@@ -1,4 +1,3 @@
-import { AssetDataProvider } from "@/contexts/asset-data-context";
 import { AssetOverviewCards } from "./_components/asset-overview-cards";
 import { AssetDistributionCards } from "./_components/asset-distribution-cards";
 import { YearlyNetAssetChart } from "./_components/yearly-net-asset-chart";
@@ -8,31 +7,38 @@ import { CryptoInput } from "./_components/crypto-input";
 import { LoanInput } from "./_components/loan-input";
 import { AssetManagementCard } from "./_components/asset-management-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldCheck } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info, Database, Sparkles } from "lucide-react";
 
 export default function Page() {
   return (
-    <AssetDataProvider>
-      <div className="flex flex-col gap-4 md:gap-6">
-        {/* 로컬 저장 안내 배너 */}
-        <Alert className="border-primary/50 bg-primary/5">
-          <ShieldCheck className="size-4 text-primary" />
-          <AlertDescription className="text-sm">
-            <span className="font-semibold text-primary">100% 로컬 저장 시스템</span>
-            <span className="text-muted-foreground">
-              {" "}• 모든 데이터는 귀하의 브라우저에만 저장됩니다. 서버 전송 없음, 로그인 불필요.{" "}
-            </span>
-            <span className="text-muted-foreground">
-              대략적인 순자산과 년도별 자산 변화를 간편하게 관리하세요.
-            </span>
+    <div className="flex flex-col gap-4 md:gap-6">
+        {/* 시스템 안내 배너 */}
+        <Alert className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+          <Info className="size-5 text-primary" />
+          <AlertTitle className="text-base font-semibold text-primary mb-2">
+            개인 자산 평가 관리 시스템
+          </AlertTitle>
+          <AlertDescription className="space-y-1.5 text-sm">
+            <div className="flex items-start gap-2">
+              <Database className="size-4 text-primary flex-shrink-0 mt-0.5" />
+              <span className="text-foreground">
+                <span className="font-medium">로컬 브라우저 환경</span>에서 운영되는 개인 자산 평가 시스템입니다. 
+                로그인 및 서버 저장 없이 귀하의 브라우저에만 데이터가 안전하게 보관됩니다.
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Sparkles className="size-4 text-primary flex-shrink-0 mt-0.5" />
+              <span className="text-foreground">
+                왼쪽 하단 <span className="font-medium">사용자 메뉴(⋮)</span>를 통해 데이터 가져오기/내보내기 및 AI 평가용 자산 현황 정리 기능을 이용하실 수 있습니다.
+              </span>
+            </div>
           </AlertDescription>
         </Alert>
 
         <AssetOverviewCards />
         <AssetDistributionCards />
         <YearlyNetAssetChart />
-        <AssetManagementCard />
 
         <Tabs defaultValue="real-estate" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
@@ -55,6 +61,5 @@ export default function Page() {
           </TabsContent>
         </Tabs>
       </div>
-    </AssetDataProvider>
   );
 }

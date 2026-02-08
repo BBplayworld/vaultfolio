@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RealEstate, realEstateSchema } from "@/types/asset";
 import { useAssetData } from "@/hooks/use-asset-data";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { ASSET_THEME } from "@/config/theme";
 
 const realEstateTypes = [
   { value: "apartment", label: "아파트" },
@@ -167,7 +168,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="purchasePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>매입가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.secondary.text}>매입가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -187,7 +188,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="currentValue"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>현재가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.secondary.text}>현재가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -304,7 +305,10 @@ export function RealEstateInput() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>부동산 자산</CardTitle>
+              <div className="flex items-center gap-2">
+                <Building2 className="size-5" />
+                <CardTitle>부동산 자산</CardTitle>
+              </div>
               <CardDescription>보유하고 있는 부동산 자산을 관리합니다.</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -343,19 +347,32 @@ export function RealEstateInput() {
 
                 return (
                   <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-2">
+                    <div className="flex flex-col gap-3">
+                      {/* 제목과 버튼 영역 */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                           <span className="rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                             {getTypeLabel(item.type)}
                           </span>
                           <h3 className="font-semibold">{item.name}</h3>
                         </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* 내용 영역 */}
+                      <div className="w-full">
                         {item.address && <p className="text-muted-foreground mb-2 text-sm">{item.address}</p>}
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">매입가:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{formatCurrencyDisplay(item.purchasePrice)}</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.secondary.text}`}>{formatCurrencyDisplay(item.purchasePrice)}</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">현재가:</span>{" "}
@@ -368,16 +385,16 @@ export function RealEstateInput() {
                               {profitRate.toFixed(2)}%)
                             </span>
                           </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
-                      <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
-                    </div>
-                          {item.tenantDeposit && item.tenantDeposit > 0 && (
-                            <div className="flex justify-between gap-2 sm:block">
-                              <span className="text-muted-foreground whitespace-nowrap">임차인보증금:</span>{" "}
-                              <span className="font-medium text-right text-amber-600 dark:text-amber-400 sm:text-left">{formatCurrencyDisplay(item.tenantDeposit)}</span>
-                            </div>
-                          )}
+                          <div className="flex justify-between gap-2 sm:block">
+                            <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
+                            <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
+                          </div>
+                          <div className="flex justify-between gap-2 sm:block">
+                            <span className="text-muted-foreground whitespace-nowrap">임차인보증금:</span>{" "}
+                            <span className={`font-medium text-right sm:text-left ${(item.tenantDeposit || 0) > 0 ? ASSET_THEME.loss.light : ""}`}>
+                              {(item.tenantDeposit || 0) > 0 ? '-' : ''}{formatCurrencyDisplay(item.tenantDeposit || 0)}
+                            </span>
+                          </div>
                           <div className="col-span-1 flex justify-between gap-2 sm:col-span-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">매입일:</span>{" "}
                             <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
@@ -386,14 +403,6 @@ export function RealEstateInput() {
                         {item.description && (
                           <p className="text-muted-foreground mt-2 text-sm">{item.description}</p>
                         )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>

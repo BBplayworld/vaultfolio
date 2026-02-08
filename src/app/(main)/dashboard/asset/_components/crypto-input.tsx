@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -29,19 +28,51 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Crypto, cryptoSchema } from "@/types/asset";
 import { useAssetData } from "@/hooks/use-asset-data";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { ASSET_THEME } from "@/config/theme";
 
-// 코인 가격 빠른 입력 버튼 (백만원 단위)
-const cryptoQuickButtons = [
-  { label: "10만", value: 100000 },
-  { label: "50만", value: 500000 },
-  { label: "100만", value: 1000000 },
-  { label: "500만", value: 5000000 },
-  { label: "1000만", value: 10000000 },
-];
+// 주요 거래소 목록
+const exchanges = [
+  { value: "upbit", label: "업비트" },
+  { value: "bithumb", label: "빗썸" },
+  { value: "coinone", label: "코인원" },
+  { value: "korbit", label: "코빗" },
+  { value: "binance", label: "바이낸스" },
+  { value: "bybit", label: "바이비트" },
+  { value: "okx", label: "OKX" },
+  { value: "coinbase", label: "코인베이스" },
+  { value: "kraken", label: "크라켄" },
+  { value: "other", label: "기타" },
+] as const;
+
+// 주요 암호화폐 목록
+const popularCryptos = [
+  { symbol: "BTC", name: "비트코인" },
+  { symbol: "ETH", name: "이더리움" },
+  { symbol: "XRP", name: "리플" },
+  { symbol: "ADA", name: "카르다노" },
+  { symbol: "SOL", name: "솔라나" },
+  { symbol: "DOGE", name: "도지코인" },
+  { symbol: "MATIC", name: "폴리곤" },
+  { symbol: "DOT", name: "폴카닷" },
+  { symbol: "AVAX", name: "아발란체" },
+  { symbol: "LINK", name: "체인링크" },
+  { symbol: "UNI", name: "유니스왑" },
+  { symbol: "ATOM", name: "코스모스" },
+  { symbol: "LTC", name: "라이트코인" },
+  { symbol: "BCH", name: "비트코인캐시" },
+  { symbol: "NEAR", name: "니어프로토콜" },
+  { symbol: "APT", name: "앱토스" },
+  { symbol: "ARB", name: "아비트럼" },
+  { symbol: "OP", name: "옵티미즘" },
+  { symbol: "SUI", name: "수이" },
+  { symbol: "HBAR", name: "헤데라" },
+  { symbol: "other", name: "직접 입력" },
+] as const;
 
 interface CryptoFormProps {
   editData?: Crypto;
@@ -51,6 +82,7 @@ interface CryptoFormProps {
 function CryptoForm({ editData, onClose }: CryptoFormProps) {
   const { addCrypto, updateCrypto } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCrypto, setSelectedCrypto] = useState<string>(editData?.symbol || "");
 
   const form = useForm<Crypto>({
     resolver: zodResolver(cryptoSchema),
@@ -66,6 +98,18 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       description: "",
     },
   });
+
+  const handleCryptoSelect = (symbol: string) => {
+    setSelectedCrypto(symbol);
+    const crypto = popularCryptos.find(c => c.symbol === symbol);
+    if (crypto && crypto.symbol !== "other") {
+      form.setValue("symbol", crypto.symbol);
+      form.setValue("name", crypto.name);
+    } else {
+      form.setValue("symbol", "");
+      form.setValue("name", "");
+    }
+  };
 
   const onSubmit = async (data: Crypto) => {
     setIsSubmitting(true);
@@ -103,32 +147,66 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="symbol"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>코인명 *</FormLabel>
-              <FormControl>
-                <Input placeholder="예: 비트코인" {...field} />
-              </FormControl>
+              <FormLabel>암호화폐 선택 *</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  handleCryptoSelect(value);
+                }} 
+                defaultValue={selectedCrypto || ""}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="암호화폐 선택" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {popularCryptos.map((crypto) => (
+                    <SelectItem key={crypto.symbol} value={crypto.symbol}>
+                      {crypto.symbol === "other" ? crypto.name : `${crypto.name} (${crypto.symbol})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="symbol"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>심볼 *</FormLabel>
-              <FormControl>
-                <Input placeholder="예: BTC" {...field} />
-              </FormControl>
-              <FormDescription>코인 심볼 (예: BTC, ETH, XRP)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {selectedCrypto === "other" && (
+          <>
+            <FormField
+              control={form.control}
+              name="symbol"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>심볼 *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="예: BTC" {...field} />
+                  </FormControl>
+                  <FormDescription>코인 심볼 (예: BTC, ETH, XRP)</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>코인명 *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="예: 비트코인" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         <FormField
           control={form.control}
@@ -136,9 +214,20 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>거래소</FormLabel>
-              <FormControl>
-                <Input placeholder="예: 업비트, 바이낸스, 빗썸" {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="거래소 선택" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {exchanges.map((exchange) => (
+                    <SelectItem key={exchange.value} value={exchange.label}>
+                      {exchange.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -149,7 +238,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
             control={form.control}
             name="quantity"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>수량 *</FormLabel>
                 <FormControl>
                   <NumberInput 
@@ -160,6 +249,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                     allowDecimals={true}
                   />
                 </FormControl>
+                <FormDescription>소수점 입력 가능</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -169,14 +259,14 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
             control={form.control}
             name="averagePrice"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>평균단가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="0"
-                    quickButtons={cryptoQuickButtons}
+                    quickButtons={[]}
                   />
                 </FormControl>
                 <FormDescription>원</FormDescription>
@@ -197,7 +287,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="0"
-                  quickButtons={cryptoQuickButtons}
+                  quickButtons={[]}
                 />
               </FormControl>
               <FormDescription>원</FormDescription>
@@ -327,31 +417,38 @@ export function CryptoInput() {
 
                 return (
                   <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex flex-1 gap-3">
-                        <Avatar className="size-10 flex-shrink-0">
-                          <AvatarFallback className="bg-orange-500/10 text-orange-600 font-semibold">
-                            {item.symbol?.substring(0, 2).toUpperCase() || item.name.substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-2 flex items-center gap-2 flex-wrap">
-                            <span className="rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600">
-                              {item.symbol}
-                            </span>
-                            <h3 className="font-semibold">{item.name}</h3>
-                            {item.exchange && (
-                              <span className="text-muted-foreground text-xs">({item.exchange})</span>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                    <div className="flex flex-col gap-3">
+                      {/* 제목과 버튼 영역 */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                          <span className="rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600">
+                            {item.symbol}
+                          </span>
+                          <h3 className="font-semibold">{item.name}</h3>
+                          {item.exchange && (
+                            <span className="text-muted-foreground text-xs">({item.exchange})</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* 내용 영역 */}
+                      <div className="w-full">
+                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">수량:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.secondary.text}`}>{item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">평균단가:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{formatCurrencyDisplay(item.averagePrice)}</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.secondary.text}`}>{formatCurrencyDisplay(item.averagePrice)}</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">현재가:</span>{" "}
@@ -368,25 +465,16 @@ export function CryptoInput() {
                               {profitRate.toFixed(2)}%)
                             </span>
                           </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
-                      <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
-                    </div>
+                          <div className="flex justify-between gap-2 sm:block">
+                            <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
+                            <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
+                          </div>
                           <div className="col-span-1 flex justify-between gap-2 sm:col-span-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">매수일:</span>{" "}
                             <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
                           </div>
                         </div>
                         {item.description && <p className="text-muted-foreground mt-2 text-sm">{item.description}</p>}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>

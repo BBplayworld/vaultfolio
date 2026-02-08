@@ -316,7 +316,10 @@ export function LoanInput() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>대출 관리</CardTitle>
+              <div className="flex items-center gap-2">
+                <CreditCard className="size-5" />
+                <CardTitle>대출 관리</CardTitle>
+              </div>
               <CardDescription>신용대출, 담보대출 등 대출 정보를 관리합니다</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -353,9 +356,10 @@ export function LoanInput() {
 
                 return (
                   <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-2">
+                    <div className="flex flex-col gap-3">
+                      {/* 제목과 버튼 영역 */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                           <span className="rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400">
                             {getTypeLabel(item.type)}
                           </span>
@@ -364,6 +368,18 @@ export function LoanInput() {
                             <span className="text-muted-foreground text-xs">({item.institution})</span>
                           )}
                         </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* 내용 영역 */}
+                      <div className="w-full">
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">현재 잔액:</span>{" "}
@@ -393,14 +409,6 @@ export function LoanInput() {
                           )}
                         </div>
                         {item.description && <p className="text-muted-foreground mt-2 text-sm">{item.description}</p>}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>

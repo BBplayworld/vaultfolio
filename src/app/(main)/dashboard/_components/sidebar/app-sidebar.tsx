@@ -13,9 +13,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { APP_CONFIG } from "@/data/config/app-config";
-import { rootUser } from "@/data/users";
-import { sidebarItems } from "@/data/navigation/sidebar/sidebar-items";
+import { APP_CONFIG } from "@/config/app";
+import { rootUser } from "@/config/users";
+import { sidebarItems } from "@/config/navigation";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";

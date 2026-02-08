@@ -8,6 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartCo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/hooks/use-asset-data";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 
 const assetDistributionChartConfig = {
   value: {
@@ -169,6 +170,7 @@ export function AssetDistributionCards() {
     "mortgage-insurance": "보험담보",
     "mortgage-deposit": "예금담보",
     "mortgage-other": "기타담보",
+    other: "기타",
   };
 
   const loanTypeData = assetData.loans
@@ -196,7 +198,7 @@ export function AssetDistributionCards() {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
-              <ChartContainer config={assetDistributionChartConfig} className="mx-auto aspect-square w-full max-w-[280px] sm:max-w-[300px]">
+              <ChartContainer config={assetDistributionChartConfig} className="mx-auto aspect-square w-full max-w-[200px] sm:max-w-[220px] md:max-w-[240px] lg:max-w-[280px]">
                 <PieChart>
                   <ChartTooltip
                     cursor={false}
@@ -215,8 +217,8 @@ export function AssetDistributionCards() {
                     data={assetDistributionData}
                     dataKey="value"
                     nameKey="category"
-                    innerRadius={60}
-                    outerRadius={90}
+                    innerRadius={70}
+                    outerRadius={95}
                     paddingAngle={2}
                     cornerRadius={4}
                   >
@@ -230,22 +232,22 @@ export function AssetDistributionCards() {
                             <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) - 12}
-                                className="fill-foreground text-lg font-bold tabular-nums sm:text-xl"
+                                y={(viewBox.cy ?? 0) - 14}
+                                className="fill-foreground text-xl font-bold tabular-nums sm:text-2xl lg:text-2xl"
                               >
                                 {shortValue}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) + 8}
-                                className="fill-muted-foreground text-[9px] sm:text-[10px]"
+                                y={(viewBox.cy ?? 0) + 10}
+                                className="fill-muted-foreground text-[10px] sm:text-xs"
                               >
                                 {fullValue}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) + 24}
-                                className="fill-muted-foreground text-[11px] sm:text-xs"
+                                y={(viewBox.cy ?? 0) + 28}
+                                className="fill-muted-foreground text-xs sm:text-sm"
                               >
                                 순자산
                               </tspan>
@@ -258,47 +260,55 @@ export function AssetDistributionCards() {
                 </PieChart>
               </ChartContainer>
 
-              {/* 범례를 차트 하단으로 이동 */}
-              <div className="w-full space-y-3">
-                {/* 자산 섹션 */}
-                {assetDistributionData.some(item => item.type === "asset") && (
-                  <div>
-                    <div className="mb-2 text-xs font-semibold text-muted-foreground">자산</div>
-                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 sm:gap-x-6">
-                      {assetDistributionData
-                        .filter(item => item.type === "asset")
-                        .map((item) => (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="size-3 rounded-full" style={{ background: item.fill }} />
-                            <span className="text-xs sm:text-sm">{assetDistributionChartConfig[item.category].label}</span>
-                            <span className="text-xs font-medium tabular-nums text-muted-foreground sm:text-sm">
-                              {formatShortCurrency(item.value)}
-                            </span>
+              {/* 범례를 차트 하단으로 이동 - 테이블 형태로 변경 */}
+              <div className="w-full flex justify-center">
+                <table className="border-separate border-spacing-y-2">
+                  <tbody>
+                    {/* 자산 섹션 */}
+                    {assetDistributionData.some(item => item.type === "asset") && (
+                      <tr>
+                        <td className="text-xs font-semibold text-muted-foreground pr-3 align-top">자산</td>
+                        <td>
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-x-6">
+                            {assetDistributionData
+                              .filter(item => item.type === "asset")
+                              .map((item) => (
+                                <div key={item.category} className="flex items-center gap-2">
+                                  <span className="size-3 rounded-full flex-shrink-0" style={{ background: item.fill }} />
+                                  <span className="text-xs sm:text-sm">{assetDistributionChartConfig[item.category]?.label || ''}</span>
+                                  <span className={`text-xs font-bold tabular-nums sm:text-sm ${ASSET_THEME.secondary.text}`}>
+                                    {formatShortCurrency(item.value)}
+                                  </span>
+                                </div>
+                              ))}
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
+                        </td>
+                      </tr>
+                    )}
 
-                {/* 부채 섹션 */}
-                {assetDistributionData.some(item => item.type === "liability") && (
-                  <div>
-                    <div className="mb-2 text-xs font-semibold text-muted-foreground">부채</div>
-                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 sm:gap-x-6">
-                      {assetDistributionData
-                        .filter(item => item.type === "liability")
-                        .map((item) => (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="size-3 rounded-full" style={{ background: item.fill }} />
-                            <span className="text-xs sm:text-sm">{assetDistributionChartConfig[item.category].label}</span>
-                            <span className="text-xs font-medium tabular-nums text-muted-foreground sm:text-sm">
-                              -{formatShortCurrency(item.value)}
-                            </span>
+                    {/* 부채 섹션 */}
+                    {assetDistributionData.some(item => item.type === "liability") && (
+                      <tr>
+                        <td className="text-xs font-semibold text-muted-foreground pr-3 align-top">부채</td>
+                        <td>
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-x-6">
+                            {assetDistributionData
+                              .filter(item => item.type === "liability")
+                              .map((item) => (
+                                <div key={item.category} className="flex items-center gap-2">
+                                  <span className="size-3 rounded-full flex-shrink-0" style={{ background: item.fill }} />
+                                  <span className="text-xs sm:text-sm">{assetDistributionChartConfig[item.category]?.label || ''}</span>
+                                  <span className={`text-xs font-bold tabular-nums sm:text-sm ${ASSET_THEME.loss.light}`}>
+                                    -{formatShortCurrency(item.value)}
+                                  </span>
+                                </div>
+                              ))}
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -326,17 +336,17 @@ export function AssetDistributionCards() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-primary">총 주식 평가금액</span>
-                  <span className="text-xl font-bold tabular-nums text-primary">
+                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.secondary.text}`}>
                     {formatShortCurrency(summary.stockValue)}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-primary/70">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {formatCurrency(summary.stockValue)}
                 </div>
               </div>
 
               {/* 카테고리별 분포 */}
-              <div className="space-y-3">
+              <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2">
                 {stockCategoryData.map((item) => {
                   const percentage = (item.value / summary.stockValue) * 100;
                   const categoryStocks = assetData.stocks.filter((s) => s.category === item.category);
@@ -356,7 +366,7 @@ export function AssetDistributionCards() {
                               <span className="text-xs font-semibold tabular-nums text-primary">
                                 {percentage.toFixed(1)}%
                               </span>
-                              <span className="text-xs font-bold tabular-nums">
+                              <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.secondary.text}`}>
                                 {formatShortCurrency(item.value)}
                               </span>
                             </div>
@@ -391,10 +401,10 @@ export function AssetDistributionCards() {
                                   <span className="text-xs font-semibold tabular-nums text-muted-foreground">
                                     {stockPercentage.toFixed(1)}%
                                   </span>
-                                  <span className="font-bold tabular-nums">
+                                  <span className={`font-bold tabular-nums ${ASSET_THEME.secondary.text}`}>
                                     {formatShortCurrency(stockValue)}
                                   </span>
-                                  <span className={`text-xs font-medium ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                  <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
                                     {profit >= 0 ? '+' : ''}{formatShortCurrency(profit)}
                                   </span>
                                 </div>
@@ -443,16 +453,16 @@ export function AssetDistributionCards() {
                           <span className="text-xs text-muted-foreground whitespace-nowrap">({coin.symbol})</span>
                         </div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{coin.quantity.toLocaleString()} {coin.symbol}</span>
+                          <span>{coin.quantity} {coin.symbol}</span>
                           {coin.exchange && <span>• {coin.exchange}</span>}
                         </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-lg font-bold tabular-nums">
+                      <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.secondary.text}`}>
                         {formatShortCurrency(coinValue)}
                       </span>
-                      <span className={`text-xs font-medium whitespace-nowrap ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`text-xs font-medium whitespace-nowrap ${getProfitLossColor(profit)}`}>
                         {profit >= 0 ? '+' : ''}{formatShortCurrency(profit)} ({profit >= 0 ? '+' : ''}{profitRate.toFixed(2)}%)
                       </span>
                     </div>
@@ -462,11 +472,11 @@ export function AssetDistributionCards() {
               <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-primary">총 암호화폐 평가금액</span>
-                  <span className="text-xl font-bold tabular-nums text-primary">
+                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.secondary.text}`}>
                     {formatShortCurrency(summary.cryptoValue)}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-primary/70">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {formatCurrency(summary.cryptoValue)}
                 </div>
               </div>
@@ -491,10 +501,25 @@ export function AssetDistributionCards() {
           ) : (
             <div className="space-y-3">
               {loanTypeData.map((loan, index) => {
+                // 대출 유형별 아이콘 색상
+                const loanIconMap: Record<string, string> = {
+                  'credit': 'bg-rose-500',
+                  'minus': 'bg-rose-600',
+                  'mortgage-home': 'bg-rose-700',
+                  'mortgage-stock': 'bg-rose-600',
+                  'mortgage-insurance': 'bg-rose-500',
+                  'mortgage-deposit': 'bg-rose-600',
+                  'mortgage-other': 'bg-rose-400',
+                  'other': 'bg-rose-500',
+                };
+                const loanIcon = loanIconMap[loan.type] || 'bg-rose-500';
+
                 return (
                   <div key={index} className="flex items-center justify-between gap-4 rounded-lg border p-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="size-3 flex-shrink-0 rounded-full" style={{ background: loan.fill }} />
+                      <div className={`size-8 flex-shrink-0 rounded-full ${loanIcon} flex items-center justify-center`}>
+                        <span className="text-xs font-bold text-white">₩</span>
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold truncate">{loan.name}</span>
@@ -506,10 +531,10 @@ export function AssetDistributionCards() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                      <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.loss.light}`}>
                         {formatShortCurrency(loan.balance)}
                       </span>
-                      <span className="text-xs font-medium text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                      <span className={`text-xs font-medium whitespace-nowrap ${ASSET_THEME.loss.light}`}>
                         금리 {loan.interestRate.toFixed(2)}%
                       </span>
                     </div>
@@ -519,11 +544,11 @@ export function AssetDistributionCards() {
               <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-rose-700 dark:text-rose-400">총 대출 잔액</span>
-                  <span className="text-xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.loss.light}`}>
                     {formatShortCurrency(summary.loanBalance)}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-rose-600/70 dark:text-rose-400/70">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {formatCurrency(summary.loanBalance)}
                 </div>
               </div>

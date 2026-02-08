@@ -18,25 +18,56 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     const [displayValue, setDisplayValue] = useState("");
 
     useEffect(() => {
-      setDisplayValue(value ? formatNumberWithCommas(value) : "");
-    }, [value]);
+      if (allowDecimals && value) {
+        // 소수점 값은 그대로 표시 (최대 12자리)
+        setDisplayValue(value.toString());
+      } else {
+        setDisplayValue(value ? formatNumberWithCommas(value) : "");
+      }
+    }, [value, allowDecimals]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
-      // 소숫점 허용 시 숫자, 콤마, 점 허용, 아니면 숫자와 콤마만
-      const cleanValue = allowDecimals
-        ? inputValue.replace(/[^\d,.-]/g, "")
-        : inputValue.replace(/[^\d,]/g, "");
-      setDisplayValue(cleanValue);
-
-      const numValue = parseNumberFromCommas(cleanValue);
-      onChange?.(numValue);
+      
+      if (allowDecimals) {
+        // 소수점 입력 시: 숫자, 콤마, 점, 마이너스 기호만 허용
+        let cleanValue = inputValue.replace(/[^\d,.-]/g, "");
+        
+        // 점이 여러 개면 첫 번째 것만 유지
+        const parts = cleanValue.split('.');
+        if (parts.length > 2) {
+          cleanValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        setDisplayValue(cleanValue);
+        
+        // 파싱: 콤마 제거 후 숫자로 변환
+        const numValue = parseFloat(cleanValue.replace(/,/g, '')) || 0;
+        onChange?.(numValue);
+      } else {
+        // 정수만 입력: 숫자와 콤마만 허용
+        const cleanValue = inputValue.replace(/[^\d,]/g, "");
+        setDisplayValue(cleanValue);
+        
+        const numValue = parseNumberFromCommas(cleanValue);
+        onChange?.(numValue);
+      }
     };
 
     const handleBlur = () => {
       // blur 시 포맷팅 정리
-      const numValue = parseNumberFromCommas(displayValue);
-      setDisplayValue(numValue ? formatNumberWithCommas(numValue) : "");
+      if (allowDecimals) {
+        const numValue = parseFloat(displayValue.replace(/,/g, '')) || 0;
+        if (numValue === 0) {
+          setDisplayValue("");
+        } else {
+          // 소수점 값은 그대로 유지 (불필요한 0 제거)
+          setDisplayValue(numValue.toString());
+        }
+      } else {
+        const numValue = parseNumberFromCommas(displayValue);
+        setDisplayValue(numValue ? formatNumberWithCommas(numValue) : "");
+      }
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -45,14 +76,16 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     const handleQuickAdd = (quickValue: number) => {
-      const currentValue = parseNumberFromCommas(displayValue);
+      const currentValue = allowDecimals 
+        ? (parseFloat(displayValue.replace(/,/g, '')) || 0)
+        : parseNumberFromCommas(displayValue);
       const newValue = currentValue + quickValue;
       setDisplayValue(formatNumberWithCommas(newValue));
       onChange?.(newValue);
     };
 
     return (
-      <div className="space-y-2">
+      <div>
         <Input
           ref={ref}
           type="text"
@@ -64,8 +97,8 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           className={cn("text-right", className)}
           {...props}
         />
-        {quickButtons && quickButtons.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
+        {quickButtons && quickButtons.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
             {quickButtons.map((btn) => (
               <Button
                 key={btn.label}
@@ -79,8 +112,6 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
               </Button>
             ))}
           </div>
-        ) : (
-          <div className="h-7" />
         )}
       </div>
     );
