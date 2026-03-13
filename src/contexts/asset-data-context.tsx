@@ -33,22 +33,37 @@ interface AssetDataContextType {
 
 const AssetDataContext = createContext<AssetDataContextType | undefined>(undefined);
 
+const STATIC_DEFAULT_ASSET_DATA: AssetData = {
+  realEstate: [],
+  stocks: [],
+  crypto: [],
+  loans: [],
+  yearlyNetAssets: [],
+  lastUpdated: "",
+};
+
 export function AssetDataProvider({ children }: { children: ReactNode }) {
-  const [assetData, setAssetData] = useState<AssetData>(() => getAssetData());
-  const [isLoading, setIsLoading] = useState(false);
-  const [exchangeRate, setExchangeRateState] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(EXCHANGE_RATE_KEY);
-      return saved ? parseFloat(saved) : 1380; // 기본 환율 1380원
-    }
-    return 1380;
-  });
+  // Start with static empty defaults to avoid SSR/client mismatch.
+  // Real data is loaded from localStorage in useEffect after hydration.
+  const [assetData, setAssetData] = useState<AssetData>(STATIC_DEFAULT_ASSET_DATA);
+  const [isLoading, setIsLoading] = useState(true);
+  const [exchangeRate, setExchangeRateState] = useState<number>(1380);
 
   const setExchangeRate = useCallback((rate: number) => {
     setExchangeRateState(rate);
     if (typeof window !== "undefined") {
       localStorage.setItem(EXCHANGE_RATE_KEY, rate.toString());
     }
+  }, []);
+
+  // 클라이언트 마운트 후 localStorage에서 초기 데이터 로드
+  useEffect(() => {
+    const saved = localStorage.getItem(EXCHANGE_RATE_KEY);
+    if (saved) {
+      setExchangeRateState(parseFloat(saved));
+    }
+    setAssetData(getAssetData());
+    setIsLoading(false);
   }, []);
 
   // 자산 데이터 새로고침

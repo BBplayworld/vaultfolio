@@ -4,14 +4,14 @@ import { AssetData, assetDataSchema } from "@/types/asset";
 
 const STORAGE_KEY = "personal-asset-data";
 
-// 기본 자산 데이터
+// 기본 자산 데이터 (SSR/클라이언트 간 일관성을 위해 정적 기본값 사용)
 const defaultAssetData: AssetData = {
   realEstate: [],
   stocks: [],
   crypto: [],
   loans: [],
   yearlyNetAssets: [],
-  lastUpdated: new Date().toISOString(),
+  lastUpdated: "",
 };
 
 // LocalStorage에서 자산 데이터 가져오기

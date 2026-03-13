@@ -82,7 +82,7 @@ export function AssetManagementCard() {
 
   const generateAIPrompt = () => {
     const summary = getAssetSummary();
-    
+
     // 부동산 상세 분석 (주소 포함)
     const realEstateList = assetData.realEstate.map((item) => {
       const typeMap: Record<string, string> = {
@@ -96,7 +96,7 @@ export function AssetManagementCard() {
       const profit = item.currentValue - item.purchasePrice;
       const profitRate = item.purchasePrice > 0 ? ((profit / item.purchasePrice) * 100).toFixed(2) : '0.00';
       const address = item.address || '주소 미입력';
-      
+
       return `  • ${item.name} (${type}) - ${address}
     평가금액: ${formatShortCurrency(item.currentValue)} | 수익률: ${profitRate}%`;
     }).join('\n');
@@ -116,7 +116,7 @@ export function AssetManagementCard() {
       const cost = item.quantity * item.averagePrice;
       const profit = value - cost;
       const profitRate = cost > 0 ? ((profit / cost) * 100).toFixed(2) : '0.00';
-      
+
       return `  • [${category}] ${item.name} (${item.ticker || 'N/A'})
     평가금액: ${formatShortCurrency(value)} | 수익률: ${profitRate}%`;
     }).join('\n');
@@ -127,7 +127,7 @@ export function AssetManagementCard() {
       const cost = item.quantity * item.averagePrice;
       const profit = value - cost;
       const profitRate = cost > 0 ? ((profit / cost) * 100).toFixed(2) : '0.00';
-      
+
       return `  • ${item.name} (${item.symbol}) - ${item.exchange || '거래소 미입력'}
     보유량: ${item.quantity} ${item.symbol} | 평가금액: ${formatShortCurrency(value)} | 수익률: ${profitRate}%`;
     }).join('\n');
@@ -144,14 +144,14 @@ export function AssetManagementCard() {
         other: '기타'
       };
       const type = typeMap[item.type] || item.type;
-      
+
       return `  • ${item.name} (${type}) - ${item.institution || '금융기관 미입력'}
     잔액: ${formatShortCurrency(item.balance)} | 금리: ${item.interestRate}%`;
     }).join('\n');
 
     const debtRatio = summary.totalValue > 0 ? (summary.loanBalance / summary.totalValue * 100).toFixed(1) : '0';
     const netAssetRatio = summary.totalValue > 0 ? (summary.netAsset / summary.totalValue * 100).toFixed(1) : '0';
-    
+
     const prompt = `안녕하세요! 제 현재 자산 현황을 분석하고 조언을 부탁드립니다.
 
 📊 **자산 현황 요약**
@@ -300,7 +300,7 @@ ${loanList || '  - 등록된 대출 없음'}
               AI 평가용 자산 종합 현황
             </DialogTitle>
             <DialogDescription>
-              아래 프롬프트를 복사하여 ChatGPT, Claude 등 AI에게 자산 분석 및 조언을 요청하세요.
+              아래 프롬프트를 복사하여 Gemini, Grok 등 AI에게 자산 분석 및 조언을 요청하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 overflow-y-auto flex-1 pr-2">

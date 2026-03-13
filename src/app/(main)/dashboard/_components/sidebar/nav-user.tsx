@@ -358,7 +358,7 @@ ${loanList || '  - 등록된 대출 없음'}
               AI 평가용 자산 종합 현황
             </DialogTitle>
             <DialogDescription>
-              아래 프롬프트를 복사하여 ChatGPT, Claude 등 AI에게 자산 분석 및 조언을 요청하세요.
+              아래 프롬프트를 복사하여 Gemini, Grok 등 AI에게 자산 분석 및 조언을 요청하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 overflow-y-auto flex-1 pr-2">
