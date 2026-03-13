@@ -22,9 +22,8 @@ export const stockSchema = z.object({
   quantity: z.number().min(0, "수량은 0 이상이어야 합니다").refine((val) => val > 0, "수량을 입력해주세요"),
   averagePrice: z.number().min(0, "평균단가는 0 이상이어야 합니다").refine((val) => val > 0, "평균단가를 입력해주세요"),
   currentPrice: z.number().min(0, "현재가는 0 이상이어야 합니다").refine((val) => val > 0, "현재가를 입력해주세요"),
-  // 해외주식용 USD 가격 (선택)
-  averagePriceUSD: z.number().optional(),
-  currentPriceUSD: z.number().optional(),
+  // 해외주식용 화폐 단위 (KRW 기본)
+  currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),
   purchaseDate: z.string().min(1, "매수일을 선택해주세요"),
   description: z.string().optional(),
 });
@@ -55,6 +54,17 @@ export const loanSchema = z.object({
   description: z.string().optional(),
 });
 
+// 현금 스키마
+export const cashSchema = z.object({
+  id: z.string(),
+  type: z.enum(["bank", "cash", "deposit", "savings"]),
+  name: z.string().min(1, "계좌/자산명을 입력해주세요"),
+  balance: z.number().min(0, "금액은 0 이상이어야 합니다").refine((val) => val > 0, "금액을 입력해주세요"),
+  currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),
+  institution: z.string().optional(),
+  description: z.string().optional(),
+});
+
 // 년도별 순자산 히스토리 스키마
 export const yearlyNetAssetSchema = z.object({
   year: z.number().min(2000).max(2100),
@@ -67,6 +77,7 @@ export const assetDataSchema = z.object({
   realEstate: z.array(realEstateSchema),
   stocks: z.array(stockSchema),
   crypto: z.array(cryptoSchema),
+  cash: z.array(cashSchema).default([]),
   loans: z.array(loanSchema).default([]),
   yearlyNetAssets: z.array(yearlyNetAssetSchema).default([]),
   lastUpdated: z.string(),
@@ -76,6 +87,7 @@ export const assetDataSchema = z.object({
 export type RealEstate = z.infer<typeof realEstateSchema>;
 export type Stock = z.infer<typeof stockSchema>;
 export type Crypto = z.infer<typeof cryptoSchema>;
+export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
@@ -95,11 +107,13 @@ export interface AssetSummary {
   cryptoValue: number;
   cryptoCost: number;
   cryptoProfit: number;
+  cashValue: number;
   loanBalance: number;
   tenantDepositTotal: number; // 임차인 보증금 합계
   netAsset: number; // 순자산 (총 자산 - 대출 잔액 - 임차인 보증금)
   realEstateCount: number;
   stockCount: number;
   cryptoCount: number;
+  cashCount: number;
   loanCount: number;
 }

@@ -6,6 +6,5 @@
 
 export * from "./app";
 export * from "./theme";
-export * from "./storage";
 export * from "./users";
 export * from "./navigation";

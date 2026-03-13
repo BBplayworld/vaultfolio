@@ -9,9 +9,11 @@ export default function NotFound() {
     <div className="flex h-dvh flex-col items-center justify-center space-y-2 text-center">
       <h1 className="text-2xl font-semibold">Page not found.</h1>
       <p className="text-muted-foreground">The page you are looking for could not be found.</p>
-      <Link replace href="/dashboard/asset">
-        <Button variant="outline">Go back home</Button>
-      </Link>
+      <Button asChild className="mt-4">
+        <Link replace href="/asset">
+          Return to Home
+        </Link>
+      </Button>
     </div>
   );
 }

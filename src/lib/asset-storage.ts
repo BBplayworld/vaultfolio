@@ -2,13 +2,19 @@
 
 import { AssetData, assetDataSchema } from "@/types/asset";
 
-const STORAGE_KEY = "personal-asset-data";
+// ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
+export const STORAGE_KEYS = {
+  assetData: "personal-asset-data",
+  exchangeRate: "exchange-rate-usd-krw",
+  defaultExchangeRate: 1380,
+} as const;
 
-// 기본 자산 데이터 (SSR/클라이언트 간 일관성을 위해 정적 기본값 사용)
-const defaultAssetData: AssetData = {
+// ─── 기본 자산 데이터 (SSR/클라이언트 하이드레이션 일관성 유지) ──────────────
+const EMPTY_ASSET_DATA: AssetData = {
   realEstate: [],
   stocks: [],
   crypto: [],
+  cash: [],
   loans: [],
   yearlyNetAssets: [],
   lastUpdated: "",
@@ -17,20 +23,20 @@ const defaultAssetData: AssetData = {
 // LocalStorage에서 자산 데이터 가져오기
 export function getAssetData(): AssetData {
   if (typeof window === "undefined") {
-    return defaultAssetData;
+    return EMPTY_ASSET_DATA;
   }
 
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = localStorage.getItem(STORAGE_KEYS.assetData);
     if (!data) {
-      return defaultAssetData;
+      return EMPTY_ASSET_DATA;
     }
 
     const parsed = JSON.parse(data);
     return assetDataSchema.parse(parsed);
   } catch (error) {
     console.error("Failed to load asset data:", error);
-    return defaultAssetData;
+    return EMPTY_ASSET_DATA;
   }
 }
 
@@ -43,7 +49,7 @@ export function saveAssetData(data: AssetData): boolean {
   try {
     const validated = assetDataSchema.parse(data);
     validated.lastUpdated = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
+    localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(validated));
     return true;
   } catch (error) {
     console.error("Failed to save asset data:", error);
@@ -94,7 +100,7 @@ export function clearAssetData(): boolean {
   }
 
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEYS.assetData);
     return true;
   } catch (error) {
     console.error("Failed to clear asset data:", error);

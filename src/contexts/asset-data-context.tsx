@@ -1,16 +1,14 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
-import { getAssetData, saveAssetData } from "@/lib/asset-storage";
-
-const EXCHANGE_RATE_KEY = "exchange-rate-usd-krw";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
+import { getAssetData, saveAssetData, STORAGE_KEYS } from "@/lib/asset-storage";
 
 interface AssetDataContextType {
   assetData: AssetData;
   isLoading: boolean;
-  exchangeRate: number;
-  setExchangeRate: (rate: number) => void;
+  exchangeRates: { USD: number; JPY: number };
+  updateExchangeRate: (currency: "USD" | "JPY", rate: number) => void;
   refreshData: () => void;
   saveData: (data: AssetData) => boolean;
   addRealEstate: (realEstate: RealEstate) => boolean;
@@ -22,6 +20,9 @@ interface AssetDataContextType {
   addCrypto: (crypto: Crypto) => boolean;
   updateCrypto: (id: string, crypto: Partial<Crypto>) => boolean;
   deleteCrypto: (id: string) => boolean;
+  addCash: (cash: Cash) => boolean;
+  updateCash: (id: string, cash: Partial<Cash>) => boolean;
+  deleteCash: (id: string) => boolean;
   addLoan: (loan: Loan) => boolean;
   updateLoan: (id: string, loan: Partial<Loan>) => boolean;
   deleteLoan: (id: string) => boolean;
@@ -37,6 +38,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   realEstate: [],
   stocks: [],
   crypto: [],
+  cash: [],
   loans: [],
   yearlyNetAssets: [],
   lastUpdated: "",
@@ -47,20 +49,32 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // Real data is loaded from localStorage in useEffect after hydration.
   const [assetData, setAssetData] = useState<AssetData>(STATIC_DEFAULT_ASSET_DATA);
   const [isLoading, setIsLoading] = useState(true);
-  const [exchangeRate, setExchangeRateState] = useState<number>(1380);
+  const [exchangeRates, setExchangeRatesState] = useState<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
 
-  const setExchangeRate = useCallback((rate: number) => {
-    setExchangeRateState(rate);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(EXCHANGE_RATE_KEY, rate.toString());
-    }
+  const updateExchangeRate = useCallback((currency: "USD" | "JPY", rate: number) => {
+    setExchangeRatesState(prev => {
+      const newRates = { ...prev, [currency]: rate };
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEYS.exchangeRate, JSON.stringify(newRates));
+      }
+      return newRates;
+    });
   }, []);
 
   // 클라이언트 마운트 후 localStorage에서 초기 데이터 로드
   useEffect(() => {
-    const saved = localStorage.getItem(EXCHANGE_RATE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.exchangeRate);
     if (saved) {
-      setExchangeRateState(parseFloat(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === "number") {
+          setExchangeRatesState({ USD: parsed, JPY: 900 });
+        } else {
+          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 900 });
+        }
+      } catch {
+        setExchangeRatesState({ USD: parseFloat(saved) || 1380, JPY: 900 });
+      }
     }
     setAssetData(getAssetData());
     setIsLoading(false);
@@ -188,6 +202,42 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // 현금 추가
+  const addCash = useCallback(
+    (cash: Cash) => {
+      const newData = {
+        ...assetData,
+        cash: [...assetData.cash, cash],
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 현금 수정
+  const updateCash = useCallback(
+    (id: string, cash: Partial<Cash>) => {
+      const newData = {
+        ...assetData,
+        cash: assetData.cash.map((item) => (item.id === id ? { ...item, ...cash } : item)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 현금 삭제
+  const deleteCash = useCallback(
+    (id: string) => {
+      const newData = {
+        ...assetData,
+        cash: assetData.cash.filter((item) => item.id !== id),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
   // 대출 추가
   const addLoan = useCallback(
     (loan: Loan) => {
@@ -261,23 +311,31 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 자산 요약 계산
   const getAssetSummary = useCallback((): AssetSummary => {
+    const getMultiplier = (currency?: string) => {
+      if (currency === "USD") return exchangeRates.USD;
+      if (currency === "JPY") return exchangeRates.JPY / 100; // 100엔당 환율
+      return 1;
+    };
+
     const realEstateValue = assetData.realEstate.reduce((sum, item) => sum + item.currentValue, 0);
     const realEstateCost = assetData.realEstate.reduce((sum, item) => sum + item.purchasePrice, 0);
     const realEstateProfit = realEstateValue - realEstateCost;
 
-    const stockValue = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.currentPrice, 0);
-    const stockCost = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
+    const stockValue = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.currentPrice * getMultiplier(item.currency), 0);
+    const stockCost = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.averagePrice * getMultiplier(item.currency), 0);
     const stockProfit = stockValue - stockCost;
 
-    const cryptoValue = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.currentPrice, 0);
+    const cryptoValue = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.currentPrice, 0); // 코인은 기본적으로 원화 기준치로 입력받음
     const cryptoCost = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
     const cryptoProfit = cryptoValue - cryptoCost;
+
+    const cashValue = assetData.cash ? assetData.cash.reduce((sum, item) => sum + item.balance * getMultiplier(item.currency), 0) : 0;
 
     const loanBalance = assetData.loans.reduce((sum, item) => sum + item.balance, 0);
     const tenantDepositTotal = assetData.realEstate.reduce((sum, item) => sum + (item.tenantDeposit || 0), 0);
 
-    const totalValue = realEstateValue + stockValue + cryptoValue;
-    const totalCost = realEstateCost + stockCost + cryptoCost;
+    const totalValue = realEstateValue + stockValue + cryptoValue + cashValue;
+    const totalCost = realEstateCost + stockCost + cryptoCost + cashValue; // 현금은 원금=현재가로 취급
     const totalProfit = totalValue - totalCost;
     const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
     const netAsset = totalValue - loanBalance - tenantDepositTotal;
@@ -296,15 +354,17 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       cryptoValue,
       cryptoCost,
       cryptoProfit,
+      cashValue,
       loanBalance,
       tenantDepositTotal,
       netAsset,
       realEstateCount: assetData.realEstate.length,
       stockCount: assetData.stocks.length,
       cryptoCount: assetData.crypto.length,
+      cashCount: assetData.cash ? assetData.cash.length : 0,
       loanCount: assetData.loans.length,
     };
-  }, [assetData]);
+  }, [assetData, exchangeRates]);
 
   // localStorage 변경 감지
   useEffect(() => {
@@ -321,8 +381,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       value={{
         assetData,
         isLoading,
-        exchangeRate,
-        setExchangeRate,
+        exchangeRates,
+        updateExchangeRate,
         refreshData,
         saveData,
         addRealEstate,
@@ -334,6 +394,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addCrypto,
         updateCrypto,
         deleteCrypto,
+        addCash,
+        updateCash,
+        deleteCash,
         addLoan,
         updateLoan,
         deleteLoan,

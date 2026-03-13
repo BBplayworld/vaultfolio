@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app";
 import { getPreference } from "@/server/server-actions";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
-import { THEME_MODE_VALUES, THEME_PRESET_VALUES, type ThemePreset, type ThemeMode } from "@/types/preferences/theme";
+import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
 
 import "./globals.css";
 
@@ -20,17 +20,15 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const themeMode = await getPreference<ThemeMode>("theme_mode", THEME_MODE_VALUES, "dark");
-  const themePreset = await getPreference<ThemePreset>("theme_preset", THEME_PRESET_VALUES, "default");
 
   return (
     <html
       lang="en"
       className={themeMode === "dark" ? "dark" : ""}
-      data-theme-preset={themePreset}
       suppressHydrationWarning
     >
       <body className={`${inter.className} min-h-screen antialiased`}>
-        <PreferencesStoreProvider themeMode={themeMode} themePreset={themePreset}>
+        <PreferencesStoreProvider themeMode={themeMode}>
           {children}
           <Toaster />
         </PreferencesStoreProvider>

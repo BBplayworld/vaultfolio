@@ -1,20 +1,4 @@
 import {
-  ShoppingBag,
-  Forklift,
-  Mail,
-  MessageSquare,
-  Calendar,
-  Kanban,
-  ReceiptText,
-  Users,
-  Lock,
-  Fingerprint,
-  SquareArrowUpRight,
-  LayoutDashboard,
-  ChartBar,
-  Banknote,
-  Gauge,
-  GraduationCap,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -51,7 +35,7 @@ export const sidebarItems: NavGroup[] = [
     items: [
       {
         title: "자산 평가서",
-        url: "/dashboard/asset",
+        url: "/asset",
         icon: Wallet,
       },
     ],
