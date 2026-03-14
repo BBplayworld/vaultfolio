@@ -12,7 +12,7 @@ export function AssetOverviewCards() {
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-      <Card className={`${ASSET_THEME.primary.border} bg-primary/20 lg:bg-primary/20 ring-2 ${ASSET_THEME.primary.ring}`}>
+      <Card className={`${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-base font-bold ${ASSET_THEME.primary.text}`}>순자산</CardTitle>

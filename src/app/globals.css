@@ -52,7 +52,8 @@ These serve as the fallback; there is no separate default.css file. */
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /*--primary: oklch(0.205 0 0);*/
+  --primary: lab(61.5481% -43.9789 -10.1484);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -61,26 +62,36 @@ These serve as the fallback; there is no separate default.css file. */
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.85 0 0);  /* 더 어둡게: 0.922 → 0.85 */
-  --input: oklch(0.85 0 0);   /* 더 어둡게: 0.922 → 0.85 */
+  /* --border: oklch(0.85 0 0); */
+  --border: oklch(0.65 0 0);
+  /* 더 어둡게: 0.922 → 0.85 */
+  --input: oklch(0.85 0 0);
+  /* 더 어둡게: 0.922 → 0.85 */
   --ring: oklch(0.708 0 0);
   /* Teal-based chart colors for light mode */
-  --chart-1: oklch(0.656 0.131 191.711);  /* teal-500 */
-  --chart-2: oklch(0.548 0.152 200.086);  /* cyan-600 */
-  --chart-3: oklch(0.750 0.108 183.586);  /* teal-400 */
-  --chart-4: oklch(0.459 0.138 208.919);  /* cyan-700 */
-  --chart-5: oklch(0.850 0.084 175.348);  /* teal-300 */
-  --chart-6: oklch(0.350 0.112 217.267);  /* cyan-800 */
+  --chart-1: oklch(0.656 0.131 191.711);
+  /* teal-500 */
+  --chart-2: oklch(0.548 0.152 200.086);
+  /* cyan-600 */
+  --chart-3: oklch(0.750 0.108 183.586);
+  /* teal-400 */
+  --chart-4: oklch(0.459 0.138 208.919);
+  /* cyan-700 */
+  --chart-5: oklch(0.850 0.084 175.348);
+  /* teal-300 */
+  --chart-6: oklch(0.350 0.112 217.267);
+  /* cyan-800 */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.85 0 0);  /* 더 어둡게: 0.922 → 0.85 */
+  --sidebar-border: oklch(0.85 0 0);
+  /* 더 어둡게: 0.922 → 0.85 */
   --sidebar-ring: oklch(0.708 0 0);
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0% 0 0);
 }
 
 .dark {
@@ -104,12 +115,18 @@ These serve as the fallback; there is no separate default.css file. */
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.656 0.131 191.711);
   /* Teal-based chart colors for dark mode - brighter versions */
-  --chart-1: oklch(0.750 0.108 183.586);  /* teal-400 */
-  --chart-2: oklch(0.661 0.139 194.874);  /* cyan-400 */
-  --chart-3: oklch(0.850 0.084 175.348);  /* teal-300 */
-  --chart-4: oklch(0.548 0.152 200.086);  /* cyan-600 */
-  --chart-5: oklch(0.656 0.131 191.711);  /* teal-500 */
-  --chart-6: oklch(0.459 0.138 208.919);  /* cyan-700 */
+  --chart-1: oklch(0.750 0.108 183.586);
+  /* teal-400 */
+  --chart-2: oklch(0.661 0.139 194.874);
+  /* cyan-400 */
+  --chart-3: oklch(0.850 0.084 175.348);
+  /* teal-300 */
+  --chart-4: oklch(0.548 0.152 200.086);
+  /* cyan-600 */
+  --chart-5: oklch(0.656 0.131 191.711);
+  /* teal-500 */
+  --chart-6: oklch(0.459 0.138 208.919);
+  /* cyan-700 */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.656 0.131 191.711);

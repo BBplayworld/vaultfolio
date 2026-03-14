@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Crypto, cryptoSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 
 // 주요 거래소 목록
 const exchanges = [
@@ -441,11 +441,7 @@ export function CryptoInput() {
 
                       {/* 내용 영역 */}
                       <div className="w-full">
-                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">수량:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개</span>
-                          </div>
+                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">평균단가:</span>{" "}
                             <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{formatCurrencyDisplay(item.averagePrice)}</span>
@@ -455,12 +451,16 @@ export function CryptoInput() {
                             <span className="font-medium text-right sm:text-left">{formatCurrencyDisplay(item.currentPrice)}</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
+                            <span className="text-muted-foreground whitespace-nowrap">수량:</span>{" "}
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개</span>
+                          </div>
+                          <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">평가금액:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{formatCurrencyDisplay(currentValue)}</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(currentValue)}</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">평가손익:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                            <span className={`font-medium text-right sm:text-left ${getProfitLossColor(profit)}`}>
                               {formatCurrencyDisplay(profit)} ({profit > 0 ? "+" : ""}
                               {profitRate.toFixed(2)}%)
                             </span>

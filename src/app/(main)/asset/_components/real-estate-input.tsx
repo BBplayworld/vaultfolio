@@ -372,7 +372,7 @@ export function RealEstateInput() {
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">매입가:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left`}>{formatCurrencyDisplay(item.purchasePrice)}</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{formatCurrencyDisplay(item.purchasePrice)}</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">실거래가:</span>{" "}

@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loan, loanSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { ASSET_THEME } from "@/config/theme";
 
 const loanTypes = [
   { value: "credit", label: "신용대출" },
@@ -383,13 +384,13 @@ export function LoanInput() {
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">현재 잔액:</span>{" "}
-                            <span className="font-medium text-right text-rose-600 dark:text-rose-400 sm:text-left">
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.liability.strong}`}>
                               {formatCurrencyDisplay(item.balance)}
                             </span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">금리:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{item.interestRate}%</span>
+                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{item.interestRate}%</span>
                           </div>
                           <div className="flex justify-between gap-2 sm:block">
                             <span className="text-muted-foreground whitespace-nowrap">대출일:</span>{" "}

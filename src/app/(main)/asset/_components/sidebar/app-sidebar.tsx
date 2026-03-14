@@ -14,11 +14,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app";
-import { rootUser } from "@/config/users";
 import { sidebarItems } from "@/config/navigation";
 
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -37,11 +35,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={sidebarItems} />
-        {/* <NavDocuments items={data.documents} /> */}
-        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={rootUser} />
       </SidebarFooter>
     </Sidebar>
   );

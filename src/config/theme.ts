@@ -19,9 +19,9 @@ export const ASSET_THEME = {
   // ===== 주요 테마 색상 (Primary) =====
   primary: {
     bg: "bg-primary",
-    bgLight: "bg-primary/10",
+    bgLight: "bg-primary/20",
     bgMedium: "bg-primary/5",
-    border: "border-primary",
+    border: "border-teal-600",
     borderLight: "border-primary/20",
     borderMedium: "border-primary/50",
     ring: "ring-primary/20",

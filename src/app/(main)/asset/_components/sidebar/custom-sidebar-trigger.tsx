@@ -18,7 +18,7 @@ export function CustomSidebarTrigger({ className }: { className?: string }) {
         className={cn("md:hidden", className)}
         aria-label="사이드바 열기"
       >
-        <Settings className="size-5" />
+        <PanelLeft className="size-5" />
       </Button>
 
       {/* PC 환경: 기본 패널 아이콘 */}

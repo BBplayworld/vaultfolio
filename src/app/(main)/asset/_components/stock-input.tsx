@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -399,8 +398,8 @@ export function StockInput() {
                 <div className="w-full">
                   <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
                     <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">평균단가:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left`}>
+                      <span className={`text-muted-foreground whitespace-nowrap`}>평균단가:</span>{" "}
+                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>
                         {formatCurrencyDisplay(item.averagePrice, item.currency)}
                         {isForeign && (
                           <span className="text-muted-foreground text-xs ml-1">
