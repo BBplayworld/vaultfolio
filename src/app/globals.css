@@ -99,7 +99,8 @@ These serve as the fallback; there is no separate default.css file. */
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  /* --popover: oklch(0.205 0 0); */
+  --popover: oklch(30.118% 0.00003 271.152 / 0.999);
   --popover-foreground: oklch(0.985 0 0);
   /* Teal primary color - oklch format for teal-500 equivalent */
   --primary: oklch(0.656 0.131 191.711);

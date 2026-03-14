@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, MoreVertical } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, MoreVertical, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
-import { exportAssetData, importAssetData, clearAssetData } from "@/lib/asset-storage";
+import { exportAssetData, importAssetData, clearAssetData, generateShareToken } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 
@@ -63,6 +63,27 @@ export function NavUser({
       toast.success("자산 데이터가 다운로드되었습니다.");
     } catch (error) {
       toast.error("데이터 내보내기에 실패했습니다.");
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (!assetData) return;
+
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates);
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${token}`;
+
+      await navigator.clipboard.writeText(shareUrl);
+
+      const length = token.length;
+      if (length <= 200) {
+        toast.success("최적화된 공유 URL이 복사되었습니다. (200자 이내)");
+      } else {
+        toast.success("공유 URL이 복사되었습니다.");
+        toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
+      }
+    } catch (error) {
+      toast.error("URL 공유 준비에 실패했습니다.");
     }
   };
 
@@ -299,23 +320,27 @@ ${loanList || '  - 등록된 대출 없음'}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1.5">
+              <div className="px-2 py-2">
                 <p className="text-xs font-medium text-muted-foreground">데이터 관리</p>
               </div>
-              <DropdownMenuItem onClick={handleExport}>
+              <DropdownMenuItem className="py-2" onClick={handleExport}>
                 <Download className="size-4" />
                 데이터 내보내기
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportClick} disabled={isImporting}>
+              <DropdownMenuItem className="py-2" onClick={handleImportClick} disabled={isImporting}>
                 <Upload className="size-4" />
                 {isImporting ? "가져오는 중..." : "데이터 가져오기"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowClearDialog(true)} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem className="py-2" onClick={handleShare}>
+                <Share2 className="size-4" />
+                공유 URL 복사
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:text-destructive py-2" onClick={() => setShowClearDialog(true)} >
                 <Trash2 className="size-4" />
                 모든 데이터 삭제
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowAIPromptDialog(true)} className="text-primary focus:text-primary">
+              <DropdownMenuItem className="text-primary focus:text-primary py-2" onClick={() => setShowAIPromptDialog(true)} >
                 <Sparkles className="size-4" />
                 <span className="flex-1">AI 평가용 자산 현황</span>
                 <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>

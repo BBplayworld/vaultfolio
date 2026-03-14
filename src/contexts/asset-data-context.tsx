@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
-import { getAssetData, saveAssetData, STORAGE_KEYS } from "@/lib/asset-storage";
+import { getAssetData, saveAssetData, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
+import { toast } from "sonner";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -61,7 +62,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // 클라이언트 마운트 후 localStorage에서 초기 데이터 로드
+  // 클라이언트 마운트 후 localStorage에서 초기 데이터 로드 및 해시 감지
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.exchangeRate);
     if (saved) {
@@ -76,8 +77,43 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         setExchangeRatesState({ USD: parseFloat(saved) || 1380, JPY: 900 });
       }
     }
-    setAssetData(getAssetData());
-    setIsLoading(false);
+
+    const handleHashShare = () => {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const shareToken = params.get("share");
+
+      if (shareToken) {
+        const result = parseShareToken(shareToken);
+        if (result) {
+          saveAssetData(result.data);
+          setAssetData(result.data);
+
+          // 공유된 환율 정보가 있으면 반영
+          if (result.rates) {
+            updateExchangeRate("USD", result.rates.USD);
+            updateExchangeRate("JPY", result.rates.JPY);
+          }
+
+          toast.success("공유된 자산 데이터를 불러왔습니다.");
+
+          // 데이터 불러온 후 해시 제거 (깔끔한 URL 유지)
+          window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        } else {
+          toast.error("공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.");
+        }
+      } else {
+        setAssetData(getAssetData());
+      }
+      setIsLoading(false);
+    };
+
+    // 초기 로드 시 실행
+    handleHashShare();
+
+    // URL 해시 변경 시 자동 감지
+    window.addEventListener("hashchange", handleHashShare);
+    return () => window.removeEventListener("hashchange", handleHashShare);
   }, []);
 
   // 자산 데이터 새로고침
