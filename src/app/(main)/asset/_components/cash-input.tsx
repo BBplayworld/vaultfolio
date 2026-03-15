@@ -282,7 +282,7 @@ export function CashInput() {
                                     현금 추가
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-h-[90vh] overflow-y-auto">
+                            <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                                 <DialogHeader>
                                     <DialogTitle>{editingItem ? "현금 자산 수정" : "현금 자산 추가"}</DialogTitle>
                                     <DialogDescription>

@@ -11,20 +11,31 @@ interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   onChange?: (value: number) => void;
   quickButtons?: { label: string; value: number }[];
   allowDecimals?: boolean; // 소숫점 허용 여부
+  maxDecimals?: number; // 허용할 최대 소숫점 자리수
 }
 
 export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
-  ({ value = 0, onChange, quickButtons, allowDecimals = false, className, ...props }, ref) => {
+  ({ value = 0, onChange, quickButtons, allowDecimals = false, maxDecimals, className, ...props }, ref) => {
     const [displayValue, setDisplayValue] = useState("");
 
     useEffect(() => {
-      if (allowDecimals && value) {
+      if (allowDecimals && value !== undefined) {
         // 소수점 값은 그대로 표시 (최대 12자리)
-        setDisplayValue(value.toString());
+        // maxDecimals가 있으면 해당 자리수만큼만 표시
+        if (maxDecimals !== undefined) {
+          const parts = value.toString().split('.');
+          if (parts.length === 2 && parts[1].length > maxDecimals) {
+            setDisplayValue(value.toFixed(maxDecimals));
+          } else {
+            setDisplayValue(value.toString());
+          }
+        } else {
+          setDisplayValue(value.toString());
+        }
       } else {
         setDisplayValue(value ? formatNumberWithCommas(value) : "");
       }
-    }, [value, allowDecimals]);
+    }, [value, allowDecimals, maxDecimals]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
@@ -37,6 +48,13 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         const parts = cleanValue.split('.');
         if (parts.length > 2) {
           cleanValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // 소수점 자리수 제한
+        if (maxDecimals !== undefined && parts.length === 2) {
+          if (parts[1].length > maxDecimals) {
+            cleanValue = parts[0] + '.' + parts[1].slice(0, maxDecimals);
+          }
         }
         
         setDisplayValue(cleanValue);
@@ -62,7 +80,12 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           setDisplayValue("");
         } else {
           // 소수점 값은 그대로 유지 (불필요한 0 제거)
-          setDisplayValue(numValue.toString());
+          // maxDecimals가 있으면 제한
+          if (maxDecimals !== undefined) {
+            setDisplayValue(parseFloat(numValue.toFixed(maxDecimals)).toString());
+          } else {
+            setDisplayValue(numValue.toString());
+          }
         }
       } else {
         const numValue = parseNumberFromCommas(displayValue);

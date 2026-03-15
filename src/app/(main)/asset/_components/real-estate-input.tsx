@@ -318,7 +318,7 @@ export function RealEstateInput() {
                   부동산 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
                   <DialogDescription>

@@ -276,7 +276,7 @@ ${loanList || '  - 등록된 대출 없음'}
       </div>
 
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="touch-pan-y">
           <AlertDialogHeader>
             <AlertDialogTitle>정말 모든 데이터를 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -293,7 +293,7 @@ ${loanList || '  - 등록된 대출 없음'}
       </AlertDialog>
 
       <Dialog open={showAIPromptDialog} onOpenChange={setShowAIPromptDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col touch-pan-y">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="size-5 text-primary" />

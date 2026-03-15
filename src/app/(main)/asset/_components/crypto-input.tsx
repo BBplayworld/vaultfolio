@@ -386,7 +386,7 @@ export function CryptoInput() {
                   코인 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "코인 수정" : "코인 추가"}</DialogTitle>
                   <DialogDescription>

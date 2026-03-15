@@ -208,9 +208,16 @@ function StockForm({ editData, onClose }: StockFormProps) {
               <FormItem className="flex flex-col">
                 <FormLabel className={ASSET_THEME.asset.strong}>수량 *</FormLabel>
                 <FormControl>
-                  <NumberInput value={field.value} onChange={field.onChange} placeholder="0" quickButtons={[]} />
+                  <NumberInput 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                    placeholder="0" 
+                    quickButtons={[]} 
+                    allowDecimals={isForeignStock}
+                    maxDecimals={isForeignStock ? 1 : undefined}
+                  />
                 </FormControl>
-                <FormDescription className="mt-1.5">주</FormDescription>
+                <FormDescription className="mt-1.5">{isForeignStock ? "소수점 1자리 가능" : "주"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -228,9 +235,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     onChange={(value) => field.onChange(value)}
                     placeholder="0"
                     quickButtons={isForeignStock ? [] : stockQuickButtons}
+                    allowDecimals={isForeignStock}
+                    maxDecimals={isForeignStock ? 1 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")}</FormDescription>
+                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 1자리 가능)"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -249,9 +258,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   onChange={(value) => field.onChange(value)}
                   placeholder="0"
                   quickButtons={isForeignStock ? [] : stockQuickButtons}
+                  allowDecimals={isForeignStock}
+                  maxDecimals={isForeignStock ? 1 : undefined}
                 />
               </FormControl>
-              <FormDescription>{form.watch("currency")}</FormDescription>
+              <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 1자리 가능)"}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -472,7 +483,7 @@ export function StockInput() {
                   주식 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
                   <DialogDescription>

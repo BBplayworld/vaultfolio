@@ -330,7 +330,7 @@ export function LoanInput() {
                   대출 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
                   <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
