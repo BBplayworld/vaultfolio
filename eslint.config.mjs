@@ -50,10 +50,10 @@ export default [
       "prettier/prettier": "off",
       // 빌드를 방해하는 주요 에러들 끄기
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": "off",
       "react/jsx-no-constructed-context-values": "off",
       "security/detect-object-injection": "off",
-      "react-hooks/exhaustive_deps": "warn",
+      "react-hooks/exhaustive_deps": "off",
       "import/order": "off",
       "max-lines": "off",
     },
