@@ -5,7 +5,7 @@ import LZString from "lz-string";
 
 // ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
 export const STORAGE_KEYS = {
-  assetData: "personal-asset-data",
+  assetData: "vaultfolio-asset-data",
   exchangeRate: "exchange-rate-usd-krw",
   defaultExchangeRate: 1380,
 } as const;
@@ -52,7 +52,7 @@ export function exportAssetData(): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `personal-asset-data-${new Date().toISOString().split("T")[0]}.json`;
+  a.download = `vaultfolio-${new Date().toISOString().split("T")[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -86,9 +86,9 @@ export function clearAssetData(): boolean {
   }
 }
 
-// ─── 공유 토큰 시스템 V6.1 (Historical Date Fix + High Precision) ────────────
+// ─── 공유 토큰 시스템 V6.2 (Collision Fix) ──────────────────────────────────
 
-const SHARED_KEY = "vlt-fl-v6.1";
+const SHARED_KEY = "vlt-fl-v6.2";
 const PIVOT_DATE = Date.UTC(2020, 0, 1); // 2020-01-01 UTC 기준
 
 const DICT = {
@@ -101,30 +101,29 @@ const DICT = {
 } as const;
 
 /**
- * [V6.1 수정 사항]
- * 1. Historical Date Fix: PIVOT_DATE(2020년) 이전의 날짜도 정상 압축 및 복구 (음수 허용)
- * 2. Fallback 제거: 파싱 시 데이터가 없으면 오늘 날짜로 덮어쓰지 않고 원본 유지 보장
- * 3. High Precision 보존: 코인 수량 등 소수점 15자리 유지
+ * [V6.2 수정 사항]
+ * 1. Suffix Conflict Fix: m, k, f 등 base-36 글자가 숫자의 일부일 때 배수로 오인되는 문제 수정 (대문자 M, K, F 사용)
+ * 2. Prefix Conflict Fix: i 접두사가 기관명 압축 시 충돌할 가능성 방지 (# 사용)
  */
 
 // 숫자 패턴 압축
 const pNum = (n: any) => {
   if (typeof n !== "number" || n === 0) return "";
   if (Number.isInteger(n)) {
-    if (n % 1000000 === 0) return (n / 1000000).toString(36) + "m";
-    if (n % 1000 === 0) return (n / 1000).toString(36) + "k";
+    if (n % 1000000 === 0) return (n / 1000000).toString(36) + "M";
+    if (n % 1000 === 0) return (n / 1000).toString(36) + "K";
     return n.toString(36);
   }
   // 소수점 보존 (지수 표기 방지하여 15자리까지)
   const floatStr = n.toFixed(15).replace(/\.?0+$/, "");
-  return "f" + floatStr;
+  return "F" + floatStr;
 };
 
 const uNum = (v: any) => {
   if (!v) return 0;
-  if (typeof v === "string" && v.startsWith("f")) return parseFloat(v.substring(1));
-  if (typeof v === "string" && v.endsWith("m")) return parseInt(v.slice(0, -1), 36) * 1000000;
-  if (typeof v === "string" && v.endsWith("k")) return parseInt(v.slice(0, -1), 36) * 1000;
+  if (typeof v === "string" && v.startsWith("F")) return parseFloat(v.substring(1));
+  if (typeof v === "string" && v.endsWith("M")) return parseInt(v.slice(0, -1), 36) * 1000000;
+  if (typeof v === "string" && v.endsWith("K")) return parseInt(v.slice(0, -1), 36) * 1000;
   return parseInt(v, 36);
 };
 
@@ -154,10 +153,10 @@ const sTxt = (s?: string) => {
   if (!s) return "";
   const clean = s.replace(/\|/g, " ").replace(/~/g, " ").replace(/\^/g, " ");
   const idx = DICT.ins.findIndex(v => clean.includes(v));
-  return idx > -1 ? `i${idx}` : clean;
+  return idx > -1 ? `#${idx}` : clean;
 };
 const uTxt = (s?: any) => {
-  if (typeof s === "string" && s.startsWith("i")) return DICT.ins[parseInt(s.substring(1))] || s;
+  if (typeof s === "string" && s.startsWith("#")) return DICT.ins[parseInt(s.substring(1))] || s;
   return s || "";
 };
 
@@ -186,7 +185,7 @@ function unpackV6(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const parts = raw.split("^");
   const gid = () => Math.random().toString(36).substring(2, 11);
   const getIdx = (idx: any, list: readonly string[]) => list[parseInt(idx)] || list[0];
-  
+
   const section = (idx: number) => (parts[idx] ? parts[idx].split("~") : []).filter(r => r !== "");
   const fields = (r: string) => r.split("|");
 
@@ -236,7 +235,7 @@ const fromSafe = (s: string) => s.replace(/\./g, '+').replace(/_/g, '/');
 export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }): string {
   try {
     const dsv = packV6(data, rates);
-    const obfuscated = dsv.split("").map((char, i) => 
+    const obfuscated = dsv.split("").map((char, i) =>
       String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY.charCodeAt(i % SHARED_KEY.length))
     ).join("");
     return toSafe(LZString.compressToBase64(obfuscated));
@@ -250,7 +249,7 @@ export function parseShareToken(token: string): { data: AssetData, rates?: { USD
   try {
     const raw = LZString.decompressFromBase64(fromSafe(token));
     if (!raw) return null;
-    const deob = raw.split("").map((char, i) => 
+    const deob = raw.split("").map((char, i) =>
       String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY.charCodeAt(i % SHARED_KEY.length))
     ).join("");
     const result = unpackV6(deob);

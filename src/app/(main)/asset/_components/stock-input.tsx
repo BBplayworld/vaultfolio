@@ -208,11 +208,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
               <FormItem className="flex flex-col">
                 <FormLabel className={ASSET_THEME.asset.strong}>수량 *</FormLabel>
                 <FormControl>
-                  <NumberInput 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    placeholder="0" 
-                    quickButtons={[]} 
+                  <NumberInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="0"
+                    quickButtons={[]}
                     allowDecimals={isForeignStock}
                     maxDecimals={isForeignStock ? 1 : undefined}
                   />
@@ -506,7 +506,47 @@ export function StockInput() {
               <TabsTrigger value="pension">연금</TabsTrigger>
               <TabsTrigger value="unlisted">비상장</TabsTrigger>
             </TabsList>
-            <TabsContent value="all">{renderStockList(assetData.stocks)}</TabsContent>
+            <TabsContent value="all">
+              {(() => {
+                if (assetData.stocks.length === 0) return renderStockList([]);
+
+                // 카테고리 순서대로 정렬 데이터 생성
+                const sortedStocks = [...assetData.stocks].sort((a, b) => {
+                  const catA = stockCategories.findIndex((c) => c.value === a.category);
+                  const catB = stockCategories.findIndex((c) => c.value === b.category);
+                  if (catA !== catB) return catA - catB;
+                  if (a.name !== b.name) return a.name.localeCompare(b.name);
+                  return (a.ticker || "").localeCompare(b.ticker || "");
+                });
+
+                // 카테고리별로 그룹화
+                const grouped = sortedStocks.reduce(
+                  (acc, stock) => {
+                    if (!acc[stock.category]) acc[stock.category] = [];
+                    acc[stock.category].push(stock);
+                    return acc;
+                  },
+                  {} as Record<string, Stock[]>,
+                );
+
+                return (
+                  <div className="space-y-8">
+                    {stockCategories
+                      .filter((cat) => grouped[cat.value])
+                      .map((cat) => (
+                        <div key={cat.value} className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-muted-foreground">{cat.label}</h3>
+                            <div className="h-px flex-1 bg-border" />
+                            <span className="text-xs text-muted-foreground">{grouped[cat.value].length}개 항목</span>
+                          </div>
+                          {renderStockList(grouped[cat.value])}
+                        </div>
+                      ))}
+                  </div>
+                );
+              })()}
+            </TabsContent>
             <TabsContent value="domestic">{renderStockList(getStocksByCategory("domestic"))}</TabsContent>
             <TabsContent value="foreign">{renderStockList(getStocksByCategory("foreign"))}</TabsContent>
             <TabsContent value="irp">{renderStockList(getStocksByCategory("irp"))}</TabsContent>
