@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { AssetDataProvider } from "@/contexts/asset-data-context";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
-import { CustomSidebarTrigger } from "./_components/sidebar/custom-sidebar-trigger";
 import { NavUser } from "./_components/sidebar/nav-user";
 import { rootUser } from "@/config/users";
 
@@ -32,8 +31,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           data-content-layout={contentLayout}
           className={cn(
             "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-screen-2xl",
-            // Adds right margin for inset sidebar in centered layout up to 113rem.
-            // On wider screens with collapsed sidebar, removes margin and sets margin auto for alignment.
             "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
           )}
         >
@@ -41,14 +38,12 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             data-navbar-style={navbarStyle}
             className={cn(
               "flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 relative z-50",
-              // Handle sticky navbar style with conditional classes so blur, background, z-index, and rounded corners remain consistent across all SidebarVariant layouts.
               "data-[navbar-style=sticky]:bg-background/50 data-[navbar-style=sticky]:sticky data-[navbar-style=sticky]:top-0 data-[navbar-style=sticky]:overflow-hidden data-[navbar-style=sticky]:rounded-t-[inherit] data-[navbar-style=sticky]:backdrop-blur-md",
               "bg-background/95 backdrop-blur-sm",
             )}
           >
             <div className="flex w-full items-center justify-between px-4 lg:px-6">
               <div className="flex items-center gap-1 lg:gap-2">
-                <CustomSidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
               </div>
               <div className="flex items-center gap-2">

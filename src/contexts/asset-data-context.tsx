@@ -4,6 +4,18 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
 import { getAssetData, saveAssetData, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { Lock, Share2 } from "lucide-react";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -51,6 +63,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [assetData, setAssetData] = useState<AssetData>(STATIC_DEFAULT_ASSET_DATA);
   const [isLoading, setIsLoading] = useState(true);
   const [exchangeRates, setExchangeRatesState] = useState<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
+  
+  // PIN 인증을 위한 상태
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
+  const [inputPin, setInputPin] = useState("");
 
   const updateExchangeRate = useCallback((currency: "USD" | "JPY", rate: number) => {
     setExchangeRatesState(prev => {
@@ -81,11 +98,21 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const handleHashShare = () => {
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
-      const shareToken = params.get("share");
+      const shareTokenRaw = params.get("share");
 
-      if (shareToken) {
+      if (shareTokenRaw) {
+        // URLSearchParams는 '+'를 공백으로 변환하므로 복구
+        const shareToken = shareTokenRaw.replace(/ /g, "+");
         const result = parseShareToken(shareToken);
-        if (result) {
+        
+        if (result && "pinRequired" in result) {
+          // PIN이 필요한 경우
+          setPendingToken(shareToken);
+          setShowPinPrompt(true);
+          return;
+        }
+
+        if (result && "data" in result) {
           saveAssetData(result.data);
           setAssetData(result.data);
 
@@ -412,6 +439,32 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [refreshData]);
 
+  const handlePinConfirm = () => {
+    if (!pendingToken) return;
+    if (inputPin.length !== 4) {
+      toast.error("PIN 번호는 4자리여야 합니다.");
+      return;
+    }
+
+    const result = parseShareToken(pendingToken, inputPin);
+    if (result && "data" in result) {
+      saveAssetData(result.data);
+      setAssetData(result.data);
+      if (result.rates) {
+        updateExchangeRate("USD", result.rates.USD);
+        updateExchangeRate("JPY", result.rates.JPY);
+      }
+      toast.success("공유된 자산 데이터를 불러왔습니다.");
+      setShowPinPrompt(false);
+      setPendingToken(null);
+      setInputPin("");
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } else {
+      toast.error("PIN 번호가 일치하지 않습니다.");
+      setInputPin("");
+    }
+  };
+
   return (
     <AssetDataContext.Provider
       value={{
@@ -443,6 +496,54 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+
+      <Dialog open={showPinPrompt} onOpenChange={setShowPinPrompt}>
+        <DialogContent className="sm:max-w-md touch-pan-y">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-5 text-primary" />
+              보안된 데이터 접근
+            </DialogTitle>
+            <DialogDescription>
+              이 데이터는 PIN 번호로 보호되어 있습니다.<br />
+              액세스하려면 4자리 PIN을 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center space-y-4 py-4">
+            <div className="flex flex-col items-center gap-3 space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <Lock className="size-3.5 text-primary" />
+                PIN 번호 입력 (4자리 숫자)
+              </Label>
+              <InputOTP
+                maxLength={4}
+                value={inputPin}
+                onChange={(value) => setInputPin(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button variant="outline" onClick={() => {
+              setShowPinPrompt(false);
+              setPendingToken(null);
+              setInputPin("");
+              window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            }}>
+              취소
+            </Button>
+            <Button onClick={handlePinConfirm} type="button">
+              데이터 불러오기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AssetDataContext.Provider>
   );
 }

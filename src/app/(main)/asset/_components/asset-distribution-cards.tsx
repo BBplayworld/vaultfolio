@@ -165,20 +165,20 @@ export function AssetDistributionCards() {
     .filter((item) => item.balance > 0);
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs lg:grid-cols-2">
-      <Card className="bg-primary/20 lg:bg-primary/10 border-primary/20 lg:border-border">
-        <CardHeader>
+    <div className="flex flex-col w-full gap-4 lg:grid lg:grid-cols-2">
+      <Card className="bg-primary/20 lg:bg-primary/10 border-primary/20 lg:border-border h-fit">
+        <CardHeader className="pb-2">
           <CardTitle className={`${ASSET_THEME.primary.text}`}>자산 분포</CardTitle>
           <CardDescription>자산 및 부채 분포 현황</CardDescription>
         </CardHeader>
-        <CardContent className="pb-2">
+        <CardContent className="pb-0 overflow-hidden">
           {assetDistributionData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
+            <div className="flex h-48 items-center justify-center text-muted-foreground">
               <p>등록된 자산이 없습니다.</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-4 w-full">
-              <ChartContainer config={assetDistributionChartConfig} className="mx-auto aspect-square w-full max-w-[320px]">
+            <div className="flex flex-col items-center w-full">
+              <ChartContainer config={assetDistributionChartConfig} className="mx-auto aspect-square w-full max-w-[300px] h-auto">
                 <PieChart>
                   <ChartTooltip
                     cursor={false}
@@ -198,8 +198,8 @@ export function AssetDistributionCards() {
                     data={assetDistributionData}
                     dataKey="value"
                     nameKey="category"
-                    innerRadius="50%"
-                    outerRadius="90%"
+                    innerRadius="48%"
+                    outerRadius="85%"
                     paddingAngle={2}
                     cornerRadius={4}
                   >
@@ -213,22 +213,22 @@ export function AssetDistributionCards() {
                             <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) - 14}
-                                className={`text-xl font-bold tabular-nums sm:text-2xl lg:text-2xl ${ASSET_THEME.asset.strong}`}
+                                y={(viewBox.cy ?? 0) - 12}
+                                className={`text-xl font-bold tabular-nums sm:text-2xl ${ASSET_THEME.asset.strong}`}
                               >
                                 {shortValue}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
                                 y={(viewBox.cy ?? 0) + 10}
-                                className="fill-foreground text-[10px] sm:text-xs"
+                                className="fill-foreground text-[10px]"
                               >
                                 {fullValue}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) + 28}
-                                className="fill-muted-foreground text-xs sm:text-sm"
+                                y={(viewBox.cy ?? 0) + 26}
+                                className="fill-muted-foreground text-xs"
                               >
                                 순자산
                               </tspan>
@@ -242,14 +242,14 @@ export function AssetDistributionCards() {
               </ChartContainer>
 
               {/* 범례를 차트 하단으로 이동 - 테이블 형태로 변경 */}
-              <div className="w-full flex justify-center">
-                <table className="border-separate border-spacing-y-2">
+              <div className="w-full pb-4">
+                <table className="w-full border-separate border-spacing-y-1.5">
                   <tbody>
                     {/* 자산 섹션 */}
                     {assetDistributionData.some(item => item.type === "asset") && (
-                      <tr className="flex flex-col sm:table-row pb-4">
-                        <td className="text-sm font-semibold text-muted-foreground pr-3 align-top py-1">자산</td>
-                        <td className="py-1">
+                      <tr className="flex flex-col sm:table-row">
+                        <td className="text-xs font-semibold text-muted-foreground pr-2 align-top py-0.5">자산</td>
+                        <td className="py-0.5">
                           <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-x-6">
                             {assetDistributionData
                               .filter(item => item.type === "asset")
@@ -541,6 +541,6 @@ export function AssetDistributionCards() {
         </CardFooter>
       </Card>
 
-    </div >
+    </div>
   );
 }

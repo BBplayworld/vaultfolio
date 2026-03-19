@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, MoreVertical, Share2 } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, CircleChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { Lock, Unlock } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -55,6 +58,8 @@ export function NavUser({
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [sharePin, setSharePin] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -66,22 +71,33 @@ export function NavUser({
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    setSharePin("");
+    setShowShareDialog(true);
+  };
+
+  const confirmShare = async () => {
     try {
       if (!assetData) return;
 
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates);
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${token}`;
+      if (sharePin && sharePin.length !== 4) {
+        toast.error("PIN 번호는 4자리여야 합니다.");
+        return;
+      }
+
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
       await navigator.clipboard.writeText(shareUrl);
 
       const length = token.length;
       if (length <= 200) {
-        toast.success("최적화된 공유 URL이 복사되었습니다. (200자 이내)");
+        toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
       } else {
         toast.success("공유 URL이 복사되었습니다.");
         toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
       }
+      setShowShareDialog(false);
     } catch (error) {
       toast.error("URL 공유 준비에 실패했습니다.");
     }
@@ -282,23 +298,18 @@ ${loanList || '  - 등록된 대출 없음'}
 
   return (
     <>
-      <SidebarMenu>
+      <SidebarMenu className="rounded-md transition-colors shadow-sm overflow-hidden">
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                className="h-9 px-2 text-white hover:text-white transition-colors border-none bg-zinc-800 hover:bg-zinc-700 data-[state=open]:bg-zinc-700 dark:bg-rose-500 dark:hover:bg-rose-600 dark:data-[state=open]:bg-rose-600"
               >
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+                <div className="grid flex-1 text-left text-xs leading-tight ml-1">
+                  <span className="truncate font-bold tracking-tighter uppercase text-[11px]">데이터 및 설정 관리</span>
                 </div>
-                <MoreVertical className="ml-auto size-4" />
+                <CircleChevronDown className="ml-auto size-3.5 opacity-70" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -314,8 +325,7 @@ ${loanList || '  - 등록된 대출 없음'}
                     <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+                    <span className="truncate font-medium">데이터 및 설정 관리</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -335,11 +345,14 @@ ${loanList || '  - 등록된 대출 없음'}
                 <Share2 className="size-4" />
                 공유 URL 복사
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive focus:text-destructive py-2" onClick={() => setShowClearDialog(true)} >
+              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2" onClick={() => setShowClearDialog(true)} >
                 <Trash2 className="size-4" />
                 모든 데이터 삭제
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <div className="px-2 py-2">
+                <p className="text-xs font-medium text-muted-foreground">기능</p>
+              </div>
               <DropdownMenuItem className="text-primary focus:text-primary py-2" onClick={() => setShowAIPromptDialog(true)} >
                 <Sparkles className="size-4" />
                 <span className="flex-1">AI 평가용 자산 현황</span>
@@ -414,6 +427,53 @@ ${loanList || '  - 등록된 대출 없음'}
                   프롬프트 복사
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md touch-pan-y">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-5 text-primary" />
+              자산 데이터 공유
+            </DialogTitle>
+            <DialogDescription>
+              암호화된 토큰을 생성하여 다른 브라우저와 데이터를 공유합니다.<br />
+              <span className="font-semibold text-rose-500">선택사항:</span> 민감한 정보 보호를 위해 4자리 PIN을 설정할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center space-y-4 py-4">
+            <div className="flex flex-col items-center gap-3 space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                {sharePin ? <Lock className="size-3.5 text-primary" /> : <Unlock className="size-3.5 text-muted-foreground" />}
+                비밀번호 (4자리 숫자)
+              </Label>
+              <InputOTP
+                maxLength={4}
+                value={sharePin}
+                onChange={(value) => setSharePin(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+              </InputOTP>
+              <p className="text-[11px] text-muted-foreground">
+                설정하지 않으려면 비워두세요.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={confirmShare} type="button">
+              <Copy className="mr-2 size-4" />
+              공유 URL 복사
             </Button>
           </DialogFooter>
         </DialogContent>
