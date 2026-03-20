@@ -4,20 +4,26 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, BadgeDollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { syncFinanceData } from "@/lib/finance-service";
+import { useState } from "react";
+import { toast } from "sonner";
+import { saveAssetData } from "@/lib/asset-storage";
 
 export function ExchangeRateInput() {
-    const { exchangeRates, updateExchangeRate } = useAssetData();
-
+    const { assetData, exchangeRates, updateExchangeRate, saveData } = useAssetData();
     return (
         <Card className="bg-muted/30 border-dashed">
             <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2 mr-4">
                     <div className="bg-primary/10 p-2 rounded-full">
-                        <RefreshCcw className="size-4 text-primary" />
+                        <BadgeDollarSign className={"size-4 text-primary"} />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold">환율 설정</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold">환율 설정</h3>
+                        </div>
                         <p className="text-xs text-muted-foreground">외화 자산의 원화 환산 기준</p>
                     </div>
                 </div>
@@ -52,6 +58,11 @@ export function ExchangeRateInput() {
                             <span className="text-sm text-muted-foreground">원</span>
                         </div>
                     </div>
+                </div>
+                <div className="flex justify-end px-1">
+                    <span className="text-xs font-bold text-rose-500 bg-rose-500/5 px-2 py-1 rounded border border-rose-500/20">
+                        환율 기준일: {new Date().toLocaleDateString("ko-KR", { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
                 </div>
             </CardContent>
         </Card>

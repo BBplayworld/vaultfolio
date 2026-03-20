@@ -11,7 +11,7 @@ import { CashInput } from "./_components/cash-input";
 import { LoanInput } from "./_components/loan-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles } from "lucide-react";
+import { Info, Database, Sparkles, Activity } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Page() {
@@ -27,7 +27,7 @@ export default function Page() {
             <AlertTitle className="text-base font-semibold text-primary mb-2">
               개인 자산 관리 시스템
             </AlertTitle>
-            <AlertDescription className="space-y-1.5 text-sm">
+            <AlertDescription className="space-y-1.5 text-xs sm:text-sm">
               <div className="flex items-start gap-2">
                 <Database className="size-4 text-primary flex-shrink-0 mt-0.5" />
                 <span className="text-foreground">
@@ -39,6 +39,13 @@ export default function Page() {
                 <Sparkles className="size-4 text-primary flex-shrink-0 mt-0.5" />
                 <span className="text-foreground">
                   상단 <span className="font-medium text-rose-500">데이터 및 설정 관리 메뉴</span>를 통해 데이터 가져오기/내보내기/공유하기 및 AI 평가용 자산 현황 정리 기능을 이용하실 수 있습니다.
+                  <br />
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Activity className="size-4 text-primary flex-shrink-0 mt-0.5" />
+                <span className="text-foreground">
+                  <span className="font-medium text-rose-500">환율, 주식 현재가</span>는 하루 단위로 자동 갱신 및 캐싱됩니다.
                 </span>
               </div>
             </AlertDescription>
@@ -49,7 +56,9 @@ export default function Page() {
       <div className="flex flex-col gap-4 md:gap-6 w-full">
         <AssetOverviewCards />
         <AssetDistributionCards />
-        <ExchangeRateInput />
+        <div className="flex flex-col gap-2">
+          <ExchangeRateInput />
+        </div>
         <YearlyNetAssetChart />
       </div>
 
@@ -77,6 +86,6 @@ export default function Page() {
           <LoanInput />
         </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 }

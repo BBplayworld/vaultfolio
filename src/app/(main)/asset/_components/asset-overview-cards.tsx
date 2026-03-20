@@ -29,7 +29,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>부동산</CardTitle>
@@ -46,7 +46,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>주식</CardTitle>
@@ -63,7 +63,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>암호화폐</CardTitle>
@@ -80,7 +80,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>현금</CardTitle>
@@ -97,7 +97,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>대출</CardTitle>
@@ -118,7 +118,7 @@ export function AssetOverviewCards() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="hidden sm:block">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>임차인 보증금</CardTitle>

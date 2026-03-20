@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { normalizeTicker } from "@/lib/finance-service";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +62,7 @@ interface StockFormProps {
 function StockForm({ editData, onClose }: StockFormProps) {
   const { addStock, updateStock } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Stock["category"]>(editData?.category || "domestic");
 
   const form = useForm<Stock>({
@@ -146,6 +148,115 @@ function StockForm({ editData, onClose }: StockFormProps) {
           )}
         />
 
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="ticker"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>티커 (종목코드) *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        placeholder={selectedCategory === "foreign" ? "예: AAPL" : "예: 005930"}
+                        maxLength={selectedCategory === "foreign" ? 5 : 6}
+                        {...field}
+                        onChange={(e) => {
+                          const val = selectedCategory === "foreign"
+                            ? e.target.value.toUpperCase().replace(/[^A-Z]/g, "")
+                            : e.target.value;
+                          field.onChange(val);
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          {!editData && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 px-3"
+              disabled={isFetchingPrice}
+              onClick={async () => {
+                // 500 에러 횟수 체크
+                const errorCount = parseInt(localStorage.getItem("finance_api_error_count") || "0");
+                if (errorCount >= 3) {
+                  toast.error("연속된 서버 오류로 조회가 비활성화되었습니다. 직접 입력해 주세요.");
+                  return;
+                }
+
+                const ticker = form.getValues("ticker");
+                const category = form.getValues("category");
+                const normalized = normalizeTicker({ ticker, category });
+
+                if (!normalized) {
+                  toast.error("올바른 티커 형식을 입력해주세요.");
+                  return;
+                }
+
+                setIsFetchingPrice(true);
+                try {
+                  const res = await fetch(`/api/finance?type=stock&tickers=${normalized}`);
+
+                  if (res.status === 500) {
+                    const newCount = errorCount + 1;
+                    localStorage.setItem("finance_api_error_count", newCount.toString());
+                    toast.error(`서버 오류 발생 (${newCount}/3)`);
+                    return;
+                  }
+
+                  // 성공 시 에러 카운트 초기화
+                  localStorage.removeItem("finance_api_error_count");
+
+                  const data = await res.json();
+
+                  if (data && data[normalized]) {
+                    form.setValue("currentPrice", data[normalized].price);
+                    // 해외주식: API 반환 name 그대로 사용
+                    // 국내 등: 종목코드·심볼 형식("005930", "005930.KS")이면 무시
+                    const fetchedName = data[normalized].name || "";
+                    const isForeign = form.getValues("category") === "foreign";
+                    const isCodeLike = /^\d{6}/.test(fetchedName) || /\.\w{2,}$/.test(fetchedName);
+                    if (fetchedName && (isForeign || !isCodeLike)) {
+                      form.setValue("name", fetchedName);
+                    }
+                    if (data[normalized].updated_at) {
+                      form.setValue("baseDate", data[normalized].updated_at);
+                    }
+                    toast.success("주식 정보를 성공적으로 가져왔습니다.");
+                  } else if (data.error) {
+                    toast.error(data.error);
+                  } else {
+                    toast.error("주식 정보를 찾을 수 없습니다.");
+                  }
+                } catch (e) {
+                  toast.error("조회 중 오류가 발생했습니다.");
+                } finally {
+                  setIsFetchingPrice(false);
+                }
+              }}
+            >
+              {isFetchingPrice ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+              <span className="ml-2 hidden sm:inline">조회</span>
+            </Button>
+          )}
+        </div>
+
+        <FormDescription className="text-[11px] leading-relaxed -mt-2">
+          {selectedCategory === "foreign" ? (
+            <><span className="text-primary/70">미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA)</span></>
+          ) : (
+            <>
+              <span className="text-primary/70">국내 주식은 6자리 숫자를 입력하세요. (예: 삼성전자 005930)</span>
+            </>
+          )}
+        </FormDescription>
+
         <FormField
           control={form.control}
           name="name"
@@ -155,21 +266,6 @@ function StockForm({ editData, onClose }: StockFormProps) {
               <FormControl>
                 <Input placeholder="예: 삼성전자" {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="ticker"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>티커</FormLabel>
-              <FormControl>
-                <Input placeholder="예: 005930" {...field} />
-              </FormControl>
-              <FormDescription>종목코드 또는 티커 심볼</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -310,9 +406,10 @@ function StockForm({ editData, onClose }: StockFormProps) {
 }
 
 export function StockInput() {
-  const { assetData, deleteStock, exchangeRates } = useAssetData();
+  const { assetData, deleteStock, exchangeRates, exchangeRateDate } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
+  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -352,7 +449,17 @@ export function StockInput() {
   };
 
   const getStocksByCategory = (category: string) => {
-    return assetData.stocks.filter((stock) => stock.category === category);
+    let stocks = assetData.stocks;
+    if (category !== "all") {
+      stocks = stocks.filter((stock) => stock.category === category);
+    }
+
+    // 평가금액(현재가 * 수량 * 환율) 순으로 내림차순 정렬
+    return [...stocks].sort((a, b) => {
+      const valA = a.quantity * a.currentPrice * getMultiplier(a.currency);
+      const valB = b.quantity * b.currentPrice * getMultiplier(b.currency);
+      return valB - valA;
+    });
   };
 
   const renderStockList = (stocks: Stock[]) => {
@@ -394,6 +501,9 @@ export function StockInput() {
                     </span>
                     <h3 className="font-semibold">{item.name}</h3>
                     {item.ticker && <span className="text-muted-foreground text-xs">({item.ticker})</span>}
+                    {item.baseDate === todayStr && (
+                      <span>&nbsp;&nbsp;<span className="text-xs font-bold text-rose-500 bg-rose-500/5 px-2 py-1 rounded border border-rose-500/20">조회 기준일: {item.baseDate}</span></span>
+                    )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
@@ -410,7 +520,7 @@ export function StockInput() {
                   <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
                     <div className="flex justify-between gap-2 sm:block">
                       <span className={`text-muted-foreground whitespace-nowrap`}>평균단가:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>
+                      <span className={`font-medium text-right sm:text-left`}>
                         {formatCurrencyDisplay(item.averagePrice, item.currency)}
                         {isForeign && (
                           <span className="text-muted-foreground text-xs ml-1">
@@ -421,7 +531,7 @@ export function StockInput() {
                     </div>
                     <div className="flex justify-between gap-2 sm:block">
                       <span className="text-muted-foreground whitespace-nowrap">현재가:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left`}>
+                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>
                         {formatCurrencyDisplay(item.currentPrice, item.currency)}
                         {isForeign && (
                           <span className="text-muted-foreground text-xs ml-1">
@@ -436,7 +546,7 @@ export function StockInput() {
                     </div>
                     <div className="flex justify-between gap-2 sm:block">
                       <span className="text-muted-foreground whitespace-nowrap">평가금액:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(currentValueInKRW)}</span>
+                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(currentValueInCurrency, item.currency)} ({formatCurrencyDisplay(currentValueInKRW)})</span>
                     </div>
                     <div className="flex justify-between gap-2 sm:block">
                       <span className="text-muted-foreground whitespace-nowrap">평가손익:</span>{" "}
@@ -469,10 +579,12 @@ export function StockInput() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="size-5" />
-                <CardTitle>주식 자산</CardTitle>
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="size-5" />
+                  <CardTitle>주식 자산</CardTitle>
+                </div>
               </div>
               <CardDescription>보유하고 있는 주식 자산을 관리합니다.</CardDescription>
             </div>
@@ -510,13 +622,14 @@ export function StockInput() {
               {(() => {
                 if (assetData.stocks.length === 0) return renderStockList([]);
 
-                // 카테고리 순서대로 정렬 데이터 생성
+                // 평가금액(현재가 * 수량 * 환율) 순으로 내림차순 정렬
                 const sortedStocks = [...assetData.stocks].sort((a, b) => {
-                  const catA = stockCategories.findIndex((c) => c.value === a.category);
-                  const catB = stockCategories.findIndex((c) => c.value === b.category);
-                  if (catA !== catB) return catA - catB;
-                  if (a.name !== b.name) return a.name.localeCompare(b.name);
-                  return (a.ticker || "").localeCompare(b.ticker || "");
+                  const valA = a.quantity * a.currentPrice * getMultiplier(a.currency);
+                  const valB = b.quantity * b.currentPrice * getMultiplier(b.currency);
+                  if (Math.abs(valA - valB) > 0.01) return valB - valA;
+
+                  // 금액이 같으면 이름순
+                  return a.name.localeCompare(b.name);
                 });
 
                 // 카테고리별로 그룹화

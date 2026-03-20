@@ -26,6 +26,49 @@ export const stockSchema = z.object({
   currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),
   purchaseDate: z.string().min(1, "매수일을 선택해주세요"),
   description: z.string().optional(),
+  baseDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.category === "domestic" || data.category === "foreign") {
+    const ticker = data.ticker?.trim() || "";
+    
+    if (ticker === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "국내 및 해외주식은 티커(종목코드) 입력이 필수입니다.",
+        path: ["ticker"],
+      });
+      return;
+    }
+
+    if (data.category === "domestic") {
+      // 국내 주식: 정확히 6자리 숫자 (또는 코스닥 접미사 :XKOS, :XKRX 포함)
+      const domesticRegex = /^\d{6}(:XKRX|:XKOS)?$/;
+      if (!domesticRegex.test(ticker)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "국내 주식은 6자리 숫자 코드로 입력해야 합니다. (예: 005930)",
+          path: ["ticker"],
+        });
+      }
+    } else if (data.category === "foreign") {
+      // 해외 주식: 영문 대문자와 숫자, 점(.)만 허용, 1~10자
+      const foreignRegex = /^[A-Z0-9.]+$/;
+      if (!foreignRegex.test(ticker.toUpperCase())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "해외 주식 티커는 영문 대문자와 숫자만 가능합니다. (예: AAPL, PLTR)",
+          path: ["ticker"],
+        });
+      }
+      if (ticker.length > 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "해외 티커는 10자 이하로 입력해 주세요.",
+          path: ["ticker"],
+        });
+      }
+    }
+  }
 });
 
 // 코인 자산 스키마

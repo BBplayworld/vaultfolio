@@ -1,9 +1,8 @@
 "use client";
 
-import { Label, Pie, PieChart } from "recharts";
-import { ChevronRight } from "lucide-react";
+import { Building2, TrendingUp, Bitcoin, Banknote, CreditCard, Wallet, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { ChartConfig } from "@/components/ui/chart";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
@@ -35,6 +34,24 @@ const assetDistributionChartConfig = {
     color: ASSET_THEME.liability.chart,
   },
 } as ChartConfig;
+
+const CATEGORY_COLORS: Record<string, string> = {
+  realEstate: "#0d9488",   // teal-600
+  stocks: "#2563eb",   // blue-600
+  crypto: "#7c3aed",   // violet-600
+  cash: "#16a34a",   // green-600
+  loans: "#e11d48",   // rose-600
+  tenantDeposit: "#db2777", // pink-600
+};
+
+const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
+  realEstate: Building2,
+  stocks: TrendingUp,
+  crypto: Bitcoin,
+  cash: Banknote,
+  loans: CreditCard,
+  tenantDeposit: Wallet,
+};
 
 const loanTypeChartConfig = {
   balance: {
@@ -171,128 +188,158 @@ export function AssetDistributionCards() {
           <CardTitle className={`${ASSET_THEME.primary.text}`}>자산 분포</CardTitle>
           <CardDescription>자산 및 부채 분포 현황</CardDescription>
         </CardHeader>
-        <CardContent className="pb-0 overflow-hidden">
+        <CardContent className="pb-2 overflow-hidden">
           {assetDistributionData.length === 0 ? (
             <div className="flex h-48 items-center justify-center text-muted-foreground">
               <p>등록된 자산이 없습니다.</p>
             </div>
-          ) : (
-            <div className="flex flex-col items-center w-full">
-              <ChartContainer config={assetDistributionChartConfig} className="mx-auto aspect-square w-full max-w-[300px] h-auto">
-                <PieChart>
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        hideLabel={false}
-                        formatter={(value, name, item) => {
-                          const dataItem = item.payload;
-                          const labelName = assetDistributionChartConfig[dataItem.category as string]?.label || name;
-                          const prefix = dataItem?.type === "liability" ? "-" : "";
-                          return [labelName, ' :　', `${prefix}${formatCurrency(value as number)}원`];
-                        }}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={assetDistributionData}
-                    dataKey="value"
-                    nameKey="category"
-                    innerRadius="48%"
-                    outerRadius="85%"
-                    paddingAngle={2}
-                    cornerRadius={4}
-                  >
-                    <Label
-                      content={({ viewBox }) => {
-                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                          const shortValue = formatShortCurrency(summary.netAsset);
-                          const fullValue = formatCurrency(summary.netAsset);
+          ) : (() => {
+            const assetItems = assetDistributionData.filter(d => d.type === "asset");
+            const liabilityItems = assetDistributionData.filter(d => d.type === "liability");
+            const totalAsset = assetItems.reduce((s, d) => s + d.value, 0);
+            const totalLiability = liabilityItems.reduce((s, d) => s + d.value, 0);
+            const grossTotal = totalAsset + totalLiability;
 
-                          return (
-                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) - 12}
-                                className={`text-xl font-bold tabular-nums sm:text-2xl ${ASSET_THEME.asset.strong}`}
-                              >
-                                {shortValue}
-                              </tspan>
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) + 10}
-                                className="fill-foreground text-[10px]"
-                              >
-                                {fullValue}
-                              </tspan>
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy ?? 0) + 26}
-                                className="fill-muted-foreground text-xs"
-                              >
-                                순자산
-                              </tspan>
-                            </text>
-                          );
-                        }
-                      }}
-                    />
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
+            return (
+              <div className="space-y-5 pb-2">
+                {/* 순자산 요약 */}
+                <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">순자산</p>
+                    <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                      {formatShortCurrency(summary.netAsset)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">{formatCurrency(summary.netAsset)}</p>
+                  </div>
+                  <div className="text-right space-y-1.5">
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">총 자산 </span>
+                      <span className={`font-bold ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(totalAsset)}</span>
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">총 부채 </span>
+                      <span className={`font-bold ${ASSET_THEME.liability.strong}`}>-{formatShortCurrency(totalLiability)}</span>
+                    </div>
+                  </div>
+                </div>
 
-              {/* 범례를 차트 하단으로 이동 - 테이블 형태로 변경 */}
-              <div className="w-full pb-4">
-                <table className="w-full border-separate border-spacing-y-1.5">
-                  <tbody>
-                    {/* 자산 섹션 */}
-                    {assetDistributionData.some(item => item.type === "asset") && (
-                      <tr className="flex flex-col sm:table-row">
-                        <td className="text-xs font-semibold text-muted-foreground pr-2 align-top py-0.5">자산</td>
-                        <td className="py-0.5">
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-x-6">
-                            {assetDistributionData
-                              .filter(item => item.type === "asset")
-                              .map((item) => (
-                                <div key={item.category} className="flex items-center gap-2">
-                                  <span className="size-3 rounded-full flex-shrink-0" style={{ background: item.fill }} />
-                                  <span className={`text-xs sm:text-sm truncate max-w-[120px] ${ASSET_THEME.primary.text}`}>{assetDistributionChartConfig[item.category]?.label || ''}</span>
-                                  <span className={`text-xs font-bold tabular-nums sm:text-sm`}>
-                                    {formatShortCurrency(item.value)}
-                                  </span>
-                                </div>
-                              ))}
-                          </div>
-                        </td>
-                      </tr>
+                {/* 자산 vs 부채 전체 비율 바 */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-muted-foreground">자산 / 부채 비율</p>
+                  <div className="flex h-5 w-full rounded-full overflow-hidden gap-px">
+                    <div
+                      className="flex items-center justify-center transition-all"
+                      style={{ width: `${(totalAsset / grossTotal) * 100}%`, backgroundColor: "#0d9488" }}
+                      title={`자산 ${((totalAsset / grossTotal) * 100).toFixed(1)}%`}
+                    >
+                      <span className="text-white text-[10px] font-bold drop-shadow select-none">
+                        {((totalAsset / grossTotal) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {totalLiability > 0 && (
+                      <div
+                        className="flex items-center justify-center transition-all"
+                        style={{ width: `${(totalLiability / grossTotal) * 100}%`, backgroundColor: "#e11d48" }}
+                        title={`부채 ${((totalLiability / grossTotal) * 100).toFixed(1)}%`}
+                      >
+                        <span className="text-white text-[10px] font-bold drop-shadow select-none">
+                          {((totalLiability / grossTotal) * 100).toFixed(0)}%
+                        </span>
+                      </div>
                     )}
+                  </div>
+                </div>
 
-                    {/* 부채 섹션 */}
-                    {assetDistributionData.some(item => item.type === "liability") && (
-                      <tr className="flex flex-col sm:table-row">
-                        <td className="text-sm font-semibold text-muted-foreground pr-3 align-top py-1">부채</td>
-                        <td className="py-1">
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-x-6">
-                            {assetDistributionData
-                              .filter(item => item.type === "liability")
-                              .map((item) => (
-                                <div key={item.category} className="flex items-center gap-2">
-                                  <span className="size-3 rounded-full flex-shrink-0" style={{ background: item.fill }} />
-                                  <span className={`text-xs sm:text-sm truncate max-w-[120px] ${ASSET_THEME.primary.text}`}>{assetDistributionChartConfig[item.category]?.label || ''}</span>
-                                  <span className={`text-xs font-bold tabular-nums sm:text-sm ${ASSET_THEME.liability.strong}`}>
-                                    -{formatShortCurrency(item.value)}
-                                  </span>
-                                </div>
-                              ))}
+                {/* 자산 구성 바 */}
+                {assetItems.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-muted-foreground">자산 구성</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(totalAsset)}</span>
+                    </div>
+                    <div className="flex h-10 w-full rounded-xl overflow-hidden gap-px">
+                      {assetItems.map(item => {
+                        const pct = (item.value / totalAsset) * 100;
+                        return (
+                          <div
+                            key={item.category}
+                            className="relative flex items-center justify-center overflow-hidden cursor-default hover:opacity-85 transition-opacity"
+                            style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[item.category] }}
+                            title={`${assetDistributionChartConfig[item.category]?.label}: ${formatShortCurrency(item.value)} (${pct.toFixed(1)}%)`}
+                          >
+                            {pct > 10 && (
+                              <span className="text-white text-[10px] font-bold drop-shadow select-none px-1 truncate">
+                                {pct.toFixed(0)}%
+                              </span>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                      {assetItems.map(item => {
+                        const pct = (item.value / totalAsset) * 100;
+                        const Icon = CATEGORY_ICON_MAP[item.category];
+                        return (
+                          <div key={item.category} className="flex items-center gap-1">
+                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
+                            {Icon && <Icon className="size-3 text-muted-foreground flex-shrink-0" />}
+                            <span className="text-xs text-muted-foreground">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>{pct.toFixed(1)}%</span>
+                            <span className="text-xs text-foreground tabular-nums">({formatShortCurrency(item.value)})</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 부채 구성 바 */}
+                {liabilityItems.length > 0 && totalLiability > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-muted-foreground">부채 구성</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>-{formatShortCurrency(totalLiability)}</span>
+                    </div>
+                    <div className="flex h-10 w-full rounded-xl overflow-hidden gap-px">
+                      {liabilityItems.map(item => {
+                        const pct = (item.value / totalLiability) * 100;
+                        return (
+                          <div
+                            key={item.category}
+                            className="relative flex items-center justify-center overflow-hidden cursor-default hover:opacity-85 transition-opacity"
+                            style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[item.category] }}
+                            title={`${assetDistributionChartConfig[item.category]?.label}: ${formatShortCurrency(item.value)} (${pct.toFixed(1)}%)`}
+                          >
+                            {pct > 10 && (
+                              <span className="text-white text-[10px] font-bold drop-shadow select-none px-1 truncate">
+                                {pct.toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                      {liabilityItems.map(item => {
+                        const pct = (item.value / totalLiability) * 100;
+                        const Icon = CATEGORY_ICON_MAP[item.category];
+                        return (
+                          <div key={item.category} className="flex items-center gap-1">
+                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
+                            {Icon && <Icon className="size-3 text-muted-foreground flex-shrink-0" />}
+                            <span className="text-xs text-muted-foreground">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>{pct.toFixed(1)}%</span>
+                            <span className="text-xs text-foreground tabular-nums">({formatShortCurrency(item.value)})</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
         <CardFooter>
           <p className="text-muted-foreground text-xs">
