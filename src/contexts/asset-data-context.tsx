@@ -74,8 +74,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const assetDataRef = useRef(assetData);
   const exchangeRatesRef = useRef(exchangeRates);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isSyncingRef = useRef(false);
   useEffect(() => { assetDataRef.current = assetData; }, [assetData]);
   useEffect(() => { exchangeRatesRef.current = exchangeRates; }, [exchangeRates]);
+
+  const INITIAL_SYNC_DELAY_MS = 1_000;
+  const PERIODIC_INTERVAL_MS = 5_000;
 
   const updateExchangeRate = useCallback((currency: "USD" | "JPY", rate: number, date?: string) => {
     setExchangeRatesState(prev => {
@@ -186,16 +190,55 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (isInitial) toast.info("오늘의 주식 및 환율 정보를 모두 업데이트했습니다.");
   }, []);
 
+  // ─── 주기적 sync 시작 ──────────────────────────────────────────────────────
+  // - 초기 sync 완료 후 호출 (useEffect에서 즉시 등록하지 않음)
+  // - 기존 interval 있으면 정리 후 재등록 (hashchange 등 재진입 안전)
+  // - isSyncingRef === true이면 tick skip (이전 sync 진행 중 중복 실행 방지)
+  // - stocks이 없어도 interval 유지 — 환율은 항상 갱신, 주식 sync만 조건부 skip
+  const startPeriodicSync = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      if (isSyncingRef.current) return;
+
+      void (async () => {
+        isSyncingRef.current = true;
+        try {
+          await syncTodayExchangeRate();
+          if (assetDataRef.current.stocks.length > 0) {
+            await syncTodayStockPrices(assetDataRef.current, false);
+          }
+        } finally {
+          isSyncingRef.current = false;
+        }
+      })();
+    }, PERIODIC_INTERVAL_MS);
+  }, [syncTodayExchangeRate, syncTodayStockPrices]);
+
+  // ─── 초기화 + sync 통합 헬퍼 ───────────────────────────────────────────────
+  // 모든 진입 경로(일반, share token, PIN 확인, hashchange)에서 공통으로 사용
+  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → sync → startPeriodicSync
+  const initAndSync = useCallback(async (data: AssetData) => {
+    initAssetData(data);
+    await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
+    isSyncingRef.current = true;
+    try {
+      await syncTodayExchangeRate();
+      await syncTodayStockPrices(data);
+    } finally {
+      isSyncingRef.current = false;
+    }
+    startPeriodicSync();
+  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, startPeriodicSync]);
+
   // 클라이언트 마운트 후 단일 초기화 흐름
-  // 마운트 즉시: storedRates로 UI 표시 + initAssetData로 자산 데이터 표시
-  // 2초 후 비동기:
-  //   1. syncTodayExchangeRate: 오늘자 환율 확인/갱신 (자기완결)
-  //   2. syncTodayStockPrices: 오늘자 주식 현재가 갱신
-  // 30초 주기: 미갱신 항목 있을 때만 1+2 반복
+  // 마운트 즉시: storedRates로 UI 표시 (플래시 방지)
+  // INITIAL_SYNC_DELAY_MS 후: 환율 + 주식 현재가 갱신 (initAndSync 내부)
+  // 초기 sync 완료 후: startPeriodicSync로 PERIODIC_INTERVAL_MS 주기 갱신 시작
   useEffect(() => {
     // 마운트 즉시: localStorage 환율을 state에 반영 (즉각적인 UI 표시용)
     // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
-    // 2초 지연 전에 UI가 기본값(1430/930)으로 표시되는 것을 방지하기 위함
+    // 지연 전에 UI가 기본값(1430/930)으로 표시되는 것을 방지하기 위함
     const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
     if (savedRates) {
       try {
@@ -211,18 +254,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);
     if (savedDate) setExchangeRateDate(savedDate);
-
-    // 10초 주기 sync: 주식 자산이 없으면 interval 자체를 해제, 있을 때만 API 호출
-    intervalRef.current = setInterval(() => {
-      if (assetDataRef.current.stocks.length === 0) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        return;
-      }
-      void (async () => {
-        await syncTodayExchangeRate();
-        await syncTodayStockPrices(assetDataRef.current, false);
-      })();
-    }, 10 * 1000);
 
     // Short URL(s:KEY)을 전체 토큰으로 변환하는 헬퍼
     const resolveShareToken = async (raw: string): Promise<string | null> => {
@@ -261,11 +292,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
       if (newResult && "data" in newResult) {
         saveAssetData(newResult.data);
-        initAssetData(newResult.data);
-        void (async () => {
-          await syncTodayExchangeRate();
-          await syncTodayStockPrices(newResult.data);
-        })();
+        await initAndSync(newResult.data);
         toast.success("공유된 자산 데이터를 불러왔습니다.");
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
       } else {
@@ -276,17 +303,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     window.addEventListener("hashchange", handleHashChange);
 
     // 초기 진입 분기 (Short URL 지원 — async IIFE)
+    // interval은 initAndSync → startPeriodicSync 체인으로만 시작 (즉시 등록 없음)
     void (async () => {
       const hash = window.location.hash.substring(1);
       const shareTokenRaw = new URLSearchParams(hash).get("share");
 
       if (!shareTokenRaw) {
-        const localData = getAssetData();
-        initAssetData(localData);
-        setTimeout(async () => {
-          await syncTodayExchangeRate();
-          await syncTodayStockPrices(localData);
-        }, 1000);
+        // 케이스 1: 공유 토큰 없음 (일반 진입)
+        await initAndSync(getAssetData());
         return;
       }
 
@@ -295,43 +319,34 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const shareToken = await resolveShareToken(rawToken);
 
       if (!shareToken) {
+        // 케이스 2: Short URL 만료/실패
         toast.error("공유 링크가 만료되었거나 유효하지 않습니다.");
-        const localData = getAssetData();
-        initAssetData(localData);
-        setTimeout(async () => {
-          await syncTodayExchangeRate();
-          await syncTodayStockPrices(localData);
-        }, 1000);
+        await initAndSync(getAssetData());
         return;
       }
 
       const result = parseShareToken(shareToken);
 
       if (result && "pinRequired" in result) {
-        // PIN 케이스: 기존 localStorage 데이터로 UI 표시, PIN 확인 후 나머지 흐름 처리
+        // 케이스 3: PIN 보호 토큰 — 기존 데이터로 UI 표시 후 PIN 입력 대기
+        // PIN 대기 중에도 환율 갱신이 필요하므로 startPeriodicSync 즉시 시작
         initAssetData(getAssetData());
+        startPeriodicSync();
         setPendingToken(shareToken);
         setShowPinPrompt(true);
         return;
       }
 
       if (result && "data" in result) {
+        // 케이스 4: 유효한 공유 데이터
         saveAssetData(result.data);
-        initAssetData(result.data);
-        setTimeout(async () => {
-          await syncTodayExchangeRate();
-          await syncTodayStockPrices(result.data);
-        }, 1000);
+        await initAndSync(result.data);
         toast.success("공유된 자산 데이터를 불러왔습니다.");
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
       } else {
+        // 케이스 5: 토큰 파싱 실패
         toast.error("공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.");
-        const localData = getAssetData();
-        initAssetData(localData);
-        setTimeout(async () => {
-          await syncTodayExchangeRate();
-          await syncTodayStockPrices(localData);
-        }, 1000);
+        await initAndSync(getAssetData());
       }
     })();
 
@@ -648,11 +663,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const result = parseShareToken(pendingToken, inputPin);
     if (result && "data" in result) {
       saveAssetData(result.data);
-      initAssetData(result.data);
-      void (async () => {
-        await syncTodayExchangeRate();
-        await syncTodayStockPrices(result.data);
-      })();
+      void initAndSync(result.data);
       toast.success("공유된 자산 데이터를 불러왔습니다.");
       setShowPinPrompt(false);
       setPendingToken(null);

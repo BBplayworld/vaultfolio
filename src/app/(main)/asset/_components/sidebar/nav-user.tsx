@@ -77,6 +77,32 @@ export function NavUser({
     setShowShareDialog(true);
   };
 
+  // 카카오톡 인앱 브라우저 등 Clipboard API를 지원하지 않는 환경을 위한 폴백 포함
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    // 1순위: Clipboard API (모던 브라우저)
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch { /* 권한 거부 시 폴백 */ }
+    }
+    // 2순위: execCommand 폴백 (인앱 브라우저, 구형 환경)
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      const success = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return success;
+    } catch {
+      return false;
+    }
+  };
+
   const confirmShareShort = async () => {
     try {
       if (!assetData) return;
@@ -96,8 +122,13 @@ export function NavUser({
       if (!json.key) throw new Error("키 생성 실패");
 
       const shortUrl = `${window.location.origin}${window.location.pathname}#share=s:${json.key}`;
-      await navigator.clipboard.writeText(shortUrl);
-      toast.success(`짧은 공유 URL이 복사되었습니다. (${shortUrl.length}자)`);
+      const copied = await copyToClipboard(shortUrl);
+      if (copied) {
+        toast.success(`짧은 공유 URL이 복사되었습니다. (${shortUrl.length}자)`);
+      } else {
+        // 복사 불가 환경: URL을 직접 표시
+        toast.info(`공유 URL: ${shortUrl}`, { duration: 10000 });
+      }
       setShowShareDialog(false);
     } catch {
       toast.error("짧은 URL 생성에 실패했습니다.");
@@ -118,17 +149,22 @@ export function NavUser({
       const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
-      await navigator.clipboard.writeText(shareUrl);
+      const copied = await copyToClipboard(shareUrl);
 
       const length = token.length;
-      if (length <= 200) {
-        toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
+      if (copied) {
+        if (length <= 200) {
+          toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
+        } else {
+          toast.success("공유 URL이 복사되었습니다.");
+          toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
+        }
       } else {
-        toast.success("공유 URL이 복사되었습니다.");
-        toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
+        // 복사 불가 환경: URL을 직접 표시
+        toast.info(`공유 URL: ${shareUrl}`, { duration: 10000 });
       }
       setShowShareDialog(false);
-    } catch (error) {
+    } catch {
       toast.error("URL 공유 준비에 실패했습니다.");
     }
   };
