@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, CircleChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -60,6 +60,7 @@ export function NavUser({
   const [copied, setCopied] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
+  const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,63 +78,49 @@ export function NavUser({
     setShowShareDialog(true);
   };
 
-  // 카카오톡 인앱 브라우저 등 Clipboard API를 지원하지 않는 환경을 위한 폴백 포함
-  const copyToClipboard = async (text: string): Promise<boolean> => {
-    // 1순위: Clipboard API (모던 브라우저)
-    if (navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch { /* 권한 거부 시 폴백 */ }
-    }
-    // 2순위: execCommand 폴백 (인앱 브라우저, 구형 환경)
-    try {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      const success = document.execCommand("copy");
-      document.body.removeChild(textarea);
-      return success;
-    } catch {
-      return false;
-    }
-  };
+  // 다이얼로그가 열리거나 PIN이 변경될 때 short URL을 미리 생성해둠.
+  // 버튼 클릭 시점에는 이미 준비된 URL을 동기적으로 복사 → user activation 만료 문제 없음.
+  useEffect(() => {
+    if (!showShareDialog || !assetData) return;
+    // PIN 입력 중(1~3자리)이면 완성될 때까지 대기
+    if (sharePin.length > 0 && sharePin.length < 4) return;
 
+    setPreGeneratedShortUrl(null);
+    setShortUrlLoading(true);
+
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+    fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((res) => res.json() as Promise<{ key?: string }>)
+      .then((json) => {
+        if (json.key) {
+          setPreGeneratedShortUrl(
+            `${window.location.origin}${window.location.pathname}#share=s:${json.key}`
+          );
+        }
+      })
+      .catch(() => { /* 미리 생성 실패 — 버튼 비활성화로 처리 */ })
+      .finally(() => setShortUrlLoading(false));
+  // assetData, assetDataContext.exchangeRates는 다이얼로그 열린 시점의 스냅샷만 필요
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showShareDialog, sharePin]);
+
+  // confirmShare와 동일하게 미리 준비된 URL을 동기적으로 복사
   const confirmShareShort = async () => {
+    if (!preGeneratedShortUrl) return;
+    if (sharePin && sharePin.length !== 4) {
+      toast.error("PIN 번호는 4자리여야 합니다.");
+      return;
+    }
     try {
-      if (!assetData) return;
-      if (sharePin && sharePin.length !== 4) {
-        toast.error("PIN 번호는 4자리여야 합니다.");
-        return;
-      }
-
-      setShortUrlLoading(true);
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
-      const res = await fetch("/api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      const json = await res.json() as { key?: string };
-      if (!json.key) throw new Error("키 생성 실패");
-
-      const shortUrl = `${window.location.origin}${window.location.pathname}#share=s:${json.key}`;
-      const copied = await copyToClipboard(shortUrl);
-      if (copied) {
-        toast.success(`짧은 공유 URL이 복사되었습니다. (${shortUrl.length}자)`);
-      } else {
-        // 복사 불가 환경: URL을 직접 표시
-        toast.info(`공유 URL: ${shortUrl}`, { duration: 10000 });
-      }
+      await navigator.clipboard.writeText(preGeneratedShortUrl);
+      toast.success(`짧은 공유 URL이 복사되었습니다. (${preGeneratedShortUrl.length}자)`);
       setShowShareDialog(false);
     } catch {
-      toast.error("짧은 URL 생성에 실패했습니다.");
-    } finally {
-      setShortUrlLoading(false);
+      toast.error("클립보드 복사에 실패했습니다.");
     }
   };
 
@@ -149,19 +136,14 @@ export function NavUser({
       const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
-      const copied = await copyToClipboard(shareUrl);
+      await navigator.clipboard.writeText(shareUrl);
 
       const length = token.length;
-      if (copied) {
-        if (length <= 200) {
-          toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
-        } else {
-          toast.success("공유 URL이 복사되었습니다.");
-          toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
-        }
+      if (length <= 200) {
+        toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
       } else {
-        // 복사 불가 환경: URL을 직접 표시
-        toast.info(`공유 URL: ${shareUrl}`, { duration: 10000 });
+        toast.success("공유 URL이 복사되었습니다.");
+        toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
       }
       setShowShareDialog(false);
     } catch {
@@ -537,7 +519,7 @@ ${loanList || '  - 등록된 대출 없음'}
             <Button variant="outline" onClick={() => setShowShareDialog(false)}>
               취소
             </Button>
-            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading} type="button">
+            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl} type="button">
               <Share2 className="mr-2 size-4" />
               {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
             </Button>
