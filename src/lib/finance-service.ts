@@ -7,7 +7,7 @@
  * Step 2. 티커 정규화
  * Step 3. 종목 분류 (국내 / 해외)
  * Step 4. 외부 API 호출 - 해외 주식 (Twelve Data)
- * Step 5. 외부 API 호출 - 국내 주식 (Yahoo Finance)
+ * Step 5. 외부 API 호출 - 국내 주식 (한국투자증권 OpenAPI)
  * Step 6. 외부 API 호출 - 환율 (Twelve Data)
  * Step 7. 종목명 결정
  * Step 8. 클라이언트 동기화 (/api/finance 경유)
@@ -50,7 +50,7 @@ export interface FinanceSyncResult {
 export const STORAGE_KEY_EXCHANGE_SYNC_DATE = "vaultfolio_exchange_last_sync_date";
 
 // 주식 항목별 오늘 동기화 완료 여부 추적 (vaultfolio-asset-data와 완전히 분리)
-export const STORAGE_KEY_STOCK_SYNC_STATUS  = "vaultfolio_stock_sync_status";
+export const STORAGE_KEY_STOCK_SYNC_STATUS = "vaultfolio_stock_sync_status";
 
 interface StockSyncStatus {
   date: string;
@@ -65,7 +65,7 @@ export function getStockSyncStatus(): StockSyncStatus {
       const parsed: StockSyncStatus = JSON.parse(saved);
       if (parsed.date === todayStr) return parsed;
     }
-  } catch {}
+  } catch { }
   return { date: todayStr, synced: [] };
 }
 
@@ -160,39 +160,66 @@ export async function fetchStocksFromTwelveData(
 }
 
 // ─────────────────────────────────────────────
-// Step 5. 외부 API 호출 - 국내 주식 (Yahoo Finance)
-// 한국 주식 현재가를 Yahoo Finance v8 chart API로 조회합니다.
-// API 키 불필요, 6자리 코드를 자동으로 ".KS" 심볼로 변환합니다.
+// Step 5. 외부 API 호출 - 국내 주식 (한국투자증권 OpenAPI)
+// access_token 발급: POST /oauth2/tokenP (24시간 유효, 서버에서 캐싱)
+// 종목 조회: GET /uapi/domestic-stock/v1/quotations/search-stock-info
 // ─────────────────────────────────────────────
 
-export async function fetchStocksFromYahooFinance(
+export async function fetchKisToken(
+  appKey: string,
+  appSecret: string
+): Promise<string | null> {
+  if (!appKey || !appSecret) return null;
+  try {
+    const res = await fetch(
+      "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant_type: "client_credentials", appkey: appKey, appsecret: appSecret }),
+        cache: "no-store",
+      }
+    );
+    const data = await res.json();
+    return (data.access_token as string) ?? null;
+  } catch (e) {
+    console.error("[KIS 토큰 발급 오류]:", e);
+    return null;
+  }
+}
+
+export async function fetchStocksFromKorea(
   tickers: string[],
-  todayStr: string
+  todayStr: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
 ): Promise<Record<string, StockPriceResult>> {
   const results: Record<string, StockPriceResult> = {};
 
   for (const ticker of tickers) {
     try {
-      const yahooSymbol = ticker.includes(".") ? ticker : `${ticker}.KS`;
       const res = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`,
-        { cache: "no-store" }
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${ticker}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            appkey: appKey,
+            appsecret: appSecret,
+            tr_id: "CTPF1002R",
+          },
+          cache: "no-store",
+        }
       );
       const data = await res.json();
-
-      const meta = data.chart?.result?.[0]?.meta;
-      if (meta?.regularMarketPrice) {
-        // longName(정식 영문명) → shortName → 빈 문자열 순으로 사용
-        // meta.symbol은 "005930.KS" 같은 코드 형식이므로 종목명으로 사용하지 않음
-        const name = meta.longName || meta.shortName || "";
-        results[ticker] = {
-          price: meta.regularMarketPrice,
-          name,
-          updated_at: todayStr,
-        };
+      const output = data.output as Record<string, string> | undefined;
+      const price = parseFloat(output?.thdt_clpr ?? "0");
+      const name: string = output?.prdt_abrv_name ?? "";
+      if (price > 0) {
+        results[ticker] = { price, name, updated_at: todayStr };
       }
     } catch (e) {
-      console.error(`[Yahoo Finance 오류 - ${ticker}]:`, e);
+      console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);
     }
   }
 
@@ -238,7 +265,7 @@ export async function fetchExchangeRatesFromTwelveData(
 // 유효한 이름이 있을 때만 덮어씁니다.
 // ─────────────────────────────────────────────
 
-function resolveStockName(
+export function resolveStockName(
   category: string | undefined,
   apiName: string,
   existingName: string
@@ -310,18 +337,24 @@ export async function syncFinanceData(
     }
 
     let updatedStocks = [...assetData.stocks];
-    let syncedTickers: string[] = [];
+    let allSyncedTickers: string[] = [];
 
-    // 주식 동기화: 미갱신 종목 전체를 서버에 전달
-    // 서버가 파일캐시 기준으로 히트/미스를 판단하고, 미캐시 항목만 외부 API 호출(2개씩 제한)
-    if (outdatedStocks.length > 0) {
-      const targets = outdatedStocks;
-      const tickersParam = targets.map(normalizeTicker).join(",");
+    // 주식 동기화: 3개씩 배치로 나누어 순차 호출
+    // - 서버가 파일캐시 기준으로 히트/미스를 판단하고, 미캐시 항목만 외부 API 호출
+    // - 배치 간 1초 지연으로 외부 API rate limit 방지
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY_MS = 10 * 1000;
+
+    for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
+      if (i > 0) await new Promise<void>(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+
+      const batch = outdatedStocks.slice(i, i + BATCH_SIZE);
+      const tickersParam = batch.map(normalizeTicker).join(",");
       const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
       const stocksData = await res.json();
 
       if (stocksData && !stocksData.error) {
-        updatedStocks = assetData.stocks.map((stock) => {
+        updatedStocks = updatedStocks.map((stock) => {
           const ticker = normalizeTicker(stock);
           const result = stocksData[ticker];
           if (result?.price !== undefined && result?.updated_at) {
@@ -337,12 +370,13 @@ export async function syncFinanceData(
           return stock;
         });
         // 갱신 완료 티커를 별도 sync status에 기록 (자산 데이터와 완전히 분리)
-        syncedTickers = targets.map(normalizeTicker).filter((t) => stocksData[t]);
-        markTickersSynced(syncedTickers);
+        const batchSynced = batch.map(normalizeTicker).filter((t) => stocksData[t]);
+        allSyncedTickers = [...allSyncedTickers, ...batchSynced];
+        markTickersSynced(batchSynced);
       }
     }
 
-    return { updatedStocks, syncedTickers, updatedExchangeRates: newExchangeRates, synced: true };
+    return { updatedStocks, syncedTickers: allSyncedTickers, updatedExchangeRates: newExchangeRates, synced: true };
   } catch (error) {
     console.error("금융 데이터 동기화 실패:", error);
     return { updatedStocks: assetData.stocks, syncedTickers: [], updatedExchangeRates: currentExchangeRates, synced: false };

@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
 import { getAssetData, saveAssetData, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
-import { syncFinanceData, STORAGE_KEY_EXCHANGE_SYNC_DATE, getStockSyncStatus, normalizeTicker } from "@/lib/finance-service";
+import { STORAGE_KEY_EXCHANGE_SYNC_DATE, normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,7 +20,6 @@ import { Lock, Share2 } from "lucide-react";
 
 interface AssetDataContextType {
   assetData: AssetData;
-  isLoading: boolean;
   exchangeRates: { USD: number; JPY: number };
   exchangeRateDate: string;
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
@@ -63,7 +62,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // Start with static empty defaults to avoid SSR/client mismatch.
   // Real data is loaded from localStorage in useEffect after hydration.
   const [assetData, setAssetData] = useState<AssetData>(STATIC_DEFAULT_ASSET_DATA);
-  const [isLoading, setIsLoading] = useState(true);
   const [exchangeRates, setExchangeRatesState] = useState<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
   const [exchangeRateDate, setExchangeRateDate] = useState<string>("");
 
@@ -75,6 +73,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 최신 값을 항상 참조하기 위한 ref (stale closure 방지)
   const assetDataRef = useRef(assetData);
   const exchangeRatesRef = useRef(exchangeRates);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => { assetDataRef.current = assetData; }, [assetData]);
   useEffect(() => { exchangeRatesRef.current = exchangeRates; }, [exchangeRates]);
 
@@ -92,144 +91,256 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // 클라이언트 마운트 후 localStorage에서 초기 데이터 로드 및 해시 감지
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.exchangeRate);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed === "number") {
-          setExchangeRatesState({ USD: parsed, JPY: 900 });
-        } else {
+  // ─── Step 1. 오늘자 환율 조회 (자기완결) ───────────────────────────────────
+  // - 오늘자 localStorage 캐시 존재: 캐시 값을 state에 반영 후 return (API 호출 없음)
+  // - 없으면: /api/finance?type=exchange 호출 → state + localStorage 갱신
+  // - 외부 초기화(setExchangeRatesState)에 의존하지 않고 스스로 환율 state를 보장
+  const syncTodayExchangeRate = useCallback(async () => {
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    if (localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE) === todayStr) {
+      // 오늘자 환율이 localStorage에 있음: 캐시 값을 state에 반영 (API 호출 없음)
+      const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
+      if (savedRates) {
+        try {
+          const parsed = JSON.parse(savedRates);
           setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 900 });
-        }
-      } catch {
-        setExchangeRatesState({ USD: parseFloat(saved) || 1380, JPY: 900 });
+          setExchangeRateDate(todayStr);
+        } catch { /* 파싱 실패 시 기존 state 유지 */ }
       }
+      return;
     }
 
-    const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);
-    if (savedDate) setExchangeRateDate(savedDate);
-
-    const handleHashShare = () => {
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      const shareTokenRaw = params.get("share");
-
-      if (shareTokenRaw) {
-        // URLSearchParams는 '+'를 공백으로 변환하므로 복구
-        const shareToken = shareTokenRaw.replace(/ /g, "+");
-        const result = parseShareToken(shareToken);
-
-        if (result && "pinRequired" in result) {
-          // PIN이 필요한 경우
-          setPendingToken(shareToken);
-          setShowPinPrompt(true);
-          return;
-        }
-
-        if (result && "data" in result) {
-          saveAssetData(result.data);
-          setAssetData(result.data);
-
-          // 공유된 환율 정보가 있으면 반영
-          if (result.rates) {
-            updateExchangeRate("USD", result.rates.USD);
-            updateExchangeRate("JPY", result.rates.JPY);
-          }
-
-          toast.success("공유된 자산 데이터를 불러왔습니다.");
-
-          // 데이터 불러온 후 해시 제거 (깔끔한 URL 유지)
-          window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        } else {
-          toast.error("공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.");
-        }
-      } else {
-        setAssetData(getAssetData());
+    // 오늘자 없음: API 호출 후 state + localStorage 갱신
+    try {
+      const res = await fetch("/api/finance?type=exchange");
+      const data = await res.json();
+      if (data && !data.error) {
+        updateExchangeRate("USD", data.USD, data.updated_at ?? todayStr);
+        updateExchangeRate("JPY", data.JPY, data.updated_at ?? todayStr);
       }
-      setIsLoading(false);
-    };
+    } catch (e) {
+      console.error("[환율 동기화 실패]:", e);
+    }
+  }, [updateExchangeRate]);
 
-    // 초기 로드 시 실행
-    handleHashShare();
-
-    // URL 해시 변경 시 자동 감지
-    window.addEventListener("hashchange", handleHashShare);
-    return () => window.removeEventListener("hashchange", handleHashShare);
+  // ─── Step 2. 에셋 데이터 로드 ──────────────────────────────────────────────
+  // 순수하게 자산 데이터만 state에 반영 (환율 없음)
+  const initAssetData = useCallback((data: AssetData) => {
+    setAssetData(data);
   }, []);
 
+  // ─── Step 3. 주식 현재가 조회 ──────────────────────────────────────────────
+  // - outdated 판단: s.baseDate !== today 단독 조건 (syncStatus 제거)
+  //   → 데이터 불러오기로 어제자 데이터 로드 시에도 무조건 갱신 수행
+  // - 3개씩 배치 순차 호출, 배치 간 10초 지연
+  const syncTodayStockPrices = useCallback(async (data: AssetData, isInitial = true) => {
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const outdatedStocks = data.stocks
+      .filter(s => normalizeTicker(s) !== "" && s.baseDate !== todayStr)
+      .sort((a, b) => (a.category === "foreign" ? -1 : 1) - (b.category === "foreign" ? -1 : 1)); // 해외 우선
 
-  // 자산 및 환율 데이터 실시간성 관리 (초기 진입 시 1회 자동 동기화 및 10분마다 미갱신 항목 자동 갱신)
-  useEffect(() => {
-    if (isLoading || !assetData.stocks) return;
+    if (outdatedStocks.length === 0) {
+      if (isInitial) toast.info("오늘의 주식 및 환율 정보가 모두 최신입니다.");
+      return;
+    }
 
-    const performSync = async (isInitial: boolean = false) => {
-      const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    console.log(`[Sync] 주식 현재가 갱신 대상: ${outdatedStocks.length}개`);
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY_MS = 10 * 1000;
 
-      // 환율: localStorage 동기화 날짜 키로 판단
-      const needExchangeSync = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE) !== todayStr;
+    for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
+      if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
+      const batch = outdatedStocks.slice(i, i + BATCH_SIZE);
+      const tickersParam = batch.map(normalizeTicker).join(",");
 
-      // 주식: 자산 데이터와 분리된 별도 sync status 키 기준으로 판단
-      const syncStatus = getStockSyncStatus();
-      const outdatedStocksCount = assetDataRef.current.stocks.filter((s) => {
-        const ticker = normalizeTicker(s);
-        // sync status에 있거나, 이미 오늘 baseDate로 갱신된 종목은 제외
-        return ticker !== "" && !syncStatus.synced.includes(ticker) && s.baseDate !== todayStr;
-      }).length;
+      try {
+        const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
+        const stocksData = await res.json();
 
-      if (!needExchangeSync && outdatedStocksCount === 0) {
-        if (isInitial) console.log("[Auto Sync] 모든 금융 데이터가 최신입니다.");
-        return;
-      }
-
-      console.log(`[Auto Sync] 시작 - 환율 갱신 필요: ${needExchangeSync}, 미갱신 주식: ${outdatedStocksCount}개`);
-      const result = await syncFinanceData(assetDataRef.current, exchangeRatesRef.current);
-
-      if (result.synced) {
-        // 환율 업데이트
-        if (result.updatedExchangeRates.updated_at) {
-          updateExchangeRate("USD", result.updatedExchangeRates.USD, result.updatedExchangeRates.updated_at);
-          updateExchangeRate("JPY", result.updatedExchangeRates.JPY, result.updatedExchangeRates.updated_at);
-        } else {
-          updateExchangeRate("USD", result.updatedExchangeRates.USD);
-          updateExchangeRate("JPY", result.updatedExchangeRates.JPY);
-        }
-
-        // 주식 업데이트: 함수형 업데이트로 최신 prev에 병합하여 stale closure로 인한 데이터 손실 방지
-        if (result.syncedTickers.length > 0) {
-          const syncedSet = new Set(result.syncedTickers);
+        if (stocksData && !stocksData.error) {
           setAssetData(prev => {
             const updatedStocks = prev.stocks.map(stock => {
               const ticker = normalizeTicker(stock);
-              if (!syncedSet.has(ticker)) return stock;
-              const synced = result.updatedStocks.find(s => normalizeTicker(s) === ticker);
-              return synced
-                ? { ...stock, currentPrice: synced.currentPrice, baseDate: synced.baseDate, name: synced.name }
-                : stock;
+              const result = stocksData[ticker];
+              if (result?.price !== undefined && result?.updated_at) {
+                return {
+                  ...stock,
+                  currentPrice: result.price,
+                  baseDate: result.updated_at,
+                  name: resolveStockName(stock.category, result.name, stock.name),
+                };
+              }
+              return stock;
             });
             const newData = { ...prev, stocks: updatedStocks };
             saveAssetData(newData);
             return newData;
           });
         }
+      } catch (e) {
+        console.error("[주식 현재가 갱신 실패]:", e);
+      }
+    }
 
-        if (isInitial) toast.info("오늘의 주식 및 환율 정보를 업데이트했습니다.");
-        else console.log("[Auto Sync] 금융 데이터 갱신 완료.");
+    if (isInitial) toast.info("오늘의 주식 및 환율 정보를 모두 업데이트했습니다.");
+  }, []);
+
+  // 클라이언트 마운트 후 단일 초기화 흐름
+  // 마운트 즉시: storedRates로 UI 표시 + initAssetData로 자산 데이터 표시
+  // 2초 후 비동기:
+  //   1. syncTodayExchangeRate: 오늘자 환율 확인/갱신 (자기완결)
+  //   2. syncTodayStockPrices: 오늘자 주식 현재가 갱신
+  // 30초 주기: 미갱신 항목 있을 때만 1+2 반복
+  useEffect(() => {
+    // 마운트 즉시: localStorage 환율을 state에 반영 (즉각적인 UI 표시용)
+    // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
+    // 2초 지연 전에 UI가 기본값(1430/930)으로 표시되는 것을 방지하기 위함
+    const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
+    if (savedRates) {
+      try {
+        const parsed = JSON.parse(savedRates);
+        if (typeof parsed === "number") {
+          setExchangeRatesState({ USD: parsed, JPY: 900 });
+        } else {
+          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 900 });
+        }
+      } catch {
+        setExchangeRatesState({ USD: parseFloat(savedRates) || 1380, JPY: 900 });
+      }
+    }
+    const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);
+    if (savedDate) setExchangeRateDate(savedDate);
+
+    // 10초 주기 sync: 주식 자산이 없으면 interval 자체를 해제, 있을 때만 API 호출
+    intervalRef.current = setInterval(() => {
+      if (assetDataRef.current.stocks.length === 0) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
+      }
+      void (async () => {
+        await syncTodayExchangeRate();
+        await syncTodayStockPrices(assetDataRef.current, false);
+      })();
+    }, 10 * 1000);
+
+    // Short URL(s:KEY)을 전체 토큰으로 변환하는 헬퍼
+    const resolveShareToken = async (raw: string): Promise<string | null> => {
+      if (!raw.startsWith("s:")) return raw;
+      const key = raw.substring(2);
+      try {
+        const res = await fetch(`/api/share?key=${key}`);
+        const json = await res.json() as { token?: string };
+        return json.token ?? null;
+      } catch {
+        return null;
       }
     };
 
-    // 초기 진입 시 2초 뒤 1회 실행
-    const initialTimeout = setTimeout(() => performSync(true), 2000);
+    // hashchange 리스너: 마운트 이후 URL 해시 변경 감지 (Short URL 지원)
+    const handleHashChange = async () => {
+      const newHash = window.location.hash.substring(1);
+      const newShareTokenRaw = new URLSearchParams(newHash).get("share");
+      if (!newShareTokenRaw) return;
 
-    // 10분마다 반복 실행 (미갱신 항목이 있을 때만 실제 API 호출)
-    const intervalId = setInterval(() => performSync(false), 10 * 60 * 1000);
+      const rawToken = newShareTokenRaw.replace(/ /g, "+");
+      const newShareToken = await resolveShareToken(rawToken);
+
+      if (!newShareToken) {
+        toast.error("공유 링크가 만료되었거나 유효하지 않습니다.");
+        return;
+      }
+
+      const newResult = parseShareToken(newShareToken);
+
+      if (newResult && "pinRequired" in newResult) {
+        setPendingToken(newShareToken);
+        setShowPinPrompt(true);
+        return;
+      }
+
+      if (newResult && "data" in newResult) {
+        saveAssetData(newResult.data);
+        initAssetData(newResult.data);
+        void (async () => {
+          await syncTodayExchangeRate();
+          await syncTodayStockPrices(newResult.data);
+        })();
+        toast.success("공유된 자산 데이터를 불러왔습니다.");
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      } else {
+        toast.error("공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.");
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+
+    // 초기 진입 분기 (Short URL 지원 — async IIFE)
+    void (async () => {
+      const hash = window.location.hash.substring(1);
+      const shareTokenRaw = new URLSearchParams(hash).get("share");
+
+      if (!shareTokenRaw) {
+        const localData = getAssetData();
+        initAssetData(localData);
+        setTimeout(async () => {
+          await syncTodayExchangeRate();
+          await syncTodayStockPrices(localData);
+        }, 1000);
+        return;
+      }
+
+      // URLSearchParams는 '+'를 공백으로 변환하므로 복구 후 Short URL 해소
+      const rawToken = shareTokenRaw.replace(/ /g, "+");
+      const shareToken = await resolveShareToken(rawToken);
+
+      if (!shareToken) {
+        toast.error("공유 링크가 만료되었거나 유효하지 않습니다.");
+        const localData = getAssetData();
+        initAssetData(localData);
+        setTimeout(async () => {
+          await syncTodayExchangeRate();
+          await syncTodayStockPrices(localData);
+        }, 1000);
+        return;
+      }
+
+      const result = parseShareToken(shareToken);
+
+      if (result && "pinRequired" in result) {
+        // PIN 케이스: 기존 localStorage 데이터로 UI 표시, PIN 확인 후 나머지 흐름 처리
+        initAssetData(getAssetData());
+        setPendingToken(shareToken);
+        setShowPinPrompt(true);
+        return;
+      }
+
+      if (result && "data" in result) {
+        saveAssetData(result.data);
+        initAssetData(result.data);
+        setTimeout(async () => {
+          await syncTodayExchangeRate();
+          await syncTodayStockPrices(result.data);
+        }, 1000);
+        toast.success("공유된 자산 데이터를 불러왔습니다.");
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      } else {
+        toast.error("공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.");
+        const localData = getAssetData();
+        initAssetData(localData);
+        setTimeout(async () => {
+          await syncTodayExchangeRate();
+          await syncTodayStockPrices(localData);
+        }, 1000);
+      }
+    })();
 
     return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(intervalId);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [isLoading, assetData.stocks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 자산 데이터 새로고침
   const refreshData = useCallback(() => {
@@ -537,11 +648,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const result = parseShareToken(pendingToken, inputPin);
     if (result && "data" in result) {
       saveAssetData(result.data);
-      setAssetData(result.data);
-      if (result.rates) {
-        updateExchangeRate("USD", result.rates.USD);
-        updateExchangeRate("JPY", result.rates.JPY);
-      }
+      initAssetData(result.data);
+      void (async () => {
+        await syncTodayExchangeRate();
+        await syncTodayStockPrices(result.data);
+      })();
       toast.success("공유된 자산 데이터를 불러왔습니다.");
       setShowPinPrompt(false);
       setPendingToken(null);
@@ -557,7 +668,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     <AssetDataContext.Provider
       value={{
         assetData,
-        isLoading,
         exchangeRates,
         exchangeRateDate,
         updateExchangeRate,

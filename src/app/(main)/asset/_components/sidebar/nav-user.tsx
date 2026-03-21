@@ -60,6 +60,7 @@ export function NavUser({
   const [copied, setCopied] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
+  const [shortUrlLoading, setShortUrlLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -74,6 +75,35 @@ export function NavUser({
   const handleShare = () => {
     setSharePin("");
     setShowShareDialog(true);
+  };
+
+  const confirmShareShort = async () => {
+    try {
+      if (!assetData) return;
+      if (sharePin && sharePin.length !== 4) {
+        toast.error("PIN 번호는 4자리여야 합니다.");
+        return;
+      }
+
+      setShortUrlLoading(true);
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const json = await res.json() as { key?: string };
+      if (!json.key) throw new Error("키 생성 실패");
+
+      const shortUrl = `${window.location.origin}${window.location.pathname}#share=s:${json.key}`;
+      await navigator.clipboard.writeText(shortUrl);
+      toast.success(`짧은 공유 URL이 복사되었습니다. (${shortUrl.length}자)`);
+      setShowShareDialog(false);
+    } catch {
+      toast.error("짧은 URL 생성에 실패했습니다.");
+    } finally {
+      setShortUrlLoading(false);
+    }
   };
 
   const confirmShare = async () => {
@@ -467,9 +497,13 @@ ${loanList || '  - 등록된 대출 없음'}
               </p>
             </div>
           </div>
-          <DialogFooter className="sm:justify-end">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setShowShareDialog(false)}>
               취소
+            </Button>
+            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading} type="button">
+              <Share2 className="mr-2 size-4" />
+              {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
             </Button>
             <Button onClick={confirmShare} type="button">
               <Copy className="mr-2 size-4" />
