@@ -59,6 +59,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "token 필드 필요" }, { status: 400 });
     }
 
+    // PIN 미설정 토큰(v71N) 거부 — 서버에는 PIN 암호화 토큰만 저장
+    if (token.startsWith("v71N")) {
+      return NextResponse.json({ error: "짧은 URL은 PIN 설정이 필요합니다." }, { status: 400 });
+    }
+
     const ip = getClientIp(request);
     const storage = getCacheStorage();
 

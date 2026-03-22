@@ -83,8 +83,8 @@ export function NavUser({
   // 버튼 클릭 시점에는 이미 준비된 URL을 동기적으로 복사 → user activation 만료 문제 없음.
   useEffect(() => {
     if (!showShareDialog || !assetData) return;
-    // PIN 입력 중(1~3자리)이면 완성될 때까지 대기
-    if (sharePin.length > 0 && sharePin.length < 4) return;
+    // PIN 4자리 완성 전에는 생성하지 않음 (PIN 필수)
+    if (sharePin.length < 4) return;
 
     setPreGeneratedShortUrl(null);
     setShortUrlLoading(true);
@@ -116,8 +116,8 @@ export function NavUser({
   // confirmShare와 동일하게 미리 준비된 URL을 동기적으로 복사
   const confirmShareShort = async () => {
     if (!preGeneratedShortUrl) return;
-    if (sharePin && sharePin.length !== 4) {
-      toast.error("PIN 번호는 4자리여야 합니다.");
+    if (sharePin.length !== 4) {
+      toast.error("PIN 번호 4자리를 입력해주세요.");
       return;
     }
     try {
@@ -133,19 +133,19 @@ export function NavUser({
     try {
       if (!assetData) return;
 
-      if (sharePin && sharePin.length !== 4) {
-        toast.error("PIN 번호는 4자리여야 합니다.");
+      if (sharePin.length !== 4) {
+        toast.error("PIN 번호 4자리를 입력해주세요.");
         return;
       }
 
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin);
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
       await navigator.clipboard.writeText(shareUrl);
 
       const length = token.length;
       if (length <= 200) {
-        toast.success(sharePin ? "보안된 공유 URL이 복사되었습니다." : "최적화된 공유 URL이 복사되었습니다.");
+        toast.success("PIN 암호화된 공유 URL이 복사되었습니다.");
       } else {
         toast.success("공유 URL이 복사되었습니다.");
         toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
@@ -362,16 +362,22 @@ export function NavUser({
               <Share2 className="size-5 text-primary" />
               자산 데이터 공유
             </DialogTitle>
-            <DialogDescription>
-              암호화된 토큰을 생성하여 다른 브라우저와 데이터를 공유합니다.<br />
-              <span className="font-semibold text-rose-500">선택사항:</span> 민감한 정보 보호를 위해 4자리 PIN을 설정할 수 있습니다.
+            <DialogDescription asChild>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>자산 데이터를 PIN으로 암호화하여 파트너와 공유합니다.</p>
+                <p className="text-xs">
+                  <span className="font-medium text-foreground">전체 URL</span> — 서버 저장 없이 URL에 직접 포함
+                  {" · "}
+                  <span className="font-medium text-foreground">짧은 URL</span> — PIN 암호화 후 서버에 30일 임시 보관
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center space-y-4 py-4">
             <div className="flex flex-col items-center gap-3 space-y-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                {sharePin ? <Lock className="size-3.5 text-primary" /> : <Unlock className="size-3.5 text-muted-foreground" />}
-                비밀번호 (4자리 숫자)
+                {sharePin.length === 4 ? <Lock className="size-3.5 text-primary" /> : <Unlock className="size-3.5 text-muted-foreground" />}
+                비밀번호 <span className="text-rose-500 font-semibold">(4자리, 필수)</span>
               </Label>
               <InputOTP
                 maxLength={4}
@@ -386,7 +392,7 @@ export function NavUser({
                 </InputOTPGroup>
               </InputOTP>
               <p className="text-[11px] text-muted-foreground">
-                설정하지 않으려면 비워두세요.
+                받는 사람도 동일한 PIN으로 자산을 열람합니다.
               </p>
             </div>
           </div>
@@ -394,13 +400,13 @@ export function NavUser({
             <Button variant="outline" onClick={() => setShowShareDialog(false)}>
               취소
             </Button>
-            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl} type="button">
+            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl || sharePin.length !== 4} type="button">
               <Share2 className="mr-2 size-4" />
               {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
             </Button>
-            <Button onClick={confirmShare} type="button">
+            <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button">
               <Copy className="mr-2 size-4" />
-              공유 URL 복사
+              전체 URL 복사
             </Button>
           </DialogFooter>
         </DialogContent>

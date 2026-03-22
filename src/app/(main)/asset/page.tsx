@@ -34,7 +34,8 @@ export default function Page() {
                   로그인·서버 저장 없이{" "}
                   <span className="font-medium text-rose-500">이 브라우저에만</span> 데이터가 안전하게 보관됩니다.{" "}
                   혼자 사용한다면 본인 기기에서만, 부부·가족이 함께 관리한다면{" "}
-                  <span className="font-medium text-rose-500">'공유 URL 복사'</span>로 암호화된 자산 현황을 파트너에게 안전하게 전달할 수 있습니다.
+                  <span className="font-medium text-rose-500">'공유 URL 복사'</span>로 PIN 암호화된 자산 현황을 파트너에게 안전하게 전달할 수 있습니다.{" "}
+                  <span className="text-muted-foreground text-xs">(짧은 URL 사용 시에만 PIN 암호화 데이터가 공유 서버에 30일 임시 보관됩니다)</span>
                 </span>
               </div>
               <div className="flex items-start gap-2">
