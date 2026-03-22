@@ -40,7 +40,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 import { getInitials } from "@/lib/utils";
 import { exportAssetData, importAssetData, clearAssetData, generateShareToken } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 
 export function NavUser({
   user,
@@ -53,11 +53,12 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const assetDataContext = useAssetData();
-  const { refreshData, getAssetSummary, assetData } = assetDataContext;
+  const { refreshData, initAndSync, getAssetSummary, assetData } = assetDataContext;
   const [isImporting, setIsImporting] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedPromptIdx, setSelectedPromptIdx] = useState(0);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
@@ -104,8 +105,8 @@ export function NavUser({
       })
       .catch(() => { /* 미리 생성 실패 — 버튼 비활성화로 처리 */ })
       .finally(() => setShortUrlLoading(false));
-  // assetData, assetDataContext.exchangeRates는 다이얼로그 열린 시점의 스냅샷만 필요
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // assetData, assetDataContext.exchangeRates는 다이얼로그 열린 시점의 스냅샷만 필요
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showShareDialog, sharePin]);
 
   // confirmShare와 동일하게 미리 준비된 URL을 동기적으로 복사
@@ -161,9 +162,9 @@ export function NavUser({
 
     setIsImporting(true);
     try {
-      await importAssetData(file);
-      refreshData();
+      const imported = await importAssetData(file);
       toast.success("자산 데이터를 불러왔습니다.");
+      void initAndSync(imported); // 주식 현재가 갱신은 백그라운드 처리 → syncTodayStockPrices가 별도 toast 표시
     } catch (error) {
       toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
     } finally {
@@ -185,155 +186,13 @@ export function NavUser({
     setShowClearDialog(false);
   };
 
-  const generateAIPrompt = () => {
-    const summary = getAssetSummary();
-
-    // 부동산 상세 분석 (주소 포함)
-    const realEstateList = assetData.realEstate.map((item) => {
-      const typeMap: Record<string, string> = {
-        apartment: '아파트',
-        house: '주택',
-        land: '토지',
-        commercial: '상가',
-        other: '기타'
-      };
-      const type = typeMap[item.type] || item.type;
-      const profit = item.currentValue - item.purchasePrice;
-      const profitRate = item.purchasePrice > 0 ? ((profit / item.purchasePrice) * 100).toFixed(2) : '0.00';
-      const address = item.address || '주소 미입력';
-
-      return `  • ${item.name} (${type}) - ${address}
-    평가금액: ${formatShortCurrency(item.currentValue)} | 수익률: ${profitRate}%`;
-    }).join('\n');
-
-    // 주식 상세 분석 (종목명 포함)
-    const stockList = assetData.stocks.map((item) => {
-      const categoryMap: Record<string, string> = {
-        domestic: '국내',
-        foreign: '해외',
-        irp: 'IRP',
-        isa: 'ISA',
-        pension: '연금',
-        unlisted: '비상장'
-      };
-      const category = categoryMap[item.category] || item.category;
-      const value = item.quantity * item.currentPrice;
-      const cost = item.quantity * item.averagePrice;
-      const profit = value - cost;
-      const profitRate = cost > 0 ? ((profit / cost) * 100).toFixed(2) : '0.00';
-
-      return `  • [${category}] ${item.name} (${item.ticker || 'N/A'})
-    평가금액: ${formatShortCurrency(value)} | 수익률: ${profitRate}%`;
-    }).join('\n');
-
-    // 암호화폐 상세 분석 (코인명 포함)
-    const cryptoList = assetData.crypto.map((item) => {
-      const value = item.quantity * item.currentPrice;
-      const cost = item.quantity * item.averagePrice;
-      const profit = value - cost;
-      const profitRate = cost > 0 ? ((profit / cost) * 100).toFixed(2) : '0.00';
-
-      return `  • ${item.name} (${item.symbol}) - ${item.exchange || '거래소 미입력'}
-    보유량: ${item.quantity} ${item.symbol} | 평가금액: ${formatShortCurrency(value)} | 수익률: ${profitRate}%`;
-    }).join('\n');
-
-    // 대출 상세 분석
-    const loanList = assetData.loans.map((item) => {
-      const typeMap: Record<string, string> = {
-        credit: '신용대출',
-        minus: '마이너스통장',
-        home_mortgage: '주택담보대출',
-        stock_mortgage: '주식담보대출',
-        insurance_loan: '보험약관대출',
-        deposit_loan: '전세자금대출',
-        other: '기타'
-      };
-      const type = typeMap[item.type] || item.type;
-
-      return `  • ${item.name} (${type}) - ${item.institution || '금융기관 미입력'}
-    잔액: ${formatShortCurrency(item.balance)} | 금리: ${item.interestRate}%`;
-    }).join('\n');
-
-    const debtRatio = summary.totalValue > 0 ? (summary.loanBalance / summary.totalValue * 100).toFixed(1) : '0';
-    const netAssetRatio = summary.totalValue > 0 ? (summary.netAsset / summary.totalValue * 100).toFixed(1) : '0';
-
-    const prompt = `안녕하세요! 제 현재 자산 현황을 분석하고 조언을 부탁드립니다.
-
-📊 **자산 현황 요약**
-
-• 순자산: ${formatShortCurrency(summary.netAsset)} (순자산비율 ${netAssetRatio}%)
-  (총자산 ${formatShortCurrency(summary.totalValue)} - 대출 ${formatShortCurrency(summary.loanBalance)} - 임차인보증금 ${formatShortCurrency(summary.tenantDepositTotal)})
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🏠 **부동산 상세** (총 ${formatShortCurrency(summary.realEstateValue)}, ${summary.realEstateCount}개)
-${realEstateList || '  - 등록된 부동산 없음'}
-
-평가손익: ${summary.realEstateProfit >= 0 ? '+' : ''}${formatShortCurrency(summary.realEstateProfit)} (${summary.realEstateCost > 0 ? ((summary.realEstateProfit / summary.realEstateCost) * 100).toFixed(2) : '0.00'}%)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📈 **주식 상세** (총 ${formatShortCurrency(summary.stockValue)}, ${summary.stockCount}개)
-${stockList || '  - 등록된 주식 없음'}
-
-평가손익: ${summary.stockProfit >= 0 ? '+' : ''}${formatShortCurrency(summary.stockProfit)} (${summary.stockCost > 0 ? ((summary.stockProfit / summary.stockCost) * 100).toFixed(2) : '0.00'}%)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-₿ **암호화폐 상세** (총 ${formatShortCurrency(summary.cryptoValue)}, ${summary.cryptoCount}개)
-${cryptoList || '  - 등록된 암호화폐 없음'}
-
-평가손익: ${summary.cryptoProfit >= 0 ? '+' : ''}${formatShortCurrency(summary.cryptoProfit)} (${summary.cryptoCost > 0 ? ((summary.cryptoProfit / summary.cryptoCost) * 100).toFixed(2) : '0.00'}%)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💳 **대출 상세** (총 ${formatShortCurrency(summary.loanBalance)}, ${summary.loanCount}건)
-${loanList || '  - 등록된 대출 없음'}
-
-📊 **부채 비율**
-  - 총자산 대비 부채 비율: ${debtRatio}%
-  - 순자산 대비 부채 비율: ${summary.netAsset > 0 ? (summary.loanBalance / summary.netAsset * 100).toFixed(1) : 'N/A'}%
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💡 **자산 포트폴리오 분석 및 개선 조언 요청**
-
-위 자산 현황을 바탕으로 다음 사항에 대해 조언 부탁드립니다:
-
-1. **포트폴리오 균형 분석**
-   - 부동산/주식/암호화폐 배분 비율의 적절성
-   - 리스크 수준 평가 및 개선 방안
-
-2. **부동산 포트폴리오**
-   - 각 부동산의 입지와 유형 평가
-   - 지역/유형 다각화 필요성
-
-3. **주식 포트폴리오 리밸런싱**
-   - 국내/해외 주식 비율의 적절성
-   - 개별 종목별 비중 및 집중도 평가
-   - 각 카테고리별(IRP, ISA, 연금저축 등) 배분 전략
-
-4. **암호화폐 포트폴리오**
-   - 종목별 비중 및 리스크 평가
-   - 포트폴리오 다각화 필요성
-
-5. **대출 관리 전략**
-   - 현재 부채 비율(${debtRatio}%)의 적정성 평가
-   - 대출 유형별 우선 상환 순서
-   - 레버리지 활용의 적절성
-
-6. **장기 자산 증식 로드맵**
-   - 현재 포트폴리오 기반 3~5년 목표 설정
-   - 월별/분기별 투자 전략
-   - 우선적으로 개선해야 할 점
-
-감사합니다!`;
-
-    return prompt;
-  };
+  const getPromptContext = (): AssetPromptContext => ({
+    data: assetData,
+    summary: getAssetSummary(),
+  });
 
   const handleCopyPrompt = async () => {
-    const prompt = generateAIPrompt();
+    const prompt = AI_PROMPT_TEMPLATES[selectedPromptIdx].generate(getPromptContext());
     try {
       await navigator.clipboard.writeText(prompt);
       setCopied(true);
@@ -355,7 +214,7 @@ ${loanList || '  - 등록된 대출 없음'}
                 className="h-9 px-2 text-white hover:text-white transition-colors border-none bg-zinc-800 hover:bg-zinc-700 data-[state=open]:bg-zinc-700 dark:bg-rose-500 dark:hover:bg-rose-600 dark:data-[state=open]:bg-rose-600"
               >
                 <div className="grid flex-1 text-left text-xs leading-tight ml-1">
-                  <span className="truncate font-bold tracking-tighter uppercase text-[11px]">데이터 및 설정 관리</span>
+                  <span className="truncate font-bold tracking-tighter uppercase text-[11px]">자산 관리</span>
                 </div>
                 <CircleChevronDown className="ml-auto size-3.5 opacity-70" />
               </SidebarMenuButton>
@@ -373,7 +232,7 @@ ${loanList || '  - 등록된 대출 없음'}
                     <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">데이터 및 설정 관리</span>
+                    <span className="truncate font-medium">자산 관리</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -382,11 +241,11 @@ ${loanList || '  - 등록된 대출 없음'}
                 <p className="text-xs font-medium text-muted-foreground">데이터 관리</p>
               </div>
               <DropdownMenuItem className="py-2" onClick={handleExport}>
-                <Download className="size-4" />
+                <Upload className="size-4" />
                 데이터 내보내기
               </DropdownMenuItem>
               <DropdownMenuItem className="py-2" onClick={handleImportClick} disabled={isImporting}>
-                <Upload className="size-4" />
+                <Download className="size-4" />
                 {isImporting ? "가져오는 중..." : "데이터 가져오기"}
               </DropdownMenuItem>
               <DropdownMenuItem className="py-2" onClick={handleShare}>
@@ -444,20 +303,32 @@ ${loanList || '  - 등록된 대출 없음'}
               AI 평가용 자산 종합 현황
             </DialogTitle>
             <DialogDescription>
-              아래 프롬프트를 복사하여 Gemini, Grok 등 AI에게 자산 분석 및 조언을 요청하세요.
+              아래 프롬프트를 복사하여 Grok·Gemini·GPT 등 AI에게 자산 분석 및 조언을 요청하세요.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 overflow-y-auto flex-1 pr-2">
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            {AI_PROMPT_TEMPLATES.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedPromptIdx(i)}
+                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${
+                  i === selectedPromptIdx
+                    ? "bg-background text-foreground shadow-sm font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>{t.label}</span>
+                <span className="text-[10px] opacity-60 hidden sm:block leading-tight text-center">{t.sublabel}</span>
+              </button>
+            ))}
+          </div>
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             <Textarea
-              value={generateAIPrompt()}
+              value={AI_PROMPT_TEMPLATES[selectedPromptIdx].generate(getPromptContext())}
               readOnly
-              className="min-h-[400px] w-full font-mono text-sm resize-none"
+              className="min-h-[380px] w-full font-mono text-sm resize-none"
             />
-            <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-              <p className="text-muted-foreground">
-                💡 이 프롬프트에는 현재 자산 현황 요약과 분석 요청 사항이 포함되어 있습니다.
-              </p>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAIPromptDialog(false)}>

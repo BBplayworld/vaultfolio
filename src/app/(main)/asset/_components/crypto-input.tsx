@@ -474,7 +474,7 @@ export function CryptoInput() {
                             <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
                           </div>
                         </div>
-                        {item.description && <p className="text-muted-foreground mt-2 text-sm">{item.description}</p>}
+                        {item.description && <p className="text-foreground mt-2 text-sm">{item.description}</p>}
                       </div>
                     </div>
                   </div>
