@@ -90,13 +90,17 @@ export function NavUser({
     setShortUrlLoading(true);
 
     const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+    const ownerId = localStorage.getItem("vaultfolio_share_owner_id") ?? undefined;
     fetch("/api/share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, owner_id: ownerId }),
     })
-      .then((res) => res.json() as Promise<{ key?: string }>)
+      .then((res) => res.json() as Promise<{ key?: string; owner_id?: string }>)
       .then((json) => {
+        if (json.owner_id) {
+          localStorage.setItem("vaultfolio_share_owner_id", json.owner_id);
+        }
         if (json.key) {
           setPreGeneratedShortUrl(
             `${window.location.origin}${window.location.pathname}#share=s:${json.key}`

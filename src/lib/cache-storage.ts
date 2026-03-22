@@ -4,6 +4,11 @@
  *
  * - 로컬 개발 (UPSTASH 환경변수 없음): 파일 기반 (data/finance-cache.json, data/share-tokens.json)
  * - Vercel 배포 (UPSTASH 환경변수 설정): Upstash for Redis
+ *
+ * Share URL 전략:
+ *   - 키 = sha256(token)[:10] (콘텐츠 기반, IP 제거) → 같은 자산 = 같은 키
+ *   - owner_id (localStorage UUID) 추적으로 자산 업데이트 시 구 키 즉시 삭제
+ *   - Sliding Window TTL: GET 시마다 30일 리셋 → 활성 링크는 자동 연장
  */
 
 import type { ExchangeRates, StockPriceResult } from "./finance-service";
@@ -13,14 +18,21 @@ import type { ExchangeRates, StockPriceResult } from "./finance-service";
 // ─────────────────────────────────────────────────────────
 
 export interface ICacheStorage {
+  // Finance
   getExchange(): Promise<ExchangeRates | null>;
   setExchange(rates: ExchangeRates): Promise<void>;
   getStock(cacheKey: string): Promise<StockPriceResult | null>;
   setStock(cacheKey: string, result: StockPriceResult, todayStr: string): Promise<void>;
   getKisToken(todayStr: string): Promise<string | null>;
   setKisToken(token: string, todayStr: string): Promise<void>;
+  // Share URL
   getShareToken(key: string): Promise<string | null>;
   setShareToken(key: string, token: string): Promise<void>;
+  deleteShareToken(key: string): Promise<void>;
+  getOwnerKey(ownerHash: string): Promise<string | null>;
+  setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
+  // Rate Limit (로컬 개발에서는 항상 통과)
+  checkRateLimit(ip: string): Promise<boolean>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -35,8 +47,13 @@ export function getCacheStorage(): ICacheStorage {
 }
 
 // ─────────────────────────────────────────────────────────
-// 공통 유틸: KST 자정까지 남은 초 (Upstash TTL 계산용)
+// 공통 유틸
 // ─────────────────────────────────────────────────────────
+
+const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
+const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX = 10;
 
 function secondsUntilMidnightKST(): number {
   const KST_OFFSET_MS = 9 * 3600 * 1000;
@@ -66,11 +83,17 @@ interface FileCacheData {
 
 interface ShareTokenEntry {
   token: string;
-  expires_at: number; // Unix timestamp (ms)
+  expires_at: number;
+}
+
+interface OwnerEntry {
+  share_key: string;
+  expires_at: number;
 }
 
 interface ShareTokensData {
   tokens: Record<string, ShareTokenEntry>;
+  owners: Record<string, OwnerEntry>;
 }
 
 class FileCacheStorage implements ICacheStorage {
@@ -85,11 +108,18 @@ class FileCacheStorage implements ICacheStorage {
 
   private writeFinanceCache(data: FileCacheData, todayStr: string): void {
     try {
-      // 오늘 날짜 외 STOCKS 항목 정리 (키 형식: "TICKER-YYYY-MM-DD")
       if (data.STOCKS && todayStr) {
+        // 오늘 날짜 외 STOCKS 항목 정리
         data.STOCKS = Object.fromEntries(
           Object.entries(data.STOCKS).filter(([key]) => key.endsWith(`-${todayStr}`))
         );
+      }
+      // 날짜 불일치 EXCHANGE / KIS_TOKEN도 함께 정리
+      if (data.EXCHANGE?.updated_at && data.EXCHANGE.updated_at !== todayStr) {
+        delete data.EXCHANGE;
+      }
+      if (data.KIS_TOKEN?.updated_at && data.KIS_TOKEN.updated_at !== todayStr) {
+        delete data.KIS_TOKEN;
       }
       fs.mkdirSync(path.dirname(FINANCE_CACHE_PATH), { recursive: true });
       fs.writeFileSync(FINANCE_CACHE_PATH, JSON.stringify(data, null, 2), "utf8");
@@ -99,12 +129,12 @@ class FileCacheStorage implements ICacheStorage {
   }
 
   private readShareTokens(): ShareTokensData {
-    if (!fs.existsSync(SHARE_TOKENS_PATH)) return { tokens: {} };
+    if (!fs.existsSync(SHARE_TOKENS_PATH)) return { tokens: {}, owners: {} };
     try {
       const raw = JSON.parse(fs.readFileSync(SHARE_TOKENS_PATH, "utf8")) as ShareTokensData;
-      return { tokens: raw.tokens ?? {} };
+      return { tokens: raw.tokens ?? {}, owners: raw.owners ?? {} };
     } catch {
-      return { tokens: {} };
+      return { tokens: {}, owners: {} };
     }
   }
 
@@ -151,22 +181,49 @@ class FileCacheStorage implements ICacheStorage {
   }
 
   async getShareToken(key: string): Promise<string | null> {
-    const entry = this.readShareTokens().tokens[key];
-    if (!entry) return null;
-    // 만료 확인
-    if (entry.expires_at < Date.now()) return null;
+    const data = this.readShareTokens();
+    const entry = data.tokens[key];
+    if (!entry || entry.expires_at < Date.now()) return null;
+    // Sliding Window: 접근 시 만료 시간 갱신
+    entry.expires_at = Date.now() + SHARE_TTL_MS;
+    this.writeShareTokens(data);
     return entry.token;
   }
 
   async setShareToken(key: string, token: string): Promise<void> {
     const data = this.readShareTokens();
-    data.tokens[key] = {
-      token,
-      expires_at: Date.now() + 30 * 24 * 3600 * 1000, // 30일
-    };
+    const existing = data.tokens[key];
+    if (existing && existing.expires_at > Date.now()) {
+      // 이미 유효한 키 존재 → TTL만 갱신
+      existing.expires_at = Date.now() + SHARE_TTL_MS;
+    } else {
+      data.tokens[key] = { token, expires_at: Date.now() + SHARE_TTL_MS };
+    }
     this.writeShareTokens(data);
   }
 
+  async deleteShareToken(key: string): Promise<void> {
+    const data = this.readShareTokens();
+    delete data.tokens[key];
+    this.writeShareTokens(data);
+  }
+
+  async getOwnerKey(ownerHash: string): Promise<string | null> {
+    const entry = this.readShareTokens().owners[ownerHash];
+    if (!entry || entry.expires_at < Date.now()) return null;
+    return entry.share_key;
+  }
+
+  async setOwnerKey(ownerHash: string, shareKey: string): Promise<void> {
+    const data = this.readShareTokens();
+    data.owners[ownerHash] = { share_key: shareKey, expires_at: Date.now() + SHARE_TTL_MS };
+    this.writeShareTokens(data);
+  }
+
+  // 로컬 개발에서는 Rate Limit 적용 없음
+  async checkRateLimit(_ip: string): Promise<boolean> {
+    return true;
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -207,6 +264,10 @@ class UpstashCacheStorage implements ICacheStorage {
   }
 
   async setKisToken(token: string, todayStr: string): Promise<void> {
+    // 전일 키 명시 삭제 (24h TTL 만료 전 즉시 정리)
+    const prevDate = new Date(Date.now() + 9 * 3600 * 1000 - 86400 * 1000)
+      .toISOString().split("T")[0];
+    await this.redis.del(`finance:kis_token:${prevDate}`);
     await this.redis.set(
       `finance:kis_token:${todayStr}`,
       { access_token: token, updated_at: todayStr },
@@ -215,11 +276,39 @@ class UpstashCacheStorage implements ICacheStorage {
   }
 
   async getShareToken(key: string): Promise<string | null> {
-    return this.redis.get<string>(`share:${key}`);
+    const token = await this.redis.get<string>(`share:${key}`);
+    if (!token) return null;
+    // Sliding Window: 접근 시 TTL 30일 리셋
+    await this.redis.expire(`share:${key}`, SHARE_TTL_SECONDS);
+    return token;
   }
 
   async setShareToken(key: string, token: string): Promise<void> {
-    await this.redis.set(`share:${key}`, token, { ex: 2592000 }); // 30일
+    const exists = await this.redis.exists(`share:${key}`);
+    if (exists) {
+      // 이미 유효한 키 존재 → TTL만 갱신
+      await this.redis.expire(`share:${key}`, SHARE_TTL_SECONDS);
+    } else {
+      await this.redis.set(`share:${key}`, token, { ex: SHARE_TTL_SECONDS });
+    }
   }
 
+  async deleteShareToken(key: string): Promise<void> {
+    await this.redis.del(`share:${key}`);
+  }
+
+  async getOwnerKey(ownerHash: string): Promise<string | null> {
+    return this.redis.get<string>(`share:owner:${ownerHash}`);
+  }
+
+  async setOwnerKey(ownerHash: string, shareKey: string): Promise<void> {
+    await this.redis.set(`share:owner:${ownerHash}`, shareKey, { ex: SHARE_TTL_SECONDS });
+  }
+
+  async checkRateLimit(ip: string): Promise<boolean> {
+    const key = `share:rl:${ip}`;
+    const count = await this.redis.incr(key);
+    if (count === 1) await this.redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
+    return count <= RATE_LIMIT_MAX;
+  }
 }
