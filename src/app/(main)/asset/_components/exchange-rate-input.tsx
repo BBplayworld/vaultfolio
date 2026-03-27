@@ -4,15 +4,11 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
-import { RefreshCcw, BadgeDollarSign } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { syncFinanceData } from "@/lib/finance-service";
-import { useState } from "react";
-import { toast } from "sonner";
-import { saveAssetData } from "@/lib/asset-storage";
+import { BadgeDollarSign } from "lucide-react";
 
 export function ExchangeRateInput() {
-    const { assetData, exchangeRates, updateExchangeRate, saveData } = useAssetData();
+    const { exchangeRates, updateExchangeRate } = useAssetData();
+
     return (
         <Card className="bg-muted/30 border-dashed">
             <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">

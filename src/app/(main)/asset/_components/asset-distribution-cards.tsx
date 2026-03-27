@@ -377,7 +377,13 @@ export function AssetDistributionCards() {
               <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2">
                 {stockCategoryData.map((item) => {
                   const percentage = (item.value / summary.stockValue) * 100;
-                  const categoryStocks = assetData.stocks.filter((s) => s.category === item.category);
+                  const categoryStocks = assetData.stocks
+                    .filter((s) => s.category === item.category)
+                    .sort((a, b) => {
+                      const aVal = a.quantity * a.currentPrice * getMultiplier(a.currency);
+                      const bVal = b.quantity * b.currentPrice * getMultiplier(b.currency);
+                      return bVal - aVal;
+                    });
 
                   return (
                     <Collapsible key={item.category}>
@@ -411,7 +417,7 @@ export function AssetDistributionCards() {
                         </div>
 
                         {/* 종목별 상세 정보 */}
-                        <CollapsibleContent className="mt-2 space-y-2 pl-6">
+                        <CollapsibleContent className="mt-2 space-y-2 pl-2">
                           {categoryStocks.map((stock) => {
                             const stockValue = stock.quantity * stock.currentPrice * getMultiplier(stock.currency);
                             const stockPercentage = (stockValue / item.value) * 100;
@@ -420,9 +426,9 @@ export function AssetDistributionCards() {
                             return (
                               <div key={stock.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className={`font-medium truncate ${ASSET_THEME.primary.text}`}>{stock.name}</span>
+                                  <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
                                   {stock.ticker && (
-                                    <span className="text-muted-foreground">({stock.ticker})</span>
+                                    <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-3 whitespace-nowrap">

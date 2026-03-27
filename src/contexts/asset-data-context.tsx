@@ -140,7 +140,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       if (savedRates) {
         try {
           const parsed = JSON.parse(savedRates);
-          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 900 });
+          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY });
           setExchangeRateDate(todayStr);
         } catch { /* 파싱 실패 시 기존 state 유지 */ }
       }
@@ -152,7 +152,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (data && !data.error) {
         updateExchangeRate("USD", data.USD, data.updated_at ?? todayStr);
-        updateExchangeRate("JPY", data.JPY, data.updated_at ?? todayStr);
+        if (data.JPY) updateExchangeRate("JPY", data.JPY);
       }
     } catch (e) {
       notify.error(MSG.EXCHANGE_SYNC_FAILED);
@@ -167,7 +167,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // Step 3. 주식 현재가 배치 조회
   // - outdated 판단: s.baseDate !== today (오늘자 미갱신 항목만 대상)
-  // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 3초 지연
+  // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 1초 지연
   // - 갱신 완료 시 toast 알림
   const syncTodayStockPrices = useCallback(async (data: AssetData) => {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -182,7 +182,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     console.log(`[Sync] 주식 현재가 갱신 대상: ${outdatedStocks.length}개`);
     const BATCH_SIZE = 3;
-    const BATCH_DELAY_MS = 3 * 1000;
+    const BATCH_DELAY_MS = 1 * 1000;
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
       if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
@@ -311,12 +311,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(savedRates);
         if (typeof parsed === "number") {
-          setExchangeRatesState({ USD: parsed, JPY: 900 });
+          setExchangeRatesState({ USD: parsed, JPY: 930 });
         } else {
-          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 900 });
+          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY || 930 });
         }
       } catch {
-        setExchangeRatesState({ USD: parseFloat(savedRates) || 1380, JPY: 900 });
+        setExchangeRatesState({ USD: parseFloat(savedRates) || 1380, JPY: 930 });
       }
     }
     const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);

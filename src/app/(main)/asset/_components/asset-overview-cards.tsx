@@ -15,15 +15,15 @@ export function AssetOverviewCards() {
       <Card className={`${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className={`text-base font-bold ${ASSET_THEME.primary.text}`}>순자산</CardTitle>
-            <Banknote className={`size-5 ${ASSET_THEME.primary.text}`} />
+            <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>순자산</CardTitle>
+            <Banknote className={`size-4 ${ASSET_THEME.primary.text}`} />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
             <p className={`text-3xl font-extrabold ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(summary.netAsset)}</p>
-            <div className="flex flex-col gap-0.5 text-xs">
-              <span className={`font-medium ${ASSET_THEME.text.muted}`}>총자산 - 대출 - 보증금</span>
+            <div className="flex items-center justify-between text-xs">
+              <span className={ASSET_THEME.text.muted}>총자산 - 총부채</span>
             </div>
           </div>
         </CardContent>

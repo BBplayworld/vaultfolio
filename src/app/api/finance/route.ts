@@ -17,14 +17,13 @@
 import { NextResponse } from "next/server";
 import {
   classifyTickers,
-  fetchStocksFromTwelveData,
+  fetchStocksFromKisOverseas,
   fetchKisToken,
   fetchStocksFromKorea,
-  fetchExchangeRatesFromTwelveData,
+  fetchExchangeRateFromKis,
 } from "@/lib/finance-service";
 import { getCacheStorage } from "@/lib/cache-storage";
 
-const API_KEY = process.env.TWELVE_DATA_API_KEY || "";
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 
@@ -56,7 +55,10 @@ export async function GET(request: Request) {
     if (cached?.updated_at === todayStr) return NextResponse.json(cached);
 
     // 2단계: 외부 API 호출
-    const rates = await fetchExchangeRatesFromTwelveData(API_KEY, todayStr);
+    const accessTokenForExchange = await getKisAccessToken(todayStr);
+    const rates = accessTokenForExchange
+      ? await fetchExchangeRateFromKis(accessTokenForExchange, KIS_APP_KEY, KIS_APP_SECRET, todayStr)
+      : null;
     if (rates) {
       // 3단계: 캐시 갱신
       await storage.setExchange(rates);
@@ -98,8 +100,11 @@ export async function GET(request: Request) {
     const apiResults: Record<string, { price: number; name: string; updated_at: string }> = {};
 
     if (usTickers.length > 0) {
-      const res = await fetchStocksFromTwelveData(usTickers, API_KEY, todayStr);
-      Object.assign(apiResults, res);
+      const accessToken = await getKisAccessToken(todayStr);
+      if (accessToken) {
+        const res = await fetchStocksFromKisOverseas(usTickers, todayStr, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        Object.assign(apiResults, res);
+      }
     }
 
     if (krTickers.length > 0) {

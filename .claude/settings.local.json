@@ -7,7 +7,14 @@
       "WebFetch(domain:gist.github.com)",
       "WebFetch(domain:pandas-datareader.readthedocs.io)",
       "Bash(npm install:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "WebFetch(domain:apiportal.koreainvestment.com)",
+      "WebFetch(domain:glama.ai)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:zerohertzlib.readthedocs.io)",
+      "WebFetch(domain:wikidocs.net)",
+      "WebFetch(domain:mcpservers.org)",
+      "WebFetch(domain:cran.r-project.org)"
     ]
   }
 }

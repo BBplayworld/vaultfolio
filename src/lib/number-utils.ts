@@ -28,11 +28,11 @@ export function formatShortCurrency(value: number): string {
   if (length === 0) return "0원";
   if (length >= 9) {
     // 1억 이상
-    return `${formatNumberWithCommas((value / 100000000).toFixed(1))}억원`;
+    return `${formatNumberWithCommas(Math.floor((value / 100000000) * 10) / 10)}억원`;
   }
   if (length >= 5) {
     // 1만 이상
-    return `${formatNumberWithCommas((value / 10000).toFixed(0))}만원`;
+    return `${formatNumberWithCommas(Math.floor(value / 10000))}만원`;
   }
   return formatCurrency(value);
 }

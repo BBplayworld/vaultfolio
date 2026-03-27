@@ -49,9 +49,8 @@ export default function Page() {
               <div className="flex items-start gap-2">
                 <Activity className="size-4 text-primary flex-shrink-0 mt-0.5" />
                 <span className="text-foreground">
-                  보유 주식 현재가와 환율(USD·JPY)은{" "}
-                  <span className="font-medium text-rose-500">매일 자동</span>으로 최신 정보를 불러옵니다.
-                  오늘 이미 갱신된 경우 불필요한 요청 없이 빠르게 표시됩니다.
+                  보유 <span className="font-medium text-rose-500">주식 현재가와 환율(USD·JPY)</span>은{" "}
+                  매일 자동으로 최신 정보를 불러옵니다.
                 </span>
               </div>
             </AlertDescription>
