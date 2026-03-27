@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Banknote } from "lucide-react";
+import { Plus, Pencil, Trash2, Banknote, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -270,7 +270,7 @@ export function CashInput() {
                     <div className="flex items-center justify-between gap-4">
                         <div className="space-y-1.5">
                             <CardTitle className="flex items-center gap-2">
-                                <Banknote className="size-5" />
+                                <Wallet className="size-5" />
                                 현금성 자산
                             </CardTitle>
                             <CardDescription>보유하고 있는 현금성 자산을 관리합니다.</CardDescription>
