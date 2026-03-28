@@ -11,7 +11,7 @@ import { CashInput } from "./_components/cash-input";
 import { LoanInput } from "./_components/loan-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles, Activity } from "lucide-react";
+import { Info, Database, Sparkles, Activity, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, CircleChevronDown } from "lucide-react";
 import { CopyrightFooter } from "./_components/copyright-footer";
 import { APP_CONFIG } from "@/config";
 
@@ -73,19 +73,34 @@ export default function Page() {
       <div className="flex flex-col gap-4 md:gap-6 w-full">
         <AssetOverviewCards />
         <AssetDistributionCards />
-        <div className="flex flex-col gap-2">
-          <ExchangeRateInput />
-        </div>
-        <YearlyNetAssetChart />
       </div>
 
       <Tabs defaultValue="real-estate" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="real-estate">부동산</TabsTrigger>
-          <TabsTrigger value="stocks">주식</TabsTrigger>
-          <TabsTrigger value="crypto">암호화폐</TabsTrigger>
-          <TabsTrigger value="cash">현금성 자산</TabsTrigger>
-          <TabsTrigger value="loans">대출</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 h-auto p-1 gap-1">
+          {(
+            [
+              { value: "real-estate", icon: Building2, label: "부동산" },
+              { value: "stocks", icon: TrendingUp, label: "주식" },
+              { value: "crypto", icon: Bitcoin, label: "암호화폐" },
+              { value: "cash", icon: Wallet, label: "현금성 자산" },
+              { value: "loans", icon: CreditCard, label: "대출" },
+            ] as const
+          ).map(({ value, icon: Icon, label }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className={[
+                "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
+                "hover:bg-accent hover:text-foreground hover:border-primary/50",
+                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",
+                "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
+              ].join(" ")}
+            >
+              <Icon className="hidden sm:inline shrink-0 size-5" />
+              <span className="text-xs sm:text-sm">{label}</span>
+              <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
+            </TabsTrigger>
+          ))}
         </TabsList>
         <TabsContent value="real-estate">
           <RealEstateInput />
@@ -103,6 +118,11 @@ export default function Page() {
           <LoanInput />
         </TabsContent>
       </Tabs>
+
+      <div className="flex flex-col gap-2">
+        <ExchangeRateInput />
+      </div>
+      <YearlyNetAssetChart />
 
       <CopyrightFooter />
     </div >

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, TrendingUp, Search, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance-service";
 
@@ -610,14 +610,31 @@ export function StockInput() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all">
-            <TabsList className="mb-4 grid w-full grid-cols-7">
-              <TabsTrigger value="all">전체</TabsTrigger>
-              <TabsTrigger value="domestic">국내</TabsTrigger>
-              <TabsTrigger value="foreign">해외</TabsTrigger>
-              <TabsTrigger value="irp">IRP</TabsTrigger>
-              <TabsTrigger value="isa">ISA</TabsTrigger>
-              <TabsTrigger value="pension">연금</TabsTrigger>
-              <TabsTrigger value="unlisted">비상장</TabsTrigger>
+            <TabsList className="mb-4 grid w-full grid-cols-7 h-auto p-1 gap-1">
+              {(
+                [
+                  { value: "all", icon: LayoutGrid, label: "전체" },
+                  { value: "domestic", icon: Flag, label: "국내" },
+                  { value: "foreign", icon: Globe, label: "해외" },
+                  { value: "irp", icon: Landmark, label: "IRP" },
+                  { value: "isa", icon: Coins, label: "ISA" },
+                  { value: "pension", icon: ShieldCheck, label: "연금" },
+                  { value: "unlisted", icon: Lock, label: "비상장" },
+                ] as const
+              ).map(({ value, icon: Icon, label }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className={[
+                    "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
+                    "hover:bg-accent hover:text-foreground hover:border-primary/50",
+                    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",
+                    "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
+                  ].join(" ")}
+                >
+                  <span className="text-xs sm:text-sm">{label}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
             <TabsContent value="all">
               {(() => {
