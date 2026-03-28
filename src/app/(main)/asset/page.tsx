@@ -79,25 +79,27 @@ export default function Page() {
         <TabsList className="grid w-full grid-cols-5 h-auto p-1 gap-1">
           {(
             [
-              { value: "real-estate", icon: Building2, label: "부동산" },
-              { value: "stocks", icon: TrendingUp, label: "주식" },
-              { value: "crypto", icon: Bitcoin, label: "암호화폐" },
-              { value: "cash", icon: Wallet, label: "현금성 자산" },
-              { value: "loans", icon: CreditCard, label: "대출" },
+              { value: "real-estate", icon: Building2, label: "부동산", mobileLabel: undefined },
+              { value: "stocks", icon: TrendingUp, label: "주식", mobileLabel: undefined },
+              { value: "crypto", icon: Bitcoin, label: "암호화폐", mobileLabel: undefined },
+              { value: "cash", icon: Wallet, label: "현금성 자산", mobileLabel: "현금" },
+              { value: "loans", icon: CreditCard, label: "대출", mobileLabel: undefined },
             ] as const
-          ).map(({ value, icon: Icon, label }) => (
+          ).map(({ value, icon: Icon, label, mobileLabel }) => (
             <TabsTrigger
               key={value}
               value={value}
               className={[
-                "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
+                "h-auto sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
                 "hover:bg-accent hover:text-foreground hover:border-primary/50",
-                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",
+                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-primary/50 data-[state=active]:font-semibold",
                 "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
               ].join(" ")}
             >
-              <Icon className="hidden sm:inline shrink-0 size-5" />
-              <span className="text-xs sm:text-sm">{label}</span>
+              <Icon className="shrink-0 size-3 sm:size-5" />
+              <span className="text-[11px] leading-tight sm:text-sm">
+                {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
+              </span>
               <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
             </TabsTrigger>
           ))}
