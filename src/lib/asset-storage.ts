@@ -101,7 +101,7 @@ const DICT = {
   re: ["apartment", "house", "land", "commercial", "other"],
   st: ["domestic", "foreign", "irp", "isa", "pension", "unlisted"],
   lo: ["credit", "minus", "mortgage-home", "mortgage-stock", "mortgage-insurance", "mortgage-deposit", "mortgage-other"],
-  ca: ["bank", "cash", "deposit", "savings"],
+  ca: ["bank", "cash", "deposit", "savings", "cma"],
   cu: ["KRW", "USD", "JPY"],
   ins: [
     "Upbit", "Bithumb", "Binance", "Coinone", "Korbit", "신한", "국민", "우리", "하나", "농협", "기업", "산업", "외환", "수협", "새마을", "신협", "우체국", "카카오", "토스", "케이",
@@ -310,7 +310,7 @@ export function parseShareToken(token: string, pin?: string): ParseResult {
     }
 
     // 하위 호환성 (V7.1:N:, V7.1:P:, V7.0)
-    let decompressed = LZString.decompressFromEncodedURIComponent(token);
+    const decompressed = LZString.decompressFromEncodedURIComponent(token);
 
     if (decompressed && decompressed.startsWith("vlt-fl-v7.1:")) {
       const parts = decompressed.split(":");
