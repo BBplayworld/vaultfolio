@@ -76,7 +76,7 @@ export default function Page() {
       </div>
 
       <Tabs defaultValue="real-estate" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto p-1 gap-1">
+        <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1">
           {(
             [
               { value: "real-estate", icon: Building2, label: "부동산", mobileLabel: undefined },
@@ -90,13 +90,12 @@ export default function Page() {
               key={value}
               value={value}
               className={[
-                "h-auto sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
+                "h-10 sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
                 "hover:bg-accent hover:text-foreground hover:border-primary/50",
                 "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-primary/50 data-[state=active]:font-semibold",
                 "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
               ].join(" ")}
             >
-              <Icon className="shrink-0 size-3 sm:size-5" />
               <span className="text-[11px] leading-tight sm:text-sm">
                 {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
               </span>
