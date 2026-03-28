@@ -39,26 +39,26 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
-      
+
       if (allowDecimals) {
         // 소수점 입력 시: 숫자, 콤마, 점, 마이너스 기호만 허용
         let cleanValue = inputValue.replace(/[^\d,.-]/g, "");
-        
+
         // 점이 여러 개면 첫 번째 것만 유지
         const parts = cleanValue.split('.');
         if (parts.length > 2) {
           cleanValue = parts[0] + '.' + parts.slice(1).join('');
         }
-        
+
         // 소수점 자리수 제한
         if (maxDecimals !== undefined && parts.length === 2) {
           if (parts[1].length > maxDecimals) {
             cleanValue = parts[0] + '.' + parts[1].slice(0, maxDecimals);
           }
         }
-        
+
         setDisplayValue(cleanValue);
-        
+
         // 파싱: 콤마 제거 후 숫자로 변환
         const numValue = parseFloat(cleanValue.replace(/,/g, '')) || 0;
         onChange?.(numValue);
@@ -66,7 +66,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         // 정수만 입력: 숫자와 콤마만 허용
         const cleanValue = inputValue.replace(/[^\d,]/g, "");
         setDisplayValue(cleanValue);
-        
+
         const numValue = parseNumberFromCommas(cleanValue);
         onChange?.(numValue);
       }
@@ -99,7 +99,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     const handleQuickAdd = (quickValue: number) => {
-      const currentValue = allowDecimals 
+      const currentValue = allowDecimals
         ? (parseFloat(displayValue.replace(/,/g, '')) || 0)
         : parseNumberFromCommas(displayValue);
       const newValue = currentValue + quickValue;
@@ -112,7 +112,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         <Input
           ref={ref}
           type="text"
-          inputMode="numeric"
+          inputMode={allowDecimals ? "decimal" : "numeric"}
           value={displayValue}
           onChange={handleChange}
           onBlur={handleBlur}
