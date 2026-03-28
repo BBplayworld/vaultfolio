@@ -14,7 +14,10 @@
       "WebFetch(domain:zerohertzlib.readthedocs.io)",
       "WebFetch(domain:wikidocs.net)",
       "WebFetch(domain:mcpservers.org)",
-      "WebFetch(domain:cran.r-project.org)"
+      "WebFetch(domain:cran.r-project.org)",
+      "Bash(node -e \"const icons = require\\(''lucide-react''\\); const needed = [''Home'', ''MapPin'', ''Store'', ''TreePine'', ''Landmark'', ''House'', ''Building'', ''Building2'', ''Calendar'']; needed.forEach\\(n => console.log\\(n, '':'', typeof icons[n]\\)\\);\")",
+      "Bash(ls -la \"e:/2.project/js/vaultfolio/src/app/\\(main\\)/asset/_components/\")",
+      "Bash(ls -la \"e:/2.project/js/vaultfolio/src/app/\\(main\\)/asset/_components/sidebar/\")"
     ]
   }
 }

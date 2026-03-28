@@ -1,11 +1,11 @@
 "use client";
 
-import { Building2, TrendingUp, Bitcoin, Banknote, CreditCard, Wallet, ChevronRight } from "lucide-react";
+import { Building2, TrendingUp, Bitcoin, Banknote, CreditCard, Wallet, ChevronRight, Home, MapPin, Store, TreePine, Landmark } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig } from "@/components/ui/chart";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 
 const assetDistributionChartConfig = {
@@ -87,6 +87,19 @@ const loanTypeChartConfig = {
     color: "hsl(var(--chart-1))",
   },
 } as ChartConfig;
+
+const CRYPTO_COLORS: string[] = [
+  "#f97316", "#8b5cf6", "#06b6d4", "#10b981",
+  "#f59e0b", "#ec4899", "#3b82f6", "#84cc16", "#ef4444", "#6366f1",
+];
+
+const REAL_ESTATE_TYPE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  apartment: { label: "아파트", icon: Building2, color: "#0d9488" },
+  house: { label: "주택", icon: Home, color: "#2563eb" },
+  land: { label: "토지", icon: TreePine, color: "#16a34a" },
+  commercial: { label: "상가", icon: Store, color: "#d97706" },
+  other: { label: "기타", icon: Landmark, color: "#7c3aed" },
+};
 
 export function AssetDistributionCards() {
   const { assetData, getAssetSummary, exchangeRates } = useAssetData();
@@ -181,8 +194,50 @@ export function AssetDistributionCards() {
     }))
     .filter((item) => item.balance > 0);
 
+  const cryptoDistributionData = assetData.crypto
+    .map((coin) => {
+      const coinValue = coin.quantity * coin.currentPrice;
+      const coinCost = coin.quantity * coin.averagePrice;
+      const profit = coinValue - coinCost;
+      const profitRate = coinCost > 0 ? (profit / coinCost) * 100 : 0;
+      return { coin, coinValue, coinCost, profit, profitRate };
+    })
+    .filter((item) => item.coinValue > 0)
+    .sort((a, b) => b.coinValue - a.coinValue);
+
+  const formatHoldingPeriod = (days: number): string => {
+    const years = Math.floor(days / 365);
+    const months = Math.floor((days % 365) / 30);
+    if (years > 0 && months > 0) return `${years}년 ${months}개월`;
+    if (years > 0) return `${years}년`;
+    if (months > 0) return `${months}개월`;
+    return `${days}일`;
+  };
+
+  const CASH_TYPE_META: Record<string, { label: string; color: string }> = {
+    bank: { label: "입출금 통장", color: "#16a34a" },
+    cma: { label: "CMA", color: "#059669" },
+    cash: { label: "실물 현금", color: "#15803d" },
+    deposit: { label: "예금", color: "#0d9488" },
+    savings: { label: "적금", color: "#0891b2" },
+  };
+
+  const cashTypeData = (["bank", "cma", "cash", "deposit", "savings"] as const)
+    .map((type) => {
+      const items = assetData.cash.filter((c) => c.type === type);
+      const value = items.reduce((sum, c) => sum + c.balance * getMultiplier(c.currency), 0);
+      return { type, ...CASH_TYPE_META[type], items, value };
+    })
+    .filter((d) => d.value > 0);
+
+  const sortedCardKeys = [
+    { key: "stockCrypto", value: summary.stockValue + summary.cryptoValue + summary.cashValue },
+    { key: "realEstate", value: summary.realEstateValue },
+    { key: "loans", value: summary.loanBalance },
+  ].sort((a, b) => b.value - a.value);
+
   return (
-    <div className="flex flex-col w-full gap-4 lg:grid lg:grid-cols-2">
+    <div className="flex flex-col w-full gap-6 lg:grid lg:grid-cols-2">
       <Card className="bg-primary/20 lg:bg-primary/10 border-primary/20 lg:border-border h-fit">
         <CardHeader className="pb-2">
           <CardTitle className={`${ASSET_THEME.primary.text}`}>자산 분포</CardTitle>
@@ -343,256 +398,523 @@ export function AssetDistributionCards() {
         </CardContent>
         <CardFooter>
           <p className="text-muted-foreground text-xs">
-            마지막 업데이트: {new Date(assetData.lastUpdated).toLocaleString("ko-KR")}
+            마지막 업데이트: {assetData.lastUpdated && !Number.isNaN(new Date(assetData.lastUpdated).getTime()) ? new Date(assetData.lastUpdated).toLocaleString("ko-KR") : ""}
           </p>
         </CardFooter>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className={`${ASSET_THEME.primary.text}`}>주식 카테고리별 분포</CardTitle>
-          <CardDescription>주식 자산의 카테고리별 평가금액</CardDescription>
-        </CardHeader>
-        <CardContent className="overflow-hidden pb-2">
-          {stockCategoryData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              <p>등록된 주식이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* 총 주식 평가금액 */}
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-primary">총 주식 평가금액</span>
-                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
-                    {formatShortCurrency(summary.stockValue)}
+      {sortedCardKeys.map(({ key }) => {
+        if (key === "stockCrypto") return (
+          <Card key={key}>
+            <CardHeader>
+              <CardTitle className={`${ASSET_THEME.primary.text}`}>금융자산 현황</CardTitle>
+              <CardDescription>주식, 암호화폐, 현금성 자산 현황</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-hidden pb-2">
+              <div className="space-y-4">
+                {/* 금융자산 총액 */}
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">금융자산 총액</p>
+                      <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                        {formatShortCurrency(summary.stockValue + summary.cryptoValue + summary.cashValue)}
+                      </p>
+                      <p className="text-[11px] text-foreground">{formatCurrency(summary.stockValue + summary.cryptoValue + summary.cashValue)}</p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      {summary.stockValue > 0 && (
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">주식 </span>
+                          <span className="font-bold text-foreground">{formatShortCurrency(summary.stockValue)}</span>
+                        </div>
+                      )}
+                      {summary.cryptoValue > 0 && (
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">암호화폐 </span>
+                          <span className="font-bold text-foreground">{formatShortCurrency(summary.cryptoValue)}</span>
+                        </div>
+                      )}
+                      {summary.cashValue > 0 && (
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">현금성 </span>
+                          <span className="font-bold text-foreground">{formatShortCurrency(summary.cashValue)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <TrendingUp className="size-3.5" />
+                    주식 분포
                   </span>
+                  <div className="h-px flex-1 bg-border" />
                 </div>
-                <div className="mt-1 text-xs text-foreground">
-                  {formatCurrency(summary.stockValue)}
-                </div>
-              </div>
 
-              {/* 카테고리별 분포 */}
-              <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2">
-                {stockCategoryData.map((item) => {
-                  const percentage = (item.value / summary.stockValue) * 100;
-                  const categoryStocks = assetData.stocks
-                    .filter((s) => s.category === item.category)
-                    .sort((a, b) => {
-                      const aVal = a.quantity * a.currentPrice * getMultiplier(a.currency);
-                      const bVal = b.quantity * b.currentPrice * getMultiplier(b.currency);
-                      return bVal - aVal;
-                    });
+                {stockCategoryData.length === 0 ? (
+                  <div className="flex h-32 items-center justify-center text-muted-foreground">
+                    <p>등록된 주식이 없습니다.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-primary">총 주식 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                          {formatShortCurrency(summary.stockValue)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-foreground">
+                        {formatCurrency(summary.stockValue)}
+                      </div>
+                    </div>
 
-                  return (
-                    <Collapsible key={item.category}>
-                      <div className="space-y-1.5">
-                        <CollapsibleTrigger className="w-full">
-                          <div className="flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg p-2 transition-colors">
-                            <div className="flex items-center gap-2">
-                              <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
-                              <span className="size-3 flex-shrink-0 rounded-full" style={{ background: item.fill }} />
-                              <span className={`font-medium ${ASSET_THEME.primary.text}`}>{item.label}</span>
-                              <span className="text-xs text-muted-foreground">({categoryStocks.length}개)</span>
+                    <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2">
+                      {stockCategoryData.map((item) => {
+                        const percentage = (item.value / summary.stockValue) * 100;
+                        const categoryStocks = assetData.stocks
+                          .filter((s) => s.category === item.category)
+                          .sort((a, b) => {
+                            const aVal = a.quantity * a.currentPrice * getMultiplier(a.currency);
+                            const bVal = b.quantity * b.currentPrice * getMultiplier(b.currency);
+                            return bVal - aVal;
+                          });
+
+                        return (
+                          <Collapsible key={item.category}>
+                            <div className="space-y-1.5">
+                              <CollapsibleTrigger className="w-full">
+                                <div className="flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg p-2 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: item.fill }} />
+                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>{item.label}</span>
+                                    <span className="text-xs text-muted-foreground">({categoryStocks.length}개)</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                      {percentage.toFixed(1)}%
+                                    </span>
+                                    <span className="text-xs font-bold tabular-nums">
+                                      {formatShortCurrency(item.value)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                  style={{ width: `${percentage}%`, background: item.fill }}
+                                />
+                              </div>
+                              <CollapsibleContent className="mt-2 space-y-2 pl-2">
+                                {categoryStocks.map((stock) => {
+                                  const stockValue = stock.quantity * stock.currentPrice * getMultiplier(stock.currency);
+                                  const stockPercentage = (stockValue / item.value) * 100;
+                                  const profit = stockValue - (stock.quantity * stock.averagePrice * getMultiplier(stock.currency));
+                                  return (
+                                    <div key={stock.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
+                                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                                        <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
+                                        {stock.ticker && (
+                                          <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3 whitespace-nowrap">
+                                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                          {stockPercentage.toFixed(1)}%
+                                        </span>
+                                        <span className="font-bold tabular-nums">
+                                          {formatShortCurrency(stockValue)}
+                                        </span>
+                                        <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
+                                          ({profit >= 0 ? '+' : ''}{formatShortCurrency(profit)})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </CollapsibleContent>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                {percentage.toFixed(1)}%
+                          </Collapsible>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {cryptoDistributionData.length > 0 && (
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                        <Bitcoin className="size-3.5" />
+                        암호화폐 분포
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-primary">총 암호화폐 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                          {formatShortCurrency(summary.cryptoValue)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-foreground">
+                        {formatCurrency(summary.cryptoValue)}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {cryptoDistributionData.map((item, index) => {
+                        const { coin, coinValue, profit, profitRate } = item;
+                        const percentage = summary.cryptoValue > 0 ? (coinValue / summary.cryptoValue) * 100 : 0;
+                        const coinColor = CRYPTO_COLORS[index % CRYPTO_COLORS.length];
+                        return (
+                          <Collapsible key={coin.id}>
+                            <div className="space-y-1.5">
+                              <CollapsibleTrigger className="w-full">
+                                <div className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted/50 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: coinColor }} />
+                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>{coin.name}</span>
+                                    <span className="text-xs text-muted-foreground">({coin.symbol})</span>
+                                    {coin.exchange && (
+                                      <span className="hidden sm:inline text-xs text-muted-foreground">• {coin.exchange}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                      {percentage.toFixed(1)}%
+                                    </span>
+                                    <span className="text-xs font-bold tabular-nums">
+                                      {formatShortCurrency(coinValue)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                  style={{ width: `${percentage}%`, background: coinColor }}
+                                />
+                              </div>
+                              <CollapsibleContent className="mt-2 pl-2">
+                                <div className="rounded-lg bg-muted/30 p-3 text-xs space-y-1.5">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">보유 수량</span>
+                                    <span className="font-medium tabular-nums">{coin.quantity.toLocaleString("ko-KR")} {coin.symbol}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">평균단가</span>
+                                    <span className="font-medium tabular-nums">{formatCurrency(coin.averagePrice)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">현재가</span>
+                                    <span className="font-medium tabular-nums">{formatCurrency(coin.currentPrice)}</span>
+                                  </div>
+                                  <div className="flex justify-between border-t border-border/50 pt-1.5">
+                                    <span className="text-muted-foreground">평가손익</span>
+                                    <span className={`font-bold tabular-nums ${getProfitLossColor(profit)}`}>
+                                      {profit >= 0 ? "+" : ""}{formatShortCurrency(profit)} ({profit >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </div>
+                          </Collapsible>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {cashTypeData.length > 0 && (
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                        <Banknote className="size-3.5" />
+                        현금성 자산 분포
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-primary">총 현금성 자산 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                          {formatShortCurrency(summary.cashValue)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-foreground">
+                        {formatCurrency(summary.cashValue)}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {cashTypeData.map((typeGroup) => {
+                        const percentage = summary.cashValue > 0 ? (typeGroup.value / summary.cashValue) * 100 : 0;
+                        return (
+                          <Collapsible key={typeGroup.type}>
+                            <div className="space-y-1.5">
+                              <CollapsibleTrigger className="w-full">
+                                <div className="flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg p-2 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: typeGroup.color }} />
+                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>{typeGroup.label}</span>
+                                    <span className="text-xs text-muted-foreground">({typeGroup.items.length}개)</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                      {percentage.toFixed(1)}%
+                                    </span>
+                                    <span className="text-xs font-bold tabular-nums">
+                                      {formatShortCurrency(typeGroup.value)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                  style={{ width: `${percentage}%`, background: typeGroup.color }}
+                                />
+                              </div>
+                              <CollapsibleContent className="mt-2 space-y-2 pl-2">
+                                {typeGroup.items.map((cashItem) => {
+                                  const itemValue = cashItem.balance * getMultiplier(cashItem.currency);
+                                  const itemPct = typeGroup.value > 0 ? (itemValue / typeGroup.value) * 100 : 0;
+                                  return (
+                                    <div key={cashItem.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
+                                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                                        <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{cashItem.name}</span>
+                                        {cashItem.institution && (
+                                          <span className="hidden sm:inline text-muted-foreground">({cashItem.institution})</span>
+                                        )}
+                                        {cashItem.currency !== "KRW" && (
+                                          <span className="text-muted-foreground">[{cashItem.currency}]</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3 whitespace-nowrap">
+                                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                          {itemPct.toFixed(1)}%
+                                        </span>
+                                        <span className="font-bold tabular-nums">
+                                          {formatShortCurrency(itemValue)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </CollapsibleContent>
+                            </div>
+                          </Collapsible>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <p className="text-muted-foreground text-xs">
+                주식 <span className="font-bold text-foreground">{summary.stockCount}개</span>
+                {summary.cryptoCount > 0 && (
+                  <> · 암호화폐 <span className="font-bold text-foreground">{summary.cryptoCount}개</span></>
+                )}
+                {summary.cashCount > 0 && (
+                  <> · 현금성 <span className="font-bold text-foreground">{summary.cashCount}개</span></>
+                )}
+                {" "}보유 중
+              </p>
+            </CardFooter>
+          </Card>
+        );
+
+        if (key === "realEstate") return (
+          <Card key={key}>
+            <CardHeader>
+              <CardTitle className={`${ASSET_THEME.primary.text}`}>부동산 자산 현황</CardTitle>
+              <CardDescription>보유 부동산의 매입가 대비 현재 평가금액</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              {assetData.realEstate.length === 0 ? (
+                <div className="flex h-64 items-center justify-center text-muted-foreground">
+                  <p>등록된 부동산이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-primary">총 부동산 평가금액</span>
+                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                        {formatShortCurrency(summary.realEstateValue)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">총 매입가액</span>
+                      <span className="font-medium tabular-nums text-foreground">{formatShortCurrency(summary.realEstateCost)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs border-t border-primary/10 pt-2">
+                      <span className="text-muted-foreground">총 평가손익</span>
+                      <span className={`font-bold tabular-nums ${getProfitLossColor(summary.realEstateProfit)}`}>
+                        {summary.realEstateProfit >= 0 ? "+" : ""}{formatShortCurrency(summary.realEstateProfit)}
+                        {summary.realEstateCost > 0 && ` (${summary.realEstateProfit >= 0 ? "+" : ""}${((summary.realEstateProfit / summary.realEstateCost) * 100).toFixed(1)}%)`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {assetData.realEstate.map((item) => {
+                    const profit = item.currentValue - item.purchasePrice;
+                    const profitRate = item.purchasePrice > 0 ? (profit / item.purchasePrice) * 100 : 0;
+                    const holdingDays = calculateHoldingDays(item.purchaseDate);
+                    const meta = REAL_ESTATE_TYPE_META[item.type] ?? REAL_ESTATE_TYPE_META.other;
+                    const TypeIcon = meta.icon;
+                    return (
+                      <div key={item.id} className="rounded-lg border p-4 space-y-3 hover:bg-muted/20 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                            <div
+                              className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-white flex-shrink-0"
+                              style={{ backgroundColor: meta.color }}
+                            >
+                              <TypeIcon className="size-3" />
+                              <span>{meta.label}</span>
+                            </div>
+                            <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{item.name}</span>
+                            {(item.tenantDeposit ?? 0) > 0 && (
+                              <span className={`text-xs rounded-full px-2 py-0.5 whitespace-nowrap ${ASSET_THEME.liability.strong} bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900`}>
+                                보증금 {formatShortCurrency(item.tenantDeposit!)}
                               </span>
-                              <span className={`text-xs font-bold tabular-nums`}>
-                                {formatShortCurrency(item.value)}
-                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                            {formatHoldingPeriod(holdingDays)} 보유
+                          </span>
+                        </div>
+
+                        {item.address && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="size-3 flex-shrink-0" />
+                            <span className="truncate">{item.address}</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="rounded-md bg-muted/30 px-2 py-2">
+                            <p className="text-[12px] text-muted-foreground mb-0.5">매입가</p>
+                            <p className="text-s font-medium tabular-nums truncate" title={formatCurrency(item.purchasePrice)}>
+                              {formatShortCurrency(item.purchasePrice)}
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-muted/30 px-2 py-2">
+                            <p className="text-[12px] text-muted-foreground mb-0.5">현재 평가금액</p>
+                            <p className={`text-s font-bold tabular-nums truncate ${ASSET_THEME.asset.strong}`} title={formatCurrency(item.currentValue)}>
+                              {formatShortCurrency(item.currentValue)}
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-muted/30 px-2 py-2">
+                            <p className="text-[12px] text-muted-foreground mb-0.5">평가손익</p>
+                            <p className={`text-s font-bold tabular-nums truncate ${getProfitLossColor(profit)}`} title={formatCurrency(profit)}>
+                              {profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}
+                            </p>
+                            <p className={`text-[12px] tabular-nums ${getProfitLossColor(profit)}`}>
+                              ({profit >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter>
+              <p className="text-muted-foreground text-xs">총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중</p>
+            </CardFooter>
+          </Card>
+        );
+
+        return (
+          <Card key={key}>
+            <CardHeader>
+              <CardTitle className={`${ASSET_THEME.primary.text}`}>대출 현황</CardTitle>
+              <CardDescription>대출 종류별 잔액 및 금리</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              {loanTypeData.length === 0 ? (
+                <div className="flex h-64 items-center justify-center text-muted-foreground">
+                  <p>등록된 대출이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {loanTypeData.map((loan, index) => {
+                    const loanIconMap: Record<string, string> = {
+                      'credit': 'bg-rose-500',
+                      'minus': 'bg-rose-600',
+                      'mortgage-home': 'bg-rose-700',
+                      'mortgage-stock': 'bg-rose-600',
+                      'mortgage-insurance': 'bg-rose-500',
+                      'mortgage-deposit': 'bg-rose-600',
+                      'mortgage-other': 'bg-rose-400',
+                      'other': 'bg-rose-500',
+                    };
+                    const loanIcon = loanIconMap[loan.type] || 'bg-rose-500';
+                    return (
+                      <div key={index} className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`size-8 flex-shrink-0 rounded-full ${loanIcon} flex items-center justify-center`}>
+                            <span className="text-xs font-bold text-white">
+                              <CreditCard className="size-4" />
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{loan.name}</span>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">({loan.label})</span>
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {formatCurrency(loan.balance)}
                             </div>
                           </div>
-                        </CollapsibleTrigger>
-                        <div className="relative h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full transition-all"
-                            style={{
-                              width: `${percentage}%`,
-                              background: item.fill,
-                            }}
-                          />
                         </div>
-
-                        {/* 종목별 상세 정보 */}
-                        <CollapsibleContent className="mt-2 space-y-2 pl-2">
-                          {categoryStocks.map((stock) => {
-                            const stockValue = stock.quantity * stock.currentPrice * getMultiplier(stock.currency);
-                            const stockPercentage = (stockValue / item.value) * 100;
-                            const profit = stockValue - (stock.quantity * stock.averagePrice * getMultiplier(stock.currency));
-
-                            return (
-                              <div key={stock.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
-                                  {stock.ticker && (
-                                    <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 whitespace-nowrap">
-                                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                    {stockPercentage.toFixed(1)}%
-                                  </span>
-                                  <span className={`font-bold tabular-nums`}>
-                                    {formatShortCurrency(stockValue)}
-                                  </span>
-                                  <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
-                                    ({profit >= 0 ? '+' : ''}{formatShortCurrency(profit)})
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </CollapsibleContent>
-                      </div>
-                    </Collapsible>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <p className="text-muted-foreground text-xs">총 <span className={`font-bold text-foreground`}>{summary.stockCount}개</span> 주식 보유 중</p>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className={`${ASSET_THEME.primary.text}`}>코인 현황</CardTitle>
-          <CardDescription>보유 중인 암호화폐 목록</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-2">
-          {assetData.crypto.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              <p>등록된 암호화폐가 없습니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {assetData.crypto.map((coin) => {
-                const coinValue = coin.quantity * coin.currentPrice;
-                const coinCost = coin.quantity * coin.averagePrice;
-                const profit = coinValue - coinCost;
-                const profitRate = (profit / coinCost) * 100;
-
-                return (
-                  <div key={coin.id} className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="size-3 flex-shrink-0 rounded-full bg-chart-3" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{coin.name}</span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">({coin.symbol})</span>
-                        </div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{coin.quantity} {coin.symbol}</span>
-                          {coin.exchange && <span>• {coin.exchange}</span>}
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.liability.weak}`}>
+                            {formatShortCurrency(loan.balance)}
+                          </span>
+                          <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
+                            금리 {loan.interestRate.toFixed(2)}%
+                          </span>
                         </div>
                       </div>
+                    );
+                  })}
+                  <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-rose-700 dark:text-rose-400">총 대출 잔액</span>
+                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>
+                        {formatShortCurrency(summary.loanBalance)}
+                      </span>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`text-lg font-bold tabular-nums`}>
-                        {formatShortCurrency(coinValue)}
-                      </span>
-                      <span className={`text-xs font-medium whitespace-nowrap ${getProfitLossColor(profit)}`}>
-                        {profit >= 0 ? '+' : ''}{formatShortCurrency(profit)} ({profit >= 0 ? '+' : ''}{profitRate.toFixed(2)}%)
-                      </span>
+                    <div className="mt-1 text-xs text-foreground">
+                      {formatCurrency(summary.loanBalance)}
                     </div>
                   </div>
-                );
-              })}
-              <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-primary">총 암호화폐 평가금액</span>
-                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
-                    {formatShortCurrency(summary.cryptoValue)}
-                  </span>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {formatCurrency(summary.cryptoValue)}
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <p className="text-muted-foreground text-xs">총 <span className={`font-bold text-foreground`}>{summary.cryptoCount}개</span> 암호화폐 보유 중</p>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className={`${ASSET_THEME.primary.text}`}>대출 현황</CardTitle>
-          <CardDescription>대출 종류별 잔액 및 금리</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-2">
-          {loanTypeData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              <p>등록된 대출이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {loanTypeData.map((loan, index) => {
-                // 대출 유형별 아이콘 색상
-                const loanIconMap: Record<string, string> = {
-                  'credit': 'bg-rose-500',
-                  'minus': 'bg-rose-600',
-                  'mortgage-home': 'bg-rose-700',
-                  'mortgage-stock': 'bg-rose-600',
-                  'mortgage-insurance': 'bg-rose-500',
-                  'mortgage-deposit': 'bg-rose-600',
-                  'mortgage-other': 'bg-rose-400',
-                  'other': 'bg-rose-500',
-                };
-                const loanIcon = loanIconMap[loan.type] || 'bg-rose-500';
-
-                return (
-                  <div key={index} className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`size-8 flex-shrink-0 rounded-full ${loanIcon} flex items-center justify-center`}>
-                        <span className="text-xs font-bold text-white">₩</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{loan.name}</span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">({loan.label})</span>
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {formatCurrency(loan.balance)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.liability.weak}`}>
-                        {formatShortCurrency(loan.balance)}
-                      </span>
-                      <span className={`text-xs font-medium whitespace-nowrap text-muted-foreground`}>
-                        금리 {loan.interestRate.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-rose-700 dark:text-rose-400">총 대출 잔액</span>
-                  <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>
-                    {formatShortCurrency(summary.loanBalance)}
-                  </span>
-                </div>
-                <div className="mt-1 text-xs text-foreground">
-                  {formatCurrency(summary.loanBalance)}
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <p className="text-muted-foreground text-xs">총 <span className={`font-bold text-foreground`}>{assetData.loans.length}건</span> 대출 보유 중</p>
-        </CardFooter>
-      </Card>
+              )}
+            </CardContent>
+            <CardFooter>
+              <p className="text-muted-foreground text-xs">총 <span className="font-bold text-foreground">{assetData.loans.length}건</span> 대출 보유 중</p>
+            </CardFooter>
+          </Card>
+        );
+      })}
 
     </div>
   );

@@ -335,7 +335,7 @@ export function RealEstateInput() {
             <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
                 <p className="text-muted-foreground text-sm">등록된 부동산이 없습니다.</p>
-                <p className="text-muted-foreground text-xs">위의 버튼을 눌러 부동산을 추가하세요.</p>
+                <p className="text-muted-foreground mt-1 text-xs">'부동산 추가' 버튼을 눌러 추가해 보세요.</p>
               </div>
             </div>
           ) : (

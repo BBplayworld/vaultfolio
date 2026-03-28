@@ -5,7 +5,7 @@ import LZString from "lz-string";
 
 // ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
 export const STORAGE_KEYS = {
-  assetData: "vaultfolio-asset-data",
+  assetData: "secretasset-asset-data",
   exchangeRate: "exchange-rate-usd-krw",
   defaultExchangeRate: 1380,
 } as const;
@@ -52,7 +52,7 @@ export function exportAssetData(): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `vaultfolio-${new Date().toISOString().split("T")[0]}.json`;
+  a.download = `secretasset-${new Date().toISOString().split("T")[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -304,14 +304,14 @@ export function parseShareToken(token: string, pin?: string): ParseResult {
 
       const result = unpackV7(dsv.substring(3));
       return {
-          data: assetDataSchema.parse(result.data),
-          rates: result.rates
+        data: assetDataSchema.parse(result.data),
+        rates: result.rates
       };
     }
 
     // 하위 호환성 (V7.1:N:, V7.1:P:, V7.0)
     let decompressed = LZString.decompressFromEncodedURIComponent(token);
-    
+
     if (decompressed && decompressed.startsWith("vlt-fl-v7.1:")) {
       const parts = decompressed.split(":");
       const flag = parts[2];
@@ -337,11 +337,11 @@ export function parseShareToken(token: string, pin?: string): ParseResult {
     const SHARED_KEY_V6 = "vlt-fl-v6.2";
     const raw = LZString.decompressFromBase64(fromSafe(token));
     if (raw) {
-        const deob = raw.split("").map((char, i) =>
-            String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY_V6.charCodeAt(i % SHARED_KEY_V6.length))
-        ).join("");
-        const result = unpackV7(deob);
-        return { data: assetDataSchema.parse(result.data), rates: result.rates };
+      const deob = raw.split("").map((char, i) =>
+        String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY_V6.charCodeAt(i % SHARED_KEY_V6.length))
+      ).join("");
+      const result = unpackV7(deob);
+      return { data: assetDataSchema.parse(result.data), rates: result.rates };
     }
 
     return null;

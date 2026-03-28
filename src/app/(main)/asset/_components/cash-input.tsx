@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Banknote, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,8 @@ import { ASSET_THEME } from "@/config/theme";
 const cashTypes = [
     { value: "deposit", label: "예금" },
     { value: "savings", label: "적금" },
-    { value: "bank", label: "입출금통장" },
+    { value: "bank", label: "입출금 통장" },
+    { value: "cma", label: "CMA" },
     { value: "cash", label: "실물 현금" },
 ] as const;
 
@@ -70,7 +71,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
             if (editData) {
                 const success = updateCash(editData.id, data);
                 if (success) {
-                    toast.success("현금 자산이 수정되었습니다.");
+                    toast.success("현금성 자산이 수정되었습니다.");
                     onClose();
                 } else {
                     toast.error("저장에 실패했습니다.");
@@ -82,7 +83,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                 };
                 const success = addCash(newData);
                 if (success) {
-                    toast.success("현금 자산이 추가되었습니다.");
+                    toast.success("현금성 자산이 추가되었습니다.");
                     onClose();
                 } else {
                     toast.error("저장에 실패했습니다.");
@@ -153,7 +154,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                         <FormItem>
                             <FormLabel>자산/계좌명 *</FormLabel>
                             <FormControl>
-                                <Input placeholder="예: 국민은행 비상금 통장" {...field} />
+                                <Input placeholder="예: 우리은행 비상금 통장" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -167,7 +168,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                         <FormItem>
                             <FormLabel>금융기관명</FormLabel>
                             <FormControl>
-                                <Input placeholder="예: 국민은행, 토스뱅크 등" {...field} value={field.value || ""} />
+                                <Input placeholder="예: 우리은행, 토스뱅크 등" {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -279,14 +280,14 @@ export function CashInput() {
                             <DialogTrigger asChild>
                                 <Button onClick={() => setEditingItem(undefined)}>
                                     <Plus className="mr-2 size-4" />
-                                    현금 추가
+                                    현금성 자산 추가
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                                 <DialogHeader>
-                                    <DialogTitle>{editingItem ? "현금 자산 수정" : "현금 자산 추가"}</DialogTitle>
+                                    <DialogTitle>{editingItem ? "현금성 자산 수정" : "현금성 자산 추가"}</DialogTitle>
                                     <DialogDescription>
-                                        {editingItem ? "현금 자산 정보를 수정합니다." : "새로운 현금 자산을 추가합니다."}
+                                        {editingItem ? "현금성 자산 정보를 수정합니다." : "새로운 현금성 자산을 추가합니다."}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <CashForm editData={editingItem} onClose={handleDialogClose} />
@@ -298,8 +299,8 @@ export function CashInput() {
                     {assetData.cash && assetData.cash.length === 0 ? (
                         <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
                             <div className="text-center">
-                                <p className="text-muted-foreground text-sm">등록된 현금 자산이 없습니다.</p>
-                                <p className="text-muted-foreground text-xs">위의 버튼을 눌러 자산을 추가하세요.</p>
+                                <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
+                                <p className="text-muted-foreground mt-1 text-xs">'현금성 자산 추가' 버튼을 눌러 추가해 보세요.</p>
                             </div>
                         </div>
                     ) : (

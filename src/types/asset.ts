@@ -100,7 +100,7 @@ export const loanSchema = z.object({
 // 현금 스키마
 export const cashSchema = z.object({
   id: z.string(),
-  type: z.enum(["bank", "cash", "deposit", "savings"]),
+  type: z.enum(["bank", "cma", "cash", "deposit", "savings"]),
   name: z.string().min(1, "계좌/자산명을 입력해주세요"),
   balance: z.number().min(0, "금액은 0 이상이어야 합니다").refine((val) => val > 0, "금액을 입력해주세요"),
   currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),

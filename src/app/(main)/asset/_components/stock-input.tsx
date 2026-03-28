@@ -406,7 +406,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
 }
 
 export function StockInput() {
-  const { assetData, deleteStock, exchangeRates, exchangeRateDate } = useAssetData();
+  const { assetData, deleteStock, exchangeRates } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -468,6 +468,7 @@ export function StockInput() {
         <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
           <div className="text-center">
             <p className="text-muted-foreground text-sm">등록된 주식이 없습니다.</p>
+            <p className="text-muted-foreground mt-1 text-xs">'주식 추가' 버튼을 눌러 추가해 보세요.</p>
           </div>
         </div>
       );

@@ -344,9 +344,8 @@ export function LoanInput() {
           {assetData.loans.length === 0 ? (
             <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
-                <CreditCard className="text-muted-foreground mx-auto mb-2 size-8" />
                 <p className="text-muted-foreground text-sm">등록된 대출이 없습니다.</p>
-                <p className="text-muted-foreground mt-1 text-xs">대출 추가 버튼을 눌러 시작하세요.</p>
+                <p className="text-muted-foreground mt-1 text-xs">'대출 추가' 버튼을 눌러 추가해 보세요.</p>
               </div>
             </div>
           ) : (

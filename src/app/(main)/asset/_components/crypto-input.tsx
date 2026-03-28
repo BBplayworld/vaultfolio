@@ -51,20 +51,20 @@ const exchanges = [
 
 // 주요 암호화폐 목록
 const popularCryptos = [
-  { symbol: "BTC", name: "비트코인" },
+  { symbol: "BTC", name: "비트암호화폐" },
   { symbol: "ETH", name: "이더리움" },
   { symbol: "XRP", name: "리플" },
   { symbol: "ADA", name: "카르다노" },
   { symbol: "SOL", name: "솔라나" },
-  { symbol: "DOGE", name: "도지코인" },
+  { symbol: "DOGE", name: "도지암호화폐" },
   { symbol: "MATIC", name: "폴리곤" },
   { symbol: "DOT", name: "폴카닷" },
   { symbol: "AVAX", name: "아발란체" },
   { symbol: "LINK", name: "체인링크" },
   { symbol: "UNI", name: "유니스왑" },
   { symbol: "ATOM", name: "코스모스" },
-  { symbol: "LTC", name: "라이트코인" },
-  { symbol: "BCH", name: "비트코인캐시" },
+  { symbol: "LTC", name: "라이트암호화폐" },
+  { symbol: "BCH", name: "비트암호화폐캐시" },
   { symbol: "NEAR", name: "니어프로토콜" },
   { symbol: "APT", name: "앱토스" },
   { symbol: "ARB", name: "아비트럼" },
@@ -117,7 +117,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       if (editData) {
         const success = updateCrypto(editData.id, data);
         if (success) {
-          toast.success("코인 정보가 수정되었습니다.");
+          toast.success("암호화폐 정보가 수정되었습니다.");
           onClose();
         } else {
           toast.error("저장에 실패했습니다.");
@@ -129,7 +129,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
         };
         const success = addCrypto(newData);
         if (success) {
-          toast.success("코인이 추가되었습니다.");
+          toast.success("암호화폐 정보가 추가되었습니다.");
           onClose();
         } else {
           toast.error("저장에 실패했습니다.");
@@ -148,7 +148,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
         <FormField
           control={form.control}
           name="symbol"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>암호화폐 선택 *</FormLabel>
               <Select
@@ -186,7 +186,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                   <FormControl>
                     <Input placeholder="예: BTC" {...field} />
                   </FormControl>
-                  <FormDescription>코인 심볼 (예: BTC, ETH, XRP)</FormDescription>
+                  <FormDescription>암호화폐 심볼 (예: BTC, ETH, XRP)</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -197,9 +197,9 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>코인명 *</FormLabel>
+                  <FormLabel>암호화폐명 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 비트코인" {...field} />
+                    <Input placeholder="예: 비트암호화폐" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -375,7 +375,7 @@ export function CryptoInput() {
             <div className="space-y-1.5">
               <CardTitle className="flex items-center gap-2">
                 <Bitcoin className="size-5" />
-                코인 자산
+                암호화폐 자산
               </CardTitle>
               <CardDescription>보유하고 있는 암호화폐 자산을 관리합니다.</CardDescription>
             </div>
@@ -383,14 +383,14 @@ export function CryptoInput() {
               <DialogTrigger asChild>
                 <Button onClick={() => setEditingItem(undefined)}>
                   <Plus className="mr-2 size-4" />
-                  코인 추가
+                  암호화폐 추가
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
                 <DialogHeader>
-                  <DialogTitle>{editingItem ? "코인 수정" : "코인 추가"}</DialogTitle>
+                  <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
                   <DialogDescription>
-                    {editingItem ? "코인 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
+                    {editingItem ? "암호화폐 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
                   </DialogDescription>
                 </DialogHeader>
                 <CryptoForm editData={editingItem} onClose={handleDialogClose} />
@@ -402,8 +402,8 @@ export function CryptoInput() {
           {assetData.crypto.length === 0 ? (
             <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm">등록된 코인이 없습니다.</p>
-                <p className="text-muted-foreground text-xs">위의 버튼을 눌러 코인을 추가하세요.</p>
+                <p className="text-muted-foreground text-sm">등록된 암호화폐가 없습니다.</p>
+                <p className="text-muted-foreground mt-1 text-xs">'암호화폐 추가' 버튼을 눌러 추가해 보세요.</p>
               </div>
             </div>
           ) : (
