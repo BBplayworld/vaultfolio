@@ -194,8 +194,8 @@ export function AssetDistributionCards() {
               <p>등록된 자산이 없습니다.</p>
             </div>
           ) : (() => {
-            const assetItems = assetDistributionData.filter(d => d.type === "asset");
-            const liabilityItems = assetDistributionData.filter(d => d.type === "liability");
+            const assetItems = assetDistributionData.filter(d => d.type === "asset").sort((a, b) => b.value - a.value);
+            const liabilityItems = assetDistributionData.filter(d => d.type === "liability").sort((a, b) => b.value - a.value);
             const totalAsset = assetItems.reduce((s, d) => s + d.value, 0);
             const totalLiability = liabilityItems.reduce((s, d) => s + d.value, 0);
             const grossTotal = totalAsset + totalLiability;
