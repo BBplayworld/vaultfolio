@@ -17,6 +17,33 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,
+  keywords: [...APP_CONFIG.meta.keywords],
+  authors: [{ name: APP_CONFIG.name, url: APP_CONFIG.siteUrl }],
+  creator: APP_CONFIG.name,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  alternates: {
+    canonical: APP_CONFIG.siteUrl,
+  },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: APP_CONFIG.siteUrl,
+    siteName: APP_CONFIG.name,
+    title: APP_CONFIG.meta.title,
+    description: APP_CONFIG.meta.description,
+  },
+  twitter: {
+    card: "summary",
+    title: APP_CONFIG.meta.title,
+    description: APP_CONFIG.meta.description,
+  },
+  other: {
+    "naver-site-verification": "7a749c9de7f929519b80424a0fac9c56fb9deb03",
+  },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
