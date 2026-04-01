@@ -44,6 +44,8 @@ export default function Page() {
     setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
+  if (!isHydrated) return null;
+
   if (isFirstTimeUser) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
