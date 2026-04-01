@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2, TrendingUp, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock } from "lucide-react";
@@ -410,6 +410,12 @@ export function StockInput() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  useEffect(() => {
+    const handler = () => { setEditingItem(undefined); setIsDialogOpen(true); };
+    window.addEventListener("trigger-add-stock", handler);
+    return () => window.removeEventListener("trigger-add-stock", handler);
+  }, []);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {

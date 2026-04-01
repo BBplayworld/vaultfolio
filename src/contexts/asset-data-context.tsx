@@ -224,8 +224,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 모든 진입 경로 공통 헬퍼
   // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가
+  // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
   const initAndSync = useCallback(async (data: AssetData) => {
     initAssetData(data);
+    const hasAssets =
+      data.realEstate.length > 0 ||
+      data.stocks.length > 0 ||
+      data.crypto.length > 0 ||
+      data.cash.length > 0 ||
+      data.loans.length > 0;
+    if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
     await syncTodayStockPrices(data);

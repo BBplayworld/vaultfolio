@@ -156,6 +156,12 @@ export function NavUser({
     }
   };
 
+  useEffect(() => {
+    const handler = () => fileInputRef.current?.click();
+    window.addEventListener("trigger-import", handler);
+    return () => window.removeEventListener("trigger-import", handler);
+  }, []);
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };

@@ -22,7 +22,11 @@
       "Read(//e/2.project/js/secret-asset/.claude/skills/**)",
       "Bash(find e:/2.project/js/secret-asset/.agent -name *.md)",
       "Bash(find e:/2.project/js/secret-asset/.claude/skills -name *.md)",
-      "Bash(find \"/e/2.project/js/secret-asset/src/app/\\(main\\)/asset\" -type f -name \"*.tsx\" -o -name \"*.ts\")"
+      "Bash(find \"/e/2.project/js/secret-asset/src/app/\\(main\\)/asset\" -type f -name \"*.tsx\" -o -name \"*.ts\")",
+      "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/)",
+      "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/asset/_components/)",
+      "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/asset/_components/sidebar/)",
+      "Bash(grep -n \"getPreference\\\\|setValueToCookie\" /e/2.project/js/secret-asset/src/server/*.ts)"
     ]
   }
 }

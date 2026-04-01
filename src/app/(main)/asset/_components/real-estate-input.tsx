@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
@@ -269,6 +269,12 @@ export function RealEstateInput() {
   const { assetData, deleteRealEstate } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RealEstate | undefined>();
+
+  useEffect(() => {
+    const handler = () => { setEditingItem(undefined); setIsDialogOpen(true); };
+    window.addEventListener("trigger-add-real-estate", handler);
+    return () => window.removeEventListener("trigger-add-real-estate", handler);
+  }, []);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
