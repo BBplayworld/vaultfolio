@@ -39,11 +39,6 @@ export default function Page() {
     assetData.cash.length === 0 &&
     assetData.loans.length === 0;
 
-  const handleSelectTab = (tab: string) => {
-    setActiveTab(tab);
-    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  };
-
   if (!isHydrated) return null;
 
   if (isFirstTimeUser) {
@@ -122,11 +117,11 @@ export default function Page() {
           <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1">
             {(
               [
-                { value: "real-estate", icon: Building2, label: "부동산",    mobileLabel: undefined },
-                { value: "stocks",      icon: TrendingUp, label: "주식",     mobileLabel: undefined },
-                { value: "crypto",      icon: Bitcoin,    label: "암호화폐",  mobileLabel: undefined },
-                { value: "cash",        icon: Wallet,     label: "현금성 자산", mobileLabel: "현금" },
-                { value: "loans",       icon: CreditCard, label: "대출",     mobileLabel: undefined },
+                { value: "real-estate", icon: Building2, label: "부동산", mobileLabel: undefined },
+                { value: "stocks", icon: TrendingUp, label: "주식", mobileLabel: undefined },
+                { value: "crypto", icon: Bitcoin, label: "암호화폐", mobileLabel: undefined },
+                { value: "cash", icon: Wallet, label: "현금성 자산", mobileLabel: "현금" },
+                { value: "loans", icon: CreditCard, label: "대출", mobileLabel: undefined },
               ] as const
             ).map(({ value, icon: Icon, label, mobileLabel }) => (
               <TabsTrigger

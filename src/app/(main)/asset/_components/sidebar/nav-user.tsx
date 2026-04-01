@@ -54,6 +54,12 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const assetDataContext = useAssetData();
   const { refreshData, initAndSync, getAssetSummary, assetData } = assetDataContext;
+  const hasAssets =
+    assetData.realEstate.length > 0 ||
+    assetData.stocks.length > 0 ||
+    assetData.crypto.length > 0 ||
+    assetData.cash.length > 0 ||
+    assetData.loans.length > 0;
   const [isImporting, setIsImporting] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
@@ -239,7 +245,9 @@ export function NavUser({
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                    <AvatarFallback className="rounded-lg bg-zinc-700 text-zinc-100 dark:bg-zinc-600 text-xs font-semibold">
+                      {getInitials(user.name)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">자산 관리</span>
@@ -250,7 +258,7 @@ export function NavUser({
               <div className="px-2 py-2">
                 <p className="text-xs font-medium text-muted-foreground">데이터 관리</p>
               </div>
-              <DropdownMenuItem className="py-2" onClick={handleExport}>
+              <DropdownMenuItem className="py-2" onClick={handleExport} disabled={!hasAssets}>
                 <Upload className="size-4" />
                 데이터 내보내기
               </DropdownMenuItem>
@@ -258,11 +266,11 @@ export function NavUser({
                 <Download className="size-4" />
                 {isImporting ? "가져오는 중..." : "데이터 가져오기"}
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-2" onClick={handleShare}>
+              <DropdownMenuItem className="py-2" onClick={handleShare} disabled={!hasAssets}>
                 <Share2 className="size-4" />
                 공유 URL 복사
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2" onClick={() => setShowClearDialog(true)} >
+              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
                 <Trash2 className="size-4" />
                 모든 데이터 삭제
               </DropdownMenuItem>
@@ -270,7 +278,7 @@ export function NavUser({
               <div className="px-2 py-2">
                 <p className="text-xs font-medium text-muted-foreground">기능</p>
               </div>
-              <DropdownMenuItem className="text-primary focus:text-primary py-2" onClick={() => setShowAIPromptDialog(true)} >
+              <DropdownMenuItem className="text-primary focus:text-primary py-2" onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
                 <Sparkles className="size-4" />
                 <span className="flex-1">AI 평가용 자산 현황</span>
                 <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
@@ -322,11 +330,10 @@ export function NavUser({
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedPromptIdx(i)}
-                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${
-                  i === selectedPromptIdx
+                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${i === selectedPromptIdx
                     ? "bg-background text-foreground shadow-sm font-medium"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <span>{t.label}</span>
                 <span className="text-[10px] opacity-60 hidden sm:block leading-tight text-center">{t.sublabel}</span>
