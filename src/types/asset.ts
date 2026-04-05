@@ -27,6 +27,7 @@ export const stockSchema = z.object({
   purchaseDate: z.string().min(1, "매수일을 선택해주세요"),
   description: z.string().optional(),
   baseDate: z.string().optional(),
+  purchaseExchangeRate: z.number().optional(), // 매입 환율 (USD: 원/달러, JPY: 원/100엔)
 }).superRefine((data, ctx) => {
   if (data.category === "domestic" || data.category === "foreign") {
     const ticker = data.ticker?.trim() || "";
@@ -95,6 +96,9 @@ export const loanSchema = z.object({
   endDate: z.string().optional(),
   institution: z.string().optional(), // 금융기관
   description: z.string().optional(),
+  linkedRealEstateId: z.string().optional(), // 주택담보대출 연계 부동산 ID
+  linkedCashId: z.string().optional(), // 예금담보대출 연계 현금성 자산 ID
+  linkedStockId: z.string().optional(), // 주식담보대출 연계 주식 ID
 });
 
 // 현금 스키마
@@ -147,6 +151,8 @@ export interface AssetSummary {
   stockValue: number;
   stockCost: number;
   stockProfit: number;
+  stockCurrencyGain: number; // 해외주식 환차손익 합계
+  stockFxProfit: number;     // 환평가손익 (stockProfit + stockCurrencyGain)
   cryptoValue: number;
   cryptoCost: number;
   cryptoProfit: number;

@@ -4,7 +4,7 @@ import { Gem, Building2, TrendingUp, Wallet, Bitcoin, CreditCard, House, Banknot
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -15,7 +15,7 @@ export function AssetOverviewCards() {
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-      <Card className={`${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight}`}>
+      <Card className={`border-2 ${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>순자산</CardTitle>
@@ -24,7 +24,7 @@ export function AssetOverviewCards() {
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            <p className={`text-3xl font-extrabold ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(summary.netAsset)}</p>
+            <p className={`text-3xl font-extrabold ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
             <div className="flex items-center justify-between text-xs">
               <span className={ASSET_THEME.text.muted}>총자산 - 총부채</span>
             </div>
@@ -46,6 +46,11 @@ export function AssetOverviewCards() {
                 <p className="text-2xl font-bold">{formatShortCurrency(summary.realEstateValue)}</p>
                 <div className="flex items-center justify-between text-xs">
                   <span className={ASSET_THEME.text.muted}>{summary.realEstateCount}개 보유</span>
+                  {summary.realEstateProfit !== 0 && (
+                    <span className={`font-semibold tabular-nums ${getProfitLossColor(summary.realEstateProfit)}`}>
+                      {summary.realEstateProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.realEstateProfit))}
+                    </span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -63,7 +68,20 @@ export function AssetOverviewCards() {
                 <p className="text-2xl font-bold">{formatShortCurrency(summary.stockValue)}</p>
                 <div className="flex items-center justify-between text-xs">
                   <span className={ASSET_THEME.text.muted}>{summary.stockCount}개 보유</span>
+                  {summary.stockFxProfit !== 0 && (
+                    <span className={`font-semibold tabular-nums ${getProfitLossColor(summary.stockFxProfit)}`}>
+                      {summary.stockFxProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockFxProfit))}
+                    </span>
+                  )}
                 </div>
+                {summary.stockCurrencyGain !== 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={ASSET_THEME.text.muted}>환차손익</span>
+                    <span className={`font-medium tabular-nums ${getProfitLossColor(summary.stockCurrencyGain)}`}>
+                      {summary.stockCurrencyGain >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockCurrencyGain))}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -80,6 +98,11 @@ export function AssetOverviewCards() {
                 <p className="text-2xl font-bold">{formatShortCurrency(summary.cryptoValue)}</p>
                 <div className="flex items-center justify-between text-xs">
                   <span className={ASSET_THEME.text.muted}>{summary.cryptoCount}개 보유</span>
+                  {summary.cryptoProfit !== 0 && (
+                    <span className={`font-semibold tabular-nums ${getProfitLossColor(summary.cryptoProfit)}`}>
+                      {summary.cryptoProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.cryptoProfit))}
+                    </span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -111,7 +134,7 @@ export function AssetOverviewCards() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <p className={`text-2xl font-bold ${ASSET_THEME.liability.strong}`}>
+                <p className={`text-2xl font-bold ${ASSET_THEME.liability}`}>
                   {summary.loanBalance > 0 ? "-" : ""}
                   {formatShortCurrency(summary.loanBalance)}
                 </p>
@@ -133,7 +156,7 @@ export function AssetOverviewCards() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <p className={`text-2xl font-bold ${ASSET_THEME.liability.strong}`}>
+                <p className={`text-2xl font-bold ${ASSET_THEME.liability}`}>
                   {summary.tenantDepositTotal > 0 ? "-" : ""}
                   {formatShortCurrency(summary.tenantDepositTotal)}
                 </p>

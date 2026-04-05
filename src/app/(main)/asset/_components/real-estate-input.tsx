@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, Clock, MapPin, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,26 +30,14 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { RealEstate, realEstateSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { realEstateTypes, quickButtonPresets } from "@/config/asset-options";
 
-const realEstateTypes = [
-  { value: "apartment", label: "아파트" },
-  { value: "house", label: "주택" },
-  { value: "land", label: "토지" },
-  { value: "commercial", label: "상가" },
-  { value: "other", label: "기타" },
-] as const;
-
-// 부동산 가격 빠른 입력 버튼 (천만원, 억 단위)
-const realEstateQuickButtons = [
-  { label: "1천만", value: 10000000 },
-  { label: "5천만", value: 50000000 },
-  { label: "1억", value: 100000000 },
-  { label: "5억", value: 500000000 },
-];
+const realEstateQuickButtons = [...quickButtonPresets.realEstate];
 
 interface RealEstateFormProps {
   editData?: RealEstate;
@@ -168,7 +156,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="purchasePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.asset.strong}>매입가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.important}>매입가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -188,7 +176,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="currentValue"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.asset.strong}>실거래가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.important}>실거래가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -345,72 +333,114 @@ export function RealEstateInput() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {assetData.realEstate.map((item) => {
                 const profit = item.currentValue - item.purchasePrice;
                 const profitRate = (profit / item.purchasePrice) * 100;
                 const holdingDays = calculateHoldingDays(item.purchaseDate);
 
                 return (
-                  <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* 제목과 버튼 영역 */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                          <span className="rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+                    {/* Layer 1: 부동산 헤더 */}
+                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                      <div className="flex flex-col gap-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={ASSET_THEME.categoryBox}>
                             {getTypeLabel(item.type)}
+                          </Badge>
+                          <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                        </div>
+                        {item.address && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                            <MapPin className="size-3 shrink-0" />
+                            {item.address}
                           </span>
-                          <h3 className="font-semibold">{item.name}</h3>
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* 내용 영역 */}
-                      <div className="w-full">
-                        {item.address && <p className="text-muted-foreground mb-2 text-sm">{item.address}</p>}
-                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">매입가:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{formatCurrencyDisplay(item.purchasePrice)}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">실거래가:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(item.currentValue)}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">평가손익:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${getProfitLossColor(profit)}`}>
-                              {formatCurrencyDisplay(profit)} ({profit > 0 ? "+" : ""}
-                              {profitRate.toFixed(2)}%)
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">임차인보증금:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${(item.tenantDeposit || 0) > 0 ? ASSET_THEME.liability.strong : ""}`}>
-                              {(item.tenantDeposit || 0) > 0 ? '-' : ''}{formatCurrencyDisplay(item.tenantDeposit || 0)}
-                            </span>
-                          </div>
-                          <div className="col-span-1 flex justify-between gap-2 sm:col-span-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">매입일:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
-                          </div>
-                        </div>
-                        {item.description && (
-                          <p className={`text-foreground mt-2 text-sm ${ASSET_THEME.primary.text}`}># {item.description}</p>
                         )}
                       </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Layer 2: 핵심 지표 */}
+                    <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-muted-foreground">실거래가</span>
+                        <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
+                          {formatCurrencyDisplay(item.currentValue)}
+                        </span>
+                        {(item.tenantDeposit || 0) > 0 && (
+                          <span className={`text-xs rounded-full px-2 py-0.5 whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900`}>
+                            보증금 {formatCurrencyDisplay(item.tenantDeposit || 0)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="hidden sm:inline text-border self-center">|</span>
+                      <div className="flex flex-col items-end sm:items-start gap-1">
+                        <span className="text-xs text-muted-foreground">평가손익</span>
+                        <span className={`text-medium font-bold ${getProfitLossColor(profit)}`}>
+                          {profit >= 0 ? "+" : ""}{formatCurrencyDisplay(profit)}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profit)}`}>
+                          {profit >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                          {profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Layer 3: 가격 비교 */}
+                    <div className="px-4 py-3 bg-muted/10 border-t">
+                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs text-muted-foreground">매입가</span>
+                          <span className="text-sm font-medium text-primary">{formatCurrencyDisplay(item.purchasePrice)}</span>
+                        </div>
+                        <span className="hidden sm:inline text-border self-center">|</span>
+                        <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                          <span className="flex items-center gap-1">
+                            <Clock className="size-3" />
+                            <span className="text-xs font-semibold text-foreground">{holdingDays.toLocaleString()}일 보유</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="size-3" />
+                            <span className="text-xs font-semibold text-foreground">{item.purchaseDate} 매수</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layer 4: 보조 정보 */}
+                    {item.description && (
+                      <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
+                        <span className="w-full mt-0.5 text-primary truncate">
+                          # {item.description}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Layer 5: 연계 주택담보대출 */}
+                    {(() => {
+                      const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
+                      if (linkedLoans.length === 0) return null;
+                      return linkedLoans.map((loan) => (
+                        <div key={loan.id} className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                          <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                          <span className="text-muted-foreground">주택담보대출</span>
+                          <span className="font-medium text-rose-400 truncate">{loan.name}</span>
+                          {loan.institution && (
+                            <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                          )}
+                          <span className="ml-auto font-semibold tabular-nums text-rose-400">
+                            -{formatCurrency(loan.balance)}
+                          </span>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 );
               })}

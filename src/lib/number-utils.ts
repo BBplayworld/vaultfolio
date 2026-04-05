@@ -23,9 +23,9 @@ export function formatCurrency(value: number): string {
 
 // 짧은 화폐 단위 포맷 (억, 만)
 export function formatShortCurrency(value: number): string {
-  const length = Math.floor(value).toString().length;
+  if (value === 0) return "0원";
 
-  if (length === 0) return "0원";
+  const length = Math.floor(value).toString().length;
   if (length >= 9) {
     // 1억 이상
     return `${formatNumberWithCommas(Math.floor((value / 100000000) * 10) / 10)}억원`;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, Calendar, Clock, Building2, Coins, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,39 +28,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Loan, loanSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
-
-const loanTypes = [
-  { value: "credit", label: "신용대출" },
-  { value: "minus", label: "마이너스대출" },
-  { value: "mortgage-home", label: "주택담보대출" },
-  { value: "mortgage-stock", label: "주식담보대출" },
-  { value: "mortgage-insurance", label: "보험담보대출" },
-  { value: "mortgage-deposit", label: "예금담보대출" },
-  { value: "mortgage-other", label: "기타담보대출" },
-] as const;
+import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets } from "@/config/asset-options";
 
 // 대출 종류별 빠른 입력 버튼
 const getQuickButtonsByType = (type: string) => {
-  if (type === "mortgage-home") {
-    return [
-      { label: "500만", value: 5000000 },
-      { label: "1000만", value: 10000000 },
-      { label: "5000만", value: 50000000 },
-      { label: "1억", value: 100000000 },
-    ];
-  }
-  return [
-    { label: "100만", value: 1000000 },
-    { label: "500만", value: 5000000 },
-    { label: "1000만", value: 10000000 },
-    { label: "5000만", value: 50000000 },
-  ];
+  if (type === "mortgage-home") return [...quickButtonPresets.loanMortgage];
+  return [...quickButtonPresets.loanDefault];
 };
 
 interface LoanFormProps {
@@ -69,7 +49,7 @@ interface LoanFormProps {
 }
 
 function LoanForm({ editData, onClose }: LoanFormProps) {
-  const { addLoan, updateLoan } = useAssetData();
+  const { addLoan, updateLoan, assetData } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState<Loan["type"]>(editData?.type || "credit");
 
@@ -85,6 +65,9 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
       endDate: "",
       institution: "",
       description: "",
+      linkedRealEstateId: "",
+      linkedCashId: "",
+      linkedStockId: "",
     },
   });
 
@@ -170,10 +153,24 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           name="institution"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>금융기관</FormLabel>
-              <FormControl>
-                <Input placeholder="예: 국민은행" {...field} />
-              </FormControl>
+              <FormLabel>{selectedType === "mortgage-stock" ? "증권사" : "금융기관"}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedType === "mortgage-stock" ? "증권사 선택" : "금융기관 선택"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(selectedType === "mortgage-stock" ? securitiesFirms : financialInstitutions).map((group) => (
+                    <SelectGroup key={group.group}>
+                      <SelectLabel>{group.group}</SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem key={item} value={item}>{item}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -264,6 +261,89 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           )}
         />
 
+        {selectedType === "mortgage-stock" && assetData.stocks.length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedStockId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 주식</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 주식 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.stocks.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}{s.ticker ? ` (${s.ticker})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {selectedType === "mortgage-deposit" && assetData.cash.filter((c) => c.type === "deposit").length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedCashId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 예금</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 예금 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.cash
+                      .filter((c) => c.type === "deposit")
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}{c.institution ? ` (${c.institution})` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {selectedType === "mortgage-home" && assetData.realEstate.length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedRealEstateId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 부동산</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 부동산 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.realEstate.map((re) => (
+                      <SelectItem key={re.id} value={re.id}>
+                        {re.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             취소
@@ -305,6 +385,17 @@ export function LoanInput() {
 
   const formatCurrencyDisplay = (value: number) => {
     return formatCurrency(value);
+  };
+
+  const formatDaysToYMD = (days: number): string => {
+    const years = Math.floor(days / 365);
+    const months = Math.floor((days % 365) / 30);
+    const d = days - years * 365 - months * 30;
+    const parts = [];
+    if (years > 0) parts.push(`${years}년`);
+    if (months > 0) parts.push(`${months}개월`);
+    if (d > 0 || parts.length === 0) parts.push(`${d}일`);
+    return parts.join(" ");
   };
 
   const getTypeLabel = (type: string) => {
@@ -349,68 +440,134 @@ export function LoanInput() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {assetData.loans.map((item) => {
                 const daysElapsed = calculateHoldingDays(item.startDate);
                 const daysRemaining = item.endDate ? calculateHoldingDays(item.endDate) : null;
 
                 return (
-                  <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* 제목과 버튼 영역 */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                          <span className="rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400">
-                            {getTypeLabel(item.type)}
-                          </span>
-                          <h3 className="font-semibold">{item.name}</h3>
-                          {item.institution && (
-                            <span className="text-muted-foreground text-xs">({item.institution})</span>
-                          )}
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
+                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+                    {/* Layer 1: 헤더 */}
+                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                        <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                          {getTypeLabel(item.type)}
+                        </Badge>
+                        <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                        {item.institution && (
+                          <span className="text-muted-foreground text-xs shrink-0">({item.institution})</span>
+                        )}
                       </div>
-
-                      {/* 내용 영역 */}
-                      <div className="w-full">
-                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">현재 잔액:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.liability.strong}`}>
-                              {formatCurrencyDisplay(item.balance)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">금리:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{item.interestRate}%</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">대출일:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{item.startDate}</span>
-                            <span className="text-muted-foreground text-xs"> ({daysElapsed}일 경과)</span>
-                          </div>
-                          {item.endDate && (
-                            <div className="flex justify-between gap-2 sm:block">
-                              <span className="text-muted-foreground whitespace-nowrap">만기일:</span>{" "}
-                              <span className="font-medium text-right sm:text-left">{item.endDate}</span>
-                              {daysRemaining !== null && (
-                                <span className="text-muted-foreground text-xs">
-                                  {daysRemaining > 0 ? ` (D-${daysRemaining})` : " (만기)"}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {item.description && <p className={`text-foreground mt-2 text-sm ${ASSET_THEME.primary.text}`}># {item.description}</p>}
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </div>
+
+                    {/* Layer 2: 핵심 지표 */}
+                    <div className="p-4 flex flex-row sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-muted-foreground">현재 잔액</span>
+                        <span className={`text-medium font-bold ${ASSET_THEME.liability}`}>
+                          {formatCurrencyDisplay(item.balance)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Layer 3: 대출 기간 */}
+                    <div className="px-4 py-3 bg-muted/10 border-t">
+                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs text-muted-foreground">금리</span>
+                          <span className="text-sm font-medium text-primary">
+                            {item.interestRate}%
+                          </span>
+                        </div>
+                        <span className="hidden sm:inline text-border self-center">|</span>
+                        {item.endDate ? (
+                          <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3" />
+                              <span className="text-xs text-foreground">{formatDaysToYMD(daysElapsed)} 경과</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3" />
+                              <span className="text-xs font-semibold text-foreground">{daysRemaining != null ? formatDaysToYMD(daysRemaining) : ""} 남음</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="size-3" />
+                              <span className="text-xs font-semibold text-foreground">{item.startDate} 대출</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                            <span className="text-xs text-muted-foreground">만기일</span>
+                            <span className="text-sm font-medium text-muted-foreground">미설정</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Layer 4: 보조 정보 */}
+                    {item.description && (
+                      <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
+                        <span className="w-full mt-0.5 text-primary truncate">
+                          # {item.description}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Layer 5: 연계 부동산 */}
+                    {item.linkedRealEstateId && (() => {
+                      const linked = assetData.realEstate.find((re) => re.id === item.linkedRealEstateId);
+                      if (!linked) return null;
+                      return (
+                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                          <Building2 className="size-3 text-primary flex-shrink-0" />
+                          <span className="text-muted-foreground">연계 부동산</span>
+                          <span className="font-medium text-primary truncate">{linked.name}</span>
+                          {linked.address && (
+                            <span className="hidden sm:inline text-muted-foreground truncate">{linked.address}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Layer 5-2: 연계 주식 */}
+                    {item.linkedStockId && (() => {
+                      const linked = assetData.stocks.find((s) => s.id === item.linkedStockId);
+                      if (!linked) return null;
+                      return (
+                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                          <TrendingUp className="size-3 text-primary flex-shrink-0" />
+                          <span className="text-muted-foreground">연계 주식</span>
+                          <span className="font-medium text-primary truncate">{linked.name}</span>
+                          {linked.ticker && (
+                            <span className="text-muted-foreground">({linked.ticker})</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Layer 5-3: 연계 예금 */}
+                    {item.linkedCashId && (() => {
+                      const linked = assetData.cash.find((c) => c.id === item.linkedCashId);
+                      if (!linked) return null;
+                      return (
+                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                          <Coins className="size-3 text-primary flex-shrink-0" />
+                          <span className="text-muted-foreground">연계 예금</span>
+                          <span className="font-medium text-primary truncate">{linked.name}</span>
+                          {linked.institution && (
+                            <span className="hidden sm:inline text-muted-foreground">({linked.institution})</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

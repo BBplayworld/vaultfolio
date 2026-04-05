@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, TrendingUp, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, Calendar, Clock, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance-service";
 
@@ -31,28 +31,15 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Stock, stockSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { stockCategories, quickButtonPresets } from "@/config/asset-options";
 
-const stockCategories = [
-  { value: "domestic", label: "국내주식" },
-  { value: "foreign", label: "해외주식" },
-  { value: "irp", label: "IRP" },
-  { value: "isa", label: "ISA" },
-  { value: "pension", label: "연금저축펀드" },
-  { value: "unlisted", label: "비상장주식" },
-] as const;
-
-// 주식 가격 빠른 입력 버튼 (백만원 단위)
-const stockQuickButtons = [
-  { label: "10만", value: 100000 },
-  { label: "50만", value: 500000 },
-  { label: "100만", value: 1000000 },
-  { label: "500만", value: 5000000 },
-];
+const stockQuickButtons = [...quickButtonPresets.stock];
 
 interface StockFormProps {
   editData?: Stock;
@@ -82,6 +69,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
   });
 
   const isForeignStock = selectedCategory === "foreign";
+  const watchedCurrency = form.watch("currency");
 
   const onSubmit = async (data: Stock) => {
     setIsSubmitting(true);
@@ -296,13 +284,38 @@ function StockForm({ editData, onClose }: StockFormProps) {
           />
         )}
 
+        {isForeignStock && watchedCurrency !== "KRW" && (
+          <FormField
+            control={form.control}
+            name="purchaseExchangeRate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>매입 환율</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder={watchedCurrency === "JPY" ? "900" : "1300"}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {watchedCurrency === "JPY" ? "원/100엔 (예: 900)" : "원/달러 (예: 1380)"}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="quantity"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.asset.strong}>수량 *</FormLabel>
+                <FormLabel className={ASSET_THEME.important}>수량 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -324,7 +337,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             name="averagePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.asset.strong}>평균단가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.important}>평균단가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -454,6 +467,14 @@ export function StockInput() {
     return stockCategories.find((c) => c.value === category)?.label || category;
   };
 
+  // 매입 환율 기준 단위당 원화 환산율 (방어: 입력 없으면 현재 환율 → 환차익 0)
+  const getPurchaseRatePerUnit = (stock: Stock): number => {
+    if (!stock.purchaseExchangeRate || stock.purchaseExchangeRate <= 0) {
+      return getMultiplier(stock.currency);
+    }
+    return stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate;
+  };
+
   const getStocksByCategory = (category: string) => {
     let stocks = assetData.stocks;
     if (category !== "all") {
@@ -481,98 +502,184 @@ export function StockInput() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {stocks.map((item) => {
           const krwMultiplier = getMultiplier(item.currency);
+          const isForeign = item.category === "foreign" && item.currency !== "KRW";
+          const purchaseRatePerUnit = getPurchaseRatePerUnit(item);
 
           const totalCostInCurrency = item.quantity * item.averagePrice;
           const currentValueInCurrency = item.quantity * item.currentPrice;
 
-          const totalCostInKRW = totalCostInCurrency * krwMultiplier;
           const currentValueInKRW = currentValueInCurrency * krwMultiplier;
+          // 해외주식: 매입원가는 매입 환율 기준으로 환산 (환차손익 정확 반영)
+          const totalCostInKRW = isForeign
+            ? totalCostInCurrency * purchaseRatePerUnit
+            : totalCostInCurrency * krwMultiplier;
 
           const profitInKRW = currentValueInKRW - totalCostInKRW;
           const profitRate = totalCostInKRW > 0 ? (profitInKRW / totalCostInKRW) * 100 : 0;
 
           const holdingDays = calculateHoldingDays(item.purchaseDate);
-          const isForeign = item.category === "foreign" && item.currency !== "KRW";
+          const currencyGain = isForeign
+            ? (krwMultiplier - purchaseRatePerUnit) * item.quantity * item.averagePrice
+            : 0;
+          const currencyGainRate =
+            isForeign && purchaseRatePerUnit > 0
+              ? ((krwMultiplier - purchaseRatePerUnit) / purchaseRatePerUnit) * 100
+              : 0;
+
 
           return (
-            <div key={item.id} className="rounded-lg border p-4">
-              <div className="flex flex-col gap-3">
-                {/* 제목과 버튼 영역 */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                      {getCategoryLabel(item.category)}
+            <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+              {/* Layer 1: 종목 헤더 */}
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                  <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                    {getCategoryLabel(item.category)}
+                  </Badge>
+                  <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                  {item.ticker && (
+                    <span className="text-muted-foreground text-xs font-mono shrink-0">({item.ticker})</span>
+                  )}
+                  {item.baseDate === todayStr && (
+                    <span className={`${ASSET_THEME.todayBox}`}>
+                      조회 기준일: {item.baseDate}
                     </span>
-                    <h3 className="font-semibold">{item.name}</h3>
-                    {item.ticker && <span className="text-muted-foreground text-xs">({item.ticker})</span>}
-                    {item.baseDate === todayStr && (
-                      <span>&nbsp;&nbsp;<span className="text-xs font-bold text-rose-500 bg-rose-500/5 px-2 py-1 rounded border border-rose-500/20">조회 기준일: {item.baseDate}</span></span>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
 
-                {/* 내용 영역 */}
-                <div className="w-full">
-                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className={`text-muted-foreground whitespace-nowrap`}>평균단가:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left`}>
-                        {formatCurrencyDisplay(item.averagePrice, item.currency)}
-                        {isForeign && (
-                          <span className="text-muted-foreground text-xs ml-1">
-                            (₩{(item.averagePrice * krwMultiplier).toLocaleString()})
-                          </span>
-                        )}
+              {/* Layer 2: 핵심 지표 */}
+              <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-muted-foreground">평가금액</span>
+                  <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
+                    {formatCurrencyDisplay(currentValueInKRW)}
+                  </span>
+                </div>
+                <span className="hidden sm:inline text-border self-center">|</span>
+                <div className="flex flex-col items-end sm:items-start gap-1">
+                  <span className="text-xs text-muted-foreground">평가손익</span>
+                  <span className={`text-medium font-bold ${getProfitLossColor(profitInKRW)}`}>
+                    {formatCurrencyDisplay(profitInKRW)}
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profitInKRW)}`}>
+                      &nbsp;({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
+                    </span>
+                  </span>
+                  {isForeign && (
+                    <span className={`text-xs font-medium ${getProfitLossColor(currencyGain)}`}>
+                      (환차손익 {formatCurrencyDisplay(Math.round(currencyGain))} 포함)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Layer 3: 가격 비교 */}
+              <div className="px-4 py-3 bg-muted/10 border-t">
+                <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs text-muted-foreground">평균단가</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {formatCurrencyDisplay(item.averagePrice, item.currency)}
+                      {isForeign && (
+                        <span className="text-xs text-muted-foreground">
+                          &nbsp;(₩{(item.averagePrice * krwMultiplier).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <span className="hidden sm:inline text-border self-center">|</span>
+                  <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                    <span className="text-xs text-muted-foreground">현재가</span>
+                    <span className="text-sm font-semibold text-primary">
+                      {formatCurrencyDisplay(item.currentPrice, item.currency)}
+                      {isForeign && (
+                        <span className="text-xs text-muted-foreground">
+                          &nbsp;(₩{(item.currentPrice * krwMultiplier).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layer 3b: 환차손익 (해외주식 외화 종목만) */}
+              {isForeign && (
+                <div className="px-4 py-3 bg-muted/10 border-t">
+                  <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground">환차손익</span>
+                      <span className={`text-sm font-semibold ${getProfitLossColor(currencyGain)}`}>
+                        {formatCurrencyDisplay(Math.round(currencyGain))}
+                        <span className="text-xs ml-1">
+                          ({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)
+                        </span>
                       </span>
                     </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">현재가:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>
-                        {formatCurrencyDisplay(item.currentPrice, item.currency)}
-                        {isForeign && (
-                          <span className="text-muted-foreground text-xs ml-1">
-                            (₩{(item.currentPrice * krwMultiplier).toLocaleString()})
-                          </span>
-                        )}
+                    <span className="hidden sm:inline text-border self-center">|</span>
+                    <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                      <span className="text-xs text-muted-foreground">매입환율</span>
+                      <span className="text-xs text-foreground">
+                        {item.purchaseExchangeRate && item.purchaseExchangeRate > 0
+                          ? item.currency === "JPY"
+                            ? `¥100 = ₩${item.purchaseExchangeRate.toLocaleString()}`
+                            : `$1 = ₩${item.purchaseExchangeRate.toLocaleString()}`
+                          : "미입력 (현재환율 기준)"}
                       </span>
-                    </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">수량:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{item.quantity.toLocaleString()}주</span>
-                    </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">평가금액:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(currentValueInCurrency, item.currency)} ({formatCurrencyDisplay(currentValueInKRW)})</span>
-                    </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">평가손익:</span>{" "}
-                      <span className={`font-medium text-right sm:text-left ${getProfitLossColor(profitInKRW)}`}>
-                        {formatCurrencyDisplay(profitInKRW)} ({profitRate > 0 ? "+" : ""}
-                        {profitRate.toFixed(2)}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
-                      <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
-                    </div>
-                    <div className="col-span-1 flex justify-between gap-2 sm:col-span-2 sm:block">
-                      <span className="text-muted-foreground whitespace-nowrap">매수일:</span>{" "}
-                      <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
                     </div>
                   </div>
-                  {item.description && <p className={`text-foreground mt-2 text-sm ${ASSET_THEME.primary.text}`}># {item.description}</p>}
                 </div>
+              )}
+
+              {/* Layer 4: 연계 주식담보대출 */}
+              {(() => {
+                const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === item.id);
+                if (linkedLoans.length === 0) return null;
+                return linkedLoans.map((loan) => (
+                  <div key={loan.id} className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                    <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                    <span className="text-muted-foreground">주식담보대출</span>
+                    <span className="font-medium text-rose-400 truncate">{loan.name}</span>
+                    {loan.institution && (
+                      <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                    )}
+                    <span className="ml-auto font-semibold tabular-nums text-rose-400">
+                      -{formatCurrency(loan.balance)}
+                    </span>
+                  </div>
+                ));
+              })()}
+
+              {/* Layer 5: 보조 정보 */}
+              <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
+                <span className="flex items-center gap-1">
+                  <span>수량</span>
+                  <span className={`font-medium font-semibold text-foreground ${ASSET_THEME.primary.text}`}>{item.quantity.toLocaleString()}주</span>
+                </span>
+                <span className="hidden sm:inline text-border">|</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="size-3" />
+                  <span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span>
+                </span>
+                <span className="hidden sm:inline text-border">|</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="size-3" />
+                  <span className="font-medium text-foreground">{item.purchaseDate} 매수</span>
+                </span>
+                {item.description && (
+                  <span className="w-full mt-0.5 text-primary truncate">
+                    # {item.description}
+                  </span>
+                )}
               </div>
             </div>
           );
@@ -674,7 +781,7 @@ export function StockInput() {
                       .map((cat) => (
                         <div key={cat.value} className="space-y-4">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-muted-foreground">{cat.label}</h3>
+                            <h3 className={`text-sm font-bold ${ASSET_THEME.categoryBox}`}>{cat.label}</h3>
                             <div className="h-px flex-1 bg-border" />
                             <span className="text-xs text-muted-foreground">{grouped[cat.value].length}개 항목</span>
                           </div>

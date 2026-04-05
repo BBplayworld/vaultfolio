@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { BadgeDollarSign } from "lucide-react";
+import { ASSET_THEME } from "@/config/theme";
 
 export function ExchangeRateInput() {
     const { exchangeRates, updateExchangeRate } = useAssetData();
@@ -55,8 +56,8 @@ export function ExchangeRateInput() {
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-end px-1">
-                    <span className="text-xs font-bold text-rose-500 bg-rose-500/5 px-2 py-1 rounded border border-rose-500/20">
+                <div className="flex justify-end">
+                    <span className={`${ASSET_THEME.todayBox}`}>
                         환율 기준일: {new Date().toLocaleDateString("ko-KR", { year: 'numeric', month: 'long', day: 'numeric' })}
                     </span>
                 </div>

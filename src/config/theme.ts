@@ -7,57 +7,61 @@
 
 export const ASSET_THEME = {
   // ===== 기본 색상 =====
-  background: {
-    default: "bg-background",
-    dark: "bg-card",
-  },
   text: {
     default: "text-foreground",
     muted: "text-muted-foreground",
-    white: "text-white",
   },
-  // ===== 주요 테마 색상 (Primary) =====
   primary: {
-    bg: "bg-primary",
-    bgLight: "bg-primary/30",
-    border: "border-teal-600",
-    borderLight: "border-primary/20",
-    borderMedium: "border-primary/50",
-    ring: "ring-primary/20",
     text: "text-primary",
-    textLight: "text-primary/70",
-    fill: "fill-primary",
-  },
-  // ===== 자산 및 수익 (Asset / Profit) =====
-  asset: {
-    strong: "text-orange-600 dark:text-orange-400 fill-orange-600 dark:fill-orange-400", // 강조
-    weak: "text-orange-600/70 dark:text-orange-400/80", // 약함
-    bgStrong: "bg-orange-600 dark:bg-orange-400",
-    bgWeak: "bg-orange-50 dark:bg-orange-950/30",
-    border: "border-orange-200 dark:border-orange-900",
-    chart: "var(--primary)", // 파이 차트 등
-  },
-  // ===== 부채 및 손실 (Liability / Loss) =====
-  liability: {
-    strong: "text-rose-600 dark:text-rose-400", // 강조
-    weak: "text-rose-600/70 dark:text-rose-400/80", // 약함
-    bgStrong: "bg-rose-600 dark:bg-rose-400",
-    bgWeak: "bg-rose-50 dark:bg-rose-950/30",
-    border: "border-rose-200 dark:border-rose-900",
-    chart: "var(--color-rose-400)", // 파이 차트 등
+    bgLight: "bg-primary/20",
+    border: "border-teal-600",
   },
 
+  value: "text-white",
+
+  // ===== 중요 =========  
+  important: "text-orange-600 dark:text-orange-400",
   // ===== 부채 및 손실 (Liability / Loss) =====
-  profit: "text-red-600 dark:text-red-400",
+  liability: "text-rose-600 dark:text-rose-400",
+  liabilityBg: "bg-rose-600",
+  // ===== 수익/손실 =====
+  profit: "text-rose-600 dark:text-rose-400",
   loss: "text-blue-600 dark:text-blue-400",
-  // ===== 차트 색상 (그 외) =====
-  chart: {
-    1: "var(--chart-1)",
-    2: "var(--chart-2)",
-    3: "var(--chart-3)",
-    4: "var(--chart-4)",
-    5: "var(--chart-5)",
-    6: "var(--chart-6)",
+  // ===== 자산 분류 카테고리 색상 (hex) =====
+  categoryColors: {
+    realEstate: "#0d9488",
+    stocks: "#2563eb",
+    crypto: "#7c3aed",
+    cash: "#16a34a",
+    loans: "#e11d48",
+    tenantDeposit: "#db2777",
+  },
+  // ===== 구분자 색상 =====
+  delimiterColor: "var(--popover)",
+
+  categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary",
+  todayBox: "text-xs text-muted-foreground bg-muted/5 px-2 py-0.5 rounded border border-white/20 shrink-0",
+
+  // ===== 부동산 유형별 색상 =====
+  realEstateTypeColors: {
+    apartment: "#0d9488",
+    house: "#2563eb",
+    land: "#16a34a",
+    commercial: "#d97706",
+    other: "#7c3aed",
+  },
+  // ===== 자산 분포 카드 다크 테마 토큰 =====
+  distributionCard: {
+    bg: "bg-gradient-to-br from-zinc-900 to-zinc-950",
+    border: "border-zinc-500",
+    title: "text-white",
+    description: "text-zinc-400",
+    sectionBg: "bg-zinc-800/60",
+    sectionBorder: "border-zinc-700",
+    itemBg: "bg-zinc-900/50",
+    itemHover: "hover:bg-zinc-800/50",
+    muted: "text-zinc-400",
+    separatorPill: "bg-zinc-700/80 text-zinc-200",
   },
 } as const;
 

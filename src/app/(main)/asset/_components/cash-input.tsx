@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, Wallet, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,20 +28,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Cash, cashSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
-
-const cashTypes = [
-    { value: "deposit", label: "예금" },
-    { value: "savings", label: "적금" },
-    { value: "bank", label: "입출금 통장" },
-    { value: "cma", label: "CMA" },
-    { value: "cash", label: "실물 현금" },
-] as const;
+import { cashTypes, financialInstitutions } from "@/config/asset-options";
 
 interface CashFormProps {
     editData?: Cash;
@@ -167,9 +161,23 @@ function CashForm({ editData, onClose }: CashFormProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>금융기관명</FormLabel>
-                            <FormControl>
-                                <Input placeholder="예: 우리은행, 토스뱅크 등" {...field} value={field.value || ""} />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="금융기관 선택" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {financialInstitutions.map((group) => (
+                                        <SelectGroup key={group.group}>
+                                            <SelectLabel>{group.group}</SelectLabel>
+                                            {group.items.map((item) => (
+                                                <SelectItem key={item} value={item}>{item}</SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -304,50 +312,70 @@ export function CashInput() {
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             {assetData.cash && assetData.cash.map((item) => {
                                 return (
-                                    <div key={item.id} className="rounded-lg border p-4">
-                                        <div className="flex flex-col gap-3">
-                                            {/* 제목과 버튼 영역 */}
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                                                    <span className="rounded bg-green-500/10 px-2 py-1 text-xs font-medium text-green-600">
-                                                        {getTypeLabel(item.type)}
-                                                    </span>
-                                                    <h3 className="font-semibold">{item.name}</h3>
-                                                    {item.institution && (
-                                                        <span className="text-muted-foreground text-xs">({item.institution})</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2 flex-shrink-0">
-                                                    <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                                                        <Pencil className="size-4" />
-                                                    </Button>
-                                                    <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                                                        <Trash2 className="size-4" />
-                                                    </Button>
-                                                </div>
+                                    <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+                                        {/* Layer 1: 헤더 */}
+                                        <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                                            <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                                                <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                                                    {getTypeLabel(item.type)}
+                                                </Badge>
+                                                <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                                                {item.institution && (
+                                                    <span className="text-muted-foreground text-xs shrink-0">({item.institution})</span>
+                                                )}
                                             </div>
-
-                                            {/* 내용 영역 */}
-                                            <div className="w-full">
-                                                <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                                                    <div className="flex justify-between gap-2 sm:block">
-                                                        <span className="text-muted-foreground whitespace-nowrap">보유금액:</span>{" "}
-                                                        <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>
-                                                            {formatCurrencyDisplay(item.balance, item.currency)}
-                                                            {item.currency !== "KRW" && (
-                                                                <span className="text-muted-foreground text-xs ml-1">
-                                                                    (₩{(item.balance * getMultiplier(item.currency)).toLocaleString()})
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                {item.description && <p className={`text-foreground mt-2 text-sm ${ASSET_THEME.primary.text}`}># {item.description}</p>}
+                                            <div className="flex gap-1 flex-shrink-0">
+                                                <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
+                                                    <Pencil className="size-3.5" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
+                                                    <Trash2 className="size-3.5" />
+                                                </Button>
                                             </div>
                                         </div>
+
+                                        {/* Layer 2: 핵심 지표 */}
+                                        <div className="p-4">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-xs text-muted-foreground">보유금액</span>
+                                                <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
+                                                    {formatCurrencyDisplay(item.balance, item.currency)}
+                                                </span>
+                                                {item.currency !== "KRW" && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        ₩{(item.balance * getMultiplier(item.currency)).toLocaleString()} 환산
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Layer 3: 부가 정보 */}
+                                        {item.description && (
+                                            <div className="px-4 py-2.5 bg-muted/10 border-t flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                                <span className="w-full mt-0.5 text-primary truncate">
+                                                    # {item.description}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Layer 4: 연계 예금담보대출 */}
+                                        {(() => {
+                                            const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
+                                            if (linkedLoans.length === 0) return null;
+                                            return linkedLoans.map((loan) => (
+                                                <div key={loan.id} className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
+                                                    <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                                                    <span className="text-muted-foreground">예금담보대출</span>
+                                                    <span className="font-medium text-rose-400 truncate">{loan.name}</span>
+                                                    <span className={`ml-auto font-semibold tabular-nums text-rose-400`}>
+                                                        -{formatCurrency(loan.balance)}
+                                                    </span>
+                                                </div>
+                                            ));
+                                        })()}
                                     </div>
                                 );
                             })}

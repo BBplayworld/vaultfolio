@@ -3,14 +3,15 @@
 import { Building2, TrendingUp, Shield, Sparkles, Activity, ArrowRight, FolderInput, Bitcoin, Wallet, CreditCard, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ASSET_THEME } from "@/config/theme";
 
 // 미리보기용 예시 자산 데이터
 const PREVIEW_CATEGORIES = [
-  { key: "realEstate", label: "부동산", icon: Building2, color: "#0d9488", value: 450_000_000, pct: 45 },
-  { key: "stocks", label: "주식", icon: TrendingUp, color: "#2563eb", value: 300_000_000, pct: 30 },
-  { key: "cash", label: "현금", icon: Wallet, color: "#16a34a", value: 150_000_000, pct: 15 },
-  { key: "crypto", label: "암호화폐", icon: Bitcoin, color: "#7c3aed", value: 70_000_000, pct: 7 },
-  { key: "loans", label: "대출", icon: CreditCard, color: "#e11d48", value: 30_000_000, pct: 3, isLiability: true },
+  { key: "realEstate", label: "부동산", icon: Building2, color: ASSET_THEME.categoryColors.realEstate, value: 450_000_000, pct: 45 },
+  { key: "stocks", label: "주식", icon: TrendingUp, color: ASSET_THEME.categoryColors.stocks, value: 300_000_000, pct: 30 },
+  { key: "cash", label: "현금", icon: Wallet, color: ASSET_THEME.categoryColors.cash, value: 150_000_000, pct: 15 },
+  { key: "crypto", label: "암호화폐", icon: Bitcoin, color: ASSET_THEME.categoryColors.crypto, value: 70_000_000, pct: 7 },
+  { key: "loans", label: "대출", icon: CreditCard, color: ASSET_THEME.categoryColors.loans, value: 30_000_000, pct: 3, isLiability: true },
 ] as const;
 
 function formatAmount(n: number) {

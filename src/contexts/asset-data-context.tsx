@@ -392,7 +392,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const saveData = useCallback((data: AssetData) => {
     const success = saveAssetData(data);
     if (success) {
-      setAssetData(data);
+      setAssetData({ ...data, lastUpdated: new Date().toISOString() });
     }
     return success;
   }, []);
@@ -594,9 +594,23 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const realEstateCost = assetData.realEstate.reduce((sum, item) => sum + item.purchasePrice, 0);
     const realEstateProfit = realEstateValue - realEstateCost;
 
+    const getPurchaseRatePerUnit = (currency?: string, purchaseExchangeRate?: number): number => {
+      if (!purchaseExchangeRate || purchaseExchangeRate <= 0) return getMultiplier(currency);
+      return currency === "JPY" ? purchaseExchangeRate / 100 : purchaseExchangeRate;
+    };
+
     const stockValue = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.currentPrice * getMultiplier(item.currency), 0);
     const stockCost = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.averagePrice * getMultiplier(item.currency), 0);
     const stockProfit = stockValue - stockCost;
+
+    const stockCurrencyGain = assetData.stocks
+      .filter((s) => s.category === "foreign" && s.currency !== "KRW")
+      .reduce((sum, s) => {
+        const curr = getMultiplier(s.currency);
+        const purchase = getPurchaseRatePerUnit(s.currency, s.purchaseExchangeRate);
+        return sum + (curr - purchase) * s.quantity * s.averagePrice;
+      }, 0);
+    const stockFxProfit = stockProfit + stockCurrencyGain;
 
     const cryptoValue = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.currentPrice, 0); // 코인은 원화 기준으로 입력
     const cryptoCost = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
@@ -624,6 +638,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       stockValue,
       stockCost,
       stockProfit,
+      stockCurrencyGain,
+      stockFxProfit,
       cryptoValue,
       cryptoCost,
       cryptoProfit,

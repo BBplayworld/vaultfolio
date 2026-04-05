@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Bitcoin } from "lucide-react";
+import { Plus, Pencil, Trash2, Bitcoin, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,49 +30,12 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Crypto, cryptoSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
-
-// 주요 거래소 목록
-const exchanges = [
-  { value: "upbit", label: "업비트" },
-  { value: "bithumb", label: "빗썸" },
-  { value: "coinone", label: "코인원" },
-  { value: "korbit", label: "코빗" },
-  { value: "binance", label: "바이낸스" },
-  { value: "bybit", label: "바이비트" },
-  { value: "okx", label: "OKX" },
-  { value: "coinbase", label: "코인베이스" },
-  { value: "kraken", label: "크라켄" },
-  { value: "other", label: "기타" },
-] as const;
-
-// 주요 암호화폐 목록
-const popularCryptos = [
-  { symbol: "BTC", name: "비트암호화폐" },
-  { symbol: "ETH", name: "이더리움" },
-  { symbol: "XRP", name: "리플" },
-  { symbol: "ADA", name: "카르다노" },
-  { symbol: "SOL", name: "솔라나" },
-  { symbol: "DOGE", name: "도지암호화폐" },
-  { symbol: "MATIC", name: "폴리곤" },
-  { symbol: "DOT", name: "폴카닷" },
-  { symbol: "AVAX", name: "아발란체" },
-  { symbol: "LINK", name: "체인링크" },
-  { symbol: "UNI", name: "유니스왑" },
-  { symbol: "ATOM", name: "코스모스" },
-  { symbol: "LTC", name: "라이트암호화폐" },
-  { symbol: "BCH", name: "비트암호화폐캐시" },
-  { symbol: "NEAR", name: "니어프로토콜" },
-  { symbol: "APT", name: "앱토스" },
-  { symbol: "ARB", name: "아비트럼" },
-  { symbol: "OP", name: "옵티미즘" },
-  { symbol: "SUI", name: "수이" },
-  { symbol: "HBAR", name: "헤데라" },
-  { symbol: "other", name: "직접 입력" },
-] as const;
+import { cryptoExchanges as exchanges, popularCryptos } from "@/config/asset-options";
 
 interface CryptoFormProps {
   editData?: Crypto;
@@ -407,7 +370,7 @@ export function CryptoInput() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {assetData.crypto.map((item) => {
                 const totalCost = item.quantity * item.averagePrice;
                 const currentValue = item.quantity * item.currentPrice;
@@ -416,66 +379,88 @@ export function CryptoInput() {
                 const holdingDays = calculateHoldingDays(item.purchaseDate);
 
                 return (
-                  <div key={item.id} className="rounded-lg border p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* 제목과 버튼 영역 */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                          <span className="rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600">
-                            {item.symbol}
-                          </span>
-                          <h3 className="font-semibold">{item.name}</h3>
-                          {item.exchange && (
-                            <span className="text-muted-foreground text-xs">({item.exchange})</span>
-                          )}
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
+                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+                    {/* Layer 1: 종목 헤더 */}
+                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                        <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                          {item.symbol}
+                        </Badge>
+                        <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                        {item.exchange && (
+                          <span className="text-muted-foreground text-xs shrink-0">({item.exchange})</span>
+                        )}
                       </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
 
-                      {/* 내용 영역 */}
-                      <div className="w-full">
-                        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">평균단가:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.primary.text}`}>{formatCurrencyDisplay(item.averagePrice)}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">현재가:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{formatCurrencyDisplay(item.currentPrice)}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">수량:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">평가금액:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${ASSET_THEME.asset.strong}`}>{formatCurrencyDisplay(currentValue)}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">평가손익:</span>{" "}
-                            <span className={`font-medium text-right sm:text-left ${getProfitLossColor(profit)}`}>
-                              {formatCurrencyDisplay(profit)} ({profit > 0 ? "+" : ""}
-                              {profitRate.toFixed(2)}%)
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">보유일수:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{holdingDays.toLocaleString()}일</span>
-                          </div>
-                          <div className="col-span-1 flex justify-between gap-2 sm:col-span-2 sm:block">
-                            <span className="text-muted-foreground whitespace-nowrap">매수일:</span>{" "}
-                            <span className="font-medium text-right sm:text-left">{item.purchaseDate}</span>
-                          </div>
-                        </div>
-                        {item.description && <p className={`text-foreground mt-2 text-sm ${ASSET_THEME.primary.text}`}># {item.description}</p>}
+                    {/* Layer 2: 핵심 지표 */}
+                    <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-muted-foreground">평가금액</span>
+                        <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
+                          {formatCurrencyDisplay(currentValue)}
+                        </span>
                       </div>
+                      <span className="hidden sm:inline text-border self-center">|</span>
+                      <div className="flex flex-col items-end sm:items-start gap-1">
+                        <span className="text-xs text-muted-foreground">평가손익</span>
+                        <span className={`text-medium font-bold ${getProfitLossColor(profit)}`}>
+                          {formatCurrencyDisplay(profit)}
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profit)}`}>
+                            &nbsp;({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Layer 3: 가격 비교 */}
+                    <div className="px-4 py-3 bg-muted/10 border-t">
+                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs text-muted-foreground">평균단가</span>
+                          <span className="text-sm font-medium text-foreground">{formatCurrencyDisplay(item.averagePrice)}</span>
+                        </div>
+                        <span className="hidden sm:inline text-border self-center">|</span>
+                        <div className="flex flex-col gap-0.5 items-end sm:items-start">
+                          <span className="text-xs text-muted-foreground">현재가</span>
+                          <span className="text-sm font-semibold text-primary">
+                            {formatCurrencyDisplay(item.currentPrice)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layer 4: 보조 정보 */}
+                    <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
+                      <span className="flex items-center gap-1">
+                        <span>수량</span>
+                        <span className="font-medium font-semibold text-primary">
+                          {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개
+                        </span>
+                      </span>
+                      <span className="hidden sm:inline text-border">|</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3" />
+                        <span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span>
+                      </span>
+                      <span className="hidden sm:inline text-border">|</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="size-3" />
+                        <span className="font-medium text-foreground">{item.purchaseDate} 매수</span>
+                      </span>
+                      {item.description && (
+                        <span className="w-full mt-0.5 text-muted-foreground truncate">
+                          # {item.description}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

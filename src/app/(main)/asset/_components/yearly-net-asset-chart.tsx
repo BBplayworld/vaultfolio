@@ -294,7 +294,7 @@ export function YearlyNetAssetChart() {
                               </span>
                             )}
                           </div>
-                          <p className={`text-sm font-bold ${isCurrentYear ? ASSET_THEME.asset.strong : ASSET_THEME.primary.text}`}>{formatCurrency(item.netAsset)}</p>
+                          <p className={`text-sm font-bold ${isCurrentYear ? ASSET_THEME.important : ASSET_THEME.primary.text}`}>{formatCurrency(item.netAsset)}</p>
                         </div>
                         {
                           !isCurrentYear && (

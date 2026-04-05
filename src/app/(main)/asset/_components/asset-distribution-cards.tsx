@@ -7,42 +7,30 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { cashTypes, loanTypes, loanTypeOrder, stockCategories, realEstateTypes } from "@/config/asset-options";
 
 const assetDistributionChartConfig = {
   realEstate: {
     label: "부동산",
-    color: ASSET_THEME.asset.chart,
   },
   stocks: {
     label: "주식",
-    color: ASSET_THEME.asset.chart,
   },
   crypto: {
     label: "암호화폐",
-    color: ASSET_THEME.asset.chart,
   },
   cash: {
     label: "현금",
-    color: ASSET_THEME.asset.chart,
   },
   loans: {
     label: "대출",
-    color: ASSET_THEME.liability.chart,
   },
   tenantDeposit: {
     label: "임차인보증금",
-    color: ASSET_THEME.liability.chart,
   },
 } as ChartConfig;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  realEstate: "#0d9488",   // teal-600
-  stocks: "#2563eb",   // blue-600
-  crypto: "#7c3aed",   // violet-600
-  cash: "#16a34a",   // green-600
-  loans: "#e11d48",   // rose-600
-  tenantDeposit: "#db2777", // pink-600
-};
+// 색상 상수는 theme.ts의 ASSET_THEME.categoryColors 에서 중앙 관리
 
 const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   realEstate: Building2,
@@ -53,52 +41,19 @@ const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   tenantDeposit: Wallet,
 };
 
-const loanTypeChartConfig = {
-  balance: {
-    label: "대출잔액",
-    color: "var(--chart-1)",
-  },
-  credit: {
-    label: "신용대출",
-    color: "hsl(var(--chart-1))",
-  },
-  minus: {
-    label: "마이너스대출",
-    color: "hsl(var(--chart-2))",
-  },
-  "mortgage-home": {
-    label: "주택담보",
-    color: "hsl(var(--chart-3))",
-  },
-  "mortgage-stock": {
-    label: "주식담보",
-    color: "hsl(var(--chart-4))",
-  },
-  "mortgage-insurance": {
-    label: "보험담보",
-    color: "hsl(var(--chart-5))",
-  },
-  "mortgage-deposit": {
-    label: "예금담보",
-    color: "hsl(var(--chart-6))",
-  },
-  "mortgage-other": {
-    label: "기타담보",
-    color: "hsl(var(--chart-1))",
-  },
-} as ChartConfig;
+// 대출 ChartConfig - loanTypes에서 자동 생성
+const loanTypeChartConfig: ChartConfig = {
+  balance: { label: "대출잔액" },
+  ...Object.fromEntries(loanTypes.map((t) => [t.value, { label: t.shortLabel }])),
+};
 
-const CRYPTO_COLORS: string[] = [
-  "#f97316", "#8b5cf6", "#06b6d4", "#10b981",
-  "#f59e0b", "#ec4899", "#3b82f6", "#84cc16", "#ef4444", "#6366f1",
-];
-
+// 부동산 유형별 메타 (아이콘·색상은 UI 전용)
 const REAL_ESTATE_TYPE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  apartment: { label: "아파트", icon: Building2, color: "#0d9488" },
-  house: { label: "주택", icon: Home, color: "#2563eb" },
-  land: { label: "토지", icon: TreePine, color: "#16a34a" },
-  commercial: { label: "상가", icon: Store, color: "#d97706" },
-  other: { label: "기타", icon: Landmark, color: "#7c3aed" },
+  apartment: { label: realEstateTypes.find((t) => t.value === "apartment")!.label, icon: Building2, color: ASSET_THEME.realEstateTypeColors.apartment },
+  house: { label: realEstateTypes.find((t) => t.value === "house")!.label, icon: Home, color: ASSET_THEME.realEstateTypeColors.house },
+  land: { label: realEstateTypes.find((t) => t.value === "land")!.label, icon: TreePine, color: ASSET_THEME.realEstateTypeColors.land },
+  commercial: { label: realEstateTypes.find((t) => t.value === "commercial")!.label, icon: Store, color: ASSET_THEME.realEstateTypeColors.commercial },
+  other: { label: realEstateTypes.find((t) => t.value === "other")!.label, icon: Landmark, color: ASSET_THEME.realEstateTypeColors.other },
 };
 
 export function AssetDistributionCards() {
@@ -116,70 +71,46 @@ export function AssetDistributionCards() {
     {
       category: "realEstate",
       value: summary.realEstateValue,
-      fill: "var(--color-realEstate)",
       type: "asset" as const,
     },
     {
       category: "stocks",
       value: summary.stockValue,
-      fill: "var(--color-stocks)",
       type: "asset" as const,
     },
     {
       category: "crypto",
       value: summary.cryptoValue,
-      fill: "var(--color-crypto)",
       type: "asset" as const,
     },
     {
       category: "cash",
       value: summary.cashValue,
-      fill: "var(--color-cash)",
       type: "asset" as const,
     },
     {
       category: "loans",
       value: summary.loanBalance,
-      fill: "var(--color-loans)",
       type: "liability" as const,
     },
     {
       category: "tenantDeposit",
       value: summary.tenantDepositTotal,
-      fill: "var(--color-tenantDeposit)",
       type: "liability" as const,
     },
   ].filter((item) => item.value > 0);
 
-  const loanTypeLabels: Record<string, string> = {
-    credit: "신용대출",
-    minus: "마이너스대출",
-    "mortgage-home": "주택담보",
-    "mortgage-stock": "주식담보",
-    "mortgage-insurance": "보험담보",
-    "mortgage-deposit": "예금담보",
-    "mortgage-other": "기타담보",
-    other: "기타",
-  };
+  // 대출 종류 라벨 맵 - loanTypes에서 자동 생성
+  const loanTypeLabels: Record<string, string> = Object.fromEntries(
+    loanTypes.map((t) => [t.value, t.shortLabel])
+  );
 
   // 주식 카테고리별 분류
-  const stockCategoryData = [
-    { category: "domestic", label: "국내주식" },
-    { category: "foreign", label: "해외주식" },
-    { category: "irp", label: "IRP" },
-    { category: "isa", label: "ISA" },
-    { category: "pension", label: "연금저축" },
-    { category: "unlisted", label: "비상장" },
-  ]
+  const stockCategoryData = stockCategories
     .map((cat) => {
-      const stocks = assetData.stocks.filter((s) => s.category === cat.category);
+      const stocks = assetData.stocks.filter((s) => s.category === cat.value);
       const value = stocks.reduce((sum, s) => sum + s.quantity * s.currentPrice * getMultiplier(s.currency), 0);
-      return {
-        category: cat.category,
-        label: cat.label,
-        value,
-        fill: `var(--color-${cat.category})`,
-      };
+      return { category: cat.value, label: cat.shortLabel, value, fill: ASSET_THEME.delimiterColor };
     })
     .filter((item) => item.value > 0);
 
@@ -190,9 +121,15 @@ export function AssetDistributionCards() {
       balance: loan.balance,
       name: loan.name,
       interestRate: loan.interestRate,
+      description: loan.description,
       fill: loanTypeChartConfig[loan.type]?.color || "var(--chart-1)",
     }))
-    .filter((item) => item.balance > 0);
+    .filter((item) => item.balance > 0)
+    .sort((a, b) => {
+      const typeOrder = loanTypeOrder.indexOf(a.type) - loanTypeOrder.indexOf(b.type);
+      if (typeOrder !== 0) return typeOrder;
+      return b.balance - a.balance;
+    });
 
   const cryptoDistributionData = assetData.crypto
     .map((coin) => {
@@ -205,6 +142,8 @@ export function AssetDistributionCards() {
     .filter((item) => item.coinValue > 0)
     .sort((a, b) => b.coinValue - a.coinValue);
 
+  // 암호화폐 색상은 theme.ts의 ASSET_THEME.cryptoColors 에서 중앙 관리
+
   const formatHoldingPeriod = (days: number): string => {
     const years = Math.floor(days / 365);
     const months = Math.floor((days % 365) / 30);
@@ -214,19 +153,12 @@ export function AssetDistributionCards() {
     return `${days}일`;
   };
 
-  const CASH_TYPE_META: Record<string, { label: string; color: string }> = {
-    bank: { label: "입출금 통장", color: "#16a34a" },
-    cma: { label: "CMA", color: "#059669" },
-    cash: { label: "실물 현금", color: "#15803d" },
-    deposit: { label: "예금", color: "#0d9488" },
-    savings: { label: "적금", color: "#0891b2" },
-  };
-
-  const cashTypeData = (["bank", "cma", "cash", "deposit", "savings"] as const)
-    .map((type) => {
+  // 현금 유형별 분류 - cashTypes에서 자동 생성
+  const cashTypeData = cashTypes
+    .map(({ value: type, label }) => {
       const items = assetData.cash.filter((c) => c.type === type);
       const value = items.reduce((sum, c) => sum + c.balance * getMultiplier(c.currency), 0);
-      return { type, ...CASH_TYPE_META[type], items, value };
+      return { type, label, items, value };
     })
     .filter((d) => d.value > 0);
 
@@ -238,14 +170,13 @@ export function AssetDistributionCards() {
 
   return (
     <div className="flex flex-col w-full gap-6 lg:grid lg:grid-cols-2">
-      <Card className="bg-primary/20 lg:bg-primary/10 border-primary/20 lg:border-border h-fit">
+      <Card className={`${ASSET_THEME.distributionCard.bg} ${ASSET_THEME.distributionCard.border} h-fit`}>
         <CardHeader className="pb-2">
-          <CardTitle className={`${ASSET_THEME.primary.text}`}>자산 분포</CardTitle>
-          <CardDescription>자산 및 부채 분포 현황</CardDescription>
+          <CardTitle className={ASSET_THEME.primary.text}>자산 분포</CardTitle>
         </CardHeader>
         <CardContent className="pb-2 overflow-hidden">
           {assetDistributionData.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-muted-foreground">
+            <div className={`flex h-48 items-center justify-center ${ASSET_THEME.distributionCard.muted}`}>
               <p>등록된 자산이 없습니다.</p>
             </div>
           ) : (() => {
@@ -258,33 +189,33 @@ export function AssetDistributionCards() {
             return (
               <div className="space-y-5 pb-2">
                 {/* 순자산 요약 */}
-                <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 px-4 py-3">
+                <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.distributionCard.sectionBg} border ${ASSET_THEME.distributionCard.sectionBorder} px-4 py-3`}>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">순자산</p>
-                    <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                    <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                    <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
                       {formatShortCurrency(summary.netAsset)}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">{formatCurrency(summary.netAsset)}</p>
+                    <p className={`text-[11px] ${ASSET_THEME.text}`}>{formatCurrency(summary.netAsset)}</p>
                   </div>
                   <div className="text-right space-y-1.5">
                     <div className="text-xs">
-                      <span className="text-muted-foreground">총 자산 </span>
-                      <span className={`font-bold ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(totalAsset)}</span>
+                      <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
+                      <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(totalAsset)}</span>
                     </div>
                     <div className="text-xs">
-                      <span className="text-muted-foreground">총 부채 </span>
-                      <span className={`font-bold ${ASSET_THEME.liability.strong}`}>-{formatShortCurrency(totalLiability)}</span>
+                      <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
+                      <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* 자산 vs 부채 전체 비율 바 */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-muted-foreground">자산 / 부채 비율</p>
+                  <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>자산 / 부채 비율</p>
                   <div className="flex h-5 w-full rounded-full overflow-hidden gap-px">
                     <div
                       className="flex items-center justify-center transition-all"
-                      style={{ width: `${(totalAsset / grossTotal) * 100}%`, backgroundColor: "#0d9488" }}
+                      style={{ width: `${(totalAsset / grossTotal) * 100}%`, backgroundColor: ASSET_THEME.categoryColors.realEstate }}
                       title={`자산 ${((totalAsset / grossTotal) * 100).toFixed(1)}%`}
                     >
                       <span className="text-white text-[10px] font-bold drop-shadow select-none">
@@ -294,7 +225,7 @@ export function AssetDistributionCards() {
                     {totalLiability > 0 && (
                       <div
                         className="flex items-center justify-center transition-all"
-                        style={{ width: `${(totalLiability / grossTotal) * 100}%`, backgroundColor: "#e11d48" }}
+                        style={{ width: `${(totalLiability / grossTotal) * 100}%`, backgroundColor: ASSET_THEME.categoryColors.loans }}
                         title={`부채 ${((totalLiability / grossTotal) * 100).toFixed(1)}%`}
                       >
                         <span className="text-white text-[10px] font-bold drop-shadow select-none">
@@ -309,17 +240,17 @@ export function AssetDistributionCards() {
                 {assetItems.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-muted-foreground">자산 구성</span>
-                      <span className={`font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>{formatShortCurrency(totalAsset)}</span>
+                      <span className={`font-semibold ${ASSET_THEME.text.muted}`}>총 자산 구성</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{formatShortCurrency(totalAsset)}</span>
                     </div>
-                    <div className="flex h-10 w-full rounded-xl overflow-hidden gap-px">
+                    <div className="flex h-8 w-full rounded-xl overflow-hidden gap-px">
                       {assetItems.map(item => {
                         const pct = (item.value / totalAsset) * 100;
                         return (
                           <div
                             key={item.category}
                             className="relative flex items-center justify-center overflow-hidden cursor-default hover:opacity-85 transition-opacity"
-                            style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[item.category] }}
+                            style={{ width: `${pct}%`, backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }}
                             title={`${assetDistributionChartConfig[item.category]?.label}: ${formatShortCurrency(item.value)} (${pct.toFixed(1)}%)`}
                           >
                             {pct > 10 && (
@@ -337,11 +268,11 @@ export function AssetDistributionCards() {
                         const Icon = CATEGORY_ICON_MAP[item.category];
                         return (
                           <div key={item.category} className="flex items-center gap-1">
-                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
-                            {Icon && <Icon className="size-3 text-muted-foreground flex-shrink-0" />}
-                            <span className="text-xs text-muted-foreground">{assetDistributionChartConfig[item.category]?.label}</span>
-                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>{pct.toFixed(1)}%</span>
-                            <span className="text-xs text-foreground tabular-nums">({formatShortCurrency(item.value)})</span>
+                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }} />
+                            {Icon && <Icon className="size-3 text-zinc-500 flex-shrink-0" />}
+                            <span className="text-xs text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{pct.toFixed(1)}%</span>
+                            <span className={`text-xs tabular-nums ${ASSET_THEME.value}`}>(<span>{formatShortCurrency(item.value)}</span>)</span>
                           </div>
                         );
                       })}
@@ -353,17 +284,17 @@ export function AssetDistributionCards() {
                 {liabilityItems.length > 0 && totalLiability > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-muted-foreground">부채 구성</span>
-                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>-{formatShortCurrency(totalLiability)}</span>
+                      <span className={`font-semibold ${ASSET_THEME.text.muted}`}>총 부채 구성</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span>
                     </div>
-                    <div className="flex h-10 w-full rounded-xl overflow-hidden gap-px">
+                    <div className="flex h-8 w-full rounded-xl overflow-hidden gap-px">
                       {liabilityItems.map(item => {
                         const pct = (item.value / totalLiability) * 100;
                         return (
                           <div
                             key={item.category}
                             className="relative flex items-center justify-center overflow-hidden cursor-default hover:opacity-85 transition-opacity"
-                            style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[item.category] }}
+                            style={{ width: `${pct}%`, backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }}
                             title={`${assetDistributionChartConfig[item.category]?.label}: ${formatShortCurrency(item.value)} (${pct.toFixed(1)}%)`}
                           >
                             {pct > 10 && (
@@ -381,11 +312,11 @@ export function AssetDistributionCards() {
                         const Icon = CATEGORY_ICON_MAP[item.category];
                         return (
                           <div key={item.category} className="flex items-center gap-1">
-                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
-                            {Icon && <Icon className="size-3 text-muted-foreground flex-shrink-0" />}
-                            <span className="text-xs text-muted-foreground">{assetDistributionChartConfig[item.category]?.label}</span>
-                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>{pct.toFixed(1)}%</span>
-                            <span className="text-xs text-foreground tabular-nums">({formatShortCurrency(item.value)})</span>
+                            <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }} />
+                            {Icon && <Icon className="size-3 text-zinc-500 flex-shrink-0" />}
+                            <span className="text-xs text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.liability}`}>{pct.toFixed(1)}%</span>
+                            <span className={`text-xs tabular-nums ${ASSET_THEME.value}`}>({formatShortCurrency(item.value)})</span>
                           </div>
                         );
                       })}
@@ -397,7 +328,7 @@ export function AssetDistributionCards() {
           })()}
         </CardContent>
         <CardFooter>
-          <p className="text-muted-foreground text-xs">
+          <p className={`${ASSET_THEME.distributionCard.muted} text-xs`}>
             마지막 업데이트: {assetData.lastUpdated && !Number.isNaN(new Date(assetData.lastUpdated).getTime()) ? new Date(assetData.lastUpdated).toLocaleString("ko-KR") : ""}
           </p>
         </CardFooter>
@@ -407,7 +338,7 @@ export function AssetDistributionCards() {
         if (key === "stockCrypto") return (
           <Card key={key}>
             <CardHeader>
-              <CardTitle className={`${ASSET_THEME.primary.text}`}>금융자산 현황</CardTitle>
+              <CardTitle className={ASSET_THEME.primary.text}>금융자산 현황</CardTitle>
               <CardDescription>주식, 암호화폐, 현금성 자산 현황</CardDescription>
             </CardHeader>
             <CardContent className="overflow-hidden pb-2">
@@ -416,8 +347,8 @@ export function AssetDistributionCards() {
                 <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">금융자산 총액</p>
-                      <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                      <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
+                      <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
                         {formatShortCurrency(summary.stockValue + summary.cryptoValue + summary.cashValue)}
                       </p>
                       <p className="text-[11px] text-foreground">{formatCurrency(summary.stockValue + summary.cryptoValue + summary.cashValue)}</p>
@@ -426,19 +357,19 @@ export function AssetDistributionCards() {
                       {summary.stockValue > 0 && (
                         <div className="text-xs">
                           <span className="text-muted-foreground">주식 </span>
-                          <span className="font-bold text-foreground">{formatShortCurrency(summary.stockValue)}</span>
+                          <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(summary.stockValue)}</span>
                         </div>
                       )}
                       {summary.cryptoValue > 0 && (
                         <div className="text-xs">
                           <span className="text-muted-foreground">암호화폐 </span>
-                          <span className="font-bold text-foreground">{formatShortCurrency(summary.cryptoValue)}</span>
+                          <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(summary.cryptoValue)}</span>
                         </div>
                       )}
                       {summary.cashValue > 0 && (
                         <div className="text-xs">
                           <span className="text-muted-foreground">현금성 </span>
-                          <span className="font-bold text-foreground">{formatShortCurrency(summary.cashValue)}</span>
+                          <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(summary.cashValue)}</span>
                         </div>
                       )}
                     </div>
@@ -447,7 +378,7 @@ export function AssetDistributionCards() {
 
                 <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${ASSET_THEME.primary.text} bg-primary/10 rounded-full px-3 py-1`}>
                     <TrendingUp className="size-3.5" />
                     주식 분포
                   </span>
@@ -462,14 +393,28 @@ export function AssetDistributionCards() {
                   <div className="space-y-4">
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-primary">총 주식 평가금액</span>
-                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                        <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>총 주식 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.important}`}>
                           {formatShortCurrency(summary.stockValue)}
                         </span>
                       </div>
-                      <div className="mt-1 text-xs text-foreground">
-                        {formatCurrency(summary.stockValue)}
-                      </div>
+                      <div className="mt-1 text-xs text-foreground">{formatCurrency(summary.stockValue)}</div>
+                      {summary.stockFxProfit !== 0 && (
+                        <div className="mt-2 flex items-center justify-between border-t border-primary/10 pt-2">
+                          <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>평가손익 합계 (환차손익 포함)</span>
+                          <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(summary.stockFxProfit)}`}>
+                            {summary.stockFxProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockFxProfit))}
+                          </span>
+                        </div>
+                      )}
+                      {summary.stockCurrencyGain !== 0 && (
+                        <div className="mt-1 flex items-center justify-between">
+                          <span className={`text-xs ${ASSET_THEME.text.muted}`}>└ 전체 환차손익</span>
+                          <span className={`text-xs font-semibold tabular-nums ${getProfitLossColor(summary.stockCurrencyGain)}`}>
+                            {summary.stockCurrencyGain >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockCurrencyGain))}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2">
@@ -507,33 +452,61 @@ export function AssetDistributionCards() {
                               <div className="relative h-2 overflow-hidden rounded-full bg-muted">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full transition-all"
-                                  style={{ width: `${percentage}%`, background: item.fill }}
+                                  style={{ background: item.fill }}
                                 />
                               </div>
                               <CollapsibleContent className="mt-2 space-y-2 pl-2">
                                 {categoryStocks.map((stock) => {
                                   const stockValue = stock.quantity * stock.currentPrice * getMultiplier(stock.currency);
                                   const stockPercentage = (stockValue / item.value) * 100;
-                                  const profit = stockValue - (stock.quantity * stock.averagePrice * getMultiplier(stock.currency));
+                                  const isForeignWithFx = stock.category === "foreign" && stock.currency !== "KRW";
+                                  const purchaseRate = isForeignWithFx && stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
+                                    ? (stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate)
+                                    : getMultiplier(stock.currency);
+                                  const profit = stockValue - stock.quantity * stock.averagePrice * purchaseRate;
+                                  const hasCurrencyGain = isForeignWithFx && stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0;
+                                  const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === stock.id);
                                   return (
-                                    <div key={stock.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
-                                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                                        <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
-                                        {stock.ticker && (
-                                          <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
-                                        )}
+                                    <div key={stock.id} className="rounded-lg bg-muted/30 text-xs overflow-hidden">
+                                      <div className="flex items-center justify-between p-2">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                          <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
+                                          {stock.ticker && (
+                                            <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-3 whitespace-nowrap">
+                                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                            {stockPercentage.toFixed(1)}%
+                                          </span>
+                                          <span className="font-bold tabular-nums">
+                                            {formatShortCurrency(stockValue)}
+                                          </span>
+                                          <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
+                                            ({profit >= 0 ? '+' : ''}{formatShortCurrency(profit)})
+                                            {hasCurrencyGain && (
+                                              <span className="text-[10px] text-muted-foreground ml-0.5">환차포함</span>
+                                            )}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-3 whitespace-nowrap">
-                                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                          {stockPercentage.toFixed(1)}%
-                                        </span>
-                                        <span className="font-bold tabular-nums">
-                                          {formatShortCurrency(stockValue)}
-                                        </span>
-                                        <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
-                                          ({profit >= 0 ? '+' : ''}{formatShortCurrency(profit)})
-                                        </span>
-                                      </div>
+                                      {linkedLoans.map((loan) => (
+                                        <div key={loan.id} className="flex items-center justify-between border-t border-muted px-2 py-1.5 bg-rose-500/5">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                                            <span className="text-muted-foreground truncate">{loan.name}</span>
+                                            {loan.institution && (
+                                              <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
+                                              -{formatShortCurrency(loan.balance)}
+                                            </span>
+                                            <span className="text-muted-foreground">{loan.interestRate}%</span>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
                                   );
                                 })}
@@ -550,7 +523,7 @@ export function AssetDistributionCards() {
                   <div className="mt-6 space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                      <span className={`flex items-center gap-1.5 text-xs font-semibold ${ASSET_THEME.primary.text} bg-primary/10 rounded-full px-3 py-1`}>
                         <Bitcoin className="size-3.5" />
                         암호화폐 분포
                       </span>
@@ -559,8 +532,8 @@ export function AssetDistributionCards() {
 
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-primary">총 암호화폐 평가금액</span>
-                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                        <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>총 암호화폐 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.important}`}>
                           {formatShortCurrency(summary.cryptoValue)}
                         </span>
                       </div>
@@ -571,9 +544,8 @@ export function AssetDistributionCards() {
 
                     <div className="space-y-3">
                       {cryptoDistributionData.map((item, index) => {
-                        const { coin, coinValue, profit, profitRate } = item;
+                        const { coin, coinValue, profit } = item;
                         const percentage = summary.cryptoValue > 0 ? (coinValue / summary.cryptoValue) * 100 : 0;
-                        const coinColor = CRYPTO_COLORS[index % CRYPTO_COLORS.length];
                         return (
                           <Collapsible key={coin.id}>
                             <div className="space-y-1.5">
@@ -581,12 +553,9 @@ export function AssetDistributionCards() {
                                 <div className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted/50 transition-colors">
                                   <div className="flex items-center gap-2">
                                     <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
-                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: coinColor }} />
-                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>{coin.name}</span>
-                                    <span className="text-xs text-muted-foreground">({coin.symbol})</span>
-                                    {coin.exchange && (
-                                      <span className="hidden sm:inline text-xs text-muted-foreground">• {coin.exchange}</span>
-                                    )}
+                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: ASSET_THEME.delimiterColor }} />
+                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>암호화폐</span>
+                                    <span className="text-xs text-muted-foreground">({cryptoDistributionData.length}개)</span>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs font-semibold tabular-nums text-muted-foreground">
@@ -601,27 +570,24 @@ export function AssetDistributionCards() {
                               <div className="relative h-2 overflow-hidden rounded-full bg-muted">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full transition-all"
-                                  style={{ width: `${percentage}%`, background: coinColor }}
+                                  style={{ background: ASSET_THEME.delimiterColor }}
                                 />
                               </div>
-                              <CollapsibleContent className="mt-2 pl-2">
-                                <div className="rounded-lg bg-muted/30 p-3 text-xs space-y-1.5">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">보유 수량</span>
-                                    <span className="font-medium tabular-nums">{coin.quantity.toLocaleString("ko-KR")} {coin.symbol}</span>
+                              <CollapsibleContent className="mt-2 space-y-2 pl-2">
+                                <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{coin.name}</span>
+                                    <span className="hidden sm:inline text-muted-foreground">({coin.symbol})</span>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">평균단가</span>
-                                    <span className="font-medium tabular-nums">{formatCurrency(coin.averagePrice)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">현재가</span>
-                                    <span className="font-medium tabular-nums">{formatCurrency(coin.currentPrice)}</span>
-                                  </div>
-                                  <div className="flex justify-between border-t border-border/50 pt-1.5">
-                                    <span className="text-muted-foreground">평가손익</span>
-                                    <span className={`font-bold tabular-nums ${getProfitLossColor(profit)}`}>
-                                      {profit >= 0 ? "+" : ""}{formatShortCurrency(profit)} ({profit >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
+                                  <div className="flex items-center gap-3 whitespace-nowrap">
+                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                      {percentage.toFixed(1)}%
+                                    </span>
+                                    <span className="font-bold tabular-nums">
+                                      {formatShortCurrency(coinValue)}
+                                    </span>
+                                    <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
+                                      ({profit >= 0 ? "+" : ""}{formatShortCurrency(profit)})
                                     </span>
                                   </div>
                                 </div>
@@ -637,7 +603,7 @@ export function AssetDistributionCards() {
                   <div className="mt-6 space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                      <span className={`flex items-center gap-1.5 text-xs font-semibold ${ASSET_THEME.primary.text} bg-primary/10 rounded-full px-3 py-1`}>
                         <Banknote className="size-3.5" />
                         현금성 자산 분포
                       </span>
@@ -646,8 +612,8 @@ export function AssetDistributionCards() {
 
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-primary">총 현금성 자산 평가금액</span>
-                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                        <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>총 현금성 자산 평가금액</span>
+                        <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.important}`}>
                           {formatShortCurrency(summary.cashValue)}
                         </span>
                       </div>
@@ -666,7 +632,7 @@ export function AssetDistributionCards() {
                                 <div className="flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg p-2 transition-colors">
                                   <div className="flex items-center gap-2">
                                     <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
-                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: typeGroup.color }} />
+                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: ASSET_THEME.delimiterColor }} />
                                     <span className={`font-medium ${ASSET_THEME.primary.text}`}>{typeGroup.label}</span>
                                     <span className="text-xs text-muted-foreground">({typeGroup.items.length}개)</span>
                                   </div>
@@ -683,7 +649,7 @@ export function AssetDistributionCards() {
                               <div className="relative h-2 overflow-hidden rounded-full bg-muted">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full transition-all"
-                                  style={{ width: `${percentage}%`, background: typeGroup.color }}
+                                  style={{ background: ASSET_THEME.delimiterColor }}
                                 />
                               </div>
                               <CollapsibleContent className="mt-2 space-y-2 pl-2">
@@ -691,24 +657,45 @@ export function AssetDistributionCards() {
                                   const itemValue = cashItem.balance * getMultiplier(cashItem.currency);
                                   const itemPct = typeGroup.value > 0 ? (itemValue / typeGroup.value) * 100 : 0;
                                   return (
-                                    <div key={cashItem.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
-                                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                                        <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{cashItem.name}</span>
-                                        {cashItem.institution && (
-                                          <span className="hidden sm:inline text-muted-foreground">({cashItem.institution})</span>
-                                        )}
-                                        {cashItem.currency !== "KRW" && (
-                                          <span className="text-muted-foreground">[{cashItem.currency}]</span>
-                                        )}
+                                    <div key={cashItem.id} className="rounded-lg bg-muted/30 text-xs overflow-hidden">
+                                      <div className="flex items-center justify-between p-2">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                          <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{cashItem.name}</span>
+                                          {cashItem.institution && (
+                                            <span className="hidden sm:inline text-muted-foreground">({cashItem.institution})</span>
+                                          )}
+                                          {cashItem.currency !== "KRW" && (
+                                            <span className="text-muted-foreground">[{cashItem.currency}]</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-3 whitespace-nowrap">
+                                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                            {itemPct.toFixed(1)}%
+                                          </span>
+                                          <span className="font-bold tabular-nums">
+                                            {formatShortCurrency(itemValue)}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-3 whitespace-nowrap">
-                                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                          {itemPct.toFixed(1)}%
-                                        </span>
-                                        <span className="font-bold tabular-nums">
-                                          {formatShortCurrency(itemValue)}
-                                        </span>
-                                      </div>
+                                      {assetData.loans
+                                        .filter((l) => l.linkedCashId === cashItem.id)
+                                        .map((loan) => (
+                                          <div key={loan.id} className="flex items-center justify-between border-t border-muted px-2 py-1.5 bg-rose-500/5">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                                              <span className="text-muted-foreground truncate">{loan.name}</span>
+                                              {loan.institution && (
+                                                <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                              <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
+                                                -{formatShortCurrency(loan.balance)}
+                                              </span>
+                                              <span className="text-muted-foreground">{loan.interestRate}%</span>
+                                            </div>
+                                          </div>
+                                        ))}
                                     </div>
                                   );
                                 })}
@@ -740,7 +727,7 @@ export function AssetDistributionCards() {
         if (key === "realEstate") return (
           <Card key={key}>
             <CardHeader>
-              <CardTitle className={`${ASSET_THEME.primary.text}`}>부동산 자산 현황</CardTitle>
+              <CardTitle className={ASSET_THEME.primary.text}>부동산 자산 현황</CardTitle>
               <CardDescription>보유 부동산의 매입가 대비 현재 평가금액</CardDescription>
             </CardHeader>
             <CardContent className="pb-2">
@@ -752,8 +739,8 @@ export function AssetDistributionCards() {
                 <div className="space-y-3">
                   <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-primary">총 부동산 평가금액</span>
-                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.asset.strong}`}>
+                      <span className={`text-sm font-semibold ${ASSET_THEME.primary.text}`}>총 부동산 평가금액</span>
+                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.important}`}>
                         {formatShortCurrency(summary.realEstateValue)}
                       </span>
                     </div>
@@ -789,7 +776,7 @@ export function AssetDistributionCards() {
                             </div>
                             <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{item.name}</span>
                             {(item.tenantDeposit ?? 0) > 0 && (
-                              <span className={`text-xs rounded-full px-2 py-0.5 whitespace-nowrap ${ASSET_THEME.liability.strong} bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900`}>
+                              <span className={`text-xs rounded-full px-2 py-0.5 whitespace-nowrap ${ASSET_THEME.liability} bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900`}>
                                 보증금 {formatShortCurrency(item.tenantDeposit!)}
                               </span>
                             )}
@@ -814,8 +801,8 @@ export function AssetDistributionCards() {
                             </p>
                           </div>
                           <div className="rounded-md bg-muted/30 px-2 py-2">
-                            <p className="text-[12px] text-muted-foreground mb-0.5">현재 평가금액</p>
-                            <p className={`text-s font-bold tabular-nums truncate ${ASSET_THEME.asset.strong}`} title={formatCurrency(item.currentValue)}>
+                            <p className="text-[12px] text-muted-foreground mb-0.5">실거래가</p>
+                            <p className={`text-s font-bold tabular-nums truncate ${ASSET_THEME.primary.text}`} title={formatCurrency(item.currentValue)}>
                               {formatShortCurrency(item.currentValue)}
                             </p>
                           </div>
@@ -829,6 +816,32 @@ export function AssetDistributionCards() {
                             </p>
                           </div>
                         </div>
+                        {(() => {
+                          const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
+                          if (linkedLoans.length === 0) return null;
+                          return (
+                            <div className="border-t pt-2 space-y-1.5">
+                              <p className="text-[11px] font-semibold text-muted-foreground">주택담보대출</p>
+                              {linkedLoans.map((loan) => (
+                                <div key={loan.id} className="flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                                    <span className="text-muted-foreground truncate">{loan.name}</span>
+                                    {loan.institution && (
+                                      <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
+                                      -{formatShortCurrency(loan.balance)}
+                                    </span>
+                                    <span className="text-muted-foreground">{loan.interestRate}%</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -844,7 +857,7 @@ export function AssetDistributionCards() {
         return (
           <Card key={key}>
             <CardHeader>
-              <CardTitle className={`${ASSET_THEME.primary.text}`}>대출 현황</CardTitle>
+              <CardTitle className={ASSET_THEME.primary.text}>대출 현황</CardTitle>
               <CardDescription>대출 종류별 잔액 및 금리</CardDescription>
             </CardHeader>
             <CardContent className="pb-2">
@@ -854,22 +867,22 @@ export function AssetDistributionCards() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-rose-700 dark:text-rose-400">총 대출 잔액</span>
+                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.liability}`}>
+                        {formatShortCurrency(summary.loanBalance)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-foreground">
+                      {formatCurrency(summary.loanBalance)}
+                    </div>
+                  </div>
                   {loanTypeData.map((loan, index) => {
-                    const loanIconMap: Record<string, string> = {
-                      'credit': 'bg-rose-500',
-                      'minus': 'bg-rose-600',
-                      'mortgage-home': 'bg-rose-700',
-                      'mortgage-stock': 'bg-rose-600',
-                      'mortgage-insurance': 'bg-rose-500',
-                      'mortgage-deposit': 'bg-rose-600',
-                      'mortgage-other': 'bg-rose-400',
-                      'other': 'bg-rose-500',
-                    };
-                    const loanIcon = loanIconMap[loan.type] || 'bg-rose-500';
                     return (
                       <div key={index} className="flex items-center justify-between gap-4 rounded-lg border p-4">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className={`size-8 flex-shrink-0 rounded-full ${loanIcon} flex items-center justify-center`}>
+                          <div className={`size-8 flex-shrink-0 rounded-full ${ASSET_THEME.liabilityBg} flex items-center justify-center`}>
                             <span className="text-xs font-bold text-white">
                               <CreditCard className="size-4" />
                             </span>
@@ -879,13 +892,13 @@ export function AssetDistributionCards() {
                               <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{loan.name}</span>
                               <span className="text-xs text-muted-foreground whitespace-nowrap">({loan.label})</span>
                             </div>
-                            <div className="mt-1 text-xs text-muted-foreground">
+                            <div className={`mt-1 text-xs ${ASSET_THEME.text}`}>
                               {formatCurrency(loan.balance)}
                             </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.liability.weak}`}>
+                          <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.liability}`}>
                             {formatShortCurrency(loan.balance)}
                           </span>
                           <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
@@ -895,17 +908,6 @@ export function AssetDistributionCards() {
                       </div>
                     );
                   })}
-                  <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-rose-700 dark:text-rose-400">총 대출 잔액</span>
-                      <span className={`text-xl font-bold tabular-nums ${ASSET_THEME.liability.strong}`}>
-                        {formatShortCurrency(summary.loanBalance)}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-foreground">
-                      {formatCurrency(summary.loanBalance)}
-                    </div>
-                  </div>
                 </div>
               )}
             </CardContent>
