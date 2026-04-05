@@ -19,29 +19,22 @@ import { APP_CONFIG } from "@/config";
 import { useAssetData } from "@/contexts/asset-data-context";
 
 export default function Page() {
-  const { assetData } = useAssetData();
+  const { assetData, isDataLoaded, isSharePending } = useAssetData();
   const [activeTab, setActiveTab] = useState("real-estate");
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [hasShareToken, setHasShareToken] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setHasShareToken(window.location.hash.includes("share="));
-    setIsHydrated(true);
-  }, []);
+  const isWelcomeGuide =
+    isSharePending ||
+    (assetData.realEstate.length === 0 &&
+      assetData.stocks.length === 0 &&
+      assetData.crypto.length === 0 &&
+      assetData.cash.length === 0 &&
+      assetData.loans.length === 0);
 
-  const isFirstTimeUser =
-    isHydrated &&
-    !hasShareToken &&
-    assetData.realEstate.length === 0 &&
-    assetData.stocks.length === 0 &&
-    assetData.crypto.length === 0 &&
-    assetData.cash.length === 0 &&
-    assetData.loans.length === 0;
+  // 로드 완료 전: 아무것도 렌더링하지 않음 (플래시 방지)
+  if (!isDataLoaded) return null;
 
-  if (!isHydrated) return null;
-
-  if (isFirstTimeUser) {
+  if (isWelcomeGuide) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
         <WelcomeGuide />
@@ -71,13 +64,12 @@ export default function Page() {
             <li className="flex items-start gap-2">
               <Database className="size-4 text-primary flex-shrink-0 mt-0.5" />
               <span className="text-foreground leading-snug">
-                <span className="font-semibold text-primary">로그인·서버 저장 없음</span>
+                <span className="font-semibold text-primary">영지식(Zero-Knowledge) 이중 보안</span>
                 {"  —  "}
-                데이터는 <span className="font-medium text-rose-500">이 기기 브라우저</span>에만 보관되며 외부로 전송되지 않습니다.{" "}
-                <span className="font-medium text-rose-500">'공유 URL 복사'</span>로
-                PIN 암호화된 자산 현황을 가족·파트너와 안전하게 공유할 수 있습니다.{" "}
-                <span className="text-muted-foreground text-xs">
-                  (짧은 URL 복사시 암호화 데이터가 서버에 30일 임시 보관되며, 동일 브라우저에서 재생성하면 이전 데이터는 자동으로 교체됩니다)
+                데이터는 <span className="font-medium text-rose-500">이 기기 브라우저</span>에만 보관됩니다.{" "}
+                <span className="font-medium text-rose-500">'공유 URL 복사'</span> 시에도 랜덤 키(Key)와 사용자 PIN이 완전히 분리되어, 관리자를 포함한 그 누구도 서버 데이터 단독으로는 복호화할 수 없도록 <span className="font-medium text-rose-500">원천 봉쇄</span>되어 있습니다.{" "}
+                <span className="text-muted-foreground text-xs block mt-1 break-keep">
+                  (주의: 공유 URL 자체에 해독 키의 절반이 포함되어 있습니다. 안전을 위해 URL을 공개 게시판 등에 노출하지 마시고, PIN 번호는 다른 수단을 통해 공유 대상자에게 별도로 알려주세요.)
                 </span>
               </span>
             </li>

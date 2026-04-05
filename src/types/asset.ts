@@ -31,7 +31,7 @@ export const stockSchema = z.object({
 }).superRefine((data, ctx) => {
   if (data.category === "domestic" || data.category === "foreign") {
     const ticker = data.ticker?.trim() || "";
-    
+
     if (ticker === "") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

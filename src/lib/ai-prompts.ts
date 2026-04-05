@@ -44,18 +44,33 @@ function buildRealEstateList(data: AssetData): string {
   }).join("\n");
 }
 
-function buildStockList(data: AssetData): string {
+function buildStockList(data: AssetData, exchangeRates?: { USD: number; JPY: number }): string {
   if (data.stocks.length === 0) return "  - 등록된 주식 없음";
+  const getMultiplier = (currency?: string) => {
+    if (!exchangeRates) return 1;
+    if (currency === "USD") return exchangeRates.USD;
+    if (currency === "JPY") return exchangeRates.JPY / 100;
+    return 1;
+  };
   return data.stocks.map((item) => {
     const category = STOCK_CATEGORY[item.category] ?? item.category;
-    const value = item.quantity * item.currentPrice;
-    const cost = item.quantity * item.averagePrice;
+    const multiplier = getMultiplier(item.currency);
+    const value = item.quantity * item.currentPrice * multiplier;
+    const cost = item.quantity * item.averagePrice * multiplier;
     const profit = value - cost;
     const profitRate = cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0.0";
     const sign = profit >= 0 ? "+" : "";
     const currency = item.currency !== "KRW" ? ` (${item.currency})` : "";
+    // 해외주식 환차손익 계산
+    let fxLine = "";
+    if (item.category === "foreign" && item.currency !== "KRW" && item.purchaseExchangeRate && item.purchaseExchangeRate > 0) {
+      const purchaseRate = item.currency === "JPY" ? item.purchaseExchangeRate / 100 : item.purchaseExchangeRate;
+      const currencyGain = (multiplier - purchaseRate) * item.quantity * item.averagePrice;
+      const fxSign = currencyGain >= 0 ? "+" : "";
+      fxLine = ` | 환차손익 ${fxSign}${formatShortCurrency(Math.round(currencyGain))} (매입환율 ${item.purchaseExchangeRate}→현재 ${item.currency === "JPY" ? (multiplier * 100).toFixed(0) : multiplier.toFixed(0)})`;
+    }
     return `  • [${category}] ${item.name}${item.ticker ? ` (${item.ticker})` : ""}${currency}
-    평균단가 ${formatShortCurrency(item.averagePrice)} × ${item.quantity}주 | 평가 ${formatShortCurrency(value)} | 손익 ${sign}${profitRate}%`;
+    평균단가 ${formatShortCurrency(item.averagePrice)} × ${item.quantity}주 | 평가 ${formatShortCurrency(value)} | 손익 ${sign}${profitRate}%${fxLine}`;
   }).join("\n");
 }
 
@@ -84,9 +99,85 @@ function buildLoanList(data: AssetData): string {
   if (data.loans.length === 0) return "  - 등록된 대출 없음";
   return data.loans.map((item) => {
     const type = LOAN_TYPE[item.type] ?? item.type;
+    // 담보대출 연계 자산 표시
+    let linkedLine = "";
+    if (item.linkedRealEstateId) {
+      const linked = data.realEstate.find(r => r.id === item.linkedRealEstateId);
+      if (linked) linkedLine = ` | 연계 부동산: ${linked.name} (현재가 ${formatShortCurrency(linked.currentValue)})`;
+    }
+    if (item.linkedStockId) {
+      const linked = data.stocks.find(s => s.id === item.linkedStockId);
+      if (linked) linkedLine = ` | 연계 주식: ${linked.name}${linked.ticker ? ` (${linked.ticker})` : ""}`;
+    }
+    if (item.linkedCashId) {
+      const linked = data.cash?.find(c => c.id === item.linkedCashId);
+      if (linked) linkedLine = ` | 연계 예금: ${linked.name} (${formatShortCurrency(linked.balance)})`;
+    }
     return `  • ${item.name} (${type})${item.institution ? ` — ${item.institution}` : ""}
-    잔액 ${formatShortCurrency(item.balance)} | 금리 ${item.interestRate}%`;
+    잔액 ${formatShortCurrency(item.balance)} | 금리 ${item.interestRate}%${linkedLine}`;
   }).join("\n");
+}
+
+function buildFxSection(ctx: AssetPromptContext): string {
+  const { data, summary } = ctx;
+  const foreignStocks = data.stocks.filter(
+    s => s.category === "foreign" && s.currency !== "KRW" && s.purchaseExchangeRate && s.purchaseExchangeRate > 0
+  );
+  if (foreignStocks.length === 0) return "";
+
+  const fxSign = summary.stockCurrencyGain >= 0 ? "+" : "";
+  const fxRatio = summary.stockValue > 0
+    ? ((summary.stockCurrencyGain / summary.stockValue) * 100).toFixed(2) : "0.00";
+
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💱 해외주식 환차손익 현황
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 전체 환차손익: ${fxSign}${formatShortCurrency(Math.round(summary.stockCurrencyGain))} (주식평가액 대비 ${fxSign}${fxRatio}%)
+• 환평가손익 합계 (손익 + 환차): ${summary.stockFxProfit >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockFxProfit))}
+${foreignStocks.map(s => {
+    const usdRate = data.stocks.length > 0 ? summary.stockValue : 0; // placeholder
+    return `  • ${s.name} (${s.ticker ?? s.currency}): 매입환율 ${s.purchaseExchangeRate}원/${s.currency === "JPY" ? "100JPY" : s.currency}`;
+  }).join("\n")}`;
+}
+
+function buildCollateralSection(data: AssetData): string {
+  const collateralLoans = data.loans.filter(
+    l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId
+  );
+  if (collateralLoans.length === 0) return "";
+
+  const lines = collateralLoans.map(loan => {
+    const type = LOAN_TYPE[loan.type] ?? loan.type;
+    let assetDesc = "";
+    let ltv = "";
+    if (loan.linkedRealEstateId) {
+      const linked = data.realEstate.find(r => r.id === loan.linkedRealEstateId);
+      if (linked) {
+        assetDesc = `부동산 "${linked.name}" (평가 ${formatShortCurrency(linked.currentValue)})`;
+        const ltvVal = linked.currentValue > 0 ? ((loan.balance / linked.currentValue) * 100).toFixed(1) : "?";
+        ltv = ` | LTV ${ltvVal}%`;
+      }
+    } else if (loan.linkedStockId) {
+      const linked = data.stocks.find(s => s.id === loan.linkedStockId);
+      if (linked) assetDesc = `주식 "${linked.name}"${linked.ticker ? ` (${linked.ticker})` : ""}`;
+    } else if (loan.linkedCashId) {
+      const linked = data.cash?.find(c => c.id === loan.linkedCashId);
+      if (linked) {
+        assetDesc = `예금 "${linked.name}" (${formatShortCurrency(linked.balance)})`;
+        const ratio = linked.balance > 0 ? ((loan.balance / linked.balance) * 100).toFixed(1) : "?";
+        ltv = ` | 담보비율 ${ratio}%`;
+      }
+    }
+    return `  • ${loan.name} (${type}) — 잔액 ${formatShortCurrency(loan.balance)}, 금리 ${loan.interestRate}%${ltv}
+    담보: ${assetDesc}`;
+  });
+
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 담보대출 연계 현황 (${collateralLoans.length}건)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${lines.join("\n")}`;
 }
 
 function buildDataSection(ctx: AssetPromptContext): string {
@@ -102,6 +193,9 @@ function buildDataSection(ctx: AssetPromptContext): string {
   const cryptoProfitRate = summary.cryptoCost > 0
     ? ((summary.cryptoProfit / summary.cryptoCost) * 100).toFixed(1) : "0";
 
+  const fxSection = buildFxSection(ctx);
+  const collateralSection = buildCollateralSection(data);
+
   return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 자산 현황 요약
@@ -112,6 +206,7 @@ function buildDataSection(ctx: AssetPromptContext): string {
 • 순자산:   ${formatShortCurrency(summary.netAsset)} (순자산비율 ${netAssetRatio}%)
 • 부채비율: ${debtRatio}%
 • 전체 투자손익: ${summary.totalProfit >= 0 ? "+" : ""}${formatShortCurrency(summary.totalProfit)} (${summary.totalProfitRate.toFixed(1)}%)
+${fxSection ? `• 해외주식 환차손익: ${summary.stockCurrencyGain >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockCurrencyGain))}` : ""}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🏠 부동산 (${formatShortCurrency(summary.realEstateValue)}, ${summary.realEstateCount}건 | 손익 ${realEstateProfitRate}%)
@@ -136,7 +231,7 @@ ${buildCashList(data)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💳 대출 (${formatShortCurrency(summary.loanBalance)}, ${summary.loanCount}건)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${buildLoanList(data)}`;
+${buildLoanList(data)}${fxSection}${collateralSection}`;
 }
 
 // ─── 프롬프트 템플릿 ──────────────────────────────────────────────────────────
@@ -167,13 +262,22 @@ ${buildDataSection(ctx)}
 2. **수익률 분석**
    - 어떤 자산이 포트폴리오에 실질적으로 기여하고, 어떤 자산이 발목을 잡고 있나요?
    - 손실 중인 항목의 원인과 보유 vs 정리 판단 기준을 알려주세요.
+${summary.stockCurrencyGain !== 0 ? `
+3. **해외주식 환차손익 분석**
+   - 현재 환차손익이 ${summary.stockCurrencyGain >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockCurrencyGain))}입니다. 환율 변동이 포트폴리오에 미치는 실질적인 영향을 평가해 주세요.
+   - 환차손익을 줄이기 위한 헤지 전략이나 환율 리스크 관리 방법을 알려주세요.
+` : ""}
+${ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? `
+${summary.stockCurrencyGain !== 0 ? "4" : "3"}. **담보대출 구조 진단**
+   - 담보대출 연계 현황(LTV, 담보비율)을 보고 현재 레버리지 구조가 적정한지 평가해 주세요.
+   - 담보 자산 가치 하락 시 추가담보 요구(마진콜) 위험이 있는 항목이 있나요?
+` : ""}
+${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "5" : "3"}. **지금 당장 해야 할 3가지 행동** (구체적인 실행 항목으로 제시해 주세요)
 
-3. **지금 당장 해야 할 3가지 행동** (구체적인 실행 항목으로 제시해 주세요)
-
-4. **세금 관점 체크**
+${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "6" : "4"}. **세금 관점 체크**
    - 현재 구성에서 양도소득세, 금융소득종합과세, IRP·ISA 연말정산 등 세금 측면에서 주의해야 할 사항이 있나요?
 
-5. **전문가로서 한마디**
+${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "7" : "5"}. **전문가로서 한마디**
    - "만약 당신이 제 자산관리사라면, 오늘 퇴근 전 반드시 하라고 할 일이 무엇인가요?"
    (부채비율 ${debtRatio}%, 총자산 ${formatShortCurrency(summary.totalValue)}, 순자산 ${formatShortCurrency(summary.netAsset)} 기준으로 답해주세요.)`;
     },
@@ -260,20 +364,33 @@ ${buildDataSection(ctx)}
    - 현재 부채비율 ${debtRatio}%, 추정 연간 이자 부담 ${formatShortCurrency(Math.round(annualInterest))}에 대한 평가를 해주세요.
    - 한국 가계의 적정 부채비율 기준과 비교해 제 상황이 위험한지, 허용 범위인지 알려주세요.
    - 대출별 우선 상환 순서를 금리, 세금 공제 가능 여부, 유동성 등을 종합해 제시해 주세요.
+${data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? `
+2. **담보대출 연계 리스크 분석**
+   - 담보대출 연계 현황의 LTV(담보인정비율)와 담보비율을 평가해 주세요.
+   - 부동산·주식·예금 담보 자산의 가격이 하락할 경우 각 대출의 위험 수준을 분석해 주세요.
+   - 주식담보대출의 경우 반대매매(마진콜) 발생 가능성과 대응 방안을 알려주세요.
+   - 담보대출별 안전 마진(현재 자산가 - 대출잔액)을 계산하고 가장 취약한 항목을 식별해 주세요.
+` : ""}
+${summary.stockCurrencyGain !== 0 ? `
+${data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "3" : "2"}. **환율 리스크 평가**
+   - 현재 환차손익 ${summary.stockCurrencyGain >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockCurrencyGain))}이 포트폴리오에 미치는 영향을 평가해 주세요.
+   - 달러·엔 환율이 각각 10% 변동할 경우 순자산에 미치는 영향을 계산해 주세요.
+   - 환위험 헤지가 필요한 수준인지, 필요하다면 현실적인 방법(RP, 환전 타이밍 등)을 알려주세요.
+` : ""}
 
-2. **집중 리스크 점검**
+${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 2}. **집중 리스크 점검**
    - 현재 부동산 ${realEstateRatio}%, 주식 ${stockRatio}%, 코인 ${cryptoRatio}% 비율에서 특정 자산 과집중 문제가 있나요?
    - 단일 부동산 또는 단일 종목이 전체 자산에서 차지하는 비중이 과도하게 높은 항목이 있다면 지적해 주세요.
 
-3. **비상금 적정성 평가**
+${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 3}. **비상금 적정성 평가**
    - 현재 현금·예금 ${formatShortCurrency(summary.cashValue)} (총자산의 ${cashRatio}%)가 비상금으로 충분한가요?
    - 일반적으로 권장하는 비상금 수준(월 생활비 기준)과 비교해 부족하다면 어떻게 채워야 하는지 알려주세요.
 
-4. **시나리오별 충격 분석**
+${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 4}. **시나리오별 충격 분석**
    - 금리 1% 추가 상승 시 연간 이자 부담 증가액과 가계 재정에 미치는 영향을 계산해 주세요.
    - 주식·코인 시장이 30% 하락한다면 순자산이 얼마나 줄어드는지, 버틸 수 있는 수준인지 평가해 주세요.
 
-5. **즉각 리스크 감소를 위한 3가지 조치**
+${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 5}. **즉각 리스크 감소를 위한 3가지 조치**
    - 지금 당장 실행 가능한 것부터 우선순위 순으로 구체적으로 알려주세요.`;
     },
   },

@@ -20,6 +20,8 @@ import { Lock, Share2 } from "lucide-react";
 
 interface AssetDataContextType {
   assetData: AssetData;
+  isDataLoaded: boolean;
+  isSharePending: boolean;
   exchangeRates: { USD: number; JPY: number };
   exchangeRateDate: string;
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
@@ -64,7 +66,7 @@ const MSG = {
   // 공유
   SHARED_DATA_LOADED: "공유된 자산 데이터를 불러왔습니다.",
   SHARE_LINK_EXPIRED: "공유 링크가 만료되었거나 유효하지 않습니다.",
-  SHARE_TOKEN_INVALID: "공유 토큰이 유효하지 않거나 데이터가 올바르지 않습니다.",
+  SHARE_TOKEN_INVALID: "잘못된 접근이거나 공유 토큰이 유효하지 않습니다. 올바른 전체 URL인지 확인해주세요.",
   // PIN
   PIN_INVALID_LENGTH: "PIN 번호는 4자리여야 합니다.",
   PIN_MISMATCH: "PIN 번호가 일치하지 않습니다.",
@@ -82,15 +84,21 @@ const notify = {
   info: (msg: string) => { toast.info(msg); console.log(`[INFO] ${msg}`); },
 };
 
-// Short URL(s:KEY)을 전체 토큰으로 변환하는 순수 유틸
+// Short URL(s:KEY_LOCALKEY)을 전체 토큰으로 변환하는 순수 유틸
 // state·hook 의존성 없음 → 모듈 스코프에 정의
-const resolveShareToken = async (raw: string): Promise<string | null> => {
-  if (!raw.startsWith("s:")) return raw;
-  const key = raw.substring(2);
+const resolveShareToken = async (raw: string): Promise<{ token: string; localKey?: string } | null> => {
+  if (!raw.startsWith("s:")) return { token: raw };
+
+  const rawKey = raw.substring(2);
+  const parts = rawKey.split("_");
+  const serverKey = parts[0];
+  const localKey = parts[1];
+
   try {
-    const res = await fetch(`/api/share?key=${key}`);
+    const res = await fetch(`/api/share?key=${serverKey}`);
     const json = await res.json() as { token?: string };
-    return json.token ?? null;
+    if (!json.token) return null;
+    return { token: json.token, localKey };
   } catch {
     return null;
   }
@@ -105,9 +113,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [exchangeRates, setExchangeRatesState] = useState<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
   const [exchangeRateDate, setExchangeRateDate] = useState<string>("");
 
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
   // PIN 인증 상태
+  const [isSharePending, setIsSharePending] = useState(false);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
-  const [pendingToken, setPendingToken] = useState<string | null>(null);
+  const [pendingToken, setPendingToken] = useState<{ token: string; localKey?: string } | null>(null);
   const [inputPin, setInputPin] = useState("");
 
   const INITIAL_SYNC_DELAY_MS = 1_000;
@@ -227,6 +238,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
   const initAndSync = useCallback(async (data: AssetData) => {
     initAssetData(data);
+    setIsDataLoaded(true);
     const hasAssets =
       data.realEstate.length > 0 ||
       data.stocks.length > 0 ||
@@ -249,35 +261,41 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // ─── [이벤트 핸들러] ────────────────────────────────────────────────────────
 
-  // hashchange: 마운트 이후 URL 해시 변경 감지 (Short URL 지원)
-  const handleHashChange = useCallback(async () => {
-    const newHash = window.location.hash.substring(1);
-    const newShareTokenRaw = new URLSearchParams(newHash).get("share");
-    if (!newShareTokenRaw) return;
+  // 공유 토큰 처리 공통 함수: 토큰 해소 → 파싱 → PIN/데이터/실패 분기
+  const processShareToken = useCallback(async (rawTokenStr: string) => {
+    setIsSharePending(true);
+    // URLSearchParams는 '+'를 공백으로 변환하므로 복구 후 Short URL 해소
+    const rawToken = rawTokenStr.replace(/ /g, "+");
+    const shareTokenRes = await resolveShareToken(rawToken);
 
-    const rawToken = newShareTokenRaw.replace(/ /g, "+");
-    const newShareToken = await resolveShareToken(rawToken);
-
-    if (!newShareToken) {
-      notify.error(MSG.SHARE_LINK_EXPIRED);
+    if (!shareTokenRes) {
+      window.location.replace("/invalid-access");
       return;
     }
 
-    const newResult = parseShareToken(newShareToken);
+    const result = parseShareToken(shareTokenRes.token, undefined, shareTokenRes.localKey);
 
-    if (newResult && "pinRequired" in newResult) {
-      setPendingToken(newShareToken);
+    if (result && "pinRequired" in result) {
+      setPendingToken(shareTokenRes);
       setShowPinPrompt(true);
       return;
     }
 
-    if (newResult && "data" in newResult) {
-      applySharedData(newResult.data);
+    if (result && "data" in result) {
+      applySharedData(result.data);
+      setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
-      notify.error(MSG.SHARE_TOKEN_INVALID);
+      window.location.replace("/invalid-access");
     }
   }, [applySharedData]);
+
+  // hashchange: 마운트 이후 URL 해시 변경 감지 (Short URL 지원)
+  const handleHashChange = useCallback(async () => {
+    const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
+    if (!shareTokenRaw) return;
+    await processShareToken(shareTokenRaw);
+  }, [processShareToken]);
 
   // storage: 다른 탭에서 localStorage 변경 감지
   const handleStorageChange = useCallback(() => {
@@ -292,18 +310,31 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const result = parseShareToken(pendingToken, inputPin);
+    const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
       applySharedData(result.data);
+      setIsSharePending(false);
       setShowPinPrompt(false);
       setPendingToken(null);
       setInputPin("");
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } else if (pendingToken.token.startsWith("v72Z")) {
+      // v72Z: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
+      window.location.replace("/invalid-access");
     } else {
       notify.error(MSG.PIN_MISMATCH);
       setInputPin("");
     }
   }, [pendingToken, inputPin, applySharedData]);
+
+  const handlePinCancel = useCallback(() => {
+    setShowPinPrompt(false);
+    setPendingToken(null);
+    setInputPin("");
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    setIsSharePending(false);
+    initAndSync(getAssetData());
+  }, [initAndSync]);
 
   // ─── [이벤트 리스너 등록] ───────────────────────────────────────────────────
 
@@ -334,51 +365,20 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     // 초기 진입 분기 (Short URL 지원)
     void (async () => {
-      const hash = window.location.hash.substring(1);
-      const shareTokenRaw = new URLSearchParams(hash).get("share");
-
+      const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
       if (!shareTokenRaw) {
         // 케이스 1: 공유 토큰 없음 (일반 진입)
         await initAndSync(getAssetData());
         return;
       }
-
-      // URLSearchParams는 '+'를 공백으로 변환하므로 복구 후 Short URL 해소
-      const rawToken = shareTokenRaw.replace(/ /g, "+");
-      const shareToken = await resolveShareToken(rawToken);
-
-      if (!shareToken) {
-        // 케이스 2: Short URL 만료/실패
-        notify.error(MSG.SHARE_LINK_EXPIRED);
-        await initAndSync(getAssetData());
-        return;
-      }
-
-      const result = parseShareToken(shareToken);
-
-      if (result && "pinRequired" in result) {
-        // 케이스 3: PIN 보호 토큰 — 기존 데이터로 UI 표시 후 PIN 입력 대기
-        initAssetData(getAssetData());
-        setPendingToken(shareToken);
-        setShowPinPrompt(true);
-        return;
-      }
-
-      if (result && "data" in result) {
-        // 케이스 4: 유효한 공유 데이터
-        applySharedData(result.data);
-        window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      } else {
-        // 케이스 5: 토큰 파싱 실패
-        notify.error(MSG.SHARE_TOKEN_INVALID);
-        await initAndSync(getAssetData());
-      }
+      // 케이스 2~5: 공유 토큰 처리
+      await processShareToken(shareTokenRaw);
     })();
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [handleHashChange, applySharedData, initAndSync, initAssetData]);
+  }, [handleHashChange, processShareToken, initAndSync]);
 
   // storage 변경 감지 리스너 등록
   useEffect(() => {
@@ -659,6 +659,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     <AssetDataContext.Provider
       value={{
         assetData,
+        isDataLoaded,
+        isSharePending,
         exchangeRates,
         exchangeRateDate,
         updateExchangeRate,
@@ -688,7 +690,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     >
       {children}
 
-      <Dialog open={showPinPrompt} onOpenChange={setShowPinPrompt}>
+      <Dialog open={showPinPrompt} onOpenChange={(open) => { if (!open) handlePinCancel(); }}>
         <DialogContent className="sm:max-w-md touch-pan-y">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -721,12 +723,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             </div>
           </div>
           <DialogFooter className="sm:justify-end">
-            <Button variant="outline" onClick={() => {
-              setShowPinPrompt(false);
-              setPendingToken(null);
-              setInputPin("");
-              window.history.replaceState(null, "", window.location.pathname + window.location.search);
-            }}>
+            <Button variant="outline" onClick={handlePinCancel}>
               취소
             </Button>
             <Button onClick={handlePinConfirm} type="button">

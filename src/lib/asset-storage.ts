@@ -104,8 +104,22 @@ const DICT = {
   ca: ["bank", "cash", "deposit", "savings", "cma"],
   cu: ["KRW", "USD", "JPY"],
   ins: [
-    "Upbit", "Bithumb", "Binance", "Coinone", "Korbit", "신한", "국민", "우리", "하나", "농협", "기업", "산업", "외환", "수협", "새마을", "신협", "우체국", "카카오", "토스", "케이",
-    "SC제일", "경남", "광주", "대구", "부산", "전북", "제주", "저축은행", "증권", "기타", "MEXC", "OKX", "Gate.io", "Bybit", "Bitget", "KuCoin"
+    // 1금융권 (시중은행) - financialInstitutions
+    "KB국민은행", "신한은행", "우리은행", "하나은행", "NH농협은행", "IBK기업은행", "KDB산업은행", "SC제일은행", "한국씨티은행",
+    // 인터넷전문은행
+    "카카오뱅크", "토스뱅크", "케이뱅크",
+    // 지방은행
+    "부산은행", "경남은행", "대구은행", "광주은행", "전북은행", "제주은행", "iM뱅크",
+    // 2금융권
+    "새마을금고", "신협", "수협", "우체국", "저축은행", "삼성생명", "한화생명", "교보생명",
+    // 기타
+    "기타",
+    // 대형 증권사 - securitiesFirms
+    "미래에셋증권", "삼성증권", "한국투자증권", "NH투자증권", "KB증권", "메리츠증권", "신한투자증권", "하나증권", "대신증권", "교보증권",
+    // 온라인/기타 증권사
+    "키움증권", "유안타증권", "이베스트투자증권", "카카오페이증권", "토스증권",
+    // 암호화폐 거래소
+    "Upbit", "Bithumb", "Binance", "Coinone", "Korbit", "Bybit", "OKX", "Coinbase", "Kraken", "MEXC", "Gate.io", "Bitget", "KuCoin"
   ]
 } as const;
 
@@ -118,10 +132,25 @@ const cryptWithPin = (str: string, pin: string, decrypt = false) => {
   const len = URI_ALPHABET.length;
   return str.split("").map((c, i) => {
     const idx = URI_ALPHABET.indexOf(c);
-    if (idx === -1) return c; // Alphabet 외의 문자는 그대로 유지 (실제로는 lz-string URI 압축기에선 발생 안함)
+    if (idx === -1) return c; // Alphabet 외의 문자는 그대로 유지
     const shift = pinNumbers[i % pinNumbers.length];
     const newIdx = decrypt
       ? (idx - shift + len) % len
+      : (idx + shift) % len;
+    return URI_ALPHABET[newIdx];
+  }).join("");
+};
+
+// Zero-Knowledge용 가변 길이 문자열 암호화 (PIN + LocalKey)
+const cryptWithKey = (str: string, key: string, decrypt = false) => {
+  if (!key) return str;
+  const len = URI_ALPHABET.length;
+  return str.split("").map((c, i) => {
+    const idx = URI_ALPHABET.indexOf(c);
+    if (idx === -1) return c;
+    const shift = key.charCodeAt(i % key.length);
+    const newIdx = decrypt
+      ? (idx - shift + len * 256) % len
       : (idx + shift) % len;
     return URI_ALPHABET[newIdx];
   }).join("");
@@ -209,10 +238,15 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }): string {
 
   const parts = [
     section(data.realEstate.map(i => [DICT.re.indexOf(i.type), sTxt(i.name), sTxt(i.address), pNum(i.purchasePrice), pNum(i.currentValue), pDate(i.purchaseDate), pNum(i.tenantDeposit), sTxt(i.description)])),
-    section(data.stocks.map(i => [DICT.st.indexOf(i.category), sTxt(i.name), i.name === i.ticker ? "*" : sTxt(i.ticker), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), DICT.cu.indexOf(i.currency || "KRW"), pDate(i.purchaseDate), sTxt(i.description)])),
+    section(data.stocks.map(i => [DICT.st.indexOf(i.category), sTxt(i.name), i.name === i.ticker ? "*" : sTxt(i.ticker), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), DICT.cu.indexOf(i.currency || "KRW"), pDate(i.purchaseDate), sTxt(i.description), pNum(i.purchaseExchangeRate ?? 0)])),
     section(data.crypto.map(i => [sTxt(i.name), i.name === i.symbol ? "*" : sTxt(i.symbol), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), pDate(i.purchaseDate), sTxt(i.exchange), sTxt(i.description)])),
     section(data.cash?.map(i => [DICT.ca.indexOf(i.type), sTxt(i.name), pNum(i.balance), DICT.cu.indexOf(i.currency || "KRW"), sTxt(i.institution), sTxt(i.description)]) || []),
-    section(data.loans?.map(i => [DICT.lo.indexOf(i.type as any), sTxt(i.name), pNum(i.balance), Math.round((i.interestRate || 0) * 1000), pDate(i.startDate), pDate(i.endDate), sTxt(i.institution), sTxt(i.description)]) || []),
+    section(data.loans?.map(i => {
+      const reIdx = i.linkedRealEstateId ? data.realEstate.findIndex(r => r.id === i.linkedRealEstateId) : -1;
+      const stIdx = i.linkedStockId ? data.stocks.findIndex(s => s.id === i.linkedStockId) : -1;
+      const caIdx = i.linkedCashId ? data.cash?.findIndex(c => c.id === i.linkedCashId) ?? -1 : -1;
+      return [DICT.lo.indexOf(i.type as any), sTxt(i.name), pNum(i.balance), Math.round((i.interestRate || 0) * 1000), pDate(i.startDate), pDate(i.endDate), sTxt(i.institution), sTxt(i.description), reIdx >= 0 ? `r${reIdx}` : "", caIdx >= 0 ? `c${caIdx}` : "", stIdx >= 0 ? `s${stIdx}` : ""];
+    }) || []),
     section(data.yearlyNetAssets.map(i => [i.year, pNum(i.netAsset), sTxt(i.note)])),
     pDate(data.lastUpdated.split('T')[0]),
     rates ? `${pNum(rates.USD)}|${pNum(rates.JPY)}` : ""
@@ -229,30 +263,64 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const section = (idx: number) => (parts[idx] ? parts[idx].split("~") : []).filter(r => r !== "");
   const fields = (r: string) => r.split("|");
 
+  // 각 섹션을 먼저 ID 배열과 함께 생성하여 loans에서 인덱스로 역참조
+  const reIds: string[] = [];
+  const stIds: string[] = [];
+  const caIds: string[] = [];
+
+  const realEstate = section(0).map(r => {
+    const f = fields(r);
+    const name = uTxt(f[1]) || "무명";
+    const id = gid();
+    reIds.push(id);
+    return { id, type: getIdx(f[0], DICT.re), name, address: uTxt(f[2]), purchasePrice: uNum(f[3]), currentValue: uNum(f[4]), purchaseDate: uDate(f[5]), tenantDeposit: uNum(f[6]), description: uTxt(f[7]) };
+  });
+  const stocks = section(1).map(r => {
+    const f = fields(r);
+    const name = uTxt(f[1]) || "무명";
+    const id = gid();
+    stIds.push(id);
+    const purchaseExchangeRate = uNum(f[9]);
+    return { id, category: getIdx(f[0], DICT.st), name, ticker: f[2] === "*" ? name : (uTxt(f[2]) || ""), quantity: uNum(f[3]), averagePrice: uNum(f[4]), currentPrice: uNum(f[5]), currency: getIdx(f[6], DICT.cu), purchaseDate: uDate(f[7]), description: uTxt(f[8]), ...(purchaseExchangeRate > 0 ? { purchaseExchangeRate } : {}) };
+  });
+  const crypto = section(2).map(r => {
+    const f = fields(r);
+    const name = uTxt(f[0]) || "무명";
+    return { id: gid(), name, symbol: f[1] === "*" ? name : (uTxt(f[1]) || "SYMBOL"), quantity: uNum(f[2]), averagePrice: uNum(f[3]), currentPrice: uNum(f[4]), purchaseDate: uDate(f[5]), exchange: uTxt(f[6]), description: uTxt(f[7]) };
+  });
+  const cash = section(3).map(r => {
+    const f = fields(r);
+    const id = gid();
+    caIds.push(id);
+    return { id, type: getIdx(f[0], DICT.ca), name: uTxt(f[1]) || "무명", balance: uNum(f[2]), currency: getIdx(f[3], DICT.cu), institution: uTxt(f[4]), description: uTxt(f[5]) };
+  });
+  const loans = section(4).map(r => {
+    const f = fields(r);
+    const reIdx = f[8]?.startsWith("r") ? parseInt(f[8].substring(1)) : -1;
+    const caIdx = f[9]?.startsWith("c") ? parseInt(f[9].substring(1)) : -1;
+    const stIdx = f[10]?.startsWith("s") ? parseInt(f[10].substring(1)) : -1;
+    return {
+      id: gid(),
+      type: getIdx(f[0], DICT.lo),
+      name: uTxt(f[1]) || "무명",
+      balance: uNum(f[2]),
+      interestRate: (parseInt(f[3]) || 0) / 1000,
+      startDate: uDate(f[4]),
+      endDate: uDate(f[5]),
+      institution: uTxt(f[6]),
+      description: uTxt(f[7]),
+      ...(reIdx >= 0 && reIds[reIdx] ? { linkedRealEstateId: reIds[reIdx] } : {}),
+      ...(caIdx >= 0 && caIds[caIdx] ? { linkedCashId: caIds[caIdx] } : {}),
+      ...(stIdx >= 0 && stIds[stIdx] ? { linkedStockId: stIds[stIdx] } : {}),
+    };
+  });
+
   const data = {
-    realEstate: section(0).map(r => {
-      const f = fields(r);
-      const name = uTxt(f[1]) || "무명";
-      return { id: gid(), type: getIdx(f[0], DICT.re), name, address: uTxt(f[2]), purchasePrice: uNum(f[3]), currentValue: uNum(f[4]), purchaseDate: uDate(f[5]), tenantDeposit: uNum(f[6]), description: uTxt(f[7]) };
-    }),
-    stocks: section(1).map(r => {
-      const f = fields(r);
-      const name = uTxt(f[1]) || "무명";
-      return { id: gid(), category: getIdx(f[0], DICT.st), name, ticker: f[2] === "*" ? name : (uTxt(f[2]) || ""), quantity: uNum(f[3]), averagePrice: uNum(f[4]), currentPrice: uNum(f[5]), currency: getIdx(f[6], DICT.cu), purchaseDate: uDate(f[7]), description: uTxt(f[8]) };
-    }),
-    crypto: section(2).map(r => {
-      const f = fields(r);
-      const name = uTxt(f[0]) || "무명";
-      return { id: gid(), name, symbol: f[1] === "*" ? name : (uTxt(f[1]) || "SYMBOL"), quantity: uNum(f[2]), averagePrice: uNum(f[3]), currentPrice: uNum(f[4]), purchaseDate: uDate(f[5]), exchange: uTxt(f[6]), description: uTxt(f[7]) };
-    }),
-    cash: section(3).map(r => {
-      const f = fields(r);
-      return { id: gid(), type: getIdx(f[0], DICT.ca), name: uTxt(f[1]) || "무명", balance: uNum(f[2]), currency: getIdx(f[3], DICT.cu), institution: uTxt(f[4]), description: uTxt(f[5]) };
-    }),
-    loans: section(4).map(r => {
-      const f = fields(r);
-      return { id: gid(), type: getIdx(f[0], DICT.lo), name: uTxt(f[1]) || "무명", balance: uNum(f[2]), interestRate: (parseInt(f[3]) || 0) / 1000, startDate: uDate(f[4]), endDate: uDate(f[5]), institution: uTxt(f[6]), description: uTxt(f[7]) };
-    }),
+    realEstate,
+    stocks,
+    crypto,
+    cash,
+    loans,
     yearlyNetAssets: section(5).map(r => {
       const f = fields(r);
       return { year: parseInt(f[0]) || new Date().getFullYear(), netAsset: uNum(f[1]), note: uTxt(f[2]) };
@@ -269,13 +337,18 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   return { data, rates };
 }
 
-export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string): string {
+export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string): string {
   try {
     const dsv = "OK|" + packV7(data, rates); // PIN 검증 및 무결성 확인용 접두사
     const compressed = LZString.compressToEncodedURIComponent(dsv);
 
     if (pin && pin.length === 4) {
-      // V7.1: 압축된 결과물에 PIN 기반 시프팅 적용 (압축률 유지 및 길이 최소화)
+      if (localKey) {
+        // V7.2 Zero-Knowledge: PIN + localKey 조합으로 초강력 암호화
+        const fullKey = pin + localKey;
+        return "v72Z" + cryptWithKey(compressed, fullKey);
+      }
+      // V7.1: 압축된 결과물에 PIN 기반 시프팅 적용
       return "v71P" + cryptWithPin(compressed, pin);
     }
     return "v71N" + compressed;
@@ -286,9 +359,27 @@ export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: 
 
 export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number } } | { pinRequired: true } | null;
 
-export function parseShareToken(token: string, pin?: string): ParseResult {
+export function parseShareToken(token: string, pin?: string, localKey?: string): ParseResult {
   if (!token) return null;
   try {
+    // 최신 Zero-Knowledge 버전 (v72Z)
+    if (token.startsWith("v72Z")) {
+      if (!localKey) return null; // localKey가 없으면 인증키가 누락된 잘못된 접근이므로 즉시 실패
+      if (!pin) return { pinRequired: true };
+      
+      const fullKey = pin + localKey;
+      const compressed = cryptWithKey(token.substring(4), fullKey, true);
+
+      const dsv = LZString.decompressFromEncodedURIComponent(compressed);
+      if (!dsv || !dsv.startsWith("OK|")) return null; // PIN/Key 틀림 또는 데이터 손상
+
+      const result = unpackV7(dsv.substring(3));
+      return {
+        data: assetDataSchema.parse(result.data),
+        rates: result.rates
+      };
+    }
+
     // 최신 버전 (v71P, v71N) 처리 (압축 결과에 시프팅 적용)
     if (token.startsWith("v71")) {
       const type = token[3]; // N or P

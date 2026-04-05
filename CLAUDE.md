@@ -6,61 +6,105 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 모든 응답, 코드 주석, 커밋 메시지는 한국어로 작성해주세요.
 
+## 개발 명령어
+
+```bash
+npm run dev       # Turbopack 개발 서버
+npm run build     # 프로덕션 빌드
+npm run lint      # ESLint 검사
+npm run format    # Prettier 포맷
+```
+
+테스트 프레임워크 없음. 기능 검증은 `npm run build`로 타입 오류 확인.
+
 ## Architecture
 
-**Vaultfolio** is an offline-first personal asset management app. All user data lives in browser `localStorage` — no authentication, no backend database.
+**Vaultfolio** — 오프라인 우선 개인 자산 관리 앱. 모든 사용자 데이터는 브라우저 `localStorage`에 저장되며 인증/백엔드 DB 없음.
 
 ### Stack
 
-- **Next.js 15** (App Router, Server + Client Components)
-- **TypeScript** with Zod runtime validation
-- **Tailwind CSS v4** + shadcn/ui (New York style)
-- **Zustand** for theme preferences, **React Context** for asset data
-- **React Hook Form** + Zod for form validation
-- **TanStack Query** for finance API data fetching
-- **Recharts** for net worth charts
-- **dnd-kit** for drag-and-drop reordering
-- **lz-string** for sharing token compression
+- **Next.js 15** (App Router) + **TypeScript** + **Zod** 런타임 유효성 검사
+- **Tailwind CSS v4** + shadcn/ui (New York 스타일)
+- **Zustand** (테마 설정), **React Context** (자산 데이터)
+- **React Hook Form** + Zod (폼 유효성 검사)
+- **TanStack Query** (금융 API 데이터 페칭)
+- **Recharts** (순자산 차트), **dnd-kit** (드래그앤드롭 정렬)
+- **lz-string** (공유 토큰 압축)
 
-### Data Flow
+### 데이터 흐름
 
 ```
 AssetDataContext (src/contexts/asset-data-context.tsx)
-  └─ All asset CRUD lives here; reads/writes to localStorage via asset-storage.ts
+  └─ 모든 자산 CRUD + 환율 상태 관리
+  └─ localStorage 읽기/쓰기 → asset-storage.ts
 
 PreferencesStoreProvider (src/stores/preferences/)
-  └─ Theme (dark/light) stored server-side via server actions + Zustand client sync
+  └─ 테마(다크/라이트)를 쿠키에 서버사이드 저장 → server-actions.ts
+  └─ Zustand로 클라이언트 동기화 (hydration mismatch 방지)
 ```
 
-The main page is `src/app/(main)/asset/page.tsx`. All input components are colocated in `src/app/(main)/asset/_components/`.
+메인 페이지: `src/app/(main)/asset/page.tsx`
+모든 입력 컴포넌트: `src/app/(main)/asset/_components/`
 
 ### Key Files
 
-| File                                  | Role                                                        |
-| ------------------------------------- | ----------------------------------------------------------- |
-| `src/types/asset.ts`                  | Zod schemas + inferred TS types for all asset classes       |
-| `src/lib/asset-storage.ts`            | localStorage read/write + sharing token system (v7.1)       |
-| `src/contexts/asset-data-context.tsx` | Global asset state and CRUD operations                      |
-| `src/app/api/finance/route.ts`        | Exchange rate + stock price API endpoint                    |
-| `src/lib/finance-api-service.ts`      | Finance API integration logic                               |
-| `data/finance-cache.json`             | Server-side daily cache for exchange rates and stock prices |
+| 파일 | 역할 |
+| ---- | ---- |
+| `src/types/asset.ts` | Zod 스키마 + TS 타입 (자산 5종) |
+| `src/lib/asset-storage.ts` | localStorage 읽기/쓰기 + 공유 토큰 시스템 (v7.1) |
+| `src/contexts/asset-data-context.tsx` | 전역 자산 상태 및 CRUD |
+| `src/lib/finance-service.ts` | 주식·환율 외부 API 통합 로직 |
+| `src/lib/cache-storage.ts` | 캐시 스토리지 추상화 (로컬↔Redis 자동 선택) |
+| `src/app/api/finance/route.ts` | 주식·환율 API 엔드포인트 |
+| `src/app/api/share/route.ts` | 공유 Short URL 생성·조회 엔드포인트 |
+| `src/server/server-actions.ts` | 쿠키 기반 서버 액션 (설정 저장) |
 
-### Asset Types
+### 자산 타입
 
-Five asset classes defined in `src/types/asset.ts` with Zod schemas: **RealEstate**, **Stock**, **Crypto**, **Cash**, **Loan**. Stocks have category-specific ticker validation (domestic KRX format vs. foreign uppercase alphanumeric). `AssetSummary` is the computed aggregate type.
+`src/types/asset.ts`에 Zod 스키마로 정의된 5종: **RealEstate**, **Stock**, **Crypto**, **Cash**, **Loan**
+
+- Stock: `category` (domestic/foreign/irp/isa/pension/unlisted)에 따라 ticker 형식 검증 분기
+  - domestic: 6자리 숫자 (예: `005930`)
+  - foreign: 대문자 영문자 (예: `TSLA`)
+- `AssetSummary`: 집계된 순자산 계산 결과 타입
 
 ### Finance API
 
-Single endpoint `/api/finance` with `?type=exchange|stock&tickers=...`. Caches responses daily (KST timezone) in `data/finance-cache.json`. Max 2 tickers per request. Uses Twelve Data API for exchange rates (`USD/KRW`, `JPY/KRW`).
+`/api/finance?type=exchange|stock&tickers=...` — KST 기준 일일 캐시.
 
-### Sharing Token System (v7.1)
+- 주식 현재가/종목명: 한국투자증권 OpenAPI (`KIS_APP_KEY`, `KIS_APP_SECRET`)
+- 환율: 한국투자증권 OpenAPI (USD/KRW, JPY/KRW)
+- 캐시 키: `"TICKER-YYYY-MM-DD"` 형식
 
-Located in `src/lib/asset-storage.ts`. Tokens use LZ-string compression + optional XOR encryption with a 4-digit PIN. Format prefix: `v71P` (with PIN) or `v71N` (no PIN). Backward compatible with v6.x and v7.0 tokens. Numbers are base36-encoded with K/M suffixes; dates are days offset from 2020-01-01.
+### 캐시 스토리지 전략
 
-### Theme System
+`src/lib/cache-storage.ts`의 `getCacheStorage()` 팩토리가 환경 자동 감지:
 
-CSS variables-based theming via Tailwind CSS v4 + next-themes. Server-side preference loading (via server actions) prevents hydration mismatches. Theme presets are generated by `src/scripts/generate-theme-presets.ts`.
+- **로컬 개발** (`UPSTASH_*` 환경변수 없음): 파일 기반 (`data/finance-cache.json`, `data/share-tokens.json`)
+- **Vercel 배포** (`KV_REST_API_URL`, `KV_REST_API_TOKEN` 설정): Upstash Redis (30일 Sliding TTL)
 
-### ESLint Configuration
+### 공유 토큰 시스템 (v7.1)
 
-Flat config (`eslint.config.mjs`) with TypeScript, React, security, SonarJS, and Unicorn plugins. The `next.config.mjs` strips `console.*` calls in production builds.
+`src/lib/asset-storage.ts` — LZ-string 압축 + 선택적 XOR 암호화 (4자리 PIN).
+
+- 프리픽스: `v71P` (PIN 있음) / `v71N` (PIN 없음)
+- v6.x, v7.0 토큰 하위 호환 지원
+- 숫자: base36 인코딩 + K/M 접미사; 날짜: 2020-01-01 기준 일수 오프셋
+- `/api/share`: `sha256(token)[:10]`을 키로 Short URL 생성, `owner_id`로 이전 키 자동 삭제
+
+### 테마 시스템
+
+Tailwind CSS v4 CSS 변수 기반. `src/scripts/generate-theme-presets.ts`로 테마 프리셋 생성.
+
+### 환경변수
+
+```
+KIS_APP_KEY          # 한국투자증권 OpenAPI 앱키
+KIS_APP_SECRET       # 한국투자증권 OpenAPI 시크릿
+KV_REST_API_URL      # Upstash Redis URL (Vercel 배포 시)
+KV_REST_API_TOKEN    # Upstash Redis 토큰 (Vercel 배포 시)
+```
+
+### ESLint 설정
+
+플랫 설정(`eslint.config.mjs`) — TypeScript, React, security, SonarJS, Unicorn 플러그인 포함. `next.config.mjs`에서 프로덕션 빌드 시 `console.*` 호출 자동 제거.

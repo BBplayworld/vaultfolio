@@ -95,7 +95,9 @@ export function NavUser({
     setPreGeneratedShortUrl(null);
     setShortUrlLoading(true);
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined);
+    const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
+
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey);
     const ownerId = localStorage.getItem("vaultfolio_share_owner_id") ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -109,7 +111,7 @@ export function NavUser({
         }
         if (json.key) {
           setPreGeneratedShortUrl(
-            `${window.location.origin}${window.location.pathname}#share=s:${json.key}`
+            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}`
           );
         }
       })
