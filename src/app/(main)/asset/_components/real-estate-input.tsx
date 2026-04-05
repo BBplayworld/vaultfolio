@@ -427,19 +427,28 @@ export function RealEstateInput() {
                     {(() => {
                       const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
                       if (linkedLoans.length === 0) return null;
-                      return linkedLoans.map((loan) => (
-                        <div key={loan.id} className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
-                          <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
-                          <span className="text-muted-foreground">주택담보대출</span>
-                          <span className="font-medium text-rose-400 truncate">{loan.name}</span>
-                          {loan.institution && (
-                            <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
-                          )}
-                          <span className="ml-auto font-semibold tabular-nums text-rose-400">
-                            -{formatCurrency(loan.balance)}
-                          </span>
+                      return (
+                        <div className="px-4 py-2.5 border-t space-y-1.5">
+                          <p className="text-[11px] font-semibold text-muted-foreground">주택담보대출</p>
+                          {linkedLoans.map((loan) => (
+                            <div key={loan.id} className="flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
+                                <span className="text-muted-foreground truncate">{loan.name}</span>
+                                {loan.institution && (
+                                  <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
+                                  -{formatCurrency(loan.balance)}
+                                </span>
+                                <span className="text-muted-foreground">{loan.interestRate}%</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ));
+                      );
                     })()}
                   </div>
                 );

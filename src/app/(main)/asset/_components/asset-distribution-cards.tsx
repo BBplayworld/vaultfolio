@@ -404,6 +404,11 @@ export function AssetDistributionCards() {
                           <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>평가손익 합계 (환차손익 포함)</span>
                           <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(summary.stockFxProfit)}`}>
                             {summary.stockFxProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockFxProfit))}
+                            {summary.stockCost > 0 && (
+                              <span className="ml-1 text-xs font-medium">
+                                ({summary.stockFxProfit >= 0 ? "+" : ""}{((summary.stockFxProfit / summary.stockCost) * 100).toFixed(2)}%)
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -412,6 +417,11 @@ export function AssetDistributionCards() {
                           <span className={`text-xs ${ASSET_THEME.text.muted}`}>└ 전체 환차손익</span>
                           <span className={`text-xs font-semibold tabular-nums ${getProfitLossColor(summary.stockCurrencyGain)}`}>
                             {summary.stockCurrencyGain >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockCurrencyGain))}
+                            {summary.stockCost > 0 && (
+                              <span className="ml-1 text-xs font-medium">
+                                ({summary.stockCurrencyGain >= 0 ? "+" : ""}{((summary.stockCurrencyGain / summary.stockCost) * 100).toFixed(2)}%)
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -537,9 +547,20 @@ export function AssetDistributionCards() {
                           {formatShortCurrency(summary.cryptoValue)}
                         </span>
                       </div>
-                      <div className="mt-1 text-xs text-foreground">
-                        {formatCurrency(summary.cryptoValue)}
-                      </div>
+                      <div className="mt-1 text-xs text-foreground">{formatCurrency(summary.cryptoValue)}</div>
+                      {summary.cryptoProfit !== 0 && (
+                        <div className="mt-2 flex items-center justify-between border-t border-primary/10 pt-2">
+                          <span className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>평가손익 합계</span>
+                          <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(summary.cryptoProfit)}`}>
+                            {summary.cryptoProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.cryptoProfit))}
+                            {summary.cryptoCost > 0 && (
+                              <span className="ml-1 text-xs font-medium">
+                                ({summary.cryptoProfit >= 0 ? "+" : ""}{((summary.cryptoProfit / summary.cryptoCost) * 100).toFixed(2)}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3">
