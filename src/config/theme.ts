@@ -17,9 +17,9 @@ export const ASSET_THEME = {
     border: "border-teal-600",
   },
 
-  value: "text-white",
+  value: "text-zinc-800 dark:text-white",
 
-  // ===== 중요 =========  
+  // ===== 중요 =========
   important: "text-orange-600 dark:text-orange-400",
   // ===== 부채 및 손실 (Liability / Loss) =====
   liability: "text-rose-600 dark:text-rose-400",
@@ -50,18 +50,18 @@ export const ASSET_THEME = {
     commercial: "#d97706",
     other: "#7c3aed",
   },
-  // ===== 자산 분포 카드 다크 테마 토큰 =====
+  // ===== 자산 분포 카드 테마 토큰 =====
   distributionCard: {
-    bg: "bg-gradient-to-br from-zinc-900 to-zinc-950",
-    border: "border-zinc-500",
-    title: "text-white",
-    description: "text-zinc-400",
-    sectionBg: "bg-zinc-800/60",
-    sectionBorder: "border-zinc-700",
-    itemBg: "bg-zinc-900/50",
-    itemHover: "hover:bg-zinc-800/50",
-    muted: "text-zinc-400",
-    separatorPill: "bg-zinc-700/80 text-zinc-200",
+    bg: "bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-900 dark:to-zinc-950",
+    border: "border-zinc-500 dark:border-zinc-500",
+    title: "text-zinc-900 dark:text-white",
+    description: "text-zinc-500 dark:text-zinc-400",
+    sectionBg: "bg-zinc-200/60 dark:bg-zinc-800/60",
+    sectionBorder: "border-zinc-300 dark:border-zinc-700",
+    itemBg: "bg-zinc-100/50 dark:bg-zinc-900/50",
+    itemHover: "hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50",
+    muted: "text-zinc-500 dark:text-zinc-400",
+    separatorPill: "bg-zinc-200/80 text-zinc-700 dark:bg-zinc-700/80 dark:text-zinc-200",
   },
 } as const;
 

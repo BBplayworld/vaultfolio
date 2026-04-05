@@ -25,7 +25,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <AssetDataProvider>
-      <SidebarProvider defaultOpen={defaultOpen}>
+      <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
         <SidebarInset
           data-content-layout={contentLayout}
           className={cn(
@@ -41,7 +41,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               "bg-background/95 backdrop-blur-sm",
             )}
           >
-            <div className="flex w-full items-center justify-between px-4 lg:px-6">
+            <div className="flex w-full items-center justify-between px-8 lg:px-12">
               <div className="flex items-center gap-1 lg:gap-2">
               </div>
               <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               </div>
             </div>
           </header>
-          <div className="h-full p-4 md:p-6">{children}</div>
+          <div className="h-full px-8 py-4 md:px-12 md:py-6">{children}</div>
           <ScrollToTop />
         </SidebarInset>
       </SidebarProvider>

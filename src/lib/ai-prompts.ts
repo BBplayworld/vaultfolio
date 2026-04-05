@@ -4,6 +4,7 @@ import { formatShortCurrency } from "@/lib/number-utils";
 export interface AssetPromptContext {
   data: AssetData;
   summary: AssetSummary;
+  exchangeRates?: { USD: number; JPY: number };
 }
 
 export interface PromptTemplate {
@@ -125,6 +126,13 @@ function buildFxSection(ctx: AssetPromptContext): string {
   );
   if (foreignStocks.length === 0) return "";
 
+  const getMultiplier = (currency?: string) => {
+    if (!ctx.exchangeRates) return 1;
+    if (currency === "USD") return ctx.exchangeRates.USD;
+    if (currency === "JPY") return ctx.exchangeRates.JPY / 100;
+    return 1;
+  };
+
   const fxSign = summary.stockCurrencyGain >= 0 ? "+" : "";
   const fxRatio = summary.stockValue > 0
     ? ((summary.stockCurrencyGain / summary.stockValue) * 100).toFixed(2) : "0.00";
@@ -136,8 +144,10 @@ function buildFxSection(ctx: AssetPromptContext): string {
 • 전체 환차손익: ${fxSign}${formatShortCurrency(Math.round(summary.stockCurrencyGain))} (주식평가액 대비 ${fxSign}${fxRatio}%)
 • 환평가손익 합계 (손익 + 환차): ${summary.stockFxProfit >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockFxProfit))}
 ${foreignStocks.map(s => {
-    const usdRate = data.stocks.length > 0 ? summary.stockValue : 0; // placeholder
-    return `  • ${s.name} (${s.ticker ?? s.currency}): 매입환율 ${s.purchaseExchangeRate}원/${s.currency === "JPY" ? "100JPY" : s.currency}`;
+    const currentRate = getMultiplier(s.currency);
+    const unit = s.currency === "JPY" ? "100JPY" : s.currency;
+    const currentRateDisplay = s.currency === "JPY" ? (currentRate * 100).toFixed(0) : currentRate.toFixed(0);
+    return `  • ${s.name} (${s.ticker ?? s.currency}): 매입환율 ${s.purchaseExchangeRate}원/${unit} → 현재 ${currentRateDisplay}원/${unit}`;
   }).join("\n")}`;
 }
 
@@ -216,7 +226,7 @@ ${buildRealEstateList(data)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 주식 (${formatShortCurrency(summary.stockValue)}, ${summary.stockCount}종목 | 손익 ${stockProfitRate}%)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${buildStockList(data)}
+${buildStockList(data, ctx.exchangeRates)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ₿ 암호화폐 (${formatShortCurrency(summary.cryptoValue)}, ${summary.cryptoCount}종목 | 손익 ${cryptoProfitRate}%)

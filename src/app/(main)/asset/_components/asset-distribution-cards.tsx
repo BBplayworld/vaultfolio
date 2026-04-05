@@ -195,7 +195,7 @@ export function AssetDistributionCards() {
                     <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
                       {formatShortCurrency(summary.netAsset)}
                     </p>
-                    <p className={`text-[11px] ${ASSET_THEME.text}`}>{formatCurrency(summary.netAsset)}</p>
+                    <p className={`text-[11px] ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
                   </div>
                   <div className="text-right space-y-1.5">
                     <div className="text-xs">
@@ -270,7 +270,7 @@ export function AssetDistributionCards() {
                           <div key={item.category} className="flex items-center gap-1">
                             <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }} />
                             {Icon && <Icon className="size-3 text-zinc-500 flex-shrink-0" />}
-                            <span className="text-xs text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
                             <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{pct.toFixed(1)}%</span>
                             <span className={`text-xs tabular-nums ${ASSET_THEME.value}`}>(<span>{formatShortCurrency(item.value)}</span>)</span>
                           </div>
@@ -314,7 +314,7 @@ export function AssetDistributionCards() {
                           <div key={item.category} className="flex items-center gap-1">
                             <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: ASSET_THEME.categoryColors[item.category as keyof typeof ASSET_THEME.categoryColors] ?? "#64748b" }} />
                             {Icon && <Icon className="size-3 text-zinc-500 flex-shrink-0" />}
-                            <span className="text-xs text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-300">{assetDistributionChartConfig[item.category]?.label}</span>
                             <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.liability}`}>{pct.toFixed(1)}%</span>
                             <span className={`text-xs tabular-nums ${ASSET_THEME.value}`}>({formatShortCurrency(item.value)})</span>
                           </div>
@@ -913,7 +913,7 @@ export function AssetDistributionCards() {
                               <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{loan.name}</span>
                               <span className="text-xs text-muted-foreground whitespace-nowrap">({loan.label})</span>
                             </div>
-                            <div className={`mt-1 text-xs ${ASSET_THEME.text}`}>
+                            <div className={`mt-1 text-xs ${ASSET_THEME.text.default}`}>
                               {formatCurrency(loan.balance)}
                             </div>
                           </div>

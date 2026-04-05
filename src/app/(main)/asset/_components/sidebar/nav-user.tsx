@@ -207,6 +207,7 @@ export function NavUser({
   const getPromptContext = (): AssetPromptContext => ({
     data: assetData,
     summary: getAssetSummary(),
+    exchangeRates: assetDataContext.exchangeRates,
   });
 
   const handleCopyPrompt = async () => {
