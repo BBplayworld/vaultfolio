@@ -448,7 +448,7 @@ export function LoanInput() {
                 return (
                   <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
                     {/* Layer 1: 헤더 */}
-                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+                    <div className={`${ASSET_THEME.inputHeader}`}>
                       <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                         <Badge variant="outline" className={ASSET_THEME.categoryBox}>
                           {getTypeLabel(item.type)}

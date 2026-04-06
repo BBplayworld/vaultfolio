@@ -26,7 +26,8 @@
       "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/)",
       "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/asset/_components/)",
       "Bash(ls -la /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/asset/_components/sidebar/)",
-      "Bash(grep -n \"getPreference\\\\|setValueToCookie\" /e/2.project/js/secret-asset/src/server/*.ts)"
+      "Bash(grep -n \"getPreference\\\\|setValueToCookie\" /e/2.project/js/secret-asset/src/server/*.ts)",
+      "Bash(grep -r \"export interface\\\\|export type\\\\|export function\" /e/2.project/js/secret-asset/src/app/\\\\\\(main\\\\\\)/asset/_components/*.tsx)"
     ]
   }
 }

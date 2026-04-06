@@ -6,7 +6,56 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 모든 응답, 코드 주석, 커밋 메시지는 한국어로 작성해주세요.
 
-## 개발 명령어
+---
+
+# 지식 베이스 (_workspace/)
+
+## 세션 시작 시 필수 절차
+
+새 대화가 시작되면 아래 순서로 KB 파일을 읽고 작업을 시작한다.
+**전체 소스를 읽기 전에 반드시 KB를 먼저 확인한다.**
+
+| 작업 유형 | 읽을 KB 파일 |
+|-----------|-------------|
+| 모든 작업 (공통) | `_workspace/architecture.md` |
+| 컴포넌트 UI 수정 | + `_workspace/components.md` |
+| 타입·스키마 변경 | + `_workspace/types-and-schemas.md` |
+| API·캐시·공유 관련 | + `_workspace/api-reference.md` |
+| Context·유틸 함수 | + `_workspace/state-and-utils.md` |
+| 새 기능·패턴 확인 | + `_workspace/dev-rules.md` |
+| 최근 변경 맥락 파악 | + `_workspace/changelog.md` |
+
+## 코드 수정 후 필수 절차
+
+코드를 수정할 때마다 아래 두 가지를 **같은 작업 내**에서 반드시 수행한다.
+
+1. **관련 KB 파일 업데이트** — 변경된 내용이 반영된 파일만 수정
+2. **changelog.md 업데이트** — 다음 형식으로 기록:
+
+```
+## YYYY-MM-DD
+
+### 변경 제목
+- **파일:** 수정된 파일 경로
+- **변경:** 무엇을 바꿨는지 (간결하게)
+- **이유:** 왜 바꿨는지 (맥락·문제 원인)
+```
+
+## KB 파일 목록
+
+| 파일 | 담긴 정보 |
+|------|----------|
+| `_workspace/architecture.md` | 전체 스택·디렉토리·데이터 흐름·레이아웃 현재값 |
+| `_workspace/types-and-schemas.md` | 자산 5종 Zod 스키마 + AssetSummary 타입 |
+| `_workspace/api-reference.md` | 내부 API·공유 토큰·캐시 추상화 인터페이스 |
+| `_workspace/components.md` | 컴포넌트 역할·카드 레이어 구조·props |
+| `_workspace/state-and-utils.md` | Context CRUD·Store·유틸 함수 시그니처 |
+| `_workspace/dev-rules.md` | 코딩 패턴·스타일 규칙·주의사항 |
+| `_workspace/changelog.md` | 주요 변경 이력 (무엇을·왜) |
+
+---
+
+# 개발 명령어
 
 ```bash
 npm run dev       # Turbopack 개발 서버
@@ -17,7 +66,9 @@ npm run format    # Prettier 포맷
 
 테스트 프레임워크 없음. 기능 검증은 `npm run build`로 타입 오류 확인.
 
-## Architecture
+---
+
+# Architecture
 
 **Vaultfolio** — 오프라인 우선 개인 자산 관리 앱. 모든 사용자 데이터는 브라우저 `localStorage`에 저장되며 인증/백엔드 DB 없음.
 

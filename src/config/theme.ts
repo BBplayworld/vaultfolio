@@ -41,6 +41,7 @@ export const ASSET_THEME = {
 
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary",
   todayBox: "text-xs text-muted-foreground bg-muted/5 px-2 py-0.5 rounded border border-white/20 shrink-0",
+  inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/5 border-b-0",
 
   // ===== 부동산 유형별 색상 =====
   realEstateTypeColors: {

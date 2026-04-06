@@ -502,7 +502,7 @@ export function StockInput() {
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 lg:gap-5">
         {stocks.map((item) => {
           const krwMultiplier = getMultiplier(item.currency);
           const isForeign = item.category === "foreign" && item.currency !== "KRW";
@@ -533,7 +533,7 @@ export function StockInput() {
           return (
             <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
               {/* Layer 1: 종목 헤더 */}
-              <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/20 border-b">
+              <div className={`${ASSET_THEME.inputHeader}`}>
                 <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                   <Badge variant="outline" className={ASSET_THEME.categoryBox}>
                     {getCategoryLabel(item.category)}
@@ -567,13 +567,13 @@ export function StockInput() {
                   </span>
                 </div>
                 <span className="hidden sm:inline text-border self-center">|</span>
-                <div className="flex flex-col items-end sm:items-start gap-1">
+                <div className="flex flex-col items-end sm:items-start gap-0.5">
                   <span className="text-xs text-muted-foreground">평가손익</span>
                   <span className={`text-medium font-bold ${getProfitLossColor(profitInKRW)}`}>
                     {formatCurrencyDisplay(profitInKRW)}
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profitInKRW)}`}>
-                      &nbsp;({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
-                    </span>
+                  </span>
+                  <span className={`text-xs font-semibold ${getProfitLossColor(profitInKRW)}`}>
+                    ({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
                   </span>
                   {isForeign && (
                     <span className={`text-xs font-medium ${getProfitLossColor(currencyGain)}`}>
