@@ -1,4 +1,4 @@
-# _workspace/ — Vaultfolio 지식 베이스
+# .claude/_knowledge/ — Vaultfolio 지식 베이스
 
 Claude와의 장기 개발 협업을 위한 지식 베이스입니다.
 매 대화마다 전체 코드를 재분석하는 비용을 줄이고, 빠른 컨텍스트 복구를 위해 운영합니다.

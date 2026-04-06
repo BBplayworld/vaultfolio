@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-# 지식 베이스 (_workspace/)
+# 지식 베이스 (.claude/_knowledge/)
 
 ## 세션 시작 시 필수 절차
 
@@ -17,13 +17,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 작업 유형 | 읽을 KB 파일 |
 |-----------|-------------|
-| 모든 작업 (공통) | `_workspace/architecture.md` |
-| 컴포넌트 UI 수정 | + `_workspace/components.md` |
-| 타입·스키마 변경 | + `_workspace/types-and-schemas.md` |
-| API·캐시·공유 관련 | + `_workspace/api-reference.md` |
-| Context·유틸 함수 | + `_workspace/state-and-utils.md` |
-| 새 기능·패턴 확인 | + `_workspace/dev-rules.md` |
-| 최근 변경 맥락 파악 | + `_workspace/changelog.md` |
+| 모든 작업 (공통) | `.claude/_knowledge/architecture.md` |
+| 컴포넌트 UI 수정 | + `.claude/_knowledge/components.md` |
+| 타입·스키마 변경 | + `.claude/_knowledge/types-and-schemas.md` |
+| API·캐시·공유 관련 | + `.claude/_knowledge/api-reference.md` |
+| Context·유틸 함수 | + `.claude/_knowledge/state-and-utils.md` |
+| 새 기능·패턴 확인 | + `.claude/_knowledge/dev-rules.md` |
+| 최근 변경 맥락 파악 | + `.claude/_knowledge/changelog.md` |
 
 ## 코드 수정 후 필수 절차
 
@@ -45,13 +45,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 파일 | 담긴 정보 |
 |------|----------|
-| `_workspace/architecture.md` | 전체 스택·디렉토리·데이터 흐름·레이아웃 현재값 |
-| `_workspace/types-and-schemas.md` | 자산 5종 Zod 스키마 + AssetSummary 타입 |
-| `_workspace/api-reference.md` | 내부 API·공유 토큰·캐시 추상화 인터페이스 |
-| `_workspace/components.md` | 컴포넌트 역할·카드 레이어 구조·props |
-| `_workspace/state-and-utils.md` | Context CRUD·Store·유틸 함수 시그니처 |
-| `_workspace/dev-rules.md` | 코딩 패턴·스타일 규칙·주의사항 |
-| `_workspace/changelog.md` | 주요 변경 이력 (무엇을·왜) |
+| `.claude/_knowledge/architecture.md` | 전체 스택·디렉토리·데이터 흐름·레이아웃 현재값 |
+| `.claude/_knowledge/types-and-schemas.md` | 자산 5종 Zod 스키마 + AssetSummary 타입 |
+| `.claude/_knowledge/api-reference.md` | 내부 API·공유 토큰·캐시 추상화 인터페이스 |
+| `.claude/_knowledge/components.md` | 컴포넌트 역할·카드 레이어 구조·props |
+| `.claude/_knowledge/state-and-utils.md` | Context CRUD·Store·유틸 함수 시그니처 |
+| `.claude/_knowledge/dev-rules.md` | 코딩 패턴·스타일 규칙·주의사항 |
+| `.claude/_knowledge/changelog.md` | 주요 변경 이력 (무엇을·왜) |
 
 ---
 
