@@ -174,7 +174,7 @@ export function AssetDistributionCards() {
         <CardHeader className="pb-2">
           <CardTitle className={ASSET_THEME.primary.text}>자산 분포</CardTitle>
         </CardHeader>
-        <CardContent className="pb-2 overflow-hidden">
+        <CardContent className="pb-2 overflow-hidden px-3 sm:px-6">
           {assetDistributionData.length === 0 ? (
             <div className={`flex h-48 items-center justify-center ${ASSET_THEME.distributionCard.muted}`}>
               <p>등록된 자산이 없습니다.</p>

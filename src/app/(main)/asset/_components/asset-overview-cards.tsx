@@ -15,7 +15,7 @@ export function AssetOverviewCards() {
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-      <Card className={`border-2 ${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight}`}>
+      <Card className={`border-2 ${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight} block sm:flex sm:flex-col`}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-medium ${ASSET_THEME.primary.text}`}>순자산</CardTitle>
@@ -23,7 +23,7 @@ export function AssetOverviewCards() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-1">
+          <div className="space-y-1 px-2 sm:px-0">
             <p className={`text-3xl font-extrabold ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
             <div className="flex items-center justify-between text-xs">
               <span className={ASSET_THEME.text.muted}>총자산 - 총부채</span>
