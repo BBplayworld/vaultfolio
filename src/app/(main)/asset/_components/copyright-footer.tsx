@@ -9,12 +9,6 @@ export function CopyrightFooter() {
       <p className="text-xs text-muted-foreground/60 mt-1">
         본 서비스는 개인 자산 관리 목적으로 제공되며, 투자 조언을 포함하지 않습니다.
       </p>
-      <p className="text-xs text-muted-foreground/50 mt-1">
-        문의:{" "}
-        <a href="mailto:bbplayworld@gmail.com" className="hover:text-muted-foreground underline underline-offset-2 transition-colors">
-          bbplayworld@gmail.com
-        </a>
-      </p>
     </footer>
   );
 }
