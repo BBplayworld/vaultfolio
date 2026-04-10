@@ -250,7 +250,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
               <FormItem>
                 <FormLabel>대출일 *</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -264,7 +264,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
               <FormItem>
                 <FormLabel>만기일</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -446,7 +446,7 @@ export function LoanInput() {
                   대출 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
+              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
                   <DialogDescription>대출 정보를 입력하세요.</DialogDescription>

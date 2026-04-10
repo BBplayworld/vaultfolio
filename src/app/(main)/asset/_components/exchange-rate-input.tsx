@@ -36,6 +36,8 @@ export function ExchangeRateInput() {
                                 onChange={(val) => updateExchangeRate("USD", val)}
                                 className="w-28"
                                 quickButtons={[]}
+                                allowDecimals={true}
+                                maxDecimals={1}
                             />
                             <span className="text-sm text-muted-foreground">원</span>
                         </div>
@@ -51,6 +53,8 @@ export function ExchangeRateInput() {
                                 onChange={(val) => updateExchangeRate("JPY", val)}
                                 className="w-28"
                                 quickButtons={[]}
+                                allowDecimals={true}
+                                maxDecimals={1}
                             />
                             <span className="text-sm text-muted-foreground">원</span>
                         </div>

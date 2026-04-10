@@ -287,7 +287,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
             <FormItem>
               <FormLabel>매수일 *</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <Input type="date" className="w-full max-w-[160px] sm:max-w-full text-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -370,7 +370,7 @@ export function CryptoInput() {
                   암호화폐 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
+              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
                   <DialogDescription>

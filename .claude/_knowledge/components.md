@@ -4,6 +4,13 @@
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
+> **자산 입력 화면은 항상 아래 5개 파일로만 구성된다:**
+> - `stock-input.tsx` — 주식 (국내/해외/IRP/ISA/연금/비상장)
+> - `real-estate-input.tsx` — 부동산
+> - `cash-input.tsx` — 현금성 자산
+> - `crypto-input.tsx` — 암호화폐
+> - `loan-input.tsx` — 대출
+
 ### *-input.tsx 공통 구조
 
 각 파일은 두 부분으로 구성:

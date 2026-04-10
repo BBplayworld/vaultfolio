@@ -6,6 +6,14 @@
 
 ## 2026-04-10
 
+### 자산 입력 컴포넌트 모바일 UX 개선 + 환율 소수점 입력
+- **파일:** `cash-input.tsx`, `real-estate-input.tsx`, `loan-input.tsx`, `crypto-input.tsx`, `stock-input.tsx`, `exchange-rate-input.tsx`
+- **변경:**
+  1. DialogContent에 `overflow-x-hidden overscroll-contain` 추가 → 가로 스크롤 제거, 빈 영역 드래그 고정
+  2. 날짜 Input(`type="date"`)에 `max-w-[160px] sm:max-w-full text-sm` 추가 → 모바일에서 박스 이탈 방지 (대출 2-col 그리드는 `min-w-0`)
+  3. 환율 NumberInput에 `allowDecimals={true} maxDecimals={1}` 추가 → USD/JPY 소수점 첫째 자리 입력 가능, 모바일 decimal 키패드 표시
+- **이유:** 모바일(375px)에서 날짜 입력이 카드 밖으로 넘치고, 다이얼로그 빈 영역 드래그 시 화면이 움직이며, 환율 정수만 입력 가능했던 문제 수정
+
 ### 주식 폼 티커 입력 placeholder·설명 카테고리별 개선
 
 - **파일:** `src/app/(main)/asset/_components/stock-input.tsx`

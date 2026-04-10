@@ -229,7 +229,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             <FormItem>
               <FormLabel>매입일 *</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <Input type="date" className="w-full max-w-[160px] sm:max-w-full text-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -342,7 +342,7 @@ export function RealEstateInput() {
                   부동산 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto touch-pan-y">
+              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
                   <DialogDescription>
