@@ -53,6 +53,31 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState<Loan["type"]>(editData?.type || "credit");
 
+  const getNamePlaceholder = () => {
+    if (selectedType === "credit") return "예: 신한은행 직장인 신용대출";
+    if (selectedType === "minus") return "예: KB국민은행 마이너스통장";
+    if (selectedType === "mortgage-home") return "예: 우리은행 아파트 주택담보대출";
+    if (selectedType === "mortgage-stock") return "예: 미래에셋 삼성전자 주식담보";
+    if (selectedType === "mortgage-insurance") return "예: 삼성생명 종신보험 약관대출";
+    if (selectedType === "mortgage-deposit") return "예: 하나은행 정기예금 담보대출";
+    if (selectedType === "mortgage-other") return "예: 기타 담보대출";
+    return "대출명 입력";
+  };
+
+  const getBalanceDescription = () => {
+    if (selectedType === "minus") return "원 (현재 사용 중인 잔액)";
+    if (selectedType === "mortgage-home") return "원 (현재 남은 대출 잔액)";
+    return "원 (현재 잔액)";
+  };
+
+  const getDescriptionPlaceholder = () => {
+    if (selectedType === "credit") return "예: 변동금리, 매월 원리금 균등 상환";
+    if (selectedType === "minus") return "예: 한도 5,000만원, 수시 입출금";
+    if (selectedType === "mortgage-home") return "예: 30년 만기, 혼합금리 5년 고정";
+    if (selectedType === "mortgage-stock") return "예: 담보유지비율 140%, 반기 연장";
+    return "추가 정보 입력...";
+  };
+
   const form = useForm<Loan>({
     resolver: zodResolver(loanSchema),
     defaultValues: editData || {
@@ -141,7 +166,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
             <FormItem>
               <FormLabel>대출명 *</FormLabel>
               <FormControl>
-                <Input placeholder="예: OO은행 주택담보대출" {...field} />
+                <Input placeholder={getNamePlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -190,7 +215,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
                   quickButtons={getQuickButtonsByType(selectedType)}
                 />
               </FormControl>
-              <FormDescription>원</FormDescription>
+              <FormDescription>{getBalanceDescription()}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -254,7 +279,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
             <FormItem>
               <FormLabel>설명</FormLabel>
               <FormControl>
-                <Textarea placeholder="추가 정보 입력..." {...field} />
+                <Textarea placeholder={getDescriptionPlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

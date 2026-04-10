@@ -45,6 +45,31 @@ interface CashFormProps {
 function CashForm({ editData, onClose }: CashFormProps) {
     const { addCash, updateCash } = useAssetData();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedType, setSelectedType] = useState<Cash["type"]>(editData?.type || "deposit");
+
+    const getNamePlaceholder = () => {
+        if (selectedType === "deposit") return "예: KB국민은행 정기예금 (1년)";
+        if (selectedType === "savings") return "예: 토스뱅크 적금 (24개월)";
+        if (selectedType === "bank") return "예: 카카오뱅크 비상금 통장";
+        if (selectedType === "cma") return "예: 미래에셋 CMA-RP";
+        if (selectedType === "cash") return "예: 지갑 현금";
+        return "자산/계좌명 입력";
+    };
+
+    const getBalanceDescription = () => {
+        if (selectedType === "deposit") return "원 (세전 원금 기준)";
+        if (selectedType === "savings") return "원 (현재까지 납입 원금)";
+        if (selectedType === "cash") return "원 (보유 현금 총액)";
+        return "원";
+    };
+
+    const getDescriptionPlaceholder = () => {
+        if (selectedType === "deposit") return "예: 만기 2026-12-31, 금리 3.5%";
+        if (selectedType === "savings") return "예: 월 30만원, 만기 2027-06-01";
+        if (selectedType === "bank") return "예: 비상금 용도, 파킹 통장";
+        if (selectedType === "cma") return "예: 증권 연계 CMA, 수시 입출금";
+        return "추가 정보 입력 (만기일, 금리 등)...";
+    };
 
     const form = useForm<Cash>({
         resolver: zodResolver(cashSchema),
@@ -99,7 +124,13 @@ function CashForm({ editData, onClose }: CashFormProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>유형 *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select
+                                onValueChange={(value) => {
+                                    field.onChange(value);
+                                    setSelectedType(value as Cash["type"]);
+                                }}
+                                defaultValue={field.value}
+                            >
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="유형 선택" />
@@ -148,7 +179,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                         <FormItem>
                             <FormLabel>자산/계좌명 *</FormLabel>
                             <FormControl>
-                                <Input placeholder="예: 우리은행 비상금 통장" {...field} />
+                                <Input placeholder={getNamePlaceholder()} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -197,7 +228,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                                     quickButtons={[]}
                                 />
                             </FormControl>
-                            <FormDescription>{form.watch("currency")}</FormDescription>
+                            <FormDescription>{form.watch("currency")} {getBalanceDescription()}</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -210,7 +241,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                         <FormItem>
                             <FormLabel>설명</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="추가 정보 입력 (만기일 등)..." {...field} />
+                                <Textarea placeholder={getDescriptionPlaceholder()} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

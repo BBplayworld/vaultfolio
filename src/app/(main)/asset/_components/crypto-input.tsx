@@ -62,6 +62,27 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
     },
   });
 
+  const getQuantityDescription = () => {
+    if (selectedCrypto === "BTC") return "BTC (소수점 8자리 가능, 예: 0.00123456)";
+    if (selectedCrypto === "ETH") return "ETH (소수점 8자리 가능, 예: 0.5)";
+    if (selectedCrypto === "other" || !selectedCrypto) return "수량 (소수점 입력 가능)";
+    return `${selectedCrypto} (소수점 입력 가능)`;
+  };
+
+  const getAvgPricePlaceholder = () => {
+    if (selectedCrypto === "BTC") return "예: 130000000";
+    if (selectedCrypto === "ETH") return "예: 4000000";
+    if (selectedCrypto === "XRP") return "예: 3500";
+    if (selectedCrypto === "SOL") return "예: 250000";
+    return "0";
+  };
+
+  const getDescriptionPlaceholder = () => {
+    if (selectedCrypto === "BTC") return "예: 장기 보유, 콜드월렛 보관";
+    if (selectedCrypto === "ETH") return "예: 스테이킹 포함, 레저 보관";
+    return "추가 정보 입력 (보관 방법, 메모 등)...";
+  };
+
   const handleCryptoSelect = (symbol: string) => {
     setSelectedCrypto(symbol);
     const crypto = popularCryptos.find(c => c.symbol === symbol);
@@ -212,7 +233,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                     allowDecimals={true}
                   />
                 </FormControl>
-                <FormDescription>소수점 입력 가능</FormDescription>
+                <FormDescription>{getQuantityDescription()}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -228,7 +249,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                   <NumberInput
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="0"
+                    placeholder={getAvgPricePlaceholder()}
                     quickButtons={[]}
                   />
                 </FormControl>
@@ -280,7 +301,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
             <FormItem>
               <FormLabel>설명</FormLabel>
               <FormControl>
-                <Textarea placeholder="추가 정보 입력..." {...field} />
+                <Textarea placeholder={getDescriptionPlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
