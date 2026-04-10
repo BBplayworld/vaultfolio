@@ -376,7 +376,7 @@ export function CashInput() {
                                                     {formatCurrencyDisplay(item.balance, item.currency)}
                                                 </span>
                                                 {item.currency !== "KRW" && (
-                                                    <span className="text-xs text-muted-foreground">
+                                                    <span className="text-xs text-foreground">
                                                         ₩{(item.balance * getMultiplier(item.currency)).toLocaleString()} 환산
                                                     </span>
                                                 )}

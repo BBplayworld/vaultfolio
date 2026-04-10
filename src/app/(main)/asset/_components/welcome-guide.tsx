@@ -62,34 +62,34 @@ export function WelcomeGuide() {
       </div>
 
       {/* 예시 자산분포 미리보기 — asset-distribution-cards 실제 스타일 적용 */}
-      <div className="rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-500 p-5 space-y-4">
+      <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} border ${ASSET_THEME.distributionCard.border} p-5 space-y-4`}>
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-white">자산 분포 미리보기</p>
+          <p className={`text-sm font-semibold ${ASSET_THEME.distributionCard.title}`}>자산 분포 미리보기</p>
           <Badge variant="secondary" className="text-[10px] px-2 py-0.5">예시 데이터</Badge>
         </div>
 
         {/* 순자산 요약 */}
-        <div className="flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700 px-4 py-3">
+        <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.distributionCard.sectionBg} border ${ASSET_THEME.distributionCard.sectionBorder} px-4 py-3`}>
           <div>
-            <p className="text-xs font-semibold text-zinc-400">순자산</p>
-            <p className="text-2xl font-extrabold tabular-nums text-orange-400">10억</p>
-            <p className="text-[11px] text-white">1,000,000,000원</p>
+            <p className={`text-xs font-semibold ${ASSET_THEME.distributionCard.muted}`}>순자산</p>
+            <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>10억</p>
+            <p className={`text-[11px] ${ASSET_THEME.text.default}`}>1,000,000,000원</p>
           </div>
           <div className="text-right space-y-1.5">
             <div className="text-xs">
-              <span className="text-zinc-400">총 자산 </span>
-              <span className="font-bold text-primary">10.3억</span>
+              <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
+              <span className={`font-bold ${ASSET_THEME.primary.text}`}>10.3억</span>
             </div>
             <div className="text-xs">
-              <span className="text-zinc-400">총 부채 </span>
-              <span className="font-bold text-rose-400">3,000만</span>
+              <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
+              <span className={`font-bold ${ASSET_THEME.liability}`}>3,000만</span>
             </div>
           </div>
         </div>
 
         {/* 자산 vs 부채 비율 바 */}
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-zinc-400">자산 / 부채 비율</p>
+          <p className={`text-xs font-semibold ${ASSET_THEME.distributionCard.muted}`}>자산 / 부채 비율</p>
           <div className="flex h-5 w-full rounded-full overflow-hidden gap-px">
             <div
               className="flex items-center justify-center transition-all"
@@ -107,8 +107,8 @@ export function WelcomeGuide() {
         {/* 총 자산 구성 바 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-zinc-400">총 자산 구성</span>
-            <span className="font-bold tabular-nums text-primary">10.3억</span>
+            <span className={`font-semibold ${ASSET_THEME.distributionCard.muted}`}>총 자산 구성</span>
+            <span className={`font-bold tabular-nums ${ASSET_THEME.primary.text}`}>10.3억</span>
           </div>
           <div className="flex h-8 w-full rounded-xl overflow-hidden gap-px">
             {PREVIEW_CATEGORIES.filter(c => !c.isLiability).map((cat) => (
@@ -132,10 +132,10 @@ export function WelcomeGuide() {
               return (
                 <div key={cat.key} className="flex items-center gap-1">
                   <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <Icon className="size-3 text-zinc-500 flex-shrink-0" />
-                  <span className="text-xs text-zinc-300">{cat.label}</span>
-                  <span className="text-xs font-bold tabular-nums text-primary">{(cat.pct / 0.97).toFixed(1)}%</span>
-                  <span className="text-xs tabular-nums text-white">(<span>{formatAmount(cat.value)}</span>)</span>
+                  <Icon className={`size-3 flex-shrink-0 ${ASSET_THEME.distributionCard.muted}`} />
+                  <span className={`text-xs ${ASSET_THEME.text.default}`}>{cat.label}</span>
+                  <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{(cat.pct / 0.97).toFixed(1)}%</span>
+                  <span className={`text-xs tabular-nums ${ASSET_THEME.text.default}`}>(<span>{formatAmount(cat.value)}</span>)</span>
                 </div>
               );
             })}
@@ -145,8 +145,8 @@ export function WelcomeGuide() {
         {/* 총 부채 구성 바 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-zinc-400">총 부채 구성</span>
-            <span className="font-bold tabular-nums text-rose-400">3,000만</span>
+            <span className={`font-semibold ${ASSET_THEME.distributionCard.muted}`}>총 부채 구성</span>
+            <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>3,000만</span>
           </div>
           <div className="flex h-8 w-full rounded-xl overflow-hidden gap-px">
             <div
@@ -159,15 +159,15 @@ export function WelcomeGuide() {
           <div className="flex flex-wrap gap-x-3 gap-y-1.5">
             <div className="flex items-center gap-1">
               <span className="size-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: ASSET_THEME.categoryColors.loans }} />
-              <CreditCard className="size-3 text-zinc-500 flex-shrink-0" />
-              <span className="text-xs text-zinc-300">대출</span>
-              <span className="text-xs font-bold tabular-nums text-primary">100%</span>
-              <span className="text-xs tabular-nums text-white">(<span>3,000만</span>)</span>
+              <CreditCard className={`size-3 flex-shrink-0 ${ASSET_THEME.distributionCard.muted}`} />
+              <span className={`text-xs ${ASSET_THEME.text.default}`}>대출</span>
+              <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.primary.text}`}>100%</span>
+              <span className={`text-xs tabular-nums ${ASSET_THEME.text.default}`}>(<span>3,000만</span>)</span>
             </div>
           </div>
         </div>
 
-        <p className="text-[11px] text-zinc-500 text-center">
+        <p className={`text-[11px] text-center ${ASSET_THEME.distributionCard.muted}`}>
           실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
         </p>
       </div>

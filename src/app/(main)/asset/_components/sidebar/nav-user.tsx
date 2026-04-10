@@ -334,8 +334,8 @@ export function NavUser({
                 type="button"
                 onClick={() => setSelectedPromptIdx(i)}
                 className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${i === selectedPromptIdx
-                    ? "bg-background text-foreground shadow-sm font-medium"
-                    : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm font-medium"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <span>{t.label}</span>
@@ -384,7 +384,7 @@ export function NavUser({
                 <p className="text-xs">
                   <span className="font-medium text-foreground">전체 URL</span> — 서버 저장 없이 URL에 직접 포함
                   {" · "}
-                  <span className="font-medium text-foreground">짧은 URL</span> — PIN 암호화 후 서버에 30일 임시 보관
+                  <span className="font-medium text-foreground">짧은 URL</span> — 암호화된 데이터만 서버 경유, URL 키와 PIN이 분리되어 서버 관리자도 복호화 불가
                 </p>
               </div>
             </DialogDescription>

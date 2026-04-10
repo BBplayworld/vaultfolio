@@ -564,59 +564,61 @@ export function AssetDistributionCards() {
                     </div>
 
                     <div className="space-y-3">
-                      {cryptoDistributionData.map((item, index) => {
-                        const { coin, coinValue, profit } = item;
-                        const percentage = summary.cryptoValue > 0 ? (coinValue / summary.cryptoValue) * 100 : 0;
-                        return (
-                          <Collapsible key={coin.id}>
-                            <div className="space-y-1.5">
-                              <CollapsibleTrigger className="w-full">
-                                <div className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted/50 transition-colors">
-                                  <div className="flex items-center gap-2">
-                                    <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
-                                    <span className="size-3 flex-shrink-0 rounded-full" style={{ background: ASSET_THEME.delimiterColor }} />
-                                    <span className={`font-medium ${ASSET_THEME.primary.text}`}>암호화폐</span>
-                                    <span className="text-xs text-muted-foreground">({cryptoDistributionData.length}개)</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                      {percentage.toFixed(1)}%
-                                    </span>
-                                    <span className="text-xs font-bold tabular-nums">
-                                      {formatShortCurrency(coinValue)}
-                                    </span>
-                                  </div>
+                      {cryptoDistributionData.length > 0 && (
+                        <Collapsible>
+                          <div className="space-y-1.5">
+                            <CollapsibleTrigger className="w-full">
+                              <div className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted/50 transition-colors">
+                                <div className="flex items-center gap-2">
+                                  <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                                  <span className="size-3 flex-shrink-0 rounded-full" style={{ backgroundColor: ASSET_THEME.delimiterColor }} />
+                                  <span className={`font-medium ${ASSET_THEME.primary.text}`}>암호화폐</span>
+                                  <span className="text-xs text-muted-foreground">({cryptoDistributionData.length}개)</span>
                                 </div>
-                              </CollapsibleTrigger>
-                              <div className="relative h-2 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="absolute inset-y-0 left-0 rounded-full transition-all"
-                                  style={{ background: ASSET_THEME.delimiterColor }}
-                                />
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                    100%
+                                  </span>
+                                  <span className="text-xs font-bold tabular-nums">
+                                    {formatShortCurrency(summary.cryptoValue)}
+                                  </span>
+                                </div>
                               </div>
-                              <CollapsibleContent className="mt-2 space-y-2 pl-2">
-                                <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{coin.name}</span>
-                                    <span className="hidden sm:inline text-muted-foreground">({coin.symbol})</span>
-                                  </div>
-                                  <div className="flex items-center gap-3 whitespace-nowrap">
-                                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                      {percentage.toFixed(1)}%
-                                    </span>
-                                    <span className="font-bold tabular-nums">
-                                      {formatShortCurrency(coinValue)}
-                                    </span>
-                                    <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
-                                      ({profit >= 0 ? "+" : ""}{formatShortCurrency(profit)})
-                                    </span>
-                                  </div>
-                                </div>
-                              </CollapsibleContent>
+                            </CollapsibleTrigger>
+                            <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="absolute inset-y-0 left-0 w-full rounded-full transition-all"
+                                style={{ backgroundColor: ASSET_THEME.delimiterColor }}
+                              />
                             </div>
-                          </Collapsible>
-                        );
-                      })}
+                            <CollapsibleContent className="mt-2 space-y-2 pl-2">
+                              {cryptoDistributionData.map((item) => {
+                                const { coin, coinValue, profit } = item;
+                                const percentage = summary.cryptoValue > 0 ? (coinValue / summary.cryptoValue) * 100 : 0;
+                                return (
+                                  <div key={coin.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{coin.name}</span>
+                                      <span className="hidden sm:inline text-muted-foreground">({coin.symbol})</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 whitespace-nowrap">
+                                      <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                        {percentage.toFixed(1)}%
+                                      </span>
+                                      <span className="font-bold tabular-nums">
+                                        {formatShortCurrency(coinValue)}
+                                      </span>
+                                      <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
+                                        ({profit >= 0 ? "+" : ""}{formatShortCurrency(profit)})
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      )}
                     </div>
                   </div>
                 )}

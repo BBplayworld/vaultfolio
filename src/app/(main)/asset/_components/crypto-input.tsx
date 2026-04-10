@@ -478,7 +478,7 @@ export function CryptoInput() {
                         <span className="font-medium text-foreground">{item.purchaseDate} 매수</span>
                       </span>
                       {item.description && (
-                        <span className="w-full mt-0.5 text-muted-foreground truncate">
+                        <span className="w-full mt-0.5 text-primary truncate">
                           # {item.description}
                         </span>
                       )}
