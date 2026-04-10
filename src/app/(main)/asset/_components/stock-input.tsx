@@ -69,7 +69,33 @@ function StockForm({ editData, onClose }: StockFormProps) {
   });
 
   const isForeignStock = selectedCategory === "foreign";
+  const isUnlisted = selectedCategory === "unlisted";
+  const isEtfCategory = selectedCategory === "irp" || selectedCategory === "isa" || selectedCategory === "pension";
   const watchedCurrency = form.watch("currency");
+
+  const getTickerPlaceholder = () => {
+    if (selectedCategory === "domestic") return "예: 005930 (삼성전자)";
+    if (selectedCategory === "foreign") return "예: AAPL (애플)";
+    if (isEtfCategory) return "예: 360750 (TIGER 미국S&P500)";
+    if (isUnlisted) return "예: 비상장 종목명 또는 코드";
+    return "종목코드 입력";
+  };
+
+  const getNamePlaceholder = () => {
+    if (selectedCategory === "domestic") return "예: 삼성전자";
+    if (selectedCategory === "foreign") return "예: Apple Inc.";
+    if (isEtfCategory) return "예: TIGER 미국S&P500";
+    if (isUnlisted) return "예: (주)비상장기업";
+    return "종목명 입력";
+  };
+
+  const getTickerDescription = () => {
+    if (selectedCategory === "domestic") return "국내 주식 6자리 숫자를 입력하세요. (예: 삼성전자 005930)";
+    if (selectedCategory === "foreign") return "미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA)";
+    if (isEtfCategory) return "국내 상장 ETF 종목코드 6자리를 입력하세요. (예: S&P500 ETF → 360750)";
+    if (isUnlisted) return "비상장 주식은 증권 API 조회가 불가합니다. 종목코드 또는 식별 코드를 자유롭게 입력하세요.";
+    return "";
+  };
 
   const onSubmit = async (data: Stock) => {
     setIsSubmitting(true);
@@ -115,6 +141,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                 onValueChange={(value) => {
                   field.onChange(value);
                   setSelectedCategory(value as Stock["category"]);
+                  form.setValue("currency", "KRW");
                 }}
                 defaultValue={field.value}
               >
@@ -147,8 +174,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   <FormControl>
                     <div className="relative">
                       <Input
-                        placeholder={selectedCategory === "foreign" ? "예: AAPL" : "예: 005930"}
-                        maxLength={selectedCategory === "foreign" ? 5 : 6}
+                        placeholder={getTickerPlaceholder()}
+                        maxLength={selectedCategory === "foreign" ? 5 : isUnlisted ? 20 : 6}
                         {...field}
                         onChange={(e) => {
                           const val = selectedCategory === "foreign"
@@ -164,7 +191,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
               )}
             />
           </div>
-          {!editData && (
+          {!editData && !isUnlisted && (
             <Button
               type="button"
               variant="outline"
@@ -236,13 +263,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
         </div>
 
         <FormDescription className="text-[11px] leading-relaxed -mt-2">
-          {selectedCategory === "foreign" ? (
-            <><span className="text-primary/70">미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA)</span></>
-          ) : (
-            <>
-              <span className="text-primary/70">국내 주식은 6자리 숫자를 입력하세요. (예: 삼성전자 005930)</span>
-            </>
-          )}
+          <span className="text-primary/70">{getTickerDescription()}</span>
         </FormDescription>
 
         <FormField
@@ -252,7 +273,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             <FormItem>
               <FormLabel>종목명 *</FormLabel>
               <FormControl>
-                <Input placeholder="예: 삼성전자" {...field} />
+                <Input placeholder={getNamePlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -275,7 +296,6 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   <SelectContent>
                     <SelectItem value="KRW">원화 (KRW)</SelectItem>
                     <SelectItem value="USD">달러 (USD)</SelectItem>
-                    <SelectItem value="JPY">엔화 (JPY)</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

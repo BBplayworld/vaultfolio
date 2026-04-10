@@ -8,22 +8,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-# 지식 베이스 (.claude/_knowledge/)
+# 지식 베이스 (.claude/\_knowledge/)
 
 ## 세션 시작 시 필수 절차
 
 새 대화가 시작되면 아래 순서로 KB 파일을 읽고 작업을 시작한다.
 **전체 소스를 읽기 전에 반드시 KB를 먼저 확인한다.**
 
-| 작업 유형 | 읽을 KB 파일 |
-|-----------|-------------|
-| 모든 작업 (공통) | `.claude/_knowledge/architecture.md` |
-| 컴포넌트 UI 수정 | + `.claude/_knowledge/components.md` |
-| 타입·스키마 변경 | + `.claude/_knowledge/types-and-schemas.md` |
-| API·캐시·공유 관련 | + `.claude/_knowledge/api-reference.md` |
-| Context·유틸 함수 | + `.claude/_knowledge/state-and-utils.md` |
-| 새 기능·패턴 확인 | + `.claude/_knowledge/dev-rules.md` |
-| 최근 변경 맥락 파악 | + `.claude/_knowledge/changelog.md` |
+| 작업 유형           | 읽을 KB 파일                                |
+| ------------------- | ------------------------------------------- |
+| 모든 작업 (공통)    | `.claude/_knowledge/architecture.md`        |
+| 컴포넌트 UI 수정    | + `.claude/_knowledge/components.md`        |
+| 타입·스키마 변경    | + `.claude/_knowledge/types-and-schemas.md` |
+| API·캐시·공유 관련  | + `.claude/_knowledge/api-reference.md`     |
+| Context·유틸 함수   | + `.claude/_knowledge/state-and-utils.md`   |
+| 새 기능·패턴 확인   | + `.claude/_knowledge/dev-rules.md`         |
+| 최근 변경 맥락 파악 | + `.claude/_knowledge/changelog.md`         |
 
 ## 코드 수정 후 필수 절차
 
@@ -43,15 +43,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## KB 파일 목록
 
-| 파일 | 담긴 정보 |
-|------|----------|
-| `.claude/_knowledge/architecture.md` | 전체 스택·디렉토리·데이터 흐름·레이아웃 현재값 |
-| `.claude/_knowledge/types-and-schemas.md` | 자산 5종 Zod 스키마 + AssetSummary 타입 |
-| `.claude/_knowledge/api-reference.md` | 내부 API·공유 토큰·캐시 추상화 인터페이스 |
-| `.claude/_knowledge/components.md` | 컴포넌트 역할·카드 레이어 구조·props |
-| `.claude/_knowledge/state-and-utils.md` | Context CRUD·Store·유틸 함수 시그니처 |
-| `.claude/_knowledge/dev-rules.md` | 코딩 패턴·스타일 규칙·주의사항 |
-| `.claude/_knowledge/changelog.md` | 주요 변경 이력 (무엇을·왜) |
+| 파일                                      | 담긴 정보                                      |
+| ----------------------------------------- | ---------------------------------------------- |
+| `.claude/_knowledge/architecture.md`      | 전체 스택·디렉토리·데이터 흐름·레이아웃 현재값 |
+| `.claude/_knowledge/types-and-schemas.md` | 자산 5종 Zod 스키마 + AssetSummary 타입        |
+| `.claude/_knowledge/api-reference.md`     | 내부 API·공유 토큰·캐시 추상화 인터페이스      |
+| `.claude/_knowledge/components.md`        | 컴포넌트 역할·카드 레이어 구조·props           |
+| `.claude/_knowledge/state-and-utils.md`   | Context CRUD·Store·유틸 함수 시그니처          |
+| `.claude/_knowledge/dev-rules.md`         | 코딩 패턴·스타일 규칙·주의사항                 |
+| `.claude/_knowledge/changelog.md`         | 주요 변경 이력 (무엇을·왜)                     |
 
 ---
 
@@ -70,7 +70,7 @@ npm run format    # Prettier 포맷
 
 # Architecture
 
-**Vaultfolio** — 오프라인 우선 개인 자산 관리 앱. 모든 사용자 데이터는 브라우저 `localStorage`에 저장되며 인증/백엔드 DB 없음.
+**secretasset** — 오프라인 우선 개인 자산 관리 앱. 모든 사용자 데이터는 브라우저 `localStorage`에 저장되며 인증/백엔드 DB 없음.
 
 ### Stack
 
@@ -99,16 +99,16 @@ PreferencesStoreProvider (src/stores/preferences/)
 
 ### Key Files
 
-| 파일 | 역할 |
-| ---- | ---- |
-| `src/types/asset.ts` | Zod 스키마 + TS 타입 (자산 5종) |
-| `src/lib/asset-storage.ts` | localStorage 읽기/쓰기 + 공유 토큰 시스템 (v7.1) |
-| `src/contexts/asset-data-context.tsx` | 전역 자산 상태 및 CRUD |
-| `src/lib/finance-service.ts` | 주식·환율 외부 API 통합 로직 |
-| `src/lib/cache-storage.ts` | 캐시 스토리지 추상화 (로컬↔Redis 자동 선택) |
-| `src/app/api/finance/route.ts` | 주식·환율 API 엔드포인트 |
-| `src/app/api/share/route.ts` | 공유 Short URL 생성·조회 엔드포인트 |
-| `src/server/server-actions.ts` | 쿠키 기반 서버 액션 (설정 저장) |
+| 파일                                  | 역할                                             |
+| ------------------------------------- | ------------------------------------------------ |
+| `src/types/asset.ts`                  | Zod 스키마 + TS 타입 (자산 5종)                  |
+| `src/lib/asset-storage.ts`            | localStorage 읽기/쓰기 + 공유 토큰 시스템 (v7.1) |
+| `src/contexts/asset-data-context.tsx` | 전역 자산 상태 및 CRUD                           |
+| `src/lib/finance-service.ts`          | 주식·환율 외부 API 통합 로직                     |
+| `src/lib/cache-storage.ts`            | 캐시 스토리지 추상화 (로컬↔Redis 자동 선택)     |
+| `src/app/api/finance/route.ts`        | 주식·환율 API 엔드포인트                         |
+| `src/app/api/share/route.ts`          | 공유 Short URL 생성·조회 엔드포인트              |
+| `src/server/server-actions.ts`        | 쿠키 기반 서버 액션 (설정 저장)                  |
 
 ### 자산 타입
 

@@ -47,6 +47,30 @@ interface RealEstateFormProps {
 function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
   const { addRealEstate, updateRealEstate } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedType, setSelectedType] = useState<RealEstate["type"]>(editData?.type || "apartment");
+
+  const getNamePlaceholder = () => {
+    if (selectedType === "apartment") return "예: 래미안 퍼스티지 84㎡";
+    if (selectedType === "house") return "예: 성북구 단독주택";
+    if (selectedType === "land") return "예: 경기도 양평 전원부지";
+    if (selectedType === "commercial") return "예: 강남역 근린상가 101호";
+    return "예: 기타 부동산";
+  };
+
+  const getAddressPlaceholder = () => {
+    if (selectedType === "apartment") return "예: 서울시 서초구 반포동 1234";
+    if (selectedType === "house") return "예: 서울시 성북구 정릉동 56";
+    if (selectedType === "land") return "예: 경기도 양평군 강상면 000번지";
+    if (selectedType === "commercial") return "예: 서울시 강남구 역삼동 123-4";
+    return "예: 주소 입력";
+  };
+
+  const getCurrentValueLabel = () => {
+    if (selectedType === "apartment") return "시세 (실거래가)";
+    if (selectedType === "land") return "공시지가 / 시세";
+    if (selectedType === "commercial") return "시세";
+    return "현재 시세";
+  };
 
   const form = useForm<RealEstate>({
     resolver: zodResolver(realEstateSchema),
@@ -103,7 +127,13 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>유형</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  setSelectedType(value as RealEstate["type"]);
+                }}
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="부동산 유형 선택" />
@@ -129,7 +159,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             <FormItem>
               <FormLabel>이름 *</FormLabel>
               <FormControl>
-                <Input placeholder="예: 강남 아파트" {...field} />
+                <Input placeholder={getNamePlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -143,7 +173,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             <FormItem>
               <FormLabel>주소</FormLabel>
               <FormControl>
-                <Input placeholder="예: 서울시 강남구..." {...field} />
+                <Input placeholder={getAddressPlaceholder()} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -165,7 +195,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                     quickButtons={realEstateQuickButtons}
                   />
                 </FormControl>
-                <FormDescription>원</FormDescription>
+                <FormDescription>원 (취득 당시 실거래가)</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -176,7 +206,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="currentValue"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.important}>실거래가 *</FormLabel>
+                <FormLabel className={ASSET_THEME.important}>{getCurrentValueLabel()} *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -185,7 +215,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                     quickButtons={realEstateQuickButtons}
                   />
                 </FormControl>
-                <FormDescription>원</FormDescription>
+                <FormDescription>원 (현재 기준)</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
