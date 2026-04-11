@@ -191,7 +191,7 @@ export function WelcomeGuide() {
             주식 추가
             <ArrowRight className="size-4" />
           </Button>
-          <Button size="lg" variant="secondary" className="gap-2 text-muted-foreground hover:text-foreground" onClick={handleImport}>
+          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={handleImport}>
             <FolderInput className="size-4" />
             기존 데이터 가져오기
           </Button>

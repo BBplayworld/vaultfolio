@@ -5,6 +5,18 @@ import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, Asset
 import { getAssetData, saveAssetData, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
 import { STORAGE_KEY_EXCHANGE_SYNC_DATE, normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
+
+// 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
+let lastToastAt = 0;
+const TOAST_STALE_MS = 4_000;
+
+const dismissStaleToasts = () => {
+  const now = Date.now();
+  if (lastToastAt > 0 && now - lastToastAt > TOAST_STALE_MS) {
+    toast.dismiss();
+  }
+  lastToastAt = now;
+};
 import {
   Dialog,
   DialogContent,
@@ -79,9 +91,9 @@ const MSG = {
 
 // 중요 이벤트: toast + console 동시 출력
 const notify = {
-  success: (msg: string) => { toast.success(msg); console.log(`[SUCCESS] ${msg}`); },
-  error: (msg: string) => { toast.error(msg); console.error(`[ERROR] ${msg}`); },
-  info: (msg: string) => { toast.info(msg); console.log(`[INFO] ${msg}`); },
+  success: (msg: string) => { dismissStaleToasts(); toast.success(msg); console.log(`[SUCCESS] ${msg}`); },
+  error: (msg: string) => { dismissStaleToasts(); toast.error(msg); console.error(`[ERROR] ${msg}`); },
+  info: (msg: string) => { dismissStaleToasts(); toast.info(msg); console.log(`[INFO] ${msg}`); },
 };
 
 // Short URL(s:KEY_LOCALKEY)을 전체 토큰으로 변환하는 순수 유틸

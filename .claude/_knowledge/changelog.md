@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-04-11
+
+### 주식 폼 조회 연동 UX 개선 + 소수점 2자리 정책 변경
+
+- **파일:** `src/app/(main)/asset/_components/stock-input.tsx`
+- **변경:**
+  1. `lookupState` 상태(`"idle" | "success" | "failed"`) 추가 — 신규 추가 시 `"idle"` 초기값, 편집 모드는 `"success"` 초기값
+  2. 종목명(`name`)·현재가(`currentPrice`) 필드를 `lookupState !== "idle"` 조건부 렌더링으로 변경 — 최초 입력 시 숨김
+  3. 조회 성공 시 `setLookupState("success")`, 실패/에러 시 `setLookupState("failed")` 설정 — 실패 시 필드 노출 + 수동 입력 안내 텍스트 표시
+  4. 카테고리 변경 시 `lookupState` 리셋 (비상장은 `"success"`, 나머지는 `"idle"`)
+  5. `quantity`, `averagePrice`, `currentPrice`의 `maxDecimals` 1→2 변경, 설명 텍스트 동일 업데이트
+- **이유:** 조회 전 빈 종목명·현재가 필드가 노출되어 UX 흐름이 불명확했고, 해외 주식 단가(예: 135.47달러)에서 소수점 1자리로 인한 반올림 오차 발생
+
+### scroll-to-top 모든 환경 노출 + toast 잔류 버그 방어 처리
+
+- **파일:** `src/components/scroll-to-top.tsx`, `src/contexts/asset-data-context.tsx`
+- **변경:**
+  1. `scroll-to-top.tsx` — `md:hidden` 클래스 제거 → PC/태블릿 포함 전체 환경에서 버튼 노출
+  2. `asset-data-context.tsx` — `dismissStaleToasts()` 유틸 추가: 마지막 toast 이후 4초 이상 경과한 경우 `toast.dismiss()` 호출 후 새 toast 표시. `notify.success/error/info` 세 곳 모두 적용
+- **이유:** scroll-to-top이 모바일에서만 보였고, 자산 입력 액션 중 이전 toast가 닫히지 않고 남아있는 버그 방어
+
+---
+
 ## 2026-04-10
 
 ### 자산 입력 컴포넌트 모바일 UX 개선 + 환율 소수점 입력

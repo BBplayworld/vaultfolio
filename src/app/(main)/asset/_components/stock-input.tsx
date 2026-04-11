@@ -51,6 +51,9 @@ function StockForm({ editData, onClose }: StockFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Stock["category"]>(editData?.category || "domestic");
+  const [lookupState, setLookupState] = useState<"idle" | "success" | "failed">(
+    editData ? "success" : "idle"
+  );
 
   const form = useForm<Stock>({
     resolver: zodResolver(stockSchema),
@@ -98,6 +101,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
   };
 
   const onSubmit = async (data: Stock) => {
+    // 1차: 신규 입력 시 조회를 하지 않은 경우 등록 차단
+    if (!editData && !isUnlisted && lookupState === "idle") {
+      toast.error("티커 조회를 먼저 진행해주세요.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       if (editData) {
@@ -142,6 +150,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   field.onChange(value);
                   setSelectedCategory(value as Stock["category"]);
                   form.setValue("currency", "KRW");
+                  setLookupState(value === "unlisted" ? "success" : "idle");
                 }}
                 defaultValue={field.value}
               >
@@ -176,6 +185,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                       <Input
                         placeholder={getTickerPlaceholder()}
                         maxLength={selectedCategory === "foreign" ? 5 : isUnlisted ? 20 : 6}
+                        inputMode={isForeignStock || isUnlisted ? "text" : "numeric"}
                         {...field}
                         onChange={(e) => {
                           const val = selectedCategory === "foreign"
@@ -243,13 +253,17 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     if (data[normalized].updated_at) {
                       form.setValue("baseDate", data[normalized].updated_at);
                     }
+                    setLookupState("success");
                     toast.success("주식 정보를 성공적으로 가져왔습니다.");
                   } else if (data.error) {
+                    setLookupState("failed");
                     toast.error(data.error);
                   } else {
+                    setLookupState("failed");
                     toast.error("주식 정보를 찾을 수 없습니다.");
                   }
                 } catch (e) {
+                  setLookupState("failed");
                   toast.error("조회 중 오류가 발생했습니다.");
                 } finally {
                   setIsFetchingPrice(false);
@@ -266,19 +280,24 @@ function StockForm({ editData, onClose }: StockFormProps) {
           <span className="text-primary/70">{getTickerDescription()}</span>
         </FormDescription>
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>종목명 *</FormLabel>
-              <FormControl>
-                <Input placeholder={getNamePlaceholder()} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {lookupState !== "idle" && (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>종목명 *</FormLabel>
+                <FormControl>
+                  <Input placeholder={getNamePlaceholder()} {...field} />
+                </FormControl>
+                {lookupState === "failed" && (
+                  <FormDescription className="text-[11px] text-amber-500">조회 실패 — 직접 입력해 주세요.</FormDescription>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {isForeignStock && (
           <FormField
@@ -343,10 +362,10 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     placeholder="0"
                     quickButtons={[]}
                     allowDecimals={isForeignStock}
-                    maxDecimals={isForeignStock ? 1 : undefined}
+                    maxDecimals={isForeignStock ? 2 : undefined}
                   />
                 </FormControl>
-                <FormDescription className="mt-1.5">{isForeignStock ? "소수점 1자리 가능" : "주"}</FormDescription>
+                <FormDescription className="mt-1.5">{isForeignStock ? "소수점 2자리 가능" : "주"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -365,37 +384,39 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     placeholder="0"
                     quickButtons={isForeignStock ? [] : stockQuickButtons}
                     allowDecimals={isForeignStock}
-                    maxDecimals={isForeignStock ? 1 : undefined}
+                    maxDecimals={isForeignStock ? 2 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 1자리 가능)"}</FormDescription>
+                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 2자리 가능)"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="currentPrice"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>현재가 *</FormLabel>
-              <FormControl>
-                <NumberInput
-                  value={field.value}
-                  onChange={(value) => field.onChange(value)}
-                  placeholder="0"
-                  quickButtons={isForeignStock ? [] : stockQuickButtons}
-                  allowDecimals={isForeignStock}
-                  maxDecimals={isForeignStock ? 1 : undefined}
-                />
-              </FormControl>
-              <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 1자리 가능)"}</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {lookupState !== "idle" && (
+          <FormField
+            control={form.control}
+            name="currentPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>현재가 *</FormLabel>
+                <FormControl>
+                  <NumberInput
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    placeholder="0"
+                    quickButtons={isForeignStock ? [] : stockQuickButtons}
+                    allowDecimals={isForeignStock}
+                    maxDecimals={isForeignStock ? 2 : undefined}
+                  />
+                </FormControl>
+                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 2자리 가능)"}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}
@@ -429,7 +450,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
           <Button type="button" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={isSubmitting || (!editData && !isUnlisted && lookupState === "idle")}
+            title={(!editData && !isUnlisted && lookupState === "idle") ? "티커 조회를 먼저 진행해주세요" : undefined}
+          >
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
         </DialogFooter>

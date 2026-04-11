@@ -41,7 +41,7 @@ export const ASSET_THEME = {
 
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary",
   todayBox: "text-xs text-muted-foreground bg-muted/5 px-2 py-0.5 rounded border border-white/20 shrink-0",
-  inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/5 border-b-0",
+  inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
 
   // ===== 부동산 유형별 색상 =====
   realEstateTypeColors: {
@@ -53,7 +53,7 @@ export const ASSET_THEME = {
   },
   // ===== 자산 분포 카드 테마 토큰 =====
   distributionCard: {
-    bg: "bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-900 dark:to-zinc-950",
+    bg: "bg-primary/15 dark:bg-primary/5",
     border: "border-zinc-500 dark:border-zinc-500",
     title: "text-zinc-900 dark:text-white",
     description: "text-zinc-500 dark:text-zinc-400",

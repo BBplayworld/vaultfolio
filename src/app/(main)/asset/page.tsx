@@ -122,11 +122,11 @@ export default function Page() {
                 className={[
                   "h-10 sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
                   "hover:bg-accent hover:text-foreground hover:border-primary/50",
-                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-primary/50 data-[state=active]:font-semibold",
+                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-semibold",
                   "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
                 ].join(" ")}
               >
-                <span className="text-[11px] leading-tight sm:text-sm">
+                <span className="ml-1 text-[11px] leading-tight sm:text-sm">
                   {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
                 </span>
                 <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
