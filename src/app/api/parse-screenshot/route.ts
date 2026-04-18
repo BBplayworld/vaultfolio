@@ -29,18 +29,22 @@ const STOCK_SCHEMA = {
       ticker: { type: Type.STRING },
       quantity: { type: Type.NUMBER },
       quantityMissing: { type: Type.BOOLEAN },
+      currentPrice: { type: Type.NUMBER },
+      averagePrice: { type: Type.NUMBER },
       currentValue: { type: Type.NUMBER },
+      profitAmount: { type: Type.NUMBER },
       profitRate: { type: Type.NUMBER },
       section: { type: Type.STRING, enum: ["국내", "해외", "기타"] },
+      currency: { type: Type.STRING, enum: ["KRW", "USD", "JPY"] },
     },
-    required: ["name", "quantity", "quantityMissing", "currentValue", "profitRate", "section"],
+    required: ["name", "quantity", "quantityMissing", "profitRate", "section"],
   },
 };
 
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로), ticker=티커(ETF참조 최우선·해외는 추론·모르면 ""), quantity=보유수량(화면에 수량이 있으면 그 값), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentValue=평가금액(원화 정수·없으면 수익금÷(손익률/100)+수익금), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타("내 기타 투자"하위=기타·TIGER·KODEX·ACE 등 국내 ETF는 반드시 국내)
+name=종목명(그대로), ticker=티커(ETF참조 최우선·해외는 추론·모르면 ""), quantity=보유수량(화면에 수량이 있으면 그 값), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·수익금·평가금액·수익률로부터 계산 금지·없으면 반드시 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·계산 금지·없으면 반드시 0), currentValue=총평가금액(화면에 숫자로 명시된 경우 반드시 기록·계산 금지·없으면 0), profitAmount=평가손익 금액(부호포함·"+476,928원(+88.23%)" 같이 금액과 수익률이 함께 표시된 경우 금액 부분만 추출·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타("내 기타 투자"하위=기타·TIGER·KODEX·ACE 등 국내 ETF는 반드시 국내), currency=통화(KRW|USD|JPY: 화면에 "원화"·"원화로 보기"·"KRW"·"₩"·금액 뒤에 "원" 단위가 보이면 해당 종목이 해외주식이어도 반드시 KRW로 설정·달러$·"외화"·"USD" 표시면 USD·엔¥·"JPY" 표시면 JPY·화면 전체에 원화 표시가 있으면 모든 종목 KRW·통화 표시 없는 해외섹션 기본값=USD·국내섹션 기본값=KRW)
 
 [국내 ETF 티커]
 ${DOMESTIC_ETF_TABLE}
@@ -52,13 +56,24 @@ interface GeminiStock {
   ticker?: string | null;
   quantity: number;
   quantityMissing: boolean;
-  currentValue: number;
+  currentPrice?: number;
+  averagePrice?: number;
+  currentValue?: number;
+  profitAmount?: number;
   profitRate: number;
   section: "국내" | "해외" | "기타";
+  currency?: string;
 }
 
 function processStockResults(raw: GeminiStock[], today: string) {
-  const filtered = raw.filter((s) => s.name && s.currentValue > 0);
+  const filtered = raw.filter((s) => {
+    if (!s.name) return false;
+    const hasCurrentValue = (s.currentValue ?? 0) > 0;
+    const hasCurrentPrice = (s.currentPrice ?? 0) > 0;
+    const hasProfitAmount = (s.profitAmount ?? 0) !== 0;
+    // 평가금액, 현재가×수량, 수익금 중 하나라도 있으면 처리 가능
+    return hasCurrentValue || hasCurrentPrice || hasProfitAmount;
+  });
   let prevCategory: "domestic" | "foreign" = "domestic";
 
   return filtered.map((s, idx) => {
@@ -84,14 +99,42 @@ function processStockResults(raw: GeminiStock[], today: string) {
     let currentPrice: number;
     if (!s.quantityMissing && s.quantity > 0) {
       quantity = Math.round(s.quantity * 1000000) / 1000000;
-      currentPrice = Math.round((s.currentValue / s.quantity) * 100) / 100;
+      // 현재가 우선, 없으면 평가금액÷수량, 없으면 수익금으로 역산
+      if ((s.currentPrice ?? 0) > 0) {
+        currentPrice = Math.round((s.currentPrice!) * 100) / 100;
+      } else if ((s.currentValue ?? 0) > 0) {
+        currentPrice = Math.round((s.currentValue! / quantity) * 100) / 100;
+      } else if ((s.profitAmount ?? 0) !== 0 && s.profitRate !== 0) {
+        // 수익금 = 현재가치 × (profitRate/100) → 현재가치 역산
+        const currentTotalValue = (s.profitAmount! / (s.profitRate / 100)) + s.profitAmount!;
+        currentPrice = Math.round((currentTotalValue / quantity) * 100) / 100;
+      } else {
+        currentPrice = 0;
+      }
     } else {
       quantity = 1;
-      currentPrice = s.currentValue;
+      currentPrice = (s.currentPrice ?? 0) > 0 ? s.currentPrice! : (s.currentValue ?? 0);
     }
 
     const divisor = 1 + s.profitRate / 100;
-    const averagePrice = divisor > 0 ? Math.round((currentPrice / divisor) * 100) / 100 : currentPrice;
+    const averagePrice = (s.averagePrice ?? 0) > 0
+      ? Math.round(s.averagePrice! * 100) / 100
+      : divisor > 0 ? Math.round((currentPrice / divisor) * 100) / 100 : currentPrice;
+
+    // AI 원본 currency 보존 (환산 분기용)
+    // 국내 티커가 아닌 종목(해외주식)인데 가격 >= 5000이면 원화 표시 앱으로 간주
+    // category가 잘못 domestic으로 분류된 경우도 커버하기 위해 category 대신 isDomesticTicker 기준 사용
+    const isForeignTicker = !isDomesticTicker && !!ticker;
+    const priceSeemKRW = (category === "foreign" || isForeignTicker) && currentPrice >= 5000;
+    const aiCurrencyIsKRW = s.currency === "KRW" || priceSeemKRW;
+    const originalCurrency: "KRW" | "USD" | "JPY" = (s.currency === "JPY") ? "JPY"
+      : aiCurrencyIsKRW ? "KRW"
+        : (s.currency === "USD") ? "USD"
+          : priceSeemKRW ? "KRW" : "USD";
+
+    const currency = (originalCurrency === "USD" || originalCurrency === "JPY")
+      ? originalCurrency
+      : category === "foreign" ? "USD" : "KRW";
 
     return {
       id: `stock_import_${Date.now()}_${idx}`,
@@ -100,7 +143,8 @@ function processStockResults(raw: GeminiStock[], today: string) {
       quantity,
       currentPrice,
       averagePrice,
-      currency: "KRW" as const,
+      currency: currency as "KRW" | "USD" | "JPY",
+      originalCurrency,
       category,
       purchaseDate: today,
       description: "",

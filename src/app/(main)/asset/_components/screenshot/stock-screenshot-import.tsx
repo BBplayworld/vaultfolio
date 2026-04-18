@@ -29,6 +29,7 @@ type ImportStock = Omit<Stock, "id"> & {
   section: "국내" | "해외" | "기타";
   selected: boolean;
   tickerInput?: string; // 티커 미인식 시 사용자 직접 입력값
+  originalCurrency?: "KRW" | "USD" | "JPY"; // AI 원본 인식 통화 (환산 분기용)
 };
 
 type ConflictMode = "merge" | "reset";
@@ -225,23 +226,27 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     const usdRate = exchangeRates.USD || 1380;
 
     for (const stock of selected) {
-      const { selected: _, section: __, tickerInput, ...stockData } = stock;
+      const { selected: _, section: __, tickerInput, originalCurrency: _origCurrency, ...stockData } = stock;
       const finalTicker = tickerInput?.trim() || stockData.ticker || "";
 
-      // 해외주식: 스크린샷 평가금액은 원화 기준 → USD로 변환 후 등록
       const isForeign = stock.section === "해외";
-      const currentPrice = isForeign
-        ? Math.round((stockData.currentPrice / usdRate) * 100) / 100
-        : stockData.currentPrice;
-      const averagePrice = isForeign
-        ? Math.round((stockData.averagePrice / usdRate) * 100) / 100
-        : stockData.averagePrice;
+      // AI가 원화(KRW)로 인식한 해외주식 → USD로 환산 필요
+      // USD/JPY로 인식했으면 이미 외화 값이므로 그대로 사용
+      const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
+
+      let finalCurrentPrice = stockData.currentPrice;
+      let finalAveragePrice = stockData.averagePrice;
+
+      if (aiSawKRW && usdRate > 0) {
+        finalCurrentPrice = Math.round((stockData.currentPrice / usdRate) * 10000) / 10000;
+        finalAveragePrice = Math.round((stockData.averagePrice / usdRate) * 10000) / 10000;
+      }
 
       const data: Stock = {
         ...stockData,
         ticker: finalTicker,
-        currentPrice,
-        averagePrice,
+        currentPrice: finalCurrentPrice,
+        averagePrice: finalAveragePrice,
         ...(isForeign ? { currency: "USD" as const, purchaseExchangeRate: usdRate } : {}),
       };
 
@@ -360,7 +365,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">토스증권, 도미노 외에도 종목명·수량·금액이 보이는 증권 계좌 화면</span>이면 대부분 인식됩니다.</li>
                 <li><span className="text-foreground">평균단가</span>는 손익률로 역산됩니다. 등록 후 정확한 값으로 수정해주세요.</li>
-                <li><span className="text-foreground">해외주식</span>은 원화 평가금액을 오늘 환율로 나눠 달러(USD)로 자동 환산합니다. 매입환율은 오늘 환율로, 매수일은 오늘 날짜로 설정되며 등록 후 수정 가능합니다.</li>
+                <li><span className="text-foreground">해외주식</span>은 달러(USD) 인식 시 그대로 저장하고, 원화로 인식된 경우 오늘 환율로 나눠 달러(USD)로 자동 환산합니다. 매입환율은 오늘 환율로, 매수일은 오늘 날짜로 설정되며 등록 후 수정 가능합니다.</li>
                 <li><span className="text-foreground">ISA·IRP·연금저축 ETF</span>는 위 계좌 유형을 먼저 선택하면 카테고리가 자동 적용됩니다.</li>
                 <li><span className="text-foreground">티커(종목코드)</span>가 미인식된 경우 미리보기에서 직접 입력해야 등록할 수 있습니다.</li>
               </ul>
@@ -491,7 +496,9 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         )}
                         {stock.section === "해외" && (
                           <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
-                            USD 자동 환산 (오늘 환율 {(exchangeRates.USD || 1380).toLocaleString()}원)
+                            {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
+                              ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
+                              : "USD 그대로 저장"}
                           </Badge>
                         )}
                         {conflictMode === "merge" && stock.ticker &&
@@ -503,22 +510,26 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                       </div>
 
                       {(() => {
-                        const usdRate = exchangeRates.USD || 1380;
                         const isForeign = stock.section === "해외";
-                        const displayPrice = isForeign
-                          ? Math.round((stock.currentPrice / usdRate) * 100) / 100
+                        const usdRateLocal = exchangeRates.USD || 1380;
+                        const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
+
+                        // 원화 인식 해외주식은 환산 후 표시, 달러 인식은 그대로 표시
+                        const displayCurrentPrice = aiSawKRW && usdRateLocal > 0
+                          ? Math.round((stock.currentPrice / usdRateLocal) * 10000) / 10000
                           : stock.currentPrice;
-                        const displayAvg = isForeign
-                          ? Math.round((stock.averagePrice / usdRate) * 100) / 100
+                        const displayAveragePrice = aiSawKRW && usdRateLocal > 0
+                          ? Math.round((stock.averagePrice / usdRateLocal) * 10000) / 10000
                           : stock.averagePrice;
+
                         const fmtPrice = isForeign
-                          ? `$${displayPrice.toFixed(2)}`
+                          ? `$${displayCurrentPrice.toFixed(2)}`
                           : formatCurrency(stock.currentPrice);
                         const fmtAvg = isForeign
-                          ? `$${displayAvg.toFixed(2)}`
+                          ? `$${displayAveragePrice.toFixed(2)}`
                           : formatCurrency(stock.averagePrice);
                         const fmtTotal = isForeign
-                          ? `$${(stock.quantity * displayPrice).toFixed(2)}`
+                          ? `$${(stock.quantity * displayCurrentPrice).toFixed(2)}`
                           : formatCurrency(stock.quantity * stock.currentPrice);
                         return (
                           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">

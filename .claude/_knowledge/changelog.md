@@ -6,6 +6,38 @@
 
 ## 2026-04-18
 
+### 스크린샷 가져오기 — 해외주식 원화/달러 인식 분기 환산 버그 수정
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
+- **변경:** 서버 반환 객체에 `originalCurrency` 필드 추가 (AI 원본 인식 통화 보존). 클라이언트에서 `originalCurrency`로 분기: USD/JPY 인식 시 그대로 저장, KRW(또는 미인식) 시 `/ usdRate` 환산 후 USD 저장. 미리보기 표시·Badge 문구·업로드 안내 문구도 동일 분기 적용. 프롬프트에 "화면에 원화 표시 있으면 해외종목이어도 KRW 우선" 지시 강화. 서버에서 가격 크기 보정 추가: 해외주식인데 currentPrice ≥ 1000이면 원화 표시 앱으로 간주
+- **이유:** 토스증권 등 원화 표시 앱에서 해외주식 금액이 KRW로 인식될 때 환산 없이 그대로 USD로 저장되어 550,000원→550,000달러가 되는 버그. AI가 "해외섹션 기본값=USD" 규칙에 의해 화면의 원화 표시를 무시하고 USD를 반환하는 경우가 있어 프롬프트+가격 크기 이중 방어 추가
+
+### 스크린샷 가져오기 — 해외주식 미리보기/저장 시 환율 이중 나눗셈 버그 수정
+
+- **파일:** `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
+- **변경:** 등록 로직과 미리보기 표시 로직에서 `currentPrice / usdRate`, `averagePrice / usdRate` 나눗셈 제거. 서버가 이미 USD 달러값을 반환하므로 그대로 사용.
+- **이유:** 이전 버전(currency 항상 KRW) 시절 "원화→달러 변환" 코드가 잔존하여, 서버가 `$400.62`를 반환해도 클라이언트에서 `400.62 / 1457.8 = $0.27`로 재계산하는 이중 오류 발생
+
+### 스크린샷 가져오기 — 해외주식 currentPrice/averagePrice 오계산 버그 수정
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:** 프롬프트에 `currentPrice`/`averagePrice`/`currentValue` 모두 "화면에 명시된 경우만·계산 금지" 강화. `STOCK_SCHEMA` 및 `GeminiStock` 타입에 `averagePrice` 필드 추가. `processStockResults`에서 averagePrice 직접 제공 시 역산 대신 그대로 사용
+- **이유:** 토스증권처럼 현재가/평균단가 컬럼 없이 총평가금액·수익률만 표시할 때 Gemini가 currentPrice를 추론해 엉뚱한 값($0.27 등)을 반환, 메리츠/한투는 평균단가 컬럼이 직접 표시되므로 averagePrice 직접 사용
+
+### 스크린샷 가져오기 — 해외주식 currency 버그 수정 (KRW 고정 → USD/JPY 자동 판별)
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:** `STOCK_SCHEMA`에 `currency` 필드 추가. 프롬프트에 달러·"외화" → USD, 엔 → JPY, 원화·"원화로 보기" → KRW 판별 지시 추가. `GeminiStock` 타입에 `currency?` 추가. `processStockResults`에서 Gemini 응답 currency 우선 적용, 미제공 시 `category === "foreign"` → USD, 나머지 → KRW fallback
+- **이유:** 해외주식 currency가 항상 "KRW"로 고정되어 테슬라 $400가 원화 400원으로 오인 저장되는 버그
+
+### 스크린샷 가져오기 — 현재가 컬럼만 있는 해외주식 화면 인식 개선
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:** `STOCK_SCHEMA`에 `currentPrice`, `profitAmount` 필드 추가. 프롬프트에 각 필드 추출 지시 추가. `processStockResults` 필터 조건을 `currentValue > 0` 단일 조건에서 현재가·평가금액·수익금 중 하나라도 있으면 통과하도록 완화. 현재가 계산 우선순위: `currentPrice` → `currentValue÷수량` → `profitAmount÷profitRate 역산`
+- **이유:** 평가금액 컬럼 없이 현재가+수량+평가손익만 표시하는 해외주식 화면(예: 키움 외화)에서 4~5번째 항목이 `currentValue=0`으로 인식되어 필터링 탈락하는 문제
+
+## 2026-04-18
+
 ### 자산 분포 카드 — 모바일 탭 전환
 
 - **파일:** `src/app/(main)/asset/_components/asset-distribution-cards.tsx`
