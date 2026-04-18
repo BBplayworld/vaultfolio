@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatCurrency } from "@/lib/number-utils";
-import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot } from "@/types/asset";
+import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -165,19 +165,35 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
   );
 }
 
-function useDailySnapshots(): DailyAssetSnapshot[] {
+function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
   const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
       if (!raw) return;
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
-      const currentYear = new Date().getFullYear().toString();
+      const currentMonth = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(0, 7);
       setSnapshots(
-        all.filter(s => s.date.startsWith(currentYear)).sort((a, b) => a.date.localeCompare(b.date))
+        all.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
       );
     } catch { /* 무시 */ }
-  }, []);
+  }, [snapshotVersion]);
+  return snapshots;
+}
+
+function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
+  const [snapshots, setSnapshots] = useState<MonthlyAssetSnapshot[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
+      if (!raw) return;
+      const all: MonthlyAssetSnapshot[] = JSON.parse(raw);
+      const currentYear = new Date().getFullYear().toString();
+      setSnapshots(
+        all.filter(s => s.month.startsWith(currentYear)).sort((a, b) => a.month.localeCompare(b.month))
+      );
+    } catch { /* 무시 */ }
+  }, [snapshotVersion]);
   return snapshots;
 }
 
@@ -201,11 +217,12 @@ function DiffBadge({ diff }: { diff: number }) {
 }
 
 export function YearlyNetAssetChart() {
-  const { assetData, getAssetSummary, deleteYearlyNetAsset } = useAssetData();
+  const { assetData, getAssetSummary, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
   const summary = getAssetSummary();
-  const dailySnapshots = useDailySnapshots();
+  const dailySnapshots = useDailySnapshots(snapshotVersion);
+  const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
 
   const handleDelete = (year: number) => {
     if (window.confirm("정말 삭제하시겠습니까?")) {
@@ -235,14 +252,11 @@ export function YearlyNetAssetChart() {
   const last5YearsData = allYearlyData.slice(-5);
 
   // 월별
-  const monthlyData = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, "0");
-    const prefix = `${currentYear}-${month}`;
-    const monthSnaps = dailySnapshots.filter(s => s.date.startsWith(prefix));
-    if (monthSnaps.length === 0) return null;
-    const last = monthSnaps[monthSnaps.length - 1];
-    return { month: `${i + 1}월`, netAsset: last.netAsset, financialAsset: last.financialAsset };
-  }).filter(Boolean) as { month: string; netAsset: number; financialAsset: number }[];
+  const monthlyData = monthlySnapshots.map(s => ({
+    month: `${parseInt(s.month.split("-")[1])}월`,
+    netAsset: s.netAsset,
+    financialAsset: s.financialAsset,
+  }));
 
   // 일별
   const dailyChartData = dailySnapshots.map(s => ({
@@ -432,7 +446,7 @@ export function YearlyNetAssetChart() {
               ) : (
                 <div className="rounded-lg border overflow-hidden">
                   {/* 헤더 */}
-                  <div className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-foreground border-b">
+                  <div className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
                     <span>월</span>
                     <span>순자산</span>
                     <span>금융자산</span>
@@ -440,20 +454,20 @@ export function YearlyNetAssetChart() {
                   </div>
                   {/* 행 */}
                   <div className="divide-y">
-                    {monthlyData.map((row, idx) => {
-                      const prev = monthlyData[idx - 1];
+                    {monthlyData.reverse().map((row, idx) => {
+                      const prev = monthlyData[idx + 1];
                       const diff = prev ? row.netAsset - prev.netAsset : null;
                       return (
                         <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
                           <span className="text-xs font-semibold">{row.month}</span>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
+                            <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
                               {formatShortCurrency(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
+                            <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
                               {formatShortCurrency(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
@@ -481,7 +495,7 @@ export function YearlyNetAssetChart() {
               ) : (
                 <div className="rounded-lg border overflow-hidden">
                   {/* 헤더 */}
-                  <div className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-foreground border-b">
+                  <div className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
                     <span>날짜</span>
                     <span>순자산</span>
                     <span>금융자산</span>
@@ -496,13 +510,13 @@ export function YearlyNetAssetChart() {
                         <div key={row.date} className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
                           <span className="text-xs font-semibold tabular-nums">{row.date}</span>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
+                            <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
                               {formatShortCurrency(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
+                            <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
                               {formatShortCurrency(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />

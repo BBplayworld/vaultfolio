@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-04-16
+> 마지막 업데이트: 2026-04-18
 
 ## 내부 API 라우트
 
@@ -143,20 +143,24 @@ Body: FormData {
 프리픽스:
   v71P — PIN 있음 (서버 공유 가능)
   v71N — PIN 없음 (서버 거부, 로컬만 사용)
+  v72Z — Zero-Knowledge (PIN + localKey 조합)
 
 생성:
-  generateShareToken(data, rates?, pin?, localKey?): string
-  → JSON 직렬화 → LZ-string 압축 → XOR 암호화(PIN) → URI safe 인코딩
+  generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
+  → packV7(data, rates, snapshots) → LZ-string 압축 → XOR 암호화(PIN) → URI safe 인코딩
+  snapshots: AssetSnapshots — 일별·월별 스냅샷 포함 (선택). packV7 섹션[8]에 저장.
 
 파싱:
   parseShareToken(token, pin?, localKey?): ParseResult
   → 역 변환 → "OK|" 접두사로 PIN 검증
+  ParseResult = { data, rates?, snapshots? } | { pinRequired: true } | null
 
 인코딩 최적화:
   숫자: base36 인코딩 + K/M 접미사
   날짜: 2020-01-01 기준 일수 오프셋
+  월: 2020-01 기준 경과 월수 base36
 
-하위 호환: v6.x, v7.0 토큰 파싱 지원
+하위 호환: v6.x, v7.0 토큰 파싱 지원 (snapshots=undefined 반환)
 ```
 
 ---
@@ -184,7 +188,18 @@ interface ICacheStorage {
 
   // Rate Limit
   checkRateLimit(ip: string): Promise<boolean>
+
+  // Gemini 사용량 (스크린샷 파싱 한도 관리)
+  getGeminiDailyCount(date: string): Promise<number>
+  incrementGeminiDailyCount(date: string): Promise<void>
+  checkGeminiDailyLimit(date: string, limit: number): Promise<boolean>
+  // FileCacheStorage: finance-cache.json의 GEMINI_COUNT.{count, date} 필드
+  // UpstashCacheStorage: Redis 키 gemini:daily:YYYY-MM-DD (자정 만료)
 }
+
+// 유효 캐시 날짜 계산 (시장 마감 시간 기준)
+getEffectiveDateStr(type: "exchange" | "stock-us" | "stock-kr"): string
+// KST 기준: 해외주식 07:00, 국내주식 16:00, 환율 09:00 이전이면 전일 날짜 반환
 
 // 팩토리
 getCacheStorage(): ICacheStorage

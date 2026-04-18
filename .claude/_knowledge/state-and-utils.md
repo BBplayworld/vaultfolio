@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-04-06
+> 마지막 업데이트: 2026-04-18
 
 ## AssetDataContext
 
@@ -13,6 +13,7 @@
 assetData: AssetData          // 모든 자산 데이터 (실시간)
 isDataLoaded: boolean         // 초기 localStorage 로드 완료 여부
 isSharePending: boolean       // 공유 토큰 PIN 인증 대기 중
+snapshotVersion: number       // saveSnapshots 호출/공유 로드 시 증가 → 차트 훅 재읽기 트리거
 exchangeRates: {
   USD: number                 // 기본값: 1430
   JPY: number                 // 기본값: 930 (100엔 기준)
@@ -28,7 +29,8 @@ updateExchangeRate(currency: "USD" | "JPY", rate: number, date?: string): void
 
 // 전체 데이터
 refreshData(): void           // localStorage에서 재로드
-initAndSync(data): void       // 초기화 + 환율·주식 API 동기화
+initAndSync(data: AssetData, opts?: { skipSnapshots?: boolean }): Promise<void>
+// opts.skipSnapshots: true 시 saveSnapshots 생략 (공유 로드 후 기존 스냅샷 보존용)
 saveData(data: AssetData): boolean
 
 // 자산 CRUD (모두 boolean 반환)
@@ -37,6 +39,7 @@ updateRealEstate(id: string, partial: Partial<RealEstate>): boolean
 deleteRealEstate(id: string): boolean
 
 addStock(data: Stock): boolean
+addStockRaw(data: Stock): boolean  // 스크린샷 가져오기 전용: ticker 빈 값 허용 (superRefine 우회)
 updateStock(id: string, partial: Partial<Stock>): boolean
 deleteStock(id: string): boolean
 
@@ -123,9 +126,10 @@ clearAssetData(): boolean
 
 generateShareToken(
   data: AssetData,
-  rates?: ExchangeRates,
+  rates?: { USD: number; JPY: number },
   pin?: string,
-  localKey?: string
+  localKey?: string,
+  snapshots?: AssetSnapshots
 ): string
 
 parseShareToken(
@@ -133,6 +137,9 @@ parseShareToken(
   pin?: string,
   localKey?: string
 ): ParseResult
+// ParseResult = { data, rates?, snapshots? } | { pinRequired: true } | null
+
+saveAssetDataRaw(data: AssetData): boolean  // superRefine 우회 저장 (스크린샷 경로)
 ```
 
 ### finance-service.ts (`src/lib/finance-service.ts`)

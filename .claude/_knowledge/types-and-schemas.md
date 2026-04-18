@@ -1,6 +1,6 @@
 # 타입 & 스키마 참조
 
-> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-04-06
+> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-04-18
 
 ## 자산 5종 Zod 스키마 요약
 
@@ -164,6 +164,34 @@ interface AssetSummary {
   loanCount: number
 }
 ```
+
+## 스냅샷 타입
+
+```typescript
+// 일별 자산 스냅샷 (이번 달 한 달치만 저장)
+interface DailyAssetSnapshot {
+  date: string;          // YYYY-MM-DD
+  netAsset: number;
+  financialAsset: number;
+}
+
+// 월별 자산 스냅샷 (올해 12개월치만 저장)
+interface MonthlyAssetSnapshot {
+  month: string;          // YYYY-MM
+  netAsset: number;
+  financialAsset: number;
+}
+
+// 공유 토큰에 포함되는 스냅샷 묶음
+interface AssetSnapshots {
+  daily: DailyAssetSnapshot[];
+  monthly: MonthlyAssetSnapshot[];
+}
+```
+
+**localStorage 키:**
+- `secretasset_daily_snapshots` — 이번 달 일별 (월 바뀌면 삭제)
+- `secretasset_monthly_snapshots` — 올해 12개월치 월별
 
 ## ID 생성 패턴
 

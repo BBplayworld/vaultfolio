@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot } from "@/types/asset";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
 import { STORAGE_KEY_EXCHANGE_SYNC_DATE, normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ interface AssetDataContextType {
   assetData: AssetData;
   isDataLoaded: boolean;
   isSharePending: boolean;
+  snapshotVersion: number;
   exchangeRates: { USD: number; JPY: number };
   exchangeRateDate: string;
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
@@ -127,6 +128,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [exchangeRateDate, setExchangeRateDate] = useState<string>("");
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [snapshotVersion, setSnapshotVersion] = useState(0);
 
   // PIN 인증 상태
   const [isSharePending, setIsSharePending] = useState(false);
@@ -246,9 +248,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     notify.info(MSG.STOCK_SYNC_COMPLETE);
   }, []);
 
-  // 오늘자 일별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
-  const saveDailySnapshot = useCallback((latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
-    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  // 오늘자 일별·월별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
+  // 일별: 이번 달 한 달치만 유지, 월별: 올해 12개월치 유지
+  const saveSnapshots = useCallback((latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
+    const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = now.toISOString().split("T")[0];
+    const currentMonth = todayStr.substring(0, 7); // YYYY-MM
+    const currentYear = currentMonth.substring(0, 4); // YYYY
+
     const getMultiplier = (currency?: string) => {
       if (currency === "USD") return latestRates.USD;
       if (currency === "JPY") return latestRates.JPY / 100;
@@ -263,21 +270,30 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const financialAsset = stockValue + cryptoValue + cashValue;
     const netAsset = realEstateValue + financialAsset - loanBalance - tenantDepositTotal;
 
-    const snapshot: DailyAssetSnapshot = { date: todayStr, netAsset, financialAsset };
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
-      const all: DailyAssetSnapshot[] = raw ? JSON.parse(raw) : [];
-      const currentYear = new Date().getFullYear().toString();
-      const filtered = all.filter(s => s.date.startsWith(currentYear) && s.date !== todayStr);
-      filtered.push(snapshot);
-      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filtered));
+      // ── 일별: 이번 달만 유지 ──
+      const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      const allDaily: DailyAssetSnapshot[] = rawDaily ? JSON.parse(rawDaily) : [];
+      const filteredDaily = allDaily.filter(s => s.date.startsWith(currentMonth) && s.date !== todayStr);
+      filteredDaily.push({ date: todayStr, netAsset, financialAsset });
+      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
+
+      // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
+      const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
+      const allMonthly: MonthlyAssetSnapshot[] = rawMonthly ? JSON.parse(rawMonthly) : [];
+      const filteredMonthly = allMonthly.filter(s => s.month.startsWith(currentYear) && s.month !== currentMonth);
+      filteredMonthly.push({ month: currentMonth, netAsset, financialAsset });
+      filteredMonthly.sort((a, b) => a.month.localeCompare(b.month));
+      localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(filteredMonthly));
+      setSnapshotVersion(v => v + 1);
     } catch { /* 저장 실패 무시 */ }
   }, []);
 
   // 모든 진입 경로 공통 헬퍼
   // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷 저장
   // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
-  const initAndSync = useCallback(async (data: AssetData) => {
+  // skipSnapshots: true 시 saveSnapshots 호출 생략 (공유 데이터 로드 후 기존 스냅샷 보존용)
+  const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
     initAssetData(data);
     setIsDataLoaded(true);
     const hasAssets =
@@ -290,22 +306,30 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
     await syncTodayStockPrices(data);
-    // 갱신 완료 후 최신 state로 스냅샷 저장
-    setAssetData(latest => {
-      setExchangeRatesState(latestRates => {
-        saveDailySnapshot(latest, latestRates);
-        return latestRates;
+    if (!skipSnapshots) {
+      setAssetData(latest => {
+        setExchangeRatesState(latestRates => {
+          saveSnapshots(latest, latestRates);
+          return latestRates;
+        });
+        return latest;
       });
-      return latest;
-    });
-  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveDailySnapshot]);
+    }
+  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
-  const applySharedData = useCallback((data: AssetData) => {
+  const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots) => {
     saveAssetData(data);
+    if (snapshots) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(snapshots.daily));
+        localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(snapshots.monthly));
+      } catch { /* 무시 */ }
+    }
     notify.success(MSG.SHARED_DATA_LOADED);
-    void initAndSync(data);
+    setSnapshotVersion(v => v + 1);
+    void initAndSync(data, { skipSnapshots: true });
   }, [initAndSync]);
 
   // ─── [이벤트 핸들러] ────────────────────────────────────────────────────────
@@ -331,7 +355,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
 
     if (result && "data" in result) {
-      applySharedData(result.data);
+      applySharedData(result.data, result.snapshots);
       setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
@@ -361,7 +385,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
-      applySharedData(result.data);
+      applySharedData(result.data, result.snapshots);
       setIsSharePending(false);
       setShowPinPrompt(false);
       setPendingToken(null);
@@ -409,6 +433,27 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);
     if (savedDate) setExchangeRateDate(savedDate);
+
+    // 원타임 마이그레이션: 기존 dailySnapshots에서 monthlySnapshots 초기 생성
+    if (!localStorage.getItem(STORAGE_KEYS.monthlySnapshots)) {
+      try {
+        const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+        if (rawDaily) {
+          const allDaily: DailyAssetSnapshot[] = JSON.parse(rawDaily);
+          const currentYear = new Date().getFullYear().toString();
+          const monthMap = new Map<string, DailyAssetSnapshot>();
+          allDaily.filter(s => s.date.startsWith(currentYear)).forEach(s => {
+            const month = s.date.substring(0, 7);
+            const existing = monthMap.get(month);
+            if (!existing || s.date > existing.date) monthMap.set(month, s);
+          });
+          const monthly: MonthlyAssetSnapshot[] = Array.from(monthMap.entries()).map(([month, snap]) => ({
+            month, netAsset: snap.netAsset, financialAsset: snap.financialAsset,
+          }));
+          localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthly));
+        }
+      } catch { /* 마이그레이션 실패 무시 */ }
+    }
 
     window.addEventListener("hashchange", handleHashChange);
 
@@ -719,6 +764,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         assetData,
         isDataLoaded,
         isSharePending,
+        snapshotVersion,
         exchangeRates,
         exchangeRateDate,
         updateExchangeRate,

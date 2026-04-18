@@ -38,7 +38,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
-import { exportAssetData, importAssetData, clearAssetData, generateShareToken } from "@/lib/asset-storage";
+import { exportAssetData, importAssetData, clearAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 
@@ -80,6 +81,19 @@ export function NavUser({
     }
   };
 
+  const collectSnapshots = (): AssetSnapshots => {
+    try {
+      const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
+      return {
+        daily: rawDaily ? JSON.parse(rawDaily) : [],
+        monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
+      };
+    } catch {
+      return { daily: [], monthly: [] };
+    }
+  };
+
   const handleShare = () => {
     setSharePin("");
     setShowShareDialog(true);
@@ -97,7 +111,7 @@ export function NavUser({
 
     const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey);
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots());
     const ownerId = localStorage.getItem("secretasset_share_owner_id") ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -146,7 +160,7 @@ export function NavUser({
         return;
       }
 
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin);
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots());
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
       await navigator.clipboard.writeText(shareUrl);

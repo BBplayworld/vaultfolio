@@ -6,6 +6,20 @@
 
 ## 2026-04-18
 
+### KB 및 CLAUDE.md 최신화
+
+- **파일:** `.claude/_knowledge/architecture.md`, `.claude/_knowledge/api-reference.md`, `.claude/_knowledge/state-and-utils.md`, `CLAUDE.md`
+- **변경:** (1) `architecture.md` — `_components` 디렉토리 구조 `input/`, `screenshot/` 분리 반영, 스크린샷 기능 설명 4종 지원으로 확장, ticker-map 규모 업데이트. (2) `api-reference.md` — `ICacheStorage`에 Gemini 한도 관련 메서드 3개 추가, `getEffectiveDateStr` 함수 추가. (3) `state-and-utils.md` — `initAndSync` 시그니처 수정(opts 파라미터), `addStockRaw` 추가, `saveAssetDataRaw` 추가. (4) `CLAUDE.md` — Key Files 테이블 경로 수정(`screenshot/` 하위), `v72Z` 토큰 프리픽스, `use-gemini-usage.ts` 추가.
+- **이유:** 04-17~18 대규모 기능 추가(스크린샷 4종 확장, 스냅샷, 캐시 개선) 이후 KB가 실제 코드와 불일치 상태였음
+
+## 2026-04-18
+
+### 공유 URL 로드 후 월별 스냅샷 데이터 유지 버그 수정
+
+- **파일:** `src/contexts/asset-data-context.tsx`, `src/app/(main)/asset/_components/yearly-net-asset-chart.tsx`, `src/lib/asset-storage.ts`
+- **변경:** (1) `packSnapshots` 내부 구분자를 `^` → `;`로 변경. `unpackSnapshots`에서 `;`/`^` 모두 허용(구 버전 호환). (2) `initAndSync`에 `skipSnapshots` 옵션 추가. `applySharedData`에서 `skipSnapshots: true`로 호출. (3) `snapshotVersion` state 추가 — `saveSnapshots` 완료 및 공유 데이터 로드 시 증가. 차트 훅이 `snapshotVersion`을 의존성으로 받아 localStorage 재읽기.
+- **이유:** (핵심) `packSnapshots`가 `^`를 구분자로 사용해 `packV7`의 섹션 구분자와 충돌 → `unpackV7`에서 `parts[8]`이 daily만, monthly는 `parts[9]`로 누락되어 월별 항상 빈 배열. (부수) 공유 로드 후 `initAndSync` → `saveSnapshots`가 이번 달 1개로 덮어쓰고, 차트 훅이 마운트 1회만 읽어 반영 안 됨
+
 ### 스크린샷 가져오기 — 해외주식 원화/달러 인식 분기 환산 버그 수정
 
 - **파일:** `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
@@ -37,6 +51,17 @@
 - **이유:** 평가금액 컬럼 없이 현재가+수량+평가손익만 표시하는 해외주식 화면(예: 키움 외화)에서 4~5번째 항목이 `currentValue=0`으로 인식되어 필터링 탈락하는 문제
 
 ## 2026-04-18
+
+### 일별/월별 스냅샷 정책 개선 및 공유 URL 포함
+
+- **파일:** `src/types/asset.ts`, `src/lib/asset-storage.ts`, `src/contexts/asset-data-context.tsx`, `src/app/(main)/asset/_components/yearly-net-asset-chart.tsx`, `src/app/(main)/asset/_components/sidebar/nav-user.tsx`
+- **변경:**
+  1. 일별 스냅샷: 이번 달 한 달치만 저장 (월 바뀌면 이전 달 자동 삭제)
+  2. 월별 스냅샷 신규 추가 (`secretasset_monthly_snapshots`): 올해 12개월치 저장, `saveSnapshots` 호출 시 이번 달 업서트
+  3. 공유 토큰에 스냅샷 포함: `generateShareToken`에 `snapshots?` 파라미터 추가, `packV7` 섹션[8]에 직렬화. `parseShareToken` 반환 타입에 `snapshots?` 포함
+  4. 기존 `dailySnapshots`에서 `monthlySnapshots` 원타임 마이그레이션 (마운트 시 1회)
+  5. 차트 월별 탭: `dailySnapshots`에서 월말 값 추출하던 방식 → `monthlySnapshots` 직접 읽기로 교체
+- **이유:** 일별 스냅샷 보존 범위가 올해 전체여서 1월 데이터가 연말까지 누적. 이달 한 달로 줄이되 월별 이력은 별도 보관. 공유 링크 수신자도 차트 이력을 볼 수 있도록 토큰에 스냅샷 포함
 
 ### 자산 분포 카드 — 모바일 탭 전환
 

@@ -139,11 +139,24 @@ export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
 
-// 일별 자산 스냅샷 (올해 월별/일별 차트용)
+// 일별 자산 스냅샷 (이번 달 일별 차트용)
 export interface DailyAssetSnapshot {
   date: string;          // YYYY-MM-DD
   netAsset: number;
   financialAsset: number; // 금융자산 총액 (주식+코인+현금)
+}
+
+// 월별 자산 스냅샷 (올해 12개월치 차트용)
+export interface MonthlyAssetSnapshot {
+  month: string;          // YYYY-MM
+  netAsset: number;
+  financialAsset: number;
+}
+
+// 공유 토큰에 포함되는 스냅샷 묶음
+export interface AssetSnapshots {
+  daily: DailyAssetSnapshot[];
+  monthly: MonthlyAssetSnapshot[];
 }
 
 // 자산 요약 타입

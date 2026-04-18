@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import { AssetData, assetDataSchema } from "@/types/asset";
+import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import LZString from "lz-string";
 
 // 읽기 전용 완화 스키마 — superRefine 없이 ticker 빈 값 허용 (스크린샷 가져오기 경로 대응)
@@ -30,6 +30,7 @@ export const STORAGE_KEYS = {
   exchangeRate: "exchange-rate-usd-krw",
   defaultExchangeRate: 1380,
   dailySnapshots: "secretasset_daily_snapshots",
+  monthlySnapshots: "secretasset_monthly_snapshots",
 } as const;
 
 // ─── 기본 자산 데이터 ───────────────────────────────────────────────────────
@@ -250,6 +251,44 @@ const uDate = (v?: string) => {
   return `${year}-${month}-${day}`;
 };
 
+// 월 패턴 압축 ("YYYY-MM" ↔ 2020-01 기준 경과 월수 base36)
+const pMonth = (m: string) => {
+  if (!m) return "";
+  const [y, mo] = m.split("-").map(Number);
+  return ((y - 2020) * 12 + (mo - 1)).toString(36);
+};
+const uMonth = (v: string) => {
+  if (!v) return "";
+  const total = parseInt(v, 36);
+  const year = 2020 + Math.floor(total / 12);
+  const month = String((total % 12) + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+
+// 스냅샷 직렬화: daily섹션;monthly섹션 (packV7의 ^ 구분자와 충돌 방지)
+const packSnapshots = (s: AssetSnapshots): string => {
+  const daily = s.daily
+    .map(d => `${pDate(d.date)}|${pNum(d.netAsset)}|${pNum(d.financialAsset)}`)
+    .join("~");
+  const monthly = s.monthly
+    .map(m => `${pMonth(m.month)}|${pNum(m.netAsset)}|${pNum(m.financialAsset)}`)
+    .join("~");
+  return `${daily};${monthly}`;
+};
+
+const unpackSnapshots = (raw: string): AssetSnapshots => {
+  // 구 버전 호환: ^ 구분자로 저장된 토큰도 처리
+  const sep = raw.includes(";") ? ";" : "^";
+  const [dailyRaw, monthlyRaw] = raw.split(sep);
+  const daily: DailyAssetSnapshot[] = (dailyRaw ? dailyRaw.split("~") : [])
+    .filter(Boolean)
+    .map(r => { const f = r.split("|"); return { date: uDate(f[0]), netAsset: uNum(f[1]), financialAsset: uNum(f[2]) }; });
+  const monthly: MonthlyAssetSnapshot[] = (monthlyRaw ? monthlyRaw.split("~") : [])
+    .filter(Boolean)
+    .map(r => { const f = r.split("|"); return { month: uMonth(f[0]), netAsset: uNum(f[1]), financialAsset: uNum(f[2]) }; });
+  return { daily, monthly };
+};
+
 // 텍스트 정제
 const sTxt = (s?: string) => {
   if (!s) return "";
@@ -262,7 +301,7 @@ const uTxt = (s?: any) => {
   return s || "";
 };
 
-function packV7(data: AssetData, rates?: { USD: number; JPY: number }): string {
+function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots?: AssetSnapshots): string {
   const row = (arr: any[]) => {
     while (arr.length > 0 && (arr[arr.length - 1] === "" || arr[arr.length - 1] === 0 || arr[arr.length - 1] === undefined || arr[arr.length - 1] === null)) arr.pop();
     return arr.join("|");
@@ -282,13 +321,14 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }): string {
     }) || []),
     section(data.yearlyNetAssets.map(i => [i.year, pNum(i.netAsset), sTxt(i.note)])),
     pDate(data.lastUpdated.split('T')[0]),
-    rates ? `${pNum(rates.USD)}|${pNum(rates.JPY)}` : ""
+    rates ? `${pNum(rates.USD)}|${pNum(rates.JPY)}` : "",
+    snapshots ? packSnapshots(snapshots) : ""
   ];
 
   return parts.join("^");
 }
 
-function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number } } {
+function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots } {
   const parts = raw.split("^");
   const gid = () => Math.random().toString(36).substring(2, 11);
   const getIdx = (idx: any, list: readonly string[]) => list[parseInt(idx)] || list[0];
@@ -367,12 +407,17 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     rates = { USD: uNum(r[0]), JPY: uNum(r[1]) };
   }
 
-  return { data, rates };
+  let snapshots: AssetSnapshots | undefined;
+  if (parts[8]) {
+    snapshots = unpackSnapshots(parts[8]);
+  }
+
+  return { data, rates, snapshots };
 }
 
-export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string): string {
+export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots): string {
   try {
-    const dsv = "OK|" + packV7(data, rates); // PIN 검증 및 무결성 확인용 접두사
+    const dsv = "OK|" + packV7(data, rates, snapshots); // PIN 검증 및 무결성 확인용 접두사
     const compressed = LZString.compressToEncodedURIComponent(dsv);
 
     if (pin && pin.length === 4) {
@@ -390,7 +435,7 @@ export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: 
   }
 }
 
-export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number } } | { pinRequired: true } | null;
+export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots } | { pinRequired: true } | null;
 
 export function parseShareToken(token: string, pin?: string, localKey?: string): ParseResult {
   if (!token) return null;
@@ -409,7 +454,8 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
       const result = unpackV7(dsv.substring(3));
       return {
         data: assetDataSchema.parse(result.data),
-        rates: result.rates
+        rates: result.rates,
+        snapshots: result.snapshots,
       };
     }
 
@@ -429,7 +475,8 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
       const result = unpackV7(dsv.substring(3));
       return {
         data: assetDataSchema.parse(result.data),
-        rates: result.rates
+        rates: result.rates,
+        snapshots: result.snapshots,
       };
     }
 
@@ -447,13 +494,13 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         dsv = decrypted.substring(3);
       }
       const result = unpackV7(dsv);
-      return { data: assetDataSchema.parse(result.data), rates: result.rates };
+      return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 
     if (decompressed && decompressed.startsWith("vlt-fl-v7.0:")) {
       const dsv = decompressed.substring("vlt-fl-v7.0:".length);
       const result = unpackV7(dsv);
-      return { data: assetDataSchema.parse(result.data), rates: result.rates };
+      return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 
     // V6.x 하위 호환 (Base64 + XOR)
@@ -465,7 +512,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY_V6.charCodeAt(i % SHARED_KEY_V6.length))
       ).join("");
       const result = unpackV7(deob);
-      return { data: assetDataSchema.parse(result.data), rates: result.rates };
+      return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 
     return null;

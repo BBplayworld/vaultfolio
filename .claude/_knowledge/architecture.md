@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-04-16
+> 마지막 업데이트: 2026-04-18
 
 ## 앱 개요
 
@@ -33,9 +33,9 @@ src/
 │   │   ├── page.tsx          # 대시보드 메인 페이지
 │   │   ├── layout.tsx        # SidebarInset 레이아웃 (max-w-screen-3xl=1680px)
 │   │   └── _components/      # 자산 관련 모든 컴포넌트
-│   │       ├── sidebar/                    # 사이드바 (app-sidebar, nav-main, theme-switcher 등)
-│   │       ├── *-input.tsx                 # 자산 유형별 입력 폼 (5종)
-│   │       ├── stock-screenshot-import.tsx # 스크린샷으로 주식 일괄 가져오기
+│   │       ├── sidebar/            # 사이드바 (app-sidebar, nav-main, theme-switcher 등)
+│   │       ├── input/              # 자산 유형별 입력 폼 (5종: stock, crypto, cash, loan, real-estate)
+│   │       ├── screenshot/         # 스크린샷 가져오기 다이얼로그 (stock, crypto, cash, loan)
 │   │       ├── asset-overview-cards.tsx
 │   │       ├── asset-distribution-cards.tsx
 │   │       ├── yearly-net-asset-chart.tsx
@@ -120,31 +120,36 @@ GEMINI_API_KEY    # Google Gemini AI API 키 (스크린샷 파싱용)
 
 ## 스크린샷 가져오기 기능
 
-**파일:** `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/stock-screenshot-import.tsx`
+**파일:** `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/screenshot/`
 
-토스증권·도미노 앱 보유종목 화면 스크린샷을 Gemini AI로 분석해 주식 데이터를 자동 추출.
+증권·거래소·은행 앱 스크린샷을 Gemini AI로 분석. **주식·암호화폐·현금성자산·대출** 4종 지원.
 
-### 플로우 (3단계)
+- **stock**: `screenshot/stock-screenshot-import.tsx` — 3단계 플로우 (upload → conflict → preview)
+- **crypto**: `screenshot/crypto-screenshot-import.tsx` — conflict 없이 직접 preview
+- **cash**: `screenshot/cash-screenshot-import.tsx` — conflict 없이 append
+- **loan**: `screenshot/loan-screenshot-import.tsx` — conflict 없이 append
+
+### 주식 스크린샷 3단계 플로우
 
 ```
-1. upload  — 이미지 업로드 (드래그앤드롭 / 클릭)
-              → POST /api/parse-screenshot → Gemini gemini-2.5-flash-lite 분석
-2. conflict — 기존 주식과 ticker 중복 탐지 시 처리 방식 선택
-              · 덮어쓰기: 중복 ticker를 스크린샷 기준으로 교체, 나머지 유지
+1. upload   — 이미지 업로드 → POST /api/parse-screenshot?assetType=stock → Gemini 분석
+2. conflict — (ticker, category) 복합 키 기준 중복 탐지 시 처리 방식 선택
+              · 덮어쓰기: 중복 ticker·category를 스크린샷 기준으로 교체, 나머지 유지
               · 초기화: 기존 주식 전부 삭제 후 스크린샷으로 대체
-3. preview — 종목 확인·선택·카테고리 수정 후 등록
+3. preview  — 종목 확인·선택·카테고리 수정 후 등록
 ```
 
 ### 주요 동작
-- ticker 미인식 시 `ticker-map.ts`의 종목명→티커 fallback 매핑 사용
-- Gemini가 `"null"` 문자열 반환 시 명시적 필터링 → 티커 미확인 처리
-- 해외주식: 원화 평가금액 → 현재 USD 환율로 자동 변환
-- 소수점 수량 지원 (도미노 앱: `310.536919주` 등)
-- 수량 미표시 항목(내 기타 투자 등) → `quantity=1` 보정
-- `"기타"` 섹션(내 기타 투자) → category `"irp"` 초기 설정 (미리보기에서 변경 가능)
+- `assetType` 파라미터로 타입별 프롬프트·스키마·후처리 분기
+- ticker 미인식 시 `ticker-map.ts` `lookupTicker()` fallback (3단계: 정확→prefix→suffix 매칭)
+- 해외주식: `originalCurrency` 필드로 KRW/USD 분기 → KRW면 `/ usdRate` 환산 후 USD 저장
+- 수량 미표시 → `quantity=1`, `currentPrice=currentValue` 보정
+- `"기타"` 섹션 → category `"irp"` 초기 설정 (미리보기에서 변경 가능)
+- 주식 탭 카테고리 → `activeTab` prop으로 국내 카테고리 우선 적용
 - 다이얼로그: 취소 버튼 외 ESC·바깥 클릭으로 닫히지 않음
+- 한도: 서버 200회/일 + 기기별 10회/일 이중 제한 (`useGeminiUsage` hook)
 
 ### ticker-map.ts
-- 국내 ETF 약 80개, 국내 주식 약 70개, 해외 주식·ETF 약 300개 매핑
-- `lookupTicker(name)` — 정규화(소문자·특수문자 제거) 후 매핑 조회
+- 국내 ETF 약 80개, 국내 주식 약 214개, 해외 주식·ETF 약 400개 매핑
+- `lookupTicker(name)` — 정규화(소문자·특수문자 제거) 후 3단계 매칭
 - 브랜드: TIGER/KODEX/ACE/HANARO/SOL/RISE/KBSTAR/KINDEX/ARIRANG/TIMEFOLIO/BIG
