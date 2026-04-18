@@ -33,14 +33,21 @@ type ImportStock = Omit<Stock, "id"> & {
 
 type ConflictMode = "merge" | "reset";
 
+// stock-input 탭에서 국내 카테고리로 매핑 가능한 값
+const DOMESTIC_CATEGORIES = new Set(["domestic", "isa", "irp", "pension", "unlisted"]);
+
 const CATEGORY_OPTIONS = stockCategories.map((c) => ({ value: c.value, label: c.label }));
+
+const makeConflictKey = (ticker: string, category: string, isForeign: boolean) =>
+  isForeign ? ticker : `${ticker}:${category}`;
 
 interface StockScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  activeTab?: string; // stock-input의 현재 활성 카테고리 탭
 }
 
-export function StockScreenshotImport({ open: externalOpen, onOpenChange }: StockScreenshotImportProps = {}) {
+export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab }: StockScreenshotImportProps = {}) {
   const { saveData, refreshData, assetData, exchangeRates } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -105,20 +112,29 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange }: Stoc
         return;
       }
 
-      const importStocks: ImportStock[] = data.stocks.map(
-        (s: Stock & { section: "국내" | "해외" | "기타" }) => ({
-          ...s,
-          selected: true,
-        })
+      // 기존 보유 종목 복합 키 Set: 해외는 ticker 단독, 국내/기타는 ticker:category
+      const existingKeys = new Set(
+        assetData.stocks
+          .map((s) => s.ticker ? makeConflictKey(s.ticker, s.category, s.category === "foreign") : null)
+          .filter(Boolean) as string[]
       );
 
-      // 기존 주식과 ticker 기준 중복 탐지
-      const existingTickers = new Set(
-        assetData.stocks.map((s) => s.ticker).filter(Boolean)
+      const importStocks: ImportStock[] = data.stocks.map(
+        (s: Stock & { section: "국내" | "해외" | "기타" }) => {
+          // 해외 섹션은 항상 foreign 카테고리 고정
+          if (s.section === "해외") return { ...s, category: "foreign" as const, selected: true };
+          // 국내/기타: 탭이 국내 카테고리 중 하나면 해당 카테고리 우선 적용, 아니면 AI 탐지 카테고리 유지
+          const resolvedCategory = activeTab && DOMESTIC_CATEGORIES.has(activeTab) ? activeTab as Stock["category"] : s.category;
+          return { ...s, category: resolvedCategory, selected: true };
+        }
       );
-      const duplicates = importStocks.filter(
-        (s) => s.ticker && existingTickers.has(s.ticker)
-      );
+
+      // 중복 탐지: importStock의 (ticker, category) 복합 키가 기존에 존재하는 경우만 중복
+      const duplicates = importStocks.filter((s) => {
+        const ticker = s.tickerInput?.trim() || s.ticker;
+        if (!ticker) return false;
+        return existingKeys.has(makeConflictKey(ticker, s.category, s.section === "해외"));
+      });
 
       setStocks(importStocks);
       geminiUsage.increment("stock");
@@ -187,17 +203,23 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange }: Stoc
     setIsRegistering(true);
 
     // 1) 완성된 stocks 배열을 순수 계산으로 만든다 (React state 비동기 문제 방지)
-    // merge: 스크린샷에 없는 기존 주식만 유지, 중복 ticker는 스크린샷으로 덮어쓰기
+    // merge: 해외주식은 ticker 단독, 나머지는 (ticker, category) 복합 키 기준 교체, 나머지 유지
     // reset: 기존 주식 전부 삭제
-    const importedTickers = new Set(
+    const importedKeys = new Set(
       selected
-        .map((s) => s.tickerInput?.trim() || s.ticker)
+        .map((s) => {
+          const ticker = s.tickerInput?.trim() || s.ticker;
+          return ticker ? makeConflictKey(ticker, s.category, s.section === "해외") : null;
+        })
         .filter(Boolean) as string[]
     );
     const mutableStocks: Stock[] =
       conflictMode === "reset"
         ? []
-        : assetData.stocks.filter((s) => !s.ticker || !importedTickers.has(s.ticker));
+        : assetData.stocks.filter((s) => {
+          if (!s.ticker) return true;
+          return !importedKeys.has(makeConflictKey(s.ticker, s.category, s.category === "foreign"));
+        });
     let hasTickerless = false;
 
     const usdRate = exchangeRates.USD || 1380;
@@ -339,7 +361,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange }: Stoc
                 <li><span className="text-foreground">토스증권, 도미노 외에도 종목명·수량·금액이 보이는 증권 계좌 화면</span>이면 대부분 인식됩니다.</li>
                 <li><span className="text-foreground">평균단가</span>는 손익률로 역산됩니다. 등록 후 정확한 값으로 수정해주세요.</li>
                 <li><span className="text-foreground">해외주식</span>은 원화 평가금액을 오늘 환율로 나눠 달러(USD)로 자동 환산합니다. 매입환율은 오늘 환율로, 매수일은 오늘 날짜로 설정되며 등록 후 수정 가능합니다.</li>
-                <li><span className="text-foreground">ISA·IRP·연금저축 ETF</span>는 카테고리를 직접 선택해주세요.</li>
+                <li><span className="text-foreground">ISA·IRP·연금저축 ETF</span>는 위 계좌 유형을 먼저 선택하면 카테고리가 자동 적용됩니다.</li>
                 <li><span className="text-foreground">티커(종목코드)</span>가 미인식된 경우 미리보기에서 직접 입력해야 등록할 수 있습니다.</li>
               </ul>
             </div>

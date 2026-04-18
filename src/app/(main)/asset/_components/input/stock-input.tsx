@@ -471,6 +471,7 @@ export function StockInput() {
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   useEffect(() => {
@@ -815,7 +816,7 @@ export function StockInput() {
               </Popover>
 
               {/* 스크린샷 가져오기 다이얼로그 */}
-              <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+              <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
 
               {/* 직접 입력 다이얼로그 */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -833,7 +834,7 @@ export function StockInput() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4 grid w-full grid-cols-7 h-13 p-1 gap-1">
               {(
                 [

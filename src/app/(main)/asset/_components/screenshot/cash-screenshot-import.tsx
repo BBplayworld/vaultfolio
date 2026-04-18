@@ -13,12 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Cash, AssetData } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { cashTypes } from "@/config/asset-options";
+import { cashTypes, financialInstitutions } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 
@@ -323,12 +322,24 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                         </Select>
 
                         <div className="flex items-center gap-1">
-                          <Input
-                            className={`h-7 w-32 text-xs ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                            placeholder="금융기관 *"
-                            value={item.institution}
-                            onChange={(e) => updateInstitution(item.id, e.target.value)}
-                          />
+                          <Select
+                            value={item.institution || "__none__"}
+                            onValueChange={(v) => updateInstitution(item.id, v === "__none__" ? "" : v)}
+                          >
+                            <SelectTrigger className={`h-7 w-36 text-xs ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}>
+                              <SelectValue placeholder="금융기관 *" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {financialInstitutions.map((group) => (
+                                <SelectGroup key={group.group}>
+                                  <SelectLabel className="text-xs">{group.group}</SelectLabel>
+                                  {group.items.map((name) => (
+                                    <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           {!item.institution.trim() && (
                             <span className="text-[10px] text-destructive whitespace-nowrap">필수</span>
                           )}

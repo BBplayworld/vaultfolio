@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 
@@ -13,6 +13,11 @@ import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const viewport: Viewport = {
+  userScalable: false,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,

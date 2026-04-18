@@ -6,6 +6,26 @@
 
 ## 2026-04-18
 
+### 스크린샷 가져오기 — 주식 탭 카테고리 자동 적용 + 현금 금융기관 Select 교체
+
+- **파일:** `src/app/(main)/asset/_components/input/stock-input.tsx`
+- **변경:** `Tabs`를 `defaultValue` → `value/onValueChange` controlled로 전환, `activeTab` 상태 추가 후 `StockScreenshotImport`에 전달
+- **이유:** 사용자가 IRP 탭 선택 후 스크린샷을 올리면 국내 종목이 자동으로 IRP 카테고리로 설정되어야 함
+
+- **파일:** `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
+- **변경:** `activeTab` prop 추가, `DOMESTIC_CATEGORIES` Set으로 국내 카테고리 여부 판별 후 AI 탐지 카테고리 대신 탭 카테고리 우선 적용. 계좌 유형 수동 선택 UI 제거
+- **이유:** 탭 정보를 prop으로 받아 처리하는 방식으로 단순화
+
+- **파일:** `src/app/(main)/asset/_components/screenshot/cash-screenshot-import.tsx`
+- **변경:** 금융기관 `Input` → `financialInstitutions` 그룹 `Select`로 교체
+- **이유:** 자유 입력보다 선택지 제공이 오입력 방지에 유리
+
+### 스크린샷 가져오기 — 카테고리 중복 탐지 로직 수정
+
+- **파일:** `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
+- **변경:** 중복 탐지를 `(ticker, category)` 복합 키 기준으로 정확하게 처리. 해외 섹션은 항상 `foreign` 고정. 국내/기타는 AI 탐지 카테고리 그대로 유지하고, 동일 ticker라도 카테고리가 다르면 별개 계좌로 취급해 중복 아님으로 처리
+- **이유:** 기존 로직이 ticker만으로 카테고리를 덮어써서, `pension`에 등록된 종목을 `irp` 스크린샷으로 가져올 때 `pension:ticker` 키 충돌로 잘못된 중복 경고 발생. 카테고리별 계좌는 독립적으로 관리해야 함
+
 ### 스크린샷 버튼 Popover 메뉴 통일 + Crypto 평균단가 미리보기
 
 - **파일:**

@@ -447,13 +447,13 @@ export function YearlyNetAssetChart() {
                         <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
                           <span className="text-xs font-semibold">{row.month}</span>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
                               {formatShortCurrency(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
                               {formatShortCurrency(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
@@ -496,13 +496,13 @@ export function YearlyNetAssetChart() {
                         <div key={row.date} className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
                           <span className="text-xs font-semibold tabular-nums">{row.date}</span>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
                               {formatShortCurrency(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
-                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                            <p className="text-xs font-bold truncate" style={{ color: ASSET_THEME.text.default }}>
                               {formatShortCurrency(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
