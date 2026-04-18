@@ -1,8 +1,10 @@
 "use client";
 
-import { Building2, TrendingUp, Shield, Sparkles, Activity, ArrowRight, FolderInput, Bitcoin, Wallet, CreditCard, Globe } from "lucide-react";
+import { Building2, TrendingUp, Shield, Sparkles, Activity, ArrowRight, FolderInput, Bitcoin, Wallet, CreditCard, Globe, ImageUp, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useState } from "react";
 import { ASSET_THEME } from "@/config/theme";
 
 // 미리보기용 예시 자산 데이터
@@ -21,6 +23,8 @@ function formatAmount(n: number) {
 }
 
 export function WelcomeGuide() {
+  const [isStockMenuOpen, setIsStockMenuOpen] = useState(false);
+
   const handleImport = () => {
     window.dispatchEvent(new CustomEvent("trigger-import"));
   };
@@ -186,11 +190,45 @@ export function WelcomeGuide() {
             부동산 추가
             <ArrowRight className="size-4" />
           </Button>
-          <Button size="lg" variant="outline" className="gap-2" onClick={() => window.dispatchEvent(new CustomEvent("trigger-add-stock"))}>
-            <TrendingUp className="size-4" />
-            주식 추가
-            <ArrowRight className="size-4" />
-          </Button>
+          <Popover open={isStockMenuOpen} onOpenChange={setIsStockMenuOpen}>
+            <PopoverTrigger asChild>
+              <Button size="lg" variant="outline" className="gap-2">
+                <TrendingUp className="size-4" />
+                주식 추가
+                <ArrowRight className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="center" className="w-52 p-1.5 space-y-0.5">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                onClick={() => {
+                  setIsStockMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode: "screenshot" } }));
+                }}
+              >
+                <ImageUp className="size-4 text-muted-foreground shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium">스크린샷 가져오기</p>
+                  <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                onClick={() => {
+                  setIsStockMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode: "manual" } }));
+                }}
+              >
+                <Pencil className="size-4 text-muted-foreground shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium">직접 입력</p>
+                  <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
+                </div>
+              </button>
+            </PopoverContent>
+          </Popover>
           <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={handleImport}>
             <FolderInput className="size-4" />
             기존 데이터 가져오기

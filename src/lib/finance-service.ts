@@ -35,7 +35,7 @@ export interface ExchangeRates {
   updated_at?: string;
 }
 
-export const STORAGE_KEY_EXCHANGE_SYNC_DATE = "vaultfolio_exchange_last_sync_date";
+export const STORAGE_KEY_EXCHANGE_SYNC_DATE = "secretasset_exchange_last_sync_date";
 
 // ─────────────────────────────────────────────
 // Step 2. 티커 정규화

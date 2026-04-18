@@ -200,7 +200,7 @@ export function AssetDistributionCards() {
                   <div className="text-right space-y-1.5">
                     <div className="text-xs">
                       <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
-                      <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(totalAsset)}</span>
+                      <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
                     </div>
                     <div className="text-xs">
                       <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
@@ -912,16 +912,16 @@ export function AssetDistributionCards() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={`font-semibold truncate ${ASSET_THEME.primary.text}`}>{loan.name}</span>
+                              <span className={`font-semibold text-sm truncate ${ASSET_THEME.text.default}`}>{loan.name}</span>
                               <span className="text-xs text-muted-foreground whitespace-nowrap">({loan.label})</span>
                             </div>
-                            <div className={`mt-1 text-xs ${ASSET_THEME.text.default}`}>
+                            <div className={`mt-1 text-xs ${ASSET_THEME.liability}`}>
                               {formatCurrency(loan.balance)}
                             </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className={`text-lg font-bold tabular-nums ${ASSET_THEME.liability}`}>
+                          <span className={`text-xs font-bold tabular-nums ${ASSET_THEME.liability}`}>
                             {formatShortCurrency(loan.balance)}
                           </span>
                           <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">

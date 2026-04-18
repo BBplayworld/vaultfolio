@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-04-06
+> 마지막 업데이트: 2026-04-16
 
 ## 내부 API 라우트
 
@@ -59,6 +59,62 @@ GET /api/share?key=a3f8b2c1ab
 - GET 시마다 TTL 30일 리셋 (Sliding TTL)
 
 **파일:** `src/app/api/share/route.ts`
+
+---
+
+### POST /api/parse-screenshot
+
+증권·거래소·은행 앱 스크린샷을 Gemini AI로 분석해 자산 배열 반환. 주식·암호화폐·현금성자산·대출 4종 지원.
+
+```
+POST /api/parse-screenshot
+Body: FormData {
+  image: File,        // JPEG/PNG/WEBP/HEIC, 최대 10MB
+  assetType: "stock" | "crypto" | "cash" | "loan"   // 기본값: "stock"
+}
+
+→ assetType="stock":  { stocks: Array<{...}>, rawText: string }
+→ assetType="crypto": { cryptos: Array<{...}>, rawText: string }
+→ assetType="cash":   { cashes: Array<{...}>, rawText: string }
+→ assetType="loan":   { loans: Array<{...}>, rawText: string }
+```
+
+**stock 응답 필드:**
+- id, name, ticker("" 미인식), quantity(미표시 시 1), currentPrice, averagePrice(손익률 역산), currency("KRW"), category, purchaseDate, section("국내"|"해외"|"기타")
+
+**crypto 응답 필드:**
+- id, name, symbol(대문자), quantity(소수점 8자리), averagePrice(미인식 시 currentPrice), averagePriceMissing(bool), currentPrice, exchange, purchaseDate
+
+**cash 응답 필드:**
+- id, name, type("bank"|"cma"|"cash"|"deposit"|"savings"), balance, currency("KRW"), institution
+
+**loan 응답 필드:**
+- id, name, type("credit"|"minus"|"mortgage-home"|...), balance, interestRate, institution, startDate(미인식 시 오늘), startDateMissing(bool)
+
+**서버 한도:** 하루 200회 (`GEMINI_SERVER_DAILY_LIMIT`) — 초과 시 `429` 반환. 성공 호출만 카운트.
+- FileCacheStorage: `finance-cache.json`의 `GEMINI_COUNT.{count, date}` 필드
+- UpstashCacheStorage: Redis 키 `gemini:daily:YYYY-MM-DD` (자정 만료)
+
+**처리 흐름:**
+1. 서버 한도 체크 (`checkGeminiDailyLimit`)
+2. Gemini `gemini-2.5-flash-lite`로 이미지 분석 (타입별 프롬프트·스키마 분기)
+3. 성공 후 `incrementGeminiDailyCount`
+4. stock: ticker-map.ts fallback (`lookupTicker`), 국내 ETF 강제 분류, 수량 미표시 처리
+
+**`lookupTicker` 매칭 순서** (`ticker-map.ts`):
+1. 정확한 일치 (normalizeName 후)
+2. prefix 매칭 — 입력이 키의 앞부분인 경우 (잘린 텍스트 대응)
+3. suffix 매칭 — 키가 입력의 앞부분인 경우
+
+**에러 응답:**
+- `400`: 이미지 없음 / 크기 초과 / 지원 않는 형식
+- `422`: Gemini 응답 파싱 실패
+- `429`: 서버 하루 한도(200회) 초과
+- `500`: GEMINI_API_KEY 미설정 / AI 오류 (503 혼잡, 429 한도 초과)
+
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset-gemini-YYYY-MM-DD` (KST 기준), 하루 10회 제한. 각 스크린샷 다이얼로그에서 `useGeminiUsage()` hook으로 체크·증가.
+
+**파일:** `src/app/api/parse-screenshot/route.ts`
 
 ---
 

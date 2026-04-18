@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-04-06
+> 마지막 업데이트: 2026-04-16
 
 ## 앱 개요
 
@@ -33,15 +33,19 @@ src/
 │   │   ├── page.tsx          # 대시보드 메인 페이지
 │   │   ├── layout.tsx        # SidebarInset 레이아웃 (max-w-screen-3xl=1680px)
 │   │   └── _components/      # 자산 관련 모든 컴포넌트
-│   │       ├── sidebar/      # 사이드바 (app-sidebar, nav-main, theme-switcher 등)
-│   │       ├── *-input.tsx   # 자산 유형별 입력 폼 (5종)
+│   │       ├── sidebar/                    # 사이드바 (app-sidebar, nav-main, theme-switcher 등)
+│   │       ├── *-input.tsx                 # 자산 유형별 입력 폼 (5종)
+│   │       ├── stock-screenshot-import.tsx # 스크린샷으로 주식 일괄 가져오기
 │   │       ├── asset-overview-cards.tsx
 │   │       ├── asset-distribution-cards.tsx
 │   │       ├── yearly-net-asset-chart.tsx
 │   │       └── asset-management-card.tsx
 │   ├── api/
-│   │   ├── finance/route.ts  # 주식·환율 조회 (캐시 포함)
-│   │   └── share/route.ts    # 공유 Short URL 생성·조회
+│   │   ├── finance/route.ts       # 주식·환율 조회 (캐시 포함)
+│   │   ├── share/route.ts         # 공유 Short URL 생성·조회
+│   │   └── parse-screenshot/      # 스크린샷 파싱 (Gemini AI)
+│   │       ├── route.ts           # POST 엔드포인트
+│   │       └── ticker-map.ts      # 종목명→티커 fallback 매핑 테이블
 │   ├── layout.tsx            # 루트 레이아웃 (PreferencesStoreProvider)
 │   └── globals.css           # 전역 스타일 + Tailwind 커스텀 breakpoint
 ├── types/
@@ -111,4 +115,36 @@ KIS_APP_KEY       # 한국투자증권 OpenAPI 앱키
 KIS_APP_SECRET    # 한국투자증권 OpenAPI 시크릿
 KV_REST_API_URL   # Upstash Redis URL (Vercel 배포 시)
 KV_REST_API_TOKEN # Upstash Redis 토큰 (Vercel 배포 시)
+GEMINI_API_KEY    # Google Gemini AI API 키 (스크린샷 파싱용)
 ```
+
+## 스크린샷 가져오기 기능
+
+**파일:** `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/stock-screenshot-import.tsx`
+
+토스증권·도미노 앱 보유종목 화면 스크린샷을 Gemini AI로 분석해 주식 데이터를 자동 추출.
+
+### 플로우 (3단계)
+
+```
+1. upload  — 이미지 업로드 (드래그앤드롭 / 클릭)
+              → POST /api/parse-screenshot → Gemini gemini-2.5-flash-lite 분석
+2. conflict — 기존 주식과 ticker 중복 탐지 시 처리 방식 선택
+              · 덮어쓰기: 중복 ticker를 스크린샷 기준으로 교체, 나머지 유지
+              · 초기화: 기존 주식 전부 삭제 후 스크린샷으로 대체
+3. preview — 종목 확인·선택·카테고리 수정 후 등록
+```
+
+### 주요 동작
+- ticker 미인식 시 `ticker-map.ts`의 종목명→티커 fallback 매핑 사용
+- Gemini가 `"null"` 문자열 반환 시 명시적 필터링 → 티커 미확인 처리
+- 해외주식: 원화 평가금액 → 현재 USD 환율로 자동 변환
+- 소수점 수량 지원 (도미노 앱: `310.536919주` 등)
+- 수량 미표시 항목(내 기타 투자 등) → `quantity=1` 보정
+- `"기타"` 섹션(내 기타 투자) → category `"irp"` 초기 설정 (미리보기에서 변경 가능)
+- 다이얼로그: 취소 버튼 외 ESC·바깥 클릭으로 닫히지 않음
+
+### ticker-map.ts
+- 국내 ETF 약 80개, 국내 주식 약 70개, 해외 주식·ETF 약 300개 매핑
+- `lookupTicker(name)` — 정규화(소문자·특수문자 제거) 후 매핑 조회
+- 브랜드: TIGER/KODEX/ACE/HANARO/SOL/RISE/KBSTAR/KINDEX/ARIRANG/TIMEFOLIO/BIG

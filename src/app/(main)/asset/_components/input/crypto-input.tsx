@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Bitcoin, Calendar, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Bitcoin, Calendar, Clock, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -36,6 +36,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { cryptoExchanges as exchanges, popularCryptos } from "@/config/asset-options";
+import { ImageUp } from "lucide-react";
+import { CryptoScreenshotImport } from "../screenshot/crypto-screenshot-import";
 
 interface CryptoFormProps {
   editData?: Crypto;
@@ -325,6 +327,8 @@ export function CryptoInput() {
   const { assetData, deleteCrypto } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Crypto | undefined>();
+  const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -363,23 +367,53 @@ export function CryptoInput() {
               </CardTitle>
               <CardDescription>보유하고 있는 암호화폐 자산을 관리합니다.</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingItem(undefined)}>
-                  <Plus className="mr-2 size-4" />
-                  암호화폐 추가
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                <DialogHeader>
-                  <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
-                  <DialogDescription>
-                    {editingItem ? "암호화폐 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
-                  </DialogDescription>
-                </DialogHeader>
-                <CryptoForm editData={editingItem} onClose={handleDialogClose} />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+              <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
+                <PopoverTrigger asChild>
+                  <Button>
+                    <Plus className="mr-1.5 size-4" />
+                    암호화폐 추가
+                    <ChevronDown className="ml-1 size-3.5 opacity-70" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                    onClick={() => { setIsAddMenuOpen(false); setIsScreenshotOpen(true); }}
+                  >
+                    <ImageUp className="size-4 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="font-medium">스크린샷 가져오기</p>
+                      <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                    onClick={() => { setIsAddMenuOpen(false); setEditingItem(undefined); setIsDialogOpen(true); }}
+                  >
+                    <Plus className="size-4 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="font-medium">직접 입력</p>
+                      <p className="text-xs text-muted-foreground">수동으로 추가</p>
+                    </div>
+                  </button>
+                </PopoverContent>
+              </Popover>
+              <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+                  <DialogHeader>
+                    <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
+                    <DialogDescription>
+                      {editingItem ? "암호화폐 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <CryptoForm editData={editingItem} onClose={handleDialogClose} />
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

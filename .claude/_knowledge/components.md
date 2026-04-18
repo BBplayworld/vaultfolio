@@ -1,15 +1,49 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-04-06
+> 마지막 업데이트: 2026-04-17
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
-> **자산 입력 화면은 항상 아래 5개 파일로만 구성된다:**
-> - `stock-input.tsx` — 주식 (국내/해외/IRP/ISA/연금/비상장)
-> - `real-estate-input.tsx` — 부동산
-> - `cash-input.tsx` — 현금성 자산
-> - `crypto-input.tsx` — 암호화폐
-> - `loan-input.tsx` — 대출
+### 디렉토리 구조
+
+```
+_components/
+├── input/              # 자산 입력 폼 + 목록 렌더링
+│   ├── stock-input.tsx
+│   ├── real-estate-input.tsx
+│   ├── cash-input.tsx
+│   ├── crypto-input.tsx
+│   ├── loan-input.tsx
+│   └── exchange-rate-input.tsx
+├── screenshot/         # 스크린샷 가져오기 다이얼로그
+│   └── stock-screenshot-import.tsx
+└── sidebar/            # 사이드바 관련
+    └── ...
+```
+
+> **자산 입력 화면은 항상 `input/` 하위 5개 파일로만 구성된다:**
+> - `input/stock-input.tsx` — 주식 (국내/해외/IRP/ISA/연금/비상장)
+> - `input/real-estate-input.tsx` — 부동산
+> - `input/cash-input.tsx` — 현금성 자산
+> - `input/crypto-input.tsx` — 암호화폐
+> - `input/loan-input.tsx` — 대출
+
+> **스크린샷 다이얼로그는 `screenshot/` 하위에 위치:**
+> - `screenshot/stock-screenshot-import.tsx` — 주식 스크린샷 가져오기
+> - `screenshot/crypto-screenshot-import.tsx` — 암호화폐 스크린샷 가져오기
+> - `screenshot/cash-screenshot-import.tsx` — 현금성 자산 스크린샷 가져오기 (conflict 단계 없음, 항상 append)
+> - `screenshot/loan-screenshot-import.tsx` — 대출 스크린샷 가져오기 (conflict 단계 없음, 항상 append)
+
+**스크린샷 다이얼로그 공통 패턴:**
+- `open/onOpenChange` props로 외부 제어 (각 input 컴포넌트의 `isScreenshotOpen` state와 연동)
+- `useGeminiUsage()` hook으로 클라이언트 하루 한도(10회) 체크·표시
+- upload → (conflict) → preview 3단계 (cash/loan은 2단계: upload → preview)
+- API 성공 후 `geminiUsage.increment(assetType)` 호출
+
+**중복 처리 전략:**
+- stock: ticker 기준 → merge/reset 선택
+- crypto: symbol 기준 → merge/reset 선택
+- cash/loan: 고유 식별자 없음 → 항상 기존 목록에 append
 
 ### *-input.tsx 공통 구조
 
@@ -89,6 +123,35 @@ getProfitLossColor() → config/theme
 - 현재 USD/JPY 환율 표시
 - 수동 입력 또는 API 조회로 갱신
 - `updateExchangeRate()` → AssetDataContext
+
+---
+
+---
+
+### stock-screenshot-import.tsx
+
+**파일:** `src/app/(main)/asset/_components/stock-screenshot-import.tsx`
+**Props:** `open?: boolean`, `onOpenChange?: (open: boolean) => void` (controlled/uncontrolled 양쪽 지원)
+
+3단계 다이얼로그 플로우로 스크린샷 기반 주식 일괄 가져오기.
+
+**단계:**
+| step | 내용 |
+|------|------|
+| `upload` | 이미지 드래그앤드롭 또는 클릭 업로드. AI 인식 중 오버레이 차단. |
+| `conflict` | 기존 주식과 ticker 중복 발생 시 처리 방식 선택 (덮어쓰기 / 초기화 후 등록) |
+| `preview` | 종목별 선택·카테고리 변경·ticker 직접 입력. 등록 버튼으로 확정. |
+
+**conflict 처리 로직 (`handleRegister`):**
+- **덮어쓰기(merge)**: 스크린샷 ticker 목록을 기존에서 제거 후, 스크린샷 종목 전체 push
+- **초기화(reset)**: 기존 주식 전부 제거 후 스크린샷 종목만 등록
+- ticker 없는 종목은 `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
+
+**UX 특이사항:**
+- 다이얼로그: ESC·바깥 클릭으로 닫히지 않음 (취소 버튼만 가능)
+- 해외주식: 원화 평가금액 → 현재 USD 환율 자동 변환, USD badge 표시
+- 티커 미확인 종목: amber badge + 직접 입력 필드 (대문자+숫자만 허용)
+- 중복 교체 대상 종목: `교체` badge 표시
 
 ---
 

@@ -1,13 +1,35 @@
 "use client";
 
+import { z } from "zod";
 import { AssetData, assetDataSchema } from "@/types/asset";
 import LZString from "lz-string";
+
+// 읽기 전용 완화 스키마 — superRefine 없이 ticker 빈 값 허용 (스크린샷 가져오기 경로 대응)
+const stockSchemaLoose = z.object({
+  id: z.string(),
+  category: z.enum(["domestic", "foreign", "irp", "isa", "pension", "unlisted"]),
+  name: z.string(),
+  ticker: z.string().optional().default(""),
+  quantity: z.number(),
+  averagePrice: z.number(),
+  currentPrice: z.number(),
+  currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),
+  purchaseDate: z.string(),
+  description: z.string().optional().default(""),
+  baseDate: z.string().optional(),
+  purchaseExchangeRate: z.number().optional(),
+});
+
+const assetDataSchemaLoose = assetDataSchema.omit({ stocks: true }).extend({
+  stocks: z.array(stockSchemaLoose).default([]),
+});
 
 // ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
 export const STORAGE_KEYS = {
   assetData: "secretasset-asset-data",
   exchangeRate: "exchange-rate-usd-krw",
   defaultExchangeRate: 1380,
+  dailySnapshots: "secretasset_daily_snapshots",
 } as const;
 
 // ─── 기본 자산 데이터 ───────────────────────────────────────────────────────
@@ -26,7 +48,7 @@ export function getAssetData(): AssetData {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.assetData);
     if (!data) return EMPTY_ASSET_DATA;
-    return assetDataSchema.parse(JSON.parse(data));
+    return assetDataSchemaLoose.parse(JSON.parse(data)) as AssetData;
   } catch (error) {
     console.error("Failed to load asset data:", error);
     return EMPTY_ASSET_DATA;
@@ -36,7 +58,7 @@ export function getAssetData(): AssetData {
 export function saveAssetData(data: AssetData): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const validated = assetDataSchema.parse(data);
+    const validated = assetDataSchemaLoose.parse(data);
     validated.lastUpdated = new Date().toISOString();
     localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(validated));
     return true;
@@ -76,6 +98,18 @@ export function importAssetData(file: File): Promise<AssetData> {
   });
 }
 
+// 스크린샷 가져오기 전용: stockSchema superRefine(ticker 필수) 우회 저장
+export function saveAssetDataRaw(data: AssetData): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const payload = { ...data, lastUpdated: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function clearAssetData(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -88,7 +122,6 @@ export function clearAssetData(): boolean {
 
 // ─── 공유 토큰 시스템 V7.1 (PIN Support) ──────────────────────────────────
 
-const SHARED_KEY_V7 = "vlt-fl-v7.1";
 const PIVOT_DATE = Date.UTC(2020, 0, 1); // 2020-01-01 UTC 기준
 
 /**
@@ -366,7 +399,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
     if (token.startsWith("v72Z")) {
       if (!localKey) return null; // localKey가 없으면 인증키가 누락된 잘못된 접근이므로 즉시 실패
       if (!pin) return { pinRequired: true };
-      
+
       const fullKey = pin + localKey;
       const compressed = cryptWithKey(token.substring(4), fullKey, true);
 

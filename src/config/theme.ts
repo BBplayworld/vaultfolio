@@ -64,6 +64,8 @@ export const ASSET_THEME = {
     muted: "text-zinc-500 dark:text-zinc-400",
     separatorPill: "bg-zinc-200/80 text-zinc-700 dark:bg-zinc-700/80 dark:text-zinc-200",
   },
+  // ===== 탭 색상 =====
+  tabActive: "dark:data-[state=active]:bg-primary/20 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary"
 } as const;
 
 /**

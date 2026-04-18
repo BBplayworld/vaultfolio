@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary } from "@/types/asset";
-import { getAssetData, saveAssetData, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot } from "@/types/asset";
+import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
 import { STORAGE_KEY_EXCHANGE_SYNC_DATE, normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
 
@@ -44,6 +44,7 @@ interface AssetDataContextType {
   updateRealEstate: (id: string, realEstate: Partial<RealEstate>) => boolean;
   deleteRealEstate: (id: string) => boolean;
   addStock: (stock: Stock) => boolean;
+  addStockRaw: (stock: Stock) => boolean;
   updateStock: (id: string, stock: Partial<Stock>) => boolean;
   deleteStock: (id: string) => boolean;
   addCrypto: (crypto: Crypto) => boolean;
@@ -245,8 +246,36 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     notify.info(MSG.STOCK_SYNC_COMPLETE);
   }, []);
 
+  // 오늘자 일별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
+  const saveDailySnapshot = useCallback((latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const getMultiplier = (currency?: string) => {
+      if (currency === "USD") return latestRates.USD;
+      if (currency === "JPY") return latestRates.JPY / 100;
+      return 1;
+    };
+    const stockValue = latestData.stocks.reduce((sum, s) => sum + s.quantity * s.currentPrice * getMultiplier(s.currency), 0);
+    const cryptoValue = latestData.crypto.reduce((sum, c) => sum + c.quantity * c.currentPrice, 0);
+    const cashValue = latestData.cash.reduce((sum, c) => sum + c.balance * getMultiplier(c.currency), 0);
+    const realEstateValue = latestData.realEstate.reduce((sum, r) => sum + r.currentValue, 0);
+    const loanBalance = latestData.loans.reduce((sum, l) => sum + l.balance, 0);
+    const tenantDepositTotal = latestData.realEstate.reduce((sum, r) => sum + (r.tenantDeposit ?? 0), 0);
+    const financialAsset = stockValue + cryptoValue + cashValue;
+    const netAsset = realEstateValue + financialAsset - loanBalance - tenantDepositTotal;
+
+    const snapshot: DailyAssetSnapshot = { date: todayStr, netAsset, financialAsset };
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      const all: DailyAssetSnapshot[] = raw ? JSON.parse(raw) : [];
+      const currentYear = new Date().getFullYear().toString();
+      const filtered = all.filter(s => s.date.startsWith(currentYear) && s.date !== todayStr);
+      filtered.push(snapshot);
+      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filtered));
+    } catch { /* 저장 실패 무시 */ }
+  }, []);
+
   // 모든 진입 경로 공통 헬퍼
-  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가
+  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷 저장
   // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
   const initAndSync = useCallback(async (data: AssetData) => {
     initAssetData(data);
@@ -261,7 +290,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
     await syncTodayStockPrices(data);
-  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices]);
+    // 갱신 완료 후 최신 state로 스냅샷 저장
+    setAssetData(latest => {
+      setExchangeRatesState(latestRates => {
+        saveDailySnapshot(latest, latestRates);
+        return latestRates;
+      });
+      return latest;
+    });
+  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveDailySnapshot]);
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
@@ -449,6 +486,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return saveData(newData);
     },
     [assetData, saveData]
+  );
+
+  // 스크린샷 가져오기 전용: ticker 없는 종목도 허용 (superRefine 우회)
+  const addStockRaw = useCallback(
+    (stock: Stock) => {
+      const newData = { ...assetData, stocks: [...assetData.stocks, stock] };
+      return saveAssetDataRaw(newData);
+    },
+    [assetData]
   );
 
   const updateStock = useCallback(
@@ -683,6 +729,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updateRealEstate,
         deleteRealEstate,
         addStock,
+        addStockRaw,
         updateStock,
         deleteStock,
         addCrypto,

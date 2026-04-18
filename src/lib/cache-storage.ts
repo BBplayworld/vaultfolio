@@ -33,6 +33,10 @@ export interface ICacheStorage {
   setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
   // Rate Limit (로컬 개발에서는 항상 통과)
   checkRateLimit(ip: string): Promise<boolean>;
+  // Gemini 사용량 관리
+  getGeminiDailyCount(todayStr: string): Promise<number>;
+  incrementGeminiDailyCount(todayStr: string): Promise<number>;
+  checkGeminiDailyLimit(todayStr: string): Promise<boolean>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -54,6 +58,27 @@ const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
 const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 10;
+export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
+
+/**
+ * 시장 마감 시간 기준 유효 캐시 날짜 반환 (KST)
+ * - foreign: 미국 장 마감 후 오전 07:00 KST 이후 → 오늘 날짜 유효
+ * - domestic: 국내 장 마감 오후 16:00 KST 이후 → 오늘 날짜 유효
+ * - exchange: 서울외국환중개 기준 오전 09:00 KST 이후 → 오늘 날짜 유효
+ * 마감 전이면 어제 날짜를 반환 (전일 종가/환율이 최신)
+ */
+export function getEffectiveDateStr(type: "domestic" | "foreign" | "exchange"): string {
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
+
+  const cutoff = type === "foreign" ? 700 : type === "domestic" ? 1600 : 900;
+  const todayStr = nowKST.toISOString().split("T")[0];
+  if (hhmm >= cutoff) return todayStr;
+
+  const yesterday = new Date(nowKST);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  return yesterday.toISOString().split("T")[0];
+}
 
 function secondsUntilMidnightKST(): number {
   const KST_OFFSET_MS = 9 * 3600 * 1000;
@@ -79,6 +104,7 @@ interface FileCacheData {
   EXCHANGE?: ExchangeRates;
   STOCKS?: Record<string, StockPriceResult>;
   KIS_TOKEN?: { access_token: string; updated_at: string };
+  GEMINI_COUNT?: { count: number; date: string };
 }
 
 interface ShareTokenEntry {
@@ -109,17 +135,25 @@ class FileCacheStorage implements ICacheStorage {
   private writeFinanceCache(data: FileCacheData, todayStr: string): void {
     try {
       if (data.STOCKS && todayStr) {
-        // 오늘 날짜 외 STOCKS 항목 정리
+        // 유효 날짜(국내/해외 각각 다를 수 있음) 이외 STOCKS 항목 정리
+        const effectiveForeign = getEffectiveDateStr("foreign");
+        const effectiveDomestic = getEffectiveDateStr("domestic");
         data.STOCKS = Object.fromEntries(
-          Object.entries(data.STOCKS).filter(([key]) => key.endsWith(`-${todayStr}`))
+          Object.entries(data.STOCKS).filter(([key]) =>
+            key.endsWith(`-${effectiveForeign}`) || key.endsWith(`-${effectiveDomestic}`)
+          )
         );
       }
       // 날짜 불일치 EXCHANGE / KIS_TOKEN도 함께 정리
-      if (data.EXCHANGE?.updated_at && data.EXCHANGE.updated_at !== todayStr) {
+      const effectiveExchange = getEffectiveDateStr("exchange");
+      if (data.EXCHANGE?.updated_at && data.EXCHANGE.updated_at !== effectiveExchange) {
         delete data.EXCHANGE;
       }
       if (data.KIS_TOKEN?.updated_at && data.KIS_TOKEN.updated_at !== todayStr) {
         delete data.KIS_TOKEN;
+      }
+      if (data.GEMINI_COUNT?.date && data.GEMINI_COUNT.date !== todayStr) {
+        delete data.GEMINI_COUNT;
       }
       fs.mkdirSync(path.dirname(FINANCE_CACHE_PATH), { recursive: true });
       fs.writeFileSync(FINANCE_CACHE_PATH, JSON.stringify(data, null, 2), "utf8");
@@ -224,6 +258,26 @@ class FileCacheStorage implements ICacheStorage {
   async checkRateLimit(_ip: string): Promise<boolean> {
     return true;
   }
+
+  async getGeminiDailyCount(todayStr: string): Promise<number> {
+    const entry = this.readFinanceCache().GEMINI_COUNT;
+    if (!entry || entry.date !== todayStr) return 0;
+    return entry.count;
+  }
+
+  async incrementGeminiDailyCount(todayStr: string): Promise<number> {
+    const cache = this.readFinanceCache();
+    const current = cache.GEMINI_COUNT?.date === todayStr ? cache.GEMINI_COUNT.count : 0;
+    const next = current + 1;
+    cache.GEMINI_COUNT = { count: next, date: todayStr };
+    this.writeFinanceCache(cache, todayStr);
+    return next;
+  }
+
+  async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
+    const count = await this.getGeminiDailyCount(todayStr);
+    return count < GEMINI_SERVER_DAILY_LIMIT;
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -310,5 +364,22 @@ class UpstashCacheStorage implements ICacheStorage {
     const count = await this.redis.incr(key);
     if (count === 1) await this.redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
     return count <= RATE_LIMIT_MAX;
+  }
+
+  async getGeminiDailyCount(todayStr: string): Promise<number> {
+    const val = await this.redis.get<number>(`gemini:daily:${todayStr}`);
+    return val ?? 0;
+  }
+
+  async incrementGeminiDailyCount(todayStr: string): Promise<number> {
+    const key = `gemini:daily:${todayStr}`;
+    const count = await this.redis.incr(key);
+    if (count === 1) await this.redis.expire(key, secondsUntilMidnightKST());
+    return count;
+  }
+
+  async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
+    const count = await this.getGeminiDailyCount(todayStr);
+    return count < GEMINI_SERVER_DAILY_LIMIT;
   }
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, TrendingUp, Calendar, Clock, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, Calendar, Clock, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock, CreditCard, ImageUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance-service";
 
@@ -35,9 +35,11 @@ import { Badge } from "@/components/ui/badge";
 import { Stock, stockSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { stockCategories, quickButtonPresets } from "@/config/asset-options";
+import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 
 const stockQuickButtons = [...quickButtonPresets.stock];
 
@@ -467,10 +469,23 @@ export function StockInput() {
   const { assetData, deleteStock, exchangeRates } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   useEffect(() => {
-    const handler = () => { setEditingItem(undefined); setIsDialogOpen(true); };
+    const handler = (e: Event) => {
+      const mode = (e as CustomEvent).detail?.mode;
+      if (mode === "screenshot") {
+        setIsScreenshotOpen(true);
+      } else if (mode === "manual") {
+        setEditingItem(undefined);
+        setIsDialogOpen(true);
+      } else {
+        // 기본: 팝오버 메뉴 열기
+        setIsAddMenuOpen(true);
+      }
+    };
     window.addEventListener("trigger-add-stock", handler);
     return () => window.removeEventListener("trigger-add-stock", handler);
   }, []);
@@ -756,23 +771,65 @@ export function StockInput() {
               </div>
               <CardDescription>보유하고 있는 주식 자산을 관리합니다.</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingItem(undefined)}>
-                  <Plus className="mr-2 size-4" />
-                  주식 추가
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                <DialogHeader>
-                  <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
-                  <DialogDescription>
-                    {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
-                  </DialogDescription>
-                </DialogHeader>
-                <StockForm editData={editingItem} onClose={handleDialogClose} />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+              {/* 주식 추가 팝오버 메뉴 */}
+              <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
+                <PopoverTrigger asChild>
+                  <Button>
+                    <Plus className="mr-1.5 size-4" />
+                    주식 추가
+                    <ChevronDown className="ml-1 size-3.5 opacity-70" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                    onClick={() => {
+                      setIsAddMenuOpen(false);
+                      setIsScreenshotOpen(true);
+                    }}
+                  >
+                    <ImageUp className="size-4 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="font-medium">스크린샷 가져오기</p>
+                      <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+                    onClick={() => {
+                      setIsAddMenuOpen(false);
+                      setEditingItem(undefined);
+                      setIsDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="size-4 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="font-medium">직접 입력</p>
+                      <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
+                    </div>
+                  </button>
+                </PopoverContent>
+              </Popover>
+
+              {/* 스크린샷 가져오기 다이얼로그 */}
+              <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+
+              {/* 직접 입력 다이얼로그 */}
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+                  <DialogHeader>
+                    <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
+                    <DialogDescription>
+                      {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <StockForm editData={editingItem} onClose={handleDialogClose} />
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -797,7 +854,7 @@ export function StockInput() {
                     "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
                     "hover:bg-accent hover:text-foreground hover:border-primary/50",
                     "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",
-                    "dark:data-[state=active]:bg-primary/30 dark:data-[state=active]:text-foreground dark:data-[state=active]:border-primary",
+                    ASSET_THEME.tabActive,
                   ].join(" ")}
                 >
                   <span className="text-xs sm:text-sm">{label}</span>

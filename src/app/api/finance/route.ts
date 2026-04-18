@@ -22,7 +22,7 @@ import {
   fetchStocksFromKorea,
   fetchExchangeRateFromKis,
 } from "@/lib/finance-service";
-import { getCacheStorage } from "@/lib/cache-storage";
+import { getCacheStorage, getEffectiveDateStr } from "@/lib/cache-storage";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
@@ -50,14 +50,15 @@ export async function GET(request: Request) {
   // ── 환율 조회 ──────────────────────────────────────────────────────────
 
   if (type === "exchange") {
-    // 1단계: 캐시 확인
+    const effectiveDateExchange = getEffectiveDateStr("exchange");
+    // 1단계: 캐시 확인 (유효 날짜 기준)
     const cached = await storage.getExchange();
-    if (cached?.updated_at === todayStr) return NextResponse.json(cached);
+    if (cached?.updated_at === effectiveDateExchange) return NextResponse.json(cached);
 
     // 2단계: 외부 API 호출
     const accessTokenForExchange = await getKisAccessToken(todayStr);
     const rates = accessTokenForExchange
-      ? await fetchExchangeRateFromKis(accessTokenForExchange, KIS_APP_KEY, KIS_APP_SECRET, todayStr)
+      ? await fetchExchangeRateFromKis(accessTokenForExchange, KIS_APP_KEY, KIS_APP_SECRET, effectiveDateExchange)
       : null;
     if (rates) {
       // 3단계: 캐시 갱신
@@ -80,44 +81,52 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "티커 없음" }, { status: 400 });
     }
 
-    const results: Record<string, { price: number; name: string; updated_at: string }> = {};
-    const uncachedTickers: string[] = [];
+    const effectiveDateForeign = getEffectiveDateStr("foreign");
+    const effectiveDateDomestic = getEffectiveDateStr("domestic");
+    const { usTickers, krTickers } = classifyTickers(tickers);
 
-    // 1단계: 캐시 확인
-    for (const ticker of tickers) {
-      const cached = await storage.getStock(stockCacheKey(ticker, todayStr));
-      if (cached) {
-        results[ticker] = cached;
-      } else {
-        uncachedTickers.push(ticker);
-      }
+    const results: Record<string, { price: number; name: string; updated_at: string }> = {};
+    const uncachedUs: string[] = [];
+    const uncachedKr: string[] = [];
+
+    // 1단계: 캐시 확인 (국내/해외 유효 날짜 각각 적용)
+    for (const ticker of usTickers) {
+      const cached = await storage.getStock(stockCacheKey(ticker, effectiveDateForeign));
+      if (cached) results[ticker] = cached;
+      else uncachedUs.push(ticker);
+    }
+    for (const ticker of krTickers) {
+      const cached = await storage.getStock(stockCacheKey(ticker, effectiveDateDomestic));
+      if (cached) results[ticker] = cached;
+      else uncachedKr.push(ticker);
     }
 
-    if (uncachedTickers.length === 0) return NextResponse.json(results);
+    if (uncachedUs.length === 0 && uncachedKr.length === 0) return NextResponse.json(results);
 
-    // 2단계: 미캐시 항목만 외부 API 호출 (국내/해외 분류)
-    const { usTickers, krTickers } = classifyTickers(uncachedTickers);
+    // 2단계: 미캐시 항목만 외부 API 호출
     const apiResults: Record<string, { price: number; name: string; updated_at: string }> = {};
 
-    if (usTickers.length > 0) {
+    if (uncachedUs.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);
       if (accessToken) {
-        const res = await fetchStocksFromKisOverseas(usTickers, todayStr, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        const res = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
       }
     }
 
-    if (krTickers.length > 0) {
+    if (uncachedKr.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);
       if (accessToken) {
-        const res = await fetchStocksFromKorea(krTickers, todayStr, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        const res = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
       }
     }
 
-    // 3단계: 캐시 갱신
+    // 3단계: 캐시 갱신 (국내/해외 날짜 각각 적용)
     for (const [ticker, result] of Object.entries(apiResults)) {
-      await storage.setStock(stockCacheKey(ticker, todayStr), result, todayStr);
+      const isUs = usTickers.includes(ticker);
+      const effectiveDate = isUs ? effectiveDateForeign : effectiveDateDomestic;
+      await storage.setStock(stockCacheKey(ticker, effectiveDate), result, effectiveDate);
     }
 
     return NextResponse.json({ ...results, ...apiResults });

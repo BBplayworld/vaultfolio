@@ -139,6 +139,13 @@ export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
 
+// 일별 자산 스냅샷 (올해 월별/일별 차트용)
+export interface DailyAssetSnapshot {
+  date: string;          // YYYY-MM-DD
+  netAsset: number;
+  financialAsset: number; // 금융자산 총액 (주식+코인+현금)
+}
+
 // 자산 요약 타입
 export interface AssetSummary {
   totalValue: number;

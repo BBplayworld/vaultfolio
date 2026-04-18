@@ -15,22 +15,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 새 대화가 시작되면 아래 순서로 KB 파일을 읽고 작업을 시작한다.
 **전체 소스를 읽기 전에 반드시 KB를 먼저 확인한다.**
 
-| 작업 유형           | 읽을 KB 파일                                |
-| ------------------- | ------------------------------------------- |
-| 모든 작업 (공통)    | `.claude/_knowledge/architecture.md`        |
-| 컴포넌트 UI 수정    | + `.claude/_knowledge/components.md`        |
-| 타입·스키마 변경    | + `.claude/_knowledge/types-and-schemas.md` |
-| API·캐시·공유 관련  | + `.claude/_knowledge/api-reference.md`     |
-| Context·유틸 함수   | + `.claude/_knowledge/state-and-utils.md`   |
-| 새 기능·패턴 확인   | + `.claude/_knowledge/dev-rules.md`         |
-| 최근 변경 맥락 파악 | + `.claude/_knowledge/changelog.md`         |
+| 작업 유형              | 읽을 KB 파일                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| 모든 작업 (공통)       | `.claude/_knowledge/architecture.md`                                         |
+| 컴포넌트 UI 수정       | + `.claude/_knowledge/components.md`                                         |
+| 타입·스키마 변경       | + `.claude/_knowledge/types-and-schemas.md`                                  |
+| API·캐시·공유 관련     | + `.claude/_knowledge/api-reference.md`                                      |
+| 스크린샷 가져오기 관련 | + `.claude/_knowledge/api-reference.md` + `.claude/_knowledge/components.md` |
+| Context·유틸 함수      | + `.claude/_knowledge/state-and-utils.md`                                    |
+| 새 기능·패턴 확인      | + `.claude/_knowledge/dev-rules.md`                                          |
+| 최근 변경 맥락 파악    | + `.claude/_knowledge/changelog.md`                                          |
 
 ## 코드 수정 후 필수 절차
 
 코드를 수정할 때마다 아래 두 가지를 **같은 작업 내**에서 반드시 수행한다.
 
 1. **관련 KB 파일 업데이트** — 변경된 내용이 반영된 파일만 수정
-2. **changelog.md 업데이트** — 다음 형식으로 기록:
+2. **changelog.md 업데이트** — 최근 1달치만 기록. 다음 형식으로 기록:
 
 ```
 ## YYYY-MM-DD
@@ -99,16 +100,19 @@ PreferencesStoreProvider (src/stores/preferences/)
 
 ### Key Files
 
-| 파일                                  | 역할                                             |
-| ------------------------------------- | ------------------------------------------------ |
-| `src/types/asset.ts`                  | Zod 스키마 + TS 타입 (자산 5종)                  |
-| `src/lib/asset-storage.ts`            | localStorage 읽기/쓰기 + 공유 토큰 시스템 (v7.1) |
-| `src/contexts/asset-data-context.tsx` | 전역 자산 상태 및 CRUD                           |
-| `src/lib/finance-service.ts`          | 주식·환율 외부 API 통합 로직                     |
-| `src/lib/cache-storage.ts`            | 캐시 스토리지 추상화 (로컬↔Redis 자동 선택)     |
-| `src/app/api/finance/route.ts`        | 주식·환율 API 엔드포인트                         |
-| `src/app/api/share/route.ts`          | 공유 Short URL 생성·조회 엔드포인트              |
-| `src/server/server-actions.ts`        | 쿠키 기반 서버 액션 (설정 저장)                  |
+| 파일                                                           | 역할                                             |
+| -------------------------------------------------------------- | ------------------------------------------------ |
+| `src/types/asset.ts`                                           | Zod 스키마 + TS 타입 (자산 5종)                  |
+| `src/lib/asset-storage.ts`                                     | localStorage 읽기/쓰기 + 공유 토큰 시스템 (v7.1) |
+| `src/contexts/asset-data-context.tsx`                          | 전역 자산 상태 및 CRUD                           |
+| `src/lib/finance-service.ts`                                   | 주식·환율 외부 API 통합 로직                     |
+| `src/lib/cache-storage.ts`                                     | 캐시 스토리지 추상화 (로컬↔Redis 자동 선택)     |
+| `src/app/api/finance/route.ts`                                 | 주식·환율 API 엔드포인트                         |
+| `src/app/api/share/route.ts`                                   | 공유 Short URL 생성·조회 엔드포인트              |
+| `src/app/api/parse-screenshot/route.ts`                        | 스크린샷 파싱 API (Gemini AI)                    |
+| `src/app/api/parse-screenshot/ticker-map.ts`                   | 종목명→티커 fallback 매핑 (~450개)               |
+| `src/app/(main)/asset/_components/stock-screenshot-import.tsx` | 스크린샷 주식 가져오기 다이얼로그 (3단계)        |
+| `src/server/server-actions.ts`                                 | 쿠키 기반 서버 액션 (설정 저장)                  |
 
 ### 자산 타입
 
@@ -147,6 +151,15 @@ PreferencesStoreProvider (src/stores/preferences/)
 
 Tailwind CSS v4 CSS 변수 기반. `src/scripts/generate-theme-presets.ts`로 테마 프리셋 생성.
 
+### 스크린샷 가져오기
+
+`/api/parse-screenshot` — Gemini `gemini-2.5-flash-lite`로 토스증권·도미노 앱 스크린샷 분석.
+
+- `ticker-map.ts`: 종목명→티커 fallback 매핑 (~450개), `lookupTicker(name)` 사용
+- 다이얼로그 3단계: upload → conflict(덮어쓰기/초기화 선택) → preview
+- 덮어쓰기: 스크린샷 ticker 기준 교체, 나머지 기존 주식 유지
+- `"기타"` 섹션(내 기타 투자) → category `"irp"` 초기 설정
+
 ### 환경변수
 
 ```
@@ -154,6 +167,7 @@ KIS_APP_KEY          # 한국투자증권 OpenAPI 앱키
 KIS_APP_SECRET       # 한국투자증권 OpenAPI 시크릿
 KV_REST_API_URL      # Upstash Redis URL (Vercel 배포 시)
 KV_REST_API_TOKEN    # Upstash Redis 토큰 (Vercel 배포 시)
+GEMINI_API_KEY       # Google Gemini AI API 키 (스크린샷 파싱용)
 ```
 
 ### ESLint 설정

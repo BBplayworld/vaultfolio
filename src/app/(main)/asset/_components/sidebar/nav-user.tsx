@@ -98,7 +98,7 @@ export function NavUser({
     const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
 
     const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey);
-    const ownerId = localStorage.getItem("vaultfolio_share_owner_id") ?? undefined;
+    const ownerId = localStorage.getItem("secretasset_share_owner_id") ?? undefined;
     fetch("/api/share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -107,7 +107,7 @@ export function NavUser({
       .then((res) => res.json() as Promise<{ key?: string; owner_id?: string }>)
       .then((json) => {
         if (json.owner_id) {
-          localStorage.setItem("vaultfolio_share_owner_id", json.owner_id);
+          localStorage.setItem("secretasset_share_owner_id", json.owner_id);
         }
         if (json.key) {
           setPreGeneratedShortUrl(

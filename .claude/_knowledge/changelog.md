@@ -4,6 +4,161 @@
 
 ---
 
+## 2026-04-18
+
+### 스크린샷 버튼 Popover 메뉴 통일 + Crypto 평균단가 미리보기
+
+- **파일:**
+  - `src/app/(main)/asset/_components/input/cash-input.tsx`
+  - `src/app/(main)/asset/_components/input/crypto-input.tsx`
+  - `src/app/(main)/asset/_components/input/loan-input.tsx`
+- **변경:** 독립 "스크린샷" 버튼 → StockInput과 동일한 Popover 드롭다운 메뉴 ("스크린샷 가져오기" / "직접 입력") 패턴으로 통일. `DialogTrigger` 제거하고 `isDialogOpen` 상태로 직접 제어
+- **이유:** UX 일관성. Stock만 Popover였고 나머지는 버튼 2개 배치 방식이었음
+
+- **파일:** `src/app/(main)/asset/_components/screenshot/crypto-screenshot-import.tsx`
+- **변경:** 미리보기 항목에 `평균단가` 추가 (수량 → 평균단가 → 현재가 → 평가금액 순)
+- **이유:** AI 인식 후 평균단가가 올바른지 사용자가 미리보기에서 확인할 수 없었음
+
+### 캐시 갱신 주기 시장 마감 시간 기준 세분화
+
+- **파일:** `src/lib/cache-storage.ts`, `src/app/api/finance/route.ts`
+- **변경:** `getEffectiveDateStr(type)` 함수 추가. 해외주식 KST 07:00, 국내주식 KST 16:00, 환율 KST 09:00 이전이면 전일 날짜를 유효 캐시 키로 사용. `FileCacheStorage.writeFinanceCache()` 정리 로직도 동일 기준 적용
+- **이유:** 기존에는 단순 날짜 비교로 오전 접속 시 전날 종가가 있어도 재조회하는 낭비 발생
+
+### 올해 월별·일별 순자산 차트 + 일별 스냅샷 자동 저장
+
+- **파일:** `src/types/asset.ts` — `DailyAssetSnapshot { date, netAsset, financialAsset }` 인터페이스 추가
+- **파일:** `src/lib/asset-storage.ts` — `STORAGE_KEYS.dailySnapshots = "secretasset_daily_snapshots"` 추가
+- **파일:** `src/contexts/asset-data-context.tsx` — `saveDailySnapshot()` 추가. `initAndSync` 완료 후 최신 state 기반 스냅샷 저장. 올해 데이터만 유지, 오늘은 덮어쓰기
+- **파일:** `src/app/(main)/asset/_components/yearly-net-asset-chart.tsx` — Tabs 3개 (년도별/월별/일별). 월별 BarChart, 일별 LineChart (순자산+금융자산). `useDailySnapshots()` 훅으로 localStorage 로드
+- **이유:** 주식 급등락에 의한 일별 자산 변화 추적 기능 요청
+
+---
+
+## 2026-04-17
+
+### 스크린샷 가져오기 확장 + Gemini 사용 한도 관리
+
+- **파일:**
+  - `src/lib/cache-storage.ts` — `getGeminiDailyCount`, `incrementGeminiDailyCount`, `checkGeminiDailyLimit` 메서드 추가 (FileCacheStorage: JSON 파일 내 `GEMINI_COUNT` 필드, UpstashCacheStorage: Redis `gemini:daily:YYYY-MM-DD` 키)
+  - `src/hooks/use-gemini-usage.ts` — 신규 생성. localStorage `secretasset-gemini-YYYY-MM-DD` 키로 기기별 하루 10회 제한
+  - `src/app/api/parse-screenshot/route.ts` — `assetType` 파라미터 추가 (stock/crypto/cash/loan 분기), 서버 한도(200회) 체크, 타입별 Gemini 프롬프트·스키마·후처리 함수 분리
+  - `src/app/(main)/asset/_components/screenshot/crypto-screenshot-import.tsx` — 신규 생성
+  - `src/app/(main)/asset/_components/screenshot/cash-screenshot-import.tsx` — 신규 생성 (conflict 없이 append)
+  - `src/app/(main)/asset/_components/screenshot/loan-screenshot-import.tsx` — 신규 생성 (conflict 없이 append, 대출일 미인식 Badge)
+  - `src/app/(main)/asset/_components/input/crypto-input.tsx` — 스크린샷 버튼 + `CryptoScreenshotImport` 연동
+  - `src/app/(main)/asset/_components/input/cash-input.tsx` — 스크린샷 버튼 + `CashScreenshotImport` 연동
+  - `src/app/(main)/asset/_components/input/loan-input.tsx` — 스크린샷 버튼 + `LoanScreenshotImport` 연동
+  - `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx` — `useGeminiUsage` 통합 (한도 표시 Badge, 초과 시 비활성화)
+- **변경:** 주식 전용이던 스크린샷 가져오기를 암호화폐·현금성자산·대출까지 확장. Gemini 비용 보호를 위해 서버 전역 하루 200회 + 기기별 하루 10회 이중 한도 추가
+- **이유:** 사용자가 코인/현금/대출도 스크린샷으로 등록 요청. 유료 API 남용 방지 목적으로 한도 관리 추가
+
+### _components 디렉토리 구조 분리
+
+- **파일:** `src/app/(main)/asset/_components/` 전체
+- **변경:** `*-input.tsx` 6개 → `input/` 하위로 이동, `stock-screenshot-import.tsx` → `screenshot/` 하위로 이동
+- **이유:** 스크린샷 가져오기 기능 확장(코인·현금·대출) 준비를 위해 input과 screenshot 파일군을 디렉토리로 구분. `page.tsx`와 `stock-input.tsx`의 import 경로 업데이트
+
+---
+
+## 2026-04-17
+
+### 스크린샷 가져오기: 국내 ETF 분류 오류 및 수량 미표시 계산 수정
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:**
+  1. `DOMESTIC_TICKERS` Set 생성 (ETF + 국내주식 티커 전체) — Gemini가 "해외"로 잘못 분류해도 이 Set에 있으면 `domestic` 강제
+  2. `quantityMissing` 필드를 스키마·프롬프트에 추가 — Gemini가 수량 미표시 여부를 직접 반환
+  3. 수량 미표시 시 `quantity=1`, `currentPrice=currentValue(원화)` 로 설정 — 프론트에서 해외주식이면 USD 환산 그대로 적용
+  4. section 반환값을 category 기준으로 재설정 — 국내 ETF 강제 분류 이후 일관성 보장
+- **이유:** TIGER/KODEX 등 국내 ETF가 Gemini에 의해 "해외"로 분류되는 케이스 발생. 수량 없는 종목의 currentPrice가 평가금액 그대로 설정되어 해외주식 USD 환산 시 이중 오류 발생
+
+### 스크린샷 가져오기: 국내 주식 ticker-map 107개 → 214개 확장
+
+- **파일:** `src/app/api/parse-screenshot/ticker-map.ts`
+- **변경:** 반도체/장비·2차전지·바이오·방산·금융·게임·유통·건설/리츠·에너지 등 107개 추가
+- **이유:** ticker-map에 종목명이 있으면 Gemini 인식 실패 시 lookupTicker() fallback으로 티커 자동 매핑 가능 → 인식률 향상
+
+### 스크린샷 가져오기: Gemini 비용 전면 최적화 (프롬프트·출력·config)
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:**
+  1. 프롬프트 압축 — 설명형 문장 제거, 필드 규칙을 1줄 형식으로 압축 (~60% 토큰 절감)
+  2. `responseMimeType: "application/json"` + `responseSchema` 적용 — JSON 구조 강제로 마크다운 블록 방어 코드 제거, 불필요한 출력 필드 차단
+  3. `temperature: 0` — 추출 작업이므로 창의성 불필요, 결정론적 출력
+  4. `maxOutputTokens: 2048` — 출력 상한 설정 (종목 50개 기준 여유)
+  5. `thinkingBudget: 0` 유지 — thinking 토큰 비활성화
+  6. ETF 테이블 구분자 줄바꿈 → 콤마로 변경 (공백 토큰 절감)
+- **이유:** gemini-2.5-flash-lite 실사용 시 이미지 토큰+thinking 토큰으로 예상보다 비용 높게 발생. 전방위 최적화로 입출력 토큰 최소화
+
+### 스크린샷 가져오기: Gemini thinking 비활성화로 비용 절감
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:** `thinkingConfig: { thinkingBudget: 0 }` 추가
+- **이유:** gemini-2.5-flash-lite는 thinking 모델로 보이지 않는 thinking 토큰이 출력에 포함되어 과금됨. 단순 JSON 추출 작업엔 thinking 불필요 → 비활성화로 출력 토큰 절반 이하로 절감
+
+---
+
+## 2026-04-17
+
+### 스크린샷 가져오기: Gemini 프롬프트 토큰 최적화 (~70% 절감)
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:**
+  1. 해외 주식·ETF 참조 테이블 전체 제거 (Gemini 자체 지식으로 추론)
+  2. 국내 주식 참조 테이블 제거 (lookupTicker fallback으로 충분)
+  3. 하드코딩된 국내 ETF 테이블 → `DOMESTIC_ETF_MAP` 런타임 자동 생성으로 교체
+  4. `DOMESTIC_ETF_TABLE` 모듈 레벨 상수로 1회 빌드
+- **이유:** Gemini API 결제 등록 후 첫 토큰부터 과금. 참조 테이블 ~850토큰 → ~250토큰으로 절감
+
+### 스크린샷 가져오기: 안내 문구 확장 + 잘린 종목명 티커 매칭 개선
+
+- **파일:** `src/app/(main)/asset/_components/stock-screenshot-import.tsx`, `src/app/api/parse-screenshot/ticker-map.ts`
+- **변경:**
+  1. DialogDescription 및 안내 bullet 수정: 토스증권/도미노 한정 → 종목명·수량·금액이 명확하면 모든 증권 앱 인식 가능 안내 추가
+  2. `lookupTicker()` 함수에 3단계 매칭 로직 추가:
+     - 1단계(기존): 정규화 후 정확한 일치
+     - 2단계(신규): prefix 매칭 — 입력이 키의 접두사인 경우 (가장 짧은 키 선택)
+     - 3단계(신규): 키가 입력의 접두사인 경우 (가장 긴 키 선택)
+     - 4자 미만은 오탐 방지로 fuzzy 매칭 생략
+- **이유:** 스크린샷에서 긴 종목명이 잘릴 때(예: "KODEX 미국배당커버드콜액") 기존 정확 매칭 실패 → prefix 매칭으로 자동 티커 인식 가능하게 개선
+
+## 2026-04-16
+
+### 스크린샷 가져오기: ticker null 버그 수정 + 미식별 종목 카테고리 자동 설정
+
+- **파일:** `src/app/api/parse-screenshot/route.ts`
+- **변경:**
+  1. Gemini가 ticker를 문자열 `"null"`로 반환할 때 truthy 평가되어 티커로 저장되던 버그 수정 → 명시적 `"null"` 문자열 필터링
+  2. ticker 미식별 종목의 category를 직전 종목(위 항목)의 category로 fallback 설정 (section 판단 실패 대비)
+- **이유:** "비트마인 이머선 테크놀로지스" 같은 종목에서 ticker=null이 문자열로 저장되고, 카테고리가 국내주식으로 잘못 설정되는 버그 발생
+
+### 스크린샷 가져오기: merge 로직 수정 + 도미노 앱 지원 + ticker-map 확장
+
+- **파일:** `src/app/(main)/asset/_components/stock-screenshot-import.tsx`, `src/app/api/parse-screenshot/route.ts`, `src/app/api/parse-screenshot/ticker-map.ts`
+- **변경:**
+  1. `merge` 모드 로직 수정: 기존 수량 합산 → 스크린샷 기준 ticker 덮어쓰기 (비중복 기존 주식은 유지)
+  2. conflict step UI: "합산" → "덮어쓰기", 설명 텍스트 및 preview badge("합산" → "교체") 수정
+  3. `route.ts` 프롬프트: 토스증권 전용 → 토스증권·도미노 앱 양쪽 지원. 소수점 수량, 평가금액 역산 안내 추가
+  4. 수량 소수점 6자리 처리 추가 (도미노 앱: 310.536919주 등)
+  5. DialogDescription에 "또는 도미노" 문구 추가
+  6. `ticker-map.ts`: 한국인 매수 top 100 기준 해외주식 약 100개 추가 (우주/모빌리티, 핀테크, 소비재, 통신, 방산, 리츠, 레버리지ETF, YieldMax ETF 등)
+- **이유:** merge가 기존 수량에 합산하는 것이 아닌 스크린샷 기준으로 덮어쓰기가 맞다는 사용자 요구. 도미노 앱 스크린샷 지원 요청.
+
+### Gemini SDK 교체 및 스크린샷 가져오기 중복 처리 개선
+
+- **파일:** `package.json`, `src/app/api/parse-screenshot/route.ts`, `src/app/(main)/asset/_components/stock-screenshot-import.tsx`
+- **변경:**
+  1. `@google/generative-ai` → `@google/genai` 패키지 교체 (v1.0.0)
+  2. `route.ts`: `GoogleGenerativeAI` → `GoogleGenAI`, 모델 `gemini-1.5-flash` → `gemini-2.5-flash`, API 호출 방식 `genAI.models.generateContent()` 형태로 변경
+  3. `stock-screenshot-import.tsx`: 파싱 완료 후 기존 주식과 ticker 기준 중복 탐지, 중복 시 `conflict` step 삽입
+  4. conflict step UI: 합산(가중평균 단가·수량 합산) / 초기화 후 등록 2가지 선택지 제공
+  5. `handleRegister`: `merge` 모드 시 `updateStock`으로 기존 항목 업데이트, `reset` 모드 시 `deleteStock` 전체 후 `addStock`
+  6. preview step에서 합산 대상 종목에 "합산" badge 표시
+- **이유:** `gemini-1.5-flash`가 2026년 기준 완전 폐기(404)되어 API 오류 발생. 기존 주식이 있는 상태에서 스크린샷 가져오기 시 중복 종목이 무조건 추가되어 데이터 중복 문제 발생
+
+---
+
 ## 2026-04-11
 
 ### 주식 폼 조회 연동 UX 개선 + 소수점 2자리 정책 변경

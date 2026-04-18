@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  Line,
+  Area, AreaChart,
+  XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  LabelList,
+} from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,28 +23,37 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatCurrency } from "@/lib/number-utils";
-import { YearlyNetAsset, yearlyNetAssetSchema } from "@/types/asset";
+import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot } from "@/types/asset";
+import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+
+const NET_COLOR = "#ffffffff";
 
 const chartConfig = {
   netAsset: {
     label: "순자산",
-    color: "var(--chart-1)",
+    color: NET_COLOR,
+  },
+  financialAsset: {
+    label: "금융자산",
+    color: NET_COLOR,
   },
 } as ChartConfig;
 
-// 년도별 순자산 빠른 입력 버튼
 const yearlyNetAssetQuickButtons = [
   { label: "1천만", value: 10000000 },
   { label: "5천만", value: 50000000 },
   { label: "1억", value: 100000000 },
   { label: "5억", value: 500000000 },
+  { label: "10억", value: 1000000000 },
 ];
 
 interface YearlyNetAssetFormProps {
@@ -80,7 +94,7 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
           toast.error("저장에 실패했습니다.");
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
@@ -109,7 +123,6 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="netAsset"
@@ -128,7 +141,6 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="note"
@@ -142,11 +154,8 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
             </FormItem>
           )}
         />
-
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            취소
-          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>취소</Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
@@ -156,20 +165,53 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
   );
 }
 
+function useDailySnapshots(): DailyAssetSnapshot[] {
+  const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      if (!raw) return;
+      const all: DailyAssetSnapshot[] = JSON.parse(raw);
+      const currentYear = new Date().getFullYear().toString();
+      setSnapshots(
+        all.filter(s => s.date.startsWith(currentYear)).sort((a, b) => a.date.localeCompare(b.date))
+      );
+    } catch { /* 무시 */ }
+  }, []);
+  return snapshots;
+}
+
+// 가로 바 — 최대값 대비 비율로 너비 계산
+function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.max(0, (value / max) * 100) : 0;
+  return (
+    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  );
+}
+
+function DiffBadge({ diff }: { diff: number }) {
+  if (diff === 0) return <span className="text-xs text-muted-foreground">-</span>;
+  return (
+    <span className={`text-xs font-medium ${getProfitLossColor(diff)}`}>
+      {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
+    </span>
+  );
+}
+
 export function YearlyNetAssetChart() {
   const { assetData, getAssetSummary, deleteYearlyNetAsset } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
   const summary = getAssetSummary();
+  const dailySnapshots = useDailySnapshots();
 
   const handleDelete = (year: number) => {
     if (window.confirm("정말 삭제하시겠습니까?")) {
       const success = deleteYearlyNetAsset(year);
-      if (success) {
-        toast.success("년도별 순자산이 삭제되었습니다.");
-      } else {
-        toast.error("삭제에 실패했습니다.");
-      }
+      if (success) toast.success("년도별 순자산이 삭제되었습니다.");
+      else toast.error("삭제에 실패했습니다.");
     }
   };
 
@@ -183,15 +225,45 @@ export function YearlyNetAssetChart() {
     setEditingItem(undefined);
   };
 
-  // 현재 년도의 순자산을 자동으로 추가
   const currentYear = new Date().getFullYear();
+
+  // 년도별
   const allYearlyData = [
     ...assetData.yearlyNetAssets,
     { year: currentYear, netAsset: summary.netAsset, note: "현재" },
   ].sort((a, b) => a.year - b.year);
-
-  // 최근 5년 데이터만 표시
   const last5YearsData = allYearlyData.slice(-5);
+
+  // 월별
+  const monthlyData = Array.from({ length: 12 }, (_, i) => {
+    const month = String(i + 1).padStart(2, "0");
+    const prefix = `${currentYear}-${month}`;
+    const monthSnaps = dailySnapshots.filter(s => s.date.startsWith(prefix));
+    if (monthSnaps.length === 0) return null;
+    const last = monthSnaps[monthSnaps.length - 1];
+    return { month: `${i + 1}월`, netAsset: last.netAsset, financialAsset: last.financialAsset };
+  }).filter(Boolean) as { month: string; netAsset: number; financialAsset: number }[];
+
+  // 일별
+  const dailyChartData = dailySnapshots.map(s => ({
+    date: s.date.slice(5).replace("-", "/"),
+    netAsset: s.netAsset,
+    financialAsset: s.financialAsset,
+  }));
+
+  const maxMonthlyNet = Math.max(...monthlyData.map(d => d.netAsset), 1);
+  const maxMonthlyFin = Math.max(...monthlyData.map(d => d.financialAsset), 1);
+  const maxMonthly = Math.max(maxMonthlyNet, maxMonthlyFin);
+
+  const maxDailyNet = Math.max(...dailyChartData.map(d => d.netAsset), 1);
+  const maxDailyFin = Math.max(...dailyChartData.map(d => d.financialAsset), 1);
+  const maxDaily = Math.max(maxDailyNet, maxDailyFin);
+
+  const commonAxisProps = {
+    tick: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
+    tickLine: false,
+    axisLine: false,
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
@@ -199,8 +271,8 @@ export function YearlyNetAssetChart() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>년도별 순자산 변화</CardTitle>
-              <CardDescription>최근 5년간 순자산 추이 (올해는 자동 계산)</CardDescription>
+              <CardTitle>순자산 변화</CardTitle>
+              <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -211,9 +283,7 @@ export function YearlyNetAssetChart() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}
-                  </DialogTitle>
+                  <DialogTitle>{editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}</DialogTitle>
                   <DialogDescription>
                     {editingItem
                       ? "년도별 순자산 정보를 수정합니다."
@@ -226,97 +296,233 @@ export function YearlyNetAssetChart() {
           </div>
         </CardHeader>
         <CardContent>
-          {last5YearsData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm">등록된 년도별 데이터가 없습니다.</p>
-                <p className="text-muted-foreground text-xs">위의 버튼을 눌러 과거 순자산을 추가하세요.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* 차트 */}
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={last5YearsData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="year"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={false}
-                      className="text-xs"
-                    />
-                    <YAxis
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => formatShortCurrency(value)}
-                      className="text-xs"
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) => formatShortCurrency(value as number)}
-                        />
-                      }
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="netAsset"
-                      stroke="var(--color-netAsset)"
-                      strokeWidth={3}
-                      dot={{ fill: "var(--color-netAsset)", r: 5 }}
-                      activeDot={{ r: 7 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+          <Tabs defaultValue="yearly">
+            <TabsList className="mb-4 grid w-full grid-cols-3">
+              <TabsTrigger className={ASSET_THEME.tabActive} value="yearly">년도별</TabsTrigger>
+              <TabsTrigger className={ASSET_THEME.tabActive} value="monthly">월별</TabsTrigger>
+              <TabsTrigger className={ASSET_THEME.tabActive} value="daily">일별</TabsTrigger>
+            </TabsList>
 
-              {/* 데이터 리스트 */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">등록된 년도별 데이터</h4>
-                <div className="space-y-2">
-                  {allYearlyData.map((item) => {
-                    const isCurrentYear = item.year === currentYear;
-                    return (
-                      <div
-                        key={item.year}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${isCurrentYear ? "border-primary/50 bg-primary/5" : ""
-                          }`}
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{item.year}년</span>
-                            {isCurrentYear && (
-                              <span className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                                현재
-                              </span>
+            {/* ── 년도별 탭 ── */}
+            <TabsContent value="yearly">
+              {last5YearsData.length === 0 ? (
+                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm">등록된 년도별 데이터가 없습니다.</p>
+                    <p className="text-muted-foreground text-xs">위의 버튼을 눌러 과거 순자산을 추가하세요.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <ChartContainer config={chartConfig} className="h-[260px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={last5YearsData} margin={{ top: 28, right: 20, bottom: 5, left: 10 }}>
+                        <defs>
+                          <linearGradient id="gradNetAsset" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={NET_COLOR} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={NET_COLOR} stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="year" {...commonAxisProps} />
+                        <YAxis
+                          {...commonAxisProps}
+                          tickFormatter={(v) => formatShortCurrency(v)}
+                          width={55}
+                        />
+                        <ChartTooltip
+                          content={
+                            <ChartTooltipContent
+                              formatter={(value) => formatShortCurrency(value as number)}
+                            />
+                          }
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="netAsset"
+                          strokeWidth={3}
+                          fill="url(#gradNetAsset)"
+                          stroke={ASSET_THEME.categoryColors.realEstate}
+                          dot={{
+                            fill: ASSET_THEME.categoryColors.realEstate,
+                            r: 5,
+                            stroke: ASSET_THEME.categoryColors.realEstate,
+                            strokeWidth: 2,
+                          }}
+                          activeDot={{
+                            fill: ASSET_THEME.categoryColors.realEstate,
+                            r: 5,
+                            stroke: ASSET_THEME.categoryColors.realEstate,
+                            strokeWidth: 2,
+                          }}
+                        >
+                          <LabelList
+                            dataKey="netAsset"
+                            position="top"
+                            offset={13}
+                            formatter={(v: number) => formatShortCurrency(v)}
+                            style={{ fill: NET_COLOR, fontSize: 11, fontWeight: 600 }}
+                          />
+                        </Area>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">등록된 년도별 데이터</h4>
+                    <div className="space-y-2">
+                      {allYearlyData.map((item, idx) => {
+                        const isCurrentYear = item.year === currentYear;
+                        const prev = allYearlyData[idx - 1];
+                        const diff = prev ? item.netAsset - prev.netAsset : null;
+                        const diffPct = prev && prev.netAsset !== 0
+                          ? ((diff! / Math.abs(prev.netAsset)) * 100).toFixed(1)
+                          : null;
+                        return (
+                          <div
+                            key={item.year}
+                            className={`flex items-center justify-between rounded-lg border p-3 ${isCurrentYear ? "border-primary/50 bg-primary/5" : ""}`}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-muted-foreground font-semibold">{item.year}년</span>
+                                {isCurrentYear && (
+                                  <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                                    올해
+                                  </Badge>
+                                )}
+                                {diff !== null && diffPct !== null && (
+                                  <span className={`text-xs font-medium ${getProfitLossColor(diff)}`}>
+                                    {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-sm font-bold ${isCurrentYear ? ASSET_THEME.important : ASSET_THEME.text.default}`}>
+                                {formatCurrency(item.netAsset)}
+                              </p>
+                            </div>
+                            {!isCurrentYear && (
+                              <div className="flex gap-2">
+                                <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDelete(item.year)}>
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
-                          <p className={`text-sm font-bold ${isCurrentYear ? ASSET_THEME.important : ASSET_THEME.primary.text}`}>{formatCurrency(item.netAsset)}</p>
-                        </div>
-                        {
-                          !isCurrentYear && (
-                            <div className="flex gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleDelete(item.year)}>
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          )
-                        }
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
+            </TabsContent>
+
+            {/* ── 월별 탭 (표 형태) ── */}
+            <TabsContent value="monthly">
+              {monthlyData.length === 0 ? (
+                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm">올해 월별 데이터가 없습니다.</p>
+                    <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border overflow-hidden">
+                  {/* 헤더 */}
+                  <div className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-foreground border-b">
+                    <span>월</span>
+                    <span>순자산</span>
+                    <span>금융자산</span>
+                    <span className="text-right">전월대비</span>
+                  </div>
+                  {/* 행 */}
+                  <div className="divide-y">
+                    {monthlyData.map((row, idx) => {
+                      const prev = monthlyData[idx - 1];
+                      const diff = prev ? row.netAsset - prev.netAsset : null;
+                      return (
+                        <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
+                          <span className="text-xs font-semibold">{row.month}</span>
+                          <div className="space-y-1 min-w-0">
+                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                              {formatShortCurrency(row.netAsset)}
+                            </p>
+                            <MiniBar value={row.netAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
+                          </div>
+                          <div className="space-y-1 min-w-0">
+                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                              {formatShortCurrency(row.financialAsset)}
+                            </p>
+                            <MiniBar value={row.financialAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
+                          </div>
+                          <div className="text-right">
+                            {diff !== null ? <DiffBadge diff={diff} /> : <span className="text-xs text-muted-foreground">-</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── 일별 탭 (표 형태 + 스크롤) ── */}
+            <TabsContent value="daily">
+              {dailyChartData.length === 0 ? (
+                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm">올해 일별 데이터가 없습니다.</p>
+                    <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border overflow-hidden">
+                  {/* 헤더 */}
+                  <div className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-foreground border-b">
+                    <span>날짜</span>
+                    <span>순자산</span>
+                    <span>금융자산</span>
+                    <span className="text-right">전일대비</span>
+                  </div>
+                  {/* 최신순 스크롤 목록 */}
+                  <div className="divide-y max-h-[400px] overflow-y-auto">
+                    {[...dailyChartData].reverse().map((row, idx, arr) => {
+                      const next = arr[idx + 1]; // reverse 후 이전 날짜
+                      const diff = next ? row.netAsset - next.netAsset : null;
+                      return (
+                        <div key={row.date} className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
+                          <span className="text-xs font-semibold tabular-nums">{row.date}</span>
+                          <div className="space-y-1 min-w-0">
+                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                              {formatShortCurrency(row.netAsset)}
+                            </p>
+                            <MiniBar value={row.netAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
+                          </div>
+                          <div className="space-y-1 min-w-0">
+                            <p className="text-xs font-bold truncate" style={{ color: NET_COLOR }}>
+                              {formatShortCurrency(row.financialAsset)}
+                            </p>
+                            <MiniBar value={row.financialAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
+                          </div>
+                          <div className="text-right">
+                            {diff !== null ? <DiffBadge diff={diff} /> : <span className="text-xs text-muted-foreground">-</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="px-3 py-2 bg-muted/30 border-t text-xs text-muted-foreground text-right">
+                    총 {dailyChartData.length}일 기록됨
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 }
