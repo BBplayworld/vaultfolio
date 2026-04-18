@@ -17,6 +17,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const viewport: Viewport = {
   userScalable: false,
   maximumScale: 1,
+  initialScale: 1,
 };
 
 export const metadata: Metadata = {

@@ -181,6 +181,10 @@ These serve as the fallback; there is no separate default.css file. */
     @apply border-border outline-ring/50;
   }
 
+  html {
+    touch-action: pan-y;
+  }
+
   body {
     @apply bg-background text-foreground overscroll-none;
   }
