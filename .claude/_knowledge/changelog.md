@@ -6,6 +6,14 @@
 
 ## 2026-04-18
 
+### 자산 분포 카드 — 모바일 탭 전환
+
+- **파일:** `src/app/(main)/asset/_components/asset-distribution-cards.tsx`
+- **변경:** `useIsMobile()` 도입, isMobile 시 4개 Card를 Tabs(자산 분포/금융자산/부동산/대출)로 전환. 데스크탑은 기존 lg:grid-cols-2 유지. 카드 JSX를 `distributionCard` 변수 + `getCardByKey()` 함수로 추출해 모바일·데스크탑 양쪽에서 재사용
+- **이유:** 모바일에서 카드가 세로로 나열되어 스크롤이 길어지는 UX 문제 개선
+
+## 2026-04-18
+
 ### 스크린샷 가져오기 — 주식 탭 카테고리 자동 적용 + 현금 금융기관 Select 교체
 
 - **파일:** `src/app/(main)/asset/_components/input/stock-input.tsx`

@@ -835,7 +835,7 @@ export function StockInput() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4 grid w-full grid-cols-7 h-13 p-1 gap-1">
+            <TabsList className="mb-2 sm:mb-4 grid w-full grid-cols-7 h-13 p-1 gap-1">
               {(
                 [
                   { value: "all", icon: LayoutGrid, label: "전체" },
@@ -851,7 +851,7 @@ export function StockInput() {
                   key={value}
                   value={value}
                   className={[
-                    "h-10 py-1",
+                    "h-10",
                     "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
                     "hover:bg-accent hover:text-foreground hover:border-primary/50",
                     "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",

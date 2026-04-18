@@ -25,18 +25,18 @@ const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
 
 
 const INPUT_TABS = [
-  { value: "real-estate", label: "부동산",      mobileLabel: undefined },
-  { value: "stocks",      label: "주식",         mobileLabel: undefined },
-  { value: "crypto",      label: "암호화폐",      mobileLabel: undefined },
-  { value: "cash",        label: "현금성 자산",   mobileLabel: "현금" },
-  { value: "loans",       label: "대출",         mobileLabel: undefined },
+  { value: "real-estate", label: "부동산", mobileLabel: undefined },
+  { value: "stocks", label: "주식", mobileLabel: undefined },
+  { value: "crypto", label: "암호화폐", mobileLabel: undefined },
+  { value: "cash", label: "현금성 자산", mobileLabel: "현금" },
+  { value: "loans", label: "대출", mobileLabel: undefined },
 ] as const;
 
 const MOBILE_TABS = [
-  { value: "asset",        label: "자산", icon: LayoutDashboard },
+  { value: "asset", label: "자산", icon: LayoutDashboard },
   { value: "distribution", label: "분포", icon: PieChart },
-  { value: "input",        label: "입력", icon: PenLine },
-  { value: "chart",        label: "차트", icon: BarChart2 },
+  { value: "input", label: "입력", icon: PenLine },
+  { value: "chart", label: "차트", icon: BarChart2 },
 ] as const;
 
 const TAB_TRIGGER_CLASS = [
@@ -165,7 +165,7 @@ export default function Page() {
 
   const inputTabs = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1">
+      <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1 mb-0.5">
         {INPUT_TABS.map(({ value, label, mobileLabel }) => (
           <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
             <span className="ml-1 text-[11px] leading-tight sm:text-sm">
@@ -194,10 +194,10 @@ export default function Page() {
 
   if (isMobile) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
         {alertOrBanner}
-        <Tabs value={activeMobileTab} onValueChange={setActiveMobileTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-13 p-1 gap-1 sticky top-0 z-10 bg-background/95 backdrop-blur">
+        <Tabs value={activeMobileTab} onValueChange={setActiveMobileTab} className="w-full mt-0.5">
+          <TabsList className="grid w-full grid-cols-4 h-11 p-1 gap-1 mb-0.5 sticky top-0 z-10 bg-background/95 backdrop-blur">
             {MOBILE_TABS.map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
@@ -215,22 +215,22 @@ export default function Page() {
             ))}
           </TabsList>
 
-          <TabsContent value="asset" className="mt-3">
+          <TabsContent value="asset">
             <AssetOverviewCards />
           </TabsContent>
 
-          <TabsContent value="distribution" className="mt-3">
+          <TabsContent value="distribution">
             <AssetDistributionCards />
           </TabsContent>
 
-          <TabsContent value="input" className="mt-3">
+          <TabsContent value="input">
             <div className="flex flex-col gap-4">
               <div ref={tabsRef}>{inputTabs}</div>
               <ExchangeRateInput />
             </div>
           </TabsContent>
 
-          <TabsContent value="chart" className="mt-3">
+          <TabsContent value="chart">
             <YearlyNetAssetChart />
           </TabsContent>
         </Tabs>

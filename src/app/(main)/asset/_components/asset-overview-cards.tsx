@@ -11,7 +11,7 @@ export function AssetOverviewCards() {
   const summary = getAssetSummary();
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+    <div className="grid grid-cols-1 gap-2 sm:gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
       <Card className={`border-2 ${ASSET_THEME.primary.border} ${ASSET_THEME.primary.bgLight} flex flex-col gap-0 sm:gap-4`}>
         <CardHeader>
           <div className="flex items-center justify-between">
