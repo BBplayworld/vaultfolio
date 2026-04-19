@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -325,6 +324,17 @@ export function RealEstateInput() {
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
@@ -335,23 +345,12 @@ export function RealEstateInput() {
               </div>
               <CardDescription>보유하고 있는 부동산 자산을 관리합니다.</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingItem(undefined)}>
-                  <Plus className="mr-2 size-4" />
-                  부동산 추가
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                <DialogHeader>
-                  <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
-                  <DialogDescription>
-                    {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
-                  </DialogDescription>
-                </DialogHeader>
-                <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
-              </DialogContent>
-            </Dialog>
+            <div className="hidden">
+              <Button onClick={() => { setEditingItem(undefined); setIsDialogOpen(true); }}>
+                <Plus className="mr-2 size-4" />
+                부동산 추가
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

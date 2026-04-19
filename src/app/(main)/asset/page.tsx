@@ -13,9 +13,10 @@ import { LoanInput } from "./_components/input/loan-input";
 import { WelcomeGuide } from "./_components/welcome-guide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, PenLine, BarChart2, X, ChevronDown } from "lucide-react";
+import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyrightFooter } from "./_components/copyright-footer";
+import { FloatingAddButton } from "./_components/floating-add-button";
 import { APP_CONFIG } from "@/config";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME } from "@/config/theme";
@@ -35,7 +36,7 @@ const INPUT_TABS = [
 const MOBILE_TABS = [
   { value: "asset", label: "자산", icon: LayoutDashboard },
   { value: "distribution", label: "분포", icon: PieChart },
-  { value: "input", label: "입력", icon: PenLine },
+  { value: "detail", label: "상세", icon: List },
   { value: "chart", label: "차트", icon: BarChart2 },
 ] as const;
 
@@ -175,11 +176,11 @@ export default function Page() {
           </TabsTrigger>
         ))}
       </TabsList>
-      <TabsContent value="real-estate"><RealEstateInput /></TabsContent>
-      <TabsContent value="stocks"><StockInput /></TabsContent>
-      <TabsContent value="crypto"><CryptoInput /></TabsContent>
-      <TabsContent value="cash"><CashInput /></TabsContent>
-      <TabsContent value="loans"><LoanInput /></TabsContent>
+      <TabsContent value="real-estate" forceMount className="data-[state=inactive]:hidden"><RealEstateInput /></TabsContent>
+      <TabsContent value="stocks" forceMount className="data-[state=inactive]:hidden"><StockInput /></TabsContent>
+      <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
+      <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
+      <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
     </Tabs>
   );
 
@@ -223,18 +224,19 @@ export default function Page() {
             <AssetDistributionCards />
           </TabsContent>
 
-          <TabsContent value="input">
-            <div className="flex flex-col gap-4">
+          <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
+            <div className="flex flex-col gap-4 pb-5">
               <div ref={tabsRef}>{inputTabs}</div>
               <ExchangeRateInput />
             </div>
           </TabsContent>
 
-          <TabsContent value="chart">
+          <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
             <YearlyNetAssetChart />
           </TabsContent>
         </Tabs>
         <CopyrightFooter />
+        <FloatingAddButton />
       </div>
     );
   }
@@ -242,11 +244,9 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       {alertOrBanner}
-      <div className="flex flex-col gap-4 md:gap-6 w-full">
-        <AssetOverviewCards />
-        <AssetDistributionCards />
-      </div>
-      <div ref={tabsRef}>
+      <AssetOverviewCards />
+      <AssetDistributionCards />
+      <div ref={tabsRef} className="pb-24">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1">
             {INPUT_TABS.map(({ value, label, mobileLabel }) => (
@@ -258,11 +258,11 @@ export default function Page() {
               </TabsTrigger>
             ))}
           </TabsList>
-          <TabsContent value="real-estate"><RealEstateInput /></TabsContent>
-          <TabsContent value="stocks"><StockInput /></TabsContent>
-          <TabsContent value="crypto"><CryptoInput /></TabsContent>
-          <TabsContent value="cash"><CashInput /></TabsContent>
-          <TabsContent value="loans"><LoanInput /></TabsContent>
+          <TabsContent value="real-estate" forceMount className="data-[state=inactive]:hidden"><RealEstateInput /></TabsContent>
+          <TabsContent value="stocks" forceMount className="data-[state=inactive]:hidden"><StockInput /></TabsContent>
+          <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
+          <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
+          <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
         </Tabs>
       </div>
       <div className="flex flex-col gap-2">
@@ -270,6 +270,7 @@ export default function Page() {
       </div>
       <YearlyNetAssetChart />
       <CopyrightFooter />
+      <FloatingAddButton />
     </div>
   );
 }

@@ -39,7 +39,8 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               "flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 relative z-50",
               "data-[navbar-style=sticky]:bg-background/50 data-[navbar-style=sticky]:sticky data-[navbar-style=sticky]:top-0 data-[navbar-style=sticky]:overflow-hidden data-[navbar-style=sticky]:rounded-t-[inherit] data-[navbar-style=sticky]:backdrop-blur-md",
               "bg-background/95 backdrop-blur-sm",
-              "mt-1"
+              "mt-1",
+              "lg:sticky lg:top-0 lg:rounded-t-[inherit] lg:overflow-hidden"
             )}
           >
             <div className="flex w-full items-center justify-between px-3 lg:px-12">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2, CreditCard, Calendar, Clock, Building2, Coins, TrendingUp, ImageUp, ChevronDown } from "lucide-react";
@@ -390,6 +390,20 @@ export function LoanInput() {
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const mode = (e as CustomEvent).detail?.mode;
+      setEditingItem(undefined);
+      if (mode === "screenshot") {
+        setIsScreenshotOpen(true);
+      } else {
+        setIsDialogOpen(true);
+      }
+    };
+    window.addEventListener("trigger-add-loan", handler);
+    return () => window.removeEventListener("trigger-add-loan", handler);
+  }, []);
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
       const success = deleteLoan(id);
@@ -432,6 +446,16 @@ export function LoanInput() {
 
   return (
     <div className="*:data-[slot=card]:shadow-xs">
+      <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
+            <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
+          </DialogHeader>
+          <LoanForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
@@ -442,7 +466,7 @@ export function LoanInput() {
               </div>
               <CardDescription>신용대출, 담보대출 등 대출 정보를 관리합니다</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2">
               <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
                 <PopoverTrigger asChild>
                   <Button>
@@ -476,16 +500,6 @@ export function LoanInput() {
                   </button>
                 </PopoverContent>
               </Popover>
-              <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
-                    <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
-                  </DialogHeader>
-                  <LoanForm editData={editingItem} onClose={handleDialogClose} />
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </CardHeader>

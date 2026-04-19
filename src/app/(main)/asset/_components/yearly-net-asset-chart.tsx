@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Line,
@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -220,6 +219,16 @@ export function YearlyNetAssetChart() {
   const { assetData, getAssetSummary, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
+
+  const openAddDialog = useCallback(() => {
+    setEditingItem(undefined);
+    setIsDialogOpen(true);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("trigger-add-yearly-net-asset", openAddDialog);
+    return () => window.removeEventListener("trigger-add-yearly-net-asset", openAddDialog);
+  }, [openAddDialog]);
   const summary = getAssetSummary();
   const dailySnapshots = useDailySnapshots(snapshotVersion);
   const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
@@ -289,12 +298,6 @@ export function YearlyNetAssetChart() {
               <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingItem(undefined)}>
-                  <Plus className="mr-2 size-4" />
-                  과거 순자산 추가
-                </Button>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}</DialogTitle>

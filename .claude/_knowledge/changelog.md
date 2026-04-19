@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-04-19
+
+### YearlyNetAssetChart 과거 순자산 추가 버튼 → FAB 이벤트 방식 전환
+
+- **파일:** `src/app/(main)/asset/_components/yearly-net-asset-chart.tsx`
+- **변경:** 카드 헤더의 "과거 순자산 추가" `DialogTrigger` 버튼 제거. `openAddDialog` 콜백 + `trigger-add-yearly-net-asset` CustomEvent 리스너 추가. `FloatingAddButton`의 "과거 순자산" 항목에서 이벤트를 수신해 다이얼로그를 열도록 변경.
+- **이유:** FAB 방식으로 통합 시 카드 내부 추가 버튼이 중복됨
+
+### Sheet 오버레이 어두움 + layout 헤더 PC sticky 적용
+
+- **파일:** `src/components/ui/sheet.tsx`, `src/app/(main)/asset/layout.tsx`
+- **변경:** (1) SheetOverlay `bg-black/50` → `bg-black/80` (더 어두운 오버레이). (2) `layout.tsx` 헤더에 `lg:sticky lg:top-0 lg:rounded-t-[inherit] lg:overflow-hidden` 추가 → PC 환경에서 헤더 상단 고정.
+- **이유:** Sheet 열릴 때 배경이 충분히 어둡지 않았음. PC 환경에서도 스크롤 시 헤더가 사라지는 문제 수정
+
+### scroll-to-top 하단 위치 조정 + theme.ts value 클래스 제거
+
+- **파일:** `src/components/scroll-to-top.tsx`, `src/config/theme.ts`
+- **변경:** (1) scroll-to-top 버튼 `bottom-6` → `bottom-5` (FAB와 겹침 방지). (2) `ASSET_THEME.value` 미사용 클래스 제거.
+- **이유:** FAB가 `bottom-5`에 위치해 scroll-to-top 버튼과 겹침 해소
+
+### Floating 추가 버튼(FAB) PC/패드 환경 확장
+
+- **파일:** `src/app/(main)/asset/page.tsx`, `src/app/(main)/asset/_components/input/real-estate-input.tsx`, `src/app/(main)/asset/_components/input/stock-input.tsx`, `src/app/(main)/asset/_components/input/crypto-input.tsx`, `src/app/(main)/asset/_components/input/cash-input.tsx`, `src/app/(main)/asset/_components/input/loan-input.tsx`
+- **변경:** (1) PC 분기 return에 `<FloatingAddButton />` 추가. (2) PC 분기 inputTabs 컨테이너에 `pb-24` 추가. (3) 각 `*-input.tsx`의 카드 헤더 추가 버튼 div를 `hidden sm:flex` → `hidden`으로 변경 (전 환경 숨김).
+- **이유:** FAB 방식이 모바일에만 적용되어 있었으나, PC/패드 환경도 동일한 UX로 통일 요청
+
+### 모바일 UI: 입력/상세 분리 + 하단 플로팅 추가 버튼(FAB)
+
+- **파일:** `src/app/(main)/asset/page.tsx`, `src/app/(main)/asset/_components/floating-add-button.tsx` (신규), `src/app/(main)/asset/_components/input/real-estate-input.tsx`, `src/app/(main)/asset/_components/input/stock-input.tsx`, `src/app/(main)/asset/_components/input/crypto-input.tsx`, `src/app/(main)/asset/_components/input/cash-input.tsx`, `src/app/(main)/asset/_components/input/loan-input.tsx`
+- **변경:** (1) 모바일 탭 "입력"(PenLine) → "상세"(List) 로 변경. (2) 신규 `FloatingAddButton` 컴포넌트: 화면 하단 중앙 fixed FAB → Sheet 열기 → 자산 유형 5개 선택 → 스크린샷/직접입력 방법 선택 → CustomEvent dispatch. (3) 각 `*-input.tsx`의 추가 버튼을 `hidden sm:flex`로 모바일에서 숨김. (4) Dialog/ScreenshotImport를 CardHeader 밖 Fragment로 분리 (이벤트 경로로도 열리도록). (5) `crypto-input`, `cash-input`, `loan-input`에 이벤트 리스너(`trigger-add-*`) 신규 추가 (기존 `stock`, `real-estate`는 이미 존재).
+- **이유:** 모바일에서 입력(Form)과 상세(목록)가 하나의 탭에 혼재되어 UX가 불명확했음. 자산 추가 동선을 하단 FAB으로 통합하고 목록은 "상세" 탭에서만 표시하도록 역할 분리
+
+---
+
 ## 2026-04-18
 
 ### KB 및 CLAUDE.md 최신화

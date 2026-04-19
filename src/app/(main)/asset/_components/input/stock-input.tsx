@@ -16,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -760,6 +759,22 @@ export function StockInput() {
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
+      {/* 스크린샷 가져오기 다이얼로그 */}
+      <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
+
+      {/* 직접 입력 다이얼로그 */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <StockForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
@@ -772,8 +787,7 @@ export function StockInput() {
               </div>
               <CardDescription>보유하고 있는 주식 자산을 관리합니다.</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              {/* 주식 추가 팝오버 메뉴 */}
+            <div className="hidden items-center gap-2">
               <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
                 <PopoverTrigger asChild>
                   <Button>
@@ -814,22 +828,6 @@ export function StockInput() {
                   </button>
                 </PopoverContent>
               </Popover>
-
-              {/* 스크린샷 가져오기 다이얼로그 */}
-              <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
-
-              {/* 직접 입력 다이얼로그 */}
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
-                    <DialogDescription>
-                      {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <StockForm editData={editingItem} onClose={handleDialogClose} />
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </CardHeader>

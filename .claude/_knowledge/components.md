@@ -1,6 +1,6 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-04-17
+> 마지막 업데이트: 2026-04-19
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
@@ -17,9 +17,15 @@ _components/
 │   └── exchange-rate-input.tsx
 ├── screenshot/         # 스크린샷 가져오기 다이얼로그
 │   └── stock-screenshot-import.tsx
+├── floating-add-button.tsx  # 하단 고정 FAB (모바일+PC/패드 전체 환경)
 └── sidebar/            # 사이드바 관련
     └── ...
 ```
+
+> **FloatingAddButton:** 화면 하단 중앙 fixed FAB. 클릭 시 Sheet 팝업 → 자산 유형 **6개** 선택(부동산/주식/암호화폐/현금성자산/대출/과거순자산) → 스크린샷/직접입력 선택 → CustomEvent dispatch. 모바일은 `side="top"`, PC/패드는 `side="right"` Sheet. 모바일·PC·패드 전 환경에서 렌더링. 각 `*-input.tsx` 카드 헤더의 개별 추가 버튼은 `hidden` (전체 숨김).
+> **이벤트 맵:** `trigger-add-real-estate`, `trigger-add-stock`, `trigger-add-crypto`, `trigger-add-cash`, `trigger-add-loan`, `trigger-add-yearly-net-asset`
+> - `real-estate`, `yearly-net-asset`: hasScreenshot=false → 바로 이벤트 dispatch (방법 선택 없음)
+> - 나머지 4종: hasScreenshot=true → `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` 포함 dispatch
 
 > **자산 입력 화면은 항상 `input/` 하위 5개 파일로만 구성된다:**
 > - `input/stock-input.tsx` — 주식 (국내/해외/IRP/ISA/연금/비상장)
@@ -130,7 +136,7 @@ getProfitLossColor() → config/theme
 
 ### stock-screenshot-import.tsx
 
-**파일:** `src/app/(main)/asset/_components/stock-screenshot-import.tsx`
+**파일:** `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
 **Props:** `open?: boolean`, `onOpenChange?: (open: boolean) => void` (controlled/uncontrolled 양쪽 지원)
 
 3단계 다이얼로그 플로우로 스크린샷 기반 주식 일괄 가져오기.
@@ -161,7 +167,7 @@ getProfitLossColor() → config/theme
 |----------|------|------|
 | AssetOverviewCards | `asset-overview-cards.tsx` | 총자산/순자산/손익 요약 카드 |
 | AssetDistributionCards | `asset-distribution-cards.tsx` | 자산군별 분포 (파이 또는 바) |
-| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | Recharts 연도별 순자산 추이 |
+| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | 순자산 추이 차트 — 년도별(AreaChart)/월별(표)/일별(표) 3탭. `trigger-add-yearly-net-asset` 이벤트 수신. |
 | AssetManagementCard | `asset-management-card.tsx` | 내보내기/가져오기/초기화/공유 |
 | WelcomeGuide | `welcome-guide.tsx` | 최초 실행 시 가이드 |
 | CopyrightFooter | `copyright-footer.tsx` | 버전·저작권 |

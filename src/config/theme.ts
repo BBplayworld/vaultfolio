@@ -17,8 +17,6 @@ export const ASSET_THEME = {
     border: "border-teal-600",
   },
 
-  value: "text-zinc-800 dark:text-white",
-
   // ===== 중요 =========
   important: "text-orange-600 dark:text-orange-400",
   // ===== 부채 및 손실 (Liability / Loss) =====
