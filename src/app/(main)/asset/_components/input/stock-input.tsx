@@ -385,10 +385,10 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     placeholder="0"
                     quickButtons={isForeignStock ? [] : stockQuickButtons}
                     allowDecimals={isForeignStock}
-                    maxDecimals={isForeignStock ? 2 : undefined}
+                    maxDecimals={isForeignStock ? 3 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 2자리 가능)"}</FormDescription>
+                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 3자리 가능)"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -409,10 +409,10 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     placeholder="0"
                     quickButtons={isForeignStock ? [] : stockQuickButtons}
                     allowDecimals={isForeignStock}
-                    maxDecimals={isForeignStock ? 2 : undefined}
+                    maxDecimals={isForeignStock ? 3 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 2자리 가능)"}</FormDescription>
+                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 3자리 가능)"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -512,8 +512,8 @@ export function StockInput() {
   };
 
   const formatCurrencyDisplay = (value: number, currency: string = "KRW") => {
-    if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-    if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 3 })}`;
+    if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 3 })}`;
     return formatCurrency(value);
   };
 

@@ -218,21 +218,27 @@ function CashForm({ editData, onClose }: CashFormProps) {
                 <FormField
                     control={form.control}
                     name="balance"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>금액 *</FormLabel>
-                            <FormControl>
-                                <NumberInput
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    placeholder="0"
-                                    quickButtons={[]}
-                                />
-                            </FormControl>
-                            <FormDescription>{form.watch("currency")} {getBalanceDescription()}</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+                    render={({ field }) => {
+                        const currency = form.watch("currency");
+                        const isForeignCurrency = currency === "USD" || currency === "JPY";
+                        return (
+                            <FormItem>
+                                <FormLabel>금액 *</FormLabel>
+                                <FormControl>
+                                    <NumberInput
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="0"
+                                        quickButtons={[]}
+                                        allowDecimals={isForeignCurrency}
+                                        maxDecimals={isForeignCurrency ? 2 : undefined}
+                                    />
+                                </FormControl>
+                                <FormDescription>{form.watch("currency")} {getBalanceDescription()}</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        );
+                    }}
                 />
 
                 <FormField
@@ -423,8 +429,8 @@ export function CashInput() {
                                                     {formatCurrencyDisplay(item.balance, item.currency)}
                                                 </span>
                                                 {item.currency !== "KRW" && (
-                                                    <span className="text-xs text-foreground">
-                                                        ₩{(item.balance * getMultiplier(item.currency)).toLocaleString()} 환산
+                                                    <span className="text-xs text-muted-foreground">
+                                                        (₩{(item.balance * getMultiplier(item.currency)).toLocaleString()})
                                                     </span>
                                                 )}
                                             </div>
