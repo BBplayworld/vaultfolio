@@ -7,9 +7,11 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { AssetDataProvider } from "@/contexts/asset-data-context";
+import { ReactQueryProvider } from "@/components/react-query-provider";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
 import { NavUser } from "./_components/sidebar/nav-user";
+import { GuideMiniButton } from "./_components/sidebar/guide-mini-banner";
 import { rootUser } from "@/config/users";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
@@ -24,6 +26,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const navbarStyle = "scroll";
 
   return (
+    <ReactQueryProvider>
     <AssetDataProvider>
       <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
         <SidebarInset
@@ -45,6 +48,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           >
             <div className="flex w-full items-center justify-between px-3 lg:px-12">
               <div className="flex items-center gap-1 lg:gap-2">
+                <GuideMiniButton />
               </div>
               <div className="flex items-center gap-2">
                 <NavUser user={rootUser} />
@@ -57,5 +61,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         </SidebarInset>
       </SidebarProvider>
     </AssetDataProvider>
+    </ReactQueryProvider>
   );
 }

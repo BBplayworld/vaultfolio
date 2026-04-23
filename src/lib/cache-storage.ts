@@ -11,7 +11,7 @@
  *   - Sliding Window TTL: GET 시마다 30일 리셋 → 활성 링크는 자동 연장
  */
 
-import type { ExchangeRates, StockPriceResult } from "./finance-service";
+import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
 
 // ─────────────────────────────────────────────────────────
 // 인터페이스
@@ -31,6 +31,9 @@ export interface ICacheStorage {
   deleteShareToken(key: string): Promise<void>;
   getOwnerKey(ownerHash: string): Promise<string | null>;
   setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
+  // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
+  getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null>;
+  setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void>;
   // Rate Limit (로컬 개발에서는 항상 통과)
   checkRateLimit(ip: string): Promise<boolean>;
   // Gemini 사용량 관리
@@ -105,6 +108,7 @@ interface FileCacheData {
   STOCKS?: Record<string, StockPriceResult>;
   KIS_TOKEN?: { access_token: string; updated_at: string };
   GEMINI_COUNT?: { count: number; date: string };
+  DIVIDENDS?: Record<string, DividendPayoutResult[]>;
 }
 
 interface ShareTokenEntry {
@@ -254,6 +258,19 @@ class FileCacheStorage implements ICacheStorage {
     this.writeShareTokens(data);
   }
 
+  async getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null> {
+    return this.readFinanceCache().DIVIDENDS?.[cacheKey] ?? null;
+  }
+
+  async setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void> {
+    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = nowKST.toISOString().split("T")[0];
+    const cache = this.readFinanceCache();
+    if (!cache.DIVIDENDS) cache.DIVIDENDS = {};
+    cache.DIVIDENDS[cacheKey] = data;
+    this.writeFinanceCache(cache, todayStr);
+  }
+
   // 로컬 개발에서는 Rate Limit 적용 없음
   async checkRateLimit(_ip: string): Promise<boolean> {
     return true;
@@ -364,6 +381,15 @@ class UpstashCacheStorage implements ICacheStorage {
     const count = await this.redis.incr(key);
     if (count === 1) await this.redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
     return count <= RATE_LIMIT_MAX;
+  }
+
+  async getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null> {
+    return this.redis.get<DividendPayoutResult[]>(`finance:dividend:${cacheKey}`);
+  }
+
+  async setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void> {
+    const DIVIDEND_TTL = 30 * 24 * 3600; // 30일
+    await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: DIVIDEND_TTL });
   }
 
   async getGeminiDailyCount(todayStr: string): Promise<number> {

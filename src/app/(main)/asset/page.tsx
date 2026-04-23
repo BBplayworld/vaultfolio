@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AssetOverviewCards } from "./_components/asset-overview-cards";
 import { AssetDistributionCards } from "./_components/asset-distribution-cards";
 import { YearlyNetAssetChart } from "./_components/yearly-net-asset-chart";
@@ -13,8 +13,9 @@ import { LoanInput } from "./_components/input/loan-input";
 import { WelcomeGuide } from "./_components/welcome-guide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X, ChevronDown } from "lucide-react";
+import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DividendCard } from "./_components/dividend-card";
 import { CopyrightFooter } from "./_components/copyright-footer";
 import { FloatingAddButton } from "./_components/floating-add-button";
 import { APP_CONFIG } from "@/config";
@@ -40,6 +41,12 @@ const MOBILE_TABS = [
   { value: "chart", label: "차트", icon: BarChart2 },
 ] as const;
 
+const PC_TABS = [
+  { value: "overview", label: "자산+분포", icon: LayoutDashboard },
+  { value: "detail", label: "상세", icon: List },
+  { value: "chart", label: "차트", icon: BarChart2 },
+] as const;
+
 const TAB_TRIGGER_CLASS = [
   "h-10 sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
   "hover:bg-accent hover:text-foreground hover:border-primary/50",
@@ -52,6 +59,8 @@ export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
   const [activeTab, setActiveTab] = useState("real-estate");
   const [activeMobileTab, setActiveMobileTab] = useState("asset");
+  const [activePcTab, setActivePcTab] = useState("overview");
+  const [activeChartTab, setActiveChartTab] = useState("netasset");
   const isMobile = useIsMobile();
   const tabsRef = useRef<HTMLDivElement>(null);
   const [alertDismissed, setAlertDismissed] = useState(() => {
@@ -68,6 +77,17 @@ export default function Page() {
     localStorage.removeItem(ALERT_DISMISSED_KEY);
     setAlertDismissed(false);
   };
+
+  useEffect(() => {
+    const restore = () => restoreAlert();
+    const dismiss = () => setAlertDismissed(true);
+    window.addEventListener("trigger-restore-guide", restore);
+    window.addEventListener("trigger-dismiss-guide", dismiss);
+    return () => {
+      window.removeEventListener("trigger-restore-guide", restore);
+      window.removeEventListener("trigger-dismiss-guide", dismiss);
+    };
+  }, []);
 
   const isWelcomeGuide =
     isSharePending ||
@@ -94,17 +114,6 @@ export default function Page() {
       </div>
     );
   }
-
-  const guideMiniBanner = (
-    <button
-      onClick={restoreAlert}
-      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-xs text-primary"
-    >
-      <Info className="size-3.5 shrink-0" />
-      <span className="flex-1 font-medium">앱 가이드 · 보안 안내 보기</span>
-      <ChevronDown className="size-3.5 shrink-0 opacity-60" />
-    </button>
-  );
 
   const alert = (
     <Alert className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 relative">
@@ -162,7 +171,7 @@ export default function Page() {
     </Alert>
   );
 
-  const alertOrBanner = alertDismissed ? guideMiniBanner : alert;
+  const alertOrBanner = alertDismissed ? null : alert;
 
   const inputTabs = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -181,6 +190,21 @@ export default function Page() {
       <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
       <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
       <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
+    </Tabs>
+  );
+
+  const chartTabs = (
+    <Tabs value={activeChartTab} onValueChange={setActiveChartTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2 h-10 p-1 gap-1 mb-0.5">
+        <TabsTrigger value="netasset" className={TAB_TRIGGER_CLASS}>순자산</TabsTrigger>
+        <TabsTrigger value="dividend" className={TAB_TRIGGER_CLASS}>배당</TabsTrigger>
+      </TabsList>
+      <TabsContent value="netasset" forceMount className="data-[state=inactive]:hidden">
+        <YearlyNetAssetChart />
+      </TabsContent>
+      <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden">
+        <DividendCard />
+      </TabsContent>
     </Tabs>
   );
 
@@ -232,7 +256,7 @@ export default function Page() {
           </TabsContent>
 
           <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
-            <YearlyNetAssetChart />
+            {chartTabs}
           </TabsContent>
         </Tabs>
         <CopyrightFooter />
@@ -244,31 +268,35 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       {alertOrBanner}
-      <AssetOverviewCards />
-      <AssetDistributionCards />
-      <div ref={tabsRef} className="pb-24">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1">
-            {INPUT_TABS.map(({ value, label, mobileLabel }) => (
-              <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
-                <span className="ml-1 text-[11px] leading-tight sm:text-sm">
-                  {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
-                </span>
-                <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <TabsContent value="real-estate" forceMount className="data-[state=inactive]:hidden"><RealEstateInput /></TabsContent>
-          <TabsContent value="stocks" forceMount className="data-[state=inactive]:hidden"><StockInput /></TabsContent>
-          <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
-          <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
-          <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
-        </Tabs>
-      </div>
-      <div className="flex flex-col gap-2">
-        <ExchangeRateInput />
-      </div>
-      <YearlyNetAssetChart />
+      <Tabs value={activePcTab} onValueChange={setActivePcTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-12 p-1 gap-2 mb-1">
+          {PC_TABS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger key={value} value={value} className={[TAB_TRIGGER_CLASS, "text-sm gap-2"].join(" ")}>
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="flex flex-col gap-4 md:gap-6">
+            <AssetOverviewCards />
+            <AssetDistributionCards />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
+          <div className="flex flex-col gap-4" ref={tabsRef}>
+            {inputTabs}
+            <ExchangeRateInput />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
+          {chartTabs}
+        </TabsContent>
+      </Tabs>
+
       <CopyrightFooter />
       <FloatingAddButton />
     </div>

@@ -4,160 +4,72 @@
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
-### 디렉토리 구조
-
 ```
 _components/
 ├── input/              # 자산 입력 폼 + 목록 렌더링
-│   ├── stock-input.tsx
-│   ├── real-estate-input.tsx
-│   ├── cash-input.tsx
-│   ├── crypto-input.tsx
-│   ├── loan-input.tsx
+│   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
+│   ├── real-estate-input.tsx    # 부동산
+│   ├── cash-input.tsx           # 현금성 자산
+│   ├── crypto-input.tsx         # 암호화폐
+│   ├── loan-input.tsx           # 대출
 │   └── exchange-rate-input.tsx
 ├── screenshot/         # 스크린샷 가져오기 다이얼로그
-│   └── stock-screenshot-import.tsx
-├── floating-add-button.tsx  # 하단 고정 FAB (모바일+PC/패드 전체 환경)
-└── sidebar/            # 사이드바 관련
-    └── ...
+│   ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
+│   ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
+│   ├── cash-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
+│   └── loan-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
+├── floating-add-button.tsx  # 하단 고정 FAB (전 환경)
+└── sidebar/
 ```
 
-> **FloatingAddButton:** 화면 하단 중앙 fixed FAB. 클릭 시 Sheet 팝업 → 자산 유형 **6개** 선택(부동산/주식/암호화폐/현금성자산/대출/과거순자산) → 스크린샷/직접입력 선택 → CustomEvent dispatch. 모바일은 `side="top"`, PC/패드는 `side="right"` Sheet. 모바일·PC·패드 전 환경에서 렌더링. 각 `*-input.tsx` 카드 헤더의 개별 추가 버튼은 `hidden` (전체 숨김).
-> **이벤트 맵:** `trigger-add-real-estate`, `trigger-add-stock`, `trigger-add-crypto`, `trigger-add-cash`, `trigger-add-loan`, `trigger-add-yearly-net-asset`
-> - `real-estate`, `yearly-net-asset`: hasScreenshot=false → 바로 이벤트 dispatch (방법 선택 없음)
-> - 나머지 4종: hasScreenshot=true → `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` 포함 dispatch
-
-> **자산 입력 화면은 항상 `input/` 하위 5개 파일로만 구성된다:**
-> - `input/stock-input.tsx` — 주식 (국내/해외/IRP/ISA/연금/비상장)
-> - `input/real-estate-input.tsx` — 부동산
-> - `input/cash-input.tsx` — 현금성 자산
-> - `input/crypto-input.tsx` — 암호화폐
-> - `input/loan-input.tsx` — 대출
-
-> **스크린샷 다이얼로그는 `screenshot/` 하위에 위치:**
-> - `screenshot/stock-screenshot-import.tsx` — 주식 스크린샷 가져오기
-> - `screenshot/crypto-screenshot-import.tsx` — 암호화폐 스크린샷 가져오기
-> - `screenshot/cash-screenshot-import.tsx` — 현금성 자산 스크린샷 가져오기 (conflict 단계 없음, 항상 append)
-> - `screenshot/loan-screenshot-import.tsx` — 대출 스크린샷 가져오기 (conflict 단계 없음, 항상 append)
-
-**스크린샷 다이얼로그 공통 패턴:**
-- `open/onOpenChange` props로 외부 제어 (각 input 컴포넌트의 `isScreenshotOpen` state와 연동)
-- `useGeminiUsage()` hook으로 클라이언트 하루 한도(10회) 체크·표시
-- upload → (conflict) → preview 3단계 (cash/loan은 2단계: upload → preview)
-- API 성공 후 `geminiUsage.increment(assetType)` 호출
-
-**중복 처리 전략:**
-- stock: ticker 기준 → merge/reset 선택
-- crypto: symbol 기준 → merge/reset 선택
-- cash/loan: 고유 식별자 없음 → 항상 기존 목록에 append
+### FloatingAddButton
+화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
+- 모바일: `side="top"`, PC/패드: `side="right"` Sheet
+- 각 `*-input.tsx` 카드 헤더 추가 버튼은 `hidden` (전체 숨김)
+- 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
+  - real-estate, yearly-net-asset: hasScreenshot=false → 바로 dispatch
+  - 나머지 4종: `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` dispatch
 
 ### *-input.tsx 공통 구조
-
-각 파일은 두 부분으로 구성:
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
 2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어
 
 ```
-useAssetData() → CRUD 함수 사용
+useAssetData() → CRUD 함수
 useForm({ resolver: zodResolver(xxxSchema) })
 toast.success/error → Sonner
 formatCurrency() → number-utils
 getProfitLossColor() → config/theme
 ```
 
+### 스크린샷 다이얼로그 공통 패턴
+- `open/onOpenChange` props로 외부 제어
+- `useGeminiUsage()` hook으로 클라이언트 하루 한도(10회) 체크
+- API 성공 후 `geminiUsage.increment(assetType)` 호출
+- **중복 처리:** stock/crypto → merge/reset 선택, cash/loan → 항상 append
+
 ---
 
-### stock-input.tsx
+### stock-input.tsx 카드 레이어
 
-**탭:** 전체 / 국내 / 해외 / IRP / ISA / 연금 / 비상장 (7탭)
-
-**카드 레이어 구조:**
 | Layer | 내용 |
 |-------|------|
-| 1 (헤더) | 카테고리 Badge + 종목명 + 티커 + 조회기준일 + 편집/삭제 버튼 |
-| 2 (핵심지표) | 평가금액(좌) / 평가손익·수익률(우, 항상 우측정렬 `items-end`) |
-| 3 (가격비교) | 평균단가 / 현재가 |
-| 3b (환차손익) | 해외주식 외화 종목만 표시 |
-| 4 (주식담보대출) | linkedStockId 연계 대출 표시 |
-| 5 (보조정보) | 수량 / 보유일 / 매수일 / 설명 |
+| 1 헤더 | 카테고리 Badge + 종목명 + 티커 + 조회기준일 + 편집/삭제 |
+| 2 핵심지표 | 평가금액(좌) / 평가손익·수익률(우, `items-end`) |
+| 3 가격비교 | 평균단가 / 현재가 |
+| 3b 환차손익 | 해외주식 외화 종목만 |
+| 4 주식담보대출 | linkedStockId 연계 대출 |
+| 5 보조정보 | 수량 / 보유일 / 매수일 / 설명 |
 
-**수익률 표시:** 금액과 분리된 독립 줄 (`text-xs font-semibold`)
-**환차손익 표시:** Layer 2에 `(환차손익 xxx 포함)` + Layer 3b 별도 섹션
+- **정렬:** 평가금액(원화 환산) 내림차순 → 동일 시 이름순
+- **탭:** 전체/국내/해외/IRP/ISA/연금/비상장 (7탭)
+- `lookupState`: `"idle"|"success"|"failed"` — idle 시 종목명·현재가 숨김
 
-**주식 정렬:** 평가금액(원화 환산) 내림차순 → 동일 금액 시 이름순
-
----
-
-### real-estate-input.tsx
-
-**카드 레이어 구조:**
-- 부동산 유형 + 이름 + 주소
-- 현재가 / 매입가 / 평가손익
-- 임차인 보증금 (있을 때만)
-- 연계 대출 (linkedRealEstateId)
-- 보유일 / 매수일
-
----
-
-### cash-input.tsx
-
-- 현금 유형 (bank/cma/cash/deposit/savings)
-- 통화 (KRW/USD/JPY) — 외화는 원화 환산 표시
-- 금융기관
-
----
-
-### crypto-input.tsx
-
-- 심볼 (예: BTC)
-- 거래소 (cryptoExchanges 옵션)
-- 수량 / 평균단가 / 현재가
-
----
-
-### loan-input.tsx
-
-- 대출 유형 7종 (credit/minus/mortgage-*)
-- 잔액 / 금리
-- 담보 자산 연계 (realEstate / cash / stock 중 하나)
-- 연계된 주식 카드에 담보대출 섹션 자동 표시
-
----
-
-### exchange-rate-input.tsx
-
-- 현재 USD/JPY 환율 표시
-- 수동 입력 또는 API 조회로 갱신
-- `updateExchangeRate()` → AssetDataContext
-
----
-
----
-
-### stock-screenshot-import.tsx
-
-**파일:** `src/app/(main)/asset/_components/screenshot/stock-screenshot-import.tsx`
-**Props:** `open?: boolean`, `onOpenChange?: (open: boolean) => void` (controlled/uncontrolled 양쪽 지원)
-
-3단계 다이얼로그 플로우로 스크린샷 기반 주식 일괄 가져오기.
-
-**단계:**
-| step | 내용 |
-|------|------|
-| `upload` | 이미지 드래그앤드롭 또는 클릭 업로드. AI 인식 중 오버레이 차단. |
-| `conflict` | 기존 주식과 ticker 중복 발생 시 처리 방식 선택 (덮어쓰기 / 초기화 후 등록) |
-| `preview` | 종목별 선택·카테고리 변경·ticker 직접 입력. 등록 버튼으로 확정. |
-
-**conflict 처리 로직 (`handleRegister`):**
-- **덮어쓰기(merge)**: 스크린샷 ticker 목록을 기존에서 제거 후, 스크린샷 종목 전체 push
-- **초기화(reset)**: 기존 주식 전부 제거 후 스크린샷 종목만 등록
-- ticker 없는 종목은 `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
-
-**UX 특이사항:**
-- 다이얼로그: ESC·바깥 클릭으로 닫히지 않음 (취소 버튼만 가능)
-- 해외주식: 원화 평가금액 → 현재 USD 환율 자동 변환, USD badge 표시
-- 티커 미확인 종목: amber badge + 직접 입력 필드 (대문자+숫자만 허용)
-- 중복 교체 대상 종목: `교체` badge 표시
+### stock-screenshot-import.tsx conflict 처리
+- **덮어쓰기(merge):** 스크린샷 ticker 제거 후 전체 push
+- **초기화(reset):** 기존 주식 전부 제거 후 스크린샷만 등록
+- ticker 없는 종목: `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
+- ESC·바깥 클릭으로 닫히지 않음 (취소 버튼만)
 
 ---
 
@@ -165,43 +77,40 @@ getProfitLossColor() → config/theme
 
 | 컴포넌트 | 파일 | 역할 |
 |----------|------|------|
-| AssetOverviewCards | `asset-overview-cards.tsx` | 총자산/순자산/손익 요약 카드 |
-| AssetDistributionCards | `asset-distribution-cards.tsx` | 자산군별 분포 (파이 또는 바) |
-| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | 순자산 추이 차트 — 년도별(AreaChart)/월별(표)/일별(표) 3탭. `trigger-add-yearly-net-asset` 이벤트 수신. |
+| AssetOverviewCards | `asset-overview-cards.tsx` | 총자산/순자산/손익 요약 |
+| AssetDistributionCards | `asset-distribution-cards.tsx` | 자산군별 분포. 모바일: Tabs, 데스크탑: lg:grid-cols-2 |
+| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | 순자산 추이 — 년도별(Area)/월별(Bar)/일별(Line) 3탭. `trigger-add-yearly-net-asset` 이벤트 수신 |
 | AssetManagementCard | `asset-management-card.tsx` | 내보내기/가져오기/초기화/공유 |
-| WelcomeGuide | `welcome-guide.tsx` | 최초 실행 시 가이드 |
-| CopyrightFooter | `copyright-footer.tsx` | 버전·저작권 |
 
 ---
 
 ## 사이드바 컴포넌트 (`sidebar/`)
 
-| 컴포넌트 | 역할 |
-|----------|------|
-| AppSidebar | 메인 사이드바 컨테이너 |
-| NavMain | 네비게이션 항목 렌더링 |
-| NavUser | 사용자 프로필 (rootUser) |
-| ThemeSwitcher | 라이트/다크 테마 전환 |
-| CustomSidebarTrigger | 모바일 햄버거 버튼 |
+AppSidebar, NavMain, NavUser, ThemeSwitcher, CustomSidebarTrigger
 
 ---
 
 ## shadcn/ui 주요 컴포넌트 (`src/components/ui/`)
 
-프로젝트에서 자주 쓰이는 컴포넌트:
-
 ```
-Button, Input, NumberInput (커스텀), Label, Badge
+Button, Input, NumberInput(커스텀), Label, Badge
 Card, CardHeader, CardTitle, CardDescription, CardContent
 Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
-Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription
-Select, SelectTrigger, SelectValue, SelectContent, SelectItem
-Tabs, TabsList, TabsTrigger, TabsContent
-Textarea, Separator, Skeleton
-toast (Sonner)
+Form, FormField, FormItem, FormLabel, FormControl, FormMessage
+Select, Tabs, Textarea, Separator, Skeleton, toast(Sonner)
 ```
 
-**NumberInput** (`src/components/ui/number-input.tsx`): 커스텀 컴포넌트
-- `value`, `onChange`, `placeholder`, `quickButtons[]`
-- `allowDecimals`, `maxDecimals`
-- 천 단위 콤마 자동 포맷
+**NumberInput** (`number-input.tsx`): `value`, `onChange`, `quickButtons[]`, `allowDecimals`, `maxDecimals` — 천 단위 콤마 자동 포맷
+
+---
+
+## 카드 레이아웃 패턴
+
+```tsx
+<div className="rounded-lg border bg-card overflow-hidden">
+  <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20 border-b">  {/* 헤더 */}
+  <div className="flex flex-row items-start justify-between p-4">  {/* 핵심지표 */}
+  <div className="px-4 py-3 bg-muted/10 border-t">  {/* 보조 섹션 */}
+  <div className="px-4 py-2.5 flex flex-wrap text-xs text-muted-foreground border-t bg-muted/5">  {/* 하단 메타 */}
+</div>
+```

@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { useForm } from "react-hook-form";
@@ -294,7 +294,7 @@ export function YearlyNetAssetChart() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>순자산 변화</CardTitle>
+              <CardTitle>순자산 변화 차트</CardTitle>
               <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -465,13 +465,13 @@ export function YearlyNetAssetChart() {
                           <span className="text-xs font-semibold">{row.month}</span>
                           <div className="space-y-1 min-w-0">
                             <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
-                              {formatShortCurrency(row.netAsset)}
+                              {formatShortCurrencyDecimal(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
                             <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
-                              {formatShortCurrency(row.financialAsset)}
+                              {formatShortCurrencyDecimal(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
@@ -514,13 +514,13 @@ export function YearlyNetAssetChart() {
                           <span className="text-xs font-semibold tabular-nums">{row.date}</span>
                           <div className="space-y-1 min-w-0">
                             <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
-                              {formatShortCurrency(row.netAsset)}
+                              {formatShortCurrencyDecimal(row.netAsset)}
                             </p>
                             <MiniBar value={row.netAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>
                           <div className="space-y-1 min-w-0">
                             <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
-                              {formatShortCurrency(row.financialAsset)}
+                              {formatShortCurrencyDecimal(row.financialAsset)}
                             </p>
                             <MiniBar value={row.financialAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
                           </div>

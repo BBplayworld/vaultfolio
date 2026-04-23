@@ -278,7 +278,135 @@ export async function fetchExchangeRateFromKis(
 }
 
 // ─────────────────────────────────────────────
-// Step 7. 종목명 결정
+// Step 7. 배당 조회 - 국내주식 (한국투자증권 OpenAPI)
+// 예탁원정보(배당일정) [국내주식-145]
+// GET /uapi/domestic-stock/v1/ksdinfo/dividend
+// 파라미터: SHT_CD(종목코드), STR_DT(시작일YYYYMMDD), END_DT(종료일YYYYMMDD)
+// ─────────────────────────────────────────────
+
+export type DividendFrequency = "annual" | "semiannual" | "quarterly" | "monthly";
+
+export interface DividendPayoutResult {
+  payoutDate: string; // YYYY-MM-DD
+  amountPerShare: number; // 원화(국내) 또는 환산 원화(해외)
+  amountForeign?: number; // 외화 주당 금액 (해외주식 달러 등)
+  currency?: string; // 통화코드 (USD, KRW 등)
+  frequency?: DividendFrequency; // 배당 빈도 (건수 기반 추정)
+}
+
+function inferFrequency(count: number): DividendFrequency {
+  if (count >= 10) return "monthly";
+  if (count >= 4) return "quarterly";
+  if (count >= 2) return "semiannual";
+  return "annual";
+}
+
+export async function fetchDividendDomestic(
+  ticker: string,
+  fdt: string,
+  tdt: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<DividendPayoutResult[]> {
+  try {
+    const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ksdinfo/dividend?CTS=&GB1=0&F_DT=${fdt}&T_DT=${tdt}&SHT_CD=${ticker}&HIGH_GB=`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: "HHKDB669102C0",
+        "content-type": "application/json; charset=utf-8",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`[KIS 국내배당 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    console.log(`[KIS 국내배당 RAW - ${ticker}]:`, JSON.stringify(data));
+    const output = data.output1 as Record<string, string>[] | undefined;
+    if (!Array.isArray(output)) return [];
+    const rows = output
+      .map((row) => {
+        // divi_pay_dt: "YYYY/MM/DD" 또는 "YYYYMMDD" 두 형식 모두 처리
+        const raw = row.divi_pay_dt ?? "";
+        const payoutDate = raw.includes("/") ? raw.replace(/\//g, "-") : raw
+          ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+          : "";
+        return {
+          payoutDate,
+          amountPerShare: parseFloat(row.per_sto_divi_amt ?? "0"),
+          currency: "KRW",
+        };
+      })
+      .filter((r) => r.payoutDate && r.amountPerShare > 0);
+    const frequency = inferFrequency(rows.length);
+    return rows.map((r) => ({ ...r, frequency }));
+  } catch (e) {
+    console.error(`[KIS 국내배당 조회 오류 - ${ticker}]:`, e);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Step 8. 배당 조회 - 해외주식 (한국투자증권 OpenAPI)
+// 해외주식 기간별권리조회 [해외주식-052]
+// GET /uapi/overseas-price/v1/quotations/period-rights
+// 파라미터: RGHT_TYPE_CD=03(배당), INQR_DVSN_CD=02(현지기준일),
+//           INQR_STRT_DT, INQR_END_DT, PDNO(상품번호=공백)
+// ─────────────────────────────────────────────
+
+export async function fetchDividendOverseas(
+  ticker: string,
+  excd: string,
+  fdt: string,
+  tdt: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<DividendPayoutResult[]> {
+  try {
+    const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${ticker}&PRDT_TYPE_CD=&CTX_AREA_NK50=&CTX_AREA_FK50=`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: "CTRGT011R",
+        "content-type": "application/json; charset=utf-8",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}]: HTTP ${res.status} ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    console.log(`[KIS 해외배당 RAW - ${ticker}/${excd}]:`, JSON.stringify(data));
+    const output = data.output as Record<string, string>[] | undefined;
+    if (!Array.isArray(output)) return [];
+    const rows = output
+      .map((row) => {
+        const raw = row.acpl_bass_dt ?? "";
+        const payoutDate = raw ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : "";
+        const amountForeign = parseFloat(row.alct_frcr_unpr ?? "0");
+        const currency = row.crcy_cd || "USD";
+        return { payoutDate, amountPerShare: amountForeign, amountForeign, currency };
+      })
+      .filter((r) => r.payoutDate && r.amountPerShare > 0);
+    const frequency = inferFrequency(rows.length);
+    return rows.map((r) => ({ ...r, frequency }));
+  } catch (e) {
+    console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}]:`, e);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Step 9. 종목명 결정
 // 해외주식은 API 반환값을 그대로 사용하고,
 // 국내·IRP·ISA·연금은 종목코드/심볼 형식("005930", "005930.KS")을 걸러낸 뒤
 // 유효한 이름이 있을 때만 덮어씁니다.

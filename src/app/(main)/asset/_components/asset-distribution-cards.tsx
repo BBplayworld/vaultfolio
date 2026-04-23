@@ -11,6 +11,31 @@ import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { cashTypes, loanTypes, loanTypeOrder, stockCategories, realEstateTypes } from "@/config/asset-options";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { normalizeTicker } from "@/lib/finance-service";
+
+function StockIcon({ ticker, name, isForeign }: { ticker: string; name: string; isForeign: boolean }) {
+  const [imgError, setImgError] = React.useState(false);
+  const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "?";
+  const showLogo = isForeign && ticker && /^[A-Z]+$/.test(ticker) && !imgError;
+
+  return (
+    <div className="size-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+      {showLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`https://img.logo.dev/ticker/${ticker}?token=pk_public`}
+          alt={name}
+          width={32}
+          height={32}
+          className="size-8 rounded-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-[10px] font-bold text-primary">{initial}</span>
+      )}
+    </div>
+  );
+}
 
 const assetDistributionChartConfig = {
   realEstate: {
@@ -493,26 +518,32 @@ export function AssetDistributionCards() {
                               const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === stock.id);
                               return (
                                 <div key={stock.id} className="rounded-lg bg-muted/30 text-xs overflow-hidden">
-                                  <div className="flex items-center justify-between p-2">
+                                  <div className="flex items-center justify-between gap-2 p-2">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{stock.name}</span>
-                                      {stock.ticker && (
-                                        <span className="hidden sm:inline text-muted-foreground">({stock.ticker})</span>
-                                      )}
+                                      <StockIcon
+                                        ticker={normalizeTicker(stock)}
+                                        name={stock.name}
+                                        isForeign={stock.category === "foreign"}
+                                      />
+                                      <div className="min-w-0">
+                                        <p className={`font-semibold truncate ${ASSET_THEME.text.default}`}>{stock.name}</p>
+                                        <p className="text-[10px] font-semibold text-muted-foreground">{stock.quantity.toLocaleString()}주</p>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-3 whitespace-nowrap">
-                                      <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                        {stockPercentage.toFixed(1)}%
-                                      </span>
-                                      <span className="font-bold tabular-nums">
-                                        {formatShortCurrency(stockValue)}
-                                      </span>
-                                      <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
-                                        ({profit >= 0 ? '+' : ''}{formatShortCurrency(profit)})
-                                        {hasCurrencyGain && (
-                                          <span className="text-[10px] text-muted-foreground ml-0.5">환차포함</span>
+                                    <div className="text-right flex-shrink-0">
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <span className="text-[11px] font-semibold tabular-nums text-primary">{stockPercentage.toFixed(1)}%</span>
+                                        <span className="font-bold tabular-nums">{formatShortCurrency(stockValue)}</span>
+                                      </div>
+                                      <p className={`text-[11px] tabular-nums ${getProfitLossColor(profit)}`}>
+                                        {hasCurrencyGain && <span className="text-[9px] text-muted-foreground ml-0.5">(환차포함)</span>}&nbsp;
+                                        {profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}
+                                        {stock.quantity > 0 && stock.averagePrice * purchaseRate > 0 && (
+                                          <span className="ml-0.5">
+                                            ({profit >= 0 ? "+" : ""}{((profit / (stock.quantity * stock.averagePrice * purchaseRate)) * 100).toFixed(2)}%)
+                                          </span>
                                         )}
-                                      </span>
+                                      </p>
                                     </div>
                                   </div>
                                   {linkedLoans.map((loan) => (
@@ -608,24 +639,32 @@ export function AssetDistributionCards() {
                         </div>
                         <CollapsibleContent className="mt-2 space-y-2 pl-2">
                           {cryptoDistributionData.map((item) => {
-                            const { coin, coinValue, profit } = item;
+                            const { coin, coinValue, coinCost, profit } = item;
                             const percentage = summary.cryptoValue > 0 ? (coinValue / summary.cryptoValue) * 100 : 0;
                             return (
-                              <div key={coin.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-2 text-xs">
+                              <div key={coin.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/30 p-2 text-xs">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{coin.name}</span>
-                                  <span className="hidden sm:inline text-muted-foreground">({coin.symbol})</span>
+                                  <div className="size-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-[10px] font-bold text-primary">
+                                      {(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className={`font-semibold truncate ${ASSET_THEME.text.default}`}>{coin.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">{coin.quantity.toLocaleString()}개</p>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-3 whitespace-nowrap">
-                                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                    {percentage.toFixed(1)}%
-                                  </span>
-                                  <span className="font-bold tabular-nums">
-                                    {formatShortCurrency(coinValue)}
-                                  </span>
-                                  <span className={`text-xs font-medium ${getProfitLossColor(profit)}`}>
-                                    ({profit >= 0 ? "+" : ""}{formatShortCurrency(profit)})
-                                  </span>
+                                <div className="text-right flex-shrink-0">
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <span className="text-[11px] font-semibold tabular-nums text-primary">{percentage.toFixed(1)}%</span>
+                                    <span className="font-bold tabular-nums">{formatShortCurrency(coinValue)}</span>
+                                  </div>
+                                  <p className={`text-[11px] tabular-nums ${getProfitLossColor(profit)}`}>
+                                    {profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}
+                                    {coinCost > 0 && (
+                                      <span className="ml-0.5">({profit >= 0 ? "+" : ""}{((profit / coinCost) * 100).toFixed(2)}%)</span>
+                                    )}
+                                  </p>
                                 </div>
                               </div>
                             );
@@ -698,7 +737,7 @@ export function AssetDistributionCards() {
                                 <div key={cashItem.id} className="rounded-lg bg-muted/30 text-xs overflow-hidden">
                                   <div className="flex items-center justify-between p-2">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.primary.text}`}>{cashItem.name}</span>
+                                      <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${ASSET_THEME.text.default}`}>{cashItem.name}</span>
                                       {cashItem.institution && (
                                         <span className="hidden sm:inline text-muted-foreground">({cashItem.institution})</span>
                                       )}
