@@ -282,7 +282,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
   );
 }
 
-export function RealEstateInput() {
+export function RealEstateInput({ hideList = false }: { hideList?: boolean } = {}) {
   const { assetData, deleteRealEstate } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RealEstate | undefined>();
@@ -292,6 +292,16 @@ export function RealEstateInput() {
     window.addEventListener("trigger-add-real-estate", handler);
     return () => window.removeEventListener("trigger-add-real-estate", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      const item = assetData.realEstate.find((r) => r.id === id);
+      if (item) { setEditingItem(item); setIsDialogOpen(true); }
+    };
+    window.addEventListener("trigger-edit-real-estate", handler);
+    return () => window.removeEventListener("trigger-edit-real-estate", handler);
+  }, [assetData.realEstate]);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -321,6 +331,22 @@ export function RealEstateInput() {
   const getTypeLabel = (type: string) => {
     return realEstateTypes.find((t) => t.value === type)?.label || type;
   };
+
+  if (hideList) {
+    return (
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">

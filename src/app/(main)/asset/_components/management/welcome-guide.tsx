@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 
 // 미리보기용 예시 자산 데이터
 const PREVIEW_CATEGORIES = [
-  { key: "realEstate", label: "부동산", icon: Building2, color: ASSET_THEME.categoryColors.realEstate, value: 480_000_000, pct: 46 },
+  { key: "realEstate", label: "부동산", icon: Building2, color: MAIN_PALETTE[0], value: 480_000_000, pct: 46 },
   { key: "stocks", label: "주식", icon: TrendingUp, color: ASSET_THEME.categoryColors.stocks, value: 310_000_000, pct: 30 },
   { key: "cash", label: "현금", icon: Wallet, color: ASSET_THEME.categoryColors.cash, value: 150_000_000, pct: 14 },
   { key: "crypto", label: "암호화폐", icon: Bitcoin, color: ASSET_THEME.categoryColors.crypto, value: 90_000_000, pct: 7 },
@@ -97,7 +97,7 @@ export function WelcomeGuide() {
           <div className="flex h-5 w-full rounded-full overflow-hidden gap-px">
             <div
               className="flex items-center justify-center transition-all"
-              style={{ width: "97%", backgroundColor: ASSET_THEME.categoryColors.realEstate }}
+              style={{ width: "97%", backgroundColor: MAIN_PALETTE[0] }}
             >
               <span className="text-white text-[10px] font-bold drop-shadow select-none">97%</span>
             </div>

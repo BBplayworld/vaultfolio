@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, CircleChevronDown } from "lucide-react";
+import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarcategoryBox, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
 import { exportAssetData, importAssetData, clearAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import type { AssetSnapshots } from "@/types/asset";
@@ -242,15 +243,16 @@ export function NavUser({
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarMenuButton
+              <SidebarcategoryBox
                 size="lg"
-                className="h-9 px-2 text-white hover:text-white transition-colors border-none bg-zinc-800 hover:bg-zinc-700 data-[state=open]:bg-zinc-700 dark:bg-rose-500 dark:hover:bg-rose-600 dark:data-[state=open]:bg-rose-600"
+                className="h-9 px-2 text-white hover:text-white transition-colors border-none"
+                style={{ backgroundColor: MAIN_PALETTE[9] }}
               >
                 <div className="grid flex-1 text-left text-xs leading-tight ml-1">
                   <span className="truncate font-bold tracking-tighter uppercase text-[11px]">자산 관리</span>
                 </div>
                 <CircleChevronDown className="ml-auto size-3.5 opacity-70" />
-              </SidebarMenuButton>
+              </SidebarcategoryBox>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-60 rounded-lg"
@@ -259,43 +261,43 @@ export function NavUser({
               sideOffset={4}
             >
               <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <div className="flex items-center gap-2 px-2 py-2 text-left text-sm rounded-md">
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                    <AvatarFallback className="rounded-lg bg-zinc-700 text-zinc-100 dark:bg-zinc-600 text-xs font-semibold">
+                    <AvatarFallback className="rounded-lg text-xs font-semibold text-white">
                       {getInitials(user.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">자산 관리</span>
+                    <span className={`truncate font-semibold ${ASSET_THEME.primary.text}`}>자산 관리</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <div className="px-2 py-2">
-                <p className="text-xs font-medium text-muted-foreground">데이터 관리</p>
+              <div className="px-2 py-2.5">
+                <p className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>데이터 관리</p>
               </div>
-              <DropdownMenuItem className="py-2" onClick={handleExport} disabled={!hasAssets}>
+              <DropdownMenuItem className="py-2.5" onClick={handleExport} disabled={!hasAssets}>
                 <Upload className="size-4" />
                 데이터 내보내기
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-2" onClick={handleImportClick} disabled={isImporting}>
+              <DropdownMenuItem className="py-2.5" onClick={handleImportClick} disabled={isImporting}>
                 <Download className="size-4" />
                 {isImporting ? "가져오는 중..." : "데이터 가져오기"}
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-2" onClick={handleShare} disabled={!hasAssets}>
+              <DropdownMenuItem className="py-2.5" onClick={handleShare} disabled={!hasAssets}>
                 <Share2 className="size-4" />
                 공유 URL 복사
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
+              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2.5" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
                 <Trash2 className="size-4" />
                 모든 데이터 삭제
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <div className="px-2 py-2">
-                <p className="text-xs font-medium text-muted-foreground">기능</p>
+              <div className="px-2 py-2.5">
+                <p className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>기능</p>
               </div>
-              <DropdownMenuItem className="text-primary focus:text-primary py-2" onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
+              <DropdownMenuItem className="py-2.5" onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
                 <Sparkles className="size-4" />
                 <span className="flex-1">AI 평가용 자산 현황</span>
                 <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
@@ -323,7 +325,7 @@ export function NavUser({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-none">
               삭제
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -348,9 +350,10 @@ export function NavUser({
                 type="button"
                 onClick={() => setSelectedPromptIdx(i)}
                 className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${i === selectedPromptIdx
-                  ? "bg-background text-foreground shadow-sm font-medium"
+                  ? "bg-background shadow-sm font-medium"
                   : "text-muted-foreground hover:text-foreground"
                   }`}
+                style={i === selectedPromptIdx ? { color: MAIN_PALETTE[0] } : undefined}
               >
                 <span>{t.label}</span>
                 <span className="text-[10px] opacity-60 hidden sm:block leading-tight text-center">{t.sublabel}</span>
@@ -368,7 +371,7 @@ export function NavUser({
             <Button variant="outline" onClick={() => setShowAIPromptDialog(false)}>
               닫기
             </Button>
-            <Button onClick={handleCopyPrompt}>
+            <Button onClick={handleCopyPrompt} style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
               {copied ? (
                 <>
                   <Check className="mr-2 size-4" />
@@ -434,7 +437,7 @@ export function NavUser({
               <Share2 className="mr-2 size-4" />
               {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
             </Button>
-            <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button">
+            <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
               <Copy className="mr-2 size-4" />
               전체 URL 복사
             </Button>

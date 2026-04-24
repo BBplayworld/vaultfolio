@@ -27,40 +27,40 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <ReactQueryProvider>
-    <AssetDataProvider>
-      <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
-        <SidebarInset
-          data-content-layout={contentLayout}
-          className={cn(
-            "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-screen-3xl",
-            "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
-          )}
-        >
-          <header
-            data-navbar-style={navbarStyle}
+      <AssetDataProvider>
+        <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
+          <SidebarInset
+            data-content-layout={contentLayout}
             className={cn(
-              "flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 relative z-50",
-              "data-[navbar-style=sticky]:bg-background/50 data-[navbar-style=sticky]:sticky data-[navbar-style=sticky]:top-0 data-[navbar-style=sticky]:overflow-hidden data-[navbar-style=sticky]:rounded-t-[inherit] data-[navbar-style=sticky]:backdrop-blur-md",
-              "bg-background/95 backdrop-blur-sm",
-              "mt-1",
-              "lg:sticky lg:top-0 lg:rounded-t-[inherit] lg:overflow-hidden"
+              "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-screen-2xl",
+              "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
             )}
           >
-            <div className="flex w-full items-center justify-between px-3 lg:px-12">
-              <div className="flex items-center gap-1 lg:gap-2">
-                <GuideMiniButton />
+            <header
+              data-navbar-style={navbarStyle}
+              className={cn(
+                "flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 relative z-50",
+                "data-[navbar-style=sticky]:bg-background/50 data-[navbar-style=sticky]:sticky data-[navbar-style=sticky]:top-0 data-[navbar-style=sticky]:overflow-hidden data-[navbar-style=sticky]:rounded-t-[inherit] data-[navbar-style=sticky]:backdrop-blur-md",
+                "bg-background/95 backdrop-blur-sm",
+                "mt-1",
+                "lg:sticky lg:top-0 lg:rounded-t-[inherit] lg:overflow-hidden"
+              )}
+            >
+              <div className="flex w-full items-center justify-between px-3 lg:px-12">
+                <div className="flex items-center gap-1 lg:gap-2">
+                  <GuideMiniButton />
+                </div>
+                <div className="flex items-center gap-2">
+                  <NavUser user={rootUser} />
+                  <ThemeSwitcher />
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <NavUser user={rootUser} />
-                <ThemeSwitcher />
-              </div>
-            </div>
-          </header>
-          <div className="h-full px-2 py-2 md:px-12 md:py-6">{children}</div>
-          <ScrollToTop />
-        </SidebarInset>
-      </SidebarProvider>
-    </AssetDataProvider>
+            </header>
+            <div className="h-full px-2 py-2 md:px-12 md:py-6">{children}</div>
+            <ScrollToTop />
+          </SidebarInset>
+        </SidebarProvider>
+      </AssetDataProvider>
     </ReactQueryProvider>
   );
 }

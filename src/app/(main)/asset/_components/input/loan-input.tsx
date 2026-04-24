@@ -383,7 +383,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
   );
 }
 
-export function LoanInput() {
+export function LoanInput({ hideList = false }: { hideList?: boolean } = {}) {
   const { assetData, deleteLoan } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Loan | undefined>();
@@ -404,6 +404,39 @@ export function LoanInput() {
     return () => window.removeEventListener("trigger-add-loan", handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      const item = assetData.loans.find((l) => l.id === id);
+      if (item) { setEditingItem(item); setIsDialogOpen(true); }
+    };
+    window.addEventListener("trigger-edit-loan", handler);
+    return () => window.removeEventListener("trigger-edit-loan", handler);
+  }, [assetData.loans]);
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setEditingItem(undefined);
+  };
+
+  if (hideList) {
+    return (
+      <>
+        <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
+              <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
+            </DialogHeader>
+            <LoanForm editData={editingItem} onClose={handleDialogClose} />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
       const success = deleteLoan(id);
@@ -418,11 +451,6 @@ export function LoanInput() {
   const handleEdit = (item: Loan) => {
     setEditingItem(item);
     setIsDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    setEditingItem(undefined);
   };
 
   const formatCurrencyDisplay = (value: number) => {

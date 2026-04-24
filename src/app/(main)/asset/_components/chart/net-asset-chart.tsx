@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
-  Line,
   Area, AreaChart,
   XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   LabelList,
@@ -32,9 +31,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 
 const NET_COLOR = "#ffffffff";
+
+const CAT_LIST = ASSET_THEME.tabList3 + " mb-4";
+const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
 const chartConfig = {
   netAsset: {
@@ -196,7 +198,6 @@ function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
   return snapshots;
 }
 
-// 가로 바 — 최대값 대비 비율로 너비 계산
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.max(0, (value / max) * 100) : 0;
   return (
@@ -219,6 +220,7 @@ export function YearlyNetAssetChart() {
   const { assetData, getAssetSummary, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
 
   const openAddDialog = useCallback(() => {
     setEditingItem(undefined);
@@ -229,6 +231,7 @@ export function YearlyNetAssetChart() {
     window.addEventListener("trigger-add-yearly-net-asset", openAddDialog);
     return () => window.removeEventListener("trigger-add-yearly-net-asset", openAddDialog);
   }, [openAddDialog]);
+
   const summary = getAssetSummary();
   const dailySnapshots = useDailySnapshots(snapshotVersion);
   const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
@@ -253,34 +256,25 @@ export function YearlyNetAssetChart() {
 
   const currentYear = new Date().getFullYear();
 
-  // 년도별
   const allYearlyData = [
     ...assetData.yearlyNetAssets,
     { year: currentYear, netAsset: summary.netAsset, note: "현재" },
-  ].sort((a, b) => a.year - b.year);
+  ].sort((a, b) => b.year - a.year);
   const last5YearsData = allYearlyData.slice(-5);
 
-  // 월별
   const monthlyData = monthlySnapshots.map(s => ({
     month: `${parseInt(s.month.split("-")[1])}월`,
     netAsset: s.netAsset,
     financialAsset: s.financialAsset,
   }));
 
-  // 일별
   const dailyChartData = dailySnapshots.map(s => ({
     date: s.date.slice(5).replace("-", "/"),
     netAsset: s.netAsset,
     financialAsset: s.financialAsset,
   }));
 
-  const maxMonthlyNet = Math.max(...monthlyData.map(d => d.netAsset), 1);
-  const maxMonthlyFin = Math.max(...monthlyData.map(d => d.financialAsset), 1);
-  const maxMonthly = Math.max(maxMonthlyNet, maxMonthlyFin);
-
-  const maxDailyNet = Math.max(...dailyChartData.map(d => d.netAsset), 1);
-  const maxDailyFin = Math.max(...dailyChartData.map(d => d.financialAsset), 1);
-  const maxDaily = Math.max(maxDailyNet, maxDailyFin);
+  const maxMonthly = Math.max(...monthlyData.map(d => Math.max(d.netAsset, d.financialAsset)), 1);
 
   const commonAxisProps = {
     tick: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
@@ -314,10 +308,10 @@ export function YearlyNetAssetChart() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="yearly">
-            <TabsList className="mb-4 grid w-full grid-cols-3">
-              <TabsTrigger className={ASSET_THEME.tabActive} value="yearly">년도별</TabsTrigger>
-              <TabsTrigger className={ASSET_THEME.tabActive} value="monthly">월별</TabsTrigger>
-              <TabsTrigger className={ASSET_THEME.tabActive} value="daily">일별</TabsTrigger>
+            <TabsList className={CAT_LIST}>
+              <TabsTrigger className={CAT_TRIGGER} value="yearly">년도별</TabsTrigger>
+              <TabsTrigger className={CAT_TRIGGER} value="monthly">월별</TabsTrigger>
+              <TabsTrigger className={CAT_TRIGGER} value="daily">일별</TabsTrigger>
             </TabsList>
 
             {/* ── 년도별 탭 ── */}
@@ -359,17 +353,17 @@ export function YearlyNetAssetChart() {
                           dataKey="netAsset"
                           strokeWidth={3}
                           fill="url(#gradNetAsset)"
-                          stroke={ASSET_THEME.categoryColors.realEstate}
+                          stroke={MAIN_PALETTE[0]}
                           dot={{
-                            fill: ASSET_THEME.categoryColors.realEstate,
+                            fill: MAIN_PALETTE[0],
                             r: 5,
-                            stroke: ASSET_THEME.categoryColors.realEstate,
+                            stroke: MAIN_PALETTE[0],
                             strokeWidth: 2,
                           }}
                           activeDot={{
-                            fill: ASSET_THEME.categoryColors.realEstate,
+                            fill: MAIN_PALETTE[0],
                             r: 5,
-                            stroke: ASSET_THEME.categoryColors.realEstate,
+                            stroke: MAIN_PALETTE[0],
                             strokeWidth: 2,
                           }}
                         >
@@ -386,11 +380,11 @@ export function YearlyNetAssetChart() {
                   </ChartContainer>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">등록된 년도별 데이터</h4>
+                    <h4 className="text-sm font-semibold">년도별 순자산</h4>
                     <div className="space-y-2">
                       {allYearlyData.map((item, idx) => {
                         const isCurrentYear = item.year === currentYear;
-                        const prev = allYearlyData[idx - 1];
+                        const prev = allYearlyData[idx + 1];
                         const diff = prev ? item.netAsset - prev.netAsset : null;
                         const diffPct = prev && prev.netAsset !== 0
                           ? ((diff! / Math.abs(prev.netAsset)) * 100).toFixed(1)
@@ -439,103 +433,135 @@ export function YearlyNetAssetChart() {
 
             {/* ── 월별 탭 (표 형태) ── */}
             <TabsContent value="monthly">
-              {monthlyData.length === 0 ? (
-                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-                  <div className="text-center">
-                    <p className="text-muted-foreground text-sm">올해 월별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+              <div className="space-y-4">
+                {monthlyData.length === 0 ? (
+                  <div className="flex h-32 items-center justify-center rounded-lg border border-dashed">
+                    <div className="text-center">
+                      <p className="text-muted-foreground text-sm">올해 월별 데이터가 없습니다.</p>
+                      <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="rounded-lg border overflow-hidden">
-                  {/* 헤더 */}
-                  <div className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
-                    <span>월</span>
-                    <span>순자산</span>
-                    <span>금융자산</span>
-                    <span className="text-right">전월대비</span>
+                ) : (
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
+                      <span>월</span>
+                      <span>순자산</span>
+                      <span>금융자산</span>
+                      <span className="text-right">전월대비</span>
+                    </div>
+                    <div className="divide-y">
+                      {monthlyData.slice().reverse().map((row, idx, arr) => {
+                        const prev = arr[idx + 1];
+                        const diff = prev ? row.netAsset - prev.netAsset : null;
+                        const monthNum = parseInt(row.month);
+                        const isSelected = selectedMonth === monthNum;
+                        return (
+                          <div
+                            key={row.month}
+                            className={`grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2.5 items-center cursor-pointer transition-colors ${isSelected ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-muted/30"}`}
+                            onClick={() => setSelectedMonth(isSelected ? undefined : monthNum)}
+                          >
+                            <span className={`text-xs font-semibold ${isSelected ? "text-primary" : ""}`}>{row.month}</span>
+                            <div className="space-y-1 min-w-0">
+                              <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
+                                {formatShortCurrencyDecimal(row.netAsset)}
+                              </p>
+                              <MiniBar value={row.netAsset} max={maxMonthly} color={MAIN_PALETTE[0]} />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                              <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
+                                {formatShortCurrencyDecimal(row.financialAsset)}
+                              </p>
+                              <MiniBar value={row.financialAsset} max={maxMonthly} color={MAIN_PALETTE[0]} />
+                            </div>
+                            <div className="text-right">
+                              {diff !== null ? <DiffBadge diff={diff} /> : <span className="text-xs text-muted-foreground">-</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {/* 행 */}
-                  <div className="divide-y">
-                    {monthlyData.reverse().map((row, idx) => {
-                      const prev = monthlyData[idx + 1];
-                      const diff = prev ? row.netAsset - prev.netAsset : null;
-                      return (
-                        <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_4rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
-                          <span className="text-xs font-semibold">{row.month}</span>
-                          <div className="space-y-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
-                              {formatShortCurrencyDecimal(row.netAsset)}
-                            </p>
-                            <MiniBar value={row.netAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
-                          </div>
-                          <div className="space-y-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
-                              {formatShortCurrencyDecimal(row.financialAsset)}
-                            </p>
-                            <MiniBar value={row.financialAsset} max={maxMonthly} color={ASSET_THEME.categoryColors.realEstate} />
-                          </div>
-                          <div className="text-right">
-                            {diff !== null ? <DiffBadge diff={diff} /> : <span className="text-xs text-muted-foreground">-</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </TabsContent>
 
-            {/* ── 일별 탭 (표 형태 + 스크롤) ── */}
+            {/* ── 일별 탭 (7×5 달력 그리드) ── */}
             <TabsContent value="daily">
-              {dailyChartData.length === 0 ? (
-                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-                  <div className="text-center">
-                    <p className="text-muted-foreground text-sm">올해 일별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-lg border overflow-hidden">
-                  {/* 헤더 */}
-                  <div className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
-                    <span>날짜</span>
-                    <span>순자산</span>
-                    <span>금융자산</span>
-                    <span className="text-right">전일대비</span>
-                  </div>
-                  {/* 최신순 스크롤 목록 */}
-                  <div className="divide-y max-h-[400px] overflow-y-auto">
-                    {[...dailyChartData].reverse().map((row, idx, arr) => {
-                      const next = arr[idx + 1]; // reverse 후 이전 날짜
-                      const diff = next ? row.netAsset - next.netAsset : null;
-                      return (
-                        <div key={row.date} className="grid grid-cols-[4rem_1fr_1fr_4.5rem] gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors">
-                          <span className="text-xs font-semibold tabular-nums">{row.date}</span>
-                          <div className="space-y-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${ASSET_THEME.important}`}>
-                              {formatShortCurrencyDecimal(row.netAsset)}
+              {(() => {
+                const currentMonthStr = new Date(Date.now() + 9 * 60 * 60 * 1000)
+                  .toISOString().split("T")[0].substring(0, 7);
+                const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000)
+                  .toISOString().split("T")[0].slice(5).replace("-", "/");
+                const firstDayOfWeek = new Date(`${currentMonthStr}-01`).getDay();
+                const cells = Array.from({ length: 35 }, (_, i) => {
+                  const dayNum = i - firstDayOfWeek + 1;
+                  if (dayNum < 1 || dayNum > 31) return null;
+                  const dateStr = `${currentMonthStr.slice(5)}/${String(dayNum).padStart(2, "0")}`;
+                  const found = dailyChartData.find(d => d.date === dateStr);
+                  return found ?? { date: dateStr, netAsset: null as unknown as number, financialAsset: null as unknown as number };
+                });
+
+                if (dailyChartData.length === 0) {
+                  return (
+                    <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
+                      <div className="text-center">
+                        <p className="text-muted-foreground text-sm">올해 일별 데이터가 없습니다.</p>
+                        <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-7 gap-1">
+                      {["일", "월", "화", "수", "목", "금", "토"].map(d => (
+                        <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
+                      ))}
+                      {cells.map((cell, i) => {
+                        if (!cell) {
+                          return <div key={`empty-${i}`} className="rounded-lg bg-muted/20 h-14 sm:h-24" />;
+                        }
+                        const hasData = cell.netAsset !== null;
+                        const isToday = cell.date === todayStr;
+                        const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
+                        const prev = dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
+                        const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
+                        return (
+                          <div
+                            key={cell.date}
+                            className={`rounded-lg border p-1 sm:p-1.5 flex flex-col transition-colors relative h-22 sm:h-24 ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/10"
+                              }`}
+                          >
+                            <p className={`text-[11px] sm:text-[13px] font-semibold tabular-nums leading-none ${isToday ? "text-foreground" : "text-muted-foreground"}`}>
+                              {parseInt(cell.date.split("/")[1])}
                             </p>
-                            <MiniBar value={row.netAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
+                            {hasData ? (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-[5px] sm:gap-[7px]">
+                                <p className={`text-[9px] sm:text-[13px] font-bold truncate leading-none ${ASSET_THEME.important}`}>
+                                  {formatShortCurrencyDecimal(cell.netAsset)}
+                                </p>
+                                <p className="text-[9px] sm:text-[13px] truncate leading-none text-muted-foreground">
+                                  {formatShortCurrencyDecimal(cell.financialAsset)}
+                                </p>
+                                {diff !== null ? (
+                                  <p className={`text-[9px] sm:text-[13px] font-medium leading-none ${getProfitLossColor(diff)}`}>
+                                    {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
-                          <div className="space-y-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${ASSET_THEME.text.default}`}>
-                              {formatShortCurrencyDecimal(row.financialAsset)}
-                            </p>
-                            <MiniBar value={row.financialAsset} max={maxDaily} color={ASSET_THEME.categoryColors.realEstate} />
-                          </div>
-                          <div className="text-right">
-                            {diff !== null ? <DiffBadge diff={diff} /> : <span className="text-xs text-muted-foreground">-</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                    <div className="text-xs text-muted-foreground text-right">
+                      총 {dailyChartData.length}일 기록됨
+                    </div>
                   </div>
-                  <div className="px-3 py-2 bg-muted/30 border-t text-xs text-muted-foreground text-right">
-                    총 {dailyChartData.length}일 기록됨
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </TabsContent>
           </Tabs>
         </CardContent>

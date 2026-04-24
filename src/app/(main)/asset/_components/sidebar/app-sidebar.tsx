@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
+  SidebarcategoryBox,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app";
@@ -24,12 +24,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+            <SidebarcategoryBox asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href="/asset">
                 <Command />
                 <span className="text-base font-semibold">{APP_CONFIG.name}</span>
               </Link>
-            </SidebarMenuButton>
+            </SidebarcategoryBox>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

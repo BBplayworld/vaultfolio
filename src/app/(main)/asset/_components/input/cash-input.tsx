@@ -268,7 +268,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
     );
 }
 
-export function CashInput() {
+export function CashInput({ hideList = false }: { hideList?: boolean } = {}) {
     const { assetData, deleteCash, exchangeRates } = useAssetData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Cash | undefined>();
@@ -289,6 +289,41 @@ export function CashInput() {
         return () => window.removeEventListener("trigger-add-cash", handler);
     }, []);
 
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const id = (e as CustomEvent).detail?.id;
+            if (!id) return;
+            const item = assetData.cash.find((c) => c.id === id);
+            if (item) { setEditingItem(item); setIsDialogOpen(true); }
+        };
+        window.addEventListener("trigger-edit-cash", handler);
+        return () => window.removeEventListener("trigger-edit-cash", handler);
+    }, [assetData.cash]);
+
+    const handleDialogClose = () => {
+        setIsDialogOpen(false);
+        setEditingItem(undefined);
+    };
+
+    if (hideList) {
+        return (
+            <>
+                <CashScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+                        <DialogHeader>
+                            <DialogTitle>{editingItem ? "현금성 자산 수정" : "현금성 자산 추가"}</DialogTitle>
+                            <DialogDescription>
+                                {editingItem ? "현금성 자산 정보를 수정합니다." : "새로운 현금성 자산을 추가합니다."}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <CashForm editData={editingItem} onClose={handleDialogClose} />
+                    </DialogContent>
+                </Dialog>
+            </>
+        );
+    }
+
     const handleDelete = (id: string) => {
         if (confirm("정말 삭제하시겠습니까?")) {
             const success = deleteCash(id);
@@ -303,11 +338,6 @@ export function CashInput() {
     const handleEdit = (item: Cash) => {
         setEditingItem(item);
         setIsDialogOpen(true);
-    };
-
-    const handleDialogClose = () => {
-        setIsDialogOpen(false);
-        setEditingItem(undefined);
     };
 
     const formatCurrencyDisplay = (value: number, currency: string = "KRW") => {

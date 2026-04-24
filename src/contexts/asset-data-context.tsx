@@ -40,6 +40,7 @@ interface AssetDataContextType {
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
   refreshData: () => void;
   initAndSync: (data: AssetData) => Promise<void>;
+  syncStockPricesAndSnapshots: () => Promise<void>;
   saveData: (data: AssetData) => boolean;
   addRealEstate: (realEstate: RealEstate) => boolean;
   updateRealEstate: (id: string, realEstate: Partial<RealEstate>) => boolean;
@@ -218,7 +219,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
         const stocksData = await res.json();
-
         if (stocksData && !stocksData.error) {
           setAssetData(prev => {
             const updatedStocks = prev.stocks.map(stock => {
@@ -289,11 +289,27 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     } catch { /* 저장 실패 무시 */ }
   }, []);
 
+  // 상세 탭 진입 시 주식 현재가 갱신 + 스냅샷 저장
+  const syncStockPricesAndSnapshots = useCallback(async () => {
+    setAssetData(latest => {
+      void syncTodayStockPrices(latest).then(() => {
+        setAssetData(after => {
+          setExchangeRatesState(latestRates => {
+            saveSnapshots(after, latestRates);
+            return latestRates;
+          });
+          return after;
+        });
+      });
+      return latest;
+    });
+  }, [syncTodayStockPrices, saveSnapshots]);
+
   // 모든 진입 경로 공통 헬퍼
-  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷 저장
-  // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
-  // skipSnapshots: true 시 saveSnapshots 호출 생략 (공유 데이터 로드 후 기존 스냅샷 보존용)
-  const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
+  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율
+  // 주식 현재가 갱신은 상세 탭 최초 진입 시(syncStockPricesAndSnapshots)로 위임
+  // skipSnapshots 옵션 유지 (공유 데이터 로드 후 호환성)
+  const initAndSync = useCallback(async (data: AssetData, { skipSnapshots: _skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
     initAssetData(data);
     setIsDataLoaded(true);
     const hasAssets =
@@ -305,17 +321,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
-    await syncTodayStockPrices(data);
-    if (!skipSnapshots) {
-      setAssetData(latest => {
-        setExchangeRatesState(latestRates => {
-          saveSnapshots(latest, latestRates);
-          return latestRates;
-        });
-        return latest;
-      });
-    }
-  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
+  }, [initAssetData, syncTodayExchangeRate]);
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
@@ -770,6 +776,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updateExchangeRate,
         refreshData,
         initAndSync,
+        syncStockPricesAndSnapshots,
         saveData,
         addRealEstate,
         updateRealEstate,
