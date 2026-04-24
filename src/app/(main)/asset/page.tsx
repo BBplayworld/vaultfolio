@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react";
-import { AssetOverviewCards } from "./_components/overview/asset-overview-cards";
 import { AssetDistributionCards } from "./_components/distribution/asset-distribution-cards";
 import { YearlyNetAssetChart } from "./_components/chart";
 import { RealEstateInput } from "./_components/input/real-estate-input";
