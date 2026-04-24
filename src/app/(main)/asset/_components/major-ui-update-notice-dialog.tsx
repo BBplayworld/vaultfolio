@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import PREVIEW_IMAGE from "./00.jpg";
+import PREVIEW_IMAGE from "public/images/00.jpg";
 
 const HIDE_UNTIL_KEY = "secretasset-major-ui-notice-hide-until";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -70,7 +70,7 @@ export function MajorUiUpdateNoticeDialog() {
             예정 업데이트 화면
           </p>
           <Image
-            src={PREVIEW_IMAGE}
+            src="/images/00.jpg"
             alt="예정 업데이트 화면"
             width={960}
             height={320}
