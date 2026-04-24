@@ -218,7 +218,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
         const stocksData = await res.json();
-
         if (stocksData && !stocksData.error) {
           setAssetData(prev => {
             const updatedStocks = prev.stocks.map(stock => {

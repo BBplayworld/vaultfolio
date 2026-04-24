@@ -464,7 +464,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
   );
 }
 
-export function StockInput() {
+export function StockInput({ hideList = false }: { hideList?: boolean } = {}) {
   const { assetData, deleteStock, exchangeRates } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
@@ -482,13 +482,26 @@ export function StockInput() {
         setEditingItem(undefined);
         setIsDialogOpen(true);
       } else {
-        // 기본: 팝오버 메뉴 열기
         setIsAddMenuOpen(true);
       }
     };
     window.addEventListener("trigger-add-stock", handler);
     return () => window.removeEventListener("trigger-add-stock", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      const item = assetData.stocks.find((s) => s.id === id);
+      if (item) {
+        setEditingItem(item);
+        setIsDialogOpen(true);
+      }
+    };
+    window.addEventListener("trigger-edit-stock", handler);
+    return () => window.removeEventListener("trigger-edit-stock", handler);
+  }, [assetData.stocks]);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -756,6 +769,25 @@ export function StockInput() {
       </div>
     );
   };
+
+  if (hideList) {
+    return (
+      <>
+        <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
+              <DialogDescription>
+                {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
+              </DialogDescription>
+            </DialogHeader>
+            <StockForm editData={editingItem} onClose={handleDialogClose} />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">

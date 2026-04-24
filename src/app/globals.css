@@ -57,7 +57,7 @@ These serve as the fallback; there is no separate default.css file. */
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   /*--primary: oklch(0.205 0 0);*/
-  --primary: lab(61.5481% -43.9789 -10.1484);
+  --primary: oklch(0.585 0.233 277.117);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -106,8 +106,8 @@ These serve as the fallback; there is no separate default.css file. */
   /* --popover: oklch(0.205 0 0); */
   --popover: oklch(30.118% 0.00003 271.152 / 0.999);
   --popover-foreground: oklch(0.985 0 0);
-  /* Teal primary color - oklch format for teal-500 equivalent */
-  --primary: oklch(0.656 0.131 191.711);
+  /* Indigo primary color */
+  --primary: oklch(0.704 0.040 256.788);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -118,28 +118,28 @@ These serve as the fallback; there is no separate default.css file. */
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.656 0.131 191.711);
-  /* Teal-based chart colors for dark mode - brighter versions */
-  --chart-1: oklch(0.750 0.108 183.586);
-  /* teal-400 */
-  --chart-2: oklch(0.661 0.139 194.874);
-  /* cyan-400 */
-  --chart-3: oklch(0.850 0.084 175.348);
-  /* teal-300 */
-  --chart-4: oklch(0.548 0.152 200.086);
-  /* cyan-600 */
-  --chart-5: oklch(0.656 0.131 191.711);
-  /* teal-500 */
-  --chart-6: oklch(0.459 0.138 208.919);
-  /* cyan-700 */
+  --ring: oklch(0.585 0.233 277.117);
+  /* Indigo-based chart colors for dark mode */
+  --chart-1: oklch(0.673 0.182 276.935);
+  /* indigo-400 */
+  --chart-2: oklch(0.585 0.233 277.117);
+  /* indigo-500 */
+  --chart-3: oklch(0.785 0.115 274.713);
+  /* indigo-300 */
+  --chart-4: oklch(0.511 0.262 276.966);
+  /* indigo-600 */
+  --chart-5: oklch(0.457 0.240 277.023);
+  /* indigo-700 */
+  --chart-6: oklch(0.398 0.195 277.366);
+  /* indigo-800 */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.656 0.131 191.711);
+  --sidebar-primary: oklch(0.585 0.233 277.117);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.656 0.131 191.711);
+  --sidebar-ring: oklch(0.585 0.233 277.117);
 }
 
 @layer utilities {

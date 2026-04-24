@@ -323,7 +323,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
   );
 }
 
-export function CryptoInput() {
+export function CryptoInput({ hideList = false }: { hideList?: boolean } = {}) {
   const { assetData, deleteCrypto } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Crypto | undefined>();
@@ -343,6 +343,16 @@ export function CryptoInput() {
     window.addEventListener("trigger-add-crypto", handler);
     return () => window.removeEventListener("trigger-add-crypto", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      const item = assetData.crypto.find((c) => c.id === id);
+      if (item) { setEditingItem(item); setIsDialogOpen(true); }
+    };
+    window.addEventListener("trigger-edit-crypto", handler);
+    return () => window.removeEventListener("trigger-edit-crypto", handler);
+  }, [assetData.crypto]);
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -368,6 +378,25 @@ export function CryptoInput() {
   const formatCurrencyDisplay = (value: number) => {
     return formatCurrency(value);
   };
+
+  if (hideList) {
+    return (
+      <>
+        <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
+              <DialogDescription>
+                {editingItem ? "암호화폐 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
+              </DialogDescription>
+            </DialogHeader>
+            <CryptoForm editData={editingItem} onClose={handleDialogClose} />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">

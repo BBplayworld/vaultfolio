@@ -54,6 +54,7 @@ export const loanTypes = [
   { value: "mortgage-insurance", label: "보험담보대출", shortLabel: "보험담보" },
   { value: "mortgage-deposit", label: "예금담보대출", shortLabel: "예금담보" },
   { value: "mortgage-other", label: "기타담보대출", shortLabel: "기타담보" },
+  { value: "tenant", label: "임차보증금", shortLabel: "임차보증금" },
 ] as const;
 
 // 대출 종류 표시 순서

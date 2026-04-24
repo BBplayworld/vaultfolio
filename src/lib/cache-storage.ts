@@ -34,6 +34,9 @@ export interface ICacheStorage {
   // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
   getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null>;
   setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void>;
+  // 과거 기준일 종가 캐시 (수익률 계산용, 1년 TTL)
+  getRefPrice(ticker: string, dateStr: string): Promise<number | null>;
+  setRefPrice(ticker: string, dateStr: string, price: number): Promise<void>;
   // Rate Limit (로컬 개발에서는 항상 통과)
   checkRateLimit(ip: string): Promise<boolean>;
   // Gemini 사용량 관리
@@ -109,6 +112,7 @@ interface FileCacheData {
   KIS_TOKEN?: { access_token: string; updated_at: string };
   GEMINI_COUNT?: { count: number; date: string };
   DIVIDENDS?: Record<string, DividendPayoutResult[]>;
+  REF_PRICES?: Record<string, number>;
 }
 
 interface ShareTokenEntry {
@@ -271,6 +275,20 @@ class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
+  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
+    const key = `${ticker}:${dateStr}`;
+    return this.readFinanceCache().REF_PRICES?.[key] ?? null;
+  }
+
+  async setRefPrice(ticker: string, dateStr: string, price: number): Promise<void> {
+    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = nowKST.toISOString().split("T")[0];
+    const cache = this.readFinanceCache();
+    if (!cache.REF_PRICES) cache.REF_PRICES = {};
+    cache.REF_PRICES[`${ticker}:${dateStr}`] = price;
+    this.writeFinanceCache(cache, todayStr);
+  }
+
   // 로컬 개발에서는 Rate Limit 적용 없음
   async checkRateLimit(_ip: string): Promise<boolean> {
     return true;
@@ -390,6 +408,15 @@ class UpstashCacheStorage implements ICacheStorage {
   async setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void> {
     const DIVIDEND_TTL = 30 * 24 * 3600; // 30일
     await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: DIVIDEND_TTL });
+  }
+
+  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
+    return this.redis.get<number>(`finance:refprice:${ticker}:${dateStr}`);
+  }
+
+  async setRefPrice(ticker: string, dateStr: string, price: number): Promise<void> {
+    const REF_PRICE_TTL = 365 * 24 * 3600; // 1년
+    await this.redis.set(`finance:refprice:${ticker}:${dateStr}`, price, { ex: REF_PRICE_TTL });
   }
 
   async getGeminiDailyCount(todayStr: string): Promise<number> {

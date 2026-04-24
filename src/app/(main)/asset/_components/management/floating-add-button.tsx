@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History } from "lucide-react";
+import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MAIN_PALETTE } from "@/config/theme";
+import { useAssetData } from "@/contexts/asset-data-context";
+import { NumberInput } from "@/components/ui/number-input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
 type Step = "select-type" | "select-method";
@@ -31,6 +37,7 @@ export function FloatingAddButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<Step>("select-type");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
+  const { exchangeRates, exchangeRateDate, updateExchangeRate } = useAssetData();
 
   const resetState = () => {
     setStep("select-type");
@@ -61,13 +68,13 @@ export function FloatingAddButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg
-        px-6 py-3.5 sm:px-10 sm:py-4.5 text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all"
+        className="fixed bottom-5 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full text-white shadow-lg px-6 py-3.5 sm:px-10 sm:py-4.5 text-sm font-semibold active:scale-95 transition-all"
+        style={{ backgroundColor: MAIN_PALETTE[9] }}
         aria-label="자산 추가"
       >
         <Plus className="size-5" />
         자산 추가
-      </button>
+      </button >
 
       <Sheet open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetState(); }}>
         <SheetContent side={isMobile ? "top" : "right"} className="rounded-t-2xl pb-10">
@@ -78,7 +85,7 @@ export function FloatingAddButton() {
           </SheetHeader>
 
           {step === "select-type" && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 px-3">
               {ASSET_TYPES.map(({ type, label, icon: Icon, hasScreenshot }) => (
                 <button
                   key={type}
@@ -90,6 +97,50 @@ export function FloatingAddButton() {
                   <span className="font-medium">{label}</span>
                 </button>
               ))}
+
+              <Separator className="my-1" />
+
+              <div className="rounded-xl border bg-card px-4 py-3 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <BadgeDollarSign className="size-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold">환율 설정</p>
+                    <p className="text-xs text-muted-foreground">
+                      {exchangeRateDate ? `기준일: ${exchangeRateDate}` : "외화 자산의 원화 환산 기준"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm font-medium whitespace-nowrap w-24">🇺🇸 USD</Label>
+                    <div className="flex items-center gap-2 flex-1">
+                      <NumberInput
+                        value={exchangeRates.USD}
+                        onChange={(val) => updateExchangeRate("USD", val)}
+                        className="flex-1"
+                        quickButtons={[]}
+                        allowDecimals={true}
+                        maxDecimals={1}
+                      />
+                      <span className="text-sm text-muted-foreground shrink-0">원</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm font-medium whitespace-nowrap w-24">🇯🇵 JPY (100¥)</Label>
+                    <div className="flex items-center gap-2 flex-1">
+                      <NumberInput
+                        value={exchangeRates.JPY}
+                        onChange={(val) => updateExchangeRate("JPY", val)}
+                        className="flex-1"
+                        quickButtons={[]}
+                        allowDecimals={true}
+                        maxDecimals={1}
+                      />
+                      <span className="text-sm text-muted-foreground shrink-0">원</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

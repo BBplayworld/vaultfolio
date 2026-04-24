@@ -1,65 +1,38 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react";
-import { AssetOverviewCards } from "./_components/asset-overview-cards";
-import { AssetDistributionCards } from "./_components/asset-distribution-cards";
-import { YearlyNetAssetChart } from "./_components/yearly-net-asset-chart";
+import { AssetOverviewCards } from "./_components/overview/asset-overview-cards";
+import { AssetDistributionCards } from "./_components/distribution/asset-distribution-cards";
+import { YearlyNetAssetChart } from "./_components/chart";
 import { RealEstateInput } from "./_components/input/real-estate-input";
 import { StockInput } from "./_components/input/stock-input";
 import { CryptoInput } from "./_components/input/crypto-input";
-import { ExchangeRateInput } from "./_components/input/exchange-rate-input";
 import { CashInput } from "./_components/input/cash-input";
 import { LoanInput } from "./_components/input/loan-input";
-import { WelcomeGuide } from "./_components/welcome-guide";
+import { WelcomeGuide } from "./_components/management/welcome-guide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X } from "lucide-react";
+import { Info, Database, Sparkles, Activity, LayoutDashboard, PieChart, List, BarChart2, X, TrendingUp, Coins, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DividendCard } from "./_components/dividend-card";
-import { CopyrightFooter } from "./_components/copyright-footer";
-import { FloatingAddButton } from "./_components/floating-add-button";
-import { APP_CONFIG } from "@/config";
+import { DividendCard, ProfitCard } from "./_components/chart";
+import { CopyrightFooter } from "./_components/management/copyright-footer";
+import { FloatingAddButton } from "./_components/management/floating-add-button";
+import { AssetDetailTabs } from "./_components/detail/asset-detail-tabs";
+import { APP_CONFIG, ASSET_THEME } from "@/config";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME } from "@/config/theme";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
 
-
-const INPUT_TABS = [
-  { value: "real-estate", label: "부동산", mobileLabel: undefined },
-  { value: "stocks", label: "주식", mobileLabel: undefined },
-  { value: "crypto", label: "암호화폐", mobileLabel: undefined },
-  { value: "cash", label: "현금성 자산", mobileLabel: "현금" },
-  { value: "loans", label: "대출", mobileLabel: undefined },
-] as const;
-
-const MOBILE_TABS = [
-  { value: "asset", label: "자산", icon: LayoutDashboard },
-  { value: "distribution", label: "분포", icon: PieChart },
+const TABS = [
+  { value: "distribution", label: "분포", icon: LayoutDashboard },
   { value: "detail", label: "상세", icon: List },
   { value: "chart", label: "차트", icon: BarChart2 },
 ] as const;
-
-const PC_TABS = [
-  { value: "overview", label: "자산+분포", icon: LayoutDashboard },
-  { value: "detail", label: "상세", icon: List },
-  { value: "chart", label: "차트", icon: BarChart2 },
-] as const;
-
-const TAB_TRIGGER_CLASS = [
-  "h-10 sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
-  "hover:bg-accent hover:text-foreground hover:border-primary/50",
-  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-semibold",
-  ASSET_THEME.tabActive,
-].join(" ");
-
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
-  const [activeTab, setActiveTab] = useState("real-estate");
-  const [activeMobileTab, setActiveMobileTab] = useState("asset");
-  const [activePcTab, setActivePcTab] = useState("overview");
+  const [activePcTab, setActivePcTab] = useState("distribution");
   const [activeChartTab, setActiveChartTab] = useState("netasset");
   const isMobile = useIsMobile();
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -137,8 +110,8 @@ export default function Page() {
             <span className="text-foreground leading-snug">
               <span className="font-semibold text-primary">영지식(Zero-Knowledge) 이중 보안</span>
               {"  —  "}
-              데이터는 <span className="text-rose-500">이 기기 브라우저</span>에만 보관됩니다.{" "}
-              <span className="text-rose-500">'공유 URL 복사'</span> 시에도 랜덤 키(Key)와 사용자 PIN이 완전히 분리되어, 관리자를 포함한 그 누구도 서버 데이터 단독으로는 복호화할 수 없도록 <span className="font-medium text-rose-500">원천 봉쇄</span>되어 있습니다.{" "}
+              데이터는 <span className="text-rose-400">이 기기 브라우저</span>에만 보관됩니다.{" "}
+              <span className="text-rose-400">&apos;공유 URL 복사&apos;</span> 시에도 랜덤 키(Key)와 사용자 PIN이 완전히 분리되어, 관리자를 포함한 그 누구도 서버 데이터 단독으로는 복호화할 수 없도록 <span className="font-medium text-rose-400">원천 봉쇄</span>되어 있습니다.{" "}
               <span className="text-muted-foreground block mt-1 break-keep">
                 (주의: 공유 URL 자체에 해독 키의 절반이 포함되어 있습니다. 안전을 위해 URL을 공개 게시판 등에 노출하지 마시고, PIN 번호는 다른 수단을 통해 공유 대상자에게 별도로 알려주세요.)
               </span>
@@ -150,9 +123,9 @@ export default function Page() {
               <span className="font-semibold text-primary">AI 자산 분석</span>
               {"  —  "}
               상단{" "}
-              <span className="text-rose-500">자산 관리 메뉴</span>에서
+              <span className="text-rose-400">자산 관리 메뉴</span>에서
               Grok·Gemini·GPT에 바로 붙여넣을 수 있는{" "}
-              <span className="text-rose-500">AI 평가용 프롬프트</span>를 생성할 수 있습니다.{" "}
+              <span className="text-rose-400">AI 평가용 프롬프트</span>를 생성할 수 있습니다.{" "}
               데이터 내보내기·가져오기를 지원합니다.
             </span>
           </li>
@@ -161,8 +134,8 @@ export default function Page() {
             <span className="text-foreground leading-snug">
               <span className="font-semibold text-primary">매일 자동 업데이트</span>
               {"  —  "}
-              보유 <span className="text-rose-500">주식 현재가</span>와{" "}
-              <span className="text-rose-500">환율(USD·JPY)</span>을
+              보유 <span className="text-rose-400">주식 현재가</span>와{" "}
+              <span className="text-rose-400">환율(USD·JPY)</span>을
               매일 최신 정보로 자동 반영합니다.
             </span>
           </li>
@@ -172,43 +145,25 @@ export default function Page() {
   );
 
   const alertOrBanner = alertDismissed ? null : alert;
-
-  const inputTabs = (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1 mb-0.5">
-        {INPUT_TABS.map(({ value, label, mobileLabel }) => (
-          <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
-            <span className="ml-1 text-[11px] leading-tight sm:text-sm">
-              {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
-            </span>
-            <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      <TabsContent value="real-estate" forceMount className="data-[state=inactive]:hidden"><RealEstateInput /></TabsContent>
-      <TabsContent value="stocks" forceMount className="data-[state=inactive]:hidden"><StockInput /></TabsContent>
-      <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
-      <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
-      <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
-    </Tabs>
-  );
-
   const chartTabs = (
     <Tabs value={activeChartTab} onValueChange={setActiveChartTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 h-10 p-1 gap-1 mb-0.5">
-        <TabsTrigger value="netasset" className={TAB_TRIGGER_CLASS}>순자산</TabsTrigger>
-        <TabsTrigger value="dividend" className={TAB_TRIGGER_CLASS}>배당</TabsTrigger>
+      <TabsList className={ASSET_THEME.tabList2}>
+        <TabsTrigger value="netasset" className={ASSET_THEME.tabTrigger2}><Landmark className="size-4 shrink-0" />순자산</TabsTrigger>
+        <TabsTrigger value="profit" className={ASSET_THEME.tabTrigger2}><TrendingUp className="size-4 shrink-0" />수익</TabsTrigger>
+        <TabsTrigger value="dividend" className={ASSET_THEME.tabTrigger2}><Coins className="size-4 shrink-0" />배당</TabsTrigger>
       </TabsList>
-      <TabsContent value="netasset" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent value="netasset" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
         <YearlyNetAssetChart />
       </TabsContent>
-      <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
         <DividendCard />
+      </TabsContent>
+      <TabsContent value="profit" forceMount className="data-[state=inactive]:hidden mt-2 sm:4">
+        <ProfitCard />
       </TabsContent>
     </Tabs>
   );
 
-  // isMobile이 undefined이면 분기 렌더 보류 (hydration flash 방지)
   if (isMobile === undefined) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
@@ -217,82 +172,43 @@ export default function Page() {
     );
   }
 
-  if (isMobile) {
-    return (
-      <div className="flex flex-col gap-1">
-        {alertOrBanner}
-        <Tabs value={activeMobileTab} onValueChange={setActiveMobileTab} className="w-full mt-0.5">
-          <TabsList className="grid w-full grid-cols-4 h-11 p-1 gap-1 mb-0.5 sticky top-0 z-10 bg-background/95 backdrop-blur">
-            {MOBILE_TABS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className={[
-                  "h-10 flex-col gap-0.5 bg-muted/60 text-muted-foreground border border-border py-1 overflow-hidden cursor-pointer transition-all",
-                  "hover:bg-accent hover:text-foreground hover:border-primary/50",
-                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-semibold",
-                  ASSET_THEME.tabActive,
-                ].join(" ")}
-              >
-                <Icon className="size-4 shrink-0" />
-                <span className="text-[10px] leading-tight">{label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="asset">
-            <AssetOverviewCards />
-          </TabsContent>
-
-          <TabsContent value="distribution">
-            <AssetDistributionCards />
-          </TabsContent>
-
-          <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
-            <div className="flex flex-col gap-4 pb-5">
-              <div ref={tabsRef}>{inputTabs}</div>
-              <ExchangeRateInput />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
-            {chartTabs}
-          </TabsContent>
-        </Tabs>
-        <CopyrightFooter />
-        <FloatingAddButton />
-      </div>
-    );
-  }
+  const inputLayer = (
+    <div className="hidden" aria-hidden="true">
+      <RealEstateInput hideList />
+      <StockInput hideList />
+      <CryptoInput hideList />
+      <CashInput hideList />
+      <LoanInput hideList />
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      {inputLayer}
       {alertOrBanner}
       <Tabs value={activePcTab} onValueChange={setActivePcTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 p-1 gap-2 mb-1">
-          {PC_TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className={[TAB_TRIGGER_CLASS, "text-sm gap-2"].join(" ")}>
+        <TabsList className={ASSET_THEME.tabList1}>
+          {TABS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger1}>
               <Icon className="size-4 shrink-0" />
               {label}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="distribution" className="data-[state=inactive]:hidden mt-2 sm:mt-4">
           <div className="flex flex-col gap-4 md:gap-6">
-            <AssetOverviewCards />
             <AssetDistributionCards />
           </div>
         </TabsContent>
 
-        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
+        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
           <div className="flex flex-col gap-4" ref={tabsRef}>
-            {inputTabs}
-            <ExchangeRateInput />
+            <AssetDetailTabs />
           </div>
         </TabsContent>
 
-        <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
+        <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
           {chartTabs}
         </TabsContent>
       </Tabs>

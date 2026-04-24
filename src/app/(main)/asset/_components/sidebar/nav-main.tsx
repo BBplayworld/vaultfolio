@@ -18,7 +18,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
+  SidebarcategoryBox,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -49,7 +49,7 @@ const NavItemExpanded = ({
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           {item.subItems ? (
-            <SidebarMenuButton
+            <SidebarcategoryBox
               disabled={item.comingSoon}
               isActive={isActive(item.url, item.subItems)}
               tooltip={item.title}
@@ -58,9 +58,9 @@ const NavItemExpanded = ({
               <span>{item.title}</span>
               {item.comingSoon && <IsComingSoon />}
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-            </SidebarMenuButton>
+            </SidebarcategoryBox>
           ) : (
-            <SidebarMenuButton
+            <SidebarcategoryBox
               asChild
               aria-disabled={item.comingSoon}
               isActive={isActive(item.url)}
@@ -71,7 +71,7 @@ const NavItemExpanded = ({
                 <span>{item.title}</span>
                 {item.comingSoon && <IsComingSoon />}
               </Link>
-            </SidebarMenuButton>
+            </SidebarcategoryBox>
           )}
         </CollapsibleTrigger>
         {item.subItems && (
@@ -107,7 +107,7 @@ const NavItemCollapsed = ({
     <SidebarMenuItem key={item.title}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton
+          <SidebarcategoryBox
             disabled={item.comingSoon}
             tooltip={item.title}
             isActive={isActive(item.url, item.subItems)}
@@ -115,7 +115,7 @@ const NavItemCollapsed = ({
             {item.icon && <item.icon />}
             <span>{item.title}</span>
             <ChevronRight />
-          </SidebarMenuButton>
+          </SidebarcategoryBox>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-50 space-y-1" side="right" align="start">
           {item.subItems?.map((subItem) => (
@@ -169,7 +169,7 @@ export function NavMain({ items }: NavMainProps) {
                   if (!item.subItems) {
                     return (
                       <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
+                        <SidebarcategoryBox
                           asChild
                           aria-disabled={item.comingSoon}
                           tooltip={item.title}
@@ -179,7 +179,7 @@ export function NavMain({ items }: NavMainProps) {
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
                           </Link>
-                        </SidebarMenuButton>
+                        </SidebarcategoryBox>
                       </SidebarMenuItem>
                     );
                   }
