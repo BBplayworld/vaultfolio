@@ -46,7 +46,7 @@ export function MajorUiUpdateNoticeDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+      <DialogContent showCloseButton={false} className="max-h-[90dvh] overflow-y-auto sm:max-w-md w-[calc(100%-1.5rem)] sm:w-full p-4 sm:p-6">
         <DialogHeader className="gap-3">
           <div className="inline-flex items-center gap-2 text-primary">
             <BellRing className="size-5" />
