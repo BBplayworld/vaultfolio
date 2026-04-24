@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { DividendCard } from "./_components/dividend-card";
 import { CopyrightFooter } from "./_components/copyright-footer";
 import { FloatingAddButton } from "./_components/floating-add-button";
+import { MajorUiUpdateNoticeDialog } from "./_components/major-ui-update-notice-dialog";
 import { APP_CONFIG } from "@/config";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME } from "@/config/theme";
@@ -102,6 +103,7 @@ export default function Page() {
   if (isWelcomeGuide) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
+        <MajorUiUpdateNoticeDialog />
         <WelcomeGuide />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
@@ -212,6 +214,7 @@ export default function Page() {
   if (isMobile === undefined) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
+        <MajorUiUpdateNoticeDialog />
         {alertOrBanner}
       </div>
     );
@@ -220,6 +223,7 @@ export default function Page() {
   if (isMobile) {
     return (
       <div className="flex flex-col gap-1">
+        <MajorUiUpdateNoticeDialog />
         {alertOrBanner}
         <Tabs value={activeMobileTab} onValueChange={setActiveMobileTab} className="w-full mt-0.5">
           <TabsList className="grid w-full grid-cols-4 h-11 p-1 gap-1 mb-0.5 sticky top-0 z-10 bg-background/95 backdrop-blur">
@@ -267,6 +271,7 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      <MajorUiUpdateNoticeDialog />
       {alertOrBanner}
       <Tabs value={activePcTab} onValueChange={setActivePcTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 p-1 gap-2 mb-1">
