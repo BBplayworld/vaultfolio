@@ -31,9 +31,18 @@ const TABS = [
 ] as const;
 
 export default function Page() {
-  const { assetData, isDataLoaded, isSharePending } = useAssetData();
+  const { assetData, isDataLoaded, isSharePending, syncStockPricesAndSnapshots } = useAssetData();
   const [activePcTab, setActivePcTab] = useState("distribution");
   const [activeChartTab, setActiveChartTab] = useState("netasset");
+  const stockSyncedRef = useRef(false);
+
+  const handlePcTabChange = (tab: string) => {
+    setActivePcTab(tab);
+    if (tab === "detail" && !stockSyncedRef.current) {
+      stockSyncedRef.current = true;
+      void syncStockPricesAndSnapshots();
+    }
+  };
   const isMobile = useIsMobile();
   const tabsRef = useRef<HTMLDivElement>(null);
   const [alertDismissed, setAlertDismissed] = useState(() => {
@@ -156,10 +165,10 @@ export default function Page() {
         <YearlyNetAssetChart />
       </TabsContent>
       <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
-        <DividendCard />
+        <DividendCard isActive={activeChartTab === "dividend"} />
       </TabsContent>
       <TabsContent value="profit" forceMount className="data-[state=inactive]:hidden mt-2 sm:4">
-        <ProfitCard />
+        <ProfitCard isActive={activeChartTab === "profit"} />
       </TabsContent>
     </Tabs>
   );
@@ -186,7 +195,7 @@ export default function Page() {
     <div className="flex flex-col gap-4 md:gap-6">
       {inputLayer}
       {alertOrBanner}
-      <Tabs value={activePcTab} onValueChange={setActivePcTab} className="w-full">
+      <Tabs value={activePcTab} onValueChange={handlePcTabChange} className="w-full">
         <TabsList className={ASSET_THEME.tabList1}>
           {TABS.map(({ value, label, icon: Icon }) => (
             <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger1}>

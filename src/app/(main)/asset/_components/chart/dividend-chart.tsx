@@ -107,7 +107,7 @@ function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): Monthl
 }
 
 
-export function DividendCard() {
+export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
@@ -124,11 +124,14 @@ export function DividendCard() {
         queryFn: () => fetchDividend(ticker, type, excd),
         staleTime: 30 * 24 * 60 * 60 * 1000,
         retry: false,
+        enabled: isActive,
       };
     }),
   });
 
   const isLoading = queries.some((q) => q.isLoading);
+  const loadedCount = queries.filter((q) => !q.isLoading).length;
+  const totalCount = queries.length;
 
   const dividendItems: StockDividendInfo[] = stocksWithTicker.map((stock, i) => ({
     stock,
@@ -170,7 +173,35 @@ export function DividendCard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading && (
-            <p className="text-xs text-muted-foreground text-center py-4">배당 정보 조회 중...</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>배당 정보 조회 중...</span>
+                <span className="tabular-nums">{loadedCount} / {totalCount}</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: totalCount > 0 ? `${(loadedCount / totalCount) * 100}%` : "0%" }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                {stocksWithTicker.slice(0, 8).map((stock, i) => {
+                  const q = queries[i];
+                  const done = q && !q.isLoading;
+                  return (
+                    <div key={stock.id} className="flex items-center justify-between px-1 py-0.5">
+                      <span className="text-xs text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
+                      <span className={`text-[10px] ${done ? "text-primary" : "text-muted-foreground"}`}>
+                        {done ? "완료" : "조회 중..."}
+                      </span>
+                    </div>
+                  );
+                })}
+                {stocksWithTicker.length > 8 && (
+                  <p className="text-[10px] text-muted-foreground px-1">외 {stocksWithTicker.length - 8}개 종목...</p>
+                )}
+              </div>
+            </div>
           )}
 
           {!isLoading && annualTotal === 0 ? (

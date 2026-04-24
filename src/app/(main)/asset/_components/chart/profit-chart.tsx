@@ -92,7 +92,7 @@ function formatRate(rate: number): string {
   return `${sign}${rate.toFixed(2)}%`;
 }
 
-export function ProfitCard() {
+export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
@@ -110,7 +110,7 @@ export function ProfitCard() {
     queryKey: ["profit", period, tickerList],
     queryFn: () => fetchProfitRef(tickerList, period),
     staleTime: 5 * 60 * 1000,
-    enabled: stocksWithPrice.length > 0,
+    enabled: isActive && stocksWithPrice.length > 0,
   });
 
   if (stocksWithPrice.length === 0) {
@@ -189,7 +189,37 @@ export function ProfitCard() {
             {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
               <TabsContent key={p} value={p} forceMount className="data-[state=inactive]:hidden mt-4 space-y-4">
                 {isLoading ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">수익 정보 조회 중...</p>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
+                      <div className="h-4 w-24 rounded bg-muted" />
+                      <div className="h-6 w-36 rounded bg-muted" />
+                    </div>
+                    {stocksWithPrice.slice(0, 5).map((stock) => (
+                      <div key={stock.id} className="rounded-lg border overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-2 h-2 rounded-full bg-muted" />
+                            <div className="h-3 w-16 rounded bg-muted animate-pulse" />
+                          </div>
+                          <div className="h-3 w-20 rounded bg-muted animate-pulse" />
+                        </div>
+                        <div className="divide-y">
+                          {[stock].map((s) => (
+                            <div key={s.id} className="grid grid-cols-[1fr_6rem] gap-x-2 px-4 py-2.5 items-center">
+                              <div className="space-y-1">
+                                <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+                                <div className="h-2.5 w-12 rounded bg-muted animate-pulse" />
+                              </div>
+                              <div className="h-3 w-16 rounded bg-muted animate-pulse ml-auto" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground text-center py-1">
+                      {PERIOD_LABELS[p]} 기준가 조회 중 ({stocksWithPrice.length}개 종목)...
+                    </p>
+                  </div>
                 ) : (
                   <>
                     {/* 전체 요약 */}
