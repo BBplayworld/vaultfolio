@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DividendCard } from "./_components/dividend-card";
 import { CopyrightFooter } from "./_components/copyright-footer";
 import { FloatingAddButton } from "./_components/floating-add-button";
 import { MajorUiUpdateNoticeDialog } from "./_components/major-ui-update-notice-dialog";
@@ -197,15 +196,11 @@ export default function Page() {
 
   const chartTabs = (
     <Tabs value={activeChartTab} onValueChange={setActiveChartTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 h-10 p-1 gap-1 mb-0.5">
+      <TabsList className="grid w-full grid-cols-1 h-10 p-1 gap-1 mb-0.5">
         <TabsTrigger value="netasset" className={TAB_TRIGGER_CLASS}>순자산</TabsTrigger>
-        <TabsTrigger value="dividend" className={TAB_TRIGGER_CLASS}>배당</TabsTrigger>
       </TabsList>
       <TabsContent value="netasset" forceMount className="data-[state=inactive]:hidden">
         <YearlyNetAssetChart />
-      </TabsContent>
-      <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden">
-        <DividendCard />
       </TabsContent>
     </Tabs>
   );

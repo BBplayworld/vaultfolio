@@ -520,11 +520,6 @@ export function AssetDistributionCards() {
                                 <div key={stock.id} className="rounded-lg bg-muted/30 text-xs overflow-hidden">
                                   <div className="flex items-center justify-between gap-2 p-2">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <StockIcon
-                                        ticker={normalizeTicker(stock)}
-                                        name={stock.name}
-                                        isForeign={stock.category === "foreign"}
-                                      />
                                       <div className="min-w-0">
                                         <p className={`font-semibold truncate ${ASSET_THEME.text.default}`}>{stock.name}</p>
                                         <p className="text-[10px] font-semibold text-muted-foreground">{stock.quantity.toLocaleString()}주</p>
@@ -644,11 +639,6 @@ export function AssetDistributionCards() {
                             return (
                               <div key={coin.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/30 p-2 text-xs">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <div className="size-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-[10px] font-bold text-primary">
-                                      {(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}
-                                    </span>
-                                  </div>
                                   <div className="min-w-0">
                                     <p className={`font-semibold truncate ${ASSET_THEME.text.default}`}>{coin.name}</p>
                                     <p className="text-[10px] text-muted-foreground">{coin.quantity.toLocaleString()}개</p>
