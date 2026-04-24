@@ -13,10 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import PREVIEW_IMAGE from "./00.jpg";
 
 const HIDE_UNTIL_KEY = "secretasset-major-ui-notice-hide-until";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const EXAMPLE_IMAGE_SRC = "/images/00.jpg";
 
 export function MajorUiUpdateNoticeDialog() {
   const [open, setOpen] = useState(false);
@@ -56,14 +56,13 @@ export function MajorUiUpdateNoticeDialog() {
           <DialogDescription className="leading-relaxed">
             더 직관적인 화면 구성과 입력 흐름 개선을 포함한 UI 개편을 진행하고 있습니다.
             곧 더 편한 사용 경험으로 찾아오겠습니다.
-            <br /><br />
-            <ul className="text-foreground">
-              <li>📢 분포 탭 - 자산, 금융자산, 부동산, 부채 비율 시각화 및 직관적 UI 개선</li>
-              <li>📢 상세 탭 - 보유 종목 비중 차트와 상세 수익 현황을 결합한 주식 특화 탭 업데이트</li>
-              <li>📢 차트 탭 - 순자산 변화, 기간별 수익, 예상 배당 차트 기능 추가</li>
-              <li>✉️ 의견 : <a href="mailto:bbplayworld@gmail.com" className="text-primary underline">bbplayworld@gmail.com</a></li>
-            </ul>
           </DialogDescription>
+          <ul className="space-y-1 text-sm text-foreground">
+            <li>📢 분포 탭 - 자산, 금융자산, 부동산, 부채 비율 시각화 및 직관적 UI 개선</li>
+            <li>📢 상세 탭 - 보유 종목 비중 차트와 상세 수익 현황을 결합한 주식 특화 탭 업데이트</li>
+            <li>📢 차트 탭 - 순자산 변화, 기간별 수익, 예상 배당 차트 기능 추가</li>
+            <li>✉️ 의견 : <a href="mailto:bbplayworld@gmail.com" className="text-primary underline">bbplayworld@gmail.com</a></li>
+          </ul>
         </DialogHeader>
 
         <div className="rounded-md border bg-muted/20 p-3">
@@ -71,8 +70,8 @@ export function MajorUiUpdateNoticeDialog() {
             예정 업데이트 화면
           </p>
           <Image
-            src={EXAMPLE_IMAGE_SRC}
-            alt="Vercel 상대 경로 이미지 예시"
+            src={PREVIEW_IMAGE}
+            alt="예정 업데이트 화면"
             width={960}
             height={320}
             className="h-auto w-full rounded-md border bg-background"
