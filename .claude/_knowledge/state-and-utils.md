@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-04-25
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -122,8 +122,15 @@ quickButtonPresets: { stock, realEstate, loan }
 ## 커스텀 이벤트 (컴포넌트 간 통신)
 
 ```typescript
-// FloatingAddButton → *-input.tsx에서 수신
+// 추가 이벤트: FloatingAddButton → *-input.tsx에서 수신
 window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode: "screenshot"|"manual" } }))
 // 이벤트 목록: trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}
 // real-estate, yearly-net-asset: mode 없이 단순 Event
+
+// 편집 이벤트: 각 *-tab.tsx Pencil 버튼 → *-input.tsx에서 수신
+window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: "stock_xxx" } }))
+// 이벤트 목록: trigger-edit-{real-estate|stock|crypto|cash|loan}
+
+// 탭 이동 이벤트: FloatingAddButton 빠른이동 → AssetDetailTabs에서 수신
+window.dispatchEvent(new CustomEvent("navigate-to-tab", { detail: { tab: "stocks"|"real-estate"|"crypto"|"cash"|"loans" } }))
 ```

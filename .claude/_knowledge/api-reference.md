@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-04-25
 
 ## 내부 API 라우트
 
@@ -21,10 +21,11 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 
 ### POST /api/share — 자산 데이터 Short URL 저장
 ```
-Body: { token: "v71P...", owner_id?: string }
+Body: { token: "v71P...|v72Z...", owner_id?: string }
 → { key: "a3f8b2c1ab", owner_id: "uuid" }
 ```
-- `v71P`(PIN 있음)만 허용, 키: `sha256(token)[:10]`
+- `v71N`(PIN 없음) 거부, `v71P`(PIN) / `v72Z`(PIN+localKey) 허용
+- 키: `sha256(token)[:10]`
 - `owner_id`로 이전 키 자동 삭제, IP Rate Limit 분당 10회
 
 ### GET /api/share?key=a3f8b2c1ab
@@ -49,7 +50,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 200회 (`GEMINI_SERVER_DAILY_LIMIT`), 초과 시 429
+**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`), 초과 시 429
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
@@ -111,4 +112,4 @@ getCacheStorage(): ICacheStorage
 getEffectiveDateStr(type: "exchange"|"stock-us"|"stock-kr"): string
 ```
 
-**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset-gemini-YYYY-MM-DD`, 하루 10회
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset-gemini-YYYY-MM-DD`, 하루 15회

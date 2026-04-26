@@ -39,12 +39,13 @@ const TAB_TRIGGER = ASSET_THEME.tabTrigger1;
 function getProfitCacheKey(tickers: string, period: ProfitPeriod): string {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const todayStr = nowKST.toISOString().split("T")[0];
-  // 주간은 이번 주 월요일 기준으로 묶음
+  // 주간은 지난주 금요일 기준으로 묶음 (토·일도 이전 주 금요일 사용)
   if (period === "weekly") {
     const day = nowKST.getUTCDay(); // 0=일
-    const monday = new Date(nowKST);
-    monday.setUTCDate(nowKST.getUTCDate() - (day === 0 ? 6 : day - 1));
-    const weekStr = monday.toISOString().split("T")[0];
+    const daysToMonday = day === 0 ? 6 : day - 1;
+    const lastFriday = new Date(nowKST);
+    lastFriday.setUTCDate(nowKST.getUTCDate() - daysToMonday - 3);
+    const weekStr = lastFriday.toISOString().split("T")[0];
     return `profit:${period}:${weekStr}:${tickers}`;
   }
   if (period === "monthly") {
@@ -137,7 +138,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const rate = (stock.currency === "USD" && !DOMESTIC_CATEGORIES.has(stock.category)) ? usdRate : 1;
 
     if (!ref) {
-      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: currentPrice * stock.quantity * rate, hasRef: false };
+      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: currentPrice * stock.quantity * rate, refValue: 0, hasRef: false };
     }
 
     const currentValue = currentPrice * stock.quantity * rate;
@@ -145,8 +146,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const profitAmount = currentValue - refValue;
     const profitRate = refValue > 0 ? (profitAmount / refValue) * 100 : 0;
 
-
-    return { stock, ticker, profitAmount, profitRate, currentValue, hasRef: true, refDate: ref.refDate };
+    return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: ref.refDate };
   });
 
   const totalCurrentValue = stockProfits.reduce((s, r) => s + r.currentValue, 0);
@@ -160,9 +160,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = stockProfits.filter((r) => r.stock.category === key);
     const catProfit = items.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
-    const catRef = items.filter((r) => r.hasRef).reduce((s, r) => s + (r.currentValue - r.profitAmount), 0);
+    const catRef = items.filter((r) => r.hasRef).reduce((s, r) => s + r.refValue, 0);
+    const catCurrent = items.filter((r) => r.hasRef).reduce((s, r) => s + r.currentValue, 0);
     const catRate = catRef > 0 ? (catProfit / catRef) * 100 : null;
-    return { key, label, color, items, catProfit, catRate };
+    return { key, label, color, items, catProfit, catRef, catCurrent, catRate };
   }).filter(({ items }) => items.length > 0);
 
   const TrendIcon = totalProfit > 0 ? TrendingUp : totalProfit < 0 ? TrendingDown : Minus;
@@ -241,6 +242,16 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                           </p>
                         </div>
                       </div>
+                      <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-[11px]">
+                        <div>
+                          <p className="text-muted-foreground">기준일 금액</p>
+                          <p className="tabular-nums font-medium">{formatShortCurrency(totalRefValue)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground">오늘 금액</p>
+                          <p className="tabular-nums font-medium">{formatShortCurrency(totalCurrentValue)}</p>
+                        </div>
+                      </div>
                       {(krRefDate || usRefDate) && (
                         <div className="pt-1.5 border-t border-border/50 text-[10px] text-muted-foreground space-y-0.5">
                           {krRefDate && <p>국내 기준: {krRefDate} 종가</p>}
@@ -251,7 +262,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
 
                     {/* 종목별 목록 */}
                     <div className="space-y-3">
-                      {grouped.map(({ key, label, color, items, catProfit, catRate }) => (
+                      {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }) => (
                         <div key={key} className="rounded-lg border overflow-hidden">
                           <div className="flex items-center justify-between px-4 py-1.5 border" style={{ borderColor: MAIN_PALETTE[0] }}>
                             <div className="flex items-center gap-2">
@@ -259,28 +270,36 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                               <span className="text-[12px] font-semibold text-muted-foreground">{label}</span>
                             </div>
                             {catRate !== null && (
-                              <div className="flex items-center gap-5">
-                                <span className={`text-[13px] tabular-nums ${getProfitLossColor(catProfit)}`}>
+                              <div className="text-right">
+                                <p className={`text-[13px] tabular-nums ${getProfitLossColor(catProfit)}`}>
                                   {catProfit >= 0 ? "+" : ""}{formatShortCurrency(catProfit)} ({formatRate(catRate)})
-                                </span>
+                                </p>
+                                <p className="text-[10px] text-muted-foreground tabular-nums">
+                                  {formatShortCurrency(catRef)} → {formatShortCurrency(catCurrent)}
+                                </p>
                               </div>
                             )}
                           </div>
                           <div className="divide-y">
-                            {items.map(({ stock, ticker, profitAmount, profitRate, hasRef }) => (
+                            {items.map(({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef }) => (
                               <div
                                 key={stock.id}
-                                className="grid grid-cols-[1fr_6rem] gap-x-2 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                                className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
                               >
                                 <div className="min-w-0">
                                   <p className="text-xs font-semibold truncate">{stock.name || ticker}</p>
                                   <p className="text-[10px] text-muted-foreground">{ticker}</p>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right shrink-0">
                                   {hasRef ? (
-                                    <p className={`text-xs tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
-                                      {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
-                                    </p>
+                                    <>
+                                      <p className={`text-xs tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
+                                        {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground tabular-nums">
+                                        {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
+                                      </p>
+                                    </>
                                   ) : (
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">기준가 없음</Badge>
                                   )}

@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-04-25
 
 ## 앱 개요
 
@@ -34,12 +34,12 @@ src/
 │   │   └── _components/
 │   │       ├── input/            # 자산 입력 폼 5종
 │   │       ├── screenshot/       # 스크린샷 다이얼로그 4종
+│   │       ├── detail/           # 자산 상세 탭 (asset-detail-tabs.tsx + tabs/ 5종)
+│   │       ├── chart/            # 차트 (net-asset, profit, dividend 등 5종)
+│   │       ├── management/       # floating-add-button.tsx
 │   │       ├── sidebar/          # AppSidebar, NavMain 등
-│   │       ├── floating-add-button.tsx
 │   │       ├── asset-overview-cards.tsx
-│   │       ├── asset-distribution-cards.tsx
-│   │       ├── yearly-net-asset-chart.tsx
-│   │       └── asset-management-card.tsx
+│   │       └── asset-distribution-cards.tsx
 │   ├── api/
 │   │   ├── finance/route.ts      # 주식·환율 (캐시 포함)
 │   │   ├── share/route.ts        # 공유 Short URL
@@ -101,5 +101,5 @@ Gemini `gemini-2.5-flash-lite`로 증권·거래소·은행 앱 스크린샷 분
 - ticker 미인식 시 `ticker-map.ts` `lookupTicker()` fallback (정확→prefix→suffix 3단계)
 - 해외주식: `originalCurrency` 필드로 KRW/USD 분기 → KRW면 `/ usdRate` 환산
 - 수량 미표시 → `quantity=1`, `currentPrice=currentValue` 보정
-- 한도: 서버 200회/일 + 기기별 10회/일 (`useGeminiUsage` hook)
+- 한도: 서버 300회/일 + 기기별 15회/일 (`useGeminiUsage` hook)
 - 다이얼로그: ESC·바깥 클릭으로 닫히지 않음

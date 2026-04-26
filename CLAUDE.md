@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 alwaysApply: true
 ---
 
@@ -25,14 +25,3 @@ alwaysApply: true
 | Context·유틸  | + `state-and-utils.md`                 |
 | 새 기능·패턴  | + `dev-rules.md`                       |
 | 최근 변경     | + `changelog.md`                       |
-
-코드 수정 후: **`npm run build`** 성공 확인 필수.
-
-# 명령어
-
-```bash
-npm run dev    # 개발 서버
-npm run build  # 빌드 (기능 검증)
-npm run lint   # ESLint
-npm run format # Prettier
-```

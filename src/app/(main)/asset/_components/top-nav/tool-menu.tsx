@@ -195,8 +195,9 @@ export function NavUser({
 
     setIsImporting(true);
     try {
-      const imported = await importAssetData(file);
+      const { assetData: imported, snapshotRestored } = await importAssetData(file);
       toast.success("자산 데이터를 불러왔습니다.");
+      if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
       void initAndSync(imported); // 주식 현재가 갱신은 백그라운드 처리 → syncTodayStockPrices가 별도 toast 표시
     } catch (error) {
       toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
@@ -246,10 +247,10 @@ export function NavUser({
               <SidebarcategoryBox
                 size="lg"
                 className="h-9 px-2 text-white hover:text-white transition-colors border-none"
-                style={{ backgroundColor: MAIN_PALETTE[9] }}
+                style={{ backgroundColor: MAIN_PALETTE[0] }}
               >
                 <div className="grid flex-1 text-left text-xs leading-tight ml-1">
-                  <span className="truncate font-bold tracking-tighter uppercase text-[11px]">자산 관리</span>
+                  <span className="truncate font-bold tracking-tighter uppercase text-[11px]">자산 도구</span>
                 </div>
                 <CircleChevronDown className="ml-auto size-3.5 opacity-70" />
               </SidebarcategoryBox>
@@ -269,7 +270,7 @@ export function NavUser({
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className={`truncate font-semibold ${ASSET_THEME.primary.text}`}>자산 관리</span>
+                    <span className={`truncate font-semibold ${ASSET_THEME.primary.text}`}>자산 도구</span>
                   </div>
                 </div>
               </DropdownMenuLabel>

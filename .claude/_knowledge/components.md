@@ -1,6 +1,6 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-04-25
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
@@ -18,17 +18,32 @@ _components/
 │   ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
 │   ├── cash-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
 │   └── loan-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
-├── floating-add-button.tsx  # 하단 고정 FAB (전 환경)
+├── detail/
+│   ├── asset-detail-tabs.tsx    # 5탭 컨테이너 + 공통 유틸 export
+│   └── tabs/
+│       ├── stock-tab.tsx        # 주식 상세 (7 서브탭)
+│       ├── real-estate-tab.tsx  # 부동산 상세
+│       ├── cash-tab.tsx         # 현금 상세
+│       ├── crypto-tab.tsx       # 암호화폐 상세
+│       └── loan-tab.tsx         # 대출 상세
+├── chart/
+│   ├── net-asset-chart.tsx      # 순자산 추이 (년도별/월별/일별)
+│   ├── profit-chart.tsx         # 수익률 차트
+│   ├── dividend-chart.tsx       # 배당 차트
+│   └── monthly-dividend-stocks.tsx
+├── management/
+│   └── floating-add-button.tsx  # 하단 고정 FAB (전 환경)
 └── sidebar/
 ```
 
-### FloatingAddButton
+### FloatingAddButton (`management/floating-add-button.tsx`)
 화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
 - 모바일: `side="top"`, PC/패드: `side="right"` Sheet
 - 각 `*-input.tsx` 카드 헤더 추가 버튼은 `hidden` (전체 숨김)
 - 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
   - real-estate, yearly-net-asset: hasScreenshot=false → 바로 dispatch
   - 나머지 4종: `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` dispatch
+- "빠른 이동" 섹션: `navigate-to-tab` CustomEvent dispatch → `AssetDetailTabs`의 탭 전환
 
 ### *-input.tsx 공통 구조
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
@@ -79,8 +94,15 @@ getProfitLossColor() → config/theme
 |----------|------|------|
 | AssetOverviewCards | `asset-overview-cards.tsx` | 총자산/순자산/손익 요약 |
 | AssetDistributionCards | `asset-distribution-cards.tsx` | 자산군별 분포. 모바일: Tabs, 데스크탑: lg:grid-cols-2 |
-| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | 순자산 추이 — 년도별(Area)/월별(Bar)/일별(Line) 3탭. `trigger-add-yearly-net-asset` 이벤트 수신 |
-| AssetManagementCard | `asset-management-card.tsx` | 내보내기/가져오기/초기화/공유 |
+| AssetDetailTabs | `detail/asset-detail-tabs.tsx` | 주식/부동산/암호화폐/현금/대출 5탭 상세 목록. `navigate-to-tab` 이벤트 수신 |
+| NetAssetChart | `chart/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별. `trigger-add-yearly-net-asset` 이벤트 수신 |
+| ProfitChart | `chart/profit-chart.tsx` | 수익률 차트 |
+| DividendChart | `chart/dividend-chart.tsx` | 배당 차트 |
+
+### page.tsx 3탭 구조
+- **분포** (`distribution`): AssetDistributionCards
+- **상세** (`detail`): AssetDetailTabs — 탭 접속 시 `syncStockPricesAndSnapshots` 호출
+- **차트** (`chart`): 순자산/수익/배당 차트
 
 ---
 

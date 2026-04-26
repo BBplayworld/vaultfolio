@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-04-25
+
+### FloatingAddButton "빠른 이동" 섹션 추가
+- FAB Sheet에 자산 탭 바로가기 5개 추가 (주식/부동산/암호화폐/현금/대출)
+- `navigate-to-tab` CustomEvent 발사 → `AssetDetailTabs`에서 수신해 탭 전환
+- **이유:** 자산 수정 진입점 개선 — 수정할 항목이 있는 탭으로 빠르게 이동
+
+### AssetDetailTabs `navigate-to-tab` 이벤트 리스너 추가
+- `useEffect`로 `navigate-to-tab` CustomEvent 수신 → `setActiveTab(tab)`
+- **이유:** FAB 빠른이동과 향후 외부 탭 제어 통합 지점 마련
+
+---
+
 ## 2026-04-19
 
 ### YearlyNetAssetChart 과거 순자산 추가 버튼 → FAB 이벤트 방식 전환

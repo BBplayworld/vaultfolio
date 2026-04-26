@@ -1,6 +1,6 @@
 # 개발 규칙 & 패턴
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-04-25
 
 ## 코드 패턴
 
@@ -65,7 +65,7 @@ const getMultiplier = (currency?: string) =>
 - JPY 환율은 100엔 기준 → 계산 시 `/100`
 
 ### 주식 티커 검증
-- domestic: `/^\d{6}$/`, foreign: `/^[A-Z0-9]{1,10}$/`
+- domestic: `/^\d{6}(:XKRX|:XKOS)?$/`, foreign: `/^[A-Z0-9.]+$/`
 
 ### API 에러 처리
 ```typescript

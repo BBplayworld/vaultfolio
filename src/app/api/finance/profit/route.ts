@@ -42,11 +42,11 @@ function getRefDate(period: ProfitPeriod): string {
   }
 
   if (period === "weekly") {
-    // 지난주 금요일
+    // 지난주 금요일: 이번 주 월요일 기준 3일 전 (토·일도 이전 주 금요일 사용)
     const d = getKSTDate(0);
     const day = d.getUTCDay(); // 0=일, 1=월, ..., 5=금, 6=토
-    const daysToLastFriday = day === 0 ? 2 : day === 6 ? 1 : day + 2;
-    d.setUTCDate(d.getUTCDate() - daysToLastFriday);
+    const daysToMonday = day === 0 ? 6 : day - 1;
+    d.setUTCDate(d.getUTCDate() - daysToMonday - 3);
     return toDateStr(d);
   }
 

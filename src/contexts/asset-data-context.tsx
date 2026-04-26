@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Lock, Share2 } from "lucide-react";
+import { MAIN_PALETTE } from "@/config/theme";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -838,7 +839,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             <Button variant="outline" onClick={handlePinCancel}>
               취소
             </Button>
-            <Button onClick={handlePinConfirm} type="button">
+            <Button onClick={handlePinConfirm} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }}>
               데이터 불러오기
             </Button>
           </DialogFooter>

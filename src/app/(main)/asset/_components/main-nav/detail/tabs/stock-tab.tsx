@@ -1,25 +1,25 @@
 "use client";
 
 import React from "react";
-import { Pencil, Trash2, Calendar, Clock, CreditCard } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit } from "../asset-detail-tabs";
 
 const CAT_LIST = ASSET_THEME.tabList3;
 const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
-const CATEGORY_TABS = [
+export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
   { value: "domestic", label: "국내" },
   { value: "foreign", label: "해외" },
@@ -49,6 +49,163 @@ function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: s
   );
 }
 
+const LS_KEY = "stock-tab-collapsible-used";
+
+// 인증샷에서 재사용하는 공유 타입
+export interface StockRowData {
+  stock: Stock;
+  color: string;
+  pct: number;
+  currentVal: number;
+  profit: number;
+  profitRate: number;
+}
+
+// 주식 비중 바 + 범례
+export function StockBarChart({ items, total }: {
+  items: { stock: Stock; value: number; color: string }[];
+  total: number;
+}) {
+  if (items.length === 0 || total <= 0) return null;
+  return (
+    <div className="space-y-2">
+      <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+        {items.map(({ stock, value: v, color }) => {
+          const pct = (v / total) * 100;
+          return (
+            <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
+              {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5 px-2">
+        {items.map(({ stock, value: v, color }) => {
+          const pct = (v / total) * 100;
+          return (
+            <div key={stock.id} className="flex items-center gap-1">
+              <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-xs text-foreground">{stock.name}</span>
+              <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+/**
+ * 선택된 카테고리의 주식 데이터 계산 훅.
+ * ShareCard, StockTab 등에서 공통 사용.
+ */
+export function useFilteredStockData(activeCategory: string) {
+  const { assetData, exchangeRates, getAssetSummary } = useAssetData();
+  const summary = getAssetSummary();
+
+  const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
+
+  const filteredStocks = useMemo(() => {
+    const base =
+      activeCategory === "all"
+        ? assetData.stocks
+        : assetData.stocks.filter((s) => s.category === activeCategory);
+    return [...base].sort(
+      (a, b) =>
+        b.quantity * b.currentPrice * mul(b.currency) -
+        a.quantity * a.currentPrice * mul(a.currency),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetData.stocks, activeCategory, exchangeRates]);
+
+  const totalValue = filteredStocks.reduce(
+    (s, st) => s + st.quantity * st.currentPrice * mul(st.currency),
+    0,
+  );
+  const totalCost = filteredStocks.reduce((s, st) => {
+    const isForeign = st.category === "foreign" && st.currency !== "KRW";
+    const rate = getPurchaseRatePerUnit(st, mul(st.currency));
+    return s + (isForeign ? st.quantity * st.averagePrice * rate : st.quantity * st.averagePrice * mul(st.currency));
+  }, 0);
+  const totalProfit = totalValue - totalCost;
+  const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+  const barValues = filteredStocks.map((st) => ({ value: st.quantity * st.currentPrice * mul(st.currency) }));
+  const barColors = assignColors(barValues);
+  const barItems = filteredStocks.map((st, idx) => ({
+    stock: st,
+    value: barValues[idx].value,
+    color: barColors[idx],
+  }));
+
+  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul };
+}
+
+// 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
+export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
+  const fmt = maskFn ?? formatShortCurrency;
+  const initial = (stock.ticker || stock.name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase();
+  return (
+    <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md`}>
+      <div className="size-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
+        <span className="text-[10px] font-bold text-white">{initial}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`font-semibold truncate ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{stock.name}</span>
+          {stock.ticker && <span className="text-[11px] text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-xs text-foreground">{stock.quantity.toLocaleString()}주</span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className={`font-bold tabular-nums ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{fmt(currentVal)}</p>
+        <p className={`text-[11px] mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
+          {profit >= 0 ? "+" : ""}{fmt(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// 주식 요약 헤더
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false }: {
+  totalValue: number;
+  totalProfit: number;
+  totalProfitRate: number;
+  currencyGain?: number;
+  maskFn?: (v: number) => string;
+  screenshotMode?: boolean;
+}) {
+  const fmt = maskFn ?? formatShortCurrency;
+  return (
+    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
+      <div>
+        <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
+        <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
+      </div>
+      <div className="text-right space-y-1">
+        <div>
+          <p className="text-xs text-muted-foreground">평가손익</p>
+          <p className={`${screenshotMode ? "text-[13px]" : "text-lg"} font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
+            {totalProfit >= 0 ? "+" : ""}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
+          </p>
+        </div>
+        {currencyGain !== undefined && currencyGain !== 0 && (
+          <div className="border-t border-border/40 pt-1">
+            <p className="text-xs text-muted-foreground">환차손익</p>
+            <p className={`${screenshotMode ? "text-[13px]" : "text-sm"} font-semibold tabular-nums ${getProfitLossColor(currencyGain)}`}>
+              {currencyGain >= 0 ? "+" : ""}{fmt(Math.round(currencyGain))}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface StockCardProps {
   stock: Stock;
   color: string;
@@ -64,13 +221,23 @@ interface StockCardProps {
   linkedLoans: Loan[];
   onDelete: (id: string) => void;
   getCategoryLabel: (cat: string) => string;
+  defaultOpen?: boolean;
+  onFirstInteract?: () => void;
+  isFirstVisit?: boolean;
 }
 
-function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, holdingDays, linkedLoans, onDelete, getCategoryLabel }: StockCardProps) {
+function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, holdingDays, linkedLoans, onDelete, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false }: StockCardProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    onFirstInteract?.();
+  };
+
   return (
-    <Collapsible className="mb-3">
+    <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-3">
       <div className="rounded-lg border bg-card overflow-hidden">
-        <div className="flex items-center gap-6 px-3 py-2.5">
+        <div className={`flex items-center gap-6 px-3 py-2.5 ${ASSET_THEME.primary.bgLight} transition-colors hover:bg-primary/20 group`}>
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-3 flex-1 min-w-0 text-left">
               <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={stock.category === "foreign"} color={color} />
@@ -92,6 +259,7 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
                   {profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
                 </p>
               </div>
+              <ChevronDown className={`size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
           <div className="flex gap-2 flex-shrink-0">
@@ -104,8 +272,11 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           </div>
         </div>
         <div className="h-0.5 w-full bg-muted">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
+        {!open && (
+          <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
+        )}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
@@ -116,7 +287,7 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">현재가</p>
-                <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[2] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
+                <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
                 {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
             </div>
@@ -169,16 +340,20 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
 }
 
 export function StockTab() {
-  const { assetData, deleteStock, exchangeRates, getAssetSummary } = useAssetData();
-  const summary = getAssetSummary();
+  const { assetData, deleteStock } = useAssetData();
   const [activeCategory, setActiveCategory] = useState("all");
+  const [hasInteracted, setHasInteracted] = useState(() => {
+    try { return !!localStorage.getItem(LS_KEY); } catch { return true; }
+  });
 
-  const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
-
-  const getPurchaseRatePerUnit = (stock: Stock): number => {
-    if (!stock.purchaseExchangeRate || stock.purchaseExchangeRate <= 0) return mul(stock.currency);
-    return stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate;
+  const handleFirstInteract = () => {
+    if (hasInteracted) return;
+    setHasInteracted(true);
+    try { localStorage.setItem(LS_KEY, "1"); } catch { /* ignore */ }
   };
+
+  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, mul } =
+    useFilteredStockData(activeCategory);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
@@ -189,31 +364,12 @@ export function StockTab() {
     }
   };
 
-  const getFilteredStocks = (category: string) => {
-    const stocks = category === "all" ? assetData.stocks : assetData.stocks.filter((s) => s.category === category);
-    return [...stocks].sort((a, b) => b.quantity * b.currentPrice * mul(b.currency) - a.quantity * a.currentPrice * mul(a.currency));
-  };
-
-  const allStocks = getFilteredStocks(activeCategory);
-  const totalValue = allStocks.reduce((s, st) => s + st.quantity * st.currentPrice * mul(st.currency), 0);
-  const totalCost = allStocks.reduce((s, st) => {
-    const isForeign = st.category === "foreign" && st.currency !== "KRW";
-    const rate = isForeign ? getPurchaseRatePerUnit(st) : mul(st.currency);
-    return s + st.quantity * st.averagePrice * rate;
-  }, 0);
-  const totalProfit = totalValue - totalCost;
-  const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
-
-  const barValues = allStocks.map((st) => ({ value: st.quantity * st.currentPrice * mul(st.currency) }));
-  const barColors = assignColors(barValues);
-  const barItems = allStocks.map((st, idx) => ({ stock: st, value: barValues[idx].value, color: barColors[idx] }));
-
-  const renderStockCard = (stock: Stock) => {
+  const renderStockCard = (stock: Stock, isFirst = false) => {
     const colorIdx = barItems.findIndex((b) => b.stock.id === stock.id);
     const color = colorIdx >= 0 ? barColors[colorIdx] : MAIN_PALETTE[0];
     const krwMul = mul(stock.currency);
     const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
-    const purchaseRate = getPurchaseRatePerUnit(stock);
+    const purchaseRate = getPurchaseRatePerUnit(stock, mul(stock.currency));
     const currentVal = stock.quantity * stock.currentPrice * krwMul;
     const cost = isForeign ? stock.quantity * stock.averagePrice * purchaseRate : stock.quantity * stock.averagePrice * krwMul;
     const profit = currentVal - cost;
@@ -240,6 +396,9 @@ export function StockTab() {
         linkedLoans={linkedLoans}
         onDelete={handleDelete}
         getCategoryLabel={getCategoryLabel}
+        defaultOpen={isFirst && !hasInteracted}
+        onFirstInteract={isFirst && !hasInteracted ? handleFirstInteract : undefined}
+        isFirstVisit={isFirst && !hasInteracted}
       />
     );
   };
@@ -289,7 +448,7 @@ export function StockTab() {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 8 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
                       </div>
                     );
                   })}
@@ -322,13 +481,13 @@ export function StockTab() {
                   return (
                     <div key={cat.value}>
                       <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                      <div className="space-y-2">{catStocks.map(renderStockCard)}</div>
+                      <div className="space-y-2">{catStocks.map((s, i) => renderStockCard(s, i === 0 && allStocks[0]?.id === s.id))}</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="space-y-2 mt-8">{allStocks.map(renderStockCard)}</div>
+              <div className="space-y-2 mt-8">{allStocks.map((s, i) => renderStockCard(s, i === 0))}</div>
             )}
           </TabsContent>
         ))}

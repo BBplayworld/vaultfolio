@@ -13,7 +13,7 @@ export const ASSET_THEME = {
   },
   primary: {
     text: "text-primary",
-    bgLight: "bg-primary/20",
+    bgLight: "bg-primary/10",
     border: "border-indigo-600",
   },
 

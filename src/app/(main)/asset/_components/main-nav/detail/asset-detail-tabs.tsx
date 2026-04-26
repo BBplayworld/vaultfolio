@@ -1,6 +1,7 @@
 "use client";
+import { Stock } from "@/types/asset";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, Building2, Bitcoin, Banknote, CreditCard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
@@ -34,6 +35,18 @@ export function formatCurrencyDisplay(value: number, currency = "KRW"): string {
   return formatCurrency(value);
 }
 
+/**
+ * 주식 종목의 매입 시 환율(단위당 원화 환산율)을 반환합니다.
+ * purchaseExchangeRate가 없으면 현재 환율로 fallback.
+ */
+export function getPurchaseRatePerUnit(
+  stock: Pick<Stock, "purchaseExchangeRate" | "currency">,
+  currentMultiplier: number,
+): number {
+  if (!stock.purchaseExchangeRate || stock.purchaseExchangeRate <= 0) return currentMultiplier;
+  return stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate;
+}
+
 const DETAIL_TABS = [
   { value: "stocks", label: "주식", icon: TrendingUp },
   { value: "real-estate", label: "부동산", icon: Building2 },
@@ -44,6 +57,15 @@ const DETAIL_TABS = [
 
 export function AssetDetailTabs() {
   const [activeTab, setActiveTab] = useState("stocks");
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab: string }>).detail?.tab;
+      if (tab) setActiveTab(tab);
+    };
+    window.addEventListener("navigate-to-tab", handler);
+    return () => window.removeEventListener("navigate-to-tab", handler);
+  }, []);
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
