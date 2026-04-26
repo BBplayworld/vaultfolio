@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Wallet, CreditCard, ImageUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -16,7 +13,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Form,
     FormControl,
@@ -30,13 +26,11 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Cash, cashSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency } from "@/lib/number-utils";
-import { ASSET_THEME } from "@/config/theme";
 import { cashTypes, financialInstitutions } from "@/config/asset-options";
 import { CashScreenshotImport } from "../screenshot/cash-screenshot-import";
+import { MAIN_PALETTE } from "@/config/theme";
 
 interface CashFormProps {
     editData?: Cash;
@@ -259,7 +253,9 @@ function CashForm({ editData, onClose }: CashFormProps) {
                     <Button type="button" variant="outline" onClick={onClose}>
                         취소
                     </Button>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button type="submit"
+                        style={{ backgroundColor: MAIN_PALETTE[0] }}
+                        disabled={isSubmitting}>
                         {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
                     </Button>
                 </DialogFooter>
@@ -268,12 +264,11 @@ function CashForm({ editData, onClose }: CashFormProps) {
     );
 }
 
-export function CashInput({ hideList = false }: { hideList?: boolean } = {}) {
-    const { assetData, deleteCash, exchangeRates } = useAssetData();
+export function CashInput() {
+    const { assetData } = useAssetData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Cash | undefined>();
     const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
-    const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -305,59 +300,8 @@ export function CashInput({ hideList = false }: { hideList?: boolean } = {}) {
         setEditingItem(undefined);
     };
 
-    if (hideList) {
-        return (
-            <>
-                <CashScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-                        <DialogHeader>
-                            <DialogTitle>{editingItem ? "현금성 자산 수정" : "현금성 자산 추가"}</DialogTitle>
-                            <DialogDescription>
-                                {editingItem ? "현금성 자산 정보를 수정합니다." : "새로운 현금성 자산을 추가합니다."}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <CashForm editData={editingItem} onClose={handleDialogClose} />
-                    </DialogContent>
-                </Dialog>
-            </>
-        );
-    }
-
-    const handleDelete = (id: string) => {
-        if (confirm("정말 삭제하시겠습니까?")) {
-            const success = deleteCash(id);
-            if (success) {
-                toast.success("삭제되었습니다.");
-            } else {
-                toast.error("삭제에 실패했습니다.");
-            }
-        }
-    };
-
-    const handleEdit = (item: Cash) => {
-        setEditingItem(item);
-        setIsDialogOpen(true);
-    };
-
-    const formatCurrencyDisplay = (value: number, currency: string = "KRW") => {
-        if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-        if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-        return formatCurrency(value);
-    };
-
-    const getMultiplier = (currency?: string) => {
-        if (currency === "USD") return exchangeRates.USD;
-        if (currency === "JPY") return exchangeRates.JPY / 100;
-        return 1;
-    };
-
-    const getTypeLabel = (value: string) => {
-        return cashTypes.find((t) => t.value === value)?.label || value;
-    };
-
     return (
-        <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
+        <>
             <CashScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
@@ -370,145 +314,6 @@ export function CashInput({ hideList = false }: { hideList?: boolean } = {}) {
                     <CashForm editData={editingItem} onClose={handleDialogClose} />
                 </DialogContent>
             </Dialog>
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="space-y-1.5">
-                            <CardTitle className="flex items-center gap-2">
-                                <Wallet className="size-5" />
-                                현금성 자산
-                            </CardTitle>
-                            <CardDescription>보유하고 있는 현금성 자산을 관리합니다.</CardDescription>
-                        </div>
-                        <div className="hidden items-center gap-2">
-                            <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button>
-                                        <Plus className="mr-1.5 size-4" />
-                                        현금성 자산 추가
-                                        <ChevronDown className="ml-1 size-3.5 opacity-70" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
-                                    <button
-                                        type="button"
-                                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                                        onClick={() => { setIsAddMenuOpen(false); setIsScreenshotOpen(true); }}
-                                    >
-                                        <ImageUp className="size-4 text-muted-foreground" />
-                                        <div className="text-left">
-                                            <p className="font-medium">스크린샷 가져오기</p>
-                                            <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
-                                        </div>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                                        onClick={() => { setIsAddMenuOpen(false); setEditingItem(undefined); setIsDialogOpen(true); }}
-                                    >
-                                        <Plus className="size-4 text-muted-foreground" />
-                                        <div className="text-left">
-                                            <p className="font-medium">직접 입력</p>
-                                            <p className="text-xs text-muted-foreground">수동으로 추가</p>
-                                        </div>
-                                    </button>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {assetData.cash && assetData.cash.length === 0 ? (
-                        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
-                            <div className="text-center">
-                                <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
-                                <p className="text-muted-foreground mt-1 text-xs">'현금성 자산 추가' 버튼을 눌러 추가해 보세요.</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            {assetData.cash && assetData.cash.map((item) => {
-                                return (
-                                    <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
-                                        {/* Layer 1: 헤더 */}
-                                        <div className={`${ASSET_THEME.inputHeader}`}>
-                                            <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                                                <Badge variant="outline" className={ASSET_THEME.categoryBox}>
-                                                    {getTypeLabel(item.type)}
-                                                </Badge>
-                                                <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                                                {item.institution && (
-                                                    <span className="text-muted-foreground text-xs shrink-0">({item.institution})</span>
-                                                )}
-                                            </div>
-                                            <div className="flex gap-1 flex-shrink-0">
-                                                <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
-                                                    <Pencil className="size-3.5" />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
-                                                    <Trash2 className="size-3.5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Layer 2: 핵심 지표 */}
-                                        <div className="p-4">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-muted-foreground">보유금액</span>
-                                                <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
-                                                    {formatCurrencyDisplay(item.balance, item.currency)}
-                                                </span>
-                                                {item.currency !== "KRW" && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        (₩{(item.balance * getMultiplier(item.currency)).toLocaleString()})
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Layer 3: 부가 정보 */}
-                                        {item.description && (
-                                            <div className="px-4 py-2.5 bg-muted/10 border-t flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                                                <span className="w-full mt-0.5 text-primary truncate">
-                                                    # {item.description}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Layer 4: 연계 예금담보대출 */}
-                                        {(() => {
-                                            const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
-                                            if (linkedLoans.length === 0) return null;
-                                            return (
-                                                <div className="px-4 py-2.5 border-t space-y-1.5">
-                                                    <p className="text-[11px] font-semibold text-muted-foreground">예금담보대출</p>
-                                                    {linkedLoans.map((loan) => (
-                                                        <div key={loan.id} className="flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5">
-                                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                                <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
-                                                                <span className="text-muted-foreground truncate">{loan.name}</span>
-                                                                {loan.institution && (
-                                                                    <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                                <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
-                                                                    -{formatCurrency(loan.balance)}
-                                                                </span>
-                                                                <span className="text-muted-foreground">{loan.interestRate}%</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+        </>
     );
 }

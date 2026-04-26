@@ -1050,7 +1050,8 @@ export const FOREIGN_STOCK_MAP: Record<string, string> = {
 
 function normalizeName(name: string): string {
   return name
-    .replace(/[()（）\s\-·&]/g, "")
+    .replace(/[()（）\s\-·&…]/g, "")
+    .replace(/\.+$/, "") // 뒷부분의 줄임표(.) 제거
     .toLowerCase();
 }
 
@@ -1098,6 +1099,21 @@ export function lookupTicker(name: string): string {
     }
   }
   if (bestKeyPrefixMatch) return bestKeyPrefixMatch;
+
+  // 4단계: 부분 일치 (includes) — 입력이 5자 이상이고 키에 포함되는 경우
+  // 예: "미국필라델피아반도체" (앞의 TIGER 누락) -> "tiger미국필라델피아반도체나스닥" 매칭
+  // 오탐 방지를 위해 입력 문자열이 최소 5자 이상일 때만 적용
+  if (normalized.length >= 5) {
+    let bestSubstringMatch = "";
+    let bestSubstringKeyLen = Infinity;
+    for (const key of Object.keys(TICKER_MAP_NORMALIZED)) {
+      if (key.includes(normalized) && key.length < bestSubstringKeyLen) {
+        bestSubstringMatch = TICKER_MAP_NORMALIZED[key];
+        bestSubstringKeyLen = key.length;
+      }
+    }
+    if (bestSubstringMatch) return bestSubstringMatch;
+  }
 
   return "";
 }

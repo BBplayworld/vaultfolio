@@ -3,11 +3,9 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Bitcoin, Calendar, Clock, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -30,14 +27,11 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Crypto, cryptoSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { cryptoExchanges as exchanges, popularCryptos } from "@/config/asset-options";
-import { ImageUp } from "lucide-react";
 import { CryptoScreenshotImport } from "../screenshot/crypto-screenshot-import";
+import { MAIN_PALETTE } from "@/config/theme";
 
 interface CryptoFormProps {
   editData?: Crypto;
@@ -314,7 +308,9 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
           <Button type="button" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit"
+            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
         </DialogFooter>
@@ -323,12 +319,11 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
   );
 }
 
-export function CryptoInput({ hideList = false }: { hideList?: boolean } = {}) {
-  const { assetData, deleteCrypto } = useAssetData();
+export function CryptoInput() {
+  const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Crypto | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -354,52 +349,13 @@ export function CryptoInput({ hideList = false }: { hideList?: boolean } = {}) {
     return () => window.removeEventListener("trigger-edit-crypto", handler);
   }, [assetData.crypto]);
 
-  const handleDelete = (id: string) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      const success = deleteCrypto(id);
-      if (success) {
-        toast.success("삭제되었습니다.");
-      } else {
-        toast.error("삭제에 실패했습니다.");
-      }
-    }
-  };
-
-  const handleEdit = (item: Crypto) => {
-    setEditingItem(item);
-    setIsDialogOpen(true);
-  };
-
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingItem(undefined);
   };
 
-  const formatCurrencyDisplay = (value: number) => {
-    return formatCurrency(value);
-  };
-
-  if (hideList) {
-    return (
-      <>
-        <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
-              <DialogDescription>
-                {editingItem ? "암호화폐 정보를 수정합니다." : "새로운 암호화폐 자산을 추가합니다."}
-              </DialogDescription>
-            </DialogHeader>
-            <CryptoForm editData={editingItem} onClose={handleDialogClose} />
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
+    <>
       <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
@@ -412,161 +368,6 @@ export function CryptoInput({ hideList = false }: { hideList?: boolean } = {}) {
           <CryptoForm editData={editingItem} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <CardTitle className="flex items-center gap-2">
-                <Bitcoin className="size-5" />
-                암호화폐 자산
-              </CardTitle>
-              <CardDescription>보유하고 있는 암호화폐 자산을 관리합니다.</CardDescription>
-            </div>
-            <div className="hidden items-center gap-2">
-              <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
-                <PopoverTrigger asChild>
-                  <Button>
-                    <Plus className="mr-1.5 size-4" />
-                    암호화폐 추가
-                    <ChevronDown className="ml-1 size-3.5 opacity-70" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => { setIsAddMenuOpen(false); setIsScreenshotOpen(true); }}
-                  >
-                    <ImageUp className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">스크린샷 가져오기</p>
-                      <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => { setIsAddMenuOpen(false); setEditingItem(undefined); setIsDialogOpen(true); }}
-                  >
-                    <Plus className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">직접 입력</p>
-                      <p className="text-xs text-muted-foreground">수동으로 추가</p>
-                    </div>
-                  </button>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {assetData.crypto.length === 0 ? (
-            <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm">등록된 암호화폐가 없습니다.</p>
-                <p className="text-muted-foreground mt-1 text-xs">'암호화폐 추가' 버튼을 눌러 추가해 보세요.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {assetData.crypto.map((item) => {
-                const totalCost = item.quantity * item.averagePrice;
-                const currentValue = item.quantity * item.currentPrice;
-                const profit = currentValue - totalCost;
-                const profitRate = totalCost > 0 ? (profit / totalCost) * 100 : 0;
-                const holdingDays = calculateHoldingDays(item.purchaseDate);
-
-                return (
-                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
-                    {/* Layer 1: 종목 헤더 */}
-                    <div className={`${ASSET_THEME.inputHeader}`}>
-                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                        <Badge variant="outline" className={ASSET_THEME.categoryBox}>
-                          {item.symbol}
-                        </Badge>
-                        <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                        {item.exchange && (
-                          <span className="text-muted-foreground text-xs shrink-0">({item.exchange})</span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Layer 2: 핵심 지표 */}
-                    <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-muted-foreground">평가금액</span>
-                        <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
-                          {formatCurrencyDisplay(currentValue)}
-                        </span>
-                      </div>
-                      <span className="hidden sm:inline text-border self-center">|</span>
-                      <div className="flex flex-col items-end sm:items-start gap-1">
-                        <span className="text-xs text-muted-foreground">평가손익</span>
-                        <span className={`text-medium font-bold ${getProfitLossColor(profit)}`}>
-                          {formatCurrencyDisplay(profit)}
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profit)}`}>
-                            &nbsp;({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Layer 3: 가격 비교 */}
-                    <div className="px-4 py-3 bg-muted/10 border-t">
-                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground">평균단가</span>
-                          <span className="text-sm font-medium text-foreground">{formatCurrencyDisplay(item.averagePrice)}</span>
-                        </div>
-                        <span className="hidden sm:inline text-border self-center">|</span>
-                        <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                          <span className="text-xs text-muted-foreground">현재가</span>
-                          <span className="text-sm font-semibold text-primary">
-                            {formatCurrencyDisplay(item.currentPrice)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Layer 4: 보조 정보 */}
-                    <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
-                      <span className="flex items-center gap-1">
-                        <span>수량</span>
-                        <span className="font-medium font-semibold text-primary">
-                          {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })} 개
-                        </span>
-                      </span>
-                      <span className="hidden sm:inline text-border">|</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3" />
-                        <span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span>
-                      </span>
-                      <span className="hidden sm:inline text-border">|</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-3" />
-                        <span className="font-medium text-foreground">{item.purchaseDate} 매수</span>
-                      </span>
-                      {item.description && (
-                        <span className="w-full mt-0.5 text-primary truncate">
-                          # {item.description}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }

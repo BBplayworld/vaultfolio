@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { MAIN_PALETTE } from "@/config/theme";
@@ -10,8 +11,11 @@ import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/da
 import { useAssetTreemapData } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
-import { SectionVisibility } from "./share-screenshot-dialog";
+import { SectionVisibility, SECTION_OPTIONS } from "./share-screenshot-dialog";
 import { APP_CONFIG } from "@/config/app";
+
+const sectionLabel = (key: keyof SectionVisibility) =>
+  SECTION_OPTIONS.find((o) => o.key === key)?.label ?? key;
 
 export interface ShareCardProps {
   hideAmounts: boolean;
@@ -22,9 +26,10 @@ export interface ShareCardProps {
 }
 
 export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, sections, cardRef }: ShareCardProps) {
+  const { resolvedTheme } = useTheme();
   // 공통 훅 사용 — 중복 로직 없음
   const { treemapData, summary } = useAssetTreemapData();
-  const { filteredStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, barItems: stockBarItems, barColors: stockBarColors, mul } =
+  const { filteredStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, barItems: stockBarItems, barColors: stockBarColors, mul, dailyProfit, dailyProfitRate } =
     useFilteredStockData(activeCategory);
 
   const maskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
@@ -45,7 +50,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   });
 
   return (
-    <div ref={cardRef} className="space-y-3 p-4 rounded-2xl bg-card border border-border">
+    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-card border border-border">
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -57,9 +62,9 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
-        <div className="rounded-lg border border-border bg-card px-4 py-1">
+        <div className="rounded-lg border border-border bg-card px-3 py-1">
           <div className="inline-block px-1 mb-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            자산 분포 차트
+            {sectionLabel("donut")}
           </div>
           <AssetDonutChart items={treemapData} netAsset={summary.netAsset} screenshotMode={true} maskFn={maskFn} />
         </div>
@@ -67,52 +72,88 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션2: 일별 순자산 미니 차트 */}
       {sections.chart && dailySnapshots.length > 1 && (
-        <div className="rounded-lg border border-border bg-card px-4 py-1">
+        <div className="rounded-lg border border-border bg-card px-3 py-1">
           <div className="inline-block px-1 py-1 mb-2 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            순자산 추이 차트
+            {sectionLabel("chart")}
           </div>
-          <div style={{ height: 120 }}>
+          <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailySnapshots} margin={{ top: 20, right: 24, bottom: 0, left: 24 }}>
-                <defs>
-                  <linearGradient id="shareNetAssetGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={MAIN_PALETTE[0]} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={MAIN_PALETTE[0]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
-                  tickFormatter={(d: string) => d.slice(5)}
-                  axisLine={false}
-                  tickLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  width={0}
-                  domain={["auto", "auto"]}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="netAsset"
-                  stroke={MAIN_PALETTE[0]}
-                  strokeWidth={2}
-                  fill="url(#shareNetAssetGrad)"
-                  dot={{ r: 3, fill: MAIN_PALETTE[0], strokeWidth: 0 }}
-                  isAnimationActive={false}
-                >
-                  <LabelList
-                    dataKey="netAsset"
-                    position="top"
-                    offset={10}
-                    formatter={(value: number) => formatShortCurrency(value)}
-                    style={{ fontSize: 9, fill: "var(--foreground)", fontWeight: 600 }}
-                  />
-                </Area>
-              </AreaChart>
+              {(() => {
+                const chartData = dailySnapshots.slice(-5);
+                const fmtAmt = (v: number) => {
+                  const abs = Math.abs(v);
+                  const sign = v < 0 ? "-" : "";
+                  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(2).replace(/\.?0+$/, "")}억원`;
+                  if (abs >= 10000) return `${sign}${Math.floor(abs / 10000)}만원`;
+                  return `${sign}${Math.floor(abs)}원`;
+                };
+                const fmtDiff = (v: number) => {
+                  const abs = Math.abs(v);
+                  const sign = v > 0 ? "+" : v < 0 ? "-" : "";
+                  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(2).replace(/\.?0+$/, "")}억`;
+                  if (abs >= 10000) return `${sign}${Math.floor(abs / 10000)}만`;
+                  return `${sign}${Math.floor(abs)}`;
+                };
+                return (
+                  <AreaChart data={chartData} margin={{ top: 46, right: 28, bottom: 0, left: 28 }}>
+                    <defs>
+                      <linearGradient id="shareNetAssetGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={MAIN_PALETTE[0]} stopOpacity={0.4} />
+                        <stop offset="95%" stopColor={MAIN_PALETTE[0]} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
+                      tickFormatter={(d: string) => d.slice(5)}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                    />
+                    <YAxis width={0} domain={["auto", "auto"]} axisLine={false} tickLine={false} tick={false} />
+                    <Area
+                      type="monotone"
+                      dataKey="netAsset"
+                      stroke={MAIN_PALETTE[0]}
+                      strokeWidth={2}
+                      fill="url(#shareNetAssetGrad)"
+                      dot={{ r: 3, fill: MAIN_PALETTE[0], strokeWidth: 0 }}
+                      isAnimationActive={false}
+                    >
+                      <LabelList
+                        dataKey="netAsset"
+                        content={({ x, y, value, index }) => {
+                          if (value == null || x == null || y == null || index == null) return null;
+                          const cur = Number(value);
+                          const prev = index > 0 ? chartData[index - 1].netAsset : null;
+                          const diff = prev != null ? cur - prev : null;
+                          const isAbove = index % 2 === 0;
+                          const baseY = Number(y);
+                          const cx = Number(x);
+                          const diffColor = diff == null ? "var(--muted-foreground)" : diff > 0 ? "#e11d48" : diff < 0 ? "#3b82f6" : "var(--muted-foreground)";
+                          const diffColorDark = diff == null ? "var(--muted-foreground)" : diff > 0 ? "#fb7185" : diff < 0 ? "#60a5fa" : "var(--muted-foreground)";
+                          const fillDiff = resolvedTheme === "dark" ? diffColorDark : diffColor;
+                          return (
+                            <g>
+                              {isAbove ? (
+                                <>
+                                  <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY - 11} textAnchor="middle" fontSize={8} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                </>
+                              ) : (
+                                <>
+                                  <text x={cx} y={baseY + 14} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY + 24} textAnchor="middle" fontSize={8} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                </>
+                              )}
+                            </g>
+                          );
+                        }}
+                      />
+                    </Area>
+                  </AreaChart>
+                );
+              })()}
             </ResponsiveContainer>
           </div>
         </div>
@@ -120,15 +161,17 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션3: 주식 요약 헤더 */}
       {sections.stockHeader && (
-        <div className="rounded-lg border border-border bg-card px-4 py-2 space-y-3">
+        <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            주식 현황 요약
+            {sectionLabel("stockHeader")}
           </div>
           <StockSummaryHeader
             totalValue={filteredTotal}
             totalProfit={filteredProfit}
             totalProfitRate={filteredProfitRate}
             currencyGain={summary.stockCurrencyGain}
+            dailyProfit={dailyProfit}
+            dailyProfitRate={dailyProfitRate}
             maskFn={maskFn}
             screenshotMode={true}
           />
@@ -137,17 +180,17 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션4: 카테고리 탭 + 비중바 + 종목 목록 통합 */}
       {sections.stockList && (
-        <div className="rounded-lg border border-border bg-card px-4 py-2 space-y-3">
+        <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            보유 종목 목록
+            {sectionLabel("stockList")}
           </div>
           {/* 카테고리 탭 */}
-          <div className="flex p-1 rounded-lg border border-border bg-muted/30 w-full flex-wrap gap-1 justify-center">
+          <div className="flex p-1 rounded-lg border border-border bg-muted/30 w-full gap-0.5 justify-center overflow-hidden">
             {CATEGORY_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => onCategoryChange(tab.value)}
-                className={`rounded-md px-3.5 py-1 text-[11px] font-medium transition-all ${activeCategory === tab.value
+                className={`rounded-md px-1 py-1 font-medium transition-all whitespace-nowrap flex-1 min-w-0 text-[9px] sm:text-[11px] ${activeCategory === tab.value
                   ? "bg-background border border-border text-foreground font-semibold shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}

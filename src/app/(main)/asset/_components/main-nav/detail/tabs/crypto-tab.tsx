@@ -19,36 +19,39 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, holdingDays, 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
       <div className="rounded-lg border bg-card overflow-hidden">
-        <div className={`flex items-center gap-6 px-3 py-2.5 ${ASSET_THEME.primary.bgLight} transition-colors hover:bg-primary/20`}>
+        <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-3 flex-1 min-w-0 text-left">
-              <div className="size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
-                <span className="text-[10px] font-bold text-white">{(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}</span>
+            <button className={ASSET_THEME.cardTriggerButton}>
+              <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
+                <span className="text-[9px] sm:text-[10px] font-bold text-white">{(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-sm truncate">{coin.name}</span>
-                  {coin.symbol && <span className="text-[11px] text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
+              <div className={ASSET_THEME.cardInfoLeft}>
+                <div className={ASSET_THEME.cardInfoTitle}>
+                  <span className={ASSET_THEME.cardInfoName}>{coin.name}</span>
+                  {coin.symbol && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-xs text-foreground">{coin.quantity.toLocaleString()}개</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                <div className={ASSET_THEME.cardInfoMeta}>
+                  <span className="text-[11px] text-foreground">{coin.quantity.toLocaleString()}개</span>
+                  <span className="text-[11px] text-muted-foreground">·</span>
+                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
-                <p className={`text-xs tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+              <div className={ASSET_THEME.cardInfoRight}>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
+                <div className={ASSET_THEME.cardAmountProfitRow}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+                </div>
               </div>
-              <ChevronDown className={`size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button size="icon" variant="outline" className="size-8" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
-              <Pencil className="size-4" />
+          <div className={ASSET_THEME.cardActions}>
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
+              <Pencil className="size-3" />
             </Button>
-            <Button size="icon" variant="outline" className="size-8" onClick={() => onDelete(coin.id)}>
-              <Trash2 className="size-4" />
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(coin.id)}>
+              <Trash2 className="size-3" />
             </Button>
           </div>
         </div>
@@ -58,9 +61,11 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, holdingDays, 
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
-              <div><p className="text-xs text-muted-foreground">평균단가</p><p className="text-sm font-medium">{formatCurrency(coin.averagePrice)}</p></div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div><p className="text-xs text-muted-foreground">매입가</p><p className="text-sm font-medium">{formatCurrency(coin.averagePrice)}</p></div>
+              <div><p className="text-xs text-muted-foreground">총 매입금액</p><p className="text-sm font-medium">{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
               <div><p className="text-xs text-muted-foreground">현재가</p><p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrency(coin.currentPrice)}</p></div>
+              <div><p className="text-xs text-muted-foreground">총 평가금액</p><p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
             </div>
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span></span>
@@ -114,7 +119,7 @@ export function CryptoTab() {
         <div className="text-right">
           <p className="text-xs text-muted-foreground">평가손익</p>
           <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-            {totalProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(totalProfit))} ({totalProfit >= 0 ? "+" : ""}{((totalProfit / totalCost) * 100).toFixed(2)}%)
+            {totalProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(totalProfit))} ({totalProfit >= 0 ? "+" : ""}{(totalCost > 0 ? (totalProfit / totalCost) * 100 : 0).toFixed(2)}%)
           </p>
         </div>
       </div>
@@ -126,7 +131,7 @@ export function CryptoTab() {
               const pct = (v / totalValue) * 100;
               return (
                 <div key={coin.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`}>
-                  {pct > 8 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+                  {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                 </div>
               );
             })}

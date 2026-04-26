@@ -65,7 +65,7 @@ export default function Page() {
         <WelcomeGuide />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
-          <StockInput />
+          <StockInput hideList />
           <CryptoInput />
           <CashInput />
           <LoanInput />
@@ -88,7 +88,7 @@ export default function Page() {
       <TabsContent value="dividend" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
         <DividendCard isActive={activeActivityTab === "dividend"} />
       </TabsContent>
-      <TabsContent value="profit" forceMount className="data-[state=inactive]:hidden mt-2 sm:4">
+      <TabsContent value="profit" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
         <ProfitCard isActive={activeActivityTab === "profit"} />
       </TabsContent>
     </Tabs>
@@ -105,7 +105,7 @@ export default function Page() {
   const inputLayer = (
     <div className="hidden" aria-hidden="true">
       <RealEstateInput hideList />
-      <StockInput hideList />
+      <StockInput />
       <CryptoInput hideList />
       <CashInput hideList />
       <LoanInput hideList />
@@ -117,28 +117,30 @@ export default function Page() {
       {inputLayer}
       <AppGuide />
       <Tabs value={activeHomeTab} onValueChange={handleHomeTabChange} className="w-full">
-        <TabsList className={ASSET_THEME.tabList1}>
-          {TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger1}>
-              <Icon className="size-4 shrink-0" />
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="sticky top-10 sm:top-0 z-40 bg-background/95 backdrop-blur-sm pb-1 sm:pb-0 sm:static sm:bg-transparent sm:backdrop-blur-none">
+          <TabsList className={ASSET_THEME.tabList1}>
+            {TABS.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger1}>
+                <Icon className="size-4 shrink-0" />
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-        <TabsContent value="home" className="data-[state=inactive]:hidden mt-2 sm:mt-4">
+        <TabsContent value="home" className="data-[state=inactive]:hidden mt-2 sm:mt-2">
           <div className="flex flex-col gap-4 md:gap-6">
             <Dashboard />
           </div>
         </TabsContent>
 
-        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
+        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-2">
           <div className="flex flex-col gap-4" ref={tabsRef}>
             <AssetDetailTabs />
           </div>
         </TabsContent>
 
-        <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-4">
+        <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden mt-2 sm:mt-2">
           {activityTabs}
         </TabsContent>
       </Tabs>

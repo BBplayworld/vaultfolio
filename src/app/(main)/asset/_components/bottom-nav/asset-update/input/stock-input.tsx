@@ -3,12 +3,11 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, TrendingUp, Calendar, Clock, Search, Loader2, LayoutGrid, Flag, Globe, Landmark, Coins, ShieldCheck, Lock, CreditCard, ImageUp, ChevronDown } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance-service";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,13 +29,9 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Stock, stockSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { stockCategories, quickButtonPresets } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 
@@ -205,8 +200,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
           {!editData && !isUnlisted && (
             <Button
               type="button"
-              variant="outline"
-              className="h-9 px-3"
+              className="h-9 px-3 text-white hover:opacity-90 border-none"
+              style={{ backgroundColor: MAIN_PALETTE[0] }}
               disabled={isFetchingPrice}
               onClick={async () => {
                 // 500 에러 횟수 체크
@@ -453,6 +448,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
           </Button>
           <Button
             type="submit"
+            className="text-white hover:opacity-90 border-none"
+            style={{ backgroundColor: MAIN_PALETTE[0] }}
             disabled={isSubmitting || (!editData && !isUnlisted && lookupState === "idle")}
             title={(!editData && !isUnlisted && lookupState === "idle") ? "티커 조회를 먼저 진행해주세요" : undefined}
           >
@@ -464,25 +461,22 @@ function StockForm({ editData, onClose }: StockFormProps) {
   );
 }
 
-export function StockInput({ hideList = false }: { hideList?: boolean } = {}) {
-  const { assetData, deleteStock, exchangeRates } = useAssetData();
+
+export function StockInput() {
+  const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
-  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const [activeTab] = useState("all");
 
   useEffect(() => {
     const handler = (e: Event) => {
       const mode = (e as CustomEvent).detail?.mode;
       if (mode === "screenshot") {
         setIsScreenshotOpen(true);
-      } else if (mode === "manual") {
+      } else {
         setEditingItem(undefined);
         setIsDialogOpen(true);
-      } else {
-        setIsAddMenuOpen(true);
       }
     };
     window.addEventListener("trigger-add-stock", handler);
@@ -503,298 +497,14 @@ export function StockInput({ hideList = false }: { hideList?: boolean } = {}) {
     return () => window.removeEventListener("trigger-edit-stock", handler);
   }, [assetData.stocks]);
 
-  const handleDelete = (id: string) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      const success = deleteStock(id);
-      if (success) {
-        toast.success("삭제되었습니다.");
-      } else {
-        toast.error("삭제에 실패했습니다.");
-      }
-    }
-  };
-
-  const handleEdit = (item: Stock) => {
-    setEditingItem(item);
-    setIsDialogOpen(true);
-  };
-
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingItem(undefined);
   };
 
-  const formatCurrencyDisplay = (value: number, currency: string = "KRW") => {
-    if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 3 })}`;
-    if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 3 })}`;
-    return formatCurrency(value);
-  };
-
-  const getMultiplier = (currency?: string) => {
-    if (currency === "USD") return exchangeRates.USD;
-    if (currency === "JPY") return exchangeRates.JPY / 100;
-    return 1;
-  };
-
-  const getCategoryLabel = (category: string) => {
-    return stockCategories.find((c) => c.value === category)?.label || category;
-  };
-
-  // 매입 환율 기준 단위당 원화 환산율 (방어: 입력 없으면 현재 환율 → 환차익 0)
-  const getPurchaseRatePerUnit = (stock: Stock): number => {
-    if (!stock.purchaseExchangeRate || stock.purchaseExchangeRate <= 0) {
-      return getMultiplier(stock.currency);
-    }
-    return stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate;
-  };
-
-  const getStocksByCategory = (category: string) => {
-    let stocks = assetData.stocks;
-    if (category !== "all") {
-      stocks = stocks.filter((stock) => stock.category === category);
-    }
-
-    // 평가금액(현재가 * 수량 * 환율) 순으로 내림차순 정렬
-    return [...stocks].sort((a, b) => {
-      const valA = a.quantity * a.currentPrice * getMultiplier(a.currency);
-      const valB = b.quantity * b.currentPrice * getMultiplier(b.currency);
-      return valB - valA;
-    });
-  };
-
-  const renderStockList = (stocks: Stock[]) => {
-    if (stocks.length === 0) {
-      return (
-        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
-          <div className="text-center">
-            <p className="text-muted-foreground text-sm">등록된 주식이 없습니다.</p>
-            <p className="text-muted-foreground mt-1 text-xs">'주식 추가' 버튼을 눌러 추가해 보세요.</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 lg:gap-5">
-        {stocks.map((item) => {
-          const krwMultiplier = getMultiplier(item.currency);
-          const isForeign = item.category === "foreign" && item.currency !== "KRW";
-          const purchaseRatePerUnit = getPurchaseRatePerUnit(item);
-
-          const totalCostInCurrency = item.quantity * item.averagePrice;
-          const currentValueInCurrency = item.quantity * item.currentPrice;
-
-          const currentValueInKRW = currentValueInCurrency * krwMultiplier;
-          // 해외주식: 매입원가는 매입 환율 기준으로 환산 (환차손익 정확 반영)
-          const totalCostInKRW = isForeign
-            ? totalCostInCurrency * purchaseRatePerUnit
-            : totalCostInCurrency * krwMultiplier;
-
-          const profitInKRW = currentValueInKRW - totalCostInKRW;
-          const profitRate = totalCostInKRW > 0 ? (profitInKRW / totalCostInKRW) * 100 : 0;
-
-          const holdingDays = calculateHoldingDays(item.purchaseDate);
-          const currencyGain = isForeign
-            ? (krwMultiplier - purchaseRatePerUnit) * item.quantity * item.averagePrice
-            : 0;
-          const currencyGainRate =
-            isForeign && purchaseRatePerUnit > 0
-              ? ((krwMultiplier - purchaseRatePerUnit) / purchaseRatePerUnit) * 100
-              : 0;
-
-
-          return (
-            <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
-              {/* Layer 1: 종목 헤더 */}
-              <div className={`${ASSET_THEME.inputHeader}`}>
-                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                  <Badge variant="outline" className={ASSET_THEME.categoryBox}>
-                    {getCategoryLabel(item.category)}
-                  </Badge>
-                  <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                  {item.ticker && (
-                    <span className="text-muted-foreground text-xs font-mono shrink-0">({item.ticker})</span>
-                  )}
-                  {item.baseDate === todayStr && (
-                    <span className={`${ASSET_THEME.todayBox}`}>
-                      조회 기준일: {item.baseDate}
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Layer 2: 핵심 지표 */}
-              <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-muted-foreground">평가금액</span>
-                  <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
-                    {formatCurrencyDisplay(currentValueInKRW)}
-                  </span>
-                </div>
-                <span className="hidden sm:inline text-border self-center">|</span>
-                <div className="flex flex-col items-end sm:items-start gap-0.5">
-                  <span className="text-xs text-muted-foreground">평가손익</span>
-                  <span className={`text-medium font-bold ${getProfitLossColor(profitInKRW)}`}>
-                    {formatCurrencyDisplay(profitInKRW)}
-                  </span>
-                  <span className={`text-xs font-semibold ${getProfitLossColor(profitInKRW)}`}>
-                    ({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%)
-                  </span>
-                  {isForeign && (
-                    <span className={`text-xs font-medium ${getProfitLossColor(currencyGain)}`}>
-                      (환차손익 {formatCurrencyDisplay(Math.round(currencyGain))} 포함)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Layer 3: 가격 비교 */}
-              <div className="px-4 py-3 bg-muted/10 border-t">
-                <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs text-muted-foreground">평균단가</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatCurrencyDisplay(item.averagePrice, item.currency)}
-                      {isForeign && (
-                        <span className="text-xs text-muted-foreground">
-                          &nbsp;(₩{(item.averagePrice * krwMultiplier).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <span className="hidden sm:inline text-border self-center">|</span>
-                  <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                    <span className="text-xs text-muted-foreground">현재가</span>
-                    <span className="text-sm font-semibold text-primary">
-                      {formatCurrencyDisplay(item.currentPrice, item.currency)}
-                      {isForeign && (
-                        <span className="text-xs text-muted-foreground">
-                          &nbsp;(₩{(item.currentPrice * krwMultiplier).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Layer 3b: 환차손익 (해외주식 외화 종목만) */}
-              {isForeign && (
-                <div className="px-4 py-3 bg-muted/10 border-t">
-                  <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-muted-foreground">환차손익</span>
-                      <span className={`text-sm font-semibold ${getProfitLossColor(currencyGain)}`}>
-                        {formatCurrencyDisplay(Math.round(currencyGain))}
-                        <span className="text-xs ml-1">
-                          ({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)
-                        </span>
-                      </span>
-                    </div>
-                    <span className="hidden sm:inline text-border self-center">|</span>
-                    <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                      <span className="text-xs text-muted-foreground">매입환율</span>
-                      <span className="text-xs text-foreground">
-                        {item.purchaseExchangeRate && item.purchaseExchangeRate > 0
-                          ? item.currency === "JPY"
-                            ? `¥100 = ₩${item.purchaseExchangeRate.toLocaleString()}`
-                            : `$1 = ₩${item.purchaseExchangeRate.toLocaleString()}`
-                          : "미입력 (현재환율 기준)"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Layer 4: 연계 주식담보대출 */}
-              {(() => {
-                const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === item.id);
-                if (linkedLoans.length === 0) return null;
-                return (
-                  <div className="px-4 py-2.5 border-t space-y-1.5">
-                    <p className="text-[11px] font-semibold text-muted-foreground">주식담보대출</p>
-                    {linkedLoans.map((loan) => (
-                      <div key={loan.id} className="flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
-                          <span className="text-muted-foreground truncate">{loan.name}</span>
-                          {loan.institution && (
-                            <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
-                            -{formatCurrency(loan.balance)}
-                          </span>
-                          <span className="text-muted-foreground">{loan.interestRate}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-
-              {/* Layer 5: 보조 정보 */}
-              <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
-                <span className="flex items-center gap-1">
-                  <span>수량</span>
-                  <span className={`font-medium font-semibold text-foreground ${ASSET_THEME.primary.text}`}>{item.quantity.toLocaleString()}주</span>
-                </span>
-                <span className="hidden sm:inline text-border">|</span>
-                <span className="flex items-center gap-1">
-                  <Clock className="size-3" />
-                  <span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span>
-                </span>
-                <span className="hidden sm:inline text-border">|</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="size-3" />
-                  <span className="font-medium text-foreground">{item.purchaseDate} 매수</span>
-                </span>
-                {item.description && (
-                  <span className="w-full mt-0.5 text-primary truncate">
-                    # {item.description}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  if (hideList) {
-    return (
-      <>
-        <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
-              <DialogDescription>
-                {editingItem ? "주식 정보를 수정합니다." : "새로운 주식 자산을 추가합니다."}
-              </DialogDescription>
-            </DialogHeader>
-            <StockForm editData={editingItem} onClose={handleDialogClose} />
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      {/* 스크린샷 가져오기 다이얼로그 */}
+    <>
       <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
-
-      {/* 직접 입력 다이얼로그 */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>
@@ -806,143 +516,6 @@ export function StockInput({ hideList = false }: { hideList?: boolean } = {}) {
           <StockForm editData={editingItem} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5 flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="size-5" />
-                  <CardTitle>주식 자산</CardTitle>
-                </div>
-              </div>
-              <CardDescription>보유하고 있는 주식 자산을 관리합니다.</CardDescription>
-            </div>
-            <div className="hidden items-center gap-2">
-              <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
-                <PopoverTrigger asChild>
-                  <Button>
-                    <Plus className="mr-1.5 size-4" />
-                    주식 추가
-                    <ChevronDown className="ml-1 size-3.5 opacity-70" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setIsScreenshotOpen(true);
-                    }}
-                  >
-                    <ImageUp className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">스크린샷 가져오기</p>
-                      <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setEditingItem(undefined);
-                      setIsDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">직접 입력</p>
-                      <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
-                    </div>
-                  </button>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-2 sm:mb-4 grid w-full grid-cols-7 h-13 p-1 gap-1">
-              {(
-                [
-                  { value: "all", icon: LayoutGrid, label: "전체" },
-                  { value: "domestic", icon: Flag, label: "국내" },
-                  { value: "foreign", icon: Globe, label: "해외" },
-                  { value: "irp", icon: Landmark, label: "IRP" },
-                  { value: "isa", icon: Coins, label: "ISA" },
-                  { value: "pension", icon: ShieldCheck, label: "연금" },
-                  { value: "unlisted", icon: Lock, label: "비상장" },
-                ] as const
-              ).map(({ value, icon: Icon, label }) => (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  className={[
-                    "h-10",
-                    "bg-muted/60 text-muted-foreground border border-border py-2 cursor-pointer transition-all",
-                    "hover:bg-accent hover:text-foreground hover:border-primary/50",
-                    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary",
-                    ASSET_THEME.tabActive,
-                  ].join(" ")}
-                >
-                  <span className="text-xs sm:text-sm">{label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <TabsContent value="all">
-              {(() => {
-                if (assetData.stocks.length === 0) return renderStockList([]);
-
-                // 평가금액(현재가 * 수량 * 환율) 순으로 내림차순 정렬
-                const sortedStocks = [...assetData.stocks].sort((a, b) => {
-                  const valA = a.quantity * a.currentPrice * getMultiplier(a.currency);
-                  const valB = b.quantity * b.currentPrice * getMultiplier(b.currency);
-                  if (Math.abs(valA - valB) > 0.01) return valB - valA;
-
-                  // 금액이 같으면 이름순
-                  return a.name.localeCompare(b.name);
-                });
-
-                // 카테고리별로 그룹화
-                const grouped = sortedStocks.reduce(
-                  (acc, stock) => {
-                    if (!acc[stock.category]) acc[stock.category] = [];
-                    acc[stock.category].push(stock);
-                    return acc;
-                  },
-                  {} as Record<string, Stock[]>,
-                );
-
-                return (
-                  <div className="space-y-8">
-                    {stockCategories
-                      .filter((cat) => grouped[cat.value])
-                      .map((cat) => (
-                        <div key={cat.value} className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <h3 className={`text-sm font-bold ${ASSET_THEME.categoryBox}`}>{cat.label}</h3>
-                            <div className="h-px flex-1 bg-border" />
-                            <span className="text-xs text-muted-foreground">{grouped[cat.value].length}개 항목</span>
-                          </div>
-                          {renderStockList(grouped[cat.value])}
-                        </div>
-                      ))}
-                  </div>
-                );
-              })()}
-            </TabsContent>
-            <TabsContent value="domestic">{renderStockList(getStocksByCategory("domestic"))}</TabsContent>
-            <TabsContent value="foreign">{renderStockList(getStocksByCategory("foreign"))}</TabsContent>
-            <TabsContent value="irp">{renderStockList(getStocksByCategory("irp"))}</TabsContent>
-            <TabsContent value="isa">{renderStockList(getStocksByCategory("isa"))}</TabsContent>
-            <TabsContent value="pension">{renderStockList(getStocksByCategory("pension"))}</TabsContent>
-            <TabsContent value="unlisted">{renderStockList(getStocksByCategory("unlisted"))}</TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }

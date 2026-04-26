@@ -18,11 +18,11 @@ export function GuideMiniButton() {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-xs text-primary"
+      className="flex items-center gap-1 sm:gap-1.5 h-7 sm:h-auto px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-xs text-primary"
     >
-      <Info className="size-3.5 shrink-0" />
+      <Info className="size-3 sm:size-3.5 shrink-0" />
       <span className="font-medium hidden sm:inline">앱 가이드</span>
-      <ChevronDown className="size-3 opacity-60" />
+      <ChevronDown className="size-3 opacity-60 hidden sm:block" />
     </button>
   );
 }

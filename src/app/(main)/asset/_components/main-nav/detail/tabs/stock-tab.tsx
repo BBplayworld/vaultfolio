@@ -3,11 +3,12 @@
 import React from "react";
 import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
@@ -15,6 +16,7 @@ import { stockCategories } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit } from "../asset-detail-tabs";
+import { fetchProfitRef } from "@/lib/profit-utils";
 
 const CAT_LIST = ASSET_THEME.tabList3;
 const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
@@ -34,16 +36,16 @@ function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: s
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
   const showLogo = isForeign && ticker && /^[A-Z]+$/.test(ticker) && !imgError;
   return (
-    <div className="rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
+    <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
       {showLogo ? (
         <img
           src={`https://img.logo.dev/ticker/${ticker}?token=pk_I3rhtineRSqYNMtDKQM1zw`}
           alt={name}
-          className="size-6 rounded-full object-cover"
+          className="size-6 sm:size-7 rounded-full object-cover"
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="size-5.5 text-[10px] font-bold text-white">{initial}</span>
+        <span className="text-[9px] sm:text-[10px] font-bold text-white">{initial}</span>
       )}
     </div>
   );
@@ -74,7 +76,7 @@ export function StockBarChart({ items, total }: {
           const pct = (v / total) * 100;
           return (
             <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-              {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+              {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
             </div>
           );
         })}
@@ -94,6 +96,9 @@ export function StockBarChart({ items, total }: {
     </div>
   );
 }
+const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
+
+
 /**
  * 선택된 카테고리의 주식 데이터 계산 훅.
  * ShareCard, StockTab 등에서 공통 사용.
@@ -103,6 +108,18 @@ export function useFilteredStockData(activeCategory: string) {
   const summary = getAssetSummary();
 
   const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
+
+  const stocksWithTicker = assetData.stocks.filter(
+    (s) => s.ticker && s.category !== "unlisted" && s.currentPrice > 0,
+  );
+  const tickerList = stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean).join(",");
+
+  const { data: refData } = useQuery({
+    queryKey: ["profit", "daily", tickerList],
+    queryFn: () => fetchProfitRef(tickerList, "daily"),
+    staleTime: 5 * 60 * 1000,
+    enabled: tickerList.length > 0,
+  });
 
   const filteredStocks = useMemo(() => {
     const base =
@@ -137,7 +154,34 @@ export function useFilteredStockData(activeCategory: string) {
     color: barColors[idx],
   }));
 
-  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul };
+  // 일별 수익 계산 (profit-chart의 daily 로직과 동일)
+  const { dailyProfit, dailyProfitRate } = useMemo(() => {
+    if (!refData) return { dailyProfit: null, dailyProfitRate: null };
+    let profitSum = 0;
+    let refSum = 0;
+    let hasAny = false;
+    for (const st of filteredStocks) {
+      if (!st.ticker || st.category === "unlisted" || !st.currentPrice) continue;
+      const ticker = normalizeTicker(st);
+      const ref = refData[ticker];
+      if (!ref) continue;
+      const rate = (st.currency === "USD" && !DOMESTIC_CATEGORIES.has(st.category))
+        ? exchangeRates.USD : 1;
+      const currentValue = st.currentPrice * st.quantity * rate;
+      const refValue = ref.refPrice * st.quantity * rate;
+      profitSum += currentValue - refValue;
+      refSum += refValue;
+      hasAny = true;
+    }
+    if (!hasAny) return { dailyProfit: null, dailyProfitRate: null };
+    return {
+      dailyProfit: profitSum,
+      dailyProfitRate: refSum > 0 ? (profitSum / refSum) * 100 : 0,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refData, filteredStocks, exchangeRates]);
+
+  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, dailyProfit, dailyProfitRate };
 }
 
 // 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
@@ -171,11 +215,13 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, dailyProfit, dailyProfitRate, maskFn, screenshotMode = false }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
   currencyGain?: number;
+  dailyProfit?: number | null;
+  dailyProfitRate?: number | null;
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
 }) {
@@ -185,6 +231,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       <div>
         <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
         <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
+        {!screenshotMode && <p className="text-[11px] text-foreground">{formatCurrency(totalValue)}</p>}
       </div>
       <div className="text-right space-y-1">
         <div>
@@ -192,12 +239,17 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
           <p className={`${screenshotMode ? "text-[13px]" : "text-lg"} font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
             {totalProfit >= 0 ? "+" : ""}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
           </p>
+          {currencyGain !== undefined && currencyGain !== 0 && (
+            <p className={`text-[11px] tabular-nums ${getProfitLossColor(currencyGain)}`}>
+              <span className="text-muted-foreground">환차손익</span> {currencyGain >= 0 ? "+" : ""}{fmt(Math.round(currencyGain))} 포함
+            </p>
+          )}
         </div>
-        {currencyGain !== undefined && currencyGain !== 0 && (
-          <div className="border-t border-border/40 pt-1">
-            <p className="text-xs text-muted-foreground">환차손익</p>
-            <p className={`${screenshotMode ? "text-[13px]" : "text-sm"} font-semibold tabular-nums ${getProfitLossColor(currencyGain)}`}>
-              {currencyGain >= 0 ? "+" : ""}{fmt(Math.round(currencyGain))}
+        {dailyProfit != null && dailyProfitRate != null && (
+          <div className="border-t border-border/40">
+            <p className="text-xs text-muted-foreground">전일 대비</p>
+            <p className={`${screenshotMode ? "text-[13px]" : "text-sm"} font-semibold tabular-nums ${getProfitLossColor(dailyProfit)}`}>
+              {dailyProfit >= 0 ? "+" : ""}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
             </p>
           </div>
         )}
@@ -237,37 +289,38 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
   return (
     <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-3">
       <div className="rounded-lg border bg-card overflow-hidden">
-        <div className={`flex items-center gap-6 px-3 py-2.5 ${ASSET_THEME.primary.bgLight} transition-colors hover:bg-primary/20 group`}>
+        <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-3 flex-1 min-w-0 text-left">
+            <button className={ASSET_THEME.cardTriggerButton}>
               <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={stock.category === "foreign"} color={color} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-sm truncate">{stock.name}</span>
-                  {stock.ticker && <span className="text-[11px] text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[10px] px-1.5 py-0`}>{getCategoryLabel(stock.category)}</Badge>
+              <div className={ASSET_THEME.cardInfoLeft}>
+                <div className={ASSET_THEME.cardInfoTitle}>
+                  <span className={ASSET_THEME.cardInfoName}>{stock.name}</span>
+                  {stock.ticker && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
+                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{getCategoryLabel(stock.category)}</Badge>
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-xs text-foreground">{stock.quantity.toLocaleString()}주</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                <div className={ASSET_THEME.cardInfoMeta}>
+                  <span className="text-[11px] text-foreground">{stock.quantity.toLocaleString()}주</span>
+                  <span className="text-[11px] text-muted-foreground">·</span>
+                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(currentVal)}</p>
-                <p className={`text-xs mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
-                  {profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
-                </p>
+              <div className={ASSET_THEME.cardInfoRight}>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(currentVal)}</p>
+                <div className={ASSET_THEME.cardAmountProfitRow}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+                </div>
               </div>
-              <ChevronDown className={`size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button size="icon" variant="outline" className="size-8" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
-              <Pencil className="size-4" />
+          <div className={ASSET_THEME.cardActions}>
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+              <Pencil className="size-3" />
             </Button>
-            <Button size="icon" variant="outline" className="size-8" onClick={() => onDelete(stock.id)}>
-              <Trash2 className="size-4" />
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(stock.id)}>
+              <Trash2 className="size-3" />
             </Button>
           </div>
         </div>
@@ -279,16 +332,26 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
         )}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
               <div>
-                <p className="text-xs text-muted-foreground">평균단가</p>
+                <p className="text-xs text-muted-foreground">매입가</p>
                 <p className="text-sm font-medium">{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
                 {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">총 매입금액</p>
+                <p className="text-sm font-medium">{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
+                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">현재가</p>
                 <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
                 {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">총 평가금액</p>
+                <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
+                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
             </div>
             {isForeign && (
@@ -340,11 +403,27 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
 }
 
 export function StockTab() {
-  const { assetData, deleteStock } = useAssetData();
+  const { assetData, deleteStock, saveData } = useAssetData();
   const [activeCategory, setActiveCategory] = useState("all");
   const [hasInteracted, setHasInteracted] = useState(() => {
     try { return !!localStorage.getItem(LS_KEY); } catch { return true; }
   });
+
+  // 비해외주식의 currency/purchaseExchangeRate 정리 (1회성 마이그레이션)
+  useEffect(() => {
+    const dirty = assetData.stocks.filter(
+      (s) => s.category !== "foreign" && (s.currency !== "KRW" || s.purchaseExchangeRate != null)
+    );
+    if (dirty.length === 0) return;
+    const fixed = assetData.stocks.map((s) => {
+      if (s.category === "foreign") return s;
+      const next = { ...s, currency: "KRW" as const };
+      delete next.purchaseExchangeRate;
+      return next;
+    });
+    saveData({ ...assetData, stocks: fixed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFirstInteract = () => {
     if (hasInteracted) return;
@@ -352,7 +431,7 @@ export function StockTab() {
     try { localStorage.setItem(LS_KEY, "1"); } catch { /* ignore */ }
   };
 
-  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, mul } =
+  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, mul, dailyProfit, dailyProfitRate } =
     useFilteredStockData(activeCategory);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -406,29 +485,14 @@ export function StockTab() {
   return (
     <div className="space-y-4 mt-2">
       {/* 요약 헤더 */}
-      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
-          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-[11px] text-foreground">{formatCurrency(totalValue)}</p>
-        </div>
-        <div className="text-right space-y-1">
-          <div>
-            <p className="text-xs text-muted-foreground">평가손익</p>
-            <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-              {totalProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
-            </p>
-          </div>
-          {summary.stockCurrencyGain !== 0 && (
-            <div className="border-t border-border/40 pt-1">
-              <p className="text-xs text-muted-foreground">환차손익</p>
-              <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(summary.stockCurrencyGain)}`}>
-                {summary.stockCurrencyGain >= 0 ? "+" : ""}{formatShortCurrency(Math.round(summary.stockCurrencyGain))}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      <StockSummaryHeader
+        totalValue={totalValue}
+        totalProfit={totalProfit}
+        totalProfitRate={totalProfitRate}
+        currencyGain={summary.stockCurrencyGain}
+        dailyProfit={dailyProfit}
+        dailyProfitRate={dailyProfitRate}
+      />
 
       {/* 카테고리 서브탭 */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
@@ -448,7 +512,7 @@ export function StockTab() {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                       </div>
                     );
                   })}

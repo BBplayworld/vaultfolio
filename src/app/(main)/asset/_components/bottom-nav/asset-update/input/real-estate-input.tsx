@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Building2, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, Clock, MapPin, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +26,9 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { RealEstate, realEstateSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, quickButtonPresets } from "@/config/asset-options";
 
 const realEstateQuickButtons = [...quickButtonPresets.realEstate];
@@ -273,7 +268,9 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
           <Button type="button" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit"
+            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
         </DialogFooter>
@@ -282,8 +279,8 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
   );
 }
 
-export function RealEstateInput({ hideList = false }: { hideList?: boolean } = {}) {
-  const { assetData, deleteRealEstate } = useAssetData();
+export function RealEstateInput() {
+  const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RealEstate | undefined>();
 
@@ -303,215 +300,22 @@ export function RealEstateInput({ hideList = false }: { hideList?: boolean } = {
     return () => window.removeEventListener("trigger-edit-real-estate", handler);
   }, [assetData.realEstate]);
 
-  const handleDelete = (id: string) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      const success = deleteRealEstate(id);
-      if (success) {
-        toast.success("삭제되었습니다.");
-      } else {
-        toast.error("삭제에 실패했습니다.");
-      }
-    }
-  };
-
-  const handleEdit = (item: RealEstate) => {
-    setEditingItem(item);
-    setIsDialogOpen(true);
-  };
-
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingItem(undefined);
   };
 
-  const formatCurrencyDisplay = (value: number) => {
-    return formatCurrency(value);
-  };
-
-  const getTypeLabel = (type: string) => {
-    return realEstateTypes.find((t) => t.value === type)?.label || type;
-  };
-
-  if (hideList) {
-    return (
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
-            </DialogDescription>
-          </DialogHeader>
-          <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
-            </DialogDescription>
-          </DialogHeader>
-          <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
-        </DialogContent>
-      </Dialog>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Building2 className="size-5" />
-                <CardTitle>부동산 자산</CardTitle>
-              </div>
-              <CardDescription>보유하고 있는 부동산 자산을 관리합니다.</CardDescription>
-            </div>
-            <div className="hidden">
-              <Button onClick={() => { setEditingItem(undefined); setIsDialogOpen(true); }}>
-                <Plus className="mr-2 size-4" />
-                부동산 추가
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {assetData.realEstate.length === 0 ? (
-            <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm">등록된 부동산이 없습니다.</p>
-                <p className="text-muted-foreground mt-1 text-xs">'부동산 추가' 버튼을 눌러 추가해 보세요.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {assetData.realEstate.map((item) => {
-                const profit = item.currentValue - item.purchasePrice;
-                const profitRate = (profit / item.purchasePrice) * 100;
-                const holdingDays = calculateHoldingDays(item.purchaseDate);
-
-                return (
-                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
-                    {/* Layer 1: 부동산 헤더 */}
-                    <div className={`${ASSET_THEME.inputHeader}`}>
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={ASSET_THEME.categoryBox}>
-                            {getTypeLabel(item.type)}
-                          </Badge>
-                          <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                        </div>
-                        {item.address && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                            <MapPin className="size-3 shrink-0" />
-                            {item.address}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Layer 2: 핵심 지표 */}
-                    <div className="flex flex-row items-start justify-between sm:justify-start gap-4 p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-muted-foreground">실거래가</span>
-                        <span className={`text-medium font-bold ${ASSET_THEME.important}`}>
-                          {formatCurrencyDisplay(item.currentValue)}
-                        </span>
-                        {(item.tenantDeposit || 0) > 0 && (
-                          <span className={`text-xs rounded-full px-2 py-0.5 whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900`}>
-                            보증금 {formatCurrencyDisplay(item.tenantDeposit || 0)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="hidden sm:inline text-border self-center">|</span>
-                      <div className="flex flex-col items-end sm:items-start gap-1">
-                        <span className="text-xs text-muted-foreground">평가손익</span>
-                        <span className={`text-medium font-bold ${getProfitLossColor(profit)}`}>
-                          {profit >= 0 ? "+" : ""}{formatCurrencyDisplay(profit)}
-                        </span>
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getProfitLossColor(profit)}`}>
-                          {profit >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
-                          {profitRate >= 0 ? "+" : ""}{profitRate.toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Layer 3: 가격 비교 */}
-                    <div className="px-4 py-3 bg-muted/10 border-t">
-                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground">매입가</span>
-                          <span className="text-sm font-medium text-primary">{formatCurrencyDisplay(item.purchasePrice)}</span>
-                        </div>
-                        <span className="hidden sm:inline text-border self-center">|</span>
-                        <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                          <span className="flex items-center gap-1">
-                            <Clock className="size-3" />
-                            <span className="text-xs font-semibold text-foreground">{holdingDays.toLocaleString()}일 보유</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="size-3" />
-                            <span className="text-xs font-semibold text-foreground">{item.purchaseDate} 매수</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Layer 4: 보조 정보 */}
-                    {item.description && (
-                      <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
-                        <span className="w-full mt-0.5 text-primary truncate">
-                          # {item.description}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Layer 5: 연계 주택담보대출 */}
-                    {(() => {
-                      const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
-                      if (linkedLoans.length === 0) return null;
-                      return (
-                        <div className="px-4 py-2.5 border-t space-y-1.5">
-                          <p className="text-[11px] font-semibold text-muted-foreground">주택담보대출</p>
-                          {linkedLoans.map((loan) => (
-                            <div key={loan.id} className="flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <CreditCard className="size-3 text-rose-400 flex-shrink-0" />
-                                <span className="text-muted-foreground truncate">{loan.name}</span>
-                                {loan.institution && (
-                                  <span className="hidden sm:inline text-muted-foreground">({loan.institution})</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>
-                                  -{formatCurrency(loan.balance)}
-                                </span>
-                                <span className="text-muted-foreground">{loan.interestRate}%</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+        <DialogHeader>
+          <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
+          <DialogDescription>
+            {editingItem ? "부동산 정보를 수정합니다." : "새로운 부동산 자산을 추가합니다."}
+          </DialogDescription>
+        </DialogHeader>
+        <RealEstateForm editData={editingItem} onClose={handleDialogClose} />
+      </DialogContent>
+    </Dialog>
   );
 }

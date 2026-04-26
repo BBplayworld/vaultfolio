@@ -6,12 +6,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
 import { Cash, Loan } from "@/types/asset";
+
+const CASH_CATEGORY_TABS = [
+  { value: "all", label: "전체" },
+  ...cashTypes.map(({ value, shortLabel }) => ({ value, label: shortLabel })),
+] as const;
+
+const CAT_LIST = ASSET_THEME.tabList3;
+const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
 export const CASH_TYPE_COLORS: Record<string, string> = {
   deposit: MAIN_PALETTE[0],
@@ -29,35 +38,35 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
       <div className="rounded-lg border bg-card overflow-hidden">
-        <div className={`flex items-center gap-6 px-3 py-2.5 ${ASSET_THEME.primary.bgLight} transition-colors hover:bg-primary/20`}>
+        <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-3 flex-1 min-w-0 text-left">
-              <div className="size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
-                <Banknote className="size-4 text-white" />
+            <button className={ASSET_THEME.cardTriggerButton}>
+              <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
+                <Banknote className="size-3.5 sm:size-4 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-sm truncate">{item.name}</span>
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[10px] px-1.5 py-0`}>{typeLabel}</Badge>
-                  {item.institution && <span className="text-xs text-muted-foreground shrink-0">({item.institution})</span>}
+              <div className={ASSET_THEME.cardInfoLeft}>
+                <div className={ASSET_THEME.cardInfoTitle}>
+                  <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
+                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
+                  {item.institution && <span className="text-[11px] text-muted-foreground shrink-0">({item.institution})</span>}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                <div className={ASSET_THEME.cardInfoMeta}>
+                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
-                {item.currency !== "KRW" && <p className="text-xs text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
+              <div className={ASSET_THEME.cardInfoRight}>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
+                {item.currency !== "KRW" && <p className="text-[11px] text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
               </div>
-              <ChevronDown className={`size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button size="icon" variant="outline" className="size-8" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
-              <Pencil className="size-4" />
+          <div className={ASSET_THEME.cardActions}>
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
+              <Pencil className="size-3" />
             </Button>
-            <Button size="icon" variant="outline" className="size-8" onClick={() => onDelete(item.id)}>
-              <Trash2 className="size-4" />
+            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(item.id)}>
+              <Trash2 className="size-3" />
             </Button>
           </div>
         </div>
@@ -94,6 +103,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
 
 export function CashTab() {
   const { assetData, deleteCash, getAssetSummary, exchangeRates } = useAssetData();
+  const [activeCategory, setActiveCategory] = useState("all");
   const summary = getAssetSummary();
 
   const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
@@ -107,13 +117,25 @@ export function CashTab() {
     })
     .filter((d) => d.value > 0);
 
-  const sorted = [...assetData.cash]
+  const allSorted = [...assetData.cash]
     .map((item) => ({ item, value: item.balance * mul(item.currency) }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
+  const filteredSorted = activeCategory === "all"
+    ? allSorted
+    : allSorted.filter(({ item }) => item.type === activeCategory);
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) { deleteCash(id); toast.success("삭제되었습니다."); }
+  };
+
+  const renderCard = ({ item, value }: { item: Cash; value: number }, idx: number) => {
+    const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
+    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
+    const typeLabel = cashTypes.find((t) => t.value === item.type)?.label ?? item.type;
+    const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
+    return <CashCard key={item.id} item={item} value={value} pct={pct} color={color} typeLabel={typeLabel} linkedLoans={linkedLoans} onDelete={handleDelete} />;
   };
 
   return (
@@ -134,52 +156,67 @@ export function CashTab() {
         </div>
       </div>
 
-      {cashTypeData.length > 0 && totalValue > 0 && (
-        <div className="space-y-2">
-          <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-            {cashTypeData.map(({ type, label, value: v }) => {
-              const pct = (v / totalValue) * 100;
-              const color = CASH_TYPE_COLORS[type] ?? MAIN_PALETTE[8];
-              return (
-                <div key={type} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
-                  {pct > 8 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {cashTypeData.map(({ type, label, value: v }) => {
-              const pct = (v / totalValue) * 100;
-              const color = CASH_TYPE_COLORS[type] ?? MAIN_PALETTE[8];
-              return (
-                <div key={type} className="flex items-center gap-1">
-                  <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                  <span className="text-xs text-foreground">{label}</span>
-                  <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
+        <TabsList className={CAT_LIST}>
+          {CASH_CATEGORY_TABS.map(({ value, label }) => (
+            <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
+          ))}
+        </TabsList>
 
-      {sorted.length === 0 ? (
-        <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {sorted.map(({ item, value }, idx) => {
-            const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
-            const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
-            const typeLabel = cashTypes.find((t) => t.value === item.type)?.label ?? item.type;
-            const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
-            return (
-              <CashCard key={item.id} item={item} value={value} pct={pct} color={color} typeLabel={typeLabel} linkedLoans={linkedLoans} onDelete={handleDelete} />
-            );
-          })}
-        </div>
-      )}
+        {CASH_CATEGORY_TABS.map(({ value }) => (
+          <TabsContent key={value} value={value} className="mt-4 space-y-3">
+            {allSorted.length > 0 && totalValue > 0 && (
+              <div className="space-y-2">
+                <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+                  {allSorted.map(({ item, value: v }, idx) => {
+                    const pct = (v / totalValue) * 100;
+                    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
+                    return (
+                      <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
+                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {allSorted.map(({ item, value: v }, idx) => {
+                    const pct = (v / totalValue) * 100;
+                    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
+                    return (
+                      <div key={item.id} className="flex items-center gap-1">
+                        <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="text-xs text-foreground">{item.name}</span>
+                        <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {filteredSorted.length === 0 ? (
+              <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+                <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
+              </div>
+            ) : value === "all" ? (
+              <div className="space-y-4 mt-8">
+                {CASH_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+                  const catItems = allSorted.filter(({ item }) => item.type === cat.value);
+                  if (catItems.length === 0) return null;
+                  return (
+                    <div key={cat.value}>
+                      <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                      <div className="space-y-2">{catItems.map(renderCard)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2 mt-8">{filteredSorted.map(renderCard)}</div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }

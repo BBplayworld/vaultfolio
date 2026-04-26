@@ -10,7 +10,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
+import { fetchProfitRef, type ProfitPeriod } from "@/lib/profit-utils";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -22,8 +22,6 @@ const CATEGORY_GROUPS = [
   { key: "pension", label: "연금저축", color: MAIN_PALETTE[7] },
 ] as const;
 
-type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
-
 const PERIOD_LABELS: Record<ProfitPeriod, string> = {
   daily: "일별",
   weekly: "주간",
@@ -33,60 +31,6 @@ const PERIOD_LABELS: Record<ProfitPeriod, string> = {
 
 const TAB_LIST = ASSET_THEME.tabList1;
 const TAB_TRIGGER = ASSET_THEME.tabTrigger1;
-
-// localStorage 캐시 유효 날짜 계산 (KST 기준)
-// daily: 당일 자정까지 / weekly·monthly·yearly: 다음 월요일 자정까지
-function getProfitCacheKey(tickers: string, period: ProfitPeriod): string {
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const todayStr = nowKST.toISOString().split("T")[0];
-  // 주간은 지난주 금요일 기준으로 묶음 (토·일도 이전 주 금요일 사용)
-  if (period === "weekly") {
-    const day = nowKST.getUTCDay(); // 0=일
-    const daysToMonday = day === 0 ? 6 : day - 1;
-    const lastFriday = new Date(nowKST);
-    lastFriday.setUTCDate(nowKST.getUTCDate() - daysToMonday - 3);
-    const weekStr = lastFriday.toISOString().split("T")[0];
-    return `profit:${period}:${weekStr}:${tickers}`;
-  }
-  if (period === "monthly") {
-    const monthStr = todayStr.slice(0, 7); // YYYY-MM
-    return `profit:${period}:${monthStr}:${tickers}`;
-  }
-  if (period === "yearly") {
-    const yearStr = todayStr.slice(0, 4); // YYYY
-    return `profit:${period}:${yearStr}:${tickers}`;
-  }
-  return `profit:${period}:${todayStr}:${tickers}`;
-}
-
-function lsGet(key: string): ProfitRefResponse | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as ProfitRefResponse) : null;
-  } catch {
-    return null;
-  }
-}
-
-function lsSet(key: string, data: ProfitRefResponse): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch {
-    // localStorage 용량 초과 등 무시
-  }
-}
-
-async function fetchProfitRef(tickers: string, period: ProfitPeriod): Promise<ProfitRefResponse> {
-  const cacheKey = getProfitCacheKey(tickers, period);
-  const cached = lsGet(cacheKey);
-  if (cached) return cached;
-
-  const res = await fetch(`/api/finance/profit?tickers=${tickers}&period=${period}`);
-  if (!res.ok) return {};
-  const data: ProfitRefResponse = await res.json();
-  lsSet(cacheKey, data);
-  return data;
-}
 
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
@@ -118,7 +62,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>수익 차트</CardTitle>
+          <CardTitle>수익 현황</CardTitle>
           <CardDescription>보유 주식의 기간별 수익</CardDescription>
         </CardHeader>
         <CardContent>
@@ -173,7 +117,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       <Card>
         <CardHeader>
           <div className="space-y-1.5">
-            <CardTitle>수익 차트</CardTitle>
+            <CardTitle>수익 현황</CardTitle>
             <CardDescription>보유 주식의 기간별 수익</CardDescription>
           </div>
         </CardHeader>

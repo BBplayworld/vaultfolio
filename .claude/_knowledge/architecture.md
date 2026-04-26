@@ -1,10 +1,10 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-04-25
+> 마지막 업데이트: 2026-04-26
 
 ## 앱 개요
 
-**Vaultfolio (secret-asset)** — 오프라인 우선 개인 자산 관리 앱
+**secretasset** — 오프라인 우선 개인 자산 관리 앱
 - 모든 사용자 데이터: 브라우저 `localStorage` 저장, 인증/백엔드 DB 없음
 - 서버: 금융 API 프록시 역할만 (한국투자증권 OpenAPI, Gemini AI)
 - Next.js App Router 기반 단일 페이지 앱
@@ -29,17 +29,19 @@
 src/
 ├── app/
 │   ├── (main)/asset/
-│   │   ├── page.tsx              # 대시보드
-│   │   ├── layout.tsx            # SidebarInset (max-w-screen-3xl=1680px)
+│   │   ├── page.tsx              # 3탭(홈/상세/성과) 메인 페이지
+│   │   ├── layout.tsx            # SidebarInset (max-w-screen-2xl)
 │   │   └── _components/
-│   │       ├── input/            # 자산 입력 폼 5종
-│   │       ├── screenshot/       # 스크린샷 다이얼로그 4종
-│   │       ├── detail/           # 자산 상세 탭 (asset-detail-tabs.tsx + tabs/ 5종)
-│   │       ├── chart/            # 차트 (net-asset, profit, dividend 등 5종)
-│   │       ├── management/       # floating-add-button.tsx
-│   │       ├── sidebar/          # AppSidebar, NavMain 등
-│   │       ├── asset-overview-cards.tsx
-│   │       └── asset-distribution-cards.tsx
+│   │       ├── bottom-nav/
+│   │       │   └── asset-update/
+│   │       │       ├── input/    # 자산 입력 폼 5종 + exchange-rate-input
+│   │       │       └── screenshot/ # 스크린샷 다이얼로그 4종
+│   │       ├── main-nav/
+│   │       │   ├── home/         # dashboard.tsx
+│   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종
+│   │       │   └── activity/     # net-asset-chart, profit, dividend
+│   │       ├── layout/           # floating-add-button, welcome-guide, copyright-footer
+│   │       └── top-nav/          # theme-switcher, tool-menu, guide-mini-banner, share/
 │   ├── api/
 │   │   ├── finance/route.ts      # 주식·환율 (캐시 포함)
 │   │   ├── share/route.ts        # 공유 Short URL
@@ -75,10 +77,18 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 | 로컬 (UPSTASH_* 없음) | 파일 (`data/finance-cache.json`, `data/share-tokens.json`) |
 | Vercel (`KV_REST_API_URL` 있음) | Upstash Redis (Sliding TTL 30일) |
 
-## 레이아웃 (현재값)
+## 레이아웃
 
-- 최대 너비: `max-w-screen-3xl` (1680px) — `layout.tsx:33`
+- 최대 너비: `max-w-screen-2xl` — `layout.tsx`
 - 사이드바: variant=`inset`, collapsible=`icon`
+- 헤더: `sticky top-0 h-10 sm:h-12` (layout.tsx)
+
+## page.tsx 탭 구조
+
+- **홈** (`home`): Dashboard
+- **상세** (`detail`): AssetDetailTabs — 진입 시 `syncStockPricesAndSnapshots` 호출
+- **성과** (`activity`): 순자산/수익/배당 차트 (3 서브탭)
+- `navigate-to-tab` CustomEvent → 상세 탭 자동 이동
 
 ## 환경변수
 

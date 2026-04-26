@@ -148,7 +148,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
         <CardHeader>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <CardTitle>배당 차트</CardTitle>
+              <CardTitle>배당</CardTitle>
               {selectedMonth !== undefined && (
                 <Badge
                   variant="outline"

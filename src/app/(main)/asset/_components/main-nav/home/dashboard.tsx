@@ -79,7 +79,6 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   netAsset: number;
   activeTab?: string;
   onSegmentClick?: (key: string) => void;
-  /** 인증샷 모드: true면 sm: 브레이크포인트 없이 항상 2열 */
   screenshotMode?: boolean;
   maskFn?: (v: number) => string;
 }) {
@@ -87,14 +86,14 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   if (items.length === 0) return null;
   return (
     <div className="space-y-3">
-      <ResponsiveContainer width="100%" height={screenshotMode ? 280 : 360} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
+      <ResponsiveContainer width="100%" height={screenshotMode ? 220 : 260} className={screenshotMode ? "" : "sm:!h-[360px]"} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
         <PieChart>
           <Pie
             data={items}
             dataKey="value"
             nameKey="name"
-            innerRadius={screenshotMode ? 60 : 75}
-            outerRadius={screenshotMode ? 140 : 165}
+            innerRadius={screenshotMode ? 45 : 55}
+            outerRadius={screenshotMode ? 110 : 130}
             strokeWidth={2}
             stroke="var(--card)"
             labelLine={false}
@@ -151,21 +150,21 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
         </PieChart>
       </ResponsiveContainer>
       {/* 범례 */}
-      <div className={`grid gap-x-4 gap-y-1.5 ${screenshotMode ? "grid-cols-2 pointer-events-none" : "grid-cols-2 sm:grid-cols-3"}`}>
+      <div className={`grid gap-x-2 ${screenshotMode ? "gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-1 grid-cols-1 sm:grid-cols-2"}`}>
         {items.map(({ key, name, value, color, pct }) => {
           const isAll = !activeTab || activeTab === "all";
           const isActive = key === activeTab;
           return (
             <div
               key={name}
-              className={`flex items-center gap-1.5 min-w-0 rounded-md px-1.5 py-2 transition-all ${screenshotMode ? "" : "cursor-pointer"} ${isActive && !screenshotMode ? "bg-muted" : !screenshotMode ? "hover:bg-muted/50" : ""}`}
+              className={`flex items-center gap-1 min-w-0 rounded-md transition-all ${screenshotMode ? "px-1 py-1" : "px-1.5 py-2 cursor-pointer"} ${isActive && !screenshotMode ? "bg-muted" : !screenshotMode ? "hover:bg-muted/50" : ""}`}
               style={{ opacity: isAll || isActive ? 1 : 0.35 }}
               onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
             >
-              <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs text-foreground truncate">{name}</span>
-              <span className="text-xs font-bold text-muted-foreground ml-auto">{pct.toFixed(1)}%</span>
-              <span className="text-xs text-foreground">({fmt(value)})</span>
+              <span className={`rounded-full flex-shrink-0 ${screenshotMode ? "size-2" : "size-2.5"}`} style={{ backgroundColor: color }} />
+              <span className={`text-foreground truncate ${screenshotMode ? "text-[10px]" : "text-xs"}`}>{name}</span>
+              <span className={`font-bold text-muted-foreground ml-auto ${screenshotMode ? "text-[10px]" : "text-xs"}`}>{pct.toFixed(1)}%</span>
+              <span className={`text-foreground ${screenshotMode ? "text-[10px]" : "text-xs"}`}>({fmt(value)})</span>
             </div>
           );
         })}

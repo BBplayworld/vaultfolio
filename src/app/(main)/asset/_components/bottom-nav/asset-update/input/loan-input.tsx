@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, CreditCard, Calendar, Clock, Building2, Coins, TrendingUp, ImageUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -30,13 +26,11 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Loan, loanSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
-import { ASSET_THEME } from "@/config/theme";
 import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets } from "@/config/asset-options";
 import { LoanScreenshotImport } from "../screenshot/loan-screenshot-import";
+import { MAIN_PALETTE } from "@/config/theme";
 
 // 대출 종류별 빠른 입력 버튼
 const getQuickButtonsByType = (type: string) => {
@@ -374,7 +368,9 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           <Button type="button" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit"
+            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
         </DialogFooter>
@@ -383,12 +379,11 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
   );
 }
 
-export function LoanInput({ hideList = false }: { hideList?: boolean } = {}) {
-  const { assetData, deleteLoan } = useAssetData();
+export function LoanInput() {
+  const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Loan | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -420,60 +415,8 @@ export function LoanInput({ hideList = false }: { hideList?: boolean } = {}) {
     setEditingItem(undefined);
   };
 
-  if (hideList) {
-    return (
-      <>
-        <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
-              <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
-            </DialogHeader>
-            <LoanForm editData={editingItem} onClose={handleDialogClose} />
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-
-  const handleDelete = (id: string) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      const success = deleteLoan(id);
-      if (success) {
-        toast.success("삭제되었습니다.");
-      } else {
-        toast.error("삭제에 실패했습니다.");
-      }
-    }
-  };
-
-  const handleEdit = (item: Loan) => {
-    setEditingItem(item);
-    setIsDialogOpen(true);
-  };
-
-  const formatCurrencyDisplay = (value: number) => {
-    return formatCurrency(value);
-  };
-
-  const formatDaysToYMD = (days: number): string => {
-    const years = Math.floor(days / 365);
-    const months = Math.floor((days % 365) / 30);
-    const d = days - years * 365 - months * 30;
-    const parts = [];
-    if (years > 0) parts.push(`${years}년`);
-    if (months > 0) parts.push(`${months}개월`);
-    if (d > 0 || parts.length === 0) parts.push(`${d}일`);
-    return parts.join(" ");
-  };
-
-  const getTypeLabel = (type: string) => {
-    return loanTypes.find((t) => t.value === type)?.label || type;
-  };
-
   return (
-    <div className="*:data-[slot=card]:shadow-xs">
+    <>
       <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
@@ -484,197 +427,6 @@ export function LoanInput({ hideList = false }: { hideList?: boolean } = {}) {
           <LoanForm editData={editingItem} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <CreditCard className="size-5" />
-                <CardTitle>대출 관리</CardTitle>
-              </div>
-              <CardDescription>신용대출, 담보대출 등 대출 정보를 관리합니다</CardDescription>
-            </div>
-            <div className="hidden items-center gap-2">
-              <Popover open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
-                <PopoverTrigger asChild>
-                  <Button>
-                    <Plus className="mr-1.5 size-4" />
-                    대출 추가
-                    <ChevronDown className="ml-1 size-3.5 opacity-70" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-52 p-1.5 space-y-0.5">
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => { setIsAddMenuOpen(false); setIsScreenshotOpen(true); }}
-                  >
-                    <ImageUp className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">스크린샷 가져오기</p>
-                      <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    onClick={() => { setIsAddMenuOpen(false); setEditingItem(undefined); setIsDialogOpen(true); }}
-                  >
-                    <Plus className="size-4 text-muted-foreground" />
-                    <div className="text-left">
-                      <p className="font-medium">직접 입력</p>
-                      <p className="text-xs text-muted-foreground">수동으로 추가</p>
-                    </div>
-                  </button>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {assetData.loans.length === 0 ? (
-            <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm">등록된 대출이 없습니다.</p>
-                <p className="text-muted-foreground mt-1 text-xs">'대출 추가' 버튼을 눌러 추가해 보세요.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {assetData.loans.map((item) => {
-                const daysElapsed = calculateHoldingDays(item.startDate);
-                const daysRemaining = item.endDate ? calculateHoldingDays(item.endDate) : null;
-
-                return (
-                  <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
-                    {/* Layer 1: 헤더 */}
-                    <div className={`${ASSET_THEME.inputHeader}`}>
-                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                        <Badge variant="outline" className={ASSET_THEME.categoryBox}>
-                          {getTypeLabel(item.type)}
-                        </Badge>
-                        <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                        {item.institution && (
-                          <span className="text-muted-foreground text-xs shrink-0">({item.institution})</span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleEdit(item)}>
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="size-8" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Layer 2: 핵심 지표 */}
-                    <div className="p-4 flex flex-row sm:flex-row sm:items-start justify-between gap-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-muted-foreground">현재 잔액</span>
-                        <span className={`text-medium font-bold ${ASSET_THEME.liability}`}>
-                          {formatCurrencyDisplay(item.balance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Layer 3: 대출 기간 */}
-                    <div className="px-4 py-3 bg-muted/10 border-t">
-                      <div className="flex items-start sm:items-center justify-between sm:justify-start gap-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground">금리</span>
-                          <span className="text-sm font-medium text-primary">
-                            {item.interestRate}%
-                          </span>
-                        </div>
-                        <span className="hidden sm:inline text-border self-center">|</span>
-                        {item.endDate ? (
-                          <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3" />
-                              <span className="text-xs text-foreground">{formatDaysToYMD(daysElapsed)} 경과</span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3" />
-                              <span className="text-xs font-semibold text-foreground">{daysRemaining != null ? formatDaysToYMD(daysRemaining) : ""} 남음</span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="size-3" />
-                              <span className="text-xs font-semibold text-foreground">{item.startDate} 대출</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-0.5 items-end sm:items-start">
-                            <span className="text-xs text-muted-foreground">만기일</span>
-                            <span className="text-sm font-medium text-muted-foreground">미설정</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Layer 4: 보조 정보 */}
-                    {item.description && (
-                      <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t bg-muted/5">
-                        <span className="w-full mt-0.5 text-primary truncate">
-                          # {item.description}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Layer 5: 연계 부동산 */}
-                    {item.linkedRealEstateId && (() => {
-                      const linked = assetData.realEstate.find((re) => re.id === item.linkedRealEstateId);
-                      if (!linked) return null;
-                      return (
-                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
-                          <Building2 className="size-3 text-primary flex-shrink-0" />
-                          <span className="text-muted-foreground">연계 부동산</span>
-                          <span className="font-medium text-primary truncate">{linked.name}</span>
-                          {linked.address && (
-                            <span className="hidden sm:inline text-muted-foreground truncate">{linked.address}</span>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Layer 5-2: 연계 주식 */}
-                    {item.linkedStockId && (() => {
-                      const linked = assetData.stocks.find((s) => s.id === item.linkedStockId);
-                      if (!linked) return null;
-                      return (
-                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
-                          <TrendingUp className="size-3 text-primary flex-shrink-0" />
-                          <span className="text-muted-foreground">연계 주식</span>
-                          <span className="font-medium text-primary truncate">{linked.name}</span>
-                          {linked.ticker && (
-                            <span className="text-muted-foreground">({linked.ticker})</span>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Layer 5-3: 연계 예금 */}
-                    {item.linkedCashId && (() => {
-                      const linked = assetData.cash.find((c) => c.id === item.linkedCashId);
-                      if (!linked) return null;
-                      return (
-                        <div className="px-4 py-2.5 border-t bg-primary/5 flex items-center gap-2 text-xs">
-                          <Coins className="size-3 text-primary flex-shrink-0" />
-                          <span className="text-muted-foreground">연계 예금</span>
-                          <span className="font-medium text-primary truncate">{linked.name}</span>
-                          {linked.institution && (
-                            <span className="hidden sm:inline text-muted-foreground">({linked.institution})</span>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }

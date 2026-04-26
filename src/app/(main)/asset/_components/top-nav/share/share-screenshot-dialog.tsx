@@ -24,11 +24,11 @@ export interface SectionVisibility {
   chart: boolean;
 }
 
-const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] = [
-  { key: "donut", label: "자산 분포 차트" },
-  { key: "chart", label: "순자산 추이 차트" },
-  { key: "stockHeader", label: "주식 현황 요약" },
-  { key: "stockList", label: "보유 종목 목록" },
+export const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] = [
+  { key: "donut", label: "자산 분포" },
+  { key: "chart", label: "순자산 변화" },
+  { key: "stockHeader", label: "주식 종합" },
+  { key: "stockList", label: "주식 상세" },
 ];
 
 export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
@@ -100,7 +100,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px]"}`}>
+      <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px] max-h-[90dvh] flex flex-col"}`}>
         {/* 헤더 — 캡처 모드에서 숨김 */}
         {!isCaptureMode && (
           <DialogHeader className="px-5 pt-5 pb-3">
@@ -212,7 +212,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         )}
 
         {/* 카드 미리보기 */}
-        <div className={`overflow-y-auto ${isCaptureMode ? "h-dvh p-4" : "max-h-[75vh] p-4"}`}>
+        <div className={`overflow-y-auto flex-1 ${isCaptureMode ? "h-dvh p-2 sm:p-4" : "p-2 sm:p-4"}`}>
           {/* 캡처 모드 해제 버튼 */}
           {isCaptureMode && (
             <div className="flex justify-end mb-2">

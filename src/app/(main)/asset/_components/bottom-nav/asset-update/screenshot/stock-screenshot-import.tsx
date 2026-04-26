@@ -21,7 +21,7 @@ import { saveAssetDataRaw } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { stockCategories } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 
 type ImportStock = Omit<Stock, "id"> & {
@@ -229,9 +229,12 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       const { selected: _, section: __, tickerInput, originalCurrency: _origCurrency, ...stockData } = stock;
       const finalTicker = tickerInput?.trim() || stockData.ticker || "";
 
-      const isForeign = stock.section === "해외";
+      // 최종 카테고리 기준으로 판단 (미리보기에서 변경된 카테고리 반영)
+      const isForeign = stockData.category === "foreign";
+      // 국내 카테고리는 무조건 KRW — 섹션이 "해외"였더라도 카테고리가 국내면 원화 처리
+      const isDomestic = DOMESTIC_CATEGORIES.has(stockData.category);
+
       // AI가 원화(KRW)로 인식한 해외주식 → USD로 환산 필요
-      // USD/JPY로 인식했으면 이미 외화 값이므로 그대로 사용
       const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
 
       let finalCurrentPrice = stockData.currentPrice;
@@ -248,7 +251,9 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         currentPrice: finalCurrentPrice,
         averagePrice: finalAveragePrice,
         ...(isForeign ? { currency: "USD" as const, purchaseExchangeRate: usdRate } : {}),
+        ...(isDomestic ? { currency: "KRW" as const } : {}),
       };
+      if (isDomestic) delete (data as Partial<Stock>).purchaseExchangeRate;
 
       if (!finalTicker) {
         hasTickerless = true;
@@ -494,7 +499,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                             onChange={(e) => updateTickerInput(stock.id, e.target.value.toUpperCase().replace(/[^A-Z0-9.]/g, ""))}
                           />
                         )}
-                        {stock.section === "해외" && (
+                        {stock.category === "foreign" && (
                           <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
                             {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
                               ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
@@ -510,7 +515,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                       </div>
 
                       {(() => {
-                        const isForeign = stock.section === "해외";
+                        const isForeign = stock.category === "foreign";
                         const usdRateLocal = exchangeRates.USD || 1380;
                         const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
 
@@ -584,6 +589,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
           {step === "preview" && (
             <Button
               onClick={handleRegister}
+              style={{ backgroundColor: MAIN_PALETTE[0] }}
               disabled={isRegistering || selectedCount === 0}
             >
               {isRegistering ? (
