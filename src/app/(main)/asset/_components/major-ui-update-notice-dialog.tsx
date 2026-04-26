@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import PREVIEW_IMAGE from "public/images/00.jpg";
 
 const HIDE_UNTIL_KEY = "secretasset-major-ui-notice-hide-until";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -57,11 +56,32 @@ export function MajorUiUpdateNoticeDialog() {
             더 직관적인 화면 구성과 입력 흐름 개선을 포함한 UI 개편을 진행하고 있습니다.
             곧 더 편한 사용 경험으로 찾아오겠습니다.
           </DialogDescription>
-          <ul className="space-y-1 text-sm text-foreground">
-            <li>📢 분포 탭 - 자산, 금융자산, 부동산, 부채 비율 시각화 및 직관적 UI 개선</li>
-            <li>📢 상세 탭 - 보유 종목 비중 차트와 상세 수익 현황을 결합한 주식 특화 탭 업데이트</li>
-            <li>📢 차트 탭 - 순자산 변화, 기간별 수익, 예상 배당 차트 기능 추가</li>
-            <li>✉️ 의견 : <a href="mailto:bbplayworld@gmail.com" className="text-primary underline">bbplayworld@gmail.com</a></li>
+          <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.8 }}>
+            <li style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 6 }}>🏠</span>
+              <strong>홈 탭</strong> - 자산·금융·부동산·부채 비율 도넛 차트 및 비중 UI 고도화
+            </li>
+
+            <li style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 6 }}>📈</span>
+              <strong>상세 탭</strong> - 종목 비중과 수익 현황을 통합한 '주식 특화 탭' 업데이트
+            </li>
+
+            <li style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 6 }}>📊</span>
+              <strong>성과 탭</strong> - 순자산 추이, 기간별 수익, 예상 배당 차트 기능 신규 도입
+            </li>
+
+            <li style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 6 }}>📸</span>
+              <strong>인증샷</strong> - 자산 현황 및 손익 요약 이미지 복사·공유 기능 추가
+            </li>
+
+            <hr style={{ border: 0, borderTop: "1px dashed #ccc", margin: "12px 0" }} />
+            <li style={{ color: "#555" }}>
+              <span style={{ marginRight: 8 }}>📅</span>
+              <strong>업데이트 예정일:</strong> 2026년 5월 초
+            </li>
           </ul>
         </DialogHeader>
 
