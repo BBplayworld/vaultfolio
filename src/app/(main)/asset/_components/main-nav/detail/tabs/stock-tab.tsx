@@ -17,9 +17,34 @@ import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/profit-utils";
+import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 
 const CAT_LIST = ASSET_THEME.tabList3;
 const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
+
+const ETF_DOMAIN: Record<string, string> = {
+  TIGER:     "www.tigeretf.com",
+  KODEX:     "www.samsungfund.com",
+  ACE:       "www.aceetf.co.kr",
+  KINDEX:    "www.aceetf.co.kr",
+  HANARO:    "www.hanaroetf.com",
+  SOL:       "www.shinhansec.com",
+  RISE:      "www.kbam.co.kr",
+  KBSTAR:    "www.kbam.co.kr",
+  ARIRANG:   "www.hanwhafund.co.kr",
+  BIG:       "www.hanwhafund.co.kr",
+  PLUS:      "www.hanwhafund.co.kr",
+  KOSEF:     "www.wooriasset.co.kr",
+  TIMEFOLIO: "www.timefolio.co.kr",
+};
+
+function getEtfDomain(name: string): string | null {
+  const upper = name.toUpperCase();
+  for (const [brand, domain] of Object.entries(ETF_DOMAIN)) {
+    if (upper.startsWith(brand + " ") || upper === brand) return domain;
+  }
+  return null;
+}
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -34,19 +59,25 @@ export const CATEGORY_TABS = [
 function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: string; isForeign: boolean; color: string }) {
   const [imgError, setImgError] = React.useState(false);
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
-  const showLogo = isForeign && ticker && /^[A-Z]+$/.test(ticker) && !imgError;
+
+  const foreignLogoSrc = isForeign && ticker && /^[A-Z]+$/.test(ticker) ? `/api/logo?ticker=${ticker}` : null;
+  const etfDomain = !isForeign ? getEtfDomain(name) : null;
+  const stockDomain = !isForeign && !etfDomain ? (DOMESTIC_STOCK_DOMAIN_MAP[ticker] ?? null) : null;
+
+  const logoSrc = foreignLogoSrc
+    ?? (etfDomain ? `/api/logo?domain=${encodeURIComponent(etfDomain)}` : null)
+    ?? (stockDomain ? `/api/logo?domain=${encodeURIComponent(stockDomain)}` : null);
+
+  const showLogo = !!logoSrc && !imgError;
+  const showInitial = !logoSrc;
+
   return (
     <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
       {showLogo ? (
-        <img
-          src={`https://img.logo.dev/ticker/${ticker}?token=pk_I3rhtineRSqYNMtDKQM1zw`}
-          alt={name}
-          className="size-6 sm:size-7 rounded-full object-cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
+        <img src={logoSrc} alt={name} className="size-6 sm:size-7 rounded-full object-cover" onError={() => setImgError(true)} />
+      ) : showInitial ? (
         <span className="text-[9px] sm:text-[10px] font-bold text-white">{initial}</span>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -187,12 +218,11 @@ export function useFilteredStockData(activeCategory: string) {
 // 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
 export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
   const fmt = maskFn ?? formatShortCurrency;
-  const initial = (stock.ticker || stock.name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase();
+  const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
+  const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
   return (
     <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md`}>
-      <div className="size-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
-        <span className="text-[10px] font-bold text-white">{initial}</span>
-      </div>
+      <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`font-semibold truncate ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{stock.name}</span>
@@ -207,7 +237,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
       <div className="text-right flex-shrink-0">
         <p className={`font-bold tabular-nums ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{fmt(currentVal)}</p>
         <p className={`text-[11px] mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
-          {profit >= 0 ? "+" : ""}{fmt(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
+          {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
         </p>
       </div>
     </div>
@@ -226,6 +256,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   screenshotMode?: boolean;
 }) {
   const fmt = maskFn ?? formatShortCurrency;
+  const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
   return (
     <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
       <div>
@@ -237,11 +268,11 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
         <div>
           <p className="text-xs text-muted-foreground">평가손익</p>
           <p className={`${screenshotMode ? "text-[13px]" : "text-lg"} font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-            {totalProfit >= 0 ? "+" : ""}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
+            {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
           </p>
           {currencyGain !== undefined && currencyGain !== 0 && (
             <p className={`text-[11px] tabular-nums ${getProfitLossColor(currencyGain)}`}>
-              <span className="text-muted-foreground">환차손익</span> {currencyGain >= 0 ? "+" : ""}{fmt(Math.round(currencyGain))} 포함
+              <span className="text-muted-foreground">환차손익</span> {!hideAmounts && (currencyGain >= 0 ? "+" : "")}{fmt(Math.round(currencyGain))} 포함
             </p>
           )}
         </div>
@@ -249,7 +280,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
           <div className="border-t border-border/40">
             <p className="text-xs text-muted-foreground">전일 대비</p>
             <p className={`${screenshotMode ? "text-[13px]" : "text-sm"} font-semibold tabular-nums ${getProfitLossColor(dailyProfit)}`}>
-              {dailyProfit >= 0 ? "+" : ""}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
+              {!hideAmounts && (dailyProfit >= 0 ? "+" : "")}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
             </p>
           </div>
         )}

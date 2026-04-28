@@ -34,7 +34,9 @@
       "Bash(mv real-estate-input.tsx stock-input.tsx crypto-input.tsx cash-input.tsx loan-input.tsx exchange-rate-input.tsx input/)",
       "Bash(mv stock-screenshot-import.tsx screenshot/)",
       "Bash(python3 -)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)"
     ]
   }
 }

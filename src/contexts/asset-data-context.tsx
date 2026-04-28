@@ -307,10 +307,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, [syncTodayStockPrices, saveSnapshots]);
 
   // 모든 진입 경로 공통 헬퍼
-  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율
-  // 주식 현재가 갱신은 상세 탭 최초 진입 시(syncStockPricesAndSnapshots)로 위임
-  // skipSnapshots 옵션 유지 (공유 데이터 로드 후 호환성)
-  const initAndSync = useCallback(async (data: AssetData, { skipSnapshots: _skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
+  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷
+  const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
     initAssetData(data);
     setIsDataLoaded(true);
     const hasAssets =
@@ -322,7 +320,17 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
-  }, [initAssetData, syncTodayExchangeRate]);
+    if (!skipSnapshots) {
+      await syncTodayStockPrices(data);
+      setAssetData(after => {
+        setExchangeRatesState(latestRates => {
+          saveSnapshots(after, latestRates);
+          return latestRates;
+        });
+        return after;
+      });
+    }
+  }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)

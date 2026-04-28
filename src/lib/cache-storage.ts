@@ -43,6 +43,9 @@ export interface ICacheStorage {
   getGeminiDailyCount(todayStr: string): Promise<number>;
   incrementGeminiDailyCount(todayStr: string): Promise<number>;
   checkGeminiDailyLimit(todayStr: string): Promise<boolean>;
+  // 기업/ETF 로고 캐시 (TTL 1년)
+  getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null>;
+  setTickerLogo(key: string, base64: string, contentType: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -294,6 +297,15 @@ class FileCacheStorage implements ICacheStorage {
     return true;
   }
 
+  // 로컬 개발에서는 로고 캐시 없음 (파일 비대화 방지)
+  async getTickerLogo(_key: string): Promise<null> {
+    return null;
+  }
+
+  async setTickerLogo(_key: string, _base64: string, _contentType: string): Promise<void> {
+    // no-op
+  }
+
   async getGeminiDailyCount(todayStr: string): Promise<number> {
     const entry = this.readFinanceCache().GEMINI_COUNT;
     if (!entry || entry.date !== todayStr) return 0;
@@ -434,5 +446,14 @@ class UpstashCacheStorage implements ICacheStorage {
   async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
     const count = await this.getGeminiDailyCount(todayStr);
     return count < GEMINI_SERVER_DAILY_LIMIT;
+  }
+
+  async getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null> {
+    return this.redis.get<{ data: string; contentType: string }>(`finance:logo:${key}`);
+  }
+
+  async setTickerLogo(key: string, base64: string, contentType: string): Promise<void> {
+    const LOGO_TTL = 365 * 24 * 3600; // 1년
+    await this.redis.set(`finance:logo:${key}`, { data: base64, contentType }, { ex: LOGO_TTL });
   }
 }

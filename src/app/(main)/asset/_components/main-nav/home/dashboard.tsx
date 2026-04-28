@@ -67,9 +67,9 @@ function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, val
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   return (
     <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>
-      <tspan x={x - 1} dy="-14" fontSize={10} fontWeight={700} fill="white">{name}</tspan>
-      <tspan x={x} dy="15" fontSize={11} fontWeight={700} fill="rgba(255, 255, 255, 1)">{fmt(value)}</tspan>
-      <tspan x={x + 3} dy="15" fontSize={11} fontWeight={700} fill="rgba(255, 255, 255, 0.6)">{pct.toFixed(1)}%</tspan>
+      <tspan x={x - 1} dy="-16" fontSize={10} fontWeight={700} fill="white">{name}</tspan>
+      <tspan x={x} dy="16" fontSize={12} fontWeight={700} fill="rgba(255, 255, 255, 1)">{fmt(value)}</tspan>
+      <tspan x={x + 3} dy="16" fontSize={12} fontWeight={700} fill="rgba(255, 255, 255, 0.6)">{pct.toFixed(1)}%</tspan>
     </text>
   );
 }
@@ -132,7 +132,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
                 ) : (
                   <>
                     <tspan x="50%" dy="-12" fontSize={12} fill="var(--muted-foreground)">순자산</tspan>
-                    <tspan x="50%" dy="26" fontSize={18} fontWeight={700} fill="var(--foreground)">{formatShortCurrency(netAsset)}</tspan>
+                    <tspan x="50%" dy="26" fontSize={18} fontWeight={700} fill={screenshotMode ? ASSET_THEME.importantHex : "var(--foreground)"}>{formatShortCurrency(netAsset)}</tspan>
                   </>
                 )}
               </text>

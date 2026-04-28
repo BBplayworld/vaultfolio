@@ -65,7 +65,7 @@ export default function Page() {
         <WelcomeGuide />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
-          <StockInput hideList />
+          <StockInput />
           <CryptoInput />
           <CashInput />
           <LoanInput />
@@ -104,11 +104,11 @@ export default function Page() {
 
   const inputLayer = (
     <div className="hidden" aria-hidden="true">
-      <RealEstateInput hideList />
+      <RealEstateInput />
       <StockInput />
-      <CryptoInput hideList />
-      <CashInput hideList />
-      <LoanInput hideList />
+      <CryptoInput />
+      <CashInput />
+      <LoanInput />
     </div>
   );
 

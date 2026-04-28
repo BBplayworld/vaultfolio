@@ -211,7 +211,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-muted-foreground">보유 종목</span>
                 <span className={`font-bold tabular-nums ${filteredProfit >= 0 ? "text-rose-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
-                  {filteredProfit >= 0 ? "+" : ""}{maskFn(Math.round(filteredProfit))}
+                  {!hideAmounts && (filteredProfit >= 0 ? "+" : "")}{maskFn(Math.round(filteredProfit))}
                   {" "}({filteredProfitRate >= 0 ? "+" : ""}{filteredProfitRate.toFixed(2)}%)
                 </span>
               </div>

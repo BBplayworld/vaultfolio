@@ -570,8 +570,8 @@ export function YearlyNetAssetChart() {
                                 <p className={`text-[9px] sm:text-[13px] font-bold truncate leading-none ${ASSET_THEME.important}`}>
                                   {formatShortCurrencyDecimal(cell.netAsset)}
                                 </p>
-                                <p className="text-[9px] sm:text-[13px] truncate leading-none text-foreground">
-                                  {formatShortCurrencyDecimal(cell.financialAsset)}
+                                <p className="text-[8px] sm:text-[12px] truncate leading-none text-foreground">
+                                  {formatShortCurrencyDecimal(cell.financialAsset)} <span>(금융자산)</span>
                                 </p>
                                 {diff !== null ? (
                                   <p className={`text-[9px] sm:text-[13px] font-medium leading-none ${getProfitLossColor(diff)}`}>
