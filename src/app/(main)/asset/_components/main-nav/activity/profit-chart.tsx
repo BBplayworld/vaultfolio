@@ -186,18 +186,18 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                           </p>
                         </div>
                       </div>
-                      <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-[11px]">
+                      <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
                         <div>
                           <p className="text-muted-foreground">기준일 금액</p>
-                          <p className="tabular-nums font-medium">{formatShortCurrency(totalRefValue)}</p>
+                          <p className="text-sm tabular-nums font-medium">{formatShortCurrency(totalRefValue)}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-muted-foreground">오늘 금액</p>
-                          <p className="tabular-nums font-medium">{formatShortCurrency(totalCurrentValue)}</p>
+                          <p className="text-sm tabular-nums font-medium">{formatShortCurrency(totalCurrentValue)}</p>
                         </div>
                       </div>
                       {(krRefDate || usRefDate) && (
-                        <div className="pt-1.5 border-t border-border/50 text-[10px] text-muted-foreground space-y-0.5">
+                        <div className="pt-1.5 border-t border-border/50 text-xs sm:text-sm text-muted-foreground space-y-0.5">
                           {krRefDate && <p>국내 기준: {krRefDate} 종가</p>}
                           {usRefDate && <p>해외 기준: {usRefDate} 종가 (KST 06:00 마감)</p>}
                         </div>
@@ -211,14 +211,14 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                           <div className="flex items-center justify-between px-4 py-1.5 border" style={{ borderColor: MAIN_PALETTE[0] }}>
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-[12px] font-semibold text-muted-foreground">{label}</span>
+                              <span className="text-sm font-semibold text-muted-foreground">{label}</span>
                             </div>
                             {catRate !== null && (
                               <div className="text-right">
-                                <p className={`text-[13px] tabular-nums ${getProfitLossColor(catProfit)}`}>
+                                <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
                                   {catProfit >= 0 ? "+" : ""}{formatShortCurrency(catProfit)} ({formatRate(catRate)})
                                 </p>
-                                <p className="text-[10px] text-muted-foreground tabular-nums">
+                                <p className="text-xs text-muted-foreground tabular-nums">
                                   {formatShortCurrency(catRef)} → {formatShortCurrency(catCurrent)}
                                 </p>
                               </div>
@@ -231,16 +231,16 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
                               >
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold truncate">{stock.name || ticker}</p>
-                                  <p className="text-[10px] text-muted-foreground">{ticker}</p>
+                                  <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground">{ticker}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                   {hasRef ? (
                                     <>
-                                      <p className={`text-xs tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
+                                      <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
                                         {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
                                       </p>
-                                      <p className="text-[10px] text-muted-foreground tabular-nums">
+                                      <p className="text-xs text-muted-foreground tabular-nums">
                                         {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
                                       </p>
                                     </>

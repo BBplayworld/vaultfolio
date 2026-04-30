@@ -42,9 +42,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-[11px] text-foreground">{formatShortCurrency(item.purchasePrice)} 매입</span>
-                  <span className="text-[11px] text-muted-foreground">·</span>
-                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-xs text-foreground">{formatShortCurrency(item.purchasePrice)} 매입</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -59,10 +59,10 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
           </CollapsibleTrigger>
           <div className={ASSET_THEME.cardActions}>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
-              <Pencil className="size-3" />
+              <Pencil className="size-3.5" />
             </Button>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(item.id)}>
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
@@ -74,42 +74,39 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-3 px-4 py-2.5 gap-2 bg-muted/10">
               <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className="text-xs text-muted-foreground mb-0.5">매입가</p>
-                <p className="text-sm font-medium tabular-nums">{formatShortCurrency(item.purchasePrice)}</p>
+                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>매입가</p>
+                <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
               </div>
               <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className="text-xs text-muted-foreground mb-0.5">실거래가</p>
-                <p className="text-sm font-bold tabular-nums" style={{ color: MAIN_PALETTE[5] }}>{formatShortCurrency(item.currentValue)}</p>
+                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>실거래가</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
               </div>
               <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className="text-xs text-muted-foreground mb-0.5">평가손익</p>
-                <p className={`text-sm font-bold tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
+                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>평가손익</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
               </div>
             </div>
             {item.address && (
               <div className="flex items-center gap-1.5 px-4 py-2 text-xs text-muted-foreground bg-muted/5">
                 <MapPin className="size-3 flex-shrink-0" />
-                <span className="truncate">{item.address}</span>
+                <span className="truncate text-sm">{item.address}</span>
               </div>
             )}
             {(item.tenantDeposit ?? 0) > 0 && (
-              <div className="flex items-center justify-between px-4 py-2 text-xs bg-muted/10">
-                <span className="text-muted-foreground">임차인보증금</span>
-                <span className={`font-semibold ${ASSET_THEME.liability}`}>{formatShortCurrency(item.tenantDeposit!)}</span>
+              <div className="flex items-center justify-between px-4 py-2 bg-muted/10">
+                <span className={`${ASSET_THEME.cardDetailLabel} font-semibold`}>임차인보증금</span>
+                <span className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</span>
               </div>
             )}
             {linkedLoans.length > 0 && (
-              <div className="px-4 py-2.5 space-y-1.5">
-                <p className="text-[11px] font-semibold text-muted-foreground">주택담보대출</p>
+              <div className={ASSET_THEME.cardLoanSection}>
+                <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />주택담보대출</p>
                 {linkedLoans.map((loan) => (
-                  <div key={loan.id} className={ASSET_THEME.liabilityBadge}>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <CreditCard className="size-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground truncate">{loan.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
-                      <span className="text-muted-foreground">{loan.interestRate}%</span>
+                  <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
+                    <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
+                      <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
                     </div>
                   </div>
                 ))}
@@ -160,7 +157,7 @@ export function RealEstateTab() {
         <div>
           <p className="text-xs text-muted-foreground font-semibold">총 부동산 평가금액</p>
           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-[11px] text-foreground">{formatCurrency(totalValue)}</p>
+          <p className="text-xs text-foreground">{formatCurrency(totalValue)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">평가손익</p>
@@ -186,19 +183,19 @@ export function RealEstateTab() {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
                   {barItems.map(({ item, value: v, color }) => {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={item.id} className="flex items-center gap-1">
                         <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs text-foreground">{item.name}</span>
-                        <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                        <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
                       </div>
                     );
                   })}

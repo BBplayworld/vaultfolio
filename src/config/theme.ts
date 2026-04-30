@@ -28,23 +28,35 @@ export const ASSET_THEME = {
   loss: "text-blue-600 dark:text-blue-400",
 
   // ===== 자산 관리 카드 공통 스타일 =====
-  cardHeader: "flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-primary/10 transition-colors hover:bg-primary/20",
-  cardActions: "flex flex-col sm:grid sm:grid-cols-2 gap-1 sm:gap-2 flex-shrink-0",
-  cardActionButton: "size-6 sm:size-8",
+  cardHeader: "flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
+  cardActions: "flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0",
+  cardActionButton: "size-8 sm:size-8",
   cardTriggerButton: "flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 text-left",
   cardInfoLeft: "flex-1 min-w-0",
   cardInfoTitle: "flex items-center gap-1 flex-wrap",
   cardInfoMeta: "flex items-center gap-1 mt-0.5",
-  cardInfoName: "font-semibold text-[13px] leading-tight truncate",
+  cardInfoName: "font-semibold text-sm sm:text-[15px] leading-tight truncate",
   cardInfoRight: "text-right flex-shrink-0",
-  cardAmountMain: "text-[13px] font-bold tabular-nums leading-tight",
+  cardAmountMain: "text-sm sm:text-[15px] font-bold tabular-nums leading-tight",
   cardAmountProfitRow: "flex sm:flex-row flex-col sm:items-center sm:gap-1 mt-0.5",
-  cardAmountSub: "text-[11px] tabular-nums",
-  cardAmountRate: "text-[10px] tabular-nums",
+  cardAmountSub: "text-xs sm:text-[13px] tabular-nums",
+  cardAmountRate: "text-[11px] sm:text-[12px] tabular-nums",
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs text-primary font-medium font-semibold",
   todayBox: "text-xs text-muted-foreground px-2 py-0.5 rounded border border-primary bg-primary/5 shrink-0",
   inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
   liabilityBadge: "flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5",
+
+  // ===== 카드 상세 영역 (CollapsibleContent) =====
+  cardDetailLabel: "text-xs text-muted-foreground",
+  cardDetailValue: "text-sm font-medium",
+  cardDetailValueBold: "text-sm font-semibold",
+  cardDetailMeta: "text-xs sm:text-sm text-muted-foreground",
+  // 담보대출 섹션
+  cardLoanSection: "px-4 py-2.5 space-y-1.5 bg-destructive/5 border-t border-destructive/15",
+  cardLoanTitle: "text-xs font-bold text-destructive/70 flex items-center gap-1",
+  cardLoanItem: "flex items-center justify-between rounded-md bg-destructive/8 border border-destructive/20 px-2.5 py-1.5 text-xs",
+  cardLoanName: "text-foreground font-medium truncate text-sm",
+  cardLoanRate: "text-muted-foreground bg-muted rounded px-1 py-0.5 text-xs",
   tabActive: "data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
 
   // ===== 탭 공통 스타일 =====
@@ -53,13 +65,13 @@ export const ASSET_THEME = {
   tabTrigger1: "rounded-lg px-3 py-2.5 sm:py-3 text-sm font-medium flex items-center gap-1.5 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 2단계: 상세 탭 (주식/부동산/암호화폐/현금/대출)
   tabList2: "flex items-center gap-1 p-1 rounded-xl bg-muted/50 border border-border w-full overflow-hidden",
-  tabTrigger2: "rounded-lg px-3 py-3 text-xs sm:text-sm font-medium flex items-center justify-center gap-1 min-w-0 flex-1 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger2: "rounded-lg px-2 py-3 text-sm font-medium flex items-center justify-center gap-1 min-w-0 flex-1 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계: 카테고리 서브탭 (주식 국내/해외/IRP 등)
   tabList3: "flex items-center gap-1 p-1 rounded-lg border border-border bg-muted/30 overflow-hidden w-full",
-  tabTrigger3: "rounded-md px-2 py-3 text-xs sm:text-sm font-medium min-w-0 flex-1 text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger3: "rounded-md px-2 py-3 text-sm font-medium min-w-0 flex-1 text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계 래핑(두 줄) 변형 — 카테고리 항목 많을 때 (부동산/현금/대출)
   tabList3Wrap: "flex flex-wrap gap-1 p-1 rounded-lg border border-border bg-muted/30 w-full mb-2 h-fit",
-  tabTrigger3Wrap: "rounded-md px-2 py-1 text-xs sm:text-sm font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger3Wrap: "rounded-md px-2 py-1 text-sm font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
 
   // ===== 자산 분포 카드 테마 토큰 =====
   distributionCard: {
@@ -99,6 +111,7 @@ export const MAIN_PALETTE = [
   "#c45e8a", // [7] 분홍
   "#7a6236", // [8] 황토
   "#4a7ab5", // [9] 하늘파랑
+  "#00BCD4" // [10] 쨍한 청록
 ] as const;
 
 /**

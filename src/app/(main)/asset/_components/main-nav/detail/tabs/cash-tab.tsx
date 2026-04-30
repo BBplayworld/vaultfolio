@@ -48,25 +48,25 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
                   <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
-                  {item.institution && <span className="text-[11px] text-muted-foreground shrink-0">({item.institution})</span>}
+                  {item.institution && <span className="text-xs text-muted-foreground shrink-0">({item.institution})</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
-                {item.currency !== "KRW" && <p className="text-[11px] text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
+                {item.currency !== "KRW" && <p className="text-xs text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
           <div className={ASSET_THEME.cardActions}>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
-              <Pencil className="size-3" />
+              <Pencil className="size-3.5" />
             </Button>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(item.id)}>
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
@@ -77,23 +77,20 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             {linkedLoans.length > 0 && (
-              <div className="px-4 py-2.5 space-y-1.5 bg-muted/10">
-                <p className="text-[11px] font-semibold text-muted-foreground">예금담보대출</p>
+              <div className={ASSET_THEME.cardLoanSection}>
+                <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />예금담보대출</p>
                 {linkedLoans.map((loan) => (
-                  <div key={loan.id} className={ASSET_THEME.liabilityBadge}>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <CreditCard className="size-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground truncate">{loan.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
-                      <span className="text-muted-foreground">{loan.interestRate}%</span>
+                  <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
+                    <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
+                      <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            {item.description && <div className="px-4 py-2 text-xs text-primary bg-muted/5"># {item.description}</div>}
+            {item.description && <div className="px-4 py-2 text-sm text-primary bg-muted/5"># {item.description}</div>}
           </div>
         </CollapsibleContent>
       </div>
@@ -144,7 +141,7 @@ export function CashTab() {
         <div>
           <p className="text-xs text-muted-foreground font-semibold">총 현금성 자산</p>
           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-[11px] text-foreground">{formatCurrency(totalValue)}</p>
+          <p className="text-xs text-foreground">{formatCurrency(totalValue)}</p>
         </div>
         <div className="text-right space-y-1">
           {cashTypeData.map((d) => (
@@ -173,20 +170,20 @@ export function CashTab() {
                     const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
                     return (
                       <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
                   {allSorted.map(({ item, value: v }, idx) => {
                     const pct = (v / totalValue) * 100;
                     const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
                     return (
                       <div key={item.id} className="flex items-center gap-1">
                         <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs text-foreground">{item.name}</span>
-                        <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                        <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
                       </div>
                     );
                   })}

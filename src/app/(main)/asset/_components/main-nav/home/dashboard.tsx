@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { cashTypes, loanTypes, realEstateTypes, stockCategories } from "@/config/asset-options";
+import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { DailyAssetSnapshot } from "@/types/asset";
+import { STORAGE_KEYS } from "@/lib/asset-storage";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -28,7 +30,7 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
           const pct = (value / total) * 100;
           return (
             <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
-              {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+              {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
             </div>
           );
         })}
@@ -39,9 +41,9 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
           return (
             <div key={key} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs text-muted-foreground">{label}</span>
-              <span className="text-xs font-bold text-primary">{pct.toFixed(1)}%</span>
-              <span className="text-xs text-foreground">({formatShortCurrency(value)})</span>
+              <span className="text-[13px] text-muted-foreground">{label}</span>
+              <span className="text-[13px] font-bold text-primary">{pct.toFixed(1)}%</span>
+              <span className="text-[13px] text-foreground">({formatShortCurrency(value)})</span>
             </div>
           );
         })}
@@ -157,14 +159,14 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
           return (
             <div
               key={name}
-              className={`flex items-center gap-1 min-w-0 rounded-md transition-all ${screenshotMode ? "px-1 py-1" : "px-1.5 py-2 cursor-pointer"} ${isActive && !screenshotMode ? "bg-muted" : !screenshotMode ? "hover:bg-muted/50" : ""}`}
+              className={`flex items-center gap-1 min-w-0 rounded-md transition-all px-1.5 py-2 cursor-pointer`}
               style={{ opacity: isAll || isActive ? 1 : 0.35 }}
               onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
             >
-              <span className={`rounded-full flex-shrink-0 ${screenshotMode ? "size-2" : "size-2.5"}`} style={{ backgroundColor: color }} />
-              <span className={`text-foreground truncate ${screenshotMode ? "text-[10px]" : "text-xs"}`}>{name}</span>
-              <span className={`font-bold text-muted-foreground ml-auto ${screenshotMode ? "text-[10px]" : "text-xs"}`}>{pct.toFixed(1)}%</span>
-              <span className={`text-foreground ${screenshotMode ? "text-[10px]" : "text-xs"}`}>({fmt(value)})</span>
+              <span className={`rounded-full flex-shrink-0 size-2.5`} style={{ backgroundColor: color }} />
+              <span className={`text-foreground truncate text-sm`}>{name}</span>
+              <span className={`ml-auto text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.default}`}>{fmt(value)}</span>
+              <span className={`font-bold text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.muted}`}>({pct.toFixed(1)}%)</span>
             </div>
           );
         })}
@@ -212,16 +214,82 @@ export function useAssetTreemapData() {
   return { treemapData, summary };
 }
 
+function DailyNetAssetTrend() {
+  const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      if (!raw) return;
+      const all: DailyAssetSnapshot[] = JSON.parse(raw);
+      const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
+      setSnapshots(sorted.slice(-7));
+    } catch { }
+  }, []);
+
+  if (snapshots.length < 2) return null;
+
+  const maxVal = Math.max(...snapshots.map((s) => s.netAsset));
+  const minVal = Math.min(...snapshots.map((s) => s.netAsset));
+  const range = maxVal - minVal || 1;
+
+  return (
+    <div className="rounded-lg border px-4 py-3 space-y-2.5" style={{ borderColor: MAIN_PALETTE[0] + "33", backgroundColor: MAIN_PALETTE[0] + "08" }}>
+      <p className="text-xs font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+      <div className="flex gap-1">
+        {snapshots.map((snap, i) => {
+          const prev = i > 0 ? snapshots[i - 1].netAsset : snap.netAsset;
+          const diff = snap.netAsset - prev;
+          const pct = prev > 0 ? (diff / prev) * 100 : 0;
+          const isBig = i > 0 && pct >= 5;
+          const isLast = i === snapshots.length - 1;
+          const heightPx = range > 0 ? Math.round(((snap.netAsset - minVal) / range) * 42 + 14) : 56;
+          const barColor = isBig ? MAIN_PALETTE[4] : isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
+          const label = snap.date.slice(5);
+
+          return (
+            <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
+              {isBig && (
+                <span className="text-[9px] font-bold animate-pulse leading-none mb-0.5" style={{ color: MAIN_PALETTE[4] }}>▲{pct.toFixed(0)}%</span>
+              )}
+              {!isBig && <span className="text-[9px] leading-none mb-0.5 invisible">x</span>}
+              <div className="w-full flex flex-col items-center" style={{ height: 72 }}>
+                <div style={{ flex: 1 }} />
+                <span className="text-[10px] font-bold text-foreground leading-none mb-1">{formatShortCurrency(snap.netAsset)}</span>
+                <div
+                  className="w-full rounded-t-sm transition-all"
+                  style={{ height: heightPx, backgroundColor: barColor, boxShadow: isBig ? `0 0 6px ${MAIN_PALETTE[4]}88` : undefined }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground">{label}</span>
+            </div>
+          );
+        })}
+      </div>
+      {(() => {
+        const last = snapshots[snapshots.length - 1];
+        const prev = snapshots[snapshots.length - 2];
+        const diff = last.netAsset - prev.netAsset;
+        const pct = prev.netAsset > 0 ? (diff / prev.netAsset) * 100 : 0;
+        const isBig = pct >= 5 || pct <= -5;
+        return (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">전일 대비</span>
+            <span className={`text-sm font-extrabold tabular-nums ${isBig ? "animate-pulse" : ""} ${getProfitLossColor(diff)}`}>
+              {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)}&nbsp;
+              <span className="text-xs font-bold">({diff >= 0 ? "+" : ""}{pct.toFixed(1)}%)</span>
+            </span>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 export function Dashboard() {
-  const { assetData, getAssetSummary, exchangeRates } = useAssetData();
+  const { assetData, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
   const [activeDetailTab, setActiveDetailTab] = useState<string>("");
-
-  const getMultiplier = (currency?: string) => {
-    if (currency === "USD") return exchangeRates.USD;
-    if (currency === "JPY") return exchangeRates.JPY / 100;
-    return 1;
-  };
 
   const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -248,57 +316,11 @@ export function Dashboard() {
   const finColors = assignColors(finBase);
   const financialBarItems = finBase.map((d, i) => ({ ...d, color: finColors[i] }));
 
-  const stockCatBase = stockCategories
-    .map((cat) => ({
-      key: cat.value,
-      label: cat.shortLabel,
-      value: assetData.stocks.filter((s) => s.category === cat.value).reduce((sum, s) => sum + s.quantity * s.currentPrice * getMultiplier(s.currency), 0),
-    }))
-    .filter((d) => d.value > 0);
-  const stockCatColors = assignColors(stockCatBase);
-  const stockCatBarItems = stockCatBase.map((d, i) => ({ ...d, color: stockCatColors[i] }));
-
-  const cryptoBase = [...assetData.crypto]
-    .map((coin) => ({ key: coin.id, label: coin.name || coin.symbol, value: coin.quantity * coin.currentPrice }))
-    .filter((d) => d.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const cryptoColors = assignColors(cryptoBase);
-  const cryptoBarItems = cryptoBase.map((d, i) => ({ ...d, color: cryptoColors[i] }));
-
-  const cashBase = cashTypes
-    .map(({ value: type, label }) => ({
-      key: type,
-      label,
-      value: assetData.cash.filter((c) => c.type === type).reduce((sum, c) => sum + c.balance * getMultiplier(c.currency), 0),
-    }))
-    .filter((d) => d.value > 0);
-  const cashColors = assignColors(cashBase);
-  const cashTypeBarItems = cashBase.map((d, i) => ({ ...d, color: cashColors[i] }));
-
   const liabTopBase = [
     { key: "loans", label: "대출", value: summary.loanBalance },
     { key: "tenant", label: "임차보증금", value: summary.tenantDepositTotal },
   ].filter((d) => d.value > 0).sort((a, b) => b.value - a.value);
   const liabTopItems = liabTopBase.map((d) => ({ ...d, color: LIABILITY_COLORS[d.key as keyof typeof LIABILITY_COLORS], pct: grossTotal > 0 ? (d.value / grossTotal) * 100 : 0 }));
-
-  const loanBase = loanTypes
-    .map(({ value: type, shortLabel: label }) => ({
-      key: type,
-      label,
-      value: assetData.loans.filter((l) => l.type === type).reduce((s, l) => s + l.balance, 0),
-    }))
-    .filter((d) => d.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const loanColors = (() => {
-    const colors = assignColors(loanBase);
-    if (loanBase.length === 0) return colors;
-    const maxIdx = loanBase.reduce((mi, it, i) => (it.value > loanBase[mi].value ? i : mi), 0);
-    colors[maxIdx] = LIABILITY_COLORS.loans;
-    return colors;
-  })();
-  const loanBarItems = loanBase.map((d, i) => ({ ...d, color: loanColors[i] }));
-
-  const sortedRealEstate = [...assetData.realEstate].sort((a, b) => b.currentValue - a.currentValue);
 
   const realEstateCatBase = realEstateTypes
     .map(({ value: type, label }) => ({
@@ -333,9 +355,6 @@ export function Dashboard() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── 자산 분포 카드 (통합) ── */}
       <Card className={`lg:col-span-2 ${ASSET_THEME.distributionCard.bg} ${ASSET_THEME.distributionCard.border} gap-2`}>
-        <CardHeader className="pb-2">
-          <CardTitle className={ASSET_THEME.primary.text}>자산 분포</CardTitle>
-        </CardHeader>
         <CardContent className="pb-2 overflow-hidden px-3 sm:px-6">
           {totalAsset === 0 ? (
             <div className="flex h-36 items-center justify-center text-muted-foreground text-sm">등록된 자산이 없습니다.</div>
@@ -360,11 +379,11 @@ export function Dashboard() {
                     <div>
                       <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
                       <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
-                      <p className={`text-[11px] ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
+                      <p className={`text-xs ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
                     </div>
                     <div className="text-right space-y-1.5">
-                      <div className="text-xs"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
-                      <div className="text-xs"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
+                      <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
+                      <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
                     </div>
                   </div>
 
@@ -379,63 +398,7 @@ export function Dashboard() {
                 {/* col-2: 세부 분포 탭 콘텐츠 */}
                 <div>
                   <TabsContent value="all" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                    <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3 space-y-2`}>
-                      <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>자산 구성</p>
-                      {treemapData.filter((d) => d.key !== "liability").map(({ key, name, value, color, pct }) => (
-                        <div key={key} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-foreground">{name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
-                            <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {totalLiability > 0 && (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
-                        <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>부채 구성</p>
-                        {liabTopItems.map(({ key, label, value, color, pct }) => (
-                          <div key={key} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-                              <span className="text-foreground">{label}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(value)}</span>
-                              <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {totalAsset > 0 && totalLiability > 0 && (() => {
-                      const ltv = (totalLiability / totalAsset) * 100;
-                      const ltvColor = ltv < 40 ? MAIN_PALETTE[4] : ltv < 70 ? MAIN_PALETTE[3] : MAIN_PALETTE[1];
-                      const ltvLabel = ltv < 40 ? "안전" : ltv < 70 ? "주의" : "위험";
-                      return (
-                        <div className="rounded-lg border px-4 py-3 space-y-2" style={{ borderColor: ltvColor + "55", backgroundColor: ltvColor + "11" }}>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-muted-foreground">LTV (부채비율)</p>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: ltvColor, backgroundColor: ltvColor + "22" }}>{ltvLabel}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(ltv, 100)}%`, backgroundColor: ltvColor }} />
-                            </div>
-                            <span className="text-sm font-extrabold tabular-nums" style={{ color: ltvColor }}>{ltv.toFixed(1)}%</span>
-                          </div>
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                            <span>0%</span>
-                            <span style={{ color: MAIN_PALETTE[4] }}>40% 안전</span>
-                            <span style={{ color: MAIN_PALETTE[3] }}>70% 주의</span>
-                            <span style={{ color: MAIN_PALETTE[1] }}>위험</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    <DailyNetAssetTrend />
                   </TabsContent>
 
                   {financialTotal > 0 && (
@@ -444,11 +407,11 @@ export function Dashboard() {
                         <div>
                           <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(financialTotal)}</p>
-                          <p className="text-[11px] text-foreground">{formatCurrency(financialTotal)}</p>
+                          <p className="text-sm text-foreground">{formatCurrency(financialTotal)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {financialBarItems.map(({ key, label, value }) => (
-                            <div key={key} className="text-xs">
+                            <div key={key} className="text-[12px]">
                               <span className="text-muted-foreground">{label} </span>
                               <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
                             </div>
@@ -460,36 +423,6 @@ export function Dashboard() {
                         <p className={`text-xs font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
-
-                      {summary.stockValue > 0 && stockCatBarItems.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={`font-semibold ${ASSET_THEME.text.muted}`}>주식</span>
-                            <span className={`font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(summary.stockValue)}</span>
-                          </div>
-                          <SectionBar items={stockCatBarItems} total={summary.stockValue} />
-                        </div>
-                      )}
-
-                      {summary.cryptoValue > 0 && cryptoBarItems.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={`font-semibold ${ASSET_THEME.text.muted}`}>암호화폐</span>
-                            <span className={`font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(summary.cryptoValue)}</span>
-                          </div>
-                          <SectionBar items={cryptoBarItems} total={summary.cryptoValue} />
-                        </div>
-                      )}
-
-                      {summary.cashValue > 0 && cashTypeBarItems.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={`font-semibold ${ASSET_THEME.text.muted}`}>현금성 자산</span>
-                            <span className={`font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(summary.cashValue)}</span>
-                          </div>
-                          <SectionBar items={cashTypeBarItems} total={summary.cashValue} />
-                        </div>
-                      )}
 
                       <p className="text-muted-foreground text-xs pb-1">
                         주식 <span className="font-bold text-foreground">{summary.stockCount}개</span>
@@ -506,7 +439,7 @@ export function Dashboard() {
                         <div>
                           <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.realEstateValue)}</p>
-                          <p className="text-[11px] text-foreground">{formatCurrency(summary.realEstateValue)}</p>
+                          <p className="text-sm text-foreground">{formatCurrency(summary.realEstateValue)}</p>
                         </div>
                       </div>
 
@@ -516,24 +449,6 @@ export function Dashboard() {
                           <SectionBar items={realEstateCatBarItems} total={summary.realEstateValue} />
                         </div>
                       )}
-
-                      {realEstateCatBarItems.map(({ key: catKey, label: catLabel, value: catTotal, color: catColor }) => {
-                        const items = sortedRealEstate
-                          .filter((r) => r.type === catKey)
-                          .map((r) => ({ key: r.id, label: r.name, value: r.currentValue, color: catColor }));
-                        if (items.length === 0) return null;
-                        const colors = assignColors(items);
-                        const coloredItems = items.map((d, i) => ({ ...d, color: colors[i] }));
-                        return (
-                          <div key={catKey} className="space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className={`font-semibold ${ASSET_THEME.text.muted}`}>{catLabel}</span>
-                              <span className={`font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(catTotal)}</span>
-                            </div>
-                            <SectionBar items={coloredItems} total={catTotal} />
-                          </div>
-                        );
-                      })}
 
                       <p className="text-muted-foreground text-xs pb-1">총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중</p>
                     </TabsContent>
@@ -545,11 +460,11 @@ export function Dashboard() {
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground">부채 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</p>
-                          <p className="text-[11px] text-foreground">{formatCurrency(totalLiability)}</p>
+                          <p className="text-sm text-muted-foreground">{formatCurrency(totalLiability)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (
-                            <div key={key} className="text-xs">
+                            <div key={key} className="text-[12px]">
                               <span className="text-muted-foreground">{label} </span>
                               <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
                               <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
@@ -562,16 +477,6 @@ export function Dashboard() {
                         <div className="space-y-2">
                           <p className={`text-xs font-semibold ${ASSET_THEME.text.default}`}>부채 구성</p>
                           <SectionBar items={liabTopItems} total={totalLiability} />
-                        </div>
-                      )}
-
-                      {summary.loanBalance > 0 && loanBarItems.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={`font-semibold ${ASSET_THEME.text.muted}`}>대출</span>
-                            <span className={`font-bold tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrency(summary.loanBalance)}</span>
-                          </div>
-                          <SectionBar items={loanBarItems} total={summary.loanBalance} />
                         </div>
                       )}
 

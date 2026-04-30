@@ -72,7 +72,7 @@ export function AssetDetailTabs() {
       <TabsList className={NAV_LIST}>
         {DETAIL_TABS.map(({ value, label, icon: Icon }) => (
           <TabsTrigger key={value} value={value} className={NAV_TRIGGER}>
-            <Icon className="size-3 shrink-0" />
+            <Icon className="size-3.5 shrink-0" />
             {label}
           </TabsTrigger>
         ))}

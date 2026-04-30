@@ -150,21 +150,21 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-xs font-semibold truncate">{stock.name || ticker}</p>
+                      <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
                       {frequency && (
                         <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0">
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">{ticker}</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">{ticker}</p>
                   </div>
                   <div className="flex flex-wrap gap-0.5 justify-end max-w-[8rem]">
                     {payoutMonths.map((m) => (
                       <Badge
                         key={m}
                         variant={m === selectedMonth ? "default" : "outline"}
-                        className="text-[11px] px-1 py-0 h-4"
+                        className="text-xs px-1 py-0 h-4"
                       >
                         {m}월
                       </Badge>
@@ -173,18 +173,18 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                   <div className="text-right">
                     {!isDomestic && currency === "USD" ? (
                       <>
-                        <p className="text-xs tabular-nums text-muted-foreground">${perShareForeign.toFixed(4)}</p>
-                        <p className="text-[10px] tabular-nums text-muted-foreground/60">{perShareKRW.toLocaleString()}원</p>
+                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">${perShareForeign.toFixed(4)}</p>
+                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground/60">{perShareKRW.toLocaleString()}원</p>
                       </>
                     ) : (
-                      <p className="text-xs tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
+                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
                     )}
                   </div>
                   <div className="text-right">
                     {!isDomestic && currency === "USD" && (
-                      <p className="text-[10px] tabular-nums text-muted-foreground/60">${annualForeign.toFixed(2)}</p>
+                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground/60">${annualForeign.toFixed(2)}</p>
                     )}
-                    <p className={`text-xs font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+                    <p className={`text-xs sm:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                       {formatCurrency(annualTotal)}
                     </p>
                   </div>

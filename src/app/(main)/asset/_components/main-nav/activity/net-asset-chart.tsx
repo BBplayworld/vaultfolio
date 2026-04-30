@@ -352,7 +352,7 @@ export function YearlyNetAssetChart() {
                             position="top"
                             offset={13}
                             formatter={(v: number) => formatShortCurrency(v)}
-                            style={{ fill: NET_COLOR, fontSize: 11, fontWeight: 600 }}
+                            style={{ fill: NET_COLOR, fontSize: 12, fontWeight: 600 }}
                           />
                         </Area>
                       </AreaChart>
@@ -360,7 +360,7 @@ export function YearlyNetAssetChart() {
                   </ChartContainer>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">년도별 순자산</h4>
+                    <h4 className="text-xs font-semibold text-muted-foreground">년도별 순자산</h4>
                     <div className="space-y-2">
                       {allYearlyData.map((item, idx) => {
                         const isCurrentYear = item.year === currentYear;
@@ -376,14 +376,14 @@ export function YearlyNetAssetChart() {
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-muted-foreground font-semibold">{item.year}년</span>
+                                <span className="text-sm font-semibold text-muted-foreground">{item.year}년</span>
                                 {isCurrentYear && (
                                   <Badge variant="outline" className={ASSET_THEME.categoryBox}>
                                     올해
                                   </Badge>
                                 )}
                                 {diff !== null && diffPct !== null && (
-                                  <span className={`text-xs font-medium ${getProfitLossColor(diff)}`}>
+                                  <span className={`text-sm font-medium ${getProfitLossColor(diff)}`}>
                                     {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
                                   </span>
                                 )}
@@ -394,11 +394,11 @@ export function YearlyNetAssetChart() {
                             </div>
                             {!isCurrentYear && (
                               <div className="flex gap-2">
-                                <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                                  <Pencil className="size-4" />
+                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => handleEdit(item)}>
+                                  <Pencil className="size-3.5" />
                                 </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleDelete(item.year)}>
-                                  <Trash2 className="size-4" />
+                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => handleDelete(item.year)}>
+                                  <Trash2 className="size-3.5" />
                                 </Button>
                               </div>
                             )}
@@ -467,16 +467,16 @@ export function YearlyNetAssetChart() {
                           <LabelList
                             dataKey="netAsset"
                             position="top"
-                            offset={20}
+                            offset={22}
                             formatter={(v: number) => formatShortCurrencyDecimal(v)}
-                            style={{ fill: ASSET_THEME.importantHex, fontSize: 10, fontWeight: 700 }}
+                            style={{ fill: ASSET_THEME.importantHex, fontSize: 12, fontWeight: 700 }}
                           />
                           <LabelList
                             dataKey="financialAsset"
                             position="top"
                             offset={6}
                             formatter={(v: number) => formatShortCurrencyDecimal(v)}
-                            style={{ fill: NET_COLOR, fontSize: 9, fontWeight: 500 }}
+                            style={{ fill: NET_COLOR, fontSize: 12, fontWeight: 500 }}
                           />
                         </Bar>
                       </BarChart>
@@ -497,10 +497,10 @@ export function YearlyNetAssetChart() {
                         const diff = prev ? row.netAsset - prev.netAsset : null;
                         return (
                           <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_1fr] gap-x-2 px-3 py-2 items-center">
-                            <span className="text-xs font-semibold text-muted-foreground">{row.month}</span>
-                            <span className={`text-xs font-bold tabular-nums text-right ${ASSET_THEME.important}`}>{formatShortCurrencyDecimal(row.netAsset)}</span>
-                            <span className={`text-xs tabular-nums text-right ${ASSET_THEME.text.default}`}>{formatShortCurrencyDecimal(row.financialAsset)}</span>
-                            <span className={`text-xs font-semibold tabular-nums text-right ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
+                            <span className="text-sm font-semibold text-muted-foreground">{row.month}</span>
+                            <span className={`text-sm font-bold tabular-nums text-right ${ASSET_THEME.important}`}>{formatShortCurrencyDecimal(row.netAsset)}</span>
+                            <span className={`text-sm tabular-nums text-right ${ASSET_THEME.text.default}`}>{formatShortCurrencyDecimal(row.financialAsset)}</span>
+                            <span className={`text-sm font-semibold tabular-nums text-right ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
                               {diff !== null ? `${diff >= 0 ? "+" : ""}${formatShortCurrency(diff)}` : "-"}
                             </span>
                           </div>
@@ -543,46 +543,50 @@ export function YearlyNetAssetChart() {
                 return (
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-muted-foreground">{yearStr}년 {parseInt(monthStr)}월</p>
-                    <div className="grid grid-cols-7 gap-1">
-                      {["일", "월", "화", "수", "목", "금", "토"].map(d => (
-                        <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
-                      ))}
-                      {cells.map((cell, i) => {
-                        if (!cell) {
-                          return <div key={`empty-${i}`} className="rounded-lg bg-muted/20 h-14 sm:h-24" />;
-                        }
-                        const hasData = cell.netAsset !== null;
-                        const isToday = cell.date === todayStr;
-                        const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
-                        const prev = dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
-                        const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
-                        return (
-                          <div
-                            key={cell.date}
-                            className={`rounded-lg border p-1 sm:p-1.5 flex flex-col transition-colors relative h-22 sm:h-24 ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/10"
-                              }`}
-                          >
-                            <p className={`absolute top-1 left-1 text-[11px] sm:text-[13px] font-semibold tabular-nums leading-none ${isToday ? "text-foreground" : "text-muted-foreground"}`}>
-                              {parseInt(cell.date.split("/")[1])}
-                            </p>
-                            {hasData ? (
-                              <div className="flex flex-col items-center gap-[3px] sm:gap-[5px] pt-[14px] sm:pt-[18px]">
-                                <p className={`text-[9px] sm:text-[13px] font-bold truncate leading-none ${ASSET_THEME.important}`}>
-                                  {formatShortCurrencyDecimal(cell.netAsset)}
+                    <div className="space-y-0.5">
+                      {/* 요일 헤더 */}
+                      <div className="grid grid-cols-7 gap-0.5">
+                        {["일", "월", "화", "수", "목", "금", "토"].map(d => (
+                          <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
+                        ))}
+                      </div>
+                      {/* 주 단위 행 */}
+                      {Array.from({ length: Math.ceil(cells.length / 7) }, (_, weekIdx) => (
+                        <div key={weekIdx} className="grid grid-cols-7 gap-0.5">
+                          {cells.slice(weekIdx * 7, weekIdx * 7 + 7).map((cell, i) => {
+                            if (!cell) {
+                              return <div key={`empty-${weekIdx}-${i}`} className="rounded-md bg-muted/20 h-24 sm:h-28" />;
+                            }
+                            const hasData = cell.netAsset !== null;
+                            const isToday = cell.date === todayStr;
+                            const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
+                            const prev = dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
+                            const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
+                            return (
+                              <div
+                                key={cell.date}
+                                className={`rounded-md border p-1 flex flex-col transition-colors relative h-24 sm:h-28 ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/10"}`}
+                              >
+                                <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-semibold tabular-nums leading-none ${isToday ? "text-foreground" : "text-muted-foreground"}`}>
+                                  {parseInt(cell.date.split("/")[1])}
                                 </p>
-                                <p className="text-[8px] sm:text-[12px] truncate leading-none text-foreground">
-                                  {formatShortCurrencyDecimal(cell.financialAsset)} <span>(금융자산)</span>
-                                </p>
-                                {diff !== null ? (
-                                  <p className={`text-[9px] sm:text-[13px] font-medium leading-none ${getProfitLossColor(diff)}`}>
-                                    {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
-                                  </p>
+                                {hasData ? (
+                                  <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[18px] w-full">
+                                    <p className={`text-xs sm:text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
+                                      {formatShortCurrencyDecimal(cell.netAsset)}
+                                    </p>
+                                    {diff !== null ? (
+                                      <p className={`text-[11px] sm:text-xs font-medium leading-none text-center w-full ${getProfitLossColor(diff)}`}>
+                                        {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
+                                      </p>
+                                    ) : null}
+                                  </div>
                                 ) : null}
                               </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                     <div className="text-xs text-muted-foreground text-right">
                       총 {dailyChartData.length}일 기록됨

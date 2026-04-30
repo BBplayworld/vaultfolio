@@ -23,18 +23,18 @@ const CAT_LIST = ASSET_THEME.tabList3;
 const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
 const ETF_DOMAIN: Record<string, string> = {
-  TIGER:     "www.tigeretf.com",
-  KODEX:     "www.samsungfund.com",
-  ACE:       "www.aceetf.co.kr",
-  KINDEX:    "www.aceetf.co.kr",
-  HANARO:    "www.hanaroetf.com",
-  SOL:       "www.shinhansec.com",
-  RISE:      "www.kbam.co.kr",
-  KBSTAR:    "www.kbam.co.kr",
-  ARIRANG:   "www.hanwhafund.co.kr",
-  BIG:       "www.hanwhafund.co.kr",
-  PLUS:      "www.hanwhafund.co.kr",
-  KOSEF:     "www.wooriasset.co.kr",
+  TIGER: "www.tigeretf.com",
+  KODEX: "www.samsungfund.com",
+  ACE: "www.aceetf.co.kr",
+  KINDEX: "www.aceetf.co.kr",
+  HANARO: "www.hanaroetf.com",
+  SOL: "www.shinhansec.com",
+  RISE: "www.kbam.co.kr",
+  KBSTAR: "www.kbam.co.kr",
+  ARIRANG: "www.hanwhafund.co.kr",
+  BIG: "www.hanwhafund.co.kr",
+  PLUS: "www.hanwhafund.co.kr",
+  KOSEF: "www.wooriasset.co.kr",
   TIMEFOLIO: "www.timefolio.co.kr",
 };
 
@@ -112,14 +112,14 @@ export function StockBarChart({ items, total }: {
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 px-2">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-2">
         {items.map(({ stock, value: v, color }) => {
           const pct = (v / total) * 100;
           return (
             <div key={stock.id} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs text-foreground">{stock.name}</span>
-              <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+              <span className="text-xs text-foreground truncate">{stock.name}</span>
+              <span className="text-xs font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
             </div>
           );
         })}
@@ -226,7 +226,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`font-semibold truncate ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{stock.name}</span>
-          {stock.ticker && <span className="text-[11px] text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
+          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className="text-xs text-foreground">{stock.quantity.toLocaleString()}주</span>
@@ -236,7 +236,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
       </div>
       <div className="text-right flex-shrink-0">
         <p className={`font-bold tabular-nums ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{fmt(currentVal)}</p>
-        <p className={`text-[11px] mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
+        <p className={`text-xs mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
           {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
         </p>
       </div>
@@ -262,16 +262,16 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       <div>
         <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
         <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
-        {!screenshotMode && <p className="text-[11px] text-foreground">{formatCurrency(totalValue)}</p>}
+        <p className="text-sm text-foreground">{formatCurrency(totalValue)}</p>
       </div>
       <div className="text-right space-y-1">
         <div>
           <p className="text-xs text-muted-foreground">평가손익</p>
-          <p className={`${screenshotMode ? "text-[13px]" : "text-lg"} font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
+          <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
             {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
           </p>
           {currencyGain !== undefined && currencyGain !== 0 && (
-            <p className={`text-[11px] tabular-nums ${getProfitLossColor(currencyGain)}`}>
+            <p className={`text-xs tabular-nums ${getProfitLossColor(currencyGain)}`}>
               <span className="text-muted-foreground">환차손익</span> {!hideAmounts && (currencyGain >= 0 ? "+" : "")}{fmt(Math.round(currencyGain))} 포함
             </p>
           )}
@@ -279,7 +279,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
         {dailyProfit != null && dailyProfitRate != null && (
           <div className="border-t border-border/40">
             <p className="text-xs text-muted-foreground">전일 대비</p>
-            <p className={`${screenshotMode ? "text-[13px]" : "text-sm"} font-semibold tabular-nums ${getProfitLossColor(dailyProfit)}`}>
+            <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(dailyProfit)}`}>
               {!hideAmounts && (dailyProfit >= 0 ? "+" : "")}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
             </p>
           </div>
@@ -327,13 +327,13 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{stock.name}</span>
-                  {stock.ticker && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{getCategoryLabel(stock.category)}</Badge>
+                  {stock.ticker && <span className="text-xs sm:text-sm text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
+                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{getCategoryLabel(stock.category)}</Badge>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-[11px] text-foreground">{stock.quantity.toLocaleString()}주</span>
-                  <span className="text-[11px] text-muted-foreground">·</span>
-                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
+                  <span className="text-sm text-muted-foreground">·</span>
+                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -348,10 +348,10 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           </CollapsibleTrigger>
           <div className={ASSET_THEME.cardActions}>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
-              <Pencil className="size-3" />
+              <Pencil className="size-3.5" />
             </Button>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(stock.id)}>
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
@@ -365,38 +365,38 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
               <div>
-                <p className="text-xs text-muted-foreground">매입가</p>
-                <p className="text-sm font-medium">{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
-                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
+                <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
+                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">총 매입금액</p>
-                <p className="text-sm font-medium">{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                <p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p>
+                <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
+                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">현재가</p>
-                <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
-                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
+                <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
+                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">총 평가금액</p>
-                <p className="text-sm font-semibold" style={{ color: MAIN_PALETTE[5] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className="text-[11px] text-muted-foreground">₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                <p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p>
+                <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
+                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
             </div>
             {isForeign && (
               <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5">
                 <div>
-                  <p className="text-xs text-muted-foreground">환차손익</p>
-                  <p className={`text-sm font-semibold ${getProfitLossColor(currencyGain)}`}>
+                  <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
                     {formatCurrencyDisplay(Math.round(currencyGain))}
                     <span className="text-xs ml-1">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">매입환율</p>
-                  <p className="text-xs text-foreground">
+                  <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
+                  <p className={ASSET_THEME.cardDetailValue}>
                     {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
                       ? stock.currency === "JPY" ? `¥100 = ₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1 = ₩${stock.purchaseExchangeRate.toLocaleString()}`
                       : "미입력 (현재환율)"}
@@ -405,25 +405,22 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
               </div>
             )}
             {linkedLoans.length > 0 && (
-              <div className="px-4 py-2.5 space-y-1.5 bg-muted/10">
-                <p className="text-[11px] font-semibold text-muted-foreground">주식담보대출</p>
+              <div className={ASSET_THEME.cardLoanSection}>
+                <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />주식담보대출</p>
                 {linkedLoans.map((loan) => (
-                  <div key={loan.id} className={ASSET_THEME.liabilityBadge}>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <CreditCard className="size-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground truncate">{loan.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`font-semibold tabular-nums ${ASSET_THEME.liability}`}>-{formatCurrency(loan.balance)}</span>
-                      <span className="text-muted-foreground">{loan.interestRate}%</span>
+                  <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
+                    <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatCurrency(loan.balance)}</span>
+                      <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
-              <span className="flex items-center gap-1"><Clock className="size-3" /><span className="font-medium text-foreground">{holdingDays.toLocaleString()}일 보유</span></span>
-              <span className="flex items-center gap-1"><Calendar className="size-3" /><span className="font-medium text-foreground">{stock.purchaseDate} 매수</span></span>
+              <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{holdingDays.toLocaleString()}일 보유</span></span>
+              <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
               {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
             </div>
           </div>
@@ -543,19 +540,19 @@ export function StockTab() {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex flex-wrap gap-x-5 gap-y-1.5 px-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
                   {barItems.map(({ stock, value: v, color }) => {
                     const pct = (v / totalValue) * 100;
                     return (
                       <div key={stock.id} className="flex items-center gap-1">
                         <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs text-foreground">{stock.name}</span>
-                        <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                        <span className="text-xs sm:text-sm text-foreground truncate">{stock.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
                       </div>
                     );
                   })}

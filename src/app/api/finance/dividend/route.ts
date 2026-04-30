@@ -55,13 +55,18 @@ export async function GET(request: Request) {
 
   const accessToken = await getKisAccessToken(todayStr);
   if (!accessToken) {
+    console.error(`[배당 조회 실패 - ${ticker}]: KIS 액세스 토큰 발급 실패`);
     return NextResponse.json([], { status: 200 });
   }
+
+  console.log(`[배당 조회 시작 - ${ticker}]: type=${type}, excd=${excd}, 기간=${fdt}~${tdt}`);
 
   const results =
     type === "domestic"
       ? await fetchDividendDomestic(ticker, fdt, tdt, accessToken, KIS_APP_KEY, KIS_APP_SECRET)
       : await fetchDividendOverseas(ticker, excd, fdt, tdt, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+
+  console.log(`[배당 조회 완료 - ${ticker}]: ${results.length}건`);
 
   // 3단계: 캐시 저장
   await storage.setDividend(cacheKey, results);

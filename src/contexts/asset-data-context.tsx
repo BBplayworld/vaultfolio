@@ -344,7 +344,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
-    void initAndSync(data, { skipSnapshots: true });
+    void initAndSync(data);
   }, [initAndSync]);
 
   // ─── [이벤트 핸들러] ────────────────────────────────────────────────────────

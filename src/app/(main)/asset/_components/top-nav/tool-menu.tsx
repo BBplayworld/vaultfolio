@@ -246,13 +246,13 @@ export function NavUser({
             <DropdownMenuTrigger asChild>
               <SidebarcategoryBox
                 size="lg"
-                className="h-7 sm:h-9 px-1.5 sm:px-2 text-white hover:text-white transition-colors border-none"
+                className="h-9 sm:h-10 px-1.5 sm:px-2 text-white hover:text-white transition-colors border-none"
                 style={{ backgroundColor: MAIN_PALETTE[0] }}
               >
                 <div className="grid flex-1 text-left leading-tight ml-0.5 sm:ml-1">
-                  <span className="truncate font-bold tracking-tighter uppercase text-[10px] sm:text-[11px]">자산 도구</span>
+                  <span className="truncate font-bold tracking-tighter uppercase text-[11px] sm:text-xs">자산 도구</span>
                 </div>
-                <CircleChevronDown className="ml-auto size-3 sm:size-3.5 opacity-70" />
+                <CircleChevronDown className="ml-auto size-3.5 sm:size-4 opacity-70" />
               </SidebarcategoryBox>
             </DropdownMenuTrigger>
             <DropdownMenuContent

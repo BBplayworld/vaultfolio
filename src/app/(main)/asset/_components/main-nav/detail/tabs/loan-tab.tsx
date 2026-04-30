@@ -56,12 +56,12 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{loan.name}</span>
                   <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
-                  {loan.institution && <span className="text-[11px] text-muted-foreground shrink-0">({loan.institution})</span>}
+                  {loan.institution && <span className="text-xs text-muted-foreground shrink-0">({loan.institution})</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-[11px] text-muted-foreground">금리 {loan.interestRate}%</span>
-                  <span className="text-[11px] text-muted-foreground">·</span>
-                  <span className="text-[11px] font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-xs text-muted-foreground">금리 {loan.interestRate}%</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -72,10 +72,10 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
           </CollapsibleTrigger>
           <div className={ASSET_THEME.cardActions}>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
-              <Pencil className="size-3" />
+              <Pencil className="size-3.5" />
             </Button>
             <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(loan.id)}>
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
@@ -87,38 +87,38 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
               <div>
-                <p className="text-xs text-muted-foreground">대출일</p>
-                <p className="text-sm font-medium">{loan.startDate}</p>
-                <p className="text-[11px] text-muted-foreground">{formatDaysToYMD(daysElapsed)} 경과</p>
+                <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
+                <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>
+                <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysElapsed)} 경과</p>
               </div>
               {loan.endDate && (
                 <div>
-                  <p className="text-xs text-muted-foreground">만기일</p>
-                  <p className={`text-sm font-semibold ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
-                  {daysRemaining !== null && <p className="text-[11px] text-muted-foreground">{formatDaysToYMD(daysRemaining)} 남음</p>}
+                  <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
+                  {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
                 </div>
               )}
             </div>
             {linkedRealEstate && (
-              <div className="flex items-center gap-2 px-4 py-2 text-xs bg-primary/5">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5">
                 <MapPin className="size-3 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground">연계 부동산</span>
-                <span className="font-medium text-primary truncate">{linkedRealEstate.name}</span>
+                <span className={ASSET_THEME.cardDetailLabel}>연계 부동산</span>
+                <span className="text-sm font-medium text-primary truncate">{linkedRealEstate.name}</span>
               </div>
             )}
             {linkedStock && (
-              <div className="flex items-center gap-2 px-4 py-2 text-xs bg-primary/5">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5">
                 <TrendingUp className="size-3 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground">연계 주식</span>
-                <span className="font-medium text-primary truncate">{linkedStock.name}</span>
-                {linkedStock.ticker && <span className="text-muted-foreground">({linkedStock.ticker})</span>}
+                <span className={ASSET_THEME.cardDetailLabel}>연계 주식</span>
+                <span className="text-sm font-medium text-primary truncate">{linkedStock.name}</span>
+                {linkedStock.ticker && <span className={ASSET_THEME.cardDetailLabel}>({linkedStock.ticker})</span>}
               </div>
             )}
             {linkedCash && (
-              <div className="flex items-center gap-2 px-4 py-2 text-xs bg-primary/5">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5">
                 <Banknote className="size-3 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground">연계 예금</span>
-                <span className="font-medium text-primary truncate">{linkedCash.name}</span>
+                <span className={ASSET_THEME.cardDetailLabel}>연계 예금</span>
+                <span className="text-sm font-medium text-primary truncate">{linkedCash.name}</span>
               </div>
             )}
             {loan.description && <div className="px-4 py-2 text-sm text-primary bg-muted"># {loan.description}</div>}
@@ -162,7 +162,7 @@ export function LoanTab() {
 
   const renderLoanCard = (loan: Loan) => {
     const pct = totalBalance > 0 ? (loan.balance / totalBalance) * 100 : 0;
-    const color = LOAN_TYPE_COLORS[loan.type] ?? MAIN_PALETTE[0];
+    const color = LOAN_TYPE_COLORS[loan.type] ?? MAIN_PALETTE[10];
     const typeLabel = loanTypes.find((t) => t.value === loan.type)?.label ?? loan.type;
     const daysElapsed = calculateHoldingDays(loan.startDate);
     const daysRemaining = loan.endDate ? calculateHoldingDays(loan.endDate) : null;
@@ -181,7 +181,7 @@ export function LoanTab() {
         <div>
           <p className="text-xs text-muted-foreground font-semibold">총 대출 잔액</p>
           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalBalance)}</p>
-          <p className="text-[11px] text-foreground">{formatCurrency(totalBalance)}</p>
+          <p className="text-xs text-foreground">{formatCurrency(totalBalance)}</p>
         </div>
         <div className="text-right space-y-1">
           {loanBarItems.map((d) => (
@@ -211,19 +211,19 @@ export function LoanTab() {
                     const pct = (v / filteredTotal) * 100;
                     return (
                       <div key={loan.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
                   {loanBarItems.map(({ loan, value: v, color }) => {
                     const pct = (v / filteredTotal) * 100;
                     return (
                       <div key={loan.id} className="flex items-center gap-1">
                         <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs text-foreground">{loan.name}</span>
-                        <span className="text-xs font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                        <span className="text-xs sm:text-sm text-foreground">{loan.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
                       </div>
                     );
                   })}
