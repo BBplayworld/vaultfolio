@@ -29,8 +29,12 @@ const CATEGORY_GROUPS = [
 async function fetchDividend(ticker: string, type: string, excd: string): Promise<DividendPayoutResult[]> {
   const params = new URLSearchParams({ ticker, type, excd });
   const res = await fetch(`/api/finance/dividend?${params}`);
+  const json = await res.json();
+  if (json.messages) {
+    console.log(`[API Logs - ${ticker}]`, json.messages);
+  }
   if (!res.ok) return [];
-  return res.json();
+  return json.data || [];
 }
 
 interface StockDividendRow {
