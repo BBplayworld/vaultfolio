@@ -53,6 +53,37 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
   const captureImage = async () => {
     if (!cardRef.current) return null;
     const { toPng } = await import("html-to-image");
+
+    // 캡처 전 모든 <img>를 직접 fetch → dataURL로 인라인
+    // (html-to-image가 동일 src를 캐싱해 첫 이미지로 덮어쓰는 문제 회피)
+    const imgs = Array.from(cardRef.current.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map(async (img) => {
+        const src = img.getAttribute("src");
+        if (!src || src.startsWith("data:")) return;
+        try {
+          const res = await fetch(src);
+          if (!res.ok) return;
+          const blob = await res.blob();
+          const dataUrl: string = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          img.setAttribute("src", dataUrl);
+          if (!(img.complete && img.naturalWidth > 0)) {
+            await new Promise<void>((resolve) => {
+              img.addEventListener("load", () => resolve(), { once: true });
+              img.addEventListener("error", () => resolve(), { once: true });
+            });
+          }
+        } catch {
+          // 실패 시 원본 src 유지 — onError로 initial 표시됨
+        }
+      }),
+    );
+
     return toPng(cardRef.current, { pixelRatio: 2, skipFonts: false });
   };
 
@@ -100,7 +131,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px] max-h-[90dvh] flex flex-col"}`}>
+      <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px] max-h-[90dvh] flex flex-col"}`}>
         {/* 헤더 — 캡처 모드에서 숨김 */}
         {!isCaptureMode && (
           <DialogHeader className="px-5 pt-5 pb-3">
@@ -212,7 +243,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         )}
 
         {/* 카드 미리보기 */}
-        <div className={`overflow-y-auto flex-1 ${isCaptureMode ? "h-dvh p-2 sm:p-4" : "p-2 sm:p-4"}`}>
+        <div className={`overflow-y-auto flex-1 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none ${isCaptureMode ? "h-dvh p-2 sm:p-4" : "p-2 sm:p-4"}`}>
           {/* 캡처 모드 해제 버튼 */}
           {isCaptureMode && (
             <div className="flex justify-end mb-2">

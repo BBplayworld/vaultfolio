@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 
@@ -30,7 +30,7 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
           const pct = (value / total) * 100;
           return (
             <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
-              {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(0)}%</span>}
+              {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
             </div>
           );
         })}
@@ -42,8 +42,8 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
             <div key={key} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <span className="text-[13px] text-muted-foreground">{label}</span>
-              <span className="text-[13px] font-bold text-primary">{pct.toFixed(1)}%</span>
-              <span className="text-[13px] text-foreground">({formatShortCurrency(value)})</span>
+              <span className="text-[13px] text-foreground">{formatShortCurrency(value)}</span>
+              <span className="text-[13px] font-bold text-primary">({pct.toFixed(1)}%)</span>
             </div>
           );
         })}
@@ -88,8 +88,8 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   if (items.length === 0) return null;
   return (
     <div className="space-y-3">
-      <ResponsiveContainer width="100%" height={screenshotMode ? 220 : 260} className={screenshotMode ? "" : "sm:!h-[360px]"} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
-        <PieChart>
+      <ResponsiveContainer width="100%" height={screenshotMode ? 220 : 260} className={`[&_*]:outline-none [&_path]:outline-none ${screenshotMode ? "" : "sm:!h-[360px]"}`} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
+        <PieChart style={{ outline: "none" }}>
           <Pie
             data={items}
             dataKey="value"
@@ -101,7 +101,10 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
             labelLine={false}
             label={({ key, ...props }) => <DonutLabel key={key} itemKey={key} activeTab={activeTab} maskFn={maskFn} {...props} />}
             onClick={(data) => { if (!screenshotMode && data?.key && onSegmentClick) onSegmentClick(data.key as string); }}
-            style={{ cursor: screenshotMode ? "default" : "pointer" }}
+            style={{ cursor: screenshotMode ? "default" : "pointer", outline: "none" }}
+            rootTabIndex={-1}
+            isAnimationActive={false}
+            activeShape={(props: React.ComponentProps<typeof Sector>) => <Sector {...props} outerRadius={screenshotMode ? 110 : 130} strokeWidth={0} stroke="none" />}
           >
             {items.map((item, i) => {
               const isAll = !activeTab || activeTab === "all";
@@ -110,11 +113,15 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
                 <Cell
                   key={i}
                   fill={item.color}
+                  stroke="var(--card)"
+                  strokeWidth={2}
+                  tabIndex={-1}
                   style={{
                     opacity: isAll || isActive ? 1 : 0.1,
                     filter: isActive ? "brightness(1.15)" : undefined,
                     transition: "opacity 0.2s, filter 0.2s",
                     cursor: screenshotMode ? "default" : "pointer",
+                    outline: "none",
                   }}
                 />
               );
@@ -166,7 +173,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
               <span className={`rounded-full flex-shrink-0 size-2.5`} style={{ backgroundColor: color }} />
               <span className={`text-foreground truncate text-sm`}>{name}</span>
               <span className={`ml-auto text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.default}`}>{fmt(value)}</span>
-              <span className={`font-bold text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.muted}`}>({pct.toFixed(1)}%)</span>
+              <span className={`font-bold text-sm`} style={{ color: color }}>({pct.toFixed(1)}%)</span>
             </div>
           );
         })}
@@ -227,21 +234,27 @@ function DailyNetAssetTrend() {
     } catch { }
   }, []);
 
-  if (snapshots.length < 2) return null;
+  if (snapshots.length === 0) return null;
 
   const maxVal = Math.max(...snapshots.map((s) => s.netAsset));
   const minVal = Math.min(...snapshots.map((s) => s.netAsset));
   const range = maxVal - minVal || 1;
+
+  const last = snapshots[snapshots.length - 1];
+  const secondLast = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
+  const lastDiff = secondLast ? last.netAsset - secondLast.netAsset : 0;
+  const lastPct = secondLast && secondLast.netAsset > 0 ? (lastDiff / secondLast.netAsset) * 100 : 0;
+  const isBigLast = lastPct >= 5 || lastPct <= -5;
 
   return (
     <div className="rounded-lg border px-4 py-3 space-y-2.5" style={{ borderColor: MAIN_PALETTE[0] + "33", backgroundColor: MAIN_PALETTE[0] + "08" }}>
       <p className="text-xs font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
       <div className="flex gap-1">
         {snapshots.map((snap, i) => {
-          const prev = i > 0 ? snapshots[i - 1].netAsset : snap.netAsset;
-          const diff = snap.netAsset - prev;
-          const pct = prev > 0 ? (diff / prev) * 100 : 0;
-          const isBig = i > 0 && pct >= 5;
+          const prev = i > 0 ? snapshots[i - 1].netAsset : null;
+          const diff = prev !== null ? snap.netAsset - prev : 0;
+          const pct = prev !== null && prev > 0 ? (diff / prev) * 100 : 0;
+          const isBig = prev !== null && pct >= 5;
           const isLast = i === snapshots.length - 1;
           const heightPx = range > 0 ? Math.round(((snap.netAsset - minVal) / range) * 42 + 14) : 56;
           const barColor = isBig ? MAIN_PALETTE[4] : isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
@@ -266,22 +279,13 @@ function DailyNetAssetTrend() {
           );
         })}
       </div>
-      {(() => {
-        const last = snapshots[snapshots.length - 1];
-        const prev = snapshots[snapshots.length - 2];
-        const diff = last.netAsset - prev.netAsset;
-        const pct = prev.netAsset > 0 ? (diff / prev.netAsset) * 100 : 0;
-        const isBig = pct >= 5 || pct <= -5;
-        return (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">전일 대비</span>
-            <span className={`text-sm font-extrabold tabular-nums ${isBig ? "animate-pulse" : ""} ${getProfitLossColor(diff)}`}>
-              {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)}&nbsp;
-              <span className="text-xs font-bold">({diff >= 0 ? "+" : ""}{pct.toFixed(1)}%)</span>
-            </span>
-          </div>
-        );
-      })()}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">전일 대비</span>
+        <span className={`text-sm font-extrabold tabular-nums ${isBigLast ? "animate-pulse" : ""} ${getProfitLossColor(lastDiff)}`}>
+          {lastDiff >= 0 ? "+" : ""}{formatShortCurrency(lastDiff)}&nbsp;
+          <span className="text-xs font-bold">({lastDiff >= 0 ? "+" : ""}{lastPct.toFixed(1)}%)</span>
+        </span>
+      </div>
     </div>
   );
 }
@@ -320,7 +324,7 @@ export function Dashboard() {
     { key: "loans", label: "대출", value: summary.loanBalance },
     { key: "tenant", label: "임차보증금", value: summary.tenantDepositTotal },
   ].filter((d) => d.value > 0).sort((a, b) => b.value - a.value);
-  const liabTopItems = liabTopBase.map((d) => ({ ...d, color: LIABILITY_COLORS[d.key as keyof typeof LIABILITY_COLORS], pct: grossTotal > 0 ? (d.value / grossTotal) * 100 : 0 }));
+  const liabTopItems = liabTopBase.map((d) => ({ ...d, color: LIABILITY_COLORS[d.key as keyof typeof LIABILITY_COLORS], pct: totalLiability > 0 ? (d.value / totalLiability) * 100 : 0 }));
 
   const realEstateCatBase = realEstateTypes
     .map(({ value: type, label }) => ({
@@ -354,7 +358,7 @@ export function Dashboard() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── 자산 분포 카드 (통합) ── */}
-      <Card className={`lg:col-span-2 ${ASSET_THEME.distributionCard.bg} ${ASSET_THEME.distributionCard.border} gap-2`}>
+      <Card className={`lg:col-span-2 gap-2`}>
         <CardContent className="pb-2 overflow-hidden px-3 sm:px-6">
           {totalAsset === 0 ? (
             <div className="flex h-36 items-center justify-center text-muted-foreground text-sm">등록된 자산이 없습니다.</div>
@@ -379,7 +383,7 @@ export function Dashboard() {
                     <div>
                       <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
                       <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
-                      <p className={`text-xs ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
+                      <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
                     </div>
                     <div className="text-right space-y-1.5">
                       <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
@@ -410,12 +414,16 @@ export function Dashboard() {
                           <p className="text-sm text-foreground">{formatCurrency(financialTotal)}</p>
                         </div>
                         <div className="text-right space-y-1">
-                          {financialBarItems.map(({ key, label, value }) => (
-                            <div key={key} className="text-[12px]">
-                              <span className="text-muted-foreground">{label} </span>
-                              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
-                            </div>
-                          ))}
+                          {financialBarItems.map(({ key, label, value }) => {
+                            const pct = financialTotal > 0 ? (value / financialTotal) * 100 : 0;
+                            return (
+                              <div key={key} className="text-[12px]">
+                                <span className="text-muted-foreground">{label} </span>
+                                <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
+                                <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -435,11 +443,23 @@ export function Dashboard() {
 
                   {summary.realEstateValue > 0 && (
                     <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 space-y-2">
+                      <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.realEstateValue)}</p>
                           <p className="text-sm text-foreground">{formatCurrency(summary.realEstateValue)}</p>
+                        </div>
+                        <div className="text-right space-y-1">
+                          {realEstateCatBarItems.map(({ key, label, value }) => {
+                            const pct = summary.realEstateValue > 0 ? (value / summary.realEstateValue) * 100 : 0;
+                            return (
+                              <div key={key} className="text-[12px]">
+                                <span className="text-muted-foreground">{label} </span>
+                                <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
+                                <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -460,7 +480,7 @@ export function Dashboard() {
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground">부채 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</p>
-                          <p className="text-sm text-muted-foreground">{formatCurrency(totalLiability)}</p>
+                          <p className="text-sm text-foreground">{formatCurrency(totalLiability)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (

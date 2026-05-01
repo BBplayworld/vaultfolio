@@ -195,7 +195,7 @@ export function RealEstateTab() {
                       <div key={item.id} className="flex items-center gap-1">
                         <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                         <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
-                        <span className="text-xs sm:text-sm font-bold text-muted-foreground">{pct.toFixed(1)}%</span>
+                        <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                       </div>
                     );
                   })}

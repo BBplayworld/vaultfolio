@@ -164,7 +164,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               {annualTotal > 0 && (
                 <span className={`ml-2 font-semibold ${ASSET_THEME.important}`}>
                   {selectedMonthTotal !== undefined
-                    ? `${selectedMonth}월 ${formatShortCurrency(selectedMonthTotal)}`
+                    ? `월 ${formatShortCurrency(selectedMonthTotal)}`
                     : `연간 ${formatShortCurrency(annualTotal)}`}
                 </span>
               )}

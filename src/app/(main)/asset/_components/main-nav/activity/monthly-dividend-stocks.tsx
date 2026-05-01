@@ -41,6 +41,8 @@ interface StockDividendRow {
   currency: string;
   annualTotal: number;
   annualForeign: number;
+  monthlyTotal: number;
+  monthlyForeign: number;
   frequency?: DividendFrequency;
 }
 
@@ -91,6 +93,13 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
           : 0;
       const perShareForeign = currency === "USD" ? (payouts[0].amountForeign ?? payouts[0].amountPerShare) : 0;
       const perShareKRW = Math.round(payouts[0].amountPerShare * rate);
+      const monthlyTotal = selectedMonth !== undefined && payoutMonths.includes(selectedMonth)
+        ? perShareKRW * stock.quantity
+        : 0;
+      const monthlyForeign =
+        currency === "USD" && selectedMonth !== undefined && payoutMonths.includes(selectedMonth)
+          ? Math.round(perShareForeign * stock.quantity * 100) / 100
+          : 0;
 
       return {
         stock,
@@ -100,6 +109,8 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         currency,
         annualTotal,
         annualForeign,
+        monthlyTotal,
+        monthlyForeign,
         frequency: payouts[0].frequency,
       };
     })
@@ -133,38 +144,40 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[1fr_5rem_3rem_4rem] sm:grid-cols-[1fr_8rem_4rem_5.5rem] gap-x-2 sm:gap-x-3 px-3 py-2 bg-muted/50 text-[10px] font-medium text-muted-foreground border-b">
+          <div className="grid grid-cols-[1fr_5rem_3rem_4rem] sm:grid-cols-[1fr_10rem_6rem_7rem] gap-x-2 sm:gap-x-3 px-3 py-2 bg-muted/50 text-xs sm:text-sm text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
-            <span className="text-right">연간예상</span>
+            <span className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 예상` : "연간예상"}</span>
           </div>
           <div className="divide-y">
-            {filtered.map(({ stock, payoutMonths, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, frequency }) => {
+            {filtered.map(({ stock, payoutMonths, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, monthlyTotal, monthlyForeign, frequency }) => {
               const ticker = normalizeTicker(stock);
               const isDomestic = DOMESTIC_CATEGORIES.has(stock.category);
+              const displayTotal = selectedMonth !== undefined ? monthlyTotal : annualTotal;
+              const displayForeign = selectedMonth !== undefined ? monthlyForeign : annualForeign;
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[1fr_5rem_3rem_4rem] sm:grid-cols-[1fr_8rem_4rem_5.5rem] gap-x-2 sm:gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[1fr_5rem_3rem_4rem] sm:grid-cols-[1fr_10rem_6rem_7rem] gap-x-2 sm:gap-x-3 px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
                       {frequency && (
-                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0">
+                        <Badge className={`${ASSET_THEME.categoryBox} text-[10px] sm:text-xs px-1 py-0 h-4 shrink-0 `}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground">{ticker}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{ticker}</p>
                   </div>
-                  <div className="flex flex-wrap gap-0.5 justify-end max-w-[8rem]">
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1.5 justify-end max-w-[8rem] sm:max-w-[12rem]">
                     {payoutMonths.map((m) => (
                       <Badge
                         key={m}
                         variant={m === selectedMonth ? "default" : "outline"}
-                        className="text-xs px-1 py-0 h-4"
+                        className="text-xs sm:text-sm px-1 py-0 h-4"
                       >
                         {m}월
                       </Badge>
@@ -173,19 +186,20 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                   <div className="text-right">
                     {!isDomestic && currency === "USD" ? (
                       <>
-                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">${perShareForeign.toFixed(4)}</p>
-                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground/60">{perShareKRW.toLocaleString()}원</p>
+                        <p className="text-xs sm:text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
+                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
                       </>
                     ) : (
-                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
+                      <p className="text-xs sm:text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
+                    <p className="text-[10px] sm:text-xs tabular-nums text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
                   <div className="text-right">
                     {!isDomestic && currency === "USD" && (
-                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground/60">${annualForeign.toFixed(2)}</p>
+                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">${displayForeign.toFixed(2)}</p>
                     )}
                     <p className={`text-xs sm:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
-                      {formatCurrency(annualTotal)}
+                      {formatCurrency(displayTotal)}
                     </p>
                   </div>
                 </div>

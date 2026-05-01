@@ -462,7 +462,7 @@ export function YearlyNetAssetChart() {
                         />
                         <Bar dataKey="netAsset" radius={[4, 4, 0, 0]} maxBarSize={40}>
                           {monthlyData.map((_, idx) => (
-                            <Cell key={idx} fill={MAIN_PALETTE[idx % MAIN_PALETTE.length]} />
+                            <Cell key={idx} fill={MAIN_PALETTE[0]} />
                           ))}
                           <LabelList
                             dataKey="netAsset"
@@ -571,12 +571,12 @@ export function YearlyNetAssetChart() {
                                   {parseInt(cell.date.split("/")[1])}
                                 </p>
                                 {hasData ? (
-                                  <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[18px] w-full">
-                                    <p className={`text-xs sm:text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
+                                  <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[25px] w-full">
+                                    <p className={`text-[11px] sm:text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
                                       {formatShortCurrencyDecimal(cell.netAsset)}
                                     </p>
                                     {diff !== null ? (
-                                      <p className={`text-[11px] sm:text-xs font-medium leading-none text-center w-full ${getProfitLossColor(diff)}`}>
+                                      <p className={`text-[12px] sm:text-sm font-medium leading-none text-center sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
                                         {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
                                       </p>
                                     ) : null}

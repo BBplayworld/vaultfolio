@@ -150,6 +150,7 @@ export async function fetchKisToken(
 ): Promise<string | null> {
   if (!appKey || !appSecret) return null;
   try {
+    console.log("[KIS 토큰 발급 시도]: POST /oauth2/tokenP");
     const res = await fetch(
       "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
       {
@@ -164,7 +165,9 @@ export async function fetchKisToken(
       return null;
     }
     const data = await res.json();
-    return (data.access_token as string) ?? null;
+    const token = (data.access_token as string) ?? null;
+    console.log(`[KIS 토큰 발급 결과]: ${token ? "성공" : "실패(access_token 없음)"}, rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}`);
+    return token;
   } catch (e) {
     console.error("[KIS 토큰 발급 오류]:", e);
     return null;
@@ -320,12 +323,16 @@ export async function fetchDividendDomestic(
       },
       cache: "no-store",
     });
+    console.log(`[KIS 국내배당 요청 - ${ticker}]: HTTP ${res.status}`);
     if (!res.ok) {
       console.error(`[KIS 국내배당 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
       return [];
     }
     const data = await res.json();
-    console.log(`[KIS 국내배당 RAW - ${ticker}]:`, JSON.stringify(data));
+    console.log(`[KIS 국내배당 응답 - ${ticker}]: rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}, output1 건수=${Array.isArray(data.output1) ? data.output1.length : "배열아님(" + typeof data.output1 + ")"}`);
+    if (data.rt_cd !== "0") {
+      console.error(`[KIS 국내배당 API 오류 - ${ticker}]: rt_cd=${data.rt_cd}, msg1=${data.msg1}`);
+    }
     const output = data.output1 as Record<string, string>[] | undefined;
     if (!Array.isArray(output)) return [];
     const rows = output

@@ -33,9 +33,9 @@ export async function GET(request: Request) {
     }
 
     try {
-      const upstream = await fetch(upstreamUrl, { signal: AbortSignal.timeout(5000) });
+      const upstream = await fetch(upstreamUrl, { signal: AbortSignal.timeout(5000), redirect: "follow" });
       if (!upstream.ok) {
-        return NextResponse.redirect(upstreamUrl, 302);
+        return NextResponse.json({ error: "logo not found" }, { status: 404 });
       }
       const contentType = upstream.headers.get("content-type") ?? "image/png";
       const buf = Buffer.from(await upstream.arrayBuffer());
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         },
       });
     } catch {
-      return NextResponse.redirect(upstreamUrl, 302);
+      return NextResponse.json({ error: "logo fetch failed" }, { status: 502 });
     }
   }
 

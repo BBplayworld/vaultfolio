@@ -5,8 +5,8 @@ import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { MAIN_PALETTE } from "@/config/theme";
-import { getPurchaseRatePerUnit } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
-import { CATEGORY_TABS, StockBarChart, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
+import { computeStockMetrics } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
+import { StockCategorySection, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
 import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { useAssetTreemapData } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { DailyAssetSnapshot } from "@/types/asset";
@@ -29,7 +29,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   const { resolvedTheme } = useTheme();
   // 공통 훅 사용 — 중복 로직 없음
   const { treemapData, summary } = useAssetTreemapData();
-  const { filteredStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, barItems: stockBarItems, barColors: stockBarColors, mul, dailyProfit, dailyProfitRate } =
+  const { filteredStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, barItems: stockBarItems, barColors: stockBarColors, exchangeRates, dailyProfit, dailyProfitRate } =
     useFilteredStockData(activeCategory);
 
   const maskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
@@ -62,7 +62,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
-        <div className="rounded-lg border border-border bg-card px-3 py-1">
+        <div className="rounded-lg bg-card px-3 py-1">
           <div className="inline-block px-1 mb-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("donut")}
           </div>
@@ -72,7 +72,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션2: 일별 순자산 미니 차트 */}
       {sections.chart && dailySnapshots.length > 1 && (
-        <div className="rounded-lg border border-border bg-card px-3 py-1">
+        <div className="rounded-lg bg-card px-3 py-1">
           <div className="inline-block px-1 py-1 mb-2 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("chart")}
           </div>
@@ -104,7 +104,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                     </defs>
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
+                      tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                       tickFormatter={(d: string) => d.slice(5)}
                       axisLine={false}
                       tickLine={false}
@@ -137,13 +137,13 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                             <g>
                               {isAbove ? (
                                 <>
-                                  <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY - 11} textAnchor="middle" fontSize={8} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                  <text x={cx} y={baseY - 20} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
                                 </>
                               ) : (
                                 <>
-                                  <text x={cx} y={baseY + 14} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY + 24} textAnchor="middle" fontSize={8} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                  <text x={cx} y={baseY + 5} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY + 18} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
                                 </>
                               )}
                             </g>
@@ -161,7 +161,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션3: 주식 요약 헤더 */}
       {sections.stockHeader && (
-        <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-3">
+        <div className="rounded-lg bg-card px-3 py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("stockHeader")}
           </div>
@@ -180,114 +180,36 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션4: 카테고리 탭 + 비중바 + 종목 목록 통합 */}
       {sections.stockList && (
-        <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-3">
+        <div className="rounded-lg bg-card px-3 py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("stockList")}
           </div>
-          {/* 카테고리 탭 */}
-          <div className="flex p-1 rounded-lg border border-border bg-muted/30 w-full gap-0.5 justify-center overflow-hidden">
-            {CATEGORY_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => onCategoryChange(tab.value)}
-                className={`rounded-md px-1 py-1 font-medium transition-all whitespace-nowrap flex-1 min-w-0 text-[9px] sm:text-[11px] ${activeCategory === tab.value
-                  ? "bg-background border border-border text-foreground font-semibold shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {filteredStocks.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">해당 카테고리에 보유 종목이 없습니다.</p>
-          ) : (
-            <>
-              {/* 비중 바 */}
-              <StockBarChart items={stockBarItems} total={filteredTotal} />
-
-              {/* 종목별 손익 요약 헤더 */}
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-muted-foreground">보유 종목</span>
-                <span className={`font-bold tabular-nums ${filteredProfit >= 0 ? "text-rose-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
-                  {!hideAmounts && (filteredProfit >= 0 ? "+" : "")}{maskFn(Math.round(filteredProfit))}
-                  {" "}({filteredProfitRate >= 0 ? "+" : ""}{filteredProfitRate.toFixed(2)}%)
-                </span>
-              </div>
-
-              {/* 종목 로우 */}
-              {activeCategory === "all" ? (
-                <div className="space-y-4 pt-1">
-                  {CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                    const catStocks = filteredStocks.filter((s) => s.category === cat.value);
-                    if (catStocks.length === 0) return null;
-                    return (
-                      <div key={cat.value}>
-                        <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                        <div className="space-y-1">
-                          {catStocks.map((stock) => {
-                            const idx = filteredStocks.findIndex((s) => s.id === stock.id);
-                            const krwMul = mul(stock.currency);
-                            const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
-                            const purchaseRate = getPurchaseRatePerUnit(stock, krwMul);
-                            const currentVal = stock.quantity * stock.currentPrice * krwMul;
-                            const cost = isForeign
-                              ? stock.quantity * stock.averagePrice * purchaseRate
-                              : stock.quantity * stock.averagePrice * krwMul;
-                            const profit = currentVal - cost;
-                            const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
-                            const pct = filteredTotal > 0 ? (currentVal / filteredTotal) * 100 : 0;
-                            return (
-                              <StockRowItem
-                                key={stock.id}
-                                stock={stock}
-                                color={stockBarColors[idx] ?? MAIN_PALETTE[0]}
-                                pct={pct}
-                                currentVal={currentVal}
-                                profit={profit}
-                                profitRate={profitRate}
-                                maskFn={maskFn}
-                                screenshotMode={true}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filteredStocks.map((stock, idx) => {
-                    const krwMul = mul(stock.currency);
-                    const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
-                    const purchaseRate = getPurchaseRatePerUnit(stock, krwMul);
-                    const currentVal = stock.quantity * stock.currentPrice * krwMul;
-                    const cost = isForeign
-                      ? stock.quantity * stock.averagePrice * purchaseRate
-                      : stock.quantity * stock.averagePrice * krwMul;
-                    const profit = currentVal - cost;
-                    const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
-                    const pct = filteredTotal > 0 ? (currentVal / filteredTotal) * 100 : 0;
-                    return (
-                      <StockRowItem
-                        key={stock.id}
-                        stock={stock}
-                        color={stockBarColors[idx] ?? MAIN_PALETTE[0]}
-                        pct={pct}
-                        currentVal={currentVal}
-                        profit={profit}
-                        profitRate={profitRate}
-                        maskFn={maskFn}
-                        screenshotMode={true}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
+          <StockCategorySection
+            activeCategory={activeCategory}
+            onCategoryChange={onCategoryChange}
+            filteredStocks={filteredStocks}
+            totalValue={filteredTotal}
+            barItems={stockBarItems}
+            barColors={stockBarColors}
+            emptyMessage="해당 카테고리에 보유 종목이 없습니다."
+            screenshotMode={true}
+            renderItem={(stock, _isFirst, color) => {
+              const m = computeStockMetrics(stock, exchangeRates, filteredTotal);
+              return (
+                <StockRowItem
+                  key={stock.id}
+                  stock={stock}
+                  color={color}
+                  pct={m.pct}
+                  currentVal={m.currentVal}
+                  profit={m.profit}
+                  profitRate={m.profitRate}
+                  maskFn={maskFn}
+                  screenshotMode={true}
+                />
+              );
+            }}
+          />
         </div>
       )}
 

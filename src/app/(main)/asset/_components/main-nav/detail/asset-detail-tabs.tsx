@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { TrendingUp, Building2, Bitcoin, Banknote, CreditCard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { formatCurrency } from "@/lib/number-utils";
+import { formatCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { StockTab } from "./tabs/stock-tab";
 import { RealEstateTab } from "./tabs/real-estate-tab";
 import { CryptoTab } from "./tabs/crypto-tab";
@@ -45,6 +45,42 @@ export function getPurchaseRatePerUnit(
 ): number {
   if (!stock.purchaseExchangeRate || stock.purchaseExchangeRate <= 0) return currentMultiplier;
   return stock.currency === "JPY" ? stock.purchaseExchangeRate / 100 : stock.purchaseExchangeRate;
+}
+
+// 단일 종목의 파생 계산값 (평가/원가/손익/환차/비중/보유일)
+export interface StockMetrics {
+  krwMul: number;
+  isForeign: boolean;
+  purchaseRate: number;
+  currentVal: number;
+  cost: number;
+  profit: number;
+  profitRate: number;
+  pct: number;
+  currencyGain: number;
+  currencyGainRate: number;
+  holdingDays: number;
+}
+
+export function computeStockMetrics(
+  stock: Stock,
+  exchangeRates: { USD: number; JPY: number },
+  totalValue = 0,
+): StockMetrics {
+  const krwMul = getMultiplier(stock.currency, exchangeRates);
+  const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
+  const purchaseRate = getPurchaseRatePerUnit(stock, krwMul);
+  const currentVal = stock.quantity * stock.currentPrice * krwMul;
+  const cost = isForeign
+    ? stock.quantity * stock.averagePrice * purchaseRate
+    : stock.quantity * stock.averagePrice * krwMul;
+  const profit = currentVal - cost;
+  const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
+  const pct = totalValue > 0 ? (currentVal / totalValue) * 100 : 0;
+  const currencyGain = isForeign ? (krwMul - purchaseRate) * stock.quantity * stock.averagePrice : 0;
+  const currencyGainRate = isForeign && purchaseRate > 0 ? ((krwMul - purchaseRate) / purchaseRate) * 100 : 0;
+  const holdingDays = calculateHoldingDays(stock.purchaseDate);
+  return { krwMul, isForeign, purchaseRate, currentVal, cost, profit, profitRate, pct, currencyGain, currencyGainRate, holdingDays };
 }
 
 const DETAIL_TABS = [

@@ -10,12 +10,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/profit-utils";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 
@@ -212,34 +212,51 @@ export function useFilteredStockData(activeCategory: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refData, filteredStocks, exchangeRates]);
 
-  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, dailyProfit, dailyProfitRate };
+  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate };
 }
 
-// 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
-export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
+// 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabel, maskFn, screenshotMode = false }: StockRowData & {
+  categoryLabel?: string;
+  maskFn?: (v: number) => string;
+  screenshotMode?: boolean;
+}) {
   const fmt = maskFn ?? formatShortCurrency;
   const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
   const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
   return (
-    <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md`}>
+    <>
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`font-semibold truncate ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{stock.name}</span>
+      <div className={ASSET_THEME.cardInfoLeft}>
+        <div className={ASSET_THEME.cardInfoTitle}>
+          <span className={`${ASSET_THEME.cardInfoName} ${screenshotMode ? "text-[12px]" : ""}`}>{stock.name}</span>
           {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
+          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{categoryLabel}</Badge>}
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-xs text-foreground">{stock.quantity.toLocaleString()}주</span>
-          <span className="text-xs text-muted-foreground">·</span>
-          <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+        <div className={ASSET_THEME.cardInfoMeta}>
+          <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
+          <span className="text-sm text-muted-foreground">·</span>
+          <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
         </div>
       </div>
-      <div className="text-right flex-shrink-0">
-        <p className={`font-bold tabular-nums ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : "text-sm"}`}>{fmt(currentVal)}</p>
-        <p className={`text-xs mt-0.5 tabular-nums ${getProfitLossColor(profit)}`}>
-          {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}{" "}({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
-        </p>
+      <div className={ASSET_THEME.cardInfoRight}>
+        <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : ""}`}>{fmt(currentVal)}</p>
+        <div className={ASSET_THEME.cardAmountProfitRow}>
+          <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
+            {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
+          </p>
+          <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+        </div>
       </div>
+    </>
+  );
+}
+
+// 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
+export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
+  return (
+    <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md`}>
+      <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} maskFn={maskFn} screenshotMode={screenshotMode} />
     </div>
   );
 }
@@ -323,26 +340,7 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
-              <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={stock.category === "foreign"} color={color} />
-              <div className={ASSET_THEME.cardInfoLeft}>
-                <div className={ASSET_THEME.cardInfoTitle}>
-                  <span className={ASSET_THEME.cardInfoName}>{stock.name}</span>
-                  {stock.ticker && <span className="text-xs sm:text-sm text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{getCategoryLabel(stock.category)}</Badge>
-                </div>
-                <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
-                  <span className="text-sm text-muted-foreground">·</span>
-                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
-                </div>
-              </div>
-              <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(currentVal)}</p>
-                <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
-                </div>
-              </div>
+              <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabel={getCategoryLabel(stock.category)} />
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
@@ -430,6 +428,104 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
   );
 }
 
+// 카테고리 탭 + 비중바 + 종목 목록 — 주식 상세/인증샷 공통 영역
+export interface StockCategorySectionProps {
+  activeCategory: string;
+  onCategoryChange: (cat: string) => void;
+  filteredStocks: Stock[];
+  totalValue: number;
+  barItems: { stock: Stock; value: number; color: string }[];
+  barColors: string[];
+  emptyMessage?: string;
+  screenshotMode: boolean;
+  renderItem: (stock: Stock, isFirstOverall: boolean, color: string) => React.ReactNode;
+}
+
+export function StockCategorySection({
+  activeCategory,
+  onCategoryChange,
+  filteredStocks,
+  totalValue,
+  barItems,
+  barColors,
+  emptyMessage = "등록된 주식이 없습니다.",
+  screenshotMode = false,
+  renderItem,
+}: StockCategorySectionProps) {
+  const colorOf = (stock: Stock) => {
+    const idx = barItems.findIndex((b) => b.stock.id === stock.id);
+    return idx >= 0 ? barColors[idx] : MAIN_PALETTE[0];
+  };
+
+  return (
+    <Tabs value={activeCategory} onValueChange={onCategoryChange}>
+      <TabsList className={CAT_LIST}>
+        {CATEGORY_TABS.map(({ value, label }) => (
+          <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
+        ))}
+      </TabsList>
+
+      {CATEGORY_TABS.map(({ value }) => (
+        <TabsContent key={value} value={value} className="mt-4 space-y-3">
+          {/* 비중 바 */}
+          {barItems.length > 0 && totalValue > 0 && (
+            <div className="space-y-2">
+              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+                {barItems.map(({ stock, value: v, color }) => {
+                  const pct = (v / totalValue) * 100;
+                  return (
+                    <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
+                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className={`grid ${screenshotMode ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-x-4 gap-y-2 px-2`}>
+                {barItems.map(({ stock, value: v, color }) => {
+                  const pct = (v / totalValue) * 100;
+                  return (
+                    <div key={stock.id} className="flex items-center gap-1">
+                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs sm:text-sm text-foreground truncate">{stock.name}</span>
+                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 종목 리스트 */}
+          {filteredStocks.length === 0 ? (
+            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+            </div>
+          ) : activeCategory === "all" ? (
+            <div className="space-y-4 mt-8">
+              {CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+                const catStocks = filteredStocks.filter((s) => s.category === cat.value);
+                if (catStocks.length === 0) return null;
+                return (
+                  <div key={cat.value}>
+                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <div className="space-y-2">
+                      {catStocks.map((s) => renderItem(s, filteredStocks[0]?.id === s.id, colorOf(s)))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2 mt-8">
+              {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
+            </div>
+          )}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
 export function StockTab() {
   const { assetData, deleteStock, saveData } = useAssetData();
   const [activeCategory, setActiveCategory] = useState("all");
@@ -459,7 +555,7 @@ export function StockTab() {
     try { localStorage.setItem(LS_KEY, "1"); } catch { /* ignore */ }
   };
 
-  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, mul, dailyProfit, dailyProfitRate } =
+  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate } =
     useFilteredStockData(activeCategory);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -469,45 +565,6 @@ export function StockTab() {
       toast.success("삭제되었습니다.");
       deleteStock(id);
     }
-  };
-
-  const renderStockCard = (stock: Stock, isFirst = false) => {
-    const colorIdx = barItems.findIndex((b) => b.stock.id === stock.id);
-    const color = colorIdx >= 0 ? barColors[colorIdx] : MAIN_PALETTE[0];
-    const krwMul = mul(stock.currency);
-    const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
-    const purchaseRate = getPurchaseRatePerUnit(stock, mul(stock.currency));
-    const currentVal = stock.quantity * stock.currentPrice * krwMul;
-    const cost = isForeign ? stock.quantity * stock.averagePrice * purchaseRate : stock.quantity * stock.averagePrice * krwMul;
-    const profit = currentVal - cost;
-    const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
-    const currencyGain = isForeign ? (krwMul - purchaseRate) * stock.quantity * stock.averagePrice : 0;
-    const currencyGainRate = isForeign && purchaseRate > 0 ? ((krwMul - purchaseRate) / purchaseRate) * 100 : 0;
-    const holdingDays = calculateHoldingDays(stock.purchaseDate);
-    const pct = totalValue > 0 ? (currentVal / totalValue) * 100 : 0;
-    const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === stock.id);
-    return (
-      <StockCard
-        key={stock.id}
-        stock={stock}
-        color={color}
-        pct={pct}
-        currentVal={currentVal}
-        profit={profit}
-        profitRate={profitRate}
-        isForeign={isForeign}
-        krwMul={krwMul}
-        currencyGain={currencyGain}
-        currencyGainRate={currencyGainRate}
-        holdingDays={holdingDays}
-        linkedLoans={linkedLoans}
-        onDelete={handleDelete}
-        getCategoryLabel={getCategoryLabel}
-        defaultOpen={isFirst && !hasInteracted}
-        onFirstInteract={isFirst && !hasInteracted ? handleFirstInteract : undefined}
-        isFirstVisit={isFirst && !hasInteracted}
-      />
-    );
   };
 
   return (
@@ -522,68 +579,42 @@ export function StockTab() {
         dailyProfitRate={dailyProfitRate}
       />
 
-      {/* 카테고리 서브탭 */}
-      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className={CAT_LIST}>
-          {CATEGORY_TABS.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
-          ))}
-        </TabsList>
-
-        {CATEGORY_TABS.map(({ value }) => (
-          <TabsContent key={value} value={value} className="mt-4 space-y-3">
-            {/* 비중 바 */}
-            {barItems.length > 0 && totalValue > 0 && (
-              <div className="space-y-2">
-                <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                  {barItems.map(({ stock, value: v, color }) => {
-                    const pct = (v / totalValue) * 100;
-                    return (
-                      <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                  {barItems.map(({ stock, value: v, color }) => {
-                    const pct = (v / totalValue) * 100;
-                    return (
-                      <div key={stock.id} className="flex items-center gap-1">
-                        <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs sm:text-sm text-foreground truncate">{stock.name}</span>
-                        <span className="text-xs sm:text-sm font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 종목 리스트 */}
-            {allStocks.length === 0 ? (
-              <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-                <p className="text-muted-foreground text-sm">등록된 주식이 없습니다.</p>
-              </div>
-            ) : value === "all" ? (
-              <div className="space-y-4 mt-8">
-                {CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                  const catStocks = allStocks.filter((s) => s.category === cat.value);
-                  if (catStocks.length === 0) return null;
-                  return (
-                    <div key={cat.value}>
-                      <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                      <div className="space-y-2">{catStocks.map((s, i) => renderStockCard(s, i === 0 && allStocks[0]?.id === s.id))}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-2 mt-8">{allStocks.map((s, i) => renderStockCard(s, i === 0))}</div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* 카테고리 + 비중바 + 종목 목록 (인증샷과 공통) */}
+      <StockCategorySection
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        filteredStocks={allStocks}
+        totalValue={totalValue}
+        barItems={barItems}
+        barColors={barColors}
+        screenshotMode={false}
+        renderItem={(stock, isFirst, color) => {
+          const m = computeStockMetrics(stock, exchangeRates, totalValue);
+          const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === stock.id);
+          return (
+            <StockCard
+              key={stock.id}
+              stock={stock}
+              color={color}
+              pct={m.pct}
+              currentVal={m.currentVal}
+              profit={m.profit}
+              profitRate={m.profitRate}
+              isForeign={m.isForeign}
+              krwMul={m.krwMul}
+              currencyGain={m.currencyGain}
+              currencyGainRate={m.currencyGainRate}
+              holdingDays={m.holdingDays}
+              linkedLoans={linkedLoans}
+              onDelete={handleDelete}
+              getCategoryLabel={getCategoryLabel}
+              defaultOpen={isFirst && !hasInteracted}
+              onFirstInteract={isFirst && !hasInteracted ? handleFirstInteract : undefined}
+              isFirstVisit={isFirst && !hasInteracted}
+            />
+          );
+        }}
+      />
     </div>
   );
 }
