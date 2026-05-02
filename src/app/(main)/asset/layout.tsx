@@ -2,65 +2,47 @@ import { ReactNode } from "react";
 
 import { cookies } from "next/headers";
 
-import { AppSidebar } from "@/app/(main)/asset/_components/sidebar/app-sidebar";
-import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { AssetDataProvider } from "@/contexts/asset-data-context";
 import { ReactQueryProvider } from "@/components/react-query-provider";
 import { ScrollToTop } from "@/components/scroll-to-top";
-import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
-import { NavUser } from "./_components/sidebar/nav-user";
-import { GuideMiniButton } from "./_components/sidebar/guide-mini-banner";
-import { rootUser } from "@/config/users";
+import { TopBar } from "./_components/top-nav/top-bar";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
   // Configuration forms have been removed; hardcode best-looking defaults
-  const sidebarVariant = "inset";
-  const sidebarCollapsible = "icon";
   const contentLayout = "centered";
 
   const navbarStyle = "scroll";
 
   return (
     <ReactQueryProvider>
-    <AssetDataProvider>
-      <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
-        <SidebarInset
-          data-content-layout={contentLayout}
-          className={cn(
-            "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-screen-3xl",
-            "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
-          )}
-        >
-          <header
-            data-navbar-style={navbarStyle}
+      <AssetDataProvider>
+        <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
+          <SidebarInset
+            data-content-layout={contentLayout}
             className={cn(
-              "flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 relative z-50",
-              "data-[navbar-style=sticky]:bg-background/50 data-[navbar-style=sticky]:sticky data-[navbar-style=sticky]:top-0 data-[navbar-style=sticky]:overflow-hidden data-[navbar-style=sticky]:rounded-t-[inherit] data-[navbar-style=sticky]:backdrop-blur-md",
-              "bg-background/95 backdrop-blur-sm",
-              "mt-1",
-              "lg:sticky lg:top-0 lg:rounded-t-[inherit] lg:overflow-hidden"
+              "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-[1400px]",
             )}
           >
-            <div className="flex w-full items-center justify-between px-3 lg:px-12">
-              <div className="flex items-center gap-1 lg:gap-2">
-                <GuideMiniButton />
-              </div>
-              <div className="flex items-center gap-2">
-                <NavUser user={rootUser} />
-                <ThemeSwitcher />
-              </div>
-            </div>
-          </header>
-          <div className="h-full px-2 py-2 md:px-12 md:py-6">{children}</div>
-          <ScrollToTop />
-        </SidebarInset>
-      </SidebarProvider>
-    </AssetDataProvider>
+            <header
+              data-navbar-style={navbarStyle}
+              className={cn(
+                "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative z-50",
+                "sticky top-0 bg-background/95 backdrop-blur-sm rounded-t-[inherit] overflow-hidden",
+                "mt-1",
+              )}
+            >
+              <TopBar />
+            </header>
+            <div className="h-full px-2 py-2 md:px-12 md:py-2 mt-2 sm:mt-0">{children}</div>
+            <ScrollToTop />
+          </SidebarInset>
+        </SidebarProvider>
+      </AssetDataProvider>
     </ReactQueryProvider>
   );
 }

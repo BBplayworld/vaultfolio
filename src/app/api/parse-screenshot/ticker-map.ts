@@ -1050,7 +1050,8 @@ export const FOREIGN_STOCK_MAP: Record<string, string> = {
 
 function normalizeName(name: string): string {
   return name
-    .replace(/[()（）\s\-·&]/g, "")
+    .replace(/[()（）\s\-·&…]/g, "")
+    .replace(/\.+$/, "") // 뒷부분의 줄임표(.) 제거
     .toLowerCase();
 }
 
@@ -1099,5 +1100,102 @@ export function lookupTicker(name: string): string {
   }
   if (bestKeyPrefixMatch) return bestKeyPrefixMatch;
 
+  // 4단계: 부분 일치 (includes) — 입력이 5자 이상이고 키에 포함되는 경우
+  // 예: "미국필라델피아반도체" (앞의 TIGER 누락) -> "tiger미국필라델피아반도체나스닥" 매칭
+  // 오탐 방지를 위해 입력 문자열이 최소 5자 이상일 때만 적용
+  if (normalized.length >= 5) {
+    let bestSubstringMatch = "";
+    let bestSubstringKeyLen = Infinity;
+    for (const key of Object.keys(TICKER_MAP_NORMALIZED)) {
+      if (key.includes(normalized) && key.length < bestSubstringKeyLen) {
+        bestSubstringMatch = TICKER_MAP_NORMALIZED[key];
+        bestSubstringKeyLen = key.length;
+      }
+    }
+    if (bestSubstringMatch) return bestSubstringMatch;
+  }
+
   return "";
 }
+
+// ─── 국내 주식 도메인 매핑 (종목코드→도메인) ──────────────────────────────
+// 도메인 확인된 주요 상장사. 나머지는 fallback 이니셜 아이콘 사용.
+export const DOMESTIC_STOCK_DOMAIN_MAP: Record<string, string> = {
+  // ── 반도체/IT ──────────────────────────────────────────────────────────────
+  "005930": "www.samsung.com",
+  "000660": "www.skhynix.com",
+  "035420": "www.naver.com",
+  "035720": "www.kakao.com",
+  "323410": "www.kakaobank.com",
+  "377300": "www.kakaopay.com",
+  "042700": "www.hmsemi.com",
+  "009150": "www.samsungelectro-mechanics.com",
+  "011070": "www.lginnotek.com",
+  // ── 2차전지 ───────────────────────────────────────────────────────────────
+  "373220": "www.lgensol.com",
+  "006400": "www.samsungsdi.co.kr",
+  "051910": "www.lgchem.com",
+  "247540": "www.ecoprobm.co.kr",
+  "086520": "www.ecopro.co.kr",
+  "003670": "www.posco.co.kr",
+  // ── 바이오/제약 ───────────────────────────────────────────────────────────
+  "207940": "www.samsungbiologics.com",
+  "068270": "www.celltrion.com",
+  "000100": "www.yuhan.co.kr",
+  "128940": "www.hanmipharm.com",
+  "069620": "www.daewon.co.kr",
+  "185750": "www.ckdpharm.com",
+  "006280": "www.greencross.com",
+  // ── 금융 ──────────────────────────────────────────────────────────────────
+  "105560": "www.kbfg.com",
+  "055550": "www.shinhangroup.com",
+  "086790": "www.hanafn.com",
+  "316140": "www.woorifinancial.co.kr",
+  "138040": "www.meritzfire.com",
+  "000810": "www.samsungfire.com",
+  "005830": "www.idbins.com",
+  "039490": "www.kiwoom.com",
+  "006800": "securities.miraeasset.com",
+  "016360": "www.samsungpop.com",
+  "005940": "www.nhqv.com",
+  // ── 자동차/운송 ───────────────────────────────────────────────────────────
+  "005380": "www.hyundai.com",
+  "000270": "www.kia.com",
+  "012330": "www.mobis.co.kr",
+  "086280": "www.hyundai-glovis.net",
+  "003490": "www.koreanair.com",
+  "011200": "www.hmm21.com",
+  // ── 에너지/소재/화학 ──────────────────────────────────────────────────────
+  "005490": "www.posco.co.kr",
+  "004020": "www.hyundai-steel.com",
+  "010130": "www.koreazinc.co.kr",
+  "096770": "www.skinnovation.com",
+  "010950": "www.s-oil.com",
+  "009830": "www.hanwha.com",
+  "267250": "www.hd-hyundai.com",
+  // ── 통신 ──────────────────────────────────────────────────────────────────
+  "017670": "www.sktelecom.com",
+  "030200": "www.kt.com",
+  "032640": "www.uplus.co.kr",
+  // ── 건설/유통 ─────────────────────────────────────────────────────────────
+  "028260": "www.samsungcnt.com",
+  "000720": "www.hdec.kr",
+  "004170": "www.shinsegae.com",
+  "139480": "emart.com",
+  "023530": "www.lotteshopping.com",
+  // ── 방산/항공우주 ─────────────────────────────────────────────────────────
+  "012450": "www.hanwhaaero.com",
+  "079550": "www.liguenexone.co.kr",
+  "064350": "www.hyundai-rotem.co.kr",
+  "047810": "www.kai.co.kr",
+  // ── 인터넷/게임 ───────────────────────────────────────────────────────────
+  "259960": "www.krafton.com",
+  "251270": "www.netmarble.com",
+  "036570": "www.ncsoft.com",
+  // ── 기타 ──────────────────────────────────────────────────────────────────
+  "032830": "www.samsunglife.com",
+  "097950": "www.cj.net",
+  "352820": "www.hybe.com",
+  "041510": "www.smtown.com",
+  "035900": "www.jype.com",
+};

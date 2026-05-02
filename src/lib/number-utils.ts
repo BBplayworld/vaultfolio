@@ -25,16 +25,17 @@ export function formatCurrency(value: number): string {
 export function formatShortCurrency(value: number): string {
   if (value === 0) return "0원";
 
-  const length = Math.floor(value).toString().length;
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+
+  const length = Math.floor(abs).toString().length;
   if (length >= 9) {
-    // 1억 이상
-    return `${formatNumberWithCommas(Math.floor((value / 100000000) * 10) / 10)}억원`;
+    return `${sign}${formatNumberWithCommas(Math.floor((abs / 100000000) * 10) / 10)}억원`;
   }
   if (length >= 5) {
-    // 1만 이상
-    return `${formatNumberWithCommas(Math.floor(value / 10000))}만원`;
+    return `${sign}${formatNumberWithCommas(Math.floor(abs / 10000))}만원`;
   }
-  return formatCurrency(value);
+  return `${sign}${formatNumberWithCommas(Math.floor(abs))}원`;
 }
 
 // 짧은 화폐 단위 포맷 (억, 만, 백만) - 소수점 2자리
@@ -69,4 +70,25 @@ export function calculateHoldingDays(purchaseDate: string): number {
   const diffTime = Math.abs(today.getTime() - purchase.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
+}
+
+export function formatHoldingPeriod(purchaseDate: string): string {
+  const purchase = new Date(purchaseDate);
+  const today = new Date();
+  let years = today.getFullYear() - purchase.getFullYear();
+  let months = today.getMonth() - purchase.getMonth();
+  let days = today.getDate() - purchase.getDate();
+  if (days < 0) {
+    months -= 1;
+    days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years}년`);
+  if (months > 0) parts.push(`${months}개월`);
+  if (days > 0 || parts.length === 0) parts.push(`${days}일`);
+  return parts.join(" ");
 }

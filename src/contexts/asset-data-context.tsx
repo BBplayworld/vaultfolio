@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
-import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, parseShareToken } from "@/lib/asset-storage";
-import { STORAGE_KEY_EXCHANGE_SYNC_DATE, normalizeTicker, resolveStockName } from "@/lib/finance-service";
+import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
+import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Lock, Share2 } from "lucide-react";
+import { MAIN_PALETTE } from "@/config/theme";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -38,6 +39,7 @@ interface AssetDataContextType {
   exchangeRates: { USD: number; JPY: number };
   exchangeRateDate: string;
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
+  syncTodayExchangeRate: () => Promise<void>;
   refreshData: () => void;
   initAndSync: (data: AssetData) => Promise<void>;
   saveData: (data: AssetData) => boolean;
@@ -147,7 +149,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_KEYS.exchangeRate, JSON.stringify(newRates));
         if (date) {
-          localStorage.setItem(STORAGE_KEY_EXCHANGE_SYNC_DATE, date);
+          localStorage.setItem(STORAGE_KEYS.exchangeSyncDate, date);
           setExchangeRateDate(date);
         }
       }
@@ -161,7 +163,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const syncTodayExchangeRate = useCallback(async () => {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    if (localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE) === todayStr) {
+    if (localStorage.getItem(STORAGE_KEYS.exchangeSyncDate) === todayStr) {
       const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
       if (savedRates) {
         try {
@@ -218,7 +220,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
         const stocksData = await res.json();
-
         if (stocksData && !stocksData.error) {
           setAssetData(prev => {
             const updatedStocks = prev.stocks.map(stock => {
@@ -274,7 +275,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       // ── 일별: 이번 달만 유지 ──
       const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
       const allDaily: DailyAssetSnapshot[] = rawDaily ? JSON.parse(rawDaily) : [];
-      const filteredDaily = allDaily.filter(s => s.date.startsWith(currentMonth) && s.date !== todayStr);
+      const cutoff = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoffStr = cutoff.toISOString().split("T")[0];
+      const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
       filteredDaily.push({ date: todayStr, netAsset, financialAsset });
       localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
 
@@ -290,9 +294,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 모든 진입 경로 공통 헬퍼
-  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷 저장
-  // 자산이 하나도 없는 신규 사용자는 환율·주식 동기화 불필요 → 즉시 리턴
-  // skipSnapshots: true 시 saveSnapshots 호출 생략 (공유 데이터 로드 후 기존 스냅샷 보존용)
+  // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷
   const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
     initAssetData(data);
     setIsDataLoaded(true);
@@ -305,14 +307,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
-    await syncTodayStockPrices(data);
     if (!skipSnapshots) {
-      setAssetData(latest => {
+      await syncTodayStockPrices(data);
+      setAssetData(after => {
         setExchangeRatesState(latestRates => {
-          saveSnapshots(latest, latestRates);
+          saveSnapshots(after, latestRates);
           return latestRates;
         });
-        return latest;
+        return after;
       });
     }
   }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
@@ -329,7 +331,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
-    void initAndSync(data, { skipSnapshots: true });
+    void initAndSync(data);
   }, [initAndSync]);
 
   // ─── [이벤트 핸들러] ────────────────────────────────────────────────────────
@@ -415,6 +417,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - 마운트 즉시: localStorage 환율을 state에 반영 (플래시 방지)
   // - 이후: 진입 경로별 분기 후 initAndSync 실행
   useEffect(() => {
+    migrateStorageKeys();
     // 마운트 즉시: localStorage 환율을 state에 반영
     // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
     // INITIAL_SYNC_DELAY_MS 지연 전에 기본값(1430/930)이 표시되는 것을 방지
@@ -431,7 +434,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         setExchangeRatesState({ USD: parseFloat(savedRates) || 1380, JPY: 930 });
       }
     }
-    const savedDate = localStorage.getItem(STORAGE_KEY_EXCHANGE_SYNC_DATE);
+    const savedDate = localStorage.getItem(STORAGE_KEYS.exchangeSyncDate);
     if (savedDate) setExchangeRateDate(savedDate);
 
     // 원타임 마이그레이션: 기존 dailySnapshots에서 monthlySnapshots 초기 생성
@@ -768,6 +771,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         exchangeRates,
         exchangeRateDate,
         updateExchangeRate,
+        syncTodayExchangeRate,
         refreshData,
         initAndSync,
         saveData,
@@ -831,7 +835,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             <Button variant="outline" onClick={handlePinCancel}>
               취소
             </Button>
-            <Button onClick={handlePinConfirm} type="button">
+            <Button onClick={handlePinConfirm} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }}>
               데이터 불러오기
             </Button>
           </DialogFooter>
