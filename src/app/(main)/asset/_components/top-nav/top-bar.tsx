@@ -1,15 +1,12 @@
 "use client";
 
-import { Info, ChevronDown, Camera, Moon, Sun, CircleChevronDown } from "lucide-react";
+import { Info, ChevronDown, Camera } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { MAIN_PALETTE } from "@/config/theme";
-import { updateThemeMode } from "@/lib/theme-utils";
-import { setValueToCookie } from "@/server/server-actions";
-import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ShareScreenshotDialog } from "./share/share-screenshot-dialog";
-import { NavUser } from "./tool-menu";
+import { ShareScreenshotDialog } from "./share/share-menu";
+import { ToolMenu } from "./tool-menu";
+import { ThemeSwitcher } from "./theme-menu";
 import { rootUser } from "@/config/users";
 
 const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
@@ -56,10 +53,10 @@ function ShareScreenshotButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1 sm:gap-1.5 ${BTN_H} px-3 rounded-lg justify-center border-none text-white text-xs font-medium transition-opacity hover:opacity-85 shrink-0`}
+        className={`inline-flex items-center gap-1 sm:gap-1.5 ${BTN_H} px-2 rounded-lg justify-center border-none text-white text-xs font-medium transition-opacity hover:opacity-85 shrink-0`}
         style={{ backgroundColor: MAIN_PALETTE[7] }}
       >
-        <Camera className="size-3.5 shrink-0" />
+        <Camera className="size-3.5 sm:size-4 shrink-0" />
         <span className="whitespace-nowrap">인증샷</span>
       </button>
       <ShareScreenshotDialog open={open} onOpenChange={setOpen} />
@@ -67,33 +64,15 @@ function ShareScreenshotButton() {
   );
 }
 
-function ThemeSwitcher() {
-  const themeMode = usePreferencesStore((s) => s.themeMode);
-  const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
-
-  const handleValueChange = async () => {
-    const newTheme = themeMode === "dark" ? "light" : "dark";
-    updateThemeMode(newTheme);
-    setThemeMode(newTheme);
-    await setValueToCookie("theme_mode", newTheme);
-  };
-
-  return (
-    <Button size="icon" className={`${BTN_H} aspect-square`} onClick={handleValueChange}>
-      {themeMode === "dark" ? <Sun className="size-4 sm:size-5" /> : <Moon className="size-4 sm:size-5" />}
-    </Button>
-  );
-}
-
 export function TopBar() {
   return (
     <div className="flex w-full items-center justify-between px-3 lg:px-12">
-      <div className="flex items-center gap-1 lg:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <GuideMiniButton />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <ShareScreenshotButton />
-        <NavUser user={rootUser} />
+        <ToolMenu user={rootUser} />
         <ThemeSwitcher />
       </div>
     </div>

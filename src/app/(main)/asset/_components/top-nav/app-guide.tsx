@@ -37,7 +37,7 @@ export function AppGuide() {
 
     return (
         <Alert className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 relative">
-            <Info className="size-5 text-primary" />
+            <Info className="size-3.5 sm:size-4 text-primary" />
             <Button
                 variant="ghost"
                 size="icon"

@@ -25,8 +25,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           <SidebarInset
             data-content-layout={contentLayout}
             className={cn(
-              "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-screen-2xl",
-              "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
+              "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-[1400px]",
             )}
           >
             <header
@@ -39,7 +38,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             >
               <TopBar />
             </header>
-            <div className="h-full px-2 py-2 md:px-12 md:py-6 mt-2 sm:mt-0">{children}</div>
+            <div className="h-full px-2 py-2 md:px-12 md:py-2 mt-2 sm:mt-0">{children}</div>
             <ScrollToTop />
           </SidebarInset>
         </SidebarProvider>

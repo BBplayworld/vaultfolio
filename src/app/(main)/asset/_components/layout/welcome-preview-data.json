@@ -1,0 +1,45 @@
+{
+  "exchangeRates": { "USD": 1420, "JPY": 900 },
+  "stocks": [
+    {
+      "id": "preview-nvda",
+      "category": "foreign",
+      "name": "엔비디아",
+      "ticker": "NVDA",
+      "quantity": 280,
+      "averagePrice": 74.2,
+      "currentPrice": 183.91,
+      "currency": "USD",
+      "purchaseDate": "2023-01-15",
+      "purchaseExchangeRate": 1265
+    },
+    {
+      "id": "preview-aapl",
+      "category": "foreign",
+      "name": "애플",
+      "ticker": "AAPL",
+      "quantity": 150,
+      "averagePrice": 158.4,
+      "currentPrice": 213.49,
+      "currency": "USD",
+      "purchaseDate": "2023-03-10",
+      "purchaseExchangeRate": 1310
+    },
+    {
+      "id": "preview-tsla",
+      "category": "foreign",
+      "name": "테슬라",
+      "ticker": "TSLA",
+      "quantity": 80,
+      "averagePrice": 210.0,
+      "currentPrice": 345.62,
+      "currency": "USD",
+      "purchaseDate": "2024-02-01",
+      "purchaseExchangeRate": 1320
+    }
+  ],
+  "realEstateValue": 400000000,
+  "loanValue": 95000000,
+  "cryptoValue": 9041360,
+  "cashValue": 79260000
+}

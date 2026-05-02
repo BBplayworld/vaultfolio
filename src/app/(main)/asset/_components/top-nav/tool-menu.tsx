@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, CircleChevronDown } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings } from "lucide-react";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -44,7 +44,7 @@ import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 
-export function NavUser({
+export function ToolMenu({
   user,
 }: {
   readonly user: {
@@ -243,16 +243,16 @@ export function NavUser({
       <SidebarMenu className="rounded-md transition-colors shadow-sm overflow-hidden">
         <SidebarMenuItem>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild className="gap-1 sm:gap-1.5">
               <SidebarcategoryBox
                 size="lg"
-                className="h-9 sm:h-10 px-1.5 sm:px-2 text-white hover:text-white transition-colors border-none"
+                className="h-9 sm:h-10 px-2 text-white hover:text-white transition-colors border-none"
                 style={{ backgroundColor: MAIN_PALETTE[0] }}
               >
-                <div className="grid flex-1 text-left leading-tight ml-0.5 sm:ml-1">
-                  <span className="truncate font-bold tracking-tighter uppercase text-[11px] sm:text-xs">자산 도구</span>
+                <Settings className="ml-auto size-3.5 sm:size-4 opacity-70" />
+                <div className="grid flex-1 text-left leading-tight">
+                  <span className="truncate font-bold tracking-tighter text-xs">자산 도구</span>
                 </div>
-                <CircleChevronDown className="ml-auto size-3.5 sm:size-4 opacity-70" />
               </SidebarcategoryBox>
             </DropdownMenuTrigger>
             <DropdownMenuContent

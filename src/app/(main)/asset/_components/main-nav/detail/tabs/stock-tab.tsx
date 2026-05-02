@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -229,7 +229,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
       <div className={ASSET_THEME.cardInfoLeft}>
         <div className={ASSET_THEME.cardInfoTitle}>
-          <span className={`${ASSET_THEME.cardInfoName} ${screenshotMode ? "text-[12px]" : ""}`}>{stock.name}</span>
+          <span className={`${ASSET_THEME.cardInfoName}}`}>{stock.name}</span>
           {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
           {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{categoryLabel}</Badge>}
         </div>
@@ -240,7 +240,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
         </div>
       </div>
       <div className={ASSET_THEME.cardInfoRight}>
-        <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} ${screenshotMode ? "text-[12px]" : ""}`}>{fmt(currentVal)}</p>
+        <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}}`}>{fmt(currentVal)}</p>
         <div className={ASSET_THEME.cardAmountProfitRow}>
           <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
             {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
@@ -317,7 +317,6 @@ interface StockCardProps {
   krwMul: number;
   currencyGain: number;
   currencyGainRate: number;
-  holdingDays: number;
   linkedLoans: Loan[];
   onDelete: (id: string) => void;
   getCategoryLabel: (cat: string) => string;
@@ -326,7 +325,7 @@ interface StockCardProps {
   isFirstVisit?: boolean;
 }
 
-function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, holdingDays, linkedLoans, onDelete, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false }: StockCardProps) {
+function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   const handleOpenChange = (next: boolean) => {
@@ -365,22 +364,22 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
                 <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p>
                 <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
                 <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p>
                 <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailMeta}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
               </div>
             </div>
             {isForeign && (
@@ -417,7 +416,7 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
               </div>
             )}
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
-              <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{holdingDays.toLocaleString()}일 보유</span></span>
+              <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
               {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
             </div>
@@ -574,7 +573,7 @@ export function StockTab() {
         totalValue={totalValue}
         totalProfit={totalProfit}
         totalProfitRate={totalProfitRate}
-        currencyGain={summary.stockCurrencyGain}
+        currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
         dailyProfit={dailyProfit}
         dailyProfitRate={dailyProfitRate}
       />
@@ -604,7 +603,6 @@ export function StockTab() {
               krwMul={m.krwMul}
               currencyGain={m.currencyGain}
               currencyGainRate={m.currencyGainRate}
-              holdingDays={m.holdingDays}
               linkedLoans={linkedLoans}
               onDelete={handleDelete}
               getCategoryLabel={getCategoryLabel}

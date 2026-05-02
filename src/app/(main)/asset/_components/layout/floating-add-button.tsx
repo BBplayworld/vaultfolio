@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -53,7 +54,8 @@ export function FloatingAddButton() {
     if (!selectedType) return;
     const asset = ASSET_TYPES.find((a) => a.type === selectedType);
     if (!asset?.hasScreenshot) {
-      window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType]));
+      if (selectedType === "real-estate") dispatchAddRealEstate();
+      else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType]));
       setIsOpen(false);
       resetState();
     } else {
@@ -72,7 +74,8 @@ export function FloatingAddButton() {
 
   const handleMethodSelect = (mode: "screenshot" | "manual") => {
     if (!selectedType) return;
-    window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
+    if (selectedType === "stock") dispatchAddStock(mode);
+    else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
     setIsOpen(false);
     resetState();
   };

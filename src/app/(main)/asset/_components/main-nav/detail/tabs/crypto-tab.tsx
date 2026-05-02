@@ -6,13 +6,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { assignColors } from "../asset-detail-tabs";
 
-function CryptoCard({ coin, value, profit, profitRate, pct, color, holdingDays, onDelete }: {
+function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
   coin: { id: string; symbol?: string; name: string; quantity: number; averagePrice: number; currentPrice: number; purchaseDate: string; description?: string };
-  value: number; profit: number; profitRate: number; pct: number; color: string; holdingDays: number;
+  value: number; profit: number; profitRate: number; pct: number; color: string;
   onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -68,7 +68,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, holdingDays, 
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
             </div>
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
-              <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{holdingDays.toLocaleString()}일 보유</span></span>
+              <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{coin.purchaseDate} 매수</span></span>
               {coin.description && <span className="w-full text-primary truncate"># {coin.description}</span>}
             </div>
@@ -160,9 +160,8 @@ export function CryptoTab() {
           {sorted.map(({ coin, value, profit, profitRate }, idx) => {
             const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
             const color = cryptoColors[idx] ?? MAIN_PALETTE[0];
-            const holdingDays = calculateHoldingDays(coin.purchaseDate);
             return (
-              <CryptoCard key={coin.id} coin={coin} value={value} profit={profit} profitRate={profitRate} pct={pct} color={color} holdingDays={holdingDays} onDelete={handleDelete} />
+              <CryptoCard key={coin.id} coin={coin} value={value} profit={profit} profitRate={profitRate} pct={pct} color={color} onDelete={handleDelete} />
             );
           })}
         </div>

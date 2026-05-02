@@ -31,6 +31,16 @@ const PERIOD_LABELS: Record<ProfitPeriod, string> = {
 
 const TAB_LIST = ASSET_THEME.tabList1;
 const TAB_TRIGGER = ASSET_THEME.tabTrigger1;
+const SUB_TAB_LIST = ASSET_THEME.tabList3;
+const SUB_TAB_TRIGGER = ASSET_THEME.tabTrigger3;
+
+type MarketView = "all" | "kr" | "us";
+
+const MARKET_LABELS: Record<MarketView, string> = {
+  all: "전체",
+  kr: "국내",
+  us: "해외",
+};
 
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
@@ -41,6 +51,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
+  const [marketView, setMarketView] = useState<MarketView>("all");
 
   const stocksWithPrice = assetData.stocks.filter(
     (s) => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0
@@ -93,16 +104,22 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: ref.refDate };
   });
 
-  const totalCurrentValue = stockProfits.reduce((s, r) => s + r.currentValue, 0);
-  const totalProfit = stockProfits.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
+  const filteredProfits = stockProfits.filter((p) => {
+    if (marketView === "all") return true;
+    const isKr = DOMESTIC_CATEGORIES.has(p.stock.category);
+    return marketView === "kr" ? isKr : !isKr;
+  });
+
+  const totalCurrentValue = filteredProfits.reduce((s, r) => s + r.currentValue, 0);
+  const totalProfit = filteredProfits.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
   const totalRefValue = totalCurrentValue - totalProfit;
   const totalRate = totalRefValue > 0 ? (totalProfit / totalRefValue) * 100 : 0;
 
-  const krRefDate = stockProfits.find((r) => r.hasRef && DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
-  const usRefDate = stockProfits.find((r) => r.hasRef && r.stock.category === "foreign")?.refDate;
+  const krRefDate = filteredProfits.find((r) => r.hasRef && DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
+  const usRefDate = filteredProfits.find((r) => r.hasRef && r.stock.category === "foreign")?.refDate;
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
-    const items = stockProfits.filter((r) => r.stock.category === key);
+    const items = filteredProfits.filter((r) => r.stock.category === key);
     const catProfit = items.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
     const catRef = items.filter((r) => r.hasRef).reduce((s, r) => s + r.refValue, 0);
     const catCurrent = items.filter((r) => r.hasRef).reduce((s, r) => s + r.currentValue, 0);
@@ -133,6 +150,15 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
 
             {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
               <TabsContent key={p} value={p} forceMount className="data-[state=inactive]:hidden mt-4 space-y-4">
+                <Tabs value={marketView} onValueChange={(v) => setMarketView(v as MarketView)}>
+                  <TabsList className={SUB_TAB_LIST}>
+                    {(Object.keys(MARKET_LABELS) as MarketView[]).map((m) => (
+                      <TabsTrigger key={m} value={m} className={SUB_TAB_TRIGGER}>
+                        {MARKET_LABELS[m]}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
                 {isLoading ? (
                   <div className="space-y-3">
                     <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
@@ -198,8 +224,14 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                       </div>
                       {(krRefDate || usRefDate) && (
                         <div className="pt-1.5 border-t border-border/50 text-xs sm:text-sm text-muted-foreground space-y-0.5">
-                          {krRefDate && <p>국내 기준: {krRefDate} 종가</p>}
-                          {usRefDate && <p>해외 기준: {usRefDate} 종가 (KST 06:00 마감)</p>}
+                          {marketView === "kr" && krRefDate && <p>기준일: {krRefDate} 종가 (KST 16:00 기준)</p>}
+                          {marketView === "us" && usRefDate && <p>기준일: {usRefDate} 종가 (KST 07:00 기준)</p>}
+                          {marketView === "all" && (
+                            <>
+                              {krRefDate && <p>국내 기준: {krRefDate} 종가 (KST 16:00 기준)</p>}
+                              {usRefDate && <p>해외 기준: {usRefDate} 종가 (KST 07:00 기준)</p>}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

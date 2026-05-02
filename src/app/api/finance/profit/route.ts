@@ -6,8 +6,17 @@ import {
   fetchOverseasHistoricalPrice,
   classifyTickers,
 } from "@/lib/finance-service";
+import {
+  rollbackToBusinessDay as krRollback,
+  forwardToBusinessDay as krForward,
+} from "@/lib/kr-holidays";
+import {
+  rollbackToUsBusinessDay as usRollback,
+  forwardToUsBusinessDay as usForward,
+} from "@/lib/us-holidays";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
+type Market = "kr" | "us";
 
 export interface ProfitRefEntry {
   refPrice: number;
@@ -26,39 +35,50 @@ function toDateStr(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
-function rollbackWeekend(d: Date): Date {
-  const day = d.getUTCDay(); // 0=일, 6=토
-  if (day === 0) d.setUTCDate(d.getUTCDate() - 2);
-  else if (day === 6) d.setUTCDate(d.getUTCDate() - 1);
-  return d;
-}
-
-function getRefDate(period: ProfitPeriod): string {
+function getRefDate(period: ProfitPeriod, market: Market): string {
+  const isKr = market === "kr";
+  const rollback = isKr ? krRollback : usRollback;
+  const forward = isKr ? krForward : usForward;
   const nowKST = getKSTDate(0);
 
   if (period === "daily") {
-    const twoDaysAgo = getKSTDate(-2);
-    return toDateStr(rollbackWeekend(twoDaysAgo));
+    // 현재가가 가리키는 영업일의 직전 영업일
+    // (주말·연휴엔 현재가도 직전 영업일 종가이므로, 그 하루 전 영업일과 비교해야 의미 있음)
+    const today = getKSTDate(0);
+    const currentBiz = rollback(today);
+    const prev = new Date(currentBiz);
+    prev.setUTCDate(prev.getUTCDate() - 1);
+    return toDateStr(rollback(prev));
   }
 
   if (period === "weekly") {
-    // 지난주 금요일: 이번 주 월요일 기준 3일 전 (토·일도 이전 주 금요일 사용)
+    // 지난주 금요일: 이번 주 월요일 기준 3일 전
     const d = getKSTDate(0);
-    const day = d.getUTCDay(); // 0=일, 1=월, ..., 5=금, 6=토
+    const day = d.getUTCDay();
     const daysToMonday = day === 0 ? 6 : day - 1;
     d.setUTCDate(d.getUTCDate() - daysToMonday - 3);
-    return toDateStr(d);
+    return toDateStr(rollback(d));
   }
 
   if (period === "monthly") {
-    // 이번달 1일
-    const d = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), 1));
-    return toDateStr(rollbackWeekend(d));
+    const firstOfMonth = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), 1));
+    const firstBizThisMonth = forward(firstOfMonth);
+    const firstBizPlusOne = new Date(firstBizThisMonth);
+    firstBizPlusOne.setUTCDate(firstBizPlusOne.getUTCDate() + 1);
+    const todayStr = toDateStr(nowKST);
+    const thresholdStr = toDateStr(firstBizPlusOne);
+
+    // 오늘 <= 첫 영업일 + 1 → 지난달로 fallback (1일치 종가만으론 의미있는 변동률 X)
+    if (todayStr <= thresholdStr) {
+      const firstOfLastMonth = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth() - 1, 1));
+      return toDateStr(forward(firstOfLastMonth));
+    }
+    return toDateStr(firstBizThisMonth);
   }
 
-  // yearly: 올해 1월 2일 (첫 영업일 근사)
+  // yearly: 올해 1월 2일 → 영업일 롤백
   const d = new Date(Date.UTC(nowKST.getUTCFullYear(), 0, 2));
-  return toDateStr(rollbackWeekend(d));
+  return toDateStr(rollback(d));
 }
 
 export async function GET(req: NextRequest) {
@@ -75,9 +95,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({});
   }
 
-  const refDate = getRefDate(period);
-  const krRefDate = refDate;
-  const usRefDate = refDate;
+  const krRefDate = getRefDate(period, "kr");
+  const usRefDate = getRefDate(period, "us");
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 
@@ -132,7 +151,7 @@ export async function GET(req: NextRequest) {
       const price = await fetchDomesticHistoricalPrice(ticker, krRefDate, accessToken!, appKey, appSecret);
       if (price !== null) {
         result[ticker] = { refPrice: price, refDate: krRefDate };
-        await cache.setRefPrice(ticker, krRefDate, price);
+        await cache.setRefPrice(ticker, krRefDate, price, period);
       } else {
         result[ticker] = null;
       }
@@ -142,7 +161,7 @@ export async function GET(req: NextRequest) {
       const price = await fetchOverseasHistoricalPrice(ticker, usRefDate, accessToken!, appKey, appSecret);
       if (price !== null) {
         result[ticker] = { refPrice: price, refDate: usRefDate };
-        await cache.setRefPrice(ticker, usRefDate, price);
+        await cache.setRefPrice(ticker, usRefDate, price, period);
       } else {
         result[ticker] = null;
       }

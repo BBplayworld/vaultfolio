@@ -126,7 +126,7 @@ export async function GET(request: Request) {
     for (const [ticker, result] of Object.entries(apiResults)) {
       const isUs = usTickers.includes(ticker);
       const effectiveDate = isUs ? effectiveDateForeign : effectiveDateDomestic;
-      await storage.setStock(stockCacheKey(ticker, effectiveDate), result, effectiveDate);
+      await storage.setStock(stockCacheKey(ticker, effectiveDate), result, effectiveDate, ticker);
     }
 
     return NextResponse.json({ ...results, ...apiResults });

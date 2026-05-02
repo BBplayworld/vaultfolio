@@ -275,7 +275,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       // ── 일별: 이번 달만 유지 ──
       const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
       const allDaily: DailyAssetSnapshot[] = rawDaily ? JSON.parse(rawDaily) : [];
-      const filteredDaily = allDaily.filter(s => s.date.startsWith(currentMonth) && s.date !== todayStr);
+      const cutoff = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoffStr = cutoff.toISOString().split("T")[0];
+      const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
       filteredDaily.push({ date: todayStr, netAsset, financialAsset });
       localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
@@ -222,6 +222,7 @@ export function useAssetTreemapData() {
 }
 
 function DailyNetAssetTrend() {
+  const { snapshotVersion } = useAssetData();
   const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
 
   useEffect(() => {
@@ -232,7 +233,7 @@ function DailyNetAssetTrend() {
       const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
       setSnapshots(sorted.slice(-7));
     } catch { }
-  }, []);
+  }, [snapshotVersion]);
 
   if (snapshots.length === 0) return null;
 
@@ -290,10 +291,30 @@ function DailyNetAssetTrend() {
   );
 }
 
-export function Dashboard() {
+export type DashboardTab = { value: string; label: string };
+
+export function useDashboardTabs(activeDetailTab: string): { visibleTabs: DashboardTab[]; resolvedTab: string } {
+  const { getAssetSummary } = useAssetData();
+  const summary = getAssetSummary();
+  const financialTotal = summary.stockValue + summary.cryptoValue + summary.cashValue;
+  const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
+
+  const TAB_META: DashboardTab[] = [
+    { value: "all", label: "전체" },
+    ...(financialTotal > 0 ? [{ value: "financial", label: "금융자산" }] : []),
+    ...(summary.realEstateValue > 0 ? [{ value: "realEstate", label: "부동산" }] : []),
+    ...(totalLiability > 0 ? [{ value: "liability", label: "부채" }] : []),
+  ];
+
+  const availableValues = TAB_META.map((t) => t.value);
+  const resolvedTab = availableValues.includes(activeDetailTab) ? activeDetailTab : "all";
+
+  return { visibleTabs: TAB_META, resolvedTab };
+}
+
+export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetailTab: string; setActiveDetailTab: (v: string) => void }) {
   const { assetData, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
-  const [activeDetailTab, setActiveDetailTab] = useState<string>("");
 
   const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -338,22 +359,7 @@ export function Dashboard() {
 
   const tenantCount = assetData.realEstate.filter((re) => (re.tenantDeposit ?? 0) > 0).length;
 
-  const availableTabs = [
-    "all",
-    financialTotal > 0 ? "financial" : null,
-    summary.realEstateValue > 0 ? "realEstate" : null,
-    totalLiability > 0 ? "liability" : null,
-  ].filter(Boolean) as string[];
-
-  const resolvedTab = availableTabs.includes(activeDetailTab) ? activeDetailTab : "all";
-
-  const TAB_META = [
-    { value: "all", label: "전체", condition: true },
-    { value: "financial", label: "금융자산", condition: financialTotal > 0 },
-    { value: "realEstate", label: "부동산", condition: summary.realEstateValue > 0 },
-    { value: "liability", label: "부채", condition: totalLiability > 0 },
-  ];
-  const visibleTabs = TAB_META.filter((t) => t.condition);
+  const { resolvedTab } = useDashboardTabs(activeDetailTab);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -364,17 +370,6 @@ export function Dashboard() {
             <div className="flex h-36 items-center justify-center text-muted-foreground text-sm">등록된 자산이 없습니다.</div>
           ) : (
             <Tabs value={resolvedTab} onValueChange={setActiveDetailTab}>
-              {/* ── 상단 탭 버튼 ── */}
-              {visibleTabs.length > 0 && (
-                <TabsList className={ASSET_THEME.tabList2}>
-                  {visibleTabs.map(({ value, label }) => (
-                    <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger2}>
-                      {label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              )}
-
               {/* ── 순자산 요약 + DonutChart / 세부 콘텐츠 2컬럼 ── */}
               <div className="py-3 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* col-1: 순자산 요약 + DonutChart */}

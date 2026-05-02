@@ -39,8 +39,8 @@ export const ASSET_THEME = {
   cardInfoRight: "text-right flex-shrink-0",
   cardAmountMain: "text-sm sm:text-[15px] font-bold tabular-nums leading-tight",
   cardAmountProfitRow: "flex sm:flex-row flex-col sm:items-center sm:gap-1 mt-0.5",
-  cardAmountSub: "text-xs sm:text-[13px] tabular-nums",
-  cardAmountRate: "text-[11px] sm:text-[12px] tabular-nums",
+  cardAmountSub: "text-sm sm:text-[13px] tabular-nums",
+  cardAmountRate: "text-sm sm:text-[13px] tabular-nums",
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs text-primary font-medium font-semibold",
   todayBox: "text-xs text-muted-foreground px-2 py-0.5 rounded border border-primary bg-primary/5 shrink-0",
   inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
@@ -50,6 +50,7 @@ export const ASSET_THEME = {
   cardDetailLabel: "text-xs text-muted-foreground",
   cardDetailValue: "text-sm font-medium",
   cardDetailValueBold: "text-sm font-semibold",
+  cardDetailPriceKRW: "text-xs sm:text-sm text-foreground",
   cardDetailMeta: "text-xs sm:text-sm text-muted-foreground",
   // 담보대출 섹션
   cardLoanSection: "px-4 py-2.5 space-y-1.5 bg-destructive/5 border-t border-destructive/15",
@@ -62,10 +63,10 @@ export const ASSET_THEME = {
   // ===== 탭 공통 스타일 =====
   // 1단계: 페이지 메인 탭
   tabList1: "flex items-center gap-2 p-2 py-3 sm:py-5 rounded-xl bg-muted/50 border border-border w-fit overflow-hidden",
-  tabTrigger1: "rounded-lg px-3 py-2.5 sm:py-3 text-sm font-medium flex items-center gap-1.5 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger1: "rounded-lg px-3 py-3 sm:py-4 text-sm font-medium flex items-center gap-1.5 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 2단계: 상세 탭 (주식/부동산/암호화폐/현금/대출)
-  tabList2: "flex items-center gap-1 p-1 rounded-xl bg-muted/50 border border-border w-full overflow-hidden",
-  tabTrigger2: "rounded-lg px-2 py-3 text-sm font-medium flex items-center justify-center gap-1 min-w-0 flex-1 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabList2: "flex items-center gap-1 p-1 py-3 sm:py-5 rounded-xl bg-muted/50 border border-border w-full overflow-hidden",
+  tabTrigger2: "rounded-lg px-2 py-3 sm:py-4 text-sm font-medium flex items-center justify-center gap-1 min-w-0 flex-1 text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계: 카테고리 서브탭 (주식 국내/해외/IRP 등)
   tabList3: "flex items-center gap-1 p-1 rounded-lg border border-border bg-muted/30 overflow-hidden w-full",
   tabTrigger3: "rounded-md px-2 py-3 text-sm font-medium min-w-0 flex-1 text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",

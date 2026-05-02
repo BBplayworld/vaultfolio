@@ -71,3 +71,24 @@ export function calculateHoldingDays(purchaseDate: string): number {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 }
+
+export function formatHoldingPeriod(purchaseDate: string): string {
+  const purchase = new Date(purchaseDate);
+  const today = new Date();
+  let years = today.getFullYear() - purchase.getFullYear();
+  let months = today.getMonth() - purchase.getMonth();
+  let days = today.getDate() - purchase.getDate();
+  if (days < 0) {
+    months -= 1;
+    days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years}년`);
+  if (months > 0) parts.push(`${months}개월`);
+  if (days > 0 || parts.length === 0) parts.push(`${days}일`);
+  return parts.join(" ");
+}

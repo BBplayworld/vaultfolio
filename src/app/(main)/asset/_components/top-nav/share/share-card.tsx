@@ -4,14 +4,14 @@ import React, { useMemo } from "react";
 import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
-import { MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { computeStockMetrics } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
 import { StockCategorySection, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
 import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { useAssetTreemapData } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
-import { SectionVisibility, SECTION_OPTIONS } from "./share-screenshot-dialog";
+import { SectionVisibility, SECTION_OPTIONS } from "./share-menu";
 import { APP_CONFIG } from "@/config/app";
 
 const sectionLabel = (key: keyof SectionVisibility) =>
@@ -71,7 +71,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
       )}
 
       {/* 섹션2: 일별 순자산 미니 차트 */}
-      {sections.chart && dailySnapshots.length > 1 && (
+      {sections.chart && dailySnapshots.length > 0 && (
         <div className="rounded-lg bg-card px-3 py-1">
           <div className="inline-block px-1 py-1 mb-2 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("chart")}
@@ -80,20 +80,6 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
             <ResponsiveContainer width="100%" height="100%">
               {(() => {
                 const chartData = dailySnapshots.slice(-5);
-                const fmtAmt = (v: number) => {
-                  const abs = Math.abs(v);
-                  const sign = v < 0 ? "-" : "";
-                  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(2).replace(/\.?0+$/, "")}억원`;
-                  if (abs >= 10000) return `${sign}${Math.floor(abs / 10000)}만원`;
-                  return `${sign}${Math.floor(abs)}원`;
-                };
-                const fmtDiff = (v: number) => {
-                  const abs = Math.abs(v);
-                  const sign = v > 0 ? "+" : v < 0 ? "-" : "";
-                  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(2).replace(/\.?0+$/, "")}억`;
-                  if (abs >= 10000) return `${sign}${Math.floor(abs / 10000)}만`;
-                  return `${sign}${Math.floor(abs)}`;
-                };
                 return (
                   <AreaChart data={chartData} margin={{ top: 46, right: 28, bottom: 0, left: 28 }}>
                     <defs>
@@ -137,13 +123,13 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                             <g>
                               {isAbove ? (
                                 <>
-                                  <text x={cx} y={baseY - 20} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                  <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{formatShortCurrency(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{formatShortCurrency(diff)}</text>}
                                 </>
                               ) : (
                                 <>
-                                  <text x={cx} y={baseY + 5} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{fmtAmt(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY + 18} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{fmtDiff(diff)}</text>}
+                                  <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{formatShortCurrency(cur)}</text>
+                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{formatShortCurrency(diff)}</text>}
                                 </>
                               )}
                             </g>
@@ -169,7 +155,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
             totalValue={filteredTotal}
             totalProfit={filteredProfit}
             totalProfitRate={filteredProfitRate}
-            currencyGain={summary.stockCurrencyGain}
+            currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
             dailyProfit={dailyProfit}
             dailyProfitRate={dailyProfitRate}
             maskFn={maskFn}
