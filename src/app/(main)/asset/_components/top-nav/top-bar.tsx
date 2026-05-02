@@ -8,18 +8,17 @@ import { ShareScreenshotDialog } from "./share/share-menu";
 import { ToolMenu } from "./tool-menu";
 import { ThemeSwitcher } from "./theme-menu";
 import { rootUser } from "@/config/users";
-
-const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 
 const BTN_H = "h-9 sm:h-10";
 
 function GuideMiniButton() {
   const handleClick = () => {
-    const isDismissed = localStorage.getItem(ALERT_DISMISSED_KEY) === "1";
+    const isDismissed = localStorage.getItem(STORAGE_KEYS.guideDismissed) === "1";
     if (isDismissed) {
       window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
     } else {
-      localStorage.setItem(ALERT_DISMISSED_KEY, "1");
+      localStorage.setItem(STORAGE_KEYS.guideDismissed, "1");
       window.dispatchEvent(new CustomEvent("trigger-dismiss-guide"));
     }
   };

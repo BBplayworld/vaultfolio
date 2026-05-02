@@ -22,13 +22,13 @@ function getTodayKST(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().split("T")[0];
 }
 
-const STORAGE_KEY = "secretasset-gemini-usage";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 
 function readUsage(): GeminiUsageData {
   if (typeof window === "undefined") return { ...DEFAULT_USAGE, date: getTodayKST() };
   const today = getTodayKST();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.geminiUsage);
     if (!raw) return { ...DEFAULT_USAGE, date: today };
     const parsed = JSON.parse(raw) as GeminiUsageData;
 
@@ -50,13 +50,13 @@ function readUsage(): GeminiUsageData {
 function writeUsage(data: GeminiUsageData): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEYS.geminiUsage, JSON.stringify(data));
 
     // 기존의 일별 키(구버전)가 남아있다면 청소 (하위 호환성 및 정리)
     const today = getTodayKST();
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("secretasset-gemini-") && key !== STORAGE_KEY) {
+      if (key && key.startsWith("secretasset-gemini-") && key !== STORAGE_KEYS.geminiUsage) {
         localStorage.removeItem(key);
       }
     }

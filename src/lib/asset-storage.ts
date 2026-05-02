@@ -3,6 +3,9 @@
 import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import LZString from "lz-string";
+import { STORAGE_KEYS } from "@/lib/local-storage";
+export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
+export const DEFAULT_EXCHANGE_RATE = 1380;
 
 // 읽기 전용 완화 스키마 — superRefine 없이 ticker 빈 값 허용 (스크린샷 가져오기 경로 대응)
 const stockSchemaLoose = z.object({
@@ -23,15 +26,6 @@ const stockSchemaLoose = z.object({
 const assetDataSchemaLoose = assetDataSchema.omit({ stocks: true }).extend({
   stocks: z.array(stockSchemaLoose).default([]),
 });
-
-// ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
-export const STORAGE_KEYS = {
-  assetData: "secretasset-asset-data",
-  exchangeRate: "exchange-rate-usd-krw",
-  defaultExchangeRate: 1380,
-  dailySnapshots: "secretasset_daily_snapshots",
-  monthlySnapshots: "secretasset_monthly_snapshots",
-} as const;
 
 // ─── 기본 자산 데이터 ───────────────────────────────────────────────────────
 const EMPTY_ASSET_DATA: AssetData = {

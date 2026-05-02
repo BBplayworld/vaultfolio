@@ -1,6 +1,6 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-04-26
+> 마지막 업데이트: 2026-05-02
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
@@ -31,13 +31,28 @@ _components/
 │   │       └── loan-tab.tsx         # 대출 상세
 │   └── activity/
 │       ├── net-asset-chart.tsx      # 순자산 추이 (년도별/월별/일별)
-│       ├── profit-chart.tsx         # 수익 차트 (기준가 대비 현재금액)
-│       └── dividend-chart.tsx       # 배당 차트 (제거됨 → DividendCard로 통합)
+│       ├── profit-chart.tsx         # 수익 차트 (기간별 기준가 대비)
+│       └── dividend-chart.tsx       # 배당 카드 (DividendCard)
 └── layout/
+    ├── asset-page-tabs.tsx          # 3탭(홈/상세/성과) 최상위 탭 컨테이너
+    ├── notice-dialog.tsx            # MajorUiUpdateNoticeDialog
     ├── floating-add-button.tsx      # 하단 고정 FAB (전 환경)
     ├── welcome-guide.tsx
     └── copyright-footer.tsx
 ```
+
+---
+
+### AssetPageTabs (`layout/asset-page-tabs.tsx`)
+최상위 3탭 컨테이너. `page.tsx`에서 렌더링.
+
+- **홈**: Dashboard + 서브탭 (전체/금융/부동산/부채) — `useDashboardTabs`가 데이터에 따라 동적 생성, 탭이 1개면 TabsList 숨김
+- **상세**: 주식/부동산/암호화폐/현금/대출 — `forceMount`로 항상 DOM 유지
+- **성과**: 순자산/수익/배당 — `forceMount`로 항상 DOM 유지
+- `navigate-to-tab` CustomEvent 수신 → 홈탭을 "detail"로 전환 + 하위 탭 이동
+- 입력 폼 5종 `<div className="hidden">` 래핑으로 DOM에 상시 마운트
+
+---
 
 ### FloatingAddButton (`layout/floating-add-button.tsx`)
 화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
@@ -106,12 +121,15 @@ getProfitLossColor() → config/theme
 | Dashboard | `main-nav/home/dashboard.tsx` | 총자산/순자산/손익 요약 + 분포 |
 | AssetDetailTabs | `main-nav/detail/asset-detail-tabs.tsx` | 주식/부동산/암호화폐/현금/대출 5탭 상세 목록 |
 | YearlyNetAssetChart | `main-nav/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별. `trigger-add-yearly-net-asset` 이벤트 수신 |
-| ProfitCard | `main-nav/activity/profit-chart.tsx` | 수익 차트 (기준가 대비 현재금액) |
-| DividendCard | `main-nav/activity/dividend-chart.tsx` | 배당 카드 |
+| ProfitCard | `main-nav/activity/profit-chart.tsx` | 기간별(일/주/월/년) 수익 차트. `isActive` prop 필수 |
+| DividendCard | `main-nav/activity/dividend-chart.tsx` | 배당 카드. `isActive` prop 필수 |
 
 ### top-nav (`top-nav/`)
+- `TopBar` — GuideMiniButton + ShareScreenshotButton + ToolMenu + ThemeSwitcher 배치
 - `ShareScreenshotButton` → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
-- `ThemeSwitcher`, `NavUser(tool-menu)`, `GuideMiniButton`
+- `ToolMenu` — 데이터 내보내기/가져오기/공유/삭제 + AI 프롬프트 기능
+- `AppGuide` — 앱 사용 안내 알림 (dismissible, `trigger-restore/dismiss-guide` 이벤트)
+- `MajorUiUpdateNoticeDialog` (`layout/notice-dialog.tsx`) — 업데이트 공지 (일주일간 숨기기)
 
 ---
 
@@ -124,6 +142,7 @@ Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 Form, FormField, FormItem, FormLabel, FormControl, FormMessage
 Select, Tabs, Textarea, Separator, Skeleton, toast(Sonner)
 Collapsible, CollapsibleContent, CollapsibleTrigger
+InputOTP, InputOTPGroup, InputOTPSlot
 ```
 
 **NumberInput** (`number-input.tsx`): `value`, `onChange`, `quickButtons[]`, `allowDecimals`, `maxDecimals` — 천 단위 콤마 자동 포맷
@@ -154,5 +173,5 @@ ASSET_THEME = {
   realEstateTypeColors, distributionCard,
 }
 MAIN_PALETTE  // 10색 팔레트 (인덱스 고정: 0=최대비율, 1=대출, 2=임차보증금)
-getProfitLossColor(value)  // >0 수익색 / <0 손실색
+getProfitLossColor(value)  // >0 수익색 / <0 손실색 / =0 기본색
 ```

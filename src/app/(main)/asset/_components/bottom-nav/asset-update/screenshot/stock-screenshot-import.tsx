@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,7 +49,7 @@ interface StockScreenshotImportProps {
 }
 
 export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab }: StockScreenshotImportProps = {}) {
-  const { saveData, refreshData, assetData, exchangeRates } = useAssetData();
+  const { saveData, refreshData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = externalOpen !== undefined;
@@ -62,6 +62,11 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       setInternalOpen(v);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void syncTodayExchangeRate();
+  }, [isOpen, syncTodayExchangeRate]);
 
   const [step, setStep] = useState<"upload" | "conflict" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);

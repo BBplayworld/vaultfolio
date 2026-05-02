@@ -3,22 +3,21 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, Database, Sparkles, Activity, X, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-
-const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 
 export function AppGuide() {
     const [alertDismissed, setAlertDismissed] = useState(() => {
         if (typeof window === "undefined") return false;
-        return localStorage.getItem(ALERT_DISMISSED_KEY) === "1";
+        return localStorage.getItem(STORAGE_KEYS.guideDismissed) === "1";
     });
 
     const dismissAlert = () => {
-        localStorage.setItem(ALERT_DISMISSED_KEY, "1");
+        localStorage.setItem(STORAGE_KEYS.guideDismissed, "1");
         setAlertDismissed(true);
     };
 
     const restoreAlert = () => {
-        localStorage.removeItem(ALERT_DISMISSED_KEY);
+        localStorage.removeItem(STORAGE_KEYS.guideDismissed);
         setAlertDismissed(false);
     };
 

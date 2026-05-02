@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-04-26
+> 마지막 업데이트: 2026-05-02
 
 ## 앱 개요
 
@@ -29,7 +29,7 @@
 src/
 ├── app/
 │   ├── (main)/asset/
-│   │   ├── page.tsx              # 3탭(홈/상세/성과) 메인 페이지
+│   │   ├── page.tsx              # AssetPageTabs 래퍼 (실질 로직은 layout/asset-page-tabs.tsx)
 │   │   ├── layout.tsx            # SidebarInset (max-w-screen-2xl)
 │   │   └── _components/
 │   │       ├── bottom-nav/
@@ -39,11 +39,14 @@ src/
 │   │       ├── main-nav/
 │   │       │   ├── home/         # dashboard.tsx
 │   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종
-│   │       │   └── activity/     # net-asset-chart, profit, dividend
-│   │       ├── layout/           # floating-add-button, welcome-guide, copyright-footer
-│   │       └── top-nav/          # theme-switcher, tool-menu, guide-mini-banner, share/
+│   │       │   └── activity/     # net-asset-chart, profit-chart, dividend-chart
+│   │       ├── layout/           # asset-page-tabs.tsx, floating-add-button, notice-dialog
+│   │       └── top-nav/          # top-bar, theme-menu, tool-menu, app-guide, share/
 │   ├── api/
-│   │   ├── finance/route.ts      # 주식·환율 (캐시 포함)
+│   │   ├── finance/
+│   │   │   ├── route.ts          # 주식·환율 조회 (캐시 포함)
+│   │   │   └── profit/route.ts   # 기준가(과거종가) 조회
+│   │   ├── logo/route.ts         # 종목 로고 프록시
 │   │   ├── share/route.ts        # 공유 Short URL
 │   │   └── parse-screenshot/
 │   │       ├── route.ts          # POST (Gemini AI)
@@ -53,14 +56,16 @@ src/
 ├── contexts/asset-data-context.tsx  # 전역 자산 상태 CRUD + 환율 + 동기화
 ├── stores/preferences/           # Zustand 테마 스토어
 ├── lib/
-│   ├── asset-storage.ts          # localStorage + 공유 토큰 (v7.1)
-│   ├── finance-service.ts        # 한국투자증권 API 연동
+│   ├── asset-storage.ts          # localStorage + 공유 토큰 (v7.2)
+│   ├── local-storage.ts          # STORAGE_KEYS, STORAGE_KEY_PREFIXES, migrateStorageKeys
+│   ├── profit-utils.ts           # 기준가 캐시(localStorage) + /api/finance/profit 조회
+│   ├── finance-service.ts        # 한국투자증권 API 연동 (주식/환율/배당/과거종가)
 │   ├── cache-storage.ts          # 환경별 캐시 추상화
 │   ├── number-utils.ts           # 숫자·통화 포맷
 │   └── utils.ts                  # cn(), getInitials(), formatCurrency()
 ├── config/
 │   ├── app.ts / asset-options.ts / theme.ts / navigation.ts
-└── components/ui/                # shadcn/ui 컴포넌트 54종
+└── components/ui/                # shadcn/ui 컴포넌트
 ```
 
 ## 데이터 흐름
@@ -68,6 +73,7 @@ src/
 ```
 localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 서버 API(/api/finance, /api/share) → cache-storage.ts → 한국투자증권 OpenAPI
+기준가 조회: profit-utils.ts → localStorage 캐시 → /api/finance/profit
 ```
 
 ## 캐시 전략
@@ -83,11 +89,11 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 - 사이드바: variant=`inset`, collapsible=`icon`
 - 헤더: `sticky top-0 h-10 sm:h-12` (layout.tsx)
 
-## page.tsx 탭 구조
+## 탭 구조 (`layout/asset-page-tabs.tsx`)
 
-- **홈** (`home`): Dashboard
-- **상세** (`detail`): AssetDetailTabs — 진입 시 `syncStockPricesAndSnapshots` 호출
-- **성과** (`activity`): 순자산/수익/배당 차트 (3 서브탭)
+- **홈** (`home`): Dashboard + 서브탭(전체/금융/부동산/부채) — `useDashboardTabs`가 동적 생성
+- **상세** (`detail`): 주식/부동산/암호화폐/현금/대출 5 서브탭
+- **성과** (`activity`): 순자산/수익/배당 3 서브탭
 - `navigate-to-tab` CustomEvent → 상세 탭 자동 이동
 
 ## 환경변수

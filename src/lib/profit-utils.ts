@@ -1,4 +1,5 @@
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
+import { STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -10,11 +11,11 @@ export function getProfitCacheKey(tickers: string, period: ProfitPeriod): string
     const daysToMonday = day === 0 ? 6 : day - 1;
     const lastFriday = new Date(nowKST);
     lastFriday.setUTCDate(nowKST.getUTCDate() - daysToMonday - 3);
-    return `profit:weekly:${lastFriday.toISOString().split("T")[0]}:${tickers}`;
+    return `${STORAGE_KEY_PREFIXES.profit}weekly:${lastFriday.toISOString().split("T")[0]}:${tickers}`;
   }
-  if (period === "monthly") return `profit:monthly:${todayStr.slice(0, 7)}:${tickers}`;
-  if (period === "yearly") return `profit:yearly:${todayStr.slice(0, 4)}:${tickers}`;
-  return `profit:daily:${todayStr}:${tickers}`;
+  if (period === "monthly") return `${STORAGE_KEY_PREFIXES.profit}monthly:${todayStr.slice(0, 7)}:${tickers}`;
+  if (period === "yearly") return `${STORAGE_KEY_PREFIXES.profit}yearly:${todayStr.slice(0, 4)}:${tickers}`;
+  return `${STORAGE_KEY_PREFIXES.profit}daily:${todayStr}:${tickers}`;
 }
 
 export async function fetchProfitRef(tickers: string, period: ProfitPeriod): Promise<ProfitRefResponse> {

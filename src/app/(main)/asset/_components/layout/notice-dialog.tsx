@@ -13,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const HIDE_UNTIL_KEY = "secretasset-notice-hide-until";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function MajorUiUpdateNoticeDialog() {
@@ -23,7 +22,7 @@ export function MajorUiUpdateNoticeDialog() {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    const rawHideUntil = localStorage.getItem(HIDE_UNTIL_KEY);
+    const rawHideUntil = localStorage.getItem(STORAGE_KEYS.noticeHideUntil);
     const hideUntil = rawHideUntil ? Number(rawHideUntil) : 0;
     const shouldOpen = !Number.isFinite(hideUntil) || hideUntil <= Date.now();
 
@@ -33,9 +32,9 @@ export function MajorUiUpdateNoticeDialog() {
 
   const handleClose = () => {
     if (hideForWeek) {
-      localStorage.setItem(HIDE_UNTIL_KEY, String(Date.now() + ONE_WEEK_MS));
+      localStorage.setItem(STORAGE_KEYS.noticeHideUntil, String(Date.now() + ONE_WEEK_MS));
     } else {
-      localStorage.removeItem(HIDE_UNTIL_KEY);
+      localStorage.removeItem(STORAGE_KEYS.noticeHideUntil);
     }
 
     setOpen(false);

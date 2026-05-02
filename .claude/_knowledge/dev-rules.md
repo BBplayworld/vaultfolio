@@ -1,6 +1,6 @@
 # 개발 규칙 & 패턴
 
-> 마지막 업데이트: 2026-04-25
+> 마지막 업데이트: 2026-05-02
 
 ## 코드 패턴
 
@@ -8,8 +8,8 @@
 1. `src/types/asset.ts` — Zod 스키마 + TS 타입
 2. `src/lib/asset-storage.ts` — 저장/로드 로직
 3. `src/contexts/asset-data-context.tsx` — CRUD 함수
-4. `src/app/(main)/asset/_components/input/xxx-input.tsx` — 입력 폼
-5. `src/app/(main)/asset/page.tsx` — 컴포넌트 등록
+4. `src/app/(main)/asset/_components/bottom-nav/asset-update/input/xxx-input.tsx` — 입력 폼
+5. `src/app/(main)/asset/_components/layout/asset-page-tabs.tsx` — 탭 등록
 6. `src/config/asset-options.ts` — 카테고리 옵션 (필요 시)
 
 ### CRUD 반환 패턴
@@ -40,6 +40,13 @@ const getMultiplier = (currency?: string) =>
 </div>
 ```
 
+### localStorage 직접 접근 패턴
+```typescript
+import { STORAGE_KEYS } from "@/lib/local-storage";
+// STORAGE_KEYS는 asset-storage.ts에서도 re-export됨
+localStorage.getItem(STORAGE_KEYS.assetData)
+```
+
 ---
 
 ## 스타일 규칙
@@ -59,6 +66,7 @@ const getMultiplier = (currency?: string) =>
 
 ### localStorage
 - 모든 자산 데이터는 localStorage에만 존재 → 저장 실패 시 `false` 반환 + toast 알림
+- 키는 반드시 `STORAGE_KEYS.*` 상수 사용 (`src/lib/local-storage.ts`)
 
 ### 해외주식
 - `allowDecimals={true}`, `maxDecimals={2}` — 소수점 2자리
@@ -70,7 +78,10 @@ const getMultiplier = (currency?: string) =>
 ### API 에러 처리
 ```typescript
 // 500 에러 연속 3회 → API 조회 비활성화
-const errorCount = parseInt(localStorage.getItem("finance_api_error_count") || "0");
+const errorCount = parseInt(localStorage.getItem(STORAGE_KEYS.financeApiErrorCount) || "0");
 if (errorCount >= 3) { /* 조회 비활성화 */ }
-// 성공 시: localStorage.removeItem("finance_api_error_count")
+// 성공 시: localStorage.removeItem(STORAGE_KEYS.financeApiErrorCount)
 ```
+
+### 항목 표시 조건
+- 목록 렌더링 시 `length > 0` 사용. `> 1` 절대 사용 금지 (단일 항목도 표시해야 함)

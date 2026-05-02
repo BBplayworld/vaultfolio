@@ -1,0 +1,56 @@
+export const STORAGE_KEY_PREFIXES = {
+  profit: "secretasset_profit:",
+} as const;
+
+export const STORAGE_KEYS = {
+  assetData:            "secretasset_asset_data",
+  dailySnapshots:       "secretasset_daily_snapshots",
+  monthlySnapshots:     "secretasset_monthly_snapshots",
+  exchangeRate:         "secretasset_exchange_rate",
+  exchangeSyncDate:     "secretasset_exchange_last_sync_date",
+  collapsibleUsed:      "secretasset_collapsible_used",
+  noticeHideUntil:      "secretasset_notice_hide_until",
+  guideDismissed:       "secretasset_guide_dismissed",
+  geminiUsage:          "secretasset_gemini_usage",
+  shareOwnerId:         "secretasset_share_owner_id",
+  financeApiErrorCount: "secretasset_finance_api_error_count",
+} as const;
+
+const LEGACY_KEYS = {
+  assetData:            "secretasset-asset-data",
+  exchangeRate:         "exchange-rate-usd-krw",
+  collapsibleUsed:      "stock-tab-collapsible-used",
+  noticeHideUntil:      "secretasset-notice-hide-until",
+  guideDismissed:       "secretasset-guide-dismissed",
+  geminiUsage:          "secretasset-gemini-usage",
+  financeApiErrorCount: "finance_api_error_count",
+} as const;
+
+export function migrateStorageKeys(): void {
+  if (typeof window === "undefined") return;
+  const pairs: Array<[string, string]> = [
+    [LEGACY_KEYS.assetData,            STORAGE_KEYS.assetData],
+    [LEGACY_KEYS.exchangeRate,         STORAGE_KEYS.exchangeRate],
+    [LEGACY_KEYS.collapsibleUsed,      STORAGE_KEYS.collapsibleUsed],
+    [LEGACY_KEYS.noticeHideUntil,      STORAGE_KEYS.noticeHideUntil],
+    [LEGACY_KEYS.guideDismissed,       STORAGE_KEYS.guideDismissed],
+    [LEGACY_KEYS.geminiUsage,          STORAGE_KEYS.geminiUsage],
+    [LEGACY_KEYS.financeApiErrorCount, STORAGE_KEYS.financeApiErrorCount],
+  ];
+  for (const [legacy, current] of pairs) {
+    if (!localStorage.getItem(current)) {
+      const old = localStorage.getItem(legacy);
+      if (old) {
+        localStorage.setItem(current, old);
+        localStorage.removeItem(legacy);
+      }
+    }
+  }
+
+  // profit: prefix 레거시 캐시 키 일괄 제거 (secretasset_profit: 으로 교체됨)
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("profit:") && !key.startsWith(STORAGE_KEY_PREFIXES.profit)) {
+      localStorage.removeItem(key);
+    }
+  }
+}

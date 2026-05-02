@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-04-25
+> 마지막 업데이트: 2026-05-02
 
 ## 내부 API 라우트
 
@@ -16,6 +16,28 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 ```
 
 캐시 키: `"TICKER-YYYY-MM-DD"` — `getEffectiveDateStr(type)` 기준 (해외 07:00, 국내 16:00, 환율 09:00 이전이면 전일)
+
+---
+
+### GET /api/finance/profit
+기준가(과거 종가) 조회. 기간별 수익 계산용.
+
+```
+GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly
+→ ProfitRefResponse: Record<string, number>  // { "005930": 72000, "TSLA": 245.3 }
+```
+
+클라이언트 캐시: `profit-utils.ts` → `secretasset_profit:{period}:{date}:{tickers}` (localStorage)
+
+---
+
+### GET /api/logo
+종목 로고 이미지 프록시.
+
+```
+GET /api/logo?ticker=AAPL          # 해외 주식 (Clearbit 또는 대체 소스)
+GET /api/logo?domain=www.samsung.com  # 도메인 기반 (ETF, 국내 주식)
+```
 
 ---
 
@@ -60,27 +82,35 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 ## 외부 API — 한국투자증권 OpenAPI (`src/lib/finance-service.ts`)
 
 ```typescript
-fetchStocksFromKorea(token, tickers)         // 국내 주식
-fetchStocksFromKisOverseas(token, tickers)   // 해외 주식
-fetchExchangeRateFromKis(token, key, secret, date)  // 환율
+fetchStocksFromKorea(tickers, todayStr, token, key, secret)       // 국내 주식
+fetchStocksFromKisOverseas(tickers, todayStr, token, key, secret) // 해외 주식 (NASDAQ→NYSE→AMEX 순 시도)
+fetchExchangeRateFromKis(token, key, secret, todayStr)            // 환율 (USD, JPY)
+fetchDividendDomestic(ticker, fdt, tdt, token, key, secret)       // 국내 배당 [국내주식-145]
+fetchDividendOverseas(ticker, excd, fdt, tdt, token, key, secret) // 해외 배당 [해외주식-052]
+fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret) // 국내 과거 종가 (roll-back 5일)
+fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret) // 해외 과거 종가 (NAS→NYS→AMS)
 
 normalizeTicker({ ticker, category }): string
 classifyTickers(tickers[]): { usTickers, krTickers }
+resolveStockName(category, apiName, existingName): string
 ```
 
 ---
 
-## 공유 토큰 시스템 v7.1 (`src/lib/asset-storage.ts`)
+## 공유 토큰 시스템 v7.2 (`src/lib/asset-storage.ts`)
 
 ```
-프리픽스: v71P(PIN 있음, 공유 가능) / v71N(PIN 없음, 로컬만) / v72Z(PIN+localKey)
+프리픽스: v71P(PIN 있음, 공유 가능) / v71N(PIN 없음, 로컬만) / v72Z(PIN+localKey, Zero-Knowledge)
 
 generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
 parseShareToken(token, pin?, localKey?): ParseResult
   = { data, rates?, snapshots? } | { pinRequired: true } | null
 
-하위 호환: v6.x, v7.0 파싱 지원
+하위 호환: v6.x, v7.0, v7.1 파싱 지원
 ```
+
+**v72Z Zero-Knowledge:** PIN + localKey 조합 암호화. 서버에는 암호화된 데이터만 저장,
+localKey는 URL 해시에 포함 → 서버 관리자도 단독 복호화 불가.
 
 ---
 
@@ -112,4 +142,4 @@ getCacheStorage(): ICacheStorage
 getEffectiveDateStr(type: "exchange"|"stock-us"|"stock-kr"): string
 ```
 
-**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset-gemini-YYYY-MM-DD`, 하루 15회
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회

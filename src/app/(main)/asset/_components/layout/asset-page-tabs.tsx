@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, List, Activity, TrendingUp, Coins, Landmark, Building2, Bitcoin, Banknote, CreditCard, LayoutGrid, Wallet, ShieldAlert } from "lucide-react";
 import { ASSET_THEME } from "@/config";
-import { useAssetData } from "@/contexts/asset-data-context";
 import { Dashboard, useDashboardTabs } from "../main-nav/home/dashboard";
 import { StockTab } from "../main-nav/detail/tabs/stock-tab";
 import { RealEstateTab } from "../main-nav/detail/tabs/real-estate-tab";
@@ -51,19 +50,13 @@ const ACTIVITY_TABS = [
 ] as const;
 
 export function AssetPageTabs() {
-  const { syncStockPricesAndSnapshots } = useAssetData();
   const [activeHomeTab, setActiveHomeTab] = useState("home");
   const [activeActivityTab, setActiveActivityTab] = useState("netasset");
   const [activeDetailTab, setActiveDetailTab] = useState("");
   const [activeDetailAssetTab, setActiveDetailAssetTab] = useState("stocks");
-  const stockSyncedRef = useRef(false);
 
   const handleHomeTabChange = (tab: string) => {
     setActiveHomeTab(tab);
-    if (tab === "detail" && !stockSyncedRef.current) {
-      stockSyncedRef.current = true;
-      void syncStockPricesAndSnapshots();
-    }
   };
 
   useEffect(() => {

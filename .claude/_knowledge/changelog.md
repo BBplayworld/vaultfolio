@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-05-02
+
+### AssetPageTabs 컴포넌트 분리 및 홈 서브탭 추가
+- `page.tsx` 탭 로직 → `layout/asset-page-tabs.tsx`로 이동
+- 홈 탭 서브탭(전체/금융/부동산/부채) 추가 — `useDashboardTabs` 훅으로 동적 생성
+- 탭이 1개면 TabsList 숨김
+- **이유:** page.tsx 단순화 + 대시보드 서브탭 뷰 도입
+
+### local-storage.ts 신규 분리
+- `STORAGE_KEYS`, `STORAGE_KEY_PREFIXES`, `migrateStorageKeys` → `src/lib/local-storage.ts`로 분리
+- `asset-storage.ts`에서 re-export (하위 호환 유지)
+- **이유:** 스토리지 키 관리 모듈화, 여러 파일에서 직접 import 가능
+
+### profit-utils.ts 신규 추가
+- `fetchProfitRef(tickers, period)` — localStorage 캐시 → `/api/finance/profit` 조회
+- `getProfitCacheKey(tickers, period)` — 기간별 캐시 키 생성
+- **이유:** 기간별 수익(일/주/월/년) 기준가 조회 로직 공유
+
+### finance-service.ts 배당·과거종가 조회 추가
+- `fetchDividendDomestic` — 국내 배당 [국내주식-145]
+- `fetchDividendOverseas` — 해외 배당 [해외주식-052]
+- `fetchDomesticHistoricalPrice` — 국내 과거 종가 (roll-back 5일)
+- `fetchOverseasHistoricalPrice` — 해외 과거 종가 (NAS→NYS→AMS)
+- `DividendPayoutResult`, `DividendFrequency` 타입 추가
+
+### TopBar 컴포넌트 도입 + AppGuide 리팩터링
+- `top-bar.tsx` 신규: GuideMiniButton + ShareScreenshotButton + ToolMenu + ThemeSwitcher 통합
+- GuideMiniButton: 가이드 토글 버튼 (이전: `guide-mini-banner.tsx`)
+- AppGuide: `trigger-restore-guide`/`trigger-dismiss-guide` CustomEvent 수신
+
+### 공유 토큰 v7.2 (Zero-Knowledge)
+- `v72Z` 프리픽스: PIN + localKey 조합 암호화 (`cryptWithKey`)
+- Short URL 공유 시 localKey를 URL 해시에 포함 → 서버 단독 복호화 불가
+
+---
+
 ## 2026-04-26
 
 ### 디렉토리 구조 재편 — layout/ 신설
@@ -67,22 +103,3 @@
 
 ### 캐시 갱신 주기 시장 마감 시간 기준 세분화
 - `getEffectiveDateStr(type)`: 해외주식 KST 07:00, 국내주식 16:00, 환율 09:00 이전이면 전일
-
----
-
-## 2026-04-17
-
-### 스크린샷 가져오기 확장 + Gemini 사용 한도 관리
-- crypto/cash/loan 스크린샷 다이얼로그 신규 추가
-- 서버 전역 하루 300회 + 기기별 15회 이중 한도 (`use-gemini-usage.ts`)
-
-### _components 디렉토리 구조 분리
-- `*-input.tsx` → `input/`, `*-screenshot-import.tsx` → `screenshot/`
-
----
-
-## 2026-04-11
-
-### 주식 폼 조회 연동 UX 개선 + 소수점 2자리 정책 변경
-- `lookupState` 상태 추가, 조회 전 종목명·현재가 필드 숨김
-- `maxDecimals` 1 → 2 변경

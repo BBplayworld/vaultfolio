@@ -1,6 +1,6 @@
 # 타입 & 스키마 참조
 
-> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-04-25
+> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-05-02
 
 ## 자산 5종 Zod 스키마
 
@@ -57,6 +57,20 @@ MonthlyAssetSnapshot: { month: string, netAsset: number, financialAsset: number 
 
 AssetSnapshots: { daily: DailyAssetSnapshot[], monthly: MonthlyAssetSnapshot[] }
   // 공유 토큰 포함 시 generateShareToken의 snapshots 파라미터로 전달
+```
+
+## 배당 관련 타입 (`src/lib/finance-service.ts`)
+
+```typescript
+DividendFrequency = "annual" | "semiannual" | "quarterly" | "monthly"
+
+DividendPayoutResult: {
+  payoutDate: string           // YYYY-MM-DD
+  amountPerShare: number       // 원화(국내) 또는 외화(해외)
+  amountForeign?: number       // 외화 주당 금액 (해외)
+  currency?: string            // "KRW" | "USD" 등
+  frequency?: DividendFrequency
+}
 ```
 
 ## ID 생성 패턴

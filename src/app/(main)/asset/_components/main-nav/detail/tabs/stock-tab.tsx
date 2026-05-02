@@ -18,6 +18,7 @@ import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/profit-utils";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 
 const CAT_LIST = ASSET_THEME.tabList3;
 const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
@@ -81,8 +82,6 @@ function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: s
     </div>
   );
 }
-
-const LS_KEY = "stock-tab-collapsible-used";
 
 // 인증샷에서 재사용하는 공유 타입
 export interface StockRowData {
@@ -272,6 +271,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
 }) {
+  const fmtFull = maskFn ?? formatCurrency;
   const fmt = maskFn ?? formatShortCurrency;
   const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
   return (
@@ -279,7 +279,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       <div>
         <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
         <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
-        <p className="text-sm text-foreground">{formatCurrency(totalValue)}</p>
+        <p className="text-sm text-foreground">{fmtFull(totalValue)}</p>
       </div>
       <div className="text-right space-y-1">
         <div>
@@ -529,7 +529,7 @@ export function StockTab() {
   const { assetData, deleteStock, saveData } = useAssetData();
   const [activeCategory, setActiveCategory] = useState("all");
   const [hasInteracted, setHasInteracted] = useState(() => {
-    try { return !!localStorage.getItem(LS_KEY); } catch { return true; }
+    try { return !!localStorage.getItem(STORAGE_KEYS.collapsibleUsed); } catch { return true; }
   });
 
   // 비해외주식의 currency/purchaseExchangeRate 정리 (1회성 마이그레이션)
@@ -551,7 +551,7 @@ export function StockTab() {
   const handleFirstInteract = () => {
     if (hasInteracted) return;
     setHasInteracted(true);
-    try { localStorage.setItem(LS_KEY, "1"); } catch { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
   const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate } =

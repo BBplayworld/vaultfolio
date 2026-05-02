@@ -113,7 +113,7 @@ export function ToolMenu({
     const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
 
     const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots());
-    const ownerId = localStorage.getItem("secretasset_share_owner_id") ?? undefined;
+    const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
     fetch("/api/share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,7 +122,7 @@ export function ToolMenu({
       .then((res) => res.json() as Promise<{ key?: string; owner_id?: string }>)
       .then((json) => {
         if (json.owner_id) {
-          localStorage.setItem("secretasset_share_owner_id", json.owner_id);
+          localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
         }
         if (json.key) {
           setPreGeneratedShortUrl(

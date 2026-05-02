@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance-service";
+import { STORAGE_KEYS } from "@/lib/local-storage";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -205,7 +206,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
               disabled={isFetchingPrice}
               onClick={async () => {
                 // 500 에러 횟수 체크
-                const errorCount = parseInt(localStorage.getItem("finance_api_error_count") || "0");
+                const errorCount = parseInt(localStorage.getItem(STORAGE_KEYS.financeApiErrorCount) || "0");
                 if (errorCount >= 3) {
                   toast.error("연속된 서버 오류로 조회가 비활성화되었습니다. 직접 입력해 주세요.");
                   return;
@@ -226,13 +227,13 @@ function StockForm({ editData, onClose }: StockFormProps) {
 
                   if (res.status === 500) {
                     const newCount = errorCount + 1;
-                    localStorage.setItem("finance_api_error_count", newCount.toString());
+                    localStorage.setItem(STORAGE_KEYS.financeApiErrorCount, newCount.toString());
                     toast.error(`서버 오류 발생 (${newCount}/3)`);
                     return;
                   }
 
                   // 성공 시 에러 카운트 초기화
-                  localStorage.removeItem("finance_api_error_count");
+                  localStorage.removeItem(STORAGE_KEYS.financeApiErrorCount);
 
                   const data = await res.json();
 
