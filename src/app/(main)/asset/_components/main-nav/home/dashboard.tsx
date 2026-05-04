@@ -250,7 +250,8 @@ function DailyNetAssetTrend() {
           const isLast = i === snapshots.length - 1;
           const heightPx = range > 0 ? Math.round(((snap.netAsset - minVal) / range) * 42 + 14) : 56;
           const barColor = isBig ? MAIN_PALETTE[4] : isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
-          const label = snap.date.slice(5);
+          const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(snap.date).getDay()];
+          const label = `${snap.date.slice(5)} (${dow})`;
 
           return (
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
@@ -260,13 +261,13 @@ function DailyNetAssetTrend() {
               {!isBig && <span className="text-[9px] leading-none mb-0.5 invisible">x</span>}
               <div className="w-full flex flex-col items-center" style={{ height: 72 }}>
                 <div style={{ flex: 1 }} />
-                <span className="text-[10px] font-bold text-foreground leading-none mb-1">{formatShortCurrency(snap.netAsset)}</span>
+                <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrency(snap.netAsset)}</span>
                 <div
                   className="w-full rounded-t-sm transition-all"
                   style={{ height: heightPx, backgroundColor: barColor, boxShadow: isBig ? `0 0 6px ${MAIN_PALETTE[4]}88` : undefined }}
                 />
               </div>
-              <span className="text-[10px] text-muted-foreground">{label}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">{label}</span>
             </div>
           );
         })}

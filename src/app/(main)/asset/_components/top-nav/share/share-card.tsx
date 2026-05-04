@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
-import { MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { MAIN_PALETTE } from "@/config/theme";
 import { computeStockMetrics } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
 import { StockCategorySection, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
 import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
@@ -40,7 +40,9 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
       const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
       if (!raw) return [];
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
-      return [...all].sort((a, b) => a.date.localeCompare(b.date));
+      return [...all]
+        .filter(s => { const d = new Date(s.date).getDay(); return d !== 0 && d !== 6; })
+        .sort((a, b) => a.date.localeCompare(b.date));
     } catch { return []; }
   }, []);
 
@@ -91,7 +93,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                      tickFormatter={(d: string) => d.slice(5)}
+                      tickFormatter={(d: string) => { const dow = ["일","월","화","수","목","금","토"][new Date(d).getDay()]; return `${d.slice(5)} (${dow})`; }}
                       axisLine={false}
                       tickLine={false}
                       interval={0}
@@ -124,12 +126,12 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                               {isAbove ? (
                                 <>
                                   <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{formatShortCurrency(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{formatShortCurrency(diff)}</text>}
+                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{diff >= 0 ? "+" : ""}{formatShortCurrency(diff)}</text>}
                                 </>
                               ) : (
                                 <>
                                   <text x={cx} y={baseY - 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--foreground)">{formatShortCurrency(cur)}</text>
-                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{formatShortCurrency(diff)}</text>}
+                                  {diff != null && <text x={cx} y={baseY - 7} textAnchor="middle" fontSize={11} fontWeight={600} fill={fillDiff}>{diff >= 0 ? "+" : ""}{formatShortCurrency(diff)}</text>}
                                 </>
                               )}
                             </g>

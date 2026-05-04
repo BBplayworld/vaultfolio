@@ -43,6 +43,7 @@ import { exportAssetData, importAssetData, clearAssetData, generateShareToken, S
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
+import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 
 export function ToolMenu({
   user,
@@ -201,6 +202,8 @@ export function ToolMenu({
       const { assetData: imported, snapshotRestored } = await importAssetData(file);
       toast.success("자산 데이터를 불러왔습니다.");
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
+      const { skipStep, statuses } = tutorialStore.getState();
+      ([0, 1, 2, 3, 4, 5] as const).forEach(step => { if (statuses[step] === "pending") skipStep(step); });
       void initAndSync(imported); // 주식 현재가 갱신은 백그라운드 처리 → syncTodayStockPrices가 별도 toast 표시
     } catch (error) {
       toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
