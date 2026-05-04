@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, MapPin, CreditCard, ChevronDown, Building2 } from "lucide-react";
+import { Pencil, Trash2, MapPin, CreditCard, ChevronDown, Building2, Clock, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { assignColors } from "../asset-detail-tabs";
@@ -72,37 +72,31 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-3 px-4 py-2.5 gap-2 bg-muted/10">
-              <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>매입가</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
                 <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
               </div>
-              <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>실거래가</p>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
                 <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
               </div>
-              <div className="rounded-md bg-muted/30 px-2 py-2 text-center">
-                <p className={`${ASSET_THEME.cardDetailLabel} mb-0.5`}>평가손익</p>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
                 <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
               </div>
+              {(item.tenantDeposit ?? 0) > 0 && (
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
+                </div>
+              )}
             </div>
-            {item.address && (
-              <div className="flex items-center gap-1.5 px-4 py-2 text-xs text-muted-foreground bg-muted/5">
-                <MapPin className="size-3 flex-shrink-0" />
-                <span className="truncate text-sm">{item.address}</span>
-              </div>
-            )}
-            {(item.tenantDeposit ?? 0) > 0 && (
-              <div className="flex items-center justify-between px-4 py-2 bg-muted/10">
-                <span className={`${ASSET_THEME.cardDetailLabel} font-semibold`}>임차인보증금</span>
-                <span className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</span>
-              </div>
-            )}
             {linkedLoans.length > 0 && (
-              <div className={ASSET_THEME.cardLoanSection}>
-                <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />주택담보대출</p>
+              <div className="px-4 py-2.5 space-y-1.5">
+                <p className="text-xs font-bold text-muted-foreground flex items-center gap-1"><CreditCard className="size-3" />주택담보대출</p>
                 {linkedLoans.map((loan) => (
-                  <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
+                  <div key={loan.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-md bg-muted/30">
                     <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
@@ -112,6 +106,17 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 ))}
               </div>
             )}
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+              {item.purchaseDate && (
+                <>
+                  <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(item.purchaseDate)} 보유</span></span>
+                  <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{item.purchaseDate} 매입</span></span>
+                </>
+              )}
+              {item.address && (
+                <span className="flex items-center gap-1 w-full"><MapPin className="size-3 flex-shrink-0" /><span className="truncate">{item.address}</span></span>
+              )}
+            </div>
           </div>
         </CollapsibleContent>
       </div>

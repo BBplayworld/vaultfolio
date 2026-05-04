@@ -144,7 +144,10 @@ export function saveAssetDataRaw(data: AssetData): boolean {
 export function clearAssetData(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    localStorage.removeItem(STORAGE_KEYS.assetData);
+    const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith("secretasset_"));
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+    }
     return true;
   } catch (error) {
     return false;

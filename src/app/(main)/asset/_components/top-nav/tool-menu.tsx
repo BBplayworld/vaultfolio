@@ -77,6 +77,7 @@ export function ToolMenu({
     try {
       exportAssetData();
       toast.success("자산 데이터가 다운로드되었습니다.");
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
     } catch (error) {
       toast.error("데이터 내보내기에 실패했습니다.");
     }
@@ -146,6 +147,7 @@ export function ToolMenu({
     try {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
       toast.success(`짧은 공유 URL이 복사되었습니다. (${preGeneratedShortUrl.length}자)`);
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
       setShowShareDialog(false);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
@@ -173,6 +175,7 @@ export function ToolMenu({
         toast.success("공유 URL이 복사되었습니다.");
         toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
       }
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
       setShowShareDialog(false);
     } catch {
       toast.error("URL 공유 준비에 실패했습니다.");
@@ -238,16 +241,23 @@ export function ToolMenu({
     }
   };
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <>
       <SidebarMenu className="rounded-md transition-colors shadow-sm overflow-hidden">
         <SidebarMenuItem>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild className="gap-1 sm:gap-1.5">
+            <DropdownMenuTrigger asChild className="gap-1 sm:gap-1.5" data-tutorial="tutorial-tool-menu" id="tool-menu-trigger">
               <SidebarcategoryBox
                 size="lg"
-                className="h-9 sm:h-10 px-2 text-white hover:text-white transition-colors border-none"
-                style={{ backgroundColor: MAIN_PALETTE[0] }}
+                className="h-9 sm:h-10 px-2 text-white hover:text-white hover:opacity-90"
+                style={{ backgroundColor: MAIN_PALETTE[11] }}
               >
                 <Settings className="ml-auto size-3.5 sm:size-4 opacity-70" />
                 <div className="grid flex-1 text-left leading-tight">

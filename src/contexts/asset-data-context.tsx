@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
@@ -296,14 +296,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 모든 진입 경로 공통 헬퍼
   // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷
   const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
-    initAssetData(data);
-    setIsDataLoaded(true);
     const hasAssets =
-      data.realEstate.length > 0 ||
       data.stocks.length > 0 ||
+      data.realEstate.length > 0 ||
       data.crypto.length > 0 ||
       data.cash.length > 0 ||
       data.loans.length > 0;
+    prevHasAssetsRef.current = hasAssets;
+    initAssetData(data);
+    setIsDataLoaded(true);
     if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
@@ -318,6 +319,33 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
+
+  // 0→양수 전환 감지: 웰컴 가이드에서 최초 자산 추가 시 전체 동기화 실행
+  const prevHasAssetsRef = useRef(false);
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    const hasAssets =
+      assetData.stocks.length > 0 ||
+      assetData.realEstate.length > 0 ||
+      assetData.crypto.length > 0 ||
+      assetData.cash.length > 0 ||
+      assetData.loans.length > 0;
+    if (hasAssets && !prevHasAssetsRef.current) {
+      const doSync = async () => {
+        await syncTodayExchangeRate();
+        await syncTodayStockPrices(assetData);
+        setAssetData(latest => {
+          setExchangeRatesState(latestRates => {
+            saveSnapshots(latest, latestRates);
+            return latestRates;
+          });
+          return latest;
+        });
+      };
+      void doSync();
+    }
+    prevHasAssetsRef.current = hasAssets;
+  }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)

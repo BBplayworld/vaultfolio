@@ -174,7 +174,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
       }}
     >
       <DialogContent
-        className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/40"
+        className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/40 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

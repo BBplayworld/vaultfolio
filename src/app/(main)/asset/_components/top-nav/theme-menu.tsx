@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { updateThemeMode } from "@/lib/theme-utils";
 import { setValueToCookie } from "@/server/server-actions";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
+import { MAIN_PALETTE } from "@/config/theme";
 
 const BTN_H = "h-9 sm:h-10";
 
@@ -20,7 +21,10 @@ export function ThemeSwitcher() {
   };
 
   return (
-    <Button size="icon" className={`${BTN_H} aspect-square`} onClick={handleValueChange}>
+    <Button size="icon"
+      className={`${BTN_H} aspect-square text-white hover:opacity-90`}
+      onClick={handleValueChange}
+      style={{ backgroundColor: MAIN_PALETTE[11] }}>
       {themeMode === "dark" ? <Sun className="size-3.5 sm:size-4" /> : <Moon className="size-3.5 sm:size-4" />}
     </Button>
   );

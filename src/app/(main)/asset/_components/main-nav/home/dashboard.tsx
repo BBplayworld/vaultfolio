@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 
@@ -147,15 +147,6 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
               </text>
             );
           })()}
-          {!screenshotMode && (
-            <Tooltip
-              formatter={(value: number, _: string, entry: { payload?: { name?: string; pct?: number } }) => [
-                `${fmt(value)} (${entry.payload?.pct?.toFixed(1)}%)`,
-                entry.payload?.name ?? "",
-              ]}
-              contentStyle={{ fontSize: 12, borderRadius: 8 }}
-            />
-          )}
         </PieChart>
       </ResponsiveContainer>
       {/* 범례 */}

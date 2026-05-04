@@ -57,6 +57,12 @@ export function AssetPageTabs() {
 
   const handleHomeTabChange = (tab: string) => {
     setActiveHomeTab(tab);
+    if (tab === "detail") {
+      window.dispatchEvent(new CustomEvent("tutorial-start-wait-step2"));
+    }
+    if (tab === "activity") {
+      window.dispatchEvent(new CustomEvent("tutorial-advance-step5"));
+    }
   };
 
   useEffect(() => {
@@ -65,8 +71,23 @@ export function AssetPageTabs() {
       handleHomeTabChange("detail");
       if (tab) setActiveDetailAssetTab(tab);
     };
+    
+    // 튜토리얼 "다음" 버튼 클릭 시, 가짜 클릭 이벤트가 무시되더라도 확실히 탭이 전환되도록 리스너 추가
+    const forceDetailTab = () => handleHomeTabChange("detail");
+    const forceActivityTab = () => setActiveHomeTab("activity");
+    const forceProfitTab = () => setActiveActivityTab("profit");
+
     window.addEventListener("navigate-to-tab", handler);
-    return () => window.removeEventListener("navigate-to-tab", handler);
+    window.addEventListener("tutorial-start-wait-step2", forceDetailTab);
+    window.addEventListener("tutorial-advance-step5", forceActivityTab);
+    window.addEventListener("tutorial-complete-step5", forceProfitTab);
+    
+    return () => {
+      window.removeEventListener("navigate-to-tab", handler);
+      window.removeEventListener("tutorial-start-wait-step2", forceDetailTab);
+      window.removeEventListener("tutorial-advance-step5", forceActivityTab);
+      window.removeEventListener("tutorial-complete-step5", forceProfitTab);
+    };
   }, []);
 
   const { visibleTabs, resolvedTab } = useDashboardTabs(activeDetailTab);
@@ -82,10 +103,15 @@ export function AssetPageTabs() {
       </div>
 
       <Tabs value={activeHomeTab} onValueChange={handleHomeTabChange} className="w-full">
-        <div className="bg-background/95 backdrop-blur-sm pb-1 sm:pb-0 sm:backdrop-blur-none">
+        <div className="bg-background/95 pb-1 sm:pb-0">
           <TabsList className={ASSET_THEME.tabList1}>
             {HOME_TABS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger1}>
+              <TabsTrigger
+                key={value}
+                value={value}
+                className={ASSET_THEME.tabTrigger1}
+                data-tutorial={value === "detail" ? "tutorial-detail-tab" : value === "activity" ? "tutorial-activity-tab" : undefined}
+              >
                 <Icon className="size-4 shrink-0" />
                 {label}
               </TabsTrigger>
@@ -133,10 +159,24 @@ export function AssetPageTabs() {
         </TabsContent>
 
         <TabsContent value="activity" forceMount className="data-[state=inactive]:hidden mt-1 sm:mt-2">
-          <Tabs value={activeActivityTab} onValueChange={setActiveActivityTab} className="w-full">
+          <Tabs
+            value={activeActivityTab}
+            onValueChange={(tab) => {
+              setActiveActivityTab(tab);
+              if (tab === "profit") {
+                window.dispatchEvent(new CustomEvent("tutorial-complete-step5"));
+              }
+            }}
+            className="w-full"
+          >
             <TabsList className={ASSET_THEME.tabList2}>
               {ACTIVITY_TABS.map(({ value, label, icon: Icon }) => (
-                <TabsTrigger key={value} value={value} className={ASSET_THEME.tabTrigger2}>
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className={ASSET_THEME.tabTrigger2}
+                  data-tutorial={value === "profit" ? "tutorial-profit-subtab" : undefined}
+                >
                   <Icon className="size-4 shrink-0 hidden sm:block" />
                   {label}
                 </TabsTrigger>

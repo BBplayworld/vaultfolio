@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
-import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/asset-dispatch";
+import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/asset-dispatch";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
@@ -58,6 +58,15 @@ export function WelcomeGuide() {
 
   const handleImport = () => {
     window.dispatchEvent(new CustomEvent("trigger-import"));
+  };
+
+  const handleStockTutorial = (mode: "screenshot" | "manual") => {
+    setIsStockMenuOpen(false);
+    window.dispatchEvent(new CustomEvent("tutorial-show-step0", { detail: { mode } }));
+  };
+
+  const handleRealEstateTutorial = () => {
+    window.dispatchEvent(new CustomEvent("tutorial-show-step0", { detail: { mode: "real-estate" } }));
   };
 
   return (
@@ -199,7 +208,7 @@ export function WelcomeGuide() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-          <Button size="lg" className="gap-2 bg-primary" onClick={dispatchAddRealEstate}>
+          <Button size="lg" className="gap-2 bg-primary" onClick={handleRealEstateTutorial}>
             <Building2 className="size-4" />
             부동산 추가
             <ArrowRight className="size-4" />
@@ -216,7 +225,7 @@ export function WelcomeGuide() {
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                onClick={() => { setIsStockMenuOpen(false); dispatchAddStock("screenshot"); }}
+                onClick={() => handleStockTutorial("screenshot")}
               >
                 <ImageUp className="size-4 text-muted-foreground shrink-0" />
                 <div className="text-left">
@@ -227,7 +236,7 @@ export function WelcomeGuide() {
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                onClick={() => { setIsStockMenuOpen(false); dispatchAddStock("manual"); }}
+                onClick={() => handleStockTutorial("manual")}
               >
                 <Pencil className="size-4 text-muted-foreground shrink-0" />
                 <div className="text-left">

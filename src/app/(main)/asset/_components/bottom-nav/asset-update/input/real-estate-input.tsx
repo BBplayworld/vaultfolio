@@ -307,7 +307,7 @@ export function RealEstateInput() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
         <DialogHeader>
           <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
           <DialogDescription>

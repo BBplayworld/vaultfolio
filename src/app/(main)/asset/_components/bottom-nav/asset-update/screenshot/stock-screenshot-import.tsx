@@ -179,7 +179,43 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
   const updateCategory = (id: string, category: Stock["category"]) => {
     setStocks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, category } : s))
+      prev.map((s) => {
+        if (s.id !== id) return s;
+
+        const usdRate = exchangeRates.USD || 1380;
+        const wasForeign = s.category === "foreign";
+        const becomeForeign = category === "foreign";
+
+        // 국내(domestic/isa/irp/pension/unlisted) → 해외: 현재가/평균단가 KRW→USD 환산
+        // originalCurrency를 "USD"로 설정하여 미리보기·등록 시 이중 환산 방지
+        if (!wasForeign && becomeForeign) {
+          return {
+            ...s,
+            category,
+            currentPrice: Math.round((s.currentPrice / usdRate) * 10000) / 10000,
+            averagePrice: Math.round((s.averagePrice / usdRate) * 10000) / 10000,
+            originalCurrency: "USD" as const,
+          };
+        }
+
+        // 해외 → 국내: USD→KRW 환산 (달러로 인식된 경우만 역환산)
+        if (wasForeign && !becomeForeign) {
+          const aiSawUSD = s.originalCurrency === "USD";
+          if (aiSawUSD) {
+            return {
+              ...s,
+              category,
+              currentPrice: Math.round(s.currentPrice * usdRate),
+              averagePrice: Math.round(s.averagePrice * usdRate),
+              originalCurrency: "KRW" as const,
+            };
+          }
+          // 원화로 인식됐다가 해외로 잘못 분류된 경우: 금액 그대로 (이미 원화)
+          return { ...s, category, originalCurrency: "KRW" as const };
+        }
+
+        return { ...s, category };
+      })
     );
   };
 
@@ -299,8 +335,15 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       }}
     >
       <DialogContent
-        className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/40"
-        onPointerDownOutside={(e) => e.preventDefault()} // 항상 바깥 클릭 차단
+        className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/40 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0"
+        onPointerDownOutside={(e) => {
+          // 오직 모달 밖 배경(검은색 딤)을 클릭했을 때만 모달 닫힘을 방지합니다.
+          // 이렇게 해야 Select 팝업 내부(포털) 클릭이 방해받지 않습니다.
+          const target = e.target as Element;
+          if (target.tagName === "DIV" && target.className.includes("bg-black/80")) {
+            e.preventDefault();
+          }
+        }}
         onEscapeKeyDown={(e) => e.preventDefault()} // 항상 ESC 차단
       >
         {/* AI 인식 중 전체 클릭 차단 오버레이 */}
@@ -486,24 +529,27 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm truncate">{stock.name}</span>
-                        {stock.ticker ? (
-                          <span className="text-xs font-mono text-muted-foreground">({stock.ticker})</span>
-                        ) : (
+                        {!stock.ticker && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
                             티커 미확인
                           </Badge>
                         )}
-                        {!stock.ticker && (
-                          <Input
-                            placeholder="티커 입력 (필수)"
-                            className={`h-6 w-32 text-xs px-2 ${stock.selected && !(stock.tickerInput?.trim())
-                              ? "border-destructive focus-visible:ring-destructive"
-                              : ""
-                              }`}
-                            value={stock.tickerInput ?? ""}
-                            onChange={(e) => updateTickerInput(stock.id, e.target.value.toUpperCase().replace(/[^A-Z0-9.]/g, ""))}
-                          />
-                        )}
+                        <Input
+                          placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
+                          className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim())
+                            ? "border-destructive focus-visible:ring-destructive"
+                            : ""
+                            }`}
+                          value={stock.tickerInput ?? (stock.ticker || "")}
+                          onChange={(e) => {
+                            const isForeign = stock.category === "foreign";
+                            const raw = e.target.value.toUpperCase();
+                            const filtered = isForeign
+                              ? raw.replace(/[^A-Z0-9.]/g, "").slice(0, 7)
+                              : raw.replace(/[^0-9]/g, "").slice(0, 6);
+                            updateTickerInput(stock.id, filtered);
+                          }}
+                        />
                         {stock.category === "foreign" && (
                           <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
                             {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")

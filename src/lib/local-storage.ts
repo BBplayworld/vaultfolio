@@ -14,6 +14,19 @@ export const STORAGE_KEYS = {
   geminiUsage:          "secretasset_gemini_usage",
   shareOwnerId:         "secretasset_share_owner_id",
   financeApiErrorCount: "secretasset_finance_api_error_count",
+  // Tutorial step state (Step 0~5 done/skipped)
+  tutorialStep0Done:    "secretasset_tutorial_step0_done",
+  tutorialStep0Skipped: "secretasset_tutorial_step0_skipped",
+  tutorialStep1Done:    "secretasset_tutorial_step1_done",
+  tutorialStep1Skipped: "secretasset_tutorial_step1_skipped",
+  tutorialStep2Done:    "secretasset_tutorial_step2_done",
+  tutorialStep2Skipped: "secretasset_tutorial_step2_skipped",
+  tutorialStep3Done:    "secretasset_tutorial_step3_done",
+  tutorialStep3Skipped: "secretasset_tutorial_step3_skipped",
+  tutorialStep4Done:    "secretasset_tutorial_step4_done",
+  tutorialStep4Skipped: "secretasset_tutorial_step4_skipped",
+  tutorialStep5Done:    "secretasset_tutorial_step5_done",
+  tutorialStep5Skipped: "secretasset_tutorial_step5_skipped",
 } as const;
 
 const LEGACY_KEYS = {

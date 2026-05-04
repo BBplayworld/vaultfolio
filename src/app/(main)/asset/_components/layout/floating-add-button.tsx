@@ -10,7 +10,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-
+import { Button } from "@/components/ui/button";
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
 type Step = "select-type" | "select-action" | "select-method";
@@ -92,9 +92,11 @@ export function FloatingAddButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full text-white shadow-lg px-6 py-3.5 sm:px-10 sm:py-4.5 text-sm font-semibold active:scale-95 transition-all"
-        style={{ backgroundColor: MAIN_PALETTE[0] }}
+        className="fixed bottom-5 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full text-white 
+        shadow-lg px-6 py-3.5 sm:px-10 sm:py-4.5 text-sm font-semibold active:scale-95 transition-all hover:opacity-90"
         aria-label="자산 추가"
+        data-tutorial="tutorial-fab"
+        style={{ backgroundColor: MAIN_PALETTE[11] }}
       >
         <Plus className="size-5" />
         자산 업데이트

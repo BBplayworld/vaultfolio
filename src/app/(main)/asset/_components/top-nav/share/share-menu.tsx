@@ -97,12 +97,14 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       try {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         setCopySuccess(true);
+        window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
         setTimeout(() => setCopySuccess(false), 2000);
       } catch {
         const a = document.createElement("a");
         a.href = dataUrl;
         a.download = `secretasset-${new Date().toISOString().slice(0, 10)}.png`;
         a.click();
+        window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
       }
     } catch (e) {
       console.error("스크린샷 생성 실패", e);
@@ -121,6 +123,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       a.download = `secretasset-${new Date().toISOString().slice(0, 10)}.png`;
       a.click();
       setSaveSuccess(true);
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (e) {
       console.error("이미지 저장 실패", e);
@@ -210,7 +213,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                 size="sm"
                 onClick={handleCopy}
                 disabled={isCopying || isSaving}
-                className="h-8 px-3 text-xs gap-1.5"
+                className="h-8 px-3 text-sm gap-1.5 text-white hover:opacity-90"
                 style={{ backgroundColor: MAIN_PALETTE[0] }}
               >
                 {isCopying ? (
@@ -227,7 +230,8 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                 variant="outline"
                 onClick={handleSave}
                 disabled={isSaving || isCopying}
-                className="h-8 px-3 text-xs gap-1.5"
+                className="h-8 px-3 text-sm gap-1.5 text-white hover:opacity-90"
+                style={{ backgroundColor: MAIN_PALETTE[11] }}
               >
                 {isSaving ? (
                   <Loader2 className="size-3 animate-spin" />
