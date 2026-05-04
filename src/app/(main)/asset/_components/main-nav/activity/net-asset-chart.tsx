@@ -175,8 +175,12 @@ function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
       if (!raw) return;
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
       const currentMonth = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(0, 7);
+      const weekdayOnly = all.filter(s => { const d = new Date(s.date).getDay(); return d !== 0 && d !== 6; });
+      if (weekdayOnly.length !== all.length) {
+        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(weekdayOnly));
+      }
       setSnapshots(
-        all.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
+        weekdayOnly.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
       );
     } catch { /* 무시 */ }
   }, [snapshotVersion]);
@@ -255,6 +259,19 @@ export function YearlyNetAssetChart() {
     netAsset: s.netAsset,
     financialAsset: s.financialAsset,
   }));
+
+  const currentMonthForHelper = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(0, 7);
+  const getPrevWeekday = (idx: number) => {
+    const [y, m] = currentMonthForHelper.split("-").map(Number);
+    for (let i = idx - 1; i >= 0; i--) {
+      const d = dailyChartData[i];
+      if (!d) continue;
+      const [mm, dd] = d.date.split("/").map(Number);
+      const dow = new Date(y, mm - 1, dd).getDay();
+      if (dow !== 0 && dow !== 6) return d;
+    }
+    return null;
+  };
 
   const commonAxisProps = {
     tick: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
@@ -560,7 +577,7 @@ export function YearlyNetAssetChart() {
                             const hasData = cell.netAsset !== null;
                             const isToday = cell.date === todayStr;
                             const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
-                            const prev = dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
+                            const prev = hasData ? getPrevWeekday(dataIdx) : null;
                             const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
                             return (
                               <div

@@ -279,7 +279,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       cutoff.setDate(cutoff.getDate() - 30);
       const cutoffStr = cutoff.toISOString().split("T")[0];
       const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
-      filteredDaily.push({ date: todayStr, netAsset, financialAsset });
+      const dayOfWeek = now.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        filteredDaily.push({ date: todayStr, netAsset, financialAsset });
+      }
       localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
 
       // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
