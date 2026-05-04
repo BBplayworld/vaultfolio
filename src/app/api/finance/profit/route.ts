@@ -6,17 +6,8 @@ import {
   fetchOverseasHistoricalPrice,
   classifyTickers,
 } from "@/lib/finance-service";
-import {
-  rollbackToBusinessDay as krRollback,
-  forwardToBusinessDay as krForward,
-} from "@/lib/kr-holidays";
-import {
-  rollbackToUsBusinessDay as usRollback,
-  forwardToUsBusinessDay as usForward,
-} from "@/lib/us-holidays";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
-type Market = "kr" | "us";
 
 export interface ProfitRefEntry {
   refPrice: number;
@@ -25,60 +16,53 @@ export interface ProfitRefEntry {
 
 export type ProfitRefResponse = Record<string, ProfitRefEntry | null>;
 
-function getKSTDate(offsetDays = 0): Date {
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  nowKST.setUTCDate(nowKST.getUTCDate() + offsetDays);
-  return nowKST;
+function getKSTNow(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000);
 }
 
 function toDateStr(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
-function getRefDate(period: ProfitPeriod, market: Market): string {
-  const isKr = market === "kr";
-  const rollback = isKr ? krRollback : usRollback;
-  const forward = isKr ? krForward : usForward;
-  const nowKST = getKSTDate(0);
-
-  if (period === "daily") {
-    // 현재가가 가리키는 영업일의 직전 영업일
-    // (주말·연휴엔 현재가도 직전 영업일 종가이므로, 그 하루 전 영업일과 비교해야 의미 있음)
-    const today = getKSTDate(0);
-    const currentBiz = rollback(today);
-    const prev = new Date(currentBiz);
-    prev.setUTCDate(prev.getUTCDate() - 1);
-    return toDateStr(rollback(prev));
-  }
-
-  if (period === "weekly") {
-    // 지난주 금요일: 이번 주 월요일 기준 3일 전
-    const d = getKSTDate(0);
+// 토/일만 건너뛰는 단순 rollback (N 영업일 전)
+function subtractWeekdays(from: Date, n: number): Date {
+  const d = new Date(from);
+  let count = 0;
+  while (count < n) {
+    d.setUTCDate(d.getUTCDate() - 1);
     const day = d.getUTCDay();
-    const daysToMonday = day === 0 ? 6 : day - 1;
-    d.setUTCDate(d.getUTCDate() - daysToMonday - 3);
-    return toDateStr(rollback(d));
+    if (day !== 0 && day !== 6) count++;
   }
+  return d;
+}
 
-  if (period === "monthly") {
-    const firstOfMonth = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), 1));
-    const firstBizThisMonth = forward(firstOfMonth);
-    const firstBizPlusOne = new Date(firstBizThisMonth);
-    firstBizPlusOne.setUTCDate(firstBizPlusOne.getUTCDate() + 1);
-    const todayStr = toDateStr(nowKST);
-    const thresholdStr = toDateStr(firstBizPlusOne);
-
-    // 오늘 <= 첫 영업일 + 1 → 지난달로 fallback (1일치 종가만으론 의미있는 변동률 X)
-    if (todayStr <= thresholdStr) {
-      const firstOfLastMonth = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth() - 1, 1));
-      return toDateStr(forward(firstOfLastMonth));
-    }
-    return toDateStr(firstBizThisMonth);
+// 달력 기준 N개월 전, 토/일이면 금요일로 rollback
+function subtractCalendarMonths(from: Date, months: number): Date {
+  const d = new Date(from);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() - 1);
   }
+  return d;
+}
 
-  // yearly: 올해 1월 2일 → 영업일 롤백
-  const d = new Date(Date.UTC(nowKST.getUTCFullYear(), 0, 2));
-  return toDateStr(rollback(d));
+// 달력 기준 N년 전, 토/일이면 금요일로 rollback
+function subtractCalendarYears(from: Date, years: number): Date {
+  const d = new Date(from);
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() - 1);
+  }
+  return d;
+}
+
+function getRefDate(period: ProfitPeriod): string {
+  const now = getKSTNow();
+  if (period === "daily") return toDateStr(subtractWeekdays(now, 2));
+  if (period === "weekly") return toDateStr(subtractWeekdays(now, 5));
+  if (period === "monthly") return toDateStr(subtractCalendarMonths(now, 1));
+  // yearly
+  return toDateStr(subtractCalendarYears(now, 1));
 }
 
 export async function GET(req: NextRequest) {
@@ -95,29 +79,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({});
   }
 
-  const krRefDate = getRefDate(period, "kr");
-  const usRefDate = getRefDate(period, "us");
+  const refDate = getRefDate(period);
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 
-  // 국내/해외 분류 후 각각 다른 refDate로 캐시 조회
   const { krTickers: allKr, usTickers: allUs } = classifyTickers(tickers);
   const uncachedKr: string[] = [];
   const uncachedUs: string[] = [];
 
   await Promise.all([
     ...allKr.map(async (ticker) => {
-      const cached = await cache.getRefPrice(ticker, krRefDate);
+      const cached = await cache.getRefPrice(ticker, refDate);
       if (cached !== null) {
-        result[ticker] = { refPrice: cached, refDate: krRefDate };
+        result[ticker] = { refPrice: cached, refDate };
       } else {
         uncachedKr.push(ticker);
       }
     }),
     ...allUs.map(async (ticker) => {
-      const cached = await cache.getRefPrice(ticker, usRefDate);
+      const cached = await cache.getRefPrice(ticker, refDate);
       if (cached !== null) {
-        result[ticker] = { refPrice: cached, refDate: usRefDate };
+        result[ticker] = { refPrice: cached, refDate };
       } else {
         uncachedUs.push(ticker);
       }
@@ -128,10 +110,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result);
   }
 
-  // KIS API 토큰 획득
   const appKey = process.env.KIS_APP_KEY ?? "";
   const appSecret = process.env.KIS_APP_SECRET ?? "";
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const nowKST = getKSTNow();
   const todayStr = toDateStr(nowKST);
 
   let accessToken: string | null = await cache.getKisToken(todayStr);
@@ -147,21 +128,21 @@ export async function GET(req: NextRequest) {
 
   await Promise.all([
     ...uncachedKr.map(async (ticker) => {
-      console.log(`[RefPrice KIS 국내 조회] ${ticker}/${krRefDate}`);
-      const price = await fetchDomesticHistoricalPrice(ticker, krRefDate, accessToken!, appKey, appSecret);
-      if (price !== null) {
-        result[ticker] = { refPrice: price, refDate: krRefDate };
-        await cache.setRefPrice(ticker, krRefDate, price, period);
+      console.log(`[RefPrice KIS 국내 조회] ${ticker}/${refDate}`);
+      const res = await fetchDomesticHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
+      if (res !== null) {
+        result[ticker] = { refPrice: res.price, refDate: res.date };
+        await cache.setRefPrice(ticker, res.date, res.price, period);
       } else {
         result[ticker] = null;
       }
     }),
     ...uncachedUs.map(async (ticker) => {
-      console.log(`[RefPrice KIS 해외 조회] ${ticker}/${usRefDate}`);
-      const price = await fetchOverseasHistoricalPrice(ticker, usRefDate, accessToken!, appKey, appSecret);
-      if (price !== null) {
-        result[ticker] = { refPrice: price, refDate: usRefDate };
-        await cache.setRefPrice(ticker, usRefDate, price, period);
+      console.log(`[RefPrice KIS 해외 조회] ${ticker}/${refDate}`);
+      const res = await fetchOverseasHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
+      if (res !== null) {
+        result[ticker] = { refPrice: res.price, refDate: res.date };
+        await cache.setRefPrice(ticker, res.date, res.price, period);
       } else {
         result[ticker] = null;
       }

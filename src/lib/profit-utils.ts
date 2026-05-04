@@ -6,16 +6,9 @@ export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 export function getProfitCacheKey(tickers: string, period: ProfitPeriod): string {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const todayStr = nowKST.toISOString().split("T")[0];
-  if (period === "weekly") {
-    const day = nowKST.getUTCDay();
-    const daysToMonday = day === 0 ? 6 : day - 1;
-    const lastFriday = new Date(nowKST);
-    lastFriday.setUTCDate(nowKST.getUTCDate() - daysToMonday - 3);
-    return `${STORAGE_KEY_PREFIXES.profit}weekly:${lastFriday.toISOString().split("T")[0]}:${tickers}`;
-  }
   if (period === "monthly") return `${STORAGE_KEY_PREFIXES.profit}monthly:${todayStr.slice(0, 7)}:${tickers}`;
   if (period === "yearly") return `${STORAGE_KEY_PREFIXES.profit}yearly:${todayStr.slice(0, 4)}:${tickers}`;
-  return `${STORAGE_KEY_PREFIXES.profit}daily:${todayStr}:${tickers}`;
+  return `${STORAGE_KEY_PREFIXES.profit}${period}:${todayStr}:${tickers}`;
 }
 
 export async function fetchProfitRef(tickers: string, period: ProfitPeriod): Promise<ProfitRefResponse> {

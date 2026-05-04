@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, type ProfitPeriod } from "@/lib/profit-utils";
@@ -45,6 +45,43 @@ const MARKET_LABELS: Record<MarketView, string> = {
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
   return `${sign}${rate.toFixed(2)}%`;
+}
+
+function toDateStr(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function subtractWeekdays(from: Date, n: number): Date {
+  const d = new Date(from);
+  let count = 0;
+  while (count < n) {
+    d.setUTCDate(d.getUTCDate() - 1);
+    const day = d.getUTCDay();
+    if (day !== 0 && day !== 6) count++;
+  }
+  return d;
+}
+
+function subtractCalendarMonths(from: Date, months: number): Date {
+  const d = new Date(from);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);
+  return d;
+}
+
+function subtractCalendarYears(from: Date, years: number): Date {
+  const d = new Date(from);
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);
+  return d;
+}
+
+function getExpectedRefDate(period: ProfitPeriod): string {
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  if (period === "daily") return toDateStr(subtractWeekdays(now, 2));
+  if (period === "weekly") return toDateStr(subtractWeekdays(now, 5));
+  if (period === "monthly") return toDateStr(subtractCalendarMonths(now, 1));
+  return toDateStr(subtractCalendarYears(now, 1));
 }
 
 export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
@@ -116,7 +153,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const totalRate = totalRefValue > 0 ? (totalProfit / totalRefValue) * 100 : 0;
 
   const krRefDate = filteredProfits.find((r) => r.hasRef && DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
-  const usRefDate = filteredProfits.find((r) => r.hasRef && r.stock.category === "foreign")?.refDate;
+  const usRefDate = filteredProfits.find((r) => r.hasRef && !DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = filteredProfits.filter((r) => r.stock.category === key);
@@ -224,14 +261,23 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                       </div>
                       {(krRefDate || usRefDate) && (
                         <div className="pt-1.5 border-t border-border/50 text-xs sm:text-sm text-muted-foreground space-y-0.5">
-                          {marketView === "kr" && krRefDate && <p>기준일: {krRefDate} 종가 (KST 16:00 기준)</p>}
-                          {marketView === "us" && usRefDate && <p>기준일: {usRefDate} 종가 (KST 07:00 기준)</p>}
-                          {marketView === "all" && (
-                            <>
-                              {krRefDate && <p>국내 기준: {krRefDate} 종가 (KST 16:00 기준)</p>}
-                              {usRefDate && <p>해외 기준: {usRefDate} 종가 (KST 07:00 기준)</p>}
-                            </>
-                          )}
+                          {(() => {
+                            const expected = getExpectedRefDate(p);
+                            const krHoliday = krRefDate && krRefDate !== expected ? ` (${expected} 휴장)` : "";
+                            const usHoliday = usRefDate && usRefDate !== expected ? ` (${expected} 휴장)` : "";
+                            return (
+                              <>
+                                {marketView === "kr" && krRefDate && <p>기준일: {krRefDate} 종가{krHoliday}</p>}
+                                {marketView === "us" && usRefDate && <p>기준일: {usRefDate} 종가{usHoliday}</p>}
+                                {marketView === "all" && (
+                                  <>
+                                    {krRefDate && <p>국내 기준: {krRefDate} 종가{krHoliday}</p>}
+                                    {usRefDate && <p>해외 기준: {usRefDate} 종가{usHoliday}</p>}
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
