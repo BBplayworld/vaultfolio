@@ -35,8 +35,6 @@ export interface ExchangeRates {
   updated_at?: string;
 }
 
-export const STORAGE_KEY_EXCHANGE_SYNC_DATE = "secretasset_exchange_last_sync_date";
-
 // ─────────────────────────────────────────────
 // Step 2. 티커 정규화
 // 서버 API가 기대하는 형식으로 변환합니다.
@@ -118,7 +116,6 @@ export async function fetchStocksFromKisOverseas(
         );
 
         const data = await res.json();
-
         if (!res.ok || !data.output) {
           console.error(`[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]: HTTP ${res.status} ${res.statusText}`);
           continue;
@@ -126,7 +123,8 @@ export async function fetchStocksFromKisOverseas(
 
         const output = data.output as Record<string, string> | undefined;
         const price = parseFloat(output?.ovrs_now_pric1 ?? "0");
-        if (price > 0) {
+        const isDelisted = !!(output?.lstg_abol_dt && output.lstg_abol_dt.trim() !== "");
+        if (price > 0 && !isDelisted) {
           results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr };
           break; // 성공 시 다음 거래소 시도 불필요
         }
@@ -151,6 +149,7 @@ export async function fetchKisToken(
 ): Promise<string | null> {
   if (!appKey || !appSecret) return null;
   try {
+    console.log("[KIS 토큰 발급 시도]: POST /oauth2/tokenP");
     const res = await fetch(
       "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
       {
@@ -165,7 +164,9 @@ export async function fetchKisToken(
       return null;
     }
     const data = await res.json();
-    return (data.access_token as string) ?? null;
+    const token = (data.access_token as string) ?? null;
+    console.log(`[KIS 토큰 발급 결과]: ${token ? "성공" : "실패(access_token 없음)"}, rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}`);
+    return token;
   } catch (e) {
     console.error("[KIS 토큰 발급 오류]:", e);
     return null;
@@ -321,12 +322,16 @@ export async function fetchDividendDomestic(
       },
       cache: "no-store",
     });
+    console.log(`[KIS 국내배당 요청 - ${ticker}]: HTTP ${res.status}`);
     if (!res.ok) {
       console.error(`[KIS 국내배당 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
       return [];
     }
     const data = await res.json();
-    console.log(`[KIS 국내배당 RAW - ${ticker}]:`, JSON.stringify(data));
+    console.log(`[KIS 국내배당 응답 - ${ticker}]: rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}, output1 건수=${Array.isArray(data.output1) ? data.output1.length : "배열아님(" + typeof data.output1 + ")"}`);
+    if (data.rt_cd !== "0") {
+      console.error(`[KIS 국내배당 API 오류 - ${ticker}]: rt_cd=${data.rt_cd}, msg1=${data.msg1}`);
+    }
     const output = data.output1 as Record<string, string>[] | undefined;
     if (!Array.isArray(output)) return [];
     const rows = output
@@ -423,5 +428,107 @@ export function resolveStockName(
   // 종목코드(6자리 숫자) 또는 심볼(".KS", ".KQ" 등) 형식이면 무시
   const isCodeLike = !apiName || /^\d{6}/.test(apiName) || /\.\w{2,}$/.test(apiName);
   return isCodeLike ? existingName : apiName;
+}
+
+// ─────────────────────────────────────────────
+// Step 10. 과거 기준일 종가 조회
+// 수익률 계산을 위해 특정 날짜의 종가를 조회합니다.
+// 데이터가 없으면 하루씩 앞으로 roll-back (최대 5회) → 공휴일/주말 자동 처리.
+// ─────────────────────────────────────────────
+
+export interface HistoricalPriceResult {
+  price: number;
+  date: string; // YYYY-MM-DD
+}
+
+export async function fetchDomesticHistoricalPrice(
+  ticker: string,
+  dateStr: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<HistoricalPriceResult | null> {
+  const dateParts = dateStr.replace(/-/g, "");
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(Date.UTC(
+      parseInt(dateParts.slice(0, 4)),
+      parseInt(dateParts.slice(4, 6)) - 1,
+      parseInt(dateParts.slice(6, 8)) - i
+    ));
+    const tryDate = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+    try {
+      const res = await fetch(
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}&FID_INPUT_DATE_1=${tryDate}&FID_INPUT_DATE_2=${tryDate}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            appkey: appKey,
+            appsecret: appSecret,
+            tr_id: "FHKST03010100",
+            "content-type": "application/json; charset=utf-8",
+          },
+          cache: "no-store",
+        }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const output = data.output2 as Record<string, string>[] | undefined;
+      if (Array.isArray(output) && output.length > 0) {
+        const price = parseFloat(output[0].stck_clpr ?? "0");
+        if (price > 0) {
+          const date = `${tryDate.slice(0, 4)}-${tryDate.slice(4, 6)}-${tryDate.slice(6, 8)}`;
+          return { price, date };
+        }
+      }
+    } catch (e) {
+      console.error(`[KIS 국내주식 과거종가 오류 - ${ticker}/${tryDate}]:`, e);
+    }
+  }
+  return null;
+}
+
+export async function fetchOverseasHistoricalPrice(
+  ticker: string,
+  dateStr: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<HistoricalPriceResult | null> {
+  const targetDate = dateStr.replace(/-/g, ""); // YYYYMMDD
+  for (const excd of ["NAS", "NYS", "AMS"]) {
+    try {
+      // NCNT=5로 최대 5개 row 조회 → xymd 날짜 일치하는 row 탐색 (휴장일 처리)
+      const res = await fetch(
+        `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${ticker}&GUBN=0&MODP=0&BYMD=${targetDate}&NCNT=5`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            appkey: appKey,
+            appsecret: appSecret,
+            tr_id: "HHDFS76240000",
+            "content-type": "application/json; charset=utf-8",
+          },
+          cache: "no-store",
+        }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const output = data.output2 as Record<string, string>[] | undefined;
+      if (!Array.isArray(output) || output.length === 0) continue;
+      // xymd가 targetDate와 일치하는 row 우선 탐색, 없으면 다음 유효한 row 사용
+      const matched = output.find((row) => row.xymd === targetDate);
+      const row = matched ?? output.find((r) => parseFloat(r.clos ?? "0") > 0);
+      if (!row) continue;
+      const price = parseFloat(row.clos ?? "0");
+      if (price > 0) {
+        const xymd = row.xymd ?? targetDate;
+        const date = `${xymd.slice(0, 4)}-${xymd.slice(4, 6)}-${xymd.slice(6, 8)}`;
+        return { price, date };
+      }
+    } catch (e) {
+      console.error(`[KIS 해외주식 과거종가 오류 - ${ticker}/${excd}/${targetDate}]:`, e);
+    }
+  }
+  return null;
 }
 

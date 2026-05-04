@@ -3,6 +3,9 @@
 import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import LZString from "lz-string";
+import { STORAGE_KEYS } from "@/lib/local-storage";
+export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
+export const DEFAULT_EXCHANGE_RATE = 1380;
 
 // 읽기 전용 완화 스키마 — superRefine 없이 ticker 빈 값 허용 (스크린샷 가져오기 경로 대응)
 const stockSchemaLoose = z.object({
@@ -23,15 +26,6 @@ const stockSchemaLoose = z.object({
 const assetDataSchemaLoose = assetDataSchema.omit({ stocks: true }).extend({
   stocks: z.array(stockSchemaLoose).default([]),
 });
-
-// ─── localStorage 키 (중앙 관리) ────────────────────────────────────────────
-export const STORAGE_KEYS = {
-  assetData: "secretasset-asset-data",
-  exchangeRate: "exchange-rate-usd-krw",
-  defaultExchangeRate: 1380,
-  dailySnapshots: "secretasset_daily_snapshots",
-  monthlySnapshots: "secretasset_monthly_snapshots",
-} as const;
 
 // ─── 기본 자산 데이터 ───────────────────────────────────────────────────────
 const EMPTY_ASSET_DATA: AssetData = {
@@ -69,9 +63,25 @@ export function saveAssetData(data: AssetData): boolean {
   }
 }
 
+function collectSnapshotsFromStorage(): AssetSnapshots {
+  try {
+    const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+    const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
+    return {
+      daily: rawDaily ? JSON.parse(rawDaily) : [],
+      monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
+    };
+  } catch {
+    return { daily: [], monthly: [] };
+  }
+}
+
 export function exportAssetData(): void {
-  const data = getAssetData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const assetData = getAssetData();
+  const snapshots = collectSnapshotsFromStorage();
+  const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
+  const payload = hasSnapshots ? { assetData, snapshots } : { assetData };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -80,16 +90,36 @@ export function exportAssetData(): void {
   URL.revokeObjectURL(url);
 }
 
-export function importAssetData(file: File): Promise<AssetData> {
+export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
         const parsed = JSON.parse(text);
-        const validated = assetDataSchema.parse(parsed);
+
+        // 신규 포맷 { assetData, snapshots? } 또는 구버전 직접 AssetData 포맷 모두 지원
+        const rawAsset = parsed.assetData ?? parsed;
+        const validated = assetDataSchema.parse(rawAsset);
         saveAssetData(validated);
-        resolve(validated);
+
+        let snapshotRestored = false;
+        if (parsed.snapshots) {
+          try {
+            const { daily, monthly } = parsed.snapshots as AssetSnapshots;
+            if (Array.isArray(daily)) {
+              localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(daily));
+            }
+            if (Array.isArray(monthly)) {
+              localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthly));
+            }
+            snapshotRestored = true;
+          } catch {
+            // 스냅샷 복원 실패는 무시
+          }
+        }
+
+        resolve({ assetData: validated, snapshotRestored });
       } catch (error) {
         reject(error);
       }
@@ -114,7 +144,10 @@ export function saveAssetDataRaw(data: AssetData): boolean {
 export function clearAssetData(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    localStorage.removeItem(STORAGE_KEYS.assetData);
+    const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith("secretasset_"));
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+    }
     return true;
   } catch (error) {
     return false;

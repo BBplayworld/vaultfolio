@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 alwaysApply: true
 ---
 
@@ -10,6 +10,8 @@ alwaysApply: true
 - 응답은 한국어, 최대한 간결하게
 - 진행 과정 설명 최소화, 결과만 출력
 - 코드 주석·커밋 메시지도 한국어
+- **요청한 사항만 정확히 적용. 요청하지 않은 추가 변경 절대 금지**
+- **신규·수정 기능 작성 시 기존에 동일한 역할의 함수·로직이 있으면 재사용. 중복 코드 작성 금지**
 
 # KB (.claude/\_knowledge/)
 
@@ -25,14 +27,3 @@ alwaysApply: true
 | Context·유틸  | + `state-and-utils.md`                 |
 | 새 기능·패턴  | + `dev-rules.md`                       |
 | 최근 변경     | + `changelog.md`                       |
-
-코드 수정 후: **`npm run build`** 성공 확인 필수.
-
-# 명령어
-
-```bash
-npm run dev    # 개발 서버
-npm run build  # 빌드 (기능 검증)
-npm run lint   # ESLint
-npm run format # Prettier
-```

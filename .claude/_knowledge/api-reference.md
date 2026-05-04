@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-05-02
 
 ## 내부 API 라우트
 
@@ -19,12 +19,35 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 
 ---
 
+### GET /api/finance/profit
+기준가(과거 종가) 조회. 기간별 수익 계산용.
+
+```
+GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly
+→ ProfitRefResponse: Record<string, number>  // { "005930": 72000, "TSLA": 245.3 }
+```
+
+클라이언트 캐시: `profit-utils.ts` → `secretasset_profit:{period}:{date}:{tickers}` (localStorage)
+
+---
+
+### GET /api/logo
+종목 로고 이미지 프록시.
+
+```
+GET /api/logo?ticker=AAPL          # 해외 주식 (Clearbit 또는 대체 소스)
+GET /api/logo?domain=www.samsung.com  # 도메인 기반 (ETF, 국내 주식)
+```
+
+---
+
 ### POST /api/share — 자산 데이터 Short URL 저장
 ```
-Body: { token: "v71P...", owner_id?: string }
+Body: { token: "v71P...|v72Z...", owner_id?: string }
 → { key: "a3f8b2c1ab", owner_id: "uuid" }
 ```
-- `v71P`(PIN 있음)만 허용, 키: `sha256(token)[:10]`
+- `v71N`(PIN 없음) 거부, `v71P`(PIN) / `v72Z`(PIN+localKey) 허용
+- 키: `sha256(token)[:10]`
 - `owner_id`로 이전 키 자동 삭제, IP Rate Limit 분당 10회
 
 ### GET /api/share?key=a3f8b2c1ab
@@ -49,7 +72,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 200회 (`GEMINI_SERVER_DAILY_LIMIT`), 초과 시 429
+**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`), 초과 시 429
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
@@ -59,27 +82,35 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 ## 외부 API — 한국투자증권 OpenAPI (`src/lib/finance-service.ts`)
 
 ```typescript
-fetchStocksFromKorea(token, tickers)         // 국내 주식
-fetchStocksFromKisOverseas(token, tickers)   // 해외 주식
-fetchExchangeRateFromKis(token, key, secret, date)  // 환율
+fetchStocksFromKorea(tickers, todayStr, token, key, secret)       // 국내 주식
+fetchStocksFromKisOverseas(tickers, todayStr, token, key, secret) // 해외 주식 (NASDAQ→NYSE→AMEX 순 시도)
+fetchExchangeRateFromKis(token, key, secret, todayStr)            // 환율 (USD, JPY)
+fetchDividendDomestic(ticker, fdt, tdt, token, key, secret)       // 국내 배당 [국내주식-145]
+fetchDividendOverseas(ticker, excd, fdt, tdt, token, key, secret) // 해외 배당 [해외주식-052]
+fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret) // 국내 과거 종가 (roll-back 5일)
+fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret) // 해외 과거 종가 (NAS→NYS→AMS)
 
 normalizeTicker({ ticker, category }): string
 classifyTickers(tickers[]): { usTickers, krTickers }
+resolveStockName(category, apiName, existingName): string
 ```
 
 ---
 
-## 공유 토큰 시스템 v7.1 (`src/lib/asset-storage.ts`)
+## 공유 토큰 시스템 v7.2 (`src/lib/asset-storage.ts`)
 
 ```
-프리픽스: v71P(PIN 있음, 공유 가능) / v71N(PIN 없음, 로컬만) / v72Z(PIN+localKey)
+프리픽스: v71P(PIN 있음, 공유 가능) / v71N(PIN 없음, 로컬만) / v72Z(PIN+localKey, Zero-Knowledge)
 
 generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
 parseShareToken(token, pin?, localKey?): ParseResult
   = { data, rates?, snapshots? } | { pinRequired: true } | null
 
-하위 호환: v6.x, v7.0 파싱 지원
+하위 호환: v6.x, v7.0, v7.1 파싱 지원
 ```
+
+**v72Z Zero-Knowledge:** PIN + localKey 조합 암호화. 서버에는 암호화된 데이터만 저장,
+localKey는 URL 해시에 포함 → 서버 관리자도 단독 복호화 불가.
 
 ---
 
@@ -111,4 +142,4 @@ getCacheStorage(): ICacheStorage
 getEffectiveDateStr(type: "exchange"|"stock-us"|"stock-kr"): string
 ```
 
-**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset-gemini-YYYY-MM-DD`, 하루 10회
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회

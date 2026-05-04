@@ -1,0 +1,432 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loan, loanSchema } from "@/types/asset";
+import { useAssetData } from "@/contexts/asset-data-context";
+import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets } from "@/config/asset-options";
+import { LoanScreenshotImport } from "../screenshot/loan-screenshot-import";
+import { MAIN_PALETTE } from "@/config/theme";
+
+// 대출 종류별 빠른 입력 버튼
+const getQuickButtonsByType = (type: string) => {
+  if (type === "mortgage-home") return [...quickButtonPresets.loanMortgage];
+  return [...quickButtonPresets.loanDefault];
+};
+
+interface LoanFormProps {
+  editData?: Loan;
+  onClose: () => void;
+}
+
+function LoanForm({ editData, onClose }: LoanFormProps) {
+  const { addLoan, updateLoan, assetData } = useAssetData();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedType, setSelectedType] = useState<Loan["type"]>(editData?.type || "credit");
+
+  const getNamePlaceholder = () => {
+    if (selectedType === "credit") return "예: 신한은행 직장인 신용대출";
+    if (selectedType === "minus") return "예: KB국민은행 마이너스통장";
+    if (selectedType === "mortgage-home") return "예: 우리은행 아파트 주택담보대출";
+    if (selectedType === "mortgage-stock") return "예: 미래에셋 삼성전자 주식담보";
+    if (selectedType === "mortgage-insurance") return "예: 삼성생명 종신보험 약관대출";
+    if (selectedType === "mortgage-deposit") return "예: 하나은행 정기예금 담보대출";
+    if (selectedType === "mortgage-other") return "예: 기타 담보대출";
+    return "대출명 입력";
+  };
+
+  const getBalanceDescription = () => {
+    if (selectedType === "minus") return "원 (현재 사용 중인 잔액)";
+    if (selectedType === "mortgage-home") return "원 (현재 남은 대출 잔액)";
+    return "원 (현재 잔액)";
+  };
+
+  const getDescriptionPlaceholder = () => {
+    if (selectedType === "credit") return "예: 변동금리, 매월 원리금 균등 상환";
+    if (selectedType === "minus") return "예: 한도 5,000만원, 수시 입출금";
+    if (selectedType === "mortgage-home") return "예: 30년 만기, 혼합금리 5년 고정";
+    if (selectedType === "mortgage-stock") return "예: 담보유지비율 140%, 반기 연장";
+    return "추가 정보 입력...";
+  };
+
+  const form = useForm<Loan>({
+    resolver: zodResolver(loanSchema),
+    defaultValues: editData || {
+      id: "",
+      type: "credit",
+      name: "",
+      balance: 0,
+      interestRate: 0,
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: "",
+      institution: "",
+      description: "",
+      linkedRealEstateId: "",
+      linkedCashId: "",
+      linkedStockId: "",
+    },
+  });
+
+  const onSubmit = async (data: Loan) => {
+    setIsSubmitting(true);
+    try {
+      if (editData) {
+        const success = updateLoan(editData.id, data);
+        if (success) {
+          toast.success("대출 정보가 수정되었습니다.");
+          onClose();
+        } else {
+          toast.error("저장에 실패했습니다.");
+        }
+      } else {
+        const newData = {
+          ...data,
+          id: `loan_${Date.now()}`,
+        };
+        const success = addLoan(newData);
+        if (success) {
+          toast.success("대출이 추가되었습니다.");
+          onClose();
+        } else {
+          toast.error("저장에 실패했습니다.");
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>대출 종류</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  setSelectedType(value as Loan["type"]);
+                }}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="대출 종류 선택" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {loanTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>대출명 *</FormLabel>
+              <FormControl>
+                <Input placeholder={getNamePlaceholder()} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="institution"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{selectedType === "mortgage-stock" ? "증권사" : "금융기관"}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedType === "mortgage-stock" ? "증권사 선택" : "금융기관 선택"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(selectedType === "mortgage-stock" ? securitiesFirms : financialInstitutions).map((group) => (
+                    <SelectGroup key={group.group}>
+                      <SelectLabel>{group.group}</SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem key={item} value={item}>{item}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="balance"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>현재 잔액 *</FormLabel>
+              <FormControl>
+                <NumberInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="0"
+                  quickButtons={getQuickButtonsByType(selectedType)}
+                />
+              </FormControl>
+              <FormDescription>{getBalanceDescription()}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="interestRate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>금리 *</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="3.5"
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormDescription>% (연이율)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>대출일 *</FormLabel>
+                <FormControl>
+                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>만기일</FormLabel>
+                <FormControl>
+                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>설명</FormLabel>
+              <FormControl>
+                <Textarea placeholder={getDescriptionPlaceholder()} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {selectedType === "mortgage-stock" && assetData.stocks.length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedStockId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 주식</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 주식 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.stocks.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}{s.ticker ? ` (${s.ticker})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {selectedType === "mortgage-deposit" && assetData.cash.filter((c) => c.type === "deposit").length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedCashId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 예금</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 예금 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.cash
+                      .filter((c) => c.type === "deposit")
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}{c.institution ? ` (${c.institution})` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {selectedType === "mortgage-home" && assetData.realEstate.length > 0 && (
+          <FormField
+            control={form.control}
+            name="linkedRealEstateId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>연계 부동산</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="연계 부동산 선택 (선택사항)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetData.realEstate.map((re) => (
+                      <SelectItem key={re.id} value={re.id}>
+                        {re.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            취소
+          </Button>
+          <Button type="submit"
+            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            disabled={isSubmitting}>
+            {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+}
+
+export function LoanInput() {
+  const { assetData } = useAssetData();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Loan | undefined>();
+  const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const mode = (e as CustomEvent).detail?.mode;
+      setEditingItem(undefined);
+      if (mode === "screenshot") {
+        setIsScreenshotOpen(true);
+      } else {
+        setIsDialogOpen(true);
+      }
+    };
+    window.addEventListener("trigger-add-loan", handler);
+    return () => window.removeEventListener("trigger-add-loan", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      const item = assetData.loans.find((l) => l.id === id);
+      if (item) { setEditingItem(item); setIsDialogOpen(true); }
+    };
+    window.addEventListener("trigger-edit-loan", handler);
+    return () => window.removeEventListener("trigger-edit-loan", handler);
+  }, [assetData.loans]);
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setEditingItem(undefined);
+  };
+
+  return (
+    <>
+      <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
+            <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
+          </DialogHeader>
+          <LoanForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

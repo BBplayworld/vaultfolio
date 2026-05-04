@@ -12,6 +12,7 @@
  */
 
 import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
+import type { ProfitPeriod } from "./profit-utils";
 
 // ─────────────────────────────────────────────────────────
 // 인터페이스
@@ -22,7 +23,7 @@ export interface ICacheStorage {
   getExchange(): Promise<ExchangeRates | null>;
   setExchange(rates: ExchangeRates): Promise<void>;
   getStock(cacheKey: string): Promise<StockPriceResult | null>;
-  setStock(cacheKey: string, result: StockPriceResult, todayStr: string): Promise<void>;
+  setStock(cacheKey: string, result: StockPriceResult, todayStr: string, ticker: string): Promise<void>;
   getKisToken(todayStr: string): Promise<string | null>;
   setKisToken(token: string, todayStr: string): Promise<void>;
   // Share URL
@@ -34,12 +35,18 @@ export interface ICacheStorage {
   // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
   getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null>;
   setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void>;
+  // 과거 기준일 종가 캐시 (수익률 계산용, period별 차등 TTL)
+  getRefPrice(ticker: string, dateStr: string): Promise<number | null>;
+  setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void>;
   // Rate Limit (로컬 개발에서는 항상 통과)
   checkRateLimit(ip: string): Promise<boolean>;
   // Gemini 사용량 관리
   getGeminiDailyCount(todayStr: string): Promise<number>;
   incrementGeminiDailyCount(todayStr: string): Promise<number>;
   checkGeminiDailyLimit(todayStr: string): Promise<boolean>;
+  // 기업/ETF 로고 캐시 (TTL 1년)
+  getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null>;
+  setTickerLogo(key: string, base64: string, contentType: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -93,6 +100,33 @@ function secondsUntilMidnightKST(): number {
   return Math.max(60, Math.floor((nextMidnightUTC - nowMs) / 1000));
 }
 
+// period별 다음 기준일 경계까지의 초 (KST 기준)
+// daily: 다음 자정, weekly: 다음 월요일 자정, monthly: 다음 달 1일 자정, yearly: 내년 1/1 자정
+function secondsUntilNextRefBoundary(period: ProfitPeriod): number {
+  const KST_OFFSET_MS = 9 * 3600 * 1000;
+  const nowMs = Date.now();
+  const kst = new Date(nowMs + KST_OFFSET_MS);
+  const y = kst.getUTCFullYear();
+  const m = kst.getUTCMonth();
+  const d = kst.getUTCDate();
+
+  let boundaryUTC: number;
+  if (period === "daily") {
+    boundaryUTC = Date.UTC(y, m, d + 1) - KST_OFFSET_MS;
+  } else if (period === "weekly") {
+    // 다음 월요일 KST 자정
+    const day = kst.getUTCDay(); // 0=일, 1=월, ..., 6=토
+    const daysToNextMonday = day === 0 ? 1 : 8 - day;
+    boundaryUTC = Date.UTC(y, m, d + daysToNextMonday) - KST_OFFSET_MS;
+  } else if (period === "monthly") {
+    boundaryUTC = Date.UTC(y, m + 1, 1) - KST_OFFSET_MS;
+  } else {
+    // yearly
+    boundaryUTC = Date.UTC(y + 1, 0, 1) - KST_OFFSET_MS;
+  }
+  return Math.max(60, Math.floor((boundaryUTC - nowMs) / 1000));
+}
+
 // ─────────────────────────────────────────────────────────
 // 파일 기반 구현 (로컬 개발)
 // ─────────────────────────────────────────────────────────
@@ -109,6 +143,7 @@ interface FileCacheData {
   KIS_TOKEN?: { access_token: string; updated_at: string };
   GEMINI_COUNT?: { count: number; date: string };
   DIVIDENDS?: Record<string, DividendPayoutResult[]>;
+  REF_PRICES?: Record<string, number>;
 }
 
 interface ShareTokenEntry {
@@ -199,7 +234,7 @@ class FileCacheStorage implements ICacheStorage {
     return this.readFinanceCache().STOCKS?.[cacheKey] ?? null;
   }
 
-  async setStock(cacheKey: string, result: StockPriceResult, todayStr: string): Promise<void> {
+  async setStock(cacheKey: string, result: StockPriceResult, todayStr: string, _ticker: string): Promise<void> {
     const cache = this.readFinanceCache();
     if (!cache.STOCKS) cache.STOCKS = {};
     cache.STOCKS[cacheKey] = result;
@@ -271,9 +306,32 @@ class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
+  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
+    const key = `${ticker}:${dateStr}`;
+    return this.readFinanceCache().REF_PRICES?.[key] ?? null;
+  }
+
+  async setRefPrice(ticker: string, dateStr: string, price: number, _period: ProfitPeriod): Promise<void> {
+    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = nowKST.toISOString().split("T")[0];
+    const cache = this.readFinanceCache();
+    if (!cache.REF_PRICES) cache.REF_PRICES = {};
+    cache.REF_PRICES[`${ticker}:${dateStr}`] = price;
+    this.writeFinanceCache(cache, todayStr);
+  }
+
   // 로컬 개발에서는 Rate Limit 적용 없음
   async checkRateLimit(_ip: string): Promise<boolean> {
     return true;
+  }
+
+  // 로컬 개발에서는 로고 캐시 없음 (파일 비대화 방지)
+  async getTickerLogo(_key: string): Promise<null> {
+    return null;
+  }
+
+  async setTickerLogo(_key: string, _base64: string, _contentType: string): Promise<void> {
+    // no-op
   }
 
   async getGeminiDailyCount(todayStr: string): Promise<number> {
@@ -325,8 +383,27 @@ class UpstashCacheStorage implements ICacheStorage {
     return this.redis.get<StockPriceResult>(`finance:stock:${cacheKey}`);
   }
 
-  async setStock(cacheKey: string, result: StockPriceResult, _todayStr: string): Promise<void> {
-    await this.redis.set(`finance:stock:${cacheKey}`, result, { ex: secondsUntilMidnightKST() });
+  async setStock(cacheKey: string, result: StockPriceResult, _todayStr: string, ticker: string): Promise<void> {
+    const fullKey = `finance:stock:${cacheKey}`;
+    await this.redis.set(fullKey, result, { ex: secondsUntilMidnightKST() });
+    // 같은 티커의 옛 날짜 키 정리 (best-effort)
+    try {
+      const pattern = `finance:stock:${ticker}-*`;
+      let cursor = "0";
+      const stale: string[] = [];
+      do {
+        const result = await this.redis.scan(cursor, { match: pattern, count: 50 });
+        const next = String(result[0]);
+        const keys = result[1] as string[];
+        for (const k of keys) {
+          if (k !== fullKey) stale.push(k);
+        }
+        cursor = next;
+      } while (cursor !== "0");
+      if (stale.length > 0) await this.redis.del(...stale);
+    } catch (e) {
+      console.error("[setStock 옛 키 정리 실패]:", e);
+    }
   }
 
   async getKisToken(todayStr: string): Promise<string | null> {
@@ -392,6 +469,16 @@ class UpstashCacheStorage implements ICacheStorage {
     await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: DIVIDEND_TTL });
   }
 
+  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
+    return this.redis.get<number>(`finance:refprice:${ticker}:${dateStr}`);
+  }
+
+  async setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void> {
+    await this.redis.set(`finance:refprice:${ticker}:${dateStr}`, price, {
+      ex: secondsUntilNextRefBoundary(period),
+    });
+  }
+
   async getGeminiDailyCount(todayStr: string): Promise<number> {
     const val = await this.redis.get<number>(`gemini:daily:${todayStr}`);
     return val ?? 0;
@@ -407,5 +494,14 @@ class UpstashCacheStorage implements ICacheStorage {
   async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
     const count = await this.getGeminiDailyCount(todayStr);
     return count < GEMINI_SERVER_DAILY_LIMIT;
+  }
+
+  async getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null> {
+    return this.redis.get<{ data: string; contentType: string }>(`finance:logo:${key}`);
+  }
+
+  async setTickerLogo(key: string, base64: string, contentType: string): Promise<void> {
+    const LOGO_TTL = 365 * 24 * 3600; // 1년
+    await this.redis.set(`finance:logo:${key}`, { data: base64, contentType }, { ex: LOGO_TTL });
   }
 }

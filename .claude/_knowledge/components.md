@@ -1,38 +1,72 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-04-19
+> 마지막 업데이트: 2026-05-02
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
 ```
 _components/
-├── input/              # 자산 입력 폼 + 목록 렌더링
-│   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
-│   ├── real-estate-input.tsx    # 부동산
-│   ├── cash-input.tsx           # 현금성 자산
-│   ├── crypto-input.tsx         # 암호화폐
-│   ├── loan-input.tsx           # 대출
-│   └── exchange-rate-input.tsx
-├── screenshot/         # 스크린샷 가져오기 다이얼로그
-│   ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
-│   ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
-│   ├── cash-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
-│   └── loan-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
-├── floating-add-button.tsx  # 하단 고정 FAB (전 환경)
-└── sidebar/
+├── bottom-nav/asset-update/
+│   ├── input/              # 자산 입력 폼 + 목록 렌더링
+│   │   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
+│   │   ├── real-estate-input.tsx    # 부동산
+│   │   ├── cash-input.tsx           # 현금성 자산
+│   │   ├── crypto-input.tsx         # 암호화폐
+│   │   ├── loan-input.tsx           # 대출
+│   │   └── exchange-rate-input.tsx
+│   └── screenshot/         # 스크린샷 가져오기 다이얼로그
+│       ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
+│       ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
+│       ├── cash-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
+│       └── loan-screenshot-import.tsx    # 2단계: upload→preview (항상 append)
+├── main-nav/
+│   ├── home/dashboard.tsx
+│   ├── detail/
+│   │   ├── asset-detail-tabs.tsx    # 5탭 컨테이너 + 공통 유틸 export
+│   │   └── tabs/
+│   │       ├── stock-tab.tsx        # 주식 상세 (7 서브탭)
+│   │       ├── real-estate-tab.tsx  # 부동산 상세
+│   │       ├── cash-tab.tsx         # 현금 상세
+│   │       ├── crypto-tab.tsx       # 암호화폐 상세
+│   │       └── loan-tab.tsx         # 대출 상세
+│   └── activity/
+│       ├── net-asset-chart.tsx      # 순자산 추이 (년도별/월별/일별)
+│       ├── profit-chart.tsx         # 수익 차트 (기간별 기준가 대비)
+│       └── dividend-chart.tsx       # 배당 카드 (DividendCard)
+└── layout/
+    ├── asset-page-tabs.tsx          # 3탭(홈/상세/성과) 최상위 탭 컨테이너
+    ├── notice-dialog.tsx            # MajorUiUpdateNoticeDialog
+    ├── floating-add-button.tsx      # 하단 고정 FAB (전 환경)
+    ├── welcome-guide.tsx
+    └── copyright-footer.tsx
 ```
 
-### FloatingAddButton
+---
+
+### AssetPageTabs (`layout/asset-page-tabs.tsx`)
+최상위 3탭 컨테이너. `page.tsx`에서 렌더링.
+
+- **홈**: Dashboard + 서브탭 (전체/금융/부동산/부채) — `useDashboardTabs`가 데이터에 따라 동적 생성, 탭이 1개면 TabsList 숨김
+- **상세**: 주식/부동산/암호화폐/현금/대출 — `forceMount`로 항상 DOM 유지
+- **성과**: 순자산/수익/배당 — `forceMount`로 항상 DOM 유지
+- `navigate-to-tab` CustomEvent 수신 → 홈탭을 "detail"로 전환 + 하위 탭 이동
+- 입력 폼 5종 `<div className="hidden">` 래핑으로 DOM에 상시 마운트
+
+---
+
+### FloatingAddButton (`layout/floating-add-button.tsx`)
 화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
 - 모바일: `side="top"`, PC/패드: `side="right"` Sheet
 - 각 `*-input.tsx` 카드 헤더 추가 버튼은 `hidden` (전체 숨김)
 - 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
   - real-estate, yearly-net-asset: hasScreenshot=false → 바로 dispatch
   - 나머지 4종: `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` dispatch
+- "빠른 이동" 섹션: `navigate-to-tab` CustomEvent dispatch → page.tsx의 탭 전환
 
 ### *-input.tsx 공통 구조
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
 2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어
+- `hideList` prop: 목록 숨김 (page.tsx inputLayer에서 사용)
 
 ```
 useAssetData() → CRUD 함수
@@ -44,7 +78,7 @@ getProfitLossColor() → config/theme
 
 ### 스크린샷 다이얼로그 공통 패턴
 - `open/onOpenChange` props로 외부 제어
-- `useGeminiUsage()` hook으로 클라이언트 하루 한도(10회) 체크
+- `useGeminiUsage()` hook으로 클라이언트 하루 한도(15회) 체크
 - API 성공 후 `geminiUsage.increment(assetType)` 호출
 - **중복 처리:** stock/crypto → merge/reset 선택, cash/loan → 항상 append
 
@@ -65,6 +99,13 @@ getProfitLossColor() → config/theme
 - **탭:** 전체/국내/해외/IRP/ISA/연금/비상장 (7탭)
 - `lookupState`: `"idle"|"success"|"failed"` — idle 시 종목명·현재가 숨김
 
+### stock-tab.tsx export 목록 (share-card에서 재사용)
+- `StockBarChart` — 비중 바 + 범례
+- `StockRowItem` — 단일 종목 로우 (인증샷용)
+- `StockSummaryHeader` — 주식 요약 헤더 (평가금액/손익/환차손익)
+- `useFilteredStockData(activeCategory)` — 필터된 주식 계산 훅
+- `CATEGORY_TABS` — 탭 정의
+
 ### stock-screenshot-import.tsx conflict 처리
 - **덮어쓰기(merge):** 스크린샷 ticker 제거 후 전체 push
 - **초기화(reset):** 기존 주식 전부 제거 후 스크린샷만 등록
@@ -77,16 +118,18 @@ getProfitLossColor() → config/theme
 
 | 컴포넌트 | 파일 | 역할 |
 |----------|------|------|
-| AssetOverviewCards | `asset-overview-cards.tsx` | 총자산/순자산/손익 요약 |
-| AssetDistributionCards | `asset-distribution-cards.tsx` | 자산군별 분포. 모바일: Tabs, 데스크탑: lg:grid-cols-2 |
-| YearlyNetAssetChart | `yearly-net-asset-chart.tsx` | 순자산 추이 — 년도별(Area)/월별(Bar)/일별(Line) 3탭. `trigger-add-yearly-net-asset` 이벤트 수신 |
-| AssetManagementCard | `asset-management-card.tsx` | 내보내기/가져오기/초기화/공유 |
+| Dashboard | `main-nav/home/dashboard.tsx` | 총자산/순자산/손익 요약 + 분포 |
+| AssetDetailTabs | `main-nav/detail/asset-detail-tabs.tsx` | 주식/부동산/암호화폐/현금/대출 5탭 상세 목록 |
+| YearlyNetAssetChart | `main-nav/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별. `trigger-add-yearly-net-asset` 이벤트 수신 |
+| ProfitCard | `main-nav/activity/profit-chart.tsx` | 기간별(일/주/월/년) 수익 차트. `isActive` prop 필수 |
+| DividendCard | `main-nav/activity/dividend-chart.tsx` | 배당 카드. `isActive` prop 필수 |
 
----
-
-## 사이드바 컴포넌트 (`sidebar/`)
-
-AppSidebar, NavMain, NavUser, ThemeSwitcher, CustomSidebarTrigger
+### top-nav (`top-nav/`)
+- `TopBar` — GuideMiniButton + ShareScreenshotButton + ToolMenu + ThemeSwitcher 배치
+- `ShareScreenshotButton` → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
+- `ToolMenu` — 데이터 내보내기/가져오기/공유/삭제 + AI 프롬프트 기능
+- `AppGuide` — 앱 사용 안내 알림 (dismissible, `trigger-restore/dismiss-guide` 이벤트)
+- `MajorUiUpdateNoticeDialog` (`layout/notice-dialog.tsx`) — 업데이트 공지 (일주일간 숨기기)
 
 ---
 
@@ -98,6 +141,8 @@ Card, CardHeader, CardTitle, CardDescription, CardContent
 Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 Form, FormField, FormItem, FormLabel, FormControl, FormMessage
 Select, Tabs, Textarea, Separator, Skeleton, toast(Sonner)
+Collapsible, CollapsibleContent, CollapsibleTrigger
+InputOTP, InputOTPGroup, InputOTPSlot
 ```
 
 **NumberInput** (`number-input.tsx`): `value`, `onChange`, `quickButtons[]`, `allowDecimals`, `maxDecimals` — 천 단위 콤마 자동 포맷
@@ -113,4 +158,20 @@ Select, Tabs, Textarea, Separator, Skeleton, toast(Sonner)
   <div className="px-4 py-3 bg-muted/10 border-t">  {/* 보조 섹션 */}
   <div className="px-4 py-2.5 flex flex-wrap text-xs text-muted-foreground border-t bg-muted/5">  {/* 하단 메타 */}
 </div>
+```
+
+## config/theme.ts 주요 항목
+
+```typescript
+ASSET_THEME = {
+  tabList1/tabTrigger1,  // 페이지 메인 탭 (홈/상세/성과)
+  tabList2/tabTrigger2,  // 2단계 탭 (순자산/수익/배당)
+  tabList3/tabTrigger3,  // 3단계 서브탭 (국내/해외/IRP 등)
+  tabList3Wrap/tabTrigger3Wrap,  // 래핑 변형
+  categoryBox, todayBox, inputHeader, liabilityBadge,
+  important, liability, profit, loss,
+  realEstateTypeColors, distributionCard,
+}
+MAIN_PALETTE  // 10색 팔레트 (인덱스 고정: 0=최대비율, 1=대출, 2=임차보증금)
+getProfitLossColor(value)  // >0 수익색 / <0 손실색 / =0 기본색
 ```

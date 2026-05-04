@@ -38,11 +38,11 @@ export const financialInstitutions = [
 
 // 현금성 자산 유형
 export const cashTypes = [
-  { value: "deposit", label: "예금" },
-  { value: "savings", label: "적금" },
-  { value: "bank", label: "입출금 통장" },
-  { value: "cma", label: "CMA" },
-  { value: "cash", label: "실물 현금" },
+  { value: "deposit", label: "예금", shortLabel: "예금" },
+  { value: "savings", label: "적금", shortLabel: "적금" },
+  { value: "bank", label: "입출금 통장", shortLabel: "입출금" },
+  { value: "cma", label: "CMA", shortLabel: "CMA" },
+  { value: "cash", label: "실물 현금", shortLabel: "실물현금" },
 ] as const;
 
 // 대출 종류
@@ -54,6 +54,7 @@ export const loanTypes = [
   { value: "mortgage-insurance", label: "보험담보대출", shortLabel: "보험담보" },
   { value: "mortgage-deposit", label: "예금담보대출", shortLabel: "예금담보" },
   { value: "mortgage-other", label: "기타담보대출", shortLabel: "기타담보" },
+  { value: "tenant", label: "임차보증금", shortLabel: "임차보증금" },
 ] as const;
 
 // 대출 종류 표시 순서
@@ -71,11 +72,11 @@ export const stockCategories = [
 
 // 부동산 유형
 export const realEstateTypes = [
-  { value: "apartment", label: "아파트" },
-  { value: "house", label: "주택" },
-  { value: "land", label: "토지" },
-  { value: "commercial", label: "상가" },
-  { value: "other", label: "기타" },
+  { value: "apartment", label: "아파트", shortLabel: "아파트" },
+  { value: "house", label: "주택", shortLabel: "주택" },
+  { value: "land", label: "토지", shortLabel: "토지" },
+  { value: "commercial", label: "상가", shortLabel: "상가" },
+  { value: "other", label: "기타", shortLabel: "기타" },
 ] as const;
 
 // 암호화폐 거래소 목록

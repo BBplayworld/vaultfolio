@@ -44,12 +44,24 @@ const STOCK_SCHEMA = {
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로), ticker=티커(ETF참조 최우선·해외는 추론·모르면 ""), quantity=보유수량(화면에 수량이 있으면 그 값), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·수익금·평가금액·수익률로부터 계산 금지·없으면 반드시 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·계산 금지·없으면 반드시 0), currentValue=총평가금액(화면에 숫자로 명시된 경우 반드시 기록·계산 금지·없으면 0), profitAmount=평가손익 금액(부호포함·"+476,928원(+88.23%)" 같이 금액과 수익률이 함께 표시된 경우 금액 부분만 추출·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타("내 기타 투자"하위=기타·TIGER·KODEX·ACE 등 국내 ETF는 반드시 국내), currency=통화(KRW|USD|JPY: 화면에 "원화"·"원화로 보기"·"KRW"·"₩"·금액 뒤에 "원" 단위가 보이면 해당 종목이 해외주식이어도 반드시 KRW로 설정·달러$·"외화"·"USD" 표시면 USD·엔¥·"JPY" 표시면 JPY·화면 전체에 원화 표시가 있으면 모든 종목 KRW·통화 표시 없는 해외섹션 기본값=USD·국내섹션 기본값=KRW)
+name=종목명(그대로), ticker=티커(화면에 보이면 최우선 추출·없으면 [국내 ETF 티커] 목록의 종목명과 일치할때만 해당 티커 추출·SPY 등 해외주식에 국내ETF 티커를 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY)
 
 [국내 ETF 티커]
 ${DOMESTIC_ETF_TABLE}
 
-무시: 계좌번호·총평가금액·광고배너`;
+무시: 계좌번호·총평가금액·광고배너
+
+예시 레이아웃 (토스증권/도미노):
+- 왼쪽: 브랜드(TIGER 등), 종목명, 수량이 2~3줄
+- 오른쪽: 평가금액(큰 숫자), 평가손익+수익률(작은 숫자)
+- 증권사 앱마다 레이아웃이 다를 수 있으므로 레이아웃보다 종목명·티커 기준으로 판단할 것
+
+section 판단 규칙:
+- 화면에 "해외주식" "국내주식" 탭·헤더·레이블이 명시된 경우 최우선 적용
+- 종목명에 "인베스코(Invesco)", "뱅가드(Vanguard)", "iShares", "SPDR" 등 해외 운용사명이 포함되거나 QQQ·SPY·VOO 등 해외 ETF 약칭이 포함된 경우 section=해외
+- 국내 ETF 브랜드(TIGER·KODEX·ACE·HANARO·SOL·RISE 등)와 혼동 금지
+
+추출 규칙: 종목명 줄과 수량 줄 우측에 있는 숫자들을 각각 currentValue와 profitAmount로 정확히 매핑할 것. 한 행에 데이터가 흩어져 있어도 하나의 종목으로 합쳐서 추출.`;
 
 interface GeminiStock {
   name: string;
@@ -71,26 +83,73 @@ function processStockResults(raw: GeminiStock[], today: string) {
     const hasCurrentValue = (s.currentValue ?? 0) > 0;
     const hasCurrentPrice = (s.currentPrice ?? 0) > 0;
     const hasProfitAmount = (s.profitAmount ?? 0) !== 0;
-    // 평가금액, 현재가×수량, 수익금 중 하나라도 있으면 처리 가능
-    return hasCurrentValue || hasCurrentPrice || hasProfitAmount;
+    const hasProfitRate = (s.profitRate ?? 0) !== 0;
+    // 평가금액, 현재가, 수익금, 수익률 중 하나라도 있으면 처리 가능
+    return hasCurrentValue || hasCurrentPrice || hasProfitAmount || hasProfitRate;
   });
+
   let prevCategory: "domestic" | "foreign" = "domestic";
 
   return filtered.map((s, idx) => {
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
-    const ticker = rawTicker || lookupTicker(s.name) || "";
+    let ticker = rawTicker || "";
+    // ticker-map에 종목명이 등록된 경우 AI 반환값보다 map을 우선 (AI 오인식 교정)
+    const mapTicker = lookupTicker(s.name);
+    if (mapTicker && !(s.section === "해외" && /^\d{6}$/.test(mapTicker))) {
+      ticker = mapTicker;
+    } else if (!ticker) {
+      // map에 없고 AI도 없으면 빈 티커 유지
+    }
+
+    // 유명 국내 ETF 브랜드로 시작하는지 검사 (예: TIGER 미국테크TOP10 IND)
+    const isDomesticBrand = /^(TIGER|KODEX|ACE|KINDEX|HANARO|SOL|RISE|KBSTAR|ARIRANG|TIMEFOLIO|BIG|PLUS|KOSEF)(?:\s|[가-힣])/i.test(s.name);
+    // 한글 없이 영문, 숫자, 기호 등으로만 구성된 순수 영문 이름인지 검사
+    const isPureEnglish = /^[a-zA-Z0-9.\s&'-]+$/.test(s.name.trim());
+
+    // AI가 티커 필드에 한글 종목명이나 이상한 긴 문자열을 넣은 경우 초기화
+    if (/[가-힣]/.test(ticker) || ticker.length > 15) {
+      ticker = lookupTicker(s.name) || "";
+    }
+
+    // 국내 ETF 브랜드인데 티커가 6자리 숫자가 아닌 경우(AI가 영문 문자열 등 환각을 넣은 경우) 재검색
+    if (isDomesticBrand && !/^\d{6}$/.test(ticker)) {
+      ticker = lookupTicker(s.name) || "";
+    }
+
+    // AI가 "SPY" 등 해외주식에 대해 의미상 유사한 국내 ETF 티커(예: 360750)를 환각으로 부여하는 것 방지
+    if (isPureEnglish && !isDomesticBrand && /^\d{6}$/.test(ticker)) {
+      ticker = lookupTicker(s.name) || "";
+    }
+
+    // 국내 브랜드가 아닌데 6자리 국내 코드를 AI가 반환한 경우 → lookupTicker로 재확인하여 해외 티커면 교체
+    if (!isDomesticBrand && /^\d{6}$/.test(ticker)) {
+      const lookedUp = lookupTicker(s.name);
+      if (lookedUp && !/^\d{6}$/.test(lookedUp)) {
+        ticker = lookedUp;
+      }
+    }
+
+    // 티커 미확인인데 이름이 순수 영문(또는 영문+숫자 혼합, 마침표 포함)인 경우 티커로 간주
+    if (!ticker && /^[a-zA-Z0-9.]+$/.test(s.name.replace(/\s/g, "")) && s.name.length <= 8) {
+      ticker = s.name.replace(/\s/g, "").toUpperCase();
+    }
 
     const isDomesticTicker = ticker ? DOMESTIC_TICKERS.has(ticker) : false;
+    // 6자리 숫자가 아닌 영문 티커 → 해외주식 (section이 "국내"여도 우선 적용)
+    const isForeignTickerByShape = !!ticker && !/^\d{6}$/.test(ticker) && /^[A-Z0-9.]+$/.test(ticker);
 
     let category: "domestic" | "foreign" | "irp";
     if (s.section === "기타") {
       category = "irp";
-    } else if (isDomesticTicker || s.section === "국내") {
+    } else if (isDomesticTicker || isDomesticBrand) {
       category = "domestic";
       prevCategory = "domestic";
-    } else if (s.section === "해외") {
+    } else if (isForeignTickerByShape || isPureEnglish || s.section === "해외") {
       category = "foreign";
       prevCategory = "foreign";
+    } else if (s.section === "국내") {
+      category = "domestic";
+      prevCategory = "domestic";
     } else {
       category = prevCategory;
     }

@@ -1,93 +1,31 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react";
-import { AssetOverviewCards } from "./_components/asset-overview-cards";
-import { AssetDistributionCards } from "./_components/asset-distribution-cards";
-import { YearlyNetAssetChart } from "./_components/yearly-net-asset-chart";
-import { RealEstateInput } from "./_components/input/real-estate-input";
-import { StockInput } from "./_components/input/stock-input";
-import { CryptoInput } from "./_components/input/crypto-input";
-import { ExchangeRateInput } from "./_components/input/exchange-rate-input";
-import { CashInput } from "./_components/input/cash-input";
-import { LoanInput } from "./_components/input/loan-input";
-import { WelcomeGuide } from "./_components/welcome-guide";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, Database, Sparkles, Activity, CircleChevronDown, LayoutDashboard, PieChart, List, BarChart2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { CopyrightFooter } from "./_components/copyright-footer";
-import { FloatingAddButton } from "./_components/floating-add-button";
-import { MajorUiUpdateNoticeDialog } from "./_components/major-ui-update-notice-dialog";
-import { APP_CONFIG } from "@/config";
+import { useEffect, useState } from "react";
+import { WelcomeGuide } from "./_components/layout/welcome-guide";
+import { RealEstateInput } from "./_components/bottom-nav/asset-update/input/real-estate-input";
+import { StockInput } from "./_components/bottom-nav/asset-update/input/stock-input";
+import { CryptoInput } from "./_components/bottom-nav/asset-update/input/crypto-input";
+import { CashInput } from "./_components/bottom-nav/asset-update/input/cash-input";
+import { LoanInput } from "./_components/bottom-nav/asset-update/input/loan-input";
+import { CopyrightFooter } from "./_components/layout/copyright-footer";
+import { FloatingAddButton } from "./_components/layout/floating-add-button";
+import { AssetPageTabs } from "./_components/layout/asset-page-tabs";
+import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME } from "@/config/theme";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-const ALERT_DISMISSED_KEY = "secretasset-guide-dismissed";
-
-
-const INPUT_TABS = [
-  { value: "real-estate", label: "부동산", mobileLabel: undefined },
-  { value: "stocks", label: "주식", mobileLabel: undefined },
-  { value: "crypto", label: "암호화폐", mobileLabel: undefined },
-  { value: "cash", label: "현금성 자산", mobileLabel: "현금" },
-  { value: "loans", label: "대출", mobileLabel: undefined },
-] as const;
-
-const MOBILE_TABS = [
-  { value: "asset", label: "자산", icon: LayoutDashboard },
-  { value: "distribution", label: "분포", icon: PieChart },
-  { value: "detail", label: "상세", icon: List },
-  { value: "chart", label: "차트", icon: BarChart2 },
-] as const;
-
-const PC_TABS = [
-  { value: "overview", label: "자산+분포", icon: LayoutDashboard },
-  { value: "detail", label: "상세", icon: List },
-  { value: "chart", label: "차트", icon: BarChart2 },
-] as const;
-
-const TAB_TRIGGER_CLASS = [
-  "h-10 sm:flex-row bg-muted/60 text-muted-foreground border border-border py-1 sm:py-2 overflow-hidden cursor-pointer transition-all",
-  "hover:bg-accent hover:text-foreground hover:border-primary/50",
-  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-semibold",
-  ASSET_THEME.tabActive,
-].join(" ");
-
+import { ScrollToTop } from "./_components/layout/scroll-to-top";
+import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
+import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
-  const [activeTab, setActiveTab] = useState("real-estate");
-  const [activeMobileTab, setActiveMobileTab] = useState("asset");
-  const [activePcTab, setActivePcTab] = useState("overview");
-  const [activeChartTab, setActiveChartTab] = useState("netasset");
   const isMobile = useIsMobile();
-  const tabsRef = useRef<HTMLDivElement>(null);
-  const [alertDismissed, setAlertDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(ALERT_DISMISSED_KEY) === "1";
-  });
-
-  const dismissAlert = () => {
-    localStorage.setItem(ALERT_DISMISSED_KEY, "1");
-    setAlertDismissed(true);
-  };
-
-  const restoreAlert = () => {
-    localStorage.removeItem(ALERT_DISMISSED_KEY);
-    setAlertDismissed(false);
-  };
-
-  useEffect(() => {
-    const restore = () => restoreAlert();
-    const dismiss = () => setAlertDismissed(true);
-    window.addEventListener("trigger-restore-guide", restore);
-    window.addEventListener("trigger-dismiss-guide", dismiss);
-    return () => {
-      window.removeEventListener("trigger-restore-guide", restore);
-      window.removeEventListener("trigger-dismiss-guide", dismiss);
-    };
-  }, []);
+  const initTutorial = useTutorialStore((s) => s.initTutorial);
+  const completeStep = useTutorialStore((s) => s.completeStep);
+  const advanceStep5 = useTutorialStore((s) => s.advanceStep5);
+  const showStep0 = useTutorialStore((s) => s.showStep0);
+  const startWaiting = useTutorialStore((s) => s.startWaiting);
+  const [step0Mode, setStep0Mode] = useState<"screenshot" | "manual" | "real-estate" | null>(null);
 
   const isWelcomeGuide =
     isSharePending ||
@@ -97,12 +35,54 @@ export default function Page() {
       assetData.cash.length === 0 &&
       assetData.loans.length === 0);
 
+  // 튜토리얼 초기화
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    initTutorial();
+  }, [isDataLoaded, initTutorial]);
+
+  useEffect(() => {
+    const h = (e: Event) => {
+      const mode = (e as CustomEvent).detail?.mode as "screenshot" | "manual" | "real-estate";
+      setStep0Mode(mode ?? "screenshot");
+      showStep0();
+    };
+    window.addEventListener("tutorial-show-step0", h);
+    return () => window.removeEventListener("tutorial-show-step0", h);
+  }, [showStep0]);
+
+  // 커스텀 이벤트 리스너 — 각 컴포넌트에서 completeStep 이벤트를 발생시키면 처리
+  useEffect(() => {
+    const makeHandler = (step: TutorialStep) => () => completeStep(step);
+    const h1 = makeHandler(1);
+    const h2 = () => startWaiting(2);
+    const h3 = makeHandler(3);
+    const h4 = makeHandler(4);
+    const h5Activity = () => advanceStep5(); // Step 5: activity 탭 클릭 → sub-step profit으로 전환
+    const h5Profit = makeHandler(5);         // Step 5: profit 탭 클릭 → 완료
+
+    window.addEventListener("tutorial-complete-step1", h1);
+    window.addEventListener("tutorial-start-wait-step2", h2);
+    window.addEventListener("tutorial-complete-step3", h3);
+    window.addEventListener("tutorial-complete-step4", h4);
+    window.addEventListener("tutorial-advance-step5", h5Activity);
+    window.addEventListener("tutorial-complete-step5", h5Profit);
+
+    return () => {
+      window.removeEventListener("tutorial-complete-step1", h1);
+      window.removeEventListener("tutorial-start-wait-step2", h2);
+      window.removeEventListener("tutorial-complete-step3", h3);
+      window.removeEventListener("tutorial-complete-step4", h4);
+      window.removeEventListener("tutorial-advance-step5", h5Activity);
+      window.removeEventListener("tutorial-complete-step5", h5Profit);
+    };
+  }, [completeStep, advanceStep5]);
+
   if (!isDataLoaded) return null;
 
   if (isWelcomeGuide) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
-        <MajorUiUpdateNoticeDialog />
         <WelcomeGuide />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
@@ -112,193 +92,26 @@ export default function Page() {
           <LoanInput />
         </div>
         <CopyrightFooter />
+        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} step0Mode={step0Mode} />
       </div>
     );
   }
 
-  const alert = (
-    <Alert className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 relative">
-      <Info className="size-5 text-primary" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={dismissAlert}
-        className="absolute top-2 right-2 size-7 text-muted-foreground hover:text-foreground"
-        aria-label="닫기"
-      >
-        <X className="size-4" />
-      </Button>
-      <AlertTitle className="text-base font-semibold text-primary mb-3 pr-8">
-        {APP_CONFIG.name} - 내 자산은 오직 내 브라우저에만
-      </AlertTitle>
-      <AlertDescription>
-        <ul className="space-y-2.5 text-xs sm:text-xs">
-          <li className="flex items-start gap-2">
-            <Database className="size-4 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-foreground leading-snug">
-              <span className="font-semibold text-primary">영지식(Zero-Knowledge) 이중 보안</span>
-              {"  —  "}
-              데이터는 <span className="text-rose-500">이 기기 브라우저</span>에만 보관됩니다.{" "}
-              <span className="text-rose-500">'공유 URL 복사'</span> 시에도 랜덤 키(Key)와 사용자 PIN이 완전히 분리되어, 관리자를 포함한 그 누구도 서버 데이터 단독으로는 복호화할 수 없도록 <span className="font-medium text-rose-500">원천 봉쇄</span>되어 있습니다.{" "}
-              <span className="text-muted-foreground block mt-1 break-keep">
-                (주의: 공유 URL 자체에 해독 키의 절반이 포함되어 있습니다. 안전을 위해 URL을 공개 게시판 등에 노출하지 마시고, PIN 번호는 다른 수단을 통해 공유 대상자에게 별도로 알려주세요.)
-              </span>
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <Sparkles className="size-4 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-foreground leading-snug">
-              <span className="font-semibold text-primary">AI 자산 분석</span>
-              {"  —  "}
-              상단{" "}
-              <span className="text-rose-500">자산 관리 메뉴</span>에서
-              Grok·Gemini·GPT에 바로 붙여넣을 수 있는{" "}
-              <span className="text-rose-500">AI 평가용 프롬프트</span>를 생성할 수 있습니다.{" "}
-              데이터 내보내기·가져오기를 지원합니다.
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <Activity className="size-4 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-foreground leading-snug">
-              <span className="font-semibold text-primary">매일 자동 업데이트</span>
-              {"  —  "}
-              보유 <span className="text-rose-500">주식 현재가</span>와{" "}
-              <span className="text-rose-500">환율(USD·JPY)</span>을
-              매일 최신 정보로 자동 반영합니다.
-            </span>
-          </li>
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
-
-  const alertOrBanner = alertDismissed ? null : alert;
-
-  const inputTabs = (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 h-13 p-1 gap-1 mb-0.5">
-        {INPUT_TABS.map(({ value, label, mobileLabel }) => (
-          <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
-            <span className="ml-1 text-[11px] leading-tight sm:text-sm">
-              {mobileLabel ? <><span className="sm:hidden">{mobileLabel}</span><span className="hidden sm:inline">{label}</span></> : label}
-            </span>
-            <CircleChevronDown className="hidden sm:inline ml-auto size-3 sm:size-5 opacity-40 shrink-0" />
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      <TabsContent value="real-estate" forceMount className="data-[state=inactive]:hidden"><RealEstateInput /></TabsContent>
-      <TabsContent value="stocks" forceMount className="data-[state=inactive]:hidden"><StockInput /></TabsContent>
-      <TabsContent value="crypto" forceMount className="data-[state=inactive]:hidden"><CryptoInput /></TabsContent>
-      <TabsContent value="cash" forceMount className="data-[state=inactive]:hidden"><CashInput /></TabsContent>
-      <TabsContent value="loans" forceMount className="data-[state=inactive]:hidden"><LoanInput /></TabsContent>
-    </Tabs>
-  );
-
-  const chartTabs = (
-    <Tabs value={activeChartTab} onValueChange={setActiveChartTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-1 h-10 p-1 gap-1 mb-0.5">
-        <TabsTrigger value="netasset" className={TAB_TRIGGER_CLASS}>순자산</TabsTrigger>
-      </TabsList>
-      <TabsContent value="netasset" forceMount className="data-[state=inactive]:hidden">
-        <YearlyNetAssetChart />
-      </TabsContent>
-    </Tabs>
-  );
-
-  // isMobile이 undefined이면 분기 렌더 보류 (hydration flash 방지)
   if (isMobile === undefined) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
-        <MajorUiUpdateNoticeDialog />
-        {alertOrBanner}
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <div className="flex flex-col gap-1">
-        <MajorUiUpdateNoticeDialog />
-        {alertOrBanner}
-        <Tabs value={activeMobileTab} onValueChange={setActiveMobileTab} className="w-full mt-0.5">
-          <TabsList className="grid w-full grid-cols-4 h-11 p-1 gap-1 mb-0.5 sticky top-0 z-10 bg-background/95 backdrop-blur">
-            {MOBILE_TABS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className={[
-                  "h-10 flex-col gap-0.5 bg-muted/60 text-muted-foreground border border-border py-1 overflow-hidden cursor-pointer transition-all",
-                  "hover:bg-accent hover:text-foreground hover:border-primary/50",
-                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-semibold",
-                  ASSET_THEME.tabActive,
-                ].join(" ")}
-              >
-                <Icon className="size-4 shrink-0" />
-                <span className="text-[10px] leading-tight">{label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="asset">
-            <AssetOverviewCards />
-          </TabsContent>
-
-          <TabsContent value="distribution">
-            <AssetDistributionCards />
-          </TabsContent>
-
-          <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
-            <div className="flex flex-col gap-4 pb-5">
-              <div ref={tabsRef}>{inputTabs}</div>
-              <ExchangeRateInput />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
-            {chartTabs}
-          </TabsContent>
-        </Tabs>
-        <CopyrightFooter />
-        <FloatingAddButton />
+        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} step0Mode={step0Mode} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <MajorUiUpdateNoticeDialog />
-      {alertOrBanner}
-      <Tabs value={activePcTab} onValueChange={setActivePcTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 p-1 gap-2 mb-1">
-          {PC_TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className={[TAB_TRIGGER_CLASS, "text-sm gap-2"].join(" ")}>
-              <Icon className="size-4 shrink-0" />
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <TabsContent value="overview">
-          <div className="flex flex-col gap-4 md:gap-6">
-            <AssetOverviewCards />
-            <AssetDistributionCards />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="detail" forceMount className="data-[state=inactive]:hidden">
-          <div className="flex flex-col gap-4" ref={tabsRef}>
-            {inputTabs}
-            <ExchangeRateInput />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="chart" forceMount className="data-[state=inactive]:hidden">
-          {chartTabs}
-        </TabsContent>
-      </Tabs>
-
+      <AssetPageTabs />
       <CopyrightFooter />
       <FloatingAddButton />
+      <ScrollToTop />
+      <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
     </div>
   );
 }
