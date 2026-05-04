@@ -84,7 +84,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       }),
     );
 
-    return toPng(cardRef.current, { pixelRatio: 1, skipFonts: false });
+    return toPng(cardRef.current, { pixelRatio: 1, width: 460, skipFonts: false });
   };
 
   const handleCopy = async () => {
