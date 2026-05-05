@@ -86,7 +86,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     );
 
     const el = cardRef.current;
-    return toPng(el, { pixelRatio: 4, skipFonts: false });
+    const actualWidth = el.getBoundingClientRect().width;
+    const pixelRatio = Math.ceil(1100 / actualWidth);
+    return toPng(el, { pixelRatio, skipFonts: false });
   };
 
   const handleCopy = async () => {
@@ -262,7 +264,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
               </button>
             </div>
           )}
-          <div ref={wrapperRef} className="w-[460px] max-w-full mx-auto">
+          <div ref={wrapperRef} className="w-[480px] max-w-full mx-auto">
             <ShareCard
               hideAmounts={hideAmounts}
               activeCategory={activeCategory}
