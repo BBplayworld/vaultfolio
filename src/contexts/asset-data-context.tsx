@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
+import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
 
@@ -362,6 +363,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
+    const { skipStep, statuses } = tutorialStore.getState();
+    ([0, 1, 2, 3, 4, 5] as const).forEach(step => { if (statuses[step] === "pending") skipStep(step); });
     void initAndSync(data);
   }, [initAndSync]);
 

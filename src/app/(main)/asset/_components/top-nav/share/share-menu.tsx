@@ -46,6 +46,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     chart: true,
   });
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const toggleSection = (key: keyof SectionVisibility) =>
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -84,7 +85,8 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       }),
     );
 
-    return toPng(cardRef.current, { pixelRatio: 1, skipFonts: false });
+    const el = cardRef.current;
+    return toPng(el, { pixelRatio: 4, skipFonts: false });
   };
 
   const handleCopy = async () => {
@@ -260,7 +262,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
               </button>
             </div>
           )}
-          <div className="w-[460px] max-w-full mx-auto">
+          <div ref={wrapperRef} className="w-[460px] max-w-full mx-auto">
             <ShareCard
               hideAmounts={hideAmounts}
               activeCategory={activeCategory}
