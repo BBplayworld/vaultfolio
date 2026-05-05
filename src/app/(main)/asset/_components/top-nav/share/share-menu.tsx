@@ -86,31 +86,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     );
 
     const el = cardRef.current;
-    const wrapper = wrapperRef.current;
-    const prevElWidth = el.style.width;
-    const prevWrapperWidth = wrapper?.style.width ?? "";
-    const prevWrapperMaxWidth = wrapper?.style.maxWidth ?? "";
-    el.style.setProperty("width", "393px", "important");
-    if (wrapper) {
-      wrapper.style.setProperty("width", "393px", "important");
-      wrapper.style.setProperty("max-width", "393px", "important");
-    }
-    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-    const hiDpi = await toPng(el, { pixelRatio: 2, skipFonts: false });
-    el.style.width = prevElWidth;
-    if (wrapper) {
-      wrapper.style.width = prevWrapperWidth;
-      wrapper.style.maxWidth = prevWrapperMaxWidth;
-    }
-    // 786px → 393px 다운샘플링 (선명도 유지, 크기 절반)
-    const img = new Image();
-    await new Promise<void>((r) => { img.onload = () => r(); img.src = hiDpi; });
-    const canvas = document.createElement("canvas");
-    canvas.width = 393;
-    canvas.height = Math.round(img.naturalHeight / 2);
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/png");
+    return toPng(el, { pixelRatio: 4, skipFonts: false });
   };
 
   const handleCopy = async () => {

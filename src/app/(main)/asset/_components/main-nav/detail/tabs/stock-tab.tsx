@@ -275,17 +275,17 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   const fmt = maskFn ?? formatShortCurrency;
   const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
-      <div>
+    <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-3 flex items-center justify-between">
+      <div className="min-w-fit flex-1">
         <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
         <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
         <p className="text-sm text-foreground">{fmtFull(totalValue)}</p>
       </div>
-      <div className="text-right space-y-1">
+      <div className="text-right space-y-1 min-w-fit">
         <div>
           <p className="text-xs text-muted-foreground">평가손익</p>
           <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-            {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))} ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
+            {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))} <span className="text-sm">({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)</span>
           </p>
           {currencyGain !== undefined && currencyGain !== 0 && (
             <p className={`text-xs tabular-nums ${getProfitLossColor(currencyGain)}`}>
@@ -465,7 +465,7 @@ export function StockCategorySection({
       </TabsList>
 
       {CATEGORY_TABS.map(({ value }) => (
-        <TabsContent key={value} value={value} className="mt-4 space-y-3">
+        <TabsContent key={value} value={value} className="mt-1 px-2 space-y-3">
           {/* 비중 바 */}
           {barItems.length > 0 && totalValue > 0 && (
             <div className="space-y-2">

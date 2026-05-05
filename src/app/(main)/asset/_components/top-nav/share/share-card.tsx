@@ -93,7 +93,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                      tickFormatter={(d: string) => { const dow = ["일","월","화","수","목","금","토"][new Date(d).getDay()]; return `${d.slice(5)} (${dow})`; }}
+                      tickFormatter={(d: string) => { const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(d).getDay()]; return `${d.slice(5)} (${dow})`; }}
                       axisLine={false}
                       tickLine={false}
                       interval={0}
@@ -149,7 +149,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션3: 주식 요약 헤더 */}
       {sections.stockHeader && (
-        <div className="rounded-lg bg-card px-3 py-2 space-y-3">
+        <div className="rounded-lg bg-card py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("stockHeader")}
           </div>
@@ -168,7 +168,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션4: 카테고리 탭 + 비중바 + 종목 목록 통합 */}
       {sections.stockList && (
-        <div className="rounded-lg bg-card px-3 py-2 space-y-3">
+        <div className="rounded-lg bg-card py-2 space-y-3">
           <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("stockList")}
           </div>
