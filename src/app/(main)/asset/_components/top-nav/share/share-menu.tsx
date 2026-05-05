@@ -46,6 +46,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     chart: true,
   });
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const toggleSection = (key: keyof SectionVisibility) =>
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -84,7 +85,32 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       }),
     );
 
-    return toPng(cardRef.current, { pixelRatio: 1, skipFonts: false });
+    const el = cardRef.current;
+    const wrapper = wrapperRef.current;
+    const prevElWidth = el.style.width;
+    const prevWrapperWidth = wrapper?.style.width ?? "";
+    const prevWrapperMaxWidth = wrapper?.style.maxWidth ?? "";
+    el.style.setProperty("width", "393px", "important");
+    if (wrapper) {
+      wrapper.style.setProperty("width", "393px", "important");
+      wrapper.style.setProperty("max-width", "393px", "important");
+    }
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    const hiDpi = await toPng(el, { pixelRatio: 2, skipFonts: false });
+    el.style.width = prevElWidth;
+    if (wrapper) {
+      wrapper.style.width = prevWrapperWidth;
+      wrapper.style.maxWidth = prevWrapperMaxWidth;
+    }
+    // 786px → 393px 다운샘플링 (선명도 유지, 크기 절반)
+    const img = new Image();
+    await new Promise<void>((r) => { img.onload = () => r(); img.src = hiDpi; });
+    const canvas = document.createElement("canvas");
+    canvas.width = 393;
+    canvas.height = Math.round(img.naturalHeight / 2);
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
   };
 
   const handleCopy = async () => {
@@ -260,7 +286,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
               </button>
             </div>
           )}
-          <div className="w-[460px] max-w-full mx-auto">
+          <div ref={wrapperRef} className="w-[460px] max-w-full mx-auto">
             <ShareCard
               hideAmounts={hideAmounts}
               activeCategory={activeCategory}
