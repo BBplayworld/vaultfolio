@@ -42,29 +42,29 @@ export const stockSchema = z.object({
     }
 
     if (data.category === "domestic") {
-      // 국내 주식: 정확히 6자리 숫자 (또는 코스닥 접미사 :XKOS, :XKRX 포함)
-      const domesticRegex = /^\d{6}(:XKRX|:XKOS)?$/;
-      if (!domesticRegex.test(ticker)) {
+      // 국내 주식: 정확히 6자리 영문 대문자·숫자 (또는 코스닥 접미사 :XKOS, :XKRX 포함)
+      const domesticRegex = /^[A-Z0-9]{6}(:XKRX|:XKOS)?$/;
+      if (!domesticRegex.test(ticker.toUpperCase())) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "국내 주식은 6자리 숫자 코드로 입력해야 합니다. (예: 005930)",
+          message: "국내 주식은 영문·숫자 6자리 코드로 입력해야 합니다. (예: 005930, 0117V0)",
           path: ["ticker"],
         });
       }
     } else if (data.category === "foreign") {
-      // 해외 주식: 영문 대문자와 숫자, 점(.)만 허용, 1~10자
-      const foreignRegex = /^[A-Z0-9.]+$/;
-      if (!foreignRegex.test(ticker.toUpperCase())) {
+      // 해외 주식: 영문 대문자와 숫자, 점(.)만 허용, 1~8자
+      const foreignRegex = /^[A-Za-z0-9.]+$/;
+      if (!foreignRegex.test(ticker)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "해외 주식 티커는 영문 대문자와 숫자만 가능합니다. (예: AAPL, PLTR)",
+          message: "해외 주식 티커는 영문 대문자, 숫자, 점(.)만 가능합니다. (예: AAPL, BRK.B)",
           path: ["ticker"],
         });
       }
-      if (ticker.length > 10) {
+      if (ticker.length > 8) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "해외 티커는 10자 이하로 입력해 주세요.",
+          message: "해외 티커는 8자 이하로 입력해 주세요.",
           path: ["ticker"],
         });
       }

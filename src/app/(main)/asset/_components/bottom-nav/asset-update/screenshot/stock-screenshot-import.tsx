@@ -545,8 +545,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                             const isForeign = stock.category === "foreign";
                             const raw = e.target.value.toUpperCase();
                             const filtered = isForeign
-                              ? raw.replace(/[^A-Z0-9.]/g, "").slice(0, 7)
-                              : raw.replace(/[^0-9]/g, "").slice(0, 6);
+                              ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
+                              : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
                             updateTickerInput(stock.id, filtered);
                           }}
                         />

@@ -90,8 +90,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
   };
 
   const getTickerDescription = () => {
-    if (selectedCategory === "domestic") return "국내 주식 6자리 숫자를 입력하세요. (예: 삼성전자 005930)";
-    if (selectedCategory === "foreign") return "미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA)";
+    if (selectedCategory === "domestic") return "국내 주식 6자리 영문+숫자를 입력하세요. (예: 삼성전자 005930, ETF 0117V0)";
+    if (selectedCategory === "foreign") return "미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA, BRK/B)";
     if (isEtfCategory) return "국내 상장 ETF 종목코드 6자리를 입력하세요. (예: S&P500 ETF → 360750)";
     if (isUnlisted) return "비상장 주식은 증권 API 조회가 불가합니다. 종목코드 또는 식별 코드를 자유롭게 입력하세요.";
     return "";
@@ -146,7 +146,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                 onValueChange={(value) => {
                   field.onChange(value);
                   setSelectedCategory(value as Stock["category"]);
-                  form.setValue("currency", "KRW");
+                  form.setValue("currency", value === "foreign" ? "USD" : "KRW");
                   setLookupState(value === "unlisted" ? "success" : "idle");
                 }}
                 defaultValue={field.value}
@@ -181,13 +181,15 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     <div className="relative">
                       <Input
                         placeholder={getTickerPlaceholder()}
-                        maxLength={selectedCategory === "foreign" ? 5 : isUnlisted ? 20 : 6}
-                        inputMode={isForeignStock || isUnlisted ? "text" : "numeric"}
+                        maxLength={isUnlisted ? 20 : selectedCategory === "foreign" ? 8 : 6}
+                        inputMode="text"
                         {...field}
                         onChange={(e) => {
-                          const val = selectedCategory === "foreign"
-                            ? e.target.value.toUpperCase().replace(/[^A-Z]/g, "")
-                            : e.target.value;
+                          const val = isUnlisted
+                            ? e.target.value
+                            : selectedCategory === "foreign"
+                              ? e.target.value.toUpperCase().replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
+                              : e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
                           field.onChange(val);
                         }}
                       />

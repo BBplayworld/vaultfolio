@@ -44,7 +44,7 @@ export interface ExchangeRates {
 
 export function normalizeTicker(stock: Partial<Stock>): string {
   if (!stock.ticker) return "";
-  const ticker = stock.ticker.trim().toUpperCase();
+  const ticker = stock.ticker.trim();
 
   const isDomestic =
     stock.category === "domestic" ||
@@ -52,11 +52,12 @@ export function normalizeTicker(stock: Partial<Stock>): string {
     stock.category === "isa" ||
     stock.category === "pension";
 
-  if (isDomestic && /^\d{6}/.test(ticker)) {
-    return ticker.match(/^\d{6}/)?.[0] || ticker;
+  if (isDomestic) {
+    const upper = ticker.toUpperCase();
+    return upper.match(/^[A-Z0-9]{6}/)?.[0] || upper;
   }
 
-  return ticker;
+  return ticker.toUpperCase().replace(/\./g, "/");
 }
 
 // ─────────────────────────────────────────────
@@ -70,8 +71,8 @@ export function classifyTickers(tickers: string[]): {
   krTickers: string[];
 } {
   return {
-    usTickers: tickers.filter((t) => !/^\d{6}/.test(t) && !t.includes(":")),
-    krTickers: tickers.filter((t) => /^\d{6}/.test(t)),
+    usTickers: tickers.filter((t) => !/^[A-Z0-9]{6}$/.test(t) && !t.includes(":")),
+    krTickers: tickers.filter((t) => /^[A-Z0-9]{6}$/.test(t)),
   };
 }
 
