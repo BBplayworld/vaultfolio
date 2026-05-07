@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
   if (type === "stock") {
     const tickers = (
-      searchParams.get("tickers")?.split(",").map((t) => t.trim().toUpperCase()) || []
+      searchParams.get("tickers")?.split(",").map((t) => t.trim()) || []
     ).slice(0, 3);
     if (tickers.length === 0) {
       return NextResponse.json({ error: "티커 없음" }, { status: 400 });
