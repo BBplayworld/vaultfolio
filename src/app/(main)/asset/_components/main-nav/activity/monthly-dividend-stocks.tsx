@@ -97,7 +97,9 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         : allPayouts;
       if (allPayouts.length === 0) return null;
 
-      const currency = (payouts[0] ?? allPayouts[0]).currency || (stock.currency === "USD" ? "USD" : "KRW");
+      const firstPayout = payouts[0] ?? allPayouts[0];
+      if (!firstPayout) return null;
+      const currency = firstPayout.currency || (stock.currency === "USD" ? "USD" : "KRW");
       const rate = currency === "USD" ? usdRate : 1;
       const beforePurchaseMonths = stock.purchaseDate
         ? [...new Set(
@@ -122,8 +124,8 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         currency === "USD"
           ? Math.round(payouts.reduce((sum, p) => sum + (p.amountForeign ?? p.amountPerShare) * stock.quantity, 0) * 100) / 100
           : 0;
-      const perShareForeign = currency === "USD" ? (payouts[0].amountForeign ?? payouts[0].amountPerShare) : 0;
-      const perShareKRW = Math.round(payouts[0].amountPerShare * rate);
+      const perShareForeign = currency === "USD" ? (firstPayout.amountForeign ?? firstPayout.amountPerShare) : 0;
+      const perShareKRW = Math.round(firstPayout.amountPerShare * rate);
       const actualPayouts = payouts.filter((p) => !p.isEstimated);
       const annualActual = Math.round(actualPayouts.reduce((sum, p) => sum + p.amountPerShare * stock.quantity * rate, 0));
       const annualForeignActual =
