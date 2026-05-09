@@ -27,6 +27,7 @@ export interface StockPriceResult {
   price: number;
   name: string;
   updated_at: string;
+  market?: string;
 }
 
 export interface ExchangeRates {
@@ -126,7 +127,8 @@ export async function fetchStocksFromKisOverseas(
         const price = parseFloat(output?.ovrs_now_pric1 ?? "0");
         const isDelisted = !!(output?.lstg_abol_dt && output.lstg_abol_dt.trim() !== "");
         if (price > 0 && !isDelisted) {
-          results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr };
+          const market = prdtTypeCd === "512" ? "NASDAQ" : prdtTypeCd === "513" ? "NYSE" : "AMEX";
+          results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr, market };
           break; // 성공 시 다음 거래소 시도 불필요
         }
       } catch (e) {
@@ -206,7 +208,10 @@ export async function fetchStocksFromKorea(
       const price = parseFloat(output?.thdt_clpr ?? "0");
       const name: string = output?.prdt_abrv_name ?? "";
       if (price > 0) {
-        results[ticker] = { price, name, updated_at: todayStr };
+        const sctyGrp = output?.scty_grp_id_cd ?? "";
+        const mketId = output?.mket_id_cd ?? "";
+        const market = sctyGrp === "EF" ? "국내ETF" : mketId === "STK" ? "코스피" : mketId === "KSQ" ? "코스닥" : undefined;
+        results[ticker] = { price, name, updated_at: todayStr, market };
       }
     } catch (e) {
       console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);

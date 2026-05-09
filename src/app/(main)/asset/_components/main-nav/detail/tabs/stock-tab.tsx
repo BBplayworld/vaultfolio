@@ -156,6 +156,13 @@ export function useFilteredStockData(activeCategory: string) {
     enabled: tickerList.length > 0,
   });
 
+  const marketMap = useMemo<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+    } catch { return {}; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickerList]);
+
   const filteredStocks = useMemo(() => {
     const base =
       activeCategory === "all"
@@ -221,7 +228,7 @@ export function useFilteredStockData(activeCategory: string) {
     [filteredStocks],
   );
 
-  return { filteredStocks, groupedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate };
+  return { filteredStocks, groupedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
@@ -341,6 +348,7 @@ interface StockCardProps {
   exchangeRates?: { USD: number; JPY: number };
   totalValue?: number;
   groupItems?: Stock[];
+  marketMap?: Record<string, string>;
 }
 
 interface SplitItem {
@@ -562,22 +570,25 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="rounded-md border border-border/60 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-primary/6 hover:bg-primary/10 ">
+        <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 bg-primary/6 hover:bg-primary/10 ">
           <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
-              <ChevronDown className={`size-3 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
+              <ChevronDown className={`size-2.5 sm:size-3.5 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
-              <span className="text-xs sm:text-sm text-muted-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
-              <span className={`text-xs sm:text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(m.profit)}`}>
-                {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
-              </span>
+              <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
+              <div className="flex flex-col items-end ml-auto shrink-0">
+                <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatShortCurrency(Math.round(m.currentVal))}</span>
+                <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
+                  {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
+                </span>
+              </div>
             </button>
           </CollapsibleTrigger>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <Button size="icon" variant="outline" className="size-7 sm:size-8" title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-0.5 sm:ml-3">
+            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
               <Pencil className="size-3.5 sm:size-4" />
             </Button>
-            <Button size="icon" variant="outline" className="size-7 sm:size-8" title="삭제" onClick={() => onDelete(stock.id)}>
+            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="삭제" onClick={() => onDelete(stock.id)}>
               <Trash2 className="size-3.5 sm:size-4" />
             </Button>
           </div>
@@ -597,7 +608,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
   );
 }
 
-function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems }: StockCardProps) {
+function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [splitOpen, setSplitOpen] = useState(false);
   const hasSubItems = !!subItems && subItems.length > 0;
@@ -628,10 +639,10 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           )}
           <CollapsibleContent>
             <div className="border-t divide-y divide-border/50">
-              <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/10">
+              <div className="flex items-center gap-1 px-4 py-2.5 bg-muted/10">
                 <span className="text-xs sm:text-sm font-semibold text-foreground">{stock.name}</span>
-                {stock.ticker && <span className="text-xs font-mono text-muted-foreground">{stock.ticker}</span>}
-                <span className="text-xs sm:text-sm text-foreground ml-auto">{stock.quantity.toLocaleString()}주</span>
+                {stock.ticker && <span className="text-xs sm:text-sm font-mono text-muted-foreground">({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})</span>}
+                <span className="text-xs sm:text-sm text-foreground font-semibold ml-auto">총 {stock.quantity.toLocaleString()}주</span>
               </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />
@@ -820,7 +831,7 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
-  const { filteredStocks: allStocks, groupedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate } =
+  const { filteredStocks: allStocks, groupedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
     useFilteredStockData(activeCategory);
 
   // 그룹 대표(병합) 목록 — 병합 후 KRW 환산 금액 기준 재정렬
@@ -905,6 +916,7 @@ export function StockTab() {
               groupItems={groupItems}
               exchangeRates={exchangeRates}
               totalValue={totalValue}
+              marketMap={marketMap}
             />
           );
         }}

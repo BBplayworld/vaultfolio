@@ -21,6 +21,7 @@ import {
   fetchKisToken,
   fetchStocksFromKorea,
   fetchExchangeRateFromKis,
+  StockPriceResult,
 } from "@/lib/finance-service";
 import { getCacheStorage, getEffectiveDateStr } from "@/lib/cache-storage";
 
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     const effectiveDateDomestic = getEffectiveDateStr("domestic");
     const { usTickers, krTickers } = classifyTickers(tickers);
 
-    const results: Record<string, { price: number; name: string; updated_at: string }> = {};
+    const results: Record<string, StockPriceResult> = {};
     const uncachedUs: string[] = [];
     const uncachedKr: string[] = [];
 
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
     if (uncachedUs.length === 0 && uncachedKr.length === 0) return NextResponse.json(results);
 
     // 2단계: 미캐시 항목만 외부 API 호출
-    const apiResults: Record<string, { price: number; name: string; updated_at: string }> = {};
+    const apiResults: Record<string, StockPriceResult> = {};
 
     if (uncachedUs.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);

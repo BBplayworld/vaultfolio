@@ -10,7 +10,7 @@ export function AppGuideContent() {
         <ul className="space-y-3 text-sm">
             <li className="flex items-start gap-2">
                 <Database className="size-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-foreground leading-snug">
+                <span className="text-foreground leading-relaxed">
                     <span className="font-semibold text-primary">영지식(Zero-Knowledge) 이중 보안</span>
                     {"  —  "}
                     데이터는 <span className="text-rose-400">이 기기 브라우저</span>에만 보관됩니다.{" "}
@@ -22,7 +22,7 @@ export function AppGuideContent() {
             </li>
             <li className="flex items-start gap-2">
                 <Sparkles className="size-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-foreground leading-snug">
+                <span className="text-foreground leading-relaxed">
                     <span className="font-semibold text-primary">AI 자산 분석</span>
                     {"  —  "}
                     상단{" "}
@@ -34,7 +34,7 @@ export function AppGuideContent() {
             </li>
             <li className="flex items-start gap-2">
                 <Activity className="size-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-foreground leading-snug">
+                <span className="text-foreground leading-relaxed">
                     <span className="font-semibold text-primary">매일 자동 업데이트</span>
                     {"  —  "}
                     보유 <span className="text-rose-400">주식 현재가</span>와{" "}

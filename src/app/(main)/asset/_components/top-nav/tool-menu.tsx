@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings, Info } from "lucide-react";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -40,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SidebarMenu, SidebarcategoryBox, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
 import { exportAssetData, importAssetData, clearAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { skipAllTutorialSteps } from "@/lib/local-storage";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
@@ -202,8 +203,8 @@ export function ToolMenu({
       const { assetData: imported, snapshotRestored } = await importAssetData(file);
       toast.success("자산 데이터를 불러왔습니다.");
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
-      const { skipStep, statuses } = tutorialStore.getState();
-      ([0, 1, 2, 3, 4, 5] as const).forEach(step => { if (statuses[step] === "pending") skipStep(step); });
+      skipAllTutorialSteps();
+      tutorialStore.getState().initTutorial();
       void initAndSync(imported); // 주식 현재가 갱신은 백그라운드 처리 → syncTodayStockPrices가 별도 toast 표시
     } catch (error) {
       toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
@@ -315,6 +316,14 @@ export function ToolMenu({
                 <Sparkles className="size-4" />
                 <span className="flex-1">AI 평가용 자산 현황</span>
                 <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="py-2.5" onClick={() => {
+                window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
+                tutorialStore.getState().showStep0();
+              }}>
+                <Info className="size-4" />
+                앱 가이드 보기
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

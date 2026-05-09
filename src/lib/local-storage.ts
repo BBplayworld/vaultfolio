@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   geminiUsage:          "secretasset_gemini_usage",
   shareOwnerId:         "secretasset_share_owner_id",
   financeApiErrorCount: "secretasset_finance_api_error_count",
+  stockMarkets:         "secretasset_stock_markets",
   // Tutorial step state (Step 0~5 done/skipped)
   tutorialStep0Done:    "secretasset_tutorial_step0_done",
   tutorialStep0Skipped: "secretasset_tutorial_step0_skipped",
@@ -39,6 +40,26 @@ const LEGACY_KEYS = {
   geminiUsage:          "secretasset-gemini-usage",
   financeApiErrorCount: "finance_api_error_count",
 } as const;
+
+// 튜토리얼 전체 스킵 — done이 아닌 step만 skipped로 기록 후 store 재초기화
+export function skipAllTutorialSteps(): void {
+  if (typeof window === "undefined") return;
+  const DONE_KEYS = [
+    STORAGE_KEYS.tutorialStep0Done, STORAGE_KEYS.tutorialStep1Done,
+    STORAGE_KEYS.tutorialStep2Done, STORAGE_KEYS.tutorialStep3Done,
+    STORAGE_KEYS.tutorialStep4Done, STORAGE_KEYS.tutorialStep5Done,
+  ] as const;
+  const SKIPPED_KEYS = [
+    STORAGE_KEYS.tutorialStep0Skipped, STORAGE_KEYS.tutorialStep1Skipped,
+    STORAGE_KEYS.tutorialStep2Skipped, STORAGE_KEYS.tutorialStep3Skipped,
+    STORAGE_KEYS.tutorialStep4Skipped, STORAGE_KEYS.tutorialStep5Skipped,
+  ] as const;
+  for (let i = 0; i < 6; i++) {
+    if (!localStorage.getItem(DONE_KEYS[i])) {
+      localStorage.setItem(SKIPPED_KEYS[i], "1");
+    }
+  }
+}
 
 export function migrateStorageKeys(): void {
   if (typeof window === "undefined") return;

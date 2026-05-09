@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
+import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
@@ -218,15 +219,45 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       })
       .sort((a, b) => (a.category === "foreign" ? -1 : 1) - (b.category === "foreign" ? -1 : 1));
 
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY_MS = 1 * 1000;
+
+    // stockMarkets가 비어있으면 오늘자 캐시가 있더라도 market 정보를 채우기 위해 재조회
+    const hasMarketCache = (() => {
+      try { return Object.keys(JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}")).length > 0; } catch { return false; }
+    })();
+
     if (outdatedStocks.length === 0) {
+      if (hasMarketCache) {
+        notify.info(MSG.STOCK_UP_TO_DATE);
+        return data;
+      }
+      // market 캐시 없음: 오늘자 ticker로 1회 조회해 stockMarkets만 채움
+      const tickersWithTicker = [...new Set(
+        data.stocks.filter(s => normalizeTicker(s)).map(s => normalizeTicker(s))
+      )];
+      for (let i = 0; i < tickersWithTicker.length; i += BATCH_SIZE) {
+        if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
+        const tickersParam = tickersWithTicker.slice(i, i + BATCH_SIZE).join(",");
+        try {
+          const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
+          const stocksData = await res.json();
+          if (stocksData && !stocksData.error) {
+            try {
+              const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+              for (const [ticker, result] of Object.entries(stocksData as Record<string, { market?: string }>)) {
+                if (result.market) saved[ticker] = result.market;
+              }
+              localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
+            } catch { /* ignore */ }
+          }
+        } catch { /* ignore */ }
+      }
       notify.info(MSG.STOCK_UP_TO_DATE);
       return data;
     }
 
     console.log(`[Sync] 주식 현재가 갱신 대상: ${outdatedStocks.length}개`);
-    const BATCH_SIZE = 3;
-    const BATCH_DELAY_MS = 1 * 1000;
-
     let current = data;
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
@@ -238,6 +269,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
         const stocksData = await res.json();
         if (stocksData && !stocksData.error) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+            for (const [ticker, result] of Object.entries(stocksData as Record<string, { market?: string }>)) {
+              if (result.market) saved[ticker] = result.market;
+            }
+            localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
+          } catch { /* ignore */ }
           const updatedStocks = current.stocks.map(stock => {
             const ticker = normalizeTicker(stock);
             const result = stocksData[ticker];
@@ -394,8 +432,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
-    const { skipStep, statuses } = tutorialStore.getState();
-    ([0, 1, 2, 3, 4, 5] as const).forEach(step => { if (statuses[step] === "pending") skipStep(step); });
+    skipAllTutorialSteps();
+    tutorialStore.getState().initTutorial();
     void initAndSync(data);
   }, [initAndSync]);
 
