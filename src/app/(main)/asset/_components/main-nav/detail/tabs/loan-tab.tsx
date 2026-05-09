@@ -70,14 +70,6 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
-          <div className={ASSET_THEME.cardActions}>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(loan.id)}>
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
         </div>
         <div className="h-0.5 w-full bg-muted">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
@@ -85,19 +77,29 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
-                <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>
-                <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysElapsed)} 경과</p>
-              </div>
-              {loan.endDate && (
+            <div className="relative">
+              <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
                 <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
-                  {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
+                  <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
+                  <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>
+                  <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysElapsed)} 경과</p>
                 </div>
-              )}
+                {loan.endDate && (
+                  <div>
+                    <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
+                    <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
+                    {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
+                  </div>
+                )}
+              </div>
+              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(loan.id)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
             </div>
             {linkedRealEstate && (
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/5">

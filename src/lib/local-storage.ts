@@ -1,5 +1,6 @@
 export const STORAGE_KEY_PREFIXES = {
   profit: "secretasset_profit:",
+  notice: "secretasset_notice_seen_",
 } as const;
 
 export const STORAGE_KEYS = {
@@ -63,6 +64,25 @@ export function migrateStorageKeys(): void {
   // profit: prefix 레거시 캐시 키 일괄 제거 (secretasset_profit: 으로 교체됨)
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith("profit:") && !key.startsWith(STORAGE_KEY_PREFIXES.profit)) {
+      localStorage.removeItem(key);
+    }
+  }
+
+  cleanExpiredNoticeKeys();
+}
+
+export function cleanExpiredNoticeKeys(): void {
+  if (typeof window === "undefined") return;
+  const prefix = STORAGE_KEY_PREFIXES.notice;
+  const now = Date.now();
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(prefix)) continue;
+    try {
+      const val = JSON.parse(localStorage.getItem(key) ?? "{}");
+      if (val.expiresAt && val.expiresAt <= now) {
+        localStorage.removeItem(key);
+      }
+    } catch {
       localStorage.removeItem(key);
     }
   }

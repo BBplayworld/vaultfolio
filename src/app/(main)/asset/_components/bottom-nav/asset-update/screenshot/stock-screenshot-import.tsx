@@ -509,121 +509,90 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
             </div>
 
             <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
-              {stocks.map((stock) => (
-                <div
-                  key={stock.id}
-                  className={`rounded-lg border p-3 transition-colors ${stock.selected ? "bg-card border-border" : "bg-muted/30 border-muted opacity-60"
-                    }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      className="mt-0.5 flex-shrink-0"
-                      onClick={() => toggleSelect(stock.id)}
+              {(() => {
+                const groupCount = new Map<string, number>();
+                for (const s of stocks) {
+                  const t = s.tickerInput?.trim() || s.ticker || "";
+                  if (!t) continue;
+                  const k = `${t}:${s.category}`;
+                  groupCount.set(k, (groupCount.get(k) ?? 0) + 1);
+                }
+                return stocks.map((stock) => {
+                  const t = stock.tickerInput?.trim() || stock.ticker || "";
+                  const isMerged = t ? (groupCount.get(`${t}:${stock.category}`) ?? 0) > 1 : false;
+                  const isForeign = stock.category === "foreign";
+                  const usdRateLocal = exchangeRates.USD || 1380;
+                  const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
+                  const displayCurrentPrice = aiSawKRW && usdRateLocal > 0
+                    ? Math.round((stock.currentPrice / usdRateLocal) * 10000) / 10000
+                    : stock.currentPrice;
+                  const displayAveragePrice = aiSawKRW && usdRateLocal > 0
+                    ? Math.round((stock.averagePrice / usdRateLocal) * 10000) / 10000
+                    : stock.averagePrice;
+                  const fmtPrice = isForeign ? `$${displayCurrentPrice.toFixed(2)}` : formatCurrency(stock.currentPrice);
+                  const fmtAvg = isForeign ? `$${displayAveragePrice.toFixed(2)}` : formatCurrency(stock.averagePrice);
+                  const fmtTotal = isForeign ? `$${(stock.quantity * displayCurrentPrice).toFixed(2)}` : formatCurrency(stock.quantity * stock.currentPrice);
+                  return (
+                    <div
+                      key={stock.id}
+                      className={`rounded-lg border p-3 transition-colors ${stock.selected ? "bg-card border-border" : "bg-muted/30 border-muted opacity-60"}`}
                     >
-                      {stock.selected
-                        ? <CheckSquare className="size-4 text-primary" />
-                        : <Square className="size-4 text-muted-foreground" />}
-                    </button>
-
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm truncate">{stock.name}</span>
-                        {!stock.ticker && (
-                          <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
-                            티커 미확인
-                          </Badge>
-                        )}
-                        <Input
-                          placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
-                          className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim())
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : ""
-                            }`}
-                          value={stock.tickerInput ?? (stock.ticker || "")}
-                          onChange={(e) => {
-                            const isForeign = stock.category === "foreign";
-                            const raw = e.target.value.toUpperCase();
-                            const filtered = isForeign
-                              ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
-                              : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
-                            updateTickerInput(stock.id, filtered);
-                          }}
-                        />
-                        {stock.category === "foreign" && (
-                          <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
-                            {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
-                              ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
-                              : "USD 그대로 저장"}
-                          </Badge>
-                        )}
-                        {conflictMode === "merge" && stock.ticker &&
-                          assetData.stocks.some((s) => s.ticker === stock.ticker) && (
-                            <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                              교체
-                            </Badge>
-                          )}
-                      </div>
-
-                      {(() => {
-                        const isForeign = stock.category === "foreign";
-                        const usdRateLocal = exchangeRates.USD || 1380;
-                        const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
-
-                        // 원화 인식 해외주식은 환산 후 표시, 달러 인식은 그대로 표시
-                        const displayCurrentPrice = aiSawKRW && usdRateLocal > 0
-                          ? Math.round((stock.currentPrice / usdRateLocal) * 10000) / 10000
-                          : stock.currentPrice;
-                        const displayAveragePrice = aiSawKRW && usdRateLocal > 0
-                          ? Math.round((stock.averagePrice / usdRateLocal) * 10000) / 10000
-                          : stock.averagePrice;
-
-                        const fmtPrice = isForeign
-                          ? `$${displayCurrentPrice.toFixed(2)}`
-                          : formatCurrency(stock.currentPrice);
-                        const fmtAvg = isForeign
-                          ? `$${displayAveragePrice.toFixed(2)}`
-                          : formatCurrency(stock.averagePrice);
-                        const fmtTotal = isForeign
-                          ? `$${(stock.quantity * displayCurrentPrice).toFixed(2)}`
-                          : formatCurrency(stock.quantity * stock.currentPrice);
-                        return (
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                            <span>
-                              수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span>
-                            </span>
-                            <span>
-                              현재가 <span className="font-semibold text-foreground">{fmtPrice}</span>
-                            </span>
-                            <span>
-                              평균단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span>
-                            </span>
-                            <span>
-                              평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span>
-                            </span>
+                      <div className="flex items-start gap-3">
+                        <button type="button" className="mt-0.5 flex-shrink-0" onClick={() => toggleSelect(stock.id)}>
+                          {stock.selected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4 text-muted-foreground" />}
+                        </button>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate">{stock.name}</span>
+                            {!stock.ticker && (
+                              <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">티커 미확인</Badge>
+                            )}
+                            <Input
+                              placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
+                              className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim()) ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                              value={stock.tickerInput ?? (stock.ticker || "")}
+                              onChange={(e) => {
+                                const raw = e.target.value.toUpperCase();
+                                const filtered = isForeign
+                                  ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
+                                  : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
+                                updateTickerInput(stock.id, filtered);
+                              }}
+                            />
+                            {isMerged && (
+                              <Badge variant="outline" className="text-[10px] text-violet-500 border-violet-500/30">통합됩니다</Badge>
+                            )}
+                            {isForeign && (
+                              <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
+                                {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
+                                  ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
+                                  : "USD 그대로 저장"}
+                              </Badge>
+                            )}
+                            {conflictMode === "merge" && stock.ticker && assetData.stocks.some((s) => s.ticker === stock.ticker) && (
+                              <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
+                            )}
                           </div>
-                        );
-                      })()}
-
-                      <Select
-                        value={stock.category}
-                        onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}
-                      >
-                        <SelectTrigger className="h-7 w-40 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                            <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
+                            <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
+                            <span>평균단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
+                            <span>평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span></span>
+                          </div>
+                          <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
+                            <SelectTrigger className="h-7 w-40 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {CATEGORY_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                });
+              })()}
             </div>
           </div>
         )}

@@ -57,14 +57,6 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
-          <div className={ASSET_THEME.cardActions}>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(item.id)}>
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
         </div>
         <div className="h-0.5 w-full bg-muted">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
@@ -72,25 +64,35 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
-                <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
-              </div>
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
-              </div>
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
-              </div>
-              {(item.tenantDeposit ?? 0) > 0 && (
+            <div className="relative">
+              <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
                 <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
+                  <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
+                  <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
                 </div>
-              )}
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
+                </div>
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
+                </div>
+                {(item.tenantDeposit ?? 0) > 0 && (
+                  <div>
+                    <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
+                    <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
+                  </div>
+                )}
+              </div>
+              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
             </div>
             {linkedLoans.length > 0 && (
               <div className="px-4 py-2.5 space-y-1.5">

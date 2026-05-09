@@ -294,6 +294,7 @@ export interface DividendPayoutResult {
   amountForeign?: number; // 외화 주당 금액 (해외주식 달러 등)
   currency?: string; // 통화코드 (USD, KRW 등)
   frequency?: DividendFrequency; // 배당 빈도 (건수 기반 추정)
+  isEstimated?: boolean; // true = 예상 지급 (전년도 패턴 기반 추정)
 }
 
 function inferFrequency(count: number): DividendFrequency {
@@ -323,7 +324,6 @@ export async function fetchDividendDomestic(
       },
       cache: "no-store",
     });
-    console.log(`[KIS 국내배당 요청 - ${ticker}]: HTTP ${res.status}`);
     if (!res.ok) {
       console.error(`[KIS 국내배당 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
       return [];

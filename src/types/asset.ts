@@ -28,6 +28,7 @@ export const stockSchema = z.object({
   description: z.string().optional(),
   baseDate: z.string().optional(),
   purchaseExchangeRate: z.number().optional(), // 매입 환율 (USD: 원/달러, JPY: 원/100엔)
+  broker: z.string().optional(), // 증권사명
 }).superRefine((data, ctx) => {
   if (data.category === "domestic" || data.category === "foreign") {
     const ticker = data.ticker?.trim() || "";

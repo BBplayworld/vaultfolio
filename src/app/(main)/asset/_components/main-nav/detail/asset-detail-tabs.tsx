@@ -47,6 +47,36 @@ export interface StockMetrics {
   holdingDays: number;
 }
 
+// ticker+category 기준으로 Stock[] 그룹핑. ticker 없으면 id 단독 키.
+export function groupStocksByTickerCategory(stocks: Stock[]): Map<string, Stock[]> {
+  const map = new Map<string, Stock[]>();
+  for (const s of stocks) {
+    const key = s.ticker ? `${s.ticker}:${s.category}` : s.id;
+    const arr = map.get(key);
+    if (arr) arr.push(s);
+    else map.set(key, [s]);
+  }
+  return map;
+}
+
+// 그룹의 합산 대표 Stock 생성 (가상 객체, 저장 안 함)
+export function mergeStockGroup(items: Stock[]): Stock {
+  if (items.length === 1) return items[0];
+  const totalQty = items.reduce((s, it) => s + it.quantity, 0);
+  const weightedAvg = totalQty > 0
+    ? items.reduce((s, it) => s + it.averagePrice * it.quantity, 0) / totalQty
+    : items[0].averagePrice;
+  const earliestDate = items.reduce((min, it) => it.purchaseDate < min ? it.purchaseDate : min, items[0].purchaseDate);
+  return {
+    ...items[0],
+    id: `__merged__${items[0].ticker}:${items[0].category}`,
+    quantity: totalQty,
+    averagePrice: weightedAvg,
+    purchaseDate: earliestDate,
+    broker: undefined,
+  };
+}
+
 export function computeStockMetrics(
   stock: Stock,
   exchangeRates: { USD: number; JPY: number },
