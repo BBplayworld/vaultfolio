@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function truncateName(name: string, max = 16): string {
+export function truncateName(name: string, max = 12): string {
   return name.length > max ? name.slice(0, max) + "…" : name;
 }
 

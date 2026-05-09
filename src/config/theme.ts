@@ -28,7 +28,7 @@ export const ASSET_THEME = {
   loss: "text-blue-600 dark:text-blue-400",
 
   // ===== 자산 관리 카드 공통 스타일 =====
-  cardHeader: "flex flex-wrap items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
+  cardHeader: "flex flex-wrap items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
   cardActions: "flex flex-row gap-1 sm:gap-2 flex-shrink-0 ml-auto",
   cardActionButton: "size-7.5 sm:size-8.5",
   cardTriggerButton: "flex items-center gap-2 sm:gap-4 flex-1 min-w-0 text-left",

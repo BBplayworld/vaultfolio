@@ -628,6 +628,11 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           )}
           <CollapsibleContent>
             <div className="border-t divide-y divide-border/50">
+              <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/10">
+                <span className="text-xs sm:text-sm font-semibold text-foreground">{stock.name}</span>
+                {stock.ticker && <span className="text-xs font-mono text-muted-foreground">{stock.ticker}</span>}
+                <span className="text-xs sm:text-sm text-foreground ml-auto">{stock.quantity.toLocaleString()}주</span>
+              </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />
               </div>
