@@ -11,6 +11,7 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, type ProfitPeriod } from "@/lib/profit-utils";
+import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -94,7 +95,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     (s) => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0
   );
 
-  const tickerList = stocksWithPrice
+  const groupedMap = groupStocksByTickerCategory(stocksWithPrice);
+  const mergedStocks = Array.from(groupedMap.values()).map(mergeStockGroup);
+
+  const tickerList = mergedStocks
     .map((s) => normalizeTicker(s))
     .filter(Boolean)
     .join(",");
@@ -103,10 +107,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     queryKey: ["profit", period, tickerList],
     queryFn: () => fetchProfitRef(tickerList, period),
     staleTime: 5 * 60 * 1000,
-    enabled: isActive && stocksWithPrice.length > 0,
+    enabled: isActive && mergedStocks.length > 0,
   });
 
-  if (stocksWithPrice.length === 0) {
+  if (mergedStocks.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -122,8 +126,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     );
   }
 
-  // 종목별 수익 계산
-  const stockProfits = stocksWithPrice.map((stock) => {
+  // 종목별 수익 계산 (병합 기준)
+  const stockProfits = mergedStocks.map((stock) => {
     const ticker = normalizeTicker(stock);
     const ref = refData?.[ticker];
     const currentPrice = stock.currentPrice ?? 0;
@@ -156,7 +160,9 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const usRefDate = filteredProfits.find((r) => r.hasRef && !DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
-    const items = filteredProfits.filter((r) => r.stock.category === key);
+    const items = filteredProfits
+      .filter((r) => r.stock.category === key)
+      .sort((a, b) => b.currentValue - a.currentValue);
     const catProfit = items.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
     const catRef = items.filter((r) => r.hasRef).reduce((s, r) => s + r.refValue, 0);
     const catCurrent = items.filter((r) => r.hasRef).reduce((s, r) => s + r.currentValue, 0);
@@ -202,7 +208,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                       <div className="h-4 w-24 rounded bg-muted" />
                       <div className="h-6 w-36 rounded bg-muted" />
                     </div>
-                    {stocksWithPrice.slice(0, 5).map((stock) => (
+                    {mergedStocks.slice(0, 5).map((stock) => (
                       <div key={stock.id} className="rounded-lg border overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-2.5">
                           <div className="flex items-center gap-2">
@@ -225,7 +231,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                       </div>
                     ))}
                     <p className="text-xs text-muted-foreground text-center py-1">
-                      {PERIOD_LABELS[p]} 기준가 조회 중 ({stocksWithPrice.length}개 종목)...
+                      {PERIOD_LABELS[p]} 기준가 조회 중 ({mergedStocks.length}개 종목)...
                     </p>
                   </div>
                 ) : (

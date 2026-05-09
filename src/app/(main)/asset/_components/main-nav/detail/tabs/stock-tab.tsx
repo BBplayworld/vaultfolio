@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { truncateName } from "@/lib/utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -237,9 +238,12 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
       <div className={ASSET_THEME.cardInfoLeft}>
         <div className={ASSET_THEME.cardInfoTitle}>
-          <span className={`${ASSET_THEME.cardInfoName}}`}>{stock.name}</span>
-          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
-          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{categoryLabel}</Badge>}
+          <span className={`${ASSET_THEME.cardInfoName}}`} title={stock.name.length > 18 ? stock.name : undefined}>
+            <span className="sm:hidden">{truncateName(stock.name)}</span>
+            <span className="hidden sm:inline">{stock.name}</span>
+          </span>
+          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0 sm:ml-1">{stock.ticker}</span>}
+          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{categoryLabel}</Badge>}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
           <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
@@ -462,7 +466,9 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                     value={it.averagePrice}
                     onChange={(e) => {
                       const raw = e.target.value;
-                      const filtered = (isForeign && !it.avgPriceInKrw) ? raw.replace(/[^0-9.]/g, "") : raw.replace(/[^0-9]/g, "");
+                      const filtered = (isForeign && !it.avgPriceInKrw)
+                        ? raw.replace(/[^0-9.]/g, "").replace(/^(\d*\.\d{0,3}).*$/, "$1")
+                        : raw.replace(/[^0-9]/g, "");
                       updateItem(idx, "averagePrice", filtered);
                     }}
                   />
@@ -560,9 +566,9 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
               <ChevronDown className={`size-3 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-              <span className="text-xs font-semibold text-foreground truncate">{label}</span>
-              <span className="text-xs text-muted-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
-              <span className={`text-xs font-semibold tabular-nums shrink-0 ${getProfitLossColor(m.profit)}`}>
+              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
+              <span className={`text-xs sm:text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(m.profit)}`}>
                 {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
               </span>
             </button>

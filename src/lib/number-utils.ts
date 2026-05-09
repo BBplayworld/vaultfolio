@@ -92,3 +92,4 @@ export function formatHoldingPeriod(purchaseDate: string): string {
   if (days > 0 || parts.length === 0) parts.push(`${days}일`);
   return parts.join(" ");
 }
+
