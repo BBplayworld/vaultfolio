@@ -122,13 +122,13 @@ export async function GET(req: NextRequest) {
   }
 
   if (!accessToken) {
+    console.error(`[KIS 토큰 없음 - 과거종가 조회 스킵]: ${[...uncachedKr, ...uncachedUs].join(",")}`);
     for (const ticker of [...uncachedKr, ...uncachedUs]) result[ticker] = null;
     return NextResponse.json(result);
   }
 
   await Promise.all([
     ...uncachedKr.map(async (ticker) => {
-      console.log(`[RefPrice KIS 국내 조회] ${ticker}/${refDate}`);
       const res = await fetchDomesticHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
       if (res !== null) {
         result[ticker] = { refPrice: res.price, refDate: res.date };
@@ -138,7 +138,6 @@ export async function GET(req: NextRequest) {
       }
     }),
     ...uncachedUs.map(async (ticker) => {
-      console.log(`[RefPrice KIS 해외 조회] ${ticker}/${refDate}`);
       const res = await fetchOverseasHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
       if (res !== null) {
         result[ticker] = { refPrice: res.price, refDate: res.date };

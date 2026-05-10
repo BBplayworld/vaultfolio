@@ -19,33 +19,41 @@ import { Badge } from "@/components/ui/badge";
 import { Stock, AssetData } from "@/types/asset";
 import { saveAssetDataRaw } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { stockCategories } from "@/config/asset-options";
+import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+
+// securitiesFirms 전체 항목 flat 배열
+const ALL_FIRMS = securitiesFirms.flatMap((g) => g.items);
+
+// brokerHint 텍스트 → securitiesFirms 매칭 (부분 문자열 포함 여부로 판단)
+function matchBrokerHint(hint: string): string | undefined {
+  if (!hint) return undefined;
+  const h = hint.replace(/\s/g, "");
+  return ALL_FIRMS.find((f) => {
+    const fn = f.replace(/\s/g, "");
+    return fn.includes(h) || h.includes(fn);
+  });
+}
 
 type ImportStock = Omit<Stock, "id"> & {
   id: string;
   section: "국내" | "해외" | "기타";
   selected: boolean;
-  tickerInput?: string; // 티커 미인식 시 사용자 직접 입력값
-  originalCurrency?: "KRW" | "USD" | "JPY"; // AI 원본 인식 통화 (환산 분기용)
+  tickerInput?: string;
+  originalCurrency?: "KRW" | "USD" | "JPY";
+  broker?: string;
 };
 
-type ConflictMode = "merge" | "reset";
-
-// stock-input 탭에서 국내 카테고리로 매핑 가능한 값
 const DOMESTIC_CATEGORIES = new Set(["domestic", "isa", "irp", "pension", "unlisted"]);
-
 const CATEGORY_OPTIONS = stockCategories.map((c) => ({ value: c.value, label: c.label }));
-
-const makeConflictKey = (ticker: string, category: string, isForeign: boolean) =>
-  isForeign ? ticker : `${ticker}:${category}`;
+const BROKER_NONE = "__none__";
 
 interface StockScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  activeTab?: string; // stock-input의 현재 활성 카테고리 탭
+  activeTab?: string;
 }
 
 export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab }: StockScreenshotImportProps = {}) {
@@ -56,11 +64,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const isOpen = isControlled ? externalOpen : internalOpen;
 
   const setIsOpen = (v: boolean) => {
-    if (isControlled) {
-      onOpenChange?.(v);
-    } else {
-      setInternalOpen(v);
-    }
+    if (isControlled) onOpenChange?.(v);
+    else setInternalOpen(v);
   };
 
   useEffect(() => {
@@ -68,20 +73,16 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     void syncTodayExchangeRate();
   }, [isOpen, syncTodayExchangeRate]);
 
-  const [step, setStep] = useState<"upload" | "conflict" | "preview">("upload");
+  const [step, setStep] = useState<"upload" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [stocks, setStocks] = useState<ImportStock[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
-  const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStep("upload");
     setStocks([]);
     setIsParsing(false);
-    setConflictMode("merge");
-    setConflictCount(0);
   };
 
   const handleClose = () => {
@@ -118,39 +119,38 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         return;
       }
 
-      // 기존 보유 종목 복합 키 Set: 해외는 ticker 단독, 국내/기타는 ticker:category
-      const existingKeys = new Set(
-        assetData.stocks
-          .map((s) => s.ticker ? makeConflictKey(s.ticker, s.category, s.category === "foreign") : null)
-          .filter(Boolean) as string[]
-      );
+      // 동일 ticker:category 그룹 내 순서 카운터 (broker 기본값 지정용)
+      const groupIndex = new Map<string, number>();
 
       const importStocks: ImportStock[] = data.stocks.map(
-        (s: Stock & { section: "국내" | "해외" | "기타" }) => {
-          // 해외 섹션은 항상 foreign 카테고리 고정
-          if (s.section === "해외") return { ...s, category: "foreign" as const, selected: true };
-          // 국내/기타: 탭이 국내 카테고리 중 하나면 해당 카테고리 우선 적용, 아니면 AI 탐지 카테고리 유지
-          const resolvedCategory = activeTab && DOMESTIC_CATEGORIES.has(activeTab) ? activeTab as Stock["category"] : s.category;
-          return { ...s, category: resolvedCategory, selected: true };
+        (s: Stock & { section: "국내" | "해외" | "기타"; brokerHint?: string }) => {
+          const resolvedCategory: Stock["category"] =
+            s.section === "해외"
+              ? "foreign"
+              : activeTab && DOMESTIC_CATEGORIES.has(activeTab)
+              ? (activeTab as Stock["category"])
+              : s.category;
+
+          const groupKey = `${s.ticker || s.name}:${resolvedCategory}`;
+          const idx = (groupIndex.get(groupKey) ?? 0) + 1;
+          groupIndex.set(groupKey, idx);
+
+          // broker 자동 설정: brokerHint 매칭 우선, 없으면 동일 그룹 2번째부터 "항목 N"
+          const matchedBroker = matchBrokerHint(s.brokerHint ?? "");
+          const broker = matchedBroker ?? (idx > 1 ? `항목 ${idx}` : undefined);
+
+          return {
+            ...s,
+            category: resolvedCategory,
+            selected: true,
+            broker,
+          };
         }
       );
 
-      // 중복 탐지: importStock의 (ticker, category) 복합 키가 기존에 존재하는 경우만 중복
-      const duplicates = importStocks.filter((s) => {
-        const ticker = s.tickerInput?.trim() || s.ticker;
-        if (!ticker) return false;
-        return existingKeys.has(makeConflictKey(ticker, s.category, s.section === "해외"));
-      });
-
       setStocks(importStocks);
       geminiUsage.increment("stock");
-
-      if (duplicates.length > 0) {
-        setConflictCount(duplicates.length);
-        setStep("conflict");
-      } else {
-        setStep("preview");
-      }
+      setStep("preview");
     } catch {
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
@@ -161,15 +161,11 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      handleFileChange(file);
-    }
+    if (file && file.type.startsWith("image/")) handleFileChange(file);
   };
 
   const toggleSelect = (id: string) => {
-    setStocks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, selected: !s.selected } : s))
-    );
+    setStocks((prev) => prev.map((s) => (s.id === id ? { ...s, selected: !s.selected } : s)));
   };
 
   const toggleAll = () => {
@@ -181,47 +177,41 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     setStocks((prev) =>
       prev.map((s) => {
         if (s.id !== id) return s;
-
         const usdRate = exchangeRates.USD || 1380;
         const wasForeign = s.category === "foreign";
         const becomeForeign = category === "foreign";
-
-        // 국내(domestic/isa/irp/pension/unlisted) → 해외: 현재가/평균단가 KRW→USD 환산
-        // originalCurrency를 "USD"로 설정하여 미리보기·등록 시 이중 환산 방지
         if (!wasForeign && becomeForeign) {
           return {
-            ...s,
-            category,
+            ...s, category,
             currentPrice: Math.round((s.currentPrice / usdRate) * 10000) / 10000,
             averagePrice: Math.round((s.averagePrice / usdRate) * 10000) / 10000,
             originalCurrency: "USD" as const,
           };
         }
-
-        // 해외 → 국내: USD→KRW 환산 (달러로 인식된 경우만 역환산)
         if (wasForeign && !becomeForeign) {
           const aiSawUSD = s.originalCurrency === "USD";
           if (aiSawUSD) {
             return {
-              ...s,
-              category,
+              ...s, category,
               currentPrice: Math.round(s.currentPrice * usdRate),
               averagePrice: Math.round(s.averagePrice * usdRate),
               originalCurrency: "KRW" as const,
             };
           }
-          // 원화로 인식됐다가 해외로 잘못 분류된 경우: 금액 그대로 (이미 원화)
           return { ...s, category, originalCurrency: "KRW" as const };
         }
-
         return { ...s, category };
       })
     );
   };
 
   const updateTickerInput = (id: string, value: string) => {
+    setStocks((prev) => prev.map((s) => (s.id === id ? { ...s, tickerInput: value } : s)));
+  };
+
+  const updateBroker = (id: string, value: string) => {
     setStocks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, tickerInput: value } : s))
+      prev.map((s) => (s.id === id ? { ...s, broker: value === BROKER_NONE ? undefined : value } : s))
     );
   };
 
@@ -232,11 +222,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       return;
     }
 
-    // 티커 필수 validation: 선택된 종목 중 티커가 없는 항목 검사
-    const missingTicker = selected.filter((s) => {
-      const finalTicker = s.tickerInput?.trim() || s.ticker || "";
-      return !finalTicker;
-    });
+    const missingTicker = selected.filter((s) => !(s.tickerInput?.trim() || s.ticker || ""));
     if (missingTicker.length > 0) {
       toast.error(`티커(종목코드)를 입력해주세요: ${missingTicker.map((s) => s.name).join(", ")}`);
       return;
@@ -244,38 +230,15 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
     setIsRegistering(true);
 
-    // 1) 완성된 stocks 배열을 순수 계산으로 만든다 (React state 비동기 문제 방지)
-    // merge: 해외주식은 ticker 단독, 나머지는 (ticker, category) 복합 키 기준 교체, 나머지 유지
-    // reset: 기존 주식 전부 삭제
-    const importedKeys = new Set(
-      selected
-        .map((s) => {
-          const ticker = s.tickerInput?.trim() || s.ticker;
-          return ticker ? makeConflictKey(ticker, s.category, s.section === "해외") : null;
-        })
-        .filter(Boolean) as string[]
-    );
-    const mutableStocks: Stock[] =
-      conflictMode === "reset"
-        ? []
-        : assetData.stocks.filter((s) => {
-          if (!s.ticker) return true;
-          return !importedKeys.has(makeConflictKey(s.ticker, s.category, s.category === "foreign"));
-        });
-    let hasTickerless = false;
-
     const usdRate = exchangeRates.USD || 1380;
+    let hasTickerless = false;
+    const newStocks: Stock[] = [];
 
     for (const stock of selected) {
       const { selected: _, section: __, tickerInput, originalCurrency: _origCurrency, ...stockData } = stock;
       const finalTicker = tickerInput?.trim() || stockData.ticker || "";
-
-      // 최종 카테고리 기준으로 판단 (미리보기에서 변경된 카테고리 반영)
       const isForeign = stockData.category === "foreign";
-      // 국내 카테고리는 무조건 KRW — 섹션이 "해외"였더라도 카테고리가 국내면 원화 처리
       const isDomestic = DOMESTIC_CATEGORIES.has(stockData.category);
-
-      // AI가 원화(KRW)로 인식한 해외주식 → USD로 환산 필요
       const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
 
       let finalCurrentPrice = stockData.currentPrice;
@@ -293,22 +256,20 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         averagePrice: finalAveragePrice,
         ...(isForeign ? { currency: "USD" as const, purchaseExchangeRate: usdRate } : {}),
         ...(isDomestic ? { currency: "KRW" as const } : {}),
+        ...(stockData.broker ? { broker: stockData.broker } : {}),
       };
       if (isDomestic) delete (data as Partial<Stock>).purchaseExchangeRate;
+      if (!finalTicker) hasTickerless = true;
 
-      if (!finalTicker) {
-        hasTickerless = true;
-      }
-      // 스크린샷 종목 전부 push (중복은 위에서 이미 기존 목록에서 제거됨)
-      mutableStocks.push(data);
+      newStocks.push(data);
     }
 
-    // 2) 한 번에 저장 — ticker 없는 종목이 있으면 superRefine 우회 저장
-    const newData: AssetData = { ...assetData, stocks: mutableStocks };
+    // 기존 stocks 유지 + 새 항목 추가 (항상 추가 방식)
+    const newData: AssetData = { ...assetData, stocks: [...assetData.stocks, ...newStocks] };
     let success: boolean;
     if (hasTickerless) {
       success = saveAssetDataRaw(newData);
-      if (success) refreshData(); // Raw 저장은 setAssetData를 호출하지 않으므로 수동 동기화
+      if (success) refreshData();
     } else {
       success = saveData(newData);
     }
@@ -316,7 +277,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     setIsRegistering(false);
 
     if (success) {
-      toast.success(`${selected.length}개 종목이 ${conflictMode === "reset" ? "등록" : "반영"}되었습니다.`);
+      toast.success(`${selected.length}개 종목이 등록되었습니다.`);
       handleClose();
     } else {
       toast.error("등록에 실패했습니다.");
@@ -330,26 +291,21 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (isParsing) return; // AI 인식 중 닫힘 차단
+        if (isParsing) return;
         if (!open) handleClose(); else setIsOpen(true);
       }}
     >
       <DialogContent
         className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/40 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0"
         onPointerDownOutside={(e) => {
-          // 오직 모달 밖 배경(검은색 딤)을 클릭했을 때만 모달 닫힘을 방지합니다.
-          // 이렇게 해야 Select 팝업 내부(포털) 클릭이 방해받지 않습니다.
           const target = e.target as Element;
           if (target.tagName === "DIV" && target.className.includes("bg-black/80")) {
             e.preventDefault();
           }
         }}
-        onEscapeKeyDown={(e) => e.preventDefault()} // 항상 ESC 차단
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* AI 인식 중 전체 클릭 차단 오버레이 */}
-        {isParsing && (
-          <div className="absolute inset-0 z-10 rounded-lg cursor-wait" />
-        )}
+        {isParsing && <div className="absolute inset-0 z-10 rounded-lg cursor-wait" />}
 
         <DialogHeader>
           <DialogTitle>스크린샷으로 가져오기</DialogTitle>
@@ -426,81 +382,20 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
           </div>
         )}
 
-        {/* Step 2: 중복 처리 선택 */}
-        {step === "conflict" && (
-          <div className="space-y-4">
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-start gap-2">
-              <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                기존 보유 종목과 <span className="font-semibold">{conflictCount}개</span> 중복됩니다.
-                처리 방식을 선택해주세요.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                className={`w-full rounded-lg border p-4 text-left transition-colors ${conflictMode === "merge"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/40"
-                  }`}
-                onClick={() => setConflictMode("merge")}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${conflictMode === "merge" ? "border-primary" : "border-muted-foreground"
-                    }`}>
-                    {conflictMode === "merge" && (
-                      <div className="size-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">덮어쓰기</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      중복 종목을 스크린샷 기준으로 교체하고, 나머지 기존 종목은 유지합니다.
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`w-full rounded-lg border p-4 text-left transition-colors ${conflictMode === "reset"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/40"
-                  }`}
-                onClick={() => setConflictMode("reset")}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${conflictMode === "reset" ? "border-primary" : "border-muted-foreground"
-                    }`}>
-                    {conflictMode === "reset" && (
-                      <div className="size-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">초기화 후 등록</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      기존 주식을 모두 삭제하고 스크린샷 종목으로 대체합니다.
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: 미리보기 */}
+        {/* Step 2: 미리보기 */}
         {step === "preview" && stocks.length > 0 && (
           <div className="space-y-3">
+            <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-muted-foreground">
+              동일 카테고리·종목은 증권사 항목으로 구분되어 하나의 종목으로 통합 표시됩니다.
+            </div>
+
             <div className="flex items-center justify-between">
               <button
                 type="button"
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 onClick={toggleAll}
               >
-                {allSelected
-                  ? <CheckSquare className="size-4 text-primary" />
-                  : <Square className="size-4" />}
+                {allSelected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4" />}
                 전체 선택 ({selectedCount}/{stocks.length})
               </button>
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>
@@ -509,103 +404,99 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
             </div>
 
             <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
-              {(() => {
-                const groupCount = new Map<string, number>();
-                for (const s of stocks) {
-                  const t = s.tickerInput?.trim() || s.ticker || "";
-                  if (!t) continue;
-                  const k = `${t}:${s.category}`;
-                  groupCount.set(k, (groupCount.get(k) ?? 0) + 1);
-                }
-                return stocks.map((stock) => {
-                  const t = stock.tickerInput?.trim() || stock.ticker || "";
-                  const isMerged = t ? (groupCount.get(`${t}:${stock.category}`) ?? 0) > 1 : false;
-                  const isForeign = stock.category === "foreign";
-                  const usdRateLocal = exchangeRates.USD || 1380;
-                  const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
-                  const displayCurrentPrice = aiSawKRW && usdRateLocal > 0
-                    ? Math.round((stock.currentPrice / usdRateLocal) * 10000) / 10000
-                    : stock.currentPrice;
-                  const displayAveragePrice = aiSawKRW && usdRateLocal > 0
-                    ? Math.round((stock.averagePrice / usdRateLocal) * 10000) / 10000
-                    : stock.averagePrice;
-                  const fmtPrice = isForeign ? `$${displayCurrentPrice.toFixed(2)}` : formatCurrency(stock.currentPrice);
-                  const fmtAvg = isForeign ? `$${displayAveragePrice.toFixed(2)}` : formatCurrency(stock.averagePrice);
-                  const fmtTotal = isForeign ? `$${(stock.quantity * displayCurrentPrice).toFixed(2)}` : formatCurrency(stock.quantity * stock.currentPrice);
-                  return (
-                    <div
-                      key={stock.id}
-                      className={`rounded-lg border p-3 transition-colors ${stock.selected ? "bg-card border-border" : "bg-muted/30 border-muted opacity-60"}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <button type="button" className="mt-0.5 flex-shrink-0" onClick={() => toggleSelect(stock.id)}>
-                          {stock.selected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4 text-muted-foreground" />}
-                        </button>
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm truncate">{stock.name}</span>
-                            {!stock.ticker && (
-                              <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">티커 미확인</Badge>
-                            )}
-                            <Input
-                              placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
-                              className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim()) ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                              value={stock.tickerInput ?? (stock.ticker || "")}
-                              onChange={(e) => {
-                                const raw = e.target.value.toUpperCase();
-                                const filtered = isForeign
-                                  ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
-                                  : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
-                                updateTickerInput(stock.id, filtered);
-                              }}
-                            />
-                            {isMerged && (
-                              <Badge variant="outline" className="text-[10px] text-violet-500 border-violet-500/30">통합됩니다</Badge>
-                            )}
-                            {isForeign && (
-                              <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
-                                {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
-                                  ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
-                                  : "USD 그대로 저장"}
-                              </Badge>
-                            )}
-                            {conflictMode === "merge" && stock.ticker && assetData.stocks.some((s) => s.ticker === stock.ticker) && (
-                              <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                            <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
-                            <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
-                            <span>평균단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
-                            <span>평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span></span>
-                          </div>
+              {stocks.map((stock) => {
+                const isForeign = stock.category === "foreign";
+                const usdRateLocal = exchangeRates.USD || 1380;
+                const aiSawKRW = isForeign && stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY";
+                const displayCurrentPrice = aiSawKRW && usdRateLocal > 0
+                  ? Math.round((stock.currentPrice / usdRateLocal) * 10000) / 10000
+                  : stock.currentPrice;
+                const displayAveragePrice = aiSawKRW && usdRateLocal > 0
+                  ? Math.round((stock.averagePrice / usdRateLocal) * 10000) / 10000
+                  : stock.averagePrice;
+                const fmtPrice = isForeign ? `$${displayCurrentPrice.toFixed(2)}` : formatCurrency(stock.currentPrice);
+                const fmtAvg = isForeign ? `$${displayAveragePrice.toFixed(2)}` : formatCurrency(stock.averagePrice);
+                const fmtTotal = isForeign ? `$${(stock.quantity * displayCurrentPrice).toFixed(2)}` : formatCurrency(stock.quantity * stock.currentPrice);
+
+                return (
+                  <div
+                    key={stock.id}
+                    className={`rounded-lg border p-3 transition-colors ${stock.selected ? "bg-card border-border" : "bg-muted/30 border-muted opacity-60"}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button type="button" className="mt-0.5 flex-shrink-0" onClick={() => toggleSelect(stock.id)}>
+                        {stock.selected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4 text-muted-foreground" />}
+                      </button>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm truncate">{stock.name}</span>
+                          {!stock.ticker && (
+                            <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">티커 미확인</Badge>
+                          )}
+                          <Input
+                            placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
+                            className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim()) ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                            value={stock.tickerInput ?? (stock.ticker || "")}
+                            onChange={(e) => {
+                              const raw = e.target.value.toUpperCase();
+                              const filtered = isForeign
+                                ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
+                                : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
+                              updateTickerInput(stock.id, filtered);
+                            }}
+                          />
+                          {isForeign && (
+                            <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
+                              {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
+                                ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
+                                : "USD 그대로 저장"}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                          <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
+                          <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
+                          <span>평균단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
+                          <span>평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span></span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
-                            <SelectTrigger className="h-7 w-40 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-7 w-36 text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {CATEGORY_OPTIONS.map((opt) => (
                                 <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <Select
+                            value={stock.broker ?? BROKER_NONE}
+                            onValueChange={(v) => updateBroker(stock.id, v)}
+                          >
+                            <SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
+                              {securitiesFirms.map((group) => (
+                                <div key={group.group}>
+                                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">{group.group}</div>
+                                  {group.items.map((firm) => (
+                                    <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
+                                  ))}
+                                </div>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </div>
-                  );
-                });
-              })()}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose}>
-            취소
-          </Button>
-          {step === "conflict" && (
-            <Button onClick={() => setStep("preview")}>
-              다음
-            </Button>
-          )}
+          <Button variant="outline" onClick={handleClose}>취소</Button>
           {step === "preview" && (
             <Button
               onClick={handleRegister}

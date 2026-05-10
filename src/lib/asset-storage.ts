@@ -96,24 +96,31 @@ export function importAssetData(file: File): Promise<{ assetData: AssetData; sna
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
         const text = e.target?.result as string;
         const parsed = JSON.parse(text);
-
-        // 신규 포맷 { assetData, snapshots? } 또는 구버전 직접 AssetData 포맷 모두 지원
         const rawAsset = parsed.assetData ?? parsed;
         const validated = assetDataSchema.parse(rawAsset);
-        saveAssetData(validated);
 
-        let snapshotRestored = false;
+        // 2단계: snapshots도 메모리에서 추출
+        let dailySnapshot: unknown[] | null = null;
+        let monthlySnapshot: unknown[] | null = null;
         if (parsed.snapshots) {
+          const { daily, monthly } = parsed.snapshots as AssetSnapshots;
+          if (Array.isArray(daily)) dailySnapshot = daily;
+          if (Array.isArray(monthly)) monthlySnapshot = monthly;
+        }
+
+        // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
+        clearAssetData();
+
+        // 4단계: 새 데이터 저장
+        saveAssetData(validated);
+        let snapshotRestored = false;
+        if (dailySnapshot || monthlySnapshot) {
           try {
-            const { daily, monthly } = parsed.snapshots as AssetSnapshots;
-            if (Array.isArray(daily)) {
-              localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(daily));
-            }
-            if (Array.isArray(monthly)) {
-              localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthly));
-            }
+            if (dailySnapshot) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
+            if (monthlySnapshot) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
             snapshotRestored = true;
           } catch {
             // 스냅샷 복원 실패는 무시

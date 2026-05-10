@@ -99,6 +99,10 @@ function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): Monthl
     pension: new Array(12).fill(0),
   };
 
+  // 지급 여부는 payoutDate의 년-월 <= 오늘(KST) 년-월 기준 (isEstimated 플래그보다 날짜 우선)
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
+
   for (const { stock, payouts } of items) {
     const cat = CATEGORY_KEYS.includes(stock.category as CategoryKey)
       ? (stock.category as CategoryKey)
@@ -109,7 +113,8 @@ function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): Monthl
       if (stock.purchaseDate && p.payoutDate < stock.purchaseDate) continue;
       const m = parseInt(p.payoutDate.split("-")[1], 10) - 1;
       if (m >= 0 && m < 12) {
-        const bucket = p.isEstimated ? estimated : actual;
+        const isPaid = p.payoutDate.slice(0, 7) <= currentYM;
+        const bucket = isPaid ? actual : estimated;
         bucket[cat][m] += p.amountPerShare * stock.quantity * rate;
       }
     }
@@ -170,7 +175,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       const excd = "NAS";
       return {
-        queryKey: ["dividend", ticker, type],
+        queryKey: ["dividend", "v11", ticker, type],
         queryFn: () => fetchDividend(ticker, type, excd),
         staleTime: 30 * 24 * 60 * 60 * 1000,
         retry: false,

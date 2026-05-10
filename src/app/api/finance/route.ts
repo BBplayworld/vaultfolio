@@ -112,6 +112,8 @@ export async function GET(request: Request) {
       if (accessToken) {
         const res = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
+      } else {
+        console.error(`[KIS 토큰 없음 - 해외주식 조회 스킵]: ${uncachedUs.join(",")}`);
       }
     }
 
@@ -120,6 +122,8 @@ export async function GET(request: Request) {
       if (accessToken) {
         const res = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
+      } else {
+        console.error(`[KIS 토큰 없음 - 국내주식 조회 스킵]: ${uncachedKr.join(",")}`);
       }
     }
 

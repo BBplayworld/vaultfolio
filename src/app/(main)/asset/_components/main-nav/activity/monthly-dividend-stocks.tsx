@@ -77,7 +77,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
       const ticker = normalizeTicker(stock);
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       return {
-        queryKey: ["dividend", ticker, type],
+        queryKey: ["dividend", "v11", ticker, type],
         queryFn: () => fetchDividend(ticker, type, "NAS"),
         staleTime: 30 * 24 * 60 * 60 * 1000,
         retry: false,
@@ -92,8 +92,10 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
       const allPayouts: DividendPayoutResult[] = Array.isArray(queries[i]?.data)
         ? (queries[i].data as DividendPayoutResult[])
         : [];
+      // 매수월(년-월)과 같은 달이면 매수일 이전 지급도 포함
+      const purchaseYM = stock.purchaseDate ? stock.purchaseDate.slice(0, 7) : null;
       const payouts = stock.purchaseDate
-        ? allPayouts.filter((p) => p.payoutDate >= stock.purchaseDate!)
+        ? allPayouts.filter((p) => p.payoutDate.slice(0, 7) >= purchaseYM! || p.payoutDate >= stock.purchaseDate!)
         : allPayouts;
       if (allPayouts.length === 0) return null;
 
@@ -104,16 +106,20 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
       const beforePurchaseMonths = stock.purchaseDate
         ? [...new Set(
           allPayouts
-            .filter((p) => p.payoutDate < stock.purchaseDate!)
+            .filter((p) => p.payoutDate.slice(0, 7) < purchaseYM!)
             .map((p) => parseInt(p.payoutDate.split("-")[1], 10))
             .filter(Boolean)
         )].sort((a, b) => a - b)
         : [];
+      // 지급 여부는 payoutDate의 년-월 <= 오늘(KST) 년-월 기준 (isEstimated 플래그보다 날짜 우선)
+      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
+      const isPaid = (p: DividendPayoutResult) => p.payoutDate.slice(0, 7) <= currentYM;
       const actualMonths = [
-        ...new Set(payouts.filter((p) => !p.isEstimated).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
+        ...new Set(payouts.filter(isPaid).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
       ].sort((a, b) => a - b);
       const estimatedMonths = [
-        ...new Set(payouts.filter((p) => p.isEstimated).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
+        ...new Set(payouts.filter((p) => !isPaid(p)).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
       ].sort((a, b) => a - b);
       const payoutMonths = [...new Set([...actualMonths, ...estimatedMonths])].sort((a, b) => a - b);
 
@@ -126,7 +132,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
           : 0;
       const perShareForeign = currency === "USD" ? (firstPayout.amountForeign ?? firstPayout.amountPerShare) : 0;
       const perShareKRW = Math.round(firstPayout.amountPerShare * rate);
-      const actualPayouts = payouts.filter((p) => !p.isEstimated);
+      const actualPayouts = payouts.filter(isPaid);
       const annualActual = Math.round(actualPayouts.reduce((sum, p) => sum + p.amountPerShare * stock.quantity * rate, 0));
       const annualForeignActual =
         currency === "USD"
@@ -170,7 +176,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         monthlyForeign,
         monthlyActual,
         monthlyForeignActual,
-        frequency: payouts[0].frequency,
+        frequency: firstPayout.frequency,
       };
     })
     .filter((r): r is StockDividendRow => r !== null);

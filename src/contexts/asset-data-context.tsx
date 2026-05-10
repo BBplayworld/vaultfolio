@@ -43,6 +43,7 @@ interface AssetDataContextType {
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
   syncTodayExchangeRate: () => Promise<void>;
   refreshData: () => void;
+  bumpSnapshotVersion: () => void;
   initAndSync: (data: AssetData) => Promise<void>;
   saveData: (data: AssetData) => boolean;
   addRealEstate: (realEstate: RealEstate) => boolean;
@@ -334,8 +335,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       cutoff.setDate(cutoff.getDate() - 30);
       const cutoffStr = cutoff.toISOString().split("T")[0];
 
-      if (dayOfWeek !== 0) {
-        // 일요일 제외: 월~토 기록
+      // 평일 기록 + 최초 기록(allDaily 비어있음)일 때는 일요일에도 기록
+      if (dayOfWeek !== 0 || allDaily.length === 0) {
         const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
         filteredDaily.push({ date: todayStr, netAsset, financialAsset });
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
@@ -600,6 +601,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 새로고침
   const refreshData = useCallback(() => {
     setAssetData(getAssetData());
+  }, []);
+
+  // 외부에서 localStorage 스냅샷을 직접 갱신한 뒤 차트 재구독을 트리거할 때 사용
+  const bumpSnapshotVersion = useCallback(() => {
+    setSnapshotVersion(v => v + 1);
   }, []);
 
   // 부동산
@@ -876,6 +882,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updateExchangeRate,
         syncTodayExchangeRate,
         refreshData,
+        bumpSnapshotVersion,
         initAndSync,
         saveData,
         addRealEstate,
