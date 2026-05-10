@@ -117,12 +117,16 @@ function inferEstimatedPayouts(
   } else if (prevYear.length === 1) {
     const thisMonth = parseInt(actualPayouts[0].payoutDate.split("-")[1], 10);
     const prevMonth = parseInt(prevYear[0].payoutDate.split("-")[1], 10);
-    const gap = ((thisMonth - prevMonth + 12) % 12) || 12;
+    // 양방향 최소 간격 사용: 작년→올해, 올해→내년 두 방향 중 짧은 쪽이 실제 배당 주기
+    // ex) 작년 3월 + 올해 12월 → 단방향 gap=9, 양방향 minGap=3 → quarterly
+    const forwardGap = ((thisMonth - prevMonth + 12) % 12) || 12;
+    const backwardGap = ((prevMonth - thisMonth + 12) % 12) || 12;
+    const gap = Math.min(forwardGap, backwardGap);
     if (gap <= 1) frequency = "monthly";
     else if (gap <= 3) frequency = "quarterly";
     else if (gap <= 6) frequency = "semiannual";
     else frequency = "annual";
-    decisionReason = `올해 1건(${thisMonth}월)+작년 1건(${prevMonth}월), gap=${gap}개월 → ${frequency}`;
+    decisionReason = `올해 1건(${thisMonth}월)+작년 1건(${prevMonth}월), 양방향 gap=${gap}개월(forward=${forwardGap}, backward=${backwardGap}) → ${frequency}`;
   } else {
     frequency = "annual";
     decisionReason = "데이터 부족 → annual";
