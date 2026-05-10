@@ -15,6 +15,8 @@ import { normalizeTicker } from "@/lib/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance-service";
 import type { Stock } from "@/types/asset";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
+import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -63,9 +65,17 @@ interface StockDividendInfo {
   payouts: DividendPayoutResult[];
 }
 
-interface MonthlyTotal {
+type ActualEstimatedFields = {
+  [K in CategoryKey as `${K}Actual`]: number;
+} & {
+  [K in CategoryKey as `${K}Estimated`]: number;
+};
+
+interface MonthlyTotal extends ActualEstimatedFields {
   month: string;
   total: number;
+  totalActual: number;
+  totalEstimated: number;
   domestic: number;
   foreign: number;
   irp: number;
@@ -74,13 +84,24 @@ interface MonthlyTotal {
 }
 
 function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): MonthlyTotal[] {
-  const totals: Record<CategoryKey, number[]> = {
+  const actual: Record<CategoryKey, number[]> = {
     domestic: new Array(12).fill(0),
     foreign: new Array(12).fill(0),
     irp: new Array(12).fill(0),
     isa: new Array(12).fill(0),
     pension: new Array(12).fill(0),
   };
+  const estimated: Record<CategoryKey, number[]> = {
+    domestic: new Array(12).fill(0),
+    foreign: new Array(12).fill(0),
+    irp: new Array(12).fill(0),
+    isa: new Array(12).fill(0),
+    pension: new Array(12).fill(0),
+  };
+
+  // 지급 여부는 payoutDate의 년-월 <= 오늘(KST) 년-월 기준 (isEstimated 플래그보다 날짜 우선)
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
 
   for (const { stock, payouts } of items) {
     const cat = CATEGORY_KEYS.includes(stock.category as CategoryKey)
@@ -89,23 +110,49 @@ function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): Monthl
     if (!cat) continue;
     const rate = stock.currency === "USD" ? usdRate : 1;
     for (const p of payouts) {
+      if (stock.purchaseDate && p.payoutDate < stock.purchaseDate) continue;
       const m = parseInt(p.payoutDate.split("-")[1], 10) - 1;
       if (m >= 0 && m < 12) {
-        totals[cat][m] += p.amountPerShare * stock.quantity * rate;
+        const isPaid = p.payoutDate.slice(0, 7) <= currentYM;
+        const bucket = isPaid ? actual : estimated;
+        bucket[cat][m] += p.amountPerShare * stock.quantity * rate;
       }
     }
   }
 
   return Array.from({ length: 12 }, (_, i) => {
-    const domestic = Math.round(totals.domestic[i]);
-    const foreign = Math.round(totals.foreign[i]);
-    const irp = Math.round(totals.irp[i]);
-    const isa = Math.round(totals.isa[i]);
-    const pension = Math.round(totals.pension[i]);
+    const da = Math.round(actual.domestic[i]);
+    const fa = Math.round(actual.foreign[i]);
+    const ia = Math.round(actual.irp[i]);
+    const sa = Math.round(actual.isa[i]);
+    const pa = Math.round(actual.pension[i]);
+    const de = Math.round(estimated.domestic[i]);
+    const fe = Math.round(estimated.foreign[i]);
+    const ie = Math.round(estimated.irp[i]);
+    const se = Math.round(estimated.isa[i]);
+    const pe = Math.round(estimated.pension[i]);
+    const totalActual = da + fa + ia + sa + pa;
+    const totalEstimated = de + fe + ie + se + pe;
     return {
       month: `${i + 1}월`,
-      total: domestic + foreign + irp + isa + pension,
-      domestic, foreign, irp, isa, pension,
+      total: totalActual + totalEstimated,
+      totalActual,
+      totalEstimated,
+      domestic: da + de,
+      foreign: fa + fe,
+      irp: ia + ie,
+      isa: sa + se,
+      pension: pa + pe,
+      domesticActual: da,
+      foreignActual: fa,
+      irpActual: ia,
+      isaActual: sa,
+      pensionActual: pa,
+      domesticEstimated: de,
+      foreignEstimated: fe,
+      irpEstimated: ie,
+      isaEstimated: se,
+      pensionEstimated: pe,
     };
   });
 }
@@ -116,7 +163,11 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const usdRate = exchangeRates.USD;
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
 
-  const stocksWithTicker = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted");
+  const stocksWithTicker = (() => {
+    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted");
+    const grouped = groupStocksByTickerCategory(base);
+    return Array.from(grouped.values()).map(mergeStockGroup);
+  })();
 
   const queries = useQueries({
     queries: stocksWithTicker.map((stock) => {
@@ -124,7 +175,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       const excd = "NAS";
       return {
-        queryKey: ["dividend", ticker, type],
+        queryKey: ["dividend", "v11", ticker, type],
         queryFn: () => fetchDividend(ticker, type, excd),
         staleTime: 30 * 24 * 60 * 60 * 1000,
         retry: false,
@@ -164,7 +215,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               )}
             </div>
             <CardDescription>
-              보유 주식 기준 예상 배당금
+              보유 주식 기준 올해 배당금
               {annualTotal > 0 && (
                 <span className={`ml-2 font-semibold ${ASSET_THEME.important}`}>
                   {selectedMonthTotal !== undefined
@@ -172,6 +223,11 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     : `연간 ${formatShortCurrency(annualTotal)}`}
                 </span>
               )}
+              <ul className="text-muted-foreground text-xs mt-1 space-y-0.5 list-disc list-inside">
+                <li>미지급 월은 예상치이며, 기업 결정에 따라 변동될 수 있습니다.</li>
+                <li>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</li>
+                <li><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</li>
+              </ul>
             </CardDescription>
           </div>
         </CardHeader>
@@ -219,7 +275,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             </div>
           ) : (
             !isLoading && (
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <ChartContainer config={chartConfig} className="h-[200px] w-[calc(100%+1rem)] -ml-4 sm:ml-0 sm:w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={monthlyTotals}
@@ -243,19 +299,44 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     <ChartTooltip
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
-                        const month = payload[0]?.payload?.month as string;
-                        const total = payload.reduce((s, p) => s + ((p.value as number) || 0), 0);
-                        const cats = payload.filter((p) => (p.value as number) > 0);
+                        const monthData = payload[0]?.payload as MonthlyTotal;
+                        const month = monthData?.month;
+                        const totalActual = monthData?.totalActual ?? 0;
+                        const totalEstimated = monthData?.totalEstimated ?? 0;
+                        const total = totalActual + totalEstimated;
+
+                        // 카테고리별 실제/예상 합산
+                        const catRows = CATEGORY_KEYS
+                          .map((cat) => {
+                            const a = (monthData?.[`${cat}Actual` as keyof MonthlyTotal] as number) ?? 0;
+                            const e = (monthData?.[`${cat}Estimated` as keyof MonthlyTotal] as number) ?? 0;
+                            return { cat, actual: a, estimated: e, total: a + e };
+                          })
+                          .filter((r) => r.total > 0);
+
                         return (
-                          <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs space-y-1 min-w-[120px]">
+                          <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs space-y-1 min-w-[140px]">
                             <p className="font-semibold text-foreground">{month}</p>
-                            {cats.map((p) => (
-                              <div key={p.dataKey} className="flex items-center justify-between gap-3">
-                                <span className="flex items-center gap-1 text-muted-foreground">
-                                  <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                                  {CATEGORY_LABELS[p.dataKey as CategoryKey]}
-                                </span>
-                                <span className="font-medium tabular-nums">{formatShortCurrency(p.value as number)}</span>
+                            {catRows.map(({ cat, actual, estimated }) => (
+                              <div key={cat} className="space-y-0.5">
+                                {actual > 0 && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="flex items-center gap-1 text-muted-foreground">
+                                      <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
+                                      {CATEGORY_LABELS[cat]}
+                                    </span>
+                                    <span className="font-medium tabular-nums">{formatShortCurrency(actual)}</span>
+                                  </div>
+                                )}
+                                {estimated > 0 && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="flex items-center gap-1 text-muted-foreground/60">
+                                      <span className="inline-block w-2 h-2 rounded-full shrink-0 opacity-40" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
+                                      {CATEGORY_LABELS[cat]} (예상)
+                                    </span>
+                                    <span className="tabular-nums text-muted-foreground">{formatShortCurrency(estimated)}</span>
+                                  </div>
+                                )}
                               </div>
                             ))}
                             <div className="border-t pt-1 flex justify-between font-semibold">
@@ -266,38 +347,55 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                         );
                       }}
                     />
-                    {CATEGORY_KEYS.map((cat, idx) => (
+                    {/* 실제 지급 Bar — 역순 선언으로 domestic이 맨 위에 쌓임 */}
+                    {[...CATEGORY_KEYS].reverse().map((cat) => (
                       <Bar
-                        key={cat}
-                        dataKey={cat}
+                        key={`${cat}-actual`}
+                        dataKey={`${cat}Actual`}
                         stackId="a"
                         name={CATEGORY_LABELS[cat]}
                         fill={CATEGORY_COLORS[cat]}
-                        radius={idx === CATEGORY_KEYS.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                        radius={[0, 0, 0, 0]}
                       >
                         {monthlyTotals.map((_, monthIdx) => (
                           <Cell
-                            key={`cell-${monthIdx}`}
-                            opacity={
-                              selectedMonth === undefined
-                                ? 1
-                                : monthIdx + 1 === selectedMonth
-                                  ? 1
-                                  : 0.3
-                            }
+                            key={`cell-actual-${monthIdx}`}
+                            opacity={selectedMonth === undefined ? 1 : monthIdx + 1 === selectedMonth ? 1 : 0.3}
                           />
                         ))}
-                        {idx === CATEGORY_KEYS.length - 1 && (
-                          <LabelList
-                            dataKey="total"
-                            position="top"
-                            offset={8}
-                            formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                            style={{ fill: "#ffffff", fontSize: 11, fontWeight: 600 }}
-                          />
-                        )}
                       </Bar>
                     ))}
+                    {/* 예상 지급 Bar — 역순, LabelList는 마지막(domestic-estimated, 맨 위)에 부착 */}
+                    {[...CATEGORY_KEYS].reverse().map((cat, idx) => {
+                      const isLast = idx === CATEGORY_KEYS.length - 1;
+                      return (
+                        <Bar
+                          key={`${cat}-estimated`}
+                          dataKey={`${cat}Estimated`}
+                          stackId="a"
+                          name={`${CATEGORY_LABELS[cat]} (예상)`}
+                          fill={CATEGORY_COLORS[cat]}
+                          fillOpacity={0.35}
+                          radius={isLast ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                        >
+                          {monthlyTotals.map((_, monthIdx) => (
+                            <Cell
+                              key={`cell-estimated-${monthIdx}`}
+                              opacity={selectedMonth === undefined ? 1 : monthIdx + 1 === selectedMonth ? 1 : 0.3}
+                            />
+                          ))}
+                          {isLast && (
+                            <LabelList
+                              dataKey="total"
+                              position="top"
+                              offset={8}
+                              formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
+                              style={{ fill: "#ffffff", fontSize: 11, fontWeight: 600 }}
+                            />
+                          )}
+                        </Bar>
+                      );
+                    })}
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>

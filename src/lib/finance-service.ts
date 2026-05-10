@@ -27,6 +27,7 @@ export interface StockPriceResult {
   price: number;
   name: string;
   updated_at: string;
+  market?: string;
 }
 
 export interface ExchangeRates {
@@ -76,13 +77,33 @@ export function classifyTickers(tickers: string[]): {
   };
 }
 
-// ─────────────────────────────────────────────
-// Step 4. 외부 API 호출 - 해외 주식 (한국투자증권 OpenAPI)
-// /uapi/overseas-price/v1/quotations/search-info (tr_id: CTPF1702R)
-// PRDT_TYPE_CD: 512(나스닥) → 513(뉴욕) 순으로 시도, 티커 간 300ms sleep
-// ─────────────────────────────────────────────
-
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// KIS 응답 정상 여부 판정 (rt_cd "0", msg1 "SUCC"/"정상처리…")
+// 비정상이면 console.error 출력하고 false 반환
+function isKisResponseOk(
+  data: { rt_cd?: string; msg_cd?: string; msg1?: string } | null | undefined,
+  context: string,
+  type: string = "-"
+): boolean {
+  if (!data) {
+    console.error(`[KIS 응답 오류 - ${context}]: 응답 본문 없음`);
+    return false;
+  }
+
+  const rtOk = data.rt_cd === "0";
+  const msg1Trim = data.msg1?.trim()
+  const msg1Ok =
+    !msg1Trim || msg1Trim === "SUCC" || msg1Trim === "정상처리되었습니다." || msg1Trim.startsWith("정상") || msg1Trim.startsWith("조회 되었습니다.") || msg1Trim.startsWith("마지막 자료")
+
+  // foreign-052(해외배당)만 msg1까지 검증, 그 외는 rt_cd만 검증
+  const ok = type === "foreign-052" ? rtOk && msg1Ok : rtOk;
+  if (ok) return true;
+  console.error(
+    `[KIS 응답 오류 - ${context}]: rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}`
+  );
+  return false;
+}
 
 export async function fetchStocksFromKisOverseas(
   tickers: string[],
@@ -117,16 +138,19 @@ export async function fetchStocksFromKisOverseas(
         );
 
         const data = await res.json();
-        if (!res.ok || !data.output) {
+        if (!res.ok) {
           console.error(`[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]: HTTP ${res.status} ${res.statusText}`);
           continue;
         }
+        if (!isKisResponseOk(data, `해외주식 ${ticker}/${prdtTypeCd}`)) continue;
+        if (!data.output) continue;
 
         const output = data.output as Record<string, string> | undefined;
         const price = parseFloat(output?.ovrs_now_pric1 ?? "0");
         const isDelisted = !!(output?.lstg_abol_dt && output.lstg_abol_dt.trim() !== "");
         if (price > 0 && !isDelisted) {
-          results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr };
+          const market = prdtTypeCd === "512" ? "NASDAQ" : prdtTypeCd === "513" ? "NYSE" : "AMEX";
+          results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr, market };
           break; // 성공 시 다음 거래소 시도 불필요
         }
       } catch (e) {
@@ -150,7 +174,6 @@ export async function fetchKisToken(
 ): Promise<string | null> {
   if (!appKey || !appSecret) return null;
   try {
-    console.log("[KIS 토큰 발급 시도]: POST /oauth2/tokenP");
     const res = await fetch(
       "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
       {
@@ -160,14 +183,14 @@ export async function fetchKisToken(
         cache: "no-store",
       }
     );
-    if (!res.ok) {
-      console.error(`[KIS 토큰 발급 오류]: HTTP ${res.status} ${res.statusText}`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.access_token) {
+      console.error(
+        `[KIS 토큰 발급 오류]: HTTP ${res.status} ${res.statusText}, error_code=${data?.error_code ?? "-"}, error_description=${data?.error_description ?? "-"}`
+      );
       return null;
     }
-    const data = await res.json();
-    const token = (data.access_token as string) ?? null;
-    console.log(`[KIS 토큰 발급 결과]: ${token ? "성공" : "실패(access_token 없음)"}, rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}`);
-    return token;
+    return data.access_token as string;
   } catch (e) {
     console.error("[KIS 토큰 발급 오류]:", e);
     return null;
@@ -202,11 +225,15 @@ export async function fetchStocksFromKorea(
         continue;
       }
       const data = await res.json();
+      if (!isKisResponseOk(data, `국내주식 ${ticker}`)) continue;
       const output = data.output as Record<string, string> | undefined;
       const price = parseFloat(output?.thdt_clpr ?? "0");
       const name: string = output?.prdt_abrv_name ?? "";
       if (price > 0) {
-        results[ticker] = { price, name, updated_at: todayStr };
+        const sctyGrp = output?.scty_grp_id_cd ?? "";
+        const mketId = output?.mket_id_cd ?? "";
+        const market = sctyGrp === "EF" ? "국내ETF" : mketId === "STK" ? "코스피" : mketId === "KSQ" ? "코스닥" : undefined;
+        results[ticker] = { price, name, updated_at: todayStr, market };
       }
     } catch (e) {
       console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);
@@ -248,6 +275,7 @@ async function fetchKisRate(
     return 0;
   }
   const data = await res.json();
+  if (!isKisResponseOk(data, `환율 ${excd}/${symb}`)) return 0;
   return parseFloat(data.output?.t_rate ?? "0");
 }
 
@@ -294,11 +322,12 @@ export interface DividendPayoutResult {
   amountForeign?: number; // 외화 주당 금액 (해외주식 달러 등)
   currency?: string; // 통화코드 (USD, KRW 등)
   frequency?: DividendFrequency; // 배당 빈도 (건수 기반 추정)
+  isEstimated?: boolean; // true = 예상 지급 (전년도 패턴 기반 추정)
 }
 
 function inferFrequency(count: number): DividendFrequency {
   if (count >= 10) return "monthly";
-  if (count >= 4) return "quarterly";
+  if (count >= 3) return "quarterly";
   if (count >= 2) return "semiannual";
   return "annual";
 }
@@ -309,7 +338,8 @@ export async function fetchDividendDomestic(
   tdt: string,
   accessToken: string,
   appKey: string,
-  appSecret: string
+  appSecret: string,
+  rawLog?: Record<string, unknown>
 ): Promise<DividendPayoutResult[]> {
   try {
     const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ksdinfo/dividend?CTS=&GB1=0&F_DT=${fdt}&T_DT=${tdt}&SHT_CD=${ticker}&HIGH_GB=`;
@@ -323,16 +353,13 @@ export async function fetchDividendDomestic(
       },
       cache: "no-store",
     });
-    console.log(`[KIS 국내배당 요청 - ${ticker}]: HTTP ${res.status}`);
     if (!res.ok) {
       console.error(`[KIS 국내배당 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
       return [];
     }
     const data = await res.json();
-    console.log(`[KIS 국내배당 응답 - ${ticker}]: rt_cd=${data.rt_cd ?? "-"}, msg1=${data.msg1 ?? "-"}, output1 건수=${Array.isArray(data.output1) ? data.output1.length : "배열아님(" + typeof data.output1 + ")"}`);
-    if (data.rt_cd !== "0") {
-      console.error(`[KIS 국내배당 API 오류 - ${ticker}]: rt_cd=${data.rt_cd}, msg1=${data.msg1}`);
-    }
+    if (!isKisResponseOk(data, `국내배당 ${ticker}`)) return [];
+    if (rawLog) rawLog[`domestic_${fdt}_${tdt}`] = data;
     const output = data.output1 as Record<string, string>[] | undefined;
     if (!Array.isArray(output)) return [];
     const rows = output
@@ -372,43 +399,51 @@ export async function fetchDividendOverseas(
   tdt: string,
   accessToken: string,
   appKey: string,
-  appSecret: string
+  appSecret: string,
+  rawLog?: Record<string, unknown>
 ): Promise<DividendPayoutResult[]> {
-  try {
-    const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${ticker}&PRDT_TYPE_CD=&CTX_AREA_NK50=&CTX_AREA_FK50=`;
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        appkey: appKey,
-        appsecret: appSecret,
-        tr_id: "CTRGT011R",
-        "content-type": "application/json; charset=utf-8",
-      },
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}]: HTTP ${res.status} ${res.statusText}`);
-      return [];
+  // 512: 나스닥, 513: 뉴욕, 529: 미국아멕스 순으로 시도
+  for (const prdtTypeCd of ["512", "513", "529"]) {
+    try {
+      const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${ticker}&PRDT_TYPE_CD=${prdtTypeCd}&CTX_AREA_NK50=&CTX_AREA_FK50=`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          appkey: appKey,
+          appsecret: appSecret,
+          tr_id: "CTRGT011R",
+          "content-type": "application/json; charset=utf-8",
+        },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}/${prdtTypeCd}]: HTTP ${res.status} ${res.statusText}`);
+        continue;
+      }
+      const data = await res.json();
+      if (rawLog) rawLog[`overseas_${excd}_${prdtTypeCd}_${fdt}_${tdt}`] = data;
+      if (!isKisResponseOk(data, `해외배당 ${ticker}/${excd}/${prdtTypeCd}`, 'foreign-052')) continue;
+      const output = data.output as Record<string, string>[] | undefined;
+      if (!Array.isArray(output)) continue;
+      const rows = output
+        .filter((row) => !row.pdno || row.pdno.toUpperCase() === ticker.toUpperCase())
+        .map((row) => {
+          const raw = row.acpl_bass_dt ?? "";
+          const payoutDate = raw ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : "";
+          const amountForeign = parseFloat(row.alct_frcr_unpr ?? "0");
+          const currency = row.crcy_cd || "USD";
+          return { payoutDate, amountPerShare: amountForeign, amountForeign, currency };
+        })
+        .filter((r) => r.payoutDate && r.amountPerShare > 0);
+      if (rows.length > 0) {
+        const frequency = inferFrequency(rows.length);
+        return rows.map((r) => ({ ...r, frequency }));
+      }
+    } catch (e) {
+      console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}/${prdtTypeCd}]:`, e);
     }
-    const data = await res.json();
-    console.log(`[KIS 해외배당 RAW - ${ticker}/${excd}]:`, JSON.stringify(data));
-    const output = data.output as Record<string, string>[] | undefined;
-    if (!Array.isArray(output)) return [];
-    const rows = output
-      .map((row) => {
-        const raw = row.acpl_bass_dt ?? "";
-        const payoutDate = raw ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : "";
-        const amountForeign = parseFloat(row.alct_frcr_unpr ?? "0");
-        const currency = row.crcy_cd || "USD";
-        return { payoutDate, amountPerShare: amountForeign, amountForeign, currency };
-      })
-      .filter((r) => r.payoutDate && r.amountPerShare > 0);
-    const frequency = inferFrequency(rows.length);
-    return rows.map((r) => ({ ...r, frequency }));
-  } catch (e) {
-    console.error(`[KIS 해외배당 조회 오류 - ${ticker}/${excd}]:`, e);
-    return [];
   }
+  return [];
 }
 
 // ─────────────────────────────────────────────
@@ -423,11 +458,9 @@ export function resolveStockName(
   apiName: string,
   existingName: string
 ): string {
-  if (category === "foreign") {
-    return apiName || existingName;
-  }
+  if (!apiName) return existingName;
   // 종목코드(6자리 숫자) 또는 심볼(".KS", ".KQ" 등) 형식이면 무시
-  const isCodeLike = !apiName || /^\d{6}/.test(apiName) || /\.\w{2,}$/.test(apiName);
+  const isCodeLike = /^\d{6}/.test(apiName) || /\.\w{2,}$/.test(apiName);
   return isCodeLike ? existingName : apiName;
 }
 
@@ -473,6 +506,7 @@ export async function fetchDomesticHistoricalPrice(
       );
       if (!res.ok) continue;
       const data = await res.json();
+      if (!isKisResponseOk(data, `국내주식 과거종가 ${ticker}/${tryDate}`)) continue;
       const output = data.output2 as Record<string, string>[] | undefined;
       if (Array.isArray(output) && output.length > 0) {
         const price = parseFloat(output[0].stck_clpr ?? "0");
@@ -514,6 +548,7 @@ export async function fetchOverseasHistoricalPrice(
       );
       if (!res.ok) continue;
       const data = await res.json();
+      if (!isKisResponseOk(data, `해외주식 과거종가 ${ticker}/${excd}/${targetDate}`)) continue;
       const output = data.output2 as Record<string, string>[] | undefined;
       if (!Array.isArray(output) || output.length === 0) continue;
       // xymd가 targetDate와 일치하는 row 우선 탐색, 없으면 다음 유효한 row 사용

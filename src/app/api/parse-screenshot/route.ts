@@ -36,6 +36,7 @@ const STOCK_SCHEMA = {
       profitRate: { type: Type.NUMBER },
       section: { type: Type.STRING, enum: ["국내", "해외", "기타"] },
       currency: { type: Type.STRING, enum: ["KRW", "USD", "JPY"] },
+      brokerHint: { type: Type.STRING },
     },
     required: ["name", "quantity", "quantityMissing", "profitRate", "section"],
   },
@@ -44,7 +45,7 @@ const STOCK_SCHEMA = {
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로), ticker=티커(화면에 보이면 최우선 추출·없으면 [국내 ETF 티커] 목록의 종목명과 일치할때만 해당 티커 추출·SPY 등 해외주식에 국내ETF 티커를 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY)
+name=종목명(그대로), ticker=티커(화면에 보이면 최우선 추출·없으면 [국내 ETF 티커] 목록의 종목명과 일치할때만 해당 티커 추출·SPY 등 해외주식에 국내ETF 티커를 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
 
 [국내 ETF 티커]
 ${DOMESTIC_ETF_TABLE}
@@ -75,6 +76,7 @@ interface GeminiStock {
   profitRate: number;
   section: "국내" | "해외" | "기타";
   currency?: string;
+  brokerHint?: string;
 }
 
 function processStockResults(raw: GeminiStock[], today: string) {
@@ -208,6 +210,7 @@ function processStockResults(raw: GeminiStock[], today: string) {
       purchaseDate: today,
       description: "",
       section: category === "foreign" ? "해외" as const : category === "irp" ? "기타" as const : "국내" as const,
+      brokerHint: s.brokerHint || "",
     };
   });
 }

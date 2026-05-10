@@ -21,6 +21,7 @@ const stockSchemaLoose = z.object({
   description: z.string().optional().default(""),
   baseDate: z.string().optional(),
   purchaseExchangeRate: z.number().optional(),
+  broker: z.string().optional(),
 });
 
 const assetDataSchemaLoose = assetDataSchema.omit({ stocks: true }).extend({
@@ -95,24 +96,31 @@ export function importAssetData(file: File): Promise<{ assetData: AssetData; sna
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
         const text = e.target?.result as string;
         const parsed = JSON.parse(text);
-
-        // 신규 포맷 { assetData, snapshots? } 또는 구버전 직접 AssetData 포맷 모두 지원
         const rawAsset = parsed.assetData ?? parsed;
         const validated = assetDataSchema.parse(rawAsset);
-        saveAssetData(validated);
 
-        let snapshotRestored = false;
+        // 2단계: snapshots도 메모리에서 추출
+        let dailySnapshot: unknown[] | null = null;
+        let monthlySnapshot: unknown[] | null = null;
         if (parsed.snapshots) {
+          const { daily, monthly } = parsed.snapshots as AssetSnapshots;
+          if (Array.isArray(daily)) dailySnapshot = daily;
+          if (Array.isArray(monthly)) monthlySnapshot = monthly;
+        }
+
+        // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
+        clearAssetData();
+
+        // 4단계: 새 데이터 저장
+        saveAssetData(validated);
+        let snapshotRestored = false;
+        if (dailySnapshot || monthlySnapshot) {
           try {
-            const { daily, monthly } = parsed.snapshots as AssetSnapshots;
-            if (Array.isArray(daily)) {
-              localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(daily));
-            }
-            if (Array.isArray(monthly)) {
-              localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthly));
-            }
+            if (dailySnapshot) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
+            if (monthlySnapshot) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
             snapshotRestored = true;
           } catch {
             // 스냅샷 복원 실패는 무시
@@ -343,7 +351,7 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
 
   const parts = [
     section(data.realEstate.map(i => [DICT.re.indexOf(i.type), sTxt(i.name), sTxt(i.address), pNum(i.purchasePrice), pNum(i.currentValue), pDate(i.purchaseDate), pNum(i.tenantDeposit), sTxt(i.description)])),
-    section(data.stocks.map(i => [DICT.st.indexOf(i.category), sTxt(i.name), i.name === i.ticker ? "*" : sTxt(i.ticker), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), DICT.cu.indexOf(i.currency || "KRW"), pDate(i.purchaseDate), sTxt(i.description), pNum(i.purchaseExchangeRate ?? 0)])),
+    section(data.stocks.map(i => [DICT.st.indexOf(i.category), sTxt(i.name), i.name === i.ticker ? "*" : sTxt(i.ticker), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), DICT.cu.indexOf(i.currency || "KRW"), pDate(i.purchaseDate), sTxt(i.description), pNum(i.purchaseExchangeRate ?? 0), sTxt(i.broker)])),
     section(data.crypto.map(i => [sTxt(i.name), i.name === i.symbol ? "*" : sTxt(i.symbol), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), pDate(i.purchaseDate), sTxt(i.exchange), sTxt(i.description)])),
     section(data.cash?.map(i => [DICT.ca.indexOf(i.type), sTxt(i.name), pNum(i.balance), DICT.cu.indexOf(i.currency || "KRW"), sTxt(i.institution), sTxt(i.description)]) || []),
     section(data.loans?.map(i => {
@@ -387,7 +395,8 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     const id = gid();
     stIds.push(id);
     const purchaseExchangeRate = uNum(f[9]);
-    return { id, category: getIdx(f[0], DICT.st), name, ticker: f[2] === "*" ? name : (uTxt(f[2]) || ""), quantity: uNum(f[3]), averagePrice: uNum(f[4]), currentPrice: uNum(f[5]), currency: getIdx(f[6], DICT.cu), purchaseDate: uDate(f[7]), description: uTxt(f[8]), ...(purchaseExchangeRate > 0 ? { purchaseExchangeRate } : {}) };
+    const broker = uTxt(f[10]);
+    return { id, category: getIdx(f[0], DICT.st), name, ticker: f[2] === "*" ? name : (uTxt(f[2]) || ""), quantity: uNum(f[3]), averagePrice: uNum(f[4]), currentPrice: uNum(f[5]), currency: getIdx(f[6], DICT.cu), purchaseDate: uDate(f[7]), description: uTxt(f[8]), ...(purchaseExchangeRate > 0 ? { purchaseExchangeRate } : {}), ...(broker ? { broker } : {}) };
   });
   const crypto = section(2).map(r => {
     const f = fields(r);

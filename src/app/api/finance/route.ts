@@ -21,6 +21,7 @@ import {
   fetchKisToken,
   fetchStocksFromKorea,
   fetchExchangeRateFromKis,
+  StockPriceResult,
 } from "@/lib/finance-service";
 import { getCacheStorage, getEffectiveDateStr } from "@/lib/cache-storage";
 
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     const effectiveDateDomestic = getEffectiveDateStr("domestic");
     const { usTickers, krTickers } = classifyTickers(tickers);
 
-    const results: Record<string, { price: number; name: string; updated_at: string }> = {};
+    const results: Record<string, StockPriceResult> = {};
     const uncachedUs: string[] = [];
     const uncachedKr: string[] = [];
 
@@ -104,13 +105,15 @@ export async function GET(request: Request) {
     if (uncachedUs.length === 0 && uncachedKr.length === 0) return NextResponse.json(results);
 
     // 2단계: 미캐시 항목만 외부 API 호출
-    const apiResults: Record<string, { price: number; name: string; updated_at: string }> = {};
+    const apiResults: Record<string, StockPriceResult> = {};
 
     if (uncachedUs.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);
       if (accessToken) {
         const res = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
+      } else {
+        console.error(`[KIS 토큰 없음 - 해외주식 조회 스킵]: ${uncachedUs.join(",")}`);
       }
     }
 
@@ -119,6 +122,8 @@ export async function GET(request: Request) {
       if (accessToken) {
         const res = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         Object.assign(apiResults, res);
+      } else {
+        console.error(`[KIS 토큰 없음 - 국내주식 조회 스킵]: ${uncachedKr.join(",")}`);
       }
     }
 

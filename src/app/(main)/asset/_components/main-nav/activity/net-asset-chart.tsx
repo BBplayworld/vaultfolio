@@ -175,12 +175,12 @@ function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
       if (!raw) return;
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
       const currentMonth = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(0, 7);
-      const weekdayOnly = all.filter(s => { const d = new Date(s.date).getDay(); return d !== 0 && d !== 6; });
-      if (weekdayOnly.length !== all.length) {
-        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(weekdayOnly));
+      const sundayRemoved = all.filter(s => new Date(s.date).getDay() !== 0);
+      if (sundayRemoved.length !== all.length) {
+        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(sundayRemoved));
       }
       setSnapshots(
-        weekdayOnly.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
+        sundayRemoved.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
       );
     } catch { /* 무시 */ }
   }, [snapshotVersion]);

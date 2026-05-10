@@ -32,8 +32,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Stock, stockSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { stockCategories, quickButtonPresets } from "@/config/asset-options";
+import { stockCategories, quickButtonPresets, securitiesFirms } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 
 const stockQuickButtons = [...quickButtonPresets.stock];
@@ -44,13 +45,14 @@ interface StockFormProps {
 }
 
 function StockForm({ editData, onClose }: StockFormProps) {
-  const { addStock, updateStock } = useAssetData();
+  const { addStock, updateStock, exchangeRates } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Stock["category"]>(editData?.category || "domestic");
   const [lookupState, setLookupState] = useState<"idle" | "success" | "failed">(
     editData ? "success" : "idle"
   );
+  const [avgPriceInKrw, setAvgPriceInKrw] = useState(false);
 
   const form = useForm<Stock>({
     resolver: zodResolver(stockSchema),
@@ -71,7 +73,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
   const isForeignStock = selectedCategory === "foreign";
   const isUnlisted = selectedCategory === "unlisted";
   const isEtfCategory = selectedCategory === "irp" || selectedCategory === "isa" || selectedCategory === "pension";
-  const watchedCurrency = form.watch("currency");
+
 
   const getTickerPlaceholder = () => {
     if (selectedCategory === "domestic") return "예: 005930 (삼성전자)";
@@ -102,6 +104,19 @@ function StockForm({ editData, onClose }: StockFormProps) {
     if (!editData && !isUnlisted && lookupState === "idle") {
       toast.error("티커 조회를 먼저 진행해주세요.");
       return;
+    }
+    // 해외주식 원화 입력 시 달러 환산
+    if (isForeignStock && avgPriceInKrw) {
+      const usdRate = exchangeRates.USD;
+      if (!usdRate) { toast.error("환율 정보를 불러오지 못했습니다."); return; }
+      data = {
+        ...data,
+        currency: "USD",
+        averagePrice: Math.round(data.averagePrice / usdRate * 10000) / 10000,
+        purchaseExchangeRate: data.purchaseExchangeRate || usdRate,
+      };
+    } else if (isForeignStock) {
+      data = { ...data, currency: "USD" };
     }
     setIsSubmitting(true);
     try {
@@ -301,30 +316,6 @@ function StockForm({ editData, onClose }: StockFormProps) {
         {isForeignStock && (
           <FormField
             control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>통화</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="통화 선택" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="KRW">원화 (KRW)</SelectItem>
-                    <SelectItem value="USD">달러 (USD)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {isForeignStock && watchedCurrency !== "KRW" && (
-          <FormField
-            control={form.control}
             name="purchaseExchangeRate"
             render={({ field }) => (
               <FormItem>
@@ -333,14 +324,12 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder={watchedCurrency === "JPY" ? "900" : "1300"}
+                    placeholder={String(exchangeRates.USD || 1380)}
                     value={field.value || ""}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
-                <FormDescription>
-                  {watchedCurrency === "JPY" ? "원/100엔 (예: 900)" : "원/달러 (예: 1380)"}
-                </FormDescription>
+                <FormDescription>원/달러 (예: {exchangeRates.USD ? Math.round(exchangeRates.USD).toLocaleString() : "1380"})</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -375,18 +364,36 @@ function StockForm({ editData, onClose }: StockFormProps) {
             name="averagePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.important}>평균단가 *</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel className={ASSET_THEME.important}>평균단가 *</FormLabel>
+                  {isForeignStock && (
+                    <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+                      <Checkbox
+                        checked={avgPriceInKrw}
+                        onCheckedChange={(v) => setAvgPriceInKrw(!!v)}
+                        className="size-3.5"
+                      />
+                      원화로 입력
+                    </label>
+                  )}
+                </div>
                 <FormControl>
                   <NumberInput
                     value={field.value}
                     onChange={(value) => field.onChange(value)}
                     placeholder="0"
-                    quickButtons={isForeignStock ? [] : stockQuickButtons}
-                    allowDecimals={isForeignStock}
-                    maxDecimals={isForeignStock ? 3 : undefined}
+                    quickButtons={isForeignStock && avgPriceInKrw ? stockQuickButtons : isForeignStock ? [] : stockQuickButtons}
+                    allowDecimals={isForeignStock && !avgPriceInKrw}
+                    maxDecimals={isForeignStock && !avgPriceInKrw ? 3 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 3자리 가능)"}</FormDescription>
+                <FormDescription>
+                  {isForeignStock
+                    ? avgPriceInKrw
+                      ? `KRW — 저장 시 달러로 환산 (현재 환율 ÷ ${exchangeRates.USD ? Math.round(exchangeRates.USD).toLocaleString() : "..."})`
+                      : "USD (소수점 3자리 가능)"
+                    : "KRW"}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -410,12 +417,38 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     maxDecimals={isForeignStock ? 3 : undefined}
                   />
                 </FormControl>
-                <FormDescription>{form.watch("currency")} {isForeignStock && "(소수점 3자리 가능)"}</FormDescription>
+                <FormDescription>{isForeignStock ? "USD (소수점 3자리 가능)" : "KRW"}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         )}
+
+        <FormField
+          control={form.control}
+          name="broker"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>증권사</FormLabel>
+              <Select onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)} value={field.value || "__none__"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택 안 함" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">선택 안 함</SelectItem>
+                  {securitiesFirms.map((group) => (
+                    group.items.map((firm) => (
+                      <SelectItem key={firm} value={firm}>{firm}</SelectItem>
+                    ))
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

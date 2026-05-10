@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { MAIN_PALETTE } from "@/config/theme";
-import { computeStockMetrics } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
+import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
 import { StockCategorySection, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
 import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { useAssetTreemapData } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
@@ -29,8 +29,17 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   const { resolvedTheme } = useTheme();
   // 공통 훅 사용 — 중복 로직 없음
   const { treemapData, summary } = useAssetTreemapData();
-  const { filteredStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, barItems: stockBarItems, barColors: stockBarColors, exchangeRates, dailyProfit, dailyProfitRate } =
+  const { groupedStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, exchangeRates, dailyProfit, dailyProfitRate } =
     useFilteredStockData(activeCategory);
+
+  const { mergedStocks, mergedBarItems, mergedBarColors } = useMemo(() => {
+    const merged = Array.from(groupedStocks.values()).map(mergeStockGroup);
+    const barValues = merged.map(st => ({ value: st.quantity * st.currentPrice * getMultiplier(st.currency, exchangeRates) }));
+    const barColors = assignColors(barValues);
+    const barItems = merged.map((st, idx) => ({ stock: st, value: barValues[idx].value, color: barColors[idx] }));
+    return { mergedStocks: merged, mergedBarItems: barItems, mergedBarColors: barColors };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupedStocks, exchangeRates]);
 
   const maskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
 
@@ -41,7 +50,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
       if (!raw) return [];
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
       return [...all]
-        .filter(s => { const d = new Date(s.date).getDay(); return d !== 0 && d !== 6; })
+        .filter(s => new Date(s.date).getDay() !== 0)
         .sort((a, b) => a.date.localeCompare(b.date));
     } catch { return []; }
   }, []);
@@ -175,10 +184,10 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
           <StockCategorySection
             activeCategory={activeCategory}
             onCategoryChange={onCategoryChange}
-            filteredStocks={filteredStocks}
+            filteredStocks={mergedStocks}
             totalValue={filteredTotal}
-            barItems={stockBarItems}
-            barColors={stockBarColors}
+            barItems={mergedBarItems}
+            barColors={mergedBarColors}
             emptyMessage="해당 카테고리에 보유 종목이 없습니다."
             screenshotMode={true}
             renderItem={(stock, _isFirst, color) => {

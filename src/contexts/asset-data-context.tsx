@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
+import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ interface AssetDataContextType {
   updateExchangeRate: (currency: "USD" | "JPY", rate: number, date?: string) => void;
   syncTodayExchangeRate: () => Promise<void>;
   refreshData: () => void;
+  bumpSnapshotVersion: () => void;
   initAndSync: (data: AssetData) => Promise<void>;
   saveData: (data: AssetData) => boolean;
   addRealEstate: (realEstate: RealEstate) => boolean;
@@ -141,12 +143,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   const INITIAL_SYNC_DELAY_MS = 1_000;
 
+  // 최신 환율을 비동기 콜백 밖에서도 동기적으로 읽기 위한 ref
+  const exchangeRatesRef = useRef<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
+
   // ─── [동기화 헬퍼] ──────────────────────────────────────────────────────────
 
   // 환율 state + localStorage 갱신
   const updateExchangeRate = useCallback((currency: "USD" | "JPY", rate: number, date?: string) => {
     setExchangeRatesState(prev => {
       const newRates = { ...prev, [currency]: rate };
+      exchangeRatesRef.current = newRates;
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_KEYS.exchangeRate, JSON.stringify(newRates));
         if (date) {
@@ -169,7 +175,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       if (savedRates) {
         try {
           const parsed = JSON.parse(savedRates);
-          setExchangeRatesState({ USD: parsed.USD || 1380, JPY: parsed.JPY });
+          const rates = { USD: parsed.USD || 1380, JPY: parsed.JPY };
+          exchangeRatesRef.current = rates;
+          setExchangeRatesState(rates);
           setExchangeRateDate(todayStr);
         } catch { /* 파싱 실패 시 기존 state 유지 */ }
       }
@@ -198,20 +206,60 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - outdated 판단: s.baseDate !== today (오늘자 미갱신 항목만 대상)
   // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 1초 지연
   // - 갱신 완료 시 toast 알림
-  const syncTodayStockPrices = useCallback(async (data: AssetData) => {
+  const syncTodayStockPrices = useCallback(async (data: AssetData): Promise<AssetData> => {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    // 동일 ticker는 broker별로 중복될 수 있으므로 ticker 단위로 dedup
+    const seenTickers = new Set<string>();
     const outdatedStocks = data.stocks
-      .filter(s => normalizeTicker(s) !== "" && s.baseDate !== todayStr)
+      .filter(s => {
+        const ticker = normalizeTicker(s);
+        if (!ticker || s.baseDate === todayStr) return false;
+        if (seenTickers.has(ticker)) return false;
+        seenTickers.add(ticker);
+        return true;
+      })
       .sort((a, b) => (a.category === "foreign" ? -1 : 1) - (b.category === "foreign" ? -1 : 1));
 
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY_MS = 1 * 1000;
+
+    // stockMarkets가 비어있으면 오늘자 캐시가 있더라도 market 정보를 채우기 위해 재조회
+    const hasMarketCache = (() => {
+      try { return Object.keys(JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}")).length > 0; } catch { return false; }
+    })();
+
     if (outdatedStocks.length === 0) {
+      if (hasMarketCache) {
+        notify.info(MSG.STOCK_UP_TO_DATE);
+        return data;
+      }
+      // market 캐시 없음: 오늘자 ticker로 1회 조회해 stockMarkets만 채움
+      const tickersWithTicker = [...new Set(
+        data.stocks.filter(s => normalizeTicker(s)).map(s => normalizeTicker(s))
+      )];
+      for (let i = 0; i < tickersWithTicker.length; i += BATCH_SIZE) {
+        if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
+        const tickersParam = tickersWithTicker.slice(i, i + BATCH_SIZE).join(",");
+        try {
+          const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
+          const stocksData = await res.json();
+          if (stocksData && !stocksData.error) {
+            try {
+              const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+              for (const [ticker, result] of Object.entries(stocksData as Record<string, { market?: string }>)) {
+                if (result.market) saved[ticker] = result.market;
+              }
+              localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
+            } catch { /* ignore */ }
+          }
+        } catch { /* ignore */ }
+      }
       notify.info(MSG.STOCK_UP_TO_DATE);
-      return;
+      return data;
     }
 
     console.log(`[Sync] 주식 현재가 갱신 대상: ${outdatedStocks.length}개`);
-    const BATCH_SIZE = 3;
-    const BATCH_DELAY_MS = 1 * 1000;
+    let current = data;
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
       if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
@@ -222,24 +270,29 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
         const stocksData = await res.json();
         if (stocksData && !stocksData.error) {
-          setAssetData(prev => {
-            const updatedStocks = prev.stocks.map(stock => {
-              const ticker = normalizeTicker(stock);
-              const result = stocksData[ticker];
-              if (result?.price !== undefined && result?.updated_at) {
-                return {
-                  ...stock,
-                  currentPrice: result.price,
-                  baseDate: result.updated_at,
-                  name: resolveStockName(stock.category, result.name, stock.name),
-                };
-              }
-              return stock;
-            });
-            const newData = { ...prev, stocks: updatedStocks };
-            saveAssetData(newData);
-            return newData;
+          try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+            for (const [ticker, result] of Object.entries(stocksData as Record<string, { market?: string }>)) {
+              if (result.market) saved[ticker] = result.market;
+            }
+            localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
+          } catch { /* ignore */ }
+          const updatedStocks = current.stocks.map(stock => {
+            const ticker = normalizeTicker(stock);
+            const result = stocksData[ticker];
+            if (result?.price !== undefined && result?.updated_at) {
+              return {
+                ...stock,
+                currentPrice: result.price,
+                baseDate: result.updated_at,
+                name: resolveStockName(stock.category, result.name, stock.name),
+              };
+            }
+            return stock;
           });
+          current = { ...current, stocks: updatedStocks };
+          setAssetData(current);
+          saveAssetData(current);
         }
       } catch (e) {
         notify.error(MSG.STOCK_SYNC_FAILED);
@@ -248,6 +301,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
 
     notify.info(MSG.STOCK_SYNC_COMPLETE);
+    return current;
   }, []);
 
   // 오늘자 일별·월별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
@@ -255,8 +309,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const saveSnapshots = useCallback((latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = now.toISOString().split("T")[0];
-    const currentMonth = todayStr.substring(0, 7); // YYYY-MM
-    const currentYear = currentMonth.substring(0, 4); // YYYY
+    const currentMonth = todayStr.substring(0, 7);
+    const currentYear = currentMonth.substring(0, 4);
 
     const getMultiplier = (currency?: string) => {
       if (currency === "USD") return latestRates.USD;
@@ -271,6 +325,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const tenantDepositTotal = latestData.realEstate.reduce((sum, r) => sum + (r.tenantDeposit ?? 0), 0);
     const financialAsset = stockValue + cryptoValue + cashValue;
     const netAsset = realEstateValue + financialAsset - loanBalance - tenantDepositTotal;
+    const dayOfWeek = new Date(todayStr).getDay();
 
     try {
       // ── 일별: 이번 달만 유지 ──
@@ -279,12 +334,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const cutoff = new Date(Date.now() + 9 * 60 * 60 * 1000);
       cutoff.setDate(cutoff.getDate() - 30);
       const cutoffStr = cutoff.toISOString().split("T")[0];
-      const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
-      const dayOfWeek = now.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+
+      // 평일 기록 + 최초 기록(allDaily 비어있음)일 때는 일요일에도 기록
+      if (dayOfWeek !== 0 || allDaily.length === 0) {
+        const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
         filteredDaily.push({ date: todayStr, netAsset, financialAsset });
+        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
       }
-      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
 
       // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
       const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
@@ -294,7 +350,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       filteredMonthly.sort((a, b) => a.month.localeCompare(b.month));
       localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(filteredMonthly));
       setSnapshotVersion(v => v + 1);
-    } catch { /* 저장 실패 무시 */ }
+    } catch (e) {
+      console.error("[Snapshot] 저장 실패", e);
+    }
   }, []);
 
   // 모든 진입 경로 공통 헬퍼
@@ -312,15 +370,33 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (!hasAssets) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
-    if (!skipSnapshots) {
-      await syncTodayStockPrices(data);
-      setAssetData(after => {
-        setExchangeRatesState(latestRates => {
-          saveSnapshots(after, latestRates);
-          return latestRates;
+
+    // 하위호환 마이그레이션: foreign + KRW → USD 자동 변환
+    const usdRateForMigration = exchangeRatesRef.current.USD;
+    if (usdRateForMigration > 0) {
+      setAssetData(prev => {
+        const dirty = prev.stocks.filter(s => s.category === "foreign" && s.currency === "KRW");
+        if (dirty.length === 0) return prev;
+        const fixed = prev.stocks.map(s => {
+          if (s.category !== "foreign" || s.currency !== "KRW") return s;
+          return {
+            ...s,
+            currency: "USD" as const,
+            averagePrice: Math.round(s.averagePrice / usdRateForMigration * 10000) / 10000,
+            currentPrice: 0,
+            baseDate: undefined,
+            purchaseExchangeRate: usdRateForMigration,
+          };
         });
-        return after;
+        const newData = { ...prev, stocks: fixed };
+        saveAssetData(newData);
+        return newData;
       });
+    }
+
+    if (!skipSnapshots) {
+      const finalData = await syncTodayStockPrices(data);
+      saveSnapshots(finalData, exchangeRatesRef.current);
     }
   }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
@@ -337,14 +413,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (hasAssets && !prevHasAssetsRef.current) {
       const doSync = async () => {
         await syncTodayExchangeRate();
-        await syncTodayStockPrices(assetData);
-        setAssetData(latest => {
-          setExchangeRatesState(latestRates => {
-            saveSnapshots(latest, latestRates);
-            return latestRates;
-          });
-          return latest;
-        });
+        const finalData = await syncTodayStockPrices(assetData);
+        saveSnapshots(finalData, exchangeRatesRef.current);
       };
       void doSync();
     }
@@ -363,8 +433,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
-    const { skipStep, statuses } = tutorialStore.getState();
-    ([0, 1, 2, 3, 4, 5] as const).forEach(step => { if (statuses[step] === "pending") skipStep(step); });
+    skipAllTutorialSteps();
+    tutorialStore.getState().initTutorial();
     void initAndSync(data);
   }, [initAndSync]);
 
@@ -531,6 +601,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 새로고침
   const refreshData = useCallback(() => {
     setAssetData(getAssetData());
+  }, []);
+
+  // 외부에서 localStorage 스냅샷을 직접 갱신한 뒤 차트 재구독을 트리거할 때 사용
+  const bumpSnapshotVersion = useCallback(() => {
+    setSnapshotVersion(v => v + 1);
   }, []);
 
   // 부동산
@@ -807,6 +882,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updateExchangeRate,
         syncTodayExchangeRate,
         refreshData,
+        bumpSnapshotVersion,
         initAndSync,
         saveData,
         addRealEstate,

@@ -183,15 +183,27 @@ class FileCacheStorage implements ICacheStorage {
           )
         );
       }
+      // KST 기준 오늘/어제 (호출자 todayStr 의존 제거 — setStock 등은 effectiveDate를 넘기므로 어제가 들어올 수 있음)
+      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayKST = nowKST.toISOString().split("T")[0];
+      const yesterdayKSTDate = new Date(nowKST);
+      yesterdayKSTDate.setUTCDate(yesterdayKSTDate.getUTCDate() - 1);
+      const yesterdayKST = yesterdayKSTDate.toISOString().split("T")[0];
+
       // 날짜 불일치 EXCHANGE / KIS_TOKEN도 함께 정리
       const effectiveExchange = getEffectiveDateStr("exchange");
       if (data.EXCHANGE?.updated_at && data.EXCHANGE.updated_at !== effectiveExchange) {
         delete data.EXCHANGE;
       }
-      if (data.KIS_TOKEN?.updated_at && data.KIS_TOKEN.updated_at !== todayStr) {
+      // KIS 토큰: 발급일 기준 2일(어제·오늘) 유지. 그보다 오래되면 정리
+      if (
+        data.KIS_TOKEN?.updated_at &&
+        data.KIS_TOKEN.updated_at !== todayKST &&
+        data.KIS_TOKEN.updated_at !== yesterdayKST
+      ) {
         delete data.KIS_TOKEN;
       }
-      if (data.GEMINI_COUNT?.date && data.GEMINI_COUNT.date !== todayStr) {
+      if (data.GEMINI_COUNT?.date && data.GEMINI_COUNT.date !== todayKST) {
         delete data.GEMINI_COUNT;
       }
       fs.mkdirSync(path.dirname(FINANCE_CACHE_PATH), { recursive: true });
@@ -227,7 +239,8 @@ class FileCacheStorage implements ICacheStorage {
   async setExchange(rates: ExchangeRates): Promise<void> {
     const cache = this.readFinanceCache();
     cache.EXCHANGE = rates;
-    this.writeFinanceCache(cache, rates.updated_at ?? "");
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    this.writeFinanceCache(cache, todayStr);
   }
 
   async getStock(cacheKey: string): Promise<StockPriceResult | null> {
@@ -241,9 +254,18 @@ class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
-  async getKisToken(todayStr: string): Promise<string | null> {
+  async getKisToken(_todayStr: string): Promise<string | null> {
     const kisToken = this.readFinanceCache().KIS_TOKEN;
-    if (kisToken?.updated_at === todayStr) return kisToken.access_token;
+    if (!kisToken?.updated_at) return null;
+    // 발급일 기준 2일(어제·오늘) 이내면 사용
+    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayKST = nowKST.toISOString().split("T")[0];
+    const yesterdayKSTDate = new Date(nowKST);
+    yesterdayKSTDate.setUTCDate(yesterdayKSTDate.getUTCDate() - 1);
+    const yesterdayKST = yesterdayKSTDate.toISOString().split("T")[0];
+    if (kisToken.updated_at === todayKST || kisToken.updated_at === yesterdayKST) {
+      return kisToken.access_token;
+    }
     return null;
   }
 

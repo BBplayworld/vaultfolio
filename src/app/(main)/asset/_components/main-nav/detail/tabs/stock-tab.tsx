@@ -1,21 +1,26 @@
 "use client";
 
 import React from "react";
-import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { truncateName } from "@/lib/utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { stockCategories } from "@/config/asset-options";
+import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, mergeStockGroup } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/profit-utils";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 import { STORAGE_KEYS } from "@/lib/local-storage";
@@ -151,6 +156,13 @@ export function useFilteredStockData(activeCategory: string) {
     enabled: tickerList.length > 0,
   });
 
+  const marketMap = useMemo<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
+    } catch { return {}; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickerList]);
+
   const filteredStocks = useMemo(() => {
     const base =
       activeCategory === "all"
@@ -211,7 +223,12 @@ export function useFilteredStockData(activeCategory: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refData, filteredStocks, exchangeRates]);
 
-  return { filteredStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate };
+  const groupedStocks = useMemo(
+    () => groupStocksByTickerCategory(filteredStocks),
+    [filteredStocks],
+  );
+
+  return { filteredStocks, groupedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
@@ -228,9 +245,12 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
       <div className={ASSET_THEME.cardInfoLeft}>
         <div className={ASSET_THEME.cardInfoTitle}>
-          <span className={`${ASSET_THEME.cardInfoName}}`}>{stock.name}</span>
-          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0">{stock.ticker}</span>}
-          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 leading-tight`}>{categoryLabel}</Badge>}
+          <span className={`${ASSET_THEME.cardInfoName}}`} title={stock.name.length > 18 ? stock.name : undefined}>
+            <span className="sm:hidden">{truncateName(stock.name)}</span>
+            <span className="hidden sm:inline">{stock.name}</span>
+          </span>
+          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0 sm:ml-1">{stock.ticker}</span>}
+          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{categoryLabel}</Badge>}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
           <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
@@ -241,10 +261,10 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <div className={ASSET_THEME.cardInfoRight}>
         <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}}`}>{fmt(currentVal)}</p>
         <div className={ASSET_THEME.cardAmountProfitRow}>
-          <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
+          <span className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
             {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
-          </p>
-          <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+          </span>
+          <span className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
         </div>
       </div>
     </>
@@ -319,102 +339,263 @@ interface StockCardProps {
   currencyGainRate: number;
   linkedLoans: Loan[];
   onDelete: (id: string) => void;
+  onDeleteGroup?: (ids: string[]) => void;
   getCategoryLabel: (cat: string) => string;
   defaultOpen?: boolean;
   onFirstInteract?: () => void;
   isFirstVisit?: boolean;
+  subItems?: Stock[];
+  exchangeRates?: { USD: number; JPY: number };
+  totalValue?: number;
+  groupItems?: Stock[];
+  marketMap?: Record<string, string>;
 }
 
-function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false }: StockCardProps) {
-  const [open, setOpen] = useState(defaultOpen);
+interface SplitItem {
+  quantity: string;
+  averagePrice: string;
+  broker: string;
+  avgPriceInKrw: boolean;
+}
 
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    onFirstInteract?.();
+function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; groupItems: Stock[]; open: boolean; onClose: () => void }) {
+  const { saveData, assetData, exchangeRates } = useAssetData();
+  const isForeign = stock.category === "foreign";
+  const maxQty = stock.quantity;
+  const groupIds = new Set(groupItems.map((s) => s.id));
+
+  const makeInitialItems = (): SplitItem[] => {
+    if (groupItems.length > 1) {
+      return groupItems.map((s) => ({
+        quantity: String(s.quantity),
+        averagePrice: String(s.averagePrice),
+        broker: s.broker || "__none__",
+        avgPriceInKrw: false,
+      }));
+    }
+    return [
+      { quantity: "", averagePrice: String(stock.averagePrice), broker: stock.broker || "__none__", avgPriceInKrw: false },
+      { quantity: "", averagePrice: String(stock.averagePrice), broker: "__none__", avgPriceInKrw: false },
+    ];
   };
 
+  const [items, setItems] = useState<SplitItem[]>(makeInitialItems);
+
+  const totalEntered = items.reduce((s, it) => {
+    const v = parseFloat(it.quantity);
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
+  const remaining = Math.round((maxQty - totalEntered) * 1e6) / 1e6;
+  const isValid = items.every((it) => {
+    const v = parseFloat(it.quantity);
+    return !isNaN(v) && v > 0;
+  }) && Math.abs(remaining) < 1e-9;
+
+  const updateItem = (idx: number, field: keyof SplitItem, val: string | boolean) => {
+    setItems((prev) => prev.map((it, i) => i === idx ? { ...it, [field]: val } : it));
+  };
+
+  const addRow = () => setItems((prev) => [...prev, { quantity: "", averagePrice: String(stock.averagePrice), broker: "__none__", avgPriceInKrw: false }]);
+  const removeRow = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleSplit = () => {
+    if (!isValid) return;
+    const baseStock = groupItems[0];
+    const usdRate = exchangeRates.USD;
+    const newItems: Stock[] = items.map((it, idx) => {
+      let avg = it.averagePrice ? parseFloat(it.averagePrice) : baseStock.averagePrice;
+      if (isForeign && it.avgPriceInKrw && usdRate) {
+        avg = Math.round(avg / usdRate * 10000) / 10000;
+      }
+      return {
+        ...baseStock,
+        id: groupItems[idx]?.id ?? `stock_${Date.now()}_${idx}`,
+        quantity: parseFloat(it.quantity),
+        averagePrice: avg,
+        broker: it.broker === "__none__" ? undefined : it.broker,
+      };
+    });
+    const otherStocks = assetData.stocks.filter((s) => !groupIds.has(s.id));
+    saveData({ ...assetData, stocks: [...otherStocks, ...newItems] });
+    toast.success(`${items.length}개 항목으로 나뉘었습니다.`);
+    onClose();
+  };
+
+  const getAvgPlaceholder = (item: SplitItem) => isForeign && !item.avgPriceInKrw ? `$${stock.averagePrice}` : `₩${(isForeign ? Math.round(stock.averagePrice * exchangeRates.USD) : stock.averagePrice).toLocaleString()}`;
+
   return (
-    <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-3">
-      <div className="rounded-lg border bg-card overflow-hidden">
-        <div className={ASSET_THEME.cardHeader}>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-sm w-[calc(100vw-2rem)]">
+        <DialogHeader>
+          <DialogTitle>{stock.name} 나누기</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-1">
+          <p className="text-xs text-muted-foreground">총 {maxQty.toLocaleString()}주를 항목별로 나눕니다.</p>
+          {items.map((it, idx) => (
+            <div key={idx} className="rounded-md border border-border/60 bg-muted/5 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">항목 {idx + 1}</span>
+                {items.length > 2 && (
+                  <Button size="icon" variant="ghost" className="size-6 -mr-1" onClick={() => removeRow(idx)}>
+                    <Trash2 className="size-3" />
+                  </Button>
+                )}
+              </div>
+              {isForeign && (
+                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none w-fit">
+                  <Checkbox checked={it.avgPriceInKrw} onCheckedChange={(v) => updateItem(idx, "avgPriceInKrw", !!v)} className="size-3.5" />
+                  원화로 입력 (저장 시 달러 환산)
+                </label>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">수량</label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      className="h-8 text-sm tabular-nums"
+                      placeholder="0"
+                      value={it.quantity}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const filtered = isForeign ? raw.replace(/[^0-9.]/g, "") : raw.replace(/[^0-9]/g, "");
+                        updateItem(idx, "quantity", filtered);
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">주</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">
+                    평균단가{isForeign && (it.avgPriceInKrw ? " (KRW)" : " (USD)")}
+                  </label>
+                  <Input
+                    className="h-8 text-sm tabular-nums"
+                    placeholder={getAvgPlaceholder(it)}
+                    value={it.averagePrice}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const filtered = (isForeign && !it.avgPriceInKrw)
+                        ? raw.replace(/[^0-9.]/g, "").replace(/^(\d*\.\d{0,3}).*$/, "$1")
+                        : raw.replace(/[^0-9]/g, "");
+                      updateItem(idx, "averagePrice", filtered);
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">증권사</label>
+                <Select value={it.broker} onValueChange={(v) => updateItem(idx, "broker", v)}>
+                  <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="선택 안 함" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">선택 안 함</SelectItem>
+                    {securitiesFirms.map((g) => g.items.map((f) => (
+                      <SelectItem key={f} value={f} className="text-xs">{f}</SelectItem>
+                    )))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addRow}>+ 항목 추가</Button>
+          <p className={`text-xs tabular-nums ${Math.abs(remaining) < 1e-9 ? "text-muted-foreground" : "text-destructive font-semibold"}`}>
+            남은 수량: {remaining.toLocaleString()}주
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>취소</Button>
+          <Button size="sm" disabled={!isValid} onClick={handleSplit} style={{ backgroundColor: MAIN_PALETTE[0] }}>나누기</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainRate }: {
+  stock: Stock; isForeign: boolean; krwMul: number; currencyGain: number; currencyGainRate: number;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+        <div>
+          <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
+          <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+        </div>
+        <div>
+          <p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p>
+          <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+        </div>
+        <div>
+          <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
+          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+        </div>
+        <div>
+          <p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p>
+          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+        </div>
+      </div>
+      {isForeign && (
+        <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5">
+          <div>
+            <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
+            <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
+              {formatCurrencyDisplay(Math.round(currencyGain))}
+              <span className="text-xs ml-1">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
+            </p>
+          </div>
+          <div>
+            <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
+            <p className={ASSET_THEME.cardDetailValue}>
+              {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
+                ? stock.currency === "JPY" ? `¥100 = ₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1 = ₩${stock.purchaseExchangeRate.toLocaleString()}`
+                : "미입력 (현재환율)"}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
+  stock: Stock; idx: number; onDelete: (id: string) => void;
+  exchangeRates: { USD: number; JPY: number }; totalValue: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const m = computeStockMetrics(stock, exchangeRates, totalValue);
+  const label = stock.broker || `항목 ${idx + 1}`;
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-md border border-border/60 overflow-hidden">
+        <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 bg-primary/6 hover:bg-primary/10 ">
           <CollapsibleTrigger asChild>
-            <button className={ASSET_THEME.cardTriggerButton}>
-              <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabel={getCategoryLabel(stock.category)} />
-              <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
+              <ChevronDown className={`size-2.5 sm:size-3.5 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
+              <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
+              <div className="flex flex-col items-end ml-auto shrink-0">
+                <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatShortCurrency(Math.round(m.currentVal))}</span>
+                <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
+                  {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
+                </span>
+              </div>
             </button>
           </CollapsibleTrigger>
-          <div className={ASSET_THEME.cardActions}>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
-              <Pencil className="size-3.5" />
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-0.5 sm:ml-3">
+            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+              <Pencil className="size-3.5 sm:size-4" />
             </Button>
-            <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => onDelete(stock.id)}>
-              <Trash2 className="size-3.5" />
+            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="삭제" onClick={() => onDelete(stock.id)}>
+              <Trash2 className="size-3.5 sm:size-4" />
             </Button>
           </div>
         </div>
-        <div className="h-0.5 w-full bg-muted">
-          <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
-        </div>
-        {!open && (
-          <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
-        )}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
-                <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
-              </div>
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p>
-                <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
-              </div>
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
-                <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
-              </div>
-              <div>
-                <p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p>
-                <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
-                {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
-              </div>
-            </div>
-            {isForeign && (
-              <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5">
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
-                    {formatCurrencyDisplay(Math.round(currencyGain))}
-                    <span className="text-xs ml-1">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
-                  </p>
-                </div>
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
-                  <p className={ASSET_THEME.cardDetailValue}>
-                    {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
-                      ? stock.currency === "JPY" ? `¥100 = ₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1 = ₩${stock.purchaseExchangeRate.toLocaleString()}`
-                      : "미입력 (현재환율)"}
-                  </p>
-                </div>
-              </div>
-            )}
-            {linkedLoans.length > 0 && (
-              <div className={ASSET_THEME.cardLoanSection}>
-                <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />주식담보대출</p>
-                {linkedLoans.map((loan) => (
-                  <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
-                    <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatCurrency(loan.balance)}</span>
-                      <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} />
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
@@ -424,6 +605,102 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
         </CollapsibleContent>
       </div>
     </Collapsible>
+  );
+}
+
+function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap }: StockCardProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const hasSubItems = !!subItems && subItems.length > 0;
+  const effectiveGroupItems = groupItems ?? [stock];
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    onFirstInteract?.();
+  };
+
+  return (
+    <>
+      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-3">
+        <div className="rounded-lg border bg-card overflow-hidden">
+          <div className={ASSET_THEME.cardHeader}>
+            <CollapsibleTrigger asChild>
+              <button className={ASSET_THEME.cardTriggerButton}>
+                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabel={getCategoryLabel(stock.category)} />
+                <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+          </div>
+          <div className="h-0.5 w-full bg-muted">
+            <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
+          </div>
+          {!open && (
+            <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
+          )}
+          <CollapsibleContent>
+            <div className="border-t divide-y divide-border/50">
+              <div className="flex items-center gap-1 px-4 py-2.5 bg-muted/10">
+                <span className="text-xs sm:text-sm font-semibold text-foreground">{stock.name}</span>
+                {stock.ticker && <span className="text-xs sm:text-sm font-mono text-muted-foreground">({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})</span>}
+                <span className="text-xs sm:text-sm text-foreground font-semibold ml-auto">총 {stock.quantity.toLocaleString()}주</span>
+              </div>
+              <div>
+                <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />
+              </div>
+              <div className="flex justify-end gap-2 px-3 py-2 bg-muted/10">
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="증권사별 나누기" onClick={() => setSplitOpen(true)}>
+                  <Scissors className="size-3.5" />
+                </Button>
+                <Button size="icon" variant="outline" className={`${ASSET_THEME.cardActionButton}${hasSubItems && effectiveGroupItems.length > 1 ? " !opacity-20 cursor-not-allowed" : ""}`} disabled={hasSubItems && effectiveGroupItems.length > 1} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
+                  if (!confirm("정말 삭제하시겠습니까?")) return;
+                  toast.success("삭제되었습니다.");
+                  if (effectiveGroupItems.length === 1) {
+                    onDelete(effectiveGroupItems[0].id);
+                  } else {
+                    onDeleteGroup?.(effectiveGroupItems.map((s) => s.id));
+                  }
+                }}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+              {linkedLoans.length > 0 && (
+                <div className={ASSET_THEME.cardLoanSection}>
+                  <p className={ASSET_THEME.cardLoanTitle}><CreditCard className="size-3" />주식담보대출</p>
+                  {linkedLoans.map((loan) => (
+                    <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
+                      <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatCurrency(loan.balance)}</span>
+                        <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!hasSubItems && (
+                <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+                  <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
+                  <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
+                  {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
+                </div>
+              )}
+              {hasSubItems && (
+                <div className="px-3 py-2.5 space-y-1.5 bg-muted/5">
+                  <p className="text-xs font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
+                  {subItems!.map((sub, idx) => (
+                    <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+      {splitOpen && <SplitStockDialog stock={stock} groupItems={effectiveGroupItems} open={splitOpen} onClose={() => setSplitOpen(false)} />}
+    </>
   );
 }
 
@@ -465,7 +742,7 @@ export function StockCategorySection({
       </TabsList>
 
       {CATEGORY_TABS.map(({ value }) => (
-        <TabsContent key={value} value={value} className="mt-1 px-2 space-y-3">
+        <TabsContent key={value} value={value} className="mt-1 px-1 sm:px-2 space-y-3">
           {/* 비중 바 */}
           {barItems.length > 0 && totalValue > 0 && (
             <div className="space-y-2">
@@ -554,8 +831,26 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
-  const { filteredStocks: allStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate } =
+  const { filteredStocks: allStocks, groupedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
     useFilteredStockData(activeCategory);
+
+  // 그룹 대표(병합) 목록 — 병합 후 KRW 환산 금액 기준 재정렬
+  const representativeStocks = useMemo(() => {
+    const seen = new Set<string>();
+    const reps: Stock[] = [];
+    for (const s of allStocks) {
+      const key = s.ticker ? `${s.ticker}:${s.category}` : s.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const group = groupedStocks.get(key) ?? [s];
+      reps.push(mergeStockGroup(group));
+    }
+    return reps.sort(
+      (a, b) =>
+        b.quantity * b.currentPrice * getMultiplier(b.currency, exchangeRates) -
+        a.quantity * a.currentPrice * getMultiplier(a.currency, exchangeRates),
+    );
+  }, [allStocks, groupedStocks, exchangeRates]);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
@@ -564,6 +859,11 @@ export function StockTab() {
       toast.success("삭제되었습니다.");
       deleteStock(id);
     }
+  };
+
+  const handleDeleteGroup = (ids: string[]) => {
+    const idSet = new Set(ids);
+    saveData({ ...assetData, stocks: assetData.stocks.filter((s) => !idSet.has(s.id)) });
   };
 
   return (
@@ -582,17 +882,19 @@ export function StockTab() {
       <StockCategorySection
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
-        filteredStocks={allStocks}
+        filteredStocks={representativeStocks}
         totalValue={totalValue}
         barItems={barItems}
         barColors={barColors}
         screenshotMode={false}
         renderItem={(stock, isFirst, color) => {
+          const groupKey = stock.ticker ? `${stock.ticker}:${stock.category}` : stock.id;
+          const groupItems = groupedStocks.get(groupKey) ?? [stock];
           const m = computeStockMetrics(stock, exchangeRates, totalValue);
-          const linkedLoans = assetData.loans.filter((l) => l.linkedStockId === stock.id);
+          const linkedLoans = groupItems.flatMap((s) => assetData.loans.filter((l) => l.linkedStockId === s.id));
           return (
             <StockCard
-              key={stock.id}
+              key={groupKey}
               stock={stock}
               color={color}
               pct={m.pct}
@@ -605,10 +907,16 @@ export function StockTab() {
               currencyGainRate={m.currencyGainRate}
               linkedLoans={linkedLoans}
               onDelete={handleDelete}
+              onDeleteGroup={handleDeleteGroup}
               getCategoryLabel={getCategoryLabel}
               defaultOpen={isFirst && !hasInteracted}
               onFirstInteract={isFirst && !hasInteracted ? handleFirstInteract : undefined}
               isFirstVisit={isFirst && !hasInteracted}
+              subItems={groupItems.length > 1 || (groupItems.length > 0 && !!groupItems[0]?.broker) ? groupItems : undefined}
+              groupItems={groupItems}
+              exchangeRates={exchangeRates}
+              totalValue={totalValue}
+              marketMap={marketMap}
             />
           );
         }}

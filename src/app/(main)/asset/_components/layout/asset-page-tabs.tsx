@@ -73,7 +73,7 @@ export function AssetPageTabs() {
     };
     
     // 튜토리얼 "다음" 버튼 클릭 시, 가짜 클릭 이벤트가 무시되더라도 확실히 탭이 전환되도록 리스너 추가
-    const forceDetailTab = () => handleHomeTabChange("detail");
+    const forceDetailTab = () => setActiveHomeTab("detail");
     const forceActivityTab = () => setActiveHomeTab("activity");
     const forceProfitTab = () => setActiveActivityTab("profit");
 
