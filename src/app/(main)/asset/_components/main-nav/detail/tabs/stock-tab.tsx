@@ -188,9 +188,32 @@ export function useFilteredStockData(activeCategory: string) {
   const totalProfit = totalValue - totalCost;
   const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
-  const barValues = filteredStocks.map((st) => ({ value: st.quantity * st.currentPrice * mul(st.currency) }));
+  const groupedStocks = useMemo(
+    () => groupStocksByTickerCategory(filteredStocks),
+    [filteredStocks],
+  );
+
+  // 그룹 대표(병합) 목록 — KRW 환산 금액 기준 재정렬
+  const mergedStocks = useMemo(() => {
+    const seen = new Set<string>();
+    const reps: Stock[] = [];
+    for (const s of filteredStocks) {
+      const key = s.ticker ? `${s.ticker}:${s.category}` : s.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      reps.push(mergeStockGroup(groupedStocks.get(key) ?? [s]));
+    }
+    return reps.sort(
+      (a, b) =>
+        b.quantity * b.currentPrice * mul(b.currency) -
+        a.quantity * a.currentPrice * mul(a.currency),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredStocks, groupedStocks, exchangeRates]);
+
+  const barValues = mergedStocks.map((st) => ({ value: st.quantity * st.currentPrice * mul(st.currency) }));
   const barColors = assignColors(barValues);
-  const barItems = filteredStocks.map((st, idx) => ({
+  const barItems = mergedStocks.map((st, idx) => ({
     stock: st,
     value: barValues[idx].value,
     color: barColors[idx],
@@ -223,12 +246,7 @@ export function useFilteredStockData(activeCategory: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refData, filteredStocks, exchangeRates]);
 
-  const groupedStocks = useMemo(
-    () => groupStocksByTickerCategory(filteredStocks),
-    [filteredStocks],
-  );
-
-  return { filteredStocks, groupedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
+  return { filteredStocks, groupedStocks, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
@@ -573,7 +591,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
         <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 bg-primary/6 hover:bg-primary/10 ">
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
-              <ChevronDown className={`size-2.5 sm:size-3.5 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
               <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
               <div className="flex flex-col items-end ml-auto shrink-0">
@@ -584,18 +602,18 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
               </div>
             </button>
           </CollapsibleTrigger>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-0.5 sm:ml-3">
-            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
-              <Pencil className="size-3.5 sm:size-4" />
-            </Button>
-            <Button size="icon" variant="outline" className="size-6.5 sm:size-8" title="삭제" onClick={() => onDelete(stock.id)}>
-              <Trash2 className="size-3.5 sm:size-4" />
-            </Button>
-          </div>
         </div>
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} />
+            <div className="flex justify-end gap-2 px-3 py-2 bg-muted/10">
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(stock.id)}>
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
@@ -831,26 +849,8 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
-  const { filteredStocks: allStocks, groupedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
+  const { groupedStocks, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
     useFilteredStockData(activeCategory);
-
-  // 그룹 대표(병합) 목록 — 병합 후 KRW 환산 금액 기준 재정렬
-  const representativeStocks = useMemo(() => {
-    const seen = new Set<string>();
-    const reps: Stock[] = [];
-    for (const s of allStocks) {
-      const key = s.ticker ? `${s.ticker}:${s.category}` : s.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const group = groupedStocks.get(key) ?? [s];
-      reps.push(mergeStockGroup(group));
-    }
-    return reps.sort(
-      (a, b) =>
-        b.quantity * b.currentPrice * getMultiplier(b.currency, exchangeRates) -
-        a.quantity * a.currentPrice * getMultiplier(a.currency, exchangeRates),
-    );
-  }, [allStocks, groupedStocks, exchangeRates]);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
@@ -882,7 +882,7 @@ export function StockTab() {
       <StockCategorySection
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
-        filteredStocks={representativeStocks}
+        filteredStocks={mergedStocks}
         totalValue={totalValue}
         barItems={barItems}
         barColors={barColors}

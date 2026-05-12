@@ -260,19 +260,6 @@ export function YearlyNetAssetChart() {
     financialAsset: s.financialAsset,
   }));
 
-  const currentMonthForHelper = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(0, 7);
-  const getPrevWeekday = (idx: number) => {
-    const [y, m] = currentMonthForHelper.split("-").map(Number);
-    for (let i = idx - 1; i >= 0; i--) {
-      const d = dailyChartData[i];
-      if (!d) continue;
-      const [mm, dd] = d.date.split("/").map(Number);
-      const dow = new Date(y, mm - 1, dd).getDay();
-      if (dow !== 0 && dow !== 6) return d;
-    }
-    return null;
-  };
-
   const commonAxisProps = {
     tick: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
     tickLine: false,
@@ -577,7 +564,7 @@ export function YearlyNetAssetChart() {
                             const hasData = cell.netAsset !== null;
                             const isToday = cell.date === todayStr;
                             const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
-                            const prev = hasData ? getPrevWeekday(dataIdx) : null;
+                            const prev = hasData && dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
                             const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
                             return (
                               <div
