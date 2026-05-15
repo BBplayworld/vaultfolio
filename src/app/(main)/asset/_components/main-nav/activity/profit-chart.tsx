@@ -10,8 +10,9 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { fetchProfitRef, type ProfitPeriod } from "@/lib/profit-utils";
+import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { DataSourceBadge } from "../data-source-badge";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -48,6 +49,14 @@ function formatRate(rate: number): string {
   return `${sign}${rate.toFixed(2)}%`;
 }
 
+// 한투 API가 반환하는 해외 거래일을 KST 일자 표기로 +1일 변환 (사용자 인지 기준)
+function shiftUsDate(date: string | undefined): string | undefined {
+  if (!date) return date;
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
 function toDateStr(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
@@ -77,9 +86,9 @@ function subtractCalendarYears(from: Date, years: number): Date {
   return d;
 }
 
-function getExpectedRefDate(period: ProfitPeriod): string {
+function getExpectedRefDate(period: ProfitPeriod, market: "domestic" | "foreign" = "domestic"): string {
   const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  if (period === "daily") return toDateStr(subtractWeekdays(now, 2));
+  if (period === "daily") return getDailyClosingRefDate(market);
   if (period === "weekly") return toDateStr(subtractWeekdays(now, 5));
   if (period === "monthly") return toDateStr(subtractCalendarMonths(now, 1));
   return toDateStr(subtractCalendarYears(now, 1));
@@ -88,6 +97,7 @@ function getExpectedRefDate(period: ProfitPeriod): string {
 export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
+  const jpyRate = exchangeRates.JPY;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
   const [marketView, setMarketView] = useState<MarketView>("all");
 
@@ -98,10 +108,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const groupedMap = groupStocksByTickerCategory(stocksWithPrice);
   const mergedStocks = Array.from(groupedMap.values()).map(mergeStockGroup);
 
-  const tickerList = mergedStocks
-    .map((s) => normalizeTicker(s))
-    .filter(Boolean)
-    .join(",");
+  // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(stock-tab 등)와 동일한 캐시 키 보장
+  const tickerList = Array.from(
+    new Set(mergedStocks.map((s) => normalizeTicker(s)).filter(Boolean))
+  ).sort().join(",");
 
   const { data: refData, isLoading } = useQuery({
     queryKey: ["profit", period, tickerList],
@@ -110,11 +120,23 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     enabled: isActive && mergedStocks.length > 0,
   });
 
+  // 우측 "기준 종가"는 모든 period에서 동일하게 daily ref 종가를 사용
+  const { data: dailyData } = useQuery({
+    queryKey: ["profit", "daily", tickerList],
+    queryFn: () => fetchProfitRef(tickerList, "daily"),
+    staleTime: 5 * 60 * 1000,
+    enabled: isActive && mergedStocks.length > 0 && period !== "daily",
+  });
+  const baseRefData = period === "daily" ? refData : dailyData;
+
   if (mergedStocks.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>수익 현황</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>수익 현황</CardTitle>
+            <DataSourceBadge kind="closing" />
+          </div>
           <CardDescription>보유 주식의 기간별 수익</CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,23 +148,52 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     );
   }
 
-  // 종목별 수익 계산 (병합 기준)
+  // 종목별 수익 계산 (병합 기준) — 모든 period 종가 vs 종가
+  // - 좌측(이전 종가): 현재 period의 ref 종가 — daily=prevPrice, 그 외=refPrice
+  // - 우측(기준 종가): 항상 daily ref 종가 (baseRefData)
+  // daily는 prev/ref 각 일자의 환율을 dailySnapshots에서 가져와 적용 (스냅샷 일치)
+  const currentRates = { USD: usdRate, JPY: jpyRate };
   const stockProfits = mergedStocks.map((stock) => {
     const ticker = normalizeTicker(stock);
     const ref = refData?.[ticker];
+    const base = baseRefData?.[ticker];
     const currentPrice = stock.currentPrice ?? 0;
-    const rate = (stock.currency === "USD" && !DOMESTIC_CATEGORIES.has(stock.category)) ? usdRate : 1;
+    const isUS = stock.currency === "USD" && !DOMESTIC_CATEGORIES.has(stock.category);
+    const isJP = stock.currency === "JPY" && !DOMESTIC_CATEGORIES.has(stock.category);
+    const rateFor = (rates: { USD: number; JPY: number }) =>
+      isUS ? rates.USD : isJP ? rates.JPY / 100 : 1;
+    const currentRate = rateFor(currentRates);
+    const fallbackCurrent = currentPrice * stock.quantity * currentRate;
 
-    if (!ref) {
-      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: currentPrice * stock.quantity * rate, refValue: 0, hasRef: false };
+    if (!ref || !base) {
+      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false };
     }
 
-    const currentValue = currentPrice * stock.quantity * rate;
-    const refValue = ref.refPrice * stock.quantity * rate;
+    // 좌측 (이전 종가)
+    const isDailyPeriod = period === "daily";
+    const prevPrice = isDailyPeriod ? ref.prevPrice : ref.refPrice;
+    const prevDate = isDailyPeriod ? ref.prevDate : ref.refDate;
+    if (prevPrice === undefined || prevDate === undefined) {
+      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false };
+    }
+
+    // daily는 시점별 환율 적용, 그 외는 현재 환율
+    // 해외는 한투 API 거래일이 KST 기준 -1일이므로 환율 조회 시 +1일 보정
+    const prevRateDate = isDailyPeriod && (isUS || isJP) ? shiftUsDate(prevDate) : prevDate;
+    const refRateDate = isDailyPeriod && (isUS || isJP) ? shiftUsDate(base.refDate) : base.refDate;
+    const prevRate = isDailyPeriod ? rateFor(getRatesForDate(prevRateDate!, currentRates)) : currentRate;
+    const refRate = isDailyPeriod ? rateFor(getRatesForDate(refRateDate!, currentRates)) : currentRate;
+    const refValue = prevPrice * stock.quantity * prevRate;
+
+    // 우측 (기준 종가) = daily ref
+    const currentValue = base.refPrice * stock.quantity * refRate;
+
     const profitAmount = currentValue - refValue;
     const profitRate = refValue > 0 ? (profitAmount / refValue) * 100 : 0;
+    const baseDate = prevDate;
+    const compareDate = base.refDate;
 
-    return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: ref.refDate };
+    return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: baseDate, compareDate };
   });
 
   const filteredProfits = stockProfits.filter((p) => {
@@ -152,12 +203,30 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   });
 
   const totalCurrentValue = filteredProfits.reduce((s, r) => s + r.currentValue, 0);
-  const totalProfit = filteredProfits.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
+  // daily + 전체 마켓뷰일 때는 공통 헬퍼 결과를 사용 (stock-tab "전일 대비"와 일치 보장)
+  const dailyCommon = (period === "daily" && marketView === "all")
+    ? computeDailyStockProfit(assetData.stocks, refData, currentRates)
+    : null;
+  const totalProfit = dailyCommon?.dailyProfit != null
+    ? dailyCommon.dailyProfit
+    : filteredProfits.filter((r) => r.hasRef).reduce((s, r) => s + r.profitAmount, 0);
   const totalRefValue = totalCurrentValue - totalProfit;
-  const totalRate = totalRefValue > 0 ? (totalProfit / totalRefValue) * 100 : 0;
+  const totalRate = dailyCommon?.dailyProfitRate != null
+    ? dailyCommon.dailyProfitRate
+    : (totalRefValue > 0 ? (totalProfit / totalRefValue) * 100 : 0);
 
-  const krRefDate = filteredProfits.find((r) => r.hasRef && DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
-  const usRefDate = filteredProfits.find((r) => r.hasRef && !DOMESTIC_CATEGORIES.has(r.stock.category))?.refDate;
+
+  // 시장별 합계 (daily 비교쌍 표시용) — marketView 필터 무시, 전체 stocks 기준
+  const krProfits = stockProfits.filter((r) => r.hasRef && DOMESTIC_CATEGORIES.has(r.stock.category));
+  const usProfits = stockProfits.filter((r) => r.hasRef && !DOMESTIC_CATEGORIES.has(r.stock.category));
+  const krRefSum = krProfits.reduce((s, r) => s + r.refValue, 0);
+  const krCurrentSum = krProfits.reduce((s, r) => s + r.currentValue, 0);
+  const usRefSum = usProfits.reduce((s, r) => s + r.refValue, 0);
+  const usCurrentSum = usProfits.reduce((s, r) => s + r.currentValue, 0);
+  const krRefDate = krProfits[0]?.refDate;
+  const usRefDate = usProfits[0]?.refDate;
+  const krCompareDate = krProfits[0]?.compareDate;
+  const usCompareDate = usProfits[0]?.compareDate;
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = filteredProfits
@@ -177,7 +246,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       <Card>
         <CardHeader>
           <div className="space-y-1.5">
-            <CardTitle>수익 현황</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle>수익 현황</CardTitle>
+              <DataSourceBadge kind="closing" />
+            </div>
             <CardDescription>보유 주식의 기간별 수익</CardDescription>
           </div>
         </CardHeader>
@@ -255,37 +327,46 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                           </p>
                         </div>
                       </div>
-                      <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
-                        <div>
-                          <p className="text-muted-foreground">기준일 금액</p>
-                          <p className="text-sm tabular-nums font-medium">{formatShortCurrency(totalRefValue)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-muted-foreground">오늘 금액</p>
-                          <p className="text-sm tabular-nums font-medium">{formatShortCurrency(totalCurrentValue)}</p>
-                        </div>
-                      </div>
-                      {(krRefDate || usRefDate) && (
-                        <div className="pt-1.5 border-t border-border/50 text-xs sm:text-sm text-muted-foreground space-y-0.5">
-                          {(() => {
-                            const expected = getExpectedRefDate(p);
-                            const krHoliday = krRefDate && krRefDate !== expected ? ` (${expected} 휴장)` : "";
-                            const usHoliday = usRefDate && usRefDate !== expected ? ` (${expected} 휴장)` : "";
-                            return (
-                              <>
-                                {marketView === "kr" && krRefDate && <p>기준일: {krRefDate} 종가{krHoliday}</p>}
-                                {marketView === "us" && usRefDate && <p>기준일: {usRefDate} 종가{usHoliday}</p>}
-                                {marketView === "all" && (
-                                  <>
-                                    {krRefDate && <p>국내 기준: {krRefDate} 종가{krHoliday}</p>}
-                                    {usRefDate && <p>해외 기준: {usRefDate} 종가{usHoliday}</p>}
-                                  </>
+                      {(() => {
+                        const isAll = marketView === "all";
+                        const isKr = marketView === "kr";
+                        const isUs = marketView === "us";
+                        const hasKr = krProfits.length > 0;
+                        const hasUs = usProfits.length > 0;
+                        const showKrDate = (isAll || isKr) && hasKr;
+                        const showUsDate = (isAll || isUs) && hasUs;
+                        // 좌측 금액: 전체=합계, 국내/해외 탭=해당 시장만
+                        const leftSum = isAll ? totalRefValue : isKr ? krRefSum : usRefSum;
+                        const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
+                        return (
+                          <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
+                            <div className="space-y-1.5">
+                              <p className="text-muted-foreground">이전 종가 <span className="text-[10px] font-normal">(KST)</span></p>
+                              <div className="space-y-0.5">
+                                {showKrDate && krRefDate && (
+                                  <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krRefDate}</p>
                                 )}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      )}
+                                {showUsDate && usRefDate && (
+                                  <p className="text-[11px] text-muted-foreground tabular-nums">해외 {usRefDate}</p>
+                                )}
+                              </div>
+                              <p className="text-sm tabular-nums font-medium">{formatShortCurrency(leftSum)}</p>
+                            </div>
+                            <div className="space-y-1.5 text-right">
+                              <p className="text-muted-foreground">기준 종가 <span className="text-[10px] font-normal">(KST)</span></p>
+                              <div className="space-y-0.5">
+                                {showKrDate && krCompareDate && (
+                                  <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krCompareDate}</p>
+                                )}
+                                {showUsDate && usCompareDate && (
+                                  <p className="text-[11px] text-muted-foreground tabular-nums">해외 {usCompareDate}</p>
+                                )}
+                              </div>
+                              <p className="text-sm tabular-nums font-medium">{formatShortCurrency(rightSum)}</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* 종목별 목록 */}

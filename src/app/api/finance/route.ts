@@ -23,7 +23,7 @@ import {
   fetchExchangeRateFromKis,
   StockPriceResult,
 } from "@/lib/finance-service";
-import { getCacheStorage, getEffectiveDateStr } from "@/lib/cache-storage";
+import { getCacheStorage, getEffectiveDateStr, getStockCacheSlot } from "@/lib/cache-storage";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
@@ -84,20 +84,22 @@ export async function GET(request: Request) {
 
     const effectiveDateForeign = getEffectiveDateStr("foreign");
     const effectiveDateDomestic = getEffectiveDateStr("domestic");
+    const slotForeign = getStockCacheSlot("foreign");
+    const slotDomestic = getStockCacheSlot("domestic");
     const { usTickers, krTickers } = classifyTickers(tickers);
 
     const results: Record<string, StockPriceResult> = {};
     const uncachedUs: string[] = [];
     const uncachedKr: string[] = [];
 
-    // 1단계: 캐시 확인 (국내/해외 유효 날짜 각각 적용)
+    // 1단계: 캐시 확인 (국내/해외 슬롯 각각 적용 — 장중 1시간 단위)
     for (const ticker of usTickers) {
-      const cached = await storage.getStock(stockCacheKey(ticker, effectiveDateForeign));
+      const cached = await storage.getStock(stockCacheKey(ticker, slotForeign));
       if (cached) results[ticker] = cached;
       else uncachedUs.push(ticker);
     }
     for (const ticker of krTickers) {
-      const cached = await storage.getStock(stockCacheKey(ticker, effectiveDateDomestic));
+      const cached = await storage.getStock(stockCacheKey(ticker, slotDomestic));
       if (cached) results[ticker] = cached;
       else uncachedKr.push(ticker);
     }
@@ -127,11 +129,11 @@ export async function GET(request: Request) {
       }
     }
 
-    // 3단계: 캐시 갱신 (국내/해외 날짜 각각 적용)
+    // 3단계: 캐시 갱신 (국내/해외 슬롯 각각 적용 — 장중 1시간 단위)
     for (const [ticker, result] of Object.entries(apiResults)) {
       const isUs = usTickers.includes(ticker);
-      const effectiveDate = isUs ? effectiveDateForeign : effectiveDateDomestic;
-      await storage.setStock(stockCacheKey(ticker, effectiveDate), result, effectiveDate, ticker);
+      const slot = isUs ? slotForeign : slotDomestic;
+      await storage.setStock(stockCacheKey(ticker, slot), result, slot, ticker);
     }
 
     return NextResponse.json({ ...results, ...apiResults });

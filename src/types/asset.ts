@@ -141,6 +141,7 @@ export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
 
 // 일별 자산 스냅샷 (이번 달 일별 차트용)
+// 환율 이력은 별도 storage(secretasset_exchange_history)로 관리
 export interface DailyAssetSnapshot {
   date: string;          // YYYY-MM-DD
   netAsset: number;

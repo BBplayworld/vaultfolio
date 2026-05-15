@@ -6,12 +6,15 @@ import {
   fetchOverseasHistoricalPrice,
   classifyTickers,
 } from "@/lib/finance-service";
+import { getDailyClosingRefDates } from "@/lib/profit-utils";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface ProfitRefEntry {
   refPrice: number;
   refDate: string;
+  prevPrice?: number;
+  prevDate?: string;
 }
 
 export type ProfitRefResponse = Record<string, ProfitRefEntry | null>;
@@ -56,13 +59,13 @@ function subtractCalendarYears(from: Date, years: number): Date {
   return d;
 }
 
-function getRefDate(period: ProfitPeriod): string {
+// daily만 두 날짜(prev, ref) 반환, 나머지는 단일 ref만
+function getDates(period: ProfitPeriod, market: "domestic" | "foreign"): { refDate: string; prevDate?: string } {
   const now = getKSTNow();
-  if (period === "daily") return toDateStr(subtractWeekdays(now, 2));
-  if (period === "weekly") return toDateStr(subtractWeekdays(now, 5));
-  if (period === "monthly") return toDateStr(subtractCalendarMonths(now, 1));
-  // yearly
-  return toDateStr(subtractCalendarYears(now, 1));
+  if (period === "daily") return getDailyClosingRefDates(market);
+  if (period === "weekly") return { refDate: toDateStr(subtractWeekdays(now, 5)) };
+  if (period === "monthly") return { refDate: toDateStr(subtractCalendarMonths(now, 1)) };
+  return { refDate: toDateStr(subtractCalendarYears(now, 1)) };
 }
 
 export async function GET(req: NextRequest) {
@@ -70,43 +73,80 @@ export async function GET(req: NextRequest) {
   const tickersParam = searchParams.get("tickers") ?? "";
   const period = (searchParams.get("period") ?? "daily") as ProfitPeriod;
 
-  const tickers = tickersParam
-    .split(",")
-    .map((t) => t.trim().toUpperCase())
-    .filter(Boolean);
+  const tickers = Array.from(new Set(
+    tickersParam
+      .split(",")
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean)
+  ));
 
   if (tickers.length === 0) {
     return NextResponse.json({});
   }
 
-  const refDate = getRefDate(period);
+  const krDates = getDates(period, "domestic");
+  const usDates = getDates(period, "foreign");
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 
   const { krTickers: allKr, usTickers: allUs } = classifyTickers(tickers);
-  const uncachedKr: string[] = [];
-  const uncachedUs: string[] = [];
+
+  // 종목별로 ref/prev 캐시 조회 → 누락된 경우 fetch 큐에 추가
+  type FetchTask = { ticker: string; date: string; kind: "ref" | "prev"; market: "domestic" | "foreign" };
+  const fetchQueue: FetchTask[] = [];
+  const ensureEntry = (ticker: string) => {
+    if (!result[ticker]) result[ticker] = { refPrice: 0, refDate: "" };
+    return result[ticker]!;
+  };
 
   await Promise.all([
     ...allKr.map(async (ticker) => {
-      const cached = await cache.getRefPrice(ticker, refDate);
-      if (cached !== null) {
-        result[ticker] = { refPrice: cached, refDate };
+      const refCached = await cache.getRefPrice(ticker, krDates.refDate);
+      if (refCached !== null) {
+        const e = ensureEntry(ticker);
+        e.refPrice = refCached;
+        e.refDate = krDates.refDate;
       } else {
-        uncachedKr.push(ticker);
+        fetchQueue.push({ ticker, date: krDates.refDate, kind: "ref", market: "domestic" });
+      }
+      if (krDates.prevDate) {
+        const prevCached = await cache.getRefPrice(ticker, krDates.prevDate);
+        if (prevCached !== null) {
+          const e = ensureEntry(ticker);
+          e.prevPrice = prevCached;
+          e.prevDate = krDates.prevDate;
+        } else {
+          fetchQueue.push({ ticker, date: krDates.prevDate, kind: "prev", market: "domestic" });
+        }
       }
     }),
     ...allUs.map(async (ticker) => {
-      const cached = await cache.getRefPrice(ticker, refDate);
-      if (cached !== null) {
-        result[ticker] = { refPrice: cached, refDate };
+      const refCached = await cache.getRefPrice(ticker, usDates.refDate);
+      if (refCached !== null) {
+        const e = ensureEntry(ticker);
+        e.refPrice = refCached;
+        e.refDate = usDates.refDate;
       } else {
-        uncachedUs.push(ticker);
+        fetchQueue.push({ ticker, date: usDates.refDate, kind: "ref", market: "foreign" });
+      }
+      if (usDates.prevDate) {
+        const prevCached = await cache.getRefPrice(ticker, usDates.prevDate);
+        if (prevCached !== null) {
+          const e = ensureEntry(ticker);
+          e.prevPrice = prevCached;
+          e.prevDate = usDates.prevDate;
+        } else {
+          fetchQueue.push({ ticker, date: usDates.prevDate, kind: "prev", market: "foreign" });
+        }
       }
     }),
   ]);
 
-  if (uncachedKr.length === 0 && uncachedUs.length === 0) {
+  // 캐시 hit으로 모두 충족 → 미설정 종목은 null 처리
+  if (fetchQueue.length === 0) {
+    for (const ticker of [...allKr, ...allUs]) {
+      if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
+    }
     return NextResponse.json(result);
   }
 
@@ -122,31 +162,36 @@ export async function GET(req: NextRequest) {
   }
 
   if (!accessToken) {
-    console.error(`[KIS 토큰 없음 - 과거종가 조회 스킵]: ${[...uncachedKr, ...uncachedUs].join(",")}`);
-    for (const ticker of [...uncachedKr, ...uncachedUs]) result[ticker] = null;
+    console.error(`[KIS 토큰 없음 - 과거종가 조회 스킵]: ${fetchQueue.map((t) => t.ticker).join(",")}`);
+    for (const ticker of [...allKr, ...allUs]) {
+      if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
+    }
     return NextResponse.json(result);
   }
 
-  await Promise.all([
-    ...uncachedKr.map(async (ticker) => {
-      const res = await fetchDomesticHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
+  await Promise.all(
+    fetchQueue.map(async (task) => {
+      const fetcher = task.market === "domestic" ? fetchDomesticHistoricalPrice : fetchOverseasHistoricalPrice;
+      const res = await fetcher(task.ticker, task.date, accessToken!, appKey, appSecret);
       if (res !== null) {
-        result[ticker] = { refPrice: res.price, refDate: res.date };
-        await cache.setRefPrice(ticker, res.date, res.price, period);
-      } else {
-        result[ticker] = null;
+        await cache.setRefPrice(task.ticker, res.date, res.price, period);
+        const e = ensureEntry(task.ticker);
+        if (task.kind === "ref") {
+          e.refPrice = res.price;
+          e.refDate = res.date;
+        } else {
+          e.prevPrice = res.price;
+          e.prevDate = res.date;
+        }
       }
-    }),
-    ...uncachedUs.map(async (ticker) => {
-      const res = await fetchOverseasHistoricalPrice(ticker, refDate, accessToken!, appKey, appSecret);
-      if (res !== null) {
-        result[ticker] = { refPrice: res.price, refDate: res.date };
-        await cache.setRefPrice(ticker, res.date, res.price, period);
-      } else {
-        result[ticker] = null;
-      }
-    }),
-  ]);
+    })
+  );
+
+  // ref 종가 자체가 없는 종목은 null로 마무리
+  for (const ticker of [...allKr, ...allUs]) {
+    const e = result[ticker];
+    if (!e || !e.refDate) result[ticker] = null;
+  }
 
   return NextResponse.json(result);
 }

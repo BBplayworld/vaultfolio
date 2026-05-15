@@ -160,7 +160,7 @@ export function RealEstateTab() {
 
   return (
     <div className="space-y-4 mt-2">
-      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
+      <div className={ASSET_THEME.summaryHeader}>
         <div>
           <p className="text-xs text-muted-foreground font-semibold">총 부동산 평가금액</p>
           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>

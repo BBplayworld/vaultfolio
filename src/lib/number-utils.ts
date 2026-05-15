@@ -38,7 +38,12 @@ export function formatShortCurrency(value: number): string {
   return `${sign}${formatNumberWithCommas(Math.floor(abs))}원`;
 }
 
-// 짧은 화폐 단위 포맷 (억, 만, 백만) - 소수점 2자리
+// 짧은 화폐 단위 포맷 (억, 만, 백만) - 소수점 2자리 (버림)
+const truncToFixed = (n: number, digits: number) => {
+  const factor = Math.pow(10, digits);
+  return (Math.floor(n * factor) / factor).toFixed(digits);
+};
+
 export function formatShortCurrencyDecimal(value: number): string {
   if (value === 0) return "0원";
 
@@ -46,18 +51,18 @@ export function formatShortCurrencyDecimal(value: number): string {
   const sign = value < 0 ? "-" : "";
 
   if (abs >= 100000000) {
-    // 1억 이상: 소수점 2자리
-    const formatted = (abs / 100000000).toFixed(2).replace(/\.?0+$/, "");
+    // 1억 이상: 소수점 2자리 (버림)
+    const formatted = truncToFixed(abs / 100000000, 2).replace(/\.?0+$/, "");
     return `${sign}${formatNumberWithCommas(formatted)}억원`;
   }
   if (abs >= 1000000) {
-    // 100만 이상: 백만 단위 소수점 2자리
-    const formatted = (abs / 1000000).toFixed(2).replace(/\.?0+$/, "");
+    // 100만 이상: 백만 단위 소수점 2자리 (버림)
+    const formatted = truncToFixed(abs / 1000000, 2).replace(/\.?0+$/, "");
     return `${sign}${formatted}백만원`;
   }
   if (abs >= 10000) {
-    // 1만 이상: 소수점 2자리
-    const formatted = (abs / 10000).toFixed(2).replace(/\.?0+$/, "");
+    // 1만 이상: 소수점 2자리 (버림)
+    const formatted = truncToFixed(abs / 10000, 2).replace(/\.?0+$/, "");
     return `${sign}${formatted}만원`;
   }
   return formatCurrency(value);

@@ -90,6 +90,49 @@ export function getEffectiveDateStr(type: "domestic" | "foreign" | "exchange"): 
   return yesterday.toISOString().split("T")[0];
 }
 
+// 미국 동부 서머타임(EDT) 여부 (Intl로 정확 판정)
+function isUsEasternDST(date: Date): boolean {
+  const tz = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", timeZoneName: "short" })
+    .formatToParts(date).find((p) => p.type === "timeZoneName")?.value ?? "";
+  return tz === "EDT";
+}
+
+/**
+ * 시장별 주식 캐시 슬롯 식별자.
+ * - 장중: "{effectiveDate}-H{HH}"  (KST 기준 1시간 단위로 갱신)
+ * - 장외: effectiveDate 그대로 (다음 장 개장 전까지 캐시 유효)
+ *
+ * 장중 시간 (KST):
+ * - domestic: 09:00 ~ 20:00
+ * - foreign DST: 22:30 ~ 익일 05:00
+ * - foreign STD: 23:30 ~ 익일 06:00
+ */
+export function getStockCacheSlot(type: "domestic" | "foreign"): string {
+  const effectiveDate = getEffectiveDateStr(type);
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
+
+  let openHHMM: number;
+  let closeHHMM: number;
+  if (type === "domestic") {
+    openHHMM = 900;
+    closeHHMM = 2000;
+  } else {
+    const isDST = isUsEasternDST(new Date());
+    openHHMM = isDST ? 2230 : 2330;
+    closeHHMM = isDST ? 500 : 600;
+  }
+
+  // 자정 넘김 케이스(해외) 포함 장중 판정
+  const isInSession = openHHMM < closeHHMM
+    ? hhmm >= openHHMM && hhmm < closeHHMM
+    : hhmm >= openHHMM || hhmm < closeHHMM;
+  if (!isInSession) return effectiveDate;
+
+  const hour = String(nowKST.getUTCHours()).padStart(2, "0");
+  return `${effectiveDate}-H${hour}`;
+}
+
 function secondsUntilMidnightKST(): number {
   const KST_OFFSET_MS = 9 * 3600 * 1000;
   const nowMs = Date.now();
@@ -407,7 +450,8 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setStock(cacheKey: string, result: StockPriceResult, _todayStr: string, ticker: string): Promise<void> {
     const fullKey = `finance:stock:${cacheKey}`;
-    await this.redis.set(fullKey, result, { ex: secondsUntilMidnightKST() });
+    // 슬롯 단위(1시간) 캐시 — 장중엔 매시간 갱신, 장외엔 다음 슬롯 전환까지 유지
+    await this.redis.set(fullKey, result, { ex: 3600 });
     // 같은 티커의 옛 날짜 키 정리 (best-effort)
     try {
       const pattern = `finance:stock:${ticker}-*`;
