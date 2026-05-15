@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import { STORAGE_KEYS } from "@/lib/local-storage";
+import { readTutorialStatus, writeTutorialStatus } from "@/lib/local-storage";
 
 export type TutorialStep = 0 | 1 | 2 | 3 | 4 | 5;
 export type StepStatus = "pending" | "done" | "skipped";
@@ -19,35 +19,7 @@ export interface TutorialState {
   showStep0: () => void;
 }
 
-type DoneKey = keyof typeof STORAGE_KEYS & `tutorialStep${TutorialStep}Done`;
-type SkippedKey = keyof typeof STORAGE_KEYS & `tutorialStep${TutorialStep}Skipped`;
-
-const DONE_KEYS: Record<TutorialStep, DoneKey> = {
-  0: "tutorialStep0Done",
-  1: "tutorialStep1Done",
-  2: "tutorialStep2Done",
-  3: "tutorialStep3Done",
-  4: "tutorialStep4Done",
-  5: "tutorialStep5Done",
-};
-
-const SKIPPED_KEYS: Record<TutorialStep, SkippedKey> = {
-  0: "tutorialStep0Skipped",
-  1: "tutorialStep1Skipped",
-  2: "tutorialStep2Skipped",
-  3: "tutorialStep3Skipped",
-  4: "tutorialStep4Skipped",
-  5: "tutorialStep5Skipped",
-};
-
 const ALL_STEPS: TutorialStep[] = [0, 1, 2, 3, 4, 5];
-
-function readStatus(step: TutorialStep): StepStatus {
-  if (typeof window === "undefined") return "pending";
-  if (localStorage.getItem(STORAGE_KEYS[DONE_KEYS[step]]) === "1") return "done";
-  if (localStorage.getItem(STORAGE_KEYS[SKIPPED_KEYS[step]]) === "1") return "skipped";
-  return "pending";
-}
 
 function nextPendingStep(statuses: Record<TutorialStep, StepStatus>): TutorialStep | null {
   for (const step of ALL_STEPS) {
@@ -68,11 +40,7 @@ export const tutorialStore = createStore<TutorialState>()((set, get) => ({
   initTutorial: () => {
     if (typeof window === "undefined") return;
 
-    const statuses = {} as Record<TutorialStep, StepStatus>;
-    for (const step of ALL_STEPS) {
-      statuses[step] = readStatus(step);
-    }
-
+    const statuses = readTutorialStatus();
     const activeStep = nextPendingStep(statuses);
     const isTutorialFinished = activeStep === null;
 
@@ -83,11 +51,9 @@ export const tutorialStore = createStore<TutorialState>()((set, get) => ({
     const { statuses } = get();
     if (statuses[step] !== "pending") return; // 이미 처리됨
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEYS[DONE_KEYS[step]], "1");
-    }
-
     const newStatuses = { ...statuses, [step]: "done" as StepStatus };
+    writeTutorialStatus(newStatuses);
+
     const activeStep = nextPendingStep(newStatuses);
     const isTutorialFinished = activeStep === null;
 
@@ -98,11 +64,9 @@ export const tutorialStore = createStore<TutorialState>()((set, get) => ({
     const { statuses } = get();
     if (statuses[step] !== "pending") return;
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEYS[SKIPPED_KEYS[step]], "1");
-    }
-
     const newStatuses = { ...statuses, [step]: "skipped" as StepStatus };
+    writeTutorialStatus(newStatuses);
+
     const activeStep = nextPendingStep(newStatuses);
     const isTutorialFinished = activeStep === null;
 

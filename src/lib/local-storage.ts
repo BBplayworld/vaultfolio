@@ -17,19 +17,8 @@ export const STORAGE_KEYS = {
   financeApiErrorCount: "secretasset_finance_api_error_count",
   stockMarkets:         "secretasset_stock_markets",
   exchangeHistory:      "secretasset_exchange_history",
-  // Tutorial step state (Step 0~5 done/skipped)
-  tutorialStep0Done:    "secretasset_tutorial_step0_done",
-  tutorialStep0Skipped: "secretasset_tutorial_step0_skipped",
-  tutorialStep1Done:    "secretasset_tutorial_step1_done",
-  tutorialStep1Skipped: "secretasset_tutorial_step1_skipped",
-  tutorialStep2Done:    "secretasset_tutorial_step2_done",
-  tutorialStep2Skipped: "secretasset_tutorial_step2_skipped",
-  tutorialStep3Done:    "secretasset_tutorial_step3_done",
-  tutorialStep3Skipped: "secretasset_tutorial_step3_skipped",
-  tutorialStep4Done:    "secretasset_tutorial_step4_done",
-  tutorialStep4Skipped: "secretasset_tutorial_step4_skipped",
-  tutorialStep5Done:    "secretasset_tutorial_step5_done",
-  tutorialStep5Skipped: "secretasset_tutorial_step5_skipped",
+  // Tutorial step state — 단일 키, 값은 { "0":"done", "1":"skipped", ... } 형태의 JSON
+  tutorialStatus:       "secretasset_tutorial_status",
 } as const;
 
 const LEGACY_KEYS = {
@@ -42,24 +31,43 @@ const LEGACY_KEYS = {
   financeApiErrorCount: "finance_api_error_count",
 } as const;
 
+// Tutorial status (Step 0~5 done/skipped/pending) — 단일 key·객체 값으로 통합
+export type TutorialStepNum = 0 | 1 | 2 | 3 | 4 | 5;
+export type TutorialStepStatus = "pending" | "done" | "skipped";
+export type TutorialStatusMap = Record<TutorialStepNum, TutorialStepStatus>;
+
+const TUTORIAL_DEFAULT: TutorialStatusMap = { 0: "pending", 1: "pending", 2: "pending", 3: "pending", 4: "pending", 5: "pending" };
+
+export function readTutorialStatus(): TutorialStatusMap {
+  if (typeof window === "undefined") return { ...TUTORIAL_DEFAULT };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.tutorialStatus);
+    if (!raw) return { ...TUTORIAL_DEFAULT };
+    const parsed = JSON.parse(raw) as Partial<Record<string, TutorialStepStatus>>;
+    const result: TutorialStatusMap = { ...TUTORIAL_DEFAULT };
+    for (const step of [0, 1, 2, 3, 4, 5] as TutorialStepNum[]) {
+      const v = parsed[String(step)];
+      if (v === "done" || v === "skipped" || v === "pending") result[step] = v;
+    }
+    return result;
+  } catch {
+    return { ...TUTORIAL_DEFAULT };
+  }
+}
+
+export function writeTutorialStatus(map: TutorialStatusMap): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEYS.tutorialStatus, JSON.stringify(map));
+}
+
 // 튜토리얼 전체 스킵 — done이 아닌 step만 skipped로 기록 후 store 재초기화
 export function skipAllTutorialSteps(): void {
   if (typeof window === "undefined") return;
-  const DONE_KEYS = [
-    STORAGE_KEYS.tutorialStep0Done, STORAGE_KEYS.tutorialStep1Done,
-    STORAGE_KEYS.tutorialStep2Done, STORAGE_KEYS.tutorialStep3Done,
-    STORAGE_KEYS.tutorialStep4Done, STORAGE_KEYS.tutorialStep5Done,
-  ] as const;
-  const SKIPPED_KEYS = [
-    STORAGE_KEYS.tutorialStep0Skipped, STORAGE_KEYS.tutorialStep1Skipped,
-    STORAGE_KEYS.tutorialStep2Skipped, STORAGE_KEYS.tutorialStep3Skipped,
-    STORAGE_KEYS.tutorialStep4Skipped, STORAGE_KEYS.tutorialStep5Skipped,
-  ] as const;
-  for (let i = 0; i < 6; i++) {
-    if (!localStorage.getItem(DONE_KEYS[i])) {
-      localStorage.setItem(SKIPPED_KEYS[i], "1");
-    }
+  const map = readTutorialStatus();
+  for (const step of [0, 1, 2, 3, 4, 5] as TutorialStepNum[]) {
+    if (map[step] !== "done") map[step] = "skipped";
   }
+  writeTutorialStatus(map);
 }
 
 import { runOneTimeMigrations } from "./one-time-migrations";

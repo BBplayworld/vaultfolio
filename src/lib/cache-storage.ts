@@ -70,67 +70,33 @@ const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
 
-/**
- * 시장 마감 시간 기준 유효 캐시 날짜 반환 (KST)
- * - foreign: 미국 장 마감 후 오전 07:00 KST 이후 → 오늘 날짜 유효
- * - domestic: 국내 장 마감 오후 16:00 KST 이후 → 오늘 날짜 유효
- * - exchange: 서울외국환중개 기준 오전 09:00 KST 이후 → 오늘 날짜 유효
- * 마감 전이면 어제 날짜를 반환 (전일 종가/환율이 최신)
- */
-export function getEffectiveDateStr(type: "domestic" | "foreign" | "exchange"): string {
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
+// 서버/클라이언트 공통 캐시 슬롯 유틸 (stock-cache-slot.ts에서 re-export)
+import { getEffectiveDateStr as _getEffectiveDateStr, getStockCacheSlot as _getStockCacheSlot } from "./stock-cache-slot";
+export { _getEffectiveDateStr as getEffectiveDateStr, _getStockCacheSlot as getStockCacheSlot };
+// 내부 사용을 위한 로컬 바인딩
+const getEffectiveDateStr = _getEffectiveDateStr;
 
-  const cutoff = type === "foreign" ? 700 : type === "domestic" ? 1600 : 900;
-  const todayStr = nowKST.toISOString().split("T")[0];
-  if (hhmm >= cutoff) return todayStr;
-
-  const yesterday = new Date(nowKST);
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  return yesterday.toISOString().split("T")[0];
-}
-
-// 미국 동부 서머타임(EDT) 여부 (Intl로 정확 판정)
-function isUsEasternDST(date: Date): boolean {
-  const tz = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", timeZoneName: "short" })
-    .formatToParts(date).find((p) => p.type === "timeZoneName")?.value ?? "";
-  return tz === "EDT";
-}
-
-/**
- * 시장별 주식 캐시 슬롯 식별자.
- * - 장중: "{effectiveDate}-H{HH}"  (KST 기준 1시간 단위로 갱신)
- * - 장외: effectiveDate 그대로 (다음 장 개장 전까지 캐시 유효)
- *
- * 장중 시간 (KST):
- * - domestic: 09:00 ~ 20:00
- * - foreign DST: 22:30 ~ 익일 05:00
- * - foreign STD: 23:30 ~ 익일 06:00
- */
-export function getStockCacheSlot(type: "domestic" | "foreign"): string {
-  const effectiveDate = getEffectiveDateStr(type);
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
-
-  let openHHMM: number;
-  let closeHHMM: number;
-  if (type === "domestic") {
-    openHHMM = 900;
-    closeHHMM = 2000;
-  } else {
-    const isDST = isUsEasternDST(new Date());
-    openHHMM = isDST ? 2230 : 2330;
-    closeHHMM = isDST ? 500 : 600;
+// JWT access_token의 exp(초)를 디코드. 형식 오류면 null.
+function getJwtExpMs(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadB64 + "=".repeat((4 - payloadB64.length % 4) % 4);
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    const payload = JSON.parse(json) as { exp?: number };
+    if (typeof payload.exp !== "number") return null;
+    return payload.exp * 1000;
+  } catch {
+    return null;
   }
+}
 
-  // 자정 넘김 케이스(해외) 포함 장중 판정
-  const isInSession = openHHMM < closeHHMM
-    ? hhmm >= openHHMM && hhmm < closeHHMM
-    : hhmm >= openHHMM || hhmm < closeHHMM;
-  if (!isInSession) return effectiveDate;
-
-  const hour = String(nowKST.getUTCHours()).padStart(2, "0");
-  return `${effectiveDate}-H${hour}`;
+// KIS 토큰이 현재 시각 기준 유효한지(만료 60초 전부터는 만료로 간주)
+function isKisTokenValid(token: string): boolean {
+  const expMs = getJwtExpMs(token);
+  if (expMs === null) return false;
+  return expMs - 60_000 > Date.now();
 }
 
 function secondsUntilMidnightKST(): number {
@@ -218,32 +184,26 @@ class FileCacheStorage implements ICacheStorage {
     try {
       if (data.STOCKS && todayStr) {
         // 유효 날짜(국내/해외 각각 다를 수 있음) 이외 STOCKS 항목 정리
+        // includes 사용: 슬롯 키(TSLA-2026-05-15-H22)도 유효 날짜를 포함하므로 유지
         const effectiveForeign = getEffectiveDateStr("foreign");
         const effectiveDomestic = getEffectiveDateStr("domestic");
         data.STOCKS = Object.fromEntries(
           Object.entries(data.STOCKS).filter(([key]) =>
-            key.endsWith(`-${effectiveForeign}`) || key.endsWith(`-${effectiveDomestic}`)
+            key.includes(`-${effectiveForeign}`) || key.includes(`-${effectiveDomestic}`)
           )
         );
       }
-      // KST 기준 오늘/어제 (호출자 todayStr 의존 제거 — setStock 등은 effectiveDate를 넘기므로 어제가 들어올 수 있음)
+      // KST 기준 오늘 (호출자 todayStr 의존 제거 — setStock 등은 effectiveDate를 넘기므로 어제가 들어올 수 있음)
       const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const todayKST = nowKST.toISOString().split("T")[0];
-      const yesterdayKSTDate = new Date(nowKST);
-      yesterdayKSTDate.setUTCDate(yesterdayKSTDate.getUTCDate() - 1);
-      const yesterdayKST = yesterdayKSTDate.toISOString().split("T")[0];
 
       // 날짜 불일치 EXCHANGE / KIS_TOKEN도 함께 정리
       const effectiveExchange = getEffectiveDateStr("exchange");
       if (data.EXCHANGE?.updated_at && data.EXCHANGE.updated_at !== effectiveExchange) {
         delete data.EXCHANGE;
       }
-      // KIS 토큰: 발급일 기준 2일(어제·오늘) 유지. 그보다 오래되면 정리
-      if (
-        data.KIS_TOKEN?.updated_at &&
-        data.KIS_TOKEN.updated_at !== todayKST &&
-        data.KIS_TOKEN.updated_at !== yesterdayKST
-      ) {
+      // KIS 토큰: JWT exp 기준 만료 시 정리
+      if (data.KIS_TOKEN?.access_token && !isKisTokenValid(data.KIS_TOKEN.access_token)) {
         delete data.KIS_TOKEN;
       }
       if (data.GEMINI_COUNT?.date && data.GEMINI_COUNT.date !== todayKST) {
@@ -299,17 +259,10 @@ class FileCacheStorage implements ICacheStorage {
 
   async getKisToken(_todayStr: string): Promise<string | null> {
     const kisToken = this.readFinanceCache().KIS_TOKEN;
-    if (!kisToken?.updated_at) return null;
-    // 발급일 기준 2일(어제·오늘) 이내면 사용
-    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const todayKST = nowKST.toISOString().split("T")[0];
-    const yesterdayKSTDate = new Date(nowKST);
-    yesterdayKSTDate.setUTCDate(yesterdayKSTDate.getUTCDate() - 1);
-    const yesterdayKST = yesterdayKSTDate.toISOString().split("T")[0];
-    if (kisToken.updated_at === todayKST || kisToken.updated_at === yesterdayKST) {
-      return kisToken.access_token;
-    }
-    return null;
+    if (!kisToken?.access_token) return null;
+    // JWT exp 기반: 실제 만료 시각이 남아 있을 때만 재사용
+    if (!isKisTokenValid(kisToken.access_token)) return null;
+    return kisToken.access_token;
   }
 
   async setKisToken(token: string, todayStr: string): Promise<void> {
@@ -472,20 +425,21 @@ class UpstashCacheStorage implements ICacheStorage {
     }
   }
 
-  async getKisToken(todayStr: string): Promise<string | null> {
-    const data = await this.redis.get<{ access_token: string }>(`finance:kis_token:${todayStr}`);
-    return data?.access_token ?? null;
+  async getKisToken(_todayStr: string): Promise<string | null> {
+    const data = await this.redis.get<{ access_token: string }>(`finance:kis_token`);
+    if (!data?.access_token) return null;
+    if (!isKisTokenValid(data.access_token)) return null;
+    return data.access_token;
   }
 
   async setKisToken(token: string, todayStr: string): Promise<void> {
-    // 전일 키 명시 삭제 (24h TTL 만료 전 즉시 정리)
-    const prevDate = new Date(Date.now() + 9 * 3600 * 1000 - 86400 * 1000)
-      .toISOString().split("T")[0];
-    await this.redis.del(`finance:kis_token:${prevDate}`);
+    // JWT exp 기준 TTL: 만료 시각까지 남은 초 (만료된 토큰은 저장하지 않음)
+    const expMs = getJwtExpMs(token);
+    const ttlSec = expMs ? Math.max(60, Math.floor((expMs - Date.now()) / 1000)) : 86400;
     await this.redis.set(
-      `finance:kis_token:${todayStr}`,
+      `finance:kis_token`,
       { access_token: token, updated_at: todayStr },
-      { ex: 86400 }
+      { ex: ttlSec }
     );
   }
 

@@ -65,6 +65,32 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    // 2026-05-16: 튜토리얼 step별 12개 키 → 단일 객체 키로 통합
+    // secretasset_tutorial_step{0..5}_done / _skipped → secretasset_tutorial_status
+    id: "2026-05-16-merge-tutorial-status",
+    run: () => {
+      const TARGET = "secretasset_tutorial_status";
+      const existing = localStorage.getItem(TARGET);
+      const map: Record<string, "pending" | "done" | "skipped"> = existing
+        ? (() => { try { return JSON.parse(existing); } catch { return {}; } })()
+        : {};
+      for (let step = 0; step <= 5; step++) {
+        const doneKey = `secretasset_tutorial_step${step}_done`;
+        const skippedKey = `secretasset_tutorial_step${step}_skipped`;
+        if (localStorage.getItem(doneKey) === "1") {
+          map[String(step)] = "done";
+        } else if (localStorage.getItem(skippedKey) === "1") {
+          if (map[String(step)] !== "done") map[String(step)] = "skipped";
+        } else if (map[String(step)] === undefined) {
+          map[String(step)] = "pending";
+        }
+        localStorage.removeItem(doneKey);
+        localStorage.removeItem(skippedKey);
+      }
+      localStorage.setItem(TARGET, JSON.stringify(map));
+    },
+  },
 ];
 
 export function runOneTimeMigrations(): void {

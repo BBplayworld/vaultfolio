@@ -6,6 +6,7 @@ import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateSto
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
+import { getStockCacheSlot } from "@/lib/stock-cache-slot";
 import { fetchProfitRef, recordTodayExchangeRate } from "@/lib/profit-utils";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
@@ -241,21 +242,25 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Step 3. 주식 현재가 배치 조회
-  // - outdated 판단: s.baseDate !== today (오늘자 미갱신 항목만 대상)
+  // - outdated 판단: s.baseDate !== currentSlot (장중 1시간 단위, 장외 날짜 단위)
   // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 1초 지연
   // - 갱신 완료 시 toast 알림
   const syncTodayStockPrices = useCallback(async (data: AssetData): Promise<AssetData> => {
-    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
-    // 동일 ticker는 broker별로 중복될 수 있으므로 ticker 단위로 dedup
-    const seenTickers = new Set<string>();
-    const outdatedStocks = data.stocks
-      .filter(s => {
-        const ticker = normalizeTicker(s);
-        if (!ticker || s.baseDate === todayStr) return false;
-        if (seenTickers.has(ticker)) return false;
-        seenTickers.add(ticker);
-        return true;
-      })
+    // 장중에는 1시간 슬롯("2026-05-15-H14"), 장외에는 날짜("2026-05-15")를 반환
+    const slotDomestic = getStockCacheSlot("domestic");
+    const slotForeign = getStockCacheSlot("foreign");
+    // ticker 단위 outdated 판정: 같은 ticker 엔트리 중 하나라도 currentSlot과 어긋나면 그 ticker 전체를 갱신 대상에 포함
+    // (broker별 엔트리가 서로 다른 baseDate를 가진 채 시작해도 한 번에 일관되게 동기화)
+    const outdatedTickers = new Map<string, Stock>();
+    for (const s of data.stocks) {
+      const ticker = normalizeTicker(s);
+      if (!ticker) continue;
+      const isForeignStock = s.category === "foreign";
+      const currentSlot = isForeignStock ? slotForeign : slotDomestic;
+      if (s.baseDate === currentSlot) continue;
+      if (!outdatedTickers.has(ticker)) outdatedTickers.set(ticker, s);
+    }
+    const outdatedStocks = Array.from(outdatedTickers.values())
       .sort((a, b) => (a.category === "foreign" ? -1 : 1) - (b.category === "foreign" ? -1 : 1));
 
     const BATCH_SIZE = 3;
@@ -296,7 +301,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return data;
     }
 
-    console.log(`[Sync] 주식 현재가 갱신 대상: ${outdatedStocks.length}개`);
     let current = data;
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
@@ -319,10 +323,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             const ticker = normalizeTicker(stock);
             const result = stocksData[ticker];
             if (result?.price !== undefined && result?.updated_at) {
+              const isForeignStock = stock.category === "foreign";
               return {
                 ...stock,
                 currentPrice: result.price,
-                baseDate: result.updated_at,
+                baseDate: isForeignStock ? slotForeign : slotDomestic,
                 name: resolveStockName(stock.category, result.name, stock.name),
               };
             }
