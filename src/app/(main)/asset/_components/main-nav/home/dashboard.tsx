@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatShortCurrencyDecimal } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
+import { DataSourceBadge } from "../data-source-badge";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -230,7 +231,12 @@ function DailyNetAssetTrend() {
 
   const maxVal = Math.max(...snapshots.map((s) => s.netAsset));
   const minVal = Math.min(...snapshots.map((s) => s.netAsset));
-  const range = maxVal - minVal || 1;
+  // 베이스라인을 최소값보다 약간 아래로 — 최소값 막대도 보이게 + 작은 변동 시각 대비 강화
+  const baseVal = minVal - (maxVal - minVal) * 0.15;
+  const range = maxVal - baseVal || 1;
+  // 막대 높이 범위 확장: 8 ~ 72px (정확한 비례, 반올림 X)
+  const MIN_BAR = 8;
+  const MAX_BAR = 72;
 
   const last = snapshots[snapshots.length - 1];
   const secondLast = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
@@ -240,7 +246,10 @@ function DailyNetAssetTrend() {
 
   return (
     <div className="rounded-lg border px-4 py-3 space-y-2.5" style={{ borderColor: MAIN_PALETTE[0] + "33", backgroundColor: MAIN_PALETTE[0] + "08" }}>
-      <p className="text-xs font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+        <DataSourceBadge kind="closing" />
+      </div>
       <div className="flex gap-1">
         {snapshots.map((snap, i) => {
           const prev = i > 0 ? snapshots[i - 1].netAsset : null;
@@ -248,7 +257,8 @@ function DailyNetAssetTrend() {
           const pct = prev !== null && prev > 0 ? (diff / prev) * 100 : 0;
           const isBig = prev !== null && pct >= 5;
           const isLast = i === snapshots.length - 1;
-          const heightPx = range > 0 ? Math.round(((snap.netAsset - minVal) / range) * 42 + 14) : 56;
+          // 값에 정확히 비례한 높이 (반올림 없이) — 어제보다 작으면 막대도 무조건 더 낮음
+          const heightPx = MIN_BAR + ((snap.netAsset - baseVal) / range) * (MAX_BAR - MIN_BAR);
           const barColor = isBig ? MAIN_PALETTE[4] : isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
           const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(snap.date).getDay()];
           const label = `${snap.date.slice(5)} (${dow})`;
@@ -259,9 +269,9 @@ function DailyNetAssetTrend() {
                 <span className="text-[9px] font-bold animate-pulse leading-none mb-0.5" style={{ color: MAIN_PALETTE[4] }}>▲{pct.toFixed(0)}%</span>
               )}
               {!isBig && <span className="text-[9px] leading-none mb-0.5 invisible">x</span>}
-              <div className="w-full flex flex-col items-center" style={{ height: 72 }}>
+              <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
-                <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrency(snap.netAsset)}</span>
+                <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div
                   className="w-full rounded-t-sm transition-all"
                   style={{ height: heightPx, backgroundColor: barColor, boxShadow: isBig ? `0 0 6px ${MAIN_PALETTE[4]}88` : undefined }}
@@ -368,7 +378,10 @@ export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetai
                 <div className="space-y-4">
                   <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
                     <div>
-                      <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                        <DataSourceBadge kind="realtime" />
+                      </div>
                       <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
                       <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
                     </div>
@@ -463,7 +476,7 @@ export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetai
 
                   {totalLiability > 0 && (
                     <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between">
+                      <div className={ASSET_THEME.summaryHeader}>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground">부채 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</p>

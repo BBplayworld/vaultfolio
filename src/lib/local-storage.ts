@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   shareOwnerId:         "secretasset_share_owner_id",
   financeApiErrorCount: "secretasset_finance_api_error_count",
   stockMarkets:         "secretasset_stock_markets",
+  exchangeHistory:      "secretasset_exchange_history",
   // Tutorial step state (Step 0~5 done/skipped)
   tutorialStep0Done:    "secretasset_tutorial_step0_done",
   tutorialStep0Skipped: "secretasset_tutorial_step0_skipped",
@@ -61,6 +62,8 @@ export function skipAllTutorialSteps(): void {
   }
 }
 
+import { runOneTimeMigrations } from "./one-time-migrations";
+
 export function migrateStorageKeys(): void {
   if (typeof window === "undefined") return;
   const pairs: Array<[string, string]> = [
@@ -90,6 +93,7 @@ export function migrateStorageKeys(): void {
   }
 
   cleanExpiredNoticeKeys();
+  runOneTimeMigrations();
 }
 
 export function cleanExpiredNoticeKeys(): void {

@@ -27,6 +27,9 @@ export const ASSET_THEME = {
   profit: "text-rose-600 dark:text-rose-400",
   loss: "text-blue-600 dark:text-blue-400",
 
+  // ===== 자산 탭 요약 헤더 (총 평가금액 박스) =====
+  summaryHeader: "rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between",
+
   // ===== 자산 관리 카드 공통 스타일 =====
   cardHeader: "flex flex-wrap items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
   cardActions: "flex flex-row gap-1 sm:gap-2 flex-shrink-0 ml-auto",

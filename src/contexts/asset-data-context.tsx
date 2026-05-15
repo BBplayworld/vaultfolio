@@ -6,6 +6,8 @@ import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateSto
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
+import { fetchProfitRef, recordTodayExchangeRate } from "@/lib/profit-utils";
+import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
@@ -102,6 +104,42 @@ const notify = {
   error: (msg: string) => { dismissStaleToasts(); toast.error(msg); console.error(`[ERROR] ${msg}`); },
   info: (msg: string) => { dismissStaleToasts(); toast.info(msg); console.log(`[INFO] ${msg}`); },
 };
+
+// 순자산·항목별 합계 공통 계산기
+// getAssetSummary와 saveSnapshots가 동일 수식을 공유하도록 모듈 스코프 헬퍼로 분리
+export interface NetAssetBreakdown {
+  stockValue: number;
+  cryptoValue: number;
+  cashValue: number;
+  realEstateValue: number;
+  loanBalance: number;
+  tenantDepositTotal: number;
+  financialAsset: number;
+  totalValue: number;
+  netAsset: number;
+}
+
+export function computeNetAsset(
+  data: AssetData,
+  rates: { USD: number; JPY: number },
+  priceOf: (s: Stock) => number = (s) => s.currentPrice,
+): NetAssetBreakdown {
+  const mul = (currency?: string) => {
+    if (currency === "USD") return rates.USD;
+    if (currency === "JPY") return rates.JPY / 100; // 100엔당
+    return 1;
+  };
+  const stockValue = data.stocks.reduce((sum, s) => sum + s.quantity * priceOf(s) * mul(s.currency), 0);
+  const cryptoValue = data.crypto.reduce((sum, c) => sum + c.quantity * c.currentPrice, 0);
+  const cashValue = data.cash ? data.cash.reduce((sum, c) => sum + c.balance * mul(c.currency), 0) : 0;
+  const realEstateValue = data.realEstate.reduce((sum, r) => sum + r.currentValue, 0);
+  const loanBalance = data.loans.reduce((sum, l) => sum + l.balance, 0);
+  const tenantDepositTotal = data.realEstate.reduce((sum, r) => sum + (r.tenantDeposit ?? 0), 0);
+  const financialAsset = stockValue + cryptoValue + cashValue;
+  const totalValue = realEstateValue + financialAsset;
+  const netAsset = totalValue - loanBalance - tenantDepositTotal;
+  return { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
+}
 
 // Short URL(s:KEY_LOCALKEY)을 전체 토큰으로 변환하는 순수 유틸
 // state·hook 의존성 없음 → 모듈 스코프에 정의
@@ -306,25 +344,33 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 오늘자 일별·월별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
   // 일별: 이번 달 한 달치만 유지, 월별: 올해 12개월치 유지
-  const saveSnapshots = useCallback((latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
+  // 주식가치는 종가(ref) 기준 — 실시간이 아닌 기준 영업일 종가로 평가
+  const saveSnapshots = useCallback(async (latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = now.toISOString().split("T")[0];
     const currentMonth = todayStr.substring(0, 7);
     const currentYear = currentMonth.substring(0, 4);
 
-    const getMultiplier = (currency?: string) => {
-      if (currency === "USD") return latestRates.USD;
-      if (currency === "JPY") return latestRates.JPY / 100;
-      return 1;
+    // 종가 기준 주식가치: /api/finance/profit daily의 refPrice 사용
+    // ref 종가 조회 실패 시 해당 종목은 실시간 currentPrice로 폴백
+    const eligibleStocks = latestData.stocks.filter(s => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0);
+    const tickerList = Array.from(new Set(eligibleStocks.map(normalizeTicker).filter(Boolean))).join(",");
+    let refMap: ProfitRefResponse = {};
+    if (tickerList) {
+      try {
+        refMap = await fetchProfitRef(tickerList, "daily");
+      } catch { /* 무시: 실패 시 실시간으로 폴백 */ }
+    }
+
+    // 공통 헬퍼로 동일 수식 사용 — 단가 함수만 다름
+    // refDate는 getDailyClosingRefDates에서 시장별로 안전하게 산출됨
+    // (해외=항상 어제, 국내=장후면 오늘/장중이면 어제) → ref 그대로 사용
+    const closePriceOf = (s: Stock): number => {
+      const t = normalizeTicker(s);
+      const entry = t ? refMap[t] : null;
+      return entry?.refPrice ?? s.currentPrice;
     };
-    const stockValue = latestData.stocks.reduce((sum, s) => sum + s.quantity * s.currentPrice * getMultiplier(s.currency), 0);
-    const cryptoValue = latestData.crypto.reduce((sum, c) => sum + c.quantity * c.currentPrice, 0);
-    const cashValue = latestData.cash.reduce((sum, c) => sum + c.balance * getMultiplier(c.currency), 0);
-    const realEstateValue = latestData.realEstate.reduce((sum, r) => sum + r.currentValue, 0);
-    const loanBalance = latestData.loans.reduce((sum, l) => sum + l.balance, 0);
-    const tenantDepositTotal = latestData.realEstate.reduce((sum, r) => sum + (r.tenantDeposit ?? 0), 0);
-    const financialAsset = stockValue + cryptoValue + cashValue;
-    const netAsset = realEstateValue + financialAsset - loanBalance - tenantDepositTotal;
+    const { financialAsset, netAsset } = computeNetAsset(latestData, latestRates, closePriceOf);
     const dayOfWeek = new Date(todayStr).getDay();
 
     try {
@@ -338,8 +384,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       // 평일 기록 + 최초 기록(allDaily 비어있음)일 때는 일요일에도 기록
       if (dayOfWeek !== 0 || allDaily.length === 0) {
         const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
-        filteredDaily.push({ date: todayStr, netAsset, financialAsset });
+        filteredDaily.push({
+          date: todayStr,
+          netAsset,
+          financialAsset,
+        });
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
+        // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
+        recordTodayExchangeRate(latestRates);
       }
 
       // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
@@ -349,6 +401,18 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       filteredMonthly.push({ month: currentMonth, netAsset, financialAsset });
       filteredMonthly.sort((a, b) => a.month.localeCompare(b.month));
       localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(filteredMonthly));
+
+      // ── 년도별: 올해 항목 종가 기준 업서트 ──
+      const currentYearNum = parseInt(currentYear);
+      setAssetData(prev => {
+        const others = prev.yearlyNetAssets.filter(y => y.year !== currentYearNum);
+        const updated = [...others, { year: currentYearNum, netAsset, note: "자동" }]
+          .sort((a, b) => a.year - b.year);
+        const next = { ...prev, yearlyNetAssets: updated };
+        saveAssetData(next);
+        return next;
+      });
+
       setSnapshotVersion(v => v + 1);
     } catch (e) {
       console.error("[Snapshot] 저장 실패", e);
@@ -396,7 +460,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     if (!skipSnapshots) {
       const finalData = await syncTodayStockPrices(data);
-      saveSnapshots(finalData, exchangeRatesRef.current);
+      await saveSnapshots(finalData, exchangeRatesRef.current);
     }
   }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
@@ -414,7 +478,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const doSync = async () => {
         await syncTodayExchangeRate();
         const finalData = await syncTodayStockPrices(assetData);
-        saveSnapshots(finalData, exchangeRatesRef.current);
+        await saveSnapshots(finalData, exchangeRatesRef.current);
       };
       void doSync();
     }
@@ -805,7 +869,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return 1;
     };
 
-    const realEstateValue = assetData.realEstate.reduce((sum, item) => sum + item.currentValue, 0);
+    // 합산값은 공통 헬퍼 사용 — saveSnapshots와 동일 수식 보장
+    const breakdown = computeNetAsset(assetData, exchangeRates);
+    const { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, totalValue, netAsset } = breakdown;
+
     const realEstateCost = assetData.realEstate.reduce((sum, item) => sum + item.purchasePrice, 0);
     const realEstateProfit = realEstateValue - realEstateCost;
 
@@ -814,7 +881,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return currency === "JPY" ? purchaseExchangeRate / 100 : purchaseExchangeRate;
     };
 
-    const stockValue = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.currentPrice * getMultiplier(item.currency), 0);
     const stockCost = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.averagePrice * getMultiplier(item.currency), 0);
     const stockProfit = stockValue - stockCost;
 
@@ -827,20 +893,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       }, 0);
     const stockFxProfit = stockProfit + stockCurrencyGain;
 
-    const cryptoValue = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.currentPrice, 0); // 코인은 원화 기준으로 입력
     const cryptoCost = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
     const cryptoProfit = cryptoValue - cryptoCost;
 
-    const cashValue = assetData.cash ? assetData.cash.reduce((sum, item) => sum + item.balance * getMultiplier(item.currency), 0) : 0;
-
-    const loanBalance = assetData.loans.reduce((sum, item) => sum + item.balance, 0);
-    const tenantDepositTotal = assetData.realEstate.reduce((sum, item) => sum + (item.tenantDeposit || 0), 0);
-
-    const totalValue = realEstateValue + stockValue + cryptoValue + cashValue;
     const totalCost = realEstateCost + stockCost + cryptoCost + cashValue; // 현금은 원금=현재가로 취급
     const totalProfit = totalValue - totalCost;
     const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
-    const netAsset = totalValue - loanBalance - tenantDepositTotal;
 
     return {
       totalValue,

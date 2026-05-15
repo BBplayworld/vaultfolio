@@ -15,13 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { DataSourceBadge } from "../../data-source-badge";
 import { truncateName } from "@/lib/utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, mergeStockGroup } from "../asset-detail-tabs";
-import { fetchProfitRef } from "@/lib/profit-utils";
+import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
+import { fetchProfitRef, computeDailyStockProfit } from "@/lib/profit-utils";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 
@@ -147,7 +148,8 @@ export function useFilteredStockData(activeCategory: string) {
   const stocksWithTicker = assetData.stocks.filter(
     (s) => s.ticker && s.category !== "unlisted" && s.currentPrice > 0,
   );
-  const tickerList = stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean).join(",");
+  // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(profit-chart 등)와 동일한 캐시 키 보장
+  const tickerList = Array.from(new Set(stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean))).sort().join(",");
 
   const { data: refData } = useQuery({
     queryKey: ["profit", "daily", tickerList],
@@ -188,9 +190,15 @@ export function useFilteredStockData(activeCategory: string) {
   const totalProfit = totalValue - totalCost;
   const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
+  const groupByTickerOnly = activeCategory === "all";
+  const groupKeyOf = (s: Stock) =>
+    groupByTickerOnly
+      ? (s.ticker ? `t:${s.ticker}` : s.id)
+      : (s.ticker ? `${s.ticker}:${s.category}` : s.id);
+
   const groupedStocks = useMemo(
-    () => groupStocksByTickerCategory(filteredStocks),
-    [filteredStocks],
+    () => groupByTickerOnly ? groupStocksByTicker(filteredStocks) : groupStocksByTickerCategory(filteredStocks),
+    [filteredStocks, groupByTickerOnly],
   );
 
   // 그룹 대표(병합) 목록 — KRW 환산 금액 기준 재정렬
@@ -198,7 +206,7 @@ export function useFilteredStockData(activeCategory: string) {
     const seen = new Set<string>();
     const reps: Stock[] = [];
     for (const s of filteredStocks) {
-      const key = s.ticker ? `${s.ticker}:${s.category}` : s.id;
+      const key = groupKeyOf(s);
       if (seen.has(key)) continue;
       seen.add(key);
       reps.push(mergeStockGroup(groupedStocks.get(key) ?? [s]));
@@ -219,39 +227,19 @@ export function useFilteredStockData(activeCategory: string) {
     color: barColors[idx],
   }));
 
-  // 일별 수익 계산 (profit-chart의 daily 로직과 동일)
-  const { dailyProfit, dailyProfitRate } = useMemo(() => {
-    if (!refData) return { dailyProfit: null, dailyProfitRate: null };
-    let profitSum = 0;
-    let refSum = 0;
-    let hasAny = false;
-    for (const st of filteredStocks) {
-      if (!st.ticker || st.category === "unlisted" || !st.currentPrice) continue;
-      const ticker = normalizeTicker(st);
-      const ref = refData[ticker];
-      if (!ref) continue;
-      const rate = (st.currency === "USD" && !DOMESTIC_CATEGORIES.has(st.category))
-        ? exchangeRates.USD : 1;
-      const currentValue = st.currentPrice * st.quantity * rate;
-      const refValue = ref.refPrice * st.quantity * rate;
-      profitSum += currentValue - refValue;
-      refSum += refValue;
-      hasAny = true;
-    }
-    if (!hasAny) return { dailyProfit: null, dailyProfitRate: null };
-    return {
-      dailyProfit: profitSum,
-      dailyProfitRate: refSum > 0 ? (profitSum / refSum) * 100 : 0,
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refData, filteredStocks, exchangeRates]);
+  // 일별 수익 계산 — profit-chart daily와 동일 결과 (공통 헬퍼 사용)
+  // 항상 전체 주식 기준 (activeCategory 무관) → profit-chart와 일치
+  const { dailyProfit, dailyProfitRate } = useMemo(
+    () => computeDailyStockProfit(assetData.stocks, refData, exchangeRates),
+    [refData, assetData.stocks, exchangeRates],
+  );
 
-  return { filteredStocks, groupedStocks, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
+  return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
-export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabel, maskFn, screenshotMode = false }: StockRowData & {
-  categoryLabel?: string;
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false }: StockRowData & {
+  categoryLabels?: string[];
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
 }) {
@@ -268,7 +256,9 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <span className="hidden sm:inline">{stock.name}</span>
           </span>
           {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0 sm:ml-1">{stock.ticker}</span>}
-          {categoryLabel && <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{categoryLabel}</Badge>}
+          {categoryLabels?.map((label) => (
+            <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{label}</Badge>
+          ))}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
           <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
@@ -313,9 +303,12 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   const fmt = maskFn ?? formatShortCurrency;
   const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-3 flex items-center justify-between">
+    <div className={ASSET_THEME.summaryHeader}>
       <div className="min-w-fit flex-1">
-        <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs text-muted-foreground font-semibold">총 주식 평가금액</p>
+          {!screenshotMode && <DataSourceBadge kind="realtime" />}
+        </div>
         <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{fmt(totalValue)}</p>
         <p className="text-sm text-foreground">{fmtFull(totalValue)}</p>
       </div>
@@ -333,7 +326,10 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
         </div>
         {dailyProfit != null && dailyProfitRate != null && (
           <div className="border-t border-border/40">
-            <p className="text-xs text-muted-foreground">전일 대비</p>
+            <div className="flex items-center gap-1.5 justify-end">
+              <p className="text-xs text-muted-foreground">전일 대비</p>
+              {!screenshotMode && <DataSourceBadge kind="closing" />}
+            </div>
             <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(dailyProfit)}`}>
               {!hideAmounts && (dailyProfit >= 0 ? "+" : "")}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
             </p>
@@ -358,7 +354,7 @@ interface StockCardProps {
   linkedLoans: Loan[];
   onDelete: (id: string) => void;
   onDeleteGroup?: (ids: string[]) => void;
-  getCategoryLabel: (cat: string) => string;
+  categoryLabels: string[];
   defaultOpen?: boolean;
   onFirstInteract?: () => void;
   isFirstVisit?: boolean;
@@ -545,7 +541,10 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
           {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
         </div>
         <div>
-          <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
+          <div className="flex items-center gap-1.5">
+            <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
+            <DataSourceBadge kind="realtime" />
+          </div>
           <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
           {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
         </div>
@@ -594,7 +593,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
               <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
-              <div className="flex flex-col items-end ml-auto shrink-0">
+              <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
                 <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatShortCurrency(Math.round(m.currentVal))}</span>
                 <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
                   {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
@@ -626,7 +625,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
   );
 }
 
-function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, getCategoryLabel, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap }: StockCardProps) {
+function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [splitOpen, setSplitOpen] = useState(false);
   const hasSubItems = !!subItems && subItems.length > 0;
@@ -644,7 +643,7 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>
               <button className={ASSET_THEME.cardTriggerButton}>
-                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabel={getCategoryLabel(stock.category)} />
+                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} />
                 <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
@@ -794,21 +793,6 @@ export function StockCategorySection({
             <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
               <p className="text-muted-foreground text-sm">{emptyMessage}</p>
             </div>
-          ) : activeCategory === "all" ? (
-            <div className="space-y-4 mt-8">
-              {CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                const catStocks = filteredStocks.filter((s) => s.category === cat.value);
-                if (catStocks.length === 0) return null;
-                return (
-                  <div key={cat.value}>
-                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                    <div className="space-y-2">
-                      {catStocks.map((s) => renderItem(s, filteredStocks[0]?.id === s.id, colorOf(s)))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           ) : (
             <div className="space-y-2 mt-8">
               {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
@@ -849,7 +833,7 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
-  const { groupedStocks, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
+  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
     useFilteredStockData(activeCategory);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -888,10 +872,11 @@ export function StockTab() {
         barColors={barColors}
         screenshotMode={false}
         renderItem={(stock, isFirst, color) => {
-          const groupKey = stock.ticker ? `${stock.ticker}:${stock.category}` : stock.id;
+          const groupKey = groupKeyOf(stock);
           const groupItems = groupedStocks.get(groupKey) ?? [stock];
           const m = computeStockMetrics(stock, exchangeRates, totalValue);
           const linkedLoans = groupItems.flatMap((s) => assetData.loans.filter((l) => l.linkedStockId === s.id));
+          const categoryLabels = Array.from(new Set(groupItems.map((s) => s.category))).map(getCategoryLabel);
           return (
             <StockCard
               key={groupKey}
@@ -908,7 +893,7 @@ export function StockTab() {
               linkedLoans={linkedLoans}
               onDelete={handleDelete}
               onDeleteGroup={handleDeleteGroup}
-              getCategoryLabel={getCategoryLabel}
+              categoryLabels={categoryLabels}
               defaultOpen={isFirst && !hasInteracted}
               onFirstInteract={isFirst && !hasInteracted ? handleFirstInteract : undefined}
               isFirstVisit={isFirst && !hasInteracted}

@@ -59,6 +59,18 @@ export function groupStocksByTickerCategory(stocks: Stock[]): Map<string, Stock[
   return map;
 }
 
+// ticker 단독 기준 그룹핑. 전체 탭에서 카테고리 무시하고 종목 단위로 합칠 때 사용.
+export function groupStocksByTicker(stocks: Stock[]): Map<string, Stock[]> {
+  const map = new Map<string, Stock[]>();
+  for (const s of stocks) {
+    const key = s.ticker ? `t:${s.ticker}` : s.id;
+    const arr = map.get(key);
+    if (arr) arr.push(s);
+    else map.set(key, [s]);
+  }
+  return map;
+}
+
 // 그룹의 합산 대표 Stock 생성 (가상 객체, 저장 안 함)
 export function mergeStockGroup(items: Stock[]): Stock {
   if (items.length === 1) return items[0];

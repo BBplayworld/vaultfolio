@@ -33,6 +33,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
+import { DataSourceBadge } from "../data-source-badge";
 
 const NET_COLOR = "#ffffffff";
 
@@ -205,7 +206,7 @@ function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
 
 
 export function YearlyNetAssetChart() {
-  const { assetData, getAssetSummary, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
+  const { assetData, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
   const openAddDialog = useCallback(() => {
@@ -218,7 +219,6 @@ export function YearlyNetAssetChart() {
     return () => window.removeEventListener("trigger-add-yearly-net-asset", openAddDialog);
   }, [openAddDialog]);
 
-  const summary = getAssetSummary();
   const dailySnapshots = useDailySnapshots(snapshotVersion);
   const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
 
@@ -242,10 +242,8 @@ export function YearlyNetAssetChart() {
 
   const currentYear = new Date().getFullYear();
 
-  const allYearlyData = [
-    ...assetData.yearlyNetAssets,
-    { year: currentYear, netAsset: summary.netAsset, note: "현재" },
-  ].sort((a, b) => a.year - b.year);
+  // 올해 항목은 saveSnapshots에서 종가 기준으로 자동 upsert됨
+  const allYearlyData = [...assetData.yearlyNetAssets].sort((a, b) => a.year - b.year);
   const last5YearsData = allYearlyData.slice(-5);
 
   const monthlyData = monthlySnapshots.map(s => ({
@@ -272,7 +270,10 @@ export function YearlyNetAssetChart() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>순자산 변화</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>순자산 변화</CardTitle>
+                <DataSourceBadge kind="closing" />
+              </div>
               <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
