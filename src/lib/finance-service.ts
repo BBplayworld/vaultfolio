@@ -137,9 +137,11 @@ export async function fetchStocksFromKisOverseas(
           }
         );
 
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          console.error(`[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]: HTTP ${res.status} ${res.statusText}`);
+          console.error(
+            `[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
+          );
           continue;
         }
         if (!isKisResponseOk(data, `해외주식 ${ticker}/${prdtTypeCd}`)) continue;
@@ -220,11 +222,13 @@ export async function fetchStocksFromKorea(
           cache: "no-store",
         }
       );
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        console.error(`[KIS 국내주식 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText}`);
+        console.error(
+          `[KIS 국내주식 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
+        );
         continue;
       }
-      const data = await res.json();
       if (!isKisResponseOk(data, `국내주식 ${ticker}`)) continue;
       const output = data.output as Record<string, string> | undefined;
       const price = parseFloat(output?.thdt_clpr ?? "0");
