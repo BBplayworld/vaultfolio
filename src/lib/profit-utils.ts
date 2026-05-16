@@ -105,10 +105,10 @@ export function getProfitCacheKey(tickers: string, period: ProfitPeriod): string
   if (period === "monthly") return `${STORAGE_KEY_PREFIXES.profit}monthly:${todayStr.slice(0, 7)}:${tickers}`;
   if (period === "yearly") return `${STORAGE_KEY_PREFIXES.profit}yearly:${todayStr.slice(0, 4)}:${tickers}`;
   if (period === "daily") {
-    // 시장별 기준일을 키에 포함 → 장중/장후 전환 시 자동 캐시 무효화
+    // KR refDate만 키에 포함 → KR 컷오프(16:00 KST) 전후 자동 무효화
+    // us_refDate는 KST 자정에 kr_refDate와 함께 변경되므로 키에서 빠져도 동기화 동일
     const kr = getDailyClosingRefDates("domestic").refDate;
-    const us = getDailyClosingRefDates("foreign").refDate;
-    return `${STORAGE_KEY_PREFIXES.profit}daily:${kr}_${us}:${tickers}`;
+    return `${STORAGE_KEY_PREFIXES.profit}daily:${kr}:${tickers}`;
   }
   return `${STORAGE_KEY_PREFIXES.profit}${period}:${todayStr}:${tickers}`;
 }
@@ -161,15 +161,82 @@ export function getRatesForDate(
   return { USD: found.USD, JPY: found.JPY };
 }
 
-export async function fetchProfitRef(tickers: string, period: ProfitPeriod): Promise<ProfitRefResponse> {
+// 현재가 갱신과 동일한 배치 패턴 (asset-data-context.tsx BATCH_SIZE/BATCH_DELAY_MS 참조)
+// KIS rate limit 회피: 3개씩 묶어 1초 간격으로 순차 호출
+const PROFIT_BATCH_SIZE = 3;
+const PROFIT_BATCH_DELAY_MS = 1000;
+
+interface FetchProfitRefOptions {
+  // 배치 응답이 올 때마다 누적 결과를 콜백으로 전달 (점진 노출용)
+  onProgress?: (partial: ProfitRefResponse) => void;
+  // 모든 배치 완료(또는 캐시 hit) 시 호출. fromCache=true면 네트워크 호출 없이 즉시 반환된 것
+  onComplete?: (fromCache: boolean) => void;
+  // 중단 신호 (탭 전환 등). true 반환 시 다음 배치 전 종료
+  signal?: AbortSignal;
+}
+
+// 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
+const inFlightFetches = new Map<string, Promise<ProfitRefResponse>>();
+
+export async function fetchProfitRef(
+  tickers: string,
+  period: ProfitPeriod,
+  options: FetchProfitRefOptions = {},
+): Promise<ProfitRefResponse> {
+  const { onProgress, onComplete, signal } = options;
   const cacheKey = getProfitCacheKey(tickers, period);
   try {
     const raw = localStorage.getItem(cacheKey);
-    if (raw) return JSON.parse(raw) as ProfitRefResponse;
+    if (raw) {
+      const cached = JSON.parse(raw) as ProfitRefResponse;
+      onProgress?.(cached);
+      onComplete?.(true);
+      return cached;
+    }
   } catch { /* ignore */ }
-  const res = await fetch(`/api/finance/profit?tickers=${tickers}&period=${period}`);
-  if (!res.ok) return {};
-  const data: ProfitRefResponse = await res.json();
-  try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* ignore */ }
-  return data;
+
+  // 동일 cacheKey로 진행 중인 fetch가 있으면 그 결과를 공유 (네트워크 중복 호출 방지)
+  // dedup된 호출자는 점진 노출 없이 최종 결과만 1회 받음 (캐시 hit과 동일 취급)
+  const existing = inFlightFetches.get(cacheKey);
+  if (existing) {
+    const result = await existing;
+    if (!signal?.aborted) {
+      onProgress?.(result);
+      onComplete?.(true);
+    }
+    return result;
+  }
+
+  const runFetch = async (): Promise<ProfitRefResponse> => {
+    const tickerArr = tickers.split(",").filter(Boolean);
+    const merged: ProfitRefResponse = {};
+    for (let i = 0; i < tickerArr.length; i += PROFIT_BATCH_SIZE) {
+      if (signal?.aborted) break;
+      if (i > 0) await new Promise<void>((r) => setTimeout(r, PROFIT_BATCH_DELAY_MS));
+      if (signal?.aborted) break;
+      const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
+      try {
+        const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}`, { signal });
+        if (res.ok) {
+          const data: ProfitRefResponse = await res.json();
+          Object.assign(merged, data);
+          onProgress?.({ ...merged });
+        }
+      } catch { /* ignore (AbortError 포함) */ }
+    }
+    // 모든 배치 완료 후에만 1회 저장 (부분 결과가 캐시 hit으로 오인되어 나머지 fetch가 안 되는 문제 방지)
+    if (!signal?.aborted) {
+      try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
+      onComplete?.(false);
+    }
+    return merged;
+  };
+
+  const promise = runFetch();
+  inFlightFetches.set(cacheKey, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightFetches.delete(cacheKey);
+  }
 }

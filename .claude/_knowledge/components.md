@@ -1,6 +1,6 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-05-02
+> 마지막 업데이트: 2026-05-16
 
 ## 자산 입력 컴포넌트 (`src/app/(main)/asset/_components/`)
 
@@ -24,21 +24,19 @@ _components/
 │   ├── detail/
 │   │   ├── asset-detail-tabs.tsx    # 5탭 컨테이너 + 공통 유틸 export
 │   │   └── tabs/
-│   │       ├── stock-tab.tsx        # 주식 상세 (7 서브탭)
-│   │       ├── real-estate-tab.tsx  # 부동산 상세
-│   │       ├── cash-tab.tsx         # 현금 상세
-│   │       ├── crypto-tab.tsx       # 암호화폐 상세
-│   │       └── loan-tab.tsx         # 대출 상세
-│   └── activity/
-│       ├── net-asset-chart.tsx      # 순자산 추이 (년도별/월별/일별)
-│       ├── profit-chart.tsx         # 수익 차트 (기간별 기준가 대비)
-│       └── dividend-chart.tsx       # 배당 카드 (DividendCard)
-└── layout/
-    ├── asset-page-tabs.tsx          # 3탭(홈/상세/성과) 최상위 탭 컨테이너
-    ├── notice-dialog.tsx            # MajorUiUpdateNoticeDialog
-    ├── floating-add-button.tsx      # 하단 고정 FAB (전 환경)
-    ├── welcome-guide.tsx
-    └── copyright-footer.tsx
+│   │       ├── stock-tab.tsx        # 주식 상세 (7 서브탭) + halted/delisted Badge
+│   │       ├── real-estate-tab.tsx, cash-tab.tsx, crypto-tab.tsx, loan-tab.tsx
+│   ├── activity/
+│   │   ├── net-asset-chart.tsx      # 순자산 추이 (년도별/월별/일별)
+│   │   ├── profit-chart.tsx         # 수익 차트 (점진 로드 + toast 완료 알림)
+│   │   ├── dividend-chart.tsx       # 배당 카드 (DividendCard)
+│   │   └── monthly-dividend-stocks.tsx
+│   └── data-source-badge.tsx        # "실시간" / "캐시" 등 데이터 출처 Badge
+├── layout/
+│   ├── asset-page-tabs.tsx, notice-dialog.tsx, floating-add-button.tsx
+│   ├── welcome-guide.tsx, copyright-footer.tsx
+├── top-nav/                # top-bar, theme-menu, tool-menu, app-guide, share/
+└── tutorial/tutorial-overlay.tsx
 ```
 
 ---
@@ -57,29 +55,16 @@ _components/
 ### FloatingAddButton (`layout/floating-add-button.tsx`)
 화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
 - 모바일: `side="top"`, PC/패드: `side="right"` Sheet
-- 각 `*-input.tsx` 카드 헤더 추가 버튼은 `hidden` (전체 숨김)
 - 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
-  - real-estate, yearly-net-asset: hasScreenshot=false → 바로 dispatch
-  - 나머지 4종: `select-method` step → `{ detail: { mode: "screenshot"|"manual" } }` dispatch
-- "빠른 이동" 섹션: `navigate-to-tab` CustomEvent dispatch → page.tsx의 탭 전환
+- "빠른 이동" 섹션: `navigate-to-tab` CustomEvent dispatch
 
 ### *-input.tsx 공통 구조
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
-2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어
-- `hideList` prop: 목록 숨김 (page.tsx inputLayer에서 사용)
-
-```
-useAssetData() → CRUD 함수
-useForm({ resolver: zodResolver(xxxSchema) })
-toast.success/error → Sonner
-formatCurrency() → number-utils
-getProfitLossColor() → config/theme
-```
+2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어 (`hideList` prop)
 
 ### 스크린샷 다이얼로그 공통 패턴
 - `open/onOpenChange` props로 외부 제어
 - `useGeminiUsage()` hook으로 클라이언트 하루 한도(15회) 체크
-- API 성공 후 `geminiUsage.increment(assetType)` 호출
 - **중복 처리:** stock/crypto → merge/reset 선택, cash/loan → 항상 append
 
 ---
@@ -100,17 +85,20 @@ getProfitLossColor() → config/theme
 - `lookupState`: `"idle"|"success"|"failed"` — idle 시 종목명·현재가 숨김
 
 ### stock-tab.tsx export 목록 (share-card에서 재사용)
-- `StockBarChart` — 비중 바 + 범례
-- `StockRowItem` — 단일 종목 로우 (인증샷용)
-- `StockSummaryHeader` — 주식 요약 헤더 (평가금액/손익/환차손익)
+- `StockBarChart`, `StockRowItem`, `StockRowHeader`, `StockSummaryHeader`, `StockCategorySection`
 - `useFilteredStockData(activeCategory)` — 필터된 주식 계산 훅
-- `CATEGORY_TABS` — 탭 정의
+  - 정렬된 tickerList (`.sort()`) 보장 → 다른 컴포넌트와 캐시 키 일치
+  - `inactiveStatus !== "delisted"` 필터 포함
+- `CATEGORY_TABS`
+
+**StockRowHeader 비활성 Badge:**
+- `halted` → amber `text-amber-600 border-amber-600` "거래정지"
+- `delisted` → red `text-red-600 border-red-600` "상장폐지"
 
 ### stock-screenshot-import.tsx conflict 처리
 - **덮어쓰기(merge):** 스크린샷 ticker 제거 후 전체 push
 - **초기화(reset):** 기존 주식 전부 제거 후 스크린샷만 등록
 - ticker 없는 종목: `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
-- ESC·바깥 클릭으로 닫히지 않음 (취소 버튼만)
 
 ---
 
@@ -119,17 +107,41 @@ getProfitLossColor() → config/theme
 | 컴포넌트 | 파일 | 역할 |
 |----------|------|------|
 | Dashboard | `main-nav/home/dashboard.tsx` | 총자산/순자산/손익 요약 + 분포 |
-| AssetDetailTabs | `main-nav/detail/asset-detail-tabs.tsx` | 주식/부동산/암호화폐/현금/대출 5탭 상세 목록 |
-| YearlyNetAssetChart | `main-nav/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별. `trigger-add-yearly-net-asset` 이벤트 수신 |
-| ProfitCard | `main-nav/activity/profit-chart.tsx` | 기간별(일/주/월/년) 수익 차트. `isActive` prop 필수 |
-| DividendCard | `main-nav/activity/dividend-chart.tsx` | 배당 카드. `isActive` prop 필수 |
+| AssetDetailTabs | `main-nav/detail/asset-detail-tabs.tsx` | 5탭 상세 목록 |
+| YearlyNetAssetChart | `main-nav/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별 |
+| ProfitCard | `main-nav/activity/profit-chart.tsx` | 기간별 수익 차트 (점진 로드) |
+| DividendCard | `main-nav/activity/dividend-chart.tsx` | 배당 카드 |
+| DataSourceBadge | `main-nav/data-source-badge.tsx` | "실시간"/"캐시" 출처 Badge |
+
+### ProfitCard 점진 로드 (`profit-chart.tsx`)
+
+useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
+- `tickerList`: ticker 있고 unlisted/delisted 아닌 종목 전체 (`currentPrice` 무관)
+  → 첫 mount부터 풀세트 → 캐시 키 안정 (syncTodayStockPrices가 백그라운드로 가격 채워도 영향 없음)
+- `fetchProfitRef(..., { onProgress, onComplete, signal })` 사용 — 배치마다 부분 결과로 setState → 점진 노출
+- `refInFlightKeyRef`로 동일 키 재실행 시 abort 방지 (의존성 흔들림 보존)
+- 완료 toast: ref/daily 모두 네트워크 완료 시 1회 (`PROFIT_SYNC_COMPLETE_MSG`)
+- 세션 단위 dedup: `notifiedKeysThisSession` (모듈 Set, 새로고침 시 초기화)
+- 캐시 hit(`fromCache=true`)이면 toast 생략
+- `pickMajorityDate(dates)`: 종목별 응답일이 다를 때 시장 단위는 **최빈값** 표시
 
 ### top-nav (`top-nav/`)
 - `TopBar` — GuideMiniButton + ShareScreenshotButton + ToolMenu + ThemeSwitcher 배치
 - `ShareScreenshotButton` → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
-- `ToolMenu` — 데이터 내보내기/가져오기/공유/삭제 + AI 프롬프트 기능
-- `AppGuide` — 앱 사용 안내 알림 (dismissible, `trigger-restore/dismiss-guide` 이벤트)
-- `MajorUiUpdateNoticeDialog` (`layout/notice-dialog.tsx`) — 업데이트 공지 (일주일간 숨기기)
+- `ToolMenu` — 데이터 내보내기/가져오기/공유/삭제 + AI 프롬프트 + **앱 가이드 보기** (`trigger-restore-guide` + `tutorialStore.showStep0(true)`)
+- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시. localStorage 저장 키 제거 — 세션 단위 표시만
+- `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
+
+### WelcomeGuide (`layout/welcome-guide.tsx`)
+첫 진입 안내 페이지. `page.tsx`의 `isWelcomeGuide` 분기에서 `<AppGuide />` 위에 표시.
+- 순자산 카드: `DataSourceBadge kind="realtime"` 포함, `bgLight` 토대
+- 미리보기 데이터: `welcome-preview-data.json`
+- `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
+
+### TutorialOverlay (`tutorial/tutorial-overlay.tsx`)
+Step 0~5 오버레이. Step 5 내부 sub-step: activity → profit.
+- **Step 0 단독 보기**(`isStandaloneStep0=true`): 메뉴-앱가이드 보기에서 호출. 버튼 "확인"으로 표시, 다음 단계 진행하지 않고 `closeStandaloneStep0()` 호출
+- WelcomeGuide에서는 Step 0이 일반적으로 숨겨지지만, `isStandaloneStep0`일 때는 표시
 
 ---
 
@@ -143,6 +155,7 @@ Form, FormField, FormItem, FormLabel, FormControl, FormMessage
 Select, Tabs, Textarea, Separator, Skeleton, toast(Sonner)
 Collapsible, CollapsibleContent, CollapsibleTrigger
 InputOTP, InputOTPGroup, InputOTPSlot
+Alert (hidden prop으로 표시 제어)
 ```
 
 **NumberInput** (`number-input.tsx`): `value`, `onChange`, `quickButtons[]`, `allowDecimals`, `maxDecimals` — 천 단위 콤마 자동 포맷
@@ -170,8 +183,9 @@ ASSET_THEME = {
   tabList3Wrap/tabTrigger3Wrap,  // 래핑 변형
   categoryBox, todayBox, inputHeader, liabilityBadge,
   important, liability, profit, loss,
+  primary: { text, bg, bgLight }, text: { default, muted },
   realEstateTypeColors, distributionCard,
 }
 MAIN_PALETTE  // 10색 팔레트 (인덱스 고정: 0=최대비율, 1=대출, 2=임차보증금)
-getProfitLossColor(value)  // >0 수익색 / <0 손실색 / =0 기본색
+getProfitLossColor(value)
 ```

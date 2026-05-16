@@ -36,8 +36,12 @@ export interface ICacheStorage {
   getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null>;
   setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void>;
   // 과거 기준일 종가 캐시 (수익률 계산용, period별 차등 TTL)
+  // dateStr은 KIS 응답의 실거래일(res.date) 기준
   getRefPrice(ticker: string, dateStr: string): Promise<number | null>;
   setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void>;
+  // 요청일 → 응답일(실거래일) 매핑. 휴장/공휴일로 요청일과 응답일이 다른 경우 영구 hit 보장
+  getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null>;
+  setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void>;
   // Rate Limit (로컬 개발에서는 항상 통과)
   checkRateLimit(ip: string): Promise<boolean>;
   // Gemini 사용량 관리
@@ -153,6 +157,8 @@ interface FileCacheData {
   GEMINI_COUNT?: { count: number; date: string };
   DIVIDENDS?: Record<string, DividendPayoutResult[]>;
   REF_PRICES?: Record<string, number>;
+  // 키: "{ticker}:{period}:{requestDate}" → 값: actualDate (KIS 응답일)
+  REF_DATE_MAP?: Record<string, string>;
 }
 
 interface ShareTokenEntry {
@@ -338,6 +344,20 @@ class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
+  async getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null> {
+    const key = `${ticker}:${period}:${requestDate}`;
+    return this.readFinanceCache().REF_DATE_MAP?.[key] ?? null;
+  }
+
+  async setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void> {
+    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = nowKST.toISOString().split("T")[0];
+    const cache = this.readFinanceCache();
+    if (!cache.REF_DATE_MAP) cache.REF_DATE_MAP = {};
+    cache.REF_DATE_MAP[`${ticker}:${period}:${requestDate}`] = actualDate;
+    this.writeFinanceCache(cache, todayStr);
+  }
+
   // 로컬 개발에서는 Rate Limit 적용 없음
   async checkRateLimit(_ip: string): Promise<boolean> {
     return true;
@@ -495,6 +515,16 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void> {
     await this.redis.set(`finance:refprice:${ticker}:${dateStr}`, price, {
+      ex: secondsUntilNextRefBoundary(period),
+    });
+  }
+
+  async getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null> {
+    return this.redis.get<string>(`finance:refdatemap:${ticker}:${period}:${requestDate}`);
+  }
+
+  async setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void> {
+    await this.redis.set(`finance:refdatemap:${ticker}:${period}:${requestDate}`, actualDate, {
       ex: secondsUntilNextRefBoundary(period),
     });
   }

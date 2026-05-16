@@ -7,6 +7,7 @@ import {
   classifyTickers,
 } from "@/lib/finance-service";
 import { getDailyClosingRefDates } from "@/lib/profit-utils";
+import { getStockCacheSlot, getEffectiveDateStr } from "@/lib/stock-cache-slot";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -25,6 +26,14 @@ function getKSTNow(): Date {
 
 function toDateStr(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+// 서버 STOCKS 캐시의 market 필드 → KIS 해외 EXCD 코드
+function marketToExcd(market: string | undefined): string | undefined {
+  if (market === "NASDAQ") return "NAS";
+  if (market === "NYSE") return "NYS";
+  if (market === "AMEX") return "AMS";
+  return undefined;
 }
 
 // 토/일만 건너뛰는 단순 rollback (N 영업일 전)
@@ -99,42 +108,54 @@ export async function GET(req: NextRequest) {
     return result[ticker]!;
   };
 
+  // 요청일 → 응답일 색인 lookup → 응답일로 가격 조회 (둘 중 하나라도 miss면 KIS 호출)
+  const lookupCached = async (
+    ticker: string,
+    requestDate: string,
+  ): Promise<{ price: number; actualDate: string } | null> => {
+    const actualDate = await cache.getRefDateForRequest(ticker, requestDate, period);
+    if (!actualDate) return null;
+    const price = await cache.getRefPrice(ticker, actualDate);
+    if (price === null) return null;
+    return { price, actualDate };
+  };
+
   await Promise.all([
     ...allKr.map(async (ticker) => {
-      const refCached = await cache.getRefPrice(ticker, krDates.refDate);
-      if (refCached !== null) {
+      const refHit = await lookupCached(ticker, krDates.refDate);
+      if (refHit) {
         const e = ensureEntry(ticker);
-        e.refPrice = refCached;
-        e.refDate = krDates.refDate;
+        e.refPrice = refHit.price;
+        e.refDate = refHit.actualDate;
       } else {
         fetchQueue.push({ ticker, date: krDates.refDate, kind: "ref", market: "domestic" });
       }
       if (krDates.prevDate) {
-        const prevCached = await cache.getRefPrice(ticker, krDates.prevDate);
-        if (prevCached !== null) {
+        const prevHit = await lookupCached(ticker, krDates.prevDate);
+        if (prevHit) {
           const e = ensureEntry(ticker);
-          e.prevPrice = prevCached;
-          e.prevDate = krDates.prevDate;
+          e.prevPrice = prevHit.price;
+          e.prevDate = prevHit.actualDate;
         } else {
           fetchQueue.push({ ticker, date: krDates.prevDate, kind: "prev", market: "domestic" });
         }
       }
     }),
     ...allUs.map(async (ticker) => {
-      const refCached = await cache.getRefPrice(ticker, usDates.refDate);
-      if (refCached !== null) {
+      const refHit = await lookupCached(ticker, usDates.refDate);
+      if (refHit) {
         const e = ensureEntry(ticker);
-        e.refPrice = refCached;
-        e.refDate = usDates.refDate;
+        e.refPrice = refHit.price;
+        e.refDate = refHit.actualDate;
       } else {
         fetchQueue.push({ ticker, date: usDates.refDate, kind: "ref", market: "foreign" });
       }
       if (usDates.prevDate) {
-        const prevCached = await cache.getRefPrice(ticker, usDates.prevDate);
-        if (prevCached !== null) {
+        const prevHit = await lookupCached(ticker, usDates.prevDate);
+        if (prevHit) {
           const e = ensureEntry(ticker);
-          e.prevPrice = prevCached;
-          e.prevDate = usDates.prevDate;
+          e.prevPrice = prevHit.price;
+          e.prevDate = prevHit.actualDate;
         } else {
           fetchQueue.push({ ticker, date: usDates.prevDate, kind: "prev", market: "foreign" });
         }
@@ -169,12 +190,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result);
   }
 
+  // 해외 종목별 EXCD를 STOCKS 캐시에서 사전 조회 (장중 슬롯과 effectiveDate 슬롯 모두 시도)
+  // 클라이언트 배치(BATCH_SIZE=3, 1초 간격)가 KIS rate limit을 흡수하므로 서버는 단순 Promise.all
+  const foreignEffective = getEffectiveDateStr("foreign");
+  const foreignSlot = getStockCacheSlot("foreign");
+  const excdByTicker = new Map<string, string | undefined>();
+  await Promise.all(
+    allUs.map(async (ticker) => {
+      const tryKeys = foreignSlot !== foreignEffective
+        ? [`${ticker}-${foreignSlot}`, `${ticker}-${foreignEffective}`]
+        : [`${ticker}-${foreignEffective}`];
+      for (const key of tryKeys) {
+        const st = await cache.getStock(key);
+        if (st?.market) {
+          excdByTicker.set(ticker, marketToExcd(st.market));
+          return;
+        }
+      }
+      excdByTicker.set(ticker, undefined);
+    }),
+  );
+
   await Promise.all(
     fetchQueue.map(async (task) => {
-      const fetcher = task.market === "domestic" ? fetchDomesticHistoricalPrice : fetchOverseasHistoricalPrice;
-      const res = await fetcher(task.ticker, task.date, accessToken!, appKey, appSecret);
+      const isDomestic = task.market === "domestic";
+      const res = isDomestic
+        ? await fetchDomesticHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret)
+        : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker));
       if (res !== null) {
         await cache.setRefPrice(task.ticker, res.date, res.price, period);
+        // 요청일이 응답일과 다를 수 있음 → 매핑 기록으로 다음 호출 영구 hit
+        await cache.setRefDateForRequest(task.ticker, task.date, res.date, period);
         const e = ensureEntry(task.ticker);
         if (task.kind === "ref") {
           e.refPrice = res.price;
@@ -184,7 +230,7 @@ export async function GET(req: NextRequest) {
           e.prevDate = res.date;
         }
       }
-    })
+    }),
   );
 
   // ref 종가 자체가 없는 종목은 null로 마무리

@@ -29,6 +29,11 @@ export const stockSchema = z.object({
   baseDate: z.string().optional(),
   purchaseExchangeRate: z.number().optional(), // 매입 환율 (USD: 원/달러, JPY: 원/100엔)
   broker: z.string().optional(), // 증권사명
+  // 비활성 상태 — KIS API 응답 기반 자동 감지
+  // delisted=상장폐지 (자산 평가 완전 제외), halted=거래정지 (마지막 가격 유지 + 표기)
+  inactiveStatus: z.enum(["delisted", "halted"]).optional(),
+  inactiveReason: z.string().optional(),
+  inactiveCheckedAt: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.category === "domestic" || data.category === "foreign") {
     const ticker = data.ticker?.trim() || "";

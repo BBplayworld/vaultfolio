@@ -1,6 +1,6 @@
 # 타입 & 스키마 참조
 
-> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-05-02
+> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-05-16
 
 ## 자산 5종 Zod 스키마
 
@@ -11,7 +11,11 @@ Stock: {
   id, name, ticker, quantity, averagePrice, currentPrice,
   category: "domestic"|"foreign"|"irp"|"isa"|"pension"|"unlisted",
   currency: "KRW"|"USD"|"JPY",
-  purchaseDate, purchaseExchangeRate?, baseDate?, description?
+  purchaseDate, purchaseExchangeRate?, baseDate?, description?, broker?,
+  // 비활성 상태 — KIS 응답 기반 자동 감지 (assetData 저장 + 공유 토큰 v7.2 직렬화)
+  inactiveStatus?: "delisted" | "halted",
+  inactiveReason?: string,
+  inactiveCheckedAt?: string,   // updated_at 그대로
   // domestic ticker: 6자리 숫자, foreign: 영문+숫자 1~10자
   // 해외: quantity/averagePrice 소수점 2자리 허용
 }
@@ -31,6 +35,18 @@ YearlyNetAsset: { year(2000~2100), netAsset, note? }
 AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[], lastUpdated }
 ```
 
+## 비활성 종목 정책 (inactiveStatus)
+
+| status | 자산 평가 | 매입원가 | 환차익 | 카운트 | 배당 | 가격 갱신 |
+|--------|----------|----------|--------|--------|------|-----------|
+| `delisted` (상장폐지) | **제외** | 제외 | 제외 | 제외 | 제외 | API 응답 0 그대로 |
+| `halted` (거래정지) | 포함 (마지막 가격 유지) | 포함 | 포함 | 포함 | 포함 | **기존 currentPrice 유지** |
+| `undefined` (활성) | 포함 | 포함 | 포함 | 포함 | 포함 | API price로 갱신 |
+
+분기 위치: `computeNetAsset`, `getAssetSummary` ([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx)), `useFilteredStockData`, `DividendCard`, `MonthlyDividendStocks`, `ProfitCard` tickerList.
+
+UI 표시: `StockRowHeader` — 거래정지(amber Badge) / 상장폐지(red Badge).
+
 ## AssetSummary (getAssetSummary() 반환)
 
 ```typescript
@@ -43,6 +59,7 @@ AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[
   loanBalance, tenantDepositTotal,
   netAsset,  // totalValue - loanBalance - tenantDepositTotal
   realEstateCount, stockCount, cryptoCount, cashCount, loanCount
+  // stockCount는 inactiveStatus !== "delisted" 종목만 카운트
 }
 ```
 
@@ -63,6 +80,7 @@ AssetSnapshots: { daily: DailyAssetSnapshot[], monthly: MonthlyAssetSnapshot[] }
 
 ```typescript
 DividendFrequency = "annual" | "semiannual" | "quarterly" | "monthly"
+InactiveStatus = "delisted" | "halted"
 
 DividendPayoutResult: {
   payoutDate: string           // YYYY-MM-DD
@@ -70,6 +88,13 @@ DividendPayoutResult: {
   amountForeign?: number       // 외화 주당 금액 (해외)
   currency?: string            // "KRW" | "USD" 등
   frequency?: DividendFrequency
+}
+
+StockPriceResult: {
+  price: number; name: string; updated_at: string;
+  market?: "NASDAQ"|"NYSE"|"AMEX";
+  inactiveStatus?: InactiveStatus;
+  inactiveReason?: string;
 }
 ```
 

@@ -113,7 +113,7 @@ function SpotlightOverlay({ rect }: { rect: TargetRect; tooltipRect: TargetRect 
 // ──────────────────────────────────────────────────────────────
 // Step 0: AppGuide 전체 내용을 튜토리얼 카드로 표시
 // ──────────────────────────────────────────────────────────────
-function Step0Card({ onNext }: { onNext: () => void }) {
+function Step0Card({ onNext, isStandalone }: { onNext: () => void; isStandalone: boolean }) {
   return createPortal(
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
@@ -128,8 +128,8 @@ function Step0Card({ onNext }: { onNext: () => void }) {
             className="flex items-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full transition-opacity hover:opacity-90"
             style={{ backgroundColor: MAIN_PALETTE[0] }}
           >
-            다음
-            <ChevronRight className="size-4" />
+            {isStandalone ? "확인" : "다음"}
+            {!isStandalone && <ChevronRight className="size-4" />}
           </button>
         </div>
       </div>
@@ -260,6 +260,8 @@ export function TutorialOverlay({
   const skipStep = useTutorialStore((s) => s.skipStep);
   const isWaiting = useTutorialStore((s) => s.isWaiting);
   const startWaiting = useTutorialStore((s) => s.startWaiting);
+  const isStandaloneStep0 = useTutorialStore((s) => s.isStandaloneStep0);
+  const closeStandaloneStep0 = useTutorialStore((s) => s.closeStandaloneStep0);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -319,13 +321,19 @@ export function TutorialOverlay({
   if (activeStep === null) return null;
 
   // WelcomeGuide에서는 Step 0만 제어 (step 1 이후는 isWelcomeGuide 무관하게 표시)
-  if (isWelcomeGuide && activeStep === 0 && !step0Mode) return null;
+  // 단, 메뉴-앱가이드 단독 보기(isStandaloneStep0)는 WelcomeGuide에서도 표시
+  if (isWelcomeGuide && activeStep === 0 && !step0Mode && !isStandaloneStep0) return null;
 
   // Step 0 — 중앙 카드
   if (activeStep === 0) {
     return (
       <Step0Card
+        isStandalone={isStandaloneStep0}
         onNext={() => {
+          if (isStandaloneStep0) {
+            closeStandaloneStep0();
+            return;
+          }
           completeStep(0);
           if (step0Mode) {
             if (step0Mode === "real-estate") {

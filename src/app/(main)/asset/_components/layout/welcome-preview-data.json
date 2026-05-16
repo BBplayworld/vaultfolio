@@ -41,5 +41,7 @@
   "realEstateValue": 400000000,
   "loanValue": 95000000,
   "cryptoValue": 9041360,
-  "cashValue": 79260000
+  "cashValue": 79260000,
+  "dailyProfit": 1284000,
+  "dailyProfitRate": 1.32
 }

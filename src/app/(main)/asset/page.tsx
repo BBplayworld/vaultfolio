@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WelcomeGuide } from "./_components/layout/welcome-guide";
+import { AppGuide } from "./_components/top-nav/app-guide";
 import { RealEstateInput } from "./_components/bottom-nav/asset-update/input/real-estate-input";
 import { StockInput } from "./_components/bottom-nav/asset-update/input/stock-input";
 import { CryptoInput } from "./_components/bottom-nav/asset-update/input/crypto-input";
@@ -84,6 +85,7 @@ export default function Page() {
   if (isWelcomeGuide) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
+        <AppGuide />
         <WelcomeGuide />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />

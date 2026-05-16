@@ -1,21 +1,25 @@
 # API 참조
 
-> 마지막 업데이트: 2026-05-02
+> 마지막 업데이트: 2026-05-16
 
 ## 내부 API 라우트
 
 ### GET /api/finance
-주식 현재가·환율 조회. KST 기준 시장 마감 시간별 캐시.
+주식 현재가·환율 조회. KST 기준 시장 마감 시간별 + 장중 1시간 슬롯 캐시.
 
 ```
 GET /api/finance?type=exchange
 → { USD: number, JPY: number, updated_at: string }
 
 GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
-→ { "005930": { price, name, updated_at }, "TSLA": {...}, ... }
+→ { "005930": { price, name, updated_at, market?, inactiveStatus?, inactiveReason? }, ... }
 ```
 
-캐시 키: `"TICKER-YYYY-MM-DD"` — `getEffectiveDateStr(type)` 기준 (해외 07:00, 국내 16:00, 환율 09:00 이전이면 전일)
+캐시 슬롯: `getStockCacheSlot("domestic"|"foreign")` ([stock-cache-slot.ts](../../src/lib/stock-cache-slot.ts))
+- 장중: `"TICKER-{date}-H{HH}"` (1시간 단위 갱신)
+- 장외: `"TICKER-{effectiveDate}"` (다음 개장까지 유지)
+
+해외주식 비활성 응답: `classifyOverseasInactive()` — delisted/halted 분류 + 가격 0으로 반환 (클라이언트가 상태 반영).
 
 ---
 
@@ -24,10 +28,22 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 
 ```
 GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly
-→ ProfitRefResponse: Record<string, number>  // { "005930": 72000, "TSLA": 245.3 }
+→ ProfitRefResponse: Record<ticker, { refPrice, refDate, prevPrice?, prevDate? }>
 ```
 
-클라이언트 캐시: `profit-utils.ts` → `secretasset_profit:{period}:{date}:{tickers}` (localStorage)
+**서버 캐시 2단:**
+1. `getRefDateForRequest(ticker, requestDate, period)` — 요청일→실거래일(KIS 응답일) 매핑
+2. `getRefPrice(ticker, actualDate)` — 실거래일 기준 가격 (period별 차등 TTL)
+
+→ 휴장/공휴일로 요청일과 응답일이 달라도 다음 호출부터 영구 hit.
+
+**해외 EXCD 사전 조회:** STOCKS 캐시(`{ticker}-{slot}` 또는 `{ticker}-{effectiveDate}`)에서 market 필드 → NAS/NYS/AMS 매핑 → `fetchOverseasHistoricalPrice(...preferredExcd)`에 전달. EXCD 미상이면 NAS→NYS→AMS 순 fallback.
+
+**클라이언트 캐시:** `profit-utils.ts` → `secretasset_profit:{period}:{date}:{tickers}` (localStorage)
+- daily 키 date: `krRefDate`만 (us는 KST 자정에 kr과 함께 변경)
+- 캐시 miss 시 BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 호출
+- 같은 cacheKey 동시 요청은 `inFlightFetches` Map으로 dedup
+- 모든 배치 완료 후에만 캐시 저장 (부분 결과 캐시 hit 회귀 방지)
 
 ---
 
@@ -83,17 +99,23 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 
 ```typescript
 fetchStocksFromKorea(tickers, todayStr, token, key, secret)       // 국내 주식
-fetchStocksFromKisOverseas(tickers, todayStr, token, key, secret) // 해외 주식 (NASDAQ→NYSE→AMEX 순 시도)
+fetchStocksFromKisOverseas(tickers, todayStr, token, key, secret) // 해외 주식 (NAS→NYS→AMS 순 시도, 비활성 시 즉시 종료)
 fetchExchangeRateFromKis(token, key, secret, todayStr)            // 환율 (USD, JPY)
 fetchDividendDomestic(ticker, fdt, tdt, token, key, secret)       // 국내 배당 [국내주식-145]
 fetchDividendOverseas(ticker, excd, fdt, tdt, token, key, secret) // 해외 배당 [해외주식-052]
-fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret) // 국내 과거 종가 (roll-back 5일)
-fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret) // 해외 과거 종가 (NAS→NYS→AMS)
+fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret) // 국내 과거 종가 (roll-back 5일, 실패 시 진단 로그)
+fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret, preferredExcd?) // 해외 과거 종가
 
 normalizeTicker({ ticker, category }): string
 classifyTickers(tickers[]): { usTickers, krTickers }
 resolveStockName(category, apiName, existingName): string
+classifyOverseasInactive(output): { status: "delisted"|"halted"|null, reason }
 ```
+
+**해외 비활성 판정 우선순위:**
+1. `lstg_abol_dt` / `lstg_abol_item_yn=Y` / `lstg_yn≠Y` → **delisted**
+2. `ovrs_stck_tr_stop_dvsn_cd ≠ "01"` 또는 `ovrs_stck_stop_rson_cd ≠ "00"` → **halted**
+3. `last_rcvg_dtime` 30일 초과 → **halted**
 
 ---
 
@@ -104,9 +126,9 @@ resolveStockName(category, apiName, existingName): string
 
 generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
 parseShareToken(token, pin?, localKey?): ParseResult
-  = { data, rates?, snapshots? } | { pinRequired: true } | null
 
-하위 호환: v6.x, v7.0, v7.1 파싱 지원
+stocks 필드 12개: [cat, name, ticker(name과 같으면 "*"), qty, avgPrice, currentPrice, currency, purchaseDate, description, purchaseRate, broker, inactiveStatus]
+  // inactiveStatus: "d"=delisted, "h"=halted, ""=활성
 ```
 
 **v72Z Zero-Knowledge:** PIN + localKey 조합 암호화. 서버에는 암호화된 데이터만 저장,
@@ -118,28 +140,29 @@ localKey는 URL 해시에 포함 → 서버 관리자도 단독 복호화 불가
 
 ```typescript
 interface ICacheStorage {
-  getExchange(date): ExchangeRates|null
-  setExchange(date, data): void
-  getStock(key): StockData|null        // key: "TICKER-YYYY-MM-DD"
-  setStock(key, data): void
-  getKisToken(): string|null
-  setKisToken(token, expiresIn): void
-  getShareToken(key): string|null
-  setShareToken(key, token): void
-  deleteShareToken(key): void
-  getOwnerKey(ownerId): string|null
-  setOwnerKey(ownerId, key): void
+  getExchange(date) / setExchange(date, data)
+  getStock(key) / setStock(key, data)                  // key: getStockCacheSlot 결과
+  getKisToken() / setKisToken(token, expiresIn)
+  getShareToken(key) / setShareToken(key, token) / deleteShareToken(key)
+  getOwnerKey(ownerId) / setOwnerKey(ownerId, key)
   checkRateLimit(ip): boolean
-  getGeminiDailyCount(date): number
-  incrementGeminiDailyCount(date): void
-  checkGeminiDailyLimit(date, limit): boolean
+
+  getDividend(cacheKey) / setDividend(cacheKey, data)
+  getRefPrice(ticker, actualDate) / setRefPrice(ticker, actualDate, price, period)
+    // dateStr은 KIS 실거래일 (res.date) — 응답일 기준 저장
+  getRefDateForRequest(ticker, requestDate, period) / setRefDateForRequest(...)
+    // 요청일 → 응답일 매핑. 휴장으로 요청일≠응답일이어도 다음 호출 영구 hit
+
+  getGeminiDailyCount(date) / incrementGeminiDailyCount(date) / checkGeminiDailyLimit(date, limit)
 }
 
 getCacheStorage(): ICacheStorage
 // KV_REST_API_URL 있으면 → UpstashStorage (Redis)
 // 없으면 → FileStorage (data/*.json)
 
-getEffectiveDateStr(type: "exchange"|"stock-us"|"stock-kr"): string
+// 파일 캐시 필드:
+// STOCKS, EXCHANGE, DIVIDENDS, REF_PRICES, REF_DATE_MAP, GEMINI_COUNT
+// REF_DATE_MAP 키: "{ticker}:{period}:{requestDate}" → actualDate
 ```
 
 **클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회
