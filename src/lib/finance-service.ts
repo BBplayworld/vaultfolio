@@ -157,13 +157,6 @@ export function classifyOverseasInactive(
   return { status: null, reason: null };
 }
 
-// 호환용 래퍼 — 기존 코드에서 사유 문자열만 필요한 경우
-function checkOverseasInactive(
-  output: Record<string, string> | undefined
-): string | null {
-  return classifyOverseasInactive(output).reason;
-}
-
 export async function fetchStocksFromKisOverseas(
   tickers: string[],
   todayStr: string,
@@ -178,6 +171,9 @@ export async function fetchStocksFromKisOverseas(
   for (let i = 0; i < tickers.length; i++) {
     if (i > 0) await sleep(350);
     const ticker = tickers[i];
+
+    let foundInactive: StockPriceResult | null = null;
+    let isActiveFound = false;
 
     // 512: 나스닥, 513: 뉴욕, 529: 미국아멕스 순으로 시도
     for (const prdtTypeCd of ["512", "513", "529"]) {
@@ -212,11 +208,12 @@ export async function fetchStocksFromKisOverseas(
         const market = prdtTypeCd === "512" ? "NASDAQ" : prdtTypeCd === "513" ? "NYSE" : "AMEX";
         if (price > 0 && !inactiveStatus) {
           results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr, market };
+          isActiveFound = true;
           break; // 활성 종목 성공 — 다음 거래소 시도 불필요
         }
-        if (inactiveStatus) {
+        if (inactiveStatus && !foundInactive) {
           // 비활성: 가격 0이어도 응답에 포함시켜 클라이언트가 상태 반영하도록
-          results[ticker] = {
+          foundInactive = {
             price: 0,
             name: output?.prdt_name || ticker,
             updated_at: todayStr,
@@ -224,12 +221,17 @@ export async function fetchStocksFromKisOverseas(
             inactiveStatus,
             inactiveReason: reason ?? undefined,
           };
-          console.log(`[비활성 - ${ticker}/${prdtTypeCd}] ${inactiveStatus}: ${reason}`);
-          break; // 비활성 확인된 거래소에서 종료
+          console.log(`[비활성 대기 - ${ticker}/${prdtTypeCd}] ${inactiveStatus}: ${reason} (다른 마켓 추가 확인)`);
+          // break 하지 않고 다른 마켓 계속 탐색
         }
       } catch (e) {
         console.error(`[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]:`, e);
       }
+    }
+
+    if (!isActiveFound && foundInactive) {
+      results[ticker] = foundInactive;
+      console.log(`[최종 비활성 처리 - ${ticker}] ${foundInactive.inactiveStatus}: ${foundInactive.inactiveReason}`);
     }
   }
 
