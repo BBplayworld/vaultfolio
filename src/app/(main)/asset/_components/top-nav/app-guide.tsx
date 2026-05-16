@@ -3,7 +3,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, Database, Sparkles, Activity, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { STORAGE_KEYS } from "@/lib/local-storage";
 
 export function AppGuideContent() {
     return (
@@ -47,20 +46,11 @@ export function AppGuideContent() {
 }
 
 export function AppGuide() {
-    const [alertDismissed, setAlertDismissed] = useState(() => {
-        if (typeof window === "undefined") return false;
-        return localStorage.getItem(STORAGE_KEYS.guideDismissed) === "1";
-    });
+    // 평소에는 숨김. 메뉴-앱가이드 클릭(trigger-restore-guide) 시에만 표시.
+    const [alertDismissed, setAlertDismissed] = useState(true);
 
-    const dismissAlert = () => {
-        localStorage.setItem(STORAGE_KEYS.guideDismissed, "1");
-        setAlertDismissed(true);
-    };
-
-    const restoreAlert = () => {
-        localStorage.removeItem(STORAGE_KEYS.guideDismissed);
-        setAlertDismissed(false);
-    };
+    const dismissAlert = () => setAlertDismissed(true);
+    const restoreAlert = () => setAlertDismissed(false);
 
     useEffect(() => {
         const restore = () => restoreAlert();
@@ -73,10 +63,11 @@ export function AppGuide() {
         };
     }, []);
 
-    if (alertDismissed) return null;
-
     return (
-        <Alert className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 relative">
+        <Alert
+            className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 relative"
+            hidden={alertDismissed}
+        >
             <Info className="size-3.5 sm:size-4 text-primary" />
             <Button
                 variant="ghost"

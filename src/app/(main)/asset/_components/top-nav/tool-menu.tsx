@@ -322,7 +322,7 @@ export function ToolMenu({
               <DropdownMenuSeparator />
               <DropdownMenuItem className="py-2.5" onClick={() => {
                 window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
-                tutorialStore.getState().showStep0();
+                tutorialStore.getState().showStep0(true);
               }}>
                 <Info className="size-4" />
                 앱 가이드 보기

@@ -146,7 +146,7 @@ export function useFilteredStockData(activeCategory: string) {
   const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
 
   const stocksWithTicker = assetData.stocks.filter(
-    (s) => s.ticker && s.category !== "unlisted" && s.currentPrice > 0,
+    (s) => s.ticker && s.category !== "unlisted" && s.currentPrice > 0 && s.inactiveStatus !== "delisted",
   );
   // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(profit-chart 등)와 동일한 캐시 키 보장
   const tickerList = Array.from(new Set(stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean))).sort().join(",");
@@ -259,6 +259,12 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           {categoryLabels?.map((label) => (
             <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{label}</Badge>
           ))}
+          {stock.inactiveStatus === "halted" && (
+            <Badge variant="outline" className="text-amber-600 border-amber-600 text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>
+          )}
+          {stock.inactiveStatus === "delisted" && (
+            <Badge variant="outline" className="text-red-600 border-red-600 text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight">상장폐지</Badge>
+          )}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
           <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>

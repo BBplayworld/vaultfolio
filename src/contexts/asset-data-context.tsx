@@ -130,7 +130,11 @@ export function computeNetAsset(
     if (currency === "JPY") return rates.JPY / 100; // 100엔당
     return 1;
   };
-  const stockValue = data.stocks.reduce((sum, s) => sum + s.quantity * priceOf(s) * mul(s.currency), 0);
+  // 상장폐지(delisted) 종목은 자산 평가에서 완전 제외, 거래정지(halted)는 마지막 가격 그대로 포함
+  const stockValue = data.stocks.reduce((sum, s) => {
+    if (s.inactiveStatus === "delisted") return sum;
+    return sum + s.quantity * priceOf(s) * mul(s.currency);
+  }, 0);
   const cryptoValue = data.crypto.reduce((sum, c) => sum + c.quantity * c.currentPrice, 0);
   const cashValue = data.cash ? data.cash.reduce((sum, c) => sum + c.balance * mul(c.currency), 0) : 0;
   const realEstateValue = data.realEstate.reduce((sum, r) => sum + r.currentValue, 0);
@@ -321,14 +325,27 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
           const updatedStocks = current.stocks.map(stock => {
             const ticker = normalizeTicker(stock);
-            const result = stocksData[ticker];
+            const result = stocksData[ticker] as {
+              price?: number;
+              updated_at?: string;
+              name?: string;
+              inactiveStatus?: "delisted" | "halted";
+              inactiveReason?: string;
+            } | undefined;
             if (result?.price !== undefined && result?.updated_at) {
               const isForeignStock = stock.category === "foreign";
+              // 거래정지(halted): 기존 currentPrice 유지 (마지막 알려진 가격 보존)
+              // 상장폐지(delisted): API가 준 0으로 덮어쓰기 (평가에서 어차피 제외됨)
+              // 활성 회복: result.price로 갱신 + inactiveStatus undefined로 리셋
+              const isHalted = result.inactiveStatus === "halted";
               return {
                 ...stock,
-                currentPrice: result.price,
+                currentPrice: isHalted ? stock.currentPrice : result.price,
                 baseDate: isForeignStock ? slotForeign : slotDomestic,
-                name: resolveStockName(stock.category, result.name, stock.name),
+                name: resolveStockName(stock.category, result.name ?? "", stock.name),
+                inactiveStatus: result.inactiveStatus,
+                inactiveReason: result.inactiveReason,
+                inactiveCheckedAt: result.updated_at,
               };
             }
             return stock;
@@ -358,8 +375,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     // 종가 기준 주식가치: /api/finance/profit daily의 refPrice 사용
     // ref 종가 조회 실패 시 해당 종목은 실시간 currentPrice로 폴백
-    const eligibleStocks = latestData.stocks.filter(s => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0);
-    const tickerList = Array.from(new Set(eligibleStocks.map(normalizeTicker).filter(Boolean))).join(",");
+    const eligibleStocks = latestData.stocks.filter(s => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0 && s.inactiveStatus !== "delisted");
+    // 다른 컴포넌트(profit-chart, stock-tab)와 동일한 캐시 키 보장 — 반드시 정렬
+    const tickerList = Array.from(new Set(eligibleStocks.map(normalizeTicker).filter(Boolean))).sort().join(",");
     let refMap: ProfitRefResponse = {};
     if (tickerList) {
       try {
@@ -886,11 +904,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return currency === "JPY" ? purchaseExchangeRate / 100 : purchaseExchangeRate;
     };
 
-    const stockCost = assetData.stocks.reduce((sum, item) => sum + item.quantity * item.averagePrice * getMultiplier(item.currency), 0);
+    // 상장폐지(delisted) 종목은 매입원가/환차익 계산에서도 제외 — 평가액 제외와 일관성
+    const stockCost = assetData.stocks.reduce((sum, item) => {
+      if (item.inactiveStatus === "delisted") return sum;
+      return sum + item.quantity * item.averagePrice * getMultiplier(item.currency);
+    }, 0);
     const stockProfit = stockValue - stockCost;
 
     const stockCurrencyGain = assetData.stocks
-      .filter((s) => s.category === "foreign" && s.currency !== "KRW")
+      .filter((s) => s.category === "foreign" && s.currency !== "KRW" && s.inactiveStatus !== "delisted")
       .reduce((sum, s) => {
         const curr = getMultiplier(s.currency);
         const purchase = getPurchaseRatePerUnit(s.currency, s.purchaseExchangeRate);
@@ -926,7 +948,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       tenantDepositTotal,
       netAsset,
       realEstateCount: assetData.realEstate.length,
-      stockCount: assetData.stocks.length,
+      stockCount: assetData.stocks.filter((s) => s.inactiveStatus !== "delisted").length,
       cryptoCount: assetData.crypto.length,
       cashCount: assetData.cash ? assetData.cash.length : 0,
       loanCount: assetData.loans.length,

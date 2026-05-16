@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-05-02
+> 마지막 업데이트: 2026-05-16
 
 ## 앱 개요
 
@@ -15,9 +15,9 @@
 |----------|------|
 | 프레임워크 | Next.js 15 (App Router) + TypeScript |
 | 폼 검증 | Zod + React Hook Form |
-| 상태 관리 | React Context (자산) + Zustand (테마) |
+| 상태 관리 | React Context (자산) + Zustand (테마/튜토리얼) |
 | 스타일링 | Tailwind CSS v4 + shadcn/ui (New York) |
-| 데이터 페칭 | TanStack Query + Fetch API |
+| 데이터 페칭 | Fetch API + AbortController (점진 로드) |
 | 차트/DnD | Recharts + dnd-kit |
 | 압축/암호화 | lz-string + XOR (PIN 기반) |
 | 저장소 | localStorage (유저) + 파일/Upstash Redis (서버 캐시) |
@@ -29,7 +29,7 @@
 src/
 ├── app/
 │   ├── (main)/asset/
-│   │   ├── page.tsx              # AssetPageTabs 래퍼 (실질 로직은 layout/asset-page-tabs.tsx)
+│   │   ├── page.tsx              # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
 │   │   ├── layout.tsx            # SidebarInset (max-w-screen-2xl)
 │   │   └── _components/
 │   │       ├── bottom-nav/
@@ -39,30 +39,36 @@ src/
 │   │       ├── main-nav/
 │   │       │   ├── home/         # dashboard.tsx
 │   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종
-│   │       │   └── activity/     # net-asset-chart, profit-chart, dividend-chart
-│   │       ├── layout/           # asset-page-tabs.tsx, floating-add-button, notice-dialog
-│   │       └── top-nav/          # top-bar, theme-menu, tool-menu, app-guide, share/
+│   │       │   ├── activity/     # net-asset-chart, profit-chart, dividend-chart, monthly-dividend-stocks
+│   │       │   └── data-source-badge.tsx
+│   │       ├── layout/           # asset-page-tabs.tsx, floating-add-button, welcome-guide, notice-dialog
+│   │       ├── top-nav/          # top-bar, theme-menu, tool-menu, app-guide, share/
+│   │       └── tutorial/         # tutorial-overlay.tsx (Step 0~5)
 │   ├── api/
 │   │   ├── finance/
-│   │   │   ├── route.ts          # 주식·환율 조회 (캐시 포함)
-│   │   │   └── profit/route.ts   # 기준가(과거종가) 조회
+│   │   │   ├── route.ts          # 주식·환율 조회 (장중 1시간 슬롯 캐시)
+│   │   │   └── profit/route.ts   # 기준가 조회 (2단 캐시: refDateMap + refPrice)
 │   │   ├── logo/route.ts         # 종목 로고 프록시
 │   │   ├── share/route.ts        # 공유 Short URL
 │   │   └── parse-screenshot/
 │   │       ├── route.ts          # POST (Gemini AI)
 │   │       └── ticker-map.ts     # 종목명→티커 fallback (~700개)
 │   └── layout.tsx                # 루트 레이아웃
-├── types/asset.ts                # 자산 5종 Zod 스키마 + 타입
-├── contexts/asset-data-context.tsx  # 전역 자산 상태 CRUD + 환율 + 동기화
-├── stores/preferences/           # Zustand 테마 스토어
+├── types/asset.ts                # 자산 5종 Zod 스키마 (inactiveStatus 포함)
+├── contexts/asset-data-context.tsx  # 전역 자산 상태 + 환율 + 동기화 + halted/delisted 분기
+├── stores/
+│   ├── preferences/              # Zustand 테마 스토어
+│   └── tutorial/                 # Zustand 튜토리얼 스토어 (Step 0~5 + isStandaloneStep0)
 ├── lib/
-│   ├── asset-storage.ts          # localStorage + 공유 토큰 (v7.2)
-│   ├── local-storage.ts          # STORAGE_KEYS, STORAGE_KEY_PREFIXES, migrateStorageKeys
-│   ├── profit-utils.ts           # 기준가 캐시(localStorage) + /api/finance/profit 조회
-│   ├── finance-service.ts        # 한국투자증권 API 연동 (주식/환율/배당/과거종가)
-│   ├── cache-storage.ts          # 환경별 캐시 추상화
+│   ├── asset-storage.ts          # localStorage + 공유 토큰 v7.2 (inactiveStatus 직렬화)
+│   ├── local-storage.ts          # STORAGE_KEYS, migrateStorageKeys, readTutorialStatus
+│   ├── one-time-migrations.ts    # secretasset_migrations_done 기반 1회성 마이그레이션
+│   ├── profit-utils.ts           # 기준가 캐시 + 점진 로드(onProgress) + dedup
+│   ├── finance-service.ts        # KIS API 연동 + classifyOverseasInactive
+│   ├── stock-cache-slot.ts       # 시장별 캐시 슬롯 유틸 (서버/클라 공용)
+│   ├── cache-storage.ts          # 캐시 추상화 (File/Upstash)
 │   ├── number-utils.ts           # 숫자·통화 포맷
-│   └── utils.ts                  # cn(), getInitials(), formatCurrency()
+│   └── utils.ts                  # cn(), getInitials()
 ├── config/
 │   ├── app.ts / asset-options.ts / theme.ts / navigation.ts
 └── components/ui/                # shadcn/ui 컴포넌트
@@ -73,7 +79,9 @@ src/
 ```
 localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 서버 API(/api/finance, /api/share) → cache-storage.ts → 한국투자증권 OpenAPI
-기준가 조회: profit-utils.ts → localStorage 캐시 → /api/finance/profit
+기준가 조회: profit-utils.ts(클라 localStorage) → /api/finance/profit
+                                                 ↓
+                                       REF_DATE_MAP + REF_PRICES 2단 캐시
 ```
 
 ## 캐시 전략
@@ -82,6 +90,10 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 |------|------|
 | 로컬 (UPSTASH_* 없음) | 파일 (`data/finance-cache.json`, `data/share-tokens.json`) |
 | Vercel (`KV_REST_API_URL` 있음) | Upstash Redis (Sliding TTL 30일) |
+
+**캐시 슬롯 시간 단위:** [stock-cache-slot.ts](../../src/lib/stock-cache-slot.ts)
+- 장중 1시간 슬롯 (domestic 09–20, foreign 17/18–익일 05/06 KST)
+- 장외에는 effectiveDate만 (cutoff: foreign 07:00, domestic 16:00, exchange 09:00 KST)
 
 ## 레이아웃
 
@@ -95,6 +107,18 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 - **상세** (`detail`): 주식/부동산/암호화폐/현금/대출 5 서브탭
 - **성과** (`activity`): 순자산/수익/배당 3 서브탭
 - `navigate-to-tab` CustomEvent → 상세 탭 자동 이동
+
+## 비활성 종목 정책
+
+KIS 응답 기반 자동 감지 → `Stock.inactiveStatus` 저장 (delisted/halted).
+- delisted: 자산 평가·매입원가·환차익·count·배당 모두 **제외**
+- halted: 마지막 currentPrice 유지하고 모든 계산에 **포함**, 배지로 표기
+- 분기 일관성: [types-and-schemas.md](./types-and-schemas.md#비활성-종목-정책-inactivestatus) 참조
+
+## 튜토리얼
+
+`secretasset_tutorial_status` 단일 키 (Record<step, status>). Step 0~5, Step 5 sub: activity/profit.
+- 단독 보기 모드: `tutorialStore.showStep0(true)` → 확인 버튼, 다음 단계 미진행 (메뉴-앱가이드 보기에서 호출)
 
 ## 환경변수
 

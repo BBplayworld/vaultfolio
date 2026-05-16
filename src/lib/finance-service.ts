@@ -23,11 +23,15 @@ import { Stock } from "@/types/asset";
 // Step 1. 타입 정의
 // ─────────────────────────────────────────────
 
+export type InactiveStatus = "delisted" | "halted";
+
 export interface StockPriceResult {
   price: number;
   name: string;
   updated_at: string;
   market?: string;
+  inactiveStatus?: InactiveStatus;
+  inactiveReason?: string;
 }
 
 export interface ExchangeRates {
@@ -105,6 +109,61 @@ function isKisResponseOk(
   return false;
 }
 
+// 해외주식 search-info 응답을 비활성 분류 — status는 "delisted"/"halted"/null
+// delisted: 상장폐지 (자산 평가 완전 제외 대상)
+// halted: 거래정지 (마지막 가격 유지 + 표기 대상)
+export function classifyOverseasInactive(
+  output: Record<string, string> | undefined
+): { status: InactiveStatus | null; reason: string | null } {
+  if (!output) return { status: null, reason: "no output" };
+
+  // 상장폐지 판정
+  if (output.lstg_abol_dt && output.lstg_abol_dt.trim() !== "") {
+    return { status: "delisted", reason: `lstg_abol_dt=${output.lstg_abol_dt}` };
+  }
+  if (output.lstg_abol_item_yn === "Y") {
+    return { status: "delisted", reason: "lstg_abol_item_yn=Y" };
+  }
+  if (output.lstg_yn && output.lstg_yn !== "Y") {
+    return { status: "delisted", reason: `lstg_yn=${output.lstg_yn}` };
+  }
+
+  // 거래정지 판정
+  const trStop = output.ovrs_stck_tr_stop_dvsn_cd;
+  if (trStop && trStop !== "01") {
+    return { status: "halted", reason: `ovrs_stck_tr_stop_dvsn_cd=${trStop}` };
+  }
+  const stopReason = output.ovrs_stck_stop_rson_cd;
+  if (stopReason && stopReason !== "00") {
+    return { status: "halted", reason: `ovrs_stck_stop_rson_cd=${stopReason}` };
+  }
+
+  // 최종수신일시 30일 초과 → 거래정지로 분류
+  const lastRcvg = output.last_rcvg_dtime;
+  if (lastRcvg && lastRcvg.length >= 8) {
+    const y = parseInt(lastRcvg.slice(0, 4));
+    const m = parseInt(lastRcvg.slice(4, 6));
+    const d = parseInt(lastRcvg.slice(6, 8));
+    if (y > 0 && m > 0 && d > 0) {
+      const lastMs = Date.UTC(y, m - 1, d);
+      const nowMs = Date.now();
+      const diffDays = (nowMs - lastMs) / (1000 * 60 * 60 * 24);
+      if (diffDays > 30) {
+        return { status: "halted", reason: `stale last_rcvg_dtime=${lastRcvg.slice(0, 8)}` };
+      }
+    }
+  }
+
+  return { status: null, reason: null };
+}
+
+// 호환용 래퍼 — 기존 코드에서 사유 문자열만 필요한 경우
+function checkOverseasInactive(
+  output: Record<string, string> | undefined
+): string | null {
+  return classifyOverseasInactive(output).reason;
+}
+
 export async function fetchStocksFromKisOverseas(
   tickers: string[],
   todayStr: string,
@@ -149,11 +208,24 @@ export async function fetchStocksFromKisOverseas(
 
         const output = data.output as Record<string, string> | undefined;
         const price = parseFloat(output?.ovrs_now_pric1 ?? "0");
-        const isDelisted = !!(output?.lstg_abol_dt && output.lstg_abol_dt.trim() !== "");
-        if (price > 0 && !isDelisted) {
-          const market = prdtTypeCd === "512" ? "NASDAQ" : prdtTypeCd === "513" ? "NYSE" : "AMEX";
+        const { status: inactiveStatus, reason } = classifyOverseasInactive(output);
+        const market = prdtTypeCd === "512" ? "NASDAQ" : prdtTypeCd === "513" ? "NYSE" : "AMEX";
+        if (price > 0 && !inactiveStatus) {
           results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr, market };
-          break; // 성공 시 다음 거래소 시도 불필요
+          break; // 활성 종목 성공 — 다음 거래소 시도 불필요
+        }
+        if (inactiveStatus) {
+          // 비활성: 가격 0이어도 응답에 포함시켜 클라이언트가 상태 반영하도록
+          results[ticker] = {
+            price: 0,
+            name: output?.prdt_name || ticker,
+            updated_at: todayStr,
+            market,
+            inactiveStatus,
+            inactiveReason: reason ?? undefined,
+          };
+          console.log(`[비활성 - ${ticker}/${prdtTypeCd}] ${inactiveStatus}: ${reason}`);
+          break; // 비활성 확인된 거래소에서 종료
         }
       } catch (e) {
         console.error(`[KIS 해외주식 조회 오류 - ${ticker}/${prdtTypeCd}]:`, e);
@@ -508,7 +580,10 @@ export async function fetchDomesticHistoricalPrice(
           cache: "no-store",
         }
       );
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.warn(`[KIS 국내 HTTP실패 - ${ticker}/${tryDate}] status=${res.status}`);
+        continue;
+      }
       const data = await res.json();
       if (!isKisResponseOk(data, `국내주식 과거종가 ${ticker}/${tryDate}`)) continue;
       const output = data.output2 as Record<string, string>[] | undefined;
@@ -518,6 +593,11 @@ export async function fetchDomesticHistoricalPrice(
           const date = `${tryDate.slice(0, 4)}-${tryDate.slice(4, 6)}-${tryDate.slice(6, 8)}`;
           return { price, date };
         }
+        // [진단 로그] 응답은 있는데 가격이 0/없음
+        console.warn(`[KIS 국내 가격없음 - ${ticker}/${tryDate}] stck_clpr=${output[0].stck_clpr}`);
+      } else {
+        // [진단 로그] output2 비어있음
+        console.warn(`[KIS 국내 빈 데이터 - ${ticker}/${tryDate}] output2.length=${output?.length ?? "undefined"}`);
       }
     } catch (e) {
       console.error(`[KIS 국내주식 과거종가 오류 - ${ticker}/${tryDate}]:`, e);
@@ -531,10 +611,13 @@ export async function fetchOverseasHistoricalPrice(
   dateStr: string,
   accessToken: string,
   appKey: string,
-  appSecret: string
+  appSecret: string,
+  preferredExcd?: string,
 ): Promise<HistoricalPriceResult | null> {
   const targetDate = dateStr.replace(/-/g, ""); // YYYYMMDD
-  for (const excd of ["NAS", "NYS", "AMS"]) {
+  // 캐시된 EXCD가 있으면 그것만 시도, 없으면 NAS/NYS/AMS 순차 fallback
+  const excdList = preferredExcd ? [preferredExcd] : ["NAS", "NYS", "AMS"];
+  for (const excd of excdList) {
     try {
       // NCNT=5로 최대 5개 row 조회 → xymd 날짜 일치하는 row 탐색 (휴장일 처리)
       const res = await fetch(
@@ -550,21 +633,34 @@ export async function fetchOverseasHistoricalPrice(
           cache: "no-store",
         }
       );
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.warn(`[KIS 해외 HTTP실패 - ${ticker}/${excd}/${targetDate}] status=${res.status}`);
+        continue;
+      }
       const data = await res.json();
       if (!isKisResponseOk(data, `해외주식 과거종가 ${ticker}/${excd}/${targetDate}`)) continue;
       const output = data.output2 as Record<string, string>[] | undefined;
-      if (!Array.isArray(output) || output.length === 0) continue;
+      if (!Array.isArray(output) || output.length === 0) {
+        // [진단 로그] output2 비어있음
+        console.warn(`[KIS 해외 빈 데이터 - ${ticker}/${excd}/${targetDate}] output2.length=${output?.length ?? "undefined"} rt_cd=${data?.rt_cd}`);
+        continue;
+      }
       // xymd가 targetDate와 일치하는 row 우선 탐색, 없으면 다음 유효한 row 사용
       const matched = output.find((row) => row.xymd === targetDate);
       const row = matched ?? output.find((r) => parseFloat(r.clos ?? "0") > 0);
-      if (!row) continue;
+      if (!row) {
+        // [진단 로그] output2는 있지만 유효 row 없음
+        console.warn(`[KIS 해외 유효row없음 - ${ticker}/${excd}/${targetDate}] rows.xymd=${output.map((r) => r.xymd).join(",")}`);
+        continue;
+      }
       const price = parseFloat(row.clos ?? "0");
       if (price > 0) {
         const xymd = row.xymd ?? targetDate;
         const date = `${xymd.slice(0, 4)}-${xymd.slice(4, 6)}-${xymd.slice(6, 8)}`;
         return { price, date };
       }
+      // [진단 로그] row는 찾았으나 가격이 0
+      console.warn(`[KIS 해외 가격0 - ${ticker}/${excd}/${targetDate}] clos=${row.clos} xymd=${row.xymd}`);
     } catch (e) {
       console.error(`[KIS 해외주식 과거종가 오류 - ${ticker}/${excd}/${targetDate}]:`, e);
     }

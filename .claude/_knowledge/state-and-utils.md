@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-05-02
+> 마지막 업데이트: 2026-05-16
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -40,9 +40,25 @@ getAssetSummary(): AssetSummary
 
 ```
 마운트 → localStorage 로드 → isDataLoaded=true
-→ 1초 대기 → 환율 동기화 → 주식 일괄 조회 (3개씩 배치, 배치 간 1초)
-→ 스냅샷 저장 (일별/월별)
+→ 1초 대기 → 환율 동기화 → 주식 일괄 조회 (BATCH_SIZE=3, BATCH_DELAY_MS=1000)
+→ profit ref(daily) 조회 → 스냅샷 저장 (일별/월별)
 ```
+
+### 현재가 갱신 규칙 (syncTodayStockPrices)
+
+```typescript
+// halted: currentPrice 유지 (마지막 알려진 가격 보존)
+// delisted: API가 준 0으로 덮어쓰기 (평가에서 어차피 제외)
+// 활성: result.price로 갱신 + inactiveStatus undefined로 리셋
+currentPrice: isHalted ? stock.currentPrice : result.price
+inactiveStatus: result.inactiveStatus,
+inactiveReason: result.inactiveReason,
+inactiveCheckedAt: result.updated_at,
+```
+
+### 스냅샷용 tickerList 정렬 필수
+
+`saveSnapshots` 내부의 `tickerList`는 반드시 `.sort()` 후 join (profit-chart·stock-tab과 동일 캐시 키 보장).
 
 ---
 
@@ -53,6 +69,27 @@ const themeMode = usePreferencesStore(s => s.themeMode);  // "light"|"dark"
 const setThemeMode = usePreferencesStore(s => s.setThemeMode);
 // 쿠키 저장: src/server/server-actions.ts (hydration mismatch 방지)
 ```
+
+---
+
+## TutorialStore (`src/stores/tutorial/tutorial-store.ts`)
+
+```typescript
+TutorialStep = 0 | 1 | 2 | 3 | 4 | 5
+StepStatus   = "pending" | "done" | "skipped"
+
+state: {
+  activeStep, step5Sub, statuses, isTutorialFinished, isWaiting,
+  isStandaloneStep0  // 메뉴-앱가이드 단독 보기 모드 (확인 버튼, 다음 단계 미진행)
+}
+actions: {
+  initTutorial, completeStep, skipStep, advanceStep5, startWaiting,
+  showStep0(standalone?: boolean)   // standalone=true → 단독 보기
+  closeStandaloneStep0()
+}
+```
+
+저장: `secretasset_tutorial_status` 단일 키 (Record<step, status>). 레거시 12 키는 `merge-tutorial-status` 마이그레이션으로 통합.
 
 ---
 
@@ -82,12 +119,23 @@ getInitials(str): string                // "홍길동" → "홍"
 STORAGE_KEYS = {
   assetData, dailySnapshots, monthlySnapshots,
   exchangeRate, exchangeSyncDate, collapsibleUsed,
-  noticeHideUntil, guideDismissed, geminiUsage,
-  shareOwnerId, financeApiErrorCount
+  noticeHideUntil, geminiUsage,
+  shareOwnerId, financeApiErrorCount,
+  tutorialStatus  // "secretasset_tutorial_status"
 }
 STORAGE_KEY_PREFIXES = { profit: "secretasset_profit:" }
-migrateStorageKeys(): void  // 레거시 키 → 신규 키 마이그레이션
+migrateStorageKeys(): void
+  // 레거시 키 마이그레이션 + guideDismissed 키 제거 + cleanExpiredNoticeKeys + runOneTimeMigrations
+
+readTutorialStatus(): Record<TutorialStep, StepStatus>
+writeTutorialStatus(map): void
 ```
+
+### one-time-migrations.ts
+
+`secretasset_migrations_done` (JSON array)에 완료 id 기록 → 매 진입 시 done 체크 → 미실행 항목만 실행. 현재 활성 id:
+- `2026-05-16-clear-profit-cache-final` — profit 캐시 일괄 정리
+- `merge-tutorial-status` — step별 12 키 → 단일 객체 통합
 
 ### asset-storage.ts
 
@@ -95,13 +143,13 @@ migrateStorageKeys(): void  // 레거시 키 → 신규 키 마이그레이션
 getAssetData(): AssetData
 saveAssetData(data): boolean
 exportAssetData(): void
-importAssetData(file): Promise<{ assetData: AssetData; snapshotRestored: boolean }>
+importAssetData(file): Promise<{ assetData, snapshotRestored }>
 clearAssetData(): boolean
 saveAssetDataRaw(data): boolean         // superRefine 우회 (스크린샷 경로)
 generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
 parseShareToken(token, pin?, localKey?): ParseResult
-  // = { data, rates?, snapshots? } | { pinRequired: true } | null
 // STORAGE_KEYS, migrateStorageKeys는 local-storage.ts에서 re-export
+// 공유 토큰 v7.2 stock 필드: inactiveStatus 직렬화 ("d"=delisted, "h"=halted, ""=활성)
 ```
 
 ### finance-service.ts
@@ -112,23 +160,51 @@ classifyTickers(tickers[]): { usTickers, krTickers }
 resolveStockName(category, apiName, fallback): string
 fetchStocksFromKorea(tickers, todayStr, token, key, secret)
 fetchStocksFromKisOverseas(tickers, todayStr, token, key, secret)
+  // → StockPriceResult에 inactiveStatus 포함 (classifyOverseasInactive)
 fetchExchangeRateFromKis(token, key, secret, todayStr)
 fetchDividendDomestic(ticker, fdt, tdt, token, key, secret): Promise<DividendPayoutResult[]>
 fetchDividendOverseas(ticker, excd, fdt, tdt, token, key, secret): Promise<DividendPayoutResult[]>
-fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret): Promise<number|null>
-fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret): Promise<number|null>
+fetchDomesticHistoricalPrice(ticker, dateStr, token, key, secret): Promise<{price, date}|null>
+fetchOverseasHistoricalPrice(ticker, dateStr, token, key, secret, preferredExcd?): Promise<{price, date}|null>
+  // preferredExcd 주어지면 그것만 시도, 없으면 NAS→NYS→AMS
 
-// DividendPayoutResult: { payoutDate, amountPerShare, amountForeign?, currency?, frequency? }
-// DividendFrequency: "annual"|"semiannual"|"quarterly"|"monthly"
+classifyOverseasInactive(output): { status: InactiveStatus|null, reason: string|null }
+  // 판정 순서: lstg_abol_dt/lstg_abol_item_yn/lstg_yn → delisted
+  //          ovrs_stck_tr_stop_dvsn_cd/ovrs_stck_stop_rson_cd → halted
+  //          last_rcvg_dtime > 30일 경과 → halted
+```
+
+### stock-cache-slot.ts (`src/lib/stock-cache-slot.ts`)
+
+서버·클라이언트 공용 캐시 슬롯 유틸. 순수 함수 (fs/Redis 의존 없음).
+
+```typescript
+getEffectiveDateStr(type: "domestic"|"foreign"|"exchange"): string
+  // 마감 시간(KST) 이후면 오늘, 이전이면 어제
+  // cutoff: foreign 07:00, domestic 16:00, exchange 09:00
+
+getStockCacheSlot(type: "domestic"|"foreign"): string
+  // 장중: "{effectiveDate}-H{HH}" (1시간 슬롯)
+  // 장외: effectiveDate
+  // domestic 장중: 09:00~20:00 KST
+  // foreign 장중: DST 17:00~익일 05:00 / STD 18:00~익일 06:00 (프리마켓 포함)
 ```
 
 ### profit-utils.ts (`src/lib/profit-utils.ts`)
 
 ```typescript
 type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
-getProfitCacheKey(tickers, period): string  // localStorage 캐시 키 생성
-fetchProfitRef(tickers, period): Promise<ProfitRefResponse>
-  // localStorage 캐시 → /api/finance/profit?tickers=...&period=...
+
+getProfitCacheKey(tickers, period): string
+  // daily 키: "secretasset_profit:daily:{krRefDate}:{tickers}"
+  // → us_refDate는 키에서 제외 (KST 자정에 kr과 함께 변경되어 동기화 동일)
+
+fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
+  // options: { onProgress?, onComplete?, signal? }
+  // 1) localStorage 캐시 hit → onProgress + onComplete(fromCache=true) 즉시 호출
+  // 2) miss → BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 fetch
+  //    배치마다 onProgress(누적 결과), 완료 후 캐시 저장 + onComplete(false)
+  // 3) inFlightFetches Map으로 동일 cacheKey 호출 dedup (네트워크 1회만)
 ```
 
 ---
@@ -136,7 +212,7 @@ fetchProfitRef(tickers, period): Promise<ProfitRefResponse>
 ## config/theme.ts
 
 ```typescript
-ASSET_THEME = { important, primary: {text, bg}, categoryBox, todayBox, liability }
+ASSET_THEME = { important, primary: {text, bg, bgLight}, text: {default, muted}, categoryBox, todayBox, liability, ... }
 getProfitLossColor(value: number): string   // >0 수익색 / <0 손실색 / =0 기본색
 ```
 
@@ -170,7 +246,7 @@ window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: "stoc
 // 탭 이동 이벤트: FloatingAddButton 빠른이동 → AssetPageTabs에서 수신
 window.dispatchEvent(new CustomEvent("navigate-to-tab", { detail: { tab: "stocks"|"real-estate"|"crypto"|"cash"|"loans" } }))
 
-// 가이드 이벤트: GuideMiniButton → AppGuide에서 수신
+// 가이드 이벤트: ToolMenu(앱가이드 보기) → AppGuide에서 수신 (+ tutorialStore.showStep0(true))
 window.dispatchEvent(new CustomEvent("trigger-restore-guide"))
 window.dispatchEvent(new CustomEvent("trigger-dismiss-guide"))
 

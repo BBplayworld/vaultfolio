@@ -11,7 +11,6 @@ export const STORAGE_KEYS = {
   exchangeSyncDate:     "secretasset_exchange_last_sync_date",
   collapsibleUsed:      "secretasset_collapsible_used",
   noticeHideUntil:      "secretasset_notice_hide_until",
-  guideDismissed:       "secretasset_guide_dismissed",
   geminiUsage:          "secretasset_gemini_usage",
   shareOwnerId:         "secretasset_share_owner_id",
   financeApiErrorCount: "secretasset_finance_api_error_count",
@@ -26,7 +25,6 @@ const LEGACY_KEYS = {
   exchangeRate:         "exchange-rate-usd-krw",
   collapsibleUsed:      "stock-tab-collapsible-used",
   noticeHideUntil:      "secretasset-notice-hide-until",
-  guideDismissed:       "secretasset-guide-dismissed",
   geminiUsage:          "secretasset-gemini-usage",
   financeApiErrorCount: "finance_api_error_count",
 } as const;
@@ -79,7 +77,6 @@ export function migrateStorageKeys(): void {
     [LEGACY_KEYS.exchangeRate,         STORAGE_KEYS.exchangeRate],
     [LEGACY_KEYS.collapsibleUsed,      STORAGE_KEYS.collapsibleUsed],
     [LEGACY_KEYS.noticeHideUntil,      STORAGE_KEYS.noticeHideUntil],
-    [LEGACY_KEYS.guideDismissed,       STORAGE_KEYS.guideDismissed],
     [LEGACY_KEYS.geminiUsage,          STORAGE_KEYS.geminiUsage],
     [LEGACY_KEYS.financeApiErrorCount, STORAGE_KEYS.financeApiErrorCount],
   ];
@@ -99,6 +96,10 @@ export function migrateStorageKeys(): void {
       localStorage.removeItem(key);
     }
   }
+
+  // 메뉴-앱가이드 보기 기능 변경으로 더 이상 사용하지 않는 키 제거
+  localStorage.removeItem("secretasset_guide_dismissed");
+  localStorage.removeItem("secretasset-guide-dismissed");
 
   cleanExpiredNoticeKeys();
   runOneTimeMigrations();

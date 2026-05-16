@@ -8,10 +8,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useState } from "react";
 import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/asset-dispatch";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
 import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
+import { DataSourceBadge } from "@/app/(main)/asset/_components/main-nav/data-source-badge";
 import { Stock } from "@/types/asset";
 import previewData from "./welcome-preview-data.json";
 
@@ -49,7 +50,9 @@ const foreignTotal = foreignStocks.reduce((s, st) => s + st.quantity * st.curren
 const foreignBarValues = foreignStocks.map((st) => ({ value: st.quantity * st.currentPrice * EXCHANGE_RATES.USD }));
 const foreignBarColors = assignColors(foreignBarValues);
 const PREVIEW_BAR_ITEMS = foreignStocks.map((st, i) => ({ stock: st, value: foreignBarValues[i].value, color: foreignBarColors[i] }));
-const foreignProfit = foreignStocks.reduce((s, st) => s + computeStockMetrics(st, EXCHANGE_RATES, foreignTotal).profit, 0);
+const foreignMetrics = foreignStocks.map((st) => computeStockMetrics(st, EXCHANGE_RATES, foreignTotal));
+const foreignProfit = foreignMetrics.reduce((s, m) => s + m.profit, 0);
+const foreignCurrencyGain = foreignMetrics.reduce((s, m) => s + m.currencyGain, 0);
 const foreignCost = foreignTotal - foreignProfit;
 const foreignProfitRate = foreignCost > 0 ? (foreignProfit / foreignCost) * 100 : 0;
 
@@ -117,18 +120,21 @@ export function WelcomeGuide() {
           {/* 왼쪽: 자산 분포 도넛 + 금융자산 구성 바 */}
           <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} border border-zinc-500/60 p-5 space-y-5`}>
             {/* 순자산 요약 */}
-            <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.distributionCard.sectionBg} border ${ASSET_THEME.distributionCard.sectionBorder} px-4 py-3`}>
+            <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
               <div>
-                <p className={`text-xs font-semibold ${ASSET_THEME.distributionCard.muted}`}>순자산</p>
+                <div className="flex items-center gap-1.5">
+                  <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                  <DataSourceBadge kind="realtime" />
+                </div>
                 <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(netAsset)}</p>
-                <p className={`text-[11px] ${ASSET_THEME.text.default}`}>{netAsset.toLocaleString("ko-KR")}원</p>
+                <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(netAsset)}</p>
               </div>
               <div className="text-right space-y-1.5">
-                <div className="text-xs">
+                <div className="text-sm">
                   <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
-                  <span className={`font-bold ${ASSET_THEME.primary.text}`}>{formatShortCurrency(totalAsset)}</span>
+                  <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
                 </div>
-                <div className="text-xs">
+                <div className="text-sm">
                   <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
                   <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(previewData.loanValue)}</span>
                 </div>
@@ -164,7 +170,10 @@ export function WelcomeGuide() {
               totalValue={foreignTotal}
               totalProfit={foreignProfit}
               totalProfitRate={foreignProfitRate}
-              screenshotMode={true}
+              currencyGain={foreignCurrencyGain}
+              dailyProfit={previewData.dailyProfit}
+              dailyProfitRate={previewData.dailyProfitRate}
+              screenshotMode={false}
             />
 
             {/* 주식 상세 — 해외주식 고정 */}

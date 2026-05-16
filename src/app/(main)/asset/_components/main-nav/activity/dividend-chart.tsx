@@ -164,7 +164,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
 
   const stocksWithTicker = (() => {
-    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted");
+    // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중)
+    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
     const grouped = groupStocksByTickerCategory(base);
     return Array.from(grouped.values()).map(mergeStockGroup);
   })();

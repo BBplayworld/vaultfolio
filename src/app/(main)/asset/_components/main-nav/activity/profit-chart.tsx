@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -11,8 +11,15 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
+import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { DataSourceBadge } from "../data-source-badge";
+
+const PROFIT_SYNC_COMPLETE_MSG = "보유 주식의 기간별 수익 동기화 완료";
+
+// 세션 단위 toast 중복 방지: 같은 (period, tickerList) 조합으로 한 번 알린 뒤엔 재진입해도 안 띄움
+// 페이지 새로고침 시 모듈 재로드 → Set 초기화 → 새 세션으로 간주
+const notifiedKeysThisSession = new Set<string>();
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -47,6 +54,16 @@ const MARKET_LABELS: Record<MarketView, string> = {
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
   return `${sign}${rate.toFixed(2)}%`;
+}
+
+// 종목별 응답일이 다를 수 있어 시장 단위 표시는 최빈 응답일 사용
+function pickMajorityDate(dates: (string | undefined)[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const d of dates) if (d) counts.set(d, (counts.get(d) ?? 0) + 1);
+  let best: string | undefined;
+  let max = 0;
+  for (const [d, c] of counts) if (c > max) { best = d; max = c; }
+  return best;
 }
 
 // 한투 API가 반환하는 해외 거래일을 KST 일자 표기로 +1일 변환 (사용자 인지 기준)
@@ -101,33 +118,107 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
   const [marketView, setMarketView] = useState<MarketView>("all");
 
+  // tickerList: currentPrice 무관, ticker가 있고 unlisted/상장폐지 아닌 종목 전체
+  // → 첫 mount부터 풀세트로 고정 → 캐시 키 안정 (syncTodayStockPrices가 백그라운드로 currentPrice를 채워도 영향 없음)
+  // 거래정지는 ref 종가 조회를 시도해 "기준가 없음"으로 표시되도록 포함
+  const tickerList = Array.from(
+    new Set(
+      assetData.stocks
+        .filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted")
+        .map((s) => normalizeTicker(s))
+        .filter(Boolean),
+    ),
+  ).sort().join(",");
+
+  // 화면 표시/계산용: 현재가가 채워진 종목만 (기존 동작 유지) + 상장폐지 제외
   const stocksWithPrice = assetData.stocks.filter(
-    (s) => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0
+    (s) => s.ticker && s.category !== "unlisted" && s.currentPrice && s.currentPrice > 0 && s.inactiveStatus !== "delisted"
   );
 
   const groupedMap = groupStocksByTickerCategory(stocksWithPrice);
   const mergedStocks = Array.from(groupedMap.values()).map(mergeStockGroup);
 
-  // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(stock-tab 등)와 동일한 캐시 키 보장
-  const tickerList = Array.from(
-    new Set(mergedStocks.map((s) => normalizeTicker(s)).filter(Boolean))
-  ).sort().join(",");
+  // 점진 노출: 배치 응답이 올 때마다 누적된 결과를 state에 반영
+  // 각 종목은 데이터가 채워지는 순서대로 화면에 표시됨
+  const [refData, setRefData] = useState<ProfitRefResponse | undefined>(undefined);
+  const [dailyData, setDailyData] = useState<ProfitRefResponse | undefined>(undefined);
+  // 진행 중인 fetch 키 추적: cleanup 후 즉시 동일 키로 재실행되는 경우 abort 방지
+  const refInFlightKeyRef = useRef<string | null>(null);
+  const dailyInFlightKeyRef = useRef<string | null>(null);
+  // 완료 알림: ref/daily 둘 다 네트워크로 완료됐을 때 한 번만 toast
+  // 캐시 hit(fromCache=true)이면 알림 생략 (사용자가 인지할 액션 없음)
+  const refDoneRef = useRef(false);
+  const dailyDoneRef = useRef(false);
+  const notifiedKeyRef = useRef<string | null>(null);
 
-  const { data: refData, isLoading } = useQuery({
-    queryKey: ["profit", period, tickerList],
-    queryFn: () => fetchProfitRef(tickerList, period),
-    staleTime: 5 * 60 * 1000,
-    enabled: isActive && mergedStocks.length > 0,
-  });
+  const maybeNotifyComplete = (key: string) => {
+    const needsDaily = period !== "daily";
+    if (!refDoneRef.current) return;
+    if (needsDaily && !dailyDoneRef.current) return;
+    if (notifiedKeyRef.current === key) return;
+    notifiedKeyRef.current = key;
+    // 세션 내 동일 (period, tickerList)로 이미 알린 적 있으면 재진입 시 생략
+    if (notifiedKeysThisSession.has(key)) return;
+    notifiedKeysThisSession.add(key);
+    toast.info(`${PERIOD_LABELS[period]} ${PROFIT_SYNC_COMPLETE_MSG}`);
+    console.log(`[INFO] ${PERIOD_LABELS[period]} ${PROFIT_SYNC_COMPLETE_MSG}`);
+  };
 
-  // 우측 "기준 종가"는 모든 period에서 동일하게 daily ref 종가를 사용
-  const { data: dailyData } = useQuery({
-    queryKey: ["profit", "daily", tickerList],
-    queryFn: () => fetchProfitRef(tickerList, "daily"),
-    staleTime: 5 * 60 * 1000,
-    enabled: isActive && mergedStocks.length > 0 && period !== "daily",
-  });
+  // 현재 period 결과 점진 로드
+  useEffect(() => {
+    if (!isActive || mergedStocks.length === 0 || !tickerList) return;
+    const key = `${period}:${tickerList}`;
+    if (refInFlightKeyRef.current === key) return; // 이미 진행 중
+    refInFlightKeyRef.current = key;
+    // 새 조회 시작: 완료 플래그 리셋 (key가 바뀌면 다시 알림)
+    refDoneRef.current = false;
+    dailyDoneRef.current = false;
+    notifiedKeyRef.current = null;
+    const controller = new AbortController();
+    setRefData(undefined);
+    fetchProfitRef(tickerList, period, {
+      signal: controller.signal,
+      onProgress: (partial) => setRefData(partial),
+      onComplete: () => {
+        refDoneRef.current = true;
+        maybeNotifyComplete(key);
+      },
+    }).finally(() => {
+      if (refInFlightKeyRef.current === key) refInFlightKeyRef.current = null;
+    });
+    return () => {
+      // 동일 키로 재실행 중이면 abort 안 함 — 의존성이 잠시 흔들려도 진행 보존
+      if (refInFlightKeyRef.current !== key) controller.abort();
+    };
+  }, [isActive, mergedStocks.length, tickerList, period]);
+
+  // daily 기준 종가 (period가 daily가 아닐 때만 별도 조회)
+  useEffect(() => {
+    if (!isActive || mergedStocks.length === 0 || !tickerList || period === "daily") return;
+    const key = `${period}:${tickerList}`;
+    const dailyKey = `daily:${tickerList}`;
+    if (dailyInFlightKeyRef.current === dailyKey) return;
+    dailyInFlightKeyRef.current = dailyKey;
+    const controller = new AbortController();
+    setDailyData(undefined);
+    fetchProfitRef(tickerList, "daily", {
+      signal: controller.signal,
+      onProgress: (partial) => setDailyData(partial),
+      onComplete: () => {
+        dailyDoneRef.current = true;
+        maybeNotifyComplete(key);
+      },
+    }).finally(() => {
+      if (dailyInFlightKeyRef.current === dailyKey) dailyInFlightKeyRef.current = null;
+    });
+    return () => {
+      if (dailyInFlightKeyRef.current !== dailyKey) controller.abort();
+    };
+  }, [isActive, mergedStocks.length, tickerList, period]);
+
   const baseRefData = period === "daily" ? refData : dailyData;
+  // 첫 응답이 오기 전까지만 스켈레톤. 한 종목이라도 데이터가 채워지면 즉시 부분 노출
+  const isLoading = refData === undefined || (period !== "daily" && dailyData === undefined);
 
   if (mergedStocks.length === 0) {
     return (
@@ -223,10 +314,11 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const krCurrentSum = krProfits.reduce((s, r) => s + r.currentValue, 0);
   const usRefSum = usProfits.reduce((s, r) => s + r.refValue, 0);
   const usCurrentSum = usProfits.reduce((s, r) => s + r.currentValue, 0);
-  const krRefDate = krProfits[0]?.refDate;
-  const usRefDate = usProfits[0]?.refDate;
-  const krCompareDate = krProfits[0]?.compareDate;
-  const usCompareDate = usProfits[0]?.compareDate;
+  // 시장별 종목들이 서로 다른 응답일을 가질 수 있으므로 최빈값으로 표시
+  const krRefDate = pickMajorityDate(krProfits.map((r) => r.refDate));
+  const usRefDate = pickMajorityDate(usProfits.map((r) => r.refDate));
+  const krCompareDate = pickMajorityDate(krProfits.map((r) => r.compareDate));
+  const usCompareDate = pickMajorityDate(usProfits.map((r) => r.compareDate));
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = filteredProfits
