@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { RealEstate, realEstateSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, quickButtonPresets } from "@/config/asset-options";
 
 const realEstateQuickButtons = [...quickButtonPresets.realEstate];
@@ -180,7 +180,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="purchasePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.important}>매입가 *</FormLabel>
+                <FormLabel style={{ color: MAIN_PALETTE[10] }}>매입가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -200,7 +200,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="currentValue"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.important}>{getCurrentValueLabel()} *</FormLabel>
+                <FormLabel style={{ color: MAIN_PALETTE[10] }}>{getCurrentValueLabel()} *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}

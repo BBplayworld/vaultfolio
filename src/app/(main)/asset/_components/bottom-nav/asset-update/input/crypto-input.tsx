@@ -213,13 +213,13 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="quantity"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>수량 *</FormLabel>
+              <FormItem className="min-w-0">
+                <FormLabel style={{ color: MAIN_PALETTE[10] }}>수량 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -239,8 +239,8 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
             control={form.control}
             name="averagePrice"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>평균단가 *</FormLabel>
+              <FormItem className="min-w-0">
+                <FormLabel style={{ color: MAIN_PALETTE[10] }}>평균단가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}

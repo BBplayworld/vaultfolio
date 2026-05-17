@@ -3,7 +3,7 @@
 import React from "react";
 import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
@@ -140,8 +140,9 @@ const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
  * ShareCard, StockTab 등에서 공통 사용.
  */
 export function useFilteredStockData(activeCategory: string) {
-  const { assetData, exchangeRates, getAssetSummary } = useAssetData();
+  const { assetData, exchangeRates, getAssetSummary, dataResetVersion } = useAssetData();
   const summary = getAssetSummary();
+  const queryClient = useQueryClient();
 
   const mul = (currency?: string) => getMultiplier(currency, exchangeRates);
 
@@ -153,10 +154,19 @@ export function useFilteredStockData(activeCategory: string) {
 
   const { data: refData } = useQuery({
     queryKey: ["profit", "daily", tickerList],
-    queryFn: () => fetchProfitRef(tickerList, "daily"),
+    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "stock-tab:useQuery" }),
     staleTime: 5 * 60 * 1000,
     enabled: tickerList.length > 0,
   });
+
+  // 데이터 삭제/불러오기 시 진행 중인 profit 쿼리 전부 강제 취소
+  const prevResetVersionRef = useRef(dataResetVersion);
+  useEffect(() => {
+    if (prevResetVersionRef.current === dataResetVersion) return;
+    prevResetVersionRef.current = dataResetVersion;
+    console.log(`[PROFIT][stock-tab] cancelQueries 호출 (dataResetVersion=${dataResetVersion})`);
+    queryClient.cancelQueries({ queryKey: ["profit"] });
+  }, [dataResetVersion, queryClient]);
 
   const marketMap = useMemo<Record<string, string>>(() => {
     try {

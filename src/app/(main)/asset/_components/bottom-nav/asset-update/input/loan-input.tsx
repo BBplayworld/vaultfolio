@@ -201,7 +201,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           name="balance"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>현재 잔액 *</FormLabel>
+              <FormLabel style={{ color: MAIN_PALETTE[10] }}>현재 잔액 *</FormLabel>
               <FormControl>
                 <NumberInput
                   value={field.value}
@@ -221,7 +221,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           name="interestRate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>금리 *</FormLabel>
+              <FormLabel style={{ color: MAIN_PALETTE[10] }}>금리 *</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -242,10 +242,10 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
             control={form.control}
             name="startDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="min-w-0">
                 <FormLabel>대출일 *</FormLabel>
                 <FormControl>
-                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
+                  <Input type="date" className="w-full max-w-[160px] sm:max-w-full min-w-0 text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -256,10 +256,10 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
             control={form.control}
             name="endDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="min-w-0">
                 <FormLabel>만기일</FormLabel>
                 <FormControl>
-                  <Input type="date" className="w-full min-w-0 text-sm" {...field} />
+                  <Input type="date" className="w-full max-w-[160px] sm:max-w-full min-w-0 text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

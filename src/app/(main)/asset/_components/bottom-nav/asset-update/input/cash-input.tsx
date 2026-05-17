@@ -217,7 +217,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                         const isForeignCurrency = currency === "USD" || currency === "JPY";
                         return (
                             <FormItem>
-                                <FormLabel>금액 *</FormLabel>
+                                <FormLabel style={{ color: MAIN_PALETTE[10] }}>금액 *</FormLabel>
                                 <FormControl>
                                     <NumberInput
                                         value={field.value}
