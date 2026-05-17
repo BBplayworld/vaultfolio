@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stock, stockSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE } from "@/config/theme";
 import { stockCategories, quickButtonPresets, securitiesFirms } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 
@@ -342,7 +342,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             name="quantity"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className={ASSET_THEME.important}>수량 *</FormLabel>
+                <FormLabel style={{ color: MAIN_PALETTE[10] }}>수량 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -365,7 +365,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <FormLabel className={ASSET_THEME.important}>평균단가 *</FormLabel>
+                  <FormLabel style={{ color: MAIN_PALETTE[10] }}>평균단가 *</FormLabel>
                   {isForeignStock && (
                     <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
                       <Checkbox

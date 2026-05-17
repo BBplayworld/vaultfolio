@@ -112,7 +112,7 @@ function getExpectedRefDate(period: ProfitPeriod, market: "domestic" | "foreign"
 }
 
 export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
-  const { assetData, exchangeRates } = useAssetData();
+  const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const usdRate = exchangeRates.USD;
   const jpyRate = exchangeRates.JPY;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
@@ -145,6 +145,9 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   // 진행 중인 fetch 키 추적: cleanup 후 즉시 동일 키로 재실행되는 경우 abort 방지
   const refInFlightKeyRef = useRef<string | null>(null);
   const dailyInFlightKeyRef = useRef<string | null>(null);
+  // 데이터 삭제/불러오기 시 직접 abort 가능하도록 진행 중인 controller 보관
+  const refAbortRef = useRef<AbortController | null>(null);
+  const dailyAbortRef = useRef<AbortController | null>(null);
   // 완료 알림: ref/daily 둘 다 네트워크로 완료됐을 때 한 번만 toast
   // 캐시 hit(fromCache=true)이면 알림 생략 (사용자가 인지할 액션 없음)
   const refDoneRef = useRef(false);
@@ -175,9 +178,11 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     dailyDoneRef.current = false;
     notifiedKeyRef.current = null;
     const controller = new AbortController();
+    refAbortRef.current = controller;
     setRefData(undefined);
     fetchProfitRef(tickerList, period, {
       signal: controller.signal,
+      caller: `profit-chart:ref(${period})`,
       onProgress: (partial) => setRefData(partial),
       onComplete: () => {
         refDoneRef.current = true;
@@ -185,12 +190,30 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       },
     }).finally(() => {
       if (refInFlightKeyRef.current === key) refInFlightKeyRef.current = null;
+      if (refAbortRef.current === controller) refAbortRef.current = null;
     });
     return () => {
       // 동일 키로 재실행 중이면 abort 안 함 — 의존성이 잠시 흔들려도 진행 보존
       if (refInFlightKeyRef.current !== key) controller.abort();
     };
   }, [isActive, mergedStocks.length, tickerList, period]);
+
+  // 데이터 삭제/불러오기 시 진행 중인 ref/daily fetch 강제 abort
+  // (useEffect 보존 최적화 우회: in-flight 키와 controller를 함께 비우고 abort)
+  const prevResetVersionRef = useRef(dataResetVersion);
+  useEffect(() => {
+    if (prevResetVersionRef.current === dataResetVersion) return;
+    prevResetVersionRef.current = dataResetVersion;
+    console.log(`[PROFIT][profit-chart] reset 감지 abort 발행 (ref=${!!refAbortRef.current}, daily=${!!dailyAbortRef.current})`);
+    refAbortRef.current?.abort();
+    dailyAbortRef.current?.abort();
+    refAbortRef.current = null;
+    dailyAbortRef.current = null;
+    refInFlightKeyRef.current = null;
+    dailyInFlightKeyRef.current = null;
+    setRefData(undefined);
+    setDailyData(undefined);
+  }, [dataResetVersion]);
 
   // daily 기준 종가 (period가 daily가 아닐 때만 별도 조회)
   useEffect(() => {
@@ -200,9 +223,11 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     if (dailyInFlightKeyRef.current === dailyKey) return;
     dailyInFlightKeyRef.current = dailyKey;
     const controller = new AbortController();
+    dailyAbortRef.current = controller;
     setDailyData(undefined);
     fetchProfitRef(tickerList, "daily", {
       signal: controller.signal,
+      caller: "profit-chart:daily(secondary)",
       onProgress: (partial) => setDailyData(partial),
       onComplete: () => {
         dailyDoneRef.current = true;
@@ -210,6 +235,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       },
     }).finally(() => {
       if (dailyInFlightKeyRef.current === dailyKey) dailyInFlightKeyRef.current = null;
+      if (dailyAbortRef.current === controller) dailyAbortRef.current = null;
     });
     return () => {
       if (dailyInFlightKeyRef.current !== dailyKey) controller.abort();

@@ -173,7 +173,17 @@ interface FetchProfitRefOptions {
   onComplete?: (fromCache: boolean) => void;
   // 중단 신호 (탭 전환 등). true 반환 시 다음 배치 전 종료
   signal?: AbortSignal;
+  // 디버그용: 호출자 식별자 (콘솔 로그에 [PROFIT][caller] 형식으로 표시)
+  caller?: string;
 }
+
+// 호출 일련번호 (디버그 추적용)
+let profitCallSeq = 0;
+const DEBUG_PROFIT = typeof window !== "undefined";
+const dlog = (caller: string, callId: number, msg: string, ...rest: unknown[]) => {
+  if (!DEBUG_PROFIT) return;
+  console.log(`[PROFIT][#${callId}][${caller}] ${msg}`, ...rest);
+};
 
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
 const inFlightFetches = new Map<string, Promise<ProfitRefResponse>>();
@@ -183,14 +193,21 @@ export async function fetchProfitRef(
   period: ProfitPeriod,
   options: FetchProfitRefOptions = {},
 ): Promise<ProfitRefResponse> {
-  const { onProgress, onComplete, signal } = options;
+  const { onProgress, onComplete, signal, caller = "unknown" } = options;
+  const callId = ++profitCallSeq;
   const cacheKey = getProfitCacheKey(tickers, period);
+  dlog(caller, callId, `start period=${period} tickers=${tickers.slice(0, 50)}${tickers.length > 50 ? "..." : ""} signalAttached=${!!signal}`);
+  if (!signal) {
+    console.warn(`[PROFIT][#${callId}][${caller}] signal 미전달 — 이 호출은 abort 불가`);
+  }
+  signal?.addEventListener("abort", () => dlog(caller, callId, "signal aborted"), { once: true });
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const cached = JSON.parse(raw) as ProfitRefResponse;
       onProgress?.(cached);
       onComplete?.(true);
+      dlog(caller, callId, "cache hit (localStorage)");
       return cached;
     }
   } catch { /* ignore */ }
@@ -199,35 +216,60 @@ export async function fetchProfitRef(
   // dedup된 호출자는 점진 노출 없이 최종 결과만 1회 받음 (캐시 hit과 동일 취급)
   const existing = inFlightFetches.get(cacheKey);
   if (existing) {
+    dlog(caller, callId, "dedup: 진행 중 fetch에 합류");
     const result = await existing;
     if (!signal?.aborted) {
       onProgress?.(result);
       onComplete?.(true);
     }
+    dlog(caller, callId, `dedup 종료 aborted=${!!signal?.aborted}`);
     return result;
   }
+
+  // abort 가능한 sleep — signal abort 시 즉시 깨어나 다음 배치 진입을 차단
+  const sleepAbortable = (ms: number) => new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+  });
+
+  // abort 시 inFlightFetches에서 즉시 제거 — 후속 호출자가 죽은 promise에 묶이지 않도록
+  const cleanupInFlight = () => {
+    if (inFlightFetches.get(cacheKey) === promise) inFlightFetches.delete(cacheKey);
+  };
+  signal?.addEventListener("abort", cleanupInFlight, { once: true });
 
   const runFetch = async (): Promise<ProfitRefResponse> => {
     const tickerArr = tickers.split(",").filter(Boolean);
     const merged: ProfitRefResponse = {};
     for (let i = 0; i < tickerArr.length; i += PROFIT_BATCH_SIZE) {
-      if (signal?.aborted) break;
-      if (i > 0) await new Promise<void>((r) => setTimeout(r, PROFIT_BATCH_DELAY_MS));
-      if (signal?.aborted) break;
+      if (signal?.aborted) { dlog(caller, callId, `batch ${i} 진입 차단 (aborted)`); break; }
+      if (i > 0) {
+        dlog(caller, callId, `batch ${i} sleep 시작`);
+        await sleepAbortable(PROFIT_BATCH_DELAY_MS);
+        dlog(caller, callId, `batch ${i} sleep 종료 aborted=${!!signal?.aborted}`);
+      }
+      if (signal?.aborted) { dlog(caller, callId, `batch ${i} sleep 후 abort 감지 → break`); break; }
       const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
+      dlog(caller, callId, `batch ${i} fetch 시작 [${batchTickers}]`);
       try {
         const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}`, { signal });
         if (res.ok) {
           const data: ProfitRefResponse = await res.json();
           Object.assign(merged, data);
           onProgress?.({ ...merged });
+          dlog(caller, callId, `batch ${i} fetch 완료 (응답 반영)`);
         }
-      } catch { /* ignore (AbortError 포함) */ }
+      } catch (e) {
+        dlog(caller, callId, `batch ${i} fetch 예외`, (e as Error)?.name ?? e);
+      }
     }
     // 모든 배치 완료 후에만 1회 저장 (부분 결과가 캐시 hit으로 오인되어 나머지 fetch가 안 되는 문제 방지)
     if (!signal?.aborted) {
       try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
       onComplete?.(false);
+      dlog(caller, callId, "전체 완료 + 캐시 저장");
+    } else {
+      dlog(caller, callId, "전체 종료 (aborted, 캐시 저장 스킵)");
     }
     return merged;
   };
@@ -237,6 +279,6 @@ export async function fetchProfitRef(
   try {
     return await promise;
   } finally {
-    inFlightFetches.delete(cacheKey);
+    cleanupInFlight();
   }
 }

@@ -47,6 +47,8 @@ interface AssetDataContextType {
   syncTodayExchangeRate: () => Promise<void>;
   refreshData: () => void;
   bumpSnapshotVersion: () => void;
+  // 데이터 삭제/불러오기 시 증가. 진행 중인 /api/finance/profit 호출 abort 트리거로 사용
+  dataResetVersion: number;
   initAndSync: (data: AssetData) => Promise<void>;
   saveData: (data: AssetData) => boolean;
   addRealEstate: (realEstate: RealEstate) => boolean;
@@ -177,6 +179,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [snapshotVersion, setSnapshotVersion] = useState(0);
+  // 데이터 삭제·불러오기 시 +1. 자식 컴포넌트는 이 값 변화로 진행 중 profit fetch를 abort
+  const [dataResetVersion, setDataResetVersion] = useState(0);
 
   // PIN 인증 상태
   const [isSharePending, setIsSharePending] = useState(false);
@@ -188,6 +192,21 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 최신 환율을 비동기 콜백 밖에서도 동기적으로 읽기 위한 ref
   const exchangeRatesRef = useRef<{ USD: number; JPY: number }>({ USD: 1430, JPY: 930 });
+
+  // 진행 중 주식 동기화 취소용 — 데이터 삭제/불러오기 시 이전 sync를 무효화
+  const stockSyncEpochRef = useRef(0);
+  const stockSyncAbortRef = useRef<AbortController | null>(null);
+  // saveSnapshots 내부의 fetchProfitRef 호출 취소용
+  // 동시 다발 호출(initAndSync + 0→양수 useEffect)도 모두 추적해야 하므로 Set 사용
+  const profitFetchAbortSetRef = useRef<Set<AbortController>>(new Set());
+  // saveSnapshots 차단 플래그 — refreshData 후 새 동기화 시작 전까지 saveSnapshots 진입 자체를 막음
+  const saveSnapshotsBlockedRef = useRef(false);
+  const abortAllProfitFetches = (reason: string) => {
+    const size = profitFetchAbortSetRef.current.size;
+    console.log(`[PROFIT][CTX] abortAllProfitFetches(${reason}) — set 크기=${size}`);
+    for (const c of profitFetchAbortSetRef.current) c.abort();
+    profitFetchAbortSetRef.current.clear();
+  };
 
   // ─── [동기화 헬퍼] ──────────────────────────────────────────────────────────
 
@@ -250,6 +269,21 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 1초 지연
   // - 갱신 완료 시 toast 알림
   const syncTodayStockPrices = useCallback(async (data: AssetData): Promise<AssetData> => {
+    // 진행 중인 직전 sync를 무효화하고 이번 sync의 epoch·AbortController 발급
+    // (데이터 삭제/불러오기 → refreshData/initAndSync 재호출 시 이전 sync는 즉시 중단)
+    stockSyncAbortRef.current?.abort();
+    abortAllProfitFetches("syncTodayStockPrices 진입");
+    saveSnapshotsBlockedRef.current = false;
+    setDataResetVersion(v => v + 1);
+    const mySyncEpoch = ++stockSyncEpochRef.current;
+    const controller = new AbortController();
+    stockSyncAbortRef.current = controller;
+    const isCanceled = () => mySyncEpoch !== stockSyncEpochRef.current || controller.signal.aborted;
+    const sleepAbortable = (ms: number) => new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, ms);
+      controller.signal.addEventListener("abort", () => { clearTimeout(t); reject(new Error("aborted")); }, { once: true });
+    });
+
     // 장중에는 1시간 슬롯("2026-05-15-H14"), 장외에는 날짜("2026-05-15")를 반환
     const slotDomestic = getStockCacheSlot("domestic");
     const slotForeign = getStockCacheSlot("foreign");
@@ -277,6 +311,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     if (outdatedStocks.length === 0) {
       if (hasMarketCache) {
+        if (isCanceled()) return data;
         notify.info(MSG.STOCK_UP_TO_DATE);
         return data;
       }
@@ -285,11 +320,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         data.stocks.filter(s => normalizeTicker(s)).map(s => normalizeTicker(s))
       )];
       for (let i = 0; i < tickersWithTicker.length; i += BATCH_SIZE) {
-        if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
+        if (isCanceled()) return data;
+        if (i > 0) {
+          try { await sleepAbortable(BATCH_DELAY_MS); } catch { return data; }
+        }
+        if (isCanceled()) return data;
         const tickersParam = tickersWithTicker.slice(i, i + BATCH_SIZE).join(",");
         try {
-          const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
+          const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
           const stocksData = await res.json();
+          if (isCanceled()) return data;
           if (stocksData && !stocksData.error) {
             try {
               const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
@@ -299,8 +339,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
               localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
             } catch { /* ignore */ }
           }
-        } catch { /* ignore */ }
+        } catch { /* abort 또는 네트워크 오류: 다음 반복에서 isCanceled가 차단 */ }
       }
+      if (isCanceled()) return data;
       notify.info(MSG.STOCK_UP_TO_DATE);
       return data;
     }
@@ -308,13 +349,19 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     let current = data;
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
-      if (i > 0) await new Promise<void>(r => setTimeout(r, BATCH_DELAY_MS));
+      if (isCanceled()) return current;
+      if (i > 0) {
+        try { await sleepAbortable(BATCH_DELAY_MS); } catch { return current; }
+      }
+      if (isCanceled()) return current;
       const batch = outdatedStocks.slice(i, i + BATCH_SIZE);
       const tickersParam = batch.map(normalizeTicker).join(",");
 
       try {
-        const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`);
+        const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
         const stocksData = await res.json();
+        // 취소된 sync의 응답은 절대 state·localStorage에 반영하지 않음 (삭제된 데이터 부활 방지)
+        if (isCanceled()) return current;
         if (stocksData && !stocksData.error) {
           try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stockMarkets) ?? "{}") as Record<string, string>;
@@ -351,15 +398,19 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             return stock;
           });
           current = { ...current, stocks: updatedStocks };
+          if (isCanceled()) return current;
           setAssetData(current);
           saveAssetData(current);
         }
       } catch (e) {
+        // AbortError는 정상 취소 — toast 표시 없이 종료
+        if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return current;
         notify.error(MSG.STOCK_SYNC_FAILED);
         console.error(e);
       }
     }
 
+    if (isCanceled()) return current;
     notify.info(MSG.STOCK_SYNC_COMPLETE);
     return current;
   }, []);
@@ -368,6 +419,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 일별: 이번 달 한 달치만 유지, 월별: 올해 12개월치 유지
   // 주식가치는 종가(ref) 기준 — 실시간이 아닌 기준 영업일 종가로 평가
   const saveSnapshots = useCallback(async (latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
+    // refreshData 후 새 sync가 시작되기 전까지는 진입 자체 차단
+    if (saveSnapshotsBlockedRef.current) {
+      console.log("[PROFIT][CTX] saveSnapshots: blocked=true → 즉시 return");
+      return;
+    }
+    console.log("[PROFIT][CTX] saveSnapshots 시작");
+
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = now.toISOString().split("T")[0];
     const currentMonth = todayStr.substring(0, 7);
@@ -379,10 +437,23 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     // 다른 컴포넌트(profit-chart, stock-tab)와 동일한 캐시 키 보장 — 반드시 정렬
     const tickerList = Array.from(new Set(eligibleStocks.map(normalizeTicker).filter(Boolean))).sort().join(",");
     let refMap: ProfitRefResponse = {};
+    let profitCtrl: AbortController | null = null;
     if (tickerList) {
+      profitCtrl = new AbortController();
+      profitFetchAbortSetRef.current.add(profitCtrl);
+      console.log(`[PROFIT][CTX] saveSnapshots add controller (set 크기=${profitFetchAbortSetRef.current.size})`);
       try {
-        refMap = await fetchProfitRef(tickerList, "daily");
+        refMap = await fetchProfitRef(tickerList, "daily", { signal: profitCtrl.signal, caller: "saveSnapshots" });
       } catch { /* 무시: 실패 시 실시간으로 폴백 */ }
+      finally {
+        profitFetchAbortSetRef.current.delete(profitCtrl);
+        console.log(`[PROFIT][CTX] saveSnapshots delete controller (set 크기=${profitFetchAbortSetRef.current.size}, aborted=${profitCtrl?.signal.aborted})`);
+      }
+    }
+    // 데이터 삭제로 취소되었거나 차단된 경우 스냅샷 저장 자체를 스킵
+    if (profitCtrl?.signal.aborted || saveSnapshotsBlockedRef.current) {
+      console.log(`[PROFIT][CTX] saveSnapshots: 종료 스킵 (aborted=${profitCtrl?.signal.aborted}, blocked=${saveSnapshotsBlockedRef.current})`);
+      return;
     }
 
     // 공통 헬퍼로 동일 수식 사용 — 단가 함수만 다름
@@ -685,8 +756,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     return success;
   }, []);
 
-  // 새로고침
+  // 새로고침 — 모든 데이터 삭제/외부 리셋 경로에서 호출됨
+  // 진행 중인 주식 동기화 + profit ref 호출을 모두 취소해
+  // 응답이 빈 state를 덮어쓰거나 stale 캐시를 만드는 것을 방지
   const refreshData = useCallback(() => {
+    console.log("[PROFIT][CTX] refreshData 호출 (데이터 삭제 등)");
+    stockSyncEpochRef.current++;
+    stockSyncAbortRef.current?.abort();
+    abortAllProfitFetches("refreshData");
+    saveSnapshotsBlockedRef.current = true;
+    setDataResetVersion(v => v + 1);
     setAssetData(getAssetData());
   }, []);
 
@@ -962,6 +1041,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         isDataLoaded,
         isSharePending,
         snapshotVersion,
+        dataResetVersion,
         exchangeRates,
         exchangeRateDate,
         updateExchangeRate,
