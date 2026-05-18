@@ -624,7 +624,10 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
               <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(stock.id)}>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
+                if (!confirm("정말 삭제하시겠습니까?")) return;
+                onDelete(stock.id);
+              }}>
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
@@ -688,7 +691,6 @@ function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeig
                 </Button>
                 <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
                   if (!confirm("정말 삭제하시겠습니까?")) return;
-                  toast.success("삭제되었습니다.");
                   if (effectiveGroupItems.length === 1) {
                     onDelete(effectiveGroupItems[0].id);
                   } else {
@@ -854,15 +856,14 @@ export function StockTab() {
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
   const handleDelete = (id: string) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      toast.success("삭제되었습니다.");
-      deleteStock(id);
-    }
+    toast.success("삭제되었습니다.");
+    deleteStock(id);
   };
 
   const handleDeleteGroup = (ids: string[]) => {
     const idSet = new Set(ids);
     saveData({ ...assetData, stocks: assetData.stocks.filter((s) => !idSet.has(s.id)) });
+    toast.success("삭제되었습니다.");
   };
 
   return (
