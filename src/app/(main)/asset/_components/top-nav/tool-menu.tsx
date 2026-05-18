@@ -57,7 +57,7 @@ export function ToolMenu({
 }) {
   const { isMobile } = useSidebar();
   const assetDataContext = useAssetData();
-  const { refreshData, bumpSnapshotVersion, initAndSync, getAssetSummary, assetData } = assetDataContext;
+  const { refreshData, bumpSnapshotVersion, initAndSync, getAssetSummary, assetData, isSharePending } = assetDataContext;
   const hasAssets =
     assetData.realEstate.length > 0 ||
     assetData.stocks.length > 0 ||
@@ -312,7 +312,7 @@ export function ToolMenu({
                 <Share2 className="size-4" />
                 공유 URL 복사
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5" onClick={handleClearCache}>
+              <DropdownMenuItem className="py-2.5" onClick={handleClearCache} disabled={!hasAssets}>
                 <RefreshCw className="size-4" />
                 캐시 초기화
               </DropdownMenuItem>
@@ -331,7 +331,12 @@ export function ToolMenu({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="py-2.5" onClick={() => {
-                window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
+                // 웰컴가이드 화면(자산 없음 or 공유 보기 대기)에서는 본문에 동일 가이드가 이미 노출돼 있어
+                // 인라인 Alert(trigger-restore-guide) 호출 생략 — 다이얼로그만 표시
+                const isWelcomeGuide = isSharePending || !hasAssets;
+                if (!isWelcomeGuide) {
+                  window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
+                }
                 tutorialStore.getState().showStep0(true);
               }}>
                 <Info className="size-4" />
