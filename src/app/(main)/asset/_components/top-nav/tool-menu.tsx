@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings, Info } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings, Info, RefreshCw } from "lucide-react";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -39,7 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SidebarMenu, SidebarcategoryBox, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
-import { exportAssetData, importAssetData, clearAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { exportAssetData, importAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -229,6 +229,12 @@ export function ToolMenu({
     setShowClearDialog(false);
   };
 
+  const handleClearCache = () => {
+    const count = clearUserCaches();
+    refreshData();
+    toast.success(`캐시 ${count}개를 초기화했습니다.`);
+  };
+
   const getPromptContext = (): AssetPromptContext => ({
     data: assetData,
     summary: getAssetSummary(),
@@ -305,6 +311,10 @@ export function ToolMenu({
               <DropdownMenuItem className="py-2.5" onClick={handleShare} disabled={!hasAssets}>
                 <Share2 className="size-4" />
                 공유 URL 복사
+              </DropdownMenuItem>
+              <DropdownMenuItem className="py-2.5" onClick={handleClearCache}>
+                <RefreshCw className="size-4" />
+                캐시 초기화
               </DropdownMenuItem>
               <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2.5" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
                 <Trash2 className="size-4" />

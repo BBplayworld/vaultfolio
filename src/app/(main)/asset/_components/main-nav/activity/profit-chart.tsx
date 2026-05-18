@@ -164,8 +164,23 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     if (notifiedKeysThisSession.has(key)) return;
     notifiedKeysThisSession.add(key);
     toast.info(`${PERIOD_LABELS[period]} ${PROFIT_SYNC_COMPLETE_MSG}`);
-    console.log(`[INFO] ${PERIOD_LABELS[period]} ${PROFIT_SYNC_COMPLETE_MSG}`);
   };
+
+  // 데이터 삭제/불러오기/캐시 초기화 시 진행 중인 ref/daily fetch 강제 abort
+  // 메인 fetch useEffect보다 먼저 선언 — dataResetVersion 변화 시 abort가 새 fetch 시작보다 먼저 실행되도록
+  const prevResetVersionRef = useRef(dataResetVersion);
+  useEffect(() => {
+    if (prevResetVersionRef.current === dataResetVersion) return;
+    prevResetVersionRef.current = dataResetVersion;
+    refAbortRef.current?.abort();
+    dailyAbortRef.current?.abort();
+    refAbortRef.current = null;
+    dailyAbortRef.current = null;
+    refInFlightKeyRef.current = null;
+    dailyInFlightKeyRef.current = null;
+    setRefData(undefined);
+    setDailyData(undefined);
+  }, [dataResetVersion]);
 
   // 현재 period 결과 점진 로드
   useEffect(() => {
@@ -196,24 +211,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       // 동일 키로 재실행 중이면 abort 안 함 — 의존성이 잠시 흔들려도 진행 보존
       if (refInFlightKeyRef.current !== key) controller.abort();
     };
-  }, [isActive, mergedStocks.length, tickerList, period]);
-
-  // 데이터 삭제/불러오기 시 진행 중인 ref/daily fetch 강제 abort
-  // (useEffect 보존 최적화 우회: in-flight 키와 controller를 함께 비우고 abort)
-  const prevResetVersionRef = useRef(dataResetVersion);
-  useEffect(() => {
-    if (prevResetVersionRef.current === dataResetVersion) return;
-    prevResetVersionRef.current = dataResetVersion;
-    console.log(`[PROFIT][profit-chart] reset 감지 abort 발행 (ref=${!!refAbortRef.current}, daily=${!!dailyAbortRef.current})`);
-    refAbortRef.current?.abort();
-    dailyAbortRef.current?.abort();
-    refAbortRef.current = null;
-    dailyAbortRef.current = null;
-    refInFlightKeyRef.current = null;
-    dailyInFlightKeyRef.current = null;
-    setRefData(undefined);
-    setDailyData(undefined);
-  }, [dataResetVersion]);
+  }, [isActive, mergedStocks.length, tickerList, period, dataResetVersion]);
 
   // daily 기준 종가 (period가 daily가 아닐 때만 별도 조회)
   useEffect(() => {
@@ -240,7 +238,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     return () => {
       if (dailyInFlightKeyRef.current !== dailyKey) controller.abort();
     };
-  }, [isActive, mergedStocks.length, tickerList, period]);
+  }, [isActive, mergedStocks.length, tickerList, period, dataResetVersion]);
 
   const baseRefData = period === "daily" ? refData : dailyData;
   // 첫 응답이 오기 전까지만 스켈레톤. 한 종목이라도 데이터가 채워지면 즉시 부분 노출
