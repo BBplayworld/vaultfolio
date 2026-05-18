@@ -201,9 +201,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const profitFetchAbortSetRef = useRef<Set<AbortController>>(new Set());
   // saveSnapshots 차단 플래그 — refreshData 후 새 동기화 시작 전까지 saveSnapshots 진입 자체를 막음
   const saveSnapshotsBlockedRef = useRef(false);
-  const abortAllProfitFetches = (reason: string) => {
-    const size = profitFetchAbortSetRef.current.size;
-    console.log(`[PROFIT][CTX] abortAllProfitFetches(${reason}) — set 크기=${size}`);
+  const abortAllProfitFetches = (_reason: string) => {
     for (const c of profitFetchAbortSetRef.current) c.abort();
     profitFetchAbortSetRef.current.clear();
   };
@@ -420,11 +418,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 주식가치는 종가(ref) 기준 — 실시간이 아닌 기준 영업일 종가로 평가
   const saveSnapshots = useCallback(async (latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
     // refreshData 후 새 sync가 시작되기 전까지는 진입 자체 차단
-    if (saveSnapshotsBlockedRef.current) {
-      console.log("[PROFIT][CTX] saveSnapshots: blocked=true → 즉시 return");
-      return;
-    }
-    console.log("[PROFIT][CTX] saveSnapshots 시작");
+    if (saveSnapshotsBlockedRef.current) return;
 
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = now.toISOString().split("T")[0];
@@ -441,20 +435,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (tickerList) {
       profitCtrl = new AbortController();
       profitFetchAbortSetRef.current.add(profitCtrl);
-      console.log(`[PROFIT][CTX] saveSnapshots add controller (set 크기=${profitFetchAbortSetRef.current.size})`);
       try {
         refMap = await fetchProfitRef(tickerList, "daily", { signal: profitCtrl.signal, caller: "saveSnapshots" });
       } catch { /* 무시: 실패 시 실시간으로 폴백 */ }
       finally {
         profitFetchAbortSetRef.current.delete(profitCtrl);
-        console.log(`[PROFIT][CTX] saveSnapshots delete controller (set 크기=${profitFetchAbortSetRef.current.size}, aborted=${profitCtrl?.signal.aborted})`);
       }
     }
     // 데이터 삭제로 취소되었거나 차단된 경우 스냅샷 저장 자체를 스킵
-    if (profitCtrl?.signal.aborted || saveSnapshotsBlockedRef.current) {
-      console.log(`[PROFIT][CTX] saveSnapshots: 종료 스킵 (aborted=${profitCtrl?.signal.aborted}, blocked=${saveSnapshotsBlockedRef.current})`);
-      return;
-    }
+    if (profitCtrl?.signal.aborted || saveSnapshotsBlockedRef.current) return;
 
     // 공통 헬퍼로 동일 수식 사용 — 단가 함수만 다름
     // refDate는 getDailyClosingRefDates에서 시장별로 안전하게 산출됨
@@ -760,7 +749,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 진행 중인 주식 동기화 + profit ref 호출을 모두 취소해
   // 응답이 빈 state를 덮어쓰거나 stale 캐시를 만드는 것을 방지
   const refreshData = useCallback(() => {
-    console.log("[PROFIT][CTX] refreshData 호출 (데이터 삭제 등)");
     stockSyncEpochRef.current++;
     stockSyncAbortRef.current?.abort();
     abortAllProfitFetches("refreshData");

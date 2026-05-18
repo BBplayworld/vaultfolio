@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import LZString from "lz-string";
-import { STORAGE_KEYS } from "@/lib/local-storage";
+import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
 export const DEFAULT_EXCHANGE_RATE = 1380;
 
@@ -163,6 +163,20 @@ export function clearAssetData(): boolean {
   } catch (error) {
     return false;
   }
+}
+
+// 캐시 프리픽스 일괄 삭제 (사용자 데이터는 보존)
+// 신규 캐시 종류 추가 시 STORAGE_KEY_PREFIXES에 등록하고 여기에 분기 추가
+export function clearUserCaches(): number {
+  if (typeof window === "undefined") return 0;
+  let count = 0;
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith(STORAGE_KEY_PREFIXES.profit)) {
+      localStorage.removeItem(key);
+      count++;
+    }
+  }
+  return count;
 }
 
 // ─── 공유 토큰 시스템 V7.1 (PIN Support) ──────────────────────────────────

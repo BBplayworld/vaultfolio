@@ -164,7 +164,6 @@ export function useFilteredStockData(activeCategory: string) {
   useEffect(() => {
     if (prevResetVersionRef.current === dataResetVersion) return;
     prevResetVersionRef.current = dataResetVersion;
-    console.log(`[PROFIT][stock-tab] cancelQueries 호출 (dataResetVersion=${dataResetVersion})`);
     queryClient.cancelQueries({ queryKey: ["profit"] });
   }, [dataResetVersion, queryClient]);
 
