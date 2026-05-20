@@ -7,7 +7,7 @@ import {
   classifyTickers,
 } from "@/lib/finance-service";
 import { getDailyClosingRefDates } from "@/lib/profit-utils";
-import { getStockCacheSlot, getEffectiveDateStr } from "@/lib/stock-cache-slot";
+import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/stock-cache-slot";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -72,9 +72,21 @@ function subtractCalendarYears(from: Date, years: number): Date {
 function getDates(period: ProfitPeriod, market: "domestic" | "foreign"): { refDate: string; prevDate?: string } {
   const now = getKSTNow();
   if (period === "daily") return getDailyClosingRefDates(market);
-  if (period === "weekly") return { refDate: toDateStr(subtractWeekdays(now, 5)) };
-  if (period === "monthly") return { refDate: toDateStr(subtractCalendarMonths(now, 1)) };
-  return { refDate: toDateStr(subtractCalendarYears(now, 1)) };
+  // 해외 weekly/monthly/yearly도 일별과 동일한 컷오프(DST 06:00 / STD 07:00 KST) 적용
+  // 새벽 ET 장중 시점의 stale 응답 방지 — daily보다 TTL이 길어 영향이 더 큼
+  const shiftForeign = (d: Date): Date => {
+    if (market !== "foreign") return d;
+    const hhmm = now.getUTCHours() * 100 + now.getUTCMinutes();
+    const cutoff = isUsEasternDST(new Date()) ? 600 : 700;
+    if (hhmm >= cutoff) return d;
+    const r = new Date(d);
+    r.setUTCDate(r.getUTCDate() - 1);
+    while (r.getUTCDay() === 0 || r.getUTCDay() === 6) r.setUTCDate(r.getUTCDate() - 1);
+    return r;
+  };
+  if (period === "weekly") return { refDate: toDateStr(shiftForeign(subtractWeekdays(now, 5))) };
+  if (period === "monthly") return { refDate: toDateStr(shiftForeign(subtractCalendarMonths(now, 1))) };
+  return { refDate: toDateStr(shiftForeign(subtractCalendarYears(now, 1))) };
 }
 
 export async function GET(req: NextRequest) {
@@ -219,8 +231,11 @@ export async function GET(req: NextRequest) {
         : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker));
       if (res !== null) {
         await cache.setRefPrice(task.ticker, res.date, res.price, period);
-        // 요청일이 응답일과 다를 수 있음 → 매핑 기록으로 다음 호출 영구 hit
-        await cache.setRefDateForRequest(task.ticker, task.date, res.date, period);
+        // 일치 시에만 매핑 저장 — 장중/휴장 등으로 응답일이 다르면 다음 요청 시 재호출되도록 함
+        // (stale `requestDate → 직전영업일` 매핑이 다음 KST 자정까지 영구 hit되는 문제 방지)
+        if (res.date === task.date) {
+          await cache.setRefDateForRequest(task.ticker, task.date, res.date, period);
+        }
         const e = ensureEntry(task.ticker);
         if (task.kind === "ref") {
           e.refPrice = res.price;

@@ -13,7 +13,7 @@ import { isKrBusinessDay } from "./kr-holidays";
 import { isUsBusinessDay } from "./us-holidays";
 
 // 미국 동부 서머타임(EDT) 여부 (Intl로 정확 판정)
-function isUsEasternDST(date: Date): boolean {
+export function isUsEasternDST(date: Date): boolean {
   const tz = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", timeZoneName: "short" })
     .formatToParts(date).find((p) => p.type === "timeZoneName")?.value ?? "";
   return tz === "EDT";

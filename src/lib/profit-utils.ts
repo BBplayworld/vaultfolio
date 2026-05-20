@@ -2,6 +2,7 @@ import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import type { Stock } from "@/types/asset";
 import { normalizeTicker } from "@/lib/finance-service";
+import { isUsEasternDST } from "@/lib/stock-cache-slot";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -75,9 +76,17 @@ export function getDailyClosingRefDates(market: "domestic" | "foreign"): { prevD
 
   const ref = new Date(nowKST);
   if (market === "foreign") {
-    // 해외: 항상 어제 KST 영업일
+    // 해외: 어제 KST 영업일 (마감 후 1시간까지는 한 칸 더 과거 — KIS 게시 지연 안전망)
+    // 미국장 마감: DST(ET 16:00) = KST 05:00 → 컷오프 06:00, STD = KST 06:00 → 컷오프 07:00
+    // 새벽 ET 장중 시간대에 요청 시 KIS가 직전 완료일을 반환하여 stale 매핑이 영구 저장되는 문제 방지
+    const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
+    const cutoff = isUsEasternDST(new Date()) ? 600 : 700;
     ref.setUTCDate(ref.getUTCDate() - 1);
     rollbackToWeekday(ref);
+    if (hhmm < cutoff) {
+      ref.setUTCDate(ref.getUTCDate() - 1);
+      rollbackToWeekday(ref);
+    }
   } else {
     // 국내: 컷오프 이후 평일이면 오늘, 그 외엔 직전 영업일
     const hhmm = nowKST.getUTCHours() * 100 + nowKST.getUTCMinutes();
