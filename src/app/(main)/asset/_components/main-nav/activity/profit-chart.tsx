@@ -483,7 +483,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                     <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krRefDate} {KR_CUTOFF_TIME}</p>
                                   )}
                                   {showUsDate && usRefDate && (
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {displayUsDate(usRefDate)} {usCutoffTime(usRefDate)}</p>
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {period === "daily" ? displayUsDate(usRefDate) : usRefDate} {usCutoffTime(usRefDate)}</p>
                                   )}
                                 </div>
                                 <p className="text-sm tabular-nums font-medium">{formatShortCurrency(leftSum)}</p>
