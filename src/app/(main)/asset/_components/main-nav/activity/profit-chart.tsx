@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
+import { isUsEasternDST } from "@/lib/stock-cache-slot";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { DataSourceBadge } from "../data-source-badge";
@@ -72,6 +73,20 @@ function shiftUsDate(date: string | undefined): string | undefined {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+// UI 표시는 데이터 적용 기준인 컷오프 시각 (실제 장 마감 시각과 다름 — 카드 상단 안내 참고)
+const KR_CUTOFF_TIME = "16:00";          // 국내 컷오프 (실제 마감 15:30)
+
+// ET 원본 일자(shift 전) 기준 DST 판정 → 컷오프 = 실제 마감 + 1시간 (DST 06:00 / STD 07:00 KST)
+function usCutoffTime(etDate: string | undefined): string {
+  if (!etDate) return "07:00";
+  return isUsEasternDST(new Date(`${etDate}T12:00:00Z`)) ? "06:00" : "07:00";
+}
+
+// 해외 일자를 KST 인지 기준(xymd + 1일)으로 변환 (모든 period 공통)
+function displayUsDate(etDate: string | undefined): string | undefined {
+  return shiftUsDate(etDate);
 }
 
 function toDateStr(d: Date): string {
@@ -455,30 +470,36 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         const leftSum = isAll ? totalRefValue : isKr ? krRefSum : usRefSum;
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
-                          <div className="pt-1.5 border-t border-border/50 grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
-                            <div className="space-y-1.5">
-                              <p className="text-muted-foreground">이전 종가 <span className="text-[10px] font-normal">(KST)</span></p>
-                              <div className="space-y-0.5">
-                                {showKrDate && krRefDate && (
-                                  <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krRefDate}</p>
-                                )}
-                                {showUsDate && usRefDate && (
-                                  <p className="text-[11px] text-muted-foreground tabular-nums">해외 {usRefDate}</p>
-                                )}
+                          <div className="pt-1.5 border-t border-border/50 space-y-1.5">
+                            <p className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400">
+                              <Info className="size-3 shrink-0" />
+                              <span>국내, 해외 정규장 마감시간에 여유 버퍼를 둔 시작·종료 종가를 적용합니다.</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
+                              <div className="space-y-1.5">
+                                <p className="text-muted-foreground">시작 종가 <span className="text-[10px] font-normal">(KST)</span></p>
+                                <div className="space-y-0.5">
+                                  {showKrDate && krRefDate && (
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krRefDate} {KR_CUTOFF_TIME}</p>
+                                  )}
+                                  {showUsDate && usRefDate && (
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {displayUsDate(usRefDate)} {usCutoffTime(usRefDate)}</p>
+                                  )}
+                                </div>
+                                <p className="text-sm tabular-nums font-medium">{formatShortCurrency(leftSum)}</p>
                               </div>
-                              <p className="text-sm tabular-nums font-medium">{formatShortCurrency(leftSum)}</p>
-                            </div>
-                            <div className="space-y-1.5 text-right">
-                              <p className="text-muted-foreground">기준 종가 <span className="text-[10px] font-normal">(KST)</span></p>
-                              <div className="space-y-0.5">
-                                {showKrDate && krCompareDate && (
-                                  <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krCompareDate}</p>
-                                )}
-                                {showUsDate && usCompareDate && (
-                                  <p className="text-[11px] text-muted-foreground tabular-nums">해외 {usCompareDate}</p>
-                                )}
+                              <div className="space-y-1.5 text-right">
+                                <p className="text-muted-foreground">종료 종가 <span className="text-[10px] font-normal">(KST)</span></p>
+                                <div className="space-y-0.5">
+                                  {showKrDate && krCompareDate && (
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krCompareDate} {KR_CUTOFF_TIME}</p>
+                                  )}
+                                  {showUsDate && usCompareDate && (
+                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {displayUsDate(usCompareDate)} {usCutoffTime(usCompareDate)}</p>
+                                  )}
+                                </div>
+                                <p className="text-sm tabular-nums font-medium">{formatShortCurrency(rightSum)}</p>
                               </div>
-                              <p className="text-sm tabular-nums font-medium">{formatShortCurrency(rightSum)}</p>
                             </div>
                           </div>
                         );
