@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -118,6 +118,32 @@ function MarketDateRow({
       {cell(startDate, undefined, startSub)}
       {cell(endDate, "text-right", endSub)}
     </div>
+  );
+}
+
+// 환차손익 분해 팝오버 — 데스크톱은 마우스 hover, 모바일은 터치(탭)로 열림(바깥 탭/Esc로 닫힘)
+function FxBreakdown({ priceGain, fxGain }: { priceGain: number; fxGain: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="환차손익 보기"
+          onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(true); }}
+          onPointerLeave={(e) => { if (e.pointerType === "mouse") setOpen(false); }}
+          className="text-sky-600/70 dark:text-sky-400/70 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+        >
+          <Globe className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-xs tabular-nums">
+        <div className="space-y-0.5 text-left">
+          <p>주가손익: <span className={getProfitLossColor(priceGain)}>{priceGain >= 0 ? "+" : ""}{formatShortCurrency(priceGain)}</span></p>
+          <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatShortCurrency(fxGain)}</span></p>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -624,21 +650,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                   {hasRef ? (
                                     <>
                                       <div className="flex items-center justify-end gap-1">
-                                        {showFx && (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <button type="button" aria-label="환차손익 보기" className="text-sky-600/70 dark:text-sky-400/70 hover:text-sky-700 dark:hover:text-sky-300 transition-colors">
-                                                <Globe className="size-3.5" />
-                                              </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="left" className="tabular-nums">
-                                              <div className="space-y-0.5 text-left">
-                                                <p>주가손익: {priceGain >= 0 ? "+" : ""}{formatShortCurrency(priceGain)}</p>
-                                                <p>환차손익: {fxGain >= 0 ? "+" : ""}{formatShortCurrency(fxGain)}</p>
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        )}
+                                        {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} />}
                                         <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
                                           {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
                                         </p>
