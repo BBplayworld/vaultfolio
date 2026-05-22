@@ -38,6 +38,18 @@ function markDone(id: string): void {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 환율 일자별 이력 도입:
+    //  1) 사용 중단된 환율 이력 동기화 가드 키 제거 (exchangeSyncDate로 통합됨)
+    //  2) 환율 이력 1회 초기화 + exchangeSyncDate 초기화 → 다음 진입에서 서버 2일치
+    //     환율 이력(전날 포함)을 새로 받아 재구성 (오늘자만 있던 기기의 전날 환율 보충)
+    id: "2026-05-22-exchange-history-resync-v2",
+    run: () => {
+      localStorage.removeItem("secretasset_exchange_history_sync_date");
+      localStorage.removeItem("secretasset_exchange_history");
+      localStorage.removeItem("secretasset_exchange_last_sync_date");
+    },
+  },
+  {
     // 응답일 통일 + tickerList 정렬 + daily 캐시 키 단순화 후 옛 캐시 전체 청소
     // weekly/monthly/yearly의 응답일 통일 전 entry까지 한 번에 정리
     id: "2026-05-16-clear-profit-cache-final",

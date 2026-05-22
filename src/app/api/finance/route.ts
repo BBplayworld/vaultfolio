@@ -54,7 +54,9 @@ export async function GET(request: Request) {
     const effectiveDateExchange = getEffectiveDateStr("exchange");
     // 1단계: 캐시 확인 (유효 날짜 기준)
     const cached = await storage.getExchange();
-    if (cached?.updated_at === effectiveDateExchange) return NextResponse.json(cached);
+    if (cached?.updated_at === effectiveDateExchange) {
+      return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() });
+    }
 
     // 2단계: 외부 API 호출
     const accessTokenForExchange = await getKisAccessToken(todayStr);
@@ -64,11 +66,11 @@ export async function GET(request: Request) {
     if (rates) {
       // 3단계: 캐시 갱신
       await storage.setExchange(rates);
-      return NextResponse.json(rates);
+      return NextResponse.json({ ...rates, history: await storage.getExchangeHistory() });
     }
 
     // 외부 API 실패 시 기존 캐시로 fallback
-    if (cached) return NextResponse.json(cached);
+    if (cached) return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() });
     return NextResponse.json({ error: "환율 조회 실패" }, { status: 500 });
   }
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Info, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -99,22 +100,23 @@ function usCloseMeta(date: string): string {
 
 const CLOSE_TABLE_COLS = "grid grid-cols-[2.25rem_1fr_1fr] gap-x-2";
 
-// 시장 행: 라벨 + 시작/종료 날짜(베이스 + 마감 메타 2줄)
+// 시장 행: 라벨 + 시작/종료 날짜(베이스 + 마감 메타 2줄, 옵션으로 적용 환율 1줄)
 function MarketDateRow({
-  label, startDate, endDate, meta,
-}: { label: string; startDate?: string; endDate?: string; meta: (d: string) => string }) {
-  const cell = (date?: string, align?: string) =>
+  label, startDate, endDate, meta, startSub, endSub,
+}: { label: string; startDate?: string; endDate?: string; meta: (d: string) => string; startSub?: string; endSub?: string }) {
+  const cell = (date?: string, align?: string, sub?: string) =>
     date ? (
       <div className={`tabular-nums leading-tight ${align ?? ""}`}>
         <p className="text-[13px] sm:text-sm">{date}</p>
         <p className="text-xs text-muted-foreground/60">{meta(date)}</p>
+        {sub && <p className="text-xs text-sky-600/70 dark:text-sky-400/70">{sub}</p>}
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
     <div className={`${CLOSE_TABLE_COLS} items-start py-1.5 border-b border-border/30`}>
       <span className="text-muted-foreground">{label}</span>
-      {cell(startDate)}
-      {cell(endDate, "text-right")}
+      {cell(startDate, undefined, startSub)}
+      {cell(endDate, "text-right", endSub)}
     </div>
   );
 }
@@ -348,7 +350,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const fallbackCurrent = currentPrice * stock.quantity * currentRate;
 
     if (!ref || !base) {
-      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false };
+      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false, fxGain: 0, isForeign: false };
     }
 
     // 좌측 (이전 종가)
@@ -356,7 +358,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const prevPrice = isDailyPeriod ? ref.prevPrice : ref.refPrice;
     const prevDate = isDailyPeriod ? ref.prevDate : ref.refDate;
     if (prevPrice === undefined || prevDate === undefined) {
-      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false };
+      return { stock, ticker, profitAmount: 0, profitRate: null as number | null, currentValue: fallbackCurrent, refValue: 0, hasRef: false, fxGain: 0, isForeign: false };
     }
 
     // daily는 시점별 환율 적용, 그 외는 현재 환율
@@ -375,7 +377,12 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const baseDate = prevDate;
     const compareDate = base.refDate;
 
-    return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: baseDate, compareDate };
+    // 환차손익(표시 증감액 중 환율분) — 일별 해외만. priceGain + fxGain = profitAmount (정확)
+    const fxGain = isDailyPeriod && (isUS || isJP)
+      ? prevPrice * stock.quantity * (refRate - prevRate)
+      : 0;
+
+    return { stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef: true, refDate: baseDate, compareDate, fxGain, isForeign: isUS || isJP };
   });
 
   const filteredProfits = stockProfits.filter((p) => {
@@ -410,6 +417,15 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const usRefDate = pickMajorityDate(usProfits.map((r) => r.refDate));
   const krCompareDate = pickMajorityDate(krProfits.map((r) => r.compareDate));
   const usCompareDate = pickMajorityDate(usProfits.map((r) => r.compareDate));
+
+  // 일별 해외에 실제 적용된 시작(어제)·종료(오늘) USD 환율 — 표시값=적용값 (history 없으면 현재환율 fallback)
+  const usdRateForUsDate = (etDate?: string): string | undefined => {
+    if (period !== "daily" || !etDate) return undefined;
+    const rate = getRatesForDate(shiftUsDate(etDate)!, currentRates).USD;
+    return rate > 0 ? `$1=₩${Math.round(rate).toLocaleString()}` : undefined;
+  };
+  const usStartRateText = usdRateForUsDate(usRefDate);
+  const usEndRateText = usdRateForUsDate(usCompareDate);
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = filteredProfits
@@ -538,8 +554,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 <Info className="size-3 shrink-0 mt-0.5" />
                                 <span>
                                   {profitBasis === "sameBusinessDay"
-                                    ? "국내·해외를 같은 영업일의 종가로 정렬합니다 (해외는 익일 새벽 마감)."
-                                    : "KST 접속일 기준으로 국내·해외 각 시장의 마감 종가를 적용합니다."}
+                                    ? "국내·해외를 같은 영업일의 종가로 합산"
+                                    : "KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산"}
+                                  <br />
+                                  {period === "daily" && " (일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용)"}
                                 </span>
                               </p>
                             </div>
@@ -555,7 +573,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} meta={krCloseMeta} />
                               )}
                               {showUsDate && (
-                                <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} meta={usCloseMeta} />
+                                <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} meta={usCloseMeta} startSub={usStartRateText} endSub={usEndRateText} />
                               )}
                               {/* 합계 */}
                               <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
@@ -590,7 +608,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                             )}
                           </div>
                           <div className="divide-y">
-                            {items.map(({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef }) => (
+                            {items.map(({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef, fxGain, isForeign }) => {
+                              const priceGain = profitAmount - fxGain;
+                              const showFx = hasRef && isForeign && period === "daily";
+                              return (
                               <div
                                 key={stock.id}
                                 className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
@@ -602,9 +623,26 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 <div className="text-right shrink-0">
                                   {hasRef ? (
                                     <>
-                                      <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
-                                        {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
-                                      </p>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {showFx && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button type="button" aria-label="환차손익 보기" className="text-sky-600/70 dark:text-sky-400/70 hover:text-sky-700 dark:hover:text-sky-300 transition-colors">
+                                                <Globe className="size-3.5" />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left" className="tabular-nums">
+                                              <div className="space-y-0.5 text-left">
+                                                <p>주가손익: {priceGain >= 0 ? "+" : ""}{formatShortCurrency(priceGain)}</p>
+                                                <p>환차손익: {fxGain >= 0 ? "+" : ""}{formatShortCurrency(fxGain)}</p>
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
+                                          {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
+                                        </p>
+                                      </div>
                                       <p className="text-xs text-muted-foreground tabular-nums">
                                         {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
                                       </p>
@@ -614,7 +652,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                   )}
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ))}

@@ -22,6 +22,8 @@ export interface ICacheStorage {
   // Finance
   getExchange(): Promise<ExchangeRates | null>;
   setExchange(rates: ExchangeRates): Promise<void>;
+  // 환율 일자별 이력(최근 2일치) — 해외 일별수익의 전날 환율을 기기 무관하게 보충
+  getExchangeHistory(): Promise<Record<string, { USD: number; JPY: number }>>;
   getStock(cacheKey: string): Promise<StockPriceResult | null>;
   setStock(cacheKey: string, result: StockPriceResult, todayStr: string, ticker: string): Promise<void>;
   getKisToken(todayStr: string): Promise<string | null>;
@@ -79,6 +81,19 @@ import { getEffectiveDateStr as _getEffectiveDateStr, getStockCacheSlot as _getS
 export { _getEffectiveDateStr as getEffectiveDateStr, _getStockCacheSlot as getStockCacheSlot };
 // 내부 사용을 위한 로컬 바인딩
 const getEffectiveDateStr = _getEffectiveDateStr;
+
+// 환율 이력에 새 일자를 반영하고 최근 2일치만 남김 (날짜 문자열 정렬 상위 2개)
+const EXCHANGE_HISTORY_DAYS = 2;
+function mergeExchangeHistoryEntry(
+  history: Record<string, { USD: number; JPY: number }>,
+  rates: ExchangeRates,
+): Record<string, { USD: number; JPY: number }> {
+  const date = rates.updated_at;
+  if (!date) return history;
+  const next: Record<string, { USD: number; JPY: number }> = { ...history, [date]: { USD: rates.USD, JPY: rates.JPY } };
+  const kept = Object.keys(next).sort().slice(-EXCHANGE_HISTORY_DAYS);
+  return Object.fromEntries(kept.map((d) => [d, next[d]]));
+}
 
 // JWT access_token의 exp(초)를 디코드. 형식 오류면 null.
 function getJwtExpMs(token: string): number | null {
@@ -152,6 +167,7 @@ const SHARE_TOKENS_PATH = path.join(process.cwd(), "data", "share-tokens.json");
 
 interface FileCacheData {
   EXCHANGE?: ExchangeRates;
+  EXCHANGE_HISTORY?: Record<string, { USD: number; JPY: number }>;
   STOCKS?: Record<string, StockPriceResult>;
   KIS_TOKEN?: { access_token: string; updated_at: string };
   GEMINI_COUNT?: { count: number; date: string };
@@ -248,8 +264,14 @@ class FileCacheStorage implements ICacheStorage {
   async setExchange(rates: ExchangeRates): Promise<void> {
     const cache = this.readFinanceCache();
     cache.EXCHANGE = rates;
+    // 일자별 이력에 반영 후 최근 2일치만 유지
+    cache.EXCHANGE_HISTORY = mergeExchangeHistoryEntry(cache.EXCHANGE_HISTORY ?? {}, rates);
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
     this.writeFinanceCache(cache, todayStr);
+  }
+
+  async getExchangeHistory(): Promise<Record<string, { USD: number; JPY: number }>> {
+    return this.readFinanceCache().EXCHANGE_HISTORY ?? {};
   }
 
   async getStock(cacheKey: string): Promise<StockPriceResult | null> {
@@ -415,6 +437,14 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setExchange(rates: ExchangeRates): Promise<void> {
     await this.redis.set("finance:exchange", rates, { ex: secondsUntilMidnightKST() });
+    // 일자별 이력(최근 2일치) — read-modify-prune-write, TTL 3일
+    const history = (await this.redis.get<Record<string, { USD: number; JPY: number }>>("finance:exchange:history")) ?? {};
+    const next = mergeExchangeHistoryEntry(history, rates);
+    await this.redis.set("finance:exchange:history", next, { ex: 3 * 24 * 3600 });
+  }
+
+  async getExchangeHistory(): Promise<Record<string, { USD: number; JPY: number }>> {
+    return (await this.redis.get<Record<string, { USD: number; JPY: number }>>("finance:exchange:history")) ?? {};
   }
 
   async getStock(cacheKey: string): Promise<StockPriceResult | null> {
