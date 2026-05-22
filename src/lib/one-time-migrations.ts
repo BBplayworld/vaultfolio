@@ -42,7 +42,7 @@ const MIGRATIONS: Migration[] = [
     //  1) 사용 중단된 환율 이력 동기화 가드 키 제거 (exchangeSyncDate로 통합됨)
     //  2) 환율 이력 1회 초기화 + exchangeSyncDate 초기화 → 다음 진입에서 서버 2일치
     //     환율 이력(전날 포함)을 새로 받아 재구성 (오늘자만 있던 기기의 전날 환율 보충)
-    id: "2026-05-22-exchange-history-resync-v2",
+    id: "2026-05-22-exchange-history-resync-v3",
     run: () => {
       localStorage.removeItem("secretasset_exchange_history_sync_date");
       localStorage.removeItem("secretasset_exchange_history");
