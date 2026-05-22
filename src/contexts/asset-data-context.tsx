@@ -7,7 +7,7 @@ import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
-import { fetchProfitRef, recordTodayExchangeRate, type ProfitBasis } from "@/lib/profit-utils";
+import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
@@ -232,6 +232,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const syncTodayExchangeRate = useCallback(async () => {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
+    // exchangeSyncDate 하나로 "오늘 환율 동기화(현재환율 + 2일치 이력)" 완료 여부를 관리
+    // 신규 fetch 한 번으로 현재환율과 서버 이력을 함께 처리하므로 별도 가드 키 불필요
     if (localStorage.getItem(STORAGE_KEYS.exchangeSyncDate) === todayStr) {
       const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
       if (savedRates) {
@@ -250,7 +252,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/finance?type=exchange");
       const data = await res.json();
       if (data && !data.error) {
-        updateExchangeRate("USD", data.USD, data.updated_at ?? todayStr);
+        // 서버 2일치 이력을 로컬에 보충(없는 날짜만) — 미접속 기기에서도 전날 환율 확보
+        if (data.history) mergeExchangeHistory(data.history);
+        updateExchangeRate("USD", data.USD, data.updated_at ?? todayStr); // exchangeSyncDate=today 기록
         if (data.JPY) updateExchangeRate("JPY", data.JPY);
       }
     } catch (e) {

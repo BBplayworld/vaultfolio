@@ -190,6 +190,21 @@ export function recordTodayExchangeRate(rates: { USD: number; JPY: number }): vo
   writeExchangeHistory(history);
 }
 
+// 서버 2일치 환율 이력을 로컬에 보충 — 로컬에 없는 날짜만 추가(로컬 우선, 서버는 빈칸 보충)
+// 해외 일별수익의 전날 환율을 미접속 기기에서도 동일하게 확보하기 위함
+export function mergeExchangeHistory(server: Record<string, { USD: number; JPY: number }>): void {
+  if (typeof window === "undefined" || !server) return;
+  const history = readExchangeHistory();
+  let changed = false;
+  for (const [date, rates] of Object.entries(server)) {
+    if (history[date]) continue; // 로컬 우선: 이미 있으면 보존
+    if (!rates || typeof rates.USD !== "number") continue;
+    history[date] = { USD: rates.USD, JPY: rates.JPY };
+    changed = true;
+  }
+  if (changed) writeExchangeHistory(history);
+}
+
 // 특정 일자의 환율 조회. 없으면 fallback.
 // 클라이언트 전용 (localStorage 접근)
 export function getRatesForDate(
