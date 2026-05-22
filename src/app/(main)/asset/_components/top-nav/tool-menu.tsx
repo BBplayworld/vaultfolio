@@ -40,6 +40,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { SidebarMenu, SidebarcategoryBox, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
 import { exportAssetData, importAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { getProfitBasis } from "@/lib/profit-utils";
+import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -115,7 +117,7 @@ export function ToolMenu({
 
     const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots());
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots(), getProfitBasis());
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -165,7 +167,7 @@ export function ToolMenu({
         return;
       }
 
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots());
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis());
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
       await navigator.clipboard.writeText(shareUrl);
@@ -201,6 +203,7 @@ export function ToolMenu({
     setIsImporting(true);
     try {
       const { assetData: imported, snapshotRestored } = await importAssetData(file);
+      useProfitBasisStore.getState().hydrate(); // 복원된 종가 기준 옵션을 store에 반영
       toast.success("자산 데이터를 불러왔습니다.");
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
       bumpSnapshotVersion(); // 차트(useDailySnapshots/useMonthlySnapshots) localStorage 재구독 트리거

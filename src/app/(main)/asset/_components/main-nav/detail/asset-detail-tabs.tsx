@@ -79,12 +79,20 @@ export function mergeStockGroup(items: Stock[]): Stock {
     ? items.reduce((s, it) => s + it.averagePrice * it.quantity, 0) / totalQty
     : items[0].averagePrice;
   const earliestDate = items.reduce((min, it) => it.purchaseDate < min ? it.purchaseDate : min, items[0].purchaseDate);
+  // 매입환율: 매입원금(수량×평단) 가중 평균 — 첫 항목 값으로 고정되던 버그 수정
+  // 유효 환율(>0) 항목만 가중 → 총 원화 매입원가가 보존됨. 모두 미입력이면 기존 fallback 유지
+  const rateItems = items.filter((it) => it.purchaseExchangeRate && it.purchaseExchangeRate > 0);
+  const rateWeight = rateItems.reduce((s, it) => s + it.averagePrice * it.quantity, 0);
+  const purchaseExchangeRate = rateWeight > 0
+    ? rateItems.reduce((s, it) => s + it.purchaseExchangeRate! * it.averagePrice * it.quantity, 0) / rateWeight
+    : items[0].purchaseExchangeRate;
   return {
     ...items[0],
     id: `__merged__${items[0].ticker}:${items[0].category}`,
     quantity: totalQty,
     averagePrice: weightedAvg,
     purchaseDate: earliestDate,
+    purchaseExchangeRate,
     broker: undefined,
   };
 }

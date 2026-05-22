@@ -16,6 +16,8 @@ export const STORAGE_KEYS = {
   financeApiErrorCount: "secretasset_finance_api_error_count",
   stockMarkets:         "secretasset_stock_markets",
   exchangeHistory:      "secretasset_exchange_history",
+  // 기간별 수익 종가 기준 옵션 ("sameBusinessDay" | "kstAccessDay")
+  profitBasis:          "secretasset_profit_basis",
   // Tutorial step state — 단일 키, 값은 { "0":"done", "1":"skipped", ... } 형태의 JSON
   tutorialStatus:       "secretasset_tutorial_status",
 } as const;

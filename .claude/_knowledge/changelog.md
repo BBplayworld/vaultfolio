@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-05-21
+
+### 성과-수익 기간별 종가 기준 2옵션 (issue-3.9)
+- `ProfitBasis = "sameBusinessDay" | "kstAccessDay"` 도입 (기본 sameBusinessDay)
+  - `sameBusinessDay`(동일 영업일): 서버에서 국내·해외 모두 `getDates(period,"foreign")` 사용 → 같은 영업일 종가로 정렬
+  - `kstAccessDay`(KST 접속일): 국내=domestic, 해외=foreign 독립 산출 (기존 동작)
+- `/api/finance/profit`에 `basis` 쿼리 추가, `fetchProfitRef(options.basis)`, `getProfitCacheKey(tickers,period,basis)` — 캐시 키 `secretasset_profit:{basis}:...`로 옵션 분리
+- 전역 store `src/stores/profit-basis-store.ts` (zustand, localStorage 동기화 + hydrate). profit-chart 토글 + stock-tab 전일대비가 함께 구독
+- **스냅샷·기존 호출은 basis 미전달 = kstAccessDay(legacy)** 유지 → 스냅샷은 항상 오늘자 종가 기준 (옵션 무관)
+- 옵션 영속화: `STORAGE_KEYS.profitBasis` + 내보내기 JSON(`profitBasis`) + 공유 토큰 packV7 parts[9]("k"=kstAccessDay)
+- UI: 시작/종료 종가 영역을 표 형태(국내/해외/합계 행 × 시작/종료 열)로 재구성, 종가 날짜는 베이스 날짜 + 마감 메타(MM-DD HH:MM) 2줄. 해외 일별 표시의 강제 +1 shift 제거 → 두 옵션 공통으로 ET 거래일을 그대로 표기
+- **이유:** 국내·해외 시차로 같은 영업일/접속일 기준 수익이 혼동되어 사용자가 명시적으로 기준을 선택하도록
+
 ## 2026-05-16
 
 ### 시간별 주식 갱신 + 기준가 캐시 안정화 (issue-3.5, 3.6)

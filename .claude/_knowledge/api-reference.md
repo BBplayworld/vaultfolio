@@ -27,9 +27,13 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 기준가(과거 종가) 조회. 기간별 수익 계산용.
 
 ```
-GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly
+GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&basis=sameBusinessDay|kstAccessDay
 → ProfitRefResponse: Record<ticker, { refPrice, refDate, prevPrice?, prevDate? }>
 ```
+
+**basis 옵션 (기본 kstAccessDay):**
+- `sameBusinessDay`(동일 영업일): `krDates = usDates = getDates(period,"foreign")` — 국내·해외 같은 영업일
+- `kstAccessDay`(KST 접속일): 국내=domestic, 해외=foreign 독립 (기존 동작)
 
 **서버 캐시 2단:**
 1. `getRefDateForRequest(ticker, requestDate, period)` — 요청일→실거래일(KIS 응답일) 매핑
@@ -39,8 +43,8 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly
 
 **해외 EXCD 사전 조회:** STOCKS 캐시(`{ticker}-{slot}` 또는 `{ticker}-{effectiveDate}`)에서 market 필드 → NAS/NYS/AMS 매핑 → `fetchOverseasHistoricalPrice(...preferredExcd)`에 전달. EXCD 미상이면 NAS→NYS→AMS 순 fallback.
 
-**클라이언트 캐시:** `profit-utils.ts` → `secretasset_profit:{period}:{date}:{tickers}` (localStorage)
-- daily 키 date: `krRefDate`만 (us는 KST 자정에 kr과 함께 변경)
+**클라이언트 캐시:** `profit-utils.ts` → `secretasset_profit:{basis}:{period}:{date}:{tickers}` (localStorage)
+- daily 키 date: sameBusinessDay=foreign refDate / kstAccessDay=domestic refDate (basis별 분리)
 - 캐시 miss 시 BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 호출
 - 같은 cacheKey 동시 요청은 `inFlightFetches` Map으로 dedup
 - 모든 배치 완료 후에만 캐시 저장 (부분 결과 캐시 hit 회귀 방지)
@@ -130,6 +134,8 @@ parseShareToken(token, pin?, localKey?): ParseResult
 stocks 필드 12개: [cat, name, ticker(name과 같으면 "*"), qty, avgPrice, currentPrice, currency, purchaseDate, description, purchaseRate, broker, inactiveStatus]
   // inactiveStatus: "d"=delisted, "h"=halted, ""=활성
 ```
+
+packV7 parts[9]: 종가 기준 옵션 (`"k"`=kstAccessDay, ""/없음=sameBusinessDay). 구버전 토큰은 parts[9] 부재 → 기본값. `generateShareToken(...,profitBasis?)` / `parseShareToken` 결과 `profitBasis?` / 내보내기 JSON `profitBasis` 동일 직렬화.
 
 **v72Z Zero-Knowledge:** PIN + localKey 조합 암호화. 서버에는 암호화된 데이터만 저장,
 localKey는 URL 해시에 포함 → 서버 관리자도 단독 복호화 불가.

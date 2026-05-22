@@ -72,6 +72,18 @@ const setThemeMode = usePreferencesStore(s => s.setThemeMode);
 
 ---
 
+## ProfitBasisStore (`src/stores/profit-basis-store.ts`)
+
+```typescript
+const basis = useProfitBasisStore(s => s.basis);       // ProfitBasis
+const setBasis = useProfitBasisStore(s => s.setBasis); // localStorage + store 동시 갱신
+const hydrate = useProfitBasisStore(s => s.hydrate);   // 마운트 후 localStorage 동기화 (SSR mismatch 방지)
+```
+
+standalone zustand `create` (provider 없음). 성과-수익 탭(profit-chart) 토글 + 상세-주식 전일대비(stock-tab)가 함께 구독. 공유 로드 시 `applySharedData`에서, 내보내기 import 시 `getState().hydrate()`로 갱신.
+
+---
+
 ## TutorialStore (`src/stores/tutorial/tutorial-store.ts`)
 
 ```typescript
@@ -121,6 +133,7 @@ STORAGE_KEYS = {
   exchangeRate, exchangeSyncDate, collapsibleUsed,
   noticeHideUntil, geminiUsage,
   shareOwnerId, financeApiErrorCount,
+  profitBasis,    // "secretasset_profit_basis" — 종가 기준 옵션
   tutorialStatus  // "secretasset_tutorial_status"
 }
 STORAGE_KEY_PREFIXES = { profit: "secretasset_profit:" }
@@ -194,13 +207,17 @@ getStockCacheSlot(type: "domestic"|"foreign"): string
 
 ```typescript
 type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
+type ProfitBasis = "sameBusinessDay" | "kstAccessDay"   // 기본 sameBusinessDay
 
-getProfitCacheKey(tickers, period): string
-  // daily 키: "secretasset_profit:daily:{krRefDate}:{tickers}"
-  // → us_refDate는 키에서 제외 (KST 자정에 kr과 함께 변경되어 동기화 동일)
+getProfitBasis() / setProfitBasis(b)   // localStorage(STORAGE_KEYS.profitBasis) 읽기/쓰기
+
+getProfitCacheKey(tickers, period, basis = "kstAccessDay"): string
+  // "secretasset_profit:{basis}:{period}:{date}:{tickers}"
+  // daily date: sameBusinessDay=foreign refDate / kstAccessDay=domestic refDate
 
 fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
-  // options: { onProgress?, onComplete?, signal? }
+  // options: { onProgress?, onComplete?, signal?, basis? }
+  // basis 미전달 시 kstAccessDay(legacy) — 스냅샷·기존 호출 동작 보존
   // 1) localStorage 캐시 hit → onProgress + onComplete(fromCache=true) 즉시 호출
   // 2) miss → BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 fetch
   //    배치마다 onProgress(누적 결과), 완료 후 캐시 저장 + onComplete(false)

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import LZString from "lz-string";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
+import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/profit-utils";
 export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
 export const DEFAULT_EXCHANGE_RATE = 1380;
 
@@ -84,7 +85,8 @@ export function exportAssetData(): void {
   const assetData = getAssetData();
   const snapshots = collectSnapshotsFromStorage();
   const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
-  const payload = hasSnapshots ? { assetData, snapshots } : { assetData };
+  const profitBasis = getProfitBasis();
+  const payload = hasSnapshots ? { assetData, snapshots, profitBasis } : { assetData, profitBasis };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -119,6 +121,10 @@ export function importAssetData(file: File): Promise<{ assetData: AssetData; sna
 
         // 4단계: 새 데이터 저장
         saveAssetData(validated);
+        // 종가 기준 옵션 복원 (clearAssetData 이후이므로 여기서 기록)
+        if (parsed.profitBasis === "kstAccessDay" || parsed.profitBasis === "sameBusinessDay") {
+          setProfitBasis(parsed.profitBasis);
+        }
         let snapshotRestored = false;
         if (dailySnapshot || monthlySnapshot) {
           try {
@@ -359,7 +365,7 @@ const uTxt = (s?: any) => {
   return s || "";
 };
 
-function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots?: AssetSnapshots): string {
+function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis): string {
   const row = (arr: any[]) => {
     while (arr.length > 0 && (arr[arr.length - 1] === "" || arr[arr.length - 1] === 0 || arr[arr.length - 1] === undefined || arr[arr.length - 1] === null)) arr.pop();
     return arr.join("|");
@@ -380,13 +386,15 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
     section(data.yearlyNetAssets.map(i => [i.year, pNum(i.netAsset), sTxt(i.note)])),
     pDate(data.lastUpdated.split('T')[0]),
     rates ? `${pNum(rates.USD)}|${pNum(rates.JPY)}` : "",
-    snapshots ? packSnapshots(snapshots) : ""
+    snapshots ? packSnapshots(snapshots) : "",
+    // parts[9]: 종가 기준 옵션 ("k"=kstAccessDay, 그 외/빈값=기본 sameBusinessDay)
+    profitBasis === "kstAccessDay" ? "k" : ""
   ];
 
   return parts.join("^");
 }
 
-function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots } {
+function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis } {
   const parts = raw.split("^");
   const gid = () => Math.random().toString(36).substring(2, 11);
   const getIdx = (idx: any, list: readonly string[]) => list[parseInt(idx)] || list[0];
@@ -473,12 +481,15 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     snapshots = unpackSnapshots(parts[8]);
   }
 
-  return { data, rates, snapshots };
+  // parts[9]: 종가 기준 옵션 (없으면 기본 sameBusinessDay)
+  const profitBasis: ProfitBasis | undefined = parts[9] === "k" ? "kstAccessDay" : undefined;
+
+  return { data, rates, snapshots, profitBasis };
 }
 
-export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots): string {
+export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis): string {
   try {
-    const dsv = "OK|" + packV7(data, rates, snapshots); // PIN 검증 및 무결성 확인용 접두사
+    const dsv = "OK|" + packV7(data, rates, snapshots, profitBasis); // PIN 검증 및 무결성 확인용 접두사
     const compressed = LZString.compressToEncodedURIComponent(dsv);
 
     if (pin && pin.length === 4) {
@@ -496,7 +507,7 @@ export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: 
   }
 }
 
-export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots } | { pinRequired: true } | null;
+export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis } | { pinRequired: true } | null;
 
 export function parseShareToken(token: string, pin?: string, localKey?: string): ParseResult {
   if (!token) return null;
@@ -517,6 +528,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         data: assetDataSchema.parse(result.data),
         rates: result.rates,
         snapshots: result.snapshots,
+        profitBasis: result.profitBasis,
       };
     }
 
@@ -538,6 +550,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         data: assetDataSchema.parse(result.data),
         rates: result.rates,
         snapshots: result.snapshots,
+        profitBasis: result.profitBasis,
       };
     }
 
