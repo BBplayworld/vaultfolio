@@ -93,6 +93,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const tickersParam = searchParams.get("tickers") ?? "";
   const period = (searchParams.get("period") ?? "daily") as ProfitPeriod;
+  // 종가 기준 옵션 (기본 kstAccessDay = 현행 동작)
+  const basis = searchParams.get("basis") === "sameBusinessDay" ? "sameBusinessDay" : "kstAccessDay";
 
   const tickers = Array.from(new Set(
     tickersParam
@@ -105,8 +107,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({});
   }
 
-  const krDates = getDates(period, "domestic");
+  // sameBusinessDay: 국내·해외 모두 해외 영업일 계산을 사용해 같은 영업일로 정렬
+  // kstAccessDay: 국내=domestic, 해외=foreign 독립 산출 (현행)
   const usDates = getDates(period, "foreign");
+  const krDates = basis === "sameBusinessDay" ? usDates : getDates(period, "domestic");
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 

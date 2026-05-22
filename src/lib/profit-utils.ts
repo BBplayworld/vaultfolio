@@ -55,6 +55,24 @@ export function computeDailyStockProfit(
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
+// 기간별 수익 종가 기준 옵션
+// - sameBusinessDay(동일 영업일, 기본): 국내·해외 모두 해외(foreign) 영업일로 정렬
+// - kstAccessDay(KST 접속일): 국내=domestic, 해외=foreign 독립 산출 (현행)
+export type ProfitBasis = "sameBusinessDay" | "kstAccessDay";
+
+export const DEFAULT_PROFIT_BASIS: ProfitBasis = "sameBusinessDay";
+
+export function getProfitBasis(): ProfitBasis {
+  if (typeof window === "undefined") return DEFAULT_PROFIT_BASIS;
+  const v = localStorage.getItem(STORAGE_KEYS.profitBasis);
+  return v === "kstAccessDay" || v === "sameBusinessDay" ? v : DEFAULT_PROFIT_BASIS;
+}
+
+export function setProfitBasis(basis: ProfitBasis): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(STORAGE_KEYS.profitBasis, basis); } catch { /* ignore */ }
+}
+
 function formatYmd(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
@@ -108,18 +126,33 @@ export function getDailyClosingRefDate(market: "domestic" | "foreign"): string {
   return getDailyClosingRefDates(market).refDate;
 }
 
-export function getProfitCacheKey(tickers: string, period: ProfitPeriod): string {
+// 캐시 키의 기간 경계 토큰(날짜 부분). 캐시 키 생성과 옛 키 정리(prunePeriodProfitCache)가 공유
+export function getProfitCacheToken(
+  period: ProfitPeriod,
+  basis: ProfitBasis = "kstAccessDay",
+): string {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const todayStr = nowKST.toISOString().split("T")[0];
-  if (period === "monthly") return `${STORAGE_KEY_PREFIXES.profit}monthly:${todayStr.slice(0, 7)}:${tickers}`;
-  if (period === "yearly") return `${STORAGE_KEY_PREFIXES.profit}yearly:${todayStr.slice(0, 4)}:${tickers}`;
+  if (period === "monthly") return todayStr.slice(0, 7);
+  if (period === "yearly") return todayStr.slice(0, 4);
   if (period === "daily") {
-    // KR refDate만 키에 포함 → KR 컷오프(16:00 KST) 전후 자동 무효화
-    // us_refDate는 KST 자정에 kr_refDate와 함께 변경되므로 키에서 빠져도 동기화 동일
-    const kr = getDailyClosingRefDates("domestic").refDate;
-    return `${STORAGE_KEY_PREFIXES.profit}daily:${kr}:${tickers}`;
+    // 국내·해외 컷오프가 독립적(국내 16:00, 해외 06:00/07:00 KST)이므로 두 시장 기준일을 모두 포함
+    // → kstAccessDay에서 해외 컷오프만 지나도(국내 16:00 전) 캐시가 무효화되어 해외 종가가 갱신됨
+    // (sameBusinessDay는 둘 다 해외 기준이라 동일 값)
+    const krRef = getDailyClosingRefDates(basis === "sameBusinessDay" ? "foreign" : "domestic").refDate;
+    const usRef = getDailyClosingRefDates("foreign").refDate;
+    return `${krRef}_${usRef}`;
   }
-  return `${STORAGE_KEY_PREFIXES.profit}${period}:${todayStr}:${tickers}`;
+  return todayStr; // weekly 등
+}
+
+export function getProfitCacheKey(
+  tickers: string,
+  period: ProfitPeriod,
+  basis: ProfitBasis = "kstAccessDay",
+): string {
+  const p = `${STORAGE_KEY_PREFIXES.profit}${basis}:`;
+  return `${p}${period}:${getProfitCacheToken(period, basis)}:${tickers}`;
 }
 
 // 환율 이력 (날짜별 USD/JPY)
@@ -184,6 +217,8 @@ interface FetchProfitRefOptions {
   signal?: AbortSignal;
   // 호출자 식별자 (signal 미전달 등 경고 로그에 사용)
   caller?: string;
+  // 종가 기준 옵션. 미전달 시 kstAccessDay(legacy: 스냅샷·기존 호출 동작 보존)
+  basis?: ProfitBasis;
 }
 
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
@@ -194,8 +229,8 @@ export async function fetchProfitRef(
   period: ProfitPeriod,
   options: FetchProfitRefOptions = {},
 ): Promise<ProfitRefResponse> {
-  const { onProgress, onComplete, signal, caller = "unknown" } = options;
-  const cacheKey = getProfitCacheKey(tickers, period);
+  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay" } = options;
+  const cacheKey = getProfitCacheKey(tickers, period, basis);
   if (!signal) {
     console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
   }
@@ -242,7 +277,7 @@ export async function fetchProfitRef(
       if (signal?.aborted) break;
       const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
       try {
-        const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}`, { signal });
+        const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}&basis=${basis}`, { signal });
         if (res.ok) {
           const data: ProfitRefResponse = await res.json();
           Object.assign(merged, data);

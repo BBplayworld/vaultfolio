@@ -23,6 +23,7 @@ import { normalizeTicker } from "@/lib/finance-service";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/profit-utils";
+import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 
@@ -152,11 +153,16 @@ export function useFilteredStockData(activeCategory: string) {
   // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(profit-chart 등)와 동일한 캐시 키 보장
   const tickerList = Array.from(new Set(stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean))).sort().join(",");
 
+  const profitBasis = useProfitBasisStore((s) => s.basis);
+  const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
+  const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
+  useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
+
   const { data: refData } = useQuery({
-    queryKey: ["profit", "daily", tickerList],
-    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "stock-tab:useQuery" }),
+    queryKey: ["profit", "daily", profitBasis, tickerList],
+    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "stock-tab:useQuery", basis: profitBasis }),
     staleTime: 5 * 60 * 1000,
-    enabled: tickerList.length > 0,
+    enabled: tickerList.length > 0 && profitBasisHydrated,
   });
 
   // 데이터 삭제/불러오기 시 진행 중인 profit 쿼리 전부 강제 취소
@@ -436,12 +442,15 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
       if (isForeign && it.avgPriceInKrw && usdRate) {
         avg = Math.round(avg / usdRate * 10000) / 10000;
       }
+      // 매입환율은 기존 항목 값을 보존(증권사별 환율 덮어쓰기 방지). 새로 추가된 행만 첫 항목 값을 기본 상속
+      const existing = groupItems[idx];
       return {
         ...baseStock,
-        id: groupItems[idx]?.id ?? `stock_${Date.now()}_${idx}`,
+        id: existing?.id ?? `stock_${Date.now()}_${idx}`,
         quantity: parseFloat(it.quantity),
         averagePrice: avg,
         broker: it.broker === "__none__" ? undefined : it.broker,
+        purchaseExchangeRate: existing ? existing.purchaseExchangeRate : baseStock.purchaseExchangeRate,
       };
     });
     const otherStocks = assetData.stocks.filter((s) => !groupIds.has(s.id));

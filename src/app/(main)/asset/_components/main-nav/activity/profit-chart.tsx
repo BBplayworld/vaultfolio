@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
+import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { isUsEasternDST } from "@/lib/stock-cache-slot";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
@@ -84,9 +86,37 @@ function usCutoffTime(etDate: string | undefined): string {
   return isUsEasternDST(new Date(`${etDate}T12:00:00Z`)) ? "06:00" : "07:00";
 }
 
-// 해외 일자를 KST 인지 기준(xymd + 1일)으로 변환 (모든 period 공통)
-function displayUsDate(etDate: string | undefined): string | undefined {
-  return shiftUsDate(etDate);
+// 통일 종가 표기 (두 옵션 공통): 베이스 날짜(영업일) + 마감 메타 2줄 분리
+// - 국내: base = KST 영업일, 마감 = 같은 날 16:00
+// - 해외: base = ET 거래일(shift 없음), 마감 = 거래일 +1일 새벽(usCutoffTime)
+function krCloseMeta(date: string): string {
+  return `${date.slice(5)} ${KR_CUTOFF_TIME} 마감`;
+}
+function usCloseMeta(date: string): string {
+  const close = shiftUsDate(date);
+  return `${close ? close.slice(5) : ""} ${usCutoffTime(date)} 마감`;
+}
+
+const CLOSE_TABLE_COLS = "grid grid-cols-[2.25rem_1fr_1fr] gap-x-2";
+
+// 시장 행: 라벨 + 시작/종료 날짜(베이스 + 마감 메타 2줄)
+function MarketDateRow({
+  label, startDate, endDate, meta,
+}: { label: string; startDate?: string; endDate?: string; meta: (d: string) => string }) {
+  const cell = (date?: string, align?: string) =>
+    date ? (
+      <div className={`tabular-nums leading-tight ${align ?? ""}`}>
+        <p className="text-[13px] sm:text-sm">{date}</p>
+        <p className="text-xs text-muted-foreground/60">{meta(date)}</p>
+      </div>
+    ) : <span className="text-muted-foreground/40">-</span>;
+  return (
+    <div className={`${CLOSE_TABLE_COLS} items-start py-1.5 border-b border-border/30`}>
+      <span className="text-muted-foreground">{label}</span>
+      {cell(startDate)}
+      {cell(endDate, "text-right")}
+    </div>
+  );
 }
 
 function toDateStr(d: Date): string {
@@ -132,6 +162,26 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const jpyRate = exchangeRates.JPY;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
   const [marketView, setMarketView] = useState<MarketView>("all");
+  const profitBasis = useProfitBasisStore((s) => s.basis);
+  const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
+  const setProfitBasis = useProfitBasisStore((s) => s.setBasis);
+  const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
+  useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
+
+  // 컷오프 경계 자동 재조회: 토큰은 render 시점에만 재계산되므로 저빈도 tick으로 재렌더 유도
+  // (deps에 넣지 않음 → 매 분 재렌더되지만 토큰이 실제로 바뀌는 컷오프 시점에만 fetch effect 재실행)
+  const [, setRefreshTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setRefreshTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // 기준일 토큰: 컷오프 경과 시 값이 바뀌어 effect 재실행을 유발
+  // daily는 국내(16:00)·해외(06:00/07:00) 컷오프가 독립적이므로 두 시장 기준일을 모두 반영
+  // → kstAccessDay에서 해외 컷오프만 지나도 재조회됨 (캐시 키와 동일 기준)
+  const refMarket = profitBasis === "sameBusinessDay" ? "foreign" : "domestic";
+  const dailyRefToken = `${getDailyClosingRefDate("domestic")}_${getDailyClosingRefDate("foreign")}`;
+  const periodRefToken = period === "daily" ? dailyRefToken : getExpectedRefDate(period, refMarket);
 
   // tickerList: currentPrice 무관, ticker가 있고 unlisted/상장폐지 아닌 종목 전체
   // → 첫 mount부터 풀세트로 고정 → 캐시 키 안정 (syncTodayStockPrices가 백그라운드로 currentPrice를 채워도 영향 없음)
@@ -199,8 +249,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
 
   // 현재 period 결과 점진 로드
   useEffect(() => {
-    if (!isActive || mergedStocks.length === 0 || !tickerList) return;
-    const key = `${period}:${tickerList}`;
+    if (!isActive || !profitBasisHydrated || mergedStocks.length === 0 || !tickerList) return;
+    const key = `${profitBasis}:${period}:${periodRefToken}:${tickerList}`;
     if (refInFlightKeyRef.current === key) return; // 이미 진행 중
     refInFlightKeyRef.current = key;
     // 새 조회 시작: 완료 플래그 리셋 (key가 바뀌면 다시 알림)
@@ -213,6 +263,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     fetchProfitRef(tickerList, period, {
       signal: controller.signal,
       caller: `profit-chart:ref(${period})`,
+      basis: profitBasis,
       onProgress: (partial) => setRefData(partial),
       onComplete: () => {
         refDoneRef.current = true;
@@ -226,13 +277,13 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       // 동일 키로 재실행 중이면 abort 안 함 — 의존성이 잠시 흔들려도 진행 보존
       if (refInFlightKeyRef.current !== key) controller.abort();
     };
-  }, [isActive, mergedStocks.length, tickerList, period, dataResetVersion]);
+  }, [isActive, profitBasisHydrated, mergedStocks.length, tickerList, period, profitBasis, periodRefToken, dataResetVersion]);
 
   // daily 기준 종가 (period가 daily가 아닐 때만 별도 조회)
   useEffect(() => {
-    if (!isActive || mergedStocks.length === 0 || !tickerList || period === "daily") return;
-    const key = `${period}:${tickerList}`;
-    const dailyKey = `daily:${tickerList}`;
+    if (!isActive || !profitBasisHydrated || mergedStocks.length === 0 || !tickerList || period === "daily") return;
+    const key = `${profitBasis}:${period}:${periodRefToken}:${tickerList}`;
+    const dailyKey = `${profitBasis}:daily:${dailyRefToken}:${tickerList}`;
     if (dailyInFlightKeyRef.current === dailyKey) return;
     dailyInFlightKeyRef.current = dailyKey;
     const controller = new AbortController();
@@ -241,6 +292,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     fetchProfitRef(tickerList, "daily", {
       signal: controller.signal,
       caller: "profit-chart:daily(secondary)",
+      basis: profitBasis,
       onProgress: (partial) => setDailyData(partial),
       onComplete: () => {
         dailyDoneRef.current = true;
@@ -253,7 +305,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     return () => {
       if (dailyInFlightKeyRef.current !== dailyKey) controller.abort();
     };
-  }, [isActive, mergedStocks.length, tickerList, period, dataResetVersion]);
+  }, [isActive, profitBasisHydrated, mergedStocks.length, tickerList, period, profitBasis, periodRefToken, dailyRefToken, dataResetVersion]);
 
   const baseRefData = period === "daily" ? refData : dailyData;
   // 첫 응답이 오기 전까지만 스켈레톤. 한 종목이라도 데이터가 채워지면 즉시 부분 노출
@@ -471,34 +523,45 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
                           <div className="pt-1.5 border-t border-border/50 space-y-1.5">
-                            <p className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400">
-                              <Info className="size-3 shrink-0" />
-                              <span>국내, 해외 정규장 마감시간에 여유 버퍼를 둔 시작·종료 종가를 적용합니다.</span>
-                            </p>
-                            <div className="grid grid-cols-2 gap-x-4 text-xs sm:text-sm">
-                              <div className="space-y-1.5">
-                                <p className="text-muted-foreground">시작 종가 <span className="text-[10px] font-normal">(KST)</span></p>
-                                <div className="space-y-0.5">
-                                  {showKrDate && krRefDate && (
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krRefDate} {KR_CUTOFF_TIME}</p>
-                                  )}
-                                  {showUsDate && usRefDate && (
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {period === "daily" ? displayUsDate(usRefDate) : usRefDate} {usCutoffTime(usRefDate)}</p>
-                                  )}
-                                </div>
-                                <p className="text-sm tabular-nums font-medium">{formatShortCurrency(leftSum)}</p>
+                            {/* 종가 기준 옵션: 모바일은 토글(상단 우측) + info(하단), sm 이상은 한 줄 */}
+                            <div className="flex flex-col gap-1.5 sm:flex-row-reverse sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-2 text-xs rounded-md bg-muted/40 px-2.5 py-1.5 self-end sm:self-auto shrink-0">
+                                <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>동일 영업일</span>
+                                <Switch
+                                  checked={profitBasis === "kstAccessDay"}
+                                  onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
+                                  aria-label="종가 기준 옵션"
+                                />
+                                <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>KST 접속일</span>
                               </div>
-                              <div className="space-y-1.5 text-right">
-                                <p className="text-muted-foreground">종료 종가 <span className="text-[10px] font-normal">(KST)</span></p>
-                                <div className="space-y-0.5">
-                                  {showKrDate && krCompareDate && (
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">국내 {krCompareDate} {KR_CUTOFF_TIME}</p>
-                                  )}
-                                  {showUsDate && usCompareDate && (
-                                    <p className="text-[11px] text-muted-foreground tabular-nums">해외 {displayUsDate(usCompareDate)} {usCutoffTime(usCompareDate)}</p>
-                                  )}
-                                </div>
-                                <p className="text-sm tabular-nums font-medium">{formatShortCurrency(rightSum)}</p>
+                              <p className="flex items-start gap-1 text-[11px] text-sky-600 dark:text-sky-400">
+                                <Info className="size-3 shrink-0 mt-0.5" />
+                                <span>
+                                  {profitBasis === "sameBusinessDay"
+                                    ? "국내·해외를 같은 영업일의 종가로 정렬합니다 (해외는 익일 새벽 마감)."
+                                    : "KST 접속일 기준으로 국내·해외 각 시장의 마감 종가를 적용합니다."}
+                                </span>
+                              </p>
+                            </div>
+                            <div className="text-sm">
+                              {/* 헤더 */}
+                              <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border/50 text-muted-foreground`}>
+                                <span className="text-[11px] font-normal self-end">(KST)</span>
+                                <span>시작 종가</span>
+                                <span className="text-right">종료 종가</span>
+                              </div>
+                              {/* 시장별 날짜 */}
+                              {showKrDate && (
+                                <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} meta={krCloseMeta} />
+                              )}
+                              {showUsDate && (
+                                <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} meta={usCloseMeta} />
+                              )}
+                              {/* 합계 */}
+                              <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
+                                <span className="text-muted-foreground font-normal">합계</span>
+                                <span>{formatShortCurrency(leftSum)}</span>
+                                <span className="text-right">{formatShortCurrency(rightSum)}</span>
                               </div>
                             </div>
                           </div>

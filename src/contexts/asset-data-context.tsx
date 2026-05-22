@@ -7,7 +7,9 @@ import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
-import { fetchProfitRef, recordTodayExchangeRate } from "@/lib/profit-utils";
+import { fetchProfitRef, recordTodayExchangeRate, type ProfitBasis } from "@/lib/profit-utils";
+import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
+import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
 
@@ -570,7 +572,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
-  const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots) => {
+  const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis) => {
     saveAssetData(data);
     if (snapshots) {
       try {
@@ -578,6 +580,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(snapshots.monthly));
       } catch { /* 무시 */ }
     }
+    // 공유자가 선택한 종가 기준 옵션 적용 (localStorage + store 동시 갱신)
+    if (profitBasis) useProfitBasisStore.getState().setBasis(profitBasis);
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
     skipAllTutorialSteps();
@@ -608,7 +612,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
 
     if (result && "data" in result) {
-      applySharedData(result.data, result.snapshots);
+      applySharedData(result.data, result.snapshots, result.profitBasis);
       setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
@@ -638,7 +642,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
-      applySharedData(result.data, result.snapshots);
+      applySharedData(result.data, result.snapshots, result.profitBasis);
       setIsSharePending(false);
       setShowPinPrompt(false);
       setPendingToken(null);
@@ -669,6 +673,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - 이후: 진입 경로별 분기 후 initAndSync 실행
   useEffect(() => {
     migrateStorageKeys();
+    prunePeriodProfitCache(); // 옛 기간별 수익 캐시 키 정리 (현재 유효 토큰만 유지)
     // 마운트 즉시: localStorage 환율을 state에 반영
     // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
     // INITIAL_SYNC_DELAY_MS 지연 전에 기본값(1430/930)이 표시되는 것을 방지
