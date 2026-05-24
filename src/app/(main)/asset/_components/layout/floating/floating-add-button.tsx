@@ -114,9 +114,10 @@ export function FloatingAddButton() {
   return (
     <>
       {/* 하단 고정 바 — 배경 페이지와 자연스럽게 이어지도록 상단 그라데이션 페이드 + solid bg */}
+      {/* 숨김 시 그라데이션(-top-4 = 16px overshoot)까지 함께 화면 밖으로 밀어내야 잔상 라인이 안 보임 */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-40 transition-transform duration-300
-        ${isHidden ? "translate-y-full" : "translate-y-0"}`}
+        ${isHidden ? "translate-y-[calc(100%+1rem)]" : "translate-y-0"}`}
       >
         {/* 상단 그라데이션 페이드 — 스크롤되는 콘텐츠가 바 위로 자연스럽게 흐려짐 */}
         <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
