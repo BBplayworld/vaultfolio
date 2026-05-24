@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings, Info, RefreshCw } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Settings, Info, RefreshCw, Moon, Sun } from "lucide-react";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
+import { updateThemeMode } from "@/lib/theme-utils";
+import { setValueToCookie } from "@/server/server-actions";
+import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Lock, Unlock } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,8 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SidebarMenu, SidebarcategoryBox, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
-import { getInitials } from "@/lib/utils";
+import { useSidebar } from "@/components/ui/sidebar";
 import { exportAssetData, importAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -48,18 +49,19 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 
-export function ToolMenu({
-  user,
-}: {
-  readonly user: {
-    readonly name: string;
-    readonly email: string;
-    readonly avatar: string;
-  };
-}) {
+export function ToolMenu() {
   const { isMobile } = useSidebar();
   const assetDataContext = useAssetData();
   const { refreshData, bumpSnapshotVersion, initAndSync, getAssetSummary, assetData, isSharePending } = assetDataContext;
+  const themeMode = usePreferencesStore((s) => s.themeMode);
+  const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+
+  const handleToggleTheme = async () => {
+    const next = themeMode === "dark" ? "light" : "dark";
+    updateThemeMode(next);
+    setThemeMode(next);
+    await setValueToCookie("theme_mode", next);
+  };
   const hasAssets =
     assetData.realEstate.length > 0 ||
     assetData.stocks.length > 0 ||
@@ -265,90 +267,70 @@ export function ToolMenu({
 
   return (
     <>
-      <SidebarMenu className="rounded-md transition-colors shadow-sm overflow-hidden">
-        <SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="gap-1 sm:gap-1.5" data-tutorial="tutorial-tool-menu" id="tool-menu-trigger">
-              <SidebarcategoryBox
-                size="lg"
-                className="h-9 sm:h-10 px-2 text-white hover:text-white hover:opacity-90"
-                style={{ backgroundColor: MAIN_PALETTE[11] }}
-              >
-                <Settings className="ml-auto size-3.5 sm:size-4 opacity-70" />
-                <div className="grid flex-1 text-left leading-tight">
-                  <span className="truncate font-bold tracking-tighter text-xs">자산 도구</span>
-                </div>
-              </SidebarcategoryBox>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-(--radix-dropdown-menu-trigger-width) min-w-60 rounded-lg"
-              side={isMobile ? "bottom" : "right"}
-              align="end"
-              sideOffset={4}
-            >
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-2 py-2 text-left text-sm rounded-md">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                    <AvatarFallback className="rounded-lg text-xs font-semibold text-white">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className={`truncate font-semibold ${ASSET_THEME.primary.text}`}>자산 도구</span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-2.5">
-                <p className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>데이터 관리</p>
-              </div>
-              <DropdownMenuItem className="py-2.5" onClick={handleExport} disabled={!hasAssets}>
-                <Upload className="size-4" />
-                데이터 내보내기
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5" onClick={handleImportClick} disabled={isImporting}>
-                <Download className="size-4" />
-                {isImporting ? "가져오는 중..." : "데이터 가져오기"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5" onClick={handleShare} disabled={!hasAssets}>
-                <Share2 className="size-4" />
-                공유 URL 복사
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5" onClick={handleClearCache} disabled={!hasAssets}>
-                <RefreshCw className="size-4" />
-                캐시 초기화
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2.5" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
-                <Trash2 className="size-4" />
-                모든 데이터 삭제
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-2.5">
-                <p className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>기능</p>
-              </div>
-              <DropdownMenuItem className="py-2.5" onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
-                <Sparkles className="size-4" />
-                <span className="flex-1">AI 평가용 자산 현황</span>
-                <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="py-2.5" onClick={() => {
-                // 웰컴가이드 화면(자산 없음 or 공유 보기 대기)에서는 본문에 동일 가이드가 이미 노출돼 있어
-                // 인라인 Alert(trigger-restore-guide) 호출 생략 — 다이얼로그만 표시
-                const isWelcomeGuide = isSharePending || !hasAssets;
-                if (!isWelcomeGuide) {
-                  window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
-                }
-                tutorialStore.getState().showStep0(true);
-              }}>
-                <Info className="size-4" />
-                앱 가이드 보기
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </SidebarMenuItem>
-      </SidebarMenu>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="자산 도구"
+          title="자산 도구"
+          data-tutorial="tutorial-tool-menu"
+          id="tool-menu-trigger"
+          className="inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w-11 rounded-lg shrink-0 text-white transition-opacity hover:opacity-85"
+          style={{ backgroundColor: MAIN_PALETTE[11] }}
+        >
+          <Settings className="size-5 sm:size-6" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="min-w-60 rounded-lg"
+          side={isMobile ? "bottom" : "bottom"}
+          align="end"
+          sideOffset={4}
+        >
+          <DropdownMenuLabel className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>데이터 관리</DropdownMenuLabel>
+          <DropdownMenuItem className="py-2.5" onClick={handleExport} disabled={!hasAssets}>
+            <Upload className="size-4" />
+            데이터 내보내기
+          </DropdownMenuItem>
+          <DropdownMenuItem className="py-2.5" onClick={handleImportClick} disabled={isImporting}>
+            <Download className="size-4" />
+            {isImporting ? "가져오는 중..." : "데이터 가져오기"}
+          </DropdownMenuItem>
+          <DropdownMenuItem className="py-2.5" onClick={handleShare} disabled={!hasAssets}>
+            <Share2 className="size-4" />
+            공유 URL 복사
+          </DropdownMenuItem>
+          <DropdownMenuItem className="py-2.5" onClick={handleClearCache} disabled={!hasAssets}>
+            <RefreshCw className="size-4" />
+            캐시 초기화
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-rose-400 focus:text-rose-400 py-2.5" onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
+            <Trash2 className="size-4" />
+            모든 데이터 삭제
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className={`text-xs font-semibold ${ASSET_THEME.primary.text}`}>기능</DropdownMenuLabel>
+          <DropdownMenuItem className="py-2.5" onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
+            <Sparkles className="size-4" />
+            <span className="flex-1">AI 평가용 자산 현황</span>
+            <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="py-2.5" onSelect={(e) => { e.preventDefault(); handleToggleTheme(); }}>
+            {themeMode === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {themeMode === "dark" ? "라이트 모드" : "다크 모드"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="py-2.5" onClick={() => {
+            // 웰컴가이드 화면(자산 없음 or 공유 보기 대기)에서는 본문에 동일 가이드가 이미 노출돼 있어
+            // 인라인 Alert(trigger-restore-guide) 호출 생략 — 다이얼로그만 표시
+            const isWelcomeGuide = isSharePending || !hasAssets;
+            if (!isWelcomeGuide) {
+              window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
+            }
+            tutorialStore.getState().showStep0(true);
+          }}>
+            <Info className="size-4" />
+            앱 가이드 보기
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <input
         ref={fileInputRef}

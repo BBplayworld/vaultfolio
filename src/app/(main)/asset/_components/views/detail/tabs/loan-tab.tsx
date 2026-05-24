@@ -5,16 +5,15 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
+import { DetailSummaryHeader } from "../detail-summary-header";
 import { Loan, RealEstate, Stock, Cash } from "@/types/asset";
-
-const CAT_LIST = ASSET_THEME.tabList3Wrap;
-const CAT_TRIGGER = ASSET_THEME.tabTrigger3Wrap;
 
 export const LOAN_TYPE_COLORS: Record<string, string> = {
   "credit": MAIN_PALETTE[1],
@@ -45,7 +44,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
   const [open, setOpen] = useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
@@ -77,29 +76,27 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="relative">
-              <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
+            <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
+                <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>
+                <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysElapsed)} 경과</p>
+              </div>
+              {loan.endDate && (
                 <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
-                  <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>
-                  <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysElapsed)} 경과</p>
+                  <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
+                  {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
                 </div>
-                {loan.endDate && (
-                  <div>
-                    <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
-                    <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
-                    {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
-                  </div>
-                )}
-              </div>
-              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(loan.id)}>
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
+              )}
+            </div>
+            <div className={ASSET_THEME.cardActions}>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(loan.id)}>
+                <Trash2 className="size-3.5" />
+              </Button>
             </div>
             {linkedRealEstate && (
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/5">
@@ -131,10 +128,30 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
   );
 }
 
+// 모바일 한정 더 짧은 라벨 (모두 2~3자로 축약)
+const LOAN_MOBILE_LABELS: Record<string, string> = {
+  "credit": "신용",
+  "minus": "마통",
+  "mortgage-home": "주택",
+  "mortgage-stock": "주식",
+  "mortgage-insurance": "보험",
+  "mortgage-deposit": "예금",
+  "mortgage-other": "기타",
+  "tenant": "임차",
+};
+
 const LOAN_CATEGORY_TABS = [
   { value: "all", label: "전체" },
-  ...loanTypes.map(({ value, shortLabel }) => ({ value, label: shortLabel })),
-] as const;
+  ...loanTypes.map(({ value, shortLabel }) => ({
+    value,
+    label: LOAN_MOBILE_LABELS[value] ? (
+      <>
+        <span className="sm:hidden">{LOAN_MOBILE_LABELS[value]}</span>
+        <span className="hidden sm:inline">{shortLabel}</span>
+      </>
+    ) : shortLabel,
+  })),
+];
 
 export function LoanTab() {
   const { assetData, deleteLoan, getAssetSummary } = useAssetData();
@@ -177,86 +194,76 @@ export function LoanTab() {
   };
 
   return (
-    <div className="space-y-4 mt-2">
-      {/* 요약 헤더 */}
-      <div className={ASSET_THEME.summaryHeader}>
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold">총 대출 잔액</p>
-          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalBalance)}</p>
-          <p className="text-xs text-foreground">{formatCurrency(totalBalance)}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>대출</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* 요약 헤더 */}
+        <DetailSummaryHeader label="총 대출 잔액" value={totalBalance} valueClass={ASSET_THEME.liability} />
+
+        {/* 카테고리 selector — 항목 많아 가로 스크롤 (모바일 스크롤바 숨김) */}
+        <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <InlineSelector
+            value={activeCategory}
+            onChange={setActiveCategory}
+            options={LOAN_CATEGORY_TABS}
+            ariaLabel="대출 카테고리 선택"
+          />
         </div>
-        <div className="text-right space-y-1">
-          {loanBarItems.map((d) => (
-            <div key={d.loan.id} className="text-xs">
-              <span className="text-muted-foreground">{d.loan.name} </span>
-              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(d.value)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 카테고리 서브탭 */}
-      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className={CAT_LIST}>
-          {LOAN_CATEGORY_TABS.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
-          ))}
-        </TabsList>
-
-        {LOAN_CATEGORY_TABS.map(({ value }) => (
-          <TabsContent key={value} value={value} className="mt-4 space-y-3">
-            {/* 비중 바 */}
-            {loanBarItems.length > 0 && filteredTotal > 0 && (
-              <div className="space-y-2">
-                <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                  {loanBarItems.map(({ loan, value: v, color }) => {
-                    const pct = (v / filteredTotal) * 100;
-                    return (
-                      <div key={loan.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                  {loanBarItems.map(({ loan, value: v, color }) => {
-                    const pct = (v / filteredTotal) * 100;
-                    return (
-                      <div key={loan.id} className="flex items-center gap-1">
-                        <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs sm:text-sm text-foreground">{loan.name}</span>
-                        <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 대출 리스트 */}
-            {filteredLoans.length === 0 ? (
-              <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-                <p className="text-muted-foreground text-sm">등록된 대출이 없습니다.</p>
-              </div>
-            ) : value === "all" ? (
-              <div className="space-y-4 mt-8">
-                {LOAN_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                  const catLoans = filteredLoans.filter((l) => l.type === cat.value);
-                  if (catLoans.length === 0) return null;
+        <div className="space-y-3">
+          {/* 비중 바 */}
+          {loanBarItems.length > 0 && filteredTotal > 0 && (
+            <div className="space-y-2">
+              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+                {loanBarItems.map(({ loan, value: v, color }) => {
+                  const pct = (v / filteredTotal) * 100;
                   return (
-                    <div key={cat.value}>
-                      <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                      <div className="space-y-2">{catLoans.map(renderLoanCard)}</div>
+                    <div key={loan.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`}>
+                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="space-y-2 mt-8">{filteredLoans.map(renderLoanCard)}</div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
+                {loanBarItems.map(({ loan, value: v, color }) => {
+                  const pct = (v / filteredTotal) * 100;
+                  return (
+                    <div key={loan.id} className="flex items-center gap-1">
+                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs sm:text-sm text-foreground">{loan.name}</span>
+                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 대출 리스트 */}
+          {filteredLoans.length === 0 ? (
+            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground text-sm">등록된 대출이 없습니다.</p>
+            </div>
+          ) : activeCategory === "all" ? (
+            <div className="space-y-4 mt-8">
+              {LOAN_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+                const catLoans = filteredLoans.filter((l) => l.type === cat.value);
+                if (catLoans.length === 0) return null;
+                return (
+                  <div key={cat.value}>
+                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <div className="space-y-2">{catLoans.map(renderLoanCard)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2 mt-8">{filteredLoans.map(renderLoanCard)}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

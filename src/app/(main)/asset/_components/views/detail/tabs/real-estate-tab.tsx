@@ -5,22 +5,21 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { assignColors } from "../asset-detail-tabs";
+import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
 import { RealEstate, Loan } from "@/types/asset";
 
 const RE_CATEGORY_TABS = [
   { value: "all", label: "전체" },
   ...realEstateTypes.map(({ value, shortLabel }) => ({ value, label: shortLabel })),
 ] as const;
-
-const CAT_LIST = ASSET_THEME.tabList3;
-const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
 function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linkedLoans, onDelete }: {
   item: RealEstate; profit: number; profitRate: number; pct: number; color: string;
@@ -29,7 +28,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
   const [open, setOpen] = useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
@@ -64,35 +63,33 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="relative">
-              <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
-                  <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
-                </div>
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
-                </div>
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
-                </div>
-                {(item.tenantDeposit ?? 0) > 0 && (
-                  <div>
-                    <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
-                    <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
-                  </div>
-                )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
+                <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
               </div>
-              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
-                  <Trash2 className="size-3.5" />
-                </Button>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
               </div>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
+              </div>
+              {(item.tenantDeposit ?? 0) > 0 && (
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
+                </div>
+              )}
+            </div>
+            <div className={ASSET_THEME.cardActions}>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
+                <Trash2 className="size-3.5" />
+              </Button>
             </div>
             {linkedLoans.length > 0 && (
               <div className="px-4 py-2.5 space-y-1.5">
@@ -159,80 +156,76 @@ export function RealEstateTab() {
   };
 
   return (
-    <div className="space-y-4 mt-2">
-      <div className={ASSET_THEME.summaryHeader}>
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold">총 부동산 평가금액</p>
-          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-xs text-foreground">{formatCurrency(totalValue)}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>부동산</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <DetailSummaryHeader
+          label="총 부동산 평가금액"
+          value={totalValue}
+          right={<ProfitMetric label="평가손익" profit={summary.realEstateProfit} cost={summary.realEstateCost} decimals={1} />}
+        />
+
+        <div className="flex justify-start">
+          <InlineSelector
+            value={activeCategory}
+            onChange={setActiveCategory}
+            options={RE_CATEGORY_TABS}
+            ariaLabel="부동산 카테고리 선택"
+          />
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">평가손익</p>
-          <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(summary.realEstateProfit)}`}>
-            {summary.realEstateProfit >= 0 ? "+" : ""}{formatShortCurrency(summary.realEstateProfit)} ({summary.realEstateProfit >= 0 ? "+" : ""}{(summary.realEstateCost > 0 ? (summary.realEstateProfit / summary.realEstateCost) * 100 : 0).toFixed(1)}%)
-          </p>
-        </div>
-      </div>
 
-      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className={CAT_LIST}>
-          {RE_CATEGORY_TABS.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
-          ))}
-        </TabsList>
-
-        {RE_CATEGORY_TABS.map(({ value }) => (
-          <TabsContent key={value} value={value} className="mt-4 space-y-3">
-            {barItems.length > 0 && totalValue > 0 && (
-              <div className="space-y-2">
-                <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                  {barItems.map(({ item, value: v, color }) => {
-                    const pct = (v / totalValue) * 100;
-                    return (
-                      <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                  {barItems.map(({ item, value: v, color }) => {
-                    const pct = (v / totalValue) * 100;
-                    return (
-                      <div key={item.id} className="flex items-center gap-1">
-                        <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
-                        <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {filteredItems.length === 0 ? (
-              <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-                <p className="text-muted-foreground text-sm">등록된 부동산이 없습니다.</p>
-              </div>
-            ) : value === "all" ? (
-              <div className="space-y-4 mt-8">
-                {RE_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                  const catItems = allSorted.filter((item) => item.type === cat.value);
-                  if (catItems.length === 0) return null;
+        <div className="space-y-3">
+          {barItems.length > 0 && totalValue > 0 && (
+            <div className="space-y-2">
+              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+                {barItems.map(({ item, value: v, color }) => {
+                  const pct = (v / totalValue) * 100;
                   return (
-                    <div key={cat.value}>
-                      <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                      <div className="space-y-2">{catItems.map(renderCard)}</div>
+                    <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
+                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="space-y-2 mt-8">{filteredItems.map(renderCard)}</div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
+                {barItems.map(({ item, value: v, color }) => {
+                  const pct = (v / totalValue) * 100;
+                  return (
+                    <div key={item.id} className="flex items-center gap-1">
+                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
+                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {filteredItems.length === 0 ? (
+            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground text-sm">등록된 부동산이 없습니다.</p>
+            </div>
+          ) : activeCategory === "all" ? (
+            <div className="space-y-4 mt-8">
+              {RE_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+                const catItems = allSorted.filter((item) => item.type === cat.value);
+                if (catItems.length === 0) return null;
+                return (
+                  <div key={cat.value}>
+                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <div className="space-y-2">{catItems.map(renderCard)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2 mt-8">{filteredItems.map(renderCard)}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

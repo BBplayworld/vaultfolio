@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShareCard } from "./share-card";
-import { CATEGORY_TABS } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
+import { CATEGORY_TABS } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
 import { MAIN_PALETTE } from "@/config";
 
 interface Props {
@@ -19,16 +19,14 @@ interface Props {
 
 export interface SectionVisibility {
   donut: boolean;
-  stockHeader: boolean;
-  stockList: boolean;
   chart: boolean;
+  stock: boolean;
 }
 
 export const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] = [
   { key: "donut", label: "자산 분포" },
+  { key: "stock", label: "주식" },
   { key: "chart", label: "순자산 변화" },
-  { key: "stockHeader", label: "주식 종합" },
-  { key: "stockList", label: "주식 상세" },
 ];
 
 export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
@@ -41,9 +39,8 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
   const [isCaptureMode, setIsCaptureMode] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>({
     donut: true,
-    stockHeader: true,
-    stockList: true,
     chart: true,
+    stock: true,
   });
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -141,13 +138,12 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
       <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px] max-h-[96dvh] flex flex-col"}`}>
         {/* 헤더 — 캡처 모드에서 숨김 */}
         {!isCaptureMode && (
-          <DialogHeader className="px-5 pt-5 pb-3">
+          <DialogHeader className="px-5 pt-4 pb-1">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Camera className="size-4 text-primary" />
               인증용 스크린샷
             </DialogTitle>
             <DialogDescription className="text-xs">
-              자산 현황을 이미지로 복사합니다
             </DialogDescription>
           </DialogHeader>
         )}
@@ -156,9 +152,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         {!isCaptureMode && (
           <div className="px-5 py-3 border-t bg-muted/10">
             <p className="text-[11px] text-muted-foreground font-medium mb-2">포함할 항목</p>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <div className="flex items-center gap-x-5 gap-y-2 flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {SECTION_OPTIONS.map(({ key, label }) => (
-                <div key={key} className="flex items-center gap-1.5">
+                <div key={key} className="flex items-center gap-1.5 shrink-0">
                   <Checkbox
                     id={`section-${key}`}
                     checked={sections[key]}
@@ -166,9 +162,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                     className="size-3.5"
                     style={{ backgroundColor: MAIN_PALETTE[0], borderColor: MAIN_PALETTE[0] }}
                   />
-                  <Label htmlFor={`section-${key}`} className="text-xs cursor-pointer select-none">
+                  <Label htmlFor={`section-${key}`} className="text-xs cursor-pointer select-none whitespace-nowrap">
                     {label}
-                    {key === "stockList" && (
+                    {key === "stock" && (
                       <Select value={activeCategory} onValueChange={setActiveCategory}>
                         <SelectTrigger className="h-5 text-xs w-[76px] ml-1.5 inline-flex">
                           <SelectValue />

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/asset-dispatch";
+import { useEffect, useRef, useState } from "react";
+import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,6 +11,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { useAssetNavigation, type DetailTab } from "../navigation/navigation-context";
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
 type Step = "select-type" | "select-action" | "select-method";
@@ -39,6 +40,22 @@ export function FloatingAddButton() {
   const [step, setStep] = useState<Step>("select-type");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
   const { exchangeRates, exchangeRateDate, updateExchangeRate } = useAssetData();
+  const { navigate } = useAssetNavigation();
+  const [isHidden, setIsHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      const dy = y - lastScrollY.current;
+      if (Math.abs(dy) < 10) return;
+      if (y < 100) setIsHidden(false);
+      else setIsHidden(dy > 0);
+      lastScrollY.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const resetState = () => {
     setStep("select-type");
@@ -55,6 +72,12 @@ export function FloatingAddButton() {
     const asset = ASSET_TYPES.find((a) => a.type === selectedType);
     if (!asset?.hasScreenshot) {
       if (selectedType === "real-estate") dispatchAddRealEstate();
+      else if (selectedType === "yearly-net-asset") {
+        // 순자산 페이지(YearlyNetAssetChart)가 마운트되어야 trigger 이벤트 수신 가능.
+        // 허브/다른 탭에서 진입 시 먼저 netasset 페이지로 이동 후 다음 tick에 dispatch
+        navigate({ type: "activity", tab: "netasset" });
+        setTimeout(() => window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType])), 50);
+      }
       else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType]));
       setIsOpen(false);
       resetState();
@@ -67,7 +90,7 @@ export function FloatingAddButton() {
     if (!selectedType) return;
     const asset = ASSET_TYPES.find((a) => a.type === selectedType);
     if (!asset?.navigateTab) return;
-    window.dispatchEvent(new CustomEvent("navigate-to-tab", { detail: { tab: asset.navigateTab } }));
+    navigate({ type: "detail", tab: asset.navigateTab as DetailTab });
     setIsOpen(false);
     resetState();
   };
@@ -90,17 +113,30 @@ export function FloatingAddButton() {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full text-white 
-        shadow-lg px-6 py-3.5 sm:px-10 sm:py-4.5 text-sm font-semibold active:scale-95 transition-all hover:opacity-90"
-        aria-label="자산 추가"
-        data-tutorial="tutorial-fab"
-        style={{ backgroundColor: MAIN_PALETTE[11] }}
+      {/* 하단 고정 바 — 배경 페이지와 자연스럽게 이어지도록 상단 그라데이션 페이드 + solid bg */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-40 transition-transform duration-300
+        ${isHidden ? "translate-y-full" : "translate-y-0"}`}
       >
-        <Plus className="size-5" />
-        자산 업데이트
-      </button >
+        {/* 상단 그라데이션 페이드 — 스크롤되는 콘텐츠가 바 위로 자연스럽게 흐려짐 */}
+        <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
+        <div
+          className="relative bg-background/95 backdrop-blur-sm
+          px-4 sm:px-6 py-2 sm:py-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] sm:pb-[max(1.2rem,env(safe-area-inset-bottom))] flex justify-center"
+        >
+          <button
+            onClick={() => setIsOpen(true)}
+            style={{ backgroundColor: MAIN_PALETTE[11] }}
+            className="flex items-center gap-2 rounded-full text-white
+            shadow-md px-5 py-3 text-sm font-semibold active:scale-95 transition-opacity hover:opacity-85"
+            aria-label="자산 추가"
+            data-tutorial="tutorial-fab"
+          >
+            <Plus className="size-5" />
+            자산 업데이트
+          </button>
+        </div>
+      </div>
 
       <Sheet open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetState(); }}>
         <SheetContent side={isMobile ? "top" : "right"} className="rounded-t-2xl pb-10">

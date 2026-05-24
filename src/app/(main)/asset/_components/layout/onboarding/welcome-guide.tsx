@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
-import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/asset-dispatch";
+import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
-import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
-import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
-import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
-import { DataSourceBadge } from "@/app/(main)/asset/_components/main-nav/data-source-badge";
+import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/views/home/dashboard";
+import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
+import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
+import { DataSourceBadge } from "@/app/(main)/asset/_components/views/data-source-badge";
 import { Stock } from "@/types/asset";
 import previewData from "./welcome-preview-data.json";
 

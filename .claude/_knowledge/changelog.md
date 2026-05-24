@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-05-23
+
+### UI 정보구조 전면 재설계 — drill-down 라우팅 + 통일 디자인 시스템
+
+- **디렉토리 rename**: `bottom-nav→forms`, `main-nav→views`, `top-nav→header` (목적 기반 명명, layout/tutorial 유지)
+- **NavigationProvider 신설** (`layout/navigation-context.tsx`):
+  - `AssetView = home | detail/{tab} | activity/{tab}` 모델 + hash 동기화 + popstate
+  - URL `/asset#detail/stocks` 직접 진입·새로고침·뒤로가기 모두 동작
+  - `back()`은 항상 `navigate({type:"home"})` (어디서나 홈 복귀 정책)
+  - `navigate()` 시 자동 `scrollTo(0,0)`
+- **InlineSelector 공용** (`layout/inline-selector.tsx`): 모든 1·2·3·4차 탭이 segmented control로 통일
+  - size 토큰: `sm/md/lg`(PC에서 한 단계 ↑: 14·16·18)
+  - 컨테이너 라이트 짙음(`bg-muted/60`), 활성 `bg-background`, label `ReactNode`(모바일 축약 JSX 지원)
+- **InfoHint 공용** (`layout/info-hint.tsx`): Popover hover/tap 패턴 — 가이드 §3
+- **상세 5탭 Card 외피 통일**: stock/real-estate/cash/loan/crypto 모두 `<Card><CardHeader><CardTitle>...</CardTitle></CardHeader><CardContent>` 구조. 카테고리 selector는 SummaryHeader 아래 (Hero→필터→리스트)
+- **카드 액션 버튼 위치 통일**: `ASSET_THEME.cardActions`("flex justify-end gap-2 px-3 py-2 bg-muted/10") 신 정의 — 5탭 모두 detail grid 하단 별도 라인
+- **StockCard `screenshotMode` + `maskFn`**: 인증샷이 페이지 본체와 시각 완전 일치. share-card는 stock-tab의 외피·StockCard 그대로 사용 (펼침·버튼만 차단)
+- **share-menu 통합**: stockHeader+stockList → 단일 `stock` 섹션. 체크박스 한 줄 가로 스크롤
+- **FAB·ScrollToTop 무채색 토큰화**: `MAIN_PALETTE[11]`(#4e5763) → `bg-foreground/85`(FAB), `bg-foreground/70`(ScrollToTop). 메뉴탭 무채색 세트와 시각 일관
+- **layout 본문 `pb-20 md:pb-24`**: FAB이 마지막 카드 가림 방지
+- **ToolMenu 통합**: ThemeSwitcher 삭제 → 도구 메뉴 안 다크모드 토글로 흡수. 상단 아이콘 인증샷·도구 2개로 축소(h-10 sm:h-11)
+- **순자산·배당 Hero 추가**: net-asset-chart에 "현재 순자산 + 전년 대비", dividend-chart에 "올해 연간 배당 + 월 평균"
+- **dividend-chart**: 설명 3줄 → InfoHint, 카테고리 범례 신규, 예상/실제 토글 신규
+- **이유:** 토스/애플 시니어 디자이너 관점 일관성 강화 — 컨테이너 위계 명확, drill-down으로 헤더 누적 해소, 무채색 토큰 통일
+
+### 환율 히스토리 7일로 확장
+- `EXCHANGE_HISTORY_DAYS` 3→7 (`lib/cache-storage.ts`) — 연휴·주말 컷오프 버퍼
+
 ## 2026-05-21
 
 ### 성과-수익 기간별 종가 기준 2옵션 (issue-3.9)

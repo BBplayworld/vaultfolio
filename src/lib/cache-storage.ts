@@ -82,8 +82,8 @@ export { _getEffectiveDateStr as getEffectiveDateStr, _getStockCacheSlot as getS
 // 내부 사용을 위한 로컬 바인딩
 const getEffectiveDateStr = _getEffectiveDateStr;
 
-// 환율 이력에 새 일자를 반영하고 최근 2일치만 남김 (날짜 문자열 정렬 상위 2개)
-const EXCHANGE_HISTORY_DAYS = 2;
+// 환율 이력에 새 일자를 반영하고 최근 7일치만 남김 (연휴·주말 컷오프 버퍼)
+const EXCHANGE_HISTORY_DAYS = 7;
 function mergeExchangeHistoryEntry(
   history: Record<string, { USD: number; JPY: number }>,
   rates: ExchangeRates,
@@ -264,7 +264,7 @@ class FileCacheStorage implements ICacheStorage {
   async setExchange(rates: ExchangeRates): Promise<void> {
     const cache = this.readFinanceCache();
     cache.EXCHANGE = rates;
-    // 일자별 이력에 반영 후 최근 2일치만 유지
+    // 일자별 이력에 반영 후 최근 3일치만 유지
     cache.EXCHANGE_HISTORY = mergeExchangeHistoryEntry(cache.EXCHANGE_HISTORY ?? {}, rates);
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
     this.writeFinanceCache(cache, todayStr);
@@ -437,10 +437,10 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setExchange(rates: ExchangeRates): Promise<void> {
     await this.redis.set("finance:exchange", rates, { ex: secondsUntilMidnightKST() });
-    // 일자별 이력(최근 2일치) — read-modify-prune-write, TTL 3일
+    // 일자별 이력(최근 3일치) — read-modify-prune-write, TTL 5일 (주말 버퍼)
     const history = (await this.redis.get<Record<string, { USD: number; JPY: number }>>("finance:exchange:history")) ?? {};
     const next = mergeExchangeHistoryEntry(history, rates);
-    await this.redis.set("finance:exchange:history", next, { ex: 3 * 24 * 3600 });
+    await this.redis.set("finance:exchange:history", next, { ex: 5 * 24 * 3600 });
   }
 
   async getExchangeHistory(): Promise<Record<string, { USD: number; JPY: number }>> {

@@ -5,10 +5,11 @@ import { useTheme } from "next-themes";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { MAIN_PALETTE } from "@/config/theme";
-import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/main-nav/detail/asset-detail-tabs";
-import { StockCategorySection, StockRowItem, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/main-nav/detail/tabs/stock-tab";
-import { AssetDonutChart } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
-import { useAssetTreemapData } from "@/app/(main)/asset/_components/main-nav/home/dashboard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
+import { StockCard, StockCategorySection, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
+import { AssetDonutChart } from "@/app/(main)/asset/_components/views/home/dashboard";
+import { useAssetTreemapData } from "@/app/(main)/asset/_components/views/home/dashboard";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { SectionVisibility, SECTION_OPTIONS } from "./share-menu";
@@ -38,7 +39,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
     const barColors = assignColors(barValues);
     const barItems = merged.map((st, idx) => ({ stock: st, value: barValues[idx].value, color: barColors[idx] }));
     return { mergedStocks: merged, mergedBarItems: barItems, mergedBarColors: barColors };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupedStocks, exchangeRates]);
 
   const maskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
@@ -73,7 +74,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
-        <div className="rounded-lg bg-card px-3 py-1">
+        <div className="rounded-lg bg-card py-2 space-y-3">
           <div className="inline-block px-1 mb-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("donut")}
           </div>
@@ -81,9 +82,63 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
         </div>
       )}
 
-      {/* 섹션2: 일별 순자산 미니 차트 */}
+      {/* 주식 (종합 + 상세 통합) — stock-tab 본체와 동일 외피 */}
+      {sections.stock && (
+        <Card>
+          <CardHeader>
+            <CardTitle>주식</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <StockSummaryHeader
+              totalValue={filteredTotal}
+              totalProfit={filteredProfit}
+              totalProfitRate={filteredProfitRate}
+              currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
+              dailyProfit={dailyProfit}
+              dailyProfitRate={dailyProfitRate}
+              maskFn={maskFn}
+              screenshotMode
+            />
+            <StockCategorySection
+              activeCategory={activeCategory}
+              onCategoryChange={onCategoryChange}
+              filteredStocks={mergedStocks}
+              totalValue={filteredTotal}
+              barItems={mergedBarItems}
+              barColors={mergedBarColors}
+              emptyMessage="해당 카테고리에 보유 종목이 없습니다."
+              screenshotMode
+              renderItem={(stock, _isFirst, color) => {
+                const m = computeStockMetrics(stock, exchangeRates, filteredTotal);
+                return (
+                  <StockCard
+                    key={stock.id}
+                    stock={stock}
+                    color={color}
+                    pct={m.pct}
+                    currentVal={m.currentVal}
+                    profit={m.profit}
+                    profitRate={m.profitRate}
+                    isForeign={m.isForeign}
+                    krwMul={m.krwMul}
+                    currencyGain={m.currencyGain}
+                    currencyGainRate={m.currencyGainRate}
+                    linkedLoans={[]}
+                    onDelete={() => { }}
+                    categoryLabels={[]}
+                    screenshotMode
+                    maskFn={maskFn}
+                  />
+                );
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 섹션3: 일별 순자산 미니 차트 */}
       {sections.chart && dailySnapshots.length > 0 && (
-        <div className="rounded-lg bg-card px-3 py-1">
+        <div className="rounded-lg bg-card py-2 space-y-3">
           <div className="inline-block px-1 py-1 mb-2 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
             {sectionLabel("chart")}
           </div>
@@ -153,60 +208,6 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
               })()}
             </ResponsiveContainer>
           </div>
-        </div>
-      )}
-
-      {/* 섹션3: 주식 요약 헤더 */}
-      {sections.stockHeader && (
-        <div className="rounded-lg bg-card py-2 space-y-3">
-          <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            {sectionLabel("stockHeader")}
-          </div>
-          <StockSummaryHeader
-            totalValue={filteredTotal}
-            totalProfit={filteredProfit}
-            totalProfitRate={filteredProfitRate}
-            currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
-            dailyProfit={dailyProfit}
-            dailyProfitRate={dailyProfitRate}
-            maskFn={maskFn}
-            screenshotMode={true}
-          />
-        </div>
-      )}
-
-      {/* 섹션4: 카테고리 탭 + 비중바 + 종목 목록 통합 */}
-      {sections.stockList && (
-        <div className="rounded-lg bg-card py-2 space-y-3">
-          <div className="inline-block px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-[10px] font-bold">
-            {sectionLabel("stockList")}
-          </div>
-          <StockCategorySection
-            activeCategory={activeCategory}
-            onCategoryChange={onCategoryChange}
-            filteredStocks={mergedStocks}
-            totalValue={filteredTotal}
-            barItems={mergedBarItems}
-            barColors={mergedBarColors}
-            emptyMessage="해당 카테고리에 보유 종목이 없습니다."
-            screenshotMode={true}
-            renderItem={(stock, _isFirst, color) => {
-              const m = computeStockMetrics(stock, exchangeRates, filteredTotal);
-              return (
-                <StockRowItem
-                  key={stock.id}
-                  stock={stock}
-                  color={color}
-                  pct={m.pct}
-                  currentVal={m.currentVal}
-                  profit={m.profit}
-                  profitRate={m.profitRate}
-                  maskFn={maskFn}
-                  screenshotMode={true}
-                />
-              );
-            }}
-          />
         </div>
       )}
 

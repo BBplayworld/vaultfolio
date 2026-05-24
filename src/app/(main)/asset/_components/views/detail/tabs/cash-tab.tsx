@@ -5,22 +5,21 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
+import { DetailSummaryHeader } from "../detail-summary-header";
 import { Cash, Loan } from "@/types/asset";
 
 const CASH_CATEGORY_TABS = [
   { value: "all", label: "전체" },
   ...cashTypes.map(({ value, shortLabel }) => ({ value, label: shortLabel })),
 ] as const;
-
-const CAT_LIST = ASSET_THEME.tabList3;
-const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
 
 export const CASH_TYPE_COLORS: Record<string, string> = {
   deposit: MAIN_PALETTE[0],
@@ -37,7 +36,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
   const [open, setOpen] = useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
@@ -68,32 +67,30 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="relative">
-              <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>잔액</p>
-                  <p className={ASSET_THEME.cardDetailValueBold}>{formatCurrencyDisplay(item.balance, item.currency)}</p>
-                  {item.currency !== "KRW" && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{formatShortCurrency(value)}</p>}
-                </div>
-                <div>
-                  <p className={ASSET_THEME.cardDetailLabel}>종류</p>
-                  <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
-                </div>
-                {item.institution && (
-                  <div>
-                    <p className={ASSET_THEME.cardDetailLabel}>금융기관</p>
-                    <p className={ASSET_THEME.cardDetailValue}>{item.institution}</p>
-                  </div>
-                )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>잔액</p>
+                <p className={ASSET_THEME.cardDetailValueBold}>{formatCurrencyDisplay(item.balance, item.currency)}</p>
+                {item.currency !== "KRW" && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{formatShortCurrency(value)}</p>}
               </div>
-              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
-                  <Trash2 className="size-3.5" />
-                </Button>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>종류</p>
+                <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
               </div>
+              {item.institution && (
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>금융기관</p>
+                  <p className={ASSET_THEME.cardDetailValue}>{item.institution}</p>
+                </div>
+              )}
+            </div>
+            <div className={ASSET_THEME.cardActions}>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
+                <Trash2 className="size-3.5" />
+              </Button>
             </div>
             {linkedLoans.length > 0 && (
               <div className={ASSET_THEME.cardLoanSection}>
@@ -155,84 +152,74 @@ export function CashTab() {
   };
 
   return (
-    <div className="space-y-4 mt-2">
-      <div className={ASSET_THEME.summaryHeader}>
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold">총 현금성 자산</p>
-          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-xs text-foreground">{formatCurrency(totalValue)}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>현금</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <DetailSummaryHeader label="총 현금성 자산" value={totalValue} />
+
+        <div className="flex justify-start">
+          <InlineSelector
+            value={activeCategory}
+            onChange={setActiveCategory}
+            options={CASH_CATEGORY_TABS}
+            ariaLabel="현금 카테고리 선택"
+          />
         </div>
-        <div className="text-right space-y-1">
-          {cashTypeData.map((d) => (
-            <div key={d.type} className="text-xs">
-              <span className="text-muted-foreground">{d.label} </span>
-              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(d.value)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className={CAT_LIST}>
-          {CASH_CATEGORY_TABS.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value} className={CAT_TRIGGER}>{label}</TabsTrigger>
-          ))}
-        </TabsList>
-
-        {CASH_CATEGORY_TABS.map(({ value }) => (
-          <TabsContent key={value} value={value} className="mt-4 space-y-3">
-            {allSorted.length > 0 && totalValue > 0 && (
-              <div className="space-y-2">
-                <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                  {allSorted.map(({ item, value: v }, idx) => {
-                    const pct = (v / totalValue) * 100;
-                    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
-                    return (
-                      <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                        {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                  {allSorted.map(({ item, value: v }, idx) => {
-                    const pct = (v / totalValue) * 100;
-                    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
-                    return (
-                      <div key={item.id} className="flex items-center gap-1">
-                        <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
-                        <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {filteredSorted.length === 0 ? (
-              <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-                <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
-              </div>
-            ) : value === "all" ? (
-              <div className="space-y-4 mt-8">
-                {CASH_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
-                  const catItems = allSorted.filter(({ item }) => item.type === cat.value);
-                  if (catItems.length === 0) return null;
+        <div className="space-y-3">
+          {allSorted.length > 0 && totalValue > 0 && (
+            <div className="space-y-2">
+              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+                {allSorted.map(({ item, value: v }, idx) => {
+                  const pct = (v / totalValue) * 100;
+                  const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
                   return (
-                    <div key={cat.value}>
-                      <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                      <div className="space-y-2">{catItems.map(renderCard)}</div>
+                    <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
+                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="space-y-2 mt-8">{filteredSorted.map(renderCard)}</div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
+                {allSorted.map(({ item, value: v }, idx) => {
+                  const pct = (v / totalValue) * 100;
+                  const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
+                  return (
+                    <div key={item.id} className="flex items-center gap-1">
+                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
+                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {filteredSorted.length === 0 ? (
+            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground text-sm">등록된 현금성 자산이 없습니다.</p>
+            </div>
+          ) : activeCategory === "all" ? (
+            <div className="space-y-4 mt-8">
+              {CASH_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+                const catItems = allSorted.filter(({ item }) => item.type === cat.value);
+                if (catItems.length === 0) return null;
+                return (
+                  <div key={cat.value}>
+                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <div className="space-y-2">{catItems.map(renderCard)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2 mt-8">{filteredSorted.map(renderCard)}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

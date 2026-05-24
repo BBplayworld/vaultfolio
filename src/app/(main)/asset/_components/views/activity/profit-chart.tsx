@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TrendingDown, Minus, Info, Globe } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { TrendingUp, TrendingDown, Minus, Info, Globe, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { InlineSelector } from "../../layout/ui/inline-selector";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import { isUsEasternDST } from "@/lib/stock-cache-slot";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { DataSourceBadge } from "../data-source-badge";
@@ -42,10 +43,10 @@ const PERIOD_LABELS: Record<ProfitPeriod, string> = {
   yearly: "연간",
 };
 
-const TAB_LIST = ASSET_THEME.tabList1;
-const TAB_TRIGGER = ASSET_THEME.tabTrigger1;
-const SUB_TAB_LIST = ASSET_THEME.tabList3;
-const SUB_TAB_TRIGGER = ASSET_THEME.tabTrigger3;
+const PERIOD_OPTIONS = (Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => ({
+  value: p,
+  label: PERIOD_LABELS[p],
+}));
 
 type MarketView = "all" | "kr" | "us";
 
@@ -54,6 +55,11 @@ const MARKET_LABELS: Record<MarketView, string> = {
   kr: "국내",
   us: "해외",
 };
+
+const MARKET_OPTIONS = (Object.keys(MARKET_LABELS) as MarketView[]).map((m) => ({
+  value: m,
+  label: MARKET_LABELS[m],
+}));
 
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
@@ -70,46 +76,18 @@ function pickMajorityDate(dates: (string | undefined)[]): string | undefined {
   return best;
 }
 
-// 한투 API가 반환하는 해외 거래일을 KST 일자 표기로 +1일 변환 (사용자 인지 기준)
-function shiftUsDate(date: string | undefined): string | undefined {
-  if (!date) return date;
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-}
-
-// UI 표시는 데이터 적용 기준인 컷오프 시각 (실제 장 마감 시각과 다름 — 카드 상단 안내 참고)
-const KR_CUTOFF_TIME = "16:00";          // 국내 컷오프 (실제 마감 15:30)
-
-// ET 원본 일자(shift 전) 기준 DST 판정 → 컷오프 = 실제 마감 + 1시간 (DST 06:00 / STD 07:00 KST)
-function usCutoffTime(etDate: string | undefined): string {
-  if (!etDate) return "07:00";
-  return isUsEasternDST(new Date(`${etDate}T12:00:00Z`)) ? "06:00" : "07:00";
-}
-
-// 통일 종가 표기 (두 옵션 공통): 베이스 날짜(영업일) + 마감 메타 2줄 분리
-// - 국내: base = KST 영업일, 마감 = 같은 날 16:00
-// - 해외: base = ET 거래일(shift 없음), 마감 = 거래일 +1일 새벽(usCutoffTime)
-function krCloseMeta(date: string): string {
-  return `${date.slice(5)} ${KR_CUTOFF_TIME} 마감`;
-}
-function usCloseMeta(date: string): string {
-  const close = shiftUsDate(date);
-  return `${close ? close.slice(5) : ""} ${usCutoffTime(date)} 마감`;
-}
-
 const CLOSE_TABLE_COLS = "grid grid-cols-[2.25rem_1fr_1fr] gap-x-2";
 
-// 시장 행: 라벨 + 시작/종료 날짜(베이스 + 마감 메타 2줄, 옵션으로 적용 환율 1줄)
+// 시장 행: 라벨 + 시작/종료 날짜(연도 포함). 마감 시각은 표 하단 공통 안내로 일원화.
+// 해외 일별만 적용 환율(startSub/endSub)을 날짜 아래 1줄로 표시.
 function MarketDateRow({
-  label, startDate, endDate, meta, startSub, endSub,
-}: { label: string; startDate?: string; endDate?: string; meta: (d: string) => string; startSub?: string; endSub?: string }) {
+  label, startDate, endDate, startSub, endSub,
+}: { label: string; startDate?: string; endDate?: string; startSub?: string; endSub?: string }) {
   const cell = (date?: string, align?: string, sub?: string) =>
     date ? (
       <div className={`tabular-nums leading-tight ${align ?? ""}`}>
         <p className="text-[13px] sm:text-sm">{date}</p>
-        <p className="text-xs text-muted-foreground/60">{meta(date)}</p>
-        {sub && <p className="text-xs text-sky-600/70 dark:text-sky-400/70">{sub}</p>}
+        {sub && <p className="text-xs text-muted-foreground/70 mt-1">{sub}</p>}
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
@@ -122,7 +100,8 @@ function MarketDateRow({
 }
 
 // 환차손익 분해 팝오버 — 데스크톱은 마우스 hover, 모바일은 터치(탭)로 열림(바깥 탭/Esc로 닫힘)
-function FxBreakdown({ priceGain, fxGain }: { priceGain: number; fxGain: number }) {
+// fxApplied=false(주/월/연간)면 현재환율 단일 적용이라 환차손익 0 → 수익이 모두 주가손익임을 안내
+function FxBreakdown({ priceGain, fxGain, fxApplied }: { priceGain: number; fxGain: number; fxApplied: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -141,7 +120,31 @@ function FxBreakdown({ priceGain, fxGain }: { priceGain: number; fxGain: number 
         <div className="space-y-0.5 text-left">
           <p>주가손익: <span className={getProfitLossColor(priceGain)}>{priceGain >= 0 ? "+" : ""}{formatShortCurrency(priceGain)}</span></p>
           <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatShortCurrency(fxGain)}</span></p>
+          {!fxApplied && <p className="text-muted-foreground/70 text-[10px]">현재환율 적용 · 기간 환차 미반영</p>}
         </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// 옵션 옆 info 아이콘 — 데스크톱 hover, 모바일 터치(탭)로 설명 팝오버 표시
+function InfoHint({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="설명 보기"
+          onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(true); }}
+          onPointerLeave={(e) => { if (e.pointerType === "mouse") setOpen(false); }}
+          className="text-sky-600/70 dark:text-sky-400/70 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+        >
+          <Info className="size-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" sideOffset={4} className="w-72 p-2.5 text-[11px] leading-relaxed text-left space-y-0.5">
+        {children}
       </PopoverContent>
     </Popover>
   );
@@ -190,6 +193,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const jpyRate = exchangeRates.JPY;
   const [period, setPeriod] = useState<ProfitPeriod>("daily");
   const [marketView, setMarketView] = useState<MarketView>("all");
+  // 기준 종가 비교 표 접힘 상태 (기본 접힘 — 종목별 손익에 시선 집중)
+  const [closeTableOpen, setCloseTableOpen] = useState(false);
   const profitBasis = useProfitBasisStore((s) => s.basis);
   const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
   const setProfitBasis = useProfitBasisStore((s) => s.setBasis);
@@ -388,11 +393,9 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     }
 
     // daily는 시점별 환율 적용, 그 외는 현재 환율
-    // 해외는 한투 API 거래일이 KST 기준 -1일이므로 환율 조회 시 +1일 보정
-    const prevRateDate = isDailyPeriod && (isUS || isJP) ? shiftUsDate(prevDate) : prevDate;
-    const refRateDate = isDailyPeriod && (isUS || isJP) ? shiftUsDate(base.refDate) : base.refDate;
-    const prevRate = isDailyPeriod ? rateFor(getRatesForDate(prevRateDate!, currentRates)) : currentRate;
-    const refRate = isDailyPeriod ? rateFor(getRatesForDate(refRateDate!, currentRates)) : currentRate;
+    // 해외는 ET 거래일을 그대로 환율 키로 사용 (ET 마감=KST 새벽, FX 미개장 → 전일 환율)
+    const prevRate = isDailyPeriod ? rateFor(getRatesForDate(prevDate, currentRates)) : currentRate;
+    const refRate = isDailyPeriod ? rateFor(getRatesForDate(base.refDate, currentRates)) : currentRate;
     const refValue = prevPrice * stock.quantity * prevRate;
 
     // 우측 (기준 종가) = daily ref
@@ -444,13 +447,18 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const krCompareDate = pickMajorityDate(krProfits.map((r) => r.compareDate));
   const usCompareDate = pickMajorityDate(usProfits.map((r) => r.compareDate));
 
-  // 일별 해외에 실제 적용된 시작(어제)·종료(오늘) USD 환율 — 표시값=적용값 (history 없으면 현재환율 fallback)
+  // 해외 행에 실제 적용된 USD 환율 표시 (표시값=적용값)
+  // - 일별: 시작=어제, 종료=오늘 시점별 환율 (history 없으면 현재환율 fallback)
+  // - 주/월/연간: 시작·종료 모두 현재환율 단일 적용 → 같은 값 노출 (환차 미반영과 일관)
   const usdRateForUsDate = (etDate?: string): string | undefined => {
-    if (period !== "daily" || !etDate) return undefined;
-    const rate = getRatesForDate(shiftUsDate(etDate)!, currentRates).USD;
+    if (!etDate) return undefined;
+    const rate = period === "daily"
+      ? getRatesForDate(etDate, currentRates).USD
+      : currentRates.USD;
     return rate > 0 ? `$1=₩${Math.round(rate).toLocaleString()}` : undefined;
   };
-  const usStartRateText = usdRateForUsDate(usRefDate);
+  // 일별은 시작·종료 환율이 달라 둘 다 표기, 비일별은 현재환율 단일이라 종료에만 1회 표기(중복 제거)
+  const usStartRateText = period === "daily" ? usdRateForUsDate(usRefDate) : undefined;
   const usEndRateText = usdRateForUsDate(usCompareDate);
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
@@ -470,35 +478,35 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
       <Card>
         <CardHeader>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <CardTitle>수익 현황</CardTitle>
-              <DataSourceBadge kind="closing" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <CardTitle>수익 현황</CardTitle>
+                <DataSourceBadge kind="closing" />
+              </div>
+              <CardDescription>보유 주식의 기간별 수익</CardDescription>
             </div>
-            <CardDescription>보유 주식의 기간별 수익</CardDescription>
+            <InlineSelector
+              value={period}
+              onChange={setPeriod}
+              options={PERIOD_OPTIONS}
+              ariaLabel="기간 선택"
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={period} onValueChange={(v) => setPeriod(v as ProfitPeriod)}>
-            <TabsList className={TAB_LIST}>
-              {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
-                <TabsTrigger key={p} value={p} className={TAB_TRIGGER}>
-                  {PERIOD_LABELS[p]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
             {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
-              <TabsContent key={p} value={p} forceMount className="data-[state=inactive]:hidden mt-4 space-y-4">
-                <Tabs value={marketView} onValueChange={(v) => setMarketView(v as MarketView)}>
-                  <TabsList className={SUB_TAB_LIST}>
-                    {(Object.keys(MARKET_LABELS) as MarketView[]).map((m) => (
-                      <TabsTrigger key={m} value={m} className={SUB_TAB_TRIGGER}>
-                        {MARKET_LABELS[m]}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+              <TabsContent key={p} value={p} forceMount className="data-[state=inactive]:hidden space-y-4">
+                <div className="flex items-center justify-end">
+                  <InlineSelector
+                    value={marketView}
+                    onChange={setMarketView}
+                    options={MARKET_OPTIONS}
+                    size="sm"
+                    ariaLabel="시장 선택"
+                  />
+                </div>
                 {isLoading ? (
                   <div className="space-y-3">
                     <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
@@ -547,7 +555,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">수익률</p>
-                          <p className={`text-base font-bold tabular-nums ${getProfitLossColor(totalRate)}`}>
+                          <p className={`text-sm font-bold tabular-nums ${getProfitLossColor(totalRate)}`}>
                             {formatRate(totalRate)}
                           </p>
                         </div>
@@ -565,49 +573,52 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
                           <div className="pt-1.5 border-t border-border/50 space-y-1.5">
-                            {/* 종가 기준 옵션: 모바일은 토글(상단 우측) + info(하단), sm 이상은 한 줄 */}
-                            <div className="flex flex-col gap-1.5 sm:flex-row-reverse sm:items-center sm:justify-between">
-                              <div className="flex items-center gap-2 text-xs rounded-md bg-muted/40 px-2.5 py-1.5 self-end sm:self-auto shrink-0">
-                                <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>동일 영업일</span>
-                                <Switch
-                                  checked={profitBasis === "kstAccessDay"}
-                                  onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
-                                  aria-label="종가 기준 옵션"
-                                />
-                                <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>KST 접속일</span>
-                              </div>
-                              <p className="flex items-start gap-1 text-[11px] text-sky-600 dark:text-sky-400">
-                                <Info className="size-3 shrink-0 mt-0.5" />
-                                <span>
-                                  {profitBasis === "sameBusinessDay"
-                                    ? "국내·해외를 같은 영업일의 종가로 합산"
-                                    : "KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산"}
-                                  <br />
-                                  {period === "daily" && " (일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용)"}
-                                </span>
-                              </p>
-                            </div>
-                            <div className="text-sm">
-                              {/* 헤더 */}
-                              <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border/50 text-muted-foreground`}>
-                                <span className="text-[11px] font-normal self-end">(KST)</span>
-                                <span>시작 종가</span>
-                                <span className="text-right">종료 종가</span>
-                              </div>
-                              {/* 시장별 날짜 */}
-                              {showKrDate && (
-                                <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} meta={krCloseMeta} />
-                              )}
-                              {showUsDate && (
-                                <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} meta={usCloseMeta} startSub={usStartRateText} endSub={usEndRateText} />
-                              )}
-                              {/* 합계 */}
-                              <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
-                                <span className="text-muted-foreground font-normal">합계</span>
-                                <span>{formatShortCurrency(leftSum)}</span>
-                                <span className="text-right">{formatShortCurrency(rightSum)}</span>
-                              </div>
-                            </div>
+                            {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
+                            <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
+                              <CollapsibleTrigger asChild>
+                                <button type="button" className="flex items-center gap-1 mt-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                  <ChevronDown className={`size-4 transition-transform ${closeTableOpen ? "rotate-180" : ""}`} />
+                                  기준 종가 비교
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="text-sm mt-2 space-y-2">
+                                {/* 옵션 토글 */}
+                                <div className="flex items-center gap-1.5 text-xs rounded-md bg-muted/40 py-1.5 px-2 w-fit ml-auto">
+                                  <InfoHint>
+                                    <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
+                                    <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
+                                    {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
+                                  </InfoHint>
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>동일 영업일</span>
+                                  <Switch
+                                    checked={profitBasis === "kstAccessDay"}
+                                    onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
+                                    aria-label="종가 기준 옵션"
+                                  />
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>KST 접속일</span>
+                                </div>
+                                {/* 헤더 */}
+                                <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border/50 text-muted-foreground`}>
+                                  <span className="text-[11px] font-normal self-end">(KST)</span>
+                                  <span>시작 종가</span>
+                                  <span className="text-right">종료 종가</span>
+                                </div>
+                                {/* 시장별 날짜 */}
+                                {showKrDate && (
+                                  <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} />
+                                )}
+                                {showUsDate && (
+                                  <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} startSub={usStartRateText} endSub={usEndRateText} />
+                                )}
+                                {/* 합계 */}
+                                <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
+                                  <span className="text-muted-foreground font-normal">합계</span>
+                                  <span>{formatShortCurrency(leftSum)}</span>
+                                  <span className="text-right">{formatShortCurrency(rightSum)}</span>
+                                </div>
+                                <p className="pt-1.5 text-[11px] text-muted-foreground/60">마감 기준: 국내 16:00 · 해외 익일 새벽 (KST)</p>
+                              </CollapsibleContent>
+                            </Collapsible>
                           </div>
                         );
                       })()}
@@ -636,34 +647,34 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                           <div className="divide-y">
                             {items.map(({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef, fxGain, isForeign }) => {
                               const priceGain = profitAmount - fxGain;
-                              const showFx = hasRef && isForeign && period === "daily";
+                              const showFx = hasRef && isForeign;
                               return (
-                              <div
-                                key={stock.id}
-                                className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
-                              >
-                                <div className="min-w-0">
-                                  <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
-                                  <p className="text-xs sm:text-sm text-muted-foreground">{ticker}</p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  {hasRef ? (
-                                    <>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} />}
-                                        <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
-                                          {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
+                                <div
+                                  key={stock.id}
+                                  className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
+                                    <p className="text-[11px] text-muted-foreground">{ticker}</p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    {hasRef ? (
+                                      <>
+                                        <div className="flex items-center justify-end gap-1">
+                                          {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} fxApplied={period === "daily"} />}
+                                          <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
+                                            {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
+                                          </p>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground tabular-nums">
+                                          {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
                                         </p>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground tabular-nums">
-                                        {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
-                                      </p>
-                                    </>
-                                  ) : (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">기준가 없음</Badge>
-                                  )}
+                                      </>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">기준가 없음</Badge>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
                               );
                             })}
                           </div>

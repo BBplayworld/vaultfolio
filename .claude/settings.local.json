@@ -38,7 +38,8 @@
       "Bash(python3 -c ' *)",
       "Bash(python3)",
       "Bash(timeout 4)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

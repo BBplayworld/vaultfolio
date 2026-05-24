@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
@@ -37,8 +38,12 @@ import { DataSourceBadge } from "../data-source-badge";
 
 const NET_COLOR = "#ffffffff";
 
-const CAT_LIST = ASSET_THEME.tabList3 + " mb-4";
-const CAT_TRIGGER = ASSET_THEME.tabTrigger3;
+type NetAssetView = "yearly" | "monthly" | "daily";
+const NET_ASSET_OPTIONS: { value: NetAssetView; label: string }[] = [
+  { value: "yearly", label: "년도별" },
+  { value: "monthly", label: "월별" },
+  { value: "daily", label: "일별" },
+];
 
 const chartConfig = {
   netAsset: {
@@ -206,9 +211,11 @@ function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
 
 
 export function YearlyNetAssetChart() {
-  const { assetData, deleteYearlyNetAsset, snapshotVersion } = useAssetData();
+  const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary } = useAssetData();
+  const summary = getAssetSummary();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
+  const [activeView, setActiveView] = useState<NetAssetView>("yearly");
   const openAddDialog = useCallback(() => {
     setEditingItem(undefined);
     setIsDialogOpen(true);
@@ -268,36 +275,49 @@ export function YearlyNetAssetChart() {
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
                 <CardTitle>순자산 변화</CardTitle>
                 <DataSourceBadge kind="closing" />
               </div>
               <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}</DialogTitle>
-                  <DialogDescription>
-                    {editingItem
-                      ? "년도별 순자산 정보를 수정합니다."
-                      : "과거 년도의 순자산을 입력하세요. (올해는 자동 계산됩니다)"}
-                  </DialogDescription>
-                </DialogHeader>
-                <YearlyNetAssetForm editData={editingItem} onClose={handleDialogClose} />
-              </DialogContent>
-            </Dialog>
+            <InlineSelector
+              value={activeView}
+              onChange={setActiveView}
+              options={NET_ASSET_OPTIONS}
+              ariaLabel="기간 선택"
+            />
           </div>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="yearly">
-            <TabsList className={CAT_LIST}>
-              <TabsTrigger className={CAT_TRIGGER} value="yearly">년도별</TabsTrigger>
-              <TabsTrigger className={CAT_TRIGGER} value="monthly">월별</TabsTrigger>
-              <TabsTrigger className={CAT_TRIGGER} value="daily">일별</TabsTrigger>
-            </TabsList>
+        <CardContent className="space-y-6">
+          {/* Hero — 현재 순자산 + 전년 대비 */}
+          {(() => {
+            const lastIdx = allYearlyData.length - 1;
+            const prevYear = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
+            const diff = prevYear ? summary.netAsset - prevYear.netAsset : null;
+            const diffPct = diff !== null && prevYear && prevYear.netAsset !== 0
+              ? (diff / Math.abs(prevYear.netAsset)) * 100
+              : null;
+            return (
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold">현재 순자산</p>
+                <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
+                <p className="text-xs text-foreground">{formatCurrency(summary.netAsset)}</p>
+                {diff !== null && diffPct !== null && (
+                  <p className="text-xs mt-1">
+                    <span className="text-muted-foreground">전년 대비 </span>
+                    <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>
+                      {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}%)
+                    </span>
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          <Tabs value={activeView} onValueChange={(v) => setActiveView(v as NetAssetView)}>
 
             {/* ── 년도별 탭 ── */}
             <TabsContent value="yearly">
@@ -377,13 +397,13 @@ export function YearlyNetAssetChart() {
                         return (
                           <div
                             key={item.year}
-                            className={`flex items-center justify-between rounded-lg border p-3 ${isCurrentYear ? "border-primary bg-primary/5" : ""}`}
+                            className={`group flex items-center justify-between rounded-lg border p-3 ${isCurrentYear ? "border-primary bg-primary/5" : ""}`}
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-semibold text-muted-foreground">{item.year}년</span>
                                 {isCurrentYear && (
-                                  <Badge variant="outline" className={ASSET_THEME.categoryBox}>
+                                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-foreground`}>
                                     올해
                                   </Badge>
                                 )}
@@ -398,7 +418,7 @@ export function YearlyNetAssetChart() {
                               </p>
                             </div>
                             {!isCurrentYear && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                 <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => handleEdit(item)}>
                                   <Pencil className="size-3.5" />
                                 </Button>
@@ -560,7 +580,7 @@ export function YearlyNetAssetChart() {
                         <div key={weekIdx} className="grid grid-cols-7 gap-0.5">
                           {cells.slice(weekIdx * 7, weekIdx * 7 + 7).map((cell, i) => {
                             if (!cell) {
-                              return <div key={`empty-${weekIdx}-${i}`} className="rounded-md bg-muted/20 h-24 sm:h-28" />;
+                              return <div key={`empty-${weekIdx}-${i}`} className="rounded-md bg-muted/5 h-12 sm:h-14" />;
                             }
                             const hasData = cell.netAsset !== null;
                             const isToday = cell.date === todayStr;
@@ -570,9 +590,9 @@ export function YearlyNetAssetChart() {
                             return (
                               <div
                                 key={cell.date}
-                                className={`rounded-md border p-1 flex flex-col transition-colors relative h-24 sm:h-28 ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/10"}`}
+                                className={`rounded-md border p-1 flex flex-col transition-colors relative ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
-                                <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-semibold tabular-nums leading-none ${isToday ? "text-foreground" : "text-muted-foreground"}`}>
+                                <p className={`absolute top-1 left-1 text-[11px] sm:text-[12px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
                                 </p>
                                 {hasData ? (
@@ -603,6 +623,21 @@ export function YearlyNetAssetChart() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* 년도별 추가/수정 다이얼로그 — 트리거는 외부(CustomEvent)에서 발화 */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}</DialogTitle>
+            <DialogDescription>
+              {editingItem
+                ? "년도별 순자산 정보를 수정합니다."
+                : "과거 년도의 순자산을 입력하세요. (올해는 자동 계산됩니다)"}
+            </DialogDescription>
+          </DialogHeader>
+          <YearlyNetAssetForm editData={editingItem} onClose={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

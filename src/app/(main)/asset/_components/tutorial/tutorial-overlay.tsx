@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronRight } from "lucide-react";
-import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/asset-dispatch";
+import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import { TUTORIAL_STEP_CONFIGS } from "./tutorial-step-config";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 import { MAIN_PALETTE } from "@/config/theme";
-import { AppGuideContent } from "@/app/(main)/asset/_components/top-nav/app-guide";
+import { AppGuideContent } from "@/app/(main)/asset/_components/header/app-guide";
 
 interface TargetRect {
   top: number;

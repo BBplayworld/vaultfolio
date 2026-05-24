@@ -11,6 +11,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { DataSourceBadge } from "../data-source-badge";
+import { InlineSelector } from "../../layout/ui/inline-selector";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -151,7 +152,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
         </PieChart>
       </ResponsiveContainer>
       {/* 범례 */}
-      <div className={`grid gap-x-2 ${screenshotMode ? "gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-1 grid-cols-1 sm:grid-cols-2"}`}>
+      <div className={`grid gap-x-2 ${screenshotMode ? "hidden gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-1 grid-cols-1 sm:grid-cols-2"}`}>
         {items.map(({ key, name, value, color, pct }) => {
           const isAll = !activeTab || activeTab === "all";
           const isActive = key === activeTab;
@@ -314,7 +315,8 @@ export function useDashboardTabs(activeDetailTab: string): { visibleTabs: Dashbo
   return { visibleTabs: TAB_META, resolvedTab };
 }
 
-export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetailTab: string; setActiveDetailTab: (v: string) => void }) {
+export function Dashboard() {
+  const [activeDetailTab, setActiveDetailTab] = useState("");
   const { assetData, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
 
@@ -361,7 +363,7 @@ export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetai
 
   const tenantCount = assetData.realEstate.filter((re) => (re.tenantDeposit ?? 0) > 0).length;
 
-  const { resolvedTab } = useDashboardTabs(activeDetailTab);
+  const { visibleTabs, resolvedTab } = useDashboardTabs(activeDetailTab);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -390,6 +392,17 @@ export function Dashboard({ activeDetailTab, setActiveDetailTab }: { activeDetai
                       <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
                     </div>
                   </div>
+
+                  {visibleTabs.length > 1 && (
+                    <div className="flex justify-center">
+                      <InlineSelector
+                        value={resolvedTab}
+                        onChange={setActiveDetailTab}
+                        options={visibleTabs.map((t) => ({ value: t.value, label: t.label }))}
+                        ariaLabel="자산 분포 필터"
+                      />
+                    </div>
+                  )}
 
                   <AssetDonutChart
                     items={treemapData}

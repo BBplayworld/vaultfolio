@@ -4,11 +4,14 @@ import { Pencil, Trash2, Calendar, Clock, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { assignColors } from "../asset-detail-tabs";
+import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
 
 function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
   coin: { id: string; symbol?: string; name: string; quantity: number; averagePrice: number; currentPrice: number; purchaseDate: string; description?: string };
@@ -18,7 +21,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
   const [open, setOpen] = useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
@@ -53,21 +56,19 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
-            <div className="relative">
-              <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
-                <div><p className={ASSET_THEME.cardDetailLabel}>매입가</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
-              </div>
-              <div className={`absolute top-2 right-2 ${ASSET_THEME.cardActions}`}>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(coin.id)}>
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div><p className={ASSET_THEME.cardDetailLabel}>매입가</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
+            </div>
+            <div className={ASSET_THEME.cardActions}>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(coin.id)}>
+                <Trash2 className="size-3.5" />
+              </Button>
             </div>
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
@@ -111,63 +112,70 @@ export function CryptoTab() {
   const barItems = sorted.map(({ coin, value }, idx) => ({ coin, value, color: cryptoColors[idx] }));
 
   return (
-    <div className="space-y-4 mt-2">
-      <div className={ASSET_THEME.summaryHeader}>
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold">총 암호화폐 평가금액</p>
-          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(totalValue)}</p>
-          <p className="text-xs text-foreground">{formatCurrency(totalValue)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">평가손익</p>
-          <p className={`text-lg font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-            {totalProfit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(totalProfit))} ({totalProfit >= 0 ? "+" : ""}{(totalCost > 0 ? (totalProfit / totalCost) * 100 : 0).toFixed(2)}%)
-          </p>
-        </div>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>암호화폐</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <DetailSummaryHeader
+          label="총 암호화폐 평가금액"
+          value={totalValue}
+          right={<ProfitMetric label="평가손익" profit={totalProfit} cost={totalCost} />}
+        />
 
-      {barItems.length > 0 && totalValue > 0 && (
-        <div className="space-y-2">
-          <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-            {barItems.map(({ coin, value: v, color }) => {
-              const pct = (v / totalValue) * 100;
+        {/* 카테고리 selector — 단일 옵션(전체)로 다른 탭과 시각 통일 */}
+        <div className="flex justify-start">
+          <InlineSelector
+            value="all"
+            onChange={() => { }}
+            options={[{ value: "all", label: "전체" }]}
+            ariaLabel="암호화폐 카테고리"
+          />
+        </div>
+
+        {barItems.length > 0 && totalValue > 0 && (
+          <div className="space-y-2">
+            <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+              {barItems.map(({ coin, value: v, color }) => {
+                const pct = (v / totalValue) * 100;
+                return (
+                  <div key={coin.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`}>
+                    {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
+              {barItems.map(({ coin, value: v, color }) => {
+                const pct = (v / totalValue) * 100;
+                return (
+                  <div key={coin.id} className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="text-xs sm:text-sm text-foreground">{coin.name}</span>
+                    <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {sorted.length === 0 ? (
+          <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+            <p className="text-muted-foreground text-sm">등록된 암호화폐가 없습니다.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sorted.map(({ coin, value, profit, profitRate }, idx) => {
+              const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
+              const color = cryptoColors[idx] ?? MAIN_PALETTE[0];
               return (
-                <div key={coin.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`}>
-                  {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                </div>
+                <CryptoCard key={coin.id} coin={coin} value={value} profit={profit} profitRate={profitRate} pct={pct} color={color} onDelete={handleDelete} />
               );
             })}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-            {barItems.map(({ coin, value: v, color }) => {
-              const pct = (v / totalValue) * 100;
-              return (
-                <div key={coin.id} className="flex items-center gap-1">
-                  <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                  <span className="text-xs sm:text-sm text-foreground">{coin.name}</span>
-                  <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {sorted.length === 0 ? (
-        <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground text-sm">등록된 암호화폐가 없습니다.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {sorted.map(({ coin, value, profit, profitRate }, idx) => {
-            const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
-            const color = cryptoColors[idx] ?? MAIN_PALETTE[0];
-            return (
-              <CryptoCard key={coin.id} coin={coin} value={value} profit={profit} profitRate={profitRate} pct={pct} color={color} onDelete={handleDelete} />
-            );
-          })}
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

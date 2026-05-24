@@ -1,21 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { WelcomeGuide } from "./_components/layout/welcome-guide";
-import { AppGuide } from "./_components/top-nav/app-guide";
-import { RealEstateInput } from "./_components/bottom-nav/asset-update/input/real-estate-input";
-import { StockInput } from "./_components/bottom-nav/asset-update/input/stock-input";
-import { CryptoInput } from "./_components/bottom-nav/asset-update/input/crypto-input";
-import { CashInput } from "./_components/bottom-nav/asset-update/input/cash-input";
-import { LoanInput } from "./_components/bottom-nav/asset-update/input/loan-input";
+import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
+import { AppGuide } from "./_components/header/app-guide";
+import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
+import { StockInput } from "./_components/forms/asset-update/input/stock-input";
+import { CryptoInput } from "./_components/forms/asset-update/input/crypto-input";
+import { CashInput } from "./_components/forms/asset-update/input/cash-input";
+import { LoanInput } from "./_components/forms/asset-update/input/loan-input";
 import { CopyrightFooter } from "./_components/layout/copyright-footer";
-import { FloatingAddButton } from "./_components/layout/floating-add-button";
-import { AssetPageTabs } from "./_components/layout/asset-page-tabs";
+import { FloatingAddButton } from "./_components/layout/floating/floating-add-button";
+import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ScrollToTop } from "./_components/layout/scroll-to-top";
-import { UpdateNoticeDialog } from "./_components/layout/notice-dialog";
+import { ScrollToTop } from "./_components/layout/floating/scroll-to-top";
+import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 
@@ -109,7 +109,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
       <AssetPageTabs />
       <CopyrightFooter />
       <FloatingAddButton />
