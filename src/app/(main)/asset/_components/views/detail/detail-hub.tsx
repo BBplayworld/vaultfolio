@@ -31,10 +31,11 @@ export function DetailHub() {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       <div className="px-1">
-        <h2 className="text-base sm:text-lg font-bold text-foreground">상세</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
+        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground">상세</h2>
+        <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
       <KpiCard
         icon={TrendingUp}
         title="주식"
@@ -85,6 +86,7 @@ export function DetailHub() {
         secondary={countLine(s.loanCount, "건")}
         onClick={() => go("loans")}
       />
+      </div>
     </div>
   );
 }

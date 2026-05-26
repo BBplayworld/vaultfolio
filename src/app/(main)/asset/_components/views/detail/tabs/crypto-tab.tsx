@@ -20,7 +20,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
+    <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MAIN_PALETTE } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
@@ -40,22 +39,33 @@ export function FloatingAddButton() {
   const [step, setStep] = useState<Step>("select-type");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
   const { exchangeRates, exchangeRateDate, updateExchangeRate } = useAssetData();
-  const { navigate } = useAssetNavigation();
+  const { navigate, view } = useAssetNavigation();
   const [isHidden, setIsHidden] = useState(false);
-  const lastScrollY = useRef(0);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
 
+  // 최상단(scrollY ≤ 50)에서만 노출 — 스크롤 다운 시 즉시 숨김
   useEffect(() => {
     const onScroll = () => {
-      const y = window.scrollY;
-      const dy = y - lastScrollY.current;
-      if (Math.abs(dy) < 10) return;
-      if (y < 100) setIsHidden(false);
-      else setIsHidden(dy > 0);
-      lastScrollY.current = y;
+      setIsHidden(window.scrollY > 50);
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // 인증샷 다이얼로그 열림 상태 추적
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const open = (e as CustomEvent<{ open: boolean }>).detail?.open;
+      setScreenshotOpen(!!open);
+    };
+    window.addEventListener("screenshot-dialog-toggle", handler);
+    return () => window.removeEventListener("screenshot-dialog-toggle", handler);
+  }, []);
+
+  // 노출 페이지: 홈 + 상세 허브만. 상세 하위 탭·성과·더보기·인증샷에서는 숨김.
+  const allowedByView = view.type === "home" || (view.type === "detail" && view.tab === "hub");
+  const showBar = allowedByView && !screenshotOpen;
 
   const resetState = () => {
     setStep("select-type");
@@ -111,37 +121,94 @@ export function FloatingAddButton() {
     return `${selectedAsset?.label} 추가`;
   };
 
+  const buttonEl = (
+    <button
+      onClick={() => setIsOpen(true)}
+      className="w-full flex items-center justify-center gap-2 rounded-2xl text-white
+      py-3.5 sm:py-4 text-base font-bold active:scale-[0.98] transition-all
+      bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700"
+      aria-label="자산 업데이트"
+      data-tutorial="tutorial-fab"
+    >
+      <Plus className="size-5" />
+      자산 업데이트
+    </button>
+  );
+
   return (
     <>
-      {/* 하단 고정 바 — 배경 페이지와 자연스럽게 이어지도록 상단 그라데이션 페이드 + solid bg */}
-      {/* 숨김 시 그라데이션(-top-4 = 16px overshoot)까지 함께 화면 밖으로 밀어내야 잔상 라인이 안 보임 */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-40 transition-transform duration-300
-        ${isHidden ? "translate-y-[calc(100%+1rem)]" : "translate-y-0"}`}
-      >
-        {/* 상단 그라데이션 페이드 — 스크롤되는 콘텐츠가 바 위로 자연스럽게 흐려짐 */}
-        <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
+      {/* 모바일: 하단 고정 바 (배경·그라데이션·스크롤 hide 포함) */}
+      {showBar && isMobile && (
         <div
-          className="relative bg-background/95 backdrop-blur-sm
-          px-4 sm:px-6 py-2 sm:py-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] sm:pb-[max(1.2rem,env(safe-area-inset-bottom))] flex justify-center"
+          className={`fixed bottom-0 left-0 right-0 z-40 transition-all duration-150
+          ${isHidden ? "translate-y-[calc(100%+1rem)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
         >
-          <button
-            onClick={() => setIsOpen(true)}
-            style={{ backgroundColor: MAIN_PALETTE[11] }}
-            className="flex items-center gap-2 rounded-full text-white
-            shadow-md px-5 py-3 text-sm font-semibold active:scale-95 transition-opacity hover:opacity-85"
-            aria-label="자산 추가"
-            data-tutorial="tutorial-fab"
+          <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
+          <div
+            className="relative bg-background/95 backdrop-blur-sm
+            px-4 py-2 pb-[max(0.8rem,env(safe-area-inset-bottom))]"
           >
-            <Plus className="size-5" />
-            자산 업데이트
-          </button>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl text-white
+              shadow-lg shadow-orange-500/20 py-3.5 text-base font-bold active:scale-[0.98] transition-all
+              bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700"
+              aria-label="자산 업데이트"
+              data-tutorial="tutorial-fab"
+            >
+              <Plus className="size-5" />
+              자산 업데이트
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* PC: 페이지 컨텐츠 흐름 안의 인라인 버튼 (footer 위, max-width 상속, shadow/배경 없음) */}
+      {showBar && isMobile === false && (
+        <div className="w-full">
+          {buttonEl}
+        </div>
+      )}
 
       <Sheet open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetState(); }}>
-        <SheetContent side={isMobile ? "top" : "right"} className="rounded-t-2xl pb-10">
-          <SheetHeader className="mb-4">
+        <SheetContent
+          side={isMobile ? "bottom" : "right"}
+          hideClose={isMobile}
+          className={isMobile
+            ? "rounded-t-2xl pb-10 max-h-[90vh] overflow-y-auto touch-pan-y"
+            : "rounded-t-2xl pb-10"}
+        >
+          {isMobile && (
+            <div
+              className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-muted-foreground/30 cursor-grab touch-none"
+              onPointerDown={(e) => {
+                const startY = e.clientY;
+                const target = e.currentTarget;
+                const sheet = target.closest('[data-slot="sheet-content"]') as HTMLElement | null;
+                if (!sheet) return;
+                target.setPointerCapture(e.pointerId);
+                const onMove = (ev: PointerEvent) => {
+                  const dy = Math.max(0, ev.clientY - startY);
+                  sheet.style.transform = `translateY(${dy}px)`;
+                  sheet.style.transition = "none";
+                };
+                const onUp = (ev: PointerEvent) => {
+                  const dy = Math.max(0, ev.clientY - startY);
+                  sheet.style.transition = "";
+                  sheet.style.transform = "";
+                  target.removeEventListener("pointermove", onMove);
+                  target.removeEventListener("pointerup", onUp);
+                  target.removeEventListener("pointercancel", onUp);
+                  if (dy > 80) setIsOpen(false);
+                };
+                target.addEventListener("pointermove", onMove);
+                target.addEventListener("pointerup", onUp);
+                target.addEventListener("pointercancel", onUp);
+              }}
+              aria-hidden="true"
+            />
+          )}
+          <SheetHeader className={isMobile ? "mb-4 mt-3" : "mb-4"}>
             <SheetTitle>{sheetTitle()}</SheetTitle>
           </SheetHeader>
 

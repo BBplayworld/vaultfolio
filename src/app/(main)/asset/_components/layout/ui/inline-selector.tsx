@@ -17,14 +17,15 @@ export function InlineSelector<T extends string>({
   value: T;
   onChange: (v: T) => void;
   options: readonly Option<T>[];
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   ariaLabel?: string;
 }) {
   const base =
     size === "sm" ? "text-[12px] sm:text-[13px] lg:text-sm px-1.5 py-1"
-    : size === "lg" ? "text-sm sm:text-base lg:text-lg px-3 py-2"
-    : "text-[13px] sm:text-sm lg:text-base px-2 py-1.5";
+      : size === "xl" ? "text-lg sm:text-2xl lg:text-2xl font-bold px-4 py-1 lg:py-0.5"
+        : size === "lg" ? "text-sm sm:text-base lg:text-lg px-3 py-2"
+          : "text-[13px] sm:text-sm lg:text-base px-2 py-1.5";
   return (
     <div
       role="radiogroup"

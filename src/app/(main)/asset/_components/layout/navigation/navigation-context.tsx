@@ -7,6 +7,7 @@ export type ActivityTab = "hub" | "netasset" | "profit" | "dividend";
 
 export type AssetView =
   | { type: "home" }
+  | { type: "more" }
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab };
 
@@ -16,6 +17,7 @@ const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "div
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");
   if (!clean || clean === "home") return { type: "home" };
+  if (clean === "more") return { type: "more" };
   const [type, tab] = clean.split("/");
   if (type === "detail") {
     // #detail (탭 생략) → hub
@@ -32,6 +34,7 @@ export function parseHash(hash: string): AssetView {
 
 export function toHash(view: AssetView): string {
   if (view.type === "home") return "";
+  if (view.type === "more") return "#more";
   // 허브는 짧은 #detail / #activity 형태 유지
   if (view.tab === "hub") return `#${view.type}`;
   return `#${view.type}/${view.tab}`;
@@ -42,6 +45,7 @@ export function toHash(view: AssetView): string {
 // - 하위 페이지(stocks/netasset 등)에서 뒤로 → 해당 허브("상세"/"성과")
 export function getBackLabel(view: AssetView): string {
   if (view.type === "home") return "";
+  if (view.type === "more") return "더보기";
   if (view.tab === "hub") return "홈";
   return view.type === "detail" ? "상세" : "성과";
 }
@@ -54,6 +58,12 @@ type NavCtx = {
 
 const NavigationContext = createContext<NavCtx | null>(null);
 
+// 페이지 이동 시 최상단으로 스크롤
+function scrollPastHeader() {
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<AssetView>({ type: "home" });
 
@@ -62,7 +72,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setView(parseHash(window.location.hash));
     const onPop = () => {
       setView(parseHash(window.location.hash));
-      window.scrollTo({ top: 0, behavior: "auto" });
+      scrollPastHeader();
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -86,6 +96,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // 뒤로가기: drill-down 1단계만 복귀.
   // 성과/상세 하위 영역 → 해당 허브, 허브 → 홈
   const back = useCallback(() => {
+    if (view.type === "more") {
+      navigate({ type: "home" });
+      return;
+    }
     if (view.type === "activity" && view.tab !== "hub") {
       navigate({ type: "activity", tab: "hub" });
       return;

@@ -27,14 +27,14 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <h3 className="text-sm lg:text-base font-semibold text-foreground">{title}</h3>
             <ChevronRight className="size-4 text-muted-foreground shrink-0" />
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-          <p className={`text-xl sm:text-2xl font-extrabold tabular-nums mt-2 ${ASSET_THEME.important}`}>
+          <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">{description}</p>
+          <p className={`text-xl sm:text-2xl lg:text-2xl font-extrabold tabular-nums mt-2 ${ASSET_THEME.important}`}>
             {primary}
           </p>
-          {secondary && <div className="text-xs mt-1">{secondary}</div>}
+          {secondary && <div className="text-xs lg:text-sm mt-1">{secondary}</div>}
         </div>
       </div>
     </Card>

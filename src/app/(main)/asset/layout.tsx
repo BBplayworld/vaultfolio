@@ -42,7 +42,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                 >
                   <TopBar />
                 </header>
-                <div className="h-full px-3 pt-2 pb-20 md:px-12 md:pt-2 md:pb-24 mt-2 sm:mt-0">{children}</div>
+                <div className="h-full px-3 pt-2 pb-10 md:px-12 md:pt-2 md:pb-14 mt-2 sm:mt-0">{children}</div>
               </SidebarInset>
             </SidebarProvider>
           </TutorialStoreProvider>

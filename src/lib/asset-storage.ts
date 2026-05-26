@@ -176,8 +176,21 @@ export function clearAssetData(): boolean {
 export function clearUserCaches(): number {
   if (typeof window === "undefined") return 0;
   let count = 0;
+  // profit 관련 prefix 키 일괄 제거
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith(STORAGE_KEY_PREFIXES.profit)) {
+      localStorage.removeItem(key);
+      count++;
+    }
+  }
+  // 환율 관련 캐시 전체 제거
+  const exchangeKeys: string[] = [
+    STORAGE_KEYS.exchangeRate,
+    STORAGE_KEYS.exchangeSyncDate,
+    STORAGE_KEYS.exchangeHistory,
+  ];
+  for (const key of exchangeKeys) {
+    if (localStorage.getItem(key) !== null) {
       localStorage.removeItem(key);
       count++;
     }

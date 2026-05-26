@@ -367,8 +367,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
               )}
               <p className="text-xs text-muted-foreground">평가손익</p>
             </div>
-            {/* 모바일: 금액·수익률 두 줄 / PC(sm+): 한 줄 */}
-            <div className="flex flex-col items-end sm:flex-row sm:items-baseline sm:gap-1.5">
+            <div className="flex flex-row items-baseline gap-1 sm:gap-1.5">
               <p className={`text-lg font-bold tabular-nums whitespace-nowrap ${getProfitLossColor(totalProfit)}`}>
                 {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))}
               </p>
@@ -731,7 +730,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-3">
+      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-2">
         <div className={ASSET_THEME.cardWrapper}>
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>

@@ -31,13 +31,13 @@ export function DetailSummaryHeader({
     <div className={`${ASSET_THEME.summaryHeader} gap-3`}>
       <div className="min-w-fit flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="text-xs text-muted-foreground font-semibold">{label}</p>
+          <p className="text-xs lg:text-sm text-muted-foreground font-semibold">{label}</p>
           {badge}
         </div>
-        <p className={`text-2xl font-extrabold tabular-nums whitespace-nowrap ${valueClass}`}>
+        <p className={`text-2xl lg:text-3xl font-extrabold tabular-nums whitespace-nowrap ${valueClass}`}>
           {formatShort(value)}
         </p>
-        <p className="text-xs text-foreground">{formatFull(value)}</p>
+        <p className="text-xs lg:text-sm text-foreground">{formatFull(value)}</p>
       </div>
       {right && <div className="text-right min-w-fit space-y-0.5">{right}</div>}
     </div>
@@ -68,8 +68,7 @@ export function ProfitMetric({
   return (
     <>
       <p className="text-xs text-muted-foreground">{label}</p>
-      {/* 모바일: 금액·수익률 두 줄 / PC(sm+): 한 줄 */}
-      <div className="flex flex-col items-end sm:flex-row sm:items-baseline sm:gap-1.5">
+      <div className="flex flex-row items-baseline gap-1 sm:gap-1.5">
         <p className={`text-lg font-bold tabular-nums whitespace-nowrap ${color}`}>
           {!hideAmountSign && sign}{formatShort(Math.round(profit))}
         </p>

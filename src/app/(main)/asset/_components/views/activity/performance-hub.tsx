@@ -134,10 +134,11 @@ export function PerformanceHub() {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       <div className="px-1">
-        <h2 className="text-base sm:text-lg font-bold text-foreground">성과</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">순자산·수익·배당을 각각 자세히 확인하세요</p>
+        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground">성과</h2>
+        <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">순자산·수익·배당을 각각 자세히 확인하세요</p>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
       <KpiCard
         icon={Wallet}
         title="순자산"
@@ -145,10 +146,10 @@ export function PerformanceHub() {
         primary={formatShortCurrency(summary.netAsset)}
         secondary={netDiff !== null && netDiffPct !== null ? (
           <>
-            <span className="text-muted-foreground">전년 대비 </span>
             <span className={`font-semibold tabular-nums ${getProfitLossColor(netDiff)}`}>
               {netDiff >= 0 ? "+" : ""}{formatShortCurrency(netDiff)} ({netDiff >= 0 ? "+" : ""}{netDiffPct.toFixed(1)}%)
             </span>
+            <span className="text-muted-foreground"> 전년 대비</span>
           </>
         ) : <span className="text-muted-foreground">전년 데이터 없음</span>}
         onClick={() => go("netasset")}
@@ -184,6 +185,7 @@ export function PerformanceHub() {
         ) : null}
         onClick={() => go("dividend")}
       />
+      </div>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { DataSourceBadge } from "../data-source-badge";
 import { InlineSelector } from "../../layout/ui/inline-selector";
+import { useNickname } from "@/hooks/use-nickname";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -214,10 +215,10 @@ export function useAssetTreemapData() {
   return { treemapData, summary };
 }
 
-function DailyNetAssetTrend() {
+// 최근 7일 일별 스냅샷 + 전일 대비 손익 (Dashboard / DailyNetAssetTrend 공용)
+function useLast7DailySnapshots() {
   const { snapshotVersion } = useAssetData();
   const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
-
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
@@ -227,6 +228,20 @@ function DailyNetAssetTrend() {
       setSnapshots(sorted.slice(-7));
     } catch { }
   }, [snapshotVersion]);
+  return snapshots;
+}
+
+function computeLastDailyDiff(snapshots: DailyAssetSnapshot[]) {
+  if (snapshots.length < 2) return null;
+  const last = snapshots[snapshots.length - 1];
+  const secondLast = snapshots[snapshots.length - 2];
+  const diff = last.netAsset - secondLast.netAsset;
+  const pct = secondLast.netAsset > 0 ? (diff / secondLast.netAsset) * 100 : 0;
+  return { diff, pct, isBig: pct >= 5 || pct <= -5 };
+}
+
+function DailyNetAssetTrend() {
+  const snapshots = useLast7DailySnapshots();
 
   if (snapshots.length === 0) return null;
 
@@ -239,16 +254,10 @@ function DailyNetAssetTrend() {
   const MIN_BAR = 8;
   const MAX_BAR = 72;
 
-  const last = snapshots[snapshots.length - 1];
-  const secondLast = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
-  const lastDiff = secondLast ? last.netAsset - secondLast.netAsset : 0;
-  const lastPct = secondLast && secondLast.netAsset > 0 ? (lastDiff / secondLast.netAsset) * 100 : 0;
-  const isBigLast = lastPct >= 5 || lastPct <= -5;
-
   return (
     <div className="rounded-lg border px-4 py-3 space-y-2.5" style={{ borderColor: MAIN_PALETTE[0] + "33", backgroundColor: MAIN_PALETTE[0] + "08" }}>
       <div className="flex items-center gap-1.5">
-        <p className="text-xs font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+        <p className="text-xs lg:text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
         <DataSourceBadge kind="closing" />
       </div>
       <div className="flex gap-1">
@@ -283,13 +292,6 @@ function DailyNetAssetTrend() {
           );
         })}
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">전일 대비</span>
-        <span className={`text-sm font-extrabold tabular-nums ${isBigLast ? "animate-pulse" : ""} ${getProfitLossColor(lastDiff)}`}>
-          {lastDiff >= 0 ? "+" : ""}{formatShortCurrency(lastDiff)}&nbsp;
-          <span className="text-xs font-bold">({lastDiff >= 0 ? "+" : ""}{lastPct.toFixed(1)}%)</span>
-        </span>
-      </div>
     </div>
   );
 }
@@ -317,8 +319,11 @@ export function useDashboardTabs(activeDetailTab: string): { visibleTabs: Dashbo
 
 export function Dashboard() {
   const [activeDetailTab, setActiveDetailTab] = useState("");
+  const [nickname] = useNickname();
   const { assetData, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
+  const dailySnapshots = useLast7DailySnapshots();
+  const lastDaily = computeLastDailyDiff(dailySnapshots);
 
   const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -378,19 +383,33 @@ export function Dashboard() {
               <div className="py-3 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* col-1: 순자산 요약 + DonutChart */}
                 <div className="space-y-4">
-                  <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-                        <DataSourceBadge kind="realtime" />
+                  <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          {nickname && (
+                            <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
+                          )}
+                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                          <DataSourceBadge kind="realtime" />
+                        </div>
+                        <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
+                        <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
                       </div>
-                      <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
-                      <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
+                      <div className="text-right space-y-1.5">
+                        <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
+                        <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
+                      </div>
                     </div>
-                    <div className="text-right space-y-1.5">
-                      <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
-                      <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
-                    </div>
+                    {lastDaily && (
+                      <div className="mt-3 pt-3 border-t border-dashed flex items-center justify-between">
+                        <span className="text-xs lg:text-sm text-muted-foreground">전일 대비</span>
+                        <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
+                          {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
+                          <span className="text-xs lg:text-sm font-bold ml-1.5">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {visibleTabs.length > 1 && (
@@ -422,7 +441,7 @@ export function Dashboard() {
                     <TabsContent value="financial" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between">
                         <div>
-                          <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
+                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(financialTotal)}</p>
                           <p className="text-sm text-foreground">{formatCurrency(financialTotal)}</p>
                         </div>
@@ -441,7 +460,7 @@ export function Dashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <p className={`text-xs font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
+                        <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
 
@@ -458,7 +477,7 @@ export function Dashboard() {
                     <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between">
                         <div>
-                          <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
+                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.realEstateValue)}</p>
                           <p className="text-sm text-foreground">{formatCurrency(summary.realEstateValue)}</p>
                         </div>
@@ -478,7 +497,7 @@ export function Dashboard() {
 
                       {realEstateCatBarItems.length > 0 && (
                         <div className="space-y-2">
-                          <p className={`text-xs font-semibold ${ASSET_THEME.text.default}`}>부동산 구성</p>
+                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>부동산 구성</p>
                           <SectionBar items={realEstateCatBarItems} total={summary.realEstateValue} />
                         </div>
                       )}
@@ -491,7 +510,7 @@ export function Dashboard() {
                     <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className={ASSET_THEME.summaryHeader}>
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground">부채 총액</p>
+                          <p className="text-xs lg:text-sm font-semibold text-muted-foreground">부채 총액</p>
                           <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</p>
                           <p className="text-sm text-foreground">{formatCurrency(totalLiability)}</p>
                         </div>
@@ -508,7 +527,7 @@ export function Dashboard() {
 
                       {liabTopItems.length > 0 && (
                         <div className="space-y-2">
-                          <p className={`text-xs font-semibold ${ASSET_THEME.text.default}`}>부채 구성</p>
+                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>부채 구성</p>
                           <SectionBar items={liabTopItems} total={totalLiability} />
                         </div>
                       )}

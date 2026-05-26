@@ -14,7 +14,6 @@ import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ScrollToTop } from "./_components/layout/floating/scroll-to-top";
 import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
@@ -111,9 +110,8 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
       <AssetPageTabs />
-      <CopyrightFooter />
       <FloatingAddButton />
-      <ScrollToTop />
+      <CopyrightFooter />
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       <UpdateNoticeDialog />
     </div>
