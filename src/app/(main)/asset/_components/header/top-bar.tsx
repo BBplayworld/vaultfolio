@@ -82,7 +82,8 @@ export function TopBar() {
   // - more 페이지: 모두 숨김
   const showShare =
     view.type === "home" ||
-    (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) ||
+    (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) || // stocks-xray는 제외
+    false ||
     (view.type === "activity" && (view.tab === "hub" || view.tab === "netasset" || view.tab === "profit"));
   const showMore = view.type === "home";
 

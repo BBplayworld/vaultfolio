@@ -13,6 +13,7 @@
 
 import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
 import type { ProfitPeriod } from "./profit-utils";
+import type { StockClassification } from "./xray/classification-store";
 
 // ─────────────────────────────────────────────────────────
 // 인터페이스
@@ -53,6 +54,9 @@ export interface ICacheStorage {
   // 기업/ETF 로고 캐시 (TTL 1년)
   getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null>;
   setTickerLogo(key: string, base64: string, contentType: string): Promise<void>;
+  // 종목 분류 캐시 (X-Ray, 90일 TTL)
+  getStockClassification(ticker: string): Promise<StockClassification | null>;
+  setStockClassification(ticker: string, value: StockClassification): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -75,6 +79,8 @@ const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
+const STOCK_CLASSIFICATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90일
+const STOCK_CLASSIFICATION_TTL_SEC = 90 * 24 * 60 * 60;
 
 // 서버/클라이언트 공통 캐시 슬롯 유틸 (stock-cache-slot.ts에서 re-export)
 import { getEffectiveDateStr as _getEffectiveDateStr, getStockCacheSlot as _getStockCacheSlot } from "./stock-cache-slot";
@@ -175,6 +181,10 @@ interface FileCacheData {
   REF_PRICES?: Record<string, number>;
   // 키: "{ticker}:{period}:{requestDate}" → 값: actualDate (KIS 응답일)
   REF_DATE_MAP?: Record<string, string>;
+  // X-Ray 종목 분류 v1 (deprecated — themes/indices 도입 전 GICS 섹터). 잔존 가능, 무해.
+  STOCK_CLASSIFICATION?: Record<string, { value: StockClassification; updated_at: number }>;
+  // X-Ray 종목 분류 v2 (90일 TTL, per-ticker, themes/indices/marketCapTier)
+  STOCK_CLASSIFICATION_V2?: Record<string, { value: StockClassification; updated_at: number }>;
 }
 
 interface ShareTokenEntry {
@@ -413,6 +423,40 @@ class FileCacheStorage implements ICacheStorage {
     const count = await this.getGeminiDailyCount(todayStr);
     return count < GEMINI_SERVER_DAILY_LIMIT;
   }
+
+  async getStockClassification(ticker: string): Promise<StockClassification | null> {
+    if (!ticker) return null;
+    const entry = this.readFinanceCache().STOCK_CLASSIFICATION_V2?.[ticker.toUpperCase()];
+    if (!entry) return null;
+    if (Date.now() - entry.updated_at > STOCK_CLASSIFICATION_TTL_MS) return null;
+    return entry.value;
+  }
+
+  async setStockClassification(ticker: string, value: StockClassification): Promise<void> {
+    if (!ticker) return;
+    const cache = this.readFinanceCache();
+    if (!cache.STOCK_CLASSIFICATION_V2) cache.STOCK_CLASSIFICATION_V2 = {};
+    const key = ticker.toUpperCase();
+    const prev = cache.STOCK_CLASSIFICATION_V2[key]?.value;
+    cache.STOCK_CLASSIFICATION_V2[key] = { value: mergeClassificationValue(prev, value), updated_at: Date.now() };
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    this.writeFinanceCache(cache, todayStr);
+  }
+}
+
+// 서버 캐시용 분류 머지 — indices만 배열 합집합, 나머지는 spread (후행 우선)
+function mergeClassificationValue(prev: StockClassification | undefined, patch: StockClassification): StockClassification {
+  if (!prev) return patch;
+  const merged: StockClassification = { ...prev, ...patch };
+  const prevIdx = Array.isArray(prev.indices) ? prev.indices : [];
+  const patchIdx = Array.isArray(patch.indices) ? patch.indices : [];
+  if (prevIdx.length || patchIdx.length) {
+    const set = new Set<string>();
+    for (const v of prevIdx) if (typeof v === "string" && v) set.add(v);
+    for (const v of patchIdx) if (typeof v === "string" && v) set.add(v);
+    merged.indices = Array.from(set);
+  }
+  return merged;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -583,5 +627,18 @@ class UpstashCacheStorage implements ICacheStorage {
   async setTickerLogo(key: string, base64: string, contentType: string): Promise<void> {
     const LOGO_TTL = 365 * 24 * 3600; // 1년
     await this.redis.set(`finance:logo:${key}`, { data: base64, contentType }, { ex: LOGO_TTL });
+  }
+
+  async getStockClassification(ticker: string): Promise<StockClassification | null> {
+    if (!ticker) return null;
+    return this.redis.get<StockClassification>(`xray:classification:v2:${ticker.toUpperCase()}`);
+  }
+
+  async setStockClassification(ticker: string, value: StockClassification): Promise<void> {
+    if (!ticker) return;
+    const key = `xray:classification:v2:${ticker.toUpperCase()}`;
+    const prev = await this.redis.get<StockClassification>(key);
+    const merged = mergeClassificationValue(prev ?? undefined, value);
+    await this.redis.set(key, merged, { ex: STOCK_CLASSIFICATION_TTL_SEC });
   }
 }

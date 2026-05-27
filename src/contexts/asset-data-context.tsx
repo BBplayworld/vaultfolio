@@ -5,7 +5,8 @@ import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, Asset
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
-import { normalizeTicker, resolveStockName } from "@/lib/finance-service";
+import { normalizeTicker, resolveStockName, type StockClassificationPatch } from "@/lib/finance-service";
+import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
@@ -24,6 +25,17 @@ const dismissStaleToasts = () => {
   }
   lastToastAt = now;
 };
+
+// /api/finance 응답에서 KIS 분류 patch 수확 → 클라 분류 캐시 머지
+function harvestClassifications(stocksData: Record<string, { classification?: StockClassificationPatch }>): void {
+  const patches: Record<string, Record<string, unknown>> = {};
+  for (const [ticker, result] of Object.entries(stocksData)) {
+    if (result?.classification) patches[ticker] = { ...result.classification } as Record<string, unknown>;
+  }
+  if (Object.keys(patches).length > 0) {
+    upsertClassifications(patches);
+  }
+}
 import {
   Dialog,
   DialogContent,
@@ -342,6 +354,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
               }
               localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
             } catch { /* ignore */ }
+            harvestClassifications(stocksData);
           }
         } catch { /* abort 또는 네트워크 오류: 다음 반복에서 isCanceled가 차단 */ }
       }
@@ -374,6 +387,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             }
             localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
           } catch { /* ignore */ }
+          harvestClassifications(stocksData);
           const updatedStocks = current.stocks.map(stock => {
             const ticker = normalizeTicker(stock);
             const result = stocksData[ticker] as {

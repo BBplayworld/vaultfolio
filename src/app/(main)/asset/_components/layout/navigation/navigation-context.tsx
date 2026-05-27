@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type DetailTab = "hub" | "stocks" | "real-estate" | "crypto" | "cash" | "loans";
+export type DetailTab = "hub" | "stocks" | "stocks-xray" | "real-estate" | "crypto" | "cash" | "loans";
 export type ActivityTab = "hub" | "netasset" | "profit" | "dividend";
 
 export type AssetView =
@@ -11,7 +11,7 @@ export type AssetView =
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab };
 
-const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "real-estate", "crypto", "cash", "loans"];
+const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "real-estate", "crypto", "cash", "loans"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend"];
 
 export function parseHash(hash: string): AssetView {
@@ -47,6 +47,7 @@ export function getBackLabel(view: AssetView): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "더보기";
   if (view.tab === "hub") return "홈";
+  if (view.type === "detail" && view.tab === "stocks-xray") return "주식";
   return view.type === "detail" ? "상세" : "성과";
 }
 
@@ -105,6 +106,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (view.type === "detail" && view.tab !== "hub") {
+      // X-Ray 하위 페이지 → 주식 상세로 1단 복귀
+      if (view.tab === "stocks-xray") {
+        navigate({ type: "detail", tab: "stocks" });
+        return;
+      }
       navigate({ type: "detail", tab: "hub" });
       return;
     }

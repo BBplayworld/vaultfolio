@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Dashboard } from "../../views/home/dashboard";
 import { StockTab } from "../../views/detail/tabs/stock-tab";
+import { StockXrayView } from "../../views/detail/xray/stock-xray-view";
 import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
 import { CashTab } from "../../views/detail/tabs/cash-tab";
@@ -32,6 +33,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       {tab === "stocks"      && <StockTab />}
+      {tab === "stocks-xray" && <StockXrayView />}
       {tab === "real-estate" && <RealEstateTab />}
       {tab === "crypto"      && <CryptoTab />}
       {tab === "cash"        && <CashTab />}

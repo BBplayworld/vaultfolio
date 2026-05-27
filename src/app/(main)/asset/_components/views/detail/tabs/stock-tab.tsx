@@ -23,6 +23,7 @@ import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { DetailSummaryHeader } from "../detail-summary-header";
+import { StockInsightStrip } from "../xray/stock-insight-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/profit-utils";
@@ -945,6 +946,9 @@ export function StockTab() {
           dailyProfit={dailyProfit}
           dailyProfitRate={dailyProfitRate}
         />
+
+        {/* X-Ray 인사이트 스트립 (인증샷 제외) */}
+        <StockInsightStrip stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
         {/* 카테고리 selector */}
         <div className="flex justify-start">
