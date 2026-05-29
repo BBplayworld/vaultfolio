@@ -6,6 +6,7 @@ import { Stock } from "@/types/asset";
 import { ExchangeRates } from "@/lib/finance-service";
 import { pickHighlights } from "@/lib/xray/stock-xray";
 import { fetchAndStoreClassifications } from "@/lib/xray/fetch-classifications";
+import { groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 
 interface StockInsightStripProps {
@@ -35,11 +36,17 @@ export function StockInsightStrip({ stocks, exchangeRates }: StockInsightStripPr
     };
   }, [stocks]);
 
+  // 증권사별 분리 항목을 ticker 단위로 병합 (집계 시 1회만 카운트)
+  const mergedStocks = useMemo(() => {
+    const grouped = groupStocksByTicker(stocks);
+    return Array.from(grouped.values()).map((g) => mergeStockGroup(g));
+  }, [stocks]);
+
   const highlights = useMemo(
-    () => pickHighlights(stocks, exchangeRates),
+    () => pickHighlights(mergedStocks, exchangeRates),
     // tick 의존성으로 localStorage 갱신 반영
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stocks, exchangeRates, tick],
+    [mergedStocks, exchangeRates, tick],
   );
 
   // 분석할 종목이 없거나 분포가 모두 미분류면 노출 생략

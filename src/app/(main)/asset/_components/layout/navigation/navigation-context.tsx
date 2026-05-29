@@ -98,6 +98,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // 성과/상세 하위 영역 → 해당 허브, 허브 → 홈
   const back = useCallback(() => {
     if (view.type === "more") {
+      // 진입 경로(주식 X-Ray 등) 복원 위해 진짜 history pop. 외부 진입(depth 부족) 시 home.
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        window.history.back();
+        return;
+      }
       navigate({ type: "home" });
       return;
     }

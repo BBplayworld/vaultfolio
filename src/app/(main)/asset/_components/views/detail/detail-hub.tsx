@@ -36,56 +36,56 @@ export function DetailHub() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-      <KpiCard
-        icon={TrendingUp}
-        title="주식"
-        description="국내·해외 보유 종목"
-        primary={formatShortCurrency(s.stockValue)}
-        secondary={s.stockCount > 0
-          ? profitLine(s.stockProfit, s.stockCost > 0 ? (s.stockProfit / s.stockCost) * 100 : null)
-          : countLine(0, "개")}
-        onClick={() => go("stocks")}
-      />
+        <KpiCard
+          icon={TrendingUp}
+          title="주식"
+          description="국내·해외 보유 종목"
+          primary={formatShortCurrency(s.stockValue)}
+          secondary={s.stockCount > 0
+            ? profitLine(s.stockProfit, s.stockCost > 0 ? (s.stockProfit / s.stockCost) * 100 : null)
+            : countLine(0, "개")}
+          onClick={() => s.stockCount > 0 ? go("stocks") : ''}
+        />
 
-      <KpiCard
-        icon={Building2}
-        title="부동산"
-        description="보유 부동산"
-        primary={formatShortCurrency(s.realEstateValue)}
-        secondary={s.realEstateCount > 0
-          ? profitLine(s.realEstateProfit, s.realEstateCost > 0 ? (s.realEstateProfit / s.realEstateCost) * 100 : null)
-          : countLine(0, "건")}
-        onClick={() => go("real-estate")}
-      />
+        <KpiCard
+          icon={Building2}
+          title="부동산"
+          description="보유 부동산"
+          primary={formatShortCurrency(s.realEstateValue)}
+          secondary={s.realEstateCount > 0
+            ? profitLine(s.realEstateProfit, s.realEstateCost > 0 ? (s.realEstateProfit / s.realEstateCost) * 100 : null)
+            : countLine(0, "건")}
+          onClick={() => s.realEstateCount > 0 ? go("real-estate") : ''}
+        />
 
-      <KpiCard
-        icon={Bitcoin}
-        title="암호화폐"
-        description="보유 코인"
-        primary={formatShortCurrency(s.cryptoValue)}
-        secondary={s.cryptoCount > 0
-          ? profitLine(s.cryptoProfit, s.cryptoCost > 0 ? (s.cryptoProfit / s.cryptoCost) * 100 : null)
-          : countLine(0, "개")}
-        onClick={() => go("crypto")}
-      />
+        <KpiCard
+          icon={Bitcoin}
+          title="암호화폐"
+          description="보유 코인"
+          primary={formatShortCurrency(s.cryptoValue)}
+          secondary={s.cryptoCount > 0
+            ? profitLine(s.cryptoProfit, s.cryptoCost > 0 ? (s.cryptoProfit / s.cryptoCost) * 100 : null)
+            : countLine(0, "개")}
+          onClick={() => s.cryptoCount ? go("crypto") : ''}
+        />
 
-      <KpiCard
-        icon={Wallet}
-        title="현금"
-        description="현금성 자산"
-        primary={formatShortCurrency(s.cashValue)}
-        secondary={countLine(s.cashCount, "건")}
-        onClick={() => go("cash")}
-      />
+        <KpiCard
+          icon={Wallet}
+          title="현금"
+          description="현금성 자산"
+          primary={formatShortCurrency(s.cashValue)}
+          secondary={countLine(s.cashCount, "건")}
+          onClick={() => s.cashCount > 0 ? go("cash") : ''}
+        />
 
-      <KpiCard
-        icon={CreditCard}
-        title="대출"
-        description="대출 잔액"
-        primary={formatShortCurrency(s.loanBalance)}
-        secondary={countLine(s.loanCount, "건")}
-        onClick={() => go("loans")}
-      />
+        <KpiCard
+          icon={CreditCard}
+          title="대출"
+          description="대출 잔액"
+          primary={formatShortCurrency(s.loanBalance)}
+          secondary={countLine(s.loanCount, "건")}
+          onClick={() => s.loanCount ? go("loans") : ''}
+        />
       </div>
     </div>
   );

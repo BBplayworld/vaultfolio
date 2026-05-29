@@ -53,15 +53,6 @@ export interface ExchangeRates {
 // KIS → 분류 매핑 헬퍼
 // ─────────────────────────────────────────────
 
-function mapKrxCapTier(label: string | undefined): "large" | "mid" | "small" | "unknown" {
-  if (!label) return "unknown";
-  // KIS 응답의 `idx_bztp_lcls_cd_name`: "시가총액규모대/중/소"
-  if (label.includes("대")) return "large";
-  if (label.includes("중")) return "mid";
-  if (label.includes("소")) return "small";
-  return "unknown";
-}
-
 function mapDomesticIndices(output: Record<string, string> | undefined): string[] {
   if (!output) return [];
   const out: string[] = [];
@@ -107,9 +98,9 @@ function mapOverseasIndices(ovrsExcgCd: string | undefined): string[] {
 
 function extractDomesticClassification(output: Record<string, string> | undefined): StockClassificationPatch | null {
   if (!output) return null;
+  // marketCapTier는 Gemini가 일원 추정 (KIS는 시총 규모 필드를 제공하지 않음 — region·indices만 보충)
   const patch: StockClassificationPatch = {
     region: "KR",
-    marketCapTier: mapKrxCapTier(output.idx_bztp_lcls_cd_name),
     indices: mapDomesticIndices(output),
   };
   return patch;

@@ -183,8 +183,10 @@ interface FileCacheData {
   REF_DATE_MAP?: Record<string, string>;
   // X-Ray 종목 분류 v1 (deprecated — themes/indices 도입 전 GICS 섹터). 잔존 가능, 무해.
   STOCK_CLASSIFICATION?: Record<string, { value: StockClassification; updated_at: number }>;
-  // X-Ray 종목 분류 v2 (90일 TTL, per-ticker, themes/indices/marketCapTier)
+  // X-Ray 종목 분류 v2 (deprecated — marketCapTier 산출 오류 잔존). 무해, 미사용.
   STOCK_CLASSIFICATION_V2?: Record<string, { value: StockClassification; updated_at: number }>;
+  // X-Ray 종목 분류 v3 (90일 TTL, per-ticker, themes/indices/marketCapTier — Gemini 시총 일원 추정)
+  STOCK_CLASSIFICATION_V3?: Record<string, { value: StockClassification; updated_at: number }>;
 }
 
 interface ShareTokenEntry {
@@ -426,7 +428,7 @@ class FileCacheStorage implements ICacheStorage {
 
   async getStockClassification(ticker: string): Promise<StockClassification | null> {
     if (!ticker) return null;
-    const entry = this.readFinanceCache().STOCK_CLASSIFICATION_V2?.[ticker.toUpperCase()];
+    const entry = this.readFinanceCache().STOCK_CLASSIFICATION_V3?.[ticker.toUpperCase()];
     if (!entry) return null;
     if (Date.now() - entry.updated_at > STOCK_CLASSIFICATION_TTL_MS) return null;
     return entry.value;
@@ -435,10 +437,10 @@ class FileCacheStorage implements ICacheStorage {
   async setStockClassification(ticker: string, value: StockClassification): Promise<void> {
     if (!ticker) return;
     const cache = this.readFinanceCache();
-    if (!cache.STOCK_CLASSIFICATION_V2) cache.STOCK_CLASSIFICATION_V2 = {};
+    if (!cache.STOCK_CLASSIFICATION_V3) cache.STOCK_CLASSIFICATION_V3 = {};
     const key = ticker.toUpperCase();
-    const prev = cache.STOCK_CLASSIFICATION_V2[key]?.value;
-    cache.STOCK_CLASSIFICATION_V2[key] = { value: mergeClassificationValue(prev, value), updated_at: Date.now() };
+    const prev = cache.STOCK_CLASSIFICATION_V3[key]?.value;
+    cache.STOCK_CLASSIFICATION_V3[key] = { value: mergeClassificationValue(prev, value), updated_at: Date.now() };
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
     this.writeFinanceCache(cache, todayStr);
   }
@@ -631,12 +633,12 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async getStockClassification(ticker: string): Promise<StockClassification | null> {
     if (!ticker) return null;
-    return this.redis.get<StockClassification>(`xray:classification:v2:${ticker.toUpperCase()}`);
+    return this.redis.get<StockClassification>(`xray:classification:v3:${ticker.toUpperCase()}`);
   }
 
   async setStockClassification(ticker: string, value: StockClassification): Promise<void> {
     if (!ticker) return;
-    const key = `xray:classification:v2:${ticker.toUpperCase()}`;
+    const key = `xray:classification:v3:${ticker.toUpperCase()}`;
     const prev = await this.redis.get<StockClassification>(key);
     const merged = mergeClassificationValue(prev ?? undefined, value);
     await this.redis.set(key, merged, { ex: STOCK_CLASSIFICATION_TTL_SEC });

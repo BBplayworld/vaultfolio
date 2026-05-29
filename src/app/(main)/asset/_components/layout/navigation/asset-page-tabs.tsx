@@ -31,7 +31,8 @@ function HomeView() {
 function DetailView({ tab }: { tab: DetailTab }) {
   if (tab === "hub") return <DetailHub />;
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
+    // min-w-0: 자식의 max-content가 부모 chain을 거슬러 올라가 card를 viewport 밖으로 grow시키는 현상 차단
+    <div className="flex flex-col gap-3 sm:gap-4 min-w-0">
       {tab === "stocks"      && <StockTab />}
       {tab === "stocks-xray" && <StockXrayView />}
       {tab === "real-estate" && <RealEstateTab />}

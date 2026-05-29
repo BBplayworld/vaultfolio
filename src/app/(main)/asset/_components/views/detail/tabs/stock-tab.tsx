@@ -299,10 +299,6 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <span className="sm:hidden">{truncateName(stock.name)}</span>
             <span className="hidden sm:inline">{stock.name}</span>
           </span>
-          {stock.ticker && <span className="text-xs text-muted-foreground font-mono shrink-0 sm:ml-1">{stock.ticker}</span>}
-          {categoryLabels?.map((label) => (
-            <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight`}>{label}</Badge>
-          ))}
           {stock.inactiveStatus === "halted" && (
             <Badge variant="outline" className="text-amber-600 border-amber-600 text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>
           )}
@@ -749,10 +745,19 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           )}
           <CollapsibleContent>
             <div className="border-t divide-y divide-border/50">
-              <div className="flex items-center gap-1 px-4 py-2.5 bg-muted/10">
-                <span className="text-xs sm:text-sm font-semibold text-foreground">{stock.name}</span>
-                {stock.ticker && <span className="text-xs sm:text-sm font-mono text-muted-foreground">({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})</span>}
-                <span className="text-xs sm:text-sm text-foreground font-semibold ml-auto">총 {stock.quantity.toLocaleString()}주</span>
+              <div className="flex items-start gap-2 px-4 py-2.5 bg-muted/10">
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 flex-1">
+                  <span className="text-xs sm:text-sm font-semibold text-foreground break-all">{stock.name}</span>
+                  {stock.ticker && (
+                    <span className="text-xs sm:text-sm font-mono text-muted-foreground">
+                      ({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})
+                    </span>
+                  )}
+                  {categoryLabels?.map((label) => (
+                    <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{label}</Badge>
+                  ))}
+                </div>
+                <span className="text-xs sm:text-sm text-foreground font-semibold shrink-0 whitespace-nowrap">총 {stock.quantity.toLocaleString()}주</span>
               </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />

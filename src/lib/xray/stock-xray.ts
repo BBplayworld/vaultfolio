@@ -18,7 +18,8 @@ export interface BreakdownItem {
   value: number;      // 원화 환산 평가금액 합계
   ratio: number;      // 0~1 (exposure 모드에선 1 초과 가능)
   tickers: string[];  // 해당 버킷에 기여한 종목 ticker (가치 내림차순)
-  contributions: Array<{ ticker: string; name: string; value: number }>;
+  contributions: Array<{ ticker: string; name: string; value: number; displayLabel: string }>;
+  topThemes?: string[]; // theme(sector) 축 한정 — 버킷 종목들의 themes 빈도·가치 가중 상위 (최대 4)
 }
 
 export type ConcentrationLevel = "high" | "medium" | "low";
@@ -79,7 +80,7 @@ const extractRegion: SingleExtractor = (s) => {
   return { key: "KR", label: REGION_LABEL.KR };
 };
 
-const CAP_LABEL: Record<string, string> = { large: "대형주", mid: "중형주", small: "소형주", unknown: "미분류" };
+const CAP_LABEL: Record<string, string> = { large: "대형주", mid: "중형주", small: "소형주", etf: "ETF/펀드", unknown: "미분류" };
 const extractMarketCap: SingleExtractor = (s) => {
   const cls = s.ticker ? getClassification(s.ticker) : undefined;
   const tier = cls?.marketCapTier ?? "unknown";
@@ -87,11 +88,11 @@ const extractMarketCap: SingleExtractor = (s) => {
   return { key: tier, label: CAP_LABEL[tier] ?? tier };
 };
 
-const extractThemes: MultiExtractor = (s) => {
+const extractSector: SingleExtractor = (s) => {
   const cls = s.ticker ? getClassification(s.ticker) : undefined;
-  const themes = Array.isArray(cls?.themes) ? cls!.themes! : [];
-  if (themes.length === 0) return [{ key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL }];
-  return themes.map((t) => ({ key: t, label: t }));
+  const sector = typeof cls?.sector === "string" && cls.sector.length > 0 ? cls.sector : undefined;
+  if (!sector) return { key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL };
+  return { key: sector, label: sector };
 };
 
 const extractIndices: MultiExtractor = (s) => {
@@ -101,19 +102,19 @@ const extractIndices: MultiExtractor = (s) => {
   return idx.map((v) => ({ key: v, label: v }));
 };
 
-const SHARE_AXES: Record<Extract<XrayAxis, "currency" | "region" | "marketCap">, SingleExtractor> = {
+const SHARE_AXES: Record<Extract<XrayAxis, "currency" | "region" | "marketCap" | "theme">, SingleExtractor> = {
   currency: extractCurrency,
   region: extractRegion,
   marketCap: extractMarketCap,
+  theme: extractSector,
 };
 
-const EXPOSURE_AXES: Record<Extract<XrayAxis, "theme" | "index">, MultiExtractor> = {
-  theme: extractThemes,
+const EXPOSURE_AXES: Record<Extract<XrayAxis, "index">, MultiExtractor> = {
   index: extractIndices,
 };
 
 function axisMode(axis: XrayAxis): AggregationMode {
-  return axis === "theme" || axis === "index" ? "exposure" : "share";
+  return axis === "index" ? "exposure" : "share";
 }
 
 // ─────────────────────────────────────────────
@@ -130,14 +131,33 @@ export function computeBreakdown(
   let total = 0;
   let unclassifiedValue = 0;
 
+  // theme(sector) 축에서만 사용: 버킷별 themes 가중 누적 (key→ themes Map<theme, value>)
+  const themeWeights = new Map<string, Map<string, number>>();
+
   function addContribution(key: string, label: string, s: Stock, v: number) {
     const cur = buckets.get(key);
-    const contrib = { ticker: (s.ticker || s.name).toUpperCase(), name: s.name, value: v };
+    const tickerUpper = (s.ticker || s.name).toUpperCase();
+    // 국내(주식·ETF)는 한글 종목명, 해외는 ticker로 표기 — 티커 정규식 대신 카테고리 기준(접미사 붙은 국내 ETF 오판 방지)
+    const isDomestic = s.category === "domestic" || s.category === "irp" || s.category === "isa" || s.category === "pension";
+    const displayLabel = isDomestic ? s.name : tickerUpper;
+    const contrib = { ticker: tickerUpper, name: s.name, value: v, displayLabel };
     if (cur) {
       cur.value += v;
       cur.contributions.push(contrib);
     } else {
       buckets.set(key, { key, label, value: v, ratio: 0, tickers: [], contributions: [contrib] });
+    }
+    if (axis === "theme") {
+      const cls = s.ticker ? getClassification(s.ticker) : undefined;
+      const themes = Array.isArray(cls?.themes) ? cls!.themes! : [];
+      if (themes.length > 0) {
+        let bag = themeWeights.get(key);
+        if (!bag) { bag = new Map(); themeWeights.set(key, bag); }
+        for (const t of themes) {
+          if (typeof t !== "string" || !t) continue;
+          bag.set(t, (bag.get(t) ?? 0) + v);
+        }
+      }
     }
   }
 
@@ -169,10 +189,15 @@ export function computeBreakdown(
 
   const items = Array.from(buckets.values()).map((it) => {
     it.contributions.sort((a, b) => b.value - a.value);
+    const bag = themeWeights.get(it.key);
+    const topThemes = bag
+      ? Array.from(bag.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t)
+      : undefined;
     return {
       ...it,
       ratio: total > 0 ? it.value / total : 0,
       tickers: it.contributions.map((c) => c.ticker),
+      topThemes,
     };
   });
   items.sort((a, b) => b.value - a.value);

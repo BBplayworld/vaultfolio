@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Check, Share2, Info, RefreshCw, Moon, Sun, User } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Share2, Info, RefreshCw, Moon, Sun, User } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { updateThemeMode } from "@/lib/theme-utils";
@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { exportAssetData, importAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -63,8 +63,6 @@ export function ToolMenuPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [selectedPromptIdx, setSelectedPromptIdx] = useState(0);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
@@ -238,18 +236,6 @@ export function ToolMenuPage() {
     exchangeRates: assetDataContext.exchangeRates,
   });
 
-  const handleCopyPrompt = async () => {
-    const prompt = AI_PROMPT_TEMPLATES[selectedPromptIdx].generate(getPromptContext());
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopied(true);
-      toast.success("AI 평가 프롬프트가 복사되었습니다.");
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error("복사에 실패했습니다.");
-    }
-  };
-
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -364,61 +350,19 @@ export function ToolMenuPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showAIPromptDialog} onOpenChange={setShowAIPromptDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-primary" />
-              AI 평가용 자산 종합 현황
-            </DialogTitle>
-            <DialogDescription>
-              아래 프롬프트를 복사하여 Grok·Gemini·GPT 등 AI에게 자산 분석 및 조언을 요청하세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-1 p-1 bg-muted rounded-lg">
-            {AI_PROMPT_TEMPLATES.map((t, i) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setSelectedPromptIdx(i)}
-                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${i === selectedPromptIdx
-                  ? "bg-background shadow-sm font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-                  }`}
-                style={i === selectedPromptIdx ? { color: MAIN_PALETTE[0] } : undefined}
-              >
-                <span>{t.label}</span>
-                <span className="text-[10px] opacity-60 hidden sm:block leading-tight text-center">{t.sublabel}</span>
-              </button>
-            ))}
-          </div>
-          <div className="space-y-3 overflow-y-auto flex-1 pr-2">
-            <Textarea
-              value={AI_PROMPT_TEMPLATES[selectedPromptIdx].generate(getPromptContext())}
-              readOnly
-              className="min-h-[380px] w-full font-mono text-sm resize-none"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAIPromptDialog(false)}>
-              닫기
-            </Button>
-            <Button onClick={handleCopyPrompt} style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
-              {copied ? (
-                <>
-                  <Check className="mr-2 size-4" />
-                  복사됨
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 size-4" />
-                  프롬프트 복사
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PromptPreviewDialog
+        open={showAIPromptDialog}
+        onOpenChange={setShowAIPromptDialog}
+        title={<><Sparkles className="size-5 text-primary" />AI 평가용 자산 종합 현황</>}
+        description="아래 프롬프트를 복사하여 Grok·Gemini·GPT 등 AI에게 자산 분석 및 조언을 요청하세요."
+        tabs={AI_PROMPT_TEMPLATES.map((t) => ({
+          id: t.id,
+          label: t.label,
+          sublabel: t.sublabel,
+          getPrompt: () => t.generate(getPromptContext()),
+        }))}
+        copySuccessMessage="AI 평가 프롬프트가 복사되었습니다."
+      />
 
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md touch-pan-y">
