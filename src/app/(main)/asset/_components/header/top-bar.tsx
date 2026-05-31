@@ -9,9 +9,9 @@ import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigatio
 import { InlineSelector } from "../layout/ui/inline-selector";
 
 type HomeTop = "detail" | "activity";
-const HOME_TOP_OPTIONS: { value: HomeTop; label: string }[] = [
-  { value: "detail", label: "상세" },
-  { value: "activity", label: "성과" },
+const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
+  { value: "detail", label: "상세", dataTutorial: "tutorial-detail-tab" },
+  { value: "activity", label: "성과", dataTutorial: "tutorial-activity-tab" },
 ];
 
 // 상단 아이콘 버튼 공용 크기 (한 단계 ↑)

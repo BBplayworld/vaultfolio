@@ -147,7 +147,10 @@ export async function fetchAndStoreClassifications(
       }
 
       // 완료 시 1회 반영 + 100% 진행률
-      if (Object.keys(buffered).length > 0) upsertClassifications(buffered);
+      if (Object.keys(buffered).length > 0) {
+        upsertClassifications(buffered);
+        toast.success("주식 X-Ray 분류가 완료되었습니다.");
+      }
       emitProgress({ done: totalItems, total: totalItems });
     } catch (e) {
       console.warn("[xray-classify 호출 오류]", e);

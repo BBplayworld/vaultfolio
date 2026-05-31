@@ -19,14 +19,12 @@ interface Props {
 
 export interface SectionVisibility {
   donut: boolean;
-  chart: boolean;
   stock: boolean;
 }
 
 export const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] = [
   { key: "donut", label: "자산 분포" },
   { key: "stock", label: "주식" },
-  { key: "chart", label: "순자산 변화" },
 ];
 
 export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
@@ -39,7 +37,6 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
   const [isCaptureMode, setIsCaptureMode] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>({
     donut: true,
-    chart: true,
     stock: true,
   });
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;

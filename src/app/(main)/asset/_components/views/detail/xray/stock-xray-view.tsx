@@ -18,17 +18,17 @@ import { groupStocksByTicker, mergeStockGroup, assignColors } from "../asset-det
 import { truncateName } from "@/lib/utils";
 
 const AXIS_OPTIONS = [
-  { value: "theme"     as XrayAxis, label: "🎯 핵심 분야" },
+  { value: "theme" as XrayAxis, label: "🎯 핵심 분야" },
   { value: "marketCap" as XrayAxis, label: "📊 시가총액" },
-  { value: "index"     as XrayAxis, label: "📈 지수" },
-  { value: "region"    as XrayAxis, label: "🌏 지역" },
-  { value: "currency"  as XrayAxis, label: "💱 통화" },
+  { value: "index" as XrayAxis, label: "📈 지수" },
+  { value: "region" as XrayAxis, label: "🌏 지역" },
+  { value: "currency" as XrayAxis, label: "💵 통화" },
 ];
 
 const CONCENTRATION_LABEL: Record<BreakdownResult["concentration"], { label: string; color: string }> = {
-  high:   { label: "집중도 높음", color: "text-amber-600" },
+  high: { label: "집중도 높음", color: "text-amber-600" },
   medium: { label: "집중도 보통", color: "text-foreground" },
-  low:    { label: "분산", color: "text-emerald-600" },
+  low: { label: "분산", color: "text-emerald-600" },
 };
 
 function ConcentrationInfo() {
@@ -91,7 +91,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
                     className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-muted/40 text-muted-foreground tabular-nums"
                     title={`${c.name} · ${formatShortCurrency(Math.round(c.value))}`}
                   >
-                    {truncateName(c.displayLabel, 8)}
+                    {truncateName(c.displayLabel, 15)}
                   </span>
                 ))}
               </div>
@@ -142,16 +142,15 @@ export function StockXrayView() {
     [axis, mergedStocks, exchangeRates, tick],
   );
 
-  const isExposure = result.mode === "exposure";
   const incomplete = (axis === "theme" || axis === "marketCap" || axis === "index") && result.unclassifiedRatio > 0;
   const conc = CONCENTRATION_LABEL[result.concentration];
 
   const buildXrayPromptText = () => buildStockXrayPrompt(mergedStocks, exchangeRates, [
-    computeBreakdown("theme",     mergedStocks, exchangeRates),
+    computeBreakdown("theme", mergedStocks, exchangeRates),
     computeBreakdown("marketCap", mergedStocks, exchangeRates),
-    computeBreakdown("index",     mergedStocks, exchangeRates),
-    computeBreakdown("region",    mergedStocks, exchangeRates),
-    computeBreakdown("currency",  mergedStocks, exchangeRates),
+    computeBreakdown("index", mergedStocks, exchangeRates),
+    computeBreakdown("region", mergedStocks, exchangeRates),
+    computeBreakdown("currency", mergedStocks, exchangeRates),
   ]);
 
   const goFullDiagnosis = () => {
@@ -193,7 +192,7 @@ export function StockXrayView() {
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground tracking-wide">
-              {isExposure ? "노출 비중 (중복 포함)" : "분포 분석"}
+              분포 분석
             </span>
             {result.total > 0 && (
               <span className="flex items-center gap-1">
@@ -221,11 +220,6 @@ export function StockXrayView() {
               ⓘ 미분류 종목 {Math.round(result.unclassifiedRatio * 100)}%는 외부 분류 데이터 수집 후 갱신됩니다.
             </p>
           )}
-          {isExposure && result.total > 0 && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              ⓘ 한 종목이 여러 항목에 동시 노출될 수 있어 합이 100%를 초과할 수 있습니다.
-            </p>
-          )}
         </div>
 
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
@@ -233,7 +227,7 @@ export function StockXrayView() {
           <div>
             <p className="text-sm font-semibold">📋 AI 진단 프롬프트</p>
             <p className="text-xs text-muted-foreground mt-1">
-              주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다. (투자 추천 ❌, 현재 진단 ✓)
+              주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다.
             </p>
           </div>
           <Button
@@ -258,11 +252,6 @@ export function StockXrayView() {
           </span>
           <ChevronRight className="size-4 text-muted-foreground shrink-0" />
         </button>
-
-        {/* 안내 */}
-        <p className={`text-[11px] ${ASSET_THEME.text.muted} text-center pt-2`}>
-          이 분석은 투자 추천이 아닌 현재 자산 상태 진단입니다.
-        </p>
       </CardContent>
       <PromptPreviewDialog
         open={promptOpen}

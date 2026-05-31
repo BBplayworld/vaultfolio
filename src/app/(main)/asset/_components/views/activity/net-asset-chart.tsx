@@ -292,14 +292,41 @@ export function YearlyNetAssetChart() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Hero — 현재 순자산 + 전년 대비 */}
+          {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액 */}
           {(() => {
-            const lastIdx = allYearlyData.length - 1;
-            const prevYear = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
-            const diff = prevYear ? summary.netAsset - prevYear.netAsset : null;
-            const diffPct = diff !== null && prevYear && prevYear.netAsset !== 0
-              ? (diff / Math.abs(prevYear.netAsset)) * 100
-              : null;
+            let diff: number | null = null;
+            let diffPct: number | null = null;
+            let comparisonLabel = "대비";
+
+            if (activeView === "yearly") {
+              const lastIdx = allYearlyData.length - 1;
+              const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
+              const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
+              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+              diffPct = diff !== null && prev && prev.netAsset !== 0
+                ? (diff / Math.abs(prev.netAsset)) * 100
+                : null;
+              comparisonLabel = "전년 대비";
+            } else if (activeView === "monthly") {
+              const lastIdx = monthlySnapshots.length - 1;
+              const latest = lastIdx >= 0 ? monthlySnapshots[lastIdx] : null;
+              const prev = lastIdx >= 1 ? monthlySnapshots[lastIdx - 1] : null;
+              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+              diffPct = diff !== null && prev && prev.netAsset !== 0
+                ? (diff / Math.abs(prev.netAsset)) * 100
+                : null;
+              comparisonLabel = "전월 대비";
+            } else if (activeView === "daily") {
+              const lastIdx = dailySnapshots.length - 1;
+              const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
+              const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
+              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+              diffPct = diff !== null && prev && prev.netAsset !== 0
+                ? (diff / Math.abs(prev.netAsset)) * 100
+                : null;
+              comparisonLabel = "전일 대비";
+            }
+
             return (
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">현재 순자산</p>
@@ -307,7 +334,7 @@ export function YearlyNetAssetChart() {
                 <p className="text-xs text-foreground">{formatCurrency(summary.netAsset)}</p>
                 {diff !== null && diffPct !== null && (
                   <p className="text-xs mt-1">
-                    <span className="text-muted-foreground">전년 대비 </span>
+                    <span className="text-muted-foreground">{comparisonLabel} </span>
                     <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>
                       {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}%)
                     </span>

@@ -13,12 +13,14 @@ interface KpiCardProps {
   primary: string;
   secondary?: ReactNode;
   onClick: () => void;
+  dataTutorial?: string;
 }
 
-export function KpiCard({ icon: Icon, title, description, primary, secondary, onClick }: KpiCardProps) {
+export function KpiCard({ icon: Icon, title, description, primary, secondary, onClick, dataTutorial }: KpiCardProps) {
   return (
     <Card
       onClick={onClick}
+      data-tutorial={dataTutorial}
       className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.99] transition-all shadow-xs"
     >
       <div className="flex items-start gap-3">

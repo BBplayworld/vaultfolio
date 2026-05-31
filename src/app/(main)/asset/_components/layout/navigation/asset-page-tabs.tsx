@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Dashboard } from "../../views/home/dashboard";
 import { StockTab } from "../../views/detail/tabs/stock-tab";
 import { StockXrayView } from "../../views/detail/xray/stock-xray-view";
+import { StockTradesView } from "../../views/detail/trades/stock-trades-view";
 import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
 import { CashTab } from "../../views/detail/tabs/cash-tab";
@@ -35,6 +36,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
     <div className="flex flex-col gap-3 sm:gap-4 min-w-0">
       {tab === "stocks"      && <StockTab />}
       {tab === "stocks-xray" && <StockXrayView />}
+      {tab === "stocks-trades" && <StockTradesView />}
       {tab === "real-estate" && <RealEstateTab />}
       {tab === "crypto"      && <CryptoTab />}
       {tab === "cash"        && <CashTab />}

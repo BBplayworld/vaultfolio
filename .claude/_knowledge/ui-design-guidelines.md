@@ -98,3 +98,15 @@ function Hint({ children }: { children: ReactNode }) {
 - [ ] 부수 설명은 아이콘+팝오버(hover+터치)로 접었는가?
 - [ ] 중복/저가치 정보를 덜어냈는가? 고정 메타는 공통 안내로 모았는가?
 - [ ] Hero → 핵심 리스트로 시선이 빠른가? 컨트롤은 노출되어 있는가?
+
+---
+
+## 액션 색상 통일 (버튼·체크박스)
+
+확인·제출 등 주요 액션 요소는 브랜드 색 하나로 통일한다.
+
+- **브랜드 색 출처**: `--brand`(globals.css) = `MAIN_PALETTE[0]`(config/theme.ts) = `#5b6fbf`(인디고). 라이트·다크 동일. 두 값은 동일 hex로 동기화 유지(주석 표기).
+- **확인·제출 버튼**: `Button variant="brand"` 사용(`bg-brand text-white hover:bg-brand/90`). 인라인 `style={{ backgroundColor: MAIN_PALETTE[0] }}` 신규 사용 지양 — hover·opacity·상태 표현이 안 되고 표준화가 깨짐.
+- **체크박스**: 기본 `Checkbox` 컴포넌트가 checked 시 자동 brand 색. 별도 색 지정 금지.
+- **역할 분리**: CSS 클래스 기반 UI는 `--brand`/`variant="brand"`, 차트·캔버스 등 JS/인라인은 `MAIN_PALETTE[0]`.
+- **예외(의미색)**: 매수=빨강/매도=파랑(유형 토글), 삭제·위험=`variant="destructive"`, 보조=`outline`/`secondary`/`ghost`. 이들은 통일 대상 아님.

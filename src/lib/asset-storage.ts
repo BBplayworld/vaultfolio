@@ -2,9 +2,11 @@
 
 import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { transactionSchema } from "@/types/transaction";
 import LZString from "lz-string";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/profit-utils";
+import { persistNickname } from "@/hooks/use-nickname";
 export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
 export const DEFAULT_EXCHANGE_RATE = 1380;
 
@@ -26,10 +28,13 @@ const stockSchemaLoose = z.object({
   inactiveStatus: z.enum(["delisted", "halted"]).optional(),
   inactiveReason: z.string().optional(),
   inactiveCheckedAt: z.string().optional(),
+  positionSource: z.enum(["manual", "computed"]).optional(),
+  positionEffectiveDate: z.string().optional(),
 });
 
 const assetDataSchemaLoose = assetDataSchema.omit({ stocks: true }).extend({
   stocks: z.array(stockSchemaLoose).default([]),
+  transactions: z.array(transactionSchema).default([]),
 });
 
 // ─── 기본 자산 데이터 ───────────────────────────────────────────────────────
@@ -40,6 +45,7 @@ const EMPTY_ASSET_DATA: AssetData = {
   cash: [],
   loans: [],
   yearlyNetAssets: [],
+  transactions: [],
   lastUpdated: "",
 };
 
@@ -86,7 +92,8 @@ export function exportAssetData(): void {
   const snapshots = collectSnapshotsFromStorage();
   const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
   const profitBasis = getProfitBasis();
-  const payload = hasSnapshots ? { assetData, snapshots, profitBasis } : { assetData, profitBasis };
+  const nickname = (() => { try { return localStorage.getItem(STORAGE_KEYS.nickname) || undefined; } catch { return undefined; } })();
+  const payload = { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -124,6 +131,10 @@ export function importAssetData(file: File): Promise<{ assetData: AssetData; sna
         // 종가 기준 옵션 복원 (clearAssetData 이후이므로 여기서 기록)
         if (parsed.profitBasis === "kstAccessDay" || parsed.profitBasis === "sameBusinessDay") {
           setProfitBasis(parsed.profitBasis);
+        }
+        // 프로필(닉네임) 복원 — clearAssetData가 secretasset_ 키를 모두 지우므로 이후 기록
+        if (typeof parsed.nickname === "string") {
+          persistNickname(parsed.nickname);
         }
         let snapshotRestored = false;
         if (dailySnapshot || monthlySnapshot) {
@@ -378,7 +389,7 @@ const uTxt = (s?: any) => {
   return s || "";
 };
 
-function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis): string {
+function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string): string {
   const row = (arr: any[]) => {
     while (arr.length > 0 && (arr[arr.length - 1] === "" || arr[arr.length - 1] === 0 || arr[arr.length - 1] === undefined || arr[arr.length - 1] === null)) arr.pop();
     return arr.join("|");
@@ -401,13 +412,30 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
     rates ? `${pNum(rates.USD)}|${pNum(rates.JPY)}` : "",
     snapshots ? packSnapshots(snapshots) : "",
     // parts[9]: 종가 기준 옵션 ("k"=kstAccessDay, 그 외/빈값=기본 sameBusinessDay)
-    profitBasis === "kstAccessDay" ? "k" : ""
+    profitBasis === "kstAccessDay" ? "k" : "",
+    // parts[10]: 거래 내역
+    section(data.transactions?.map(t => [
+      t.type === "buy" ? "b" : "s",
+      sTxt(t.stockName),
+      sTxt(t.ticker),
+      pNum(t.quantity),
+      pNum(t.price),
+      DICT.cu.indexOf(t.currency || "KRW"),
+      pDate(t.date),
+      pNum(t.exchangeRate ?? 0),
+      pNum(t.fee ?? 0),
+      t.reflected ? "1" : "0",
+      sTxt(t.memo),
+      t.stockId,
+    ]) || []),
+    // parts[11]: 프로필 닉네임
+    sTxt(nickname || ""),
   ];
 
   return parts.join("^");
 }
 
-function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis } {
+function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string } {
   const parts = raw.split("^");
   const gid = () => Math.random().toString(36).substring(2, 11);
   const getIdx = (idx: any, list: readonly string[]) => list[parseInt(idx)] || list[0];
@@ -470,6 +498,27 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     };
   });
 
+  const transactions = section(10).map(r => {
+    const f = fields(r);
+    const reflected = f[9] === "1";
+    return {
+      id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      type: f[0] === "b" ? "buy" as const : "sell" as const,
+      stockName: uTxt(f[1]) || "",
+      ticker: uTxt(f[2]) || "",
+      quantity: uNum(f[3]),
+      price: uNum(f[4]),
+      currency: getIdx(f[5], DICT.cu),
+      date: uDate(f[6]),
+      exchangeRate: uNum(f[7]) || undefined,
+      fee: uNum(f[8]) || undefined,
+      reflected,
+      memo: uTxt(f[10]) || undefined,
+      stockId: f[11] || "",
+      createdAt: new Date().toISOString(),
+    };
+  });
+
   const data = {
     realEstate,
     stocks,
@@ -480,6 +529,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
       const f = fields(r);
       return { year: parseInt(f[0]) || new Date().getFullYear(), netAsset: uNum(f[1]), note: uTxt(f[2]) };
     }),
+    transactions,
     lastUpdated: new Date().toISOString()
   };
 
@@ -497,12 +547,15 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   // parts[9]: 종가 기준 옵션 (없으면 기본 sameBusinessDay)
   const profitBasis: ProfitBasis | undefined = parts[9] === "k" ? "kstAccessDay" : undefined;
 
-  return { data, rates, snapshots, profitBasis };
+  // parts[11]: 프로필 닉네임 (구버전 토큰엔 없음)
+  const nickname = parts[11] ? uTxt(parts[11]) || undefined : undefined;
+
+  return { data, rates, snapshots, profitBasis, nickname };
 }
 
-export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis): string {
+export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string): string {
   try {
-    const dsv = "OK|" + packV7(data, rates, snapshots, profitBasis); // PIN 검증 및 무결성 확인용 접두사
+    const dsv = "OK|" + packV7(data, rates, snapshots, profitBasis, nickname); // PIN 검증 및 무결성 확인용 접두사
     const compressed = LZString.compressToEncodedURIComponent(dsv);
 
     if (pin && pin.length === 4) {
@@ -520,7 +573,7 @@ export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: 
   }
 }
 
-export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis } | { pinRequired: true } | null;
+export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string } | { pinRequired: true } | null;
 
 export function parseShareToken(token: string, pin?: string, localKey?: string): ParseResult {
   if (!token) return null;
@@ -542,6 +595,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         rates: result.rates,
         snapshots: result.snapshots,
         profitBasis: result.profitBasis,
+        nickname: result.nickname,
       };
     }
 
@@ -564,6 +618,7 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         rates: result.rates,
         snapshots: result.snapshots,
         profitBasis: result.profitBasis,
+        nickname: result.nickname,
       };
     }
 

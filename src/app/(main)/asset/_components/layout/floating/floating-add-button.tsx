@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dispatchAddRealEstate, dispatchAddStock } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
-import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil } from "lucide-react";
+import { dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
+import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -124,9 +124,9 @@ export function FloatingAddButton() {
   const buttonEl = (
     <button
       onClick={() => setIsOpen(true)}
-      className="w-full flex items-center justify-center gap-2 rounded-2xl text-white
-      py-3.5 sm:py-4 text-base font-bold active:scale-[0.98] transition-all
-      bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700"
+      className="w-full max-w-xs flex items-center justify-center gap-2 rounded-2xl
+      py-3 text-base font-bold active:scale-[0.98] transition-colors
+      border border-[#5b6fbf]/30 bg-[#5b6fbf]/10 text-foreground/90 hover:bg-[#5b6fbf]/20"
       aria-label="자산 업데이트"
       data-tutorial="tutorial-fab"
     >
@@ -145,18 +145,18 @@ export function FloatingAddButton() {
         >
           <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
           <div
-            className="relative bg-background/95 backdrop-blur-sm
+            className="relative bg-background/95 backdrop-blur-sm flex justify-center
             px-4 py-2 pb-[max(0.8rem,env(safe-area-inset-bottom))]"
           >
             <button
               onClick={() => setIsOpen(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl text-white
-              shadow-lg shadow-orange-500/20 py-3.5 text-base font-bold active:scale-[0.98] transition-all
-              bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700"
+              className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
+              py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
+              border border-[#5b6fbf]/30 bg-[#5b6fbf]/10 text-foreground hover:bg-[#5b6fbf]/20"
               aria-label="자산 업데이트"
               data-tutorial="tutorial-fab"
             >
-              <Plus className="size-5" />
+              <Plus className="size-4" />
               자산 업데이트
             </button>
           </div>
@@ -165,7 +165,7 @@ export function FloatingAddButton() {
 
       {/* PC: 페이지 컨텐츠 흐름 안의 인라인 버튼 (footer 위, max-width 상속, shadow/배경 없음) */}
       {showBar && isMobile === false && (
-        <div className="w-full">
+        <div className="w-full flex justify-center">
           {buttonEl}
         </div>
       )}
@@ -175,12 +175,12 @@ export function FloatingAddButton() {
           side={isMobile ? "bottom" : "right"}
           hideClose={isMobile}
           className={isMobile
-            ? "rounded-t-2xl pb-10 max-h-[90vh] overflow-y-auto touch-pan-y"
+            ? "rounded-t-2xl pb-10 max-h-[80vh] overflow-y-auto touch-pan-y"
             : "rounded-t-2xl pb-10"}
         >
           {isMobile && (
             <div
-              className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-muted-foreground/30 cursor-grab touch-none"
+              className="absolute top-0 left-0 right-0 h-10 flex items-center justify-center cursor-grab touch-none z-50"
               onPointerDown={(e) => {
                 const startY = e.clientY;
                 const target = e.currentTarget;
@@ -206,7 +206,9 @@ export function FloatingAddButton() {
                 target.addEventListener("pointercancel", onUp);
               }}
               aria-hidden="true"
-            />
+            >
+              <div className="w-10 h-1.5 rounded-full bg-muted-foreground/30" />
+            </div>
           )}
           <SheetHeader className={isMobile ? "mb-4 mt-3" : "mb-4"}>
             <SheetTitle>{sheetTitle()}</SheetTitle>
@@ -282,10 +284,27 @@ export function FloatingAddButton() {
               >
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
-                  <p className="font-medium">추가</p>
-                  <p className="text-xs text-muted-foreground">새 {selectedAsset.label} 자산 등록</p>
+                  <p className="font-medium">자산 업데이트</p>
+                  <p className="text-xs text-muted-foreground">보유 상태 직접 입력</p>
                 </div>
               </button>
+              {selectedType === "stock" && (
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                  onClick={() => {
+                    dispatchAddTrade();
+                    setIsOpen(false);
+                    resetState();
+                  }}
+                >
+                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
+                  <div>
+                    <p className="font-medium">거래 입력</p>
+                    <p className="text-xs text-muted-foreground">매수/매도 거래 기록</p>
+                  </div>
+                </button>
+              )}
               {selectedAsset.navigateTab && (
                 <button
                   type="button"

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
+import { useAssetImport } from "@/hooks/use-asset-import";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
 import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/views/home/dashboard";
@@ -58,10 +59,7 @@ const foreignProfitRate = foreignCost > 0 ? (foreignProfit / foreignCost) * 100 
 
 export function WelcomeGuide() {
   const [isStockMenuOpen, setIsStockMenuOpen] = useState(false);
-
-  const handleImport = () => {
-    window.dispatchEvent(new CustomEvent("trigger-import"));
-  };
+  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
 
   const handleStockTutorial = (mode: "screenshot" | "manual") => {
     setIsStockMenuOpen(false);
@@ -161,46 +159,48 @@ export function WelcomeGuide() {
               <Camera className="size-4 text-primary shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-foreground">인증샷으로 공유하세요</p>
-                <p className="text-[11px] text-muted-foreground">우측 상단 메뉴 → 인증샷 · 자산 분포·주식 종합·상세 섹션 선택 가능</p>
+                <p className="text-[11px] text-muted-foreground">우측 상단 메뉴 → 인증샷 · 자산 분포·주식 카테고리·금액 숨기기 선택 가능</p>
               </div>
             </div>
 
-            {/* 주식 종합 */}
-            <StockSummaryHeader
-              totalValue={foreignTotal}
-              totalProfit={foreignProfit}
-              totalProfitRate={foreignProfitRate}
-              currencyGain={foreignCurrencyGain}
-              dailyProfit={previewData.dailyProfit}
-              dailyProfitRate={previewData.dailyProfitRate}
-              screenshotMode={false}
-            />
+            {/* 주식 종합 + 상세 — 개선된 상세 카드 스타일 */}
+            <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} border border-zinc-500/60 p-4 sm:p-5 space-y-4`}>
+              <StockSummaryHeader
+                totalValue={foreignTotal}
+                totalProfit={foreignProfit}
+                totalProfitRate={foreignProfitRate}
+                currencyGain={foreignCurrencyGain}
+                dailyProfit={previewData.dailyProfit}
+                dailyProfitRate={previewData.dailyProfitRate}
+                screenshotMode={false}
+              />
 
-            {/* 주식 상세 — 해외주식 고정 */}
-            <StockCategorySection
-              activeCategory="foreign"
-              onCategoryChange={() => { }}
-              filteredStocks={foreignStocks}
-              totalValue={foreignTotal}
-              barItems={PREVIEW_BAR_ITEMS}
-              barColors={foreignBarColors}
-              screenshotMode={true}
-              renderItem={(stock, _isFirst, color) => {
-                const m = computeStockMetrics(stock, EXCHANGE_RATES, foreignTotal);
-                return (
-                  <StockRowItem
-                    key={stock.id}
-                    stock={stock}
-                    color={color}
-                    pct={m.pct}
-                    currentVal={m.currentVal}
-                    profit={m.profit}
-                    profitRate={m.profitRate}
-                    screenshotMode={true}
-                  />
-                );
-              }}
-            />
+              {/* 주식 상세 — 해외주식 고정 */}
+              <StockCategorySection
+                activeCategory="foreign"
+                onCategoryChange={() => { }}
+                filteredStocks={foreignStocks}
+                totalValue={foreignTotal}
+                barItems={PREVIEW_BAR_ITEMS}
+                barColors={foreignBarColors}
+                screenshotMode={true}
+                renderItem={(stock, _isFirst, color) => {
+                  const m = computeStockMetrics(stock, EXCHANGE_RATES, foreignTotal);
+                  return (
+                    <StockRowItem
+                      key={stock.id}
+                      stock={stock}
+                      color={color}
+                      pct={m.pct}
+                      currentVal={m.currentVal}
+                      profit={m.profit}
+                      profitRate={m.profitRate}
+                      screenshotMode={true}
+                    />
+                  );
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -255,11 +255,12 @@ export function WelcomeGuide() {
               </button>
             </PopoverContent>
           </Popover>
-          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={handleImport}>
+          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={openFilePicker} disabled={isImporting}>
             <FolderInput className="size-4" />
-            기존 데이터 가져오기
+            {isImporting ? "가져오는 중..." : "기존 데이터 가져오기"}
           </Button>
         </div>
+        <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
       </div>
 
       {/* For international visitors */}

@@ -19,7 +19,9 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        rose: "dark:bg-rose-500 dark:hover:bg-rose-600 dark:data-[state=open]:bg-rose-600"
+        rose: "dark:bg-rose-500 dark:hover:bg-rose-600 dark:data-[state=open]:bg-rose-600",
+        // 확인·제출 등 주요 액션 표준 색 (= MAIN_PALETTE[0] / --brand)
+        brand: "bg-brand text-white hover:bg-brand/90 shadow-xs",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

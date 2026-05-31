@@ -155,7 +155,6 @@ function StepOverlay({
   const isModalOpen = useIsModalOpen();
   const rect = useTargetRect(targetAttr, step, isModalOpen);
   const config = TUTORIAL_STEP_CONFIGS[step];
-  const step5Sub = useTutorialStore((s) => s.step5Sub);
 
   if (isWaiting) return null;
   // Sheet/Dialog 열려있으면 overlay 숨김
@@ -186,13 +185,8 @@ function StepOverlay({
 
   const Icon = config.icon;
 
-  let displayTitle = config.title;
-  let displayDescription = config.description;
-
-  if (step === 5 && step5Sub === "profit") {
-    displayTitle = config.title2 || displayTitle;
-    displayDescription = config.description2 || displayDescription;
-  }
+  const displayTitle = config.title;
+  const displayDescription = config.description;
 
   return createPortal(
     <>
@@ -255,65 +249,33 @@ export function TutorialOverlay({
 }) {
   const activeStep = useTutorialStore((s) => s.activeStep);
   const isTutorialFinished = useTutorialStore((s) => s.isTutorialFinished);
-  const step5Sub = useTutorialStore((s) => s.step5Sub);
   const completeStep = useTutorialStore((s) => s.completeStep);
   const skipStep = useTutorialStore((s) => s.skipStep);
   const isWaiting = useTutorialStore((s) => s.isWaiting);
-  const startWaiting = useTutorialStore((s) => s.startWaiting);
   const isStandaloneStep0 = useTutorialStore((s) => s.isStandaloneStep0);
   const closeStandaloneStep0 = useTutorialStore((s) => s.closeStandaloneStep0);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // Step 5 sub-step 분기를 위해 targetAttr 계산
   const targetAttr =
     activeStep !== null && activeStep !== 0
-      ? (activeStep === 5 && step5Sub === "profit"
-        ? "tutorial-profit-subtab"
-        : TUTORIAL_STEP_CONFIGS[activeStep].targetAttr)
+      ? TUTORIAL_STEP_CONFIGS[activeStep].targetAttr
       : null;
 
-  // step4 전용: DropdownMenu 열림 감지로 완료 처리
+  // document 캡처 단계 클릭 리스너 — 사용자가 하이라이트된 실제 타겟을 클릭하면 해당 스텝 완료
   useEffect(() => {
-    if (activeStep !== 4 || isWaiting || isTutorialFinished) return;
-    const mo = new MutationObserver(() => {
-      const menu = document.querySelector('[role="menu"][data-state="open"]');
-      if (menu) startWaiting(4);
-    });
-    mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-state"] });
-    return () => mo.disconnect();
-  }, [activeStep, isWaiting, isTutorialFinished, startWaiting]);
-
-  // document 캡처 단계 클릭 리스너 — 컴포넌트 바깥에서 안정적으로 감지
-  useEffect(() => {
-    if (!targetAttr || isWaiting || activeStep === null || activeStep === 0) return;
+    if (!targetAttr || activeStep === null || activeStep === 0) return;
     const handler = (e: MouseEvent) => {
       const el = document.querySelector(`[data-tutorial="${targetAttr}"]`);
       const path = e.composedPath ? e.composedPath() : [];
       const hit = el && (el.contains(e.target as Node) || path.includes(el));
       if (!hit) return;
-
-      // 즉각 완료되어야 하는 스텝(1, 3, 5)에서 startWaiting이 호출되면
-      // isWaiting=true가 되어 말풍선이 5초간 사라지는 버그가 발생하므로, 대기가 필요한 스텝만 처리합니다.
-      if (activeStep === 2 || activeStep === 4) {
-        startWaiting(activeStep);
-      } else {
-        // 대기가 필요 없는 스텝은 클릭 시 즉시 완료/진행 처리
-        if (activeStep === 1) window.dispatchEvent(new CustomEvent("tutorial-complete-step1"));
-        if (activeStep === 3) window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
-        if (activeStep === 5) {
-          if (step5Sub === "activity") {
-            window.dispatchEvent(new CustomEvent("tutorial-advance-step5"));
-          } else {
-            window.dispatchEvent(new CustomEvent("tutorial-complete-step5"));
-          }
-        }
-      }
+      window.dispatchEvent(new CustomEvent(`tutorial-complete-step${activeStep}`));
     };
     document.addEventListener("click", handler, true);
     return () => document.removeEventListener("click", handler, true);
-  }, [targetAttr, isWaiting, activeStep, startWaiting, completeStep]);
+  }, [targetAttr, activeStep]);
 
   if (!mounted) return null;
   if (isSharePending) return null;
@@ -354,30 +316,9 @@ export function TutorialOverlay({
       key={activeStep}
       step={activeStep}
       onComplete={() => {
-        const el = document.querySelector(`[data-tutorial="${targetAttr}"]`) as HTMLElement;
-        if (el) {
-          // Radix UI 트리거(Tabs, Dropdown 등)는 click 메서드 대신 pointer/mouse down 이벤트를 감지하므로 수동으로 디스패치
-          const eventInit = { bubbles: true, cancelable: true, view: window, button: 0 };
-          el.dispatchEvent(new PointerEvent("pointerdown", { ...eventInit, buttons: 1 }));
-          el.dispatchEvent(new MouseEvent("mousedown", { ...eventInit, buttons: 1 }));
-          el.dispatchEvent(new PointerEvent("pointerup", { ...eventInit, buttons: 0 }));
-          el.dispatchEvent(new MouseEvent("mouseup", { ...eventInit, buttons: 0 }));
-          el.click();
-        }
-
-        // Radix UI 특성상 이미 해당 탭/상태가 활성화되어 있으면 click() 시 내부 onChange 이벤트가 발생하지 않아
-        // 튜토리얼이 멈추는 현상을 방지하기 위해, "다음" 버튼 클릭 시에는 명시적으로 해당 스텝의 이벤트를 한 번 더 트리거합니다. (다중 호출 안전함)
-        if (activeStep === 1) window.dispatchEvent(new CustomEvent("tutorial-complete-step1"));
-        if (activeStep === 2) window.dispatchEvent(new CustomEvent("tutorial-start-wait-step2"));
-        if (activeStep === 3) window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
-        if (activeStep === 4) startWaiting(4);
-
-        if (activeStep === 5) {
-          if (step5Sub === "activity") {
-            window.dispatchEvent(new CustomEvent("tutorial-advance-step5"));
-          } else {
-            window.dispatchEvent(new CustomEvent("tutorial-complete-step5"));
-          }
+        // "다음"은 안내만 진행(동작 없이 다음 스텝으로). 실제 기능은 하이라이트된 요소를 직접 클릭.
+        if (activeStep !== null) {
+          window.dispatchEvent(new CustomEvent(`tutorial-complete-step${activeStep}`));
         }
       }}
       targetAttr={targetAttr}

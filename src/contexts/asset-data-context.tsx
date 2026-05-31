@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots } from "@/types/asset";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, Transaction } from "@/types/asset";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName, type StockClassificationPatch } from "@/lib/finance-service";
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
+import { pruneTransactions } from "@/lib/trade-utils";
+import { persistNickname } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -85,6 +87,14 @@ interface AssetDataContextType {
   updateYearlyNetAsset: (year: number, yearlyNetAsset: Partial<YearlyNetAsset>) => boolean;
   deleteYearlyNetAsset: (year: number) => boolean;
   getAssetSummary: () => AssetSummary;
+  // 거래 내역
+  addTransaction: (tx: Transaction) => boolean;
+  deleteTransaction: (txId: string) => boolean;
+  updateTransaction: (txId: string, tx: Partial<Transaction>) => boolean;
+  // 거래 + 포지션 원자적 반영 (단일 저장으로 stale-closure 덮어쓰기 방지)
+  addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>) => boolean;
+  addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[]) => boolean;
+  deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>) => boolean;
 }
 
 const AssetDataContext = createContext<AssetDataContextType | undefined>(undefined);
@@ -96,6 +106,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   cash: [],
   loans: [],
   yearlyNetAssets: [],
+  transactions: [],
   lastUpdated: "",
 };
 
@@ -277,7 +288,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // Step 2. 자산 데이터 초기화 (순수하게 state에 반영만 수행)
   const initAssetData = useCallback((data: AssetData) => {
-    setAssetData(data);
+    // 보존 기간(3년) 초과 거래 로그 방어적 정리
+    const transactions = data.transactions ? pruneTransactions(data.transactions) : data.transactions;
+    setAssetData(transactions === data.transactions ? data : { ...data, transactions });
   }, []);
 
   // Step 3. 주식 현재가 배치 조회
@@ -484,8 +497,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       cutoff.setDate(cutoff.getDate() - 30);
       const cutoffStr = cutoff.toISOString().split("T")[0];
 
-      // 평일 기록 + 최초 기록(allDaily 비어있음)일 때는 일요일에도 기록
-      if (dayOfWeek !== 0 || allDaily.length === 0) {
+      // 평일(월~토) 기록
+      if (dayOfWeek !== 0) {
         const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== todayStr);
         filteredDaily.push({
           date: todayStr,
@@ -495,6 +508,24 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
         // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
         recordTodayExchangeRate(latestRates);
+      } else {
+        // 일요일: 전날(토요일) 데이터가 없는 경우 토요일 날짜로 스냅샷 보완 기록
+        const saturday = new Date(now);
+        saturday.setDate(now.getDate() - 1);
+        const saturdayStr = saturday.toISOString().split("T")[0];
+        const hasSaturdaySnapshot = allDaily.some(s => s.date === saturdayStr);
+
+        if (!hasSaturdaySnapshot) {
+          const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== saturdayStr);
+          filteredDaily.push({
+            date: saturdayStr,
+            netAsset,
+            financialAsset,
+          });
+          localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
+          // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
+          recordTodayExchangeRate(latestRates);
+        }
       }
 
       // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
@@ -590,7 +621,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
-  const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis) => {
+  const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string) => {
     saveAssetData(data);
     if (snapshots) {
       try {
@@ -600,6 +631,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     // 공유자가 선택한 종가 기준 옵션 적용 (localStorage + store 동시 갱신)
     if (profitBasis) useProfitBasisStore.getState().setBasis(profitBasis);
+    // 공유자 프로필(닉네임) 적용
+    if (typeof nickname === "string") persistNickname(nickname);
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
     skipAllTutorialSteps();
@@ -630,7 +663,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
 
     if (result && "data" in result) {
-      applySharedData(result.data, result.snapshots, result.profitBasis);
+      applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
@@ -660,7 +693,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
-      applySharedData(result.data, result.snapshots, result.profitBasis);
+      applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
       setShowPinPrompt(false);
       setPendingToken(null);
@@ -973,6 +1006,85 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // ─── [거래 내역] ─────────────────────────────────────────────────────────────
+
+  const addTransaction = useCallback(
+    (tx: Transaction) => {
+      const newData = {
+        ...assetData,
+        // 보존 기간(3년) 초과 로그는 저장 시 자동 정리
+        transactions: pruneTransactions([...(assetData.transactions || []), tx]),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  const deleteTransaction = useCallback(
+    (txId: string) => {
+      const newData = {
+        ...assetData,
+        transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  const updateTransaction = useCallback(
+    (txId: string, tx: Partial<Transaction>) => {
+      const newData = {
+        ...assetData,
+        transactions: (assetData.transactions || []).map((t) =>
+          t.id === txId ? { ...t, ...tx } : t
+        ),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 거래 추가 + 종목 포지션 갱신을 단일 저장으로 처리 (두 번 saveData 시 stale-closure가
+  // 먼저 저장한 transactions를 덮어쓰는 문제 방지)
+  const addTransactionWithPosition = useCallback(
+    (tx: Transaction, stockId: string, patch: Partial<Stock>) => {
+      const newData = {
+        ...assetData,
+        transactions: pruneTransactions([...(assetData.transactions || []), tx]),
+        stocks: assetData.stocks.map((s) => (s.id === stockId ? { ...s, ...patch } : s)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 여러 거래 + 다종목 포지션 갱신을 단일 저장으로 처리 (스크린샷 일괄 등록 — 루프 stale-closure 방지)
+  const addTransactionsBatch = useCallback(
+    (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[]) => {
+      const patchMap = new Map(patches.map((p) => [p.stockId, p.patch]));
+      const newData = {
+        ...assetData,
+        transactions: pruneTransactions([...(assetData.transactions || []), ...txs]),
+        stocks: assetData.stocks.map((s) => (patchMap.has(s.id) ? { ...s, ...patchMap.get(s.id)! } : s)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 거래 삭제 + 포지션 롤백을 단일 저장으로 처리 (동일 사유)
+  const deleteTransactionWithPosition = useCallback(
+    (txId: string, stockId: string, patch: Partial<Stock>) => {
+      const newData = {
+        ...assetData,
+        transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
+        stocks: assetData.stocks.map((s) => (s.id === stockId ? { ...s, ...patch } : s)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
   // ─── [자산 요약 계산] ────────────────────────────────────────────────────────
 
   const getAssetSummary = useCallback((): AssetSummary => {
@@ -1081,6 +1193,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updateYearlyNetAsset,
         deleteYearlyNetAsset,
         getAssetSummary,
+        addTransaction,
+        deleteTransaction,
+        updateTransaction,
+        addTransactionWithPosition,
+        addTransactionsBatch,
+        deleteTransactionWithPosition,
       }}
     >
       {children}

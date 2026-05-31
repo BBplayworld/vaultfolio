@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors, Globe } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors, Globe, ArrowLeftRight, History } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,9 @@ import { fetchProfitRef, computeDailyStockProfit } from "@/lib/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
 import { STORAGE_KEYS } from "@/lib/local-storage";
+import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
+import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
+import { useTradeViewStore } from "@/stores/trade-view-store";
 
 
 const ETF_DOMAIN: Record<string, string> = {
@@ -436,7 +439,8 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
   const groupIds = new Set(groupItems.map((s) => s.id));
 
   const makeInitialItems = (): SplitItem[] => {
-    if (groupItems.length > 1) {
+    // 이미 증권사 정보가 있으면(분할됐거나 단일 증권사 지정) 기존 항목 로드
+    if (groupItems.length > 1 || groupItems[0]?.broker) {
       return groupItems.map((s) => ({
         quantity: String(s.quantity),
         averagePrice: String(s.averagePrice),
@@ -457,10 +461,13 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
     return s + (isNaN(v) ? 0 : v);
   }, 0);
   const remaining = Math.round((maxQty - totalEntered) * 1e6) / 1e6;
+  // 증권사 유니크 검증 — 미지정(__none__) 제외
+  const selectedBrokers = items.map((it) => it.broker).filter((b) => b !== "__none__");
+  const hasDupBroker = new Set(selectedBrokers).size !== selectedBrokers.length;
   const isValid = items.every((it) => {
     const v = parseFloat(it.quantity);
     return !isNaN(v) && v > 0;
-  }) && Math.abs(remaining) < 1e-9;
+  }) && Math.abs(remaining) < 1e-9 && !hasDupBroker;
 
   const updateItem = (idx: number, field: keyof SplitItem, val: string | boolean) => {
     setItems((prev) => prev.map((it, i) => i === idx ? { ...it, [field]: val } : it));
@@ -540,7 +547,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] text-muted-foreground">
-                    평균단가{isForeign && (it.avgPriceInKrw ? " (KRW)" : " (USD)")}
+                    평단가{isForeign && (it.avgPriceInKrw ? " (KRW)" : " (USD)")}
                   </label>
                   <Input
                     className="h-8 text-sm tabular-nums"
@@ -574,6 +581,9 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
           <p className={`text-xs tabular-nums ${Math.abs(remaining) < 1e-9 ? "text-muted-foreground" : "text-destructive font-semibold"}`}>
             남은 수량: {remaining.toLocaleString()}주
           </p>
+          {hasDupBroker && (
+            <p className="text-xs text-destructive font-semibold">동일 증권사를 중복 선택할 수 없습니다.</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>취소</Button>
@@ -591,7 +601,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
         <div>
-          <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
+          <p className={ASSET_THEME.cardDetailLabel}>평단가</p>
           <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
           {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{(stock.averagePrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
         </div>
@@ -637,9 +647,24 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
   );
 }
 
-function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
+// 거래입력·거래내역 — 라벨형 버튼으로 구분(아이콘만 쓰던 기존 혼선 해소)
+function TradeActionRow({ stockId, onViewTrades }: { stockId: string; onViewTrades: (id: string) => void }) {
+  return (
+    <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+      <Button variant="outline" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => dispatchAddTrade(stockId)}>
+        <ArrowLeftRight className="size-3.5" /> 거래입력
+      </Button>
+      <Button variant="outline" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => onViewTrades(stockId)}>
+        <History className="size-3.5" /> 거래내역
+      </Button>
+    </div>
+  );
+}
+
+function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewTrades }: {
   stock: Stock; idx: number; onDelete: (id: string) => void;
   exchangeRates: { USD: number; JPY: number }; totalValue: number;
+  onViewTrades: (stockId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const m = computeStockMetrics(stock, exchangeRates, totalValue);
@@ -665,6 +690,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue }: {
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} />
+            <TradeActionRow stockId={stock.id} onViewTrades={onViewTrades} />
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
                 <Pencil className="size-3.5" />
@@ -693,6 +719,19 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
   const [splitOpen, setSplitOpen] = useState(false);
   const hasSubItems = !!subItems && subItems.length > 0;
   const effectiveGroupItems = groupItems ?? [stock];
+
+  const { navigate } = useAssetNavigation();
+  const setTradeTarget = useTradeViewStore((s) => s.setTarget);
+  const openTrades = (initialStockId: string | null) => {
+    setTradeTarget({
+      groupStockIds: effectiveGroupItems.map((s) => s.id),
+      name: stock.name,
+      ticker: stock.ticker || "",
+      category: stock.category,
+      initialStockId,
+    });
+    navigate({ type: "detail", tab: "stocks-trades" });
+  };
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -762,6 +801,8 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />
               </div>
+              {/* 비분할 종목: 라벨형 거래입력·거래내역. 분할 종목은 각 증권사 항목에 노출 */}
+              {!hasSubItems && <TradeActionRow stockId={stock.id} onViewTrades={openTrades} />}
               <div className={ASSET_THEME.cardActions}>
                 <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="증권사별 나누기" onClick={() => setSplitOpen(true)}>
                   <Scissors className="size-3.5" />
@@ -805,7 +846,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 <div className="px-3 py-2.5 space-y-1.5 bg-muted/5">
                   <p className="text-xs font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
                   {subItems!.map((sub, idx) => (
-                    <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} />
+                    <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} onViewTrades={openTrades} />
                   ))}
                 </div>
               )}
@@ -877,15 +918,17 @@ export function StockCategorySection({
         </div>
       )}
 
-      {/* 종목 리스트 */}
-      {filteredStocks.length === 0 ? (
-        <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
-        </div>
-      ) : (
-        <div className="space-y-2 mt-8">
-          {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
-        </div>
+      {/* 종목 리스트 (인증샷 모드에서는 비중바+범례까지만 노출, 리스트 제외) */}
+      {!screenshotMode && (
+        filteredStocks.length === 0 ? (
+          <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+          </div>
+        ) : (
+          <div className="space-y-2 mt-8">
+            {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
+          </div>
+        )
       )}
     </div>
   );

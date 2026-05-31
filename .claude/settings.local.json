@@ -39,7 +39,8 @@
       "Bash(python3)",
       "Bash(timeout 4)",
       "Bash(git checkout *)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx vitest:*)"
     ]
   }
 }

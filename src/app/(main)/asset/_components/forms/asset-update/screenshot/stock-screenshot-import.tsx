@@ -373,7 +373,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               </p>
               <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">토스증권, 도미노 외에도 종목명·수량·금액이 보이는 증권 계좌 화면</span>이면 대부분 인식됩니다.</li>
-                <li><span className="text-foreground">평균단가</span>는 손익률로 역산됩니다. 등록 후 정확한 값으로 수정해주세요.</li>
+                <li><span className="text-foreground">평단가</span>는 손익률로 역산됩니다. 등록 후 정확한 값으로 수정해주세요.</li>
                 <li><span className="text-foreground">해외주식</span>은 달러(USD) 인식 시 그대로 저장하고, 원화로 인식된 경우 오늘 환율로 나눠 달러(USD)로 자동 환산합니다. 매입환율은 오늘 환율로, 매수일은 오늘 날짜로 설정되며 등록 후 수정 가능합니다.</li>
                 <li><span className="text-foreground">ISA·IRP·연금저축 ETF</span>는 위 계좌 유형을 먼저 선택하면 카테고리가 자동 적용됩니다.</li>
                 <li><span className="text-foreground">티커(종목코드)</span>가 미인식된 경우 미리보기에서 직접 입력해야 등록할 수 있습니다.</li>
@@ -456,7 +456,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                           <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
                           <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
-                          <span>평균단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
+                          <span>평단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
                           <span>평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span></span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">

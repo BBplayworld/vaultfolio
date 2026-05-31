@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, Upload, Trash2, Sparkles, Copy, Share2, Info, RefreshCw, Moon, Sun, User } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
@@ -32,10 +32,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
-import { exportAssetData, importAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { useAssetImport } from "@/hooks/use-asset-import";
+import { exportAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
-import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import { skipAllTutorialSteps } from "@/lib/local-storage";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
@@ -44,7 +43,8 @@ import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
   const [nickname, setNickname] = useNickname();
-  const { refreshData, bumpSnapshotVersion, initAndSync, getAssetSummary, assetData, isSharePending } = assetDataContext;
+  const { refreshData, getAssetSummary, assetData, isSharePending } = assetDataContext;
+  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
 
@@ -60,20 +60,18 @@ export function ToolMenuPage() {
     assetData.crypto.length > 0 ||
     assetData.cash.length > 0 ||
     assetData.loans.length > 0;
-  const [isImporting, setIsImporting] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     try {
       exportAssetData();
       toast.success("자산 데이터가 다운로드되었습니다.");
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
     } catch (error) {
       toast.error("데이터 내보내기에 실패했습니다.");
     }
@@ -109,7 +107,7 @@ export function ToolMenuPage() {
 
     const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots(), getProfitBasis());
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots(), getProfitBasis(), nickname || undefined);
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -143,7 +141,7 @@ export function ToolMenuPage() {
     try {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
       toast.success(`짧은 공유 URL이 복사되었습니다. (${preGeneratedShortUrl.length}자)`);
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
@@ -159,7 +157,7 @@ export function ToolMenuPage() {
         return;
       }
 
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis());
+      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis(), nickname || undefined);
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
 
       await navigator.clipboard.writeText(shareUrl);
@@ -171,45 +169,10 @@ export function ToolMenuPage() {
         toast.success("공유 URL이 복사되었습니다.");
         toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
       }
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step4"));
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {
       toast.error("URL 공유 준비에 실패했습니다.");
-    }
-  };
-
-  useEffect(() => {
-    const handler = () => fileInputRef.current?.click();
-    window.addEventListener("trigger-import", handler);
-    return () => window.removeEventListener("trigger-import", handler);
-  }, []);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    try {
-      const { assetData: imported, snapshotRestored } = await importAssetData(file);
-      useProfitBasisStore.getState().hydrate(); // 복원된 종가 기준 옵션을 store에 반영
-      toast.success("자산 데이터를 불러왔습니다.");
-      if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
-      bumpSnapshotVersion(); // 차트(useDailySnapshots/useMonthlySnapshots) localStorage 재구독 트리거
-      skipAllTutorialSteps();
-      tutorialStore.getState().initTutorial();
-      void initAndSync(imported); // 주식 현재가 갱신은 백그라운드 처리 → syncTodayStockPrices가 별도 toast 표시
-    } catch (error) {
-      console.error("[데이터 가져오기 실패]:", error);
-      toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
-    } finally {
-      setIsImporting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -289,7 +252,7 @@ export function ToolMenuPage() {
               <Upload className="size-5 text-primary shrink-0" />
               <span className="font-medium">데이터 내보내기</span>
             </button>
-            <button type="button" className={ROW} onClick={handleImportClick} disabled={isImporting}>
+            <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
               <Download className="size-5 text-primary shrink-0" />
               <span className="font-medium">{isImporting ? "가져오는 중..." : "데이터 가져오기"}</span>
             </button>

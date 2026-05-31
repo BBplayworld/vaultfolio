@@ -12,8 +12,8 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import type { BreakdownResult } from "./stock-xray";
 
 const AXIS_TITLE: Record<BreakdownResult["axis"], string> = {
-  currency: "통화",
   region: "지역",
+  currency: "통화",
   theme: "핵심 분야",
   marketCap: "시가총액",
   index: "지수",
@@ -33,8 +33,7 @@ function summarizeAxis(result: BreakdownResult): string {
     .map((it) => `${it.label} ${(it.ratio * 100).toFixed(1)}% (${formatShortCurrency(Math.round(it.value))})`)
     .join(" / ");
   const tail = result.items.length > 6 ? ` 외 ${result.items.length - 6}건` : "";
-  const modeHint = result.mode === "exposure" ? " (노출도, 중복 포함)" : "";
-  return `[${AXIS_TITLE[result.axis]}${modeHint}] ${head}${tail}`;
+  return `[${AXIS_TITLE[result.axis]}] ${head}${tail}`;
 }
 
 export function buildStockXrayPrompt(
@@ -54,7 +53,7 @@ export function buildStockXrayPrompt(
   lines.push("- 투자 추천 금지: 매수·매도 권유, 종목 추천, 미래 가격 예측을 하지 마세요.");
   lines.push("- 현재 상태 진단만: 분포 비중, 집중도, 노출 위험을 객관적으로 설명하세요.");
   lines.push("- 표현 예시: \"OO 비중이 X%입니다\", \"OO에 Y% 노출되어 있습니다\" (O), \"OO를 사세요/파세요\" (X)");
-  lines.push("- '핵심 분야'와 '지수' 축은 한 종목이 여러 카테고리에 동시 노출될 수 있어 합이 100%를 초과할 수 있습니다. '노출도(중복 포함)'로 해석해 주세요.");
+  lines.push("- 모든 축은 한 종목을 단일 항목에만 배정해 집계합니다(중복 없음, 합 ≈ 100%).");
   lines.push("");
   lines.push("## 주식 포트폴리오 요약");
   lines.push(`- 총 평가금액(원화): ${formatShortCurrency(Math.round(totalValue))}`);

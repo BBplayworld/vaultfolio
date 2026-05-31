@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-type Option<T extends string> = { value: T; label: ReactNode };
+type Option<T extends string> = { value: T; label: ReactNode; dataTutorial?: string };
 
 // 카드 내부·페이지 컨텍스트 selector (segmented control). 모든 탭 UI의 공용 컴포넌트.
 // size: sm(보조), md(기본), lg(1차 탭 등 강조). PC(lg)에서 한 단계씩 ↑
@@ -40,6 +40,7 @@ export function InlineSelector<T extends string>({
             type="button"
             role="radio"
             aria-checked={active}
+            data-tutorial={o.dataTutorial}
             onClick={() => onChange(o.value)}
             className={`${base} whitespace-nowrap shrink-0 rounded transition-colors ${active
               ? "bg-background text-foreground font-semibold shadow-sm"

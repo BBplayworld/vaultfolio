@@ -38,6 +38,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand: var(--brand);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -59,6 +61,9 @@ These serve as the fallback; there is no separate default.css file. */
   /*--primary: oklch(0.205 0 0);*/
   --primary: oklch(0.585 0.233 277.117);
   --primary-foreground: oklch(0.985 0 0);
+  /* 브랜드 액션 색 — 확인/제출 버튼·체크박스 공용. MAIN_PALETTE[0](config/theme.ts)과 동일 hex 유지 */
+  --brand: #5b6fbf;
+  --brand-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -109,6 +114,9 @@ These serve as the fallback; there is no separate default.css file. */
   /* Indigo primary color */
   --primary: oklch(0.704 0.040 256.788);
   --primary-foreground: oklch(1 0 0);
+  /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
+  --brand: #5b6fbf;
+  --brand-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);

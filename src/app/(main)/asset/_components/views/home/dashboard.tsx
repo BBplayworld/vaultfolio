@@ -144,7 +144,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
                 ) : (
                   <>
                     <tspan x="50%" dy="-12" fontSize={12} fill="var(--muted-foreground)">순자산</tspan>
-                    <tspan x="50%" dy="26" fontSize={18} fontWeight={700} fill={screenshotMode ? ASSET_THEME.importantHex : "var(--foreground)"}>{formatShortCurrency(netAsset)}</tspan>
+                    <tspan x="50%" dy="26" fontSize={18} fontWeight={700} fill={screenshotMode ? ASSET_THEME.importantHex : "var(--foreground)"}>{fmt(netAsset)}</tspan>
                   </>
                 )}
               </text>
