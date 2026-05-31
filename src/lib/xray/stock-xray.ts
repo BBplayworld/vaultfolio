@@ -6,7 +6,7 @@
 
 import { Stock } from "@/types/asset";
 import { ExchangeRates } from "@/lib/finance-service";
-import { getClassification } from "./classification-store";
+import { getClassification, SECTOR_ENUM } from "./classification-store";
 
 export type XrayAxis = "region" | "theme" | "marketCap" | "index" | "currency";
 
@@ -74,9 +74,24 @@ const extractRegion: SingleExtractor = (s) => {
   // 1) 국내 ETF 중 해외 지수를 추종하는 상품은 명칭 기반으로 지역 판정 (이전의 잘못된 캐시 region: "KR"을 덮어쓰기 위해 최우선 실행)
   const name = s.name || "";
   const upper = name.toUpperCase();
-  const isKrEtf = cls?.marketCapTier === "etf" || KR_ETF_BRANDS.some((b) => upper.startsWith(b)) || upper.includes("ETF");
+  const isKrEtf = cls?.marketCapTier === "etf" || 
+                  KR_ETF_BRANDS.some((b) => upper.startsWith(b)) || 
+                  upper.includes("ETF") || 
+                  upper.includes("액티브") || 
+                  upper.includes("커버드콜") || 
+                  upper.includes("혼합");
+
   if (isKrEtf) {
-    if (upper.includes("미국") || upper.includes("US") || upper.includes("S&P500") || upper.includes("나스닥") || upper.includes("NASDAQ") || upper.includes("SP500")) {
+    if (
+      upper.includes("미국") || 
+      upper.includes("US") || 
+      upper.includes("S&P500") || 
+      upper.includes("나스닥") || 
+      upper.includes("NASDAQ") || 
+      upper.includes("SP500") || 
+      upper.includes("다우존스") || 
+      upper.includes("DOW")
+    ) {
       return { key: "US", label: REGION_LABEL["US"] };
     }
     if (upper.includes("일본") || upper.includes("니케이") || upper.includes("TOPIX") || upper.includes("NIKKEI")) {
@@ -134,6 +149,22 @@ const extractCurrency: SingleExtractor = (s) => {
 const CAP_LABEL: Record<string, string> = { large: "대형주", mid: "중형주", small: "소형주", etf: "ETF/펀드", unknown: "미분류" };
 const extractMarketCap: SingleExtractor = (s) => {
   const cls = s.ticker ? getClassification(s.ticker) : undefined;
+  const name = s.name || "";
+  const upperName = name.toUpperCase();
+  const upperTicker = (s.ticker || "").toUpperCase();
+
+  const isEtf = cls?.marketCapTier === "etf" || 
+                KR_ETF_BRANDS.some((b) => upperName.startsWith(b)) || 
+                upperName.includes("ETF") ||
+                upperName.includes("액티브") || 
+                upperName.includes("커버드콜") || 
+                upperName.includes("혼합") ||
+                ["SPY", "SPYM", "QQQ", "QQQM", "VOO", "IVV", "TQQQ", "SOXL", "UPRO", "QLD", "UDOW", "SGOV", "YMAX", "ULTY", "DIVO", "QQQI", "QQQU", "QDVO", "GPIX", "SCHD", "SCHG", "VNQ", "GLDM"].includes(upperTicker);
+
+  if (isEtf) {
+    return { key: "etf", label: CAP_LABEL["etf"] };
+  }
+
   const tier = cls?.marketCapTier ?? "unknown";
   if (tier === "unknown") return { key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL };
   return { key: tier, label: CAP_LABEL[tier] ?? tier };
@@ -141,8 +172,112 @@ const extractMarketCap: SingleExtractor = (s) => {
 
 const extractSector: SingleExtractor = (s) => {
   const cls = s.ticker ? getClassification(s.ticker) : undefined;
+  const name = s.name || "";
+  const upperName = name.toUpperCase();
+  const upperTicker = (s.ticker || "").toUpperCase();
+
+  // 1. 싱글 스탁 레버리지/커버드콜 ETF 및 특정 테마 상품 예외 처리 -> 기초 자산/테마 섹터로 강제 지정
+  
+  // 1-1. 테슬라 (TSLA) 계열 파생 상품 -> 자율주행 및 모빌리티
+  if (upperTicker.includes("TSLL") || upperTicker.includes("TSLY") || upperName.includes("테슬라") && (upperName.includes("2X") || upperName.includes("레버리지") || upperName.includes("인버스") || upperName.includes("커버드콜"))) {
+    return { key: "자율주행 및 모빌리티", label: "자율주행 및 모빌리티" };
+  }
+  
+  // 1-2. 엔비디아 (NVDA) 계열 파생 상품 -> AI 및 반도체
+  if (upperTicker.includes("NVDL") || upperTicker.includes("NVDY") || upperName.includes("엔비디아") && (upperName.includes("2X") || upperName.includes("레버리지") || upperName.includes("인버스") || upperName.includes("커버드콜"))) {
+    return { key: "AI 및 반도체", label: "AI 및 반도체" };
+  }
+  
+  // 1-3. 코인베이스/마이크로스트레티지/가상자산 현물/선물/레버리지 ETF -> 블록체인 및 디지털자산
+  if (
+    upperTicker.includes("CONL") || upperTicker.includes("CONY") ||
+    upperTicker.includes("MSTL") || upperTicker.includes("MSTY") ||
+    upperTicker.includes("IBIT") || upperTicker.includes("ETHU") || upperTicker.includes("FBTC") ||
+    upperName.includes("코인베이스") || upperName.includes("비트코인") || upperName.includes("이더리움") || upperName.includes("크립토")
+  ) {
+    return { key: "블록체인 및 디지털자산", label: "블록체인 및 디지털자산" };
+  }
+  
+  // 1-4. 마이크로소프트 (MSFT) 계열 파생 상품 -> AI 및 소프트웨어
+  if (upperTicker.includes("MSFL") || upperTicker.includes("MSFO") || upperName.includes("마이크로소프트") && (upperName.includes("2X") || upperName.includes("레버리지") || upperName.includes("인버스") || upperName.includes("커버드콜"))) {
+    return { key: "AI 및 소프트웨어", label: "AI 및 소프트웨어" };
+  }
+  
+  // 1-5. 아마존 (AMZN) 계열 파생 상품 -> 소비재 및 유통
+  if (upperTicker.includes("AMZU") || upperTicker.includes("AMZY") || upperName.includes("아마존") && (upperName.includes("2X") || upperName.includes("레버리지") || upperName.includes("인버스") || upperName.includes("커버드콜"))) {
+    return { key: "소비재 및 유통", label: "소비재 및 유통" };
+  }
+  
+  // 1-6. 구글 (GOOGL) 계열 파생 상품 -> AI 및 소프트웨어
+  if (upperTicker.includes("GGLL") || upperTicker.includes("GOOGY") || upperName.includes("구글") && (upperName.includes("커버드콜") || upperName.includes("인컴") || upperName.includes("레버리지"))) {
+    return { key: "AI 및 소프트웨어", label: "AI 및 소프트웨어" };
+  }
+  
+  // 1-7. 메타 (META) 계열 파생 상품 -> AI 및 소프트웨어
+  if (upperTicker.includes("METL") || upperName.includes("메타") && (upperName.includes("커버드콜") || upperName.includes("인컴") || upperName.includes("레버리지"))) {
+    return { key: "AI 및 소프트웨어", label: "AI 및 소프트웨어" };
+  }
+
+  // 1-8. 애플 (AAPL) 계열 파생 상품 -> AI 및 소프트웨어
+  if (upperTicker.includes("AAPB") || upperTicker.includes("APLY") || upperName.includes("애플") && (upperName.includes("2X") || upperName.includes("레버리지") || upperName.includes("인버스") || upperName.includes("커버드콜"))) {
+    return { key: "AI 및 소프트웨어", label: "AI 및 소프트웨어" };
+  }
+
+  // 1-9. 미국 M7 빅테크 기업 직접 지정
+  if (["AAPL", "MSFT", "GOOGL", "META"].includes(upperTicker)) {
+    return { key: "AI 및 소프트웨어", label: "AI 및 소프트웨어" };
+  }
+  if (["NVDA"].includes(upperTicker)) {
+    return { key: "AI 및 반도체", label: "AI 및 반도체" };
+  }
+  if (["AMZN", "MO"].includes(upperTicker)) {
+    return { key: "소비재 및 유통", label: "소비재 및 유통" };
+  }
+  if (["TSLA"].includes(upperTicker)) {
+    return { key: "자율주행 및 모빌리티", label: "자율주행 및 모빌리티" };
+  }
+  if (["VICI"].includes(upperTicker)) {
+    return { key: "금융 및 핀테크", label: "금융 및 핀테크" };
+  }
+  if (["MAGS"].includes(upperTicker)) {
+    return { key: "ETF/펀드", label: "ETF/펀드" };
+  }
+
+  // 1-10. 전통 국내 기업 및 오분류 방지 강제 매핑
+  const domesticOverrides: Record<string, string> = {
+    "005930": "AI 및 반도체",            // 삼성전자
+    "005935": "AI 및 반도체",            // 삼성전자우
+    "000660": "AI 및 반도체",            // SK하이닉스
+    "000810": "금융 및 핀테크",          // 삼성화재
+    "003490": "인프라 및 물류",          // 대한항공
+    "006800": "금융 및 핀테크",          // 미래에셋증권
+    "010120": "AI 인프라 및 전력",        // LS ELECTRIC
+    "010170": "AI 인프라 및 전력",        // 대한광통신 (광통신 인프라)
+    "005380": "자율주행 및 모빌리티",        // 현대차
+    "005387": "자율주행 및 모빌리티",        // 현대차2우B
+    "021240": "소비재 및 유통",          // 코웨이 (구 기타 ➔ 소비재 및 유통)
+    "004020": "인프라 및 물류",          // 현대제철 (구 기타 ➔ 인프라 및 물류)
+    "010140": "인프라 및 물류",          // 삼성중공업 (구 기타 ➔ 인프라 및 물류)
+    "017670": "인프라 및 물류",          // SK텔레콤 (구 기타 ➔ 인프라 및 물류)
+    "006400": "자율주행 및 모빌리티",        // 삼성SDI (구 기타 ➔ 자율주행 및 모빌리티)
+    "373220": "자율주행 및 모빌리티",        // LG에너지솔루션 (신규 ➔ 자율주행 및 모빌리티)
+  };
+  if (domesticOverrides[upperTicker]) {
+    const overrideSector = domesticOverrides[upperTicker];
+    return { key: overrideSector, label: overrideSector };
+  }
+
+  // 2. 일반 ETF 판별 -> "ETF/펀드" 섹터로 분류
+  // (인기 글로벌/테마 ETF 목록을 직접 추가해 100% 매핑 보장)
+  const isKrEtf = cls?.marketCapTier === "etf" || KR_ETF_BRANDS.some((b) => upperName.startsWith(b)) || upperName.includes("ETF") ||
+                  ["SPY", "SPYM", "QQQ", "QQQM", "VOO", "IVV", "TQQQ", "SOXL", "UPRO", "QLD", "UDOW", "SGOV", "YMAX", "ULTY", "DIVO", "QQQI", "QQQU", "QDVO", "GPIX", "SCHD", "SCHG", "VNQ", "GLDM"].includes(upperTicker);
+  if (isKrEtf) {
+    return { key: "ETF/펀드", label: "ETF/펀드" };
+  }
+
+  // 3. 기존 분류에 기반
   const sector = typeof cls?.sector === "string" && cls.sector.length > 0 ? cls.sector : undefined;
-  if (!sector) return { key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL };
+  if (!sector || !SECTOR_ENUM.includes(sector as any)) return { key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL };
   return { key: sector, label: sector };
 };
 
@@ -164,7 +299,10 @@ const INDEX_PRIORITY = ["KOSPI", "KOSDAQ", "NASDAQ100", "SP500", "OTHER"];
 const OTHER_INDEX = { key: "OTHER", label: "그 외 핵심 지수" };
 
 // 국내 ETF 브랜드 접두어 (stock-tab.tsx ETF_DOMAIN 키와 동기화)
-const KR_ETF_BRANDS = ["TIGER", "KODEX", "ACE", "KBSTAR", "SOL", "RISE", "PLUS", "ARIRANG", "KOSEF", "HANARO", "KINDEX", "TIMEFOLIO", "BIG"];
+const KR_ETF_BRANDS = [
+  "TIGER", "KODEX", "ACE", "KBSTAR", "SOL", "RISE", "PLUS", "ARIRANG", "KOSEF", "HANARO", "KINDEX", "TIMEFOLIO", "BIG",
+  "TIME", "KIWOOM", "KOACT", "WOORI", "HANA", "SHINHAN", "MERITZ", "DAISHIN", "UNICORN"
+];
 // 해외(미국 등) 시장 키워드 — 구체 지수 미매칭 시 "그 외 핵심 지수"로
 const FOREIGN_NAME_KEYS = ["미국", "US", "선진", "신흥", "유럽", "중국", "일본", "인도", "글로벌", "베트남", "대만", "홍콩", "다우", "DOW", "러셀", "RUSSELL", "나스닥종합"];
 
@@ -174,7 +312,12 @@ function indexFromEtfName(s: Stock): { key: string; label: string } | null {
   const cls = s.ticker ? getClassification(s.ticker) : undefined;
   const name = s.name || "";
   const upper = name.toUpperCase();
-  const isKrEtf = cls?.marketCapTier === "etf" || KR_ETF_BRANDS.some((b) => upper.startsWith(b)) || upper.includes("ETF");
+  const isKrEtf = cls?.marketCapTier === "etf" || 
+                  KR_ETF_BRANDS.some((b) => upper.startsWith(b)) || 
+                  upper.includes("ETF") || 
+                  upper.includes("액티브") || 
+                  upper.includes("커버드콜") || 
+                  upper.includes("혼합");
   if (!isKrEtf) return null;
 
   const norm = upper.replace(/[^A-Z0-9]/g, "");

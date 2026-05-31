@@ -8,7 +8,7 @@
 
 import type { Stock } from "@/types/asset";
 import { toast } from "sonner";
-import { getAllClassifications, upsertClassifications } from "./classification-store";
+import { getAllClassifications, upsertClassifications, SECTOR_ENUM } from "./classification-store";
 
 export interface ClassifyProgress {
   done: number;
@@ -45,11 +45,12 @@ export async function fetchAndStoreClassifications(
   const items = stocks
     .filter((s) => s.ticker && s.ticker.trim())
     .filter((s) => {
-      // themes·indices 둘 다 있어야 수집 완료 — 하나라도 비면 재분류 대상(ETF 지수 보강 트리거)
+      // themes·indices·유효한 sector 모두 있어야 수집 완료 — 하나라도 비거나 옛 카테고리면 재분류 대상
       const cur = existing[s.ticker!.trim().toUpperCase()];
       const hasThemes = !!cur && Array.isArray(cur.themes) && cur.themes.length > 0;
       const hasIndices = !!cur && Array.isArray(cur.indices) && cur.indices.length > 0;
-      return !hasThemes || !hasIndices;
+      const hasValidSector = !!cur && typeof cur.sector === "string" && (SECTOR_ENUM as readonly string[]).includes(cur.sector);
+      return !hasThemes || !hasIndices || !hasValidSector;
     })
     .map((s) => ({
       ticker: s.ticker!.trim().toUpperCase(),

@@ -11,6 +11,15 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { SECTOR_ENUM, type StockClassification } from "@/lib/xray/classification-store";
+import { DOMESTIC_STOCK_MAP, DOMESTIC_ETF_MAP } from "@/app/api/parse-screenshot/ticker-map";
+
+const reverseDomesticMap: Record<string, string> = {};
+for (const [name, ticker] of Object.entries(DOMESTIC_STOCK_MAP)) {
+  reverseDomesticMap[ticker] = name;
+}
+for (const [name, ticker] of Object.entries(DOMESTIC_ETF_MAP)) {
+  reverseDomesticMap[ticker] = name;
+}
 
 interface ClassifyItem {
   ticker: string;
@@ -74,40 +83,28 @@ function buildPrompt(items: ClassifyItem[]): string {
     "",
     "규칙:",
     "- sector: 종목이 속한 상위 카테고리 **정확히 1개**. 아래 분류군 중에서만 선택:",
-    "    [AI 및 디지털 인프라]",
-    "    \"AI 가속기 및 반도체\"       — 예) NVDA, AVGO, AMD, TSM, ASML, SK하이닉스, 한미반도체",
-    "    \"AI 데이터센터 및 인프라\"   — 예) VRT(버티브), ANET, SMCI, EQIX",
-    "    \"AI 전력 인프라 및 중전기기\" — 예) GE Vernova, ETN(이튼), GEV, HD현대일렉트릭, 효성중공업",
-    "    \"사이버 보안\"               — 예) CRWD, PANW, FTNT",
-    "    \"피지컬 AI 및 휴머노이드 로봇\" — 예) 양족 로봇 제조사, 로보틱스 부품사",
-    "    \"자율주행 및 모빌리티\"       — 예) TSLA(FSD/자율주행 주도), MBLY(모빌아이)",
+    "    [핵심 테크 (AI, 로봇, 모빌리티)]",
+    "    \"AI 및 반도체\"             — 예) NVDA, AVGO, AMD, TSM, ASML, SK하이닉스, 한미반도체 및 NVDL/NVDY 등의 엔비디아 레버리지/커버드콜 ETF",
+    "    \"AI 및 소프트웨어\"           — 예) MSFT, AAPL, GOOGL, META, PLTR, CRWD 및 이들의 레버리지/커버드콜/파생 ETF(예: MSFL, APLY, GGLL, METL)",
+    "    \"AI 인프라 및 전력\"          — 예) VRT(버티브), ANET, SMCI, EQIX, GE Vernova, ETN(이튼), GEV, HD현대일렉트릭, 효성중공업, LS ELECTRIC, 대한광통신",
+    "    \"로봇 및 산업 자동화\"        — 예) 로보틱스, 양족 로봇 제조사, ROK, CGNX, 스마트 팩토리 솔루션",
+    "    \"자율주행 및 모빌리티\"       — 예) TSLA(FSD/자율주행 주도), MBLY(모빌아이), 현대차, 기아 및 TSLL/TSLY 등의 테슬라 레버리지/커버드콜 ETF, LG에너지솔루션, 삼성SDI 등 이차전지 및 전기차 부품 제조사",
     "    ",
-    "    [규제 완화 및 매크로 수혜]",
-    "    \"전통 에너지 및 석유·가스\"    — 예) XOM, CVX, COP, EOG",
-    "    \"방위산업 및 우주항공\"       — 예) LMT, RTX, GD, NOC, 한화에어로스페이스, LIG넥스원",
-    "    \"기업용 소프트웨어 및 SaaS\"  — 예) MSFT, ORCL, CRM, ADBE, NOW, PLTR",
-    "    \"핀테크 및 차세대 결제\"       — 예) PYPL, SQ, NU, STNE",
-    "    \"전통 금융 및 보험\"          — 예) JPM, BAC, MS, GS, BRK.B, 대형 생명/손해보험사",
+    "    [전통 및 융합 산업]",
+    "    \"금융 및 핀테크\"            — 예) JPM, BAC, MS, GS, BRK.B, PYPL, SQ, NU, Visa, Mastercard, 미래에셋증권, VICI 등 대형 금융지주/보험사/리츠",
+    "    \"바이오 및 헬스케어\"          — 예) LLY, NVO, UNH, ELV, CI, TDOC, OGN 및 비만치료제/AI 신약개발/디지털 헬스케어 관련 기업",
+    "    \"소비재 및 유통\"            — 예) AMZN, WMT, COST, TGT, SBUX, TJX, NFLX, DIS, SPOT, MO, 코웨이 및 이커머스/유통/미디어 콘텐츠/생활가전/필수소비재 관련 기업 및 파생 ETF(예: AMZU)",
+    "    \"인프라 및 물류\"            — 예) CAT, DE, 두산밥캣, FDX, UPS, CHRW, WM, XOM, CVX, COP, 대한항공, SK텔레콤, 현대제철, 삼성중공업, 전통 에너지/건설/물류/통신/철강/조선 관련 기업",
+    "    \"방산 및 우주항공\"           — 예) LMT, RTX, GD, NOC, RKLB, NASA, 한화에어로스페이스, LIG넥스원",
+    "    \"블록체인 및 디지털자산\"      — 예) COIN, MARA, RIOT, MSTR, BMNR 및 IBIT, ETHU, FBTC 등의 비트코인/이더리움 현물/선물 ETF",
     "    ",
-    "    [실물 경제 및 경기 방어]",
-    "    \"건설 및 중장비\"            — 예) CAT, DE, 두산밥캣, HD현대인프라코어",
-    "    \"초대형 유통 및 이커머스\"     — 예) WMT, COST, TGT, AMZN, 쿠팡",
-    "    \"공급망 리밸런싱 및 물류\"     — 예) FDX, UPS, CHRW, 물류/공급망 재편 수혜기업",
-    "    \"산업 자동화\"               — 예) ROK, CGNX, 스마트 팩토리 솔루션",
-    "    \"디지털 광고 및 미디어 콘텐츠\" — 예) GOOGL, META, NFLX, DIS, SPOT",
-    "    ",
-    "    [바이오 헬스케어 및 미래 기술]",
-    "    \"비만치료제 및 GLP-1\"       — 예) LLY, NVO 및 비만치료제 밸류체인",
-    "    \"AI 기반 신약 개발\"          — 예) RXRX(리커전), AI 활용 신약 탐색/개발사",
-    "    \"디지털 헬스케어 및 의료 관리\" — 예) UNH, ELV, CI, TDOC, 모리나(MOH)",
-    "    \"암호화폐 및 블록체인 금융\"   — 예) COIN, MARA, RIOT, MSTR, BMNR",
-    "    ",
-    "    [기타 및 공통 상품]",
-    "    \"ETF/펀드\"                  — 예) SPY, QQQ, VOO, DIA, SOXL, SCHD, KODEX/TIGER/KBSTAR 등의 모든 인덱스/테마 ETF 및 뮤추얼 펀드",
-    "    \"기타\"                      — 위 어디에도 명확히 속하지 않는 경우만",
+    "    [공통 상품]",
+    "    \"ETF/펀드\"                  — 예) SPY, QQQ, VOO, DIA, SOXL, SCHD, MAGS, KODEX/TIGER/KBSTAR 등의 모든 지수/테마/배당 포트폴리오 ETF 및 뮤추얼 펀드 (단, 단일 주식 추종 레버리지 ETF는 제외)",
+    "    \"기타\"                      — 위 어디에도 속하지 않는 일반 잡화 및 단순 도소매 등 분류 불가 기업",
     "  중요 특수 규칙:",
-    "  - 가상자산/블록체인 인프라 및 채굴 기업(예: BMNR, COIN, MARA, RIOT 등)은 'AI 가속기 및 반도체'가 아니며 반드시 '암호화폐 및 블록체인 금융'으로 분류해야 합니다. 특히 BMNR은 '암호화폐 및 블록체인 금융'으로 정확히 매핑해 주세요.",
-    "  - ETF나 펀드(예: QQQ, SPY, TIGER 미국나스닥100 등)는 개별 기업이 아니므로 반드시 'ETF/펀드' sector로 분류해야 합니다.",
+    "  - 가상자산/블록체인 인프라 및 채굴 기업(예: BMNR, COIN, MARA, RIOT 등) 및 비트코인/이더리움 현물/선물 ETF(예: IBIT, ETHU, FBTC 등)는 'ETF/펀드'가 아니며 반드시 '블록체인 및 디지털자산'으로 분류해야 합니다. 특히 BMNR, IBIT, ETHU는 '블록체인 및 디지털자산'으로 정확히 매핑해 주세요.",
+    "  - 단일 주식을 추종하는 레버리지/커버드콜/옵션 ETF(예: TSLL/TSLY -> Tesla 추종, NVDL/NVDY -> Nvidia 추종, CONL/CONY -> Coinbase 추종, MSFL/MSFO -> Microsoft 추종, APLY -> Apple 추종, AMZY -> Amazon 추종 등)는 'ETF/펀드'가 아닌 **기초 개별 기업의 sector**(예: TSLL은 '자율주행 및 모빌리티', NVDL은 'AI 및 반도체', MSFL/APLY는 'AI 및 소프트웨어', AMZY는 '소비재 및 유통')로 분류해야 합니다.",
+    "  - 반면 지수나 여러 기업을 담은 포트폴리오형 인덱스/테마 ETF(예: SPY, QQQ, VOO, MAGS, TIGER 미국나스닥100, KODEX 2차전지산업, ACE 미국S&P500 등)는 개별 기업이 아니므로 반드시 'ETF/펀드' sector로 분류해야 합니다.",
     "  - 복수 사업 영위 종목은 매출·이익 비중이 가장 큰 1개로 배정합니다.",
     "- themes: 종목의 핵심 사업·기술·산업 분야 **정확히 3~4개** 다중 태그. 한국어 또는 단순 영문 가능.",
     "  중요도 높은 분야 위주로 선별. 너무 세부적인 분야는 묶어서 표현(예: '메모리/파운드리/시스템반도체' → '반도체').",
@@ -233,7 +230,16 @@ export async function POST(request: Request) {
     const t = it.ticker.trim().toUpperCase();
     if (!dedup.has(t)) dedup.set(t, { ...it, ticker: t });
   }
-  const normalized = Array.from(dedup.values());
+  
+  const isNumeric = (str: string) => /^\d+$/.test(str);
+  const normalized = Array.from(dedup.values()).map((it) => {
+    let name = it.name?.trim();
+    if (!name || isNumeric(name)) {
+      const mapped = reverseDomesticMap[it.ticker];
+      if (mapped) name = mapped;
+    }
+    return { ...it, name };
+  });
 
   const cache = getCacheStorage();
 
@@ -249,6 +255,7 @@ export async function POST(request: Request) {
       c.themes.length > 0 &&
       typeof c.sector === "string" &&
       c.sector.length > 0 &&
+      (SECTOR_ENUM as readonly string[]).includes(c.sector) && // 현재 유효한 섹터인지 검증
       Array.isArray(c.indices) &&
       c.indices.length > 0
     ) {

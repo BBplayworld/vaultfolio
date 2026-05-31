@@ -143,6 +143,8 @@ export function StockXrayView() {
   );
 
   const incomplete = (axis === "theme" || axis === "marketCap" || axis === "index") && result.unclassifiedRatio > 0;
+  const unclassPct = Math.round(result.unclassifiedRatio * 1000) / 10;
+  const showWarning = unclassPct > 0;
   const conc = CONCENTRATION_LABEL[result.concentration];
 
   const buildXrayPromptText = () => buildStockXrayPrompt(mergedStocks, exchangeRates, [
@@ -215,9 +217,9 @@ export function StockXrayView() {
           ) : (
             <BreakdownVisual result={result} />
           )}
-          {incomplete && result.items.length > 1 && (
+          {incomplete && showWarning && result.items.length > 1 && (
             <p className="mt-3 text-[11px] text-muted-foreground">
-              ⓘ 미분류 종목 {Math.round(result.unclassifiedRatio * 100)}%는 외부 분류 데이터 수집 후 갱신됩니다.
+              ⓘ 미분류 종목 {unclassPct}%는 외부 분류 데이터 수집 후 갱신됩니다.
             </p>
           )}
         </div>
