@@ -18,8 +18,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   // Configuration forms have been removed; hardcode best-looking defaults
   const contentLayout = "centered";
 
-  const navbarStyle = "scroll";
-
   return (
     <ReactQueryProvider>
       <AssetDataProvider>
@@ -32,16 +30,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                   "data-[content-layout=centered]:!mx-auto data-[content-layout=centered]:max-w-[1400px]",
                 )}
               >
-                <header
-                  data-navbar-style={navbarStyle}
-                  className={cn(
-                    "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative",
-                    "bg-background rounded-t-[inherit] overflow-hidden",
-                    "mt-1",
-                  )}
-                >
-                  <TopBar />
-                </header>
+                <TopBar />
                 <div className="h-full px-3 pt-2 pb-10 md:px-12 md:pt-2 md:pb-14 mt-2 sm:mt-0">{children}</div>
               </SidebarInset>
             </SidebarProvider>

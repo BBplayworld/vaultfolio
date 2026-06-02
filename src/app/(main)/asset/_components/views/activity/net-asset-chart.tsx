@@ -445,11 +445,11 @@ export function YearlyNetAssetChart() {
                               </p>
                             </div>
                             {!isCurrentYear && (
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => handleEdit(item)}>
+                              <div className="flex gap-2">
+                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" aria-label="순자산 수정" onClick={() => handleEdit(item)}>
                                   <Pencil className="size-3.5" />
                                 </Button>
-                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} onClick={() => handleDelete(item.year)}>
+                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" aria-label="순자산 삭제" onClick={() => handleDelete(item.year)}>
                                   <Trash2 className="size-3.5" />
                                 </Button>
                               </div>

@@ -3,6 +3,7 @@
 import { Camera, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { MAIN_PALETTE } from "@/config/theme";
+import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ShareScreenshotDialog } from "./share/share-menu";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
@@ -73,8 +74,18 @@ function MoreButton() {
 
 export function TopBar() {
   const { view, navigate, back } = useAssetNavigation();
+  const { assetData, isSharePending } = useAssetData();
   const title = getBackLabel(view);
   const isSubView = view.type !== "home";
+
+  // 웰컴가이드(자산 없음·공유 대기) 시 상단 상세/성과·더보기 영역 숨김
+  const isWelcomeGuide =
+    isSharePending ||
+    (assetData.realEstate.length === 0 &&
+      assetData.stocks.length === 0 &&
+      assetData.crypto.length === 0 &&
+      assetData.cash.length === 0 &&
+      assetData.loans.length === 0);
 
   // 우측 아이콘 노출 규칙
   // - 인증샷: 홈 / 상세 허브·주식 / 성과 순자산·수익
@@ -85,17 +96,28 @@ export function TopBar() {
     (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) || // stocks-xray는 제외
     false ||
     (view.type === "activity" && (view.tab === "hub" || view.tab === "netasset" || view.tab === "profit"));
-  const showMore = view.type === "home";
+  const showMore = view.type === "home" && !isWelcomeGuide;
 
   const onHomeTabChange = (tab: HomeTop) => {
     if (tab === "detail") navigate({ type: "detail", tab: "hub" });
     if (tab === "activity") navigate({ type: "activity", tab: "hub" });
   };
 
+  // 웰컴가이드 페이지에선 헤더 영역 자체를 렌더하지 않아 공간을 차지하지 않게 함
+  if (isWelcomeGuide) return null;
+
   return (
+    <header
+      data-navbar-style="scroll"
+      className={cn(
+        "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative",
+        "bg-background rounded-t-[inherit] overflow-hidden",
+        "mt-1",
+      )}
+    >
     <div className="flex w-full items-center justify-between px-3 lg:px-12">
       <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-        {isSubView ? (
+        {isWelcomeGuide ? null : isSubView ? (
           <button
             onClick={back}
             aria-label="뒤로가기"
@@ -119,5 +141,6 @@ export function TopBar() {
         {showMore && <MoreButton />}
       </div>
     </div>
+    </header>
   );
 }

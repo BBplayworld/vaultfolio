@@ -17,7 +17,7 @@ import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
 import { rollbackTransaction } from "@/lib/trade-utils";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
 import { stockCategories } from "@/config/asset-options";
-import { getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import type { Stock, Transaction } from "@/types/asset";
 import type { PositionSnapshot, PositionPreview } from "@/types/transaction";
 
@@ -159,12 +159,18 @@ export function StockTradesView() {
       toast.success("거래가 삭제되었습니다.");
       return;
     }
-    const baseSnapshot: PositionSnapshot = {
-      stockId: stock.id, quantity: 0, avgPrice: 0, avgExchangeRate: 0,
-      source: "computed", effectiveDate: stock.purchaseDate, lockedByManual: false,
+    // 현재 보유 포지션 — 거래로그에 없는 수동 보유분을 역산으로 보존하기 위한 기준점
+    const currentPosition: PositionSnapshot = {
+      stockId: stock.id,
+      quantity: stock.quantity,
+      avgPrice: stock.averagePrice,
+      avgExchangeRate: stock.purchaseExchangeRate ?? 0,
+      source: stock.positionSource ?? "manual",
+      effectiveDate: stock.positionEffectiveDate ?? stock.purchaseDate,
+      lockedByManual: false,
     };
     const allTx = (assetData.transactions || []).filter((t) => t.stockId === stock.id);
-    const rolledBack = rollbackTransaction(baseSnapshot, allTx, tx.id);
+    const rolledBack = rollbackTransaction(currentPosition, allTx, tx.id);
     setDeleteTarget({
       tx, stock,
       preview: { quantity: rolledBack.quantity, avgPrice: rolledBack.avgPrice, avgExchangeRate: rolledBack.avgExchangeRate },
@@ -329,14 +335,16 @@ export function StockTradesView() {
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">반영</span>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          className="opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className={`${ASSET_THEME.cardActionButton} text-muted-foreground hover:text-destructive shrink-0`}
                           onClick={() => handleDeleteClick(tx)}
+                          title="삭제"
                           aria-label="거래 삭제"
                         >
                           <Trash2 className="size-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     );
                   })}

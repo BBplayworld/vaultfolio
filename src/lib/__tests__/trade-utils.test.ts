@@ -109,16 +109,31 @@ describe("recomputeFromLog", () => {
 });
 
 describe("rollbackTransaction", () => {
-  it("반영된 거래 삭제 시 재계산", () => {
-    const base = makeSnapshot({ quantity: 0, avgPrice: 0, avgExchangeRate: 0 });
+  it("반영된 거래 삭제 시 현재 포지션에서 역산 재계산", () => {
+    // 현재 보유: buy100 + buy50 = 150주 @53333.33
+    const current = makeSnapshot({ quantity: 150, avgPrice: 53333.333, source: "computed" });
     const txs: Transaction[] = [
       makeTx({ id: "tx1", type: "buy", quantity: 100, price: 50000, date: "2026-01-10", reflected: true }),
       makeTx({ id: "tx2", type: "buy", quantity: 50, price: 60000, date: "2026-02-15", reflected: true }),
     ];
     // tx2 삭제 → tx1만 남음
-    const result = rollbackTransaction(base, txs, "tx2");
+    const result = rollbackTransaction(current, txs, "tx2");
 
     expect(result.quantity).toBe(100);
-    expect(result.avgPrice).toBe(50000);
+    expect(result.avgPrice).toBeCloseTo(50000, 0);
+  });
+
+  it("거래로그에 없는 수동 보유분이 거래 삭제 후에도 보존됨 (P1 회귀)", () => {
+    // 수동 100주 @50000 위에 buy50@60000 반영 → 현재 150주 @53333.33
+    // 거래로그에는 buy50만 존재 (최초 100주는 수동 입력이라 미기록)
+    const current = makeSnapshot({ quantity: 150, avgPrice: 53333.333, source: "computed" });
+    const txs: Transaction[] = [
+      makeTx({ id: "tx_buy50", type: "buy", quantity: 50, price: 60000, date: "2026-02-15", reflected: true }),
+    ];
+    const result = rollbackTransaction(current, txs, "tx_buy50");
+
+    // 거래 삭제 시 0이 아니라 수동 보유분 100주 @50000이 복원되어야 함
+    expect(result.quantity).toBe(100);
+    expect(result.avgPrice).toBeCloseTo(50000, 0);
   });
 });

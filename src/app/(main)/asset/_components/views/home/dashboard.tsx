@@ -226,7 +226,7 @@ function useLast7DailySnapshots() {
       const all: DailyAssetSnapshot[] = JSON.parse(raw);
       const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
       setSnapshots(sorted.slice(-7));
-    } catch { }
+    } catch { /* 스냅샷 파싱 실패 시 무시 */ }
   }, [snapshotVersion]);
   return snapshots;
 }

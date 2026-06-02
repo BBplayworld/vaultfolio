@@ -40,7 +40,14 @@
       "Bash(timeout 4)",
       "Bash(git checkout *)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(echo \"tsc EXIT:$?\")",
+      "Bash(echo \"lint EXIT:$?\")",
+      "Bash(node -e \"console.log\\('next', require\\('next/package.json'\\).version\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(echo \"eslint EXIT:$?\")",
+      "Bash(ls eslint.config.* .eslintrc*)",
+      "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\('lint:', s.lint\\)\")"
     ]
   }
 }

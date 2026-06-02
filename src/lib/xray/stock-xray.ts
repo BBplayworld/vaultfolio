@@ -345,7 +345,19 @@ function indexFromEtfName(s: Stock): { key: string; label: string } | null {
   return null; // 국내 테마(2차전지·반도체 등) → 폴백(상장거래소)
 }
 
+// 미국 지수추종 ETF(지수형·레버리지·인버스) → 기초 지수 직접 매핑.
+// 레버리지/인버스 상품도 추종 지수에 맞춰 분류(예: TQQQ·QLD → NASDAQ 100, UPRO·SSO → S&P 500).
+const NASDAQ100_INDEX = { key: "NASDAQ100", label: "NASDAQ 100" };
+const SP500_INDEX = { key: "SP500", label: "S&P 500" };
+const US_INDEX_ETF_MAP: Record<string, { key: string; label: string }> = {};
+for (const t of ["QQQ", "QQQM", "TQQQ", "QLD", "SQQQ", "QID", "PSQ", "QQQU", "QQQI"]) US_INDEX_ETF_MAP[t] = NASDAQ100_INDEX;
+for (const t of ["SPY", "SPYM", "VOO", "IVV", "UPRO", "SSO", "SPXL", "SPXU", "SPXS", "SDS", "SH"]) US_INDEX_ETF_MAP[t] = SP500_INDEX;
+
 const extractIndex: SingleExtractor = (s) => {
+  // 0) 미국 지수추종 ETF(레버리지·인버스 포함)는 기초 지수로 직접 배정
+  const mapped = US_INDEX_ETF_MAP[(s.ticker || "").toUpperCase()];
+  if (mapped) return mapped;
+
   // 1) 국내 ETF는 종목명 추종지수 우선 판정
   const byName = indexFromEtfName(s);
   if (byName) return byName;
