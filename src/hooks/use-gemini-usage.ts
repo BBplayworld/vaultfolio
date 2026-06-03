@@ -3,7 +3,7 @@
 // 기기(브라우저)별 하루 Gemini AI 인식 사용 한도
 const CLIENT_DAILY_LIMIT = 15;
 
-type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "classify" | "trade";
+type ParseAssetType = "stock" | "crypto" | "cash" | "loan";
 
 interface GeminiUsageData {
   date: string;
@@ -14,7 +14,7 @@ interface GeminiUsageData {
 const DEFAULT_USAGE: GeminiUsageData = {
   date: "",
   count: 0,
-  byType: { stock: 0, crypto: 0, cash: 0, loan: 0, classify: 0, trade: 0 },
+  byType: { stock: 0, crypto: 0, cash: 0, loan: 0 },
 };
 
 // KST 기준 오늘 날짜 문자열 (YYYY-MM-DD)

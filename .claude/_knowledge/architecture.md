@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-05-23
+> 마지막 업데이트: 2026-05-16
 
 ## 앱 개요
 
@@ -30,28 +30,19 @@ src/
 ├── app/
 │   ├── (main)/asset/
 │   │   ├── page.tsx              # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
-│   │   ├── layout.tsx            # SidebarInset + NavigationProvider + FAB pb-20/24
+│   │   ├── layout.tsx            # SidebarInset (max-w-screen-2xl)
 │   │   └── _components/
-│   │       ├── forms/            # (구 bottom-nav) 자산 입력 폼 + 스크린샷 다이얼로그
+│   │       ├── bottom-nav/
 │   │       │   └── asset-update/
 │   │       │       ├── input/    # 자산 입력 폼 5종 + exchange-rate-input
 │   │       │       └── screenshot/ # 스크린샷 다이얼로그 4종
-│   │       ├── views/            # (구 main-nav) 페이지 본문 콘텐츠
+│   │       ├── main-nav/
 │   │       │   ├── home/         # dashboard.tsx
-│   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종 (모두 Card+CardHeader+CardTitle 외피)
+│   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종
 │   │       │   ├── activity/     # net-asset-chart, profit-chart, dividend-chart, monthly-dividend-stocks
 │   │       │   └── data-source-badge.tsx
-│   │       ├── layout/           # 라우팅·공용 UI
-│   │       │   ├── navigation-context.tsx  # AssetView hash routing (home/detail/activity)
-│   │       │   ├── asset-page-tabs.tsx     # view 분기 라우터 (drill-down)
-│   │       │   ├── inline-selector.tsx     # 모든 탭·셀렉터 공용 (size sm/md/lg)
-│   │       │   ├── info-hint.tsx           # Popover hover/tap 패턴
-│   │       │   ├── floating-add-button.tsx # bg-foreground/85 무채색 FAB
-│   │       │   ├── scroll-to-top.tsx       # bg-foreground/70 무채색 utility
-│   │       │   ├── welcome-guide.tsx, notice-dialog.tsx, copyright-footer.tsx
-│   │       ├── header/           # (구 top-nav) 상단 헤더
-│   │       │   ├── top-bar.tsx   # ← 뒤로가기 + 페이지 타이틀 + 인증샷 + 도구 메뉴(다크모드 통합)
-│   │       │   ├── tool-menu.tsx, app-guide.tsx, share/
+│   │       ├── layout/           # asset-page-tabs.tsx, floating-add-button, welcome-guide, notice-dialog
+│   │       ├── top-nav/          # top-bar, theme-menu, tool-menu, app-guide, share/
 │   │       └── tutorial/         # tutorial-overlay.tsx (Step 0~5)
 │   ├── api/
 │   │   ├── finance/
@@ -110,25 +101,12 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 - 사이드바: variant=`inset`, collapsible=`icon`
 - 헤더: `sticky top-0 h-10 sm:h-12` (layout.tsx)
 
-## 페이지 네비게이션 — drill-down hash routing
+## 탭 구조 (`layout/asset-page-tabs.tsx`)
 
-**모델**: `AssetView = { type: "home" } | { type: "detail", tab } | { type: "activity", tab }`
-**hash 매핑**: `#detail/stocks`, `#activity/profit` 등 — `/asset#detail/...` URL 직접 진입·새로고침·뒤로가기 모두 동작
-
-- **홈** (`#home` 또는 hash 없음): InlineSelector(홈/상세/성과 1차 탭) + Dashboard. 상세/성과 탭 클릭 = drill-down 진입 트리거
-- **상세 진입**: TopBar 좌측에 ← + "상세" 타이틀. 본문에 InlineSelector(주식/부동산/암호화폐/현금/대출) + 해당 탭 컴포넌트
-- **성과 진입**: 동일 패턴. ← "성과" + InlineSelector(순자산/수익/배당)
-- **뒤로가기**: 항상 `navigate({type:"home"})`로 홈 복귀 (history.back() 아님)
-- **scroll-to-top**: navigate·popstate 시 자동 스크롤 0
-- `navigate-to-tab` CustomEvent → `navigate({type:"detail", tab})` 호출 (FAB 수정 진입)
-
-**InlineSelector size 위계** (`layout/inline-selector.tsx`):
-- `lg`(1차 탭): `text-sm sm:text-base lg:text-lg`
-- `md`(2·3차, 기본): `text-[13px] sm:text-sm lg:text-base`
-- `sm`(4차 보조): `text-[12px] sm:text-[13px] lg:text-sm`
-- 컨테이너: `bg-muted/60 dark:bg-muted/40` (라이트 짙음, 다크 옅음). 활성: `bg-background`
-
-**카드 외피 통일**: 상세 5탭(stock/real-estate/crypto/cash/loan) 모두 `<Card><CardHeader><CardTitle>...</CardTitle></CardHeader><CardContent>` 패턴. 카테고리 selector는 CardContent 안 SummaryHeader 바로 아래(Hero → 필터 → 리스트 시선 흐름).
+- **홈** (`home`): Dashboard + 서브탭(전체/금융/부동산/부채) — `useDashboardTabs`가 동적 생성
+- **상세** (`detail`): 주식/부동산/암호화폐/현금/대출 5 서브탭
+- **성과** (`activity`): 순자산/수익/배당 3 서브탭
+- `navigate-to-tab` CustomEvent → 상세 탭 자동 이동
 
 ## 비활성 종목 정책
 

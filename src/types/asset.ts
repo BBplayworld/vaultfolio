@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { transactionSchema } from "./transaction";
 
 // 부동산 자산 스키마
 export const realEstateSchema = z.object({
@@ -21,7 +20,7 @@ export const stockSchema = z.object({
   name: z.string().min(1, "종목명을 입력해주세요"),
   ticker: z.string().optional(),
   quantity: z.number().min(0, "수량은 0 이상이어야 합니다").refine((val) => val > 0, "수량을 입력해주세요"),
-  averagePrice: z.number().min(0, "평단가는 0 이상이어야 합니다").refine((val) => val > 0, "평단가를 입력해주세요"),
+  averagePrice: z.number().min(0, "평균단가는 0 이상이어야 합니다").refine((val) => val > 0, "평균단가를 입력해주세요"),
   currentPrice: z.number().min(0, "현재가는 0 이상이어야 합니다").refine((val) => val > 0, "현재가를 입력해주세요"),
   // 해외주식용 화폐 단위 (KRW 기본)
   currency: z.enum(["KRW", "USD", "JPY"]).default("KRW"),
@@ -35,9 +34,6 @@ export const stockSchema = z.object({
   inactiveStatus: z.enum(["delisted", "halted"]).optional(),
   inactiveReason: z.string().optional(),
   inactiveCheckedAt: z.string().optional(),
-  // 거래 반영 관련 — 포지션 출처 추적
-  positionSource: z.enum(["manual", "computed"]).optional(),
-  positionEffectiveDate: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.category === "domestic" || data.category === "foreign") {
     const ticker = data.ticker?.trim() || "";
@@ -137,7 +133,6 @@ export const assetDataSchema = z.object({
   cash: z.array(cashSchema).default([]),
   loans: z.array(loanSchema).default([]),
   yearlyNetAssets: z.array(yearlyNetAssetSchema).default([]),
-  transactions: z.array(transactionSchema).default([]),
   lastUpdated: z.string(),
 });
 
@@ -149,7 +144,6 @@ export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
-export type { Transaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
 
 // 일별 자산 스냅샷 (이번 달 일별 차트용)
 // 환율 이력은 별도 storage(secretasset_exchange_history)로 관리

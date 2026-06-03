@@ -4,7 +4,7 @@ import { getCacheStorage } from "@/lib/cache-storage";
 const LOGO_DEV_TICKER_TOKEN = "pk_I3rhtineRSqYNMtDKQM1zw";
 const LOGO_DEV_DOMAIN_TOKEN = "pk_DmcvYxOTTfuXuZ2Nuf3sJA";
 const TICKER_RE = /^[A-Z0-9]{1,10}$/i;
-const DOMAIN_RE = /^[a-z0-9][a-z0-9\-.]{1,98}[a-z0-9]$/i;
+const DOMAIN_RE = /^[a-z0-9][a-z0-9\-\.]{1,98}[a-z0-9]$/i;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

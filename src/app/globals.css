@@ -38,8 +38,6 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-brand-foreground: var(--brand-foreground);
-  --color-brand: var(--brand);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -61,9 +59,6 @@ These serve as the fallback; there is no separate default.css file. */
   /*--primary: oklch(0.205 0 0);*/
   --primary: oklch(0.585 0.233 277.117);
   --primary-foreground: oklch(0.985 0 0);
-  /* 브랜드 액션 색 — 확인/제출 버튼·체크박스 공용. MAIN_PALETTE[0](config/theme.ts)과 동일 hex 유지 */
-  --brand: #5b6fbf;
-  --brand-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -114,9 +109,6 @@ These serve as the fallback; there is no separate default.css file. */
   /* Indigo primary color */
   --primary: oklch(0.704 0.040 256.788);
   --primary-foreground: oklch(1 0 0);
-  /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
-  --brand: #5b6fbf;
-  --brand-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -181,32 +173,6 @@ These serve as the fallback; there is no separate default.css file. */
 
   [data-theme-preset]:not([data-theme-preset="default"]) .shadow-2xl {
     box-shadow: var(--shadow-2xl);
-  }
-
-  /* 가로 스크롤 컨테이너 공용 — 라이트/다크 자동 적용, 화살표 버튼 제거, 트랙 투명 */
-  .scrollbar-themed {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent) transparent;
-  }
-  .scrollbar-themed::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-  }
-  .scrollbar-themed::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-themed::-webkit-scrollbar-thumb {
-    background-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent);
-    border-radius: 9999px;
-  }
-  .scrollbar-themed::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
-  }
-  .scrollbar-themed::-webkit-scrollbar-button {
-    display: none;
-  }
-  .scrollbar-themed::-webkit-scrollbar-corner {
-    background: transparent;
   }
 }
 
