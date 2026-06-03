@@ -1,0 +1,4 @@
+# 로컬 테스트용 공지 이미지는 커밋하지 않음 (운영은 Vercel Blob 사용)
+*
+!.gitignore
+!README.md

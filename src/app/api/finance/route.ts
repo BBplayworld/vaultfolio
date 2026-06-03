@@ -95,14 +95,15 @@ export async function GET(request: Request) {
     const uncachedKr: string[] = [];
 
     // 1단계: 캐시 확인 (국내/해외 슬롯 각각 적용 — 장중 1시간 단위)
+    // X-Ray 분류(classification) 필드가 없는 옛 캐시는 미캐시로 처리해 재조회 트리거
     for (const ticker of usTickers) {
       const cached = await storage.getStock(stockCacheKey(ticker, slotForeign));
-      if (cached) results[ticker] = cached;
+      if (cached && cached.classification) results[ticker] = cached;
       else uncachedUs.push(ticker);
     }
     for (const ticker of krTickers) {
       const cached = await storage.getStock(stockCacheKey(ticker, slotDomestic));
-      if (cached) results[ticker] = cached;
+      if (cached && cached.classification) results[ticker] = cached;
       else uncachedKr.push(ticker);
     }
 
@@ -114,8 +115,13 @@ export async function GET(request: Request) {
     if (uncachedUs.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);
       if (accessToken) {
-        const res = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
-        Object.assign(apiResults, res);
+        const { prices, classifications } = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        for (const [ticker, cls] of Object.entries(classifications)) {
+          if (prices[ticker]) prices[ticker].classification = cls;
+          // 90일 분류 캐시에도 머지 저장 — Gemini themes가 없어도 region/marketCapTier/indices는 보존
+          await storage.setStockClassification(ticker, cls as unknown as Record<string, unknown>);
+        }
+        Object.assign(apiResults, prices);
       } else {
         console.error(`[KIS 토큰 없음 - 해외주식 조회 스킵]: ${uncachedUs.join(",")}`);
       }
@@ -124,8 +130,12 @@ export async function GET(request: Request) {
     if (uncachedKr.length > 0) {
       const accessToken = await getKisAccessToken(todayStr);
       if (accessToken) {
-        const res = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
-        Object.assign(apiResults, res);
+        const { prices, classifications } = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        for (const [ticker, cls] of Object.entries(classifications)) {
+          if (prices[ticker]) prices[ticker].classification = cls;
+          await storage.setStockClassification(ticker, cls as unknown as Record<string, unknown>);
+        }
+        Object.assign(apiResults, prices);
       } else {
         console.error(`[KIS 토큰 없음 - 국내주식 조회 스킵]: ${uncachedKr.join(",")}`);
       }
