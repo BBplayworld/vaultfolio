@@ -6,15 +6,6 @@ import { isUsEasternDST } from "@/lib/stock-cache-slot";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
-// 한투 API가 반환하는 해외 거래일을 KST 일자 표기로 +1일 변환
-// 환율 매칭에 사용 (스냅샷의 환율은 KST 일자 기준으로 저장됨)
-function shiftUsDate(date: string | undefined): string | undefined {
-  if (!date) return date;
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-}
-
 // 일별 수익 계산 — profit-chart daily와 stock-tab의 "전일 대비"가 같은 값을 쓰도록 통일
 // 모든 종목의 종가 vs 종가 비교, 시점별 환율(prev=어제, ref=오늘) 적용
 export function computeDailyStockProfit(
@@ -35,11 +26,9 @@ export function computeDailyStockProfit(
     const isJP = st.currency === "JPY" && !DOMESTIC_CATEGORIES.has(st.category);
     const rateFor = (rates: { USD: number; JPY: number }) =>
       isUS ? rates.USD : isJP ? rates.JPY / 100 : 1;
-    // 해외는 한투 거래일 +1일이 KST 일자 → 환율 매칭
-    const prevRateDate = (isUS || isJP) ? shiftUsDate(ref.prevDate) : ref.prevDate;
-    const refRateDate = (isUS || isJP) ? shiftUsDate(ref.refDate) : ref.refDate;
-    const prevRate = rateFor(getRatesForDate(prevRateDate!, currentRates));
-    const refRate = rateFor(getRatesForDate(refRateDate!, currentRates));
+    // ET 거래일 = 동일 KST 날짜의 환율 (ET 마감=KST 새벽, FX 미개장 → 전일 환율 적용)
+    const prevRate = rateFor(getRatesForDate(ref.prevDate, currentRates));
+    const refRate = rateFor(getRatesForDate(ref.refDate, currentRates));
     const currentValue = ref.refPrice * st.quantity * refRate;
     const refValue = ref.prevPrice * st.quantity * prevRate;
     profitSum += currentValue - refValue;
@@ -190,7 +179,7 @@ export function recordTodayExchangeRate(rates: { USD: number; JPY: number }): vo
   writeExchangeHistory(history);
 }
 
-// 서버 2일치 환율 이력을 로컬에 보충 — 로컬에 없는 날짜만 추가(로컬 우선, 서버는 빈칸 보충)
+// 서버 3일치 환율 이력을 로컬에 보충 — 로컬에 없는 날짜만 추가(로컬 우선, 서버는 빈칸 보충)
 // 해외 일별수익의 전날 환율을 미접속 기기에서도 동일하게 확보하기 위함
 export function mergeExchangeHistory(server: Record<string, { USD: number; JPY: number }>): void {
   if (typeof window === "undefined" || !server) return;

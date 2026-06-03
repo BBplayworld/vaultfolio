@@ -25,6 +25,14 @@ import { Stock } from "@/types/asset";
 
 export type InactiveStatus = "delisted" | "halted";
 
+// X-Ray 분류 패치 — KIS 응답에서 자동 추출 가능한 항목
+export interface StockClassificationPatch {
+  region?: string;
+  regionName?: string;
+  marketCapTier?: "large" | "mid" | "small" | "unknown";
+  indices?: string[];
+}
+
 export interface StockPriceResult {
   price: number;
   name: string;
@@ -32,12 +40,81 @@ export interface StockPriceResult {
   market?: string;
   inactiveStatus?: InactiveStatus;
   inactiveReason?: string;
+  classification?: StockClassificationPatch;
 }
 
 export interface ExchangeRates {
   USD: number;
   JPY: number;
   updated_at?: string;
+}
+
+// ─────────────────────────────────────────────
+// KIS → 분류 매핑 헬퍼
+// ─────────────────────────────────────────────
+
+function mapDomesticIndices(output: Record<string, string> | undefined): string[] {
+  if (!output) return [];
+  const out: string[] = [];
+  const mketId = output.mket_id_cd;
+  if (mketId === "STK") out.push("KOSPI");
+  else if (mketId === "KSQ") out.push("KOSDAQ");
+  else if (mketId === "KNX") out.push("KONEX");
+  if (output.kospi200_item_yn === "Y") out.push("KOSPI 200");
+  return out;
+}
+
+const NATN_CD_TO_ISO: Record<string, string> = {
+  "840": "US",
+  "392": "JP",
+  "156": "CN",
+  "344": "HK",
+  "410": "KR",
+  "826": "UK",
+  "276": "DE",
+};
+
+function mapOverseasRegion(natnCd: string | undefined): { region: string; regionName?: string } {
+  if (!natnCd) return { region: "Other" };
+  const iso = NATN_CD_TO_ISO[natnCd];
+  return { region: iso ?? "Other" };
+}
+
+function mapOverseasIndices(ovrsExcgCd: string | undefined): string[] {
+  if (!ovrsExcgCd) return [];
+  // 거래소를 지수의 기본 단위로 포함 (구체 지수는 Gemini 보충)
+  const map: Record<string, string> = {
+    NASD: "NASDAQ",
+    NYSE: "NYSE",
+    AMEX: "AMEX",
+    TSE: "TSE",
+    HKS: "HKEX",
+    SHS: "SSE",
+    SZS: "SZSE",
+  };
+  const v = map[ovrsExcgCd];
+  return v ? [v] : [];
+}
+
+function extractDomesticClassification(output: Record<string, string> | undefined): StockClassificationPatch | null {
+  if (!output) return null;
+  // marketCapTier는 Gemini가 일원 추정 (KIS는 시총 규모 필드를 제공하지 않음 — region·indices만 보충)
+  const patch: StockClassificationPatch = {
+    region: "KR",
+    indices: mapDomesticIndices(output),
+  };
+  return patch;
+}
+
+function extractOverseasClassification(output: Record<string, string> | undefined): StockClassificationPatch | null {
+  if (!output) return null;
+  const { region, regionName } = mapOverseasRegion(output.natn_cd);
+  const patch: StockClassificationPatch = {
+    region,
+    regionName: regionName ?? (output.natn_name?.trim() || undefined),
+    indices: mapOverseasIndices(output.ovrs_excg_cd),
+  };
+  return patch;
 }
 
 // ─────────────────────────────────────────────
@@ -157,16 +234,104 @@ export function classifyOverseasInactive(
   return { status: null, reason: null };
 }
 
+// ─────────────────────────────────────────────
+// Step 5. 외부 API 호출 - 국내 주식 (한국투자증권 OpenAPI)
+// access_token 발급: POST /oauth2/tokenP (24시간 유효, 서버에서 캐싱)
+// 종목 조회: GET /uapi/domestic-stock/v1/quotations/search-stock-info
+// ─────────────────────────────────────────────
+
+export async function fetchKisToken(
+  appKey: string,
+  appSecret: string
+): Promise<string | null> {
+  if (!appKey || !appSecret) return null;
+  try {
+    const res = await fetch(
+      "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant_type: "client_credentials", appkey: appKey, appsecret: appSecret }),
+        cache: "no-store",
+      }
+    );
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.access_token) {
+      console.error(
+        `[KIS 토큰 발급 오류]: HTTP ${res.status} ${res.statusText}, error_code=${data?.error_code ?? "-"}, error_description=${data?.error_description ?? "-"}`
+      );
+      return null;
+    }
+    return data.access_token as string;
+  } catch (e) {
+    console.error("[KIS 토큰 발급 오류]:", e);
+    return null;
+  }
+}
+
+export async function fetchStocksFromKorea(
+  tickers: string[],
+  todayStr: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<{ prices: Record<string, StockPriceResult>; classifications: Record<string, StockClassificationPatch> }> {
+  const results: Record<string, StockPriceResult> = {};
+  const classifications: Record<string, StockClassificationPatch> = {};
+
+  for (const ticker of tickers) {
+    try {
+      const res = await fetch(
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${ticker}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            appkey: appKey,
+            appsecret: appSecret,
+            tr_id: "CTPF1002R",
+          },
+          cache: "no-store",
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error(
+          `[KIS 국내주식 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
+        );
+        continue;
+      }
+      if (!isKisResponseOk(data, `국내주식 ${ticker}`)) continue;
+      const output = data.output as Record<string, string> | undefined;
+      const price = parseFloat(output?.thdt_clpr ?? "0");
+      const name: string = output?.prdt_abrv_name ?? "";
+      if (price > 0) {
+        const sctyGrp = output?.scty_grp_id_cd ?? "";
+        const mketId = output?.mket_id_cd ?? "";
+        const market = sctyGrp === "EF" ? "국내ETF" : mketId === "STK" ? "코스피" : mketId === "KSQ" ? "코스닥" : undefined;
+        results[ticker] = { price, name, updated_at: todayStr, market };
+      }
+      // 분류 추출 — 가격 조회 성공 여부와 무관하게 가능하면 추출
+      const cls = extractDomesticClassification(output);
+      if (cls) classifications[ticker] = cls;
+    } catch (e) {
+      console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);
+    }
+  }
+
+  return { prices: results, classifications };
+}
+
 export async function fetchStocksFromKisOverseas(
   tickers: string[],
   todayStr: string,
   accessToken: string,
   appKey: string,
   appSecret: string
-): Promise<Record<string, StockPriceResult>> {
-  if (!accessToken || tickers.length === 0) return {};
+): Promise<{ prices: Record<string, StockPriceResult>; classifications: Record<string, StockClassificationPatch> }> {
+  if (!accessToken || tickers.length === 0) return { prices: {}, classifications: {} };
 
   const results: Record<string, StockPriceResult> = {};
+  const classifications: Record<string, StockClassificationPatch> = {};
 
   for (let i = 0; i < tickers.length; i++) {
     if (i > 0) await sleep(350);
@@ -209,6 +374,8 @@ export async function fetchStocksFromKisOverseas(
         if (price > 0 && !inactiveStatus) {
           results[ticker] = { price, name: output?.prdt_name || ticker, updated_at: todayStr, market };
           isActiveFound = true;
+          const cls = extractOverseasClassification(output);
+          if (cls) classifications[ticker] = cls;
           break; // 활성 종목 성공 — 다음 거래소 시도 불필요
         }
         if (inactiveStatus && !foundInactive) {
@@ -235,90 +402,7 @@ export async function fetchStocksFromKisOverseas(
     }
   }
 
-  return results;
-}
-
-// ─────────────────────────────────────────────
-// Step 5. 외부 API 호출 - 국내 주식 (한국투자증권 OpenAPI)
-// access_token 발급: POST /oauth2/tokenP (24시간 유효, 서버에서 캐싱)
-// 종목 조회: GET /uapi/domestic-stock/v1/quotations/search-stock-info
-// ─────────────────────────────────────────────
-
-export async function fetchKisToken(
-  appKey: string,
-  appSecret: string
-): Promise<string | null> {
-  if (!appKey || !appSecret) return null;
-  try {
-    const res = await fetch(
-      "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grant_type: "client_credentials", appkey: appKey, appsecret: appSecret }),
-        cache: "no-store",
-      }
-    );
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.access_token) {
-      console.error(
-        `[KIS 토큰 발급 오류]: HTTP ${res.status} ${res.statusText}, error_code=${data?.error_code ?? "-"}, error_description=${data?.error_description ?? "-"}`
-      );
-      return null;
-    }
-    return data.access_token as string;
-  } catch (e) {
-    console.error("[KIS 토큰 발급 오류]:", e);
-    return null;
-  }
-}
-
-export async function fetchStocksFromKorea(
-  tickers: string[],
-  todayStr: string,
-  accessToken: string,
-  appKey: string,
-  appSecret: string
-): Promise<Record<string, StockPriceResult>> {
-  const results: Record<string, StockPriceResult> = {};
-
-  for (const ticker of tickers) {
-    try {
-      const res = await fetch(
-        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${ticker}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            appkey: appKey,
-            appsecret: appSecret,
-            tr_id: "CTPF1002R",
-          },
-          cache: "no-store",
-        }
-      );
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        console.error(
-          `[KIS 국내주식 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
-        );
-        continue;
-      }
-      if (!isKisResponseOk(data, `국내주식 ${ticker}`)) continue;
-      const output = data.output as Record<string, string> | undefined;
-      const price = parseFloat(output?.thdt_clpr ?? "0");
-      const name: string = output?.prdt_abrv_name ?? "";
-      if (price > 0) {
-        const sctyGrp = output?.scty_grp_id_cd ?? "";
-        const mketId = output?.mket_id_cd ?? "";
-        const market = sctyGrp === "EF" ? "국내ETF" : mketId === "STK" ? "코스피" : mketId === "KSQ" ? "코스닥" : undefined;
-        results[ticker] = { price, name, updated_at: todayStr, market };
-      }
-    } catch (e) {
-      console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);
-    }
-  }
-
-  return results;
+  return { prices: results, classifications };
 }
 
 // ─────────────────────────────────────────────
