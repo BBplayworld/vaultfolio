@@ -52,20 +52,34 @@ export function UpdateNoticeDialog() {
   const config = getNoticeConfig();
 
   useEffect(() => {
-    if (!config) { setIsHydrated(true); return; }
+    // [디버그] 공지 미표시·이미지 누락 원인 추적용 로그 (진단 후 제거)
+    if (!config) {
+      console.warn("[notice] config 없음 — NEXT_PUBLIC_NOTICE 미설정·enabled:false·만료·JSON 파싱실패 중 하나");
+      setIsHydrated(true);
+      return;
+    }
     cleanExpiredNoticeKeys();
     const key = `${STORAGE_KEY_PREFIXES.notice}${config.id}`;
     const seen = localStorage.getItem(key);
+    const hasImages = config.items.some((it) => it.image);
+    console.log("[notice] config", { id: config.id, items: config.items.length, hasImages, alreadySeen: !!seen });
     if (!seen) {
       setOpen(true);
       // 이미지 매핑이 필요한 항목이 있을 때만 fetch
-      const hasImages = config.items.some((it) => it.image);
       if (hasImages) {
+        console.log("[notice] /api/notice/images 호출 시작");
         fetch("/api/notice/images")
           .then((r) => r.json())
-          .then((data) => setImageMap(data.images ?? {}))
-          .catch(() => {});
+          .then((data) => {
+            console.log("[notice] /api/notice/images 응답", data);
+            setImageMap(data.images ?? {});
+          })
+          .catch((e) => console.warn("[notice] /api/notice/images 호출 실패", e));
+      } else {
+        console.log("[notice] image 필드 가진 항목 없음 — fetch 생략");
       }
+    } else {
+      console.log("[notice] 이미 확인한 공지(localStorage 키 존재) — 다이얼로그·fetch 생략. 재노출하려면 id 변경 또는 해당 키 삭제");
     }
     setIsHydrated(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps

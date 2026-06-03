@@ -17,8 +17,16 @@ export async function GET() {
         const stem = b.pathname.replace(/^notice\//, "").replace(/\.[^.]+$/, "");
         images[stem] = b.url;
       }
+      // [디버그] preview에서 이미지 누락 원인 추적용 (진단 후 제거)
+      console.log("[notice-images] blob 조회", {
+        source: "blob",
+        blobCount: blobs.length,
+        pathnames: blobs.map((b) => b.pathname),
+        mappedKeys: Object.keys(images),
+      });
       return NextResponse.json({ images });
-    } catch {
+    } catch (e) {
+      console.warn("[notice-images] blob 조회 실패", e);
       return NextResponse.json({ images: {} });
     }
   }
