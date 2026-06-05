@@ -19,23 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Stock, AssetData } from "@/types/asset";
 import { saveAssetDataRaw } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { stockCategories, securitiesFirms } from "@/config/asset-options";
+import { stockCategories, securitiesFirms, matchBrokerHint } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
-
-// securitiesFirms 전체 항목 flat 배열
-const ALL_FIRMS = securitiesFirms.flatMap((g) => g.items);
-
-// brokerHint 텍스트 → securitiesFirms 매칭 (부분 문자열 포함 여부로 판단)
-function matchBrokerHint(hint: string): string | undefined {
-  if (!hint) return undefined;
-  const h = hint.replace(/\s/g, "");
-  return ALL_FIRMS.find((f) => {
-    const fn = f.replace(/\s/g, "");
-    return fn.includes(h) || h.includes(fn);
-  });
-}
 
 type ImportStock = Omit<Stock, "id"> & {
   id: string;

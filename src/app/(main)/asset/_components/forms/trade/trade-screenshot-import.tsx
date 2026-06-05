@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { formatCurrency } from "@/lib/number-utils";
-import { securitiesFirms } from "@/config/asset-options";
+import { securitiesFirms, matchBrokerHint } from "@/config/asset-options";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade-utils";
@@ -33,6 +33,7 @@ interface ImportTrade {
   dateMissing?: boolean;
   section: "국내" | "해외" | "기타";
   currency: "KRW" | "USD" | "JPY";
+  brokerHint?: string;
   selected: boolean;
 }
 
@@ -87,37 +88,49 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     reset();
   };
 
-  // 종목명/티커 + 증권사로 보유 종목 매칭. 증권사 분할이 없으면 단일 보유에 반영(방어).
-  const resolveMatch = (ticker: string, name: string, broker: string): string => {
+  // 거래 → 보유 종목 매칭 결과
+  // existing: 기존 보유에 반영 / split: 선택 증권사 보유로 새로 분할 생성 / none: 미보유(제외)
+  type MatchInfo =
+    | { kind: "existing"; stockId: string }
+    | { kind: "split"; baseStockId: string }
+    | { kind: "none" };
+
+  // 종목명/티커 + 증권사로 보유 종목 매칭.
+  // 선택 증권사 보유가 있으면 거기에, 없는데 다른 증권사 분할 보유가 있으면 선택 증권사로 새 분할 생성,
+  // 증권사 미지정 단일 보유면 그대로 반영(방어).
+  const resolveMatch = (ticker: string, name: string, broker: string): MatchInfo => {
     const norm = ticker.toUpperCase();
     const candidates = ticker
       ? stocks.filter((s) => s.ticker?.toUpperCase() === norm)
       : stocks.filter((s) => s.name === name);
     if (candidates.length === 0) {
       const byName = stocks.find((s) => s.name === name);
-      return byName?.id ?? "";
+      return byName ? { kind: "existing", stockId: byName.id } : { kind: "none" };
     }
     if (broker) {
       const byBroker = candidates.find((s) => s.broker === broker);
-      if (byBroker) return byBroker.id;
+      if (byBroker) return { kind: "existing", stockId: byBroker.id };
+      // 선택 증권사 보유는 없지만 다른 증권사로 분할 관리 중 → 선택 증권사로 새 분할 생성
+      if (candidates.some((s) => s.broker)) return { kind: "split", baseStockId: candidates[0].id };
     }
-    return candidates[0].id;
+    return { kind: "existing", stockId: candidates[0].id };
   };
 
-  // 거래별 매칭 종목 id (selectedBroker·stocks 변경 시 재산출)
+  // 거래별 매칭 정보 (selectedBroker·stocks 변경 시 재산출)
   const matchMap = useMemo(() => {
-    const m = new Map<string, string>();
+    const m = new Map<string, MatchInfo>();
     for (const t of trades) m.set(t.id, resolveMatch(t.ticker, t.name, selectedBroker));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trades, selectedBroker, assetData.stocks]);
 
-  // 거래별 기존 중복 여부(매칭 stockId + 날짜·수량·가격·유형 동일)
+  // 거래별 기존 중복 여부(기존 보유 매칭일 때만 — 분할 신규 생성은 중복 없음)
   const dupMap = useMemo(() => {
     const m = new Map<string, boolean>();
     const existing = assetData.transactions || [];
     for (const t of trades) {
-      const stockId = matchMap.get(t.id) || "";
+      const info = matchMap.get(t.id);
+      const stockId = info?.kind === "existing" ? info.stockId : "";
       m.set(t.id, stockId ? !!findDuplicateTransaction(existing, {
         stockId, date: t.date, quantity: t.quantity, price: t.price, type: t.type,
       }) : false);
@@ -159,6 +172,9 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
       }));
 
       setTrades(importTrades);
+      // 인식된 증권사명을 증권사 select에 자동 설정(매칭 실패 시 빈값 유지 → 수동 선택)
+      const autoBroker = matchBrokerHint(importTrades[0]?.brokerHint ?? "");
+      if (autoBroker) setSelectedBroker(autoBroker);
       geminiUsage.increment("trade");
       setStep("preview");
     } catch {
@@ -175,12 +191,12 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   };
 
   const toggleSelect = (id: string) => {
-    if (!matchMap.get(id)) return; // 미보유(미매칭)는 선택 불가
+    if (matchMap.get(id)?.kind === "none") return; // 미보유(미매칭)는 선택 불가
     setTrades((prev) => prev.map((t) => (t.id === id ? { ...t, selected: !t.selected } : t)));
   };
 
-  // 선택됨 + 매칭됨
-  const registerList = trades.filter((t) => t.selected && matchMap.get(t.id));
+  // 선택됨 + 매칭됨(기존 반영 또는 분할 신규)
+  const registerList = trades.filter((t) => t.selected && matchMap.get(t.id)?.kind !== "none");
   // 실제 추가 대상 = 위 중 (중복+덮어쓰기) 제외
   const addList = registerList.filter((t) => !(dupMap.get(t.id) && dupActionOf(t.id) === "overwrite"));
   const overwriteSkipCount = registerList.length - addList.length;
@@ -207,11 +223,38 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
 
     const txs: Transaction[] = [];
     const posState = new Map<string, PositionSnapshot>();
+    // 분할 신규 생성 종목: baseStockId → 새 stock(quantity 0 초기). 반영 ON일 때만 생성.
+    const splitStocks = new Map<string, Stock>();
+    const splitIdByBase = new Map<string, string>();
     const now = new Date().toISOString();
 
     ordered.forEach((t, i) => {
-      const stockId = matchMap.get(t.id)!;
-      const stock = stocks.find((s) => s.id === stockId)!;
+      const info = matchMap.get(t.id)!;
+      if (info.kind === "none") return; // addList에서 제외되나 타입 좁힘 겸 방어
+      let stockId: string;
+      // 분할 신규(반영 ON): 선택 증권사 보유 종목을 새로 만들어 그 종목에 거래 반영
+      if (info.kind === "split" && reflectToHoldings) {
+        const existingNewId = splitIdByBase.get(info.baseStockId);
+        if (existingNewId) {
+          stockId = existingNewId;
+        } else {
+          const base = stocks.find((s) => s.id === info.baseStockId)!;
+          stockId = `stock_${Date.now()}_${i}`;
+          splitIdByBase.set(info.baseStockId, stockId);
+          splitStocks.set(stockId, {
+            ...base,
+            id: stockId,
+            broker: selectedBroker,
+            quantity: 0,
+            averagePrice: 0,
+            purchaseDate: t.date,
+          });
+        }
+      } else {
+        // 기존 반영 또는 (반영 OFF인 분할은 기록만 → 기준 보유에 거래내역만 연결)
+        stockId = info.kind === "split" ? info.baseStockId : info.stockId;
+      }
+      const stock = splitStocks.get(stockId) ?? stocks.find((s) => s.id === stockId)!;
       const tx: Transaction = {
         id: `tx_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
         stockId,
@@ -248,19 +291,23 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
       });
     });
 
-    // 반영 OFF면 포지션 패치 없음(기록만)
-    const patches = Array.from(posState.entries()).map(([stockId, p]) => ({
-      stockId,
-      patch: {
+    // 반영 OFF면 포지션 패치 없음(기록만). 분할 신규 종목은 newStocks로, 기존 종목은 patch로 분리.
+    const patches: { stockId: string; patch: Partial<Stock> }[] = [];
+    const newStocks: Stock[] = [];
+    for (const [stockId, p] of posState.entries()) {
+      const patch: Partial<Stock> = {
         quantity: p.quantity,
         averagePrice: p.avgPrice,
         purchaseExchangeRate: p.avgExchangeRate || undefined,
         positionSource: "computed" as const,
         positionEffectiveDate: p.effectiveDate,
-      } satisfies Partial<Stock>,
-    }));
+      };
+      const splitBase = splitStocks.get(stockId);
+      if (splitBase) newStocks.push({ ...splitBase, ...patch });
+      else patches.push({ stockId, patch });
+    }
 
-    addTransactionsBatch(txs, patches);
+    addTransactionsBatch(txs, patches, newStocks);
     toast.success(
       `${ordered.length}건의 거래가 등록되었습니다.` +
       (overwriteSkipCount > 0 ? ` (중복 ${overwriteSkipCount}건은 기존 유지)` : "")
@@ -357,9 +404,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
             )}
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">
               {trades.map((t) => {
-                const matchedId = matchMap.get(t.id) || "";
-                const matched = !!matchedId;
-                const matchedStock = matched ? stocks.find((s) => s.id === matchedId) : undefined;
+                const info = matchMap.get(t.id) ?? { kind: "none" as const };
+                const matched = info.kind !== "none";
+                const isSplit = info.kind === "split";
+                const matchedStock = info.kind === "existing" ? stocks.find((s) => s.id === info.stockId) : undefined;
                 const active = matched && t.selected;
                 return (
                   <div
@@ -404,6 +452,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                               ))}
                             </div>
                           </div>
+                        ) : isSplit ? (
+                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                            ✓ {selectedBroker} 보유로 {reflectToHoldings ? "새로 추가" : "거래내역에 기록"}
+                          </p>
                         ) : (
                           <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
                             ✓ {matchedStock?.broker ? `${matchedStock.broker} ` : ""}보유 종목{reflectToHoldings ? "에 반영" : " 거래내역에 기록"}

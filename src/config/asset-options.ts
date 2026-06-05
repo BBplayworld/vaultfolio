@@ -12,6 +12,19 @@ export const securitiesFirms = [
   },
 ] as const;
 
+// securitiesFirms 전체 항목 flat 배열
+export const ALL_SECURITIES_FIRMS = securitiesFirms.flatMap((g) => g.items);
+
+// brokerHint 텍스트 → securitiesFirms 매칭 (공백 제거 후 부분 문자열 포함 여부로 판단)
+export function matchBrokerHint(hint: string): string | undefined {
+  if (!hint) return undefined;
+  const h = hint.replace(/\s/g, "");
+  return ALL_SECURITIES_FIRMS.find((f) => {
+    const fn = f.replace(/\s/g, "");
+    return fn.includes(h) || h.includes(fn);
+  });
+}
+
 // 금융기관 목록 (현금성 자산, 대출 공통)
 export const financialInstitutions = [
   {

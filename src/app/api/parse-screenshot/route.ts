@@ -392,6 +392,7 @@ const TRADE_SCHEMA = {
       fee: { type: Type.NUMBER },
       section: { type: Type.STRING, enum: ["국내", "해외", "기타"] },
       currency: { type: Type.STRING, enum: ["KRW", "USD", "JPY"] },
+      brokerHint: { type: Type.STRING },
     },
     required: ["name", "type", "quantity", "price", "section"],
   },
@@ -400,13 +401,13 @@ const TRADE_SCHEMA = {
 const buildTradePrompt = () => `증권 앱 체결 내역(거래 내역) 화면에서 거래 정보를 추출하라.
 
 필드:
-name=종목명(그대로), ticker=티커(화면에 보이면 최우선·없으면 ""), type=buy(매수)|sell(매도), quantity=체결수량(숫자만), price=체결단가(1주당 가격·숫자만), date=체결일(YYYY-MM-DD·없으면 ""), fee=수수료(숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY)
+name=종목명(그대로), ticker=티커(화면에 보이면 최우선·없으면 ""), type=buy(매수)|sell(매도), quantity=체결수량(숫자만), price=체결단가(1주당 가격·숫자만), date=체결일(연도가 화면에 보이면 YYYY-MM-DD·연도가 없으면 MM-DD만·아예 없으면 ""), fee=수수료(숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"메리츠증권"·"토스증권"·"키움")·없으면 ""
 
 판단 규칙:
 - "매수" "BUY" → type=buy, "매도" "SELL" → type=sell
 - price는 1주당 단가다. "체결가격/주문가격/체결단가/단가" 컬럼 값은 이미 1주당 가격이므로 그대로 사용하고 절대 수량으로 나누지 마라. (예: 수량 5, 체결가격 362 → price=362)
 - "총 매수금액/정산금액/거래금액"처럼 합계 금액만 있고 1주당 단가가 전혀 없을 때만 price=합계÷수량으로 계산
-- 날짜가 연도 없이 MM/DD만 있으면 올해로 추정
+- 체결일에 연도가 화면에 표시되지 않았으면 절대 연도를 추측하지 말고 MM-DD만 반환하라(예: "06/03" → "06-03")
 
 무시: 계좌번호·총 평가금액·광고`;
 
@@ -420,6 +421,30 @@ interface GeminiTrade {
   fee?: number;
   section: "국내" | "해외" | "기타";
   currency?: string;
+  brokerHint?: string;
+}
+
+// 체결일 연도 보정: YYYY-MM-DD면 그대로, 연도 없는 MM-DD/MM/DD면 올해 적용(오늘보다 미래면 작년), 빈값이면 today
+function normalizeTradeDate(raw: string | undefined, today: string): string {
+  if (!raw) return today;
+  const s = raw.trim();
+  // 연도 포함(YYYY-MM-DD 또는 YYYY/MM/DD) → 그대로 신뢰
+  const full = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (full) {
+    const [, y, m, d] = full;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // 연도 없는 MM-DD/MM/DD → 올해 적용, 오늘보다 미래면 작년
+  const md = s.match(/^(\d{1,2})[-/](\d{1,2})$/);
+  if (md) {
+    const [, m, d] = md;
+    const mm = m.padStart(2, "0");
+    const dd = d.padStart(2, "0");
+    const thisYear = today.slice(0, 4);
+    const candidate = `${thisYear}-${mm}-${dd}`;
+    return candidate > today ? `${Number(thisYear) - 1}-${mm}-${dd}` : candidate;
+  }
+  return today;
 }
 
 function processTradeResults(raw: GeminiTrade[], today: string) {
@@ -452,11 +477,12 @@ function processTradeResults(raw: GeminiTrade[], today: string) {
         type: t.type,
         quantity: Math.round(t.quantity * 1000000) / 1000000,
         price: Math.round(t.price * 100) / 100,
-        date: t.date || today,
+        date: normalizeTradeDate(t.date, today),
         dateMissing: !t.date,
         fee: t.fee ?? 0,
         section,
         currency: currency as "KRW" | "USD" | "JPY",
+        brokerHint: t.brokerHint || "",
       };
     });
 }

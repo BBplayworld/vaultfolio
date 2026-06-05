@@ -93,7 +93,7 @@ interface AssetDataContextType {
   updateTransaction: (txId: string, tx: Partial<Transaction>) => boolean;
   // 거래 + 포지션 원자적 반영 (단일 저장으로 stale-closure 덮어쓰기 방지)
   addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>) => boolean;
-  addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[]) => boolean;
+  addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[]) => boolean;
   deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>) => boolean;
 }
 
@@ -1059,13 +1059,21 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   );
 
   // 여러 거래 + 다종목 포지션 갱신을 단일 저장으로 처리 (스크린샷 일괄 등록 — 루프 stale-closure 방지)
+  // newStocks: 증권사 분할 등으로 새로 생성된 보유 종목(이미 최종 포지션이 반영된 상태)
   const addTransactionsBatch = useCallback(
-    (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[]) => {
+    (
+      txs: Transaction[],
+      patches: { stockId: string; patch: Partial<Stock> }[],
+      newStocks: Stock[] = []
+    ) => {
       const patchMap = new Map(patches.map((p) => [p.stockId, p.patch]));
       const newData = {
         ...assetData,
         transactions: pruneTransactions([...(assetData.transactions || []), ...txs]),
-        stocks: assetData.stocks.map((s) => (patchMap.has(s.id) ? { ...s, ...patchMap.get(s.id)! } : s)),
+        stocks: [
+          ...assetData.stocks.map((s) => (patchMap.has(s.id) ? { ...s, ...patchMap.get(s.id)! } : s)),
+          ...newStocks,
+        ],
       };
       return saveData(newData);
     },
