@@ -46,14 +46,6 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   return (
     <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-card border border-border">
 
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center ml-1 gap-2">
-          <span className="text-sm font-bold text-primary">{APP_CONFIG.name}</span>
-        </div>
-        <span className="text-[11px] text-muted-foreground">{now}</span>
-      </div>
-
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
         <div className="rounded-lg bg-card py-2 space-y-3">
@@ -111,6 +103,14 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
           </CardContent>
         </Card>
       )}
+
+      {/* 푸터 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center ml-1 gap-2">
+          &nbsp;
+        </div>
+        <span className="text-[11px] text-muted-foreground">{now}</span>
+      </div>
     </div>
   );
 }

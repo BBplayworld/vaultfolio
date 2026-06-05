@@ -15,6 +15,8 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
+import { isKrHoliday } from "@/lib/kr-holidays";
+import { isUsHoliday } from "@/lib/us-holidays";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
@@ -81,22 +83,41 @@ const CLOSE_TABLE_COLS = "grid grid-cols-[2.25rem_1fr_1fr] gap-x-2";
 // 시장 행: 라벨 + 시작/종료 날짜(연도 포함). 마감 시각은 표 하단 공통 안내로 일원화.
 // 해외 일별만 적용 환율(startSub/endSub)을 날짜 아래 1줄로 표시.
 function MarketDateRow({
-  label, startDate, endDate, startSub, endSub,
-}: { label: string; startDate?: string; endDate?: string; startSub?: string; endSub?: string }) {
-  const cell = (date?: string, align?: string, sub?: string) =>
+  label, startDate, endDate, startSub, endSub, startNote,
+}: { label: string; startDate?: string; endDate?: string; startSub?: string; endSub?: string; startNote?: string }) {
+  const cell = (date?: string, align?: string, sub?: string, note?: string) =>
     date ? (
       <div className={`tabular-nums leading-tight ${align ?? ""}`}>
         <p className="text-[13px] sm:text-sm">{date}</p>
+        {note && (
+          <p className="text-[10px] leading-none mt-0.5 text-amber-600/80 dark:text-amber-500/80" title="휴장일이 있어 직전 영업일 종가로 비교됩니다">
+            {note}
+          </p>
+        )}
         {sub && <p className="text-xs text-muted-foreground/70 mt-1">{sub}</p>}
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
     <div className={`${CLOSE_TABLE_COLS} items-start py-1.5 border-b border-border/30`}>
       <span className="text-muted-foreground">{label}</span>
-      {cell(startDate, undefined, startSub)}
+      {cell(startDate, undefined, startSub, startNote)}
       {cell(endDate, "text-right", endSub)}
     </div>
   );
+}
+
+// 시작~종료 날짜 사이에 해당 시장 휴장일(평일)이 끼어있는지 — 일별에서 직전 영업일이 휴장이라 폴백된 경우 감지
+function hasHolidayBetween(start: string | undefined, end: string | undefined, isHoliday: (d: string) => boolean): boolean {
+  if (!start || !end) return false;
+  const d = new Date(`${start}T00:00:00.000Z`);
+  const e = new Date(`${end}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  while (d < e) {
+    const day = d.getUTCDay();
+    if (day !== 0 && day !== 6 && isHoliday(toDateStr(d))) return true;
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return false;
 }
 
 // 환차손익 분해 팝오버 — 데스크톱은 마우스 hover, 모바일은 터치(탭)로 열림(바깥 탭/Esc로 닫힘)
@@ -447,6 +468,17 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const krCompareDate = pickMajorityDate(krProfits.map((r) => r.compareDate));
   const usCompareDate = pickMajorityDate(usProfits.map((r) => r.compareDate));
 
+  // 시작 종가가 휴장으로 직전 영업일에 폴백된 경우 "휴장제외" 최소 표시
+  // - 일별: 시작~종료 사이에 휴장일이 끼어있는지로 판정
+  // - 주/월/연간: 요청한 명목 기준 시작일(주말 보정) 자체가 그 시장 휴장일인지로 판정
+  const nonDailyTarget = period !== "daily" ? getExpectedRefDate(period) : undefined;
+  const krHolidayExcluded = period === "daily"
+    ? hasHolidayBetween(krRefDate, krCompareDate, isKrHoliday)
+    : !!nonDailyTarget && isKrHoliday(nonDailyTarget);
+  const usHolidayExcluded = period === "daily"
+    ? hasHolidayBetween(usRefDate, usCompareDate, isUsHoliday)
+    : !!nonDailyTarget && isUsHoliday(nonDailyTarget);
+
   // 해외 행에 실제 적용된 USD 환율 표시 (표시값=적용값)
   // - 일별: 시작=어제, 종료=오늘 시점별 환율 (history 없으면 현재환율 fallback)
   // - 주/월/연간: 시작·종료 모두 현재환율 단일 적용 → 같은 값 노출 (환차 미반영과 일관)
@@ -605,10 +637,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 </div>
                                 {/* 시장별 날짜 */}
                                 {showKrDate && (
-                                  <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} />
+                                  <MarketDateRow label="국내" startDate={krRefDate} endDate={krCompareDate} startNote={krHolidayExcluded ? "휴장제외" : undefined} />
                                 )}
                                 {showUsDate && (
-                                  <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} startSub={usStartRateText} endSub={usEndRateText} />
+                                  <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} startSub={usStartRateText} endSub={usEndRateText} startNote={usHolidayExcluded ? "휴장제외" : undefined} />
                                 )}
                                 {/* 합계 */}
                                 <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>

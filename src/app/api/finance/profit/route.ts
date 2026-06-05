@@ -8,6 +8,8 @@ import {
 } from "@/lib/finance-service";
 import { getDailyClosingRefDates } from "@/lib/profit-utils";
 import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/stock-cache-slot";
+import { isKrBusinessDay } from "@/lib/kr-holidays";
+import { isUsBusinessDay } from "@/lib/us-holidays";
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -235,9 +237,12 @@ export async function GET(req: NextRequest) {
         : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker));
       if (res !== null) {
         await cache.setRefPrice(task.ticker, res.date, res.price, period);
-        // 일치 시에만 매핑 저장 — 장중/휴장 등으로 응답일이 다르면 다음 요청 시 재호출되도록 함
-        // (stale `requestDate → 직전영업일` 매핑이 다음 KST 자정까지 영구 hit되는 문제 방지)
-        if (res.date === task.date) {
+        // 응답일==요청일이거나, 요청일이 비영업일(휴장/주말)이라 직전 영업일로 폴백된 경우 매핑 저장
+        // - 비영업일 폴백은 영구 확정값이라 안전 (휴장일 동안 매번 KIS 재호출되던 churn 제거)
+        // - 영업일인데 응답일이 더 이른 경우(장중 미확정)는 stale 매핑 영구 hit 방지를 위해 저장 안 함
+        const reqDate = new Date(`${task.date}T00:00:00.000Z`);
+        const reqIsBusinessDay = isDomestic ? isKrBusinessDay(reqDate) : isUsBusinessDay(reqDate);
+        if (res.date === task.date || !reqIsBusinessDay) {
           await cache.setRefDateForRequest(task.ticker, task.date, res.date, period);
         }
         const e = ensureEntry(task.ticker);

@@ -4,7 +4,6 @@ import { Pencil, Trash2, MapPin, TrendingUp, Banknote, CreditCard, ChevronDown }
 import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
@@ -54,12 +53,8 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{loan.name}</span>
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
-                  {loan.institution && <span className="text-xs text-muted-foreground shrink-0">({loan.institution})</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs text-muted-foreground">금리 {loan.interestRate}%</span>
-                  <span className="text-xs text-muted-foreground">·</span>
                   <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
@@ -77,6 +72,20 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>종류</p>
+                <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
+              </div>
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>금리</p>
+                <p className={ASSET_THEME.cardDetailValue}>{loan.interestRate}%</p>
+              </div>
+              {loan.institution && (
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>금융기관</p>
+                  <p className={ASSET_THEME.cardDetailValue}>{loan.institution}</p>
+                </div>
+              )}
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>대출일</p>
                 <p className={ASSET_THEME.cardDetailValue}>{loan.startDate}</p>

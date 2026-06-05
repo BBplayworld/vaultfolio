@@ -223,7 +223,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             <FormItem>
               <FormLabel>매입일 *</FormLabel>
               <FormControl>
-                <Input type="date" className="w-full max-w-[160px] sm:max-w-full text-sm" {...field} />
+                <Input type="date" className="w-full text-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

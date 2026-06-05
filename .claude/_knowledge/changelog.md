@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-06-05
+
+### 일별 수익 휴장 처리 + UI 정리 (issue-4.1)
+
+- **휴장 폴백 캐시 매핑** (`/api/finance/profit`): ref-date 매핑 저장 가드를 `res.date === task.date || !reqIsBusinessDay`로 완화. 요청일이 비영업일(`isKrBusinessDay`/`isUsBusinessDay`)이라 직전 영업일로 폴백된 경우(영구 확정값)도 응답일 기준 저장 → 휴장일 동안 매번 KIS 재호출되던 churn 제거. 영업일+장중 미확정(응답일이 더 이름)은 stale 영구 hit 방지로 여전히 미저장. **일별 수익 표시값·날짜 로직은 불변.**
+- **"휴장제외" 표시** (`profit-chart`): 기준 종가 비교 표에서 시작 종가가 휴장으로 직전 영업일에 폴백되면 시작일 아래 최소 표시. 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKrHoliday`/`isUsHoliday`)
+- **인증샷 보강** (`stock-tab`/`share-card`): `StockCategorySection`이 인증샷 모드에서도 비중바·포트폴리오 하단에 종목 리스트 노출(`!screenshotMode` 가드 제거). 요약 헤더는 인증샷 시 전일 대비+상단 구분선 제거 → 평가손익이 평가금액과 동일 행 정렬
+- **해외 상세 환차손익**: 금액 아래 줄에 수익률(`block`)로 분리 — 우측 매입환율 영역 침범 방지
+- **비종목 자산 카드 정리** (real-estate/loan/cash): 접힘행 왼쪽=`이름 / 비중%`만(종류 배지·매입가·금리·기관 제거), 상세 펼침에 종류·매입가(부동산)·금리·금융기관(대출) 이동 — 주식 카드 패턴과 통일
+- **날짜 input 모바일 넘침 원천 차단** (`globals.css`): `input[type="date"]` 등에 `appearance:none`+`min-width:0`+`max-width:100%`+webkit 의사요소 리셋 전역 규칙. 폼별 `max-w-[160px] sm:max-w-full` 임시방편 제거 → 전폭 통일
+- **이유:** 동일 영업일 기준에서 국내 휴장일이 KIS 폴백으로 우연히 맞던 값을 캐시·표시까지 일관화하고, 비종목 자산 리스트의 정보 위계를 주식과 통일, 모바일 날짜 input 넘침을 소스 레벨에서 차단
+
 ## 2026-05-23
 
 ### UI 정보구조 전면 재설계 — drill-down 라우팅 + 통일 디자인 시스템

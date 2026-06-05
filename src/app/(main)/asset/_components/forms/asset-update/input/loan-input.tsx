@@ -245,7 +245,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
               <FormItem className="min-w-0">
                 <FormLabel>대출일 *</FormLabel>
                 <FormControl>
-                  <Input type="date" className="w-full max-w-[160px] sm:max-w-full min-w-0 text-sm" {...field} />
+                  <Input type="date" className="w-full text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -259,7 +259,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
               <FormItem className="min-w-0">
                 <FormLabel>만기일</FormLabel>
                 <FormControl>
-                  <Input type="date" className="w-full max-w-[160px] sm:max-w-full min-w-0 text-sm" {...field} />
+                  <Input type="date" className="w-full text-sm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

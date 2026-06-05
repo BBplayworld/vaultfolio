@@ -381,7 +381,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
               </p>
             )}
           </div>
-          {dailyProfit != null && dailyProfitRate != null && (
+          {!screenshotMode && dailyProfit != null && dailyProfitRate != null && (
             <div className="border-t border-border/40 pt-1 mt-1">
               <div className="flex items-center gap-1.5 justify-end">
                 <p className="text-xs text-muted-foreground">전일 대비</p>
@@ -630,7 +630,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
             <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
             <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
               {formatCurrencyDisplay(Math.round(currencyGain))}
-              <span className="text-xs ml-1">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
+              <span className="block text-xs">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
             </p>
           </div>
           <div>
@@ -918,17 +918,15 @@ export function StockCategorySection({
         </div>
       )}
 
-      {/* 종목 리스트 (인증샷 모드에서는 비중바+범례까지만 노출, 리스트 제외) */}
-      {!screenshotMode && (
-        filteredStocks.length === 0 ? (
-          <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
-            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
-          </div>
-        ) : (
-          <div className="space-y-2 mt-8">
-            {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
-          </div>
-        )
+      {/* 종목 리스트 — 주식 상세/인증샷 공통 (인증샷도 비중바+포트폴리오 하단에 노출) */}
+      {filteredStocks.length === 0 ? (
+        <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+        </div>
+      ) : (
+        <div className="space-y-2 mt-8">
+          {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
+        </div>
       )}
     </div>
   );

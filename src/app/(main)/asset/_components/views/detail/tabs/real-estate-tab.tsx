@@ -4,7 +4,6 @@ import { Pencil, Trash2, MapPin, CreditCard, ChevronDown, Building2, Clock, Cale
 import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
@@ -38,11 +37,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] px-1 py-0 leading-tight`}>{typeLabel}</Badge>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs text-foreground">{formatShortCurrency(item.purchasePrice)} 매입</span>
-                  <span className="text-xs text-muted-foreground">·</span>
                   <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
@@ -64,6 +60,10 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
         <CollapsibleContent>
           <div className="border-t divide-y divide-border/50">
             <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+              <div>
+                <p className={ASSET_THEME.cardDetailLabel}>종류</p>
+                <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
+              </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
                 <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>

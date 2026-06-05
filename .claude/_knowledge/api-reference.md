@@ -40,6 +40,7 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&b
 2. `getRefPrice(ticker, actualDate)` — 실거래일 기준 가격 (period별 차등 TTL)
 
 → 휴장/공휴일로 요청일과 응답일이 달라도 다음 호출부터 영구 hit.
+매핑 저장 가드: `res.date === task.date || !reqIsBusinessDay`(요청일이 비영업일=휴장/주말이면 폴백 확정값이라 저장). 요청일이 **영업일인데 응답일이 더 이른**(장중 미확정) 경우만 미저장 → stale 매핑 영구 hit 방지.
 
 **해외 EXCD 사전 조회:** STOCKS 캐시(`{ticker}-{slot}` 또는 `{ticker}-{effectiveDate}`)에서 market 필드 → NAS/NYS/AMS 매핑 → `fetchOverseasHistoricalPrice(...preferredExcd)`에 전달. EXCD 미상이면 NAS→NYS→AMS 순 fallback.
 
