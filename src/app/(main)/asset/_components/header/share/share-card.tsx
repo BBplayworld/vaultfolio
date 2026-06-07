@@ -2,7 +2,6 @@
 
 import React, { useMemo } from "react";
 import { formatShortCurrency, formatCurrency, formatPriceByMode } from "@/lib/number-utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
 import { StockCard, StockCategorySection, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
 import { AssetDonutChart } from "@/app/(main)/asset/_components/views/home/dashboard";
@@ -46,19 +45,19 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   });
 
   return (
-    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-card">
+    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-transparent">
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
-        <div className="rounded-lg bg-card py-2 space-y-3">
+        <div className="rounded-lg bg-transparent py-2 space-y-3">
           <AssetDonutChart items={treemapData} netAsset={summary.netAsset} screenshotMode={true} maskFn={chartMaskFn} />
         </div>
       )}
 
       {/* 주식 (종합 + 상세 통합) — stock-tab 본체와 동일 외피 */}
       {sections.stock && (
-        <Card className="border-0 shadow-none py-0">
-          <CardContent className="space-y-4 pt-0 px-0 sm:px-0">
+        <div className="border-0 bg-transparent">
+          <div className="space-y-4 pt-0 px-0 sm:px-0">
             <StockSummaryHeader
               totalValue={filteredTotal}
               totalProfit={filteredProfit}
@@ -100,8 +99,8 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
                 );
               }}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* 푸터 */}
