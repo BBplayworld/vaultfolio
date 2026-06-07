@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
@@ -51,7 +51,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
                 {item.currency !== "KRW" && <p className="text-xs text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
@@ -68,7 +68,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>잔액</p>
                 <p className={ASSET_THEME.cardDetailValueBold}>{formatCurrencyDisplay(item.balance, item.currency)}</p>
-                {item.currency !== "KRW" && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{formatShortCurrency(value)}</p>}
+                {item.currency !== "KRW" && <p className={ASSET_THEME.cardDetailPriceKRW}>₩{formatPriceByMode(value)}</p>}
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>종류</p>
@@ -82,10 +82,10 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
               )}
             </div>
             <div className={ASSET_THEME.cardActions}>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
@@ -96,7 +96,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                   <div key={loan.id} className={ASSET_THEME.cardLoanItem}>
                     <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatPriceByMode(loan.balance)}</span>
                       <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
                     </div>
                   </div>
@@ -149,12 +149,12 @@ export function CashTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle>현금</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <DetailSummaryHeader label="총 현금성 자산" value={totalValue} />
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
+        <DetailSummaryHeader label="총 현금성 자산" value={totalValue} valueClass={ASSET_THEME.text.default} />
 
         <div className="flex justify-start">
           <InlineSelector

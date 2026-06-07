@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
-import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
+import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -126,7 +126,7 @@ export function FloatingAddButton() {
       onClick={() => setIsOpen(true)}
       className="w-full max-w-xs flex items-center justify-center gap-2 rounded-2xl
       py-3 text-base font-bold active:scale-[0.98] transition-colors
-      border border-[#5b6fbf]/30 bg-[#5b6fbf]/10 text-foreground/90 hover:bg-[#5b6fbf]/20"
+      bg-[#5b6fbf]/10 text-foreground/90 hover:bg-[#5b6fbf]/20"
       aria-label="자산 업데이트"
       data-tutorial="tutorial-fab"
     >
@@ -152,7 +152,7 @@ export function FloatingAddButton() {
               onClick={() => setIsOpen(true)}
               className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
               py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
-              border border-[#5b6fbf]/30 bg-[#5b6fbf]/10 text-foreground hover:bg-[#5b6fbf]/20"
+              bg-[#5b6fbf]/10 text-foreground hover:bg-[#5b6fbf]/20"
               aria-label="자산 업데이트"
               data-tutorial="tutorial-fab"
             >
@@ -220,55 +220,36 @@ export function FloatingAddButton() {
                 <button
                   key={type}
                   type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                   onClick={() => handleTypeSelect(type)}
                 >
                   <Icon className="size-5 text-primary shrink-0" />
                   <span className="font-medium">{label}</span>
+                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
                 </button>
               ))}
 
               <Separator className="my-1" />
 
-              <div className="rounded-xl border bg-card px-4 py-3 flex flex-col gap-3">
+              <div className="rounded-xl bg-card px-4 py-3 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <BadgeDollarSign className="size-4 text-primary shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">환율 설정
-                      <span className="text-xs text-muted-foreground ml-2 border p-1.5 rounded-md">
-                        {exchangeRateDate ? `기준일: ${exchangeRateDate}` : "외화 자산의 원화 환산 기준"}
+                      <span className="text-xs text-muted-foreground ml-2 bg-muted/50 px-2 py-0.5 rounded">
+                         {exchangeRateDate ? `기준일: ${exchangeRateDate}` : "외화 자산의 원화 환산 기준"}
                       </span>
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <Label className="text-sm font-medium whitespace-nowrap w-24">🇺🇸 USD</Label>
-                    <div className="flex items-center gap-2 flex-1">
-                      <NumberInput
-                        value={exchangeRates.USD}
-                        onChange={(val) => updateExchangeRate("USD", val)}
-                        className="flex-1"
-                        quickButtons={[]}
-                        allowDecimals={true}
-                        maxDecimals={1}
-                      />
-                      <span className="text-sm text-muted-foreground shrink-0">원</span>
-                    </div>
+                  <div className="flex items-center gap-3 justify-between">
+                    <Label className="text-sm font-medium whitespace-nowrap">🇺🇸 USD</Label>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">{exchangeRates.USD.toLocaleString()}원</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Label className="text-sm font-medium whitespace-nowrap w-24">🇯🇵 JPY (100¥)</Label>
-                    <div className="flex items-center gap-2 flex-1">
-                      <NumberInput
-                        value={exchangeRates.JPY}
-                        onChange={(val) => updateExchangeRate("JPY", val)}
-                        className="flex-1"
-                        quickButtons={[]}
-                        allowDecimals={true}
-                        maxDecimals={1}
-                      />
-                      <span className="text-sm text-muted-foreground shrink-0">원</span>
-                    </div>
+                  <div className="flex items-center gap-3 justify-between">
+                    <Label className="text-sm font-medium whitespace-nowrap">🇯🇵 JPY (100¥)</Label>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">{exchangeRates.JPY.toLocaleString()}원</span>
                   </div>
                 </div>
               </div>
@@ -279,7 +260,7 @@ export function FloatingAddButton() {
             <div className="flex flex-col gap-2 px-3">
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                 onClick={handleActionAdd}
               >
                 <Plus className="size-5 text-primary shrink-0" />
@@ -287,11 +268,12 @@ export function FloatingAddButton() {
                   <p className="font-medium">자산 업데이트</p>
                   <p className="text-xs text-muted-foreground">보유 상태 직접 입력</p>
                 </div>
+                <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
               {selectedType === "stock" && (
                 <button
                   type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                   onClick={() => {
                     dispatchAddTrade();
                     setIsOpen(false);
@@ -303,12 +285,13 @@ export function FloatingAddButton() {
                     <p className="font-medium">거래 입력</p>
                     <p className="text-xs text-muted-foreground">매수/매도 거래 기록</p>
                   </div>
+                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
                 </button>
               )}
               {selectedAsset.navigateTab && (
                 <button
                   type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                   onClick={handleActionEdit}
                 >
                   <Pencil className="size-5 text-primary shrink-0" />
@@ -321,7 +304,7 @@ export function FloatingAddButton() {
               )}
               <button
                 type="button"
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
                 onClick={() => setStep("select-type")}
               >
                 <ChevronLeft className="size-4" />
@@ -334,7 +317,7 @@ export function FloatingAddButton() {
             <div className="flex flex-col gap-2 px-3">
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("screenshot")}
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
@@ -342,10 +325,11 @@ export function FloatingAddButton() {
                   <p className="font-medium">스크린샷 가져오기</p>
                   <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
                 </div>
+                <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("manual")}
               >
                 <Plus className="size-5 text-primary shrink-0" />
@@ -353,10 +337,11 @@ export function FloatingAddButton() {
                   <p className="font-medium">직접 입력</p>
                   <p className="text-xs text-muted-foreground">수동으로 직접 입력</p>
                 </div>
+                <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
                 onClick={() => setStep("select-action")}
               >
                 <ChevronLeft className="size-4" />

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/profit-utils";
@@ -139,8 +139,8 @@ function FxBreakdown({ priceGain, fxGain, fxApplied }: { priceGain: number; fxGa
       </PopoverTrigger>
       <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-xs tabular-nums">
         <div className="space-y-0.5 text-left">
-          <p>주가손익: <span className={getProfitLossColor(priceGain)}>{priceGain >= 0 ? "+" : ""}{formatShortCurrency(priceGain)}</span></p>
-          <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatShortCurrency(fxGain)}</span></p>
+          <p>주가손익: <span className={getProfitLossColor(priceGain)}>{priceGain >= 0 ? "+" : ""}{formatPriceByMode(priceGain)}</span></p>
+          <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatPriceByMode(fxGain)}</span></p>
           {!fxApplied && <p className="text-muted-foreground/70 text-[10px]">현재환율 적용 · 기간 환차 미반영</p>}
         </div>
       </PopoverContent>
@@ -367,15 +367,15 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
 
   if (mergedStocks.length === 0) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className={ASSET_THEME.contentCard}>
+        <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-center gap-1.5">
             <CardTitle>수익 현황</CardTitle>
             <DataSourceBadge kind="closing" />
           </div>
           <CardDescription>보유 주식의 기간별 수익</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className={ASSET_THEME.contentPad}>
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
             <p className="text-muted-foreground text-sm">현재가가 등록된 주식이 없습니다.</p>
           </div>
@@ -507,9 +507,9 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   const TrendIcon = totalProfit > 0 ? TrendingUp : totalProfit < 0 ? TrendingDown : Minus;
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <Card>
-        <CardHeader>
+    <div className="grid grid-cols-1 gap-4">
+      <Card className={ASSET_THEME.contentCard}>
+        <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -526,7 +526,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
           <Tabs value={period} onValueChange={(v) => setPeriod(v as ProfitPeriod)}>
             {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
               <TabsContent key={p} value={p} forceMount className="data-[state=inactive]:hidden space-y-4">
@@ -574,14 +574,14 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                 ) : (
                   <>
                     {/* 전체 요약 */}
-                    <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2">
+                    <div className="rounded-lg bg-muted/20 px-4 py-3 space-y-2">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                           <TrendIcon className={`size-5 ${getProfitLossColor(totalProfit)}`} />
                           <div>
                             <p className="text-xs text-foreground">{PERIOD_LABELS[p]} 수익</p>
                             <p className={`text-base font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
-                              {totalProfit >= 0 ? "+" : ""}{formatShortCurrency(totalProfit)}
+                              {totalProfit >= 0 ? "+" : ""}{formatPriceByMode(totalProfit)}
                             </p>
                           </div>
                         </div>
@@ -645,8 +645,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 {/* 합계 */}
                                 <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
                                   <span className="text-muted-foreground font-normal">합계</span>
-                                  <span>{formatShortCurrency(leftSum)}</span>
-                                  <span className="text-right">{formatShortCurrency(rightSum)}</span>
+                                  <span>{formatPriceByMode(leftSum)}</span>
+                                  <span className="text-right">{formatPriceByMode(rightSum)}</span>
                                 </div>
                                 <p className="pt-1.5 text-[11px] text-muted-foreground/60">마감 기준: 국내 16:00 · 해외 익일 새벽 (KST)</p>
                               </CollapsibleContent>
@@ -659,8 +659,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                     {/* 종목별 목록 */}
                     <div className="space-y-3">
                       {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }) => (
-                        <div key={key} className="rounded-lg border overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-1.5 border" style={{ borderColor: MAIN_PALETTE[0] }}>
+                        <div key={key} className="rounded-lg overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-1.5 bg-muted/20">
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                               <span className="text-sm font-semibold text-muted-foreground">{label}</span>
@@ -668,10 +668,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                             {catRate !== null && (
                               <div className="text-right">
                                 <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
-                                  {catProfit >= 0 ? "+" : ""}{formatShortCurrency(catProfit)} ({formatRate(catRate)})
+                                  {catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)} ({formatRate(catRate)})
                                 </p>
                                 <p className="text-xs text-muted-foreground tabular-nums">
-                                  {formatShortCurrency(catRef)} → {formatShortCurrency(catCurrent)}
+                                  {formatPriceByMode(catRef)} → {formatPriceByMode(catCurrent)}
                                 </p>
                               </div>
                             )}
@@ -695,11 +695,11 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                         <div className="flex items-center justify-end gap-1">
                                           {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} fxApplied={period === "daily"} />}
                                           <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
-                                            {profitAmount >= 0 ? "+" : ""}{formatShortCurrency(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
+                                            {profitAmount >= 0 ? "+" : ""}{formatPriceByMode(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
                                           </p>
                                         </div>
                                         <p className="text-xs text-muted-foreground tabular-nums">
-                                          {formatShortCurrency(refValue)} → {formatShortCurrency(currentValue)}
+                                          {formatPriceByMode(refValue)} → {formatPriceByMode(currentValue)}
                                         </p>
                                       </>
                                     ) : (

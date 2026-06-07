@@ -9,7 +9,7 @@ import { useState } from "react";
 import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { formatCurrency, formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
 import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/views/home/dashboard";
 import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
@@ -116,28 +116,35 @@ export function WelcomeGuide() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* 왼쪽: 자산 분포 도넛 + 금융자산 구성 바 */}
-          <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} border border-zinc-500/60 p-5 space-y-5`}>
+          <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} p-5 space-y-5`}>
             {/* 순자산 요약 */}
-            <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-                  <DataSourceBadge kind="realtime" />
+            {(() => {
+              const netAssetLayout = getPriceLayout(netAsset);
+              return (
+                <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-3`}>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+                      <DataSourceBadge kind="realtime" />
+                    </div>
+                    <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
+                    {netAssetLayout.secondary && (
+                      <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{netAssetLayout.secondary}</p>
+                    )}
+                  </div>
+                  <div className="text-right space-y-1.5">
+                    <div className="text-sm">
+                      <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
+                      <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatPriceByMode(totalAsset)}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
+                      <span className={`font-bold ${ASSET_THEME.liability}`}>{formatPriceByMode(previewData.loanValue)}</span>
+                    </div>
+                  </div>
                 </div>
-                <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(netAsset)}</p>
-                <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(netAsset)}</p>
-              </div>
-              <div className="text-right space-y-1.5">
-                <div className="text-sm">
-                  <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
-                  <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
-                </div>
-                <div className="text-sm">
-                  <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
-                  <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(previewData.loanValue)}</span>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* 자산 분포 도넛 차트 */}
             <AssetDonutChart items={PREVIEW_TREEMAP} netAsset={netAsset} screenshotMode={true} />
@@ -146,7 +153,7 @@ export function WelcomeGuide() {
             <div className="space-y-2 border-t border-border/40 pt-4">
               <div className="flex items-center justify-between text-xs">
                 <span className={`font-semibold ${ASSET_THEME.distributionCard.muted}`}>금융자산 구성</span>
-                <span className={`font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{formatShortCurrency(financialValue)}</span>
+                <span className={`font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{formatPriceByMode(financialValue)}</span>
               </div>
               <SectionBar items={PREVIEW_FIN_BAR} total={financialValue} />
             </div>
@@ -170,8 +177,6 @@ export function WelcomeGuide() {
                 totalProfit={foreignProfit}
                 totalProfitRate={foreignProfitRate}
                 currencyGain={foreignCurrencyGain}
-                dailyProfit={previewData.dailyProfit}
-                dailyProfitRate={previewData.dailyProfitRate}
                 screenshotMode={false}
               />
 

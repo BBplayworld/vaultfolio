@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Wallet, TrendingUp, BadgeDollarSign } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency } from "@/lib/number-utils";
-import { getProfitLossColor } from "@/config/theme";
+import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { normalizeTicker } from "@/lib/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance-service";
@@ -132,59 +132,61 @@ export function PerformanceHub() {
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="px-1">
+    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad}`}>
+      <div>
         <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground">성과</h2>
         <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">순자산·수익·배당을 각각 자세히 확인하세요</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-      <KpiCard
-        icon={Wallet}
-        title="순자산"
-        description="자산 총액과 추이"
-        primary={formatShortCurrency(summary.netAsset)}
-        secondary={netDiff !== null && netDiffPct !== null ? (
-          <>
-            <span className={`font-semibold tabular-nums ${getProfitLossColor(netDiff)}`}>
-              {netDiff >= 0 ? "+" : ""}{formatShortCurrency(netDiff)} ({netDiff >= 0 ? "+" : ""}{netDiffPct.toFixed(1)}%)
+        <KpiCard
+          icon={Wallet}
+          title="순자산"
+          description="자산 총액과 추이"
+          primary={formatPriceByMode(summary.netAsset)}
+          secondary={netDiff !== null && netDiffPct !== null ? (
+            <>
+              <span className={`font-semibold tabular-nums ${getProfitLossColor(netDiff)}`}>
+                {netDiff >= 0 ? "+" : ""}{formatPriceByMode(netDiff)} ({netDiff >= 0 ? "+" : ""}{netDiffPct.toFixed(1)}%)
+              </span>
+              <span className="text-muted-foreground"> 전년 대비</span>
+            </>
+          ) : <span className="text-muted-foreground">전년 데이터 없음</span>}
+          onClick={() => go("netasset")}
+        />
+
+        <KpiCard
+          icon={TrendingUp}
+          title="수익"
+          description="기간별 수익"
+          primary={dailyReady
+            ? `${dailyProfit! >= 0 ? "+" : ""}${formatPriceByMode(dailyProfit!)}`
+            : "조회 중…"}
+          primaryClassName={ASSET_THEME.text.default}
+          secondary={dailyReady ? (
+            <span className={`font-semibold tabular-nums ${getProfitLossColor(dailyProfit!)}`}>
+              {dailyProfit! >= 0 ? "+" : ""}{(dailyProfitRate ?? 0).toFixed(2)}%
+              <span className="text-muted-foreground font-normal ml-1.5">일별 대비</span>
             </span>
-            <span className="text-muted-foreground"> 전년 대비</span>
-          </>
-        ) : <span className="text-muted-foreground">전년 데이터 없음</span>}
-        onClick={() => go("netasset")}
-      />
+          ) : null}
+          onClick={() => go("profit")}
+        />
 
-      <KpiCard
-        icon={TrendingUp}
-        title="수익"
-        description="기간별 수익"
-        primary={dailyReady
-          ? `${dailyProfit! >= 0 ? "+" : ""}${formatShortCurrency(dailyProfit!)}`
-          : "조회 중…"}
-        secondary={dailyReady ? (
-          <span className={`font-semibold tabular-nums ${getProfitLossColor(dailyProfit!)}`}>
-            {dailyProfit! >= 0 ? "+" : ""}{(dailyProfitRate ?? 0).toFixed(2)}%
-            <span className="text-muted-foreground font-normal ml-1.5">일별 · 전일 종가 대비</span>
-          </span>
-        ) : null}
-        onClick={() => go("profit")}
-      />
-
-      <KpiCard
-        icon={BadgeDollarSign}
-        title="배당"
-        description="올해 배당 (지급 + 예상)"
-        primary={divLoading && annualTotal === 0 ? "조회 중…" : formatShortCurrency(annualTotal)}
-        secondary={!divLoading && annualTotal > 0 ? (
-          <span className="text-muted-foreground">
-            지급 <span className="font-semibold text-foreground tabular-nums">{formatShortCurrency(annualActual)}</span>
-            <span className="mx-1.5 text-muted-foreground/60">·</span>
-            예상 <span className="font-semibold text-foreground tabular-nums">{formatShortCurrency(annualEstimated)}</span>
-          </span>
-        ) : null}
-        onClick={() => go("dividend")}
-      />
+        <KpiCard
+          icon={BadgeDollarSign}
+          title="배당"
+          description="올해 배당 (지급 + 예상)"
+          primary={divLoading && annualTotal === 0 ? "조회 중…" : formatPriceByMode(annualTotal)}
+          primaryClassName={ASSET_THEME.text.default}
+          secondary={!divLoading && annualTotal > 0 ? (
+            <span className="text-muted-foreground">
+              지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
+              <span className="mx-1.5 text-muted-foreground/60">·</span>
+              예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
+            </span>
+          ) : null}
+          onClick={() => go("dividend")}
+        />
       </div>
     </div>
   );

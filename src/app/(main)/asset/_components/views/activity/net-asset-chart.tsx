@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency, formatPriceByMode, formatPriceDecimalByMode, getPriceLayout } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { useForm } from "react-hook-form";
@@ -163,7 +163,7 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
           )}
         />
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>취소</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
@@ -272,9 +272,9 @@ export function YearlyNetAssetChart() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <Card>
-        <CardHeader>
+    <div className="grid grid-cols-1 gap-4">
+      <Card className={ASSET_THEME.contentCard}>
+        <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -291,7 +291,7 @@ export function YearlyNetAssetChart() {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className={`space-y-6 ${ASSET_THEME.contentPad}`}>
           {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액 */}
           {(() => {
             let diff: number | null = null;
@@ -327,16 +327,19 @@ export function YearlyNetAssetChart() {
               comparisonLabel = "전일 대비";
             }
 
+            const netAssetLayout = getPriceLayout(summary.netAsset);
             return (
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">현재 순자산</p>
-                <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
-                <p className="text-xs text-foreground">{formatCurrency(summary.netAsset)}</p>
+                <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
+                {netAssetLayout.secondary && (
+                  <p className="text-xs text-foreground">{netAssetLayout.secondary}</p>
+                )}
                 {diff !== null && diffPct !== null && (
                   <p className="text-xs mt-1">
                     <span className="text-muted-foreground">{comparisonLabel} </span>
                     <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>
-                      {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}%)
+                      {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)} ({diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}%)
                     </span>
                   </p>
                 )}
@@ -424,7 +427,7 @@ export function YearlyNetAssetChart() {
                         return (
                           <div
                             key={item.year}
-                            className={`group flex items-center justify-between rounded-lg border p-3 ${isCurrentYear ? "border-primary bg-primary/5" : ""}`}
+                            className={`group flex items-center justify-between rounded-lg p-3 ${isCurrentYear ? "bg-primary/5" : ""}`}
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -436,20 +439,20 @@ export function YearlyNetAssetChart() {
                                 )}
                                 {diff !== null && diffPct !== null && (
                                   <span className={`text-sm font-medium ${getProfitLossColor(diff)}`}>
-                                    {diff >= 0 ? "+" : ""}{formatShortCurrency(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
+                                    {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
                                   </span>
                                 )}
                               </div>
                               <p className={`text-sm font-bold ${isCurrentYear ? ASSET_THEME.important : ASSET_THEME.text.default}`}>
-                                {formatCurrency(item.netAsset)}
+                                {formatPriceByMode(item.netAsset)}
                               </p>
                             </div>
                             {!isCurrentYear && (
                               <div className="flex gap-2">
-                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" aria-label="순자산 수정" onClick={() => handleEdit(item)}>
+                                <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" aria-label="순자산 수정" onClick={() => handleEdit(item)}>
                                   <Pencil className="size-3.5" />
                                 </Button>
-                                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" aria-label="순자산 삭제" onClick={() => handleDelete(item.year)}>
+                                <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" aria-label="순자산 삭제" onClick={() => handleDelete(item.year)}>
                                   <Trash2 className="size-3.5" />
                                 </Button>
                               </div>
@@ -496,16 +499,16 @@ export function YearlyNetAssetChart() {
                                 <p className="font-semibold text-foreground">{row.month}</p>
                                 <div className="flex justify-between gap-3">
                                   <span className="text-muted-foreground">순자산</span>
-                                  <span className={`font-bold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrencyDecimal(row.netAsset)}</span>
+                                  <span className={`font-bold tabular-nums ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
                                 </div>
                                 <div className="flex justify-between gap-3">
                                   <span className="text-muted-foreground">금융자산</span>
-                                  <span className={`font-medium tabular-nums ${ASSET_THEME.text.default}`}>{formatShortCurrencyDecimal(row.financialAsset)}</span>
+                                  <span className={`font-medium tabular-nums ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
                                 </div>
                                 {diff !== null && (
                                   <div className="flex justify-between gap-3 border-t pt-1">
                                     <span className="text-muted-foreground">전월대비</span>
-                                    <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>{diff >= 0 ? "+" : ""}{formatShortCurrency(diff)}</span>
+                                    <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>{diff >= 0 ? "+" : ""}{formatPriceByMode(diff)}</span>
                                   </div>
                                 )}
                               </div>
@@ -536,7 +539,7 @@ export function YearlyNetAssetChart() {
                   </ChartContainer>
 
                   {/* 전월대비 표 */}
-                  <div className="rounded-lg border overflow-hidden">
+                  <div className="rounded-lg overflow-hidden">
                     <div className="grid grid-cols-[3rem_1fr_1fr_1fr] gap-x-2 px-3 py-1.5 bg-muted/50 text-[10px] font-medium text-muted-foreground border-b">
                       <span>월</span>
                       <span className="text-right">순자산</span>
@@ -550,10 +553,10 @@ export function YearlyNetAssetChart() {
                         return (
                           <div key={row.month} className="grid grid-cols-[3rem_1fr_1fr_1fr] gap-x-2 px-3 py-2 items-center">
                             <span className="text-sm font-semibold text-muted-foreground">{row.month}</span>
-                            <span className={`text-sm font-bold tabular-nums text-right ${ASSET_THEME.important}`}>{formatShortCurrencyDecimal(row.netAsset)}</span>
-                            <span className={`text-sm tabular-nums text-right ${ASSET_THEME.text.default}`}>{formatShortCurrencyDecimal(row.financialAsset)}</span>
+                            <span className={`text-sm font-bold tabular-nums text-right ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
+                            <span className={`text-sm tabular-nums text-right ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
                             <span className={`text-sm font-semibold tabular-nums text-right ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
-                              {diff !== null ? `${diff >= 0 ? "+" : ""}${formatShortCurrency(diff)}` : "-"}
+                              {diff !== null ? `${diff >= 0 ? "+" : ""}${formatPriceByMode(diff)}` : "-"}
                             </span>
                           </div>
                         );

@@ -414,20 +414,23 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
     // parts[9]: 종가 기준 옵션 ("k"=kstAccessDay, 그 외/빈값=기본 sameBusinessDay)
     profitBasis === "kstAccessDay" ? "k" : "",
     // parts[10]: 거래 내역
-    section(data.transactions?.map(t => [
-      t.type === "buy" ? "b" : "s",
-      sTxt(t.stockName),
-      sTxt(t.ticker),
-      pNum(t.quantity),
-      pNum(t.price),
-      DICT.cu.indexOf(t.currency || "KRW"),
-      pDate(t.date),
-      pNum(t.exchangeRate ?? 0),
-      pNum(t.fee ?? 0),
-      t.reflected ? "1" : "0",
-      sTxt(t.memo),
-      t.stockId,
-    ]) || []),
+    section(data.transactions?.map(t => {
+      const stIdx = data.stocks.findIndex(s => s.id === t.stockId);
+      return [
+        t.type === "buy" ? "b" : "s",
+        sTxt(t.stockName),
+        sTxt(t.ticker),
+        pNum(t.quantity),
+        pNum(t.price),
+        DICT.cu.indexOf(t.currency || "KRW"),
+        pDate(t.date),
+        pNum(t.exchangeRate ?? 0),
+        pNum(t.fee ?? 0),
+        t.reflected ? "1" : "0",
+        sTxt(t.memo),
+        stIdx >= 0 ? stIdx.toString() : t.stockId,
+      ];
+    }) || []),
     // parts[11]: 프로필 닉네임
     sTxt(nickname || ""),
   ];
@@ -501,6 +504,22 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const transactions = section(10).map(r => {
     const f = fields(r);
     const reflected = f[9] === "1";
+    const rawStockId = f[11] || "";
+    const isIndex = /^\d+$/.test(rawStockId);
+    const stIdx = isIndex ? parseInt(rawStockId, 10) : -1;
+    let stockId = (stIdx >= 0 && stIdx < stIds.length) ? stIds[stIdx] : "";
+
+    if (!stockId && rawStockId) {
+      // Backward compatibility: match legacy raw stock IDs using ticker or name
+      const ticker = uTxt(f[2]) || "";
+      const stockName = uTxt(f[1]) || "";
+      const matched = stocks.find(s => 
+        (ticker && s.ticker === ticker) || 
+        (stockName && s.name === stockName)
+      );
+      stockId = matched ? matched.id : rawStockId;
+    }
+
     return {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       type: f[0] === "b" ? "buy" as const : "sell" as const,
@@ -514,7 +533,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
       fee: uNum(f[8]) || undefined,
       reflected,
       memo: uTxt(f[10]) || undefined,
-      stockId: f[11] || "",
+      stockId,
       createdAt: new Date().toISOString(),
     };
   });

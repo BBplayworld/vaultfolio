@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatShortCurrencyDecimal } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatShortCurrencyDecimal, getPriceLayout } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -255,7 +255,7 @@ function DailyNetAssetTrend() {
   const MAX_BAR = 72;
 
   return (
-    <div className="rounded-lg border px-4 py-3 space-y-2.5" style={{ borderColor: MAIN_PALETTE[0] + "33", backgroundColor: MAIN_PALETTE[0] + "08" }}>
+    <div className="rounded-lg px-4 py-3 space-y-2.5" style={{ backgroundColor: MAIN_PALETTE[0] + "08" }}>
       <div className="flex items-center gap-1.5">
         <p className="text-xs lg:text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
         <DataSourceBadge kind="closing" />
@@ -373,8 +373,8 @@ export function Dashboard() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── 자산 분포 카드 (통합) ── */}
-      <Card className={`lg:col-span-2 gap-2`}>
-        <CardContent className="pb-2 overflow-hidden px-3 sm:px-6">
+      <Card className={`lg:col-span-2 gap-2 ${ASSET_THEME.contentCard}`}>
+        <CardContent className={`pb-2 overflow-hidden ${ASSET_THEME.contentPad}`}>
           {totalAsset === 0 ? (
             <div className="flex h-36 items-center justify-center text-muted-foreground text-sm">등록된 자산이 없습니다.</div>
           ) : (
@@ -383,33 +383,36 @@ export function Dashboard() {
               <div className="py-3 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* col-1: 순자산 요약 + DonutChart */}
                 <div className="space-y-4">
-                  <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} border px-4 py-3`}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          {nickname && (
-                            <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
-                          )}
-                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-                          <DataSourceBadge kind="realtime" />
-                        </div>
-                        <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.netAsset)}</p>
-                        <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{formatCurrency(summary.netAsset)}</p>
-                      </div>
-                      <div className="text-right space-y-1.5">
-                        <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 자산 </span><span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span></div>
-                        <div className="text-sm"><span className={ASSET_THEME.distributionCard.muted}>총 부채 </span><span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span></div>
-                      </div>
+                  <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`}>
+                    <div className="flex items-center gap-1.5">
+                      {nickname && (
+                        <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
+                      )}
+                      <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
                     </div>
-                    {lastDaily && (
-                      <div className="mt-3 pt-3 border-t border-dashed flex items-center justify-between">
-                        <span className="text-xs lg:text-sm text-muted-foreground">전일 대비</span>
-                        <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
-                          {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
-                          <span className="text-xs lg:text-sm font-bold ml-1.5">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const { primary, secondary } = getPriceLayout(summary.netAsset);
+                      return (
+                        <>
+                          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
+                              {primary}
+                            </p>
+                            {lastDaily && (
+                              <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
+                                {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
+                                <span className="text-xs lg:text-sm font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
+                              </span>
+                            )}
+                          </div>
+                          {secondary && (
+                            <p className={`mt-0.5 text-xs sm:text-sm ${ASSET_THEME.text.default}`}>
+                              {secondary}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {visibleTabs.length > 1 && (
@@ -439,12 +442,17 @@ export function Dashboard() {
 
                   {financialTotal > 0 && (
                     <TabsContent value="financial" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(financialTotal)}</p>
-                          <p className="text-sm text-foreground">{formatCurrency(financialTotal)}</p>
-                        </div>
+                      <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
+                        {(() => {
+                          const { primary, secondary } = getPriceLayout(financialTotal);
+                          return (
+                            <div>
+                              <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
+                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
+                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
+                            </div>
+                          );
+                        })()}
                         <div className="text-right space-y-1">
                           {financialBarItems.map(({ key, label, value }) => {
                             const pct = financialTotal > 0 ? (value / financialTotal) * 100 : 0;
@@ -475,12 +483,17 @@ export function Dashboard() {
 
                   {summary.realEstateValue > 0 && (
                     <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{formatShortCurrency(summary.realEstateValue)}</p>
-                          <p className="text-sm text-foreground">{formatCurrency(summary.realEstateValue)}</p>
-                        </div>
+                      <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
+                        {(() => {
+                          const { primary, secondary } = getPriceLayout(summary.realEstateValue);
+                          return (
+                            <div>
+                              <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
+                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
+                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
+                            </div>
+                          );
+                        })()}
                         <div className="text-right space-y-1">
                           {realEstateCatBarItems.map(({ key, label, value }) => {
                             const pct = summary.realEstateValue > 0 ? (value / summary.realEstateValue) * 100 : 0;
@@ -509,11 +522,16 @@ export function Dashboard() {
                   {totalLiability > 0 && (
                     <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className={ASSET_THEME.summaryHeader}>
-                        <div>
-                          <p className="text-xs lg:text-sm font-semibold text-muted-foreground">부채 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</p>
-                          <p className="text-sm text-foreground">{formatCurrency(totalLiability)}</p>
-                        </div>
+                        {(() => {
+                          const { primary, secondary } = getPriceLayout(totalLiability);
+                          return (
+                            <div>
+                              <p className="text-xs lg:text-sm font-semibold text-muted-foreground">부채 총액</p>
+                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{primary}</p>
+                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
+                            </div>
+                          );
+                        })()}
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (
                             <div key={key} className="text-[12px]">
@@ -544,7 +562,7 @@ export function Dashboard() {
             </Tabs>
           )}
         </CardContent>
-        <CardFooter>
+        <CardFooter className={ASSET_THEME.contentPad}>
           <p className={`${ASSET_THEME.distributionCard.muted} text-xs`}>
             마지막 업데이트: {assetData.lastUpdated && !Number.isNaN(new Date(assetData.lastUpdated).getTime()) ? new Date(assetData.lastUpdated).toLocaleString("ko-KR") : ""}
           </p>

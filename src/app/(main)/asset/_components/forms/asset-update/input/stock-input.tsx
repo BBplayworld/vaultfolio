@@ -218,8 +218,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
           {!editData && !isUnlisted && (
             <Button
               type="button"
-              className="h-9 px-3 text-white hover:opacity-90 border-none"
-              style={{ backgroundColor: MAIN_PALETTE[0] }}
+              variant="brand"
+              className="h-9 px-3"
               disabled={isFetchingPrice}
               onClick={async () => {
                 // 500 에러 횟수 체크
@@ -479,13 +479,12 @@ function StockForm({ editData, onClose }: StockFormProps) {
         />
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
           <Button
             type="submit"
-            className="text-white hover:opacity-90 border-none"
-            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            variant="brand"
             disabled={isSubmitting || (!editData && !isUnlisted && lookupState === "idle")}
             title={(!editData && !isUnlisted && lookupState === "idle") ? "티커 조회를 먼저 진행해주세요" : undefined}
           >

@@ -139,7 +139,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### U3. 다크모드·디자인 토큰
 - 하드코딩 색(`text-black`/`bg-white`/원시 `#hex` className) 금지 → `text-foreground`/`bg-background` 등 토큰
 - 의미색 규칙: 확인·제출 `Button variant="brand"`, 체크박스 기본 `Checkbox`(자동 brand), 매수=빨강·매도=파랑, 삭제=destructive만 예외
-- 카드 액션 버튼 `Button size="icon" variant="outline"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5) 통일
+- 카드 액션 버튼 `Button size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5) 통일
 
 ### U4. 정보위계·사용성 (휴리스틱)
 - 빈/로딩/에러/단일항목 상태 메시지 존재 (목록은 `length > 0`)
@@ -188,10 +188,10 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ## 디자인·코드 규칙 (점검 시 함께 적용)
 
 - 확인·제출 버튼 `Button variant="brand"`, 체크박스 기본 `Checkbox`(자동 brand). 매수=빨강/매도=파랑, 삭제=destructive 의미색만 예외
-- 카드 액션 버튼: `Button size="icon" variant="outline"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5) 통일
+- 카드 액션 버튼: `Button size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5) 통일
 - 목록 표시는 항상 `length > 0`, 비교 키 tickerList는 `.sort()`
 - UI/화면 작업 시 `ui-design-guidelines.md`(위계·색상·정보처리·집중도) 병행
 
 ---
 
-_최종 갱신: 2026-06-05 · issue-4.1 기준 전체 재작성 (현재 기능 구성·UI 품질 항목·R1~R10 회귀 레지스트리)_
+_최종 갱신: 2026-06-07 · issue-5.1 기준 전체 재작성 (보더리스 UI 구축 및 폼 인지성 강화)_

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
 import { StockCard, StockCategorySection, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
@@ -24,7 +24,7 @@ export interface ShareCardProps {
 export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, sections, cardRef }: ShareCardProps) {
   // 공통 훅 사용 — 중복 로직 없음
   const { treemapData, summary } = useAssetTreemapData();
-  const { groupedStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, exchangeRates, dailyProfit, dailyProfitRate } =
+  const { groupedStocks, totalValue: filteredTotal, totalProfit: filteredProfit, totalProfitRate: filteredProfitRate, exchangeRates } =
     useFilteredStockData(activeCategory);
 
   const { mergedStocks, mergedBarItems, mergedBarColors } = useMemo(() => {
@@ -36,7 +36,9 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupedStocks, exchangeRates]);
 
-  const maskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
+  const maskFn = hideAmounts ? (_: number) => "••••" : formatPriceByMode;
+  const fmtFull = hideAmounts ? (_: number) => "••••" : formatCurrency;
+  const chartMaskFn = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
 
   const now = new Date().toLocaleString("ko-KR", {
     year: "numeric", month: "2-digit", day: "2-digit",
@@ -44,27 +46,25 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   });
 
   return (
-    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-card border border-border">
+    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-card">
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (
         <div className="rounded-lg bg-card py-2 space-y-3">
-          <AssetDonutChart items={treemapData} netAsset={summary.netAsset} screenshotMode={true} maskFn={maskFn} />
+          <AssetDonutChart items={treemapData} netAsset={summary.netAsset} screenshotMode={true} maskFn={chartMaskFn} />
         </div>
       )}
 
       {/* 주식 (종합 + 상세 통합) — stock-tab 본체와 동일 외피 */}
       {sections.stock && (
-        <Card>
-          <CardContent className="space-y-4 pt-4">
+        <Card className="border-0 shadow-none py-0">
+          <CardContent className="space-y-4 pt-0 px-0 sm:px-0">
             <StockSummaryHeader
               totalValue={filteredTotal}
               totalProfit={filteredProfit}
               totalProfitRate={filteredProfitRate}
               currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
-              dailyProfit={dailyProfit}
-              dailyProfitRate={dailyProfitRate}
-              maskFn={maskFn}
+              maskFn={fmtFull}
               screenshotMode
             />
             <StockCategorySection

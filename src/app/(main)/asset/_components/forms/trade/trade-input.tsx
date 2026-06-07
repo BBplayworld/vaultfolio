@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
-import { ImageUp, Plus } from "lucide-react";
+import { ImageUp, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -312,25 +312,27 @@ export function TradeInput() {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/60 hover:bg-muted/90 dark:bg-muted/30 dark:hover:bg-muted/50 transition-colors text-left w-full"
                 onClick={() => { setIsOpen(false); setScreenshotOpen(true); }}
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">스크린샷 가져오기</p>
                   <p className="text-xs text-muted-foreground">체결 내역 화면 자동 인식</p>
                 </div>
+                <ChevronRight className="size-4 text-muted-foreground shrink-0" />
               </button>
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/60 hover:bg-muted/90 dark:bg-muted/30 dark:hover:bg-muted/50 transition-colors text-left w-full"
                 onClick={() => setMode("manual")}
               >
                 <Plus className="size-5 text-primary shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">직접 입력</p>
                   <p className="text-xs text-muted-foreground">매수/매도 거래 수동 입력</p>
                 </div>
+                <ChevronRight className="size-4 text-muted-foreground shrink-0" />
               </button>
             </div>
           )}
@@ -400,7 +402,7 @@ export function TradeInput() {
 
               {/* 선택 종목 보유 정보 (사용자 확인용) */}
               {selectedStock && (
-                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
+                <div className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-xs">
                   {lockedStock && (
                     <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
                       {stockCategories.find((c) => c.value === selectedStock.category)?.label ?? selectedStock.category}
@@ -426,7 +428,7 @@ export function TradeInput() {
                     <div className="flex gap-2">
                       <Button
                         type="button"
-                        variant={field.value === "buy" ? "default" : "outline"}
+                        variant={field.value === "buy" ? "default" : "secondary"}
                         className={field.value === "buy" ? "flex-1 bg-red-500 hover:bg-red-600 text-white" : "flex-1"}
                         onClick={() => field.onChange("buy")}
                       >
@@ -434,7 +436,7 @@ export function TradeInput() {
                       </Button>
                       <Button
                         type="button"
-                        variant={field.value === "sell" ? "default" : "outline"}
+                        variant={field.value === "sell" ? "default" : "secondary"}
                         className={field.value === "sell" ? "flex-1 bg-blue-500 hover:bg-blue-600 text-white" : "flex-1"}
                         onClick={() => field.onChange("sell")}
                       >
@@ -588,7 +590,7 @@ export function TradeInput() {
                 control={form.control}
                 name="reflected"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg border p-3">
+                  <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -610,11 +612,11 @@ export function TradeInput() {
               {/* 반영 후 예상 포지션 미리보기 */}
               {reflectionPreview && selectedStock && (
                 reflectionPreview.oversell ? (
-                  <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+                  <div className="rounded-lg bg-destructive/10 dark:bg-destructive/20 p-3 text-xs text-destructive font-medium">
                     보유 수량({selectedStock.quantity.toLocaleString()}주)을 초과합니다
                   </div>
                 ) : (
-                  <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                  <div className="rounded-lg bg-muted/40 dark:bg-muted/25 p-3 space-y-2">
                     <p className="text-[11px] font-medium text-muted-foreground">반영 후 예상 포지션</p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
@@ -639,7 +641,7 @@ export function TradeInput() {
               )}
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={resetAndClose}>
+                <Button type="button" variant="secondary" onClick={resetAndClose}>
                   취소
                 </Button>
                 <Button type="submit" variant="brand">
@@ -653,8 +655,8 @@ export function TradeInput() {
           {/* 중복 거래 확인 — 같은 Dialog 내 인라인(중첩 모달 회피) */}
           {mode === "manual" && dupPending && (
             <div className="space-y-4">
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 space-y-1 text-sm">
-                <p className="font-medium">이미 동일한 거래가 있습니다</p>
+              <div className="rounded-lg bg-amber-500/10 dark:bg-amber-500/20 p-3 space-y-1 text-sm">
+                <p className="font-medium text-amber-600 dark:text-amber-500">이미 동일한 거래가 있습니다</p>
                 <p className="text-muted-foreground text-xs">증권사·날짜·수량·체결가·유형이 동일한 거래가 이미 기록되어 있습니다.</p>
                 <p className="tabular-nums">
                   <span className={dupPending.tx.type === "buy" ? "text-red-500 font-semibold" : "text-blue-500 font-semibold"}>
@@ -664,10 +666,10 @@ export function TradeInput() {
                 </p>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button type="button" variant="outline" onClick={() => setDupPending(null)}>
+                <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>
                   취소
                 </Button>
-                <Button type="button" variant="outline" onClick={() => { if (dupPending) commitTransaction(dupPending.tx, dupPending.stock); }}>
+                <Button type="button" variant="secondary" onClick={() => { if (dupPending) commitTransaction(dupPending.tx, dupPending.stock); }}>
                   새로 추가
                 </Button>
                 <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 거래를 유지했습니다."); resetAndClose(); }}>

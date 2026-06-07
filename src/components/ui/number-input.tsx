@@ -127,7 +127,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
                 key={btn.label}
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleQuickAdd(btn.value)}
                 className="h-7 text-xs"
               >

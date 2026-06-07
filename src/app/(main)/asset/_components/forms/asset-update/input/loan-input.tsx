@@ -365,11 +365,11 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
         )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
           <Button type="submit"
-            style={{ backgroundColor: MAIN_PALETTE[0] }}
+            variant="brand"
             disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>

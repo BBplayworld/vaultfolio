@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -220,9 +220,9 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
     : null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <Card>
-        <CardHeader>
+    <div className="grid grid-cols-1 gap-4">
+      <Card className={ASSET_THEME.contentCard}>
+        <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
@@ -257,7 +257,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className={`space-y-6 ${ASSET_THEME.contentPad}`}>
           {/* Hero — 연간 / 선택 월 배당 */}
           {annualTotal > 0 && (
             <div>
@@ -274,8 +274,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   </span>
                 )}
               </div>
-              <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
-                {formatShortCurrency(heroValue)}
+              <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.text.default}`}>
+                {formatPriceByMode(heroValue)}
               </p>
             </div>
           )}

@@ -59,7 +59,7 @@ export function StockInsightStrip({ stocks, exchangeRates }: StockInsightStripPr
       type="button"
       data-screenshot-hide
       onClick={() => navigate({ type: "detail", tab: "stocks-xray" })}
-      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left"
       aria-label="주식 X-Ray 인사이트 보기"
     >
       <Microscope className="size-4 shrink-0 text-primary" />

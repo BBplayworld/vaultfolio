@@ -165,14 +165,14 @@ export function StockXrayView() {
 
   return (
     // min-w-0 chain: 부모 flex item(Card·CardContent)이 자식 max-content에 끌려 grow하지 않도록 차단 → wrapper가 부모 폭에 고정되어 가로 스크롤 정상 작동
-    <Card className="min-w-0">
-      <CardHeader>
+    <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle className="flex items-center gap-2">
           <Microscope className="size-5 text-primary" />
           주식 X-Ray
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 min-w-0">
+      <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
         {/* 축 선택 */}
         {/*
           축 셀렉터 가로 스크롤:
@@ -191,7 +191,7 @@ export function StockXrayView() {
         </div>
 
         {/* 분포 시각화 */}
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground tracking-wide">
               분포 분석
@@ -225,7 +225,7 @@ export function StockXrayView() {
         </div>
 
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
-        <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+        <div className="rounded-lg bg-muted/20 p-4 space-y-3">
           <div>
             <p className="text-sm font-semibold">📋 AI 진단 프롬프트</p>
             <p className="text-xs text-muted-foreground mt-1">

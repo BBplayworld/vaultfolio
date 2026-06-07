@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { Camera, Copy, Check, Loader2, Download, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ShareCard } from "./share-card";
 import { CATEGORY_TABS } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
 import { MAIN_PALETTE } from "@/config";
+import { useAssetData } from "@/contexts/asset-data-context";
 
 interface Props {
   open: boolean;
@@ -28,8 +29,26 @@ export const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] 
 ];
 
 export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
+  const { assetData } = useAssetData();
   const [hideAmounts, setHideAmounts] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
+
+  const activeCategories = useMemo(() => {
+    return Array.from(
+      new Set(
+        assetData.stocks
+          .filter((s) => s.inactiveStatus !== "delisted")
+          .map((s) => s.category)
+      )
+    );
+  }, [assetData.stocks]);
+
+  const visibleTabs = useMemo(() => {
+    return CATEGORY_TABS.filter((tab) => {
+      if (tab.value === "all") return true;
+      return activeCategories.includes(tab.value);
+    });
+  }, [activeCategories]);
   const [isCopying, setIsCopying] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -161,13 +180,13 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                   />
                   <Label htmlFor={`section-${key}`} className="text-xs cursor-pointer select-none whitespace-nowrap">
                     {label}
-                    {key === "stock" && (
+                    {key === "stock" && activeCategories.length > 0 && (
                       <Select value={activeCategory} onValueChange={setActiveCategory}>
                         <SelectTrigger className="h-5 text-xs w-[76px] ml-1.5 inline-flex">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {CATEGORY_TABS.map((tab) => (
+                          {visibleTabs.map((tab) => (
                             <SelectItem key={tab.value} value={tab.value} className="text-xs">
                               {tab.label}
                             </SelectItem>

@@ -8,10 +8,10 @@ import { BadgeDollarSign } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 
 export function ExchangeRateInput() {
-    const { exchangeRates, updateExchangeRate } = useAssetData();
+    const { exchangeRates } = useAssetData();
 
     return (
-        <Card className="bg-muted/30 border-dashed">
+        <Card className="bg-muted/30 border-0 shadow-none">
             <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2 mr-4">
                     <div className="bg-primary/10 p-2 rounded-full">
@@ -31,15 +31,7 @@ export function ExchangeRateInput() {
                             🇺🇸 USD
                         </Label>
                         <div className="flex items-center gap-2">
-                            <NumberInput
-                                value={exchangeRates.USD}
-                                onChange={(val) => updateExchangeRate("USD", val)}
-                                className="w-28"
-                                quickButtons={[]}
-                                allowDecimals={true}
-                                maxDecimals={1}
-                            />
-                            <span className="text-sm text-muted-foreground">원</span>
+                            <span className="text-sm font-semibold tabular-nums text-foreground">{exchangeRates.USD.toLocaleString()}원</span>
                         </div>
                     </div>
 
@@ -48,15 +40,7 @@ export function ExchangeRateInput() {
                             🇯🇵 JPY (100엔)
                         </Label>
                         <div className="flex items-center gap-2">
-                            <NumberInput
-                                value={exchangeRates.JPY}
-                                onChange={(val) => updateExchangeRate("JPY", val)}
-                                className="w-28"
-                                quickButtons={[]}
-                                allowDecimals={true}
-                                maxDecimals={1}
-                            />
-                            <span className="text-sm text-muted-foreground">원</span>
+                            <span className="text-sm font-semibold tabular-nums text-foreground">{exchangeRates.JPY.toLocaleString()}원</span>
                         </div>
                     </div>
                 </div>

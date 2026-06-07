@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { assignColors } from "../asset-detail-tabs";
@@ -43,9 +43,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(item.currentValue)}</p>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(item.currentValue)}</p>
                 <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
                   <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
                 </div>
               </div>
@@ -66,28 +66,28 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>매입가</p>
-                <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatShortCurrency(item.purchasePrice)}</p>
+                <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatPriceByMode(item.purchasePrice)}</p>
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatShortCurrency(item.currentValue)}</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatPriceByMode(item.currentValue)}</p>
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(profit)}</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
               </div>
               {(item.tenantDeposit ?? 0) > 0 && (
                 <div>
                   <p className={ASSET_THEME.cardDetailLabel}>임차보증금</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatShortCurrency(item.tenantDeposit!)}</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>{formatPriceByMode(item.tenantDeposit!)}</p>
                 </div>
               )}
             </div>
             <div className={ASSET_THEME.cardActions}>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(item.id)}>
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
@@ -98,7 +98,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <div key={loan.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-md bg-muted/30">
                     <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatShortCurrency(loan.balance)}</span>
+                      <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatPriceByMode(loan.balance)}</span>
                       <span className={ASSET_THEME.cardLoanRate}>{loan.interestRate}%</span>
                     </div>
                   </div>
@@ -156,15 +156,16 @@ export function RealEstateTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle>부동산</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader
           label="총 부동산 평가금액"
           value={totalValue}
-          right={<ProfitMetric label="평가손익" profit={summary.realEstateProfit} cost={summary.realEstateCost} decimals={1} />}
+          valueClass={ASSET_THEME.text.default}
+          inline={<ProfitMetric label="평가손익" profit={summary.realEstateProfit} cost={summary.realEstateCost} decimals={1} />}
         />
 
         <div className="flex justify-start">

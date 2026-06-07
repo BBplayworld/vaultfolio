@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, calculateHoldingDays } from "@/lib/number-utils";
+import { formatShortCurrency, calculateHoldingDays, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
@@ -59,7 +59,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.liability}`}>{formatShortCurrency(loan.balance)}</p>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.liability}`}>{formatPriceByMode(loan.balance)}</p>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
@@ -100,10 +100,10 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
               )}
             </div>
             <div className={ASSET_THEME.cardActions}>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: loan.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(loan.id)}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(loan.id)}>
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
@@ -203,13 +203,13 @@ export function LoanTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle>대출</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 */}
-        <DetailSummaryHeader label="총 대출 잔액" value={totalBalance} valueClass={ASSET_THEME.liability} />
+        <DetailSummaryHeader label="총 대출 잔액" value={totalBalance} valueClass={ASSET_THEME.text.default} />
 
         {/* 카테고리 selector — 항목 많아 가로 스크롤 (모바일 스크롤바 숨김) */}
         <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">

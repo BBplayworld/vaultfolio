@@ -444,7 +444,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                           <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
                           <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
                           <span>평단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
-                          <span>평가금액 <span className={`font-semibold ${ASSET_THEME.important}`}>{fmtTotal}</span></span>
+                          <span>평가금액 <span className={`font-semibold ${ASSET_THEME.text.default}`}>{fmtTotal}</span></span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>

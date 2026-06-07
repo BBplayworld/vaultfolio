@@ -14,14 +14,15 @@ interface KpiCardProps {
   secondary?: ReactNode;
   onClick: () => void;
   dataTutorial?: string;
+  primaryClassName?: string;
 }
 
-export function KpiCard({ icon: Icon, title, description, primary, secondary, onClick, dataTutorial }: KpiCardProps) {
+export function KpiCard({ icon: Icon, title, description, primary, secondary, onClick, dataTutorial, primaryClassName }: KpiCardProps) {
   return (
     <Card
       onClick={onClick}
       data-tutorial={dataTutorial}
-      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.99] transition-all shadow-xs"
+      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.99] transition-all shadow-xs border-0"
     >
       <div className="flex items-start gap-3">
         <div className="size-9 sm:size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -33,7 +34,7 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
             <ChevronRight className="size-4 text-muted-foreground shrink-0" />
           </div>
           <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">{description}</p>
-          <p className={`text-xl sm:text-2xl lg:text-2xl font-extrabold tabular-nums mt-2 ${ASSET_THEME.important}`}>
+          <p className={`text-xl sm:text-2xl lg:text-2xl font-extrabold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
             {primary}
           </p>
           {secondary && <div className="text-xs lg:text-sm mt-1">{secondary}</div>}

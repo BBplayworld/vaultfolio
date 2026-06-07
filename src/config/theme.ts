@@ -28,10 +28,15 @@ export const ASSET_THEME = {
   loss: "text-blue-600 dark:text-blue-400",
 
   // ===== 자산 탭 요약 헤더 (총 평가금액 박스) =====
-  summaryHeader: "rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between",
+  summaryHeader: "rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between",
+
+  // 본문 최상위 카드 — border/배경/그림자 제거, 풀블리드
+  contentCard: "border-0 bg-transparent shadow-none py-0 gap-3",
+  // 본문 좌우 거터 — 전 페이지 공통. 페이지 컨테이너 px-3가 TopBar 버튼 거터와 동일 라인이므로 내부 추가 패딩은 0
+  contentPad: "px-0 sm:px-0",
 
   // ===== 자산 관리 카드 공통 스타일 =====
-  cardWrapper: "rounded-lg overflow-hidden",
+  cardWrapper: "rounded-lg overflow-hidden border-0 bg-transparent",
   // cardHeader: "flex flex-wrap items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
   cardHeader: "flex flex-wrap items-center gap-3 sm:gap-4 py-2.5 transition-colors",
   cardActions: "flex justify-end gap-2 px-3 py-2 bg-muted/10",

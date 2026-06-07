@@ -16,13 +16,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
 import { truncateName } from "@/lib/utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
-import { DetailSummaryHeader } from "../detail-summary-header";
+import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
 import { StockInsightStrip } from "../xray/stock-insight-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
@@ -290,8 +290,8 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
 }) {
-  const fmt = maskFn ?? formatShortCurrency;
-  const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
+  const fmt = maskFn ?? formatPriceByMode;
+  const hideAmounts = !!maskFn && maskFn(123456).includes("•");
   const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
   return (
     <>
@@ -338,61 +338,35 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, dailyProfit, dailyProfitRate, maskFn, screenshotMode = false }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
   currencyGain?: number;
-  dailyProfit?: number | null;
-  dailyProfitRate?: number | null;
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
 }) {
   const fmtFull = maskFn ?? formatCurrency;
-  const fmt = maskFn ?? formatShortCurrency;
-  const hideAmounts = !!maskFn && maskFn !== formatShortCurrency;
+  const fmt = maskFn ?? formatPriceByMode;
+  const hideAmounts = !!maskFn && maskFn(123456).includes("•");
   return (
     <DetailSummaryHeader
       label="총 주식 평가금액"
-      badge={!screenshotMode && <DataSourceBadge kind="realtime" />}
       value={totalValue}
-      formatShort={fmt}
+      valueClass={ASSET_THEME.text.default}
       formatFull={fmtFull}
-      right={
-        <>
-          <div>
-            <div className="flex items-center gap-1 justify-end">
-              {!screenshotMode && currencyGain !== undefined && currencyGain !== 0 && (
-                <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
-              )}
-              <p className="text-xs text-muted-foreground">평가손익</p>
-            </div>
-            <div className="flex flex-row items-baseline gap-1 sm:gap-1.5">
-              <p className={`text-lg font-bold tabular-nums whitespace-nowrap ${getProfitLossColor(totalProfit)}`}>
-                {!hideAmounts && (totalProfit >= 0 ? "+" : "")}{fmt(Math.round(totalProfit))}
-              </p>
-              <p className={`text-xs font-semibold tabular-nums whitespace-nowrap ${getProfitLossColor(totalProfit)}`}>
-                ({totalProfitRate >= 0 ? "+" : ""}{totalProfitRate.toFixed(2)}%)
-              </p>
-            </div>
-            {screenshotMode && currencyGain !== undefined && currencyGain !== 0 && (
-              <p className={`text-xs tabular-nums ${getProfitLossColor(currencyGain)}`}>
-                <span className="text-muted-foreground">환차손익</span> {!hideAmounts && (currencyGain >= 0 ? "+" : "")}{fmt(Math.round(currencyGain))} 포함
-              </p>
-            )}
-          </div>
-          {!screenshotMode && dailyProfit != null && dailyProfitRate != null && (
-            <div className="border-t border-border/40 pt-1 mt-1">
-              <div className="flex items-center gap-1.5 justify-end">
-                <p className="text-xs text-muted-foreground">전일 대비</p>
-                {!screenshotMode && <DataSourceBadge kind="closing" />}
-              </div>
-              <p className={`text-sm font-semibold tabular-nums whitespace-nowrap ${getProfitLossColor(dailyProfit)}`}>
-                {!hideAmounts && (dailyProfit >= 0 ? "+" : "")}{fmt(Math.round(dailyProfit))} ({dailyProfitRate >= 0 ? "+" : ""}{dailyProfitRate.toFixed(2)}%)
-              </p>
-            </div>
-          )}
-        </>
+      formatShort={fmt}
+      inline={
+        <ProfitMetric
+          label="평가손익"
+          profit={totalProfit}
+          rate={totalProfitRate}
+          formatShort={fmt}
+          hideAmountSign={hideAmounts}
+          prefix={!screenshotMode && currencyGain !== undefined && currencyGain !== 0
+            ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
+            : undefined}
+        />
       }
     />
   );
@@ -651,10 +625,10 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
 function TradeActionRow({ stockId, onViewTrades }: { stockId: string; onViewTrades: (id: string) => void }) {
   return (
     <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
-      <Button variant="outline" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => dispatchAddTrade(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => dispatchAddTrade(stockId)}>
         <ArrowLeftRight className="size-3.5" /> 거래입력
       </Button>
-      <Button variant="outline" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => onViewTrades(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => onViewTrades(stockId)}>
         <History className="size-3.5" /> 거래내역
       </Button>
     </div>
@@ -679,9 +653,9 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
               <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
               <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
-                <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatShortCurrency(Math.round(m.currentVal))}</span>
+                <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatPriceByMode(Math.round(m.currentVal))}</span>
                 <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
-                  {m.profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
+                  {m.profit >= 0 ? "+" : ""}{formatPriceByMode(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
                 </span>
               </div>
             </button>
@@ -692,10 +666,10 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
             <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} />
             <TradeActionRow stockId={stock.id} onViewTrades={onViewTrades} />
             <div className={ASSET_THEME.cardActions}>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
                 if (!confirm("정말 삭제하시겠습니까?")) return;
                 onDelete(stock.id);
               }}>
@@ -804,13 +778,13 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
               {/* 비분할 종목: 라벨형 거래입력·거래내역. 분할 종목은 각 증권사 항목에 노출 */}
               {!hasSubItems && <TradeActionRow stockId={stock.id} onViewTrades={openTrades} />}
               <div className={ASSET_THEME.cardActions}>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="증권사별 나누기" onClick={() => setSplitOpen(true)}>
+                <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="증권사별 나누기" onClick={() => setSplitOpen(true)}>
                   <Scissors className="size-3.5" />
                 </Button>
-                <Button size="icon" variant="outline" className={`${ASSET_THEME.cardActionButton}${hasSubItems && effectiveGroupItems.length > 1 ? " !opacity-20 cursor-not-allowed" : ""}`} disabled={hasSubItems && effectiveGroupItems.length > 1} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
+                <Button size="icon" variant="secondary" className={`${ASSET_THEME.cardActionButton}${hasSubItems && effectiveGroupItems.length > 1 ? " !opacity-20 cursor-not-allowed" : ""}`} disabled={hasSubItems && effectiveGroupItems.length > 1} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
                   <Pencil className="size-3.5" />
                 </Button>
-                <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
+                <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => {
                   if (!confirm("정말 삭제하시겠습니까?")) return;
                   if (effectiveGroupItems.length === 1) {
                     onDelete(effectiveGroupItems[0].id);
@@ -961,7 +935,7 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
-  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, dailyProfit, dailyProfitRate, marketMap } =
+  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, marketMap } =
     useFilteredStockData(activeCategory);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -978,19 +952,17 @@ export function StockTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle>주식</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 */}
         <StockSummaryHeader
           totalValue={totalValue}
           totalProfit={totalProfit}
           totalProfitRate={totalProfitRate}
           currencyGain={activeCategory === "foreign" || activeCategory === "all" ? summary.stockCurrencyGain : 0}
-          dailyProfit={dailyProfit}
-          dailyProfitRate={dailyProfitRate}
         />
 
         {/* X-Ray 인사이트 스트립 (인증샷 제외) */}

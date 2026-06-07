@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatHoldingPeriod } from "@/lib/number-utils";
+import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { assignColors } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
@@ -40,9 +40,9 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</p>
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
                 <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatShortCurrency(Math.round(profit))}</p>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(Math.round(profit))}</p>
                   <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
                 </div>
               </div>
@@ -63,10 +63,10 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
             </div>
             <div className={ASSET_THEME.cardActions}>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
                 <Pencil className="size-3.5" />
               </Button>
-              <Button size="icon" variant="outline" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(coin.id)}>
+              <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="삭제" onClick={() => onDelete(coin.id)}>
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
@@ -112,15 +112,16 @@ export function CryptoTab() {
   const barItems = sorted.map(({ coin, value }, idx) => ({ coin, value, color: cryptoColors[idx] }));
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle>암호화폐</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader
           label="총 암호화폐 평가금액"
           value={totalValue}
-          right={<ProfitMetric label="평가손익" profit={totalProfit} cost={totalCost} />}
+          valueClass={ASSET_THEME.text.default}
+          inline={<ProfitMetric label="평가손익" profit={totalProfit} cost={totalCost} />}
         />
 
         {/* 카테고리 selector — 단일 옵션(전체)로 다른 탭과 시각 통일 */}

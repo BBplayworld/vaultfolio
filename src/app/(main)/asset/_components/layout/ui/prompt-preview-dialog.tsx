@@ -89,7 +89,7 @@ export function PromptPreviewDialog({
           <Textarea
             value={promptText}
             readOnly
-            className="min-h-[380px] w-full font-mono text-sm resize-none"
+            className="min-h-[380px] w-full font-mono text-sm resize-none border-0 focus-visible:ring-0"
           />
         </div>
         <DialogFooter>

@@ -192,8 +192,8 @@ export function StockTradesView() {
 
   if (!target || groupStocks.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex h-48 items-center justify-center">
+      <Card className={ASSET_THEME.contentCard}>
+        <CardContent className={`flex h-48 items-center justify-center ${ASSET_THEME.contentPad}`}>
           <p className="text-muted-foreground text-sm">조회할 종목을 먼저 선택해 주세요.</p>
         </CardContent>
       </Card>
@@ -204,16 +204,16 @@ export function StockTradesView() {
   const currentVal = summaryStock ? summaryStock.quantity * summaryStock.currentPrice * (currency === "KRW" ? 1 : mul) : 0;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={ASSET_THEME.contentCard}>
+      <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle className="flex items-center gap-2 text-base">
           <ArrowLeftRight className="size-4" style={{ color: MAIN_PALETTE[0] }} />
           거래내역
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 종목 헤더 */}
-        <div className="rounded-xl border bg-muted/20 px-4 py-3">
+        <div className="rounded-xl bg-muted/20 px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-bold">{target.name}</span>
             {target.ticker && <span className="text-sm font-mono text-muted-foreground">({target.ticker})</span>}
@@ -286,12 +286,12 @@ export function StockTradesView() {
 
         {/* 기간 요약 스탯 */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2">
+          <div className="rounded-xl bg-red-500/5 px-3 py-2">
             <p className="flex items-center gap-1 text-[11px] text-red-500"><TrendingUp className="size-3" /> 매수</p>
             <p className="font-bold tabular-nums">{stats.buyQty.toLocaleString()}주</p>
             <p className="text-xs text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
           </div>
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2">
+          <div className="rounded-xl bg-blue-500/5 px-3 py-2">
             <p className="flex items-center gap-1 text-[11px] text-blue-500"><TrendingDown className="size-3" /> 매도</p>
             <p className="font-bold tabular-nums">{stats.sellQty.toLocaleString()}주</p>
             <p className="text-xs text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
@@ -300,7 +300,7 @@ export function StockTradesView() {
 
         {/* 거래 리스트 */}
         {filtered.length === 0 ? (
-          <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
+          <div className="flex h-36 items-center justify-center rounded-lg">
             <p className="text-muted-foreground text-sm">해당 조건의 거래내역이 없습니다.</p>
           </div>
         ) : (
@@ -313,7 +313,7 @@ export function StockTradesView() {
                   {txs.map((tx) => {
                     const amt = tx.price * tx.quantity * (tx.currency === "KRW" ? 1 : mul);
                     return (
-                      <div key={tx.id} className="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm group/item">
+                      <div key={tx.id} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm group/item">
                         <span className={`text-xs font-bold shrink-0 w-8 ${tx.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
                           {tx.type === "buy" ? "매수" : "매도"}
                         </span>

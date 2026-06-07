@@ -11,14 +11,9 @@ export function parseNumberFromCommas(value: string): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
-// 화폐 단위 포맷 (원)
+// 화폐 단위 포맷 (전체금액 + "원")
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+  return `${Math.round(value).toLocaleString("ko-KR")}원`;
 }
 
 // 짧은 화폐 단위 포맷 (억, 만)
@@ -97,4 +92,45 @@ export function formatHoldingPeriod(purchaseDate: string): string {
   if (days > 0 || parts.length === 0) parts.push(`${days}일`);
   return parts.join(" ");
 }
+
+// 가격 표시 방식 설정 (1안: "full-only" - 토스/도미노 스타일, 2안: "hybrid" - 시크릿에셋 스타일)
+export type PriceDisplayMode = "full-only" | "hybrid";
+export const PRICE_DISPLAY_MODE: PriceDisplayMode = "full-only";
+
+export interface PriceLayout {
+  primary: string;
+  secondary?: string;
+}
+
+export function getPriceLayout(
+  value: number,
+  formatFull: (v: number) => string = formatCurrency,
+  formatShort: (v: number) => string = formatShortCurrency
+): PriceLayout {
+  if (PRICE_DISPLAY_MODE === "full-only") {
+    return {
+      primary: formatFull(value),
+    };
+  }
+  return {
+    primary: formatShort(value),
+    secondary: formatFull(value),
+  };
+}
+
+export function formatPriceByMode(value: number): string {
+  if (PRICE_DISPLAY_MODE === "full-only") {
+    return formatCurrency(value);
+  }
+  return formatShortCurrency(value);
+}
+
+export function formatPriceDecimalByMode(value: number): string {
+  if (PRICE_DISPLAY_MODE === "full-only") {
+    return formatCurrency(value);
+  }
+  return formatShortCurrencyDecimal(value);
+}
+
+
 

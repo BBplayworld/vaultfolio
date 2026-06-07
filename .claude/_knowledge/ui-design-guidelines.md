@@ -110,3 +110,4 @@ function Hint({ children }: { children: ReactNode }) {
 - **체크박스**: 기본 `Checkbox` 컴포넌트가 checked 시 자동 brand 색. 별도 색 지정 금지.
 - **역할 분리**: CSS 클래스 기반 UI는 `--brand`/`variant="brand"`, 차트·캔버스 등 JS/인라인은 `MAIN_PALETTE[0]`.
 - **예외(의미색)**: 매수=빨강/매도=파랑(유형 토글), 삭제·위험=`variant="destructive"`, 보조=`outline`/`secondary`/`ghost`. 이들은 통일 대상 아님.
+- **보조/취소 액션의 보더리스화**: 폼 내 취소 버튼, 퀵 추가 버튼, 리스트 내 수정/삭제/나누기 아이콘 버튼 등 보조 액션 요소에는 테두리(`border`)가 드러나는 `variant="outline"` 대신 테두리가 없고 배경이 은은히 들어간 `variant="secondary"`를 활용하여 전체 앱의 보더리스 및 플랫(Flat) 디자인을 통일한다.
