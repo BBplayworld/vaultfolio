@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2, MapPin, CreditCard, ChevronDown, Building2, Clock, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -131,6 +131,22 @@ export function RealEstateTab() {
   const allSorted = [...assetData.realEstate].sort((a, b) => b.currentValue - a.currentValue);
   const totalValue = summary.realEstateValue;
 
+  const visibleCategories = useMemo(() => {
+    const activeTypes = new Set(allSorted.map((item) => item.type));
+    return [
+      { value: "all", label: "전체" },
+      ...realEstateTypes
+        .filter(({ value }) => activeTypes.has(value))
+        .map(({ value, shortLabel }) => ({ value, label: shortLabel })),
+    ];
+  }, [allSorted]);
+
+  useEffect(() => {
+    if (!visibleCategories.some((tab) => tab.value === activeCategory)) {
+      setActiveCategory("all");
+    }
+  }, [visibleCategories, activeCategory]);
+
   const reBarColors = assignColors(allSorted.map((item) => ({ value: item.currentValue })));
   const barItems = allSorted.map((item, idx) => ({ item, value: item.currentValue, color: reBarColors[idx] }));
 
@@ -172,7 +188,7 @@ export function RealEstateTab() {
           <InlineSelector
             value={activeCategory}
             onChange={setActiveCategory}
-            options={RE_CATEGORY_TABS}
+            options={visibleCategories}
             ariaLabel="부동산 카테고리 선택"
           />
         </div>
@@ -211,7 +227,7 @@ export function RealEstateTab() {
             </div>
           ) : activeCategory === "all" ? (
             <div className="space-y-4 mt-8">
-              {RE_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+              {visibleCategories.filter((c) => c.value !== "all").map((cat) => {
                 const catItems = allSorted.filter((item) => item.type === cat.value);
                 if (catItems.length === 0) return null;
                 return (

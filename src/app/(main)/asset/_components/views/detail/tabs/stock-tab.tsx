@@ -611,7 +611,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
             <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
             <p className={ASSET_THEME.cardDetailValue}>
               {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
-                ? stock.currency === "JPY" ? `¥100 = ₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1=₩${stock.purchaseExchangeRate.toLocaleString()}`
+                ? stock.currency === "JPY" ? `¥100=₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1=₩${stock.purchaseExchangeRate.toLocaleString()}`
                 : "미입력 (현재환율)"}
             </p>
           </div>
@@ -935,6 +935,20 @@ export function StockTab() {
     try { localStorage.setItem(STORAGE_KEYS.collapsibleUsed, "1"); } catch { /* ignore */ }
   };
 
+  const visibleCategories = useMemo(() => {
+    const activeCats = new Set(assetData.stocks.map((s) => s.category));
+    return CATEGORY_TABS.filter((tab) => {
+      if (tab.value === "all") return true;
+      return activeCats.has(tab.value);
+    });
+  }, [assetData.stocks]);
+
+  useEffect(() => {
+    if (!visibleCategories.some((tab) => tab.value === activeCategory)) {
+      setActiveCategory("all");
+    }
+  }, [visibleCategories, activeCategory]);
+
   const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, marketMap } =
     useFilteredStockData(activeCategory);
 
@@ -973,7 +987,7 @@ export function StockTab() {
           <InlineSelector
             value={activeCategory}
             onChange={setActiveCategory}
-            options={CATEGORY_TABS}
+            options={visibleCategories}
             ariaLabel="주식 카테고리 선택"
           />
         </div>

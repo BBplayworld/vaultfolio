@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2, CreditCard, Banknote, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -132,6 +132,22 @@ export function CashTab() {
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
+  const visibleCategories = useMemo(() => {
+    const activeTypes = new Set(allSorted.map(({ item }) => item.type));
+    return [
+      { value: "all", label: "전체" },
+      ...cashTypes
+        .filter(({ value }) => activeTypes.has(value))
+        .map(({ value, shortLabel }) => ({ value, label: shortLabel })),
+    ];
+  }, [allSorted]);
+
+  useEffect(() => {
+    if (!visibleCategories.some((tab) => tab.value === activeCategory)) {
+      setActiveCategory("all");
+    }
+  }, [visibleCategories, activeCategory]);
+
   const filteredSorted = activeCategory === "all"
     ? allSorted
     : allSorted.filter(({ item }) => item.type === activeCategory);
@@ -160,7 +176,7 @@ export function CashTab() {
           <InlineSelector
             value={activeCategory}
             onChange={setActiveCategory}
-            options={CASH_CATEGORY_TABS}
+            options={visibleCategories}
             ariaLabel="현금 카테고리 선택"
           />
         </div>
@@ -201,7 +217,7 @@ export function CashTab() {
             </div>
           ) : activeCategory === "all" ? (
             <div className="space-y-4 mt-8">
-              {CASH_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+              {visibleCategories.filter((c) => c.value !== "all").map((cat) => {
                 const catItems = allSorted.filter(({ item }) => item.type === cat.value);
                 if (catItems.length === 0) return null;
                 return (

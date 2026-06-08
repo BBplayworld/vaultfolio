@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2, MapPin, TrendingUp, Banknote, CreditCard, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -172,6 +172,30 @@ export function LoanTab() {
     .filter((l) => l.balance > 0)
     .sort((a, b) => b.balance - a.balance);
 
+  const visibleCategories = useMemo(() => {
+    const activeTypes = new Set(allLoans.map((l) => l.type));
+    return [
+      { value: "all", label: "전체" },
+      ...loanTypes
+        .filter(({ value }) => activeTypes.has(value as any))
+        .map(({ value, shortLabel }) => ({
+          value,
+          label: LOAN_MOBILE_LABELS[value] ? (
+            <>
+              <span className="sm:hidden">{LOAN_MOBILE_LABELS[value]}</span>
+              <span className="hidden sm:inline">{shortLabel}</span>
+            </>
+          ) : shortLabel,
+        })),
+    ];
+  }, [allLoans]);
+
+  useEffect(() => {
+    if (!visibleCategories.some((tab) => tab.value === activeCategory)) {
+      setActiveCategory("all");
+    }
+  }, [visibleCategories, activeCategory]);
+
   const filteredLoans = activeCategory === "all"
     ? allLoans
     : allLoans.filter((l) => l.type === activeCategory);
@@ -216,7 +240,7 @@ export function LoanTab() {
           <InlineSelector
             value={activeCategory}
             onChange={setActiveCategory}
-            options={LOAN_CATEGORY_TABS}
+            options={visibleCategories}
             ariaLabel="대출 카테고리 선택"
           />
         </div>
@@ -257,7 +281,7 @@ export function LoanTab() {
             </div>
           ) : activeCategory === "all" ? (
             <div className="space-y-4 mt-8">
-              {LOAN_CATEGORY_TABS.filter((c) => c.value !== "all").map((cat) => {
+              {visibleCategories.filter((c) => c.value !== "all").map((cat) => {
                 const catLoans = filteredLoans.filter((l) => l.type === cat.value);
                 if (catLoans.length === 0) return null;
                 return (
