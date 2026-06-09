@@ -152,12 +152,16 @@ export function CashTab() {
     ? allSorted
     : allSorted.filter(({ item }) => item.type === activeCategory);
 
+  const displayValue = activeCategory === "all"
+    ? totalValue
+    : filteredSorted.reduce((sum, d) => sum + d.value, 0);
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) { deleteCash(id); toast.success("삭제되었습니다."); }
   };
 
   const renderCard = ({ item, value }: { item: Cash; value: number }, idx: number) => {
-    const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
+    const pct = displayValue > 0 ? (value / displayValue) * 100 : 0;
     const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
     const typeLabel = cashTypes.find((t) => t.value === item.type)?.label ?? item.type;
     const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
@@ -170,7 +174,7 @@ export function CashTab() {
         <CardTitle>현금</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
-        <DetailSummaryHeader label="총 현금성 자산" value={totalValue} valueClass={ASSET_THEME.text.default} />
+        <DetailSummaryHeader label="총 현금성 자산" value={displayValue} valueClass={ASSET_THEME.text.default} />
 
         <div className="flex justify-start">
           <InlineSelector

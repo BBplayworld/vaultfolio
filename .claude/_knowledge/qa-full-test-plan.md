@@ -32,6 +32,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ add/update/delete가 `saveData` 단일 저장 경로 사용, 삭제 후 합계 재계산 ([asset-data-context](../../src/contexts/asset-data-context.tsx) `getAssetSummary`)
 - 👤 각 자산 유형 추가→수정→삭제, 순자산/총자산/총부채 즉시 갱신
 - 👤 비종목 자산(부동산·대출·현금) 카드 접힘행 왼쪽=`이름 / 비중%`만, 상세 펼침에 종류·매입가(부동산)·금리·금융기관(대출) 노출 — 주식 카드 패턴과 통일
+- 👤 주식 보유종목 스크린샷 가져오기 미리보기([stock-screenshot-import.tsx](../../src/app/(main)/asset/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx)) 카드 레이아웃 그리드 정렬 및 증권사 드롭다운 텍스트 짤림 방지 확인
 - 엣지: 0개 상태(웰컴가이드 노출), 단일 항목 표시(`length > 0` 규칙)
 - 회귀: 부동산 임차보증금(tenantDeposit) 순자산 차감, 대출 잔액 차감
 
@@ -78,6 +79,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-SHARE. 공유 (Zero-Knowledge) ([header/share](../../src/app/(main)/asset/_components/header/share) · [api/share](../../src/app/api/share))
 - 👤 공유 URL 생성·로드, Short URL(s:KEY), PIN 보호(4자리), 잘못된 토큰→invalid-access
+- 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
@@ -108,7 +110,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([app-guide.tsx](../../src/app/(main)/asset/_components/header/app-guide.tsx))
-- 👤 웰컴가이드(자산 0개), 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
+- 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
 ### F-NOTICE. 공지 시스템
@@ -194,4 +196,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-07 · issue-5.1 기준 전체 재작성 (보더리스 UI 구축 및 폼 인지성 강화)_
+_최종 갱신: 2026-06-09 · 테마 연동 및 가져오기 UI 정돈 반영_

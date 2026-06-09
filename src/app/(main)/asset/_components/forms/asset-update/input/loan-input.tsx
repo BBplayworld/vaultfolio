@@ -207,6 +207,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="0"
+                  maxLength={15}
                   quickButtons={getQuickButtonsByType(selectedType)}
                 />
               </FormControl>
@@ -227,8 +228,9 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
                   type="number"
                   step="0.01"
                   placeholder="3.5"
+                  maxLength={5}
                   value={field.value || ""}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value.slice(0, 5)) || 0)}
                 />
               </FormControl>
               <FormDescription>% (연이율)</FormDescription>

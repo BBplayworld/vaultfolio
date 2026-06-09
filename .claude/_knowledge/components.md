@@ -1,6 +1,6 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-05-23
+> 마지막 업데이트: 2026-06-09
 
 ## 자산 컴포넌트 (`src/app/(main)/asset/_components/`)
 
@@ -129,10 +129,11 @@ _components/
 - `halted` → amber `text-amber-600 border-amber-600` "거래정지"
 - `delisted` → red `text-red-600 border-red-600` "상장폐지"
 
-### stock-screenshot-import.tsx conflict 처리
+### stock-screenshot-import.tsx conflict 및 미리보기 UI 처리
 
 - **덮어쓰기(merge):** 스크린샷 ticker 제거 후 전체 push
 - **초기화(reset):** 기존 주식 전부 제거 후 스크린샷만 등록
+- **미리보기 UI:** 1행(이름+티커+환산뱃지), 2행(수량/현재가/평단가/평가금액 그리드 패널 bg-muted/40), 3행(드롭다운 가로 배치 및 증권사 선택 max-w-[220px] 짤림 방지)
 - ticker 없는 종목: `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
 
 ---
@@ -190,6 +191,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 - 순자산 카드: `DataSourceBadge kind="realtime"` 포함, `bgLight` 토대
 - 미리보기 데이터: `welcome-preview-data.json`
+- 미리보기 대시보드: 실제 `dashboard.tsx` 컴포넌트를 공통 공유하여 동일 포맷으로 노출하되, 내부의 클릭이나 인터랙션은 차단/방지 처리.
 - `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
 
 ### TutorialOverlay (`tutorial/tutorial-overlay.tsx`)

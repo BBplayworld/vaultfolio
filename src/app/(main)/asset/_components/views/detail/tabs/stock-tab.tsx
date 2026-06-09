@@ -331,7 +331,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
 // 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
 export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
   return (
-    <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md`}>
+    <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md w-full min-w-0`}>
       <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} maskFn={maskFn} screenshotMode={screenshotMode} />
     </div>
   );

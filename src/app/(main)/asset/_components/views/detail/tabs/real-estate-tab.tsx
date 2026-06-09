@@ -154,6 +154,18 @@ export function RealEstateTab() {
     ? allSorted
     : allSorted.filter((item) => item.type === activeCategory);
 
+  const displayValue = activeCategory === "all"
+    ? totalValue
+    : filteredItems.reduce((sum, item) => sum + item.currentValue, 0);
+
+  const displayCost = activeCategory === "all"
+    ? summary.realEstateCost
+    : filteredItems.reduce((sum, item) => sum + item.purchasePrice, 0);
+
+  const displayProfit = activeCategory === "all"
+    ? summary.realEstateProfit
+    : displayValue - displayCost;
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) { deleteRealEstate(id); toast.success("삭제되었습니다."); }
   };
@@ -162,7 +174,7 @@ export function RealEstateTab() {
     const idx = allSorted.findIndex((r) => r.id === item.id);
     const profit = item.currentValue - item.purchasePrice;
     const profitRate = item.purchasePrice > 0 ? (profit / item.purchasePrice) * 100 : 0;
-    const pct = totalValue > 0 ? (item.currentValue / totalValue) * 100 : 0;
+    const pct = displayValue > 0 ? (item.currentValue / displayValue) * 100 : 0;
     const color = reBarColors[idx] ?? MAIN_PALETTE[0];
     const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
     const typeLabel = realEstateTypes.find((t) => t.value === item.type)?.label ?? item.type;
@@ -179,9 +191,9 @@ export function RealEstateTab() {
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader
           label="총 부동산 평가금액"
-          value={totalValue}
+          value={displayValue}
           valueClass={ASSET_THEME.text.default}
-          inline={<ProfitMetric label="평가손익" profit={summary.realEstateProfit} cost={summary.realEstateCost} decimals={1} />}
+          inline={<ProfitMetric label="평가손익" profit={displayProfit} cost={displayCost} decimals={1} />}
         />
 
         <div className="flex justify-start">

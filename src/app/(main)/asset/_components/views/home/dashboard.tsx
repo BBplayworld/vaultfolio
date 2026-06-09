@@ -176,8 +176,103 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   );
 }
 
+export function NetAssetSummaryBox({
+  netAsset,
+  totalAsset,
+  totalLiability,
+  nickname,
+  lastDaily,
+  treemapData,
+  activeTab = "all",
+  onSegmentClick,
+  visibleTabs = [],
+  screenshotMode = false,
+  showRealtimeBadge = false,
+}: {
+  netAsset: number;
+  totalAsset?: number;
+  totalLiability?: number;
+  nickname?: string;
+  lastDaily?: { diff: number; pct: number; isBig: boolean } | null;
+  treemapData: TreemapItem[];
+  activeTab?: string;
+  onSegmentClick?: (key: string) => void;
+  visibleTabs?: { value: string; label: string }[];
+  screenshotMode?: boolean;
+  showRealtimeBadge?: boolean;
+}) {
+  const netAssetLayout = getPriceLayout(netAsset);
+  const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4 ${hasRightSide ? "flex items-center justify-between" : ""}`}>
+        <div>
+          <div className="flex items-center gap-1.5">
+            {nickname && (
+              <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
+            )}
+            <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+            {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
+          </div>
+
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
+              {netAssetLayout.primary}
+            </p>
+            {lastDaily && (
+              <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
+                {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
+                <span className="text-xs lg:text-sm font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
+              </span>
+            )}
+          </div>
+          {netAssetLayout.secondary && (
+            <p className={`mt-0.5 text-xs sm:text-sm ${ASSET_THEME.text.default}`}>
+              {netAssetLayout.secondary}
+            </p>
+          )}
+        </div>
+
+        {hasRightSide && (
+          <div className="text-right space-y-1.5 shrink-0">
+            <div className="text-sm">
+              <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
+              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
+            </div>
+            <div className="text-sm">
+              <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
+              <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {visibleTabs.length > 1 && onSegmentClick && (
+        <div className="flex justify-center">
+          <InlineSelector
+            value={activeTab}
+            onChange={onSegmentClick}
+            options={visibleTabs.map((t) => ({ value: t.value, label: t.label }))}
+            ariaLabel="자산 분포 필터"
+          />
+        </div>
+      )}
+
+      <AssetDonutChart
+        items={treemapData}
+        netAsset={netAsset}
+        activeTab={activeTab}
+        onSegmentClick={onSegmentClick}
+        screenshotMode={screenshotMode}
+      />
+    </div>
+  );
+}
+
 /**
  * 자산 분포 도닛차트에 필요한 treemapData를 계산하는 후크.
+
  * ShareCard 등 다른 컨포넌트에서 재사용 가능.
  */
 export function useAssetTreemapData() {
@@ -382,57 +477,15 @@ export function Dashboard() {
               {/* ── 순자산 요약 + DonutChart / 세부 콘텐츠 2컬럼 ── */}
               <div className="py-3 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* col-1: 순자산 요약 + DonutChart */}
-                <div className="space-y-4">
-                  <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`}>
-                    <div className="flex items-center gap-1.5">
-                      {nickname && (
-                        <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
-                      )}
-                      <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-                    </div>
-                    {(() => {
-                      const { primary, secondary } = getPriceLayout(summary.netAsset);
-                      return (
-                        <>
-                          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                            <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
-                              {primary}
-                            </p>
-                            {lastDaily && (
-                              <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
-                                {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
-                                <span className="text-xs lg:text-sm font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
-                              </span>
-                            )}
-                          </div>
-                          {secondary && (
-                            <p className={`mt-0.5 text-xs sm:text-sm ${ASSET_THEME.text.default}`}>
-                              {secondary}
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {visibleTabs.length > 1 && (
-                    <div className="flex justify-center">
-                      <InlineSelector
-                        value={resolvedTab}
-                        onChange={setActiveDetailTab}
-                        options={visibleTabs.map((t) => ({ value: t.value, label: t.label }))}
-                        ariaLabel="자산 분포 필터"
-                      />
-                    </div>
-                  )}
-
-                  <AssetDonutChart
-                    items={treemapData}
-                    netAsset={summary.netAsset}
-                    activeTab={resolvedTab}
-                    onSegmentClick={setActiveDetailTab}
-                  />
-                </div>
+                <NetAssetSummaryBox
+                  netAsset={summary.netAsset}
+                  nickname={nickname}
+                  lastDaily={lastDaily}
+                  treemapData={treemapData}
+                  activeTab={resolvedTab}
+                  onSegmentClick={setActiveDetailTab}
+                  visibleTabs={visibleTabs}
+                />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}
                 <div>

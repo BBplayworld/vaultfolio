@@ -225,6 +225,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="0"
+                    maxLength={18}
                     quickButtons={[]}
                     allowDecimals={true}
                   />
@@ -246,6 +247,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     placeholder={getAvgPricePlaceholder()}
+                    maxLength={15}
                     quickButtons={[]}
                   />
                 </FormControl>
@@ -267,6 +269,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="0"
+                  maxLength={15}
                   quickButtons={[]}
                 />
               </FormControl>

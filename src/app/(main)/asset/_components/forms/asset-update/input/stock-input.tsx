@@ -37,8 +37,6 @@ import { MAIN_PALETTE } from "@/config/theme";
 import { stockCategories, quickButtonPresets, securitiesFirms } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 
-const stockQuickButtons = [...quickButtonPresets.stock];
-
 interface StockFormProps {
   editData?: Stock;
   onClose: () => void;
@@ -348,7 +346,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="0"
-                    quickButtons={[]}
+                    maxLength={12}
                     allowDecimals={isForeignStock}
                     maxDecimals={isForeignStock ? 2 : undefined}
                   />
@@ -382,7 +380,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     value={field.value}
                     onChange={(value) => field.onChange(value)}
                     placeholder="0"
-                    quickButtons={isForeignStock && avgPriceInKrw ? stockQuickButtons : isForeignStock ? [] : stockQuickButtons}
+                    maxLength={15}
                     allowDecimals={isForeignStock && !avgPriceInKrw}
                     maxDecimals={isForeignStock && !avgPriceInKrw ? 3 : undefined}
                   />
@@ -412,7 +410,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                     value={field.value}
                     onChange={(value) => field.onChange(value)}
                     placeholder="0"
-                    quickButtons={isForeignStock ? [] : stockQuickButtons}
+                    maxLength={15}
                     allowDecimals={isForeignStock}
                     maxDecimals={isForeignStock ? 3 : undefined}
                   />

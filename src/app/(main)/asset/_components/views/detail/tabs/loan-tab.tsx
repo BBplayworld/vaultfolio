@@ -213,7 +213,7 @@ export function LoanTab() {
   };
 
   const renderLoanCard = (loan: Loan) => {
-    const pct = totalBalance > 0 ? (loan.balance / totalBalance) * 100 : 0;
+    const pct = filteredTotal > 0 ? (loan.balance / filteredTotal) * 100 : 0;
     const color = LOAN_TYPE_COLORS[loan.type] ?? MAIN_PALETTE[10];
     const typeLabel = loanTypes.find((t) => t.value === loan.type)?.label ?? loan.type;
     const daysElapsed = calculateHoldingDays(loan.startDate);
@@ -233,7 +233,7 @@ export function LoanTab() {
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 */}
-        <DetailSummaryHeader label="총 대출 잔액" value={totalBalance} valueClass={ASSET_THEME.text.default} />
+        <DetailSummaryHeader label="총 대출 잔액" value={filteredTotal} valueClass={ASSET_THEME.text.default} />
 
         {/* 카테고리 selector — 항목 많아 가로 스크롤 (모바일 스크롤바 숨김) */}
         <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">

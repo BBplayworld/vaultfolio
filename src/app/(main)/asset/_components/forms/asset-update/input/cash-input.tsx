@@ -223,6 +223,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                                         value={field.value}
                                         onChange={field.onChange}
                                         placeholder="0"
+                                        maxLength={15}
                                         quickButtons={[]}
                                         allowDecimals={isForeignCurrency}
                                         maxDecimals={isForeignCurrency ? 2 : undefined}

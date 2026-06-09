@@ -408,70 +408,119 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                 return (
                   <div
                     key={stock.id}
-                    className={`rounded-lg border p-3 transition-colors ${stock.selected ? "bg-card border-border" : "bg-muted/30 border-muted opacity-60"}`}
+                    className={`rounded-xl border p-4 transition-all duration-200 ${
+                      stock.selected
+                        ? "bg-card border-primary/20 shadow-sm"
+                        : "bg-muted/10 border-muted opacity-60"
+                    }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <button type="button" className="mt-0.5 flex-shrink-0" onClick={() => toggleSelect(stock.id)}>
-                        {stock.selected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4 text-muted-foreground" />}
+                    <div className="flex items-start gap-3.5">
+                      {/* 선택 체크박스 */}
+                      <button
+                        type="button"
+                        className="mt-1 flex-shrink-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => toggleSelect(stock.id)}
+                      >
+                        {stock.selected ? (
+                          <CheckSquare className="size-5 text-primary" />
+                        ) : (
+                          <Square className="size-5" />
+                        )}
                       </button>
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm truncate">{stock.name}</span>
-                          {!stock.ticker && (
-                            <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">티커 미확인</Badge>
-                          )}
-                          <Input
-                            placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
-                            className={`h-6 w-28 text-xs px-2 font-mono ${stock.selected && !stock.ticker && !(stock.tickerInput?.trim()) ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                            value={stock.tickerInput ?? (stock.ticker || "")}
-                            onChange={(e) => {
-                              const raw = e.target.value.toUpperCase();
-                              const filtered = isForeign
-                                ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
-                                : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
-                              updateTickerInput(stock.id, filtered);
-                            }}
-                          />
+
+                      {/* 본문 레이아웃 */}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        {/* 1행: 이름 + 티커 입력 + 환산 뱃지 */}
+                        <div className="flex items-center gap-2 flex-wrap justify-between">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="font-bold text-sm sm:text-base text-foreground truncate max-w-[200px]">
+                              {stock.name}
+                            </span>
+                            {!stock.ticker && (
+                              <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30 font-medium shrink-0">
+                                티커 미확인
+                              </Badge>
+                            )}
+                            <Input
+                              placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
+                              className={`h-7 w-28 text-xs px-2.5 font-mono shrink-0 ${
+                                stock.selected && !stock.ticker && !(stock.tickerInput?.trim())
+                                  ? "border-destructive focus-visible:ring-destructive"
+                                  : "border-border/60"
+                              }`}
+                              value={stock.tickerInput ?? (stock.ticker || "")}
+                              onChange={(e) => {
+                                const raw = e.target.value.toUpperCase();
+                                const filtered = isForeign
+                                  ? raw.replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
+                                  : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6);
+                                updateTickerInput(stock.id, filtered);
+                              }}
+                            />
+                          </div>
+
                           {isForeign && (
-                            <Badge variant="outline" className="text-[10px] text-blue-500 border-blue-500/30">
+                            <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0 font-medium bg-primary/5">
                               {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
                                 ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
                                 : "USD 그대로 저장"}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                          <span>수량 <span className={`font-semibold ${ASSET_THEME.primary.text}`}>{stock.quantity.toLocaleString()}주</span></span>
-                          <span>현재가 <span className="font-semibold text-foreground">{fmtPrice}</span></span>
-                          <span>평단가(추정) <span className="font-semibold text-foreground">{fmtAvg}</span></span>
-                          <span>평가금액 <span className={`font-semibold ${ASSET_THEME.text.default}`}>{fmtTotal}</span></span>
+
+                        {/* 2행: 핵심 자산 정보 그리드 (2열/4열 구성으로 넓고 깔끔하게 배치) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-lg bg-muted/40 dark:bg-muted/10 p-3 text-xs">
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] text-muted-foreground">수량</p>
+                            <p className={`font-semibold text-sm ${ASSET_THEME.primary.text}`}>
+                              {stock.quantity.toLocaleString()}주
+                            </p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] text-muted-foreground">현재가</p>
+                            <p className="font-semibold text-sm text-foreground">{fmtPrice}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] text-muted-foreground">평단가(추정)</p>
+                            <p className="font-semibold text-sm text-foreground">{fmtAvg}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] text-muted-foreground">평가금액</p>
+                            <p className="font-bold text-sm text-foreground">{fmtTotal}</p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
-                            <SelectTrigger className="h-7 w-36 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {CATEGORY_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={stock.broker ?? BROKER_NONE}
-                            onValueChange={(v) => updateBroker(stock.id, v)}
-                          >
-                            <SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
-                              {securitiesFirms.map((group) => (
-                                <div key={group.group}>
-                                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">{group.group}</div>
-                                  {group.items.map((firm) => (
-                                    <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
-                                  ))}
-                                </div>
-                              ))}
-                            </SelectContent>
-                          </Select>
+
+                        {/* 3행: 카테고리 & 증권사 선택 드롭다운 (가로 나란히 정렬, 증권사 너비 넉넉히) */}
+                        <div className="flex flex-col sm:flex-row gap-2.5 pt-0.5">
+                          <div className="flex-1 sm:max-w-[180px]">
+                            <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
+                              <SelectTrigger className="h-8 text-xs w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {CATEGORY_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1 sm:max-w-[220px]">
+                            <Select
+                              value={stock.broker ?? BROKER_NONE}
+                              onValueChange={(v) => updateBroker(stock.id, v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
+                                {securitiesFirms.map((group) => (
+                                  <div key={group.group}>
+                                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
+                                    {group.items.map((firm) => (
+                                      <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
+                                    ))}
+                                  </div>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     </div>

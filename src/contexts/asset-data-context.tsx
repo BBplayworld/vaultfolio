@@ -15,6 +15,9 @@ import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
+import { updateThemeMode } from "@/lib/theme-utils";
+import { setValueToCookie } from "@/server/server-actions";
+import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
 let lastToastAt = 0;
@@ -194,6 +197,7 @@ const resolveShareToken = async (raw: string): Promise<{ token: string; localKey
 };
 
 export function AssetDataProvider({ children }: { children: ReactNode }) {
+  const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
   // Start with static empty defaults to avoid SSR/client mismatch.
   // Real data is loaded from localStorage in useEffect after hydration.
 
@@ -619,6 +623,17 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     prevHasAssetsRef.current = hasAssets;
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, saveSnapshots]);
 
+  const checkAndApplyThemeMode = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.hash.substring(1));
+    const themeParam = urlParams.get("theme");
+    if (themeParam === "light") {
+      updateThemeMode("light");
+      setThemeMode("light");
+      void setValueToCookie("theme_mode", "light");
+    }
+  }, [setThemeMode]);
+
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
   const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string) => {
@@ -637,8 +652,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     setSnapshotVersion(v => v + 1);
     skipAllTutorialSteps();
     tutorialStore.getState().initTutorial();
+    checkAndApplyThemeMode();
     void initAndSync(data);
-  }, [initAndSync]);
+  }, [initAndSync, checkAndApplyThemeMode]);
 
   // ─── [이벤트 핸들러] ────────────────────────────────────────────────────────
 

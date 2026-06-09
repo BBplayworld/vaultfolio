@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-05-16
+> 마지막 업데이트: 2026-06-09
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -69,6 +69,9 @@ const themeMode = usePreferencesStore(s => s.themeMode);  // "light"|"dark"
 const setThemeMode = usePreferencesStore(s => s.setThemeMode);
 // 쿠키 저장: src/server/server-actions.ts (hydration mismatch 방지)
 ```
+
+**테마 URL 동기화**:
+공유 URL 복사 시, 현재 테마가 라이트 모드(`themeMode === "light"`)라면 URL에 `&theme=light` 파라미터가 포함되며, 수신 측(`applySharedData` 시점)에서 `checkAndApplyThemeMode`가 실행되어 수신 기기의 테마 스토어, 쿠키, HTML DOM의 테마 클래스를 모두 `"light"`로 동기화 설정합니다.
 
 ---
 

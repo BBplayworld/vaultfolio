@@ -186,6 +186,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="0"
+                    maxLength={15}
                     quickButtons={realEstateQuickButtons}
                   />
                 </FormControl>
@@ -206,6 +207,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="0"
+                    maxLength={15}
                     quickButtons={realEstateQuickButtons}
                   />
                 </FormControl>
@@ -241,6 +243,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                   value={field.value || 0}
                   onChange={field.onChange}
                   placeholder="0"
+                  maxLength={15}
                   quickButtons={realEstateQuickButtons}
                 />
               </FormControl>

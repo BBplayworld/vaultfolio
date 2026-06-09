@@ -120,8 +120,9 @@ export function ToolMenuPage() {
           localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
         }
         if (json.key) {
+          const isLight = themeMode === "light";
           setPreGeneratedShortUrl(
-            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}`
+            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}${isLight ? "&theme=light" : ""}`
           );
         }
       })
@@ -129,7 +130,7 @@ export function ToolMenuPage() {
       .finally(() => setShortUrlLoading(false));
     // assetData, assetDataContext.exchangeRates는 다이얼로그 열린 시점의 스냅샷만 필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showShareDialog, sharePin]);
+  }, [showShareDialog, sharePin, themeMode]);
 
   // confirmShare와 동일하게 미리 준비된 URL을 동기적으로 복사
   const confirmShareShort = async () => {
@@ -158,7 +159,8 @@ export function ToolMenuPage() {
       }
 
       const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis(), nickname || undefined);
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}`;
+      const isLight = themeMode === "light";
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}${isLight ? "&theme=light" : ""}`;
 
       await navigator.clipboard.writeText(shareUrl);
 

@@ -6,14 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
-import { dispatchAddRealEstate } from "@/app/(main)/asset/_components/layout/navigation/asset-dispatch";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { formatCurrency, formatShortCurrency, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
-import { AssetDonutChart, SectionBar, TreemapItem } from "@/app/(main)/asset/_components/views/home/dashboard";
+import { TreemapItem, NetAssetSummaryBox } from "@/app/(main)/asset/_components/views/home/dashboard";
 import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
-import { DataSourceBadge } from "@/app/(main)/asset/_components/views/data-source-badge";
 import { Stock } from "@/types/asset";
 import previewData from "./welcome-preview-data.json";
 
@@ -71,7 +68,7 @@ export function WelcomeGuide() {
   };
 
   return (
-    <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10 p-6 md:p-10 space-y-8">
+    <div className="w-full border-0 bg-transparent shadow-none px-0 py-2 sm:px-0 space-y-8">
 
       {/* 헤로 섹션 */}
       <div className="text-center space-y-3">
@@ -107,106 +104,70 @@ export function WelcomeGuide() {
       </div>
 
       {/* 예시 미리보기 */}
-      <div className="space-y-3">
+      <div className="space-y-6">
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-foreground">포트폴리오 미리보기</p>
           <Badge variant="secondary" className="text-[10px] px-2 py-0.5">예시 데이터</Badge>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* 1. 홈탭 (자산 분포 및 구성) 미리보기 영역 — 바깥 카드 영역 제거, 최대 가로 너비 */}
+        <div className="space-y-5">
+          <NetAssetSummaryBox
+            netAsset={netAsset}
+            treemapData={PREVIEW_TREEMAP}
+            lastDaily={{ diff: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false }}
+            screenshotMode={true}
+            showRealtimeBadge={true}
+          />
+        </div>
 
-          {/* 왼쪽: 자산 분포 도넛 + 금융자산 구성 바 */}
-          <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} p-5 space-y-5`}>
-            {/* 순자산 요약 */}
-            {(() => {
-              const netAssetLayout = getPriceLayout(netAsset);
+        {/* 구분선 */}
+        <div className="border-t border-border/60 my-6" />
+
+        {/* 2. 주식 탭 미리보기 영역 — 실제 stock-tab 과 동일하게 카드 박스 없이 노출 */}
+        <div className="space-y-4">
+          {/* 인증샷 가이드 배너 */}
+          <div className="rounded-lg border-0 bg-primary/5 px-4 py-3 flex items-center gap-2.5">
+            <Camera className="size-4 text-primary shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-foreground">인증샷으로 공유하세요</p>
+              <p className="text-[11px] text-muted-foreground">우측 상단 메뉴 → 인증샷 · 자산 분포·주식 카테고리·금액 숨기기 선택 가능</p>
+            </div>
+          </div>
+
+          <StockSummaryHeader
+            totalValue={foreignTotal}
+            totalProfit={foreignProfit}
+            totalProfitRate={foreignProfitRate}
+            currencyGain={foreignCurrencyGain}
+            screenshotMode={false}
+          />
+
+          {/* 주식 상세 — 해외주식 고정 */}
+          <StockCategorySection
+            activeCategory="foreign"
+            onCategoryChange={() => { }}
+            filteredStocks={foreignStocks}
+            totalValue={foreignTotal}
+            barItems={PREVIEW_BAR_ITEMS}
+            barColors={foreignBarColors}
+            screenshotMode={true}
+            renderItem={(stock, _isFirst, color) => {
+              const m = computeStockMetrics(stock, EXCHANGE_RATES, foreignTotal);
               return (
-                <div className={`flex items-center justify-between rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-3`}>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-xs font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-                      <DataSourceBadge kind="realtime" />
-                    </div>
-                    <p className={`text-2xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
-                    {netAssetLayout.secondary && (
-                      <p className={`text-xs sm:text-sm ${ASSET_THEME.text.default}`}>{netAssetLayout.secondary}</p>
-                    )}
-                  </div>
-                  <div className="text-right space-y-1.5">
-                    <div className="text-sm">
-                      <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
-                      <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatPriceByMode(totalAsset)}</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
-                      <span className={`font-bold ${ASSET_THEME.liability}`}>{formatPriceByMode(previewData.loanValue)}</span>
-                    </div>
-                  </div>
-                </div>
+                <StockRowItem
+                  key={stock.id}
+                  stock={stock}
+                  color={color}
+                  pct={m.pct}
+                  currentVal={m.currentVal}
+                  profit={m.profit}
+                  profitRate={m.profitRate}
+                  screenshotMode={true}
+                />
               );
-            })()}
-
-            {/* 자산 분포 도넛 차트 */}
-            <AssetDonutChart items={PREVIEW_TREEMAP} netAsset={netAsset} screenshotMode={true} />
-
-            {/* 금융자산 구성 바 */}
-            <div className="space-y-2 border-t border-border/40 pt-4">
-              <div className="flex items-center justify-between text-xs">
-                <span className={`font-semibold ${ASSET_THEME.distributionCard.muted}`}>금융자산 구성</span>
-                <span className={`font-bold tabular-nums ${ASSET_THEME.primary.text}`}>{formatPriceByMode(financialValue)}</span>
-              </div>
-              <SectionBar items={PREVIEW_FIN_BAR} total={financialValue} />
-            </div>
-          </div>
-
-          {/* 오른쪽: 인증샷 가이드 + 주식 종합 + 주식 상세 */}
-          <div className="space-y-3">
-            {/* 인증샷 가이드 배너 */}
-            <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 flex items-center gap-2.5">
-              <Camera className="size-4 text-primary shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-foreground">인증샷으로 공유하세요</p>
-                <p className="text-[11px] text-muted-foreground">우측 상단 메뉴 → 인증샷 · 자산 분포·주식 카테고리·금액 숨기기 선택 가능</p>
-              </div>
-            </div>
-
-            {/* 주식 종합 + 상세 — 개선된 상세 카드 스타일 */}
-            <div className={`rounded-xl ${ASSET_THEME.distributionCard.bg} border border-zinc-500/60 p-4 sm:p-5 space-y-4`}>
-              <StockSummaryHeader
-                totalValue={foreignTotal}
-                totalProfit={foreignProfit}
-                totalProfitRate={foreignProfitRate}
-                currencyGain={foreignCurrencyGain}
-                screenshotMode={false}
-              />
-
-              {/* 주식 상세 — 해외주식 고정 */}
-              <StockCategorySection
-                activeCategory="foreign"
-                onCategoryChange={() => { }}
-                filteredStocks={foreignStocks}
-                totalValue={foreignTotal}
-                barItems={PREVIEW_BAR_ITEMS}
-                barColors={foreignBarColors}
-                screenshotMode={true}
-                renderItem={(stock, _isFirst, color) => {
-                  const m = computeStockMetrics(stock, EXCHANGE_RATES, foreignTotal);
-                  return (
-                    <StockRowItem
-                      key={stock.id}
-                      stock={stock}
-                      color={color}
-                      pct={m.pct}
-                      currentVal={m.currentVal}
-                      profit={m.profit}
-                      profitRate={m.profitRate}
-                      screenshotMode={true}
-                    />
-                  );
-                }}
-              />
-            </div>
-          </div>
+            }}
+          />
         </div>
       </div>
       <p className={`text-[11px] text-center ${ASSET_THEME.distributionCard.muted}`}>
