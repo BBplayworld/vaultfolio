@@ -33,6 +33,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 각 자산 유형 추가→수정→삭제, 순자산/총자산/총부채 즉시 갱신
 - 👤 비종목 자산(부동산·대출·현금) 카드 접힘행 왼쪽=`이름 / 비중%`만, 상세 펼침에 종류·매입가(부동산)·금리·금융기관(대출) 노출 — 주식 카드 패턴과 통일
 - 👤 주식 보유종목 스크린샷 가져오기 미리보기([stock-screenshot-import.tsx](../../src/app/(main)/asset/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx)) 카드 레이아웃 그리드 정렬 및 증권사 드롭다운 텍스트 짤림 방지 확인
+- 👤 주식 스샷 **공통/개별 적용 토글**: 기본 "공통 적용"(카테고리·증권사 1세트 → 전 종목 일괄), "개별 선택" 전환 시 종목별 드롭다운 노출. 공통 카테고리 변경 시 해외↔국내 가격/통화 환산이 개별 변경과 동일한지
+- ⚙ `convertStockCategory` 단일 헬퍼로 `updateCategory`·`applyCommonCategory` 환산 로직 일원화(중복 제거), 파싱 직후 다수=해외→`foreign`/그 외 도메스틱·`activeTab` 기준 공통 기본값 설정 + `matchBrokerHint` 증권사 자동 매칭
 - 엣지: 0개 상태(웰컴가이드 노출), 단일 항목 표시(`length > 0` 규칙)
 - 회귀: 부동산 임차보증금(tenantDeposit) 순자산 차감, 대출 잔액 차감
 
@@ -120,6 +122,10 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
 
+### F-FEEDBACK. 의견·요청 보내기 ([tool-menu.tsx](../../src/app/(main)/asset/_components/header/tool-menu.tsx) · [api/feedback](../../src/app/api/feedback/route.ts))
+- 👤 더보기 > "의견·요청 보내기" 다이얼로그: 내용 Textarea(초기 min-h-160, max-h-40vh 내부 스크롤) + 연락처(선택), 전송 중 스피너, 성공/실패 토스트. **다이얼로그 스크롤로 하단 "보내기" 버튼 항상 노출**
+- ⚙ `/api/feedback` POST: message 공백 검증(400)·2000자 절단, IP `checkRateLimit` 재사용(429), `SLACK_WEBHOOK_URL` 미설정(500)·웹훅 실패(502), 닉네임 자동 첨부. **서버 저장 없음**(웹훅 전달만)
+
 ---
 
 ## Phase 1B — UI 품질 유지 (코드레벨 상시 점검)
@@ -196,4 +202,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-09 · 테마 연동 및 가져오기 UI 정돈 반영_
+_최종 갱신: 2026-06-11 · 주식 스샷 공통/개별 적용 옵션 + 의견·요청 보내기(Slack 웹훅) 반영_

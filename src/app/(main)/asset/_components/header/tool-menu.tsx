@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Share2, Info, RefreshCw, Moon, Sun, User } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Copy, Share2, Info, RefreshCw, Moon, Sun, User, MessageSquarePlus, Loader2 } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { updateThemeMode } from "@/lib/theme-utils";
@@ -31,6 +31,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { exportAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
@@ -66,6 +68,40 @@ export function ToolMenuPage() {
   const [sharePin, setSharePin] = useState("");
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackContact, setFeedbackContact] = useState("");
+  const [feedbackSending, setFeedbackSending] = useState(false);
+
+  const FEEDBACK_MAX = 2000;
+  const submitFeedback = async () => {
+    const message = feedbackMessage.trim();
+    if (!message) {
+      toast.error("요청 내용을 입력해주세요.");
+      return;
+    }
+    setFeedbackSending(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, nickname: nickname || undefined, contact: feedbackContact.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "전송에 실패했습니다.");
+        return;
+      }
+      toast.success("의견이 전달되었습니다. 감사합니다!");
+      setShowFeedbackDialog(false);
+      setFeedbackMessage("");
+      setFeedbackContact("");
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setFeedbackSending(false);
+    }
+  };
 
   const handleExport = () => {
     try {
@@ -286,6 +322,10 @@ export function ToolMenuPage() {
               <Info className="size-5 text-primary shrink-0" />
               <span className="font-medium">앱 가이드 보기</span>
             </button>
+            <button type="button" className={ROW} onClick={() => setShowFeedbackDialog(true)}>
+              <MessageSquarePlus className="size-5 text-primary shrink-0" />
+              <span className="font-medium">의견·요청 보내기</span>
+            </button>
           </div>
         </section>
       </div>
@@ -381,6 +421,54 @@ export function ToolMenuPage() {
             <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
               <Copy className="mr-2 size-4" />
               전체 URL 복사
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto touch-pan-y">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="size-5 text-primary" />
+              의견·요청 보내기
+            </DialogTitle>
+            <DialogDescription>
+              개선 의견이나 기능 요청을 남겨주세요. 개발자에게 바로 전달됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="space-y-1">
+              <Textarea
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value.slice(0, FEEDBACK_MAX))}
+                placeholder="예) 배당 캘린더에 알림 기능이 있으면 좋겠어요."
+                rows={8}
+                className="resize-none min-h-[160px] max-h-[40vh] overflow-y-auto"
+              />
+              <p className="text-[11px] text-muted-foreground text-right tabular-nums">
+                {feedbackMessage.length}/{FEEDBACK_MAX}
+              </p>
+            </div>
+            <Input
+              value={feedbackContact}
+              onChange={(e) => setFeedbackContact(e.target.value)}
+              placeholder="연락처 (선택 · 이메일 등 회신받을 곳)"
+              maxLength={100}
+            />
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
+              취소
+            </Button>
+            <Button
+              variant="brand"
+              onClick={submitFeedback}
+              disabled={feedbackSending || !feedbackMessage.trim()}
+              type="button"
+            >
+              {feedbackSending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <MessageSquarePlus className="mr-2 size-4" />}
+              보내기
             </Button>
           </DialogFooter>
         </DialogContent>

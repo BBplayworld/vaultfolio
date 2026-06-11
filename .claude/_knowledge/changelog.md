@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-06-11
+
+### 주식 스샷 공통/개별 적용 옵션 + 의견·요청 보내기(Slack 웹훅) (issue-4.3)
+
+- **주식 스크린샷 공통/개별 적용 토글** ([stock-screenshot-import.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/asset/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx)):
+  * 동일 증권사·카테고리 화면을 한 번에 캡쳐하는 일반적 사용 패턴을 위해 미리보기에 **"공통 적용"(기본) ↔ "개별 선택"** 세그먼트 토글 추가. 공통 모드는 카테고리·증권사 `Select` 1세트로 전 종목 일괄 적용, 개별 모드는 기존 종목별 드롭다운.
+  * `updateCategory` 내부 환산 로직을 순수 헬퍼 `convertStockCategory(stock, category, usdRate)`로 추출 → `updateCategory`·공통 일괄 적용(`applyCommonCategory`)이 동일 헬퍼 재사용(해외↔국내 가격/통화 환산 일관, 중복 제거).
+  * 파싱 직후 공통 기본값 자동 설정: 다수 종목이 해외면 `foreign`, 아니면 도메스틱/`activeTab` 국내계열. 증권사는 `matchBrokerHint(brokerHint)` 자동 매칭(거래 스샷과 동일 방식).
+- **의견·요청 보내기 메뉴** ([tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/asset/_components/header/tool-menu.tsx) · 신규 [api/feedback/route.ts](file:///e:/2.project/js/secret-asset/src/app/api/feedback/route.ts)):
+  * 더보기 "설정/기능"에 "의견·요청 보내기" 추가 → `Textarea`(내용 필수, 최대 2000자) + 연락처(선택) 다이얼로그. 닉네임 자동 첨부.
+  * `/api/feedback` POST는 `SLACK_WEBHOOK_URL`로 메시지 전달만 수행하고 **서버에 저장하지 않음**. message 공백 검증(400), IP `checkRateLimit` 재사용(429), 웹훅 미설정(500)·실패(502). 기존 `share/route.ts`의 `getClientIp`·rate-limit 패턴 재사용.
+  * Textarea는 `field-sizing-content` 자동 확장으로 다이얼로그를 밀어내 하단 버튼이 가려지던 문제 → `min-h-[160px] max-h-[40vh] overflow-y-auto`로 상한+내부 스크롤, `DialogContent`에 `max-h-[85vh] overflow-y-auto` 추가.
+- **이유:** 같은 증권사 다종목 등록 시 반복 입력을 없애 입력 효율을 높이고, 사용자 의견을 서버 저장 없이 Slack으로 즉시 받는 피드백 창구를 마련.
+
+---
+
 ## 2026-06-09
 
 ### 공유 URL 테마 모드 동기화 및 스크린샷 가져오기 UI 정돈 (issue-6.1)
@@ -190,37 +206,3 @@
 - FAB Sheet에 자산 탭 바로가기 5개 추가
 - `navigate-to-tab` CustomEvent → `page.tsx`에서 수신
 
----
-
-## 2026-04-19
-
-### YearlyNetAssetChart 과거 순자산 추가 버튼 → FAB 이벤트 방식 전환
-- 카드 헤더 DialogTrigger 제거 → `trigger-add-yearly-net-asset` CustomEvent 리스너
-
-### Sheet 오버레이 어두움 + layout 헤더 sticky 적용
-- SheetOverlay `bg-black/50` → `bg-black/80`, layout 헤더 `sticky top-0`
-
-### FAB PC/패드 환경 확장
-- PC 분기에 `<FloatingAddButton />` 추가
-
-### 모바일 UI: 입력/상세 분리 + FAB
-- FAB: 하단 중앙 fixed → Sheet → 자산 유형 6개 → 스크린샷/직접입력
-
----
-
-## 2026-04-18
-
-### 공유 URL 로드 후 월별 스냅샷 데이터 유지 버그 수정
-- `packSnapshots` 구분자 `^` → `;` (packV7 섹션 구분자와 충돌 방지)
-
-### 스크린샷 가져오기 — 해외주식 원화/달러 인식 분기 환산 버그 수정
-- `originalCurrency` 필드 추가, 클라이언트에서 분기 환산 처리
-
-### 일별/월별 스냅샷 정책 개선 및 공유 URL 포함
-- 일별: 이번 달 한 달치만, 월별 `secretasset_monthly_snapshots` 신규 추가
-
-### 자산 분포 카드 — 모바일 탭 전환
-- `useIsMobile()` 도입, isMobile 시 4개 Card → Tabs 전환
-
-### 캐시 갱신 주기 시장 마감 시간 기준 세분화
-- `getEffectiveDateStr(type)`: 해외주식 KST 07:00, 국내주식 16:00, 환율 09:00 이전이면 전일

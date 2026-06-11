@@ -148,6 +148,9 @@ KIS 응답 기반 자동 감지 → `Stock.inactiveStatus` 저장 (delisted/halt
 KIS_APP_KEY / KIS_APP_SECRET          # 한국투자증권 OpenAPI
 KV_REST_API_URL / KV_REST_API_TOKEN   # Upstash Redis (Vercel)
 GEMINI_API_KEY                         # Google Gemini AI
+SLACK_WEBHOOK_URL                      # 의견·요청 보내기 → Slack (/api/feedback)
+BLOB_READ_WRITE_TOKEN                  # Vercel Blob (공지 이미지)
+NEXT_PUBLIC_NOTICE                     # 공지 시스템 단일 JSON
 ```
 
 ## 스크린샷 가져오기

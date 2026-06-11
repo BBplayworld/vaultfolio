@@ -37,6 +37,33 @@ const DOMESTIC_CATEGORIES = new Set(["domestic", "isa", "irp", "pension", "unlis
 const CATEGORY_OPTIONS = stockCategories.map((c) => ({ value: c.value, label: c.label }));
 const BROKER_NONE = "__none__";
 
+// 카테고리 변경에 따른 가격/통화 환산 (foreign↔domestic). 공통·개별 모드 공용.
+function convertStockCategory(stock: ImportStock, category: Stock["category"], usdRate: number): ImportStock {
+  const wasForeign = stock.category === "foreign";
+  const becomeForeign = category === "foreign";
+  if (!wasForeign && becomeForeign) {
+    return {
+      ...stock, category,
+      currentPrice: Math.round((stock.currentPrice / usdRate) * 10000) / 10000,
+      averagePrice: Math.round((stock.averagePrice / usdRate) * 10000) / 10000,
+      originalCurrency: "USD" as const,
+    };
+  }
+  if (wasForeign && !becomeForeign) {
+    const aiSawUSD = stock.originalCurrency === "USD";
+    if (aiSawUSD) {
+      return {
+        ...stock, category,
+        currentPrice: Math.round(stock.currentPrice * usdRate),
+        averagePrice: Math.round(stock.averagePrice * usdRate),
+        originalCurrency: "KRW" as const,
+      };
+    }
+    return { ...stock, category, originalCurrency: "KRW" as const };
+  }
+  return { ...stock, category };
+}
+
 interface StockScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -64,12 +91,18 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const [isParsing, setIsParsing] = useState(false);
   const [stocks, setStocks] = useState<ImportStock[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [applyMode, setApplyMode] = useState<"common" | "individual">("common");
+  const [commonCategory, setCommonCategory] = useState<Stock["category"]>("domestic");
+  const [commonBroker, setCommonBroker] = useState<string>(BROKER_NONE);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStep("upload");
     setStocks([]);
     setIsParsing(false);
+    setApplyMode("common");
+    setCommonCategory("domestic");
+    setCommonBroker(BROKER_NONE);
   };
 
   const handleClose = () => {
@@ -135,7 +168,23 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         }
       );
 
-      setStocks(importStocks);
+      // 공통 모드 기본값(기본 모드): 다수 종목이 해외면 foreign, 아니면 activeTab 국내계열/도메스틱
+      const foreignCount = importStocks.filter((s) => s.category === "foreign").length;
+      const defaultCategory: Stock["category"] =
+        foreignCount * 2 > importStocks.length
+          ? "foreign"
+          : activeTab && DOMESTIC_CATEGORIES.has(activeTab)
+          ? (activeTab as Stock["category"])
+          : "domestic";
+      const defaultBroker = matchBrokerHint(data.stocks[0]?.brokerHint ?? "") ?? BROKER_NONE;
+      setCommonCategory(defaultCategory);
+      setCommonBroker(defaultBroker);
+
+      // 기본 공통 모드이므로 파싱 직후 전 종목에 공통 카테고리·증권사를 일괄 적용
+      const usdRate = exchangeRates.USD || 1380;
+      const commonBrokerVal = defaultBroker === BROKER_NONE ? undefined : defaultBroker;
+      setStocks(importStocks.map((s) => ({ ...convertStockCategory(s, defaultCategory, usdRate), broker: commonBrokerVal })));
+
       geminiUsage.increment("stock");
       setStep("preview");
     } catch {
@@ -161,35 +210,21 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   };
 
   const updateCategory = (id: string, category: Stock["category"]) => {
-    setStocks((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        const usdRate = exchangeRates.USD || 1380;
-        const wasForeign = s.category === "foreign";
-        const becomeForeign = category === "foreign";
-        if (!wasForeign && becomeForeign) {
-          return {
-            ...s, category,
-            currentPrice: Math.round((s.currentPrice / usdRate) * 10000) / 10000,
-            averagePrice: Math.round((s.averagePrice / usdRate) * 10000) / 10000,
-            originalCurrency: "USD" as const,
-          };
-        }
-        if (wasForeign && !becomeForeign) {
-          const aiSawUSD = s.originalCurrency === "USD";
-          if (aiSawUSD) {
-            return {
-              ...s, category,
-              currentPrice: Math.round(s.currentPrice * usdRate),
-              averagePrice: Math.round(s.averagePrice * usdRate),
-              originalCurrency: "KRW" as const,
-            };
-          }
-          return { ...s, category, originalCurrency: "KRW" as const };
-        }
-        return { ...s, category };
-      })
-    );
+    const usdRate = exchangeRates.USD || 1380;
+    setStocks((prev) => prev.map((s) => (s.id === id ? convertStockCategory(s, category, usdRate) : s)));
+  };
+
+  // 공통 모드: 전 종목에 카테고리·증권사 일괄 적용
+  const applyCommonCategory = (category: Stock["category"]) => {
+    setCommonCategory(category);
+    const usdRate = exchangeRates.USD || 1380;
+    setStocks((prev) => prev.map((s) => convertStockCategory(s, category, usdRate)));
+  };
+
+  const applyCommonBroker = (value: string) => {
+    setCommonBroker(value);
+    const broker = value === BROKER_NONE ? undefined : value;
+    setStocks((prev) => prev.map((s) => ({ ...s, broker })));
   };
 
   const updateTickerInput = (id: string, value: string) => {
@@ -376,6 +411,72 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               동일 카테고리·종목은 증권사 항목으로 구분되어 하나의 종목으로 통합 표시됩니다.
             </div>
 
+            {/* 적용 방식 토글: 공통(한 번에) vs 개별 */}
+            <div className="space-y-2.5">
+              <div className="inline-flex rounded-md border overflow-hidden text-xs w-full">
+                {([
+                  { v: "common", label: "공통 적용" },
+                  { v: "individual", label: "개별 선택" },
+                ] as const).map((m) => (
+                  <button
+                    key={m.v}
+                    type="button"
+                    className={`flex-1 px-3 py-2 transition-colors ${
+                      applyMode === m.v
+                        ? "bg-brand text-primary-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                    onClick={() => {
+                      // 공통 진입 시 현재 공통값을 전 종목에 재적용("전부 같게" 의미 일치).
+                      // 개별 진입 시 직전 값 유지(미세조정 시작점) — 작업 손실 방지.
+                      if (m.v === "common") {
+                        applyCommonCategory(commonCategory);
+                        applyCommonBroker(commonBroker);
+                      }
+                      setApplyMode(m.v);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {applyMode === "common" ? (
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <div className="flex-1">
+                    <Select value={commonCategory} onValueChange={(v) => applyCommonCategory(v as Stock["category"])}>
+                      <SelectTrigger className="h-9 text-xs w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Select value={commonBroker} onValueChange={applyCommonBroker}>
+                      <SelectTrigger className="h-9 text-xs w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
+                        {securitiesFirms.map((group) => (
+                          <div key={group.group}>
+                            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
+                            {group.items.map((firm) => (
+                              <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
+                            ))}
+                          </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground px-0.5">
+                  종목마다 아래 카드에서 카테고리·증권사를 직접 선택하세요.
+                </p>
+              )}
+            </div>
+
             <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -490,7 +591,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                           </div>
                         </div>
 
-                        {/* 3행: 카테고리 & 증권사 선택 드롭다운 (가로 나란히 정렬, 증권사 너비 넉넉히) */}
+                        {/* 3행: 카테고리 & 증권사 선택 드롭다운 (개별 모드에서만 노출) */}
+                        {applyMode === "individual" && (
                         <div className="flex flex-col sm:flex-row gap-2.5 pt-0.5">
                           <div className="flex-1 sm:max-w-[180px]">
                             <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
@@ -522,6 +624,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                             </Select>
                           </div>
                         </div>
+                        )}
                       </div>
                     </div>
                   </div>

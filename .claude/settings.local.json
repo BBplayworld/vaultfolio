@@ -47,7 +47,8 @@
       "Bash(npx eslint *)",
       "Bash(echo \"eslint EXIT:$?\")",
       "Bash(ls eslint.config.* .eslintrc*)",
-      "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\('lint:', s.lint\\)\")"
+      "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\('lint:', s.lint\\)\")",
+      "Bash(ls -la \"E:\\\\2.project\\\\js\\\\secret-asset\\\\\")"
     ]
   }
 }

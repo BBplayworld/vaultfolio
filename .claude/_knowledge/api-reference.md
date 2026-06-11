@@ -98,6 +98,19 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
 
+### POST /api/feedback — 의견·요청 Slack 전달
+사용자 의견을 Slack Incoming Webhook으로 전달. **서버 저장 없음.** **파일:** `src/app/api/feedback/route.ts`
+
+```
+Body: { message: string(필수, 최대 2000자 절단), nickname?: string, contact?: string }
+→ { ok: true }
+```
+
+- `SLACK_WEBHOOK_URL` 환경변수로 `{ text }` POST (`*[secretasset 의견·요청]*` + 닉네임/연락처/본문)
+- IP `checkRateLimit` 재사용(`share/route.ts`와 동일 버킷, 분당 10회), `getClientIp` 동일 패턴
+- **에러:** 400(message 공백/잘못된 요청) / 429(rate limit) / 500(`SLACK_WEBHOOK_URL` 미설정) / 502(웹훅 실패)
+- 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/asset/_components/header/tool-menu.tsx) 더보기 > "의견·요청 보내기"
+
 ---
 
 ## 외부 API — 한국투자증권 OpenAPI (`src/lib/finance-service.ts`)
