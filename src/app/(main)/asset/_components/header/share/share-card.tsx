@@ -45,7 +45,7 @@ export function ShareCard({ hideAmounts, activeCategory, onCategoryChange, secti
   });
 
   return (
-    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-transparent">
+    <div ref={cardRef} className="space-y-3 p-3 rounded-2xl bg-background">
 
       {/* 섹션1: 자산 분포 도넛 */}
       {sections.donut && treemapData.length > 0 && (

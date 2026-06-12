@@ -101,7 +101,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     const el = cardRef.current;
     const actualWidth = el.getBoundingClientRect().width;
     const pixelRatio = Math.ceil(1100 / actualWidth);
-    return toPng(el, { pixelRatio, skipFonts: false });
+    // 카드의 계산된 배경색(테마 따라 흰/어두움)을 캡처 배경으로 지정 → 투명 영역까지 테마색으로 채움
+    const backgroundColor = getComputedStyle(el).backgroundColor;
+    return toPng(el, { pixelRatio, skipFonts: false, backgroundColor });
   };
 
   const handleCopy = async () => {
