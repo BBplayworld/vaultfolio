@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
+import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { exportAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
@@ -156,9 +157,8 @@ export function ToolMenuPage() {
           localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
         }
         if (json.key) {
-          const isLight = themeMode === "light";
           setPreGeneratedShortUrl(
-            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}${isLight ? "&theme=light" : ""}`
+            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}&theme=${themeMode}`
           );
         }
       })
@@ -195,8 +195,7 @@ export function ToolMenuPage() {
       }
 
       const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis(), nickname || undefined);
-      const isLight = themeMode === "light";
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}${isLight ? "&theme=light" : ""}`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}&theme=${themeMode}`;
 
       await navigator.clipboard.writeText(shareUrl);
 
@@ -274,8 +273,15 @@ export function ToolMenuPage() {
             <button type="button" className={ROW} onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
               <Sparkles className="size-5 text-primary shrink-0" />
               <span className="flex-1 font-medium">AI 평가용 자산 현황</span>
-              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">NEW</span>
+              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Plus</span>
             </button>
+          </div>
+        </section>
+
+        <section>
+          <p className={SECTION_LABEL}>공유</p>
+          <div className="flex flex-col gap-2">
+            <CloudSyncMenuEntry rowClassName={ROW} />
             <button type="button" className={ROW} onClick={handleShare} disabled={!hasAssets}>
               <Share2 className="size-5 text-primary shrink-0" />
               <span className="font-medium">공유 URL 복사</span>
@@ -346,11 +352,11 @@ export function ToolMenuPage() {
               이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-none">
               삭제
             </AlertDialogAction>
+            <AlertDialogCancel>취소</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -410,10 +416,7 @@ export function ToolMenuPage() {
               </p>
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowShareDialog(false)}>
-              취소
-            </Button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl || sharePin.length !== 4} type="button">
               <Share2 className="mr-2 size-4" />
               {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
@@ -421,6 +424,9 @@ export function ToolMenuPage() {
             <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
               <Copy className="mr-2 size-4" />
               전체 URL 복사
+            </Button>
+            <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+              취소
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -457,10 +463,7 @@ export function ToolMenuPage() {
               maxLength={100}
             />
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
-              취소
-            </Button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="brand"
               onClick={submitFeedback}
@@ -469,6 +472,9 @@ export function ToolMenuPage() {
             >
               {feedbackSending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <MessageSquarePlus className="mr-2 size-4" />}
               보내기
+            </Button>
+            <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
+              취소
             </Button>
           </DialogFooter>
         </DialogContent>

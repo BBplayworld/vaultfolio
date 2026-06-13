@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
-import { AppGuide } from "./_components/header/app-guide";
+import { AppGuide } from "./_components/header-menu/app-guide";
 import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
 import { StockInput } from "./_components/forms/asset-update/input/stock-input";
 import { CryptoInput } from "./_components/forms/asset-update/input/crypto-input";
@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
+import { PwaInstallBanner } from "./_components/layout/pwa-install-banner";
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
@@ -112,6 +113,7 @@ export default function Page() {
       <CopyrightFooter />
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       <UpdateNoticeDialog />
+      <PwaInstallBanner />
     </div>
   );
 }

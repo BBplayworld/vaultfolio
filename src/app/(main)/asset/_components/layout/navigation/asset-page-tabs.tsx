@@ -12,7 +12,7 @@ import { LoanTab } from "../../views/detail/tabs/loan-tab";
 import { YearlyNetAssetChart, DividendCard, ProfitCard } from "../../views/activity";
 import { PerformanceHub } from "../../views/activity/performance-hub";
 import { DetailHub } from "../../views/detail/detail-hub";
-import { ToolMenuPage } from "../../header/tool-menu";
+import { ToolMenuPage } from "../../header-menu/tool-menu";
 import { RealEstateInput } from "../../forms/asset-update/input/real-estate-input";
 import { StockInput } from "../../forms/asset-update/input/stock-input";
 import { CryptoInput } from "../../forms/asset-update/input/crypto-input";

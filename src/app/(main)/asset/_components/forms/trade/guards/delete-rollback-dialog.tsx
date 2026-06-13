@@ -78,16 +78,16 @@ export function DeleteRollbackDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={onCancel} className="flex-1">
-            취소
-          </Button>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="destructive"
             onClick={onConfirm}
-            className="flex-1"
+            className="flex-1 sm:flex-initial"
           >
             삭제 + 롤백
+          </Button>
+          <Button variant="outline" onClick={onCancel} className="flex-1 sm:flex-initial">
+            취소
           </Button>
         </DialogFooter>
       </DialogContent>

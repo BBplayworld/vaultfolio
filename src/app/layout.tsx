@@ -62,6 +62,20 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var hash = window.location.hash;
+                var themeMatch = hash.match(/[#&]theme=(light|dark)/);
+                if (themeMatch) {
+                  var theme = themeMatch[1];
+                  document.documentElement.className = theme === 'dark' ? 'dark' : '';
+                }
+              } catch (_) {}
+            `
+          }}
+        />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
           strategy="afterInteractive"
@@ -79,6 +93,21 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <PreferencesStoreProvider themeMode={themeMode}>
           {children}
           <Toaster />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                      console.log('ServiceWorker registration successful');
+                    }).catch(function(err) {
+                      console.error('ServiceWorker registration failed: ', err);
+                    });
+                  });
+                }
+              `
+            }}
+          />
         </PreferencesStoreProvider>
       </body>
     </html>

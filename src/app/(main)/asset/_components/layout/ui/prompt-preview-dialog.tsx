@@ -92,12 +92,11 @@ export function PromptPreviewDialog({
             className="min-h-[380px] w-full font-mono text-sm resize-none border-0 focus-visible:ring-0"
           />
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>닫기</Button>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
             onClick={handleCopy}
             style={{ backgroundColor: MAIN_PALETTE[0] }}
-            className="text-white hover:opacity-90 border-none"
+            className="text-white hover:opacity-90 border-none flex-1 sm:flex-initial"
           >
             {copied ? (
               <>
@@ -110,6 +109,9 @@ export function PromptPreviewDialog({
                 프롬프트 복사
               </>
             )}
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-initial">
+            닫기
           </Button>
         </DialogFooter>
       </DialogContent>

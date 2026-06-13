@@ -139,6 +139,7 @@ export const assetDataSchema = z.object({
   yearlyNetAssets: z.array(yearlyNetAssetSchema).default([]),
   transactions: z.array(transactionSchema).default([]),
   lastUpdated: z.string(),
+  nickname: z.string().optional().default(""),
 });
 
 // 타입 추출

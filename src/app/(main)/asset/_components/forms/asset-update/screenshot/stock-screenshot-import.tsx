@@ -634,13 +634,13 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
           </div>
         )}
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose}>취소</Button>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           {step === "preview" && (
             <Button
               onClick={handleRegister}
               style={{ backgroundColor: MAIN_PALETTE[0] }}
               disabled={isRegistering || selectedCount === 0}
+              className="text-white hover:opacity-90 border-none"
             >
               {isRegistering ? (
                 <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</>
@@ -649,6 +649,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               )}
             </Button>
           )}
+          <Button variant="outline" onClick={handleClose}>취소</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -47,14 +47,31 @@ const EMPTY_ASSET_DATA: AssetData = {
   yearlyNetAssets: [],
   transactions: [],
   lastUpdated: "",
+  nickname: "",
 };
 
 export function getAssetData(): AssetData {
   if (typeof window === "undefined") return EMPTY_ASSET_DATA;
   try {
     const data = localStorage.getItem(STORAGE_KEYS.assetData);
-    if (!data) return EMPTY_ASSET_DATA;
-    return assetDataSchemaLoose.parse(JSON.parse(data)) as AssetData;
+    let parsed: any;
+    if (!data) {
+      parsed = { ...EMPTY_ASSET_DATA };
+    } else {
+      parsed = JSON.parse(data);
+    }
+
+    // 하위 호환 마이그레이션: 기존 secretasset_nickname 단독 키가 존재하고, parsed.nickname이 없거나 비어있는 경우
+    const legacyNickname = localStorage.getItem(STORAGE_KEYS.nickname);
+    if (legacyNickname && !parsed.nickname) {
+      parsed.nickname = legacyNickname;
+      try {
+        localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(parsed));
+        localStorage.removeItem(STORAGE_KEYS.nickname);
+      } catch { /* ignore */ }
+    }
+
+    return assetDataSchemaLoose.parse(parsed) as AssetData;
   } catch (error) {
     console.error("Failed to load asset data:", error);
     return EMPTY_ASSET_DATA;
@@ -87,13 +104,18 @@ function collectSnapshotsFromStorage(): AssetSnapshots {
   }
 }
 
-export function exportAssetData(): void {
+// 내보내기·클라우드 동기화 공용 페이로드 빌더 (assetData + 스냅샷 + 옵션 + 닉네임)
+export function buildExportPayload(): Record<string, unknown> {
   const assetData = getAssetData();
   const snapshots = collectSnapshotsFromStorage();
   const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
   const profitBasis = getProfitBasis();
   const nickname = (() => { try { return localStorage.getItem(STORAGE_KEYS.nickname) || undefined; } catch { return undefined; } })();
-  const payload = { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
+  return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
+}
+
+export function exportAssetData(): void {
+  const payload = buildExportPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -103,51 +125,57 @@ export function exportAssetData(): void {
   URL.revokeObjectURL(url);
 }
 
+// 파싱된 페이로드를 검증 후 로컬에 복원 (파일 가져오기·클라우드 동기화 공용)
+// 검증 실패 시 throw — 기존 데이터는 보존(clearAssetData 전에 검증 완료)
+export function applyImportedPayload(parsed: unknown): { assetData: AssetData; snapshotRestored: boolean } {
+  const p = (parsed ?? {}) as Record<string, unknown>;
+  // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
+  const rawAsset = (p.assetData ?? p) as unknown;
+  const validated = assetDataSchema.parse(rawAsset);
+
+  // 2단계: snapshots도 메모리에서 추출
+  let dailySnapshot: unknown[] | null = null;
+  let monthlySnapshot: unknown[] | null = null;
+  if (p.snapshots) {
+    const { daily, monthly } = p.snapshots as AssetSnapshots;
+    if (Array.isArray(daily)) dailySnapshot = daily;
+    if (Array.isArray(monthly)) monthlySnapshot = monthly;
+  }
+
+  // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
+  clearAssetData();
+
+  // 4단계: 새 데이터 저장
+  saveAssetData(validated);
+  // 종가 기준 옵션 복원 (clearAssetData 이후이므로 여기서 기록)
+  if (p.profitBasis === "kstAccessDay" || p.profitBasis === "sameBusinessDay") {
+    setProfitBasis(p.profitBasis as ProfitBasis);
+  }
+  // 프로필(닉네임) 복원 — clearAssetData가 secretasset_ 키를 모두 지우므로 이후 기록
+  if (typeof p.nickname === "string") {
+    persistNickname(p.nickname);
+  }
+  let snapshotRestored = false;
+  if (dailySnapshot || monthlySnapshot) {
+    try {
+      if (dailySnapshot) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
+      if (monthlySnapshot) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
+      snapshotRestored = true;
+    } catch {
+      // 스냅샷 복원 실패는 무시
+    }
+  }
+
+  return { assetData: validated, snapshotRestored };
+}
+
 export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
-        const text = e.target?.result as string;
-        const parsed = JSON.parse(text);
-        const rawAsset = parsed.assetData ?? parsed;
-        const validated = assetDataSchema.parse(rawAsset);
-
-        // 2단계: snapshots도 메모리에서 추출
-        let dailySnapshot: unknown[] | null = null;
-        let monthlySnapshot: unknown[] | null = null;
-        if (parsed.snapshots) {
-          const { daily, monthly } = parsed.snapshots as AssetSnapshots;
-          if (Array.isArray(daily)) dailySnapshot = daily;
-          if (Array.isArray(monthly)) monthlySnapshot = monthly;
-        }
-
-        // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
-        clearAssetData();
-
-        // 4단계: 새 데이터 저장
-        saveAssetData(validated);
-        // 종가 기준 옵션 복원 (clearAssetData 이후이므로 여기서 기록)
-        if (parsed.profitBasis === "kstAccessDay" || parsed.profitBasis === "sameBusinessDay") {
-          setProfitBasis(parsed.profitBasis);
-        }
-        // 프로필(닉네임) 복원 — clearAssetData가 secretasset_ 키를 모두 지우므로 이후 기록
-        if (typeof parsed.nickname === "string") {
-          persistNickname(parsed.nickname);
-        }
-        let snapshotRestored = false;
-        if (dailySnapshot || monthlySnapshot) {
-          try {
-            if (dailySnapshot) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
-            if (monthlySnapshot) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
-            snapshotRestored = true;
-          } catch {
-            // 스냅샷 복원 실패는 무시
-          }
-        }
-
-        resolve({ assetData: validated, snapshotRestored });
+        const parsed = JSON.parse(e.target?.result as string);
+        resolve(applyImportedPayload(parsed));
       } catch (error) {
         reject(error);
       }
@@ -172,7 +200,24 @@ export function saveAssetDataRaw(data: AssetData): boolean {
 export function clearAssetData(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith("secretasset_"));
+    // 동기화/초기화 시 보존해야 하는 중요 기기 메타데이터 키 목록
+    const keepKeys = [
+      "secretasset_tutorial_status",
+      "secretasset_sync",
+      "secretasset_gemini_usage",
+      "secretasset_collapsible_used",
+      "secretasset_notice_hide_until",
+      "secretasset_finance_api_error_count",
+    ];
+
+    const keysToRemove = Object.keys(localStorage).filter((k) => {
+      if (!k.startsWith("secretasset_")) return false;
+      if (keepKeys.includes(k)) return false;
+      // 공지 팝업 기한/확인 키 보존 (secretasset_notice_seen_...)
+      if (k.startsWith("secretasset_notice_seen_")) return false;
+      return true;
+    });
+
     for (const key of keysToRemove) {
       localStorage.removeItem(key);
     }

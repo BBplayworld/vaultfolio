@@ -82,6 +82,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-SHARE. 공유 (Zero-Knowledge) ([header/share](../../src/app/(main)/asset/_components/header/share) · [api/share](../../src/app/api/share))
 - 👤 공유 URL 생성·로드, Short URL(s:KEY), PIN 보호(4자리), 잘못된 토큰→invalid-access
 - 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
+- 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
@@ -110,6 +111,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-NAV. 네비게이션 (drill-down)
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
+
+### F-PWA. PWA 및 오프라인 접근성
+- ⚙ `manifest.ts` (/manifest.webmanifest) 동적 JSON 응답 및 `share_target` 매핑 설정 정상 동작 확인
+- ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
+- 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
+- 👤 브라우저 환경(Chrome, Edge 등)에서 PWA 설치 플로팅 배너가 출력되며 클릭 시 네이티브 A2HS 설치창이 열리고, 닫았을 때 `secretasset_pwa_banner_dismissed`가 스토리지에 남아 중복 노출이 차단되는지 확인
+- 👤 iOS Safari 모바일 접속 시 화면 하단에 iOS 전용 수동 홈 화면 추가 가이드 배너가 출력되는지 확인
+- 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([app-guide.tsx](../../src/app/(main)/asset/_components/header/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵

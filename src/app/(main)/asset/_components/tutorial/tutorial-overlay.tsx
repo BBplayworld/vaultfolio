@@ -8,7 +8,7 @@ import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import { TUTORIAL_STEP_CONFIGS } from "./tutorial-step-config";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 import { MAIN_PALETTE } from "@/config/theme";
-import { AppGuideContent } from "@/app/(main)/asset/_components/header/app-guide";
+import { AppGuideContent } from "@/app/(main)/asset/_components/header-menu/app-guide";
 
 interface TargetRect {
   top: number;

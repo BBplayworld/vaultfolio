@@ -111,6 +111,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   yearlyNetAssets: [],
   transactions: [],
   lastUpdated: "",
+  nickname: "",
 };
 
 // ─── [메세지 상수] ────────────────────────────────────────────────────────────
@@ -627,10 +628,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const urlParams = new URLSearchParams(window.location.hash.substring(1));
     const themeParam = urlParams.get("theme");
-    if (themeParam === "light") {
-      updateThemeMode("light");
-      setThemeMode("light");
-      void setValueToCookie("theme_mode", "light");
+    if (themeParam === "light" || themeParam === "dark") {
+      updateThemeMode(themeParam);
+      setThemeMode(themeParam);
+      void setValueToCookie("theme_mode", themeParam);
     }
   }, [setThemeMode]);
 
@@ -689,10 +690,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // hashchange: 마운트 이후 URL 해시 변경 감지 (Short URL 지원)
   const handleHashChange = useCallback(async () => {
+    checkAndApplyThemeMode();
     const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
     if (!shareTokenRaw) return;
     await processShareToken(shareTokenRaw);
-  }, [processShareToken]);
+  }, [processShareToken, checkAndApplyThemeMode]);
 
   // storage: 다른 탭에서 localStorage 변경 감지
   const handleStorageChange = useCallback(() => {
@@ -783,8 +785,22 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("hashchange", handleHashChange);
 
-    // 초기 진입 분기 (Short URL 지원)
+    // 초기 진입 분기 (Short URL 및 PWA Share Target 지원)
     void (async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const searchParams = new URLSearchParams(window.location.search);
+          const sharedUrl = searchParams.get("url") || searchParams.get("text") || "";
+          if (sharedUrl) {
+            const hashIdx = sharedUrl.indexOf("#");
+            if (hashIdx >= 0) {
+              window.location.hash = sharedUrl.substring(hashIdx);
+            }
+          }
+        } catch (_) { /* 무시 */ }
+      }
+
+      checkAndApplyThemeMode();
       const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
       if (!shareTokenRaw) {
         // 케이스 1: 공유 토큰 없음 (일반 진입)
@@ -1259,12 +1275,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
               </InputOTP>
             </div>
           </div>
-          <DialogFooter className="sm:justify-end">
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={handlePinConfirm} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
+              데이터 불러오기
+            </Button>
             <Button variant="outline" onClick={handlePinCancel}>
               취소
-            </Button>
-            <Button onClick={handlePinConfirm} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }}>
-              데이터 불러오기
             </Button>
           </DialogFooter>
         </DialogContent>

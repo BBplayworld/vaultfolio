@@ -640,12 +640,12 @@ export function TradeInput() {
                 )
               )}
 
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={resetAndClose}>
-                  취소
-                </Button>
+              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <Button type="submit" variant="brand">
                   {tradeType === "buy" ? "매수 기록" : "매도 기록"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={resetAndClose}>
+                  취소
                 </Button>
               </DialogFooter>
             </form>
@@ -665,15 +665,15 @@ export function TradeInput() {
                   {dupPending.tx.date} · {dupPending.tx.quantity}주 · {formatPrice(dupPending.tx.price, dupPending.tx.currency)}
                 </p>
               </div>
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>
-                  취소
+              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 거래를 유지했습니다."); resetAndClose(); }}>
+                  덮어쓰기 (기존 유지)
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => { if (dupPending) commitTransaction(dupPending.tx, dupPending.stock); }}>
                   새로 추가
                 </Button>
-                <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 거래를 유지했습니다."); resetAndClose(); }}>
-                  덮어쓰기 (기존 유지)
+                <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>
+                  취소
                 </Button>
               </DialogFooter>
             </div>

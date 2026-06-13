@@ -472,18 +472,18 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               })}
             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => { reset(); }} className="flex-1">
-                다시 촬영
-              </Button>
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button
                 onClick={handleRegister}
                 variant="brand"
                 disabled={isRegistering || !selectedBroker || registerList.length === 0}
-                className="flex-1"
+                className="flex-1 sm:flex-initial"
               >
                 {isRegistering ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
                 {addList.length}건 등록{overwriteSkipCount > 0 ? ` (유지 ${overwriteSkipCount})` : ""}
+              </Button>
+              <Button variant="outline" onClick={() => { reset(); }} className="flex-1 sm:flex-initial">
+                다시 촬영
               </Button>
             </DialogFooter>
           </div>

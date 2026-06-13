@@ -559,9 +559,9 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
             <p className="text-xs text-destructive font-semibold">동일 증권사를 중복 선택할 수 없습니다.</p>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button size="sm" disabled={!isValid} onClick={handleSplit} style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">나누기</Button>
           <Button variant="outline" size="sm" onClick={onClose}>취소</Button>
-          <Button size="sm" disabled={!isValid} onClick={handleSplit} style={{ backgroundColor: MAIN_PALETTE[0] }}>나누기</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

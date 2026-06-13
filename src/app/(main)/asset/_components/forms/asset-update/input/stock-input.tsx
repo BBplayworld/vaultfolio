@@ -476,10 +476,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
           )}
         />
 
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            취소
-          </Button>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
             type="submit"
             variant="brand"
@@ -487,6 +484,9 @@ function StockForm({ editData, onClose }: StockFormProps) {
             title={(!editData && !isUnlisted && lookupState === "idle") ? "티커 조회를 먼저 진행해주세요" : undefined}
           >
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            취소
           </Button>
         </DialogFooter>
       </form>

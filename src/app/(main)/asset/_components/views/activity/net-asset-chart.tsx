@@ -162,11 +162,11 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
             </FormItem>
           )}
         />
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "저장 중..." : editData ? "수정" : "추가"}
           </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
         </DialogFooter>
       </form>
     </Form>
