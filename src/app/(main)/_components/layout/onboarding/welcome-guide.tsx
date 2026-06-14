@@ -334,14 +334,14 @@ function FeatureCard({
   desc: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card/60 p-4 space-y-2">
+    <div className="rounded-xl border border-border/50 bg-card/60 p-5 space-y-2.5">
       <div className="flex items-center gap-2">
         <div className="rounded-lg bg-primary/10 p-2 shrink-0">
           <Icon className="size-4 text-primary" />
         </div>
-        <h3 className="text-sm font-semibold">{title}</h3>
+        <h3 className="text-[15px] font-semibold">{title}</h3>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+      <p className="text-[13px] text-muted-foreground leading-7 tracking-[0.01em] break-keep">{desc}</p>
     </div>
   );
 }

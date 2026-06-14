@@ -30,6 +30,7 @@ alwaysApply: true
 | 스크린샷      | + `api-reference.md` + `components.md`           |
 | Context·유틸  | + `state-and-utils.md`                           |
 | 새 기능·패턴  | + `dev-rules.md` + `ui-design-guidelines.md`     |
+| 구독·자산 단위 | + `asset-and-subscription.md`                    |
 | 최근 변경     | + `changelog.md`                                 |
 
 > **UI/화면 작업 시 `ui-design-guidelines.md`(위계·색상·정보처리·집중도)를 항상 함께 적용한다.**

@@ -50,6 +50,15 @@ export const metadata: Metadata = {
   other: {
     "naver-site-verification": "7a749c9de7f929519b80424a0fac9c56fb9deb03",
   },
+  // iOS 홈 화면 추가용 아이콘·standalone 메타 (manifest만으론 iOS가 제대로 인식 못 함)
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "시크릿에셋",
+  },
+  icons: {
+    apple: [{ url: "/icons/icon-192x192.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

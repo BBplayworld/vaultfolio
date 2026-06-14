@@ -9,7 +9,7 @@
  *   - rememberedKey: "이 기기 기억" ON 시 masterBits를 기기 비추출 키로 wrap한 암호문(평문 저장 금지).
  *
  * salt·privKey·pubKey는 저장하지 않는다(syncId·금고암호로 그때그때 파생).
- * pull(clearAssetData)이 이 키를 지우므로 복원 후 재기록(sync-client.pullVault).
+ * pull(clearAssetData)이 이 키를 지우므로 복원 후 재기록(sync-client.pullAsset).
  */
 
 import { wrapSecret, unwrapSecret, type WrappedSecret } from "./device-key";
@@ -19,7 +19,6 @@ export const SYNC_STATE_KEY = "secretasset_sync";
 
 interface SyncState {
   assetId?: string;
-  syncId?: string; // 하위 호환용
   version?: number;
   lastSyncedAt?: string;
   rememberedKey?: WrappedSecret;
@@ -29,18 +28,7 @@ function read(): SyncState {
   try {
     const raw = localStorage.getItem(SYNC_STATE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as SyncState;
-    // 하위 호환 마이그레이션: syncId는 존재하는데 assetId가 없는 경우 자동으로 이관 후 patch
-    if (parsed.syncId && !parsed.assetId) {
-      parsed.assetId = parsed.syncId;
-      delete parsed.syncId;
-      try {
-        localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(parsed));
-      } catch {
-        // 무시
-      }
-    }
-    return parsed;
+    return JSON.parse(raw) as SyncState;
   } catch {
     return {};
   }

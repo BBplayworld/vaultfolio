@@ -15,6 +15,7 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isInApp, setIsInApp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
@@ -30,11 +31,14 @@ export function usePWAInstall() {
 
     checkStandalone();
 
-    // iOS Safari 여부 감지
+    // iOS 기기 감지 (브라우저 무관: iOS는 모든 브라우저가 beforeinstallprompt 미지원 → 수동 추가)
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isAppleDevice = /iphone|ipad|ipod/.test(userAgent);
-    const isSafari = /safari/.test(userAgent) && !/crios|fxios|chrome|opera|edge/.test(userAgent);
-    setIsIOS(isAppleDevice && isSafari);
+    setIsIOS(isAppleDevice);
+
+    // 인앱 브라우저 감지 (홈 화면 추가 불가 → 외부 브라우저 유도)
+    const isInAppBrowser = /kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/.test(userAgent);
+    setIsInApp(isInAppBrowser);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       // 브라우저의 기본 설치 배너 방지
@@ -179,6 +183,7 @@ export function usePWAInstall() {
   return {
     isInstallable: isInstallable && !isStandalone,
     isIOS: isIOS && !isStandalone,
+    isInApp,
     isStandalone,
     prepareInstall,
     installPWA,

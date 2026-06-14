@@ -9,7 +9,7 @@
 import { buildExportPayload, applyImportedPayload } from "@/lib/asset-storage";
 import {
   encryptPayload, decryptPayload, signMessage, sha256Hex, randomNonce, toBase64, toBase64Url,
-  type VaultKeys, type EncryptedBlob,
+  type AssetKeys, type EncryptedBlob,
 } from "./crypto";
 import { SYNC_AUTH_HEADER } from "./config";
 import { getVersion, markSynced } from "./sync-state";
@@ -40,7 +40,7 @@ export type PullResult =
   | { status: "empty" }
   | { status: "error"; message: string };
 
-export async function pushVault(assetId: string, keys: VaultKeys): Promise<PushResult> {
+export async function pushAsset(assetId: string, keys: AssetKeys): Promise<PushResult> {
   try {
     const blob = await encryptPayload(buildExportPayload(), keys.encKey);
     const baseVersion = getVersion();
@@ -52,8 +52,8 @@ export async function pushVault(assetId: string, keys: VaultKeys): Promise<PushR
       body: JSON.stringify({ iv: blob.iv, ciphertext: blob.ciphertext, baseVersion, pubKey: toBase64(keys.pubKey) }),
     });
     if (res.status === 409) {
-      const data = (await res.json()) as { vault?: { version?: number } };
-      return { status: "conflict", remoteVersion: data.vault?.version ?? 0 };
+      const data = (await res.json()) as { asset?: { version?: number } };
+      return { status: "conflict", remoteVersion: data.asset?.version ?? 0 };
     }
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -67,7 +67,7 @@ export async function pushVault(assetId: string, keys: VaultKeys): Promise<PushR
   }
 }
 
-export async function pullVault(assetId: string, keys: VaultKeys): Promise<PullResult> {
+export async function pullAsset(assetId: string, keys: AssetKeys): Promise<PullResult> {
   try {
     const token = await makeAuthToken("GET", assetId, keys.privKey);
     const res = await fetch("/api/sync", { method: "GET", headers: { [SYNC_AUTH_HEADER]: token } });
@@ -77,23 +77,23 @@ export async function pullVault(assetId: string, keys: VaultKeys): Promise<PullR
       const data = await res.json().catch(() => ({}));
       return { status: "error", message: data.error || "불러오기에 실패했습니다." };
     }
-    const data = (await res.json()) as { vault: EncryptedBlob & { version: number } };
+    const data = (await res.json()) as { asset: EncryptedBlob & { version: number } };
     let payload: unknown;
     try {
-      payload = await decryptPayload({ iv: data.vault.iv, ciphertext: data.vault.ciphertext }, keys.encKey);
+      payload = await decryptPayload({ iv: data.asset.iv, ciphertext: data.asset.ciphertext }, keys.encKey);
     } catch {
       return { status: "error", message: "복호화 실패 — 금고 암호가 올바르지 않습니다." };
     }
     applyImportedPayload(payload); // 검증 실패 시 throw → 기존 데이터 보존
-    markSynced(data.vault.version);
-    return { status: "ok", version: data.vault.version };
+    markSynced(data.asset.version);
+    return { status: "ok", version: data.asset.version };
   } catch {
     return { status: "error", message: "복원에 실패했습니다." };
   }
 }
 
 // 폴링용 버전 조회. 미존재/오류 → null.
-export async function fetchRemoteVersion(assetId: string, keys: VaultKeys): Promise<number | null> {
+export async function fetchRemoteVersion(assetId: string, keys: AssetKeys): Promise<number | null> {
   try {
     const token = await makeAuthToken("GET", assetId, keys.privKey);
     const res = await fetch("/api/sync?meta=1", { method: "GET", headers: { [SYNC_AUTH_HEADER]: token } });

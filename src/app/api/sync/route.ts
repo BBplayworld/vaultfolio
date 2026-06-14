@@ -5,15 +5,14 @@
  *   sig = Ed25519.sign(canonical, privKey). 서버는 assetId로 pubKey 조회 후 검증 + ts 신선도(±5분).
  *   금고암호·privKey·encKey·평문은 서버로 오지 않는다. 서버 저장 = pubKey + 암호문뿐(제로지식).
  *
- * GET            canonical "GET|assetId|ts|nonce"            → { vault } (pubKey 제외)
+ * GET            canonical "GET|assetId|ts|nonce"            → { asset } (pubKey 제외)
  * GET ?meta=1    canonical "GET|assetId|ts|nonce"            → { version }
  * PUT            canonical "PUT|assetId|baseVersion|sha256(ciphertext)|ts|nonce"
  *                body { iv, ciphertext, baseVersion, pubKey? } → 신규 TOFU 등록 / 기존 검증·version+1
  */
 
 import { NextResponse } from "next/server";
-import { getVault, setVault } from "@/lib/cloud-sync/sync-storage";
-import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC, type VaultEnvelope } from "@/lib/cloud-sync/config";
+import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC, type AssetEnvelope } from "@/lib/cloud-sync/config";
 import { fromBase64, sha256Hex, verifySignature } from "@/lib/cloud-sync/crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
 
@@ -51,18 +50,18 @@ export async function GET(request: Request) {
   const auth = parseAuth(request);
   if (!auth || !freshTs(auth.ts)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const vault = await getVault(auth.assetId);
-  if (!vault) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const envelope = await getCacheStorage().getAssetEnvelope(auth.assetId);
+  if (!envelope) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const canonical = `GET|${auth.assetId}|${auth.ts}|${auth.nonce}`;
-  const ok = await verifySignature(canonical, auth.sig, fromBase64(vault.pubKey));
+  const ok = await verifySignature(canonical, auth.sig, fromBase64(envelope.pubKey));
   if (!ok) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   if (searchParams.get("meta") === "1") {
-    return NextResponse.json({ version: vault.version, updatedAt: vault.updatedAt });
+    return NextResponse.json({ version: envelope.version, updatedAt: envelope.updatedAt });
   }
-  return NextResponse.json({ vault: { iv: vault.iv, ciphertext: vault.ciphertext, version: vault.version } });
+  return NextResponse.json({ asset: { iv: envelope.iv, ciphertext: envelope.ciphertext, version: envelope.version } });
 }
 
 export async function PUT(request: Request) {
@@ -91,7 +90,7 @@ export async function PUT(request: Request) {
   const ctHash = await sha256Hex(ciphertext);
   const canonical = `PUT|${auth.assetId}|${baseVersion}|${ctHash}|${auth.ts}|${auth.nonce}`;
 
-  const current = await getVault(auth.assetId);
+  const current = await getCacheStorage().getAssetEnvelope(auth.assetId);
 
   // 검증 키: 기존 금고는 저장된 pubKey, 신규(TOFU)는 body.pubKey
   const verifyPubKey = current?.pubKey ?? pubKey;
@@ -105,17 +104,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "pubKey 변경 불가" }, { status: 403 });
     }
     if (current.version > baseVersion) {
-      return NextResponse.json({ error: "conflict", vault: { version: current.version } }, { status: 409 });
+      return NextResponse.json({ error: "conflict", asset: { version: current.version } }, { status: 409 });
     }
   }
 
-  const envelope: VaultEnvelope = {
+  const envelope: AssetEnvelope = {
     pubKey: current?.pubKey ?? verifyPubKey,
     iv,
     ciphertext,
     version: (current?.version ?? 0) + 1,
     updatedAt: new Date().toISOString(),
   };
-  await setVault(auth.assetId, envelope);
+  await getCacheStorage().setAssetEnvelope(auth.assetId, envelope);
   return NextResponse.json({ version: envelope.version });
 }

@@ -98,6 +98,21 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `use-asset-import`, 스키마·`validate-reflection` 검증, 악성·손상 JSON 방어
 - 회귀: 가져오기 후 `dataResetVersion`++로 진행 중 fetch abort
 
+### F-CLOUD-SYNC. E2EE 클라우드 동기화 ([cloud-sync](../../src/lib/cloud-sync) · [api/sync](../../src/app/api/sync/route.ts))
+- ⚙ 용어 표준화 완료 — 코드 전 영역: `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`(구 pushVault/pullVault), Redis 키 `csync:asset:{assetId}`, URL 해시 `#asset=<assetId>`, `SYNC_HASH_PARAM = "asset"`
+- ⚙ `crypto.ts`: `AssetKeys(encKey, pubKey, privKey)` 파생 — PBKDF2(200k iter, SHA-256) → `encKey`(AES-GCM 256) + Ed25519 키쌍. `generateAssetId()` 128비트 base64url. salt 값(`secretasset-salt|` 접두) 불변 확인
+- ⚙ `sync-state.ts`: `SYNC_STATE_KEY = "secretasset_sync"` 단일 키. `assetId/version/lastSyncedAt/rememberedKey` 필드. 레거시 `syncId` 마이그레이션 코드 없음(개발 버전 전용)
+- ⚙ `pushAsset`: AES-GCM 암호화 → PUT `/api/sync` (x-sync-auth 헤더 Ed25519 서명). 409 conflict → `remoteVersion` 반환
+- ⚙ `pullAsset`: GET `/api/sync` → 응답 `{ asset: EncryptedBlob }` → AES-GCM 복호화 → `applyImportedPayload`. 복호화 실패 시 기존 데이터 보존
+- ⚙ `fetchRemoteVersion`: GET `/api/sync?meta=1` — 폴링용 버전 조회, 미존재/오류 → `null`
+- ⚙ `sync-client.ts` `makeAuthToken`: canonical=`[method, assetId, ...extra, ts, nonce].join("|")` — 신선도 300초(`SIG_FRESHNESS_SEC`), nonce 16바이트
+- 👤 금고 암호 입력 → 새 assetId 생성 → 첫 push(서버 등록) → 다른 기기에서 `#asset=<assetId>` 링크로 pull → 복호화 후 자산 동일 확인
+- 👤 conflict(409) — A기기 push 후 B기기 동시 push → conflict 토스트·해결 UI 확인
+- 👤 "이 기기 기억" — `saveRememberedMaster` → `rememberedKey` localStorage 저장 → 재진입 시 암호 없이 `loadRememberedMaster` 복원 → `forgetRemembered` 후 재요구
+- 👤 금고 암호 오류 → 401 → "금고 암호가 올바르지 않습니다." 토스트
+- 엣지: 첫 pull(404 → `status:"empty"`), 서명 만료(ts+300s 초과), assetId 없는 상태에서 동기화 시도 차단
+- 회귀: `clearAssetData` 호출 후 `SYNC_STATE_KEY` 삭제 → pullAsset 완료 후 재기록 — assetId 유실 없는지 확인
+
 ### F-SYNC. 가격·환율 동기화
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
 - ⚙ `getStockCacheSlot` 장중 1시간/장외 날짜 슬롯, outdated 판정, 3개씩 배치+1초 간격
@@ -112,12 +127,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
-### F-PWA. PWA 및 오프라인 접근성
+### F-PWA. PWA 설치 및 오프라인 접근성
 - ⚙ `manifest.ts` (/manifest.webmanifest) 동적 JSON 응답 및 `share_target` 매핑 설정 정상 동작 확인
+- ⚙ `layout.tsx` `appleWebApp` 메타데이터(`capable: true`, `statusBarStyle: "black-translucent"`) 및 `icons.apple`(`/icons/icon-192x192.png` 180×180) 포함 출력 확인
 - ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
+- ⚙ `usePWAInstall`: `isIOS` = `/iphone|ipad|ipod/` UA 감지(브라우저 무관, Safari 한정 아님). `isInApp` = `/kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/` UA 감지. standalone 제외 처리 확인
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
-- 👤 브라우저 환경(Chrome, Edge 등)에서 PWA 설치 플로팅 배너가 출력되며 클릭 시 네이티브 A2HS 설치창이 열리고, 닫았을 때 `secretasset_pwa_banner_dismissed`가 스토리지에 남아 중복 노출이 차단되는지 확인
-- 👤 iOS Safari 모바일 접속 시 화면 하단에 iOS 전용 수동 홈 화면 추가 가이드 배너가 출력되는지 확인
+- 👤 **PC/Android Chrome·Edge**: `beforeinstallprompt` 발생 → 설치 버튼 클릭 → PIN 4자리 입력 → 설치하기 → 네이티브 A2HS 창 열림 확인
+- 👤 **iOS(Safari·크롬·웨일 등)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(공유→홈 화면에 추가→추가) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인
+- 👤 **인앱 브라우저(카카오톡·인스타·페북·라인 등)**: 설치 버튼 클릭 → `inAppStep` 가이드(메뉴→다른 브라우저로 열기→앱 설치) 노출, 현재 URL 클립보드 복사 시도 확인
+- 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `chrome://apps` 클립보드 복사 토스트 + `PwaInstallGuideDialog` 열림. 다이얼로그 제목 "앱 설치가 안 되나요?", PC·Android·iOS 각 탭에 설치 불가 환경(인앱/Firefox) 주의 콜아웃 표시. iOS 탭 라벨 "iOS (Safari·크롬·웨일 등)" 확인
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([app-guide.tsx](../../src/app/(main)/asset/_components/header/app-guide.tsx))
@@ -211,4 +230,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-11 · 주식 스샷 공통/개별 적용 옵션 + 의견·요청 보내기(Slack 웹훅) 반영_
+_최종 갱신: 2026-06-14 · PWA iOS/인앱 브라우저 감지·가이드 개선, PwaInstallGuideDialog 재검토, E2EE 클라우드 동기화(F-CLOUD-SYNC) 신규 섹션 추가_

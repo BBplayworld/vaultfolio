@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Sun, RefreshCw, Trash2, ShieldCheck } from "lucide-react";
+import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Upload, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { updateThemeMode } from "@/lib/theme-utils";
 import { setValueToCookie } from "@/server/server-actions";
@@ -29,14 +29,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { clearAssetData, clearUserCaches } from "@/lib/asset-storage";
+import { clearAssetData, clearUserCaches, exportAssetData } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { useAssetImport } from "@/hooks/use-asset-import";
 import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "../pwa/pwa-lock-screen";
 
 export function SettingsPage() {
   const { refreshData, assetData } = useAssetData();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -70,6 +72,16 @@ export function SettingsPage() {
     const count = clearUserCaches();
     refreshData();
     toast.success(`캐시 ${count}개를 초기화했습니다.`);
+  };
+
+  const handleExport = () => {
+    try {
+      exportAssetData();
+      toast.success("자산 데이터가 다운로드되었습니다.");
+      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
+    } catch (error) {
+      toast.error("데이터 내보내기에 실패했습니다.");
+    }
   };
 
   const handleClear = () => {
@@ -167,6 +179,20 @@ export function SettingsPage() {
         <section>
           <p className={SECTION_LABEL}>데이터</p>
           <div className="flex flex-col gap-2">
+            <button type="button" className={ROW} onClick={handleExport} disabled={!hasAssets}>
+              <Upload className="size-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">데이터 내보내기</span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">현재 자산 데이터를 JSON 파일로 다운로드</p>
+              </div>
+            </button>
+            <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
+              <Download className="size-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">{isImporting ? "데이터 가져오는 중..." : "데이터 가져오기"}</span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">JSON 백업 파일로부터 자산 복원</p>
+              </div>
+            </button>
             <button type="button" className={ROW} onClick={handleClearCache} disabled={!hasAssets}>
               <RefreshCw className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
@@ -261,6 +287,14 @@ export function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
     </>
   );
 }

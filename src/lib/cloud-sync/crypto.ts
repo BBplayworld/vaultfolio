@@ -52,7 +52,7 @@ async function deriveSalt(assetId: string): Promise<Uint8Array> {
   return new Uint8Array(digest).slice(0, 16);
 }
 
-export interface VaultKeys {
+export interface AssetKeys {
   encKey: CryptoKey;       // AES-GCM 데이터 암복호
   privKey: Uint8Array;     // Ed25519 개인키(기기 전용)
   pubKey: Uint8Array;      // Ed25519 공개키(서버 등록)
@@ -82,7 +82,7 @@ async function hkdf(masterBits: Uint8Array, info: string, lenBytes: number): Pro
 }
 
 // masterBits → encKey + Ed25519 키쌍 (remember 복원/최초 공용)
-export async function deriveKeysFromMaster(masterBits: Uint8Array): Promise<VaultKeys> {
+export async function deriveKeysFromMaster(masterBits: Uint8Array): Promise<AssetKeys> {
   const encBits = await hkdf(masterBits, "enc", 32);
   const seed = await hkdf(masterBits, "ed25519", 32);
   const encKey = await crypto.subtle.importKey("raw", encBits as BufferSource, "AES-GCM", false, ["encrypt", "decrypt"]);
@@ -90,7 +90,7 @@ export async function deriveKeysFromMaster(masterBits: Uint8Array): Promise<Vaul
   return { encKey, privKey: seed, pubKey, masterBits };
 }
 
-export async function deriveKeys(passphrase: string, assetId: string): Promise<VaultKeys> {
+export async function deriveKeys(passphrase: string, assetId: string): Promise<AssetKeys> {
   const masterBits = await deriveMasterBits(passphrase, assetId);
   return deriveKeysFromMaster(masterBits);
 }

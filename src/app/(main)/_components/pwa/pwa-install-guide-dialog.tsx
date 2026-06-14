@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Smartphone, Share, Copy, Check, Info, RefreshCw, X } from "lucide-react";
+import { Monitor, Smartphone, Share, Copy, Check, Info, RefreshCw, X, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,10 +39,10 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
         <DialogHeader className="px-6 pt-6 pb-2 text-left">
           <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <Info className="size-5" style={{ color: MAIN_PALETTE[0] }} />
-            앱 설치 및 재설치 가이드
+            앱 설치가 안 되나요?
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
-            바탕화면 아이콘을 삭제하셨거나 브라우저 문제로 설치 버튼이 작동하지 않는 경우, 아래 가이드에 따라 완전 삭제 후 재설치를 진행해 주세요.
+            설치 버튼이 안 보이거나, 아이콘을 지운 뒤 재설치가 안 되거나, 카카오톡·인스타 같은 <span className="font-semibold text-foreground">인앱 브라우저처럼 설치가 막힌 환경</span>일 수 있어요. 아래에서 사용 중인 환경을 선택해 주세요.
           </DialogDescription>
         </DialogHeader>
 
@@ -51,7 +51,7 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
             <TabsList className="grid w-full grid-cols-3 h-10 p-0.5 bg-muted/40 rounded-lg">
               <TabsTrigger value="pc" className="text-xs py-1.5 flex items-center justify-center gap-1.5 rounded-md data-[state=active]:bg-background">
                 <Monitor className="size-3.5" />
-                PC (크롬/엣지)
+                PC (크롬/엣지/웨일)
               </TabsTrigger>
               <TabsTrigger value="android" className="text-xs py-1.5 flex items-center justify-center gap-1.5 rounded-md data-[state=active]:bg-background">
                 <Smartphone className="size-3.5" />
@@ -59,7 +59,7 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
               </TabsTrigger>
               <TabsTrigger value="ios" className="text-xs py-1.5 flex items-center justify-center gap-1.5 rounded-md data-[state=active]:bg-background">
                 <Share className="size-3.5" />
-                iOS (Safari)
+                iOS (Safari·크롬·웨일 등)
               </TabsTrigger>
             </TabsList>
           </div>
@@ -109,6 +109,16 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
                     </p>
                   </div>
                 </div>
+
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">Firefox 및 일부 브라우저 미지원</p>
+                    <p className="leading-relaxed">
+                      Firefox 등 일부 브라우저는 PWA 설치를 지원하지 않습니다. Chrome, Edge, 또는 웨일 브라우저로 주소를 열어 설치를 진행해 주세요.
+                    </p>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -130,6 +140,16 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
                     바탕화면 아이콘 삭제 후 재설치가 작동하지 않는다면, 기기의 <span className="font-semibold text-foreground">[설정 → 애플리케이션 → 시크릿에셋]</span>을 찾아 <span className="font-semibold text-destructive">[설치 삭제]</span>한 후 브라우저 페이지를 새로고침하여 재진행해 주세요.
                   </p>
                 </div>
+
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">인앱 브라우저 설치 불가</p>
+                    <p className="leading-relaxed">
+                      카카오톡, 인스타그램, 페이스북, 라인 등의 인앱 브라우저에서는 설치가 지원되지 않습니다. 우측 상단 메뉴에서 <span className="font-semibold text-foreground">&ldquo;다른 브라우저로 열기&rdquo;</span>를 선택하여 Chrome 또는 삼성 인터넷에서 다시 열어 주세요.
+                    </p>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -140,7 +160,7 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
                   <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">1</span>
                   <p className="text-muted-foreground leading-relaxed">
                     <span className="text-foreground font-semibold">공유 버튼 클릭:</span><br />
-                    Safari 브라우저 하단 툴바의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5"><Share className="size-3.5" /> [공유]</span> 아이콘을 누릅니다.
+                    Safari, 크롬, 웨일 등 브라우저의 하단 또는 상단 툴바에서 <span className="font-semibold text-foreground inline-flex items-center gap-0.5"><Share className="size-3.5" /> [공유]</span> 아이콘을 누릅니다.
                   </p>
                 </div>
 
@@ -148,8 +168,18 @@ export function PwaInstallGuideDialog({ open, onOpenChange }: PwaInstallGuideDia
                   <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">2</span>
                   <p className="text-muted-foreground leading-relaxed">
                     <span className="text-foreground font-semibold">홈 화면에 추가:</span><br />
-                    나타나는 공유 시트에서 아래로 스크롤하여 <span className="font-semibold text-foreground">[홈 화면에 추가]</span> 버튼을 클릭하여 기기에 앱을 설치합니다.
+                    나타나는 공유 메뉴 시트에서 <span className="font-semibold text-foreground">[홈 화면에 추가]</span> 버튼을 클릭하여 기기에 앱을 설치합니다.
                   </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">인앱 브라우저 설치 불가</p>
+                    <p className="leading-relaxed">
+                      카카오톡, 인스타그램 등의 인앱 브라우저에서는 홈 화면 추가가 지원되지 않습니다. 우측 하단 또는 상단 메뉴에서 <span className="font-semibold text-foreground">&ldquo;다른 브라우저로 열기&rdquo;</span>를 통해 Safari 또는 Chrome 브라우저로 이동한 후 진행해 주세요.
+                    </p>
+                  </div>
                 </div>
               </div>
             </TabsContent>

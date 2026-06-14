@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Upload, Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight } from "lucide-react";
+import { Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -23,8 +23,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
-import { useAssetImport } from "@/hooks/use-asset-import";
-import { exportAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -36,9 +36,9 @@ export function ToolMenuPage() {
   const assetDataContext = useAssetData();
   const [nickname, setNickname] = useNickname();
   const { refreshData, getAssetSummary, assetData, isSharePending } = assetDataContext;
-  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const { navigate } = useAssetNavigation();
+  const cs = useCloudSync();
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -48,6 +48,8 @@ export function ToolMenuPage() {
     assetData.loans.length > 0;
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showShareSyncChooser, setShowShareSyncChooser] = useState(false);
+  const [showCloudSync, setShowCloudSync] = useState(false);
   const [sharePin, setSharePin] = useState("");
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
@@ -86,15 +88,7 @@ export function ToolMenuPage() {
     }
   };
 
-  const handleExport = () => {
-    try {
-      exportAssetData();
-      toast.success("자산 데이터가 다운로드되었습니다.");
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
-    } catch (error) {
-      toast.error("데이터 내보내기에 실패했습니다.");
-    }
-  };
+
 
   const collectSnapshots = (): AssetSnapshots => {
     try {
@@ -228,31 +222,26 @@ export function ToolMenuPage() {
         </section>
 
         <section>
+          <p className={SECTION_LABEL}>공유 · 동기화</p>
+          <div className="flex flex-col gap-2">
+            <button type="button" className={ROW} onClick={() => setShowShareSyncChooser(true)} disabled={!hasAssets}>
+              <Cloud className="size-5 text-primary shrink-0" />
+              <span className="font-medium">자산 공유 · 동기화</span>
+              {cs.status === "armed" && (
+                <RefreshCw className={`size-4 text-primary shrink-0 ${cs.syncing ? "animate-spin" : ""}`} />
+              )}
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
+            </button>
+          </div>
+        </section>
+
+        <section>
           <p className={SECTION_LABEL}>도구</p>
           <div className="flex flex-col gap-2">
             <button type="button" className={ROW} onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
               <Sparkles className="size-5 text-primary shrink-0" />
               <span className="flex-1 font-medium">AI 평가용 자산 현황</span>
               <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Plus</span>
-            </button>
-            <button type="button" className={ROW} onClick={handleShare} disabled={!hasAssets}>
-              <Share2 className="size-5 text-primary shrink-0" />
-              <span className="font-medium">공유 URL 복사</span>
-            </button>
-          </div>
-        </section>
-
-        <section>
-          <p className={SECTION_LABEL}>동기화 · 백업</p>
-          <div className="flex flex-col gap-2">
-            <CloudSyncMenuEntry rowClassName={ROW} />
-            <button type="button" className={ROW} onClick={handleExport} disabled={!hasAssets}>
-              <Upload className="size-5 text-primary shrink-0" />
-              <span className="font-medium">데이터 내보내기</span>
-            </button>
-            <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
-              <Download className="size-5 text-primary shrink-0" />
-              <span className="font-medium">{isImporting ? "가져오는 중..." : "데이터 가져오기"}</span>
             </button>
           </div>
         </section>
@@ -288,14 +277,6 @@ export function ToolMenuPage() {
         </section>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleFileChange}
-        className="hidden"
-      />
-
       <PromptPreviewDialog
         open={showAIPromptDialog}
         onOpenChange={setShowAIPromptDialog}
@@ -310,6 +291,77 @@ export function ToolMenuPage() {
         copySuccessMessage="AI 평가 프롬프트가 복사되었습니다."
       />
 
+      <Dialog open={showShareSyncChooser} onOpenChange={setShowShareSyncChooser}>
+        <DialogContent className="sm:max-w-md touch-pan-y">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Cloud className="size-5 text-primary" />
+              자산 공유 · 동기화
+            </DialogTitle>
+            <DialogDescription>
+              자산을 다른 기기로 공유하거나 동기화합니다.
+              <br />
+              지속 자동 동기화는 <strong className="text-primary font-semibold">Plus</strong> 요금제에서 제공됩니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-4">
+            <button
+              type="button"
+              className="flex flex-col text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-all duration-200 group relative overflow-hidden"
+              onClick={() => {
+                setShowShareSyncChooser(false);
+                handleShare();
+              }}
+            >
+              <div className="flex items-center justify-between w-full mb-1">
+                <div className="flex items-center gap-2">
+                  <Share2 className="size-5 text-primary group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-foreground">간편 공유</span>
+                </div>
+                <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
+                  무료
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                URL로 다른 기기에 <strong className="text-foreground font-semibold">1회 전달</strong>합니다 (PIN 설정 필요).
+              </p>
+            </button>
+
+            <button
+              type="button"
+              className="flex flex-col text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-all duration-200 group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!cs.enabled}
+              onClick={() => {
+                setShowShareSyncChooser(false);
+                setShowCloudSync(true);
+              }}
+            >
+              <div className="flex items-center justify-between w-full mb-1">
+                <div className="flex items-center gap-2">
+                  <Cloud className="size-5 text-primary group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-foreground">자동 동기화</span>
+                </div>
+                <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  Plus
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                여러 기기에서 자산 데이터를 <strong className="text-foreground font-semibold">항상 최신으로 자동 유지</strong>합니다.
+              </p>
+            </button>
+          </div>
+
+          <DialogFooter className="flex justify-end">
+            <Button variant="outline" onClick={() => setShowShareSyncChooser(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CloudSyncMenuEntry open={showCloudSync} onOpenChange={setShowCloudSync} />
+
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md touch-pan-y">
           <DialogHeader>
@@ -319,8 +371,9 @@ export function ToolMenuPage() {
             </DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-1 text-sm text-muted-foreground">
-                <p>자산 데이터를 PIN으로 암호화하여 파트너와 공유합니다.</p>
-                <p className="text-xs">
+                <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
+                <p className="text-[11px] text-primary">이후 지속적인 자동 동기화가 필요하다면 &apos;클라우드 동기화&apos; 메뉴를 이용해 주세요.</p>
+                <p className="text-xs pt-1">
                   <span className="font-medium text-foreground">전체 URL</span> — 서버 저장 없이 URL에 직접 포함
                   {" · "}
                   <span className="font-medium text-foreground">짧은 URL</span> — 암호화된 데이터만 서버 경유, URL 키와 PIN이 분리되어 서버 관리자도 복호화 불가

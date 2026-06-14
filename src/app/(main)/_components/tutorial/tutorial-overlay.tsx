@@ -119,7 +119,7 @@ function Step0Card({ onNext, isStandalone }: { onNext: () => void; isStandalone:
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ backgroundColor: OVERLAY_COLOR }}
     >
-      <div className="bg-background rounded-2xl shadow-2xl max-w-3xl w-full p-5 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 max-h-[120vh] overflow-y-auto">
+      <div className="bg-background rounded-2xl shadow-2xl max-w-4xl w-full p-5 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 max-h-[150vh] overflow-y-auto">
         <AppGuideContent />
         <div className="flex items-center justify-between gap-2 pt-1">
           <div>&nbsp;</div>

@@ -14,12 +14,17 @@
 import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
 import type { ProfitPeriod } from "./profit-utils";
 import type { StockClassification } from "./xray/classification-store";
+import type { AssetEnvelope } from "./cloud-sync/config";
 
 // ─────────────────────────────────────────────────────────
 // 인터페이스
 // ─────────────────────────────────────────────────────────
 
 export interface ICacheStorage {
+  // Cloud Sync (E2EE Asset)
+  getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null>;
+  setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void>;
+
   // Finance
   getExchange(): Promise<ExchangeRates | null>;
   setExchange(rates: ExchangeRates): Promise<void>;
@@ -170,6 +175,12 @@ import * as path from "path";
 
 const FINANCE_CACHE_PATH = path.join(process.cwd(), "data", "finance-cache.json");
 const SHARE_TOKENS_PATH = path.join(process.cwd(), "data", "share-tokens.json");
+const CLOUD_SYNC_PATH = path.join(process.cwd(), "data", "cloud-sync.json");
+
+interface CloudSyncFileData {
+  assets?: Record<string, AssetEnvelope>;
+  vaults?: Record<string, AssetEnvelope>;
+}
 
 interface FileCacheData {
   EXCHANGE?: ExchangeRates;
@@ -266,6 +277,35 @@ class FileCacheStorage implements ICacheStorage {
       fs.writeFileSync(SHARE_TOKENS_PATH, JSON.stringify(data, null, 2), "utf8");
     } catch (e) {
       console.error("[ShareTokens 저장 오류]:", e);
+    }
+  }
+
+  async getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null> {
+    if (!fs.existsSync(CLOUD_SYNC_PATH)) return null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(CLOUD_SYNC_PATH, "utf8")) as CloudSyncFileData;
+      return raw.assets?.[assetId] ?? raw.vaults?.[assetId] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void> {
+    try {
+      let data: CloudSyncFileData = { assets: {} };
+      if (fs.existsSync(CLOUD_SYNC_PATH)) {
+        try {
+          data = JSON.parse(fs.readFileSync(CLOUD_SYNC_PATH, "utf8")) as CloudSyncFileData;
+        } catch {
+          // ignore
+        }
+      }
+      if (!data.assets) data.assets = {};
+      data.assets[assetId] = envelope;
+      fs.mkdirSync(path.dirname(CLOUD_SYNC_PATH), { recursive: true });
+      fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(data, null, 2), "utf8");
+    } catch (e) {
+      console.error("[FileCacheStorage setAssetEnvelope 오류]:", e);
     }
   }
 
@@ -475,6 +515,14 @@ class UpstashCacheStorage implements ICacheStorage {
       url: process.env.KV_REST_API_URL!,
       token: process.env.KV_REST_API_TOKEN!,
     });
+  }
+
+  async getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null> {
+    return this.redis.get<AssetEnvelope>(`csync:asset:${assetId}`);
+  }
+
+  async setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void> {
+    await this.redis.set(`csync:asset:${assetId}`, envelope);
   }
 
   async getExchange(): Promise<ExchangeRates | null> {

@@ -7,7 +7,7 @@
  *  상태: none(금고 미설정) / locked(assetId 있으나 이번 세션 미무장) / armed(키 메모리 보유→자동 동기화)
  *  - 기억된 기기: 로드 시 rememberedMaster unwrap→자동 armed→폴링·자동동기화 즉시 시작.
  *  - 송신: 자산 변경 → 2.5s 디바운스 push(무음). 수신: 20s 폴링 + 포커스 → 원격 최신이면 자동 pull.
- *  - #vault= (신규) 또는 #sync= (기존) 링크 진입 → pendingConnectAssetId(연결 모달 트리거).
+ *  - #asset= (신규) 링크 진입 → pendingConnectAssetId(연결 모달 트리거).
  *  - 금고암호는 메모리(ref)에만. remember ON이면 masterBits만 기기키로 암호화 보관.
  */
 
@@ -17,15 +17,15 @@ import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { buildExportPayload } from "@/lib/asset-storage";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "./config";
-import { deriveKeys, deriveKeysFromMaster, generateAssetId, type VaultKeys } from "./crypto";
-import { pushVault, pullVault, fetchRemoteVersion, type PushResult, type PullResult } from "./sync-client";
+import { deriveKeys, deriveKeysFromMaster, generateAssetId, type AssetKeys } from "./crypto";
+import { pushAsset, pullAsset, fetchRemoteVersion, type PushResult, type PullResult } from "./sync-client";
 import {
   getAssetId, setAssetId, getVersion, getLastSyncedAt,
   saveRememberedMaster, loadRememberedMaster, forgetRemembered, clearSyncState,
 } from "./sync-state";
 
 const AUTO_PUSH_DEBOUNCE_MS = 2500;
-const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_MS = 60000;
 
 // 비교를 위해 payload에서 lastUpdated 타임스탬프 필드를 제외한 직렬화 문자열 반환
 const getComparablePayloadString = (): string => {
@@ -76,7 +76,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const enabled = isCloudSyncEnabled();
   const { assetData, refreshData } = useAssetData();
 
-  const keysRef = useRef<VaultKeys | null>(null);
+  const keysRef = useRef<AssetKeys | null>(null);
   const assetIdRef = useRef<string | null>(null);
   const rememberRef = useRef(true);
   const skipNextChangeRef = useRef(false);
@@ -92,7 +92,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const [pendingConnectAssetId, setPendingConnectAssetId] = useState<string | null>(null);
 
   // 무장 직후 공통 처리 — 상태 반영 + 동기화 자격(assetId·remember) 영속
-  const arm = useCallback(async (assetId: string, keys: VaultKeys, remember: boolean) => {
+  const arm = useCallback(async (assetId: string, keys: AssetKeys, remember: boolean) => {
     keysRef.current = keys;
     assetIdRef.current = assetId;
     rememberRef.current = remember;
@@ -130,12 +130,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  // #vault= (신규) 또는 #sync= (기존 하위 호환) 링크 진입 감지 → 연결 모달 트리거
+  // #asset= 링크 진입 감지 → 연결 모달 트리거
   useEffect(() => {
     if (!enabled) return;
     const detect = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const aid = hashParams.get(SYNC_HASH_PARAM) || hashParams.get("sync");
+      const aid = hashParams.get(SYNC_HASH_PARAM);
       if (aid && aid !== getAssetId()) setPendingConnectAssetId(aid);
     };
     detect();
@@ -156,7 +156,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!keys || !aid) return { status: "error", message: "잠금 해제가 필요합니다." };
     if (busyRef.current) return { status: "error", message: "동기화 중입니다." };
     busyRef.current = true; setSyncing(true);
-    const r = await pushVault(aid, keys);
+    const r = await pushAsset(aid, keys);
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
       lastPushedRef.current = getComparablePayloadString();
@@ -177,7 +177,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (busyRef.current) return { status: "error", message: "동기화 중입니다." };
     busyRef.current = true; setSyncing(true);
     skipNextChangeRef.current = true;
-    const r = await pullVault(aid, keys);
+    const r = await pullAsset(aid, keys);
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
       runPushAfterRestoreFix();
@@ -235,7 +235,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     assetIdRef.current = aid;
     const keys = await deriveKeys(passphrase, aid);
     keysRef.current = keys;
-    const r = await pushVault(aid, keys); // 신규 금고 생성(TOFU)
+    const r = await pushAsset(aid, keys); // 신규 금고 생성(TOFU)
     if (r.status !== "ok") return { ok: false, message: r.status === "error" ? r.message : "생성 실패" };
     await arm(aid, keys, remember);
     return { ok: true, link: buildLink(aid) };
@@ -245,7 +245,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     const keys = await deriveKeys(passphrase, aid);
     keysRef.current = keys;
     assetIdRef.current = aid;
-    const r = await pullVault(aid, keys);
+    const r = await pullAsset(aid, keys);
     if (r.status === "error") { keysRef.current = null; return { ok: false, message: r.message }; }
     if (r.status === "empty") { keysRef.current = null; return { ok: false, message: "클라우드에 금고가 없습니다." }; }
     await arm(aid, keys, remember);
@@ -266,7 +266,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const clearPendingConnect = useCallback(() => {
     setPendingConnectAssetId(null);
     // 해시 제거(재트리거 방지) - 신구 해시파라미터 모두 정합
-    if (typeof window !== "undefined" && (window.location.hash.includes(`${SYNC_HASH_PARAM}=`) || window.location.hash.includes("sync="))) {
+    if (typeof window !== "undefined" && (
+      window.location.hash.includes(`${SYNC_HASH_PARAM}=`) ||
+      window.location.hash.includes("sync=") ||
+      window.location.hash.includes("vault=")
+    )) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, []);

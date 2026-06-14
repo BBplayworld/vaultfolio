@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "시크릿에셋 (Secret Asset)",
+    name: "시크릿에셋",
     short_name: "시크릿에셋",
     description: "서버 저장 없는 나만의 암호화 자산 금고",
     id: "/asset",

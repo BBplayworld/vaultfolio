@@ -13,7 +13,7 @@ export function isCloudSyncEnabled(): boolean {
 }
 
 // 서버 저장 금고(없으면 null). 자산 내용·salt·비밀 없음 — pubKey만.
-export interface VaultEnvelope {
+export interface AssetEnvelope {
   pubKey: string;      // base64 — Ed25519 공개키(TOFU 등록)
   iv: string;          // base64 — AES-GCM nonce
   ciphertext: string;  // base64 — 암호문(+tag)
@@ -24,8 +24,8 @@ export interface VaultEnvelope {
 // 인증 토큰 헤더 (base64url JSON { syncId, ts, nonce, sig })
 export const SYNC_AUTH_HEADER = "x-sync-auth";
 
-// 동기화 링크 해시 파라미터 (#vault=<assetId>)
-export const SYNC_HASH_PARAM = "vault";
+// 동기화 링크 해시 파라미터 (#asset=<assetId>)
+export const SYNC_HASH_PARAM = "asset";
 
 // 서명 신선도 창(초)
 export const SIG_FRESHNESS_SEC = 300;
