@@ -8,6 +8,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { ShareScreenshotDialog } from "./share/share-menu";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
 import { InlineSelector } from "../layout/ui/inline-selector";
+import { PwaInstallButton } from "../pwa/pwa-install-button";
 
 type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
@@ -87,16 +88,13 @@ export function TopBar() {
       assetData.cash.length === 0 &&
       assetData.loans.length === 0);
 
-  // 우측 아이콘 노출 규칙
-  // - 인증샷: 홈 / 상세 허브·주식 / 성과 순자산·수익
-  // - 더보기: 홈만
-  // - more 페이지: 모두 숨김
+  // 우측 아이콘 노출 규칙 (PWA standalone 모드에선 CSS로 완전히 가림)
   const showShare =
     view.type === "home" ||
-    (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) || // stocks-xray는 제외
-    false ||
+    (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) ||
     (view.type === "activity" && (view.tab === "hub" || view.tab === "netasset" || view.tab === "profit"));
   const showMore = view.type === "home" && !isWelcomeGuide;
+  const showInstall = true;
 
   const onHomeTabChange = (tab: HomeTop) => {
     if (tab === "detail") navigate({ type: "detail", tab: "hub" });
@@ -106,6 +104,12 @@ export function TopBar() {
   // 웰컴가이드 페이지에선 헤더 영역 자체를 렌더하지 않아 공간을 차지하지 않게 함
   if (isWelcomeGuide) return null;
 
+  // 1차 허브 페이지(홈, 상세 허브, 성과 허브, 더보기)를 제외한 2단계/3단계 서브페이지는 pwa-show-header 클래스 부여
+  const isNestedView =
+    view.type === "settings" ||
+    (view.type === "detail" && view.tab !== "hub") ||
+    (view.type === "activity" && view.tab !== "hub");
+
   return (
     <header
       data-navbar-style="scroll"
@@ -113,11 +117,12 @@ export function TopBar() {
         "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative",
         "bg-background rounded-t-[inherit] overflow-hidden",
         "mt-1",
+        isNestedView && "pwa-show-header"
       )}
     >
     <div className="flex w-full items-center justify-between px-3 lg:px-12">
       <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-        {isWelcomeGuide ? null : isSubView ? (
+        {isSubView ? (
           <button
             onClick={back}
             aria-label="뒤로가기"
@@ -136,7 +141,8 @@ export function TopBar() {
           />
         )}
       </div>
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pwa-hide-actions">
+        {showInstall && <PwaInstallButton />}
         {showShare && <ShareScreenshotButton />}
         {showMore && <MoreButton />}
       </div>

@@ -1,27 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Copy, Share2, Info, RefreshCw, Moon, Sun, User, MessageSquarePlus, Loader2 } from "lucide-react";
+import { Download, Upload, Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
-import { updateThemeMode } from "@/lib/theme-utils";
-import { setValueToCookie } from "@/server/server-actions";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Lock, Unlock } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -36,12 +24,13 @@ import { Input } from "@/components/ui/input";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { useAssetImport } from "@/hooks/use-asset-import";
-import { exportAssetData, clearAssetData, clearUserCaches, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { exportAssetData, generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
+import { useAssetNavigation } from "../layout/navigation/navigation-context";
 
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
@@ -49,21 +38,14 @@ export function ToolMenuPage() {
   const { refreshData, getAssetSummary, assetData, isSharePending } = assetDataContext;
   const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
   const themeMode = usePreferencesStore((s) => s.themeMode);
-  const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+  const { navigate } = useAssetNavigation();
 
-  const handleToggleTheme = async () => {
-    const next = themeMode === "dark" ? "light" : "dark";
-    updateThemeMode(next);
-    setThemeMode(next);
-    await setValueToCookie("theme_mode", next);
-  };
   const hasAssets =
     assetData.realEstate.length > 0 ||
     assetData.stocks.length > 0 ||
     assetData.crypto.length > 0 ||
     assetData.cash.length > 0 ||
     assetData.loans.length > 0;
-  const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharePin, setSharePin] = useState("");
@@ -133,16 +115,14 @@ export function ToolMenuPage() {
   };
 
   // 다이얼로그가 열리거나 PIN이 변경될 때 short URL을 미리 생성해둠.
-  // 버튼 클릭 시점에는 이미 준비된 URL을 동기적으로 복사 → user activation 만료 문제 없음.
   useEffect(() => {
     if (!showShareDialog || !assetData) return;
-    // PIN 4자리 완성 전에는 생성하지 않음 (PIN 필수)
     if (sharePin.length < 4) return;
 
     setPreGeneratedShortUrl(null);
     setShortUrlLoading(true);
 
-    const localKey = Math.random().toString(36).substring(2, 14); // 12자리 난수
+    const localKey = Math.random().toString(36).substring(2, 14);
 
     const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots(), getProfitBasis(), nickname || undefined);
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
@@ -162,13 +142,11 @@ export function ToolMenuPage() {
           );
         }
       })
-      .catch(() => { /* 미리 생성 실패 — 버튼 비활성화로 처리 */ })
+      .catch(() => { /* 미리 생성 실패 */ })
       .finally(() => setShortUrlLoading(false));
-    // assetData, assetDataContext.exchangeRates는 다이얼로그 열린 시점의 스냅샷만 필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showShareDialog, sharePin, themeMode]);
 
-  // confirmShare와 동일하게 미리 준비된 URL을 동기적으로 복사
   const confirmShareShort = async () => {
     if (!preGeneratedShortUrl) return;
     if (sharePin.length !== 4) {
@@ -213,23 +191,6 @@ export function ToolMenuPage() {
     }
   };
 
-  const handleClear = () => {
-    const success = clearAssetData();
-    if (success) {
-      refreshData();
-      toast.success("모든 자산 데이터가 삭제되었습니다.");
-    } else {
-      toast.error("데이터 삭제에 실패했습니다.");
-    }
-    setShowClearDialog(false);
-  };
-
-  const handleClearCache = () => {
-    const count = clearUserCaches();
-    refreshData();
-    toast.success(`캐시 ${count}개를 초기화했습니다.`);
-  };
-
   const getPromptContext = (): AssetPromptContext => ({
     data: assetData,
     summary: getAssetSummary(),
@@ -244,7 +205,6 @@ export function ToolMenuPage() {
   if (!mounted) return null;
 
   const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-rose-300/40 dark:border-rose-900/40 bg-rose-500/5 hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
@@ -268,20 +228,13 @@ export function ToolMenuPage() {
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>메인 도구</p>
+          <p className={SECTION_LABEL}>도구</p>
           <div className="flex flex-col gap-2">
             <button type="button" className={ROW} onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
               <Sparkles className="size-5 text-primary shrink-0" />
               <span className="flex-1 font-medium">AI 평가용 자산 현황</span>
               <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Plus</span>
             </button>
-          </div>
-        </section>
-
-        <section>
-          <p className={SECTION_LABEL}>공유</p>
-          <div className="flex flex-col gap-2">
-            <CloudSyncMenuEntry rowClassName={ROW} />
             <button type="button" className={ROW} onClick={handleShare} disabled={!hasAssets}>
               <Share2 className="size-5 text-primary shrink-0" />
               <span className="font-medium">공유 URL 복사</span>
@@ -290,8 +243,9 @@ export function ToolMenuPage() {
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>데이터 관리</p>
+          <p className={SECTION_LABEL}>동기화 · 백업</p>
           <div className="flex flex-col gap-2">
+            <CloudSyncMenuEntry rowClassName={ROW} />
             <button type="button" className={ROW} onClick={handleExport} disabled={!hasAssets}>
               <Upload className="size-5 text-primary shrink-0" />
               <span className="font-medium">데이터 내보내기</span>
@@ -300,23 +254,15 @@ export function ToolMenuPage() {
               <Download className="size-5 text-primary shrink-0" />
               <span className="font-medium">{isImporting ? "가져오는 중..." : "데이터 가져오기"}</span>
             </button>
-            <button type="button" className={ROW} onClick={handleClearCache} disabled={!hasAssets}>
-              <RefreshCw className="size-5 text-primary shrink-0" />
-              <span className="font-medium">캐시 초기화</span>
-            </button>
-            <button type="button" className={ROW_DESTRUCTIVE} onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
-              <Trash2 className="size-5 shrink-0" />
-              <span className="font-medium">모든 데이터 삭제</span>
-            </button>
           </div>
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>설정 / 기능</p>
+          <p className={SECTION_LABEL}>지원</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={handleToggleTheme}>
-              {themeMode === "dark" ? <Sun className="size-5 text-primary shrink-0" /> : <Moon className="size-5 text-primary shrink-0" />}
-              <span className="font-medium">{themeMode === "dark" ? "라이트 모드" : "다크 모드"}</span>
+            <button type="button" className={ROW} onClick={() => setShowFeedbackDialog(true)}>
+              <MessageSquarePlus className="size-5 text-primary shrink-0" />
+              <span className="font-medium">의견·요청 보내기</span>
             </button>
             <button type="button" className={ROW} onClick={() => {
               const isWelcomeGuide = isSharePending || !hasAssets;
@@ -328,9 +274,15 @@ export function ToolMenuPage() {
               <Info className="size-5 text-primary shrink-0" />
               <span className="font-medium">앱 가이드 보기</span>
             </button>
-            <button type="button" className={ROW} onClick={() => setShowFeedbackDialog(true)}>
-              <MessageSquarePlus className="size-5 text-primary shrink-0" />
-              <span className="font-medium">의견·요청 보내기</span>
+          </div>
+        </section>
+
+        <section>
+          <div className="flex flex-col gap-2">
+            <button type="button" className={ROW} onClick={() => navigate({ type: "settings" })}>
+              <Settings className="size-5 text-primary shrink-0" />
+              <span className="font-medium">설정</span>
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>
         </section>
@@ -343,23 +295,6 @@ export function ToolMenuPage() {
         onChange={handleFileChange}
         className="hidden"
       />
-
-      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>정말 모든 데이터를 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-none">
-              삭제
-            </AlertDialogAction>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <PromptPreviewDialog
         open={showAIPromptDialog}

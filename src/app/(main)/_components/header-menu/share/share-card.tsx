@@ -2,10 +2,10 @@
 
 import React, { useMemo } from "react";
 import { formatShortCurrency, formatCurrency, formatPriceByMode } from "@/lib/number-utils";
-import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
-import { StockCard, StockCategorySection, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
-import { AssetDonutChart } from "@/app/(main)/asset/_components/views/home/dashboard";
-import { useAssetTreemapData } from "@/app/(main)/asset/_components/views/home/dashboard";
+import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
+import { StockCard, StockCategorySection, StockSummaryHeader, useFilteredStockData } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
+import { AssetDonutChart } from "@/app/(main)/_components/views/home/dashboard";
+import { useAssetTreemapData } from "@/app/(main)/_components/views/home/dashboard";
 import { SectionVisibility, SECTION_OPTIONS } from "./share-menu";
 import { APP_CONFIG } from "@/config/app";
 

@@ -21,7 +21,7 @@ export default function InvalidAccessPage() {
 
       <div className="pt-4">
         <Button asChild size="lg" className="gap-2">
-          <Link replace href="/asset">
+          <Link replace href="/">
             <Home className="size-4" />
             내 자산 홈으로 돌아가기
           </Link>

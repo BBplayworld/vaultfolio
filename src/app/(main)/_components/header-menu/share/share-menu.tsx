@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShareCard } from "./share-card";
-import { CATEGORY_TABS } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
+import { CATEGORY_TABS } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
 import { MAIN_PALETTE } from "@/config";
 import { useAssetData } from "@/contexts/asset-data-context";
 

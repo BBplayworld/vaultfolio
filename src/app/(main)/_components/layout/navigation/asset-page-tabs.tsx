@@ -13,6 +13,7 @@ import { YearlyNetAssetChart, DividendCard, ProfitCard } from "../../views/activ
 import { PerformanceHub } from "../../views/activity/performance-hub";
 import { DetailHub } from "../../views/detail/detail-hub";
 import { ToolMenuPage } from "../../header-menu/tool-menu";
+import { SettingsPage } from "../../header-menu/settings-page";
 import { RealEstateInput } from "../../forms/asset-update/input/real-estate-input";
 import { StockInput } from "../../forms/asset-update/input/stock-input";
 import { CryptoInput } from "../../forms/asset-update/input/crypto-input";
@@ -81,11 +82,12 @@ export function AssetPageTabs() {
 
       {/* key 변경 시 재마운트되며 fade+slide-in 애니메이션 (토스 스타일 미세 전환) */}
       <div
-        key={view.type === "home" || view.type === "more" ? view.type : `${view.type}/${view.tab}`}
+        key={view.type === "home" || view.type === "more" || view.type === "settings" ? view.type : `${view.type}/${view.tab}`}
         className="animate-in fade-in slide-in-from-bottom-1 duration-200"
       >
         {view.type === "home" && <HomeView />}
         {view.type === "more" && <ToolMenuPage />}
+        {view.type === "settings" && <SettingsPage />}
         {view.type === "detail" && <DetailView tab={view.tab} />}
         {view.type === "activity" && <ActivityView tab={view.tab} />}
       </div>

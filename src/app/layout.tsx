@@ -65,6 +65,33 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // PWA 설치 이벤트 조기 캡처 (React 마운트 전 발생분 누락 방지)
+              window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.__bipEvent = e;
+                window.dispatchEvent(new Event('bip-captured'));
+              });
+              window.addEventListener('appinstalled', function () {
+                window.__bipEvent = null;
+                window.__pwaInstalled = true;
+              });
+            `
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var ua = window.navigator.userAgent.toLowerCase();
+                var isMobile = /iphone|ipad|ipod|android|webos|blackberry|iemobile|opera mini/i.test(ua);
+                document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'pc');
+              } catch (_) {}
+            `
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
               try {
                 var hash = window.location.hash;
                 var themeMatch = hash.match(/[#&]theme=(light|dark)/);

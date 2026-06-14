@@ -1,17 +1,20 @@
 "use client";
 
 import React from "react";
-import { Building2, TrendingUp, Shield, Sparkles, Activity, ArrowRight, FolderInput, Pencil, ImageUp, Globe, Camera } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Globe, Camera, Download, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAssetImport } from "@/hooks/use-asset-import";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { TreemapItem, NetAssetSummaryBox } from "@/app/(main)/asset/_components/views/home/dashboard";
-import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/asset/_components/views/detail/tabs/stock-tab";
-import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/asset/_components/views/detail/asset-detail-tabs";
+import { toast } from "sonner";
+import { TreemapItem, NetAssetSummaryBox } from "@/app/(main)/_components/views/home/dashboard";
+import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
+import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
+import { PwaInstallGuideDialog } from "../../pwa/pwa-install-guide-dialog";
 import previewData from "./welcome-preview-data.json";
 
 // ── 예시 데이터 정적 계산 (컴포넌트 외부)
@@ -57,6 +60,14 @@ const foreignProfitRate = foreignCost > 0 ? (foreignProfit / foreignCost) * 100 
 export function WelcomeGuide() {
   const [isStockMenuOpen, setIsStockMenuOpen] = useState(false);
   const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
+  const { isInstallable, isIOS, isStandalone, installPWA } = usePWAInstall();
+  const [pwaLoading, setPwaLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const canInstallPWA = mounted && !isStandalone;
 
   const handleStockTutorial = (mode: "screenshot" | "manual") => {
     setIsStockMenuOpen(false);
@@ -65,6 +76,24 @@ export function WelcomeGuide() {
 
   const handleRealEstateTutorial = () => {
     window.dispatchEvent(new CustomEvent("tutorial-show-step0", { detail: { mode: "real-estate" } }));
+  };
+
+  const handleInstallPWA = async () => {
+    if (isInstallable) {
+      setPwaLoading(true);
+      try {
+        const success = await installPWA();
+        if (success) {
+          toast.success("앱이 설치되었습니다! 설치된 앱에서 자산을 등록해보세요.");
+        }
+      } catch {
+        toast.error("설치 중 오류가 발생했습니다.");
+      } finally {
+        setPwaLoading(false);
+      }
+    } else {
+      setShowGuide(true);
+    }
   };
 
   return (
@@ -84,24 +113,83 @@ export function WelcomeGuide() {
         </p>
       </div>
 
-      {/* 특징 카드 3개 */}
+      {/* 보안 특징 카드 3개 — 앱가이드와 동일 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FeatureCard
-          icon={Shield}
-          title="영지식(Zero-Knowledge) 이중 암호화"
-          desc="자산 데이터는 이 기기에만 저장됩니다. '짧은 공유 URL' 사용 시 서버를 거치더라도, 암호화 열쇠의 절반(URL)과 PIN 번호(4자리)가 완벽히 분리되어 서버 관리자조차 복호화가 100% 불가능한 원천 봉쇄 구조입니다."
+          icon={ShieldCheck}
+          title="영지식(Zero-Knowledge) 로컬 격리"
+          desc="모든 자산 데이터는 브라우저 내부(localStorage 및 기기 비추출 키 기반 IndexedDB)에만 안전하게 보관됩니다. 자격 증명이나 사용자 동의 없이는 데이터가 기기를 절대 벗어나지 않습니다."
         />
         <FeatureCard
-          icon={Sparkles}
-          title="AI 자산 분석"
-          desc="상단 자산 관리 메뉴에서 Grok·Gemini·GPT에 바로 붙여넣을 수 있는 AI 평가용 프롬프트를 생성할 수 있습니다. 데이터 내보내기·가져오기를 지원합니다."
+          icon={CloudLightning}
+          title="이중 종단간 암호화(E2EE) 동기화"
+          desc="기기 내부에서 금고 암호로부터 PBKDF2 (200k 반복 연산)를 통해 강력한 대칭키와 인증용 서명 키쌍(Ed25519)을 파생합니다. 전송되는 모든 데이터는 기기 내에서 암호화됩니다."
         />
         <FeatureCard
-          icon={Activity}
-          title="매일 자동 업데이트"
-          desc="보유 주식 현재가와 환율(USD·JPY)을 매일 최신 정보로 자동 반영합니다."
+          icon={EyeOff}
+          title="서버 관리자 자산 열람 원천 불가"
+          desc="서버는 오직 암호문(blob)과 공개키(pubKey)만 보관하며 해독 수단이 전혀 없습니다. 링크 공유 시에도 복호화 키의 절반은 브라우저 주소에만 전달됩니다."
         />
       </div>
+
+      {/* PWA 웹앱 설치 유도 */}
+      {canInstallPWA && (
+        <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
+              <Smartphone className="size-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold">웹앱으로 설치하세요</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                홈 화면에서 바로 실행 · 네이티브 앱처럼 사용
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="flex items-start gap-2">
+              <span className="shrink-0 size-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">1</span>
+              <p className="text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">앱 설치</span> — 아래 버튼으로 홈 화면에 추가
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0 size-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">2</span>
+              <p className="text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">자산 등록</span> — 설치된 앱에서 첫 자산 추가
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0 size-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">3</span>
+              <p className="text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">잠금 설정</span> — 더보기 → 설정에서 PIN 인증 활성화
+              </p>
+            </div>
+          </div>
+          {isIOS ? (
+            <div className="flex flex-col gap-2">
+              <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground flex items-center gap-1">
+                  <Share className="size-3.5" /> iOS 설치 방법
+                </p>
+                <p>1. Safari 하단의 <span className="font-semibold text-foreground">공유</span> 버튼을 누릅니다.</p>
+                <p>2. <span className="font-semibold text-foreground">홈 화면에 추가</span>를 선택합니다.</p>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="brand"
+              size="lg"
+              className="gap-2 w-full sm:w-auto"
+              onClick={handleInstallPWA}
+              disabled={pwaLoading}
+            >
+              <Download className="size-4" />
+              {pwaLoading ? "설치 중..." : "웹앱 설치하기"}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* 예시 미리보기 */}
       <div className="space-y-6">
@@ -177,7 +265,9 @@ export function WelcomeGuide() {
       {/* CTA 섹션 */}
       <div className="rounded-xl border border-border/60 bg-card/80 p-6 space-y-5">
         <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold">첫 번째 자산을 추가해보세요</h2>
+          <h2 className="text-lg font-semibold">
+            {mounted && isStandalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
+          </h2>
           <p className="text-sm text-muted-foreground">
             부동산, 주식, 암호화폐, 현금, 대출까지 — 모든 자산을 한 곳에서 관리하세요.
           </p>
@@ -229,18 +319,7 @@ export function WelcomeGuide() {
         <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
       </div>
 
-      {/* For international visitors */}
-      <div className="rounded-xl border border-border/40 bg-muted/30 px-5 py-4 flex items-start gap-3">
-        <Globe className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          <span className="font-semibold text-foreground/70">For international visitors</span>
-          {" — "}
-          This app is designed exclusively for the Korean financial ecosystem (KRX).
-          It supports Korean stocks (6-digit KRX tickers), KRW-based exchange rates (USD · JPY),
-          Korean real estate types, and Korea-specific financial products such as IRP, ISA, and pension accounts.
-        </p>
-      </div>
-
+      <PwaInstallGuideDialog open={showGuide} onOpenChange={setShowGuide} />
     </div>
   );
 }

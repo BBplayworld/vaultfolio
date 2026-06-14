@@ -7,7 +7,7 @@ import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { useAssetNavigation } from "@/app/(main)/asset/_components/layout/navigation/navigation-context";
+import { useAssetNavigation } from "@/app/(main)/_components/layout/navigation/navigation-context";
 
 /**
  * 자산 데이터 가져오기(JSON) 공용 훅 — tool-menu·welcome-guide 공유.

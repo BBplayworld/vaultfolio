@@ -1,6 +1,6 @@
-const CACHE_NAME = "secretasset-cache-v1";
+const CACHE_NAME = "secretasset-cache-v2";
 const PRECACHE_URLS = [
-  "/asset",
+  "/",
   "/favicon.ico",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png"
@@ -83,7 +83,7 @@ self.addEventListener("fetch", (event) => {
       })
     );
   } else {
-    // 2. 페이지 요청 (e.g. /asset) -> Network First, Fallback to Cache
+    // 2. 페이지 요청 (e.g. /) -> Network First, Fallback to Cache
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
@@ -96,14 +96,14 @@ self.addEventListener("fetch", (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // 네트워크 실패 시 캐시된 페이지 반환 (특히 /asset 페이지)
+          // 네트워크 실패 시 캐시된 페이지 반환 (특히 / 페이지)
           return caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) return cachedResponse;
-            // 만약 해시가 변경된 형태(/asset#vault=...)라면 /asset 매칭을 시도
-            if (url.pathname === "/asset") {
-              return caches.match("/asset");
+            // 만약 해시가 변경된 형태(/#vault=...)라면 / 매칭을 시도
+            if (url.pathname === "/") {
+              return caches.match("/");
             }
-            return caches.match("/asset"); // 기본값으로 홈 또는 자산 페이지 반환
+            return caches.match("/"); // 기본값으로 홈 또는 자산 페이지 반환
           });
         })
     );

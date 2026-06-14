@@ -188,23 +188,29 @@ These serve as the fallback; there is no separate default.css file. */
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent) transparent;
   }
+
   .scrollbar-themed::-webkit-scrollbar {
     height: 6px;
     width: 6px;
   }
+
   .scrollbar-themed::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .scrollbar-themed::-webkit-scrollbar-thumb {
     background-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent);
     border-radius: 9999px;
   }
+
   .scrollbar-themed::-webkit-scrollbar-thumb:hover {
     background-color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
   }
+
   .scrollbar-themed::-webkit-scrollbar-button {
     display: none;
   }
+
   .scrollbar-themed::-webkit-scrollbar-corner {
     background: transparent;
   }
@@ -280,6 +286,7 @@ input[type="week"] {
   min-width: 0;
   max-width: 100%;
 }
+
 input[type="date"]::-webkit-date-and-time-value,
 input[type="datetime-local"]::-webkit-date-and-time-value,
 input[type="time"]::-webkit-date-and-time-value,
@@ -288,7 +295,92 @@ input[type="month"]::-webkit-date-and-time-value {
   min-width: 0;
   margin: 0;
 }
+
 input[type="date"]::-webkit-datetime-edit,
 input[type="datetime-local"]::-webkit-datetime-edit {
   padding: 0;
+}
+
+/* 브라우저 일반 모드: PWA용 네비게이션바 숨김 */
+nav.pwa-nav-container {
+  display: none !important;
+}
+
+/* PWA 스탠드얼론 모드: 모바일은 하단 nav, PC/윈도우는 상단 nav */
+@media (display-mode: standalone) {
+
+  /* 3단계 서브페이지를 제외한 일반 헤더는 숨김 */
+  header[data-navbar-style="scroll"]:not(.pwa-show-header) {
+    display: none !important;
+  }
+
+  [data-content-area] {
+    margin-top: 0 !important;
+  }
+
+  /* 기본값 및 모바일 PWA 환경 (iOS / Android) - 하단 NAV */
+  [data-content-area] {
+    padding-bottom: 5rem !important;
+    /* iOS의 노치 및 상태바 높이에 대응하고, 안드로이드 등 일반 환경에서도 최소 1.5rem(24px)의 상단 여백 확보 */
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* 모바일 PWA 환경에서 3단계 헤더 노출 시: 상태바 영역 확보 및 본문 상단 여백 정리 */
+  header.pwa-show-header {
+    height: calc(3rem + env(safe-area-inset-top, 0px)) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+
+  header.pwa-show-header+[data-content-area] {
+    padding-top: 1rem !important;
+  }
+
+  nav.pwa-nav-container {
+    display: block !important;
+    bottom: 0 !important;
+    top: auto !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: none !important;
+  }
+
+  /* 데스크톱 및 PC PWA 환경 (Windows / macOS) - 상단 NAV */
+  html[data-device="pc"] [data-content-area] {
+    padding-bottom: 2rem !important;
+    /* 상단 NAV 높이(약 65px) + 1.25rem(20px) 여백 추가 = 약 85px */
+    padding-top: calc(65px + 1.25rem) !important;
+  }
+
+  /* PC PWA 환경에서 3단계 헤더 노출 시: 상단 NAV(65px) 아래로 배치 및 본문 상단 여백 정리 */
+  html[data-device="pc"] header.pwa-show-header {
+    margin-top: 75px !important;
+  }
+
+  html[data-device="pc"] header.pwa-show-header+[data-content-area] {
+    padding-top: 1.5rem !important;
+  }
+
+  html[data-device="pc"] nav.pwa-nav-container {
+    display: block !important;
+    top: 0 !important;
+    bottom: auto !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-top: none !important;
+  }
+
+  html[data-device="pc"] nav.pwa-nav-container>div {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* PWA 스탠드얼론 모드에서는 플로팅/인라인 "+자산 업데이트" 버튼을 완전히 숨김 (NAV바의 업데이트 버튼이 대체함) */
+  .pwa-fab-container {
+    display: none !important;
+  }
+
+  /* PWA 스탠드얼론 모드에서는 헤더의 브라우저 전용 기능(공유, 설치, 더보기)을 CSS로 일괄 숨김 */
+  .pwa-hide-actions {
+    display: none !important;
+  }
 }

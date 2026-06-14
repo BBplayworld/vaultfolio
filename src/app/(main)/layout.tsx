@@ -11,6 +11,8 @@ import { TutorialStoreProvider } from "@/stores/tutorial/tutorial-provider";
 import { NavigationProvider } from "./_components/layout/navigation/navigation-context";
 import { CloudSyncProvider } from "@/lib/cloud-sync/cloud-sync-provider";
 import { CloudSyncConnectDialog } from "./_components/functions/cloud-sync/cloud-sync-connect-dialog";
+import { BottomNav } from "./_components/pwa/bottom-nav";
+import { PwaLockScreen } from "./_components/pwa/pwa-lock-screen";
 
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
@@ -35,7 +37,9 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                 )}
               >
                 <TopBar />
-                <div className="h-full px-3 pt-2 pb-10 md:px-12 md:pt-2 md:pb-14 mt-2 sm:mt-0">{children}</div>
+                <div data-content-area className="h-full px-3 pt-2 pb-10 md:px-12 md:pt-2 md:pb-14 mt-2 sm:mt-0">{children}</div>
+                <BottomNav />
+                <PwaLockScreen />
               </SidebarInset>
             </SidebarProvider>
           </TutorialStoreProvider>

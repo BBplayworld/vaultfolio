@@ -25,7 +25,7 @@ import {
 } from "./sync-state";
 
 const AUTO_PUSH_DEBOUNCE_MS = 2500;
-const POLL_INTERVAL_MS = 20000;
+const POLL_INTERVAL_MS = 30000;
 
 // 비교를 위해 payload에서 lastUpdated 타임스탬프 필드를 제외한 직렬화 문자열 반환
 const getComparablePayloadString = (): string => {
@@ -83,7 +83,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const lastPushedRef = useRef<string | null>(null);
   const busyRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoPullRef = useRef<() => void>(() => {});
+  const autoPullRef = useRef<() => void>(() => { });
 
   const [status, setStatus] = useState<SyncStatus>("none");
   const [assetIdState, setAssetIdState] = useState<string | null>(null);

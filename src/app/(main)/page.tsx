@@ -18,7 +18,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
-import { PwaInstallBanner } from "./_components/layout/pwa-install-banner";
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
@@ -113,7 +112,6 @@ export default function Page() {
       <CopyrightFooter />
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       <UpdateNoticeDialog />
-      <PwaInstallBanner />
     </div>
   );
 }
