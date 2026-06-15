@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, SquarePlus, ExternalLink, Copy, MoreHorizontal } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import type { AssetSnapshots } from "@/types/asset";
 import { PwaInstallGuideDialog } from "./pwa-install-guide-dialog";
+import { IosShareStep, IosChromeShareStep, IosWhaleShareStep, IosAddToHomeStep } from "./pwa-guide-illustrations";
 
 const ICON_BTN = "inline-flex items-center justify-center h-9 sm:h-11 w-9 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";
 
@@ -51,6 +52,8 @@ export function PwaInstallButton() {
   const [mounted, setMounted] = useState(false);
   const [iosStep, setIosStep] = useState(false); // 데이터 준비 후 '홈 화면 추가' 가이드 단계
   const [inAppStep, setInAppStep] = useState(false); // 인앱 브라우저: 외부 브라우저 유도 단계
+  const [iosBrowser, setIosBrowser] = useState<"safari" | "chrome" | "whale">("safari"); // iOS 상세 브라우저 선택 가이드 (Rebuild Trigger)
+  const originalUrlRef = useRef<string | null>(null); // 주소창 공유URL 주입 전 원래 URL
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -131,7 +134,16 @@ export function PwaInstallButton() {
       setLoading(true);
       try {
         const startUrl = await generateStartUrl();
-        if (startUrl) setManifestStartUrl(startUrl);
+        if (startUrl) {
+          setManifestStartUrl(startUrl);
+          // iOS·일부 브라우저는 홈 화면 추가 시 manifest start_url 대신 현재 주소창 URL을
+          // 캡처한다. 공유URL을 주소창에 주입해 확실히 전달. replaceState는 hashchange를
+          // 발생시키지 않으므로 현재 탭에서 공유 가져오기가 재실행되지 않는다.
+          if (startUrl !== "/") {
+            originalUrlRef.current = window.location.href;
+            window.history.replaceState(null, "", startUrl);
+          }
+        }
         setIosStep(true);
       } catch (err) {
         console.error("iOS 데이터 준비 실패:", err);
@@ -191,7 +203,16 @@ export function PwaInstallButton() {
     if (!open) {
       setIosStep(false);
       setInAppStep(false);
-      if (isIOS) setTimeout(restoreManifest, 30000);
+      if (isIOS) {
+        // 사용자가 홈 화면 추가를 마칠 시간을 준 뒤 manifest·주소창을 원복하여,
+        // 이후 현재 탭 새로고침 시 불필요한 공유 가져오기 프롬프트를 막는다.
+        const prevUrl = originalUrlRef.current;
+        setTimeout(() => {
+          restoreManifest();
+          if (prevUrl) window.history.replaceState(null, "", prevUrl);
+          originalUrlRef.current = null;
+        }, 30000);
+      }
     }
   };
 
@@ -257,122 +278,181 @@ export function PwaInstallButton() {
       </button>
 
       <Dialog open={showDialog} onOpenChange={handleDialogChange}>
-        <DialogContent className="sm:max-w-md touch-pan-y">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
+          <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border/50">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
-              {inAppStep ? "외부 브라우저에서 열기" : "홈 화면에 추가"}
+              {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : "홈 화면에 앱 설치"}
             </DialogTitle>
             {!iosStep && !inAppStep && (
               <DialogDescription asChild>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>현재 자산 데이터를 앱에 연동합니다.</p>
-                  <p className="text-xs">
-                    PIN으로 암호화된 데이터가 서버를 경유하여 전송됩니다.
-                    {isIOS && " 설치 후 앱을 열면 PIN을 입력하여 데이터를 불러옵니다."}
+                <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed mt-1">
+                  <p className="text-foreground font-semibold">안전한 자산 연동과 브라우저 세션 끊김으로 인한 데이터 유실을 막기 위해 앱으로 설치해야 합니다.</p>
+                  <p className="text-sm">
+                    설정할 PIN으로 자산이 로컬 암호화되며, 설치 완료 후 앱을 열어 동일한 PIN을 입력하면 즉시 데이터가 복원됩니다.
                   </p>
                 </div>
               </DialogDescription>
             )}
+            {iosStep && (
+              <DialogDescription className="text-sm text-muted-foreground leading-relaxed mt-1">
+                iOS 환경은 브라우저 보안 규정으로 인해 자동 설치가 불가능합니다. <span className="font-semibold text-foreground">아래 공유 기능을 통해 1분 만에 설치할 수 있습니다.</span>
+              </DialogDescription>
+            )}
           </DialogHeader>
 
-          {inAppStep ? (
-            /* 인앱 브라우저(카카오톡 등): 홈 화면 추가 불가 → 외부 브라우저로 유도 */
-            <div className="flex flex-col gap-4 py-2">
-              <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400">
-                <Copy className="size-4 shrink-0 mt-0.5" />
-                현재 주소를 복사했어요. 이 브라우저(카카오톡 등)에서는 홈 화면 추가가 불가능해 기본 브라우저에서 열어야 합니다.
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {inAppStep ? (
+              /* 인앱 브라우저(카카오톡 등): 홈 화면 추가 불가 → 외부 브라우저로 유도 */
+              <div className="flex flex-col gap-4 py-1">
+                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20 leading-relaxed">
+                  <Copy className="size-4 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>현재 웹페이지 주소가 복사되었습니다!</strong>
+                    <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+                      카카오톡, 인스타그램 등의 브라우저에서는 앱 설치 기능이 지원되지 않으므로 Chrome, Safari 등 외부 브라우저로 접속해 주세요.
+                    </p>
+                  </div>
+                </div>
+                
+                <ol className="space-y-3.5 py-1">
+                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
+                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
+                    <span>
+                      화면 우측 상단 또는 하단의{" "}
+                      <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                        메뉴 <MoreHorizontal className="size-3.5" />
+                      </span>{" "}
+                      를 누릅니다.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
+                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
+                    <span>
+                      <span className="font-semibold text-foreground">&ldquo;다른 브라우저로 열기&rdquo;</span>(또는 Safari/Chrome으로 열기)를 선택합니다.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
+                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
+                    <span>
+                      이동한 기본 브라우저에서 다시 우측 상단의 <span className="font-semibold text-foreground">앱 설치</span> 버튼을 터치하여 홈 화면에 추가합니다.
+                    </span>
+                  </li>
+                </ol>
+                <div className="rounded-lg bg-muted/40 p-2.5 text-sm text-muted-foreground border">
+                  메뉴에 위 항목이 보이지 않는다면, 복사된 주소를 복사하여 스마트폰의 기본 브라우저(Safari 또는 크롬) 주소창에 직접 붙여넣어 접속해 주세요.
+                </div>
               </div>
-              <ol className="space-y-3.5">
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-                  <span>
-                    화면 우측 상단/하단의{" "}
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      메뉴 <MoreHorizontal className="size-3.5" />
-                    </span>{" "}
-                    를 누릅니다.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
-                  <span>
-                    <span className="font-semibold text-foreground">다른 브라우저로 열기</span>(또는 Safari·Chrome으로 열기)를 선택합니다.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
-                  <span>
-                    열린 브라우저에서 다시 <span className="font-semibold text-foreground">앱 설치</span> 버튼을 눌러 홈 화면에 추가합니다.
-                  </span>
-                </li>
-              </ol>
-              <p className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground">
-                메뉴에 항목이 없다면, 복사된 주소를 기본 브라우저 주소창에 붙여넣어 접속해 주세요.
-              </p>
-            </div>
-          ) : iosStep ? (
-            /* iOS: 브라우저 공유 메뉴에서 직접 추가하도록 단계별 가이드 (브라우저 무관) */
-            <div className="flex flex-col gap-4 py-2">
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="size-4 shrink-0" />
-                준비 완료! 아래 순서대로 추가해 주세요.
-              </div>
-              <ol className="space-y-3.5">
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-                  <span>
-                    브라우저 하단(또는 상단)의{" "}
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      공유 <Share className="size-3.5" />
-                    </span>{" "}
-                    버튼을 누릅니다.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
-                  <span>
-                    메뉴를 위로 올려{" "}
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      홈 화면에 추가 <SquarePlus className="size-3.5" />
-                    </span>{" "}
-                    를 선택합니다.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm leading-relaxed">
-                  <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
-                  <span>
-                    우측 상단 <span className="font-semibold text-foreground">추가</span> 를 누르면 완료됩니다.
-                  </span>
-                </li>
-              </ol>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center space-y-4 py-4">
-              <div className="flex flex-col items-center gap-3 space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  {pin.length === 4 ? <Lock className="size-3.5 text-primary" /> : <Unlock className="size-3.5 text-muted-foreground" />}
-                  비밀번호 <span className="text-rose-500 font-semibold">(4자리, 필수)</span>
-                </Label>
-                <InputOTP maxLength={4} value={pin} onChange={setPin}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                  </InputOTPGroup>
-                </InputOTP>
-                <p className="text-[11px] text-muted-foreground">
-                  앱 최초 실행 시 동일한 PIN으로 데이터를 불러옵니다.
-                </p>
-              </div>
-            </div>
-          )}
+            ) : iosStep ? (
+              /* iOS: 브라우저 공유 메뉴에서 직접 추가하도록 단계별 가이드 (브라우저 무관) */
+              <div className="flex flex-col gap-4 py-1">
+                {/* 브라우저별 선택 칩 */}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm text-muted-foreground font-medium">사용 중인 브라우저:</span>
+                  <div className="flex gap-1 bg-muted/50 p-0.5 rounded-lg border">
+                    {(["safari", "chrome", "whale"] as const).map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setIosBrowser(b)}
+                        className={`text-xs sm:text-sm px-2.5 py-0.5 rounded-md font-semibold transition-colors capitalize ${
+                          iosBrowser === b ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {b === "safari" ? "Safari" : b === "chrome" ? "Chrome" : "Whale"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 1단계 */}
+                  <div className="flex flex-col space-y-2.5 p-3.5 rounded-xl border border-border/50 bg-muted/10">
+                    <div className="flex items-center gap-2">
+                      <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
+                      <p className="font-semibold text-sm text-foreground">
+                        {iosBrowser === "safari" ? "Safari" : iosBrowser === "chrome" ? "Chrome" : "Whale"} 공유 메뉴 클릭
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed h-12">
+                      {iosBrowser === "safari" && (
+                        <>
+                          Safari 하단 우측 메뉴(<span className="font-semibold text-foreground font-mono">⋯</span>) 터치 후, 메뉴창 상단의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 선택합니다.
+                        </>
+                      )}
+                      {iosBrowser === "chrome" && (
+                        <>
+                          크롬 브라우저 상단 주소창 우측에 위치한 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.
+                        </>
+                      )}
+                      {iosBrowser === "whale" && (
+                        <>
+                          웨일 브라우저 상단 주소창 우측에 위치한 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.
+                        </>
+                      )}
+                    </p>
+                    <div className="flex-1 flex items-center justify-center pt-1">
+                      {iosBrowser === "safari" && (
+                        <IosShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
+                      )}
+                      {iosBrowser === "chrome" && (
+                        <IosChromeShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
+                      )}
+                      {iosBrowser === "whale" && (
+                        <IosWhaleShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2단계 */}
+                  <div className="flex flex-col space-y-2.5 p-3.5 rounded-xl border border-border/50 bg-muted/10">
+                    <div className="flex items-center gap-2">
+                      <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
+                      <p className="font-semibold text-sm text-foreground">홈 화면에 추가 선택</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed h-12">
+                      공유 메뉴 창을 아래로 올려 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">홈 화면에 추가 <SquarePlus className="size-3" /></span>를 터치합니다.
+                    </p>
+                    <div className="flex-1 flex items-center justify-center pt-1">
+                      <IosAddToHomeStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3.5 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  <span>
+                    마지막으로 우측 상단의 <strong className="text-foreground font-semibold">[추가]</strong> 버튼을 누르면 홈 화면에 앱 아이콘이 생성됩니다.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-4 py-4">
+                <div className="flex flex-col items-center gap-3 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    {pin.length === 4 ? <Lock className="size-3.5 text-primary" /> : <Unlock className="size-3.5 text-muted-foreground" />}
+                    접근 비밀번호 <span className="text-rose-500 font-semibold">(4자리, 필수)</span>
+                  </Label>
+                  <InputOTP maxLength={4} value={pin} onChange={setPin}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  <p className="text-sm text-muted-foreground text-center">
+                    설치된 앱 최초 실행 시 동일한 PIN 번호를 입력하면<br />암호화된 내 자산 정보가 자동으로 동기화됩니다.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
             {iosStep || inAppStep ? (
-              <Button variant="brand" onClick={() => handleDialogChange(false)} type="button">
-                확인했습니다
+              <Button variant="brand" onClick={() => handleDialogChange(false)} type="button" className="text-sm h-10 px-5 shadow-sm font-semibold text-white">
+                가이드 확인 완료
               </Button>
             ) : (
               <>
@@ -381,11 +461,12 @@ export function PwaInstallButton() {
                   onClick={handleInstall}
                   disabled={loading || pin.length !== 4 || (!isIOS && (preparing || !ready))}
                   type="button"
+                  className="text-sm h-10 px-5 font-semibold text-white"
                 >
                   {loading || (!isIOS && preparing) ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
                   {isIOS ? "추가 방법 보기" : preparing ? "준비 중…" : "설치하기"}
                 </Button>
-                <Button variant="outline" onClick={() => handleDialogChange(false)}>
+                <Button variant="outline" onClick={() => handleDialogChange(false)} className="text-sm h-10 px-4 font-semibold">
                   취소
                 </Button>
               </>
