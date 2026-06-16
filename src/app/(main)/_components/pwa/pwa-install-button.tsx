@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import type { AssetSnapshots } from "@/types/asset";
+import { pwaDebugLog } from "@/lib/pwa-debug"; // [임시 진단] PWA 빈 자산 원인 판별
 import { PwaInstallGuideDialog } from "./pwa-install-guide-dialog";
 import { IosShareStep, IosChromeShareStep, IosWhaleShareStep, IosAddToHomeStep } from "./pwa-guide-illustrations";
 
@@ -134,6 +135,7 @@ export function PwaInstallButton() {
       setLoading(true);
       try {
         const startUrl = await generateStartUrl();
+        pwaDebugLog("install", `iOS generateStartUrl → ${startUrl ?? "null"}`);
         if (startUrl) {
           setManifestStartUrl(startUrl);
           // iOS·일부 브라우저는 홈 화면 추가 시 manifest start_url 대신 현재 주소창 URL을
@@ -142,6 +144,7 @@ export function PwaInstallButton() {
           if (startUrl !== "/") {
             originalUrlRef.current = window.location.href;
             window.history.replaceState(null, "", startUrl);
+            pwaDebugLog("install", `주소창 주입 완료 href=${window.location.href}`);
           }
         }
         setIosStep(true);
@@ -210,6 +213,7 @@ export function PwaInstallButton() {
         setTimeout(() => {
           restoreManifest();
           if (prevUrl) window.history.replaceState(null, "", prevUrl);
+          pwaDebugLog("install", `30초 경과 → manifest·주소창 원복(href=${window.location.href})`);
           originalUrlRef.current = null;
         }, 30000);
       }
@@ -382,12 +386,12 @@ export function PwaInstallButton() {
                       )}
                       {iosBrowser === "chrome" && (
                         <>
-                          크롬 브라우저 상단 주소창 우측에 위치한 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.
+                          크롬 상단 주소창 옆 메뉴(<span className="font-semibold text-foreground font-mono">⋯</span>) 터치 후, 메뉴 상단의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 선택합니다.
                         </>
                       )}
                       {iosBrowser === "whale" && (
                         <>
-                          웨일 브라우저 상단 주소창 우측에 위치한 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.
+                          웨일 상단 주소창 옆 메뉴(<span className="font-semibold text-foreground font-mono">☰</span>) 터치 후, 메뉴 상단의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 선택합니다.
                         </>
                       )}
                     </p>

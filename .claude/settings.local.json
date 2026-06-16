@@ -48,7 +48,15 @@
       "Bash(echo \"eslint EXIT:$?\")",
       "Bash(ls eslint.config.* .eslintrc*)",
       "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\('lint:', s.lint\\)\")",
-      "Bash(ls -la \"E:\\\\2.project\\\\js\\\\secret-asset\\\\\")"
+      "Bash(ls -la \"E:\\\\2.project\\\\js\\\\secret-asset\\\\\")",
+      "Bash(command -v magick)",
+      "Bash(command -v convert)",
+      "Bash(command -v node)",
+      "Bash(node -e \"try{require.resolve\\('sharp'\\);console.log\\('sharp OK'\\)}catch\\(e\\){console.log\\('no sharp'\\)}\")",
+      "Bash(node -e \"try{console.log\\('sharp:',require.resolve\\('sharp'\\)\\)}catch\\(e\\){console.log\\('no sharp'\\)}\")",
+      "PowerShell(Get-ChildItem \"E:\\\\2.project\\\\js\\\\secret-asset\\\\public\\\\icons\\\\\" | Select-Object Name, Length; Write-Output \"---magick---\"; \\(Get-Command magick -ErrorAction SilentlyContinue\\).Source; \\(Get-Command convert -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(\\(Get-Command node -ErrorAction SilentlyContinue\\).Source; node -v; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\sharp\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\canvas\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\jimp\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\pngjs\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\sharp\\\\package.json\")",
+      "PowerShell(cd \"E:\\\\2.project\\\\js\\\\secret-asset\"; npx tsc --noEmit; Write-Output \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }

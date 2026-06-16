@@ -3,7 +3,8 @@
  * 외부 이미지·실제 로고 없이 인라인 SVG로 각 브라우저의 실제 UI 형태를 정밀하게 묘사.
  * 다크모드는 테마 토큰(currentColor 계열)으로 대응, 강조는 --brand(MAIN_PALETTE[0]).
  *
- * - IosShareStep / IosAddToHomeStep : Safari·iOS 크롬 공용
+ * - IosShareStep / IosChromeShareStep / IosWhaleShareStep : iOS Safari·크롬·웨일
+ *   (공통 흐름: 주소 옆 메뉴 → 공유 → IosAddToHomeStep 의 '홈 화면에 추가')
  * - ChromeMenuStep                  : Android 크롬·웨일 (⋮ 상단 메뉴)
  * - SamsungMenuStep                 : 삼성 인터넷 (☰ 하단 메뉴)
  */
@@ -126,111 +127,122 @@ export function IosShareStep({ className }: IllustrationProps) {
   );
 }
 
-/** iOS Chrome 1단계: 크롬 브라우저 상단 주소창 우측의 공유 버튼 강조 */
+/** iOS Chrome 1단계: 주소창 옆 메뉴(⋯) 터치 → 팝업 메뉴 상단 공유 항목 강조 (Safari와 동일 흐름) */
 export function IosChromeShareStep({ className }: IllustrationProps) {
   return (
-    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="iOS 크롬 상단 공유 버튼 위치" fill="none">
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="iOS 크롬 주소창 옆 메뉴의 공유 위치" fill="none">
       <PhoneFrame />
-      
-      {/* iOS Chrome 상단 주소창 영역 */}
-      <rect x="44" y="34" width="112" height="20" rx="10" className={SURFACE} fill="currentColor" />
+
+      {/* iOS Chrome 상단 주소창 영역 (메뉴 버튼 공간 확보 위해 단축) */}
+      <rect x="44" y="34" width="100" height="20" rx="10" className={SURFACE} fill="currentColor" />
       {/* 자물쇠 */}
-      <rect x="54" y="41.5" width="4.5" height="3.5" rx="0.8" className={HINT} fill="currentColor" />
+      <rect x="52" y="42.5" width="4.5" height="3.5" rx="0.8" className={HINT} fill="currentColor" />
       {/* 주소 텍스트 (실제 도메인 주소 반영) */}
-      <text x="100" y="47.5" fontSize="7" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
-      
-      {/* [강조] iOS Chrome 주소창 우측 공유 단추 */}
-      <circle cx="168" cy="44" r="9.5" fill={BRAND} opacity="0.15" />
-      <circle cx="168" cy="44" r="14" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
-      <g transform="translate(168, 44)" stroke={BRAND} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="-4.5" y="-1.5" width="9" height="8" rx="1.5" fill="none" />
-        <path d="M0 -6 V2" />
-        <path d="M-2.5 -3.5 L0 -6 L2.5 -3.5" />
+      <text x="96" y="47.5" fontSize="6.5" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
+
+      {/* [강조] 주소창 옆 메뉴 버튼 (⋯ 세로 3점) - 클릭된 상태 */}
+      <circle cx="164" cy="44" r="9.5" fill={BRAND} opacity="0.12" />
+      <circle cx="164" cy="44" r="13" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.45" />
+      <circle cx="164" cy="40" r="1.3" fill={BRAND} />
+      <circle cx="164" cy="44" r="1.3" fill={BRAND} />
+      <circle cx="164" cy="48" r="1.3" fill={BRAND} />
+
+      {/* 메뉴 클릭 시 나타나는 팝업 (우상단에서 드롭) */}
+      <rect x="92" y="62" width="86" height="120" rx="12" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="0.8" />
+
+      {/* [강조] 팝업 상단 공유 항목 */}
+      <g transform="translate(98, 68)">
+        <rect x="0" y="0" width="74" height="20" rx="6" fill={BRAND} opacity="0.14" />
+        <rect x="0" y="0" width="74" height="20" rx="6" stroke={BRAND} strokeWidth="0.9" />
+        {/* 공유 아이콘 (box+arrow) */}
+        <g transform="translate(12, 10)" stroke={BRAND} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="-4" y="-1" width="8" height="7" rx="1.3" fill="none" />
+          <path d="M0 -5 V1.5" />
+          <path d="M-2.2 -3 L0 -5 L2.2 -3" />
+        </g>
+        <text x="46" y="13.5" fontSize="7" fontWeight="bold" fill={BRAND} textAnchor="middle">공유</text>
+        {/* 터치 펄스 */}
+        <circle cx="46" cy="10" r="9" stroke={BRAND} strokeWidth="0.8" strokeDasharray="1.5 1.5" opacity="0.55" />
       </g>
 
-      {/* 본문 콘텐츠 라인 피드 */}
-      <rect x="52" y="68" width="116" height="8" rx="4" className={LINE} fill="currentColor" />
-      <rect x="52" y="84" width="92" height="6" rx="3" className={LINE} fill="currentColor" />
-      <rect x="52" y="98" width="104" height="6" rx="3" className={LINE} fill="currentColor" />
-      
-      {/* 하단 Chrome 툴바 (이전, 다음, 새탭/검색, 탭목록, 메뉴) */}
-      <rect x="39" y="228" width="142" height="34" rx="0" fill="currentColor" className="text-background/95 dark:text-background/90" />
-      <line x1="39" y1="228" x2="181" y2="228" stroke="currentColor" className={FRAME} strokeWidth="1" />
-      
-      <path d="M52 245 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M70 245 l4 4 l-4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      {/* 크롬 새탭/검색 (+) */}
-      <circle cx="110" cy="249" r="8" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
-      <path d="M110 246 v6 M107 249 h6" stroke="currentColor" className={HINT} strokeWidth="1.2" />
-      {/* 탭 카운터 */}
-      <rect x="138" y="244" width="10" height="10" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
-      {/* 메뉴 점3개 */}
-      <circle cx="164" cy="245" r="1" fill="currentColor" className={HINT} />
-      <circle cx="164" cy="249" r="1" fill="currentColor" className={HINT} />
-      <circle cx="164" cy="253" r="1" fill="currentColor" className={HINT} />
+      {/* 팝업 나머지 메뉴 항목들 */}
+      <g transform="translate(102, 100)" className={LINE}>
+        <rect x="0" y="0" width="66" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="16" width="52" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="32" width="60" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="48" width="44" height="4" rx="2" fill="currentColor" opacity="0.8" />
+      </g>
 
-      {/* 가이드 화살표 */}
-      <g transform="translate(168, 18)">
-        <path d="M0 -4 V5" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M-3 2 L0 5 L3 2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* 본문 콘텐츠 라인 (팝업 뒤) */}
+      <rect x="52" y="200" width="116" height="7" rx="3.5" className={LINE} fill="currentColor" opacity="0.5" />
+      <rect x="52" y="214" width="92" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.5" />
+
+      {/* 가이드 화살표: 메뉴 버튼 지목 */}
+      <g transform="translate(164, 22)">
+        <path d="M0 -4 V6" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M-3 3 L0 6 L3 3" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
   );
 }
 
-/** iOS Whale 1단계: 웨일 브라우저 상단 주소창 우측의 공유 버튼 강조 */
+/** iOS Whale 1단계: 주소창 옆 메뉴(☰) 터치 → 팝업 메뉴 상단 공유 항목 강조 (Safari와 동일 흐름) */
 export function IosWhaleShareStep({ className }: IllustrationProps) {
   const WHALE_GREEN = "#00cd3c";
   return (
-    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="iOS 웨일 상단 공유 버튼 위치" fill="none">
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="iOS 웨일 주소창 옆 메뉴의 공유 위치" fill="none">
       <PhoneFrame />
-      
-      {/* iOS Whale 상단 주소창 영역 */}
-      <rect x="44" y="34" width="112" height="20" rx="10" className={SURFACE} fill="currentColor" />
-      {/* 고래 심볼 로고 느낌 포인트 */}
-      <circle cx="54" cy="44" r="3.5" fill={WHALE_GREEN} opacity="0.8" />
+
+      {/* iOS Whale 상단 주소창 영역 (메뉴 버튼 공간 확보 위해 단축) */}
+      <rect x="44" y="34" width="100" height="20" rx="10" className={SURFACE} fill="currentColor" />
+      {/* 고래 심볼 로고 느낌 포인트 (웨일 식별) */}
+      <circle cx="52" cy="44" r="3.5" fill={WHALE_GREEN} opacity="0.8" />
       {/* 주소 텍스트 (실제 도메인 주소 반영) */}
-      <text x="108" y="47.5" fontSize="7" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
-      
-      {/* [강조] iOS Whale 주소창 우측 공유 단추 */}
-      <circle cx="168" cy="44" r="9.5" fill={BRAND} opacity="0.15" />
-      <circle cx="168" cy="44" r="14" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
-      <g transform="translate(168, 44)" stroke={BRAND} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="-4.5" y="-1.5" width="9" height="8" rx="1.5" fill="none" />
-        <path d="M0 -6 V2" />
-        <path d="M-2.5 -3.5 L0 -6 L2.5 -3.5" />
+      <text x="98" y="47.5" fontSize="6.5" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
+
+      {/* [강조] 주소창 옆 메뉴 버튼 (☰) - 클릭된 상태 */}
+      <circle cx="164" cy="44" r="9.5" fill={BRAND} opacity="0.12" />
+      <circle cx="164" cy="44" r="13" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.45" />
+      <g stroke={BRAND} strokeWidth="1.5" strokeLinecap="round" transform="translate(159, 41)">
+        <line x1="0" y1="0" x2="10" y2="0" />
+        <line x1="0" y1="3" x2="10" y2="3" />
+        <line x1="0" y1="6" x2="10" y2="6" />
       </g>
 
-      {/* 본문 콘텐츠 라인 피드 */}
-      <rect x="52" y="68" width="116" height="8" rx="4" className={LINE} fill="currentColor" />
-      <rect x="52" y="84" width="92" height="6" rx="3" className={LINE} fill="currentColor" />
-      <rect x="52" y="98" width="104" height="6" rx="3" className={LINE} fill="currentColor" />
-      
-      {/* 하단 Whale 툴바 (이전, 다음, 웨일 스페이스/벨, 탭목록, 메뉴) */}
-      <rect x="39" y="228" width="142" height="34" rx="0" fill="currentColor" className="text-background/95 dark:text-background/90" />
-      <line x1="39" y1="228" x2="181" y2="228" stroke="currentColor" className={FRAME} strokeWidth="1" />
-      
-      <path d="M52 245 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M70 245 l4 4 l-4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      
-      {/* 웨일 특유의 둥근 로고/스페이스 버튼 */}
-      <circle cx="110" cy="249" r="9" fill={WHALE_GREEN} opacity="0.15" />
-      <circle cx="110" cy="249" r="7" stroke={WHALE_GREEN} strokeWidth="1.5" fill="none" />
-      
-      {/* 탭 카운터 */}
-      <rect x="138" y="244" width="10" height="10" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
-      
-      {/* 메뉴 ☰ */}
-      <g stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" transform="translate(159, 246)">
-        <line x1="1" y1="1" x2="9" y2="1" />
-        <line x1="1" y1="3.5" x2="9" y2="3.5" />
-        <line x1="1" y1="6" x2="9" y2="6" />
+      {/* 메뉴 클릭 시 나타나는 팝업 (우상단에서 드롭) */}
+      <rect x="92" y="62" width="86" height="120" rx="12" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="0.8" />
+
+      {/* [강조] 팝업 상단 공유 항목 */}
+      <g transform="translate(98, 68)">
+        <rect x="0" y="0" width="74" height="20" rx="6" fill={BRAND} opacity="0.14" />
+        <rect x="0" y="0" width="74" height="20" rx="6" stroke={BRAND} strokeWidth="0.9" />
+        {/* 공유 아이콘 (box+arrow) */}
+        <g transform="translate(12, 10)" stroke={BRAND} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="-4" y="-1" width="8" height="7" rx="1.3" fill="none" />
+          <path d="M0 -5 V1.5" />
+          <path d="M-2.2 -3 L0 -5 L2.2 -3" />
+        </g>
+        <text x="46" y="13.5" fontSize="7" fontWeight="bold" fill={BRAND} textAnchor="middle">공유</text>
+        {/* 터치 펄스 */}
+        <circle cx="46" cy="10" r="9" stroke={BRAND} strokeWidth="0.8" strokeDasharray="1.5 1.5" opacity="0.55" />
       </g>
 
-      {/* 가이드 화살표 */}
-      <g transform="translate(168, 18)">
-        <path d="M0 -4 V5" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M-3 2 L0 5 L3 2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* 팝업 나머지 메뉴 항목들 */}
+      <g transform="translate(102, 100)" className={LINE}>
+        <rect x="0" y="0" width="66" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="16" width="52" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="32" width="60" height="4" rx="2" fill="currentColor" />
+        <rect x="0" y="48" width="44" height="4" rx="2" fill="currentColor" opacity="0.8" />
+      </g>
+
+      {/* 본문 콘텐츠 라인 (팝업 뒤) */}
+      <rect x="52" y="200" width="116" height="7" rx="3.5" className={LINE} fill="currentColor" opacity="0.5" />
+      <rect x="52" y="214" width="92" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.5" />
+
+      {/* 가이드 화살표: 메뉴 버튼 지목 */}
+      <g transform="translate(164, 22)">
+        <path d="M0 -4 V6" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M-3 3 L0 6 L3 3" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
   );
