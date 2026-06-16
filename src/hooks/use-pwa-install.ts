@@ -171,13 +171,26 @@ export function usePWAInstall() {
   };
 
   /**
-   * manifest link를 원래대로 복원
+   * iOS용: manifest link 자체를 제거.
+   * iOS는 manifest가 있으면 그 start_url(해시 제거됨)로 PWA를 시작하므로, 홈 화면 추가 전
+   * manifest를 제거해 '주소창 URL(해시 포함)'이 북마크로 캡처되게 한다. (standalone은 apple 메타로 유지)
+   */
+  const removeManifestLink = () => {
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) manifestLink.parentElement?.removeChild(manifestLink);
+  };
+
+  /**
+   * manifest link를 원래대로 복원 (제거됐으면 재생성)
    */
   const restoreManifest = () => {
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-      (manifestLink as HTMLLinkElement).href = "/manifest.webmanifest";
+    let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+    if (!manifestLink) {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      document.head.appendChild(manifestLink);
     }
+    manifestLink.href = "/manifest.webmanifest";
   };
 
   return {
@@ -188,6 +201,7 @@ export function usePWAInstall() {
     prepareInstall,
     installPWA,
     setManifestStartUrl,
+    removeManifestLink,
     restoreManifest,
   };
 }

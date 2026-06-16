@@ -41,7 +41,7 @@ function collectSnapshots(): AssetSnapshots {
 }
 
 export function PwaInstallButton() {
-  const { isInstallable, isIOS, isInApp, isStandalone, prepareInstall, installPWA, setManifestStartUrl, restoreManifest } = usePWAInstall();
+  const { isInstallable, isIOS, isInApp, isStandalone, prepareInstall, installPWA, removeManifestLink, restoreManifest } = usePWAInstall();
   const { assetData, exchangeRates } = useAssetData();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const [showDialog, setShowDialog] = useState(false);
@@ -137,10 +137,13 @@ export function PwaInstallButton() {
         const startUrl = await generateStartUrl();
         pwaDebugLog("install", `iOS generateStartUrl → ${startUrl ?? "null"}`);
         if (startUrl) {
-          setManifestStartUrl(startUrl);
-          // iOS·일부 브라우저는 홈 화면 추가 시 manifest start_url 대신 현재 주소창 URL을
-          // 캡처한다. 공유URL을 주소창에 주입해 확실히 전달. replaceState는 hashchange를
-          // 발생시키지 않으므로 현재 탭에서 공유 가져오기가 재실행되지 않는다.
+          // iOS는 manifest가 있으면 그 start_url(해시 제거됨)로 PWA를 시작해 #share 토큰이 유실된다.
+          // → manifest 링크를 제거해, iOS가 '주소창 URL(해시 포함)'을 홈 화면 북마크로 캡처하도록 유도.
+          // standalone 표시는 apple-mobile-web-app-capable 메타로 유지됨.
+          removeManifestLink();
+          pwaDebugLog("install", "manifest 링크 제거(iOS 주소창 URL 캡처 유도)");
+          // 공유URL을 주소창에 주입. replaceState는 hashchange를 발생시키지 않으므로
+          // 현재 탭에서 공유 가져오기가 재실행되지 않는다.
           if (startUrl !== "/") {
             originalUrlRef.current = window.location.href;
             // [임시 진단] 주입 성공/실패를 명시적으로 분리 기록 (replaceState 실패 시 가설 b 확정)
