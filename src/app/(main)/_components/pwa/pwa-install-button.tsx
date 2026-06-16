@@ -220,15 +220,16 @@ export function PwaInstallButton() {
       setIosStep(false);
       setInAppStep(false);
       if (isIOS) {
-        // 사용자가 홈 화면 추가를 마칠 시간을 준 뒤 manifest·주소창을 원복하여,
+        // 사용자가 홈 화면 추가를 마칠 충분한 시간을 준 뒤 manifest·주소창을 원복하여,
         // 이후 현재 탭 새로고침 시 불필요한 공유 가져오기 프롬프트를 막는다.
+        // (제거된 manifest가 너무 일찍 복원되면 iOS가 다시 manifest를 캡처해 해시가 유실되므로 충분히 길게)
         const prevUrl = originalUrlRef.current;
         setTimeout(() => {
           restoreManifest();
           if (prevUrl) window.history.replaceState(null, "", prevUrl);
-          pwaDebugLog("install", `30초 경과 → manifest·주소창 원복(href=${window.location.href})`);
+          pwaDebugLog("install", `복원(3분 경과) → manifest·주소창 원복(href=${window.location.href})`);
           originalUrlRef.current = null;
-        }, 30000);
+        }, 180000);
       }
     }
   };

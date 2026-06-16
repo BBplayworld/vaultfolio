@@ -13,15 +13,24 @@ export interface PwaDebugEntry {
   msg: string;
 }
 
-/** standalone 또는 ?pwadebug=1 일 때만 기록 (일반 사용자 영향 없음) */
+const FLAG_KEY = "secretasset_pwa_debug_on";
+
+/**
+ * standalone 또는 ?pwadebug=1 일 때만 기록 (일반 사용자 영향 없음).
+ * ?pwadebug=1을 한 번 보면 localStorage에 영속화 → replaceState로 쿼리가 사라져도 로그 유지.
+ */
 function isDebugEnabled(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as { standalone?: boolean }).standalone === true;
-    const flagged = new URLSearchParams(window.location.search).get("pwadebug") === "1";
-    return standalone || flagged;
+    if (new URLSearchParams(window.location.search).get("pwadebug") === "1") {
+      try { localStorage.setItem(FLAG_KEY, "1"); } catch { /* 무시 */ }
+      return true;
+    }
+    const persisted = (() => { try { return localStorage.getItem(FLAG_KEY) === "1"; } catch { return false; } })();
+    return standalone || persisted;
   } catch {
     return false;
   }
