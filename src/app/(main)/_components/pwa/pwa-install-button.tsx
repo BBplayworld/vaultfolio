@@ -143,12 +143,22 @@ export function PwaInstallButton() {
           // 발생시키지 않으므로 현재 탭에서 공유 가져오기가 재실행되지 않는다.
           if (startUrl !== "/") {
             originalUrlRef.current = window.location.href;
-            window.history.replaceState(null, "", startUrl);
-            pwaDebugLog("install", `주소창 주입 완료 href=${window.location.href}`);
+            // [임시 진단] 주입 성공/실패를 명시적으로 분리 기록 (replaceState 실패 시 가설 b 확정)
+            try {
+              window.history.replaceState(null, "", startUrl);
+              pwaDebugLog("install", `주소창 주입 성공 href=${window.location.href}`);
+            } catch (e) {
+              pwaDebugLog("install", `주소창 주입 실패(replaceState throw): ${String(e)}`);
+            }
+          } else {
+            pwaDebugLog("install", "startUrl='/' → 주입 생략(자산 없음/서버 실패)");
           }
+        } else {
+          pwaDebugLog("install", "startUrl=null → 주입 안 함(서버 저장 실패 추정)");
         }
         setIosStep(true);
       } catch (err) {
+        pwaDebugLog("install", `iOS 데이터 준비 실패(catch): ${String(err)}`);
         console.error("iOS 데이터 준비 실패:", err);
         toast.error("데이터 준비 중 오류가 발생했습니다.");
       } finally {
