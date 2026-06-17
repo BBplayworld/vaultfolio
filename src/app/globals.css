@@ -320,7 +320,7 @@ nav.pwa-nav-container {
 
   /* 기본값 및 모바일 PWA 환경 (iOS / Android) - 하단 NAV */
   [data-content-area] {
-    padding-bottom: 5.75rem !important;
+    padding-bottom: 6.75rem !important;
     /* iOS의 노치 및 상태바 높이에 대응하고, 안드로이드 등 일반 환경에서도 최소 1.5rem(24px)의 상단 여백 확보 */
     padding-top: max(1.5rem, env(safe-area-inset-top, 0px)) !important;
   }

@@ -107,7 +107,7 @@ export function BottomNav() {
   return (
     <>
       <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
-        <div className="flex items-center justify-around px-2 pt-2 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))]">
+        <div className="flex items-center justify-around px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;
             const isCenter = id === "update";
@@ -124,7 +124,7 @@ export function BottomNav() {
               >
                 {isCenter ? (
                   <div
-                    className="flex items-center justify-center size-8 -mt-1 rounded-2xl text-white shadow-lg shadow-primary/30"
+                    className="flex items-center justify-center size-8 -mt-1 rounded-xl text-white shadow-lg shadow-primary/30"
                     style={{ backgroundColor: MAIN_PALETTE[0] }}
                   >
                     <Icon className="size-5" />
