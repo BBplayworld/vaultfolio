@@ -70,6 +70,10 @@ export function BottomNav() {
     assetData.loans.length > 0;
 
   const handleTap = (id: string) => {
+    // 전 탭 햅틱 (안드로이드만 동작 — iOS는 Web Vibration 미지원으로 no-op)
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(8);
+    }
     switch (id) {
       case "home":
         navigate({ type: "home" });
@@ -103,7 +107,7 @@ export function BottomNav() {
   return (
     <>
       <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
-        <div className="flex items-center justify-around px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-around px-2 pt-2 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))]">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;
             const isCenter = id === "update";
@@ -114,22 +118,29 @@ export function BottomNav() {
                 key={id}
                 type="button"
                 onClick={() => handleTap(id)}
-                className="flex flex-col items-center justify-center gap-0.5 min-w-[3.5rem] py-1 transition-colors"
+                className="flex flex-col items-center justify-center gap-0.5 min-w-[3.25rem] min-h-[44px] py-1.5 select-none transition-transform duration-100 active:scale-95 [-webkit-tap-highlight-color:transparent]"
+                style={{ touchAction: "manipulation" }}
                 aria-label={label}
               >
                 {isCenter ? (
                   <div
-                    className="flex items-center justify-center size-8 rounded-full text-white"
+                    className="flex items-center justify-center size-8 -mt-1 rounded-2xl text-white shadow-lg shadow-primary/30"
                     style={{ backgroundColor: MAIN_PALETTE[0] }}
                   >
                     <Icon className="size-5" />
                   </div>
                 ) : (
-                  <Icon
-                    className="size-5"
-                    style={isActive ? { color: MAIN_PALETTE[0] } : undefined}
-                    strokeWidth={isActive ? 2.5 : 1.5}
-                  />
+                  <span
+                    className={`flex items-center justify-center rounded-full px-3 py-1 transition-colors ${
+                      isActive && !isAction ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <Icon
+                      className="size-5 transition-colors"
+                      style={isActive ? { color: MAIN_PALETTE[0] } : undefined}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </span>
                 )}
                 <span
                   className={`text-[10px] leading-tight ${
