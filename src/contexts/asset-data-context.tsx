@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import { updateThemeMode } from "@/lib/theme-utils";
 import { setValueToCookie } from "@/server/server-actions";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
-import { pwaDebugLog } from "@/lib/pwa-debug"; // [임시 진단] PWA 빈 자산 원인 판별
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
 let lastToastAt = 0;
@@ -665,34 +664,28 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 공유 토큰 처리 공통 함수: 토큰 해소 → 파싱 → PIN/데이터/실패 분기
   const processShareToken = useCallback(async (rawTokenStr: string) => {
     setIsSharePending(true);
-    pwaDebugLog("process", `진입 raw=${rawTokenStr.slice(0, 24)}…`);
     // URLSearchParams는 '+'를 공백으로 변환하므로 복구 후 Short URL 해소
     const rawToken = rawTokenStr.replace(/ /g, "+");
     const shareTokenRes = await resolveShareToken(rawToken);
 
     if (!shareTokenRes) {
-      pwaDebugLog("process", "resolveShareToken=null → invalid-access");
       window.location.replace("/invalid-access");
       return;
     }
-    pwaDebugLog("process", `resolve OK token=${shareTokenRes.token.slice(0, 8)} localKey=${shareTokenRes.localKey ?? "none"}`);
 
     const result = parseShareToken(shareTokenRes.token, undefined, shareTokenRes.localKey);
 
     if (result && "pinRequired" in result) {
-      pwaDebugLog("process", "parse=pinRequired → PIN 프롬프트 표시");
       setPendingToken(shareTokenRes);
       setShowPinPrompt(true);
       return;
     }
 
     if (result && "data" in result) {
-      pwaDebugLog("process", "parse=data(무PIN) → 즉시 적용");
       applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
-      pwaDebugLog("process", "parse=실패 → invalid-access");
       window.location.replace("/invalid-access");
     }
   }, [applySharedData]);
@@ -718,10 +711,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    pwaDebugLog("pin", "PIN 확인 시도");
     const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
-      pwaDebugLog("pin", "PIN 성공 → 데이터 적용");
       applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
       setShowPinPrompt(false);
@@ -730,17 +721,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } else if (pendingToken.token.startsWith("v72Z")) {
       // v72Z: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
-      pwaDebugLog("pin", "v72Z 실패(localKey 손상 추정) → invalid-access");
       window.location.replace("/invalid-access");
     } else {
-      pwaDebugLog("pin", "PIN 불일치 → 재입력");
       notify.error(MSG.PIN_MISMATCH);
       setInputPin("");
     }
   }, [pendingToken, inputPin, applySharedData]);
 
   const handlePinCancel = useCallback(() => {
-    pwaDebugLog("pin", "PIN 취소(handlePinCancel) → 빈/로컬 데이터로 진입");
     setShowPinPrompt(false);
     setPendingToken(null);
     setInputPin("");
@@ -755,13 +743,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - 마운트 즉시: localStorage 환율을 state에 반영 (플래시 방지)
   // - 이후: 진입 경로별 분기 후 initAndSync 실행
   useEffect(() => {
-    // [임시 진단] replaceState가 해시를 지우기 전에 진입 URL·standalone 신호를 먼저 기록 → (b)공유URL 캡처 여부 판별
-    {
-      const dm = window.matchMedia("(display-mode: standalone)").matches;
-      const navStandalone = (window.navigator as { standalone?: boolean }).standalone === true;
-      pwaDebugLog("launch", `standalone(dm=${dm},nav=${navStandalone}) href=${window.location.href}`);
-      pwaDebugLog("launch", `hash=${window.location.hash || "(없음)"} search=${window.location.search || "(없음)"}`);
-    }
     migrateStorageKeys();
     prunePeriodProfitCache(); // 옛 기간별 수익 캐시 키 정리 (현재 유효 토큰만 유지)
     // 마운트 즉시: localStorage 환율을 state에 반영
@@ -813,7 +794,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           const searchParams = new URLSearchParams(window.location.search);
           const sharedUrl = searchParams.get("url") || searchParams.get("text") || "";
           if (sharedUrl) {
-            pwaDebugLog("share-target", `?url/?text 수신 → 해시 복원 시도: ${sharedUrl.slice(0, 40)}…`);
             const hashIdx = sharedUrl.indexOf("#");
             if (hashIdx >= 0) {
               window.location.hash = sharedUrl.substring(hashIdx);
@@ -826,12 +806,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
       if (!shareTokenRaw) {
         // 케이스 1: 공유 토큰 없음 (일반 진입)
-        pwaDebugLog("branch", "share 토큰 없음 → 일반 진입(로컬 데이터, 빈 자산 가능)");
         await initAndSync(getAssetData());
         return;
       }
       // 케이스 2~5: 공유 토큰 처리
-      pwaDebugLog("branch", "share 토큰 있음 → processShareToken");
       await processShareToken(shareTokenRaw);
     })();
 

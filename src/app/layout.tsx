@@ -9,7 +9,6 @@ import { APP_CONFIG } from "@/config/app";
 import { getPreference } from "@/server/server-actions";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
-import { PwaDebugOverlay } from "@/app/(main)/_components/pwa/pwa-debug-overlay"; // [임시 진단] 전 경로 노출
 
 import "./globals.css";
 
@@ -129,7 +128,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${inter.className} min-h-screen antialiased`}>
         <PreferencesStoreProvider themeMode={themeMode}>
           {children}
-          <PwaDebugOverlay />
           <Toaster />
           <script
             dangerouslySetInnerHTML={{

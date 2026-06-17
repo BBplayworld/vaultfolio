@@ -5,7 +5,6 @@ import { ShieldCheck, AlertTriangle } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { MAIN_PALETTE } from "@/config/theme";
-import { pwaDebugLog } from "@/lib/pwa-debug"; // [임시 진단] PWA 빈 자산 원인 판별
 
 const AUTH_ENABLED_KEY = "secretasset_pwa_auth_enabled";
 const AUTH_PIN_HASH_KEY = "secretasset_pwa_auth_pin_hash";
@@ -64,9 +63,7 @@ export function PwaLockScreen() {
     const authEnabled = isPwaAuthEnabled();
     const alreadyAuth = sessionStorage.getItem(SESSION_AUTH_KEY) === "true";
 
-    pwaDebugLog("lock", `standalone=${standalone} authEnabled=${authEnabled} alreadyAuth=${alreadyAuth}`);
     if (standalone && authEnabled && !alreadyAuth) {
-      pwaDebugLog("lock", "잠금 화면 표시(공유 PIN 프롬프트보다 우선 가로챔)");
       setLocked(true);
     }
   }, []);

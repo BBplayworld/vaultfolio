@@ -58,7 +58,7 @@ function ActivityView({ tab }: { tab: ActivityTab }) {
 }
 
 export function AssetPageTabs() {
-  const { view, navigate } = useAssetNavigation();
+  const { view, navigate, slideDir } = useAssetNavigation();
 
   // 기존 코드와의 호환: navigate-to-tab CustomEvent 수신해 detail로 진입
   useEffect(() => {
@@ -81,9 +81,12 @@ export function AssetPageTabs() {
       </div>
 
       {/* key 변경 시 재마운트되며 fade+slide-in 애니메이션 (토스 스타일 미세 전환) */}
+      {/* 1차 메뉴 좌우 이동 시 방향에 맞춘 슬라이드, 그 외엔 기본 하단 슬라이드 */}
       <div
         key={view.type === "home" || view.type === "more" || view.type === "settings" ? view.type : `${view.type}/${view.tab}`}
-        className="animate-in fade-in slide-in-from-bottom-1 duration-200"
+        className={`animate-in fade-in duration-200 ${
+          slideDir === "right" ? "slide-in-from-right-4" : slideDir === "left" ? "slide-in-from-left-4" : "slide-in-from-bottom-1"
+        }`}
       >
         {view.type === "home" && <HomeView />}
         {view.type === "more" && <ToolMenuPage />}

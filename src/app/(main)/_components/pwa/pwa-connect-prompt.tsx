@@ -9,13 +9,15 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MAIN_PALETTE } from "@/config/theme";
+import { SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
 
 const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
 
 /**
  * PWA 첫 실행 연결 화면 — standalone + 자산 없음일 때만 표시.
- * iOS는 홈 화면 추가 시 URL 해시가 제거되므로, 웹에서 자동 복사한 '연결 코드(s:KEY_LOCALKEY)'를
- * 붙여넣어 서버에서 자산을 가져온다. 가져오기 후 PIN 프롬프트(Provider 내부)가 자동 표시된다.
+ * iOS는 홈 화면 추가 시 URL 해시가 제거되므로, 웹에서 자동 복사한 코드를 붙여넣어 연동한다.
+ *  - sync:<assetId>  → 동기화 코드. #asset= 해시 설정 → CloudSyncConnectDialog(금고 암호)로 pull.
+ *  - s:KEY_LOCALKEY → 연결 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
  * z-40: PIN 다이얼로그(z-50)·잠금 화면(z-100)보다 아래에 위치.
  */
 export function PwaConnectPrompt() {
@@ -42,7 +44,7 @@ export function PwaConnectPrompt() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) { setCode(text.trim()); toast.success("연결 코드를 붙여넣었습니다."); }
+      if (text) { setCode(text.trim()); toast.success("코드를 붙여넣었습니다."); }
       else toast.error("클립보드가 비어 있습니다. 코드를 직접 입력해주세요.");
     } catch {
       toast.error("붙여넣기 권한이 없습니다. 코드를 직접 입력해주세요.");
@@ -51,8 +53,16 @@ export function PwaConnectPrompt() {
 
   const handleImport = async () => {
     const trimmed = code.trim();
-    if (!trimmed) { toast.error("연결 코드를 입력해주세요."); return; }
-    // 가져오기 → PIN 필요 시 Provider의 PIN 프롬프트가 자동 표시됨
+    if (!trimmed) { toast.error("코드를 입력해주세요."); return; }
+    // 동기화 코드(sync:) → #asset= 해시 설정 → CloudSyncProvider가 감지해 금고 암호 모달 표시
+    if (trimmed.startsWith("sync:")) {
+      const assetId = trimmed.slice(5);
+      if (!assetId) { toast.error("동기화 코드가 올바르지 않습니다."); return; }
+      handleSkip(); // 본 화면 dismiss → 금고 암호 모달 노출
+      window.location.hash = `${SYNC_HASH_PARAM}=${assetId}`;
+      return;
+    }
+    // 연결 코드(s:) → 가져오기. PIN 필요 시 Provider의 PIN 프롬프트가 자동 표시됨
     await importSharedByCode(trimmed);
   };
 
@@ -72,7 +82,7 @@ export function PwaConnectPrompt() {
         </div>
         <h1 className="text-lg font-bold">웹에서 쓰던 자산이 있나요?</h1>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-          웹에서 <span className="font-semibold text-foreground">앱 설치</span> 시 복사된 연결 코드를 붙여넣으면 자산을 그대로 가져옵니다.
+          웹에서 <span className="font-semibold text-foreground">앱 설치</span> 시 복사된 <span className="font-semibold text-foreground">동기화 코드·연결 코드</span>를 붙여넣으면 자산을 그대로 가져옵니다.
         </p>
       </div>
 
@@ -84,12 +94,12 @@ export function PwaConnectPrompt() {
           disabled={isSharePending}
           type="button"
         >
-          <ClipboardPaste className="mr-2 size-4" /> 연결 코드 붙여넣기
+          <ClipboardPaste className="mr-2 size-4" /> 코드 붙여넣기
         </Button>
         <Input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="또는 코드 직접 입력 (s:...)"
+          placeholder="또는 코드 직접 입력 (sync: 또는 s:)"
           className="text-center font-mono text-sm"
           onKeyDown={(e) => { if (e.key === "Enter") void handleImport(); }}
         />

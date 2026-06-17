@@ -15,6 +15,13 @@ export type AssetView =
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "cash", "loans"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend"];
 
+// 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
+const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
+type MainViewType = typeof PAGE_ORDER[number];
+// 슬라이드 전환 방향: "right"=오른쪽에서 진입(다음 메뉴), "left"=왼쪽에서 진입(이전 메뉴)
+export type SlideDir = "left" | "right" | null;
+const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" ? "more" : t);
+
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");
   if (!clean || clean === "home") return { type: "home" };
@@ -59,6 +66,7 @@ type NavCtx = {
   view: AssetView;
   navigate: (v: AssetView) => void;
   back: () => void;
+  slideDir: SlideDir;
 };
 
 const NavigationContext = createContext<NavCtx | null>(null);
@@ -116,17 +124,32 @@ function shouldIgnoreSwipe(element: HTMLElement | null): boolean {
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<AssetView>({ type: "home" });
+  const [slideDir, setSlideDir] = useState<SlideDir>(null);
 
+  const viewRef = useRef<AssetView>(view); // navigate에서 stale 없이 직전 view 참조
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const startTimeRef = useRef(0);
   const ignoreSwipeRef = useRef(false);
 
+  // 1차 메뉴 간 이동 방향 계산 (그 외엔 null → 기본 전환)
+  const computeSlideDir = (from: AssetView, to: AssetView): SlideDir => {
+    const pi = PAGE_ORDER.indexOf(mainTypeOf(from.type));
+    const ni = PAGE_ORDER.indexOf(mainTypeOf(to.type));
+    if (pi < 0 || ni < 0 || pi === ni) return null;
+    return ni > pi ? "right" : "left";
+  };
+
   // 초기 hash 1회 동기화 (SSR 안전)
   useEffect(() => {
-    setView(parseHash(window.location.hash));
+    const initial = parseHash(window.location.hash);
+    viewRef.current = initial;
+    setView(initial);
     const onPop = () => {
-      setView(parseHash(window.location.hash));
+      const next = parseHash(window.location.hash);
+      setSlideDir(computeSlideDir(viewRef.current, next));
+      viewRef.current = next;
+      setView(next);
       scrollPastHeader();
     };
     window.addEventListener("popstate", onPop);
@@ -143,6 +166,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
       navigator.vibrate(8);
     }
+    setSlideDir(computeSlideDir(viewRef.current, v));
+    viewRef.current = v;
     setView(v);
     // 페이지 이동 시 항상 최상단
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -183,13 +208,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         Math.abs(deltaX) > 120 &&
         Math.abs(deltaX) > Math.abs(deltaY) * 2
       ) {
-        const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
-        type MainViewType = typeof PAGE_ORDER[number];
+        const currentType = mainTypeOf(view.type);
+        if (!PAGE_ORDER.includes(currentType)) return;
 
-        const currentType = view.type === "settings" ? "more" : view.type;
-        if (!PAGE_ORDER.includes(currentType as any)) return;
-
-        const currentIndex = PAGE_ORDER.indexOf(currentType as MainViewType);
+        const currentIndex = PAGE_ORDER.indexOf(currentType);
 
         if (deltaX > 0) {
           // LtoR swipe: 하단 NAV 기준 왼쪽 메뉴 이동 (인덱스 감소)
@@ -262,7 +284,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   }, [navigate, view]);
 
   return (
-    <NavigationContext.Provider value={{ view, navigate, back }}>
+    <NavigationContext.Provider value={{ view, navigate, back, slideDir }}>
       {children}
     </NavigationContext.Provider>
   );

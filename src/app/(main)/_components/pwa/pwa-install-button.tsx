@@ -6,6 +6,8 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE } from "@/config/theme";
 import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { getAssetId } from "@/lib/cloud-sync/sync-state";
+import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
 import { getProfitBasis } from "@/lib/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
@@ -62,6 +64,12 @@ export function PwaInstallButton() {
     assetData.cash.length > 0 ||
     assetData.loans.length > 0;
 
+  // 클라우드 동기화 사용 기기 → PIN·공유 토큰 없이 assetId 포인터(sync:)로 연동.
+  // 새 기기에서 [동기화 코드 + 금고 암호]만으로 자산 pull + 동기화 armed가 동시에 완료된다.
+  const syncAssetId = mounted && isCloudSyncEnabled() ? getAssetId() : null;
+  const isSyncMode = !!syncAssetId;
+  const codeLabel = isSyncMode ? "동기화 코드" : "연결 코드"; // 화면 표시 명칭(데이터 성격이 달라 구분)
+
   const nickname = (() => {
     try { return localStorage.getItem(STORAGE_KEYS.nickname) || ""; } catch { return ""; }
   })();
@@ -102,9 +110,22 @@ export function PwaInstallButton() {
   // "설치하기" 클릭 시점엔 사용자 제스처 안에서 await 없이 prompt()만 호출되게 한다.
   // (비-iOS · 자산 보유 시에만)
   useEffect(() => {
-    if (!showDialog || isIOS || !hasAssets) return;
-    if (pin.length !== 4) { setReady(false); return; }
+    if (!showDialog || isIOS) return;
     let cancelled = false;
+    // 동기화 모드: PIN 없이 즉시 #asset= start_url로 준비 (Chrome PWA는 해시 유지)
+    if (isSyncMode && syncAssetId) {
+      setPreparing(true);
+      setReady(false);
+      (async () => {
+        const ok = await prepareInstall(`/#${SYNC_HASH_PARAM}=${syncAssetId}&theme=${themeMode}`);
+        if (cancelled) return;
+        setReady(ok);
+        setPreparing(false);
+      })();
+      return () => { cancelled = true; };
+    }
+    if (!hasAssets) return;
+    if (pin.length !== 4) { setReady(false); return; }
     setPreparing(true);
     setReady(false);
     (async () => {
@@ -117,35 +138,37 @@ export function PwaInstallButton() {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDialog, pin, isIOS, hasAssets]);
+  }, [showDialog, pin, isIOS, hasAssets, isSyncMode, syncAssetId]);
 
   useEffect(() => { setMounted(true); }, []);
 
   if (!mounted || isStandalone) return null;
 
   const handleInstall = async () => {
-    if (pin.length !== 4) {
+    if (!isSyncMode && pin.length !== 4) {
       toast.error("PIN 번호 4자리를 입력해주세요.");
       return;
     }
 
     if (isIOS) {
-      // iOS는 설치 API가 없고, '홈 화면 추가' 시 URL 해시(#share)가 제거된다.
-      // → 데이터는 서버(/api/share)에 올리고, 짧은 연결 코드를 클립보드에 자동 복사해
-      //   앱 첫 실행 시 사용자가 붙여넣어 가져오도록 안내한다.
+      // iOS는 설치 API가 없고, '홈 화면 추가' 시 URL 해시가 제거된다.
+      // → 연결 코드를 클립보드에 자동 복사해 앱 첫 실행 시 붙여넣게 한다.
+      //   동기화 모드: sync:<assetId> 포인터(서버 업로드 불필요). 그 외: 공유 토큰 s: 코드.
       setLoading(true);
       try {
-        const artifacts = await generateShareArtifacts();
-        if (artifacts) {
-          setShareCode(artifacts.code);
-          try {
-            await navigator.clipboard.writeText(artifacts.code);
-          } catch {
-            // 복사 실패해도 가이드 카드에 코드를 노출하므로 수동 복사 가능
-          }
+        if (isSyncMode && syncAssetId) {
+          const code = `sync:${syncAssetId}`;
+          setShareCode(code);
+          try { await navigator.clipboard.writeText(code); } catch { /* 가이드 카드에 노출되므로 수동 복사 가능 */ }
         } else {
-          setShareCode(null);
-          toast.error("연결 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          const artifacts = await generateShareArtifacts();
+          if (artifacts) {
+            setShareCode(artifacts.code);
+            try { await navigator.clipboard.writeText(artifacts.code); } catch { /* 수동 복사 가능 */ }
+          } else {
+            setShareCode(null);
+            toast.error("연결 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          }
         }
         setIosStep(true);
       } catch (err) {
@@ -167,7 +190,11 @@ export function PwaInstallButton() {
     try {
       const success = await installPWA();
       if (success) {
-        toast.success("앱이 설치되었습니다! PWA에서 PIN을 입력하면 데이터가 연동됩니다.");
+        toast.success(
+          isSyncMode
+            ? "앱이 설치되었습니다! 앱을 열어 금고 암호를 입력하면 동기화가 이어집니다."
+            : "앱이 설치되었습니다! PWA에서 PIN을 입력하면 데이터가 연동됩니다.",
+        );
         setShowDialog(false);
       }
     } catch {
@@ -233,7 +260,10 @@ export function PwaInstallButton() {
       return;
     }
     if (isInstallable || isIOS) {
-      if (isIOS && !hasAssets) {
+      if (isSyncMode) {
+        // 동기화 기기: PIN 없이 연동 다이얼로그 (자산 유무 무관)
+        openDialog();
+      } else if (isIOS && !hasAssets) {
         // iOS 빈 상태: 데이터 준비 없이 곧바로 가이드 표시 (연결 코드 없음)
         setPin("");
         setShareCode(null);
@@ -283,9 +313,15 @@ export function PwaInstallButton() {
               <DialogDescription asChild>
                 <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed mt-1">
                   <p className="text-foreground font-semibold">안전한 자산 연동과 브라우저 세션 끊김으로 인한 데이터 유실을 막기 위해 앱으로 설치해야 합니다.</p>
-                  <p className="text-sm">
-                    설정할 PIN으로 자산이 로컬 암호화되며, 설치 완료 후 앱을 열어 동일한 PIN을 입력하면 즉시 데이터가 복원됩니다.
-                  </p>
+                  {isSyncMode ? (
+                    <p className="text-sm">
+                      이 기기는 <span className="font-semibold text-foreground">클라우드 동기화 중</span>입니다. 설치 후 앱을 열어 <span className="font-semibold text-foreground">금고 암호</span>만 입력하면 자산이 복원되고 동기화가 이어집니다. (PIN 불필요)
+                    </p>
+                  ) : (
+                    <p className="text-sm">
+                      설정할 PIN으로 자산이 로컬 암호화되며, 설치 완료 후 앱을 열어 동일한 PIN을 입력하면 즉시 데이터가 복원됩니다.
+                    </p>
+                  )}
                 </div>
               </DialogDescription>
             )}
@@ -351,7 +387,7 @@ export function PwaInstallButton() {
                     <div className="flex items-center text-primary/50 font-bold">→</div>
                     <div className="flex-1 rounded-lg bg-background/60 px-2 py-2">
                       <p className="text-xs font-bold text-primary">STEP 2</p>
-                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">앱에서 연결 코드 붙여넣기</p>
+                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">앱에서 {codeLabel} 붙여넣기</p>
                     </div>
                   </div>
                 )}
@@ -441,11 +477,11 @@ export function PwaInstallButton() {
                   <div className="flex flex-col gap-2.5 rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5">
                     <div className="flex items-center gap-2">
                       <span className="shrink-0 size-5.5 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</span>
-                      <p className="font-semibold text-sm text-foreground">앱을 열고 연결 코드 붙여넣기</p>
+                      <p className="font-semibold text-sm text-foreground">앱을 열고 {codeLabel} 붙여넣기</p>
                     </div>
                     <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       <CheckCircle2 className="size-3.5 shrink-0" />
-                      연결 코드가 클립보드에 복사되었습니다.
+                      {codeLabel}가 클립보드에 복사되었습니다.
                     </div>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 truncate rounded-lg bg-muted/60 px-3 py-2 text-xs font-mono text-foreground border">{shareCode}</code>
@@ -455,7 +491,7 @@ export function PwaInstallButton() {
                         type="button"
                         className="h-9 px-3 shrink-0"
                         onClick={async () => {
-                          try { await navigator.clipboard.writeText(shareCode); toast.success("연결 코드를 복사했습니다."); }
+                          try { await navigator.clipboard.writeText(shareCode); toast.success(`${codeLabel}를 복사했습니다.`); }
                           catch { toast.error("복사에 실패했습니다. 코드를 길게 눌러 복사해주세요."); }
                         }}
                       >
@@ -463,10 +499,22 @@ export function PwaInstallButton() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      홈 화면에 추가된 <span className="font-semibold text-foreground">시크릿에셋 앱을 처음 열면</span> 연결 화면이 나옵니다. <span className="font-semibold text-foreground">붙여넣기</span> 후 설치 시 정한 <span className="font-semibold text-foreground">PIN 4자리</span>를 입력하면 자산이 복원됩니다.
+                      홈 화면에 추가된 <span className="font-semibold text-foreground">시크릿에셋 앱을 처음 열면</span> 연결 화면이 나옵니다. <span className="font-semibold text-foreground">붙여넣기</span> 후 {isSyncMode ? <><span className="font-semibold text-foreground">금고 암호</span>를 입력하면 자산이 복원되고 동기화가 이어집니다.</> : <><span className="font-semibold text-foreground">PIN 4자리</span>를 입력하면 자산이 복원됩니다.</>}
                     </p>
                   </div>
                 )}
+              </div>
+            ) : isSyncMode ? (
+              /* 동기화 기기: PIN 입력 없이 안내만 — 새 기기에서 금고 암호로 복원 */
+              <div className="flex flex-col items-center justify-center space-y-4 py-6">
+                <div className="flex items-center justify-center size-14 rounded-2xl text-white" style={{ backgroundColor: MAIN_PALETTE[0] }}>
+                  <CheckCircle2 className="size-7" />
+                </div>
+                <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-xs">
+                  클라우드 동기화 중인 기기입니다.<br />
+                  아래 <span className="font-semibold text-foreground">설치하기</span>를 누르면 바로 설치되고,<br />
+                  설치된 앱을 열어 <span className="font-semibold text-foreground">금고 암호</span>를 입력하면 자산이 복원됩니다.
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center space-y-4 py-4">
@@ -501,7 +549,7 @@ export function PwaInstallButton() {
                 <Button
                   variant="brand"
                   onClick={handleInstall}
-                  disabled={loading || pin.length !== 4 || (!isIOS && (preparing || !ready))}
+                  disabled={loading || (!isSyncMode && pin.length !== 4) || (!isIOS && (preparing || !ready))}
                   type="button"
                   className="text-sm h-10 px-5 font-semibold text-white"
                 >
