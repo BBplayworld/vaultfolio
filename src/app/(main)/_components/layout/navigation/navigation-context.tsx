@@ -200,14 +200,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const deltaX = touch.clientX - startXRef.current;
       const deltaY = touch.clientY - startYRef.current;
       const duration = Date.now() - startTimeRef.current;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
 
-      // 긴 터치 (긴 수평 스와이프) 조건 검사
-      if (
-        duration >= 100 &&
-        duration <= 800 &&
-        Math.abs(deltaX) > 120 &&
-        Math.abs(deltaX) > Math.abs(deltaY) * 2
-      ) {
+      // 수평 스와이프 인식 — 짧은 이동·빠른 플릭도 인식(둔감 개선)
+      const isHorizontal = absX > absY * 1.2;
+      const enoughDistance = absX > 45;
+      const isFlick = duration < 400 && absX > 30; // 빠르고 짧은 플릭
+      if (duration <= 1000 && isHorizontal && (enoughDistance || isFlick)) {
         const currentType = mainTypeOf(view.type);
         if (!PAGE_ORDER.includes(currentType)) return;
 

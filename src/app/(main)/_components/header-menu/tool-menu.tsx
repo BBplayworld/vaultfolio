@@ -293,10 +293,8 @@ export function ToolMenuPage() {
               <Cloud className="size-5 text-primary" />
               자산 공유 · 동기화
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-left">
               자산을 다른 기기로 공유하거나 동기화합니다.
-              <br />
-              지속 자동 동기화는 <strong className="text-primary font-semibold">Plus</strong> 요금제에서 제공됩니다.
             </DialogDescription>
           </DialogHeader>
 
@@ -314,9 +312,6 @@ export function ToolMenuPage() {
                   <Share2 className="size-5 text-primary group-hover:scale-110 transition-transform" />
                   <span className="font-semibold text-foreground">간편 공유</span>
                 </div>
-                <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
-                  무료
-                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 URL로 다른 기기에 <strong className="text-foreground font-semibold">1회 전달</strong>합니다 (PIN 설정 필요).
@@ -365,7 +360,7 @@ export function ToolMenuPage() {
               자산 데이터 공유
             </DialogTitle>
             <DialogDescription asChild>
-              <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="space-y-1 text-sm text-muted-foreground text-left">
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
                 <p className="text-[11px] text-primary">이후 지속적인 자동 동기화가 필요하다면 &apos;클라우드 동기화&apos; 메뉴를 이용해 주세요.</p>
                 <p className="text-xs pt-1">

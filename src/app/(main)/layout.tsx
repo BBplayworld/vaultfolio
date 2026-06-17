@@ -14,6 +14,7 @@ import { CloudSyncConnectDialog } from "./_components/functions/cloud-sync/cloud
 import { BottomNav } from "./_components/pwa/bottom-nav";
 import { PwaLockScreen } from "./_components/pwa/pwa-lock-screen";
 import { PwaConnectPrompt } from "./_components/pwa/pwa-connect-prompt";
+import { AppGuide } from "./_components/header-menu/app-guide";
 
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
@@ -42,6 +43,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                 <BottomNav />
                 <PwaLockScreen />
                 <PwaConnectPrompt />
+                <AppGuide />
               </SidebarInset>
             </SidebarProvider>
           </TutorialStoreProvider>

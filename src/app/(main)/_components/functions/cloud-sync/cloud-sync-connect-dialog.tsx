@@ -46,7 +46,7 @@ export function CloudSyncConnectDialog() {
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="size-5 text-primary" /> 이 기기 연결
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-left">
             금고 암호를 입력하면 클라우드의 자산을 이 기기로 불러오고 자동 동기화를 시작합니다.
           </DialogDescription>
         </DialogHeader>

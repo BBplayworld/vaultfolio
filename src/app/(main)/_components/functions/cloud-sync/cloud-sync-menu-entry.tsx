@@ -85,7 +85,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto touch-pan-y">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Cloud className="size-5 text-primary" /> 클라우드 동기화</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-left">
             새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). 서버는 E2EE 암호문만 보관하므로 금고 암호 없이는 열 수 없습니다.
           </DialogDescription>
         </DialogHeader>
@@ -93,9 +93,6 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* none: 동기화 시작 */}
         {cs.status === "none" && (
           <div className="space-y-3 py-1">
-            <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-[11px] text-muted-foreground">
-              <span className="text-primary font-semibold">Plus 요금제</span> 공식 출시 전 제공되는 <span className="text-foreground font-medium">사전 무료 체험 서비스</span>입니다.
-            </div>
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1.5"><KeyRound className="size-3.5 text-primary" /> 금고 암호</Label>
               <Input

@@ -1,7 +1,6 @@
 import { APP_CONFIG } from "@/config";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldCheck, CloudLightning, EyeOff, Info, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ShieldCheck, CloudLightning, EyeOff, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function AppGuideContent() {
@@ -46,15 +45,12 @@ export function AppGuideContent() {
 }
 
 export function AppGuide() {
-  // 평소에는 숨김. 메뉴-앱가이드 클릭(trigger-restore-guide) 시에만 표시.
-  const [alertDismissed, setAlertDismissed] = useState(true);
-
-  const dismissAlert = () => setAlertDismissed(true);
-  const restoreAlert = () => setAlertDismissed(false);
+  // 평소에는 숨김. 메뉴-앱가이드 클릭(trigger-restore-guide) 시 중앙 모달로 표시.
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const restore = () => restoreAlert();
-    const dismiss = () => setAlertDismissed(true);
+    const restore = () => setOpen(true);
+    const dismiss = () => setOpen(false);
     window.addEventListener("trigger-restore-guide", restore);
     window.addEventListener("trigger-dismiss-guide", dismiss);
     return () => {
@@ -64,29 +60,19 @@ export function AppGuide() {
   }, []);
 
   return (
-    <Alert
-      className="border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 relative p-5 sm:p-6 shadow-md rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300"
-      hidden={alertDismissed}
-    >
-      <Info className="size-5 text-primary mt-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={dismissAlert}
-        className="absolute top-3 right-3 size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
-        aria-label="닫기"
-      >
-        <X className="size-4" />
-      </Button>
-      <AlertTitle className="text-[17px] font-bold text-primary mb-1 pr-8 tracking-tight">
-        {APP_CONFIG.name} 보안 가이드 - 내 자산은 오직 나만 볼 수 있게
-      </AlertTitle>
-      <p className="text-[13px] text-muted-foreground leading-relaxed mb-4">
-        시크릿에셋은 데이터 프라이버시를 최우선으로 생각합니다. E2EE 암호학적 검증 모델이 적용되어 안전합니다.
-      </p>
-      <AlertDescription>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto touch-pan-y">
+        <DialogHeader className="text-left">
+          <DialogTitle className="flex items-center gap-2 text-[17px] font-bold text-primary tracking-tight">
+            <Info className="size-5 shrink-0" />
+            {APP_CONFIG.name} 보안 가이드 - 내 자산은 오직 나만 볼 수 있게
+          </DialogTitle>
+          <DialogDescription className="text-[13px] leading-relaxed text-left">
+            시크릿에셋은 데이터 프라이버시를 최우선으로 생각합니다. E2EE 암호학적 검증 모델이 적용되어 안전합니다.
+          </DialogDescription>
+        </DialogHeader>
         <AppGuideContent />
-      </AlertDescription>
-    </Alert>
+      </DialogContent>
+    </Dialog>
   );
 }
