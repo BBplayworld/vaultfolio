@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, SquarePlus, ExternalLink, Copy, MoreHorizontal } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import type { AssetSnapshots } from "@/types/asset";
-import { pwaDebugLog } from "@/lib/pwa-debug"; // [임시 진단] PWA 빈 자산 원인 판별
 import { PwaInstallGuideDialog } from "./pwa-install-guide-dialog";
 import { IosShareStep, IosChromeShareStep, IosWhaleShareStep, IosAddToHomeStep } from "./pwa-guide-illustrations";
 
@@ -41,7 +40,7 @@ function collectSnapshots(): AssetSnapshots {
 }
 
 export function PwaInstallButton() {
-  const { isInstallable, isIOS, isInApp, isStandalone, prepareInstall, installPWA, removeManifestLink, restoreManifest } = usePWAInstall();
+  const { isInstallable, isIOS, isInApp, isStandalone, prepareInstall, installPWA } = usePWAInstall();
   const { assetData, exchangeRates } = useAssetData();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const [showDialog, setShowDialog] = useState(false);
@@ -54,7 +53,7 @@ export function PwaInstallButton() {
   const [iosStep, setIosStep] = useState(false); // 데이터 준비 후 '홈 화면 추가' 가이드 단계
   const [inAppStep, setInAppStep] = useState(false); // 인앱 브라우저: 외부 브라우저 유도 단계
   const [iosBrowser, setIosBrowser] = useState<"safari" | "chrome" | "whale">("safari"); // iOS 상세 브라우저 선택 가이드 (Rebuild Trigger)
-  const originalUrlRef = useRef<string | null>(null); // 주소창 공유URL 주입 전 원래 URL
+  const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 연결 코드 (자동 복사됨)
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -67,9 +66,9 @@ export function PwaInstallButton() {
     try { return localStorage.getItem(STORAGE_KEYS.nickname) || ""; } catch { return ""; }
   })();
 
-  // 공유 토큰 생성 → 서버 저장 → start_url 구성
-  const generateStartUrl = async (): Promise<string | null> => {
-    if (!hasAssets) return "/";
+  // 공유 토큰 생성 → 서버 저장 → { url(start_url용), code(연결 코드용) } 반환. 자산 없거나 실패 시 null.
+  const generateShareArtifacts = async (): Promise<{ url: string; code: string } | null> => {
+    if (!hasAssets) return null;
 
     const localKey = Math.random().toString(36).substring(2, 14);
     const token = generateShareToken(
@@ -89,7 +88,8 @@ export function PwaInstallButton() {
         localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
       }
       if (json.key) {
-        return `/#share=s:${json.key}_${localKey}&theme=${themeMode}`;
+        const code = `s:${json.key}_${localKey}`;
+        return { url: `/#share=${code}&theme=${themeMode}`, code };
       }
     } catch {
       // fallback: 서버 실패 시 start_url 없이 설치
@@ -108,9 +108,9 @@ export function PwaInstallButton() {
     setPreparing(true);
     setReady(false);
     (async () => {
-      const startUrl = await generateStartUrl();
+      const artifacts = await generateShareArtifacts();
       if (cancelled) return;
-      const ok = startUrl ? await prepareInstall(startUrl) : false;
+      const ok = artifacts ? await prepareInstall(artifacts.url) : false;
       if (cancelled) return;
       setReady(ok);
       setPreparing(false);
@@ -130,38 +130,25 @@ export function PwaInstallButton() {
     }
 
     if (isIOS) {
-      // iOS는 설치 API가 없어 사용자가 직접 Safari 공유 메뉴에서 추가해야 함.
-      // 데이터(start_url)만 manifest에 심어두고 단계별 가이드로 전환한다.
+      // iOS는 설치 API가 없고, '홈 화면 추가' 시 URL 해시(#share)가 제거된다.
+      // → 데이터는 서버(/api/share)에 올리고, 짧은 연결 코드를 클립보드에 자동 복사해
+      //   앱 첫 실행 시 사용자가 붙여넣어 가져오도록 안내한다.
       setLoading(true);
       try {
-        const startUrl = await generateStartUrl();
-        pwaDebugLog("install", `iOS generateStartUrl → ${startUrl ?? "null"}`);
-        if (startUrl) {
-          // iOS는 manifest가 있으면 그 start_url(해시 제거됨)로 PWA를 시작해 #share 토큰이 유실된다.
-          // → manifest 링크를 제거해, iOS가 '주소창 URL(해시 포함)'을 홈 화면 북마크로 캡처하도록 유도.
-          // standalone 표시는 apple-mobile-web-app-capable 메타로 유지됨.
-          removeManifestLink();
-          pwaDebugLog("install", "manifest 링크 제거(iOS 주소창 URL 캡처 유도)");
-          // 공유URL을 주소창에 주입. replaceState는 hashchange를 발생시키지 않으므로
-          // 현재 탭에서 공유 가져오기가 재실행되지 않는다.
-          if (startUrl !== "/") {
-            originalUrlRef.current = window.location.href;
-            // [임시 진단] 주입 성공/실패를 명시적으로 분리 기록 (replaceState 실패 시 가설 b 확정)
-            try {
-              window.history.replaceState(null, "", startUrl);
-              pwaDebugLog("install", `주소창 주입 성공 href=${window.location.href}`);
-            } catch (e) {
-              pwaDebugLog("install", `주소창 주입 실패(replaceState throw): ${String(e)}`);
-            }
-          } else {
-            pwaDebugLog("install", "startUrl='/' → 주입 생략(자산 없음/서버 실패)");
+        const artifacts = await generateShareArtifacts();
+        if (artifacts) {
+          setShareCode(artifacts.code);
+          try {
+            await navigator.clipboard.writeText(artifacts.code);
+          } catch {
+            // 복사 실패해도 가이드 카드에 코드를 노출하므로 수동 복사 가능
           }
         } else {
-          pwaDebugLog("install", "startUrl=null → 주입 안 함(서버 저장 실패 추정)");
+          setShareCode(null);
+          toast.error("연결 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
         setIosStep(true);
       } catch (err) {
-        pwaDebugLog("install", `iOS 데이터 준비 실패(catch): ${String(err)}`);
         console.error("iOS 데이터 준비 실패:", err);
         toast.error("데이터 준비 중 오류가 발생했습니다.");
       } finally {
@@ -208,37 +195,26 @@ export function PwaInstallButton() {
 
   const openDialog = () => {
     setPin("");
+    setShareCode(null);
     setIosStep(false);
     setInAppStep(false);
     setShowDialog(true);
   };
 
-  // 다이얼로그 닫힘: 상태 초기화 + 교체했던 manifest 복원
+  // 다이얼로그 닫힘: 상태 초기화
   const handleDialogChange = (open: boolean) => {
     setShowDialog(open);
     if (!open) {
       setIosStep(false);
       setInAppStep(false);
-      if (isIOS) {
-        // 사용자가 홈 화면 추가를 마칠 충분한 시간을 준 뒤 manifest·주소창을 원복하여,
-        // 이후 현재 탭 새로고침 시 불필요한 공유 가져오기 프롬프트를 막는다.
-        // (제거된 manifest가 너무 일찍 복원되면 iOS가 다시 manifest를 캡처해 해시가 유실되므로 충분히 길게)
-        const prevUrl = originalUrlRef.current;
-        setTimeout(() => {
-          restoreManifest();
-          if (prevUrl) window.history.replaceState(null, "", prevUrl);
-          pwaDebugLog("install", `복원(3분 경과) → manifest·주소창 원복(href=${window.location.href})`);
-          originalUrlRef.current = null;
-        }, 180000);
-      }
     }
   };
 
   // 인앱 브라우저(카카오톡 등): 현재 주소를 복사하고 외부 브라우저 유도 가이드 표시
   const openInAppGuide = async () => {
     try {
-      const startUrl = hasAssets ? await generateStartUrl() : "/";
-      const fullUrl = window.location.origin + (startUrl ?? "/");
+      const artifacts = hasAssets ? await generateShareArtifacts() : null;
+      const fullUrl = window.location.origin + (artifacts?.url ?? "/");
       try {
         await navigator.clipboard.writeText(fullUrl);
       } catch {
@@ -258,8 +234,9 @@ export function PwaInstallButton() {
     }
     if (isInstallable || isIOS) {
       if (isIOS && !hasAssets) {
-        // iOS 빈 상태: 데이터 준비 없이 곧바로 가이드 표시
+        // iOS 빈 상태: 데이터 준비 없이 곧바로 가이드 표시 (연결 코드 없음)
         setPin("");
+        setShareCode(null);
         setIosStep(true);
         setShowDialog(true);
       } else if (hasAssets) {
@@ -364,6 +341,21 @@ export function PwaInstallButton() {
             ) : iosStep ? (
               /* iOS: 브라우저 공유 메뉴에서 직접 추가하도록 단계별 가이드 (브라우저 무관) */
               <div className="flex flex-col gap-4 py-1">
+                {/* 2단계 진행 배너 — 사용자가 해야 할 두 액션을 먼저 명확히 인지 */}
+                {shareCode && (
+                  <div className="flex items-stretch gap-1.5 rounded-xl border border-primary/20 bg-primary/5 p-2 text-center">
+                    <div className="flex-1 rounded-lg bg-background/60 px-2 py-2">
+                      <p className="text-xs font-bold text-primary">STEP 1</p>
+                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">홈 화면에 추가</p>
+                    </div>
+                    <div className="flex items-center text-primary/50 font-bold">→</div>
+                    <div className="flex-1 rounded-lg bg-background/60 px-2 py-2">
+                      <p className="text-xs font-bold text-primary">STEP 2</p>
+                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">앱에서 연결 코드 붙여넣기</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* 브라우저별 선택 칩 */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm text-muted-foreground font-medium">사용 중인 브라우저:</span>
@@ -443,6 +435,38 @@ export function PwaInstallButton() {
                     마지막으로 우측 상단의 <strong className="text-foreground font-semibold">[추가]</strong> 버튼을 누르면 홈 화면에 앱 아이콘이 생성됩니다.
                   </span>
                 </div>
+
+                {/* STEP 2 — 연결 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
+                {shareCode && (
+                  <div className="flex flex-col gap-2.5 rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="shrink-0 size-5.5 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</span>
+                      <p className="font-semibold text-sm text-foreground">앱을 열고 연결 코드 붙여넣기</p>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      연결 코드가 클립보드에 복사되었습니다.
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 truncate rounded-lg bg-muted/60 px-3 py-2 text-xs font-mono text-foreground border">{shareCode}</code>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        className="h-9 px-3 shrink-0"
+                        onClick={async () => {
+                          try { await navigator.clipboard.writeText(shareCode); toast.success("연결 코드를 복사했습니다."); }
+                          catch { toast.error("복사에 실패했습니다. 코드를 길게 눌러 복사해주세요."); }
+                        }}
+                      >
+                        <Copy className="mr-1.5 size-3.5" /> 복사
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      홈 화면에 추가된 <span className="font-semibold text-foreground">시크릿에셋 앱을 처음 열면</span> 연결 화면이 나옵니다. <span className="font-semibold text-foreground">붙여넣기</span> 후 설치 시 정한 <span className="font-semibold text-foreground">PIN 4자리</span>를 입력하면 자산이 복원됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center space-y-4 py-4">

@@ -67,6 +67,8 @@ interface AssetDataContextType {
   syncTodayExchangeRate: () => Promise<void>;
   refreshData: () => void;
   bumpSnapshotVersion: () => void;
+  // 연결 코드(s:KEY_LOCALKEY 또는 원시 토큰) 수동 가져오기 — PWA 첫 실행 연동용
+  importSharedByCode: (code: string) => Promise<void>;
   // 데이터 삭제/불러오기 시 증가. 진행 중인 /api/finance/profit 호출 abort 트리거로 사용
   dataResetVersion: number;
   initAndSync: (data: AssetData) => Promise<void>;
@@ -1233,6 +1235,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         syncTodayExchangeRate,
         refreshData,
         bumpSnapshotVersion,
+        importSharedByCode: processShareToken,
         initAndSync,
         saveData,
         addRealEstate,
