@@ -31,11 +31,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { clearAssetData, clearUserCaches, exportAssetData } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "../pwa/pwa-lock-screen";
 
 export function SettingsPage() {
   const { refreshData, assetData } = useAssetData();
+  const cs = useCloudSync();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
   const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
@@ -85,6 +87,9 @@ export function SettingsPage() {
   };
 
   const handleClear = () => {
+    // 동기화 연결을 먼저 해제(forget) → 빈 자산이 클라우드로 자동 push되어 백업이
+    // 덮어써지는 것을 차단한다. 클라우드 금고 자체는 보존(다른 기기·재연결로 복구 가능).
+    cs.forget();
     const success = clearAssetData();
     if (success) {
       refreshData();
@@ -214,6 +219,7 @@ export function SettingsPage() {
             <AlertDialogTitle>정말 모든 데이터를 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
               이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
+              {cs.status !== "none" && " 클라우드 동기화 연결도 해제됩니다. 클라우드 백업은 보존되어 재연결 시 복구할 수 있습니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
