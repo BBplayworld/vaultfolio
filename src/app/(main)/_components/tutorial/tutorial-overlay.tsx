@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronRight } from "lucide-react";
-import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import { TUTORIAL_STEP_CONFIGS } from "./tutorial-step-config";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 import { MAIN_PALETTE } from "@/config/theme";
-import { AppGuideContent } from "@/app/(main)/_components/header-menu/app-guide";
+
+const TOTAL_STEPS = Object.keys(TUTORIAL_STEP_CONFIGS).length; // 말풍선 "x / N" 표기용
 
 interface TargetRect {
   top: number;
@@ -111,34 +111,6 @@ function SpotlightOverlay({ rect }: { rect: TargetRect; tooltipRect: TargetRect 
 }
 
 // ──────────────────────────────────────────────────────────────
-// Step 0: AppGuide 전체 내용을 튜토리얼 카드로 표시
-// ──────────────────────────────────────────────────────────────
-function Step0Card({ onNext, isStandalone }: { onNext: () => void; isStandalone: boolean }) {
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-      style={{ backgroundColor: OVERLAY_COLOR }}
-    >
-      <div className="bg-background rounded-2xl shadow-2xl max-w-4xl w-full p-5 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 max-h-[150vh] overflow-y-auto">
-        <AppGuideContent />
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <div>&nbsp;</div>
-          <button
-            onClick={onNext}
-            className="flex items-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full transition-opacity hover:opacity-90"
-            style={{ backgroundColor: MAIN_PALETTE[0] }}
-          >
-            {isStandalone ? "확인" : "다음"}
-            {!isStandalone && <ChevronRight className="size-4" />}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
 // Step 1~5: 타겟 하이라이트 + 말풍선
 // ──────────────────────────────────────────────────────────────
 function StepOverlay({
@@ -217,7 +189,7 @@ function StepOverlay({
           </button>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{step} / 5</span>
+          <span className="text-sm text-muted-foreground">{step} / {TOTAL_STEPS}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={onComplete}
@@ -241,31 +213,25 @@ function StepOverlay({
 export function TutorialOverlay({
   isWelcomeGuide,
   isSharePending,
-  step0Mode = null,
 }: {
   isWelcomeGuide: boolean;
   isSharePending: boolean;
-  step0Mode?: "screenshot" | "manual" | "real-estate" | null;
 }) {
   const activeStep = useTutorialStore((s) => s.activeStep);
   const isTutorialFinished = useTutorialStore((s) => s.isTutorialFinished);
-  const completeStep = useTutorialStore((s) => s.completeStep);
-  const skipStep = useTutorialStore((s) => s.skipStep);
   const isWaiting = useTutorialStore((s) => s.isWaiting);
-  const isStandaloneStep0 = useTutorialStore((s) => s.isStandaloneStep0);
-  const closeStandaloneStep0 = useTutorialStore((s) => s.closeStandaloneStep0);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
   const targetAttr =
-    activeStep !== null && activeStep !== 0
+    activeStep !== null
       ? TUTORIAL_STEP_CONFIGS[activeStep].targetAttr
       : null;
 
   // document 캡처 단계 클릭 리스너 — 사용자가 하이라이트된 실제 타겟을 클릭하면 해당 스텝 완료
   useEffect(() => {
-    if (!targetAttr || activeStep === null || activeStep === 0) return;
+    if (!targetAttr || activeStep === null) return;
     const handler = (e: MouseEvent) => {
       const el = document.querySelector(`[data-tutorial="${targetAttr}"]`);
       const path = e.composedPath ? e.composedPath() : [];
@@ -281,33 +247,8 @@ export function TutorialOverlay({
   if (isSharePending) return null;
   if (isTutorialFinished) return null;
   if (activeStep === null) return null;
-
-  // WelcomeGuide에서는 Step 0만 제어 (step 1 이후는 isWelcomeGuide 무관하게 표시)
-  // 단, 메뉴-앱가이드 단독 보기(isStandaloneStep0)는 WelcomeGuide에서도 표시
-  if (isWelcomeGuide && activeStep === 0 && !step0Mode && !isStandaloneStep0) return null;
-
-  // Step 0 — 중앙 카드
-  if (activeStep === 0) {
-    return (
-      <Step0Card
-        isStandalone={isStandaloneStep0}
-        onNext={() => {
-          if (isStandaloneStep0) {
-            closeStandaloneStep0();
-            return;
-          }
-          completeStep(0);
-          if (step0Mode) {
-            if (step0Mode === "real-estate") {
-              dispatchAddRealEstate();
-            } else {
-              dispatchAddStock(step0Mode);
-            }
-          }
-        }}
-      />
-    );
-  }
+  // 빈 자산(웰컴가이드)에서는 자산 페이지 타겟이 없으므로 표시하지 않음
+  if (isWelcomeGuide) return null;
 
   if (!targetAttr) return null;
 

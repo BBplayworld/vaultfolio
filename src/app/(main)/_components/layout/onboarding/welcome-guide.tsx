@@ -15,6 +15,7 @@ import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(m
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
 import { PwaInstallGuideDialog } from "../../pwa/pwa-install-guide-dialog";
+import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 
 // ── 예시 데이터 정적 계산 (컴포넌트 외부)
@@ -71,11 +72,11 @@ export function WelcomeGuide() {
 
   const handleStockTutorial = (mode: "screenshot" | "manual") => {
     setIsStockMenuOpen(false);
-    window.dispatchEvent(new CustomEvent("tutorial-show-step0", { detail: { mode } }));
+    dispatchAddStock(mode);
   };
 
   const handleRealEstateTutorial = () => {
-    window.dispatchEvent(new CustomEvent("tutorial-show-step0", { detail: { mode: "real-estate" } }));
+    dispatchAddRealEstate();
   };
 
   const handleInstallPWA = async () => {

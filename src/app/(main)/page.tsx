@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
 import { AppGuide } from "./_components/header-menu/app-guide";
 import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
@@ -24,8 +24,6 @@ export default function Page() {
   const isMobile = useIsMobile();
   const initTutorial = useTutorialStore((s) => s.initTutorial);
   const completeStep = useTutorialStore((s) => s.completeStep);
-  const showStep0 = useTutorialStore((s) => s.showStep0);
-  const [step0Mode, setStep0Mode] = useState<"screenshot" | "manual" | "real-estate" | null>(null);
 
   const isWelcomeGuide =
     isSharePending ||
@@ -40,16 +38,6 @@ export default function Page() {
     if (!isDataLoaded) return;
     initTutorial();
   }, [isDataLoaded, initTutorial]);
-
-  useEffect(() => {
-    const h = (e: Event) => {
-      const mode = (e as CustomEvent).detail?.mode as "screenshot" | "manual" | "real-estate";
-      setStep0Mode(mode ?? "screenshot");
-      showStep0();
-    };
-    window.addEventListener("tutorial-show-step0", h);
-    return () => window.removeEventListener("tutorial-show-step0", h);
-  }, [showStep0]);
 
   // 커스텀 이벤트 리스너 — 각 컴포넌트에서 completeStep 이벤트를 발생시키면 처리
   useEffect(() => {
@@ -91,7 +79,7 @@ export default function Page() {
           <TradeInput />
         </div>
         <CopyrightFooter />
-        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} step0Mode={step0Mode} />
+        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       </div>
     );
   }
@@ -99,13 +87,14 @@ export default function Page() {
   if (isMobile === undefined) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
-        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} step0Mode={step0Mode} />
+        <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
+      <AppGuide />
       <AssetPageTabs />
       <FloatingAddButton />
       <TradeInput />

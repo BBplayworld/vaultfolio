@@ -29,7 +29,6 @@ import { getProfitBasis } from "@/lib/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
-import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 
 export function ToolMenuPage() {
@@ -254,11 +253,7 @@ export function ToolMenuPage() {
               <span className="font-medium">의견·요청 보내기</span>
             </button>
             <button type="button" className={ROW} onClick={() => {
-              const isWelcomeGuide = isSharePending || !hasAssets;
-              if (!isWelcomeGuide) {
-                window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
-              }
-              tutorialStore.getState().showStep0(true);
+              window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
             }}>
               <Info className="size-5 text-primary shrink-0" />
               <span className="font-medium">앱 가이드 보기</span>

@@ -1,4 +1,4 @@
-import { Database, Sparkles, Activity, List, Camera, Settings, TrendingUp } from "lucide-react";
+import { Activity, List, Camera, Settings, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 
@@ -17,14 +17,6 @@ export interface TutorialStepConfig {
 }
 
 export const TUTORIAL_STEP_CONFIGS: Record<TutorialStep, TutorialStepConfig> = {
-  0: {
-    step: 0,
-    targetAttr: null,
-    title: "Secret Asset에 오신 것을 환영합니다!",
-    description: "",
-    icon: Sparkles,
-    preferPosition: "auto",
-  },
   1: {
     step: 1,
     targetAttr: "tutorial-fab",
@@ -67,25 +59,3 @@ export const TUTORIAL_STEP_CONFIGS: Record<TutorialStep, TutorialStepConfig> = {
     preferPosition: "bottom",
   },
 };
-
-/** Step 0에서 보여줄 AppGuide 콘텐츠 아이템 */
-export const APP_GUIDE_ITEMS = [
-  {
-    icon: Database,
-    title: "영지식(Zero-Knowledge) 이중 보안",
-    description:
-      "데이터는 이 기기 브라우저에만 보관됩니다. '공유 URL 복사' 시에도 랜덤 키(Key)와 사용자 PIN이 완전히 분리되어, 관리자를 포함한 그 누구도 서버 데이터 단독으로는 복호화할 수 없습니다.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI 자산 분석",
-    description:
-      "상단 자산 도구 메뉴에서 Grok·Gemini·GPT에 바로 붙여넣을 수 있는 AI 평가용 프롬프트를 생성할 수 있습니다. 데이터 내보내기·가져오기도 지원합니다.",
-  },
-  {
-    icon: Activity,
-    title: "매일 자동 업데이트",
-    description:
-      "보유 주식 현재가와 환율(USD·JPY)을 매일 최신 정보로 자동 반영합니다.",
-  },
-];

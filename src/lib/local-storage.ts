@@ -32,12 +32,12 @@ const LEGACY_KEYS = {
   financeApiErrorCount: "finance_api_error_count",
 } as const;
 
-// Tutorial status (Step 0~5 done/skipped/pending) — 단일 key·객체 값으로 통합
-export type TutorialStepNum = 0 | 1 | 2 | 3 | 4 | 5;
+// Tutorial status (Step 1~5 done/skipped/pending) — 단일 key·객체 값으로 통합
+export type TutorialStepNum = 1 | 2 | 3 | 4 | 5;
 export type TutorialStepStatus = "pending" | "done" | "skipped";
 export type TutorialStatusMap = Record<TutorialStepNum, TutorialStepStatus>;
 
-const TUTORIAL_DEFAULT: TutorialStatusMap = { 0: "pending", 1: "pending", 2: "pending", 3: "pending", 4: "pending", 5: "pending" };
+const TUTORIAL_DEFAULT: TutorialStatusMap = { 1: "pending", 2: "pending", 3: "pending", 4: "pending", 5: "pending" };
 
 export function readTutorialStatus(): TutorialStatusMap {
   if (typeof window === "undefined") return { ...TUTORIAL_DEFAULT };
@@ -46,7 +46,7 @@ export function readTutorialStatus(): TutorialStatusMap {
     if (!raw) return { ...TUTORIAL_DEFAULT };
     const parsed = JSON.parse(raw) as Partial<Record<string, TutorialStepStatus>>;
     const result: TutorialStatusMap = { ...TUTORIAL_DEFAULT };
-    for (const step of [0, 1, 2, 3, 4, 5] as TutorialStepNum[]) {
+    for (const step of [1, 2, 3, 4, 5] as TutorialStepNum[]) {
       const v = parsed[String(step)];
       if (v === "done" || v === "skipped" || v === "pending") result[step] = v;
     }
@@ -65,7 +65,7 @@ export function writeTutorialStatus(map: TutorialStatusMap): void {
 export function skipAllTutorialSteps(): void {
   if (typeof window === "undefined") return;
   const map = readTutorialStatus();
-  for (const step of [0, 1, 2, 3, 4, 5] as TutorialStepNum[]) {
+  for (const step of [1, 2, 3, 4, 5] as TutorialStepNum[]) {
     if (map[step] !== "done") map[step] = "skipped";
   }
   writeTutorialStatus(map);

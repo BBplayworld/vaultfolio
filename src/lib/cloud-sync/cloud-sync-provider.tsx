@@ -16,6 +16,8 @@ import { toast } from "sonner";
 
 import { useAssetData } from "@/contexts/asset-data-context";
 import { buildExportPayload } from "@/lib/asset-storage";
+import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "./config";
 import { deriveKeys, deriveKeysFromMaster, generateAssetId, type AssetKeys } from "./crypto";
 import { pushAsset, pullAsset, fetchRemoteVersion, type PushResult, type PullResult } from "./sync-client";
@@ -249,6 +251,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (r.status === "error") { keysRef.current = null; return { ok: false, message: r.message }; }
     if (r.status === "empty") { keysRef.current = null; return { ok: false, message: "클라우드에 금고가 없습니다." }; }
     await arm(aid, keys, remember);
+    // 외부 데이터로 연동된 기기는 튜토리얼 전체 스킵 (공유 경로 applySharedData와 동일)
+    skipAllTutorialSteps();
+    tutorialStore.getState().initTutorial();
     refreshData();
     return { ok: true };
   }, [arm, refreshData]);
