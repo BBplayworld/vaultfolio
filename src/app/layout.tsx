@@ -133,9 +133,20 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             dangerouslySetInnerHTML={{
               __html: `
                 if ('serviceWorker' in navigator) {
+                  // 새 SW가 제어를 잡는 순간(=새 버전 활성) 1회 자동 새로고침 → 항상 최신 반영
+                  var __refreshing = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (__refreshing) return;
+                    __refreshing = true;
+                    window.location.reload();
+                  });
                   window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                      console.log('ServiceWorker registration successful');
+                    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) {
+                      reg.update();
+                      // 포그라운드 복귀 시마다 최신 SW 확인
+                      document.addEventListener('visibilitychange', function() {
+                        if (document.visibilityState === 'visible') reg.update();
+                      });
                     }).catch(function(err) {
                       console.error('ServiceWorker registration failed: ', err);
                     });

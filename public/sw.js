@@ -1,4 +1,4 @@
-const CACHE_NAME = "secretasset-cache-v2";
+const CACHE_NAME = "secretasset-cache-v3";
 const PRECACHE_URLS = ["/", "/favicon.ico", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
 // 서비스 워커 설치 및 프리캐시
