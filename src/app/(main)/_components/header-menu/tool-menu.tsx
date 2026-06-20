@@ -288,7 +288,7 @@ export function ToolMenuPage() {
 
       <Dialog open={showShareSyncChooser} onOpenChange={setShowShareSyncChooser}>
         <DialogContent className="sm:max-w-md touch-pan-y">
-          <DialogHeader>
+          <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Cloud className="size-5 text-primary" />
               자산 공유 · 동기화
@@ -354,7 +354,7 @@ export function ToolMenuPage() {
 
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md touch-pan-y">
-          <DialogHeader>
+          <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Share2 className="size-5 text-primary" />
               자산 데이터 공유

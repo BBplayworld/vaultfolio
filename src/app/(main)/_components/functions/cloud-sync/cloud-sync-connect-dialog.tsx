@@ -42,7 +42,7 @@ export function CloudSyncConnectDialog() {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { setPassphrase(""); cs.clearPendingConnect(); } }}>
       <DialogContent className="sm:max-w-md touch-pan-y">
-        <DialogHeader>
+        <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="size-5 text-primary" /> 이 기기 연결
           </DialogTitle>

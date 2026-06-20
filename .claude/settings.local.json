@@ -56,7 +56,23 @@
       "Bash(node -e \"try{console.log\\('sharp:',require.resolve\\('sharp'\\)\\)}catch\\(e\\){console.log\\('no sharp'\\)}\")",
       "PowerShell(Get-ChildItem \"E:\\\\2.project\\\\js\\\\secret-asset\\\\public\\\\icons\\\\\" | Select-Object Name, Length; Write-Output \"---magick---\"; \\(Get-Command magick -ErrorAction SilentlyContinue\\).Source; \\(Get-Command convert -ErrorAction SilentlyContinue\\).Source)",
       "PowerShell(\\(Get-Command node -ErrorAction SilentlyContinue\\).Source; node -v; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\sharp\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\canvas\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\jimp\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\pngjs\"; Test-Path \"E:\\\\2.project\\\\js\\\\secret-asset\\\\node_modules\\\\sharp\\\\package.json\")",
-      "PowerShell(cd \"E:\\\\2.project\\\\js\\\\secret-asset\"; npx tsc --noEmit; Write-Output \"EXIT=$LASTEXITCODE\")"
+      "PowerShell(cd \"E:\\\\2.project\\\\js\\\\secret-asset\"; npx tsc --noEmit; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(\"===\")",
+      "PowerShell(git add \"src/app/\\(main\\)/_components/pwa/pwa-install-button.tsx\" \"src/app/\\(main\\)/_components/pwa/pwa-connect-prompt.tsx\" \"src/app/\\(main\\)/layout.tsx\" \"src/contexts/asset-data-context.tsx\")",
+      "PowerShell(git push origin issue-4.5)",
+      "PowerShell(Remove-Item \"src/lib/pwa-debug.ts\" -Force; Remove-Item \"src/app/\\(main\\)/_components/pwa/pwa-debug-overlay.tsx\" -Force; \"deleted: $\\(\\(-not \\(Test-Path 'src/lib/pwa-debug.ts'\\)\\) -and \\(-not \\(Test-Path 'src/app/\\(main\\)/_components/pwa/pwa-debug-overlay.tsx'\\)\\)\\)\")",
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/\\(main\\)/_components/header-menu/settings-page.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(git add \"src/app/\\(main\\)/_components/header-menu/settings-page.tsx\")",
+      "PowerShell(npx eslint \"src/lib/cloud-sync/cloud-sync-provider.tsx\" \"src/stores/tutorial/tutorial-store.ts\" \"src/lib/local-storage.ts\" \"src/app/\\(main\\)/_components/tutorial/tutorial-step-config.ts\" \"src/app/\\(main\\)/_components/tutorial/tutorial-overlay.tsx\" \"src/app/\\(main\\)/page.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\" \"src/app/\\(main\\)/_components/layout/onboarding/welcome-guide.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(git add \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\" \"src/app/globals.css\" \"src/lib/cloud-sync/cloud-sync-provider.tsx\" \"src/stores/tutorial/tutorial-store.ts\" \"src/lib/local-storage.ts\" \"src/app/\\(main\\)/_components/tutorial/tutorial-step-config.ts\" \"src/app/\\(main\\)/_components/tutorial/tutorial-overlay.tsx\" \"src/app/\\(main\\)/page.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\" \"src/app/\\(main\\)/_components/layout/onboarding/welcome-guide.tsx\")",
+      "PowerShell(git reset HEAD \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\" \"src/app/globals.css\")",
+      "PowerShell(git add \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\" \"src/app/globals.css\")",
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/layout.tsx\" \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(git add \"src/app/layout.tsx\" \"public/sw.js\")",
+      "PowerShell(npx eslint \"src/app/\\(main\\)/_components/header-menu/app-guide.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\" \"src/app/\\(main\\)/page.tsx\" \"src/app/\\(main\\)/layout.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx\" \"src/app/\\(main\\)/_components/views/activity/net-asset-chart.tsx\" \"src/app/\\(main\\)/_components/layout/navigation/navigation-context.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\"; \"eslint exit: $LASTEXITCODE\")"
     ]
   }
 }

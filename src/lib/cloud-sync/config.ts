@@ -2,9 +2,8 @@
  * cloud-sync/config.ts
  * E2EE 클라우드 동기화 — 공용 설정·타입.
  *
- * 공개 무료 서비스: 누구나 금고 생성, syncId+링크로 기기 연결.
  * 인증은 금고암호 파생 Ed25519 서명(서버는 pubKey만 보유, 비밀 전송 0).
- * 로컬 상태는 단일 키 `secretasset_sync`(sync-state.ts). 결제 없음("추후 Plus" 명시).
+ * 로컬 상태는 단일 키 `secretasset_sync`(sync-state.ts).
  */
 
 // 기본 노출. 운영 비상 차단만 `NEXT_PUBLIC_CLOUD_SYNC=off`.

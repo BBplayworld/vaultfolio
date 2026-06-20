@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 더보기 > 클라우드 동기화 진입점 (공개 무료, 결제 없음 — "추후 Plus" 명시).
+ * 더보기 > 클라우드 동기화 진입점.
  * 상태·동기화 로직은 CloudSyncProvider(useCloudSync)에 위임 — 이 컴포넌트는 UI만.
  *
  * 상태별 UI: none(동기화 시작) / locked(금고 암호로 잠금 해제) / armed(링크·QR·공유 + 백업/불러오기).
@@ -83,7 +83,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) resetLocal(); }}>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto touch-pan-y">
-        <DialogHeader>
+        <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2"><Cloud className="size-5 text-primary" /> 클라우드 동기화</DialogTitle>
           <DialogDescription className="text-left">
             새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). 서버는 E2EE 암호문만 보관하므로 금고 암호 없이는 열 수 없습니다.

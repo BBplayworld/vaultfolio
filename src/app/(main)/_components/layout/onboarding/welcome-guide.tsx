@@ -1,20 +1,20 @@
 "use client";
 
 import React from "react";
-import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Globe, Camera, Download, Share, Smartphone } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Camera, Download, Smartphone, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect } from "react";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { toast } from "sonner";
 import { TreemapItem, NetAssetSummaryBox } from "@/app/(main)/_components/views/home/dashboard";
 import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
-import { PwaInstallGuideDialog } from "../../pwa/pwa-install-guide-dialog";
+import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 
@@ -61,14 +61,17 @@ const foreignProfitRate = foreignCost > 0 ? (foreignProfit / foreignCost) * 100 
 export function WelcomeGuide() {
   const [isStockMenuOpen, setIsStockMenuOpen] = useState(false);
   const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
-  const { isInstallable, isIOS, isStandalone, installPWA } = usePWAInstall();
-  const [pwaLoading, setPwaLoading] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
+  const { isStandalone } = usePWAInstall();
+  const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
+  const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '설치 없이 바로 시작' 선택 시에만 자산 등록 노출
 
   useEffect(() => { setMounted(true); }, []);
 
   const canInstallPWA = mounted && !isStandalone;
+  // 모바일 웹(미설치): PWA 설치 우선 — 자산 등록 CTA는 기본 숨김, 선택 시 노출
+  const mobileWeb = mounted && isMobile && !isStandalone;
+  const ctaVisible = !mobileWeb || showAssetCta;
 
   const handleStockTutorial = (mode: "screenshot" | "manual") => {
     setIsStockMenuOpen(false);
@@ -77,24 +80,6 @@ export function WelcomeGuide() {
 
   const handleRealEstateTutorial = () => {
     dispatchAddRealEstate();
-  };
-
-  const handleInstallPWA = async () => {
-    if (isInstallable) {
-      setPwaLoading(true);
-      try {
-        const success = await installPWA();
-        if (success) {
-          toast.success("앱이 설치되었습니다! 설치된 앱에서 자산을 등록해보세요.");
-        }
-      } catch {
-        toast.error("설치 중 오류가 발생했습니다.");
-      } finally {
-        setPwaLoading(false);
-      }
-    } else {
-      setShowGuide(true);
-    }
   };
 
   return (
@@ -133,7 +118,7 @@ export function WelcomeGuide() {
         />
       </div>
 
-      {/* PWA 웹앱 설치 유도 */}
+      {/* PWA 웹앱 설치 유도 — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
       {canInstallPWA && (
         <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4">
           <div className="flex items-center gap-3">
@@ -141,7 +126,7 @@ export function WelcomeGuide() {
               <Smartphone className="size-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold">웹앱으로 설치하세요</h2>
+              <h2 className="text-base font-semibold">{mobileWeb ? "앱으로 설치하고 시작하세요" : "웹앱으로 설치하세요"}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 홈 화면에서 바로 실행 · 네이티브 앱처럼 사용
               </p>
@@ -167,28 +152,20 @@ export function WelcomeGuide() {
               </p>
             </div>
           </div>
-          {isIOS ? (
-            <div className="flex flex-col gap-2">
-              <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground flex items-center gap-1">
-                  <Share className="size-3.5" /> iOS 설치 방법
-                </p>
-                <p>1. Safari 하단의 <span className="font-semibold text-foreground">공유</span> 버튼을 누릅니다.</p>
-                <p>2. <span className="font-semibold text-foreground">홈 화면에 추가</span>를 선택합니다.</p>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="brand"
-              size="lg"
-              className="gap-2 w-full sm:w-auto"
-              onClick={handleInstallPWA}
-              disabled={pwaLoading}
-            >
-              <Download className="size-4" />
-              {pwaLoading ? "설치 중..." : "웹앱 설치하기"}
-            </Button>
-          )}
+          <PwaInstallFlow>
+            {({ onClick, loading }) => (
+              <Button
+                variant="brand"
+                size="lg"
+                className="gap-2 w-full sm:w-auto"
+                onClick={onClick}
+                disabled={loading}
+              >
+                <Download className="size-4" />
+                {loading ? "준비 중..." : "웹앱 설치하기"}
+              </Button>
+            )}
+          </PwaInstallFlow>
         </div>
       )}
 
@@ -263,7 +240,22 @@ export function WelcomeGuide() {
         실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
       </p>
 
+      {/* 모바일 웹: 설치 우선 — 자산 등록 CTA는 기본 숨김, 보조 링크로만 노출 */}
+      {mobileWeb && !showAssetCta && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setShowAssetCta(true)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+          >
+            설치 없이 웹에서 바로 시작
+            <ChevronDown className="size-4" />
+          </button>
+        </div>
+      )}
+
       {/* CTA 섹션 */}
+      {ctaVisible && (
       <div className="rounded-xl border border-border/60 bg-card/80 p-6 space-y-5">
         <div className="text-center space-y-1">
           <h2 className="text-lg font-semibold">
@@ -319,8 +311,7 @@ export function WelcomeGuide() {
         </div>
         <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
       </div>
-
-      <PwaInstallGuideDialog open={showGuide} onOpenChange={setShowGuide} />
+      )}
     </div>
   );
 }

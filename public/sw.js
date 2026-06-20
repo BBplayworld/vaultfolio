@@ -1,4 +1,4 @@
-const CACHE_NAME = "secretasset-cache-v3";
+const CACHE_NAME = "secretasset-cache-v4";
 const PRECACHE_URLS = ["/", "/favicon.ico", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
 // 서비스 워커 설치 및 프리캐시
@@ -31,11 +31,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch 가로채기 (오프라인 캐싱)
+// Fetch 가로채기 — Network-First 전면 (온라인이면 항상 최신 = 신규 웹 접속과 동일)
+// 캐시는 오직 오프라인 폴백 용도로만 사용한다 (SWR/Cache-First 미사용).
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // API 요청이나 핫 리로드(development) 웹소켓 등은 캐시하지 않음
+  // API·데이터·HMR 등은 가로채지 않고 네트워크 직행
   if (
     event.request.method !== "GET" ||
     url.pathname.startsWith("/api/") ||
@@ -45,69 +46,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 1. static 리소스 (JS, CSS, 폰트, 이미지 등) -> Cache First / Stale-While-Revalidate
-  const isStatic =
+  // 불변 해시 자산(_next/static, icons, 폰트): URL이 콘텐츠 해시라 안전 → 브라우저 캐시 활용 가능
+  const isImmutable =
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
-    url.pathname.includes("fonts.gstatic.com") ||
-    url.pathname.includes("fonts.googleapis.com") ||
-    url.pathname.endsWith(".js") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".ico");
+    url.hostname.includes("fonts.gstatic.com") ||
+    url.hostname.includes("fonts.googleapis.com");
 
-  if (isStatic) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // 캐시된 버전을 반환하되, 백그라운드에서 신규 버전을 가져와 캐시를 업데이트함
-          fetch(event.request)
-            .then((networkResponse) => {
-              if (networkResponse.status === 200) {
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-              }
-            })
-            .catch(() => {
-              /* 백그라운드 fetch 에러 무시 */
-            });
-          return cachedResponse;
-        }
+  // 페이지(HTML)·RSC 등 동적 자산: HTTP 캐시까지 무시(no-store)하고 항상 최신
+  const fetchOptions = isImmutable ? undefined : { cache: "no-store" };
 
-        return fetch(event.request).then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
-            return networkResponse;
-          }
+  event.respondWith(
+    fetch(event.request, fetchOptions)
+      .then((networkResponse) => {
+        // 성공 응답은 오프라인 폴백용으로만 캐시 갱신
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return networkResponse;
-        });
-      }),
-    );
-  } else {
-    // 2. 페이지 요청 (e.g. /) -> Network First, Fallback to Cache
-    event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // 네트워크 실패 시 캐시된 페이지 반환 (특히 / 페이지)
-          return caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) return cachedResponse;
-            if (url.pathname === "/") {
-              return caches.match("/");
-            }
-            return caches.match("/"); // 기본값으로 홈 또는 자산 페이지 반환
-          });
-        }),
-    );
-  }
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      })
+      .catch(() =>
+        // 네트워크 실패(오프라인) 시에만 캐시 폴백, 없으면 홈(/)
+        caches.match(event.request).then((cached) => cached || caches.match("/")),
+      ),
+  );
 });

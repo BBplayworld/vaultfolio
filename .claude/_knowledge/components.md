@@ -193,13 +193,15 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 미리보기 데이터: `welcome-preview-data.json`
 - 미리보기 대시보드: 실제 `dashboard.tsx` 컴포넌트를 공통 공유하여 동일 포맷으로 노출하되, 내부의 클릭이나 인터랙션은 차단/방지 처리.
 - `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
+- **모바일 웹 PWA-우선 분기**: `mobileWeb = mounted && useIsMobile() && !isStandalone`. 참이면 PWA 설치 유도를 메인 CTA로 강조, 즉시 자산 등록 CTA는 기본 숨김(`showAssetCta` 토글, "설치 없이 웹에서 바로 시작" 링크로 노출). `ctaVisible = !mobileWeb || showAssetCta`. 데스크톱·standalone은 기존 레이아웃.
+- 설치 버튼은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출 — `PwaInstallGuideDialog` 직접 호출 제거
 
 ### TutorialOverlay (`tutorial/tutorial-overlay.tsx`)
 
-Step 0~5 오버레이. Step 5 내부 sub-step: activity → profit.
+Step 1~5 오버레이(Step 0 제거됨). Step 5 내부 sub-step: activity → profit.
 
-- **Step 0 단독 보기**(`isStandaloneStep0=true`): 메뉴-앱가이드 보기에서 호출. 버튼 "확인"으로 표시, 다음 단계 진행하지 않고 `closeStandaloneStep0()` 호출
-- WelcomeGuide에서는 Step 0이 일반적으로 숨겨지지만, `isStandaloneStep0`일 때는 표시
+- 앱 소개 단독 보기는 별도 `app-guide.tsx`(`AppGuideContent`, `"use client"`) 다이얼로그로 분리 — 튜토리얼 오버레이와 무관
+- 외부 진입(공유/클라우드 동기화)·standalone 시 `skipAllTutorialSteps()`로 전체 자동 스킵. 상태는 `secretasset_tutorial_status` 단일 키
 
 ---
 

@@ -127,20 +127,27 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
-### F-PWA. PWA 설치 및 오프라인 접근성
+### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))
 - ⚙ `manifest.ts` (/manifest.webmanifest) 동적 JSON 응답 및 `share_target` 매핑 설정 정상 동작 확인
 - ⚙ `layout.tsx` `appleWebApp` 메타데이터(`capable: true`, `statusBarStyle: "black-translucent"`) 및 `icons.apple`(`/icons/icon-192x192.png` 180×180) 포함 출력 확인
 - ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
 - ⚙ `usePWAInstall`: `isIOS` = `/iphone|ipad|ipod/` UA 감지(브라우저 무관, Safari 한정 아님). `isInApp` = `/kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/` UA 감지. standalone 제외 처리 확인
+- ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
+- ⚙ iOS step1 SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx))는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 우측 원형 `⋯`→세로 팝업 최상단 `공유`(`IosShareStep`) / Chrome=주소창 우측 `공유`(box-arrow) 직접 탭(`IosChromeShareStep`, 중간 메뉴 없음) / Whale=하단 우측 `≡`→그리드 팝업의 `공유` 타일(`IosWhaleShareStep`). step2(`홈 화면에 추가`)는 3종 공통 `IosAddToHomeStep` 재사용. 다이얼로그 step1 안내 문구도 각 구조와 일치
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
 - 👤 **PC/Android Chrome·Edge**: `beforeinstallprompt` 발생 → 설치 버튼 클릭 → PIN 4자리 입력 → 설치하기 → 네이티브 A2HS 창 열림 확인
-- 👤 **iOS(Safari·크롬·웨일 등)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(공유→홈 화면에 추가→추가) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인
+- 👤 **iOS(Safari·크롬·웨일 등)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(브라우저 칩 Safari/Chrome/Whale별 step1 SVG + 공유→홈 화면에 추가→추가) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인
+- 👤 iOS 가이드 SVG 3종이 실제 스샷과 일치하는지: Safari `⋯`(우측 원형)→공유 최상단 / Chrome 주소창 공유 아이콘 직접 / Whale `≡`→그리드 공유 타일, 칩 문구도 동일
 - 👤 **인앱 브라우저(카카오톡·인스타·페북·라인 등)**: 설치 버튼 클릭 → `inAppStep` 가이드(메뉴→다른 브라우저로 열기→앱 설치) 노출, 현재 URL 클립보드 복사 시도 확인
 - 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `chrome://apps` 클립보드 복사 토스트 + `PwaInstallGuideDialog` 열림. 다이얼로그 제목 "앱 설치가 안 되나요?", PC·Android·iOS 각 탭에 설치 불가 환경(인앱/Firefox) 주의 콜아웃 표시. iOS 탭 라벨 "iOS (Safari·크롬·웨일 등)" 확인
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
-### F-ONBOARD. 튜토리얼·온보딩 ([app-guide.tsx](../../src/app/(main)/asset/_components/header/app-guide.tsx))
+### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
+- 👤 **모바일 웹 PWA 우선 레이아웃**(`useIsMobile() && !isStandalone`): 보안 소개+포트폴리오 미리보기 노출 후 PWA 설치 유도 섹션 강조. "웹앱 설치하기" 버튼이 홈 버튼과 동일한 `PwaInstallFlow` 공용 흐름 호출(iOS는 브라우저 칩+SVG 가이드). 즉시 자산 등록 CTA는 **기본 숨김**, "설치 없이 웹에서 바로 시작" 링크 클릭 시에만 노출(`showAssetCta` 토글)
+- 👤 **데스크톱·standalone(설치된 앱)**: 기존 레이아웃 유지(자산 등록 CTA 항상 노출), 모바일 전용 분기 미적용 확인
+- ⚙ 웰컴가이드는 `PwaInstallGuideDialog` 직접 호출 제거(공용 `PwaInstallFlow`로 대체). 분기 키: `mobileWeb = mounted && isMobile && !isStandalone`, `ctaVisible = !mobileWeb || showAssetCta`
+- ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
 ### F-NOTICE. 공지 시스템
@@ -209,6 +216,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R8 | **캐시 슬롯 전환** | 장중/장외 슬롯 전환 직후 stale 캐시 표시 안 되는지 |
 | R9 | **휴장 폴백 캐시 매핑** | ref-date 매핑은 응답일==요청일 또는 요청일이 비영업일일 때만 저장 — 영업일+장중 미확정에 저장돼 stale 영구 hit 안 되는지 |
 | R10 | **날짜 input 모바일 넘침** | `globals.css` 전역 규칙 유지, 신규 날짜 input이 별도 `max-w` 없이 `w-full`로 컨테이너 내 수렴하는지 |
+| R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존 |
 
 ---
 
@@ -230,4 +238,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-14 · PWA iOS/인앱 브라우저 감지·가이드 개선, PwaInstallGuideDialog 재검토, E2EE 클라우드 동기화(F-CLOUD-SYNC) 신규 섹션 추가_
+_최종 갱신: 2026-06-20 · PWA 설치 흐름 공용화(`PwaInstallFlow` 추출, 홈 버튼↔웰컴가이드 공유), 웰컴가이드 모바일 웹 PWA-우선 레이아웃(자산 CTA 기본 숨김), iOS step1 SVG 실사화(Safari ⋯팝업/Chrome 주소창 공유 직접/Whale ≡그리드), app-guide `"use client"` 수정 — R11 추가_

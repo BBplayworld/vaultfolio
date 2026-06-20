@@ -42,10 +42,12 @@ src/
 │   │   │       ├── header/           # (구 top-nav) top-bar, tool-menu, app-guide, share/
 │   │   │       ├── functions/
 │   │   │       │   └── cloud-sync/   # cloud-sync-menu-entry, cloud-sync-connect-dialog, cloud-sync-provider
-│   │   │       ├── pwa/              # pwa-install-button, pwa-install-guide-dialog
-│   │   │       │   ├── pwa-install-button.tsx   # 설치 버튼 (iOS/인앱/PC 분기 + iosStep/inAppStep 가이드)
-│   │   │       │   └── pwa-install-guide-dialog.tsx  # "앱 설치가 안 되나요?" 3탭 다이얼로그
-│   │   │       └── tutorial/         # tutorial-overlay.tsx (Step 0~5)
+│   │   │       ├── pwa/              # 설치 흐름 공용 + 가이드 SVG
+│   │   │       │   ├── pwa-install-flow.tsx     # 설치 다이얼로그+로직 공용 소스 (홈 버튼·웰컴가이드 공유, render-prop 트리거)
+│   │   │       │   ├── pwa-install-button.tsx   # 다운로드 아이콘 버튼 (PwaInstallFlow 얇은 래퍼)
+│   │   │       │   ├── pwa-install-guide-dialog.tsx  # "앱 설치가 안 되나요?" 3탭 다이얼로그 (고스트/인앱 fallback)
+│   │   │       │   └── pwa-guide-illustrations.tsx  # iOS 설치 step SVG (Safari ⋯팝업/Chrome 주소창 공유/Whale ≡그리드)
+│   │   │       └── tutorial/         # tutorial-overlay.tsx (Step 1~5)
 │   │   └── _components/
 │   │       └── header-menu/          # tool-menu, settings-page, app-guide (더보기 메뉴)
 │   ├── api/

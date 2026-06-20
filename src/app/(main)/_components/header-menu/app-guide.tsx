@@ -1,3 +1,5 @@
+"use client";
+
 import { APP_CONFIG } from "@/config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ShieldCheck, CloudLightning, EyeOff, Info } from "lucide-react";

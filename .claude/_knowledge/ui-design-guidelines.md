@@ -99,8 +99,15 @@ function Hint({ children }: { children: ReactNode }) {
 - [ ] 부수 설명은 아이콘+팝오버(hover+터치)로 접었는가?
 - [ ] 중복/저가치 정보를 덜어냈는가? 고정 메타는 공통 안내로 모았는가?
 - [ ] Hero → 핵심 리스트로 시선이 빠른가? 컨트롤은 노출되어 있는가?
+- [ ] 설명형 다이얼로그의 `DialogHeader`에 `text-left`를 줬는가?(모바일 중앙 정렬 방지)
 
 ---
+
+## 다이얼로그 헤더·안내 정렬
+
+- shadcn `DialogHeader` 기본 클래스가 `text-center sm:text-left`라 **모바일에서 제목·설명이 가운데 정렬**된다. 설명형 다이얼로그(공유·동기화·가이드 등 안내 문장이 긴 팝업)는 가운데 정렬이 가독성을 해치므로 **`<DialogHeader className="text-left">`로 좌측 통일**한다(`DialogTitle`+`DialogDescription` 동시 적용됨).
+- 짧은 확인용 모달(예/아니오 등)은 기본 중앙 허용. QR·아이콘 캡션 등 의도적 중앙 정렬은 유지.
+- 적용 예: `cloud-sync-menu-entry`, `cloud-sync-connect-dialog`, `tool-menu`의 공유·동기화 다이얼로그, `app-guide` 모달.
 
 ## 액션 색상 통일 (버튼·체크박스)
 
