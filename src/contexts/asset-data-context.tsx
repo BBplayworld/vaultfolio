@@ -180,12 +180,13 @@ export function computeNetAsset(
   return { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
 }
 
-// Short URL(s:KEY_LOCALKEY)을 전체 토큰으로 변환하는 순수 유틸
+// Short URL(share:KEY_LOCALKEY, 구 s:)을 전체 토큰으로 변환하는 순수 유틸
 // state·hook 의존성 없음 → 모듈 스코프에 정의
 const resolveShareToken = async (raw: string): Promise<{ token: string; localKey?: string } | null> => {
-  if (!raw.startsWith("s:")) return { token: raw };
+  // raw 토큰(v72Z/v71P/v71N)은 ":" 미포함 → 단축키만 분기
+  if (!raw.startsWith("share:") && !raw.startsWith("s:")) return { token: raw };
 
-  const rawKey = raw.substring(2);
+  const rawKey = raw.slice(raw.indexOf(":") + 1);
   const parts = rawKey.split("_");
   const serverKey = parts[0];
   const localKey = parts[1];

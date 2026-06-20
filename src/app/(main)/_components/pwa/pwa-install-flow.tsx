@@ -119,7 +119,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
         localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
       }
       if (json.key) {
-        const code = `s:${json.key}_${localKey}`;
+        const code = `share:${json.key}_${localKey}`;
         return { url: `/#share=${code}&theme=${themeMode}`, code };
       }
     } catch {

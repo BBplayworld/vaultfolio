@@ -6,8 +6,8 @@
  *
  *  상태: none(금고 미설정) / locked(assetId 있으나 이번 세션 미무장) / armed(키 메모리 보유→자동 동기화)
  *  - 기억된 기기: 로드 시 rememberedMaster unwrap→자동 armed→폴링·자동동기화 즉시 시작.
- *  - 송신: 자산 변경 → 2.5s 디바운스 push(무음). 수신: 20s 폴링 + 포커스 → 원격 최신이면 자동 pull.
- *  - #asset= (신규) 링크 진입 → pendingConnectAssetId(연결 모달 트리거).
+ *  - 송신: 자산·프로필(닉네임) 변경 → 2.5s 디바운스 push(무음). 수신: 20s 폴링 + 포커스 → 원격 최신이면 자동 pull.
+ *  - #sync= (신규, 구 #asset=) 링크 진입 → pendingConnectAssetId(연결 모달 트리거).
  *  - 금고암호는 메모리(ref)에만. remember ON이면 masterBits만 기기키로 암호화 보관.
  */
 
@@ -15,6 +15,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, ty
 import { toast } from "sonner";
 
 import { useAssetData } from "@/contexts/asset-data-context";
+import { NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { buildExportPayload } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
@@ -95,6 +96,15 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingConnectAssetId, setPendingConnectAssetId] = useState<string | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+  // 프로필(닉네임) 변경은 assetData state를 바꾸지 않으므로 별도 tick으로 push 트리거
+  const [changeTick, setChangeTick] = useState(0);
+
+  // 닉네임 변경 이벤트 → tick 증가 → 자동 push 효과 재실행
+  useEffect(() => {
+    const bump = () => setChangeTick(t => t + 1);
+    window.addEventListener(NICKNAME_EVENT, bump);
+    return () => window.removeEventListener(NICKNAME_EVENT, bump);
+  }, []);
 
   // 무장 직후 공통 처리 — 상태 반영 + 동기화 자격(assetId·remember) 영속
   const arm = useCallback(async (assetId: string, keys: AssetKeys, remember: boolean) => {
@@ -135,12 +145,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  // #asset= 링크 진입 감지 → 연결 모달 트리거
+  // #sync= 링크 진입 감지 → 연결 모달 트리거 (구 #asset= 호환)
   useEffect(() => {
     if (!enabled) return;
     const detect = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const aid = hashParams.get(SYNC_HASH_PARAM);
+      const aid = hashParams.get(SYNC_HASH_PARAM) ?? hashParams.get("asset");
       if (aid && aid !== getAssetId()) {
         setPendingConnectAssetId(aid);
         setShowConnectDialog(true);
@@ -197,7 +207,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     return r;
   }, [refreshData, runPushAfterRestoreFix]);
 
-  // 자산 변경 → 무장 시 디바운스 push
+  // 자산·프로필(닉네임) 변경 → 무장 시 디바운스 push
   useEffect(() => {
     if (!enabled || status !== "armed") return;
     if (skipNextChangeRef.current) { skipNextChangeRef.current = false; return; }
@@ -205,7 +215,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { void runPush(true); }, AUTO_PUSH_DEBOUNCE_MS);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [assetData, status, enabled, runPush]);
+  }, [assetData, changeTick, status, enabled, runPush]);
 
   // 원격 최신이면 자동 pull
   const autoPullIfNewer = useCallback(async () => {
@@ -280,7 +290,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     // 해시 제거(재트리거 방지) - 신구 해시파라미터 모두 정합
     if (typeof window !== "undefined" && (
       window.location.hash.includes(`${SYNC_HASH_PARAM}=`) ||
-      window.location.hash.includes("sync=") ||
+      window.location.hash.includes("asset=") ||
       window.location.hash.includes("vault=")
     )) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);

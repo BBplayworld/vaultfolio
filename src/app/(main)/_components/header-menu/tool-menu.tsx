@@ -139,7 +139,7 @@ export function ToolMenuPage() {
         }
         if (json.key) {
           setPreGeneratedShortUrl(
-            `${window.location.origin}${window.location.pathname}#share=s:${json.key}_${localKey}&theme=${themeMode}`
+            `${window.location.origin}${window.location.pathname}#share=share:${json.key}_${localKey}&theme=${themeMode}`
           );
         }
       })

@@ -16,8 +16,8 @@ const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
 /**
  * PWA 첫 실행 연결 화면 — standalone + 자산 없음일 때만 표시.
  * iOS는 홈 화면 추가 시 URL 해시가 제거되므로, 웹에서 자동 복사한 코드를 붙여넣어 연동한다.
- *  - sync:<assetId>  → 동기화 코드. #asset= 해시 설정 → CloudSyncConnectDialog(금고 암호)로 pull.
- *  - s:KEY_LOCALKEY → 연결 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
+ *  - sync:<assetId>  → 동기화 코드. #sync= 해시 설정 → CloudSyncConnectDialog(금고 암호)로 pull.
+ *  - share:KEY_LOCALKEY (구 s:) → 연결 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
  * z-40: PIN 다이얼로그(z-50)·잠금 화면(z-100)보다 아래에 위치.
  */
 export function PwaConnectPrompt() {
@@ -54,7 +54,7 @@ export function PwaConnectPrompt() {
   const handleImport = async () => {
     const trimmed = code.trim();
     if (!trimmed) { toast.error("코드를 입력해주세요."); return; }
-    // 동기화 코드(sync:) → #asset= 해시 설정 → CloudSyncProvider가 감지해 금고 암호 모달 표시
+    // 동기화 코드(sync:) → #sync= 해시 설정 → CloudSyncProvider가 감지해 금고 암호 모달 표시
     if (trimmed.startsWith("sync:")) {
       const assetId = trimmed.slice(5);
       if (!assetId) { toast.error("동기화 코드가 올바르지 않습니다."); return; }
@@ -99,7 +99,7 @@ export function PwaConnectPrompt() {
         <Input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="또는 코드 직접 입력 (sync: 또는 s:)"
+          placeholder="또는 코드 직접 입력 (sync: 또는 share:)"
           className="text-center font-mono text-sm"
           onKeyDown={(e) => { if (e.key === "Enter") void handleImport(); }}
         />
