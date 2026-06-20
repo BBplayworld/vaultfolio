@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-06-20 (2)
+
+### 기기 동기화 명칭 통일 + 앱 잠금 웹 확장 + 공지 컴포넌트화 (issue-4.5)
+
+- **명칭 통일** — 사용자 노출 텍스트 전체: "클라우드 동기화" → "기기 동기화 Plus" / "지금 백업" → "지금 동기화" / "클라우드 → 이 기기 불러오기" → "기기 데이터 가져오기" / "이 기기 연결 해제" → "이 기기 연결 끊기". 변경 파일: [cloud-sync-menu-entry.tsx](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx), [settings-page.tsx](../../src/app/(main)/_components/header-menu/settings-page.tsx), [tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx), [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx), [notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx).
+- **앱 잠금 설정 웹 확장** ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx)): 기존 `standalone && authEnabled` → `authEnabled`만으로 조건 변경. 웹 브라우저에서도 잠금 ON 시 세션 진입마다 PIN 요구.
+- **공지 컴포넌트화** ([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx) 신규): branch 단위 공지를 실제 사이트 컴포넌트(`pointer-events-none`)로 구성. `NOTICE_ID="202606"`, `NOTICE_TITLE`, `NoticeContent` export. 내용: 기기 동기화 Plus + 앱 설치(PWA) 소개.
+- **이유:** "클라우드"라는 모호한 표현 대신 기기 중심 명칭으로 서비스 본질 강조. 앱 잠금을 PWA 전용에서 웹으로 확대해 비PWA 사용자도 보안 설정 활용 가능.
+
+---
+
 ## 2026-06-20
 
 ### PWA 설치 흐름 공용화 + 웰컴가이드 모바일 최적화 + iOS 가이드 SVG 실사화 (issue-4.5)

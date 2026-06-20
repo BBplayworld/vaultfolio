@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ShieldCheck, AlertTriangle } from "lucide-react";
-import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { MAIN_PALETTE } from "@/config/theme";
+import { useAssetData } from "@/contexts/asset-data-context";
 
 const AUTH_ENABLED_KEY = "secretasset_pwa_auth_enabled";
 const AUTH_PIN_HASH_KEY = "secretasset_pwa_auth_pin_hash";
@@ -45,28 +45,32 @@ export async function verifyPwaAuthPin(pin: string): Promise<boolean> {
 }
 
 export function PwaLockScreen() {
-  const { isStandalone } = usePWAInstall();
+  const { unlockAndLoad } = useAssetData();
   const [locked, setLocked] = useState(false);
   const [pin, setPin] = useState("");
   const [failCount, setFailCount] = useState(0);
   const [checking, setChecking] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const otpRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
     if (typeof window === "undefined") return;
 
-    // 스탠드얼론 + 인증 활성화 + 세션 미인증 → 잠금
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
+    // 인증 활성화 + 세션 미인증 → 잠금 (웹·PWA 모두 동작)
     const authEnabled = isPwaAuthEnabled();
     const alreadyAuth = sessionStorage.getItem(SESSION_AUTH_KEY) === "true";
 
-    if (standalone && authEnabled && !alreadyAuth) {
+    if (authEnabled && !alreadyAuth) {
       setLocked(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (locked) {
+      setTimeout(() => otpRef.current?.focus(), 150);
+    }
+  }, [locked]);
 
   const handlePinChange = useCallback(async (value: string) => {
     setPin(value);
@@ -79,9 +83,11 @@ export function PwaLockScreen() {
     if (ok) {
       sessionStorage.setItem(SESSION_AUTH_KEY, "true");
       setLocked(false);
+      void unlockAndLoad();
     } else {
       setFailCount((c) => c + 1);
       setPin("");
+      setTimeout(() => otpRef.current?.focus(), 100);
     }
   }, []);
 
@@ -100,7 +106,7 @@ export function PwaLockScreen() {
         <p className="text-sm text-muted-foreground">비밀번호를 입력해주세요</p>
       </div>
 
-      <InputOTP maxLength={4} value={pin} onChange={handlePinChange} disabled={checking}>
+      <InputOTP ref={otpRef} maxLength={4} value={pin} onChange={handlePinChange} disabled={checking}>
         <InputOTPGroup>
           <InputOTPSlot index={0} />
           <InputOTPSlot index={1} />

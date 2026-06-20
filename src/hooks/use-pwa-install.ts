@@ -79,59 +79,6 @@ export function usePWAInstall() {
   }, []);
 
   /**
-   * manifest 교체 후 Chrome이 재발생시키는 새 beforeinstallprompt를 대기.
-   * 타임아웃 시 현재 window.__bipEvent로 폴백.
-   */
-  const waitForFreshPrompt = (timeoutMs = 3000): Promise<BeforeInstallPromptEvent | null> => {
-    return new Promise((resolve) => {
-      let done = false;
-      const finish = (evt: BeforeInstallPromptEvent | null) => {
-        if (done) return;
-        done = true;
-        window.removeEventListener("bip-captured", onCaptured);
-        window.removeEventListener("beforeinstallprompt", onBip);
-        resolve(evt);
-      };
-      const onCaptured = () => {
-        const evt = (window as any).__bipEvent as BeforeInstallPromptEvent | null;
-        if (evt) finish(evt);
-      };
-      const onBip = (e: Event) => {
-        e.preventDefault();
-        (window as any).__bipEvent = e;
-        finish(e as BeforeInstallPromptEvent);
-      };
-      window.addEventListener("bip-captured", onCaptured);
-      window.addEventListener("beforeinstallprompt", onBip);
-      setTimeout(() => finish(((window as any).__bipEvent as BeforeInstallPromptEvent | null) ?? null), timeoutMs);
-    });
-  };
-
-  /**
-   * 설치 준비: manifest를 startUrl 포함 엔드포인트로 교체하고
-   * 재발생하는 유효한 beforeinstallprompt를 확보한다.
-   * 설치 버튼 클릭 "이전"에 호출하여, 클릭 시점엔 await 없이 prompt()만 부르도록 한다.
-   */
-  const prepareInstall = async (startUrl: string): Promise<boolean> => {
-    const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
-    if (!manifestLink) return Boolean((window as any).__bipEvent || deferredPrompt);
-
-    // 새 BIP 유도: 기존 캡처 이벤트 초기화 후 manifest 교체
-    (window as any).__bipEvent = null;
-    manifestLink.href = `/api/pwa-manifest?startUrl=${encodeURIComponent(startUrl)}`;
-
-    const fresh = await waitForFreshPrompt();
-    if (fresh) {
-      (window as any).__bipEvent = fresh;
-      setDeferredPrompt(fresh);
-      setIsInstallable(true);
-      return true;
-    }
-    // 폴백: 새 이벤트가 없으면 기존 이벤트라도 사용
-    return Boolean(deferredPrompt);
-  };
-
-  /**
    * PWA 설치 트리거. 항상 "현재 유효한" 이벤트(window.__bipEvent 우선)로
    * 사용자 제스처 안에서 await 없이 prompt()를 호출한다.
    */
@@ -160,48 +107,11 @@ export function usePWAInstall() {
     }
   };
 
-  /**
-   * iOS용: manifest link를 동적으로 교체 (홈 화면 추가 전 호출)
-   */
-  const setManifestStartUrl = (startUrl: string) => {
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-      (manifestLink as HTMLLinkElement).href = `/api/pwa-manifest?startUrl=${encodeURIComponent(startUrl)}`;
-    }
-  };
-
-  /**
-   * iOS용: manifest link 자체를 제거.
-   * iOS는 manifest가 있으면 그 start_url(해시 제거됨)로 PWA를 시작하므로, 홈 화면 추가 전
-   * manifest를 제거해 '주소창 URL(해시 포함)'이 북마크로 캡처되게 한다. (standalone은 apple 메타로 유지)
-   */
-  const removeManifestLink = () => {
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) manifestLink.parentElement?.removeChild(manifestLink);
-  };
-
-  /**
-   * manifest link를 원래대로 복원 (제거됐으면 재생성)
-   */
-  const restoreManifest = () => {
-    let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
-    if (!manifestLink) {
-      manifestLink = document.createElement("link");
-      manifestLink.rel = "manifest";
-      document.head.appendChild(manifestLink);
-    }
-    manifestLink.href = "/manifest.webmanifest";
-  };
-
   return {
     isInstallable: isInstallable && !isStandalone,
     isIOS: isIOS && !isStandalone,
     isInApp,
     isStandalone,
-    prepareInstall,
     installPWA,
-    setManifestStartUrl,
-    removeManifestLink,
-    restoreManifest,
   };
 }

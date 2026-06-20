@@ -50,6 +50,8 @@ interface CloudSyncContextValue {
   syncing: boolean;
   lastSyncedAt: string | null;
   pendingConnectAssetId: string | null;
+  showConnectDialog: boolean;
+  setShowConnectDialog: (show: boolean) => void;
   enableSync: (passphrase: string, remember: boolean) => Promise<ActionResult>;
   unlock: (passphrase: string, remember: boolean) => Promise<ActionResult>;
   connect: (assetId: string, passphrase: string, remember: boolean) => Promise<ActionResult>;
@@ -92,6 +94,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingConnectAssetId, setPendingConnectAssetId] = useState<string | null>(null);
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
 
   // 무장 직후 공통 처리 — 상태 반영 + 동기화 자격(assetId·remember) 영속
   const arm = useCallback(async (assetId: string, keys: AssetKeys, remember: boolean) => {
@@ -138,7 +141,10 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     const detect = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const aid = hashParams.get(SYNC_HASH_PARAM);
-      if (aid && aid !== getAssetId()) setPendingConnectAssetId(aid);
+      if (aid && aid !== getAssetId()) {
+        setPendingConnectAssetId(aid);
+        setShowConnectDialog(true);
+      }
     };
     detect();
     window.addEventListener("hashchange", detect);
@@ -270,6 +276,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
 
   const clearPendingConnect = useCallback(() => {
     setPendingConnectAssetId(null);
+    setShowConnectDialog(false);
     // 해시 제거(재트리거 방지) - 신구 해시파라미터 모두 정합
     if (typeof window !== "undefined" && (
       window.location.hash.includes(`${SYNC_HASH_PARAM}=`) ||
@@ -297,6 +304,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       value={{
         enabled, status, assetId: assetIdState, syncLink: assetIdState ? buildLink(assetIdState) : null,
         syncing, lastSyncedAt, pendingConnectAssetId,
+        showConnectDialog, setShowConnectDialog,
         enableSync, unlock, connect, clearPendingConnect, pushNow, pullNow, forget,
       }}
     >

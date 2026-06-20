@@ -21,6 +21,8 @@ export const STORAGE_KEYS = {
   profitBasis:          "secretasset_profit_basis",
   // Tutorial step state — 단일 키, 값은 { "0":"done", "1":"skipped", ... } 형태의 JSON
   tutorialStatus:       "secretasset_tutorial_status",
+  // 클라우드 동기화 상태 키
+  syncState:            "secretasset_sync",
 } as const;
 
 const LEGACY_KEYS = {

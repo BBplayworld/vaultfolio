@@ -100,6 +100,7 @@ interface AssetDataContextType {
   addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>) => boolean;
   addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[]) => boolean;
   deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>) => boolean;
+  unlockAndLoad: () => Promise<void>;
 }
 
 const AssetDataContext = createContext<AssetDataContextType | undefined>(undefined);
@@ -199,6 +200,20 @@ const resolveShareToken = async (raw: string): Promise<{ token: string; localKey
   }
 };
 
+function checkIsLocked(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    const authEnabled = localStorage.getItem("secretasset_pwa_auth_enabled") === "true";
+    const alreadyAuth = sessionStorage.getItem("secretasset_pwa_authenticated") === "true";
+    return standalone && authEnabled && !alreadyAuth;
+  } catch {
+    return false;
+  }
+}
+
 export function AssetDataProvider({ children }: { children: ReactNode }) {
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
   // Start with static empty defaults to avoid SSR/client mismatch.
@@ -219,6 +234,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [showPinPrompt, setShowPinPrompt] = useState(false);
   const [pendingToken, setPendingToken] = useState<{ token: string; localKey?: string } | null>(null);
   const [inputPin, setInputPin] = useState("");
+  const otpRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showPinPrompt) {
+      setTimeout(() => otpRef.current?.focus(), 150);
+    }
+  }, [showPinPrompt]);
 
   const INITIAL_SYNC_DELAY_MS = 1_000;
 
@@ -725,6 +747,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     } else {
       notify.error(MSG.PIN_MISMATCH);
       setInputPin("");
+      setTimeout(() => otpRef.current?.focus(), 100);
     }
   }, [pendingToken, inputPin, applySharedData]);
 
@@ -745,6 +768,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     migrateStorageKeys();
     prunePeriodProfitCache(); // 옛 기간별 수익 캐시 키 정리 (현재 유효 토큰만 유지)
+    if (checkIsLocked()) {
+      return;
+    }
     // 마운트 즉시: localStorage 환율을 state에 반영
     // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
     // INITIAL_SYNC_DELAY_MS 지연 전에 기본값(1430/930)이 표시되는 것을 방지
@@ -804,9 +830,29 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
       checkAndApplyThemeMode();
       const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
+      const localData = getAssetData();
+      const hasLocalAssets =
+        localData.realEstate.length > 0 ||
+        localData.stocks.length > 0 ||
+        localData.crypto.length > 0 ||
+        localData.cash.length > 0 ||
+        localData.loans.length > 0;
+
+      const isStandaloneMode =
+        typeof window !== "undefined" && (
+          window.matchMedia("(display-mode: standalone)").matches ||
+          (window.navigator as any).standalone === true
+        );
+
+      if (shareTokenRaw && isStandaloneMode && hasLocalAssets) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        await initAndSync(localData);
+        return;
+      }
+
       if (!shareTokenRaw) {
         // 케이스 1: 공유 토큰 없음 (일반 진입)
-        await initAndSync(getAssetData());
+        await initAndSync(localData);
         return;
       }
       // 케이스 2~5: 공유 토큰 처리
@@ -1199,10 +1245,53 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     };
   }, [assetData, exchangeRates]);
 
+  const unlockAndLoad = useCallback(async () => {
+    const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
+    if (savedRates) {
+      try {
+        const parsed = JSON.parse(savedRates);
+        const rates = { USD: parsed.USD || 1380, JPY: parsed.JPY || 930 };
+        exchangeRatesRef.current = rates;
+        setExchangeRatesState(rates);
+      } catch { /* ignore */ }
+    }
+    const savedDate = localStorage.getItem(STORAGE_KEYS.exchangeSyncDate);
+    if (savedDate) setExchangeRateDate(savedDate);
+
+    const localData = getAssetData();
+    checkAndApplyThemeMode();
+    const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
+    const hasLocalAssets =
+      localData.realEstate.length > 0 ||
+      localData.stocks.length > 0 ||
+      localData.crypto.length > 0 ||
+      localData.cash.length > 0 ||
+      localData.loans.length > 0;
+
+    const isStandaloneMode =
+      typeof window !== "undefined" && (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true
+      );
+
+    if (shareTokenRaw && isStandaloneMode && hasLocalAssets) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      await initAndSync(localData);
+      return;
+    }
+
+    if (!shareTokenRaw) {
+      await initAndSync(localData);
+      return;
+    }
+    await processShareToken(shareTokenRaw);
+  }, [initAndSync, processShareToken, checkAndApplyThemeMode]);
+
   return (
     <AssetDataContext.Provider
       value={{
         assetData,
+        unlockAndLoad,
         isDataLoaded,
         isSharePending,
         snapshotVersion,
@@ -1265,6 +1354,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
                 PIN 번호 입력 (4자리 숫자)
               </Label>
               <InputOTP
+                ref={otpRef}
                 maxLength={4}
                 value={inputPin}
                 onChange={(value) => setInputPin(value)}

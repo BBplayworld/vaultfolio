@@ -151,8 +151,18 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
 ### F-NOTICE. 공지 시스템
-- ⚙ `NEXT_PUBLIC_NOTICE` 단일 JSON 파싱(enabled/expiresAt/id), items[] + 이미지 매칭(Vercel Blob)
-- 엣지: 잘못된 JSON→미표시, 만료, id 기준 1회 노출(localStorage)
+- ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
+- ⚙ `notice.tsx`: `NOTICE_ID="202606"`, `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단.
+- ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
+- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(`secretasset_notice_seen_{id}` localStorage, PWA standalone 분리)
+
+### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
+- ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.
+- ⚙ `isPwaAuthEnabled()` / `setPwaAuthPin(pin)` / `disablePwaAuth()` / `verifyPwaAuthPin(pin)` 유틸 export.
+- 👤 설정 > 앱 잠금 설정 ON → 브라우저 새 탭/재접속 시 PIN 화면 즉시 노출, 4자리 입력 → 잠금 해제 → 대시보드 진입.
+- 👤 PIN 오류 1~2회: "비밀번호가 일치하지 않습니다" 문구. 3회+: "비밀번호를 다시 확인해주세요" 경고 노출.
+- 👤 설정 > 앱 잠금 설정 OFF → 현재 PIN 입력 후 비활성화, 이후 재접속 시 PIN 화면 미노출.
+- 엣지: PWA standalone에서도 동일 동작(세션 분리 → 앱 재실행마다 PIN 요구)
 
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
@@ -238,4 +248,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-20 · PWA 설치 흐름 공용화(`PwaInstallFlow` 추출, 홈 버튼↔웰컴가이드 공유), 웰컴가이드 모바일 웹 PWA-우선 레이아웃(자산 CTA 기본 숨김), iOS step1 SVG 실사화(Safari ⋯팝업/Chrome 주소창 공유 직접/Whale ≡그리드), app-guide `"use client"` 수정 — R11 추가_
+_최종 갱신: 2026-06-20 (2) · 기기 동기화 명칭 통일(클라우드 동기화→기기 동기화 Plus 등), 앱 잠금 웹 확장(standalone 체크 제거), 공지 컴포넌트화(notice.tsx 신규), F-APPLOCK 섹션 추가_

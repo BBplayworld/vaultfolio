@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
@@ -47,6 +47,14 @@ export function ToolMenuPage() {
     assetData.loans.length > 0;
   const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const otpRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showShareDialog) {
+      setTimeout(() => otpRef.current?.focus(), 150);
+    }
+  }, [showShareDialog]);
+
   const [showShareSyncChooser, setShowShareSyncChooser] = useState(false);
   const [showCloudSync, setShowCloudSync] = useState(false);
   const [sharePin, setSharePin] = useState("");
@@ -148,39 +156,11 @@ export function ToolMenuPage() {
     }
     try {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
-      toast.success(`짧은 공유 URL이 복사되었습니다. (${preGeneratedShortUrl.length}자)`);
+      toast.success("공유 URL이 복사되었습니다.");
       window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
-    }
-  };
-
-  const confirmShare = async () => {
-    try {
-      if (!assetData) return;
-
-      if (sharePin.length !== 4) {
-        toast.error("PIN 번호 4자리를 입력해주세요.");
-        return;
-      }
-
-      const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin, undefined, collectSnapshots(), getProfitBasis(), nickname || undefined);
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(token)}&theme=${themeMode}`;
-
-      await navigator.clipboard.writeText(shareUrl);
-
-      const length = token.length;
-      if (length <= 200) {
-        toast.success("PIN 암호화된 공유 URL이 복사되었습니다.");
-      } else {
-        toast.success("공유 URL이 복사되었습니다.");
-        toast.info(`데이터가 많아 토큰이 ${length}자입니다. 일부 환경에서 제한될 수 있습니다.`);
-      }
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
-      setShowShareDialog(false);
-    } catch {
-      toast.error("URL 공유 준비에 실패했습니다.");
     }
   };
 
@@ -330,7 +310,7 @@ export function ToolMenuPage() {
               <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center gap-2">
                   <Cloud className="size-5 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-foreground">자동 동기화</span>
+                  <span className="font-semibold text-foreground">기기 동기화</span>
                 </div>
                 <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
                   Plus
@@ -357,16 +337,14 @@ export function ToolMenuPage() {
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Share2 className="size-5 text-primary" />
-              자산 데이터 공유
+              간편 공유
             </DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-1 text-sm text-muted-foreground text-left">
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
-                <p className="text-[11px] text-primary">이후 지속적인 자동 동기화가 필요하다면 &apos;클라우드 동기화&apos; 메뉴를 이용해 주세요.</p>
-                <p className="text-xs pt-1">
-                  <span className="font-medium text-foreground">전체 URL</span> — 서버 저장 없이 URL에 직접 포함
-                  {" · "}
-                  <span className="font-medium text-foreground">짧은 URL</span> — 암호화된 데이터만 서버 경유, URL 키와 PIN이 분리되어 서버 관리자도 복호화 불가
+                <p className="text-[11px] text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
+                <p className="text-xs pt-1 text-muted-foreground/80">
+                  암호화된 데이터만 서버를 안전하게 경유하며, URL 키와 PIN이 분리되어 서버 관리자도 내용을 복호화할 수 없습니다.
                 </p>
               </div>
             </DialogDescription>
@@ -378,6 +356,7 @@ export function ToolMenuPage() {
                 비밀번호 <span className="text-rose-500 font-semibold">(4자리, 필수)</span>
               </Label>
               <InputOTP
+                ref={otpRef}
                 maxLength={4}
                 value={sharePin}
                 onChange={(value) => setSharePin(value)}
@@ -395,15 +374,11 @@ export function ToolMenuPage() {
             </div>
           </div>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl || sharePin.length !== 4} type="button">
+            <Button variant="rose" onClick={confirmShareShort} disabled={shortUrlLoading || !preGeneratedShortUrl || sharePin.length !== 4} type="button" className="flex-1 sm:flex-initial">
               <Share2 className="mr-2 size-4" />
-              {shortUrlLoading ? "생성 중..." : "짧은 URL 복사"}
+              {shortUrlLoading ? "생성 중..." : "공유 URL 복사"}
             </Button>
-            <Button onClick={confirmShare} disabled={sharePin.length !== 4} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
-              <Copy className="mr-2 size-4" />
-              전체 URL 복사
-            </Button>
-            <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+            <Button variant="outline" onClick={() => setShowShareDialog(false)} className="flex-1 sm:flex-initial">
               취소
             </Button>
           </DialogFooter>
@@ -426,7 +401,7 @@ export function ToolMenuPage() {
               <Textarea
                 value={feedbackMessage}
                 onChange={(e) => setFeedbackMessage(e.target.value.slice(0, FEEDBACK_MAX))}
-                placeholder="예) 배당 캘린더에 알림 기능이 있으면 좋겠어요."
+                placeholder="자산 관리 개선에 대한 의견, 추가하고 싶은 기능 등을 자유롭게 남겨주세요."
                 rows={8}
                 className="resize-none min-h-[160px] max-h-[40vh] overflow-y-auto"
               />

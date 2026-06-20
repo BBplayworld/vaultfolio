@@ -14,8 +14,9 @@
 
 import { wrapSecret, unwrapSecret, type WrappedSecret } from "./device-key";
 import { toBase64, fromBase64 } from "./crypto";
+import { STORAGE_KEYS } from "../local-storage";
 
-export const SYNC_STATE_KEY = "secretasset_sync";
+export const SYNC_STATE_KEY = STORAGE_KEYS.syncState;
 
 interface SyncState {
   assetId?: string;

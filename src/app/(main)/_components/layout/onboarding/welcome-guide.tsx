@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Camera, Download, Smartphone, ChevronDown } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Camera, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +17,7 @@ import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
+import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 
 // ── 예시 데이터 정적 계산 (컴포넌트 외부)
 const EXCHANGE_RATES = previewData.exchangeRates as { USD: number; JPY: number };
@@ -65,6 +66,7 @@ export function WelcomeGuide() {
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '설치 없이 바로 시작' 선택 시에만 자산 등록 노출
+  const cs = useCloudSync();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -307,6 +309,10 @@ export function WelcomeGuide() {
           <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={openFilePicker} disabled={isImporting}>
             <FolderInput className="size-4" />
             {isImporting ? "가져오는 중..." : "기존 데이터 가져오기"}
+          </Button>
+          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => cs.setShowConnectDialog(true)}>
+            <Link2 className="size-4 text-primary" />
+            기존 동기화 자산 연결
           </Button>
         </div>
         <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />

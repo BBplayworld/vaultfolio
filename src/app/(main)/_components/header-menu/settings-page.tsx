@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Upload, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { updateThemeMode } from "@/lib/theme-utils";
@@ -53,11 +53,17 @@ export function SettingsPage() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authMode, setAuthMode] = useState<"enable" | "disable">("enable");
   const [authPin, setAuthPin] = useState("");
-  const [authPinConfirm, setAuthPinConfirm] = useState("");
-  const [authStep, setAuthStep] = useState<"pin" | "confirm">("pin");
   const [pwaAuthEnabled, setPwaAuthEnabled] = useState(false);
 
   const [mounted, setMounted] = useState(false);
+  const otpRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showAuthDialog) {
+      setTimeout(() => otpRef.current?.focus(), 150);
+    }
+  }, [showAuthDialog]);
+
   useEffect(() => {
     setMounted(true);
     setPwaAuthEnabled(isPwaAuthEnabled());
@@ -102,46 +108,31 @@ export function SettingsPage() {
 
   const handleToggleAuth = () => {
     setAuthPin("");
-    setAuthPinConfirm("");
-    setAuthStep("pin");
     setAuthMode(pwaAuthEnabled ? "disable" : "enable");
     setShowAuthDialog(true);
   };
 
   const handleAuthSubmit = async () => {
+    if (authPin.length !== 4) {
+      toast.error("PIN 번호 4자리를 입력해주세요.");
+      return;
+    }
     if (authMode === "enable") {
-      if (authStep === "pin") {
-        if (authPin.length !== 4) {
-          toast.error("PIN 번호 4자리를 입력해주세요.");
-          return;
-        }
-        setAuthStep("confirm");
-        setAuthPinConfirm("");
-        return;
-      }
-      if (authPinConfirm !== authPin) {
-        toast.error("비밀번호가 일치하지 않습니다.");
-        setAuthPinConfirm("");
-        return;
-      }
       await setPwaAuthPin(authPin);
       setPwaAuthEnabled(true);
-      toast.success("웹앱 인증이 활성화되었습니다.");
+      toast.success("앱 잠금이 활성화되었습니다.");
       setShowAuthDialog(false);
     } else {
-      if (authPin.length !== 4) {
-        toast.error("PIN 번호 4자리를 입력해주세요.");
-        return;
-      }
       const ok = await verifyPwaAuthPin(authPin);
       if (!ok) {
         toast.error("비밀번호가 일치하지 않습니다.");
         setAuthPin("");
+        setTimeout(() => otpRef.current?.focus(), 100);
         return;
       }
       disablePwaAuth();
       setPwaAuthEnabled(false);
-      toast.success("웹앱 인증이 해제되었습니다.");
+      toast.success("앱 잠금이 해제되었습니다.");
       setShowAuthDialog(false);
     }
   };
@@ -161,8 +152,8 @@ export function SettingsPage() {
             <button type="button" className={ROW} onClick={handleToggleAuth}>
               <ShieldCheck className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="font-medium">웹앱 인증</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">앱 실행 시 비밀번호 입력</p>
+                <span className="font-medium">앱 잠금 설정 (App Lock)</span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">앱 실행 시 4자리 PIN 번호 잠금</p>
               </div>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded ${pwaAuthEnabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                 {pwaAuthEnabled ? "ON" : "OFF"}
@@ -219,7 +210,7 @@ export function SettingsPage() {
             <AlertDialogTitle>정말 모든 데이터를 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
               이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
-              {cs.status !== "none" && " 클라우드 동기화 연결도 해제됩니다. 클라우드 백업은 보존되어 재연결 시 복구할 수 있습니다."}
+              {cs.status !== "none" && " 기기 동기화 연결도 끊어집니다. 동기화 데이터는 보존되어 재연결 시 복구할 수 있습니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -236,41 +227,28 @@ export function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldCheck className="size-5 text-primary" />
-              {authMode === "enable" ? "웹앱 인증 설정" : "웹앱 인증 해제"}
+              {authMode === "enable" ? "앱 잠금 설정 (App Lock)" : "앱 잠금 해제"}
             </DialogTitle>
             <DialogDescription>
               {authMode === "enable"
-                ? "PWA 앱 실행 시 매번 비밀번호를 입력해야 합니다."
-                : "현재 비밀번호를 입력하여 인증을 해제합니다."}
+                ? "앱 실행 시 기기 보호를 위해 입력할 4자리 PIN 비밀번호를 설정합니다. (설치 시 사용했던 데이터 전송용 PIN과는 무관한 독립된 잠금 장치입니다)"
+                : "현재 비밀번호를 입력하여 앱 잠금을 해제합니다."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center justify-center space-y-4 py-4">
             <div className="flex flex-col items-center gap-3 space-y-2">
               <Label className="text-sm font-medium">
-                {authMode === "enable" && authStep === "confirm"
-                  ? "비밀번호 확인"
-                  : "비밀번호 (4자리)"}
+                비밀번호 (4자리)
               </Label>
-              {authMode === "enable" && authStep === "confirm" ? (
-                <InputOTP maxLength={4} value={authPinConfirm} onChange={setAuthPinConfirm}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                  </InputOTPGroup>
-                </InputOTP>
-              ) : (
-                <InputOTP maxLength={4} value={authPin} onChange={setAuthPin}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                  </InputOTPGroup>
-                </InputOTP>
-              )}
+              <InputOTP ref={otpRef} maxLength={4} value={authPin} onChange={setAuthPin}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
           </div>
 
@@ -278,14 +256,10 @@ export function SettingsPage() {
             <Button
               variant="brand"
               onClick={handleAuthSubmit}
-              disabled={
-                authMode === "enable"
-                  ? authStep === "pin" ? authPin.length !== 4 : authPinConfirm.length !== 4
-                  : authPin.length !== 4
-              }
+              disabled={authPin.length !== 4}
               type="button"
             >
-              {authMode === "enable" && authStep === "pin" ? "다음" : authMode === "enable" ? "설정 완료" : "인증 해제"}
+              {authMode === "enable" ? "설정 완료" : "앱 잠금 해제"}
             </Button>
             <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
               취소

@@ -201,13 +201,13 @@ export function clearAssetData(): boolean {
   if (typeof window === "undefined") return false;
   try {
     // 동기화/초기화 시 보존해야 하는 중요 기기 메타데이터 키 목록
-    const keepKeys = [
-      "secretasset_tutorial_status",
-      "secretasset_sync",
-      "secretasset_gemini_usage",
-      "secretasset_collapsible_used",
-      "secretasset_notice_hide_until",
-      "secretasset_finance_api_error_count",
+    const keepKeys: string[] = [
+      STORAGE_KEYS.tutorialStatus,
+      STORAGE_KEYS.syncState,
+      STORAGE_KEYS.geminiUsage,
+      STORAGE_KEYS.collapsibleUsed,
+      STORAGE_KEYS.noticeHideUntil,
+      STORAGE_KEYS.financeApiErrorCount,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {

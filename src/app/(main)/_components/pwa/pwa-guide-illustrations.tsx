@@ -467,46 +467,109 @@ export function SamsungMenuStep({ className }: IllustrationProps) {
       {/* 메뉴 드래그 바 */}
       <rect x="98" y="96" width="24" height="3" rx="1.5" className={HINT} fill="currentColor" opacity="0.3" />
 
-      {/* 2x3 그리드 형태의 도구들 */}
-      {/* 1행 1열: 북마크 (비활성) */}
-      <g transform="translate(50, 108)">
-        <rect x="4" y="2" width="18" height="18" rx="4" className={LINE} fill="currentColor" />
-        <text x="13" y="30" fontSize="5.5" fontWeight="500" textAnchor="middle" className={LINE} fill="currentColor">북마크</text>
+      {/* 4x4 그리드 형태의 도구들 */}
+      {/* 1행 1열: 다운로드 */}
+      <g transform="translate(58, 112)" className={LINE}>
+        <path d="M-3 -3 v4.5 M-5 -1 L-3 1.5 L-1 -1 M-6 3.5 h12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">다운로드</text>
       </g>
-      {/* 1행 2열: 저장됨 (비활성) */}
-      <g transform="translate(80, 108)">
-        <rect x="4" y="2" width="18" height="18" rx="4" className={LINE} fill="currentColor" />
-        <text x="13" y="30" fontSize="5.5" fontWeight="500" textAnchor="middle" className={LINE} fill="currentColor">저장됨</text>
+      {/* 1행 2열: 방문기록 */}
+      <g transform="translate(93, 112)" className={LINE}>
+        <circle cx="0" cy="-2.5" r="4.5" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M0 -5 v2.5 h1.8" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">방문기록</text>
       </g>
-      {/* [강조] 1행 3열: 앱 추가 / 홈 화면에 추가 */}
-      <g transform="translate(110, 108)">
-        <rect x="0" y="-2" width="26" height="34" rx="6" fill={BRAND} opacity="0.14" />
-        <rect x="0" y="-2" width="26" height="34" rx="6" stroke={BRAND} strokeWidth="1" />
-        
-        {/* 모니터/웹 화면에 + 아이콘 */}
-        <rect x="4" y="2" width="18" height="14" rx="3.5" stroke={BRAND} strokeWidth="1.5" fill="none" />
-        <path d="M13 5 v8 M9 9 h8" stroke={BRAND} strokeWidth="1.5" strokeLinecap="round" />
-        
-        {/* 실제 텍스트 추가 ("앱 추가") */}
-        <text x="13" y="30" fontSize="6" fontWeight="800" textAnchor="middle" fill={BRAND}>앱 추가</text>
-        {/* 펄스 링 */}
-        <circle cx="13" cy="9" r="11" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+      {/* 1행 3열: 저장한 페이지 */}
+      <g transform="translate(127, 112)" className={LINE}>
+        <circle cx="0" cy="-2.5" r="4.5" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M-3.5 -2.5 h7 M-2 -4 v3 M1 -4.5 v4 M-2.5 -0.5 h5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">저장한 페이지</text>
+      </g>
+      {/* [강조] 1행 4열: 현재 페이지 추가 */}
+      <g transform="translate(162, 112)">
+        {/* 강조 배경 박스 */}
+        <rect x="-13" y="-10" width="26" height="30" rx="4" fill={BRAND} opacity="0.14" />
+        <rect x="-13" y="-10" width="26" height="30" rx="4" stroke={BRAND} strokeWidth="1" />
+        {/* + 기호 */}
+        <path d="M-4 -2.5 h8 M0 -6.5 v8" stroke={BRAND} strokeWidth="1.4" strokeLinecap="round" />
+        {/* 라벨 텍스트 2줄 분리 */}
+        <text x="0" y="9.5" fontSize="4.2" fontWeight="800" textAnchor="middle" fill={BRAND}>현재 페이지</text>
+        <text x="0" y="15" fontSize="4.2" fontWeight="800" textAnchor="middle" fill={BRAND}>추가</text>
+        {/* 터치 펄스 */}
+        <circle cx="0" cy="-2.5" r="9.5" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
       </g>
 
-      {/* 2행 1열: 다크 모드 (비활성) */}
-      <g transform="translate(50, 148)">
-        <rect x="4" y="2" width="18" height="18" rx="4" className={LINE} fill="currentColor" />
-        <text x="13" y="30" fontSize="5.5" fontWeight="500" textAnchor="middle" className={LINE} fill="currentColor">다크 모드</text>
+      {/* 2행 1열: 공유 */}
+      <g transform="translate(58, 140)" className={LINE}>
+        <circle cx="-2.5" cy="-2.5" r="1.2" stroke="currentColor" strokeWidth="0.9" />
+        <circle cx="2.5" cy="-5" r="1.2" stroke="currentColor" strokeWidth="0.9" />
+        <circle cx="2.5" cy="0" r="1.2" stroke="currentColor" strokeWidth="0.9" />
+        <path d="M-1.5 -3 L1.5 -4.5 M-1.5 -2 L1.5 -1" stroke="currentColor" strokeWidth="0.9" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">공유</text>
       </g>
-      {/* 2행 2열: 광고 차단 (비활성) */}
-      <g transform="translate(80, 148)">
-        <rect x="4" y="2" width="18" height="18" rx="4" className={LINE} fill="currentColor" />
-        <text x="13" y="30" fontSize="5.5" fontWeight="500" textAnchor="middle" className={LINE} fill="currentColor">광고 차단</text>
+      {/* 2행 2열: 어두운 웹페이지 */}
+      <g transform="translate(93, 140)" className={LINE} opacity="0.3">
+        <path d="M-2 -5.5 a4.5 4.5 0 0 0 4 6 a4.5 4.5 0 1 1 -4 -6" stroke="currentColor" strokeWidth="1" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">어두운 웹페이지</text>
       </g>
-      {/* 2행 3열: 설정 (비활성) */}
-      <g transform="translate(110, 148)">
-        <rect x="4" y="2" width="18" height="18" rx="4" className={LINE} fill="currentColor" />
-        <text x="13" y="30" fontSize="5.5" fontWeight="500" textAnchor="middle" className={LINE} fill="currentColor">설정</text>
+      {/* 2행 3열: 광고 차단 기능 */}
+      <g transform="translate(127, 140)" className={LINE}>
+        <path d="M-4 -5.5 h8 v3.5 c0 2.5 -4 5 -4 5 s-4 -2.5 -4 -5 z" stroke="currentColor" strokeWidth="1" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">광고 차단</text>
+      </g>
+      {/* 2행 4열: 페이지에서 찾기 */}
+      <g transform="translate(162, 140)" className={LINE}>
+        <circle cx="-1" cy="-3.5" r="2.5" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M1 -1.5 L3.5 1" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">페이지 찾기</text>
+      </g>
+
+      {/* 3행 1열: PC 버전 */}
+      <g transform="translate(58, 168)" className={LINE}>
+        <rect x="-5" y="-6" width="10" height="7" rx="1" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M-2.5 2 h5 M0 1 v1" stroke="currentColor" strokeWidth="1" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">PC 버전</text>
+      </g>
+      {/* 3행 2열: 글자 크기 */}
+      <g transform="translate(93, 168)" className={LINE}>
+        <path d="M-4 -5 h3 M-2.5 -5 v6.5 M1 -3.5 h2.5 M2.2 -3.5 v5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">글자 크기</text>
+      </g>
+      {/* 3행 3열: 확대/축소 */}
+      <g transform="translate(127, 168)" className={LINE}>
+        <circle cx="0" cy="-2.5" r="4.5" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M-2 -2.5 h4 M0 -4.5 v4" stroke="currentColor" strokeWidth="0.8" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">확대/축소</text>
+      </g>
+      {/* 3행 4열: 추가 기능 */}
+      <g transform="translate(162, 168)" className={LINE}>
+        <rect x="-4.5" y="-6" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1" fill="none" />
+        <circle cx="0" cy="-2.5" r="1.5" stroke="currentColor" strokeWidth="0.9" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">추가 기능</text>
+      </g>
+
+      {/* 4행 1열: 인쇄/PDF */}
+      <g transform="translate(58, 196)" className={LINE}>
+        <path d="M-4.5 -2 h9 v4.5 h-9 z M-3 -4.5 h6 v2.5 h-6 z M-2.5 2.5 h5" stroke="currentColor" strokeWidth="0.9" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">인쇄/PDF</text>
+      </g>
+      {/* 4행 2열: 개인정보 */}
+      <g transform="translate(93, 196)" className={LINE}>
+        <circle cx="0" cy="-4" r="2.2" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M-3.5 0.5 a3.5 3.5 0 0 1 7 0 z" stroke="currentColor" strokeWidth="1" fill="none" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">개인정보</text>
+      </g>
+      {/* 4행 3열: 설정 */}
+      <g transform="translate(127, 196)" className={LINE}>
+        <circle cx="0" cy="-2.5" r="3" stroke="currentColor" strokeWidth="1" fill="none" />
+        <path d="M0 -6 v1 M0 -1 v1 M-3.5 -2.5 h1 M2.5 -2.5 h1" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">설정</text>
+      </g>
+      {/* 4행 4열: 번역기 */}
+      <g transform="translate(162, 196)" className={LINE}>
+        <rect x="-4.5" y="-6" width="9" height="7.5" rx="1" stroke="currentColor" strokeWidth="1" fill="none" />
+        <text x="0" y="-1" fontSize="3.5" fontWeight="bold" textAnchor="middle" fill="currentColor">A</text>
+        <text x="0" y="14" fontSize="4" fontWeight="500" textAnchor="middle" fill="currentColor">번역기</text>
       </g>
 
       {/* 하단 삼성 인터넷 고정 툴바 */}
@@ -515,23 +578,80 @@ export function SamsungMenuStep({ className }: IllustrationProps) {
       
       {/* 툴바 아이콘들 (뒤로, 앞으로, 홈, 탭목록, ☰메뉴) */}
       <path d="M50 245 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M68 245 l4 4 l-4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M68 245 l4 4 l-4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
       <path d="M92 249 v-4.5 l4 -3.5 l4 3.5 v4.5 z" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
       <rect x="114" y="244" width="10" height="10" rx="2.5" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
-
-      {/* [강조] ☰ 메뉴 버튼 */}
-      <circle cx="148" cy="249" r="10.5" fill={BRAND} opacity="0.15" />
-      <g stroke={BRAND} strokeWidth="1.6" strokeLinecap="round" transform="translate(143, 246)">
-        <line x1="1" y1="1" x2="9" y2="1" />
-        <line x1="1" y1="3.5" x2="9" y2="3.5" />
-        <line x1="1" y1="6" x2="9" y2="6" />
+      <g stroke="currentColor" className={HINT} strokeWidth="1.6" strokeLinecap="round" transform="translate(143, 246)">
+        <line x1="1" y1="1" x2="9" y2="1" opacity="0.5" />
+        <line x1="1" y1="3.5" x2="9" y2="3.5" opacity="0.5" />
+        <line x1="1" y1="6" x2="9" y2="6" opacity="0.5" />
       </g>
 
-      {/* 가이드 지시 화살표 (☰ 메뉴 포인팅) */}
-      <g transform="translate(148, 274)">
-        <path d="M0 4 V-5" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M-3 -2 L0 -5 L3 -2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* 가이드 지시 화살표 (+ 기호 포인팅) */}
+      <g transform="translate(162, 134)">
+        <path d="M0 8 V-1" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M-3 2 L0 -1 L3 2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
   );
 }
+
+/** 삼성 인터넷 2단계: '현재 페이지 추가' 팝업에서 '홈 화면' 강조 */
+export function SamsungAddToHomeStep({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="삼성 인터넷 현재 페이지 추가 팝업의 홈 화면 항목" fill="none">
+      <PhoneFrame />
+
+      {/* 배경 콘텐츠 흐릿하게 묘사 */}
+      <rect x="48" y="34" width="124" height="18" rx="9" className={SURFACE} fill="currentColor" opacity="0.3" />
+      <rect x="52" y="66" width="116" height="8" rx="4" className={LINE} fill="currentColor" opacity="0.3" />
+      <rect x="52" y="82" width="72" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.3" />
+
+      {/* 삼성 인터넷 '현재 페이지 추가' 팝업 */}
+      <rect x="46" y="75" width="128" height="136" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+
+      {/* 팝업 타이틀 */}
+      <text x="110" y="96" fontSize="8" fontWeight="800" textAnchor="middle" fill="currentColor" className="text-foreground">현재 페이지 추가</text>
+      <line x1="46" y1="106" x2="174" y2="106" stroke="currentColor" className={FRAME} strokeWidth="0.8" opacity="0.4" />
+
+      {/* 항목 1: 북마크 */}
+      <g transform="translate(110, 122)">
+        <text x="0" y="0" fontSize="7.2" fontWeight="500" textAnchor="middle" fill="currentColor" className={HINT}>북마크</text>
+      </g>
+      <line x1="56" y1="130" x2="164" y2="130" stroke="currentColor" className={FRAME} strokeWidth="0.6" opacity="0.3" />
+
+      {/* 항목 2: 빠른 실행 */}
+      <g transform="translate(110, 146)">
+        <text x="0" y="0" fontSize="7.2" fontWeight="500" textAnchor="middle" fill="currentColor" className={HINT}>빠른 실행</text>
+      </g>
+      <line x1="56" y1="154" x2="164" y2="154" stroke="currentColor" className={FRAME} strokeWidth="0.6" opacity="0.3" />
+
+      {/* [강조] 항목 3: 홈 화면 */}
+      <g transform="translate(110, 170)">
+        {/* 행 전체 강조 박스 */}
+        <rect x="-56" y="-10" width="112" height="18" rx="6" fill={BRAND} opacity="0.14" />
+        <rect x="-56" y="-10" width="112" height="18" rx="6" stroke={BRAND} strokeWidth="1.2" />
+        
+        {/* 홈 화면 텍스트 */}
+        <text x="0" y="2" fontSize="7.8" fontWeight="800" textAnchor="middle" fill={BRAND}>홈 화면</text>
+
+        {/* 터치 포인터 펄스 서클 */}
+        <circle cx="42" cy="-1" r="5" fill={BRAND} opacity="0.2" />
+        <circle cx="42" cy="-1" r="8" stroke={BRAND} strokeWidth="1.2" strokeDasharray="2 2" opacity="0.5" />
+      </g>
+      <line x1="56" y1="178" x2="164" y2="178" stroke="currentColor" className={FRAME} strokeWidth="0.6" opacity="0.3" />
+
+      {/* 항목 4: 저장한 페이지 */}
+      <g transform="translate(110, 194)">
+        <text x="0" y="0" fontSize="7.2" fontWeight="500" textAnchor="middle" fill="currentColor" className={HINT}>저장한 페이지</text>
+      </g>
+
+      {/* 가이드 지시 화살표 (오른쪽에서 왼쪽으로 가리킴) */}
+      <g transform="translate(172, 169)">
+        <path d="M6 0 L-3 0" stroke={BRAND} strokeWidth="2" strokeLinecap="round" />
+        <path d="M1 -3.5 L-3 0 L1 3.5" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
