@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * PWA 공유→홈 화면 추가 단계 SVG 일러스트.
  * 외부 이미지·실제 로고 없이 인라인 SVG로 각 브라우저의 실제 UI 형태를 정밀하게 묘사.
@@ -9,7 +11,10 @@
  * - SamsungMenuStep                 : 삼성 인터넷 (☰ 하단 메뉴)
  */
 
+import { useEffect, useState, type FC } from "react";
+
 import { APP_CONFIG } from "@/config/app";
+import type { GuidePlatform, GuideBrowser } from "@/lib/pwa/detect-browser";
 
 const BRAND = "#5b6fbf"; // MAIN_PALETTE[0]
 const DOMAIN = APP_CONFIG.siteUrl.replace(/^https?:\/\//, ""); // "secretasset.xyz"
@@ -47,74 +52,56 @@ function PhoneFrame() {
   );
 }
 
-/** iOS Safari 1단계: 하단 우측 원형 ⋯ 메뉴 터치 → 위로 뜨는 세로 팝업 최상단 '공유' 강조 */
+/** iOS Safari 1단계: 하단 툴바 중앙의 '공유'(box-arrow) 버튼을 직접 탭 (메뉴 버튼 없음) */
 export function IosShareStep({ className }: IllustrationProps) {
   return (
-    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="Safari 하단 우측 메뉴의 공유 위치" fill="none">
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="Safari 하단 툴바 중앙의 공유 버튼 위치" fill="none">
       <PhoneFrame />
 
-      {/* 본문 콘텐츠 라인 (페이지 상단) */}
-      <rect x="52" y="42" width="116" height="9" rx="4.5" className={LINE} fill="currentColor" opacity="0.5" />
-      <rect x="52" y="60" width="92" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.5" />
-      <rect x="52" y="74" width="104" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.4" />
+      {/* 본문 콘텐츠 라인 (팝업 없이 상단 가득) */}
+      <rect x="52" y="46" width="116" height="9" rx="4.5" className={LINE} fill="currentColor" opacity="0.5" />
+      <rect x="52" y="64" width="92" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.45" />
+      <rect x="52" y="78" width="104" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.4" />
+      <rect x="52" y="100" width="108" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.35" />
+      <rect x="52" y="114" width="84" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.35" />
+      <rect x="52" y="136" width="100" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.3" />
+      <rect x="52" y="150" width="96" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.3" />
 
-      {/* ⋯ 클릭 시 위로 떠오르는 세로 리스트 팝업 */}
-      <rect x="74" y="92" width="102" height="118" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="0.8" />
+      {/* 하단 Safari 바 배경 (주소창 + 툴바 2단) */}
+      <rect x="39" y="216" width="142" height="48" fill="currentColor" className="text-background/95 dark:text-background/90" />
+      <line x1="39" y1="216" x2="181" y2="216" stroke="currentColor" className={FRAME} strokeWidth="1" />
 
-      {/* [강조] 최상단 공유 행 (box-arrow 아이콘 + 텍스트) */}
-      <g transform="translate(80, 98)">
-        <rect x="0" y="0" width="90" height="20" rx="6" fill={BRAND} opacity="0.14" />
-        <rect x="0" y="0" width="90" height="20" rx="6" stroke={BRAND} strokeWidth="0.9" />
-        {/* 공유 아이콘 (box+arrow) */}
-        <g transform="translate(13, 10)" stroke={BRAND} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="-4" y="-1" width="8" height="7" rx="1.3" fill="none" />
-          <path d="M0 -5 V1.5" />
-          <path d="M-2.2 -3 L0 -5 L2.2 -3" />
-        </g>
-        <text x="30" y="13.5" fontSize="7" fontWeight="bold" fill={BRAND}>공유</text>
-        {/* 터치 펄스 */}
-        <circle cx="9" cy="10" r="9" stroke={BRAND} strokeWidth="0.8" strokeDasharray="1.5 1.5" opacity="0.55" />
+      {/* 상단 주소창 pill (좌 글자크기 ㄱㅏ · 중앙 도메인 · 우 새로고침) */}
+      <rect x="48" y="221" width="124" height="16" rx="8" className={SURFACE} fill="currentColor" />
+      <text x="58" y="232" fontSize="6" fontWeight="700" textAnchor="middle" className={HINT} fill="currentColor">A</text>
+      <text x="65" y="232" fontSize="8.5" fontWeight="700" textAnchor="middle" className={HINT} fill="currentColor">A</text>
+      <text x="113" y="231.5" fontSize="6.5" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
+      <path d="M160 231 a3.4 3.4 0 1 1 0.9 -3.4" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M161.6 223.1 l-0.3 3 l-2.9 -0.5" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* 툴바 행 (뒤로 < / 앞으로 > / 공유(중앙,강조) / 북마크 / 탭) */}
+      {/* 뒤로 < */}
+      <path d="M52 250 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* 앞으로 > */}
+      <path d="M80 250 l4 4 l-4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* [강조] 중앙 공유 버튼 (box-arrow) - 직접 탭 대상 */}
+      <circle cx="110" cy="254" r="10" fill={BRAND} opacity="0.12" />
+      <circle cx="110" cy="254" r="12.5" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+      <g transform="translate(110, 254.5)" stroke={BRAND} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="-4.5" y="-1" width="9" height="8" rx="1.4" fill="none" />
+        <path d="M0 -6 V2" />
+        <path d="M-2.4 -3.6 L0 -6 L2.4 -3.6" />
       </g>
 
-      {/* 팝업 나머지 항목 (북마크에 추가 / 폴더 / (구분) / 새 탭) 더미 */}
-      <g transform="translate(88, 130)" className={LINE}>
-        <rect x="0" y="0" width="72" height="4" rx="2" fill="currentColor" />
-        <rect x="0" y="16" width="60" height="4" rx="2" fill="currentColor" />
-      </g>
-      <line x1="80" y1="162" x2="170" y2="162" stroke="currentColor" className={FRAME} strokeWidth="0.7" opacity="0.6" />
-      <g transform="translate(88, 172)" className={LINE}>
-        <rect x="0" y="0" width="56" height="4" rx="2" fill="currentColor" opacity="0.85" />
-        <rect x="0" y="16" width="66" height="4" rx="2" fill="currentColor" opacity="0.85" />
-      </g>
+      {/* 북마크 (책 모양) */}
+      <path d="M140 249 h7 v10 l-3.5 -2.6 l-3.5 2.6 z" stroke="currentColor" className={HINT} strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+      {/* 탭 (겹친 사각) */}
+      <rect x="167" y="251" width="8.5" height="8.5" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
+      <rect x="164" y="249" width="8.5" height="8.5" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
 
-      {/* 하단 Safari 단일행 바 배경 */}
-      <rect x="39" y="232" width="142" height="32" rx="0" fill="currentColor" className="text-background/95 dark:text-background/90" />
-      <line x1="39" y1="232" x2="181" y2="232" stroke="currentColor" className={FRAME} strokeWidth="1" />
-
-      {/* 좌측 뒤로가기 < (원형) */}
-      <circle cx="53" cy="248" r="9" className={SURFACE} fill="currentColor" />
-      <path d="M55 244 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* 중앙 주소창 pill */}
-      <rect x="70" y="240" width="82" height="16" rx="8" className={SURFACE} fill="currentColor" />
-      {/* 페이지 아이콘 (스택 사각) */}
-      <rect x="76" y="245" width="6" height="5" rx="1" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" />
-      <line x1="77.5" y1="252" x2="80.5" y2="252" stroke="currentColor" className={HINT} strokeWidth="1" strokeLinecap="round" />
-      {/* 주소 텍스트 */}
-      <text x="113" y="251.5" fontSize="6.5" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
-      {/* 우측 새로고침 ↻ */}
-      <path d="M144 250.5 a3.4 3.4 0 1 1 0.9 -3.4" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinecap="round" />
-      <path d="M145.6 242.6 l-0.3 3 l-2.9 -0.5" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* [강조] 우측 ⋯ 메뉴 (원형) - 클릭된 상태 */}
-      <circle cx="168" cy="248" r="10" fill={BRAND} opacity="0.12" />
-      <circle cx="168" cy="248" r="12.5" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.45" />
-      <circle cx="164" cy="248" r="1.3" fill={BRAND} />
-      <circle cx="168" cy="248" r="1.3" fill={BRAND} />
-      <circle cx="172" cy="248" r="1.3" fill={BRAND} />
-
-      {/* 가이드 화살표: 하단 우측 ⋯ 메뉴를 아래로 지목 */}
-      <g transform="translate(168, 224)">
+      {/* 가이드 화살표: 중앙 공유 버튼을 위에서 아래로 지목 */}
+      <g transform="translate(110, 234)">
         <path d="M0 -6 V4" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
         <path d="M-3 1 L0 4 L3 1" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </g>
@@ -353,6 +340,60 @@ export function IosAddToHomeStep({ className }: IllustrationProps) {
       <g transform="translate(160, 192)">
         <path d="M-6 8 L-1 -2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
         <path d="M-5 -4 L-1 -2 L-3 2" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** iOS 3단계: '홈 화면에 추가' 미리보기 화면에서 우측 상단 [추가] 버튼 강조 (대부분 브라우저 공통 형태) */
+export function IosConfirmAddStep({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="홈 화면에 추가 화면의 추가 버튼" fill="none">
+      <PhoneFrame />
+
+      {/* 배경 콘텐츠 흐릿하게 묘사 */}
+      <rect x="48" y="44" width="124" height="16" rx="8" className={SURFACE} fill="currentColor" opacity="0.22" />
+      <rect x="52" y="72" width="116" height="7" rx="3.5" className={LINE} fill="currentColor" opacity="0.22" />
+
+      {/* 상단에서 내려온 '홈 화면에 추가' 시트 */}
+      <rect x="41" y="34" width="138" height="116" rx="16" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+
+      {/* 네비 행: 취소(좌) / 제목(중앙) / 추가(우, 강조) */}
+      <text x="58" y="55.5" fontSize="7.5" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">취소</text>
+      <text x="106" y="55.5" fontSize="7.8" fontWeight="800" textAnchor="middle" fill="currentColor" className="text-foreground">홈 화면에 추가</text>
+
+      {/* [강조] 우측 상단 추가 버튼 */}
+      <g transform="translate(150, 44)">
+        <rect x="0" y="0" width="23" height="16" rx="6" fill={BRAND} opacity="0.16" />
+        <rect x="0" y="0" width="23" height="16" rx="6" stroke={BRAND} strokeWidth="1.1" />
+        <text x="11.5" y="11.5" fontSize="7.5" fontWeight="800" textAnchor="middle" fill={BRAND}>추가</text>
+        <circle cx="11.5" cy="8" r="14" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+      </g>
+      <line x1="41" y1="68" x2="179" y2="68" stroke="currentColor" className={FRAME} strokeWidth="0.8" opacity="0.5" />
+
+      {/* 미리보기 행: 앱 아이콘(좌) + 이름 '시크릿에셋'(중앙) + 도메인 */}
+      {/* 앱 아이콘 */}
+      <rect x="52" y="80" width="30" height="30" rx="7.5" fill={BRAND} />
+      {/* 아이콘 내부 자물쇠 모티프 */}
+      <g transform="translate(67, 95)">
+        <rect x="-5" y="-1.5" width="10" height="8.5" rx="2" fill="#fff" />
+        <path d="M-3 -1.5 V-4 a3 3 0 0 1 6 0 V-1.5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <circle cx="0" cy="2.5" r="1.3" fill={BRAND} />
+      </g>
+      {/* 이름 입력 필드 '시크릿에셋' */}
+      <rect x="90" y="82" width="84" height="14" rx="3.5" className={SURFACE} fill="currentColor" />
+      <text x="95" y="92" fontSize="7.5" fontWeight="700" className="text-foreground" fill="currentColor">시크릿에셋</text>
+      {/* 도메인 주소 */}
+      <text x="91" y="107" fontSize="6.5" fontWeight="500" className={HINT} fill="currentColor">{DOMAIN}</text>
+
+      {/* 안내 문구 라인 */}
+      <rect x="52" y="126" width="116" height="4" rx="2" className={LINE} fill="currentColor" opacity="0.4" />
+      <rect x="52" y="136" width="84" height="4" rx="2" className={LINE} fill="currentColor" opacity="0.4" />
+
+      {/* 가이드 화살표: 추가 버튼을 위에서 아래로 지목 */}
+      <g transform="translate(161.5, 30)">
+        <path d="M0 -5 V3" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M-3 0 L0 3 L3 0" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
   );
@@ -652,6 +693,70 @@ export function SamsungAddToHomeStep({ className }: IllustrationProps) {
         <path d="M1 -3.5 L-3 0 L1 3.5" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
+  );
+}
+
+// 가이드 애니메이션이 다루는 플랫폼(pc 제외 — pc는 네이티브 설치라 단계 가이드 없음)
+type GuideAnimPlatform = Exclude<GuidePlatform, "pc">;
+
+/** 플랫폼·브라우저별 설치 가이드 3단계 시퀀스 (브라우저별 1스텝 일러스트는 각자 distinct, 3번째 '추가 확정'은 공통) */
+function getGuideSteps(platform: GuideAnimPlatform, browser: GuideBrowser): FC<IllustrationProps>[] {
+  if (platform === "ios") {
+    const Step1 = browser === "safari" ? IosShareStep : browser === "whale" ? IosWhaleShareStep : IosChromeShareStep;
+    return [Step1, IosAddToHomeStep, IosConfirmAddStep];
+  }
+  // android — 전 브라우저 3단계 통일
+  if (browser === "samsung") return [SamsungMenuStep, SamsungAddToHomeStep, IosConfirmAddStep];
+  const Step1 = browser === "whale" ? IosWhaleShareStep : IosChromeShareStep;
+  return [Step1, IosAddToHomeStep, IosConfirmAddStep];
+}
+
+/**
+ * 설치 가이드 — 브라우저별 3단계를 2.5초 간격 페이드로 자동 순환 재생하는 동영상형 공통 플레이어.
+ * 설치 플로우와 통합 설치 가이드 양쪽에서 재사용.
+ */
+export function InstallGuideAnimation({
+  platform,
+  browser,
+  className,
+}: IllustrationProps & { platform: GuideAnimPlatform; browser: GuideBrowser }) {
+  const steps = getGuideSteps(platform, browser);
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    setActive(0);
+    if (steps.length <= 1) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setActive(a => (a + 1) % steps.length), 2500);
+    return () => clearInterval(id);
+    // platform·browser가 바뀌면 시퀀스가 바뀌므로 재시작
+  }, [platform, browser, steps.length]);
+
+  return (
+    <div className={className}>
+      <div className="relative mx-auto w-full max-w-[260px]" style={{ aspectRatio: "220 / 290" }}>
+        {steps.map((Step, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 transition-opacity duration-500"
+            style={{ opacity: i === active ? 1 : 0 }}
+            aria-hidden={i === active ? undefined : true}
+          >
+            <Step className="w-full h-full text-foreground" />
+          </div>
+        ))}
+      </div>
+      {/* 단계 진행 점 인디케이터 */}
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {steps.map((_, i) => (
+          <span
+            key={i}
+            className={`size-1.5 rounded-full transition-all duration-300 ${i === active ? "scale-125" : "bg-border"}`}
+            style={i === active ? { backgroundColor: BRAND } : undefined}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

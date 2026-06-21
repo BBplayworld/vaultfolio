@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  Cloud, CloudUpload, CloudDownload, Loader2, KeyRound, AlertTriangle, RefreshCw, Lock, Copy, QrCode, Share2, Link2,
+  Cloud, CloudUpload, CloudDownload, Loader2, KeyRound, AlertTriangle, RefreshCw, Lock, Copy, QrCode, Share2, Link2, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,7 +134,11 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) resetLocal(); }}>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto touch-pan-y">
         <DialogHeader className="text-left">
-          <DialogTitle className="flex items-center gap-2"><Cloud className="size-5 text-primary" /> 기기 동기화</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Cloud className="size-5 text-primary" /> 기기 동기화
+            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary">Plus</span>
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">베타 무료</span>
+          </DialogTitle>
           <DialogDescription className="text-left">
             새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). 서버는 E2EE 암호문만 보관하므로 금고 암호 없이는 열 수 없습니다.
           </DialogDescription>
@@ -144,6 +148,15 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* none: 동기화 시작 */}
         {cs.status === "none" && (
           <div className="space-y-3 py-1">
+            {/* Plus 프로모션 넛지 — 가치 인지 + 베타 무료 안내 */}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 space-y-1">
+              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                기기 동기화는 암호화 서버 비용이 드는 <span className="font-semibold text-primary">Plus 멤버십 기능</span>입니다. 정식 요금제 출시 전까지 <span className="font-semibold text-foreground">베타 기간 무료</span>로 제공하며, 유료 전환 전 충분한 기간을 두고 미리 알려드려요.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1.5"><KeyRound className="size-3.5 text-primary" /> 금고 암호</Label>
               <Input

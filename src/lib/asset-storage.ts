@@ -110,7 +110,7 @@ export function buildExportPayload(): Record<string, unknown> {
   const snapshots = collectSnapshotsFromStorage();
   const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
   const profitBasis = getProfitBasis();
-  const nickname = (() => { try { return localStorage.getItem(STORAGE_KEYS.nickname) || undefined; } catch { return undefined; } })();
+  const nickname = assetData.nickname || undefined;
   return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
 }
 

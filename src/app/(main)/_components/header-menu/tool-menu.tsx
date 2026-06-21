@@ -312,12 +312,20 @@ export function ToolMenuPage() {
                   <Cloud className="size-5 text-primary group-hover:scale-110 transition-transform" />
                   <span className="font-semibold text-foreground">기기 동기화</span>
                 </div>
-                <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                  Plus
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary">
+                    Plus
+                  </span>
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                    베타 무료
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 여러 기기에서 자산 데이터를 <strong className="text-foreground font-semibold">항상 최신으로 자동 유지</strong>합니다.
+              </p>
+              <p className="text-[11px] text-primary/80 mt-1.5 leading-relaxed">
+                Plus 요금제 출시 전 한시적 프로모션으로 지금은 무료예요.
               </p>
             </button>
           </div>

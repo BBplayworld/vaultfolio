@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { IN_APP_BROWSER_RE } from "@/lib/pwa/detect-browser";
+
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
@@ -37,7 +39,7 @@ export function usePWAInstall() {
     setIsIOS(isAppleDevice);
 
     // 인앱 브라우저 감지 (홈 화면 추가 불가 → 외부 브라우저 유도)
-    const isInAppBrowser = /kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/.test(userAgent);
+    const isInAppBrowser = IN_APP_BROWSER_RE.test(userAgent);
     setIsInApp(isInAppBrowser);
 
     const handleBeforeInstallPrompt = (e: Event) => {

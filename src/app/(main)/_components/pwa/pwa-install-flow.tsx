@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, SquarePlus, ExternalLink, Copy, MoreHorizontal } from "lucide-react";
+import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, ExternalLink, Copy, MoreHorizontal, Smartphone } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE } from "@/config/theme";
@@ -23,8 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import type { AssetSnapshots } from "@/types/asset";
-import { PwaInstallGuideDialog } from "./pwa-install-guide-dialog";
-import { IosShareStep, IosChromeShareStep, IosWhaleShareStep, IosAddToHomeStep } from "./pwa-guide-illustrations";
+import { InstallGuideContent } from "./pwa-install-guide-content";
+import { detectBrowserEnv, type BrowserEnv } from "@/lib/pwa/detect-browser";
 
 function collectSnapshots(): AssetSnapshots {
   try {
@@ -63,7 +63,6 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const { assetData, exchangeRates } = useAssetData();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const [showDialog, setShowDialog] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -71,7 +70,8 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
   const [iosStep, setIosStep] = useState(false); // 데이터 준비 후 '홈 화면 추가' 가이드 단계
   const [inAppStep, setInAppStep] = useState(false); // 인앱 브라우저: 외부 브라우저 유도 단계
-  const [iosBrowser, setIosBrowser] = useState<"safari" | "chrome" | "whale">("safari"); // iOS 상세 브라우저 선택 가이드
+  const [guideStep, setGuideStep] = useState(false); // 설치불가 폴백: 환경별 설치 가이드/문제해결
+  const [env, setEnv] = useState<BrowserEnv>({ platform: "ios", browser: "safari", isInApp: false }); // 접속 환경 자동감지
   const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 연결 코드 (자동 복사됨)
 
   const hasAssets =
@@ -87,9 +87,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const isSyncMode = !!syncAssetId;
   const codeLabel = isSyncMode ? "동기화 코드" : "연결 코드"; // 화면 표시 명칭(데이터 성격이 달라 구분)
 
-  const nickname = (() => {
-    try { return localStorage.getItem(STORAGE_KEYS.nickname) || ""; } catch { return ""; }
-  })();
+  const nickname = assetData.nickname || "";
 
   useEffect(() => {
     if (showDialog && !iosStep && !inAppStep && !isSyncMode) {
@@ -130,7 +128,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
 
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setMounted(true); setEnv(detectBrowserEnv()); }, []);
 
   if (!mounted || isStandalone) return null;
 
@@ -150,10 +148,24 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
         setShareCode(code);
         try { await navigator.clipboard.writeText(code); } catch { /* 가이드 카드에 노출되므로 수동 복사 가능 */ }
       } else {
-        const artifacts = await generateShareArtifacts();
+        // WebKit(iOS): await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은
+        // ClipboardItem을 동기 시점에 전달해 자동 복사 보존
+        const artifactsPromise = generateShareArtifacts();
+        let copied = false;
+        if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/plain": artifactsPromise.then(a => new Blob([a?.code ?? ""], { type: "text/plain" })),
+              }),
+            ]);
+            copied = true;
+          } catch { /* 폴백: 아래 writeText */ }
+        }
+        const artifacts = await artifactsPromise;
         if (artifacts) {
           setShareCode(artifacts.code);
-          try { await navigator.clipboard.writeText(artifacts.code); } catch { /* 수동 복사 가능 */ }
+          if (!copied) { try { await navigator.clipboard.writeText(artifacts.code); } catch { /* 수동 복사 가능 */ } }
         } else {
           setShareCode(null);
           toast.error("연결 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -173,6 +185,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     setShareCode(null);
     setIosStep(false);
     setInAppStep(false);
+    setGuideStep(false);
     setShowDialog(true);
   };
 
@@ -182,18 +195,27 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     if (!open) {
       setIosStep(false);
       setInAppStep(false);
+      setGuideStep(false);
     }
   };
 
   // 인앱 브라우저(카카오톡 등): 현재 주소를 복사하고 외부 브라우저 유도 가이드 표시
   const openInAppGuide = async () => {
     try {
-      const artifacts = hasAssets ? await generateShareArtifacts() : null;
-      const fullUrl = window.location.origin + (artifacts?.url ?? "/");
-      try {
-        await navigator.clipboard.writeText(fullUrl);
-      } catch {
-        // 클립보드 실패 시에도 가이드는 표시
+      // WebKit: await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은 ClipboardItem 전달
+      const artifactsPromise = hasAssets ? generateShareArtifacts() : Promise.resolve(null);
+      const toUrl = (a: { url: string; code: string } | null) => window.location.origin + (a?.url ?? "/");
+      let copied = false;
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "text/plain": artifactsPromise.then(a => new Blob([toUrl(a)], { type: "text/plain" })) }),
+          ]);
+          copied = true;
+        } catch { /* 폴백: 아래 writeText */ }
+      }
+      if (!copied) {
+        try { await navigator.clipboard.writeText(toUrl(await artifactsPromise)); } catch { /* 클립보드 실패 시에도 가이드는 표시 */ }
       }
     } finally {
       setInAppStep(true);
@@ -246,7 +268,13 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
           console.error("클립보드 복사 실패:", err);
         }
       }
-      setShowGuide(true);
+      // 통합 설치 가이드(환경별 + 문제해결)를 같은 다이얼로그로 노출
+      setPin("");
+      setShareCode(null);
+      setIosStep(false);
+      setInAppStep(false);
+      setGuideStep(true);
+      setShowDialog(true);
     }
   };
 
@@ -258,10 +286,15 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
         <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
           <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border/50">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
-              {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : "홈 화면에 앱 설치"}
+              {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : guideStep ? <Smartphone className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
+              {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : guideStep ? "앱 설치 가이드" : "홈 화면에 앱 설치"}
             </DialogTitle>
-            {!iosStep && !inAppStep && (
+            {guideStep && (
+              <DialogDescription className="text-sm text-muted-foreground leading-relaxed mt-1">
+                현재 접속 환경에 맞는 설치 방법입니다. 설치가 안 된다면 아래 <span className="font-semibold text-foreground">설치가 안 되나요?</span>를 펼쳐 확인해 주세요.
+              </DialogDescription>
+            )}
+            {!iosStep && !inAppStep && !guideStep && (
               <DialogDescription asChild>
                 <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed mt-1">
                   <p className="text-foreground font-semibold">안전한 자산 연동과 브라우저 세션 끊김으로 인한 데이터 유실을 막기 위해 앱으로 설치해야 합니다.</p>
@@ -326,6 +359,11 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                   메뉴에 위 항목이 보이지 않는다면, 복사된 주소를 복사하여 스마트폰의 기본 브라우저(Safari 또는 크롬) 주소창에 직접 붙여넣어 접속해 주세요.
                 </div>
               </div>
+            ) : guideStep ? (
+              /* 설치불가 폴백: 접속 환경 자동감지 통합 가이드 + 문제해결 */
+              <div className="py-1">
+                <InstallGuideContent env={env} />
+              </div>
             ) : iosStep ? (
               /* iOS: 브라우저 공유 메뉴에서 직접 추가하도록 단계별 가이드 (브라우저 무관) */
               <div className="flex flex-col gap-4 py-1">
@@ -344,24 +382,6 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                   </div>
                 )}
 
-                {/* 브라우저별 선택 칩 */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-muted-foreground font-medium">사용 중인 브라우저:</span>
-                  <div className="flex gap-1 bg-muted/50 p-0.5 rounded-lg border">
-                    {(["safari", "chrome", "whale"] as const).map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setIosBrowser(b)}
-                        className={`text-xs sm:text-sm px-2.5 py-0.5 rounded-md font-semibold transition-colors capitalize ${iosBrowser === b ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                          }`}
-                      >
-                        {b === "safari" ? "Safari" : b === "chrome" ? "Chrome" : "Whale"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* STEP 1 섹션 헤더 (연결 코드 있을 때만 — STEP 2와 위계 일치) */}
                 {shareCode && (
                   <div className="flex items-center gap-2">
@@ -370,66 +390,8 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* 1단계: 공유 */}
-                  <div className="flex flex-col space-y-2.5 p-3.5 rounded-xl border border-border/50 bg-muted/10">
-                    <div className="flex items-center gap-2">
-                      <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-                      <p className="font-semibold text-sm text-foreground">
-                        {iosBrowser === "safari" ? "Safari" : iosBrowser === "chrome" ? "Chrome" : "Whale"} 공유 메뉴 클릭
-                      </p>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed h-12">
-                      {iosBrowser === "safari" && (
-                        <>
-                          Safari 하단 우측 메뉴(<span className="font-semibold text-foreground font-mono">⋯</span>) 터치 후, 메뉴 <span className="font-semibold text-foreground">최상단</span>의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span>를 선택합니다.
-                        </>
-                      )}
-                      {iosBrowser === "chrome" && (
-                        <>
-                          크롬 하단 주소창 우측의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 아이콘을 바로 누릅니다.
-                        </>
-                      )}
-                      {iosBrowser === "whale" && (
-                        <>
-                          웨일 하단 우측 메뉴(<span className="font-semibold text-foreground font-mono">≡</span>) 터치 후, 그리드의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span>를 선택합니다.
-                        </>
-                      )}
-                    </p>
-                    <div className="flex-1 flex items-center justify-center pt-1">
-                      {iosBrowser === "safari" && (
-                        <IosShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
-                      )}
-                      {iosBrowser === "chrome" && (
-                        <IosChromeShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
-                      )}
-                      {iosBrowser === "whale" && (
-                        <IosWhaleShareStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 2단계 */}
-                  <div className="flex flex-col space-y-2.5 p-3.5 rounded-xl border border-border/50 bg-muted/10">
-                    <div className="flex items-center gap-2">
-                      <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
-                      <p className="font-semibold text-sm text-foreground">홈 화면에 추가 선택</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed h-12">
-                      공유 메뉴 창을 아래로 올려 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">홈 화면에 추가 <SquarePlus className="size-3" /></span>를 터치합니다.
-                    </p>
-                    <div className="flex-1 flex items-center justify-center pt-1">
-                      <IosAddToHomeStep className="w-full max-w-[280px] text-foreground transition-all hover:scale-[1.02]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3.5 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 className="size-4 shrink-0" />
-                  <span>
-                    마지막으로 우측 상단의 <strong className="text-foreground font-semibold">[추가]</strong> 버튼을 누르면 홈 화면에 앱 아이콘이 생성됩니다.
-                  </span>
-                </div>
+                {/* 환경 자동감지 통합 가이드 (브라우저별 3단계 + 접이식 문제해결) */}
+                <InstallGuideContent env={env} />
 
                 {/* STEP 2 — 연결 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
                 {shareCode && (
@@ -500,7 +462,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
           </div>
 
           <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {iosStep || inAppStep ? (
+            {iosStep || inAppStep || guideStep ? (
               <Button variant="brand" onClick={() => handleDialogChange(false)} type="button" className="text-sm h-10 px-5 shadow-sm font-semibold text-white">
                 가이드 확인 완료
               </Button>
@@ -524,8 +486,6 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <PwaInstallGuideDialog open={showGuide} onOpenChange={setShowGuide} />
     </>
   );
 }
