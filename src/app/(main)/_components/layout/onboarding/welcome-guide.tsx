@@ -19,6 +19,9 @@ import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_component
 import previewData from "./welcome-preview-data.json";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 
+// 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시) — delay는 style로 분산
+const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500";
+
 // ── 예시 데이터 정적 계산 (컴포넌트 외부)
 const EXCHANGE_RATES = previewData.exchangeRates as { USD: number; JPY: number };
 const PREVIEW_STOCKS = previewData.stocks as unknown as Stock[];
@@ -88,21 +91,21 @@ export function WelcomeGuide() {
     <div className="w-full border-0 bg-transparent shadow-none px-0 py-2 sm:px-0 space-y-8">
 
       {/* 헤로 섹션 */}
-      <div className="text-center space-y-3">
+      <div className={`text-center space-y-3 ${ENTER}`}>
         <Badge variant="outline" className="border-primary/40 text-primary px-3 py-1 text-xs font-medium">
           시작하기
         </Badge>
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-balance">
           나만의 비밀 자산 금고
         </h1>
-        <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+        <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed text-pretty">
           로그인 없이, 서버 저장 없이.<br className="hidden sm:block" />
           내 자산은 오직 내 브라우저에만 보관됩니다.
         </p>
       </div>
 
       {/* 보안 특징 카드 3개 — 앱가이드와 동일 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${ENTER}`} style={{ animationDelay: "100ms" }}>
         <FeatureCard
           icon={ShieldCheck}
           title="영지식(Zero-Knowledge) 로컬 격리"
@@ -122,7 +125,7 @@ export function WelcomeGuide() {
 
       {/* PWA 웹앱 설치 유도 — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
       {canInstallPWA && (
-        <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4">
+        <div className={`rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4 ${ENTER}`} style={{ animationDelay: "200ms" }}>
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
               <Smartphone className="size-5 text-primary" />
@@ -260,10 +263,10 @@ export function WelcomeGuide() {
       {ctaVisible && (
       <div className="rounded-xl border border-border/60 bg-card/80 p-6 space-y-5">
         <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-balance">
             {mounted && isStandalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-pretty">
             부동산, 주식, 암호화폐, 현금, 대출까지 — 모든 자산을 한 곳에서 관리하세요.
           </p>
         </div>
@@ -337,9 +340,9 @@ function FeatureCard({
         <div className="rounded-lg bg-primary/10 p-2 shrink-0">
           <Icon className="size-4 text-primary" />
         </div>
-        <h3 className="text-[15px] font-semibold">{title}</h3>
+        <h3 className="text-[15px] font-semibold text-balance">{title}</h3>
       </div>
-      <p className="text-[13px] text-muted-foreground leading-7 tracking-[0.01em] break-keep">{desc}</p>
+      <p className="text-[13px] text-muted-foreground leading-7 tracking-[0.01em] break-keep text-pretty">{desc}</p>
     </div>
   );
 }

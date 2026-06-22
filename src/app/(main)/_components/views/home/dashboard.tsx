@@ -466,7 +466,7 @@ export function Dashboard() {
   const { visibleTabs, resolvedTab } = useDashboardTabs(activeDetailTab);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
       {/* ── 자산 분포 카드 (통합) ── */}
       <Card className={`lg:col-span-2 gap-2 ${ASSET_THEME.contentCard}`}>
         <CardContent className={`pb-2 overflow-hidden ${ASSET_THEME.contentPad}`}>

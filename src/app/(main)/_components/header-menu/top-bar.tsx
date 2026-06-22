@@ -17,7 +17,7 @@ const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }
 ];
 
 // 상단 아이콘 버튼 공용 크기 (한 단계 ↑)
-const ICON_BTN = "inline-flex items-center justify-center h-9 sm:h-11 w-9 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";
+const ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";
 
 function ShareScreenshotButton() {
   const [open, setOpenState] = useState(false);

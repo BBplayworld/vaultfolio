@@ -305,7 +305,7 @@ export function StockTradesView() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-[11px] text-muted-foreground">총 {filtered.length.toLocaleString()}건</p>
+            <p className="text-[11px] text-muted-foreground tabular-nums">총 {filtered.length.toLocaleString()}건</p>
             {Object.entries(grouped).map(([date, txs]) => (
               <div key={date}>
                 <p className="text-[11px] text-muted-foreground mb-1.5">{date}</p>
@@ -355,7 +355,7 @@ export function StockTradesView() {
             {/* 더보기 — PC는 버튼, 모바일은 자동 로드 sentinel */}
             {hasMore && (
               isMobile === false ? (
-                <Button variant="outline" size="sm" className="w-full h-9 text-xs" onClick={() => setVisibleCount((c) => c + STEP)}>
+                <Button variant="outline" size="sm" className="w-full h-9 text-xs tabular-nums" onClick={() => setVisibleCount((c) => c + STEP)}>
                   더보기 (남은 {(filtered.length - visibleCount).toLocaleString()}건)
                 </Button>
               ) : (

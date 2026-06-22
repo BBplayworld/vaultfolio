@@ -290,7 +290,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
               {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : guideStep ? "앱 설치 가이드" : "홈 화면에 앱 설치"}
             </DialogTitle>
             {guideStep && (
-              <DialogDescription className="text-sm text-muted-foreground leading-relaxed mt-1">
+              <DialogDescription className="text-sm text-muted-foreground leading-relaxed mt-1 text-pretty">
                 현재 접속 환경에 맞는 설치 방법입니다. 설치가 안 된다면 아래 <span className="font-semibold text-foreground">설치가 안 되나요?</span>를 펼쳐 확인해 주세요.
               </DialogDescription>
             )}
@@ -395,7 +395,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
                 {/* STEP 2 — 연결 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
                 {shareCode && (
-                  <div className="flex flex-col gap-2.5 rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5">
+                  <div className="flex flex-col gap-2.5 mt-3 border-t border-border/50 pt-5">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 rounded-md bg-primary text-white text-xs font-bold">STEP 2</span>
                       <p className="font-semibold text-sm text-foreground">앱을 열고 {codeLabel} 붙여넣기</p>

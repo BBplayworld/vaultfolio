@@ -144,7 +144,7 @@ Body: { message: string(필수, 최대 2000자 절단), nickname?: string, conta
 - `SLACK_WEBHOOK_URL` 환경변수로 `{ text }` POST (`*[secretasset 의견·요청]*` + 닉네임/연락처/본문)
 - IP `checkRateLimit` 재사용(`share/route.ts`와 동일 버킷, 분당 10회), `getClientIp` 동일 패턴
 - **에러:** 400(message 공백/잘못된 요청) / 429(rate limit) / 500(`SLACK_WEBHOOK_URL` 미설정) / 502(웹훅 실패)
-- 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/asset/_components/header/tool-menu.tsx) 더보기 > "의견·요청 보내기"
+- 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/tool-menu.tsx) 더보기 > "의견·요청 보내기"
 
 ---
 

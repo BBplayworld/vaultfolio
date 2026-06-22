@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-06-14
+> 마지막 업데이트: 2026-06-22
 
 ## 앱 개요
 
@@ -25,43 +25,59 @@
 
 ## 디렉토리 구조
 
+> **구조 변경(2026-06): `(main)/asset/` 레이어 제거** — 기존 `(main)/asset/_components/*`·`(main)/asset/page.tsx`가 `(main)/_components/*`·`(main)/page.tsx`로 평탄화됨. `header/` → `header-menu/`로 rename. 옛 `asset/_components/header/...` 경로 참조는 모두 무효.
+
 ```
 src/
 ├── app/
 │   ├── (main)/
-│   │   ├── asset/
-│   │   │   ├── page.tsx              # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
-│   │   │   ├── layout.tsx            # SidebarInset + NavigationProvider + FAB pb-20/24
-│   │   │   └── _components/
-│   │   │       ├── forms/            # (구 bottom-nav) 자산 입력 폼 + 스크린샷 다이얼로그
-│   │   │       ├── views/            # (구 main-nav) 페이지 본문 콘텐츠
-│   │   │       │   ├── home/dashboard.tsx
-│   │   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종
-│   │   │       │   └── activity/     # net-asset-chart, profit-chart, dividend-chart
-│   │   │       ├── layout/           # 라우팅·공용 UI (navigation-context, inline-selector, ...)
-│   │   │       ├── header/           # (구 top-nav) top-bar, tool-menu, app-guide, share/
-│   │   │       ├── functions/
-│   │   │       │   └── cloud-sync/   # cloud-sync-menu-entry, cloud-sync-connect-dialog, cloud-sync-provider
-│   │   │       ├── pwa/              # 설치 흐름 공용 + 가이드 SVG
-│   │   │       │   ├── pwa-install-flow.tsx     # 설치 다이얼로그+로직 공용 소스 (홈 버튼·웰컴가이드 공유, render-prop 트리거)
-│   │   │       │   ├── pwa-install-button.tsx   # 다운로드 아이콘 버튼 (PwaInstallFlow 얇은 래퍼)
-│   │   │       │   ├── pwa-install-guide-dialog.tsx  # "앱 설치가 안 되나요?" 3탭 다이얼로그 (고스트/인앱 fallback)
-│   │   │       │   └── pwa-guide-illustrations.tsx  # iOS 설치 step SVG (Safari ⋯팝업/Chrome 주소창 공유/Whale ≡그리드)
-│   │   │       └── tutorial/         # tutorial-overlay.tsx (Step 1~5)
+│   │   ├── page.tsx                  # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
+│   │   ├── layout.tsx                # SidebarInset + NavigationProvider + FAB pb-20/24
+│   │   ├── [...not-found]/
 │   │   └── _components/
-│   │       └── header-menu/          # tool-menu, settings-page, app-guide (더보기 메뉴)
+│   │       ├── forms/                # (구 bottom-nav) 자산 입력 폼 + 스크린샷/거래 다이얼로그
+│   │       │   ├── asset-update/
+│   │       │   │   ├── input/        # stock/crypto/cash/loan/real-estate/exchange-rate-input
+│   │       │   │   └── screenshot/   # stock/crypto/cash/loan-screenshot-import
+│   │       │   └── trade/            # trade-input, trade-screenshot-import, guards/delete-rollback-dialog
+│   │       ├── views/                # (구 main-nav) 페이지 본문 콘텐츠
+│   │       │   ├── home/dashboard.tsx
+│   │       │   ├── detail/           # asset-detail-tabs, detail-hub, detail-summary-header
+│   │       │   │   ├── tabs/         # stock/real-estate/crypto/cash/loan-tab 5종
+│   │       │   │   ├── trades/       # stock-trades-view
+│   │       │   │   └── xray/         # stock-xray-view, stock-insight-strip
+│   │       │   └── activity/         # net-asset/profit/dividend chart + performance-hub
+│   │       ├── layout/               # 라우팅·공용 UI
+│   │       │   ├── navigation/       # navigation-context, asset-page-tabs, asset-dispatch
+│   │       │   ├── floating/         # floating-add-button, scroll-to-top
+│   │       │   ├── onboarding/       # welcome-guide, notice, notice-dialog
+│   │       │   └── ui/               # inline-selector, kpi-card, info-hint, prompt-preview-dialog
+│   │       ├── header-menu/          # (구 top-nav/header) top-bar, tool-menu, settings-page, app-guide
+│   │       │   └── share/            # share-card, share-menu
+│   │       ├── functions/
+│   │       │   └── cloud-sync/       # cloud-sync-menu-entry, cloud-sync-connect-dialog, sync-qr
+│   │       ├── pwa/                  # 설치 흐름 공용 + 가이드 SVG
+│   │       │   ├── pwa-install-flow.tsx     # 설치 다이얼로그+로직 공용 소스 (홈 버튼·웰컴가이드 공유, render-prop 트리거)
+│   │       │   ├── pwa-install-button.tsx   # 다운로드 아이콘 버튼 (PwaInstallFlow 얇은 래퍼)
+│   │       │   ├── pwa-install-guide-content.tsx  # (구 -dialog) 환경별 설치 가이드 본문 컴포넌트 (flow 내 임베드)
+│   │       │   ├── pwa-guide-illustrations.tsx  # iOS 설치 step SVG (Safari ⋯팝업/Chrome 주소창 공유/Whale ≡그리드)
+│   │       │   ├── pwa-install-banner.tsx, pwa-connect-prompt.tsx, pwa-lock-screen.tsx, bottom-nav.tsx
+│   │       └── tutorial/             # tutorial-overlay.tsx (Step 1~5)
 │   ├── api/
 │   │   ├── finance/
 │   │   │   ├── route.ts              # 주식·환율 조회 (장중 1시간 슬롯 캐시)
-│   │   │   └── profit/route.ts       # 기준가 조회 (2단 캐시: refDateMap + refPrice)
+│   │   │   ├── profit/route.ts       # 기준가 조회 (2단 캐시: refDateMap + refPrice)
+│   │   │   ├── dividend/route.ts     # 배당 조회
+│   │   │   └── debug-overseas/route.ts
 │   │   ├── sync/route.ts             # E2EE 클라우드 동기화 (PUT/GET AssetEnvelope)
-│   │   ├── pwa-manifest/route.ts     # PWA manifest 동적 생성 (startUrl 주입)
+│   │   ├── xray-classify/route.ts    # X-Ray AI 분류 (스트리밍)
 │   │   ├── logo/route.ts             # 종목 로고 프록시
 │   │   ├── share/route.ts            # 공유 Short URL
 │   │   ├── feedback/route.ts         # 의견·요청 Slack 전달
 │   │   └── parse-screenshot/
 │   │       ├── route.ts              # POST (Gemini AI)
 │   │       └── ticker-map.ts         # 종목명→티커 fallback (~700개)
+│   ├── manifest.ts                   # PWA manifest (/manifest.webmanifest, share_target 포함)
 │   └── layout.tsx                    # 루트 레이아웃 (appleWebApp·apple-touch-icon 메타데이터 포함)
 ├── hooks/
 │   └── use-pwa-install.ts            # PWA 설치 훅 (isInstallable/isIOS/isInApp/isStandalone)
@@ -85,6 +101,8 @@ src/
 │   │   ├── sync-client.ts            # pushAsset/pullAsset/fetchRemoteVersion, Ed25519 인증
 │   │   ├── device-key.ts             # IndexedDB 기기키 wrap/unwrap (rememberedKey 보관)
 │   │   └── cloud-sync-provider.tsx   # SYNC_HASH_PARAM 해시 감지·자동 연결
+│   ├── pwa/
+│   │   └── detect-browser.ts         # iOS 브라우저 판별(Safari/Chrome/Whale) — 가이드 SVG 분기
 │   ├── number-utils.ts
 │   └── utils.ts
 ├── config/

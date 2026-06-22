@@ -1,6 +1,6 @@
 # 개발 규칙 & 패턴
 
-> 마지막 업데이트: 2026-05-16
+> 마지막 업데이트: 2026-06-22 (경로: `(main)/asset/` 제거 → `(main)/_components/` 평탄화)
 
 ## 코드 패턴
 
@@ -8,8 +8,8 @@
 1. `src/types/asset.ts` — Zod 스키마 + TS 타입
 2. `src/lib/asset-storage.ts` — 저장/로드 로직
 3. `src/contexts/asset-data-context.tsx` — CRUD 함수
-4. `src/app/(main)/asset/_components/bottom-nav/asset-update/input/xxx-input.tsx` — 입력 폼
-5. `src/app/(main)/asset/_components/layout/asset-page-tabs.tsx` — 탭 등록
+4. `src/app/(main)/_components/forms/asset-update/input/xxx-input.tsx` — 입력 폼
+5. `src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx` — 탭 등록
 6. `src/config/asset-options.ts` — 카테고리 옵션 (필요 시)
 
 ### CRUD 반환 패턴

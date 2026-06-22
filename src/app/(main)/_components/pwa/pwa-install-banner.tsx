@@ -51,7 +51,7 @@ export function PwaInstallBanner() {
 
           <button
             onClick={handleDismiss}
-            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50"
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
             aria-label="닫기"
           >
             <X className="size-4" />
@@ -65,7 +65,7 @@ export function PwaInstallBanner() {
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 앱으로 더 안전하고 빠르게!
               </h4>
-              <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+              <p className="text-sm text-muted-foreground leading-relaxed mt-1 text-pretty">
                 홈 화면에 시크릿에셋을 설치하면 브라우저 주소창 없이 앱의 형태로 편리하고 안전하게 금고를 연동하여 사용할 수 있습니다.
               </p>
             </div>
@@ -104,7 +104,7 @@ export function PwaInstallBanner() {
 
           <button
             onClick={handleDismiss}
-            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50"
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
             aria-label="닫기"
           >
             <X className="size-4" />
@@ -118,7 +118,7 @@ export function PwaInstallBanner() {
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 홈 화면에 추가하고 앱처럼 사용!
               </h4>
-              <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+              <p className="text-sm text-muted-foreground leading-relaxed mt-1 text-pretty">
                 Safari 브라우저 하단의 <span className="font-semibold text-foreground flex inline-flex items-center gap-0.5 mx-0.5"><Share className="size-3" /> [공유]</span> 버튼을 누른 후,
                 <span className="font-semibold text-foreground"> [홈 화면에 추가]</span>를 선택하면 네이티브 앱처럼 시크릿에셋 금고를 연동할 수 있습니다.
               </p>

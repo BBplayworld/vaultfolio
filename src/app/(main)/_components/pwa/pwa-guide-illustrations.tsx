@@ -734,7 +734,9 @@ export function InstallGuideAnimation({
 
   return (
     <div className={className}>
-      <div className="relative mx-auto w-full max-w-[260px]" style={{ aspectRatio: "220 / 290" }}>
+      <div className="relative mx-auto w-full max-w-[260px]">
+        {/* 220:290 비율 스페이서 — 구형 Safari(iOS 14 이하) 등 aspect-ratio 미지원 대비 */}
+        <div style={{ paddingTop: "131.818%" }} aria-hidden />
         {steps.map((Step, i) => (
           <div
             key={i}

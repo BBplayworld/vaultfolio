@@ -65,7 +65,7 @@ export function AppGuide() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto touch-pan-y">
         <DialogHeader className="text-left">
-          <DialogTitle className="flex items-center gap-2 text-[17px] font-bold text-primary tracking-tight">
+          <DialogTitle className="flex items-center gap-2 text-[17px] font-bold text-primary tracking-tight pr-8 text-balance">
             <Info className="size-5 shrink-0" />
             {APP_CONFIG.name} 보안 가이드 - 내 자산은 오직 나만 볼 수 있게
           </DialogTitle>

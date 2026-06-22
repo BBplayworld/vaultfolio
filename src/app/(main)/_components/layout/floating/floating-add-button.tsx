@@ -16,6 +16,9 @@ import { useAssetNavigation, type DetailTab } from "../navigation/navigation-con
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
 type Step = "select-type" | "select-action" | "select-method";
 
+// 시트 리스트 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시)
+const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300";
+
 const ASSET_TYPES = [
   { type: "real-estate" as AssetType, label: "부동산", icon: Building2, hasScreenshot: false, navigateTab: "real-estate" as string | null },
   { type: "stock" as AssetType, label: "주식", icon: TrendingUp, hasScreenshot: true, navigateTab: "stocks" as string | null },
@@ -149,7 +152,7 @@ export function FloatingAddButton() {
       {/* 모바일: 하단 고정 바 (배경·그라데이션·스크롤 hide 포함) */}
       {showBar && isMobile && (
         <div
-          className={`pwa-fab-container fixed bottom-0 left-0 right-0 z-40 transition-all duration-150
+          className={`pwa-fab-container fixed bottom-0 left-0 right-0 z-40 transition-[transform,opacity] duration-150
           ${isHidden ? "translate-y-[calc(100%+1rem)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
         >
           <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
@@ -225,11 +228,12 @@ export function FloatingAddButton() {
 
           {step === "select-type" && (
             <div className="flex flex-col gap-2 px-3">
-              {ASSET_TYPES.map(({ type, label, icon: Icon }) => (
+              {ASSET_TYPES.map(({ type, label, icon: Icon }, i) => (
                 <button
                   key={type}
                   type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                  style={{ animationDelay: `${i * 40}ms` }}
                   onClick={() => handleTypeSelect(type)}
                 >
                   <Icon className="size-5 text-primary shrink-0" />

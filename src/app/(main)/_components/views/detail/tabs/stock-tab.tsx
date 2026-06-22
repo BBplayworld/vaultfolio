@@ -310,7 +310,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
-          <span className="text-sm text-foreground">{stock.quantity.toLocaleString()}주</span>
+          <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
           <span className="text-sm text-muted-foreground">·</span>
           <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
         </div>
@@ -609,7 +609,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
           </div>
           <div>
             <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
-            <p className={ASSET_THEME.cardDetailValue}>
+            <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>
               {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
                 ? stock.currency === "JPY" ? `¥100=₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1=₩${stock.purchaseExchangeRate.toLocaleString()}`
                 : "미입력 (현재환율)"}
@@ -651,7 +651,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
-              <span className="text-xs sm:text-sm text-foreground shrink-0">{stock.quantity.toLocaleString()}주</span>
+              <span className="text-xs sm:text-sm text-foreground shrink-0 tabular-nums">{stock.quantity.toLocaleString()}주</span>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
                 <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatPriceByMode(Math.round(m.currentVal))}</span>
                 <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
@@ -770,7 +770,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                     <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{label}</Badge>
                   ))}
                 </div>
-                <span className="text-xs sm:text-sm text-foreground font-semibold shrink-0 whitespace-nowrap">총 {stock.quantity.toLocaleString()}주</span>
+                <span className="text-xs sm:text-sm text-foreground font-semibold shrink-0 whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
               </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />

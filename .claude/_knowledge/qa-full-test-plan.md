@@ -32,13 +32,13 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ add/update/delete가 `saveData` 단일 저장 경로 사용, 삭제 후 합계 재계산 ([asset-data-context](../../src/contexts/asset-data-context.tsx) `getAssetSummary`)
 - 👤 각 자산 유형 추가→수정→삭제, 순자산/총자산/총부채 즉시 갱신
 - 👤 비종목 자산(부동산·대출·현금) 카드 접힘행 왼쪽=`이름 / 비중%`만, 상세 펼침에 종류·매입가(부동산)·금리·금융기관(대출) 노출 — 주식 카드 패턴과 통일
-- 👤 주식 보유종목 스크린샷 가져오기 미리보기([stock-screenshot-import.tsx](../../src/app/(main)/asset/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx)) 카드 레이아웃 그리드 정렬 및 증권사 드롭다운 텍스트 짤림 방지 확인
+- 👤 주식 보유종목 스크린샷 가져오기 미리보기([stock-screenshot-import.tsx](../../src/app/(main)/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx)) 카드 레이아웃 그리드 정렬 및 증권사 드롭다운 텍스트 짤림 방지 확인
 - 👤 주식 스샷 **공통/개별 적용 토글**: 기본 "공통 적용"(카테고리·증권사 1세트 → 전 종목 일괄), "개별 선택" 전환 시 종목별 드롭다운 노출. 공통 카테고리 변경 시 해외↔국내 가격/통화 환산이 개별 변경과 동일한지
 - ⚙ `convertStockCategory` 단일 헬퍼로 `updateCategory`·`applyCommonCategory` 환산 로직 일원화(중복 제거), 파싱 직후 다수=해외→`foreign`/그 외 도메스틱·`activeTab` 기준 공통 기본값 설정 + `matchBrokerHint` 증권사 자동 매칭
 - 엣지: 0개 상태(웰컴가이드 노출), 단일 항목 표시(`length > 0` 규칙)
 - 회귀: 부동산 임차보증금(tenantDeposit) 순자산 차감, 대출 잔액 차감
 
-### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/asset/_components/views/detail/tabs/stock-tab.tsx))
+### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx))
 - 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
 - 👤 요약 헤더 평가손익·전일 대비, 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
@@ -46,7 +46,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 해외주식 원화/달러 평단 입력 분기, 환차익 계산
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
-### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/asset/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/asset/_components/views/detail/trades/stock-trades-view.tsx))
+### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
 - 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기, 중복 거래 인라인 확인
 - 👤 거래 삭제 → 미반영 즉시삭제 / 반영 롤백 다이얼로그
 - ⚙ `trade-utils`: 가중평균 평단·환율, 매도 차감, 미반영 스킵, **역산 롤백(수동 보유분 보존)**, `findDuplicateTransaction`, `pruneTransactions` 3년 롤링
@@ -54,18 +54,18 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 수동 보유분+반영거래 삭제 시 보유분 보존(P1 회귀), 전량매도 평단 0, 보유초과 매도 차단, 미래·보존기간(3년) 밖 날짜 차단
 - 회귀: `addTransactionWithPosition`/`deleteTransactionWithPosition` 단일 저장(stale-closure 방지)
 
-### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/asset/_components/forms/trade/trade-screenshot-import.tsx))
+### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx))
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`)
 - 엣지: 통화 KRW/USD 분기, 중복 거래 처리, 매칭 실패 종목 제외
 
-### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/asset/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
+### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
 - 👤 5축(핵심분야·시가총액·지수·지역·통화) 전환, 분포바·집중도 등급, AI 분류 진행률, 프롬프트 확인·복사
 - ⚙ `stock-xray` `computeBreakdown` 단일배정·합 100%, 미분류 처리, 레버리지/인버스 ETF 지수매핑(TQQQ·QLD→NASDAQ100, UPRO·SSO→S&P500)
 - ⚙ `fetch-classifications` 캐시 hit 스킵·dedup·스트리밍, 실패 토스트 폴백, `classification-store` localStorage 90일
 - 엣지: 전량 미분류 시 "준비 중", 집중도 임계값 0.6/0.35, delisted 가치 0
 - 회귀: ticker 병합 후 집계(1회 노출)
 
-### F-ACTIVITY. 성과 (순자산·수익·배당) ([views/activity](../../src/app/(main)/asset/_components/views/activity))
+### F-ACTIVITY. 성과 (순자산·수익·배당) ([views/activity](../../src/app/(main)/_components/views/activity))
 - 👤 순자산 차트(현재+전년 대비), 수익 차트(기간별 일/주/월/연, basis 토글), 배당 차트(연간+월평균, 예상/실제)·월별 배당 종목
 - 👤 수익 차트 "기준 종가 비교": 시작 종가가 휴장으로 직전 영업일에 폴백되면 "휴장제외" 최소 표시 — 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKr/UsHoliday`)
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리
@@ -79,7 +79,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 빈 카테고리 클릭 비활성, 단일 종목, 0·음수 값
 - ⚙ `assignColors` 최대값=MAIN_PALETTE[0]
 
-### F-SHARE. 공유 (Zero-Knowledge) ([header/share](../../src/app/(main)/asset/_components/header/share) · [api/share](../../src/app/api/share))
+### F-SHARE. 공유 (Zero-Knowledge) ([header-menu/share](../../src/app/(main)/_components/header-menu/share) · [api/share](../../src/app/api/share))
 - 👤 공유 URL 생성·로드, Short URL(s:KEY), PIN 보호(4자리), 잘못된 토큰→invalid-access
 - 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
 - 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
@@ -87,7 +87,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
 
-### F-SCREENSHOT. 인증샷 (share-card) ([share-card.tsx](../../src/app/(main)/asset/_components/header/share/share-card.tsx))
+### F-SCREENSHOT. 인증샷 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx))
 - 👤 인증샷 생성, 섹션 선택(도넛·주식), 금액/카테고리 숨김 마스킹, 핵심 포트폴리오 강조
 - 👤 주식 섹션: 비중바·포트폴리오(범례) 하단에 종목 리스트(헤더+비중 그라데이션 바) 노출, 요약 헤더는 전일 대비/구분선 제거·평가손익이 평가금액과 동일 행 정렬
 - ⚙ `screenshotMode` 본문과 시각 일치, `maskFn` 적용
@@ -132,14 +132,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `layout.tsx` `appleWebApp` 메타데이터(`capable: true`, `statusBarStyle: "black-translucent"`) 및 `icons.apple`(`/icons/icon-192x192.png` 180×180) 포함 출력 확인
 - ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
 - ⚙ `usePWAInstall`: `isIOS` = `/iphone|ipad|ipod/` UA 감지(브라우저 무관, Safari 한정 아님). `isInApp` = `/kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/` UA 감지. standalone 제외 처리 확인
+- ⚙ `detectBrowserEnv()` ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts)) → `BrowserEnv { platform: "ios"|"android"|"pc", browser: GuideBrowser, isInApp }`. `GuideBrowser` = `safari`/`chrome`/`whale`/`samsung`. flow에서 `useEffect(setEnv(detectBrowserEnv()))`로 마운트 후 1회 감지
 - ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
-- ⚙ iOS step1 SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx))는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 우측 원형 `⋯`→세로 팝업 최상단 `공유`(`IosShareStep`) / Chrome=주소창 우측 `공유`(box-arrow) 직접 탭(`IosChromeShareStep`, 중간 메뉴 없음) / Whale=하단 우측 `≡`→그리드 팝업의 `공유` 타일(`IosWhaleShareStep`). step2(`홈 화면에 추가`)는 3종 공통 `IosAddToHomeStep` 재사용. 다이얼로그 step1 안내 문구도 각 구조와 일치
+- ⚙ **설치 가이드 단일화** — 옛 `PwaInstallGuideDialog`(3탭 다이얼로그) 제거 → [pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) `InstallGuideContent({ env })`로 통합. flow의 `iosStep`·`guideStep` 모두 동일 컴포넌트 임베드. 모바일=설치 애니메이션+step1/step2 설명+"다른 브라우저인가요?" 칩 재선택(오감지 대비)+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 미지원 문제해결
+- ⚙ iOS·Android step SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) `InstallGuideAnimation({ platform, browser })`는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 중앙 `공유`→`홈 화면에 추가` / Chrome(iOS)=주소창 우측 `공유` 직접 / Chrome(Android)=우측상단 `⋮`→`공유` / Whale=하단 우측 `≡`→`공유` / 삼성인터넷=하단 `☰`→`+ 현재 페이지 추가`→홈 화면. step1/step2 안내 문구(`step1Text`/`step2Text`)도 각 구조와 일치. **aspect-ratio 미지원(구형 Safari) 대비 `paddingTop` 스페이서로 220:290 비율 폴백**
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
 - 👤 **PC/Android Chrome·Edge**: `beforeinstallprompt` 발생 → 설치 버튼 클릭 → PIN 4자리 입력 → 설치하기 → 네이티브 A2HS 창 열림 확인
-- 👤 **iOS(Safari·크롬·웨일 등)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(브라우저 칩 Safari/Chrome/Whale별 step1 SVG + 공유→홈 화면에 추가→추가) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인
-- 👤 iOS 가이드 SVG 3종이 실제 스샷과 일치하는지: Safari `⋯`(우측 원형)→공유 최상단 / Chrome 주소창 공유 아이콘 직접 / Whale `≡`→그리드 공유 타일, 칩 문구도 동일
+- 👤 **iOS(Safari·크롬·웨일 등)·Android(크롬·웨일·삼성인터넷)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(`detectBrowserEnv` 감지 브라우저의 설치 애니메이션 + step1/step2) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인. 오감지 시 "다른 브라우저인가요?" 칩으로 재선택
+- 👤 가이드 step SVG·문구가 실제 스샷과 일치하는지(브라우저별 공유/메뉴 진입 위치). 칩 재선택 시 애니메이션·step 문구가 즉시 해당 브라우저로 갱신
 - 👤 **인앱 브라우저(카카오톡·인스타·페북·라인 등)**: 설치 버튼 클릭 → `inAppStep` 가이드(메뉴→다른 브라우저로 열기→앱 설치) 노출, 현재 URL 클립보드 복사 시도 확인
-- 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `chrome://apps` 클립보드 복사 토스트 + `PwaInstallGuideDialog` 열림. 다이얼로그 제목 "앱 설치가 안 되나요?", PC·Android·iOS 각 탭에 설치 불가 환경(인앱/Firefox) 주의 콜아웃 표시. iOS 탭 라벨 "iOS (Safari·크롬·웨일 등)" 확인
+- 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `guideStep`(제목 "앱 설치 가이드") + `InstallGuideContent` PC 문제해결 노출 — 시크릿모드 불가 콜아웃, `chrome://apps` 자동/수동 복사, Firefox 미지원 주의. 모바일은 접이식 "설치가 안 되나요?"에 인앱·재설치 안내
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
@@ -167,7 +169,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
 
-### F-FEEDBACK. 의견·요청 보내기 ([tool-menu.tsx](../../src/app/(main)/asset/_components/header/tool-menu.tsx) · [api/feedback](../../src/app/api/feedback/route.ts))
+### F-FEEDBACK. 의견·요청 보내기 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx) · [api/feedback](../../src/app/api/feedback/route.ts))
 - 👤 더보기 > "의견·요청 보내기" 다이얼로그: 내용 Textarea(초기 min-h-160, max-h-40vh 내부 스크롤) + 연락처(선택), 전송 중 스피너, 성공/실패 토스트. **다이얼로그 스크롤로 하단 "보내기" 버튼 항상 노출**
 - ⚙ `/api/feedback` POST: message 공백 검증(400)·2000자 절단, IP `checkRateLimit` 재사용(429), `SLACK_WEBHOOK_URL` 미설정(500)·웹훅 실패(502), 닉네임 자동 첨부. **서버 저장 없음**(웹훅 전달만)
 
@@ -201,11 +203,22 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 숫자 표기 `tabular-nums`, 통화 포맷 일관(`formatCurrency`/`formatShortCurrency`)
 - 리스트 카드 위계: 접힘행 왼쪽=핵심 식별(이름·비중), 상세는 펼침에 — 비종목 자산도 동일(`ui-design-guidelines.md`)
 
+### U5. 디테일 폴리시 (`make-interfaces-feel-better` 스킬)
+> UI 신규·수정 시 항상 검토. CSS 전환 + `tw-animate-css`(framer-motion 미사용), `motion-safe`로 reduced-motion 대응.
+- **`transition: all` 금지** → `transition-[color,box-shadow,transform]` 등 변하는 속성만 명시(button/toggle/kpi-card/accordion/dialog/navigation-menu/sidebar/switch 적용 완료)
+- **누름 피드백** `active:not-disabled:scale-[0.96]`(카드류 0.98~0.99). `Button`은 기본 적용 — link 변형·`static` prop은 제외
+- **진입 stagger** `motion-safe:animate-in fade-in slide-in-from-bottom-*`(뷰 컨테이너: dashboard/detail-hub/performance-hub) + 리스트는 `animationDelay`로 분산(FAB 타입 선택 40ms 간격)
+- **숫자 `tabular-nums`** — 수량·환율·건수·금액 등 자릿수 흔들리는 표기 전부
+- **`text-balance`(제목)·`text-pretty`(본문)** — 헤딩/설명 줄바꿈 균형
+- **최소 히트영역 40×40px** — 작은 닫기/dismiss 버튼은 `after:absolute after:-inset-*`로 터치영역 확장, 헤더 아이콘 버튼 `h-10 sm:h-11`
+- **`will-change` 절제**, 동심 radius·광학 정렬·shadow 우선·이미지 outline 검토
+
 > 스캔 예시:
 > ```bash
 > grep -rn "onClick" src --include=*.tsx | grep "<div\|<span"        # 클릭 가능 div/span
 > grep -rn "size=\"icon\"" src --include=*.tsx                        # 아이콘 버튼 aria 누락 후보
 > grep -rn "text-black\|text-white\|bg-white\|bg-black\|#[0-9a-fA-F]\{6\}" src --include=*.tsx  # 하드코딩 색
+> grep -rn "transition-all" src --include=*.tsx                       # transition:all 잔존(폴리시 위반)
 > ```
 
 ---
@@ -226,7 +239,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R8 | **캐시 슬롯 전환** | 장중/장외 슬롯 전환 직후 stale 캐시 표시 안 되는지 |
 | R9 | **휴장 폴백 캐시 매핑** | ref-date 매핑은 응답일==요청일 또는 요청일이 비영업일일 때만 저장 — 영업일+장중 미확정에 저장돼 stale 영구 hit 안 되는지 |
 | R10 | **날짜 input 모바일 넘침** | `globals.css` 전역 규칙 유지, 신규 날짜 input이 별도 `max-w` 없이 `w-full`로 컨테이너 내 수렴하는지 |
-| R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존 |
+| R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존. 설치 가이드는 `InstallGuideContent({ env })` 단일 소스(iosStep·guideStep 공유) |
+| R12 | **transition:all 잔존** | UI 컴포넌트에 `transition-all` 재유입 금지 — 변하는 속성만 명시(레이아웃 thrash·원치 않는 transition 방지) |
 
 ---
 
@@ -248,4 +262,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-20 (2) · 기기 동기화 명칭 통일(클라우드 동기화→기기 동기화 Plus 등), 앱 잠금 웹 확장(standalone 체크 제거), 공지 컴포넌트화(notice.tsx 신규), F-APPLOCK 섹션 추가_
+_최종 갱신: 2026-06-22 · `(main)/asset/` 레이어 제거(경로 평탄화·header→header-menu) 반영, PWA 설치 가이드 단일화(PwaInstallGuideDialog→InstallGuideContent·detect-browser, Android 지원), U5 디테일 폴리시(make-interfaces-feel-better) 섹션·R12 추가_

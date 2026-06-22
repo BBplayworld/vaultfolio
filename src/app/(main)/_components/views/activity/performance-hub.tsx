@@ -132,10 +132,10 @@ export function PerformanceHub() {
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
-    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad}`}>
+    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div>
-        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground">성과</h2>
-        <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">순자산·수익·배당을 각각 자세히 확인하세요</p>
+        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>
+        <p className="text-xs lg:text-sm text-muted-foreground mt-0.5 text-pretty">순자산·수익·배당을 각각 자세히 확인하세요</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
