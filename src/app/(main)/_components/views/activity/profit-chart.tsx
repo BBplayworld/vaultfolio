@@ -473,10 +473,10 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   // - 주/월/연간: 요청한 명목 기준 시작일(주말 보정) 자체가 그 시장 휴장일인지로 판정
   const nonDailyTarget = period !== "daily" ? getExpectedRefDate(period) : undefined;
   const krHolidayExcluded = period === "daily"
-    ? hasHolidayBetween(krRefDate, krCompareDate, isKrHoliday)
+    ? hasHolidayBetween(krRefDate, krCompareDate, isKrHoliday) || (!!krCompareDate && isKrHoliday(krCompareDate))
     : !!nonDailyTarget && isKrHoliday(nonDailyTarget);
   const usHolidayExcluded = period === "daily"
-    ? hasHolidayBetween(usRefDate, usCompareDate, isUsHoliday)
+    ? hasHolidayBetween(usRefDate, usCompareDate, isUsHoliday) || (!!usCompareDate && isUsHoliday(usCompareDate))
     : !!nonDailyTarget && isUsHoliday(nonDailyTarget);
 
   // 해외 행에 실제 적용된 USD 환율 표시 (표시값=적용값)

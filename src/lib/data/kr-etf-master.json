@@ -1,0 +1,6872 @@
+[
+    {
+        "code":  "0193M0",
+        "name":  "BNK 27-12 특수채(AAA이상)액티브",
+        "fullName":  "BNK BNK 27-12 특수채(AAA이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "466810",
+        "name":  "BNK 2차전지양극재",
+        "fullName":  "BNK BNK 2차전지양극재증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "457930",
+        "name":  "BNK 미래전략기술액티브",
+        "fullName":  "BNK BNK 미래전략기술액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "487750",
+        "name":  "BNK 온디바이스AI",
+        "fullName":  "BNK BNK 온디바이스AI증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "445690",
+        "name":  "BNK 주주가치액티브",
+        "fullName":  "BNK BNK 주주가치액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0120J0",
+        "name":  "BNK 카카오그룹포커스",
+        "fullName":  "BNK BNK 카카오그룹포커스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0112X0",
+        "name":  "마이티 200TR",
+        "fullName":  "DB 마이티 200 Total Return증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "465780",
+        "name":  "마이티 26-09 특수채(AAA)액티브",
+        "fullName":  "DB 마이티 26-09 특수채(AAA)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0191M0",
+        "name":  "마이티 5월만기자동연장특수채(AAA)액티브",
+        "fullName":  "DB 마이티 5월만기자동연장특수채(AAA)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "442260",
+        "name":  "마이티 다이나믹퀀트액티브",
+        "fullName":  "DB 마이티 다이나믹퀀트액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0001P0",
+        "name":  "마이티 바이오시밀러\u0026CDMO액티브",
+        "fullName":  "DB 마이티 바이오시밀러\u0026CDMO액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "159800",
+        "name":  "마이티 코스피100",
+        "fullName":  "DB마이티K100증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "472840",
+        "name":  "IBK 200",
+        "fullName":  "IBK IBK 200증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0005G0",
+        "name":  "IBK K-AI반도체코어테크",
+        "fullName":  "IBK IBK K-AI반도체 코어테크 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0178H0",
+        "name":  "IBK 미국AI TOP10국채혼합50",
+        "fullName":  "IBK IBK 미국AI TOP10국채혼합50 증권상장지수투자신탁[채권혼합]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0135Y0",
+        "name":  "IBK 중기종합채권(AA-이상)액티브",
+        "fullName":  "IBK IBK 중기종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0191S0",
+        "name":  "IBK 코스닥150",
+        "fullName":  "IBK IBK 코스닥150증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0208N0",
+        "name":  "IBK 코스피액티브",
+        "fullName":  "IBK IBK 코스피액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "361580",
+        "name":  "RISE 200TR",
+        "fullName":  "KB RISE 200 Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "290080",
+        "name":  "RISE 200고배당커버드콜ATM",
+        "fullName":  "KB RISE 200고배당커버드콜ATM증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "284980",
+        "name":  "RISE 200금융",
+        "fullName":  "KB RISE 200금융증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252400",
+        "name":  "RISE 200선물레버리지",
+        "fullName":  "KB RISE 200선물레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252420",
+        "name":  "RISE 200선물인버스2X",
+        "fullName":  "KB RISE 200선물인버스2X증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252410",
+        "name":  "RISE 200선물인버스",
+        "fullName":  "KB RISE 200선물인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475720",
+        "name":  "RISE 200위클리커버드콜",
+        "fullName":  "KB RISE 200위클리커버드콜 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "148020",
+        "name":  "RISE 200",
+        "fullName":  "KB RISE 200증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "183700",
+        "name":  "RISE 200채권혼합50",
+        "fullName":  "KB RISE 200채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0122W0",
+        "name":  "RISE 26-11 회사채(AA-이상)액티브",
+        "fullName":  "KB RISE 26-11 회사채(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "465330",
+        "name":  "RISE 2차전지TOP10",
+        "fullName":  "KB RISE 2차전지TOP10 iSelect증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "465350",
+        "name":  "RISE 2차전지TOP10인버스(합성)",
+        "fullName":  "KB RISE 2차전지TOP10인버스iSelect증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "422420",
+        "name":  "RISE 2차전지액티브",
+        "fullName":  "KB RISE 2차전지액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "105780",
+        "name":  "RISE 5대그룹주",
+        "fullName":  "KB RISE 5대그룹주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "469070",
+        "name":  "RISE AI\u0026로봇",
+        "fullName":  "KB RISE AI\u0026로봇증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0093A0",
+        "name":  "RISE AI반도체TOP10",
+        "fullName":  "KB RISE AI반도체TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0101N0",
+        "name":  "RISE AI전력인프라",
+        "fullName":  "KB RISE AI전력인프라증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "427120",
+        "name":  "RISE AI플랫폼",
+        "fullName":  "KB RISE AI플랫폼증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "477080",
+        "name":  "RISE CD금리액티브(합성)",
+        "fullName":  "KB RISE CD금리액티브특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "290130",
+        "name":  "RISE ESG사회책임투자",
+        "fullName":  "KB RISE ESG사회책임투자증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "367770",
+        "name":  "RISE 수소경제테마",
+        "fullName":  "KB RISE Fn수소경제테마증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "326240",
+        "name":  "RISE IT플러스",
+        "fullName":  "KB RISE IT플러스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "385560",
+        "name":  "RISE KIS국고채30년Enhanced",
+        "fullName":  "KB RISE KIS국고채30년Enhanced증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "479520",
+        "name":  "RISE KOFR금리액티브(합성)",
+        "fullName":  "KB RISE KOFR금리액티브증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "270800",
+        "name":  "RISE KQ고배당",
+        "fullName":  "KB RISE KQ고배당증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "292050",
+        "name":  "RISE KRX300",
+        "fullName":  "KB RISE KRX300증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "388280",
+        "name":  "RISE K엔터\u0026여행레저",
+        "fullName":  "KB RISE K엔터\u0026여행레저증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0192L0",
+        "name":  "RISE SK하이닉스단일종목레버리지",
+        "fullName":  "KB RISE SK하이닉스단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0013R0",
+        "name":  "RISE 테슬라미국채타겟커버드콜혼합(합성)",
+        "fullName":  "KB RISE TSLA-UST타겟커버드콜증권상장지수투자신탁(채권혼합-파생재간접형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "234310",
+        "name":  "RISE V\u0026S셀렉트밸류",
+        "fullName":  "KB RISE V\u0026S셀렉트밸류증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "241390",
+        "name":  "RISE V\u0026S셀렉트밸류채권혼합",
+        "fullName":  "KB RISE V\u0026S셀렉트밸류채권혼합증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "401170",
+        "name":  "RISE 메타버스",
+        "fullName":  "KB RISE iSelect메타버스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "300640",
+        "name":  "RISE 게임테마",
+        "fullName":  "KB RISE 게임테마증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "266160",
+        "name":  "RISE 고배당",
+        "fullName":  "KB RISE 고배당증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "481430",
+        "name":  "RISE 국고채10년액티브",
+        "fullName":  "KB RISE 국고채10년액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "282000",
+        "name":  "RISE 국고채3년선물인버스",
+        "fullName":  "KB RISE 국고채3년선물인버스증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "114100",
+        "name":  "RISE 국고채3년",
+        "fullName":  "KB RISE 국고채3년증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "451670",
+        "name":  "RISE 국채30년레버리지(합성)",
+        "fullName":  "KB RISE 국채30년레버리지KAP증권상장지수투자신탁(채권-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "295020",
+        "name":  "RISE 국채선물10년인버스",
+        "fullName":  "KB RISE 국채선물10년인버스증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "295000",
+        "name":  "RISE 국채선물10년",
+        "fullName":  "KB RISE 국채선물10년증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "432600",
+        "name":  "RISE 국채선물3년",
+        "fullName":  "KB RISE 국채선물3년증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "397420",
+        "name":  "RISE 국채선물5년추종",
+        "fullName":  "KB RISE 국채선물5년추종증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0114X0",
+        "name":  "RISE 글로벌게임테크TOP3Plus",
+        "fullName":  "KB RISE 글로벌게임테크TOP3Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "437370",
+        "name":  "RISE 글로벌농업경제",
+        "fullName":  "KB RISE 글로벌농업경제MV증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "375270",
+        "name":  "RISE 글로벌데이터센터리츠(합성)",
+        "fullName":  "KB RISE 글로벌데이터센터리츠부동산상장지수투자신탁(파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "475380",
+        "name":  "RISE 글로벌리얼티인컴",
+        "fullName":  "KB RISE 글로벌리얼티인컴 부동산상장지수투자신탁(재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "476310",
+        "name":  "RISE 글로벌비만산업TOP2+",
+        "fullName":  "KB RISE 글로벌비만산업TOP2+증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "417450",
+        "name":  "RISE 글로벌수소경제",
+        "fullName":  "KB RISE 글로벌수소경제Indxx증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "442320",
+        "name":  "RISE 글로벌원자력",
+        "fullName":  "KB RISE 글로벌원자력iSelect증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "461490",
+        "name":  "RISE 글로벌자산배분액티브",
+        "fullName":  "KB RISE 글로벌자산배분액티브 증권상장지수투자신탁(혼합-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "459750",
+        "name":  "RISE 글로벌주식분산액티브",
+        "fullName":  "KB RISE 글로벌주식분산액티브증권상장지수투자신탁(주식-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "399580",
+        "name":  "RISE 글로벌클린에너지",
+        "fullName":  "KB RISE 글로벌클린에너지S\u0026P증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "276650",
+        "name":  "RISE 글로벌테크놀로지(합성 H)",
+        "fullName":  "KB RISE 글로벌테크놀로지증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "336160",
+        "name":  "RISE 금융채액티브",
+        "fullName":  "KB RISE 금융채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "326230",
+        "name":  "RISE 내수주플러스",
+        "fullName":  "KB RISE 내수주플러스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "367760",
+        "name":  "RISE 네트워크인프라",
+        "fullName":  "KB RISE 네트워크인프라증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "272560",
+        "name":  "RISE 단기국공채액티브",
+        "fullName":  "KB RISE 단기국공채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "385550",
+        "name":  "RISE 단기채권알파액티브",
+        "fullName":  "KB RISE 단기채권알파액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "196230",
+        "name":  "RISE 단기통안채",
+        "fullName":  "KB RISE 단기통안채증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0061Z0",
+        "name":  "RISE 단기특수은행채액티브",
+        "fullName":  "KB RISE 단기특수은행채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "315960",
+        "name":  "RISE 대형고배당10TR",
+        "fullName":  "KB RISE 대형고배당10Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0138D0",
+        "name":  "RISE 동학개미",
+        "fullName":  "KB RISE 동학개미증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "455890",
+        "name":  "RISE 머니마켓액티브",
+        "fullName":  "KB RISE 머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "481340",
+        "name":  "RISE 미국30년국채액티브",
+        "fullName":  "KB RISE 미국30년국채액티브증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "472870",
+        "name":  "RISE 미국30년국채엔화노출(합성 H)",
+        "fullName":  "KB RISE 미국30년국채엔화노출증권상장지수투자신탁(채권-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "472830",
+        "name":  "RISE 미국30년국채커버드콜(합성)",
+        "fullName":  "KB RISE 미국30년국채커버드콜증권상장지수투자신탁(채권-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "485690",
+        "name":  "RISE 미국AI밸류체인TOP3Plus",
+        "fullName":  "KB RISE 미국AI밸류체인TOP3Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "490590",
+        "name":  "RISE 미국AI밸류체인데일리고정커버드콜",
+        "fullName":  "KB RISE 미국AI밸류체인데일리고정커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0176E0",
+        "name":  "RISE 미국AI전력인프라액티브",
+        "fullName":  "KB RISE 미국AI전력인프라액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0127R0",
+        "name":  "RISE 미국AI클라우드인프라",
+        "fullName":  "KB RISE 미국AI클라우드인프라증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "495940",
+        "name":  "RISE 미국AI테크액티브",
+        "fullName":  "KB RISE 미국AI테크액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0138T0",
+        "name":  "RISE 미국S\u0026P500데일리고정커버드콜",
+        "fullName":  "KB RISE 미국S\u0026P500데일리고정커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0005C0",
+        "name":  "RISE 미국S\u0026P500엔화노출(합성 H)",
+        "fullName":  "KB RISE 미국S\u0026P500엔화노출증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "379780",
+        "name":  "RISE 미국S\u0026P500",
+        "fullName":  "KB RISE 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "453330",
+        "name":  "RISE 미국S\u0026P500(H)",
+        "fullName":  "KB RISE 미국S\u0026P500증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "460660",
+        "name":  "RISE 미국S\u0026P배당킹",
+        "fullName":  "KB RISE 미국S\u0026P배당킹증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "219390",
+        "name":  "RISE 미국S\u0026P원유생산기업(합성 H)",
+        "fullName":  "KB RISE 미국S\u0026P원유생산기업증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0115C0",
+        "name":  "RISE 미국고배당다우존스TOP10",
+        "fullName":  "KB RISE 미국고배당다우존스TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "354240",
+        "name":  "RISE 미국고정배당우선증권",
+        "fullName":  "KB RISE 미국고정배당우선증권ICE 증권상장지수투자신탁(주식혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "368590",
+        "name":  "RISE 미국나스닥100",
+        "fullName":  "KB RISE 미국나스닥100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "437350",
+        "name":  "RISE 미국단기투자등급회사채액티브",
+        "fullName":  "KB RISE 미국단기투자등급회사채액티브증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "455960",
+        "name":  "RISE 미국달러SOFR금리액티브(합성)",
+        "fullName":  "KB RISE 미국달러SOFR금리액티브특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "469530",
+        "name":  "RISE 미국달러선물인버스",
+        "fullName":  "KB RISE 미국달러선물인버스특별자산상장지수투자신탁(미국달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "469060",
+        "name":  "RISE 미국반도체NYSE",
+        "fullName":  "KB RISE 미국반도체NYSE증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "469050",
+        "name":  "RISE 미국반도체NYSE(H)",
+        "fullName":  "KB RISE 미국반도체NYSE증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "491630",
+        "name":  "RISE 미국반도체인버스(합성 H)",
+        "fullName":  "KB RISE 미국반도체인버스증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "490600",
+        "name":  "RISE 미국배당100데일리고정커버드콜",
+        "fullName":  "KB RISE 미국배당100데일리고정커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0018Z0",
+        "name":  "RISE 미국양자컴퓨팅",
+        "fullName":  "KB RISE 미국양자컴퓨팅증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0013P0",
+        "name":  "RISE 미국은행TOP10",
+        "fullName":  "KB RISE 미국은행TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "267490",
+        "name":  "RISE 미국장기국채선물레버리지(합성 H)",
+        "fullName":  "KB RISE 미국장기국채선물레버리지증권상장지수투자신탁(채권-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "267450",
+        "name":  "RISE 미국장기국채선물인버스(H)",
+        "fullName":  "KB RISE 미국장기국채선물인버스증권상장지수투자신탁(채권-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "267440",
+        "name":  "RISE 미국장기국채선물(H)",
+        "fullName":  "KB RISE 미국장기국채선물증권상장지수투자신탁(채권-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0036Z0",
+        "name":  "RISE 미국천연가스밸류체인",
+        "fullName":  "KB RISE 미국천연가스밸류체인증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "491620",
+        "name":  "RISE 미국테크100데일리고정커버드콜",
+        "fullName":  "KB RISE 미국테크100데일리고정커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0036R0",
+        "name":  "RISE 미국휴머노이드로봇",
+        "fullName":  "KB RISE 미국휴머노이드로봇증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0000Z0",
+        "name":  "RISE 바이오TOP10액티브",
+        "fullName":  "KB RISE 바이오TOP10액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "446700",
+        "name":  "RISE 배터리 리사이클링",
+        "fullName":  "KB RISE 배터리 리사이클링iSelect증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475350",
+        "name":  "RISE 버크셔포트폴리오TOP10",
+        "fullName":  "KB RISE 버크셔포트폴리오TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "388420",
+        "name":  "RISE 비메모리반도체액티브",
+        "fullName":  "KB RISE 비메모리반도체액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "448630",
+        "name":  "RISE 삼성그룹Top3채권혼합",
+        "fullName":  "KB RISE 삼성그룹Top3채권혼합블룸버그증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0162Z0",
+        "name":  "RISE 삼성전자SK하이닉스채권혼합50",
+        "fullName":  "KB RISE 삼성전자SK하이닉스채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0192M0",
+        "name":  "RISE 삼성전자단일종목레버리지",
+        "fullName":  "KB RISE 삼성전자단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "140570",
+        "name":  "RISE 수출주",
+        "fullName":  "KB RISE 수출주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0093B0",
+        "name":  "RISE 엔비디아고정테크100",
+        "fullName":  "KB RISE 엔비디아고정테크100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "140580",
+        "name":  "RISE 우량업종대표주",
+        "fullName":  "KB RISE 우량업종대표주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "379790",
+        "name":  "RISE 유로스탁스50(H)",
+        "fullName":  "KB RISE 유로스탁스50증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "498610",
+        "name":  "RISE 인도디지털성장",
+        "fullName":  "KB RISE 인도디지털성장증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "488480",
+        "name":  "RISE 일본섹터TOP4Plus",
+        "fullName":  "KB RISE 일본섹터TOP4Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "442550",
+        "name":  "RISE TDF2030액티브 적격",
+        "fullName":  "KB RISE 적격TDF2030액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "442560",
+        "name":  "RISE TDF2040액티브 적격",
+        "fullName":  "KB RISE 적격TDF2040액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "442570",
+        "name":  "RISE TDF2050액티브 적격",
+        "fullName":  "KB RISE 적격TDF2050액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "385540",
+        "name":  "RISE 종합채권(A-이상)액티브",
+        "fullName":  "KB RISE 종합채권(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "183710",
+        "name":  "RISE 주식혼합",
+        "fullName":  "KB RISE 주식혼합증권상장지수투자신탁(주식혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "310080",
+        "name":  "RISE 중국MSCI China(H)",
+        "fullName":  "KB RISE 중국MSCI China증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "463300",
+        "name":  "RISE 중국본토CSI300",
+        "fullName":  "KB RISE 중국본토CSI300증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "174360",
+        "name":  "RISE 중국본토대형주CSI100",
+        "fullName":  "KB RISE 중국본토대형주CSI100증권상장지수자투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "136340",
+        "name":  "RISE 중기우량회사채",
+        "fullName":  "KB RISE 중기우량회사채증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "281990",
+        "name":  "RISE 중소형고배당",
+        "fullName":  "KB RISE 중소형고배당증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "272570",
+        "name":  "RISE 중장기국공채액티브",
+        "fullName":  "KB RISE 중장기국공채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0164G0",
+        "name":  "RISE 차이나AI반도체TOP4Plus",
+        "fullName":  "KB RISE 차이나AI반도체TOP4Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "250730",
+        "name":  "RISE 차이나HSCEI(H)",
+        "fullName":  "KB RISE 차이나HSCEI증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "291680",
+        "name":  "RISE 차이나H선물인버스(H)",
+        "fullName":  "KB RISE 차이나H선물인버스증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0094L0",
+        "name":  "RISE 차이나테크TOP10위클리타겟커버드콜",
+        "fullName":  "KB RISE 차이나테크TOP10위클리타겟커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371150",
+        "name":  "RISE 차이나항셍테크",
+        "fullName":  "KB RISE 차이나항셍테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "498860",
+        "name":  "RISE 코리아금융고배당",
+        "fullName":  "KB RISE 코리아금융고배당증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0094M0",
+        "name":  "RISE 코리아밸류업위클리고정커버드콜",
+        "fullName":  "KB RISE 코리아밸류업위클리고정커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "495050",
+        "name":  "RISE 코리아밸류업",
+        "fullName":  "KB RISE 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0151P0",
+        "name":  "RISE 코리아전략산업액티브",
+        "fullName":  "KB RISE 코리아전략산업액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "278240",
+        "name":  "RISE 코스닥150선물레버리지",
+        "fullName":  "KB RISE 코스닥150선물레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "275750",
+        "name":  "RISE 코스닥150선물인버스",
+        "fullName":  "KB RISE 코스닥150선물인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "270810",
+        "name":  "RISE 코스닥150",
+        "fullName":  "KB RISE 코스닥150증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "302450",
+        "name":  "RISE 코스피",
+        "fullName":  "KB RISE 코스피증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0047P0",
+        "name":  "RISE 테슬라고정테크100",
+        "fullName":  "KB RISE 테슬라고정테크100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "449580",
+        "name":  "RISE 테슬라애플아마존채권혼합",
+        "fullName":  "KB RISE 테슬라애플아마존채권혼합iSelect증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "334700",
+        "name":  "RISE 팔라듐선물인버스(H)",
+        "fullName":  "KB RISE 팔라듐선물인버스특별자산상장지수투자신탁(파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "334690",
+        "name":  "RISE 팔라듐선물(H)",
+        "fullName":  "KB RISE 팔라듐선물특별자산상장지수투자신탁(파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0047R0",
+        "name":  "RISE 팔란티어고정테크100",
+        "fullName":  "KB RISE 팔란티어고정테크100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "253280",
+        "name":  "RISE 헬스케어",
+        "fullName":  "KB RISE 헬스케어증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "253290",
+        "name":  "RISE 헬스케어채권혼합",
+        "fullName":  "KB RISE 헬스케어채권혼합증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0190C0",
+        "name":  "RISE 현대차고정피지컬AI",
+        "fullName":  "KB RISE 현대차고정피지컬AI증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "407310",
+        "name":  "HANARO 200 TOP10",
+        "fullName":  "NH-Amundi HANARO 200 TOP10 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "332930",
+        "name":  "HANARO 200TR",
+        "fullName":  "NH-Amundi HANARO 200 Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "304780",
+        "name":  "HANARO 200선물레버리지",
+        "fullName":  "NH-Amundi HANARO 200선물레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "306520",
+        "name":  "HANARO 200선물인버스",
+        "fullName":  "NH-Amundi HANARO 200선물인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "293180",
+        "name":  "HANARO 200",
+        "fullName":  "NH-Amundi HANARO 200증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0123S0",
+        "name":  "HANARO 26-12 은행채(AA+이상)액티브",
+        "fullName":  "NH-Amundi HANARO 26-12 은행채(AA+이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0091M0",
+        "name":  "HANARO 27-06 회사채(AA-이상)액티브",
+        "fullName":  "NH-Amundi HANARO 27-06 회사채(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "448490",
+        "name":  "HANARO 32-10 국고채액티브",
+        "fullName":  "NH-Amundi HANARO 32-10 국고채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "454320",
+        "name":  "HANARO CAPEX설비투자iSelect",
+        "fullName":  "NH-Amundi HANARO CAPEX설비투자iSelect증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "395290",
+        "name":  "HANARO Fn K-POP\u0026미디어",
+        "fullName":  "NH-Amundi HANARO Fn K-POP\u0026미디어증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "395280",
+        "name":  "HANARO Fn K-게임",
+        "fullName":  "NH-Amundi HANARO Fn K-게임증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "368190",
+        "name":  "HANARO Fn K-뉴딜디지털플러스",
+        "fullName":  "NH-Amundi HANARO Fn K-뉴딜디지털플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "402460",
+        "name":  "HANARO Fn K-메타버스MZ",
+        "fullName":  "NH-Amundi HANARO Fn K-메타버스MZ증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "395270",
+        "name":  "HANARO Fn K-반도체",
+        "fullName":  "NH-Amundi HANARO Fn K-반도체증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "438900",
+        "name":  "HANARO Fn K-푸드",
+        "fullName":  "NH-Amundi HANARO Fn K-푸드증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "367740",
+        "name":  "HANARO Fn5G산업",
+        "fullName":  "NH-Amundi HANARO Fn5G산업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "407300",
+        "name":  "HANARO Fn골프테마",
+        "fullName":  "NH-Amundi HANARO Fn골프테마 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "381560",
+        "name":  "HANARO Fn전기\u0026수소차",
+        "fullName":  "NH-Amundi HANARO Fn전기\u0026수소차증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "441540",
+        "name":  "HANARO Fn조선해운",
+        "fullName":  "NH-Amundi HANARO Fn조선해운증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "381570",
+        "name":  "HANARO Fn친환경에너지",
+        "fullName":  "NH-Amundi HANARO Fn친환경에너지증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "479850",
+        "name":  "HANARO K-뷰티",
+        "fullName":  "NH-Amundi HANARO K-뷰티증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "453060",
+        "name":  "HANARO KOFR금리액티브(합성)",
+        "fullName":  "NH-Amundi HANARO KOFR금리액티브특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "304760",
+        "name":  "HANARO KRX300",
+        "fullName":  "NH-Amundi HANARO KRX300증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "322410",
+        "name":  "HANARO K고배당",
+        "fullName":  "NH-Amundi HANARO K고배당증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0155N0",
+        "name":  "HANARO K휴머노이드테마TOP10",
+        "fullName":  "NH-Amundi HANARO K휴머노이드테마TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "332940",
+        "name":  "HANARO MSCI Korea TR",
+        "fullName":  "NH-Amundi HANARO MSCI Korea Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "322400",
+        "name":  "HANARO e커머스",
+        "fullName":  "NH-Amundi HANARO e커머스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "473640",
+        "name":  "HANARO 글로벌금채굴기업",
+        "fullName":  "NH-Amundi HANARO 글로벌금채굴기업증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "354350",
+        "name":  "HANARO 글로벌럭셔리S\u0026P(합성)",
+        "fullName":  "NH-Amundi HANARO 글로벌럭셔리S\u0026P 증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "461340",
+        "name":  "HANARO 글로벌생성형AI액티브",
+        "fullName":  "NH-Amundi HANARO 글로벌생성형AI액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "424460",
+        "name":  "HANARO 글로벌워터MSCI(합성)",
+        "fullName":  "NH-Amundi HANARO 글로벌워터MSCI 증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "401590",
+        "name":  "HANARO 글로벌탄소배출권선물ICE(합성)",
+        "fullName":  "NH-Amundi HANARO 글로벌탄소배출권선물ICE특별자산ETF(탄소배출권-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0040S0",
+        "name":  "HANARO 글로벌피지컬AI액티브",
+        "fullName":  "NH-Amundi HANARO 글로벌피지컬AI액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "314700",
+        "name":  "HANARO 농업융복합산업",
+        "fullName":  "NH-Amundi HANARO 농업융복합산업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "486830",
+        "name":  "HANARO 머니마켓액티브",
+        "fullName":  "NH-Amundi HANARO 머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0181B0",
+        "name":  "HANARO 미국AI메모리반도체TOP4+",
+        "fullName":  "NH-Amundi HANARO 미국AI메모리반도체TOP4+증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "432840",
+        "name":  "HANARO 미국S\u0026P500",
+        "fullName":  "NH-Amundi HANARO 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "498050",
+        "name":  "HANARO 바이오코리아액티브",
+        "fullName":  "NH-Amundi HANARO 바이오코리아액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "476260",
+        "name":  "HANARO 반도체핵심공정주도주",
+        "fullName":  "NH-Amundi HANARO 반도체핵심공정주도주 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "434730",
+        "name":  "HANARO 원자력iSelect",
+        "fullName":  "NH-Amundi HANARO 원자력iSelect증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0082F0",
+        "name":  "HANARO 유럽방산",
+        "fullName":  "NH-Amundi HANARO 유럽방산증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "491820",
+        "name":  "HANARO 전력설비투자",
+        "fullName":  "NH-Amundi HANARO 전력설비투자증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461500",
+        "name":  "HANARO 종합채권(AA-이상)액티브",
+        "fullName":  "NH-Amundi HANARO 종합채권(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0191W0",
+        "name":  "HANARO 중기종합채권(A-이상)액티브",
+        "fullName":  "NH-Amundi HANARO 중기종합채권(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0111J0",
+        "name":  "HANARO 증권고배당TOP3플러스",
+        "fullName":  "NH-Amundi HANARO 증권고배당TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "495750",
+        "name":  "HANARO 코리아밸류업",
+        "fullName":  "NH-Amundi HANARO 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "306530",
+        "name":  "HANARO 코스닥150선물레버리지",
+        "fullName":  "NH-Amundi HANARO 코스닥150선물레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "304770",
+        "name":  "HANARO 코스닥150",
+        "fullName":  "NH-Amundi HANARO 코스닥150증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "375760",
+        "name":  "HANARO 탄소효율그린뉴딜",
+        "fullName":  "NH-Amundi HANARO 탄소효율그린뉴딜증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0007N0",
+        "name":  "아이엠에셋 200",
+        "fullName":  "iM에셋 아이엠에셋 200증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "491510",
+        "name":  "파워 K-주주가치액티브",
+        "fullName":  "교보악사 파워 K-주주가치액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "140950",
+        "name":  "파워 코스피100",
+        "fullName":  "교보악사 파워 K100 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "152870",
+        "name":  "파워 200",
+        "fullName":  "교보악사 파워 K200 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "192720",
+        "name":  "파워 고배당저변동성",
+        "fullName":  "교보악사 파워 고배당저변동성 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "498180",
+        "name":  "파워 종합채권(AA-이상)액티브",
+        "fullName":  "교보악사 파워 종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "486240",
+        "name":  "DAISHIN343 AI반도체\u0026인프라액티브",
+        "fullName":  "대신 DAISHIN343 AI반도체\u0026인프라액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "434960",
+        "name":  "DAISHIN343 K200",
+        "fullName":  "대신 DAISHIN343 K200증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0189Z0",
+        "name":  "DAISHIN343 금융\u0026지주고배당",
+        "fullName":  "대신 DAISHIN343 금융\u0026지주고배당증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0174J0",
+        "name":  "DAISHIN343 오피스리츠플러스",
+        "fullName":  "대신 DAISHIN343 오피스리츠플러스부동산상장지수투자신탁[재간접형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0053M0",
+        "name":  "더제이 중소형포커스액티브",
+        "fullName":  "더제이 더제이 중소형포커스액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "488290",
+        "name":  "MIDAS 일본테크액티브",
+        "fullName":  "마이다스 MIDAS 일본테크액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "438740",
+        "name":  "MIDAS 중소형액티브",
+        "fullName":  "마이다스 MIDAS 중소형액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0191B0",
+        "name":  "MIDAS 코스닥액티브",
+        "fullName":  "마이다스 MIDAS 코스닥액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "403790",
+        "name":  "MIDAS 코스피액티브",
+        "fullName":  "마이다스 MIDAS 코스피액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0139F0",
+        "name":  "TIGER 12월자동연장금융채(AA-이상)액티브",
+        "fullName":  "미래에셋 TIGER 12월만기자동연장금융채(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "310960",
+        "name":  "TIGER 200TR",
+        "fullName":  "미래에셋 TIGER 200 Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "227550",
+        "name":  "TIGER 200 산업재",
+        "fullName":  "미래에셋 TIGER 200 산업재 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "227560",
+        "name":  "TIGER 200 생활소비재",
+        "fullName":  "미래에셋 TIGER 200 생활소비재 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "102110",
+        "name":  "TIGER 200",
+        "fullName":  "미래에셋 TIGER 200 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "243880",
+        "name":  "TIGER 200IT레버리지",
+        "fullName":  "미래에셋 TIGER 200IT레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252000",
+        "name":  "TIGER 200동일가중",
+        "fullName":  "미래에셋 TIGER 200동일가중증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "267770",
+        "name":  "TIGER 200선물레버리지",
+        "fullName":  "미래에셋 TIGER 200선물레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252710",
+        "name":  "TIGER 200선물인버스2X",
+        "fullName":  "미래에셋 TIGER 200선물인버스2X증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "243890",
+        "name":  "TIGER 200에너지화학레버리지",
+        "fullName":  "미래에셋 TIGER 200에너지화학레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "315270",
+        "name":  "TIGER 200커뮤니케이션서비스",
+        "fullName":  "미래에셋 TIGER 200커뮤니케이션서비스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "166400",
+        "name":  "TIGER 200커버드콜OTM",
+        "fullName":  "미래에셋 TIGER 200커버드콜OTM 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0104N0",
+        "name":  "TIGER 200타겟위클리커버드콜",
+        "fullName":  "미래에셋 TIGER 200타겟위클리커버드콜증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "227540",
+        "name":  "TIGER 200 헬스케어",
+        "fullName":  "미래에셋 TIGER 200헬스케어증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "480260",
+        "name":  "TIGER 27-04회사채(A+이상)액티브",
+        "fullName":  "미래에셋 TIGER 27-04회사채(A+이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0094K0",
+        "name":  "TIGER 28-04 회사채(A+이상)액티브",
+        "fullName":  "미래에셋 TIGER 28-04 회사채(A+이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "364980",
+        "name":  "TIGER 2차전지TOP10",
+        "fullName":  "미래에셋 TIGER 2차전지TOP10 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "412570",
+        "name":  "TIGER 2차전지TOP10레버리지",
+        "fullName":  "미래에셋 TIGER 2차전지TOP10레버리지 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "462010",
+        "name":  "TIGER 2차전지소재Fn",
+        "fullName":  "미래에셋 TIGER 2차전지소재Fn증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "305540",
+        "name":  "TIGER 2차전지테마",
+        "fullName":  "미래에셋 TIGER 2차전지테마증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "471760",
+        "name":  "TIGER AI반도체핵심공정",
+        "fullName":  "미래에셋 TIGER AI반도체핵심공정증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "365040",
+        "name":  "TIGER AI코리아그로스액티브",
+        "fullName":  "미래에셋 TIGER AI코리아그로스액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "364960",
+        "name":  "TIGER BBIG",
+        "fullName":  "미래에셋 TIGER BBIG 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "412560",
+        "name":  "TIGER BBIG레버리지",
+        "fullName":  "미래에셋 TIGER BBIG레버리지 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475630",
+        "name":  "TIGER CD1년금리액티브(합성)",
+        "fullName":  "미래에셋 TIGER CD1년금리액티브증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "357870",
+        "name":  "TIGER CD금리투자KIS(합성)",
+        "fullName":  "미래에셋 TIGER CD금리투자KIS특별자산상장지수투자신탁(CD-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "499660",
+        "name":  "TIGER CD금리플러스액티브(합성)",
+        "fullName":  "미래에셋 TIGER CD금리플러스액티브증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "400970",
+        "name":  "TIGER Fn메타버스",
+        "fullName":  "미래에셋 TIGER Fn메타버스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "377990",
+        "name":  "TIGER Fn신재생에너지",
+        "fullName":  "미래에셋 TIGER Fn신재생에너지증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "417630",
+        "name":  "TIGER KEDI혁신기업ESG30",
+        "fullName":  "미래에셋 TIGER KEDI혁신기업ESG30증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "292160",
+        "name":  "TIGER KRX300",
+        "fullName":  "미래에셋 TIGER KRX300증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0072R0",
+        "name":  "TIGER KRX금현물",
+        "fullName":  "미래에셋 TIGER KRX금현물특별자산상장지수투자신탁(금)",
+        "market":  "국내"
+    },
+    {
+        "code":  "404540",
+        "name":  "TIGER KRX기후변화솔루션",
+        "fullName":  "미래에셋 TIGER KRX기후변화솔루션증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "300610",
+        "name":  "TIGER K게임",
+        "fullName":  "미래에셋 TIGER K게임증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "138530",
+        "name":  "TIGER LG그룹플러스",
+        "fullName":  "미래에셋 TIGER LG그룹+ 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "445910",
+        "name":  "TIGER MKF배당귀족",
+        "fullName":  "미래에셋 TIGER MKF배당귀족증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "289260",
+        "name":  "TIGER MSCI KOREA ESG리더스",
+        "fullName":  "미래에셋 TIGER MSCI KOREA ESG리더스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "289250",
+        "name":  "TIGER MSCI KOREA ESG유니버설",
+        "fullName":  "미래에셋 TIGER MSCI KOREA ESG유니버설증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "310970",
+        "name":  "TIGER MSCI Korea TR",
+        "fullName":  "미래에셋 TIGER MSCI Korea Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0000D0",
+        "name":  "TIGER 엔비디아미국채커버드콜밸런스(합성)",
+        "fullName":  "미래에셋 TIGER NVDA-UST커버드콜증권상장지수투자신탁(채권혼합-파생재간접형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "143850",
+        "name":  "TIGER 미국S\u0026P500선물(H)",
+        "fullName":  "미래에셋 TIGER S\u0026P500선물 증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "269370",
+        "name":  "TIGER S\u0026P글로벌인프라(합성)",
+        "fullName":  "미래에셋 TIGER S\u0026P글로벌인프라증권상장지수투자신탁 (주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0195S0",
+        "name":  "TIGER SK하이닉스단일종목레버리지",
+        "fullName":  "미래에셋 TIGER SK하이닉스단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "453950",
+        "name":  "TIGER TSMC파운드리밸류체인",
+        "fullName":  "미래에셋 TIGER TSMC파운드리밸류체인증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "364990",
+        "name":  "TIGER 게임TOP10",
+        "fullName":  "미래에셋 TIGER 게임TOP10 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139280",
+        "name":  "TIGER 경기방어",
+        "fullName":  "미래에셋 TIGER 경기방어 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "237440",
+        "name":  "TIGER 경기방어채권혼합",
+        "fullName":  "미래에셋 TIGER 경기방어혼합 증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "319640",
+        "name":  "TIGER 골드선물(H)",
+        "fullName":  "미래에셋 TIGER 골드선물특별자산상장지수투자신탁(금-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0190Y0",
+        "name":  "TIGER 구글밸류체인",
+        "fullName":  "미래에셋 TIGER 구글밸류체인증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "160580",
+        "name":  "TIGER 구리실물",
+        "fullName":  "미래에셋 TIGER 구리실물 특별자산상장지수투자신탁(금속)",
+        "market":  "해외"
+    },
+    {
+        "code":  "114820",
+        "name":  "TIGER 국채3년",
+        "fullName":  "미래에셋 TIGER 국채3 증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "464310",
+        "name":  "TIGER 글로벌AI\u0026로보틱스 INDXX",
+        "fullName":  "미래에셋 TIGER 글로벌AI\u0026로보틱스INDXX증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "418670",
+        "name":  "TIGER 글로벌AI사이버보안",
+        "fullName":  "미래에셋 TIGER 글로벌AI사이버보안증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "466950",
+        "name":  "TIGER 글로벌AI액티브",
+        "fullName":  "미래에셋 TIGER 글로벌AI액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "440340",
+        "name":  "TIGER 글로벌멀티에셋TIF액티브",
+        "fullName":  "미래에셋 TIGER 글로벌멀티에셋TIF액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "476690",
+        "name":  "TIGER 글로벌비만치료제TOP2Plus",
+        "fullName":  "미래에셋 TIGER 글로벌비만치료제TOP2 Plus INDXX증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "480310",
+        "name":  "TIGER 글로벌온디바이스AI",
+        "fullName":  "미래에셋 TIGER 글로벌온디바이스AI증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "387270",
+        "name":  "TIGER 글로벌이노베이션액티브",
+        "fullName":  "미래에셋 TIGER 글로벌이노베이션액티브증권상장지수투자신탁(주식-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371450",
+        "name":  "TIGER 글로벌클라우드컴퓨팅INDXX",
+        "fullName":  "미래에셋 TIGER 글로벌클라우드컴퓨팅INDXX증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "248270",
+        "name":  "TIGER S\u0026P글로벌헬스케어(합성)",
+        "fullName":  "미래에셋 TIGER 글로벌헬스케어 증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "464930",
+        "name":  "TIGER 글로벌혁신블루칩TOP10",
+        "fullName":  "미래에셋 TIGER 글로벌혁신블루칩TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "139320",
+        "name":  "TIGER 금은선물(H)",
+        "fullName":  "미래에셋 TIGER 금은선물 특별자산상장지수투자신탁(금속-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0168K0",
+        "name":  "TIGER 기술이전바이오액티브",
+        "fullName":  "미래에셋 TIGER 기술이전바이오액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "137610",
+        "name":  "TIGER 농산물선물Enhanced(H)",
+        "fullName":  "미래에셋 TIGER 농산물선물 특별자산상장지수투자신탁(농산물-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "272580",
+        "name":  "TIGER 단기채권액티브",
+        "fullName":  "미래에셋 TIGER 단기채권액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "157450",
+        "name":  "TIGER 단기통안채",
+        "fullName":  "미래에셋 TIGER 단기통안채증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "105010",
+        "name":  "TIGER 라틴35",
+        "fullName":  "미래에셋 TIGER 라틴 증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "123320",
+        "name":  "TIGER 레버리지",
+        "fullName":  "미래에셋 TIGER 레버리지 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0086B0",
+        "name":  "TIGER 리츠부동산인프라TOP10액티브",
+        "fullName":  "미래에셋 TIGER 리츠부동산인프라TOP10액티브부동산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "341850",
+        "name":  "TIGER 리츠부동산인프라채권",
+        "fullName":  "미래에셋 TIGER 리츠부동산인프라채권부동산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "329200",
+        "name":  "TIGER 리츠부동산인프라",
+        "fullName":  "미래에셋 TIGER 리츠부동산인프라혼합자산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0086C0",
+        "name":  "TIGER 리츠부동산인프라10채권혼합액티브",
+        "fullName":  "미래에셋 TIGER 리츠인프라10채권액티브증권상장지수투자신탁(채권혼합-재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0043B0",
+        "name":  "TIGER 머니마켓액티브",
+        "fullName":  "미래에셋 TIGER 머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "147970",
+        "name":  "TIGER 모멘텀",
+        "fullName":  "미래에셋 TIGER 모멘텀 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "458250",
+        "name":  "TIGER 미국30년국채스트립액티브(합성 H)",
+        "fullName":  "미래에셋 TIGER 미국30년국채스트립액티브증권상장지수투자신탁(채권-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0142D0",
+        "name":  "TIGER 미국AI데이터센터TOP4Plus",
+        "fullName":  "미래에셋 TIGER 미국AI데이터센터TOP4Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "491830",
+        "name":  "TIGER 미국AI반도체팹리스",
+        "fullName":  "미래에셋 TIGER 미국AI반도체팹리스증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "490090",
+        "name":  "TIGER 미국AI빅테크10",
+        "fullName":  "미래에셋 TIGER 미국AI빅테크10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "493810",
+        "name":  "TIGER 미국AI빅테크10타겟데일리커버드콜",
+        "fullName":  "미래에셋 TIGER 미국AI빅테크10타겟데일리커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0102A0",
+        "name":  "TIGER 미국AI소프트웨어TOP4Plus",
+        "fullName":  "미래에셋 TIGER 미국AI소프트웨어TOP4Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0123G0",
+        "name":  "TIGER 미국AI전력SMR",
+        "fullName":  "미래에셋 TIGER 미국AI전력SMR증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "488500",
+        "name":  "TIGER 미국S\u0026P500동일가중",
+        "fullName":  "미래에셋 TIGER 미국S\u0026P500동일가중증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "429000",
+        "name":  "TIGER 미국S\u0026P500배당귀족",
+        "fullName":  "미래에셋 TIGER 미국S\u0026P500배당귀족증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "360750",
+        "name":  "TIGER 미국S\u0026P500",
+        "fullName":  "미래에셋 TIGER 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "448290",
+        "name":  "TIGER 미국S\u0026P500(H)",
+        "fullName":  "미래에셋 TIGER 미국S\u0026P500증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "418660",
+        "name":  "TIGER 미국나스닥100레버리지(합성)",
+        "fullName":  "미래에셋 TIGER 미국나스닥100레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "133690",
+        "name":  "TIGER 미국나스닥100",
+        "fullName":  "미래에셋 TIGER 미국나스닥100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "448300",
+        "name":  "TIGER 미국나스닥100(H)",
+        "fullName":  "미래에셋 TIGER 미국나스닥100증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "435420",
+        "name":  "TIGER 미국나스닥100채권혼합50",
+        "fullName":  "미래에셋 TIGER 미국나스닥100채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "441680",
+        "name":  "TIGER 미국나스닥100커버드콜(합성)",
+        "fullName":  "미래에셋 TIGER 미국나스닥100커버드콜증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "429010",
+        "name":  "TIGER 미국나스닥넥스트100",
+        "fullName":  "미래에셋 TIGER 미국나스닥넥스트100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "245340",
+        "name":  "TIGER 미국다우존스30",
+        "fullName":  "미래에셋 TIGER 미국다우존스30 증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "456610",
+        "name":  "TIGER 미국달러SOFR금리액티브(합성)",
+        "fullName":  "미래에셋 TIGER 미국달러SOFR금리액티브특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "329750",
+        "name":  "TIGER 미국달러단기채권액티브",
+        "fullName":  "미래에셋 TIGER 미국달러단기채권액티브증권상장지수투자신탁(채권-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "261110",
+        "name":  "TIGER 미국달러선물레버리지",
+        "fullName":  "미래에셋 TIGER 미국달러선물레버리지특별자산상장지수투자신탁(달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261120",
+        "name":  "TIGER 미국달러선물인버스2X",
+        "fullName":  "미래에셋 TIGER 미국달러선물인버스2X특별자산상장지수투자신탁(달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "494840",
+        "name":  "TIGER 미국방산TOP10",
+        "fullName":  "미래에셋 TIGER 미국방산TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "458730",
+        "name":  "TIGER 미국배당다우존스",
+        "fullName":  "미래에셋 TIGER 미국배당다우존스증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0008S0",
+        "name":  "TIGER 미국배당다우존스타겟데일리커버드콜",
+        "fullName":  "미래에셋 TIGER 미국배당다우존스타겟데일리커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0015K0",
+        "name":  "TIGER 미국소비트렌드액티브",
+        "fullName":  "미래에셋 TIGER 미국소비트렌드액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0183J0",
+        "name":  "TIGER 미국우주테크",
+        "fullName":  "미래에셋 TIGER 미국우주테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "305080",
+        "name":  "TIGER 미국채10년선물",
+        "fullName":  "미래에셋 TIGER 미국채10년선물증권상장지수투자신탁(채권-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0046A0",
+        "name":  "TIGER 미국초단기(3개월이하)국채",
+        "fullName":  "미래에셋 TIGER 미국초단기(3개월이하)국채증권상장지수투자신탁(채권-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "465670",
+        "name":  "TIGER 미국캐시카우100",
+        "fullName":  "미래에셋 TIGER 미국캐시카우100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "381170",
+        "name":  "TIGER 미국테크TOP10 INDXX",
+        "fullName":  "미래에셋 TIGER 미국테크TOP10 INDXX증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "472160",
+        "name":  "TIGER 미국테크TOP10 INDXX(H)",
+        "fullName":  "미래에셋 TIGER 미국테크TOP10 INDXX증권상장지수투자신탁(주식)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "472170",
+        "name":  "TIGER 미국테크TOP10채권혼합",
+        "fullName":  "미래에셋 TIGER 미국테크TOP10채권혼합증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "458260",
+        "name":  "TIGER 미국투자등급회사채액티브(H)",
+        "fullName":  "미래에셋 TIGER 미국투자등급회사채액티브증권상장지수투자신탁(채권)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "497570",
+        "name":  "TIGER 미국필라델피아AI반도체나스닥",
+        "fullName":  "미래에셋 TIGER 미국필라델피아AI반도체나스닥증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "381180",
+        "name":  "TIGER 미국필라델피아반도체나스닥",
+        "fullName":  "미래에셋 TIGER 미국필라델피아반도체나스닥증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "228810",
+        "name":  "TIGER 미디어컨텐츠",
+        "fullName":  "미래에셋 TIGER 미디어컨텐츠 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "364970",
+        "name":  "TIGER 바이오TOP10",
+        "fullName":  "미래에셋 TIGER 바이오TOP10 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "091230",
+        "name":  "TIGER 반도체",
+        "fullName":  "미래에셋 TIGER 반도체 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "488080",
+        "name":  "TIGER 반도체TOP10레버리지",
+        "fullName":  "미래에셋 TIGER 반도체TOP10레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "396500",
+        "name":  "TIGER 반도체TOP10",
+        "fullName":  "미래에셋 TIGER 반도체TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0177R0",
+        "name":  "TIGER 반도체TOP10커버드콜액티브",
+        "fullName":  "미래에셋 TIGER 반도체TOP10커버드콜액티브증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "138520",
+        "name":  "TIGER 삼성그룹",
+        "fullName":  "미래에셋 TIGER 삼성그룹 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0195R0",
+        "name":  "TIGER 삼성전자단일종목레버리지",
+        "fullName":  "미래에셋 TIGER 삼성전자단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "157490",
+        "name":  "TIGER 소프트웨어",
+        "fullName":  "미래에셋 TIGER 소프트웨어 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "228800",
+        "name":  "TIGER 여행레저",
+        "fullName":  "미래에셋 TIGER 여행레저 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "227570",
+        "name":  "TIGER 우량가치",
+        "fullName":  "미래에셋 TIGER 우량가치 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261140",
+        "name":  "TIGER 우선주",
+        "fullName":  "미래에셋 TIGER 우선주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "130680",
+        "name":  "TIGER 원유선물Enhanced(H)",
+        "fullName":  "미래에셋 TIGER 원유선물 특별자산상장지수투자신탁(원유-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "245350",
+        "name":  "TIGER 유로스탁스배당30",
+        "fullName":  "미래에셋 TIGER 유로스탁스배당30 증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0189B0",
+        "name":  "TIGER 은액티브",
+        "fullName":  "미래에셋 TIGER 은액티브특별자산상장지수투자신탁(은-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "091220",
+        "name":  "TIGER 은행",
+        "fullName":  "미래에셋 TIGER 은행 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "466940",
+        "name":  "TIGER 은행고배당플러스TOP10",
+        "fullName":  "미래에셋 TIGER 은행고배당플러스TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "307510",
+        "name":  "TIGER 의료기기",
+        "fullName":  "미래에셋 TIGER 의료기기증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "453870",
+        "name":  "TIGER 인도니프티50",
+        "fullName":  "미래에셋 TIGER 인도니프티50증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "236350",
+        "name":  "TIGER 인도니프티50레버리지(합성)",
+        "fullName":  "미래에셋 TIGER 인도레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "479730",
+        "name":  "TIGER 인도빌리언컨슈머",
+        "fullName":  "미래에셋 TIGER 인도빌리언컨슈머증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "123310",
+        "name":  "TIGER 인버스",
+        "fullName":  "미래에셋 TIGER 인버스 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "365000",
+        "name":  "TIGER 인터넷TOP10",
+        "fullName":  "미래에셋 TIGER 인터넷TOP10 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "241180",
+        "name":  "TIGER 일본니케이225",
+        "fullName":  "미래에셋 TIGER 일본니케이225증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "465660",
+        "name":  "TIGER 일본반도체FACTSET",
+        "fullName":  "미래에셋 TIGER 일본반도체FACTSET증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "292560",
+        "name":  "TIGER 일본엔선물",
+        "fullName":  "미래에셋 TIGER 일본엔선물특별자산상장지수투자신탁(엔-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0025N0",
+        "name":  "TIGER TDF2045 적격",
+        "fullName":  "미래에셋 TIGER 적격TDF2045증권상장지수투자신탁(주식혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "494670",
+        "name":  "TIGER 조선TOP10",
+        "fullName":  "미래에셋 TIGER 조선TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "150460",
+        "name":  "TIGER 중국소비테마",
+        "fullName":  "미래에셋 TIGER 중국소비테마 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0192Z0",
+        "name":  "TIGER 중기종합채권(A-이상)액티브",
+        "fullName":  "미래에셋 TIGER 중기종합채권(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "302190",
+        "name":  "TIGER 중장기국채",
+        "fullName":  "미래에셋 TIGER 중장기국채증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "157500",
+        "name":  "TIGER 증권",
+        "fullName":  "미래에셋 TIGER 증권 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "307520",
+        "name":  "TIGER 지주회사",
+        "fullName":  "미래에셋 TIGER 지주회사증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "117690",
+        "name":  "TIGER 차이나항셍30",
+        "fullName":  "미래에셋 TIGER 차이나 증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0067Y0",
+        "name":  "TIGER 차이나AI소프트웨어",
+        "fullName":  "미래에셋 TIGER 차이나AI소프트웨어증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "245360",
+        "name":  "TIGER 차이나HSCEI",
+        "fullName":  "미래에셋 TIGER 차이나HSCEI증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "414780",
+        "name":  "TIGER 차이나과창판STAR50(합성)",
+        "fullName":  "미래에셋 TIGER 차이나과창판STAR50증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0067V0",
+        "name":  "TIGER 차이나글로벌리더스TOP3+",
+        "fullName":  "미래에셋 TIGER 차이나글로벌리더스TOP3+증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371470",
+        "name":  "TIGER 차이나바이오테크SOLACTIVE",
+        "fullName":  "미래에셋 TIGER 차이나바이오테크SOLACTIVE증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "396520",
+        "name":  "TIGER 차이나반도체FACTSET",
+        "fullName":  "미래에셋 TIGER 차이나반도체FACTSET증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371460",
+        "name":  "TIGER 차이나전기차SOLACTIVE",
+        "fullName":  "미래에셋 TIGER 차이나전기차SOLACTIVE증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "456680",
+        "name":  "TIGER 차이나전기차레버리지(합성)",
+        "fullName":  "미래에셋 TIGER 차이나전기차레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0133E0",
+        "name":  "TIGER 차이나증권",
+        "fullName":  "미래에셋 TIGER 차이나증권증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "396510",
+        "name":  "TIGER 차이나클린에너지SOLACTIVE",
+        "fullName":  "미래에셋 TIGER 차이나클린에너지SOLACTIVE증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0047A0",
+        "name":  "TIGER 차이나테크TOP10",
+        "fullName":  "미래에셋 TIGER 차이나테크TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "438320",
+        "name":  "TIGER 차이나항셍테크레버리지(합성 H)",
+        "fullName":  "미래에셋 TIGER 차이나항셍테크레버리지증권상장지수투자신탁(주식혼합-파생)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371160",
+        "name":  "TIGER 차이나항셍테크",
+        "fullName":  "미래에셋 TIGER 차이나항셍테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0053L0",
+        "name":  "TIGER 차이나휴머노이드로봇",
+        "fullName":  "미래에셋 TIGER 차이나휴머노이드로봇증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0117V0",
+        "name":  "TIGER 코리아AI전력기기TOP3플러스",
+        "fullName":  "미래에셋 TIGER 코리아AI전력기기TOP3플러스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "292150",
+        "name":  "TIGER 코리아TOP10",
+        "fullName":  "미래에셋 TIGER 코리아TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0104P0",
+        "name":  "TIGER 코리아배당다우존스위클리커버드콜",
+        "fullName":  "미래에셋 TIGER 코리아배당다우존스위클리커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0052D0",
+        "name":  "TIGER 코리아배당다우존스",
+        "fullName":  "미래에셋 TIGER 코리아배당다우존스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "496080",
+        "name":  "TIGER 코리아밸류업",
+        "fullName":  "미래에셋 TIGER 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0091P0",
+        "name":  "TIGER 코리아원자력",
+        "fullName":  "미래에셋 TIGER 코리아원자력증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0148J0",
+        "name":  "TIGER 코리아휴머노이드로봇산업",
+        "fullName":  "미래에셋 TIGER 코리아휴머노이드로봇산업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "233160",
+        "name":  "TIGER 코스닥150 레버리지",
+        "fullName":  "미래에셋 TIGER 코스닥150 레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "232080",
+        "name":  "TIGER 코스닥150",
+        "fullName":  "미래에셋 TIGER 코스닥150 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261060",
+        "name":  "TIGER 코스닥150IT",
+        "fullName":  "미래에셋 TIGER 코스닥150IT증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261070",
+        "name":  "TIGER 코스닥150바이오테크",
+        "fullName":  "미래에셋 TIGER 코스닥150바이오테크증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "250780",
+        "name":  "TIGER 코스닥150선물인버스",
+        "fullName":  "미래에셋 TIGER 코스닥150인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461580",
+        "name":  "TIGER 코스닥글로벌",
+        "fullName":  "미래에셋 TIGER 코스닥글로벌증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0204S0",
+        "name":  "TIGER 코스닥액티브",
+        "fullName":  "미래에셋 TIGER 코스닥액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "277640",
+        "name":  "TIGER 코스피대형주",
+        "fullName":  "미래에셋 TIGER 코스피대형주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "277650",
+        "name":  "TIGER 코스피중형주",
+        "fullName":  "미래에셋 TIGER 코스피중형주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "277630",
+        "name":  "TIGER 코스피",
+        "fullName":  "미래에셋 TIGER 코스피증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "376410",
+        "name":  "TIGER 탄소효율그린뉴딜",
+        "fullName":  "미래에셋 TIGER 탄소효율그린뉴딜증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "447770",
+        "name":  "TIGER 테슬라채권혼합Fn",
+        "fullName":  "미래에셋 TIGER 테슬라채권혼합Fn증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0060H0",
+        "name":  "TIGER 토탈월드스탁액티브",
+        "fullName":  "미래에셋 TIGER 토탈월드스탁액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "387280",
+        "name":  "TIGER 퓨처모빌리티액티브",
+        "fullName":  "미래에셋 TIGER 퓨처모빌리티액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "449690",
+        "name":  "TIGER 한중반도체(합성)",
+        "fullName":  "미래에셋 TIGER 한중반도체증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "449680",
+        "name":  "TIGER 한중전기차(합성)",
+        "fullName":  "미래에셋 TIGER 한중전기차증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "143860",
+        "name":  "TIGER 헬스케어",
+        "fullName":  "미래에셋 TIGER 헬스케어 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "138540",
+        "name":  "TIGER 현대차그룹플러스",
+        "fullName":  "미래에셋 TIGER 현대차그룹+ 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "228790",
+        "name":  "TIGER 화장품",
+        "fullName":  "미래에셋 TIGER 화장품 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "394670",
+        "name":  "TIGER 글로벌리튬\u00262차전지SOLACTIVE(합성)",
+        "fullName":  "미래에셋 TIGER글로벌리튬\u00262차전지SOLACTIVE증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "394660",
+        "name":  "TIGER 글로벌자율주행\u0026전기차SOLACTIVE",
+        "fullName":  "미래에셋 TIGER글로벌자율주행\u0026전기차SOLACTIVE증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "276000",
+        "name":  "TIGER 글로벌자원생산기업(합성 H)",
+        "fullName":  "미래에셋 TIGER모닝스타글로벌자원생산기업증권상장지수투자신탁(주식-파생형)(합성H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "449170",
+        "name":  "TIGER KOFR금리액티브(합성)",
+        "fullName":  "미래에셋TIGER KOFR금리액티브증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "458750",
+        "name":  "TIGER 미국배당다우존스타겟커버드콜1호",
+        "fullName":  "미래에셋TIGER 미국배당다우존스타겟커버드콜1호증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "471780",
+        "name":  "TIGER 코리아테크액티브",
+        "fullName":  "미래에셋TIGER 코리아테크액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139260",
+        "name":  "TIGER 200 IT",
+        "fullName":  "미래에셋TIGER200IT증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139220",
+        "name":  "TIGER 200 건설",
+        "fullName":  "미래에셋TIGER200건설증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139290",
+        "name":  "TIGER 200 경기소비재",
+        "fullName":  "미래에셋TIGER200경기소비재증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139270",
+        "name":  "TIGER 200 금융",
+        "fullName":  "미래에셋TIGER200금융증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139250",
+        "name":  "TIGER 200 에너지화학",
+        "fullName":  "미래에셋TIGER200에너지화학증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139230",
+        "name":  "TIGER 200 중공업",
+        "fullName":  "미래에셋TIGER200중공업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "139240",
+        "name":  "TIGER 200 철강소재",
+        "fullName":  "미래에셋TIGER200철강소재증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "289480",
+        "name":  "TIGER 200커버드콜",
+        "fullName":  "미래에셋TIGER200커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "228820",
+        "name":  "TIGER KTOP30",
+        "fullName":  "미래에셋TIGERKTOP30증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "463250",
+        "name":  "TIGER K방산\u0026우주",
+        "fullName":  "미래에셋TIGERK방산\u0026우주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "225060",
+        "name":  "TIGER 이머징마켓MSCI레버리지(합성 H)",
+        "fullName":  "미래에셋TIGERMSCIEM레버리지증권상장지수투자신탁(주식혼합-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "182480",
+        "name":  "TIGER 미국MSCI리츠(합성 H)",
+        "fullName":  "미래에셋TIGERMSCIUS리츠부동산상장지수투자신탁(파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "225040",
+        "name":  "TIGER 미국S\u0026P500레버리지(합성 H)",
+        "fullName":  "미래에셋TIGERS\u0026P500레버리지증권상장지수투자신탁(주식혼합-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "225030",
+        "name":  "TIGER 미국S\u0026P500선물인버스(H)",
+        "fullName":  "미래에셋TIGERS\u0026P500인버스선물증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "451530",
+        "name":  "TIGER 국고채30년스트립액티브",
+        "fullName":  "미래에셋TIGER국고채30년스트립액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "491010",
+        "name":  "TIGER 글로벌AI전력인프라액티브",
+        "fullName":  "미래에셋TIGER글로벌AI전력인프라액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "412770",
+        "name":  "TIGER 글로벌AI플랫폼액티브",
+        "fullName":  "미래에셋TIGER글로벌AI플랫폼액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "203780",
+        "name":  "TIGER 미국나스닥바이오",
+        "fullName":  "미래에셋TIGER나스닥바이오증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "182490",
+        "name":  "TIGER 단기선진하이일드(합성 H)",
+        "fullName":  "미래에셋TIGER단기선진국하이일드증권상장지수투자신탁(채권-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "174350",
+        "name":  "TIGER 로우볼",
+        "fullName":  "미래에셋TIGER로우볼증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "275980",
+        "name":  "TIGER 글로벌4차산업혁신기술(합성 H)",
+        "fullName":  "미래에셋TIGER모닝스타글로벌4차산업혁신기술증권상장지수투자신탁(주식-파생형)합성H",
+        "market":  "해외"
+    },
+    {
+        "code":  "476550",
+        "name":  "TIGER 미국30년국채커버드콜액티브(H)",
+        "fullName":  "미래에셋TIGER미국30년국채커버드콜액티브증권상장지수투자신탁(채권-재간접형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "482730",
+        "name":  "TIGER 미국S\u0026P500타겟데일리커버드콜",
+        "fullName":  "미래에셋TIGER미국S\u0026P500타겟데일리커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "486290",
+        "name":  "TIGER 미국나스닥100타겟데일리커버드콜",
+        "fullName":  "미래에셋TIGER미국나스닥100타겟데일리커버드콜증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "458760",
+        "name":  "TIGER 미국배당다우존스타겟커버드콜2호",
+        "fullName":  "미래에셋TIGER미국배당다우존스타켓커버드콜2호증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "474220",
+        "name":  "TIGER 미국테크TOP10타겟커버드콜",
+        "fullName":  "미래에셋TIGER미국테크TOP10타겟커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "211560",
+        "name":  "TIGER 배당성장",
+        "fullName":  "미래에셋TIGER배당성장증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "472150",
+        "name":  "TIGER 배당커버드콜액티브",
+        "fullName":  "미래에셋TIGER배당커버드콜액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "438330",
+        "name":  "TIGER 우량회사채액티브",
+        "fullName":  "미래에셋TIGER우량회사채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "217770",
+        "name":  "TIGER 원유선물인버스(H)",
+        "fullName":  "미래에셋TIGER원유인버스선물특별자산상장지수투자신탁(원유-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "225050",
+        "name":  "TIGER 유로스탁스레버리지(합성 H)",
+        "fullName":  "미래에셋TIGER유로스탁스50레버리지증권상장지수투자신탁(주식혼합-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "195930",
+        "name":  "TIGER 유로스탁스50(합성 H)",
+        "fullName":  "미래에셋TIGER유로스탁스50증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "195920",
+        "name":  "TIGER 일본TOPIX(합성 H)",
+        "fullName":  "미래에셋TIGER일본증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "451540",
+        "name":  "TIGER 종합채권(AA-이상)액티브",
+        "fullName":  "미래에셋TIGER종합채권(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "204480",
+        "name":  "TIGER 차이나CSI300레버리지(합성)",
+        "fullName":  "미래에셋TIGER차이나CSI300레버리지증권상장지수투자신탁(주식혼합-파생재간접형)합성",
+        "market":  "해외"
+    },
+    {
+        "code":  "217780",
+        "name":  "TIGER 차이나CSI300인버스(합성)",
+        "fullName":  "미래에셋TIGER차이나CSI300인버스증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "192090",
+        "name":  "TIGER 차이나CSI300",
+        "fullName":  "미래에셋TIGER차이나CSI300증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "210780",
+        "name":  "TIGER 코스피고배당",
+        "fullName":  "미래에셋TIGER코스피고배당증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "423920",
+        "name":  "TIGER 미국필라델피아반도체레버리지(합성)",
+        "fullName":  "미래에셋TIGER필라델피아반도체레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0098Z0",
+        "name":  "FOCUS 200",
+        "fullName":  "브이아이 FOCUS 200 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0176P0",
+        "name":  "FOCUS AI반도체위클리고정커버드콜",
+        "fullName":  "브이아이 FOCUS AI반도체위클리고정커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "448570",
+        "name":  "FOCUS AI코리아액티브",
+        "fullName":  "브이아이 FOCUS AI코리아액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0073X0",
+        "name":  "FOCUS 알리바바미국채커버드콜혼합",
+        "fullName":  "브이아이 FOCUS BABA-UST커버드콜혼합증권상장지수투자신탁[채권혼합-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "285690",
+        "name":  "FOCUS ESG리더스",
+        "fullName":  "브이아이 FOCUS ESG Leaders150증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "278530",
+        "name":  "KODEX 200TR",
+        "fullName":  "삼성 KODEX 200 Total Return증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "226980",
+        "name":  "KODEX 200 중소형",
+        "fullName":  "삼성 KODEX 200 중소형 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "337160",
+        "name":  "KODEX 200ESG",
+        "fullName":  "삼성 KODEX 200ESG증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "363580",
+        "name":  "KODEX 200IT TR",
+        "fullName":  "삼성 KODEX 200IT Total Return증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "337150",
+        "name":  "KODEX 200exTOP",
+        "fullName":  "삼성 KODEX 200exTOP증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "223190",
+        "name":  "KODEX 200가치저변동",
+        "fullName":  "삼성 KODEX 200가치저변동증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "237350",
+        "name":  "KODEX 코스피100",
+        "fullName":  "삼성 KODEX 200대형증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "252650",
+        "name":  "KODEX 200동일가중",
+        "fullName":  "삼성 KODEX 200동일가중증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "360140",
+        "name":  "KODEX 200롱코스닥150숏선물",
+        "fullName":  "삼성 KODEX 200롱코스닥150숏선물증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "252670",
+        "name":  "KODEX 200선물인버스2X",
+        "fullName":  "삼성 KODEX 200선물인버스2X증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "494890",
+        "name":  "KODEX 200액티브",
+        "fullName":  "삼성 KODEX 200액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "498400",
+        "name":  "KODEX 200타겟위클리커버드콜",
+        "fullName":  "삼성 KODEX 200타겟위클리커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0117L0",
+        "name":  "KODEX 26-12 금융채(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 26-12 금융채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "473290",
+        "name":  "KODEX 26-12 회사채(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 26-12 회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0007F0",
+        "name":  "KODEX 27-12 회사채(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 27-12 회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0119H0",
+        "name":  "KODEX 28-12 회사채(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 28-12 회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "462330",
+        "name":  "KODEX 2차전지산업레버리지",
+        "fullName":  "삼성 KODEX 2차전지산업레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "305720",
+        "name":  "KODEX 2차전지산업",
+        "fullName":  "삼성 KODEX 2차전지산업증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "461950",
+        "name":  "KODEX 2차전지핵심소재10",
+        "fullName":  "삼성 KODEX 2차전지핵심소재10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "457690",
+        "name":  "KODEX 33-06 국고채액티브",
+        "fullName":  "삼성 KODEX 33-06 국고채액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "271060",
+        "name":  "KODEX 3대농산물선물(H)",
+        "fullName":  "삼성 KODEX 3대농산물선물특별자산상장지수투자신탁[농산물-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "457700",
+        "name":  "KODEX 53-09 국고채액티브",
+        "fullName":  "삼성 KODEX 53-09 국고채액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "395160",
+        "name":  "KODEX AI반도체TOP2플러스",
+        "fullName":  "삼성 KODEX AI반도체TOP2플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "471990",
+        "name":  "KODEX AI반도체핵심장비",
+        "fullName":  "삼성 KODEX AI반도체핵심장비증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "487240",
+        "name":  "KODEX AI전력핵심설비",
+        "fullName":  "삼성 KODEX AI전력핵심설비증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "481050",
+        "name":  "KODEX CD1년금리플러스액티브(합성)",
+        "fullName":  "삼성 KODEX CD1년금리플러스액티브증권상장지수투자신탁[채권혼합-파생형](합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "459580",
+        "name":  "KODEX CD금리액티브(합성)",
+        "fullName":  "삼성 KODEX CD금리액티브증권상장지수투자신탁[채권혼합-파생형](합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "439860",
+        "name":  "KODEX ESG종합채권(A-이상)액티브",
+        "fullName":  "삼성 KODEX ESG종합채권(A-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "266370",
+        "name":  "KODEX IT",
+        "fullName":  "삼성 KODEX IT증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "101280",
+        "name":  "KODEX 일본TOPIX100",
+        "fullName":  "삼성 KODEX Japan 증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "368680",
+        "name":  "KODEX K-뉴딜디지털플러스",
+        "fullName":  "삼성 KODEX K-뉴딜디지털플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "423160",
+        "name":  "KODEX KOFR금리액티브(합성)",
+        "fullName":  "삼성 KODEX KOFR금리액티브특별자산상장지수투자신탁[금리-파생형](합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "306950",
+        "name":  "KODEX KRX300레버리지",
+        "fullName":  "삼성 KODEX KRX300레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "292190",
+        "name":  "KODEX KRX300",
+        "fullName":  "삼성 KODEX KRX300증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "229720",
+        "name":  "KODEX KTOP30",
+        "fullName":  "삼성 KODEX KTOP30 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "266360",
+        "name":  "KODEX K콘텐츠",
+        "fullName":  "삼성 KODEX K콘텐츠증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "289040",
+        "name":  "KODEX MSCI KOREA ESG유니버설",
+        "fullName":  "삼성 KODEX MSCI ESG유니버설증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "156080",
+        "name":  "KODEX MSCI Korea",
+        "fullName":  "삼성 KODEX MSCI KOREA 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "278540",
+        "name":  "KODEX MSCI Korea TR",
+        "fullName":  "삼성 KODEX MSCI Korea Total Return증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "251350",
+        "name":  "KODEX MSCI선진국",
+        "fullName":  "삼성 KODEX MSCI선진국증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "269420",
+        "name":  "KODEX S\u0026P글로벌인프라(합성)",
+        "fullName":  "삼성 KODEX S\u0026P글로벌인프라증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "291890",
+        "name":  "KODEX MSCI EM선물(H)",
+        "fullName":  "삼성 KODEX SGX MSCI EM 선물증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0193T0",
+        "name":  "KODEX SK하이닉스단일종목레버리지",
+        "fullName":  "삼성 KODEX SK하이닉스단일종목레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "329650",
+        "name":  "KODEX TRF3070",
+        "fullName":  "삼성 KODEX TRF3070증권상장지수투자신탁[채권혼합]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "329660",
+        "name":  "KODEX TRF5050",
+        "fullName":  "삼성 KODEX TRF5050증권상장지수투자신탁[주식혼합-재간접]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "329670",
+        "name":  "KODEX TRF7030",
+        "fullName":  "삼성 KODEX TRF7030증권상장지수투자신탁[주식혼합-재간접]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "395170",
+        "name":  "KODEX Top10동일가중",
+        "fullName":  "삼성 KODEX Top10동일가중증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "315930",
+        "name":  "KODEX Top5PlusTR",
+        "fullName":  "삼성 KODEX Top5Plus Total Return증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "271050",
+        "name":  "KODEX WTI원유선물인버스(H)",
+        "fullName":  "삼성 KODEX WTI원유선물인버스특별자산상장지수투자신탁(원유-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "261220",
+        "name":  "KODEX WTI원유선물(H)",
+        "fullName":  "삼성 KODEX WTI원유선물특별자산상장지수투자신탁[원유-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "468380",
+        "name":  "KODEX iShares미국하이일드액티브",
+        "fullName":  "삼성 KODEX iShares미국하이일드액티브증권상장지수투자신탁[채권-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "275290",
+        "name":  "KODEX 가치주",
+        "fullName":  "삼성 KODEX 가치주증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "300950",
+        "name":  "KODEX 게임산업",
+        "fullName":  "삼성 KODEX 게임산업증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "266390",
+        "name":  "KODEX 경기소비재",
+        "fullName":  "삼성 KODEX 경기소비재증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "279530",
+        "name":  "KODEX 고배당주",
+        "fullName":  "삼성 KODEX 고배당주증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "280940",
+        "name":  "KODEX 골드선물인버스(H)",
+        "fullName":  "삼성 KODEX 골드선물인버스특별자산상장지수투자신탁[금-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "132030",
+        "name":  "KODEX 골드선물(H)",
+        "fullName":  "삼성 KODEX 골드선물특별자산상장지수투자신탁(금-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "138910",
+        "name":  "KODEX 구리선물(H)",
+        "fullName":  "삼성 KODEX 구리선물특별자산상장지수투자신탁(구리-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "471230",
+        "name":  "KODEX 국고채10년액티브",
+        "fullName":  "삼성 KODEX 국고채10년액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "439870",
+        "name":  "KODEX 국고채30년액티브",
+        "fullName":  "삼성 KODEX 국고채30년액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "114260",
+        "name":  "KODEX 국고채3년",
+        "fullName":  "삼성 KODEX 국고채권 증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "292770",
+        "name":  "KODEX 국채선물3년인버스",
+        "fullName":  "삼성 KODEX 국채선물3년인버스증권상장지수투자신탁[채권-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "276990",
+        "name":  "KODEX 글로벌로봇(합성)",
+        "fullName":  "삼성 KODEX 글로벌로봇증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "476070",
+        "name":  "KODEX 글로벌비만치료제TOP2 Plus",
+        "fullName":  "삼성 KODEX 글로벌비만치료제TOP2 Plus증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0064K0",
+        "name":  "KODEX 금액티브",
+        "fullName":  "삼성 KODEX 금액티브특별자산상장지수투자신탁[금-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0089D0",
+        "name":  "KODEX 금융고배당TOP10",
+        "fullName":  "삼성 KODEX 금융고배당TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "498410",
+        "name":  "KODEX 금융고배당TOP10타겟위클리커버드콜",
+        "fullName":  "삼성 KODEX 금융고배당TOP10타겟위클리커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0162M0",
+        "name":  "KODEX 금융채1~2년(AA-이상)PLUS액티브",
+        "fullName":  "삼성 KODEX 금융채1~2년(AA-이상)PLUS액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "102960",
+        "name":  "KODEX 기계장비",
+        "fullName":  "삼성 KODEX 기계장비증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "404260",
+        "name":  "KODEX 기후변화솔루션",
+        "fullName":  "삼성 KODEX 기후변화솔루션증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "273140",
+        "name":  "KODEX 단기변동금리부채권액티브",
+        "fullName":  "삼성 KODEX 단기변동금리부채권액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "487950",
+        "name":  "KODEX 대만테크고배당다우존스",
+        "fullName":  "삼성 KODEX 대만테크고배당다우존스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "445290",
+        "name":  "KODEX 로봇액티브",
+        "fullName":  "삼성 KODEX 로봇액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "488770",
+        "name":  "KODEX 머니마켓액티브",
+        "fullName":  "삼성 KODEX 머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "337120",
+        "name":  "KODEX 멀티팩터",
+        "fullName":  "삼성 KODEX 멀티팩터증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "401470",
+        "name":  "KODEX 메타버스액티브",
+        "fullName":  "삼성 KODEX 메타버스액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "244620",
+        "name":  "KODEX 모멘텀Plus",
+        "fullName":  "삼성 KODEX 모멘텀PLUS증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "275280",
+        "name":  "KODEX 모멘텀주",
+        "fullName":  "삼성 KODEX 모멘텀주증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "308620",
+        "name":  "KODEX 미국10년국채선물",
+        "fullName":  "삼성 KODEX 미국10년국채선물증권상장지수투자신탁[채권-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0091C0",
+        "name":  "KODEX 미국10년국채액티브(H)",
+        "fullName":  "삼성 KODEX 미국10년국채액티브증권상장지수투자신탁[채권-재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "484790",
+        "name":  "KODEX 미국30년국채액티브(H)",
+        "fullName":  "삼성 KODEX 미국30년국채액티브증권상장지수투자신탁[채권-재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "304670",
+        "name":  "KODEX 미국30년국채울트라선물인버스(H)",
+        "fullName":  "삼성 KODEX 미국30년국채울트라선물인버스증권상장지수투자신탁[채권-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "304660",
+        "name":  "KODEX 미국30년국채울트라선물(H)",
+        "fullName":  "삼성 KODEX 미국30년국채울트라선물증권상장지수투자신탁[채권-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "481060",
+        "name":  "KODEX 미국30년국채타겟커버드콜(합성 H)",
+        "fullName":  "삼성 KODEX 미국30년국채타겟커버드콜증권상장지수투자신탁[채권-파생형](합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0173Y0",
+        "name":  "KODEX 미국AI광통신네트워크",
+        "fullName":  "삼성 KODEX 미국AI광통신네트워크증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0151S0",
+        "name":  "KODEX 미국AI반도체TOP3플러스",
+        "fullName":  "삼성 KODEX 미국AI반도체TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0041D0",
+        "name":  "KODEX 미국AI소프트웨어TOP10",
+        "fullName":  "삼성 KODEX 미국AI소프트웨어TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "487230",
+        "name":  "KODEX 미국AI전력핵심인프라",
+        "fullName":  "삼성 KODEX 미국AI전력핵심인프라증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "485540",
+        "name":  "KODEX 미국AI테크TOP10",
+        "fullName":  "삼성 KODEX 미국AI테크TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "483280",
+        "name":  "KODEX 미국AI테크TOP10타겟커버드콜",
+        "fullName":  "삼성 KODEX 미국AI테크TOP10타겟커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "428560",
+        "name":  "KODEX 미국ETF산업Top10 Indxx",
+        "fullName":  "삼성 KODEX 미국ETF산업Top10 Indxx증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "379800",
+        "name":  "KODEX 미국S\u0026P500",
+        "fullName":  "삼성 KODEX 미국S\u0026P500 증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453660",
+        "name":  "KODEX 미국S\u0026P500경기소비재",
+        "fullName":  "삼성 KODEX 미국S\u0026P500경기소비재증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453650",
+        "name":  "KODEX 미국S\u0026P500금융",
+        "fullName":  "삼성 KODEX 미국S\u0026P500금융증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0005A0",
+        "name":  "KODEX 미국S\u0026P500데일리커버드콜OTM",
+        "fullName":  "삼성 KODEX 미국S\u0026P500데일리커버드콜OTM증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "276970",
+        "name":  "KODEX 미국S\u0026P500배당귀족커버드콜(합성 H)",
+        "fullName":  "삼성 KODEX 미국S\u0026P500배당귀족커버드콜증권상장지수투자신탁[주식-파생형](합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0026E0",
+        "name":  "KODEX 미국S\u0026P500버퍼3월액티브",
+        "fullName":  "삼성 KODEX 미국S\u0026P500버퍼3월액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0068M0",
+        "name":  "KODEX 미국S\u0026P500버퍼6월액티브",
+        "fullName":  "삼성 KODEX 미국S\u0026P500버퍼6월액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0089C0",
+        "name":  "KODEX 미국S\u0026P500변동성확대시커버드콜",
+        "fullName":  "삼성 KODEX 미국S\u0026P500변동성확대시커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "200030",
+        "name":  "KODEX 미국S\u0026P500산업재(합성)",
+        "fullName":  "삼성 KODEX 미국S\u0026P500산업재증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0041E0",
+        "name":  "KODEX 미국S\u0026P500액티브",
+        "fullName":  "삼성 KODEX 미국S\u0026P500액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "218420",
+        "name":  "KODEX 미국S\u0026P500에너지(합성)",
+        "fullName":  "삼성 KODEX 미국S\u0026P500에너지증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "463640",
+        "name":  "KODEX 미국S\u0026P500유틸리티",
+        "fullName":  "삼성 KODEX 미국S\u0026P500유틸리티증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "449180",
+        "name":  "KODEX 미국S\u0026P500(H)",
+        "fullName":  "삼성 KODEX 미국S\u0026P500증권상장지수투자신탁[주식](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "463690",
+        "name":  "KODEX 미국S\u0026P500커뮤니케이션",
+        "fullName":  "삼성 KODEX 미국S\u0026P500커뮤니케이션증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "463680",
+        "name":  "KODEX 미국S\u0026P500테크놀로지",
+        "fullName":  "삼성 KODEX 미국S\u0026P500테크놀로지증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453630",
+        "name":  "KODEX 미국S\u0026P500필수소비재",
+        "fullName":  "삼성 KODEX 미국S\u0026P500필수소비재증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453640",
+        "name":  "KODEX 미국S\u0026P500헬스케어",
+        "fullName":  "삼성 KODEX 미국S\u0026P500헬스케어증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0028X0",
+        "name":  "KODEX 미국금융테크액티브",
+        "fullName":  "삼성 KODEX 미국금융테크액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "379810",
+        "name":  "KODEX 미국나스닥100",
+        "fullName":  "삼성 KODEX 미국나스닥100 증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "494300",
+        "name":  "KODEX 미국나스닥100데일리커버드콜OTM",
+        "fullName":  "삼성 KODEX 미국나스닥100데일리커버드콜OTM증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "409820",
+        "name":  "KODEX 미국나스닥100레버리지(합성 H)",
+        "fullName":  "삼성 KODEX 미국나스닥100레버리지증권상장지수투자신탁[주식-파생형](합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "409810",
+        "name":  "KODEX 미국나스닥100선물인버스(H)",
+        "fullName":  "삼성 KODEX 미국나스닥100선물인버스증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "304940",
+        "name":  "KODEX 미국나스닥100선물(H)",
+        "fullName":  "삼성 KODEX 미국나스닥100선물증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "449190",
+        "name":  "KODEX 미국나스닥100(H)",
+        "fullName":  "삼성 KODEX 미국나스닥100증권상장지수투자신탁[주식](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "411420",
+        "name":  "KODEX 미국나스닥AI테크액티브",
+        "fullName":  "삼성 KODEX 미국나스닥AI테크액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "455030",
+        "name":  "KODEX 미국달러SOFR금리액티브(합성)",
+        "fullName":  "삼성 KODEX 미국달러SOFR금리액티브특별자산상장지수투자신탁[금리-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "261250",
+        "name":  "KODEX 미국달러선물레버리지",
+        "fullName":  "삼성 KODEX 미국달러선물레버리지특별자산상장지수투자신탁(미국달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261260",
+        "name":  "KODEX 미국달러선물인버스2X",
+        "fullName":  "삼성 KODEX 미국달러선물인버스2X특별자산상장지수투자신탁(미국달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261270",
+        "name":  "KODEX 미국달러선물인버스",
+        "fullName":  "삼성 KODEX 미국달러선물인버스특별자산상장지수투자신탁(미국달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "261240",
+        "name":  "KODEX 미국달러선물",
+        "fullName":  "삼성 KODEX 미국달러선물특별자산상장지수투자신탁(미국달러-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0144M0",
+        "name":  "KODEX 미국드론UAM TOP10",
+        "fullName":  "삼성 KODEX 미국드론UAM TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "280930",
+        "name":  "KODEX 미국러셀2000(H)",
+        "fullName":  "삼성 KODEX 미국러셀2000증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0048J0",
+        "name":  "KODEX 미국머니마켓액티브",
+        "fullName":  "삼성 KODEX 미국머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "해외"
+    },
+    {
+        "code":  "390390",
+        "name":  "KODEX 미국반도체",
+        "fullName":  "삼성 KODEX 미국반도체증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "489250",
+        "name":  "KODEX 미국배당다우존스",
+        "fullName":  "삼성 KODEX 미국배당다우존스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "483290",
+        "name":  "KODEX 미국배당다우존스타겟커버드콜",
+        "fullName":  "삼성 KODEX 미국배당다우존스타겟커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "441640",
+        "name":  "KODEX 미국배당커버드콜액티브",
+        "fullName":  "삼성 KODEX 미국배당커버드콜S\u0026P액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "352560",
+        "name":  "KODEX 미국부동산리츠(H)",
+        "fullName":  "삼성 KODEX 미국부동산리츠부동산상장지수투자신탁[REITs-파생재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "314250",
+        "name":  "KODEX 미국빅테크10(H)",
+        "fullName":  "삼성 KODEX 미국빅테크10증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "473460",
+        "name":  "KODEX 미국서학개미",
+        "fullName":  "삼성 KODEX 미국서학개미증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0144L0",
+        "name":  "KODEX 미국성장커버드콜액티브",
+        "fullName":  "삼성 KODEX 미국성장커버드콜액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "390400",
+        "name":  "KODEX 미국스마트모빌리티S\u0026P",
+        "fullName":  "삼성 KODEX 미국스마트모빌리티S\u0026P증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0167Z0",
+        "name":  "KODEX 미국우주항공",
+        "fullName":  "삼성 KODEX 미국우주항공증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0132H0",
+        "name":  "KODEX 미국원자력SMR",
+        "fullName":  "삼성 KODEX 미국원자력SMR증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "437080",
+        "name":  "KODEX 미국종합채권ESG액티브(H)",
+        "fullName":  "삼성 KODEX 미국종합채권ESG액티브증권상장지수투자신탁(H)[채권]",
+        "market":  "해외"
+    },
+    {
+        "code":  "419420",
+        "name":  "KODEX 미국클린에너지나스닥",
+        "fullName":  "삼성 KODEX 미국클린에너지나스닥증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "491090",
+        "name":  "KODEX 미국테크TOP3플러스",
+        "fullName":  "삼성 KODEX 미국테크TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0038A0",
+        "name":  "KODEX 미국휴머노이드로봇",
+        "fullName":  "삼성 KODEX 미국휴머노이드로봇증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "244580",
+        "name":  "KODEX 바이오",
+        "fullName":  "삼성 KODEX 바이오증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "091160",
+        "name":  "KODEX 반도체",
+        "fullName":  "삼성 KODEX 반도체 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "494310",
+        "name":  "KODEX 반도체레버리지",
+        "fullName":  "삼성 KODEX 반도체레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0190G0",
+        "name":  "KODEX 반도체타겟위클리커버드콜",
+        "fullName":  "삼성 KODEX 반도체타겟위클리커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0100K0",
+        "name":  "KODEX 방산TOP10레버리지",
+        "fullName":  "삼성 KODEX 방산TOP10레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0080G0",
+        "name":  "KODEX 방산TOP10",
+        "fullName":  "삼성 KODEX 방산TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "325020",
+        "name":  "KODEX 배당가치",
+        "fullName":  "삼성 KODEX 배당가치증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "244670",
+        "name":  "KODEX 밸류Plus",
+        "fullName":  "삼성 KODEX 밸류PLUS증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "102780",
+        "name":  "KODEX 삼성그룹",
+        "fullName":  "삼성 KODEX 삼성그룹주 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0177N0",
+        "name":  "KODEX 삼성전자SK하이닉스채권혼합50",
+        "fullName":  "삼성 KODEX 삼성전자SK하이닉스채권혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0193W0",
+        "name":  "KODEX 삼성전자단일종목레버리지",
+        "fullName":  "삼성 KODEX 삼성전자단일종목레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "448330",
+        "name":  "KODEX 삼성전자채권혼합",
+        "fullName":  "삼성 KODEX 삼성전자채권혼합증권상장지수투자신탁[채권혼합]",
+        "market":  "국내"
+    },
+    {
+        "code":  "325010",
+        "name":  "KODEX 성장주",
+        "fullName":  "삼성 KODEX 성장주증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "385510",
+        "name":  "KODEX 신재생에너지액티브",
+        "fullName":  "삼성 KODEX 신재생에너지액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "446690",
+        "name":  "KODEX 아시아AI반도체exChina액티브",
+        "fullName":  "삼성 KODEX 아시아AI반도체exChina액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "437070",
+        "name":  "KODEX 아시아달러채권ESG플러스액티브",
+        "fullName":  "삼성 KODEX 아시아달러채권ESG플러스액티브증권상장지수투자신탁[채권]",
+        "market":  "해외"
+    },
+    {
+        "code":  "275300",
+        "name":  "KODEX 우량주",
+        "fullName":  "삼성 KODEX 우량주증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0098F0",
+        "name":  "KODEX 원자력SMR",
+        "fullName":  "삼성 KODEX 원자력SMR증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "395150",
+        "name":  "KODEX 웹툰\u0026드라마",
+        "fullName":  "삼성 KODEX 웹툰\u0026드라마증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "456250",
+        "name":  "KODEX 유럽명품TOP10 STOXX",
+        "fullName":  "삼성 KODEX 유럽명품TOP10 STOXX증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "400570",
+        "name":  "KODEX 유럽탄소배출권선물ICE(H)",
+        "fullName":  "삼성 KODEX 유럽탄소배출권선물ICE특별자산상장지수투자신탁[탄소배출권-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "144600",
+        "name":  "KODEX 은선물(H)",
+        "fullName":  "삼성 KODEX 은선물특별자산상장지수투자신탁(은-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "091170",
+        "name":  "KODEX 은행",
+        "fullName":  "삼성 KODEX 은행 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "453820",
+        "name":  "KODEX 인도Nifty50레버리지(합성)",
+        "fullName":  "삼성 KODEX 인도Nifty50레버리지증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "453810",
+        "name":  "KODEX 인도Nifty50",
+        "fullName":  "삼성 KODEX 인도Nifty50증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0000H0",
+        "name":  "KODEX 인도Nifty미드캡100",
+        "fullName":  "삼성 KODEX 인도Nifty미드캡100증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "477730",
+        "name":  "KODEX 인도타타그룹",
+        "fullName":  "삼성 KODEX 인도타타그룹증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "352540",
+        "name":  "KODEX 일본부동산리츠(H)",
+        "fullName":  "삼성 KODEX 일본부동산리츠부동산상장지수투자신탁[REITs-파생재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "091180",
+        "name":  "KODEX 자동차",
+        "fullName":  "삼성 KODEX 자동차 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "385520",
+        "name":  "KODEX 자율주행액티브",
+        "fullName":  "삼성 KODEX 자율주행액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "363570",
+        "name":  "KODEX 장기종합채권(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 장기종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "433970",
+        "name":  "KODEX TDF2030액티브 적격",
+        "fullName":  "삼성 KODEX 적격 TDF2030액티브증권상장지수투자신탁[채권혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "433980",
+        "name":  "KODEX TDF2040액티브 적격",
+        "fullName":  "삼성 KODEX 적격 TDF2040액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "434060",
+        "name":  "KODEX TDF2050액티브 적격",
+        "fullName":  "삼성 KODEX 적격 TDF2050액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0082V0",
+        "name":  "KODEX TDF2060액티브 적격",
+        "fullName":  "삼성 KODEX 적격 TDF2060액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0209D0",
+        "name":  "KODEX 전고체배터리ESS TOP2플러스",
+        "fullName":  "삼성 KODEX 전고체배터리ESS TOP2플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0115D0",
+        "name":  "KODEX 조선TOP10",
+        "fullName":  "삼성 KODEX 조선TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "273130",
+        "name":  "KODEX 종합채권(AA-이상)액티브",
+        "fullName":  "삼성 KODEX 종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0153K0",
+        "name":  "KODEX 주주환원고배당주",
+        "fullName":  "삼성 KODEX 주주환원고배당주증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "102970",
+        "name":  "KODEX 증권",
+        "fullName":  "삼성 KODEX 증권주 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "419430",
+        "name":  "KODEX 차이나2차전지MSCI(합성)",
+        "fullName":  "삼성 KODEX 차이나2차전지MSCI증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0162L0",
+        "name":  "KODEX 차이나AI반도체TOP10",
+        "fullName":  "삼성 KODEX 차이나AI반도체TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "428510",
+        "name":  "KODEX 차이나AI테크액티브",
+        "fullName":  "삼성 KODEX 차이나AI테크액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "283580",
+        "name":  "KODEX 차이나CSI300",
+        "fullName":  "삼성 KODEX 차이나CSI300증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "169950",
+        "name":  "KODEX 차이나A50",
+        "fullName":  "삼성 KODEX 차이나FTSE China A50증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "204450",
+        "name":  "KODEX 차이나H레버리지(H)",
+        "fullName":  "삼성 KODEX 차이나H레버리지증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "099140",
+        "name":  "KODEX 차이나H",
+        "fullName":  "삼성 KODEX 차이나H증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "415340",
+        "name":  "KODEX 차이나과창판STAR50(합성)",
+        "fullName":  "삼성 KODEX 차이나과창판STAR50증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "256750",
+        "name":  "KODEX 차이나심천ChiNext(합성)",
+        "fullName":  "삼성 KODEX 차이나심천ChiNext증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0065G0",
+        "name":  "KODEX 차이나테크TOP10",
+        "fullName":  "삼성 KODEX 차이나테크TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "372330",
+        "name":  "KODEX 차이나항셍테크",
+        "fullName":  "삼성 KODEX 차이나항셍테크증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0048K0",
+        "name":  "KODEX 차이나휴머노이드로봇",
+        "fullName":  "삼성 KODEX 차이나휴머노이드로봇증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "279540",
+        "name":  "KODEX 최소변동성",
+        "fullName":  "삼성 KODEX 최소변동성증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "445150",
+        "name":  "KODEX 친환경조선해운액티브",
+        "fullName":  "삼성 KODEX 친환경조선해운액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "211900",
+        "name":  "KODEX 코리아배당성장",
+        "fullName":  "삼성 KODEX 코리아배당성장증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "237370",
+        "name":  "KODEX 코리아배당성장채권혼합",
+        "fullName":  "삼성 KODEX 코리아배당성장채권혼합증권상장지수투자신탁[채권혼합]",
+        "market":  "국내"
+    },
+    {
+        "code":  "495850",
+        "name":  "KODEX 코리아밸류업",
+        "fullName":  "삼성 KODEX 코리아밸류업증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0115E0",
+        "name":  "KODEX 코리아소버린AI",
+        "fullName":  "삼성 KODEX 코리아소버린AI증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "373490",
+        "name":  "KODEX 코리아혁신성장액티브",
+        "fullName":  "삼성 KODEX 코리아혁신성장액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "229200",
+        "name":  "KODEX 코스닥150",
+        "fullName":  "삼성 KODEX 코스닥 150 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "233740",
+        "name":  "KODEX 코스닥150레버리지",
+        "fullName":  "삼성 KODEX 코스닥150 레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "360150",
+        "name":  "KODEX 코스닥150롱코스피200숏선물",
+        "fullName":  "삼성 KODEX 코스닥150롱코스피200숏선물증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "251340",
+        "name":  "KODEX 코스닥150선물인버스",
+        "fullName":  "삼성 KODEX 코스닥150인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461450",
+        "name":  "KODEX 코스닥글로벌",
+        "fullName":  "삼성 KODEX 코스닥글로벌증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "226490",
+        "name":  "KODEX 코스피",
+        "fullName":  "삼성 KODEX 코스피 증권상장지수투자신탁(신탁)",
+        "market":  "국내"
+    },
+    {
+        "code":  "359210",
+        "name":  "KODEX 코스피TR",
+        "fullName":  "삼성 KODEX 코스피TotalReturn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "337140",
+        "name":  "KODEX 코스피대형주",
+        "fullName":  "삼성 KODEX 코스피대형주증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "138920",
+        "name":  "KODEX 콩선물(H)",
+        "fullName":  "삼성 KODEX 콩선물특별자산상장지수투자신탁(콩-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "244660",
+        "name":  "KODEX 퀄리티Plus",
+        "fullName":  "삼성 KODEX 퀄리티PLUS증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "375770",
+        "name":  "KODEX 탄소효율그린뉴딜",
+        "fullName":  "삼성 KODEX 탄소효율그린뉴딜증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "459560",
+        "name":  "KODEX 테슬라밸류체인FactSet",
+        "fullName":  "삼성 KODEX 테슬라밸류체인FactSet증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "475080",
+        "name":  "KODEX 테슬라커버드콜채권혼합액티브",
+        "fullName":  "삼성 KODEX 테슬라커버드콜채권혼합액티브증권상장지수투자신탁[채권혼합-파생형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "266410",
+        "name":  "KODEX 필수소비재",
+        "fullName":  "삼성 KODEX 필수소비재증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "298770",
+        "name":  "KODEX 한국대만IT프리미어",
+        "fullName":  "삼성 KODEX 한국대만IT프리미어증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "476800",
+        "name":  "KODEX 한국부동산리츠인프라",
+        "fullName":  "삼성 KODEX 한국부동산리츠인프라부동산상장지수투자신탁[재간접형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "450190",
+        "name":  "KODEX 한중반도체(합성)",
+        "fullName":  "삼성 KODEX 한중반도체증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "450180",
+        "name":  "KODEX 한중전기차(합성)",
+        "fullName":  "삼성 KODEX 한중전기차증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "266420",
+        "name":  "KODEX 헬스케어",
+        "fullName":  "삼성 KODEX 헬스케어증권상장지수투자신탁[주식형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "364690",
+        "name":  "KODEX 혁신기술테마액티브",
+        "fullName":  "삼성 KODEX 혁신기술테마액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0204D0",
+        "name":  "KODEX 현대차로보틱스밸류체인TOP3플러스",
+        "fullName":  "삼성 KODEX 현대차로보틱스밸류체인TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "069500",
+        "name":  "KODEX 200",
+        "fullName":  "삼성 KODEX200 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "284430",
+        "name":  "KODEX 200미국채혼합",
+        "fullName":  "삼성 KODEX200미국채혼합증권상장지수투자신탁[채권혼합-파생형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "321410",
+        "name":  "KODEX 멀티에셋하이인컴(H)",
+        "fullName":  "삼성 KODEX모닝스타멀티에셋하이인컴증권상장지수투자신탁[채권혼합-파생재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "219480",
+        "name":  "KODEX 미국S\u0026P500선물(H)",
+        "fullName":  "삼성KODEX S\u0026P500선물증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "468370",
+        "name":  "KODEX iShares미국인플레이션국채액티브",
+        "fullName":  "삼성KODEX iShares미국인플레이션국채액티브증권상장지수투자신탁[채권-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "468630",
+        "name":  "KODEX iShares미국투자등급회사채액티브",
+        "fullName":  "삼성KODEX iShares미국투자등급회사채액티브증권상장지수투자신탁[채권-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "176950",
+        "name":  "KODEX 국채선물10년인버스",
+        "fullName":  "삼성KODEX10년국채선물인버스증권상장지수투자신탁[채권-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "152380",
+        "name":  "KODEX 국채선물10년",
+        "fullName":  "삼성KODEX10년국채선물증권상장지수투자신탁[채권-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "117700",
+        "name":  "KODEX 건설",
+        "fullName":  "삼성KODEX건설증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "214980",
+        "name":  "KODEX 단기채권PLUS",
+        "fullName":  "삼성KODEX단기채권PLUS증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "153130",
+        "name":  "KODEX 단기채권",
+        "fullName":  "삼성KODEX단기채권증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "122630",
+        "name":  "KODEX 레버리지",
+        "fullName":  "삼성KODEX레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "185680",
+        "name":  "KODEX 미국S\u0026P바이오(합성)",
+        "fullName":  "삼성KODEX미국바이오테크증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "140700",
+        "name":  "KODEX 보험",
+        "fullName":  "삼성KODEX보험증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "213610",
+        "name":  "KODEX 삼성그룹밸류",
+        "fullName":  "삼성KODEX삼성그룹밸류증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "117460",
+        "name":  "KODEX 에너지화학",
+        "fullName":  "삼성KODEX에너지화학증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "140710",
+        "name":  "KODEX 운송",
+        "fullName":  "삼성KODEX운송증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "114800",
+        "name":  "KODEX 인버스",
+        "fullName":  "삼성KODEX인버스증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "117680",
+        "name":  "KODEX 철강",
+        "fullName":  "삼성KODEX철강증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "487130",
+        "name":  "KoAct AI인프라액티브",
+        "fullName":  "삼성액티브 KoAct AI인프라액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0074K0",
+        "name":  "KoAct K수출핵심기업TOP30액티브",
+        "fullName":  "삼성액티브 KoAct K수출핵심기업TOP30액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "471040",
+        "name":  "KoAct 글로벌AI\u0026로봇액티브",
+        "fullName":  "삼성액티브 KoAct 글로벌AI\u0026로봇액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0174B0",
+        "name":  "KoAct 글로벌AI메모리반도체액티브",
+        "fullName":  "삼성액티브 KoAct 글로벌AI메모리반도체액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0132D0",
+        "name":  "KoAct 글로벌K컬처밸류체인액티브",
+        "fullName":  "삼성액티브 KoAct 글로벌K컬처밸류체인액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0020H0",
+        "name":  "KoAct 글로벌양자컴퓨팅액티브",
+        "fullName":  "삼성액티브 KoAct 글로벌양자컴퓨팅액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "475070",
+        "name":  "KoAct 글로벌친환경전력인프라액티브",
+        "fullName":  "삼성액티브 KoAct 글로벌친환경전력인프라액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0015B0",
+        "name":  "KoAct 미국나스닥성장기업액티브",
+        "fullName":  "삼성액티브 KoAct 미국나스닥성장기업액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0104H0",
+        "name":  "KoAct 미국나스닥채권혼합50액티브",
+        "fullName":  "삼성액티브 KoAct 미국나스닥채권혼합50액티브증권상장지수투자신탁[채권혼합]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0186L0",
+        "name":  "KoAct 미국로봇피지컬AI액티브",
+        "fullName":  "삼성액티브 KoAct 미국로봇피지컬AI액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0113G0",
+        "name":  "KoAct 미국바이오헬스케어액티브",
+        "fullName":  "삼성액티브 KoAct 미국바이오헬스케어액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "497780",
+        "name":  "KoAct 미국천연가스인프라액티브",
+        "fullName":  "삼성액티브 KoAct 미국천연가스인프라액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "490330",
+        "name":  "KoAct 미국치매\u0026뇌질환치료제액티브",
+        "fullName":  "삼성액티브 KoAct 미국치매\u0026뇌질환치료제액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "462900",
+        "name":  "KoAct 바이오헬스케어액티브",
+        "fullName":  "삼성액티브 KoAct 바이오헬스케어액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "482030",
+        "name":  "KoAct 반도체\u00262차전지핵심소재액티브",
+        "fullName":  "삼성액티브 KoAct 반도체\u00262차전지핵심소재액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "476850",
+        "name":  "KoAct 배당성장액티브",
+        "fullName":  "삼성액티브 KoAct 배당성장액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0051A0",
+        "name":  "KoAct 브로드컴밸류체인액티브",
+        "fullName":  "삼성액티브 KoAct 브로드컴밸류체인액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0150K0",
+        "name":  "KoAct 수소전력ESS인프라액티브",
+        "fullName":  "삼성액티브 KoAct 수소전력ESS인프라액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0154H0",
+        "name":  "KoAct 차이나바이오헬스케어액티브",
+        "fullName":  "삼성액티브 KoAct 차이나바이오헬스케어액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "495230",
+        "name":  "KoAct 코리아밸류업액티브",
+        "fullName":  "삼성액티브 KoAct 코리아밸류업액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0163Y0",
+        "name":  "KoAct 코스닥액티브",
+        "fullName":  "삼성액티브 KoAct 코스닥액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0193G0",
+        "name":  "KoAct 코스피액티브",
+        "fullName":  "삼성액티브 KoAct 코스피액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0093D0",
+        "name":  "KoAct 팔란티어밸류체인액티브",
+        "fullName":  "삼성액티브 KoAct 팔란티어밸류체인액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "411540",
+        "name":  "SOL 200 Top10",
+        "fullName":  "신한 SOL 200 Top10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "295040",
+        "name":  "SOL 200TR",
+        "fullName":  "신한 SOL 200 Total Return증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0167B0",
+        "name":  "SOL 200타겟위클리커버드콜",
+        "fullName":  "신한 SOL 200타겟위클리커버드콜증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "488980",
+        "name":  "SOL 26-12 회사채(AA-이상)액티브",
+        "fullName":  "신한 SOL 26-12회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0092C0",
+        "name":  "SOL 27-12 회사채(AA-이상)액티브",
+        "fullName":  "신한 SOL 27-12 회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "455860",
+        "name":  "SOL 2차전지소부장Fn",
+        "fullName":  "신한 SOL 2차전지소부장Fn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0167A0",
+        "name":  "SOL AI반도체TOP2플러스",
+        "fullName":  "신한 SOL AI반도체TOP2플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "455850",
+        "name":  "SOL AI반도체소부장",
+        "fullName":  "신한 SOL AI반도체소부장증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "497880",
+        "name":  "SOL CD금리\u0026머니마켓액티브",
+        "fullName":  "신한 SOL CD금리\u0026머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "363510",
+        "name":  "SOL KIS단기통안채",
+        "fullName":  "신한 SOL KIS단기통안채증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "292500",
+        "name":  "SOL KRX300",
+        "fullName":  "신한 SOL KRX300증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "404650",
+        "name":  "SOL KRX기후변화솔루션",
+        "fullName":  "신한 SOL KRX기후변화솔루션증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "490480",
+        "name":  "SOL K방산",
+        "fullName":  "신한 SOL K방산증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0197W0",
+        "name":  "SOL SK하이닉스단일종목레버리지",
+        "fullName":  "신한 SOL SK하이닉스단일종목레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0197X0",
+        "name":  "SOL SK하이닉스선물단일종목인버스2X",
+        "fullName":  "신한 SOL SK하이닉스선물단일종목인버스2X증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "438570",
+        "name":  "SOL 국고채10년",
+        "fullName":  "신한 SOL 국고채10년증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "474390",
+        "name":  "SOL 국고채30년액티브",
+        "fullName":  "신한 SOL 국고채30년액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "438560",
+        "name":  "SOL 국고채3년",
+        "fullName":  "신한 SOL 국고채3년증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0022T0",
+        "name":  "SOL 국제금커버드콜액티브",
+        "fullName":  "신한 SOL 국제금커버드콜액티브특별자산상장지수투자신탁[금-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0066W0",
+        "name":  "SOL 국제금",
+        "fullName":  "신한 SOL 국제금특별자산상장지수투자신탁[금-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "423170",
+        "name":  "SOL 글로벌AI반도체탑픽액티브",
+        "fullName":  "신한 SOL 글로벌AI반도체탑픽액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "400590",
+        "name":  "SOL 글로벌탄소배출권선물ICE(합성)",
+        "fullName":  "신한 SOL 글로벌탄소배출권선물ICE특별자산ETF[탄소배출권-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "484880",
+        "name":  "SOL 금융지주플러스고배당",
+        "fullName":  "신한 SOL 금융지주플러스고배당증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "484890",
+        "name":  "SOL 머니마켓액티브",
+        "fullName":  "신한 SOL 머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "461600",
+        "name":  "SOL 미국30년국채액티브(H)",
+        "fullName":  "신한 SOL 미국30년국채액티브증권상장지수투자신탁[채권](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "473330",
+        "name":  "SOL 미국30년국채커버드콜(합성)",
+        "fullName":  "신한 SOL 미국30년국채커버드콜증권상장지수투자신탁[채권-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "494210",
+        "name":  "SOL 미국500타겟데일리커버드콜액티브",
+        "fullName":  "신한 SOL 미국500타겟데일리커버드콜액티브증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "479620",
+        "name":  "SOL 미국AI반도체칩메이커",
+        "fullName":  "신한 SOL 미국AI반도체칩메이커증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "481180",
+        "name":  "SOL 미국AI소프트웨어",
+        "fullName":  "신한 SOL 미국AI소프트웨어증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "486450",
+        "name":  "SOL 미국AI전력인프라",
+        "fullName":  "신한 SOL 미국AI전력인프라증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "433330",
+        "name":  "SOL 미국S\u0026P500",
+        "fullName":  "신한 SOL 미국S\u0026P500 증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "399110",
+        "name":  "SOL 미국S\u0026P500ESG",
+        "fullName":  "신한 SOL 미국S\u0026P500ESG증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0080X0",
+        "name":  "SOL 미국S\u0026P500미국채혼합50",
+        "fullName":  "신한 SOL 미국S\u0026P500미국채혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "해외"
+    },
+    {
+        "code":  "499150",
+        "name":  "SOL 미국S\u0026P500엔화노출(H)",
+        "fullName":  "신한 SOL 미국S\u0026P500엔화노출증권상장지수투자신탁[주식-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "447620",
+        "name":  "SOL 미국TOP5채권혼합50",
+        "fullName":  "신한 SOL 미국TOP5채권혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "476030",
+        "name":  "SOL 미국나스닥100",
+        "fullName":  "신한 SOL 미국나스닥100증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0118S0",
+        "name":  "SOL 미국넥스트테크TOP10액티브",
+        "fullName":  "신한 SOL 미국넥스트테크TOP10액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "493420",
+        "name":  "SOL 미국배당다우존스2호",
+        "fullName":  "신한 SOL 미국배당다우존스2호증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "446720",
+        "name":  "SOL 미국배당다우존스",
+        "fullName":  "신한 SOL 미국배당다우존스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "490490",
+        "name":  "SOL 미국배당미국채혼합50",
+        "fullName":  "신한 SOL 미국배당미국채혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0023A0",
+        "name":  "SOL 미국양자컴퓨팅TOP10",
+        "fullName":  "신한 SOL 미국양자컴퓨팅TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0181L0",
+        "name":  "SOL 미국우주항공TOP10",
+        "fullName":  "신한 SOL 미국우주항공TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0051G0",
+        "name":  "SOL 미국원자력SMR",
+        "fullName":  "신한 SOL 미국원자력SMR증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "481190",
+        "name":  "SOL 미국테크TOP10",
+        "fullName":  "신한 SOL 미국테크TOP10증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "475300",
+        "name":  "SOL 반도체전공정",
+        "fullName":  "신한 SOL 반도체전공정증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "475310",
+        "name":  "SOL 반도체후공정",
+        "fullName":  "신한 SOL 반도체후공정증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0152E0",
+        "name":  "SOL 배당성향탑픽액티브",
+        "fullName":  "신한 SOL 배당성향탑픽액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0207G0",
+        "name":  "SOL 우주항공밸류체인",
+        "fullName":  "신한 SOL 우주항공밸류체인증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "400580",
+        "name":  "SOL 유럽탄소배출권선물S\u0026P(H)",
+        "fullName":  "신한 SOL 유럽탄소배출권선물S\u0026P특별자산상장지수투자신탁[탄소배출권-파생형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "464610",
+        "name":  "SOL 의료기기소부장Fn",
+        "fullName":  "신한 SOL 의료기기소부장Fn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "466930",
+        "name":  "SOL 자동차TOP3플러스",
+        "fullName":  "신한 SOL 자동차TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "464600",
+        "name":  "SOL 자동차소부장Fn",
+        "fullName":  "신한 SOL 자동차소부장Fn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0005D0",
+        "name":  "SOL 전고체배터리\u0026실리콘음극재",
+        "fullName":  "신한 SOL 전고체배터리\u0026실리콘음극재증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0080Y0",
+        "name":  "SOL 조선TOP3플러스레버리지",
+        "fullName":  "신한 SOL 조선TOP3플러스레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "466920",
+        "name":  "SOL 조선TOP3플러스",
+        "fullName":  "신한 SOL 조선TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0141S0",
+        "name":  "SOL 조선기자재",
+        "fullName":  "신한 SOL 조선기자재증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0141T0",
+        "name":  "SOL 중기종합채권(AA-이상)액티브",
+        "fullName":  "신한 SOL 중기종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0016X0",
+        "name":  "SOL 중단기회사채(A-이상)액티브",
+        "fullName":  "신한 SOL 중단기회사채(A-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "220130",
+        "name":  "SOL 차이나강소기업CSI500(합성 H)",
+        "fullName":  "신한 SOL 차이나강소기업CSI500증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0131A0",
+        "name":  "SOL 차이나소비트렌드",
+        "fullName":  "신한 SOL 차이나소비트렌드증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "415760",
+        "name":  "SOL 차이나육성산업액티브(합성)",
+        "fullName":  "신한 SOL 차이나육성산업액티브증권상장지수투자신탁[주식혼합-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "413220",
+        "name":  "SOL 차이나태양광CSI(합성)",
+        "fullName":  "신한 SOL 차이나태양광CSI증권상장지수투자신탁[주식혼합-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "469830",
+        "name":  "SOL 초단기채권액티브",
+        "fullName":  "신한 SOL 초단기채권액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0105E0",
+        "name":  "SOL 코리아고배당",
+        "fullName":  "신한 SOL 코리아고배당증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "444200",
+        "name":  "SOL 코리아메가테크액티브",
+        "fullName":  "신한 SOL 코리아메가테크액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "495550",
+        "name":  "SOL 코리아밸류업TR",
+        "fullName":  "신한 SOL 코리아밸류업TotalReturn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "450910",
+        "name":  "SOL 코스닥150",
+        "fullName":  "신한 SOL 코스닥150증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0192T0",
+        "name":  "SOL 코스닥TOP10",
+        "fullName":  "신한 SOL 코스닥TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0192S0",
+        "name":  "SOL 코스피200채권혼합50",
+        "fullName":  "신한 SOL 코스피200채권혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0040X0",
+        "name":  "SOL 팔란티어미국채커버드콜혼합",
+        "fullName":  "신한 SOL 팔란티어미국채커버드콜혼합증권상장지수투자신탁[채권혼합-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0040Y0",
+        "name":  "SOL 팔란티어커버드콜OTM채권혼합",
+        "fullName":  "신한 SOL 팔란티어커버드콜OTM채권혼합증권상장지수투자신탁[채권혼합-파생형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0105D0",
+        "name":  "SOL 한국AI소프트웨어",
+        "fullName":  "신한 SOL 한국AI소프트웨어증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0092B0",
+        "name":  "SOL 한국원자력SMR",
+        "fullName":  "신한 SOL 한국원자력SMR증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "429980",
+        "name":  "SOL 한국형글로벌전기차\u00262차전지액티브",
+        "fullName":  "신한 SOL 한국형글로벌전기차\u00262차전지액티브증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0008T0",
+        "name":  "SOL 화장품TOP3플러스",
+        "fullName":  "신한 SOL 화장품TOP3플러스증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "452360",
+        "name":  "SOL 미국배당다우존스(H)",
+        "fullName":  "신한 SOL미국배당다우존스증권상장지수투자신탁[주식](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "436140",
+        "name":  "SOL 종합채권(AA-이상)액티브",
+        "fullName":  "신한 SOL종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "462340",
+        "name":  "에셋플러스 글로벌다이나믹시니어액티브",
+        "fullName":  "에셋플러스 에셋플러스 글로벌다이나믹시니어액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "433220",
+        "name":  "에셋플러스 글로벌대장장이액티브",
+        "fullName":  "에셋플러스 에셋플러스 글로벌대장장이액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "451150",
+        "name":  "에셋플러스 글로벌영에이지액티브",
+        "fullName":  "에셋플러스 에셋플러스 글로벌영에이지액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "477490",
+        "name":  "에셋플러스 글로벌일등기업포커스10액티브",
+        "fullName":  "에셋플러스 에셋플러스 글로벌일등기업 포커스10액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "407830",
+        "name":  "에셋플러스 글로벌플랫폼액티브",
+        "fullName":  "에셋플러스 에셋플러스 글로벌플랫폼액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0002C0",
+        "name":  "에셋플러스 인도일등기업포커스20액티브",
+        "fullName":  "에셋플러스 에셋플러스 인도일등기업포커스20액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "474920",
+        "name":  "에셋플러스 차이나일등기업포커스10액티브",
+        "fullName":  "에셋플러스 에셋플러스 차이나일등기업 포커스10액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "442090",
+        "name":  "에셋플러스 코리아대장장이액티브",
+        "fullName":  "에셋플러스 에셋플러스 코리아대장장이액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "407820",
+        "name":  "에셋플러스 코리아플랫폼액티브",
+        "fullName":  "에셋플러스 에셋플러스 코리아플랫폼액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "448100",
+        "name":  "WON 200",
+        "fullName":  "우리 WON 200증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "413930",
+        "name":  "WON AI ESG액티브",
+        "fullName":  "우리 WON AI ESG액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0088N0",
+        "name":  "WON K-글로벌수급상위",
+        "fullName":  "우리 WON K-글로벌수급상위증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "458030",
+        "name":  "WON 국공채머니마켓액티브",
+        "fullName":  "우리 WON 국공채머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "426150",
+        "name":  "WON 대한민국국고채액티브",
+        "fullName":  "우리 WON 대한민국국고채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0177A0",
+        "name":  "WON 두산그룹포커스",
+        "fullName":  "우리 WON 두산그룹포커스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "444490",
+        "name":  "WON 미국S\u0026P500",
+        "fullName":  "우리 WON 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "489290",
+        "name":  "WON 미국빌리어네어",
+        "fullName":  "우리 WON 미국빌리어네어증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "440910",
+        "name":  "WON 미국우주항공방산",
+        "fullName":  "우리 WON 미국우주항공방산증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "474590",
+        "name":  "WON 반도체밸류체인액티브",
+        "fullName":  "우리 WON 반도체밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0203S0",
+        "name":  "WON 삼성전자현대차채권혼합50",
+        "fullName":  "우리 WON 삼성전자현대차채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "496020",
+        "name":  "WON 전단채플러스액티브",
+        "fullName":  "우리 WON 전단채플러스액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "488720",
+        "name":  "WON 종합채권(AA-이상)액티브",
+        "fullName":  "우리 WON 종합채권(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0203R0",
+        "name":  "WON 중단기종합채권(A-이상)액티브",
+        "fullName":  "우리 WON 중단기종합채권(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0154F0",
+        "name":  "WON 초대형IB\u0026금융지주",
+        "fullName":  "우리 WON 초대형IB\u0026금융지주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "480460",
+        "name":  "WON 한국부동산TOP3플러스",
+        "fullName":  "우리 WON 한국부동산TOP3플러스부동산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "108590",
+        "name":  "TREX 200",
+        "fullName":  "유리 TREX200 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "145850",
+        "name":  "TREX 펀더멘탈 200",
+        "fullName":  "유리 TREX펀더멘탈200 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "483570",
+        "name":  "KCGI 미국S\u0026P500 TOP10",
+        "fullName":  "케이씨지아이 KCGI 미국S\u0026P500 TOP10 증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "153270",
+        "name":  "KIWOOM 코스피100",
+        "fullName":  "키움 KIWOOM 100 증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "167860",
+        "name":  "KIWOOM 국고채10년레버리지",
+        "fullName":  "키움 KIWOOM 10년국고채레버리지증권상장지수투자신탁[채권-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "148070",
+        "name":  "KIWOOM 국고채10년",
+        "fullName":  "키움 KIWOOM 10년국고채증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "069660",
+        "name":  "KIWOOM 200",
+        "fullName":  "키움 KIWOOM 200 상장지수증권투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "294400",
+        "name":  "KIWOOM 200TR",
+        "fullName":  "키움 KIWOOM 200TotalReturn증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "253250",
+        "name":  "KIWOOM 200선물레버리지",
+        "fullName":  "키움 KIWOOM 200선물레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "253230",
+        "name":  "KIWOOM 200선물인버스2X",
+        "fullName":  "키움 KIWOOM 200선물인버스2X증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "253240",
+        "name":  "KIWOOM 200선물인버스",
+        "fullName":  "키움 KIWOOM 200선물인버스증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "464240",
+        "name":  "KIWOOM 26-09회사채(AA-이상)액티브",
+        "fullName":  "키움 KIWOOM 26-09회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "458210",
+        "name":  "KIWOOM CD금리액티브(합성)",
+        "fullName":  "키움 KIWOOM CD금리액티브특별자산상장지수투자신탁[금리-파생형](합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "488200",
+        "name":  "KIWOOM K-2차전지북미공급망",
+        "fullName":  "키움 KIWOOM K-2차전지북미공급망증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "488210",
+        "name":  "KIWOOM K-반도체북미공급망",
+        "fullName":  "키움 KIWOOM K-반도체북미공급망증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "100910",
+        "name":  "KIWOOM KRX100",
+        "fullName":  "키움 KIWOOM KRX100 상장지수증권투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "200250",
+        "name":  "KIWOOM 인도Nifty50(합성)",
+        "fullName":  "키움 KIWOOM NIFTY50인디아증권상장지수투자신탁[주식-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0194R0",
+        "name":  "KIWOOM SK하이닉스선물단일종목레버리지",
+        "fullName":  "키움 KIWOOM SK하이닉스선물단일종목레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0084E0",
+        "name":  "KIWOOM 미국대형주500월간목표헤지액티브",
+        "fullName":  "키움 KIWOOM US대형500월간목표헤지액티브증권상장지수투자신탁[혼합-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0084D0",
+        "name":  "KIWOOM 미국테크100월간목표헤지액티브",
+        "fullName":  "키움 KIWOOM US테크100월간목표헤지액티브증권상장지수투자신탁[혼합-파생재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "114470",
+        "name":  "KIWOOM 국고채3년",
+        "fullName":  "키움 KIWOOM 국고채 상장지수증권투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "471460",
+        "name":  "KIWOOM 국고채30년액티브",
+        "fullName":  "키움 KIWOOM 국고채30년액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "473490",
+        "name":  "KIWOOM 글로벌AI반도체",
+        "fullName":  "키움 KIWOOM 글로벌AI반도체증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "489860",
+        "name":  "KIWOOM 글로벌전력GRID인프라",
+        "fullName":  "키움 KIWOOM 글로벌전력GRID인프라증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "130730",
+        "name":  "KIWOOM 단기자금",
+        "fullName":  "키움 KIWOOM 단기자금증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "419890",
+        "name":  "KIWOOM 단기채권ESG액티브",
+        "fullName":  "키움 KIWOOM 단기채권ESG액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "411860",
+        "name":  "KIWOOM 독일DAX",
+        "fullName":  "키움 KIWOOM 독일DAX증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "476450",
+        "name":  "KIWOOM 머니마켓액티브",
+        "fullName":  "키움 KIWOOM 머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "430500",
+        "name":  "KIWOOM 물가채KIS",
+        "fullName":  "키움 KIWOOM 물가채KIS증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0190M0",
+        "name":  "KIWOOM 미국AI테크하이베타",
+        "fullName":  "키움 KIWOOM 미국AI테크하이베타증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0127V0",
+        "name":  "KIWOOM 미국S\u0026P500 TOP10\u0026배당다우비중전환",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500 TOP10\u0026배당다우존스비중전환증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0137W0",
+        "name":  "KIWOOM 미국S\u0026P500\u0026GOLD",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500\u0026GOLD증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0127T0",
+        "name":  "KIWOOM 미국S\u0026P500\u0026배당다우존스비중전환",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500\u0026배당다우존스비중전환증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0137V0",
+        "name":  "KIWOOM 미국S\u0026P500모멘텀",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500모멘텀증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "449770",
+        "name":  "KIWOOM 미국S\u0026P500",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "449780",
+        "name":  "KIWOOM 미국S\u0026P500(H)",
+        "fullName":  "키움 KIWOOM 미국S\u0026P500증권상장지수투자신탁[주식](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0107F0",
+        "name":  "KIWOOM 미국고배당\u0026AI테크",
+        "fullName":  "키움 KIWOOM 미국고배당\u0026AI테크증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453080",
+        "name":  "KIWOOM 미국나스닥100(H)",
+        "fullName":  "키움 KIWOOM 미국나스닥100증권상장지수투자신탁[주식](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "460270",
+        "name":  "KIWOOM 미국달러SOFR금리액티브(합성)",
+        "fullName":  "키움 KIWOOM 미국달러SOFR금리액티브특별자산상장지수투자신탁[금리-파생형](합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "230480",
+        "name":  "KIWOOM 미국달러선물인버스2X",
+        "fullName":  "키움 KIWOOM 미국달러선물 인버스2X 특별자산상장지수투자신탁[미국달러-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "225800",
+        "name":  "KIWOOM 미국달러선물레버리지",
+        "fullName":  "키움 KIWOOM 미국달러선물레버리지특별자산상장지수투자신탁[미국달러-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "139660",
+        "name":  "KIWOOM 미국달러선물인버스",
+        "fullName":  "키움 KIWOOM 미국달러선물인버스특별자산상장지수투자신탁[미국달러-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "138230",
+        "name":  "KIWOOM 미국달러선물",
+        "fullName":  "키움 KIWOOM 미국달러선물특별자산상장지수투자신탁[미국달러-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "373790",
+        "name":  "KIWOOM 미국방어배당성장나스닥",
+        "fullName":  "키움 KIWOOM 미국방어배당성장나스닥증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "483030",
+        "name":  "KIWOOM 미국블록버스터바이오테크의약품+",
+        "fullName":  "키움 KIWOOM 미국블록버스터바이오테크의약품+증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "459790",
+        "name":  "KIWOOM 미국성장기업30액티브",
+        "fullName":  "키움 KIWOOM 미국성장기업30액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0174R0",
+        "name":  "KIWOOM 미국성장다우존스",
+        "fullName":  "키움 KIWOOM 미국성장다우존스증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "498270",
+        "name":  "KIWOOM 미국양자컴퓨팅",
+        "fullName":  "키움 KIWOOM 미국양자컴퓨팅증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0207Z0",
+        "name":  "KIWOOM 미국우주데이터센터인프라",
+        "fullName":  "키움 KIWOOM 미국우주데이터센터인프라증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "474800",
+        "name":  "KIWOOM 미국원유에너지기업",
+        "fullName":  "키움 KIWOOM 미국원유에너지기업증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "104520",
+        "name":  "KIWOOM 블루칩",
+        "fullName":  "키움 KIWOOM 블루칩 상장지수증권투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0183V0",
+        "name":  "KIWOOM 삼성전자\u0026SK하이닉스채권혼합50",
+        "fullName":  "키움 KIWOOM 삼성전자\u0026SK하이닉스채권혼합50증권상장지수투자신탁[채권혼합]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0194N0",
+        "name":  "KIWOOM 삼성전자선물단일종목레버리지",
+        "fullName":  "키움 KIWOOM 삼성전자선물단일종목레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0015E0",
+        "name":  "KIWOOM 엔비디아미국30년국채혼합액티브(H)",
+        "fullName":  "키움 KIWOOM 엔비디아미국30년국채혼합액티브증권상장지수투자신탁[채권혼합](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "483020",
+        "name":  "KIWOOM 의료AI",
+        "fullName":  "키움 KIWOOM 의료AI증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "435530",
+        "name":  "KIWOOM TDF2030액티브 적격",
+        "fullName":  "키움 KIWOOM 적격TDF2030액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "435540",
+        "name":  "KIWOOM TDF2040액티브 적격",
+        "fullName":  "키움 KIWOOM 적격TDF2040액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "435550",
+        "name":  "KIWOOM TDF2050액티브 적격",
+        "fullName":  "키움 KIWOOM 적격TDF2050액티브증권상장지수투자신탁[주식혼합-재간접형]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "454780",
+        "name":  "KIWOOM 종합채권(AA-이상)액티브",
+        "fullName":  "키움 KIWOOM 종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "454180",
+        "name":  "KIWOOM 차이나내수소비TOP CSI",
+        "fullName":  "키움 KIWOOM 차이나내수소비TOPCSI증권상장지수투자신탁[주식-파생형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "104530",
+        "name":  "KIWOOM 코리아고배당",
+        "fullName":  "키움 KIWOOM 코리아고배당증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "496090",
+        "name":  "KIWOOM 코리아밸류업",
+        "fullName":  "키움 KIWOOM 코리아밸류업증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "469790",
+        "name":  "KIWOOM 코리아테크TOP10",
+        "fullName":  "키움 KIWOOM 코리아테크TOP10증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "291630",
+        "name":  "KIWOOM 코스닥150선물레버리지",
+        "fullName":  "키움 KIWOOM 코스닥150선물레버리지증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "291620",
+        "name":  "KIWOOM 코스닥150선물인버스",
+        "fullName":  "키움 KIWOOM 코스닥150선물인버스증권상장지수투자신탁[주식-파생형]",
+        "market":  "국내"
+    },
+    {
+        "code":  "316670",
+        "name":  "KIWOOM 코스닥150",
+        "fullName":  "키움 KIWOOM 코스닥150증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "122260",
+        "name":  "KIWOOM 통안채1년",
+        "fullName":  "키움 KIWOOM 통안채 상장지수증권투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0015F0",
+        "name":  "KIWOOM 팔란티어미국30년국채혼합액티브(H)",
+        "fullName":  "키움 KIWOOM 팔란티어미국30년국채혼합액티브증권상장지수투자신탁[채권혼합](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0097L0",
+        "name":  "KIWOOM 한국고배당\u0026미국AI테크",
+        "fullName":  "키움 KIWOOM 한국고배당\u0026미국AI테크증권상장지수투자신탁[주식]",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "441800",
+        "name":  "TIME Korea플러스배당액티브",
+        "fullName":  "타임폴리오 TIME Korea플러스배당액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "463050",
+        "name":  "TIME K바이오액티브",
+        "fullName":  "타임폴리오 TIME K바이오액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "404120",
+        "name":  "TIME K신재생에너지액티브",
+        "fullName":  "타임폴리오 TIME K신재생에너지액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "385710",
+        "name":  "TIME K이노베이션액티브",
+        "fullName":  "타임폴리오 TIME K이노베이션액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "410870",
+        "name":  "TIME K컬처액티브",
+        "fullName":  "타임폴리오 TIME K컬처액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "456600",
+        "name":  "TIME 글로벌AI인공지능액티브",
+        "fullName":  "타임폴리오 TIME 글로벌AI인공지능액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "485810",
+        "name":  "TIME 글로벌바이오액티브",
+        "fullName":  "타임폴리오 TIME 글로벌바이오액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "494180",
+        "name":  "TIME 글로벌소비트렌드액티브",
+        "fullName":  "타임폴리오 TIME 글로벌소비트렌드액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "478150",
+        "name":  "TIME 글로벌우주테크\u0026방산액티브",
+        "fullName":  "타임폴리오 TIME 글로벌우주테크\u0026방산액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0113D0",
+        "name":  "TIME 글로벌탑픽액티브",
+        "fullName":  "타임폴리오 TIME 글로벌탑픽액티브증권상장지수투자신탁(주식-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0185L0",
+        "name":  "TIME 글로벌휴머노이드로봇산업액티브",
+        "fullName":  "타임폴리오 TIME 글로벌휴머노이드로봇산업액티브증권상장지수투자신탁[주식]",
+        "market":  "해외"
+    },
+    {
+        "code":  "426020",
+        "name":  "TIME 미국S\u0026P500액티브",
+        "fullName":  "타임폴리오 TIME 미국S\u0026P500액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "426030",
+        "name":  "TIME 미국나스닥100액티브",
+        "fullName":  "타임폴리오 TIME 미국나스닥100액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0019K0",
+        "name":  "TIME 미국나스닥100채권혼합50액티브",
+        "fullName":  "타임폴리오 TIME 미국나스닥100채권혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0036D0",
+        "name":  "TIME 미국배당다우존스액티브",
+        "fullName":  "타임폴리오 TIME 미국배당다우존스액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0043Y0",
+        "name":  "TIME 차이나AI테크액티브",
+        "fullName":  "타임폴리오 TIME 차이나AI테크액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "495060",
+        "name":  "TIME 코리아밸류업액티브",
+        "fullName":  "타임폴리오 TIME 코리아밸류업액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0162Y0",
+        "name":  "TIME 코스닥액티브",
+        "fullName":  "타임폴리오 TIME 코스닥액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "385720",
+        "name":  "TIME 코스피액티브",
+        "fullName":  "타임폴리오 TIME 코스피액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "472720",
+        "name":  "TRUSTON 주주가치액티브",
+        "fullName":  "트러스톤 TRUSTON 주주가치액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "496130",
+        "name":  "TRUSTON 코리아밸류업액티브",
+        "fullName":  "트러스톤 TRUSTON 코리아밸류업액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "451060",
+        "name":  "1Q 200액티브",
+        "fullName":  "하나 1Q 200액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0184E0",
+        "name":  "1Q 200채권혼합50액티브",
+        "fullName":  "하나 1Q 200채권혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "491610",
+        "name":  "1Q CD금리액티브(합성)",
+        "fullName":  "하나 1Q CD금리액티브증권상장지수투자신탁(채권혼합-파생형)(합성)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0182R0",
+        "name":  "1Q K반도체TOP2+",
+        "fullName":  "하나 1Q K반도체TOP2+증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0182S0",
+        "name":  "1Q K반도체TOP2채권혼합50",
+        "fullName":  "하나 1Q K반도체TOP2채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0103T0",
+        "name":  "1Q K소버린AI",
+        "fullName":  "하나 1Q K소버린AI증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0198D0",
+        "name":  "1Q SK하이닉스선물단일종목레버리지",
+        "fullName":  "하나 1Q SK하이닉스선물단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "463290",
+        "name":  "1Q 단기금융채액티브",
+        "fullName":  "하나 1Q 단기금융채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0131W0",
+        "name":  "1Q 단기특수은행채액티브",
+        "fullName":  "하나 1Q 단기특수은행채액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "479080",
+        "name":  "1Q 머니마켓액티브",
+        "fullName":  "하나 1Q 머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0052S0",
+        "name":  "1Q 미국S\u0026P500미국채혼합50액티브",
+        "fullName":  "하나 1Q 미국S\u0026P500미국채혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0026S0",
+        "name":  "1Q 미국S\u0026P500",
+        "fullName":  "하나 1Q 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0111P0",
+        "name":  "1Q 미국나스닥100미국채혼합50액티브",
+        "fullName":  "하나 1Q 미국나스닥100미국채혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0069M0",
+        "name":  "1Q 미국나스닥100",
+        "fullName":  "하나 1Q 미국나스닥100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0083S0",
+        "name":  "1Q 미국메디컬AI",
+        "fullName":  "하나 1Q 미국메디컬AI증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0004G0",
+        "name":  "1Q 미국배당TOP30",
+        "fullName":  "하나 1Q 미국배당TOP30증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0131V0",
+        "name":  "1Q 미국우주항공테크",
+        "fullName":  "하나 1Q 미국우주항공테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0198B0",
+        "name":  "1Q 삼성전자선물단일종목레버리지",
+        "fullName":  "하나 1Q 삼성전자선물단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0094X0",
+        "name":  "1Q 샤오미밸류체인액티브",
+        "fullName":  "하나 1Q 샤오미밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0172V0",
+        "name":  "1Q 은액티브",
+        "fullName":  "하나 1Q 은액티브특별자산상장지수투자신탁[은-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "0017Y0",
+        "name":  "1Q 종합채권(AA-이상)액티브",
+        "fullName":  "하나 1Q 종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0052T0",
+        "name":  "1Q 중단기회사채(A-이상)액티브",
+        "fullName":  "하나 1Q 중단기회사채(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "495330",
+        "name":  "1Q 코리아밸류업",
+        "fullName":  "하나 1Q 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0186S0",
+        "name":  "1Q 코스닥150채권혼합50액티브",
+        "fullName":  "하나 1Q 코스닥150채권혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "492500",
+        "name":  "1Q 현대차그룹채권(A+이상)\u0026국고통안",
+        "fullName":  "하나 1Q 현대차그룹채권(A+이상)\u0026국고통안 증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0206G0",
+        "name":  "1Q 현대차기아채권혼합50",
+        "fullName":  "하나 1Q 현대차기아채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내"
+    },
+    {
+        "code":  "422260",
+        "name":  "VITA MZ소비액티브",
+        "fullName":  "한국밸류 VITA MZ소비액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "473440",
+        "name":  "ACE 11월만기자동연장회사채AA-이상액티브",
+        "fullName":  "한국투자 ACE 11월만기자동연장회사채AA-이상액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "332500",
+        "name":  "ACE 200TR",
+        "fullName":  "한국투자 ACE 200 Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "105190",
+        "name":  "ACE 200",
+        "fullName":  "한국투자 ACE 200 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461270",
+        "name":  "ACE 26-06 회사채(AA-이상)액티브",
+        "fullName":  "한국투자 ACE 26-06 회사채(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475260",
+        "name":  "ACE 2월만기자동연장회사채AA-이상액티브",
+        "fullName":  "한국투자 ACE 2월만기자동연장회사채AA-이상액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "385600",
+        "name":  "ACE 2차전지\u0026친환경차액티브",
+        "fullName":  "한국투자 ACE 2차전지\u0026친환경차액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475270",
+        "name":  "ACE 5월만기자동연장회사채AA-이상액티브",
+        "fullName":  "한국투자 ACE 5월만기자동연장회사채AA-이상액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475280",
+        "name":  "ACE 8월만기자동연장회사채AA-이상액티브",
+        "fullName":  "한국투자 ACE 8월만기자동연장회사채AA-이상액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "469150",
+        "name":  "ACE AI반도체TOP3+",
+        "fullName":  "한국투자 ACE AI반도체TOP3+증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0079X0",
+        "name":  "ACE BYD밸류체인액티브",
+        "fullName":  "한국투자 ACE BYD밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "385590",
+        "name":  "ACE ESG액티브",
+        "fullName":  "한국투자 ACE ESG액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "475050",
+        "name":  "ACE KPOP포커스",
+        "fullName":  "한국투자 ACE KPOP포커스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "411060",
+        "name":  "ACE KRX금현물",
+        "fullName":  "한국투자 ACE KRX금현물특별자산상장지수투자신탁(금)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0210A0",
+        "name":  "ACE K반도체TOP2+",
+        "fullName":  "한국투자 ACE K반도체TOP2+증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0172Y0",
+        "name":  "ACE K수출핵심TOP10산업액티브",
+        "fullName":  "한국투자 ACE K수출핵심TOP10산업액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0177X0",
+        "name":  "ACE K휴머노이드로봇산업TOP2+",
+        "fullName":  "한국투자 ACE K휴머노이드로봇산업TOP2+증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "291130",
+        "name":  "ACE MSCI멕시코(합성)",
+        "fullName":  "한국투자 ACE MSCI멕시코증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "256440",
+        "name":  "ACE MSCI인도네시아(합성)",
+        "fullName":  "한국투자 ACE MSCI인도네시아증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "261920",
+        "name":  "ACE MSCI필리핀(합성)",
+        "fullName":  "한국투자 ACE MSCI필리핀증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0194T0",
+        "name":  "ACE SK하이닉스단일종목레버리지",
+        "fullName":  "한국투자 ACE SK하이닉스단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0021C0",
+        "name":  "ACE TDF장기자산배분액티브",
+        "fullName":  "한국투자 ACE TDF장기자산배분액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0199C0",
+        "name":  "ACE 고배당주Plus커버드콜액티브",
+        "fullName":  "한국투자 ACE 고배당주Plus커버드콜액티브증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0139P0",
+        "name":  "ACE 고배당주",
+        "fullName":  "한국투자 ACE 고배당주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "225130",
+        "name":  "ACE 골드선물 레버리지(합성 H)",
+        "fullName":  "한국투자 ACE 골드선물레버리지특별자산상장지수투자신탁(금-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "483340",
+        "name":  "ACE 구글밸류체인액티브",
+        "fullName":  "한국투자 ACE 구글밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "114460",
+        "name":  "ACE 국고채3년",
+        "fullName":  "한국투자 ACE 국고채 증권 상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "365780",
+        "name":  "ACE 국고채10년",
+        "fullName":  "한국투자 ACE 국고채10년증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "494340",
+        "name":  "ACE 글로벌AI맞춤형반도체",
+        "fullName":  "한국투자 ACE 글로벌AI맞춤형반도체증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "446770",
+        "name":  "ACE 글로벌반도체TOP4 Plus",
+        "fullName":  "한국투자 ACE 글로벌반도체TOP4 Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "435040",
+        "name":  "ACE 글로벌브랜드TOP10",
+        "fullName":  "한국투자 ACE 글로벌브랜드TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "497510",
+        "name":  "ACE 글로벌빅파마",
+        "fullName":  "한국투자 ACE 글로벌빅파마증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "460960",
+        "name":  "ACE 글로벌인컴TOP10",
+        "fullName":  "한국투자 ACE 글로벌인컴TOP10증권상장지수투자신탁[혼합-재간접형]",
+        "market":  "해외"
+    },
+    {
+        "code":  "414270",
+        "name":  "ACE 글로벌자율주행액티브",
+        "fullName":  "한국투자 ACE 글로벌자율주행액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "190620",
+        "name":  "ACE 단기통안채",
+        "fullName":  "한국투자 ACE 단기자금 증권 상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "440640",
+        "name":  "ACE 단기채권알파액티브",
+        "fullName":  "한국투자 ACE 단기채권알파액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "494330",
+        "name":  "ACE 라이프자산주주가치액티브",
+        "fullName":  "한국투자 ACE 라이프자산주주가치액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "265690",
+        "name":  "ACE 러시아MSCI(합성)",
+        "fullName":  "한국투자 ACE 러시아MSCI증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "152500",
+        "name":  "ACE 레버리지",
+        "fullName":  "한국투자 ACE 레버리지 증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0153P0",
+        "name":  "ACE 리츠부동산인프라액티브",
+        "fullName":  "한국투자 ACE 리츠부동산인프라액티브부동산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "483330",
+        "name":  "ACE 마이크로소프트밸류체인액티브",
+        "fullName":  "한국투자 ACE 마이크로소프트밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "487340",
+        "name":  "ACE 머니마켓액티브",
+        "fullName":  "한국투자 ACE 머니마켓액티브 증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0085P0",
+        "name":  "ACE 미국10년국채액티브",
+        "fullName":  "한국투자 ACE 미국10년국채액티브증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0085N0",
+        "name":  "ACE 미국10년국채액티브(H)",
+        "fullName":  "한국투자 ACE 미국10년국채액티브증권상장지수투자신탁(채권)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "452250",
+        "name":  "ACE 미국30년국채선물레버리지(합성 H)",
+        "fullName":  "한국투자 ACE 미국30년국채선물레버리지증권상장지수투자신탁(채권-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "476760",
+        "name":  "ACE 미국30년국채액티브",
+        "fullName":  "한국투자 ACE 미국30년국채액티브증권상장지수투자신탁[채권]",
+        "market":  "해외"
+    },
+    {
+        "code":  "453850",
+        "name":  "ACE 미국30년국채액티브(H)",
+        "fullName":  "한국투자 ACE 미국30년국채액티브증권상장지수투자신탁[채권](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "476750",
+        "name":  "ACE 미국30년국채엔화노출액티브(H)",
+        "fullName":  "한국투자 ACE 미국30년국채엔화노출액티브증권상장지수투자신탁[채권](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "480030",
+        "name":  "ACE 미국500데일리타겟커버드콜(합성)",
+        "fullName":  "한국투자 ACE 미국500데일리타겟커버드콜증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0118Z0",
+        "name":  "ACE 미국AI테크핵심산업액티브",
+        "fullName":  "한국투자 ACE 미국AI테크핵심산업액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "280320",
+        "name":  "ACE 미국IT인터넷(합성 H)",
+        "fullName":  "한국투자 ACE 미국IT인터넷증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "438080",
+        "name":  "ACE 미국S\u0026P500미국채혼합50액티브",
+        "fullName":  "한국투자 ACE 미국S\u0026P500미국채혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "360200",
+        "name":  "ACE 미국S\u0026P500",
+        "fullName":  "한국투자 ACE 미국S\u0026P500증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0155M0",
+        "name":  "ACE 미국SMR원자력TOP10",
+        "fullName":  "한국투자 ACE 미국SMR원자력TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "309230",
+        "name":  "ACE 미국WideMoat동일가중",
+        "fullName":  "한국투자 ACE 미국WideMoat동일가중증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "438100",
+        "name":  "ACE 미국나스닥100미국채혼합50액티브",
+        "fullName":  "한국투자 ACE 미국나스닥100미국채혼합50액티브증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "367380",
+        "name":  "ACE 미국나스닥100",
+        "fullName":  "한국투자 ACE 미국나스닥100증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "456880",
+        "name":  "ACE 미국달러SOFR금리(합성)",
+        "fullName":  "한국투자 ACE 미국달러SOFR금리특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "440650",
+        "name":  "ACE 미국달러단기채권액티브",
+        "fullName":  "한국투자 ACE 미국달러단기채권액티브증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0127M0",
+        "name":  "ACE 미국대형가치주액티브",
+        "fullName":  "한국투자 ACE 미국대형가치주액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0127P0",
+        "name":  "ACE 미국대형성장주액티브",
+        "fullName":  "한국투자 ACE 미국대형성장주액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "480040",
+        "name":  "ACE 미국반도체데일리타겟커버드콜(합성)",
+        "fullName":  "한국투자 ACE 미국반도체데일리타겟커버드콜증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "402970",
+        "name":  "ACE 미국배당다우존스",
+        "fullName":  "한국투자 ACE 미국배당다우존스증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0049M0",
+        "name":  "ACE 미국배당퀄리티+커버드콜액티브",
+        "fullName":  "한국투자 ACE 미국배당퀄리티+커버드콜액티브증권상장지수투자신탁(주식-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0046Y0",
+        "name":  "ACE 미국배당퀄리티",
+        "fullName":  "한국투자 ACE 미국배당퀄리티증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0049K0",
+        "name":  "ACE 미국배당퀄리티채권혼합50",
+        "fullName":  "한국투자 ACE 미국배당퀄리티채권혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "181480",
+        "name":  "ACE 미국부동산리츠(합성 H)",
+        "fullName":  "한국투자 ACE 미국부동산리츠 부동산상장지수투자신탁(파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "480020",
+        "name":  "ACE 미국빅테크7+데일리타겟커버드콜(합성)",
+        "fullName":  "한국투자 ACE 미국빅테크7+데일리타겟커버드콜증권상장지수투자신탁(주식-파생형)합성",
+        "market":  "해외"
+    },
+    {
+        "code":  "465610",
+        "name":  "ACE 미국빅테크TOP7 Plus레버리지(합성)",
+        "fullName":  "한국투자 ACE 미국빅테크TOP7 Plus레버리지증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "465620",
+        "name":  "ACE 미국빅테크TOP7 Plus인버스(합성)",
+        "fullName":  "한국투자 ACE 미국빅테크TOP7 Plus인버스증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "465580",
+        "name":  "ACE 미국빅테크TOP7 Plus",
+        "fullName":  "한국투자 ACE 미국빅테크TOP7 Plus증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0180V0",
+        "name":  "ACE 미국우주테크액티브",
+        "fullName":  "한국투자 ACE 미국우주테크액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "473590",
+        "name":  "ACE 미국주식베스트셀러",
+        "fullName":  "한국투자 ACE 미국주식베스트셀러증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0008E0",
+        "name":  "ACE 미국중심중소형제조업",
+        "fullName":  "한국투자 ACE 미국중심중소형제조업증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "391600",
+        "name":  "ACE 미국친환경그린테마",
+        "fullName":  "한국투자 ACE 미국친환경그린테마증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "455660",
+        "name":  "ACE 미국하이일드액티브(H)",
+        "fullName":  "한국투자 ACE 미국하이일드액티브증권상장지수투자신탁[채권-재간접형](H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "245710",
+        "name":  "ACE 베트남VN30(합성)",
+        "fullName":  "한국투자 ACE 베트남VN30증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "131890",
+        "name":  "ACE 삼성그룹동일가중",
+        "fullName":  "한국투자 ACE 삼성그룹주 동일가중 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "108450",
+        "name":  "ACE 삼성그룹섹터가중",
+        "fullName":  "한국투자 ACE 삼성그룹주SW 증권 상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0194M0",
+        "name":  "ACE 삼성전자단일종목레버리지",
+        "fullName":  "한국투자 ACE 삼성전자단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "226380",
+        "name":  "ACE Fn성장소비주도주",
+        "fullName":  "한국투자 ACE 성장소비주도주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "316300",
+        "name":  "ACE 싱가포르리츠",
+        "fullName":  "한국투자 ACE 싱가포르리츠부동산상장지수투자신탁(재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "277540",
+        "name":  "ACE 아시아TOP50",
+        "fullName":  "한국투자 ACE 아시아TOP50증권상장지수투자신탁(주식)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "483420",
+        "name":  "ACE 애플밸류체인액티브",
+        "fullName":  "한국투자 ACE 애플밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "483320",
+        "name":  "ACE 엔비디아밸류체인액티브",
+        "fullName":  "한국투자 ACE 엔비디아밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "448540",
+        "name":  "ACE 엔비디아채권혼합",
+        "fullName":  "한국투자 ACE 엔비디아채권혼합증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0099L0",
+        "name":  "ACE 우량회사채(AA-이상)액티브",
+        "fullName":  "한국투자 ACE 우량회사채(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "433500",
+        "name":  "ACE 원자력TOP10",
+        "fullName":  "한국투자 ACE 원자력TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0102X0",
+        "name":  "ACE 유럽방산TOP10",
+        "fullName":  "한국투자 ACE 유럽방산TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "487920",
+        "name":  "ACE 인도시장대표BIG5그룹액티브",
+        "fullName":  "한국투자 ACE 인도시장대표BIG5그룹액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "487910",
+        "name":  "ACE 인도컨슈머파워액티브",
+        "fullName":  "한국투자 ACE 인도컨슈머파워액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "145670",
+        "name":  "ACE 인버스",
+        "fullName":  "한국투자 ACE 인버스 증권 상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "497520",
+        "name":  "ACE 일라이릴리밸류체인",
+        "fullName":  "한국투자 ACE 일라이릴리밸류체인증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "196030",
+        "name":  "ACE 일본TOPIX레버리지(H)",
+        "fullName":  "한국투자 ACE 일본 레버리지 증권 상장지수투자신탁(주식-재간접파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "238720",
+        "name":  "ACE 일본Nikkei225(H)",
+        "fullName":  "한국투자 ACE 일본Nikkei225증권상장지수투자신탁(주식-파생형)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "469160",
+        "name":  "ACE 일본반도체",
+        "fullName":  "한국투자 ACE 일본반도체증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "205720",
+        "name":  "ACE 일본TOPIX인버스(합성 H)",
+        "fullName":  "한국투자 ACE 일본인버스 증권 상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0021D0",
+        "name":  "ACE TDF2030액티브 적격",
+        "fullName":  "한국투자 ACE 적격TDF2030액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0021E0",
+        "name":  "ACE TDF2050액티브 적격",
+        "fullName":  "한국투자 ACE 적격TDF2050액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "356540",
+        "name":  "ACE 종합채권(AA-이상)액티브",
+        "fullName":  "한국투자 ACE 종합채권(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "447430",
+        "name":  "ACE 주주환원가치주액티브",
+        "fullName":  "한국투자 ACE 주주환원가치주액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "416090",
+        "name":  "ACE 중국과창판STAR50",
+        "fullName":  "한국투자 ACE 중국과창판STAR50증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "168580",
+        "name":  "ACE 중국본토CSI300",
+        "fullName":  "한국투자 ACE 중국본토 CSI300 증권 자상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "219900",
+        "name":  "ACE 중국본토CSI300레버리지(합성)",
+        "fullName":  "한국투자 ACE 중국본토레버리지CSI300증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "272910",
+        "name":  "ACE 중장기국공채액티브",
+        "fullName":  "한국투자 ACE 중장기국공채액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0087F0",
+        "name":  "ACE 차이나AI빅테크TOP2+액티브",
+        "fullName":  "한국투자 ACE 차이나AI빅테크TOP2+액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "371870",
+        "name":  "ACE 차이나항셍테크",
+        "fullName":  "한국투자 ACE 차이나항셍테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0209Z0",
+        "name":  "ACE 코리아AI전력TOP10",
+        "fullName":  "한국투자 ACE 코리아AI전력TOP10증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "380340",
+        "name":  "ACE 코리아AI테크핵심산업",
+        "fullName":  "한국투자 ACE 코리아AI테크핵심산업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "496120",
+        "name":  "ACE 코리아밸류업",
+        "fullName":  "한국투자 ACE 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "354500",
+        "name":  "ACE 코스닥150",
+        "fullName":  "한국투자 ACE 코스닥150증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "305050",
+        "name":  "ACE 코스피",
+        "fullName":  "한국투자 ACE 코스피증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "457480",
+        "name":  "ACE 테슬라밸류체인액티브",
+        "fullName":  "한국투자 ACE 테슬라밸류체인액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "469170",
+        "name":  "ACE 포스코그룹포커스",
+        "fullName":  "한국투자 ACE 포스코그룹포커스증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "491220",
+        "name":  "PLUS 200TR",
+        "fullName":  "한화 PLUS 200 Total Return증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "152100",
+        "name":  "PLUS 200",
+        "fullName":  "한화 PLUS 200 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "253150",
+        "name":  "PLUS 200선물레버리지",
+        "fullName":  "한화 PLUS 200선물레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "253160",
+        "name":  "PLUS 200선물인버스2X",
+        "fullName":  "한화 PLUS 200선물인버스2X증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0203D0",
+        "name":  "PLUS 200위클리커버드콜채권혼합",
+        "fullName":  "한화 PLUS 200위클리커버드콜채권혼합증권상장지수투자신탁(채권혼합-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0210E0",
+        "name":  "PLUS 200커버드콜액티브",
+        "fullName":  "한화 PLUS 200커버드콜액티브증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "395750",
+        "name":  "PLUS ESG가치주액티브",
+        "fullName":  "한화 PLUS ESG가치주액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "395760",
+        "name":  "PLUS ESG성장주액티브",
+        "fullName":  "한화 PLUS ESG성장주액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "453010",
+        "name":  "PLUS KOFR금리",
+        "fullName":  "한화 PLUS KOFR금리특별자산상장지수투자신탁(금리)",
+        "market":  "국내"
+    },
+    {
+        "code":  "227830",
+        "name":  "PLUS 코스피",
+        "fullName":  "한화 PLUS KOSPI 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "122090",
+        "name":  "PLUS 코스피50",
+        "fullName":  "한화 PLUS KOSPI50 증권 상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "429740",
+        "name":  "PLUS K리츠",
+        "fullName":  "한화 PLUS K리츠부동산상장지수투자신탁(재간접형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0104G0",
+        "name":  "PLUS K방산레버리지",
+        "fullName":  "한화 PLUS K방산레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0090B0",
+        "name":  "PLUS K방산소부장",
+        "fullName":  "한화 PLUS K방산소부장증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "449450",
+        "name":  "PLUS K방산",
+        "fullName":  "한화 PLUS K방산증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0166S0",
+        "name":  "PLUS K제조업핵심기업액티브",
+        "fullName":  "한화 PLUS K제조업핵심기업액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "269540",
+        "name":  "PLUS 미국S\u0026P500(H)",
+        "fullName":  "한화 PLUS S\u0026P500증권상장지수투자신탁(주식-파생)(H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "269530",
+        "name":  "PLUS S\u0026P글로벌인프라",
+        "fullName":  "한화 PLUS S\u0026P글로벌인프라 증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "251590",
+        "name":  "PLUS 고배당저변동50",
+        "fullName":  "한화 PLUS 고배당저변동50증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "161510",
+        "name":  "PLUS 고배당주",
+        "fullName":  "한화 PLUS 고배당주 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0018C0",
+        "name":  "PLUS 고배당주위클리고정커버드콜",
+        "fullName":  "한화 PLUS 고배당주위클리고정커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "489030",
+        "name":  "PLUS 고배당주위클리커버드콜",
+        "fullName":  "한화 PLUS 고배당주위클리커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "251600",
+        "name":  "PLUS 고배당주채권혼합",
+        "fullName":  "한화 PLUS 고배당주채권혼합증권상장지수투자신탁(채권혼합-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461460",
+        "name":  "PLUS 국고채10년액티브",
+        "fullName":  "한화 PLUS 국고채10년액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "451600",
+        "name":  "PLUS 국고채30년액티브",
+        "fullName":  "한화 PLUS 국고채30년액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "491230",
+        "name":  "PLUS 국공채머니마켓액티브",
+        "fullName":  "한화 PLUS 국공채머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "289670",
+        "name":  "PLUS 국채선물10년",
+        "fullName":  "한화 PLUS 국채선물10년증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "298340",
+        "name":  "PLUS 국채선물3년",
+        "fullName":  "한화 PLUS 국채선물3년증권상장지수투자신탁(채권-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "489010",
+        "name":  "PLUS 글로벌AI인프라",
+        "fullName":  "한화 PLUS 글로벌AI인프라증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "442580",
+        "name":  "PLUS 글로벌HBM반도체",
+        "fullName":  "한화 PLUS 글로벌HBM반도체증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "496770",
+        "name":  "PLUS 글로벌방산",
+        "fullName":  "한화 PLUS 글로벌방산증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "419650",
+        "name":  "PLUS 글로벌수소\u0026차세대연료전지",
+        "fullName":  "한화 PLUS 글로벌수소\u0026차세대연료전지증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0007G0",
+        "name":  "PLUS 글로벌원자력밸류체인",
+        "fullName":  "한화 PLUS 글로벌원자력밸류체인증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0166T0",
+        "name":  "PLUS 글로벌저작권핵심기업액티브",
+        "fullName":  "한화 PLUS 글로벌저작권핵심기업액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0035T0",
+        "name":  "PLUS 글로벌휴머노이드로봇액티브",
+        "fullName":  "한화 PLUS 글로벌휴머노이드로봇액티브증권상장지수투자신탁(주식)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "415920",
+        "name":  "PLUS 글로벌희토류\u0026전략자원생산기업",
+        "fullName":  "한화 PLUS 글로벌희토류\u0026전략자원생산기업증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0138Y0",
+        "name":  "PLUS 금채권혼합",
+        "fullName":  "한화 PLUS 금채권혼합증권상장지수투자신탁(채권혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "278620",
+        "name":  "PLUS 단기채권액티브",
+        "fullName":  "한화 PLUS 단기채권액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "477050",
+        "name":  "PLUS 머니마켓액티브",
+        "fullName":  "한화 PLUS 머니마켓액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0050E0",
+        "name":  "PLUS 미국AI에이전트",
+        "fullName":  "한화 PLUS 미국AI에이전트증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "429760",
+        "name":  "PLUS 미국S\u0026P500",
+        "fullName":  "한화 PLUS 미국S\u0026P500 증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0057H0",
+        "name":  "PLUS 미국S\u0026P500미국채혼합50액티브",
+        "fullName":  "한화 PLUS 미국S\u0026P500미국채혼합50액티브증권상장지수투자신탁(채권혼합-재간접형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "494410",
+        "name":  "PLUS 미국S\u0026P500성장주",
+        "fullName":  "한화 PLUS 미국S\u0026P500성장주증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0153X0",
+        "name":  "PLUS 미국고배당주액티브",
+        "fullName":  "한화 PLUS 미국고배당주액티브증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0089B0",
+        "name":  "PLUS 미국나스닥100미국채혼합50",
+        "fullName":  "한화 PLUS 미국나스닥100미국채혼합50증권상장지수투자신탁(채권혼합)",
+        "market":  "해외"
+    },
+    {
+        "code":  "287180",
+        "name":  "PLUS 미국나스닥테크",
+        "fullName":  "한화 PLUS 미국나스닥테크증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "332610",
+        "name":  "PLUS 미국단기회사채(AAA~A)",
+        "fullName":  "한화 PLUS 미국단기회사채(AAA~A)증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "456200",
+        "name":  "PLUS 미국달러SOFR금리액티브(합성)",
+        "fullName":  "한화 PLUS 미국달러SOFR금리액티브특별자산상장지수투자신탁(금리-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0078V0",
+        "name":  "PLUS 미국로보택시",
+        "fullName":  "한화 PLUS 미국로보택시증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "494420",
+        "name":  "PLUS 미국배당증가성장주데일리커버드콜",
+        "fullName":  "한화 PLUS 미국배당증가성장주데일리커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0023B0",
+        "name":  "PLUS 미국양자컴퓨팅TOP10",
+        "fullName":  "한화 PLUS 미국양자컴퓨팅TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "332620",
+        "name":  "PLUS 미국장기우량회사채",
+        "fullName":  "한화 PLUS 미국장기우량회사채증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "464470",
+        "name":  "PLUS 미국채30년액티브",
+        "fullName":  "한화 PLUS 미국채30년액티브증권상장지수투자신탁(채권)",
+        "market":  "해외"
+    },
+    {
+        "code":  "461900",
+        "name":  "PLUS 미국테크TOP10",
+        "fullName":  "한화 PLUS 미국테크TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0193K0",
+        "name":  "PLUS 삼성전자단일종목레버리지",
+        "fullName":  "한화 PLUS 삼성전자단일종목레버리지증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0193L0",
+        "name":  "PLUS 삼성전자선물단일종목인버스2X",
+        "fullName":  "한화 PLUS 삼성전자선물단일종목인버스2X증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "238670",
+        "name":  "PLUS 스마트베타Quality채권혼합",
+        "fullName":  "한화 PLUS 스마트베타Quality채권혼합증권상장지수투자신탁(채권혼합-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "256450",
+        "name":  "PLUS 심천차이넥스트(합성)",
+        "fullName":  "한화 PLUS 심천차이넥스트증권상장지수투자신탁(주식-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "447660",
+        "name":  "PLUS 애플채권혼합",
+        "fullName":  "한화 PLUS 애플채권혼합증권상장지수투자신탁(채권혼합)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "239660",
+        "name":  "PLUS 우량회사채50",
+        "fullName":  "한화 PLUS 우량회사채50증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "421320",
+        "name":  "PLUS 우주항공",
+        "fullName":  "한화 PLUS 우주항공 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0184N0",
+        "name":  "PLUS 은채권혼합",
+        "fullName":  "한화 PLUS 은채권혼합증권상장지수투자신탁(채권혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "464920",
+        "name":  "PLUS 일본반도체소부장",
+        "fullName":  "한화 PLUS 일본반도체소부장증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "489000",
+        "name":  "PLUS 일본엔화초단기국채(합성)",
+        "fullName":  "한화 PLUS 일본엔화초단기국채증권상장지수투자신탁(채권-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0098N0",
+        "name":  "PLUS 자사주매입고배당주",
+        "fullName":  "한화 PLUS 자사주매입고배당주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "433880",
+        "name":  "PLUS TDF2060액티브 적격",
+        "fullName":  "한화 PLUS 적격TDF2060액티브증권상장지수투자신탁(주식혼합-재간접형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "451000",
+        "name":  "PLUS 종합채권(AA-이상)액티브",
+        "fullName":  "한화 PLUS 종합채권(AA-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "280920",
+        "name":  "PLUS 주도업종",
+        "fullName":  "한화 PLUS 주도업종증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0184L0",
+        "name":  "PLUS 중기종합채권(A-이상)액티브",
+        "fullName":  "한화 PLUS 중기종합채권(A-이상)액티브증권상장지수투자신탁(채권)",
+        "market":  "국내"
+    },
+    {
+        "code":  "266550",
+        "name":  "PLUS 중형주저변동50",
+        "fullName":  "한화 PLUS 중형주저변동50증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0047N0",
+        "name":  "PLUS 차이나AI테크TOP10",
+        "fullName":  "한화 PLUS 차이나AI테크TOP10증권상장지수투자신탁(주식)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0128D0",
+        "name":  "PLUS 차이나항셍테크위클리타겟커버드콜",
+        "fullName":  "한화 PLUS 차이나항셍테크위클리타겟커버드콜증권상장지수투자신탁(주식-파생형)",
+        "market":  "해외"
+    },
+    {
+        "code":  "495040",
+        "name":  "PLUS 코리아밸류업",
+        "fullName":  "한화 PLUS 코리아밸류업증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "301410",
+        "name":  "PLUS 코스닥150선물인버스",
+        "fullName":  "한화 PLUS 코스닥150선물인버스증권상장지수투자신탁(주식-파생형)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0166N0",
+        "name":  "PLUS 코스닥150액티브",
+        "fullName":  "한화 PLUS 코스닥150액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "301400",
+        "name":  "PLUS 코스닥150",
+        "fullName":  "한화 PLUS 코스닥150증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "328370",
+        "name":  "PLUS 코스피TR",
+        "fullName":  "한화 PLUS 코스피TotalReturn증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "457990",
+        "name":  "PLUS 태양광\u0026ESS",
+        "fullName":  "한화 PLUS 태양광\u0026ESS 증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0132K0",
+        "name":  "PLUS 테슬라위클리커버드콜채권혼합",
+        "fullName":  "한화 PLUS 테슬라위클리커버드콜채권혼합증권상장지수투자신탁(채권혼합-파생형)",
+        "market":  "국내\u0026해외"
+    },
+    {
+        "code":  "0000J0",
+        "name":  "PLUS 한화그룹주",
+        "fullName":  "한화 PLUS 한화그룹주증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "461910",
+        "name":  "PLUS 미국테크TOP10레버리지(합성)",
+        "fullName":  "한화 PLUS미국테크TOP10레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)",
+        "market":  "해외"
+    },
+    {
+        "code":  "213630",
+        "name":  "PLUS 미국다우존스고배당주(합성 H)",
+        "fullName":  "한화PLUS DJ US Select Dividend 증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "189400",
+        "name":  "PLUS 글로벌MSCI(합성 H)",
+        "fullName":  "한화PLUS MSCI AC World 증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "195970",
+        "name":  "PLUS 선진국MSCI(합성 H)",
+        "fullName":  "한화PLUS MSCI EAFE 증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "195980",
+        "name":  "PLUS 신흥국MSCI(합성 H)",
+        "fullName":  "한화PLUS MSCI Emerging Markets 증권상장지수투자신탁(주식-파생형)(합성 H)",
+        "market":  "해외"
+    },
+    {
+        "code":  "0184V0",
+        "name":  "UNICORN K바이오액티브",
+        "fullName":  "현대 UNICORN K바이오액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "433250",
+        "name":  "UNICORN R\u0026D 액티브",
+        "fullName":  "현대 UNICORN R\u0026D 액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "494220",
+        "name":  "UNICORN SK하이닉스밸류체인액티브",
+        "fullName":  "현대 UNICORN SK하이닉스밸류체인액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "470310",
+        "name":  "UNICORN 생성형AI강소기업액티브",
+        "fullName":  "현대 UNICORN 생성형AI강소기업액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "476000",
+        "name":  "UNICORN 포스트IPO액티브",
+        "fullName":  "현대 UNICORN 포스트IPO액티브증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "491700",
+        "name":  "HK 200",
+        "fullName":  "흥국 HK 200증권상장지수투자신탁[주식]",
+        "market":  "국내"
+    },
+    {
+        "code":  "0000Y0",
+        "name":  "HK 26-12 회사채(AA-이상)액티브",
+        "fullName":  "흥국 HK 26-12 회사채(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "215620",
+        "name":  "HK S\u0026P코리아로우볼",
+        "fullName":  "흥국 HK S\u0026P로우볼증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "0113P0",
+        "name":  "HK 머니마켓액티브",
+        "fullName":  "흥국 HK 머니마켓액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    },
+    {
+        "code":  "391670",
+        "name":  "HK 베스트일레븐액티브",
+        "fullName":  "흥국 HK 베스트일레븐액티브증권상장지수투자신탁(주식)",
+        "market":  "국내"
+    },
+    {
+        "code":  "472920",
+        "name":  "HK 종합채권(AA-이상)액티브",
+        "fullName":  "흥국 HK 종합채권(AA-이상)액티브증권상장지수투자신탁[채권]",
+        "market":  "국내"
+    }
+]

@@ -20,7 +20,7 @@ export interface AssetEnvelope {
   updatedAt: string;   // ISO
 }
 
-// 인증 토큰 헤더 (base64url JSON { syncId, ts, nonce, sig })
+// 인증 토큰 헤더 (base64url JSON { assetId, ts, nonce, sig })
 export const SYNC_AUTH_HEADER = "x-sync-auth";
 
 // 동기화 링크 해시 파라미터 (#sync=<assetId>, 구 #asset=)

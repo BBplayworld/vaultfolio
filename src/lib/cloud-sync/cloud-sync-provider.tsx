@@ -6,7 +6,7 @@
  *
  *  상태: none(금고 미설정) / locked(assetId 있으나 이번 세션 미무장) / armed(키 메모리 보유→자동 동기화)
  *  - 기억된 기기: 로드 시 rememberedMaster unwrap→자동 armed→폴링·자동동기화 즉시 시작.
- *  - 송신: 자산·프로필(닉네임) 변경 → 2.5s 디바운스 push(무음). 수신: 20s 폴링 + 포커스 → 원격 최신이면 자동 pull.
+ *  - 송신: 자산·프로필(닉네임) 변경 → 2.5s 디바운스 push(무음). 수신: 30s 폴링 + 포커스 → 원격 최신이면 자동 pull.
  *  - #sync= (신규, 구 #asset=) 링크 진입 → pendingConnectAssetId(연결 모달 트리거).
  *  - 금고암호는 메모리(ref)에만. remember ON이면 masterBits만 기기키로 암호화 보관.
  */
@@ -28,7 +28,7 @@ import {
 } from "./sync-state";
 
 const AUTO_PUSH_DEBOUNCE_MS = 2500;
-const POLL_INTERVAL_MS = 60000;
+const POLL_INTERVAL_MS = 30000;
 
 // 비교를 위해 payload에서 lastUpdated 타임스탬프 필드를 제외한 직렬화 문자열 반환
 const getComparablePayloadString = (): string => {

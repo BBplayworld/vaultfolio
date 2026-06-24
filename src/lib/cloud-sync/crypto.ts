@@ -3,7 +3,7 @@
  * E2EE 암복호 + Ed25519 서명 (브라우저/Node 공용 WebCrypto + @noble/ed25519).
  *
  * 키 파생(결정적):
- *   salt        = SHA-256("secretasset-salt|"+syncId)[:16]   (syncId로 자체계산, 서버 미전송)
+ *   salt        = SHA-256("secretasset-salt|"+assetId)[:16]  (assetId로 자체계산, 서버 미전송)
  *   masterBits  = PBKDF2(passphrase, salt, 200k, SHA-256, 32B)
  *   encKey      = HKDF(masterBits, info="enc")   → AES-256-GCM (데이터 암복호, 기기 전용)
  *   ed25519Seed = HKDF(masterBits, info="ed25519") → Ed25519 키쌍 (privKey 기기 / pubKey 서버 등록)

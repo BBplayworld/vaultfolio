@@ -11,15 +11,10 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { SECTOR_ENUM, type StockClassification } from "@/lib/xray/classification-store";
-import { DOMESTIC_STOCK_MAP, DOMESTIC_ETF_MAP } from "@/app/api/parse-screenshot/ticker-map";
+import { KR_CODE_TO_NAME } from "@/lib/kr-master";
 
-const reverseDomesticMap: Record<string, string> = {};
-for (const [name, ticker] of Object.entries(DOMESTIC_STOCK_MAP)) {
-  reverseDomesticMap[ticker] = name;
-}
-for (const [name, ticker] of Object.entries(DOMESTIC_ETF_MAP)) {
-  reverseDomesticMap[ticker] = name;
-}
+// 코드→약명 역맵 (KRX 전종목 마스터)
+const reverseDomesticMap: Record<string, string> = KR_CODE_TO_NAME;
 
 interface ClassifyItem {
   ticker: string;

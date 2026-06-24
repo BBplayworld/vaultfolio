@@ -3,12 +3,12 @@
 /**
  * cloud-sync/sync-state.ts
  * 동기화 로컬 상태 — **단일 키** `secretasset_sync`(객체).
- *   { syncId, version, lastSyncedAt, rememberedKey? }
- *   - syncId: 금고 주소(비밀 아님) → 평문.
+ *   { assetId, version, lastSyncedAt, rememberedKey? }
+ *   - assetId: 금고 주소(비밀 아님) → 평문.
  *   - version/lastSyncedAt: 충돌 판정·표시.
  *   - rememberedKey: "이 기기 기억" ON 시 masterBits를 기기 비추출 키로 wrap한 암호문(평문 저장 금지).
  *
- * salt·privKey·pubKey는 저장하지 않는다(syncId·금고암호로 그때그때 파생).
+ * salt·privKey·pubKey는 저장하지 않는다(assetId·금고암호로 그때그때 파생).
  * pull(clearAssetData)이 이 키를 지우므로 복원 후 재기록(sync-client.pullAsset).
  */
 

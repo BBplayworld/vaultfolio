@@ -753,7 +753,7 @@ export function InstallGuideAnimation({
         {steps.map((_, i) => (
           <span
             key={i}
-            className={`size-1.5 rounded-full transition-all duration-300 ${i === active ? "scale-125" : "bg-border"}`}
+            className={`size-1.5 rounded-full transition-[transform,background-color] duration-300 ${i === active ? "scale-125" : "bg-border"}`}
             style={i === active ? { backgroundColor: BRAND } : undefined}
           />
         ))}

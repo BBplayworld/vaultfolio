@@ -99,19 +99,35 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 가져오기 후 `dataResetVersion`++로 진행 중 fetch abort
 
 ### F-CLOUD-SYNC. E2EE 클라우드 동기화 ([cloud-sync](../../src/lib/cloud-sync) · [api/sync](../../src/app/api/sync/route.ts))
-- ⚙ 용어 표준화 완료 — 코드 전 영역: `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`(구 pushVault/pullVault), Redis 키 `csync:asset:{assetId}`, URL 해시 `#asset=<assetId>`, `SYNC_HASH_PARAM = "asset"`
-- ⚙ `crypto.ts`: `AssetKeys(encKey, pubKey, privKey)` 파생 — PBKDF2(200k iter, SHA-256) → `encKey`(AES-GCM 256) + Ed25519 키쌍. `generateAssetId()` 128비트 base64url. salt 값(`secretasset-salt|` 접두) 불변 확인
-- ⚙ `sync-state.ts`: `SYNC_STATE_KEY = "secretasset_sync"` 단일 키. `assetId/version/lastSyncedAt/rememberedKey` 필드. 레거시 `syncId` 마이그레이션 코드 없음(개발 버전 전용)
-- ⚙ `pushAsset`: AES-GCM 암호화 → PUT `/api/sync` (x-sync-auth 헤더 Ed25519 서명). 409 conflict → `remoteVersion` 반환
-- ⚙ `pullAsset`: GET `/api/sync` → 응답 `{ asset: EncryptedBlob }` → AES-GCM 복호화 → `applyImportedPayload`. 복호화 실패 시 기존 데이터 보존
-- ⚙ `fetchRemoteVersion`: GET `/api/sync?meta=1` — 폴링용 버전 조회, 미존재/오류 → `null`
-- ⚙ `sync-client.ts` `makeAuthToken`: canonical=`[method, assetId, ...extra, ts, nonce].join("|")` — 신선도 300초(`SIG_FRESHNESS_SEC`), nonce 16바이트
-- 👤 금고 암호 입력 → 새 assetId 생성 → 첫 push(서버 등록) → 다른 기기에서 `#asset=<assetId>` 링크로 pull → 복호화 후 자산 동일 확인
-- 👤 conflict(409) — A기기 push 후 B기기 동시 push → conflict 토스트·해결 UI 확인
-- 👤 "이 기기 기억" — `saveRememberedMaster` → `rememberedKey` localStorage 저장 → 재진입 시 암호 없이 `loadRememberedMaster` 복원 → `forgetRemembered` 후 재요구
-- 👤 금고 암호 오류 → 401 → "금고 암호가 올바르지 않습니다." 토스트
-- 엣지: 첫 pull(404 → `status:"empty"`), 서명 만료(ts+300s 초과), assetId 없는 상태에서 동기화 시도 차단
-- 회귀: `clearAssetData` 호출 후 `SYNC_STATE_KEY` 삭제 → pullAsset 완료 후 재기록 — assetId 유실 없는지 확인
+
+#### 코드레벨(⚙)
+- ⚙ 용어 표준화 — `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`, Redis 키 `csync:asset:{assetId}`. **URL 해시 `#sync=<assetId>`, `SYNC_HASH_PARAM = "sync"`**(구 `#asset=`/`#vault=` 진입 호환 — provider `detect`·`clearPendingConnect` 모두 신구 처리) ([config.ts:27](../../src/lib/cloud-sync/config.ts) · [provider:153,291-295](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
+- ⚙ **3-상태 모델**: `none`(금고 미설정) / `locked`(assetId만 보유, 이번 세션 미무장) / `armed`(키 메모리 보유→자동 동기화). 마운트 시 `loadRememberedMaster` unwrap 성공+assetId 존재 → 자동 `armed`, 아니면 `locked`/`none` ([provider:124-146](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
+- ⚙ **자동 동기화** — 송신: 자산(`assetData`)·닉네임(`NICKNAME_EVENT`→`changeTick`) 변경 → `AUTO_PUSH_DEBOUNCE_MS=2500` 디바운스 무음 push. 수신: `POLL_INTERVAL_MS=30000`(30s) 폴링(`document.visibilityState==="visible"`일 때만)+`focus`+`visibilitychange` → `fetchRemoteVersion > getVersion()`이면 자동 pull.
+- ⚙ `crypto.ts` 키 파생(결정적): `deriveSalt = SHA-256("secretasset-salt|"+assetId)[:16]`(서버 미전송, 접두 불변) → `masterBits = PBKDF2(passphrase, salt, 200k, SHA-256, 32B)` → `encKey = HKDF(info"enc")`(AES-256-GCM) + `ed25519Seed = HKDF(info"ed25519")`(Ed25519 키쌍). `generateAssetId()` 128비트 base64url. 전송=iv·ciphertext·pubKey(1회)·서명뿐
+- ⚙ `device-key.ts`: remember 시 `masterBits`만 **기기 비추출(non-extractable) AES-GCM 키**(IndexedDB `secretasset_kv`)로 wrap → `rememberedKey`(평문 금지). IndexedDB는 `clearAssetData`(localStorage 한정)에 안 지워짐
+- ⚙ `sync-state.ts`: `SYNC_STATE_KEY = "secretasset_sync"` 단일 키. `assetId/version/lastSyncedAt/rememberedKey`. salt·privKey·pubKey 미저장
+- ⚙ `sync-client.ts` `makeAuthToken`: canonical=`[method, assetId, ...extra, ts, nonce].join("|")`. nonce 12바이트 base64url, ts 초단위
+- ⚙ `pushAsset`: AES-GCM 암호화 → PUT `/api/sync`. canonical extra=`[baseVersion, sha256(ciphertext)]`. 409 → `{status:"conflict", remoteVersion}`
+- ⚙ `pullAsset`: GET `/api/sync` → AES-GCM 복호화 → `applyImportedPayload`(검증 실패 throw→기존 보존). 404→`empty`, 401/복호화 실패→error
+- ⚙ `fetchRemoteVersion`: GET `/api/sync?meta=1` — 미존재/오류 → `null`
+- ⚙ **서버([route.ts](../../src/app/api/sync/route.ts))**: TOFU 최초 등록은 `body.pubKey`로 검증, 기존 금고는 저장된 pubKey로만 검증 + `pubKey` 교체 시도 시 **403**. `current.version > baseVersion` → **409**(낙관적 동시성, version+1). `SIG_FRESHNESS_SEC=300`(±5분), `MAX_CIPHERTEXT=4MB`→**413**, PUT만 `checkRateLimit`(IP)→**429**. Redis `csync:asset:{assetId}` + `CSYNC_TTL_SECONDS` 슬라이딩 만료(get 시 expire 갱신) ([cache-storage.ts:548-558](../../src/lib/cache-storage.ts))
+
+#### 정밀 실행 시나리오(👤 단계별 — 사전조건→단계→기대)
+- **S1 신규 금고(none→armed)**: 더보기>기기 동기화 → 금고 암호(8~50자, **영문 소문자+숫자+특수문자 필수** `validatePassphrase`) → "동기화 시작"(`enableSync`: generateAssetId→clearSyncState→첫 push TOFU) → armed, 복구 링크/QR/`sync:` 코드 노출
+- **S2 링크 진입 연결**: 다른 기기에서 `#sync=<assetId>` 열기 → `CloudSyncConnectDialog` 자동(pendingConnectAssetId, sync 코드 readOnly) → 금고 암호만 입력 → `connect`→pull→armed, 자산 동일·튜토리얼 전체 스킵(`skipAllTutorialSteps`)
+- **S3 수동 코드 연결**: none 화면 "기존 기기 동기화 연결" → `sync:xxxx`(assetId 정규식 `^[A-Za-z0-9-_]{20,24}$`) → 연결. `/`·`#`·`?` 포함 시 "복구 링크는 주소창에" 거부
+- **S4 PWA 첫 실행 연결**: standalone+자산 0개 → `PwaConnectPrompt` 전체화면 → `sync:` 붙여넣기 → `#sync=` 해시 설정 → 금고 암호 모달. `share:` 코드는 `importSharedByCode`(PIN 경로)
+- **S5 잠금 해제(locked→armed)**: rememberedKey 없는 재진입 → locked → 금고 암호 → `unlock`(armWithPull). remember 재선택 가능
+- **S6 충돌(409)**: A push 후 B가 stale baseVersion push → conflict → "클라우드가 더 최신…" 토스트 + 자동 pull(`autoPullRef.current()`)로 수렴
+- **S7 암호 오류**: 틀린 금고 암호 → pull 401/복호화 실패 → "금고 암호가 올바르지 않습니다." + **기존 로컬 데이터 보존**(keysRef null 복귀)
+- **S8 기억/해제**: remember ON→`saveRememberedMaster`→재진입 무암호 자동 armed. armed 화면 "이 기기 연결 끊기"(`forget`)→clearSyncState→none
+- **S9 pull 후 자격 재기록(R-신규)**: pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록 → assetId 유실 없음
+- **S10 push-loop/동시성 가드**: pull 직후 `skipNextChangeRef`로 디바운스 push 미발생, `busyRef` 뮤텍스로 push/pull 동시 실행 차단("동기화 중입니다.")
+
+#### 엣지·회귀
+- 엣지: 첫 pull(404→`empty`), 서명 만료(ts±300s 초과→401), assetId 없는 상태 push/pull 차단("잠금 해제가 필요합니다."), 4MB 초과(413), 동일 출처 XSS는 device-key decrypt 호출 가능(완전 방어 아님, 표준 완화)
+- 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), `getComparablePayloadString()`이 `lastUpdated` 제외 비교로 무한 push 루프 차단
 
 ### F-SYNC. 가격·환율 동기화
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
@@ -144,6 +160,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `guideStep`(제목 "앱 설치 가이드") + `InstallGuideContent` PC 문제해결 노출 — 시크릿모드 불가 콜아웃, `chrome://apps` 자동/수동 복사, Firefox 미지원 주의. 모바일은 접이식 "설치가 안 되나요?"에 인앱·재설치 안내
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
+#### PWA 설치 정밀 시나리오 (isSyncMode 분기)
+- ⚙ **isSyncMode 분기**([pwa-install-flow.tsx:84-88,135-181](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)): 설치 시 `getAssetId()` 존재(동기화 기기) → **PIN 불필요**, 코드=`sync:<assetId>`(서버 업로드 없음). 비동기화 → **PIN 4자리(InputOTP) 필수** + 코드=`share:KEY_LOCALKEY`(공유 토큰 `/api/share` POST 저장). `codeLabel`도 "동기화 코드"/"연결 코드"로 구분
+- ⚙ **iOS 클립보드 보존**: `await fetch` 뒤 `writeText`는 제스처 만료로 실패 → `ClipboardItem`에 Promise(text/plain) 동기 전달로 자동 복사 보존 → 실패 시 `writeText` 폴백([pwa-install-flow.tsx:153-168](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)). 인앱 가이드(`openInAppGuide`)도 동일 기법으로 현재 URL 복사
+- ⚙ `usePWAInstall`: `isInstallable`/`isIOS`는 `&& !isStandalone`로 노출, `__bipEvent`(head 캡처) 우선 사용해 제스처 내 `installPWA` 호출([use-pwa-install.ts](../../src/hooks/use-pwa-install.ts))
+- 👤 **P1 PC/Android Chrome·Edge**: `beforeinstallprompt`(또는 `__bipEvent`) → 버튼 클릭 → 즉시 네이티브 A2HS(`installPWA`), 성공 토스트
+- 👤 **P2 iOS/인앱**: iOS=PIN/코드 준비 후 `iosStep`(STEP1 홈추가 + STEP2 코드 붙여넣기), 인앱=`inAppStep`(외부 브라우저 유도+URL 복사)
+- 👤 **P3 동기화 기기 설치**: isSyncMode → PIN 입력란 없음, "설치하기" 후 `sync:<assetId>` 자동 복사. 새 기기 앱 첫 실행 → `PwaConnectPrompt`에 붙여넣기 → 금고 암호로 복원(F-CLOUD-SYNC S4)
+- 👤 **P4 비동기화 설치**: PIN 4자리 → `share:` 코드 자동 복사 → 새 기기에서 붙여넣기 → PIN 입력 복원
+- 👤 **P5 설치불가 고스트(PC)**: `beforeinstallprompt` 없음 → `chrome://apps` 자동 복사 + `guideStep`(InstallGuideContent PC 문제해결)
+
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
 - 👤 **모바일 웹 PWA 우선 레이아웃**(`useIsMobile() && !isStandalone`): 보안 소개+포트폴리오 미리보기 노출 후 PWA 설치 유도 섹션 강조. "웹앱 설치하기" 버튼이 홈 버튼과 동일한 `PwaInstallFlow` 공용 흐름 호출(iOS는 브라우저 칩+SVG 가이드). 즉시 자산 등록 CTA는 **기본 숨김**, "설치 없이 웹에서 바로 시작" 링크 클릭 시에만 노출(`showAssetCta` 토글)
@@ -154,7 +180,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
-- ⚙ `notice.tsx`: `NOTICE_ID="202606"`, `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단.
+- ⚙ `notice.tsx`: `NOTICE_ID="20260624"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. 본문=기기 동기화(복구 링크·동기화 코드)+PWA 설치(복원 경로 2종: 금고 암호/PIN) 안내, PWA 카드는 `!isStandalone`만 노출
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
 - 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(`secretasset_notice_seen_{id}` localStorage, PWA standalone 분리)
 
@@ -241,6 +267,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R10 | **날짜 input 모바일 넘침** | `globals.css` 전역 규칙 유지, 신규 날짜 input이 별도 `max-w` 없이 `w-full`로 컨테이너 내 수렴하는지 |
 | R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존. 설치 가이드는 `InstallGuideContent({ env })` 단일 소스(iosStep·guideStep 공유) |
 | R12 | **transition:all 잔존** | UI 컴포넌트에 `transition-all` 재유입 금지 — 변하는 속성만 명시(레이아웃 thrash·원치 않는 transition 방지) |
+| R13 | **pull 후 sync-state 재기록** | pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록(F-CLOUD-SYNC S9). 누락 시 assetId 유실 |
+| R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(lastUpdated 제외 비교) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). R5(sync abort)와 연계 |
+| R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(연결 코드) 구분 보존 |
 
 ---
 
@@ -262,4 +291,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-22 · `(main)/asset/` 레이어 제거(경로 평탄화·header→header-menu) 반영, PWA 설치 가이드 단일화(PwaInstallGuideDialog→InstallGuideContent·detect-browser, Android 지원), U5 디테일 폴리시(make-interfaces-feel-better) 섹션·R12 추가_
+_최종 갱신: 2026-06-24 · F-CLOUD-SYNC·F-PWA 정밀 QA 갱신(`#sync=` 해시·3-상태 모델·자동 동기화·키 파생·서버 동시성/보안 + S1~S10·P1~P5 시나리오), R13~R15 추가, notice.tsx 최종 적용 반영(NOTICE_ID 20260624). 이전: 2026-06-22 경로 평탄화·PWA 가이드 단일화·U5/R12_

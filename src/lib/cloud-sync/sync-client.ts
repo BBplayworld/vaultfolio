@@ -3,7 +3,7 @@
 /**
  * cloud-sync/sync-client.ts
  * Ed25519 서명 요청으로 push/pull/meta. 암호화는 crypto.ts, 직렬화/복원은 asset-storage 재사용.
- * 모든 요청은 단일 헤더 `x-sync-auth`(base64url{syncId,ts,nonce,sig})로 인증.
+ * 모든 요청은 단일 헤더 `x-sync-auth`(base64url{assetId,ts,nonce,sig})로 인증.
  */
 
 import { buildExportPayload, applyImportedPayload } from "@/lib/asset-storage";
