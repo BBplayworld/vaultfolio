@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-06-25
+
+### SVG 가이드 애니메이션 공용화 + 복원 코드 개명 + 공지 수동 진입 (issue-4.5)
+
+- **SVG 애니메이션 공용 플레이어** ([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)): 3벌 중복 플레이어를 `StepAnimationPlayer` 단일 컴포넌트로 통합(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). **멈춤/시작 버튼 + 단계 점 클릭 이동**(`pointer-events-auto`로 공지 `pointer-events-none` 내부에서도 동작), 컷 간격 3500ms 통일, `prefers-reduced-motion` 시 자동재생 끔. 신규 `SyncSetupAnimation`(기기 동기화 4컷)·`PwaSetupAnimation`(PWA 설치→복원 4컷). 새 기기 화면은 `PhoneFrame tone="new"`(teal)+"새 기기" 배지로 구분, 더보기 ⋯는 가로 점.
+- **"복원 코드" 개명** ([pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)·[pwa-connect-prompt.tsx](../../src/app/(main)/_components/pwa/pwa-connect-prompt.tsx) 등): 비동기화 설치 코드 "연결 코드" → **"복원 코드"**(일회성 데이터 복원이라 의미 명확화, `동기화 코드`와 구분). "다른 기기 연결 및 복구 링크" → **"다른 기기 동기화 링크"**. 자동 pull 폴링 60→30s.
+- **공지 PWA 우선 + 복원 2종 구분** ([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx), `NOTICE_ID="20260624"`): 카드 순서 PWA 설치 먼저 → 기기 동기화. PWA 복원을 **동기화=금고 암호 / 일반=PIN 4자리** 2케이스로 텍스트·SVG 명확 구분.
+- **공지 수동 진입 통합** ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): "앱 가이드 보기" → **"앱 가이드 · 공지사항"** 통합 선택기. 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용(메뉴 과밀 회피).
+- **렌더 버그 수정**: SVG `fill={HINT}`(색 토큰 className을 fill에 직접 사용 → 다크모드 미표시) → `fill="currentColor" className={HINT}` 정정(비밀번호 점·PIN 표시).
+- **이유:** 향후 SVG 가이드 확장 대비 단일 플레이어로 일원화하고 사용자 제어(멈춤/이동) 추가. "연결 코드"가 "기기 연결/동기화"와 혼동되어 행위(복원) 기준으로 개명. 공지를 메뉴 과밀 없이 상시 재열람 가능하게.
+
+---
+
 ## 2026-06-22
 
 ### PWA 설치 가이드 통일 + 행위 prefix 통일 + UI 디테일 폴리시 (issue-4.5)
@@ -167,16 +180,5 @@
 ### 환율 히스토리 7일로 확장
 - `EXCHANGE_HISTORY_DAYS` 3→7 (`lib/cache-storage.ts`) — 연휴·주말 컷오프 버퍼
 
-## 2026-05-21
-
-### 성과-수익 기간별 종가 기준 2옵션 (issue-3.9)
-- `ProfitBasis = "sameBusinessDay" | "kstAccessDay"` 도입 (기본 sameBusinessDay)
-  - `sameBusinessDay`(동일 영업일): 서버에서 국내·해외 모두 `getDates(period,"foreign")` 사용 → 같은 영업일 종가로 정렬
-  - `kstAccessDay`(KST 접속일): 국내=domestic, 해외=foreign 독립 산출 (기존 동작)
-- `/api/finance/profit`에 `basis` 쿼리 추가, `fetchProfitRef(options.basis)`, `getProfitCacheKey(tickers,period,basis)` — 캐시 키 `secretasset_profit:{basis}:...`로 옵션 분리
-- 전역 store `src/stores/profit-basis-store.ts` (zustand, localStorage 동기화 + hydrate). profit-chart 토글 + stock-tab 전일대비가 함께 구독
-- **스냅샷·기존 호출은 basis 미전달 = kstAccessDay(legacy)** 유지 → 스냅샷은 항상 오늘자 종가 기준 (옵션 무관)
-- 옵션 영속화: `STORAGE_KEYS.profitBasis` + 내보내기 JSON(`profitBasis`) + 공유 토큰 packV7 parts[9]("k"=kstAccessDay)
-- UI: 시작/종료 종가 영역을 표 형태(국내/해외/합계 행 × 시작/종료 열)로 재구성, 종가 날짜는 베이스 날짜 + 마감 메타(MM-DD HH:MM) 2줄. 해외 일별 표시의 강제 +1 shift 제거 → 두 옵션 공통으로 ET 거래일을 그대로 표기
-- **이유:** 국내·해외 시차로 같은 영업일/접속일 기준 수익이 혼동되어 사용자가 명시적으로 기준을 선택하도록
+<!-- 2026-05-21 항목은 "최근 10개 유지" 정책에 따라 제거됨 (성과-수익 기간별 종가 기준 2옵션 ProfitBasis) -->
 

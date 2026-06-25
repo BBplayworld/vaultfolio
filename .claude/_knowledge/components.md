@@ -166,8 +166,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 - `TopBar` — 좌측: `view !== "home"`일 때 ChevronLeft + getViewTitle("상세"/"성과"). 우측: 인증샷·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
 - `ShareScreenshotButton` (Camera 아이콘만) → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
-- `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / 앱 가이드 보기). `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
-- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시
+- `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
+- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치)
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
 
 ### ShareCard (`header/share/share-card.tsx`)

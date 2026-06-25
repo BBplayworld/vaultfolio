@@ -233,10 +233,10 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               <span className="text-muted-foreground">{cs.lastSyncedAt ? new Date(cs.lastSyncedAt).toLocaleTimeString("ko-KR") : "-"}</span>
             </div>
 
-            {/* 카드 1: 다른 기기 연결 및 복구 링크 */}
+            {/* 카드 1: 다른 기기 동기화 링크 */}
             <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2.5">
               <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
-                <Link2 className="size-3.5 text-primary" /> 다른 기기 연결 및 복구 링크
+                <Link2 className="size-3.5 text-primary" /> 다른 기기 동기화 링크
               </Label>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 이 링크를 다른 기기에서 열어 연동하거나, <strong>기기 분실 및 로컬 데이터 초기화 시 복구용</strong>으로 백업해 두세요. 금고 암호와 이 링크가 모두 있어야 복구가 가능합니다.

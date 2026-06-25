@@ -11,12 +11,14 @@
  * - SamsungMenuStep                 : 삼성 인터넷 (☰ 하단 메뉴)
  */
 
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useMemo, useState, type FC } from "react";
+import { Play, Pause } from "lucide-react";
 
 import { APP_CONFIG } from "@/config/app";
 import type { GuidePlatform, GuideBrowser } from "@/lib/pwa/detect-browser";
 
 const BRAND = "#5b6fbf"; // MAIN_PALETTE[0]
+const ACCENT = "#37a98e"; // 새 기기 구분용 보조 색(teal) — "다른 기기" 인식 강화
 const DOMAIN = APP_CONFIG.siteUrl.replace(/^https?:\/\//, ""); // "secretasset.xyz"
 
 // 다크/라이트 모드 대응 컬러 토큰 클래스
@@ -33,22 +35,41 @@ interface IllustrationProps {
  * 공용 세로형 스마트폰 외곽 프레임 
  * viewBox="0 0 220 290" 에 최적화된 세련된 베젤리스 폰 묘사
  */
-function PhoneFrame() {
+function PhoneFrame({ tone = "default" }: { tone?: "default" | "new" }) {
+  const isNew = tone === "new";
   return (
     <>
       {/* 폰 그림자 및 배경 */}
       <rect x="35" y="10" width="150" height="270" rx="24" className="text-background" fill="currentColor" />
       <rect x="35" y="10" width="150" height="270" rx="24" className={SURFACE} fill="currentColor" opacity="0.1" />
-      {/* 폰 테두리 */}
-      <rect x="35" y="10" width="150" height="270" rx="24" stroke="currentColor" className={FRAME} strokeWidth="3.5" fill="none" />
+      {/* 새 기기: 베젤 안쪽 보조색 틴트 */}
+      {isNew && <rect x="35" y="10" width="150" height="270" rx="24" fill={ACCENT} opacity="0.06" />}
+      {/* 폰 테두리 — 새 기기는 보조색(ACCENT)으로 '다른 기기' 강조 */}
+      {isNew ? (
+        <rect x="35" y="10" width="150" height="270" rx="24" stroke={ACCENT} strokeWidth="3.5" fill="none" />
+      ) : (
+        <rect x="35" y="10" width="150" height="270" rx="24" stroke="currentColor" className={FRAME} strokeWidth="3.5" fill="none" />
+      )}
       {/* 액정 화면 내부 경계 (베젤 안쪽) */}
-      <rect x="39" y="14" width="142" height="262" rx="20" stroke="currentColor" className={FRAME} strokeWidth="1.2" fill="none" opacity="0.5" />
+      <rect x="39" y="14" width="142" height="262" rx="20" stroke={isNew ? ACCENT : "currentColor"} className={isNew ? undefined : FRAME} strokeWidth="1.2" fill="none" opacity="0.5" />
       {/* 상단 다이내믹 아일랜드 (카메라/센서부) */}
       <rect x="90" y="18" width="40" height="8" rx="4" fill="currentColor" className="text-foreground/80 dark:text-foreground/60" />
       <circle cx="110" cy="22" r="2.5" fill="currentColor" className="text-foreground/40 dark:text-foreground/20" />
       {/* 하단 iOS 홈 인디케이터 바 */}
       <rect x="85" y="268" width="50" height="3" rx="1.5" fill="currentColor" className="text-foreground/30 dark:text-foreground/20" />
     </>
+  );
+}
+
+/** 새 기기 구분 배지 — 좌측 상단 'NEW 기기' 라벨 (보조색) */
+function NewDeviceBadge() {
+  return (
+    <g>
+      <rect x="47" y="31" width="40" height="13" rx="6.5" fill={ACCENT} opacity="0.16" />
+      <rect x="47" y="31" width="40" height="13" rx="6.5" stroke={ACCENT} strokeWidth="0.8" />
+      <circle cx="55" cy="37.5" r="2" fill={ACCENT} />
+      <text x="61" y="40" fontSize="6.3" fontWeight="800" fill={ACCENT}>새 기기</text>
+    </g>
   );
 }
 
@@ -712,32 +733,266 @@ function getGuideSteps(platform: GuideAnimPlatform, browser: GuideBrowser): FC<I
 }
 
 /**
- * 설치 가이드 — 브라우저별 3단계를 2.5초 간격 페이드로 자동 순환 재생하는 동영상형 공통 플레이어.
- * 설치 플로우와 통합 설치 가이드 양쪽에서 재사용.
+ * 설치 가이드 — 브라우저별 3단계를 페이드로 자동 순환 재생. 공용 StepAnimationPlayer 위임.
+ * 설치 플로우와 통합 설치 가이드 양쪽에서 재사용(멈춤/시작 버튼 포함).
  */
 export function InstallGuideAnimation({
   platform,
   browser,
   className,
 }: IllustrationProps & { platform: GuideAnimPlatform; browser: GuideBrowser }) {
-  const steps = getGuideSteps(platform, browser);
+  const steps = useMemo<AnimStep[]>(
+    () => getGuideSteps(platform, browser).map(Step => ({ Step })),
+    [platform, browser]
+  );
+  return <StepAnimationPlayer steps={steps} intervalMs={3500} resetKey={`${platform}-${browser}`} className={className} />;
+}
+
+// ─── 기기 동기화 설정 단계 일러스트 (모바일 웹 기준) ──────────────────────────
+
+/** 동기화 1단계: 우측 상단 ⋯ 더보기 → '자산 공유 · 동기화'(간편 공유 · 기기 동기화 가로 배치) */
+function SyncStepMenu({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="우측 상단 더보기 메뉴의 자산 공유 동기화 항목" fill="none">
+      <PhoneFrame />
+      {/* 상단 앱바 */}
+      <rect x="39" y="32" width="142" height="22" fill="currentColor" className="text-background dark:text-muted/10" />
+      <line x1="39" y1="54" x2="181" y2="54" stroke="currentColor" className={FRAME} strokeWidth="1" />
+      <text x="50" y="46.5" fontSize="8" fontWeight="800" className="text-foreground" fill="currentColor">시크릿에셋</text>
+
+      {/* [강조] ⋯ 더보기 (우측 상단, 가로 점) */}
+      <circle cx="170" cy="43" r="9" fill={BRAND} opacity="0.15" />
+      <circle cx="170" cy="43" r="12.5" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+      <g fill={BRAND}>
+        <circle cx="165.5" cy="43" r="1.5" />
+        <circle cx="170" cy="43" r="1.5" />
+        <circle cx="174.5" cy="43" r="1.5" />
+      </g>
+
+      {/* 본문 흐릿 라인 */}
+      <rect x="50" y="70" width="120" height="7" rx="3.5" className={LINE} fill="currentColor" opacity="0.4" />
+      <rect x="50" y="84" width="90" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.35" />
+
+      {/* 메뉴 패널 (가로형) */}
+      <rect x="46" y="104" width="128" height="100" rx="13" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="0.9" />
+      {/* 패널 제목 */}
+      <text x="58" y="123" fontSize="7.2" fontWeight="800" className="text-foreground" fill="currentColor">자산 공유 · 동기화</text>
+      <line x1="58" y1="130" x2="162" y2="130" stroke="currentColor" className={FRAME} strokeWidth="0.7" opacity="0.5" />
+
+      {/* 두 옵션 가로 배치 — 간편 공유 | 기기 동기화(강조) */}
+      {/* 간편 공유 카드 */}
+      <g transform="translate(58, 140)">
+        <rect x="0" y="0" width="48" height="50" rx="9" className={SURFACE} fill="currentColor" stroke="currentColor" strokeWidth="0.6" />
+        {/* 공유 아이콘 */}
+        <g transform="translate(24, 18)" stroke="currentColor" className={HINT} strokeWidth="1.3" fill="none">
+          <circle cx="-6" cy="0" r="2.2" /><circle cx="6" cy="-5" r="2.2" /><circle cx="6" cy="5" r="2.2" />
+          <path d="M-3.8 -1.1 L3.8 -3.9 M-3.8 1.1 L3.8 3.9" />
+        </g>
+        <text x="24" y="40" fontSize="6.4" fontWeight="700" textAnchor="middle" className={HINT} fill="currentColor">간편 공유</text>
+      </g>
+      {/* [강조] 기기 동기화 카드 */}
+      <g transform="translate(114, 140)">
+        <rect x="0" y="0" width="48" height="50" rx="9" fill={BRAND} opacity="0.14" />
+        <rect x="0" y="0" width="48" height="50" rx="9" stroke={BRAND} strokeWidth="1.2" />
+        {/* 클라우드 아이콘 */}
+        <path d="M16 26 a4 4 0 0 1 0.5 -7.9 a5 5 0 0 1 9.6 1 a3.3 3.3 0 0 1 0.4 6.9 z" stroke={BRAND} strokeWidth="1.4" fill="none" strokeLinejoin="round" />
+        <text x="24" y="40" fontSize="6.4" fontWeight="800" textAnchor="middle" fill={BRAND}>기기 동기화</text>
+        <circle cx="24" cy="25" r="20" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
+      </g>
+
+      {/* 화살표 → ⋯ */}
+      <g transform="translate(170, 20)">
+        <path d="M0 -6 V6" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M-3 3 L0 6 L3 3" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** 동기화 2단계: 기기 동기화 다이얼로그 — 금고 암호 입력 → '동기화 시작' */
+function SyncStepPassphrase({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="기기 동기화 금고 암호 입력" fill="none">
+      <PhoneFrame />
+      <rect x="50" y="40" width="120" height="7" rx="3.5" className={LINE} fill="currentColor" opacity="0.22" />
+
+      {/* 다이얼로그 카드 */}
+      <rect x="46" y="62" width="128" height="172" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+
+      {/* 타이틀: 클라우드 + 기기 동기화 */}
+      <path d="M59 90 a3.3 3.3 0 0 1 0.4 -6.5 a4.2 4.2 0 0 1 8 0.8 a2.8 2.8 0 0 1 0.3 5.7 z" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+      <text x="76" y="89" fontSize="8.5" fontWeight="800" className="text-foreground" fill="currentColor">기기 동기화</text>
+
+      {/* 라벨 + [강조] 입력 필드 (점) */}
+      <text x="58" y="116" fontSize="6.8" fontWeight="700" className={HINT} fill="currentColor">금고 암호</text>
+      <rect x="58" y="122" width="104" height="20" rx="6" className={SURFACE} fill="currentColor" stroke={BRAND} strokeWidth="1.3" />
+      <g fill="currentColor" className={HINT}>
+        <circle cx="69" cy="132" r="2" /><circle cx="77" cy="132" r="2" /><circle cx="85" cy="132" r="2" />
+        <circle cx="93" cy="132" r="2" /><circle cx="101" cy="132" r="2" /><circle cx="109" cy="132" r="2" />
+      </g>
+
+      {/* 이 기기 기억하기 */}
+      <rect x="58" y="152" width="9" height="9" rx="2.5" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" />
+      <path d="M60 156.5 l2 2 l3 -3.5" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="72" y="159.5" fontSize="6.5" fontWeight="500" className={HINT} fill="currentColor">이 기기 기억하기</text>
+
+      {/* [강조] 동기화 시작 버튼 */}
+      <rect x="58" y="174" width="104" height="22" rx="7" fill={BRAND} />
+      <text x="110" y="188.5" fontSize="8" fontWeight="800" textAnchor="middle" fill="#fff">동기화 시작</text>
+      <circle cx="110" cy="185" r="15" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.45" />
+
+      {/* 화살표 → 입력 필드 */}
+      <g transform="translate(168, 132)">
+        <path d="M6 0 L-4 0" stroke={BRAND} strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M0 -3.5 L-4 0 L0 3.5" stroke={BRAND} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** 동기화 3단계: 자동 동기화 켜짐 → '다른 기기 동기화 링크' 복사·QR·공유 */
+function SyncStepLink({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="다른 기기 동기화 링크 복사 및 공유" fill="none">
+      <PhoneFrame />
+
+      {/* 자동 동기화 켜짐 배너 */}
+      <rect x="50" y="44" width="120" height="18" rx="6" fill={BRAND} opacity="0.1" />
+      <rect x="50" y="44" width="120" height="18" rx="6" stroke={BRAND} strokeWidth="0.8" />
+      <g transform="translate(60, 53)" stroke={BRAND} strokeWidth="1.2" fill="none" strokeLinecap="round">
+        <path d="M-3 -1 a3.2 3.2 0 1 1 0.6 2.2" />
+        <path d="M-3 -3.4 V-1 H-0.6" strokeLinejoin="round" />
+      </g>
+      <text x="70" y="55.5" fontSize="6.5" fontWeight="700" fill={BRAND}>자동 동기화 켜짐</text>
+
+      {/* 카드: 다른 기기 동기화 링크 */}
+      <rect x="46" y="74" width="128" height="124" rx="12" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+      {/* 링크 아이콘 + 제목 */}
+      <g transform="translate(58, 92)" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinecap="round">
+        <path d="M0 3 a3 3 0 0 1 0 -4 l2 -2 a3 3 0 0 1 4 4 l-1 1" />
+        <path d="M6 1 a3 3 0 0 1 0 4 l-2 2 a3 3 0 0 1 -4 -4 l1 -1" />
+      </g>
+      <text x="70" y="93" fontSize="7.4" fontWeight="800" className="text-foreground" fill="currentColor">다른 기기 동기화 링크</text>
+
+      {/* [강조] 링크 pill */}
+      <rect x="58" y="106" width="104" height="18" rx="6" className={SURFACE} fill="currentColor" stroke={BRAND} strokeWidth="1.2" />
+      <text x="64" y="117.5" fontSize="5.6" fontWeight="500" fontFamily="monospace" className={HINT} fill="currentColor">{DOMAIN}/#sync=…</text>
+
+      {/* 버튼 행: 복사 / QR / 공유 */}
+      <g transform="translate(58, 134)">
+        {/* 복사 (강조) */}
+        <rect x="0" y="0" width="32" height="20" rx="6" fill={BRAND} opacity="0.14" />
+        <rect x="0" y="0" width="32" height="20" rx="6" stroke={BRAND} strokeWidth="1.1" />
+        <g transform="translate(9, 6)" stroke={BRAND} strokeWidth="1.1" fill="none" strokeLinejoin="round">
+          <rect x="2" y="2" width="7" height="7" rx="1.4" />
+          <path d="M0 6 V0 h6" />
+        </g>
+        <text x="22" y="13" fontSize="5.5" fontWeight="700" fill={BRAND}>복사</text>
+        {/* QR */}
+        <rect x="38" y="0" width="32" height="20" rx="6" className={SURFACE} fill="currentColor" />
+        <g transform="translate(45, 5)" stroke="currentColor" className={HINT} strokeWidth="1" fill="none">
+          <rect x="0" y="0" width="4" height="4" rx="0.8" /><rect x="6" y="0" width="4" height="4" rx="0.8" /><rect x="0" y="6" width="4" height="4" rx="0.8" />
+          <rect x="7" y="7" width="2.5" height="2.5" rx="0.6" />
+        </g>
+        <text x="60" y="13" fontSize="5.5" fontWeight="600" className={HINT} fill="currentColor">QR</text>
+        {/* 공유 */}
+        <rect x="76" y="0" width="32" height="20" rx="6" className={SURFACE} fill="currentColor" />
+        <g transform="translate(84, 5)" stroke="currentColor" className={HINT} strokeWidth="1" fill="none">
+          <circle cx="0" cy="0" r="1.6" /><circle cx="7" cy="-3" r="1.6" /><circle cx="7" cy="3" r="1.6" />
+          <path d="M1.4 -0.8 L5.6 -2.4 M1.4 0.8 L5.6 2.4" />
+        </g>
+        <text x="93" y="13" fontSize="5.5" fontWeight="600" className={HINT} fill="currentColor">공유</text>
+      </g>
+
+      {/* 화살표 → 복사 버튼 */}
+      <g transform="translate(74, 168)">
+        <path d="M0 8 V-2" stroke={BRAND} strokeWidth="2.3" strokeLinecap="round" />
+        <path d="M-3 1 L0 -2 L3 1" stroke={BRAND} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** 동기화 4단계: 새 기기에서 링크 열고 금고 암호 입력 → 동기화 완료 */
+function SyncStepNewDevice({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="새 기기에서 금고 암호 입력 후 동기화 완료" fill="none">
+      <PhoneFrame tone="new" />
+      <NewDeviceBadge />
+
+      {/* '이 기기 연결' 카드 */}
+      <rect x="46" y="60" width="128" height="150" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+      <path d="M59 86 a3.3 3.3 0 0 1 0.4 -6.5 a4.2 4.2 0 0 1 8 0.8 a2.8 2.8 0 0 1 0.3 5.7 z" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+      <text x="76" y="85" fontSize="8" fontWeight="800" className="text-foreground" fill="currentColor">이 기기 연결</text>
+
+      {/* 동기화 코드(읽기전용) */}
+      <rect x="58" y="98" width="104" height="15" rx="5" className={SURFACE} fill="currentColor" />
+      <text x="110" y="108" fontSize="5.6" fontWeight="500" fontFamily="monospace" textAnchor="middle" className={HINT} fill="currentColor">sync:••••••••</text>
+
+      {/* [강조] 금고 암호 입력 */}
+      <text x="58" y="128" fontSize="6.6" fontWeight="700" className={HINT} fill="currentColor">금고 암호</text>
+      <rect x="58" y="133" width="104" height="19" rx="6" className={SURFACE} fill="currentColor" stroke={BRAND} strokeWidth="1.3" />
+      <g fill="currentColor" className={HINT}>
+        <circle cx="69" cy="142.5" r="2" /><circle cx="77" cy="142.5" r="2" /><circle cx="85" cy="142.5" r="2" />
+        <circle cx="93" cy="142.5" r="2" /><circle cx="101" cy="142.5" r="2" /><circle cx="109" cy="142.5" r="2" />
+      </g>
+
+      {/* 연결하기 버튼 */}
+      <rect x="58" y="162" width="104" height="20" rx="6.5" fill={BRAND} />
+      <text x="110" y="175.5" fontSize="7.6" fontWeight="800" textAnchor="middle" fill="#fff">연결하기</text>
+
+      {/* 동기화 완료 배지 */}
+      <g transform="translate(110, 234)">
+        <circle cx="0" cy="0" r="15" fill={BRAND} opacity="0.12" />
+        <circle cx="0" cy="0" r="15" stroke={BRAND} strokeWidth="1.4" />
+        <path d="M-6 0 l4 4 l8 -9" stroke={BRAND} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+      <text x="110" y="259" fontSize="6.6" fontWeight="700" textAnchor="middle" fill={BRAND}>동기화 완료</text>
+    </svg>
+  );
+}
+
+const SYNC_STEPS: { Step: FC<IllustrationProps>; caption: string }[] = [
+  { Step: SyncStepMenu, caption: "① 우측 상단 ⋯ 더보기 → 자산 공유 · 동기화" },
+  { Step: SyncStepPassphrase, caption: "② 기기 동기화 → 금고 암호 입력 후 시작" },
+  { Step: SyncStepLink, caption: "③ 다른 기기 동기화 링크 복사 · 공유" },
+  { Step: SyncStepNewDevice, caption: "④ 새 기기에서 링크 열고 금고 암호 → 동기화" },
+];
+
+export interface AnimStep { Step: FC<IllustrationProps>; caption?: string }
+
+/**
+ * 단계형 SVG 애니메이션 공용 플레이어.
+ * - 캡션(있을 때만)·단계 점·멈춤/시작 버튼 포함. 점 클릭 시 해당 단계로 이동(+일시정지).
+ * - reduced-motion 시 자동재생 안 함(수동 조작만). 컨트롤은 `pointer-events-auto`로
+ *   상위가 pointer-events-none(예: 공지 본문)이어도 조작 가능.
+ */
+export function StepAnimationPlayer({
+  steps,
+  intervalMs = 3500,
+  resetKey,
+  className,
+}: { steps: AnimStep[]; intervalMs?: number; resetKey?: string } & IllustrationProps) { // intervalMs 기본 3500ms
   const [active, setActive] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const hasCaptions = steps.some(s => s.caption);
+
+  // 시퀀스가 바뀌면 첫 단계로 리셋
+  useEffect(() => { setActive(0); }, [resetKey]);
 
   useEffect(() => {
-    setActive(0);
-    if (steps.length <= 1) return;
+    if (!playing || steps.length <= 1) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = setInterval(() => setActive(a => (a + 1) % steps.length), 2500);
+    const id = setInterval(() => setActive(a => (a + 1) % steps.length), intervalMs);
     return () => clearInterval(id);
-    // platform·browser가 바뀌면 시퀀스가 바뀌므로 재시작
-  }, [platform, browser, steps.length]);
+  }, [playing, steps.length, intervalMs]);
 
   return (
     <div className={className}>
-      <div className="relative mx-auto w-full max-w-[260px]">
-        {/* 220:290 비율 스페이서 — 구형 Safari(iOS 14 이하) 등 aspect-ratio 미지원 대비 */}
+      <div className="relative mx-auto w-full max-w-[240px]">
+        {/* 220:290 비율 스페이서 — aspect-ratio 미지원 폴백 */}
         <div style={{ paddingTop: "131.818%" }} aria-hidden />
-        {steps.map((Step, i) => (
+        {steps.map(({ Step }, i) => (
           <div
             key={i}
             className="absolute inset-0 transition-opacity duration-500"
@@ -748,17 +1003,168 @@ export function InstallGuideAnimation({
           </div>
         ))}
       </div>
-      {/* 단계 진행 점 인디케이터 */}
-      <div className="mt-3 flex items-center justify-center gap-1.5">
-        {steps.map((_, i) => (
-          <span
-            key={i}
-            className={`size-1.5 rounded-full transition-[transform,background-color] duration-300 ${i === active ? "scale-125" : "bg-border"}`}
-            style={i === active ? { backgroundColor: BRAND } : undefined}
-          />
-        ))}
+
+      {/* 단계 설명 캡션 (레이아웃 시프트 방지 위해 최소 높이 고정) */}
+      {hasCaptions && (
+        <p className="mt-2 min-h-9 px-2 text-center text-[11px] font-medium leading-relaxed text-muted-foreground text-balance">
+          {steps[active].caption}
+        </p>
+      )}
+
+      {/* 컨트롤: 멈춤/시작 + 단계 점 */}
+      <div className="mt-2 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPlaying(p => !p)}
+          aria-label={playing ? "애니메이션 멈춤" : "애니메이션 시작"}
+          className="pointer-events-auto relative flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-[color,background-color,transform] hover:text-foreground active:not-disabled:scale-[0.96] after:absolute after:-inset-2"
+        >
+          {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+        </button>
+        <div className="flex items-center gap-2">
+          {steps.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => { setActive(i); setPlaying(false); }}
+              aria-label={`${i + 1}단계 보기`}
+              className={`pointer-events-auto relative size-3 rounded-full border-0 p-0 transition-[transform,background-color] duration-300 after:absolute after:-inset-2 hover:opacity-80 ${i === active ? "scale-110" : "bg-border"}`}
+              style={i === active ? { backgroundColor: BRAND } : undefined}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+/** 기기 동기화 설정 흐름 — 4단계 자동 순환 (notice 등 재사용) */
+export function SyncSetupAnimation({ className }: IllustrationProps) {
+  return <StepAnimationPlayer steps={SYNC_STEPS} intervalMs={3500} className={className} />;
+}
+
+// ─── PWA 설치 → 복원 흐름 일러스트 ───────────────────────────────────────────
+
+/** PWA 설치 1단계: 우측 상단 [앱 설치] 버튼 클릭 → 복원 코드 자동 복사 */
+function PwaCodeCopyStep({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="우측 상단 앱 설치 버튼 클릭 후 복원 코드 복사" fill="none">
+      <PhoneFrame />
+      {/* 상단 앱바 */}
+      <rect x="39" y="32" width="142" height="22" fill="currentColor" className="text-background dark:text-muted/10" />
+      <line x1="39" y1="54" x2="181" y2="54" stroke="currentColor" className={FRAME} strokeWidth="1" />
+      <text x="50" y="46.5" fontSize="8" fontWeight="800" className="text-foreground" fill="currentColor">시크릿에셋</text>
+
+      {/* [강조] 우측 상단 앱 설치 버튼 (다운로드 아이콘) */}
+      <rect x="150" y="36" width="24" height="15" rx="5" fill={BRAND} opacity="0.16" />
+      <rect x="150" y="36" width="24" height="15" rx="5" stroke={BRAND} strokeWidth="1" />
+      <g transform="translate(160, 40)" stroke={BRAND} strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 -1 V4 M0 2 L2 4 L4 2 M-0.5 6.5 H4.5" />
+      </g>
+      <circle cx="162" cy="43.5" r="13" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+      {/* 화살표 → 설치 버튼 */}
+      <g transform="translate(162, 20)">
+        <path d="M0 -5 V5" stroke={BRAND} strokeWidth="2.4" strokeLinecap="round" />
+        <path d="M-3 2 L0 5 L3 2" stroke={BRAND} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+
+      {/* 복원 코드 복사됨 카드 */}
+      <rect x="46" y="80" width="128" height="118" rx="13" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
+      {/* 복사됨 배지 */}
+      <g transform="translate(58, 96)">
+        <rect x="0" y="0" width="104" height="18" rx="5" fill={BRAND} opacity="0.1" />
+        <rect x="0" y="0" width="104" height="18" rx="5" stroke={BRAND} strokeWidth="0.8" />
+        <path d="M8 9 l2.6 2.6 l5.4 -6" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="24" y="12" fontSize="5.8" fontWeight="700" fill={BRAND}>복원 코드가 복사되었습니다</text>
+      </g>
+      {/* 라벨 + 코드 pill + 복사 버튼 */}
+      <text x="58" y="132" fontSize="6.6" fontWeight="700" className={HINT} fill="currentColor">복원 코드</text>
+      <rect x="58" y="138" width="80" height="18" rx="5" className={SURFACE} fill="currentColor" />
+      <text x="64" y="149.5" fontSize="5.6" fontWeight="500" fontFamily="monospace" className={HINT} fill="currentColor">share:••••_••••</text>
+      <rect x="142" y="138" width="20" height="18" rx="5" fill={BRAND} opacity="0.16" />
+      <rect x="142" y="138" width="20" height="18" rx="5" stroke={BRAND} strokeWidth="1" />
+      <g transform="translate(148.5, 143)" stroke={BRAND} strokeWidth="1.1" fill="none" strokeLinejoin="round">
+        <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" />
+        <path d="M0 5 V0 h5" />
+      </g>
+      {/* 안내 라인 */}
+      <rect x="58" y="170" width="104" height="4" rx="2" className={LINE} fill="currentColor" opacity="0.4" />
+      <rect x="58" y="180" width="76" height="4" rx="2" className={LINE} fill="currentColor" opacity="0.4" />
+    </svg>
+  );
+}
+
+/** PWA 설치 단계: 앱 첫 실행 — 복원 코드 붙여넣기 + (동기화 시) 금고 암호 입력 */
+function PwaFirstLaunchStep({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="앱 첫 실행 — 동기화는 금고 암호, 일반 설치는 PIN 4자리로 복원" fill="none">
+      <PhoneFrame tone="new" />
+      <NewDeviceBadge />
+
+      {/* 링크 아이콘 배지 */}
+      <rect x="99" y="48" width="22" height="22" rx="6.5" fill={BRAND} />
+      <g transform="translate(110, 59)" stroke="#fff" strokeWidth="1.3" fill="none" strokeLinecap="round">
+        <path d="M-1 3 a3 3 0 0 1 0 -4 l1.5 -1.5 a3 3 0 0 1 4 4" />
+        <path d="M1 -3 a3 3 0 0 1 0 4 l-1.5 1.5 a3 3 0 0 1 -4 -4" />
+      </g>
+
+      {/* 타이틀 */}
+      <text x="110" y="80" fontSize="7.4" fontWeight="800" textAnchor="middle" className="text-foreground" fill="currentColor">웹에서 쓰던 자산이 있나요?</text>
+
+      {/* 코드 붙여넣기 입력 */}
+      <rect x="56" y="88" width="108" height="16" rx="5" className={SURFACE} fill="currentColor" stroke={BRAND} strokeWidth="1.1" />
+      <g transform="translate(64, 96)" stroke="currentColor" className={HINT} strokeWidth="0.9" fill="none" strokeLinejoin="round">
+        <rect x="0" y="-3.5" width="6" height="7" rx="1.2" />
+        <rect x="1.5" y="-4.8" width="3" height="2" rx="0.5" />
+      </g>
+      <text x="78" y="99" fontSize="5.4" fontWeight="600" className={HINT} fill="currentColor">복원 · 동기화 코드 붙여넣기</text>
+
+      {/* 복원 방법 구분 라벨 */}
+      <text x="56" y="116" fontSize="5.8" fontWeight="700" className={HINT} fill="currentColor">복원 방법 — 설치 유형에 따라 입력</text>
+
+      {/* ① 동기화 연동 → 금고 암호 */}
+      <rect x="56" y="120" width="108" height="28" rx="7" fill={BRAND} opacity="0.07" />
+      <rect x="56" y="120" width="108" height="28" rx="7" stroke={BRAND} strokeWidth="0.9" />
+      <text x="63" y="132" fontSize="6" fontWeight="800" fill={BRAND}>동기화 연동</text>
+      <text x="63" y="142" fontSize="5.4" fontWeight="600" className={HINT} fill="currentColor">금고 암호</text>
+      <rect x="104" y="126" width="54" height="16" rx="5" className={SURFACE} fill="currentColor" stroke={BRAND} strokeWidth="1" />
+      <g fill="currentColor" className={HINT}>
+        <circle cx="116" cy="134" r="1.7" /><circle cx="123" cy="134" r="1.7" /><circle cx="130" cy="134" r="1.7" />
+        <circle cx="137" cy="134" r="1.7" /><circle cx="144" cy="134" r="1.7" />
+      </g>
+
+      {/* ② 일반 설치 → PIN 4자리 */}
+      <rect x="56" y="152" width="108" height="28" rx="7" className={SURFACE} fill="currentColor" stroke="currentColor" strokeWidth="0.6" />
+      <text x="63" y="164" fontSize="6" fontWeight="800" className="text-foreground" fill="currentColor">일반 설치</text>
+      <text x="63" y="174" fontSize="5.4" fontWeight="600" className={HINT} fill="currentColor">PIN 4자리</text>
+      <g stroke="currentColor" className={HINT} strokeWidth="1" fill="none">
+        <rect x="110" y="160" width="10" height="13" rx="2.5" />
+        <rect x="124" y="160" width="10" height="13" rx="2.5" />
+        <rect x="138" y="160" width="10" height="13" rx="2.5" />
+        <rect x="152" y="160" width="10" height="13" rx="2.5" />
+      </g>
+      <g fill="currentColor" className={HINT}>
+        <circle cx="115" cy="166.5" r="1.6" /><circle cx="129" cy="166.5" r="1.6" />
+        <circle cx="143" cy="166.5" r="1.6" /><circle cx="157" cy="166.5" r="1.6" />
+      </g>
+
+      {/* 자산 가져오기 버튼 */}
+      <rect x="56" y="188" width="108" height="20" rx="6.5" fill={BRAND} />
+      <text x="110" y="201.5" fontSize="7.4" fontWeight="800" textAnchor="middle" fill="#fff">자산 가져오기</text>
+      <circle cx="110" cy="198" r="15" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
+    </svg>
+  );
+}
+
+const PWA_SETUP_STEPS: AnimStep[] = [
+  { Step: PwaCodeCopyStep, caption: "① 우측 상단 [앱 설치] 버튼 → 복원 코드 자동 복사" },
+  { Step: IosChromeShareStep, caption: "② 브라우저(크롬) 공유 버튼 누르기" },
+  { Step: IosAddToHomeStep, caption: "③ '홈 화면에 추가' 선택" },
+  { Step: PwaFirstLaunchStep, caption: "④ 새 기기 첫 실행 → 동기화는 금고 암호 · 일반 설치는 PIN 4자리" },
+];
+
+/** PWA 설치→복원 흐름 — 앱 설치 버튼·공유·홈 추가·새 기기 복원 4단계 자동 순환 (notice 재사용) */
+export function PwaSetupAnimation({ className }: IllustrationProps) {
+  return <StepAnimationPlayer steps={PWA_SETUP_STEPS} intervalMs={3500} className={className} />;
 }
 

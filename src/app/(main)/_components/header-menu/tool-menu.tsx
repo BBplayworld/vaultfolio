@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw } from "lucide-react";
+import { Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
+import { NOTICE_TITLE, NoticeContent } from "../layout/onboarding/notice";
 import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/profit-utils";
@@ -61,6 +62,8 @@ export function ToolMenuPage() {
   const [preGeneratedShortUrl, setPreGeneratedShortUrl] = useState<string | null>(null);
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showHelpChooser, setShowHelpChooser] = useState(false);
+  const [showNotice, setShowNotice] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackContact, setFeedbackContact] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
@@ -232,11 +235,10 @@ export function ToolMenuPage() {
               <MessageSquarePlus className="size-5 text-primary shrink-0" />
               <span className="font-medium">의견·요청 보내기</span>
             </button>
-            <button type="button" className={ROW} onClick={() => {
-              window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
-            }}>
+            <button type="button" className={ROW} onClick={() => setShowHelpChooser(true)}>
               <Info className="size-5 text-primary shrink-0" />
-              <span className="font-medium">앱 가이드 보기</span>
+              <span className="font-medium">앱 가이드 · 공지사항</span>
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>
         </section>
@@ -436,6 +438,84 @@ export function ToolMenuPage() {
             </Button>
             <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
               취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 도움말 선택기: 앱 가이드 · 공지사항 (정보 진입점 통합) */}
+      <Dialog open={showHelpChooser} onOpenChange={setShowHelpChooser}>
+        <DialogContent className="sm:max-w-md touch-pan-y">
+          <DialogHeader className="text-left">
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="size-5 text-primary" />
+              앱 가이드 · 공지사항
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              앱 사용법 가이드와 최신 업데이트 공지를 확인합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-4">
+            <button
+              type="button"
+              className="flex items-center gap-3 text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-[background-color,border-color] duration-200 active:not-disabled:scale-[0.99]"
+              onClick={() => {
+                setShowHelpChooser(false);
+                window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
+              }}
+            >
+              <Info className="size-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">앱 가이드 보기</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">주요 기능 사용법을 단계별로 둘러봅니다.</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="flex items-center gap-3 text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-[background-color,border-color] duration-200 active:not-disabled:scale-[0.99]"
+              onClick={() => {
+                setShowHelpChooser(false);
+                setShowNotice(true);
+              }}
+            >
+              <BellRing className="size-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">공지사항 보기</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">최신 업데이트·핵심 기능 안내를 확인합니다.</p>
+              </div>
+            </button>
+          </div>
+
+          <DialogFooter className="flex justify-end">
+            <Button variant="outline" onClick={() => setShowHelpChooser(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공지사항 뷰어 — 자동 팝업(UpdateNoticeDialog)과 동일 본문 재사용 */}
+      <Dialog open={showNotice} onOpenChange={setShowNotice}>
+        <DialogContent
+          showCloseButton={false}
+          className="max-h-[90dvh] overflow-y-auto w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl p-4 sm:p-6"
+        >
+          <DialogHeader className="gap-3 text-left">
+            <div className="inline-flex items-center gap-2 text-primary">
+              <BellRing className="size-5" />
+              <span className="text-sm font-semibold">업데이트 공지</span>
+            </div>
+            <DialogTitle>{NOTICE_TITLE}</DialogTitle>
+            <DialogDescription className="sr-only">앱 업데이트 내용</DialogDescription>
+          </DialogHeader>
+
+          <NoticeContent />
+
+          <DialogFooter>
+            <Button variant="brand" onClick={() => setShowNotice(false)} className="w-full sm:w-auto">
+              확인
             </Button>
           </DialogFooter>
         </DialogContent>

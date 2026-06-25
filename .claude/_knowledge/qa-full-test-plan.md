@@ -152,6 +152,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
 - ⚙ **설치 가이드 단일화** — 옛 `PwaInstallGuideDialog`(3탭 다이얼로그) 제거 → [pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) `InstallGuideContent({ env })`로 통합. flow의 `iosStep`·`guideStep` 모두 동일 컴포넌트 임베드. 모바일=설치 애니메이션+step1/step2 설명+"다른 브라우저인가요?" 칩 재선택(오감지 대비)+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 미지원 문제해결
 - ⚙ iOS·Android step SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) `InstallGuideAnimation({ platform, browser })`는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 중앙 `공유`→`홈 화면에 추가` / Chrome(iOS)=주소창 우측 `공유` 직접 / Chrome(Android)=우측상단 `⋮`→`공유` / Whale=하단 우측 `≡`→`공유` / 삼성인터넷=하단 `☰`→`+ 현재 페이지 추가`→홈 화면. step1/step2 안내 문구(`step1Text`/`step2Text`)도 각 구조와 일치. **aspect-ratio 미지원(구형 Safari) 대비 `paddingTop` 스페이서로 220:290 비율 폴백**
+- ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3500ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `InstallGuideAnimation(platform,browser)`=브라우저별 설치 3컷, `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+"새 기기" 배지]), `PwaSetupAnimation`=PWA 4컷(① 우측상단 앱설치 버튼→복원코드 → ② 크롬 공유(`IosChromeShareStep`) → ③ 홈 화면 추가 → ④ **새 기기** 복원: 동기화=금고암호 / 일반=PIN 4자리 2케이스 구분)
+- ⚙ **컨트롤 클릭성** — 멈춤/시작·단계 점은 `pointer-events-auto`로 공지 본문(`pointer-events-none`) 안에서도 동작. 점은 `size-3`+`after:-inset-2` 히트영역, 클릭 시 해당 컷 이동+일시정지
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
 - 👤 **PC/Android Chrome·Edge**: `beforeinstallprompt` 발생 → 설치 버튼 클릭 → PIN 4자리 입력 → 설치하기 → 네이티브 A2HS 창 열림 확인
 - 👤 **iOS(Safari·크롬·웨일 등)·Android(크롬·웨일·삼성인터넷)**: 설치 버튼 클릭 → PIN 입력 → "추가 방법 보기" → `iosStep` 가이드(`detectBrowserEnv` 감지 브라우저의 설치 애니메이션 + step1/step2) 노출. `navigator.share()` 호출 없음, Safari 한정 문구 없음 확인. 오감지 시 "다른 브라우저인가요?" 칩으로 재선택
@@ -161,7 +163,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
 #### PWA 설치 정밀 시나리오 (isSyncMode 분기)
-- ⚙ **isSyncMode 분기**([pwa-install-flow.tsx:84-88,135-181](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)): 설치 시 `getAssetId()` 존재(동기화 기기) → **PIN 불필요**, 코드=`sync:<assetId>`(서버 업로드 없음). 비동기화 → **PIN 4자리(InputOTP) 필수** + 코드=`share:KEY_LOCALKEY`(공유 토큰 `/api/share` POST 저장). `codeLabel`도 "동기화 코드"/"연결 코드"로 구분
+- ⚙ **isSyncMode 분기**([pwa-install-flow.tsx:84-88,135-181](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)): 설치 시 `getAssetId()` 존재(동기화 기기) → **PIN 불필요**, 코드=`sync:<assetId>`(서버 업로드 없음). 비동기화 → **PIN 4자리(InputOTP) 필수** + 코드=`share:KEY_LOCALKEY`(공유 토큰 `/api/share` POST 저장). `codeLabel`도 "동기화 코드"/**"복원 코드"**(구 "연결 코드" 전면 개명)로 구분
 - ⚙ **iOS 클립보드 보존**: `await fetch` 뒤 `writeText`는 제스처 만료로 실패 → `ClipboardItem`에 Promise(text/plain) 동기 전달로 자동 복사 보존 → 실패 시 `writeText` 폴백([pwa-install-flow.tsx:153-168](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)). 인앱 가이드(`openInAppGuide`)도 동일 기법으로 현재 URL 복사
 - ⚙ `usePWAInstall`: `isInstallable`/`isIOS`는 `&& !isStandalone`로 노출, `__bipEvent`(head 캡처) 우선 사용해 제스처 내 `installPWA` 호출([use-pwa-install.ts](../../src/hooks/use-pwa-install.ts))
 - 👤 **P1 PC/Android Chrome·Edge**: `beforeinstallprompt`(또는 `__bipEvent`) → 버튼 클릭 → 즉시 네이티브 A2HS(`installPWA`), 성공 토스트
@@ -180,9 +182,10 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
-- ⚙ `notice.tsx`: `NOTICE_ID="20260624"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. 본문=기기 동기화(복구 링크·동기화 코드)+PWA 설치(복원 경로 2종: 금고 암호/PIN) 안내, PWA 카드는 `!isStandalone`만 노출
+- ⚙ `notice.tsx`: `NOTICE_ID="20260624"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단(애니메이션 컨트롤만 `pointer-events-auto`). 본문 순서 **①PWA 설치(`!isStandalone`만, `PwaSetupAnimation`+복원 2종: 동기화=금고암호/일반=PIN 4자리 명확 구분) → ②기기 동기화(`SyncSetupAnimation`+"다른 기기 동기화 링크")**
+- ⚙ **수동 공지 진입** — 자동 1회 팝업(`UpdateNoticeDialog`) 외에, 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
-- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(`secretasset_notice_seen_{id}` localStorage, PWA standalone 분리)
+- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(`secretasset_notice_seen_{id}` localStorage, PWA standalone 분리). 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능
 
 ### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.
@@ -194,6 +197,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
+- 👤 더보기 `지원` 섹션 **"앱 가이드 · 공지사항"** 통합 진입점 — 선택기에서 앱 가이드 보기 / 공지사항 보기 분기(메뉴 행 1개로 통합). 공지 뷰어는 SVG 애니메이션 멈춤/시작 동작 확인
 
 ### F-FEEDBACK. 의견·요청 보내기 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx) · [api/feedback](../../src/app/api/feedback/route.ts))
 - 👤 더보기 > "의견·요청 보내기" 다이얼로그: 내용 Textarea(초기 min-h-160, max-h-40vh 내부 스크롤) + 연락처(선택), 전송 중 스피너, 성공/실패 토스트. **다이얼로그 스크롤로 하단 "보내기" 버튼 항상 노출**
@@ -269,7 +273,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R12 | **transition:all 잔존** | UI 컴포넌트에 `transition-all` 재유입 금지 — 변하는 속성만 명시(레이아웃 thrash·원치 않는 transition 방지) |
 | R13 | **pull 후 sync-state 재기록** | pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록(F-CLOUD-SYNC S9). 누락 시 assetId 유실 |
 | R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(lastUpdated 제외 비교) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). R5(sync abort)와 연계 |
-| R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(연결 코드) 구분 보존 |
+| R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
+| R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
 
 ---
 
@@ -291,4 +296,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-24 · F-CLOUD-SYNC·F-PWA 정밀 QA 갱신(`#sync=` 해시·3-상태 모델·자동 동기화·키 파생·서버 동시성/보안 + S1~S10·P1~P5 시나리오), R13~R15 추가, notice.tsx 최종 적용 반영(NOTICE_ID 20260624). 이전: 2026-06-22 경로 평탄화·PWA 가이드 단일화·U5/R12_
+_최종 갱신: 2026-06-25 · SVG 애니메이션 공용화(`StepAnimationPlayer`·멈춤/시작·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`·새 기기 tone)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입("앱 가이드·공지사항" 통합)·notice PWA 우선·복원 2종(금고암호/PIN) 구분 반영, R16 추가. 이전: 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_

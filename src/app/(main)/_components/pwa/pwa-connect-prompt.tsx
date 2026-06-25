@@ -17,7 +17,7 @@ const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
  * PWA 첫 실행 연결 화면 — standalone + 자산 없음일 때만 표시.
  * iOS는 홈 화면 추가 시 URL 해시가 제거되므로, 웹에서 자동 복사한 코드를 붙여넣어 연동한다.
  *  - sync:<assetId>  → 동기화 코드. #sync= 해시 설정 → CloudSyncConnectDialog(금고 암호)로 pull.
- *  - share:KEY_LOCALKEY (구 s:) → 연결 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
+ *  - share:KEY_LOCALKEY (구 s:) → 복원 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
  * z-40: PIN 다이얼로그(z-50)·잠금 화면(z-100)보다 아래에 위치.
  */
 export function PwaConnectPrompt() {
@@ -62,7 +62,7 @@ export function PwaConnectPrompt() {
       window.location.hash = `${SYNC_HASH_PARAM}=${assetId}`;
       return;
     }
-    // 연결 코드(s:) → 가져오기. PIN 필요 시 Provider의 PIN 프롬프트가 자동 표시됨
+    // 복원 코드(s:) → 가져오기. PIN 필요 시 Provider의 PIN 프롬프트가 자동 표시됨
     await importSharedByCode(trimmed);
   };
 
@@ -82,7 +82,7 @@ export function PwaConnectPrompt() {
         </div>
         <h1 className="text-lg font-bold">웹에서 쓰던 자산이 있나요?</h1>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-          웹에서 <span className="font-semibold text-foreground">앱 설치</span> 시 복사된 <span className="font-semibold text-foreground">동기화 코드·연결 코드</span>를 붙여넣으면 자산을 그대로 가져옵니다.
+          웹에서 <span className="font-semibold text-foreground">앱 설치</span> 시 복사된 <span className="font-semibold text-foreground">동기화 코드·복원 코드</span>를 붙여넣으면 자산을 그대로 가져옵니다.
         </p>
       </div>
 

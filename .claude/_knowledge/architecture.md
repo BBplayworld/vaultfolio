@@ -60,7 +60,7 @@ src/
 │   │       │   ├── pwa-install-flow.tsx     # 설치 다이얼로그+로직 공용 소스 (홈 버튼·웰컴가이드 공유, render-prop 트리거)
 │   │       │   ├── pwa-install-button.tsx   # 다운로드 아이콘 버튼 (PwaInstallFlow 얇은 래퍼)
 │   │       │   ├── pwa-install-guide-content.tsx  # (구 -dialog) 환경별 설치 가이드 본문 컴포넌트 (flow 내 임베드)
-│   │       │   ├── pwa-guide-illustrations.tsx  # iOS 설치 step SVG (Safari ⋯팝업/Chrome 주소창 공유/Whale ≡그리드)
+│   │       │   ├── pwa-guide-illustrations.tsx  # 설치/동기화 step SVG + 공용 StepAnimationPlayer(멈춤·시작·단계점, InstallGuide/SyncSetup/PwaSetup 위임)
 │   │       │   ├── pwa-install-banner.tsx, pwa-connect-prompt.tsx, pwa-lock-screen.tsx, bottom-nav.tsx
 │   │       └── tutorial/             # tutorial-overlay.tsx (Step 1~5)
 │   ├── api/

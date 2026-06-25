@@ -55,7 +55,7 @@ interface PwaInstallFlowProps {
 
 /**
  * PWA 설치 흐름 공용 컴포넌트.
- * 홈 설치 버튼과 웰컴가이드가 동일한 설치 다이얼로그(PIN/동기화/iOS step/인앱/연결코드)를 공유한다.
+ * 홈 설치 버튼과 웰컴가이드가 동일한 설치 다이얼로그(PIN/동기화/iOS step/인앱/복원코드)를 공유한다.
  * 트리거 UI만 children(render-prop)으로 외부에서 주입한다.
  */
 export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
@@ -72,7 +72,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const [inAppStep, setInAppStep] = useState(false); // 인앱 브라우저: 외부 브라우저 유도 단계
   const [guideStep, setGuideStep] = useState(false); // 설치불가 폴백: 환경별 설치 가이드/문제해결
   const [env, setEnv] = useState<BrowserEnv>({ platform: "ios", browser: "safari", isInApp: false }); // 접속 환경 자동감지
-  const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 연결 코드 (자동 복사됨)
+  const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 복원 코드 (자동 복사됨)
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -85,7 +85,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   // 새 기기에서 [동기화 코드 + 금고 암호]만으로 자산 pull + 동기화 armed가 동시에 완료된다.
   const syncAssetId = mounted && isCloudSyncEnabled() ? getAssetId() : null;
   const isSyncMode = !!syncAssetId;
-  const codeLabel = isSyncMode ? "동기화 코드" : "연결 코드"; // 화면 표시 명칭(데이터 성격이 달라 구분)
+  const codeLabel = isSyncMode ? "동기화 코드" : "복원 코드"; // 화면 표시 명칭(데이터 성격이 달라 구분)
 
   const nickname = assetData.nickname || "";
 
@@ -95,7 +95,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     }
   }, [showDialog, iosStep, inAppStep, isSyncMode]);
 
-  // 공유 토큰 생성 → 서버 저장 → { url(start_url용), code(연결 코드용) } 반환. 자산 없거나 실패 시 null.
+  // 공유 토큰 생성 → 서버 저장 → { url(start_url용), code(복원 코드용) } 반환. 자산 없거나 실패 시 null.
   const generateShareArtifacts = async (): Promise<{ url: string; code: string } | null> => {
     if (!hasAssets) return null;
 
@@ -139,7 +139,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     }
 
     // iOS는 설치 API가 없고, '홈 화면 추가' 시 URL 해시가 제거된다.
-    // → 연결 코드를 클립보드에 자동 복사해 앱 첫 실행 시 붙여넣게 한다.
+    // → 복원 코드를 클립보드에 자동 복사해 앱 첫 실행 시 붙여넣게 한다.
     //   동기화 모드: sync:<assetId> 포인터(서버 업로드 불필요). 그 외: 공유 토큰 s: 코드.
     setLoading(true);
     try {
@@ -168,7 +168,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
           if (!copied) { try { await navigator.clipboard.writeText(artifacts.code); } catch { /* 수동 복사 가능 */ } }
         } else {
           setShareCode(null);
-          toast.error("연결 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          toast.error("복원 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
       }
       setIosStep(true);
@@ -234,7 +234,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
         // 동기화 기기: PIN 없이 연동 다이얼로그 (자산 유무 무관)
         openDialog();
       } else if (!hasAssets) {
-        // iOS 빈 상태: 데이터 준비 없이 곧바로 가이드 표시 (연결 코드 없음)
+        // iOS 빈 상태: 데이터 준비 없이 곧바로 가이드 표시 (복원 코드 없음)
         setPin("");
         setShareCode(null);
         setIosStep(true);
@@ -382,7 +382,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                   </div>
                 )}
 
-                {/* STEP 1 섹션 헤더 (연결 코드 있을 때만 — STEP 2와 위계 일치) */}
+                {/* STEP 1 섹션 헤더 (복원 코드 있을 때만 — STEP 2와 위계 일치) */}
                 {shareCode && (
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded-md bg-primary text-white text-xs font-bold">STEP 1</span>
@@ -393,7 +393,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                 {/* 환경 자동감지 통합 가이드 (브라우저별 3단계 + 접이식 문제해결) */}
                 <InstallGuideContent env={env} />
 
-                {/* STEP 2 — 연결 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
+                {/* STEP 2 — 복원 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
                 {shareCode && (
                   <div className="flex flex-col gap-2.5 mt-3 border-t border-border/50 pt-5">
                     <div className="flex items-center gap-2">
