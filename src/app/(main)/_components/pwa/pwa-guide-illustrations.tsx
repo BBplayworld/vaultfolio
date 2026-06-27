@@ -35,23 +35,22 @@ interface IllustrationProps {
  * 공용 세로형 스마트폰 외곽 프레임 
  * viewBox="0 0 220 290" 에 최적화된 세련된 베젤리스 폰 묘사
  */
-function PhoneFrame({ tone = "default" }: { tone?: "default" | "new" }) {
-  const isNew = tone === "new";
+function PhoneFrame({ accent }: { accent?: string }) {
   return (
     <>
       {/* 폰 그림자 및 배경 */}
       <rect x="35" y="10" width="150" height="270" rx="24" className="text-background" fill="currentColor" />
       <rect x="35" y="10" width="150" height="270" rx="24" className={SURFACE} fill="currentColor" opacity="0.1" />
-      {/* 새 기기: 베젤 안쪽 보조색 틴트 */}
-      {isNew && <rect x="35" y="10" width="150" height="270" rx="24" fill={ACCENT} opacity="0.06" />}
-      {/* 폰 테두리 — 새 기기는 보조색(ACCENT)으로 '다른 기기' 강조 */}
-      {isNew ? (
-        <rect x="35" y="10" width="150" height="270" rx="24" stroke={ACCENT} strokeWidth="3.5" fill="none" />
+      {/* accent: 베젤 안쪽 강조색 틴트 (다른 기기/앱 구분) */}
+      {accent && <rect x="35" y="10" width="150" height="270" rx="24" fill={accent} opacity="0.06" />}
+      {/* 폰 테두리 — accent 지정 시 강조색으로 '다른 기기/앱' 강조 */}
+      {accent ? (
+        <rect x="35" y="10" width="150" height="270" rx="24" stroke={accent} strokeWidth="3.5" fill="none" />
       ) : (
         <rect x="35" y="10" width="150" height="270" rx="24" stroke="currentColor" className={FRAME} strokeWidth="3.5" fill="none" />
       )}
       {/* 액정 화면 내부 경계 (베젤 안쪽) */}
-      <rect x="39" y="14" width="142" height="262" rx="20" stroke={isNew ? ACCENT : "currentColor"} className={isNew ? undefined : FRAME} strokeWidth="1.2" fill="none" opacity="0.5" />
+      <rect x="39" y="14" width="142" height="262" rx="20" stroke={accent ?? "currentColor"} className={accent ? undefined : FRAME} strokeWidth="1.2" fill="none" opacity="0.5" />
       {/* 상단 다이내믹 아일랜드 (카메라/센서부) */}
       <rect x="90" y="18" width="40" height="8" rx="4" fill="currentColor" className="text-foreground/80 dark:text-foreground/60" />
       <circle cx="110" cy="22" r="2.5" fill="currentColor" className="text-foreground/40 dark:text-foreground/20" />
@@ -61,14 +60,14 @@ function PhoneFrame({ tone = "default" }: { tone?: "default" | "new" }) {
   );
 }
 
-/** 새 기기 구분 배지 — 좌측 상단 'NEW 기기' 라벨 (보조색) */
-function NewDeviceBadge() {
+/** 화면 구분 배지 — 좌측 상단 라벨. 기본 "새 기기"(teal, 동기화=다른 기기). PWA 설치는 "앱 (PWA)"(brand, 같은 기기의 설치 앱). */
+function DeviceBadge({ label = "새 기기", color = ACCENT, width = 40 }: { label?: string; color?: string; width?: number }) {
   return (
     <g>
-      <rect x="47" y="31" width="40" height="13" rx="6.5" fill={ACCENT} opacity="0.16" />
-      <rect x="47" y="31" width="40" height="13" rx="6.5" stroke={ACCENT} strokeWidth="0.8" />
-      <circle cx="55" cy="37.5" r="2" fill={ACCENT} />
-      <text x="61" y="40" fontSize="6.3" fontWeight="800" fill={ACCENT}>새 기기</text>
+      <rect x="47" y="31" width={width} height="13" rx="6.5" fill={color} opacity="0.16" />
+      <rect x="47" y="31" width={width} height="13" rx="6.5" stroke={color} strokeWidth="0.8" />
+      <circle cx="55" cy="37.5" r="2" fill={color} />
+      <text x="61" y="40" fontSize="6.3" fontWeight="800" fill={color}>{label}</text>
     </g>
   );
 }
@@ -978,8 +977,8 @@ function SyncStepLink({ className }: IllustrationProps) {
 function SyncStepNewDevice({ className }: IllustrationProps) {
   return (
     <svg viewBox="0 0 220 290" className={className} role="img" aria-label="새 기기에서 금고 암호 입력 후 동기화 완료" fill="none">
-      <PhoneFrame tone="new" />
-      <NewDeviceBadge />
+      <PhoneFrame accent={ACCENT} />
+      <DeviceBadge />
 
       {/* '이 기기 연결' 카드 */}
       <rect x="46" y="60" width="128" height="150" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="1" />
@@ -1160,9 +1159,9 @@ function PwaCodeCopyStep({ className }: IllustrationProps) {
 /** PWA 설치 단계: 앱 첫 실행 — 복원 코드 붙여넣기 + (동기화 시) 금고 암호 입력 */
 function PwaFirstLaunchStep({ className }: IllustrationProps) {
   return (
-    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="앱 첫 실행 — 동기화는 금고 암호, 일반 설치는 PIN 4자리로 복원" fill="none">
-      <PhoneFrame tone="new" />
-      <NewDeviceBadge />
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="앱(PWA) 첫 실행 — 동기화는 금고 암호, 일반 설치는 PIN 4자리로 복원" fill="none">
+      <PhoneFrame accent={BRAND} />
+      <DeviceBadge label="앱 (PWA)" color={BRAND} width={52} />
 
       {/* 링크 아이콘 배지 */}
       <rect x="99" y="48" width="22" height="22" rx="6.5" fill={BRAND} />
@@ -1222,7 +1221,7 @@ function PwaFirstLaunchStep({ className }: IllustrationProps) {
 /** PWA 설치→복원 단계 구성 — ①앱 설치(복원 코드)·④새 기기 복원은 공통, ②③은 접속 브라우저별 */
 function buildPwaSetupSteps(platform: GuidePlatform, browser: GuideBrowser, safariModern: boolean): AnimStep[] {
   const codeStep: AnimStep = { Step: PwaCodeCopyStep, caption: "① 우측 상단 [앱 설치] 버튼 → 복원 코드 자동 복사" };
-  const launchText = "새 기기 첫 실행 → 동기화는 금고 암호 · 일반은 PIN 4자리";
+  const launchText = "앱(PWA) 첫 실행 → 동기화는 금고 암호 · 일반은 PIN 4자리";
   // PC: 네이티브 설치라 브라우저별 공유·홈추가 단계 없음 → 공통 2컷
   if (platform === "pc") {
     return [codeStep, { Step: PwaFirstLaunchStep, caption: `② ${launchText}` }];
