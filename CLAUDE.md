@@ -15,7 +15,8 @@ alwaysApply: true
 - **계획 md 파일(`C:/Users/궁빈/.claude/plans/*.md`)은 완료된 작업은 모두 제거하고 신규 작업 계획만 유지한다.**
 - **라이브 프리뷰 및 동작 검증 제외** (preview_start·browser eval 등으로 앱을 띄워 확인하는 절차 생략. 타입 체크·코드 변경 결과 보고로 마무리)
 - **확인·제출 버튼은 `Button variant="brand"`(= `--brand`/`MAIN_PALETTE[0]`), 체크박스는 기본 `Checkbox`(자동 brand)로 색상 통일. 매수=빨강/매도=파랑, 삭제=destructive 등 의미색만 예외.**
-- **모든 UI 신규·수정 작업 시 `make-interfaces-feel-better` 스킬(`.claude/skills/make-interfaces-feel-better`)을 기본 검토한다.** 동심 radius·광학 정렬·shadow 우선·인터럽터블 전환·split/stagger 진입·subtle exit·tabular-nums·text-balance/pretty·이미지 outline·press scale(0.96)·`transition: all` 금지·`will-change` 절제·최소 히트영역 40×40px 체크리스트를 적용한다. (framer-motion 미사용 → CSS 전환 + `tw-animate-css`, `motion-safe`로 reduced-motion 대응)
+- **모든 UI/디자인 작업은 [`.claude/_knowledge/design-system.md`](.claude/_knowledge/design-system.md)를 단일 출처(source of truth)로 준수한다.** 색 토큰(블랙 배경/화이트 전경·순자산=주황 `important`/액션=brand 인디고·손익 빨강/파랑)·간격(4px 그리드, 섹션 gap-5·카드 gap-3)·동심 radius·테두리보다 그림자 우선·컴포넌트 규약·모션 폴리시·접근성을 모두 이 문서에 맞춘다. 신규 색·간격·컴포넌트 패턴을 만들기 전에 design-system.md에 흡수 가능한지 먼저 확인하고, 문서에 없는 새 규약이 생기면 design-system.md에 반영한다.
+- **UI 디테일 폴리시 체크리스트(design-system.md §6)를 기본 적용한다.** 동심 radius·광학 정렬·shadow 우선·인터럽터블 전환·split/stagger 진입·subtle exit·tabular-nums·text-balance/pretty·이미지 outline·press scale(0.96)·`transition: all` 금지·`will-change` 절제·최소 히트영역 40×40px. (framer-motion 미사용 → CSS 전환 + `tw-animate-css`, `motion-safe`로 reduced-motion 대응)
 
 # KB (.claude/\_knowledge/)
 
@@ -24,14 +25,14 @@ alwaysApply: true
 | 작업 유형     | KB 파일                                          |
 | ------------- | ------------------------------------------------ |
 | 공통 (필수)   | `architecture.md`                                |
-| UI 컴포넌트   | + `components.md` + `ui-design-guidelines.md` + `make-interfaces-feel-better` 스킬 |
-| 페이지·화면 UI | + `ui-design-guidelines.md` + `make-interfaces-feel-better` 스킬 |
+| UI 컴포넌트   | + `components.md` + `design-system.md` |
+| 페이지·화면 UI | + `design-system.md` |
 | 타입·스키마   | + `types-and-schemas.md`                         |
 | API·캐시·공유 | + `api-reference.md`                             |
 | 스크린샷      | + `api-reference.md` + `components.md`           |
 | Context·유틸  | + `state-and-utils.md`                           |
-| 새 기능·패턴  | + `dev-rules.md` + `ui-design-guidelines.md` + `make-interfaces-feel-better` 스킬 |
+| 새 기능·패턴  | + `dev-rules.md` + `design-system.md` |
 | 구독·자산 단위 | + `asset-and-subscription.md`                    |
 | 최근 변경     | + `changelog.md`                                 |
 
-> **UI/화면 작업 시 `ui-design-guidelines.md`(위계·색상·정보처리·집중도)와 `make-interfaces-feel-better` 스킬(디테일 폴리시·체크리스트)을 항상 함께 적용한다.**
+> **UI/화면 작업 시 `design-system.md`를 단일 출처로 준수한다 — 색·간격·반경·고도·컴포넌트 규약(§1~§5)·모션/디테일 폴리시(§6)·접근성(§7)·정보 설계 휴리스틱(§11).**

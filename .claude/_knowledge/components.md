@@ -222,7 +222,7 @@ Alert (hidden prop으로 표시 제어)
 
 **Button** (`button.tsx`): 기본 누름 피드백 `active:not-disabled:scale-[0.96]` 내장. `link` 변형·`static` prop(`<Button static>`) 전달 시 scale 비활성. 전환은 `transition-[color,box-shadow,transform] duration-150 ease-out`(transition-all 금지). 의미색은 `variant="brand"`(확인·제출) 등 CLAUDE.md 규칙 준수.
 
-> **폴리시 공통(make-interfaces-feel-better)**: shadcn 프리미티브(toggle/switch/accordion/dialog/navigation-menu/sidebar)는 `transition-all` 대신 변하는 속성만 명시. 작은 닫기 버튼은 `after:absolute after:-inset-*`로 40×40 히트영역 확보.
+> **폴리시 공통(design-system.md §6)**: shadcn 프리미티브(toggle/switch/accordion/dialog/navigation-menu/sidebar)는 `transition-all` 대신 변하는 속성만 명시. 작은 닫기 버튼은 `after:absolute after:-inset-*`로 40×40 히트영역 확보.
 
 ---
 

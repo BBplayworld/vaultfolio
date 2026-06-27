@@ -130,6 +130,81 @@ export function IosShareStep({ className }: IllustrationProps) {
   );
 }
 
+/** iOS Safari(신형, iOS 15+) 1단계: 하단 주소창 우측 ⋯ 메뉴 → 팝업 최상단 '공유' 강조 */
+export function IosSafariNewShareStep({ className }: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 220 290" className={className} role="img" aria-label="신형 Safari 하단 더보기 메뉴의 공유 위치" fill="none">
+      <PhoneFrame />
+
+      {/* 페이지 콘텐츠 (상단) */}
+      <rect x="52" y="44" width="116" height="8" rx="4" className={LINE} fill="currentColor" opacity="0.4" />
+      <rect x="52" y="58" width="92" height="6" rx="3" className={LINE} fill="currentColor" opacity="0.35" />
+
+      {/* ⋯ 클릭 시 위로 뜨는 메뉴 팝업 */}
+      <rect x="66" y="74" width="108" height="140" rx="14" fill="currentColor" className="text-popover shadow-2xl" stroke="currentColor" strokeWidth="0.8" />
+
+      {/* [강조] 공유 (최상단) */}
+      <rect x="73" y="82" width="94" height="22" rx="7" fill={BRAND} opacity="0.14" />
+      <rect x="73" y="82" width="94" height="22" rx="7" stroke={BRAND} strokeWidth="1.1" />
+      <g transform="translate(86, 93)" stroke={BRAND} strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="-4" y="-1" width="8" height="7" rx="1.3" />
+        <path d="M0 -5 V1.5" />
+        <path d="M-2.2 -3 L0 -5 L2.2 -3" />
+      </g>
+      <text x="100" y="96.5" fontSize="7.6" fontWeight="800" fill={BRAND}>공유</text>
+
+      {/* 북마크에 추가 */}
+      <path d="M82 116 h7 v9 l-3.5 -2.6 l-3.5 2.6 z" stroke="currentColor" className={HINT} strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+      <text x="100" y="123" fontSize="7" fontWeight="500" className={HINT} fill="currentColor">북마크에 추가</text>
+
+      {/* 폴더에 추가 */}
+      <path d="M81 137 h4 l1.5 2 h4.5 v7 h-10 z" stroke="currentColor" className={HINT} strokeWidth="1.1" fill="none" strokeLinejoin="round" />
+      <text x="100" y="143" fontSize="7" fontWeight="500" className={HINT} fill="currentColor">폴더에 추가…</text>
+
+      <line x1="73" y1="156" x2="167" y2="156" stroke="currentColor" className={FRAME} strokeWidth="0.7" opacity="0.5" />
+
+      {/* 새로운 탭 */}
+      <path d="M83 166 V174 M79 170 H87" stroke="currentColor" className={HINT} strokeWidth="1.3" strokeLinecap="round" />
+      <text x="100" y="173" fontSize="7" fontWeight="500" className={HINT} fill="currentColor">새로운 탭</text>
+
+      <line x1="73" y1="186" x2="167" y2="186" stroke="currentColor" className={FRAME} strokeWidth="0.7" opacity="0.5" />
+
+      {/* 하단 빠른 항목 [북마크] [모든 탭] */}
+      <path d="M96 196 h4 v8 l-2 -1.5 l-2 1.5 z" stroke="currentColor" className={HINT} strokeWidth="1.1" fill="none" strokeLinejoin="round" />
+      <text x="98" y="211" fontSize="5.5" fontWeight="600" textAnchor="middle" className={HINT} fill="currentColor">북마크</text>
+      <rect x="141" y="197" width="8" height="8" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.1" fill="none" />
+      <rect x="138" y="200" width="8" height="8" rx="2" stroke="currentColor" className={HINT} strokeWidth="1.1" fill="none" />
+      <text x="142" y="217" fontSize="5.5" fontWeight="600" textAnchor="middle" className={HINT} fill="currentColor">모든 탭</text>
+
+      {/* 하단 Safari 단일 바: < · 주소 · ↻ · ⋯ */}
+      <rect x="39" y="230" width="142" height="36" fill="currentColor" className="text-background/95 dark:text-background/90" />
+      <line x1="39" y1="230" x2="181" y2="230" stroke="currentColor" className={FRAME} strokeWidth="1" />
+      {/* 뒤로 < (원형) */}
+      <circle cx="52" cy="248" r="8.5" className={SURFACE} fill="currentColor" />
+      <path d="M54 244 l-4 4 l4 4" stroke="currentColor" className={HINT} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* 주소 pill */}
+      <rect x="68" y="240" width="84" height="16" rx="8" className={SURFACE} fill="currentColor" />
+      <g transform="translate(77, 248)" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinejoin="round">
+        <rect x="-3" y="-2.5" width="6" height="4.5" rx="1" /><path d="M-3 3 h6" />
+      </g>
+      <text x="112" y="251" fontSize="6.2" fontWeight="500" textAnchor="middle" className={HINT} fill="currentColor">{DOMAIN}</text>
+      <path d="M146 248 a3.2 3.2 0 1 1 0.8 -3.2" stroke="currentColor" className={HINT} strokeWidth="1" fill="none" strokeLinecap="round" />
+      {/* [강조] ⋯ 더보기 (우측, 원형) */}
+      <circle cx="170" cy="248" r="9.5" fill={BRAND} opacity="0.14" />
+      <circle cx="170" cy="248" r="12" stroke={BRAND} strokeWidth="1" strokeDasharray="2 2" opacity="0.45" />
+      <g fill={BRAND}>
+        <circle cx="165.5" cy="248" r="1.5" /><circle cx="170" cy="248" r="1.5" /><circle cx="174.5" cy="248" r="1.5" />
+      </g>
+
+      {/* 가이드 화살표: 메뉴 최상단 공유로 */}
+      <g transform="translate(96, 70)">
+        <path d="M0 -5 V5" stroke={BRAND} strokeWidth="2.4" strokeLinecap="round" />
+        <path d="M-3 2 L0 5 L3 2" stroke={BRAND} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
 /** iOS Chrome 1단계: 하단 주소창 우측의 '공유'(box-arrow) 아이콘 직접 탭 (중간 메뉴 없음) */
 export function IosChromeShareStep({ className }: IllustrationProps) {
   return (
@@ -721,31 +796,17 @@ export function SamsungAddToHomeStep({ className }: IllustrationProps) {
 type GuideAnimPlatform = Exclude<GuidePlatform, "pc">;
 
 /** 플랫폼·브라우저별 설치 가이드 3단계 시퀀스 (브라우저별 1스텝 일러스트는 각자 distinct, 3번째 '추가 확정'은 공통) */
-function getGuideSteps(platform: GuideAnimPlatform, browser: GuideBrowser): FC<IllustrationProps>[] {
+function getGuideSteps(platform: GuideAnimPlatform, browser: GuideBrowser, safariModern = false): FC<IllustrationProps>[] {
   if (platform === "ios") {
-    const Step1 = browser === "safari" ? IosShareStep : browser === "whale" ? IosWhaleShareStep : IosChromeShareStep;
+    const Step1 = browser === "safari"
+      ? (safariModern ? IosSafariNewShareStep : IosShareStep) // 신형(iOS 15+)=⋯메뉴→공유 / 구형=하단 중앙 공유
+      : browser === "whale" ? IosWhaleShareStep : IosChromeShareStep;
     return [Step1, IosAddToHomeStep, IosConfirmAddStep];
   }
   // android — 전 브라우저 3단계 통일
   if (browser === "samsung") return [SamsungMenuStep, SamsungAddToHomeStep, IosConfirmAddStep];
   const Step1 = browser === "whale" ? IosWhaleShareStep : IosChromeShareStep;
   return [Step1, IosAddToHomeStep, IosConfirmAddStep];
-}
-
-/**
- * 설치 가이드 — 브라우저별 3단계를 페이드로 자동 순환 재생. 공용 StepAnimationPlayer 위임.
- * 설치 플로우와 통합 설치 가이드 양쪽에서 재사용(멈춤/시작 버튼 포함).
- */
-export function InstallGuideAnimation({
-  platform,
-  browser,
-  className,
-}: IllustrationProps & { platform: GuideAnimPlatform; browser: GuideBrowser }) {
-  const steps = useMemo<AnimStep[]>(
-    () => getGuideSteps(platform, browser).map(Step => ({ Step })),
-    [platform, browser]
-  );
-  return <StepAnimationPlayer steps={steps} intervalMs={3500} resetKey={`${platform}-${browser}`} className={className} />;
 }
 
 // ─── 기기 동기화 설정 단계 일러스트 (모바일 웹 기준) ──────────────────────────
@@ -964,15 +1025,16 @@ export interface AnimStep { Step: FC<IllustrationProps>; caption?: string }
 /**
  * 단계형 SVG 애니메이션 공용 플레이어.
  * - 캡션(있을 때만)·단계 점·멈춤/시작 버튼 포함. 점 클릭 시 해당 단계로 이동(+일시정지).
- * - reduced-motion 시 자동재생 안 함(수동 조작만). 컨트롤은 `pointer-events-auto`로
- *   상위가 pointer-events-none(예: 공지 본문)이어도 조작 가능.
+ * - **현재 컷 1개만 렌더(key={active}로 remount)** — 구형 iOS Safari에서 opacity 스택 레이어의
+ *   repaint 누락으로 다음 컷 미전환되던 버그 회피. 진입 페이드는 `motion-safe`로 reduced-motion 대응.
+ * - 컨트롤은 `pointer-events-auto`로 상위가 pointer-events-none(예: 공지 본문)이어도 조작 가능.
  */
 export function StepAnimationPlayer({
   steps,
-  intervalMs = 3500,
+  intervalMs = 3000,
   resetKey,
   className,
-}: { steps: AnimStep[]; intervalMs?: number; resetKey?: string } & IllustrationProps) { // intervalMs 기본 3500ms
+}: { steps: AnimStep[]; intervalMs?: number; resetKey?: string } & IllustrationProps) {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const hasCaptions = steps.some(s => s.caption);
@@ -980,34 +1042,35 @@ export function StepAnimationPlayer({
   // 시퀀스가 바뀌면 첫 단계로 리셋
   useEffect(() => { setActive(0); }, [resetKey]);
 
+  // 자동 재생(컷 전환은 콘텐츠 진행이라 reduced-motion에서도 동작 — 페이드만 motion-safe로 비활성). 멈춤 버튼으로 정지.
   useEffect(() => {
     if (!playing || steps.length <= 1) return;
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = setInterval(() => setActive(a => (a + 1) % steps.length), intervalMs);
     return () => clearInterval(id);
   }, [playing, steps.length, intervalMs]);
+
+  // steps 길이가 줄어드는 prop 변경 직후(resetKey 리셋 effect는 렌더 후 실행) active가 범위를 넘는 한 프레임 방어
+  const safeActive = Math.min(active, steps.length - 1);
+  const ActiveStep = steps[safeActive].Step;
 
   return (
     <div className={className}>
       <div className="relative mx-auto w-full max-w-[240px]">
         {/* 220:290 비율 스페이서 — aspect-ratio 미지원 폴백 */}
         <div style={{ paddingTop: "131.818%" }} aria-hidden />
-        {steps.map(({ Step }, i) => (
-          <div
-            key={i}
-            className="absolute inset-0 transition-opacity duration-500"
-            style={{ opacity: i === active ? 1 : 0 }}
-            aria-hidden={i === active ? undefined : true}
-          >
-            <Step className="w-full h-full text-foreground" />
-          </div>
-        ))}
+        {/* 활성 컷만 렌더 + key로 remount → 모든 브라우저에서 전환 보장(구형 Safari opacity repaint 버그 회피) */}
+        <div
+          key={safeActive}
+          className="absolute inset-0 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500"
+        >
+          <ActiveStep className="w-full h-full text-foreground" />
+        </div>
       </div>
 
       {/* 단계 설명 캡션 (레이아웃 시프트 방지 위해 최소 높이 고정) */}
       {hasCaptions && (
         <p className="mt-2 min-h-9 px-2 text-center text-[11px] font-medium leading-relaxed text-muted-foreground text-balance">
-          {steps[active].caption}
+          {steps[safeActive].caption}
         </p>
       )}
 
@@ -1028,8 +1091,8 @@ export function StepAnimationPlayer({
               type="button"
               onClick={() => { setActive(i); setPlaying(false); }}
               aria-label={`${i + 1}단계 보기`}
-              className={`pointer-events-auto relative size-3 rounded-full border-0 p-0 transition-[transform,background-color] duration-300 after:absolute after:-inset-2 hover:opacity-80 ${i === active ? "scale-110" : "bg-border"}`}
-              style={i === active ? { backgroundColor: BRAND } : undefined}
+              className={`pointer-events-auto relative size-3 rounded-full border-0 p-0 transition-[transform,background-color] duration-300 after:absolute after:-inset-2 hover:opacity-80 ${i === safeActive ? "scale-110" : "bg-border"}`}
+              style={i === safeActive ? { backgroundColor: BRAND } : undefined}
             />
           ))}
         </div>
@@ -1040,7 +1103,7 @@ export function StepAnimationPlayer({
 
 /** 기기 동기화 설정 흐름 — 4단계 자동 순환 (notice 등 재사용) */
 export function SyncSetupAnimation({ className }: IllustrationProps) {
-  return <StepAnimationPlayer steps={SYNC_STEPS} intervalMs={3500} className={className} />;
+  return <StepAnimationPlayer steps={SYNC_STEPS} intervalMs={3000} className={className} />;
 }
 
 // ─── PWA 설치 → 복원 흐름 일러스트 ───────────────────────────────────────────
@@ -1156,15 +1219,35 @@ function PwaFirstLaunchStep({ className }: IllustrationProps) {
   );
 }
 
-const PWA_SETUP_STEPS: AnimStep[] = [
-  { Step: PwaCodeCopyStep, caption: "① 우측 상단 [앱 설치] 버튼 → 복원 코드 자동 복사" },
-  { Step: IosChromeShareStep, caption: "② 브라우저(크롬) 공유 버튼 누르기" },
-  { Step: IosAddToHomeStep, caption: "③ '홈 화면에 추가' 선택" },
-  { Step: PwaFirstLaunchStep, caption: "④ 새 기기 첫 실행 → 동기화는 금고 암호 · 일반 설치는 PIN 4자리" },
-];
+/** PWA 설치→복원 단계 구성 — ①앱 설치(복원 코드)·④새 기기 복원은 공통, ②③은 접속 브라우저별 */
+function buildPwaSetupSteps(platform: GuidePlatform, browser: GuideBrowser, safariModern: boolean): AnimStep[] {
+  const codeStep: AnimStep = { Step: PwaCodeCopyStep, caption: "① 우측 상단 [앱 설치] 버튼 → 복원 코드 자동 복사" };
+  const launchText = "새 기기 첫 실행 → 동기화는 금고 암호 · 일반은 PIN 4자리";
+  // PC: 네이티브 설치라 브라우저별 공유·홈추가 단계 없음 → 공통 2컷
+  if (platform === "pc") {
+    return [codeStep, { Step: PwaFirstLaunchStep, caption: `② ${launchText}` }];
+  }
+  // 모바일: ②③ = 접속 브라우저별 설치 단계(공유/메뉴 → 홈 화면에 추가)
+  const bs = getGuideSteps(platform, browser, safariModern);
+  return [
+    codeStep,
+    { Step: bs[0], caption: "② 브라우저 공유 · 메뉴 열기" },
+    { Step: bs[1], caption: "③ 홈 화면에 추가" },
+    { Step: PwaFirstLaunchStep, caption: `④ ${launchText}` },
+  ];
+}
 
-/** PWA 설치→복원 흐름 — 앱 설치 버튼·공유·홈 추가·새 기기 복원 4단계 자동 순환 (notice 재사용) */
-export function PwaSetupAnimation({ className }: IllustrationProps) {
-  return <StepAnimationPlayer steps={PWA_SETUP_STEPS} intervalMs={3500} className={className} />;
+/**
+ * PWA 설치→복원 흐름 공용 가이드 — ①앱 설치(복원 코드)·④새 기기 복원은 공통,
+ * ②③은 접속 브라우저별 SVG. 공지(notice)·설치 가이드(InstallGuideContent) 공용. 멈춤/시작·단계 점 포함.
+ */
+export function PwaSetupAnimation({
+  platform,
+  browser,
+  safariModern = false,
+  className,
+}: IllustrationProps & { platform: GuidePlatform; browser: GuideBrowser; safariModern?: boolean }) {
+  const steps = useMemo(() => buildPwaSetupSteps(platform, browser, safariModern), [platform, browser, safariModern]);
+  return <StepAnimationPlayer steps={steps} intervalMs={3000} resetKey={`pwa-${platform}-${browser}-${safariModern}`} className={className} />;
 }
 

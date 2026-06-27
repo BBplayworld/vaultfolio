@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { IN_APP_BROWSER_RE } from "@/lib/pwa/detect-browser";
+import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -33,14 +33,11 @@ export function usePWAInstall() {
 
     checkStandalone();
 
-    // iOS 기기 감지 (브라우저 무관: iOS는 모든 브라우저가 beforeinstallprompt 미지원 → 수동 추가)
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isAppleDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isAppleDevice);
-
-    // 인앱 브라우저 감지 (홈 화면 추가 불가 → 외부 브라우저 유도)
-    const isInAppBrowser = IN_APP_BROWSER_RE.test(userAgent);
-    setIsInApp(isInAppBrowser);
+    // 환경 감지 단일 소스(detectBrowserEnv) — iPadOS 13+ 데스크톱 위장 UA(Macintosh+터치)도 iOS로 인식.
+    // iOS는 모든 브라우저가 beforeinstallprompt 미지원 → 수동 추가. 인앱은 외부 브라우저 유도.
+    const env = detectBrowserEnv();
+    setIsIOS(env.platform === "ios");
+    setIsInApp(env.isInApp);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       // 브라우저의 기본 설치 배너 방지

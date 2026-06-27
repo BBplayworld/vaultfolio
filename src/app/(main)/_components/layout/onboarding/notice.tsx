@@ -1,15 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Sparkles, Cloud, Smartphone, MessageSquareText } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { SyncSetupAnimation, PwaSetupAnimation } from "../../pwa/pwa-guide-illustrations";
+import { detectBrowserEnv, type BrowserEnv } from "@/lib/pwa/detect-browser";
 
 export const NOTICE_ID = "20260624";
 export const NOTICE_TITLE = "핵심 기능 업데이트 & 앱 설치 (PWA)";
 
 export function NoticeContent() {
   const { isStandalone } = usePWAInstall();
+  // 접속 브라우저 감지 — PWA 가이드 ②③ 컷을 사용자 브라우저별로 노출 (마운트 후 1회)
+  const [env, setEnv] = useState<BrowserEnv>({ platform: "android", browser: "chrome", isInApp: false, iosSafariModern: false });
+  useEffect(() => { setEnv(detectBrowserEnv()); }, []);
 
   return (
     <div className="space-y-4 pointer-events-none select-none">
@@ -40,8 +44,8 @@ export function NoticeContent() {
             </p>
             {/* 설치 → 복원 흐름 애니메이션 (Chrome 기준) */}
             <div className="rounded-lg bg-muted/40 p-3 border">
-              <p className="font-semibold text-foreground text-xs mb-2">💡 앱 설치 → 복원 방법 (예: Chrome)</p>
-              <PwaSetupAnimation />
+              <p className="font-semibold text-foreground text-xs mb-2">💡 앱 설치 → 복원 방법 (현재 브라우저 기준)</p>
+              <PwaSetupAnimation platform={env.platform} browser={env.browser} safariModern={env.iosSafariModern} />
             </div>
             {/* 접근 가이드 — 복원 방법 2가지 명확 구분 */}
             <div className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground space-y-1 border">

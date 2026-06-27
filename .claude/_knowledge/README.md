@@ -11,6 +11,7 @@ Claude와의 장기 개발 협업을 위한 지식 베이스입니다.
 | [types-and-schemas.md](./types-and-schemas.md) | Zod 스키마 + TS 타입 정의 요약 | 타입 추가/변경 시 |
 | [api-reference.md](./api-reference.md) | API 라우트·캐시·외부 서비스 연동 | API 변경 시 |
 | [components.md](./components.md) | 컴포넌트 목록·역할·props | 컴포넌트 추가/변경 시 |
+| [design-system.md](./design-system.md) | **디자인 단일 출처** — 색 토큰·간격·반경·컴포넌트 규약·모션 폴리시·정보 설계 휴리스틱(§11) | 모든 UI 작업 시 준수, 새 규약 발생 시 |
 | [state-and-utils.md](./state-and-utils.md) | Context·Store·유틸 함수 시그니처 | 함수 추가/변경 시 |
 | [dev-rules.md](./dev-rules.md) | 코딩 규칙·패턴·주의사항 | 규칙 합의 시 |
 | [changelog.md](./changelog.md) | 주요 변경 이력 (무엇을·왜) | 매 작업 후 |

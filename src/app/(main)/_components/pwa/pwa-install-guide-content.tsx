@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Share, SquarePlus, AlertTriangle, Copy, Check, ChevronDown } from "lucide-react";
+import { Share, SquarePlus, AlertTriangle, Copy, Check, ChevronDown, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { BrowserEnv, GuideBrowser } from "@/lib/pwa/detect-browser";
-import { InstallGuideAnimation } from "./pwa-guide-illustrations";
+import { PwaSetupAnimation } from "./pwa-guide-illustrations";
 
 interface InstallGuideContentProps {
   env: BrowserEnv;
   className?: string;
+  shareCode?: string | null;
+  codeLabel?: string;
+  isSyncMode?: boolean;
 }
 
 const IOS_BROWSERS: GuideBrowser[] = ["safari", "chrome", "whale"];
@@ -19,7 +22,7 @@ const ANDROID_BROWSERS: GuideBrowser[] = ["chrome", "whale", "samsung"];
 const BROWSER_LABEL: Record<GuideBrowser, string> = { safari: "Safari", chrome: "Chrome", whale: "Whale", samsung: "삼성 인터넷" };
 
 /** 1단계(공유/메뉴 진입) 안내 문구 — 플랫폼·브라우저별 */
-function step1Text(platform: "ios" | "android", browser: GuideBrowser) {
+function step1Text(platform: "ios" | "android", browser: GuideBrowser, safariModern = false) {
   if (browser === "samsung")
     return (<>하단 툴바 우측 메뉴(<span className="font-semibold text-foreground font-mono">☰</span>)에서 <span className="font-semibold text-foreground">+ 현재 페이지 추가</span>를 터치합니다.</>);
   if (browser === "whale")
@@ -28,7 +31,9 @@ function step1Text(platform: "ios" | "android", browser: GuideBrowser) {
     return platform === "ios"
       ? (<>주소창 우측의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.</>)
       : (<>우측 상단 메뉴(<span className="font-semibold text-foreground font-mono">⋮</span>)에서 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span>를 선택합니다.</>);
-  // safari
+  // safari (신형 iOS 15+ = 하단 우측 ⋯ 메뉴 안에 공유 / 구형 = 하단 중앙 공유 버튼)
+  if (safariModern)
+    return (<>하단 주소창 우측 <span className="font-semibold text-foreground font-mono">⋯</span> 메뉴에서 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span>를 선택합니다.</>);
   return (<>하단 중앙의 <span className="font-semibold text-foreground inline-flex items-center gap-0.5">공유 <Share className="size-3" /></span> 버튼을 터치합니다.</>);
 }
 
@@ -44,10 +49,17 @@ function step2Text(browser: GuideBrowser) {
  * 모바일(iOS·Android): 감지 브라우저 3단계 애니메이션 + 단계 설명. PC: 재설치 문제해결 안내.
  * 하단에 접이식 "설치가 안 되나요?" 섹션(환경별 문제해결)·작은 브라우저 재선택 링크.
  */
-export function InstallGuideContent({ env, className }: InstallGuideContentProps) {
+export function InstallGuideContent({
+  env,
+  className,
+  shareCode,
+  codeLabel = "복원 코드",
+  isSyncMode = false,
+}: InstallGuideContentProps) {
   const [browser, setBrowser] = useState<GuideBrowser>(env.browser);
   const [showChips, setShowChips] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [troubleOpen, setTroubleOpen] = useState(false);
 
   const handleCopyAppsLink = async () => {
@@ -76,17 +88,93 @@ export function InstallGuideContent({ env, className }: InstallGuideContentProps
 
   return (
     <div className={`flex flex-col gap-4 ${className ?? ""}`}>
-      <InstallGuideAnimation platform={platform} browser={browser} className="w-full" />
+      {/* 최상단에 SVG 애니메이션 플레이어 배치 */}
+      <PwaSetupAnimation platform={platform} browser={browser} safariModern={env.iosSafariModern} className="w-full" />
 
-      {/* 단계 설명 */}
-      <div className="w-full space-y-2.5">
+      {/* 단계 설명 (Step 1~4) */}
+      <div className="w-full space-y-3 pt-2">
+        {/* Step 1: 복원 코드 복사 */}
+        {shareCode && (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border border-border/50 bg-muted/10">
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
+              <p className="text-xs font-bold text-foreground">{codeLabel} 복사</p>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              {codeLabel}가 클립보드에 복사되었습니다.
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 truncate rounded-lg bg-background px-2.5 py-1.5 text-xs font-mono text-foreground border">{shareCode}</code>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                className="h-8 px-2.5 shrink-0 text-xs"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(shareCode);
+                    setCodeCopied(true);
+                    toast.success(`${codeLabel}를 복사했습니다.`);
+                    setTimeout(() => setCodeCopied(false), 2000);
+                  } catch {
+                    toast.error("복사에 실패했습니다. 코드를 길게 눌러 복사해주세요.");
+                  }
+                }}
+              >
+                {codeCopied ? <Check className="mr-1 size-3 text-emerald-500" /> : <Copy className="mr-1 size-3" />}
+                {codeCopied ? "복사됨" : "복사"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: 브라우저 공유/메뉴 열기 */}
         <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
-          <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">1</span>
-          <p className="text-sm text-muted-foreground leading-relaxed">{step1Text(platform, browser)}</p>
+          <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
+            {shareCode ? 2 : 1}
+          </span>
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-foreground">브라우저 메뉴 열기</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{step1Text(platform, browser, env.iosSafariModern)}</p>
+          </div>
         </div>
+
+        {/* Step 3: 홈 화면에 추가 */}
         <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
-          <span className="shrink-0 size-5.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">2</span>
-          <p className="text-sm text-muted-foreground leading-relaxed">{step2Text(browser)}</p>
+          <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
+            {shareCode ? 3 : 2}
+          </span>
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-foreground">홈 화면에 추가</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{step2Text(browser)}</p>
+          </div>
+        </div>
+
+        {/* Step 4: 앱 첫 실행 및 복원 */}
+        <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
+          <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
+            {shareCode ? 4 : 3}
+          </span>
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-foreground">앱 실행 및 데이터 복원</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {shareCode ? (
+                <>
+                  추가된 <span className="font-semibold text-foreground">앱을 처음 실행</span>하고 복사된 코드를 붙여넣은 뒤,{" "}
+                  {isSyncMode ? (
+                    <><span className="font-semibold text-foreground">금고 암호</span>를 입력하여 동기화를 완료합니다.</>
+                  ) : (
+                    <><span className="font-semibold text-foreground">PIN 4자리</span>를 입력하여 자산을 복원합니다.</>
+                  )}
+                </>
+              ) : (
+                <>
+                  추가된 <span className="font-semibold text-foreground">앱을 실행</span>하여 PIN 번호를 설정하고 안전하게 금고를 시작합니다.
+                </>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 

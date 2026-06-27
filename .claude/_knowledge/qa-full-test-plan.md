@@ -147,12 +147,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `manifest.ts` (/manifest.webmanifest) 동적 JSON 응답 및 `share_target` 매핑 설정 정상 동작 확인
 - ⚙ `layout.tsx` `appleWebApp` 메타데이터(`capable: true`, `statusBarStyle: "black-translucent"`) 및 `icons.apple`(`/icons/icon-192x192.png` 180×180) 포함 출력 확인
 - ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
-- ⚙ `usePWAInstall`: `isIOS` = `/iphone|ipad|ipod/` UA 감지(브라우저 무관, Safari 한정 아님). `isInApp` = `/kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/` UA 감지. standalone 제외 처리 확인
-- ⚙ `detectBrowserEnv()` ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts)) → `BrowserEnv { platform: "ios"|"android"|"pc", browser: GuideBrowser, isInApp }`. `GuideBrowser` = `safari`/`chrome`/`whale`/`samsung`. flow에서 `useEffect(setEnv(detectBrowserEnv()))`로 마운트 후 1회 감지
+- ⚙ `usePWAInstall`: `isIOS`·`isInApp`은 **`detectBrowserEnv()` 단일 소스 위임**(`platform==="ios"`/`isInApp`). **iPadOS 13+ 데스크톱 위장 UA(Macintosh) → `maxTouchPoints>1`로 iPad=iOS 인식**(미인식 시 iPad가 PC로 빠져 설치·코드복사 흐름 깨짐). standalone 제외 처리 확인
+- ⚙ `detectBrowserEnv()` ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts)) → `BrowserEnv { platform: "ios"|"android"|"pc", browser: GuideBrowser, isInApp, iosSafariModern }`. `GuideBrowser` = `safari`/`chrome`/`whale`/`samsung`. flow에서 `useEffect(setEnv(detectBrowserEnv()))`로 마운트 후 1회 감지. **`iosSafariModern`** = iOS 순정 Safari + 메이저 ≥ 15(`parseIosMajor`: `os N_` 우선, iPad 위장 UA는 `version/N` 폴백) → 신형 가이드(`IosSafariNewShareStep`: 하단 ⋯ 메뉴→공유), 그 외 구형(`IosShareStep`: 하단 중앙 공유). **iPad(iPadOS 13+)는 Macintosh UA+`maxTouchPoints>1`로 iOS 판별** — UA만으론 PC 오인식(회귀 위험). 브라우저: crios=chrome / whale=whale / 그 외 safari, samsungbrowser=samsung(Android)
 - ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
 - ⚙ **설치 가이드 단일화** — 옛 `PwaInstallGuideDialog`(3탭 다이얼로그) 제거 → [pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) `InstallGuideContent({ env })`로 통합. flow의 `iosStep`·`guideStep` 모두 동일 컴포넌트 임베드. 모바일=설치 애니메이션+step1/step2 설명+"다른 브라우저인가요?" 칩 재선택(오감지 대비)+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 미지원 문제해결
 - ⚙ iOS·Android step SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) `InstallGuideAnimation({ platform, browser })`는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 중앙 `공유`→`홈 화면에 추가` / Chrome(iOS)=주소창 우측 `공유` 직접 / Chrome(Android)=우측상단 `⋮`→`공유` / Whale=하단 우측 `≡`→`공유` / 삼성인터넷=하단 `☰`→`+ 현재 페이지 추가`→홈 화면. step1/step2 안내 문구(`step1Text`/`step2Text`)도 각 구조와 일치. **aspect-ratio 미지원(구형 Safari) 대비 `paddingTop` 스페이서로 220:290 비율 폴백**
-- ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3500ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `InstallGuideAnimation(platform,browser)`=브라우저별 설치 3컷, `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+"새 기기" 배지]), `PwaSetupAnimation`=PWA 4컷(① 우측상단 앱설치 버튼→복원코드 → ② 크롬 공유(`IosChromeShareStep`) → ③ 홈 화면 추가 → ④ **새 기기** 복원: 동기화=금고암호 / 일반=PIN 4자리 2케이스 구분)
+- ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3500ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+"새 기기" 배지])
+- ⚙ **PWA 가이드 단일화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx) `PwaSetupAnimation({platform,browser})`) — **공지(notice)와 설치 가이드(`InstallGuideContent`)가 동일 컴포넌트 공유**(구 `InstallGuideAnimation` 제거). **①앱 설치(복원 코드)·④새 기기 복원**(동기화=금고암호 / 일반=PIN 4자리 2케이스 구분)은 공통, **②③은 `getGuideSteps(platform,browser)`로 접속 브라우저별 공유/메뉴→홈 화면 추가** SVG. PC(`platform==="pc"`)는 네이티브 설치라 ②③ 생략(공통 2컷). 브라우저 재선택 칩 변경 시 `resetKey`로 ②③ 즉시 갱신. **iOS Safari는 `iosSafariModern`(UA iOS 메이저 ≥ 15)로 신형(⋯메뉴→공유)/구형(중앙 공유) SVG·step1 문구 분기**. 컷 간격 **3000ms**
+- ⚙ **구형 iOS Safari 컷 미전환 버그 수정** — 원인=opacity로 스택된 컷 레이어의 repaint 누락(구형 Safari)으로 다음 컷 안 바뀜. 해결=**활성 컷 1개만 렌더 + `key={active}` remount**(`StepAnimationPlayer`)로 모든 브라우저 전환 보장. 진입 페이드는 `motion-safe:animate-in fade-in`. 자동 전환은 콘텐츠 진행이라 reduced-motion에서도 동작(페이드만 비활성), 멈춤 버튼으로 정지. opacity 스택 레이어 방식 재도입 금지
 - ⚙ **컨트롤 클릭성** — 멈춤/시작·단계 점은 `pointer-events-auto`로 공지 본문(`pointer-events-none`) 안에서도 동작. 점은 `size-3`+`after:-inset-2` 히트영역, 클릭 시 해당 컷 이동+일시정지
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
 - 👤 **PC/Android Chrome·Edge**: `beforeinstallprompt` 발생 → 설치 버튼 클릭 → PIN 4자리 입력 → 설치하기 → 네이티브 A2HS 창 열림 확인
@@ -231,9 +233,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 위계: Hero→필터→리스트 순서, InlineSelector 탭 통일
 - 파괴적 액션(삭제) 확인 단계(`confirm`/다이얼로그)
 - 숫자 표기 `tabular-nums`, 통화 포맷 일관(`formatCurrency`/`formatShortCurrency`)
-- 리스트 카드 위계: 접힘행 왼쪽=핵심 식별(이름·비중), 상세는 펼침에 — 비종목 자산도 동일(`ui-design-guidelines.md`)
+- 리스트 카드 위계: 접힘행 왼쪽=핵심 식별(이름·비중), 상세는 펼침에 — 비종목 자산도 동일(`design-system.md §11`)
 
-### U5. 디테일 폴리시 (`make-interfaces-feel-better` 스킬)
+### U5. 디테일 폴리시 (design-system.md §6)
 > UI 신규·수정 시 항상 검토. CSS 전환 + `tw-animate-css`(framer-motion 미사용), `motion-safe`로 reduced-motion 대응.
 - **`transition: all` 금지** → `transition-[color,box-shadow,transform]` 등 변하는 속성만 명시(button/toggle/kpi-card/accordion/dialog/navigation-menu/sidebar/switch 적용 완료)
 - **누름 피드백** `active:not-disabled:scale-[0.96]`(카드류 0.98~0.99). `Button`은 기본 적용 — link 변형·`static` prop은 제외
@@ -292,7 +294,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 확인·제출 버튼 `Button variant="brand"`, 체크박스 기본 `Checkbox`(자동 brand). 매수=빨강/매도=파랑, 삭제=destructive 의미색만 예외
 - 카드 액션 버튼: `Button size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5) 통일
 - 목록 표시는 항상 `length > 0`, 비교 키 tickerList는 `.sort()`
-- UI/화면 작업 시 `ui-design-guidelines.md`(위계·색상·정보처리·집중도) 병행
+- UI/화면 작업 시 `design-system.md`(단일 출처: 토큰·간격·컴포넌트·모션·정보 설계 휴리스틱) 준수
 
 ---
 

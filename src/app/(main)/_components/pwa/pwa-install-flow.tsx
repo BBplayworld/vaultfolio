@@ -71,7 +71,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const [iosStep, setIosStep] = useState(false); // 데이터 준비 후 '홈 화면 추가' 가이드 단계
   const [inAppStep, setInAppStep] = useState(false); // 인앱 브라우저: 외부 브라우저 유도 단계
   const [guideStep, setGuideStep] = useState(false); // 설치불가 폴백: 환경별 설치 가이드/문제해결
-  const [env, setEnv] = useState<BrowserEnv>({ platform: "ios", browser: "safari", isInApp: false }); // 접속 환경 자동감지
+  const [env, setEnv] = useState<BrowserEnv>({ platform: "ios", browser: "safari", isInApp: false, iosSafariModern: false }); // 접속 환경 자동감지
   const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 복원 코드 (자동 복사됨)
 
   const hasAssets =
@@ -366,64 +366,13 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
               </div>
             ) : iosStep ? (
               /* iOS: 브라우저 공유 메뉴에서 직접 추가하도록 단계별 가이드 (브라우저 무관) */
-              <div className="flex flex-col gap-4 py-1">
-                {/* 2단계 진행 배너 — 사용자가 해야 할 두 액션을 먼저 명확히 인지 */}
-                {shareCode && (
-                  <div className="flex items-stretch gap-1.5 rounded-xl border border-primary/20 bg-primary/5 p-2 text-center">
-                    <div className="flex-1 rounded-lg bg-background/60 px-2 py-2">
-                      <p className="text-xs font-bold text-primary">STEP 1</p>
-                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">홈 화면에 추가</p>
-                    </div>
-                    <div className="flex items-center text-primary/50 font-bold">→</div>
-                    <div className="flex-1 rounded-lg bg-background/60 px-2 py-2">
-                      <p className="text-xs font-bold text-primary">STEP 2</p>
-                      <p className="text-[11px] sm:text-xs font-medium text-foreground mt-0.5">앱에서 {codeLabel} 붙여넣기</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 1 섹션 헤더 (복원 코드 있을 때만 — STEP 2와 위계 일치) */}
-                {shareCode && (
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-primary text-white text-xs font-bold">STEP 1</span>
-                    <p className="text-sm font-semibold text-foreground">홈 화면에 앱 설치 (PWA)</p>
-                  </div>
-                )}
-
-                {/* 환경 자동감지 통합 가이드 (브라우저별 3단계 + 접이식 문제해결) */}
-                <InstallGuideContent env={env} />
-
-                {/* STEP 2 — 복원 코드 카드 (자산 보유 시): 클립보드 자동 복사됨 + 재복사 버튼 */}
-                {shareCode && (
-                  <div className="flex flex-col gap-2.5 mt-3 border-t border-border/50 pt-5">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-primary text-white text-xs font-bold">STEP 2</span>
-                      <p className="font-semibold text-sm text-foreground">앱을 열고 {codeLabel} 붙여넣기</p>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <CheckCircle2 className="size-3.5 shrink-0" />
-                      {codeLabel}가 클립보드에 복사되었습니다.
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 truncate rounded-lg bg-muted/60 px-3 py-2 text-xs font-mono text-foreground border">{shareCode}</code>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        type="button"
-                        className="h-9 px-3 shrink-0"
-                        onClick={async () => {
-                          try { await navigator.clipboard.writeText(shareCode); toast.success(`${codeLabel}를 복사했습니다.`); }
-                          catch { toast.error("복사에 실패했습니다. 코드를 길게 눌러 복사해주세요."); }
-                        }}
-                      >
-                        <Copy className="mr-1.5 size-3.5" /> 복사
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      홈 화면에 추가된 <span className="font-semibold text-foreground">시크릿에셋 앱을 처음 열면</span> 연결 화면이 나옵니다. <span className="font-semibold text-foreground">붙여넣기</span> 후 {isSyncMode ? <><span className="font-semibold text-foreground">금고 암호</span>를 입력하면 자산이 복원되고 동기화가 이어집니다.</> : <><span className="font-semibold text-foreground">PIN 4자리</span>를 입력하면 자산이 복원됩니다.</>}
-                    </p>
-                  </div>
-                )}
+              <div className="py-1">
+                <InstallGuideContent
+                  env={env}
+                  shareCode={shareCode}
+                  codeLabel={codeLabel}
+                  isSyncMode={isSyncMode}
+                />
               </div>
             ) : isSyncMode ? (
               /* 동기화 기기: PIN 입력 없이 안내만 — 새 기기에서 금고 암호로 복원 */
