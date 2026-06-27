@@ -9,7 +9,7 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
 import { pruneTransactions } from "@/lib/trade-utils";
-import { persistNickname } from "@/hooks/use-nickname";
+import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -663,6 +663,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 공유 데이터 반영 공통 헬퍼
   // - 저장 → 즉시 toast → initAndSync 백그라운드 (주식 현재가 toast는 syncTodayStockPrices가 별도 표시)
   const applySharedData = useCallback((data: AssetData, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string) => {
+    if (typeof nickname === "string") {
+      data.nickname = nickname;
+      persistNickname(nickname);
+    }
     saveAssetData(data);
     if (snapshots) {
       try {
@@ -672,8 +676,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     // 공유자가 선택한 종가 기준 옵션 적용 (localStorage + store 동시 갱신)
     if (profitBasis) useProfitBasisStore.getState().setBasis(profitBasis);
-    // 공유자 프로필(닉네임) 적용
-    if (typeof nickname === "string") persistNickname(nickname);
     notify.success(MSG.SHARED_DATA_LOADED);
     setSnapshotVersion(v => v + 1);
     skipAllTutorialSteps();
@@ -870,6 +872,18 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [handleStorageChange]);
+
+  // 닉네임 변경 감지 리스너 등록 (React 상태 동기화)
+  useEffect(() => {
+    const handleNicknameChange = () => {
+      setAssetData(prev => {
+        const latest = getAssetData();
+        return { ...prev, nickname: latest.nickname };
+      });
+    };
+    window.addEventListener(NICKNAME_EVENT, handleNicknameChange);
+    return () => window.removeEventListener(NICKNAME_EVENT, handleNicknameChange);
+  }, []);
 
   // ─── [자산 데이터 CRUD] ──────────────────────────────────────────────────────
 

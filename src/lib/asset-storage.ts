@@ -154,6 +154,7 @@ export function applyImportedPayload(parsed: unknown): { assetData: AssetData; s
   // 프로필(닉네임) 복원 — clearAssetData가 secretasset_ 키를 모두 지우므로 이후 기록
   if (typeof p.nickname === "string") {
     persistNickname(p.nickname);
+    validated.nickname = p.nickname;
   }
   let snapshotRestored = false;
   if (dailySnapshot || monthlySnapshot) {
@@ -594,7 +595,8 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
       return { year: parseInt(f[0]) || new Date().getFullYear(), netAsset: uNum(f[1]), note: uTxt(f[2]) };
     }),
     transactions,
-    lastUpdated: new Date().toISOString()
+    lastUpdated: new Date().toISOString(),
+    nickname: parts[11] ? uTxt(parts[11]) || "" : "",
   };
 
   let rates;
@@ -654,6 +656,9 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
       if (!dsv || !dsv.startsWith("OK|")) return null; // PIN/Key 틀림 또는 데이터 손상
 
       const result = unpackV7(dsv.substring(3));
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
       return {
         data: assetDataSchema.parse(result.data),
         rates: result.rates,
@@ -677,6 +682,9 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
       if (!dsv || !dsv.startsWith("OK|")) return null; // PIN 틀림 또는 데이터 손상
 
       const result = unpackV7(dsv.substring(3));
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
       return {
         data: assetDataSchema.parse(result.data),
         rates: result.rates,
@@ -700,12 +708,18 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         dsv = decrypted.substring(3);
       }
       const result = unpackV7(dsv);
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
       return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 
     if (decompressed && decompressed.startsWith("vlt-fl-v7.0:")) {
       const dsv = decompressed.substring("vlt-fl-v7.0:".length);
       const result = unpackV7(dsv);
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
       return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 
@@ -718,6 +732,9 @@ export function parseShareToken(token: string, pin?: string, localKey?: string):
         String.fromCharCode(char.charCodeAt(0) ^ SHARED_KEY_V6.charCodeAt(i % SHARED_KEY_V6.length))
       ).join("");
       const result = unpackV7(deob);
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
       return { data: assetDataSchema.parse(result.data), rates: result.rates, snapshots: result.snapshots };
     }
 

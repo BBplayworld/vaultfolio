@@ -200,6 +200,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
 - 👤 더보기 `지원` 섹션 **"앱 가이드 · 공지사항"** 통합 진입점 — 선택기에서 앱 가이드 보기 / 공지사항 보기 분기(메뉴 행 1개로 통합). 공지 뷰어는 SVG 애니메이션 멈춤/시작 동작 확인
+- ⚙ 닉네임 변경(`NICKNAME_EVENT`) 발생 시 React `assetData` 상태가 실시간 업데이트되며, 자산 CRUD/동기화 시 닉네임이 빈 값으로 덮어써지지 않는지 검증
+- ⚙ 공유 토큰 파싱(`parseShareToken`/`unpackV7`) 및 데이터 가져오기 시 닉네임이 `validated.nickname` 및 `data.nickname`에 누락 없이 복원되어 보존되는지 검증
 
 ### F-FEEDBACK. 의견·요청 보내기 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx) · [api/feedback](../../src/app/api/feedback/route.ts))
 - 👤 더보기 > "의견·요청 보내기" 다이얼로그: 내용 Textarea(초기 min-h-160, max-h-40vh 내부 스크롤) + 연락처(선택), 전송 중 스피너, 성공/실패 토스트. **다이얼로그 스크롤로 하단 "보내기" 버튼 항상 노출**
@@ -277,6 +279,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(lastUpdated 제외 비교) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). R5(sync abort)와 연계 |
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
 | R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
+| R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지 |
 
 ---
 
