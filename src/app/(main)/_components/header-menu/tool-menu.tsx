@@ -327,7 +327,7 @@ export function ToolMenuPage() {
                 여러 기기에서 자산 데이터를 <strong className="text-foreground font-semibold">항상 최신으로 자동 유지</strong>합니다.
               </p>
               <p className="text-[11px] text-primary/80 mt-1.5 leading-relaxed">
-                Plus 요금제 출시 전 한시적 프로모션으로 지금은 무료예요.
+                베타 무료 기간입니다.
               </p>
             </button>
           </div>

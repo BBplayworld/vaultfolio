@@ -154,7 +154,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                 <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
               </p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                기기 동기화는 암호화 서버 비용이 드는 <span className="font-semibold text-primary">Plus 멤버십 기능</span>입니다. 정식 요금제 출시 전까지 <span className="font-semibold text-foreground">베타 기간 무료</span>로 제공하며, 유료 전환 전 충분한 기간을 두고 미리 알려드려요.
+                베타 무료 기간입니다.
               </p>
             </div>
             <div className="space-y-1.5">
