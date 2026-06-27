@@ -50,6 +50,15 @@ export const metadata: Metadata = {
   other: {
     "naver-site-verification": "7a749c9de7f929519b80424a0fac9c56fb9deb03",
   },
+  // iOS 홈 화면 추가용 아이콘·standalone 메타 (manifest만으론 iOS가 제대로 인식 못 함)
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "시크릿에셋",
+  },
+  icons: {
+    apple: [{ url: "/icons/icon-192x192.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -62,6 +71,47 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // PWA 설치 이벤트 조기 캡처 (React 마운트 전 발생분 누락 방지)
+              window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.__bipEvent = e;
+                window.dispatchEvent(new Event('bip-captured'));
+              });
+              window.addEventListener('appinstalled', function () {
+                window.__bipEvent = null;
+                window.__pwaInstalled = true;
+              });
+            `
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var ua = window.navigator.userAgent.toLowerCase();
+                var isMobile = /iphone|ipad|ipod|android|webos|blackberry|iemobile|opera mini/i.test(ua);
+                document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'pc');
+              } catch (_) {}
+            `
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var hash = window.location.hash;
+                var themeMatch = hash.match(/[#&]theme=(light|dark)/);
+                if (themeMatch) {
+                  var theme = themeMatch[1];
+                  document.documentElement.className = theme === 'dark' ? 'dark' : '';
+                }
+              } catch (_) {}
+            `
+          }}
+        />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
           strategy="afterInteractive"
@@ -79,6 +129,32 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <PreferencesStoreProvider themeMode={themeMode}>
           {children}
           <Toaster />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  // 새 SW가 제어를 잡는 순간(=새 버전 활성) 1회 자동 새로고침 → 항상 최신 반영
+                  var __refreshing = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (__refreshing) return;
+                    __refreshing = true;
+                    window.location.reload();
+                  });
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) {
+                      reg.update();
+                      // 포그라운드 복귀 시마다 최신 SW 확인
+                      document.addEventListener('visibilitychange', function() {
+                        if (document.visibilityState === 'visible') reg.update();
+                      });
+                    }).catch(function(err) {
+                      console.error('ServiceWorker registration failed: ', err);
+                    });
+                  });
+                }
+              `
+            }}
+          />
         </PreferencesStoreProvider>
       </body>
     </html>

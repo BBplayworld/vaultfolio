@@ -1,6 +1,6 @@
 # 아키텍처 개요
 
-> 마지막 업데이트: 2026-05-23
+> 마지막 업데이트: 2026-06-22
 
 ## 앱 개요
 
@@ -25,62 +25,89 @@
 
 ## 디렉토리 구조
 
+> **구조 변경(2026-06): `(main)/asset/` 레이어 제거** — 기존 `(main)/asset/_components/*`·`(main)/asset/page.tsx`가 `(main)/_components/*`·`(main)/page.tsx`로 평탄화됨. `header/` → `header-menu/`로 rename. 옛 `asset/_components/header/...` 경로 참조는 모두 무효.
+
 ```
 src/
 ├── app/
-│   ├── (main)/asset/
-│   │   ├── page.tsx              # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
-│   │   ├── layout.tsx            # SidebarInset + NavigationProvider + FAB pb-20/24
+│   ├── (main)/
+│   │   ├── page.tsx                  # AssetPageTabs 래퍼 + isWelcomeGuide 분기 (AppGuide + WelcomeGuide)
+│   │   ├── layout.tsx                # SidebarInset + NavigationProvider + FAB pb-20/24
+│   │   ├── [...not-found]/
 │   │   └── _components/
-│   │       ├── forms/            # (구 bottom-nav) 자산 입력 폼 + 스크린샷 다이얼로그
-│   │       │   └── asset-update/
-│   │       │       ├── input/    # 자산 입력 폼 5종 + exchange-rate-input
-│   │       │       └── screenshot/ # 스크린샷 다이얼로그 4종
-│   │       ├── views/            # (구 main-nav) 페이지 본문 콘텐츠
-│   │       │   ├── home/         # dashboard.tsx
-│   │       │   ├── detail/       # asset-detail-tabs.tsx + tabs/ 5종 (모두 Card+CardHeader+CardTitle 외피)
-│   │       │   ├── activity/     # net-asset-chart, profit-chart, dividend-chart, monthly-dividend-stocks
-│   │       │   └── data-source-badge.tsx
-│   │       ├── layout/           # 라우팅·공용 UI
-│   │       │   ├── navigation-context.tsx  # AssetView hash routing (home/detail/activity)
-│   │       │   ├── asset-page-tabs.tsx     # view 분기 라우터 (drill-down)
-│   │       │   ├── inline-selector.tsx     # 모든 탭·셀렉터 공용 (size sm/md/lg)
-│   │       │   ├── info-hint.tsx           # Popover hover/tap 패턴
-│   │       │   ├── floating-add-button.tsx # bg-foreground/85 무채색 FAB
-│   │       │   ├── scroll-to-top.tsx       # bg-foreground/70 무채색 utility
-│   │       │   ├── welcome-guide.tsx, notice-dialog.tsx, copyright-footer.tsx
-│   │       ├── header/           # (구 top-nav) 상단 헤더
-│   │       │   ├── top-bar.tsx   # ← 뒤로가기 + 페이지 타이틀 + 인증샷 + 도구 메뉴(다크모드 통합)
-│   │       │   ├── tool-menu.tsx, app-guide.tsx, share/
-│   │       └── tutorial/         # tutorial-overlay.tsx (Step 0~5)
+│   │       ├── forms/                # (구 bottom-nav) 자산 입력 폼 + 스크린샷/거래 다이얼로그
+│   │       │   ├── asset-update/
+│   │       │   │   ├── input/        # stock/crypto/cash/loan/real-estate/exchange-rate-input
+│   │       │   │   └── screenshot/   # stock/crypto/cash/loan-screenshot-import
+│   │       │   └── trade/            # trade-input, trade-screenshot-import, guards/delete-rollback-dialog
+│   │       ├── views/                # (구 main-nav) 페이지 본문 콘텐츠
+│   │       │   ├── home/dashboard.tsx
+│   │       │   ├── detail/           # asset-detail-tabs, detail-hub, detail-summary-header
+│   │       │   │   ├── tabs/         # stock/real-estate/crypto/cash/loan-tab 5종
+│   │       │   │   ├── trades/       # stock-trades-view
+│   │       │   │   └── xray/         # stock-xray-view, stock-insight-strip
+│   │       │   └── activity/         # net-asset/profit/dividend chart + performance-hub
+│   │       ├── layout/               # 라우팅·공용 UI
+│   │       │   ├── navigation/       # navigation-context, asset-page-tabs, asset-dispatch
+│   │       │   ├── floating/         # floating-add-button, scroll-to-top
+│   │       │   ├── onboarding/       # welcome-guide, notice, notice-dialog
+│   │       │   └── ui/               # inline-selector, kpi-card, info-hint, prompt-preview-dialog
+│   │       ├── header-menu/          # (구 top-nav/header) top-bar, tool-menu, settings-page, app-guide
+│   │       │   └── share/            # share-card, share-menu
+│   │       ├── functions/
+│   │       │   └── cloud-sync/       # cloud-sync-menu-entry, cloud-sync-connect-dialog, sync-qr
+│   │       ├── pwa/                  # 설치 흐름 공용 + 가이드 SVG
+│   │       │   ├── pwa-install-flow.tsx     # 설치 다이얼로그+로직 공용 소스 (홈 버튼·웰컴가이드 공유, render-prop 트리거)
+│   │       │   ├── pwa-install-button.tsx   # 다운로드 아이콘 버튼 (PwaInstallFlow 얇은 래퍼)
+│   │       │   ├── pwa-install-guide-content.tsx  # (구 -dialog) 환경별 설치 가이드 본문 컴포넌트 (flow 내 임베드)
+│   │       │   ├── pwa-guide-illustrations.tsx  # 설치/동기화 step SVG + 공용 StepAnimationPlayer(멈춤·시작·단계점, InstallGuide/SyncSetup/PwaSetup 위임)
+│   │       │   ├── pwa-install-banner.tsx, pwa-connect-prompt.tsx, pwa-lock-screen.tsx, bottom-nav.tsx
+│   │       └── tutorial/             # tutorial-overlay.tsx (Step 1~5)
 │   ├── api/
 │   │   ├── finance/
-│   │   │   ├── route.ts          # 주식·환율 조회 (장중 1시간 슬롯 캐시)
-│   │   │   └── profit/route.ts   # 기준가 조회 (2단 캐시: refDateMap + refPrice)
-│   │   ├── logo/route.ts         # 종목 로고 프록시
-│   │   ├── share/route.ts        # 공유 Short URL
+│   │   │   ├── route.ts              # 주식·환율 조회 (장중 1시간 슬롯 캐시)
+│   │   │   ├── profit/route.ts       # 기준가 조회 (2단 캐시: refDateMap + refPrice)
+│   │   │   ├── dividend/route.ts     # 배당 조회
+│   │   │   └── debug-overseas/route.ts
+│   │   ├── sync/route.ts             # E2EE 클라우드 동기화 (PUT/GET AssetEnvelope)
+│   │   ├── xray-classify/route.ts    # X-Ray AI 분류 (스트리밍)
+│   │   ├── logo/route.ts             # 종목 로고 프록시
+│   │   ├── share/route.ts            # 공유 Short URL
+│   │   ├── feedback/route.ts         # 의견·요청 Slack 전달
 │   │   └── parse-screenshot/
-│   │       ├── route.ts          # POST (Gemini AI)
-│   │       └── ticker-map.ts     # 종목명→티커 fallback (~700개)
-│   └── layout.tsx                # 루트 레이아웃
-├── types/asset.ts                # 자산 5종 Zod 스키마 (inactiveStatus 포함)
-├── contexts/asset-data-context.tsx  # 전역 자산 상태 + 환율 + 동기화 + halted/delisted 분기
+│   │       ├── route.ts              # POST (Gemini AI)
+│   │       └── ticker-map.ts         # 종목명→티커 fallback (~700개)
+│   ├── manifest.ts                   # PWA manifest (/manifest.webmanifest, share_target 포함)
+│   └── layout.tsx                    # 루트 레이아웃 (appleWebApp·apple-touch-icon 메타데이터 포함)
+├── hooks/
+│   └── use-pwa-install.ts            # PWA 설치 훅 (isInstallable/isIOS/isInApp/isStandalone)
+├── types/asset.ts                    # 자산 5종 Zod 스키마 (inactiveStatus 포함)
+├── contexts/asset-data-context.tsx   # 전역 자산 상태 + 환율 + 동기화 + halted/delisted 분기
 ├── stores/
-│   ├── preferences/              # Zustand 테마 스토어
-│   └── tutorial/                 # Zustand 튜토리얼 스토어 (Step 0~5 + isStandaloneStep0)
+│   ├── preferences/                  # Zustand 테마 스토어
+│   └── tutorial/                     # Zustand 튜토리얼 스토어 (Step 0~5 + isStandaloneStep0)
 ├── lib/
-│   ├── asset-storage.ts          # localStorage + 공유 토큰 v7.2 (inactiveStatus 직렬화)
-│   ├── local-storage.ts          # STORAGE_KEYS, migrateStorageKeys, readTutorialStatus
-│   ├── one-time-migrations.ts    # secretasset_migrations_done 기반 1회성 마이그레이션
-│   ├── profit-utils.ts           # 기준가 캐시 + 점진 로드(onProgress) + dedup
-│   ├── finance-service.ts        # KIS API 연동 + classifyOverseasInactive
-│   ├── stock-cache-slot.ts       # 시장별 캐시 슬롯 유틸 (서버/클라 공용)
-│   ├── cache-storage.ts          # 캐시 추상화 (File/Upstash)
-│   ├── number-utils.ts           # 숫자·통화 포맷
-│   └── utils.ts                  # cn(), getInitials()
+│   ├── asset-storage.ts              # localStorage + 공유 토큰 v7.2
+│   ├── local-storage.ts              # STORAGE_KEYS, migrateStorageKeys
+│   ├── one-time-migrations.ts        # 1회성 마이그레이션
+│   ├── profit-utils.ts               # 기준가 캐시 + 점진 로드
+│   ├── finance-service.ts            # KIS API 연동 + classifyOverseasInactive
+│   ├── stock-cache-slot.ts           # 시장별 캐시 슬롯 유틸
+│   ├── cache-storage.ts              # 캐시 추상화 (File/Upstash, AssetEnvelope 포함)
+│   ├── cloud-sync/                   # E2EE 클라우드 동기화
+│   │   ├── config.ts                 # AssetEnvelope, SYNC_HASH_PARAM("asset"), SIG_FRESHNESS_SEC
+│   │   ├── crypto.ts                 # AssetKeys, PBKDF2→encKey+Ed25519, generateAssetId
+│   │   ├── sync-state.ts             # secretasset_sync (assetId/version/rememberedKey)
+│   │   ├── sync-client.ts            # pushAsset/pullAsset/fetchRemoteVersion, Ed25519 인증
+│   │   ├── device-key.ts             # IndexedDB 기기키 wrap/unwrap (rememberedKey 보관)
+│   │   └── cloud-sync-provider.tsx   # SYNC_HASH_PARAM 해시 감지·자동 연결
+│   ├── pwa/
+│   │   └── detect-browser.ts         # iOS 브라우저 판별(Safari/Chrome/Whale) — 가이드 SVG 분기
+│   ├── number-utils.ts
+│   └── utils.ts
 ├── config/
 │   ├── app.ts / asset-options.ts / theme.ts / navigation.ts
-└── components/ui/                # shadcn/ui 컴포넌트
+└── components/ui/                    # shadcn/ui 컴포넌트
 ```
 
 ## 데이터 흐름
@@ -91,6 +118,14 @@ localStorage → asset-storage.ts → AssetDataContext → 컴포넌트
 기준가 조회: profit-utils.ts(클라 localStorage) → /api/finance/profit
                                                  ↓
                                        REF_DATE_MAP + REF_PRICES 2단 캐시
+
+E2EE 클라우드 동기화:
+  금고암호 → crypto.ts(PBKDF2) → AssetKeys(encKey+Ed25519)
+  pushAsset: AES-GCM 암호화 → PUT /api/sync (x-sync-auth Ed25519 서명)
+  pullAsset: GET /api/sync → 복호화 → applyImportedPayload
+  로컬 상태: secretasset_sync (assetId/version/rememberedKey) ← sync-state.ts
+  서버 저장: csync:asset:{assetId} (Redis, AssetEnvelope — pubKey+iv+ciphertext+version)
+  연결 링크: #asset=<assetId>&theme=... ← SYNC_HASH_PARAM="asset"
 ```
 
 ## 캐시 전략
@@ -151,6 +186,7 @@ GEMINI_API_KEY                         # Google Gemini AI
 SLACK_WEBHOOK_URL                      # 의견·요청 보내기 → Slack (/api/feedback)
 BLOB_READ_WRITE_TOKEN                  # Vercel Blob (공지 이미지)
 NEXT_PUBLIC_NOTICE                     # 공지 시스템 단일 JSON
+NEXT_PUBLIC_CLOUD_SYNC                 # "off" 설정 시 클라우드 동기화 비활성화 (운영 비상 차단용)
 ```
 
 ## 스크린샷 가져오기

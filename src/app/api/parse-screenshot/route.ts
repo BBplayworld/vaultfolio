@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import { lookupTicker, DOMESTIC_ETF_MAP, DOMESTIC_STOCK_MAP } from "./ticker-map";
+import { lookupTicker } from "./ticker-map";
+import { KR_CODES } from "@/lib/kr-master";
+import { US_TICKERS } from "@/lib/us-master";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 
-// 국내 ETF만 "종목명→티커" 형식으로 압축 (모듈 로드 시 1회 실행)
-const DOMESTIC_ETF_TABLE = Object.entries(DOMESTIC_ETF_MAP)
-  .map(([name, ticker]) => `${name}→${ticker}`)
-  .join(",");
-
 // 국내 종목 티커 Set — section이 "해외"여도 이 안에 있으면 domestic으로 강제
-const DOMESTIC_TICKERS = new Set([
-  ...Object.values(DOMESTIC_ETF_MAP),
-  ...Object.values(DOMESTIC_STOCK_MAP),
-]);
+// KRX 전종목 마스터 기준 (src/lib/kr-master.ts)
+const DOMESTIC_TICKERS = KR_CODES;
 
 type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "trade";
 
@@ -45,10 +40,7 @@ const STOCK_SCHEMA = {
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로), ticker=티커(화면에 보이면 최우선 추출·없으면 [국내 ETF 티커] 목록의 종목명과 일치할때만 해당 티커 추출·SPY 등 해외주식에 국내ETF 티커를 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
-
-[국내 ETF 티커]
-${DOMESTIC_ETF_TABLE}
+name=종목명(그대로·정확히), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
 
 무시: 계좌번호·총평가금액·광고배너
 
@@ -134,6 +126,14 @@ function processStockResults(raw: GeminiStock[], today: string) {
     // 티커 미확인인데 이름이 순수 영문(또는 영문+숫자 혼합, 마침표 포함)인 경우 티커로 간주
     if (!ticker && /^[a-zA-Z0-9.]+$/.test(s.name.replace(/\s/g, "")) && s.name.length <= 8) {
       ticker = s.name.replace(/\s/g, "").toUpperCase();
+    }
+
+    // 미국 방어 검증: 영문 티커가 마스터에 없으면(OCR 오독 의심) 종목명으로 유효 미국 티커를 찾아 교체
+    if (ticker && !/^\d{6}$/.test(ticker) && /^[A-Z0-9.]+$/.test(ticker) && !US_TICKERS.has(ticker)) {
+      const looked = lookupTicker(s.name);
+      if (looked && looked !== ticker && US_TICKERS.has(looked)) {
+        ticker = looked;
+      }
     }
 
     const isDomesticTicker = ticker ? DOMESTIC_TICKERS.has(ticker) : false;

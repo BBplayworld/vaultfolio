@@ -113,6 +113,10 @@ export async function GET(req: NextRequest) {
   // kstAccessDay: 국내=domestic, 해외=foreign 독립 산출 (현행)
   const usDates = getDates(period, "foreign");
   const krDates = basis === "sameBusinessDay" ? usDates : getDates(period, "domestic");
+  // 일별 종료일이 그 시장 휴장일이면 refDate를 명목 종료일로 유지(직전 영업일로 덮어쓰지 않음)
+  // → refPrice는 폴백 close라 prevPrice와 같아 주가변동 0, refRate만 종료일 환율로 잡혀 환차만 반영
+  const krRefHoliday = period === "daily" && !isKrBusinessDay(new Date(`${krDates.refDate}T00:00:00.000Z`));
+  const usRefHoliday = period === "daily" && !isUsBusinessDay(new Date(`${usDates.refDate}T00:00:00.000Z`));
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 
@@ -144,7 +148,7 @@ export async function GET(req: NextRequest) {
       if (refHit) {
         const e = ensureEntry(ticker);
         e.refPrice = refHit.price;
-        e.refDate = refHit.actualDate;
+        e.refDate = krRefHoliday ? krDates.refDate : refHit.actualDate;
       } else {
         fetchQueue.push({ ticker, date: krDates.refDate, kind: "ref", market: "domestic" });
       }
@@ -164,7 +168,7 @@ export async function GET(req: NextRequest) {
       if (refHit) {
         const e = ensureEntry(ticker);
         e.refPrice = refHit.price;
-        e.refDate = refHit.actualDate;
+        e.refDate = usRefHoliday ? usDates.refDate : refHit.actualDate;
       } else {
         fetchQueue.push({ ticker, date: usDates.refDate, kind: "ref", market: "foreign" });
       }
@@ -248,7 +252,8 @@ export async function GET(req: NextRequest) {
         const e = ensureEntry(task.ticker);
         if (task.kind === "ref") {
           e.refPrice = res.price;
-          e.refDate = res.date;
+          // 일별 종료일이 휴장이면 명목 종료일 유지 (주가변동 0 + 환차만 반영)
+          e.refDate = period === "daily" && !reqIsBusinessDay ? task.date : res.date;
         } else {
           e.prevPrice = res.price;
           e.prevDate = res.date;

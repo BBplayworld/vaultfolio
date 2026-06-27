@@ -1,6 +1,6 @@
 # API 참조
 
-> 마지막 업데이트: 2026-05-16
+> 마지막 업데이트: 2026-06-14
 
 ## 내부 API 라우트
 
@@ -98,6 +98,41 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
 
+### PUT /api/sync — E2EE 클라우드 동기화 업로드
+```
+Headers: x-sync-auth: base64url({ assetId, ts, nonce, sig })  // Ed25519 서명, 신선도 300초
+Body: { iv: string, ciphertext: string, baseVersion: number, pubKey: string }
+→ 200: { version: number }
+→ 409: { asset: { version: number } }  // conflict — 원격이 더 새로움
+→ 401: 서명 검증 실패
+```
+- 서버 저장: `csync:asset:{assetId}` (Upstash Redis or 파일). 구조: `AssetEnvelope { pubKey, iv, ciphertext, version, updatedAt }`
+- TOFU(처음 PUT이면 pubKey 등록), 이후 PUT은 등록된 pubKey로 서명 검증
+- `baseVersion` < 서버 version → 409 conflict 반환
+
+### GET /api/sync — E2EE 클라우드 동기화 다운로드
+```
+Headers: x-sync-auth: base64url({ assetId, ts, nonce, sig })
+→ 200: { asset: { iv, ciphertext, version, pubKey, updatedAt } }
+→ 404: 금고 미존재 (첫 pull)
+→ 401: 서명 검증 실패
+
+GET /api/sync?meta=1
+→ 200: { version: number }  // 폴링용 버전 조회만
+```
+
+---
+
+### GET /api/pwa-manifest — PWA manifest 동적 생성
+```
+GET /api/pwa-manifest?startUrl=/path
+→ manifest JSON (start_url 필드만 동적, 나머지는 /manifest.webmanifest 동일)
+```
+- PC/Android 설치 시 `prepareInstall(startUrl)`에서 `<link rel="manifest">` href를 이 엔드포인트로 교체 → Chrome이 `beforeinstallprompt` 재발생 → 유효한 이벤트로 `installPWA()` 호출
+- iOS는 직접 API 없음 — `setManifestStartUrl(startUrl)` 로만 manifest 교체 후 홈 화면 추가 가이드 표시
+
+---
+
 ### POST /api/feedback — 의견·요청 Slack 전달
 사용자 의견을 Slack Incoming Webhook으로 전달. **서버 저장 없음.** **파일:** `src/app/api/feedback/route.ts`
 
@@ -109,7 +144,7 @@ Body: { message: string(필수, 최대 2000자 절단), nickname?: string, conta
 - `SLACK_WEBHOOK_URL` 환경변수로 `{ text }` POST (`*[secretasset 의견·요청]*` + 닉네임/연락처/본문)
 - IP `checkRateLimit` 재사용(`share/route.ts`와 동일 버킷, 분당 10회), `getClientIp` 동일 패턴
 - **에러:** 400(message 공백/잘못된 요청) / 429(rate limit) / 500(`SLACK_WEBHOOK_URL` 미설정) / 502(웹훅 실패)
-- 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/asset/_components/header/tool-menu.tsx) 더보기 > "의견·요청 보내기"
+- 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/tool-menu.tsx) 더보기 > "의견·요청 보내기"
 
 ---
 
@@ -174,6 +209,11 @@ interface ICacheStorage {
     // 요청일 → 응답일 매핑. 휴장으로 요청일≠응답일이어도 다음 호출 영구 hit
 
   getGeminiDailyCount(date) / incrementGeminiDailyCount(date) / checkGeminiDailyLimit(date, limit)
+
+  // E2EE 클라우드 동기화 (AssetEnvelope)
+  getAssetEnvelope(assetId): AssetEnvelope | null
+  setAssetEnvelope(assetId, envelope: AssetEnvelope): void
+  // Redis 키: csync:asset:{assetId}
 }
 
 getCacheStorage(): ICacheStorage

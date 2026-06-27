@@ -1,0 +1,269 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { X, ChevronRight } from "lucide-react";
+import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
+import { TUTORIAL_STEP_CONFIGS } from "./tutorial-step-config";
+import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
+import { MAIN_PALETTE } from "@/config/theme";
+
+const TOTAL_STEPS = Object.keys(TUTORIAL_STEP_CONFIGS).length; // 말풍선 "x / N" 표기용
+
+interface TargetRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+const TOOLTIP_MARGIN = 15;
+const HIGHLIGHT_PADDING_X = 12 + 100; // 좌우
+const HIGHLIGHT_PADDING_Y = 12 + 200; // 상하
+const OVERLAY_COLOR = "rgba(0,0,0,0.70)";
+
+/** Sheet/Dialog/Drawer가 열려있으면 true */
+function useIsModalOpen() {
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      setIsOpen(
+        !!document.querySelector(
+          '[role="dialog"][data-state="open"], [data-vaul-drawer][data-state="open"], [role="dialog"]:not([data-state="closed"])'
+        )
+      );
+    };
+    const mo = new MutationObserver(check);
+    // subtree + childList로 DOM 삽입도 감지 (Radix UI는 open 시 DOM에 삽입)
+    mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-state"] });
+    check();
+    return () => mo.disconnect();
+  }, []);
+  return isOpen;
+}
+
+/** data-tutorial 속성을 가진 요소의 viewport 기준 rect를 반환 */
+function useTargetRect(targetAttr: string | null, activeStep: TutorialStep | null, isModalOpen: boolean) {
+  const [rect, setRect] = useState<TargetRect | null>(null);
+
+  const measure = useCallback(() => {
+    if (!targetAttr) { setRect(null); return; }
+    const el = document.querySelector(`[data-tutorial="${targetAttr}"]`);
+    if (!el) { setRect(null); return; }
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) { setRect(null); return; }
+    setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+  }, [targetAttr]);
+
+  useEffect(() => {
+    // 약간 지연 후 첫 측정 (렌더링 완료 보장)
+    const t = setTimeout(measure, 80);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+
+    // DOM 변경(새 요소 삽입, 클래스/스타일 변경 등)을 감지하여 타겟을 다시 찾음
+    const mo = new MutationObserver(measure);
+    mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "style", "data-state"] });
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+      mo.disconnect();
+    };
+  }, [measure, activeStep, isModalOpen]);
+
+  return rect;
+}
+
+/**
+ * 타겟+말풍선을 합친 bounding box 바깥을 4개 div 패널로 덮는 오버레이.
+ * SVG/clipPath 방식은 stacking context 문제로 포기.
+ * div 패널은 z-index만으로 작동하므로 stacking context 영향 없음.
+ */
+function SpotlightOverlay({ rect }: { rect: TargetRect; tooltipRect: TargetRect }) {
+  const PX = HIGHLIGHT_PADDING_X;
+  const PY = HIGHLIGHT_PADDING_Y;
+  const top = rect.top - PY;
+  const left = rect.left - PX;
+  const right = rect.left + rect.width + PX;
+  const bottom = rect.top + rect.height + PY;
+
+  const s: React.CSSProperties = {
+    position: "fixed",
+    background: OVERLAY_COLOR,
+    zIndex: 9998,
+    pointerEvents: "none",
+  };
+
+  return (
+    <>
+      {/* 상단 */}
+      <div style={{ ...s, top: 0, left: 0, right: 0, height: Math.max(0, top) }} />
+      {/* 하단 */}
+      <div style={{ ...s, top: bottom, left: 0, right: 0, bottom: 0 }} />
+      {/* 좌측 (상하 사이) */}
+      <div style={{ ...s, top, left: 0, width: Math.max(0, left), height: bottom - top }} />
+      {/* 우측 (상하 사이) */}
+      <div style={{ ...s, top, left: right, right: 0, height: bottom - top }} />
+    </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Step 1~5: 타겟 하이라이트 + 말풍선
+// ──────────────────────────────────────────────────────────────
+function StepOverlay({
+  step,
+  onComplete,
+  targetAttr,
+  isWaiting,
+}: {
+  step: TutorialStep;
+  onComplete: () => void;
+  targetAttr: string;
+  isWaiting: boolean;
+}) {
+  const isModalOpen = useIsModalOpen();
+  const rect = useTargetRect(targetAttr, step, isModalOpen);
+  const config = TUTORIAL_STEP_CONFIGS[step];
+
+  if (isWaiting) return null;
+  // Sheet/Dialog 열려있으면 overlay 숨김
+  if (isModalOpen) return null;
+  // 타겟 요소가 DOM에 없으면 렌더링 하지 않음
+  if (!rect) return null;
+
+  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 0;
+
+  // 말풍선 위치 계산 — rect(타겟 원본) 기준
+  const tooltipWidth = Math.min(300, vw - 24);
+  let tooltipLeft = rect.left + rect.width / 2 - tooltipWidth / 2;
+  tooltipLeft = Math.max(12, Math.min(vw - tooltipWidth - 12, tooltipLeft));
+
+  const spaceBelow = vh - (rect.top + rect.height);
+  const showAbove =
+    config.preferPosition === "top" ||
+    (config.preferPosition === "auto" && spaceBelow < 180);
+  const tooltipHeight = 140;
+  // Step 1(FAB)의 경우 말풍선을 좀 더 위로 올리기 위해 마진을 추가 조정
+  const margin = step === 1 ? 35 : TOOLTIP_MARGIN;
+  const tooltipTop = showAbove
+    ? rect.top - margin - tooltipHeight
+    : rect.top + rect.height + margin;
+
+  const tooltipRect: TargetRect = { top: tooltipTop, left: tooltipLeft, width: tooltipWidth, height: tooltipHeight };
+
+  const Icon = config.icon;
+
+  const displayTitle = config.title;
+  const displayDescription = config.description;
+
+  return createPortal(
+    <>
+      <SpotlightOverlay rect={rect} tooltipRect={tooltipRect} />
+
+      {/* 말풍선 */}
+      <div
+        className="fixed rounded-xl shadow-xl border border-primary/80 p-4 flex flex-col gap-3 animate-in fade-in duration-150 bg-background text-foreground"
+        style={{ top: tooltipTop, left: tooltipLeft, width: tooltipWidth, zIndex: 10000 }}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2.5">
+            <div
+              className="size-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+              style={{ backgroundColor: MAIN_PALETTE[0] }}
+            >
+              <Icon className="size-3.5" style={{ color: MAIN_PALETTE[0] }} />
+            </div>
+            <div>
+              <p className="text-sm font-bold leading-snug" style={{ color: MAIN_PALETTE[0] }}>{displayTitle}</p>
+              {displayDescription && (
+                <p className="text-sm text-foreground mt-1 leading-snug">{displayDescription}</p>
+              )}
+            </div>
+          </div>
+          <button onClick={onComplete} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">{step} / {TOTAL_STEPS}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onComplete}
+              className="flex items-center gap-1 text-sm font-semibold text-white px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
+              style={{ backgroundColor: MAIN_PALETTE[0] }}
+            >
+              다음
+              <ChevronRight className="size-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// 메인 TutorialOverlay
+// ──────────────────────────────────────────────────────────────
+export function TutorialOverlay({
+  isWelcomeGuide,
+  isSharePending,
+}: {
+  isWelcomeGuide: boolean;
+  isSharePending: boolean;
+}) {
+  const activeStep = useTutorialStore((s) => s.activeStep);
+  const isTutorialFinished = useTutorialStore((s) => s.isTutorialFinished);
+  const isWaiting = useTutorialStore((s) => s.isWaiting);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const targetAttr =
+    activeStep !== null
+      ? TUTORIAL_STEP_CONFIGS[activeStep].targetAttr
+      : null;
+
+  // document 캡처 단계 클릭 리스너 — 사용자가 하이라이트된 실제 타겟을 클릭하면 해당 스텝 완료
+  useEffect(() => {
+    if (!targetAttr || activeStep === null) return;
+    const handler = (e: MouseEvent) => {
+      const el = document.querySelector(`[data-tutorial="${targetAttr}"]`);
+      const path = e.composedPath ? e.composedPath() : [];
+      const hit = el && (el.contains(e.target as Node) || path.includes(el));
+      if (!hit) return;
+      window.dispatchEvent(new CustomEvent(`tutorial-complete-step${activeStep}`));
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, [targetAttr, activeStep]);
+
+  if (!mounted) return null;
+  if (isSharePending) return null;
+  if (isTutorialFinished) return null;
+  if (activeStep === null) return null;
+  // 빈 자산(웰컴가이드)에서는 자산 페이지 타겟이 없으므로 표시하지 않음
+  if (isWelcomeGuide) return null;
+
+  if (!targetAttr) return null;
+
+  return (
+    <StepOverlay
+      key={activeStep}
+      step={activeStep}
+      onComplete={() => {
+        // "다음"은 안내만 진행(동작 없이 다음 스텝으로). 실제 기능은 하이라이트된 요소를 직접 클릭.
+        if (activeStep !== null) {
+          window.dispatchEvent(new CustomEvent(`tutorial-complete-step${activeStep}`));
+        }
+      }}
+      targetAttr={targetAttr}
+      isWaiting={isWaiting}
+    />
+  );
+}

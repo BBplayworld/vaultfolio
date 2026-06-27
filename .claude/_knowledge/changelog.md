@@ -4,6 +4,90 @@
 
 ---
 
+## 2026-06-25
+
+### SVG 가이드 애니메이션 공용화 + 복원 코드 개명 + 공지 수동 진입 (issue-4.5)
+
+- **SVG 애니메이션 공용 플레이어** ([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)): 3벌 중복 플레이어를 `StepAnimationPlayer` 단일 컴포넌트로 통합(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). **멈춤/시작 버튼 + 단계 점 클릭 이동**(`pointer-events-auto`로 공지 `pointer-events-none` 내부에서도 동작), 컷 간격 3500ms 통일, `prefers-reduced-motion` 시 자동재생 끔. 신규 `SyncSetupAnimation`(기기 동기화 4컷). 새 기기 화면은 `PhoneFrame tone="new"`(teal)+"새 기기" 배지로 구분, 더보기 ⋯는 가로 점.
+- **PWA 설치 가이드 단일화** ([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)·[pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx)): 공지와 실제 설치 가이드(`InstallGuideContent`)가 동일 `PwaSetupAnimation({platform,browser})` 공유(구 `InstallGuideAnimation` 제거). **①앱 설치(복원 코드)·④새 기기 복원은 공통, ②③은 접속 브라우저별**(`getGuideSteps` 공유/메뉴→홈 추가) SVG. PC는 ②③ 생략(공통 2컷). notice는 `detectBrowserEnv()`로 브라우저 감지해 전달. **iOS Safari 구형/신형 분기**(`iosSafariModern`=UA iOS 메이저 ≥ 15): 신형은 하단 ⋯ 메뉴→공유(`IosSafariNewShareStep` 신규), 구형은 하단 중앙 공유. 컷 간격 3000ms. **구형 iOS Safari 컷 미전환 버그**(opacity 스택 레이어 repaint 누락) → **활성 컷 1개만 `key={active}` remount 렌더**로 전환 보장, 진입 페이드는 `motion-safe`.
+- **iPad UA 오인식 수정** ([detect-browser.ts](../../src/lib/pwa/detect-browser.ts)·[use-pwa-install.ts](../../src/hooks/use-pwa-install.ts)): iPadOS 13+ Safari가 데스크톱(Macintosh) UA로 위장 → `pc` 오분류로 iPad가 설치·복원 가이드 대신 PC 문제해결을 받던 버그. `maxTouchPoints>1`로 iPad=iOS 판별, `usePWAInstall.isIOS/isInApp`도 `detectBrowserEnv()` 단일 소스로 위임. `parseIosMajor`는 위장 UA용 `version/N` 폴백 추가.
+- **"복원 코드" 개명** ([pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)·[pwa-connect-prompt.tsx](../../src/app/(main)/_components/pwa/pwa-connect-prompt.tsx) 등): 비동기화 설치 코드 "연결 코드" → **"복원 코드"**(일회성 데이터 복원이라 의미 명확화, `동기화 코드`와 구분). "다른 기기 연결 및 복구 링크" → **"다른 기기 동기화 링크"**. 자동 pull 폴링 60→30s.
+- **공지 PWA 우선 + 복원 2종 구분** ([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx), `NOTICE_ID="20260624"`): 카드 순서 PWA 설치 먼저 → 기기 동기화. PWA 복원을 **동기화=금고 암호 / 일반=PIN 4자리** 2케이스로 텍스트·SVG 명확 구분.
+- **공지 수동 진입 통합** ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): "앱 가이드 보기" → **"앱 가이드 · 공지사항"** 통합 선택기. 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용(메뉴 과밀 회피).
+- **렌더 버그 수정**: SVG `fill={HINT}`(색 토큰 className을 fill에 직접 사용 → 다크모드 미표시) → `fill="currentColor" className={HINT}` 정정(비밀번호 점·PIN 표시).
+- **이유:** 향후 SVG 가이드 확장 대비 단일 플레이어로 일원화하고 사용자 제어(멈춤/이동) 추가. "연결 코드"가 "기기 연결/동기화"와 혼동되어 행위(복원) 기준으로 개명. 공지를 메뉴 과밀 없이 상시 재열람 가능하게.
+
+---
+
+## 2026-06-22
+
+### PWA 설치 가이드 통일 + 행위 prefix 통일 + UI 디테일 폴리시 (issue-4.5)
+
+- **설치 가이드 단일화** ([pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) 신규 · 구 `pwa-install-guide-dialog.tsx` 제거): 3탭 다이얼로그 → `InstallGuideContent({ env })` 통합 본문. flow의 `iosStep`·`guideStep`이 동일 컴포넌트 임베드. 모바일=감지 브라우저 설치 애니메이션+step1/step2 문구+"다른 브라우저인가요?" 칩 재선택+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 문제해결.
+- **브라우저 환경 감지** ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts) 신규): `detectBrowserEnv()` → `BrowserEnv { platform: ios/android/pc, browser: safari/chrome/whale/samsung, isInApp }`. **Android(크롬·웨일·삼성인터넷) 가이드 추가** — iOS 한정에서 확장. `InstallGuideAnimation`이 `platform`·`browser` props로 분기.
+- **행위 prefix 통일** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx), [asset-data-context.tsx](../../src/contexts/asset-data-context.tsx), [config.ts](../../src/lib/cloud-sync/config.ts), [pwa-connect-prompt.tsx](../../src/app/(main)/_components/pwa/pwa-connect-prompt.tsx) 등): 동기화 연결/복구 사용자 문구·로그 prefix 일관화.
+- **UI 디테일 폴리시(make-interfaces-feel-better)**: `transition-all` → 변하는 속성만 명시(button/toggle/switch/accordion/dialog/navigation-menu/sidebar/kpi-card). `Button` 누름 피드백 `active:not-disabled:scale-[0.96]` 내장 + `static` prop으로 비활성. 뷰 진입 stagger(`motion-safe` animate-in: dashboard/detail-hub/performance-hub, FAB 리스트 40ms 분산). `tabular-nums`(수량·환율·건수), `text-balance`/`text-pretty`(제목·본문). 작은 닫기 버튼 `after:-inset-*`로 40×40 히트영역, 헤더 아이콘 버튼 `h-10 sm:h-11`. iOS 가이드 SVG aspect-ratio 폴백(`paddingTop` 스페이서).
+- **이유:** iOS 전용이던 설치 가이드를 Android 포함 전 환경으로 일반화하고 환경 자동감지로 단일 컴포넌트화(다이얼로그 중복 제거). 누름·진입·숫자 정렬 등 마이크로 인터랙션을 스킬 체크리스트로 일괄 정비.
+
+---
+
+## 2026-06-20 (2)
+
+### 기기 동기화 명칭 통일 + 앱 잠금 웹 확장 + 공지 컴포넌트화 (issue-4.5)
+
+- **명칭 통일** — 사용자 노출 텍스트 전체: "클라우드 동기화" → "기기 동기화 Plus" / "지금 백업" → "지금 동기화" / "클라우드 → 이 기기 불러오기" → "기기 데이터 가져오기" / "이 기기 연결 해제" → "이 기기 연결 끊기". 변경 파일: [cloud-sync-menu-entry.tsx](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx), [settings-page.tsx](../../src/app/(main)/_components/header-menu/settings-page.tsx), [tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx), [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx), [notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx).
+- **앱 잠금 설정 웹 확장** ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx)): 기존 `standalone && authEnabled` → `authEnabled`만으로 조건 변경. 웹 브라우저에서도 잠금 ON 시 세션 진입마다 PIN 요구.
+- **공지 컴포넌트화** ([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx) 신규): branch 단위 공지를 실제 사이트 컴포넌트(`pointer-events-none`)로 구성. `NOTICE_ID="202606"`, `NOTICE_TITLE`, `NoticeContent` export. 내용: 기기 동기화 Plus + 앱 설치(PWA) 소개.
+- **이유:** "클라우드"라는 모호한 표현 대신 기기 중심 명칭으로 서비스 본질 강조. 앱 잠금을 PWA 전용에서 웹으로 확대해 비PWA 사용자도 보안 설정 활용 가능.
+
+---
+
+## 2026-06-20
+
+### PWA 설치 흐름 공용화 + 웰컴가이드 모바일 최적화 + iOS 가이드 SVG 실사화 (issue-4.5)
+
+- **설치 흐름 공용 컴포넌트 추출** ([pwa-install-flow.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/pwa/pwa-install-flow.tsx) 신규): 홈 설치 버튼에 인라인돼 있던 설치 다이얼로그+전체 로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)을 단일 컴포넌트로 분리. 트리거는 children render-prop(`{ onClick, loading, isIOS, isInApp, isInstallable }`)로 외부 주입. [pwa-install-button.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 넘기는 얇은 래퍼로 축소(공개 API 동일).
+- **웰컴가이드 모바일 웹 PWA-우선 레이아웃** ([welcome-guide.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/layout/onboarding/welcome-guide.tsx)): `mobileWeb = mounted && useIsMobile() && !isStandalone`일 때 보안·포트폴리오 소개 노출 후 PWA 설치 유도를 메인 CTA로 강조. 즉시 자산 등록 CTA는 기본 숨김, "설치 없이 웹에서 바로 시작" 링크 클릭(`showAssetCta`) 시에만 노출. "웹앱 설치하기"는 홈 버튼과 동일한 `PwaInstallFlow` 호출. 기존 `PwaInstallGuideDialog` 직접 호출 제거. 데스크톱·standalone은 기존 레이아웃 유지.
+- **iOS step1 가이드 SVG 실사화** ([pwa-guide-illustrations.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)): 실제 브라우저 스크린샷 기준으로 주소창 하단 + 진입 구조 재현. Safari=하단 우측 원형 `⋯`→세로 팝업 최상단 `공유`(`IosShareStep`), Chrome=주소창 우측 `공유`(box-arrow) 직접 탭(`IosChromeShareStep`), Whale=하단 우측 `≡`→그리드 팝업의 `공유` 타일(`IosWhaleShareStep`). step2(`IosAddToHomeStep`)는 3종 공통. 다이얼로그 step1 문구도 각 구조에 동기화.
+- **app-guide `"use client"` 추가** ([app-guide.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/app-guide.tsx)): `useState/useEffect` 사용으로 서버 컴포넌트 빌드 에러 발생 → 지시어 추가.
+- **이유:** 홈 버튼과 웰컴가이드가 각각 다른 설치 경로(인라인 vs `PwaInstallGuideDialog`)를 써서 불일치 → 단일 흐름으로 통합. 모바일 웹 신규 사용자를 PWA 설치로 집중 유도(미설치 선택 시에만 웹 자산 등록). iOS 가이드 SVG가 실제 UI와 달라 사용자 혼동 → 실제 스크린샷 구조로 교정.
+
+---
+
+## 2026-06-14
+
+### PWA iOS/인앱 브라우저 설치 플로우 개선 + 앱가이드 가독성 향상 (issue-4.5)
+
+- **iOS 전 브라우저 감지** ([use-pwa-install.ts](file:///e:/2.project/js/secret-asset/src/hooks/use-pwa-install.ts)): `isIOS` 감지를 Safari 한정에서 `/iphone|ipad|ipod/` UA 전체로 확장. iOS Chrome·웨일에서도 홈 화면 추가 가이드가 노출됨.
+- **인앱 브라우저 감지 + 외부 브라우저 유도** ([pwa-install-button.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/pwa/pwa-install-button.tsx)): `isInApp` (카카오톡·인스타·FB·라인·네이버 인앱 UA) 감지 추가. 인앱에서는 현재 URL 클립보드 복사 → `inAppStep` 외부 브라우저 유도 가이드(메뉴→다른 브라우저로 열기→앱 설치) 표시.
+- **iOS 가이드 개선**: `navigator.share()` 호출 제거. 대신 `iosStep` 플로우(공유→홈 화면에 추가→추가) 가이드 UI로 교체. 버튼 라벨 "추가 방법 보기" (Safari 제한 문구 없음).
+- **`apple-touch-icon` / `appleWebApp` 메타데이터 추가** ([layout.tsx](file:///e:/2.project/js/secret-asset/src/app/layout.tsx)): `appleWebApp: { capable: true, statusBarStyle: "black-translucent" }` + `icons.apple` (`/icons/icon-192x192.png`, 180×180) — iOS 홈 화면 아이콘 및 스탠드얼론 모드 인식.
+- **PwaInstallGuideDialog 재검토** ([pwa-install-guide-dialog.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/pwa/pwa-install-guide-dialog.tsx)): 제목 "앱 설치가 안 되나요?", 설명 3상황(버튼 안 보임/재설치 불가/설치 불가 환경) 재작성. PC·Android·iOS 탭에 인앱/Firefox 불가 환경 주의 콜아웃 추가. iOS 탭 라벨 "iOS (Safari·크롬·웨일 등)"로 브라우저 무관 일반화.
+- **앱가이드·웰컴가이드 가독성 향상** ([app-guide.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/app-guide.tsx), [welcome-guide.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/layout/onboarding/welcome-guide.tsx)): 카드 여백 `p-5`, 제목 `text-[15px]`, 본문 `text-[13px] leading-7 tracking-[0.01em]` 통일.
+- **이유:** iOS에서 설치 버튼을 눌러도 아무 반응 없던 문제 해결. 카카오톡 등 인앱 브라우저에서 홈 화면 추가 불가 환경을 명확히 안내. iOS 홈 화면 아이콘 품질 개선(apple-touch-icon 누락).
+
+---
+
+### Plus 구독 모델을 위한 용어(Asset) 정의 및 코드 표준화
+
+- **용어집 작성 및 표준 정의**: `.claude/_knowledge/asset-and-subscription.md`를 생성하여 전체 자산 데이터 묶음을 `Asset` (식별자 `assetId`), 서버 저장 암호화 본을 `AssetEnvelope`으로 명확히 규정.
+- **서버 저장소 통합 및 `sync-storage.ts` 삭제**: 
+  * [sync-storage.ts](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/sync-storage.ts) 파일을 전면 삭제하고, 파일/Redis 입출력 동작을 [cache-storage.ts](file:///e:/2.project/js/secret-asset/src/lib/cache-storage.ts)의 `getAssetEnvelope` 및 `setAssetEnvelope` 메서드로 이관하여 서버 캐시/스토리지 로직을 단일화.
+  * `UpstashCacheStorage`에서 Redis 키를 `csync:asset:${assetId}`로 변경하여 저장 관리. (레거시 검증이므로 하위 호환 마이그레이션 생략)
+- **클라우드 동기화 및 크립토 리네임**:
+  * [config.ts](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/config.ts): `VaultEnvelope` -> `AssetEnvelope` 변경 및 `SYNC_HASH_PARAM`을 `"asset"`으로 변경.
+  * [crypto.ts](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/crypto.ts): `VaultKeys` -> `AssetKeys` 리네임 및 주석 내 `syncId` 혼용 제거, `assetId`로 명확히 통일.
+  * [sync-state.ts](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/sync-state.ts): 불필요한 레거시 `syncId` 마이그레이션 분기 제거 및 `assetId` 기반으로 단순화.
+  * [sync-client.ts](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/sync-client.ts): `pushVault`/`pullVault` -> `pushAsset`/`pullAsset` 리네임, GET API 응답 JSON 필드 `vault` -> `asset` 변경.
+- **API 라우트 및 UI 컴포넌트 업데이트**:
+  * [route.ts (API Sync)](file:///e:/2.project/js/secret-asset/src/app/api/sync/route.ts): `sync-storage` 대신 `cache-storage` 싱글톤을 활용하여 E2EE 암호 봉투 저장/조회. API 응답 필드 `vault` -> `asset` 변경.
+  * [cloud-sync-provider.tsx](file:///e:/2.project/js/secret-asset/src/lib/cloud-sync/cloud-sync-provider.tsx): `SYNC_HASH_PARAM="asset"` 반영으로 동기화 링크가 `#asset=<assetId>`로 빌드/탐지되도록 수정. `sync` 해시 폴백 감지 유지.
+  * [cloud-sync-connect-dialog.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx) 및 [cloud-sync-menu-entry.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx): 리네임된 변수명 연동 및 UI 텍스트 정비.
+  * [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/tool-menu.tsx): Share(1회 공유)와 Cloud Sync(지속 동기화)의 가치 포지셔닝 차이를 설명 및 메뉴 카피에 명시.
+- **이유:** 향후 Plus 유료 구독 모델을 안정적으로 설계하고 연동하기 위해 구독/과금 대상의 공통 단위를 `asset` (`assetId`)으로 확정하고, 중구난방이던 서버 저장 키와 URL 파라미터, 소스 코드 구조를 깔끔하게 단일화함.
+
+---
+
 ## 2026-06-11
 
 ### 주식 스샷 공통/개별 적용 옵션 + 의견·요청 보내기(Slack 웹훅) (issue-4.3)
@@ -98,111 +182,5 @@
 ### 환율 히스토리 7일로 확장
 - `EXCHANGE_HISTORY_DAYS` 3→7 (`lib/cache-storage.ts`) — 연휴·주말 컷오프 버퍼
 
-## 2026-05-21
-
-### 성과-수익 기간별 종가 기준 2옵션 (issue-3.9)
-- `ProfitBasis = "sameBusinessDay" | "kstAccessDay"` 도입 (기본 sameBusinessDay)
-  - `sameBusinessDay`(동일 영업일): 서버에서 국내·해외 모두 `getDates(period,"foreign")` 사용 → 같은 영업일 종가로 정렬
-  - `kstAccessDay`(KST 접속일): 국내=domestic, 해외=foreign 독립 산출 (기존 동작)
-- `/api/finance/profit`에 `basis` 쿼리 추가, `fetchProfitRef(options.basis)`, `getProfitCacheKey(tickers,period,basis)` — 캐시 키 `secretasset_profit:{basis}:...`로 옵션 분리
-- 전역 store `src/stores/profit-basis-store.ts` (zustand, localStorage 동기화 + hydrate). profit-chart 토글 + stock-tab 전일대비가 함께 구독
-- **스냅샷·기존 호출은 basis 미전달 = kstAccessDay(legacy)** 유지 → 스냅샷은 항상 오늘자 종가 기준 (옵션 무관)
-- 옵션 영속화: `STORAGE_KEYS.profitBasis` + 내보내기 JSON(`profitBasis`) + 공유 토큰 packV7 parts[9]("k"=kstAccessDay)
-- UI: 시작/종료 종가 영역을 표 형태(국내/해외/합계 행 × 시작/종료 열)로 재구성, 종가 날짜는 베이스 날짜 + 마감 메타(MM-DD HH:MM) 2줄. 해외 일별 표시의 강제 +1 shift 제거 → 두 옵션 공통으로 ET 거래일을 그대로 표기
-- **이유:** 국내·해외 시차로 같은 영업일/접속일 기준 수익이 혼동되어 사용자가 명시적으로 기준을 선택하도록
-
-## 2026-05-16
-
-### 시간별 주식 갱신 + 기준가 캐시 안정화 (issue-3.5, 3.6)
-- `stock-cache-slot.ts` 신규: 장중 1시간 슬롯 / 장외 effectiveDate 단일 캐시 슬롯 추상화. 서버·클라 공용 순수 함수
-- `/api/finance/profit` 2단 캐시 도입: `REF_DATE_MAP` (요청일→KIS 응답일) + `REF_PRICES` (응답일 기준 가격) → 휴장/공휴일로 요청일과 응답일이 달라도 다음 호출부터 영구 hit
-- 해외 과거종가: STOCKS 캐시의 market 필드에서 EXCD 사전 조회 → NAS/NYS/AMS 순차 fallback 호출 제거
-- `fetchProfitRef` 점진 로드: BATCH_SIZE=3, 1초 간격 배치 + `onProgress`/`onComplete`/`signal` 옵션 + `inFlightFetches` Map dedup
-- daily 캐시 키에서 us_refDate 제거 — KST 자정에 kr과 함께 변경되므로 키 단순화
-- ProfitCard tickerList를 currentPrice 무관 풀세트로 고정 → syncTodayStockPrices가 가격을 채우는 동안에도 캐시 키 안정
-- **이유:** 시간별 슬롯 전환 직후 stale 캐시 표시 + tickerList 부분집합에서 캐시 누락 회귀
-
-### 주식 비활성 상태 자동 감지 (issue-3.3 / 3.4 ~ 3.6)
-- `Stock` 타입에 `inactiveStatus: "delisted"|"halted"`, `inactiveReason`, `inactiveCheckedAt` 추가
-- `classifyOverseasInactive()`: lstg_abol_dt → delisted / ovrs_stck_tr_stop_dvsn_cd / last_rcvg_dtime>30일 → halted
-- `computeNetAsset` / `getAssetSummary`: delisted 제외, halted는 마지막 currentPrice 유지
-- `useFilteredStockData`, `DividendCard`, `MonthlyDividendStocks`, `ProfitCard`: delisted 필터링
-- `StockRowHeader`: 거래정지(amber) / 상장폐지(red) Badge 표기
-- 공유 토큰 v7.2 stocks 필드에 inactiveStatus 직렬화 ("d"/"h"/"")
-- **이유:** 상장폐지·거래정지 종목이 자산 평가를 왜곡 + 보유 종목 상태를 사용자에 시각화
-
-### 메뉴-앱가이드 보기 단독 모드
-- `AppGuide`: localStorage(`secretasset_guide_dismissed`) 제거 → 평소 hidden, `trigger-restore-guide` 수신 시에만 표시
-- `tutorialStore.showStep0(standalone=true)` + `closeStandaloneStep0()`: 단독 보기 시 버튼 "확인", 다음 단계 미진행
-- `WelcomeGuide`에서도 `isStandaloneStep0`이면 Step 0 표시
-- `migrateStorageKeys`: 레거시 guideDismissed 키 정리
-- **이유:** 가이드를 "한 번 닫으면 영원히 숨김"에서 "필요할 때 즉시 다시 보기"로 전환
-
-### 튜토리얼 키 단일 객체로 통합
-- step별 12개 키(`secretasset_tutorial_step{0..5}_{done|skipped}`) → 단일 키 `secretasset_tutorial_status` (Record<step, status>)
-- `one-time-migrations.ts`의 `merge-tutorial-status` 마이그레이션 — 레거시 존재 시에만 통합
-- migration id 날짜 prefix 제거: 매 진입 시 done 체크 → 미실행만 실행 패턴 명시화
-- **이유:** 키 관리 단순화 + 향후 step 추가 시 키 폭발 방지
-
-### profit 캐시 일괄 정리 마이그레이션
-- `2026-05-16-clear-profit-cache-final`: 응답일 통일 + tickerList 정렬 + daily 캐시 키 단순화 이전 entry 일괄 제거
-- **이유:** 캐시 구조 변경 누적 → 일관된 새 캐시로 강제 갱신
-
-### WelcomeGuide 순자산 카드 + AppGuide 통합
-- 순자산 카드: `primary.bgLight` 토대 + `DataSourceBadge kind="realtime"` 표시, 폰트 사이즈 정리
-- `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate` 전달, `screenshotMode=false`
-- `page.tsx`의 `isWelcomeGuide` 분기에 `<AppGuide />` 추가 (가이드 영역도 함께 노출)
-- **이유:** 첫 진입 시 핵심 정보(순자산·환차익·일별손익)를 더 확실히 보여주기
-
-### KIS 과거종가 진단 로그 강화
-- domestic/overseas `fetchXxxHistoricalPrice`에 HTTP 실패 / 빈 데이터 / 유효 row 없음 / 가격 0 케이스별 console.warn
-- **이유:** 종목별로 ref price miss가 발생하는 원인을 운영 로그로 빠르게 식별
-
----
-
-## 2026-05-02
-
-### AssetPageTabs 컴포넌트 분리 및 홈 서브탭 추가
-- `page.tsx` 탭 로직 → `layout/asset-page-tabs.tsx`로 이동
-- 홈 탭 서브탭(전체/금융/부동산/부채) 추가 — `useDashboardTabs` 훅으로 동적 생성
-- 탭이 1개면 TabsList 숨김
-
-### local-storage.ts 신규 분리
-- `STORAGE_KEYS`, `STORAGE_KEY_PREFIXES`, `migrateStorageKeys` → `src/lib/local-storage.ts`로 분리
-- `asset-storage.ts`에서 re-export (하위 호환 유지)
-
-### profit-utils.ts 신규 추가
-- `fetchProfitRef(tickers, period)` — localStorage 캐시 → `/api/finance/profit` 조회
-
-### finance-service.ts 배당·과거종가 조회 추가
-- `fetchDividendDomestic`, `fetchDividendOverseas`, `fetchDomesticHistoricalPrice`, `fetchOverseasHistoricalPrice`
-- `DividendPayoutResult`, `DividendFrequency` 타입 추가
-
-### TopBar 컴포넌트 도입 + AppGuide 리팩터링
-- `top-bar.tsx`: GuideMiniButton + ShareScreenshotButton + ToolMenu + ThemeSwitcher 통합
-- AppGuide: `trigger-restore-guide`/`trigger-dismiss-guide` CustomEvent 수신
-
-### 공유 토큰 v7.2 (Zero-Knowledge)
-- `v72Z` 프리픽스: PIN + localKey 조합 암호화
-
----
-
-## 2026-04-26
-
-### 디렉토리 구조 재편 — layout/ 신설
-- `floating-add-button.tsx`, `welcome-guide.tsx`, `copyright-footer.tsx` → `layout/`으로 이동
-
-### page.tsx 탭 구조 3탭으로 정리
-- 홈/상세/성과 탭으로 단순화
-
-### ProfitCard 수익 차트 — 기준가 대비 현재금액 표시 추가
-- 인증샷 섹션 분리: 수익 > 기준가, 현재 금액 별도 표시
-
----
-
-## 2026-04-25
-
-### FloatingAddButton "빠른 이동" 섹션 추가
-- FAB Sheet에 자산 탭 바로가기 5개 추가
-- `navigate-to-tab` CustomEvent → `page.tsx`에서 수신
+<!-- 2026-05-21 항목은 "최근 10개 유지" 정책에 따라 제거됨 (성과-수익 기간별 종가 기준 2옵션 ProfitBasis) -->
 

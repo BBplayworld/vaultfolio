@@ -1,55 +1,55 @@
 # 컴포넌트 참조
 
-> 마지막 업데이트: 2026-06-09
+> 마지막 업데이트: 2026-06-22
 
-## 자산 컴포넌트 (`src/app/(main)/asset/_components/`)
+## 자산 컴포넌트 (`src/app/(main)/_components/`)
 
-> **디렉토리 rename(2026-05-23)**: `bottom-nav` → `forms`, `main-nav` → `views`, `top-nav` → `header`. `layout`·`tutorial`은 유지.
+> **구조 변경(2026-06)**: `(main)/asset/` 레이어 제거 → `(main)/_components/`로 평탄화, `header` → `header-menu`로 rename. (이전 2026-05-23 rename: `bottom-nav`→`forms`, `main-nav`→`views`, `top-nav`→`header`)
 
 ```
 _components/
-├── forms/asset-update/    # (구 bottom-nav)
-│   ├── input/              # 자산 입력 폼 + 목록 렌더링
-│   │   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
-│   │   ├── real-estate-input.tsx, cash-input.tsx, crypto-input.tsx, loan-input.tsx
-│   │   └── exchange-rate-input.tsx
-│   └── screenshot/         # 스크린샷 가져오기 다이얼로그
-│       ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
-│       ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
-│       ├── cash-screenshot-import.tsx, loan-screenshot-import.tsx  # 항상 append
-├── views/                 # (구 main-nav)
-│   ├── home/
-│   │   ├── dashboard.tsx           # 도넛+필터칩(InlineSelector) — Dashboard()
-│   │   └── (entry-cards.tsx 삭제됨 — 1차 탭 복원으로 대체)
+├── forms/                 # 자산 입력 폼 + 스크린샷/거래 다이얼로그
+│   ├── asset-update/
+│   │   ├── input/          # 자산 입력 폼 + 목록 렌더링
+│   │   │   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
+│   │   │   ├── real-estate-input.tsx, cash-input.tsx, crypto-input.tsx, loan-input.tsx
+│   │   │   └── exchange-rate-input.tsx
+│   │   └── screenshot/     # 스크린샷 가져오기 다이얼로그
+│   │       ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
+│   │       ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
+│   │       ├── cash-screenshot-import.tsx, loan-screenshot-import.tsx  # 항상 append
+│   └── trade/              # trade-input, trade-screenshot-import (매매 로그)
+│       └── guards/delete-rollback-dialog.tsx  # 반영 거래 삭제 롤백 확인
+├── views/                 # 페이지 본문 콘텐츠
+│   ├── home/dashboard.tsx           # 도넛+필터칩(InlineSelector) — Dashboard()
 │   ├── detail/
 │   │   ├── asset-detail-tabs.tsx    # 5탭 컨테이너 + 공통 유틸 export
-│   │   └── tabs/
-│   │       ├── stock-tab.tsx        # Card+CardHeader+CardTitle 외피, StockCard(screenshotMode·maskFn), 카테고리 selector는 SummaryHeader 아래
-│   │       ├── real-estate-tab.tsx, cash-tab.tsx, crypto-tab.tsx, loan-tab.tsx
-│   ├── activity/
-│   │   ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/월별/일별 InlineSelector(CardHeader)
-│   │   ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표
-│   │   ├── dividend-chart.tsx       # Hero(연간/월 배당) + InfoHint + 카테고리 범례 + 예상/실제 토글
-│   │   └── monthly-dividend-stocks.tsx
-│   └── data-source-badge.tsx        # "실시간" / "캐시" 등 데이터 출처 Badge
+│   │   ├── detail-hub.tsx, detail-summary-header.tsx
+│   │   ├── tabs/                    # stock/real-estate/cash/crypto/loan-tab
+│   │   │   └── stock-tab.tsx        # Card+CardHeader+CardTitle 외피, StockCard(screenshotMode·maskFn), 카테고리 selector는 SummaryHeader 아래
+│   │   ├── trades/stock-trades-view.tsx
+│   │   └── xray/                    # stock-xray-view, stock-insight-strip
+│   └── activity/
+│       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/월별/일별 InlineSelector(CardHeader)
+│       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표
+│       ├── dividend-chart.tsx       # Hero(연간/월 배당) + InfoHint + 카테고리 범례 + 예상/실제 토글
+│       └── performance-hub.tsx, monthly-dividend-stocks.tsx
 ├── layout/                # 라우팅·공용 UI
-│   ├── navigation-context.tsx      # NavigationProvider + useAssetNavigation
-│   ├── asset-page-tabs.tsx         # view 분기 라우터 (HomeView/DetailView/ActivityView)
-│   ├── inline-selector.tsx         # 모든 탭·셀렉터 공용 (size sm/md/lg, label ReactNode)
-│   ├── info-hint.tsx               # Popover hover/tap 패턴 (가이드 §3)
-│   ├── floating-add-button.tsx     # bg-foreground/85 FAB
-│   ├── scroll-to-top.tsx           # bg-foreground/70 utility (native button)
-│   ├── welcome-guide.tsx, notice-dialog.tsx, copyright-footer.tsx
-├── header/                # (구 top-nav)
-│   ├── top-bar.tsx                 # ← 뒤로가기 + 페이지 타이틀 + 인증샷·도구 아이콘
-│   ├── tool-menu.tsx               # 데이터 관리 + 기능(다크모드 통합)
-│   ├── app-guide.tsx, share/
+│   ├── navigation/        # navigation-context(NavigationProvider+useAssetNavigation), asset-page-tabs(view 분기 라우터), asset-dispatch
+│   ├── ui/                # inline-selector(size sm/md/lg), kpi-card, info-hint, prompt-preview-dialog
+│   ├── floating/          # floating-add-button(bg-foreground/85 FAB), scroll-to-top
+│   ├── onboarding/        # welcome-guide, notice, notice-dialog
+│   └── copyright-footer.tsx
+├── header-menu/           # top-bar(←+타이틀+아이콘), tool-menu, settings-page, app-guide
+│   └── share/             # share-card, share-menu
+├── functions/cloud-sync/  # cloud-sync-menu-entry, cloud-sync-connect-dialog, sync-qr
+├── pwa/                   # 설치 흐름 공용 + 가이드 (architecture.md 참조)
 └── tutorial/tutorial-overlay.tsx
 ```
 
 ---
 
-### AssetPageTabs (`layout/asset-page-tabs.tsx`) — drill-down 라우터
+### AssetPageTabs (`layout/navigation/asset-page-tabs.tsx`) — drill-down 라우터
 
 `useAssetNavigation().view` 분기로 단일 view만 mount.
 
@@ -58,7 +58,7 @@ _components/
 - **ActivityView({tab})**: InlineSelector(순자산/수익/배당) + YearlyNetAssetChart/ProfitCard/DividendCard
 - 입력 폼 5종 `<div className="hidden">` 래핑으로 DOM에 상시 마운트 (편집 다이얼로그용)
 
-### NavigationProvider (`layout/navigation-context.tsx`)
+### NavigationProvider (`layout/navigation/navigation-context.tsx`)
 
 - `AssetView = home | detail/{tab} | activity/{tab}` 상태 + hash 동기화 + popstate 리스너
 - `navigate(view)`: pushState + scrollTo(0,0)
@@ -67,7 +67,7 @@ _components/
 
 ---
 
-### FloatingAddButton (`layout/floating-add-button.tsx`)
+### FloatingAddButton (`layout/floating/floating-add-button.tsx`)
 
 화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
 
@@ -77,7 +77,7 @@ _components/
 - 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
 - 수정 액션: `navigate({type:"detail", tab})` 직접 호출 (CustomEvent 미사용)
 
-### ScrollToTop (`layout/scroll-to-top.tsx`)
+### ScrollToTop (`layout/floating/scroll-to-top.tsx`)
 
 화면 우하단 utility 버튼. 100px 스크롤 시 노출.
 
@@ -166,8 +166,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 - `TopBar` — 좌측: `view !== "home"`일 때 ChevronLeft + getViewTitle("상세"/"성과"). 우측: 인증샷·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
 - `ShareScreenshotButton` (Camera 아이콘만) → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
-- `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / 앱 가이드 보기). `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
-- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시
+- `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
+- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치)
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
 
 ### ShareCard (`header/share/share-card.tsx`)
@@ -193,13 +193,15 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 미리보기 데이터: `welcome-preview-data.json`
 - 미리보기 대시보드: 실제 `dashboard.tsx` 컴포넌트를 공통 공유하여 동일 포맷으로 노출하되, 내부의 클릭이나 인터랙션은 차단/방지 처리.
 - `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
+- **모바일 웹 PWA-우선 분기**: `mobileWeb = mounted && useIsMobile() && !isStandalone`. 참이면 PWA 설치 유도를 메인 CTA로 강조, 즉시 자산 등록 CTA는 기본 숨김(`showAssetCta` 토글, "설치 없이 웹에서 바로 시작" 링크로 노출). `ctaVisible = !mobileWeb || showAssetCta`. 데스크톱·standalone은 기존 레이아웃.
+- 설치 버튼은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출 — `PwaInstallGuideDialog` 직접 호출 제거
 
 ### TutorialOverlay (`tutorial/tutorial-overlay.tsx`)
 
-Step 0~5 오버레이. Step 5 내부 sub-step: activity → profit.
+Step 1~5 오버레이(Step 0 제거됨). Step 5 내부 sub-step: activity → profit.
 
-- **Step 0 단독 보기**(`isStandaloneStep0=true`): 메뉴-앱가이드 보기에서 호출. 버튼 "확인"으로 표시, 다음 단계 진행하지 않고 `closeStandaloneStep0()` 호출
-- WelcomeGuide에서는 Step 0이 일반적으로 숨겨지지만, `isStandaloneStep0`일 때는 표시
+- 앱 소개 단독 보기는 별도 `app-guide.tsx`(`AppGuideContent`, `"use client"`) 다이얼로그로 분리 — 튜토리얼 오버레이와 무관
+- 외부 진입(공유/클라우드 동기화)·standalone 시 `skipAllTutorialSteps()`로 전체 자동 스킵. 상태는 `secretasset_tutorial_status` 단일 키
 
 ---
 
@@ -217,6 +219,10 @@ Alert (hidden prop으로 표시 제어)
 ```
 
 **NumberInput** (`number-input.tsx`): `value`, `onChange`, `quickButtons[]`, `allowDecimals`, `maxDecimals` — 천 단위 콤마 자동 포맷
+
+**Button** (`button.tsx`): 기본 누름 피드백 `active:not-disabled:scale-[0.96]` 내장. `link` 변형·`static` prop(`<Button static>`) 전달 시 scale 비활성. 전환은 `transition-[color,box-shadow,transform] duration-150 ease-out`(transition-all 금지). 의미색은 `variant="brand"`(확인·제출) 등 CLAUDE.md 규칙 준수.
+
+> **폴리시 공통(design-system.md §6)**: shadcn 프리미티브(toggle/switch/accordion/dialog/navigation-menu/sidebar)는 `transition-all` 대신 변하는 속성만 명시. 작은 닫기 버튼은 `after:absolute after:-inset-*`로 40×40 히트영역 확보.
 
 ---
 

@@ -14,12 +14,17 @@
 import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
 import type { ProfitPeriod } from "./profit-utils";
 import type { StockClassification } from "./xray/classification-store";
+import type { AssetEnvelope } from "./cloud-sync/config";
 
 // ─────────────────────────────────────────────────────────
 // 인터페이스
 // ─────────────────────────────────────────────────────────
 
 export interface ICacheStorage {
+  // Cloud Sync (E2EE Asset)
+  getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null>;
+  setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void>;
+
   // Finance
   getExchange(): Promise<ExchangeRates | null>;
   setExchange(rates: ExchangeRates): Promise<void>;
@@ -76,6 +81,8 @@ export function getCacheStorage(): ICacheStorage {
 
 const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
 const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
+const CSYNC_TTL_SECONDS = 90 * 24 * 3600; // 90일
+const CSYNC_TTL_MS = CSYNC_TTL_SECONDS * 1000;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
@@ -170,6 +177,17 @@ import * as path from "path";
 
 const FINANCE_CACHE_PATH = path.join(process.cwd(), "data", "finance-cache.json");
 const SHARE_TOKENS_PATH = path.join(process.cwd(), "data", "share-tokens.json");
+const CLOUD_SYNC_PATH = path.join(process.cwd(), "data", "cloud-sync.json");
+
+interface AssetEnvelopeEntry {
+  envelope: AssetEnvelope;
+  expires_at: number;
+}
+
+interface CloudSyncFileData {
+  assets?: Record<string, AssetEnvelopeEntry | AssetEnvelope>;
+  vaults?: Record<string, AssetEnvelope>;
+}
 
 interface FileCacheData {
   EXCHANGE?: ExchangeRates;
@@ -266,6 +284,56 @@ class FileCacheStorage implements ICacheStorage {
       fs.writeFileSync(SHARE_TOKENS_PATH, JSON.stringify(data, null, 2), "utf8");
     } catch (e) {
       console.error("[ShareTokens 저장 오류]:", e);
+    }
+  }
+
+  async getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null> {
+    if (!fs.existsSync(CLOUD_SYNC_PATH)) return null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(CLOUD_SYNC_PATH, "utf8")) as CloudSyncFileData;
+      const entry = raw.assets?.[assetId] ?? raw.vaults?.[assetId] ?? null;
+      if (!entry) return null;
+
+      // 하위 호환: 만약 래핑되지 않은 레거시 데이터라면 그대로 반환
+      if (!("envelope" in entry)) {
+        return entry;
+      }
+
+      // 만료 판단
+      if (entry.expires_at < Date.now()) {
+        delete raw.assets?.[assetId];
+        fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(raw, null, 2), "utf8");
+        return null;
+      }
+
+      // Sliding TTL 갱신
+      entry.expires_at = Date.now() + CSYNC_TTL_MS;
+      fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(raw, null, 2), "utf8");
+      return entry.envelope;
+    } catch {
+      return null;
+    }
+  }
+
+  async setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void> {
+    try {
+      let data: CloudSyncFileData = { assets: {} };
+      if (fs.existsSync(CLOUD_SYNC_PATH)) {
+        try {
+          data = JSON.parse(fs.readFileSync(CLOUD_SYNC_PATH, "utf8")) as CloudSyncFileData;
+        } catch {
+          // ignore
+        }
+      }
+      if (!data.assets) data.assets = {};
+      data.assets[assetId] = {
+        envelope,
+        expires_at: Date.now() + CSYNC_TTL_MS,
+      };
+      fs.mkdirSync(path.dirname(CLOUD_SYNC_PATH), { recursive: true });
+      fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(data, null, 2), "utf8");
+    } catch (e) {
+      console.error("[FileCacheStorage setAssetEnvelope 오류]:", e);
     }
   }
 
@@ -475,6 +543,19 @@ class UpstashCacheStorage implements ICacheStorage {
       url: process.env.KV_REST_API_URL!,
       token: process.env.KV_REST_API_TOKEN!,
     });
+  }
+
+  async getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null> {
+    const key = `csync:asset:${assetId}`;
+    const envelope = await this.redis.get<AssetEnvelope>(key);
+    if (envelope) {
+      await this.redis.expire(key, CSYNC_TTL_SECONDS);
+    }
+    return envelope;
+  }
+
+  async setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void> {
+    await this.redis.set(`csync:asset:${assetId}`, envelope, { ex: CSYNC_TTL_SECONDS });
   }
 
   async getExchange(): Promise<ExchangeRates | null> {
