@@ -7,6 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE } from "@/config/theme";
 import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getAssetId } from "@/lib/cloud-sync/sync-state";
+import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
 import { getProfitBasis } from "@/lib/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -61,6 +62,7 @@ interface PwaInstallFlowProps {
 export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const { isInstallable, isIOS, isInApp, isStandalone, installPWA } = usePWAInstall();
   const { assetData, exchangeRates } = useAssetData();
+  const { syncLink } = useCloudSync();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const [showDialog, setShowDialog] = useState(false);
   const [pin, setPin] = useState("");
@@ -201,6 +203,14 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
   // 인앱 브라우저(카카오톡 등): 현재 주소를 복사하고 외부 브라우저 유도 가이드 표시
   const openInAppGuide = async () => {
+    // 동기화 기기: 서버 share 토큰 업로드 없이 복원코드 기반 #sync= 링크를 복사.
+    // 외부 브라우저에서 해당 링크 진입 시 금고암호 연결 모달로 자산 연동(동일 기기 내).
+    if (isSyncMode && syncLink) {
+      try { await navigator.clipboard.writeText(syncLink); } catch { /* 가이드 카드에 안내되므로 수동 복사 가능 */ }
+      setInAppStep(true);
+      setShowDialog(true);
+      return;
+    }
     try {
       // WebKit: await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은 ClipboardItem 전달
       const artifactsPromise = hasAssets ? generateShareArtifacts() : Promise.resolve(null);

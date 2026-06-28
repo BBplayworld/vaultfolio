@@ -72,7 +72,22 @@
       "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/layout.tsx\" \"src/app/\\(main\\)/_components/pwa/bottom-nav.tsx\"; \"eslint exit: $LASTEXITCODE\")",
       "PowerShell(git add \"src/app/layout.tsx\" \"public/sw.js\")",
       "PowerShell(npx eslint \"src/app/\\(main\\)/_components/header-menu/app-guide.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\" \"src/app/\\(main\\)/page.tsx\" \"src/app/\\(main\\)/layout.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx\" \"src/app/\\(main\\)/_components/views/activity/net-asset-chart.tsx\" \"src/app/\\(main\\)/_components/layout/navigation/navigation-context.tsx\"; \"eslint exit: $LASTEXITCODE\")",
-      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\"; \"eslint exit: $LASTEXITCODE\")"
+      "PowerShell(npx tsc --noEmit; \"tsc exit: $LASTEXITCODE\"; npx eslint \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx\" \"src/app/\\(main\\)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx\" \"src/app/\\(main\\)/_components/header-menu/tool-menu.tsx\"; \"eslint exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40; \"=== tsc exit: $LASTEXITCODE ===\")",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 30; \"=== vitest exit: $LASTEXITCODE ===\")",
+      "PowerShell(npm run lint 2>&1 | Select-Object -Last 40; \"=== lint exit: $LASTEXITCODE ===\")",
+      "PowerShell(npm run build 2>&1 | Select-Object -Last 45; \"=== build exit: $LASTEXITCODE ===\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.claude\\\\settings.json\" -Raw | ConvertFrom-Json | Select-Object -ExpandProperty permissions | ConvertTo-Json; \"=== valid JSON ===\")",
+      "PowerShell(\"===BRANCH===\")",
+      "PowerShell(\"===DIFFSTAT===\")",
+      "PowerShell(\"===REMOTE===\")",
+      "PowerShell(\"===MAIN vs issue-4.6===\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30; \"=== tsc exit: $LASTEXITCODE ===\")",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 20; \"=== vitest exit: $LASTEXITCODE ===\")",
+      "PowerShell(npm run *)"
     ]
   }
 }

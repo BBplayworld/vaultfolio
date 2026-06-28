@@ -23,6 +23,16 @@ export function isPwaAuthEnabled(): boolean {
   try { return localStorage.getItem(AUTH_ENABLED_KEY) === "true"; } catch { return false; }
 }
 
+/** 앱잠금 상태(인증 활성화 + 세션 미인증) 여부 — 동기화 pull 게이트 등에서 재사용 */
+export function isPwaLocked(): boolean {
+  try {
+    return isPwaAuthEnabled() && sessionStorage.getItem(SESSION_AUTH_KEY) !== "true";
+  } catch { return false; }
+}
+
+/** 잠금 해제 직후 발행되는 이벤트 — CloudSyncProvider가 즉시 pull 트리거 */
+export const PWA_UNLOCKED_EVENT = "secretasset:pwa-unlocked";
+
 /** 인증 PIN 해시 저장 */
 export async function setPwaAuthPin(pin: string): Promise<void> {
   const hash = await sha256(pin);
@@ -82,6 +92,7 @@ export function PwaLockScreen() {
 
     if (ok) {
       sessionStorage.setItem(SESSION_AUTH_KEY, "true");
+      window.dispatchEvent(new Event(PWA_UNLOCKED_EVENT));
       setLocked(false);
       void unlockAndLoad();
     } else {
