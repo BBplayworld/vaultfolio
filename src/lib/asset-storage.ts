@@ -216,6 +216,8 @@ export function clearAssetData(): boolean {
       if (keepKeys.includes(k)) return false;
       // 공지 팝업 기한/확인 키 보존 (secretasset_notice_seen_...)
       if (k.startsWith("secretasset_notice_seen_")) return false;
+      // 앱잠금 비밀번호 해시/활성화 키 보존 (동기화 pull이 잠금 인증을 지우지 않도록)
+      if (k.startsWith("secretasset_pwa_auth")) return false;
       return true;
     });
 

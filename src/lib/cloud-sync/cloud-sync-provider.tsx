@@ -15,6 +15,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, ty
 import { toast } from "sonner";
 
 import { useAssetData } from "@/contexts/asset-data-context";
+import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/app/(main)/_components/pwa/pwa-lock-screen";
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { buildExportPayload } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
@@ -155,6 +156,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         setPendingConnectAssetId(aid);
         setShowConnectDialog(true);
       }
+      // 해시 제거는 연결 모달이 닫힐 때 clearPendingConnect에서 수행.
+      // (다이얼로그가 열리는 틱에 Next 패치 replaceState를 호출하면 Radix가 즉시 닫히는 버그 → 제거 시점 분리)
     };
     detect();
     window.addEventListener("hashchange", detect);
@@ -221,6 +224,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const autoPullIfNewer = useCallback(async () => {
     const keys = keysRef.current, aid = assetIdRef.current;
     if (!keys || !aid || busyRef.current) return;
+    if (isPwaLocked()) return; // 앱잠금 해제 전에는 pull 금지(clearAssetData가 잠금 인증 삭제·잠금화면 우회 방지)
     const remote = await fetchRemoteVersion(aid, keys);
     if (remote == null || remote <= getVersion()) return;
     await runPull(true);
@@ -233,14 +237,17 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!enabled || status !== "armed") return;
     const tick = () => { if (document.visibilityState === "visible") autoPullRef.current(); };
+    const onUnlocked = () => autoPullRef.current(); // 앱잠금 해제 직후 즉시 pull
     const id = setInterval(tick, POLL_INTERVAL_MS);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", tick);
+    window.addEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
     autoPullRef.current();
     return () => {
       clearInterval(id);
       window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
     };
   }, [enabled, status]);
 

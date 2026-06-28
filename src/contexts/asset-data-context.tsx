@@ -703,6 +703,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (result && "pinRequired" in result) {
       setPendingToken(shareTokenRes);
       setShowPinPrompt(true);
+      // 해시 제거는 PIN 확정/취소(handlePinConfirm·handlePinCancel) 시 수행.
+      // (PIN 다이얼로그가 열리는 틱에 Next 패치 replaceState 호출 시 Radix 즉시 닫힘 버그 → 제거 시점 분리)
       return;
     }
 

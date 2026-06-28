@@ -81,6 +81,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-SHARE. 공유 (Zero-Knowledge) ([header-menu/share](../../src/app/(main)/_components/header-menu/share) · [api/share](../../src/app/api/share))
 - 👤 공유 URL 생성·로드, Short URL(s:KEY), PIN 보호(4자리), 잘못된 토큰→invalid-access
+- ⚙ **`#share=` 해시 삭제 시점(보안)** — 복호화 키(localKey) 포함 베어러 토큰이라 소비 **완료 시** `history.replaceState`로 제거: 데이터 적용(712)·PIN 확정(`handlePinConfirm` 746)·취소(`handlePinCancel` 761)·무효(invalid-access). **PIN 다이얼로그가 열리는 틱에는 제거 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(아래 R20). `processShareToken(rawTokenStr)`은 인자만 사용(해시 재읽기 없음)·PIN 확정은 `pendingToken` state라 제거 후에도 복원 정상
 - 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
 - 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
@@ -102,6 +103,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 #### 코드레벨(⚙)
 - ⚙ 용어 표준화 — `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`, Redis 키 `csync:asset:{assetId}`. **URL 해시 `#sync=<assetId>`, `SYNC_HASH_PARAM = "sync"`**(구 `#asset=`/`#vault=` 진입 호환 — provider `detect`·`clearPendingConnect` 모두 신구 처리) ([config.ts:27](../../src/lib/cloud-sync/config.ts) · [provider:153,291-295](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
+- ⚙ **`#sync=` 해시 삭제 시점** — `detect`는 `aid`를 `pendingConnectAssetId` state로 캡처만, **해시 제거는 연결 모달이 닫힐 때 `clearPendingConnect`(291-303)에서** 수행(성공·취소 공통). **detect(다이얼로그 여는 틱)에서 replaceState 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(R20). `#sync=`는 비밀 없는 assetId 포인터(E2EE 금고암호 별도)라 모달 표시 중 잔존 허용·완료 시 제거. 연결 모달은 `pendingConnectAssetId` state 기반(해시 비의존, [connect-dialog:87,100,130,178](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx)) ([provider:149-162,291-303](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
+- ⚙ **앱잠금 중 pull 차단(잠금 우회·인증키 삭제 방지)** — `autoPullIfNewer` 진입부 `if (isPwaLocked()) return`로 잠금화면 위 자동 pull(→`clearAssetData`) 차단. 잠금 해제 시 `PwaLockScreen`이 `PWA_UNLOCKED_EVENT`(`secretasset:pwa-unlocked`) 발행 → 폴링 effect 리스너가 즉시 1회 pull. `isPwaLocked`/`PWA_UNLOCKED_EVENT`는 `pwa-lock-screen.tsx` export 단일 소스 ([provider:221-245](../../src/lib/cloud-sync/cloud-sync-provider.tsx) · [pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ **3-상태 모델**: `none`(금고 미설정) / `locked`(assetId만 보유, 이번 세션 미무장) / `armed`(키 메모리 보유→자동 동기화). 마운트 시 `loadRememberedMaster` unwrap 성공+assetId 존재 → 자동 `armed`, 아니면 `locked`/`none` ([provider:124-146](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **자동 동기화** — 송신: 자산(`assetData`)·닉네임(`NICKNAME_EVENT`→`changeTick`) 변경 → `AUTO_PUSH_DEBOUNCE_MS=2500` 디바운스 무음 push. 수신: `POLL_INTERVAL_MS=30000`(30s) 폴링(`document.visibilityState==="visible"`일 때만)+`focus`+`visibilitychange` → `fetchRemoteVersion > getVersion()`이면 자동 pull.
 - ⚙ `crypto.ts` 키 파생(결정적): `deriveSalt = SHA-256("secretasset-salt|"+assetId)[:16]`(서버 미전송, 접두 불변) → `masterBits = PBKDF2(passphrase, salt, 200k, SHA-256, 32B)` → `encKey = HKDF(info"enc")`(AES-256-GCM) + `ed25519Seed = HKDF(info"ed25519")`(Ed25519 키쌍). `generateAssetId()` 128비트 base64url. 전송=iv·ciphertext·pubKey(1회)·서명뿐
@@ -115,7 +118,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 #### 정밀 실행 시나리오(👤 단계별 — 사전조건→단계→기대)
 - **S1 신규 금고(none→armed)**: 더보기>기기 동기화 → 금고 암호(8~50자, **영문 소문자+숫자+특수문자 필수** `validatePassphrase`) → "동기화 시작"(`enableSync`: generateAssetId→clearSyncState→첫 push TOFU) → armed, 복구 링크/QR/`sync:` 코드 노출
-- **S2 링크 진입 연결**: 다른 기기에서 `#sync=<assetId>` 열기 → `CloudSyncConnectDialog` 자동(pendingConnectAssetId, sync 코드 readOnly) → 금고 암호만 입력 → `connect`→pull→armed, 자산 동일·튜토리얼 전체 스킵(`skipAllTutorialSteps`)
+- **S2 링크 진입 연결**: 다른 기기에서 `#sync=<assetId>` 열기 → `CloudSyncConnectDialog` 자동(pendingConnectAssetId, sync 코드 readOnly) → 금고 암호만 입력 → `connect`→pull→armed, 자산 동일·튜토리얼 전체 스킵(`skipAllTutorialSteps`). **모달이 닫히지 않고 유지되는지**(R20: 여는 틱 replaceState 금지). **dev(StrictMode)는 mount-unmount-remount로 노출→닫힘→재노출 깜빡임이 정상** — prod(`npm start`)는 단일 노출(초기 로드 hashchange 미발화). 자산 0개면 웰컴가이드 위에 표시
 - **S3 수동 코드 연결**: none 화면 "기존 기기 동기화 연결" → `sync:xxxx`(assetId 정규식 `^[A-Za-z0-9-_]{20,24}$`) → 연결. `/`·`#`·`?` 포함 시 "복구 링크는 주소창에" 거부
 - **S4 PWA 첫 실행 연결**: standalone+자산 0개 → `PwaConnectPrompt` 전체화면 → `sync:` 붙여넣기 → `#sync=` 해시 설정 → 금고 암호 모달. `share:` 코드는 `importSharedByCode`(PIN 경로)
 - **S5 잠금 해제(locked→armed)**: rememberedKey 없는 재진입 → locked → 금고 암호 → `unlock`(armWithPull). remember 재선택 가능
@@ -124,10 +127,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - **S8 기억/해제**: remember ON→`saveRememberedMaster`→재진입 무암호 자동 armed. armed 화면 "이 기기 연결 끊기"(`forget`)→clearSyncState→none
 - **S9 pull 후 자격 재기록(R-신규)**: pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록 → assetId 유실 없음
 - **S10 push-loop/동시성 가드**: pull 직후 `skipNextChangeRef`로 디바운스 push 미발생, `busyRef` 뮤텍스로 push/pull 동시 실행 차단("동기화 중입니다.")
+- **S11 앱잠금+동기화 첫 진입(P0 회귀)**: 앱잠금 ON + remembered 기기 PWA 첫 진입 → 잠금화면 위에서 자동 pull **미실행**(`isPwaLocked()` 가드). PIN 해제 → `PWA_UNLOCKED_EVENT` → 즉시 pull로 다른 기기 변경 반영. **해제 후 PIN 재검증 정상**(pull의 `clearAssetData`가 `secretasset_pwa_auth_*` 보존 → "비밀번호 불일치" 버그 없음)
 
 #### 엣지·회귀
 - 엣지: 첫 pull(404→`empty`), 서명 만료(ts±300s 초과→401), assetId 없는 상태 push/pull 차단("잠금 해제가 필요합니다."), 4MB 초과(413), 동일 출처 XSS는 device-key decrypt 호출 가능(완전 방어 아님, 표준 완화)
-- 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), `getComparablePayloadString()`이 `lastUpdated` 제외 비교로 무한 push 루프 차단
+- 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), `getComparablePayloadString()`이 `lastUpdated` 제외 비교로 무한 push 루프 차단, **`clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존(S11 앱잠금 해시 유실 방지)**
 
 ### F-SYNC. 가격·환율 동기화
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
@@ -148,12 +152,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `layout.tsx` `appleWebApp` 메타데이터(`capable: true`, `statusBarStyle: "black-translucent"`) 및 `icons.apple`(`/icons/icon-192x192.png` 180×180) 포함 출력 확인
 - ⚙ 서비스 워커 `/sw.js` 성공적인 브라우저 등록 및 static 에셋 오프라인 로컬 캐싱(Stale-While-Revalidate) 보장
 - ⚙ `usePWAInstall`: `isIOS`·`isInApp`은 **`detectBrowserEnv()` 단일 소스 위임**(`platform==="ios"`/`isInApp`). **iPadOS 13+ 데스크톱 위장 UA(Macintosh) → `maxTouchPoints>1`로 iPad=iOS 인식**(미인식 시 iPad가 PC로 빠져 설치·코드복사 흐름 깨짐). standalone 제외 처리 확인
-- ⚙ `detectBrowserEnv()` ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts)) → `BrowserEnv { platform: "ios"|"android"|"pc", browser: GuideBrowser, isInApp, iosSafariModern }`. `GuideBrowser` = `safari`/`chrome`/`whale`/`samsung`. flow에서 `useEffect(setEnv(detectBrowserEnv()))`로 마운트 후 1회 감지. **`iosSafariModern`** = iOS 순정 Safari + 메이저 ≥ 15(`parseIosMajor`: `os N_` 우선, iPad 위장 UA는 `version/N` 폴백) → 신형 가이드(`IosSafariNewShareStep`: 하단 ⋯ 메뉴→공유), 그 외 구형(`IosShareStep`: 하단 중앙 공유). **iPad(iPadOS 13+)는 Macintosh UA+`maxTouchPoints>1`로 iOS 판별** — UA만으론 PC 오인식(회귀 위험). 브라우저: crios=chrome / whale=whale / 그 외 safari, samsungbrowser=samsung(Android)
+- ⚙ `detectBrowserEnv()` ([lib/pwa/detect-browser.ts](../../src/lib/pwa/detect-browser.ts)) → `BrowserEnv { platform: "ios"|"android"|"pc", browser: GuideBrowser, isInApp, iosSafariModern }`. `GuideBrowser` = `safari`/`chrome`/`whale`/`samsung`. flow에서 `useEffect(setEnv(detectBrowserEnv()))`로 마운트 후 1회 감지. **`iosSafariModern`** = iOS 순정 Safari + 메이저 **≥ 18**(`IOS_SAFARI_MODERN_MAJOR=18`, `parseIosMajor`: `os N_` 우선, iPad 위장 UA는 `version/N` 폴백) → 신형 가이드(`IosSafariNewShareStep`: 하단 단일 바 **⋯ 더보기 메뉴**→공유, iOS 18 도입). **iOS 17 이하는 구형(`IosShareStep`: 하단 공유 버튼 직접 탭)** — iOS 18부터 ⋯ 메뉴 안에 공유가 들어가는 UI 변경 반영(이전 임계값 15는 iOS 17.6.1을 신형 오분류). **iPad(iPadOS 13+)는 Macintosh UA+`maxTouchPoints>1`로 iOS 판별** — UA만으론 PC 오인식(회귀 위험). 브라우저: crios=chrome / whale=whale / 그 외 safari, samsungbrowser=samsung(Android)
 - ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
 - ⚙ **설치 가이드 단일화** — 옛 `PwaInstallGuideDialog`(3탭 다이얼로그) 제거 → [pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) `InstallGuideContent({ env })`로 통합. flow의 `iosStep`·`guideStep` 모두 동일 컴포넌트 임베드. 모바일=설치 애니메이션+step1/step2 설명+"다른 브라우저인가요?" 칩 재선택(오감지 대비)+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 미지원 문제해결
 - ⚙ iOS·Android step SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) `InstallGuideAnimation({ platform, browser })`는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 중앙 `공유`→`홈 화면에 추가` / Chrome(iOS)=주소창 우측 `공유` 직접 / Chrome(Android)=우측상단 `⋮`→`공유` / Whale=하단 우측 `≡`→`공유` / 삼성인터넷=하단 `☰`→`+ 현재 페이지 추가`→홈 화면. step1/step2 안내 문구(`step1Text`/`step2Text`)도 각 구조와 일치. **aspect-ratio 미지원(구형 Safari) 대비 `paddingTop` 스페이서로 220:290 비율 폴백**
 - ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3000ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+`DeviceBadge` "새 기기" — 실제 다른 기기])
-- ⚙ **PWA 가이드 단일화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx) `PwaSetupAnimation({platform,browser})`) — **공지(notice)와 설치 가이드(`InstallGuideContent`)가 동일 컴포넌트 공유**(구 `InstallGuideAnimation` 제거). **①앱 설치(복원 코드)·④앱(PWA) 첫 실행 복원**(같은 기기 — 기본 frame + brand `DeviceBadge` "앱 (PWA)", 동기화의 "새 기기"와 구분 / 동기화=금고암호·일반=PIN 4자리 2케이스)은 공통, **②③은 `getGuideSteps(platform,browser)`로 접속 브라우저별 공유/메뉴→홈 화면 추가** SVG. PC(`platform==="pc"`)는 네이티브 설치라 ②③ 생략(공통 2컷). 브라우저 재선택 칩 변경 시 `resetKey`로 ②③ 즉시 갱신. **iOS Safari는 `iosSafariModern`(UA iOS 메이저 ≥ 15)로 신형(⋯메뉴→공유)/구형(중앙 공유) SVG·step1 문구 분기**. 컷 간격 **3000ms**
+- ⚙ **PWA 가이드 단일화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx) `PwaSetupAnimation({platform,browser})`) — **공지(notice)와 설치 가이드(`InstallGuideContent`)가 동일 컴포넌트 공유**(구 `InstallGuideAnimation` 제거). **①앱 설치(복원 코드)·④앱(PWA) 첫 실행 복원**(같은 기기 — 기본 frame + brand `DeviceBadge` "앱 (PWA)", 동기화의 "새 기기"와 구분 / 동기화=금고암호·일반=PIN 4자리 2케이스)은 공통, **②③은 `getGuideSteps(platform,browser)`로 접속 브라우저별 공유/메뉴→홈 화면 추가** SVG. PC(`platform==="pc"`)는 네이티브 설치라 ②③ 생략(공통 2컷). 브라우저 재선택 칩 변경 시 `resetKey`로 ②③ 즉시 갱신. **iOS Safari는 `iosSafariModern`(UA iOS 메이저 ≥ 18)로 신형(⋯메뉴→공유)/구형(중앙 공유) SVG·step1 문구 분기**. 컷 간격 **3000ms**
 - ⚙ **구형 iOS Safari 컷 미전환 버그 수정** — 원인=opacity로 스택된 컷 레이어의 repaint 누락(구형 Safari)으로 다음 컷 안 바뀜. 해결=**활성 컷 1개만 렌더 + `key={active}` remount**(`StepAnimationPlayer`)로 모든 브라우저 전환 보장. 진입 페이드는 `motion-safe:animate-in fade-in`. 자동 전환은 콘텐츠 진행이라 reduced-motion에서도 동작(페이드만 비활성), 멈춤 버튼으로 정지. opacity 스택 레이어 방식 재도입 금지
 - ⚙ **컨트롤 클릭성** — 멈춤/시작·단계 점은 `pointer-events-auto`로 공지 본문(`pointer-events-none`) 안에서도 동작. 점은 `size-3`+`after:-inset-2` 히트영역, 클릭 시 해당 컷 이동+일시정지
 - 👤 완전 오프라인(네트워크 단절) 상태에서 앱 새로고침 시에도 자산 대시보드 화면이 에러 없이 로컬 스토리지로부터 정상 로드 및 렌더링되는지 확인
@@ -166,7 +170,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 #### PWA 설치 정밀 시나리오 (isSyncMode 분기)
 - ⚙ **isSyncMode 분기**([pwa-install-flow.tsx:84-88,135-181](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)): 설치 시 `getAssetId()` 존재(동기화 기기) → **PIN 불필요**, 코드=`sync:<assetId>`(서버 업로드 없음). 비동기화 → **PIN 4자리(InputOTP) 필수** + 코드=`share:KEY_LOCALKEY`(공유 토큰 `/api/share` POST 저장). `codeLabel`도 "동기화 코드"/**"복원 코드"**(구 "연결 코드" 전면 개명)로 구분
-- ⚙ **iOS 클립보드 보존**: `await fetch` 뒤 `writeText`는 제스처 만료로 실패 → `ClipboardItem`에 Promise(text/plain) 동기 전달로 자동 복사 보존 → 실패 시 `writeText` 폴백([pwa-install-flow.tsx:153-168](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)). 인앱 가이드(`openInAppGuide`)도 동일 기법으로 현재 URL 복사
+- ⚙ **인앱 복사 sync 분기**(`openInAppGuide`): 동기화 기기(`isSyncMode`)는 서버 share 토큰 업로드 없이 **`useCloudSync().syncLink`(`#sync=<assetId>&theme=` 복원코드 링크) 즉시 복사**(동기 값이라 `writeText` 1회). 비동기화는 기존 `generateShareArtifacts`→`#share=` 경로 유지. 외부 브라우저 진입 시 `#sync=` 감지→금고암호 연결 모달(동일 기기 내 연동) ([pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx))
+- ⚙ **iOS 클립보드 보존**: `await fetch` 뒤 `writeText`는 제스처 만료로 실패 → `ClipboardItem`에 Promise(text/plain) 동기 전달로 자동 복사 보존 → 실패 시 `writeText` 폴백([pwa-install-flow.tsx:153-168](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)). 인앱 가이드(`openInAppGuide`)의 비동기화 경로도 동일 기법으로 현재 URL 복사
 - ⚙ `usePWAInstall`: `isInstallable`/`isIOS`는 `&& !isStandalone`로 노출, `__bipEvent`(head 캡처) 우선 사용해 제스처 내 `installPWA` 호출([use-pwa-install.ts](../../src/hooks/use-pwa-install.ts))
 - 👤 **P1 PC/Android Chrome·Edge**: `beforeinstallprompt`(또는 `__bipEvent`) → 버튼 클릭 → 즉시 네이티브 A2HS(`installPWA`), 성공 토스트
 - 👤 **P2 iOS/인앱**: iOS=PIN/코드 준비 후 `iosStep`(STEP1 홈추가 + STEP2 코드 붙여넣기), 인앱=`inAppStep`(외부 브라우저 유도+URL 복사)
@@ -191,7 +196,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.
-- ⚙ `isPwaAuthEnabled()` / `setPwaAuthPin(pin)` / `disablePwaAuth()` / `verifyPwaAuthPin(pin)` 유틸 export.
+- ⚙ `isPwaAuthEnabled()` / `setPwaAuthPin(pin)` / `disablePwaAuth()` / `verifyPwaAuthPin(pin)` / **`isPwaLocked()`**(인증 활성+세션 미인증) / **`PWA_UNLOCKED_EVENT`**(해제 시 발행) 유틸 export.
+- ⚙ **동기화-잠금 정합(P0)** — PIN 해시 키 `secretasset_pwa_auth_enabled`/`secretasset_pwa_auth_pin_hash`는 `clearAssetData` keepKeys(`secretasset_pwa_auth*` 프리픽스)로 **동기화 pull에도 보존**(미보존 시 해시 유실→해제 후 "비밀번호 불일치" P0). 동기화 pull은 `isPwaLocked()` 가드로 **잠금 해제 전 미실행**, 해제 시 `PWA_UNLOCKED_EVENT`로 즉시 1회 pull(F-CLOUD-SYNC S11).
 - 👤 설정 > 앱 잠금 설정 ON → 브라우저 새 탭/재접속 시 PIN 화면 즉시 노출, 4자리 입력 → 잠금 해제 → 대시보드 진입.
 - 👤 PIN 오류 1~2회: "비밀번호가 일치하지 않습니다" 문구. 3회+: "비밀번호를 다시 확인해주세요" 경고 노출.
 - 👤 설정 > 앱 잠금 설정 OFF → 현재 PIN 입력 후 비활성화, 이후 재접속 시 PIN 화면 미노출.
@@ -280,6 +286,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
 | R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
 | R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지 |
+| R18 | **동기화 pull의 앱잠금 인증키 삭제** | `clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존 + `autoPullIfNewer` 진입 `isPwaLocked()` 가드. 누락 시 동기화 후 PIN 해시 유실→"비밀번호 불일치"(P0), 또는 잠금화면 위 pull로 우회. 해제는 `PWA_UNLOCKED_EVENT`로만 즉시 pull(F-CLOUD-SYNC S11) |
+| R19 | **share/sync 해시 삭제 시점** | `#share=`(localKey 포함)·`#sync=`는 **소비 완료/모달 닫힘 시** 제거(share=확정·취소·데이터적용, sync=`clearPendingConnect`). 복원·연결·코드획득은 `pendingToken`/`pendingConnectAssetId`/`syncLink` **state 기반**이라 해시 비의존(해시 재읽기 코드 재유입 금지) |
+| R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
 
 ---
 
@@ -301,4 +310,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-25 · SVG 애니메이션 공용화(`StepAnimationPlayer`·멈춤/시작·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`·새 기기 tone)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입("앱 가이드·공지사항" 통합)·notice PWA 우선·복원 2종(금고암호/PIN) 구분 반영, R16 추가. 이전: 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_
+_최종 갱신: 2026-06-28 · 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_

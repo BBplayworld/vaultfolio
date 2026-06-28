@@ -10,15 +10,16 @@ export interface BrowserEnv {
   platform: GuidePlatform;
   browser: GuideBrowser;
   isInApp: boolean;
-  /** iOS Safari 신형(재설계 하단 주소창 + ⋯ 메뉴 → 공유) 여부. iOS 메이저 ≥ 15. */
+  /** iOS Safari 신형(하단 단일 바 ⋯ 더보기 메뉴 → 공유) 여부. iOS 메이저 ≥ 18. */
   iosSafariModern: boolean;
 }
 
 // 인앱 브라우저(홈 화면 추가 불가 → 외부 브라우저 유도)
 export const IN_APP_BROWSER_RE = /kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/;
 
-// iOS Safari 신형 가이드(⋯ 메뉴 → 공유) 적용 최소 메이저 버전
-const IOS_SAFARI_MODERN_MAJOR = 15;
+// iOS Safari 신형 가이드(⋯ 메뉴 → 공유) 적용 최소 메이저 버전.
+// iOS 18부터 하단 단일 바에 ⋯ 더보기 메뉴 도입 → 그 안에서 공유. iOS 17 이하는 공유 버튼 직접 탭(구형).
+const IOS_SAFARI_MODERN_MAJOR = 18;
 
 /**
  * UA에서 iOS 메이저 버전 파싱.
@@ -46,7 +47,7 @@ export function detectBrowserEnv(
 
   if (/iphone|ipad|ipod/.test(s) || isIpadOS) {
     const browser: GuideBrowser = /crios/.test(s) ? "chrome" : /whale/.test(s) ? "whale" : "safari";
-    // 신형 판정은 순정 Safari에만 의미(크롬/웨일 iOS는 자체 공유 위치) → safari + iOS ≥ 15
+    // 신형 판정은 순정 Safari에만 의미(크롬/웨일 iOS는 자체 공유 위치) → safari + iOS ≥ 18
     const iosSafariModern = browser === "safari" && parseIosMajor(s) >= IOS_SAFARI_MODERN_MAJOR;
     return { platform: "ios", browser, isInApp, iosSafariModern };
   }

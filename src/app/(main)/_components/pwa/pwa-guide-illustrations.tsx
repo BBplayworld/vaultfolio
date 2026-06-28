@@ -129,7 +129,7 @@ export function IosShareStep({ className }: IllustrationProps) {
   );
 }
 
-/** iOS Safari(신형, iOS 15+) 1단계: 하단 주소창 우측 ⋯ 메뉴 → 팝업 최상단 '공유' 강조 */
+/** iOS Safari(신형, iOS 18+) 1단계: 하단 주소창 우측 ⋯ 메뉴 → 팝업 최상단 '공유' 강조 */
 export function IosSafariNewShareStep({ className }: IllustrationProps) {
   return (
     <svg viewBox="0 0 220 290" className={className} role="img" aria-label="신형 Safari 하단 더보기 메뉴의 공유 위치" fill="none">
