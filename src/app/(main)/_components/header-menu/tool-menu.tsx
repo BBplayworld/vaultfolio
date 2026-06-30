@@ -35,6 +35,17 @@ import { useAssetNavigation } from "../layout/navigation/navigation-context";
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
   const [nickname, setNickname] = useNickname();
+  // 닉네임은 편집 중 로컬 draft만 갱신하고, 탭 이탈(언마운트) 시 1회 커밋 → 키 입력마다 push 방지
+  const [draft, setDraft] = useState(nickname);
+  // 외부(pull·다른 탭) 닉네임 변경을 입력란에 반영
+  useEffect(() => setDraft(nickname), [nickname]);
+  const commitRef = useRef(() => {});
+  commitRef.current = () => {
+    const clean = sanitizeNickname(draft);
+    if (clean !== nickname) setNickname(clean);
+  };
+  // 탭 이탈 시 1회 커밋
+  useEffect(() => () => commitRef.current(), []);
   const { refreshData, getAssetSummary, assetData, isSharePending } = assetDataContext;
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const { navigate } = useAssetNavigation();
@@ -192,14 +203,14 @@ export function ToolMenuPage() {
             <User className="size-5 text-primary shrink-0" />
             <input
               type="text"
-              value={nickname}
-              onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
+              value={draft}
+              onChange={(e) => setDraft(sanitizeNickname(e.target.value))}
               maxLength={NICKNAME_MAX}
               placeholder="닉네임 (최대 8자)"
               aria-label="닉네임"
               className="flex-1 min-w-0 bg-transparent outline-none text-sm font-medium placeholder:text-muted-foreground"
             />
-            <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{nickname.length}/{NICKNAME_MAX}</span>
+            <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{draft.length}/{NICKNAME_MAX}</span>
           </div>
         </section>
 

@@ -107,6 +107,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **앱잠금 중 pull 차단(잠금 우회·인증키 삭제 방지)** — `autoPullIfNewer` 진입부 `if (isPwaLocked()) return`로 잠금화면 위 자동 pull(→`clearAssetData`) 차단. 잠금 해제 시 `PwaLockScreen`이 `PWA_UNLOCKED_EVENT`(`secretasset:pwa-unlocked`) 발행 → 폴링 effect 리스너가 즉시 1회 pull. `isPwaLocked`/`PWA_UNLOCKED_EVENT`는 `pwa-lock-screen.tsx` export 단일 소스 ([provider:221-245](../../src/lib/cloud-sync/cloud-sync-provider.tsx) · [pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ **3-상태 모델**: `none`(금고 미설정) / `locked`(assetId만 보유, 이번 세션 미무장) / `armed`(키 메모리 보유→자동 동기화). 마운트 시 `loadRememberedMaster` unwrap 성공+assetId 존재 → 자동 `armed`, 아니면 `locked`/`none` ([provider:124-146](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **자동 동기화** — 송신: 자산(`assetData`)·닉네임(`NICKNAME_EVENT`→`changeTick`) 변경 → `AUTO_PUSH_DEBOUNCE_MS=2500` 디바운스 무음 push. 수신: `POLL_INTERVAL_MS=30000`(30s) 폴링(`document.visibilityState==="visible"`일 때만)+`focus`+`visibilitychange` → `fetchRemoteVersion > getVersion()`이면 자동 pull.
+- ⚙ **pull 후 전체 동기화(R-신규)** — `runPull`·`armWithPull`(연결)은 복원 직후 `refreshData()`가 아니라 **`initAndSync(getAssetData())`** 호출 → 환율→주식 현재가→스냅샷 전체 재동기화. `refreshData`는 진행 중 sync만 취소하고 오늘자 주식·환율을 갱신하지 않아, 양쪽 기기 모두 자산 보유 시 pull 후 시세 미갱신 버그가 있었음. `initAndSync` 진입의 `syncTodayStockPrices`가 이전 sync abort·`saveSnapshotsBlockedRef=false`·`dataResetVersion++`를 모두 수행(기존 `refreshData` 역할 포함) ([provider:205,280](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ `crypto.ts` 키 파생(결정적): `deriveSalt = SHA-256("secretasset-salt|"+assetId)[:16]`(서버 미전송, 접두 불변) → `masterBits = PBKDF2(passphrase, salt, 200k, SHA-256, 32B)` → `encKey = HKDF(info"enc")`(AES-256-GCM) + `ed25519Seed = HKDF(info"ed25519")`(Ed25519 키쌍). `generateAssetId()` 128비트 base64url. 전송=iv·ciphertext·pubKey(1회)·서명뿐
 - ⚙ `device-key.ts`: remember 시 `masterBits`만 **기기 비추출(non-extractable) AES-GCM 키**(IndexedDB `secretasset_kv`)로 wrap → `rememberedKey`(평문 금지). IndexedDB는 `clearAssetData`(localStorage 한정)에 안 지워짐
 - ⚙ `sync-state.ts`: `SYNC_STATE_KEY = "secretasset_sync"` 단일 키. `assetId/version/lastSyncedAt/rememberedKey`. salt·privKey·pubKey 미저장
@@ -135,7 +136,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-SYNC. 가격·환율 동기화
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
+- 👤 **기기 동기화 pull 후 시세 갱신** — 다른 기기 변경 반영(pull) 직후 "오늘의 주식 및 환율 정보를 모두 업데이트했습니다." 토스트가 뜨고 현재가·환율이 갱신되는지(양쪽 기기 모두 자산 보유 상태에서)
 - ⚙ `getStockCacheSlot` 장중 1시간/장외 날짜 슬롯, outdated 판정, 3개씩 배치+1초 간격
+- ⚙ pull(`runPull`/`armWithPull`)이 `initAndSync` 경유로 시세 동기화 트리거 — 마운트·0→양수 외 추가 진입 경로(F-CLOUD-SYNC 자동 동기화)
 - 엣지: 데이터 삭제/불러오기 중 sync abort(epoch+AbortController), 취소된 응답 미반영
 - 회귀: foreign+KRW→USD 마이그레이션, market 캐시 비었을 때 재조회
 
@@ -205,7 +208,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
+- 👤 **닉네임 커밋 시점 = 탭 이탈(언마운트)** — 더보기 탭에서 닉네임 여러 글자 입력 중에는 저장·push 미발생(로컬 draft만), **더보기 탭을 벗어날 때 1회만** 커밋. 편집 중 다른 기기 pull로 닉네임이 바뀌면 입력란이 자동 갱신되고, 그대로 탭 이탈 시 stale 값 재push 없음(draft==현재 닉네임 → 커밋 no-op)
 - 👤 더보기 `지원` 섹션 **"앱 가이드 · 공지사항"** 통합 진입점 — 선택기에서 앱 가이드 보기 / 공지사항 보기 분기(메뉴 행 1개로 통합). 공지 뷰어는 SVG 애니메이션 멈춤/시작 동작 확인
+- ⚙ **닉네임 입력 draft 분리**([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): `onChange`는 로컬 `draft` state만 갱신(localStorage·`NICKNAME_EVENT`·push 없음), `useEffect([nickname])`로 외부 변경 반영, 언마운트 클로저(`commitRef`)에서 `sanitizeNickname(draft)!==nickname`일 때만 `setNickname` 커밋. `persistNickname` 로직 재사용·호출 시점만 변경
 - ⚙ 닉네임 변경(`NICKNAME_EVENT`) 발생 시 React `assetData` 상태가 실시간 업데이트되며, 자산 CRUD/동기화 시 닉네임이 빈 값으로 덮어써지지 않는지 검증
 - ⚙ 공유 토큰 파싱(`parseShareToken`/`unpackV7`) 및 데이터 가져오기 시 닉네임이 `validated.nickname` 및 `data.nickname`에 누락 없이 복원되어 보존되는지 검증
 
@@ -285,7 +290,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(lastUpdated 제외 비교) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). R5(sync abort)와 연계 |
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
 | R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
-| R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지 |
+| R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지. **커밋은 탭 이탈(언마운트) 1회** — 입력 중 draft만 갱신, `useEffect([nickname])`로 외부 pull 반영해 stale 재push 차단(F-MISC) |
+| R21 | **pull 후 시세 미갱신** | 기기 동기화 pull(`runPull`·`armWithPull`)은 `refreshData`가 아닌 **`initAndSync(getAssetData())`** 호출 — 양쪽 기기 자산 보유 시 pull 후 오늘자 주식·환율 미갱신 방지. `refreshData`로 회귀 금지(F-SYNC·F-CLOUD-SYNC) |
 | R18 | **동기화 pull의 앱잠금 인증키 삭제** | `clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존 + `autoPullIfNewer` 진입 `isPwaLocked()` 가드. 누락 시 동기화 후 PIN 해시 유실→"비밀번호 불일치"(P0), 또는 잠금화면 위 pull로 우회. 해제는 `PWA_UNLOCKED_EVENT`로만 즉시 pull(F-CLOUD-SYNC S11) |
 | R19 | **share/sync 해시 삭제 시점** | `#share=`(localKey 포함)·`#sync=`는 **소비 완료/모달 닫힘 시** 제거(share=확정·취소·데이터적용, sync=`clearPendingConnect`). 복원·연결·코드획득은 `pendingToken`/`pendingConnectAssetId`/`syncLink` **state 기반**이라 해시 비의존(해시 재읽기 코드 재유입 금지) |
 | R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
@@ -310,4 +316,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-28 · 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_
+_최종 갱신: 2026-06-30 · **기기 동기화 pull 후 `initAndSync` 전체 시세 동기화**(refreshData→initAndSync, R21)·**닉네임 커밋 시점 탭 이탈(언마운트) 1회로 변경**(draft 분리·외부 pull 반영, R17 보강). 이전: 2026-06-28 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_

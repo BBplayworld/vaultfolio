@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/app/(main)/_components/pwa/pwa-lock-screen";
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
-import { buildExportPayload } from "@/lib/asset-storage";
+import { buildExportPayload, getAssetData } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "./config";
@@ -80,7 +80,7 @@ function buildLink(assetId: string): string {
 
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const enabled = isCloudSyncEnabled();
-  const { assetData, refreshData } = useAssetData();
+  const { assetData, initAndSync } = useAssetData();
 
   const keysRef = useRef<AssetKeys | null>(null);
   const assetIdRef = useRef<string | null>(null);
@@ -202,13 +202,13 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
       runPushAfterRestoreFix();
-      refreshData();
+      void initAndSync(getAssetData());
       lastPushedRef.current = getComparablePayloadString();
       setLastSyncedAt(getLastSyncedAt());
       if (auto) toast.info("다른 기기의 변경을 반영했습니다.");
     }
     return r;
-  }, [refreshData, runPushAfterRestoreFix]);
+  }, [initAndSync, runPushAfterRestoreFix]);
 
   // 자산·프로필(닉네임) 변경 → 무장 시 디바운스 push
   useEffect(() => {
@@ -277,9 +277,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     // 외부 데이터로 연동된 기기는 튜토리얼 전체 스킵 (공유 경로 applySharedData와 동일)
     skipAllTutorialSteps();
     tutorialStore.getState().initTutorial();
-    refreshData();
+    void initAndSync(getAssetData());
     return { ok: true };
-  }, [arm, refreshData]);
+  }, [arm, initAndSync]);
 
   const unlock = useCallback((passphrase: string, remember: boolean) => {
     const aid = getAssetId();

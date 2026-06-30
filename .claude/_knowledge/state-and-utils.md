@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-06-09
+> 마지막 업데이트: 2026-06-30
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -23,8 +23,11 @@ exchangeRateDate: string      // YYYY-MM-DD
 updateExchangeRate(currency: "USD"|"JPY", rate: number, date?: string): void
 syncTodayExchangeRate(): Promise<void>  // 오늘자 환율 동기화 (캐시 우선)
 refreshData(): void
+  // 진행 중 sync/profit fetch만 취소 + localStorage 재로드(dataResetVersion++). 시세 재동기화 안 함
 initAndSync(data: AssetData): Promise<void>
   // 순서: initAssetData → 1초 대기 → 환율 → 주식 현재가 → 스냅샷
+  // 시세 동기화 진입점: 마운트 / 0→양수 전환 / 기기 동기화 pull·연결(cloud-sync runPull·armWithPull)
+  // ※ pull 후엔 refreshData가 아닌 initAndSync 사용 — refreshData만 쓰면 pull 후 오늘자 시세 미갱신(R21)
 saveData(data: AssetData): boolean
 
 // CRUD (모두 boolean 반환: 성공 true, 실패 false)
@@ -272,4 +275,13 @@ window.dispatchEvent(new CustomEvent("trigger-dismiss-guide"))
 
 // 파일 임포트 트리거: → ToolMenu에서 수신
 window.dispatchEvent(new CustomEvent("trigger-import"))
+
+// 닉네임 변경: persistNickname() → useNickname·cloud-sync(changeTick)에서 수신
+window.dispatchEvent(new CustomEvent(NICKNAME_EVENT))  // "secretasset-nickname-change"
 ```
+
+### 닉네임 (`src/hooks/use-nickname.ts`)
+
+- `persistNickname(next)`: `sanitizeNickname`(한글·영문·숫자, 최대 8자) → `assetData.nickname` 저장 + `NICKNAME_EVENT` 발행. 공유/가져오기/pull 복원(`applyImportedPayload`)도 이 함수 사용.
+- `useNickname()`: `[nickname, setNickname]`. `NICKNAME_EVENT`·`storage` 수신해 상태 동기화.
+- **커밋 시점 = 더보기 탭 이탈(언마운트) 1회** ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): 입력란은 로컬 `draft` state로 분리해 키 입력 중엔 저장·push 안 함. `useEffect([nickname])`로 외부 pull 변경을 draft에 반영, 언마운트 `commitRef`에서 `draft!==nickname`일 때만 `setNickname` 커밋(no-op 가드 → stale 닉네임 재push 차단). 키 입력마다 즉시 저장하던 ping-pong 동기화 버그 해결.

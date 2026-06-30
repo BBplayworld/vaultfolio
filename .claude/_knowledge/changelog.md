@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-06-30
+
+### 기기 동기화 pull 후 시세 동기화 + 닉네임 커밋 시점 변경 (issue-4.7)
+
+- **pull 후 전체 시세 동기화** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx) `runPull`·`armWithPull`): 다른 기기 변경 반영(pull)·신규 연결 직후 호출을 `refreshData()` → **`initAndSync(getAssetData())`** 로 교체. `refreshData`는 진행 중 sync 취소 + localStorage 재로드만 하고 오늘자 환율·주식 현재가를 재동기화하지 않아, **양쪽 기기 모두 자산 보유 시 pull 후 시세가 갱신되지 않던 버그** 수정(시세 동기화는 마운트·0→양수 전환에서만 트리거됐음). `initAndSync` 진입의 `syncTodayStockPrices`가 이전 sync abort·`saveSnapshotsBlockedRef=false`·`dataResetVersion++`(기존 `refreshData` 역할 포함)를 모두 수행. `runPushAfterRestoreFix`(자격 재기록)·`skipNextChangeRef`(push 루프 가드) 호출 순서·로직 보존.
+- **닉네임 커밋 시점 = 탭 이탈** ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): 닉네임 입력을 로컬 `draft` state로 분리. `onChange`는 draft만 갱신(localStorage 저장·`NICKNAME_EVENT`·push 없음), `useEffect([nickname])`로 외부 pull/다른 탭 변경을 입력란에 반영, **더보기 탭 이탈(언마운트) 시 `commitRef`로 1회만 커밋**(`sanitizeNickname(draft)!==nickname`일 때만 `setNickname`→no-op로 stale 재push 차단). `persistNickname` 로직은 그대로 재사용·호출 시점만 변경.
+- **이유:** 닉네임을 키 입력마다 즉시 저장→push하던 탓에, 기기 A의 신규 닉네임을 받은 기기 B가 자신의 오래된 닉네임으로 되돌려 동기화하는 ping-pong이 관찰됨. 커밋을 탭 이탈 1회로 늦추고 외부 변경을 draft에 반영해 원천 차단. 동기화 pull이 시세 갱신 진입 경로에서 누락돼 있던 것도 함께 정정.
+
+---
+
 ## 2026-06-25
 
 ### SVG 가이드 애니메이션 공용화 + 복원 코드 개명 + 공지 수동 진입 (issue-4.5)
@@ -154,33 +164,5 @@
 - **날짜 input 모바일 넘침 원천 차단** (`globals.css`): `input[type="date"]` 등에 `appearance:none`+`min-width:0`+`max-width:100%`+webkit 의사요소 리셋 전역 규칙. 폼별 `max-w-[160px] sm:max-w-full` 임시방편 제거 → 전폭 통일
 - **이유:** 동일 영업일 기준에서 국내 휴장일이 KIS 폴백으로 우연히 맞던 값을 캐시·표시까지 일관화하고, 비종목 자산 리스트의 정보 위계를 주식과 통일, 모바일 날짜 input 넘침을 소스 레벨에서 차단
 
-## 2026-05-23
-
-### UI 정보구조 전면 재설계 — drill-down 라우팅 + 통일 디자인 시스템
-
-- **디렉토리 rename**: `bottom-nav→forms`, `main-nav→views`, `top-nav→header` (목적 기반 명명, layout/tutorial 유지)
-- **NavigationProvider 신설** (`layout/navigation-context.tsx`):
-  - `AssetView = home | detail/{tab} | activity/{tab}` 모델 + hash 동기화 + popstate
-  - URL `/asset#detail/stocks` 직접 진입·새로고침·뒤로가기 모두 동작
-  - `back()`은 항상 `navigate({type:"home"})` (어디서나 홈 복귀 정책)
-  - `navigate()` 시 자동 `scrollTo(0,0)`
-- **InlineSelector 공용** (`layout/inline-selector.tsx`): 모든 1·2·3·4차 탭이 segmented control로 통일
-  - size 토큰: `sm/md/lg`(PC에서 한 단계 ↑: 14·16·18)
-  - 컨테이너 라이트 짙음(`bg-muted/60`), 활성 `bg-background`, label `ReactNode`(모바일 축약 JSX 지원)
-- **InfoHint 공용** (`layout/info-hint.tsx`): Popover hover/tap 패턴 — 가이드 §3
-- **상세 5탭 Card 외피 통일**: stock/real-estate/cash/loan/crypto 모두 `<Card><CardHeader><CardTitle>...</CardTitle></CardHeader><CardContent>` 구조. 카테고리 selector는 SummaryHeader 아래 (Hero→필터→리스트)
-- **카드 액션 버튼 위치 통일**: `ASSET_THEME.cardActions`("flex justify-end gap-2 px-3 py-2 bg-muted/10") 신 정의 — 5탭 모두 detail grid 하단 별도 라인
-- **StockCard `screenshotMode` + `maskFn`**: 인증샷이 페이지 본체와 시각 완전 일치. share-card는 stock-tab의 외피·StockCard 그대로 사용 (펼침·버튼만 차단)
-- **share-menu 통합**: stockHeader+stockList → 단일 `stock` 섹션. 체크박스 한 줄 가로 스크롤
-- **FAB·ScrollToTop 무채색 토큰화**: `MAIN_PALETTE[11]`(#4e5763) → `bg-foreground/85`(FAB), `bg-foreground/70`(ScrollToTop). 메뉴탭 무채색 세트와 시각 일관
-- **layout 본문 `pb-20 md:pb-24`**: FAB이 마지막 카드 가림 방지
-- **ToolMenu 통합**: ThemeSwitcher 삭제 → 도구 메뉴 안 다크모드 토글로 흡수. 상단 아이콘 인증샷·도구 2개로 축소(h-10 sm:h-11)
-- **순자산·배당 Hero 추가**: net-asset-chart에 "현재 순자산 + 전년 대비", dividend-chart에 "올해 연간 배당 + 월 평균"
-- **dividend-chart**: 설명 3줄 → InfoHint, 카테고리 범례 신규, 예상/실제 토글 신규
-- **이유:** 토스/애플 시니어 디자이너 관점 일관성 강화 — 컨테이너 위계 명확, drill-down으로 헤더 누적 해소, 무채색 토큰 통일
-
-### 환율 히스토리 7일로 확장
-- `EXCHANGE_HISTORY_DAYS` 3→7 (`lib/cache-storage.ts`) — 연휴·주말 컷오프 버퍼
-
-<!-- 2026-05-21 항목은 "최근 10개 유지" 정책에 따라 제거됨 (성과-수익 기간별 종가 기준 2옵션 ProfitBasis) -->
+<!-- 2026-05-23 항목은 "최근 10개 유지" 정책에 따라 제거됨 (UI 정보구조 전면 재설계 — drill-down 라우팅 + 통일 디자인 시스템, 환율 히스토리 7일 확장) -->
 
