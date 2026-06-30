@@ -37,10 +37,13 @@ export function ToolMenuPage() {
   const [nickname, setNickname] = useNickname();
   // 닉네임은 편집 중 로컬 draft만 갱신하고, 탭 이탈(언마운트) 시 1회 커밋 → 키 입력마다 push 방지
   const [draft, setDraft] = useState(nickname);
-  // 외부(pull·다른 탭) 닉네임 변경을 입력란에 반영
-  useEffect(() => setDraft(nickname), [nickname]);
+  // 사용자 실제 편집 여부 — 외부 pull로 draft가 갱신된 경우 stale 재push 방지
+  const dirtyRef = useRef(false);
+  // 외부(pull·다른 탭) 닉네임 변경을 입력란에 반영 + 편집 상태 해제
+  useEffect(() => { setDraft(nickname); dirtyRef.current = false; }, [nickname]);
   const commitRef = useRef(() => {});
   commitRef.current = () => {
+    if (!dirtyRef.current) return; // 사용자가 직접 입력했을 때만 커밋
     const clean = sanitizeNickname(draft);
     if (clean !== nickname) setNickname(clean);
   };
@@ -204,7 +207,7 @@ export function ToolMenuPage() {
             <input
               type="text"
               value={draft}
-              onChange={(e) => setDraft(sanitizeNickname(e.target.value))}
+              onChange={(e) => { setDraft(sanitizeNickname(e.target.value)); dirtyRef.current = true; }}
               maxLength={NICKNAME_MAX}
               placeholder="닉네임 (최대 8자)"
               aria-label="닉네임"
