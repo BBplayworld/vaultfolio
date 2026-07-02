@@ -389,7 +389,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               </div>
             )}
 
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-1">
+            <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
               <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
@@ -407,7 +407,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         {/* Step 2: 미리보기 */}
         {step === "preview" && stocks.length > 0 && (
           <div className="space-y-3">
-            <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
               동일 카테고리·종목은 증권사 항목으로 구분되어 하나의 종목으로 통합 표시됩니다.
             </div>
 
@@ -649,7 +649,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               )}
             </Button>
           )}
-          <Button variant="outline" onClick={handleClose}>취소</Button>
+          <Button variant="secondary" onClick={handleClose}>취소</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

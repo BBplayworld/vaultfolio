@@ -49,7 +49,7 @@ export function DeleteRollbackDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg bg-card shadow-xs p-3">
             <div className="flex items-center gap-2 text-sm">
               <span className={tx.type === "buy" ? "text-red-500 font-medium" : "text-blue-500 font-medium"}>
                 [{tx.type === "buy" ? "매수" : "매도"}]
@@ -62,7 +62,7 @@ export function DeleteRollbackDialog({
             </p>
           </div>
 
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+          <div className="rounded-lg bg-muted/30 p-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">삭제 시 자동 롤백</p>
             <div className="grid grid-cols-[1fr_auto_1fr] gap-x-2 gap-y-1 text-sm">
               <span className="text-muted-foreground">수량</span>
@@ -86,7 +86,7 @@ export function DeleteRollbackDialog({
           >
             삭제 + 롤백
           </Button>
-          <Button variant="outline" onClick={onCancel} className="flex-1 sm:flex-initial">
+          <Button variant="secondary" onClick={onCancel} className="flex-1 sm:flex-initial">
             취소
           </Button>
         </DialogFooter>

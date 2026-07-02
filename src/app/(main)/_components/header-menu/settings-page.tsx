@@ -139,8 +139,8 @@ export function SettingsPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-rose-300/40 dark:border-rose-900/40 bg-rose-500/5 hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-rose-500/5 shadow-xs hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
@@ -261,7 +261,7 @@ export function SettingsPage() {
             >
               {authMode === "enable" ? "설정 완료" : "앱 잠금 해제"}
             </Button>
-            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowAuthDialog(false)}>
               취소
             </Button>
           </DialogFooter>

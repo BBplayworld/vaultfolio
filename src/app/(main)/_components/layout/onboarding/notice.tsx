@@ -18,7 +18,7 @@ export function NoticeContent() {
   return (
     <div className="space-y-4 pointer-events-none select-none">
       {/* 핵심 기능 업데이트 강조 배너 */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-start gap-2.5">
+      <div className="rounded-xl bg-primary/5 p-3.5 flex items-start gap-2.5">
         <Sparkles className="size-5 text-primary shrink-0 mt-0.5 animate-pulse" />
         <div className="space-y-1">
           <p className="text-sm font-bold text-foreground">핵심 기능 업데이트 안내</p>
@@ -32,7 +32,7 @@ export function NoticeContent() {
       <div className="space-y-3">
         {/* 1. 앱 설치 (PWA) — 미설치 상태에서만 표시 */}
         {!isStandalone && (
-          <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="rounded-xl bg-card shadow-xs p-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-2 shrink-0">
                 <Smartphone className="size-4 text-primary" />
@@ -43,12 +43,12 @@ export function NoticeContent() {
               PWA(프로그레시브 웹앱) 기술을 적용하여 스마트폰 홈 화면에 바로가기 앱을 설치해 보세요. 브라우저 세션 만료나 쿠키 삭제로 인한 자산 데이터 유실 위험 없이 네이티브 앱처럼 안정적으로 사용 가능합니다.
             </p>
             {/* 설치 → 복원 흐름 애니메이션 (Chrome 기준) */}
-            <div className="rounded-lg bg-muted/40 p-3 border">
+            <div className="rounded-lg bg-muted/40 p-3">
               <p className="font-semibold text-foreground text-xs mb-2">💡 앱 설치 → 복원 방법 (현재 브라우저 기준)</p>
               <PwaSetupAnimation platform={env.platform} browser={env.browser} safariModern={env.iosSafariModern} />
             </div>
             {/* 접근 가이드 — 복원 방법 2가지 명확 구분 */}
-            <div className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground space-y-1 border">
+            <div className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground text-xs">💡 앱 설치 및 데이터 복원 방법</p>
               <p className="leading-relaxed">
                 • <strong className="text-foreground">설치</strong>: PC / 모바일 웹 접속 시 첫 화면의 <strong className="text-foreground">앱 설치하기</strong> 배너 터치 또는 상단의 설치 아이콘(📥) 터치
@@ -64,7 +64,7 @@ export function NoticeContent() {
         )}
 
         {/* 2. 기기 동기화 */}
-        <div className="rounded-xl border bg-card p-4 space-y-3">
+        <div className="rounded-xl bg-card shadow-xs p-4 space-y-3">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-primary/10 p-2 shrink-0">
               <Cloud className="size-4 text-primary" />
@@ -78,7 +78,7 @@ export function NoticeContent() {
             기존의 1회성 공유 URL과 달리, <strong className="text-foreground">연동된 여러 기기 간에 데이터가 실시간으로 자동 양방향 동기화</strong>됩니다. 금고 암호 기반의 종단간 암호화(E2EE) 기술을 사용하여 서버 관리자를 포함한 그 누구도 자산을 열람할 수 없어 안전합니다. <strong className="text-foreground">다른 기기 동기화 링크</strong>를 백업해 두면 기기 분실·초기화 시에도 금고 암호로 자산을 되살릴 수 있습니다.
           </p>
           {/* 접근 가이드 — 설정 흐름 애니메이션 */}
-          <div className="rounded-lg bg-muted/40 p-3 border">
+          <div className="rounded-lg bg-muted/40 p-3">
             <p className="font-semibold text-foreground text-xs mb-1">💡 기기 동기화 설정 방법</p>
             <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
               <strong className="text-foreground">웹</strong>의 우측 상단 <strong className="text-foreground">더보기 ⋯</strong> → <strong className="text-foreground">자산 공유 · 동기화</strong>에서 시작합니다. (앱은 하단 탭 바의 더보기)
@@ -89,7 +89,7 @@ export function NoticeContent() {
       </div>
 
       {/* 의견 보내기 부탁 배너 */}
-      <div className="rounded-xl border border-muted bg-muted/20 p-3.5 flex items-start gap-2.5">
+      <div className="rounded-xl bg-muted/20 p-3.5 flex items-start gap-2.5">
         <MessageSquareText className="size-5 text-muted-foreground shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">소중한 피드백을 기다립니다</p>

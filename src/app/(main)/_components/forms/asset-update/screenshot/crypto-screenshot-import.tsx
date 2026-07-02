@@ -258,7 +258,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
               </div>
             )}
 
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-1">
+            <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
               <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
@@ -274,7 +274,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
         {/* Step 2: 중복 처리 */}
         {step === "conflict" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-start gap-2">
+            <div className="rounded-md bg-amber-500/10px-4 py-3 flex items-start gap-2">
               <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-700 dark:text-amber-400">
                 기존 보유 코인과 <span className="font-semibold">{conflictCount}개</span> 중복됩니다.
@@ -388,7 +388,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 코인 등록`}
             </Button>
           )}
-          <Button variant="outline" onClick={handleClose}>취소</Button>
+          <Button variant="secondary" onClick={handleClose}>취소</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

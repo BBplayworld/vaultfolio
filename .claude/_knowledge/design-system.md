@@ -81,6 +81,7 @@
 
 ### 3.3 고도(elevation) — 테두리보다 그림자
 - 면 분리는 **배경 톤차(`bg-muted/40`, `bg-card/50`) → 그림자** 순으로. 테두리는 최후.
+- **[필수] 보더리스 박스**: 박스·카드·의미색 콜아웃 컨테이너는 **테두리 없이 배경 톤차(+`shadow-xs`)로 표현**한다(팝업 내부 포함 전 영역). `border`(전방위 테두리)는 다음에만 허용 — hairline 구분선(`border-t`/`border-b`), 기능성(선택상태 표시·업로드 `border-dashed` 드롭존·segmented 트랙·인라인 코드/키캡 칩·`Badge`·단계 점 컨트롤), 다이얼로그/시트 프레임 외곽. 예: `border bg-card` → `bg-card shadow-xs`, `border border-amber-500/20 bg-amber-500/10` → `bg-amber-500/10`.
 - 팝오버·시트·드롭다운 `shadow-2xl`, 활성 탭·작은 떠오름 `shadow-sm`.
 - z-index 스케일: 일반 오버레이 `z-40`(연결 프롬프트) · 다이얼로그 `z-50` · 앱 잠금 `z-100`.
 
@@ -103,6 +104,7 @@
 - **탭/세그먼트**: `ASSET_THEME.tabList1/2/3`·`tabTrigger1/2/3`. 1단계=메인, 2단계=상세(캡슐), 3단계=카테고리(border-2). InlineSelector로 전 차수 통일.
 - **카드**: 접힘행 왼쪽=핵심 식별(이름·비중%), 상세(종류·금리·매입가 등)는 펼침(Collapsible)에. 비종목 자산도 주식 카드와 동일 패턴. 토큰: `cardWrapper`/`cardHeader`/`cardInfoName`/`cardAmountMain`…
 - **다이얼로그**: 설명형(공유·동기화·가이드)은 `<DialogHeader className="text-left">`(모바일 중앙 정렬 방지). 짧은 확인 모달만 중앙 허용.
+- **팝업 취소/닫기 버튼(통일 규약)**: ① 색 = `variant="secondary"`(테두리 없는 플랫, `outline` 금지). `AlertDialogCancel`도 secondary 기본. ② 순서 = DOM은 `[주요 버튼, 취소/닫기]` 순 → 모바일 취소 하단·PC 취소 우측(`DialogFooter`/`AlertDialogFooter` 기본 `flex-col ... sm:flex-row sm:justify-end`, 개별 오버라이드·`flex-col-reverse` 금지). ③ 텍스트 = 맥락별: 폼·설정·실행형(입력/제출/삭제/연결/앱잠금 등)은 **"취소"**, 읽기전용 정보(공지·미리보기·가이드 등)는 **"닫기"**.
 - **드롭다운/Select**: 한국어 짤림 방지 — `min-w-[180px]`/`sm:max-w-[220px]` 여유. 항목 多 = 적응형 그리드 `grid-cols-2 sm:grid-cols-4`.
 - **부수 설명**: 본문에 펼치지 말고 **아이콘+Popover**(hover+터치 동시지원, radix Tooltip ✗). 참고 `InfoHint`(profit-chart). 코드 패턴은 §11.
 - **입력**: 날짜/시간 input은 globals.css 전역 리셋(appearance-none·min-w-0·max-w-100%)로 모바일 넘침 차단 — 폼별 `max-w` 임시방편 금지.
@@ -160,7 +162,7 @@
 ## 10. 부족분 보완 가이드(점진 적용)
 
 현 UI에서 아직 일관되지 않은 부분은 작업하며 이 기준으로 수렴한다.
-- **고도 일관화**: 면 분리에 테두리가 남아 있으면 `bg-muted/40`+`shadow`로 점진 교체(보더리스 플랫 강화).
+- **고도 일관화**: 면 분리에 테두리가 남아 있으면 `bg-muted/40`+`shadow`로 교체(보더리스 플랫 강화). **팝업(다이얼로그·시트·배너) 내부 정보/콜아웃 박스는 §3.3 [필수] 규약으로 즉시 적용**(점진 아님).
 - **간격 스케일 수렴**: 비표준 px/gap은 §3.1 4px 그리드 값으로 흡수.
 - **의미색 오용 점검**: 정보성 텍스트의 파랑/sky 잔존을 `text-muted-foreground`로 교정(§1.2·§11).
 - **모션 누락 보완**: 신규/수정 인터랙션에 누름 scale·진입 stagger·`transition` 속성 명시를 기본 포함.

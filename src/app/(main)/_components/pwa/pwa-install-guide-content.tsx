@@ -95,12 +95,12 @@ export function InstallGuideContent({
       <div className="w-full space-y-3 pt-2">
         {/* Step 1: 복원 코드 복사 */}
         {shareCode && (
-          <div className="flex flex-col gap-2 p-3 rounded-xl border border-border/50 bg-muted/10">
+          <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/10">
             <div className="flex items-center gap-2">
               <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
               <p className="text-xs font-bold text-foreground">{codeLabel} 복사</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5 shrink-0" />
               {codeLabel}가 클립보드에 복사되었습니다.
             </div>
@@ -130,7 +130,7 @@ export function InstallGuideContent({
         )}
 
         {/* Step 2: 브라우저 공유/메뉴 열기 */}
-        <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/10">
           <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
             {shareCode ? 2 : 1}
           </span>
@@ -141,7 +141,7 @@ export function InstallGuideContent({
         </div>
 
         {/* Step 3: 홈 화면에 추가 */}
-        <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/10">
           <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
             {shareCode ? 3 : 2}
           </span>
@@ -152,7 +152,7 @@ export function InstallGuideContent({
         </div>
 
         {/* Step 4: 앱 첫 실행 및 복원 */}
-        <div className="flex items-start gap-3 p-3 rounded-xl border border-border/50 bg-muted/10">
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/10">
           <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">
             {shareCode ? 4 : 3}
           </span>
@@ -200,7 +200,7 @@ export function InstallGuideContent({
       </div>
 
       {/* 접이식 문제해결 */}
-      <Collapsible open={troubleOpen} onOpenChange={setTroubleOpen} className="rounded-xl border border-border bg-muted/10">
+      <Collapsible open={troubleOpen} onOpenChange={setTroubleOpen} className="rounded-xl bg-muted/10">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold">
           <span className="flex items-center gap-2"><AlertTriangle className="size-4 text-amber-500" /> 설치가 안 되나요?</span>
           <ChevronDown className={`size-4 text-muted-foreground transition-transform ${troubleOpen ? "rotate-180" : ""}`} />
@@ -217,13 +217,13 @@ export function InstallGuideContent({
 function MobileTroubleshooting() {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
+      <div className="rounded-xl bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
         <p className="font-semibold">카카오톡·인스타그램 등으로 접속하셨나요?</p>
         <p className="leading-relaxed text-amber-600 dark:text-amber-300 mt-0.5">
           인앱 브라우저에서는 홈 화면 추가가 막혀 있습니다. <span className="font-semibold text-foreground">우측 상단 메뉴 → &ldquo;다른 브라우저로 열기&rdquo;</span>로 Safari·Chrome·삼성 인터넷에서 다시 열어 주세요.
         </p>
       </div>
-      <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground leading-relaxed">
+      <div className="rounded-xl bg-muted/20 p-3 text-xs text-muted-foreground leading-relaxed">
         <strong className="text-foreground font-semibold">※ 재설치가 안 될 때</strong><br />
         홈 화면의 앱 아이콘을 길게 눌러 삭제하거나 기기 [설정]에서 앱을 완전히 삭제한 뒤 다시 시도해 주세요.
       </div>
@@ -235,7 +235,7 @@ function MobileTroubleshooting() {
 function PcTroubleshooting({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
   return (
     <div className="space-y-4 text-sm">
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3 items-start text-amber-700 dark:text-amber-400">
+      <div className="rounded-xl bg-amber-500/5 p-4 flex gap-3 items-start text-amber-700 dark:text-amber-400">
         <AlertTriangle className="size-5 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-semibold">시크릿 모드(사생활 보호 모드) 설치 불가</p>
@@ -250,7 +250,7 @@ function PcTroubleshooting({ copied, onCopy }: { copied: boolean; onCopy: () => 
         <div className="text-muted-foreground leading-relaxed space-y-2 flex-1">
           <p className="text-amber-600 dark:text-amber-400 font-semibold">아이콘만 지운 뒤 재설치가 안 될 때</p>
           <p>브라우저에 기존 설치 기록이 남은 상태입니다. <strong className="font-semibold text-foreground">앱 관리 주소(chrome://apps)가 자동 복사되었습니다.</strong> 복사되지 않았다면 아래 버튼으로 복사해 주세요.</p>
-          <div className="flex items-center gap-2 my-2 bg-muted/60 rounded-lg p-2 border">
+          <div className="flex items-center gap-2 my-2 bg-muted/60 rounded-lg p-2">
             <code className="text-sm font-mono text-foreground flex-1 select-all pl-1">chrome://apps</code>
             <Button type="button" size="sm" variant="ghost" onClick={onCopy} className="h-8 px-3 text-sm gap-1">
               {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
@@ -261,7 +261,7 @@ function PcTroubleshooting({ copied, onCopy }: { copied: boolean; onCopy: () => 
         </div>
       </div>
 
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3 items-start text-amber-700 dark:text-amber-400">
+      <div className="rounded-xl bg-amber-500/5 p-4 flex gap-3 items-start text-amber-700 dark:text-amber-400">
         <AlertTriangle className="size-5 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-semibold">Firefox 등 일부 브라우저 미지원</p>

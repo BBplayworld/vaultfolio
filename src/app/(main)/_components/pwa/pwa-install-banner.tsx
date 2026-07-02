@@ -45,7 +45,7 @@ export function PwaInstallBanner() {
   if (isInstallable) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-xl border border-primary/20 bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
+        <div className="rounded-xl bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
           {/* 브랜드 데코 그라디언트 */}
           <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: MAIN_PALETTE[0] }} />
 
@@ -99,7 +99,7 @@ export function PwaInstallBanner() {
   if (isIOS) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-xl border border-primary/20 bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
+        <div className="rounded-xl bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: MAIN_PALETTE[0] }} />
 
           <button

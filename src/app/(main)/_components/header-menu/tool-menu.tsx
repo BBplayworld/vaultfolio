@@ -194,7 +194,7 @@ export function ToolMenuPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-card hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
@@ -202,7 +202,7 @@ export function ToolMenuPage() {
       <div className="flex flex-col gap-5">
         <section>
           <p className={SECTION_LABEL}>프로필</p>
-          <div className="flex items-center gap-2 px-4 py-3 rounded-xl border bg-card">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card shadow-xs">
             <User className="size-5 text-primary shrink-0" />
             <input
               type="text"
@@ -297,7 +297,7 @@ export function ToolMenuPage() {
           <div className="flex flex-col gap-3 py-4">
             <button
               type="button"
-              className="flex flex-col text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-all duration-200 group relative overflow-hidden"
+              className="flex flex-col text-left p-4 rounded-xl bg-card shadow-xs hover:bg-accent transition-[background-color,box-shadow] duration-200 group relative overflow-hidden"
               onClick={() => {
                 setShowShareSyncChooser(false);
                 handleShare();
@@ -316,7 +316,7 @@ export function ToolMenuPage() {
 
             <button
               type="button"
-              className="flex flex-col text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-all duration-200 group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col text-left p-4 rounded-xl bg-card shadow-xs hover:bg-accent transition-[background-color,box-shadow] duration-200 group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!cs.enabled}
               onClick={() => {
                 setShowShareSyncChooser(false);
@@ -347,7 +347,7 @@ export function ToolMenuPage() {
           </div>
 
           <DialogFooter className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowShareSyncChooser(false)}>
+            <Button variant="secondary" onClick={() => setShowShareSyncChooser(false)}>
               닫기
             </Button>
           </DialogFooter>
@@ -402,7 +402,7 @@ export function ToolMenuPage() {
               <Share2 className="mr-2 size-4" />
               {shortUrlLoading ? "생성 중..." : "공유 URL 복사"}
             </Button>
-            <Button variant="outline" onClick={() => setShowShareDialog(false)} className="flex-1 sm:flex-initial">
+            <Button variant="secondary" onClick={() => setShowShareDialog(false)} className="flex-1 sm:flex-initial">
               취소
             </Button>
           </DialogFooter>
@@ -450,7 +450,7 @@ export function ToolMenuPage() {
               {feedbackSending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <MessageSquarePlus className="mr-2 size-4" />}
               보내기
             </Button>
-            <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowFeedbackDialog(false)}>
               취소
             </Button>
           </DialogFooter>
@@ -473,7 +473,7 @@ export function ToolMenuPage() {
           <div className="flex flex-col gap-3 py-4">
             <button
               type="button"
-              className="flex items-center gap-3 text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-[background-color,border-color] duration-200 active:not-disabled:scale-[0.99]"
+              className="flex items-center gap-3 text-left p-4 rounded-xl bg-card shadow-xs hover:bg-accent transition-[background-color,box-shadow] duration-200 active:not-disabled:scale-[0.99]"
               onClick={() => {
                 setShowHelpChooser(false);
                 window.dispatchEvent(new CustomEvent("trigger-restore-guide"));
@@ -488,7 +488,7 @@ export function ToolMenuPage() {
 
             <button
               type="button"
-              className="flex items-center gap-3 text-left p-4 rounded-xl border bg-card hover:bg-accent hover:border-primary/50 transition-[background-color,border-color] duration-200 active:not-disabled:scale-[0.99]"
+              className="flex items-center gap-3 text-left p-4 rounded-xl bg-card shadow-xs hover:bg-accent transition-[background-color,box-shadow] duration-200 active:not-disabled:scale-[0.99]"
               onClick={() => {
                 setShowHelpChooser(false);
                 setShowNotice(true);
@@ -503,7 +503,7 @@ export function ToolMenuPage() {
           </div>
 
           <DialogFooter className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowHelpChooser(false)}>
+            <Button variant="secondary" onClick={() => setShowHelpChooser(false)}>
               닫기
             </Button>
           </DialogFooter>

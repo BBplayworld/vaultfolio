@@ -149,7 +149,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {cs.status === "none" && (
           <div className="space-y-3 py-1">
             {/* Plus 프로모션 넛지 — 가치 인지 + 베타 무료 안내 */}
-            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 space-y-1">
+            <div className="rounded-lg bg-primary/5 px-3 py-2.5 space-y-1">
               <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
               </p>
@@ -198,7 +198,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* locked: 잠금 해제 */}
         {cs.status === "locked" && (
           <div className="space-y-3 py-1">
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-[11px] text-amber-600 dark:text-amber-400">
+            <div className="rounded-md bg-amber-500/10 px-3 py-2 text-[11px] text-amber-600 dark:text-amber-400">
               이 기기는 금고에 연결돼 있어요. 금고 암호로 잠금을 해제하면 동기화가 재개됩니다.
             </div>
             <div className="space-y-1.5">
@@ -225,7 +225,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* armed: 링크/QR/공유 + 동기화 */}
         {cs.status === "armed" && (
           <div className="space-y-4 py-1">
-            <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs flex items-center justify-between">
+            <div className="rounded-md bg-primary/5 px-3 py-2 text-xs flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-foreground font-medium">
                 <RefreshCw className={`size-3.5 text-primary ${cs.syncing ? "animate-spin" : ""}`} />
                 자동 동기화 켜짐{cs.syncing ? " · 동기화 중…" : ""}
@@ -234,7 +234,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             </div>
 
             {/* 카드 1: 다른 기기 동기화 링크 */}
-            <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2.5">
+            <div className="rounded-lg bg-card/50 shadow-xs p-3 space-y-2.5">
               <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
                 <Link2 className="size-3.5 text-primary" /> 다른 기기 동기화 링크
               </Label>
@@ -261,7 +261,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             </div>
 
             {/* 카드 2: 동기화 코드 (Sync Code) */}
-            <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2.5">
+            <div className="rounded-lg bg-card/50 shadow-xs p-3 space-y-2.5">
               <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
                 <KeyRound className="size-3.5 text-primary" /> PWA/네이티브 앱 연동 코드
               </Label>
@@ -289,7 +289,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                   <CloudDownload className="mr-2 size-4" /> 기기 데이터 가져오기
                 </Button>
               ) : (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+                <div className="rounded-md bg-amber-500/10 p-3 space-y-2">
                   <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <AlertTriangle className="size-3.5" /> 이 기기의 현재 자산을 클라우드 데이터로 덮어씁니다.
                   </p>

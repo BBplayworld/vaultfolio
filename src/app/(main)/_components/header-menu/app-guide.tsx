@@ -9,7 +9,7 @@ export function AppGuideContent() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-sm">
       {/* 피처 1: 영지식 */}
-      <div className="flex flex-col gap-2.5 p-5 rounded-xl border border-primary/20 bg-background/50 backdrop-blur-sm shadow-sm transition-all hover:border-primary/40">
+      <div className="flex flex-col gap-2.5 p-5 rounded-xl bg-muted/40 backdrop-blur-sm shadow-sm transition-colors hover:bg-muted/60">
         <div className="flex items-center gap-2">
           <ShieldCheck className="size-5 text-primary shrink-0" />
           <h4 className="font-semibold text-foreground text-[15px]">영지식(Zero-Knowledge) 로컬 격리</h4>
@@ -20,7 +20,7 @@ export function AppGuideContent() {
       </div>
 
       {/* 피처 2: 클라우드 동기화 */}
-      <div className="flex flex-col gap-2.5 p-5 rounded-xl border border-primary/20 bg-background/50 backdrop-blur-sm shadow-sm transition-all hover:border-primary/40">
+      <div className="flex flex-col gap-2.5 p-5 rounded-xl bg-muted/40 backdrop-blur-sm shadow-sm transition-colors hover:bg-muted/60">
         <div className="flex items-center gap-2">
           <CloudLightning className="size-5 text-primary shrink-0" />
           <h4 className="font-semibold text-foreground text-[15px]">이중 종단간 암호화(E2EE) 동기화</h4>
@@ -32,7 +32,7 @@ export function AppGuideContent() {
       </div>
 
       {/* 피처 3: 서버 관리자 불가 */}
-      <div className="flex flex-col gap-2.5 p-5 rounded-xl border border-primary/20 bg-background/50 backdrop-blur-sm shadow-sm transition-all hover:border-primary/40">
+      <div className="flex flex-col gap-2.5 p-5 rounded-xl bg-muted/40 backdrop-blur-sm shadow-sm transition-colors hover:bg-muted/60">
         <div className="flex items-center gap-2">
           <EyeOff className="size-5 text-primary shrink-0" />
           <h4 className="font-semibold text-foreground text-[15px]">서버 관리자 자산 열람 원천 불가</h4>

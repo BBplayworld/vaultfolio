@@ -1389,7 +1389,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             <Button onClick={handlePinConfirm} type="button" style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">
               데이터 불러오기
             </Button>
-            <Button variant="outline" onClick={handlePinCancel}>
+            <Button variant="secondary" onClick={handlePinCancel}>
               취소
             </Button>
           </DialogFooter>

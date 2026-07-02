@@ -252,7 +252,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
               </div>
             )}
 
-            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-1">
+            <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
               <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
@@ -359,7 +359,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 항목 등록`}
             </Button>
           )}
-          <Button variant="outline" onClick={handleClose}>취소</Button>
+          <Button variant="secondary" onClick={handleClose}>취소</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

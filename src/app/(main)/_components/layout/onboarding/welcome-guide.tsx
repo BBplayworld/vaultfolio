@@ -125,7 +125,7 @@ export function WelcomeGuide() {
 
       {/* PWA 웹앱 설치 유도 — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
       {canInstallPWA && (
-        <div className={`rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4 ${ENTER}`} style={{ animationDelay: "200ms" }}>
+        <div className={`rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-6 space-y-4 ${ENTER}`} style={{ animationDelay: "200ms" }}>
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
               <Smartphone className="size-5 text-primary" />
@@ -261,7 +261,7 @@ export function WelcomeGuide() {
 
       {/* CTA 섹션 */}
       {ctaVisible && (
-      <div className="rounded-xl border border-border/60 bg-card/80 p-6 space-y-5">
+      <div className="rounded-xl bg-card/80 shadow-xs p-6 space-y-5">
         <div className="text-center space-y-1">
           <h2 className="text-lg font-semibold text-balance">
             {mounted && isStandalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
@@ -335,7 +335,7 @@ function FeatureCard({
   desc: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card/60 p-5 space-y-2.5">
+    <div className="rounded-xl bg-card/60 shadow-xs p-5 space-y-2.5">
       <div className="flex items-center gap-2">
         <div className="rounded-lg bg-primary/10 p-2 shrink-0">
           <Icon className="size-4 text-primary" />

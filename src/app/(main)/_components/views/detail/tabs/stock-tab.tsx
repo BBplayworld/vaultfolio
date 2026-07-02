@@ -561,7 +561,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
         </div>
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button size="sm" disabled={!isValid} onClick={handleSplit} style={{ backgroundColor: MAIN_PALETTE[0] }} className="text-white hover:opacity-90 border-none">나누기</Button>
-          <Button variant="outline" size="sm" onClick={onClose}>취소</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>취소</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -110,7 +110,7 @@ export function PromptPreviewDialog({
               </>
             )}
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-initial">
+          <Button variant="secondary" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-initial">
             닫기
           </Button>
         </DialogFooter>

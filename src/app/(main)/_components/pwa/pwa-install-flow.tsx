@@ -331,7 +331,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             {inAppStep ? (
               /* 인앱 브라우저(카카오톡 등): 홈 화면 추가 불가 → 외부 브라우저로 유도 */
               <div className="flex flex-col gap-4 py-1">
-                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20 leading-relaxed">
+                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 leading-relaxed">
                   <Copy className="size-4 shrink-0 mt-0.5" />
                   <div>
                     <strong>현재 웹페이지 주소가 복사되었습니다!</strong>
@@ -365,7 +365,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                     </span>
                   </li>
                 </ol>
-                <div className="rounded-lg bg-muted/40 p-2.5 text-sm text-muted-foreground border">
+                <div className="rounded-lg bg-muted/40 p-2.5 text-sm text-muted-foreground">
                   메뉴에 위 항목이 보이지 않는다면, 복사된 주소를 복사하여 스마트폰의 기본 브라우저(Safari 또는 크롬) 주소창에 직접 붙여넣어 접속해 주세요.
                 </div>
               </div>
@@ -437,7 +437,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                   {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
                   {isIOS ? "추가 방법 보기" : "설치하기"}
                 </Button>
-                <Button variant="outline" onClick={() => handleDialogChange(false)} className="text-sm h-10 px-4 font-semibold">
+                <Button variant="secondary" onClick={() => handleDialogChange(false)} className="text-sm h-10 px-4 font-semibold">
                   취소
                 </Button>
               </>
