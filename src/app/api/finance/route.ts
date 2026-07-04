@@ -23,7 +23,7 @@ import {
   StockPriceResult,
 } from "@/lib/finance-service";
 import { getCacheStorage, getEffectiveDateStr, getStockCacheSlot } from "@/lib/cache-storage";
-import { getKisAccessToken } from "@/lib/kis-token";
+import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
@@ -59,11 +59,17 @@ export async function GET(request: Request) {
     if (rates) {
       // 3단계: 캐시 갱신
       await storage.setExchange(rates);
+      await recordKisSuccess();
       return NextResponse.json({ ...rates, history: await storage.getExchangeHistory() });
     }
 
-    // 외부 API 일시 오류 헤더 (5회 이상 토큰 실패)
-    const headers = unavailable ? KIS_UNAVAILABLE_HEADER : undefined;
+    // 토큰은 유효했으나(캐시 hit) 환율 조회 자체가 전량 실패 = 토큰 발급 후·만료 전에
+    // KIS 점검이 시작된 경우 → 서킷에 반영해 오늘자 동기화에도 일시 오류 신호 전달
+    let unavailableNow = unavailable;
+    if (accessTokenForExchange && !rates) {
+      unavailableNow = await recordKisFailure();
+    }
+    const headers = unavailableNow ? KIS_UNAVAILABLE_HEADER : undefined;
     // 외부 API 실패 시 기존 캐시로 fallback
     if (cached) return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() }, { headers });
     return NextResponse.json({ error: "환율 조회 실패" }, { status: 500, headers });
@@ -107,12 +113,16 @@ export async function GET(request: Request) {
     // 2단계: 미캐시 항목만 외부 API 호출
     const apiResults: Record<string, StockPriceResult> = {};
     let kisUnavailable = false;
+    let attemptedFetch = false;
+    let anySuccess = false;
 
     if (uncachedUs.length > 0) {
       const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
       kisUnavailable = kisUnavailable || unavailable;
       if (accessToken) {
+        attemptedFetch = true;
         const { prices, classifications } = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        if (Object.keys(prices).length > 0) anySuccess = true;
         for (const [ticker, cls] of Object.entries(classifications)) {
           if (prices[ticker]) prices[ticker].classification = cls;
           // 90일 분류 캐시에도 머지 저장 — Gemini themes가 없어도 region/marketCapTier/indices는 보존
@@ -129,7 +139,9 @@ export async function GET(request: Request) {
       const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
       kisUnavailable = kisUnavailable || unavailable;
       if (accessToken) {
+        attemptedFetch = true;
         const { prices, classifications } = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        if (Object.keys(prices).length > 0) anySuccess = true;
         for (const [ticker, cls] of Object.entries(classifications)) {
           if (prices[ticker]) prices[ticker].classification = cls;
           await storage.setStockClassification(ticker, cls as unknown as Record<string, unknown>);
@@ -145,6 +157,16 @@ export async function GET(request: Request) {
       const isUs = usTickers.includes(ticker);
       const slot = isUs ? slotForeign : slotDomestic;
       await storage.setStock(stockCacheKey(ticker, slot), result, slot, ticker);
+    }
+
+    // 토큰은 유효했으나(캐시 hit) 조회가 전량 실패 = 토큰 발급 후·만료 전에 KIS 점검이
+    // 시작된 경우 → 서킷에 반영. 개별 티커 1~2개 실패(신규상장 등)는 anySuccess가 true라 무시.
+    if (attemptedFetch) {
+      if (anySuccess) {
+        await recordKisSuccess();
+      } else {
+        kisUnavailable = await recordKisFailure();
+      }
     }
 
     return NextResponse.json(

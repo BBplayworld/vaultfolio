@@ -5,7 +5,7 @@ import {
   fetchOverseasHistoricalPrice,
   classifyTickers,
 } from "@/lib/finance-service";
-import { getKisAccessToken } from "@/lib/kis-token";
+import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/kis-token";
 import { getDailyClosingRefDates } from "@/lib/profit-utils";
 import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/stock-cache-slot";
 import { isKrBusinessDay } from "@/lib/kr-holidays";
@@ -230,6 +230,7 @@ export async function GET(req: NextRequest) {
     }),
   );
 
+  let successCount = 0;
   await Promise.all(
     fetchQueue.map(async (task) => {
       const isDomestic = task.market === "domestic";
@@ -237,6 +238,7 @@ export async function GET(req: NextRequest) {
         ? await fetchDomesticHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret)
         : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker));
       if (res !== null) {
+        successCount++;
         await cache.setRefPrice(task.ticker, res.date, res.price, period);
         // 응답일==요청일이거나, 요청일이 비영업일(휴장/주말)이라 직전 영업일로 폴백된 경우 매핑 저장
         // - 비영업일 폴백은 영구 확정값이라 안전 (휴장일 동안 매번 KIS 재호출되던 churn 제거)
@@ -265,5 +267,14 @@ export async function GET(req: NextRequest) {
     if (!e || !e.refDate) result[ticker] = null;
   }
 
-  return NextResponse.json(result);
+  // 토큰은 유효했으나(캐시 hit) 전량 실패 = 토큰 발급 후·만료 전에 KIS 점검이 시작된 경우 →
+  // 서킷에 반영해 클라이언트에 일시 오류 신호 전달. 개별 티커 1~2개 실패(신규상장 등)는 정상 범위.
+  let unavailableNow = false;
+  if (fetchQueue.length > 0 && successCount === 0) {
+    unavailableNow = await recordKisFailure();
+  } else if (successCount > 0) {
+    await recordKisSuccess();
+  }
+
+  return NextResponse.json(result, unavailableNow ? { headers: { "X-KIS-Unavailable": "1" } } : undefined);
 }

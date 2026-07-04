@@ -240,13 +240,29 @@ export async function fetchProfitRef(
   if (!signal) {
     console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
   }
+  // 요청한 모든 티커가 키로 존재해야 완전한 캐시 — 점검으로 잘려 일부만 저장된
+  // 과거 잔존 캐시를 "완료"로 오인하지 않도록 검증(과거 종가는 불변이라 완전하면 그대로 신뢰)
+  // daily는 prevPrice/prevDate(전일 대비용, 선택 필드)가 ref와 별개 하위 작업으로 채워지므로
+  // 그것까지 있어야 진짜 완전 — 없으면 computeDailyStockProfit이 해당 종목만 조용히 건너뛰어
+  // 일부 데이터로 계산된 수치가 점검 배너 대신 노출되는 문제 방지
+  const requestedTickers = tickers.split(",").filter(Boolean);
+  const isCacheComplete = (data: ProfitRefResponse): boolean =>
+    requestedTickers.length > 0 && requestedTickers.every((t) => {
+      if (!(t in data)) return false;
+      const entry = data[t];
+      if (entry === null) return true; // 확정된 "기준가 없음" — 완전한 응답
+      if (period === "daily") return entry.prevPrice !== undefined && entry.prevDate !== undefined;
+      return true;
+    });
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const cached = JSON.parse(raw) as ProfitRefResponse;
-      onProgress?.(cached);
-      onComplete?.(true);
-      return cached;
+      if (isCacheComplete(cached)) {
+        onProgress?.(cached);
+        onComplete?.(true);
+        return cached;
+      }
     }
   } catch { /* ignore */ }
 
@@ -277,6 +293,8 @@ export async function fetchProfitRef(
   const runFetch = async (): Promise<ProfitRefResponse> => {
     const tickerArr = tickers.split(",").filter(Boolean);
     const merged: ProfitRefResponse = {};
+    // 점검(X-KIS-Unavailable)으로 배치 중 잘린 경우 — 불완전한 결과이므로 "완료"로 취급하지 않음
+    let hitUnavailable = false;
     for (let i = 0; i < tickerArr.length; i += PROFIT_BATCH_SIZE) {
       if (signal?.aborted) break;
       if (i > 0) await sleepAbortable(PROFIT_BATCH_DELAY_MS);
@@ -284,8 +302,9 @@ export async function fetchProfitRef(
       const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
       try {
         const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}&basis=${basis}`, { signal });
-        // 5회 이상 토큰 실패로 외부 API 일시 오류 → 콜백 후 추가 배치 중단
+        // 토큰 발급 실패 누적 또는 전량 조회 실패로 외부 API 일시 오류 → 콜백 후 추가 배치 중단
         if (res.headers.get("X-KIS-Unavailable") === "1") {
+          hitUnavailable = true;
           onKisUnavailable?.();
           break;
         }
@@ -296,8 +315,9 @@ export async function fetchProfitRef(
         }
       } catch { /* abort 등 정상 흐름 */ }
     }
-    // 모든 배치 완료 후에만 1회 저장 (부분 결과가 캐시 hit으로 오인되어 나머지 fetch가 안 되는 문제 방지)
-    if (!signal?.aborted) {
+    // 모든 배치가 정상 완료된 경우에만 저장 — 점검으로 잘린 불완전한 결과는 캐시에 남기지 않아
+    // 다음 호출이 "정상 완료"로 오인하지 않고 반드시 재시도하도록 함
+    if (!signal?.aborted && !hitUnavailable) {
       try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
       onComplete?.(false);
     }

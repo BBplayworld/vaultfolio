@@ -538,34 +538,28 @@ export function YearlyNetAssetChart() {
                     </ResponsiveContainer>
                   </ChartContainer>
 
-                  {/* 전월대비 표 */}
-                  <div className="rounded-lg overflow-hidden border border-border/50">
-                    <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                      <div className="min-w-[360px]">
-                        <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-x-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
-                          <span>월</span>
-                          <span className="text-right">순자산</span>
-                          <span className="text-right">금융자산</span>
-                          <span className="text-right">전월대비</span>
+                  {/* 월별 순자산 목록 — 년도별 리스트와 동일한 스택 레이아웃(고정폭 그리드 대신 자연 줄바꿈) */}
+                  <div className="space-y-2">
+                    {monthlyData.map((row, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const diff = prev ? row.netAsset - prev.netAsset : null;
+                      return (
+                        <div key={row.month} className="rounded-lg p-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-muted-foreground">{row.month}</span>
+                            {diff !== null && (
+                              <span className={`text-sm font-semibold ${getProfitLossColor(diff)}`}>
+                                {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
+                            <p className={`text-sm font-bold ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</p>
+                            <span className="text-sm text-muted-foreground">금융자산 {formatPriceDecimalByMode(row.financialAsset)}</span>
+                          </div>
                         </div>
-                        <div className="divide-y">
-                          {monthlyData.map((row, idx, arr) => {
-                            const prev = arr[idx - 1];
-                            const diff = prev ? row.netAsset - prev.netAsset : null;
-                            return (
-                              <div key={row.month} className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-x-2 px-3 py-2 items-center">
-                                <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{row.month}</span>
-                                <span className={`text-sm font-bold tabular-nums text-right whitespace-nowrap ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
-                                <span className={`text-sm tabular-nums text-right whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
-                                <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
-                                  {diff !== null ? `${diff >= 0 ? "+" : ""}${formatPriceByMode(diff)}` : "-"}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

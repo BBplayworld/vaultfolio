@@ -121,7 +121,7 @@ export function PerformanceHub() {
       basis: profitBasis,
       onProgress: (data) => setRefData({ ...data }),
       onKisUnavailable: () => setKisUnavailable(true),
-    }).then((data) => setRefData(data)).catch(() => { /* abort 등 무시 */ });
+    }).catch(() => { /* abort 등 무시 */ });
     return () => controller.abort();
   }, [profitBasisHydrated, tickerList, profitBasis]);
 
@@ -163,17 +163,19 @@ export function PerformanceHub() {
           icon={TrendingUp}
           title="수익"
           description="기간별 수익"
-          primary={dailyReady
-            ? `${dailyProfit! >= 0 ? "+" : ""}${formatPriceByMode(dailyProfit!)}`
-            : kisUnavailable ? "점검 중" : "조회 중…"}
+          primary={kisUnavailable
+            ? "점검 중"
+            : dailyReady
+              ? `${dailyProfit! >= 0 ? "+" : ""}${formatPriceByMode(dailyProfit!)}`
+              : "조회 중…"}
           primaryClassName={ASSET_THEME.text.default}
-          secondary={dailyReady ? (
+          secondary={kisUnavailable ? (
+            <span className="text-muted-foreground">외부 증권 API 점검으로 인한 오류</span>
+          ) : dailyReady ? (
             <span className={`font-semibold tabular-nums ${getProfitLossColor(dailyProfit!)}`}>
               {dailyProfit! >= 0 ? "+" : ""}{(dailyProfitRate ?? 0).toFixed(2)}%
               <span className="text-muted-foreground font-medium ml-1.5">일별 대비</span>
             </span>
-          ) : kisUnavailable ? (
-            <span className="text-muted-foreground">외부 증권 API 점검으로 인한 오류</span>
           ) : null}
           onClick={() => go("profit")}
         />

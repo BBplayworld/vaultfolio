@@ -317,6 +317,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const controller = new AbortController();
     refAbortRef.current = controller;
     setRefData(undefined);
+    setKisUnavailable(false);
     fetchProfitRef(tickerList, period, {
       signal: controller.signal,
       caller: `profit-chart:ref(${period})`,
@@ -347,6 +348,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     const controller = new AbortController();
     dailyAbortRef.current = controller;
     setDailyData(undefined);
+    setKisUnavailable(false);
     fetchProfitRef(tickerList, "daily", {
       signal: controller.signal,
       caller: "profit-chart:daily(secondary)",
@@ -389,8 +391,9 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     );
   }
 
-  // KIS 외부 API 일시 오류 + 표시할 데이터 없음 → 정보없음 노출 (무한 스켈레톤 방지)
-  if (kisUnavailable && isLoading) {
+  // KIS 외부 API 일시 오류 → 항상 통일된 배너 노출 (캐시 히트로 isLoading이 꺼져도
+  // 종목별 "기준가 없음"으로 새지 않도록 우선순위를 최상단에 둠)
+  if (kisUnavailable) {
     return (
       <Card className={ASSET_THEME.contentCard}>
         <CardHeader className={ASSET_THEME.contentPad}>
