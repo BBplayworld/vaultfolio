@@ -9,22 +9,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { fetchDividendDomestic, fetchDividendOverseas, fetchKisToken } from "@/lib/finance-service";
+import { fetchDividendDomestic, fetchDividendOverseas } from "@/lib/finance-service";
 import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance-service";
 import { getCacheStorage } from "@/lib/cache-storage";
+import { getKisAccessToken } from "@/lib/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 const DIVIDEND_CACHE_VERSION = "v11";
-
-async function getKisAccessToken(todayStr: string): Promise<string | null> {
-  const storage = getCacheStorage();
-  const cached = await storage.getKisToken(todayStr);
-  if (cached) return cached;
-  const token = await fetchKisToken(KIS_APP_KEY, KIS_APP_SECRET);
-  if (token) await storage.setKisToken(token, todayStr);
-  return token;
-}
 
 // 해외주식 이상값 필터: 전년도 중앙값 기준으로 올해 이상값 제거
 function filterOverseasOutliers(
@@ -215,9 +207,12 @@ export async function GET(request: Request) {
 
     const year = nowKST.getUTCFullYear();
     const prevYear = year - 1;
-    const accessToken = await getKisAccessToken(todayStr);
+    const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
     if (!accessToken) {
-      return NextResponse.json({ data: [], messages }, { status: 200 });
+      return NextResponse.json(
+        { data: [], messages },
+        { status: 200, headers: unavailable ? { "X-KIS-Unavailable": "1" } : undefined }
+      );
     }
 
     // 2단계: KIS 원본 응답 수집용 (로컬 로그)

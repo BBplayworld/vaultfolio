@@ -20,12 +20,12 @@ export function DetailHub() {
       {rate !== null && (
         <> ({profit >= 0 ? "+" : ""}{rate.toFixed(2)}%)</>
       )}
-      <span className="text-muted-foreground font-normal ml-1.5">평가손익</span>
+      <span className="text-muted-foreground font-medium ml-1.5">평가손익</span>
     </span>
   );
 
   const countLine = (count: number, unit: string) => (
-    <span className="text-muted-foreground tabular-nums">{count}{unit}</span>
+    <span className="text-muted-foreground font-medium tabular-nums">{count}{unit}</span>
   );
 
   return (

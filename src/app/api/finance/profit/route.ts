@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
 import {
-  fetchKisToken,
   fetchDomesticHistoricalPrice,
   fetchOverseasHistoricalPrice,
   classifyTickers,
 } from "@/lib/finance-service";
+import { getKisAccessToken } from "@/lib/kis-token";
 import { getDailyClosingRefDates } from "@/lib/profit-utils";
 import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/stock-cache-slot";
 import { isKrBusinessDay } from "@/lib/kr-holidays";
@@ -198,18 +198,15 @@ export async function GET(req: NextRequest) {
   const nowKST = getKSTNow();
   const todayStr = toDateStr(nowKST);
 
-  let accessToken: string | null = await cache.getKisToken(todayStr);
-  if (!accessToken) {
-    accessToken = await fetchKisToken(appKey, appSecret);
-    if (accessToken) await cache.setKisToken(accessToken, todayStr);
-  }
+  const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
 
   if (!accessToken) {
     console.error(`[KIS 토큰 없음 - 과거종가 조회 스킵]: ${fetchQueue.map((t) => t.ticker).join(",")}`);
     for (const ticker of [...allKr, ...allUs]) {
       if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
     }
-    return NextResponse.json(result);
+    // 5회 이상 토큰 실패 시 클라이언트에 일시 오류 신호
+    return NextResponse.json(result, unavailable ? { headers: { "X-KIS-Unavailable": "1" } } : undefined);
   }
 
   // 해외 종목별 EXCD를 STOCKS 캐시에서 사전 조회 (장중 슬롯과 effectiveDate 슬롯 모두 시도)

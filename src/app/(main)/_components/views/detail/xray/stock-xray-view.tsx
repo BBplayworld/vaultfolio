@@ -60,8 +60,8 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
         return (
           <div key={item.key} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium truncate">{item.label}</span>
-              <span className="text-xs tabular-nums text-muted-foreground shrink-0">
+              <span className="text-sm sm:text-base font-semibold truncate">{item.label}</span>
+              <span className="text-xs sm:text-sm font-semibold tabular-nums text-foreground/80 shrink-0">
                 {formatShortCurrency(Math.round(item.value))} · {pct}%
               </span>
             </div>
@@ -76,7 +76,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
                 {item.topThemes.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-medium"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-primary/10 text-primary font-medium"
                   >
                     #{t}
                   </span>
@@ -88,7 +88,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
                 {item.contributions.map((c, ci) => (
                   <span
                     key={`${c.ticker}-${ci}`}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-muted/40 text-muted-foreground tabular-nums"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-muted/40 text-muted-foreground tabular-nums"
                     title={`${c.name} · ${formatShortCurrency(Math.round(c.value))}`}
                   >
                     {truncateName(c.displayLabel, 15)}
@@ -191,15 +191,15 @@ export function StockXrayView() {
         </div>
 
         {/* 분포 시각화 */}
-        <div className="rounded-lg bg-card p-4">
+        <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+            <span className="text-xs sm:text-sm font-bold text-muted-foreground tracking-wide">
               분포 분석
             </span>
             {result.total > 0 && (
               <span className="flex items-center gap-1">
                 <ConcentrationInfo />
-                <span className={`text-xs font-medium ${conc.color}`}>{conc.label}</span>
+                <span className={`text-xs sm:text-sm font-bold ${conc.color}`}>{conc.label}</span>
               </span>
             )}
           </div>
@@ -218,7 +218,7 @@ export function StockXrayView() {
             <BreakdownVisual result={result} />
           )}
           {incomplete && showWarning && result.items.length > 1 && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
+            <p className="mt-3 text-[11px] sm:text-xs text-muted-foreground">
               ⓘ 미분류 종목 {unclassPct}%는 외부 분류 데이터 수집 후 갱신됩니다.
             </p>
           )}
@@ -227,8 +227,8 @@ export function StockXrayView() {
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
         <div className="rounded-lg bg-muted/20 p-4 space-y-3">
           <div>
-            <p className="text-sm font-semibold">📋 AI 진단 프롬프트</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm sm:text-base font-bold">📋 AI 진단 프롬프트</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다.
             </p>
           </div>

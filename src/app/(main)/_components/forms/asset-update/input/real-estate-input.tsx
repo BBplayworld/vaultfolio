@@ -180,7 +180,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="purchasePrice"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel style={{ color: MAIN_PALETTE[10] }}>매입가 *</FormLabel>
+                <FormLabel style={{ color: "var(--accent-teal)" }}>매입가 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -201,7 +201,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
             name="currentValue"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel style={{ color: MAIN_PALETTE[10] }}>{getCurrentValueLabel()} *</FormLabel>
+                <FormLabel style={{ color: "var(--accent-teal)" }}>{getCurrentValueLabel()} *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}

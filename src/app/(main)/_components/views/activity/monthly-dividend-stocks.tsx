@@ -183,7 +183,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
     .filter((r): r is StockDividendRow => r !== null);
 
   if (isLoading) {
-    return <p className="text-xs text-muted-foreground text-center py-3">배당 정보 조회 중...</p>;
+    return <p className="text-sm text-muted-foreground text-center py-3">배당 정보 조회 중...</p>;
   }
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
@@ -196,7 +196,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
 
   if (grouped.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground text-center py-3">
+      <p className="text-sm text-muted-foreground text-center py-3">
         {selectedMonth !== undefined ? `${selectedMonth}월 배당 종목이 없습니다.` : "배당 데이터가 없습니다."}
       </p>
     );
@@ -208,7 +208,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         <div key={key} className="rounded-lg border overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b">
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
+            <span className="text-xs font-semibold text-muted-foreground">{label}</span>
           </div>
           <div className="grid grid-cols-[2fr_4rem_3rem_3rem_3rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-2 sm:gap-x-3 px-3 py-2 bg-muted/50 text-xs sm:text-sm text-muted-foreground border-b">
             <span>종목명</span>
@@ -243,19 +243,19 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     <div className="flex items-center gap-1 sm:hidden mt-0.5">
                       <span className="text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
-                        <Badge className={`${ASSET_THEME.categoryBox} text-[10px] px-1 py-0 h-4 shrink-0`}>
+                        <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    {stock.purchaseDate && <p className="text-xs text-muted-foreground/60 mt-1">매수 {stock.purchaseDate}</p>}
+                    {stock.purchaseDate && <p className="text-xs text-muted-foreground mt-1">매수 {stock.purchaseDate}</p>}
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end">
                     {beforePurchaseMonths.map((m) => (
                       <Badge
                         key={`before-${m}`}
                         variant="outline"
-                        className="text-[10px] sm:text-xs px-2 py-0.5 h-6 opacity-25 cursor-default"
+                        className="text-xs px-2 py-0.5 h-6 opacity-25 cursor-default"
                       >
                         {m}월
                       </Badge>
@@ -264,7 +264,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                       <Badge
                         key={`actual-${m}`}
                         variant={m === selectedMonth ? "default" : "outline"}
-                        className="text-[10px] sm:text-xs px-2 py-0.5 h-6 font-semibold"
+                        className="text-xs px-2 py-0.5 h-6 font-semibold"
                         style={m !== selectedMonth ? { backgroundColor: `${MAIN_PALETTE[0]}22`, color: MAIN_PALETTE[0], borderColor: `${MAIN_PALETTE[0]}66` } : undefined}
                       >
                         {m}월
@@ -274,7 +274,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                       <Badge
                         key={`est-${m}`}
                         variant={m === selectedMonth ? "default" : "outline"}
-                        className={`text-[10px] sm:text-xs px-2 py-0.5 h-6 ${m !== selectedMonth ? "border-dashed text-muted-foreground" : ""}`}
+                        className={`text-xs px-2 py-0.5 h-6 ${m !== selectedMonth ? "border-dashed text-muted-foreground" : ""}`}
                       >
                         {m}월 예정
                       </Badge>
@@ -289,7 +289,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     ) : (
                       <p className="text-xs sm:text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
-                    <p className="text-[11px] sm:text-xs tabular-nums text-muted-foreground">보유 {stock.quantity}주</p>
+                    <p className="text-xs tabular-nums text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
                   <div className="text-right break-words">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (

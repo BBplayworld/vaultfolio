@@ -46,7 +46,7 @@ const chartConfig = Object.fromEntries(
 ) as ChartConfig;
 
 const commonAxisProps = {
-  tick: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
+  tick: { fill: "hsl(var(--muted-foreground))", fontSize: 12 },
   tickLine: false,
   axisLine: false,
 };
@@ -262,14 +262,14 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           {annualTotal > 0 && (
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground font-semibold">{heroLabel}</p>
+                <p className="text-sm text-muted-foreground font-semibold">{heroLabel}</p>
                 {heroStatus === "actual" && (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                     지급
                   </span>
                 )}
                 {heroStatus === "estimated" && (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
                     예상치
                   </span>
                 )}
@@ -282,7 +282,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
 
           {isLoading && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
                 <span>배당 정보 조회 중...</span>
                 <span className="tabular-nums">{loadedCount} / {totalCount}</span>
               </div>
@@ -299,14 +299,14 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   return (
                     <div key={stock.id} className="flex items-center justify-between px-1 py-0.5">
                       <span className="text-xs text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
-                      <span className={`text-[10px] ${done ? "text-primary" : "text-muted-foreground"}`}>
+                      <span className={`text-xs ${done ? "text-primary" : "text-muted-foreground"}`}>
                         {done ? "완료" : "조회 중..."}
                       </span>
                     </div>
                   );
                 })}
                 {stocksWithTicker.length > 8 && (
-                  <p className="text-[10px] text-muted-foreground px-1">외 {stocksWithTicker.length - 8}개 종목...</p>
+                  <p className="text-xs text-muted-foreground px-1">외 {stocksWithTicker.length - 8}개 종목...</p>
                 )}
               </div>
             </div>
@@ -316,7 +316,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
                 <p className="text-muted-foreground text-sm">올해 배당 데이터가 없습니다.</p>
-                <p className="text-muted-foreground text-xs mt-1">
+                <p className="text-muted-foreground text-sm mt-1">
                   보유 주식에 배당금이 없거나 KIS API가 설정되지 않았습니다.
                 </p>
               </div>
@@ -363,7 +363,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                           .filter((r) => r.total > 0);
 
                         return (
-                          <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs space-y-1 min-w-[140px]">
+                          <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm space-y-1 min-w-[140px]">
                             <p className="font-semibold text-foreground">{month}</p>
                             {catRows.map(({ cat, actual, estimated }) => (
                               <div key={cat} className="space-y-0.5">
@@ -378,7 +378,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                                 )}
                                 {estimated > 0 && (
                                   <div className="flex items-center justify-between gap-3">
-                                    <span className="flex items-center gap-1 text-muted-foreground/60">
+                                    <span className="flex items-center gap-1 text-muted-foreground">
                                       <span className="inline-block w-2 h-2 rounded-full shrink-0 opacity-40" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
                                       {CATEGORY_LABELS[cat]} (예상)
                                     </span>
@@ -420,7 +420,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                               position="top"
                               offset={8}
                               formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "#ffffff", fontSize: 11, fontWeight: 600 }}
+                              style={{ fill: "#ffffff", fontSize: 12, fontWeight: 700 }}
                             />
                           )}
                         </Bar>
@@ -451,7 +451,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                               position="top"
                               offset={8}
                               formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "#ffffff", fontSize: 11, fontWeight: 600 }}
+                              style={{ fill: "#ffffff", fontSize: 12, fontWeight: 700 }}
                             />
                           )}
                         </Bar>
@@ -474,13 +474,13 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 {activeCats.map((cat) => (
                   <div key={cat} className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
-                    <span className="text-xs text-muted-foreground">{CATEGORY_LABELS[cat]}</span>
+                    <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[cat]}</span>
                   </div>
                 ))}
                 {estimateMode === "all" && (
                   <div className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full shrink-0 bg-muted-foreground/40" />
-                    <span className="text-xs text-muted-foreground">예상 (옅음)</span>
+                    <span className="text-sm text-muted-foreground">예상 (옅음)</span>
                   </div>
                 )}
               </div>

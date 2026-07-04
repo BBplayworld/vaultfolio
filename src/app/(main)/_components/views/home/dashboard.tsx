@@ -33,7 +33,7 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
           const pct = (value / total) * 100;
           return (
             <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
-              {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+              {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
         })}
@@ -44,9 +44,9 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
           return (
             <div key={key} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-[13px] text-muted-foreground">{label}</span>
-              <span className="text-[13px] text-foreground">{formatShortCurrency(value)}</span>
-              <span className="text-[13px] font-bold text-primary">({pct.toFixed(1)}%)</span>
+              <span className="text-sm font-medium text-muted-foreground">{label}</span>
+              <span className="text-sm font-semibold text-foreground">{formatShortCurrency(value)}</span>
+              <span className="text-sm font-bold text-primary">({pct.toFixed(1)}%)</span>
             </div>
           );
         })}
@@ -72,9 +72,9 @@ function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, val
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   return (
     <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>
-      <tspan x={x - 1} dy="-16" fontSize={10} fontWeight={700} fill="white">{name}</tspan>
-      <tspan x={x} dy="16" fontSize={12} fontWeight={700} fill="rgba(255, 255, 255, 1)">{fmt(value)}</tspan>
-      <tspan x={x + 3} dy="16" fontSize={12} fontWeight={700} fill="rgba(255, 255, 255, 0.6)">{pct.toFixed(1)}%</tspan>
+      <tspan x={x - 1} dy="-16" fontSize={11} fontWeight={700} fill="white">{name}</tspan>
+      <tspan x={x} dy="16" fontSize={13} fontWeight={700} fill="rgba(255, 255, 255, 1)">{fmt(value)}</tspan>
+      <tspan x={x + 3} dy="16" fontSize={13} fontWeight={700} fill="rgba(255, 255, 255, 0.85)">{pct.toFixed(1)}%</tspan>
     </text>
   );
 }
@@ -223,7 +223,7 @@ export function NetAssetSummaryBox({
             {lastDaily && (
               <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
                 {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
-                <span className="text-xs lg:text-sm font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
+                <span className="text-sm lg:text-base font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
               </span>
             )}
           </div>
@@ -371,9 +371,9 @@ function DailyNetAssetTrend() {
           return (
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
               {isBig && (
-                <span className="text-[9px] font-bold animate-pulse leading-none mb-0.5" style={{ color: MAIN_PALETTE[4] }}>▲{pct.toFixed(0)}%</span>
+                <span className="text-[10px] sm:text-[11px] font-bold animate-pulse leading-none mb-0.5" style={{ color: MAIN_PALETTE[4] }}>▲{pct.toFixed(0)}%</span>
               )}
-              {!isBig && <span className="text-[9px] leading-none mb-0.5 invisible">x</span>}
+              {!isBig && <span className="text-[10px] sm:text-[11px] leading-none mb-0.5 invisible">x</span>}
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
                 <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrencyDecimal(snap.netAsset)}</span>
@@ -510,7 +510,7 @@ export function Dashboard() {
                           {financialBarItems.map(({ key, label, value }) => {
                             const pct = financialTotal > 0 ? (value / financialTotal) * 100 : 0;
                             return (
-                              <div key={key} className="text-[12px]">
+                              <div key={key} className="text-sm">
                                 <span className="text-muted-foreground">{label} </span>
                                 <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
                                 <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
@@ -525,7 +525,7 @@ export function Dashboard() {
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
 
-                      <p className="text-muted-foreground text-xs pb-1">
+                      <p className="text-muted-foreground text-sm pb-1">
                         주식 <span className="font-bold text-foreground">{summary.stockCount}개</span>
                         {summary.cryptoCount > 0 && <> · 암호화폐 <span className="font-bold text-foreground">{summary.cryptoCount}개</span></>}
                         {summary.cashCount > 0 && <> · 현금성 <span className="font-bold text-foreground">{summary.cashCount}개</span></>}
@@ -551,7 +551,7 @@ export function Dashboard() {
                           {realEstateCatBarItems.map(({ key, label, value }) => {
                             const pct = summary.realEstateValue > 0 ? (value / summary.realEstateValue) * 100 : 0;
                             return (
-                              <div key={key} className="text-[12px]">
+                              <div key={key} className="text-sm">
                                 <span className="text-muted-foreground">{label} </span>
                                 <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
                                 <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
@@ -568,7 +568,7 @@ export function Dashboard() {
                         </div>
                       )}
 
-                      <p className="text-muted-foreground text-xs pb-1">총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중</p>
+                      <p className="text-muted-foreground text-sm pb-1">총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중</p>
                     </TabsContent>
                   )}
 
@@ -587,7 +587,7 @@ export function Dashboard() {
                         })()}
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (
-                            <div key={key} className="text-[12px]">
+                            <div key={key} className="text-sm">
                               <span className="text-muted-foreground">{label} </span>
                               <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
                               <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
@@ -603,7 +603,7 @@ export function Dashboard() {
                         </div>
                       )}
 
-                      <p className="text-muted-foreground text-xs pb-1">
+                      <p className="text-muted-foreground text-sm pb-1">
                         {assetData.loans.length > 0 && <>대출 <span className="font-bold text-foreground">{assetData.loans.length}건</span></>}
                         {assetData.loans.length > 0 && tenantCount > 0 && " · "}
                         {tenantCount > 0 && <>임차보증금 <span className="font-bold text-foreground">{tenantCount}건</span></>}

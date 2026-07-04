@@ -70,8 +70,8 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
         </div>
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
-          <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/10">
+          <div className={ASSET_THEME.cardExpandBox}>
+            <div className={`grid grid-cols-2 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>종류</p>
                 <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
@@ -214,7 +214,7 @@ export function LoanTab() {
 
   const renderLoanCard = (loan: Loan) => {
     const pct = filteredTotal > 0 ? (loan.balance / filteredTotal) * 100 : 0;
-    const color = LOAN_TYPE_COLORS[loan.type] ?? MAIN_PALETTE[10];
+    const color = LOAN_TYPE_COLORS[loan.type] ?? "var(--accent-teal)";
     const typeLabel = loanTypes.find((t) => t.value === loan.type)?.label ?? loan.type;
     const daysElapsed = calculateHoldingDays(loan.startDate);
     const daysRemaining = loan.endDate ? calculateHoldingDays(loan.endDate) : null;

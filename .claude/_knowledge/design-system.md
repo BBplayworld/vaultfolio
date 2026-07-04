@@ -83,6 +83,8 @@
 - 면 분리는 **배경 톤차(`bg-muted/40`, `bg-card/50`) → 그림자** 순으로. 테두리는 최후.
 - **[필수] 보더리스 박스**: 박스·카드·의미색 콜아웃 컨테이너는 **테두리 없이 배경 톤차(+`shadow-xs`)로 표현**한다(팝업 내부 포함 전 영역). `border`(전방위 테두리)는 다음에만 허용 — hairline 구분선(`border-t`/`border-b`), 기능성(선택상태 표시·업로드 `border-dashed` 드롭존·segmented 트랙·인라인 코드/키캡 칩·`Badge`·단계 점 컨트롤), 다이얼로그/시트 프레임 외곽. 예: `border bg-card` → `bg-card shadow-xs`, `border border-amber-500/20 bg-amber-500/10` → `bg-amber-500/10`.
 - 팝오버·시트·드롭다운 `shadow-2xl`, 활성 탭·작은 떠오름 `shadow-sm`.
+- **[필수] 라이트 뉴트럴 계조**(보더리스와 짝): 라이트는 순백 단일톤 금지 → **캔버스 `bg-background`(그레이 `oklch 0.91`) < 리세스 `bg-muted`(`0.88`) < 부상 `bg-card`(화이트)** 3단 + `shadow-xs/sm` 소프트 섀도우로 박스 분리. 다크는 card(`.205`)>background(`.145`) 톤차 유지. 토큰 출처 [globals.css](../../src/app/globals.css) `:root`/`.dark`. 소프트 섀도우는 `--shadow-2xs/xs/sm` + `:root .shadow-*` 무조건 오버라이드(프리셋 미설정 상태에서도 적용).
+- **[필수] 자산 카드 표면 계층**([theme.ts](../../src/config/theme.ts) `ASSET_THEME`): 라이트 모드는 다크 모드와 동일 구조(미러링)를 적용하되, 대조를 높이고 은은한 경계선을 두어 영역을 명확히 구분합니다. 자산 상세 콘텐츠(cardWrapper·섹션·subCard)는 캔버스와 통일(투명/faint 톤, 양 모드 동일 클래스 구조)하여 불필요한 레이어를 없애되, 상세 구분 영역(cardSection/subItemsWell 등)에는 불투명도를 높인 faint 톤(`bg-muted/40` 및 `/20`)과 아주 부드러운 소프트 보더(`border-border/10`, `divide-border/10`)를 적용하여 시각적 구분을 명확히 합니다. 허브·메뉴 카드만 `bg-card`(화이트)+은은한 보더(`border-border/10`)로 명도 pop을 구현합니다. 다크 모드는 현행 디자인(borderless 또는 기존 다크 전용 보더/디바이더)을 그대로 보존합니다.
 - z-index 스케일: 일반 오버레이 `z-40`(연결 프롬프트) · 다이얼로그 `z-50` · 앱 잠금 `z-100`.
 
 ---

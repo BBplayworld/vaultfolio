@@ -118,7 +118,7 @@ export function StockBarChart({ items, total }: {
           const pct = (v / total) * 100;
           return (
             <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-              {pct > 5 && <span className="text-white text-[10px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+              {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
         })}
@@ -129,8 +129,8 @@ export function StockBarChart({ items, total }: {
           return (
             <div key={stock.id} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs text-foreground truncate">{stock.name}</span>
-              <span className="text-xs font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
+              <span className="text-sm text-foreground truncate">{stock.name}</span>
+              <span className="text-sm sm:text-base font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
             </div>
           );
         })}
@@ -303,10 +303,10 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <span className="hidden sm:inline">{stock.name}</span>
           </span>
           {stock.inactiveStatus === "halted" && (
-            <Badge variant="outline" className="text-amber-600 border-amber-600 text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>
+            <Badge variant="outline" className="text-amber-600 border-amber-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>
           )}
           {stock.inactiveStatus === "delisted" && (
-            <Badge variant="outline" className="text-red-600 border-red-600 text-[9px] sm:text-[10px] px-1 py-0 sm:ml-1 leading-tight">상장폐지</Badge>
+            <Badge variant="outline" className="text-red-600 border-red-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">상장폐지</Badge>
           )}
         </div>
         <div className={ASSET_THEME.cardInfoMeta}>
@@ -497,14 +497,14 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                 )}
               </div>
               {isForeign && (
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none w-fit">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none w-fit">
                   <Checkbox checked={it.avgPriceInKrw} onCheckedChange={(v) => updateItem(idx, "avgPriceInKrw", !!v)} className="size-3.5" />
                   원화로 입력 (저장 시 달러 환산)
                 </label>
               )}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">수량</label>
+                  <label className="text-xs text-muted-foreground">수량</label>
                   <div className="flex items-center gap-1">
                     <Input
                       className="h-8 text-sm tabular-nums"
@@ -520,7 +520,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">
+                  <label className="text-xs text-muted-foreground">
                     평단가{isForeign && (it.avgPriceInKrw ? " (KRW)" : " (USD)")}
                   </label>
                   <Input
@@ -538,7 +538,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">증권사</label>
+                <label className="text-xs text-muted-foreground">증권사</label>
                 <Select value={it.broker} onValueChange={(v) => updateItem(idx, "broker", v)}>
                   <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="선택 안 함" /></SelectTrigger>
                   <SelectContent>
@@ -589,13 +589,13 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
             <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
             <DataSourceBadge kind="realtime" />
           </div>
-          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
-          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: "var(--accent-teal)" }}>₩{(stock.currentPrice * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
         </div>
         <div>
           <p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p>
-          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
-          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: MAIN_PALETTE[10] }}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
+          <p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrencyDisplay(stock.currentPrice * stock.quantity, stock.currency)}</p>
+          {isForeign && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: "var(--accent-teal)" }}>₩{(stock.currentPrice * stock.quantity * krwMul).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</p>}
         </div>
       </div>
       {isForeign && (
@@ -604,7 +604,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
             <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
             <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
               {formatCurrencyDisplay(Math.round(currencyGain))}
-              <span className="block text-xs">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
+              <span className="block text-sm font-semibold">({currencyGainRate >= 0 ? "+" : ""}{currencyGainRate.toFixed(2)}%)</span>
             </p>
           </div>
           <div>
@@ -645,16 +645,16 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   const label = stock.broker || `항목 ${idx + 1}`;
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="rounded-md border border-border/60 overflow-hidden">
-        <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 bg-primary/6 hover:bg-primary/10 ">
+      <div className={ASSET_THEME.subCard}>
+        <div className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 ${ASSET_THEME.subCardHeader}`}>
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{label}</span>
-              <span className="text-xs sm:text-sm text-foreground shrink-0 tabular-nums">{stock.quantity.toLocaleString()}주</span>
+              <span className="text-sm font-semibold text-foreground truncate">{label}</span>
+              <span className="text-sm text-foreground shrink-0 tabular-nums">{stock.quantity.toLocaleString()}주</span>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
-                <span className="text-xs sm:text-sm text-foreground tabular-nums">{formatPriceByMode(Math.round(m.currentVal))}</span>
-                <span className={`text-xs sm:text-sm font-semibold tabular-nums ${getProfitLossColor(m.profit)}`}>
+                <span className="text-sm font-medium text-foreground tabular-nums">{formatPriceByMode(Math.round(m.currentVal))}</span>
+                <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(m.profit)}`}>
                   {m.profit >= 0 ? "+" : ""}{formatPriceByMode(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
                 </span>
               </div>
@@ -662,7 +662,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
           </CollapsibleTrigger>
         </div>
         <CollapsibleContent>
-          <div className="border-t divide-y divide-border/50">
+          <div className={ASSET_THEME.cardExpandBox}>
             <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} />
             <TradeActionRow stockId={stock.id} onViewTrades={onViewTrades} />
             <div className={ASSET_THEME.cardActions}>
@@ -757,12 +757,12 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
             <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
           )}
           <CollapsibleContent>
-            <div className="border-t divide-y divide-border/50">
-              <div className="flex items-start gap-2 px-4 py-2.5 bg-muted/10">
+            <div className={ASSET_THEME.cardExpandBox}>
+              <div className={`flex items-start gap-2 px-4 py-2.5 ${ASSET_THEME.cardSection}`}>
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 flex-1">
                   <span className="text-xs sm:text-sm font-semibold text-foreground break-all">{stock.name}</span>
                   {stock.ticker && (
-                    <span className="text-xs sm:text-sm font-mono text-muted-foreground">
+                    <span className="text-xs sm:text-sm font-mono font-medium text-muted-foreground">
                       ({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})
                     </span>
                   )}
@@ -810,14 +810,14 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 </div>
               )}
               {!hasSubItems && (
-                <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+                <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
                   <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
                   <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
                   {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
                 </div>
               )}
               {hasSubItems && (
-                <div className="px-3 py-2.5 space-y-1.5 bg-muted/5">
+                <div className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
                   <p className="text-xs font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
                   {subItems!.map((sub, idx) => (
                     <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} onViewTrades={openTrades} />
@@ -872,7 +872,7 @@ export function StockCategorySection({
               const pct = (v / totalValue) * 100;
               return (
                 <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                  {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
+                  {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
                 </div>
               );
             })}
@@ -883,8 +883,8 @@ export function StockCategorySection({
               return (
                 <div key={stock.id} className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                  <span className="text-xs sm:text-sm text-foreground truncate">{stock.name}</span>
-                  <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                  <span className="text-sm sm:text-base text-foreground truncate">{stock.name}</span>
+                  <span className="text-sm sm:text-base font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                 </div>
               );
             })}

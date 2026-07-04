@@ -36,10 +36,18 @@ export const ASSET_THEME = {
   contentPad: "px-0 sm:px-0",
 
   // ===== 자산 관리 카드 공통 스타일 =====
+  // 라이트=흰 패널+그림자(그레이 캔버스 위 부상), 다크=현행(투명·그림자 없음) 보존
   cardWrapper: "rounded-lg overflow-hidden border-0 bg-transparent",
   // cardHeader: "flex flex-wrap items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
   cardHeader: "flex flex-wrap items-center gap-3 sm:gap-4 py-2.5 transition-colors",
-  cardActions: "flex justify-end gap-2 px-3 py-2 bg-muted/10",
+  cardActions: "flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-muted/10",
+  // ===== 표면 계층 토큰 (라이트 강화 + dark: 현행 보존) =====
+  cardSection: "bg-muted/40 dark:bg-muted/10", // 섹션 strip(name/ticker 등)
+  cardSectionMeta: "bg-muted/20 dark:bg-muted/5", // 메타 strip(보유·매수일)
+  cardExpandBox: "divide-y divide-border/10 dark:divide-border/50 border-t border-border/10 dark:border-t", // 확장부 래퍼: 라이트=선 없음(톤차 구분), 다크=현행 선
+  subItemsWell: "bg-muted/20 dark:bg-muted/5", // 증권사별 항목 컨테이너(라이트 회색 well)
+  subCard: "rounded-md overflow-hidden bg-transparent border border-border/10 dark:border-border/60", // 서브카드 외피
+  subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-primary/6 dark:hover:bg-primary/10", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
   cardActionButton: "size-7.5 sm:size-8.5",
   cardTriggerButton: "flex items-center gap-2 sm:gap-4 flex-1 min-w-0 text-left",
   cardInfoLeft: "flex-1",
@@ -49,25 +57,25 @@ export const ASSET_THEME = {
   cardInfoRight: "text-right flex-shrink-0",
   cardAmountMain: "text-sm sm:text-[15px] font-bold tabular-nums leading-tight",
   cardAmountProfitRow: "flex flex-row items-center gap-1 mt-0.5",
-  cardAmountSub: "text-xs tabular-nums",
-  cardAmountRate: "text-xs tabular-nums",
+  cardAmountSub: "text-sm font-bold tabular-nums",
+  cardAmountRate: "text-sm font-bold tabular-nums",
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs text-primary font-medium font-semibold",
   todayBox: "text-xs text-muted-foreground px-2 py-0.5 rounded border border-primary bg-primary/5 shrink-0",
   inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
   liabilityBadge: "flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5",
 
   // ===== 카드 상세 영역 (CollapsibleContent) =====
-  cardDetailLabel: "text-xs text-muted-foreground",
-  cardDetailValue: "text-sm font-medium",
-  cardDetailValueBold: "text-sm font-semibold",
-  cardDetailPriceKRW: "text-xs sm:text-sm text-foreground",
+  cardDetailLabel: "text-xs sm:text-sm text-muted-foreground",
+  cardDetailValue: "text-sm font-semibold",
+  cardDetailValueBold: "text-sm font-bold",
+  cardDetailPriceKRW: "mt-0.5 text-sm text-foreground",
   cardDetailMeta: "text-xs sm:text-sm text-muted-foreground",
   // 담보대출 섹션
   cardLoanSection: "px-4 py-2.5 space-y-1.5 bg-destructive/5 border-t border-destructive/15",
   cardLoanTitle: "text-xs font-bold text-destructive/70 flex items-center gap-1",
   cardLoanItem: "flex items-center justify-between rounded-md bg-destructive/8 border border-destructive/20 px-2.5 py-1.5 text-xs",
   cardLoanName: "text-foreground font-medium truncate text-sm",
-  cardLoanRate: "text-muted-foreground bg-muted rounded px-1 py-0.5 text-xs",
+  cardLoanRate: "text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-sm font-medium",
   tabActive: "data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
 
   // ===== 탭 공통 스타일 =====

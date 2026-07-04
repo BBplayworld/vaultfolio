@@ -41,7 +41,7 @@ export function ToolMenuPage() {
   const dirtyRef = useRef(false);
   // 외부(pull·다른 탭) 닉네임 변경을 입력란에 반영 + 편집 상태 해제
   useEffect(() => { setDraft(nickname); dirtyRef.current = false; }, [nickname]);
-  const commitRef = useRef(() => {});
+  const commitRef = useRef(() => { });
   commitRef.current = () => {
     if (!dirtyRef.current) return; // 사용자가 직접 입력했을 때만 커밋
     const clean = sanitizeNickname(draft);
@@ -194,7 +194,7 @@ export function ToolMenuPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card border border-border/10 dark:border-0 shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
@@ -213,7 +213,7 @@ export function ToolMenuPage() {
               aria-label="닉네임"
               className="flex-1 min-w-0 bg-transparent outline-none text-sm font-medium placeholder:text-muted-foreground"
             />
-            <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{draft.length}/{NICKNAME_MAX}</span>
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{draft.length}/{NICKNAME_MAX}</span>
           </div>
         </section>
 
@@ -309,7 +309,7 @@ export function ToolMenuPage() {
                   <span className="font-semibold text-foreground">간편 공유</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 URL로 다른 기기에 <strong className="text-foreground font-semibold">1회 전달</strong>합니다 (PIN 설정 필요).
               </p>
             </button>
@@ -332,16 +332,10 @@ export function ToolMenuPage() {
                   <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary">
                     Plus
                   </span>
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
-                    베타 무료
-                  </span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 여러 기기에서 자산 데이터를 <strong className="text-foreground font-semibold">항상 최신으로 자동 유지</strong>합니다.
-              </p>
-              <p className="text-[11px] text-primary/80 mt-1.5 leading-relaxed">
-                베타 무료 기간입니다.
               </p>
             </button>
           </div>
@@ -366,7 +360,7 @@ export function ToolMenuPage() {
             <DialogDescription asChild>
               <div className="space-y-1 text-sm text-muted-foreground text-left">
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
-                <p className="text-[11px] text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
+                <p className="text-xs text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
                 <p className="text-xs pt-1 text-muted-foreground/80">
                   암호화된 데이터만 서버를 안전하게 경유하며, URL 키와 PIN이 분리되어 서버 관리자도 내용을 복호화할 수 없습니다.
                 </p>
@@ -392,7 +386,7 @@ export function ToolMenuPage() {
                   <InputOTPSlot index={3} />
                 </InputOTPGroup>
               </InputOTP>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 받는 사람도 동일한 PIN으로 자산을 열람합니다.
               </p>
             </div>
@@ -429,7 +423,7 @@ export function ToolMenuPage() {
                 rows={8}
                 className="resize-none min-h-[160px] max-h-[40vh] overflow-y-auto"
               />
-              <p className="text-[11px] text-muted-foreground text-right tabular-nums">
+              <p className="text-xs text-muted-foreground text-right tabular-nums">
                 {feedbackMessage.length}/{FEEDBACK_MAX}
               </p>
             </div>

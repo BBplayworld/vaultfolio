@@ -79,7 +79,7 @@ export function PromptPreviewDialog({
               >
                 <span>{t.label}</span>
                 {t.sublabel && (
-                  <span className="text-[10px] opacity-60 hidden sm:block leading-tight text-center">{t.sublabel}</span>
+                  <span className="text-xs opacity-80 hidden sm:block leading-tight text-center">{t.sublabel}</span>
                 )}
               </button>
             ))}

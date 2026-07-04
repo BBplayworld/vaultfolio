@@ -83,7 +83,7 @@ export function ProfitMetric({
       <span className={`text-base lg:text-lg font-bold tabular-nums whitespace-nowrap ${color}`}>
         {!hideAmountSign && sign}{formatShort(Math.round(profit))}
       </span>
-      <span className={`text-xs font-semibold tabular-nums whitespace-nowrap ${color}`}>
+      <span className={`text-sm lg:text-base font-bold tabular-nums whitespace-nowrap ${color}`}>
         ({sign}{effectiveRate.toFixed(decimals)}%)
       </span>
     </span>

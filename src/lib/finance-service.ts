@@ -19,6 +19,12 @@
 
 import { Stock } from "@/types/asset";
 
+// 외부(KIS) API fetch 전역 timeout — 응답 지연 시 3초 후 TimeoutError로 중단
+const FETCH_TIMEOUT_MS = 3000;
+function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+}
+
 // ─────────────────────────────────────────────
 // Step 1. 타입 정의
 // ─────────────────────────────────────────────
@@ -246,7 +252,7 @@ export async function fetchKisToken(
 ): Promise<string | null> {
   if (!appKey || !appSecret) return null;
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
       {
         method: "POST",
@@ -281,7 +287,7 @@ export async function fetchStocksFromKorea(
 
   for (const ticker of tickers) {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${ticker}`,
         {
           headers: {
@@ -343,7 +349,7 @@ export async function fetchStocksFromKisOverseas(
     // 512: 나스닥, 513: 뉴욕, 529: 미국아멕스 순으로 시도
     for (const prdtTypeCd of ["512", "513", "529"]) {
       try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
           `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/search-info?PRDT_TYPE_CD=${prdtTypeCd}&PDNO=${ticker}`,
           {
             headers: {
@@ -419,7 +425,7 @@ async function fetchKisRate(
   appKey: string,
   appSecret: string
 ): Promise<number> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=${excd}&SYMB=${symb}`,
     {
       headers: {
@@ -505,7 +511,7 @@ export async function fetchDividendDomestic(
 ): Promise<DividendPayoutResult[]> {
   try {
     const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ksdinfo/dividend?CTS=&GB1=0&F_DT=${fdt}&T_DT=${tdt}&SHT_CD=${ticker}&HIGH_GB=`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         appkey: appKey,
@@ -568,7 +574,7 @@ export async function fetchDividendOverseas(
   for (const prdtTypeCd of ["512", "513", "529"]) {
     try {
       const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${ticker}&PRDT_TYPE_CD=${prdtTypeCd}&CTX_AREA_NK50=&CTX_AREA_FK50=`;
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           appkey: appKey,
@@ -653,7 +659,7 @@ export async function fetchDomesticHistoricalPrice(
     ));
     const tryDate = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}&FID_INPUT_DATE_1=${tryDate}&FID_INPUT_DATE_2=${tryDate}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
         {
           headers: {
@@ -706,7 +712,7 @@ export async function fetchOverseasHistoricalPrice(
   for (const excd of excdList) {
     try {
       // NCNT=5로 최대 5개 row 조회 → xymd 날짜 일치하는 row 탐색 (휴장일 처리)
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${ticker}&GUBN=0&MODP=0&BYMD=${targetDate}&NCNT=5`,
         {
           headers: {

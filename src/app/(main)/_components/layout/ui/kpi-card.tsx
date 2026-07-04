@@ -22,7 +22,7 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
     <Card
       onClick={onClick}
       data-tutorial={dataTutorial}
-      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.98] transition-[color,background-color,box-shadow,transform] duration-150 ease-out shadow-xs border-0"
+      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.98] transition-[color,background-color,box-shadow,transform] duration-150 ease-out shadow-xs border border-border/10 dark:border-0"
     >
       <div className="flex items-start gap-3">
         <div className="size-9 sm:size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -37,7 +37,7 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
           <p className={`text-xl sm:text-2xl lg:text-2xl font-extrabold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
             {primary}
           </p>
-          {secondary && <div className="text-xs lg:text-sm mt-1">{secondary}</div>}
+          {secondary && <div className="text-sm lg:text-base font-medium mt-1">{secondary}</div>}
         </div>
       </div>
     </Card>

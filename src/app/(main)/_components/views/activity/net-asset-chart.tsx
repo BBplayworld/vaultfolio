@@ -330,13 +330,13 @@ export function YearlyNetAssetChart() {
             const netAssetLayout = getPriceLayout(summary.netAsset);
             return (
               <div>
-                <p className="text-xs text-muted-foreground font-semibold">현재 순자산</p>
+                <p className="text-sm text-muted-foreground font-semibold">현재 순자산</p>
                 <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
                 {netAssetLayout.secondary && (
-                  <p className="text-xs text-foreground">{netAssetLayout.secondary}</p>
+                  <p className="text-sm text-foreground">{netAssetLayout.secondary}</p>
                 )}
                 {diff !== null && diffPct !== null && (
-                  <p className="text-xs mt-1">
+                  <p className="text-sm mt-1">
                     <span className="text-muted-foreground">{comparisonLabel} </span>
                     <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>
                       {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)} ({diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}%)
@@ -355,7 +355,7 @@ export function YearlyNetAssetChart() {
                 <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
                   <div className="text-center">
                     <p className="text-muted-foreground text-sm">등록된 년도별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-xs">위의 버튼을 눌러 과거 순자산을 추가하세요.</p>
+                    <p className="text-muted-foreground text-sm">위의 버튼을 눌러 과거 순자산을 추가하세요.</p>
                   </div>
                 </div>
               ) : (
@@ -407,7 +407,7 @@ export function YearlyNetAssetChart() {
                             position="top"
                             offset={13}
                             formatter={(v: number) => formatShortCurrency(v)}
-                            style={{ fill: NET_COLOR, fontSize: 12, fontWeight: 600 }}
+                            style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
                           />
                         </Area>
                       </AreaChart>
@@ -415,7 +415,7 @@ export function YearlyNetAssetChart() {
                   </ChartContainer>
 
                   <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground">년도별 순자산</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground">년도별 순자산</h4>
                     <div className="space-y-2">
                       {allYearlyData.map((item, idx) => {
                         const isCurrentYear = item.year === currentYear;
@@ -472,7 +472,7 @@ export function YearlyNetAssetChart() {
                 <div className="flex h-32 items-center justify-center rounded-lg border border-dashed">
                   <div className="text-center">
                     <p className="text-muted-foreground text-sm">올해 월별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                    <p className="text-muted-foreground text-sm">페이지 접속 시 자동으로 기록됩니다.</p>
                   </div>
                 </div>
               ) : (
@@ -531,7 +531,7 @@ export function YearlyNetAssetChart() {
                             position="top"
                             offset={6}
                             formatter={(v: number) => formatShortCurrencyDecimal(v)}
-                            style={{ fill: NET_COLOR, fontSize: 12, fontWeight: 500 }}
+                            style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
                           />
                         </Bar>
                       </BarChart>
@@ -542,7 +542,7 @@ export function YearlyNetAssetChart() {
                   <div className="rounded-lg overflow-hidden border border-border/50">
                     <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       <div className="min-w-[360px]">
-                        <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-x-2 px-3 py-1.5 bg-muted/50 text-[10px] font-medium text-muted-foreground border-b">
+                        <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-x-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b">
                           <span>월</span>
                           <span className="text-right">순자산</span>
                           <span className="text-right">금융자산</span>
@@ -554,10 +554,10 @@ export function YearlyNetAssetChart() {
                             const diff = prev ? row.netAsset - prev.netAsset : null;
                             return (
                               <div key={row.month} className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-x-2 px-3 py-2 items-center">
-                                <span className="text-xs sm:text-sm font-semibold text-muted-foreground whitespace-nowrap">{row.month}</span>
-                                <span className={`text-xs sm:text-sm font-bold tabular-nums text-right whitespace-nowrap ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
-                                <span className={`text-xs sm:text-sm tabular-nums text-right whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
-                                <span className={`text-xs sm:text-sm font-semibold tabular-nums text-right whitespace-nowrap ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
+                                <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{row.month}</span>
+                                <span className={`text-sm font-bold tabular-nums text-right whitespace-nowrap ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
+                                <span className={`text-sm tabular-nums text-right whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
+                                <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${diff !== null ? getProfitLossColor(diff) : "text-muted-foreground"}`}>
                                   {diff !== null ? `${diff >= 0 ? "+" : ""}${formatPriceByMode(diff)}` : "-"}
                                 </span>
                               </div>
@@ -592,7 +592,7 @@ export function YearlyNetAssetChart() {
                     <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
                       <div className="text-center">
                         <p className="text-muted-foreground text-sm">올해 일별 데이터가 없습니다.</p>
-                        <p className="text-muted-foreground text-xs">페이지 접속 시 자동으로 기록됩니다.</p>
+                        <p className="text-muted-foreground text-sm">페이지 접속 시 자동으로 기록됩니다.</p>
                       </div>
                     </div>
                   );
@@ -626,16 +626,16 @@ export function YearlyNetAssetChart() {
                                 key={cell.date}
                                 className={`rounded-md border p-1 flex flex-col transition-colors relative ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
-                                <p className={`absolute top-1 left-1 text-[11px] sm:text-[12px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
+                                <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
                                 </p>
                                 {hasData ? (
                                   <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[25px] w-full">
-                                    <p className={`text-[11px] sm:text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
+                                    <p className={`text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
                                       {formatShortCurrencyDecimal(cell.netAsset)}
                                     </p>
                                     {diff !== null ? (
-                                      <p className={`text-[12px] sm:text-sm font-medium leading-none text-center sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
+                                      <p className={`text-sm font-semibold leading-none text-center sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
                                         {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
                                       </p>
                                     ) : null}
@@ -647,7 +647,7 @@ export function YearlyNetAssetChart() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-xs text-muted-foreground text-right">
+                    <div className="text-sm text-muted-foreground text-right">
                       총 {dailyChartData.length}일 기록됨
                     </div>
                   </div>

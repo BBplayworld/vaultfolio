@@ -223,6 +223,8 @@ interface FetchProfitRefOptions {
   caller?: string;
   // 종가 기준 옵션. 미전달 시 kstAccessDay(legacy: 스냅샷·기존 호출 동작 보존)
   basis?: ProfitBasis;
+  // KIS 외부 API 일시 오류(5회 이상 토큰 실패) 응답 헤더 감지 시 호출
+  onKisUnavailable?: () => void;
 }
 
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
@@ -233,7 +235,7 @@ export async function fetchProfitRef(
   period: ProfitPeriod,
   options: FetchProfitRefOptions = {},
 ): Promise<ProfitRefResponse> {
-  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay" } = options;
+  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay", onKisUnavailable } = options;
   const cacheKey = getProfitCacheKey(tickers, period, basis);
   if (!signal) {
     console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
@@ -282,6 +284,11 @@ export async function fetchProfitRef(
       const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
       try {
         const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}&basis=${basis}`, { signal });
+        // 5회 이상 토큰 실패로 외부 API 일시 오류 → 콜백 후 추가 배치 중단
+        if (res.headers.get("X-KIS-Unavailable") === "1") {
+          onKisUnavailable?.();
+          break;
+        }
         if (res.ok) {
           const data: ProfitRefResponse = await res.json();
           Object.assign(merged, data);

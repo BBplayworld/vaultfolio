@@ -58,8 +58,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
         </div>
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
-          <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+          <div className={ASSET_THEME.cardExpandBox}>
+            <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>종류</p>
                 <p className={ASSET_THEME.cardDetailValue}>{typeLabel}</p>
@@ -70,7 +70,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: MAIN_PALETTE[10] }}>{formatPriceByMode(item.currentValue)}</p>
+                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: "var(--accent-teal)" }}>{formatPriceByMode(item.currentValue)}</p>
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
@@ -105,7 +105,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 ))}
               </div>
             )}
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
               {item.purchaseDate && (
                 <>
                   <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(item.purchaseDate)} 보유</span></span>

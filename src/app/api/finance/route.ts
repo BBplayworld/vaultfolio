@@ -18,28 +18,21 @@ import { NextResponse } from "next/server";
 import {
   classifyTickers,
   fetchStocksFromKisOverseas,
-  fetchKisToken,
   fetchStocksFromKorea,
   fetchExchangeRateFromKis,
   StockPriceResult,
 } from "@/lib/finance-service";
 import { getCacheStorage, getEffectiveDateStr, getStockCacheSlot } from "@/lib/cache-storage";
+import { getKisAccessToken } from "@/lib/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 
+// KIS 외부 API 일시 오류 신호 헤더 (5회 이상 토큰 발급 실패 시)
+const KIS_UNAVAILABLE_HEADER = { "X-KIS-Unavailable": "1" } as const;
+
 function stockCacheKey(ticker: string, date: string): string {
   return `${ticker}-${date}`;
-}
-
-// KIS access_token: 오늘자 캐시 확인 → 없으면 신규 발급 후 저장
-async function getKisAccessToken(todayStr: string): Promise<string | null> {
-  const storage = getCacheStorage();
-  const cached = await storage.getKisToken(todayStr);
-  if (cached) return cached;
-  const token = await fetchKisToken(KIS_APP_KEY, KIS_APP_SECRET);
-  if (token) await storage.setKisToken(token, todayStr);
-  return token;
 }
 
 export async function GET(request: Request) {
@@ -59,7 +52,7 @@ export async function GET(request: Request) {
     }
 
     // 2단계: 외부 API 호출
-    const accessTokenForExchange = await getKisAccessToken(todayStr);
+    const { token: accessTokenForExchange, unavailable } = await getKisAccessToken(todayStr);
     const rates = accessTokenForExchange
       ? await fetchExchangeRateFromKis(accessTokenForExchange, KIS_APP_KEY, KIS_APP_SECRET, effectiveDateExchange)
       : null;
@@ -69,9 +62,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ ...rates, history: await storage.getExchangeHistory() });
     }
 
+    // 외부 API 일시 오류 헤더 (5회 이상 토큰 실패)
+    const headers = unavailable ? KIS_UNAVAILABLE_HEADER : undefined;
     // 외부 API 실패 시 기존 캐시로 fallback
-    if (cached) return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() });
-    return NextResponse.json({ error: "환율 조회 실패" }, { status: 500 });
+    if (cached) return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() }, { headers });
+    return NextResponse.json({ error: "환율 조회 실패" }, { status: 500, headers });
   }
 
   // ── 주식 현재가 조회 ──────────────────────────────────────────────────
@@ -111,9 +106,11 @@ export async function GET(request: Request) {
 
     // 2단계: 미캐시 항목만 외부 API 호출
     const apiResults: Record<string, StockPriceResult> = {};
+    let kisUnavailable = false;
 
     if (uncachedUs.length > 0) {
-      const accessToken = await getKisAccessToken(todayStr);
+      const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
+      kisUnavailable = kisUnavailable || unavailable;
       if (accessToken) {
         const { prices, classifications } = await fetchStocksFromKisOverseas(uncachedUs, effectiveDateForeign, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         for (const [ticker, cls] of Object.entries(classifications)) {
@@ -127,8 +124,10 @@ export async function GET(request: Request) {
       }
     }
 
-    if (uncachedKr.length > 0) {
-      const accessToken = await getKisAccessToken(todayStr);
+    // 서킷 open이 아니고 국내 미캐시가 있으면 조회 (서킷 open이면 외부 호출 스킵)
+    if (uncachedKr.length > 0 && !kisUnavailable) {
+      const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
+      kisUnavailable = kisUnavailable || unavailable;
       if (accessToken) {
         const { prices, classifications } = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         for (const [ticker, cls] of Object.entries(classifications)) {
@@ -148,7 +147,10 @@ export async function GET(request: Request) {
       await storage.setStock(stockCacheKey(ticker, slot), result, slot, ticker);
     }
 
-    return NextResponse.json({ ...results, ...apiResults });
+    return NextResponse.json(
+      { ...results, ...apiResults },
+      kisUnavailable ? { headers: KIS_UNAVAILABLE_HEADER } : undefined
+    );
   }
 
   return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });

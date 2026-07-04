@@ -139,9 +139,9 @@ export function SettingsPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-rose-500/5 shadow-xs hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
-  const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card border border-border/10 dark:border-0 shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-rose-500/5 border border-rose-500/10 dark:border-0 shadow-xs hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
+  const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
     <>
@@ -153,9 +153,9 @@ export function SettingsPage() {
               <ShieldCheck className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="font-medium">앱 잠금 설정 (App Lock)</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">앱 실행 시 4자리 PIN 번호 잠금</p>
+                <p className="text-xs text-muted-foreground mt-0.5">앱 실행 시 4자리 PIN 번호 잠금</p>
               </div>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${pwaAuthEnabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+              <span className={`text-sm font-semibold px-2 py-0.5 rounded ${pwaAuthEnabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                 {pwaAuthEnabled ? "ON" : "OFF"}
               </span>
             </button>
@@ -179,21 +179,21 @@ export function SettingsPage() {
               <Upload className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="font-medium">데이터 내보내기</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">현재 자산 데이터를 JSON 파일로 다운로드</p>
+                <p className="text-xs text-muted-foreground mt-0.5">현재 자산 데이터를 JSON 파일로 다운로드</p>
               </div>
             </button>
             <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
               <Download className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="font-medium">{isImporting ? "데이터 가져오는 중..." : "데이터 가져오기"}</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">JSON 백업 파일로부터 자산 복원</p>
+                <p className="text-xs text-muted-foreground mt-0.5">JSON 백업 파일로부터 자산 복원</p>
               </div>
             </button>
             <button type="button" className={ROW} onClick={handleClearCache} disabled={!hasAssets}>
               <RefreshCw className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="font-medium">캐시 초기화</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">수익·환율 캐시 재설정</p>
+                <p className="text-xs text-muted-foreground mt-0.5">수익·환율 캐시 재설정</p>
               </div>
             </button>
             <button type="button" className={ROW_DESTRUCTIVE} onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>

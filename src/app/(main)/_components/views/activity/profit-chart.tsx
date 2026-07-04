@@ -88,13 +88,13 @@ function MarketDateRow({
   const cell = (date?: string, align?: string, sub?: string, note?: string) =>
     date ? (
       <div className={`tabular-nums leading-tight ${align ?? ""}`}>
-        <p className="text-[13px] sm:text-sm">{date}</p>
+        <p className="text-sm">{date}</p>
         {note && (
-          <p className="text-[10px] leading-none mt-0.5 text-amber-600/80 dark:text-amber-500/80" title="휴장일이 있어 직전 영업일 종가로 비교됩니다">
+          <p className="text-xs leading-none mt-0.5 text-amber-600/80 dark:text-amber-500/80" title="휴장일이 있어 직전 영업일 종가로 비교됩니다">
             {note}
           </p>
         )}
-        {sub && <p className="text-xs text-muted-foreground/70 mt-1">{sub}</p>}
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
@@ -137,11 +137,11 @@ function FxBreakdown({ priceGain, fxGain, fxApplied }: { priceGain: number; fxGa
           <Globe className="size-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-xs tabular-nums">
+      <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-sm tabular-nums">
         <div className="space-y-0.5 text-left">
           <p>주가손익: <span className={getProfitLossColor(priceGain)}>{priceGain >= 0 ? "+" : ""}{formatPriceByMode(priceGain)}</span></p>
           <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatPriceByMode(fxGain)}</span></p>
-          {!fxApplied && <p className="text-muted-foreground/70 text-[10px]">현재환율 적용 · 기간 환차 미반영</p>}
+          {!fxApplied && <p className="text-muted-foreground text-xs">현재환율 적용 · 기간 환차 미반영</p>}
         </div>
       </PopoverContent>
     </Popover>
@@ -164,7 +164,7 @@ function InfoHint({ children }: { children: ReactNode }) {
           <Info className="size-4" />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="bottom" sideOffset={4} className="w-72 p-2.5 text-[11px] leading-relaxed text-left space-y-0.5">
+      <PopoverContent side="bottom" sideOffset={4} className="w-72 p-2.5 text-xs leading-relaxed text-left space-y-0.5">
         {children}
       </PopoverContent>
     </Popover>
@@ -261,6 +261,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
   // 각 종목은 데이터가 채워지는 순서대로 화면에 표시됨
   const [refData, setRefData] = useState<ProfitRefResponse | undefined>(undefined);
   const [dailyData, setDailyData] = useState<ProfitRefResponse | undefined>(undefined);
+  // KIS 외부 API 일시 오류(5회 이상 토큰 실패) — 정보없음 노출용
+  const [kisUnavailable, setKisUnavailable] = useState(false);
   // 진행 중인 fetch 키 추적: cleanup 후 즉시 동일 키로 재실행되는 경우 abort 방지
   const refInFlightKeyRef = useRef<string | null>(null);
   const dailyInFlightKeyRef = useRef<string | null>(null);
@@ -299,6 +301,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
     dailyInFlightKeyRef.current = null;
     setRefData(undefined);
     setDailyData(undefined);
+    setKisUnavailable(false);
   }, [dataResetVersion]);
 
   // 현재 period 결과 점진 로드
@@ -319,6 +322,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       caller: `profit-chart:ref(${period})`,
       basis: profitBasis,
       onProgress: (partial) => setRefData(partial),
+      onKisUnavailable: () => setKisUnavailable(true),
       onComplete: () => {
         refDoneRef.current = true;
         maybeNotifyComplete(key);
@@ -348,6 +352,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
       caller: "profit-chart:daily(secondary)",
       basis: profitBasis,
       onProgress: (partial) => setDailyData(partial),
+      onKisUnavailable: () => setKisUnavailable(true),
       onComplete: () => {
         dailyDoneRef.current = true;
         maybeNotifyComplete(key);
@@ -378,6 +383,26 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
         <CardContent className={ASSET_THEME.contentPad}>
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
             <p className="text-muted-foreground text-sm">현재가가 등록된 주식이 없습니다.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // KIS 외부 API 일시 오류 + 표시할 데이터 없음 → 정보없음 노출 (무한 스켈레톤 방지)
+  if (kisUnavailable && isLoading) {
+    return (
+      <Card className={ASSET_THEME.contentCard}>
+        <CardHeader className={ASSET_THEME.contentPad}>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>수익 현황</CardTitle>
+            <DataSourceBadge kind="closing" />
+          </div>
+          <CardDescription>보유 주식의 기간별 수익</CardDescription>
+        </CardHeader>
+        <CardContent className={ASSET_THEME.contentPad}>
+          <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
+            <p className="text-muted-foreground text-sm">외부 증권 API 점검으로 정보를 불러올 수 없습니다.</p>
           </div>
         </CardContent>
       </Card>
@@ -567,7 +592,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         </div>
                       </div>
                     ))}
-                    <p className="text-xs text-muted-foreground text-center py-1">
+                    <p className="text-sm text-muted-foreground text-center py-1">
                       {PERIOD_LABELS[p]} 기준가 조회 중 ({mergedStocks.length}개 종목)...
                     </p>
                   </div>
@@ -579,14 +604,14 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                         <div className="flex items-center gap-2">
                           <TrendIcon className={`size-5 ${getProfitLossColor(totalProfit)}`} />
                           <div>
-                            <p className="text-xs text-foreground">{PERIOD_LABELS[p]} 수익</p>
+                            <p className="text-sm text-foreground">{PERIOD_LABELS[p]} 수익</p>
                             <p className={`text-base font-bold tabular-nums ${getProfitLossColor(totalProfit)}`}>
                               {totalProfit >= 0 ? "+" : ""}{formatPriceByMode(totalProfit)}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground">수익률</p>
+                          <p className="text-sm text-muted-foreground">수익률</p>
                           <p className={`text-sm font-bold tabular-nums ${getProfitLossColor(totalRate)}`}>
                             {formatRate(totalRate)}
                           </p>
@@ -615,7 +640,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
                                 {/* 옵션 토글 */}
-                                <div className="flex items-center gap-1.5 text-xs rounded-md bg-muted/40 py-1.5 px-2 w-fit ml-auto">
+                                <div className="flex items-center gap-1.5 text-sm rounded-md bg-muted/40 py-1.5 px-2 w-fit ml-auto">
                                   <InfoHint>
                                     <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
                                     <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
@@ -631,7 +656,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 </div>
                                 {/* 헤더 */}
                                 <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border/50 text-muted-foreground`}>
-                                  <span className="text-[11px] font-normal self-end">(KST)</span>
+                                  <span className="text-xs font-medium self-end">(KST)</span>
                                   <span>시작 종가</span>
                                   <span className="text-right">종료 종가</span>
                                 </div>
@@ -648,7 +673,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                   <span>{formatPriceByMode(leftSum)}</span>
                                   <span className="text-right">{formatPriceByMode(rightSum)}</span>
                                 </div>
-                                <p className="pt-1.5 text-[11px] text-muted-foreground/60">마감 기준: 국내 16:00 · 해외 익일 새벽 (KST)</p>
+                                <p className="pt-1.5 text-xs text-muted-foreground">마감 기준: 국내 16:00 · 해외 익일 새벽 (KST)</p>
                               </CollapsibleContent>
                             </Collapsible>
                           </div>
@@ -670,7 +695,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                 <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
                                   {catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)} ({formatRate(catRate)})
                                 </p>
-                                <p className="text-xs text-muted-foreground tabular-nums">
+                                <p className="text-sm text-muted-foreground tabular-nums">
                                   {formatPriceByMode(catRef)} → {formatPriceByMode(catCurrent)}
                                 </p>
                               </div>
@@ -686,8 +711,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                   className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
                                 >
                                   <div className="min-w-0">
-                                    <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
-                                    <p className="text-[11px] text-muted-foreground">{ticker}</p>
+                                    <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
+                                    <p className="text-xs text-muted-foreground">{ticker}</p>
                                   </div>
                                   <div className="text-right shrink-0">
                                     {hasRef ? (
@@ -698,12 +723,12 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                                             {profitAmount >= 0 ? "+" : ""}{formatPriceByMode(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
                                           </p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground tabular-nums">
+                                        <p className="text-sm text-muted-foreground tabular-nums">
                                           {formatPriceByMode(refValue)} → {formatPriceByMode(currentValue)}
                                         </p>
                                       </>
                                     ) : (
-                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">기준가 없음</Badge>
+                                      <Badge variant="outline" className="text-xs px-1 py-0 h-4">기준가 없음</Badge>
                                     )}
                                   </div>
                                 </div>

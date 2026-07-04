@@ -34,6 +34,10 @@ export interface ICacheStorage {
   setStock(cacheKey: string, result: StockPriceResult, todayStr: string, ticker: string): Promise<void>;
   getKisToken(todayStr: string): Promise<string | null>;
   setKisToken(token: string, todayStr: string): Promise<void>;
+  // KIS 토큰 발급 실패 서킷 브레이커 상태 (5회 이상 실패 시 쿨다운 동안 외부 호출 차단)
+  getKisFailState(): Promise<{ count: number; openUntil: number } | null>;
+  setKisFailState(state: { count: number; openUntil: number }, ttlSec: number): Promise<void>;
+  clearKisFailState(): Promise<void>;
   // Share URL
   getShareToken(key: string): Promise<string | null>;
   setShareToken(key: string, token: string): Promise<void>;
@@ -194,6 +198,7 @@ interface FileCacheData {
   EXCHANGE_HISTORY?: Record<string, { USD: number; JPY: number }>;
   STOCKS?: Record<string, StockPriceResult>;
   KIS_TOKEN?: { access_token: string; updated_at: string };
+  KIS_FAIL?: { count: number; openUntil: number };
   GEMINI_COUNT?: { count: number; date: string };
   DIVIDENDS?: Record<string, DividendPayoutResult[]>;
   REF_PRICES?: Record<string, number>;
@@ -376,6 +381,25 @@ class FileCacheStorage implements ICacheStorage {
   async setKisToken(token: string, todayStr: string): Promise<void> {
     const cache = this.readFinanceCache();
     cache.KIS_TOKEN = { access_token: token, updated_at: todayStr };
+    this.writeFinanceCache(cache, todayStr);
+  }
+
+  async getKisFailState(): Promise<{ count: number; openUntil: number } | null> {
+    return this.readFinanceCache().KIS_FAIL ?? null;
+  }
+
+  async setKisFailState(state: { count: number; openUntil: number }, _ttlSec: number): Promise<void> {
+    const cache = this.readFinanceCache();
+    cache.KIS_FAIL = state;
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    this.writeFinanceCache(cache, todayStr);
+  }
+
+  async clearKisFailState(): Promise<void> {
+    const cache = this.readFinanceCache();
+    if (!cache.KIS_FAIL) return;
+    delete cache.KIS_FAIL;
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
     this.writeFinanceCache(cache, todayStr);
   }
 
@@ -618,6 +642,18 @@ class UpstashCacheStorage implements ICacheStorage {
       { access_token: token, updated_at: todayStr },
       { ex: ttlSec }
     );
+  }
+
+  async getKisFailState(): Promise<{ count: number; openUntil: number } | null> {
+    return this.redis.get<{ count: number; openUntil: number }>(`finance:kis_fail`);
+  }
+
+  async setKisFailState(state: { count: number; openUntil: number }, ttlSec: number): Promise<void> {
+    await this.redis.set(`finance:kis_fail`, state, { ex: Math.max(60, ttlSec) });
+  }
+
+  async clearKisFailState(): Promise<void> {
+    await this.redis.del(`finance:kis_fail`);
   }
 
   async getShareToken(key: string): Promise<string | null> {

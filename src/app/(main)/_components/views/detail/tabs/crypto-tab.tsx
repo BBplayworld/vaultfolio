@@ -55,12 +55,12 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
         </div>
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
-          <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+          <div className={ASSET_THEME.cardExpandBox}>
+            <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
               <div><p className={ASSET_THEME.cardDetailLabel}>매입가</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice)}</p></div>
               <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
-              <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice)}</p></div>
-              <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
             </div>
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
@@ -70,7 +70,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{coin.purchaseDate} 매수</span></span>
               {coin.description && <span className="w-full text-primary truncate"># {coin.description}</span>}

@@ -63,8 +63,8 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
         </div>
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
-          <div className="border-t divide-y divide-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+          <div className={ASSET_THEME.cardExpandBox}>
+            <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>잔액</p>
                 <p className={ASSET_THEME.cardDetailValueBold}>{formatCurrencyDisplay(item.balance, item.currency)}</p>
@@ -103,7 +103,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                 ))}
               </div>
             )}
-            {item.description && <div className="px-4 py-2 text-sm text-primary bg-muted/5"># {item.description}</div>}
+            {item.description && <div className={`px-4 py-2 text-sm text-primary ${ASSET_THEME.cardSectionMeta}`}># {item.description}</div>}
           </div>
         </CollapsibleContent>
       </div>

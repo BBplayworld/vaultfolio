@@ -201,7 +201,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           name="balance"
           render={({ field }) => (
             <FormItem>
-              <FormLabel style={{ color: MAIN_PALETTE[10] }}>현재 잔액 *</FormLabel>
+              <FormLabel style={{ color: "var(--accent-teal)" }}>현재 잔액 *</FormLabel>
               <FormControl>
                 <NumberInput
                   value={field.value}
@@ -222,7 +222,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           name="interestRate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel style={{ color: MAIN_PALETTE[10] }}>금리 *</FormLabel>
+              <FormLabel style={{ color: "var(--accent-teal)" }}>금리 *</FormLabel>
               <FormControl>
                 <Input
                   type="number"

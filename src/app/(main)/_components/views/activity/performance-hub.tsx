@@ -108,15 +108,19 @@ export function PerformanceHub() {
   useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
 
   const [refData, setRefData] = useState<ProfitRefResponse | undefined>(undefined);
+  // KIS 외부 API 점검(5회 이상 토큰 실패) — 무한 "조회 중…" 방지용
+  const [kisUnavailable, setKisUnavailable] = useState(false);
   useEffect(() => {
     if (!profitBasisHydrated || !tickerList) return;
     const controller = new AbortController();
     setRefData(undefined);
+    setKisUnavailable(false);
     fetchProfitRef(tickerList, "daily", {
       signal: controller.signal,
       caller: "performance-hub:daily",
       basis: profitBasis,
       onProgress: (data) => setRefData({ ...data }),
+      onKisUnavailable: () => setKisUnavailable(true),
     }).then((data) => setRefData(data)).catch(() => { /* abort 등 무시 */ });
     return () => controller.abort();
   }, [profitBasisHydrated, tickerList, profitBasis]);
@@ -161,13 +165,15 @@ export function PerformanceHub() {
           description="기간별 수익"
           primary={dailyReady
             ? `${dailyProfit! >= 0 ? "+" : ""}${formatPriceByMode(dailyProfit!)}`
-            : "조회 중…"}
+            : kisUnavailable ? "점검 중" : "조회 중…"}
           primaryClassName={ASSET_THEME.text.default}
           secondary={dailyReady ? (
             <span className={`font-semibold tabular-nums ${getProfitLossColor(dailyProfit!)}`}>
               {dailyProfit! >= 0 ? "+" : ""}{(dailyProfitRate ?? 0).toFixed(2)}%
-              <span className="text-muted-foreground font-normal ml-1.5">일별 대비</span>
+              <span className="text-muted-foreground font-medium ml-1.5">일별 대비</span>
             </span>
+          ) : kisUnavailable ? (
+            <span className="text-muted-foreground">외부 증권 API 점검으로 인한 오류</span>
           ) : null}
           onClick={() => go("profit")}
         />
@@ -181,7 +187,7 @@ export function PerformanceHub() {
           secondary={!divLoading && annualTotal > 0 ? (
             <span className="text-muted-foreground">
               지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
-              <span className="mx-1.5 text-muted-foreground/60">·</span>
+              <span className="mx-1.5 text-muted-foreground">·</span>
               예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
             </span>
           ) : null}

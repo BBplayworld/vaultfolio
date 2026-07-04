@@ -64,11 +64,11 @@ These serve as the fallback; there is no separate default.css file. */
   /* 브랜드 액션 색 — 확인/제출 버튼·체크박스 공용. MAIN_PALETTE[0](config/theme.ts)과 동일 hex 유지 */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
-  --secondary: oklch(0.97 0 0);
+  --secondary: oklch(0.895 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: oklch(0.88 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: oklch(0.905 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   /* --border: oklch(0.85 0 0); */
@@ -99,8 +99,14 @@ These serve as the fallback; there is no separate default.css file. */
   --sidebar-border: oklch(0.85 0 0);
   /* 더 어둡게: 0.922 → 0.85 */
   --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0% 0 0);
+  --background: oklch(0.92 0 0);
+  --foreground: oklch(13.604% 0.00969 18.328);
+  /* 강조 청록 — 라이트: 흰 배경에 눈 피로 없는 진한 청록(cyan-700), 다크: .dark에서 덮어씀 */
+  --accent-teal: #0e7490;
+  /* 라이트: 카드 부상용 소프트 섀도우(다층) — 그레이 캔버스 위 화이트 카드 분리 */
+  --shadow-2xs: 0 1px 2px 0 oklch(0 0 0 / 0.08);
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.12);
+  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.15), 0 1px 2px -1px oklch(0 0 0 / 0.10);
 }
 
 .dark {
@@ -148,6 +154,8 @@ These serve as the fallback; there is no separate default.css file. */
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.585 0.233 277.117);
+  /* 강조 청록 — 다크: 어두운 배경에 쨍하게 보이는 기존 cyan(MAIN_PALETTE[10]) */
+  --accent-teal: #00BCD4;
 }
 
 @layer utilities {
@@ -181,6 +189,22 @@ These serve as the fallback; there is no separate default.css file. */
 
   [data-theme-preset]:not([data-theme-preset="default"]) .shadow-2xl {
     box-shadow: var(--shadow-2xl);
+  }
+
+  /* 카드 부상 소프트 섀도우 — 프리셋 미설정(기본) 상태에서도 항상 적용.
+     :root:not(.dark) 로 라이트 전용 + specificity(0,3,0)로 Tailwind 기본·dark: 유틸보다 우선.
+     다크는 미매칭 → Tailwind 기본/`dark:shadow-none` 정상 동작(현행 보존).
+     shadow(md/lg/xl/2xl 다이얼로그·팝오버)은 Tailwind 기본 유지 → 미포함. */
+  :root:not(.dark) .shadow-2xs {
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :root:not(.dark) .shadow-xs {
+    box-shadow: var(--shadow-xs);
+  }
+
+  :root:not(.dark) .shadow-sm {
+    box-shadow: var(--shadow-sm);
   }
 
   /* 가로 스크롤 컨테이너 공용 — 라이트/다크 자동 적용, 화살표 버튼 제거, 트랙 투명 */

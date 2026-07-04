@@ -340,7 +340,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             name="quantity"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel style={{ color: MAIN_PALETTE[10] }}>수량 *</FormLabel>
+                <FormLabel style={{ color: "var(--accent-teal)" }}>수량 *</FormLabel>
                 <FormControl>
                   <NumberInput
                     value={field.value}
@@ -363,7 +363,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <FormLabel style={{ color: MAIN_PALETTE[10] }}>평단가 *</FormLabel>
+                  <FormLabel style={{ color: "var(--accent-teal)" }}>평단가 *</FormLabel>
                   {isForeignStock && (
                     <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
                       <Checkbox

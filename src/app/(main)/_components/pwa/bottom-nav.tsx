@@ -143,10 +143,10 @@ export function BottomNav() {
                   </span>
                 )}
                 <span
-                  className={`text-[10px] leading-tight ${
+                  className={`text-[11px] leading-tight ${
                     isActive && !isAction
                       ? "font-semibold"
-                      : "text-muted-foreground"
+                      : "font-medium text-muted-foreground"
                   }`}
                   style={isActive && !isAction ? { color: MAIN_PALETTE[0] } : undefined}
                 >

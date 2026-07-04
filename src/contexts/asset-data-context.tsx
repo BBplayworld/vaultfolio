@@ -131,6 +131,7 @@ const MSG = {
   STOCK_SYNC_COMPLETE: "오늘의 주식 및 환율 정보를 모두 업데이트했습니다.",
   STOCK_SYNC_FAILED: "[주식 현재가 갱신 실패]",
   EXCHANGE_SYNC_FAILED: "[환율 동기화 실패]",
+  KIS_API_UNAVAILABLE: "외부 증권 API 점검으로 인한 오류",
 } as const;
 
 // 중요 이벤트: toast + console 동시 출력
@@ -139,6 +140,14 @@ const notify = {
   error: (msg: string) => { dismissStaleToasts(); toast.error(msg); console.error(`[ERROR] ${msg}`); },
   info: (msg: string) => { dismissStaleToasts(); toast.info(msg); console.log(`[INFO] ${msg}`); },
 };
+
+// KIS 외부 API 일시 오류 토스트는 세션당 1회만 노출 (배치 반복 중복 방지)
+let kisUnavailableNotified = false;
+function notifyKisUnavailableOnce() {
+  if (kisUnavailableNotified) return;
+  kisUnavailableNotified = true;
+  notify.error(MSG.KIS_API_UNAVAILABLE);
+}
 
 // 순자산·항목별 합계 공통 계산기
 // getAssetSummary와 saveSnapshots가 동일 수식을 공유하도록 모듈 스코프 헬퍼로 분리
@@ -387,6 +396,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const tickersParam = tickersWithTicker.slice(i, i + BATCH_SIZE).join(",");
         try {
           const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
+          if (res.headers.get("X-KIS-Unavailable") === "1") {
+            if (isCanceled()) return data;
+            notifyKisUnavailableOnce();
+            return data; // 서킷 open: 외부 호출 중단 + 완료 토스트 스킵
+          }
           const stocksData = await res.json();
           if (isCanceled()) return data;
           if (stocksData && !stocksData.error) {
@@ -419,6 +433,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
       try {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
+        if (res.headers.get("X-KIS-Unavailable") === "1") {
+          if (isCanceled()) return current;
+          notifyKisUnavailableOnce();
+          return current; // 서킷 open: 외부 호출 중단 + 완료 토스트 스킵
+        }
         const stocksData = await res.json();
         // 취소된 sync의 응답은 절대 state·localStorage에 반영하지 않음 (삭제된 데이터 부활 방지)
         if (isCanceled()) return current;
@@ -495,11 +514,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const tickerList = Array.from(new Set(eligibleStocks.map(normalizeTicker).filter(Boolean))).sort().join(",");
     let refMap: ProfitRefResponse = {};
     let profitCtrl: AbortController | null = null;
+    let kisUnavailable = false;
     if (tickerList) {
       profitCtrl = new AbortController();
       profitFetchAbortSetRef.current.add(profitCtrl);
       try {
-        refMap = await fetchProfitRef(tickerList, "daily", { signal: profitCtrl.signal, caller: "saveSnapshots" });
+        refMap = await fetchProfitRef(tickerList, "daily", {
+          signal: profitCtrl.signal,
+          caller: "saveSnapshots",
+          onKisUnavailable: () => { kisUnavailable = true; notifyKisUnavailableOnce(); },
+        });
       } catch { /* 무시: 실패 시 실시간으로 폴백 */ }
       finally {
         profitFetchAbortSetRef.current.delete(profitCtrl);
@@ -507,6 +531,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     // 데이터 삭제로 취소되었거나 차단된 경우 스냅샷 저장 자체를 스킵
     if (profitCtrl?.signal.aborted || saveSnapshotsBlockedRef.current) return;
+    // KIS 점검(서킷 open): 종가 미확정 → 오늘자 스냅샷 저장 스킵 (마지막 정상 스냅샷 보존)
+    if (kisUnavailable) return;
 
     // 공통 헬퍼로 동일 수식 사용 — 단가 함수만 다름
     // refDate는 getDailyClosingRefDates에서 시장별로 안전하게 산출됨

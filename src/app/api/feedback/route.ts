@@ -6,7 +6,7 @@
  *   body: { message: string, nickname?: string, contact?: string }
  *   → { ok: true }
  *
- * 환경변수: SLACK_WEBHOOK_URL (미설정 시 500)
+ * 환경변수: SLACK_FEEDBACK_WEBHOOK_URL (구: SLACK_WEBHOOK_URL, 미설정 시 500)
  * 남용 방지: IP 기반 Rate Limit (share와 동일 버킷, 분당 10회)
  */
 
@@ -40,9 +40,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
     }
 
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const webhookUrl = process.env.SLACK_FEEDBACK_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL;
     if (!webhookUrl) {
-      console.error("[feedback] SLACK_WEBHOOK_URL 미설정");
+      console.error("[feedback] SLACK_FEEDBACK_WEBHOOK_URL 미설정");
       return NextResponse.json({ error: "전송 설정이 완료되지 않았습니다." }, { status: 500 });
     }
 
