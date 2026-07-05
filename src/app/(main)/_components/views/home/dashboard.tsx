@@ -210,9 +210,9 @@ export function NetAssetSummaryBox({
         <div>
           <div className="flex items-center gap-1.5">
             {nickname && (
-              <span className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
+              <span className={`text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
             )}
-            <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
+            <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
             {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
           </div>
 
@@ -228,7 +228,7 @@ export function NetAssetSummaryBox({
             )}
           </div>
           {netAssetLayout.secondary && (
-            <p className={`mt-0.5 text-xs sm:text-sm ${ASSET_THEME.text.default}`}>
+            <p className={`mt-0.5 text-sm ${ASSET_THEME.text.default}`}>
               {netAssetLayout.secondary}
             </p>
           )}
@@ -352,7 +352,7 @@ function DailyNetAssetTrend() {
   return (
     <div className="rounded-lg px-4 py-3 space-y-2.5" style={{ backgroundColor: MAIN_PALETTE[0] + "08" }}>
       <div className="flex items-center gap-1.5">
-        <p className="text-xs lg:text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+        <p className="text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
         <DataSourceBadge kind="closing" />
       </div>
       <div className="flex gap-1">
@@ -382,7 +382,7 @@ function DailyNetAssetTrend() {
                   style={{ height: heightPx, backgroundColor: barColor, boxShadow: isBig ? `0 0 6px ${MAIN_PALETTE[4]}88` : undefined }}
                 />
               </div>
-              <span className="text-xs sm:text-sm text-muted-foreground">{label}</span>
+              <span className="text-sm text-muted-foreground">{label}</span>
             </div>
           );
         })}
@@ -500,7 +500,7 @@ export function Dashboard() {
                           const { primary, secondary } = getPriceLayout(financialTotal);
                           return (
                             <div>
-                              <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
+                              <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
                               <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
                               {secondary && <p className="text-sm text-foreground">{secondary}</p>}
                             </div>
@@ -521,7 +521,7 @@ export function Dashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
+                        <p className={`text-sm font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
 
@@ -541,7 +541,7 @@ export function Dashboard() {
                           const { primary, secondary } = getPriceLayout(summary.realEstateValue);
                           return (
                             <div>
-                              <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
+                              <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
                               <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
                               {secondary && <p className="text-sm text-foreground">{secondary}</p>}
                             </div>
@@ -563,7 +563,7 @@ export function Dashboard() {
 
                       {realEstateCatBarItems.length > 0 && (
                         <div className="space-y-2">
-                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>부동산 구성</p>
+                          <p className={`text-sm font-semibold ${ASSET_THEME.text.default}`}>부동산 구성</p>
                           <SectionBar items={realEstateCatBarItems} total={summary.realEstateValue} />
                         </div>
                       )}
@@ -579,7 +579,7 @@ export function Dashboard() {
                           const { primary, secondary } = getPriceLayout(totalLiability);
                           return (
                             <div>
-                              <p className="text-xs lg:text-sm font-semibold text-muted-foreground">부채 총액</p>
+                              <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
                               <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{primary}</p>
                               {secondary && <p className="text-sm text-foreground">{secondary}</p>}
                             </div>
@@ -598,7 +598,7 @@ export function Dashboard() {
 
                       {liabTopItems.length > 0 && (
                         <div className="space-y-2">
-                          <p className={`text-xs lg:text-sm font-semibold ${ASSET_THEME.text.default}`}>부채 구성</p>
+                          <p className={`text-sm font-semibold ${ASSET_THEME.text.default}`}>부채 구성</p>
                           <SectionBar items={liabTopItems} total={totalLiability} />
                         </div>
                       )}

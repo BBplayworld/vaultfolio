@@ -190,7 +190,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
         {/* Step 1: 업로드 */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
               본인 계좌 스크린샷을 본인 앱에 입력하는 행위로, 저작권·약관·개인정보 측면에서 문제없습니다.
             </div>
 
@@ -210,7 +210,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                   <ImageUp className="size-10 text-muted-foreground/50" />
                   <div className="text-center">
                     <p className="text-sm font-medium">클릭하거나 이미지를 드래그하세요</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
+                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
                   </div>
                 </>
               )}
@@ -235,16 +235,16 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
             </div>
 
             {!geminiUsage.canUse() && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
                 오늘의 AI 인식 한도({geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.
               </div>
             )}
 
             <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
-              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+              <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">대출 종류</span>(신용·주택담보 등)는 미리보기에서 변경할 수 있습니다.</li>
                 <li><span className="text-foreground">대출 실행일</span>이 화면에 없으면 오늘 날짜로 설정됩니다. 등록 후 수정해주세요.</li>
                 <li>연계 자산(담보 부동산·주식)은 등록 후 직접 연결해주세요.</li>
@@ -265,7 +265,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                 {allSelected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4" />}
                 전체 선택 ({selectedCount}/{loans.length})
               </button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>
+              <Button variant="ghost" size="sm" className="h-7 text-sm" onClick={reset}>
                 <X className="size-3 mr-1" /> 다시 업로드
               </Button>
             </div>
@@ -288,7 +288,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                           {getTypeLabel(item.type)}
                         </Badge>
                         {item.institution && (
-                          <span className="text-xs text-muted-foreground">{item.institution}</span>
+                          <span className="text-sm text-muted-foreground">{item.institution}</span>
                         )}
                         {item.startDateMissing && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
@@ -297,7 +297,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <span>잔액 <span className="font-semibold text-destructive">{formatCurrency(item.balance)}</span></span>
                         <span>금리 <span className="font-semibold text-foreground">{item.interestRate}%</span></span>
                         <span>실행일 <span className="font-semibold text-foreground">{item.startDate}</span></span>
@@ -307,12 +307,12 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                         value={item.type}
                         onValueChange={(v) => updateType(item.id, v as Loan["type"])}
                       >
-                        <SelectTrigger className="h-7 w-40 text-xs">
+                        <SelectTrigger className="h-7 w-40 text-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {LOAN_TYPE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                            <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

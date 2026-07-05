@@ -30,13 +30,13 @@ export function DetailSummaryHeader({
 
   return (
     <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`}>
-      <p className="text-xs lg:text-sm text-muted-foreground font-semibold">{label}</p>
+      <p className="text-sm text-muted-foreground font-semibold">{label}</p>
       <div className="mt-1 flex flex-col gap-0.5">
         <p className={`text-xl sm:text-2xl lg:text-3xl font-extrabold tabular-nums break-all leading-tight ${valueClass}`}>
           {primary}
         </p>
         {secondary && (
-          <p className="text-xs lg:text-sm text-muted-foreground font-medium tabular-nums break-all leading-tight">
+          <p className="text-sm text-muted-foreground font-medium tabular-nums break-all leading-tight">
             {secondary}
           </p>
         )}

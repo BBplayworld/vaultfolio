@@ -195,7 +195,7 @@ export function ToolMenuPage() {
   if (!mounted) return null;
 
   const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card border border-border/10 dark:border-0 shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const SECTION_LABEL = `text-xs font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
+  const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (
     <>
@@ -361,7 +361,7 @@ export function ToolMenuPage() {
               <div className="space-y-1 text-sm text-muted-foreground text-left">
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
                 <p className="text-xs text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
-                <p className="text-xs pt-1 text-muted-foreground/80">
+                <p className="text-xs pt-1 text-muted-foreground dark:text-muted-foreground/80">
                   암호화된 데이터만 서버를 안전하게 경유하며, URL 키와 PIN이 분리되어 서버 관리자도 내용을 복호화할 수 없습니다.
                 </p>
               </div>

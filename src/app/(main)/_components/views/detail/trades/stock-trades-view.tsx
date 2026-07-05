@@ -222,15 +222,15 @@ export function StockTradesView() {
           {summaryStock && (
             <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
               <div>
-                <p className="text-[11px] text-muted-foreground">보유 수량</p>
+                <p className="text-sm text-muted-foreground">보유 수량</p>
                 <p className="font-semibold tabular-nums">{summaryStock.quantity.toLocaleString()}주</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground">평단가</p>
+                <p className="text-sm text-muted-foreground">평단가</p>
                 <p className="font-semibold tabular-nums">{formatPrice(summaryStock.averagePrice, currency)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground">평가금액</p>
+                <p className="text-sm text-muted-foreground">평가금액</p>
                 <p className="font-semibold tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(Math.round(currentVal))}</p>
               </div>
             </div>
@@ -287,14 +287,14 @@ export function StockTradesView() {
         {/* 기간 요약 스탯 */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-red-500/5 px-3 py-2">
-            <p className="flex items-center gap-1 text-[11px] text-red-500"><TrendingUp className="size-3" /> 매수</p>
+            <p className="flex items-center gap-1 text-sm text-red-500"><TrendingUp className="size-3" /> 매수</p>
             <p className="font-bold tabular-nums">{stats.buyQty.toLocaleString()}주</p>
-            <p className="text-xs text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
+            <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
           </div>
           <div className="rounded-xl bg-blue-500/5 px-3 py-2">
-            <p className="flex items-center gap-1 text-[11px] text-blue-500"><TrendingDown className="size-3" /> 매도</p>
+            <p className="flex items-center gap-1 text-sm text-blue-500"><TrendingDown className="size-3" /> 매도</p>
             <p className="font-bold tabular-nums">{stats.sellQty.toLocaleString()}주</p>
-            <p className="text-xs text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
+            <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
           </div>
         </div>
 
@@ -308,7 +308,7 @@ export function StockTradesView() {
             <p className="text-[11px] text-muted-foreground tabular-nums">총 {filtered.length.toLocaleString()}건</p>
             {Object.entries(grouped).map(([date, txs]) => (
               <div key={date}>
-                <p className="text-[11px] text-muted-foreground mb-1.5">{date}</p>
+                <p className="text-sm text-muted-foreground mb-1.5">{date}</p>
                 <div className="space-y-1.5">
                   {txs.map((tx) => {
                     const amt = tx.price * tx.quantity * (tx.currency === "KRW" ? 1 : mul);

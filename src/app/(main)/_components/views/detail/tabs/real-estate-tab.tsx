@@ -39,7 +39,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -93,9 +93,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
             </div>
             {linkedLoans.length > 0 && (
               <div className="px-4 py-2.5 space-y-1.5">
-                <p className="text-xs font-bold text-muted-foreground flex items-center gap-1"><CreditCard className="size-3" />주택담보대출</p>
+                <p className="text-sm font-bold text-muted-foreground flex items-center gap-1"><CreditCard className="size-3" />주택담보대출</p>
                 {linkedLoans.map((loan) => (
-                  <div key={loan.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-md bg-muted/30">
+                  <div key={loan.id} className="flex items-center justify-between px-2.5 py-1.5 text-sm rounded-md bg-muted/30">
                     <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>-{formatPriceByMode(loan.balance)}</span>
@@ -105,7 +105,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 ))}
               </div>
             )}
-            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
+            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
               {item.purchaseDate && (
                 <>
                   <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(item.purchaseDate)} 보유</span></span>
@@ -224,8 +224,8 @@ export function RealEstateTab() {
                   return (
                     <div key={item.id} className="flex items-center gap-1">
                       <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
-                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                      <span className="text-sm text-foreground">{item.name}</span>
+                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                     </div>
                   );
                 })}
@@ -244,7 +244,7 @@ export function RealEstateTab() {
                 if (catItems.length === 0) return null;
                 return (
                   <div key={cat.value}>
-                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
                     <div className="space-y-2">{catItems.map(renderCard)}</div>
                   </div>
                 );

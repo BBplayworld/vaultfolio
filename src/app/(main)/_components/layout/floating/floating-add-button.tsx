@@ -249,7 +249,7 @@ export function FloatingAddButton() {
                   <BadgeDollarSign className="size-4 text-primary shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">환율 설정
-                      <span className="text-xs text-muted-foreground ml-2 bg-muted/50 px-2 py-0.5 rounded">
+                      <span className="text-sm text-muted-foreground ml-2 bg-muted/50 px-2 py-0.5 rounded">
                          {exchangeRateDate ? `기준일: ${exchangeRateDate}` : "외화 자산의 원화 환산 기준"}
                       </span>
                     </p>
@@ -279,7 +279,7 @@ export function FloatingAddButton() {
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">자산 업데이트</p>
-                  <p className="text-xs text-muted-foreground">보유 상태 직접 입력</p>
+                  <p className="text-sm text-muted-foreground">보유 상태 직접 입력</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
@@ -296,7 +296,7 @@ export function FloatingAddButton() {
                   <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
                   <div>
                     <p className="font-medium">거래 입력</p>
-                    <p className="text-xs text-muted-foreground">매수/매도 거래 기록</p>
+                    <p className="text-sm text-muted-foreground">매수/매도 거래 기록</p>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
                 </button>
@@ -310,7 +310,7 @@ export function FloatingAddButton() {
                   <Pencil className="size-5 text-primary shrink-0" />
                   <div>
                     <p className="font-medium">수정</p>
-                    <p className="text-xs text-muted-foreground">{selectedAsset.label} 탭으로 이동</p>
+                    <p className="text-sm text-muted-foreground">{selectedAsset.label} 탭으로 이동</p>
                   </div>
                   <ArrowRight className="size-4 text-muted-foreground ml-auto" />
                 </button>
@@ -336,7 +336,7 @@ export function FloatingAddButton() {
                 <ImageUp className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">스크린샷 가져오기</p>
-                  <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
+                  <p className="text-sm text-muted-foreground">스크린샷 화면 자동 인식</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
@@ -348,7 +348,7 @@ export function FloatingAddButton() {
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">직접 입력</p>
-                  <p className="text-xs text-muted-foreground">수동으로 직접 입력</p>
+                  <p className="text-sm text-muted-foreground">수동으로 직접 입력</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>

@@ -136,7 +136,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="size-5 text-primary" /> 기기 동기화
-            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
+            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-sm font-bold text-primary">Plus</span>
           </DialogTitle>
           <DialogDescription className="text-left">
             새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). 서버는 E2EE 암호문만 보관하므로 금고 암호 없이는 열 수 없습니다.
@@ -149,7 +149,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
           <div className="space-y-3 py-1">
             {/* Plus 프로모션 넛지 — 가치 인지 안내 */}
             <div className="rounded-lg bg-primary/5 px-3 py-2.5 space-y-1">
-              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
               </p>
             </div>
@@ -162,10 +162,10 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                 placeholder="영문 소문자, 숫자, 특수문자 포함 8~50자"
                 onKeyDown={(e) => { if (e.key === "Enter") doEnable(); }}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 설정 조건: <span className="text-foreground font-semibold">8~50자, 영문 소문자 + 숫자 + 특수문자 필수 포함</span>
               </p>
-              <p className="text-xs text-muted-foreground">저장·전송되지 않습니다. <span className="text-foreground">잊으면 복구할 수 없으니</span> 꼭 기억하세요.</p>
+              <p className="text-sm text-muted-foreground">저장·전송되지 않습니다. <span className="text-foreground">잊으면 복구할 수 없으니</span> 꼭 기억하세요.</p>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
@@ -176,10 +176,10 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             </Button>
 
             <div className="border-t border-border/50 pt-3 mt-3 flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground text-center">다른 기기에서 이미 기기 동기화를 사용 중이신가요?</p>
+              <p className="text-sm text-muted-foreground text-center">다른 기기에서 이미 기기 동기화를 사용 중이신가요?</p>
               <Button
                 variant="outline"
-                className="w-full text-xs gap-1.5"
+                className="w-full text-sm gap-1.5"
                 onClick={() => {
                   onOpenChange(false);
                   cs.setShowConnectDialog(true);
@@ -194,7 +194,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* locked: 잠금 해제 */}
         {cs.status === "locked" && (
           <div className="space-y-3 py-1">
-            <div className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            <div className="rounded-md bg-amber-500/10 px-3 py-2 text-sm text-amber-600 dark:text-amber-400">
               이 기기는 금고에 연결돼 있어요. 금고 암호로 잠금을 해제하면 동기화가 재개됩니다.
             </div>
             <div className="space-y-1.5">
@@ -212,7 +212,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             <Button variant="brand" className="w-full" onClick={doUnlock} disabled={busy || !passphrase}>
               {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Lock className="mr-2 size-4" />} 잠금 해제
             </Button>
-            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={cs.forget}>
+            <Button variant="ghost" size="sm" className="w-full text-sm text-muted-foreground" onClick={cs.forget}>
               이 기기 연결 끊기(다른 금고로 새로 시작)
             </Button>
           </div>
@@ -221,7 +221,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* armed: 링크/QR/공유 + 동기화 */}
         {cs.status === "armed" && (
           <div className="space-y-4 py-1">
-            <div className="rounded-md bg-primary/5 px-3 py-2 text-xs flex items-center justify-between">
+            <div className="rounded-md bg-primary/5 px-3 py-2 text-sm flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-foreground font-medium">
                 <RefreshCw className={`size-3.5 text-primary ${cs.syncing ? "animate-spin" : ""}`} />
                 자동 동기화 켜짐{cs.syncing ? " · 동기화 중…" : ""}
@@ -234,24 +234,24 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
                 <Link2 className="size-3.5 text-primary" /> 다른 기기 동기화 링크
               </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 이 링크를 다른 기기에서 열어 연동하거나, <strong>기기 분실 및 로컬 데이터 초기화 시 복구용</strong>으로 백업해 두세요. 금고 암호와 이 링크가 모두 있어야 복구가 가능합니다.
               </p>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm" className="flex-1 text-xs" onClick={copyLink}>
+                <Button variant="secondary" size="sm" className="flex-1 text-sm" onClick={copyLink}>
                   <Copy className="mr-1 size-3" /> 복사
                 </Button>
-                <Button variant="secondary" size="sm" className="flex-1 text-xs" onClick={() => setShowQr((v) => !v)}>
+                <Button variant="secondary" size="sm" className="flex-1 text-sm" onClick={() => setShowQr((v) => !v)}>
                   <QrCode className="mr-1 size-3" /> QR 코드
                 </Button>
-                <Button variant="secondary" size="sm" className="flex-1 text-xs" onClick={shareLink}>
+                <Button variant="secondary" size="sm" className="flex-1 text-sm" onClick={shareLink}>
                   <Share2 className="mr-1 size-3" /> 공유
                 </Button>
               </div>
               {showQr && cs.syncLink && (
                 <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-border/50">
                   <SyncQr value={cs.syncLink} />
-                  <p className="text-xs text-muted-foreground">다른 기기 카메라로 스캔</p>
+                  <p className="text-sm text-muted-foreground">다른 기기 카메라로 스캔</p>
                 </div>
               )}
             </div>
@@ -261,14 +261,14 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
                 <KeyRound className="size-3.5 text-primary" /> PWA/네이티브 앱 연동 코드
               </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 PWA 앱이나 네이티브 앱 최초 설치 시 (또는 초기화 후) 아래의 동기화 코드를 붙여넣어 자산을 즉시 복원하고 연동할 수 있습니다.
               </p>
               <div className="flex gap-1.5 items-center">
                 <Input
                   readOnly
                   value={`sync:${cs.assetId}`}
-                  className="font-mono text-xs text-center select-all bg-muted/40 h-8 flex-1"
+                  className="font-mono text-sm text-center select-all bg-muted/40 h-8 flex-1"
                 />
                 <Button variant="secondary" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={copySyncCode}>
                   <Copy className="size-3.5" />
@@ -286,18 +286,18 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                 </Button>
               ) : (
                 <div className="rounded-md bg-amber-500/10 p-3 space-y-2">
-                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <AlertTriangle className="size-3.5" /> 이 기기의 현재 자산을 클라우드 데이터로 덮어씁니다.
                   </p>
                   <div className="flex gap-2">
-                    <Button className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 border-none text-xs" onClick={doPull} disabled={cs.syncing}>
+                    <Button className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 border-none text-sm" onClick={doPull} disabled={cs.syncing}>
                       {cs.syncing ? <Loader2 className="mr-2 size-4 animate-spin" /> : null} 덮어쓰기
                     </Button>
-                    <Button variant="secondary" className="flex-1 text-xs" onClick={() => setConfirmPull(false)} disabled={cs.syncing}>취소</Button>
+                    <Button variant="secondary" className="flex-1 text-sm" onClick={() => setConfirmPull(false)} disabled={cs.syncing}>취소</Button>
                   </div>
                 </div>
               )}
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={cs.forget}>
+              <Button variant="ghost" size="sm" className="text-sm text-muted-foreground" onClick={cs.forget}>
                 <Lock className="mr-1.5 size-3.5" /> 이 기기 연결 끊기
               </Button>
             </div>

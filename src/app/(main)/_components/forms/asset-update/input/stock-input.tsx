@@ -288,7 +288,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
           )}
         </div>
 
-        <FormDescription className="text-[11px] leading-relaxed -mt-2">
+        <FormDescription className="text-sm leading-relaxed -mt-2">
           <span className="text-primary/70">{getTickerDescription()}</span>
         </FormDescription>
 
@@ -303,7 +303,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   <Input placeholder={getNamePlaceholder()} {...field} />
                 </FormControl>
                 {lookupState === "failed" && (
-                  <FormDescription className="text-[11px] text-amber-500">조회 실패 — 직접 입력해 주세요.</FormDescription>
+                  <FormDescription className="text-sm text-amber-500">조회 실패 — 직접 입력해 주세요.</FormDescription>
                 )}
                 <FormMessage />
               </FormItem>
@@ -365,7 +365,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                 <div className="flex items-center justify-between">
                   <FormLabel style={{ color: "var(--accent-teal)" }}>평단가 *</FormLabel>
                   {isForeignStock && (
-                    <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+                    <label className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer select-none">
                       <Checkbox
                         checked={avgPriceInKrw}
                         onCheckedChange={(v) => setAvgPriceInKrw(!!v)}

@@ -208,7 +208,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
         {/* Step 1: 업로드 */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
               본인 계좌 스크린샷을 본인 앱에 입력하는 행위로, 저작권·약관·개인정보 측면에서 문제없습니다.
             </div>
 
@@ -228,7 +228,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                   <ImageUp className="size-10 text-muted-foreground/50" />
                   <div className="text-center">
                     <p className="text-sm font-medium">클릭하거나 이미지를 드래그하세요</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
+                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
                   </div>
                 </>
               )}
@@ -253,16 +253,16 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
             </div>
 
             {!geminiUsage.canUse() && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
                 오늘의 AI 인식 한도({geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.
               </div>
             )}
 
             <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
-              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+              <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">평균단가</span>가 화면에 없으면 현재가로 대체됩니다. 등록 후 수정해주세요.</li>
                 <li><span className="text-foreground">거래소</span>는 미리보기에서 변경할 수 있습니다.</li>
                 <li>매수일은 오늘 날짜로 설정됩니다. 등록 후 수정 가능합니다.</li>
@@ -296,7 +296,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                     </div>
                     <div>
                       <p className="text-sm font-semibold">{mode === "merge" ? "덮어쓰기" : "초기화 후 등록"}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         {mode === "merge"
                           ? "중복 코인을 스크린샷 기준으로 교체하고, 나머지 기존 코인은 유지합니다."
                           : "기존 코인을 모두 삭제하고 스크린샷 코인으로 대체합니다."}
@@ -321,7 +321,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                 {allSelected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4" />}
                 전체 선택 ({selectedCount}/{cryptos.length})
               </button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>
+              <Button variant="ghost" size="sm" className="h-7 text-sm" onClick={reset}>
                 <X className="size-3 mr-1" /> 다시 업로드
               </Button>
             </div>
@@ -351,7 +351,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <span>수량 <span className="font-semibold text-foreground">
                           {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}
                         </span></span>
@@ -364,12 +364,12 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                         value={item.exchange || "other"}
                         onValueChange={(v) => updateExchange(item.id, v === "other" ? "" : v)}
                       >
-                        <SelectTrigger className="h-7 w-36 text-xs">
+                        <SelectTrigger className="h-7 w-36 text-sm">
                           <SelectValue placeholder="거래소 선택" />
                         </SelectTrigger>
                         <SelectContent>
                           {cryptoExchanges.map((ex) => (
-                            <SelectItem key={ex.value} value={ex.value} className="text-xs">{ex.label}</SelectItem>
+                            <SelectItem key={ex.value} value={ex.value} className="text-sm">{ex.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

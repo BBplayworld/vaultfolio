@@ -57,13 +57,13 @@ export function DeleteRollbackDialog({
               <span className="font-medium">{tx.stockName}</span>
               <span>{tx.quantity}주</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {tx.date} · {formatPrice(tx.price, currency)} · ✓반영됨
             </p>
           </div>
 
           <div className="rounded-lg bg-muted/30 p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">삭제 시 자동 롤백</p>
+            <p className="text-sm font-medium text-muted-foreground">삭제 시 자동 롤백</p>
             <div className="grid grid-cols-[1fr_auto_1fr] gap-x-2 gap-y-1 text-sm">
               <span className="text-muted-foreground">수량</span>
               <span className="text-muted-foreground">→</span>

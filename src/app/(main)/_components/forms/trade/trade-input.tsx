@@ -318,7 +318,7 @@ export function TradeInput() {
                 <ImageUp className="size-5 text-primary shrink-0" />
                 <div className="flex-1">
                   <p className="font-medium">스크린샷 가져오기</p>
-                  <p className="text-xs text-muted-foreground">체결 내역 화면 자동 인식</p>
+                  <p className="text-sm text-muted-foreground">체결 내역 화면 자동 인식</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
               </button>
@@ -330,7 +330,7 @@ export function TradeInput() {
                 <Plus className="size-5 text-primary shrink-0" />
                 <div className="flex-1">
                   <p className="font-medium">직접 입력</p>
-                  <p className="text-xs text-muted-foreground">매수/매도 거래 수동 입력</p>
+                  <p className="text-sm text-muted-foreground">매수/매도 거래 수동 입력</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
               </button>
@@ -394,7 +394,7 @@ export function TradeInput() {
                       )))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     증권사별로 나뉜 보유가 있으면 해당 항목에, 분할이 없으면 기존 보유 종목에 반영됩니다.
                   </p>
                 </FormItem>
@@ -469,7 +469,7 @@ export function TradeInput() {
                       />
                     </FormControl>
                     {tradeType === "sell" && selectedStock && (
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         보유: {selectedStock.quantity}주
                         <button
                           type="button"
@@ -496,7 +496,7 @@ export function TradeInput() {
                         체결 단가 {isUsd ? (priceInKrw ? "(원)" : "(USD)") : isForeign ? `(${selectedStock?.currency})` : "(원)"}
                       </FormLabel>
                       {isUsd && (
-                        <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+                        <label className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer select-none">
                           <Checkbox
                             checked={priceInKrw}
                             onCheckedChange={(v) => setPriceInKrw(!!v)}
@@ -516,7 +516,7 @@ export function TradeInput() {
                       />
                     </FormControl>
                     {isUsd && (
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {priceInKrw
                           ? `KRW — 저장 시 달러로 환산 (÷ ${exchangeRates.USD ? Math.round(exchangeRates.USD).toLocaleString() : "..."})`
                           : "USD (소수점 3자리 가능)"}
@@ -601,7 +601,7 @@ export function TradeInput() {
                       <FormLabel className="text-sm font-medium cursor-pointer">
                         보유 수량에 즉시 반영
                       </FormLabel>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다
                       </p>
                     </div>
@@ -612,15 +612,15 @@ export function TradeInput() {
               {/* 반영 후 예상 포지션 미리보기 */}
               {reflectionPreview && selectedStock && (
                 reflectionPreview.oversell ? (
-                  <div className="rounded-lg bg-destructive/10 dark:bg-destructive/20 p-3 text-xs text-destructive font-medium">
+                  <div className="rounded-lg bg-destructive/10 dark:bg-destructive/20 p-3 text-sm text-destructive font-medium">
                     보유 수량({selectedStock.quantity.toLocaleString()}주)을 초과합니다
                   </div>
                 ) : (
                   <div className="rounded-lg bg-muted/40 dark:bg-muted/25 p-3 space-y-2">
-                    <p className="text-[11px] font-medium text-muted-foreground">반영 후 예상 포지션</p>
+                    <p className="text-sm font-medium text-muted-foreground">반영 후 예상 포지션</p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-[11px] text-muted-foreground">보유 수량</p>
+                        <p className="text-sm text-muted-foreground">보유 수량</p>
                         <p className="tabular-nums">
                           <span className="text-muted-foreground">{reflectionPreview.before.quantity.toLocaleString()}</span>
                           <span className="text-muted-foreground/60"> → </span>
@@ -628,7 +628,7 @@ export function TradeInput() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] text-muted-foreground">평단가</p>
+                        <p className="text-sm text-muted-foreground">평단가</p>
                         <p className="tabular-nums">
                           <span className="text-muted-foreground">{formatPrice(reflectionPreview.before.avgPrice, selectedStock.currency || "KRW")}</span>
                           <span className="text-muted-foreground/60"> → </span>
@@ -657,7 +657,7 @@ export function TradeInput() {
             <div className="space-y-4">
               <div className="rounded-lg bg-amber-500/10 dark:bg-amber-500/20 p-3 space-y-1 text-sm">
                 <p className="font-medium text-amber-600 dark:text-amber-500">이미 동일한 거래가 있습니다</p>
-                <p className="text-muted-foreground text-xs">증권사·날짜·수량·체결가·유형이 동일한 거래가 이미 기록되어 있습니다.</p>
+                <p className="text-muted-foreground text-sm">증권사·날짜·수량·체결가·유형이 동일한 거래가 이미 기록되어 있습니다.</p>
                 <p className="tabular-nums">
                   <span className={dupPending.tx.type === "buy" ? "text-red-500 font-semibold" : "text-blue-500 font-semibold"}>
                     {dupPending.tx.type === "buy" ? "매수" : "매도"}

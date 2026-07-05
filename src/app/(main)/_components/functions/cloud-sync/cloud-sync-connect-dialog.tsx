@@ -176,7 +176,7 @@ export function CloudSyncConnectDialog() {
               <Input
                 readOnly
                 value={`sync:${cs.pendingConnectAssetId}`}
-                className="font-mono text-xs text-center select-all bg-muted/40 h-9"
+                className="font-mono text-sm text-center select-all bg-muted/40 h-9"
               />
             </div>
           )}
@@ -203,7 +203,7 @@ export function CloudSyncConnectDialog() {
 
           {hasAssets && (
             <div className="rounded-md bg-amber-500/10 p-3">
-              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                 <AlertTriangle className="size-4 shrink-0 text-amber-500" />
                 연결 시 이 기기의 현재 자산이 삭제되고 클라우드 데이터로 대체됩니다.
               </p>

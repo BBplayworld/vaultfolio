@@ -62,18 +62,18 @@ export const ASSET_THEME = {
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs text-primary font-medium font-semibold",
   todayBox: "text-xs text-muted-foreground px-2 py-0.5 rounded border border-primary bg-primary/5 shrink-0",
   inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
-  liabilityBadge: "flex items-center justify-between text-xs rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5",
+  liabilityBadge: "flex items-center justify-between text-sm rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5",
 
   // ===== 카드 상세 영역 (CollapsibleContent) =====
-  cardDetailLabel: "text-xs sm:text-sm text-muted-foreground",
+  cardDetailLabel: "text-sm text-muted-foreground",
   cardDetailValue: "text-sm font-semibold",
   cardDetailValueBold: "text-sm font-bold",
   cardDetailPriceKRW: "mt-0.5 text-sm text-foreground",
-  cardDetailMeta: "text-xs sm:text-sm text-muted-foreground",
+  cardDetailMeta: "text-sm text-muted-foreground",
   // 담보대출 섹션
   cardLoanSection: "px-4 py-2.5 space-y-1.5 bg-destructive/5 border-t border-destructive/15",
-  cardLoanTitle: "text-xs font-bold text-destructive/70 flex items-center gap-1",
-  cardLoanItem: "flex items-center justify-between rounded-md bg-destructive/8 border border-destructive/20 px-2.5 py-1.5 text-xs",
+  cardLoanTitle: "text-sm font-bold text-destructive/70 flex items-center gap-1",
+  cardLoanItem: "flex items-center justify-between rounded-md bg-destructive/8 border border-destructive/20 px-2.5 py-1.5 text-sm",
   cardLoanName: "text-foreground font-medium truncate text-sm",
   cardLoanRate: "text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-sm font-medium",
   tabActive: "data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",

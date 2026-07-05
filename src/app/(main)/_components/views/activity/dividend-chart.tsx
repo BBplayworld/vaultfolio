@@ -249,7 +249,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 value={estimateMode}
                 onChange={setEstimateMode}
                 options={[
-                  { value: "all",    label: "예상 포함" },
+                  { value: "all", label: "예상 포함" },
                   { value: "actual", label: "지급만" },
                 ]}
                 ariaLabel="배당 표시 모드"
@@ -298,7 +298,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   const done = q && !q.isLoading;
                   return (
                     <div key={stock.id} className="flex items-center justify-between px-1 py-0.5">
-                      <span className="text-xs text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
+                      <span className="text-sm text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
                       <span className={`text-xs ${done ? "text-primary" : "text-muted-foreground"}`}>
                         {done ? "완료" : "조회 중..."}
                       </span>
@@ -420,7 +420,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                               position="top"
                               offset={8}
                               formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "#ffffff", fontSize: 12, fontWeight: 700 }}
+                              style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
                             />
                           )}
                         </Bar>
@@ -451,7 +451,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                               position="top"
                               offset={8}
                               formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "#ffffff", fontSize: 12, fontWeight: 700 }}
+                              style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
                             />
                           )}
                         </Bar>

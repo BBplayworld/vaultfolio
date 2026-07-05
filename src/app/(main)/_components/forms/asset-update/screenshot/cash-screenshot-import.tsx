@@ -202,7 +202,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
         {/* Step 1: 업로드 */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
               본인 계좌 스크린샷을 본인 앱에 입력하는 행위로, 저작권·약관·개인정보 측면에서 문제없습니다.
             </div>
 
@@ -222,7 +222,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                   <ImageUp className="size-10 text-muted-foreground/50" />
                   <div className="text-center">
                     <p className="text-sm font-medium">클릭하거나 이미지를 드래그하세요</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
+                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
                   </div>
                 </>
               )}
@@ -247,16 +247,16 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
             </div>
 
             {!geminiUsage.canUse() && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
                 오늘의 AI 인식 한도({geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.
               </div>
             )}
 
             <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
-              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+              <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">계좌 유형</span>(입출금·예금·적금 등)은 미리보기에서 변경할 수 있습니다.</li>
                 <li>대출 계좌가 포함된 경우 자동으로 제외됩니다. 대출은 별도로 등록해주세요.</li>
                 <li>통화는 원화(KRW)로 고정됩니다. 외화 계좌는 직접 입력해주세요.</li>
@@ -277,7 +277,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                 {allSelected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4" />}
                 전체 선택 ({selectedCount}/{cashes.length})
               </button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>
+              <Button variant="ghost" size="sm" className="h-7 text-sm" onClick={reset}>
                 <X className="size-3 mr-1" /> 다시 업로드
               </Button>
             </div>
@@ -298,11 +298,11 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                         <span className="font-semibold text-sm">{item.name}</span>
                         <Badge variant="outline" className="text-[10px]">{getTypeLabel(item.type)}</Badge>
                         {item.institution && (
-                          <span className="text-xs text-muted-foreground">{item.institution}</span>
+                          <span className="text-sm text-muted-foreground">{item.institution}</span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>잔액 <span className="font-semibold text-foreground">{formatCurrency(item.balance)}</span></span>
                       </div>
 
@@ -311,12 +311,12 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                           value={item.type}
                           onValueChange={(v) => updateType(item.id, v as Cash["type"])}
                         >
-                          <SelectTrigger className="h-7 w-36 text-xs">
+                          <SelectTrigger className="h-7 w-36 text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {CASH_TYPE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                              <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -326,15 +326,15 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
                             value={item.institution || "__none__"}
                             onValueChange={(v) => updateInstitution(item.id, v === "__none__" ? "" : v)}
                           >
-                            <SelectTrigger className={`h-7 w-36 text-xs ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}>
+                            <SelectTrigger className={`h-7 w-36 text-sm ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}>
                               <SelectValue placeholder="금융기관 *" />
                             </SelectTrigger>
                             <SelectContent>
                               {financialInstitutions.map((group) => (
                                 <SelectGroup key={group.group}>
-                                  <SelectLabel className="text-xs">{group.group}</SelectLabel>
+                                  <SelectLabel className="text-sm">{group.group}</SelectLabel>
                                   {group.items.map((name) => (
-                                    <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+                                    <SelectItem key={name} value={name} className="text-sm">{name}</SelectItem>
                                   ))}
                                 </SelectGroup>
                               ))}

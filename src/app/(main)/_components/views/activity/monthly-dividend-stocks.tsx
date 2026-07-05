@@ -208,9 +208,9 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
         <div key={key} className="rounded-lg border overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b">
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+            <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[2fr_4rem_3rem_3rem_3rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-2 sm:gap-x-3 px-3 py-2 bg-muted/50 text-xs sm:text-sm text-muted-foreground border-b">
+          <div className="grid grid-cols-[2fr_4rem_3rem_3rem_3rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-2 sm:gap-x-3 px-3 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
@@ -232,7 +232,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-xs sm:text-sm font-semibold truncate">{stock.name || ticker}</p>
+                      <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
                       <span className="hidden sm:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
                         <Badge className={`hidden sm:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>
@@ -283,27 +283,27 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                   <div className="text-right">
                     {!isDomestic && currency === "USD" ? (
                       <>
-                        <p className="text-xs sm:text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
-                        <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
+                        <p className="text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
+                        <p className="text-sm tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
                       </>
                     ) : (
-                      <p className="text-xs sm:text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
+                      <p className="text-sm tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
-                    <p className="text-xs tabular-nums text-muted-foreground">보유 {stock.quantity}주</p>
+                    <p className="text-sm tabular-nums text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
                   <div className="text-right break-words">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (
-                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
+                      <p className="text-sm tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
                     )}
-                    <p className="text-xs sm:text-sm font-bold tabular-nums text-foreground">
+                    <p className="text-sm font-bold tabular-nums text-foreground">
                       {displayActual > 0 ? formatCurrency(displayActual) : <span className="text-muted-foreground">-</span>}
                     </p>
                   </div>
                   <div className="text-right break-words">
                     {!isDomestic && currency === "USD" && (
-                      <p className="text-xs sm:text-sm tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
+                      <p className="text-sm tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
                     )}
-                    <p className={`text-xs sm:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+                    <p className={`text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                       {formatCurrency(displayTotal)}
                     </p>
                   </div>

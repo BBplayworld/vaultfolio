@@ -98,19 +98,19 @@ export function InstallGuideContent({
           <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/10">
             <div className="flex items-center gap-2">
               <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-              <p className="text-xs font-bold text-foreground">{codeLabel} 복사</p>
+              <p className="text-sm font-bold text-foreground">{codeLabel} 복사</p>
             </div>
             <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5 shrink-0" />
               {codeLabel}가 클립보드에 복사되었습니다.
             </div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 truncate rounded-lg bg-background px-2.5 py-1.5 text-xs font-mono text-foreground border">{shareCode}</code>
+              <code className="flex-1 truncate rounded-lg bg-background px-2.5 py-1.5 text-sm font-mono text-foreground border">{shareCode}</code>
               <Button
                 variant="secondary"
                 size="sm"
                 type="button"
-                className="h-8 px-2.5 shrink-0 text-xs"
+                className="h-8 px-2.5 shrink-0 text-sm"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(shareCode);
@@ -135,8 +135,8 @@ export function InstallGuideContent({
             {shareCode ? 2 : 1}
           </span>
           <div className="space-y-0.5">
-            <p className="text-xs font-bold text-foreground">브라우저 메뉴 열기</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">{step1Text(platform, browser, env.iosSafariModern)}</p>
+            <p className="text-sm font-bold text-foreground">브라우저 메뉴 열기</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{step1Text(platform, browser, env.iosSafariModern)}</p>
           </div>
         </div>
 
@@ -146,8 +146,8 @@ export function InstallGuideContent({
             {shareCode ? 3 : 2}
           </span>
           <div className="space-y-0.5">
-            <p className="text-xs font-bold text-foreground">홈 화면에 추가</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">{step2Text(browser)}</p>
+            <p className="text-sm font-bold text-foreground">홈 화면에 추가</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{step2Text(browser)}</p>
           </div>
         </div>
 
@@ -157,8 +157,8 @@ export function InstallGuideContent({
             {shareCode ? 4 : 3}
           </span>
           <div className="space-y-0.5">
-            <p className="text-xs font-bold text-foreground">앱 실행 및 데이터 복원</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-sm font-bold text-foreground">앱 실행 및 데이터 복원</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {shareCode ? (
                 <>
                   추가된 <span className="font-semibold text-foreground">앱을 처음 실행</span>하고 복사된 코드를 붙여넣은 뒤,{" "}
@@ -180,7 +180,7 @@ export function InstallGuideContent({
 
       {/* 브라우저 재선택 (오감지 대비, 기본 접힘) */}
       <div className="flex flex-col items-center gap-1.5">
-        <button type="button" onClick={() => setShowChips(v => !v)} className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+        <button type="button" onClick={() => setShowChips(v => !v)} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
           다른 브라우저인가요?
         </button>
         {showChips && (
@@ -190,7 +190,7 @@ export function InstallGuideContent({
                 key={b}
                 type="button"
                 onClick={() => setBrowser(b)}
-                className={`text-xs px-2.5 py-0.5 rounded-md font-semibold transition-colors ${browser === b ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                className={`text-sm px-2.5 py-0.5 rounded-md font-semibold transition-colors ${browser === b ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {BROWSER_LABEL[b]}
               </button>
@@ -223,7 +223,7 @@ function MobileTroubleshooting() {
           인앱 브라우저에서는 홈 화면 추가가 막혀 있습니다. <span className="font-semibold text-foreground">우측 상단 메뉴 → &ldquo;다른 브라우저로 열기&rdquo;</span>로 Safari·Chrome·삼성 인터넷에서 다시 열어 주세요.
         </p>
       </div>
-      <div className="rounded-xl bg-muted/20 p-3 text-xs text-muted-foreground leading-relaxed">
+      <div className="rounded-xl bg-muted/20 p-3 text-sm text-muted-foreground leading-relaxed">
         <strong className="text-foreground font-semibold">※ 재설치가 안 될 때</strong><br />
         홈 화면의 앱 아이콘을 길게 눌러 삭제하거나 기기 [설정]에서 앱을 완전히 삭제한 뒤 다시 시도해 주세요.
       </div>

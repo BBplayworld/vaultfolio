@@ -67,7 +67,7 @@ export function StockInsightStrip({ stocks, exchangeRates }: StockInsightStripPr
         <span className="text-[10px] font-semibold text-muted-foreground tracking-wide">
           🔬 X-RAY 인사이트
         </span>
-        <span className="text-xs sm:text-sm font-medium truncate">{summary}</span>
+        <span className="text-sm font-medium truncate">{summary}</span>
       </div>
       <span className="text-[11px] text-muted-foreground shrink-0">분석</span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

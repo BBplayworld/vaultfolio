@@ -21,7 +21,7 @@ export function ExchangeRateInput() {
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold">환율 설정</h3>
                         </div>
-                        <p className="text-xs text-muted-foreground">외화 자산의 원화 환산 기준</p>
+                        <p className="text-sm text-muted-foreground">외화 자산의 원화 환산 기준</p>
                     </div>
                 </div>
 

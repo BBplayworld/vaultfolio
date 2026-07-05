@@ -344,7 +344,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                 <p className="text-sm text-muted-foreground text-center">
                   증권 앱의 체결 내역 화면을<br />스크린샷으로 찍어 업로드하세요
                 </p>
-                <p className="text-[11px] text-muted-foreground">클릭 또는 드래그&amp;드롭</p>
+                <p className="text-sm text-muted-foreground">클릭 또는 드래그&amp;드롭</p>
               </>
             )}
             <input
@@ -365,7 +365,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
           <div className="space-y-3">
             {/* 증권사 선택 — 전체 거래 공통, 필수 (스크린샷은 보통 한 증권사 화면) */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">증권사 *</label>
+              <label className="text-sm font-medium text-muted-foreground">증권사 *</label>
               <Select value={selectedBroker} onValueChange={setSelectedBroker}>
                 <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                 <SelectContent>
@@ -374,7 +374,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                   )))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {!selectedBroker
                   ? "증권사를 먼저 선택하세요. 증권사별로 나뉜 보유가 있으면 해당 항목에, 분할이 없으면 기존 보유 종목에 반영됩니다."
                   : reflectToHoldings
@@ -388,7 +388,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               <Checkbox checked={reflectToHoldings} onCheckedChange={(v) => setReflectToHoldings(!!v)} />
               <div className="leading-none">
                 <span className="text-sm font-medium">보유 수량·평단에 반영</span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   해제 시 거래 기록만 남기고 보유 수량/평단은 변경하지 않습니다
                 </p>
               </div>
@@ -398,7 +398,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               인식된 거래 {trades.length}건 — 등록할 항목을 선택하세요
             </p>
             {trades.some((t) => t.currency !== "KRW") && (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
                 ⓘ 해외 거래는 체결환율이 없어 <span className="font-medium">오늘자 환율</span>(USD {Math.round(exchangeRates.USD || 0).toLocaleString()}원)로 반영됩니다.
               </p>
             )}

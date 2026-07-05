@@ -55,7 +55,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
                   <span className={ASSET_THEME.cardInfoName}>{loan.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -265,8 +265,8 @@ export function LoanTab() {
                   return (
                     <div key={loan.id} className="flex items-center gap-1">
                       <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-xs sm:text-sm text-foreground">{loan.name}</span>
-                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                      <span className="text-sm text-foreground">{loan.name}</span>
+                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                     </div>
                   );
                 })}
@@ -286,7 +286,7 @@ export function LoanTab() {
                 if (catLoans.length === 0) return null;
                 return (
                   <div key={cat.value}>
-                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
                     <div className="space-y-2">{catLoans.map(renderLoanCard)}</div>
                   </div>
                 );

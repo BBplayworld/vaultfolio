@@ -132,12 +132,12 @@ export function WelcomeGuide() {
             </div>
             <div>
               <h2 className="text-base font-semibold">{mobileWeb ? "앱으로 설치하고 시작하세요" : "웹앱으로 설치하세요"}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 홈 화면에서 바로 실행 · 네이티브 앱처럼 사용
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <div className="flex items-start gap-2">
               <span className="shrink-0 size-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] font-bold mt-0.5">1</span>
               <p className="text-muted-foreground leading-relaxed">

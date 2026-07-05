@@ -339,7 +339,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         {/* Step 1: 업로드 */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
               본인 계좌 스크린샷을 본인 앱에 입력하는 행위로, 저작권·약관·개인정보 측면에서 문제없습니다.
             </div>
 
@@ -359,7 +359,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                   <ImageUp className="size-10 text-muted-foreground/50" />
                   <div className="text-center">
                     <p className="text-sm font-medium">클릭하거나 이미지를 드래그하세요</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
+                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
                   </div>
                 </>
               )}
@@ -384,16 +384,16 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
             </div>
 
             {!geminiUsage.canUse() && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
                 오늘의 AI 인식 한도({geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.
               </div>
             )}
 
             <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
-              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+              <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">토스증권, 도미노 외에도 종목명·수량·금액이 보이는 증권 계좌 화면</span>이면 대부분 인식됩니다.</li>
                 <li><span className="text-foreground">평단가</span>는 손익률로 역산됩니다. 등록 후 정확한 값으로 수정해주세요.</li>
                 <li><span className="text-foreground">해외주식</span>은 달러(USD) 인식 시 그대로 저장하고, 원화로 인식된 경우 오늘 환율로 나눠 달러(USD)로 자동 환산합니다. 매입환율은 오늘 환율로, 매수일은 오늘 날짜로 설정되며 등록 후 수정 가능합니다.</li>
@@ -407,13 +407,13 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         {/* Step 2: 미리보기 */}
         {step === "preview" && stocks.length > 0 && (
           <div className="space-y-3">
-            <div className="rounded-md bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
               동일 카테고리·종목은 증권사 항목으로 구분되어 하나의 종목으로 통합 표시됩니다.
             </div>
 
             {/* 적용 방식 토글: 공통(한 번에) vs 개별 */}
             <div className="space-y-2.5">
-              <div className="inline-flex rounded-md border overflow-hidden text-xs w-full">
+              <div className="inline-flex rounded-md border overflow-hidden text-sm w-full">
                 {([
                   { v: "common", label: "공통 적용" },
                   { v: "individual", label: "개별 선택" },
@@ -445,24 +445,24 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                 <div className="flex flex-col sm:flex-row gap-2.5">
                   <div className="flex-1">
                     <Select value={commonCategory} onValueChange={(v) => applyCommonCategory(v as Stock["category"])}>
-                      <SelectTrigger className="h-9 text-xs w-full"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-sm w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CATEGORY_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                          <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex-1">
                     <Select value={commonBroker} onValueChange={applyCommonBroker}>
-                      <SelectTrigger className="h-9 text-xs w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
+                        <SelectItem value={BROKER_NONE} className="text-sm text-muted-foreground">증권사 선택 안 함</SelectItem>
                         {securitiesFirms.map((group) => (
                           <div key={group.group}>
                             <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
                             {group.items.map((firm) => (
-                              <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
+                              <SelectItem key={firm} value={firm} className="text-sm">{firm}</SelectItem>
                             ))}
                           </div>
                         ))}
@@ -471,7 +471,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground px-0.5">
+                <p className="text-sm text-muted-foreground px-0.5">
                   종목마다 아래 카드에서 카테고리·증권사를 직접 선택하세요.
                 </p>
               )}
@@ -486,7 +486,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                 {allSelected ? <CheckSquare className="size-4 text-primary" /> : <Square className="size-4" />}
                 전체 선택 ({selectedCount}/{stocks.length})
               </button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>
+              <Button variant="ghost" size="sm" className="h-7 text-sm" onClick={reset}>
                 <X className="size-3 mr-1" /> 다시 업로드
               </Button>
             </div>
@@ -570,23 +570,23 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         </div>
 
                         {/* 2행: 핵심 자산 정보 그리드 (2열/4열 구성으로 넓고 깔끔하게 배치) */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-lg bg-muted/40 dark:bg-muted/10 p-3 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-lg bg-muted/40 dark:bg-muted/10 p-3 text-sm">
                           <div className="space-y-0.5">
-                            <p className="text-[11px] text-muted-foreground">수량</p>
+                            <p className="text-sm text-muted-foreground">수량</p>
                             <p className={`font-semibold text-sm ${ASSET_THEME.primary.text}`}>
                               {stock.quantity.toLocaleString()}주
                             </p>
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-[11px] text-muted-foreground">현재가</p>
+                            <p className="text-sm text-muted-foreground">현재가</p>
                             <p className="font-semibold text-sm text-foreground">{fmtPrice}</p>
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-[11px] text-muted-foreground">평단가(추정)</p>
+                            <p className="text-sm text-muted-foreground">평단가(추정)</p>
                             <p className="font-semibold text-sm text-foreground">{fmtAvg}</p>
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-[11px] text-muted-foreground">평가금액</p>
+                            <p className="text-sm text-muted-foreground">평가금액</p>
                             <p className="font-bold text-sm text-foreground">{fmtTotal}</p>
                           </div>
                         </div>
@@ -596,10 +596,10 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         <div className="flex flex-col sm:flex-row gap-2.5 pt-0.5">
                           <div className="flex-1 sm:max-w-[180px]">
                             <Select value={stock.category} onValueChange={(v) => updateCategory(stock.id, v as Stock["category"])}>
-                              <SelectTrigger className="h-8 text-xs w-full"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-8 text-sm w-full"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {CATEGORY_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                                  <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -609,14 +609,14 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                               value={stock.broker ?? BROKER_NONE}
                               onValueChange={(v) => updateBroker(stock.id, v)}
                             >
-                              <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                              <SelectTrigger className="h-8 text-sm w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value={BROKER_NONE} className="text-xs text-muted-foreground">증권사 선택 안 함</SelectItem>
+                                <SelectItem value={BROKER_NONE} className="text-sm text-muted-foreground">증권사 선택 안 함</SelectItem>
                                 {securitiesFirms.map((group) => (
                                   <div key={group.group}>
                                     <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
                                     {group.items.map((firm) => (
-                                      <SelectItem key={firm} value={firm} className="text-xs">{firm}</SelectItem>
+                                      <SelectItem key={firm} value={firm} className="text-sm">{firm}</SelectItem>
                                     ))}
                                   </div>
                                 ))}

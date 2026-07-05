@@ -47,12 +47,12 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                   <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
-                {item.currency !== "KRW" && <p className="text-xs text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
+                {item.currency !== "KRW" && <p className="text-sm text-muted-foreground">{formatCurrencyDisplay(item.balance, item.currency)}</p>}
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
@@ -206,8 +206,8 @@ export function CashTab() {
                   return (
                     <div key={item.id} className="flex items-center gap-1">
                       <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-xs sm:text-sm text-foreground">{item.name}</span>
-                      <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                      <span className="text-sm text-foreground">{item.name}</span>
+                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                     </div>
                   );
                 })}
@@ -226,7 +226,7 @@ export function CashTab() {
                 if (catItems.length === 0) return null;
                 return (
                   <div key={cat.value}>
-                    <p className="text-xs font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
+                    <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
                     <div className="space-y-2">{catItems.map(renderCard)}</div>
                   </div>
                 );

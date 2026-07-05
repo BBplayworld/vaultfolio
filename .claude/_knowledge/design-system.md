@@ -55,11 +55,12 @@
 
 | 단계 | 크기 | 용도 |
 |---|---|---|
-| 캡션 | `text-[11px]` | 보조 안내·티커·마감 기준·접기 트리거 |
-| 보조 | `text-xs` (12px) | 라벨·부가 수치 |
-| 본문·금액 | `text-sm` (14px, `sm:text-[15px]`) | 종목명·손익 금액·표 데이터 |
+| 캡션 | `text-[11px]` | 캡션 역할 콘텐츠 한정 — 티커·배지 상태·스텝 원형 숫자·차트 축 라벨·타임스탬프·마감 기준 메타·접기 트리거 |
+| 보조 | `text-xs` (12px) | **신규 사용 지양** — 좁은 칩/배지·3단 카테고리 탭(`categoryBox`/`todayBox`/`tabTrigger3`류, 폭 제약으로 예외 존속) 한정 |
+| 본문·금액 | `text-sm` (14px, `sm:text-[15px]`) | 라벨·부가 수치·이름·종목명·손익 금액·표 데이터 — **모바일·PC 공통** |
 | Hero | `text-base`+ (16px↑) | 페이지 핵심 지표 |
 
+- **모바일·PC 인지성 통일**: 캡션 역할(위 표)·구조적 제약(칩/배지/3단 탭) 예외가 아니면 `text-xs`를 쓰지 않고 `text-sm`으로 통일한다(반응형 `text-xs sm:text-sm` 분기도 `text-sm` 고정으로 단순화 — PC뿐 아니라 모바일도 14px).
 - Hero 내부도 1순위(금액) > 2순위(수익률) **반 단계** 차등.
 - 새 px 추가 전 위 4단계로 흡수 가능한지 먼저 검토(9·10·13·14 난립 금지).
 - 숫자·수량·환율·건수·금액 등 **자릿수 흔들리는 표기는 전부 `tabular-nums`**.
@@ -143,6 +144,7 @@
 - 모든 색은 시맨틱 토큰. 부득이한 의미색도 `text-orange-600 dark:text-orange-400`처럼 **라이트/다크 쌍**으로.
 - `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것.
 - 공유/동기화 링크 진입 시 송신 테마(`&theme=`)를 hydration 이전 단계부터 적용해 깜빡임(FOUC) 방지.
+- **라이트/다크 비대칭 pin**: 라이트에서만 인지성이 부족한 조합(예: `text-muted-foreground/NN`)은 라이트 값을 교정하고 다크는 `dark:text-muted-foreground/NN`로 기존 모습 그대로 고정한다(§11 참고).
 
 ---
 
@@ -184,7 +186,8 @@
 - 정보성 텍스트는 파랑 금지(손익 전용) → 중립 회색. **info 아이콘만 sky** 허용(`text-sky-600/70 dark:text-sky-400/70`, hover sky-700/300) — 형태로 손익 숫자와 구분.
 
 **정보 처리**
-- 캡션이 muted면 굵기를 과하게 주지 않는다(muted+semibold는 모순) → `text-[11px] text-muted-foreground/60` 수준.
+- 캡션이 muted면 굵기를 과하게 주지 않는다(muted+semibold는 모순) → `text-[11px] text-muted-foreground` 수준.
+- **`text-muted-foreground` 위 추가 투명도(`/NN`) 사용 제한**: 라이트는 배경이 밝아 대비 헤드룸이 적어 투명도 중첩 시 AA 미만으로 쉽게 떨어진다(다크는 배경이 어두워 헤드룸이 넉넉해 문제없음). 캡션 장식·placeholder·empty-state·구분자에만 허용하고, 실제 안내 문장(고지·프라이버시 설명 등 사용자가 읽어야 하는 문장)에는 라이트에서 투명도 금지 — `text-muted-foreground dark:text-muted-foreground/NN`로 다크만 pin(예: `copyright-footer.tsx`, `tool-menu.tsx` 공유 다이얼로그 안내문).
 - **중복 정보 금지**: 같은 값이 두 셀에 반복되면(예: 비교표 시작=종료 환율 동일) 1회만.
 - 시점·시장별 **고정 메타(마감 시각 등)는 행마다 반복하지 말고 표 하단 공통 1줄**로 일원화.
 

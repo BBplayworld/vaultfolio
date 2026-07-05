@@ -248,6 +248,7 @@ export function YearlyNetAssetChart() {
   };
 
   const currentYear = new Date().getFullYear();
+  const currentMonth = `${parseInt(new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(5, 7))}월`;
 
   // 올해 항목은 saveSnapshots에서 종가 기준으로 자동 upsert됨
   const allYearlyData = [...assetData.yearlyNetAssets].sort((a, b) => a.year - b.year);
@@ -495,15 +496,11 @@ export function YearlyNetAssetChart() {
                             const prev = idx > 0 ? monthlyData[idx - 1] : null;
                             const diff = prev ? row.netAsset - prev.netAsset : null;
                             return (
-                              <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs space-y-1 min-w-[130px]">
+                              <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm space-y-1 min-w-[130px]">
                                 <p className="font-semibold text-foreground">{row.month}</p>
                                 <div className="flex justify-between gap-3">
                                   <span className="text-muted-foreground">순자산</span>
                                   <span className={`font-bold tabular-nums ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
-                                </div>
-                                <div className="flex justify-between gap-3">
-                                  <span className="text-muted-foreground">금융자산</span>
-                                  <span className={`font-medium tabular-nums ${ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.financialAsset)}</span>
                                 </div>
                                 {diff !== null && (
                                   <div className="flex justify-between gap-3 border-t pt-1">
@@ -522,14 +519,7 @@ export function YearlyNetAssetChart() {
                           <LabelList
                             dataKey="netAsset"
                             position="top"
-                            offset={22}
-                            formatter={(v: number) => formatShortCurrencyDecimal(v)}
-                            style={{ fill: ASSET_THEME.importantHex, fontSize: 12, fontWeight: 700 }}
-                          />
-                          <LabelList
-                            dataKey="financialAsset"
-                            position="top"
-                            offset={6}
+                            offset={13}
                             formatter={(v: number) => formatShortCurrencyDecimal(v)}
                             style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
                           />
@@ -541,21 +531,24 @@ export function YearlyNetAssetChart() {
                   {/* 월별 순자산 목록 — 년도별 리스트와 동일한 스택 레이아웃(고정폭 그리드 대신 자연 줄바꿈) */}
                   <div className="space-y-2">
                     {monthlyData.map((row, idx, arr) => {
+                      const isCurrentMonth = row.month === currentMonth;
                       const prev = arr[idx - 1];
                       const diff = prev ? row.netAsset - prev.netAsset : null;
+                      const diffPct = prev && prev.netAsset !== 0
+                        ? ((diff! / Math.abs(prev.netAsset)) * 100).toFixed(1)
+                        : null;
                       return (
                         <div key={row.month} className="rounded-lg p-3">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-semibold text-muted-foreground">{row.month}</span>
                             {diff !== null && (
                               <span className={`text-sm font-semibold ${getProfitLossColor(diff)}`}>
-                                {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)}
+                                {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
                               </span>
                             )}
                           </div>
                           <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
-                            <p className={`text-sm font-bold ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</p>
-                            <span className="text-sm text-muted-foreground">금융자산 {formatPriceDecimalByMode(row.financialAsset)}</span>
+                            <p className={`text-sm font-bold ${isCurrentMonth ? ASSET_THEME.important : ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.netAsset)}</p>
                           </div>
                         </div>
                       );

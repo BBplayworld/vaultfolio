@@ -70,7 +70,7 @@ export function PromptPreviewDialog({
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedIdx(i)}
-                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-xs transition-colors ${
+                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-sm transition-colors ${
                   i === selectedIdx
                     ? "bg-background shadow-sm font-medium"
                     : "text-muted-foreground hover:text-foreground"
@@ -79,7 +79,7 @@ export function PromptPreviewDialog({
               >
                 <span>{t.label}</span>
                 {t.sublabel && (
-                  <span className="text-xs opacity-80 hidden sm:block leading-tight text-center">{t.sublabel}</span>
+                  <span className="text-sm opacity-80 hidden sm:block leading-tight text-center">{t.sublabel}</span>
                 )}
               </button>
             ))}

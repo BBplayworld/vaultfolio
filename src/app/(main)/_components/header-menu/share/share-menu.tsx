@@ -169,7 +169,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         {/* 섹션 선택 체크박스 — 캡처 모드에서 숨김 */}
         {!isCaptureMode && (
           <div className="px-5 py-3 border-t bg-muted/10">
-            <p className="text-[11px] text-muted-foreground font-medium mb-2">포함할 항목</p>
+            <p className="text-sm text-muted-foreground font-medium mb-2">포함할 항목</p>
             <div className="flex items-center gap-x-5 gap-y-2 flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {SECTION_OPTIONS.map(({ key, label }) => (
                 <div key={key} className="flex items-center gap-1.5 shrink-0">
@@ -180,16 +180,16 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                     className="size-3.5"
                     style={{ backgroundColor: MAIN_PALETTE[0], borderColor: MAIN_PALETTE[0] }}
                   />
-                  <Label htmlFor={`section-${key}`} className="text-xs cursor-pointer select-none whitespace-nowrap">
+                  <Label htmlFor={`section-${key}`} className="text-sm cursor-pointer select-none whitespace-nowrap">
                     {label}
                     {key === "stock" && activeCategories.length > 0 && (
                       <Select value={activeCategory} onValueChange={setActiveCategory}>
-                        <SelectTrigger className="h-5 text-xs w-[76px] ml-1.5 inline-flex">
+                        <SelectTrigger className="h-5 text-sm w-[76px] ml-1.5 inline-flex">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {visibleTabs.map((tab) => (
-                            <SelectItem key={tab.value} value={tab.value} className="text-xs">
+                            <SelectItem key={tab.value} value={tab.value} className="text-sm">
                               {tab.label}
                             </SelectItem>
                           ))}
@@ -214,7 +214,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                   onCheckedChange={setHideAmounts}
                   className="scale-90"
                 />
-                <Label htmlFor="hide-amounts" className="text-xs cursor-pointer select-none">금액 숨기기</Label>
+                <Label htmlFor="hide-amounts" className="text-sm cursor-pointer select-none">금액 숨기기</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -223,7 +223,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                   onCheckedChange={setIsCaptureMode}
                   className="scale-90"
                 />
-                <Label htmlFor="capture-mode" className="text-xs cursor-pointer select-none">캡처 모드</Label>
+                <Label htmlFor="capture-mode" className="text-sm cursor-pointer select-none">캡처 모드</Label>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
             <div className="flex justify-end mb-2">
               <button
                 onClick={() => setIsCaptureMode(false)}
-                className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-full transition-colors"
+                className="flex items-center gap-1 text-sm text-muted-foreground bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-full transition-colors"
               >
                 <X className="size-3" />
                 캡처 모드 해제

@@ -61,7 +61,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
           <div key={item.key} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-sm sm:text-base font-semibold truncate">{item.label}</span>
-              <span className="text-xs sm:text-sm font-semibold tabular-nums text-foreground/80 shrink-0">
+              <span className="text-sm font-semibold tabular-nums text-foreground/80 shrink-0">
                 {formatShortCurrency(Math.round(item.value))} · {pct}%
               </span>
             </div>
@@ -193,13 +193,13 @@ export function StockXrayView() {
         {/* 분포 시각화 */}
         <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-bold text-muted-foreground tracking-wide">
+            <span className="text-sm font-bold text-muted-foreground tracking-wide">
               분포 분석
             </span>
             {result.total > 0 && (
               <span className="flex items-center gap-1">
                 <ConcentrationInfo />
-                <span className={`text-xs sm:text-sm font-bold ${conc.color}`}>{conc.label}</span>
+                <span className={`text-sm font-bold ${conc.color}`}>{conc.label}</span>
               </span>
             )}
           </div>
@@ -228,7 +228,7 @@ export function StockXrayView() {
         <div className="rounded-lg bg-muted/20 p-4 space-y-3">
           <div>
             <p className="text-sm sm:text-base font-bold">📋 AI 진단 프롬프트</p>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다.
             </p>
           </div>

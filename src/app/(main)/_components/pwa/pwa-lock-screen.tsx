@@ -127,13 +127,13 @@ export function PwaLockScreen() {
       </InputOTP>
 
       {failCount >= 3 && (
-        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+        <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
           <AlertTriangle className="size-3.5" />
           <span>비밀번호를 다시 확인해주세요</span>
         </div>
       )}
       {failCount > 0 && failCount < 3 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           비밀번호가 일치하지 않습니다
         </p>
       )}

@@ -34,9 +34,9 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
                   {coin.symbol && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-xs text-foreground">{coin.quantity.toLocaleString()}개</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm text-foreground">{coin.quantity.toLocaleString()}개</span>
+                  <span className="text-sm text-muted-foreground">·</span>
+                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -70,7 +70,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete }: {
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
+            <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{coin.purchaseDate} 매수</span></span>
               {coin.description && <span className="w-full text-primary truncate"># {coin.description}</span>}
@@ -152,8 +152,8 @@ export function CryptoTab() {
                 return (
                   <div key={coin.id} className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-xs sm:text-sm text-foreground">{coin.name}</span>
-                    <span className="text-xs sm:text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    <span className="text-sm text-foreground">{coin.name}</span>
+                    <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                   </div>
                 );
               })}

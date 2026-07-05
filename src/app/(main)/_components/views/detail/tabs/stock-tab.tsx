@@ -156,7 +156,7 @@ function CurrencyGainHint({ value, formatter }: { value: number; formatter: (v: 
           <Globe className="size-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-xs tabular-nums">
+      <PopoverContent side="left" sideOffset={4} className="w-auto p-2.5 text-sm tabular-nums">
         <p>
           <span className="text-muted-foreground">환차손익 </span>
           <span className={getProfitLossColor(value)}>{value >= 0 ? "+" : ""}{formatter(value)}</span>
@@ -485,11 +485,11 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
           <DialogTitle>{stock.name} 나누기</DialogTitle>
         </DialogHeader>
         <div className="space-y-2 py-1">
-          <p className="text-xs text-muted-foreground">총 {maxQty.toLocaleString()}주를 항목별로 나눕니다.</p>
+          <p className="text-sm text-muted-foreground">총 {maxQty.toLocaleString()}주를 항목별로 나눕니다.</p>
           {items.map((it, idx) => (
             <div key={idx} className="rounded-md border border-border/60 bg-muted/5 p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">항목 {idx + 1}</span>
+                <span className="text-sm font-semibold text-muted-foreground">항목 {idx + 1}</span>
                 {items.length > 2 && (
                   <Button size="icon" variant="ghost" className="size-6 -mr-1" onClick={() => removeRow(idx)}>
                     <Trash2 className="size-3" />
@@ -497,14 +497,14 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                 )}
               </div>
               {isForeign && (
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none w-fit">
+                <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none w-fit">
                   <Checkbox checked={it.avgPriceInKrw} onCheckedChange={(v) => updateItem(idx, "avgPriceInKrw", !!v)} className="size-3.5" />
                   원화로 입력 (저장 시 달러 환산)
                 </label>
               )}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">수량</label>
+                  <label className="text-sm text-muted-foreground">수량</label>
                   <div className="flex items-center gap-1">
                     <Input
                       className="h-8 text-sm tabular-nums"
@@ -516,11 +516,11 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                         updateItem(idx, "quantity", filtered);
                       }}
                     />
-                    <span className="text-xs text-muted-foreground shrink-0">주</span>
+                    <span className="text-sm text-muted-foreground shrink-0">주</span>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">
+                  <label className="text-sm text-muted-foreground">
                     평단가{isForeign && (it.avgPriceInKrw ? " (KRW)" : " (USD)")}
                   </label>
                   <Input
@@ -538,25 +538,25 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">증권사</label>
+                <label className="text-sm text-muted-foreground">증권사</label>
                 <Select value={it.broker} onValueChange={(v) => updateItem(idx, "broker", v)}>
-                  <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="선택 안 함" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm w-full"><SelectValue placeholder="선택 안 함" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">선택 안 함</SelectItem>
                     {securitiesFirms.map((g) => g.items.map((f) => (
-                      <SelectItem key={f} value={f} className="text-xs">{f}</SelectItem>
+                      <SelectItem key={f} value={f} className="text-sm">{f}</SelectItem>
                     )))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           ))}
-          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addRow}>+ 항목 추가</Button>
-          <p className={`text-xs tabular-nums ${Math.abs(remaining) < 1e-9 ? "text-muted-foreground" : "text-destructive font-semibold"}`}>
+          <Button variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addRow}>+ 항목 추가</Button>
+          <p className={`text-sm tabular-nums ${Math.abs(remaining) < 1e-9 ? "text-muted-foreground" : "text-destructive font-semibold"}`}>
             남은 수량: {remaining.toLocaleString()}주
           </p>
           {hasDupBroker && (
-            <p className="text-xs text-destructive font-semibold">동일 증권사를 중복 선택할 수 없습니다.</p>
+            <p className="text-sm text-destructive font-semibold">동일 증권사를 중복 선택할 수 없습니다.</p>
           )}
         </div>
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -625,10 +625,10 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
 function TradeActionRow({ stockId, onViewTrades }: { stockId: string; onViewTrades: (id: string) => void }) {
   return (
     <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
-      <Button variant="secondary" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => dispatchAddTrade(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddTrade(stockId)}>
         <ArrowLeftRight className="size-3.5" /> 거래입력
       </Button>
-      <Button variant="secondary" size="sm" className="h-8 flex-1 text-xs gap-1" onClick={() => onViewTrades(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => onViewTrades(stockId)}>
         <History className="size-3.5" /> 거래내역
       </Button>
     </div>
@@ -676,7 +676,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/5">
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
               {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
@@ -760,9 +760,9 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
             <div className={ASSET_THEME.cardExpandBox}>
               <div className={`flex items-start gap-2 px-4 py-2.5 ${ASSET_THEME.cardSection}`}>
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 flex-1">
-                  <span className="text-xs sm:text-sm font-semibold text-foreground break-all">{stock.name}</span>
+                  <span className="text-sm font-semibold text-foreground break-all">{stock.name}</span>
                   {stock.ticker && (
-                    <span className="text-xs sm:text-sm font-mono font-medium text-muted-foreground">
+                    <span className="text-sm font-mono font-medium text-muted-foreground">
                       ({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})
                     </span>
                   )}
@@ -770,7 +770,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                     <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{label}</Badge>
                   ))}
                 </div>
-                <span className="text-xs sm:text-sm text-foreground font-semibold shrink-0 whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
+                <span className="text-sm text-foreground font-semibold shrink-0 whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
               </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} />
@@ -810,7 +810,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 </div>
               )}
               {!hasSubItems && (
-                <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
+                <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
                   <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
                   <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
                   {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
@@ -818,7 +818,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
               )}
               {hasSubItems && (
                 <div className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
-                  <p className="text-xs font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
+                  <p className="text-sm font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
                   {subItems!.map((sub, idx) => (
                     <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} onViewTrades={openTrades} />
                   ))}
