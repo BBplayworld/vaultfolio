@@ -87,7 +87,20 @@
       "PowerShell(\"===MAIN vs issue-4.6===\")",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30; \"=== tsc exit: $LASTEXITCODE ===\")",
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 20; \"=== vitest exit: $LASTEXITCODE ===\")",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "Bash(echo \"=== EXIT: $? ===\")",
+      "Bash(echo \"=== TSC EXIT: $? ===\")",
+      "PowerShell(npx tsc --noEmit; Write-Output \"=== TSC EXIT: $LASTEXITCODE ===\")",
+      "PowerShell(npx vitest run; Write-Output \"=== VITEST EXIT: $LASTEXITCODE ===\")",
+      "PowerShell(npm run lint; Write-Output \"=== LINT EXIT: $LASTEXITCODE ===\")",
+      "PowerShell(npm run build; Write-Output \"=== BUILD EXIT: $LASTEXITCODE ===\")",
+      "Bash(git add *)",
+      "PowerShell(git add \".claude/_knowledge/design-system.md\" \"src\")",
+      "PowerShell(git fetch origin 2>&1)",
+      "PowerShell(git checkout main)",
+      "PowerShell(git merge issue-4.10 --no-edit)",
+      "PowerShell(git ls-remote --heads origin main issue-4.10)",
+      "PowerShell(git push origin main)"
     ]
   }
 }

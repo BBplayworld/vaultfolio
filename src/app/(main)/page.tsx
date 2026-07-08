@@ -14,15 +14,20 @@ import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
+import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
   const isMobile = useIsMobile();
+  const { isStandalone } = usePWAInstall();
+  const { view } = useAssetNavigation();
   const initTutorial = useTutorialStore((s) => s.initTutorial);
   const completeStep = useTutorialStore((s) => s.completeStep);
+  const hideFooterInPWA = isStandalone && (view.type === "detail" || view.type === "activity");
 
   const isWelcomeGuide =
     isSharePending ||
@@ -95,7 +100,7 @@ export default function Page() {
       <AssetPageTabs />
       <FloatingAddButton />
       <TradeInput />
-      <CopyrightFooter />
+      {!hideFooterInPWA && <CopyrightFooter />}
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       <UpdateNoticeDialog />
     </div>
