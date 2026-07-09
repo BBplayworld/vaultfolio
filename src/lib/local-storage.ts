@@ -21,6 +21,8 @@ export const STORAGE_KEYS = {
   profitBasis:          "secretasset_profit_basis",
   // Tutorial step state — 단일 키, 값은 { "0":"done", "1":"skipped", ... } 형태의 JSON
   tutorialStatus:       "secretasset_tutorial_status",
+  // 주식 탭 원/달러 표시 화폐 ("KRW" | "USD")
+  stockDisplayCurrency: "secretasset_stock_display_currency",
   // 클라우드 동기화 상태 키
   syncState:            "secretasset_sync",
 } as const;

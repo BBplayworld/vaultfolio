@@ -13,6 +13,8 @@ export function InlineSelector<T extends string>({
   size = "md",
   className,
   ariaLabel,
+  disabledValues,
+  disabledTitle,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -20,6 +22,8 @@ export function InlineSelector<T extends string>({
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   ariaLabel?: string;
+  disabledValues?: readonly T[];
+  disabledTitle?: string;
 }) {
   const base =
     size === "sm" ? "text-[12px] sm:text-[13px] lg:text-sm px-1.5 py-1"
@@ -34,17 +38,22 @@ export function InlineSelector<T extends string>({
     >
       {options.map((o, i) => {
         const active = value === o.value;
+        const disabled = disabledValues?.includes(o.value) ?? false;
         return (
           <button
             key={`${o.value}-${i}`}
             type="button"
             role="radio"
             aria-checked={active}
+            disabled={disabled}
+            title={disabled ? disabledTitle : undefined}
             data-tutorial={o.dataTutorial}
             onClick={() => onChange(o.value)}
-            className={`${base} whitespace-nowrap shrink-0 rounded transition-colors ${active
-              ? "bg-background text-foreground font-semibold shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+            className={`${base} whitespace-nowrap shrink-0 rounded transition-colors ${disabled
+              ? "text-muted-foreground/40 cursor-not-allowed"
+              : active
+                ? "bg-background text-foreground font-semibold shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
               }`}
           >
             {o.label}

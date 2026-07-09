@@ -14,6 +14,8 @@ interface DetailSummaryHeaderProps {
   formatShort?: (v: number) => string;
   // 히어로 금액 아래 보조 강조 (예: 평가손익)
   inline?: ReactNode;
+  // 라벨 우측 컨트롤 (예: 주식 탭 원/달러 선택)
+  headerAction?: ReactNode;
 }
 
 // 상세 탭 헤더 — 5개 탭(주식/부동산/암호화폐/현금/대출) 공통.
@@ -25,12 +27,16 @@ export function DetailSummaryHeader({
   formatFull = formatCurrency,
   formatShort = formatPriceByMode,
   inline,
+  headerAction,
 }: DetailSummaryHeaderProps) {
   const { primary, secondary } = getPriceLayout(value, formatFull, formatShort);
 
   return (
     <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`}>
-      <p className="text-sm text-muted-foreground font-semibold">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground font-semibold">{label}</p>
+        {headerAction}
+      </div>
       <div className="mt-1 flex flex-col gap-0.5">
         <p className={`text-xl sm:text-2xl lg:text-3xl font-extrabold tabular-nums break-all leading-tight ${valueClass}`}>
           {primary}
