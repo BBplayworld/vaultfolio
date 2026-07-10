@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Search, Loader2 } from "lucide-react";
@@ -74,11 +74,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
 
 
   const getTickerPlaceholder = () => {
-    if (selectedCategory === "domestic") return "예: 005930 (삼성전자)";
-    if (selectedCategory === "foreign") return "예: AAPL (애플)";
-    if (isEtfCategory) return "예: 360750 (TIGER 미국S&P500)";
+    if (selectedCategory === "domestic") return "예: 삼성전자 또는 005930";
+    if (selectedCategory === "foreign") return "예: 애플, Apple 또는 AAPL";
+    if (isEtfCategory) return "예: TIGER 미국S&P500 또는 360750";
     if (isUnlisted) return "예: 비상장 종목명 또는 코드";
-    return "종목코드 입력";
+    return "종목명 또는 종목코드";
   };
 
   const getNamePlaceholder = () => {
@@ -90,9 +90,9 @@ function StockForm({ editData, onClose }: StockFormProps) {
   };
 
   const getTickerDescription = () => {
-    if (selectedCategory === "domestic") return "국내 주식 6자리 영문+숫자를 입력하세요. (예: 삼성전자 005930, ETF 0117V0)";
-    if (selectedCategory === "foreign") return "미국 등 해외주식 티커를 입력하세요. (예: AAPL, TSLA, BRK/B)";
-    if (isEtfCategory) return "국내 상장 ETF 종목코드 6자리를 입력하세요. (예: S&P500 ETF → 360750)";
+    if (selectedCategory === "domestic") return "종목명 또는 종목코드로 검색하세요. (예: 삼성전자 / 005930)";
+    if (selectedCategory === "foreign") return "종목명(한글·영문) 또는 티커로 검색하세요. (예: 애플 / Apple / AAPL)";
+    if (isEtfCategory) return "종목명 또는 ETF 종목코드로 검색하세요. (예: TIGER 미국S&P500 / 360750)";
     if (isUnlisted) return "비상장 주식은 증권 API 조회가 불가합니다. 종목코드 또는 식별 코드를 자유롭게 입력하세요.";
     return "";
   };
@@ -146,6 +146,123 @@ function StockForm({ editData, onClose }: StockFormProps) {
     }
   };
 
+  // 티커/종목명으로 현재가 조회 (조회 버튼·자동완성 선택 공용)
+  const fetchPrice = async (ticker: string, category: string) => {
+    const errorCount = parseInt(localStorage.getItem(STORAGE_KEYS.financeApiErrorCount) || "0");
+    if (errorCount >= 3) {
+      toast.error("연속된 서버 오류로 조회가 비활성화되었습니다. 직접 입력해 주세요.");
+      return;
+    }
+    const normalized = normalizeTicker({ ticker, category: category as Stock["category"] });
+    if (!normalized) {
+      toast.error("올바른 티커 형식을 입력해주세요.");
+      return;
+    }
+    setIsFetchingPrice(true);
+    try {
+      const res = await fetch(`/api/finance?type=stock&tickers=${normalized}`);
+      if (res.status === 500) {
+        const newCount = errorCount + 1;
+        localStorage.setItem(STORAGE_KEYS.financeApiErrorCount, newCount.toString());
+        toast.error(`서버 오류 발생 (${newCount}/3)`);
+        return;
+      }
+      localStorage.removeItem(STORAGE_KEYS.financeApiErrorCount);
+      const data = await res.json();
+      if (data && data[normalized]) {
+        form.setValue("currentPrice", data[normalized].price);
+        // 해외주식: API 반환 name 그대로 사용 / 국내 등: 종목코드·심볼 형식이면 무시
+        const fetchedName = data[normalized].name || "";
+        const isForeign = category === "foreign";
+        const isCodeLike = /^\d{6}/.test(fetchedName) || /\.\w{2,}$/.test(fetchedName);
+        if (fetchedName && (isForeign || !isCodeLike)) {
+          form.setValue("name", fetchedName);
+        }
+        if (data[normalized].updated_at) {
+          form.setValue("baseDate", data[normalized].updated_at);
+        }
+        setLookupState("success");
+        toast.success("주식 정보를 성공적으로 가져왔습니다.");
+      } else if (data.error) {
+        setLookupState("failed");
+        toast.error(data.error);
+      } else {
+        setLookupState("failed");
+        toast.error("주식 정보를 찾을 수 없습니다.");
+      }
+    } catch {
+      setLookupState("failed");
+      toast.error("조회 중 오류가 발생했습니다.");
+    } finally {
+      setIsFetchingPrice(false);
+    }
+  };
+
+  // ─── 종목명·코드 자동완성 검색 ───
+  const searchMarket: "kr" | "us" | null =
+    selectedCategory === "foreign" ? "us" : selectedCategory === "unlisted" ? null : "kr";
+  const [searchResults, setSearchResults] = useState<{ ticker: string; name: string; market?: string }[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [noResult, setNoResult] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
+
+  const runSearch = (q: string) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (!searchMarket || !!editData || !q.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      setNoResult(false);
+      return;
+    }
+    searchDebounceRef.current = setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      searchAbortRef.current = ctrl;
+      try {
+        const res = await fetch(`/api/ticker-search?q=${encodeURIComponent(q.trim())}&market=${searchMarket}`, { signal: ctrl.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        const results = (data.results ?? []) as { ticker: string; name: string; market?: string }[];
+        setSearchResults(results);
+        setShowDropdown(results.length > 0);
+        setNoResult(results.length === 0);
+        setActiveIndex(-1);
+      } catch {
+        /* aborted/ignore */
+      }
+    }, 250);
+  };
+
+  const selectResult = (r: { ticker: string; name: string }) => {
+    form.setValue("ticker", r.ticker);
+    form.setValue("name", r.name);
+    setShowDropdown(false);
+    setSearchResults([]);
+    setNoResult(false);
+    void fetchPrice(r.ticker, form.getValues("category"));
+  };
+
+  // 카테고리 변경 시 검색 상태 초기화 (market 전환)
+  useEffect(() => {
+    setSearchResults([]);
+    setShowDropdown(false);
+    setActiveIndex(-1);
+    setNoResult(false);
+  }, [selectedCategory]);
+
+  // 바깥 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    if (!showDropdown) return;
+    const onDown = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showDropdown]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -161,6 +278,11 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   setSelectedCategory(value as Stock["category"]);
                   form.setValue("currency", value === "foreign" ? "USD" : "KRW");
                   setLookupState(value === "unlisted" ? "success" : "idle");
+                  // 카테고리 전환 시 이전 종목코드·종목명·현재가 초기화
+                  form.setValue("ticker", "");
+                  form.setValue("name", "");
+                  form.setValue("currentPrice", 0);
+                  form.setValue("baseDate", "");
                 }}
                 defaultValue={field.value}
               >
@@ -189,23 +311,65 @@ function StockForm({ editData, onClose }: StockFormProps) {
               name="ticker"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>티커 (종목코드) *</FormLabel>
+                  <FormLabel>{isUnlisted ? "티커 (종목코드) *" : "종목코드 · 종목명 검색 *"}</FormLabel>
                   <FormControl>
-                    <div className="relative">
+                    <div className="relative" ref={searchWrapRef}>
                       <Input
                         placeholder={getTickerPlaceholder()}
-                        maxLength={isUnlisted ? 20 : selectedCategory === "foreign" ? 8 : 6}
+                        maxLength={isUnlisted ? 20 : 40}
                         inputMode="text"
+                        autoComplete="off"
                         {...field}
                         onChange={(e) => {
-                          const val = isUnlisted
-                            ? e.target.value
-                            : selectedCategory === "foreign"
-                              ? e.target.value.toUpperCase().replace(/[^A-Z0-9./]/g, "").replace(/\./g, "/").slice(0, 8)
-                              : e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+                          // 검색 겸용: 종목코드·종목명 모두 허용. 비상장은 자유 입력.
+                          const val = isUnlisted ? e.target.value : e.target.value.slice(0, 40);
                           field.onChange(val);
+                          runSearch(val);
+                        }}
+                        onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
+                        onKeyDown={(e) => {
+                          if (!showDropdown || searchResults.length === 0) return;
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setActiveIndex((i) => (i + 1) % searchResults.length);
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setActiveIndex((i) => (i - 1 + searchResults.length) % searchResults.length);
+                          } else if (e.key === "Enter") {
+                            if (activeIndex >= 0 && activeIndex < searchResults.length) {
+                              e.preventDefault();
+                              selectResult(searchResults[activeIndex]);
+                            }
+                          } else if (e.key === "Escape") {
+                            setShowDropdown(false);
+                          }
                         }}
                       />
+                      {noResult && !editData && searchMarket && field.value?.trim() && !showDropdown && (
+                        <div className="absolute z-50 mt-1 w-full rounded-md bg-popover p-3 text-sm text-muted-foreground shadow-2xl">
+                          검색 결과가 없습니다. 티커(종목코드)를 직접 입력한 뒤 &lsquo;조회&rsquo;를 눌러주세요.
+                        </div>
+                      )}
+                      {showDropdown && searchResults.length > 0 && (
+                        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md bg-popover p-1 shadow-2xl scrollbar-themed">
+                          {searchResults.map((r, i) => (
+                            <li key={`${r.ticker}-${i}`}>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); selectResult(r); }}
+                                onMouseEnter={() => setActiveIndex(i)}
+                                className={`flex w-full items-center justify-between gap-2 rounded-sm px-2 py-2 text-left text-sm ${i === activeIndex ? "bg-muted" : "hover:bg-muted/60"}`}
+                              >
+                                <span className="truncate text-foreground">{r.name}</span>
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                  <span className="font-mono text-xs tabular-nums text-muted-foreground">{r.ticker}</span>
+                                  {r.market && <span className="text-[10px] text-muted-foreground">{r.market}</span>}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -219,68 +383,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
               variant="brand"
               className="h-9 px-3"
               disabled={isFetchingPrice}
-              onClick={async () => {
-                // 500 에러 횟수 체크
-                const errorCount = parseInt(localStorage.getItem(STORAGE_KEYS.financeApiErrorCount) || "0");
-                if (errorCount >= 3) {
-                  toast.error("연속된 서버 오류로 조회가 비활성화되었습니다. 직접 입력해 주세요.");
-                  return;
-                }
-
-                const ticker = form.getValues("ticker");
-                const category = form.getValues("category");
-                const normalized = normalizeTicker({ ticker, category });
-
-                if (!normalized) {
-                  toast.error("올바른 티커 형식을 입력해주세요.");
-                  return;
-                }
-
-                setIsFetchingPrice(true);
-                try {
-                  const res = await fetch(`/api/finance?type=stock&tickers=${normalized}`);
-
-                  if (res.status === 500) {
-                    const newCount = errorCount + 1;
-                    localStorage.setItem(STORAGE_KEYS.financeApiErrorCount, newCount.toString());
-                    toast.error(`서버 오류 발생 (${newCount}/3)`);
-                    return;
-                  }
-
-                  // 성공 시 에러 카운트 초기화
-                  localStorage.removeItem(STORAGE_KEYS.financeApiErrorCount);
-
-                  const data = await res.json();
-
-                  if (data && data[normalized]) {
-                    form.setValue("currentPrice", data[normalized].price);
-                    // 해외주식: API 반환 name 그대로 사용
-                    // 국내 등: 종목코드·심볼 형식("005930", "005930.KS")이면 무시
-                    const fetchedName = data[normalized].name || "";
-                    const isForeign = form.getValues("category") === "foreign";
-                    const isCodeLike = /^\d{6}/.test(fetchedName) || /\.\w{2,}$/.test(fetchedName);
-                    if (fetchedName && (isForeign || !isCodeLike)) {
-                      form.setValue("name", fetchedName);
-                    }
-                    if (data[normalized].updated_at) {
-                      form.setValue("baseDate", data[normalized].updated_at);
-                    }
-                    setLookupState("success");
-                    toast.success("주식 정보를 성공적으로 가져왔습니다.");
-                  } else if (data.error) {
-                    setLookupState("failed");
-                    toast.error(data.error);
-                  } else {
-                    setLookupState("failed");
-                    toast.error("주식 정보를 찾을 수 없습니다.");
-                  }
-                } catch (e) {
-                  setLookupState("failed");
-                  toast.error("조회 중 오류가 발생했습니다.");
-                } finally {
-                  setIsFetchingPrice(false);
-                }
-              }}
+              onClick={() => { void fetchPrice(form.getValues("ticker") ?? "", form.getValues("category")); }}
             >
               {isFetchingPrice ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
               <span className="ml-2 hidden sm:inline">조회</span>

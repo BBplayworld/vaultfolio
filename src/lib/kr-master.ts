@@ -24,6 +24,10 @@ for (const e of ALL) {
 // 전체 국내 코드 (기존 DOMESTIC_TICKERS 대체)
 export const KR_CODES = new Set<string>(ALL.map((e) => e.code));
 
+// 종목명 검색 인덱스 (서버 검색 엔드포인트 전용 — 클라이언트 미소비 tree-shake)
+export const KR_SEARCH_ENTRIES: { code: string; name: string; fullName: string; market: string }[] =
+  ALL.map((e) => ({ code: e.code, name: e.name, fullName: e.fullName, market: e.market }));
+
 // 코드 → 약명 (xray 역맵 대체)
 export const KR_CODE_TO_NAME: Record<string, string> = {};
 for (const e of ALL) {

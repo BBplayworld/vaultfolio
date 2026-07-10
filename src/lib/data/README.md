@@ -31,8 +31,8 @@ $out=$rows | ForEach-Object { [ordered]@{ code=$_.단축코드.Trim(); name=$_.�
 
 ## 재생성 (미국 마스터 갱신 시)
 
-- 주식: nasdaq.com 스크리너 CSV(`Symbol,Name,...`) + NASDAQ Trader otherlisted CSV(`ACT Symbol,...,Exchange,ETF,...`)
-- ETF: ETF 목록 CSV(`Ticker,Fund Name,Asset Class,Assets`)
+- 주식: https://www.nasdaq.com/market-activity/stocks/screener
+- ETF: https://www.nasdaq.com/market-activity/etf/screener
 
 ```powershell
 $enc=[System.Text.Encoding]::UTF8

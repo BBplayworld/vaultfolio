@@ -29,16 +29,55 @@ import {
 } from "./sync-state";
 
 const AUTO_PUSH_DEBOUNCE_MS = 2500;
-const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_MS = 60000;
 
-// 비교를 위해 payload에서 lastUpdated 타임스탬프 필드를 제외한 직렬화 문자열 반환
+// 변경 감지기 — "사용자의 자산·닉네임 수정·추가"만 push 트리거로 본다.
+// 매 접속마다 saveSnapshots/syncTodayStockPrices가 재계산하는 "진행 중 구간·API 파생값"은
+// 비교에서 제외해 오늘자 시세·스냅샷 재계산이 version 갱신(핑퐁)을 유발하지 않게 한다.
+// (실제 push payload인 buildExportPayload는 그대로 두므로 데이터 자체는 온전히 동기화됨)
 const getComparablePayloadString = (): string => {
   const payload = buildExportPayload();
+  // KST 기준 오늘/이번달/올해 (saveSnapshots와 동일 산출)
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const todayStr = kst.toISOString().split("T")[0];
+  const currentMonth = todayStr.substring(0, 7);
+  const currentYear = parseInt(todayStr.substring(0, 4), 10);
+
+  const normalized: Record<string, unknown> = { ...payload };
+
   if (payload.assetData && typeof payload.assetData === "object") {
-    const { lastUpdated, ...restAssetData } = payload.assetData as any;
-    return JSON.stringify({ ...payload, assetData: restAssetData });
+    const { lastUpdated, stocks, yearlyNetAssets, ...restAssetData } = payload.assetData as any;
+    normalized.assetData = {
+      ...restAssetData,
+      // API 동기화 종목(ticker 有·비상장 아님)의 현재가·비활성 필드는 종목별 로컬 재조회값 → 트리거 제외.
+      // 비상장·무티커 종목의 currentPrice는 사용자 입력값이라 유지.
+      // halted(거래정지)는 syncTodayStockPrices가 currentPrice를 덮어쓰지 않고 보존 → 사용자 입력 성격이라 감지기에 유지.
+      stocks: Array.isArray(stocks)
+        ? stocks.map((s: any) => {
+          if (s?.ticker && s.category !== "unlisted" && s.inactiveStatus !== "halted") {
+            const { currentPrice, inactiveStatus, inactiveReason, inactiveCheckedAt, ...restStock } = s;
+            return restStock;
+          }
+          return s;
+        })
+        : stocks,
+      // 올해 순자산은 접속마다 saveSnapshots가 덮어쓰는 auto값 → 트리거 제외 (과거 연도·수동 입력 유지)
+      yearlyNetAssets: Array.isArray(yearlyNetAssets)
+        ? yearlyNetAssets.filter((y: any) => y?.year !== currentYear)
+        : yearlyNetAssets,
+    };
   }
-  return JSON.stringify(payload);
+
+  if (payload.snapshots && typeof payload.snapshots === "object") {
+    const snap = payload.snapshots as { daily?: unknown[]; monthly?: unknown[] };
+    normalized.snapshots = {
+      // 오늘자 일별·이번달 월별은 접속마다 재계산 → 제외. 과거 항목은 유지(확정 시 1회 동기화)
+      daily: Array.isArray(snap.daily) ? snap.daily.filter((d: any) => d?.date !== todayStr) : snap.daily,
+      monthly: Array.isArray(snap.monthly) ? snap.monthly.filter((m: any) => m?.month !== currentMonth) : snap.monthly,
+    };
+  }
+
+  return JSON.stringify(normalized);
 };
 
 type SyncStatus = "none" | "locked" | "armed";

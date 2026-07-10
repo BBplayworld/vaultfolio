@@ -31,6 +31,12 @@ export const US_TICKERS = new Set<string>([
   ...ETF.map((e) => e.ticker),
 ]);
 
+// 종목명 검색 인덱스 (서버 검색 엔드포인트 전용 — 클라이언트 미소비 tree-shake)
+export const US_SEARCH_ENTRIES: { ticker: string; name: string; exchange?: string }[] = [
+  ...STOCK.map((e) => ({ ticker: e.ticker, name: e.name, exchange: e.exchange })),
+  ...ETF.map((e) => ({ ticker: e.ticker, name: e.name })),
+];
+
 // 티커 → 이름
 export const US_TICKER_TO_NAME: Record<string, string> = {};
 for (const e of [...STOCK, ...ETF]) {
