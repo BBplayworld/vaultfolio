@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-07-11
+
+### 인앱 브라우저 외부 이동 하드 게이트 + 동기화 잦은 version 갱신 개선 (issue-4.12)
+
+- **인앱 브라우저 하드 게이트** ([in-app-browser-gate.tsx](../../src/app/(main)/_components/pwa/in-app-browser-gate.tsx) 신규, [layout.tsx](../../src/app/(main)/layout.tsx) 마운트): 카카오톡·네이버 등 인앱 브라우저 진입 시 앱 전체를 전체화면 오버레이로 가리고 외부 브라우저(Chrome/Safari)로 이동 유도. 렌더 조건 `isInApp && !isStandalone`. **Android는 버튼으로 자동 이동**([open-external-browser.tsx](../../src/lib/pwa/open-external-browser.ts) 신규 `openExternalBrowser`: 카카오톡=`kakaotalk://web/openExternal?url=`, 그 외=`intent://…;S.browser_fallback_url=…;end`), **iOS는 자동 이동 스킴이 없어 `false` 반환** → 현재 주소 클립보드 복사 + 3단계 수동 가이드([in-app-external-guide.tsx](../../src/app/(main)/_components/pwa/in-app-external-guide.tsx) 신규, `pwa-install-flow`의 `inAppStep`과 공유). 자산 있으면 이동 전 PIN 4자리 입력 → 복원코드 `#share=` URL로 이동, 동기화 기기는 PIN 없이 `syncLink`로 이동. `generateShareArtifacts`는 [use-share-artifacts.ts](../../src/hooks/use-share-artifacts.ts) 신규 훅으로 추출해 게이트·설치 흐름 공용(중복 제거).
+- **게이트 활성 시 자동 동작 전면 차단** ([detect-browser.ts](../../src/lib/pwa/detect-browser.ts) `isInAppGateActive()`/`isStandaloneDisplay()` 신규): 게이트가 화면만 덮고 뒤에서 자동 동기화·시세가 계속 돌던 문제 수정. cloud-sync arm effect는 `assetId`/`lastSyncedAt` 세팅은 유지(syncLink 생성)하되 **armed 진입만 차단**(→pull/폴링/push 정지), `#sync=` 연결 모달도 차단. asset-data-context `initAndSync`·0→양수 전환 effect는 **데이터 로드 후 게이트면 조기 return**해 오늘자 환율·시세·스냅샷 자동 저장 skip.
+- **동기화 잦은 version 갱신(핑퐁) 개선** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx) `getComparablePayloadString`): 변경 감지 필터가 `currentPrice/inactive*`만 제외하고 **`baseDate`(시세 슬롯 도장)·`name`(API 이름)을 빠뜨려**, 자산 미변경이어도 접속마다(장외=매일, 장중=매시간) baseDate 갱신이 자동 push를 유발하던 원인 제거. 이제 API 동기화 종목(halted 포함)에서 `baseDate`·`name`·`inactiveCheckedAt` 항상 제외, 활성 종목은 `currentPrice`·`inactiveStatus`·`inactiveReason`도 제외, **halted는 `currentPrice`(보존 가격)·`inactiveStatus`(정지 상태) 유지**. 무티커·비상장은 사용자 입력값이라 그대로 비교. 실제 push payload(`buildExportPayload`)는 불변이라 데이터는 온전히 동기화 (R14 보강).
+- **이유:** 인앱 브라우저의 세션 끊김 데이터 유실 리스크를 소프트 안내에서 하드 게이트로 격상하고, 게이트 뒤 자동 동작이 그 목적과 충돌하던 것을 차단. 동기화는 오늘자 접근·장중마다 양 기기가 무의미한 version을 주고받던 핑퐁을 감지기에서 근본 차단.
+
+---
+
 ## 2026-06-30
 
 ### 기기 동기화 pull 후 시세 동기화 + 닉네임 커밋 시점 변경 (issue-4.7)
@@ -152,17 +163,6 @@
 
 ---
 
-## 2026-06-05
-
-### 일별 수익 휴장 처리 + UI 정리 (issue-4.1)
-
-- **휴장 폴백 캐시 매핑** (`/api/finance/profit`): ref-date 매핑 저장 가드를 `res.date === task.date || !reqIsBusinessDay`로 완화. 요청일이 비영업일(`isKrBusinessDay`/`isUsBusinessDay`)이라 직전 영업일로 폴백된 경우(영구 확정값)도 응답일 기준 저장 → 휴장일 동안 매번 KIS 재호출되던 churn 제거. 영업일+장중 미확정(응답일이 더 이름)은 stale 영구 hit 방지로 여전히 미저장. **일별 수익 표시값·날짜 로직은 불변.**
-- **"휴장제외" 표시** (`profit-chart`): 기준 종가 비교 표에서 시작 종가가 휴장으로 직전 영업일에 폴백되면 시작일 아래 최소 표시. 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKrHoliday`/`isUsHoliday`)
-- **인증샷 보강** (`stock-tab`/`share-card`): `StockCategorySection`이 인증샷 모드에서도 비중바·포트폴리오 하단에 종목 리스트 노출(`!screenshotMode` 가드 제거). 요약 헤더는 인증샷 시 전일 대비+상단 구분선 제거 → 평가손익이 평가금액과 동일 행 정렬
-- **해외 상세 환차손익**: 금액 아래 줄에 수익률(`block`)로 분리 — 우측 매입환율 영역 침범 방지
-- **비종목 자산 카드 정리** (real-estate/loan/cash): 접힘행 왼쪽=`이름 / 비중%`만(종류 배지·매입가·금리·기관 제거), 상세 펼침에 종류·매입가(부동산)·금리·금융기관(대출) 이동 — 주식 카드 패턴과 통일
-- **날짜 input 모바일 넘침 원천 차단** (`globals.css`): `input[type="date"]` 등에 `appearance:none`+`min-width:0`+`max-width:100%`+webkit 의사요소 리셋 전역 규칙. 폼별 `max-w-[160px] sm:max-w-full` 임시방편 제거 → 전폭 통일
-- **이유:** 동일 영업일 기준에서 국내 휴장일이 KIS 폴백으로 우연히 맞던 값을 캐시·표시까지 일관화하고, 비종목 자산 리스트의 정보 위계를 주식과 통일, 모바일 날짜 input 넘침을 소스 레벨에서 차단
-
+<!-- 2026-06-05 항목은 "최근 10개 유지" 정책에 따라 제거됨 (일별 수익 휴장 폴백 캐시 매핑·"휴장제외" 표시·인증샷 종목 리스트·비종목 카드 정리·날짜 input 모바일 넘침 전역 차단) -->
 <!-- 2026-05-23 항목은 "최근 10개 유지" 정책에 따라 제거됨 (UI 정보구조 전면 재설계 — drill-down 라우팅 + 통일 디자인 시스템, 환율 히스토리 7일 확장) -->
 

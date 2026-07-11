@@ -57,3 +57,21 @@ export function detectBrowserEnv(
   }
   return { platform: "pc", browser: "chrome", isInApp, iosSafariModern: false };
 }
+
+/** 홈 화면에 설치된 standalone(PWA) 실행 여부. */
+export function isStandaloneDisplay(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true
+  );
+}
+
+/**
+ * 인앱 브라우저 하드 게이트 활성 여부 = 인앱 브라우저 && standalone 아님.
+ * 게이트가 화면을 덮는 동안 자동 동기화·시세·스냅샷 등 백그라운드 부작용을 차단하는 데 쓴다.
+ */
+export function isInAppGateActive(): boolean {
+  if (typeof window === "undefined") return false;
+  return detectBrowserEnv().isInApp && !isStandaloneDisplay();
+}

@@ -80,7 +80,8 @@ src/
 │   ├── manifest.ts                   # PWA manifest (/manifest.webmanifest, share_target 포함)
 │   └── layout.tsx                    # 루트 레이아웃 (appleWebApp·apple-touch-icon 메타데이터 포함)
 ├── hooks/
-│   └── use-pwa-install.ts            # PWA 설치 훅 (isInstallable/isIOS/isInApp/isStandalone)
+│   ├── use-pwa-install.ts            # PWA 설치 훅 (isInstallable/isIOS/isInApp/isStandalone)
+│   └── use-share-artifacts.ts        # 공유 토큰 생성(#share= URL·복원 코드) 공용 훅 — 설치 흐름·인앱 게이트 재사용
 ├── types/asset.ts                    # 자산 5종 Zod 스키마 (inactiveStatus 포함)
 ├── contexts/asset-data-context.tsx   # 전역 자산 상태 + 환율 + 동기화 + halted/delisted 분기
 ├── stores/
@@ -102,7 +103,8 @@ src/
 │   │   ├── device-key.ts             # IndexedDB 기기키 wrap/unwrap (rememberedKey 보관)
 │   │   └── cloud-sync-provider.tsx   # SYNC_HASH_PARAM 해시 감지·자동 연결
 │   ├── pwa/
-│   │   └── detect-browser.ts         # iOS 브라우저 판별(Safari/Chrome/Whale) — 가이드 SVG 분기
+│   │   ├── detect-browser.ts         # 브라우저/플랫폼 판별 + isInApp + isStandaloneDisplay/isInAppGateActive(인앱 게이트 활성 판정)
+│   │   └── open-external-browser.ts  # 인앱→외부 브라우저 이동(Android=kakaotalk/intent 스킴, iOS=false 폴백)
 │   ├── number-utils.ts
 │   └── utils.ts
 ├── config/

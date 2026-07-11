@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
+import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -24,14 +24,7 @@ export function usePWAInstall() {
     if (typeof window === "undefined") return;
 
     // 이미 설치된 Standalone 환경인지 검사
-    const checkStandalone = () => {
-      const isStandaloneMode =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true;
-      setIsStandalone(isStandaloneMode);
-    };
-
-    checkStandalone();
+    setIsStandalone(isStandaloneDisplay());
 
     // 환경 감지 단일 소스(detectBrowserEnv) — iPadOS 13+ 데스크톱 위장 UA(Macintosh+터치)도 iOS로 인식.
     // iOS는 모든 브라우저가 beforeinstallprompt 미지원 → 수동 추가. 인앱은 외부 브라우저 유도.

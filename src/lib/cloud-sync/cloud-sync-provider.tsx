@@ -19,6 +19,7 @@ import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/app/(main)/_components/pwa/pw
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { buildExportPayload, getAssetData } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { isInAppGateActive } from "@/lib/pwa/detect-browser";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "./config";
 import { deriveKeys, deriveKeysFromMaster, generateAssetId, type AssetKeys } from "./crypto";
@@ -49,16 +50,18 @@ const getComparablePayloadString = (): string => {
     const { lastUpdated, stocks, yearlyNetAssets, ...restAssetData } = payload.assetData as any;
     normalized.assetData = {
       ...restAssetData,
-      // API 동기화 종목(ticker 有·비상장 아님)의 현재가·비활성 필드는 종목별 로컬 재조회값 → 트리거 제외.
-      // 비상장·무티커 종목의 currentPrice는 사용자 입력값이라 유지.
-      // halted(거래정지)는 syncTodayStockPrices가 currentPrice를 덮어쓰지 않고 보존 → 사용자 입력 성격이라 감지기에 유지.
+      // API 동기화 종목(ticker 有·비상장 아님)의 접속마다 재계산되는 파생 필드를 트리거에서 제외.
+      // - baseDate(시세 슬롯 도장)·name(API 이름)·inactiveCheckedAt: 항상 갱신되므로 halted 포함 모든 API 종목에서 제외.
+      // - 활성 종목은 currentPrice·inactiveStatus·inactiveReason(현재가·비활성 파생)도 제외.
+      // - halted(거래정지)는 currentPrice(마지막 보존 가격)·inactiveStatus(정지 상태)를 유지 — 상태 변화는 의미 있는 변경.
+      // - 무티커·비상장 종목은 전부 사용자 입력값이라 그대로 비교.
       stocks: Array.isArray(stocks)
         ? stocks.map((s: any) => {
-          if (s?.ticker && s.category !== "unlisted" && s.inactiveStatus !== "halted") {
-            const { currentPrice, inactiveStatus, inactiveReason, inactiveCheckedAt, ...restStock } = s;
-            return restStock;
-          }
-          return s;
+          if (!s?.ticker || s.category === "unlisted") return s;
+          const { baseDate, name, inactiveCheckedAt, ...rest } = s;
+          if (s.inactiveStatus === "halted") return rest;
+          const { currentPrice, inactiveStatus, inactiveReason, ...rest2 } = rest;
+          return rest2;
         })
         : stocks,
       // 올해 순자산은 접속마다 saveSnapshots가 덮어쓰는 auto값 → 트리거 제외 (과거 연도·수동 입력 유지)
@@ -170,7 +173,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const master = await loadRememberedMaster();
       if (cancelled) return;
-      if (master && aid) {
+      // 인앱 게이트 활성 시 armed 진입 차단 → 자동 pull/폴링/push(status==="armed" 의존) 전면 정지.
+      // assetId/lastSyncedAt은 위에서 이미 세팅되어 syncLink 생성은 유지됨.
+      if (master && aid && !isInAppGateActive()) {
         const keys = await deriveKeysFromMaster(master);
         if (cancelled) return;
         keysRef.current = keys;
@@ -187,7 +192,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
 
   // #sync= 링크 진입 감지 → 연결 모달 트리거 (구 #asset= 호환)
   useEffect(() => {
-    if (!enabled) return;
+    // 인앱 게이트 활성 시 연결 모달이 게이트 뒤에서 열리지 않게 차단
+    if (!enabled || isInAppGateActive()) return;
     const detect = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const aid = hashParams.get(SYNC_HASH_PARAM) ?? hashParams.get("asset");

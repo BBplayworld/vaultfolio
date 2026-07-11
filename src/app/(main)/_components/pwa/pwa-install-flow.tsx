@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, ExternalLink, Copy, MoreHorizontal, Smartphone } from "lucide-react";
+import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, ExternalLink, Smartphone } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { useAssetData } from "@/contexts/asset-data-context";
+import { useShareArtifacts } from "@/hooks/use-share-artifacts";
 import { MAIN_PALETTE } from "@/config/theme";
-import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
 import { getAssetId } from "@/lib/cloud-sync/sync-state";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
-import { getProfitBasis } from "@/lib/profit-utils";
-import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -23,22 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import type { AssetSnapshots } from "@/types/asset";
 import { InstallGuideContent } from "./pwa-install-guide-content";
+import { InAppExternalGuide } from "./in-app-external-guide";
 import { detectBrowserEnv, type BrowserEnv } from "@/lib/pwa/detect-browser";
-
-function collectSnapshots(): AssetSnapshots {
-  try {
-    const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
-    const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
-    return {
-      daily: rawDaily ? JSON.parse(rawDaily) : [],
-      monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
-    };
-  } catch {
-    return { daily: [], monthly: [] };
-  }
-}
 
 /** 트리거에 전달되는 설치 진입 상태/핸들러 */
 export interface PwaInstallTrigger {
@@ -61,9 +45,8 @@ interface PwaInstallFlowProps {
  */
 export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const { isInstallable, isIOS, isInApp, isStandalone, installPWA } = usePWAInstall();
-  const { assetData, exchangeRates } = useAssetData();
+  const { generateShareArtifacts, hasAssets } = useShareArtifacts();
   const { syncLink } = useCloudSync();
-  const themeMode = usePreferencesStore((s) => s.themeMode);
   const [showDialog, setShowDialog] = useState(false);
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,59 +59,17 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
   const [env, setEnv] = useState<BrowserEnv>({ platform: "ios", browser: "safari", isInApp: false, iosSafariModern: false }); // 접속 환경 자동감지
   const [shareCode, setShareCode] = useState<string | null>(null); // iOS: 앱에서 붙여넣을 복원 코드 (자동 복사됨)
 
-  const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
-
   // 클라우드 동기화 사용 기기 → PIN·공유 토큰 없이 assetId 포인터(sync:)로 연동.
   // 새 기기에서 [동기화 코드 + 금고 암호]만으로 자산 pull + 동기화 armed가 동시에 완료된다.
   const syncAssetId = mounted && isCloudSyncEnabled() ? getAssetId() : null;
   const isSyncMode = !!syncAssetId;
   const codeLabel = isSyncMode ? "동기화 코드" : "복원 코드"; // 화면 표시 명칭(데이터 성격이 달라 구분)
 
-  const nickname = assetData.nickname || "";
-
   useEffect(() => {
     if (showDialog && !iosStep && !inAppStep && !isSyncMode) {
       setTimeout(() => otpRef.current?.focus(), 150);
     }
   }, [showDialog, iosStep, inAppStep, isSyncMode]);
-
-  // 공유 토큰 생성 → 서버 저장 → { url(start_url용), code(복원 코드용) } 반환. 자산 없거나 실패 시 null.
-  const generateShareArtifacts = async (): Promise<{ url: string; code: string } | null> => {
-    if (!hasAssets) return null;
-
-    const localKey = Math.random().toString(36).substring(2, 14);
-    const token = generateShareToken(
-      assetData, exchangeRates, pin || undefined, localKey,
-      collectSnapshots(), getProfitBasis(), nickname || undefined,
-    );
-
-    const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
-    try {
-      const res = await fetch("/api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, owner_id: ownerId }),
-      });
-      const json = await res.json() as { key?: string; owner_id?: string };
-      if (json.owner_id) {
-        localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
-      }
-      if (json.key) {
-        const code = `share:${json.key}_${localKey}`;
-        return { url: `/#share=${code}&theme=${themeMode}`, code };
-      }
-    } catch {
-      // fallback: 서버 실패 시 start_url 없이 설치
-    }
-    return null;
-  };
-
-
 
   useEffect(() => { setMounted(true); setEnv(detectBrowserEnv()); }, []);
 
@@ -152,7 +93,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
       } else {
         // WebKit(iOS): await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은
         // ClipboardItem을 동기 시점에 전달해 자동 복사 보존
-        const artifactsPromise = generateShareArtifacts();
+        const artifactsPromise = generateShareArtifacts(pin || undefined);
         let copied = false;
         if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
           try {
@@ -213,7 +154,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     }
     try {
       // WebKit: await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은 ClipboardItem 전달
-      const artifactsPromise = hasAssets ? generateShareArtifacts() : Promise.resolve(null);
+      const artifactsPromise = hasAssets ? generateShareArtifacts(pin || undefined) : Promise.resolve(null);
       const toUrl = (a: { url: string; code: string } | null) => window.location.origin + (a?.url ?? "/");
       let copied = false;
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
@@ -330,45 +271,11 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {inAppStep ? (
               /* 인앱 브라우저(카카오톡 등): 홈 화면 추가 불가 → 외부 브라우저로 유도 */
-              <div className="flex flex-col gap-4 py-1">
-                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 leading-relaxed">
-                  <Copy className="size-4 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>현재 웹페이지 주소가 복사되었습니다!</strong>
-                    <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-                      카카오톡, 인스타그램 등의 브라우저에서는 앱 설치 기능이 지원되지 않으므로 Chrome, Safari 등 외부 브라우저로 접속해 주세요.
-                    </p>
-                  </div>
-                </div>
-
-                <ol className="space-y-3.5 py-1">
-                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
-                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-                    <span>
-                      화면 우측 상단 또는 하단의{" "}
-                      <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                        메뉴 <MoreHorizontal className="size-3.5" />
-                      </span>{" "}
-                      를 누릅니다.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
-                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
-                    <span>
-                      <span className="font-semibold text-foreground">&ldquo;다른 브라우저로 열기&rdquo;</span>(또는 Safari/Chrome으로 열기)를 선택합니다.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3.5 text-sm leading-relaxed">
-                    <span className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
-                    <span>
-                      이동한 기본 브라우저에서 다시 우측 상단의 <span className="font-semibold text-foreground">앱 설치</span> 버튼을 터치하여 홈 화면에 추가합니다.
-                    </span>
-                  </li>
-                </ol>
-                <div className="rounded-lg bg-muted/40 p-2.5 text-sm text-muted-foreground">
-                  메뉴에 위 항목이 보이지 않는다면, 복사된 주소를 복사하여 스마트폰의 기본 브라우저(Safari 또는 크롬) 주소창에 직접 붙여넣어 접속해 주세요.
-                </div>
-              </div>
+              <InAppExternalGuide
+                lastStep={
+                  <>이동한 기본 브라우저에서 다시 우측 상단의 <span className="font-semibold text-foreground">앱 설치</span> 버튼을 터치하여 홈 화면에 추가합니다.</>
+                }
+              />
             ) : guideStep ? (
               /* 설치불가 폴백: 접속 환경 자동감지 통합 가이드 + 문제해결 */
               <div className="py-1">

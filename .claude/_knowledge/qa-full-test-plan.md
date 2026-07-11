@@ -171,6 +171,13 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **설치 불가 상태(고스트)**: PC에서 `beforeinstallprompt` 없을 시 `guideStep`(제목 "앱 설치 가이드") + `InstallGuideContent` PC 문제해결 노출 — 시크릿모드 불가 콜아웃, `chrome://apps` 자동/수동 복사, Firefox 미지원 주의. 모바일은 접이식 "설치가 안 되나요?"에 인앱·재설치 안내
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
+#### 인앱 브라우저 하드 게이트 (R22)
+- ⚙ **게이트 렌더 조건**([in-app-browser-gate.tsx](../../src/app/(main)/_components/pwa/in-app-browser-gate.tsx)): `isInApp && !isStandalone`일 때만 전체화면 오버레이(`layout.tsx`에 `AssetDataProvider`·`CloudSyncProvider` 하위 마운트). 일반 브라우저·PWA standalone은 `null`(앱 정상)
+- ⚙ **외부 이동 유틸**([open-external-browser.ts](../../src/lib/pwa/open-external-browser.ts) `openExternalBrowser`): Android 카카오톡=`kakaotalk://web/openExternal?url=`, Android 그 외=`intent://<host><path>#Intent;scheme=https;S.browser_fallback_url=<enc>;end`(원본 해시는 intent `#Intent` 구분자 충돌 방지 위해 fallback_url에만 담음), **iOS=`false` 반환**(자동 이동 스킴 없음→호출측 수동 폴백)
+- ⚙ **자산 이동 분기**: 자산 없음→origin URL 이동 / 자산 있음→PIN 4자리 입력 후 `useShareArtifacts().generateShareArtifacts(pin)`로 `#share=` URL 생성 이동(실패 시 origin 폴백) / 동기화 기기→PIN 없이 `syncLink` 이동. iOS는 `go()`가 제스처 보존 `ClipboardItem` Promise로 대상 URL 복사 후 `InAppExternalGuide`(3단계 수동 가이드, `pwa-install-flow` inAppStep과 공용) 노출
+- ⚙ **자동 동작 차단(R22)**: 게이트 활성 시 `isInAppGateActive()`로 cloud-sync 자동 arm·`#sync=` 모달·`initAndSync` 시세/스냅샷·0→양수 동기화 전부 차단(데이터 로드·assetId/syncLink는 유지)
+- 👤 PC Chrome DevTools 커스텀 UA로 카카오톡(Android)/네이버/인스타/iOS 카카오톡 진입 → 게이트 노출, Android는 스킴 이동 시도·iOS는 주소 복사+가이드. 일반 UA 복귀 시 게이트 사라짐. Network 탭에 `/api/sync`·`/api/finance` 자동 요청 없음, 동기화 기기 UA에서 연결 모달 미노출
+
 #### PWA 설치 정밀 시나리오 (isSyncMode 분기)
 - ⚙ **isSyncMode 분기**([pwa-install-flow.tsx:84-88,135-181](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx)): 설치 시 `getAssetId()` 존재(동기화 기기) → **PIN 불필요**, 코드=`sync:<assetId>`(서버 업로드 없음). 비동기화 → **PIN 4자리(InputOTP) 필수** + 코드=`share:KEY_LOCALKEY`(공유 토큰 `/api/share` POST 저장). `codeLabel`도 "동기화 코드"/**"복원 코드"**(구 "연결 코드" 전면 개명)로 구분
 - ⚙ **인앱 복사 sync 분기**(`openInAppGuide`): 동기화 기기(`isSyncMode`)는 서버 share 토큰 업로드 없이 **`useCloudSync().syncLink`(`#sync=<assetId>&theme=` 복원코드 링크) 즉시 복사**(동기 값이라 `writeText` 1회). 비동기화는 기존 `generateShareArtifacts`→`#share=` 경로 유지. 외부 브라우저 진입 시 `#sync=` 감지→금고암호 연결 모달(동일 기기 내 연동) ([pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx))
@@ -287,7 +294,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존. 설치 가이드는 `InstallGuideContent({ env })` 단일 소스(iosStep·guideStep 공유) |
 | R12 | **transition:all 잔존** | UI 컴포넌트에 `transition-all` 재유입 금지 — 변하는 속성만 명시(레이아웃 thrash·원치 않는 transition 방지) |
 | R13 | **pull 후 sync-state 재기록** | pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록(F-CLOUD-SYNC S9). 누락 시 assetId 유실 |
-| R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(lastUpdated 제외 비교) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). R5(sync abort)와 연계 |
+| R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(비교에서 `lastUpdated`·`yearlyNetAssets`(올해)·오늘 daily·이번달 monthly + **API 종목 `baseDate`·`name`·`inactiveCheckedAt`**(halted 포함)·활성종목 `currentPrice`·`inactiveStatus`·`inactiveReason` 제외) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). **`baseDate`(장외=매일·장중=매시간 슬롯 도장)가 비교에 남으면 자산 미변경에도 자동 push 핑퐁** — 제외 필수. `buildExportPayload`(실제 push)는 불변. R5(sync abort)와 연계 |
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
 | R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
 | R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지. **커밋은 탭 이탈(언마운트) 1회** — 입력 중 draft만 갱신, `useEffect([nickname])`로 외부 pull 반영해 stale 재push 차단(F-MISC) |
@@ -295,6 +302,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R18 | **동기화 pull의 앱잠금 인증키 삭제** | `clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존 + `autoPullIfNewer` 진입 `isPwaLocked()` 가드. 누락 시 동기화 후 PIN 해시 유실→"비밀번호 불일치"(P0), 또는 잠금화면 위 pull로 우회. 해제는 `PWA_UNLOCKED_EVENT`로만 즉시 pull(F-CLOUD-SYNC S11) |
 | R19 | **share/sync 해시 삭제 시점** | `#share=`(localKey 포함)·`#sync=`는 **소비 완료/모달 닫힘 시** 제거(share=확정·취소·데이터적용, sync=`clearPendingConnect`). 복원·연결·코드획득은 `pendingToken`/`pendingConnectAssetId`/`syncLink` **state 기반**이라 해시 비의존(해시 재읽기 코드 재유입 금지) |
 | R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
+| R22 | **인앱 게이트 활성 시 자동 동작 차단** | `isInAppGateActive()`(=`isInApp && !isStandalone`, [detect-browser.ts](../../src/lib/pwa/detect-browser.ts))가 cloud-sync arm effect(armed 진입만 차단·assetId/lastSyncedAt/syncLink는 유지)·`#sync=` 연결 모달·asset-data `initAndSync`(데이터 로드 후 조기 return)·0→양수 전환 effect를 가드. 누락 시 인앱 게이트 뒤에서 자동 동기화·오늘자 시세/스냅샷이 계속 돎(세션 끊김 데이터 유실 리스크와 충돌). 일반 브라우저·standalone에선 `false`라 정상 동작(회귀 주의) |
 
 ---
 
@@ -316,4 +324,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-06-30 · **기기 동기화 pull 후 `initAndSync` 전체 시세 동기화**(refreshData→initAndSync, R21)·**닉네임 커밋 시점 탭 이탈(언마운트) 1회로 변경**(draft 분리·외부 pull 반영, R17 보강). 이전: 2026-06-28 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_
+_최종 갱신: 2026-07-11 · **인앱 브라우저 하드 게이트**(외부 이동 `openExternalBrowser`·게이트 활성 시 자동 동작 차단 `isInAppGateActive`, R22)·**동기화 변경 감지에 `baseDate`·`name` 제외**(장외 매일/장중 매시간 슬롯 도장 핑퐁 차단, R14 보강). 이전: 2026-06-30 · **기기 동기화 pull 후 `initAndSync` 전체 시세 동기화**(refreshData→initAndSync, R21)·**닉네임 커밋 시점 탭 이탈(언마운트) 1회로 변경**(draft 분리·외부 pull 반영, R17 보강). 이전: 2026-06-28 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_

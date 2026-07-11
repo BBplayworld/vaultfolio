@@ -12,6 +12,7 @@ import { pruneTransactions } from "@/lib/trade-utils";
 import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
+import { isInAppGateActive } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
@@ -622,6 +623,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     initAssetData(data);
     setIsDataLoaded(true);
     if (!hasAssets) return;
+    // 인앱 게이트 활성 시 오늘자 환율·시세·스냅샷 자동 동기화 차단 (데이터 로드는 위에서 완료)
+    if (isInAppGateActive()) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
 
@@ -658,6 +661,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const prevHasAssetsRef = useRef(false);
   useEffect(() => {
     if (!isDataLoaded) return;
+    if (isInAppGateActive()) return; // 인앱 게이트 활성 시 자동 동기화 차단
     const hasAssets =
       assetData.stocks.length > 0 ||
       assetData.realEstate.length > 0 ||
