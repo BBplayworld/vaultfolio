@@ -58,6 +58,28 @@ export function SettingsPage() {
   const [mounted, setMounted] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
 
+  // GA 수집 제외 숨김 트리거: '화면' 라벨 7회 연속 탭 → ga-optout 토글 (본인 전용)
+  const gaTapRef = useRef({ count: 0, timer: 0 });
+  const handleGaOptoutTap = () => {
+    const s = gaTapRef.current;
+    window.clearTimeout(s.timer);
+    s.count += 1;
+    s.timer = window.setTimeout(() => (s.count = 0), 3000);
+    if (s.count < 7) return;
+    s.count = 0;
+    const GA_ID = "G-PZXY31JVEW";
+    const on = localStorage.getItem("ga-optout") === "1";
+    if (on) {
+      localStorage.removeItem("ga-optout");
+      (window as any)["ga-disable-" + GA_ID] = false;
+      toast.success("GA 수집 제외 OFF");
+    } else {
+      localStorage.setItem("ga-optout", "1");
+      (window as any)["ga-disable-" + GA_ID] = true;
+      toast.success("GA 수집 제외 ON");
+    }
+  };
+
   useEffect(() => {
     if (showAuthDialog) {
       setTimeout(() => otpRef.current?.focus(), 150);
@@ -163,7 +185,7 @@ export function SettingsPage() {
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>화면</p>
+          <p className={SECTION_LABEL} onClick={handleGaOptoutTap}>화면</p>
           <div className="flex flex-col gap-2">
             <button type="button" className={ROW} onClick={handleToggleTheme}>
               {themeMode === "dark" ? <Sun className="size-5 text-primary shrink-0" /> : <Moon className="size-5 text-primary shrink-0" />}
