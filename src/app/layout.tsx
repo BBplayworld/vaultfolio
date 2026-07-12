@@ -112,6 +112,26 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             `
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var GA_ID = 'G-PZXY31JVEW';
+                var host = window.location.hostname;
+                // 로컬 개발 환경은 자동 제외
+                var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\.local$/.test(host);
+                var params = new URLSearchParams(window.location.search);
+                // 특정 URL로 본인 기기에 플래그 기록/해제
+                if (params.get('ga-optout') === '1') localStorage.setItem('ga-optout', '1');
+                if (params.get('ga-optout') === '0') localStorage.removeItem('ga-optout');
+                // 로컬 접속이거나 플래그 있으면 GA 전송 완전 차단
+                if (isLocal || localStorage.getItem('ga-optout') === '1') {
+                  window['ga-disable-' + GA_ID] = true;
+                }
+              } catch (_) {}
+            `
+          }}
+        />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
           strategy="afterInteractive"
