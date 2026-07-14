@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +30,7 @@ type ImportCrypto = {
   averagePriceMissing: boolean;
   currentPrice: number;
   exchange: string;
+  currency: "KRW" | "USD";
   purchaseDate: string;
   description: string;
   selected: boolean;
@@ -43,7 +44,7 @@ interface CryptoScreenshotImportProps {
 }
 
 export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: CryptoScreenshotImportProps = {}) {
-  const { saveData, assetData } = useAssetData();
+  const { saveData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
 
   const [internalOpen, setInternalOpen] = useState(false);
@@ -60,6 +61,8 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
   const [isRegistering, setIsRegistering] = useState(false);
   const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
   const [conflictCount, setConflictCount] = useState(0);
+  const [applyMode, setApplyMode] = useState<"common" | "individual">("common");
+  const [commonExchange, setCommonExchange] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -68,12 +71,18 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
     setIsParsing(false);
     setConflictMode("merge");
     setConflictCount(0);
+    setApplyMode("common");
+    setCommonExchange("");
   };
 
   const handleClose = () => {
     setIsOpen(false);
     reset();
   };
+
+  useEffect(() => {
+    if (isOpen) void syncTodayExchangeRate();
+  }, [isOpen, syncTodayExchangeRate]);
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
@@ -104,14 +113,29 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
 
       geminiUsage.increment("crypto");
 
+      const usdRate = exchangeRates.USD || 1380;
       const importCryptos: ImportCrypto[] = data.cryptos.map(
-        (s: Omit<ImportCrypto, "selected">) => ({ ...s, selected: true })
+        (s: Omit<ImportCrypto, "selected">) =>
+          s.currency === "USD"
+            ? {
+                ...s,
+                averagePrice: Math.round(s.averagePrice * usdRate * 100) / 100,
+                currentPrice: Math.round(s.currentPrice * usdRate * 100) / 100,
+                currency: "KRW" as const,
+                selected: true,
+              }
+            : { ...s, selected: true }
       );
 
-      const existingSymbols = new Set(assetData.crypto.map((c) => c.symbol).filter(Boolean));
-      const duplicates = importCryptos.filter((c) => existingSymbols.has(c.symbol));
+      // 기본 공통 모드: 첫 코인의 AI 추출 거래소를 전체에 일괄 적용 (스크린샷 하나 = 거래소 하나 전제)
+      const defaultExchange = importCryptos[0]?.exchange || "";
+      setCommonExchange(defaultExchange);
+      const finalCryptos = importCryptos.map((c) => ({ ...c, exchange: defaultExchange }));
 
-      setCryptos(importCryptos);
+      const existingKeys = new Set(assetData.crypto.map((c) => `${c.symbol}:${c.exchange || ""}`));
+      const duplicates = finalCryptos.filter((c) => existingKeys.has(`${c.symbol}:${c.exchange || ""}`));
+
+      setCryptos(finalCryptos);
 
       if (duplicates.length > 0) {
         setConflictCount(duplicates.length);
@@ -143,6 +167,11 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
   const updateExchange = (id: string, exchange: string) =>
     setCryptos((prev) => prev.map((c) => (c.id === id ? { ...c, exchange } : c)));
 
+  const applyCommonExchange = (exchange: string) => {
+    setCommonExchange(exchange);
+    setCryptos((prev) => prev.map((c) => ({ ...c, exchange })));
+  };
+
   const handleRegister = () => {
     const selected = cryptos.filter((c) => c.selected);
     if (selected.length === 0) {
@@ -152,15 +181,15 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
 
     setIsRegistering(true);
 
-    const importedSymbols = new Set(selected.map((c) => c.symbol));
+    const importedKeys = new Set(selected.map((c) => `${c.symbol}:${c.exchange || ""}`));
     const kept: Crypto[] =
       conflictMode === "reset"
         ? []
-        : assetData.crypto.filter((c) => !importedSymbols.has(c.symbol));
+        : assetData.crypto.filter((c) => !importedKeys.has(`${c.symbol}:${c.exchange || ""}`));
 
     const newCryptos: Crypto[] = [
       ...kept,
-      ...selected.map(({ selected: _, averagePriceMissing: __, ...c }, idx) => ({
+      ...selected.map(({ selected: _, averagePriceMissing: __, currency: ___, ...c }, idx) => ({
         ...c,
         id: `crypto_import_${Date.now()}_${idx}`,
       })),
@@ -264,6 +293,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
               </p>
               <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                 <li><span className="text-foreground">평균단가</span>가 화면에 없으면 현재가로 대체됩니다. 등록 후 수정해주세요.</li>
+                <li>바이낸스 등 <span className="text-foreground">달러(USD) 표시</span> 화면은 오늘 환율로 자동 원화 환산됩니다.</li>
                 <li><span className="text-foreground">거래소</span>는 미리보기에서 변경할 수 있습니다.</li>
                 <li>매수일은 오늘 날짜로 설정됩니다. 등록 후 수정 가능합니다.</li>
               </ul>
@@ -326,6 +356,48 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
               </Button>
             </div>
 
+            {/* 적용 방식 토글: 공통(한 번에) vs 개별 */}
+            <div className="space-y-2.5">
+              <div className="inline-flex rounded-md border overflow-hidden text-sm w-full">
+                {([
+                  { v: "common", label: "공통 적용" },
+                  { v: "individual", label: "개별 선택" },
+                ] as const).map((m) => (
+                  <button
+                    key={m.v}
+                    type="button"
+                    className={`flex-1 px-3 py-2 transition-colors ${
+                      applyMode === m.v
+                        ? "bg-brand text-primary-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                    onClick={() => {
+                      if (m.v === "common") applyCommonExchange(commonExchange);
+                      setApplyMode(m.v);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {applyMode === "common" ? (
+                <Select value={commonExchange || "기타"} onValueChange={applyCommonExchange}>
+                  <SelectTrigger className="h-9 text-sm w-full">
+                    <SelectValue placeholder="거래소 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cryptoExchanges.map((ex) => (
+                      <SelectItem key={ex.value} value={ex.label} className="text-sm">{ex.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground px-0.5">
+                  코인마다 아래 카드에서 거래소를 직접 선택하세요.
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
               {cryptos.map((item) => (
                 <div
@@ -346,33 +418,35 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
                             평균단가 미확인
                           </Badge>
                         )}
-                        {conflictMode === "merge" && assetData.crypto.some((c) => c.symbol === item.symbol) && (
+                        {conflictMode === "merge" && assetData.crypto.some((c) => c.symbol === item.symbol && (c.exchange || "") === (item.exchange || "")) && (
                           <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
                         )}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <span>수량 <span className="font-semibold text-foreground">
-                          {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}
                         </span></span>
                         <span>평균단가 <span className="font-semibold text-foreground">{formatCurrency(item.averagePrice)}</span></span>
                         <span>현재가 <span className="font-semibold text-foreground">{formatCurrency(item.currentPrice)}</span></span>
                         <span>평가금액 <span className="font-semibold text-foreground">{formatCurrency(item.quantity * item.currentPrice)}</span></span>
                       </div>
 
-                      <Select
-                        value={item.exchange || "other"}
-                        onValueChange={(v) => updateExchange(item.id, v === "other" ? "" : v)}
-                      >
-                        <SelectTrigger className="h-7 w-36 text-sm">
-                          <SelectValue placeholder="거래소 선택" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cryptoExchanges.map((ex) => (
-                            <SelectItem key={ex.value} value={ex.value} className="text-sm">{ex.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {applyMode === "individual" && (
+                        <Select
+                          value={item.exchange || "기타"}
+                          onValueChange={(v) => updateExchange(item.id, v)}
+                        >
+                          <SelectTrigger className="h-7 w-36 text-sm">
+                            <SelectValue placeholder="거래소 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cryptoExchanges.map((ex) => (
+                              <SelectItem key={ex.value} value={ex.label} className="text-sm">{ex.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 </div>

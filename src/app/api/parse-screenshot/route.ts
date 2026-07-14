@@ -229,50 +229,116 @@ const CRYPTO_SCHEMA = {
       quantity: { type: Type.NUMBER },
       averagePrice: { type: Type.NUMBER },
       currentPrice: { type: Type.NUMBER },
+      currentValue: { type: Type.NUMBER },
+      profitAmount: { type: Type.NUMBER },
+      profitRate: { type: Type.NUMBER },
       exchange: { type: Type.STRING },
+      currency: { type: Type.STRING, enum: ["KRW", "USD"] },
     },
-    required: ["name", "symbol", "quantity", "currentPrice"],
+    required: ["name", "symbol", "quantity", "profitAmount", "profitRate"],
   },
 };
 
 const buildCryptoPrompt = () => `암호화폐 거래소 앱 보유 화면에서 코인 정보를 추출하라.
 
 필드:
-name=코인명(한글 또는 영문), symbol=심볼(BTC/ETH/XRP 등 대문자), quantity=보유수량(소수점 포함), averagePrice=평균단가(원화·없으면 0), currentPrice=현재가(원화), exchange=거래소명(업비트/빗썸/바이낸스 등·없으면 "")
+name=코인명(한글 또는 영문), symbol=심볼(BTC/ETH/XRP 등 대문자), quantity=보유수량(소수점 포함), averagePrice=코인 1개당 평균 매수단가("매수평균가"·"평균단가"·"평균매수가"·"Avg Buy Price" 라벨의 숫자·1개당 단가만 해당·없으면 0), currentPrice=코인 1개당 현재가("현재가"·"Current Price" 라벨이 화면에 명시된 경우만·없으면 0), currentValue="평가금액" 라벨이 정확히 붙은 숫자만(코인별 현재 총 평가액·"Est. Total Value" 같은 계좌 전체 총액이나 "매수금액"과는 다른 값·없으면 0), profitAmount=평가손익 금액(부호포함·"평가손익"·"수익금"·"Unrealized PNL"의 금액 부분(예: "-$0.80104797 (-46.88%)"에서 -0.80104797) 라벨의 숫자·없으면 0), profitRate=수익률(부호포함 숫자·"수익률"·"Unrealized PNL"의 괄호 안 퍼센트 부분(위 예시에서 -46.88) 라벨의 숫자·없으면 0), exchange=거래소명(업비트/빗썸/바이낸스 등·없으면 ""), currency=화면에 표시된 통화(금액 앞에 "$"·"USD" 표시면 USD, "원"·"KRW"·달러 표시 없으면 KRW)
 
-무시: 총평가금액·입금주소·이벤트 배너·미보유 코인`;
+레이아웃 힌트(업비트류 앱): 코인별로 2행에 걸쳐 숫자 4개가 좌우로 배치되는 경우가 흔함 — 1행 좌="보유수량", 1행 우="매수평균가"(1개당 단가), 2행 좌="평가금액"(현재 총 평가액), 2행 우="매수금액"(총매입원가). "평가금액"과 "매수금액"은 반드시 라벨을 정확히 구분해서 매칭할 것.
+
+주의: "매수금액"(총매입원가)은 총액이므로 averagePrice(1개당 단가)·currentValue(평가금액) 어디에도 넣지 말 것 — 무시 목록으로 처리. USDT/USDC 같은 스테이블코인도 다른 코인과 동일하게 추출.
+
+무시: 매수금액(총매입원가)·입금주소·이벤트 배너·미보유 코인·"Est. Total Value"(계좌 전체 총액)`;
 
 interface GeminiCrypto {
   name: string;
   symbol: string;
   quantity: number;
   averagePrice?: number;
-  currentPrice: number;
+  currentPrice?: number;
+  currentValue?: number;
+  profitAmount?: number;
+  profitRate?: number;
   exchange?: string;
+  currency?: string;
 }
 
 function processCryptoResults(raw: GeminiCrypto[], today: string) {
-  return raw
-    .filter((s) => s.name && s.symbol && s.currentPrice > 0)
-    .map((s, idx) => {
-      const currentPrice = Math.round(s.currentPrice * 100) / 100;
-      const averagePrice = s.averagePrice && s.averagePrice > 0
-        ? Math.round(s.averagePrice * 100) / 100
-        : currentPrice;
-      const quantity = Math.round(s.quantity * 1e8) / 1e8;
-      return {
-        id: `crypto_import_${Date.now()}_${idx}`,
-        name: s.name,
-        symbol: s.symbol.toUpperCase(),
-        quantity,
-        averagePrice,
-        currentPrice,
-        averagePriceMissing: !s.averagePrice || s.averagePrice === 0,
-        exchange: s.exchange || "",
-        purchaseDate: today,
-        description: "",
-      };
-    });
+  const filtered = raw.filter((s) => {
+    if (!s.name || !s.symbol) return false;
+    const hasCurrentValue = (s.currentValue ?? 0) > 0;
+    const hasCurrentPrice = (s.currentPrice ?? 0) > 0;
+    const hasProfitAmount = (s.profitAmount ?? 0) !== 0;
+    const hasProfitRate = (s.profitRate ?? 0) !== 0;
+    const hasAveragePrice = (s.averagePrice ?? 0) > 0;
+    return hasCurrentValue || hasCurrentPrice || hasProfitAmount || hasProfitRate || hasAveragePrice;
+  });
+
+  return filtered.map((s, idx) => {
+    const quantity = Math.round(s.quantity * 1e10) / 1e10;
+
+    const avg = s.averagePrice ?? 0;
+    const profitAmount = s.profitAmount ?? 0;
+    const profitRate = s.profitRate ?? 0;
+
+    // 평가손익 기반 매수금액(원가) = 평가손익 ÷ (수익률/100)
+    const costFromProfit = profitAmount !== 0 && profitRate !== 0 ? profitAmount / (profitRate / 100) : 0;
+    // 매수평균가 신뢰 여부: avg×수량(원가)이 평가손익 기반 원가와 일치하면 화면에 실제 표시된 값으로 간주.
+    // (바이낸스처럼 매수평균가 미표시 화면에서 AI가 엉뚱한 값을 넣는 경우를 걸러냄)
+    const avgReliable = avg > 0 && quantity > 0 && costFromProfit > 0
+      && Math.abs(avg * quantity - costFromProfit) / costFromProfit < 0.25;
+
+    // 현재가 계산 우선순위:
+    // 1) 화면에 현재가가 명시된 경우
+    // 2) (신뢰 가능한 매수평균가) + (평가손익 ÷ 수량) — 업비트류에서 정확. currentValue(평가금액) 오인식 영향 없음
+    // 3) 평가손익+수익률로 평가금액 역산 후 ÷수량 — 매수평균가 미표시·신뢰불가 화면(바이낸스류)
+    // 4) 평가금액 ÷ 수량
+    // 5) 매수평균가 × (1 + 수익률/100)
+    // 6) 매수평균가 그대로
+    let currentPrice: number;
+    if ((s.currentPrice ?? 0) > 0) {
+      currentPrice = Math.round(s.currentPrice! * 100) / 100;
+    } else if (avgReliable && profitAmount !== 0) {
+      currentPrice = Math.round((avg + profitAmount / quantity) * 100) / 100;
+    } else if (costFromProfit > 0 && quantity > 0) {
+      currentPrice = Math.round(((costFromProfit + profitAmount) / quantity) * 100) / 100;
+    } else if ((s.currentValue ?? 0) > 0 && quantity > 0) {
+      currentPrice = Math.round((s.currentValue! / quantity) * 100) / 100;
+    } else if (avg > 0 && profitRate !== 0) {
+      currentPrice = Math.round(avg * (1 + profitRate / 100) * 100) / 100;
+    } else {
+      currentPrice = avg > 0 ? Math.round(avg * 100) / 100 : 0;
+    }
+
+    // 평균단가: 신뢰 가능한 값이면 그대로, 아니면 현재가÷(1+수익률/100)로 역산
+    let averagePrice: number;
+    let averagePriceMissing: boolean;
+    if (avgReliable || (avg > 0 && costFromProfit <= 0)) {
+      averagePrice = Math.round(avg * 100) / 100;
+      averagePriceMissing = false;
+    } else if (currentPrice > 0 && profitRate !== 0) {
+      const divisor = 1 + profitRate / 100;
+      averagePrice = divisor > 0 ? Math.round((currentPrice / divisor) * 100) / 100 : currentPrice;
+      averagePriceMissing = false;
+    } else {
+      averagePrice = currentPrice;
+      averagePriceMissing = true;
+    }
+
+    return {
+      id: `crypto_import_${Date.now()}_${idx}`,
+      name: s.name,
+      symbol: s.symbol.toUpperCase(),
+      quantity,
+      averagePrice,
+      currentPrice,
+      averagePriceMissing,
+      exchange: s.exchange || "",
+      currency: s.currency === "USD" ? "USD" as const : "KRW" as const,
+      purchaseDate: today,
+      description: "",
+    };
+  });
 }
 
 // ─────────────────────────────────────────────────────────

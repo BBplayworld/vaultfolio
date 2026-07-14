@@ -7,6 +7,13 @@ import LZString from "lz-string";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/profit-utils";
 import { persistNickname } from "@/hooks/use-nickname";
+import { cryptoExchanges } from "@/config/asset-options";
+
+// 구버전 스크린샷 임포트가 저장한 영문 거래소 값("upbit") → 한글 라벨("업비트") 매핑
+// (수동 입력·신규 임포트는 한글 라벨을 저장하므로, 옛 영문 값만 정규화하여 통일)
+const CRYPTO_EXCHANGE_VALUE_TO_LABEL: Record<string, string> = Object.fromEntries(
+  cryptoExchanges.map((ex) => [ex.value, ex.label])
+);
 export { STORAGE_KEYS, migrateStorageKeys } from "@/lib/local-storage";
 export const DEFAULT_EXCHANGE_RATE = 1380;
 
@@ -69,6 +76,25 @@ export function getAssetData(): AssetData {
         localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(parsed));
         localStorage.removeItem(STORAGE_KEYS.nickname);
       } catch { /* ignore */ }
+    }
+
+    // 하위 호환 마이그레이션: 구버전 스크린샷 임포트가 저장한 영문 거래소 값 → 한글 라벨 정규화
+    if (Array.isArray(parsed.crypto)) {
+      let changed = false;
+      for (const c of parsed.crypto) {
+        if (c && typeof c.exchange === "string" && c.exchange) {
+          const label = CRYPTO_EXCHANGE_VALUE_TO_LABEL[c.exchange];
+          if (label && label !== c.exchange) {
+            c.exchange = label;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(parsed));
+        } catch { /* ignore */ }
+      }
     }
 
     return assetDataSchemaLoose.parse(parsed) as AssetData;

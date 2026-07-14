@@ -228,6 +228,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
                     maxLength={18}
                     quickButtons={[]}
                     allowDecimals={true}
+                    maxDecimals={10}
                   />
                 </FormControl>
                 <FormDescription>{getQuantityDescription()}</FormDescription>

@@ -1,5 +1,5 @@
 "use client";
-import { Stock } from "@/types/asset";
+import { Stock, Crypto } from "@/types/asset";
 
 import { MAIN_PALETTE } from "@/config/theme";
 import { formatCurrency, formatPriceByMode, calculateHoldingDays } from "@/lib/number-utils";
@@ -109,6 +109,36 @@ export function mergeStockGroup(items: Stock[]): Stock {
     purchaseDate: earliestDate,
     purchaseExchangeRate,
     broker: undefined,
+  };
+}
+
+// symbol 기준으로 Crypto[] 그룹핑. symbol 없으면 id 단독 키.
+export function groupCryptoBySymbol(cryptos: Crypto[]): Map<string, Crypto[]> {
+  const map = new Map<string, Crypto[]>();
+  for (const c of cryptos) {
+    const key = c.symbol || c.id;
+    const arr = map.get(key);
+    if (arr) arr.push(c);
+    else map.set(key, [c]);
+  }
+  return map;
+}
+
+// 그룹의 합산 대표 Crypto 생성 (가상 객체, 저장 안 함)
+export function mergeCryptoGroup(items: Crypto[]): Crypto {
+  if (items.length === 1) return items[0];
+  const totalQty = items.reduce((s, it) => s + it.quantity, 0);
+  const weightedAvg = totalQty > 0
+    ? items.reduce((s, it) => s + it.averagePrice * it.quantity, 0) / totalQty
+    : items[0].averagePrice;
+  const earliestDate = items.reduce((min, it) => it.purchaseDate < min ? it.purchaseDate : min, items[0].purchaseDate);
+  return {
+    ...items[0],
+    id: `__merged__${items[0].symbol}`,
+    quantity: totalQty,
+    averagePrice: weightedAvg,
+    purchaseDate: earliestDate,
+    exchange: undefined,
   };
 }
 
