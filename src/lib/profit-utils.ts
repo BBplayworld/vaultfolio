@@ -42,6 +42,37 @@ export function computeDailyStockProfit(
   };
 }
 
+// weekly/monthly/yearly 기간 수익 합계 — profit-chart.tsx의 종목별 계산과 동일 수식(좌측=periodRefData.refPrice,
+// 우측=dailyRefData.refPrice, 현재 환율 적용)을 총합만 필요한 곳(자산 성적표 등)에서 재사용.
+// daily는 prevPrice/prevDate 구조가 달라 대상 아님 — computeDailyStockProfit 사용.
+export function computePeriodStockProfitTotal(
+  stocks: Stock[],
+  periodRefData: ProfitRefResponse | undefined,
+  dailyRefData: ProfitRefResponse | undefined,
+  currentRates: { USD: number; JPY: number },
+): number | null {
+  if (!periodRefData || !dailyRefData) return null;
+  let profitSum = 0;
+  let hasAny = false;
+  for (const st of stocks) {
+    if (!st.ticker || st.category === "unlisted" || !st.currentPrice) continue;
+    const ticker = normalizeTicker(st);
+    const ref = periodRefData[ticker];
+    const base = dailyRefData[ticker];
+    if (!ref || !base || ref.refPrice === undefined || ref.refDate === undefined) continue;
+    const isUS = st.currency === "USD" && !DOMESTIC_CATEGORIES.has(st.category);
+    const isJP = st.currency === "JPY" && !DOMESTIC_CATEGORIES.has(st.category);
+    const rateFor = (rates: { USD: number; JPY: number }) =>
+      isUS ? rates.USD : isJP ? rates.JPY / 100 : 1;
+    const rate = rateFor(currentRates);
+    const refValue = ref.refPrice * st.quantity * rate;
+    const currentValue = base.refPrice * st.quantity * rate;
+    profitSum += currentValue - refValue;
+    hasAny = true;
+  }
+  return hasAny ? profitSum : null;
+}
+
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 // 기간별 수익 종가 기준 옵션
@@ -145,9 +176,9 @@ export function getProfitCacheKey(
 }
 
 // 환율 이력 (날짜별 USD/JPY)
-type ExchangeHistory = Record<string, { USD: number; JPY: number }>;
+export type ExchangeHistory = Record<string, { USD: number; JPY: number }>;
 
-function readExchangeHistory(): ExchangeHistory {
+export function readExchangeHistory(): ExchangeHistory {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.exchangeHistory);
     return raw ? (JSON.parse(raw) as ExchangeHistory) : {};

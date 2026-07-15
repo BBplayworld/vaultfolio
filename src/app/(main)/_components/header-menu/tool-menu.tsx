@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing } from "lucide-react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing } from "lucide-react";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -21,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { PromptPreviewDialog } from "../layout/ui/prompt-preview-dialog";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { NOTICE_TITLE, NoticeContent } from "../layout/onboarding/notice";
 import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
@@ -29,7 +28,6 @@ import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { AI_PROMPT_TEMPLATES, AssetPromptContext } from "@/lib/ai-prompts";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 
 export function ToolMenuPage() {
@@ -49,7 +47,7 @@ export function ToolMenuPage() {
   };
   // 탭 이탈 시 1회 커밋
   useEffect(() => () => commitRef.current(), []);
-  const { refreshData, getAssetSummary, assetData, isSharePending } = assetDataContext;
+  const { refreshData, assetData, isSharePending } = assetDataContext;
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const { navigate } = useAssetNavigation();
   const cs = useCloudSync();
@@ -60,7 +58,6 @@ export function ToolMenuPage() {
     assetData.crypto.length > 0 ||
     assetData.cash.length > 0 ||
     assetData.loans.length > 0;
-  const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
 
@@ -181,12 +178,6 @@ export function ToolMenuPage() {
     }
   };
 
-  const getPromptContext = (): AssetPromptContext => ({
-    data: assetData,
-    summary: getAssetSummary(),
-    exchangeRates: assetDataContext.exchangeRates,
-  });
-
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -232,17 +223,6 @@ export function ToolMenuPage() {
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>도구</p>
-          <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={() => setShowAIPromptDialog(true)} disabled={!hasAssets}>
-              <Sparkles className="size-5 text-primary shrink-0" />
-              <span className="flex-1 font-medium">AI 평가용 자산 현황</span>
-              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Plus</span>
-            </button>
-          </div>
-        </section>
-
-        <section>
           <p className={SECTION_LABEL}>지원</p>
           <div className="flex flex-col gap-2">
             <button type="button" className={ROW} onClick={() => setShowFeedbackDialog(true)}>
@@ -267,20 +247,6 @@ export function ToolMenuPage() {
           </div>
         </section>
       </div>
-
-      <PromptPreviewDialog
-        open={showAIPromptDialog}
-        onOpenChange={setShowAIPromptDialog}
-        title={<><Sparkles className="size-5 text-primary" />AI 평가용 자산 종합 현황</>}
-        description="아래 프롬프트를 복사하여 Grok·Gemini·GPT 등 AI에게 자산 분석 및 조언을 요청하세요."
-        tabs={AI_PROMPT_TEMPLATES.map((t) => ({
-          id: t.id,
-          label: t.label,
-          sublabel: t.sublabel,
-          getPrompt: () => t.generate(getPromptContext()),
-        }))}
-        copySuccessMessage="AI 평가 프롬프트가 복사되었습니다."
-      />
 
       <Dialog open={showShareSyncChooser} onOpenChange={setShowShareSyncChooser}>
         <DialogContent className="sm:max-w-md touch-pan-y">

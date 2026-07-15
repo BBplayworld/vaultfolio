@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wallet, TrendingUp, BadgeDollarSign } from "lucide-react";
+import { Wallet, TrendingUp, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
@@ -25,8 +25,8 @@ async function fetchDividend(ticker: string, type: string): Promise<DividendPayo
   return json.data || [];
 }
 
-// dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유
-function useDividendAnnualTotals() {
+// dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유 (자산 성적표에서도 재사용)
+export function useDividendAnnualTotals() {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
 
@@ -194,6 +194,26 @@ export function PerformanceHub() {
             </span>
           ) : null}
           onClick={() => go("dividend")}
+        />
+
+        <KpiCard
+          icon={Trophy}
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              자산 성적표
+              <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
+            </span>
+          }
+          description="넣은 돈 대비 진짜 수익"
+          primary={`${summary.totalProfit >= 0 ? "+" : ""}${formatPriceByMode(summary.totalProfit)}`}
+          primaryClassName={getProfitLossColor(summary.totalProfit)}
+          secondary={summary.totalCost > 0 ? (
+            <span className={`font-semibold tabular-nums ${getProfitLossColor(summary.totalProfit)}`}>
+              {summary.totalProfit >= 0 ? "+" : ""}{summary.totalProfitRate.toFixed(1)}%
+              <span className="text-muted-foreground font-medium ml-1.5">투입원가 대비</span>
+            </span>
+          ) : <span className="text-muted-foreground">자산 등록 후 계산</span>}
+          onClick={() => go("report")}
         />
       </div>
     </div>

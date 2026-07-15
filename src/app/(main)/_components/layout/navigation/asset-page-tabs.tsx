@@ -9,7 +9,7 @@ import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
 import { CashTab } from "../../views/detail/tabs/cash-tab";
 import { LoanTab } from "../../views/detail/tabs/loan-tab";
-import { YearlyNetAssetChart, DividendCard, ProfitCard } from "../../views/activity";
+import { YearlyNetAssetChart, DividendCard, ProfitCard, AssetReportView } from "../../views/activity";
 import { PerformanceHub } from "../../views/activity/performance-hub";
 import { DetailHub } from "../../views/detail/detail-hub";
 import { ToolMenuPage } from "../../header-menu/tool-menu";
@@ -53,6 +53,7 @@ function ActivityView({ tab }: { tab: ActivityTab }) {
       {tab === "netasset" && <YearlyNetAssetChart />}
       {tab === "profit"   && <ProfitCard isActive />}
       {tab === "dividend" && <DividendCard isActive />}
+      {tab === "report"   && <AssetReportView />}
     </div>
   );
 }

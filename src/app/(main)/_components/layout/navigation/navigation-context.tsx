@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "cash" | "loans";
-export type ActivityTab = "hub" | "netasset" | "profit" | "dividend";
+export type ActivityTab = "hub" | "netasset" | "profit" | "dividend" | "report";
 
 export type AssetView =
   | { type: "home" }
@@ -13,7 +13,7 @@ export type AssetView =
   | { type: "activity"; tab: ActivityTab };
 
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "cash", "loans"];
-const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend"];
+const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend", "report"];
 
 // 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
 const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
@@ -272,8 +272,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (view.type === "detail" && view.tab !== "hub") {
-      // X-Ray·거래내역 하위 페이지 → 주식 상세로 1단 복귀
-      if (view.tab === "stocks-xray" || view.tab === "stocks-trades") {
+      // 거래내역 → 주식 상세로 1단 복귀
+      if (view.tab === "stocks-trades") {
+        navigate({ type: "detail", tab: "stocks" });
+        return;
+      }
+      // X-Ray는 진입 경로가 다양(주식탭 하위·성적표 딥링크 등) → 실제 진입 경로로 되돌리는 history pop
+      if (view.tab === "stocks-xray") {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+          window.history.back();
+          return;
+        }
         navigate({ type: "detail", tab: "stocks" });
         return;
       }

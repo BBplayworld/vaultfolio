@@ -190,6 +190,43 @@ export function computeNetAsset(
   return { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
 }
 
+// 투입원가 분해 — getAssetSummary와 saveSnapshots가 동일 수식을 공유(중복·발산 방지)
+export interface AssetCostBreakdown {
+  realEstateCost: number;
+  stockCost: number;
+  stockCurrencyGain: number; // 해외주식 환차손익
+  cryptoCost: number;
+}
+export function computeAssetCost(
+  data: AssetData,
+  rates: { USD: number; JPY: number },
+): AssetCostBreakdown {
+  const getMultiplier = (currency?: string) => {
+    if (currency === "USD") return rates.USD;
+    if (currency === "JPY") return rates.JPY / 100; // 100엔당
+    return 1;
+  };
+  const getPurchaseRatePerUnit = (currency?: string, purchaseExchangeRate?: number): number => {
+    if (!purchaseExchangeRate || purchaseExchangeRate <= 0) return getMultiplier(currency);
+    return currency === "JPY" ? purchaseExchangeRate / 100 : purchaseExchangeRate;
+  };
+  const realEstateCost = data.realEstate.reduce((sum, item) => sum + item.purchasePrice, 0);
+  // 상장폐지(delisted) 종목은 매입원가/환차익 계산에서도 제외 — 평가액 제외와 일관성
+  const stockCost = data.stocks.reduce((sum, item) => {
+    if (item.inactiveStatus === "delisted") return sum;
+    return sum + item.quantity * item.averagePrice * getMultiplier(item.currency);
+  }, 0);
+  const stockCurrencyGain = data.stocks
+    .filter((s) => s.category === "foreign" && s.currency !== "KRW" && s.inactiveStatus !== "delisted")
+    .reduce((sum, s) => {
+      const curr = getMultiplier(s.currency);
+      const purchase = getPurchaseRatePerUnit(s.currency, s.purchaseExchangeRate);
+      return sum + (curr - purchase) * s.quantity * s.averagePrice;
+    }, 0);
+  const cryptoCost = data.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
+  return { realEstateCost, stockCost, stockCurrencyGain, cryptoCost };
+}
+
 // Short URL(share:KEY_LOCALKEY, 구 s:)을 전체 토큰으로 변환하는 순수 유틸
 // state·hook 의존성 없음 → 모듈 스코프에 정의
 const resolveShareToken = async (raw: string): Promise<{ token: string; localKey?: string } | null> => {
@@ -543,8 +580,40 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const entry = t ? refMap[t] : null;
       return entry?.refPrice ?? s.currentPrice;
     };
-    const { financialAsset, netAsset } = computeNetAsset(latestData, latestRates, closePriceOf);
+    const nab = computeNetAsset(latestData, latestRates, closePriceOf);
+    const { financialAsset, netAsset } = nab;
     const dayOfWeek = new Date(todayStr).getDay();
+
+    // v2 파생 정보(성적표·원인분해 델타용) — 스냅샷 시점 박제
+    const cost = computeAssetCost(latestData, latestRates);
+    // 통화별 외화노출 기준액(KRW 환산) — 환율효과 분리용
+    const fxBase = { USD: 0, JPY: 0 };
+    for (const s of latestData.stocks) {
+      if (s.inactiveStatus === "delisted") continue;
+      if (s.currency === "USD") fxBase.USD += s.quantity * closePriceOf(s) * latestRates.USD;
+      else if (s.currency === "JPY") fxBase.JPY += s.quantity * closePriceOf(s) * (latestRates.JPY / 100);
+    }
+    for (const c of latestData.cash ?? []) {
+      if (c.currency === "USD") fxBase.USD += c.balance * latestRates.USD;
+      else if (c.currency === "JPY") fxBase.JPY += c.balance * (latestRates.JPY / 100);
+    }
+    const enrich = {
+      breakdown: {
+        realEstate: nab.realEstateValue,
+        stocks: nab.stockValue,
+        crypto: nab.cryptoValue,
+        cash: nab.cashValue,
+        loans: nab.loanBalance,
+      },
+      fx: { USD: latestRates.USD, JPY: latestRates.JPY },
+      fxBase,
+      cost: {
+        total: cost.realEstateCost + cost.stockCost + cost.cryptoCost + nab.cashValue,
+        stock: cost.stockCost,
+        crypto: cost.cryptoCost,
+        realEstate: cost.realEstateCost,
+      },
+    };
 
     try {
       // ── 일별: 이번 달만 유지 ──
@@ -561,6 +630,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           date: todayStr,
           netAsset,
           financialAsset,
+          ...enrich,
         });
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
         // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
@@ -578,6 +648,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             date: saturdayStr,
             netAsset,
             financialAsset,
+            ...enrich,
           });
           localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
           // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
@@ -589,7 +660,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
       const allMonthly: MonthlyAssetSnapshot[] = rawMonthly ? JSON.parse(rawMonthly) : [];
       const filteredMonthly = allMonthly.filter(s => s.month.startsWith(currentYear) && s.month !== currentMonth);
-      filteredMonthly.push({ month: currentMonth, netAsset, financialAsset });
+      filteredMonthly.push({ month: currentMonth, netAsset, financialAsset, ...enrich });
       filteredMonthly.sort((a, b) => a.month.localeCompare(b.month));
       localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(filteredMonthly));
 
@@ -1223,41 +1294,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // ─── [자산 요약 계산] ────────────────────────────────────────────────────────
 
   const getAssetSummary = useCallback((): AssetSummary => {
-    const getMultiplier = (currency?: string) => {
-      if (currency === "USD") return exchangeRates.USD;
-      if (currency === "JPY") return exchangeRates.JPY / 100; // 100엔당 환율
-      return 1;
-    };
-
     // 합산값은 공통 헬퍼 사용 — saveSnapshots와 동일 수식 보장
     const breakdown = computeNetAsset(assetData, exchangeRates);
     const { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, totalValue, netAsset } = breakdown;
 
-    const realEstateCost = assetData.realEstate.reduce((sum, item) => sum + item.purchasePrice, 0);
+    // 원가·환차익은 공통 헬퍼 사용 — saveSnapshots와 동일 수식 보장
+    const { realEstateCost, stockCost, stockCurrencyGain, cryptoCost } = computeAssetCost(assetData, exchangeRates);
     const realEstateProfit = realEstateValue - realEstateCost;
-
-    const getPurchaseRatePerUnit = (currency?: string, purchaseExchangeRate?: number): number => {
-      if (!purchaseExchangeRate || purchaseExchangeRate <= 0) return getMultiplier(currency);
-      return currency === "JPY" ? purchaseExchangeRate / 100 : purchaseExchangeRate;
-    };
-
-    // 상장폐지(delisted) 종목은 매입원가/환차익 계산에서도 제외 — 평가액 제외와 일관성
-    const stockCost = assetData.stocks.reduce((sum, item) => {
-      if (item.inactiveStatus === "delisted") return sum;
-      return sum + item.quantity * item.averagePrice * getMultiplier(item.currency);
-    }, 0);
     const stockProfit = stockValue - stockCost;
-
-    const stockCurrencyGain = assetData.stocks
-      .filter((s) => s.category === "foreign" && s.currency !== "KRW" && s.inactiveStatus !== "delisted")
-      .reduce((sum, s) => {
-        const curr = getMultiplier(s.currency);
-        const purchase = getPurchaseRatePerUnit(s.currency, s.purchaseExchangeRate);
-        return sum + (curr - purchase) * s.quantity * s.averagePrice;
-      }, 0);
     const stockFxProfit = stockProfit + stockCurrencyGain;
-
-    const cryptoCost = assetData.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
     const cryptoProfit = cryptoValue - cryptoCost;
 
     const totalCost = realEstateCost + stockCost + cryptoCost + cashValue; // 현금은 원금=현재가로 취급

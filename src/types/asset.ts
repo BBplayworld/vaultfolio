@@ -152,12 +152,32 @@ export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
 export type { Transaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
 
+// 스냅샷 시점 박제용 파생 정보 (성적표·원인분해 델타용, v2)
+// 구버전 스냅샷 호환을 위해 모두 optional. 공유/동기화 토큰에는 포함되지 않음(로컬 전용)
+export interface SnapshotBreakdown {
+  realEstate: number;
+  stocks: number;
+  crypto: number;
+  cash: number;
+  loans: number; // 대출 잔액(부채)
+}
+export interface SnapshotCost {
+  total: number;      // 총 투입원가 (현금은 원금=현재가로 취급)
+  stock: number;
+  crypto: number;
+  realEstate: number;
+}
+
 // 일별 자산 스냅샷 (이번 달 일별 차트용)
 // 환율 이력은 별도 storage(secretasset_exchange_history)로 관리
 export interface DailyAssetSnapshot {
   date: string;          // YYYY-MM-DD
   netAsset: number;
   financialAsset: number; // 금융자산 총액 (주식+코인+현금)
+  breakdown?: SnapshotBreakdown; // v2: 자산군별 종가 평가액
+  fx?: { USD: number; JPY: number }; // v2: 스냅샷 시점 환율
+  fxBase?: { USD: number; JPY: number }; // v2: 통화별 외화노출 기준액(KRW 환산) — 환율효과 분리용
+  cost?: SnapshotCost;   // v2: 자산군별 투입원가
 }
 
 // 월별 자산 스냅샷 (올해 12개월치 차트용)
@@ -165,6 +185,10 @@ export interface MonthlyAssetSnapshot {
   month: string;          // YYYY-MM
   netAsset: number;
   financialAsset: number;
+  breakdown?: SnapshotBreakdown;
+  fx?: { USD: number; JPY: number };
+  fxBase?: { USD: number; JPY: number };
+  cost?: SnapshotCost;
 }
 
 // 공유 토큰에 포함되는 스냅샷 묶음

@@ -14,6 +14,14 @@ export interface PromptTemplate {
   generate: (ctx: AssetPromptContext) => string;
 }
 
+// 공통 가드레일 — 개별 종목 리딩(추천·목표가·타이밍)만 금지, 자산 구조·리스크·세금 관리 관점은 허용
+// (서비스는 자산 "관리" 목적이며 투자 조언을 포함하지 않는다는 원칙과 일치)
+const GUARDRAIL = `[중요 — 이 도구는 개인 자산 "관리" 보조용입니다]
+- 개별 종목의 매수·매도 추천, 목표주가, 매매 타이밍 제시는 하지 마세요.
+- 미래 가격·수익률을 단정적으로 예측하지 마세요 (시나리오는 "가정"으로만 제시).
+- 제가 이미 보유한 자산의 구성·비중·리스크·부채·세금 구조 관점에서만 분석해 주세요.
+`;
+
 // ─── 데이터 포맷 헬퍼 ────────────────────────────────────────────────────────
 
 const REAL_ESTATE_TYPE: Record<string, string> = {
@@ -256,7 +264,8 @@ export const AI_PROMPT_TEMPLATES: PromptTemplate[] = [
       const debtRatio = summary.totalValue > 0
         ? (summary.loanBalance / summary.totalValue * 100).toFixed(1) : "0";
 
-      return `당신은 한국의 15년 경력 자산관리 전문가입니다.
+      return `${GUARDRAIL}
+당신은 한국의 15년 경력 자산관리 전문가입니다.
 아래 제 자산 현황을 보고 현재 포트폴리오를 솔직하게 진단해 주세요.
 좋은 말보다는 실제로 개선이 필요한 부분을 명확히 짚어주세요.
 ${buildDataSection(ctx)}
@@ -309,9 +318,11 @@ ${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstate
         hasPension && "연금저축",
       ].filter(Boolean).join("·") || "IRP·ISA·연금저축 (현재 미등록)";
 
-      return `당신은 한국의 자산 증식 전략 전문가입니다.
+      return `${GUARDRAIL}
+당신은 한국의 자산 증식 전략 전문가입니다.
 아래 제 현재 자산을 기반으로 향후 5년 내 순자산을 최대로 늘리기 위한 구체적인 전략을 세워주세요.
 막연한 격언이 아니라, 이 데이터에 맞는 구체적인 수치와 실행 순서를 포함해 주세요.
+(단, 개별 종목 추천이 아니라 자산군 배분·계좌·저축 구조 관점에서 제시해 주세요.)
 ${buildDataSection(ctx)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -362,7 +373,8 @@ ${buildDataSection(ctx)}
         return sum + loan.balance * (loan.interestRate / 100);
       }, 0);
 
-      return `당신은 한국의 자산 리스크 분석 전문가입니다.
+      return `${GUARDRAIL}
+당신은 한국의 자산 리스크 분석 전문가입니다.
 아래 제 자산 현황에서 위험 요소와 부채 구조를 냉정하게 분석하고, 지금 당장 개선할 수 있는 방안을 알려주세요.
 ${buildDataSection(ctx)}
 
