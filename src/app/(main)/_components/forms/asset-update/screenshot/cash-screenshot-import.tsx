@@ -355,7 +355,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           {step === "preview" && (
-            <Button onClick={handleRegister} disabled={isRegistering || selectedCount === 0 || hasInstitutionError}>
+            <Button variant="brand" onClick={handleRegister} disabled={isRegistering || selectedCount === 0 || hasInstitutionError}>
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 항목 등록`}
             </Button>
           )}

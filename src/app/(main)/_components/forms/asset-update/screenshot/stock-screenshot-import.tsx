@@ -21,7 +21,7 @@ import { saveAssetDataRaw } from "@/lib/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { stockCategories, securitiesFirms, matchBrokerHint } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 
 type ImportStock = Omit<Stock, "id"> & {
@@ -637,10 +637,9 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           {step === "preview" && (
             <Button
+              variant="brand"
               onClick={handleRegister}
-              style={{ backgroundColor: MAIN_PALETTE[0] }}
               disabled={isRegistering || selectedCount === 0}
-              className="text-white hover:opacity-90 border-none"
             >
               {isRegistering ? (
                 <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</>
