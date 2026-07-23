@@ -23,6 +23,7 @@ import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
+import { AnnualizedReturn } from "../annualized-return";
 import { StockInsightStrip } from "../xray/stock-insight-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
@@ -284,16 +285,27 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
     [refData, filteredStocks, exchangeRates],
   );
 
-  return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, marketMap };
+  return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, refData, marketMap };
+}
+
+// 오늘 등락 칩 — 누적 손익과 구분되게 뮤트 배경 칩에 담고, 방향(▲빨강/▼파랑)만 값에 색.
+function TodayChangeChip({ rate, className = "" }: { rate: number; className?: string }) {
+  return (
+    <span className={`${ASSET_THEME.todayBox} ${className}`}>
+      <span className="text-muted-foreground">오늘</span>
+      <span className={getProfitLossColor(rate)}>{rate >= 0 ? "▲" : "▼"}{Math.abs(rate).toFixed(1)}%</span>
+    </span>
+  );
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
-export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, displayCurrency = "KRW", usdRate = 1 }: StockRowData & {
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, displayCurrency = "KRW", usdRate = 1, dailyRate }: StockRowData & {
   categoryLabels?: string[];
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
   displayCurrency?: StockDisplayCurrency;
   usdRate?: number;
+  dailyRate?: number | null;
 }) {
   const fmt = maskFn ?? ((v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate));
   const hideAmounts = !!maskFn && maskFn(123456).includes("•");
@@ -301,7 +313,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   return (
     <>
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
-      <div className={ASSET_THEME.cardInfoLeft}>
+      <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
         <div className={ASSET_THEME.cardInfoTitle}>
           <span className={ASSET_THEME.cardInfoName} title={stock.name.length > 18 ? stock.name : undefined}>
             <span className="sm:hidden">{truncateName(stock.name)}</span>
@@ -314,10 +326,14 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <Badge variant="outline" className="text-red-600 border-red-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">상장폐지</Badge>
           )}
         </div>
-        <div className={ASSET_THEME.cardInfoMeta}>
+        <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
           <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
           <span className="text-sm text-muted-foreground">·</span>
           <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+          {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
+          {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
+            <TodayChangeChip rate={dailyRate} className="text-[11px]" />
+          )}
         </div>
       </div>
       <div className={ASSET_THEME.cardInfoRight}>
@@ -343,7 +359,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, dailyRate }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
@@ -354,6 +370,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   onDisplayCurrencyChange?: (v: StockDisplayCurrency) => void;
   usdRate?: number;
   disableUsd?: boolean;
+  dailyRate?: number | null;
 }) {
   const currency = displayCurrency ?? "KRW";
   const fmtFull = maskFn ?? ((v: number) => formatByDisplayCurrency(v, currency, usdRate, "full"));
@@ -378,16 +395,21 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
         />
       ) : undefined}
       inline={
-        <ProfitMetric
-          label="평가손익"
-          profit={totalProfit}
-          rate={totalProfitRate}
-          formatShort={fmt}
-          hideAmountSign={hideAmounts}
-          prefix={!screenshotMode && currencyGain !== undefined && currencyGain !== 0
-            ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
-            : undefined}
-        />
+        <span className="inline-flex items-baseline gap-x-2 flex-wrap">
+          <ProfitMetric
+            label="평가손익"
+            profit={totalProfit}
+            rate={totalProfitRate}
+            formatShort={fmt}
+            hideAmountSign={hideAmounts}
+            prefix={!screenshotMode && currencyGain !== undefined && currencyGain !== 0
+              ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
+              : undefined}
+          />
+          {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
+            <TodayChangeChip rate={dailyRate} className="text-xs" />
+          )}
+        </span>
       }
     />
   );
@@ -419,6 +441,7 @@ interface StockCardProps {
   screenshotMode?: boolean;
   maskFn?: (v: number) => string;
   displayCurrency?: StockDisplayCurrency;
+  dailyRate?: number | null;
 }
 
 interface SplitItem {
@@ -712,6 +735,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
             <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
+              <AnnualizedReturn totalRatePct={m.profitRate} sinceDate={stock.purchaseDate} />
               {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
             </div>
           </div>
@@ -721,7 +745,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   );
 }
 
-export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, maskFn, displayCurrency = "KRW" }: StockCardProps) {
+export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, maskFn, displayCurrency = "KRW", dailyRate }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const usdRate = exchangeRates.USD;
   const [splitOpen, setSplitOpen] = useState(false);
@@ -779,7 +803,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>
               <button className={ASSET_THEME.cardTriggerButton}>
-                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} />
+                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} dailyRate={dailyRate} />
                 <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
@@ -847,6 +871,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 <div className={`px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground ${ASSET_THEME.cardSectionMeta}`}>
                   <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
                   <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
+                  <AnnualizedReturn totalRatePct={profitRate} sinceDate={stock.purchaseDate} />
                   {stock.description && <span className="w-full text-primary truncate"># {stock.description}</span>}
                 </div>
               )}
@@ -878,6 +903,8 @@ export interface StockCategorySectionProps {
   emptyMessage?: string;
   screenshotMode: boolean;
   renderItem: (stock: Stock, isFirstOverall: boolean, color: string) => React.ReactNode;
+  /** 종목 리스트 최대 노출 개수 — 초과분은 "외 N종목" 요약행. 비중바·범례는 전체 유지 (인증샷 축약용) */
+  maxItems?: number;
 }
 
 export function StockCategorySection({
@@ -890,6 +917,7 @@ export function StockCategorySection({
   emptyMessage = "등록된 주식이 없습니다.",
   screenshotMode = false,
   renderItem,
+  maxItems,
 }: StockCategorySectionProps) {
   const colorOf = (stock: Stock) => {
     const idx = barItems.findIndex((b) => b.stock.id === stock.id);
@@ -898,44 +926,71 @@ export function StockCategorySection({
 
   return (
     <div className="px-1 sm:px-2 space-y-3">
-      {/* 비중 바 */}
-      {barItems.length > 0 && totalValue > 0 && (
-        <div className="space-y-2">
-          <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-            {barItems.map(({ stock, value: v, color }) => {
-              const pct = (v / totalValue) * 100;
-              return (
-                <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
-                  {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
+      {/* 비중 바 — maxItems 지정 시 상위 N개 + "기타" 집계(인증샷 축약) */}
+      {barItems.length > 0 && totalValue > 0 && (() => {
+        const barShown = maxItems ? barItems.slice(0, maxItems) : barItems;
+        const barRest = maxItems ? barItems.slice(maxItems) : [];
+        const restValue = barRest.reduce((s, b) => s + b.value, 0);
+        const restPct = (restValue / totalValue) * 100;
+        const ETC_COLOR = "#9ca3af";
+        return (
+          <div className="space-y-2">
+            <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
+              {barShown.map(({ stock, value: v, color }) => {
+                const pct = (v / totalValue) * 100;
+                return (
+                  <div key={stock.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`} />
+                );
+              })}
+              {barRest.length > 0 && restPct > 0 && (
+                <div className="overflow-hidden transition-all" style={{ width: `${restPct}%`, backgroundColor: ETC_COLOR }} title={`기타: ${restPct.toFixed(1)}%`} />
+              )}
+            </div>
+            <div className={`grid ${screenshotMode ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-x-4 gap-y-2 px-2`}>
+              {barShown.map(({ stock, value: v, color }) => {
+                const pct = (v / totalValue) * 100;
+                return (
+                  <div key={stock.id} className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="text-sm sm:text-base text-foreground truncate">{stock.name}</span>
+                    <span className="text-sm sm:text-base font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                  </div>
+                );
+              })}
+              {barRest.length > 0 && restPct > 0 && (
+                <div className="flex items-center gap-1">
+                  <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ETC_COLOR }} />
+                  <span className="text-sm sm:text-base text-muted-foreground truncate">기타 {barRest.length}종목</span>
+                  <span className="text-sm sm:text-base font-bold shrink-0 text-muted-foreground">{restPct.toFixed(1)}%</span>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
-          <div className={`grid ${screenshotMode ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-x-4 gap-y-2 px-2`}>
-            {barItems.map(({ stock, value: v, color }) => {
-              const pct = (v / totalValue) * 100;
-              return (
-                <div key={stock.id} className="flex items-center gap-1">
-                  <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                  <span className="text-sm sm:text-base text-foreground truncate">{stock.name}</span>
-                  <span className="text-sm sm:text-base font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 종목 리스트 — 주식 상세/인증샷 공통 (인증샷도 비중바+포트폴리오 하단에 노출) */}
       {filteredStocks.length === 0 ? (
         <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
           <p className="text-muted-foreground text-sm">{emptyMessage}</p>
         </div>
-      ) : (
-        <div className="space-y-2 mt-8">
-          {filteredStocks.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
-        </div>
-      )}
+      ) : (() => {
+        const shown = maxItems ? filteredStocks.slice(0, maxItems) : filteredStocks;
+        const rest = maxItems ? filteredStocks.slice(maxItems) : [];
+        const restValue = rest.reduce((sum, s) => sum + (barItems.find((b) => b.stock.id === s.id)?.value ?? 0), 0);
+        const restPct = totalValue > 0 ? (restValue / totalValue) * 100 : 0;
+        return (
+          <div className="space-y-2 mt-8">
+            {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
+            {rest.length > 0 && (
+              <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5 text-sm">
+                <span className="text-muted-foreground">외 {rest.length}종목</span>
+                <span className="font-semibold tabular-nums text-foreground">비중 {restPct.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1000,7 +1055,7 @@ export function StockTab() {
     }
   }, [visibleCategories, activeCategory]);
 
-  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, marketMap } =
+  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, refData, dailyProfitRate, marketMap } =
     useFilteredStockData(activeCategory, effectiveDisplayCurrency);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -1032,6 +1087,7 @@ export function StockTab() {
           onDisplayCurrencyChange={activeCategory === "foreign" ? handleDisplayCurrencyChange : undefined}
           usdRate={exchangeRates.USD}
           disableUsd={!hasForeignStock}
+          dailyRate={dailyProfitRate}
         />
 
         {/* X-Ray 인사이트 스트립 (인증샷 제외) */}
@@ -1062,6 +1118,8 @@ export function StockTab() {
             const m = computeStockMetrics(stock, exchangeRates, totalValue, effectiveDisplayCurrency);
             const linkedLoans = groupItems.flatMap((s) => assetData.loans.filter((l) => l.linkedStockId === s.id));
             const categoryLabels = Array.from(new Set(groupItems.map((s) => s.category))).map(getCategoryLabel);
+            // 종목별 오늘 등락 — 홈(전일 순자산)·성과(집계 일별수익)와 중복 없는 개별 종목 단위
+            const { dailyProfitRate: dailyRate } = computeDailyStockProfit(groupItems, refData, exchangeRates);
             return (
               <StockCard
                 key={groupKey}
@@ -1071,6 +1129,7 @@ export function StockTab() {
                 currentVal={m.currentVal}
                 profit={m.profit}
                 profitRate={m.profitRate}
+                dailyRate={dailyRate}
                 isForeign={m.isForeign}
                 krwMul={m.krwMul}
                 currencyGain={m.currencyGain}

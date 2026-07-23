@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Wallet, TrendingUp, BadgeDollarSign } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Wallet, TrendingUp, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
@@ -14,6 +14,7 @@ import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { buildAssetReport } from "@/lib/report/asset-report";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -25,8 +26,8 @@ async function fetchDividend(ticker: string, type: string): Promise<DividendPayo
   return json.data || [];
 }
 
-// dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유
-function useDividendAnnualTotals() {
+// dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유 (자산 성적표에서도 재사용)
+export function useDividendAnnualTotals() {
   const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
 
@@ -81,6 +82,11 @@ export function PerformanceHub() {
   const { navigate } = useAssetNavigation();
 
   const go = (tab: ActivityTab) => navigate({ type: "activity", tab });
+
+  // 자산 성적표 카드 — 상세 "투입 대비 성과"와 동일하게 이자 차감 후 '남긴 돈'을 노출(같은 소스로 값 일치)
+  const report = useMemo(() => buildAssetReport(assetData, summary), [assetData, summary]);
+  const allNet = summary.totalProfit - report.annualInterest;
+  const allNetRate = summary.totalCost > 0 ? (allNet / summary.totalCost) * 100 : 0;
 
   // 순자산 — 전년 대비
   const yearly = [...assetData.yearlyNetAssets].sort((a, b) => a.year - b.year);
@@ -142,6 +148,8 @@ export function PerformanceHub() {
         <p className="text-sm text-muted-foreground mt-0.5 text-pretty">순자산·수익·배당을 각각 자세히 확인하세요</p>
       </div>
 
+      {/* 지난 접속 등락은 홈 Hero(순자산 헤더)로 통합 — 앱을 켜자마자 보는 정보라 중복 노출하지 않는다 */}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <KpiCard
           icon={Wallet}
@@ -194,6 +202,28 @@ export function PerformanceHub() {
             </span>
           ) : null}
           onClick={() => go("dividend")}
+        />
+
+        <KpiCard
+          icon={Trophy}
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              자산 성적표
+              <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
+            </span>
+          }
+          description="이자 내고 남긴 진짜 수익"
+          primary={`${allNet >= 0 ? "+" : ""}${formatPriceByMode(Math.round(allNet))}`}
+          primaryClassName={getProfitLossColor(allNet)}
+          secondary={summary.totalCost > 0 ? (
+            <span className={`font-semibold tabular-nums ${getProfitLossColor(allNet)}`}>
+              {allNet >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
+              <span className="text-muted-foreground font-medium ml-1.5">투입 대비</span>
+              {/* 주식만이 아니라 부동산·코인·현금까지 포함한 값이라 기준을 못박는다 */}
+              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground align-middle">모든 자산</span>
+            </span>
+          ) : <span className="text-muted-foreground">자산 등록 후 계산</span>}
+          onClick={() => go("report")}
         />
       </div>
     </div>

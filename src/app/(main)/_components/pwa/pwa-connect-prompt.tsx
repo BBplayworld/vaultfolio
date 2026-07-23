@@ -8,7 +8,7 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
 
 const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
@@ -18,7 +18,7 @@ const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
  * iOS는 홈 화면 추가 시 URL 해시가 제거되므로, 웹에서 자동 복사한 코드를 붙여넣어 연동한다.
  *  - sync:<assetId>  → 동기화 코드. #sync= 해시 설정 → CloudSyncConnectDialog(금고 암호)로 pull.
  *  - share:KEY_LOCALKEY (구 s:) → 복원 코드(일회성 공유 토큰). importSharedByCode → PIN 프롬프트(Provider 내부).
- * z-40: PIN 다이얼로그(z-50)·잠금 화면(z-100)보다 아래에 위치.
+ * 레이어: Z_LAYER.floating — 다이얼로그·잠금 화면보다 아래 (config/theme.ts 레이어 스케일 참조).
  */
 export function PwaConnectPrompt() {
   const { isStandalone } = usePWAInstall();
@@ -72,7 +72,7 @@ export function PwaConnectPrompt() {
   };
 
   return (
-    <div className="fixed inset-0 z-40 bg-background flex flex-col items-center justify-center gap-6 px-6">
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6 px-6" style={{ zIndex: Z_LAYER.floating }}>
       <div className="flex flex-col items-center gap-3 text-center">
         <div
           className="flex items-center justify-center size-16 rounded-2xl text-white"

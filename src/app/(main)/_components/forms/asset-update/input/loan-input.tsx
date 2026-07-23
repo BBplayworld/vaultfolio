@@ -339,7 +339,10 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
           />
         )}
 
-        {selectedType === "mortgage-home" && assetData.realEstate.length > 0 && (
+        {/* 종류 무관하게 노출 — 신용·마이너스대출로 부동산을 산 경우에도 연결할 수 있어야 한다.
+            주택담보에만 열어두면 그런 대출이 영원히 "투자 레버리지"로 분류돼
+            자산 성적표의 레버리지 이자·대출비율이 부풀려진다(부동산 수익은 측정 불가라 비교 제외 대상). */}
+        {assetData.realEstate.length > 0 && (
           <FormField
             control={form.control}
             name="linkedRealEstateId"
@@ -360,6 +363,9 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormDescription>
+                  부동산을 사려고 받은 대출이면 연결해 주세요. 종류가 신용·마이너스대출이어도 연결하면 자산 성적표의 <span className="font-semibold text-foreground">레버리지 비교에서 제외</span>됩니다.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

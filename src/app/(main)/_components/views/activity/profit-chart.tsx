@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { TrendingUp, TrendingDown, Minus, Info, Globe, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { TrendingUp, TrendingDown, Minus, Globe, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
+import { InfoHint } from "../../layout/ui/info-hint";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -143,29 +144,6 @@ function FxBreakdown({ priceGain, fxGain, fxApplied }: { priceGain: number; fxGa
           <p>환차손익: <span className={getProfitLossColor(fxGain)}>{fxGain >= 0 ? "+" : ""}{formatPriceByMode(fxGain)}</span></p>
           {!fxApplied && <p className="text-muted-foreground text-xs">현재환율 적용 · 기간 환차 미반영</p>}
         </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// 옵션 옆 info 아이콘 — 데스크톱 hover, 모바일 터치(탭)로 설명 팝오버 표시
-function InfoHint({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="설명 보기"
-          onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(true); }}
-          onPointerLeave={(e) => { if (e.pointerType === "mouse") setOpen(false); }}
-          className="text-sky-600/70 dark:text-sky-400/70 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
-        >
-          <Info className="size-4" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="bottom" sideOffset={4} className="w-72 p-2.5 text-xs leading-relaxed text-left space-y-0.5">
-        {children}
       </PopoverContent>
     </Popover>
   );
@@ -644,7 +622,7 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
                                 {/* 옵션 토글 */}
                                 <div className="flex items-center gap-1.5 text-sm rounded-md bg-muted/40 py-1.5 px-2 w-fit ml-auto">
-                                  <InfoHint>
+                                  <InfoHint summary="국내·해외 종가를 어느 날짜로 묶어 합산할지 정하는 기준이에요.">
                                     <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
                                     <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
                                     {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}

@@ -13,7 +13,7 @@
 
 | 카테고리 | 기술 |
 |----------|------|
-| 프레임워크 | Next.js 15 (App Router) + TypeScript |
+| 프레임워크 | Next.js 16 (App Router) + TypeScript |
 | 폼 검증 | Zod + React Hook Form |
 | 상태 관리 | React Context (자산) + Zustand (테마/튜토리얼) |
 | 스타일링 | Tailwind CSS v4 + shadcn/ui (New York) |

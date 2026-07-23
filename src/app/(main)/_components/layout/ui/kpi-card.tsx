@@ -8,7 +8,7 @@ import { ASSET_THEME } from "@/config/theme";
 
 interface KpiCardProps {
   icon: LucideIcon;
-  title: string;
+  title: ReactNode;
   description: string;
   primary: string;
   secondary?: ReactNode;

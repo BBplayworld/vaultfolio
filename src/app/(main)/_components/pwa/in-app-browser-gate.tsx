@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { InAppExternalGuide } from "./in-app-external-guide";
+import { Z_LAYER } from "@/config/theme";
 
 /**
  * 인앱 브라우저 하드 게이트 — 카카오톡·네이버 등 인앱 브라우저 진입 시 앱 전체를 가리고
@@ -88,7 +89,7 @@ export function InAppBrowserGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-background px-6 py-10">
+    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto bg-background px-6 py-10" style={{ zIndex: Z_LAYER.gate }}>
       <div className="w-full max-w-md flex flex-col gap-5">
         <header className="flex flex-col items-center gap-3 text-center">
           <div className="flex items-center justify-center size-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">

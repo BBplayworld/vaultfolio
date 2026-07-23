@@ -1,92 +1,107 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Sparkles, Cloud, Smartphone, MessageSquareText } from "lucide-react";
-import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { SyncSetupAnimation, PwaSetupAnimation } from "../../pwa/pwa-guide-illustrations";
-import { detectBrowserEnv, type BrowserEnv } from "@/lib/pwa/detect-browser";
+import React from "react";
+import { Sparkles, Trophy, RefreshCw, Building2, Camera, MessageSquareText, Link2 } from "lucide-react";
+import { APP_VERSION } from "@/config/app-version";
 
-export const NOTICE_ID = "20260624";
-export const NOTICE_TITLE = "핵심 기능 업데이트 & 앱 설치 (PWA)";
+export const NOTICE_ID = "20260722";
+export const NOTICE_TITLE = "자산 성적표 · 실거래가 · 인증샷 업데이트";
+
+// 이번 릴리스 핵심 4가지 — 아이콘 + 한두 문장으로만. 스크롤 없이 훑히는 분량을 상한으로 둔다.
+const FEATURES = [
+  {
+    icon: Trophy,
+    title: "자산 성적표",
+    body: (
+      <>
+        장기 성장·수익의 질·레버리지·분산·투자 습관 <strong className="text-foreground">5개 축을 별점과 트로피 등급으로 채점</strong>합니다.
+        넣은 돈이 이자를 내고도 남는지 <strong className="text-foreground">모든 자산 · 실투자금 · 순수 레버리지 세 기준으로 한눈에 비교</strong>하도록 재구성했고,
+        AI 평가 프롬프트(진단·증식·리스크)도 더 정교해졌습니다. <strong className="text-foreground">성과 탭</strong>에서 확인하세요.
+      </>
+    ),
+  },
+  {
+    icon: RefreshCw,
+    title: "암호화폐 시세 자동 갱신",
+    body: (
+      <>
+        직접 입력해야 했던 코인 현재가가 이제 <strong className="text-foreground">1시간 단위로 자동 갱신</strong>됩니다.
+        손대지 않아도 순자산과 수익률이 최신 시세로 계산됩니다.
+      </>
+    ),
+  },
+  {
+    icon: Building2,
+    title: "부동산 실거래가 추정",
+    body: (
+      <>
+        주소만 입력하면 <strong className="text-foreground">국토교통부 실거래 기반 추정 시세</strong>를 내 입력값과 함께 보여줍니다.
+        어떤 단지·층·평형의 거래를 근거로 삼았는지와 신뢰도 등급을 함께 표기하며, 근거가 약하면 아예 표시하지 않습니다.
+      </>
+    ),
+  },
+  {
+    icon: Camera,
+    title: "인증샷 개편",
+    body: (
+      <>
+        순자산과 수익률이 가장 먼저 보이도록 <strong className="text-foreground">한 장으로 재구성</strong>했습니다.
+        포트폴리오 구성 비중과 핵심 자산 Top 8을 담고, 금액은 가린 채로도 공유할 수 있습니다. 상단 카메라 아이콘에서 만들어 보세요.
+      </>
+    ),
+  },
+];
 
 export function NoticeContent() {
-  const { isStandalone } = usePWAInstall();
-  // 접속 브라우저 감지 — PWA 가이드 ②③ 컷을 사용자 브라우저별로 노출 (마운트 후 1회)
-  const [env, setEnv] = useState<BrowserEnv>({ platform: "android", browser: "chrome", isInApp: false, iosSafariModern: false });
-  useEffect(() => { setEnv(detectBrowserEnv()); }, []);
-
   return (
     <div className="space-y-4 pointer-events-none select-none">
       {/* 핵심 기능 업데이트 강조 배너 */}
       <div className="rounded-xl bg-primary/5 p-3.5 flex items-start gap-2.5">
         <Sparkles className="size-5 text-primary shrink-0 mt-0.5 animate-pulse" />
         <div className="space-y-1">
-          <p className="text-sm font-bold text-foreground">핵심 기능 업데이트 안내</p>
+          {/* 버전은 설정 > 정보와 동일한 단일 소스(APP_VERSION) — 공지에 항상 명시한다 */}
+          <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            핵심 기능 업데이트 안내
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary tabular-nums">v{APP_VERSION}</span>
+          </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            시크릿에셋의 주요 핵심 기능들이 대폭 보완되고 새로워졌습니다! 아래 새로운 업데이트 항목들을 확인해 보세요.
+            이번 업데이트는 <strong className="text-foreground">내 자산을 평가하고 검증하는 기능</strong>에 집중했습니다. 아래 네 가지를 확인해 보세요.
           </p>
         </div>
       </div>
 
       {/* 피처 요약 */}
       <div className="space-y-3">
-        {/* 1. 앱 설치 (PWA) — 미설치 상태에서만 표시 */}
-        {!isStandalone && (
-          <div className="rounded-xl bg-card shadow-xs p-4 space-y-3">
+        {FEATURES.map(({ icon: Icon, title, body }) => (
+          <div key={title} className="rounded-xl bg-card shadow-xs p-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-2 shrink-0">
-                <Smartphone className="size-4 text-primary" />
+                <Icon className="size-4 text-primary" />
               </div>
-              <h4 className="text-sm font-bold text-foreground">홈 화면 앱 설치 (PWA)</h4>
+              <h4 className="text-sm font-bold text-foreground">{title}</h4>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed pl-1">
-              PWA(프로그레시브 웹앱) 기술을 적용하여 스마트폰 홈 화면에 바로가기 앱을 설치해 보세요. 브라우저 세션 만료나 쿠키 삭제로 인한 자산 데이터 유실 위험 없이 네이티브 앱처럼 안정적으로 사용 가능합니다.
-            </p>
-            {/* 설치 → 복원 흐름 애니메이션 (Chrome 기준) */}
-            <div className="rounded-lg bg-muted/40 p-3">
-              <p className="font-semibold text-foreground text-sm mb-2">💡 앱 설치 → 복원 방법 (현재 브라우저 기준)</p>
-              <PwaSetupAnimation platform={env.platform} browser={env.browser} safariModern={env.iosSafariModern} />
-            </div>
-            {/* 접근 가이드 — 복원 방법 2가지 명확 구분 */}
-            <div className="rounded-lg bg-muted/40 p-2.5 text-sm text-muted-foreground space-y-1">
-              <p className="font-semibold text-foreground text-sm">💡 앱 설치 및 데이터 복원 방법</p>
-              <p className="leading-relaxed">
-                • <strong className="text-foreground">설치</strong>: PC / 모바일 웹 접속 시 첫 화면의 <strong className="text-foreground">앱 설치하기</strong> 배너 터치 또는 상단의 설치 아이콘(📥) 터치
-              </p>
-              <p className="leading-relaxed">
-                • <strong className="text-foreground">복원 — 동기화 사용</strong>: 앱 첫 실행 화면에 <strong className="text-foreground">동기화 코드</strong>를 붙여넣고 <strong className="text-foreground">금고 암호</strong> 입력
-              </p>
-              <p className="leading-relaxed">
-                • <strong className="text-foreground">복원 — 일반 설치</strong>: 앱 첫 실행 화면에 <strong className="text-foreground">복원 코드</strong>를 붙여넣고 <strong className="text-foreground">PIN 4자리</strong> 입력
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed pl-1">{body}</p>
           </div>
-        )}
+        ))}
+      </div>
 
-        {/* 2. 기기 동기화 */}
-        <div className="rounded-xl bg-card shadow-xs p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary/10 p-2 shrink-0">
-              <Cloud className="size-4 text-primary" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-foreground">기기 동기화</h4>
-              <span className="rounded bg-amber-500/10 dark:bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-500 border border-amber-500/20">Plus</span>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed pl-1">
-            기존의 1회성 공유 URL과 달리, <strong className="text-foreground">연동된 여러 기기 간에 데이터가 실시간으로 자동 양방향 동기화</strong>됩니다. 금고 암호 기반의 종단간 암호화(E2EE) 기술을 사용하여 서버 관리자를 포함한 그 누구도 자산을 열람할 수 없어 안전합니다. <strong className="text-foreground">다른 기기 동기화 링크</strong>를 백업해 두면 기기 분실·초기화 시에도 금고 암호로 자산을 되살릴 수 있습니다.
+      {/* 행동 요청 — 기존 사용자가 직접 해줘야 계산이 맞아떨어지는 항목이라 기능 카드와 톤을 분리 */}
+      <div className="rounded-xl bg-amber-500/10 p-3.5 flex items-start gap-2.5">
+        <Link2 className="size-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-foreground">확인해 주세요 · 신용대출로 부동산을 사셨다면</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            그 대출에 <strong className="text-foreground">연계 부동산</strong>을 지정해 주세요. 지정하지 않으면 자산 성적표가 그 이자와 잔액을 주식 레버리지로 계산해 수치가 부풀려집니다.
+            <strong className="text-foreground"> 성과 → 자산 성적표 → 레버리지 → 계산 근거</strong>에서 대출을 누르면 바로 연결할 수 있습니다.
           </p>
-          {/* 접근 가이드 — 설정 흐름 애니메이션 */}
-          <div className="rounded-lg bg-muted/40 p-3">
-            <p className="font-semibold text-foreground text-sm mb-1">💡 기기 동기화 설정 방법</p>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              <strong className="text-foreground">웹</strong>의 우측 상단 <strong className="text-foreground">더보기 ⋯</strong> → <strong className="text-foreground">자산 공유 · 동기화</strong>에서 시작합니다. (앱은 하단 탭 바의 더보기)
-            </p>
-            <SyncSetupAnimation />
-          </div>
         </div>
       </div>
+
+      {/* 나머지 개선 — 카드로 세울 만큼 크지 않아 한 문단으로 */}
+      <p className="text-sm text-muted-foreground leading-relaxed px-1 text-pretty">
+        그 외 순자산 변화의 원인을 시세·환율·부채 등 이름으로 더 자세히 보여주고, 홈 헤더의 전일 순자산 대비 증감과 종목별 오늘 등락을 한 줄로 확인할 수 있습니다.
+        데이터 백업 날짜 표기와 성과 화면의 지표 기준도 정확하게 다듬었습니다.
+      </p>
 
       {/* 의견 보내기 부탁 배너 */}
       <div className="rounded-xl bg-muted/20 p-3.5 flex items-start gap-2.5">

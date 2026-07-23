@@ -86,11 +86,33 @@ export const stockCategories = [
 // 부동산 유형
 export const realEstateTypes = [
   { value: "apartment", label: "아파트", shortLabel: "아파트" },
+  { value: "officetel", label: "오피스텔", shortLabel: "오피스텔" },
+  { value: "villa", label: "빌라(연립·다세대)", shortLabel: "빌라" },
   { value: "house", label: "주택", shortLabel: "주택" },
   { value: "land", label: "토지", shortLabel: "토지" },
-  { value: "commercial", label: "상가", shortLabel: "상가" },
+  { value: "commercial", label: "상가·사무실", shortLabel: "상가" },
   { value: "other", label: "기타", shortLabel: "기타" },
 ] as const;
+
+// 실거래가 연동(S-4.21) — 부동산 종류 → MOLIT 데이터셋·매칭 방식 매핑
+// dataset: realestate-service의 fetchTrades 분기 키. complex=단지명 매칭, area-only=법정동+면적 근사
+// areaKind/areaLabel: MOLIT가 종류별로 다른 면적을 공개한다(전용면적 vs 연면적 vs 건물면적).
+// 서로 다른 종류를 비교하면 안 되므로 입력 라벨과 매칭 필터에 동일 값을 쓴다.
+export const realEstateTradeDataset: Record<string, {
+  dataset: string;
+  matchBy: "complex" | "area";
+  accuracy: "high" | "mid" | "low";
+  areaKind: "exclusive" | "gross";
+  areaLabel: string;
+} | null> = {
+  apartment:  { dataset: "apt",   matchBy: "complex", accuracy: "high", areaKind: "exclusive", areaLabel: "전용면적" },
+  officetel:  { dataset: "offi",  matchBy: "complex", accuracy: "high", areaKind: "exclusive", areaLabel: "전용면적" },
+  villa:      { dataset: "rh",    matchBy: "complex", accuracy: "mid",  areaKind: "exclusive", areaLabel: "전용면적" },
+  house:      { dataset: "sh",    matchBy: "area",    accuracy: "low",  areaKind: "gross",     areaLabel: "연면적" },
+  commercial: { dataset: "nrg",   matchBy: "area",    accuracy: "low",  areaKind: "gross",     areaLabel: "건물면적" },
+  land:       null, // 이번 범위 제외
+  other:      null,
+};
 
 // 암호화폐 거래소 목록
 export const cryptoExchanges = [

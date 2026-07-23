@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "시크릿에셋",
+    title: APP_CONFIG.name,
   },
   icons: {
     apple: [{ url: "/icons/icon-192x192.png", sizes: "180x180", type: "image/png" }],
@@ -119,7 +119,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 var GA_ID = 'G-PZXY31JVEW';
                 var host = window.location.hostname;
                 // 로컬 개발 환경은 자동 제외
-                var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\.local$/.test(host);
+                // 인라인 스크립트 문자열이라 정규식의 점 이스케이프는 역슬래시 2개로 써야 한다.
+                // 1개만 쓰면 템플릿 리터럴이 삼켜 점이 와일드카드가 되고, "local"로 끝나는 모든 호스트가 매칭된다.
+                var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\\.local$/.test(host);
                 var params = new URLSearchParams(window.location.search);
                 // 특정 URL로 본인 기기에 플래그 기록/해제
                 if (params.get('ga-optout') === '1') localStorage.setItem('ga-optout', '1');

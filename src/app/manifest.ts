@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { APP_CONFIG } from "@/config/app";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "시크릿에셋",
-    short_name: "시크릿에셋",
+    name: APP_CONFIG.name,
+    short_name: APP_CONFIG.name,
     description: "서버 저장 없는 나만의 암호화 자산 금고",
     id: "/asset",
     start_url: "/",

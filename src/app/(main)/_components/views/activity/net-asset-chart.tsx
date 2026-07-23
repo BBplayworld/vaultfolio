@@ -29,6 +29,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency, formatPriceByMode, formatPriceDecimalByMode, getPriceLayout } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset-storage";
+import { computeRecordStats, type RecordStats } from "@/lib/report/record-streak";
+import { listArchivedDates } from "@/lib/snapshot-archive";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -193,6 +195,21 @@ function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
   return snapshots;
 }
 
+// 기록 스트릭·기록률 — 30일 원본 목록(월 경계 무관) + 장기 아카이브에서 파생
+function useRecordStats(snapshotVersion: number): RecordStats | null {
+  const [stats, setStats] = useState<RecordStats | null>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+      const all: DailyAssetSnapshot[] = raw ? JSON.parse(raw) : [];
+      if (all.length === 0) return;
+      const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+      setStats(computeRecordStats(all.map(s => s.date), todayStr, listArchivedDates()));
+    } catch { /* 무시 */ }
+  }, [snapshotVersion]);
+  return stats;
+}
+
 function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
   const [snapshots, setSnapshots] = useState<MonthlyAssetSnapshot[]>([]);
   useEffect(() => {
@@ -228,6 +245,7 @@ export function YearlyNetAssetChart() {
 
   const dailySnapshots = useDailySnapshots(snapshotVersion);
   const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
+  const recordStats = useRecordStats(snapshotVersion);
 
   const handleDelete = (year: number) => {
     if (window.confirm("정말 삭제하시겠습니까?")) {
@@ -588,7 +606,16 @@ export function YearlyNetAssetChart() {
                 const [yearStr, monthStr] = currentMonthStr.split("-");
                 return (
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold text-muted-foreground">{yearStr}년 {parseInt(monthStr)}월</p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-sm font-semibold text-muted-foreground">{yearStr}년 {parseInt(monthStr)}월</p>
+                      {recordStats && recordStats.streakDays > 0 && (
+                        <p className="text-sm text-muted-foreground tabular-nums">
+                          연속 <span className="font-semibold text-foreground">{recordStats.streakDays}일</span> 기록
+                          <span className="mx-1">·</span>
+                          기록률 <span className="font-semibold text-foreground">{Math.round(recordStats.monthRate * 100)}%</span>
+                        </p>
+                      )}
+                    </div>
                     <div className="space-y-0.5">
                       {/* 요일 헤더 */}
                       <div className="grid grid-cols-7 gap-0.5">

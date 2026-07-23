@@ -5,7 +5,7 @@ import { Home, PieChart, TrendingUp, PlusCircle, Camera, MoreHorizontal } from "
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { ShareScreenshotDialog } from "../header-menu/share/share-menu";
 
 type NavItem = {
@@ -106,7 +106,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+      <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border" style={{ zIndex: Z_LAYER.nav }}>
         <div className="flex items-center justify-around px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;

@@ -86,7 +86,21 @@
 - 팝오버·시트·드롭다운 `shadow-2xl`, 활성 탭·작은 떠오름 `shadow-sm`.
 - **[필수] 라이트 뉴트럴 계조**(보더리스와 짝): 라이트는 순백 단일톤 금지 → **캔버스 `bg-background`(그레이 `oklch 0.91`) < 리세스 `bg-muted`(`0.88`) < 부상 `bg-card`(화이트)** 3단 + `shadow-xs/sm` 소프트 섀도우로 박스 분리. 다크는 card(`.205`)>background(`.145`) 톤차 유지. 토큰 출처 [globals.css](../../src/app/globals.css) `:root`/`.dark`. 소프트 섀도우는 `--shadow-2xs/xs/sm` + `:root .shadow-*` 무조건 오버라이드(프리셋 미설정 상태에서도 적용).
 - **[필수] 자산 카드 표면 계층**([theme.ts](../../src/config/theme.ts) `ASSET_THEME`): 라이트 모드는 다크 모드와 동일 구조(미러링)를 적용하되, 대조를 높이고 은은한 경계선을 두어 영역을 명확히 구분합니다. 자산 상세 콘텐츠(cardWrapper·섹션·subCard)는 캔버스와 통일(투명/faint 톤, 양 모드 동일 클래스 구조)하여 불필요한 레이어를 없애되, 상세 구분 영역(cardSection/subItemsWell 등)에는 불투명도를 높인 faint 톤(`bg-muted/40` 및 `/20`)과 아주 부드러운 소프트 보더(`border-border/10`, `divide-border/10`)를 적용하여 시각적 구분을 명확히 합니다. 허브·메뉴 카드만 `bg-card`(화이트)+은은한 보더(`border-border/10`)로 명도 pop을 구현합니다. 다크 모드는 현행 디자인(borderless 또는 기존 다크 전용 보더/디바이더)을 그대로 보존합니다.
-- z-index 스케일: 일반 오버레이 `z-40`(연결 프롬프트) · 다이얼로그 `z-50` · 앱 잠금 `z-100`.
+### 3.4 z-index 레이어 스케일 [필수]
+겹침 순서의 단일 출처는 [theme.ts](../../src/config/theme.ts)의 **`Z_LAYER`** 상수다. **임의의 `z-*` 클래스를 새로 만들지 말고 반드시 이 상수를 `style={{ zIndex: Z_LAYER.x }}`로 주입**한다.
+
+| 레이어 | 값 | 용도 |
+| --- | --- | --- |
+| `base` / `raised` | 10 / 20 | 카드 내 오버레이(로딩 가림막), 리사이저 |
+| `floating` | 40 | FAB, PWA 연결 프롬프트 |
+| `nav` | 50 | 하단 네비, 스크롤 투 톱 |
+| `hint` | 60 | InfoHint·Tooltip — **nav보다 위** |
+| `modal` / `modalContent` | 10001 / 10002 | Dialog·Sheet 오버레이/콘텐츠 |
+| `modalHint` | 10003 | **모달 내부**에서 열리는 InfoHint |
+| `gate` / `lock` | 10100 / 10200 | 인앱 브라우저 게이트, 앱 잠금 |
+
+- **[금지] 동률 배치**: 같은 층에 두 오버레이를 두면 DOM 순서로 승부가 갈려 예측 불가다(과거 InfoHint와 하단 네비가 모두 `z-50`이라 힌트가 가려짐).
+- **Popover는 Portal로 body에 붙어** 부모의 stacking context를 벗어난다. 따라서 다이얼로그 안에서 힌트를 쓰면 `hint`(60)로는 모달 콘텐츠(10002)에 반드시 가려진다 → `InfoHint`에 **`inModal`을 켜서 `modalHint`로 올린다.**
 
 ---
 
@@ -109,8 +123,19 @@
 - **다이얼로그**: 설명형(공유·동기화·가이드)은 `<DialogHeader className="text-left">`(모바일 중앙 정렬 방지). 짧은 확인 모달만 중앙 허용.
 - **팝업 취소/닫기 버튼(통일 규약)**: ① 색 = `variant="secondary"`(테두리 없는 플랫, `outline` 금지). `AlertDialogCancel`도 secondary 기본. ② 순서 = DOM은 `[주요 버튼, 취소/닫기]` 순 → 모바일 취소 하단·PC 취소 우측(`DialogFooter`/`AlertDialogFooter` 기본 `flex-col ... sm:flex-row sm:justify-end`, 개별 오버라이드·`flex-col-reverse` 금지). ③ 텍스트 = 맥락별: 폼·설정·실행형(입력/제출/삭제/연결/앱잠금 등)은 **"취소"**, 읽기전용 정보(공지·미리보기·가이드 등)는 **"닫기"**.
 - **드롭다운/Select**: 한국어 짤림 방지 — `min-w-[180px]`/`sm:max-w-[220px]` 여유. 항목 多 = 적응형 그리드 `grid-cols-2 sm:grid-cols-4`.
-- **부수 설명**: 본문에 펼치지 말고 **아이콘+Popover**(hover+터치 동시지원, radix Tooltip ✗). 참고 `InfoHint`(profit-chart). 코드 패턴은 §11.
+- **부수 설명(InfoHint) [필수]**: 본문에 펼치지 말고 **아이콘+Popover**(hover+터치 동시지원, radix Tooltip ✗). 구현체는 [info-hint.tsx](../../src/app/(main)/_components/layout/ui/info-hint.tsx) **하나뿐이며 로컬 재정의 금지**(과거 profit-chart가 중복 정의해 규격이 갈렸음).
+  - **`summary` 필수**: 팝오버 최상단에 **한 줄 요약**이 항상 먼저 온다. 상세는 `children`(선택)으로 그 아래. 요약 없이 장문만 넣지 않는다 — 열어봐도 결론을 모르는 힌트를 막기 위함.
+  - 본문 폰트는 `text-sm`(§2 — `text-xs` 이하 지양). 레이어는 §3.4, 모달 내부에서는 `inModal`.
 - **입력**: 날짜/시간 input은 globals.css 전역 리셋(appearance-none·min-w-0·max-w-100%)로 모바일 넘침 차단 — 폼별 `max-w` 임시방편 금지.
+
+### 5.1 데이터 뷰 재사용 패턴 (레퍼런스: [asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) 로컬 `SECTION`/`SectionHeader`/`GROUP_BADGE`/`SpecRow`·비교 그리드)
+
+> 긴 데이터 화면(성적표·허브·상세 등)에서 위계·구분·정렬을 통일하는 레시피. 소비처 2곳 이상 되면 shared 컴포넌트로 추출.
+
+- **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card border border-border/10 dark:border-0 shadow-sm p-4 space-y-3`(테두리보다 그림자 §3.3) + 헤더 = **채운 아이콘 칩**(`flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary` 안에 `size-4` 아이콘) + 굵은 제목(`text-sm sm:text-base font-bold`) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
+- **소그룹 뱃지 라벨** — 섹션 안에서 산식 체인·목록 카테고리 등 하위 묶음의 시작을 표시: `inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary`. muted 텍스트 라벨 대신 brand 톤 뱃지를 쓴다(§1.2 info 아이콘 sky와 구분 — 이건 라벨).
+- **비교 표(그리드)** — 여러 기준을 컬럼 정렬로 대조: `overflow-x-auto` 래퍼(모바일 가로 넘침 보호) + `grid grid-cols-[1fr_auto_…] items-baseline gap-x-… gap-y-…` + 헤더행 + `col-span-N h-px bg-border/40` 구분선. 라벨 좌측, 값 우측(`text-right tabular-nums`), 폭 압축은 `formatShortCurrency`, `min-w-[…]`로 하한. 강조 컬럼만 `font-bold` + 부호색(`getProfitLossColor`).
+- **명세 행(SpecRow)** — 값 + 짧은 설명을 한 캡션에 욱여넣지 말고 라벨/값 분리: 라벨(좌, `text-sm text-muted-foreground text-pretty`, 선택 `· hint`는 `text-muted-foreground/70`) + 값(우, `text-sm text-foreground font-semibold tabular-nums shrink-0`). 좁은 폭 줄바꿈 지저분함을 막는다. 위계·집중도 판단은 §11 참조.
 
 ---
 
@@ -195,6 +220,20 @@
 - Hero(핵심 지표) 최상단·최대 → **핵심 액션 리스트(종목별 손익 등)로 시선이 빨리 닿게**. 사이를 막는 부차 정보(비교표 등)는 **접이식(기본 접힘)** 또는 압축.
 - **단, 사용자 컨트롤(토글·필터)은 접힘 밖 항상 노출** — 조작 요소를 숨기지 않는다.
 - 반올림으로 변화가 안 보이는 부가 줄 등 **저가치 정보는 덜어낸다.**
+
+**지표·성적표 화면 — UI 방향 기준** (4.18 자산 성적표에서 확립, 이후 동일 방향 유지)
+- **등급·티어 시각화는 그림자로**: 테두리 대신 드롭섀도로 등급을 표현하고, **레벨이 높을수록 채도·글로우를 강화**(bronze 은은 → platinum 강한 블룸). §3 "테두리보다 그림자 우선"의 지표 적용. (참고: `asset-report-view.tsx` `TIER_STYLE`)
+- **참고 지표는 결론(Hero) 먼저**: 종합 등급·핵심 결론을 최상단 최대로, 근거·상세는 **접이식 기본 접힘**(위 집중도 원칙의 지표판). 단 사용자 컨트롤(기간 선택 등)은 접힘 밖 노출.
+- **분모/기준이 다른 두 값이 한 화면에 있으면 각 블록에 기준 뱃지**: `모든 자산` vs `금융자산만`, `1년 기준` 등으로 분모를 못박고 검산용 캡션(예: `금융 투자 원가 N원 대비 42%`)을 붙인다. 같은 화면의 두 수치가 다른 분모를 쓰면 사용자는 불일치로 오인한다.
+- **측정 불가·비동기 대기 값은 숨기지 말고 명시**: 빈칸 대신 회색 별("측정불가")·잠정("pending") 표기 + "기록이 쌓이면 자동 정밀화" 안내. 데이터 부족을 침묵으로 처리하지 않는다.
+- **장문 InfoHint 금지**: 힌트는 3문단 상한, 초과 설명은 접기 본문으로 내린다.
+
+**참고 지표·채점 기능 설계 원칙** (§11의 "무엇을 쓸지"가 아닌 "어떻게 채점을 설계할지". 4.18에서 확립, 신규 지표·채점 기능은 이 방향을 따른다)
+- **측정 가능한 것만으로 산출**: 데이터 부족 항목은 `null`(측정불가)로 두고, 종합은 **측정 가능한 축만 가중 재정규화**한다. 데이터가 없다고 신규 사용자를 배제하지 않는다. (참고: `asset-grade.ts` `computeAssetGrade`)
+- **임계값(컷)은 단일 상수에 모으고 근거를 주석으로**: `GRADE_THRESHOLDS`처럼 컷을 한곳에 집약하고 각 컷의 근거(통념·시장 기준)를 코드 주석에 남긴다. 매직넘버를 로직 곳곳에 흩지 않는다.
+- **같은 개념 값은 단일 소스에서 1회 계산 후 공유**: 화면 표시값과 지표 입력이 같은 값을 쓰게 해 **화면-등급 불일치를 구조적으로 차단**(예: `netLeverage`를 Hero와 등급 `coverage`가 공유). 조회는 기존 쿼리 키를 재사용해 캐시를 공유한다(성과 허브·배당 차트와 동일 키, tickerList는 R1대로 `.sort()`).
+- **파생·비동기 값은 pending, 확정 후에만 이력화**: 비동기 대기 축은 잠정 표기하고, 전 축 확정 시에만 스냅샷에 기록하되 **동일 값 재기록은 스킵(멱등)**·과거 스냅샷은 소급 변경하지 않는다.
+- **지표는 참고용임을 고지하고 관점을 분명히**: "투자 조언이 아닌 참고 지표"임을 명시한다. 축의 관점을 명확히 정의한다(예: 레버리지 축은 활용도가 아니라 **건전성/리스크** → 무부채 = 리스크 0 = 만점).
 
 **공용 패턴 — hover + 터치 Popover 힌트** (radix Tooltip은 hover 전용 → Popover + `pointerType` 필터로 데스크톱 hover·모바일 탭 동시지원)
 ```tsx

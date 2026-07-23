@@ -38,6 +38,34 @@ function markDone(id: string): void {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 백업 메타 2키 → 단일 객체 통합
+    // secretasset_last_backup_at + secretasset_backup_nudge_shown_on → secretasset_backup { lastBackupAt, nudgeShownOn }
+    id: "consolidate-backup-keys",
+    run: () => {
+      const lastBackupAt = localStorage.getItem("secretasset_last_backup_at");
+      const nudgeShownOn = localStorage.getItem("secretasset_backup_nudge_shown_on");
+      if (lastBackupAt === null && nudgeShownOn === null) return; // 이관할 값 없음
+      const meta: Record<string, string> = {};
+      if (lastBackupAt !== null) meta.lastBackupAt = lastBackupAt;
+      if (nudgeShownOn !== null) meta.nudgeShownOn = nudgeShownOn;
+      // 이미 통합 키가 있으면 덮어쓰지 않고 병합(신규 값 우선은 아님 — idempotent, 옛 키 우선 이관)
+      let existing: Record<string, string> = {};
+      try { existing = JSON.parse(localStorage.getItem("secretasset_backup") ?? "{}"); } catch { existing = {}; }
+      localStorage.setItem("secretasset_backup", JSON.stringify({ ...meta, ...existing }));
+      localStorage.removeItem("secretasset_last_backup_at");
+      localStorage.removeItem("secretasset_backup_nudge_shown_on");
+    },
+  },
+  {
+    // 공지 열람 키 통합: 죽은 "일주일 숨기기" 잔재 키 제거
+    // (per-id secretasset_notice_seen_* 키의 이관·정리는 notice-dialog의 cleanExpiredNoticeKeys(NOTICE_ID)가 담당)
+    id: "consolidate-notice-keys",
+    run: () => {
+      localStorage.removeItem("secretasset_notice_hide_until");
+      localStorage.removeItem("secretasset-notice-hide-until");
+    },
+  },
+  {
     // 환율 일자별 이력 도입:
     //  1) 사용 중단된 환율 이력 동기화 가드 키 제거 (exchangeSyncDate로 통합됨)
     //  2) 환율 이력 1회 초기화 + exchangeSyncDate 초기화 → 다음 진입에서 서버 2일치

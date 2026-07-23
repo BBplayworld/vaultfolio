@@ -47,9 +47,29 @@ const getComparablePayloadString = (): string => {
   const normalized: Record<string, unknown> = { ...payload };
 
   if (payload.assetData && typeof payload.assetData === "object") {
-    const { lastUpdated, stocks, yearlyNetAssets, ...restAssetData } = payload.assetData as any;
+    const { lastUpdated, stocks, crypto, yearlyNetAssets, realEstate, ...restAssetData } = payload.assetData as any;
     normalized.assetData = {
       ...restAssetData,
+      // 부동산 실거래 추정치는 접속마다 재조회되는 파생값 → 트리거에서 제외 (미제외 시 자동 push 핑퐁, R14)
+      realEstate: Array.isArray(realEstate)
+        ? realEstate.map((r: any) => {
+          const {
+            marketEstimate, marketEstimateDate, marketEstimateSource,
+            marketEstimateComplexName, marketEstimateLegalDong, marketEstimateFloor,
+            marketEstimateArea, marketEstimateGrade, marketEstimateSampleCount,
+            ...rest
+          } = r ?? {};
+          return rest;
+        })
+        : realEstate,
+      // 코인도 접속마다 업비트 시세로 갱신되므로 baseDate(슬롯 도장)·currentPrice를 트리거에서 제외.
+      // 미제외 시 자산 미변경에도 매시간 자동 push 핑퐁 발생 (R14, 주식과 동일한 이유)
+      crypto: Array.isArray(crypto)
+        ? crypto.map((c: any) => {
+          const { baseDate, currentPrice, ...rest } = c ?? {};
+          return rest;
+        })
+        : crypto,
       // API 동기화 종목(ticker 有·비상장 아님)의 접속마다 재계산되는 파생 필드를 트리거에서 제외.
       // - baseDate(시세 슬롯 도장)·name(API 이름)·inactiveCheckedAt: 항상 갱신되므로 halted 포함 모든 API 종목에서 제외.
       // - 활성 종목은 currentPrice·inactiveStatus·inactiveReason(현재가·비활성 파생)도 제외.
@@ -74,6 +94,8 @@ const getComparablePayloadString = (): string => {
   if (payload.snapshots && typeof payload.snapshots === "object") {
     const snap = payload.snapshots as { daily?: unknown[]; monthly?: unknown[] };
     normalized.snapshots = {
+      // 장기 아카이브(dailyArchive)는 월 전환 시 1회만 변해 정당한 push 트리거 — 그대로 비교에 포함
+      ...(payload.snapshots as Record<string, unknown>),
       // 오늘자 일별·이번달 월별은 접속마다 재계산 → 제외. 과거 항목은 유지(확정 시 1회 동기화)
       daily: Array.isArray(snap.daily) ? snap.daily.filter((d: any) => d?.date !== todayStr) : snap.daily,
       monthly: Array.isArray(snap.monthly) ? snap.monthly.filter((m: any) => m?.month !== currentMonth) : snap.monthly,
@@ -227,6 +249,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (r.status === "ok") {
       lastPushedRef.current = getComparablePayloadString();
       setLastSyncedAt(getLastSyncedAt());
+      // lastBackupAt은 건드리지 않는다 — "데이터 백업(파일 내보내기)"만의 사실이다.
+      // 자동 push가 이 값을 갱신하면 사용자가 백업한 적 없는 날도 "마지막 백업: 오늘"로 보인다.
+      // 넛지 오탐은 shouldShowBackupNudge가 syncArmed로 이미 차단하므로 여기서 기록할 필요가 없다.
       if (!silent) toast.success("클라우드에 백업했습니다.");
     } else if (r.status === "conflict") {
       if (!silent) toast.info("클라우드가 더 최신이라 최신 데이터를 반영합니다.");

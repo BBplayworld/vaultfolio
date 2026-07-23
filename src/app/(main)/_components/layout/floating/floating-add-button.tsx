@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
+import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -152,7 +153,8 @@ export function FloatingAddButton() {
       {/* 모바일: 하단 고정 바 (배경·그라데이션·스크롤 hide 포함) */}
       {showBar && isMobile && (
         <div
-          className={`pwa-fab-container fixed bottom-0 left-0 right-0 z-40 transition-[transform,opacity] duration-150
+          style={{ zIndex: Z_LAYER.floating }}
+          className={`pwa-fab-container fixed bottom-0 left-0 right-0 transition-[transform,opacity] duration-150
           ${isHidden ? "translate-y-[calc(100%+1rem)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
         >
           <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />

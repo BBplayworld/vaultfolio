@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ShieldCheck, AlertTriangle } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { MAIN_PALETTE } from "@/config/theme";
+import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
 
 const AUTH_ENABLED_KEY = "secretasset_pwa_auth_enabled";
@@ -105,7 +105,7 @@ export function PwaLockScreen() {
   if (!mounted || !locked) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-6 px-6">
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6 px-6" style={{ zIndex: Z_LAYER.lock }}>
       <div className="flex flex-col items-center gap-3">
         <div
           className="flex items-center justify-center size-16 rounded-2xl text-white"
