@@ -1,6 +1,43 @@
 # 개발 규칙 & 패턴
 
-> 마지막 업데이트: 2026-06-22 (경로: `(main)/asset/` 제거 → `(main)/_components/` 평탄화)
+> 마지막 업데이트: 2026-07-23 (재사용 우선 체크리스트 신설)
+
+## 재사용 우선 체크리스트 (강제 — 모든 신규·수정 구현)
+
+> **기존 구현 방식이 이후 모든 작업의 기본 방향.** 신규 구현의 목표는 "새로 만들기"가 아니라 **기존 자산 재사용으로 작업 최소화**다. `CLAUDE.md` 최상위 재사용 정책의 실행 절차 단일 출처.
+
+**구현 전 게이트** (신규 파일 생성·기능 추가 전 반드시 통과):
+1. **검색했는가** — 만들려는 것과 같은 역할의 기존 컴포넌트/유틸/패턴을 아래 카탈로그 + `Grep`으로 찾았는가.
+2. **재사용 가능한가** — 가능하면 재사용(그대로·래핑·파라미터화). 불가하면 **왜 불가한지 한 줄**로 남긴다.
+3. **신규 생성이면** — 공용 자산(2곳 이상에서 쓰일 수 있는가)? 공용이면 **카탈로그 등록 대상**(아래 등록 규약).
+
+> src/ 하위 신규 파일을 `Write`할 때 비차단 PreToolUse 훅(`.claude/hooks/reuse-reminder.mjs`)이 이 게이트를 상기시킨다.
+
+**검색 위치 표** (무엇을 찾을 때 어느 문서를):
+
+| 찾는 것 | 문서 |
+| --- | --- |
+| 공용 UI 컴포넌트·폼·차트 | [components.md](./components.md) |
+| 색·간격·반경·컴포넌트/모션 규약·정보설계 | [design-system.md](./design-system.md) |
+| 유틸 함수·Context·Store 시그니처 | [state-and-utils.md](./state-and-utils.md) |
+| 코드 패턴·주의사항(통화·캐시키·필터 등) | [dev-rules.md](./dev-rules.md) (본 문서 아래) |
+| 기존 기능 현행 사양 | [qa-full-test-plan.md](./qa-full-test-plan.md) `F-*` |
+
+**"새로 만들기 전에 확인" — 중복 다발 지점** (아래는 신규 작성 금지, 기존 것 재사용):
+- 포맷·통화 함수 → `formatPriceByMode`·`formatShortCurrency`·`formatCurrencyDisplay`·`getMultiplier` 재사용.
+- 카드·셀렉터·힌트 → `InlineSelector`(size sm/md/lg)·`kpi-card`·`InfoHint`·`prompt-preview-dialog` 재사용.
+- 시세 fetch → `fetchProfitRef` 재사용, tickerList는 항상 `.sort()`(캐시 키 일관성).
+- 색·간격 → 하드코딩 금지, `ASSET_THEME.*`·design-system 토큰.
+- 저장 키 → 신규 문자열 금지, `STORAGE_KEYS.*`(`src/lib/local-storage.ts`) 경유.
+- 손익 색 → `getProfitLossColor`(상승 빨강/하락 파랑) 재사용.
+
+**신규 공용 자산 등록 규약** (등록 없는 신규 공용 자산 금지):
+- 공용 컴포넌트 → `components.md` 해당 그룹에 1줄(경로·역할·핵심 props).
+- 유틸/Context/Store → `state-and-utils.md`에 시그니처.
+- 새 색·간격·컴포넌트/모션 패턴 → `design-system.md` 관련 §.
+- 등록은 코드와 **같은 작업 단위**에서 처리(KB 동시 갱신 관행과 짝).
+
+---
 
 ## 코드 패턴
 

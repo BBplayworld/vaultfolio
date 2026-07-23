@@ -227,7 +227,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <CardTitle>배당</CardTitle>
-                <InfoHint>
+                <InfoHint summary="아직 안 받은 달은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
                   <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
                   <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
                   <p><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</p>

@@ -60,7 +60,7 @@ export const ASSET_THEME = {
   cardAmountSub: "text-sm font-bold tabular-nums",
   cardAmountRate: "text-sm font-bold tabular-nums",
   categoryBox: "rounded bg-primary/10 px-2 py-1 text-xs text-primary font-medium font-semibold",
-  todayBox: "text-xs text-muted-foreground px-2 py-0.5 rounded border border-primary bg-primary/5 shrink-0",
+  todayBox: "inline-flex items-center gap-0.5 rounded bg-muted/60 px-1.5 py-0.5 font-semibold tabular-nums shrink-0",
   inputHeader: "flex items-center justify-between gap-2 px-4 py-2.5 border-primary/30 bg-primary/15 dark:bg-primary/5 border-b-0",
   liabilityBadge: "flex items-center justify-between text-sm rounded-md bg-rose-500/5 border border-rose-200/30 dark:border-rose-900/30 px-2.5 py-1.5",
 
@@ -112,6 +112,34 @@ export const ASSET_THEME = {
  */
 export function getProfitLossColor(value: number): string {
   return value >= 0 ? ASSET_THEME.profit : ASSET_THEME.loss;
+}
+
+/**
+ * z-index 레이어 스케일 — 겹침 순서의 단일 출처(single source of truth)
+ *
+ * 규칙: 새 오버레이는 반드시 이 표의 값을 쓰고, 임의의 z-* 를 만들지 않는다.
+ * 같은 층에 두 요소를 두면 DOM 순서에 따라 가려지므로 **동률 배치 금지**.
+ *
+ * - hint 가 nav 보다 위: 하단 네비·스크롤 버튼 위에서도 설명 팝오버가 보여야 한다.
+ * - modalHint 가 modal 보다 위: 다이얼로그 안에서 연 InfoHint 가 가려지면 안 된다.
+ *   (Popover 는 Portal 로 body 에 붙어 모달의 stacking context 밖에 놓인다)
+ */
+export const Z_LAYER = {
+  base: 10,        // 카드 내 오버레이(로딩 가림막 등)
+  raised: 20,      // 리사이저·겹침 컨트롤
+  floating: 40,    // FAB, PWA 연결 프롬프트
+  nav: 50,         // 하단 네비, 스크롤 투 톱
+  hint: 60,        // InfoHint·Tooltip (nav 위)
+  modal: 10001,    // Dialog·Sheet 오버레이
+  modalContent: 10002,
+  modalHint: 10003, // 모달 내부에서 열리는 InfoHint
+  gate: 10100,     // 인앱 브라우저 게이트
+  lock: 10200,     // 앱 잠금 화면
+} as const;
+
+/** Tailwind 임의값 클래스로 변환 (예: Z_LAYER.hint → "z-[60]") */
+export function zClass(layer: keyof typeof Z_LAYER): string {
+  return `z-[${Z_LAYER[layer]}]`;
 }
 
 /**

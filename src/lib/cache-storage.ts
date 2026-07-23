@@ -12,6 +12,7 @@
  */
 
 import type { ExchangeRates, StockPriceResult, DividendPayoutResult } from "./finance-service";
+import type { CoinPriceResult } from "./upbit-service";
 import type { ProfitPeriod } from "./profit-utils";
 import type { StockClassification } from "./xray/classification-store";
 import type { AssetEnvelope } from "./cloud-sync/config";
@@ -66,6 +67,21 @@ export interface ICacheStorage {
   // 종목 분류 캐시 (X-Ray, 90일 TTL)
   getStockClassification(ticker: string): Promise<StockClassification | null>;
   setStockClassification(ticker: string, value: StockClassification): Promise<void>;
+
+  // ── 암호화폐 (업비트) ──
+  // 슬롯 캐시(1시간)와 stale 캐시(3시간)를 분리 저장 — 갱신 실패 시에도 최근 값 제공
+  getCoin(cacheKey: string): Promise<CoinPriceResult | null>;
+  getCoinStale(market: string): Promise<CoinPriceResult | null>;
+  setCoin(cacheKey: string, market: string, result: CoinPriceResult): Promise<void>;
+  // 원화 마켓 페어 목록 (TTL 1일) — 무효 심볼로 ticker 요청 전체가 실패하는 것 방지
+  getUpbitMarkets(): Promise<string[] | null>;
+  setUpbitMarkets(markets: string[]): Promise<void>;
+  // 외부 호출 직렬화용 락 — 획득 성공 시 true. TTL 후 자동 해제
+  acquireUpbitLock(ttlSec: number): Promise<boolean>;
+  releaseUpbitLock(): Promise<void>;
+  // 마지막 외부 호출 시각(ms) — 최소 호출 간격 강제용
+  getUpbitLastCallAt(): Promise<number | null>;
+  setUpbitLastCallAt(ms: number): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -92,6 +108,12 @@ const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
 const STOCK_CLASSIFICATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90일
 const STOCK_CLASSIFICATION_TTL_SEC = 90 * 24 * 60 * 60;
+// 코인: 슬롯 1시간 캐시 + 3시간 stale 폴백 (갱신 실패해도 최근 값 제공)
+const COIN_TTL_SEC = 3600;
+const COIN_STALE_TTL_SEC = 3 * 3600;
+const COIN_STALE_TTL_MS = COIN_STALE_TTL_SEC * 1000;
+const UPBIT_MARKETS_TTL_SEC = 24 * 3600;
+const UPBIT_MARKETS_TTL_MS = UPBIT_MARKETS_TTL_SEC * 1000;
 
 // 서버/클라이언트 공통 캐시 슬롯 유틸 (stock-cache-slot.ts에서 re-export)
 import { getEffectiveDateStr as _getEffectiveDateStr, getStockCacheSlot as _getStockCacheSlot } from "./stock-cache-slot";
@@ -210,6 +232,13 @@ interface FileCacheData {
   STOCK_CLASSIFICATION_V2?: Record<string, { value: StockClassification; updated_at: number }>;
   // X-Ray 종목 분류 v3 (90일 TTL, per-ticker, themes/indices/marketCapTier — Gemini 시총 일원 추정)
   STOCK_CLASSIFICATION_V3?: Record<string, { value: StockClassification; updated_at: number }>;
+  // 암호화폐 슬롯 캐시 — STOCKS와 반드시 분리(writeFinanceCache의 prune이 주식 유효일 기준이라
+  // 같은 버킷에 넣으면 매 write마다 코인 항목이 통째로 삭제된다)
+  COINS?: Record<string, { value: CoinPriceResult; updated_at: number }>;
+  // 마지막 성공값 (stale 폴백, market 단위)
+  COINS_LAST?: Record<string, { value: CoinPriceResult; updated_at: number }>;
+  UPBIT_MARKETS?: { markets: string[]; updated_at: number };
+  UPBIT_LAST_CALL?: number;
 }
 
 interface ShareTokenEntry {
@@ -536,6 +565,72 @@ class FileCacheStorage implements ICacheStorage {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
     this.writeFinanceCache(cache, todayStr);
   }
+
+  // ── 암호화폐 ──
+  private writeCoinCache(cache: FileCacheData): void {
+    const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    this.writeFinanceCache(cache, todayStr);
+  }
+
+  async getCoin(cacheKey: string): Promise<CoinPriceResult | null> {
+    const entry = this.readFinanceCache().COINS?.[cacheKey];
+    if (!entry) return null;
+    if (Date.now() - entry.updated_at > COIN_TTL_SEC * 1000) return null;
+    return entry.value;
+  }
+
+  async getCoinStale(market: string): Promise<CoinPriceResult | null> {
+    const entry = this.readFinanceCache().COINS_LAST?.[market];
+    if (!entry) return null;
+    if (Date.now() - entry.updated_at > COIN_STALE_TTL_MS) return null;
+    return entry.value;
+  }
+
+  async setCoin(cacheKey: string, market: string, result: CoinPriceResult): Promise<void> {
+    const cache = this.readFinanceCache();
+    if (!cache.COINS) cache.COINS = {};
+    if (!cache.COINS_LAST) cache.COINS_LAST = {};
+    const now = Date.now();
+    cache.COINS[cacheKey] = { value: result, updated_at: now };
+    cache.COINS_LAST[market] = { value: result, updated_at: now };
+    // 만료된 슬롯 항목 정리 (STOCKS와 달리 자체 TTL 기준)
+    for (const [k, v] of Object.entries(cache.COINS)) {
+      if (now - v.updated_at > COIN_STALE_TTL_MS) delete cache.COINS[k];
+    }
+    this.writeCoinCache(cache);
+  }
+
+  async getUpbitMarkets(): Promise<string[] | null> {
+    const entry = this.readFinanceCache().UPBIT_MARKETS;
+    if (!entry) return null;
+    if (Date.now() - entry.updated_at > UPBIT_MARKETS_TTL_MS) return null;
+    return entry.markets;
+  }
+
+  async setUpbitMarkets(markets: string[]): Promise<void> {
+    const cache = this.readFinanceCache();
+    cache.UPBIT_MARKETS = { markets, updated_at: Date.now() };
+    this.writeCoinCache(cache);
+  }
+
+  // 로컬은 단일 프로세스 — 라우트의 in-flight dedup이 직렬화를 담당하므로 락은 항상 성공 처리
+  async acquireUpbitLock(_ttlSec: number): Promise<boolean> {
+    return true;
+  }
+
+  async releaseUpbitLock(): Promise<void> {
+    // no-op
+  }
+
+  async getUpbitLastCallAt(): Promise<number | null> {
+    return this.readFinanceCache().UPBIT_LAST_CALL ?? null;
+  }
+
+  async setUpbitLastCallAt(ms: number): Promise<void> {
+    const cache = this.readFinanceCache();
+    cache.UPBIT_LAST_CALL = ms;
+    this.writeCoinCache(cache);
+  }
 }
 
 // 서버 캐시용 분류 머지 — indices만 배열 합집합, 나머지는 spread (후행 우선)
@@ -759,5 +854,47 @@ class UpstashCacheStorage implements ICacheStorage {
     const prev = await this.redis.get<StockClassification>(key);
     const merged = mergeClassificationValue(prev ?? undefined, value);
     await this.redis.set(key, merged, { ex: STOCK_CLASSIFICATION_TTL_SEC });
+  }
+
+  // ── 암호화폐 ──
+  // 키 접두를 finance:coin:으로 분리 — finance:stock: SCAN 정리와 서로 지우지 않도록
+  async getCoin(cacheKey: string): Promise<CoinPriceResult | null> {
+    return this.redis.get<CoinPriceResult>(`finance:coin:${cacheKey}`);
+  }
+
+  async getCoinStale(market: string): Promise<CoinPriceResult | null> {
+    return this.redis.get<CoinPriceResult>(`finance:coin:last:${market}`);
+  }
+
+  async setCoin(cacheKey: string, market: string, result: CoinPriceResult): Promise<void> {
+    await this.redis.set(`finance:coin:${cacheKey}`, result, { ex: COIN_TTL_SEC });
+    // stale 폴백 — 슬롯 캐시가 만료돼도 3시간은 마지막 값을 제공
+    await this.redis.set(`finance:coin:last:${market}`, result, { ex: COIN_STALE_TTL_SEC });
+  }
+
+  async getUpbitMarkets(): Promise<string[] | null> {
+    return this.redis.get<string[]>("finance:upbit:markets");
+  }
+
+  async setUpbitMarkets(markets: string[]): Promise<void> {
+    await this.redis.set("finance:upbit:markets", markets, { ex: UPBIT_MARKETS_TTL_SEC });
+  }
+
+  // SET NX EX — 획득자만 외부 호출. TTL로 홀더가 죽어도 자동 해제
+  async acquireUpbitLock(ttlSec: number): Promise<boolean> {
+    const res = await this.redis.set("finance:upbit:lock", "1", { nx: true, ex: ttlSec });
+    return res === "OK";
+  }
+
+  async releaseUpbitLock(): Promise<void> {
+    await this.redis.del("finance:upbit:lock");
+  }
+
+  async getUpbitLastCallAt(): Promise<number | null> {
+    return this.redis.get<number>("finance:upbit:last");
+  }
+
+  async setUpbitLastCallAt(ms: number): Promise<void> {
+    await this.redis.set("finance:upbit:last", ms, { ex: 60 });
   }
 }

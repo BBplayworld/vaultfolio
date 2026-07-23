@@ -148,6 +148,7 @@ _components/
 | ProfitCard          | `main-nav/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드)   |
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
+| AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
 
 ### ProfitCard 점진 로드 (`profit-chart.tsx`)
 

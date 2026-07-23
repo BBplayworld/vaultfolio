@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Upload, Download } from "lucide-react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { updateThemeMode } from "@/lib/theme-utils";
 import { setValueToCookie } from "@/server/server-actions";
@@ -29,7 +29,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { clearAssetData, clearUserCaches, exportAssetData } from "@/lib/asset-storage";
+import { clearAssetData, clearUserCaches } from "@/lib/asset-storage";
+import { clearBackupStatus } from "@/lib/backup-status";
+import { useDataExport } from "@/hooks/use-data-export";
+import { computeStorageStats, formatBytes } from "@/lib/storage-stats";
+import { APP_VERSION } from "@/config/app-version";
+import { APP_CONFIG } from "@/config/app";
+import { InlineSelector } from "../layout/ui/inline-selector";
+import { InfoHint } from "../layout/ui/info-hint";
+import { useProfitBasisStore } from "@/stores/profit-basis-store";
+import type { ProfitBasis } from "@/lib/profit-utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { useAssetImport } from "@/hooks/use-asset-import";
@@ -104,21 +113,28 @@ export function SettingsPage() {
     toast.success(`캐시 ${count}개를 초기화했습니다.`);
   };
 
-  const handleExport = () => {
-    try {
-      exportAssetData();
-      toast.success("자산 데이터가 다운로드되었습니다.");
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
-    } catch (error) {
-      toast.error("데이터 내보내기에 실패했습니다.");
-    }
-  };
+  // 저장 현황 갱신용 tick (가져오기/삭제 직후 재계산)
+  const { exportTick } = useDataExport();
+
+  // 저장 현황 — 전체 키 순회가 필요한 동기 작업이라 설정 진입 시 1회만 계산
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stats = useMemo(() => computeStorageStats(), [exportTick]);
+
+  // 종가 기준 — 성과 탭에만 있던 설정값을 설정 화면에서도 바꿀 수 있게 노출
+  const profitBasis = useProfitBasisStore((s) => s.basis);
+  const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
+  const setProfitBasis = useProfitBasisStore((s) => s.setBasis);
+  const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
+  useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
 
   const handleClear = () => {
     // 동기화 연결을 먼저 해제(forget) → 빈 자산이 클라우드로 자동 push되어 백업이
     // 덮어써지는 것을 차단한다. 클라우드 금고 자체는 보존(다른 기기·재연결로 복구 가능).
     cs.forget();
     const success = clearAssetData();
+    // clearAssetData는 백업 시각을 보존하지만(가져오기 경로 보호), 전체 삭제는 사용자의
+    // 명시적 의도이므로 여기서만 함께 지운다 — 남은 데이터가 없으니 "백업함" 상태도 무의미.
+    clearBackupStatus();
     if (success) {
       refreshData();
       toast.success("모든 자산 데이터가 삭제되었습니다.");
@@ -197,13 +213,6 @@ export function SettingsPage() {
         <section>
           <p className={SECTION_LABEL}>데이터</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={handleExport} disabled={!hasAssets}>
-              <Upload className="size-5 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="font-medium">데이터 내보내기</span>
-                <p className="text-sm text-muted-foreground mt-0.5">현재 자산 데이터를 JSON 파일로 다운로드</p>
-              </div>
-            </button>
             <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
               <Download className="size-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
@@ -222,6 +231,49 @@ export function SettingsPage() {
               <Trash2 className="size-5 shrink-0" />
               <span className="font-medium">모든 데이터 삭제</span>
             </button>
+            {/* 저장 현황 — 내 데이터가 얼마나 쌓였는지 (읽기 전용) */}
+            {stats.itemCount > 0 && (
+              <p className="px-4 pt-1 text-sm text-muted-foreground tabular-nums text-pretty">
+                자산 {stats.itemCount}개 · 일별 기록 {stats.dailyCount}일
+                {stats.archivedMonths > 0 && ` (+보관 ${stats.archivedMonths}개월)`}
+                {" · 약 "}{formatBytes(stats.approxBytes)}
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <p className={SECTION_LABEL}>표시</p>
+          <div className="px-4 py-3 rounded-xl bg-card shadow-xs space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium">기간 수익 종가 기준</span>
+              <InfoHint summary="국내·해외 종가를 어느 날짜로 묶어 합산할지 정하는 기준이에요.">
+                <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
+                <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
+              </InfoHint>
+            </div>
+            {/* hydrate 전에는 기본값이 렌더돼 실제 설정과 어긋나므로 확정 후 노출 */}
+            {profitBasisHydrated && (
+              <InlineSelector
+                value={profitBasis}
+                onChange={(v) => setProfitBasis(v as ProfitBasis)}
+                options={[
+                  { value: "sameBusinessDay", label: "동일 영업일" },
+                  { value: "kstAccessDay", label: "KST 접속일" },
+                ]}
+                size="sm"
+                ariaLabel="기간 수익 종가 기준"
+              />
+            )}
+          </div>
+        </section>
+
+        <section>
+          <p className={SECTION_LABEL}>정보</p>
+          <div className="px-4 py-3 rounded-xl bg-card shadow-xs">
+            <p className="text-sm text-muted-foreground">
+              {APP_CONFIG.name} <span className="tabular-nums">v{APP_VERSION}</span>
+            </p>
           </div>
         </section>
       </div>

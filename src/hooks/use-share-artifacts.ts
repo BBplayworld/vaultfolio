@@ -1,24 +1,12 @@
 "use client";
 
 import { useAssetData } from "@/contexts/asset-data-context";
-import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset-storage";
 import { getProfitBasis } from "@/lib/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
-import type { AssetSnapshots } from "@/types/asset";
 
-/** 일별·월별 순자산 스냅샷을 localStorage에서 수집 (공유 토큰에 포함). */
-export function collectSnapshots(): AssetSnapshots {
-  try {
-    const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
-    const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
-    return {
-      daily: rawDaily ? JSON.parse(rawDaily) : [],
-      monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
-    };
-  } catch {
-    return { daily: [], monthly: [] };
-  }
-}
+/** 일별·월별 순자산 스냅샷 수집 — 정본은 asset-storage.collectSnapshotsFromStorage */
+export { collectSnapshotsFromStorage as collectSnapshots };
 
 /**
  * 공유 토큰 생성 → 서버 저장 → { url(start_url용), code(복원 코드용) } 반환.
@@ -45,7 +33,7 @@ export function useShareArtifacts() {
     const localKey = Math.random().toString(36).substring(2, 14);
     const token = generateShareToken(
       assetData, exchangeRates, pin || undefined, localKey,
-      collectSnapshots(), getProfitBasis(), nickname || undefined,
+      collectSnapshotsFromStorage(), getProfitBasis(), nickname || undefined,
     );
 
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;

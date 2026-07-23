@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     const nickname = body.nickname?.trim().slice(0, FIELD_MAX) || "(미입력)";
     const contact = body.contact?.trim().slice(0, FIELD_MAX) || "(미입력)";
-    const text = `*[secretasset 의견·요청]*\n닉네임: ${nickname}\n연락처: ${contact}\n\n${message}`;
+    const text = `*[시크릿에셋 의견·요청]*\n닉네임: ${nickname}\n연락처: ${contact}\n\n${message}`;
 
     const res = await fetch(webhookUrl, {
       method: "POST",

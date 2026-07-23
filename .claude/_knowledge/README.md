@@ -15,6 +15,10 @@ Claude와의 장기 개발 협업을 위한 지식 베이스입니다.
 | [state-and-utils.md](./state-and-utils.md) | Context·Store·유틸 함수 시그니처 | 함수 추가/변경 시 |
 | [dev-rules.md](./dev-rules.md) | 코딩 규칙·패턴·주의사항 | 규칙 합의 시 |
 | [changelog.md](./changelog.md) | 주요 변경 이력 (무엇을·왜) | 매 작업 후 |
+| [qa-full-test-plan.md](./qa-full-test-plan.md) | 전체 기능 QA 계획 — `F-*` 매트릭스가 **기존 기능의 현행 사양**을 겸함 | 기능 추가·회귀 발견 시 |
+
+> 기능의 **의도·수용 기준**(이번에 무엇을 왜 만드나)은 KB가 아니라 [`../specs/`](../specs/)에 둔다.
+> KB는 **"지금 코드가 어떻게 되어 있나"** 만 기록한다. 기존 기능의 현행 사양은 [qa-full-test-plan.md](./qa-full-test-plan.md)의 `F-*` 매트릭스가 담당한다.
 
 ## 운영 규칙
 
@@ -22,3 +26,4 @@ Claude와의 장기 개발 협업을 위한 지식 베이스입니다.
 2. **새 대화 시작 시** Claude는 관련 KB 파일을 먼저 읽고 작업한다.
 3. **코드가 KB와 충돌**하면 실제 코드를 신뢰하고 KB를 수정한다.
 4. **changelog.md**는 "왜" 변경했는지를 중심으로 간결하게 기록한다.
+5. **재사용 우선**: 신규·수정 구현 전 재사용 지도(components·state-and-utils·design-system·dev-rules)를 먼저 검색하고, 재사용 가능한 신규 공용 코드는 **생성과 동시에 관련 카탈로그에 등록**한다. 절차는 [dev-rules.md](./dev-rules.md) "재사용 우선 체크리스트", 최상위 정책은 `CLAUDE.md`.

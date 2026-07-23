@@ -5,7 +5,7 @@ import { BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getNoticeWindow } from "@/lib/notice-config";
-import { STORAGE_KEY_PREFIXES, cleanExpiredNoticeKeys } from "@/lib/local-storage";
+import { cleanExpiredNoticeKeys, readNoticeSeenId, markNoticeSeen } from "@/lib/local-storage";
 import { NOTICE_ID, NOTICE_TITLE, NoticeContent } from "./notice";
 
 export function UpdateNoticeDialog() {
@@ -19,10 +19,9 @@ export function UpdateNoticeDialog() {
       setIsHydrated(true);
       return;
     }
-    cleanExpiredNoticeKeys();
-    const key = `${STORAGE_KEY_PREFIXES.notice}${NOTICE_ID}`;
-    const seen = localStorage.getItem(key);
-    if (!seen) {
+    // 현재 공지 레거시 per-id 키를 단일 키로 이관 + 나머지 공지 키 전부 정리(한 개만 유지)
+    cleanExpiredNoticeKeys(NOTICE_ID);
+    if (readNoticeSeenId() !== NOTICE_ID) {
       setOpen(true);
     }
     setIsHydrated(true);
@@ -32,11 +31,7 @@ export function UpdateNoticeDialog() {
   if (!isHydrated || !windowConfig) return null;
 
   const handleClose = () => {
-    const key = `${STORAGE_KEY_PREFIXES.notice}${NOTICE_ID}`;
-    localStorage.setItem(
-      key,
-      JSON.stringify({ seenAt: Date.now(), expiresAt: windowConfig.expiresAt })
-    );
+    markNoticeSeen(NOTICE_ID, windowConfig.expiresAt);
     setOpen(false);
   };
 

@@ -21,7 +21,8 @@ import { Stock } from "@/types/asset";
 
 // 외부(KIS) API fetch 전역 timeout — 응답 지연 시 3초 후 TimeoutError로 중단
 const FETCH_TIMEOUT_MS = 3000;
-function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+// 외부 API 공용 — upbit-service 등에서도 재사용
+export function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 

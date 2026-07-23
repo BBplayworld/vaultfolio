@@ -1,68 +1,28 @@
 "use client";
 
-import React, { useRef, useState, useMemo } from "react";
-import { Camera, Copy, Check, Loader2, Download, X } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { Camera, Copy, Check, Loader2, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ShareCard } from "./share-card";
-import { CATEGORY_TABS } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
 import { MAIN_PALETTE } from "@/config";
-import { useAssetData } from "@/contexts/asset-data-context";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export interface SectionVisibility {
-  donut: boolean;
-  stock: boolean;
-}
-
-export const SECTION_OPTIONS: { key: keyof SectionVisibility; label: string }[] = [
-  { key: "donut", label: "자산 분포" },
-  { key: "stock", label: "주식" },
-];
-
 export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
-  const { assetData } = useAssetData();
-  const [hideAmounts, setHideAmounts] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("all");
-
-  const activeCategories = useMemo(() => {
-    return Array.from(
-      new Set(
-        assetData.stocks
-          .filter((s) => s.inactiveStatus !== "delisted")
-          .map((s) => s.category)
-      )
-    );
-  }, [assetData.stocks]);
-
-  const visibleTabs = useMemo(() => {
-    return CATEGORY_TABS.filter((tab) => {
-      if (tab.value === "all") return true;
-      return activeCategories.includes(tab.value);
-    });
-  }, [activeCategories]);
+  // 기본은 금액 노출 — 필요 시 스위치로 숨겨 자산 규모(₩)만 가릴 수 있다
+  const [showAmounts, setShowAmounts] = useState(true);
   const [isCopying, setIsCopying] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isCaptureMode, setIsCaptureMode] = useState(false);
-  const [sections, setSections] = useState<SectionVisibility>({
-    donut: true,
-    stock: true,
-  });
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const toggleSection = (key: keyof SectionVisibility) =>
-    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const captureImage = async () => {
     if (!cardRef.current) return null;
@@ -153,77 +113,27 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={!isCaptureMode} className={`p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 ${isCaptureMode ? "max-w-full sm:max-w-full w-screen h-dvh max-h-dvh rounded-none border-0" : "max-w-[520px] sm:max-w-[680px] max-h-[96dvh] flex flex-col"}`}>
-        {/* 헤더 — 캡처 모드에서 숨김 */}
-        {!isCaptureMode && (
-          <DialogHeader className="px-5 pt-4 pb-1">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Camera className="size-4 text-primary" />
-              인증용 스크린샷
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-            </DialogDescription>
-          </DialogHeader>
-        )}
+      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 max-w-[520px] sm:max-w-[680px] h-[94dvh] max-h-[96dvh] flex flex-col">
+        <DialogHeader className="px-5 pt-4 pb-1">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Camera className="size-4 text-primary" />
+            인증용 스크린샷
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* 섹션 선택 체크박스 — 캡처 모드에서 숨김 */}
-        {!isCaptureMode && (
-          <div className="px-5 py-3 border-t bg-muted/10">
-            <p className="text-sm text-muted-foreground font-medium mb-2">포함할 항목</p>
-            <div className="flex items-center gap-x-5 gap-y-2 flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {SECTION_OPTIONS.map(({ key, label }) => (
-                <div key={key} className="flex items-center gap-1.5 shrink-0">
-                  <Checkbox
-                    id={`section-${key}`}
-                    checked={sections[key]}
-                    onCheckedChange={() => toggleSection(key)}
-                    className="size-3.5"
-                    style={{ backgroundColor: MAIN_PALETTE[0], borderColor: MAIN_PALETTE[0] }}
-                  />
-                  <Label htmlFor={`section-${key}`} className="text-sm cursor-pointer select-none whitespace-nowrap">
-                    {label}
-                    {key === "stock" && activeCategories.length > 0 && (
-                      <Select value={activeCategory} onValueChange={setActiveCategory}>
-                        <SelectTrigger className="h-5 text-sm w-[76px] ml-1.5 inline-flex">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {visibleTabs.map((tab) => (
-                            <SelectItem key={tab.value} value={tab.value} className="text-sm">
-                              {tab.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 제어 바 — 캡처 모드에서 숨김 */}
-        {!isCaptureMode && (
-          <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-b bg-muted/20 flex-wrap">
+        {/* 제어 바 */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-b bg-muted/20 flex-wrap">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Switch
-                  id="hide-amounts"
-                  checked={hideAmounts}
-                  onCheckedChange={setHideAmounts}
+                  id="show-amounts"
+                  checked={showAmounts}
+                  onCheckedChange={setShowAmounts}
                   className="scale-90"
                 />
-                <Label htmlFor="hide-amounts" className="text-sm cursor-pointer select-none">금액 숨기기</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="capture-mode"
-                  checked={isCaptureMode}
-                  onCheckedChange={setIsCaptureMode}
-                  className="scale-90"
-                />
-                <Label htmlFor="capture-mode" className="text-sm cursor-pointer select-none">캡처 모드</Label>
+                <Label htmlFor="show-amounts" className="text-sm cursor-pointer select-none">금액 표시</Label>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -261,29 +171,13 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                 {saveSuccess ? "저장됨!" : isSaving ? "처리 중..." : "저장"}
               </Button>
             </div>
-          </div>
-        )}
+        </div>
 
         {/* 카드 미리보기 */}
-        <div className={`overflow-y-auto flex-1 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none ${isCaptureMode ? "h-dvh p-2 sm:p-4" : "p-2 sm:p-4"}`}>
-          {/* 캡처 모드 해제 버튼 */}
-          {isCaptureMode && (
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={() => setIsCaptureMode(false)}
-                className="flex items-center gap-1 text-sm text-muted-foreground bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-full transition-colors"
-              >
-                <X className="size-3" />
-                캡처 모드 해제
-              </button>
-            </div>
-          )}
+        <div className="overflow-y-auto flex-1 p-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <div ref={wrapperRef} className="w-[480px] max-w-full mx-auto">
             <ShareCard
-              hideAmounts={hideAmounts}
-              activeCategory={activeCategory}
-              onCategoryChange={setActiveCategory}
-              sections={sections}
+              hideAmounts={!showAmounts}
               cardRef={cardRef}
             />
           </div>

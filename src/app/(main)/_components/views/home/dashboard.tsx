@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatShortCurrencyDecimal, getPriceLayout } from "@/lib/number-utils";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
+import { readExchangeHistory } from "@/lib/profit-utils";
+import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot } from "@/types/asset";
-import { STORAGE_KEYS } from "@/lib/asset-storage";
 import { DataSourceBadge } from "../data-source-badge";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
+import { BackupNudge } from "./backup-nudge";
+import { useAssetNavigation } from "../../layout/navigation/navigation-context";
+import { ChevronRight, ChevronDown } from "lucide-react";
+import type { ReactNode } from "react";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -181,7 +187,7 @@ export function NetAssetSummaryBox({
   totalAsset,
   totalLiability,
   nickname,
-  lastDaily,
+  change,
   treemapData,
   activeTab = "all",
   onSegmentClick,
@@ -193,7 +199,7 @@ export function NetAssetSummaryBox({
   totalAsset?: number;
   totalLiability?: number;
   nickname?: string;
-  lastDaily?: { diff: number; pct: number; isBig: boolean } | null;
+  change?: HeaderChange | null;
   treemapData: TreemapItem[];
   activeTab?: string;
   onSegmentClick?: (key: string) => void;
@@ -201,8 +207,10 @@ export function NetAssetSummaryBox({
   screenshotMode?: boolean;
   showRealtimeBadge?: boolean;
 }) {
-  const netAssetLayout = getPriceLayout(netAsset);
+  // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
+  const [causeOpen, setCauseOpen] = useState(false);
+  const hasCause = !!change && (!!change.sentence || change.estimated);
 
   return (
     <div className="space-y-4">
@@ -216,22 +224,40 @@ export function NetAssetSummaryBox({
             {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
           </div>
 
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
-              {netAssetLayout.primary}
-            </p>
-            {lastDaily && (
-              <span className={`text-base lg:text-lg font-extrabold tabular-nums ${lastDaily.isBig ? "animate-pulse" : ""} ${getProfitLossColor(lastDaily.diff)}`}>
-                {lastDaily.diff >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(lastDaily.diff)}
-                <span className="text-sm lg:text-base font-bold ml-1">({lastDaily.diff >= 0 ? "+" : ""}{lastDaily.pct.toFixed(1)}%)</span>
-              </span>
+          <div className="mt-1 space-y-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
+                {formatPriceByMode(netAsset)}
+              </p>
+              {change && (
+                <span className={`inline-flex items-center text-base lg:text-lg font-extrabold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
+                  {change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}
+                  <span className="text-sm lg:text-base font-bold ml-1">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
+                  <span className="text-sm font-medium text-muted-foreground ml-1.5">{change.label}</span>
+                  {/* 원인 문구는 기본 접힘 — 헤더에 상시 노출하면 숫자보다 문장이 시선을 끈다 */}
+                  {hasCause && !screenshotMode && (
+                    <button
+                      type="button"
+                      onClick={() => setCauseOpen((v) => !v)}
+                      aria-expanded={causeOpen}
+                      aria-label="변동 원인 보기"
+                      className="ml-1 -my-2 p-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronDown className={`size-3.5 transition-transform duration-200 ${causeOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
+            {change && hasCause && (causeOpen || screenshotMode) && (
+              <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground text-pretty">
+                {change.estimated && (
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">예측</span>
+                )}
+                {change.sentence && <span>{change.sentence}</span>}
+              </p>
             )}
           </div>
-          {netAssetLayout.secondary && (
-            <p className={`mt-0.5 text-sm ${ASSET_THEME.text.default}`}>
-              {netAssetLayout.secondary}
-            </p>
-          )}
         </div>
 
         {hasRightSide && (
@@ -315,30 +341,80 @@ function useLast7DailySnapshots() {
   const { snapshotVersion } = useAssetData();
   const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
-      if (!raw) return;
-      const all: DailyAssetSnapshot[] = JSON.parse(raw);
-      const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
-      setSnapshots(sorted.slice(-7));
-    } catch { /* 스냅샷 파싱 실패 시 무시 */ }
+    const all = readDailySnapshots();
+    setSnapshots([...all].sort((a, b) => a.date.localeCompare(b.date)).slice(-7));
   }, [snapshotVersion]);
   return snapshots;
 }
 
-function computeLastDailyDiff(snapshots: DailyAssetSnapshot[]) {
-  if (snapshots.length < 2) return null;
-  const last = snapshots[snapshots.length - 1];
-  const secondLast = snapshots[snapshots.length - 2];
-  const diff = last.netAsset - secondLast.netAsset;
-  const pct = secondLast.netAsset > 0 ? (diff / secondLast.netAsset) * 100 : 0;
-  return { diff, pct, isBig: pct >= 5 || pct <= -5 };
+// Hero 통합 등락 뷰모델 — "지난 접속일 종가 → 실시간 현재"를 원인분해까지 한 줄에 표기.
+interface HeaderChange {
+  deltaNet: number;
+  pct: number;
+  isBig: boolean;
+  label: string;            // "전일 대비" 또는 "지난 접속(M/D) 이후"
+  estimated: boolean;
+  sentence: string | null;  // 최상위 원인 문장
+}
+
+// 비교 시작일 표기: YYYY-MM-DD → M/D, YYYY-MM → M월
+function fmtFromDate(d: string): string {
+  const parts = d.split("-");
+  if (parts.length >= 3) return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+  return `${parseInt(parts[1])}월`;
+}
+
+// 헤더 통합 등락: 끝점을 실시간 현재값(buildLiveAttributionCurr)으로 잡아 Hero 순자산과 기준 일치.
+// 시작점은 지난 접속일. 당일 재접속(previousVisitDate=오늘)이어도 직전 기록일(어제 등) 대비로 항상 노출.
+// 비교할 과거 스냅샷이 하나도 없을 때만 null(첫날).
+function useHeaderNetChange(): HeaderChange | null {
+  const { assetData, exchangeRates, snapshotVersion, previousVisitDate, getAssetSummary } = useAssetData();
+  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  return useMemo(() => {
+    const yesterday = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    // 지난 접속일이 유효(오늘 이전)면 그걸, 아니면(당일 재접속·미기록) 직전 기록일 기준으로 어제까지 소급
+    const sinceDate = previousVisitDate && previousVisitDate < todayStr ? previousVisitDate : yesterdayStr;
+    const summary = getAssetSummary();
+    const liveCurr = buildLiveAttributionCurr(assetData, exchangeRates, summary);
+    const attr = computeAttributionSince(
+      readDailySnapshots(),
+      readMonthlySnapshots(),
+      readExchangeHistory(),
+      sinceDate,
+      assetData,
+      exchangeRates,
+      liveCurr,
+    );
+    if (!attr) return null;
+    const prevNet = summary.netAsset - attr.deltaNet;
+    const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
+    const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${fmtFromDate(attr.fromDate)}) 이후`;
+    return {
+      deltaNet: attr.deltaNet,
+      pct,
+      isBig: Math.abs(pct) >= 5,
+      label,
+      estimated: attr.estimated,
+      sentence: formatAttributionSentence(attr),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previousVisitDate, todayStr, assetData, exchangeRates, snapshotVersion]);
 }
 
 function DailyNetAssetTrend() {
   const snapshots = useLast7DailySnapshots();
 
-  if (snapshots.length === 0) return null;
+  // 자산 등록 직후엔 기록이 없어 이 영역이 통째로 비어버린다 → 언제부터 쌓이는지 알려준다
+  if (snapshots.length === 0) {
+    return (
+      <div className="rounded-lg bg-muted/40 px-4 py-6 text-center space-y-1">
+        <p className="text-sm font-semibold text-foreground">순자산 추이는 내일부터 그려져요</p>
+        <p className="text-sm text-muted-foreground text-pretty">접속할 때마다 하루치가 자동으로 기록됩니다.</p>
+      </div>
+    );
+  }
 
   const maxVal = Math.max(...snapshots.map((s) => s.netAsset));
   const minVal = Math.min(...snapshots.map((s) => s.netAsset));
@@ -355,6 +431,9 @@ function DailyNetAssetTrend() {
         <p className="text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
         <DataSourceBadge kind="closing" />
       </div>
+      {snapshots.length === 1 && (
+        <p className="text-sm text-muted-foreground text-pretty">하루 더 쌓이면 날짜별 변화를 비교할 수 있어요.</p>
+      )}
       <div className="flex gap-1">
         {snapshots.map((snap, i) => {
           const prev = i > 0 ? snapshots[i - 1].netAsset : null;
@@ -391,6 +470,20 @@ function DailyNetAssetTrend() {
   );
 }
 
+// 탭 하단 요약 문장 → 해당 상세 화면으로 이동. 최소 히트영역 40px 확보(py-2.5)
+function DrillDownRow({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-between gap-2 text-left text-muted-foreground text-sm py-2.5 rounded-lg hover:text-foreground transition-colors active:scale-[0.99]"
+    >
+      <span className="min-w-0 text-pretty">{children}</span>
+      <ChevronRight className="size-4 shrink-0" />
+    </button>
+  );
+}
+
 export type DashboardTab = { value: string; label: string };
 
 export function useDashboardTabs(activeDetailTab: string): { visibleTabs: DashboardTab[]; resolvedTab: string } {
@@ -416,25 +509,17 @@ export function Dashboard() {
   const [activeDetailTab, setActiveDetailTab] = useState("");
   const [nickname] = useNickname();
   const { assetData, getAssetSummary } = useAssetData();
+  const { navigate } = useAssetNavigation();
   const summary = getAssetSummary();
-  const dailySnapshots = useLast7DailySnapshots();
-  const lastDaily = computeLastDailyDiff(dailySnapshots);
+  // Hero 통합 등락 — 지난 접속일 종가 → 실시간 현재 (원인분해 포함)
+  const headerChange = useHeaderNetChange();
 
   const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
   const grossTotal = totalAsset + totalLiability;
 
-  const financialAssetValue = summary.stockValue + summary.cryptoValue + summary.cashValue;
-  const liabilityValue = summary.loanBalance + summary.tenantDepositTotal;
-  const treemapRawAssets = [
-    { key: "realEstate", name: "부동산", value: summary.realEstateValue },
-    { key: "financial", name: "금융자산", value: financialAssetValue },
-  ].filter((d) => d.value > 0);
-  const assetPaletteColors = assignColors(treemapRawAssets);
-  const treemapData: TreemapItem[] = [
-    ...treemapRawAssets.map((d, i) => ({ ...d, color: assetPaletteColors[i], pct: grossTotal > 0 ? (d.value / grossTotal) * 100 : 0 })),
-    ...(liabilityValue > 0 ? [{ key: "liability", name: "부채", value: liabilityValue, color: LIABILITY_COLORS.loans, pct: grossTotal > 0 ? (liabilityValue / grossTotal) * 100 : 0 }] : []),
-  ];
+  // 도넛 데이터는 공용 훅 재사용 (ShareCard 등과 동일 계산 — 로컬 복제 금지)
+  const { treemapData } = useAssetTreemapData();
 
   const financialTotal = summary.stockValue + summary.cryptoValue + summary.cashValue;
   const finBase = [
@@ -467,10 +552,16 @@ export function Dashboard() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
+      {/* ── 상단 알림 (백업 넛지) — 지난 접속 등락은 Hero로 통합됨 ── */}
+      <div className="lg:col-span-2 empty:hidden space-y-3">
+        <BackupNudge />
+      </div>
+
       {/* ── 자산 분포 카드 (통합) ── */}
       <Card className={`lg:col-span-2 gap-2 ${ASSET_THEME.contentCard}`}>
         <CardContent className={`pb-2 overflow-hidden ${ASSET_THEME.contentPad}`}>
-          {totalAsset === 0 ? (
+          {/* 부채만 등록한 사용자도 순자산·구성이 보여야 하므로 자산+부채 합계로 판단 */}
+          {grossTotal === 0 ? (
             <div className="flex h-36 items-center justify-center text-muted-foreground text-sm">등록된 자산이 없습니다.</div>
           ) : (
             <Tabs value={resolvedTab} onValueChange={setActiveDetailTab}>
@@ -480,11 +571,12 @@ export function Dashboard() {
                 <NetAssetSummaryBox
                   netAsset={summary.netAsset}
                   nickname={nickname}
-                  lastDaily={lastDaily}
+                  change={headerChange}
                   treemapData={treemapData}
                   activeTab={resolvedTab}
                   onSegmentClick={setActiveDetailTab}
                   visibleTabs={visibleTabs}
+                  showRealtimeBadge
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}
@@ -496,16 +588,10 @@ export function Dashboard() {
                   {financialTotal > 0 && (
                     <TabsContent value="financial" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        {(() => {
-                          const { primary, secondary } = getPriceLayout(financialTotal);
-                          return (
-                            <div>
-                              <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
-                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
-                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
-                            </div>
-                          );
-                        })()}
+                        <div>
+                          <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
+                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(financialTotal)}</p>
+                        </div>
                         <div className="text-right space-y-1">
                           {financialBarItems.map(({ key, label, value }) => {
                             const pct = financialTotal > 0 ? (value / financialTotal) * 100 : 0;
@@ -525,28 +611,22 @@ export function Dashboard() {
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
 
-                      <p className="text-muted-foreground text-sm pb-1">
+                      <DrillDownRow onClick={() => navigate({ type: "detail", tab: "stocks" })}>
                         주식 <span className="font-bold text-foreground">{summary.stockCount}개</span>
                         {summary.cryptoCount > 0 && <> · 암호화폐 <span className="font-bold text-foreground">{summary.cryptoCount}개</span></>}
                         {summary.cashCount > 0 && <> · 현금성 <span className="font-bold text-foreground">{summary.cashCount}개</span></>}
                         {" "}보유 중
-                      </p>
+                      </DrillDownRow>
                     </TabsContent>
                   )}
 
                   {summary.realEstateValue > 0 && (
                     <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        {(() => {
-                          const { primary, secondary } = getPriceLayout(summary.realEstateValue);
-                          return (
-                            <div>
-                              <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
-                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{primary}</p>
-                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
-                            </div>
-                          );
-                        })()}
+                        <div>
+                          <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
+                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(summary.realEstateValue)}</p>
+                        </div>
                         <div className="text-right space-y-1">
                           {realEstateCatBarItems.map(({ key, label, value }) => {
                             const pct = summary.realEstateValue > 0 ? (value / summary.realEstateValue) * 100 : 0;
@@ -568,23 +648,19 @@ export function Dashboard() {
                         </div>
                       )}
 
-                      <p className="text-muted-foreground text-sm pb-1">총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중</p>
+                      <DrillDownRow onClick={() => navigate({ type: "detail", tab: "real-estate" })}>
+                        총 <span className="font-bold text-foreground">{summary.realEstateCount}개</span> 부동산 보유 중
+                      </DrillDownRow>
                     </TabsContent>
                   )}
 
                   {totalLiability > 0 && (
                     <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className={ASSET_THEME.summaryHeader}>
-                        {(() => {
-                          const { primary, secondary } = getPriceLayout(totalLiability);
-                          return (
-                            <div>
-                              <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
-                              <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{primary}</p>
-                              {secondary && <p className="text-sm text-foreground">{secondary}</p>}
-                            </div>
-                          );
-                        })()}
+                        <div>
+                          <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
+                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{formatPriceByMode(totalLiability)}</p>
+                        </div>
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (
                             <div key={key} className="text-sm">
@@ -603,11 +679,11 @@ export function Dashboard() {
                         </div>
                       )}
 
-                      <p className="text-muted-foreground text-sm pb-1">
+                      <DrillDownRow onClick={() => navigate({ type: "detail", tab: "loans" })}>
                         {assetData.loans.length > 0 && <>대출 <span className="font-bold text-foreground">{assetData.loans.length}건</span></>}
                         {assetData.loans.length > 0 && tenantCount > 0 && " · "}
                         {tenantCount > 0 && <>임차보증금 <span className="font-bold text-foreground">{tenantCount}건</span></>}
-                      </p>
+                      </DrillDownRow>
                     </TabsContent>
                   )}
                 </div>

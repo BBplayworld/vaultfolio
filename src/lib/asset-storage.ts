@@ -1,7 +1,9 @@
 "use client";
 
 import { z } from "zod";
-import { AssetData, assetDataSchema, AssetSnapshots, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { AssetData, assetDataSchema, AssetSnapshots, DailyArchive, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { readDailyArchive, writeDailyArchive, mergeDailyArchives } from "@/lib/snapshot-archive";
+import { markBackedUp } from "@/lib/backup-status";
 import { transactionSchema } from "@/types/transaction";
 import LZString from "lz-string";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
@@ -117,13 +119,18 @@ export function saveAssetData(data: AssetData): boolean {
   }
 }
 
-function collectSnapshotsFromStorage(): AssetSnapshots {
+// 스냅샷 수집 정본 — 내보내기·동기화·공유가 모두 이 함수를 쓴다(수집 로직 중복 금지).
+// 공유 토큰(packV7)은 daily/monthly의 netAsset·financialAsset만 축약 인코딩하므로
+// dailyArchive·v2 enrich는 자동으로 빠진다(URL 길이 제약, 의도된 동작).
+export function collectSnapshotsFromStorage(): AssetSnapshots {
   try {
     const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
     const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
+    const archive = readDailyArchive();
     return {
       daily: rawDaily ? JSON.parse(rawDaily) : [],
       monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
+      ...(Object.keys(archive).length > 0 ? { dailyArchive: archive } : {}),
     };
   } catch {
     return { daily: [], monthly: [] };
@@ -149,6 +156,9 @@ export function exportAssetData(): void {
   a.download = `secretasset-${new Date().toISOString().split("T")[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  // 백업 시각 기록 — 호출처가 늘어도 자동 반영되도록 함수 내부에서 처리.
+  // 한계: click() 이후 사용자가 다운로드를 취소해도 감지할 수 없어 "백업함"으로 남는다.
+  markBackedUp();
 }
 
 // 파싱된 페이로드를 검증 후 로컬에 복원 (파일 가져오기·클라우드 동기화 공용)
@@ -162,11 +172,15 @@ export function applyImportedPayload(parsed: unknown): { assetData: AssetData; s
   // 2단계: snapshots도 메모리에서 추출
   let dailySnapshot: unknown[] | null = null;
   let monthlySnapshot: unknown[] | null = null;
+  let incomingArchive: DailyArchive | null = null;
   if (p.snapshots) {
-    const { daily, monthly } = p.snapshots as AssetSnapshots;
+    const { daily, monthly, dailyArchive } = p.snapshots as AssetSnapshots;
     if (Array.isArray(daily)) dailySnapshot = daily;
     if (Array.isArray(monthly)) monthlySnapshot = monthly;
+    if (dailyArchive && typeof dailyArchive === "object") incomingArchive = dailyArchive;
   }
+  // 장기 아카이브는 merge 복원(로컬 ∪ 수신) — 구버전 payload가 아카이브 없이 와도 로컬 유실 방지
+  const localArchive = readDailyArchive();
 
   // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
   clearAssetData();
@@ -192,6 +206,9 @@ export function applyImportedPayload(parsed: unknown): { assetData: AssetData; s
       // 스냅샷 복원 실패는 무시
     }
   }
+  // 장기 아카이브 복원 — clearAssetData가 지운 로컬분과 수신분 merge
+  const mergedArchive = mergeDailyArchives(localArchive, incomingArchive ?? {});
+  if (Object.keys(mergedArchive).length > 0) writeDailyArchive(mergedArchive);
 
   return { assetData: validated, snapshotRestored };
 }
@@ -233,15 +250,18 @@ export function clearAssetData(): boolean {
       STORAGE_KEYS.syncState,
       STORAGE_KEYS.geminiUsage,
       STORAGE_KEYS.collapsibleUsed,
-      STORAGE_KEYS.noticeHideUntil,
       STORAGE_KEYS.financeApiErrorCount,
+      // 백업 메타(마지막 백업 시각·넛지 노출일)는 기기 메타데이터 — 가져오기(applyImportedPayload)가 이 함수를
+      // 거치므로 보존하지 않으면 백업 파일을 복원할 때마다 "백업한 적 없음"으로 잘못 판정된다.
+      // ("모든 데이터 삭제"는 사용자의 명시적 의도이므로 호출처에서 별도로 지운다)
+      STORAGE_KEYS.backup,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {
       if (!k.startsWith("secretasset_")) return false;
       if (keepKeys.includes(k)) return false;
-      // 공지 팝업 기한/확인 키 보존 (secretasset_notice_seen_...)
-      if (k.startsWith("secretasset_notice_seen_")) return false;
+      // 공지 열람 단일 키 보존 (secretasset_notice_seen — 가져오기 후 공지 재노출 방지)
+      if (k.startsWith("secretasset_notice_seen")) return false;
       // 앱잠금 비밀번호 해시/활성화 키 보존 (동기화 pull이 잠금 인증을 지우지 않도록)
       if (k.startsWith("secretasset_pwa_auth")) return false;
       return true;
@@ -294,7 +314,8 @@ const PIVOT_DATE = Date.UTC(2020, 0, 1); // 2020-01-01 UTC 기준
  */
 
 const DICT = {
-  re: ["apartment", "house", "land", "commercial", "other"],
+  // officetel·villa는 끝에 가법 추가 — 기존 인덱스(0~4) 불변으로 구 토큰 파싱 호환 (R3)
+  re: ["apartment", "house", "land", "commercial", "other", "officetel", "villa"],
   st: ["domestic", "foreign", "irp", "isa", "pension", "unlisted"],
   lo: ["credit", "minus", "mortgage-home", "mortgage-stock", "mortgage-insurance", "mortgage-deposit", "mortgage-other"],
   ca: ["bank", "cash", "deposit", "savings", "cma"],

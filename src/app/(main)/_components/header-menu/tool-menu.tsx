@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing } from "lucide-react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload } from "lucide-react";
+import { useDataExport } from "@/hooks/use-data-export";
+import { formatLastBackup, isBackupStale } from "@/lib/backup-status";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
 import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -23,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { NOTICE_TITLE, NoticeContent } from "../layout/onboarding/notice";
-import { generateShareToken, STORAGE_KEYS } from "@/lib/asset-storage";
+import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset-storage";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
@@ -51,6 +53,13 @@ export function ToolMenuPage() {
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const { navigate } = useAssetNavigation();
   const cs = useCloudSync();
+
+  // 백업 상태 — 내보내기 직후 표시가 즉시 갱신되도록 훅의 tick으로 재계산
+  const { exportNow, exportTick } = useDataExport();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const lastBackup = useMemo(() => formatLastBackup(), [exportTick]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const backupStale = useMemo(() => isBackupStale(), [exportTick]);
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -111,19 +120,6 @@ export function ToolMenuPage() {
 
 
 
-  const collectSnapshots = (): AssetSnapshots => {
-    try {
-      const rawDaily = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
-      const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
-      return {
-        daily: rawDaily ? JSON.parse(rawDaily) : [],
-        monthly: rawMonthly ? JSON.parse(rawMonthly) : [],
-      };
-    } catch {
-      return { daily: [], monthly: [] };
-    }
-  };
-
   const handleShare = () => {
     setSharePin("");
     setShowShareDialog(true);
@@ -139,7 +135,7 @@ export function ToolMenuPage() {
 
     const localKey = Math.random().toString(36).substring(2, 14);
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshots(), getProfitBasis(), nickname || undefined);
+    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshotsFromStorage(), getProfitBasis(), nickname || undefined);
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -219,6 +215,16 @@ export function ToolMenuPage() {
               )}
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
+            {/* 백업은 데이터 유실을 막는 핵심 동작이라 설정 3뎁스에 숨기지 않고 1단에 노출 */}
+            <button type="button" className={ROW} onClick={exportNow} disabled={!hasAssets}>
+              <Upload className="size-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">데이터 백업</span>
+                <p className={`text-sm mt-0.5 ${backupStale ? "text-orange-600 dark:text-orange-400 font-medium" : "text-muted-foreground"}`}>
+                  {lastBackup ? `마지막 백업: ${lastBackup}` : "아직 백업하지 않았습니다"}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
 
@@ -277,6 +283,7 @@ export function ToolMenuPage() {
               </div>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 URL로 다른 기기에 <strong className="text-foreground font-semibold">1회 전달</strong>합니다 (PIN 설정 필요).
+                링크에는 최근 기록만 담기므로, 기기를 옮길 땐 <strong className="text-foreground font-semibold">데이터 백업</strong>을 권장합니다.
               </p>
             </button>
 

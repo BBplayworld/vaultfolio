@@ -33,9 +33,8 @@ const CONCENTRATION_LABEL: Record<BreakdownResult["concentration"], { label: str
 
 function ConcentrationInfo() {
   return (
-    <InfoHint side="bottom">
-      <p className="text-xs font-semibold text-foreground">집중도 기준</p>
-      <p className="text-muted-foreground">상위 1개 항목의 비중을 기준으로 평가합니다.</p>
+    <InfoHint side="bottom" summary="상위 1개 항목의 비중으로 집중도를 평가해요.">
+      <p className="text-muted-foreground">60% 이상이면 집중도 높음, 35~60%는 보통, 35% 미만은 분산입니다.</p>
       <ul className="space-y-1 pt-1">
         <li><span className="text-amber-600 font-semibold">집중도 높음</span> <span className="text-muted-foreground">— 60% 이상. 단일 영역 의존도가 큼</span></li>
         <li><span className="text-foreground font-semibold">집중도 보통</span> <span className="text-muted-foreground">— 35~60%. 무난한 분산</span></li>

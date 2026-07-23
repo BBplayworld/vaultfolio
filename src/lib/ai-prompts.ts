@@ -22,6 +22,14 @@ const GUARDRAIL = `[중요 — 이 도구는 개인 자산 "관리" 보조용입
 - 제가 이미 보유한 자산의 구성·비중·리스크·부채·세금 구조 관점에서만 분석해 주세요.
 `;
 
+// 최신 LLM에서 답변 품질을 끌어올리는 공통 지침 — 근거 우선·구조화·가정 명시·수치 인용
+const ANALYSIS_DIRECTIVE = `[답변 방식 — 아래 4가지를 지켜 분석의 밀도를 높여 주세요]
+1. 결론 전에 근거가 되는 수치를 먼저 짚고, 단계적으로 따져 판단하세요.
+2. 비교·배분·우선순위는 가능한 한 표로 정리하고, 실행 항목은 "기대 효과 × 실행 난이도"로 우선순위를 매기세요.
+3. 사용한 가정(기대수익률·물가·저축률 등)은 명시하고, 데이터로 알 수 없는 부분은 단정하지 말고 "추가 확인 필요"로 표시하세요.
+4. 일반론이 아니라 아래 제 실제 수치를 직접 인용해 "왜 그런지"까지 설명하세요.
+`;
+
 // ─── 데이터 포맷 헬퍼 ────────────────────────────────────────────────────────
 
 const REAL_ESTATE_TYPE: Record<string, string> = {
@@ -265,22 +273,25 @@ export const AI_PROMPT_TEMPLATES: PromptTemplate[] = [
         ? (summary.loanBalance / summary.totalValue * 100).toFixed(1) : "0";
 
       return `${GUARDRAIL}
-당신은 한국의 15년 경력 자산관리 전문가입니다.
+당신은 한국의 15년 경력 자산관리 전문가(CFP)입니다.
 아래 제 자산 현황을 보고 현재 포트폴리오를 솔직하게 진단해 주세요.
-좋은 말보다는 실제로 개선이 필요한 부분을 명확히 짚어주세요.
-${buildDataSection(ctx)}
+듣기 좋은 말보다, 실제로 개선이 필요한 지점을 근거와 함께 명확히 짚어주세요.
+${ANALYSIS_DIRECTIVE}${buildDataSection(ctx)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 진단 요청 사항
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+0. **종합 점수표 (먼저 제시)**
+   - 자산 구성 / 수익의 질 / 부채 건전성 / 분산 / 유동성 5개 항목을 각 1~5점으로 채점하고, 점수마다 한 줄 근거를 표로 정리해 주세요.
+
 1. **자산 구성 진단**
-   - 부동산 / 주식 / 코인 / 현금의 비율이 제 나이와 자산 규모에 적합한가요?
-   - 특정 자산에 과도하게 쏠려 있지는 않은지 평가해 주세요.
+   - 부동산 / 주식 / 코인 / 현금 비중을 제시하고, 제 나이·자산 규모대의 통념적 배분과 비교해 과부족을 판단해 주세요.
+   - 단일 자산 과집중(예: 특정 부동산·종목이 순자산의 몇 %인지)을 수치로 짚어주세요.
 
 2. **수익률 분석**
-   - 어떤 자산이 포트폴리오에 실질적으로 기여하고, 어떤 자산이 발목을 잡고 있나요?
-   - 손실 중인 항목의 원인과 보유 vs 정리 판단 기준을 알려주세요.
+   - 자산별 기여도를 "포트폴리오를 끌어올린 항목 / 발목 잡는 항목"으로 나눠 표로 정리해 주세요.
+   - 손실 중인 항목은 원인(시세·환율·진입가)을 구분하고, 보유 vs 정리 판단 기준을 제시해 주세요.
 ${summary.stockCurrencyGain !== 0 ? `
 3. **해외주식 환차손익 분석**
    - 현재 환차손익이 ${summary.stockCurrencyGain >= 0 ? "+" : ""}${formatShortCurrency(Math.round(summary.stockCurrencyGain))}입니다. 환율 변동이 포트폴리오에 미치는 실질적인 영향을 평가해 주세요.
@@ -291,7 +302,8 @@ ${summary.stockCurrencyGain !== 0 ? "4" : "3"}. **담보대출 구조 진단**
    - 담보대출 연계 현황(LTV, 담보비율)을 보고 현재 레버리지 구조가 적정한지 평가해 주세요.
    - 담보 자산 가치 하락 시 추가담보 요구(마진콜) 위험이 있는 항목이 있나요?
 ` : ""}
-${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "5" : "3"}. **지금 당장 해야 할 3가지 행동** (구체적인 실행 항목으로 제시해 주세요)
+${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "5" : "3"}. **지금 당장 해야 할 3가지 행동**
+   - 기대 효과가 큰 순서로, 각 항목에 "예상 효과 · 실행 난이도 · 걸리는 기간"을 함께 표기해 주세요.
 
 ${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? "6" : "4"}. **세금 관점 체크**
    - 현재 구성에서 양도소득세, 금융소득종합과세, IRP·ISA 연말정산 등 세금 측면에서 주의해야 할 사항이 있나요?
@@ -321,31 +333,30 @@ ${summary.stockCurrencyGain !== 0 || ctx.data.loans.some(l => l.linkedRealEstate
       return `${GUARDRAIL}
 당신은 한국의 자산 증식 전략 전문가입니다.
 아래 제 현재 자산을 기반으로 향후 5년 내 순자산을 최대로 늘리기 위한 구체적인 전략을 세워주세요.
-막연한 격언이 아니라, 이 데이터에 맞는 구체적인 수치와 실행 순서를 포함해 주세요.
+막연한 격언이 아니라, 이 데이터에 맞는 수치·순서·가정을 포함해 주세요.
 (단, 개별 종목 추천이 아니라 자산군 배분·계좌·저축 구조 관점에서 제시해 주세요.)
-${buildDataSection(ctx)}
+${ANALYSIS_DIRECTIVE}${buildDataSection(ctx)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 전략 수립 요청 사항
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. **목표 포트폴리오 배분 제안**
-   - 현재 구성 대비 이상적인 목표 배분(%)을 구체적으로 제시해 주세요.
-   - 어떤 자산을 줄이고, 어떤 자산을 늘려야 하는지 금액 기준으로 알려주세요.
+1. **목표 포트폴리오 배분 (표로)**
+   - 자산군 | 현재 % | 목표 % | 이동 금액(±) | 근거 형태의 표로 제시해 주세요.
+   - 목표 배분의 전제(제 위험성향·투자기간 가정)를 먼저 밝혀주세요.
 
 2. **세제혜택 계좌 최적화** (현재 등록된 계좌: ${taxAccounts})
-   - IRP, ISA, 연금저축 등 세제혜택 계좌를 어느 수준까지 채워야 하는지 연간 한도 기준으로 설명해 주세요.
-   - 각 계좌에 어떤 ETF/자산을 넣는 것이 세금 측면에서 유리한지 알려주세요.
+   - IRP·ISA·연금저축의 연간 납입 한도 대비 현재 여유분을 계산하고, 채우는 우선순위를 매겨주세요.
+   - 각 계좌에 어떤 성격의 자산(ETF 유형)을 담는 게 세금·수익 측면에서 유리한지 알려주세요.
 
 3. **리밸런싱 실행 계획**
-   - 매도 후 재투자가 필요한 종목이 있다면 우선순위 순으로 나열해 주세요.
-   - 매도 시 세금 부담도 함께 고려해 주세요.
+   - 조정이 필요한 항목을 우선순위 순으로 나열하고, 매도 시 예상 세금·수수료를 함께 고려해 주세요.
 
 4. **월별 추가 투자 우선순위**
-   - 매월 여유 자금이 생긴다면 어디에 먼저 투자해야 하는지 1순위부터 순서대로 알려주세요.
+   - 매월 여유 자금이 생길 때 넣을 순서를 1순위부터, 각 순위의 이유와 함께 제시해 주세요.
 
 5. **3년 / 5년 순자산 시나리오**
-   - 현재 ${formatShortCurrency(summary.netAsset)} 기준, 낙관·기본·보수 시나리오별 순자산 예측을 간략하게 제시해 주세요.`;
+   - 현재 순자산 ${formatShortCurrency(summary.netAsset)} 기준, **가정한 연 수익률·월 저축액을 명시**하고 낙관·기본·보수 3가지로 예측해 주세요(단정 금지, 어디까지나 가정).`;
     },
   },
 
@@ -376,16 +387,15 @@ ${buildDataSection(ctx)}
       return `${GUARDRAIL}
 당신은 한국의 자산 리스크 분석 전문가입니다.
 아래 제 자산 현황에서 위험 요소와 부채 구조를 냉정하게 분석하고, 지금 당장 개선할 수 있는 방안을 알려주세요.
-${buildDataSection(ctx)}
+${ANALYSIS_DIRECTIVE}${buildDataSection(ctx)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 리스크 분석 요청 사항
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. **부채 구조 평가**
-   - 현재 부채비율 ${debtRatio}%, 추정 연간 이자 부담 ${formatShortCurrency(Math.round(annualInterest))}에 대한 평가를 해주세요.
-   - 한국 가계의 적정 부채비율 기준과 비교해 제 상황이 위험한지, 허용 범위인지 알려주세요.
-   - 대출별 우선 상환 순서를 금리, 세금 공제 가능 여부, 유동성 등을 종합해 제시해 주세요.
+   - 현재 부채비율 ${debtRatio}%, 추정 연간 이자 ${formatShortCurrency(Math.round(annualInterest))}가 한국 가계 적정 기준 대비 위험한지·허용 범위인지 판단해 주세요.
+   - 대출별 **우선 상환 순서를 표**(대출명 | 금리 | 유동성 | 세금공제 가능 | 상환 우선순위)로 제시해 주세요.
 ${data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId) ? `
 2. **담보대출 연계 리스크 분석**
    - 담보대출 연계 현황의 LTV(담보인정비율)와 담보비율을 평가해 주세요.
@@ -408,12 +418,12 @@ ${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashI
    - 현재 현금·예금 ${formatShortCurrency(summary.cashValue)} (총자산의 ${cashRatio}%)가 비상금으로 충분한가요?
    - 일반적으로 권장하는 비상금 수준(월 생활비 기준)과 비교해 부족하다면 어떻게 채워야 하는지 알려주세요.
 
-${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 4}. **시나리오별 충격 분석**
-   - 금리 1% 추가 상승 시 연간 이자 부담 증가액과 가계 재정에 미치는 영향을 계산해 주세요.
-   - 주식·코인 시장이 30% 하락한다면 순자산이 얼마나 줄어드는지, 버틸 수 있는 수준인지 평가해 주세요.
+${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 4}. **스트레스 시나리오 (수치로)**
+   - ① 금리 +1%p ② 주식·코인 −30% ③ 부동산 −15% 세 경우 각각 순자산 변화액을 계산하고, 버틸 수 있는 수준인지 표로 정리해 주세요.
+   - 세 충격이 겹칠 때 가장 먼저 문제가 되는 지점(유동성·마진콜 등)을 짚어주세요.
 
 ${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashId), summary.stockCurrencyGain !== 0].filter(Boolean).length + 5}. **즉각 리스크 감소를 위한 3가지 조치**
-   - 지금 당장 실행 가능한 것부터 우선순위 순으로 구체적으로 알려주세요.`;
+   - 지금 실행 가능한 것부터, 각 항목에 "기대 효과 · 실행 난이도"를 함께 표기해 우선순위 순으로 알려주세요.`;
     },
   },
 ];

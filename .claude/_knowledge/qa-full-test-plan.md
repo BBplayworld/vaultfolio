@@ -28,6 +28,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 각 기능: **핵심 / 엣지·경계 / 회귀**. ⚙=자동·코드레벨, 👤=앱 수동.
 
+> 이 `F-*` 매트릭스가 **기존 기능의 현행 사양** 역할을 겸한다(별도 명세 문서를 만들지 않는 이유).
+> 신규 기능은 [`.claude/specs/`](../specs/) 명세 §6이 지정한 `F-*` 항목을 여기에 추가한 뒤 완료 처리한다.
+
 ### F-ASSET. 자산 CRUD (주식·암호화폐·부동산·현금·대출·년도별 순자산)
 - ⚙ add/update/delete가 `saveData` 단일 저장 경로 사용, 삭제 후 합계 재계산 ([asset-data-context](../../src/contexts/asset-data-context.tsx) `getAssetSummary`)
 - 👤 각 자산 유형 추가→수정→삭제, 순자산/총자산/총부채 즉시 갱신
@@ -58,6 +61,28 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`)
 - 엣지: 통화 KRW/USD 분기, 중복 거래 처리, 매칭 실패 종목 제외
 
+### F-CRYPTO. 코인 시세 자동 갱신 (업비트) ([upbit-service.ts](../../src/lib/upbit-service.ts) · [api/finance/crypto](../../src/app/api/finance/crypto/route.ts)) — 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
+- ⚙ **1시간 슬롯**([coin-cache-slot.ts](../../src/lib/coin-cache-slot.ts) `getCoinCacheSlot`): 코인은 24시간 무휴장이라 주식과 달리 장중/장외·영업일·DST 판정 없이 **항상** `{YYYY-MM-DD}-H{HH}`(KST). `c.baseDate === slot`이면 재조회 스킵(AC1·AC2)
+- ⚙ **공통 캐시**: 서버 키가 마켓 단위(`finance:coin:KRW-BTC-{slot}`)라 같은 코인 보유자끼리 캐시 공유 → 외부 호출이 슬롯당 1회로 수렴(AC3)
+- ⚙ **캐시 버킷 분리**: 파일 캐시는 `COINS`/`COINS_LAST`로 `STOCKS`와 분리 — `writeFinanceCache` prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 매 write마다 삭제됨. Upstash도 `finance:coin:` 접두 분리(`finance:stock:` SCAN 정리와 충돌 방지)
+- ⚙ **rate limit 방어**(업비트 IP 기준 10 req/s의 20%만 사용): 슬롯 캐시 → stale(3시간) 즉시 반환 + `after()` 백그라운드 갱신 → 최초만 동기 대기(AC7). 외부 호출은 `finance:upbit:lock`(SET NX EX 5s)로 직렬화 + 최소 500ms 간격(AC8). 로컬은 단일 프로세스라 모듈 스코프 in-flight dedup으로 대체
+- ⚙ **무효 심볼 방어**: `market/all`(1일 캐시)과 교집합 후 조회 — 미상장 심볼이 섞이면 ticker 요청 **전체가 400 실패**하므로 필수. 응답에 없는 심볼은 수동 입력값 유지(AC4)
+- ⚙ 심볼 단위 중복 제거 — 같은 코인을 여러 거래소에 보유해도 1회 조회(AC5). epoch+AbortController로 취소된 응답 미반영(AC6)
+- ⚙ 429·418 수신 시 재시도 없이 stale 유지 + `X-Upbit-Unavailable` 헤더(AC9)
+- 👤 코인 보유 상태로 접속 → 현재가가 업비트 시세로 갱신, 같은 시간 내 재접속 시 외부 호출 없음
+- 엣지: 업비트 미상장 코인(해외 거래소 전용) 수동값 보존, 코인 0개일 때 호출 자체 스킵
+- 회귀: crypto `baseDate`·`currentPrice`가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰(packV7) crypto 섹션 8필드 유지(R3)
+
+### F-REALESTATE. 부동산 실거래 추정 ([realestate-service.ts](../../src/lib/realestate-service.ts) · [api/realestate](../../src/app/api/realestate/route.ts)) — 명세 [S-4.21](../specs/4.21-realestate-transaction-price.md)
+- ⚙ **데이터셋별 면적 필드**(AC8): apt/offi/rh=`excluUseAr`, sh=`totalFloorAr`, nrg=`buildingAr`, 폴백 `plottageAr`. `areaKind`(exclusive/gross/plottage)가 다른 거래는 **절대 섞어 비교하지 않으며**, 후보 0건이어도 전체 풀로 되돌리지 않는다
+- ⚙ **오매칭 차단**(AC9): `matchBy:"area"`(단독 sh·상가 nrg)에서 면적 미상이면 `matchTrade`는 반드시 `null`. 과거 회귀 = 시군구 전체 최근 거래 1건이 추정치로 노출됨
+- ⚙ **매칭 점수**: 지번일치 > 단지명 > 법정동 > 면적근접 > 최근성. 면적 허용 오차는 **상대 ±10%(최소 ±3㎡)**. `resolveAddress`의 `jibun`이 estimate 요청까지 전달되는지(누락 시 정확도 급락)
+- ⚙ **단가 폴백**(AC10): 같은 법정동·같은 areaKind·±30% 표본의 ㎡당 단가 중앙값 × 내 면적. **표본 3건 미만이면 미노출**. 등급(exact/similar/approx/estimated)·표본수 응답 포함
+- ⚙ 조회 창 6→12→24개월 단계 확장, 캐시 슬롯 `${dataset}:${lawd}:${ym}` 재사용
+- 👤 아파트: 주소 조회 → 추정가·근거(단지·면적·층) 표시, 상세 카드에 면적 수치 노출. 상가·단독: 면적 입력(㎡/평 토글) 전에는 추정 미노출, 입력 후 등급 배지와 함께 표시
+- 회귀: `marketEstimate*` 전 필드가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰 pack/unpack 포맷 미변경(R3)
+- 자동: `src/lib/__tests__/realestate-match.test.ts`
+
 ### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
 - 👤 5축(핵심분야·시가총액·지수·지역·통화) 전환, 분포바·집중도 등급, AI 분류 진행률, 프롬프트 확인·복사
 - ⚙ `stock-xray` `computeBreakdown` 단일배정·합 100%, 미분류 처리, 레버리지/인버스 ETF 지수매핑(TQQQ·QLD→NASDAQ100, UPRO·SSO→S&P500)
@@ -71,8 +96,25 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리
 - ⚙ `computeDailyStockProfit` 전일 종가 대비, `ProfitBasis`(sameBusinessDay/kstAccessDay), `getDailyClosingRefDates` 시장별 컷오프(국내16:00·해외06:00/07:00 KST)
 - ⚙ 휴장 폴백 캐시: 요청일이 비영업일(`isKrBusinessDay`/`isUsBusinessDay`)일 때만 응답일 기준 ref-date 매핑 저장(churn 제거), 영업일+장중 미확정은 미저장(stale 방지) ([route.ts](../../src/app/api/finance/profit/route.ts))
+- ⚙ **자산 성적표 레버리지 박스의 3개 기간 축** — 이자=`잔액 × 금리` 향후 12개월 환산 / 주식=`period:"yearly"`(정확히 1년 전, TTM) / 배당=**`annualTotal`(올해 실적+예상 12개월)**. 셋 다 1년 길이여야 하며, 배당을 `annualActual`(YTD)로 되돌리면 연중 N/12만 잡혀 과소계상 회귀. `AssetGradeInputs.dividend.annual`도 동일 값
+- ⚙ **레버리지 박스 구성** — **①결론 Hero(이자 내고 남는 돈 + 판정 문구) ②나가는/들어오는 2박스 ③`계산 근거 · 대출 상세` 접기(기본 접힘)** 3블록. 접기 안에 총액·분모·산출 근거·대출 목록·제외 안내가 순서대로. 근거를 기본 화면으로 되돌리면 결론이 묻히는 회귀(design-system §11)
+- ⚙ **대출 행 딥링크** — 접기 안 대출 행 클릭 → `trigger-edit-loan`(`detail:{id}`) dispatch → 대출 수정 다이얼로그. `LoanInput`이 [asset-page-tabs.tsx](../../src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx)의 **뷰 전환 밖 hidden 영역에 상시 마운트**되어야 성과 탭에서 동작한다(뷰 안으로 옮기면 깨짐). `!isRealEstate` 행에만 `부동산 연결` 라벨
+- ⚙ **레버리지 분모 = 금융자산만** — 대출비율 = `investLoanBalance ÷ (stockCost + cryptoCost)`(`financialInvestCost`)라 '넣은 돈 대비 성과'(= 부동산·현금 포함 `totalCost`)와 **분모가 다르다**. 두 블록에 `금융자산만`/`모든 자산` 뱃지가 유지되는지. 부동산 연계 대출(`type==="mortgage-home" || linkedRealEstateId`)은 이자·잔액 모두 비교 제외
+- ⚙ **연계 부동산 선택은 전 대출 종류에 노출**([loan-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-input.tsx)) — `mortgage-home` 한정으로 되돌리면 신용·마이너스대출로 산 부동산을 연결할 수 없어 레버리지 이자·비율이 부풀려지는 회귀
+- ⚙ **원인분해 표시 합계 불변 조건** — 홈 헤더(`formatAttributionSentence`)·성적표 원인분해가 표시하는 금액의 합 = `deltaNet`(만원 반올림 오차 제외). `topCauses` + `restCauses`(≥1만원) + 잔차(`restEffect − Σ restCauses`, ≥1만원일 때만) 구조를 깨면 헤더 증감액과 원인 합계가 어긋난다(과거 P1 회귀 지점)
 - 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
+
+### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)
+> 레버리지 박스(이자 vs 투자 수익)는 F-ACTIVITY에 있음 — 여기선 **5축 채점·티어·재정규화·이력화·delta**만 다룬다(중복 금지).
+- ⚙ 5축 가중(growth .3 / earning .2 / leverage .2 / diversification .2 / habit .1). 측정 불가 축은 `null` → **측정 가능한 축만 가중 재정규화**해 종합 산출(신규 사용자도 등급, AC2)
+- ⚙ 레버리지 축: 무부채(loanBalance≤0)=**5.0**(건전성 만점, AC3) / 자본잠식(equity≤0 & 부채>0)=**0.5**(AC4). 부채비율 40/60%·평균금리 6%·이자 커버리지 감가점
+- ⚙ 채점 컷 전부 `GRADE_THRESHOLDS` 단일 소스(AC5) — 티어 4.5/3.5/2.5(platinum/gold/silver), 컷 근거는 각 score 함수 주석
+- ⚙ 전 축 non-pending 확정 시 오늘 daily·이번 달 monthly `grade` 기록(`recordGradeSnapshot`, **동일 값 스킵=멱등**, 과거 불소급, AC6). `diffGrade`로 종합·축별 ▲▼·티어 승·강등(AC7) — 최근 과거 daily 우선, 없으면 이전 달 monthly 대비
+- ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
+- 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
+- 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → `getComparablePayloadString`이 두 곳을 이미 제외하므로 등급 확정이 push를 유발하지 않음(R14 핑퐁 없음). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)
+- 자동: `src/lib/report/__tests__/asset-grade.test.ts` (미작성 — 후속 과제)
 
 ### F-HUB. 집중도·허브·대시보드
 - 👤 `detail-hub`(카테고리별 평가손익·건수), `performance-hub`(순자산·수익·배당 KPI), `dashboard` 도넛/금융자산 바
@@ -159,7 +201,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **설치 흐름 단일화** — 설치 다이얼로그+로직(state·`handleButtonClick`·`handleInstall`·`generateShareArtifacts`·iOS/인앱/동기화 분기)은 공용 컴포넌트 [pwa-install-flow.tsx](../../src/app/(main)/_components/pwa/pwa-install-flow.tsx) 단일 소스. 트리거는 children(render-prop, `{ onClick, loading, isIOS, isInApp, isInstallable }`)로 주입. [pwa-install-button.tsx](../../src/app/(main)/_components/pwa/pwa-install-button.tsx)는 다운로드 아이콘 버튼만 전달하는 얇은 래퍼. **홈 버튼·웰컴가이드가 동일 흐름 공유** — 한쪽만 수정 시 회귀 주의
 - ⚙ **설치 가이드 단일화** — 옛 `PwaInstallGuideDialog`(3탭 다이얼로그) 제거 → [pwa-install-guide-content.tsx](../../src/app/(main)/_components/pwa/pwa-install-guide-content.tsx) `InstallGuideContent({ env })`로 통합. flow의 `iosStep`·`guideStep` 모두 동일 컴포넌트 임베드. 모바일=설치 애니메이션+step1/step2 설명+"다른 브라우저인가요?" 칩 재선택(오감지 대비)+접이식 "설치가 안 되나요?", PC=시크릿모드/`chrome://apps` 재설치/Firefox 미지원 문제해결
 - ⚙ iOS·Android step SVG([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) `InstallGuideAnimation({ platform, browser })`는 **실제 브라우저 UI 구조 반영(주소창 하단)**: Safari=하단 중앙 `공유`→`홈 화면에 추가` / Chrome(iOS)=주소창 우측 `공유` 직접 / Chrome(Android)=우측상단 `⋮`→`공유` / Whale=하단 우측 `≡`→`공유` / 삼성인터넷=하단 `☰`→`+ 현재 페이지 추가`→홈 화면. step1/step2 안내 문구(`step1Text`/`step2Text`)도 각 구조와 일치. **aspect-ratio 미지원(구형 Safari) 대비 `paddingTop` 스페이서로 220:290 비율 폴백**
-- ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3000ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+`DeviceBadge` "새 기기" — 실제 다른 기기])
+- ⚙ **SVG 애니메이션 공용화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx)) — 모든 단계형 애니메이션이 공용 `StepAnimationPlayer`(캡션 옵션·**멈춤/시작 버튼**·단계 점 클릭 이동·`resetKey`)에 위임. 컷 간격 **3000ms 통일**, `prefers-reduced-motion` 시 자동재생 끔. `SyncSetupAnimation`=기기 동기화 4컷(① ⋯더보기[가로 점]→간편공유·기기동기화 가로 카드 → ② 금고암호 → ③ 동기화 링크 → ④ **새 기기**[teal `tone="new"`+`DeviceBadge` "새 기기" — 실제 다른 기기]). **노출 위치는 [cloud-sync-menu-entry.tsx](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx)의 `status === "none"`(동기화 시작 화면)** — 4.18 공지 개편으로 공지에서 이 화면으로 이전
 - ⚙ **PWA 가이드 단일화**([pwa-guide-illustrations.tsx](../../src/app/(main)/_components/pwa/pwa-guide-illustrations.tsx) `PwaSetupAnimation({platform,browser})`) — **공지(notice)와 설치 가이드(`InstallGuideContent`)가 동일 컴포넌트 공유**(구 `InstallGuideAnimation` 제거). **①앱 설치(복원 코드)·④앱(PWA) 첫 실행 복원**(같은 기기 — 기본 frame + brand `DeviceBadge` "앱 (PWA)", 동기화의 "새 기기"와 구분 / 동기화=금고암호·일반=PIN 4자리 2케이스)은 공통, **②③은 `getGuideSteps(platform,browser)`로 접속 브라우저별 공유/메뉴→홈 화면 추가** SVG. PC(`platform==="pc"`)는 네이티브 설치라 ②③ 생략(공통 2컷). 브라우저 재선택 칩 변경 시 `resetKey`로 ②③ 즉시 갱신. **iOS Safari는 `iosSafariModern`(UA iOS 메이저 ≥ 18)로 신형(⋯메뉴→공유)/구형(중앙 공유) SVG·step1 문구 분기**. 컷 간격 **3000ms**
 - ⚙ **구형 iOS Safari 컷 미전환 버그 수정** — 원인=opacity로 스택된 컷 레이어의 repaint 누락(구형 Safari)으로 다음 컷 안 바뀜. 해결=**활성 컷 1개만 렌더 + `key={active}` remount**(`StepAnimationPlayer`)로 모든 브라우저 전환 보장. 진입 페이드는 `motion-safe:animate-in fade-in`. 자동 전환은 콘텐츠 진행이라 reduced-motion에서도 동작(페이드만 비활성), 멈춤 버튼으로 정지. opacity 스택 레이어 방식 재도입 금지
 - ⚙ **컨트롤 클릭성** — 멈춤/시작·단계 점은 `pointer-events-auto`로 공지 본문(`pointer-events-none`) 안에서도 동작. 점은 `size-3`+`after:-inset-2` 히트영역, 클릭 시 해당 컷 이동+일시정지
@@ -199,10 +241,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
-- ⚙ `notice.tsx`: `NOTICE_ID="20260624"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단(애니메이션 컨트롤만 `pointer-events-auto`). 본문 순서 **①PWA 설치(`!isStandalone`만, `PwaSetupAnimation`+복원 2종: 동기화=금고암호/일반=PIN 4자리 명확 구분) → ②기기 동기화(`SyncSetupAnimation`+"다른 기기 동기화 링크")**
+- ⚙ `notice.tsx`: `NOTICE_ID="20260722"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증샷 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증샷 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너
 - ⚙ **수동 공지 진입** — 자동 1회 팝업(`UpdateNoticeDialog`) 외에, 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
-- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(`secretasset_notice_seen_{id}` localStorage, PWA standalone 분리). 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능
+- ⚙ **공지 열람 상태 단일 키** — `secretasset_notice_seen`(값 `{ id, seenAt, expiresAt }`) **한 개만** 유지(구 `secretasset_notice_seen_{id}` per-id 다중 키 폐기). `readNoticeSeenId()===NOTICE_ID`면 열람. `cleanExpiredNoticeKeys(NOTICE_ID)`가 매 진입 시 현재 공지 레거시 키를 단일 키로 이관(열람 상태 보존) 후 레거시 `_*` 전부 제거 / init 경로(no-id)는 만료 레거시만 정리. 죽은 `secretasset_notice_hide_until`은 `consolidate-notice-keys` 마이그레이션으로 제거. keepKeys는 `secretasset_notice_seen`(접미 `_` 없이) 보존
+- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(단일 키, PWA standalone 분리). 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능
 
 ### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.
@@ -216,7 +259,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력
 - 👤 닉네임 저장·공유 반영, 다크모드 토글, 도구 메뉴(`tool-menu`) AI 자산현황 프롬프트, 수동 환율 입력
 - 👤 **닉네임 커밋 시점 = 탭 이탈(언마운트)** — 더보기 탭에서 닉네임 여러 글자 입력 중에는 저장·push 미발생(로컬 draft만), **더보기 탭을 벗어날 때 1회만** 커밋. 편집 중 다른 기기 pull로 닉네임이 바뀌면 입력란이 자동 갱신되고, 그대로 탭 이탈 시 stale 값 재push 없음(draft==현재 닉네임 → 커밋 no-op)
-- 👤 더보기 `지원` 섹션 **"앱 가이드 · 공지사항"** 통합 진입점 — 선택기에서 앱 가이드 보기 / 공지사항 보기 분기(메뉴 행 1개로 통합). 공지 뷰어는 SVG 애니메이션 멈춤/시작 동작 확인
+- 👤 더보기 `지원` 섹션 **"앱 가이드 · 공지사항"** 통합 진입점 — 선택기에서 앱 가이드 보기 / 공지사항 보기 분기(메뉴 행 1개로 통합). 공지 뷰어는 정적 카드 4장(SVG 애니메이션 없음 — 4.18 개편). 동기화 4컷 애니메이션의 멈춤/시작은 **더보기 > 기기 동기화(미설정 상태)** 화면에서 확인
 - ⚙ **닉네임 입력 draft 분리**([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): `onChange`는 로컬 `draft` state만 갱신(localStorage·`NICKNAME_EVENT`·push 없음), `useEffect([nickname])`로 외부 변경 반영, 언마운트 클로저(`commitRef`)에서 `sanitizeNickname(draft)!==nickname`일 때만 `setNickname` 커밋. `persistNickname` 로직 재사용·호출 시점만 변경
 - ⚙ 닉네임 변경(`NICKNAME_EVENT`) 발생 시 React `assetData` 상태가 실시간 업데이트되며, 자산 CRUD/동기화 시 닉네임이 빈 값으로 덮어써지지 않는지 검증
 - ⚙ 공유 토큰 파싱(`parseShareToken`/`unpackV7`) 및 데이터 가져오기 시 닉네임이 `validated.nickname` 및 `data.nickname`에 누락 없이 복원되어 보존되는지 검증
@@ -296,7 +339,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R13 | **pull 후 sync-state 재기록** | pull의 `applyImportedPayload`(clearAssetData)가 `secretasset_sync` 삭제 → `runPushAfterRestoreFix`로 assetId·rememberedKey 재기록(F-CLOUD-SYNC S9). 누락 시 assetId 유실 |
 | R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵 + `getComparablePayloadString()`(비교에서 `lastUpdated`·`yearlyNetAssets`(올해)·오늘 daily·이번달 monthly + **API 종목 `baseDate`·`name`·`inactiveCheckedAt`**(halted 포함)·활성종목 `currentPrice`·`inactiveStatus`·`inactiveReason` 제외) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). **`baseDate`(장외=매일·장중=매시간 슬롯 도장)가 비교에 남으면 자산 미변경에도 자동 push 핑퐁** — 제외 필수. `buildExportPayload`(실제 push)는 불변. R5(sync abort)와 연계 |
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |
-| R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(공지 등 `pointer-events-none` 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
+| R16 | **SVG 애니메이션 공용 플레이어** | 모든 단계형 애니메이션은 `StepAnimationPlayer` 단일 경로(`InstallGuideAnimation`·`SyncSetupAnimation`·`PwaSetupAnimation` 위임). **각 애니메이션의 소비처가 최소 1곳은 유지되는지**(공지 개편처럼 사용처를 걷어내면 고아 코드가 되고 가이드가 앱에서 사라짐 — `SyncSetupAnimation`=기기 동기화 설정 화면, `PwaSetupAnimation`=`InstallGuideContent`). 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`(`pointer-events-none` 컨테이너 내부 동작 보장). SVG fill에 색 토큰 className 직접 사용 금지 → `fill="currentColor" className={토큰}` (className을 `fill={HINT}`로 넣으면 다크모드 미표시) |
 | R17 | **닉네임 상태 동기화 누락** | 닉네임 변경(`NICKNAME_EVENT`) 시 `AssetDataProvider`의 `assetData` 상태 동기화 누락으로 CRUD/동기화 시 닉네임 초기화 방지. **커밋은 탭 이탈(언마운트) 1회** — 입력 중 draft만 갱신, `useEffect([nickname])`로 외부 pull 반영해 stale 재push 차단(F-MISC) |
 | R21 | **pull 후 시세 미갱신** | 기기 동기화 pull(`runPull`·`armWithPull`)은 `refreshData`가 아닌 **`initAndSync(getAssetData())`** 호출 — 양쪽 기기 자산 보유 시 pull 후 오늘자 주식·환율 미갱신 방지. `refreshData`로 회귀 금지(F-SYNC·F-CLOUD-SYNC) |
 | R18 | **동기화 pull의 앱잠금 인증키 삭제** | `clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존 + `autoPullIfNewer` 진입 `isPwaLocked()` 가드. 누락 시 동기화 후 PIN 해시 유실→"비밀번호 불일치"(P0), 또는 잠금화면 위 pull로 우회. 해제는 `PWA_UNLOCKED_EVENT`로만 즉시 pull(F-CLOUD-SYNC S11) |

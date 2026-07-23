@@ -13,6 +13,7 @@ import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
 import { DetailSummaryHeader } from "../detail-summary-header";
+import { computeFxExposure } from "@/lib/report/asset-report";
 import { Cash, Loan } from "@/types/asset";
 
 const CASH_CATEGORY_TABS = [
@@ -156,6 +157,12 @@ export function CashTab() {
     ? totalValue
     : filteredSorted.reduce((sum, d) => sum + d.value, 0);
 
+  // 현금성 자산의 통화별 노출 — 성적표와 동일한 computeFxExposure 재사용(현금만 넘겨 비중 기준을 현금 총액으로)
+  const fxCash = useMemo(
+    () => computeFxExposure({ ...assetData, stocks: [] }, exchangeRates, totalValue),
+    [assetData, exchangeRates, totalValue],
+  );
+
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) { deleteCash(id); toast.success("삭제되었습니다."); }
   };
@@ -175,6 +182,25 @@ export function CashTab() {
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader label="총 현금성 자산" value={displayValue} valueClass={ASSET_THEME.text.default} />
+
+        {/* 통화별 외화 노출 — 환율이 움직일 때 얼마가 흔들리는가 */}
+        {fxCash.length > 0 && (
+          <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4 space-y-2">
+            <p className="text-sm font-bold text-foreground">통화별 노출</p>
+            {fxCash.map((fx) => (
+              <div key={fx.currency} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  {fx.currency}
+                  <span className="ml-1.5 tabular-nums">{fx.ratio.toFixed(1)}%</span>
+                </span>
+                <span className="text-right">
+                  <span className="font-semibold tabular-nums text-foreground">{formatPriceByMode(Math.round(fx.exposureKrw))}</span>
+                  <span className="ml-2 text-muted-foreground tabular-nums">환율 10원당 ±{formatShortCurrency(Math.round(fx.per10Won))}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-start">
           <InlineSelector

@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { SyncQr } from "./sync-qr";
+import { SyncSetupAnimation } from "../../pwa/pwa-guide-illustrations";
 
 function validatePassphrase(passphrase: string): { ok: boolean; message?: string } {
   if (!passphrase) {
@@ -152,6 +153,11 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
               </p>
+            </div>
+            {/* 설정 흐름 4컷 — 공지에서 옮겨온 공용 애니메이션(설정 화면이 실제 사용 시점) */}
+            <div className="rounded-lg bg-muted/40 p-3">
+              <p className="font-semibold text-foreground text-sm mb-2">💡 기기 동기화 설정 방법</p>
+              <SyncSetupAnimation />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1.5"><KeyRound className="size-3.5 text-primary" /> 금고 암호</Label>

@@ -23,6 +23,24 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 
 ---
 
+### GET /api/finance/crypto
+암호화폐 현재가 (업비트). 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
+
+```
+GET /api/finance/crypto?symbols=BTC,ETH,SOL
+→ { "BTC": { price, market: "KRW-BTC", updated_at }, ... }
+```
+
+캐시 슬롯: `getCoinCacheSlot()` ([coin-cache-slot.ts](../../src/lib/coin-cache-slot.ts)) — 코인은 24시간 무휴장이라 장중/장외·영업일 구분 없이 **항상** `"{date}-H{HH}"`(KST 1시간).
+
+- **캐시 2겹**: `finance:coin:{market}-{slot}`(1시간) + `finance:coin:last:{market}`(3시간 stale 폴백). 파일 캐시는 `COINS`/`COINS_LAST` — **`STOCKS`와 반드시 분리**(prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 삭제됨).
+- **rate limit 방어**(업비트 IP 기준 10 req/s의 20%만 사용): 슬롯 캐시 → stale 즉시 반환 + `after()` 백그라운드 갱신 → 최초만 동기 대기. 외부 호출은 `finance:upbit:lock`(SET NX EX 5s) 직렬화 + 최소 500ms 간격. 로컬은 모듈 스코프 in-flight dedup.
+- **무효 심볼 방어**: `market/all`(1일 캐시)과 교집합 후 조회 — 미상장 심볼이 섞이면 요청 **전체가 400 실패**. 응답에 없는 코인은 클라이언트가 수동값 유지.
+- 429·418 → 재시도 없이 stale 유지 + `X-Upbit-Unavailable` 헤더.
+- **인증 불필요**하지만 **Origin 헤더가 붙으면 10초당 1회**로 제한되므로 브라우저 직접 호출 금지 — 반드시 이 라우트로 프록시.
+
+---
+
 ### GET /api/finance/profit
 기준가(과거 종가) 조회. 기간별 수익 계산용.
 

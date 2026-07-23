@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-07-22
+
+### 부동산 실거래 추정 정확도 개선 + 홈·주식·인증샷 UI 정리 (issue-4.18)
+
+- **오매칭 근본 원인 3종 제거** ([realestate-service.ts](../../src/lib/realestate-service.ts)): ① `parseTradesXml`이 아파트 태그(`excluUseAr`·`aptNm`)만 읽어 **단독(sh)·비주거용(nrg)은 전 거래 면적이 0**이었다 → 데이터셋별 필드 테이블(sh=`totalFloorAr`, nrg=`buildingAr`, 폴백 `plottageAr`)과 `areaKind`(전용/연면적/대지) 도입. ② 면적이 0이면 면적 필터가 통째로 스킵되고 `matchBy:"area"`는 단지명 필터도 없어 **시군구 전체 최근 거래 1건**이 그대로 추정치가 됐다 → 면적 미상이면 추정 자체를 금지하는 하드 가드. ③ 면적 종류가 다른 거래를 섞어 비교하지 않으며, 후보 0건이어도 전체 풀로 되돌리지 않는다(이 완화가 곧 오매칭).
+- **매칭 재작성**: 절대 ±3㎡ → **상대 ±10%(최소 ±3㎡)**(대형 상가에서 절대치는 무의미). 점수 = 지번일치 > 단지명 > 법정동 > 면적 근접 > 최근성이며, 카카오가 이미 주는 **`jibun`을 estimate에 전달**(기존엔 해석만 하고 버려 가장 큰 정확도 손실). 1단계 실패 시 같은 법정동·같은 면적종류·±30% 표본의 **㎡당 단가 중앙값 × 내 면적**으로 폴백하되 **표본 3건 미만이면 미노출**. 결과는 등급(`exact`/`similar`/`approx`/`estimated`)·표본수와 함께 반환. 조회 창은 6→12→24개월 단계 확장(상가·단독은 거래 희소, 캐시 슬롯 재사용).
+- **면적 직접 입력(㎡/평 토글)** ([real-estate-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/real-estate-input.tsx)): 기존엔 조회 성공 시에만 면적이 세팅돼 상가·단독은 영원히 매칭 불가한 순환이었다. 저장은 항상 ㎡, 토글 상태만 `areaUnitPreference`로 보존(왕복 변환 오차 방지를 위해 입력값은 로컬 상태로 유지). 라벨은 종류별(전용면적/연면적/건물면적).
+- **아파트 면적 미노출 해소** ([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx)): 자동 갱신이 매칭 면적을 어디에도 저장하지 않아 상세 근거 줄이 비어 있었다 → `marketEstimateArea`(사용자 입력과 분리) 저장 + 기존 물건도 다음 접속에 채워지도록 갱신 조건 확장. 신규 `marketEstimate*` 필드는 전부 sync 변경감지 제외(R14).
+- **UI 정리**: 홈 헤더 원인 문구를 기본 접힘(토글)으로 돌리고 `animate-pulse` 제거 / 주식 개별 카드의 '오늘' 칩을 우측 3줄 → 좌측 메타 줄로 이동 / 인증샷 `text-[11px]` → `text-sm` 승격 + 보유 비중을 좌측(이름 아래)으로 이동.
+- **공지 4.18 개편** ([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx), `NOTICE_ID` `20260624`→**`20260722`**): 6월 릴리스 기준의 PWA 설치·기기 동기화 2카드(+SVG 애니메이션 2종)를 **이번 릴리스 기능 4카드**(자산 성적표·암호화폐 시세 자동 갱신·부동산 실거래가 추정·인증샷 개편)로 전면 교체. 카드 정의를 `FEATURES` 배열로 데이터화해 마크업 반복 제거, 브라우저 분기가 사라져 `usePWAInstall`·`detectBrowserEnv`·state 없는 **정적 컴포넌트**가 됨. "자산 변동 노출 개선"은 5번째 카드 대신 하단 1문단으로 흡수. `.env.local` `NEXT_PUBLIC_NOTICE.expiresAt` 2026-07-25→08-22 연장(운영 환경변수도 별도 연장 필요).
+- **레버리지 수익 기간 불일치 수정** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): "레버리지 이자 vs 투자 수익"에서 이자는 연 환산(12개월)·주식은 TTM(12개월)인데 **배당만 `annualActual`(올해 실지급분, 연중이면 N/12)** 이라 레버리지 몫 수익이 구조적으로 과소계상됐다 → `annualTotal`(올해 실적+예상 12개월)로 교체. 같은 값이 `AssetGradeInputs.dividend`로도 흘러 배당수익률(`divYield`)이 연중 과소평가되던 문제도 함께 해소(필드명 `annualActual`→`annual`로 정정). 두 박스에 **`1년 기준` 뱃지 + 각 산출 근거 캡션**(이자=현재 잔액×금리·향후 1년 / 수익=주식 최근 1년+올해 배당) 추가 — 세 값의 창이 미묘하게 달라 뱃지 하나로 뭉뚱그리지 않고 박스별로 명시.
+- **원인분해 "그 외" 상세화** ([asset-report.ts](../../src/lib/report/asset-report.ts) `pickTopCauses`): 상위 1~2개만 이름을 갖고 나머지(환율·부채·저축)는 `restEffect` 단일 숫자로 뭉쳐 "그 외 −1,200만원"이 무엇인지 알 수 없었다 → **`restCauses`**(임계값 1만원 이상, 절대값 내림차순) 추가. 홈 헤더(`formatAttributionSentence`)·성적표 원인분해 모두 전 원인을 이름으로 펼치고, 임계값 미만 잔차만 "그 외"로 남긴다. **표시 금액 합계 = Δ순자산** 불변 조건은 잔차(`restEffect − Σ표시분`) 계산으로 유지.
+- **백업 날짜 "(오늘)" 오표시 수정** ([backup-status.ts](../../src/lib/backup-status.ts) `formatLastBackup`): 오늘/어제 라벨을 `daysSinceBackup`(경과 24h 블록)으로 판단해, 어제 저녁 백업 후 오늘 아침(24h 미만)이면 "(오늘)"로 잘못 표기 → **KST 달력일 차이**로 판단하도록 교체(`daysSinceBackup`은 30일 stale 임계값용이라 그대로 유지).
+- **인증샷 헤더 순서**: 대표 지표 행을 `총 수익률 → 수익금`에서 **`수익금 → 총 수익률`**로 스왑(금액을 먼저).
+- **성적표 '넣은 돈' 혼선 완화**: 넣은 돈(총 투입원가)이 대출·보증금을 포함해 순자산보다 커 보이던 혼선 → **`그중 실투자금 N (부채 제외 내 돈)`** 캡션(`report.equity`)을 병기하고 InfoHint에 실투자금·순자산 관계 문단 추가.
+- **레버리지 '들어오는 돈' 계산 투명화**: 레버리지 몫 수익 아래에 **`금융 수익 +N (+Y%) × 대출비율 42%`** 한 줄 추가 — 총 금융자산 1년 수익(`totalFinReturn`)과 그 수익률을 노출해 어떻게 그 금액이 나왔는지 직관적으로 보이게.
+- **성적표 대주제 구분 + 넣은돈·레버리지 통합** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): 대주제 섹션이 같은 `BOX` 스타일로 뭉개져 구분이 약했다 → `SECTION`(bg-card+shadow-sm)로 띄우고 `SectionHeader`(아이콘 칩+굵은 제목)로 각 섹션 시작을 명시(투입 대비 성과 / 5축 측정 / 순자산 변화). 5축은 헤더 없이 카드만 흩어져 있던 것을 섹션으로 묶고 축 카드는 `bg-muted/30` 내부 톤으로 낮춤. **'넣은 돈 대비 성과'와 '레버리지 이자' 박스를 하나로 통합** — `모든 자산 / 실투자금 / 순수 레버리지` **3기준 × (넣은 돈·이자·번 돈) 비교 표**(컬럼 정렬 grid, `formatShortCurrency` 압축, 모바일 `overflow-x-auto`)로 재구성. 넣은돈=총원가·번돈=누적, 이자·레버리지 수익=연간임을 InfoHint·표 캡션에 명시. 순수 레버리지 결론(이자 내고 남는 돈)은 강조 줄, 계산 근거·대출 상세는 압축 접기로 유지. 미사용된 `BOX`·`hasLoans` 제거.
+- **명세 행(`SpecRow`) 패턴 도입**: 좁은 타일에서 값+설명이 한 캡션에 섞여 모바일 줄바꿈이 지저분하던 문제 → 라벨(좌·text-pretty)·값(우·tabular-nums) 분리 헬퍼로 통일. 설명 문장은 `text-pretty`로 위계 구분.
+- **레버리지 박스 위계 재설계** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): 정확도를 올리는 과정에서 블록이 8개까지 늘어 결론이 묻혔다 → **①결론 Hero(이자 내고 남는 돈, `text-xl~2xl` + 판정 문구 1줄) ②나가는/들어오는 2박스(산출 캡션 제거해 2줄로 압축) ③접기 트리거** 3블록으로 재구성. 총액·분모·산출 근거·대출 목록·제외 안내는 전부 **`계산 근거 · 대출 상세` 접기(기본 접힘)** 로 이동(design-system §11 "Hero 최상단·부차 정보는 접이식"). 9문단짜리 InfoHint도 3문단으로 압축하고 나머지는 접기 본문으로. **계산 로직 불변** — `netLeverage`/`netRate`만 IIFE 밖으로 끌어올려 Hero와 등급 `coverage`가 같은 값을 공유.
+- **대출 → 부동산 연결 딥링크**: 접기 안 대출 행을 `<button>`으로 바꿔 클릭 시 **기존 `trigger-edit-loan` 이벤트**를 dispatch → 해당 대출 수정 다이얼로그가 열린다(`LoanInput`이 [asset-page-tabs.tsx](../../src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx) 뷰 전환 밖 hidden 영역에 상시 마운트라 성과 탭에서도 닿음 — 신규 배선 0). 연결 필요한 대출(`!isRealEstate`)에만 `Link2` + `부동산 연결` 라벨. `AssetReport.loanInterest`에 `id` 추가(렌더 key도 `name-rate` 조합 → `id`로 교체, 동명이 대출 충돌 제거).
+- **공지 행동 요청 콜아웃**: 기존 사용자는 연결 UI가 열린 걸 모르므로 [notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx)에 amber 톤 콜아웃 추가(경로 안내 포함, 공지는 `pointer-events-none`이라 링크 불가).
+- **신용대출로 산 부동산 연결 가능**([loan-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-input.tsx)): `연계 부동산` 선택이 `selectedType === "mortgage-home"`일 때만 렌더돼, **신용·마이너스대출로 산 부동산은 연결할 수단 자체가 없었다** → 해당 대출이 영원히 "투자 레버리지"로 분류되어 성적표의 레버리지 이자·대출비율이 부풀려짐(실사용 데이터에서 투자 레버리지 1.277억 중 7,000만원이 사무실 용도 신용대출로 확인). 종류 조건을 제거해 전 대출에서 연결 가능하게 하고, 연결 시 레버리지 비교에서 빠진다는 `FormDescription` 추가. **계산 로직은 이미 `linkedRealEstateId`를 보고 있어 UI 조건만 해제**.
+- **분모 노출·기준 뱃지**: 레버리지 박스에 `금융자산만` 뱃지 + `금융 투자 원가 N원 대비 42%` 캡션(`AssetReport.financialInvestCost` 신설)을 추가해 사용자가 %를 직접 검산 가능하게. '넣은 돈'에는 `부동산 · 주식 · 코인 · 현금 합산` 캡션 — **두 블록의 분모가 다르다**(전체 자산 대비 11%가 금융투자 대비 42%로 보이는 이유)는 점이 혼동 지점이었다.
+- **"모든 자산 기준" 명시**: 성과 허브 자산 성적표 카드의 "투입원가 대비"에 `모든 자산` 뱃지 추가 + 성적표 본문 Hero 아래에 **넣은 돈·번 돈·수익률 요약 블록 신설**(카드에만 있고 정작 성적표엔 없던 값). 현금이 분모에 포함돼 수익률을 희석한다는 점을 InfoHint로 안내.
+- **백업 메타 localStorage 2키 → 1키 통합**([backup-status.ts](../../src/lib/backup-status.ts)·[local-storage.ts](../../src/lib/local-storage.ts)): 4.18 추가 키 중 `secretasset_last_backup_at`·`secretasset_backup_nudge_shown_on`이 같은 개념·같은 라이프사이클(둘 다 keepKeys 보존·`clearBackupStatus` 동시 삭제·기기 로컬 전용)이라 **단일 객체 `secretasset_backup { lastBackupAt, nudgeShownOn }`** 로 통합. 접근은 `readBackupMeta`/`writeBackupMeta` read-modify-write로 캡슐화(소비처 무변경). `consolidate-backup-keys` 마이그레이션으로 옛 2키 이관. (검토 결과 `lastVisitDate`는 clear 동작 상이·`dailyArchive`는 데이터 blob이라 통합 제외 — 나머지 4.18 키는 모두 bounded 단일 키)
+- **공지 localStorage 단일 키 통합**([local-storage.ts](../../src/lib/local-storage.ts)·[notice-dialog.tsx](../../src/app/(main)/_components/layout/onboarding/notice-dialog.tsx)): 릴리스마다 `secretasset_notice_seen_{id}` per-id 키가 만료 전까지 누적되고 죽은 `secretasset_notice_hide_until`(구 "일주일 숨기기" 잔재)이 계속 이관·보존되던 sprawl 제거 → **단일 키 `secretasset_notice_seen`**(`{id,seenAt,expiresAt}`)로 통합. `cleanExpiredNoticeKeys(currentId)`가 현재 공지 레거시 키를 단일 키로 이관(열람 상태 보존) 후 나머지 전부 정리, `consolidate-notice-keys` 마이그레이션으로 죽은 hide_until 제거. `merge-tutorial-status`(12키→1키) 선례 패턴.
+- **공지 문구 오늘 작업 반영 + 성적표 패턴 등록**([notice.tsx](../../src/app/(main)/_components/layout/onboarding/notice.tsx)·[design-system.md](design-system.md) §5.1): 자산 성적표 카드에 투입 대비 성과 3기준·AI 프롬프트 고도화 문구를, 기타 개선 문단에 원인분해 상세화·백업 날짜 정확도를 보강(`NOTICE_ID` 불변). 성적표에서 만든 재사용 UI 패턴 4종(**대주제 섹션 구분·소그룹 뱃지 라벨·비교 그리드·명세 행 SpecRow**)을 design-system §5.1에 레시피+레퍼런스로 등록.
+- **이유(공지):** 공지의 성패는 정보량이 아니라 인지율이다. PWA 설치는 홈 배너·상단 아이콘으로 이미 상시 노출 중이라 공지에서 빼도 유입 손실이 없고, 그 자리를 비워야 신규 기능 4개가 스크롤 없이 들어온다.
+- **이유:** 추정치가 틀리면 병기하지 않느니만 못하다. 이번 변경의 축은 "더 많이 추정"이 아니라 **근거가 약하면 내보내지 않고, 내보낼 땐 등급·표본을 함께 보여준다**에 있다.
+
+---
+
+## 2026-07-20
+
+### 업비트 코인 시세 자동 갱신 — 1시간 슬롯 캐싱 (issue-4.20)
+
+- **코인 시세 자동화** ([upbit-service.ts](../../src/lib/upbit-service.ts)·[coin-cache-slot.ts](../../src/lib/coin-cache-slot.ts)·[api/finance/crypto](../../src/app/api/finance/crypto/route.ts) 신규): 암호화폐만 현재가가 100% 수동 입력이라 사용자가 직접 고치지 않으면 평가액·순자산·성적표가 낡은 값으로 계산되던 문제 해결. 업비트 Quotation API(인증 불필요·콤마로 복수 페어 1회 조회)로 접속 시 자동 갱신. 코인은 24시간 무휴장이라 주식의 장중/장외·영업일·DST 판정이 무의미해 **항상 1시간 슬롯**(`{YYYY-MM-DD}-H{HH}` KST)만 쓰는 별도 슬롯 유틸로 단순화. `cryptoSchema.baseDate`(optional) 도장으로 같은 슬롯이면 재조회 스킵. 업비트는 복수 조회를 지원하므로 주식의 배치 루프(3개/1초)가 통째로 불필요.
+- **공통 캐시 + rate limit 방어**: 서버 캐시 키가 마켓 단위(`finance:coin:KRW-BTC-{slot}`)라 같은 코인 보유자끼리 캐시를 공유해 외부 호출이 슬롯당 1회로 수렴. 업비트 한도(IP 기준 10 req/s)의 **20%만 사용**하도록 ① 슬롯 캐시 → **stale(3시간) 즉시 반환 + `after()` 백그라운드 갱신**(사용자 대기 0) → 최초만 동기 대기 ② 외부 호출은 `finance:upbit:lock`(SET NX EX 5s)로 직렬화 + **최소 500ms 간격** ③ 클라이언트 **0~5초 지터**로 매시 정각 몰림(thundering herd) 분산. 로컬(단일 프로세스)은 모듈 스코프 in-flight dedup으로 락 대체. 429·418 수신 시 재시도 없이 stale 유지.
+- **캐시 버킷 분리(함정)** ([cache-storage.ts](../../src/lib/cache-storage.ts)): 파일 캐시를 `COINS`/`COINS_LAST`로 `STOCKS`와 분리. `writeFinanceCache`의 prune이 주식 유효일 문자열 매칭(`key.includes('-{effectiveDate}')`)이라 같은 버킷에 넣으면 코인이 매 write마다 통째로 삭제됨. Upstash도 `finance:coin:` 접두로 분리해 `finance:stock:` SCAN 정리와 충돌 방지. 실측으로 주식 캐시 보존 확인.
+- **무효 심볼 방어**: 업비트 미상장 심볼이 하나라도 섞이면 ticker 요청 **전체가 400 실패**하므로, `market/all`(1일 캐시)과 교집합을 취한 뒤 조회. 응답에 없는 코인(해외 거래소 전용)은 수동 입력값을 그대로 유지.
+- **동기화 핑퐁 차단** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx) `getComparablePayloadString`): crypto의 `baseDate`·`currentPrice`를 변경감지에서 제외. 미제외 시 자산 미변경에도 매시간 자동 push가 발생(R14, 주식과 동일한 이유). 공유 토큰(packV7)은 crypto 섹션이 8필드 고정 배열이라 `baseDate` 미포함 — 주식도 `baseDate`를 공유 토큰에 넣지 않는 선례를 따름(R3).
+- **이유:** 자산 5종 중 코인만 시세가 멈춰 있어 순자산·성적표의 정확도를 떨어뜨렸다. 업비트는 인증이 없고 복수 조회가 되어 주식보다 오히려 단순하게 붙지만, IP 기준 초당 제한과 서버리스 IP 공유가 위험이라 캐시·락·stale·지터로 호출 자체를 슬롯당 1회로 수렴시키는 데 설계를 집중했다.
+
+---
+
 ## 2026-07-11
 
 ### 인앱 브라우저 외부 이동 하드 게이트 + 동기화 잦은 version 갱신 개선 (issue-4.12)

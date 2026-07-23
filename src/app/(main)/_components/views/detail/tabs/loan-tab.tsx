@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, calculateHoldingDays, formatPriceByMode } from "@/lib/number-utils";
+import { formatShortCurrency, calculateHoldingDays, daysUntil, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
@@ -35,8 +35,8 @@ function formatDaysToYMD(days: number): string {
   return parts.join(" ");
 }
 
-function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, linkedRealEstate, linkedStock, linkedCash, onDelete }: {
-  loan: Loan; pct: number; color: string; typeLabel: string; daysElapsed: number; daysRemaining: number | null;
+function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEstate, linkedStock, linkedCash, onDelete }: {
+  loan: Loan; pct: number; color: string; typeLabel: string; daysElapsed: number; dDay: number | null;
   linkedRealEstate: RealEstate | null; linkedStock: Stock | null; linkedCash: Cash | null;
   onDelete: (id: string) => void;
 }) {
@@ -80,6 +80,15 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
                 <p className={ASSET_THEME.cardDetailLabel}>금리</p>
                 <p className={ASSET_THEME.cardDetailValue}>{loan.interestRate}%</p>
               </div>
+              {loan.interestRate > 0 && (
+                <div>
+                  <p className={ASSET_THEME.cardDetailLabel}>이자 부담</p>
+                  <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.liability} tabular-nums`}>
+                    월 −{formatPriceByMode(Math.round(loan.balance * (loan.interestRate / 100) / 12))}
+                  </p>
+                  <p className={ASSET_THEME.cardDetailMeta}>연 −{formatShortCurrency(Math.round(loan.balance * (loan.interestRate / 100)))}</p>
+                </div>
+              )}
               {loan.institution && (
                 <div>
                   <p className={ASSET_THEME.cardDetailLabel}>금융기관</p>
@@ -95,7 +104,15 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, daysRemaining, lin
                 <div>
                   <p className={ASSET_THEME.cardDetailLabel}>만기일</p>
                   <p className={`${ASSET_THEME.cardDetailValueBold} ${ASSET_THEME.text.default}`}>{loan.endDate}</p>
-                  {daysRemaining !== null && <p className={ASSET_THEME.cardDetailMeta}>{formatDaysToYMD(daysRemaining)} 남음</p>}
+                  {dDay !== null && (
+                    dDay < 0 ? (
+                      <p className={`text-sm font-semibold ${ASSET_THEME.liability}`}>만기 {formatDaysToYMD(-dDay)} 지남</p>
+                    ) : (
+                      <p className={dDay <= 90 ? `text-sm font-semibold ${ASSET_THEME.liability}` : ASSET_THEME.cardDetailMeta}>
+                        D-{dDay} · {formatDaysToYMD(dDay)} 남음
+                      </p>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -201,6 +218,8 @@ export function LoanTab() {
     : allLoans.filter((l) => l.type === activeCategory);
 
   const filteredTotal = filteredLoans.reduce((s, l) => s + l.balance, 0);
+  // 연간 이자 추정 = Σ 잔액 × 금리 (성적표 buildAssetReport와 동일 수식)
+  const filteredAnnualInterest = filteredLoans.reduce((s, l) => s + l.balance * (l.interestRate / 100), 0);
 
   const loanBarItems = filteredLoans.map((l) => ({
     loan: l,
@@ -217,12 +236,13 @@ export function LoanTab() {
     const color = LOAN_TYPE_COLORS[loan.type] ?? "var(--accent-teal)";
     const typeLabel = loanTypes.find((t) => t.value === loan.type)?.label ?? loan.type;
     const daysElapsed = calculateHoldingDays(loan.startDate);
-    const daysRemaining = loan.endDate ? calculateHoldingDays(loan.endDate) : null;
+    // 만기 D-day — 지난 만기는 음수로 구분 (calculateHoldingDays는 절대값이라 과거·미래 구분 불가)
+    const dDay = loan.endDate ? daysUntil(loan.endDate) : null;
     const linkedRealEstate = loan.linkedRealEstateId ? assetData.realEstate.find((re) => re.id === loan.linkedRealEstateId) ?? null : null;
     const linkedStock = loan.linkedStockId ? assetData.stocks.find((s) => s.id === loan.linkedStockId) ?? null : null;
     const linkedCash = loan.linkedCashId ? assetData.cash.find((c) => c.id === loan.linkedCashId) ?? null : null;
     return (
-      <LoanCard key={loan.id} loan={loan} pct={pct} color={color} typeLabel={typeLabel} daysElapsed={daysElapsed} daysRemaining={daysRemaining} linkedRealEstate={linkedRealEstate} linkedStock={linkedStock} linkedCash={linkedCash} onDelete={handleDelete} />
+      <LoanCard key={loan.id} loan={loan} pct={pct} color={color} typeLabel={typeLabel} daysElapsed={daysElapsed} dDay={dDay} linkedRealEstate={linkedRealEstate} linkedStock={linkedStock} linkedCash={linkedCash} onDelete={handleDelete} />
     );
   };
 
@@ -232,8 +252,20 @@ export function LoanTab() {
         <CardTitle>대출</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
-        {/* 요약 헤더 */}
-        <DetailSummaryHeader label="총 대출 잔액" value={filteredTotal} valueClass={ASSET_THEME.text.default} />
+        {/* 요약 헤더 — 잔액과 함께 매달 나가는 이자 부담 노출 */}
+        <DetailSummaryHeader
+          label="총 대출 잔액"
+          value={filteredTotal}
+          valueClass={ASSET_THEME.text.default}
+          inline={filteredAnnualInterest > 0 ? (
+            <span className="text-sm sm:text-base">
+              <span className="text-muted-foreground">월 이자 </span>
+              <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>−{formatPriceByMode(Math.round(filteredAnnualInterest / 12))}</span>
+              <span className="text-muted-foreground"> · 연 </span>
+              <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>−{formatShortCurrency(Math.round(filteredAnnualInterest))}</span>
+            </span>
+          ) : undefined}
+        />
 
         {/* 카테고리 selector — 항목 많아 가로 스크롤 (모바일 스크롤바 숨김) */}
         <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">

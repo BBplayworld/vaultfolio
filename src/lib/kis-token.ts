@@ -39,7 +39,7 @@ export async function recordKisFailure(): Promise<boolean> {
   if (count === KIS_FAIL_THRESHOLD) {
     const nowKST = new Date(now + 9 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 19);
     await sendAdminSlack(
-      `*[secretasset] 외부 증권 API(KIS) 점검·오류 감지*\n` +
+      `*[시크릿에셋] 외부 증권 API(KIS) 점검·오류 감지*\n` +
         `연속 실패 ${KIS_FAIL_THRESHOLD}회 → 서킷 open (쿨다운 ${KIS_CIRCUIT_COOLDOWN_SEC / 60}분)\n` +
         `시각(KST): ${nowKST}`
     );

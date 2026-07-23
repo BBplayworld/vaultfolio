@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronUp } from "lucide-react";
+import { Z_LAYER } from "@/config/theme";
 import { cn } from "@/lib/utils";
 
 export function ScrollToTop() {
@@ -33,12 +34,13 @@ export function ScrollToTop() {
       type="button"
       onClick={scrollToTop}
       className={cn(
-        "fixed bottom-18 sm:bottom-22 right-6 z-50 size-10 rounded-full shadow-md transition-all duration-300",
+        "fixed bottom-18 sm:bottom-22 right-6 size-10 rounded-full shadow-md transition-[opacity,transform] duration-300",
         "inline-flex items-center justify-center",
         "bg-foreground/60 text-background hover:bg-foreground/90 hover:scale-105",
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
       )}
       aria-label="맨 위로 가기"
+      style={{ zIndex: Z_LAYER.nav }}
     >
       <ChevronUp className="size-5" />
     </button>
