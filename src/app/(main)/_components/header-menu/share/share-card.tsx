@@ -95,7 +95,7 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
             </span>
           </span>
           <span className="flex items-baseline gap-1.5">
-            <span className="text-sm font-semibold text-muted-foreground">총 수익률</span>
+            <span className="text-sm font-semibold text-muted-foreground">수익률</span>
             <span className={`text-lg font-extrabold tabular-nums ${getProfitLossColor(summary.totalProfitRate)}`}>
               {summary.totalProfitRate >= 0 ? "+" : ""}{summary.totalProfitRate.toFixed(1)}%
             </span>
