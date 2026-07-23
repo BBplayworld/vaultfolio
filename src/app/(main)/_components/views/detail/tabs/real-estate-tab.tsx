@@ -43,7 +43,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
   const [open, setOpen] = useState(false);
   const equity = computeEquityMetrics(item, linkedLoans, profit);
   // 종류별 면적 명칭(전용면적/연면적/건물면적) — 서로 다른 면적을 같은 이름으로 부르지 않는다
-  const areaLabel = realEstateTradeDataset[item.type]?.areaLabel ?? "면적";
+  const datasetInfo = realEstateTradeDataset[item.type];
+  const areaLabel = datasetInfo?.areaLabel ?? "면적";
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
       <div className={ASSET_THEME.cardWrapper}>
@@ -95,11 +96,12 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
                 <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
               </div>
-              {/* 실거래 추정 시세 (S-4.21) — currentValue와 병기, 참고 톤(muted) */}
+              {/* 실거래 추정 시세 (S-4.21) — currentValue와 병기, 참고 톤(muted).
+                  모바일은 라벨(뱃지+info 포함)이 다른 셀보다 길어 반폭(grid-cols-2)에서 잘리므로 전폭 사용 */}
               {item.marketEstimate && item.marketEstimate > 0 && (
-                <div>
-                  <p className={`${ASSET_THEME.cardDetailLabel} flex items-center gap-1`}>
-                    실거래 추정{item.marketEstimateDate ? ` (${item.marketEstimateDate})` : ""}
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                    <span className={ASSET_THEME.cardDetailLabel}>실거래 추정</span>
                     <GradeBadge
                       grade={item.marketEstimateGrade}
                       detail={
@@ -111,6 +113,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                     />
                   </p>
                   <p className={`${ASSET_THEME.cardDetailValue} tabular-nums text-muted-foreground`}>{formatPriceByMode(item.marketEstimate)}</p>
+                  {item.marketEstimateDate && (
+                    <p className={ASSET_THEME.cardDetailMeta}>{item.marketEstimateDate} 기준</p>
+                  )}
                 </div>
               )}
               {(item.tenantDeposit ?? 0) > 0 && (
@@ -137,6 +142,29 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   item.marketEstimateFloor !== undefined ? `${item.marketEstimateFloor}층` : undefined,
                 ].filter(Boolean).join(" · ")}
               </p>
+            )}
+            {/* 실거래 추정 미확보 안내 (S-4.21 AC4) — 지원 종류인데 추정치가 없으면 원인별 CTA로 유도.
+                수정 다이얼로그 안에서 주소 검색·면적 입력을 하므로 기존 trigger-edit-real-estate 이벤트를 재사용한다. */}
+            {!(item.marketEstimate && item.marketEstimate > 0) && datasetInfo && (
+              <div className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2 ${ASSET_THEME.cardSectionMeta}`}>
+                <p className="text-sm text-muted-foreground">
+                  실거래 추정 · <span className="font-medium text-foreground">
+                    {!item.regionCode
+                      ? "주소 검색 필요"
+                      : datasetInfo.matchBy === "area" && !item.exclusiveArea
+                        ? `${areaLabel} 입력 필요`
+                        : "실거래 매칭 실패"}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-real-estate", { detail: { id: item.id } }))}
+                >
+                  <Pencil className="size-3.5" />수정
+                </Button>
+              </div>
             )}
             {/* 실투자금 기준 성과 — 보증금·담보대출을 뺀 내 돈이 얼마나 일했는가 */}
             {equity.actualInvested > 0 && (equity.leverageTotal > 0) && (

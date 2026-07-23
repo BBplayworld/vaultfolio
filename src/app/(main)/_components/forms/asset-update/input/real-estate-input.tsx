@@ -66,7 +66,7 @@ export function GradeBadge({ grade, className = "", detail, inModal = false }: {
   if (!grade || !GRADE_BADGE[grade]) return null;
   const g = GRADE_BADGE[grade];
   return (
-    <span className={`inline-flex items-center gap-1 ${className}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1 ${className}`}>
       <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${g.tone}`}>{g.label}</span>
       <InfoHint summary={GRADE_NOTE[grade]} inModal={inModal}>{detail}</InfoHint>
     </span>
