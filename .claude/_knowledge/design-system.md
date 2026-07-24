@@ -60,6 +60,9 @@
 | 본문·금액 | `text-sm` (14px, `sm:text-[15px]`) | 라벨·부가 수치·이름·종목명·손익 금액·표 데이터 — **모바일·PC 공통** |
 | Hero | `text-base`+ (16px↑) | 페이지 핵심 지표 |
 
+- **웨이트는 3종만**: `font-medium`(보조 라벨) · `font-semibold`(강조·라벨) · `font-bold`(Hero·금액). **`font-extrabold` 미사용**(Hero는 크기+색+`font-bold`로 충분 — 웨이트 난립 방지, UI팁 #13). shadcn 프리미티브의 `font-medium`은 그대로 둔다.
+- **줄높이**: 여러 줄 산문(설명·안내·캡션)은 **line-height ≥1.5**(`leading-relaxed`/`leading-normal`/`leading-7`) — UI팁 #16. 단일 줄 숫자·Hero 금액은 자릿수 정렬 위해 `leading-tight` 허용.
+
 - **모바일·PC 인지성 통일**: 캡션 역할(위 표)·구조적 제약(칩/배지/3단 탭) 예외가 아니면 `text-xs`를 쓰지 않고 `text-sm`으로 통일한다(반응형 `text-xs sm:text-sm` 분기도 `text-sm` 고정으로 단순화 — PC뿐 아니라 모바일도 14px).
 - Hero 내부도 1순위(금액) > 2순위(수익률) **반 단계** 차등.
 - 새 px 추가 전 위 4단계로 흡수 가능한지 먼저 검토(9·10·13·14 난립 금지).
@@ -86,6 +89,8 @@
 - 팝오버·시트·드롭다운 `shadow-2xl`, 활성 탭·작은 떠오름 `shadow-sm`.
 - **[필수] 라이트 뉴트럴 계조**(보더리스와 짝): 라이트는 순백 단일톤 금지 → **캔버스 `bg-background`(그레이 `oklch 0.91`) < 리세스 `bg-muted`(`0.88`) < 부상 `bg-card`(화이트)** 3단 + `shadow-xs/sm` 소프트 섀도우로 박스 분리. 다크는 card(`.205`)>background(`.145`) 톤차 유지. 토큰 출처 [globals.css](../../src/app/globals.css) `:root`/`.dark`. 소프트 섀도우는 `--shadow-2xs/xs/sm` + `:root .shadow-*` 무조건 오버라이드(프리셋 미설정 상태에서도 적용).
 - **[필수] 자산 카드 표면 계층**([theme.ts](../../src/config/theme.ts) `ASSET_THEME`): 라이트 모드는 다크 모드와 동일 구조(미러링)를 적용하되, 대조를 높이고 은은한 경계선을 두어 영역을 명확히 구분합니다. 자산 상세 콘텐츠(cardWrapper·섹션·subCard)는 캔버스와 통일(투명/faint 톤, 양 모드 동일 클래스 구조)하여 불필요한 레이어를 없애되, 상세 구분 영역(cardSection/subItemsWell 등)에는 불투명도를 높인 faint 톤(`bg-muted/40` 및 `/20`)과 아주 부드러운 소프트 보더(`border-border/10`, `divide-border/10`)를 적용하여 시각적 구분을 명확히 합니다. 허브·메뉴 카드만 `bg-card`(화이트)+은은한 보더(`border-border/10`)로 명도 pop을 구현합니다. 다크 모드는 현행 디자인(borderless 또는 기존 다크 전용 보더/디바이더)을 그대로 보존합니다.
+- **[필수] 인터랙티브 경계 대비(WCAG 1.4.11)**: 입력 필드·체크박스 등 조작 요소의 경계는 **3:1 이상**. 라이트는 헤드룸이 좁아 `border-input`(=`--input` `oklch(0.58)`)로 가시 경계를 준다(`Input`은 `border border-input dark:border-0`, `Checkbox`는 `border-input`). **다크는 보더리스 fill 유지**(`dark:border-0`, `--input` 별도 pin). 장식용 구분선(`--border`)은 1.4.11 대상이 아니므로 헤어라인을 무겁게 하지 않는다.
+
 ### 3.4 z-index 레이어 스케일 [필수]
 겹침 순서의 단일 출처는 [theme.ts](../../src/config/theme.ts)의 **`Z_LAYER`** 상수다. **임의의 `z-*` 클래스를 새로 만들지 말고 반드시 이 상수를 `style={{ zIndex: Z_LAYER.x }}`로 주입**한다.
 
@@ -135,7 +140,11 @@
 - **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card border border-border/10 dark:border-0 shadow-sm p-4 space-y-3`(테두리보다 그림자 §3.3) + 헤더 = **채운 아이콘 칩**(`flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary` 안에 `size-4` 아이콘) + 굵은 제목(`text-sm sm:text-base font-bold`) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
 - **소그룹 뱃지 라벨** — 섹션 안에서 산식 체인·목록 카테고리 등 하위 묶음의 시작을 표시: `inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary`. muted 텍스트 라벨 대신 brand 톤 뱃지를 쓴다(§1.2 info 아이콘 sky와 구분 — 이건 라벨).
 - **비교 표(그리드)** — 여러 기준을 컬럼 정렬로 대조: `overflow-x-auto` 래퍼(모바일 가로 넘침 보호) + `grid grid-cols-[1fr_auto_…] items-baseline gap-x-… gap-y-…` + 헤더행 + `col-span-N h-px bg-border/40` 구분선. 라벨 좌측, 값 우측(`text-right tabular-nums`), 폭 압축은 `formatShortCurrency`, `min-w-[…]`로 하한. 강조 컬럼만 `font-bold` + 부호색(`getProfitLossColor`).
-- **명세 행(SpecRow)** — 값 + 짧은 설명을 한 캡션에 욱여넣지 말고 라벨/값 분리: 라벨(좌, `text-sm text-muted-foreground text-pretty`, 선택 `· hint`는 `text-muted-foreground/70`) + 값(우, `text-sm text-foreground font-semibold tabular-nums shrink-0`). 좁은 폭 줄바꿈 지저분함을 막는다. 위계·집중도 판단은 §11 참조.
+  - **`auto` 값 열은 모바일에서 `1fr` 라벨 열을 0으로 붕괴시킨다**(라벨이 한 글자씩 세로로 깨짐). `min-w-[…]`는 반드시 **모든 열의 자연 폭 합 이상**이어야 가로 스크롤이 실제로 동작한다. 그 폭을 잡을 수 없으면 **모바일은 기준별 세로 스택(`sm:hidden`, 라벨-값 쌍 블록) + `hidden sm:grid`로 표**를 쓴다. 두 레이아웃은 반드시 같은 행 배열 소스를 map 해 JSX 중복을 만들지 않는다(예: `asset-report-view.tsx`의 `perfRows`).
+  - 한 표 안에서 금액 포맷을 섞지 않는다(`formatShortCurrency` 억/만 표기 vs `formatPriceByMode`가 `full-only`일 때의 9자리 전체 표기 → 열 폭이 2배 이상 벌어짐).
+- **명세 행(SpecRow)** — 값 + 짧은 설명을 한 캡션에 욱여넣지 말고 라벨/값 분리: 라벨(좌, `text-sm text-muted-foreground text-pretty break-keep`, 선택 `· hint`는 `text-muted-foreground/70`) + 값(우, `text-sm text-foreground font-semibold tabular-nums shrink-0 ml-auto`). 컨테이너는 `flex flex-wrap`으로 두어, 한 줄에 안 들어가면 라벨을 부수는 대신 값을 다음 줄 우측으로 내린다. 위계·집중도 판단은 §11 참조.
+- **한글 줄바꿈** — 한글은 기본 `word-break`에서 **음절 단위로 쪼개진다**. 좁은 컬럼·카드에 들어가는 한글 라벨·캡션은 `text-pretty`와 함께 **`break-keep`**(word-break: keep-all)을 붙인다. 전역 상수(`CAPTION` 등)에는 넣지 말고 폭이 좁은 지점에만 적용.
+- **행 안의 부가 뱃지** — `truncate`는 잘려도 되는 텍스트(이름)에만 걸고, 뒤따르는 상태 뱃지·어포던스 라벨(`비교 제외`, `부동산 연결` 등)은 `shrink-0` + 컨테이너 `flex-wrap`으로 둘째 줄에 내려가게 한다. 래퍼 전체에 `truncate`를 걸면 뱃지가 말줄임에 먹혀 **기능 자체가 보이지 않는다**.
 
 ---
 

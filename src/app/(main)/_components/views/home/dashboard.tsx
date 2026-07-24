@@ -226,11 +226,11 @@ export function NetAssetSummaryBox({
 
           <div className="mt-1 space-y-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
+              <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
                 {formatPriceByMode(netAsset)}
               </p>
               {change && (
-                <span className={`inline-flex items-center text-base lg:text-lg font-extrabold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
+                <span className={`inline-flex items-center text-base lg:text-lg font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
                   {change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}
                   <span className="text-sm lg:text-base font-bold ml-1">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
                   <span className="text-sm font-medium text-muted-foreground ml-1.5">{change.label}</span>
@@ -590,7 +590,7 @@ export function Dashboard() {
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(financialTotal)}</p>
+                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(financialTotal)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {financialBarItems.map(({ key, label, value }) => {
@@ -625,7 +625,7 @@ export function Dashboard() {
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(summary.realEstateValue)}</p>
+                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(summary.realEstateValue)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {realEstateCatBarItems.map(({ key, label, value }) => {
@@ -659,7 +659,7 @@ export function Dashboard() {
                       <div className={ASSET_THEME.summaryHeader}>
                         <div>
                           <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
-                          <p className={`text-2xl font-extrabold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{formatPriceByMode(totalLiability)}</p>
+                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{formatPriceByMode(totalLiability)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           {liabTopItems.map(({ key, label, value, pct }) => (

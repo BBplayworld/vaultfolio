@@ -492,7 +492,9 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
   const section = (items: any[]) => items.map(i => row(i)).join("~");
 
   const parts = [
-    section(data.realEstate.map(i => [DICT.re.indexOf(i.type), sTxt(i.name), sTxt(i.address), pNum(i.purchasePrice), pNum(i.currentValue), pDate(i.purchaseDate), pNum(i.tenantDeposit), sTxt(i.description)])),
+    // f[8]~f[13]: 실거래가 연동 검색 키 (S-4.21) — 섹션 끝에 덧붙여 구버전 토큰과 하위호환.
+    // marketEstimate*는 파생값이라 미포함(이관 후 접속 시 자동 갱신이 다시 채운다).
+    section(data.realEstate.map(i => [DICT.re.indexOf(i.type), sTxt(i.name), sTxt(i.address), pNum(i.purchasePrice), pNum(i.currentValue), pDate(i.purchaseDate), pNum(i.tenantDeposit), sTxt(i.description), sTxt(i.regionCode), sTxt(i.legalDong), sTxt(i.complexName), sTxt(i.addressDetail ?? [i.dongName, i.hoName].filter(Boolean).join(" ")), pNum(i.exclusiveArea), i.areaUnitPreference === "pyeong" ? "p" : ""])),
     section(data.stocks.map(i => [DICT.st.indexOf(i.category), sTxt(i.name), i.name === i.ticker ? "*" : sTxt(i.ticker), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), DICT.cu.indexOf(i.currency || "KRW"), pDate(i.purchaseDate), sTxt(i.description), pNum(i.purchaseExchangeRate ?? 0), sTxt(i.broker), i.inactiveStatus === "delisted" ? "d" : i.inactiveStatus === "halted" ? "h" : ""])),
     section(data.crypto.map(i => [sTxt(i.name), i.name === i.symbol ? "*" : sTxt(i.symbol), pNum(i.quantity), pNum(i.averagePrice), pNum(i.currentPrice), pDate(i.purchaseDate), sTxt(i.exchange), sTxt(i.description)])),
     section(data.cash?.map(i => [DICT.ca.indexOf(i.type), sTxt(i.name), pNum(i.balance), DICT.cu.indexOf(i.currency || "KRW"), sTxt(i.institution), sTxt(i.description)]) || []),
@@ -551,7 +553,22 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     const name = uTxt(f[1]) || "무명";
     const id = gid();
     reIds.push(id);
-    return { id, type: getIdx(f[0], DICT.re), name, address: uTxt(f[2]), purchasePrice: uNum(f[3]), currentValue: uNum(f[4]), purchaseDate: uDate(f[5]), tenantDeposit: uNum(f[6]), description: uTxt(f[7]) };
+    // 실거래가 연동 검색 키 — 빈 값이 ""/0으로 저장되면 자동 갱신 판정을 흐리므로 있을 때만 넣는다
+    const regionCode = uTxt(f[8]);
+    const legalDong = uTxt(f[9]);
+    const complexName = uTxt(f[10]);
+    const addressDetail = uTxt(f[11]);
+    const exclusiveArea = uNum(f[12]);
+    return {
+      id, type: getIdx(f[0], DICT.re), name, address: uTxt(f[2]), purchasePrice: uNum(f[3]), currentValue: uNum(f[4]),
+      purchaseDate: uDate(f[5]), tenantDeposit: uNum(f[6]), description: uTxt(f[7]),
+      ...(regionCode ? { regionCode } : {}),
+      ...(legalDong ? { legalDong } : {}),
+      ...(complexName ? { complexName } : {}),
+      ...(addressDetail ? { addressDetail } : {}),
+      ...(exclusiveArea > 0 ? { exclusiveArea } : {}),
+      ...(f[13] === "p" ? { areaUnitPreference: "pyeong" as const } : {}),
+    };
   });
   const stocks = section(1).map(r => {
     const f = fields(r);

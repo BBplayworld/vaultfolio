@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Trophy, Star, TrendingUp, Landmark, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +47,8 @@ const SECTION = "rounded-xl bg-card border border-border/10 dark:border-0 shadow
 const SECTION_TITLE = "text-sm sm:text-base font-bold text-foreground";
 // 근거 접기 안 소그룹 라벨 — 뱃지 형태(brand 톤)로 산식 단위를 구분
 const GROUP_BADGE = "inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary";
-const CAPTION = "text-sm text-muted-foreground";
+// 여러 줄 설명 캡션 — 가독성 위해 line-height ≥1.5(leading-relaxed). 단일 줄에도 무해.
+const CAPTION = "text-sm text-muted-foreground leading-relaxed";
 
 // 대주제 섹션 헤더 — 아이콘을 채운 원형 칩에 담아 각 섹션의 시작을 시각적으로 announce 한다.
 function SectionHeader({ icon: Icon, title, badge, children }: {
@@ -67,14 +68,15 @@ function SectionHeader({ icon: Icon, title, badge, children }: {
 
 // 근거·명세 한 줄 — 좁은 타일 밖 전폭에서 라벨(좌, 줄바꿈 허용)·값(우, 고정)으로 정렬한다.
 // 값+설명을 한 캡션에 섞어 모바일에서 줄바꿈이 지저분해지던 문제를 라벨/값 분리로 해결.
+// 한 줄에 못 담으면 라벨을 음절 단위로 부수는 대신(break-keep) 값을 다음 줄 우측으로 내린다.
 function SpecRow({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="min-w-0 text-sm text-muted-foreground text-pretty">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+      <span className="min-w-0 text-sm text-muted-foreground text-pretty break-keep">
         {label}
         {hint && <span className="text-muted-foreground/70"> · {hint}</span>}
       </span>
-      <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{children}</span>
+      <span className="ml-auto shrink-0 text-sm font-semibold text-foreground tabular-nums">{children}</span>
     </div>
   );
 }
@@ -298,6 +300,79 @@ export function AssetReportView() {
   const hasAssets = summary.totalValue > 0;
   const tierStyle = TIER_STYLE[grade.tier];
 
+  // ── 투입 대비 성과 3기준 행 — 모바일 세로 스택과 sm+ 표가 같은 소스를 쓰도록 한 번만 정의 ──
+  // interest: null이면 "—"(이자 미부과), 그 외엔 연간 이자(음수 표기)
+  const perfRows: { key: string; title: string; desc: string; cost: string; interest: number | null; value: ReactNode }[] = [
+    {
+      key: "all",
+      title: "모든 자산",
+      desc: "부동산·주식·코인·현금 · 부채 포함",
+      cost: formatShortCurrency(summary.totalCost),
+      interest: report.annualInterest > 0 ? report.annualInterest : null,
+      value: (
+        <div className="text-right">
+          <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(allNet)} /></p>
+          {allNetRate !== null && (
+            <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(allNetRate)}`}>
+              {allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
+            </p>
+          )}
+        </div>
+      ),
+    },
+    // 실투자금 — 부채가 있을 때만(무부채면 모든 자산과 동일해 중복)
+    ...(report.equity < summary.totalCost
+      ? [{
+          key: "equity",
+          title: "실투자금",
+          desc: "부채 뺀 내 돈",
+          cost: formatShortCurrency(report.equity),
+          interest: null,
+          value: (
+            <div className="text-right">
+              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(summary.totalProfit)} /></p>
+              {report.equity > 0 && (
+                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(report.equityReturnRate)}`}>
+                  {report.equityReturnRate >= 0 ? "+" : ""}{report.equityReturnRate.toFixed(1)}%
+                </p>
+              )}
+            </div>
+          ),
+        }]
+      : []),
+    // 순수 레버리지 — 투자 대출이 있을 때만
+    ...(report.investLoanBalance > 0
+      ? [{
+          key: "leverage",
+          title: "순수 레버리지",
+          desc: "투자에 쓴 대출 · 1년",
+          cost: formatShortCurrency(report.investLoanBalance),
+          interest: report.annualInterestInvest,
+          value: kisUnavailable ? (
+            <span className="text-xs text-muted-foreground text-right self-center">점검 중</span>
+          ) : interestCompareReady ? (
+            <div className="text-right">
+              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(netLeverage)} /></p>
+              {netRate !== null && (
+                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(netRate)}`}>
+                  {netRate >= 0 ? "+" : ""}{netRate.toFixed(1)}%
+                </p>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground text-right self-center">조회 중…</span>
+          ),
+        }]
+      : []),
+  ];
+
+  // 이자 열 — 값 유무에 따라 부채색/muted 전환 (그리드·스택 공용)
+  const renderInterest = (v: number | null) => (
+    <span className={`text-sm tabular-nums text-right ${v !== null ? ASSET_THEME.liability : "text-muted-foreground/70"}`}>
+      {v !== null ? `−${formatShortCurrency(Math.round(v))}` : "—"}
+    </span>
+  );
+
   // 축별 액션 링크 (관련 화면 이동)
   const axisNavigate = (key: AxisKey) => {
     if (key === "diversification") navigate({ type: "detail", tab: "stocks-xray" });
@@ -329,7 +404,7 @@ export function AssetReportView() {
             <div className="rounded-xl border border-border/10 bg-card dark:border-0 shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
               <div>
-                <p className={`text-2xl sm:text-3xl font-extrabold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
                 <div className="mt-1.5 flex items-center justify-center gap-2">
                   <StarRating score={grade.overall} size="lg" />
                   <span className="text-lg font-bold tabular-nums text-foreground">{grade.overall.toFixed(1)}</span>
@@ -349,7 +424,7 @@ export function AssetReportView() {
                 )}
                 <p className={`${CAPTION} mt-1 tabular-nums`}>{grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`}</p>
               </div>
-              <p className={`${CAPTION} text-pretty`}>{TIER_SUMMARY[grade.tier]}</p>
+              <p className={`${CAPTION} text-pretty break-keep`}>{TIER_SUMMARY[grade.tier]}</p>
             </div>
 
             {/* ── 투입 대비 성과 — 넣은 돈 + 레버리지를 3기준(모든 자산/실투자금/순수 레버리지) 한 표로 통합 ── */}
@@ -371,7 +446,7 @@ export function AssetReportView() {
               <div className="rounded-lg bg-muted/30 px-3 py-3 space-y-0.5">
                 <p className={CAPTION}>이자 내고 남긴 돈 · 모든 자산 기준</p>
                 <p className="flex items-baseline gap-2 flex-wrap">
-                  <Signed value={Math.round(allNet)} className="text-xl sm:text-2xl font-extrabold" />
+                  <Signed value={Math.round(allNet)} className="text-xl sm:text-2xl font-bold" />
                   {allNetRate !== null && (
                     <span className={`text-base font-bold tabular-nums ${getProfitLossColor(allNetRate)}`}>
                       ({allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%)
@@ -389,78 +464,52 @@ export function AssetReportView() {
                 </p>
               </div>
 
-              {/* 3기준 × (넣은 돈·이자·남긴 돈) 비교 표 — 번 돈 열은 빼고 남긴 돈만 강조(모바일 4열) */}
-              <div className="overflow-x-auto -mx-1 px-1">
-                <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3 sm:gap-x-5 gap-y-2.5 min-w-[280px]">
+              {/* 3기준 × (넣은 돈·이자·남긴 돈) — 모바일은 기준별 세로 스택(4열 그리드는 금액 폭에 밀려 라벨이 붕괴) */}
+              <div className="space-y-2 sm:hidden">
+                {perfRows.map((r) => (
+                  <div key={r.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-1.5">
+                    <div>
+                      <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
+                      <p className="text-xs text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs text-muted-foreground shrink-0">넣은 돈</span>
+                        <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs text-muted-foreground shrink-0">이자·연</span>
+                        {renderInterest(r.interest)}
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs font-semibold text-foreground shrink-0">남긴 돈</span>
+                        {r.value}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* sm+ — 컬럼 대조 표(번 돈 열은 빼고 남긴 돈만 강조). min-w는 자연 폭 이상으로 둬야 가로 스크롤이 실제로 동작 */}
+              <div className="hidden sm:block overflow-x-auto -mx-1 px-1">
+                <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-5 gap-y-2.5 min-w-[440px]">
                   <span className="text-xs text-muted-foreground">기준</span>
                   <span className="text-xs text-muted-foreground text-right">넣은 돈</span>
                   <span className="text-xs text-muted-foreground text-right">이자·연</span>
                   <span className="text-xs font-semibold text-foreground text-right">남긴 돈</span>
                   <div className="col-span-4 h-px bg-border/40" />
 
-                  {/* 모든 자산 — 넣은 돈에 대출·보증금(부채)이 포함됨을 명시 */}
-                  <div>
-                    <p className="text-sm font-medium text-foreground">모든 자산</p>
-                    <p className="text-xs text-muted-foreground/70 text-pretty">부동산·주식·코인·현금 · 부채 포함</p>
-                  </div>
-                  <span className="text-sm tabular-nums text-foreground text-right">{formatShortCurrency(summary.totalCost)}</span>
-                  <span className={`text-sm tabular-nums text-right ${report.annualInterest > 0 ? ASSET_THEME.liability : "text-muted-foreground/70"}`}>
-                    {report.annualInterest > 0 ? `−${formatShortCurrency(Math.round(report.annualInterest))}` : "—"}
-                  </span>
-                  <div className="text-right">
-                    <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(allNet)} /></p>
-                    {allNetRate !== null && (
-                      <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(allNetRate)}`}>
-                        {allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 실투자금 — 부채가 있을 때만(무부채면 모든 자산과 동일해 중복) */}
-                  {report.equity < summary.totalCost && (
-                    <>
+                  {perfRows.map((r) => (
+                    <Fragment key={r.key}>
                       <div>
-                        <p className="text-sm font-medium text-foreground">실투자금</p>
-                        <p className="text-xs text-muted-foreground/70 text-pretty">부채 뺀 내 돈</p>
+                        <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
+                        <p className="text-xs text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
                       </div>
-                      <span className="text-sm tabular-nums text-foreground text-right">{formatShortCurrency(report.equity)}</span>
-                      <span className="text-sm tabular-nums text-right text-muted-foreground/70">—</span>
-                      <div className="text-right">
-                        <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(summary.totalProfit)} /></p>
-                        {report.equity > 0 && (
-                          <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(report.equityReturnRate)}`}>
-                            {report.equityReturnRate >= 0 ? "+" : ""}{report.equityReturnRate.toFixed(1)}%
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* 순수 레버리지 — 투자 대출이 있을 때만 */}
-                  {report.investLoanBalance > 0 && (
-                    <>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">순수 레버리지</p>
-                        <p className="text-xs text-muted-foreground/70 text-pretty">투자에 쓴 대출 · 1년</p>
-                      </div>
-                      <span className="text-sm tabular-nums text-foreground text-right">{formatShortCurrency(report.investLoanBalance)}</span>
-                      <span className={`text-sm tabular-nums text-right ${ASSET_THEME.liability}`}>−{formatShortCurrency(Math.round(report.annualInterestInvest))}</span>
-                      {kisUnavailable ? (
-                        <span className="text-xs text-muted-foreground text-right self-center">점검 중</span>
-                      ) : interestCompareReady ? (
-                        <div className="text-right">
-                          <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(netLeverage)} /></p>
-                          {netRate !== null && (
-                            <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(netRate)}`}>
-                              {netRate >= 0 ? "+" : ""}{netRate.toFixed(1)}%
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground text-right self-center">조회 중…</span>
-                      )}
-                    </>
-                  )}
+                      <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
+                      {renderInterest(r.interest)}
+                      {r.value}
+                    </Fragment>
+                  ))}
                 </div>
               </div>
 
@@ -526,15 +575,16 @@ export function AssetReportView() {
                             type="button"
                             aria-label={`${l.name} 대출 수정`}
                             onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-loan", { detail: { id: l.id } }))}
-                            className="flex w-full items-baseline justify-between gap-2 rounded-md px-2 py-2 text-sm text-left hover:bg-muted/40 active:scale-[0.98] transition-[background-color,transform] duration-150"
+                            className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2.5 text-sm text-left hover:bg-muted/40 active:scale-[0.98] transition-[background-color,transform] duration-150"
                           >
-                            <span className="min-w-0 truncate text-muted-foreground">
-                              {l.name}
-                              <span className="ml-1.5 tabular-nums">{l.rate}%</span>
+                            {/* 이름만 말줄임하고 이율·뱃지는 shrink-0 + wrap — 좁은 폭에서 "부동산 연결" 어포던스가 잘려 사라지던 문제 방지 */}
+                            <span className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-muted-foreground">
+                              <span className="min-w-0 max-w-full truncate">{l.name}</span>
+                              <span className="shrink-0 tabular-nums">{l.rate}%</span>
                               {l.isRealEstate ? (
-                                <span className="ml-1.5 text-xs text-muted-foreground/70">비교 제외</span>
+                                <span className="shrink-0 text-xs text-muted-foreground/70">비교 제외</span>
                               ) : (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-muted-foreground/70">
+                                <span className="shrink-0 inline-flex items-center gap-0.5 text-xs text-muted-foreground/70">
                                   <Link2 className="size-3" />부동산 연결
                                 </span>
                               )}
@@ -591,18 +641,18 @@ export function AssetReportView() {
                         )}
                       </span>
                     </div>
-                    <p className={`${CAPTION} text-pretty`}>{axis.reason}</p>
+                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.reason}</p>
                     {linked ? (
                       <button
                         type="button"
                         onClick={() => axisNavigate(axis.key)}
                         className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
                       >
-                        <span className="text-pretty">{axis.action}</span>
+                        <span className="text-pretty break-keep">{axis.action}</span>
                         <ChevronRight className="size-4 shrink-0" />
                       </button>
                     ) : (
-                      <p className="text-sm font-medium text-foreground text-pretty">{axis.action}</p>
+                      <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
                     )}
                     </div>
                   );
@@ -643,7 +693,7 @@ export function AssetReportView() {
                   <div className="space-y-2">
                     {[...attribution.topCauses, ...attribution.restCauses].map((cause) => (
                       <div key={cause.key} className="rounded-lg bg-muted/30 px-3 py-2.5 flex items-center justify-between gap-3">
-                        <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty">{cause.sentence}</p>
+                        <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">{cause.sentence}</p>
                         <Signed value={Math.round(cause.amount)} className="shrink-0" />
                       </div>
                     ))}

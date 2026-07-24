@@ -78,25 +78,26 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
 
       {/* 브랜딩 헤더 */}
       <div className="flex items-center px-1 pt-0.5">
-        <span className="text-base font-extrabold tracking-tight text-foreground">{APP_CONFIG.name}</span>
+        <span className="text-base font-bold tracking-tight text-foreground">{APP_CONFIG.name}</span>
       </div>
 
       {/* 대표 지표 — 순자산 전폭 hero(1순위) + 수익률·수익금 한 줄(2순위) */}
       <div className="rounded-lg bg-muted/20 dark:bg-muted/10 p-3.5 space-y-2">
         <div>
           <p className="text-sm font-semibold text-muted-foreground">순자산</p>
-          <p className={`text-3xl font-extrabold tabular-nums leading-tight ${ASSET_THEME.important}`}>{netMask(summary.netAsset)}</p>
+          <p className={`text-2xl sm:text-3xl font-bold tabular-nums leading-tight break-keep ${ASSET_THEME.important}`}>{netMask(summary.netAsset)}</p>
         </div>
-        <div className="flex items-baseline gap-x-4 border-t border-border/40 pt-2">
-          <span className="flex items-baseline gap-1.5">
+        {/* 수익금·수익률 — 좁은 폭(320px)에서 넘치면 항목째 줄바꿈(숫자는 nowrap으로 통짜 유지) */}
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-border/40 pt-2">
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             <span className="text-sm font-semibold text-muted-foreground">수익금</span>
             <span className={`text-lg font-bold tabular-nums ${getProfitLossColor(summary.totalProfit)}`}>
               {summary.totalProfit >= 0 ? "+" : ""}{amountMask(Math.round(summary.totalProfit))}
             </span>
           </span>
-          <span className="flex items-baseline gap-1.5">
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             <span className="text-sm font-semibold text-muted-foreground">수익률</span>
-            <span className={`text-lg font-extrabold tabular-nums ${getProfitLossColor(summary.totalProfitRate)}`}>
+            <span className={`text-lg font-bold tabular-nums ${getProfitLossColor(summary.totalProfitRate)}`}>
               {summary.totalProfitRate >= 0 ? "+" : ""}{summary.totalProfitRate.toFixed(1)}%
             </span>
           </span>

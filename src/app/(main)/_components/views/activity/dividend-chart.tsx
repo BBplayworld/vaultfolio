@@ -274,7 +274,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   </span>
                 )}
               </div>
-              <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.text.default}`}>
+              <p className={`text-2xl sm:text-3xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                 {formatPriceByMode(heroValue)}
               </p>
             </div>

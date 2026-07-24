@@ -171,6 +171,15 @@ parseShareToken(token, pin?, localKey?): ParseResult
 // 공유 토큰 v7.2 stock 필드: inactiveStatus 직렬화 ("d"=delisted, "h"=halted, ""=활성)
 ```
 
+### real-estate-address.ts (`src/lib/real-estate-address.ts`)
+
+부동산 주소 표기 정본. 구 입력 필드 `dongName`·`hoName`은 `addressDetail`로 통합됐으므로 **읽기 시점에 합쳐** 준다(저장분 유실 없음). 폼 기본값·상세 카드·공유 인코딩이 모두 이 함수를 쓴다 — 병합식을 인라인으로 다시 쓰지 말 것.
+
+```typescript
+getAddressDetail(item): string    // addressDetail ?? "동 호"
+formatFullAddress(item): string   // "주소 상세주소" (한쪽만 있으면 있는 쪽만)
+```
+
 ### finance-service.ts
 
 ```typescript
@@ -278,6 +287,11 @@ window.dispatchEvent(new CustomEvent("trigger-import"))
 
 // 닉네임 변경: persistNickname() → useNickname·cloud-sync(changeTick)에서 수신
 window.dispatchEvent(new CustomEvent(NICKNAME_EVENT))  // "secretasset-nickname-change"
+
+// 사용자 명시 편집: AssetDataContext의 saveData(자산 CRUD 전용) 성공 시 → cloud-sync에서 수신
+window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT))  // "secretasset-asset-user-edit"
+// 수신 측은 파생값 비교·pull 직후 skip을 우회해 반드시 push한다 (api-reference.md "자동 push 변경 감지").
+// 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다 → 핑퐁 없음.
 ```
 
 ### 닉네임 (`src/hooks/use-nickname.ts`)

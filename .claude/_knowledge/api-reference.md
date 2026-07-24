@@ -139,6 +139,17 @@ GET /api/sync?meta=1
 → 200: { version: number }  // 폴링용 버전 조회만
 ```
 
+### 자동 push 변경 감지 (`src/lib/cloud-sync/cloud-sync-provider.tsx`)
+
+두 경로가 함께 트리거를 결정한다. **둘 중 하나라도 걸리면 push**.
+
+1. **파생값 제외 비교** — `getComparablePayloadString()`: push payload(`buildExportPayload`)에서 접속마다 재계산되는 값을 뺀 문자열이 직전 push와 다르면 트리거.
+   제외 대상: 부동산 `marketEstimate*`, 코인 `baseDate`·`currentPrice`, API 종목 `baseDate`·`name`·`inactiveCheckedAt`(활성 종목은 `currentPrice`·`inactiveStatus`·`inactiveReason`도), 올해 `yearlyNetAssets`, 오늘자 daily·이번달 monthly 스냅샷. → 시세 재계산이 version을 올리는 핑퐁(R14) 방지.
+2. **사용자 명시 편집 플래그** — `ASSET_USER_EDIT_EVENT`(`asset-data-context.tsx`). 컨텍스트의 `saveData`(자산 CRUD 전용) 성공 시 발생하며, 받은 provider는 **비교 결과와 pull 직후 skip을 모두 우회해 push**한다. 자동 갱신 경로는 `saveAssetData`를 직접 호출하므로 이 이벤트가 없다.
+   → 부동산 실거래가 재조회처럼 **바뀐 필드가 제외 대상뿐인 사용자 저장**이 누락되던 문제, 디바운스 중 pull이 끼어들어 push가 취소되던 문제를 함께 막는다. 플래그는 push/pull 성공 시에만 해제.
+
+**새 파생 필드를 추가할 때**: 접속마다 갱신되면 1번 제외 목록에 반드시 넣는다(누락 시 push 핑퐁). 사용자가 직접 저장하는 값이면 2번이 자동으로 커버하므로 제외해도 동기화가 끊기지 않는다.
+
 ---
 
 ### GET /api/pwa-manifest — PWA manifest 동적 생성
@@ -200,7 +211,16 @@ parseShareToken(token, pin?, localKey?): ParseResult
 
 stocks 필드 12개: [cat, name, ticker(name과 같으면 "*"), qty, avgPrice, currentPrice, currency, purchaseDate, description, purchaseRate, broker, inactiveStatus]
   // inactiveStatus: "d"=delisted, "h"=halted, ""=활성
+
+realEstate 필드 14개: [type, name, address, purchasePrice, currentValue, purchaseDate, tenantDeposit, description,
+                       regionCode, legalDong, complexName, addressDetail, exclusiveArea, areaUnitPreference("p"=평, ""=㎡)]
+  // f[8]~f[13] = 실거래가 연동 검색 키(S-4.21). marketEstimate*(추정치·근거)는 파생값이라 미포함 —
+  // 이관 후 접속 시 asset-data-context의 자동 갱신이 다시 채운다.
 ```
+
+**섹션 필드 추가 규칙:** `row()`가 trailing 빈 값을 pop하므로 **섹션 끝에만** 필드를 덧붙인다.
+그러면 구버전 토큰(필드 부족 → undefined)과 구버전 앱(잉여 필드 무시) 양방향 하위호환이 유지된다.
+unpack 시 빈 문자열·0을 그대로 넣지 말고 조건부 스프레드로 생략해야 "미설정" 판정이 흐려지지 않는다.
 
 packV7 parts[9]: 종가 기준 옵션 (`"k"`=kstAccessDay, ""/없음=sameBusinessDay). 구버전 토큰은 parts[9] 부재 → 기본값. `generateShareToken(...,profitBasis?)` / `parseShareToken` 결과 `profitBasis?` / 내보내기 JSON `profitBasis` 동일 직렬화.
 

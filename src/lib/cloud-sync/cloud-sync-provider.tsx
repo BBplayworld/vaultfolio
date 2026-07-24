@@ -14,7 +14,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useAssetData } from "@/contexts/asset-data-context";
+import { useAssetData, ASSET_USER_EDIT_EVENT } from "@/contexts/asset-data-context";
 import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/app/(main)/_components/pwa/pwa-lock-screen";
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { buildExportPayload, getAssetData } from "@/lib/asset-storage";
@@ -36,6 +36,10 @@ const POLL_INTERVAL_MS = 60000;
 // 매 접속마다 saveSnapshots/syncTodayStockPrices가 재계산하는 "진행 중 구간·API 파생값"은
 // 비교에서 제외해 오늘자 시세·스냅샷 재계산이 version 갱신(핑퐁)을 유발하지 않게 한다.
 // (실제 push payload인 buildExportPayload는 그대로 두므로 데이터 자체는 온전히 동기화됨)
+//
+// 단, 이 비교는 "자동 갱신인지" 판별용일 뿐이다. 사용자가 폼에서 직접 저장한 편집
+// (ASSET_USER_EDIT_EVENT)은 바뀐 필드가 여기서 제외된 파생값뿐이어도 반드시 push한다 —
+// 부동산 실거래가 재조회처럼 marketEstimate*만 바뀌는 저장이 통째로 누락되던 문제 방지.
 const getComparablePayloadString = (): string => {
   const payload = buildExportPayload();
   // KST 기준 오늘/이번달/올해 (saveSnapshots와 동일 산출)
@@ -153,6 +157,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const lastPushedRef = useRef<string | null>(null);
   const busyRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 사용자 명시 편집 대기 플래그 — push 성공 시에만 해제(실패·중단 시 다음 tick에 재시도)
+  const userEditRef = useRef(false);
   const autoPullRef = useRef<() => void>(() => { });
 
   const [status, setStatus] = useState<SyncStatus>("none");
@@ -169,6 +175,13 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     const bump = () => setChangeTick(t => t + 1);
     window.addEventListener(NICKNAME_EVENT, bump);
     return () => window.removeEventListener(NICKNAME_EVENT, bump);
+  }, []);
+
+  // 사용자 명시 편집(자산 CRUD) → 파생값 비교 우회 플래그 + tick 증가
+  useEffect(() => {
+    const mark = () => { userEditRef.current = true; setChangeTick(t => t + 1); };
+    window.addEventListener(ASSET_USER_EDIT_EVENT, mark);
+    return () => window.removeEventListener(ASSET_USER_EDIT_EVENT, mark);
   }, []);
 
   // 무장 직후 공통 처리 — 상태 반영 + 동기화 자격(assetId·remember) 영속
@@ -248,6 +261,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
       lastPushedRef.current = getComparablePayloadString();
+      userEditRef.current = false;
       setLastSyncedAt(getLastSyncedAt());
       // lastBackupAt은 건드리지 않는다 — "데이터 백업(파일 내보내기)"만의 사실이다.
       // 자동 push가 이 값을 갱신하면 사용자가 백업한 적 없는 날도 "마지막 백업: 오늘"로 보인다.
@@ -274,6 +288,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       runPushAfterRestoreFix();
       void initAndSync(getAssetData());
       lastPushedRef.current = getComparablePayloadString();
+      // pull이 로컬을 덮어썼으므로 대기 중이던 사용자 편집도 더는 존재하지 않는다(즉시 되-push 방지)
+      userEditRef.current = false;
       setLastSyncedAt(getLastSyncedAt());
       if (auto) toast.info("다른 기기의 변경을 반영했습니다.");
     }
@@ -283,8 +299,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   // 자산·프로필(닉네임) 변경 → 무장 시 디바운스 push
   useEffect(() => {
     if (!enabled || status !== "armed") return;
-    if (skipNextChangeRef.current) { skipNextChangeRef.current = false; return; }
-    if (getComparablePayloadString() === lastPushedRef.current) return;
+    // 사용자 명시 편집은 pull 직후 skip에도, 파생값 비교에도 걸리지 않고 반드시 push한다
+    if (skipNextChangeRef.current && !userEditRef.current) { skipNextChangeRef.current = false; return; }
+    if (!userEditRef.current && getComparablePayloadString() === lastPushedRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { void runPush(true); }, AUTO_PUSH_DEBOUNCE_MS);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };

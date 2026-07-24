@@ -38,7 +38,7 @@ export function DetailSummaryHeader({
         {headerAction}
       </div>
       <div className="mt-1 flex flex-col gap-0.5">
-        <p className={`text-xl sm:text-2xl lg:text-3xl font-extrabold tabular-nums break-all leading-tight ${valueClass}`}>
+        <p className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums break-all leading-tight ${valueClass}`}>
           {primary}
         </p>
         {secondary && (

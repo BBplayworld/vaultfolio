@@ -11,6 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes, realEstateTradeDataset } from "@/config/asset-options";
+import { formatFullAddress } from "@/lib/real-estate-address";
 import { GradeBadge } from "../../../forms/asset-update/input/real-estate-input";
 import { assignColors } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
@@ -220,8 +221,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <AnnualizedReturn totalRatePct={profitRate} sinceDate={item.purchaseDate} />
                 </>
               )}
-              {item.address && (
-                <span className="flex items-center gap-1 w-full"><MapPin className="size-3 flex-shrink-0" /><span className="truncate">{item.address}</span></span>
+              {/* 주소 + 상세주소(동·호) — 말줄임하면 동·호수가 잘려 사라지므로 줄바꿈으로 전부 보여준다 */}
+              {formatFullAddress(item) && (
+                <span className="flex items-start gap-1 w-full"><MapPin className="size-3 flex-shrink-0 mt-1" /><span className="min-w-0 text-pretty break-keep">{formatFullAddress(item)}</span></span>
               )}
             </div>
           </div>
@@ -330,9 +332,9 @@ export function RealEstateTab() {
                 {barItems.map(({ item, value: v, color }) => {
                   const pct = (v / totalValue) * 100;
                   return (
-                    <div key={item.id} className="flex items-center gap-1">
+                    <div key={item.id} className="flex items-center gap-1 min-w-0">
                       <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-sm text-foreground">{item.name}</span>
+                      <span className="text-sm text-foreground truncate min-w-0">{item.name}</span>
                       <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
                     </div>
                   );

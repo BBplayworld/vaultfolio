@@ -35,6 +35,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useDaumPostcode, extractJibun } from "@/hooks/use-daum-postcode";
 import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, quickButtonPresets, realEstateTradeDataset } from "@/config/asset-options";
+import { getAddressDetail } from "@/lib/real-estate-address";
 
 const realEstateQuickButtons = [...quickButtonPresets.realEstate];
 
@@ -132,7 +133,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
     // 구 동/호 2칸을 상세주소 한 칸으로 통합 — 기존 데이터는 읽기 시점에 합쳐 보여준다(저장분 유실 없음)
     defaultValues: editData ? {
       ...editData,
-      addressDetail: editData.addressDetail ?? [editData.dongName, editData.hoName].filter(Boolean).join(" ") ?? "",
+      addressDetail: getAddressDetail(editData),
     } : {
       id: "",
       type: "apartment",

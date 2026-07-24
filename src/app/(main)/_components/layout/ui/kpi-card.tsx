@@ -34,7 +34,7 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
             <ChevronRight className="size-4 text-muted-foreground shrink-0" />
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
-          <p className={`text-xl sm:text-2xl lg:text-2xl font-extrabold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
+          <p className={`text-xl sm:text-2xl lg:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
             {primary}
           </p>
           {secondary && <div className="text-sm lg:text-base font-medium mt-1">{secondary}</div>}

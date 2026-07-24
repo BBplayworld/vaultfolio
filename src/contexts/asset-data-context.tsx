@@ -22,6 +22,11 @@ import { updateThemeMode } from "@/lib/theme-utils";
 import { setValueToCookie } from "@/server/server-actions";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
+// 사용자가 명시적으로 저장한 편집(add/update/delete = saveData 경로) 알림 이벤트.
+// 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다.
+// 클라우드 동기화가 이 신호를 받으면 파생값 비교 결과와 무관하게 push한다(변경 감지 누락 방지).
+export const ASSET_USER_EDIT_EVENT = "secretasset-asset-user-edit";
+
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
 let lastToastAt = 0;
 const TOAST_STALE_MS = 4_000;
@@ -1128,6 +1133,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const success = saveAssetData(data);
     if (success) {
       setAssetData({ ...data, lastUpdated: new Date().toISOString() });
+      // 사용자 명시 편집 신호 — 동기화가 파생값 비교를 건너뛰고 반드시 push하게 한다
+      window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
     }
     return success;
   }, []);

@@ -95,7 +95,7 @@ export function WelcomeGuide() {
         <Badge variant="outline" className="border-primary/40 text-primary px-3 py-1 text-xs font-medium">
           시작하기
         </Badge>
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-balance">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
           나만의 비밀 자산 금고
         </h1>
         <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed text-pretty">

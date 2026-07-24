@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-07-24
+
+### 자산 성적표 모바일 반응형 + 동기화 변경 감지 누락 수정 (issue-4.19)
+
+- **성적표 3기준 표 붕괴 수정** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): `grid-cols-[1fr_auto_auto_auto]`에서 값 3열이 `auto`라 모바일에서 `1fr` 라벨 열이 0으로 붕괴, "부동산·주식·코인·현금"이 **한 글자씩 세로로** 깨졌다(`min-w-[280px]`가 자연 폭 440px보다 작아 `overflow-x-auto`도 무력). → 행 배열(`perfRows`) 하나를 두 레이아웃이 공유하게 하고 **모바일은 기준별 세로 스택, `sm+`만 표**(min-w 440px). 한글 라벨·캡션에 `break-keep` 적용, `SpecRow`는 `flex-wrap`으로 값이 다음 줄 우측으로 내려가게.
+- **대출 행 어포던스 소실 수정**: 이름·이율·뱃지를 감싼 래퍼 전체에 `truncate`가 걸려 **`부동산 연결`·`비교 제외` 뱃지가 말줄임에 먹혀 사라졌다**(바로 위 캡션은 "연계 부동산을 지정하세요"라고 안내 중) → 말줄임은 이름에만, 뱃지는 `shrink-0` + `flex-wrap`으로 둘째 줄에 내려가게.
+- **동기화 변경 감지 누락 수정** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx), [asset-data-context.tsx](../../src/contexts/asset-data-context.tsx)): 부동산 실거래가를 다시 조회해 저장하면 바뀌는 필드가 `marketEstimate*`뿐인데 이 필드들이 **핑퐁 방지용 비교 제외 목록에 있어 push가 아예 안 됐다**. 또 디바운스(2.5s) 중 폴링 pull이 끼어들면 effect cleanup이 타이머를 지우고 조기 return해 **사용자 편집 push가 조용히 취소**됐다. → `saveData`(자산 CRUD 전용 경로) 성공 시 **`ASSET_USER_EDIT_EVENT`** 발행, 수신 측은 파생값 비교와 pull 직후 skip을 **모두 우회해 push**. 자동 갱신은 `saveAssetData`를 직접 호출하므로 이벤트가 없어 핑퐁 방지는 그대로 유지된다.
+- **공유 토큰에 부동산 검색 키 추가** ([asset-storage.ts](../../src/lib/asset-storage.ts) `packV7`/`unpackV7`): 부동산을 8필드만 실어 `regionCode`·`legalDong`·`complexName`·`addressDetail`·`exclusiveArea`·`areaUnitPreference`가 전부 유실됐다 — PWA 설치는 공유 URL로 이관하므로 **PWA로 넘어가면 실거래가 연동이 통째로 날아갔다**. 섹션 끝에 6필드 추가(꼬리 추가라 양방향 하위호환, `row()`가 빈 값을 pop해 미설정 물건은 길이 증가 없음). `marketEstimate*`는 파생값이라 계속 미포함 — 이관 후 자동 갱신이 다시 채운다. JSON 내보내기(`buildExportPayload`)는 원래부터 전 필드 포함이라 변경 없음.
+- **상세 카드에 상세주소 표시** ([real-estate-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/real-estate-tab.tsx)): 펼침 하단에 `address`만 `truncate` 한 줄로 나와 **동·호수(`addressDetail`)는 어디에도 안 보이고 긴 주소는 잘렸다** → 신규 [real-estate-address.ts](../../src/lib/real-estate-address.ts)(`getAddressDetail`/`formatFullAddress`, 구 `dongName`·`hoName` 병합 정본)로 통일하고 줄바꿈 허용. 폼 기본값의 인라인 병합식도 같은 유틸로 교체.
+
+---
+
 ## 2026-07-22
 
 ### 부동산 실거래 추정 정확도 개선 + 홈·주식·인증샷 UI 정리 (issue-4.18)

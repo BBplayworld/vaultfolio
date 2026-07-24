@@ -350,7 +350,7 @@ export function YearlyNetAssetChart() {
             return (
               <div>
                 <p className="text-sm text-muted-foreground font-semibold">현재 순자산</p>
-                <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
+                <p className={`text-2xl sm:text-3xl font-bold tabular-nums ${ASSET_THEME.important}`}>{netAssetLayout.primary}</p>
                 {netAssetLayout.secondary && (
                   <p className="text-sm text-foreground">{netAssetLayout.secondary}</p>
                 )}
