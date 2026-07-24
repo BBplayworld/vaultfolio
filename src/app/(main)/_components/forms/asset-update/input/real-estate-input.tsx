@@ -190,8 +190,9 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
         form.setValue("address", data.roadAddress || data.jibunAddress, { shouldValidate: true });
         form.setValue("regionCode", data.sigunguCode);          // = MOLIT LAWD_CD
         if (data.bname) form.setValue("legalDong", data.bname);
-        const complex = data.buildingName || form.getValues("name") || "";
-        if (complex) form.setValue("complexName", complex);
+        // 단지명은 주소 검색이 준 건물명만 신뢰한다 — 자산 이름("우리집" 등 별칭)을 단지명으로
+        // 대체하면 매칭 키가 오염돼 엉뚱한 단지가 잡힌다.
+        if (data.buildingName) form.setValue("complexName", data.buildingName);
         setResolvedJibun(extractJibun(data.jibunAddress));
         // 공동주택으로 확인됐고 사용자가 아직 유형을 바꾸지 않았으면 아파트로 제안
         if (data.apartment === "Y" && !editData && selectedType === "apartment") {
@@ -241,8 +242,8 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
         if (r.buildingName) form.setValue("complexName", r.buildingName);
       }
       if (!lawdCd) { toast.error("주소를 해석하지 못했습니다."); return; }
-      const complexName = form.getValues("complexName") || form.getValues("name") || "";
-      if (complexName) form.setValue("complexName", complexName);
+      // 단지명은 주소 검색·해석이 확보한 값 또는 사용자가 직접 입력한 값만 쓴다(자산 이름 대체 금지)
+      const complexName = form.getValues("complexName") || "";
 
       const area = areaOverride ?? form.getValues("exclusiveArea");
       // 단독·상가는 단지명으로 좁힐 수 없어 면적 없이는 매칭이 무의미하다 (오매칭 방지)

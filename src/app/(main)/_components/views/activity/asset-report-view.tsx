@@ -47,6 +47,11 @@ const SECTION = "rounded-xl bg-card border border-border/10 dark:border-0 shadow
 const SECTION_TITLE = "text-sm sm:text-base font-bold text-foreground";
 // 근거 접기 안 소그룹 라벨 — 뱃지 형태(brand 톤)로 산식 단위를 구분
 const GROUP_BADGE = "inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary";
+// 계산 근거의 값 앞 범위 뱃지 — 헤더 행 없이 각 금액이 어느 기준인지 그 자리에서 읽히게.
+// brand 톤은 그룹 제목(GROUP_BADGE) 전용으로 예약하고, 범위 뱃지는 중성 2단으로 낮춰 구분한다.
+const SCOPE_BADGE = "shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold";
+const SCOPE_MAIN = `${SCOPE_BADGE} bg-foreground/10 text-foreground`;  // 주 — 전체 기준
+const SCOPE_SUB = `${SCOPE_BADGE} bg-muted text-muted-foreground`;      // 보조 — 금융자산·연간
 // 여러 줄 설명 캡션 — 가독성 위해 line-height ≥1.5(leading-relaxed). 단일 줄에도 무해.
 const CAPTION = "text-sm text-muted-foreground leading-relaxed";
 
@@ -206,9 +211,19 @@ export function AssetReportView() {
   // 결론(이자 내고 남는 돈) — Hero와 등급 입력(coverage)이 같은 값을 쓰도록 여기서 1회 계산
   const netLeverage = leveragedReturn - report.annualInterestInvest;
   const netRate = report.investLoanBalance > 0 ? (netLeverage / report.investLoanBalance) * 100 : null;
-  // 3기준 '남긴 돈'(번 돈 − 연간 이자). 모든 자산은 전체 이자, 실투자금은 이자 미부과, 레버리지는 netLeverage.
+  // ── 3기준 자본 분해 (누적·전 자산) ───────────────────────────────────
+  // totalCost = equity + debt 가 정의상 항등식이라 완전 분해가 성립한다.
+  // 수익은 자본 비중대로 귀속하고, 이자는 전부 빌린 돈이 진다 → 실투자금 + 레버리지 = 모든 자산.
   const allNet = summary.totalProfit - report.annualInterest;
   const allNetRate = summary.totalCost > 0 ? (allNet / summary.totalCost) * 100 : null;
+  const debt = Math.max(0, summary.totalCost - report.equity); // 대출 잔액 + 임차보증금
+  const equityShare = summary.totalCost > 0 ? summary.totalProfit * (report.equity / summary.totalCost) : 0;
+  const debtShare = summary.totalProfit - equityShare;   // 차액으로 계산 → 반올림해도 합이 어긋나지 않는다
+  const equityNet = equityShare;                          // 내 돈에는 이자가 붙지 않는다
+  const debtNet = debtShare - report.annualInterest;      // 이자는 전부 빌린 돈 몫
+  const equityNetRate = report.equity > 0 ? (equityNet / report.equity) * 100 : null;
+  const debtNetRate = debt > 0 ? (debtNet / debt) * 100 : null;
+  const debtRatioOfCost = summary.totalCost > 0 ? (debt / summary.totalCost) * 100 : 0;
 
   // 환노출 (분산 축 입력)
   const fxExposures = useMemo(
@@ -320,49 +335,45 @@ export function AssetReportView() {
         </div>
       ),
     },
-    // 실투자금 — 부채가 있을 때만(무부채면 모든 자산과 동일해 중복)
-    ...(report.equity < summary.totalCost
-      ? [{
+    // 실투자금·레버리지 — 부채가 있을 때만(무부채면 모든 자산과 동일해 중복).
+    // 수익은 자본 비중대로 귀속하고 이자는 전부 빌린 돈이 져, 두 행의 합이 '모든 자산'과 정확히 맞는다.
+    ...(debt > 0
+      ? [
+        {
           key: "equity",
           title: "실투자금",
           desc: "부채 뺀 내 돈",
           cost: formatShortCurrency(report.equity),
-          interest: null,
+          interest: null, // 내 돈에는 이자가 붙지 않는다
           value: (
             <div className="text-right">
-              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(summary.totalProfit)} /></p>
-              {report.equity > 0 && (
-                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(report.equityReturnRate)}`}>
-                  {report.equityReturnRate >= 0 ? "+" : ""}{report.equityReturnRate.toFixed(1)}%
+              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(equityNet)} /></p>
+              {equityNetRate !== null && (
+                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(equityNetRate)}`}>
+                  {equityNetRate >= 0 ? "+" : ""}{equityNetRate.toFixed(1)}%
                 </p>
               )}
             </div>
           ),
-        }]
-      : []),
-    // 순수 레버리지 — 투자 대출이 있을 때만
-    ...(report.investLoanBalance > 0
-      ? [{
+        },
+        {
           key: "leverage",
-          title: "순수 레버리지",
-          desc: "투자에 쓴 대출 · 1년",
-          cost: formatShortCurrency(report.investLoanBalance),
-          interest: report.annualInterestInvest,
-          value: kisUnavailable ? (
-            <span className="text-xs text-muted-foreground text-right self-center">점검 중</span>
-          ) : interestCompareReady ? (
+          title: "레버리지",
+          desc: "빌린 돈 · 대출+보증금",
+          cost: formatShortCurrency(debt),
+          interest: report.annualInterest > 0 ? report.annualInterest : null,
+          value: (
             <div className="text-right">
-              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(netLeverage)} /></p>
-              {netRate !== null && (
-                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(netRate)}`}>
-                  {netRate >= 0 ? "+" : ""}{netRate.toFixed(1)}%
+              <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(debtNet)} /></p>
+              {debtNetRate !== null && (
+                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(debtNetRate)}`}>
+                  {debtNetRate >= 0 ? "+" : ""}{debtNetRate.toFixed(1)}%
                 </p>
               )}
             </div>
-          ) : (
-            <span className="text-xs text-muted-foreground text-right self-center">조회 중…</span>
           ),
-        }]
+        },
+      ]
       : []),
   ];
 
@@ -427,18 +438,17 @@ export function AssetReportView() {
               <p className={`${CAPTION} text-pretty break-keep`}>{TIER_SUMMARY[grade.tier]}</p>
             </div>
 
-            {/* ── 투입 대비 성과 — 넣은 돈 + 레버리지를 3기준(모든 자산/실투자금/순수 레버리지) 한 표로 통합 ── */}
+            {/* ── 투입 대비 성과 — 넣은 돈 + 레버리지를 3기준(모든 자산/실투자금/금융투자 레버리지) 한 표로 통합 ── */}
             <div className={SECTION}>
               <SectionHeader
                 icon={Wallet}
                 title="투입 대비 성과"
                 badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">3가지 기준</span>}
               >
-                <InfoHint summary="같은 자산을 '모든 자산 / 내 돈만 / 빌린 돈만' 세 기준으로 나눠 넣은 돈·이자·번 돈을 비교해요.">
+                <InfoHint summary="투입 자본을 '내 돈'과 '빌린 돈'으로 나눠, 각각 얼마를 남겼는지 비교해요.">
                   <p><span className="font-semibold text-foreground">모든 자산</span>: 부동산·주식·코인·현금 전부. 넣은 돈에는 대출·보증금으로 마련한 돈도 포함됩니다.</p>
-                  <p><span className="font-semibold text-foreground">실투자금</span>: 넣은 돈에서 부채를 뺀 실제 내 돈. 순자산은 여기에 평가손익을 더한 값입니다.</p>
-                  <p><span className="font-semibold text-foreground">순수 레버리지</span>: 투자에 쓴 대출만(금융자산 기준). 빌린 돈이 낸 이자보다 더 벌었는지 봅니다.</p>
-                  <p>넣은 돈·번 돈은 <span className="font-semibold text-foreground">매입 후 누적</span>, 이자·레버리지 수익은 <span className="font-semibold text-foreground">연간</span> 기준입니다.</p>
+                  <p><span className="font-semibold text-foreground">실투자금</span>(내 돈)과 <span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
+                  <p>수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 부동산·코인의 1년 수익을 잴 수 없어 주식·코인만 담은 별점용 보조 지표입니다.</p>
                 </InfoHint>
               </SectionHeader>
 
@@ -513,62 +523,81 @@ export function AssetReportView() {
                 </div>
               </div>
 
-              {/* 계산 근거 · 대출 상세 (압축 접기) — 레버리지가 있을 때만 노출 */}
-              {report.investLoanBalance > 0 && (
+              {/* 합계 검산 — 수식만 남긴다(산문 설명 없이도 두 행을 더하면 맞는다는 게 읽힌다) */}
+              {debt > 0 && <p className={CAPTION}>실투자금 + 레버리지 = 모든 자산</p>}
+
+              {/* 계산 근거 · 대출 상세 (압축 접기) — 부채가 있을 때만 노출 */}
+              {debt > 0 && (
                 <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/10">
                   <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-3 text-sm font-semibold text-foreground">
                     <span>레버리지 계산 근거 · 대출 상세</span>
                     <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${leverageDetailOpen ? "rotate-180" : ""}`} />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-3 space-y-4">
-                    {/* 그룹 1 — 5항목을 두 산식 체인으로 정렬(입력값 → 결과값). ▸는 결과 항목의 산식 */}
-                    {report.financialInvestCost > 0 && (
-                      <div className="space-y-1.5">
-                        {/* 산식 A: 레버리지 총액 ÷ 금융 투자 원가 = 대출 비율 */}
-                        <p><span className={GROUP_BADGE}>대출 비율</span></p>
-                        <SpecRow label="레버리지 총액" hint="부동산 담보 제외">
-                          {formatPriceByMode(report.investLoanBalance)}
-                        </SpecRow>
-                        <SpecRow label="금융 투자 원가" hint="주식·코인 (부동산·현금 제외)">
-                          {formatPriceByMode(report.financialInvestCost)}
-                        </SpecRow>
-                        <SpecRow label="대출 비율" hint="▸ 레버리지 총액 ÷ 금융 투자 원가">
-                          {(report.investLeverageRatio * 100).toFixed(0)}%
-                        </SpecRow>
-                        {/* 산식 B: 금융 수익 × 대출 비율 = 레버리지 몫 수익 */}
-                        {interestCompareReady && !kisUnavailable && (
-                          <>
-                            <p className="pt-1"><span className={GROUP_BADGE}>레버리지 몫 수익</span></p>
-                            <SpecRow label="금융 수익" hint="주식 지난 1년 + 올해 배당">
-                              <span className="inline-flex items-baseline gap-1">
-                                <Signed value={Math.round(totalFinReturn)} />
-                                {totalFinReturnRate !== null && (
-                                  <span className={`text-xs ${getProfitLossColor(totalFinReturnRate)}`}>
-                                    ({totalFinReturnRate >= 0 ? "+" : ""}{totalFinReturnRate.toFixed(1)}%)
-                                  </span>
-                                )}
-                              </span>
-                            </SpecRow>
-                            <SpecRow label="레버리지 몫 수익" hint="▸ 금융 수익 × 대출 비율">
-                              <Signed value={Math.round(leveragedReturn)} />
-                            </SpecRow>
-                          </>
-                        )}
-                        <p className={`${CAPTION} text-pretty`}>부동산·코인 수익은 측정 불가로 비교에서 제외됩니다.</p>
-                      </div>
-                    )}
+                    {/* 그룹 1 — 두 관점을 같은 항목명으로 2열 대조.
+                        동일한 7단계 계산(빌린돈÷투입원가=비율, 수익×비율=몫수익, 몫수익−이자=남긴돈)을
+                        범위만 달리 적용한 것이라, 나란히 두면 금융자산·연간이 전 자산의 부분집합임이 드러난다. */}
+                    <div className="space-y-1.5">
+                      <p><span className={GROUP_BADGE}>계산 근거</span></p>
+                      {(() => {
+                        const annualOn = report.investLoanBalance > 0 && report.financialInvestCost > 0;
+                        const money = (v: number) => formatShortCurrency(Math.round(v));
+                        const signed = (v: number) => `${v >= 0 ? "+" : ""}${money(v)}`;
+                        // [항목, 전체·누적, 금융자산·연간, KIS 시세 조회가 필요한 값인지]
+                        // 잔액·원가·비율·이자는 즉시 계산되는 값이라 조회를 기다릴 이유가 없다(행별로 가린다).
+                        const rows: [string, string, string, boolean][] = [
+                          ["빌린 돈", money(debt), money(report.investLoanBalance), false],
+                          ["투입 원가", money(summary.totalCost), money(report.financialInvestCost), false],
+                          ["대출 비율", `${debtRatioOfCost.toFixed(0)}%`, `${(report.investLeverageRatio * 100).toFixed(0)}%`, false],
+                          ["수익", signed(summary.totalProfit), signed(totalFinReturn), true],
+                          ["레버리지 몫 수익", signed(debtShare), signed(leveragedReturn), true],
+                          ["연간 이자", `−${money(report.annualInterest)}`, `−${money(report.annualInterestInvest)}`, false],
+                          ["남긴 돈", signed(debtNet), signed(netLeverage), true],
+                        ];
+                        const ready = annualOn && interestCompareReady && !kisUnavailable;
+                        const pendingLabel = kisUnavailable ? "점검 중" : "조회 중…";
+                        return (
+                          // 항목마다 '라벨 줄 + 값 줄' 고정 2줄 — wrap에 맡기면 값 길이에 따라 행 구조가 달라진다.
+                          // 값은 2열 그리드라 뱃지 폭이 열마다 같아 금액이 세로로 정렬된다.
+                          <div className="space-y-3">
+                            {rows.map(([label, all, fin, needsKis], i) => {
+                              const last = i === rows.length - 1;
+                              // 강조는 색이 아니라 굵기·구분선으로만 — 한 줄만 색이 튀지 않게 금액·라벨 색은 통일
+                              const amount = `text-sm tabular-nums text-foreground${last ? " font-bold" : ""}`;
+                              const finReady = !needsKis || ready; // 조회가 필요 없는 값은 즉시 노출
+                              return (
+                                <div key={label} className={`space-y-1 ${last ? "border-t border-border/40 pt-2.5" : ""}`}>
+                                  <p className={`text-sm text-muted-foreground break-keep${last ? " font-medium" : ""}`}>{label}</p>
+                                  <div className={`grid ${annualOn ? "grid-cols-2" : "grid-cols-1"} gap-x-3`}>
+                                    <span className="flex min-w-0 items-baseline gap-1.5">
+                                      <span className={SCOPE_MAIN}>전체·누적</span>
+                                      <span className={amount}>{all}</span>
+                                    </span>
+                                    {annualOn && (
+                                      <span className="flex min-w-0 items-baseline gap-1.5">
+                                        <span className={SCOPE_SUB}>금융자산·연간</span>
+                                        <span className={finReady ? amount : "text-xs text-muted-foreground"}>{finReady ? fin : pendingLabel}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
                     {/* 그룹 2 — 대출별 이자 */}
                     {report.loanInterest.length > 0 && (
                       <div className="space-y-1.5">
                         <p><span className={GROUP_BADGE}>대출별 이자</span></p>
-                        {/* 종합 — 붉은색으로 노출 중인 비교 대상 대출만 합산(비교 제외 muted 항목은 빠짐) */}
+                        {/* 종합 — 전 자산 기준이 주(主)이므로 부동산 담보 포함 전체 이자. 아래 목록 합계와 일치한다 */}
                         <div className="flex items-baseline justify-between gap-2 rounded-md bg-muted/40 px-2 py-2">
                           <span className="text-sm font-semibold text-foreground">연간 이자 총합</span>
                           <span className={`text-sm sm:text-base font-bold tabular-nums ${ASSET_THEME.liability}`}>
-                            −{formatPriceByMode(Math.round(report.annualInterestInvest))}<span className="text-muted-foreground font-medium">/년</span>
+                            −{formatPriceByMode(Math.round(report.annualInterest))}<span className="text-muted-foreground font-medium">/년</span>
                           </span>
                         </div>
-                        <p className={`${CAPTION} text-pretty`}>신용·마이너스대출로 부동산을 샀다면 눌러서 <span className="text-foreground font-medium">연계 부동산</span>을 지정하세요. 지정하면 이 비교에서 빠집니다.</p>
                         {report.loanInterest.map((l) => (
                           <button
                             key={l.id}
@@ -581,15 +610,17 @@ export function AssetReportView() {
                             <span className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-muted-foreground">
                               <span className="min-w-0 max-w-full truncate">{l.name}</span>
                               <span className="shrink-0 tabular-nums">{l.rate}%</span>
+                              {/* 부동산 연계 대출도 전 자산 기준에는 포함된다 — "비교 제외"가 아니라 연간 지표에서만 빠짐 */}
                               {l.isRealEstate ? (
-                                <span className="shrink-0 text-xs text-muted-foreground/70">비교 제외</span>
+                                <span className="shrink-0 text-xs text-muted-foreground/70">연간 지표 제외</span>
                               ) : (
                                 <span className="shrink-0 inline-flex items-center gap-0.5 text-xs text-muted-foreground/70">
                                   <Link2 className="size-3" />부동산 연결
                                 </span>
                               )}
                             </span>
-                            <span className={`shrink-0 font-semibold tabular-nums ${l.isRealEstate ? "text-muted-foreground" : ASSET_THEME.liability}`}>
+                            {/* 모든 대출이 전 자산 기준 이자에 포함되므로 금액 색을 통일한다 */}
+                            <span className={`shrink-0 font-semibold tabular-nums ${ASSET_THEME.liability}`}>
                               −{formatPriceByMode(Math.round(l.annual))}<span className="text-muted-foreground font-medium">/년</span>
                             </span>
                           </button>

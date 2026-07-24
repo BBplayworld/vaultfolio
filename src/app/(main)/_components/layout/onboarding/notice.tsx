@@ -15,7 +15,7 @@ const FEATURES = [
     body: (
       <>
         장기 성장·수익의 질·레버리지·분산·투자 습관 <strong className="text-foreground">5개 축을 별점과 트로피 등급으로 채점</strong>합니다.
-        넣은 돈이 이자를 내고도 남는지 <strong className="text-foreground">모든 자산 · 실투자금 · 순수 레버리지 세 기준으로 한눈에 비교</strong>하도록 재구성했고,
+        넣은 돈이 이자를 내고도 남는지 <strong className="text-foreground">모든 자산 · 실투자금 · 금융투자 레버리지 세 기준으로 한눈에 비교</strong>하도록 재구성했고,
         AI 평가 프롬프트(진단·증식·리스크)도 더 정교해졌습니다. <strong className="text-foreground">성과 탭</strong>에서 확인하세요.
       </>
     ),

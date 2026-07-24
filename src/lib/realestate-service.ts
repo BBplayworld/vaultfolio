@@ -217,8 +217,10 @@ export function matchTrade(trades: RealEstateTrade[], opts: MatchOptions): Match
       const jibunHit = !!opts.jibun && !!t.jibun && normJibun(t.jibun) === normJibun(opts.jibun);
       const nameHit = !!opts.complexName && !!t.complexName && nameMatches(t.complexName, opts.complexName);
       const dongHit = !!opts.legalDong && !!t.legalDong && t.legalDong.includes(opts.legalDong);
-      // 단지명으로 찾는 종류인데 단지명도 법정동도 안 맞으면 후보에서 제외
-      if (opts.matchBy === "complex" && opts.complexName && !nameHit && !dongHit) return null;
+      // 단지명으로 찾는 종류는 지번 또는 단지명이 "실제로 일치"할 때만 개별 거래를 특정한다.
+      // 법정동만 맞는 거래를 고르면 전혀 다른 단지의 가격·이름이 '근사'로 확정 노출된다(실사용 오매칭).
+      // 여기서 걸러진 건은 2단계 단가 중앙값(estimated)으로 흘러가며, 그 경로는 단지명을 내보내지 않는다.
+      if (opts.matchBy === "complex" && !jibunHit && !nameHit) return null;
       const score =
         (jibunHit ? 1000 : 0) +
         (nameHit ? 300 : 0) +

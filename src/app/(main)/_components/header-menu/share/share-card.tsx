@@ -5,7 +5,7 @@ import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { computeStockMetrics, mergeStockGroup, assignColors, getMultiplier, groupStocksByTicker } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { useAssetTreemapData } from "@/app/(main)/_components/views/home/dashboard";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { APP_CONFIG } from "@/config/app";
 
 // 인증샷 축약 상수 — 하단 주식 전용 섹션을 없애고 통합 랭킹 하나로 흡수했으므로 노출 개수 확대
@@ -53,6 +53,9 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
   const coreRestCount = coreHoldings.length - coreTop.length;
 
   // 포트폴리오 구성 — 자산군 단위 비중(금액 없이 색상 바 + 비중%). 바이럴 요소이자 자산규모 비노출.
+  // 색은 아래 '핵심 자산'에서 그 자산군 1위 보유 항목의 색을 그대로 물려받는다
+  // (주식=테슬라 색, 부동산=아파트 색). 위아래가 다른 색이면 같은 자산군인지 알아보기 어렵다.
+  // coreHoldings는 값 내림차순이라 kind가 처음 일치하는 항목이 곧 그 자산군 1위다(label === kind 규약).
   const classBar = useMemo(() => {
     const base = [
       { key: "stock", label: "주식", value: summary.stockValue },
@@ -60,10 +63,20 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
       { key: "crypto", label: "코인", value: summary.cryptoValue },
       { key: "cash", label: "현금", value: summary.cashValue },
     ].filter((d) => d.value > 0);
-    const colors = assignColors(base);
     const total = base.reduce((s, d) => s + d.value, 0);
-    return { items: base.map((d, i) => ({ ...d, color: colors[i] })), total };
-  }, [summary]);
+    const used = new Set<string>();
+    const items = base.map((d) => {
+      const inherited = coreHoldings.find((h) => h.kind === d.label)?.color;
+      // 개별 보유 항목이 없거나(집계엔 잡히지만 목록엔 없는 경우) 앞 자산군과 색이 겹치면
+      // 아직 안 쓴 팔레트 색으로 대체 — 바에 같은 색 구간이 두 번 나오지 않게.
+      const color = inherited && !used.has(inherited)
+        ? inherited
+        : MAIN_PALETTE.slice(0, 10).find((c) => !used.has(c)) ?? MAIN_PALETTE[0];
+      used.add(color);
+      return { ...d, color };
+    });
+    return { items, total };
+  }, [summary, coreHoldings]);
 
   // 금액류만 마스킹 — 비중%·수익률%는 항상 노출
   const amountMask = hideAmounts ? (_: number) => "••••" : formatShortCurrency;

@@ -1221,7 +1221,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
               lawd = rj.lawdCd;
               // 주소가 바뀐 경우엔 옛 법정동·단지명도 함께 버린다(같은 이유)
               legalDong = (stale ? rj.legalDong : legalDong || rj.legalDong) || undefined;
-              complexName = (stale ? rj.buildingName || r.name : complexName || rj.buildingName || r.name) || undefined;
+              // 단지명은 주소 해석이 준 건물명만 신뢰 — 자산 이름(별칭)을 단지명으로 쓰면 매칭 키가 오염된다
+              complexName = (stale ? rj.buildingName : complexName || rj.buildingName) || undefined;
               patch.regionCode = lawd;
               patch.legalDong = legalDong;
               patch.complexName = complexName;
@@ -1257,6 +1258,19 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             patch.marketEstimateArea = e.matchedArea ?? undefined;
             patch.marketEstimateGrade = e.grade || undefined;
             patch.marketEstimateSampleCount = e.sampleCount ?? undefined;
+          } else if (!e.error && e.estimate == null && r.marketEstimate !== undefined) {
+            // 정상 응답인데 매칭 실패 → 예전에 저장된 추정·근거를 지운다.
+            // (안 지우면 매칭 기준이 강화돼도 옛 오매칭 값이 화면에 영구 잔존한다)
+            // e.error·네트워크 실패(catch)는 일시 장애이므로 기존 값을 보존한다.
+            patch.marketEstimate = undefined;
+            patch.marketEstimateDate = undefined;
+            patch.marketEstimateSource = undefined;
+            patch.marketEstimateComplexName = undefined;
+            patch.marketEstimateLegalDong = undefined;
+            patch.marketEstimateFloor = undefined;
+            patch.marketEstimateArea = undefined;
+            patch.marketEstimateGrade = undefined;
+            patch.marketEstimateSampleCount = undefined;
           }
         } catch { /* graceful */ }
         if (Object.keys(patch).length > 0) patches[r.id] = patch;

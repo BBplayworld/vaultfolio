@@ -87,6 +87,28 @@ describe("matchTrade — 오매칭 차단 (AC9)", () => {
     const r = matchTrade(trades, { matchBy: "area", legalDong: "역삼동", area: 130, areaKind: "gross" });
     expect(r).toBeNull();
   });
+
+  // 실사용 오매칭: 단지명이 안 맞는데 법정동만 같아서 전혀 다른 단지가 '근사'로 확정 노출되던 케이스
+  it("matchBy=complex는 단지명이 안 맞으면 법정동만으로 특정 거래를 고르지 않는다", () => {
+    const trades = [
+      trade({ complexName: "현대성우주상복합아파트", area: 151.2, legalDong: "서초동", jibun: "1300", date: "2026-06-30" }),
+    ];
+    const r = matchTrade(trades, {
+      matchBy: "complex", complexName: "래미안퍼스티지", legalDong: "서초동",
+      area: 151, areaKind: "exclusive",
+    });
+    expect(r).toBeNull(); // 표본(1건)도 부족해 단가 폴백도 없음
+  });
+
+  it("matchBy=complex는 단지명을 모르면 특정 거래 대신 단가 중앙값으로만 추정한다", () => {
+    const near = (amount: number, date: string, jibun: string) =>
+      trade({ complexName: "현대성우주상복합아파트", area: 150, amount, date, jibun, legalDong: "서초동" });
+    const trades = [near(3_000_000_000, "2026-06-30", "1"), near(3_000_000_000, "2026-05-30", "2"), near(3_000_000_000, "2026-04-30", "3")];
+    const r = matchTrade(trades, { matchBy: "complex", legalDong: "서초동", area: 150, areaKind: "exclusive" });
+    expect(r?.grade).toBe("estimated");
+    expect(r?.complexName).toBeUndefined(); // 특정 단지를 참칭하지 않는다
+    expect(r?.sampleCount).toBe(3);
+  });
 });
 
 describe("matchTrade — 유사 거래 선정 (AC1)", () => {

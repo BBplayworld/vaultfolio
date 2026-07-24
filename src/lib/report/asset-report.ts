@@ -11,7 +11,7 @@ export interface AssetReport {
   equity: number;         // 자기자본 (= totalCost - 부채) — 실제 내가 넣은 돈
   totalProfit: number;    // 번 돈 (평가손익)
   totalProfitRate: number;   // 총자산 수익률 (= totalProfit / totalCost)
-  equityReturnRate: number;  // 자기자본 수익률 (= totalProfit / equity, 레버리지 반영)
+  equityReturnRate: number;  // 자기자본 수익률 gross (= totalProfit / equity, 레버리지 반영·이자 미차감). 성적표 뷰는 이자 차감 net rate를 별도 계산해 표시(ROE 표준)
   currencyGain: number;   // 그중 환차익 (해외주식)
   priceGain: number;      // 그중 순수 시세손익 (= totalProfit - currencyGain)
   perClass: { key: string; label: string; cost: number; value: number; profit: number }[];
