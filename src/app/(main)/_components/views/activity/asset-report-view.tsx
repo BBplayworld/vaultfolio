@@ -328,7 +328,7 @@ export function AssetReportView() {
         <div className="text-right">
           <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(allNet)} /></p>
           {allNetRate !== null && (
-            <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(allNetRate)}`}>
+            <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(allNetRate)}`}>
               {allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
             </p>
           )}
@@ -349,7 +349,7 @@ export function AssetReportView() {
             <div className="text-right">
               <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(equityNet)} /></p>
               {equityNetRate !== null && (
-                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(equityNetRate)}`}>
+                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(equityNetRate)}`}>
                   {equityNetRate >= 0 ? "+" : ""}{equityNetRate.toFixed(1)}%
                 </p>
               )}
@@ -366,7 +366,7 @@ export function AssetReportView() {
             <div className="text-right">
               <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(debtNet)} /></p>
               {debtNetRate !== null && (
-                <p className={`text-xs font-semibold tabular-nums ${getProfitLossColor(debtNetRate)}`}>
+                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(debtNetRate)}`}>
                   {debtNetRate >= 0 ? "+" : ""}{debtNetRate.toFixed(1)}%
                 </p>
               )}
@@ -480,19 +480,19 @@ export function AssetReportView() {
                   <div key={r.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-1.5">
                     <div>
                       <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
-                      <p className="text-xs text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+                      <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-xs text-muted-foreground shrink-0">넣은 돈</span>
+                        <span className="text-sm text-muted-foreground shrink-0">넣은 돈</span>
                         <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
                       </div>
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-xs text-muted-foreground shrink-0">이자·연</span>
+                        <span className="text-sm text-muted-foreground shrink-0">이자·연</span>
                         {renderInterest(r.interest)}
                       </div>
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-xs font-semibold text-foreground shrink-0">남긴 돈</span>
+                        <span className="text-sm font-semibold text-foreground shrink-0">남긴 돈</span>
                         {r.value}
                       </div>
                     </div>
@@ -503,17 +503,17 @@ export function AssetReportView() {
               {/* sm+ — 컬럼 대조 표(번 돈 열은 빼고 남긴 돈만 강조). min-w는 자연 폭 이상으로 둬야 가로 스크롤이 실제로 동작 */}
               <div className="hidden sm:block overflow-x-auto -mx-1 px-1">
                 <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-5 gap-y-2.5 min-w-[440px]">
-                  <span className="text-xs text-muted-foreground">기준</span>
-                  <span className="text-xs text-muted-foreground text-right">넣은 돈</span>
-                  <span className="text-xs text-muted-foreground text-right">이자·연</span>
-                  <span className="text-xs font-semibold text-foreground text-right">남긴 돈</span>
+                  <span className="text-sm text-muted-foreground">기준</span>
+                  <span className="text-sm text-muted-foreground text-right">넣은 돈</span>
+                  <span className="text-sm text-muted-foreground text-right">이자·연</span>
+                  <span className="text-sm font-semibold text-foreground text-right">남긴 돈</span>
                   <div className="col-span-4 h-px bg-border/40" />
 
                   {perfRows.map((r) => (
                     <Fragment key={r.key}>
                       <div>
                         <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
-                        <p className="text-xs text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+                        <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
                       </div>
                       <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
                       {renderInterest(r.interest)}
@@ -533,7 +533,7 @@ export function AssetReportView() {
                     <span>레버리지 계산 근거 · 대출 상세</span>
                     <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${leverageDetailOpen ? "rotate-180" : ""}`} />
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 space-y-4">
+                  <CollapsibleContent className="px-3 pb-3 pt-4 space-y-5 border-t border-border/40">
                     {/* 그룹 1 — 두 관점을 같은 항목명으로 2열 대조.
                         동일한 7단계 계산(빌린돈÷투입원가=비율, 수익×비율=몫수익, 몫수익−이자=남긴돈)을
                         범위만 달리 적용한 것이라, 나란히 두면 금융자산·연간이 전 자산의 부분집합임이 드러난다. */}
@@ -562,11 +562,13 @@ export function AssetReportView() {
                           <div className="space-y-3">
                             {rows.map(([label, all, fin, needsKis], i) => {
                               const last = i === rows.length - 1;
+                              // 산식 3단계 경계 — ②수익 배분(i=3), ③최종(i=5) 시작 앞에 amber 구분선으로 단락을 끊는다(별점 amber와 통일)
+                              const groupStart = i === 3 || i === 5;
                               // 강조는 색이 아니라 굵기·구분선으로만 — 한 줄만 색이 튀지 않게 금액·라벨 색은 통일
                               const amount = `text-sm tabular-nums text-foreground${last ? " font-bold" : ""}`;
                               const finReady = !needsKis || ready; // 조회가 필요 없는 값은 즉시 노출
                               return (
-                                <div key={label} className={`space-y-1 ${last ? "border-t border-border/40 pt-2.5" : ""}`}>
+                                <div key={label} className={`space-y-1 ${groupStart ? `${ASSET_THEME.dividerAccent} pt-3` : ""}${last ? "border-t border-border/40 pt-2.5" : ""}`}>
                                   <p className={`text-sm text-muted-foreground break-keep${last ? " font-medium" : ""}`}>{label}</p>
                                   <div className={`grid ${annualOn ? "grid-cols-2" : "grid-cols-1"} gap-x-3`}>
                                     <span className="flex min-w-0 items-baseline gap-1.5">
@@ -587,9 +589,9 @@ export function AssetReportView() {
                         );
                       })()}
                     </div>
-                    {/* 그룹 2 — 대출별 이자 */}
+                    {/* 그룹 2 — 대출별 이자. 계산 근거와 amber 구분선으로 큰 단락을 분리(별점 색과 통일) */}
                     {report.loanInterest.length > 0 && (
-                      <div className="space-y-1.5">
+                      <div className={`space-y-1.5 ${ASSET_THEME.dividerAccent} pt-4`}>
                         <p><span className={GROUP_BADGE}>대출별 이자</span></p>
                         {/* 종합 — 전 자산 기준이 주(主)이므로 부동산 담보 포함 전체 이자. 아래 목록 합계와 일치한다 */}
                         <div className="flex items-baseline justify-between gap-2 rounded-md bg-muted/40 px-2 py-2">
@@ -757,7 +759,7 @@ export function AssetReportView() {
             <div className="rounded-lg bg-muted/20 p-4 space-y-3">
               <div>
                 <p className={`${SECTION_TITLE} flex items-center gap-1.5`}>
-                  <Sparkles className="size-4 text-primary" /> AI 평가 프롬프트
+                  <Sparkles className="size-4 text-primary" /> 전체 자산 AI 평가 프롬프트
                 </p>
                 <p className={`${CAPTION} mt-1 text-pretty`}>
                   자산 현황을 외부 AI(Grok·Gemini·GPT)에 붙여넣어 구조·리스크 진단을 받아보세요.
@@ -768,7 +770,7 @@ export function AssetReportView() {
                 style={{ backgroundColor: MAIN_PALETTE[0] }}
                 className="text-white hover:opacity-90 border-none w-full"
               >
-                AI 평가 프롬프트 확인 · 복사
+                전체 자산 프롬프트 확인 · 복사
               </Button>
             </div>
           </>

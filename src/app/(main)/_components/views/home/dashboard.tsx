@@ -588,21 +588,9 @@ export function Dashboard() {
                   {financialTotal > 0 && (
                     <TabsContent value="financial" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div>
+                        <div className="w-full">
                           <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
                           <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(financialTotal)}</p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          {financialBarItems.map(({ key, label, value }) => {
-                            const pct = financialTotal > 0 ? (value / financialTotal) * 100 : 0;
-                            return (
-                              <div key={key} className="text-sm">
-                                <span className="text-muted-foreground">{label} </span>
-                                <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
-                                <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
-                              </div>
-                            );
-                          })}
                         </div>
                       </div>
 
@@ -623,21 +611,9 @@ export function Dashboard() {
                   {summary.realEstateValue > 0 && (
                     <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div>
+                        <div className="w-full">
                           <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
                           <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(summary.realEstateValue)}</p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          {realEstateCatBarItems.map(({ key, label, value }) => {
-                            const pct = summary.realEstateValue > 0 ? (value / summary.realEstateValue) * 100 : 0;
-                            return (
-                              <div key={key} className="text-sm">
-                                <span className="text-muted-foreground">{label} </span>
-                                <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
-                                <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
-                              </div>
-                            );
-                          })}
                         </div>
                       </div>
 
@@ -657,18 +633,9 @@ export function Dashboard() {
                   {totalLiability > 0 && (
                     <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
                       <div className={ASSET_THEME.summaryHeader}>
-                        <div>
+                        <div className="w-full">
                           <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
                           <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{formatPriceByMode(totalLiability)}</p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          {liabTopItems.map(({ key, label, value, pct }) => (
-                            <div key={key} className="text-sm">
-                              <span className="text-muted-foreground">{label} </span>
-                              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(value)}</span>
-                              <span className="text-muted-foreground ml-1">({pct.toFixed(1)}%)</span>
-                            </div>
-                          ))}
                         </div>
                       </div>
 

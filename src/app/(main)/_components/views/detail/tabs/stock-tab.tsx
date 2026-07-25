@@ -18,7 +18,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
-import { truncateName } from "@/lib/utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
@@ -315,9 +314,9 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
       <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
         <div className={ASSET_THEME.cardInfoTitle}>
-          <span className={ASSET_THEME.cardInfoName} title={stock.name.length > 18 ? stock.name : undefined}>
-            <span className="sm:hidden">{truncateName(stock.name)}</span>
-            <span className="hidden sm:inline">{stock.name}</span>
+          {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
+          <span className={`${ASSET_THEME.cardInfoName} line-clamp-2`} title={stock.name.length > 18 ? stock.name : undefined}>
+            {stock.name}
           </span>
           {stock.inactiveStatus === "halted" && (
             <Badge variant="outline" className="text-amber-600 border-amber-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>

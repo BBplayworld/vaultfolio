@@ -123,14 +123,20 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
         {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
-            {!hasSubItems && (
-              <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
-                <div><p className={ASSET_THEME.cardDetailLabel}>매입가</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice)}</p></div>
-                <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
+            {/* 종합 — 거래소 분할 여부와 무관하게 병합 대표(coin)의 합산 상세를 항상 노출 (주식과 동일 형태) */}
+            <div className={`flex items-start gap-2 px-4 py-2.5 ${ASSET_THEME.cardSection}`}>
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 flex-1">
+                <span className="text-sm font-semibold text-foreground break-all">{coin.name}</span>
+                {coin.symbol && <span className="text-sm font-mono font-medium text-muted-foreground">({coin.symbol})</span>}
               </div>
-            )}
+              <span className="text-sm text-foreground font-semibold shrink-0 whitespace-nowrap tabular-nums">총 {coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
+            </div>
+            <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
+              <div><p className={ASSET_THEME.cardDetailLabel}>매입가</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(coin.averagePrice * coin.quantity)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice)}</p></div>
+              <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
+            </div>
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={`${ASSET_THEME.cardActionButton}${hasSubItems && effectiveGroupItems.length > 1 ? " !opacity-20 cursor-not-allowed" : ""}`} disabled={hasSubItems && effectiveGroupItems.length > 1} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
                 <Pencil className="size-3.5" />

@@ -661,7 +661,7 @@ export function YearlyNetAssetChart() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-sm text-muted-foreground text-right">
+                    <div className="text-sm text-muted-foreground text-right border-t border-border/40 pt-2">
                       총 {dailyChartData.length}일 기록됨
                     </div>
                   </div>

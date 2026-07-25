@@ -664,8 +664,8 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
 
                     {/* 종목별 목록 */}
                     <div className="space-y-3">
-                      {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }) => (
-                        <div key={key} className="rounded-lg overflow-hidden">
+                      {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }, i) => (
+                        <div key={key} className={`rounded-lg overflow-hidden${i > 0 ? ` ${ASSET_THEME.dividerAccent} pt-3` : ""}`}>
                           <div className="flex items-center justify-between px-4 py-1.5 bg-muted/20">
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />

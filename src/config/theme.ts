@@ -47,6 +47,7 @@ export const ASSET_THEME = {
   cardExpandBox: "divide-y divide-border/10 dark:divide-border/50 border-t border-border/10 dark:border-t", // 확장부 래퍼: 라이트=선 없음(톤차 구분), 다크=현행 선
   subItemsWell: "bg-muted/20 dark:bg-muted/5", // 증권사별 항목 컨테이너(라이트 회색 well)
   subCard: "rounded-md overflow-hidden bg-transparent border border-border/10 dark:border-border/60", // 서브카드 외피
+  dividerAccent: "border-t border-amber-400/25", // 논리 그룹·섹션 경계 강조 구분선(별점 text-amber-400 톤 통일). 중립 헤어라인과 구별해 '큰 단락' 분리에만.
   subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-primary/6 dark:hover:bg-primary/10", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
   cardActionButton: "size-7.5 sm:size-8.5",
   cardTriggerButton: "flex items-center gap-2 sm:gap-4 flex-1 min-w-0 text-left",

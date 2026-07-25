@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-25
+
+### v4.19 UI 마감 — 암호화폐 종합 뷰·amber 구분선 표준화·X-Ray 정합·홈 도넛 중복 제거 (issue-4.19)
+
+- **암호화폐 상세 "종합" 뷰 추가** ([crypto-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/crypto-tab.tsx)): 거래소 분할 코인은 종합 그리드가 `!hasSubItems`에 묶여 사라져 주식과 형태가 달랐다 → 병합 대표(`mergeCryptoGroup`) 기준 헤더행(코인명·심볼·총 N개) + 종합 그리드를 **항상 노출**하고 하단에 거래소별 항목을 잇는 주식 동일 구조로 통일.
+- **주식 이름 최대 2줄** ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx)): 모바일 `truncateName` 15자 하드컷 제거 → `line-clamp-2`로 전체 노출하되 2줄 초과분만 말줄임(모바일·PC 공통 단일 span).
+- **amber 강조 구분선 표준화** ([theme.ts](../../src/config/theme.ts) `ASSET_THEME.dividerAccent`, [design-system.md](design-system.md) §3.3·§11): 성적표에 임시 인라인으로 넣은 amber 구분선(`border-amber-400/25`, 별점 톤)을 **공식 토큰**으로 승격하고 문서에 "구분선 2종"(중립 헤어라인=일반 분리 / amber accent=논리 그룹·섹션 경계) 규약 명문화. 성적표 레버리지 근거 7행을 **3단 논리 그룹**(입력값/수익 배분/최종)으로 amber 경계 구분, 성과 수익 국내/해외/IRP 섹션에도 동일 적용.
+- **성적표 투입 대비 성과 text-sm 통일**: 라벨·헤더·설명·등락률의 `text-xs`를 `text-sm`으로(design-system §2 인지성 규약, 뱃지 예외 유지).
+- **X-Ray 정합·프롬프트 범위 구분** ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx)): AI 프롬프트가 더보기→자산 성적표로 이관돼 스테일이 된 "전체 자산 종합 진단 → 더보기" 백링크(`goFullDiagnosis`) 제거, "보유 주식만 대상" 범위 설명 추가. 두 프롬프트는 **분리 유지 + 명칭으로 범위 구분**(성적표="전체 자산 AI 평가 프롬프트" / X-Ray="주식 X-Ray AI 프롬프트"). 허브 성적표 카드 설명에 AI 진단 힌트로 진입성 보강.
+- **홈 도넛 헤더 중복 제거** ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx)): 개별 자산(금융/부동산/부채) 선택 시 헤더 우측 상세가 바로 아래 `SectionBar` 범례와 동일 데이터를 이중 노출 → 헤더 우측 제거, 좌측 총액 `w-full`. 상세는 비중바 범례에만 유지.
+- **일별 달력 하단 문구 분리** ([net-asset-chart.tsx](../../src/app/(main)/_components/views/activity/net-asset-chart.tsx)): "총 N일 기록됨"이 미래 날짜 짧은 셀 아래 떠 보여, 중립 헤어라인+여백으로 그리드와 분리(실제 겹침은 없었음).
+- **보조 설명 간결성 규약** ([design-system.md](design-system.md) §11): 카드·허브·섹션 보조 설명은 짧은 명사구 한 줄, 문장형 장문은 `InfoHint`로 내리도록 [필수] 명문화(hub·신규 페이지 공통).
+- **QA에 KB 최신화 단계 추가** ([qa-full-test SKILL·plan](qa-full-test-plan.md) Phase 4): 전체 테스트 마무리에 문서-코드 드리프트 점검·KB 갱신 단계 상설화.
+
+---
+
 ## 2026-07-24
 
 ### 자산 성적표 모바일 반응형 + 동기화 변경 감지 누락 수정 (issue-4.19)

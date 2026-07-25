@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchAndStoreClassifications } from "@/lib/xray/fetch-classifications";
-import { Microscope, Copy, ChevronRight } from "lucide-react";
+import { Microscope, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -154,14 +154,6 @@ export function StockXrayView() {
     computeBreakdown("currency", mergedStocks, exchangeRates),
   ]);
 
-  const goFullDiagnosis = () => {
-    // 도구 메뉴 페이지로 이동 → 사용자가 "AI 평가용 자산 현황" 진입 가능
-    // (직접 다이얼로그를 오픈하는 이벤트는 도입하지 않음 — 단순 백링크)
-    if (typeof window !== "undefined") {
-      window.location.hash = "more";
-    }
-  };
-
   return (
     // min-w-0 chain: 부모 flex item(Card·CardContent)이 자식 max-content에 끌려 grow하지 않도록 차단 → wrapper가 부모 폭에 고정되어 가로 스크롤 정상 작동
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
@@ -170,6 +162,10 @@ export function StockXrayView() {
           <Microscope className="size-5 text-primary" />
           주식 X-Ray
         </CardTitle>
+        {/* 범위 명시 — 전체 자산 진단(자산 성적표)과 구분되게 '보유 주식 한정'임을 못박는다 */}
+        <p className="text-sm text-muted-foreground mt-1">
+          보유 주식만 대상으로 한 분포·집중도 진단이에요.
+        </p>
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
         {/* 축 선택 */}
@@ -226,7 +222,7 @@ export function StockXrayView() {
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
         <div className="rounded-lg bg-muted/20 p-4 space-y-3">
           <div>
-            <p className="text-sm sm:text-base font-bold">📋 AI 진단 프롬프트</p>
+            <p className="text-sm sm:text-base font-bold">📋 주식 X-Ray AI 프롬프트</p>
             <p className="text-sm text-muted-foreground mt-1">
               주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다.
             </p>
@@ -241,18 +237,6 @@ export function StockXrayView() {
             주식 X-Ray 프롬프트 확인 · 복사
           </Button>
         </div>
-
-        {/* 종합 진단 백링크 */}
-        <button
-          type="button"
-          onClick={goFullDiagnosis}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors text-left"
-        >
-          <span className="text-xs text-muted-foreground">
-            전체 자산 종합 진단이 필요하면 → 더보기 메뉴
-          </span>
-          <ChevronRight className="size-4 text-muted-foreground shrink-0" />
-        </button>
       </CardContent>
       <PromptPreviewDialog
         open={promptOpen}

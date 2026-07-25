@@ -212,7 +212,7 @@ export function PerformanceHub() {
               <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
             </span>
           }
-          description="이자 내고 남긴 진짜 수익"
+          description="이자 뺀 실수익 · AI 진단"
           primary={`${allNet >= 0 ? "+" : ""}${formatPriceByMode(Math.round(allNet))}`}
           primaryClassName={getProfitLossColor(allNet)}
           secondary={summary.totalCost > 0 ? (
