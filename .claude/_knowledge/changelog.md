@@ -6,6 +6,15 @@
 
 ## 2026-07-25
 
+### 현금 입출금 거래내역 — 소득·저축 유입 원인분해 + 습관 축 결합 (issue-4.19 · S-4.22)
+
+- **현금 입출금 로그 신설** ([transaction.ts](../../src/types/transaction.ts) `cashTransactionSchema`, [asset.ts](../../src/types/asset.ts) `cashTransactions` 최상위 배열): 현금 자산에 입금/출금 이력이 없어 월급·목돈 유입을 분석에 못 썼다 → 주식 `transactions` 패턴 답습(잔액 선형 가감이라 가중평균 불필요). 입금에 **정기/비정기** 구분, `reflected` ON이면 `cash[].balance` 자동 가감(과거 소급은 로그만). `cash[].balance`는 진실원본 유지 → 요약·스냅샷 계산 무변경.
+- **CRUD 단일 저장** ([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx) `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`): 로그+잔액을 한 번에 저장(stale-closure 방지, 주식 대칭). 신규 [cash-tx-utils.ts](../../src/lib/cash-tx-utils.ts)(`pruneCashTransactions` 3년·`findDuplicateCashTx`·`reflectedBalanceDelta`·`isCashWithdrawalValid` 출금초과 가드).
+- **입력 폼·로그 뷰·진입점**: [cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx)(입금/출금·정기 토글·반영·출금 가드·중복 확인), [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)(총입금·출금·순유입 통계·기간/유형 필터·반영 삭제 시 잔액 역가감), 신규 탭 `cash-transactions`([navigation-context](../../src/app/(main)/_components/layout/navigation/navigation-context.tsx)·[asset-page-tabs](../../src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx)), [cash-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/cash-tab.tsx) 카드에 "입출금 기록·내역" 버튼, [cash-tx-view-store.ts](../../src/stores/cash-tx-view-store.ts).
+- **원인분해 `income` cause 분리** ([asset-report.ts](../../src/lib/report/asset-report.ts)): 기존 `saving`(현금 유입+투자 매수 혼합)에서 **기간 내 반영된 현금 순유입**(입금−출금, KRW 환산)을 `income`("소득·저축 유입")으로 떼어냄. `saving`은 투자자산 신규 매수만 남고, `priceEffect`는 계속 잔차 → **표시 합계 = deltaNet 불변**. 홈 헤더·지난 접속 브리핑·성적표 원인분해에 자동 반영(파이프라인은 key 추가만으로 흐름).
+- **성적표 습관 축 저축 규칙성 + 딥링크** ([asset-grade.ts](../../src/lib/report/asset-grade.ts)): habit ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월)** 중 높은 쪽으로 채점(저축을 시세상승과 분리해 직접 측정). 가중치 0.1·재정규화·티어 불변. habit 카드에 현금 상세 딥링크 추가.
+- **공유 토큰**([asset-storage.ts](../../src/lib/asset-storage.ts) packV7 `parts[12]`): 현금 거래를 `caIdx`로 부모 계좌 참조해 직렬화(꼬리 추가 → 구버전 하위호환, R3). `getComparablePayloadString`엔 `restAssetData`로 자연 포함(사용자 편집 push, R14 핑퐁 없음). 명세 [S-4.22](../specs/4.22-cash-transactions.md).
+
 ### v4.19 UI 마감 — 암호화폐 종합 뷰·amber 구분선 표준화·X-Ray 정합·홈 도넛 중복 제거 (issue-4.19)
 
 - **암호화폐 상세 "종합" 뷰 추가** ([crypto-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/crypto-tab.tsx)): 거래소 분할 코인은 종합 그리드가 `!hasSubItems`에 묶여 사라져 주식과 형태가 달랐다 → 병합 대표(`mergeCryptoGroup`) 기준 헤더행(코인명·심볼·총 N개) + 종합 그리드를 **항상 노출**하고 하단에 거래소별 항목을 잇는 주식 동일 구조로 통일.

@@ -1,12 +1,15 @@
 "use client";
 
-import { Pencil, Trash2, CreditCard, Banknote, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, CreditCard, Banknote, ChevronDown, ArrowLeftRight, History } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
+import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
+import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
+import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency, formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
@@ -34,6 +37,12 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
   linkedLoans: Loan[]; onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { navigate } = useAssetNavigation();
+  const setTxTarget = useCashTxViewStore((s) => s.setTarget);
+  const openTxView = () => {
+    setTxTarget({ cashId: item.id, name: item.name });
+    navigate({ type: "detail", tab: "cash-transactions" });
+  };
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
       <div className={ASSET_THEME.cardWrapper}>
@@ -81,6 +90,15 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                   <p className={ASSET_THEME.cardDetailValue}>{item.institution}</p>
                 </div>
               )}
+            </div>
+            {/* 입출금 기록·내역 — 주식 거래내역과 대칭 */}
+            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+              <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCashTx(item.id)}>
+                <ArrowLeftRight className="size-3.5" /> 입출금 기록
+              </Button>
+              <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={openTxView}>
+                <History className="size-3.5" /> 입출금 내역
+              </Button>
             </div>
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-cash", { detail: { id: item.id } }))}>

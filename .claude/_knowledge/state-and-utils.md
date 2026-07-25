@@ -111,7 +111,21 @@ actions: {
 
 ---
 
+## CashTxViewStore (`src/stores/cash-tx-view-store.ts`)
+
+현금 입출금 내역 뷰(`cash-transactions` 탭) 진입 대상 전달. `target: { cashId, name } | null` · `setTarget`/`clear`. 주식 `trade-view-store` 대칭(S-4.22).
+
 ## 유틸 함수
+
+### cash-tx-utils.ts (S-4.22)
+
+```typescript
+pruneCashTransactions(txns, years=3)      // 3년 롤링 정리 (trade-utils.pruneTransactions 대칭)
+findDuplicateCashTx(txns, {cashId,date,amount,type})
+reflectedBalanceDelta(txns, cashId)        // Σ반영입금 − Σ반영출금 (잔액 재계산)
+isCashWithdrawalValid(balance, amount): boolean  // 출금 반영 초과 가드
+```
+현금 잔액은 선형 가감이라 가중평균(trade-utils.computeNewPosition) 계열 불필요. `cash[].balance`가 진실원본.
 
 ### number-utils.ts
 

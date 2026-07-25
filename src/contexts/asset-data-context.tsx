@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction } from "@/types/asset";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/snapshot-archive";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
@@ -11,6 +11,7 @@ import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/coin-cache-slot";
 import { pruneTransactions } from "@/lib/trade-utils";
+import { pruneCashTransactions } from "@/lib/cash-tx-utils";
 import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
@@ -113,6 +114,11 @@ interface AssetDataContextType {
   addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>) => boolean;
   addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[]) => boolean;
   deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>) => boolean;
+  // 현금 입출금 내역 (잔액 가감 단일 저장)
+  addCashTransaction: (tx: CashTransaction) => boolean;
+  addCashTransactionWithBalance: (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => boolean;
+  deleteCashTransaction: (txId: string) => boolean;
+  deleteCashTransactionWithBalance: (txId: string, cashId: string, patch: Partial<Cash>) => boolean;
   unlockAndLoad: () => Promise<void>;
 }
 
@@ -126,6 +132,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   loans: [],
   yearlyNetAssets: [],
   transactions: [],
+  cashTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -1531,6 +1538,57 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // ─── [현금 입출금 내역] ───────────────────────────────────────────────────────
+  // 미반영 기록만 추가(잔액 무변경 — 과거 소급 로그)
+  const addCashTransaction = useCallback(
+    (tx: CashTransaction) => {
+      const newData = {
+        ...assetData,
+        cashTransactions: pruneCashTransactions([...(assetData.cashTransactions || []), tx]),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 입출금 기록 + 현금 잔액 가감을 단일 저장으로 (두 번 saveData 시 stale-closure 방지, 주식 대칭)
+  const addCashTransactionWithBalance = useCallback(
+    (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => {
+      const newData = {
+        ...assetData,
+        cashTransactions: pruneCashTransactions([...(assetData.cashTransactions || []), tx]),
+        cash: assetData.cash.map((c) => (c.id === cashId ? { ...c, ...patch } : c)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 입출금 삭제 + 잔액 역가감 단일 저장
+  const deleteCashTransactionWithBalance = useCallback(
+    (txId: string, cashId: string, patch: Partial<Cash>) => {
+      const newData = {
+        ...assetData,
+        cashTransactions: (assetData.cashTransactions || []).filter((t) => t.id !== txId),
+        cash: assetData.cash.map((c) => (c.id === cashId ? { ...c, ...patch } : c)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 미반영 거래 삭제(잔액 무변경)
+  const deleteCashTransaction = useCallback(
+    (txId: string) => {
+      const newData = {
+        ...assetData,
+        cashTransactions: (assetData.cashTransactions || []).filter((t) => t.id !== txId),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
   // ─── [자산 요약 계산] ────────────────────────────────────────────────────────
 
   const getAssetSummary = useCallback((): AssetSummary => {
@@ -1665,6 +1723,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addTransactionWithPosition,
         addTransactionsBatch,
         deleteTransactionWithPosition,
+        addCashTransaction,
+        addCashTransactionWithBalance,
+        deleteCashTransaction,
+        deleteCashTransactionWithBalance,
       }}
     >
       {children}

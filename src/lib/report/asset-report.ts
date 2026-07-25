@@ -96,7 +96,7 @@ export function buildAssetReport(data: AssetData, summary: AssetSummary): AssetR
 export type AttributionPeriod = "1w" | "1m" | "3m" | "ytd";
 
 export interface AttributionCause {
-  key: "price" | "fx" | "saving" | "debt" | "rest";
+  key: "price" | "fx" | "saving" | "income" | "debt" | "rest";
   label: string;
   amount: number;
   sentence: string; // 뷰가 그대로 렌더하는 문장
@@ -108,7 +108,8 @@ export interface PeriodAttribution {
   deltaNet: number;
   priceEffect: number;   // 투자 성과(시세)
   fxEffect: number;      // 환율 영향
-  savingEffect: number;  // 새로 넣은 자산 (Δ총원가 — 저축·신규 매수)
+  savingEffect: number;  // 새로 넣은 자산 (Δ총원가 − 현금 유입 = 투자자산 신규 매수)
+  incomeEffect: number;  // 현금 순유입 (기간 내 반영된 입금−출금, 월급·목돈 등)
   debtEffect: number;    // 부채 증감 (−Δ대출: 상환=+, 증가=−)
   // 시작 스냅샷이 v2 미만 → 예측 분해: Δ순자산·과거 순자산은 실측(스냅샷) 그대로 쓰되,
   // 저축·부채는 현재 자산 정보의 매수일·대출일로, 환율은 환율 이력 + 현재 외화노출로 추정
@@ -142,6 +143,10 @@ export function causeSentence(key: AttributionCause["key"], amount: number): str
       return amount >= 0
         ? `새로 추가한 자산(저축·신규 매수)으로 ${amt} 늘었어요.`
         : `자산 회수·인출로 ${amt} 줄었어요.`;
+    case "income":
+      return amount >= 0
+        ? `월급·목돈 유입으로 ${amt} 늘었어요.`
+        : `현금 인출·지출로 ${amt} 줄었어요.`;
     case "debt":
       return amount >= 0 ? `부채 상환으로 순자산이 ${amt} 늘었어요.` : `부채 증가가 ${amt} 깎았어요.`;
     case "rest":
@@ -153,6 +158,7 @@ const CAUSE_LABELS: Record<AttributionCause["key"], string> = {
   price: "시세 변동",
   fx: "환율 영향",
   saving: "새로 추가한 자산",
+  income: "소득·저축 유입",
   debt: "부채 증감",
   rest: "그 외",
 };
@@ -163,6 +169,7 @@ function causeShortLabel(key: AttributionCause["key"], amount: number): string {
     case "price": return amount >= 0 ? "시세 상승" : "시세 하락";
     case "fx": return amount >= 0 ? "환율 상승" : "환율 하락";
     case "saving": return amount >= 0 ? "저축·매수" : "회수·인출";
+    case "income": return amount >= 0 ? "소득 유입" : "인출·지출";
     case "debt": return amount >= 0 ? "부채 상환" : "부채 증가";
     case "rest": return "그 외";
   }
@@ -180,6 +187,28 @@ export function formatAttributionSentence(attr: PeriodAttribution): string | nul
   const residual = attr.restEffect - shownRest;
   if (Math.abs(residual) >= CAUSE_DISPLAY_MIN) parts.push(`그 외 ${fmtManwon(residual)}`);
   return parts.join(" · ");
+}
+
+// 원인 리스트 표시용 — formatAttributionSentence와 동일한 항목 집합(합계=deltaNet)을 구조화해 반환.
+// 항목 수가 늘어 한 줄 문장이 길어질 때 뷰가 세로 리스트로 렌더하고 금액 색을 개별 적용한다.
+export interface AttributionDisplayItem {
+  key: AttributionCause["key"];
+  label: string;  // 축약 라벨(부호 방향 반영)
+  amount: number; // 색상 판정용 원값
+  text: string;   // 부호+만원 표기
+}
+
+export function getAttributionItems(attr: PeriodAttribution): AttributionDisplayItem[] {
+  const toItem = (c: AttributionCause): AttributionDisplayItem => ({
+    key: c.key, label: causeShortLabel(c.key, c.amount), amount: c.amount, text: fmtManwon(c.amount),
+  });
+  const items = [...attr.topCauses, ...attr.restCauses].map(toItem);
+  const shownRest = attr.restCauses.reduce((s, c) => s + c.amount, 0);
+  const residual = attr.restEffect - shownRest;
+  if (Math.abs(residual) >= CAUSE_DISPLAY_MIN) {
+    items.push({ key: "rest", label: causeShortLabel("rest", residual), amount: residual, text: fmtManwon(residual) });
+  }
+  return items;
 }
 
 // 효과 목록에서 절대값 상위 1~2개를 topCauses로 선정 (2위가 1위의 25% 미만이면 1개만).
@@ -291,22 +320,27 @@ function resolveAttribution(
 
   const bothEnriched = !!(prev.breakdown && prev.fx && prev.fxBase && prev.cost && curr.breakdown && curr.cost);
 
+  // 기간(prev, curr] 내 반영된 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
+  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates);
+
   if (bothEnriched) {
-    // 정밀 4효과 분해
-    const savingEffect = curr.cost!.total - prev.cost!.total;                 // 새로 넣은 자산(저축·신규 매수)
+    // 정밀 분해. saving은 총원가 증감이라 현금 유입(income)을 포함 → income을 떼어내 투자자산 매수만 남긴다.
+    const savingFull = curr.cost!.total - prev.cost!.total;                   // Δ총원가(현금 포함)
+    const savingEffect = savingFull - incomeEffect;                          // 투자자산 신규 매수
     const debtEffect = -(curr.breakdown!.loans - prev.breakdown!.loans);     // 부채 증감 (상환=+)
     const fxEffect = (["USD", "JPY"] as const).reduce((sum, c) => {
       if (!prev.fx![c] || prev.fx![c] <= 0) return sum;
       return sum + prev.fxBase![c] * (curr.fx![c] / prev.fx![c] - 1);
     }, 0);
-    const priceEffect = deltaNet - savingEffect - debtEffect - fxEffect;     // 잔차 = 시세
+    const priceEffect = deltaNet - savingFull - debtEffect - fxEffect;       // 잔차 = 시세 (income은 savingFull에 포함돼 이미 차감됨)
     const { topCauses, restEffect, restCauses } = pickTopCauses([
       { key: "price", amount: priceEffect },
       { key: "fx", amount: fxEffect },
       { key: "saving", amount: savingEffect },
+      { key: "income", amount: incomeEffect },
       { key: "debt", amount: debtEffect },
     ]);
-    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, debtEffect, estimated: false, topCauses, restEffect, restCauses };
+    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, incomeEffect, debtEffect, estimated: false, topCauses, restEffect, restCauses };
   }
 
   // 예측 분해: 시작 스냅샷이 레거시(netAsset만) — Δ순자산은 실측 그대로 쓰고,
@@ -323,18 +357,35 @@ function resolveAttribution(
     }, 0)
     : 0;
   const { saving: savingEffect, debt: debtEffect } = estimatePeriodInflows(assetData, prev._date, curr._date, rates);
-  const priceEffect = deltaNet - fxEffect - savingEffect - debtEffect;
+  // 예측 모드의 saving은 매수일 기반이라 현금 유입을 포함하지 않음 → income을 별도 항으로 두고 잔차(price)에서 뺀다.
+  const priceEffect = deltaNet - fxEffect - savingEffect - debtEffect - incomeEffect;
   const { topCauses, restEffect, restCauses } = pickTopCauses([
     { key: "price", amount: priceEffect },
     { key: "fx", amount: fxEffect },
     { key: "saving", amount: savingEffect },
+    { key: "income", amount: incomeEffect },
     { key: "debt", amount: debtEffect },
   ]);
   return {
     fromDate, toDate, deltaNet,
-    priceEffect, fxEffect, savingEffect, debtEffect,
+    priceEffect, fxEffect, savingEffect, incomeEffect, debtEffect,
     estimated: true, topCauses, restEffect, restCauses,
   };
+}
+
+// 기간(from, to] 내 반영된 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.
+// 반영분만 집계해야 잔액(cost.total) 변화와 정합 → 표시 합계 = deltaNet 불변.
+function reflectedCashInflow(
+  assetData: AssetData,
+  fromDate: string,
+  toDate: string,
+  rates: { USD: number; JPY: number },
+): number {
+  const txns = assetData.cashTransactions || [];
+  const mul = (cur: string) => (cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1);
+  return txns
+    .filter((t) => t.reflected && t.date > fromDate && t.date <= toDate)
+    .reduce((sum, t) => sum + (t.type === "deposit" ? t.amount : -t.amount) * mul(t.currency), 0);
 }
 
 // 기간 시작점에 가장 가까운(시작일 이하 최근) 스냅샷 선택.

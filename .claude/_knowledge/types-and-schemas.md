@@ -32,7 +32,10 @@ Loan: {
 
 YearlyNetAsset: { year(2000~2100), netAsset, note? }
 
-AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[], lastUpdated }
+// 현금 입출금 로그 (S-4.22) — 최상위 배열, cash[].balance는 진실원본 유지(로그는 이력)
+CashTransaction: { id("ctx_*"), cashId, type("deposit"|"withdrawal"), amount(>0), currency, recurring?(입금 정기 여부), date, memo?, reflected, reflectedAt?, reflectionId?, createdAt }
+
+AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[], transactions[], cashTransactions[], lastUpdated, nickname? }
 ```
 
 ## 비활성 종목 정책 (inactiveStatus)

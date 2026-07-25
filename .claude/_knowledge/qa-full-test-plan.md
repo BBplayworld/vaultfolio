@@ -57,6 +57,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 수동 보유분+반영거래 삭제 시 보유분 보존(P1 회귀), 전량매도 평단 0, 보유초과 매도 차단, 미래·보존기간(3년) 밖 날짜 차단
 - 회귀: `addTransactionWithPosition`/`deleteTransactionWithPosition` 단일 저장(stale-closure 방지)
 
+### F-CASH-TX. 현금 입출금 거래내역 ([cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx) · [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)) — 명세 [S-4.22](../specs/4.22-cash-transactions.md)
+- 👤 현금 카드 "입출금 기록/내역" 진입 → 입금/출금(입금 시 정기·비정기 토글)·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총입금·총출금·순유입 통계, 기간·유형 필터
+- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 미반영 즉시 삭제
+- ⚙ `cash-tx-utils`: `pruneCashTransactions`(3년 롤링)·`findDuplicateCashTx`(계좌·날짜·금액·유형)·`reflectedBalanceDelta`(반영분만)·`isCashWithdrawalValid`(출금초과 가드). `cash[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경
+- ⚙ 단일 저장 `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
+- 엣지: 출금 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단, 통화(USD·JPY/100) 환산
+- 회귀: 공유 토큰 `parts[12]` 왕복·`caIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
+
 ### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx))
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`)
 - 엣지: 통화 KRW/USD 분기, 중복 거래 처리, 매칭 실패 종목 제외
@@ -102,6 +110,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **레버리지 분모 = 금융자산만** — 대출비율 = `investLoanBalance ÷ (stockCost + cryptoCost)`(`financialInvestCost`)라 '넣은 돈 대비 성과'(= 부동산·현금 포함 `totalCost`)와 **분모가 다르다**. 두 블록에 `금융자산만`/`모든 자산` 뱃지가 유지되는지. 부동산 연계 대출(`type==="mortgage-home" || linkedRealEstateId`)은 이자·잔액 모두 비교 제외
 - ⚙ **연계 부동산 선택은 전 대출 종류에 노출**([loan-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-input.tsx)) — `mortgage-home` 한정으로 되돌리면 신용·마이너스대출로 산 부동산을 연결할 수 없어 레버리지 이자·비율이 부풀려지는 회귀
 - ⚙ **원인분해 표시 합계 불변 조건** — 홈 헤더(`formatAttributionSentence`)·성적표 원인분해가 표시하는 금액의 합 = `deltaNet`(만원 반올림 오차 제외). `topCauses` + `restCauses`(≥1만원) + 잔차(`restEffect − Σ restCauses`, ≥1만원일 때만) 구조를 깨면 헤더 증감액과 원인 합계가 어긋난다(과거 P1 회귀 지점)
+- ⚙ **`income`(소득·저축 유입) cause** (S-4.22) — 기간 내 반영된 현금 순유입(입금−출금, KRW)을 `saving`에서 분리. enriched=`saving`에서 차감(price 잔차 불변), estimated=별도 항+price 잔차에서 차감. income 추가 후에도 합계=deltaNet 불변 유지 확인(F-CASH-TX 연계)
 - 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
@@ -111,6 +120,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 레버리지 축: 무부채(loanBalance≤0)=**5.0**(건전성 만점, AC3) / 자본잠식(equity≤0 & 부채>0)=**0.5**(AC4). 부채비율 40/60%·평균금리 6%·이자 커버리지 감가점
 - ⚙ 채점 컷 전부 `GRADE_THRESHOLDS` 단일 소스(AC5) — 티어 4.5/3.5/2.5(platinum/gold/silver), 컷 근거는 각 score 함수 주석
 - ⚙ 전 축 non-pending 확정 시 오늘 daily·이번 달 monthly `grade` 기록(`recordGradeSnapshot`, **동일 값 스킵=멱등**, 과거 불소급, AC6). `diffGrade`로 종합·축별 ▲▼·티어 승·강등(AC7) — 최근 과거 daily 우선, 없으면 이전 달 monthly 대비
+- ⚙ **habit 저축 규칙성**(S-4.22) — ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월, `savingsRhythm`)** 중 높은 비율로 채점(저축을 시세와 분리). 가중치 0.1·재정규화·티어 불변. 현금 거래 없으면 순자산 상승 폴백. habit 카드 → 현금 상세 딥링크
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
 - 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → `getComparablePayloadString`이 두 곳을 이미 제외하므로 등급 확정이 push를 유발하지 않음(R14 핑퐁 없음). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)

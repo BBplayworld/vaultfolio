@@ -55,6 +55,7 @@ const EMPTY_ASSET_DATA: AssetData = {
   loans: [],
   yearlyNetAssets: [],
   transactions: [],
+  cashTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -530,6 +531,20 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
     }) || []),
     // parts[11]: 프로필 닉네임
     sTxt(nickname || ""),
+    // parts[12]: 현금 입출금 내역 (S-4.22) — 꼬리 추가라 구버전 토큰과 하위호환. caIdx로 부모 계좌 참조.
+    section(data.cashTransactions?.map(t => {
+      const caIdx = data.cash?.findIndex(c => c.id === t.cashId) ?? -1;
+      return [
+        t.type === "deposit" ? "d" : "w",
+        pNum(t.amount),
+        DICT.cu.indexOf(t.currency || "KRW"),
+        pDate(t.date),
+        t.recurring ? "1" : "0",
+        t.reflected ? "1" : "0",
+        sTxt(t.memo),
+        caIdx >= 0 ? caIdx.toString() : t.cashId,
+      ];
+    }) || []),
   ];
 
   return parts.join("^");
@@ -650,6 +665,27 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     };
   });
 
+  // 현금 입출금 내역 (S-4.22) — caIdx로 부모 계좌 재연결. 계좌 못 찾으면 제외.
+  const cashTransactions = section(12).map(r => {
+    const f = fields(r);
+    const rawCa = f[7] || "";
+    const isIdx = /^\d+$/.test(rawCa);
+    const caIdx = isIdx ? parseInt(rawCa, 10) : -1;
+    const cashId = (caIdx >= 0 && caIdx < caIds.length) ? caIds[caIdx] : (isIdx ? "" : rawCa);
+    return {
+      id: `ctx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      cashId,
+      type: f[0] === "d" ? "deposit" as const : "withdrawal" as const,
+      amount: uNum(f[1]),
+      currency: getIdx(f[2], DICT.cu),
+      date: uDate(f[3]),
+      ...(f[4] === "1" ? { recurring: true } : {}),
+      reflected: f[5] === "1",
+      memo: uTxt(f[6]) || undefined,
+      createdAt: new Date().toISOString(),
+    };
+  }).filter(t => t.cashId);
+
   const data = {
     realEstate,
     stocks,
@@ -661,6 +697,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
       return { year: parseInt(f[0]) || new Date().getFullYear(), netAsset: uNum(f[1]), note: uTxt(f[2]) };
     }),
     transactions,
+    cashTransactions,
     lastUpdated: new Date().toISOString(),
     nickname: parts[11] ? uTxt(parts[11]) || "" : "",
   };

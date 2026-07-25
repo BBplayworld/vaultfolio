@@ -11,3 +11,7 @@ export function dispatchAddStock(mode: AssetMode) {
 export function dispatchAddTrade(stockId?: string) {
   window.dispatchEvent(new CustomEvent("trigger-add-trade", { detail: { stockId } }));
 }
+
+export function dispatchAddCashTx(cashId?: string) {
+  window.dispatchEvent(new CustomEvent("trigger-add-cash-tx", { detail: { cashId } }));
+}

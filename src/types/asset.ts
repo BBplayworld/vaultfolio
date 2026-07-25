@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { transactionSchema } from "./transaction";
+import { transactionSchema, cashTransactionSchema } from "./transaction";
 
 // 부동산 자산 스키마
 export const realEstateSchema = z.object({
@@ -163,6 +163,7 @@ export const assetDataSchema = z.object({
   loans: z.array(loanSchema).default([]),
   yearlyNetAssets: z.array(yearlyNetAssetSchema).default([]),
   transactions: z.array(transactionSchema).default([]),
+  cashTransactions: z.array(cashTransactionSchema).default([]),
   lastUpdated: z.string(),
   nickname: z.string().optional().default(""),
 });
@@ -175,7 +176,7 @@ export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
-export type { Transaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
+export type { Transaction, CashTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
 
 // 스냅샷 시점 박제용 파생 정보 (성적표·원인분해 델타용, v2)
 // 구버전 스냅샷 호환을 위해 모두 optional.

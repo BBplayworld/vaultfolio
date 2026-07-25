@@ -97,8 +97,9 @@ export function NoticeContent() {
         </div>
       </div>
 
-      {/* 나머지 개선 — 카드로 세울 만큼 크지 않아 한 문단으로 */}
-      <p className="w-full text-sm text-muted-foreground leading-relaxed px-1 text-pretty">
+      {/* 나머지 개선 — 카드로 세울 만큼 크지 않아 한 문단으로.
+          text-pretty 제외: 모바일에서 마지막 줄 균형 맞추기가 줄 길이를 줄여 우측 공백이 생겨, 전폭 greedy 줄바꿈을 우선한다(§2 국소 예외). */}
+      <p className="text-sm text-muted-foreground leading-relaxed px-1">
         그 외 순자산 변화의 원인을 시세·환율·부채 등 이름으로 더 자세히 보여주고, 홈 헤더의 전일 순자산 대비 증감과 종목별 오늘 등락을 한 줄로 확인할 수 있습니다.
         데이터 백업 날짜 표기와 성과 화면의 지표 기준도 정확하게 다듬었습니다.
       </p>

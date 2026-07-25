@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
 import { readExchangeHistory } from "@/lib/profit-utils";
-import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence } from "@/lib/report/asset-report";
+import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence, getAttributionItems, type AttributionDisplayItem } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -250,12 +250,24 @@ export function NetAssetSummaryBox({
               )}
             </div>
             {change && hasCause && (causeOpen || screenshotMode) && (
-              <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground text-pretty">
+              <div className="space-y-1">
                 {change.estimated && (
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">예측</span>
+                  <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
                 )}
-                {change.sentence && <span>{change.sentence}</span>}
-              </p>
+                {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·금액(손익색) 분리 */}
+                {change.causes.length > 0 ? (
+                  <ul className="w-full max-w-xs space-y-0.5">
+                    {change.causes.map((c) => (
+                      <li key={c.key} className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm text-foreground break-keep">{c.label}</span>
+                        <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  change.sentence && <p className="text-sm text-muted-foreground text-pretty">{change.sentence}</p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -354,7 +366,8 @@ interface HeaderChange {
   isBig: boolean;
   label: string;            // "전일 대비" 또는 "지난 접속(M/D) 이후"
   estimated: boolean;
-  sentence: string | null;  // 최상위 원인 문장
+  sentence: string | null;  // 최상위 원인 문장(스크린샷·폴백용)
+  causes: AttributionDisplayItem[]; // 원인 리스트(항목별 색상 렌더)
 }
 
 // 비교 시작일 표기: YYYY-MM-DD → M/D, YYYY-MM → M월
@@ -398,6 +411,7 @@ function useHeaderNetChange(): HeaderChange | null {
       label,
       estimated: attr.estimated,
       sentence: formatAttributionSentence(attr),
+      causes: getAttributionItems(attr),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previousVisitDate, todayStr, assetData, exchangeRates, snapshotVersion]);

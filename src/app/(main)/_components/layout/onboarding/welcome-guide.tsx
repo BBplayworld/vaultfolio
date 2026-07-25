@@ -186,7 +186,7 @@ export function WelcomeGuide() {
           <NetAssetSummaryBox
             netAsset={netAsset}
             treemapData={PREVIEW_TREEMAP}
-            change={{ deltaNet: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false, label: "전일 대비", estimated: false, sentence: null }}
+            change={{ deltaNet: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false, label: "전일 대비", estimated: false, sentence: null, causes: [] }}
             screenshotMode={true}
             showRealtimeBadge={true}
           />

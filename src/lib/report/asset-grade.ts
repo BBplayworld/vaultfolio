@@ -42,6 +42,8 @@ export interface AssetGradeInputs {
   coverage: { value: number; ready: boolean };
   /** 이번 달 기록률 (0~1). null/미지정 = 측정 전(레거시 배점 유지) */
   recordRate?: number | null;
+  /** 저축 규칙성 — 최근 windowMonths개월 중 현금 입금이 관측된 개월 수. null = 현금 거래 없음(순자산 상승 방식 폴백) */
+  savingsRhythm?: { depositMonths: number; windowMonths: number } | null;
 }
 
 const AXIS_WEIGHTS: Record<AxisKey, number> = {
@@ -286,7 +288,12 @@ function scoreDiversification(
 // ── ⑤ 투자 습관 ──────────────────────────────────────────────────────
 // recordRate(이번 달 기록률) 측정 가능 시: 비중 2.0 + 꾸준함 2.0 + 기록률 1.0 배점.
 // 미측정(null)이면 기존 배점(2.5+2.5) 유지 — 하위호환.
-function scoreHabit(summary: AssetSummary, monthly: MonthlyAssetSnapshot[], recordRate?: number | null): AxisScore {
+function scoreHabit(
+  summary: AssetSummary,
+  monthly: MonthlyAssetSnapshot[],
+  recordRate?: number | null,
+  savingsRhythm?: { depositMonths: number; windowMonths: number } | null,
+): AxisScore {
   const label = "투자 습관";
   if (summary.totalValue <= 0) {
     return {
@@ -313,22 +320,33 @@ function scoreHabit(summary: AssetSummary, monthly: MonthlyAssetSnapshot[], reco
   if (noCash) ratioScore -= 0.5;
   ratioScore *= scale;
 
-  // 꾸준함: 최근 월별 스냅샷(최대 6개) 중 순자산 상승 개월 비율
+  // 꾸준함: 저축 규칙성(현금 입금 관측 개월) 우선, 없으면 순자산 상승 개월로 폴백.
+  // 저축은 직접 관측이 시세상승과 뒤섞이지 않아 더 정확 → 둘 다 있으면 높은 쪽을 택한다.
   const sorted = [...monthly].sort((a, b) => a.month.localeCompare(b.month)).slice(-7); // 비교쌍 6개
+  const hasSavings = !!savingsRhythm && savingsRhythm.windowMonths >= 3;
+  const savingsRatio = hasSavings ? savingsRhythm!.depositMonths / savingsRhythm!.windowMonths : null;
   let score: number;
   let steadyNote: string;
-  if (sorted.length >= 3) {
-    let ups = 0;
-    for (let i = 1; i < sorted.length; i++) if (sorted[i].netAsset > sorted[i - 1].netAsset) ups++;
-    const pairs = sorted.length - 1;
-    const upRatio = ups / pairs;
-    const steady = (upRatio >= H.steadyStrong ? 2.5 : upRatio >= H.steadyWeak ? 1.5 : 0.5) * scale;
+  if (sorted.length >= 3 || hasSavings) {
+    let upRatio = 0;
+    let pairs = 0;
+    if (sorted.length >= 3) {
+      let ups = 0;
+      for (let i = 1; i < sorted.length; i++) if (sorted[i].netAsset > sorted[i - 1].netAsset) ups++;
+      pairs = sorted.length - 1;
+      upRatio = ups / pairs;
+    }
+    // 저축 규칙성과 순자산 상승 중 높은 비율을 '꾸준함' 근거로
+    const bestRatio = Math.max(upRatio, savingsRatio ?? 0);
+    const steady = (bestRatio >= H.steadyStrong ? 2.5 : bestRatio >= H.steadyWeak ? 1.5 : 0.5) * scale;
     score = ratioScore + steady;
-    steadyNote = `② 꾸준히 모으는가: 최근 ${pairs}개월 중 ${ups}개월 순자산 증가`;
+    steadyNote = hasSavings
+      ? `② 꾸준히 모으는가: 최근 ${savingsRhythm!.windowMonths}개월 중 ${savingsRhythm!.depositMonths}개월 입금`
+      : `② 꾸준히 모으는가: 최근 ${pairs}개월 중 ${Math.round(upRatio * pairs)}개월 순자산 증가`;
   } else {
-    // 월별 기록 부족 시 비중 점수만으로 스케일
+    // 월별 기록·저축 모두 부족 시 비중 점수만으로 스케일
     score = ratioScore * 2;
-    steadyNote = "② 꾸준히 모으는가: 월별 기록 3개월부터 반영";
+    steadyNote = "② 꾸준히 모으는가: 월별 기록 3개월 또는 현금 입금 기록부터 반영";
   }
 
   // 기록 습관: 이번 달 기록률 ≥80% → +1 / ≥50% → +0.5 (접속할수록 오르는 축)
@@ -366,7 +384,7 @@ export function computeAssetGrade(inputs: AssetGradeInputs): AssetGrade {
     scoreEarningQuality(inputs.report, inputs.summary, inputs.dividend),
     scoreLeverage(inputs.report, inputs.summary, inputs.coverage),
     scoreDiversification(inputs.report, inputs.summary, inputs.topShare, inputs.fxRatioSum),
-    scoreHabit(inputs.summary, inputs.monthlySnapshots, inputs.recordRate),
+    scoreHabit(inputs.summary, inputs.monthlySnapshots, inputs.recordRate, inputs.savingsRhythm),
   ];
 
   // 측정 가능한 축만 가중 재정규화

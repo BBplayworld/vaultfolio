@@ -260,6 +260,22 @@ export function AssetReportView() {
   );
 
   // ── 종합 등급 ──
+  // 저축 규칙성 — 최근 6개월 중 현금 입금이 관측된 개월 수(습관 축 '꾸준함' 근거). 입금 기록 없으면 null(순자산 상승 폴백).
+  const savingsRhythm = useMemo(() => {
+    const deposits = (assetData.cashTransactions || []).filter((t) => t.type === "deposit");
+    if (deposits.length === 0) return null;
+    const windowMonths = 6;
+    const cut = new Date();
+    cut.setMonth(cut.getMonth() - (windowMonths - 1));
+    const cutoffYM = `${cut.getFullYear()}-${String(cut.getMonth() + 1).padStart(2, "0")}`;
+    const months = new Set<string>();
+    for (const t of deposits) {
+      const ym = t.date.substring(0, 7);
+      if (ym >= cutoffYM) months.add(ym);
+    }
+    return { depositMonths: months.size, windowMonths };
+  }, [assetData.cashTransactions]);
+
   const grade = useMemo(() => computeAssetGrade({
     summary,
     report,
@@ -272,7 +288,8 @@ export function AssetReportView() {
     coverage: { value: netLeverage, ready: interestCompareReady },
     // 기록률 — 일별 기록이 하나도 없으면 측정 전(레거시 배점 유지)
     recordRate: dailySnapshots.length > 0 ? recordStats.monthRate : null,
-  }), [summary, report, assetData.yearlyNetAssets, dailySnapshots.length, monthlySnapshots, topShare, fxRatioSum, annualDividend, divReady, netLeverage, interestCompareReady, recordStats]);
+    savingsRhythm,
+  }), [summary, report, assetData.yearlyNetAssets, dailySnapshots.length, monthlySnapshots, topShare, fxRatioSum, annualDividend, divReady, netLeverage, interestCompareReady, recordStats, savingsRhythm]);
 
   // ── 성적표 이력화: 전 축 확정(non-pending) 시 오늘자 스냅샷에 기록 ──
   // recordGradeSnapshot은 동일 값 재기록을 스킵하므로 effect 재실행에도 안전(idempotent)
@@ -388,9 +405,11 @@ export function AssetReportView() {
   const axisNavigate = (key: AxisKey) => {
     if (key === "diversification") navigate({ type: "detail", tab: "stocks-xray" });
     else if (key === "growth") navigate({ type: "activity", tab: "netasset" });
+    else if (key === "habit") navigate({ type: "detail", tab: "cash" });
   };
   const axisHasLink = (key: AxisKey) =>
-    (key === "diversification" && assetData.stocks.length > 0) || key === "growth";
+    (key === "diversification" && assetData.stocks.length > 0) || key === "growth" ||
+    (key === "habit" && assetData.cash.length > 0);
 
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
