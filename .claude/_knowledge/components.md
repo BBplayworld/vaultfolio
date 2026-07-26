@@ -77,6 +77,7 @@ _components/
 - 색상: `bg-foreground/85 text-background` (라이트=검정 음영+흰, 다크=흰 음영+검정 자동 반전). hover 시 풀톤
 - 모바일: `side="top"`, PC/패드: `side="right"` Sheet
 - 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
+- `select-action` 스텝의 거래 진입(자산 업데이트/수정과 같은 레벨): 주식=**거래 입력**(`dispatchAddTrade`) · 현금=**입출금 기록**(`dispatchAddCashTx`, 계좌 미지정 → 폼에서 선택). 둘 다 대상 폼이 hidden 상시 마운트라 추가 마운트 불필요. 현금은 스크린샷 일괄 가져오기 미지원(S-4.22 제외 범위)이라 `select-method`를 거치지 않는다
 - 수정 액션: `navigate({type:"detail", tab})` 직접 호출 (CustomEvent 미사용)
 
 ### ScrollToTop (`layout/floating/scroll-to-top.tsx`)

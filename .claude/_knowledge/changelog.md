@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-07-26
+
+### 원인분해: 카테고리 순서 정렬 + "대출" 용어 통일 (issue-4.19)
+
+- **원인 표시 순서를 카테고리 고정 순서로 통일** ([asset-report.ts](../../src/lib/report/asset-report.ts) 신규 `CAUSE_ORDER`·`getOrderedCauses`): 기존엔 절대값 크기순(topCauses 1~2개 + restCauses)으로만 나열돼, 주식 매수·매도처럼 연관된 원인이 부채·저축 등에 밀려 뚝뚝 떨어져 표시됐다(예: 시세하락→신규매수→부채증가→새로 추가한 자산→매도 회수). → 시세·환율(시장) → 주식 매수·매도(거래) → 주식 외 자산 추가 → 소득 → 대출 → 그 외 순서로 항상 나란히 정렬. `pickTopCauses`의 선정(1~2개 강조·임계값 필터링) 로직과 `topCauses[0]`(지난 접속 브리핑의 한 줄 요약이 쓰는 "가장 큰 원인")은 그대로 두고, **나열 순서만** 바꿨다. `formatAttributionSentence`·`getAttributionItems`·[asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)의 원인 리스트가 모두 `getOrderedCauses`를 공유.
+- **"부채" → "대출" 용어 통일**: `debtEffect`는 실제로 대출 잔액 증감만 반영(임차보증금 제외)해 "부채"보다 "대출"이 정확. `saving`의 "새로 추가한 자산"과 짝을 이루도록 `debt` 문구도 "새로 추가한 대출로 ~ 줄었어요" / "대출 상환으로 ~ 늘었어요" 구조로 통일(신규 유입 vs 신규 부채가 대칭 표현). 회귀 테스트 1건 추가(카테고리 순서 검증).
+
+### 원인분해: "신규 매수" vs "새로 추가한 자산" 경계 명시 (issue-4.19)
+
+- **buy/sell·saving 라벨에 "주식"/"주식 외" 명시** ([asset-report.ts](../../src/lib/report/asset-report.ts) `causeSentence`·`causeShortLabel`·`CAUSE_LABELS`): "신규 매수"(거래내역 반영분)와 "새로 추가한 자산(저축·코인·부동산 등)"이 둘 다 "새 투입"으로 읽혀 경계가 불명확했다 → `buy`="주식 신규 매수", `sell`="주식 매도 회수", `saving`="주식 외 새로 추가한 자산"(축약 "코인·부동산 등"/"주식 외 회수·인출")로 스코프를 라벨에서 바로 드러냄. [asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)의 InfoHint 설명 문구도 동일 용어로 정리.
+
+### 원인분해: 실시간 끝점의 휴장일 quote 노이즈를 "시세" 원인에서 제외 (issue-4.19)
+
+- **휴장일(국내·해외 모두) + 실시간 끝점일 때 "시세" 원인을 "그 외"로 대체** ([asset-report.ts](../../src/lib/report/asset-report.ts) `isClosedForBothMarkets`·`resolveAttribution`): slot 고정 수정 후에도, 실시간 quote(`currentPrice`)와 정산 종가(`refPrice`, 스냅샷 기준)가 애초에 다른 KIS API 소스라 휴장 중 재조회 시에도 몇 만원~몇 백만원 차이가 남을 수 있음을 확인(헤더 "전일 대비"에 실제 시장 움직임 없는 +366만원 "시세 상승" 노출). 순자산 총액(Hero) 자체는 정확하므로 건드리지 않고, **원인 귀속 라벨만** 휴장일 실시간 비교(`buildLiveAttributionCurr`, 신규 `_isLive` 마킹)일 때 "시세"→"그 외"로 바꿔 오귀속을 막는다. 과거 구간 비교(1주/1개월/3개월 등, `computePeriodAttribution`)는 스냅샷 간 비교라 항상 refPrice 기준이므로 영향 없음. 표시 합계=deltaNet 항등식 유지. 회귀 테스트 2케이스 추가.
+
+### 휴장일 주식 캐시 slot 고정 — 재조회로 인한 원인분해 허위 "시세 변동" 제거 (issue-4.19)
+
+- **`getStockCacheSlot` 수정** ([stock-cache-slot.ts](../../src/lib/stock-cache-slot.ts)): 휴장일(주말·공휴일)에도 slot이 `effectiveDate`(달력 날짜) 그대로라 매일 바뀌어, `syncTodayStockPrices`가 휴장 중에도 매일 실시간 시세를 재조회했다 — 실측 종가(스냅샷의 `refPrice`)는 안 바뀌었는데 실시간 quote만 미세하게 흔들려(KIS 리얼타임 vs 정산 종가 소스가 다름) 원인분해가 이를 "시세 상승"으로 오인(예: 일요일 헤더에 실제로는 없던 +366만원 시세 변동 표시). → 휴장일 판정을 시간대와 무관하게 최우선으로 옮기고, 휴장이면 `rollbackToBusinessDay`/`rollbackToUsBusinessDay`(기존 유틸, [kr-holidays.ts](../../src/lib/kr-holidays.ts)·[us-holidays.ts](../../src/lib/us-holidays.ts))로 **직전 영업일 slot에 고정** — 주말 내내 같은 slot이라 재조회가 발생하지 않는다. 영업일 로직은 변경 없음. 프로덕션(Upstash, TTL 1시간)은 slot 값과 무관해 영향 없음. 회귀 테스트 3케이스 추가.
+
+### 원인분해: 예측 모드 신규 매수 누락 수정 + saving 문구 중복 정리 (issue-4.19)
+
+- **`saving` 원인 문구에서 "신규 매수" 제거** ([asset-report.ts](../../src/lib/report/asset-report.ts) `causeSentence`·`causeShortLabel`): 매수/매도가 별도 `buy`/`sell` 원인으로 분리된 이후에도 `saving` 문구가 `(저축·신규 매수)`라 "신규 매수" 항목과 중복돼 보였다 → `(저축·코인·부동산 등)`, 축약 `저축·매수`→`저축·기타`. `saving`은 실제로 코인·부동산 매수·직접입력 잔여만 담는다.
+
+
+- **예측(estimated) 모드가 기간 내 추가 매수를 놓치던 버그 수정** ([asset-report.ts](../../src/lib/report/asset-report.ts) `estimatePeriodInflows`·estimated 분기): 매수 반영 시 `stock.purchaseDate`는 갱신되지 않아(원매수일 유지), 예측 모드가 `purchaseDate`로만 신규투입을 추정하던 탓에 **기존 보유 종목에 기간 내 추가 매수한 물량이 통째로 누락**돼 시세 잔차로 흡수됐다(예: "순자산 변화, 왜?" 1개월에 테슬라 07-20 매수 미노출, 시세 하락폭 축소). → 예측 모드에도 `reflectedTradeFlow`로 `buy`/`sell`을 계산해 노출하고, 이중계산 방지로 `estimatePeriodInflows`는 **기간 내 반영 거래가 있는 종목을 건너뛴다**(권위=거래내역). 정밀 모드는 종전대로. 합계 = `deltaNet` 항등식 유지, 회귀 테스트 추가.
+
+### 원인분해: 외화 원가 환율 재평가 누출 수정 + 만원 미만 변동 표기 정합 (issue-4.19)
+
+- **외화 원가 환율 재평가 누출 수정** ([asset-report.ts](../../src/lib/report/asset-report.ts) `costFxRevaluation`): `cost.total`이 현재 환율로 환산한 원가(주식 `getMultiplier`·현금 `cashValue`)를 담아, 환율만 움직여도 `savingFull`이 외화 원가 재평가분을 흡수 → `savingEffect`에 `+(외화 원가×Δfx)`, `priceEffect`에 `−(외화 원가×Δfx)`가 허위로 갈렸다(합계 `deltaNet`은 불변). enriched 분기에서 원가 재평가분을 `savingFull`에서 제외(`savingFullReal`)해 **환율 변동일에도 저축·시세가 0, 환차익은 fx로만 귀속**. 평가액 기준 `fxEffect`가 환차익을 이미 담당하므로 이중 귀속 제거. 예측 경로는 매수일 기반이라 누출 없어 무변경.
+- **만원 미만 변동 표기 정합** ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx) `useHeaderNetChange`): hero는 원 단위(`+484원`), 원인 리스트는 만원 반올림(`+0만원`)이라 미세 변동 시 "시세 상승 +0만원"처럼 방향어+0이 깨져 보였다 → `|deltaNet| < CAUSE_DISPLAY_MIN`이면 금액·원인 대신 "`{label} 변동 없음`"으로 통일 표시(`negligible` 플래그).
+- **회귀 테스트 3케이스 추가**: 외화 원가 fx-중립화, 환율+시세 동시 분리, 환율 동결 시 암호화폐 소폭 상승 → 시세 귀속.
+
+### 원인분해에 매수·매도 분리 + 소급 입금 인식 · FAB 현금 입출금 진입 (issue-4.19)
+
+- **`buy`/`sell` cause 신설** ([asset-report.ts](../../src/lib/report/asset-report.ts) `reflectedTradeFlow`): 원인분해가 `assetData.transactions`를 전혀 읽지 않아 신규 매수·매도가 `Δcost.total` 안에서 상계돼 보이지 않았다 → 기간 내 **반영된 주식 거래 체결액**(체결 환율 우선)을 `saving`에서 떼어내 "신규 매수"·"매도 회수"로 분리. `buy + sell + saving = 종전 savingEffect` 항등식이라 **표시 합계 = deltaNet 불변**. 예측(estimated) 경로는 `estimatePeriodInflows`가 매수일 기반이라 이중계산이 되므로 분리하지 않는다. 거래내역 스키마가 주식 전용이라 코인·부동산 매수는 종전대로 `saving`.
+- **미반영(과거 소급) 현금 입출금도 `income`으로 인식** (`cashInflow`): 소급 기록은 잔액을 건드리지 않아 `cost.total`엔 없지만 그 입금은 **이미 잔액에 녹아 있어** `deltaNet`엔 있다 → 반영분은 종전대로 `saving`에서, **미반영분은 `price` 잔차에서** 차감. 소급 입력만으로도 소득이 "시세 상승"으로 오인되지 않는다. 미반영을 `saving`에서 빼면 `saving`이 음수로 왜곡되므로 두 값을 나눠 처리한다.
+- **자동 테스트 신설** ([asset-report.test.ts](../../src/lib/report/__tests__/asset-report.test.ts)): 정밀·예측 두 경로의 합계 항등식, 미반영 income, buy/sell 분리, 체결 환율 환산 7케이스. 원인분해에 자동 테스트가 없어 회귀 감지가 불가능하던 상태를 해소.
+- **FAB에 현금 "입출금 기록" 추가** ([floating-add-button.tsx](../../src/app/(main)/_components/layout/floating/floating-add-button.tsx)): 현금 입출금 진입점이 현금 상세 탭 안에만 있어 주식 "거래 입력"과 접근성이 달랐다 → `select-action` 스텝에 **같은 레벨**로 배치(`dispatchAddCashTx`, 계좌는 폼에서 선택). 스크린샷 일괄 가져오기는 S-4.22 제외 범위라 `select-method`를 거치지 않는다.
+- **성적표 원인분해 InfoHint 갱신**: "4가지 원인"으로 고정돼 있어 `income`·`buy`/`sell`이 문구에서 누락돼 있었다 → 원인 목록과 각 원인의 출처(주식 거래내역 / 현금 입출금 내역)를 명시.
+
 ## 2026-07-25
 
 ### 현금 입출금 거래내역 — 소득·저축 유입 원인분해 + 습관 축 결합 (issue-4.19 · S-4.22)

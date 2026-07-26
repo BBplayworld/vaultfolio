@@ -9,8 +9,8 @@
  * 순수 함수: Node.js / 브라우저 양쪽에서 동작 (fs, Redis 의존 없음)
  */
 
-import { isKrBusinessDay } from "./kr-holidays";
-import { isUsBusinessDay } from "./us-holidays";
+import { isKrBusinessDay, rollbackToBusinessDay } from "./kr-holidays";
+import { isUsBusinessDay, rollbackToUsBusinessDay } from "./us-holidays";
 
 // 미국 동부 서머타임(EDT) 여부 (Intl로 정확 판정)
 export function isUsEasternDST(date: Date): boolean {
@@ -65,24 +65,29 @@ export function getStockCacheSlot(type: "domestic" | "foreign"): string {
     closeHHMM = isDST ? 500 : 600;
   }
 
+  // 영업일 판정 기준일 — foreign은 KST 새벽(<closeHHMM)이면 ET 전일, KST 오후(>=openHHMM)면 ET 당일
+  let bizRefDate: Date;
+  if (type === "domestic") {
+    bizRefDate = nowKST;
+  } else {
+    bizRefDate = new Date(nowKST);
+    if (hhmm < closeHHMM) bizRefDate.setUTCDate(bizRefDate.getUTCDate() - 1);
+  }
+  const isBusinessDay = type === "domestic" ? isKrBusinessDay(bizRefDate) : isUsBusinessDay(bizRefDate);
+
+  // 휴장일(주말·공휴일)은 시간대와 무관하게 직전 영업일로 slot을 고정한다.
+  // effectiveDate는 달력 날짜라 휴장일에도 매일 바뀌어, 예전엔 주말 내내 매일 재조회(currentPrice 흔들림)가 발생했다
+  // → 원인분해가 "휴장일 시세 변동"으로 오인하는 원인이었음(실측 종가는 안 바뀌었는데 실시간 quote만 흔들림).
+  if (!isBusinessDay) {
+    const lastBizDate = type === "domestic" ? rollbackToBusinessDay(bizRefDate) : rollbackToUsBusinessDay(bizRefDate);
+    return lastBizDate.toISOString().split("T")[0];
+  }
+
   // 자정 넘김 케이스(해외) 포함 장중 판정
   const isInSession = openHHMM < closeHHMM
     ? hhmm >= openHHMM && hhmm < closeHHMM
     : hhmm >= openHHMM || hhmm < closeHHMM;
   if (!isInSession) return effectiveDate;
-
-  // 영업일 판정: 휴장일에는 1시간 슬롯 사용하지 않음 (일 단위 캐시만 유지)
-  // - domestic: KST 오늘 = 한국 영업일
-  // - foreign: 미국 장 운영 기준일 — KST 새벽(<closeHHMM)은 ET 전일, KST 오후(>=openHHMM)는 ET 당일
-  let isBusinessDay: boolean;
-  if (type === "domestic") {
-    isBusinessDay = isKrBusinessDay(nowKST);
-  } else {
-    const etRefDate = new Date(nowKST);
-    if (hhmm < closeHHMM) etRefDate.setUTCDate(etRefDate.getUTCDate() - 1);
-    isBusinessDay = isUsBusinessDay(etRefDate);
-  }
-  if (!isBusinessDay) return effectiveDate;
 
   const hour = String(nowKST.getUTCHours()).padStart(2, "0");
   return `${effectiveDate}-H${hour}`;

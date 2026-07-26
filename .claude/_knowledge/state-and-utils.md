@@ -127,6 +127,18 @@ isCashWithdrawalValid(balance, amount): boolean  // 출금 반영 초과 가드
 ```
 현금 잔액은 선형 가감이라 가중평균(trade-utils.computeNewPosition) 계열 불필요. `cash[].balance`가 진실원본.
 
+### report/asset-report.ts — 원인분해 집계 헬퍼 (모듈 내부)
+
+```typescript
+krwMul(currency, rates)                              // KRW 환산 배수 (JPY는 100엔당) — 원인분해 공용
+cashInflow(data, from, to, rates)                    // → { reflected, unreflected } 현금 순유입
+reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
+costFxRevaluation(data, prevFx, currFx)              // 외화 원가(주식·현금)의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
+isClosedForBothMarkets(dateStr)                      // 국내·해외 모두 휴장인 날짜인지 — 실시간 끝점(_isLive)의 시세 원인 억제 판정용
+getOrderedCauses(attr): AttributionCause[]           // export. topCauses+restCauses를 카테고리 고정 순서(시세→환율→매수→매도→저축→소득→대출→그외)로 정렬 — 연관 원인(매수·매도)이 절대값 크기와 무관하게 나란히 보이도록. formatAttributionSentence·getAttributionItems·asset-report-view가 공유
+```
+`resolveAttribution`이 Δ순자산을 `price/fx/saving/buy/sell/income/debt`로 분해할 때 쓴다. **`price`는 잔차**라 설명되지 않은 차이가 모두 시세로 흡수되므로, 새 원인을 추가할 때는 잔차에서 정확히 차감해 **표시 합계 = deltaNet 항등식**을 유지해야 한다(F-ACTIVITY 회귀 지점). 원인 나열 순서는 `getOrderedCauses`만 거치고, `topCauses[0]`(절대값 최대, `last-visit-briefing.tsx`의 한 줄 요약이 사용)의 선정 로직 자체는 그대로 둔다.
+
 ### number-utils.ts
 
 ```typescript

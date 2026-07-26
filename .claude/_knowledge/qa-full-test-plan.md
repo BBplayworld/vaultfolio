@@ -110,7 +110,13 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **레버리지 분모 = 금융자산만** — 대출비율 = `investLoanBalance ÷ (stockCost + cryptoCost)`(`financialInvestCost`)라 '넣은 돈 대비 성과'(= 부동산·현금 포함 `totalCost`)와 **분모가 다르다**. 두 블록에 `금융자산만`/`모든 자산` 뱃지가 유지되는지. 부동산 연계 대출(`type==="mortgage-home" || linkedRealEstateId`)은 이자·잔액 모두 비교 제외
 - ⚙ **연계 부동산 선택은 전 대출 종류에 노출**([loan-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-input.tsx)) — `mortgage-home` 한정으로 되돌리면 신용·마이너스대출로 산 부동산을 연결할 수 없어 레버리지 이자·비율이 부풀려지는 회귀
 - ⚙ **원인분해 표시 합계 불변 조건** — 홈 헤더(`formatAttributionSentence`)·성적표 원인분해가 표시하는 금액의 합 = `deltaNet`(만원 반올림 오차 제외). `topCauses` + `restCauses`(≥1만원) + 잔차(`restEffect − Σ restCauses`, ≥1만원일 때만) 구조를 깨면 헤더 증감액과 원인 합계가 어긋난다(과거 P1 회귀 지점)
-- ⚙ **`income`(소득·저축 유입) cause** (S-4.22) — 기간 내 반영된 현금 순유입(입금−출금, KRW)을 `saving`에서 분리. enriched=`saving`에서 차감(price 잔차 불변), estimated=별도 항+price 잔차에서 차감. income 추가 후에도 합계=deltaNet 불변 유지 확인(F-CASH-TX 연계)
+- ⚙ **`income`(소득·저축 유입) cause** (S-4.22) — 기간 내 현금 순유입(입금−출금, KRW)을 `saving`에서 분리. **반영·미반영을 나눠 처리**(`cashInflow`): 반영분은 `cost.total`에 이미 있으니 `saving`에서 차감, **미반영(과거 소급 기록)분은 `cost.total`에 없으므로 `price` 잔차에서 차감**. 표시 income = 반영+미반영. 미반영을 `saving`에서 빼도록 되돌리면 `saving`이 음수로 왜곡돼 "자산 회수·인출"이 오표시되는 회귀
+- ⚙ **`buy`/`sell`(주식 신규 매수·매도 회수) cause** — `assetData.transactions` 중 **반영된** 주식 거래를 체결액(체결 환율 우선, 없으면 현재 환율)으로 집계해 `saving`에서 분리(`reflectedTradeFlow`). **`buy + sell + saving = 종전 savingEffect` 항등식**이라 합계=deltaNet 불변. **예측(estimated) 경로도 동일 분리 적용**(과거엔 분리 안 해 매수 반영 시 `purchaseDate`가 갱신되지 않는 점 때문에 기존 보유 종목의 기간 내 추가 매수가 `estimatePeriodInflows`에서 통째로 누락돼 시세로 흡수되는 회귀가 있었음) — `estimatePeriodInflows`는 **기간 내 반영 거래가 있는 종목을 건너뛰어**(권위=거래내역) 이중계산 방지. 한계: 거래내역 스키마가 주식 전용이라 코인·부동산 매수는 `saving`에 남고, 매도는 체결액 기준이라 실현손익 차이를 `saving`이 흡수
+- ⚙ **외화 원가 환율 재평가 누출(`costFxRevaluation`)** — `cost.total`이 현재 환율로 환산된 주식·현금 원가를 포함해, 환율만 움직여도 `savingFull`이 재평가분을 흡수해 `saving`↔`price`가 허위로 갈렸다(`fxEffect`가 평가액 기준 환차익을 이미 별도 계산하므로 이중귀속). `savingFullReal = savingFull − costFxRevaluation(...)`로 제외
+- ⚙ **휴장일 실시간 quote 노이즈 억제** — 실시간 끝점(`buildLiveAttributionCurr`, `_isLive` 마킹)이면서 오늘이 국내·해외 모두 휴장(`isClosedForBothMarkets`)이면 "시세" 원인을 "그 외"(`rest`)로 relabel — `currentPrice`(실시간)와 스냅샷의 `refPrice`(정산 종가)가 소스가 달라 휴장 중에도 재조회 시 미세하게 값이 갈릴 수 있어 허위 "시세 변동"으로 오인되는 것 방지. 합계·순자산(Hero)은 불변, 라벨만 변경. **과거 구간 비교(`computePeriodAttribution`)는 항상 스냅샷 간(refPrice 기준)이라 영향 없음**(`_isLive` 없음)
+- ⚙ **원인 표시 카테고리 순서(`getOrderedCauses`)** — 절대값 크기순이 아닌 시세→환율→주식매수→주식매도→주식외자산추가→소득→대출→그외 고정 순서로 나열(연관 원인이 나란히 보이도록). `topCauses[0]`(절대값 최대, `last-visit-briefing.tsx` 한 줄 요약용)의 선정 로직은 그대로, 나열 순서만 변경
+- ⚙ **용어**: `buy`/`sell`="주식 신규 매수"/"주식 매도 회수", `saving`="주식 외 새로 추가한 자산"(주식 매수와 경계 명시), `debt`="대출 증감"(임차보증금 제외, 실제로 대출 잔액만 반영하므로 "부채"보다 정확) + `saving`과 대칭되는 "새로 추가한 대출"/"대출 상환" 문구
+- 자동: `src/lib/report/__tests__/asset-report.test.ts` — 항등식(정밀·예측), 미반영 income, buy/sell 분리(정밀·예측 양쪽), 체결 환율 환산, 외화 원가 fx-중립화, 휴장일 quote 노이즈 억제, 카테고리 순서. `src/lib/__tests__/stock-cache-slot.test.ts` — 휴장일 slot 고정(F-SYNC 연계)
 - 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
@@ -190,6 +196,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
 - 👤 **기기 동기화 pull 후 시세 갱신** — 다른 기기 변경 반영(pull) 직후 "오늘의 주식 및 환율 정보를 모두 업데이트했습니다." 토스트가 뜨고 현재가·환율이 갱신되는지(양쪽 기기 모두 자산 보유 상태에서)
 - ⚙ `getStockCacheSlot` 장중 1시간/장외 날짜 슬롯, outdated 판정, 3개씩 배치+1초 간격
+- ⚙ **휴장일 slot 고정(R23)** — 국내·해외 영업일 판정을 `isInSession` 체크보다 **먼저** 수행해, 휴장일(주말·공휴일)은 시간대·세션모양과 무관하게 직전 영업일(`rollbackToBusinessDay`/`rollbackToUsBusinessDay`)로 slot을 고정한다. 과거엔 `effectiveDate`(달력 날짜)가 휴장 중에도 매일 바뀌어 매일 실시간 재조회가 발생, quote 미세 흔들림이 원인분해에 "휴장일 시세 변동"으로 허위 노출됐다(F-ACTIVITY 연계)
 - ⚙ pull(`runPull`/`armWithPull`)이 `initAndSync` 경유로 시세 동기화 트리거 — 마운트·0→양수 외 추가 진입 경로(F-CLOUD-SYNC 자동 동기화)
 - 엣지: 데이터 삭제/불러오기 중 sync abort(epoch+AbortController), 취소된 응답 미반영
 - 회귀: foreign+KRW→USD 마이그레이션, market 캐시 비었을 때 재조회
@@ -356,6 +363,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R19 | **share/sync 해시 삭제 시점** | `#share=`(localKey 포함)·`#sync=`는 **소비 완료/모달 닫힘 시** 제거(share=확정·취소·데이터적용, sync=`clearPendingConnect`). 복원·연결·코드획득은 `pendingToken`/`pendingConnectAssetId`/`syncLink` **state 기반**이라 해시 비의존(해시 재읽기 코드 재유입 금지) |
 | R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
 | R22 | **인앱 게이트 활성 시 자동 동작 차단** | `isInAppGateActive()`(=`isInApp && !isStandalone`, [detect-browser.ts](../../src/lib/pwa/detect-browser.ts))가 cloud-sync arm effect(armed 진입만 차단·assetId/lastSyncedAt/syncLink는 유지)·`#sync=` 연결 모달·asset-data `initAndSync`(데이터 로드 후 조기 return)·0→양수 전환 effect를 가드. 누락 시 인앱 게이트 뒤에서 자동 동기화·오늘자 시세/스냅샷이 계속 돎(세션 끊김 데이터 유실 리스크와 충돌). 일반 브라우저·standalone에선 `false`라 정상 동작(회귀 주의) |
+| R23 | **휴장일 slot 계산 순서** | `getStockCacheSlot`의 영업일 판정은 `isInSession` 체크보다 반드시 먼저 실행 — 순서가 바뀌면 휴장일에 세션-모양 시간대일 때 `effectiveDate`(달력 날짜)가 그대로 반환돼 매일 slot이 바뀌고, 실시간 quote 재조회가 원인분해에 허위 "시세 변동"으로 노출된다(F-SYNC·F-ACTIVITY 연계) |
 
 ---
 
@@ -394,4 +402,4 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ---
 
-_최종 갱신: 2026-07-11 · **인앱 브라우저 하드 게이트**(외부 이동 `openExternalBrowser`·게이트 활성 시 자동 동작 차단 `isInAppGateActive`, R22)·**동기화 변경 감지에 `baseDate`·`name` 제외**(장외 매일/장중 매시간 슬롯 도장 핑퐁 차단, R14 보강). 이전: 2026-06-30 · **기기 동기화 pull 후 `initAndSync` 전체 시세 동기화**(refreshData→initAndSync, R21)·**닉네임 커밋 시점 탭 이탈(언마운트) 1회로 변경**(draft 분리·외부 pull 반영, R17 보강). 이전: 2026-06-28 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_
+_최종 갱신: 2026-07-26 · **원인분해 정확도 일괄 수정**(F-ACTIVITY) — 외화 원가 환율 재평가 누출(`costFxRevaluation`)·예측 경로 신규 매수 누락(`estimatePeriodInflows` 거래종목 skip)·휴장일 실시간 quote 노이즈 억제(`isClosedForBothMarkets`+`_isLive`)·원인 카테고리 고정 순서(`getOrderedCauses`)·용어 통일(주식 매수·매도/주식 외 자산/대출). **휴장일 slot 계산 순서 수정**(F-SYNC, R23) — 영업일 판정을 `isInSession`보다 먼저 실행해 휴장일 slot 고정. 이전: 2026-07-11 · **인앱 브라우저 하드 게이트**(외부 이동 `openExternalBrowser`·게이트 활성 시 자동 동작 차단 `isInAppGateActive`, R22)·**동기화 변경 감지에 `baseDate`·`name` 제외**(장외 매일/장중 매시간 슬롯 도장 핑퐁 차단, R14 보강). 이전: 2026-06-30 · **기기 동기화 pull 후 `initAndSync` 전체 시세 동기화**(refreshData→initAndSync, R21)·**닉네임 커밋 시점 탭 이탈(언마운트) 1회로 변경**(draft 분리·외부 pull 반영, R17 보강). 이전: 2026-06-28 앱잠금+동기화 정합(clearAssetData `pwa_auth*` 보존·`isPwaLocked()` pull 가드·`PWA_UNLOCKED_EVENT` 즉시 pull, S11·R18)·share/sync URL 해시 삭제는 모달 닫힘 시점으로(R19)·**다이얼로그 여는 틱 replaceState 금지(Next 패치→Radix 즉시 닫힘 버그 수정, R20)**·인앱 복사 sync 기기 `#sync=` 링크 분기·iOS Safari 신형 임계값 15→18(iOS 18 ⋯메뉴 도입 반영) 추가. 이전: 2026-06-25 SVG 애니메이션 공용화(`StepAnimationPlayer`·3500ms·`PwaSetupAnimation`/`SyncSetupAnimation`)·"복원 코드"/"다른 기기 동기화 링크" 개명·공지 수동 진입·복원 2종 구분, R16. 2026-06-24 F-CLOUD-SYNC·F-PWA 정밀 QA(S1~S10·P1~P5·R13~R15)_

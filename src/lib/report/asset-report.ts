@@ -4,6 +4,8 @@
 // 투자 조언 아님 — 사용자 자신의 자산의 사실·구조·변화만 계산
 
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { isKrBusinessDay } from "@/lib/kr-holidays";
+import { isUsBusinessDay } from "@/lib/us-holidays";
 
 // ── point-in-time 성적표 ──────────────────────────────────────────────
 export interface AssetReport {
@@ -96,7 +98,7 @@ export function buildAssetReport(data: AssetData, summary: AssetSummary): AssetR
 export type AttributionPeriod = "1w" | "1m" | "3m" | "ytd";
 
 export interface AttributionCause {
-  key: "price" | "fx" | "saving" | "income" | "debt" | "rest";
+  key: "price" | "fx" | "saving" | "buy" | "sell" | "income" | "debt" | "rest";
   label: string;
   amount: number;
   sentence: string; // 뷰가 그대로 렌더하는 문장
@@ -108,8 +110,10 @@ export interface PeriodAttribution {
   deltaNet: number;
   priceEffect: number;   // 투자 성과(시세)
   fxEffect: number;      // 환율 영향
-  savingEffect: number;  // 새로 넣은 자산 (Δ총원가 − 현금 유입 = 투자자산 신규 매수)
-  incomeEffect: number;  // 현금 순유입 (기간 내 반영된 입금−출금, 월급·목돈 등)
+  savingEffect: number;  // 새로 넣은 자산 중 거래내역으로 설명되지 않는 잔여 (직접 입력 수정·코인·부동산 매수 등)
+  buyEffect: number;     // 기간 내 반영된 주식 매수 체결액 (KRW 환산)
+  sellEffect: number;    // 기간 내 반영된 주식 매도 체결액 (음수)
+  incomeEffect: number;  // 현금 순유입 (기간 내 입금−출금, 월급·목돈 등. 미반영 소급 기록 포함)
   debtEffect: number;    // 부채 증감 (−Δ대출: 상환=+, 증가=−)
   // 시작 스냅샷이 v2 미만 → 예측 분해: Δ순자산·과거 순자산은 실측(스냅샷) 그대로 쓰되,
   // 저축·부채는 현재 자산 정보의 매수일·대출일로, 환율은 환율 이력 + 현재 외화노출로 추정
@@ -122,7 +126,7 @@ export interface PeriodAttribution {
 const PERIOD_DAYS: Record<AttributionPeriod, number> = { "1w": 7, "1m": 30, "3m": 91, ytd: 366 };
 
 // 원인 항목을 따로 표시할 최소 금액 — 만원 단위 반올림 표기라 1만원 미만은 "+0만원"이 되어 노이즈
-const CAUSE_DISPLAY_MIN = 10000;
+export const CAUSE_DISPLAY_MIN = 10000;
 
 const fmtManwon = (v: number): string => {
   const man = Math.round(Math.abs(v) / 10000);
@@ -140,26 +144,38 @@ export function causeSentence(key: AttributionCause["key"], amount: number): str
     case "fx":
       return amount >= 0 ? `환율 상승이 ${amt} 보탰어요.` : `환율 하락이 ${amt} 깎았어요.`;
     case "saving":
+      // 주식 신규 매수는 별도 buy 원인으로 분리됨 → 여기선 주식 거래내역으로 안 잡히는 것만
+      // (코인·부동산 매수, 주식 직접 수정 등). "주식 외"를 명시해 buy/sell과 겹치지 않게 구분.
       return amount >= 0
-        ? `새로 추가한 자산(저축·신규 매수)으로 ${amt} 늘었어요.`
-        : `자산 회수·인출로 ${amt} 줄었어요.`;
+        ? `주식 외 새로 추가한 자산(저축·코인·부동산 등)으로 ${amt} 늘었어요.`
+        : `주식 외 자산 회수·인출로 ${amt} 줄었어요.`;
+    case "buy":
+      return `주식 매수로 ${amt} 늘었어요.`;
+    case "sell":
+      return `주식 매도 회수로 ${amt} 줄었어요.`;
     case "income":
       return amount >= 0
         ? `월급·목돈 유입으로 ${amt} 늘었어요.`
         : `현금 인출·지출로 ${amt} 줄었어요.`;
     case "debt":
-      return amount >= 0 ? `부채 상환으로 순자산이 ${amt} 늘었어요.` : `부채 증가가 ${amt} 깎았어요.`;
+      // debtEffect는 대출 잔액 증감만 반영(임차보증금 제외) → "부채"보다 "대출"이 정확한 용어.
+      // saving의 "새로 추가한 자산"과 짝을 이루도록 "새로 추가한 대출" 구조로 통일(신규 유입 vs 신규 부채).
+      return amount >= 0 ? `대출 상환으로 ${amt} 늘었어요.` : `새로 추가한 대출로 ${amt} 줄었어요.`;
     case "rest":
       return `그 외 요인 ${amt}.`;
   }
 }
 
+// buy/sell(주식 거래내역 반영분)과 saving(그 외 자산 추가·회수)이 겹쳐 보이지 않도록
+// "주식"/"주식 외"를 라벨에 명시해 두 원인의 경계를 분명히 한다.
 const CAUSE_LABELS: Record<AttributionCause["key"], string> = {
   price: "시세 변동",
   fx: "환율 영향",
-  saving: "새로 추가한 자산",
+  saving: "주식 외 새로 추가한 자산",
+  buy: "주식 신규 매수",
+  sell: "주식 매도 회수",
   income: "소득·저축 유입",
-  debt: "부채 증감",
+  debt: "대출 증감",
   rest: "그 외",
 };
 
@@ -168,11 +184,34 @@ function causeShortLabel(key: AttributionCause["key"], amount: number): string {
   switch (key) {
     case "price": return amount >= 0 ? "시세 상승" : "시세 하락";
     case "fx": return amount >= 0 ? "환율 상승" : "환율 하락";
-    case "saving": return amount >= 0 ? "저축·매수" : "회수·인출";
+    case "saving": return amount >= 0 ? "코인·부동산 등" : "주식 외 회수·인출";
+    case "buy": return "주식 매수";
+    case "sell": return "주식 매도";
     case "income": return amount >= 0 ? "소득 유입" : "인출·지출";
-    case "debt": return amount >= 0 ? "부채 상환" : "부채 증가";
+    case "debt": return amount >= 0 ? "대출 상환" : "신규 대출";
     case "rest": return "그 외";
   }
+}
+
+// 원인 표시 순서(연관 원인끼리 인접하도록) — 시세·환율(시장 요인) → 주식 매수·매도(거래) →
+// 주식 외 자산 추가(저축·코인·부동산) → 소득 → 대출 → 그 외. topCauses[0](가장 큰 원인, 지난 접속
+// 브리핑의 한 줄 요약용)은 이 순서와 무관하게 기존 절대값 기준 선정을 그대로 유지한다.
+const CAUSE_ORDER: Record<AttributionCause["key"], number> = {
+  price: 0,
+  fx: 1,
+  buy: 2,
+  sell: 3,
+  saving: 4,
+  income: 5,
+  debt: 6,
+  rest: 7,
+};
+
+// 표시용 원인 전체(topCauses+restCauses)를 카테고리 순서로 정렬 — 매수·매도처럼 연관된 원인이
+// 절대값 크기와 무관하게 항상 나란히 보이도록. 합계·포함 여부(=pickTopCauses의 선정 로직)는 그대로,
+// 오직 나열 순서만 바꾼다.
+export function getOrderedCauses(attr: PeriodAttribution): AttributionCause[] {
+  return [...attr.topCauses, ...attr.restCauses].sort((a, b) => CAUSE_ORDER[a.key] - CAUSE_ORDER[b.key]);
 }
 
 // 원인 전체(topCauses + restCauses)를 한 줄로 결합 — 좁은 공간(홈 헤더 등)에서도
@@ -181,7 +220,7 @@ function causeShortLabel(key: AttributionCause["key"], amount: number): string {
 export function formatAttributionSentence(attr: PeriodAttribution): string | null {
   if (attr.topCauses.length === 0) return null;
   const short = (c: AttributionCause) => `${causeShortLabel(c.key, c.amount)} ${fmtManwon(c.amount)}`;
-  const parts = [...attr.topCauses.map(short), ...attr.restCauses.map(short)];
+  const parts = getOrderedCauses(attr).map(short);
   // 임계값 미만이라 펼치지 못한 잔차만 "그 외"로 — 이게 있어야 표시 합계가 deltaNet과 맞는다
   const shownRest = attr.restCauses.reduce((s, c) => s + c.amount, 0);
   const residual = attr.restEffect - shownRest;
@@ -202,7 +241,7 @@ export function getAttributionItems(attr: PeriodAttribution): AttributionDisplay
   const toItem = (c: AttributionCause): AttributionDisplayItem => ({
     key: c.key, label: causeShortLabel(c.key, c.amount), amount: c.amount, text: fmtManwon(c.amount),
   });
-  const items = [...attr.topCauses, ...attr.restCauses].map(toItem);
+  const items = getOrderedCauses(attr).map(toItem);
   const shownRest = attr.restCauses.reduce((s, c) => s + c.amount, 0);
   const residual = attr.restEffect - shownRest;
   if (Math.abs(residual) >= CAUSE_DISPLAY_MIN) {
@@ -247,6 +286,8 @@ function pickTopCauses(effects: { key: AttributionCause["key"]; amount: number }
 
 // 과거 구간 예측용: 현재 자산 정보의 매수일·대출일로 기간 내 신규 투입(저축)·신규 부채를 추정.
 // 한계(예측치인 이유): 매수일은 항목당 1개(추가 매수 미분리), 이미 매도·상환한 과거 자산은 미포착.
+// 단, 기간 내 반영 거래가 있는 주식은 reflectedTradeFlow(buy/sell)가 권위 소스이므로 건너뛴다
+//  — 매수 반영 시 purchaseDate는 갱신되지 않아(원매수일 유지) 추가 매수가 이 추정에서 통째로 누락되던 문제 해소.
 function estimatePeriodInflows(
   data: AssetData,
   fromDate: string,
@@ -254,8 +295,15 @@ function estimatePeriodInflows(
   rates: { USD: number; JPY: number },
 ): { saving: number; debt: number } {
   const inPeriod = (d?: string) => !!d && d > fromDate && d <= toDate;
+  // 기간 내 반영 거래를 가진 종목 id — 이 종목의 투입은 buy/sell로 계산되므로 매수일 추정에서 제외
+  const tradedStockIds = new Set(
+    (data.transactions || [])
+      .filter((t) => t.reflected && t.date > fromDate && t.date <= toDate)
+      .map((t) => t.stockId),
+  );
   let saving = 0;
   for (const s of data.stocks) {
+    if (tradedStockIds.has(s.id)) continue;
     if (!inPeriod(s.purchaseDate)) continue;
     // 매입 시점 환율 우선(purchaseExchangeRate), 없으면 현재 환율로 환산 (JPY는 100엔당)
     const pr = s.purchaseExchangeRate && s.purchaseExchangeRate > 0 ? s.purchaseExchangeRate : undefined;
@@ -278,7 +326,17 @@ function estimatePeriodInflows(
 }
 
 // 통합 시계열 포인트: daily는 date 그대로, monthly는 실제 말일로 정렬(표시는 YYYY-MM).
-type AttributionPoint = (DailyAssetSnapshot | MonthlyAssetSnapshot) & { _date: string; _display: string };
+// _isLive: buildLiveAttributionCurr가 만든 실시간 끝점 표시(스냅샷=refPrice 기준과 달리 currentPrice=실시간 quote 기준).
+type AttributionPoint = (DailyAssetSnapshot | MonthlyAssetSnapshot) & { _date: string; _display: string; _isLive?: boolean };
+
+// 국내·해외 주식시장이 모두 휴장인 날인지(주말·공휴일) — YYYY-MM-DD 문자열 기준.
+// 실시간 quote(currentPrice)는 정산 종가(refPrice, 스냅샷 기준)와 소스가 달라, 휴장 중에도
+// 재조회 시 미세하게 값이 흔들려 "시세 변동"으로 오인될 수 있다(실측 시세는 안 바뀌었음).
+// 스냅샷 간 비교(과거 구간)는 이미 refPrice 기준이라 이 문제가 없으므로, 실시간 끝점(_isLive)에만 적용한다.
+function isClosedForBothMarkets(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  return !isKrBusinessDay(d) && !isUsBusinessDay(d);
+}
 
 function buildAttributionPoints(
   daily: DailyAssetSnapshot[],
@@ -320,27 +378,44 @@ function resolveAttribution(
 
   const bothEnriched = !!(prev.breakdown && prev.fx && prev.fxBase && prev.cost && curr.breakdown && curr.cost);
 
-  // 기간(prev, curr] 내 반영된 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
-  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates);
+  // 실시간 끝점 + 오늘 휴장(국내·해외 모두)이면 시세 원인을 "그 외"로 억제(순자산 합계는 그대로, 라벨만 변경)
+  const suppressPriceCause = !!curr._isLive && isClosedForBothMarkets(curr._date);
+  const priceKey: AttributionCause["key"] = suppressPriceCause ? "rest" : "price";
+
+  // 기간(prev, curr] 내 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
+  const inflow = cashInflow(assetData, prev._date, curr._date, rates);
+  const incomeEffect = inflow.reflected + inflow.unreflected;
 
   if (bothEnriched) {
     // 정밀 분해. saving은 총원가 증감이라 현금 유입(income)을 포함 → income을 떼어내 투자자산 매수만 남긴다.
     const savingFull = curr.cost!.total - prev.cost!.total;                   // Δ총원가(현금 포함)
-    const savingEffect = savingFull - incomeEffect;                          // 투자자산 신규 매수
+    // 외화 원가(주식·현금)는 cost.total이 현재 환율로 환산돼 환율만 움직여도 savingFull에 잡힌다 —
+    // 신규 투입이 아니므로 제외한다. (fxEffect가 평가액 기준으로 환차익을 이미 잡으므로 saving에 남기면 이중 귀속)
+    const costFx = costFxRevaluation(assetData, prev.fx!, curr.fx!);
+    const savingFullReal = savingFull - costFx;
+    const savingInvest = savingFullReal - inflow.reflected;                   // 투자자산 신규 매수
+    // 거래내역으로 설명되는 매수·매도를 떼어내고 나머지만 saving으로 남긴다.
+    // (buy + sell + saving = savingInvest 항등식이라 표시 합계는 그대로 deltaNet)
+    const { buy: buyEffect, sell: sellEffect } = reflectedTradeFlow(assetData, prev._date, curr._date, rates);
+    const savingEffect = savingInvest - buyEffect - sellEffect;
     const debtEffect = -(curr.breakdown!.loans - prev.breakdown!.loans);     // 부채 증감 (상환=+)
     const fxEffect = (["USD", "JPY"] as const).reduce((sum, c) => {
       if (!prev.fx![c] || prev.fx![c] <= 0) return sum;
       return sum + prev.fxBase![c] * (curr.fx![c] / prev.fx![c] - 1);
     }, 0);
-    const priceEffect = deltaNet - savingFull - debtEffect - fxEffect;       // 잔차 = 시세 (income은 savingFull에 포함돼 이미 차감됨)
+    // 잔차 = 시세. 반영분 income은 savingFull에 포함돼 이미 차감됐고,
+    // 미반영(소급) income은 savingFull에 없으므로 여기서 따로 뺀다. costFx는 fxEffect가 담당하므로 여기선 제외.
+    const priceEffect = deltaNet - savingFullReal - debtEffect - fxEffect - inflow.unreflected;
     const { topCauses, restEffect, restCauses } = pickTopCauses([
-      { key: "price", amount: priceEffect },
+      { key: priceKey, amount: priceEffect },
       { key: "fx", amount: fxEffect },
       { key: "saving", amount: savingEffect },
+      { key: "buy", amount: buyEffect },
+      { key: "sell", amount: sellEffect },
       { key: "income", amount: incomeEffect },
       { key: "debt", amount: debtEffect },
     ]);
-    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, incomeEffect, debtEffect, estimated: false, topCauses, restEffect, restCauses };
+    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, topCauses, restEffect, restCauses };
   }
 
   // 예측 분해: 시작 스냅샷이 레거시(netAsset만) — Δ순자산은 실측 그대로 쓰고,
@@ -358,34 +433,95 @@ function resolveAttribution(
     : 0;
   const { saving: savingEffect, debt: debtEffect } = estimatePeriodInflows(assetData, prev._date, curr._date, rates);
   // 예측 모드의 saving은 매수일 기반이라 현금 유입을 포함하지 않음 → income을 별도 항으로 두고 잔차(price)에서 뺀다.
-  const priceEffect = deltaNet - fxEffect - savingEffect - debtEffect - incomeEffect;
+  // 거래내역이 있는 주식은 estimatePeriodInflows가 건너뛰므로(권위=거래내역) buy/sell을 여기서 분리해 노출한다.
+  // (매수 반영 시 purchaseDate가 안 바뀌어 추가 매수가 saving에서 통째로 누락되던 문제 해소)
+  const { buy: buyEffect, sell: sellEffect } = reflectedTradeFlow(assetData, prev._date, curr._date, rates);
+  const priceEffect = deltaNet - fxEffect - savingEffect - buyEffect - sellEffect - debtEffect - incomeEffect;
   const { topCauses, restEffect, restCauses } = pickTopCauses([
-    { key: "price", amount: priceEffect },
+    { key: priceKey, amount: priceEffect },
     { key: "fx", amount: fxEffect },
     { key: "saving", amount: savingEffect },
+    { key: "buy", amount: buyEffect },
+    { key: "sell", amount: sellEffect },
     { key: "income", amount: incomeEffect },
     { key: "debt", amount: debtEffect },
   ]);
   return {
     fromDate, toDate, deltaNet,
-    priceEffect, fxEffect, savingEffect, incomeEffect, debtEffect,
+    priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect,
     estimated: true, topCauses, restEffect, restCauses,
   };
 }
 
-// 기간(from, to] 내 반영된 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.
-// 반영분만 집계해야 잔액(cost.total) 변화와 정합 → 표시 합계 = deltaNet 불변.
-function reflectedCashInflow(
+// KRW 환산 배수 — 원인분해 전 구간 공용 (JPY는 100엔당)
+const krwMul = (cur: string | undefined, rates: { USD: number; JPY: number }): number =>
+  cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1;
+
+// 외화 원가(주식 매입원가·현금 잔액)가 환율 변동으로만 재평가된 KRW 증감 — 신규 투입이 아님.
+// computeAssetCost와 동일 원가 기준(주식=수량×평균단가, 현금=잔액), delisted 제외.
+function costFxRevaluation(
+  data: AssetData,
+  prevFx: { USD: number; JPY: number },
+  currFx: { USD: number; JPY: number },
+): number {
+  const d = (cur: string | undefined) => krwMul(cur, currFx) - krwMul(cur, prevFx); // KRW은 0
+  let eff = 0;
+  for (const s of data.stocks) {
+    if (s.inactiveStatus === "delisted") continue;
+    eff += s.quantity * s.averagePrice * d(s.currency);
+  }
+  for (const c of data.cash ?? []) eff += c.balance * d(c.currency);
+  return eff;
+}
+
+// 기간(from, to] 내 현금 거래 순유입(입금−출금)을 KRW로 환산해 반영/미반영으로 나눠 합산.
+// - reflected: 앱이 잔액을 가감했으므로 cost.total 변화(savingFull)에 이미 포함 → saving에서 차감
+// - 미반영(과거 소급 기록): 잔액을 건드리지 않았으나 그 입금은 이미 잔액에 녹아 있다
+//   (폼 문구 "기록만 남기고 잔액은 변경하지 않습니다(과거 소급용)") → savingFull에는 없고
+//   deltaNet에는 있으므로 price 잔차에서 차감해야 원인이 소득으로 귀속된다.
+// 두 값을 나눠 써야 표시 합계 = deltaNet 항등식이 유지된다.
+function cashInflow(
   assetData: AssetData,
   fromDate: string,
   toDate: string,
   rates: { USD: number; JPY: number },
-): number {
+): { reflected: number; unreflected: number } {
   const txns = assetData.cashTransactions || [];
-  const mul = (cur: string) => (cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1);
-  return txns
-    .filter((t) => t.reflected && t.date > fromDate && t.date <= toDate)
-    .reduce((sum, t) => sum + (t.type === "deposit" ? t.amount : -t.amount) * mul(t.currency), 0);
+  let reflected = 0;
+  let unreflected = 0;
+  for (const t of txns) {
+    if (t.date <= fromDate || t.date > toDate) continue;
+    const signed = (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
+    if (t.reflected) reflected += signed;
+    else unreflected += signed;
+  }
+  return { reflected, unreflected };
+}
+
+// 기간(from, to] 내 반영된 주식 거래 체결액을 KRW로 환산해 매수/매도로 나눠 합산.
+// 체결 시 환율(exchangeRate)이 있으면 그걸, 없으면 현재 환율로 환산한다.
+// 한계 ①: transactionSchema는 주식 전용(stockId·ticker) — 코인·부동산 매수는 saving 잔여로 남는다.
+// 한계 ②: 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로,
+//         실현손익만큼의 차이는 saving 잔여가 흡수한다(합계 정합은 유지).
+function reflectedTradeFlow(
+  assetData: AssetData,
+  fromDate: string,
+  toDate: string,
+  rates: { USD: number; JPY: number },
+): { buy: number; sell: number } {
+  const txns = assetData.transactions || [];
+  let buy = 0;
+  let sell = 0;
+  for (const t of txns) {
+    if (!t.reflected || t.date <= fromDate || t.date > toDate) continue;
+    const rate = t.exchangeRate && t.exchangeRate > 0
+      ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate)
+      : krwMul(t.currency, rates);
+    const amount = t.quantity * t.price * rate;
+    if (t.type === "buy") buy += amount;
+    else sell -= amount;
+  }
+  return { buy, sell };
 }
 
 // 기간 시작점에 가장 가까운(시작일 이하 최근) 스냅샷 선택.
@@ -483,6 +619,7 @@ export function buildLiveAttributionCurr(
     },
     _date: todayStr,
     _display: todayStr,
+    _isLive: true,
   } as AttributionPoint;
 }
 

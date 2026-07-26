@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { dispatchAddCashTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -299,6 +299,24 @@ export function FloatingAddButton() {
                   <div>
                     <p className="font-medium">거래 입력</p>
                     <p className="text-sm text-muted-foreground">매수/매도 거래 기록</p>
+                  </div>
+                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
+                </button>
+              )}
+              {selectedType === "cash" && (
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                  onClick={() => {
+                    dispatchAddCashTx();
+                    setIsOpen(false);
+                    resetState();
+                  }}
+                >
+                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
+                  <div>
+                    <p className="font-medium">입출금 기록</p>
+                    <p className="text-sm text-muted-foreground">입금/출금 거래 기록</p>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
                 </button>

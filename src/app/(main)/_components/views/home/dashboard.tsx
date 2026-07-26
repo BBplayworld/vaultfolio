@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
 import { readExchangeHistory } from "@/lib/profit-utils";
-import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence, getAttributionItems, type AttributionDisplayItem } from "@/lib/report/asset-report";
+import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence, getAttributionItems, CAUSE_DISPLAY_MIN, type AttributionDisplayItem } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -210,7 +210,7 @@ export function NetAssetSummaryBox({
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
   const [causeOpen, setCauseOpen] = useState(false);
-  const hasCause = !!change && (!!change.sentence || change.estimated);
+  const hasCause = !!change && !change.negligible && (!!change.sentence || change.estimated);
 
   return (
     <div className="space-y-4">
@@ -229,7 +229,11 @@ export function NetAssetSummaryBox({
               <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
                 {formatPriceByMode(netAsset)}
               </p>
-              {change && (
+              {change && change.negligible && (
+                // 만원 미만 변동은 원 단위 금액·"+0만원" 원인이 깨져 보여, 정합되게 "변동 없음"으로 대체
+                <span className="text-sm font-medium text-muted-foreground">{change.label} 변동 없음</span>
+              )}
+              {change && !change.negligible && (
                 <span className={`inline-flex items-center text-base lg:text-lg font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
                   {change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}
                   <span className="text-sm lg:text-base font-bold ml-1">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
@@ -364,6 +368,7 @@ interface HeaderChange {
   deltaNet: number;
   pct: number;
   isBig: boolean;
+  negligible: boolean;      // |deltaNet| < 만원 → 원 단위 금액·원인 대신 "변동 없음" 표시
   label: string;            // "전일 대비" 또는 "지난 접속(M/D) 이후"
   estimated: boolean;
   sentence: string | null;  // 최상위 원인 문장(스크린샷·폴백용)
@@ -408,6 +413,7 @@ function useHeaderNetChange(): HeaderChange | null {
       deltaNet: attr.deltaNet,
       pct,
       isBig: Math.abs(pct) >= 5,
+      negligible: Math.abs(attr.deltaNet) < CAUSE_DISPLAY_MIN,
       label,
       estimated: attr.estimated,
       sentence: formatAttributionSentence(attr),

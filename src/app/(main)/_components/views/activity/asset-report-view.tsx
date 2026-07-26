@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { buildAssetReport, computeFxExposure, computePeriodAttribution, type AttributionPeriod } from "@/lib/report/asset-report";
+import { buildAssetReport, computeFxExposure, computePeriodAttribution, getOrderedCauses, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/snapshot-archive";
@@ -716,8 +716,9 @@ export function AssetReportView() {
             <div className={SECTION}>
               <div className="flex items-center justify-between gap-2">
                 <SectionHeader icon={Landmark} title="순자산 변화, 왜?">
-                  <InfoHint summary="순자산 변화를 시세·환율·신규 자산·부채 4가지 원인으로 나눠 큰 것만 보여드려요.">
-                    <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">시세 · 환율 · 새로 넣은 자산(저축·매수) · 부채 증감</span> 4원인으로 나눠 영향이 큰 것만 표시합니다.</p>
+                  <InfoHint summary="순자산 변화를 시세·환율·매수/매도·소득·부채 원인으로 나눠 큰 것만 보여드려요.">
+                    <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">시세 · 환율 · 주식 신규 매수 · 주식 매도 회수 · 주식 외 새로 추가한 자산 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
+                    <p><span className="font-semibold text-foreground">주식 신규 매수·매도 회수</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 주식 거래내역이 없으면(코인·부동산 매수, 주식 직접 수정 등) &quot;주식 외 새로 추가한 자산&quot;으로 묶여 표시됩니다.</p>
                     <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
                   </InfoHint>
                 </SectionHeader>
@@ -740,10 +741,11 @@ export function AssetReportView() {
                     {attribution.fromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
                     {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
                   </p>
-                  {/* 주 원인과 나머지 원인을 같은 목록으로 — "그 외" 한 덩어리로 접으면 환율·부채가 뭉쳐 보인다.
-                      홈 헤더(formatAttributionSentence)와 동일한 원인 집합을 쓴다. */}
+                  {/* 주 원인과 나머지 원인을 같은 목록으로 — "그 외" 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
+                      홈 헤더(formatAttributionSentence)와 동일한 원인 집합을, 연관 원인(매수·매도 등)이
+                      나란히 보이도록 카테고리 순서(getOrderedCauses)로 정렬해 쓴다. */}
                   <div className="space-y-2">
-                    {[...attribution.topCauses, ...attribution.restCauses].map((cause) => (
+                    {getOrderedCauses(attribution).map((cause) => (
                       <div key={cause.key} className="rounded-lg bg-muted/30 px-3 py-2.5 flex items-center justify-between gap-3">
                         <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">{cause.sentence}</p>
                         <Signed value={Math.round(cause.amount)} className="shrink-0" />
