@@ -164,6 +164,12 @@ export const MAIN_PALETTE = [
 ] as const;
 
 /**
+ * 공유 카드용 안전 팔레트 — 의미색과 충돌하는 [1] 빨강(부채/이익)·[2] 주황(임차보증금, 순자산
+ * important와 유사)을 제외한다. [0] 인디고는 §1.3 "최대 비율 고정" 규칙 그대로 1위에 배정.
+ */
+export const SHARE_SAFE_PALETTE = [0, 5, 4, 6, 9, 7, 3, 8, 10].map((i) => MAIN_PALETTE[i]);
+
+/**
  * CSS 클래스 조합 헬퍼
  */
 export function cn(...classes: (string | undefined | false)[]): string {

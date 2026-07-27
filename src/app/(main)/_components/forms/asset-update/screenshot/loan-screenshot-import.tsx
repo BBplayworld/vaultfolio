@@ -245,7 +245,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange }: LoanS
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
               <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
-                <li><span className="text-foreground">대출 종류</span>(신용·주택담보 등)는 미리보기에서 변경할 수 있습니다.</li>
+                <li><span className="text-foreground">대출 종류</span>(신용·담보 등)는 미리보기에서 변경할 수 있습니다.</li>
                 <li><span className="text-foreground">대출 실행일</span>이 화면에 없으면 오늘 날짜로 설정됩니다. 등록 후 수정해주세요.</li>
                 <li>연계 자산(담보 부동산·주식)은 등록 후 직접 연결해주세요.</li>
               </ul>

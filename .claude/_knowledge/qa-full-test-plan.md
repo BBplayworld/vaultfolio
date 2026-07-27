@@ -65,6 +65,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 출금 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단, 통화(USD·JPY/100) 환산
 - 회귀: 공유 토큰 `parts[12]` 왕복·`caIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
 
+### F-TAX. 세금 신고 안내 ([tax-notice-box.tsx](../../src/app/(main)/_components/views/home/tax-notice-box.tsx) · [tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx)) — 명세 [S-4.23](../specs/4.23-tax-calendar.md)
+- 👤 **홈 배너**: 자산 분포 카드 **아래**에 "내 자산 세금 일정" 박스. 이번 달·다음 달 항목 최대 3건 + 각 항목의 매칭 근거("상가·사무실 1건 보유 → 대상"). "월별 세금 일정 전체 보기" → `#tax`
+- ⚙ **자산 파생 항목만 노출**(AC2): `getAssetDrivenHighlights`는 `common`(연말정산·건강보험료) 전용 항목을 제외한다. 자산이 없거나 해당 항목이 0건이면 **배너 자체가 렌더되지 않는다**
+- ⚙ **월 단위 dismiss**(AC4): `STORAGE_KEYS.taxNotice` = `{ dismissedMonth: "YYYY-MM" }`(KST). 같은 달 재방문 미노출, 달이 바뀌면 재노출
+- ⚙ **태그 매칭**(AC1): 상가(`realEstate.type==="commercial"`)→business, 부동산 보유→realestate, `category==="foreign" || currency!=="KRW"`→foreign, irp/isa/pension→pension, `mortgage-home`→loan, 현금 보유→cash
+- ⚙ **해외주식 실현차익**(AC6·AC7): `computeForeignRealizedGain`이 거래 로그를 날짜순 replay(`computeNewPosition` 재사용)해 당해 매도분 손익을 KRW 통산. 250만원 초과 시 이듬해 5월 신고 대상 표기. 매수 로그·체결 환율 누락 시 현재 평단·환율 폴백 + "추정" 표기. 거래 로그 없거나 당해 매도 0건이면 `null`(미표시). 국내주식(KRW)은 집계 제외
+- 👤 **캘린더 뷰**: `내 세금`/`전체` 필터, 현재 월 강조·자동 스크롤, 카드 `Collapsible` 상세, 하단 면책 문구 항상 노출
+- 엣지: 12월 → 다음 달 1월 롤오버, `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
+- 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
+
 ### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx))
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`)
 - 엣지: 통화 KRW/USD 분기, 중복 거래 처리, 매칭 실패 종목 제외
@@ -146,11 +156,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
 
-### F-SCREENSHOT. 인증샷 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx))
-- 👤 인증샷 생성, 섹션 선택(도넛·주식), 금액/카테고리 숨김 마스킹, 핵심 포트폴리오 강조
-- 👤 주식 섹션: 비중바·포트폴리오(범례) 하단에 종목 리스트(헤더+비중 그라데이션 바) 노출, 요약 헤더는 전일 대비/구분선 제거·평가손익이 평가금액과 동일 행 정렬
-- ⚙ `screenshotMode` 본문과 시각 일치, `maskFn` 적용
-- 엣지: 카테고리 필터(전체/해외 등), 빈 섹션
+### F-SCREENSHOT. 자산 카드 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx), [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))
+- 👤 상단바·하단네비 "자산 카드" 버튼(`IdCard` 아이콘)으로 다이얼로그 오픈, "저장" 단일 버튼(`variant="brand"`)으로 이미지 다운로드
+- 👤 닉네임 설정 시에만 상단 우측 `@닉네임` pill 노출(문구 없음), 순자산 hero(`text-foreground`, "포트폴리오 구성" 제목과 동일 색), 수익금·수익률 한 줄
+- 👤 포트폴리오 구성 바 — 자산군(주식·부동산·코인·현금) 단위 색상, 범례 %가 색점과 동일 색
+- 👤 핵심 자산 Top 8 — 1줄(색점·종목명·비중%·금액), 색점은 자기 자산군 색을 상속(바 색과 1:1 매칭)
+- 👤 금액 표시 스위치 끄면 금액류만 `••••` 마스킹(비중%는 항상 노출), 푸터 좌측에 "시크릿에셋"(`text-xs text-foreground`) + 도메인(`secretasset.xyz`), 우측에 날짜
+- ⚙ `SHARE_SAFE_PALETTE`(theme.ts) 사용 — 부채/손실 의미색과 충돌 안 함
+- 엣지: 닉네임 미설정 시 pill 미노출, 단일 자산군만 보유 시 바 100%
 
 ### F-IMPORT-EXPORT. 데이터 내보내기/가져오기
 - 👤 JSON 내보내기→가져오기 라운드트립, 자산·스냅샷·옵션 보존
@@ -207,6 +220,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NAV. 네비게이션 (drill-down)
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
+- ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R24)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))
@@ -364,6 +378,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
 | R22 | **인앱 게이트 활성 시 자동 동작 차단** | `isInAppGateActive()`(=`isInApp && !isStandalone`, [detect-browser.ts](../../src/lib/pwa/detect-browser.ts))가 cloud-sync arm effect(armed 진입만 차단·assetId/lastSyncedAt/syncLink는 유지)·`#sync=` 연결 모달·asset-data `initAndSync`(데이터 로드 후 조기 return)·0→양수 전환 effect를 가드. 누락 시 인앱 게이트 뒤에서 자동 동기화·오늘자 시세/스냅샷이 계속 돎(세션 끊김 데이터 유실 리스크와 충돌). 일반 브라우저·standalone에선 `false`라 정상 동작(회귀 주의) |
 | R23 | **휴장일 slot 계산 순서** | `getStockCacheSlot`의 영업일 판정은 `isInSession` 체크보다 반드시 먼저 실행 — 순서가 바뀌면 휴장일에 세션-모양 시간대일 때 `effectiveDate`(달력 날짜)가 그대로 반환돼 매일 slot이 바뀌고, 실시간 quote 재조회가 원인분해에 허위 "시세 변동"으로 노출된다(F-SYNC·F-ACTIVITY 연계) |
+| R24 | **뒤로가기 콜드스타트 폴백 홈 직행** | `back()`의 `history.length<=1` 폴백은 항상 `navigate({type:"home"})`. 다른 history-의존적 화면(`more`처럼 자신도 `history.back()`을 쓰는 화면)으로 폴백하면, 그 화면에서 다시 뒤로가기 시 방금 만든 push를 되감아 원래 화면으로 돌아오는 **홈 도달 불가 루프**가 생긴다(과거 `settings`→`"more"` 폴백 버그, F-NAV) |
+| R25 | **자산 카드 캡처 DOM에 뷰포트 기준 반응형 금지** | share-card.tsx의 캡처 대상(`cardRef`) DOM에는 `sm:` 등 뷰포트 미디어쿼리 클래스를 쓰지 않는다 — 캡처는 고정폭(480px) 카드인데 `sm:`은 브라우저 뷰포트 기준이라 PC/모바일에서 같은 사용자가 다른 크기로 캡처되는 버그가 있었다(F-SCREENSHOT). 축소 미리보기는 `ScaledCardPreview`(share-menu.tsx)의 CSS `transform: scale()`로만 처리 — 레이아웃 크기 자체는 항상 480px 고정. **`captureImage`의 `pixelRatio` 계산은 반드시 `el.offsetWidth`(레이아웃 폭) 기준이어야 한다 — `getBoundingClientRect().width`는 `ScaledCardPreview`의 transform 영향을 받아 기기마다 다른 pixelRatio·최종 해상도가 나온다(QA에서 발견, 2026-07-27 수정)** |
 
 ---
 

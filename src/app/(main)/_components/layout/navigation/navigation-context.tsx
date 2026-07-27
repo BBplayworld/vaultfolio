@@ -9,6 +9,7 @@ export type AssetView =
   | { type: "home" }
   | { type: "more" }
   | { type: "settings" }
+  | { type: "tax" }
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab };
 
@@ -20,13 +21,15 @@ const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
 type MainViewType = typeof PAGE_ORDER[number];
 // 슬라이드 전환 방향: "right"=오른쪽에서 진입(다음 메뉴), "left"=왼쪽에서 진입(이전 메뉴)
 export type SlideDir = "left" | "right" | null;
-const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" ? "more" : t);
+// settings·tax는 더보기 하위 페이지 — 스와이프 위치상 more로 취급(PAGE_ORDER는 불변)
+const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" || t === "tax" ? "more" : t);
 
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");
   if (!clean || clean === "home") return { type: "home" };
   if (clean === "more") return { type: "more" };
   if (clean === "settings") return { type: "settings" };
+  if (clean === "tax") return { type: "tax" };
   const [type, tab] = clean.split("/");
   if (type === "detail") {
     // #detail (탭 생략) → hub
@@ -45,6 +48,7 @@ export function toHash(view: AssetView): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "#more";
   if (view.type === "settings") return "#settings";
+  if (view.type === "tax") return "#tax";
   // 허브는 짧은 #detail / #activity 형태 유지
   if (view.tab === "hub") return `#${view.type}`;
   return `#${view.type}/${view.tab}`;
@@ -57,6 +61,8 @@ export function getBackLabel(view: AssetView): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
   if (view.type === "settings") return "더보기";
+  // 세금 일정은 홈 배너·더보기 두 경로에서 진입하므로 중립 라벨(실제 복귀는 history.back)
+  if (view.type === "tax") return "뒤로";
   if (view.tab === "hub") return "홈";
   if (view.type === "detail" && (view.tab === "stocks-xray" || view.tab === "stocks-trades")) return "주식";
   if (view.type === "detail" && view.tab === "cash-transactions") return "현금";
@@ -250,13 +256,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // 뒤로가기: drill-down 1단계만 복귀.
   // 성과/상세 하위 영역 → 해당 허브, 허브 → 홈
   const back = useCallback(() => {
-    if (view.type === "settings") {
-      // settings는 more에서 pushState로 진입하므로 pop으로 복귀
+    if (view.type === "settings" || view.type === "tax") {
+      // settings·tax는 pushState로 진입하므로 pop으로 복귀 (tax는 홈·더보기 양쪽에서 진입 가능)
       if (typeof window !== "undefined" && window.history.length > 1) {
         window.history.back();
         return;
       }
-      navigate({ type: "more" });
+      // 콜드스타트(history 없음, 딥링크 진입 등)는 항상 홈으로 — settings를 "more"로 보내면
+      // more의 back()이 다시 history.back()에 의존해 설정↔더보기 핑퐁 루프가 발생했다(홈 도달 불가)
+      navigate({ type: "home" });
       return;
     }
     if (view.type === "more") {

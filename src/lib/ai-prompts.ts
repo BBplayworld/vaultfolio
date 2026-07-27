@@ -42,7 +42,7 @@ const STOCK_CATEGORY: Record<string, string> = {
 
 const LOAN_TYPE: Record<string, string> = {
   credit: "신용대출", minus: "마이너스통장",
-  home_mortgage: "주택담보대출", "mortgage-home": "주택담보대출",
+  home_mortgage: "담보대출", "mortgage-home": "담보대출",
   stock_mortgage: "주식담보대출", "mortgage-stock": "주식담보대출",
   insurance_loan: "보험약관대출", "mortgage-insurance": "보험약관대출",
   deposit_loan: "전세자금대출", "mortgage-deposit": "전세자금대출",

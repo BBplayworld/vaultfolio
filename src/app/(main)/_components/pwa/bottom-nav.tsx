@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Home, PieChart, TrendingUp, PlusCircle, Camera, MoreHorizontal } from "lucide-react";
+import { Home, PieChart, TrendingUp, PlusCircle, IdCard, MoreHorizontal } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "detail", label: "상세", icon: PieChart },
   { id: "activity", label: "성과", icon: TrendingUp },
   { id: "update", label: "업데이트", icon: PlusCircle },
-  { id: "screenshot", label: "인증샷", icon: Camera },
+  { id: "screenshot", label: "자산카드", icon: IdCard },
   { id: "more", label: "더보기", icon: MoreHorizontal },
 ];
 

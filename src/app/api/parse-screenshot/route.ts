@@ -411,7 +411,7 @@ const LOAN_SCHEMA = {
 const buildLoanPrompt = () => `대출 계좌 화면에서 대출 정보를 추출하라.
 
 필드:
-name=대출명, type=credit(신용대출)|minus(마이너스통장)|mortgage-home(주택담보)|mortgage-stock(주식담보)|mortgage-insurance(보험담보)|mortgage-deposit(예금담보)|mortgage-other(기타담보), balance=현재잔액(원화 정수), interestRate=금리(숫자만·예:3.5), institution=금융기관명(없으면 ""), startDate=대출실행일(YYYY-MM-DD·모르면 "")
+name=대출명, type=credit(신용대출)|minus(마이너스통장)|mortgage-home(부동산담보·주택/상가 무관)|mortgage-stock(주식담보)|mortgage-insurance(보험담보)|mortgage-deposit(예금담보)|mortgage-other(기타담보), balance=현재잔액(원화 정수), interestRate=금리(숫자만·예:3.5), institution=금융기관명(없으면 ""), startDate=대출실행일(YYYY-MM-DD·모르면 "")
 
 무시: 예금·적금 항목·카드·포인트`;
 

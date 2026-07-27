@@ -62,7 +62,8 @@ export const cashTypes = [
 export const loanTypes = [
   { value: "credit", label: "신용대출", shortLabel: "신용대출" },
   { value: "minus", label: "마이너스대출", shortLabel: "마이너스" },
-  { value: "mortgage-home", label: "주택담보대출", shortLabel: "주택담보" },
+  // 주택·상가 구분 없이 부동산 담보 전반을 담는 항목이라 "주택"을 붙이지 않는다
+  { value: "mortgage-home", label: "담보대출", shortLabel: "담보" },
   { value: "mortgage-stock", label: "주식담보대출", shortLabel: "주식담보" },
   { value: "mortgage-insurance", label: "보험담보대출", shortLabel: "보험담보" },
   { value: "mortgage-deposit", label: "예금담보대출", shortLabel: "예금담보" },

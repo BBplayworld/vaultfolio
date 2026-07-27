@@ -1,4 +1,4 @@
-import { Activity, List, Camera, Settings, TrendingUp } from "lucide-react";
+import { Activity, List, IdCard, Settings, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
 
@@ -36,9 +36,9 @@ export const TUTORIAL_STEP_CONFIGS: Record<TutorialStep, TutorialStepConfig> = {
   3: {
     step: 3,
     targetAttr: "tutorial-screenshot-btn",
-    title: "인증샷으로 공유해보세요",
-    description: "인증샷 버튼을 눌러 자산 현황을 이미지로 저장하거나 공유할 수 있습니다.",
-    icon: Camera,
+    title: "자산 카드로 공유해보세요",
+    description: "자산 카드 버튼을 눌러 자산 현황을 이미지로 저장하거나 공유할 수 있습니다.",
+    icon: IdCard,
     preferPosition: "bottom",
   },
   4: {

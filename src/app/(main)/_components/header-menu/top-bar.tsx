@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ChevronLeft, MoreHorizontal } from "lucide-react";
+import { IdCard, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
@@ -44,11 +44,11 @@ function ShareScreenshotButton() {
         onClick={() => setOpen(true)}
         className={`${ICON_BTN} border-none text-white`}
         style={{ backgroundColor: MAIN_PALETTE[5] }}
-        aria-label="인증샷"
-        title="인증샷"
+        aria-label="자산 카드"
+        title="자산 카드"
         data-tutorial="tutorial-screenshot-btn"
       >
-        <Camera className="size-5 sm:size-6" />
+        <IdCard className="size-5 sm:size-6" />
       </button>
       <ShareScreenshotDialog open={open} onOpenChange={setOpen} />
     </>

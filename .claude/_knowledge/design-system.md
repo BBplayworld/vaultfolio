@@ -33,7 +33,7 @@
 | 의미 | 토큰 | 값 |
 |---|---|---|
 | **브랜드(확인·제출·선택)** | `variant="brand"` / `--brand` / `MAIN_PALETTE[0]` | **#5b6fbf 인디고** (라이트·다크 동일, foreground #fff) |
-| **중요·순자산 강조** | `ASSET_THEME.important` / `importantHex` | **주황 `text-orange-600 dark:text-orange-400` / #ff8904** |
+| **중요·강조(순자산·경고성 배지·주의 유도)** | `ASSET_THEME.important` / `importantHex` | **주황 `text-orange-600 dark:text-orange-400` / #ff8904** |
 | 이익 / 매수 | `ASSET_THEME.profit` (`getProfitLossColor(v)`) | **빨강** `text-rose-600 dark:text-rose-400` |
 | 손실 / 매도 | `ASSET_THEME.loss` | **파랑** `text-blue-600 dark:text-blue-400` |
 | 부채·임차보증금 차감 | `ASSET_THEME.liability` | rose 계열 |
@@ -44,10 +44,13 @@
 - **손익=한국 관습**: 이익=빨강·손실=파랑. 직접 하드코딩 금지, `getProfitLossColor()` 사용.
 - **파랑은 손익 전용.** 정보성 텍스트(환율 등)는 파랑 금지 → 중립 `text-muted-foreground`. (정보 "아이콘"만 sky 허용 — 형태로 구분됨)
 - **순자산/중요 수치는 주황(`important`)** 으로 1순위 강조. 브랜드 인디고는 "액션·선택"에만.
+- **주황(`important`)은 "순자산" 전용이 아니라 화면 전체의 범용 강조색이다** — 검정 배경·흰 전경·회색 제목이라는 기본 톤 위에서 **사용자가 눈여겨봐야 할 항목**(마감 임박·미백업·높은 심각도 배지 등)을 튀지 않게 부각시킬 때 1순위로 쓴다. 삭제·위험(`destructive`)만큼 강하지 않되 `text-muted-foreground`보다 확실히 눈에 띄어야 하는 "주의 유도" 톤에 적합. 예: 세금 캘린더 `severity==="high"` 배지(`bg-orange-500/10 text-orange-600 dark:text-orange-400`), 백업 미실시 경고(`backup-nudge.tsx`), 오래된 백업 안내(`tool-menu.tsx`). 새로운 강조·경고성 UI를 만들 때 색을 새로 고르지 말고 이 토큰부터 검토한다.
 - CSS 클래스 UI = `--brand`/`variant="brand"`, 차트·캔버스 등 JS/인라인 = `MAIN_PALETTE[0]`.
 
 ### 1.3 차트 팔레트 (`MAIN_PALETTE`, 12색)
 `[0]` 인디고=최대 비율 고정 · `[1]` 빨강=대출 고정 · `[2]` 주황=임차보증금 고정 · `[3~10]` 자산 항목 순차 · `[11]` `#4e5763` 무채색 버튼. `assignColors`에서 **최댓값=`MAIN_PALETTE[0]`** 규칙 유지. (CSS `--chart-1~6`은 라이트=teal/다크=indigo 계열)
+
+**`SHARE_SAFE_PALETTE`** (theme.ts) — 자산 카드(share-card.tsx) 전용. `MAIN_PALETTE`에서 의미가 예약된 `[1]` 빨강(부채/손실)·`[2]` 주황(임차보증금, 순자산 `important`와 유사)을 제외한 순서. `[0]` 인디고는 최대 비율 고정 규칙 그대로 유지. **공유 카드의 색은 자산군(주식·부동산·코인·현금) 단위로 먼저 배정하고, 개별 종목은 자기 자산군의 색을 상속한다** — 포트폴리오 바 색과 핵심 자산 목록 색점이 항상 1:1로 매칭되게 하기 위함. 상세 탭(`assignColors`)은 부채를 포함해 `[1]`/`[2]` 예약 의미가 유효하므로 그대로 `MAIN_PALETTE` 사용, 공유 카드에서만 `SHARE_SAFE_PALETTE`를 쓴다.
 
 ---
 

@@ -51,7 +51,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
   const getNamePlaceholder = () => {
     if (selectedType === "credit") return "예: 신한은행 직장인 신용대출";
     if (selectedType === "minus") return "예: KB국민은행 마이너스통장";
-    if (selectedType === "mortgage-home") return "예: 우리은행 아파트 주택담보대출";
+    if (selectedType === "mortgage-home") return "예: 우리은행 아파트 담보대출";
     if (selectedType === "mortgage-stock") return "예: 미래에셋 삼성전자 주식담보";
     if (selectedType === "mortgage-insurance") return "예: 삼성생명 종신보험 약관대출";
     if (selectedType === "mortgage-deposit") return "예: 하나은행 정기예금 담보대출";
@@ -340,7 +340,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
         )}
 
         {/* 종류 무관하게 노출 — 신용·마이너스대출로 부동산을 산 경우에도 연결할 수 있어야 한다.
-            주택담보에만 열어두면 그런 대출이 영원히 "투자 레버리지"로 분류돼
+            담보대출에만 열어두면 그런 대출이 영원히 "투자 레버리지"로 분류돼
             자산 성적표의 레버리지 이자·대출비율이 부풀려진다(부동산 수익은 측정 불가라 비교 제외 대상). */}
         {assetData.realEstate.length > 0 && (
           <FormField

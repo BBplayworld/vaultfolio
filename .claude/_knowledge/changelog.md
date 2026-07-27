@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-07-27
+
+### 인증샷 → "자산 카드" 개편 — 명칭·색 체계·정보 구조·품질
+
+- **왜**: 앱 밖으로 나가는 유일한 산출물인데 명칭이 "인증샷"(버튼·네비)/"인증용 스크린샷"(다이얼로그)으로 갈려 있었고, "인증"이 과시·KYC로 오독될 여지가 있었다. 핵심자산 8색이 포트폴리오 바(자산군 4색)와 매칭되지 않아 색이 정보가 아닌 장식이었고, `sm:` 뷰포트 반응형이 캡처 대상에 남아 PC/모바일에서 같은 사용자가 다른 이미지를 얻는 버그가 있었다.
+- **명칭 통일**: 버튼·네비·다이얼로그·튜토리얼·공지 문구를 전부 "자산 카드"로 통일, `Camera` 아이콘을 `IdCard`로 교체(top-bar.tsx, bottom-nav.tsx, share-menu.tsx, welcome-guide.tsx, tutorial-step-config.ts, notice.tsx).
+- **색 체계 재설계** ([theme.ts](../../src/config/theme.ts) `SHARE_SAFE_PALETTE`, [share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx)): 의미색(부채 빨강·임차보증금 주황)과 충돌하지 않는 안전 팔레트를 도입하고, 색 배정 주체를 "개별 종목"에서 "자산군"으로 뒤집었다 — 자산군에 먼저 색을 배정하고 개별 종목이 그 색을 상속해, 포트폴리오 바와 핵심 자산 목록 색점이 항상 1:1로 매칭된다. 상세 탭의 `assignColors`(부채 포함)는 변경하지 않음.
+- **정보 구조·브랜딩**: `useNickname()`으로 카드에 닉네임 pill 추가(설정 시에만 노출), 브랜딩 헤더를 "{앱이름}로 관리중인 자산" 문장으로 전환, 푸터에 도메인(`secretasset.xyz`) 표기, 핵심 자산 목록을 2줄→1줄(색점·종목명·비중%·금액)로 압축(개별 수익률 제거 — hero에 총 수익률 이미 존재).
+- **품질 버그 수정** (R25): 캡처 대상 DOM의 `sm:text-3xl`을 고정 `text-3xl`로 변경하고, 미리보기 축소는 [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx)의 `ScaledCardPreview`(CSS `transform: scale()`)로만 처리해 캡처는 항상 480px 기준. 빈 `DialogDescription` 채움, 캡처 실패 시 `console.error`뿐이던 것에 `toast.error` 추가.
+- **후속 조정**: 브랜딩 헤더의 "{앱이름}로 관리중인 자산" 문장을 제거(닉네임 pill만 남김), 대신 푸터에 한글 브랜드명 "시크릿에셋"(`text-xs text-foreground`)을 도메인 옆에 추가. 순자산 텍스트 색을 기존 주황(`important`)에서 "포트폴리오 구성" 제목과 동일한 `text-foreground`로 변경 — 이 카드에 한정된 예외이며 앱 본편의 순자산=주황 규칙은 그대로 유지.
+- **버튼 통합**: [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx)의 "복사"·"저장" 버튼을 "저장"(다운로드) 단일 버튼으로 통합 — 클립보드 복사는 브라우저·기기별 성공률이 낮고(특히 모바일 사파리), 다운로드가 가장 안정적인 경로라 핵심 동작 하나로 압축. `variant="brand"`로 CLAUDE.md 확인·제출 버튼 색 규칙 통일(기존 인라인 `MAIN_PALETTE` 스타일 제거).
+- **QA 발견 수정** (R25 보강): `captureImage`의 `pixelRatio` 계산이 `el.getBoundingClientRect().width`(=`ScaledCardPreview`의 CSS transform 영향을 받는 시각적 크기)를 기준으로 삼아, 레이아웃은 480px로 고정됐는데도 미리보기 축소 비율에 따라 기기마다 최종 PNG 해상도가 달랐다(모바일이 더 고해상도). `el.offsetWidth`(transform 무관 실제 레이아웃 폭) 기준으로 변경해 pixelRatio·최종 해상도가 기기와 무관하게 항상 동일해지도록 수정.
+
+### 뒤로가기: 설정 화면 콜드스타트 홈 도달 불가 루프 수정 (R24)
+
+- **`navigation-context.tsx`의 `back()`**: `settings`가 `history.length<=1`(딥링크·새 세션 진입)일 때 `"more"`로 폴백하던 것을 `"home"`으로 변경. `more`의 back()도 history 의존적(`history.back()`)이라, `settings`→`more`로 폴백한 뒤 다시 뒤로가기를 누르면 방금 만든 push를 되감아 **원래의 설정 화면으로 돌아오는 루프**가 발생했다(더보기 화면의 뒤로가기 라벨은 "홈"인데 실제 동작은 설정으로 회귀 — 라벨-동작 불일치). `tax`는 이미 홈 직행이라 문제없었음. 정상 진입(홈→더보기→설정)은 `history.length>1`이라 기존처럼 `history.back()`으로 더보기 복귀, 영향 없음.
+
+### 세금 신고 안내 — 보유 자산 기반 월별 세금 캘린더 (issue-4.20)
+
+- **왜**: 앱이 순자산·수익률은 보여주면서 "그 자산을 가졌기 때문에 생기는 납세 의무"는 전혀 안내하지 않았다. 상가는 1·7월 부가세와 5월 종소세, 부동산은 6/1 과세기준일과 7·9월 재산세, 해외주식은 이듬해 5월 양도세가 각각 다른 기한으로 돌아오는데 이미 입력된 자산 구성만으로 특정할 수 있는 정보가 놀고 있었다. 명세 [S-4.23](../specs/4.23-tax-calendar.md).
+- **세금 일정 정적 데이터** ([tax-calendar.ts](../../src/config/tax-calendar.ts)): 부가세(확정·예정고지)·종소세(확정·중간예납)·재산세·종부세·양도세·연말정산·건강보험료 정산·연금 납입마감 등 21건을 `TaxEvent`(월·기한·대상·요약·상세·태그·severity)로 정의. 외부 API 없이 상수만 쓴다.
+- **개인화** ([tax-utils.ts](../../src/lib/tax-utils.ts)): `resolveTaxTags`가 보유 자산 → 세금 태그 + 근거 문구를 산출(상가 = `realEstate.type==="commercial"`). `computeForeignRealizedGain`은 거래 로그를 replay(`trade-utils.computeNewPosition` 재사용)해 당해 해외주식 실현손익을 KRW로 통산하고 **기본공제 250만원 초과 시 이듬해 5월 양도세 신고 대상**임을 알린다. 매수 로그·체결 환율이 없으면 현재 평단·환율로 폴백하고 "추정"으로 표기.
+- **홈 배너** ([tax-notice-box.tsx](../../src/app/(main)/_components/views/home/tax-notice-box.tsx)): 자산 분포 카드 아래. **내 자산에서 파생된 항목만** 띄운다 — 연말정산·건강보험료 같은 전 국민 공통(`common`) 항목은 자산과 무관하므로 홈에서 제외하고 캘린더에서만 본다. 해당 항목이 0건이면 배너 자체가 렌더되지 않는다. 닫으면 **그 달 동안** 미노출(`STORAGE_KEYS.taxNotice` = `{dismissedMonth}`), 달이 바뀌면 재노출 — 5월 종소세·7월 부가세처럼 큰 일정을 영구히 놓치지 않게 하려는 의도. 백업 복원·동기화 pull이 닫기 상태를 지우지 않도록 `asset-storage.ts` keepKeys에 보존.
+- **세금 캘린더 뷰** ([tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx), `#tax`): 12개월 세로 리스트 + `내 세금`/`전체` 필터 + 현재 월 자동 스크롤 + 하단 면책 고정. **하단탭은 늘리지 않고** `settings`와 동일한 더보기 하위 페이지 패턴을 복제(진입: 더보기 > 지원 > 세금 일정, 홈 배너 "전체 보기"). 뒤로가기는 `history.back()`이라 진입 경로로 복귀. shadcn `Calendar`는 날짜 선택기라 쓰지 않고 일정 목록으로 구성.
+- 회귀 테스트 21케이스 추가([tax-utils.test.ts](../../src/lib/__tests__/tax-utils.test.ts)) · 스키마·공유 토큰·sync payload 무변경.
+
 ## 2026-07-26
 
 ### 원인분해: 카테고리 순서 정렬 + "대출" 용어 통일 (issue-4.19)

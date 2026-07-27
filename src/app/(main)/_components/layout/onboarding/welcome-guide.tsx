@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Camera, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -197,15 +197,6 @@ export function WelcomeGuide() {
 
         {/* 2. 주식 탭 미리보기 영역 — 실제 stock-tab 과 동일하게 카드 박스 없이 노출 */}
         <div className="space-y-4">
-          {/* 인증샷 가이드 배너 */}
-          <div className="rounded-lg border-0 bg-primary/5 px-4 py-3 flex items-center gap-2.5">
-            <Camera className="size-4 text-primary shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-foreground">인증샷으로 공유하세요</p>
-              <p className="text-[11px] text-muted-foreground">우측 상단 메뉴 → 인증샷 · 자산 분포·주식 카테고리·금액 숨기기 선택 가능</p>
-            </div>
-          </div>
-
           <StockSummaryHeader
             totalValue={foreignTotal}
             totalProfit={foreignProfit}

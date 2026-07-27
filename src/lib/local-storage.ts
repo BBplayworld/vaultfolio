@@ -32,6 +32,8 @@ export const STORAGE_KEYS = {
   stockDisplayCurrency: "secretasset_stock_display_currency",
   // 클라우드 동기화 상태 키
   syncState:            "secretasset_sync",
+  // 홈 세금 안내 배너 닫기 메타 — 값 { dismissedMonth: "YYYY-MM" }(KST). 기기 로컬 전용(월 단위 재노출)
+  taxNotice:            "secretasset_tax_notice",
 } as const;
 
 const LEGACY_KEYS = {

@@ -14,6 +14,7 @@ import { PerformanceHub } from "../../views/activity/performance-hub";
 import { DetailHub } from "../../views/detail/detail-hub";
 import { ToolMenuPage } from "../../header-menu/tool-menu";
 import { SettingsPage } from "../../header-menu/settings-page";
+import { TaxCalendarView } from "../../views/tax/tax-calendar-view";
 import { RealEstateInput } from "../../forms/asset-update/input/real-estate-input";
 import { StockInput } from "../../forms/asset-update/input/stock-input";
 import { CryptoInput } from "../../forms/asset-update/input/crypto-input";
@@ -88,7 +89,7 @@ export function AssetPageTabs() {
       {/* key 변경 시 재마운트되며 fade+slide-in 애니메이션 (토스 스타일 미세 전환) */}
       {/* 1차 메뉴 좌우 이동 시 방향에 맞춘 슬라이드, 그 외엔 기본 하단 슬라이드 */}
       <div
-        key={view.type === "home" || view.type === "more" || view.type === "settings" ? view.type : `${view.type}/${view.tab}`}
+        key={view.type === "home" || view.type === "more" || view.type === "settings" || view.type === "tax" ? view.type : `${view.type}/${view.tab}`}
         className={`animate-in fade-in duration-200 ${
           slideDir === "right" ? "slide-in-from-right-4" : slideDir === "left" ? "slide-in-from-left-4" : "slide-in-from-bottom-1"
         }`}
@@ -96,6 +97,7 @@ export function AssetPageTabs() {
         {view.type === "home" && <HomeView />}
         {view.type === "more" && <ToolMenuPage />}
         {view.type === "settings" && <SettingsPage />}
+        {view.type === "tax" && <TaxCalendarView />}
         {view.type === "detail" && <DetailView tab={view.tab} />}
         {view.type === "activity" && <ActivityView tab={view.tab} />}
       </div>

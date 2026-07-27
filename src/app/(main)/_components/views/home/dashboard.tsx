@@ -16,6 +16,7 @@ import { DataSourceBadge } from "../data-source-badge";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { BackupNudge } from "./backup-nudge";
+import { TaxNoticeBox } from "./tax-notice-box";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
@@ -684,6 +685,12 @@ export function Dashboard() {
           </p>
         </CardFooter>
       </Card>
+
+      {/* ── 세금 안내 (S-4.23) — 순자산 헤더가 있는 자산 분포 카드 바로 아래.
+          내 자산에서 파생된 일정이 없거나 이번 달에 닫았으면 스스로 null을 반환한다. ── */}
+      <div className="lg:col-span-2 empty:hidden">
+        <TaxNoticeBox />
+      </div>
     </div>
   );
 }

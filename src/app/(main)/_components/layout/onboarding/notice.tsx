@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Trophy, RefreshCw, Building2, Camera, MessageSquareText, Link2 } from "lucide-react";
+import { Sparkles, Trophy, RefreshCw, Building2, IdCard, MessageSquareText, Link2 } from "lucide-react";
 import { APP_VERSION } from "@/config/app-version";
 
 export const NOTICE_ID = "20260722";
-export const NOTICE_TITLE = "자산 성적표 · 실거래가 · 인증샷 업데이트";
+export const NOTICE_TITLE = "자산 성적표 · 실거래가 · 자산 카드 업데이트";
 
 // 이번 릴리스 핵심 4가지 — 아이콘 + 한두 문장으로만. 스크롤 없이 훑히는 분량을 상한으로 둔다.
 const FEATURES = [
@@ -41,12 +41,12 @@ const FEATURES = [
     ),
   },
   {
-    icon: Camera,
-    title: "인증샷 개편",
+    icon: IdCard,
+    title: "자산 카드 개편",
     body: (
       <>
         순자산과 수익률이 가장 먼저 보이도록 <strong className="text-foreground">한 장으로 재구성</strong>했습니다.
-        포트폴리오 구성 비중과 핵심 자산 Top 8을 담고, 금액은 가린 채로도 공유할 수 있습니다. 상단 카메라 아이콘에서 만들어 보세요.
+        포트폴리오 구성 비중과 핵심 자산 Top 8을 담고, 금액은 가린 채로도 공유할 수 있습니다. 상단 카드 아이콘에서 만들어 보세요.
       </>
     ),
   },

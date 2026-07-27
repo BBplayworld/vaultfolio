@@ -92,3 +92,4 @@ S-4.19 ─┬─ .claude/specs/4.19-deposit-maturity.md   ← 의도·수용기�
 | [S-4.20](./4.20-upbit-crypto-price.md) | 업비트 코인 시세 자동 갱신 | 완료 | `issue-4.20-upbit-crypto-price` | F-CRYPTO |
 | [S-4.21](./4.21-realestate-transaction-price.md) | 부동산 실거래가 연동 | 승인 | `issue-4.21-realestate-price` | F-REALESTATE(예정) |
 | [S-4.22](./4.22-cash-transactions.md) | 현금 입출금 거래내역(소득·저축 유입) | 완료 | `issue-4.19` | F-CASH-TX |
+| [S-4.23](./4.23-tax-calendar.md) | 세금 신고 안내(자산 기반 월별 캘린더) | 승인 | `issue-4.20` | F-TAX(예정) |

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload } from "lucide-react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Receipt } from "lucide-react";
 import { useDataExport } from "@/hooks/use-data-export";
 import { formatLastBackup, isBackupStale } from "@/lib/backup-status";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
@@ -238,6 +238,11 @@ export function ToolMenuPage() {
             <button type="button" className={ROW} onClick={() => setShowHelpChooser(true)}>
               <Info className="size-5 text-primary shrink-0" />
               <span className="font-medium">앱 가이드 · 공지사항</span>
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
+            </button>
+            <button type="button" className={ROW} onClick={() => navigate({ type: "tax" })}>
+              <Receipt className="size-5 text-primary shrink-0" />
+              <span className="font-medium">세금 일정</span>
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>

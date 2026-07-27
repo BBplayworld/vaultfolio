@@ -131,7 +131,7 @@ export const loanSchema = z.object({
   endDate: z.string().optional(),
   institution: z.string().optional(), // 금융기관
   description: z.string().optional(),
-  linkedRealEstateId: z.string().optional(), // 주택담보대출 연계 부동산 ID
+  linkedRealEstateId: z.string().optional(), // 담보대출 연계 부동산 ID
   linkedCashId: z.string().optional(), // 예금담보대출 연계 현금성 자산 ID
   linkedStockId: z.string().optional(), // 주식담보대출 연계 주식 ID
 });

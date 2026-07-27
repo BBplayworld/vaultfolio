@@ -158,7 +158,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
 const LOAN_MOBILE_LABELS: Record<string, string> = {
   "credit": "신용",
   "minus": "마통",
-  "mortgage-home": "주택",
+  "mortgage-home": "담보",
   "mortgage-stock": "주식",
   "mortgage-insurance": "보험",
   "mortgage-deposit": "예금",

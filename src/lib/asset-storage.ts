@@ -256,6 +256,8 @@ export function clearAssetData(): boolean {
       // 거치므로 보존하지 않으면 백업 파일을 복원할 때마다 "백업한 적 없음"으로 잘못 판정된다.
       // ("모든 데이터 삭제"는 사용자의 명시적 의도이므로 호출처에서 별도로 지운다)
       STORAGE_KEYS.backup,
+      // 세금 안내 배너 닫기 상태도 기기 로컬 메타 — 보존하지 않으면 복원·동기화 pull 때마다 닫은 배너가 되살아난다
+      STORAGE_KEYS.taxNotice,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {

@@ -201,7 +201,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
             </div>
             {linkedLoans.length > 0 && (
               <div className="px-4 py-2.5 space-y-1.5">
-                <p className="text-sm font-bold text-muted-foreground flex items-center gap-1"><CreditCard className="size-3" />주택담보대출</p>
+                <p className="text-sm font-bold text-muted-foreground flex items-center gap-1"><CreditCard className="size-3" />담보대출</p>
                 {linkedLoans.map((loan) => (
                   <div key={loan.id} className="flex items-center justify-between px-2.5 py-1.5 text-sm rounded-md bg-muted/30">
                     <span className={ASSET_THEME.cardLoanName}>{loan.name}</span>
