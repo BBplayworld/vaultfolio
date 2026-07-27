@@ -127,7 +127,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
             <IdCard className="size-4 text-primary" />
             자산 카드
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-xs text-left">
             내 자산 현황을 이미지로 만들어 저장할 수 있습니다.
           </DialogDescription>
         </DialogHeader>
