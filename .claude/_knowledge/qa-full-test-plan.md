@@ -158,7 +158,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-SCREENSHOT. 자산 카드 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx), [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))
 - 👤 상단바·하단네비 "자산 카드" 버튼(`IdCard` 아이콘)으로 다이얼로그 오픈, "저장" 단일 버튼(`variant="brand"`)으로 이미지 다운로드
-- 👤 닉네임 설정 시에만 상단 우측 `@닉네임` pill 노출(문구 없음), 순자산 hero(`text-foreground`, "포트폴리오 구성" 제목과 동일 색), 수익금·수익률 한 줄
+- 👤 순자산 hero(`text-foreground`, "포트폴리오 구성" 제목과 동일 색) — 라벨이 **`@닉네임 순자산` 한 문구**(닉네임은 `text-primary` 평문, 미설정 시 `순자산`만), 아래에 수익금·수익률 한 줄
+- 👤 다이얼로그 헤더는 모바일 포함 전 뷰포트 좌측 정렬(`text-left`로 shadcn `DialogHeader`의 `text-center` 오버라이드), 상하 여백 균등(`py-4`)
 - 👤 포트폴리오 구성 바 — 자산군(주식·부동산·코인·현금) 단위 색상, 범례 %가 색점과 동일 색
 - 👤 핵심 자산 Top 8 — 1줄(색점·종목명·비중%·금액), 색점은 자기 자산군 색을 상속(바 색과 1:1 매칭)
 - 👤 금액 표시 스위치 끄면 금액류만 `••••` 마스킹(비중%는 항상 노출), 푸터 좌측에 "시크릿에셋"(`text-xs text-foreground`) + 도메인(`secretasset.xyz`), 우측에 날짜

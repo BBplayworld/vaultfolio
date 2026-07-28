@@ -15,6 +15,7 @@
 - **품질 버그 수정** (R25): 캡처 대상 DOM의 `sm:text-3xl`을 고정 `text-3xl`로 변경하고, 미리보기 축소는 [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx)의 `ScaledCardPreview`(CSS `transform: scale()`)로만 처리해 캡처는 항상 480px 기준. 빈 `DialogDescription` 채움, 캡처 실패 시 `console.error`뿐이던 것에 `toast.error` 추가.
 - **후속 조정**: 브랜딩 헤더의 "{앱이름}로 관리중인 자산" 문장을 제거(닉네임 pill만 남김), 대신 푸터에 한글 브랜드명 "시크릿에셋"(`text-xs text-foreground`)을 도메인 옆에 추가. 순자산 텍스트 색을 기존 주황(`important`)에서 "포트폴리오 구성" 제목과 동일한 `text-foreground`로 변경 — 이 카드에 한정된 예외이며 앱 본편의 순자산=주황 규칙은 그대로 유지.
 - **버튼 통합**: [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx)의 "복사"·"저장" 버튼을 "저장"(다운로드) 단일 버튼으로 통합 — 클립보드 복사는 브라우저·기기별 성공률이 낮고(특히 모바일 사파리), 다운로드가 가장 안정적인 경로라 핵심 동작 하나로 압축. `variant="brand"`로 CLAUDE.md 확인·제출 버튼 색 규칙 통일(기존 인라인 `MAIN_PALETTE` 스타일 제거).
+- **UI 마감**: 다이얼로그 헤더가 모바일에서만 중앙 정렬되던 것(shadcn `DialogHeader` 기본값 `text-center sm:text-left`)을 호출부 `text-left`로 오버라이드해 전 뷰포트 좌측 정렬 통일(공용 `dialog.tsx`는 전 화면 공유라 미수정), 상하 여백도 `pt-4 pb-1`→`py-4`로 균등화. 카드 최상위에 따로 떠 있던 닉네임 pill은 순자산 hero의 라벨로 흡수해 **"@닉네임 순자산" 한 문구**로 전환 — 배지 배경·세로 패딩(`py-1`)이 사라져 아래 `text-3xl` 금액과의 간격이 회복되고, 소유자와 지표가 하나의 구로 읽힌다(닉네임 미설정 시 "순자산"만).
 - **QA 발견 수정** (R25 보강): `captureImage`의 `pixelRatio` 계산이 `el.getBoundingClientRect().width`(=`ScaledCardPreview`의 CSS transform 영향을 받는 시각적 크기)를 기준으로 삼아, 레이아웃은 480px로 고정됐는데도 미리보기 축소 비율에 따라 기기마다 최종 PNG 해상도가 달랐다(모바일이 더 고해상도). `el.offsetWidth`(transform 무관 실제 레이아웃 폭) 기준으로 변경해 pixelRatio·최종 해상도가 기기와 무관하게 항상 동일해지도록 수정.
 
 ### 뒤로가기: 설정 화면 콜드스타트 홈 도달 불가 루프 수정 (R24)

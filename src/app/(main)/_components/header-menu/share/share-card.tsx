@@ -77,17 +77,14 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
   return (
     <div ref={cardRef} className="space-y-4 p-3 rounded-2xl bg-background dark:bg-card">
 
-      {/* 닉네임 pill(신원 요소) — 닉네임 있을 때만 렌더 */}
-      {nickname && (
-        <div className="flex items-center justify-end px-1 pt-0.5">
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">@{nickname}</span>
-        </div>
-      )}
-
       {/* 대표 지표 — 순자산 전폭 hero(1순위) + 수익률·수익금 한 줄(2순위) */}
       <div className="rounded-lg bg-muted/20 dark:bg-muted/10 p-3.5 space-y-2">
         <div>
-          <p className="text-sm font-semibold text-muted-foreground">순자산</p>
+          {/* 신원 + 지표를 "@닉네임 순자산" 한 문구로 — 닉네임 미설정 시 "순자산"만 */}
+          <div className="flex items-baseline gap-1.5">
+            {nickname && <span className="text-xs font-semibold text-primary">@{nickname}</span>}
+            <span className="text-sm font-semibold text-muted-foreground">순자산</span>
+          </div>
           <p className="text-3xl font-bold tabular-nums leading-tight break-keep text-foreground">{netMask(summary.netAsset)}</p>
         </div>
         {/* 수익금·수익률 — 좁은 폭(320px)에서 넘치면 항목째 줄바꿈(숫자는 nowrap으로 통짜 유지) */}

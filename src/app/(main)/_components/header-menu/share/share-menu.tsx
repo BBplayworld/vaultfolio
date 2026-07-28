@@ -122,7 +122,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 max-w-[520px] sm:max-w-[680px] h-[94dvh] max-h-[96dvh] flex flex-col">
-        <DialogHeader className="px-5 pt-4 pb-1">
+        <DialogHeader className="px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <IdCard className="size-4 text-primary" />
             자산 카드
