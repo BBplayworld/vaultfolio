@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { buildAssetReport, computeFxExposure, computePeriodAttribution, getOrderedCauses, type AttributionPeriod } from "@/lib/report/asset-report";
+import { buildAssetReport, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/snapshot-archive";
@@ -25,13 +25,6 @@ import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
-
-// 성적표 변화 비교 기준일 표기: YYYY-MM-DD → M/D, YYYY-MM → M월
-function fmtGradeBaseDate(d: string): string {
-  const parts = d.split("-");
-  if (parts.length >= 3) return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
-  return `${parseInt(parts[1])}월`;
-}
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -444,7 +437,7 @@ export function AssetReportView() {
                     <span className={`font-semibold ${getProfitLossColor(gradeDelta.overallDiff)}`}>
                       {gradeDelta.overallDiff > 0 ? "▲" : "▼"} {Math.abs(gradeDelta.overallDiff).toFixed(1)}
                     </span>
-                    <span className="text-muted-foreground"> {fmtGradeBaseDate(gradeDelta.baseDate)} 대비</span>
+                    <span className="text-muted-foreground"> {formatAttributionDate(gradeDelta.baseDate)} 대비</span>
                   </p>
                 )}
                 {gradeDelta?.tierChange && (
@@ -716,10 +709,10 @@ export function AssetReportView() {
             <div className={SECTION}>
               <div className="flex items-center justify-between gap-2">
                 <SectionHeader icon={Landmark} title="순자산 변화, 왜?">
-                  <InfoHint summary="순자산 변화를 시세·환율·매수/매도·소득·부채 원인으로 나눠 큰 것만 보여드려요.">
-                    <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">시세 · 환율 · 주식 신규 매수 · 주식 매도 회수 · 주식 외 새로 추가한 자산 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
-                    <p><span className="font-semibold text-foreground">주식 신규 매수·매도 회수</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 주식 거래내역이 없으면(코인·부동산 매수, 주식 직접 수정 등) &quot;주식 외 새로 추가한 자산&quot;으로 묶여 표시됩니다.</p>
-                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
+                  <InfoHint summary="순자산 변화를 자산별 시세·환율·매수/매도·소득·대출 원인으로 나눠 큰 것만 보여드려요.">
+                    <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">주식·코인·부동산 시세 · 환율 · 자산별 매수/매도 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
+                    <p><span className="font-semibold text-foreground">주식 매수·매도</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 거래내역 없이 수량·평단을 직접 수정한 분은 같은 자산의 매수·매도에 합쳐집니다.</p>
+                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 하나로 표시됩니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
                   </InfoHint>
                 </SectionHeader>
                 <InlineSelector
@@ -742,26 +735,16 @@ export function AssetReportView() {
                     {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
                   </p>
                   {/* 주 원인과 나머지 원인을 같은 목록으로 — "그 외" 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
-                      홈 헤더(formatAttributionSentence)와 동일한 원인 집합을, 연관 원인(매수·매도 등)이
-                      나란히 보이도록 카테고리 순서(getOrderedCauses)로 정렬해 쓴다. */}
+                      홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
+                      (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). */}
                   <div className="space-y-2">
-                    {getOrderedCauses(attribution).map((cause) => (
+                    {getAttributionItems(attribution).map((cause) => (
                       <div key={cause.key} className="rounded-lg bg-muted/30 px-3 py-2.5 flex items-center justify-between gap-3">
                         <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">{cause.sentence}</p>
                         <Signed value={Math.round(cause.amount)} className="shrink-0" />
                       </div>
                     ))}
                   </div>
-                  {/* 임계값 미만이라 위 목록에 못 낀 잔차만 표시 — 합계가 Δ순자산과 맞도록 */}
-                  {(() => {
-                    const shownRest = attribution.restCauses.reduce((s, c) => s + c.amount, 0);
-                    const residual = attribution.restEffect - shownRest;
-                    return Math.abs(residual) >= 10000 ? (
-                      <p className={`${CAPTION} tabular-nums`}>
-                        그 외 요인 <Signed value={Math.round(residual)} className="font-medium" />
-                      </p>
-                    ) : null;
-                  })()}
                   {attribution.estimated && (
                     <p className={`${CAPTION} text-pretty`}>
                       과거 구간은 현재 자산의 매수일·대출일 기반 예측치예요. 지금부터 쌓이는 기록은 실측으로 분해됩니다.

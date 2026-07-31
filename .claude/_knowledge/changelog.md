@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-31
+
+### iOS PWA에서 PIN 숫자패드가 뜨지 않던 문제 수정 (issue-4.20)
+
+- **왜**: iOS PWA에서 잠금 화면의 PIN 입력을 눌러도 숫자패드가 나오려다 사라지고 화면이 튀는 현상이 반복됐다. 원인은 **제스처 밖 `focus()`**([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx) 마운트 후 `setTimeout(…,150)`) — iOS는 이 호출로 키보드를 열지 않으면서 `activeElement`만 잡아버려, 이후 사용자가 탭해도 focus 전환이 없어 키패드가 끝내 뜨지 않는다(탭마다 `input-otp`의 selectionchange 리스너가 캐럿만 리셋해 화면이 튄다). 두 번째 원인은 4자리 입력 순간의 **`disabled={checking}`** — iOS가 즉시 blur시켜 키보드를 닫고, 오입력 시 다시 제스처 밖 `focus()`라 복귀가 불가능했다.
+- **공용 훅 신설** ([use-otp-focus.ts](../../src/hooks/use-otp-focus.ts)): `useOtpAutoFocus`는 **마우스 환경(`(pointer: fine)`)에서만** 자동 포커스하고 터치는 사용자 탭에 맡긴다. `focusOtpFromGesture`는 OTP 래퍼의 `onPointerDown`에서 호출돼 이미 포커스된 경우 `blur()→focus()`로 전환을 강제한다(iOS에서 키패드가 뜨는 유일한 경로).
+- **잠금 화면 수정**: `disabled` 제거 → `checkingRef` 가드로 중복 검증만 차단(시각 피드백은 래퍼 `opacity`), 오입력 후 재포커스 호출 제거, `handlePinChange`의 stale closure(`useCallback([])` → `[unlockAndLoad]`) 정리. 오버레이도 중앙 정렬 → **상단 정렬 + `overflow-y-auto` + safe-area** 로 바꿔 키보드가 올라와도 입력칸이 가리지 않게 했다(fixed 오버레이는 iOS 키보드에 맞춰 밀리지 않는다).
+- **공유 복원 PIN**([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx))도 같은 앱 진입 경로라 동일 패턴 적용. 설정·설치흐름·공유메뉴의 PIN 3곳은 사용자 제스처로 열리는 다이얼로그라 이번 범위 밖.
+
+### 원인분해: 자산군별 시세·매수 분해 + 표시 레이어 단일화 (issue-4.20)
+
+- **왜**: "시세 상승 +12만원"만으로는 주식인지 코인인지 부동산인지 알 수 없었고, 신규 투입은 `saving`("코인·부동산 등") 한 덩어리라 무엇을 샀는지 읽히지 않았다. `priceEffect`가 잔차 하나였기 때문인데, 스냅샷에 이미 `breakdown`(자산군별 평가액)·`cost`(자산군별 원가)가 박제돼 있어 **스키마 변경 없이** 쪼갤 수 있었다.
+- **원인 키에 자산군 명시** ([asset-report.ts](../../src/lib/report/asset-report.ts)): `price:stock`/`price:crypto`/`price:realEstate`, `buy|sell:stock/crypto/realEstate`. 시세는 `Δbreakdown − Δcost`(주식은 평가손익의 환차익 제외), 신규투입은 `Δcost`로 산출한다. **`priceEffect`·`savingInvest` 총액은 건드리지 않고 그 안을 나누므로** 표시 합계 = `deltaNet` 항등식이 그대로 유지되고, 분해되지 않는 조각만 `rest`가 흡수한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 방향별로 `buy:stock`/`sell:stock`에 합산해 같은 라벨이 두 줄로 갈라지지 않게 했고, 투자 3종으로 설명되지 않는 원가 증감(현금 잔액 직접 수정)은 성격이 같은 `income`에 합산했다(구 설계대로 `rest`에 넣으면 "그 외"에 묻힌다). 시작 스냅샷이 레거시인 예측 모드는 자산군별 평가액이 없어 시세만 통합 `price`로 남는다.
+- **휴장일 억제를 주식으로 한정**: 종전엔 증시 휴장일 실시간 끝점에서 "시세" 전체를 "그 외"로 보냈는데, 코인은 24시간 거래·부동산은 직접 입력이라 **진짜 변동까지 묻히고 있었다** → `price:stock`에만 적용.
+- **표시 레이어 단일화**: 성적표가 인라인으로 복제하던 잔차 계산(+하드코딩 `10000`)을 제거하고 홈과 함께 `getAttributionItems` 하나만 쓰게 했다(임계값이 갈려 두 화면 합계가 어긋나는 것을 구조적으로 차단). 소비처가 0이던 `CAUSE_LABELS`를 제거하고 `causeShortLabel`을 라벨 단일 출처로 삼아 `label`·`sentence`가 여기서 파생되게 했으며, 3중 복제돼 있던 날짜 포맷을 `formatAttributionDate`로 승격했다. 홈 헤더의 도달 불가 폴백 분기와, 어디서도 import되지 않던 `last-visit-briefing.tsx`(홈 Hero로 통합된 잔재)도 함께 제거.
+- 회귀 테스트 4케이스 추가(자산군별 시세 분해, 코인·부동산 매수 분리, 직접 수정분 방향 합산, 휴장일 주식 한정 억제) + 표시 항목 합계 검증(`getAttributionItems`) 도입. **스키마·저장 키·공유 토큰·sync payload 무변경.**
+
 ## 2026-07-27
 
 ### 인증샷 → "자산 카드" 개편 — 명칭·색 체계·정보 구조·품질

@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-06-30
+> 마지막 업데이트: 2026-07-31 (원인분해 자산군별 분해 · OTP 포커스 훅)
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -142,17 +142,43 @@ todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
 실현차익은 `trade-utils.computeNewPosition`으로 이동평균 원가를 replay해 산출하며, 매수 로그·체결 환율 누락 시 현재 평단·환율로 폴백하고 `estimated: true`를 세운다.
 닫기 상태는 `STORAGE_KEYS.taxNotice` 단일 키(`{ dismissedMonth: "YYYY-MM" }`) — `backup-status.ts`와 동일한 기기 로컬 메타 패턴이라 `asset-storage.ts` keepKeys에 보존되고 sync payload에는 넣지 않는다(R14 핑퐁 방지).
 
-### report/asset-report.ts — 원인분해 집계 헬퍼 (모듈 내부)
+### report/asset-report.ts — 원인분해 집계 헬퍼
 
 ```typescript
+// 모듈 내부
 krwMul(currency, rates)                              // KRW 환산 배수 (JPY는 100엔당) — 원인분해 공용
 cashInflow(data, from, to, rates)                    // → { reflected, unreflected } 현금 순유입
 reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
-costFxRevaluation(data, prevFx, currFx)              // 외화 원가(주식·현금)의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
-isClosedForBothMarkets(dateStr)                      // 국내·해외 모두 휴장인 날짜인지 — 실시간 끝점(_isLive)의 시세 원인 억제 판정용
-getOrderedCauses(attr): AttributionCause[]           // export. topCauses+restCauses를 카테고리 고정 순서(시세→환율→매수→매도→저축→소득→대출→그외)로 정렬 — 연관 원인(매수·매도)이 절대값 크기와 무관하게 나란히 보이도록. formatAttributionSentence·getAttributionItems·asset-report-view가 공유
+costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
+fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure·stockFxShare 공용 단일 수식
+stockFxShare(data, rates)                            // → { USD, JPY } 0~1. 환율효과 중 주식 몫 안분 비율(현재 보유 기준 근사)
+isClosedForBothMarkets(dateStr)                      // 국내·해외 모두 휴장인 날짜인지 — 실시간 끝점(_isLive)의 **주식** 시세 원인 억제 판정용
+makeCause(key, amount): AttributionCause             // label=causeShortLabel·sentence=causeSentence 파생
+
+// export
+causeShortLabel(key, amount): string                 // 모든 라벨의 단일 출처(부호 방향 반영). label·sentence가 여기서 파생
+causeSentence(key, amount): string                   // 서술형 문장 (성적표용)
+getOrderedCauses(attr): AttributionCause[]           // topCauses+restCauses를 CAUSE_ORDER 고정 순서로 정렬
+getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 잔차("그 외") 병합까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
+formatAttributionSentence(attr): string | null       // 위 항목을 한 줄로 결합(스크린샷·폴백용)
+formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-MM→M월 (홈·성적표 공용)
 ```
-`resolveAttribution`이 Δ순자산을 `price/fx/saving/buy/sell/income/debt`로 분해할 때 쓴다. **`price`는 잔차**라 설명되지 않은 차이가 모두 시세로 흡수되므로, 새 원인을 추가할 때는 잔차에서 정확히 차감해 **표시 합계 = deltaNet 항등식**을 유지해야 한다(F-ACTIVITY 회귀 지점). 원인 나열 순서는 `getOrderedCauses`만 거치고, `topCauses[0]`(절대값 최대, `last-visit-briefing.tsx`의 한 줄 요약이 사용)의 선정 로직 자체는 그대로 둔다.
+
+`resolveAttribution`이 Δ순자산을 분해한다. **원인 키는 자산군까지 명시한다**:
+`price:stock|price:crypto|price:realEstate`(정밀) · `price`(예측 모드 통합) · `fx` · `buy:stock|sell:stock|buy:crypto|sell:crypto|buy:realEstate|sell:realEstate` · `income` · `debt` · `rest`.
+
+- **`priceEffect`는 잔차**다. 자산군별 시세는 스냅샷의 `breakdown`(평가액)−`cost`(원가) 델타로 산출하고, `priceEffect` **총액은 건드리지 않은 채** 그 안을 나눈다. 분해되지 않는 조각은 전부 `rest`가 흡수 → **표시 합계 = deltaNet 항등식** 유지(F-ACTIVITY 회귀 지점).
+- 신규 투입도 자산군별 `Δcost`로 쪼개 "매수/매도" 용어로 통일한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 **방향별로** `buy:stock`/`sell:stock`에 합산(같은 라벨 두 줄 방지). 투자 3종으로 설명되지 않는 원가 증감(=현금 잔액 직접 수정)은 `income`에 합산한다.
+- 휴장일 억제(`isClosedForBothMarkets`)는 **`price:stock`에만** 적용한다 — 코인은 24시간 거래, 부동산은 직접 입력이라 증시 휴장과 무관.
+- 뷰는 잔차를 직접 계산하지 말 것. `getAttributionItems` 하나만 거쳐야 두 화면의 임계값·합계가 갈리지 않는다.
+
+### hooks/use-otp-focus.ts — PIN(OTP) 입력 포커스 (iOS 키보드 대응)
+
+```typescript
+focusOtpFromGesture(el: HTMLInputElement | null): void   // 사용자 제스처 안에서 호출. 이미 포커스면 blur→focus로 전환 강제
+useOtpAutoFocus(ref, active: boolean): void              // 마우스 환경((pointer: fine))에서만 자동 포커스
+```
+iOS는 **제스처 밖 `focus()`로 키보드를 열지 않으면서 `activeElement`만** 잡는다 → 이후 탭해도 focus 전환이 없어 숫자패드가 영영 안 뜬다. 그래서 ① 터치 환경에선 자동 포커스를 하지 않고 ② OTP 래퍼의 `onPointerDown`에서 `focusOtpFromGesture`로 전환을 강제한다. **검증 중에도 input을 `disabled`로 만들지 말 것**(iOS가 blur시켜 키보드가 닫히고 돌아오지 않음 — ref 가드를 쓴다). 적용: `pwa-lock-screen.tsx`, `asset-data-context.tsx`(공유 복원 PIN).
 
 ### number-utils.ts
 

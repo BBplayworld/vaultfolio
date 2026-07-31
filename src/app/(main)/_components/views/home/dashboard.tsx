@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
 import { readExchangeHistory } from "@/lib/profit-utils";
-import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionSentence, getAttributionItems, CAUSE_DISPLAY_MIN, type AttributionDisplayItem } from "@/lib/report/asset-report";
+import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, CAUSE_DISPLAY_MIN, type AttributionDisplayItem } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -260,18 +260,14 @@ export function NetAssetSummaryBox({
                   <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
                 )}
                 {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·금액(손익색) 분리 */}
-                {change.causes.length > 0 ? (
-                  <ul className="w-full max-w-xs space-y-0.5">
-                    {change.causes.map((c) => (
-                      <li key={c.key} className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm text-foreground break-keep">{c.label}</span>
-                        <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  change.sentence && <p className="text-sm text-muted-foreground text-pretty">{change.sentence}</p>
-                )}
+                <ul className="w-full max-w-xs space-y-0.5">
+                  {change.causes.map((c) => (
+                    <li key={c.key} className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm text-foreground break-keep">{c.label}</span>
+                      <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
@@ -372,15 +368,8 @@ interface HeaderChange {
   negligible: boolean;      // |deltaNet| < 만원 → 원 단위 금액·원인 대신 "변동 없음" 표시
   label: string;            // "전일 대비" 또는 "지난 접속(M/D) 이후"
   estimated: boolean;
-  sentence: string | null;  // 최상위 원인 문장(스크린샷·폴백용)
+  sentence: string | null;  // 원인 전체를 한 줄로 결합(원인 유무 판정·스크린샷용)
   causes: AttributionDisplayItem[]; // 원인 리스트(항목별 색상 렌더)
-}
-
-// 비교 시작일 표기: YYYY-MM-DD → M/D, YYYY-MM → M월
-function fmtFromDate(d: string): string {
-  const parts = d.split("-");
-  if (parts.length >= 3) return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
-  return `${parseInt(parts[1])}월`;
 }
 
 // 헤더 통합 등락: 끝점을 실시간 현재값(buildLiveAttributionCurr)으로 잡아 Hero 순자산과 기준 일치.
@@ -409,7 +398,7 @@ function useHeaderNetChange(): HeaderChange | null {
     if (!attr) return null;
     const prevNet = summary.netAsset - attr.deltaNet;
     const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
-    const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${fmtFromDate(attr.fromDate)}) 이후`;
+    const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`;
     return {
       deltaNet: attr.deltaNet,
       pct,
