@@ -84,7 +84,9 @@ function KeypadKey({
       variant={variant}
       aria-label={label}
       className={cn(
-        "h-14 duration-75 select-none touch-manipulation [-webkit-tap-highlight-color:transparent]",
+        // touch-none: 세로 팬을 허용하면 iOS가 "탭 vs 스크롤"을 판별하느라 pointerdown을 늦춘다.
+        // 잠금화면은 스크롤할 것이 없으므로 모호성을 없애 즉시 발화시킨다.
+        "h-14 duration-50 select-none touch-none [-webkit-tap-highlight-color:transparent]",
         className,
       )}
       onPointerDown={() => { pressedAt.current = Date.now(); onPress(); }}
@@ -193,7 +195,8 @@ export function PwaLockScreen() {
           <span
             key={i}
             className={cn(
-              "size-3.5 rounded-full transition-colors duration-75",
+              // 전환 없음 — 누르는 즉시 채워져야 반응이 빠르게 읽힌다
+              "size-3.5 rounded-full",
               i < pin.length ? "bg-foreground" : "bg-muted-foreground/30",
             )}
           />
