@@ -172,13 +172,6 @@ formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-M
 - 휴장일 억제(`isClosedForBothMarkets`)는 **`price:stock`에만** 적용한다 — 코인은 24시간 거래, 부동산은 직접 입력이라 증시 휴장과 무관.
 - 뷰는 잔차를 직접 계산하지 말 것. `getAttributionItems` 하나만 거쳐야 두 화면의 임계값·합계가 갈리지 않는다.
 
-### hooks/use-otp-focus.ts — PIN(OTP) 입력 포커스 (iOS 키보드 대응)
-
-```typescript
-focusOtpFromGesture(el: HTMLInputElement | null): void   // 사용자 제스처 안에서 호출. 이미 포커스면 blur→focus로 전환 강제
-useOtpAutoFocus(ref, active: boolean): void              // 마우스 환경((pointer: fine))에서만 자동 포커스
-```
-iOS는 **제스처 밖 `focus()`로 키보드를 열지 않으면서 `activeElement`만** 잡는다 → 이후 탭해도 focus 전환이 없어 숫자패드가 영영 안 뜬다. 그래서 ① 터치 환경에선 자동 포커스를 하지 않고 ② OTP 래퍼의 `onPointerDown`에서 `focusOtpFromGesture`로 전환을 강제한다. **검증 중에도 input을 `disabled`로 만들지 말 것**(iOS가 blur시켜 키보드가 닫히고 돌아오지 않음 — ref 가드를 쓴다). 적용: `pwa-lock-screen.tsx`, `asset-data-context.tsx`(공유 복원 PIN).
 
 ### number-utils.ts
 

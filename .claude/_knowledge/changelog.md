@@ -6,12 +6,13 @@
 
 ## 2026-07-31
 
-### iOS PWA에서 PIN 숫자패드가 뜨지 않던 문제 수정 (issue-4.20)
+### 잠금화면 PIN을 자체 숫자패드로 전환 — 소프트 키보드 의존 제거 (issue-4.20)
 
-- **왜**: iOS PWA에서 잠금 화면의 PIN 입력을 눌러도 숫자패드가 나오려다 사라지고 화면이 튀는 현상이 반복됐다. 원인은 **제스처 밖 `focus()`**([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx) 마운트 후 `setTimeout(…,150)`) — iOS는 이 호출로 키보드를 열지 않으면서 `activeElement`만 잡아버려, 이후 사용자가 탭해도 focus 전환이 없어 키패드가 끝내 뜨지 않는다(탭마다 `input-otp`의 selectionchange 리스너가 캐럿만 리셋해 화면이 튄다). 두 번째 원인은 4자리 입력 순간의 **`disabled={checking}`** — iOS가 즉시 blur시켜 키보드를 닫고, 오입력 시 다시 제스처 밖 `focus()`라 복귀가 불가능했다.
-- **공용 훅 신설** ([use-otp-focus.ts](../../src/hooks/use-otp-focus.ts)): `useOtpAutoFocus`는 **마우스 환경(`(pointer: fine)`)에서만** 자동 포커스하고 터치는 사용자 탭에 맡긴다. `focusOtpFromGesture`는 OTP 래퍼의 `onPointerDown`에서 호출돼 이미 포커스된 경우 `blur()→focus()`로 전환을 강제한다(iOS에서 키패드가 뜨는 유일한 경로).
-- **잠금 화면 수정**: `disabled` 제거 → `checkingRef` 가드로 중복 검증만 차단(시각 피드백은 래퍼 `opacity`), 오입력 후 재포커스 호출 제거, `handlePinChange`의 stale closure(`useCallback([])` → `[unlockAndLoad]`) 정리. 오버레이도 중앙 정렬 → **상단 정렬 + `overflow-y-auto` + safe-area** 로 바꿔 키보드가 올라와도 입력칸이 가리지 않게 했다(fixed 오버레이는 iOS 키보드에 맞춰 밀리지 않는다).
-- **공유 복원 PIN**([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx))도 같은 앱 진입 경로라 동일 패턴 적용. 설정·설치흐름·공유메뉴의 PIN 3곳은 사용자 제스처로 열리는 다이얼로그라 이번 범위 밖.
+- **왜**: iOS PWA에서 잠금화면 PIN 입력을 누르면 숫자패드가 열리려다 닫히는 현상이 반복됐다. 같은 날 먼저 시도한 수정(`focus()` 개입)은 **오진이었고 증상을 간헐 → 고정 발생으로 악화시켰다**. 기록으로 남기는 실패 경로:
+  - 증상을 "자동 포커스가 미리 `activeElement`를 잡아 탭에 focus 전환이 없어 키패드가 아예 안 뜬다"로 진단하고, 터치 자동 포커스를 끄는 대신 `onPointerDown`에서 `blur()→focus()`로 전환을 강제하는 훅(`use-otp-focus.ts`)을 넣었다. **브라우저 기본 포커스 처리보다 먼저 `focus()`를 걸면** 키보드가 올라오며 레이아웃이 밀려 뒤이은 `click`이 36px 입력란 밖에 떨어지고 iOS가 blur시킨다. 이미 포커스된 분기의 `blur()→focus()`는 WKWebView가 같은 태스크의 dismiss를 우선해 역시 "열리려다 닫힘"이다. 함께 넣은 오버레이 `overflow-y-auto`는 `fixed inset-0`을 스크롤 컨테이너로 만들어 탭 도중 입력란을 이동시켜 이를 증폭했다.
+- **왜 표적 수정 대신 의존 제거인가**: 포커스를 훔치는 주체를 정적 분석으로 특정하지 못했다. 후보(`CloudSyncConnectDialog`의 Radix focus trap — `#sync=` 해시 필요, `PwaConnectPrompt` — trap 없음, `page.tsx` 하위 자동 open 다이얼로그 — standalone 잠금 시 미마운트)가 모두 이 케이스를 설명하지 못했고, iOS PWA는 devtools가 없어 더 좁힐 수 없었다. **원인이 무엇이든 성립하지 않게** 만드는 쪽을 택했다.
+- **자체 숫자패드** ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx)): `InputOTP`를 걷어내고 **포커스 가능한 입력 요소를 아예 두지 않는다**. 기존 `Button`(누름 `scale-[0.96]`·전환 내장) 3×4 그리드 + 4점 표시(`role="status"`), 물리 키보드는 `window` `keydown`(0~9·Backspace)으로 받아 자동 포커스가 필요 없다. 소프트 키보드를 호출하지 않으므로 포커스 강탈·present/dismiss 경합·포커스 줌이 구조적으로 불가능해지고, "키보드가 입력칸을 가린다"는 문제도 함께 사라져 오버레이 레이아웃을 원본(`justify-center`)으로 되돌렸다. 자동 제출은 `pin.length === 4`를 보는 별도 effect로 분리(상태 updater 안 검증은 StrictMode 이중 실행), `unlockAndLoad`는 비메모 context value에서 오므로 ref 경유.
+- **롤백**: `use-otp-focus.ts` 삭제, 공유 복원 PIN([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx))은 검증되지 않은 변경을 남기지 않도록 이전 상태로 복구. 설정·설치흐름·공유메뉴의 PIN 3곳은 사용자 제스처로 열리는 다이얼로그라 현행 `InputOTP` 유지 — 잠금화면과 입력 방식이 달라지지만 문제가 보고되지 않은 화면의 회귀 위험을 늘리지 않는 선택이다.
 
 ### 원인분해: 자산군별 시세·매수 분해 + 표시 레이어 단일화 (issue-4.20)
 

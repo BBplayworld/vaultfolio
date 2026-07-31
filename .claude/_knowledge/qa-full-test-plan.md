@@ -287,8 +287,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 설정 > 앱 잠금 설정 ON → 브라우저 새 탭/재접속 시 PIN 화면 즉시 노출, 4자리 입력 → 잠금 해제 → 대시보드 진입.
 - 👤 PIN 오류 1~2회: "비밀번호가 일치하지 않습니다" 문구. 3회+: "비밀번호를 다시 확인해주세요" 경고 노출.
 - 👤 설정 > 앱 잠금 설정 OFF → 현재 PIN 입력 후 비활성화, 이후 재접속 시 PIN 화면 미노출.
-- ⚙ **iOS 숫자패드 노출 규약(P1)** — [use-otp-focus.ts](../../src/hooks/use-otp-focus.ts) 참조. ① **터치 환경에서 자동 `focus()` 금지**(`useOtpAutoFocus`는 `(pointer: fine)`에서만) — iOS는 제스처 밖 focus로 키보드를 열지 않으면서 `activeElement`만 잡아, 이후 탭해도 focus 전환이 없어 숫자패드가 영영 안 뜬다. ② OTP 래퍼 `onPointerDown`에서 `focusOtpFromGesture`로 blur→focus 전환 강제. ③ **검증 중 `disabled` 금지**(ref 가드 사용) — disable하면 iOS가 blur시켜 키보드가 닫히고 제스처 밖 재포커스로는 복귀 못 한다. ④ 오입력 후 `focus()` 재호출 금지(포커스는 이미 유지됨). ⑤ 잠금 오버레이는 중앙 정렬이 아니라 상단 정렬 + `overflow-y-auto`(fixed 오버레이는 키보드에 맞춰 밀리지 않아 입력칸이 가린다). 같은 규약이 공유 복원 PIN([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx))에도 적용됨
-- 👤 **iOS PWA 실기기**: 앱 첫 실행 → PIN 슬롯 탭 → 숫자패드 즉시 노출 / 4자리 오입력 → 키패드 유지된 채 재입력 / 키보드 노출 시 슬롯 미가림. 데스크톱(마우스)은 종전처럼 자동 포커스
+- ⚙ **잠금화면은 소프트 키보드를 쓰지 않는다(P1 규약)** — 이 화면에는 **포커스 가능한 입력 요소를 두지 말 것**. 자체 숫자패드(`Button` 3×4 그리드) + 4점 표시(`role="status"`, 순수 표시용 `<span>`)로 입력받고, 물리 키보드는 `window` `keydown`(0~9·Backspace)으로 받는다. iOS standalone의 소프트 키보드는 포커스 강탈·present/dismiss 경합에 취약해 앱 코드로 결정론적 제어가 불가능하며(키패드가 열리려다 닫히는 반복), **`focus()`/`blur()` 개입과 오버레이 `overflow-y-auto` 스크롤 컨테이너화로 오히려 고정 회귀를 만든 이력이 있다**(2026-07-31). `InputOTP` 복귀·자동 포커스·tap-to-focus 도입 금지
+- ⚙ 자동 제출은 `pin.length === 4`를 보는 **별도 effect**로(상태 updater 안에서 검증하면 StrictMode 이중 실행). `checkingRef`로 중복 검증 차단하고, 검증 중엔 그리드에 `pointer-events-none opacity-60`만 준다. `unlockAndLoad`는 비메모 context value에서 와 식별자가 흔들리므로 **ref 경유**(deps 직접 참조 시 provider 리렌더마다 콜백 재생성)
+- 👤 **iOS PWA 실기기**: 앱 첫 실행 → 숫자 버튼 탭 → 점이 채워짐. **소프트 키보드가 전혀 뜨지 않고** 화면 흔들림·줌 없음(핵심 수용 기준) / 4자리 오입력 → 점 초기화 후 즉시 재입력 / 데스크톱은 물리 키보드·마우스 클릭 모두 동작
 - 엣지: PWA standalone에서도 동일 동작(세션 분리 → 앱 재실행마다 PIN 요구)
 
 ### F-MISC. 닉네임·테마·AI 프롬프트·환율 입력

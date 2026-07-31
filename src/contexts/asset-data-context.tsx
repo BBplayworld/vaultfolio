@@ -13,7 +13,6 @@ import { getCoinCacheSlot } from "@/lib/coin-cache-slot";
 import { pruneTransactions } from "@/lib/trade-utils";
 import { pruneCashTransactions } from "@/lib/cash-tx-utils";
 import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
-import { focusOtpFromGesture, useOtpAutoFocus } from "@/hooks/use-otp-focus";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
 import { isInAppGateActive } from "@/lib/pwa/detect-browser";
@@ -312,7 +311,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [inputPin, setInputPin] = useState("");
   const otpRef = useRef<HTMLInputElement>(null);
 
-  useOtpAutoFocus(otpRef, showPinPrompt);
+  useEffect(() => {
+    if (showPinPrompt) {
+      setTimeout(() => otpRef.current?.focus(), 150);
+    }
+  }, [showPinPrompt]);
 
   const INITIAL_SYNC_DELAY_MS = 1_000;
 
@@ -994,8 +997,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       window.location.replace("/invalid-access");
     } else {
       notify.error(MSG.PIN_MISMATCH);
-      // 재포커스 호출 금지 — iOS에서 오히려 키보드가 닫힌다(포커스는 유지된 상태)
       setInputPin("");
+      setTimeout(() => otpRef.current?.focus(), 100);
     }
   }, [pendingToken, inputPin, applySharedData]);
 
@@ -1746,22 +1749,19 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
                 <Lock className="size-3.5 text-primary" />
                 PIN 번호 입력 (4자리 숫자)
               </Label>
-              {/* 탭은 반드시 제스처 안에서 포커스를 전환시킨다 — iOS에서 숫자패드가 뜨는 유일한 경로 */}
-              <div onPointerDown={() => focusOtpFromGesture(otpRef.current)}>
-                <InputOTP
-                  ref={otpRef}
-                  maxLength={4}
-                  value={inputPin}
-                  onChange={(value) => setInputPin(value)}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
+              <InputOTP
+                ref={otpRef}
+                maxLength={4}
+                value={inputPin}
+                onChange={(value) => setInputPin(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
           </div>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

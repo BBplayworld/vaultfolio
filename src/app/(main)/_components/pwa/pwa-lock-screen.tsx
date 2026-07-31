@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ShieldCheck, AlertTriangle } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { ShieldCheck, AlertTriangle, Delete } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { focusOtpFromGesture, useOtpAutoFocus } from "@/hooks/use-otp-focus";
+import { cn } from "@/lib/utils";
 
 const AUTH_ENABLED_KEY = "secretasset_pwa_auth_enabled";
 const AUTH_PIN_HASH_KEY = "secretasset_pwa_auth_pin_hash";
@@ -55,6 +55,18 @@ export async function verifyPwaAuthPin(pin: string): Promise<boolean> {
   return inputHash === storedHash;
 }
 
+const PIN_LENGTH = 4;
+const KEYPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+
+/**
+ * 앱 잠금 화면.
+ *
+ * **소프트 키보드를 쓰지 않는다 — 포커스 가능한 입력 요소를 두지 않는 것이 이 화면의 규약이다.**
+ * iOS standalone에서 소프트 키보드는 포커스 강탈·present/dismiss 경합에 취약해 앱 코드로
+ * 결정론적 제어가 불가능했고(키패드가 열리려다 닫히는 반복), `focus()`/`blur()` 개입과
+ * 오버레이 스크롤 컨테이너화로 오히려 고정 회귀를 만든 이력이 있다.
+ * 자체 숫자패드는 원인이 무엇이든 그 경합 자체가 성립하지 않게 한다. 물리 키보드는 window keydown으로 받는다.
+ */
 export function PwaLockScreen() {
   const { unlockAndLoad } = useAssetData();
   const [locked, setLocked] = useState(false);
@@ -62,9 +74,11 @@ export function PwaLockScreen() {
   const [failCount, setFailCount] = useState(0);
   const [checking, setChecking] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const otpRef = useRef<HTMLInputElement>(null);
-  // 검증 중 중복 실행 가드 — input을 disabled로 막으면 iOS가 blur시켜 키보드가 닫히고 돌아오지 않는다
+  // 검증 중 중복 실행 가드
   const checkingRef = useRef(false);
+  // unlockAndLoad는 비메모 context value에서 와 식별자가 흔들린다 → deps에 넣지 않고 최신 참조만 유지
+  const unlockRef = useRef(unlockAndLoad);
+  useEffect(() => { unlockRef.current = unlockAndLoad; }, [unlockAndLoad]);
 
   useEffect(() => {
     setMounted(true);
@@ -79,39 +93,52 @@ export function PwaLockScreen() {
     }
   }, []);
 
-  useOtpAutoFocus(otpRef, locked);
+  const push = useCallback((d: string) => {
+    if (checkingRef.current) return;
+    setPin((p) => (p.length >= PIN_LENGTH ? p : p + d));
+  }, []);
 
-  const handlePinChange = useCallback(async (value: string) => {
-    setPin(value);
-    if (value.length !== 4 || checkingRef.current) return;
+  const pop = useCallback(() => {
+    if (checkingRef.current) return;
+    setPin((p) => p.slice(0, -1));
+  }, []);
 
+  // 자동 제출은 별도 effect로 — 상태 updater 안에서 검증하면 StrictMode 이중 실행에 노출된다
+  useEffect(() => {
+    if (pin.length !== PIN_LENGTH || checkingRef.current) return;
     checkingRef.current = true;
     setChecking(true);
-    const ok = await verifyPwaAuthPin(value);
-    setChecking(false);
-    checkingRef.current = false;
+    void (async () => {
+      const ok = await verifyPwaAuthPin(pin);
+      setChecking(false);
+      checkingRef.current = false;
+      if (ok) {
+        sessionStorage.setItem(SESSION_AUTH_KEY, "true");
+        window.dispatchEvent(new Event(PWA_UNLOCKED_EVENT));
+        setLocked(false);
+        void unlockRef.current();
+      } else {
+        setFailCount((c) => c + 1);
+        setPin("");
+      }
+    })();
+  }, [pin]);
 
-    if (ok) {
-      sessionStorage.setItem(SESSION_AUTH_KEY, "true");
-      window.dispatchEvent(new Event(PWA_UNLOCKED_EVENT));
-      setLocked(false);
-      void unlockAndLoad();
-    } else {
-      setFailCount((c) => c + 1);
-      // 입력만 비운다 — 재포커스를 호출하면 iOS에서 오히려 키보드가 닫힌다(포커스는 유지된 상태)
-      setPin("");
-    }
-  }, [unlockAndLoad]);
+  // 물리 키보드(데스크톱·외장) — 포커스 대상이 없으므로 window에서 직접 받는다
+  useEffect(() => {
+    if (!locked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") push(e.key);
+      else if (e.key === "Backspace") pop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [locked, push, pop]);
 
   if (!mounted || !locked) return null;
 
   return (
-    // 키보드가 올라와도 PIN 입력이 가리지 않도록 중앙 정렬 대신 상단 정렬 + 스크롤 허용
-    // (iOS standalone은 fixed 오버레이를 키보드에 맞춰 밀어주지 않는다). 상태바는 black-translucent라 safe-area 확보.
-    <div
-      className="fixed inset-0 bg-background flex flex-col items-center justify-start overflow-y-auto gap-6 px-6 pb-8 pt-[max(env(safe-area-inset-top),15vh)]"
-      style={{ zIndex: Z_LAYER.lock }}
-    >
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-5 px-6" style={{ zIndex: Z_LAYER.lock }}>
       <div className="flex flex-col items-center gap-3">
         <div
           className="flex items-center justify-center size-16 rounded-2xl text-white"
@@ -123,16 +150,51 @@ export function PwaLockScreen() {
         <p className="text-sm text-muted-foreground">비밀번호를 입력해주세요</p>
       </div>
 
-      {/* 탭은 반드시 제스처 안에서 포커스를 전환시킨다 — iOS에서 숫자패드가 뜨는 유일한 경로 */}
-      <div onPointerDown={() => focusOtpFromGesture(otpRef.current)} className={checking ? "opacity-60" : undefined}>
-        <InputOTP ref={otpRef} maxLength={4} value={pin} onChange={handlePinChange}>
-          <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-            <InputOTPSlot index={3} />
-          </InputOTPGroup>
-        </InputOTP>
+      {/* 입력 자릿수 표시 — 값을 담는 input이 아니라 순수 표시용 */}
+      <div className="flex items-center gap-3" role="status" aria-label={`${pin.length}자리 입력됨`}>
+        {Array.from({ length: PIN_LENGTH }, (_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "size-3.5 rounded-full transition-colors duration-150",
+              i < pin.length ? "bg-foreground" : "bg-muted-foreground/30",
+            )}
+          />
+        ))}
+      </div>
+
+      <div className={cn("grid grid-cols-3 gap-3 w-full max-w-[260px]", checking && "pointer-events-none opacity-60")}>
+        {KEYPAD_DIGITS.map((d) => (
+          <Button
+            key={d}
+            type="button"
+            variant="secondary"
+            className="h-14 text-xl font-semibold tabular-nums"
+            aria-label={`숫자 ${d}`}
+            onClick={() => push(d)}
+          >
+            {d}
+          </Button>
+        ))}
+        <span />
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-14 text-xl font-semibold tabular-nums"
+          aria-label="숫자 0"
+          onClick={() => push("0")}
+        >
+          0
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-14"
+          aria-label="한 자리 지우기"
+          onClick={pop}
+        >
+          <Delete className="size-5" />
+        </Button>
       </div>
 
       {failCount >= 3 && (
