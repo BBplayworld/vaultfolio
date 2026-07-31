@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { ShieldCheck, AlertTriangle, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
@@ -57,6 +57,43 @@ export async function verifyPwaAuthPin(pin: string): Promise<boolean> {
 
 const PIN_LENGTH = 4;
 const KEYPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+
+/**
+ * 키패드 키 — 누르는 순간(pointerdown) 반영한다.
+ * `click`은 pointerup 이후에 오므로 손가락을 뗄 때 입력돼 굼뜨게 느껴진다.
+ * 접근성을 위해 click도 받되, 키보드·보조기술 활성화(detail===0)이면서
+ * 직전 pointerdown이 없을 때만 통과시켜 중복 입력을 막는다.
+ */
+function KeypadKey({
+  label,
+  onPress,
+  variant = "secondary",
+  className,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  variant?: "secondary" | "ghost";
+  className?: string;
+  children: ReactNode;
+}) {
+  const pressedAt = useRef(0);
+  return (
+    <Button
+      type="button"
+      variant={variant}
+      aria-label={label}
+      className={cn(
+        "h-14 duration-75 select-none touch-manipulation [-webkit-tap-highlight-color:transparent]",
+        className,
+      )}
+      onPointerDown={() => { pressedAt.current = Date.now(); onPress(); }}
+      onClick={(e) => { if (e.detail === 0 && Date.now() - pressedAt.current > 500) onPress(); }}
+    >
+      {children}
+    </Button>
+  );
+}
 
 /**
  * 앱 잠금 화면.
@@ -156,7 +193,7 @@ export function PwaLockScreen() {
           <span
             key={i}
             className={cn(
-              "size-3.5 rounded-full transition-colors duration-150",
+              "size-3.5 rounded-full transition-colors duration-75",
               i < pin.length ? "bg-foreground" : "bg-muted-foreground/30",
             )}
           />
@@ -165,36 +202,17 @@ export function PwaLockScreen() {
 
       <div className={cn("grid grid-cols-3 gap-3 w-full max-w-[260px]", checking && "pointer-events-none opacity-60")}>
         {KEYPAD_DIGITS.map((d) => (
-          <Button
-            key={d}
-            type="button"
-            variant="secondary"
-            className="h-14 text-xl font-semibold tabular-nums"
-            aria-label={`숫자 ${d}`}
-            onClick={() => push(d)}
-          >
+          <KeypadKey key={d} label={`숫자 ${d}`} className="text-xl font-semibold tabular-nums" onPress={() => push(d)}>
             {d}
-          </Button>
+          </KeypadKey>
         ))}
         <span />
-        <Button
-          type="button"
-          variant="secondary"
-          className="h-14 text-xl font-semibold tabular-nums"
-          aria-label="숫자 0"
-          onClick={() => push("0")}
-        >
+        <KeypadKey label="숫자 0" className="text-xl font-semibold tabular-nums" onPress={() => push("0")}>
           0
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-14"
-          aria-label="한 자리 지우기"
-          onClick={pop}
-        >
+        </KeypadKey>
+        <KeypadKey label="한 자리 지우기" variant="ghost" onPress={pop}>
           <Delete className="size-5" />
-        </Button>
+        </KeypadKey>
       </div>
 
       {failCount >= 3 && (
