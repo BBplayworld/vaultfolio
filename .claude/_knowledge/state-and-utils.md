@@ -1,6 +1,6 @@
 # 상태 관리 & 유틸 함수 참조
 
-> 마지막 업데이트: 2026-07-31 (원인분해 자산군별 분해 · OTP 포커스 훅)
+> 마지막 업데이트: 2026-08-01 (원인분해 income/cash 분리·deposit 신설·기간 하이브리드 합성)
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
@@ -153,26 +153,55 @@ costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외�
 fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
 byDateThenDaily(a, b)                                // 시계열 포인트 정렬 — 같은 날짜면 daily 우선(monthly보다 뒤) → 시작점이 daily로 잡힌다
 makeCause(key, amount): AttributionCause             // label=causeShortLabel·sentence=causeSentence 파생
+isFullyEnriched(p): boolean                          // breakdown·fx·fxBase·cost 전부 보유 — bothEnriched 판정과 하이브리드 mid 탐색이 공유하는 단일 술어
+yearlyAnchorPoints(assetData)                        // yearlyNetAssets → YYYY-12-31 앵커 포인트(netAsset만, 항상 예측 경로)
+mergeAttributions(older, newer)                      // 두 PeriodAttribution의 effects를 key별 합산 후 pickTopCauses 재실행 — 하이브리드 구간 합성
 
 // export
 causeShortLabel(key, amount): string                 // 모든 라벨의 단일 출처(부호 방향 반영). label·sentence가 여기서 파생
 causeSentence(key, amount): string                   // 서술형 문장 (성적표용)
 getOrderedCauses(attr): AttributionCause[]           // topCauses+restCauses를 CAUSE_ORDER 고정 순서로 정렬
-getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 임계값 미만 잔차 흡수까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
+getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 임계값 미만 잔차 흡수(부호 일치 확인)까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
 formatAttributionSentence(attr): string | null       // 위 항목을 한 줄로 결합(스크린샷·폴백용)
 formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-MM→M월 (홈·성적표 공용)
 ```
 
 `resolveAttribution`이 Δ순자산을 분해한다. **원인 키는 자산군까지 명시한다**:
-`price:stock|price:crypto|price:realEstate`(정밀) · `price`(예측 모드 통합) · `fx` · `buy:stock|sell:stock|buy:crypto|sell:crypto|buy:realEstate|sell:realEstate` · `income` · `debt`.
+`price:stock|price:crypto|price:realEstate`(정밀) · `price`(예측 모드 통합) · `fx` · `buy:stock|sell:stock|buy:crypto|sell:crypto|buy:realEstate|sell:realEstate` · `income` · `cash` · `deposit` · `debt`.
 
 - **"그 외"(`rest`) 범주는 없다.** 순자산 변동의 원인은 시세·환율·자산 유입/유출뿐이므로 잔차 범주를 두지 않는다. 새 원인을 추가할 때 "설명 안 되는 조각은 rest로" 식의 폴백을 되살리지 말 것.
+- **`income`과 `cash`는 서로 다르다(2026-08 분리, P1 회귀 수정)** — `income` = `cashTransactions`에 **실제로 기록된** 입출금만(`incomeEffect`). `cash` = 기록으로 설명되지 않는 현금 잔액의 실측 변동. 라벨(`causeShortLabel`)은 "현금 잔액 증가/감소"로 사건을 단정하지 않지만, **서술형 문장(`causeSentence`)은 "현금 잔액 직접 수정으로 ~ 추정돼요"** — 실사례 디버깅(`scripts/debug-attribution.js` 매일 타임라인 대조) 결과 대부분 계좌 잔액을 입출금 기록 없이 직접 수정한 경우였음을 확인해 반영. 단정("~때문이에요")이 아니라 "추정돼요"로 남겨 다른 원인(계좌 삭제 등) 가능성을 열어둔다. **종전엔 `income = incomeEffect + dCostCash`로 합쳐 방출해 `incomeEffect`가 대수적으로 완전히 소거됐다**(기록을 넣든 안 넣든 표시 금액이 같았다 — "인출·지출 −480만원"이 거래 기록 0건인데 표시된 실제 회귀). 두 키로 나눠 방출하면 항등식은 그대로 유지되면서 기록 여부가 실제로 반영된다.
+- **`deposit`(임차보증금 증감, 2026-08 신설)** — `netAsset = totalValue − loans − tenantDeposit`인데 `SnapshotBreakdown`에 `tenantDeposit`이 없으면 그 변동이 통째로 `priceResidual`(→ 현금 잔차)로 샌다. `breakdown.tenantDeposit`(optional, v4)이 있는 스냅샷끼리만 분리 가능 — 과거 스냅샷(필드 부재)은 여전히 잔차로 흡수된다. debt와 동일 부호 규약(증가=음수, 반환=양수).
 - **`priceEffect`는 잔차**다. 자산군별 시세는 스냅샷의 `breakdown`(평가액)−`cost`(원가) 델타로 산출하고, `priceEffect` **총액은 건드리지 않은 채** 그 안을 나눈다.
 - 환율효과의 **주식 몫 = `fxEffect − costFx.cash`**(현금 몫을 정확히 계산해 빼는 방식) — 보유 비율 안분 근사를 쓰면 오차가 잔차로 남는다. 이 정의 덕에 자산군별 시세의 합 = `priceEffect`가 성립한다.
-- 스냅샷의 `netAsset`과 `breakdown` 합이 어긋날 때만 남는 `priceResidual`은 **`dCostCash`(→`income`)에 합산**한다 — 성격이 현금성 변동이고, 이 항이 **표시 합계 = deltaNet 항등식**을 무조건 보장한다(F-ACTIVITY 회귀 지점).
-- 신규 투입도 자산군별 `Δcost`로 쪼개 "매수/매도" 용어로 통일한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 **방향별로** `buy:stock`/`sell:stock`에 합산(같은 라벨 두 줄 방지). 투자 3종으로 설명되지 않는 원가 증감(=현금 잔액 직접 수정)은 `income`에 합산한다.
+- 스냅샷의 `netAsset`과 `breakdown` 합이 어긋날 때만 남는 `priceResidual`은 `depositEffect`를 뺀 뒤 **`dCostCash`(→`cash`, `income`이 아니다)에 합산**한다 — 이 항이 **표시 합계 = deltaNet 항등식**을 무조건 보장한다(F-ACTIVITY 회귀 지점).
+- 신규 투입도 자산군별 `Δcost`로 쪼개 "매수/매도" 용어로 통일한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 **방향별로** `buy:stock`/`sell:stock`에 합산(같은 라벨 두 줄 방지). 투자 3종+임차보증금으로 설명되지 않는 원가 증감(=현금 잔액 직접 수정)은 `cash`에 합산한다.
 - **휴장 여부로 시세 원인을 억제하지 않는다.** 해외 종가는 KST 화~토 새벽에, 국내는 평일에 갱신되므로 월~토는 매일 주식 변동이 실재한다(일요일만 없고, 그날은 금액이 임계값 미만이라 자동으로 안 보인다).
+- **잔차 흡수는 부호가 같은 원인에만 붙는다**(`getAttributionItems`, 2026-08 안전장치) — 임계값 미만 잔차 합(residual)을 절대값 최대 원인에 얹되, `residual`과 부호가 다른 원인에는 얹지 않는다. 방향 고정 라벨(`buy:stock` 등)에 반대 부호 잔차가 붙으면 "주식 매수로 −3만원 늘었어요" 같은 모순 문장이 나오기 때문. 부호가 맞는 원인이 하나도 없으면 `cash`로 보낸다(없으면 신설).
+
+### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
+
+기간별 특수 처리를 두지 않는다. **네 기간 모두 같은 코드 경로**를 타고, 기간마다 다른 것은 시작일(`targetStr`) 계산뿐이다. 규칙: **실측 스냅샷이 있는 구간은 실측으로 분해하고, 그 이전의 부족한 구간만 예측으로 채운다.**
+
+```
+1. targetStr 계산                     ← 기간별로 다른 유일한 부분
+2. prevOld = targetStr 이하 최신 포인트, 없으면 가장 오래된 포인트로 폴백
+   (computeAttributionSince의 `?? candidates[0]` 패턴과 동일 원칙 — "기록 없음" 대신 가진 만큼 보여준다)
+3. prevOld가 이미 isFullyEnriched()면 mid를 찾지 않는다(전체 실측, 쪼갤 이유 없음) — **필수 가드**
+4. prevOld가 예측(레거시)일 때만 mid = (prevOld, curr) 구간에서 isFullyEnriched()를 만족하는 가장 오래된 daily
+5. mid 없음 → 단일 구간(resolveAttribution 1회, 종전과 완전히 동일)
+6. mid 있음 → (prevOld,mid] 예측 + (mid,curr] 실측을 각각 계산해 mergeAttributions로 합성
+```
+- `isFullyEnriched(p)` = `!!(p.breakdown && p.fx && p.fxBase && p.cost)` — `resolveAttribution`의 `bothEnriched` 판정과 **같은 술어**를 공유해야 실측/예측 경계가 어긋나지 않는다.
+- **3번 가드 누락 시 회귀(2026-08 확인)**: `prevOld`가 이미 실측인데도(예: 1주는 daily 30일 창 안이라 거의 항상 실측) `mid`를 무조건 찾으면, 사이에 있는 아무 enriched daily나 붙잡아 불필요하게 두 구간으로 쪼갠다. 이때 `mergeAttributions`가 `older.estimated`를 확인하지 않고 무조건 `estimatedUntil`을 채우면(과거엔 그랬음), 전부 실측인데 "그 날짜 이전은 추정치" 배지가 근거 없이 붙는다. `mergeAttributions`는 방어적으로 **`older.estimated`가 실제 `true`일 때만** `estimatedUntil`을 채우도록 되어 있지만, 3번 가드가 없으면 애초에 실측끼리도 쪼개져 불필요한 연산과 혼란을 만든다 — 두 방어 모두 유지해야 한다.
+- `mid`는 **daily만** 허용(monthly 제외) — monthly의 `_date`는 월말로 강제되는데 값 시점은 그 달 마지막 접속일이라 최대 30일 어긋나고, 그 사이 거래·입출금이 flow 윈도우에서 누락된다.
+- `yearlyAnchorPoints(assetData)` — `assetData.yearlyNetAssets`(연도별 종가 순자산, netAsset만)를 `YYYY-12-31` 앵커로 승격해 후보 풀에 추가. enrich가 없어 항상 예측 경로로만 쓰이지만, daily(30일 롤링)·monthly(올해분만)가 못 미치는 먼 과거에서도 "기록 없음" 대신 예측 시작점을 잡을 수 있게 한다.
+- `mergeAttributions(older, newer)` — 두 `PeriodAttribution`의 `effects`(key별 raw 벡터, `pickTopCauses` 호출 직전 값)를 key별로 합산한 뒤 `pickTopCauses`를 **1회만** 다시 돌려 표시용 top/rest를 재선정한다. `deltaNet`·집계 필드는 단순 합(텔레스코핑) — 합계=deltaNet 항등식은 자동 유지.
+- `estimated: boolean` → 전체 구간이 예측일 때만 `true`(하위호환). 부분예측은 **`estimatedUntil?: string`**(이 날짜 **이전**만 예측)으로 표현 — `estimated===false`이면서 `estimatedUntil`이 있으면 "일부 예측" 배지.
+- `PeriodAttribution.effects`는 `pickTopCauses`가 버리지 않고 반환하는 key별 raw 벡터 — 하이브리드 합성의 전제(합산 후 재선정 가능하게 하는 유일한 이유).
+- `computeAttributionSince`(홈 헤더, "지난 접속 이후")는 **하이브리드 대상이 아니다** — 기존 `?? candidates[0]` 폴백만 유지, 단일 `resolveAttribution` 호출 그대로.
 - 뷰는 잔차를 직접 계산하지 말 것. `getAttributionItems` 하나만 거쳐야 두 화면의 임계값·합계가 갈리지 않는다.
+- **`cashRoundTrip`(2026-08 신설)** — `resolveAttribution`은 두 끝점만 비교하므로, 기간 중 현금이 크게 올랐다가 순변화 없이 되돌아오면(왕복) `cash` 원인 자체가 사라진다("1주엔 보이는데 1개월엔 왜 안 보이냐" 혼란의 원인). `detectCashRoundTrip`이 실측 daily 구간에서 baseline 대비 최대 이탈폭을 찾아 `{peakAmount, peakDate}`로 `PeriodAttribution.cashRoundTrip`에 붙인다(순변화가 최고 이탈폭의 절반 이상이면 "왕복"으로 보기 어려워 생략). `cash`만 대상 — 시세는 상시 변동이 정상이라 일반화하면 노이즈. `computePeriodAttribution`(성적표 기간 선택기)에만 적용, `computeAttributionSince`(홈)는 범위 밖.
 
 
 ### pwa/app-lock.ts — 앱 잠금(PIN) 상태 **단일 소스**

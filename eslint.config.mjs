@@ -16,8 +16,8 @@ const compat = new FlatCompat({
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
-  // ".claude/": 훅·스킬 스크립트는 tsconfig project 밖이라 typed-lint가 파싱 에러를 낸다("*.mjs"는 루트만 매칭)
-  { ignores: [".github/", ".husky/", ".claude/", "node_modules/", ".next/", "src/components/ui", "*.config.ts", "*.mjs", "public/sw.js"] },
+  // ".claude/"·"scripts/": 훅·개발용 디버깅 스크립트는 tsconfig project 밖이라 typed-lint가 파싱 에러를 낸다("*.mjs"는 루트만 매칭)
+  { ignores: [".github/", ".husky/", ".claude/", "scripts/", "node_modules/", ".next/", "src/components/ui", "*.config.ts", "*.mjs", "public/sw.js"] },
   {
     languageOptions: {
       globals: globals.browser,

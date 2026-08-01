@@ -712,7 +712,7 @@ export function AssetReportView() {
                   <InfoHint summary="순자산 변화를 자산별 시세·환율·매수/매도·소득·대출 원인으로 나눠 큰 것만 보여드려요.">
                     <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">주식·코인·부동산 시세 · 환율 · 자산별 매수/매도 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
                     <p><span className="font-semibold text-foreground">주식 매수·매도</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 거래내역 없이 수량·평단을 직접 수정한 분은 같은 자산의 매수·매도에 합쳐집니다.</p>
-                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 하나로 표시됩니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
+                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 하나로 표시됩니다. <span className="font-semibold text-foreground">&quot;일부 예측&quot;</span>은 기간 앞부분만 상세가 없어 그 구간만 추정하고, 상세가 쌓인 이후 구간은 실측으로 정밀 분해해 합친 것입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
                   </InfoHint>
                 </SectionHeader>
                 <InlineSelector
@@ -733,6 +733,9 @@ export function AssetReportView() {
                   <p className={`${CAPTION} text-pretty tabular-nums`}>
                     {attribution.fromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
                     {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
+                    {!attribution.estimated && attribution.estimatedUntil && (
+                      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">일부 예측</span>
+                    )}
                   </p>
                   {/* 주 원인과 나머지 원인을 같은 목록으로 — 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
                       홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
@@ -748,6 +751,16 @@ export function AssetReportView() {
                   {attribution.estimated && (
                     <p className={`${CAPTION} text-pretty`}>
                       과거 구간은 현재 자산의 매수일·대출일 기반 예측치예요. 지금부터 쌓이는 기록은 실측으로 분해됩니다.
+                    </p>
+                  )}
+                  {!attribution.estimated && attribution.estimatedUntil && (
+                    <p className={`${CAPTION} text-pretty`}>
+                      {formatAttributionDate(attribution.estimatedUntil)} 이전 구간은 매수일·대출일 기반 추정치이고, 그 이후는 실제 기록으로 분해했어요.
+                    </p>
+                  )}
+                  {attribution.cashRoundTrip && (
+                    <p className={`${CAPTION} text-pretty`}>
+                      {formatAttributionDate(attribution.cashRoundTrip.peakDate)}에 현금 잔액이 일시적으로 최대 {Math.abs(Math.round(attribution.cashRoundTrip.peakAmount / 10000)).toLocaleString()}만원까지 움직였다가 되돌아와 순변화에는 반영되지 않았어요.
                     </p>
                   )}
                 </div>

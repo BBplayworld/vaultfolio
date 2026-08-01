@@ -188,6 +188,10 @@ export interface SnapshotBreakdown {
   crypto: number;
   cash: number;
   loans: number; // 대출 잔액(부채)
+  // v4(optional, 하위호환): netAsset은 임차보증금을 차감해 산출되는데(computeNetAsset) 이 필드가
+  // 없으면 breakdown 합만으로는 netAsset을 복원할 수 없어 그 차액이 원인분해 잔차로 흘러간다.
+  // 과거 스냅샷(필드 부재)은 여전히 잔차 처리된다 — 소급 불가.
+  tenantDeposit?: number;
 }
 export interface SnapshotCost {
   total: number;      // 총 투입원가 (현금은 원금=현재가로 취급)

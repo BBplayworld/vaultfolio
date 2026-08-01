@@ -98,13 +98,15 @@ export type AttributionPeriod = "1w" | "1m" | "3m" | "ytd";
 // 원인 키 — 시세·매수/매도는 자산군까지 명시한다("시세 상승"만으로는 주식인지 코인인지 알 수 없음).
 // "price"(자산군 없는 통합 시세)는 시작 스냅샷이 레거시라 자산군 분해가 불가능한 예측 모드 전용.
 // 순자산 변동의 원인은 시세·환율·자산 유입/유출뿐이므로 "그 외"(잔차) 범주는 두지 않는다.
+// "income"과 "cash"는 서로 다른 것이다 — income은 cashTransactions에 실제로 기록된 입출금만,
+// cash는 기록으로 설명되지 않는 현금 잔액의 실측 변동(직접 잔액 수정 등, 사건을 단정하지 않음).
 export type AttributionCauseKey =
   | "price" | "price:stock" | "price:crypto" | "price:realEstate"
   | "fx"
   | "buy:stock" | "sell:stock"
   | "buy:crypto" | "sell:crypto"
   | "buy:realEstate" | "sell:realEstate"
-  | "income" | "debt";
+  | "income" | "cash" | "deposit" | "debt";
 
 export interface AttributionCause {
   key: AttributionCauseKey;
@@ -122,16 +124,26 @@ export interface PeriodAttribution {
   savingEffect: number;  // 새로 넣은 자산 중 거래내역으로 설명되지 않는 잔여 (직접 입력 수정·코인·부동산 매수 등)
   buyEffect: number;     // 기간 내 반영된 주식 매수 체결액 (KRW 환산)
   sellEffect: number;    // 기간 내 반영된 주식 매도 체결액 (음수)
-  // 현금 순유입 (기간 내 입금−출금, 월급·목돈 등). **반영된 기록만** — 미반영(소급) 기록은
-  // 잔액을 건드리지 않으므로 제외하고, 실제 잔액 증가는 dCostCash를 거쳐 income으로 귀속된다.
+  // 현금 순유입 (기간 내 입금−출금, 월급·목돈 등). **반영된 기록만** — cashTransactions에 실제
+  // 기록이 없으면 0이다. 기록 없이 잔액이 변한 부분은 별도 "cash" 원인으로 분리된다.
   incomeEffect: number;
   debtEffect: number;    // 부채 증감 (−Δ대출: 상환=+, 증가=−)
   // 시작 스냅샷이 v2 미만 → 예측 분해: Δ순자산·과거 순자산은 실측(스냅샷) 그대로 쓰되,
   // 저축·부채는 현재 자산 정보의 매수일·대출일로, 환율은 환율 이력 + 현재 외화노출로 추정
   estimated: boolean;
+  // 하이브리드 구간 합성 시: 이 날짜 **이전** 구간만 예측이고 이후는 실측. undefined=전체 실측,
+  // toDate와 같으면 전체 예측(구 estimated===true와 동일 의미). 뷰의 "일부 예측" 배지가 이 필드를 쓴다.
+  estimatedUntil?: string;
+  // pickTopCauses에 넘긴 key별 raw 효과 벡터(top/rest 분류 전) — 하이브리드 구간 합성이
+  // key별로 합산할 수 있도록 버리지 않고 보존한다.
+  effects: { key: AttributionCauseKey; amount: number }[];
   topCauses: AttributionCause[]; // 주요 원인 1~2개
   restEffect: number;    // topCauses 외 나머지 합 (표시 합계 검증용)
   restCauses: AttributionCause[]; // topCauses 외 원인 중 표시 임계값 이상인 것들 (환율·부채 등)
+  // 기간 중 현금 잔액이 크게 움직였다가 순변화 없이(또는 미미하게) 되돌아온 경우 — resolveAttribution은
+  // 두 끝점만 비교해 "cash" 순변화만 보므로, 왕복은 net에 안 잡혀 원인 목록에서 통째로 사라진다.
+  // 없으면(왕복이 없거나 daily 세부가 없는 예측 구간) undefined.
+  cashRoundTrip?: { peakAmount: number; peakDate: string };
 }
 
 const PERIOD_DAYS: Record<AttributionPeriod, number> = { "1w": 7, "1m": 30, "3m": 91, ytd: 366 };
@@ -162,6 +174,8 @@ export function causeShortLabel(key: AttributionCauseKey, amount: number): strin
     case "buy:realEstate": return "부동산 매수";
     case "sell:realEstate": return "부동산 매도";
     case "income": return amount >= 0 ? "소득 유입" : "인출·지출";
+    case "cash": return amount >= 0 ? "현금 잔액 증가" : "현금 잔액 감소";
+    case "deposit": return amount >= 0 ? "임차보증금 반환" : "임차보증금 증가";
     case "debt": return amount >= 0 ? "대출 상환" : "신규 대출";
   }
 }
@@ -191,6 +205,17 @@ export function causeSentence(key: AttributionCauseKey, amount: number): string 
       return amount >= 0
         ? `월급·목돈 유입으로 ${amt} 늘었어요.`
         : `현금 인출·지출로 ${amt} 줄었어요.`;
+    case "cash":
+      // 기록된 입출금(income)과 달리 이 값은 잔차다 — 실사례 분석 결과 대부분 현금 계좌 잔액을
+      // 입출금 기록 없이 직접 수정(정정·목돈 반영 등)한 경우였다. 다만 100% 단정은 아니므로
+      // "추정"으로 표기해 실제 원인이 다를 가능성(계좌 삭제, 극히 드문 계산 오차 등)을 남긴다.
+      return amount >= 0
+        ? `현금 잔액 직접 수정으로 ${amt} 늘어난 것으로 추정돼요.`
+        : `현금 잔액 직접 수정으로 ${amt} 줄어든 것으로 추정돼요.`;
+    case "deposit":
+      return amount >= 0
+        ? `임차보증금 반환으로 ${amt} 늘었어요.`
+        : `임차보증금 증가로 ${amt} 줄었어요.`;
     case "debt":
       // debtEffect는 대출 잔액 증감만 반영(임차보증금 제외) → "부채"보다 "대출"이 정확한 용어.
       // 매수(신규 유입)와 대칭을 이루도록 "새로 추가한 대출" 구조로 통일.
@@ -221,7 +246,9 @@ const CAUSE_ORDER: Record<AttributionCauseKey, number> = {
   "buy:realEstate": 9,
   "sell:realEstate": 10,
   income: 11,
-  debt: 12,
+  cash: 12,
+  debt: 13,
+  deposit: 14,
 };
 
 // 표시용 원인 전체(topCauses+restCauses)를 카테고리 순서로 정렬 — 매수·매도처럼 연관된 원인이
@@ -244,17 +271,26 @@ export interface AttributionDisplayItem {
 
 export function getAttributionItems(attr: PeriodAttribution): AttributionDisplayItem[] {
   const causes = [...getOrderedCauses(attr)];
-  // 임계값 미만이라 펼치지 못한 원인들의 합(잔차)은 절대값이 가장 큰 원인에 얹는다 —
+  // 임계값 미만이라 펼치지 못한 원인들의 합(잔차)은 **부호가 같은 원인 중 절대값 최대**에 얹는다 —
   // "그 외" 범주를 만들지 않으면서 표시 합계 = deltaNet을 유지하기 위함.
-  // ("+0만원" 소액 항목을 따로 나열하면 노이즈만 늘고 읽히지 않는다)
+  // 부호를 가리지 않고 아무 원인에나 얹으면 buy:stock처럼 방향이 라벨에 고정된 항목에 반대
+  // 부호 잔차가 붙어 "주식 매수로 −3만원 늘었어요" 같은 모순 문장이 나온다.
   const shownRest = attr.restCauses.reduce((s, c) => s + c.amount, 0);
   const residual = attr.restEffect - shownRest;
   if (Math.abs(residual) >= CAUSE_DISPLAY_MIN && causes.length > 0) {
-    let i = 0;
-    for (let k = 1; k < causes.length; k++) {
-      if (Math.abs(causes[k].amount) > Math.abs(causes[i].amount)) i = k;
+    const sameSign = causes
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => (residual >= 0 ? c.amount >= 0 : c.amount <= 0));
+    if (sameSign.length > 0) {
+      let best = sameSign[0];
+      for (const cand of sameSign) if (Math.abs(cand.c.amount) > Math.abs(best.c.amount)) best = cand;
+      causes[best.i] = makeCause(causes[best.i].key, causes[best.i].amount + residual);
+    } else {
+      // 부호가 맞는 원인이 하나도 없다 = 설명되지 않는 방향 전환이므로 정직하게 cash로 보낸다
+      const cashIdx = causes.findIndex((c) => c.key === "cash");
+      if (cashIdx >= 0) causes[cashIdx] = makeCause("cash", causes[cashIdx].amount + residual);
+      else causes.push(makeCause("cash", residual));
     }
-    causes[i] = makeCause(causes[i].key, causes[i].amount + residual);
   }
   return causes.map((c) => ({
     key: c.key, label: c.label, sentence: c.sentence, amount: c.amount, text: fmtManwon(c.amount),
@@ -277,6 +313,7 @@ export function formatAttributionDate(d: string): string {
 // 효과 목록에서 절대값 상위 1~2개를 topCauses로 선정 (2위가 1위의 25% 미만이면 1개만).
 // top에 못 든 원인도 임계값(1만원) 이상이면 restCauses로 이름을 살려 함께 돌려준다.
 function pickTopCauses(rawEffects: { key: AttributionCauseKey; amount: number }[]): {
+  effects: { key: AttributionCauseKey; amount: number }[];
   topCauses: AttributionCause[];
   restEffect: number;
   restCauses: AttributionCause[];
@@ -298,6 +335,7 @@ function pickTopCauses(rawEffects: { key: AttributionCauseKey; amount: number }[
   const restEffect = rest.reduce((s, e) => s + e.amount, 0);
   const toCause = (t: { key: AttributionCauseKey; amount: number }) => makeCause(t.key, t.amount);
   return {
+    effects,
     topCauses: top.map(toCause),
     restEffect,
     restCauses: rest
@@ -388,7 +426,13 @@ function pickAttributionCurr(dailyPoints: AttributionPoint[]): AttributionPoint 
   return curr?.fx && curr.fxBase ? curr : null;
 }
 
-// prev/curr 두 스냅샷으로 Δ순자산을 4효과 분해 (computePeriodAttribution·computeAttributionSince 공용)
+// 정밀 분해에 필요한 필드를 모두 가졌는지 — computePeriodAttribution의 하이브리드 구간 탐색과
+// resolveAttribution의 bothEnriched 판정이 반드시 같은 술어를 써야 두 곳의 실측/예측 경계가 일치한다.
+function isFullyEnriched(p: AttributionPoint): boolean {
+  return !!(p.breakdown && p.fx && p.fxBase && p.cost);
+}
+
+// prev/curr 두 스냅샷으로 Δ순자산을 여러 효과로 분해 (computePeriodAttribution·computeAttributionSince 공용)
 function resolveAttribution(
   prev: AttributionPoint,
   curr: AttributionPoint,
@@ -400,7 +444,7 @@ function resolveAttribution(
   const fromDate = prev._display;
   const toDate = curr._display;
 
-  const bothEnriched = !!(prev.breakdown && prev.fx && prev.fxBase && prev.cost && curr.breakdown && curr.cost);
+  const bothEnriched = isFullyEnriched(prev) && isFullyEnriched(curr);
 
   // 기간(prev, curr] 내 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
   const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates);
@@ -451,15 +495,23 @@ function resolveAttribution(
     const sellStock = sellEffect + Math.min(stockManual, 0);
 
     // 자산군별 시세로 설명되지 않는 잔차 — fxStock 정의상 이론값은 0이고, 스냅샷의 netAsset과
-    // breakdown 합이 어긋날 때(반올림·구버전 기록)만 비영이 된다. 성격이 현금성 변동이므로 아래
-    // dCostCash에 합산해 소득으로 귀속한다 — 이 항이 있어야 표시 합계 = deltaNet이 무조건 성립한다.
+    // breakdown 합이 어긋날 때(반올림·구버전 기록·breakdown에 없는 필드의 변동)만 비영이 된다.
+    // 성격이 현금성 변동이므로 아래 dCostCash에 합산한다 — 이 항이 있어야 표시 합계 = deltaNet이 무조건 성립한다.
     const priceResidual = priceEffect - priceStock - priceCrypto - priceRealEstate;
 
-    // 투자자산 3종으로 설명되지 않는 원가 증감 = 현금성 원가(잔액) 변동. 입출금 기록 없이 잔액을
-    // 직접 수정한 경우(이자 입금 등)가 여기 남는데 성격이 입출금과 같으므로 소득 항목에 합산한다.
-    const dCostCash = savingInvest - dCostStock - dCostCrypto - dCostRealEstate + priceResidual;
+    // 임차보증금 증감 — netAsset = totalValue − loans − tenantDeposit이라 breakdown에 이 필드가
+    // 없으면 그 변동이 통째로 priceResidual(→ 현금 잔차)로 새어나간다. 필드가 있는 스냅샷끼리만
+    // 분리 가능(구버전은 여전히 잔차로 남음). debt와 대칭: 증가=−(부채성이므로), 반환=+.
+    const depositEffect = (prev.breakdown!.tenantDeposit != null && curr.breakdown!.tenantDeposit != null)
+      ? -(curr.breakdown!.tenantDeposit - prev.breakdown!.tenantDeposit)
+      : 0;
 
-    const { topCauses, restEffect, restCauses } = pickTopCauses([
+    // 투자자산 3종+임차보증금으로 설명되지 않는 원가 증감 = 현금성 잔액 변동. 입출금 기록 없이
+    // 잔액을 직접 수정한 경우가 여기 남는다 — "income"과 합치지 않고 별도 "cash"로 방출해
+    // incomeEffect(실제 기록)가 대수적으로 소거되지 않게 한다(기록 없이도 표시가 바뀌던 회귀 수정).
+    const dCostCash = savingInvest - dCostStock - dCostCrypto - dCostRealEstate + priceResidual - depositEffect;
+
+    const { effects, topCauses, restEffect, restCauses } = pickTopCauses([
       { key: "price:stock", amount: priceStock },
       { key: "price:crypto", amount: priceCrypto },
       { key: "price:realEstate", amount: priceRealEstate },
@@ -468,10 +520,12 @@ function resolveAttribution(
       { key: "sell:stock", amount: sellStock },
       { key: dCostCrypto >= 0 ? "buy:crypto" : "sell:crypto", amount: dCostCrypto },
       { key: dCostRealEstate >= 0 ? "buy:realEstate" : "sell:realEstate", amount: dCostRealEstate },
-      { key: "income", amount: incomeEffect + dCostCash },
+      { key: "income", amount: incomeEffect },
+      { key: "cash", amount: dCostCash },
+      { key: "deposit", amount: depositEffect },
       { key: "debt", amount: debtEffect },
     ]);
-    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, topCauses, restEffect, restCauses };
+    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, effects, topCauses, restEffect, restCauses };
   }
 
   // 예측 분해: 시작 스냅샷이 레거시(netAsset만) — Δ순자산은 실측 그대로 쓰고,
@@ -498,7 +552,7 @@ function resolveAttribution(
   // 시작 스냅샷에 자산군별 평가액(breakdown)이 없어 **시세만** 통합 "price"로 남고, 매수·매도는 자산군별로 나뉜다.
   const buyStock = buyEffect + Math.max(inflows.stock, 0);
   const sellStock = sellEffect + Math.min(inflows.stock, 0);
-  const { topCauses, restEffect, restCauses } = pickTopCauses([
+  const { effects, topCauses, restEffect, restCauses } = pickTopCauses([
     { key: "price", amount: priceEffect },
     { key: "fx", amount: fxEffect },
     { key: "buy:stock", amount: buyStock },
@@ -511,7 +565,7 @@ function resolveAttribution(
   return {
     fromDate, toDate, deltaNet,
     priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect,
-    estimated: true, topCauses, restEffect, restCauses,
+    estimated: true, estimatedUntil: toDate, effects, topCauses, restEffect, restCauses,
   };
 }
 
@@ -583,8 +637,86 @@ function reflectedTradeFlow(
   return { buy, sell };
 }
 
-// 기간 시작점에 가장 가까운(시작일 이하 최근) 스냅샷 선택.
-// 1w는 daily 위주, 1m 이상은 monthly+daily를 합쳐 날짜 기준으로 고른다.
+// 작년 이전 yearlyNetAssets(연도별 종가 순자산, netAsset만)를 12/31 앵커 포인트로 승격 —
+// daily(30일 롤링)·monthly(올해분만)가 못 미치는 먼 과거 구간에서도 "기록 없음" 대신
+// 예측이라도 시작점을 잡을 수 있게 후보 풀을 넓힌다. 값의 정확한 저장 시점은 알 수 없어(그 해
+// 마지막 접속일) 12/31은 근사 표기일 뿐이지만, 이 포인트는 enrich가 없어 항상 예측 경로로만 쓰인다.
+function yearlyAnchorPoints(assetData: AssetData): AttributionPoint[] {
+  return (assetData.yearlyNetAssets || []).map((y) => {
+    const d = `${y.year}-12-31`;
+    return { date: d, netAsset: y.netAsset, financialAsset: y.netAsset, _date: d, _display: d } as AttributionPoint;
+  });
+}
+
+// 두 인접 구간((prevOld, mid] 예측 + (mid, curr] 실측)의 raw 효과를 key별로 합산해 하나로 재구성.
+// 각 필드가 텔레스코핑(가산적)이라 성립 — deltaNet·집계 필드 모두 단순 합, effects도 key별 합산 뒤
+// pickTopCauses를 1회만 다시 돌려 표시용 top/rest를 재선정한다(합계 = deltaNet 항등식은 자동 유지).
+function mergeAttributions(older: PeriodAttribution, newer: PeriodAttribution): PeriodAttribution {
+  const byKey = new Map<AttributionCauseKey, number>();
+  for (const e of [...older.effects, ...newer.effects]) {
+    byKey.set(e.key, (byKey.get(e.key) ?? 0) + e.amount);
+  }
+  const { effects, topCauses, restEffect, restCauses } = pickTopCauses([...byKey].map(([key, amount]) => ({ key, amount })));
+  return {
+    fromDate: older.fromDate,
+    toDate: newer.toDate,
+    deltaNet: older.deltaNet + newer.deltaNet,
+    priceEffect: older.priceEffect + newer.priceEffect,
+    fxEffect: older.fxEffect + newer.fxEffect,
+    savingEffect: older.savingEffect + newer.savingEffect,
+    buyEffect: older.buyEffect + newer.buyEffect,
+    sellEffect: older.sellEffect + newer.sellEffect,
+    incomeEffect: older.incomeEffect + newer.incomeEffect,
+    debtEffect: older.debtEffect + newer.debtEffect,
+    estimated: false, // 실측 구간이 섞였으므로 "전체 예측"은 아님 — 부분예측은 estimatedUntil로 표현
+    // older가 실제로 예측이었을 때만 경계를 표시한다(하드코딩하면 호출부가 실측끼리도 쪼개 넘길 때
+    // 근거 없이 "일부 예측" 배지가 붙는다 — computePeriodAttribution의 mid 탐색 가드와 별개로 방어).
+    estimatedUntil: older.estimated ? older.toDate : undefined,
+    effects, topCauses, restEffect, restCauses,
+  };
+}
+
+// 기간 내 breakdown.cash가 baselineCash에서 일시적으로 크게 벗어났다가 순변화 없이(또는 미미하게)
+// 되돌아온 경우를 감지한다. resolveAttribution은 두 끝점만 비교해 "cash" 순변화만 보므로, 구간
+// 중간의 왕복은 net에 안 잡혀 원인 목록에서 통째로 사라진다 — "더 긴 기간엔 왜 안 보이냐"는
+// 혼란을 막기 위한 안내용. cash만 대상으로 한다(시세는 상시 변동이 정상이라 매번 안내하면 노이즈).
+function detectCashRoundTrip(
+  segmentDaily: AttributionPoint[],
+  baselineCash: number,
+  netCashEffect: number,
+): { peakAmount: number; peakDate: string } | null {
+  let peak = { amount: 0, date: "" };
+  for (const p of segmentDaily) {
+    if (!p.breakdown) continue;
+    const dev = p.breakdown.cash - baselineCash;
+    if (Math.abs(dev) > Math.abs(peak.amount)) peak = { amount: dev, date: p._date };
+  }
+  if (Math.abs(peak.amount) < CAUSE_DISPLAY_MIN) return null;
+  // 순변화가 최고 이탈폭의 절반 이상이면 "왕복 후 복귀"로 보기 어렵다 — 조용히 생략
+  if (Math.abs(netCashEffect) >= Math.abs(peak.amount) * 0.5) return null;
+  return { peakAmount: peak.amount, peakDate: peak.date };
+}
+
+// 실측 daily 구간(start 이후 ~ curr까지)이 있을 때만 왕복을 탐지해 붙인다.
+// start가 없거나 breakdown이 없으면(예측 전용 구간) 탐지 자체가 불가능하므로 그대로 반환.
+function attachCashRoundTrip(
+  attr: PeriodAttribution,
+  dailyPoints: AttributionPoint[],
+  start: AttributionPoint | undefined,
+  curr: AttributionPoint,
+): PeriodAttribution {
+  if (!start || !start.breakdown) return attr;
+  const segment = dailyPoints.filter((p) => p._date > start._date && p._date <= curr._date && p.breakdown);
+  const netCash = attr.effects.find((e) => e.key === "cash")?.amount ?? 0;
+  const roundTrip = detectCashRoundTrip(segment, start.breakdown.cash, netCash);
+  return roundTrip ? { ...attr, cashRoundTrip: roundTrip } : attr;
+}
+
+// 기간 시작점에 가장 가까운(시작일 이하 최근) 스냅샷 선택 후, 그 안에서 실측 가능한 부분 구간을
+// 찾아 예측+실측으로 나눠 합성한다. **1주·1개월·3개월·올해 전부 이 알고리즘 하나를 공유** —
+// 기간마다 다른 것은 시작일(targetStr) 계산뿐이다: 실측 스냅샷이 있는 구간은 실측으로, 그 이전의
+// 부족한 구간만 예측으로 채운다(1주도 예외 아님 — 공유 링크로 복원한 기기는 daily의 enrich가
+// 소실돼 1주도 예측이 될 수 있다).
 export function computePeriodAttribution(
   daily: DailyAssetSnapshot[],
   monthly: MonthlyAssetSnapshot[],
@@ -606,14 +738,37 @@ export function computePeriodAttribution(
     t.setDate(t.getDate() - PERIOD_DAYS[period]);
     targetStr = t.toISOString().split("T")[0];
   }
-  // 시작 스냅샷: 시작일 이하 중 가장 최근 (daily+monthly 통합, curr 이전만)
-  const prev = [...dailyPoints, ...monthlyPoints]
-    .sort(byDateThenDaily)
-    .reverse()
-    .find((s) => s._date <= targetStr && s._date < curr._date);
-  if (!prev) return null;
 
-  return resolveAttribution(prev, curr, exchangeHistory, assetData, rates);
+  const allPoints = [...dailyPoints, ...monthlyPoints, ...yearlyAnchorPoints(assetData)]
+    .filter((s) => s._date < curr._date)
+    .sort(byDateThenDaily);
+  if (allPoints.length === 0) return null;
+
+  // 시작 스냅샷: 목표일 이하 중 가장 최근. 없으면(연초 등 목표일보다 오래된 기록만 있거나 전혀
+  // 없는 경우) "기록 없음"으로 죽이지 않고 가진 것 중 가장 오래된 포인트로 폴백한다
+  // (computeAttributionSince의 `?? candidates[0]` 패턴과 동일 — 홈과 성적표가 같은 원칙을 쓴다).
+  const prevOld = [...allPoints].reverse().find((s) => s._date <= targetStr) ?? allPoints[0];
+
+  // 하이브리드 분기점: prevOld가 이미 실측(enrich 완비)이면 애초에 mid를 찾지 않는다 — 예를 들어
+  // 1주는 daily 30일 롤링 창 안이라 prevOld가 대개 이미 완전히 실측인데, 여기서 무조건 mid를
+  // 찾으면 불필요하게 두 구간으로 쪼개고(다음 줄부터) 실측 구간에 "예측" 경계가 잘못 찍힌다(P1 회귀).
+  // prevOld가 예측(레거시 monthly·yearly 앵커 등)일 때만 (prevOld, curr) 구간에서 enrich를 모두
+  // 가진 가장 오래된 daily를 찾는다. monthly는 mid 후보에서 제외 — _date가 월말로 강제돼 값 시점
+  // (그 달 마지막 접속일)과 최대 30일 어긋나, 그 사이 거래·입출금이 flow 윈도우에서 누락된다.
+  const mid = isFullyEnriched(prevOld) ? undefined : dailyPoints
+    .filter((s) => s._date > prevOld._date && s._date < curr._date && isFullyEnriched(s))
+    .sort((a, b) => a._date.localeCompare(b._date))[0];
+
+  if (!mid) {
+    const attr = resolveAttribution(prevOld, curr, exchangeHistory, assetData, rates);
+    // prevOld가 실측일 때만(=isFullyEnriched) daily 세부가 있어 왕복 탐지가 가능하다
+    return attachCashRoundTrip(attr, dailyPoints, isFullyEnriched(prevOld) ? prevOld : undefined, curr);
+  }
+  const older = resolveAttribution(prevOld, mid, exchangeHistory, assetData, rates);
+  const newer = resolveAttribution(mid, curr, exchangeHistory, assetData, rates);
+  const merged = mergeAttributions(older, newer);
+  // 실측 구간은 (mid, curr]뿐이므로 왕복 탐지의 시작점도 mid로 한정한다
+  return attachCashRoundTrip(merged, dailyPoints, mid, curr);
 }
 
 // "지난 접속 이후" 브리핑용: sinceDate(마지막 스냅샷 저장일) 이하 최근 스냅샷 vs 끝점 비교.
@@ -667,6 +822,7 @@ export function buildLiveAttributionCurr(
       crypto: summary.cryptoValue,
       cash: summary.cashValue,
       loans: summary.loanBalance,
+      tenantDeposit: summary.tenantDepositTotal,
     },
     fx: { USD: rates.USD, JPY: rates.JPY },
     fxBase,

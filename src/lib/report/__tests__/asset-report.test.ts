@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeAttributionSince, getAttributionItems, getOrderedCauses } from "../asset-report";
+import { computeAttributionSince, computePeriodAttribution, getAttributionItems, getOrderedCauses } from "../asset-report";
 import type { AssetData, DailyAssetSnapshot, Loan, SnapshotBreakdown, SnapshotCost, Stock } from "@/types/asset";
 import type { CashTransaction, Transaction } from "@/types/transaction";
 
@@ -105,7 +105,7 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr!)).toBeCloseTo(attr!.deltaNet, 6);
   });
 
-  it("미반영(과거 소급) 현금 기록 자체는 원인이 아니고, 실제 잔액 증가가 소득으로 귀속된다", () => {
+  it("미반영(과거 소급) 현금 기록 자체는 원인이 아니고, 실제 잔액 증가는 cash로 귀속되어 기록된 income과 구분된다", () => {
     const data = emptyData();
     data.cashTransactions = [cashTx({ date: "2026-05-10", amount: 3_000_000, reflected: false })];
     // 미반영 거래는 cost.total을 움직이지 않는다 → savingFull = 0. 잔액(breakdown.cash)만 +300만
@@ -113,9 +113,10 @@ describe("asset-report 원인분해", () => {
     const attr = run(data, daily, "2026-05-01")!;
     expect(attr.incomeEffect).toBe(0); // 순자산을 움직이지 않은 기록은 집계하지 않는다
     expect(attr.savingEffect).toBe(0);
-    // 실제 현금 증가분은 표시 단계에서 소득으로 귀속되고 시세로 오인되지 않는다
+    // 기록 없이 실제로 변한 잔액은 income(=기록된 입출금)이 아니라 cash(=설명되지 않는 잔차)로 귀속된다
     const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
-    expect(byKey.get("income")).toBeCloseTo(3_000_000, 6);
+    expect(byKey.get("cash")).toBeCloseTo(3_000_000, 6);
+    expect(byKey.has("income")).toBe(false); // incomeEffect=0이라 pickTopCauses가 자동으로 걸러낸다
     expect(byKey.has("price:stock")).toBe(false);
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
@@ -349,8 +350,10 @@ describe("asset-report 원인분해", () => {
     ];
     const attr = run(data, daily, "2026-05-01")!;
     const ordered = getOrderedCauses(attr).map((c) => c.key);
-    // CAUSE_ORDER: buy:stock(5) < sell:stock(6) < income(11) < debt(12) — 절대값 크기와 무관하게 이 순서
-    expect(ordered).toEqual(["buy:stock", "sell:stock", "income", "debt"]);
+    // CAUSE_ORDER: buy:stock(5) < sell:stock(6) < cash(12) < debt(13) — 절대값 크기와 무관하게 이 순서.
+    // cashTransactions 기록이 없어 incomeEffect=0이므로 잔차는 income이 아니라 cash로 잡힌다
+    // (이 테스트의 snap() 헬퍼는 cost.stock을 항상 0으로 둬 실제 매매와 어긋나는 합성 잔차를 만든다).
+    expect(ordered).toEqual(["buy:stock", "sell:stock", "cash", "debt"]);
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
@@ -401,6 +404,158 @@ describe("asset-report 원인분해", () => {
     const daily = [legacy, snap("2026-05-20", 104_000_000, 93_000_000)];
     const attr = run(data, daily, "2026-05-01")!;
     expect(attr.estimated).toBe(true);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("cashTransactions 기록 여부에 따라 income⇄cash 사이에서 표시가 실제로 이동한다(B-1 회귀 수정 검증)", () => {
+    // 종전엔 income = incomeEffect + dCostCash로 합쳐 방출해 incomeEffect가 대수적으로 소거됐다
+    // (기록을 넣든 안 넣든 표시 금액이 같았다). 이제는 두 키로 나눠 방출해 기록 여부가 실제로 반영된다.
+    const daily = [snap("2026-05-01", 100_000_000, 90_000_000), snap("2026-05-20", 103_000_000, 93_000_000)];
+
+    const noTx = emptyData();
+    const attrNoTx = run(noTx, daily, "2026-05-01")!;
+    const byKeyNoTx = new Map(getOrderedCauses(attrNoTx).map((c) => [c.key, c.amount]));
+    expect(attrNoTx.incomeEffect).toBe(0);
+    expect(byKeyNoTx.has("income")).toBe(false); // 기록이 없으므로 income 항목 자체가 없음
+    expect(byKeyNoTx.get("cash")).toBeCloseTo(3_000_000, 6); // 기록 없이 변한 잔액은 cash로
+
+    const withTx = emptyData();
+    withTx.cashTransactions = [cashTx({ date: "2026-05-10", amount: 3_000_000, reflected: true })];
+    const attrWithTx = run(withTx, daily, "2026-05-01")!;
+    expect(attrWithTx.incomeEffect).toBe(3_000_000);
+    const byKeyWithTx = new Map(getOrderedCauses(attrWithTx).map((c) => [c.key, c.amount]));
+    expect(byKeyWithTx.get("income")).toBeCloseTo(3_000_000, 6); // 같은 금액이 이제 income으로
+    expect(byKeyWithTx.has("cash")).toBe(false); // 전부 설명됐으므로 cash는 남지 않음
+
+    expect(sumDisplayed(attrNoTx)).toBeCloseTo(attrNoTx.deltaNet, 6);
+    expect(sumDisplayed(attrWithTx)).toBeCloseTo(attrWithTx.deltaNet, 6);
+  });
+
+  it("임차보증금 증감은 독립된 deposit 원인으로 분리되고 income·cash를 오염시키지 않는다(B-2)", () => {
+    const data = emptyData();
+    const prev = snapClass("2026-05-01", { cash: 100_000_000 }, {});
+    const curr = snapClass("2026-05-20", { cash: 100_000_000 }, {});
+    prev.breakdown!.tenantDeposit = 20_000_000;
+    curr.breakdown!.tenantDeposit = 25_000_000; // 보증금 500만 증가(부채성 증가) → netAsset 감소 요인
+    prev.netAsset = 100_000_000 - 20_000_000;
+    curr.netAsset = 100_000_000 - 25_000_000;
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("deposit")).toBeCloseTo(-5_000_000, 6); // 증가는 음수(대출 증가와 동일 부호 규약)
+    expect(byKey.has("income")).toBe(false);
+    expect(byKey.has("cash")).toBe(false);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("잔차 흡수는 부호가 같은 원인에만 붙는다 — 반대 부호 잔차는 방향 고정 라벨을 오염시키지 않고 cash로 간다(B-3)", () => {
+    const data = emptyData();
+    const cost = { stock: 8_000_000, crypto: 900_000, realEstate: 1_900_000 };
+    const prev = snapClass("2026-05-01", { stocks: 10_000_000, crypto: 1_000_000, realEstate: 2_000_000 }, cost);
+    // 주식은 +500만(큰 양수), 코인·부동산은 각각 −6천·−7천(개별로는 임계값 1만원 미만이라 안 보이지만
+    // 합은 −1.3만원이라 잔차 흡수 대상). 원가는 불변이라 셋 다 시세만 순수 반영.
+    const curr = snapClass("2026-05-20", { stocks: 15_000_000, crypto: 994_000, realEstate: 1_993_000 }, cost);
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const items = getAttributionItems(attr);
+    const byKey = new Map(items.map((c) => [c.key, c.amount]));
+    // price:stock은 잔차에 오염되지 않고 순수 500만원 그대로여야 한다("주식 매수로 −1만원 늘었어요" 같은
+    // 모순 문장 방지). 반대 부호 잔차(−1.3만원)는 별도 cash 항목으로 정직하게 분리된다.
+    expect(byKey.get("price:stock")).toBeCloseTo(5_000_000, 6);
+    expect(byKey.get("cash")).toBeCloseTo(-13_000, 6);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+});
+
+describe("asset-report 원인분해 — computePeriodAttribution 하이브리드(1주·1개월·3개월·올해 공통)", () => {
+  it("mid가 있으면 (prevOld,mid]은 예측 + (mid,curr]은 실측으로 합성되고 표시 합계 = 전체 deltaNet", () => {
+    const data = emptyData();
+    const prevOld = { date: "2026-06-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-06-15", 105_000_000, 95_000_000);
+    const curr = snap("2026-07-01", 108_000_000, 95_000_000);
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    expect(attr).not.toBeNull();
+    expect(attr.fromDate).toBe("2026-06-01");
+    expect(attr.toDate).toBe("2026-07-01");
+    expect(attr.deltaNet).toBe(8_000_000);
+    expect(attr.estimated).toBe(false); // 실측이 섞였으므로 "전체 예측"은 아님
+    expect(attr.estimatedUntil).toBe("2026-06-15"); // mid 이전만 예측
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("mid가 없으면(사이에 enriched daily가 없음) 단일 구간과 완전히 동일한 결과(회귀 방지)", () => {
+    const data = emptyData();
+    const prevOld = snap("2026-06-01", 100_000_000, 90_000_000);
+    const curr = snap("2026-06-20", 103_000_000, 91_000_000);
+    const attr = computePeriodAttribution([prevOld, curr], [], {}, "1m", data, RATES)!;
+    expect(attr.estimatedUntil).toBeUndefined();
+    expect(attr.estimated).toBe(false);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("prevOld가 이미 실측이면 사이에 다른 enriched daily가 있어도 쪼개지 않는다(1주 오판정 회귀 수정)", () => {
+    // 실사용 버그 재현: 1주 기간은 prevOld(daily 30일 창 안)가 이미 완전히 실측인데,
+    // 그 사이에 또 다른 enriched daily(mid 후보)가 있다는 이유만으로 잘못 쪼개져
+    // "그 날짜 이전은 추정치" 배지가 근거 없이 붙던 버그.
+    const data = emptyData();
+    const prevOld = snap("2026-07-25", 100_000_000, 90_000_000); // 완전 실측
+    const between = snap("2026-07-27", 101_000_000, 90_500_000); // 완전 실측이지만 mid로 쓰이면 안 됨
+    const curr = snap("2026-08-01", 103_000_000, 91_000_000);
+    const attr = computePeriodAttribution([prevOld, between, curr], [], {}, "1w", data, RATES)!;
+    expect(attr.fromDate).toBe("2026-07-25");
+    expect(attr.estimated).toBe(false);
+    expect(attr.estimatedUntil).toBeUndefined(); // "07/27 이전은 추정치" 같은 근거 없는 배지 금지
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("기간 중 현금이 왕복(등락 후 복귀)하면 순변화는 0이지만 cashRoundTrip 힌트가 잡힌다", () => {
+    // 실사용 재현: mid(=1개월 실측 시작점)와 curr의 breakdown.cash가 완전히 같아 "cash" 원인 자체는
+    // 사라지지만(net=0), 중간에 07-27까지 +530만원 벗어났다가 되돌아온 사실을 힌트로 알려줘야 한다.
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-07-24", 9_450_000, 9_450_000);
+    const rise1 = snap("2026-07-25", 14_250_000, 9_450_000);
+    const rise2 = snap("2026-07-27", 14_750_000, 9_450_000); // 최고 이탈점(+530만)
+    const back = snap("2026-07-30", 9_450_000, 9_450_000);
+    const curr = snap("2026-08-01", 9_450_000, 9_450_000); // mid와 완전히 동일 → net cash = 0
+    const attr = computePeriodAttribution([prevOld, mid, rise1, rise2, back, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("cash")).toBe(false); // 순변화 0이라 원인 목록엔 안 잡힘(정상)
+    expect(attr.cashRoundTrip).toBeDefined();
+    expect(attr.cashRoundTrip!.peakDate).toBe("2026-07-27");
+    expect(attr.cashRoundTrip!.peakAmount).toBeCloseTo(5_300_000, 6);
+  });
+
+  it("왕복 없이 단조 변화하면 cashRoundTrip 힌트가 붙지 않는다(오탐 방지)", () => {
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-07-24", 9_450_000, 9_450_000);
+    const rise = snap("2026-07-27", 12_000_000, 9_450_000);
+    const curr = snap("2026-08-01", 14_000_000, 9_450_000); // 계속 증가 — 왕복 아님
+    const attr = computePeriodAttribution([prevOld, mid, rise, curr], [], {}, "1m", data, RATES)!;
+    expect(attr.cashRoundTrip).toBeUndefined();
+  });
+
+  it("1주·1개월·3개월·올해 네 기간 모두 같은 하이브리드 규칙을 따른다(기간별 특수 취급 없음)", () => {
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-07-20", 100_000_000, 90_000_000);
+    const curr = snap("2026-08-01", 102_000_000, 90_000_000);
+    for (const period of ["1w", "1m", "3m", "ytd"] as const) {
+      const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, period, data, RATES)!;
+      expect(attr).not.toBeNull();
+      expect(attr.toDate).toBe("2026-08-01");
+      expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+    }
+  });
+
+  it("목표일 이하 기록이 전혀 없으면(연초 등) 가장 오래된 포인트로 폴백해 '기록 없음' 대신 결과를 낸다", () => {
+    const data = emptyData();
+    const onlyOld = { date: "2026-03-01", netAsset: 95_000_000, financialAsset: 95_000_000 } as DailyAssetSnapshot;
+    const curr = snap("2026-08-01", 100_000_000, 90_000_000);
+    // ytd 목표일(1/1)보다 onlyOld(3/1)가 더 나중이라 <=targetStr 조건은 불만족하지만,
+    // 폴백으로 가장 오래된 포인트를 써서 null이 아니라 결과를 낸다(computeAttributionSince와 동일 원칙).
+    const attr = computePeriodAttribution([onlyOld, curr], [], {}, "ytd", data, RATES)!;
+    expect(attr).not.toBeNull();
+    expect(attr.fromDate).toBe("2026-03-01");
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 });

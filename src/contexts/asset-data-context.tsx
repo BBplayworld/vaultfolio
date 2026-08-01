@@ -678,6 +678,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         crypto: nab.cryptoValue,
         cash: nab.cashValue,
         loans: nab.loanBalance,
+        tenantDeposit: nab.tenantDepositTotal,
       },
       fx: { USD: latestRates.USD, JPY: latestRates.JPY },
       fxBase,
