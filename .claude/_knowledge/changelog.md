@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-08-01
+
+### 잠금화면 뒤 백그라운드 동작 전면 차단 + 동기화 파생 변경 결함 수정 (issue-4.21)
+
+- **왜(잠금)**: `asset-data-context`의 `checkIsLocked()`가 `standalone`을 AND로 요구했는데 잠금화면([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))은 standalone을 보지 않는다 → **브라우저 탭에서 앱잠금 ON이면 PIN 화면 뒤로 `initAndSync` 전체(환율·주식·코인·profit 조회·스냅샷 저장·`lastVisitDate` 기록)가 그대로 실행**됐다(해제 후 "지난 접속 이후" 브리핑 소실). 게다가 그 가드는 7개 effect 중 1개에만 있었고, 마이그레이션은 가드 **위**에서 돌아 환율 이력 삭제 같은 파괴적 1회성 작업이 잠금화면 뒤에서 `done` 처리됐다. 부동산 실거래 갱신 effect는 잠금·인앱게이트·`isDataLoaded` **가드가 전무**해 `storage` 이벤트만으로 `/api/realestate` 요청이 나갔다.
+- **잠금 판정 단일화** ([app-lock.ts](../../src/lib/pwa/app-lock.ts) 신설): 잠금 유틸을 UI에서 순수 모듈로 분리(잠금화면이 `useAssetData`를 쓰므로 컨텍스트가 import하면 순환 참조)하고 `checkIsLocked()`를 제거해 **`isPwaLocked()` 하나로 통일**. 백그라운드 가드는 [background-gate.ts](../../src/lib/pwa/background-gate.ts)의 `isBackgroundWorkBlocked()`(인앱 게이트 ∪ 앱잠금) 단일 함수로 묶었다 — 게이트가 2종인데 지점마다 따로 쓰면 한쪽을 빠뜨린다(실제로 부동산 effect가 그 상태였다). 마이그레이션은 가드 아래로 내리고 `unlockAndLoad`가 대신 실행한다. `armed` 진입은 IndexedDB 언랩뿐이라 그대로 두고 push/pull을 각각 막았다.
+- **해제 순서 직렬화**: 종전엔 `PWA_UNLOCKED_EVENT`(→ pull → `clearAssetData` → `initAndSync`)와 `unlockAndLoad()`(→ `initAndSync`)가 **병렬**로 시작해, pull이 로컬을 덮어쓰는 동안 구 데이터 기준 시세·스냅샷 저장이 동시에 진행될 수 있었다 → `markPwaAuthenticated()` → `await unlockAndLoad()` → `emitPwaUnlocked()` 순으로 고정.
+- **왜(동기화)**: "사용자가 명시적으로 바꾼 것만 전파" 설계는 대체로 지켜지고 있었으나 8건이 남아 있었다. **데이터가 실제로 없어지는 2건**: ① `autoPullIfNewer`에 `userEditRef` 가드가 없어 디바운스(2.5s) 대기 중 pull이 끼어들면 방금 한 편집이 push되지도 복구되지도 않고 소실 → pull 보류로 수정. ② `buildExportPayload`는 스냅샷이 비면 키 자체를 넣지 않는데 `applyImportedPayload`는 `clearAssetData` 후 **있을 때만** 복원 → 스냅샷 없는 새 기기가 push한 걸 pull하면 기존 기기 이력이 증발. `dailyArchive`가 쓰던 "로컬 먼저 읽어두고 없으면 되돌려 쓰기" 패턴을 daily/monthly에도 적용.
+- **불필요한 자동 push 제거**: `saveSnapshots`가 일요일에 **토요일** 스냅샷을 만들고 등급도 토요일 항목에 기록하는데 비교 제외는 오늘자뿐이라 파생 변경만으로 push됐다(자정을 넘겨 켜둔 경우도 동일) → daily 제외를 **오늘·어제**로 확장해 두 케이스를 함께 해소. 부동산 `regionCode`·`legalDong`·`complexName`(주소 해석 API 자동 채움)도 제외 목록에 추가.
+- **트리거 정합**: 실패한 pull이 `skipNextChangeRef`를 되돌리지 않아 다음 비-사용자편집 변경 1회를 삼키던 것 수정. `addStockRaw`(스크린샷 일괄 등록)는 명백한 사용자 편집인데 이벤트를 안 내 push가 호출처 `refreshData()`의 우연한 비교 통과에 의존하던 것 → 이벤트 발행. 반대로 `stock-tab`의 1회성 마이그레이션은 파생인데 `saveData`로 사용자 편집인 척 push를 강제하던 것 → `saveAssetData` 직접 호출로 전환.
+- **QA에서 발견한 자기 회귀 5건 수정**(`/qa-full-test`): ① **P0** `setPwaAuthPin`이 세션 인증을 기록하지 않아 **앱잠금을 켠 그 세션의 push/pull/시세/스냅샷이 전부 무증상 정지**(잠금화면은 마운트 시에만 판정해 뜨지도 않음) → `markPwaAuthenticated()` 동반 호출. 가드를 넓힌 것의 직접적 부작용이었다. ② 잠금 시 마운트 effect를 통째로 건너뛰면서 hashchange 리스너·monthlySnapshots 백필(비가역)·Share Target 변환이 세션 내내 미실행 → 본문을 `runBootstrap()` 단일 함수로 추출해 마운트(비잠금)·`unlockAndLoad`(해제) 양쪽에서 호출하고, hashchange 리스너는 항상 등록하되 핸들러가 잠금을 가드. ③ `userEditRef` pull 보류가 **conflict 화해를 영구 차단**(conflict는 push 성공이 아니라 플래그가 안 풀림) → `autoPullIfNewer({ force })`로 충돌 경로만 우회. ④ push 실패 시 플래그가 안 풀려 pull이 무기한 차단 → `userEditAtRef` 타임스탬프로 보류에 10초 상한. ⑤ `stock-tab` 마이그레이션의 `refreshData()`가 `saveSnapshotsBlockedRef`를 세워 **그 세션의 오늘자 스냅샷 저장을 통째로 스킵**시킴(해제는 `syncTodayStockPrices` 안에서만) → `saveData` 유지로 롤백(이 마이그레이션은 API 파생값이 아니라 실제 사용자 데이터를 정정하므로 전파가 옳다).
+- **부수 수정**: 해제 이벤트를 `try/finally`로 감싸 `unlockAndLoad`가 throw해도 유실되지 않게 함. `applyImportedPayload`의 스냅샷 폴백을 `keepLocalSnapshots` 옵션으로 분기(pull=보존 / 파일 가져오기=교체 — 남의 백업에 내 이력만 남으면 자산과 이력이 뒤섞인다)하고 빈 배열이 폴백을 우회하던 것(`[]`은 truthy)을 `?.length` 판정으로 수정. `npm run lint`가 `.claude/hooks/*.mjs`(tsconfig project 밖) 때문에 `fb7af6e`부터 계속 실패하던 것 → eslint `ignores`에 `".claude/"` 추가.
+- **테스트**: "그 외" 폐지의 핵심인 **잔차 흡수 분기가 19개 테스트에서 한 번도 실행되지 않던 것**을 발견해 케이스 추가(개별 9천원×2 → 합 1.8만원이 최대 원인에 흡수), 예측 경로의 표시 항목 합계 검증도 추가(종전엔 집계 필드만 봐서 자산군 분해를 우회).
+- **문서 정정**: 폴링 주기가 문서 3곳에 30초로 적혀 있었으나 코드는 도입 이후 `60000` 불변 → 60초로 정정. S9·R13의 전제("pull이 `secretasset_sync`를 지운다")는 keepKeys에 `syncState`가 이미 포함돼 **성립하지 않음**을 명시(`runPushAfterRestoreFix`는 이중 방어로 유지). R14 제외 목록 보강, R22를 게이트 2종 공통 가드로 확장, R26(pull이 지우기만 하고 복원 안 하는 필드) 신설.
+
+### 원인분해 "그 외" 범주 폐지 + 주식 시세 상시 노출 (issue-4.21)
+
+- **왜**: 토요일 홈 헤더에서 주식이 분명히 올랐는데 `주식 시세 상승`이 안 보이고 금액이 통째로 `그 외 +608만원`으로 묻혔다. 순자산 변동의 원인은 **시세·환율·자산 유입/유출**뿐이므로 "그 외"라는 범주 자체가 있을 이유가 없다는 판단으로, 증상(휴장일 억제)과 범주(잔차) 양쪽을 함께 걷어냈다.
+- **휴장일 억제 제거** ([asset-report.ts](../../src/lib/report/asset-report.ts)): 직접 원인은 `isClosedForBothMarkets`였다. 토요일은 국내·해외 증시가 닫혀 있지만 **미국 금요일장 종가가 토요일 새벽 KST에 새로 확정**되므로 주식 변동이 실재한다. `getDailyClosingRefDates("foreign")` 기준으로 해외 종가는 화~토, 국내는 평일에 갱신되니 **월~토는 매일 주식 변동이 있고 일요일만 없다** — 일요일은 금액이 표시 임계값 미만이라 자동으로 안 보이므로 억제 로직 자체가 불필요했다.
+- **잔차의 정체를 대수적으로 제거**: `restCarry = costFx.cash − fxCash − inflow.unreflected` 두 조각이 전부였다. ① 환율효과의 주식 몫을 `stockFxShare`(현재 보유 비율)로 안분하던 근사를 버리고 **`fxEffect − costFx.cash`**(정확히 계산되는 현금 몫을 빼는 방식)로 정의 → 오차 0. ② 잔액을 움직이지 않는 미반영 소급 현금기록은 변동 원인이 아니므로 집계에서 제외(`reflectedCashInflow`) — 실제 잔액 증가는 `dCostCash`로 이미 `income`에 잡히므로 표시 금액은 그대로다(사실상 이중계상 후 잔차로 상쇄하던 구조를 정리). 남는 `priceResidual`(스냅샷 `netAsset`↔`breakdown` 불일치 시에만 비영)은 `income`에 흡수시켜 **표시 합계 = `deltaNet` 항등식을 정의상 보장**한다.
+- **`AttributionCauseKey`에서 `rest` 삭제** — switch exhaustive 검사가 잔존 참조를 컴파일 에러로 잡아준다. 임계값(1만원) 미만이라 숨겨진 원인들의 합은 `getAttributionItems`가 **절대값 최대 원인에 얹어** 흡수한다("+0만원" 노이즈 항목을 만들지 않으면서 합계 유지).
+- **시작점 선정 tie-break**: 월말 daily와 monthly는 `_date`가 같아 안정 정렬만으로는 monthly가 먼저 잡혔다 → 헤더가 "전일 대비" 대신 "지난 접속(7월) 이후"로 표기되고, monthly에 v2 필드가 없으면 예측 모드로 떨어져 자산군별 시세가 통합 `price`로 뭉쳤다. `byDateThenDaily`로 daily 우선.
+- 테스트 19케이스 통과(휴장일 억제 3케이스 → 토요일 노출·주식/코인 동시 노출·"그 외" 라벨 부재·동일 날짜 daily 우선로 교체). **스키마·저장 키·공유 토큰·sync payload 무변경.**
+
 ## 2026-07-31
 
 ### 잠금화면 PIN을 자체 숫자패드로 전환 — 소프트 키보드 의존 제거 (issue-4.20)

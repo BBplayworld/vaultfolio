@@ -734,7 +734,7 @@ export function AssetReportView() {
                     {attribution.fromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
                     {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
                   </p>
-                  {/* 주 원인과 나머지 원인을 같은 목록으로 — "그 외" 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
+                  {/* 주 원인과 나머지 원인을 같은 목록으로 — 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
                       홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
                       (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). */}
                   <div className="space-y-2">

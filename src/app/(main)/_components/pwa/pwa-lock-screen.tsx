@@ -6,54 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { cn } from "@/lib/utils";
-
-const AUTH_ENABLED_KEY = "secretasset_pwa_auth_enabled";
-const AUTH_PIN_HASH_KEY = "secretasset_pwa_auth_pin_hash";
-const SESSION_AUTH_KEY = "secretasset_pwa_authenticated";
-
-/** SHA-256 해시 생성 (브라우저 WebCrypto) */
-async function sha256(text: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/** 인증 활성화 여부 */
-export function isPwaAuthEnabled(): boolean {
-  try { return localStorage.getItem(AUTH_ENABLED_KEY) === "true"; } catch { return false; }
-}
-
-/** 앱잠금 상태(인증 활성화 + 세션 미인증) 여부 — 동기화 pull 게이트 등에서 재사용 */
-export function isPwaLocked(): boolean {
-  try {
-    return isPwaAuthEnabled() && sessionStorage.getItem(SESSION_AUTH_KEY) !== "true";
-  } catch { return false; }
-}
-
-/** 잠금 해제 직후 발행되는 이벤트 — CloudSyncProvider가 즉시 pull 트리거 */
-export const PWA_UNLOCKED_EVENT = "secretasset:pwa-unlocked";
-
-/** 인증 PIN 해시 저장 */
-export async function setPwaAuthPin(pin: string): Promise<void> {
-  const hash = await sha256(pin);
-  localStorage.setItem(AUTH_PIN_HASH_KEY, hash);
-  localStorage.setItem(AUTH_ENABLED_KEY, "true");
-}
-
-/** 인증 비활성화 */
-export function disablePwaAuth(): void {
-  localStorage.removeItem(AUTH_ENABLED_KEY);
-  localStorage.removeItem(AUTH_PIN_HASH_KEY);
-}
-
-/** 저장된 PIN 해시 검증 */
-export async function verifyPwaAuthPin(pin: string): Promise<boolean> {
-  const storedHash = localStorage.getItem(AUTH_PIN_HASH_KEY);
-  if (!storedHash) return false;
-  const inputHash = await sha256(pin);
-  return inputHash === storedHash;
-}
+import { emitPwaUnlocked, isPwaLocked, markPwaAuthenticated, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
 
 const PIN_LENGTH = 4;
 const KEYPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
@@ -123,13 +76,8 @@ export function PwaLockScreen() {
     setMounted(true);
     if (typeof window === "undefined") return;
 
-    // 인증 활성화 + 세션 미인증 → 잠금 (웹·PWA 모두 동작)
-    const authEnabled = isPwaAuthEnabled();
-    const alreadyAuth = sessionStorage.getItem(SESSION_AUTH_KEY) === "true";
-
-    if (authEnabled && !alreadyAuth) {
-      setLocked(true);
-    }
+    // 잠금 판정은 isPwaLocked() 단일 소스 (웹·PWA 모두 동작)
+    if (isPwaLocked()) setLocked(true);
   }, []);
 
   const push = useCallback((d: string) => {
@@ -152,10 +100,18 @@ export function PwaLockScreen() {
       setChecking(false);
       checkingRef.current = false;
       if (ok) {
-        sessionStorage.setItem(SESSION_AUTH_KEY, "true");
-        window.dispatchEvent(new Event(PWA_UNLOCKED_EVENT));
+        // ① 세션 인증부터 기록 — 이게 없으면 unlockAndLoad가 백그라운드 가드에 스스로 막힌다
+        markPwaAuthenticated();
         setLocked(false);
-        void unlockRef.current();
+        // ② 로컬 로드를 먼저 끝내고 ③ 해제 이벤트로 원격 pull을 트리거한다.
+        // 병렬로 두면 pull(clearAssetData→전체 교체)과 구 데이터 기준 시세·스냅샷 저장이
+        // 동시에 진행돼 서로를 덮어쓴다. finally로 감싸야 unlockAndLoad가 throw해도
+        // (스토리지 차단 환경에서 실제 가능) 해제 알림이 유실되지 않는다.
+        try {
+          await unlockRef.current();
+        } finally {
+          emitPwaUnlocked();
+        }
       } else {
         setFailCount((c) => c + 1);
         setPin("");

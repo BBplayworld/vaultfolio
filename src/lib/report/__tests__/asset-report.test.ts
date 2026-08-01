@@ -105,17 +105,19 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr!)).toBeCloseTo(attr!.deltaNet, 6);
   });
 
-  it("미반영(과거 소급) 현금 입금도 income으로 잡히고 saving은 오염되지 않는다", () => {
+  it("미반영(과거 소급) 현금 기록 자체는 원인이 아니고, 실제 잔액 증가가 소득으로 귀속된다", () => {
     const data = emptyData();
     data.cashTransactions = [cashTx({ date: "2026-05-10", amount: 3_000_000, reflected: false })];
-    // 미반영 거래는 cost.total을 움직이지 않는다 → savingFull = 0
+    // 미반영 거래는 cost.total을 움직이지 않는다 → savingFull = 0. 잔액(breakdown.cash)만 +300만
     const daily = [snap("2026-05-01", 100_000_000, 90_000_000), snap("2026-05-20", 103_000_000, 90_000_000)];
     const attr = run(data, daily, "2026-05-01")!;
-    expect(attr.incomeEffect).toBe(3_000_000);
+    expect(attr.incomeEffect).toBe(0); // 순자산을 움직이지 않은 기록은 집계하지 않는다
     expect(attr.savingEffect).toBe(0);
-    // 소급분이 price 잔차에서 빠져 시세로 오인되지 않는다
-    expect(attr.priceEffect).toBe(0);
-    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
+    // 실제 현금 증가분은 표시 단계에서 소득으로 귀속되고 시세로 오인되지 않는다
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBeCloseTo(3_000_000, 6);
+    expect(byKey.has("price:stock")).toBe(false);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
   it("반영 현금 입금은 saving이 아니라 income으로 귀속된다", () => {
@@ -196,48 +198,69 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
-  it("실시간 끝점 + 오늘 휴장(주말)이면 시세 원인이 '그 외'로 대체된다(quote 노이즈 오귀속 방지)", () => {
-    // 2026-07-25는 실제 토요일 — 실시간 끝점(_isLive)이 이 날짜면 국내·해외 모두 휴장으로 판정돼야 한다.
+  it("토요일 실시간 끝점에서도 주식 시세가 그대로 노출된다(미국 금요일장 종가는 토요일 새벽 KST에 확정)", () => {
+    // 2026-08-01은 토요일 — 국내·해외 증시는 닫혀 있지만 직전 미국장 종가가 새로 반영된 날이다.
     const data = emptyData();
     data.stocks = [usdStock({ currentPrice: 13 })];
-    const prevSnap = snapFx("2026-07-24", 1_680_000, 1_400_000, { USD: 1400, JPY: 900 }, { USD: 1_680_000, JPY: 0 });
+    const prevSnap = snapFx("2026-07-31", 1_680_000, 1_400_000, { USD: 1400, JPY: 900 }, { USD: 1_680_000, JPY: 0 });
     const liveCurr = {
-      date: "2026-07-25", netAsset: 1_950_000, financialAsset: 1_950_000,
+      date: "2026-08-01", netAsset: 1_950_000, financialAsset: 1_950_000,
       breakdown: { realEstate: 0, stocks: 1_950_000, crypto: 0, cash: 0, loans: 0 },
       fx: { USD: 1400, JPY: 900 }, fxBase: { USD: 1_950_000, JPY: 0 },
       cost: { total: 1_400_000, stock: 1_400_000, crypto: 0, realEstate: 0 },
-      _date: "2026-07-25", _display: "2026-07-25", _isLive: true,
+      _date: "2026-08-01", _display: "2026-08-01", _isLive: true,
     };
-    const attr = computeAttributionSince([prevSnap], [], {}, "2026-07-24", data, RATES, liveCurr as never)!;
-    const allCauses = [...attr.topCauses, ...attr.restCauses];
-    expect(allCauses.some((c) => c.key === "price:stock")).toBe(false);
-    expect(allCauses.some((c) => c.key === "rest")).toBe(true);
-    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6); // 라벨만 바뀌고 합계는 그대로
-  });
-
-  it("휴장일 억제는 주식 시세에만 적용되고 코인 시세는 그대로 노출된다", () => {
-    // 코인은 24시간 거래라 증시 휴장과 무관 — 함께 억제하면 진짜 변동이 "그 외"에 묻힌다.
-    const data = emptyData();
-    const prevSnap = snapClass("2026-07-24", { stocks: 10_000_000, crypto: 5_000_000 }, { stock: 8_000_000, crypto: 4_000_000 });
-    const liveCurr = {
-      ...snapClass("2026-07-25", { stocks: 10_300_000, crypto: 5_400_000 }, { stock: 8_000_000, crypto: 4_000_000 }),
-      _date: "2026-07-25", _display: "2026-07-25", _isLive: true,
-    };
-    const attr = computeAttributionSince([prevSnap], [], {}, "2026-07-24", data, RATES, liveCurr as never)!;
+    const attr = computeAttributionSince([prevSnap], [], {}, "2026-07-31", data, RATES, liveCurr as never)!;
     const keys = getOrderedCauses(attr).map((c) => c.key);
-    expect(keys).not.toContain("price:stock");     // 주식만 억제
-    expect(keys).toContain("price:crypto");        // 코인 시세는 유지
+    expect(keys).toContain("price:stock");
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
-  it("같은 휴장일이어도 실시간 끝점이 아니면(스냅샷 비교) 시세 원인이 그대로 노출된다", () => {
-    // curr가 실시간(_isLive)이 아니라 스냅샷이면 quote 노이즈가 없으므로 억제하지 않는다.
+  it("실시간 끝점에서 주식·코인 시세가 각각 노출된다(휴장 여부로 억제하지 않는다)", () => {
     const data = emptyData();
-    const prevSnap = snapClass("2026-05-01", { stocks: 100_000_000 }, { stock: 90_000_000 });
-    const currSnap = snapClass("2026-07-25", { stocks: 100_500_000 }, { stock: 90_000_000 }); // 토요일 날짜의 저장 스냅샷
-    const attr = run(data, [prevSnap, currSnap], "2026-05-01")!;
-    const allCauses = [...attr.topCauses, ...attr.restCauses];
-    expect(allCauses.some((c) => c.key === "price:stock")).toBe(true);
+    const prevSnap = snapClass("2026-07-31", { stocks: 10_000_000, crypto: 5_000_000 }, { stock: 8_000_000, crypto: 4_000_000 });
+    const liveCurr = {
+      ...snapClass("2026-08-01", { stocks: 10_300_000, crypto: 5_400_000 }, { stock: 8_000_000, crypto: 4_000_000 }),
+      _date: "2026-08-01", _display: "2026-08-01", _isLive: true,
+    };
+    const attr = computeAttributionSince([prevSnap], [], {}, "2026-07-31", data, RATES, liveCurr as never)!;
+    const keys = getOrderedCauses(attr).map((c) => c.key);
+    expect(keys).toContain("price:stock");
+    expect(keys).toContain("price:crypto");
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("어떤 원인도 '그 외' 범주로 뭉뚱그려지지 않는다 (외화 주식+외화 현금 동시 보유)", () => {
+    // 환율효과의 주식/현금 안분 근사를 없앴으므로 설명 안 되는 잔차가 남지 않아야 한다.
+    const data = emptyData();
+    data.stocks = [usdStock()];                                   // 원가 100×$10, 평가 100×$12
+    data.cash = [{ id: "c1", name: "달러예금", balance: 1000, currency: "USD", type: "savings" }];
+    const daily = [
+      // 주식 1,680,000 + 현금 1,400,000 = 3,080,000
+      snapClass("2026-05-01", { stocks: 1_680_000, cash: 1_400_000 }, { stock: 1_400_000, total: 2_800_000 }),
+      // 환율 1400→1500: 주식 1,800,000 + 현금 1,500,000 = 3,300,000
+      { ...snapClass("2026-05-20", { stocks: 1_800_000, cash: 1_500_000 }, { stock: 1_500_000, total: 3_000_000 }),
+        fx: { USD: 1500, JPY: 900 } },
+    ];
+    daily[0].fxBase = { USD: 3_080_000, JPY: 0 };
+    daily[1].fxBase = { USD: 3_300_000, JPY: 0 };
+    const attr = run(data, daily, "2026-05-01")!;
+    const items = getAttributionItems(attr);
+    expect(items.map((i) => i.label)).not.toContain("그 외");
+    expect(attr.fxEffect).toBeCloseTo(220_000, 6);  // 3,080,000 × (1500/1400 − 1)
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("같은 날짜의 daily·monthly가 함께 있으면 daily를 시작점으로 고른다", () => {
+    // monthly는 v2 필드가 없거나 갱신이 늦어 예측 모드로 떨어질 수 있고, 표기도 "7월"이 아니라 날짜가 맞다.
+    const data = emptyData();
+    const prevDaily = snapClass("2026-07-31", { stocks: 10_000_000 }, { stock: 8_000_000 });
+    const currDaily = snapClass("2026-08-01", { stocks: 10_500_000 }, { stock: 8_000_000 });
+    const legacyMonthly = { month: "2026-07", netAsset: 10_000_000, financialAsset: 10_000_000 };
+    const attr = computeAttributionSince([prevDaily, currDaily], [legacyMonthly], {}, "2026-07-31", data, RATES)!;
+    expect(attr.fromDate).toBe("2026-07-31"); // "2026-07"(월 표기)이 아니어야 한다
+    expect(attr.estimated).toBe(false);       // 정밀 분해 경로 유지
+    expect(getOrderedCauses(attr).map((c) => c.key)).toContain("price:stock");
   });
 
   it("시세가 자산군별로 분해된다 (주식·코인·부동산)", () => {
@@ -326,8 +349,8 @@ describe("asset-report 원인분해", () => {
     ];
     const attr = run(data, daily, "2026-05-01")!;
     const ordered = getOrderedCauses(attr).map((c) => c.key);
-    // CAUSE_ORDER: buy:stock(5) < sell:stock(6) < income(11) < debt(12) < rest(13) — 절대값 크기와 무관하게 이 순서
-    expect(ordered).toEqual(["buy:stock", "sell:stock", "income", "debt", "rest"]);
+    // CAUSE_ORDER: buy:stock(5) < sell:stock(6) < income(11) < debt(12) — 절대값 크기와 무관하게 이 순서
+    expect(ordered).toEqual(["buy:stock", "sell:stock", "income", "debt"]);
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
@@ -343,7 +366,41 @@ describe("asset-report 원인분해", () => {
     const daily = [legacy, snap("2026-05-20", 104_000_000, 93_000_000)];
     const attr = run(data, daily, "2026-05-01")!;
     expect(attr.estimated).toBe(true);
-    expect(attr.incomeEffect).toBe(1_500_000);
+    expect(attr.incomeEffect).toBe(1_000_000); // 미반영 50만은 순자산을 움직이지 않아 집계 제외
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("임계값 미만 잔차가 버려지지 않고 절대값 최대 원인에 흡수된다", () => {
+    // "그 외" 범주를 폐지한 뒤 잔차를 흡수하는 분기(getAttributionItems)를 직접 태우는 케이스.
+    // 코인·부동산이 각각 9천원만 올라 개별로는 표시 임계값(1만원) 미만 → restCauses에서 탈락하지만
+    // 합(1.8만원)은 임계값 이상이라 버리면 표시 합계가 deltaNet과 어긋난다.
+    const data = emptyData();
+    const cost = { stock: 90_000_000, crypto: 9_000_000, realEstate: 45_000_000 };
+    const daily = [
+      snapClass("2026-05-01", { stocks: 100_000_000, crypto: 10_000_000, realEstate: 50_000_000 }, cost),
+      snapClass("2026-05-20", { stocks: 105_000_000, crypto: 10_009_000, realEstate: 50_009_000 }, cost),
+    ];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.restCauses).toHaveLength(0);       // 개별 9천원은 표시 대상 아님
+    expect(attr.restEffect).toBeCloseTo(18_000, 6);
+    const items = getAttributionItems(attr);
+    expect(items).toHaveLength(1);
+    expect(items[0].key).toBe("price:stock");
+    expect(items[0].amount).toBeCloseTo(5_018_000, 6); // 500만 + 흡수된 잔차 1.8만
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("예측 경로에서도 표시 항목 합계 = deltaNet", () => {
+    // 기존 예측 테스트는 집계 필드(sumEffects)만 봐서 자산군 분해·잔차 흡수를 우회했다.
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-05-10", amount: 1_000_000, reflected: true })];
+    data.transactions = [trade({ date: "2026-05-10", type: "buy", quantity: 10, price: 100_000 })];
+    data.crypto = [{ id: "c1", name: "비트코인", symbol: "BTC", quantity: 1, averagePrice: 500_000, currentPrice: 600_000, purchaseDate: "2026-05-12" }];
+    data.loans = [loan({ balance: 2_000_000, startDate: "2026-05-05" })];
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 104_000_000, 93_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 });

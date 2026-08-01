@@ -147,31 +147,54 @@ todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
 ```typescript
 // 모듈 내부
 krwMul(currency, rates)                              // KRW 환산 배수 (JPY는 100엔당) — 원인분해 공용
-cashInflow(data, from, to, rates)                    // → { reflected, unreflected } 현금 순유입
+reflectedCashInflow(data, from, to, rates): number   // 반영된 현금 순유입만 합산 (미반영 소급 기록은 순자산 무변동 → 제외)
 reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
 costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
-fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure·stockFxShare 공용 단일 수식
-stockFxShare(data, rates)                            // → { USD, JPY } 0~1. 환율효과 중 주식 몫 안분 비율(현재 보유 기준 근사)
-isClosedForBothMarkets(dateStr)                      // 국내·해외 모두 휴장인 날짜인지 — 실시간 끝점(_isLive)의 **주식** 시세 원인 억제 판정용
+fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
+byDateThenDaily(a, b)                                // 시계열 포인트 정렬 — 같은 날짜면 daily 우선(monthly보다 뒤) → 시작점이 daily로 잡힌다
 makeCause(key, amount): AttributionCause             // label=causeShortLabel·sentence=causeSentence 파생
 
 // export
 causeShortLabel(key, amount): string                 // 모든 라벨의 단일 출처(부호 방향 반영). label·sentence가 여기서 파생
 causeSentence(key, amount): string                   // 서술형 문장 (성적표용)
 getOrderedCauses(attr): AttributionCause[]           // topCauses+restCauses를 CAUSE_ORDER 고정 순서로 정렬
-getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 잔차("그 외") 병합까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
+getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 임계값 미만 잔차 흡수까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
 formatAttributionSentence(attr): string | null       // 위 항목을 한 줄로 결합(스크린샷·폴백용)
 formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-MM→M월 (홈·성적표 공용)
 ```
 
 `resolveAttribution`이 Δ순자산을 분해한다. **원인 키는 자산군까지 명시한다**:
-`price:stock|price:crypto|price:realEstate`(정밀) · `price`(예측 모드 통합) · `fx` · `buy:stock|sell:stock|buy:crypto|sell:crypto|buy:realEstate|sell:realEstate` · `income` · `debt` · `rest`.
+`price:stock|price:crypto|price:realEstate`(정밀) · `price`(예측 모드 통합) · `fx` · `buy:stock|sell:stock|buy:crypto|sell:crypto|buy:realEstate|sell:realEstate` · `income` · `debt`.
 
-- **`priceEffect`는 잔차**다. 자산군별 시세는 스냅샷의 `breakdown`(평가액)−`cost`(원가) 델타로 산출하고, `priceEffect` **총액은 건드리지 않은 채** 그 안을 나눈다. 분해되지 않는 조각은 전부 `rest`가 흡수 → **표시 합계 = deltaNet 항등식** 유지(F-ACTIVITY 회귀 지점).
+- **"그 외"(`rest`) 범주는 없다.** 순자산 변동의 원인은 시세·환율·자산 유입/유출뿐이므로 잔차 범주를 두지 않는다. 새 원인을 추가할 때 "설명 안 되는 조각은 rest로" 식의 폴백을 되살리지 말 것.
+- **`priceEffect`는 잔차**다. 자산군별 시세는 스냅샷의 `breakdown`(평가액)−`cost`(원가) 델타로 산출하고, `priceEffect` **총액은 건드리지 않은 채** 그 안을 나눈다.
+- 환율효과의 **주식 몫 = `fxEffect − costFx.cash`**(현금 몫을 정확히 계산해 빼는 방식) — 보유 비율 안분 근사를 쓰면 오차가 잔차로 남는다. 이 정의 덕에 자산군별 시세의 합 = `priceEffect`가 성립한다.
+- 스냅샷의 `netAsset`과 `breakdown` 합이 어긋날 때만 남는 `priceResidual`은 **`dCostCash`(→`income`)에 합산**한다 — 성격이 현금성 변동이고, 이 항이 **표시 합계 = deltaNet 항등식**을 무조건 보장한다(F-ACTIVITY 회귀 지점).
 - 신규 투입도 자산군별 `Δcost`로 쪼개 "매수/매도" 용어로 통일한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 **방향별로** `buy:stock`/`sell:stock`에 합산(같은 라벨 두 줄 방지). 투자 3종으로 설명되지 않는 원가 증감(=현금 잔액 직접 수정)은 `income`에 합산한다.
-- 휴장일 억제(`isClosedForBothMarkets`)는 **`price:stock`에만** 적용한다 — 코인은 24시간 거래, 부동산은 직접 입력이라 증시 휴장과 무관.
+- **휴장 여부로 시세 원인을 억제하지 않는다.** 해외 종가는 KST 화~토 새벽에, 국내는 평일에 갱신되므로 월~토는 매일 주식 변동이 실재한다(일요일만 없고, 그날은 금액이 임계값 미만이라 자동으로 안 보인다).
 - 뷰는 잔차를 직접 계산하지 말 것. `getAttributionItems` 하나만 거쳐야 두 화면의 임계값·합계가 갈리지 않는다.
 
+
+### pwa/app-lock.ts — 앱 잠금(PIN) 상태 **단일 소스**
+
+```typescript
+PWA_UNLOCKED_EVENT                       // "secretasset:pwa-unlocked"
+isPwaAuthEnabled(): boolean
+isPwaLocked(): boolean                   // 인증 활성 + 세션 미인증. standalone 무관 — 잠금화면 판정과 동일해야 한다
+markPwaAuthenticated(): void             // 세션 인증 기록 (이 시점부터 백그라운드 가드 해제)
+emitPwaUnlocked(): void                  // 해제 알림 → CloudSyncProvider가 pull
+setPwaAuthPin(pin) / disablePwaAuth() / verifyPwaAuthPin(pin)
+```
+UI(`pwa-lock-screen.tsx`)가 아니라 순수 모듈에 두는 이유: 잠금화면이 `useAssetData`를 쓰므로 `asset-data-context`·`cloud-sync-provider`가 import하면 **순환 참조**가 된다.
+**해제 순서 = `markPwaAuthenticated()` → `try { await unlockAndLoad() } finally { emitPwaUnlocked() }`.** 기록을 먼저 하지 않으면 `unlockAndLoad`가 자기 가드에 막히고, 뒤 둘을 병렬로 두면 원격 pull과 로컬 시세·스냅샷 저장이 서로를 덮어쓴다. `finally`가 없으면 `unlockAndLoad`가 throw할 때 해제 알림이 유실된다.
+**`setPwaAuthPin`은 반드시 `markPwaAuthenticated()`를 함께 호출한다** — 방금 잠금을 설정한 세션은 정의상 인증된 세션이다. 빠뜨리면 설정 직후 `isPwaLocked()`가 true로 굳는데 잠금화면은 마운트 시에만 판정해 뜨지 않고, 그 세션의 push·pull·시세·스냅샷이 전부 무증상 정지한다(과거 회귀).
+
+### pwa/background-gate.ts — 자동 백그라운드 동작 차단 판정
+
+```typescript
+isBackgroundWorkBlocked(): boolean       // isInAppGateActive() || isPwaLocked()
+```
+전체화면 게이트(인앱 브라우저 게이트·앱 잠금)가 덮고 있는 동안 시세·환율·코인·스냅샷 저장·부동산 재조회·연결 모달 등 **사용자가 인지하지 못하는 부작용**을 막는다. 게이트가 2종이라 지점마다 따로 쓰면 한쪽을 빠뜨리므로 반드시 이 함수를 경유한다(R22).
 
 ### number-utils.ts
 

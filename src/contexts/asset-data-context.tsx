@@ -15,7 +15,9 @@ import { pruneCashTransactions } from "@/lib/cash-tx-utils";
 import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
-import { isInAppGateActive } from "@/lib/pwa/detect-browser";
+import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
+import { isPwaLocked } from "@/lib/pwa/app-lock";
+import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
@@ -266,20 +268,6 @@ const resolveShareToken = async (raw: string): Promise<{ token: string; localKey
     return null;
   }
 };
-
-function checkIsLocked(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    const authEnabled = localStorage.getItem("secretasset_pwa_auth_enabled") === "true";
-    const alreadyAuth = sessionStorage.getItem("secretasset_pwa_authenticated") === "true";
-    return standalone && authEnabled && !alreadyAuth;
-  } catch {
-    return false;
-  }
-}
 
 export function AssetDataProvider({ children }: { children: ReactNode }) {
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
@@ -836,8 +824,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     initAssetData(data);
     setIsDataLoaded(true);
     if (!hasAssets) return;
-    // 인앱 게이트 활성 시 오늘자 환율·시세·스냅샷 자동 동기화 차단 (데이터 로드는 위에서 완료)
-    if (isInAppGateActive()) return;
+    // 전체화면 게이트(인앱 게이트·앱 잠금) 활성 시 오늘자 환율·시세·스냅샷 자동 동기화 차단
+    // (데이터 로드는 위에서 완료). 호출처 7곳을 개별 방어하는 것보다 여기 한 곳이 안전하다.
+    if (isBackgroundWorkBlocked()) return;
     await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
     await syncTodayExchangeRate();
 
@@ -876,7 +865,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const prevHasAssetsRef = useRef(false);
   useEffect(() => {
     if (!isDataLoaded) return;
-    if (isInAppGateActive()) return; // 인앱 게이트 활성 시 자동 동기화 차단
+    if (isBackgroundWorkBlocked()) return; // 인앱 게이트·앱 잠금 활성 시 자동 동기화 차단
     const hasAssets =
       assetData.stocks.length > 0 ||
       assetData.realEstate.length > 0 ||
@@ -965,6 +954,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // hashchange: 마운트 이후 URL 해시 변경 감지 (Short URL 지원)
   const handleHashChange = useCallback(async () => {
+    if (isPwaLocked()) return; // 잠금화면 뒤에서 공유 토큰이 적용되지 않도록
     checkAndApplyThemeMode();
     const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
     if (!shareTokenRaw) return;
@@ -972,7 +962,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, [processShareToken, checkAndApplyThemeMode]);
 
   // storage: 다른 탭에서 localStorage 변경 감지
+  // 잠금 중에는 주입하지 않는다 — assetData가 채워지면 부동산 갱신 등 파생 effect가 연쇄 발화한다
   const handleStorageChange = useCallback(() => {
+    if (isPwaLocked()) return;
     setAssetData(getAssetData());
   }, []);
 
@@ -1013,15 +1005,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // ─── [이벤트 리스너 등록] ───────────────────────────────────────────────────
 
-  // 마운트 초기화 + hashchange 리스너 등록
-  // - 마운트 즉시: localStorage 환율을 state에 반영 (플래시 방지)
-  // - 이후: 진입 경로별 분기 후 initAndSync 실행
-  useEffect(() => {
+  // 부트스트랩 — 마이그레이션·환율 hydrate·monthly 백필·Share Target 변환·진입 분기를 한 덩어리로 묶는다.
+  // 잠금 중이면 마운트에서 건너뛰고 **해제 시 unlockAndLoad가 이 함수를 호출**한다(세션당 1회).
+  // 개별 항목을 unlockAndLoad에 하나씩 옮겨 적으면 반드시 빠뜨린다 — 단일 함수가 요점.
+  const bootstrapDoneRef = useRef(false);
+  const runBootstrap = useCallback(async () => {
+    if (bootstrapDoneRef.current) return;
+    bootstrapDoneRef.current = true;
     migrateStorageKeys();
     prunePeriodProfitCache(); // 옛 기간별 수익 캐시 키 정리 (현재 유효 토큰만 유지)
-    if (checkIsLocked()) {
-      return;
-    }
     // 마운트 즉시: localStorage 환율을 state에 반영
     // syncTodayExchangeRate가 자기완결적으로 환율 state를 보장하지만,
     // INITIAL_SYNC_DELAY_MS 지연 전에 기본값(1430/930)이 표시되는 것을 방지
@@ -1062,58 +1054,56 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       } catch { /* 마이그레이션 실패 무시 */ }
     }
 
-    window.addEventListener("hashchange", handleHashChange);
-
     // 초기 진입 분기 (Short URL 및 PWA Share Target 지원)
-    void (async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const searchParams = new URLSearchParams(window.location.search);
-          const sharedUrl = searchParams.get("url") || searchParams.get("text") || "";
-          if (sharedUrl) {
-            const hashIdx = sharedUrl.indexOf("#");
-            if (hashIdx >= 0) {
-              window.location.hash = sharedUrl.substring(hashIdx);
-            }
+    if (typeof window !== "undefined") {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const sharedUrl = searchParams.get("url") || searchParams.get("text") || "";
+        if (sharedUrl) {
+          const hashIdx = sharedUrl.indexOf("#");
+          if (hashIdx >= 0) {
+            window.location.hash = sharedUrl.substring(hashIdx);
           }
-        } catch (_) { /* 무시 */ }
-      }
+        }
+      } catch (_) { /* 무시 */ }
+    }
 
-      checkAndApplyThemeMode();
-      const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
-      const localData = getAssetData();
-      const hasLocalAssets =
-        localData.realEstate.length > 0 ||
-        localData.stocks.length > 0 ||
-        localData.crypto.length > 0 ||
-        localData.cash.length > 0 ||
-        localData.loans.length > 0;
+    checkAndApplyThemeMode();
+    const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
+    const localData = getAssetData();
+    const hasLocalAssets =
+      localData.realEstate.length > 0 ||
+      localData.stocks.length > 0 ||
+      localData.crypto.length > 0 ||
+      localData.cash.length > 0 ||
+      localData.loans.length > 0;
 
-      const isStandaloneMode =
-        typeof window !== "undefined" && (
-          window.matchMedia("(display-mode: standalone)").matches ||
-          (window.navigator as any).standalone === true
-        );
+    if (shareTokenRaw && isStandaloneDisplay() && hasLocalAssets) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      await initAndSync(localData);
+      return;
+    }
 
-      if (shareTokenRaw && isStandaloneMode && hasLocalAssets) {
-        window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        await initAndSync(localData);
-        return;
-      }
+    if (!shareTokenRaw) {
+      // 케이스 1: 공유 토큰 없음 (일반 진입)
+      await initAndSync(localData);
+      return;
+    }
+    // 케이스 2~5: 공유 토큰 처리
+    await processShareToken(shareTokenRaw);
+  }, [processShareToken, initAndSync, checkAndApplyThemeMode]);
 
-      if (!shareTokenRaw) {
-        // 케이스 1: 공유 토큰 없음 (일반 진입)
-        await initAndSync(localData);
-        return;
-      }
-      // 케이스 2~5: 공유 토큰 처리
-      await processShareToken(shareTokenRaw);
-    })();
+  // hashchange 리스너는 잠금 여부와 무관하게 항상 등록한다 — 잠금 때문에 미등록되면
+  // 해제 후에도 영영 붙지 않아 `#share=` 수신·테마 해시가 세션 내내 죽는다(핸들러가 잠금을 가드).
+  useEffect(() => {
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [handleHashChange]);
 
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-    };
-  }, [handleHashChange, processShareToken, initAndSync]);
+  useEffect(() => {
+    if (isPwaLocked()) return; // 잠금 중이면 해제 시 unlockAndLoad가 부트스트랩을 수행
+    void runBootstrap();
+  }, [runBootstrap]);
 
   // storage 변경 감지 리스너 등록
   useEffect(() => {
@@ -1195,10 +1185,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 접속 시 부동산 실거래 추정치 자동 갱신 (S-4.21) — 주식 현재가와 동일 취지.
   // 지원 종류(dataset)이고 주소 또는 시군구코드가 있으면 대상. regionCode 없으면 주소를 먼저 해석해 채운다.
-  // 최초 로드 1회. marketEstimate는 sync 비교 제외라 push 핑퐁 없음.
+  // 최초 로드 1회. marketEstimate·regionCode·legalDong·complexName은 sync 비교 제외라 push 핑퐁 없음.
   const realEstateRefreshedRef = useRef(false);
   useEffect(() => {
     if (realEstateRefreshedRef.current) return;
+    // 게이트(인앱·앱잠금) 뒤에서 /api/realestate 요청·저장이 돌지 않도록 차단.
+    // ref를 세우기 전에 return해야 해제 후 정상 실행된다.
+    if (!isDataLoaded || isBackgroundWorkBlocked()) return;
     const eligible = assetData.realEstate.filter(
       (r) => realEstateTradeDataset[r.type] && (r.regionCode || r.address),
     );
@@ -1289,7 +1282,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         return next;
       });
     })();
-  }, [assetData.realEstate]);
+  }, [assetData.realEstate, isDataLoaded]);
 
   // 주식
   const addStock = useCallback(
@@ -1301,10 +1294,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   );
 
   // 스크린샷 가져오기 전용: ticker 없는 종목도 허용 (superRefine 우회)
+  // 스키마 검증만 우회할 뿐 명백한 사용자 편집이므로 saveData와 동일하게 편집 신호를 발행한다
+  // (없으면 push가 호출처 refreshData로 인한 파생값 비교 우연 통과에 의존하게 된다)
   const addStockRaw = useCallback(
     (stock: Stock) => {
       const newData = { ...assetData, stocks: [...assetData.stocks, stock] };
-      return saveAssetDataRaw(newData);
+      const success = saveAssetDataRaw(newData);
+      if (success) window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
+      return success;
     },
     [assetData]
   );
@@ -1635,47 +1632,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     };
   }, [assetData, exchangeRates]);
 
+  // 잠금 해제 직후 — 마운트에서 건너뛴 부트스트랩을 그대로 수행한다(마이그레이션·환율 hydrate·
+  // monthly 백필·Share Target 변환·진입 분기 전부). 개별 항목을 여기 복제하지 말 것.
   const unlockAndLoad = useCallback(async () => {
-    const savedRates = localStorage.getItem(STORAGE_KEYS.exchangeRate);
-    if (savedRates) {
-      try {
-        const parsed = JSON.parse(savedRates);
-        const rates = { USD: parsed.USD || 1380, JPY: parsed.JPY || 930 };
-        exchangeRatesRef.current = rates;
-        setExchangeRatesState(rates);
-      } catch { /* ignore */ }
-    }
-    const savedDate = localStorage.getItem(STORAGE_KEYS.exchangeSyncDate);
-    if (savedDate) setExchangeRateDate(savedDate);
-
-    const localData = getAssetData();
-    checkAndApplyThemeMode();
-    const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
-    const hasLocalAssets =
-      localData.realEstate.length > 0 ||
-      localData.stocks.length > 0 ||
-      localData.crypto.length > 0 ||
-      localData.cash.length > 0 ||
-      localData.loans.length > 0;
-
-    const isStandaloneMode =
-      typeof window !== "undefined" && (
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true
-      );
-
-    if (shareTokenRaw && isStandaloneMode && hasLocalAssets) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      await initAndSync(localData);
-      return;
-    }
-
-    if (!shareTokenRaw) {
-      await initAndSync(localData);
-      return;
-    }
-    await processShareToken(shareTokenRaw);
-  }, [initAndSync, processShareToken, checkAndApplyThemeMode]);
+    await runBootstrap();
+  }, [runBootstrap]);
 
   return (
     <AssetDataContext.Provider

@@ -164,7 +164,15 @@ export function exportAssetData(): void {
 
 // 파싱된 페이로드를 검증 후 로컬에 복원 (파일 가져오기·클라우드 동기화 공용)
 // 검증 실패 시 throw — 기존 데이터는 보존(clearAssetData 전에 검증 완료)
-export function applyImportedPayload(parsed: unknown): { assetData: AssetData; snapshotRestored: boolean } {
+/**
+ * @param keepLocalSnapshots 수신 payload에 스냅샷이 없을 때 **로컬 스냅샷을 보존**할지.
+ *  - 클라우드 pull(`true`): 스냅샷 없는 기기가 push했다고 해서 내 순자산 이력을 지우면 안 된다.
+ *  - 파일 가져오기(`false`): 남의 백업을 얹으면서 내 이력만 남기면 자산과 이력이 뒤섞인다.
+ */
+export function applyImportedPayload(
+  parsed: unknown,
+  { keepLocalSnapshots = false }: { keepLocalSnapshots?: boolean } = {},
+): { assetData: AssetData; snapshotRestored: boolean } {
   const p = (parsed ?? {}) as Record<string, unknown>;
   // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
   const rawAsset = (p.assetData ?? p) as unknown;
@@ -182,6 +190,11 @@ export function applyImportedPayload(parsed: unknown): { assetData: AssetData; s
   }
   // 장기 아카이브는 merge 복원(로컬 ∪ 수신) — 구버전 payload가 아카이브 없이 와도 로컬 유실 방지
   const localArchive = readDailyArchive();
+  // 일별·월별도 같은 취지로 로컬분을 미리 읽어둔다(pull 한정). buildExportPayload는 스냅샷이 비면
+  // 키 자체를 넣지 않으므로(스냅샷 없는 새 기기가 push한 경우), 아래 clearAssetData가 지운 뒤
+  // 복원이 스킵되면 받는 쪽 스냅샷이 통째로 사라진다 — "없으면 유지"가 되도록 폴백을 준비한다.
+  const localDaily = keepLocalSnapshots ? localStorage.getItem(STORAGE_KEYS.dailySnapshots) : null;
+  const localMonthly = keepLocalSnapshots ? localStorage.getItem(STORAGE_KEYS.monthlySnapshots) : null;
 
   // 3단계: 모든 검증 통과 → 기존 데이터 전체 삭제 (동기 완료)
   clearAssetData();
@@ -198,14 +211,16 @@ export function applyImportedPayload(parsed: unknown): { assetData: AssetData; s
     validated.nickname = p.nickname;
   }
   let snapshotRestored = false;
-  if (dailySnapshot || monthlySnapshot) {
-    try {
-      if (dailySnapshot) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
-      if (monthlySnapshot) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
-      snapshotRestored = true;
-    } catch {
-      // 스냅샷 복원 실패는 무시
-    }
+  try {
+    // 수신분이 있으면 교체, 없으면(빈 배열 포함) 로컬분을 되돌려 쓴다.
+    // `[]`도 truthy이므로 반드시 length로 판정해야 폴백이 우회되지 않는다.
+    if (dailySnapshot?.length) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
+    else if (localDaily) localStorage.setItem(STORAGE_KEYS.dailySnapshots, localDaily);
+    if (monthlySnapshot?.length) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
+    else if (localMonthly) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, localMonthly);
+    snapshotRestored = !!(dailySnapshot?.length || monthlySnapshot?.length);
+  } catch {
+    // 스냅샷 복원 실패는 무시
   }
   // 장기 아카이브 복원 — clearAssetData가 지운 로컬분과 수신분 merge
   const mergedArchive = mergeDailyArchives(localArchive, incomingArchive ?? {});

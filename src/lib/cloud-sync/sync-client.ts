@@ -84,7 +84,9 @@ export async function pullAsset(assetId: string, keys: AssetKeys): Promise<PullR
     } catch {
       return { status: "error", message: "복호화 실패 — 금고 암호가 올바르지 않습니다." };
     }
-    applyImportedPayload(payload); // 검증 실패 시 throw → 기존 데이터 보존
+    // 검증 실패 시 throw → 기존 데이터 보존.
+    // keepLocalSnapshots: 스냅샷 없는 기기가 push했다고 해서 이 기기의 순자산 이력을 지우지 않는다.
+    applyImportedPayload(payload, { keepLocalSnapshots: true });
     markSynced(data.asset.version);
     return { status: "ok", version: data.asset.version };
   } catch {

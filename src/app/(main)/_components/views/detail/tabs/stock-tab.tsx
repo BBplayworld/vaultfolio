@@ -1030,6 +1030,10 @@ export function StockTab() {
       delete next.purchaseExchangeRate;
       return next;
     });
+    // saveData 유지 — API 파생값이 아니라 실제 사용자 데이터(currency·purchaseExchangeRate)를
+    // 정정하는 것이라 타 기기 전파가 옳고, dirty가 비면 1회로 수렴한다.
+    // refreshData()로 바꾸면 진행 중 시세 sync를 abort하고 saveSnapshotsBlockedRef를 세워
+    // 그 세션의 오늘자 스냅샷 저장이 통째로 스킵된다(해제는 syncTodayStockPrices 안에서만 일어남).
     saveData({ ...assetData, stocks: fixed });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

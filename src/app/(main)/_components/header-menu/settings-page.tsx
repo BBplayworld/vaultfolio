@@ -42,7 +42,7 @@ import type { ProfitBasis } from "@/lib/profit-utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { useAssetImport } from "@/hooks/use-asset-import";
-import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "../pwa/pwa-lock-screen";
+import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
 
 export function SettingsPage() {
   const { refreshData, assetData } = useAssetData();
