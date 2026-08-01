@@ -755,12 +755,12 @@ export function AssetReportView() {
                   )}
                   {!attribution.estimated && attribution.estimatedUntil && (
                     <p className={`${CAPTION} text-pretty`}>
-                      {formatAttributionDate(attribution.estimatedUntil)} 이전 구간은 매수일·대출일 기반 추정치이고, 그 이후는 실제 기록으로 분해했어요.
+                      {formatAttributionDate(attribution.estimatedUntil)} 이전은 추정치, 이후는 실측이에요.
                     </p>
                   )}
                   {attribution.cashRoundTrip && (
                     <p className={`${CAPTION} text-pretty`}>
-                      {formatAttributionDate(attribution.cashRoundTrip.peakDate)}에 현금 잔액이 일시적으로 최대 {Math.abs(Math.round(attribution.cashRoundTrip.peakAmount / 10000)).toLocaleString()}만원까지 움직였다가 되돌아와 순변화에는 반영되지 않았어요.
+                      {formatAttributionDate(attribution.cashRoundTrip.peakDate)}에 최대 {Math.abs(Math.round(attribution.cashRoundTrip.peakAmount / 10000)).toLocaleString()}만원 변동 후 복귀돼 순변화엔 반영 안 됐어요.
                     </p>
                   )}
                 </div>
