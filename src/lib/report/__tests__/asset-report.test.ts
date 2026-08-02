@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { computeAttributionSince, computePeriodAttribution, getAttributionItems, getOrderedCauses } from "../asset-report";
+import { CAUSE_DISPLAY_MIN, computeAttributionSince, computePeriodAttribution, getAttributionItems, getOrderedCauses, groupAttributionItems } from "../asset-report";
 import type { AssetData, DailyAssetSnapshot, Loan, SnapshotBreakdown, SnapshotCost, Stock } from "@/types/asset";
-import type { CashTransaction, Transaction } from "@/types/transaction";
+import type { CashTransaction, LoanTransaction, Transaction } from "@/types/transaction";
 
 // 원인분해 항등식 회귀 — 표시 항목의 합이 항상 Δ순자산과 일치해야 한다(S-4.22 AC6).
 // resolveAttribution은 비공개라 computeAttributionSince를 통해 검증한다.
@@ -10,7 +10,7 @@ const RATES = { USD: 1400, JPY: 900 };
 
 const emptyData = (): AssetData => ({
   realEstate: [], stocks: [], crypto: [], cash: [], loans: [],
-  yearlyNetAssets: [], transactions: [], cashTransactions: [],
+  yearlyNetAssets: [], transactions: [], cashTransactions: [], loanTransactions: [],
   lastUpdated: new Date().toISOString(), nickname: "",
 });
 
@@ -73,6 +73,12 @@ const loan = (o: Partial<Loan> = {}): Loan => ({
 const cashTx = (o: Partial<CashTransaction> = {}): CashTransaction => ({
   id: `ctx_${Math.random().toString(36).slice(2)}`,
   cashId: "c1", type: "deposit", amount: 1_000_000, currency: "KRW",
+  date: "2026-05-10", reflected: true, createdAt: new Date().toISOString(), ...o,
+});
+
+const loanTx = (o: Partial<LoanTransaction> = {}): LoanTransaction => ({
+  id: `ltx_${Math.random().toString(36).slice(2)}`,
+  loanId: "l1", type: "repay", amount: 1_000_000,
   date: "2026-05-10", reflected: true, createdAt: new Date().toISOString(), ...o,
 });
 
@@ -373,6 +379,35 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
+  it("예측 경로: 기간 내 기존 대출의 반영된 상환이 debt effect에 포착된다(S-4.24)", () => {
+    // 대출은 startDate가 기간 밖(신규 대출 아님)이라 estimatePeriodInflows의 매수일 기반 추정은
+    // 이 상환을 전혀 못 잡는다 — reflectedLoanFlow가 없으면 debtEffect=0으로 과소평가됐다.
+    const data = emptyData();
+    data.loans = [loan({ id: "l1", balance: 2_000_000, startDate: "2026-01-01" })];
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-05-10", reflected: true })];
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 104_000_000, 93_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    expect(attr.debtEffect).toBe(1_000_000); // 상환 = +(순자산 증가 방향)
+    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("예측 경로: 기간 내 신규 대출 + 그 대출의 반영 거래가 동시에 있어도 이중계산되지 않는다(S-4.24)", () => {
+    // 신규 대출(startDate 기간 내)이면서 동시에 반영된 borrow 거래도 있는 경우 —
+    // estimatePeriodInflows가 loanTxLoanIds로 스킵하지 않으면 -balance(추정) + -amount(reflectedLoanFlow)가
+    // 이중으로 잡혀 debtEffect가 실제 대출액의 2배로 과대평가된다.
+    const data = emptyData();
+    data.loans = [loan({ id: "l1", balance: 5_000_000, startDate: "2026-05-05" })];
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "borrow", amount: 5_000_000, date: "2026-05-05", reflected: true })];
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 104_000_000, 93_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    expect(attr.debtEffect).toBe(-5_000_000); // 단일 계산(신규 대출로 순자산 감소 방향), 이중계산이면 -10,000,000
+    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
   it("임계값 미만 잔차가 버려지지 않고 절대값 최대 원인에 흡수된다", () => {
     // "그 외" 범주를 폐지한 뒤 잔차를 흡수하는 분기(getAttributionItems)를 직접 태우는 케이스.
     // 코인·부동산이 각각 9천원만 올라 개별로는 표시 임계값(1만원) 미만 → restCauses에서 탈락하지만
@@ -534,6 +569,47 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(attr.cashRoundTrip).toBeUndefined();
   });
 
+  it("기록된 입금으로 현금이 단조 증가하면 cashRoundTrip 힌트가 붙지 않는다(오탐 방지, 실사용 재현)", () => {
+    // 실사용 재현: reflected 입금 2,800만원이 기록돼 breakdown.cash가 그만큼 영구히 올랐는데,
+    // 이탈폭 계산이 income을 빼지 않으면 "왕복 후 복귀"로 오판해 income cause와 모순되는 힌트가 뜬다.
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-08-01", amount: 28_000_000 })];
+    const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-07-24", 9_450_000, 9_450_000);
+    const curr = snap("2026-08-01", 37_450_000, 37_450_000);
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    expect(attr.cashRoundTrip).toBeUndefined();
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBeCloseTo(28_000_000, 6);
+    expect(byKey.has("cash")).toBe(false);
+  });
+
+  it("일요일 홈: 토요일 스냅샷이 stale(목요일 종가)이면 price:stock에 미국 금요일장 하루치가 통째로 잡힌다", () => {
+    // 실사용 재현: 토요일 새벽 접속 시 getDailyClosingRefDates가 목요일 종가로 스냅샷을 박제하면,
+    // 일요일 실시간 끝점(금요일 확정 종가)과 비교해 휴장일(일요일)인데도 큰 주식 시세 원인이 뜬다.
+    const stale = snapClass("2026-08-01", { stocks: 100_000_000, cash: 0 }, { stock: 90_000_000 });
+    const liveCurr = {
+      ...snapClass("2026-08-02", { stocks: 103_270_000, cash: 0 }, { stock: 90_000_000 }),
+      _date: "2026-08-02", _display: "2026-08-02", _isLive: true,
+    };
+    const attr = computeAttributionSince([stale], [], {}, "2026-08-01", emptyData(), RATES, liveCurr as never);
+    expect(attr).not.toBeNull();
+    const byKey = new Map(getOrderedCauses(attr!).map((c) => [c.key, c.amount]));
+    expect(byKey.get("price:stock")).toBeGreaterThan(CAUSE_DISPLAY_MIN);
+  });
+
+  it("일요일 홈: 토요일 스냅샷을 금요일 종가로 교정하면 price:stock이 표시 임계값 아래로 사라진다", () => {
+    const corrected = snapClass("2026-08-01", { stocks: 103_270_000, cash: 0 }, { stock: 90_000_000 });
+    const liveCurr = {
+      ...snapClass("2026-08-02", { stocks: 103_270_000, cash: 0 }, { stock: 90_000_000 }),
+      _date: "2026-08-02", _display: "2026-08-02", _isLive: true,
+    };
+    const attr = computeAttributionSince([corrected], [], {}, "2026-08-01", emptyData(), RATES, liveCurr as never);
+    expect(attr).not.toBeNull();
+    const byKey = new Map(getOrderedCauses(attr!).map((c) => [c.key, c.amount]));
+    expect(Math.abs(byKey.get("price:stock") ?? 0)).toBeLessThan(CAUSE_DISPLAY_MIN);
+  });
+
   it("1주·1개월·3개월·올해 네 기간 모두 같은 하이브리드 규칙을 따른다(기간별 특수 취급 없음)", () => {
     const data = emptyData();
     const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
@@ -557,5 +633,112 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(attr).not.toBeNull();
     expect(attr.fromDate).toBe("2026-03-01");
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("하이브리드: 예측 구간의 통합 price가 mid 구성비로 안분돼 실측 price:stock과 한 항목으로 합쳐지고 '일부 예측'로 표시된다", () => {
+    // 실사용 재현: "시세 하락"(예측, 통합)과 "주식 시세 하락"(실측)이 별도 두 줄로 뜨던 문제.
+    // mid 시점 자산 구성이 전부 주식이므로 older의 price(2백만) 전액이 price:stock으로 재배분되고,
+    // newer의 price:stock(2백만)과 합쳐져 한 항목(4백만)이 되어야 한다.
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 8_000_000, financialAsset: 8_000_000 } as DailyAssetSnapshot;
+    const mid = snapClass("2026-06-15", { stocks: 10_000_000 }, { stock: 8_000_000 });
+    const curr = snapClass("2026-07-01", { stocks: 12_000_000 }, { stock: 8_000_000 });
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    expect(attr).not.toBeNull();
+    expect(attr.estimatedUntil).toBe("2026-06-15");
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("price")).toBe(false); // 통합 key는 안분 후 사라져야 한다
+    expect(byKey.get("price:stock")).toBeCloseTo(4_000_000, 6); // 2백만(예측 안분) + 2백만(실측)
+    const items = getAttributionItems(attr);
+    const stockItem = items.find((i) => i.key === "price:stock");
+    expect(stockItem?.estimated).toBe(true); // 일부 예측이 섞인 항목이므로 배지 대상
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("하이브리드: mid의 자산 구성 정보가 없으면(전액 현금 등) price가 안분되지 않고 통합 라벨 그대로 남는다", () => {
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 90_000_000, financialAsset: 90_000_000 } as DailyAssetSnapshot;
+    const mid = snap("2026-06-15", 95_000_000, 90_000_000); // snap 헬퍼는 stocks/crypto/realEstate=0, cash만
+    const curr = snap("2026-07-01", 98_000_000, 90_000_000);
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("price")).toBe(true); // 안분 불가 → 통합 key 유지
+    const items = getAttributionItems(attr);
+    const priceItem = items.find((i) => i.key === "price");
+    expect(priceItem?.label).toContain("보유자산 시세"); // 자산군 통합임이 라벨로 드러나야 한다
+  });
+
+  it("순수 예측 구간(mid 없음)에서도 price 라벨이 '보유자산 시세'로 명확히 표시된다", () => {
+    const data = emptyData();
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 100_005_000, 90_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    const items = getAttributionItems(attr);
+    const priceItem = items.find((i) => i.key === "price");
+    expect(priceItem?.label).toBe("보유자산 시세 상승");
+  });
+
+  it("소득 유입/유출 문구가 매수·매도와 같은 패턴('현금 입금/출금으로 ~')으로 통일된다", () => {
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-05-10", amount: 1_000_000, reflected: true })];
+    const daily = [snap("2026-05-01", 100_000_000, 90_000_000), snap("2026-05-20", 101_000_000, 91_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    const items = getAttributionItems(attr);
+    const incomeItem = items.find((i) => i.key === "income");
+    expect(incomeItem?.label).toBe("현금 입금");
+    expect(incomeItem?.sentence).toBe("현금 입금으로 +100만원 늘었어요.");
+  });
+
+  it("하이브리드: 부동산 비중이 커도 예측 price 안분은 주식·코인에만 적용되고 부동산은 제외된다", () => {
+    // 부동산은 currentValue를 사용자가 수동으로만 갱신하는 계단식 값이라(real-estate-input.tsx),
+    // "정체불명 시세 변동"을 부동산 비중만큼 떼어주면 근거 없는 "부동산 시세 하락"이 뜬다.
+    // mid 구성이 부동산 80%·주식 20%여도, 예측 price(2백만) 전액이 주식에만 안분돼야 한다
+    // (구버전 버그였다면 20%인 40만원만 주식에, 나머지 160만원이 price:realEstate로 샜을 것).
+    const data = emptyData();
+    const prevOld = { date: "2025-01-01", netAsset: 8_000_000, financialAsset: 8_000_000 } as DailyAssetSnapshot;
+    const cost = { stock: 2_000_000, realEstate: 8_000_000 };
+    const mid = snapClass("2026-06-15", { stocks: 2_000_000, realEstate: 8_000_000 }, cost);
+    const curr = snapClass("2026-07-01", { stocks: 3_000_000, realEstate: 8_000_000 }, cost);
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("price")).toBe(false);
+    expect(byKey.has("price:realEstate")).toBe(false); // 부동산은 안분 대상에서 완전히 빠져야 한다
+    expect(byKey.get("price:stock")).toBeCloseTo(3_000_000, 6); // 2백만(예측 전액) + 1백만(실측)
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("groupAttributionItems: 같은 자산군 원인(시세·매수·매도, 대출)을 한 박스로 묶고 fx는 단독으로 남기며, 그룹은 합계 절대값 큰 순서로 정렬된다", () => {
+    const items = [
+      { key: "price:stock", label: "주식 시세 상승", sentence: "주식 시세 상승으로 100원 늘었어요.", amount: 100, text: "+100원" },
+      { key: "fx", label: "환율 상승", sentence: "환율 상승이 50원 보탰어요.", amount: 50, text: "+50원" },
+      { key: "buy:stock", label: "주식 매수", sentence: "주식 매수로 30원 늘었어요.", amount: 30, text: "+30원" },
+      { key: "sell:stock", label: "주식 매도", sentence: "주식 매도로 10원 줄었어요.", amount: -10, text: "-10원" },
+      { key: "income", label: "현금 입금", sentence: "현금 입금으로 20원 늘었어요.", amount: 20, text: "+20원" },
+      { key: "cash", label: "현금 잔액 증가", sentence: "현금 잔액 직접 수정으로 5원 늘어난 것으로 추정돼요.", amount: 5, text: "+5원" },
+      { key: "debt", label: "대출 상환", sentence: "대출 상환으로 15원 늘었어요.", amount: 15, text: "+15원" },
+    ] as ReturnType<typeof getAttributionItems>;
+    const groups = groupAttributionItems(items);
+    // 그룹 합계(절대값): stock=100+30-10=120, fx=50, cash=20+5=25, loan=15 → 이 순서로 정렬돼야 한다
+    expect(groups.map((g) => g.key)).toEqual(["stock", null, "cash", "loan"]);
+    expect(groups[0].label).toBe("주식");
+    expect(groups[0].items.map((i) => i.key)).toEqual(["price:stock", "buy:stock", "sell:stock"]);
+    expect(groups[1].items.map((i) => i.key)).toEqual(["fx"]);
+    expect(groups[2].label).toBe("현금");
+    expect(groups[2].items.map((i) => i.key)).toEqual(["income", "cash"]);
+    expect(groups[3].label).toBe("대출");
+    expect(groups[3].items.map((i) => i.key)).toEqual(["debt"]);
+  });
+
+  it("groupAttributionItems: 반대 부호 항목이 상쇄돼도 순변동(합계 절대값) 기준으로 정렬된다", () => {
+    // 주식은 개별 항목 크기(90+90=180)는 크지만 매수·매도가 상쇄돼 순변동은 0에 가깝다.
+    // 코인은 순변동 40 하나뿐이라 실제로는 코인이 더 위로 와야 한다(단순 절대값 합이 아니라 순합의 절대값).
+    const items = [
+      { key: "buy:stock", label: "주식 매수", sentence: "주식 매수로 90원 늘었어요.", amount: 90, text: "+90원" },
+      { key: "sell:stock", label: "주식 매도", sentence: "주식 매도로 88원 줄었어요.", amount: -88, text: "-88원" },
+      { key: "price:crypto", label: "코인 시세 상승", sentence: "코인 시세 상승으로 40원 늘었어요.", amount: 40, text: "+40원" },
+    ] as ReturnType<typeof getAttributionItems>;
+    const groups = groupAttributionItems(items);
+    expect(groups.map((g) => g.key)).toEqual(["crypto", "stock"]); // 코인(40) > 주식 순변동(2)
   });
 });

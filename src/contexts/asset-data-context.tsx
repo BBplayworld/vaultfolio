@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction } from "@/types/asset";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/snapshot-archive";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
@@ -12,6 +12,7 @@ import { getStockCacheSlot } from "@/lib/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/coin-cache-slot";
 import { pruneTransactions } from "@/lib/trade-utils";
 import { pruneCashTransactions } from "@/lib/cash-tx-utils";
+import { pruneLoanTransactions } from "@/lib/loan-tx-utils";
 import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/profit-cache-cleanup";
@@ -121,6 +122,11 @@ interface AssetDataContextType {
   addCashTransactionWithBalance: (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => boolean;
   deleteCashTransaction: (txId: string) => boolean;
   deleteCashTransactionWithBalance: (txId: string, cashId: string, patch: Partial<Cash>) => boolean;
+  // 대출 상환/추가 대출 내역 (잔액 가감 단일 저장, S-4.24)
+  addLoanTransaction: (tx: LoanTransaction) => boolean;
+  addLoanTransactionWithBalance: (tx: LoanTransaction, loanId: string, patch: Partial<Loan>) => boolean;
+  deleteLoanTransaction: (txId: string) => boolean;
+  deleteLoanTransactionWithBalance: (txId: string, loanId: string, patch: Partial<Loan>) => boolean;
   unlockAndLoad: () => Promise<void>;
 }
 
@@ -135,6 +141,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   yearlyNetAssets: [],
   transactions: [],
   cashTransactions: [],
+  loanTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -718,24 +725,26 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
         recordTodayExchangeRate(latestRates);
       } else {
-        // 일요일: 전날(토요일) 데이터가 없는 경우 토요일 날짜로 스냅샷 보완 기록
+        // 일요일: 토요일 날짜로 스냅샷을 항상 upsert. 일요일 시점의 종가 기준일은
+        // 국내·해외 모두 반드시 금요일을 가리키므로(getDailyClosingRefDates), 토요일 새벽
+        // 접속으로 목요일 종가가 박힌 stale 스냅샷을 여기서 금요일 종가로 교정한다
+        // (그대로 두면 일요일 홈에서 "미국 금요일장 하루치 변동"이 주식 시세 원인으로 오표시된다).
         const saturday = new Date(now);
         saturday.setDate(now.getDate() - 1);
         const saturdayStr = saturday.toISOString().split("T")[0];
-        const hasSaturdaySnapshot = allDaily.some(s => s.date === saturdayStr);
+        const prevSaturday = allDaily.find(s => s.date === saturdayStr);
 
-        if (!hasSaturdaySnapshot) {
-          const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== saturdayStr);
-          filteredDaily.push({
-            date: saturdayStr,
-            netAsset,
-            financialAsset,
-            ...enrich,
-          });
-          localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
-          // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
-          recordTodayExchangeRate(latestRates);
-        }
+        const filteredDaily = allDaily.filter(s => s.date >= cutoffStr && s.date !== saturdayStr);
+        filteredDaily.push({
+          date: saturdayStr,
+          netAsset,
+          financialAsset,
+          ...enrich,
+          ...(prevSaturday?.grade ? { grade: prevSaturday.grade } : {}),
+        });
+        localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(filteredDaily));
+        // 환율 이력은 별도 storage로 관리 (스냅샷과 분리)
+        recordTodayExchangeRate(latestRates);
       }
 
       // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
@@ -1587,6 +1596,57 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // ─── [대출 상환/추가 대출 내역] ─────────────────────────────────────────────────
+  // 미반영 기록만 추가(잔액 무변경 — 과거 소급 로그)
+  const addLoanTransaction = useCallback(
+    (tx: LoanTransaction) => {
+      const newData = {
+        ...assetData,
+        loanTransactions: pruneLoanTransactions([...(assetData.loanTransactions || []), tx]),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 상환/추가대출 기록 + 대출 잔액 가감을 단일 저장으로 (두 번 saveData 시 stale-closure 방지, 현금 대칭)
+  const addLoanTransactionWithBalance = useCallback(
+    (tx: LoanTransaction, loanId: string, patch: Partial<Loan>) => {
+      const newData = {
+        ...assetData,
+        loanTransactions: pruneLoanTransactions([...(assetData.loanTransactions || []), tx]),
+        loans: assetData.loans.map((l) => (l.id === loanId ? { ...l, ...patch } : l)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 기록 삭제 + 잔액 역가감 단일 저장
+  const deleteLoanTransactionWithBalance = useCallback(
+    (txId: string, loanId: string, patch: Partial<Loan>) => {
+      const newData = {
+        ...assetData,
+        loanTransactions: (assetData.loanTransactions || []).filter((t) => t.id !== txId),
+        loans: assetData.loans.map((l) => (l.id === loanId ? { ...l, ...patch } : l)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 미반영 거래 삭제(잔액 무변경)
+  const deleteLoanTransaction = useCallback(
+    (txId: string) => {
+      const newData = {
+        ...assetData,
+        loanTransactions: (assetData.loanTransactions || []).filter((t) => t.id !== txId),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
   // ─── [자산 요약 계산] ────────────────────────────────────────────────────────
 
   const getAssetSummary = useCallback((): AssetSummary => {
@@ -1629,7 +1689,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       stockCount: assetData.stocks.filter((s) => s.inactiveStatus !== "delisted").length,
       cryptoCount: assetData.crypto.length,
       cashCount: assetData.cash ? assetData.cash.length : 0,
-      loanCount: assetData.loans.length,
+      loanCount: assetData.loans.filter((l) => l.balance > 0).length, // 완납(balance=0) 대출은 현황에서 제외 (S-4.24, stockCount의 delisted 제외와 동일 논리)
     };
   }, [assetData, exchangeRates]);
 
@@ -1689,6 +1749,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addCashTransactionWithBalance,
         deleteCashTransaction,
         deleteCashTransactionWithBalance,
+        addLoanTransaction,
+        addLoanTransactionWithBalance,
+        deleteLoanTransaction,
+        deleteLoanTransactionWithBalance,
       }}
     >
       {children}

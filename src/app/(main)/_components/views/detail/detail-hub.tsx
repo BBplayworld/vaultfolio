@@ -8,7 +8,7 @@ import { useAssetNavigation, type DetailTab } from "../../layout/navigation/navi
 import { KpiCard } from "../../layout/ui/kpi-card";
 
 export function DetailHub() {
-  const { getAssetSummary } = useAssetData();
+  const { assetData, getAssetSummary } = useAssetData();
   const s = getAssetSummary();
   const { navigate } = useAssetNavigation();
 
@@ -89,7 +89,7 @@ export function DetailHub() {
           primary={formatPriceByMode(s.loanBalance)}
           primaryClassName={ASSET_THEME.text.default}
           secondary={countLine(s.loanCount, "건")}
-          onClick={() => s.loanCount ? go("loans") : ''}
+          onClick={() => assetData.loans.length > 0 ? go("loans") : ''}
         />
       </div>
     </div>

@@ -22,6 +22,7 @@ const emptyData = (): AssetData => ({
   yearlyNetAssets: [],
   transactions: [],
   cashTransactions: [],
+  loanTransactions: [],
   lastUpdated: new Date().toISOString(),
   nickname: "",
 });

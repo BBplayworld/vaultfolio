@@ -56,6 +56,7 @@ const EMPTY_ASSET_DATA: AssetData = {
   yearlyNetAssets: [],
   transactions: [],
   cashTransactions: [],
+  loanTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -562,6 +563,19 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
         caIdx >= 0 ? caIdx.toString() : t.cashId,
       ];
     }) || []),
+    // parts[13]: 대출 상환/추가대출 내역 (S-4.24) — 꼬리 추가라 구버전 토큰과 하위호환. loanIdx로 부모 대출 참조.
+    // 통화 필드 없음(대출은 항상 KRW) — cashTransactions보다 필드 1개 적다.
+    section(data.loanTransactions?.map(t => {
+      const loanIdx = data.loans?.findIndex(l => l.id === t.loanId) ?? -1;
+      return [
+        t.type === "repay" ? "p" : "b",
+        pNum(t.amount),
+        pDate(t.date),
+        t.reflected ? "1" : "0",
+        sTxt(t.memo),
+        loanIdx >= 0 ? loanIdx.toString() : t.loanId,
+      ];
+    }) || []),
   ];
 
   return parts.join("^");
@@ -579,6 +593,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const reIds: string[] = [];
   const stIds: string[] = [];
   const caIds: string[] = [];
+  const loIds: string[] = [];
 
   const realEstate = section(0).map(r => {
     const f = fields(r);
@@ -629,8 +644,10 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     const reIdx = f[8]?.startsWith("r") ? parseInt(f[8].substring(1)) : -1;
     const caIdx = f[9]?.startsWith("c") ? parseInt(f[9].substring(1)) : -1;
     const stIdx = f[10]?.startsWith("s") ? parseInt(f[10].substring(1)) : -1;
+    const id = gid();
+    loIds.push(id);
     return {
-      id: gid(),
+      id,
       type: getIdx(f[0], DICT.lo),
       name: uTxt(f[1]) || "무명",
       balance: uNum(f[2]),
@@ -703,6 +720,25 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     };
   }).filter(t => t.cashId);
 
+  // 대출 상환/추가대출 내역 (S-4.24) — loIdx로 부모 대출 재연결. 대출 못 찾으면 제외.
+  const loanTransactions = section(13).map(r => {
+    const f = fields(r);
+    const rawLo = f[5] || "";
+    const isIdx = /^\d+$/.test(rawLo);
+    const loIdx = isIdx ? parseInt(rawLo, 10) : -1;
+    const loanId = (loIdx >= 0 && loIdx < loIds.length) ? loIds[loIdx] : (isIdx ? "" : rawLo);
+    return {
+      id: `ltx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      loanId,
+      type: f[0] === "p" ? "repay" as const : "borrow" as const,
+      amount: uNum(f[1]),
+      date: uDate(f[2]),
+      reflected: f[3] === "1",
+      memo: uTxt(f[4]) || undefined,
+      createdAt: new Date().toISOString(),
+    };
+  }).filter(t => t.loanId);
+
   const data = {
     realEstate,
     stocks,
@@ -715,6 +751,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     }),
     transactions,
     cashTransactions,
+    loanTransactions,
     lastUpdated: new Date().toISOString(),
     nickname: parts[11] ? uTxt(parts[11]) || "" : "",
   };

@@ -113,8 +113,10 @@ function buildCashList(data: AssetData): string {
 }
 
 function buildLoanList(data: AssetData): string {
-  if (data.loans.length === 0) return "  - 등록된 대출 없음";
-  return data.loans.map((item) => {
+  // 완납(balance=0) 대출은 헤더의 loanCount(활성만 카운트)와 정합을 맞추기 위해 제외
+  const activeLoans = data.loans.filter((item) => item.balance > 0);
+  if (activeLoans.length === 0) return "  - 등록된 대출 없음";
+  return activeLoans.map((item) => {
     const type = LOAN_TYPE[item.type] ?? item.type;
     // 담보대출 연계 자산 표시
     let linkedLine = "";

@@ -41,6 +41,23 @@ export const cashTransactionSchema = z.object({
 
 export type CashTransaction = z.infer<typeof cashTransactionSchema>;
 
+// 대출 상환/추가 대출 거래내역 스키마 — cashTransactionSchema 미러링(잔액 선형 가감).
+// 대출은 통화 필드 없음(loanSchema가 항상 KRW). loans[].balance는 진실원본 유지, reflected 거래만 잔액을 가감한다.
+export const loanTransactionSchema = z.object({
+  id: z.string(), // ltx_{timestamp}
+  loanId: z.string(), // Loan.id 참조
+  type: z.enum(["repay", "borrow"]),
+  amount: z.number().min(0).refine((v) => v > 0, "금액을 입력해주세요"),
+  date: z.string(), // YYYY-MM-DD
+  memo: z.string().optional(),
+  reflected: z.boolean(), // balance에 반영됨 여부
+  reflectedAt: z.string().optional(),
+  reflectionId: z.string().optional(), // 멱등성 보장 ID
+  createdAt: z.string(),
+});
+
+export type LoanTransaction = z.infer<typeof loanTransactionSchema>;
+
 // 포지션 스냅샷 — 재계산 기준점
 export interface PositionSnapshot {
   stockId: string;

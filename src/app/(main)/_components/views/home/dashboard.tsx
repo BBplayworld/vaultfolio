@@ -657,8 +657,8 @@ export function Dashboard() {
                       )}
 
                       <DrillDownRow onClick={() => navigate({ type: "detail", tab: "loans" })}>
-                        {assetData.loans.length > 0 && <>대출 <span className="font-bold text-foreground">{assetData.loans.length}건</span></>}
-                        {assetData.loans.length > 0 && tenantCount > 0 && " · "}
+                        {summary.loanCount > 0 && <>대출 <span className="font-bold text-foreground">{summary.loanCount}건</span></>}
+                        {summary.loanCount > 0 && tenantCount > 0 && " · "}
                         {tenantCount > 0 && <>임차보증금 <span className="font-bold text-foreground">{tenantCount}건</span></>}
                       </DrillDownRow>
                     </TabsContent>

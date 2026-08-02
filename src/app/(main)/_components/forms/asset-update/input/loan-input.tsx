@@ -92,6 +92,12 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
   });
 
   const onSubmit = async (data: Loan) => {
+    // 신규 등록은 잔액 0(완납)으로 시작할 수 없다 — 완납은 상환 거래내역으로만 도달(S-4.24).
+    // 수정(editData)은 잔액 0 허용(상환 반영 등으로 정상 도달 가능).
+    if (!editData && data.balance <= 0) {
+      form.setError("balance", { message: "현재 잔액을 입력해주세요" });
+      return;
+    }
     setIsSubmitting(true);
     try {
       if (editData) {

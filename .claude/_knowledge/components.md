@@ -59,6 +59,8 @@ _components/
 - 입력 폼 5종 `<div className="hidden">` 래핑으로 DOM에 상시 마운트 (편집 다이얼로그용)
 - **CashTxInput** (`forms/asset-update/input/cash-tx-input.tsx`, S-4.22): 현금 입출금 기록 폼. `trigger-add-cash-tx`(`dispatchAddCashTx(cashId)`)로 오픈. 입금/출금·정기 토글·반영·출금초과 가드·중복 인라인 확인. hidden 영역 상시 마운트
 - **CashTxView** (`views/detail/cash-tx/cash-tx-view.tsx`, S-4.22): `cash-transactions` 탭. 총입금·출금·순유입 통계·기간/유형 필터·반영 삭제 시 잔액 역가감. 진입 대상은 `useCashTxViewStore`. 현금 카드 "입출금 기록/내역" 버튼·성적표 habit 딥링크로 진입
+- **LoanTxInput** (`forms/asset-update/input/loan-tx-input.tsx`, S-4.24): 대출 상환/추가대출 기록 폼. `trigger-add-loan-tx`(`dispatchAddLoanTx(loanId)`)로 오픈. `CashTxInput` 미러링(통화 분기·정기 토글 없음, 상환초과 가드·중복 인라인 확인). hidden 영역 상시 마운트
+- **LoanTxView** (`views/detail/loan-tx/loan-tx-view.tsx`, S-4.24): `loan-transactions` 탭. 총상환·추가대출·순상환 통계·기간/유형 필터·반영 삭제 시 잔액 역가감·완납 배지. 진입 대상은 `useLoanTxViewStore`. 대출 카드 "상환/대출 기록·내역" 버튼으로 진입
 - **TaxCalendarView** (`views/tax/tax-calendar-view.tsx`, S-4.23): `#tax` 뷰. 12개월 세금 일정 세로 리스트(`InlineSelector` 내 세금/전체 필터 · `Collapsible` 상세 · 현재 월 강조·`scrollIntoView`). 해외주식 실현차익 근거 박스 + 하단 면책 고정. `settings`와 동일한 더보기 하위 페이지 패턴(하단탭 미등록). shadcn `Calendar`는 날짜 선택기라 사용하지 않는다
 
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)

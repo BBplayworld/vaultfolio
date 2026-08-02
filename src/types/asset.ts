@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { transactionSchema, cashTransactionSchema } from "./transaction";
+import { transactionSchema, cashTransactionSchema, loanTransactionSchema } from "./transaction";
 
 // 부동산 자산 스키마
 export const realEstateSchema = z.object({
@@ -125,7 +125,7 @@ export const loanSchema = z.object({
   id: z.string(),
   type: z.enum(["credit", "minus", "mortgage-home", "mortgage-stock", "mortgage-insurance", "mortgage-deposit", "mortgage-other"]),
   name: z.string().min(1, "대출명을 입력해주세요"),
-  balance: z.number().min(0, "현재 잔액은 0 이상이어야 합니다").refine((val) => val > 0, "현재 잔액을 입력해주세요"),
+  balance: z.number().min(0, "현재 잔액은 0 이상이어야 합니다"), // 0 = 완납(상환 거래내역으로 도달 가능, S-4.24)
   interestRate: z.number().min(0, "금리는 0 이상이어야 합니다"),
   startDate: z.string().min(1, "대출일을 선택해주세요"),
   endDate: z.string().optional(),
@@ -164,6 +164,7 @@ export const assetDataSchema = z.object({
   yearlyNetAssets: z.array(yearlyNetAssetSchema).default([]),
   transactions: z.array(transactionSchema).default([]),
   cashTransactions: z.array(cashTransactionSchema).default([]),
+  loanTransactions: z.array(loanTransactionSchema).default([]),
   lastUpdated: z.string(),
   nickname: z.string().optional().default(""),
 });
@@ -176,7 +177,7 @@ export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
-export type { Transaction, CashTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
+export type { Transaction, CashTransaction, LoanTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
 
 // 스냅샷 시점 박제용 파생 정보 (성적표·원인분해 델타용, v2)
 // 구버전 스냅샷 호환을 위해 모두 optional.

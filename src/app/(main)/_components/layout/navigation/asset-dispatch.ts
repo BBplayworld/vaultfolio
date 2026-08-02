@@ -15,3 +15,7 @@ export function dispatchAddTrade(stockId?: string) {
 export function dispatchAddCashTx(cashId?: string) {
   window.dispatchEvent(new CustomEvent("trigger-add-cash-tx", { detail: { cashId } }));
 }
+
+export function dispatchAddLoanTx(loanId?: string) {
+  window.dispatchEvent(new CustomEvent("trigger-add-loan-tx", { detail: { loanId } }));
+}

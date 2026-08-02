@@ -115,6 +115,10 @@ actions: {
 
 현금 입출금 내역 뷰(`cash-transactions` 탭) 진입 대상 전달. `target: { cashId, name } | null` · `setTarget`/`clear`. 주식 `trade-view-store` 대칭(S-4.22).
 
+## LoanTxViewStore (`src/stores/loan-tx-view-store.ts`)
+
+대출 상환/추가 대출 내역 뷰(`loan-transactions` 탭) 진입 대상 전달. `target: { loanId, name } | null` · `setTarget`/`clear`. `CashTxViewStore` 미러링(S-4.24).
+
 ## 유틸 함수
 
 ### cash-tx-utils.ts (S-4.22)
@@ -126,6 +130,16 @@ reflectedBalanceDelta(txns, cashId)        // Σ반영입금 − Σ반영출금 
 isCashWithdrawalValid(balance, amount): boolean  // 출금 반영 초과 가드
 ```
 현금 잔액은 선형 가감이라 가중평균(trade-utils.computeNewPosition) 계열 불필요. `cash[].balance`가 진실원본.
+
+### loan-tx-utils.ts (S-4.24)
+
+```typescript
+pruneLoanTransactions(txns, years=3)      // 3년 롤링 정리
+findDuplicateLoanTx(txns, {loanId,date,amount,type})
+reflectedLoanBalanceDelta(txns, loanId)    // Σ반영추가대출 − Σ반영상환 (잔액 재계산)
+isLoanRepaymentValid(balance, amount): boolean  // 상환 반영 초과 가드
+```
+cash-tx-utils.ts 미러링(대출은 통화 필드 없음, 항상 KRW). `loans[].balance`가 진실원본, 0=완납.
 
 ### tax-utils.ts (S-4.23)
 
@@ -152,16 +166,18 @@ reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영
 costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
 fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
 byDateThenDaily(a, b)                                // 시계열 포인트 정렬 — 같은 날짜면 daily 우선(monthly보다 뒤) → 시작점이 daily로 잡힌다
-makeCause(key, amount): AttributionCause             // label=causeShortLabel·sentence=causeSentence 파생
+makeCause(key, amount, estimated?): AttributionCause // label=causeShortLabel·sentence=causeSentence 파생. estimated 플래그가 있으면 AttributionCause.estimated=true
 isFullyEnriched(p): boolean                          // breakdown·fx·fxBase·cost 전부 보유 — bothEnriched 판정과 하이브리드 mid 탐색이 공유하는 단일 술어
 yearlyAnchorPoints(assetData)                        // yearlyNetAssets → YYYY-12-31 앵커 포인트(netAsset만, 항상 예측 경로)
-mergeAttributions(older, newer)                      // 두 PeriodAttribution의 effects를 key별 합산 후 pickTopCauses 재실행 — 하이브리드 구간 합성
+reallocatePriceEffects(effects, mid)                 // 예측 구간의 통합 "price"를 mid breakdown의 **주식·코인** 비중으로만 안분해 price:stock/price:crypto로 재배분(estimated:true). 부동산은 제외(2026-08, 아래 참조)
+mergeAttributions(older, newer, mid)                 // 두 PeriodAttribution의 effects를 reallocatePriceEffects로 안분 후 key별 합산·pickTopCauses 재실행 — 하이브리드 구간 합성
 
 // export
 causeShortLabel(key, amount): string                 // 모든 라벨의 단일 출처(부호 방향 반영). label·sentence가 여기서 파생
 causeSentence(key, amount): string                   // 서술형 문장 (성적표용)
 getOrderedCauses(attr): AttributionCause[]           // topCauses+restCauses를 CAUSE_ORDER 고정 순서로 정렬
-getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 임계값 미만 잔차 흡수(부호 일치 확인)까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다
+getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단일 출처.** 임계값 미만 잔차 흡수(부호 일치 확인)까지 끝낸 최종 목록 — 홈(label+text)·성적표(sentence+원단위)가 모두 이것만 쓴다. estimated?: boolean 필드로 항목별 "일부 예측" 배지 판정(2026-08)
+groupAttributionItems(items): AttributionItemGroup[] // getAttributionItems 결과를 자산 타입(stock/crypto/realEstate/cash/loan)별로 묶어 그룹 합계 절대값 큰 순서로 정렬(2026-08, 성적표 "순자산 변화, 왜?" 박스 그룹핑). fx·deposit·통합 price는 그룹 없음(key: null)
 formatAttributionSentence(attr): string | null       // 위 항목을 한 줄로 결합(스크린샷·폴백용)
 formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-MM→M월 (홈·성적표 공용)
 ```
@@ -178,6 +194,8 @@ formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-M
 - 신규 투입도 자산군별 `Δcost`로 쪼개 "매수/매도" 용어로 통일한다. 거래내역 없는 주식 원가 변동(직접 수정·스크린샷 등록)은 **방향별로** `buy:stock`/`sell:stock`에 합산(같은 라벨 두 줄 방지). 투자 3종+임차보증금으로 설명되지 않는 원가 증감(=현금 잔액 직접 수정)은 `cash`에 합산한다.
 - **휴장 여부로 시세 원인을 억제하지 않는다.** 해외 종가는 KST 화~토 새벽에, 국내는 평일에 갱신되므로 월~토는 매일 주식 변동이 실재한다(일요일만 없고, 그날은 금액이 임계값 미만이라 자동으로 안 보인다).
 - **잔차 흡수는 부호가 같은 원인에만 붙는다**(`getAttributionItems`, 2026-08 안전장치) — 임계값 미만 잔차 합(residual)을 절대값 최대 원인에 얹되, `residual`과 부호가 다른 원인에는 얹지 않는다. 방향 고정 라벨(`buy:stock` 등)에 반대 부호 잔차가 붙으면 "주식 매수로 −3만원 늘었어요" 같은 모순 문장이 나오기 때문. 부호가 맞는 원인이 하나도 없으면 `cash`로 보낸다(없으면 신설).
+- **`estimated` per-item 배지 + 부동산 제외 안분(2026-08)** — `resolveAttribution`의 예측 분기가 만드는 `effects`는 전부 `estimated:true`(단, `income`은 기록된 거래 그대로라 예외), 정밀 분기는 전부 `estimated`가 없음(false 취급). `mergeAttributions`가 하이브리드 병합 시 older(예측)의 통합 `price`를 `reallocatePriceEffects`로 **mid 시점 breakdown의 주식·코인 비중에만** 안분해 newer(실측)의 `price:stock`/`price:crypto`와 합친다 — **부동산은 안분 대상에서 제외**한다(`real-estate-input.tsx`의 `currentValue`는 시장가 자동 갱신이 없고 사용자가 실거래가 조회 후 수동으로만 바꾸는 계단식 값이라, 정체불명 시세 잔차를 부동산 비중만큼 떼어주면 사용자가 값을 건드리지도 않았는데 "부동산 시세 하락"이 뜨는 근거 없는 추정이 된다). 부동산의 실제 시세 변동은 정밀 분해(`bothEnriched`, `price:realEstate`)로만 노출. 주식+코인 구성이 0(mid breakdown 없음·부동산뿐 등)이면 안분하지 않고 통합 `price` 그대로 남아 `causeShortLabel`이 "보유자산 시세"로 라벨링한다(자산군 통합임을 명시). `AttributionDisplayItem.estimated`가 true인 항목에 뷰가 "일부 예측" 배지를 개별로 붙인다(구간 전체가 `attribution.estimated`면 상단 배지로 이미 충분하므로 중복 생략).
+- **`groupAttributionItems`(2026-08)** — `getAttributionItems` 출력(이미 `CAUSE_ORDER` 정렬됨)을 자산 타입별로 묶는다: `price:X`/`buy:X`/`sell:X`(X=stock/crypto/realEstate) → 해당 자산군 그룹, `income`/`cash` → `cash` 그룹, `debt` → `loan` 그룹. `fx`/`deposit`/통합 `price`는 그룹 없음(`key: null`, 단독 박스). 그룹 소속 판정은 첫 등장 순서를 보존하되, **최종 나열 순서는 그룹 내 금액 순합(양음 상쇄 반영)의 절대값이 큰 순서로 재정렬**한다 — 변동이 큰 자산 타입이 위로. 성적표 뷰가 이 그룹 단위로 박스 하나에 여러 줄을 묶어 렌더한다(`GROUP_BADGE` 라벨 재사용).
 
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
 
@@ -196,7 +214,7 @@ formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-M
 - **3번 가드 누락 시 회귀(2026-08 확인)**: `prevOld`가 이미 실측인데도(예: 1주는 daily 30일 창 안이라 거의 항상 실측) `mid`를 무조건 찾으면, 사이에 있는 아무 enriched daily나 붙잡아 불필요하게 두 구간으로 쪼갠다. 이때 `mergeAttributions`가 `older.estimated`를 확인하지 않고 무조건 `estimatedUntil`을 채우면(과거엔 그랬음), 전부 실측인데 "그 날짜 이전은 추정치" 배지가 근거 없이 붙는다. `mergeAttributions`는 방어적으로 **`older.estimated`가 실제 `true`일 때만** `estimatedUntil`을 채우도록 되어 있지만, 3번 가드가 없으면 애초에 실측끼리도 쪼개져 불필요한 연산과 혼란을 만든다 — 두 방어 모두 유지해야 한다.
 - `mid`는 **daily만** 허용(monthly 제외) — monthly의 `_date`는 월말로 강제되는데 값 시점은 그 달 마지막 접속일이라 최대 30일 어긋나고, 그 사이 거래·입출금이 flow 윈도우에서 누락된다.
 - `yearlyAnchorPoints(assetData)` — `assetData.yearlyNetAssets`(연도별 종가 순자산, netAsset만)를 `YYYY-12-31` 앵커로 승격해 후보 풀에 추가. enrich가 없어 항상 예측 경로로만 쓰이지만, daily(30일 롤링)·monthly(올해분만)가 못 미치는 먼 과거에서도 "기록 없음" 대신 예측 시작점을 잡을 수 있게 한다.
-- `mergeAttributions(older, newer)` — 두 `PeriodAttribution`의 `effects`(key별 raw 벡터, `pickTopCauses` 호출 직전 값)를 key별로 합산한 뒤 `pickTopCauses`를 **1회만** 다시 돌려 표시용 top/rest를 재선정한다. `deltaNet`·집계 필드는 단순 합(텔레스코핑) — 합계=deltaNet 항등식은 자동 유지.
+- `mergeAttributions(older, newer, mid)` — `older.effects`를 `reallocatePriceEffects(effects, mid)`로 먼저 안분(통합 `price`→`price:stock`/`price:crypto`, 부동산 제외)한 뒤 `newer.effects`와 key별로 합산, `pickTopCauses`를 **1회만** 다시 돌려 표시용 top/rest를 재선정한다. `deltaNet`·집계 필드는 단순 합(텔레스코핑) — 합계=deltaNet 항등식은 자동 유지.
 - `estimated: boolean` → 전체 구간이 예측일 때만 `true`(하위호환). 부분예측은 **`estimatedUntil?: string`**(이 날짜 **이전**만 예측)으로 표현 — `estimated===false`이면서 `estimatedUntil`이 있으면 "일부 예측" 배지.
 - `PeriodAttribution.effects`는 `pickTopCauses`가 버리지 않고 반환하는 key별 raw 벡터 — 하이브리드 합성의 전제(합산 후 재선정 가능하게 하는 유일한 이유).
 - `computeAttributionSince`(홈 헤더, "지난 접속 이후")는 **하이브리드 대상이 아니다** — 기존 `?? candidates[0]` 폴백만 유지, 단일 `resolveAttribution` 호출 그대로.

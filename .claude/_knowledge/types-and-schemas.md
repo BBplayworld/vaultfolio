@@ -1,6 +1,6 @@
 # 타입 & 스키마 참조
 
-> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-05-16
+> 파일: `src/types/asset.ts` | 마지막 업데이트: 2026-08-02
 
 ## 자산 5종 Zod 스키마
 
@@ -26,7 +26,7 @@ Cash: { id, type("bank"|"cma"|"cash"|"deposit"|"savings"), name, balance, curren
 
 Loan: {
   id, type("credit"|"minus"|"mortgage-home"|"mortgage-stock"|"mortgage-insurance"|"mortgage-deposit"|"mortgage-other"),
-  name, balance, interestRate, startDate, endDate?, institution?, description?,
+  name, balance(>=0, 0=완납), interestRate, startDate, endDate?, institution?, description?,
   linkedRealEstateId?, linkedCashId?, linkedStockId?
 }
 
@@ -35,7 +35,10 @@ YearlyNetAsset: { year(2000~2100), netAsset, note? }
 // 현금 입출금 로그 (S-4.22) — 최상위 배열, cash[].balance는 진실원본 유지(로그는 이력)
 CashTransaction: { id("ctx_*"), cashId, type("deposit"|"withdrawal"), amount(>0), currency, recurring?(입금 정기 여부), date, memo?, reflected, reflectedAt?, reflectionId?, createdAt }
 
-AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[], transactions[], cashTransactions[], lastUpdated, nickname? }
+// 대출 상환/추가대출 로그 (S-4.24) — 최상위 배열, loans[].balance는 진실원본 유지(로그는 이력). 통화 필드 없음(항상 KRW)
+LoanTransaction: { id("ltx_*"), loanId, type("repay"|"borrow"), amount(>0), date, memo?, reflected, reflectedAt?, reflectionId?, createdAt }
+
+AssetData: { realEstate[], stocks[], crypto[], cash[], loans[], yearlyNetAssets[], transactions[], cashTransactions[], loanTransactions[], lastUpdated, nickname? }
 ```
 
 ## 비활성 종목 정책 (inactiveStatus)

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 
-export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "cash" | "cash-transactions" | "loans";
+export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 export type ActivityTab = "hub" | "netasset" | "profit" | "dividend" | "report";
 
 export type AssetView =
@@ -13,7 +13,7 @@ export type AssetView =
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab };
 
-const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "cash", "cash-transactions", "loans"];
+const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "cash", "cash-transactions", "loans", "loan-transactions"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend", "report"];
 
 // 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
@@ -66,6 +66,7 @@ export function getBackLabel(view: AssetView): string {
   if (view.tab === "hub") return "홈";
   if (view.type === "detail" && (view.tab === "stocks-xray" || view.tab === "stocks-trades")) return "주식";
   if (view.type === "detail" && view.tab === "cash-transactions") return "현금";
+  if (view.type === "detail" && view.tab === "loan-transactions") return "대출";
   return view.type === "detail" ? "상세" : "성과";
 }
 
@@ -289,6 +290,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       // 현금 입출금 내역 → 현금 상세로 1단 복귀
       if (view.tab === "cash-transactions") {
         navigate({ type: "detail", tab: "cash" });
+        return;
+      }
+      // 대출 상환/추가대출 내역 → 대출 상세로 1단 복귀
+      if (view.tab === "loan-transactions") {
+        navigate({ type: "detail", tab: "loans" });
         return;
       }
       // X-Ray는 진입 경로가 다양(주식탭 하위·성적표 딥링크 등) → 실제 진입 경로로 되돌리는 history pop

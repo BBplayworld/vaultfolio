@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { buildAssetReport, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
+import { buildAssetReport, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, groupAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/snapshot-archive";
@@ -48,13 +48,24 @@ const SCOPE_SUB = `${SCOPE_BADGE} bg-muted text-muted-foreground`;      // 보�
 // 여러 줄 설명 캡션 — 가독성 위해 line-height ≥1.5(leading-relaxed). 단일 줄에도 무해.
 const CAPTION = "text-sm text-muted-foreground leading-relaxed";
 
+// 대주제 섹션 아이콘 칩 톤 — 제목 텍스트(text-foreground)는 공통으로 유지하고 아이콘 배경·색만
+// 섹션별로 달리해 "지금 몇 번째 큰 단락인지"를 은은하게 구분한다. 임의의 새 색을 만들지 않고
+// design-system.md에 이미 의미가 정해진 토큰만 재사용한다(브랜드=액션, important=순자산 강조,
+// gold=별점·등급 톤과 통일, info=보조 도구 성격).
+const SECTION_TONE = {
+  brand: "bg-primary/15 text-primary",
+  gold: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  important: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
+  info: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+} as const;
+
 // 대주제 섹션 헤더 — 아이콘을 채운 원형 칩에 담아 각 섹션의 시작을 시각적으로 announce 한다.
-function SectionHeader({ icon: Icon, title, badge, children }: {
-  icon: LucideIcon; title: string; badge?: ReactNode; children?: ReactNode;
+function SectionHeader({ icon: Icon, title, badge, children, tone = "brand" }: {
+  icon: LucideIcon; title: string; badge?: ReactNode; children?: ReactNode; tone?: keyof typeof SECTION_TONE;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+      <span className={`flex size-7 items-center justify-center rounded-lg shrink-0 ${SECTION_TONE[tone]}`}>
         <Icon className="size-4" />
       </span>
       <span className="text-sm sm:text-base font-bold text-foreground">{title}</span>
@@ -651,6 +662,7 @@ export function AssetReportView() {
               <SectionHeader
                 icon={Star}
                 title="5축 측정"
+                tone="gold"
                 badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{grade.measuredCount}/5 측정</span>}
               />
               <div className="space-y-2">
@@ -708,11 +720,12 @@ export function AssetReportView() {
             {/* ── 순자산 변화, 왜? (기간별 주요 원인 1~2가지) ── */}
             <div className={SECTION}>
               <div className="flex items-center justify-between gap-2">
-                <SectionHeader icon={Landmark} title="순자산 변화, 왜?">
+                <SectionHeader icon={Landmark} title="순자산 변화, 왜?" tone="important">
                   <InfoHint summary="순자산 변화를 자산별 시세·환율·매수/매도·소득·대출 원인으로 나눠 큰 것만 보여드려요.">
                     <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">주식·코인·부동산 시세 · 환율 · 자산별 매수/매도 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
                     <p><span className="font-semibold text-foreground">주식 매수·매도</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 거래내역 없이 수량·평단을 직접 수정한 분은 같은 자산의 매수·매도에 합쳐집니다.</p>
-                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 하나로 표시됩니다. <span className="font-semibold text-foreground">&quot;일부 예측&quot;</span>은 기간 앞부분만 상세가 없어 그 구간만 추정하고, 상세가 쌓인 이후 구간은 실측으로 정밀 분해해 합친 것입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
+                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 <span className="font-semibold text-foreground">보유자산 시세</span>로 통합 표시됩니다. <span className="font-semibold text-foreground">&quot;일부 예측&quot;</span>은 기간 앞부분만 상세가 없어 그 구간만 추정하고, 상세가 쌓인 이후 구간은 실측으로 정밀 분해해 합친 것입니다 — 항목 옆 개별 &quot;일부 예측&quot; 배지는 그 줄의 금액에 추정치가 섞여 있다는 뜻입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
+                    <p>예측 구간도 <span className="font-semibold text-foreground">순자산 변화 자체(맨 위 금액)는 실제 스냅샷 기준 값</span>이라 정확합니다 — 예측은 그 변화를 시세·환율·저축 등 원인으로 나누는 분해 과정에만 적용됩니다.</p>
                   </InfoHint>
                 </SectionHeader>
                 <InlineSelector
@@ -739,14 +752,41 @@ export function AssetReportView() {
                   </p>
                   {/* 주 원인과 나머지 원인을 같은 목록으로 — 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
                       홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
-                      (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). */}
+                      (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). 자산 타입이
+                      같은 원인(시세·매수·매도, 입금·직접수정)은 groupAttributionItems로 박스 하나에 묶는다. */}
                   <div className="space-y-2">
-                    {getAttributionItems(attribution).map((cause) => (
-                      <div key={cause.key} className="rounded-lg bg-muted/30 px-3 py-2.5 flex items-center justify-between gap-3">
-                        <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">{cause.sentence}</p>
-                        <Signed value={Math.round(cause.amount)} className="shrink-0" />
-                      </div>
-                    ))}
+                    {groupAttributionItems(getAttributionItems(attribution)).map((group) => {
+                      const row = (cause: ReturnType<typeof getAttributionItems>[number]) => (
+                        <div key={cause.key} className="flex items-center justify-between gap-3">
+                          <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">
+                            {cause.sentence}
+                            {/* 구간 전체가 예측(attribution.estimated)이면 위 "예측" 배지로 이미 충분 —
+                                여기서는 실측·예측이 한 줄에 섞인 항목에만 "일부 예측"을 개별로 붙인다 */}
+                            {!attribution.estimated && cause.estimated && (
+                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">일부 예측</span>
+                            )}
+                          </p>
+                          <Signed value={Math.round(cause.amount)} className="shrink-0" />
+                        </div>
+                      );
+                      if (group.key === null) {
+                        return (
+                          <div key={group.items[0].key} className="rounded-lg bg-muted/30 px-3 py-2.5">
+                            {row(group.items[0])}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={group.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-2">
+                          <span className={GROUP_BADGE}>{group.label}</span>
+                          <div className="divide-y divide-border/30">
+                            {group.items.map((cause) => (
+                              <div key={cause.key} className="py-2 first:pt-0 last:pb-0">{row(cause)}</div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   {attribution.estimated && (
                     <p className={`${CAPTION} text-pretty`}>
@@ -775,9 +815,7 @@ export function AssetReportView() {
             {/* ── AI 평가 프롬프트 ── */}
             <div className="rounded-lg bg-muted/20 p-4 space-y-3">
               <div>
-                <p className={`${SECTION_TITLE} flex items-center gap-1.5`}>
-                  <Sparkles className="size-4 text-primary" /> 전체 자산 AI 평가 프롬프트
-                </p>
+                <SectionHeader icon={Sparkles} title="전체 자산 AI 평가 프롬프트" tone="info" />
                 <p className={`${CAPTION} mt-1 text-pretty`}>
                   자산 현황을 외부 AI(Grok·Gemini·GPT)에 붙여넣어 구조·리스크 진단을 받아보세요.
                 </p>

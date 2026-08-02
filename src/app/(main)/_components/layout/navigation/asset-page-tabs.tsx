@@ -21,7 +21,9 @@ import { CryptoInput } from "../../forms/asset-update/input/crypto-input";
 import { CashInput } from "../../forms/asset-update/input/cash-input";
 import { CashTxInput } from "../../forms/asset-update/input/cash-tx-input";
 import { LoanInput } from "../../forms/asset-update/input/loan-input";
+import { LoanTxInput } from "../../forms/asset-update/input/loan-tx-input";
 import { CashTxView } from "../../views/detail/cash-tx/cash-tx-view";
+import { LoanTxView } from "../../views/detail/loan-tx/loan-tx-view";
 import { useAssetNavigation, type DetailTab, type ActivityTab } from "./navigation-context";
 
 // 홈 1차 탭(상세/성과)은 TopBar 좌측에 노출됨 — 본문은 Dashboard만.
@@ -46,6 +48,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
       {tab === "cash"        && <CashTab />}
       {tab === "cash-transactions" && <CashTxView />}
       {tab === "loans"       && <LoanTab />}
+      {tab === "loan-transactions" && <LoanTxView />}
     </div>
   );
 }
@@ -84,6 +87,7 @@ export function AssetPageTabs() {
         <CashInput />
         <CashTxInput />
         <LoanInput />
+        <LoanTxInput />
       </div>
 
       {/* key 변경 시 재마운트되며 fade+slide-in 애니메이션 (토스 스타일 미세 전환) */}
