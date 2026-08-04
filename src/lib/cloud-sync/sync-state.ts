@@ -23,6 +23,10 @@ interface SyncState {
   version?: number;
   lastSyncedAt?: string;
   rememberedKey?: WrappedSecret;
+  // 마지막으로 서버와 맞춰진 항목 id 집합 — pull 병합의 **기준점**.
+  // 로컬에만 있는 항목이 "아직 안 올린 신규 추가"인지 "원격에서 삭제된 것"인지 구분하는 유일한
+  // 단서다(삭제가 tombstone 없이 배열 제거라 부재 자체로는 두 경우를 구분할 수 없다).
+  syncedIds?: string[];
 }
 
 function read(): SyncState {
@@ -63,6 +67,16 @@ export function getLastSyncedAt(): string | null {
   return read().lastSyncedAt ?? null;
 }
 
+// 기준점이 없으면(구버전·첫 동기화) null — 호출측은 병합을 끄고 원격 그대로 쓴다(안전 폴백).
+export function getSyncedIds(): Set<string> | null {
+  const ids = read().syncedIds;
+  return Array.isArray(ids) ? new Set(ids) : null;
+}
+
+export function setSyncedIds(ids: string[]): void {
+  patch({ syncedIds: ids });
+}
+
 export function hasRemembered(): boolean {
   return !!read().rememberedKey;
 }
@@ -84,9 +98,11 @@ export async function loadRememberedMaster(): Promise<Uint8Array | null> {
 }
 
 export function forgetRemembered(): void {
-  const { assetId, version, lastSyncedAt } = read();
+  // rememberedKey만 떨군다 — syncedIds(병합 기준점)까지 지우면 병합이 안전 폴백으로 꺼져
+  // 다음 동기화 전까지 신규 추가분 보호가 사라진다.
+  const { assetId, version, lastSyncedAt, syncedIds } = read();
   try {
-    localStorage.setItem(SYNC_STATE_KEY, JSON.stringify({ assetId, version, lastSyncedAt }));
+    localStorage.setItem(SYNC_STATE_KEY, JSON.stringify({ assetId, version, lastSyncedAt, syncedIds }));
   } catch {
     /* 무시 */
   }

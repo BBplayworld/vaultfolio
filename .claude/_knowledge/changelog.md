@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-08-04 (4)
+
+### 기기 동기화 데이터 손실 원천 차단 + 순자산 왜 현금/대출 완전 분리 (issue-4.21)
+
+- **왜(동기화)**: "A기기에서 추가한 현금 자산이 B기기 접속 후 사라진다"는 재발 제보. 클라이언트의 pull-first 순서(마운트·연결·잠금해제)는 이미 있었으나, 심층 점검에서 **더 넓은 두 구멍**을 확인했다. ① 서버 `/api/sync` PUT의 버전 체크가 `getAssetEnvelope`→비교→`setAssetEnvelope`의 read-then-write라, 두 기기가 거의 동시에 push하면 둘 다 체크를 통과해(TOCTOU) 나중 쓰기가 먼저 쓰기를 조용히 지웠다(lost update — 어느 쪽도 409를 못 받음). ② 409 충돌 복구가 pull로 로컬을 통째로 교체할 뿐 **push하려던 로컬 편집을 재병합·재전송하지 않아**, 정상적인 멀티기기 사용에서 "막 추가한 자산"이 구조적으로 반복 소실됐다(같은 원인이 멀티탭·마운트 pull 창에서도 발생).
+- **원자적 CAS**([cache-storage.ts](../../src/lib/cache-storage.ts) `compareAndSetAssetEnvelope` 신설, [route.ts](../../src/app/api/sync/route.ts)): 버전 비교+저장을 단일 원자 연산으로. Upstash는 Lua 스크립트(`redis.eval`)로 GET→비교→SET을 Redis 내부에서 처리(Lua는 항상 원자적), 로컬 `FileCacheStorage`는 중간 `await` 없는 동기 fs 호출로 같은 보장. pubKey 교체 불가(403)만 원자성 밖 사전 체크로 유지.
+- **기준점(syncedIds) 병합**([asset-storage.ts](../../src/lib/asset-storage.ts) `reconcileAdditiveMerge`·`collectAssetIds`, [sync-state.ts](../../src/lib/cloud-sync/sync-state.ts) `syncedIds`): pull이 덮어쓰기 직전 로컬을 읽어 **원격에 없는 로컬 항목 중 "아직 서버에 올라간 적 없는 것"만 되살린다**. 되살린 게 있으면 `runPull`이 `lastPushedRef=null`로 파생값 비교를 건너뛰고 즉시 재-push해 서버에도 반영. 같은 id를 양쪽이 다르게 수정한 진짜 충돌은 원격 우선으로 남김(과설계 회피).
+  - **기준점이 없으면 삭제가 부활한다(작업 중 발견·수정한 P0)**: 삭제가 tombstone 없이 배열 제거라 "로컬에 있고 원격에 없다"가 *신규 추가*와 *원격 삭제* 두 의미를 갖는다. 최초 구현은 이를 무조건 신규로 해석해, A가 지운 자산을 B가 pull하며 되살리고 그 결과를 재-push → A에서도 부활 → "지웠는데 1분 뒤 다시 나타남"이 무한 반복되어 다기기 삭제가 무력화됐다. **CAS로는 못 막는다** — CAS는 쓰기 순서만 통제하고, B는 최신을 정상 수신한 뒤 baseVersion도 최신이라 CAS 관점에선 완벽히 정당한 요청이었다. `syncedIds`(마지막으로 서버와 맞춰진 항목 키)를 기준점으로 두어 *기준점에 없음=신규 보존 / 있음=원격 삭제 존중*으로 판별.
+  - 기준점 갱신 시점이 함정 — pull은 **병합 전 원격 키**로 갱신해야 한다(병합으로 살려둔 신규분까지 넣으면 그게 올라가기 전에 다음 pull이 "삭제됨"으로 오판해 스스로 지운다). push는 push한 키로 갱신. `forgetRemembered`도 `syncedIds` 보존.
+  - `connect`(다른 금고 채택)는 `pullAsset(..., { merge: false })`로 원격 완전 대체 — 로컬 잔여 자산을 남의 금고에 섞지 않는다(F-CLOUD-SYNC S2 "자산 동일"). `unlock`(같은 금고)은 병합.
+- **온라인 복귀 pull-first**([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx)): armed 폴링 effect에 `window "online"` 리스너 추가(force pull). 없으면 오프라인 중 쌓인 디바운스 push가 다음 폴링(최대 60초)보다 먼저 나가 충돌 경로로 들어갔다.
+- **왜(현금/대출)**: 자산성적표 "순자산 왜?"에서 신규 현금 자산이 "대출" 섹션에 표시되고 금액도 다르게 읽힌다는 제보. `groupAttributionItems`의 "이 기간에 `debt`가 하나라도 있으면 `cash`를 대출 그룹으로 강제 편입"(2026-08 설계)이 금액·연관성과 무관하게 트리거된 게 원인 — 8600만원 신규 현금과 전혀 무관한 소액 대출 변동이 같은 주에 겹쳤다는 이유만으로 끌려갔다. **병합 규칙을 완전히 제거해 현금·대출을 항상 각자 그룹으로 분리.** `dCostCash`는 원래도 `loans`를 참조하지 않아 금액은 정확했음을 회귀 테스트로 확정(금액 차이는 두 줄이 한 박스에 나란히 표시되며 생긴 시각적 오독).
+- 신규 테스트 16건(CAS 4·기준점 병합 11·현금대출 분리 회귀 1 + 기존 2건 갱신), 전체 141건 통과. R28 회귀 항목 신설(원자성·기준점·갱신 시점·online 리스너 5개 조건). `npx tsc --noEmit`·`npx vitest run`·`npm run lint`(0 errors)·`npm run build` 전부 통과.
+
 ## 2026-08-04 (3)
 
 ### 암호화폐 종합 카드 매수/매도 버튼 중복 노출 수정 + 상세탭 공통 규칙 명문화 (issue-4.21)

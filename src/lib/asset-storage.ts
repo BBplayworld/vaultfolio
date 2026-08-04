@@ -164,21 +164,114 @@ export function exportAssetData(): void {
   markBackedUp();
 }
 
+// 동기화 병합 기준점의 항목 키 — `yearlyNetAssets`만 id가 없어 year를 키로 쓴다.
+// collectAssetIds와 mergeById가 **같은 규칙**을 써야 판별이 성립하므로 여기 단일 출처로 둔다.
+const yearKey = (year: number) => `year:${year}`;
+
+// 병합 기준점용 전체 항목 키 수집 — push/pull 성공 시 "지금 서버와 맞춰진 항목"으로 기록된다.
+export function collectAssetIds(data: AssetData): string[] {
+  return [
+    ...data.realEstate.map((i) => i.id),
+    ...data.stocks.map((i) => i.id),
+    ...data.crypto.map((i) => i.id),
+    ...data.cash.map((i) => i.id),
+    ...data.loans.map((i) => i.id),
+    ...data.transactions.map((i) => i.id),
+    ...data.cashTransactions.map((i) => i.id),
+    ...data.loanTransactions.map((i) => i.id),
+    ...data.cryptoTransactions.map((i) => i.id),
+    ...data.yearlyNetAssets.map((y) => yearKey(y.year)),
+  ];
+}
+
+// before(로컬)에만 있는 항목 중 **기준점에 없는 것만** 되살린다.
+//  - syncedIds에 없음 = 아직 서버에 올라간 적 없는 신규 추가 → 보존
+//  - syncedIds에 있음 = 예전엔 서버에도 있었는데 지금 원격에 없음 = 원격에서 삭제됨 → 존중(제외)
+// 기준점 없이 "로컬에 있고 원격에 없으면 무조건 되살림"으로 하면 다른 기기의 삭제가 되살아나
+// 다기기 환경에서 삭제가 무력화된다(2026-08 P0).
+function mergeById<T extends { id: string }>(before: T[], after: T[], syncedIds: Set<string>): { arr: T[]; changed: boolean } {
+  if (before.length === 0) return { arr: after, changed: false };
+  const afterIds = new Set(after.map((item) => item.id));
+  const missing = before.filter((item) => !afterIds.has(item.id) && !syncedIds.has(item.id));
+  return missing.length > 0 ? { arr: [...after, ...missing], changed: true } : { arr: after, changed: false };
+}
+
+// 클라우드 pull 직전 로컬(before)에만 있던 **신규** 항목을 원격 데이터(after)에 되살린다.
+// 다른 기기가 거의 동시에 push해 내가 막 추가한 자산이 pull로 통째로 덮여 사라지는 것을
+// 막는 마지막 방어선(추가 전용 — 같은 항목을 양쪽이 다르게 수정한 충돌은 원격 우선, 범위 밖).
+// changed=true면 되살린 항목이 있다는 뜻 — 호출측이 즉시 재-push해 서버에도 반영해야 한다.
+export function reconcileAdditiveMerge(before: AssetData, after: AssetData, syncedIds: Set<string>): { data: AssetData; changed: boolean } {
+  const realEstate = mergeById(before.realEstate, after.realEstate, syncedIds);
+  const stocks = mergeById(before.stocks, after.stocks, syncedIds);
+  const crypto = mergeById(before.crypto, after.crypto, syncedIds);
+  const cash = mergeById(before.cash, after.cash, syncedIds);
+  const loans = mergeById(before.loans, after.loans, syncedIds);
+  const transactions = mergeById(before.transactions, after.transactions, syncedIds);
+  const cashTransactions = mergeById(before.cashTransactions, after.cashTransactions, syncedIds);
+  const loanTransactions = mergeById(before.loanTransactions, after.loanTransactions, syncedIds);
+  const cryptoTransactions = mergeById(before.cryptoTransactions, after.cryptoTransactions, syncedIds);
+
+  // yearlyNetAssets는 id가 아니라 year 기준 (기준점 판별도 동일하게 yearKey로)
+  let yearlyNetAssets = after.yearlyNetAssets;
+  let yearlyChanged = false;
+  if (before.yearlyNetAssets.length > 0) {
+    const afterYears = new Set(after.yearlyNetAssets.map((y) => y.year));
+    const missingYears = before.yearlyNetAssets.filter((y) => !afterYears.has(y.year) && !syncedIds.has(yearKey(y.year)));
+    if (missingYears.length > 0) {
+      yearlyNetAssets = [...after.yearlyNetAssets, ...missingYears];
+      yearlyChanged = true;
+    }
+  }
+
+  const changed = realEstate.changed || stocks.changed || crypto.changed || cash.changed || loans.changed
+    || transactions.changed || cashTransactions.changed || loanTransactions.changed || cryptoTransactions.changed
+    || yearlyChanged;
+  if (!changed) return { data: after, changed: false };
+  return {
+    data: {
+      ...after,
+      realEstate: realEstate.arr, stocks: stocks.arr, crypto: crypto.arr, cash: cash.arr, loans: loans.arr,
+      transactions: transactions.arr, cashTransactions: cashTransactions.arr,
+      loanTransactions: loanTransactions.arr, cryptoTransactions: cryptoTransactions.arr,
+      yearlyNetAssets,
+    },
+    changed: true,
+  };
+}
+
 // 파싱된 페이로드를 검증 후 로컬에 복원 (파일 가져오기·클라우드 동기화 공용)
 // 검증 실패 시 throw — 기존 데이터는 보존(clearAssetData 전에 검증 완료)
 /**
  * @param keepLocalSnapshots 수신 payload에 스냅샷이 없을 때 **로컬 스냅샷을 보존**할지.
  *  - 클라우드 pull(`true`): 스냅샷 없는 기기가 push했다고 해서 내 순자산 이력을 지우면 안 된다.
  *  - 파일 가져오기(`false`): 남의 백업을 얹으면서 내 이력만 남기면 자산과 이력이 뒤섞인다.
+ * @param syncedIds 클라우드 pull 한정 — "마지막으로 서버와 맞춰진 항목 키" 기준점. 넘기면 원격이
+ *  로컬을 덮어쓰기 직전, 로컬에만 있던 **신규**(기준점에 없는) 항목을 되살린다. 읽기 시점을
+ *  clearAssetData 바로 앞으로 최대한 당겨서(중간에 await 없음) 마운트 pull·409 충돌 복구 중
+ *  사용자가 막 추가한 자산이 사라지는 창을 최소화한다. 넘기지 않으면(null/undefined) 종전대로
+ *  원격이 로컬을 통째로 대체한다 — 파일 가져오기(남의 백업에 내 항목을 섞으면 안 됨)와
+ *  connect(다른 금고를 새로 채택)가 이 경로다.
+ * @returns remoteIds 병합 **전** 원격 payload의 항목 키 — 호출측이 기준점 갱신에 쓴다. 병합으로
+ *  살려둔 로컬 신규분은 아직 서버에 없으므로 기준점에 넣으면 안 된다(넣으면 다음 pull이 그걸
+ *  "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다).
  */
 export function applyImportedPayload(
   parsed: unknown,
-  { keepLocalSnapshots = false }: { keepLocalSnapshots?: boolean } = {},
-): { assetData: AssetData; snapshotRestored: boolean } {
+  { keepLocalSnapshots = false, syncedIds }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null } = {},
+): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[] } {
   const p = (parsed ?? {}) as Record<string, unknown>;
   // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
   const rawAsset = (p.assetData ?? p) as unknown;
-  const validated = assetDataSchema.parse(rawAsset);
+  let validated = assetDataSchema.parse(rawAsset);
+  const remoteIds = collectAssetIds(validated); // 병합 전에 캡처 — 기준점 갱신용
+  let mergedAdditions = false;
+  if (syncedIds) {
+    // clearAssetData 직전(아래)까지 다른 await가 없어, 이 읽기와 실제 덮어쓰기 사이의 창이
+    // 최소화된다 — 그 사이 사용자가 저장한 편집만 여전히 놓칠 수 있다(범위 밖, 드문 경합).
+    const reconciled = reconcileAdditiveMerge(getAssetData(), validated, syncedIds);
+    validated = reconciled.data;
+    mergedAdditions = reconciled.changed;
+  }
 
   // 2단계: snapshots도 메모리에서 추출
   let dailySnapshot: unknown[] | null = null;
@@ -228,7 +321,7 @@ export function applyImportedPayload(
   const mergedArchive = mergeDailyArchives(localArchive, incomingArchive ?? {});
   if (Object.keys(mergedArchive).length > 0) writeDailyArchive(mergedArchive);
 
-  return { assetData: validated, snapshotRestored };
+  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds };
 }
 
 export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean }> {

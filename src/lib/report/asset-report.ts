@@ -330,15 +330,10 @@ export interface AttributionItemGroup {
 // 그룹핑 자체(어떤 항목이 어떤 그룹에 속하는지)만 첫 등장 순서로 만들고, 이후 정렬만 별도로 한다
 // — 그래야 그룹 소속 판정과 표시 순서가 서로 얽히지 않는다.
 export function groupAttributionItems(items: AttributionDisplayItem[]): AttributionItemGroup[] {
-  // 이 기간에 대출 활동(debt)이 있으면, 설명되지 않는 현금 잔차(cash)를 현금 그룹이 아니라
-  // 대출 그룹에 묶는다 — 대출 상환/추가대출에 쓰인 미기록 현금일 가능성이 높아 같은 사건의
-  // 다른 면으로 보이게 하기 위함(2026-08). 금액은 절대 합치지 않고 각자 그대로 보여준다 —
-  // 더해서 하나로 합치면 상환액과 그 현금 유출이 상쇄돼 "대출 상환" 사실 자체가 사라질 수 있다.
-  const hasDebt = items.some((i) => i.key === "debt");
   const groups: AttributionItemGroup[] = [];
   const byGroup = new Map<AttributionGroupKey, AttributionItemGroup>();
   for (const item of items) {
-    const g = item.key === "cash" && hasDebt ? "loan" : ATTRIBUTION_GROUP[item.key];
+    const g = ATTRIBUTION_GROUP[item.key];
     if (!g) { groups.push({ key: null, label: null, items: [item] }); continue; }
     let bucket = byGroup.get(g);
     if (!bucket) {

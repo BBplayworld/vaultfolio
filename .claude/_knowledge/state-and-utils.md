@@ -316,11 +316,28 @@ exportAssetData(): void
 importAssetData(file): Promise<{ assetData, snapshotRestored }>
 clearAssetData(): boolean
 saveAssetDataRaw(data): boolean         // superRefine 우회 (스크린샷 경로)
+buildExportPayload(): Record<string, unknown>   // 내보내기·동기화 공용 (assetData+스냅샷+옵션+닉네임)
+applyImportedPayload(parsed, { keepLocalSnapshots?, syncedIds? })
+  // → { assetData, snapshotRestored, mergedAdditions, remoteIds }
+reconcileAdditiveMerge(before, after, syncedIds): { data: AssetData; changed: boolean }
+collectAssetIds(data): string[]         // 자산 5종·거래 4종 id + yearlyNetAssets는 `year:{year}`
 generateShareToken(data, rates?, pin?, localKey?, snapshots?): string
 parseShareToken(token, pin?, localKey?): ParseResult
 // STORAGE_KEYS, migrateStorageKeys는 local-storage.ts에서 re-export
 // 공유 토큰 v7.2 stock 필드: inactiveStatus 직렬화 ("d"=delisted, "h"=halted, ""=활성)
 ```
+
+**`syncedIds` 기준점 병합(클라우드 pull 전용, 2026-08 P0)** — pull은 `clearAssetData` 후 원격 데이터로 통째로 교체하므로, 다른 기기가 거의 동시에 push하면 이 기기가 막 추가한 자산이 흔적 없이 사라졌다. `reconcileAdditiveMerge`가 덮어쓰기 **직전**의 로컬을 읽어 되살리되, **무엇을 되살릴지는 기준점으로 판별**한다:
+
+- 삭제는 tombstone 없이 배열 제거라(`delete*` 전부 `filter`) **"로컬에 있고 원격에 없다"만으로는 "내가 방금 추가함"과 "상대가 삭제함"을 구분할 수 없다.** 기준점 없이 무조건 되살리면 다른 기기의 삭제가 부활하고 그 결과가 재-push되어, 다기기 환경에서 삭제가 무력화된다(실제로 이 버그를 냈고 R28로 고정).
+- `syncedIds`(= `sync-state.ts`의 `secretasset_sync.syncedIds`, "마지막으로 서버와 맞춰진 항목 키")에 **없으면** 아직 안 올라간 신규 추가 → **보존**. **있으면** 예전엔 서버에도 있었는데 지금 원격에 없음 = 원격에서 삭제됨 → **존중(제외)**.
+- 키 규칙은 `collectAssetIds`가 단일 출처(자산·거래는 `id`, `yearlyNetAssets`는 `year:{year}`) — 수집과 판별이 갈리면 삭제 존중이 깨진다.
+- 같은 id를 양쪽이 다르게 수정한 진짜 충돌은 원격 값 유지(범위 밖).
+- 되살린 게 있으면 `mergedAdditions: true` → `runPull`이 **즉시 재-push**(안 하면 이 기기에만 남아 다음 pull 때 또 사라짐).
+
+**기준점 갱신 시점이 이 설계의 함정** — pull 성공 시엔 `remoteIds`(**병합 전** 원격 키)로 갱신한다. 병합으로 살려둔 로컬 신규분까지 넣으면, 그게 서버에 올라가기 전에 다음 pull이 "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다. push 성공 시엔 push한 payload의 키로 갱신. `forgetRemembered`도 `syncedIds`를 보존해야 한다(떨구면 병합이 안전 폴백으로 꺼진다).
+
+`syncedIds`가 없으면(구버전·첫 동기화) 병합을 끄고 원격이 그대로 대체한다(안전 폴백). 파일 가져오기와 `connect`(다른 금고 채택, `pullAsset(..., { merge: false })`)도 이 대체 경로 — 남의 백업·금고에 내 로컬 잔여 항목을 섞으면 안 된다(F-CLOUD-SYNC S2 "자산 동일"). `unlock`(같은 금고)은 병합.
 
 ### real-estate-address.ts (`src/lib/real-estate-address.ts`)
 

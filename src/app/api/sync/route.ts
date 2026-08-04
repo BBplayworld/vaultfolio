@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC, type AssetEnvelope } from "@/lib/cloud-sync/config";
+import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC } from "@/lib/cloud-sync/config";
 import { fromBase64, sha256Hex, verifySignature } from "@/lib/cloud-sync/crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
 
@@ -98,23 +98,23 @@ export async function PUT(request: Request) {
   const ok = await verifySignature(canonical, auth.sig, fromBase64(verifyPubKey));
   if (!ok) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // 기존 금고: pubKey 교체 불가(현 키 서명으로만), 낙관적 동시성
-  if (current) {
-    if (pubKey && pubKey !== current.pubKey) {
-      return NextResponse.json({ error: "pubKey 변경 불가" }, { status: 403 });
-    }
-    if (current.version > baseVersion) {
-      return NextResponse.json({ error: "conflict", asset: { version: current.version } }, { status: 409 });
-    }
+  // 기존 금고: pubKey 교체 불가(현 키 서명으로만). pubKey는 변경 빈도가 극히 낮고 최악의 경우도
+  // 데이터 손실이 아닌 거부(403)라 원자성이 필요 없어 사전 체크로 유지.
+  if (current && pubKey && pubKey !== current.pubKey) {
+    return NextResponse.json({ error: "pubKey 변경 불가" }, { status: 403 });
   }
 
-  const envelope: AssetEnvelope = {
+  // 버전 비교+저장은 반드시 원자적으로: read-then-write로 나누면 두 기기가 거의 동시에 push할 때
+  // 둘 다 버전 체크를 통과해버려(TOCTOU) 나중 쓰기가 먼저 쓰기를 조용히 지우는 lost update가
+  // 생긴다. compareAndSetAssetEnvelope가 Redis Lua 스크립트로 이 구간 전체를 단일 원자 연산으로
+  // 처리한다.
+  const result = await getCacheStorage().compareAndSetAssetEnvelope(auth.assetId, baseVersion, {
     pubKey: current?.pubKey ?? verifyPubKey,
     iv,
     ciphertext,
-    version: (current?.version ?? 0) + 1,
-    updatedAt: new Date().toISOString(),
-  };
-  await getCacheStorage().setAssetEnvelope(auth.assetId, envelope);
-  return NextResponse.json({ version: envelope.version });
+  });
+  if (!result.ok) {
+    return NextResponse.json({ error: "conflict", asset: { version: result.currentVersion } }, { status: 409 });
+  }
+  return NextResponse.json({ version: result.version });
 }

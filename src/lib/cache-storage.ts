@@ -25,6 +25,14 @@ export interface ICacheStorage {
   // Cloud Sync (E2EE Asset)
   getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null>;
   setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void>;
+  // 원자적 compare-and-set — "현재 버전 조회 → 비교 → 저장"을 단일 연산으로 묶어 두 기기가
+  // 거의 동시에 push해도 lost update(TOCTOU 레이스)가 나지 않게 한다. baseVersion보다 서버가
+  // 최신이면 실패(현재 버전 반환), 아니면 version+1로 저장하고 성공(신규 버전 반환).
+  compareAndSetAssetEnvelope(
+    assetId: string,
+    baseVersion: number,
+    data: { pubKey: string; iv: string; ciphertext: string },
+  ): Promise<{ ok: true; version: number } | { ok: false; currentVersion: number }>;
 
   // Finance
   getExchange(): Promise<ExchangeRates | null>;
@@ -256,7 +264,7 @@ interface ShareTokensData {
   owners: Record<string, OwnerEntry>;
 }
 
-class FileCacheStorage implements ICacheStorage {
+export class FileCacheStorage implements ICacheStorage {
   private readFinanceCache(): FileCacheData {
     if (!fs.existsSync(FINANCE_CACHE_PATH)) return { STOCKS: {} };
     try {
@@ -368,6 +376,41 @@ class FileCacheStorage implements ICacheStorage {
       fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(data, null, 2), "utf8");
     } catch (e) {
       console.error("[FileCacheStorage setAssetEnvelope 오류]:", e);
+    }
+  }
+
+  // 읽기·비교·쓰기를 전부 동기 fs 호출로만 구성(중간에 await 없음) — Node 단일 이벤트루프에서
+  // 다른 요청이 이 함수 실행 중간에 끼어들 yield point가 없어, 로컬 dev(단일 프로세스)에서는
+  // 이 구간의 레이스가 원천적으로 닫힌다.
+  async compareAndSetAssetEnvelope(
+    assetId: string,
+    baseVersion: number,
+    data: { pubKey: string; iv: string; ciphertext: string },
+  ): Promise<{ ok: true; version: number } | { ok: false; currentVersion: number }> {
+    try {
+      let raw: CloudSyncFileData = { assets: {} };
+      if (fs.existsSync(CLOUD_SYNC_PATH)) {
+        try {
+          raw = JSON.parse(fs.readFileSync(CLOUD_SYNC_PATH, "utf8")) as CloudSyncFileData;
+        } catch {
+          // ignore
+        }
+      }
+      if (!raw.assets) raw.assets = {};
+      const entry = raw.assets[assetId] ?? raw.vaults?.[assetId] ?? null;
+      const current = entry && "envelope" in entry ? entry.envelope : (entry as AssetEnvelope | null);
+      const currentVersion = current?.version ?? 0;
+      if (current && currentVersion > baseVersion) {
+        return { ok: false, currentVersion };
+      }
+      const envelope: AssetEnvelope = { ...data, version: currentVersion + 1, updatedAt: new Date().toISOString() };
+      raw.assets[assetId] = { envelope, expires_at: Date.now() + CSYNC_TTL_MS };
+      fs.mkdirSync(path.dirname(CLOUD_SYNC_PATH), { recursive: true });
+      fs.writeFileSync(CLOUD_SYNC_PATH, JSON.stringify(raw, null, 2), "utf8");
+      return { ok: true, version: envelope.version };
+    } catch (e) {
+      console.error("[FileCacheStorage compareAndSetAssetEnvelope 오류]:", e);
+      return { ok: false, currentVersion: 0 };
     }
   }
 
@@ -675,6 +718,40 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setAssetEnvelope(assetId: string, envelope: AssetEnvelope): Promise<void> {
     await this.redis.set(`csync:asset:${assetId}`, envelope, { ex: CSYNC_TTL_SECONDS });
+  }
+
+  // Lua 스크립트로 "GET → 버전비교 → SET"을 Redis 내부에서 단일 원자 연산으로 실행한다(Lua
+  // 스크립트는 Redis에서 항상 원자적으로 실행됨) — 두 서버리스 인스턴스가 거의 동시에 호출해도
+  // 레이스 불가능. route.ts의 read-then-write(TOCTOU) 구조를 대체하기 위한 핵심 장치.
+  private static readonly CAS_SCRIPT = `
+    local raw = redis.call('GET', KEYS[1])
+    local currentVersion = 0
+    if raw then
+      local cur = cjson.decode(raw)
+      currentVersion = cur.version or 0
+      if currentVersion > tonumber(ARGV[1]) then
+        return {0, currentVersion}
+      end
+    end
+    local envelope = cjson.decode(ARGV[2])
+    envelope.version = currentVersion + 1
+    envelope.updatedAt = ARGV[3]
+    redis.call('SET', KEYS[1], cjson.encode(envelope), 'EX', ARGV[4])
+    return {1, envelope.version}
+  `;
+
+  async compareAndSetAssetEnvelope(
+    assetId: string,
+    baseVersion: number,
+    data: { pubKey: string; iv: string; ciphertext: string },
+  ): Promise<{ ok: true; version: number } | { ok: false; currentVersion: number }> {
+    const key = `csync:asset:${assetId}`;
+    const [ok, version] = await this.redis.eval(
+      UpstashCacheStorage.CAS_SCRIPT,
+      [key],
+      [String(baseVersion), JSON.stringify(data), new Date().toISOString(), String(CSYNC_TTL_SECONDS)],
+    ) as [number, number];
+    return ok === 1 ? { ok: true, version } : { ok: false, currentVersion: version };
   }
 
   async getExchange(): Promise<ExchangeRates | null> {

@@ -175,6 +175,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   // push 실패 시 플래그가 안 풀려 타 기기 변경이 영영 들어오지 않는다.
   const userEditAtRef = useRef(0);
   const autoPullRef = useRef<(opts?: { force?: boolean }) => Promise<PullResult | null>>(async () => null);
+  // runPull이 병합분 재-push를 호출할 때 쓰는 우회 참조 — runPush의 conflict 분기가 다시 pull을
+  // 부르므로 직접 의존시키면 순환이 된다(autoPullRef와 같은 패턴).
+  const runPushRef = useRef<(silent: boolean) => Promise<PushResult>>(async () => ({ status: "error", message: "" }));
 
   const [status, setStatus] = useState<SyncStatus>("none");
   const [assetIdState, setAssetIdState] = useState<string | null>(null);
@@ -330,6 +333,13 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       userEditRef.current = false;
       setLastSyncedAt(getLastSyncedAt());
       if (auto) toast.info("다른 기기의 변경을 반영했습니다.");
+      // 원격에 없던 로컬 항목을 되살렸으면 그 병합 결과를 서버에도 즉시 올린다 — 올리지 않으면
+      // 이 기기에만 남아 다음 pull 때 또 사라진다(추가 전용 병합의 반쪽만 적용되는 상태 방지).
+      // busyRef가 이미 해제된 뒤라 재진입 가능하고, baseVersion도 방금 pull로 최신이라 통과한다.
+      if (r.mergedAdditions) {
+        lastPushedRef.current = null; // 병합분이 반드시 push되도록 파생값 비교를 건너뛴다
+        void runPushRef.current(true);
+      }
     } else {
       // 실패(empty·error)면 skip 예약을 되돌린다 — 남겨두면 다음 비-사용자편집 변경 1회를
       // 삼켜버린다(닉네임 변경은 changeTick만 올리고 userEditRef는 안 올려 그대로 걸린다)
@@ -369,22 +379,29 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   // 렌더링 시마다 최신 함수 직접 동기화 (useEffect 레이스 컨디션 차단) — Promise<PullResult|null> 반환:
   // 마운트 effect·409 충돌 복구가 pull 완료(성공 여부)를 await할 수 있어야 한다(2026-08 P0).
   autoPullRef.current = (opts) => autoPullIfNewer(opts);
+  runPushRef.current = (silent) => runPush(silent);
 
   // 무장 동안 폴링 + 포커스 (인터벌은 status 기준 1회 설정)
   useEffect(() => {
     if (!enabled || status !== "armed") return;
     const tick = () => { if (document.visibilityState === "visible") void autoPullRef.current(); };
     const onUnlocked = () => void autoPullRef.current(); // 앱잠금 해제 직후 즉시 pull
+    // 온라인 복귀 시 반드시 pull을 먼저 시도한다 — 없으면 오프라인 중 쌓인 디바운스 push가
+    // 다음 폴링(최대 60초)보다 먼저 나가버려, 오프라인 동안 다른 기기가 올린 변경을 모르는 채로
+    // 충돌 경로에 들어간다. force로 편집 보류 가드도 넘긴다(마운트 pull-first와 같은 취지).
+    const onOnline = () => void autoPullRef.current({ force: true });
     const id = setInterval(tick, POLL_INTERVAL_MS);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", tick);
     window.addEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
+    window.addEventListener("online", onOnline);
     void autoPullRef.current();
     return () => {
       clearInterval(id);
       window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", tick);
       window.removeEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
+      window.removeEventListener("online", onOnline);
     };
   }, [enabled, status]);
 
@@ -403,11 +420,13 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     return { ok: true, link: buildLink(aid) };
   }, [arm]);
 
-  const armWithPull = useCallback(async (aid: string, passphrase: string, remember: boolean): Promise<ActionResult> => {
+  // merge=false는 connect(다른 금고를 새로 채택) 전용 — 이 기기에 남아 있던 로컬 자산을 남의
+  // 금고에 섞어 올리면 안 된다(F-CLOUD-SYNC S2 "자산 동일"). unlock은 같은 금고라 병합이 옳다.
+  const armWithPull = useCallback(async (aid: string, passphrase: string, remember: boolean, merge: boolean): Promise<ActionResult> => {
     const keys = await deriveKeys(passphrase, aid);
     keysRef.current = keys;
     assetIdRef.current = aid;
-    const r = await pullAsset(aid, keys);
+    const r = await pullAsset(aid, keys, { merge });
     if (r.status === "error") { keysRef.current = null; return { ok: false, message: r.message }; }
     if (r.status === "empty") { keysRef.current = null; return { ok: false, message: "클라우드에 금고가 없습니다." }; }
     await arm(aid, keys, remember);
@@ -421,11 +440,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const unlock = useCallback((passphrase: string, remember: boolean) => {
     const aid = getAssetId();
     if (!aid) return Promise.resolve({ ok: false, message: "연결된 금고가 없습니다." });
-    return armWithPull(aid, passphrase, remember);
+    return armWithPull(aid, passphrase, remember, true); // 같은 금고 — 잠금 중 추가분 보존
   }, [armWithPull]);
 
   const connect = useCallback((aid: string, passphrase: string, remember: boolean) => {
-    return armWithPull(aid, passphrase, remember);
+    return armWithPull(aid, passphrase, remember, false); // 새 금고 채택 — 원격으로 완전 대체
   }, [armWithPull]);
 
   const clearPendingConnect = useCallback(() => {

@@ -895,7 +895,7 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
-  it("groupAttributionItems: 같은 자산군 원인(시세·매수·매도, 대출)을 한 박스로 묶고 fx는 단독으로 남기며, 그룹은 합계 절대값 큰 순서로 정렬된다", () => {
+  it("groupAttributionItems: 같은 자산군 원인(시세·매수·매도)을 한 박스로 묶고 현금·대출은 항상 각자의 그룹으로 완전히 분리되며, 그룹은 합계 절대값 큰 순서로 정렬된다", () => {
     const items = [
       { key: "price:stock", label: "주식 시세 상승", sentence: "주식 시세 상승으로 100원 늘었어요.", amount: 100, text: "+100원" },
       { key: "fx", label: "환율 상승", sentence: "환율 상승이 50원 보탰어요.", amount: 50, text: "+50원" },
@@ -906,24 +906,23 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
       { key: "debt", label: "대출 상환", sentence: "대출 상환으로 15원 늘었어요.", amount: 15, text: "+15원" },
     ] as ReturnType<typeof getAttributionItems>;
     const groups = groupAttributionItems(items);
-    // debt가 있으므로 cash는 "현금"이 아니라 "대출" 그룹으로 간다(대출 상환에 쓰인 미기록 현금일
-    // 가능성 — 금액은 합치지 않고 따로 표시). 그룹 합계(절대값): stock=120, fx=50, 현금(income만)=20,
-    // 대출(cash+debt)=5+15=20 → 현금·대출이 동률이라 안정 정렬로 먼저 나온(원래 순서) 현금이 앞선다.
+    // 대출 활동이 있어도 cash는 항상 "현금" 그룹에만 남는다(2026-08 병합 규칙 완전 제거 — 무관한
+    // 소액 대출 변동이 같은 기간에 있다는 이유만으로 큰 현금 변동까지 "대출" 섹션에 끌려가는 오분류
+    // 방지). 그룹 합계(절대값): stock=120, fx=50, 현금(income+cash)=25, 대출(debt만)=15.
     expect(groups.map((g) => g.key)).toEqual(["stock", null, "cash", "loan"]);
     expect(groups[0].label).toBe("주식");
     expect(groups[0].items.map((i) => i.key)).toEqual(["price:stock", "buy:stock", "sell:stock"]);
     expect(groups[1].items.map((i) => i.key)).toEqual(["fx"]);
     expect(groups[2].label).toBe("현금");
-    expect(groups[2].items.map((i) => i.key)).toEqual(["income"]);
+    expect(groups[2].items.map((i) => i.key)).toEqual(["income", "cash"]);
     expect(groups[3].label).toBe("대출");
-    expect(groups[3].items.map((i) => i.key)).toEqual(["cash", "debt"]);
+    expect(groups[3].items.map((i) => i.key)).toEqual(["debt"]);
   });
 
-  it("groupAttributionItems: 실제 계산 결과에서도 대출 활동이 있으면 현금 잔차가 대출 박스로 묶인다 — 금액은 합치지 않고 그대로 유지", () => {
-    // 대출 상환만 기록하고 그 돈이 나간 현금 계좌 쪽엔 별도 출금 기록을 안 남긴 흔한 시나리오.
-    // debtEffect(+100만)와 cash 잔차(-100만)를 더해버리면 상쇄돼 "대출 상환" 사실 자체가 사라지므로
-    // (2026-08 설계 수정 — 애초 시도했던 금액 합산 방식의 버그), 금액은 절대 합치지 않고 각자
-    // 정확한 값으로 보여주되 같은 "대출" 박스에 묶어 두 줄이 한 사건의 다른 면임을 드러낸다.
+  it("groupAttributionItems: 대출 활동이 있어도 현금 잔차는 대출 박스로 묶이지 않고 각자의 그룹으로 완전히 분리된다", () => {
+    // 대출 상환만 기록하고 그 돈이 나간 현금 계좌 쪽엔 별도 출금 기록을 안 남긴 시나리오라도,
+    // 무관한 큰 현금 변동(예: 신규 현금 자산 대량 추가)이 같은 기간에 있으면 "대출" 섹션에
+    // 잘못 끌려가는 오분류가 있었다(2026-08 QA) — 병합 규칙을 완전히 제거해 항상 분리한다.
     const data = emptyData();
     data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-05-10", reflected: true })];
     const prev = snapClass("2026-05-01", { cash: 10_000_000, loans: 3_000_000 }, {});
@@ -935,7 +934,28 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(byKey.get("cash")).toBeCloseTo(-1_000_000, 6); // 미기록 현금 유출도 별도 금액으로 그대로 보임
     const groups = groupAttributionItems(items);
     const loanGroup = groups.find((g) => g.key === "loan")!;
-    expect(loanGroup.items.map((i) => i.key)).toEqual(["cash", "debt"]); // 같은 박스로 묶임
+    const cashGroup = groups.find((g) => g.key === "cash")!;
+    expect(loanGroup.items.map((i) => i.key)).toEqual(["debt"]); // 대출 그룹엔 debt만
+    expect(cashGroup.items.map((i) => i.key)).toEqual(["cash"]); // 현금 그룹엔 cash만 — 더 이상 합쳐지지 않음
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("groupAttributionItems: 신규 현금 대량 추가와 무관한 소액 대출 변동이 같은 기간에 있어도 현금 금액이 그대로 표시된다(대출 오분류 회귀)", () => {
+    // 실사용 재현: 8600만원 규모 신규 현금 자산을 등록한 주에, 무관한 소액 대출 변동(예: 이자
+    // 반영으로 인한 잔액 소폭 증가)이 같은 기간에 겹치면 신규 현금 추가가 "대출" 섹션에 잘못
+    // 표시되고 금액도 착시로 다르게 읽히는 문제가 보고됐다(2026-08). dCostCash 자체는 loans를
+    // 참조하지 않으므로 금액은 원래도 정확해야 하고, 그룹 분리로 표시도 더 이상 뒤섞이지 않는다.
+    const data = emptyData();
+    const prev = snapClass("2026-07-28", { cash: 5_000_000, loans: 20_000_000 }, {});
+    const curr = snapClass("2026-08-04", { cash: 91_000_000, loans: 20_300_000 }, {}); // 현금 +8600만, 대출 +30만(무관한 소액 변동)
+    const attr = run(data, [prev, curr], "2026-07-28")!;
+    const items = getAttributionItems(attr);
+    const byKey = new Map(items.map((c) => [c.key, c.amount]));
+    expect(byKey.get("cash")).toBeCloseTo(86_000_000, 6); // 신규 현금 추가액이 정확히 그대로
+    expect(byKey.get("debt")).toBeCloseTo(-300_000, 6); // 대출 증가(부호 규약상 음수)는 별개 값
+    const groups = groupAttributionItems(items);
+    expect(groups.find((g) => g.key === "cash")!.items.map((i) => i.key)).toEqual(["cash"]);
+    expect(groups.find((g) => g.key === "loan")!.items.map((i) => i.key)).toEqual(["debt"]);
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
