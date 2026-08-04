@@ -57,6 +57,7 @@ const EMPTY_ASSET_DATA: AssetData = {
   transactions: [],
   cashTransactions: [],
   loanTransactions: [],
+  cryptoTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -576,6 +577,20 @@ function packV7(data: AssetData, rates?: { USD: number; JPY: number }, snapshots
         loanIdx >= 0 ? loanIdx.toString() : t.loanId,
       ];
     }) || []),
+    // parts[14]: 암호화폐 매수/매도 내역 (S-4.25) — 꼬리 추가라 구버전 토큰과 하위호환. crIdx로 부모 코인 참조.
+    // 통화 필드 없음(코인은 항상 KRW) — transactions(주식)보다 필드 3개 적다(currency·exchangeRate·fee 없음).
+    section(data.cryptoTransactions?.map(t => {
+      const crIdx = data.crypto.findIndex(c => c.id === t.cryptoId);
+      return [
+        t.type === "buy" ? "b" : "s",
+        pNum(t.quantity),
+        pNum(t.price),
+        pDate(t.date),
+        t.reflected ? "1" : "0",
+        sTxt(t.memo),
+        crIdx >= 0 ? crIdx.toString() : t.cryptoId,
+      ];
+    }) || []),
   ];
 
   return parts.join("^");
@@ -594,6 +609,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const stIds: string[] = [];
   const caIds: string[] = [];
   const loIds: string[] = [];
+  const crIds: string[] = [];
 
   const realEstate = section(0).map(r => {
     const f = fields(r);
@@ -631,7 +647,9 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   const crypto = section(2).map(r => {
     const f = fields(r);
     const name = uTxt(f[0]) || "무명";
-    return { id: gid(), name, symbol: f[1] === "*" ? name : (uTxt(f[1]) || "SYMBOL"), quantity: uNum(f[2]), averagePrice: uNum(f[3]), currentPrice: uNum(f[4]), purchaseDate: uDate(f[5]), exchange: uTxt(f[6]), description: uTxt(f[7]) };
+    const id = gid();
+    crIds.push(id);
+    return { id, name, symbol: f[1] === "*" ? name : (uTxt(f[1]) || "SYMBOL"), quantity: uNum(f[2]), averagePrice: uNum(f[3]), currentPrice: uNum(f[4]), purchaseDate: uDate(f[5]), exchange: uTxt(f[6]), description: uTxt(f[7]) };
   });
   const cash = section(3).map(r => {
     const f = fields(r);
@@ -739,6 +757,29 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     };
   }).filter(t => t.loanId);
 
+  // 암호화폐 매수/매도 내역 (S-4.25) — crIdx로 부모 코인 재연결. 코인 못 찾으면 제외.
+  const cryptoTransactions = section(14).map(r => {
+    const f = fields(r);
+    const rawCr = f[6] || "";
+    const isIdx = /^\d+$/.test(rawCr);
+    const crIdx = isIdx ? parseInt(rawCr, 10) : -1;
+    const cryptoId = (crIdx >= 0 && crIdx < crIds.length) ? crIds[crIdx] : (isIdx ? "" : rawCr);
+    const coin = crypto.find(c => c.id === cryptoId);
+    return {
+      id: `crtx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      cryptoId,
+      symbol: coin?.symbol || "",
+      name: coin?.name || "",
+      type: f[0] === "b" ? "buy" as const : "sell" as const,
+      quantity: uNum(f[1]),
+      price: uNum(f[2]),
+      date: uDate(f[3]),
+      reflected: f[4] === "1",
+      memo: uTxt(f[5]) || undefined,
+      createdAt: new Date().toISOString(),
+    };
+  }).filter(t => t.cryptoId);
+
   const data = {
     realEstate,
     stocks,
@@ -752,6 +793,7 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
     transactions,
     cashTransactions,
     loanTransactions,
+    cryptoTransactions,
     lastUpdated: new Date().toISOString(),
     nickname: parts[11] ? uTxt(parts[11]) || "" : "",
   };

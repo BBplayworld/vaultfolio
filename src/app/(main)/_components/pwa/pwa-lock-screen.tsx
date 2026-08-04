@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { ShieldCheck, AlertTriangle, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { emitPwaUnlocked, isPwaLocked, markPwaAuthenticated, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
 
@@ -66,6 +68,10 @@ export function PwaLockScreen() {
   const [failCount, setFailCount] = useState(0);
   const [checking, setChecking] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // PC는 물리 키보드로 네이티브 input에 직접 입력 — 소프트 키보드 금지 규약(위 주석)은
+  // iOS standalone 포커스 강탈 버그가 원인이라 데스크톱에는 해당하지 않는다(2026-08).
+  const isMobile = useIsMobile();
+  const isPC = mounted && isMobile === false;
   // 검증 중 중복 실행 가드
   const checkingRef = useRef(false);
   // unlockAndLoad는 비메모 context value에서 와 식별자가 흔들린다 → deps에 넣지 않고 최신 참조만 유지
@@ -119,16 +125,17 @@ export function PwaLockScreen() {
     })();
   }, [pin]);
 
-  // 물리 키보드(데스크톱·외장) — 포커스 대상이 없으므로 window에서 직접 받는다
+  // 물리 키보드(모바일 자체 숫자패드 화면 한정) — 포커스 대상이 없으므로 window에서 직접 받는다.
+  // PC(isPC)는 네이티브 input이 포커스를 갖고 자체적으로 키 입력을 받으므로 중복 입력 방지를 위해 끈다.
   useEffect(() => {
-    if (!locked) return;
+    if (!locked || isPC) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key >= "0" && e.key <= "9") push(e.key);
       else if (e.key === "Backspace") pop();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [locked, push, pop]);
+  }, [locked, isPC, push, pop]);
 
   if (!mounted || !locked) return null;
 
@@ -159,20 +166,37 @@ export function PwaLockScreen() {
         ))}
       </div>
 
-      <div className={cn("grid grid-cols-3 gap-3 w-full max-w-[260px]", checking && "pointer-events-none opacity-60")}>
-        {KEYPAD_DIGITS.map((d) => (
-          <KeypadKey key={d} label={`숫자 ${d}`} className="text-xl font-semibold tabular-nums" onPress={() => push(d)}>
-            {d}
+      {isPC ? (
+        // PC: 물리 키보드로 직접 입력 — 소프트 키보드 포커스 강탈 버그는 iOS standalone 한정이라
+        // 데스크톱에서는 네이티브 input을 막을 이유가 없다.
+        <Input
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          autoFocus
+          maxLength={PIN_LENGTH}
+          value={pin}
+          disabled={checking}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH))}
+          className="w-40 text-center text-2xl tracking-[0.6em] tabular-nums"
+          aria-label="비밀번호 4자리"
+        />
+      ) : (
+        <div className={cn("grid grid-cols-3 gap-3 w-full max-w-[260px]", checking && "pointer-events-none opacity-60")}>
+          {KEYPAD_DIGITS.map((d) => (
+            <KeypadKey key={d} label={`숫자 ${d}`} className="text-xl font-semibold tabular-nums" onPress={() => push(d)}>
+              {d}
+            </KeypadKey>
+          ))}
+          <span />
+          <KeypadKey label="숫자 0" className="text-xl font-semibold tabular-nums" onPress={() => push("0")}>
+            0
           </KeypadKey>
-        ))}
-        <span />
-        <KeypadKey label="숫자 0" className="text-xl font-semibold tabular-nums" onPress={() => push("0")}>
-          0
-        </KeypadKey>
-        <KeypadKey label="한 자리 지우기" variant="ghost" onPress={pop}>
-          <Delete className="size-5" />
-        </KeypadKey>
-      </div>
+          <KeypadKey label="한 자리 지우기" variant="ghost" onPress={pop}>
+            <Delete className="size-5" />
+          </KeypadKey>
+        </div>
+      )}
 
       {failCount >= 3 && (
         <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">

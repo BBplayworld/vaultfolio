@@ -137,3 +137,57 @@ describe("rollbackTransaction", () => {
     expect(result.avgPrice).toBeCloseTo(50000, 0);
   });
 });
+
+// 코인(cryptoId·exchangeRate 없음)도 구조적 타입 완화 후 동일한 가중평균 로직을 그대로
+// 통과하는지 확인 — 주식 전용 코드를 복제하지 않고 재사용한다는 계약의 회귀 방지(S-4.25).
+describe("코인 거래 재사용 (trade-utils 구조적 타입 완화)", () => {
+  interface CryptoPos {
+    cryptoId: string;
+    quantity: number;
+    avgPrice: number;
+    avgExchangeRate: number;
+    source: "manual" | "computed";
+    effectiveDate: string;
+    lockedByManual: boolean;
+  }
+  const makeCryptoPos = (overrides: Partial<CryptoPos> = {}): CryptoPos => ({
+    cryptoId: "c1",
+    quantity: 1,
+    avgPrice: 100_000_000,
+    avgExchangeRate: 0,
+    source: "manual",
+    effectiveDate: "2026-01-01",
+    lockedByManual: false,
+    ...overrides,
+  });
+  const makeCryptoTx = (overrides: Partial<{ type: "buy" | "sell"; quantity: number; price: number; date: string; reflected: boolean; createdAt: string; id: string }> = {}) => ({
+    id: `crtx_${Date.now()}`,
+    type: "buy" as const,
+    quantity: 0.5,
+    price: 110_000_000,
+    date: "2026-05-01",
+    reflected: true,
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  });
+
+  it("computeNewPosition: 코인 매수 가중평균(환율 필드 없이도 동작)", () => {
+    const pos = makeCryptoPos({ quantity: 1, avgPrice: 100_000_000 });
+    const tx = makeCryptoTx({ type: "buy", quantity: 0.5, price: 110_000_000 });
+    const result = computeNewPosition(pos, tx);
+    expect(result.quantity).toBeCloseTo(1.5, 6);
+    // (1억*1 + 1.1억*0.5) / 1.5 = 1.55억/1.5 ≈ 103,333,333
+    expect(result.avgPrice).toBeCloseTo(103_333_333, -2);
+  });
+
+  it("rollbackTransaction: 코인도 거래 삭제 시 역산 재계산", () => {
+    const current = makeCryptoPos({ quantity: 1.5, avgPrice: 103_333_333.33, source: "computed" });
+    const txs = [
+      makeCryptoTx({ id: "ctx1", type: "buy", quantity: 1, price: 100_000_000, date: "2026-01-10" }),
+      makeCryptoTx({ id: "ctx2", type: "buy", quantity: 0.5, price: 110_000_000, date: "2026-02-15" }),
+    ];
+    const result = rollbackTransaction(current, txs, "ctx2");
+    expect(result.quantity).toBeCloseTo(1, 6);
+    expect(result.avgPrice).toBeCloseTo(100_000_000, -2);
+  });
+});

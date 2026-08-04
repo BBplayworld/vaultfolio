@@ -56,11 +56,13 @@ _components/
 - **HomeView**: InlineSelector size="lg" (홈/상세/성과) + Dashboard. 상세/성과 클릭 = drill-down 진입
 - **DetailView({tab})**: InlineSelector(주식/부동산/암호화폐/현금/대출) + 해당 탭 컴포넌트 (1개만 mount)
 - **ActivityView({tab})**: InlineSelector(순자산/수익/배당) + YearlyNetAssetChart/ProfitCard/DividendCard
-- 입력 폼 5종 `<div className="hidden">` 래핑으로 DOM에 상시 마운트 (편집 다이얼로그용)
+- 입력 폼 8종(자산 5종 + Cash/Loan/CryptoTx) `<div className="hidden">` 래핑으로 DOM에 상시 마운트 (편집 다이얼로그용)
 - **CashTxInput** (`forms/asset-update/input/cash-tx-input.tsx`, S-4.22): 현금 입출금 기록 폼. `trigger-add-cash-tx`(`dispatchAddCashTx(cashId)`)로 오픈. 입금/출금·정기 토글·반영·출금초과 가드·중복 인라인 확인. hidden 영역 상시 마운트
 - **CashTxView** (`views/detail/cash-tx/cash-tx-view.tsx`, S-4.22): `cash-transactions` 탭. 총입금·출금·순유입 통계·기간/유형 필터·반영 삭제 시 잔액 역가감. 진입 대상은 `useCashTxViewStore`. 현금 카드 "입출금 기록/내역" 버튼·성적표 habit 딥링크로 진입
 - **LoanTxInput** (`forms/asset-update/input/loan-tx-input.tsx`, S-4.24): 대출 상환/추가대출 기록 폼. `trigger-add-loan-tx`(`dispatchAddLoanTx(loanId)`)로 오픈. `CashTxInput` 미러링(통화 분기·정기 토글 없음, 상환초과 가드·중복 인라인 확인). hidden 영역 상시 마운트
 - **LoanTxView** (`views/detail/loan-tx/loan-tx-view.tsx`, S-4.24): `loan-transactions` 탭. 총상환·추가대출·순상환 통계·기간/유형 필터·반영 삭제 시 잔액 역가감·완납 배지. 진입 대상은 `useLoanTxViewStore`. 대출 카드 "상환/대출 기록·내역" 버튼으로 진입
+- **CryptoTxInput** (`forms/asset-update/input/crypto-tx-input.tsx`, S-4.25): 코인 매수/매도 기록 폼. `trigger-add-crypto-tx`(`dispatchAddCryptoTx(cryptoId)`)로 오픈. `CashTxInput` 구조 미러링이나 계산은 잔액 가감이 아니라 `trade-utils.computeNewPosition` 가중평균(주식과 동형) — 반영 시 수량·평단 재계산, 반영 후 예상 포지션 인라인 미리보기·초과매도 가드(`validateReflection`)·중복 인라인 확인. hidden 영역 상시 마운트
+- **CryptoTxView** (`views/detail/crypto-tx/crypto-tx-view.tsx`, S-4.25): `crypto-transactions` 탭. 총매수·총매도 통계·기간/유형 필터. 반영 삭제는 잔액 역가감이 아니라 `trade-utils.rollbackTransaction`(거래로그 전체 재적용)으로 포지션 롤백. 진입 대상은 `useCryptoTxViewStore`. 코인 카드(병합·거래소별 하위 카드) "매수/매도 기록·내역" 버튼 및 "자산업데이트" 플로팅 버튼(코인 선택 시)으로 진입
 - **TaxCalendarView** (`views/tax/tax-calendar-view.tsx`, S-4.23): `#tax` 뷰. 12개월 세금 일정 세로 리스트(`InlineSelector` 내 세금/전체 필터 · `Collapsible` 상세 · 현재 월 강조·`scrollIntoView`). 해외주식 실현차익 근거 박스 + 하단 면책 고정. `settings`와 동일한 더보기 하위 페이지 패턴(하단탭 미등록). shadcn `Calendar`는 날짜 선택기라 사용하지 않는다
 
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)

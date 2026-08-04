@@ -131,8 +131,8 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     for (const t of trades) {
       const info = matchMap.get(t.id);
       const stockId = info?.kind === "existing" ? info.stockId : "";
-      m.set(t.id, stockId ? !!findDuplicateTransaction(existing, {
-        stockId, date: t.date, quantity: t.quantity, price: t.price, type: t.type,
+      m.set(t.id, stockId ? !!findDuplicateTransaction(existing, "stockId", {
+        assetId: stockId, date: t.date, quantity: t.quantity, price: t.price, type: t.type,
       }) : false);
     }
     return m;

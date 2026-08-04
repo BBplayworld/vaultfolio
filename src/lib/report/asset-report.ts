@@ -177,9 +177,9 @@ export function causeShortLabel(key: AttributionCauseKey, amount: number): strin
     case "buy:realEstate": return "부동산 매수";
     case "sell:realEstate": return "부동산 매도";
     case "income": return amount >= 0 ? "현금 입금" : "현금 출금";
-    case "cash": return amount >= 0 ? "현금 잔액 증가" : "현금 잔액 감소";
+    case "cash": return amount >= 0 ? "현금 증가(추정)" : "현금 감소(추정)";
     case "deposit": return amount >= 0 ? "임차보증금 반환" : "임차보증금 증가";
-    case "debt": return amount >= 0 ? "대출 상환" : "신규 대출";
+    case "debt": return amount >= 0 ? "대출 상환" : "추가 대출";
   }
 }
 
@@ -303,7 +303,7 @@ export function getAttributionItems(attr: PeriodAttribution): AttributionDisplay
   }));
 }
 
-// 자산 타입별 그룹 — 성적표 화면이 같은 자산군 원인(시세·매수·매도, 대출 상환·신규 대출)을
+// 자산 타입별 그룹 — 성적표 화면이 같은 자산군 원인(시세·매수·매도, 대출 상환·추가 대출)을
 // 박스 하나에 묶어 보여줄 때 쓴다. fx·deposit·통합 price처럼 자산 타입이 없는 원인은 그룹을 만들지 않는다.
 export type AttributionGroupKey = "stock" | "crypto" | "realEstate" | "cash" | "loan";
 
@@ -330,10 +330,15 @@ export interface AttributionItemGroup {
 // 그룹핑 자체(어떤 항목이 어떤 그룹에 속하는지)만 첫 등장 순서로 만들고, 이후 정렬만 별도로 한다
 // — 그래야 그룹 소속 판정과 표시 순서가 서로 얽히지 않는다.
 export function groupAttributionItems(items: AttributionDisplayItem[]): AttributionItemGroup[] {
+  // 이 기간에 대출 활동(debt)이 있으면, 설명되지 않는 현금 잔차(cash)를 현금 그룹이 아니라
+  // 대출 그룹에 묶는다 — 대출 상환/추가대출에 쓰인 미기록 현금일 가능성이 높아 같은 사건의
+  // 다른 면으로 보이게 하기 위함(2026-08). 금액은 절대 합치지 않고 각자 그대로 보여준다 —
+  // 더해서 하나로 합치면 상환액과 그 현금 유출이 상쇄돼 "대출 상환" 사실 자체가 사라질 수 있다.
+  const hasDebt = items.some((i) => i.key === "debt");
   const groups: AttributionItemGroup[] = [];
   const byGroup = new Map<AttributionGroupKey, AttributionItemGroup>();
   for (const item of items) {
-    const g = ATTRIBUTION_GROUP[item.key];
+    const g = item.key === "cash" && hasDebt ? "loan" : ATTRIBUTION_GROUP[item.key];
     if (!g) { groups.push({ key: null, label: null, items: [item] }); continue; }
     let bucket = byGroup.get(g);
     if (!bucket) {
@@ -427,6 +432,13 @@ function estimatePeriodInflows(
       .filter((t) => t.reflected && t.date > fromDate && t.date <= toDate)
       .map((t) => t.loanId),
   );
+  // 기간 내 반영된 코인 거래를 가진 코인 id — reflectedCryptoFlow가 권위 소스이므로 매수일 추정에서
+  // 제외(이중계산 방지, tradedStockIds와 동일 패턴, S-4.25)
+  const tradedCryptoIds = new Set(
+    (data.cryptoTransactions || [])
+      .filter((t) => t.reflected && t.date > fromDate && t.date <= toDate)
+      .map((t) => t.cryptoId),
+  );
   let stock = 0;
   for (const s of data.stocks) {
     if (tradedStockIds.has(s.id)) continue;
@@ -440,6 +452,7 @@ function estimatePeriodInflows(
   }
   let crypto = 0;
   for (const c of data.crypto) {
+    if (tradedCryptoIds.has(c.id)) continue;
     if (inPeriod(c.purchaseDate)) crypto += c.averagePrice * c.quantity;
   }
   let realEstate = 0;
@@ -454,17 +467,37 @@ function estimatePeriodInflows(
   return { stock, crypto, realEstate, debt };
 }
 
-// 기간(from, to] 내 반영된 대출 상환/추가대출 순액(Σ상환−Σ추가대출)을 집계.
+// 기간[from, to] 내 반영된 대출 상환/추가대출 순액(Σ상환−Σ추가대출)을 집계.
 // 대출은 통화 필드가 없어(항상 KRW) rates 불필요 — reflectedCashInflow·reflectedTradeFlow와 동형.
 // 예측(estimated) 경로 전용: 정밀(bothEnriched) 경로의 debtEffect는 스냅샷 breakdown 델타로 이미 정확하다.
+// 시작일(fromDate) 당일 거래도 포함(<)한다 — 과거 "(from,to] 시작일 제외" 규칙은 "시작 스냅샷이
+// 그날 거래를 이미 반영했을 것"이란 전제였는데, 소급 기록·마지막 방문일과 같은 날짜로 남긴 거래는
+// 스냅샷에 반영되지 않은 채 통째로 걸러져 debt/income이 사라지고 무관한 cash 잔차로 둔갑했다(2026-08 P1).
 function reflectedLoanFlow(assetData: AssetData, fromDate: string, toDate: string): number {
   const txns = assetData.loanTransactions || [];
   let net = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date <= fromDate || t.date > toDate) continue;
+    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
     net += t.type === "repay" ? t.amount : -t.amount;
   }
   return net;
+}
+
+// 기간[from, to] 내 반영된 코인 매수/매도 체결액을 매수/매도로 나눠 합산.
+// 코인은 항상 KRW 취급(currency·exchangeRate 없음)이라 rates 불필요 — reflectedTradeFlow(주식)와
+// 동형이나 통화 변환이 없다는 점만 다르다(reflectedLoanFlow와 동일한 이유로 rates 불필요).
+// 시작일(fromDate) 당일 거래 포함 이유는 reflectedCashInflow와 동일(2026-08 P1).
+function reflectedCryptoFlow(assetData: AssetData, fromDate: string, toDate: string): { buy: number; sell: number } {
+  const txns = assetData.cryptoTransactions || [];
+  let buy = 0;
+  let sell = 0;
+  for (const t of txns) {
+    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
+    const amount = t.quantity * t.price;
+    if (t.type === "buy") buy += amount;
+    else sell -= amount;
+  }
+  return { buy, sell };
 }
 
 // 통합 시계열 포인트: daily는 date 그대로, monthly는 실제 말일로 정렬(표시는 YYYY-MM).
@@ -484,7 +517,10 @@ function buildAttributionPoints(
   };
   return {
     dailyPoints: daily.map((s) => ({ ...s, _date: s.date, _display: s.date })),
-    monthlyPoints: monthly.map((s) => ({ ...s, _date: monthEnd(s.month), _display: s.month, _isMonthly: true })),
+    // _date는 범위 경계(fromDate)로도 쓰이므로 실제 캡처일(s.date)을 우선한다 — 월말로 강제하면
+    // 실제 캡처일~월말 사이에 일어난 거래가 reflectedXFlow 범위 필터에서 누락된다. 레거시(필드
+    // 없음)만 월말로 폴백. _display는 차트·문구용 "YYYY-MM" 표기이므로 그대로 둔다.
+    monthlyPoints: monthly.map((s) => ({ ...s, _date: s.date ?? monthEnd(s.month), _display: s.month, _isMonthly: true })),
   };
 }
 
@@ -573,6 +609,13 @@ function resolveAttribution(
     const buyStock = buyEffect + Math.max(stockManual, 0);
     const sellStock = sellEffect + Math.min(stockManual, 0);
 
+    // 코인도 주식과 동형 — 반영된 매수/매도 거래(reflectedCryptoFlow)를 권위 소스로 쓰고,
+    // 거래내역 없이 수량·평단만 직접 수정한 나머지(cryptoManual)는 방향별로 합산한다(S-4.25).
+    const { buy: buyCryptoEffect, sell: sellCryptoEffect } = reflectedCryptoFlow(assetData, prev._date, curr._date);
+    const cryptoManual = dCostCrypto - buyCryptoEffect - sellCryptoEffect;
+    const buyCrypto = buyCryptoEffect + Math.max(cryptoManual, 0);
+    const sellCrypto = sellCryptoEffect + Math.min(cryptoManual, 0);
+
     // 자산군별 시세로 설명되지 않는 잔차 — fxStock 정의상 이론값은 0이고, 스냅샷의 netAsset과
     // breakdown 합이 어긋날 때(반올림·구버전 기록·breakdown에 없는 필드의 변동)만 비영이 된다.
     // 성격이 현금성 변동이므로 아래 dCostCash에 합산한다 — 이 항이 있어야 표시 합계 = deltaNet이 무조건 성립한다.
@@ -597,7 +640,8 @@ function resolveAttribution(
       { key: "fx", amount: fxEffect },
       { key: "buy:stock", amount: buyStock },
       { key: "sell:stock", amount: sellStock },
-      { key: dCostCrypto >= 0 ? "buy:crypto" : "sell:crypto", amount: dCostCrypto },
+      { key: "buy:crypto", amount: buyCrypto },
+      { key: "sell:crypto", amount: sellCrypto },
       { key: dCostRealEstate >= 0 ? "buy:realEstate" : "sell:realEstate", amount: dCostRealEstate },
       { key: "income", amount: incomeEffect },
       { key: "cash", amount: dCostCash },
@@ -622,17 +666,26 @@ function resolveAttribution(
     : 0;
   const inflows = estimatePeriodInflows(assetData, prev._date, curr._date, rates);
   const savingEffect = inflows.stock + inflows.crypto + inflows.realEstate;
-  // 예측 모드의 inflows.debt는 매수일 기반이라 기간 내 신규 대출만 포착 — 기존 대출의 상환은 보이지 않는다.
-  // 반영된 대출 거래(reflectedLoanFlow)로 보강 — 이중계산 방지는 estimatePeriodInflows의 loanTxLoanIds skip이 담당.
-  const debtEffect = inflows.debt + reflectedLoanFlow(assetData, prev._date, curr._date);
+  // breakdown(자산군별 평가액)은 fx/fxBase/cost 없이도 양쪽에 있을 수 있다 — breakdown.loans는
+  // breakdown 존재 시 항상 채워지는 필수 필드이므로, 있으면 정밀 분기와 동일하게 잔액 차이로
+  // 대출 증감을 직접 계산한다(대출 상환을 기록 없이 잔액만 수정한 경우도 정확히 잡힘).
+  // 없으면(완전 레거시) 매수일 기반 신규대출 추정(inflows.debt) + 반영된 대출 거래로 폴백.
+  const debtFromBreakdown = prev.breakdown && curr.breakdown
+    ? -(curr.breakdown.loans - prev.breakdown.loans)
+    : null;
+  const debtEffect = debtFromBreakdown ?? (inflows.debt + reflectedLoanFlow(assetData, prev._date, curr._date));
   // 예측 모드의 saving은 매수일 기반이라 현금 유입을 포함하지 않음 → income을 별도 항으로 두고 잔차(price)에서 뺀다.
   // 거래내역이 있는 주식은 estimatePeriodInflows가 건너뛰므로(권위=거래내역) buy/sell을 여기서 분리해 노출한다.
   // (매수 반영 시 purchaseDate가 안 바뀌어 추가 매수가 saving에서 통째로 누락되던 문제 해소)
   const { buy: buyEffect, sell: sellEffect } = reflectedTradeFlow(assetData, prev._date, curr._date, rates);
-  const priceEffect = deltaNet - fxEffect - savingEffect - buyEffect - sellEffect - debtEffect - incomeEffect;
+  // 코인도 동일 — estimatePeriodInflows가 tradedCryptoIds를 건너뛰므로(권위=거래내역) 여기서 분리 노출(S-4.25)
+  const { buy: buyCryptoEffect, sell: sellCryptoEffect } = reflectedCryptoFlow(assetData, prev._date, curr._date);
+  const priceEffect = deltaNet - fxEffect - savingEffect - buyEffect - sellEffect - buyCryptoEffect - sellCryptoEffect - debtEffect - incomeEffect;
   // 시작 스냅샷에 자산군별 평가액(breakdown)이 없어 **시세만** 통합 "price"로 남고, 매수·매도는 자산군별로 나뉜다.
   const buyStock = buyEffect + Math.max(inflows.stock, 0);
   const sellStock = sellEffect + Math.min(inflows.stock, 0);
+  const buyCrypto = buyCryptoEffect + Math.max(inflows.crypto, 0);
+  const sellCrypto = sellCryptoEffect + Math.min(inflows.crypto, 0);
   // 예측 분해 구간에서 실제로 추정치인 것만 표시 — income(reflectedCashInflow)은 이 분기에서도
   // 기록된 거래내역을 그대로 쓰므로 예측이 아니다. debt·buy:stock/sell:stock은 실측(반영 거래)과
   // 추정(매수일·대출일 기반 inflows)이 섞여 있어 일부만 예측이라도 estimated:true로 표시한다.
@@ -641,10 +694,11 @@ function resolveAttribution(
     { key: "fx", amount: fxEffect, estimated: true },
     { key: "buy:stock", amount: buyStock, estimated: true },
     { key: "sell:stock", amount: sellStock, estimated: true },
-    { key: inflows.crypto >= 0 ? "buy:crypto" : "sell:crypto", amount: inflows.crypto, estimated: true },
+    { key: "buy:crypto", amount: buyCrypto, estimated: true },
+    { key: "sell:crypto", amount: sellCrypto, estimated: true },
     { key: inflows.realEstate >= 0 ? "buy:realEstate" : "sell:realEstate", amount: inflows.realEstate, estimated: true },
     { key: "income", amount: incomeEffect },
-    { key: "debt", amount: debtEffect, estimated: true },
+    { key: "debt", amount: debtEffect, estimated: debtFromBreakdown === null },
   ]);
   return {
     fromDate, toDate, deltaNet,
@@ -676,10 +730,13 @@ function costFxRevaluation(
   return { stock, cash };
 }
 
-// 기간(from, to] 내 **반영된** 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.
+// 기간[from, to] 내 **반영된** 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.
 // 앱이 잔액을 가감했으므로 cost.total 변화(savingFull)에 이미 포함 → saving에서 차감해 소득으로 귀속한다.
 // 미반영(과거 소급 기록)은 잔액을 건드리지 않아 순자산을 움직이지 않았으므로 변동 원인이 아니다 → 제외.
 // (그 입금이 실제로 잔액에 반영돼 있었다면 그 증감은 dCostCash로 이미 소득 항목에 잡힌다)
+// 시작일(fromDate) 당일 거래도 포함(<)한다 — reflectedLoanFlow와 동일 이유(2026-08 P1):
+// "(from,to] 시작일 제외"는 소급 기록·마지막 방문일과 같은 날짜의 거래를 통째로 걸러
+// income이 0으로 계산되고 그 금액이 무관한 cash 잔차("현금 잔액 증가/감소")로 새어나갔다.
 function reflectedCashInflow(
   assetData: AssetData,
   fromDate: string,
@@ -689,17 +746,19 @@ function reflectedCashInflow(
   const txns = assetData.cashTransactions || [];
   let reflected = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date <= fromDate || t.date > toDate) continue;
+    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
     reflected += (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
   }
   return reflected;
 }
 
-// 기간(from, to] 내 반영된 주식 거래 체결액을 KRW로 환산해 매수/매도로 나눠 합산.
+// 기간[from, to] 내 반영된 주식 거래 체결액을 KRW로 환산해 매수/매도로 나눠 합산.
 // 체결 시 환율(exchangeRate)이 있으면 그걸, 없으면 현재 환율로 환산한다.
-// 한계 ①: transactionSchema는 주식 전용(stockId·ticker) — 코인·부동산 매수는 saving 잔여로 남는다.
+// 한계 ①: transactionSchema는 주식 전용(stockId·ticker) — 부동산 매수는 saving 잔여로 남는다
+// (코인은 cryptoTransactionSchema·reflectedCryptoFlow로 동일하게 분리됨, S-4.25).
 // 한계 ②: 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로,
 //         실현손익만큼의 차이는 saving 잔여가 흡수한다(합계 정합은 유지).
+// 시작일(fromDate) 당일 거래 포함 이유는 reflectedCashInflow와 동일(2026-08 P1).
 function reflectedTradeFlow(
   assetData: AssetData,
   fromDate: string,
@@ -710,7 +769,7 @@ function reflectedTradeFlow(
   let buy = 0;
   let sell = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date <= fromDate || t.date > toDate) continue;
+    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
     const rate = t.exchangeRate && t.exchangeRate > 0
       ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate)
       : krwMul(t.currency, rates);
@@ -837,6 +896,10 @@ function attachCashRoundTrip(
 // 기간마다 다른 것은 시작일(targetStr) 계산뿐이다: 실측 스냅샷이 있는 구간은 실측으로, 그 이전의
 // 부족한 구간만 예측으로 채운다(1주도 예외 아님 — 공유 링크로 복원한 기기는 daily의 enrich가
 // 소실돼 1주도 예측이 될 수 있다).
+// liveCurr 전달 시 끝점을 저장된 종가 스냅샷 대신 실시간 현재값(buildLiveAttributionCurr)으로
+// 사용한다(computeAttributionSince와 동일 패턴) — 세션 중 기록한 자산 변경이 다음 스냅샷 저장
+// 전까지 누락되던 문제, 일요일엔 "오늘" 날짜 daily가 아예 없어(토요일 슬롯만 upsert) curr이
+// 토요일에 고정돼 일요일자 거래가 range 밖으로 밀리던 문제를 함께 해소한다(2026-08).
 export function computePeriodAttribution(
   daily: DailyAssetSnapshot[],
   monthly: MonthlyAssetSnapshot[],
@@ -844,9 +907,10 @@ export function computePeriodAttribution(
   period: AttributionPeriod,
   assetData: AssetData,
   rates: { USD: number; JPY: number },
+  liveCurr?: AttributionPoint,
 ): PeriodAttribution | null {
   const { dailyPoints, monthlyPoints } = buildAttributionPoints(daily, monthly);
-  const curr = pickAttributionCurr(dailyPoints);
+  const curr = liveCurr ?? pickAttributionCurr(dailyPoints);
   if (!curr) return null;
 
   // 기간 시작일 계산 (ytd = 올해 1/1)

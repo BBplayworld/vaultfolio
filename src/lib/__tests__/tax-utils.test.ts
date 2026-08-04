@@ -23,6 +23,7 @@ const emptyData = (): AssetData => ({
   transactions: [],
   cashTransactions: [],
   loanTransactions: [],
+  cryptoTransactions: [],
   lastUpdated: new Date().toISOString(),
   nickname: "",
 });

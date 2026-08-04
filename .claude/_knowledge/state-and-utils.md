@@ -119,6 +119,10 @@ actions: {
 
 대출 상환/추가 대출 내역 뷰(`loan-transactions` 탭) 진입 대상 전달. `target: { loanId, name } | null` · `setTarget`/`clear`. `CashTxViewStore` 미러링(S-4.24).
 
+## CryptoTxViewStore (`src/stores/crypto-tx-view-store.ts`)
+
+암호화폐 매수/매도 내역 뷰(`crypto-transactions` 탭) 진입 대상 전달. `target: { cryptoId, name } | null` · `setTarget`/`clear`. `CashTxViewStore` 미러링(S-4.25).
+
 ## 유틸 함수
 
 ### cash-tx-utils.ts (S-4.22)
@@ -140,6 +144,23 @@ reflectedLoanBalanceDelta(txns, loanId)    // Σ반영추가대출 − Σ반영�
 isLoanRepaymentValid(balance, amount): boolean  // 상환 반영 초과 가드
 ```
 cash-tx-utils.ts 미러링(대출은 통화 필드 없음, 항상 KRW). `loans[].balance`가 진실원본, 0=완납.
+
+### trade-utils.ts — 수량×평단 가중평균 재계산 (주식·코인 공용, S-4.25 일반화)
+
+```typescript
+computeNewPosition<P extends PositionLike>(current: P, tx: TxLike): PositionPreview
+recomputeFromLog<P extends PositionLike>(baseSnapshot: P, transactions: TxLike[]): P
+reverseTransaction<P extends PositionLike>(current: P, tx: TxLike): PositionPreview
+deriveBaseSnapshot<P extends PositionLike>(currentPosition: P, transactions: TxLike[]): P
+rollbackTransaction<P extends PositionLike, T extends TxLike & {id: string}>(currentPosition: P, allTransactions: T[], removeTxId: string): P
+pruneTransactions<T extends {date: string}>(transactions: T[], years=3)
+findDuplicateTransaction<T>(transactions: T[], assetIdKey: keyof T, {assetId,date,quantity,price,type})
+```
+`PositionLike`/`TxLike`(같은 파일 export)는 필요한 필드만 뽑은 구조적 타입 — 주식(`Transaction`/`PositionSnapshot`, `stockId`)뿐 아니라 코인(`CryptoTransaction`, `cryptoId`, 환율 없음)도 그대로 통과한다. **잔액 선형 가감(현금·대출)이 아니라 수량×평단이 바뀌는 자산이면 여기를 재사용**하고 cash-tx-utils류를 새로 만들지 않는다. `validateReflection`(`src/lib/validate-reflection.ts`)도 동일 원리로 `TxLike`/`PositionLike` 제네릭.
+
+### crypto: cryptoTransactionSchema (S-4.25)
+
+`src/types/transaction.ts`. `transactionSchema`(주식)에서 `currency`/`exchangeRate`/`fee` 제거(코인은 항상 KRW), `stockId`→`cryptoId`. `assetData.cryptoTransactions[]`. 입력 폼 `forms/asset-update/input/crypto-tx-input.tsx`(cash-tx-input.tsx 구조 미러링, "자산업데이트" 플로팅 버튼 플로우 소속) · 뷰 `views/detail/crypto-tx/crypto-tx-view.tsx`(`crypto-transactions` 탭). 원인분해는 `asset-report.ts`의 `reflectedCryptoFlow`(`reflectedTradeFlow` 대칭)가 담당.
 
 ### tax-utils.ts (S-4.23)
 

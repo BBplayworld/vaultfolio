@@ -155,13 +155,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             dangerouslySetInnerHTML={{
               __html: `
                 if ('serviceWorker' in navigator) {
-                  // 새 SW가 제어를 잡는 순간(=새 버전 활성) 1회 자동 새로고침 → 항상 최신 반영
-                  var __refreshing = false;
-                  navigator.serviceWorker.addEventListener('controllerchange', function() {
-                    if (__refreshing) return;
-                    __refreshing = true;
-                    window.location.reload();
-                  });
+                  // 새 SW는 install→activate→clients.claim()까지 조용히 진행되고,
+                  // 다음 자연스러운 진입(다음 방문·탭 재실행)부터 새 번들을 받는다.
+                  // 과거엔 controllerchange에서 즉시 location.reload()를 강제했는데,
+                  // 배포 직후 CDN/엣지 인스턴스 간 빌드가 잠깐 어긋나는 배포 스큐 구간에서
+                  // reload→다른 버전 sw.js 수신→install→activate→controllerchange→reload가
+                  // 반복되는 무한 새로고침 루프를 만들 수 있었다(모바일 크롬에서 특히 재현,
+                  // visibilitychange마다 reg.update()가 잦아 재발 빈도가 높음). 세션 중 하드
+                  // 리로드가 사용자 흐름을 끊는 비용이 즉시 반영의 이득보다 크므로 제거한다(2026-08).
                   window.addEventListener('load', function() {
                     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) {
                       reg.update();

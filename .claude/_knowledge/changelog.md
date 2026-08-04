@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-08-04 (3)
+
+### 암호화폐 종합 카드 매수/매도 버튼 중복 노출 수정 + 상세탭 공통 규칙 명문화 (issue-4.21)
+
+- **왜**: 거래소가 1개만 지정된 코인은 종합 카드(`CryptoCard`)와 거래소별 하위 카드(`SubCryptoCard`) 양쪽에 동일 코인의 "매수/매도 기록·내역" 버튼이 중복 노출됐다(사용자 점검 요청으로 발견). 주식(`StockCard`)은 거래입력 노출 조건이 `!hasSubItems` 하나뿐인데, 암호화폐는 "병합 대표 id 편집 불가" 판단용 조건(`effectiveGroupItems.length > 1`)을 거래입력 노출에도 잘못 재사용해 두 자산의 기준이 벌어졌던 것이 원인.
+- **수정**: [crypto-tab.tsx:166](../../src/app/(main)/_components/views/detail/tabs/crypto-tab.tsx)의 `CryptoCard` 거래입력 행 노출 조건을 `!(hasSubItems && effectiveGroupItems.length > 1)`→`!hasSubItems`로 변경, 주식과 완전히 동일한 규칙으로 통일. 수정 버튼 disabled 조건(`effectiveGroupItems.length > 1`)은 의미가 다르므로 그대로 유지.
+- **KB 반영**: `qa-full-test-plan.md` F-ASSET에 "하위 항목 보유 자산의 거래입력 노출 규칙(필수)" 명문화, F-STOCK·F-CRYPTO-TX 상호 참조 추가. `dev-rules.md`에 "자산 상세탭 공통 적용 판단 체크리스트" 신설 — 앞으로 5탭(현금·암호화폐·주식·부동산·대출) 중 하나라도 수정 시 하위 항목(증권사·거래소) 이슈면 주식+암호화폐 동시 수정, 그 외 공통 이슈면 5탭 전체 검토를 강제.
+- `npx tsc --noEmit`·`npx vitest run`(125건 통과)·`npm run lint`(0 errors, 기존 warning 외 신규 없음)·`npm run build` 전부 통과(QA 완료).
+
+## 2026-08-04 (2)
+
+### 암호화폐 매수/매도 거래내역 신설 (issue-4.21, S-4.25)
+
+- **왜**: `crypto[]`는 `quantity`·`averagePrice`(잔고 스냅샷)만 있고 거래 이력이 없었다 — 주식(`transactions`)·현금(`cashTransactions`)·대출(`loanTransactions`)은 이미 갖춘 기능이 코인만 빠져 있었고, 원인분해의 `buy:crypto`/`sell:crypto`도 실제 거래가 아니라 스냅샷 원가 델타 추정치였다. "자산업데이트" 플로팅 버튼에도 현금·대출은 기록 액션이 있는데 코인만 진입로가 없었다(사용자 제보).
+- **계산 엔진 재사용**: [trade-utils.ts](../../src/lib/trade-utils.ts)의 가중평균 재계산 함수 5개(`computeNewPosition`·`recomputeFromLog`·`reverseTransaction`·`deriveBaseSnapshot`·`rollbackTransaction`)와 `pruneTransactions`·`findDuplicateTransaction`, `validate-reflection.ts`를 `TxLike`/`PositionLike` 구조적 타입으로 일반화해 주식 코드를 복제하지 않고 코인에도 재사용(현금·대출의 잔액 선형 가감과 달리 코인은 매수 시 평단이 바뀌므로 계산 구조가 주식과 동일).
+- **진입 동선 통일**: `floating-add-button.tsx`의 "자산업데이트" 플로우에 현금 "입출금 기록"·대출 "상환/대출 기록"과 동일 위치·패턴으로 코인 "매수/매도 기록" 액션 추가([asset-dispatch.ts](../../src/app/(main)/_components/layout/navigation/asset-dispatch.ts) `dispatchAddCryptoTx`). 코인 상세 탭 카드에도 기록/내역 버튼 추가(병합 카드는 거래소 분할 보유 시 합성 id라 비활성화, 거래소별 하위 카드에서 개별 기록).
+- **신규**: [types/transaction.ts](../../src/types/transaction.ts) `cryptoTransactionSchema`(주식 `transactionSchema`에서 통화·환율·수수료 필드 제거), `assetData.cryptoTransactions[]`, [crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx)·[crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)(`crypto-transactions` 탭), `asset-data-context` CRUD 4종(단일 저장, R4 대칭).
+- **원인분해 정확화**([asset-report.ts](../../src/lib/report/asset-report.ts)): `reflectedCryptoFlow` 신설로 `buy:crypto`/`sell:crypto`를 실제 반영 거래 기반으로 계산(정밀·예측 분기 모두). `estimatePeriodInflows`에 `tradedCryptoIds` 추가해 반영 거래 있는 코인을 매수일 추정에서 제외(이중계산 방지, `tradedStockIds` 패턴).
+- **공유 토큰**: packV7 `parts[14]`에 코인 거래내역 섹션을 꼬리로 추가(`crIdx`로 부모 코인 참조). 꼬리 추가라 구버전 토큰 호환(R3).
+- 명세 [S-4.25](../specs/4.25-crypto-transactions.md) 역작성. 신규 테스트 4건(trade-utils 코인 재사용 2건, asset-report buy:crypto 정확화·이중계산 방지 2건), 전체 122건 통과. `npx tsc --noEmit`·`npx vitest run`·`npm run lint`(0 errors, 기존 warning 외 신규 없음)·`npm run build` 전부 통과(QA 완료).
+
+## 2026-08-04 (1)
+
+### 순자산 왜 — 대출 상환 오분류·기간별 노출 불일치 수정 (issue-4.21)
+
+- **왜**: 08-03 백업 데이터 기준으로 홈 "자산 원인"에 실제 대출 상환이 "현금 감소(추정)"로, 자산성적표 1개월/3개월 기간에서 1주엔 보이던 대출·현금 기록이 사라지는 문제가 제보됨.
+- **대출 상환 오분류**([asset-report.ts](../../src/lib/report/asset-report.ts) `resolveAttribution`): 예측(estimated) 분기가 `inflows.debt`(신규 대출만 감지)+`reflectedLoanFlow`(기록된 상환 거래만 집계)만 써서, 대출 잔액을 직접 수정한 경우(백업 복원 등, 상환 기록 없음)를 놓쳐 `debtEffect≈0`이 되고 실제 변화가 잔차로 새어나갔다. `breakdown`(fx·cost 없이도 존재 가능)이 양쪽에 있으면 정밀 분기와 동일하게 `-(curr.breakdown.loans - prev.breakdown.loans)`로 직접 계산하도록 보강.
+- **기간별 노출 불일치**: `buildAttributionPoints`가 monthly 스냅샷의 `_date`를 실제 캡처일이 아니라 그 달 마지막 날(월말)로 강제해, 실제 캡처일~월말 사이 거래가 `reflectedXFlow` 범위 필터에서 누락됐다(1주는 daily라 문제없고 1·3개월만 monthly를 써서 증상 발생). `MonthlyAssetSnapshot`에 실제 캡처일(`date`, optional) 필드를 추가해 `_date`로 우선 사용, 레거시(필드 없음)만 월말 폴백.
+- 신규 테스트 4건, 전체 118건 통과. `npx tsc --noEmit`·`npx vitest run` 통과(라이브 프리뷰 생략, CLAUDE.md 지침).
+
 ## 2026-08-02 (4)
 
 ### 순자산 변화, 왜? — 자산 타입 그룹 박스·부동산 안분 제외·문구 통일 (issue-4.21)
@@ -173,44 +203,8 @@
 - **FAB에 현금 "입출금 기록" 추가** ([floating-add-button.tsx](../../src/app/(main)/_components/layout/floating/floating-add-button.tsx)): 현금 입출금 진입점이 현금 상세 탭 안에만 있어 주식 "거래 입력"과 접근성이 달랐다 → `select-action` 스텝에 **같은 레벨**로 배치(`dispatchAddCashTx`, 계좌는 폼에서 선택). 스크린샷 일괄 가져오기는 S-4.22 제외 범위라 `select-method`를 거치지 않는다.
 - **성적표 원인분해 InfoHint 갱신**: "4가지 원인"으로 고정돼 있어 `income`·`buy`/`sell`이 문구에서 누락돼 있었다 → 원인 목록과 각 원인의 출처(주식 거래내역 / 현금 입출금 내역)를 명시.
 
-## 2026-07-25
-
-### 현금 입출금 거래내역 — 소득·저축 유입 원인분해 + 습관 축 결합 (issue-4.19 · S-4.22)
-
-- **현금 입출금 로그 신설** ([transaction.ts](../../src/types/transaction.ts) `cashTransactionSchema`, [asset.ts](../../src/types/asset.ts) `cashTransactions` 최상위 배열): 현금 자산에 입금/출금 이력이 없어 월급·목돈 유입을 분석에 못 썼다 → 주식 `transactions` 패턴 답습(잔액 선형 가감이라 가중평균 불필요). 입금에 **정기/비정기** 구분, `reflected` ON이면 `cash[].balance` 자동 가감(과거 소급은 로그만). `cash[].balance`는 진실원본 유지 → 요약·스냅샷 계산 무변경.
-- **CRUD 단일 저장** ([asset-data-context.tsx](../../src/contexts/asset-data-context.tsx) `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`): 로그+잔액을 한 번에 저장(stale-closure 방지, 주식 대칭). 신규 [cash-tx-utils.ts](../../src/lib/cash-tx-utils.ts)(`pruneCashTransactions` 3년·`findDuplicateCashTx`·`reflectedBalanceDelta`·`isCashWithdrawalValid` 출금초과 가드).
-- **입력 폼·로그 뷰·진입점**: [cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx)(입금/출금·정기 토글·반영·출금 가드·중복 확인), [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)(총입금·출금·순유입 통계·기간/유형 필터·반영 삭제 시 잔액 역가감), 신규 탭 `cash-transactions`([navigation-context](../../src/app/(main)/_components/layout/navigation/navigation-context.tsx)·[asset-page-tabs](../../src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx)), [cash-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/cash-tab.tsx) 카드에 "입출금 기록·내역" 버튼, [cash-tx-view-store.ts](../../src/stores/cash-tx-view-store.ts).
-- **원인분해 `income` cause 분리** ([asset-report.ts](../../src/lib/report/asset-report.ts)): 기존 `saving`(현금 유입+투자 매수 혼합)에서 **기간 내 반영된 현금 순유입**(입금−출금, KRW 환산)을 `income`("소득·저축 유입")으로 떼어냄. `saving`은 투자자산 신규 매수만 남고, `priceEffect`는 계속 잔차 → **표시 합계 = deltaNet 불변**. 홈 헤더·지난 접속 브리핑·성적표 원인분해에 자동 반영(파이프라인은 key 추가만으로 흐름).
-- **성적표 습관 축 저축 규칙성 + 딥링크** ([asset-grade.ts](../../src/lib/report/asset-grade.ts)): habit ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월)** 중 높은 쪽으로 채점(저축을 시세상승과 분리해 직접 측정). 가중치 0.1·재정규화·티어 불변. habit 카드에 현금 상세 딥링크 추가.
-- **공유 토큰**([asset-storage.ts](../../src/lib/asset-storage.ts) packV7 `parts[12]`): 현금 거래를 `caIdx`로 부모 계좌 참조해 직렬화(꼬리 추가 → 구버전 하위호환, R3). `getComparablePayloadString`엔 `restAssetData`로 자연 포함(사용자 편집 push, R14 핑퐁 없음). 명세 [S-4.22](../specs/4.22-cash-transactions.md).
-
-### v4.19 UI 마감 — 암호화폐 종합 뷰·amber 구분선 표준화·X-Ray 정합·홈 도넛 중복 제거 (issue-4.19)
-
-- **암호화폐 상세 "종합" 뷰 추가** ([crypto-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/crypto-tab.tsx)): 거래소 분할 코인은 종합 그리드가 `!hasSubItems`에 묶여 사라져 주식과 형태가 달랐다 → 병합 대표(`mergeCryptoGroup`) 기준 헤더행(코인명·심볼·총 N개) + 종합 그리드를 **항상 노출**하고 하단에 거래소별 항목을 잇는 주식 동일 구조로 통일.
-- **주식 이름 최대 2줄** ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx)): 모바일 `truncateName` 15자 하드컷 제거 → `line-clamp-2`로 전체 노출하되 2줄 초과분만 말줄임(모바일·PC 공통 단일 span).
-- **amber 강조 구분선 표준화** ([theme.ts](../../src/config/theme.ts) `ASSET_THEME.dividerAccent`, [design-system.md](design-system.md) §3.3·§11): 성적표에 임시 인라인으로 넣은 amber 구분선(`border-amber-400/25`, 별점 톤)을 **공식 토큰**으로 승격하고 문서에 "구분선 2종"(중립 헤어라인=일반 분리 / amber accent=논리 그룹·섹션 경계) 규약 명문화. 성적표 레버리지 근거 7행을 **3단 논리 그룹**(입력값/수익 배분/최종)으로 amber 경계 구분, 성과 수익 국내/해외/IRP 섹션에도 동일 적용.
-- **성적표 투입 대비 성과 text-sm 통일**: 라벨·헤더·설명·등락률의 `text-xs`를 `text-sm`으로(design-system §2 인지성 규약, 뱃지 예외 유지).
-- **X-Ray 정합·프롬프트 범위 구분** ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx)): AI 프롬프트가 더보기→자산 성적표로 이관돼 스테일이 된 "전체 자산 종합 진단 → 더보기" 백링크(`goFullDiagnosis`) 제거, "보유 주식만 대상" 범위 설명 추가. 두 프롬프트는 **분리 유지 + 명칭으로 범위 구분**(성적표="전체 자산 AI 평가 프롬프트" / X-Ray="주식 X-Ray AI 프롬프트"). 허브 성적표 카드 설명에 AI 진단 힌트로 진입성 보강.
-- **홈 도넛 헤더 중복 제거** ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx)): 개별 자산(금융/부동산/부채) 선택 시 헤더 우측 상세가 바로 아래 `SectionBar` 범례와 동일 데이터를 이중 노출 → 헤더 우측 제거, 좌측 총액 `w-full`. 상세는 비중바 범례에만 유지.
-- **일별 달력 하단 문구 분리** ([net-asset-chart.tsx](../../src/app/(main)/_components/views/activity/net-asset-chart.tsx)): "총 N일 기록됨"이 미래 날짜 짧은 셀 아래 떠 보여, 중립 헤어라인+여백으로 그리드와 분리(실제 겹침은 없었음).
-- **보조 설명 간결성 규약** ([design-system.md](design-system.md) §11): 카드·허브·섹션 보조 설명은 짧은 명사구 한 줄, 문장형 장문은 `InfoHint`로 내리도록 [필수] 명문화(hub·신규 페이지 공통).
-- **QA에 KB 최신화 단계 추가** ([qa-full-test SKILL·plan](qa-full-test-plan.md) Phase 4): 전체 테스트 마무리에 문서-코드 드리프트 점검·KB 갱신 단계 상설화.
-
----
-
-## 2026-07-24
-
-### 자산 성적표 모바일 반응형 + 동기화 변경 감지 누락 수정 (issue-4.19)
-
-- **성적표 3기준 표 붕괴 수정** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): `grid-cols-[1fr_auto_auto_auto]`에서 값 3열이 `auto`라 모바일에서 `1fr` 라벨 열이 0으로 붕괴, "부동산·주식·코인·현금"이 **한 글자씩 세로로** 깨졌다(`min-w-[280px]`가 자연 폭 440px보다 작아 `overflow-x-auto`도 무력). → 행 배열(`perfRows`) 하나를 두 레이아웃이 공유하게 하고 **모바일은 기준별 세로 스택, `sm+`만 표**(min-w 440px). 한글 라벨·캡션에 `break-keep` 적용, `SpecRow`는 `flex-wrap`으로 값이 다음 줄 우측으로 내려가게.
-- **대출 행 어포던스 소실 수정**: 이름·이율·뱃지를 감싼 래퍼 전체에 `truncate`가 걸려 **`부동산 연결`·`비교 제외` 뱃지가 말줄임에 먹혀 사라졌다**(바로 위 캡션은 "연계 부동산을 지정하세요"라고 안내 중) → 말줄임은 이름에만, 뱃지는 `shrink-0` + `flex-wrap`으로 둘째 줄에 내려가게.
-- **동기화 변경 감지 누락 수정** ([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx), [asset-data-context.tsx](../../src/contexts/asset-data-context.tsx)): 부동산 실거래가를 다시 조회해 저장하면 바뀌는 필드가 `marketEstimate*`뿐인데 이 필드들이 **핑퐁 방지용 비교 제외 목록에 있어 push가 아예 안 됐다**. 또 디바운스(2.5s) 중 폴링 pull이 끼어들면 effect cleanup이 타이머를 지우고 조기 return해 **사용자 편집 push가 조용히 취소**됐다. → `saveData`(자산 CRUD 전용 경로) 성공 시 **`ASSET_USER_EDIT_EVENT`** 발행, 수신 측은 파생값 비교와 pull 직후 skip을 **모두 우회해 push**. 자동 갱신은 `saveAssetData`를 직접 호출하므로 이벤트가 없어 핑퐁 방지는 그대로 유지된다.
-- **공유 토큰에 부동산 검색 키 추가** ([asset-storage.ts](../../src/lib/asset-storage.ts) `packV7`/`unpackV7`): 부동산을 8필드만 실어 `regionCode`·`legalDong`·`complexName`·`addressDetail`·`exclusiveArea`·`areaUnitPreference`가 전부 유실됐다 — PWA 설치는 공유 URL로 이관하므로 **PWA로 넘어가면 실거래가 연동이 통째로 날아갔다**. 섹션 끝에 6필드 추가(꼬리 추가라 양방향 하위호환, `row()`가 빈 값을 pop해 미설정 물건은 길이 증가 없음). `marketEstimate*`는 파생값이라 계속 미포함 — 이관 후 자동 갱신이 다시 채운다. JSON 내보내기(`buildExportPayload`)는 원래부터 전 필드 포함이라 변경 없음.
-- **상세 카드에 상세주소 표시** ([real-estate-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/real-estate-tab.tsx)): 펼침 하단에 `address`만 `truncate` 한 줄로 나와 **동·호수(`addressDetail`)는 어디에도 안 보이고 긴 주소는 잘렸다** → 신규 [real-estate-address.ts](../../src/lib/real-estate-address.ts)(`getAddressDetail`/`formatFullAddress`, 구 `dongName`·`hoName` 병합 정본)로 통일하고 줄바꿈 허용. 폼 기본값의 인라인 병합식도 같은 유틸로 교체.
-- **실투자금 '남긴 돈' 이자 차감(ROE 표준)** ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx)): 실투자금 행의 남긴 돈이 전체 평가손익(`summary.totalProfit`)을 그대로 쓰고 이자는 `—`(미부과)라, 레버리지 upside는 누리면서 financing 비용은 반영 안 해 수익률이 과대 표시됐고 바로 위 '모든 자산' 행(이자 차감)과도 불일치했다 → 남긴 돈 = `allNet`(평가손익 − 전체이자)로 통일(모든 자산과 동일 분자), 수익률만 분모를 실투자금으로(`equityNetRate`). 이자 열도 실제 값 표기. 레버리지 수익은 분자에 그대로 포함. 등급은 `equityReturnRate` 미사용이라 불변. InfoHint 문구도 "평가손익에서 연간 이자를 뺀 값" 으로 갱신.
-
----
-
+<!-- 2026-07-25 항목은 "최근 10개 유지" 정책에 따라 제거됨 (현금 입출금 거래내역 신설(S-4.22)·암호화폐 종합 뷰·amber 구분선 표준화·X-Ray 정합) -->
+<!-- 2026-07-24 항목은 "최근 10개 유지" 정책에 따라 제거됨 (성적표 모바일 반응형 표 붕괴 수정·동기화 변경 감지 누락 수정(ASSET_USER_EDIT_EVENT)·공유 토큰 부동산 검색 키 추가) -->
 <!-- 2026-07-22 항목은 "최근 10개 유지" 정책에 따라 제거됨 (부동산 실거래 추정 정확도 개선(면적 데이터셋별 필드·오매칭 방지·상대오차 매칭)·공지 4.18 개편·레버리지 수익기간 통일·원인분해 restCauses 도입·성적표 대주제 섹션 도입·부동산 오매칭 P1 수정) -->
 <!-- 2026-07-20 항목은 "최근 10개 유지" 정책에 따라 제거됨 (업비트 코인 시세 자동 갱신 — 1시간 슬롯 캐싱, S-4.20) -->
 <!-- 2026-07-11 항목은 "최근 10개 유지" 정책에 따라 제거됨 (인앱 브라우저 하드 게이트 신설·동기화 baseDate/name 변경감지 제외로 핑퐁 방지) -->

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { transactionSchema, cashTransactionSchema, loanTransactionSchema } from "./transaction";
+import { transactionSchema, cashTransactionSchema, loanTransactionSchema, cryptoTransactionSchema } from "./transaction";
 
 // 부동산 자산 스키마
 export const realEstateSchema = z.object({
@@ -118,6 +118,9 @@ export const cryptoSchema = z.object({
   // 업비트 시세 슬롯 도장 (주식의 baseDate와 동일 역할) — 같은 슬롯이면 재조회 스킵.
   // optional 필수: 구버전 백업 JSON이 parse를 통과해야 복구 가능
   baseDate: z.string().optional(),
+  // 거래내역 기반 포지션 재계산 여부(주식 positionSource/positionEffectiveDate와 동형, S-4.25)
+  positionSource: z.enum(["manual", "computed"]).optional(),
+  positionEffectiveDate: z.string().optional(),
 });
 
 // 대출 스키마
@@ -165,6 +168,7 @@ export const assetDataSchema = z.object({
   transactions: z.array(transactionSchema).default([]),
   cashTransactions: z.array(cashTransactionSchema).default([]),
   loanTransactions: z.array(loanTransactionSchema).default([]),
+  cryptoTransactions: z.array(cryptoTransactionSchema).default([]),
   lastUpdated: z.string(),
   nickname: z.string().optional().default(""),
 });
@@ -177,7 +181,7 @@ export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
-export type { Transaction, CashTransaction, LoanTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
+export type { Transaction, CashTransaction, LoanTransaction, CryptoTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
 
 // 스냅샷 시점 박제용 파생 정보 (성적표·원인분해 델타용, v2)
 // 구버전 스냅샷 호환을 위해 모두 optional.
@@ -234,6 +238,9 @@ export interface MonthlyAssetSnapshot {
   fxBase?: { USD: number; JPY: number };
   cost?: SnapshotCost;
   grade?: SnapshotGrade; // v3: 이번 달 성적표 (뷰가 확정 시 기록)
+  // v5(optional, 하위호환): 이번 달 마지막 기록(캡처) 실제 날짜. 없으면(레거시) 원인분해가
+  // 월말로 폴백한다 — 필드 부재 시 실제 캡처일과 월말 사이 거래가 범위 밖으로 밀릴 수 있다.
+  date?: string;           // YYYY-MM-DD
 }
 
 // 일별 스냅샷 장기 아카이브 — 30일 롤링에서 밀려난 일별 기록의 월 단위 압축 보관

@@ -1,17 +1,18 @@
-import type { Transaction, PositionSnapshot, GuardResult } from "@/types/transaction";
-import { computeNewPosition } from "./trade-utils";
+import type { GuardResult } from "@/types/transaction";
+import { computeNewPosition, type TxLike, type PositionLike } from "./trade-utils";
 
 /**
- * 거래 반영 전 정합성 검증
+ * 거래 반영 전 정합성 검증 — 주식뿐 아니라 코인 등 동일한 수량×평단 가중평균 구조를 가진
+ * 자산이면 그대로 재사용 가능하도록 TxLike/PositionLike 구조적 타입을 받는다.
  * - Case 2: 보유 초과 매도 → restrict
  * - Case 4: 중복 반영 → restrict
  * - Case 1: 직접 입력값 충돌 → confirm (preview 포함)
  * - Case 3: 과거 날짜 역행 → confirm (preview 포함)
  * - 통과 → pass
  */
-export function validateReflection(
-  tx: Transaction,
-  pos: PositionSnapshot,
+export function validateReflection<P extends PositionLike>(
+  tx: TxLike & { reflectionId?: string },
+  pos: P,
 ): GuardResult {
   // Case 2: 보유 초과 매도 (제한)
   if (tx.type === "sell" && tx.quantity > pos.quantity) {

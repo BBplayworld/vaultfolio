@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { CAUSE_DISPLAY_MIN, computeAttributionSince, computePeriodAttribution, getAttributionItems, getOrderedCauses, groupAttributionItems } from "../asset-report";
-import type { AssetData, DailyAssetSnapshot, Loan, SnapshotBreakdown, SnapshotCost, Stock } from "@/types/asset";
-import type { CashTransaction, LoanTransaction, Transaction } from "@/types/transaction";
+import type { AssetData, Crypto, DailyAssetSnapshot, Loan, MonthlyAssetSnapshot, SnapshotBreakdown, SnapshotCost, Stock } from "@/types/asset";
+import type { CashTransaction, CryptoTransaction, LoanTransaction, Transaction } from "@/types/transaction";
 
 // 원인분해 항등식 회귀 — 표시 항목의 합이 항상 Δ순자산과 일치해야 한다(S-4.22 AC6).
 // resolveAttribution은 비공개라 computeAttributionSince를 통해 검증한다.
@@ -10,7 +10,7 @@ const RATES = { USD: 1400, JPY: 900 };
 
 const emptyData = (): AssetData => ({
   realEstate: [], stocks: [], crypto: [], cash: [], loans: [],
-  yearlyNetAssets: [], transactions: [], cashTransactions: [], loanTransactions: [],
+  yearlyNetAssets: [], transactions: [], cashTransactions: [], loanTransactions: [], cryptoTransactions: [],
   lastUpdated: new Date().toISOString(), nickname: "",
 });
 
@@ -88,6 +88,26 @@ const trade = (o: Partial<Transaction> = {}): Transaction => ({
   type: "buy", quantity: 10, price: 70_000, currency: "KRW",
   date: "2026-05-10", reflected: true, createdAt: new Date().toISOString(), ...o,
 });
+
+const cryptoAsset = (o: Partial<Crypto> = {}): Crypto => ({
+  id: "cr1", name: "비트코인", symbol: "BTC",
+  quantity: 1, averagePrice: 100_000_000, currentPrice: 110_000_000,
+  purchaseDate: "2026-04-01", ...o,
+});
+
+const cryptoTx = (o: Partial<CryptoTransaction> = {}): CryptoTransaction => ({
+  id: `crtx_${Math.random().toString(36).slice(2)}`,
+  cryptoId: "cr1", symbol: "BTC", name: "비트코인",
+  type: "buy", quantity: 0.1, price: 110_000_000,
+  date: "2026-05-10", reflected: true, createdAt: new Date().toISOString(), ...o,
+});
+
+// buildLiveAttributionCurr가 만드는 실시간 끝점과 동형 — computePeriodAttribution의 liveCurr 인자용.
+// snapClass(저장 스냅샷)와 달리 _date/_display를 직접 갖춰야 AttributionPoint로 쓸 수 있다.
+const liveCurr = (date: string, breakdown: Partial<SnapshotBreakdown>, cost: Partial<SnapshotCost>) => {
+  const s = snapClass(date, breakdown, cost);
+  return { ...s, _date: date, _display: date, _isLive: true as const };
+};
 
 // 표시되는 원인(top + rest + 잔여)의 합 — 뷰가 렌더하는 것과 동일 집합
 const sumEffects = (a: NonNullable<ReturnType<typeof computeAttributionSince>>) =>
@@ -270,6 +290,45 @@ describe("asset-report 원인분해", () => {
     expect(getOrderedCauses(attr).map((c) => c.key)).toContain("price:stock");
   });
 
+  it("monthly 스냅샷의 실제 캡처일(date)이 있으면 월말이 아니라 그 날짜를 fromDate로 써서 그 사이 반영 거래를 포함한다", () => {
+    // 1개월/3개월처럼 daily 30일 롤링 창 밖에서 monthly가 prevOld로 쓰일 때, 종전에는 _date가
+    // 무조건 그 달 말일로 강제돼 실제 캡처일(예: 5/10)과 말일(5/31) 사이의 거래(예: 5/20 출금)가
+    // fromDate(5/31)보다 이르다는 이유로 범위 밖으로 밀려 사라졌다 — "1주엔 보이는데 1개월엔
+    // 안 보인다"는 증상의 원인.
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-05-20", amount: 1_000_000, type: "withdrawal", reflected: true })];
+    const prevMonthly: MonthlyAssetSnapshot = {
+      month: "2026-05",
+      date: "2026-05-10", // 실제 마지막 접속일(월말 아님)
+      netAsset: 30_000_000, financialAsset: 30_000_000,
+      breakdown: { realEstate: 0, stocks: 0, crypto: 0, cash: 30_000_000, loans: 0 },
+      fx: { ...RATES }, fxBase: { USD: 0, JPY: 0 },
+      cost: { total: 30_000_000, stock: 0, crypto: 0, realEstate: 0 },
+    };
+    const curr = snapClass("2026-06-20", { cash: 29_500_000 }, {});
+    const attr = computePeriodAttribution([curr], [prevMonthly], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBeCloseTo(-1_000_000, 6); // fromDate(5/10) 이후라 정상 포함
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("monthly 스냅샷에 date가 없으면(레거시) 월말로 폴백한다 — 회귀 방지", () => {
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-05-20", amount: 1_000_000, type: "withdrawal", reflected: true })];
+    const prevMonthly: MonthlyAssetSnapshot = {
+      month: "2026-05", // date 필드 없음 → monthEnd("2026-05-31")로 폴백(기존 동작 유지)
+      netAsset: 30_000_000, financialAsset: 30_000_000,
+      breakdown: { realEstate: 0, stocks: 0, crypto: 0, cash: 30_000_000, loans: 0 },
+      fx: { ...RATES }, fxBase: { USD: 0, JPY: 0 },
+      cost: { total: 30_000_000, stock: 0, crypto: 0, realEstate: 0 },
+    };
+    const curr = snapClass("2026-06-20", { cash: 29_500_000 }, {});
+    const attr = computePeriodAttribution([curr], [prevMonthly], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("income")).toBe(false); // 5/20 거래가 fromDate(5/31)보다 일러 여전히 제외된다
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
   it("시세가 자산군별로 분해된다 (주식·코인·부동산)", () => {
     const data = emptyData();
     const cost = { stock: 8_000_000, crypto: 4_000_000, realEstate: 90_000_000 };
@@ -313,6 +372,36 @@ describe("asset-report 원인분해", () => {
     const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
     expect(byKey.get("buy:stock")).toBeCloseTo(3_000_000, 6);
     expect(byKey.has("sell:stock")).toBe(false); // 방향별로 합산돼 같은 라벨이 두 줄로 갈라지지 않는다
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("거래내역 없는 코인 원가 증가(직접 수정)는 코인 매수에 합산된다(S-4.25)", () => {
+    const data = emptyData();
+    data.cryptoTransactions = [cryptoTx({ date: "2026-05-10", type: "buy", quantity: 0.01, price: 100_000_000 })]; // +100만
+    const daily = [
+      snapClass("2026-05-01", { crypto: 10_000_000 }, { crypto: 8_000_000 }),
+      // 원가 +300만 중 거래내역으로 설명되는 건 100만 → 나머지 200만은 직접 수정분
+      snapClass("2026-05-20", { crypto: 13_000_000 }, { crypto: 11_000_000 }),
+    ];
+    const attr = run(data, daily, "2026-05-01")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("buy:crypto")).toBeCloseTo(3_000_000, 6);
+    expect(byKey.has("sell:crypto")).toBe(false); // 방향별로 합산돼 같은 라벨이 두 줄로 갈라지지 않는다
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("예측 경로: 코인의 기간 내 반영 매수도 buy:crypto로 잡히고 이중계산되지 않는다(S-4.25)", () => {
+    // 원매수일이 기간 이전(purchaseDate 불변)인 코인에 기간 내 반영 매수 — estimatePeriodInflows가
+    // tradedCryptoIds로 건너뛰지 않으면 inflows.crypto(추정)와 reflectedCryptoFlow(실측)가 이중 계산된다.
+    const data = emptyData();
+    data.crypto = [cryptoAsset({ id: "cr1", quantity: 1, averagePrice: 100_000_000, purchaseDate: "2026-04-01" })];
+    data.cryptoTransactions = [cryptoTx({ cryptoId: "cr1", date: "2026-05-10", type: "buy", quantity: 0.05, price: 100_000_000 })]; // +500만
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 105_000_000, 90_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("buy:crypto")).toBeCloseTo(5_000_000, 6); // 이중계산이면 1000만
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
@@ -408,6 +497,26 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
+  it("예측 경로: breakdown만 있고 fx·cost가 없어도 대출 잔액 직접 수정(상환 기록 없음)을 debtEffect로 정확히 잡는다", () => {
+    // 백업 복원 등으로 대출 잔액만 바뀌고 loanTransactions에 상환 기록이 안 남는 경우 —
+    // fx·cost가 없어 bothEnriched는 아니지만 breakdown(loans 포함)은 있는 흔한 부분 인리치드 상태.
+    // 기존에는 inflows.debt(신규 대출만 감지)+reflectedLoanFlow(기록된 거래만 집계) 둘 다 이걸 놓쳐
+    // debtEffect≈0이 되고 실제 변화가 시세("price")로 잘못 흡수됐다.
+    const data = emptyData(); // loans·loanTransactions 모두 비어있음(기록 없음)
+    const prev = {
+      date: "2026-06-01", netAsset: 30_000_000, financialAsset: 30_000_000,
+      breakdown: { realEstate: 0, stocks: 0, crypto: 0, cash: 50_000_000, loans: 20_000_000 },
+    } as DailyAssetSnapshot;
+    const curr = snapClass("2026-06-20", { cash: 33_000_000, loans: 15_000_000 }, {});
+    const attr = run(data, [prev, curr], "2026-06-01")!;
+    expect(attr.estimated).toBe(true); // prev가 fx·cost 없어 전체 분해는 여전히 예측
+    expect(attr.debtEffect).toBeCloseTo(5_000_000, 6); // -(15,000,000-20,000,000)
+    const causes = getOrderedCauses(attr);
+    const debtCause = causes.find((c) => c.key === "debt")!;
+    expect(debtCause.estimated).toBeFalsy(); // breakdown 델타 기반이라 이 항목만은 실측
+    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
   it("임계값 미만 잔차가 버려지지 않고 절대값 최대 원인에 흡수된다", () => {
     // "그 외" 범주를 폐지한 뒤 잔차를 흡수하는 분기(getAttributionItems)를 직접 태우는 케이스.
     // 코인·부동산이 각각 9천원만 올라 개별로는 표시 임계값(1만원) 미만 → restCauses에서 탈락하지만
@@ -464,6 +573,37 @@ describe("asset-report 원인분해", () => {
 
     expect(sumDisplayed(attrNoTx)).toBeCloseTo(attrNoTx.deltaNet, 6);
     expect(sumDisplayed(attrWithTx)).toBeCloseTo(attrWithTx.deltaNet, 6);
+  });
+
+  it("경계일(fromDate)에 남긴 반영 거래도 income/debt로 정상 집계된다 — 통째로 누락돼 cash로 새던 버그 수정(2026-08 P1)", () => {
+    // 실사용 재현: 대출 상환 기록 + 대응하는 현금 출금 기록을 둘 다 남겼는데도 홈에는 "대출 상환"·
+    // "현금 출금"이 안 뜨고 "현금 잔액 증가(추정)"만 표시됐다. 원인은 reflectedCashInflow의
+    // 경계 조건이 "(from,to]"(시작일 당일 거래 제외)라, 거래 날짜가 시작 스냅샷 날짜(fromDate)와
+    // 정확히 같으면(소급 기록·마지막 방문일과 같은 날짜) 통째로 걸러져 income이 0이 되고, 원래
+    // 상쇄됐어야 할 현금 감소분이 그대로 dCostCash(→cash 잔차)로 새어나갔다.
+    const data = emptyData();
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-05-01", reflected: true })];
+    data.cashTransactions = [cashTx({ date: "2026-05-01", amount: 1_000_000, type: "withdrawal", reflected: true })];
+    const prev = snapClass("2026-05-01", { cash: 10_000_000, loans: 3_000_000 }, {});
+    const curr = snapClass("2026-05-20", { cash: 9_000_000, loans: 2_000_000 }, {});
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBeCloseTo(-1_000_000, 6); // 출금 기록이 사라지지 않고 정상 표시
+    expect(byKey.get("debt")).toBeCloseTo(1_000_000, 6);    // 정밀 경로는 breakdown 델타라 원래도 정상
+    expect(byKey.has("cash")).toBe(false); // 둘 다 설명됐으니 무관한 cash 잔차가 남으면 안 된다
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("예측 경로: 경계일(fromDate)에 남긴 대출 상환 기록도 debt로 정상 집계된다(2026-08 P1)", () => {
+    const data = emptyData();
+    data.loans = [loan({ id: "l1", balance: 2_000_000, startDate: "2026-01-01" })];
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-05-01", reflected: true })];
+    const legacy = { date: "2026-05-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const daily = [legacy, snap("2026-05-20", 101_000_000, 90_000_000)];
+    const attr = run(data, daily, "2026-05-01")!;
+    expect(attr.estimated).toBe(true);
+    expect(attr.debtEffect).toBe(1_000_000); // 경계일 거래라도 debt에서 누락되면 안 된다
+    expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
   it("임차보증금 증감은 독립된 deposit 원인으로 분리되고 income·cash를 오염시키지 않는다(B-2)", () => {
@@ -539,6 +679,53 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(attr.estimated).toBe(false);
     expect(attr.estimatedUntil).toBeUndefined(); // "07/27 이전은 추정치" 같은 근거 없는 배지 금지
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("liveCurr 없이는 세션 중 반영한 오늘 거래가 stale 저장 스냅샷 탓에 원인분해에서 통째로 누락된다(회귀 재현)", () => {
+    // 페이지 로드 시점에 저장된 "오늘" 스냅샷은 이후 세션 중 기록한 대출 상환을 알 수 없다
+    // (saveSnapshots는 로드 시 1회만 실행) — liveCurr 없는 기존 호출은 이 stale 스냅샷을 그대로 curr로 쓴다.
+    const data = emptyData();
+    data.loans = [loan({ id: "l1", balance: 2_000_000 })];
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-08-04", reflected: true })];
+    const prevOld = snapClass("2026-08-01", { cash: 10_000_000, loans: 3_000_000 }, {});
+    const staleToday = snapClass("2026-08-04", { cash: 10_000_000, loans: 3_000_000 }, {}); // 상환 반영 전 상태로 저장됨
+    const attr = computePeriodAttribution([prevOld, staleToday], [], {}, "1w", data, RATES)!;
+    expect(attr.deltaNet).toBe(0); // stale curr라 상환 자체가 안 보임
+    expect(getOrderedCauses(attr).find((c) => c.key === "debt")).toBeUndefined();
+  });
+
+  it("liveCurr 전달 시 오늘 기록한 대출 상환이 stale 저장 스냅샷과 무관하게 정확히 debt로 잡힌다(수정 확인)", () => {
+    const data = emptyData();
+    data.loans = [loan({ id: "l1", balance: 2_000_000 })];
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-08-04", reflected: true })];
+    const prevOld = snapClass("2026-08-01", { cash: 10_000_000, loans: 3_000_000 }, {});
+    const staleToday = snapClass("2026-08-04", { cash: 10_000_000, loans: 3_000_000 }, {}); // 여전히 stale
+    const curr = liveCurr("2026-08-04", { cash: 10_000_000, loans: 2_000_000 }, {}); // 실시간 값은 상환 반영됨
+    const attr = computePeriodAttribution([prevOld, staleToday], [], {}, "1w", data, RATES, curr)!;
+    expect(attr.deltaNet).toBe(1_000_000);
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("debt")).toBeCloseTo(1_000_000, 6);
+  });
+
+  it("일요일: 저장 daily가 토요일 항목뿐이어도 liveCurr가 일요일 날짜면 일요일자 반영 거래가 range에 포함된다(가설 B 수정 확인)", () => {
+    // saveSnapshots는 일요일엔 "오늘(일요일)" 날짜로 저장하지 않고 토요일 슬롯만 upsert한다
+    // (asset-data-context.tsx) — liveCurr 없이는 curr이 토요일에 고정돼 일요일자 거래가
+    // reflectedCryptoFlow의 [fromDate, toDate=토요일] 범위 밖으로 밀려 완전히 사라진다.
+    const data = emptyData();
+    data.crypto = [cryptoAsset({ id: "cr1", quantity: 0, averagePrice: 0, purchaseDate: "2026-08-01" })];
+    data.cryptoTransactions = [cryptoTx({ cryptoId: "cr1", date: "2026-08-09", type: "buy", quantity: 0.01, price: 100_000_000, reflected: true })]; // 일요일 매수 +100만
+    const prevOld = snapClass("2026-08-01", { cash: 10_000_000, crypto: 0 }, { crypto: 0 });
+    const saturdaySnap = snapClass("2026-08-08", { cash: 10_000_000, crypto: 0 }, { crypto: 0 }); // 토요일까지 무변동
+
+    const withoutLive = computePeriodAttribution([prevOld, saturdaySnap], [], {}, "1w", data, RATES)!;
+    expect(withoutLive.deltaNet).toBe(0);
+    expect(getOrderedCauses(withoutLive).find((c) => c.key === "buy:crypto")).toBeUndefined();
+
+    const sundayLive = liveCurr("2026-08-09", { cash: 10_000_000, crypto: 1_000_000 }, { crypto: 1_000_000 });
+    const withLive = computePeriodAttribution([prevOld, saturdaySnap], [], {}, "1w", data, RATES, sundayLive)!;
+    expect(withLive.deltaNet).toBe(1_000_000);
+    const byKey = new Map(getOrderedCauses(withLive).map((c) => [c.key, c.amount]));
+    expect(byKey.get("buy:crypto")).toBeCloseTo(1_000_000, 6);
   });
 
   it("기간 중 현금이 왕복(등락 후 복귀)하면 순변화는 0이지만 cashRoundTrip 힌트가 잡힌다", () => {
@@ -719,15 +906,37 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
       { key: "debt", label: "대출 상환", sentence: "대출 상환으로 15원 늘었어요.", amount: 15, text: "+15원" },
     ] as ReturnType<typeof getAttributionItems>;
     const groups = groupAttributionItems(items);
-    // 그룹 합계(절대값): stock=100+30-10=120, fx=50, cash=20+5=25, loan=15 → 이 순서로 정렬돼야 한다
+    // debt가 있으므로 cash는 "현금"이 아니라 "대출" 그룹으로 간다(대출 상환에 쓰인 미기록 현금일
+    // 가능성 — 금액은 합치지 않고 따로 표시). 그룹 합계(절대값): stock=120, fx=50, 현금(income만)=20,
+    // 대출(cash+debt)=5+15=20 → 현금·대출이 동률이라 안정 정렬로 먼저 나온(원래 순서) 현금이 앞선다.
     expect(groups.map((g) => g.key)).toEqual(["stock", null, "cash", "loan"]);
     expect(groups[0].label).toBe("주식");
     expect(groups[0].items.map((i) => i.key)).toEqual(["price:stock", "buy:stock", "sell:stock"]);
     expect(groups[1].items.map((i) => i.key)).toEqual(["fx"]);
     expect(groups[2].label).toBe("현금");
-    expect(groups[2].items.map((i) => i.key)).toEqual(["income", "cash"]);
+    expect(groups[2].items.map((i) => i.key)).toEqual(["income"]);
     expect(groups[3].label).toBe("대출");
-    expect(groups[3].items.map((i) => i.key)).toEqual(["debt"]);
+    expect(groups[3].items.map((i) => i.key)).toEqual(["cash", "debt"]);
+  });
+
+  it("groupAttributionItems: 실제 계산 결과에서도 대출 활동이 있으면 현금 잔차가 대출 박스로 묶인다 — 금액은 합치지 않고 그대로 유지", () => {
+    // 대출 상환만 기록하고 그 돈이 나간 현금 계좌 쪽엔 별도 출금 기록을 안 남긴 흔한 시나리오.
+    // debtEffect(+100만)와 cash 잔차(-100만)를 더해버리면 상쇄돼 "대출 상환" 사실 자체가 사라지므로
+    // (2026-08 설계 수정 — 애초 시도했던 금액 합산 방식의 버그), 금액은 절대 합치지 않고 각자
+    // 정확한 값으로 보여주되 같은 "대출" 박스에 묶어 두 줄이 한 사건의 다른 면임을 드러낸다.
+    const data = emptyData();
+    data.loanTransactions = [loanTx({ loanId: "l1", type: "repay", amount: 1_000_000, date: "2026-05-10", reflected: true })];
+    const prev = snapClass("2026-05-01", { cash: 10_000_000, loans: 3_000_000 }, {});
+    const curr = snapClass("2026-05-20", { cash: 9_000_000, loans: 2_000_000 }, {});
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const items = getAttributionItems(attr);
+    const byKey = new Map(items.map((c) => [c.key, c.amount]));
+    expect(byKey.get("debt")).toBeCloseTo(1_000_000, 6); // 상환 사실이 상쇄되지 않고 그대로 보임
+    expect(byKey.get("cash")).toBeCloseTo(-1_000_000, 6); // 미기록 현금 유출도 별도 금액으로 그대로 보임
+    const groups = groupAttributionItems(items);
+    const loanGroup = groups.find((g) => g.key === "loan")!;
+    expect(loanGroup.items.map((i) => i.key)).toEqual(["cash", "debt"]); // 같은 박스로 묶임
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
   it("groupAttributionItems: 반대 부호 항목이 상쇄돼도 순변동(합계 절대값) 기준으로 정렬된다", () => {

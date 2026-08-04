@@ -126,6 +126,38 @@ const MIGRATIONS: Migration[] = [
       localStorage.setItem(TARGET, JSON.stringify(map));
     },
   },
+  {
+    // 삭제된 계좌/종목/대출을 참조하는 orphan 거래 로그 정리 — deleteCash/deleteStock/deleteLoan이
+    // 해당 거래 로그를 함께 지우지 않던 결함(2026-08 수정)으로, 삭제 후에도 reflectedCashInflow 등이
+    // 그 로그를 영원히 집계해 "현금 입금 +N / 현금 감소(추정) -N"처럼 정확히 상쇄되는 대칭 오표시를
+    // 낳았다. 삭제 함수 자체는 고쳤지만 이미 오염된 기존 사용자 데이터는 1회 정리가 필요하다.
+    id: "2026-08-prune-orphan-transactions",
+    run: () => {
+      const raw = localStorage.getItem("secretasset_asset_data");
+      if (!raw) return;
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(raw); } catch { return; }
+
+      const idsOf = (key: string): Set<string> =>
+        new Set((Array.isArray(data[key]) ? data[key] as { id: string }[] : []).map((item) => item.id));
+      const cashIds = idsOf("cash");
+      const stockIds = idsOf("stocks");
+      const loanIds = idsOf("loans");
+
+      let changed = false;
+      const prune = (key: string, refField: string, validIds: Set<string>) => {
+        const list = data[key];
+        if (!Array.isArray(list)) return;
+        const filtered = list.filter((t: Record<string, unknown>) => validIds.has(t[refField] as string));
+        if (filtered.length !== list.length) { data[key] = filtered; changed = true; }
+      };
+      prune("cashTransactions", "cashId", cashIds);
+      prune("transactions", "stockId", stockIds);
+      prune("loanTransactions", "loanId", loanIds);
+
+      if (changed) localStorage.setItem("secretasset_asset_data", JSON.stringify(data));
+    },
+  },
 ];
 
 export function runOneTimeMigrations(): void {

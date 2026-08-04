@@ -174,7 +174,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   // 마지막 사용자 편집 시각 — pull 보류의 **시간 상한**용. userEditRef만으로 보류하면
   // push 실패 시 플래그가 안 풀려 타 기기 변경이 영영 들어오지 않는다.
   const userEditAtRef = useRef(0);
-  const autoPullRef = useRef<(opts?: { force?: boolean }) => void>(() => { });
+  const autoPullRef = useRef<(opts?: { force?: boolean }) => Promise<PullResult | null>>(async () => null);
 
   const [status, setStatus] = useState<SyncStatus>("none");
   const [assetIdState, setAssetIdState] = useState<string | null>(null);
@@ -213,7 +213,13 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     setLastSyncedAt(getLastSyncedAt());
   }, []);
 
-  // 마운트: 기억된 기기면 자동 무장, 아니면 locked/none
+  // 마운트: 기억된 기기면 자동 무장, 아니면 locked/none.
+  // 원격이 로컬보다 최신이면 pull을 먼저 마친 뒤에만 armed로 전환한다 — armed가 되는 순간
+  // 자동 push 디바운스 effect도 함께 무장되므로, pull 없이 먼저 armed가 되면 오래된 로컬(stale)
+  // 데이터를 baseline으로 그대로 push해 서버의 최신 데이터를 덮어쓸 수 있었다(오랜만에 켠 기기가
+  // 최신 데이터를 지우는 P0 회귀, 2026-08 — PC·PWA로 최신화된 계정을 오래된 모바일 브라우저로
+  // 열면 그 즉시 stale push가 나갈 수 있었다). autoPullRef는 render 본문에서 매번 최신 함수로
+  // 동기화되므로(아래) 선언 순서와 무관하게 이 시점에도 이미 사용 가능하다.
   useEffect(() => {
     if (!enabled) return;
     const aid = getAssetId();
@@ -231,6 +237,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         keysRef.current = keys;
         assetIdRef.current = aid;
         rememberRef.current = true;
+        // force:true로 편집-보류 가드를 우회 — 아직 armed 전이라 사용자 편집이 있을 수 없다.
+        await autoPullRef.current({ force: true });
+        if (cancelled) return;
         lastPushedRef.current = getComparablePayloadString();
         setStatus("armed");
       } else {
@@ -293,7 +302,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       if (!silent) toast.info("클라우드가 더 최신이라 최신 데이터를 반영합니다.");
       // conflict는 push 성공이 아니라 userEditAt이 남아 있다 → force로 편집 보류 가드를 넘긴다.
       // 넘기지 않으면 push→conflict→pull차단이 반복되며 영구히 수렴하지 않는다.
-      autoPullRef.current({ force: true });
+      // await + 실패 시 짧은 재시도 — fire-and-forget이면 실패(네트워크 등)가 다음 60초 폴링까지
+      // 방치돼, 그 사이 로컬이 여전히 stale인 채로 남을 수 있었다(2026-08 P0 보강).
+      const recovered = await autoPullRef.current({ force: true });
+      if (!recovered || recovered.status !== "ok") {
+        setTimeout(() => { void autoPullRef.current({ force: true }); }, 3000);
+      }
     } else if (!silent) {
       toast.error(r.message);
     }
@@ -338,33 +352,34 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
 
   // 원격 최신이면 자동 pull. force=true는 409 충돌 화해 전용 —
   // 그 경로는 서버가 push를 거부한 상태라 pull 말고는 수렴할 방법이 없다.
-  const autoPullIfNewer = useCallback(async ({ force = false } = {}) => {
+  const autoPullIfNewer = useCallback(async ({ force = false } = {}): Promise<PullResult | null> => {
     const keys = keysRef.current, aid = assetIdRef.current;
-    if (!keys || !aid || busyRef.current) return;
-    if (isPwaLocked()) return; // 앱잠금 해제 전에는 pull 금지(clearAssetData가 잠금 인증 삭제·잠금화면 우회 방지)
+    if (!keys || !aid || busyRef.current) return null;
+    if (isPwaLocked()) return null; // 앱잠금 해제 전에는 pull 금지(clearAssetData가 잠금 인증 삭제·잠금화면 우회 방지)
     // 디바운스 대기 중인 사용자 편집이 있으면 pull을 보류한다 — pull은 로컬을 통째로 덮어쓰면서
     // userEditRef까지 지우므로, 방금 한 편집이 push되지도 복구되지도 않고 소실된다.
     // **시간 상한 필수**: push가 실패하면(오프라인·busy·conflict) 플래그가 안 풀리는데,
     // 무기한 보류하면 타 기기 변경이 영영 들어오지 않는다. 디바운스 완료에 필요한 시간만 보호한다.
-    if (!force && Date.now() - userEditAtRef.current < USER_EDIT_PULL_HOLD_MS) return;
+    if (!force && Date.now() - userEditAtRef.current < USER_EDIT_PULL_HOLD_MS) return null;
     const remote = await fetchRemoteVersion(aid, keys);
-    if (remote == null || remote <= getVersion()) return;
-    await runPull(true);
+    if (remote == null || remote <= getVersion()) return null;
+    return await runPull(true);
   }, [runPull]);
 
-  // 렌더링 시마다 최신 함수 직접 동기화 (useEffect 레이스 컨디션 차단)
-  autoPullRef.current = () => { void autoPullIfNewer(); };
+  // 렌더링 시마다 최신 함수 직접 동기화 (useEffect 레이스 컨디션 차단) — Promise<PullResult|null> 반환:
+  // 마운트 effect·409 충돌 복구가 pull 완료(성공 여부)를 await할 수 있어야 한다(2026-08 P0).
+  autoPullRef.current = (opts) => autoPullIfNewer(opts);
 
   // 무장 동안 폴링 + 포커스 (인터벌은 status 기준 1회 설정)
   useEffect(() => {
     if (!enabled || status !== "armed") return;
-    const tick = () => { if (document.visibilityState === "visible") autoPullRef.current(); };
-    const onUnlocked = () => autoPullRef.current(); // 앱잠금 해제 직후 즉시 pull
+    const tick = () => { if (document.visibilityState === "visible") void autoPullRef.current(); };
+    const onUnlocked = () => void autoPullRef.current(); // 앱잠금 해제 직후 즉시 pull
     const id = setInterval(tick, POLL_INTERVAL_MS);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", tick);
     window.addEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
-    autoPullRef.current();
+    void autoPullRef.current();
     return () => {
       clearInterval(id);
       window.removeEventListener("focus", tick);

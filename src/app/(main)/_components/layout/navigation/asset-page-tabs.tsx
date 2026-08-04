@@ -18,12 +18,14 @@ import { TaxCalendarView } from "../../views/tax/tax-calendar-view";
 import { RealEstateInput } from "../../forms/asset-update/input/real-estate-input";
 import { StockInput } from "../../forms/asset-update/input/stock-input";
 import { CryptoInput } from "../../forms/asset-update/input/crypto-input";
+import { CryptoTxInput } from "../../forms/asset-update/input/crypto-tx-input";
 import { CashInput } from "../../forms/asset-update/input/cash-input";
 import { CashTxInput } from "../../forms/asset-update/input/cash-tx-input";
 import { LoanInput } from "../../forms/asset-update/input/loan-input";
 import { LoanTxInput } from "../../forms/asset-update/input/loan-tx-input";
 import { CashTxView } from "../../views/detail/cash-tx/cash-tx-view";
 import { LoanTxView } from "../../views/detail/loan-tx/loan-tx-view";
+import { CryptoTxView } from "../../views/detail/crypto-tx/crypto-tx-view";
 import { useAssetNavigation, type DetailTab, type ActivityTab } from "./navigation-context";
 
 // 홈 1차 탭(상세/성과)은 TopBar 좌측에 노출됨 — 본문은 Dashboard만.
@@ -45,6 +47,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
       {tab === "stocks-trades" && <StockTradesView />}
       {tab === "real-estate" && <RealEstateTab />}
       {tab === "crypto"      && <CryptoTab />}
+      {tab === "crypto-transactions" && <CryptoTxView />}
       {tab === "cash"        && <CashTab />}
       {tab === "cash-transactions" && <CashTxView />}
       {tab === "loans"       && <LoanTab />}
@@ -84,6 +87,7 @@ export function AssetPageTabs() {
         <RealEstateInput />
         <StockInput />
         <CryptoInput />
+        <CryptoTxInput />
         <CashInput />
         <CashTxInput />
         <LoanInput />

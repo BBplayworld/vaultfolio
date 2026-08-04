@@ -94,3 +94,4 @@ S-4.19 ─┬─ .claude/specs/4.19-deposit-maturity.md   ← 의도·수용기�
 | [S-4.22](./4.22-cash-transactions.md) | 현금 입출금 거래내역(소득·저축 유입) | 완료 | `issue-4.19` | F-CASH-TX |
 | [S-4.23](./4.23-tax-calendar.md) | 세금 신고 안내(자산 기반 월별 캘린더) | 승인 | `issue-4.20` | F-TAX(예정) |
 | [S-4.24](./4.24-loan-transactions.md) | 대출 상환/추가 대출(마이너스통장) 거래내역 | 완료 | `issue-4.24-loan-transactions` | F-LOAN-TX |
+| [S-4.25](./4.25-crypto-transactions.md) | 암호화폐 매수/매도 거래내역 | 완료 | `issue-4.21` | F-CRYPTO-TX(예정) |

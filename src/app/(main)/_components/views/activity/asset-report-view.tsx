@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { buildAssetReport, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, groupAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
+import { buildAssetReport, buildLiveAttributionCurr, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, groupAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/snapshot-archive";
@@ -323,8 +323,13 @@ export function AssetReportView() {
   // ── 원인분해 (기간 선택) ──
   const [attrPeriod, setAttrPeriod] = useState<AttributionPeriod>("1m");
   const attribution = useMemo(
-    () => computePeriodAttribution(dailySnapshots, monthlySnapshots, readExchangeHistory(), attrPeriod, assetData, exchangeRates),
-    [dailySnapshots, monthlySnapshots, attrPeriod, assetData, exchangeRates],
+    () => computePeriodAttribution(
+      dailySnapshots, monthlySnapshots, readExchangeHistory(), attrPeriod, assetData, exchangeRates,
+      // 끝점을 실시간 값으로 — 세션 중 기록한 자산 변경이 다음 스냅샷 저장 전까지 누락되던 문제,
+      // 일요일에 curr이 토요일에 고정돼 당일 거래가 범위 밖으로 밀리던 문제 해소(홈 헤더와 동일 기준).
+      buildLiveAttributionCurr(assetData, exchangeRates, summary),
+    ),
+    [dailySnapshots, monthlySnapshots, attrPeriod, assetData, exchangeRates, summary],
   );
 
   const getPromptContext = (): AssetPromptContext => ({

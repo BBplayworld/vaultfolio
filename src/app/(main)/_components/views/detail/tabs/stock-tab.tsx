@@ -382,16 +382,20 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       valueClass={ASSET_THEME.text.default}
       formatFull={fmtFull}
       formatShort={fmt}
-      headerAction={!screenshotMode && onDisplayCurrencyChange ? (
-        <InlineSelector
-          size="sm"
-          value={currency}
-          onChange={onDisplayCurrencyChange}
-          options={[{ value: "KRW", label: "원화" }, { value: "USD", label: "달러" }] as const}
-          disabledValues={disableUsd ? (["USD"] as const) : undefined}
-          disabledTitle="해외주식 보유 시 이용 가능"
-          ariaLabel="주식 표시 화폐 선택"
-        />
+      headerAction={!screenshotMode ? (
+        <div className="min-h-7 flex items-center">
+          {onDisplayCurrencyChange && (
+            <InlineSelector
+              size="sm"
+              value={currency}
+              onChange={onDisplayCurrencyChange}
+              options={[{ value: "KRW", label: "원화" }, { value: "USD", label: "달러" }] as const}
+              disabledValues={disableUsd ? (["USD"] as const) : undefined}
+              disabledTitle="해외주식 보유 시 이용 가능"
+              ariaLabel="주식 표시 화폐 선택"
+            />
+          )}
+        </div>
       ) : undefined}
       inline={
         <span className="inline-flex items-baseline gap-x-2 flex-wrap">
@@ -705,8 +709,18 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-              <span className="text-sm font-semibold text-foreground truncate">{label}</span>
-              <span className="text-sm text-foreground shrink-0 tabular-nums">{stock.quantity.toLocaleString()}주</span>
+              <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
+                <div className={ASSET_THEME.cardInfoTitle}>
+                  <span className={`${ASSET_THEME.cardInfoName} truncate`}>{label}</span>
+                </div>
+                <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
+                  <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
+                  <span className="text-sm text-muted-foreground">·</span>
+                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight shrink-0`}>
+                    {stockCategories.find((c) => c.value === stock.category)?.shortLabel ?? stock.category}
+                  </Badge>
+                </div>
+              </div>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
                 <span className="text-sm font-medium text-foreground tabular-nums">{fmt(Math.round(m.currentVal))}</span>
                 <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(m.profit)}`}>

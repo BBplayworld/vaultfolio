@@ -39,11 +39,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 주식 스샷 **공통/개별 적용 토글**: 기본 "공통 적용"(카테고리·증권사 1세트 → 전 종목 일괄), "개별 선택" 전환 시 종목별 드롭다운 노출. 공통 카테고리 변경 시 해외↔국내 가격/통화 환산이 개별 변경과 동일한지
 - ⚙ `convertStockCategory` 단일 헬퍼로 `updateCategory`·`applyCommonCategory` 환산 로직 일원화(중복 제거), 파싱 직후 다수=해외→`foreign`/그 외 도메스틱·`activeTab` 기준 공통 기본값 설정 + `matchBrokerHint` 증권사 자동 매칭
 - 엣지: 0개 상태(웰컴가이드 노출), 단일 항목 표시(`length > 0` 규칙)
+- ⚙ **하위 항목(증권사·거래소) 보유 자산의 거래입력 노출 규칙(필수)** — 종합 카드는 `!hasSubItems` 단일 조건으로만 거래입력 행을 숨김/노출한다. 하위 항목이 1개든 여러 개든 존재하면 종합 레벨에서는 항상 숨기고, 하위 항목(`SubStockCard`/`SubCryptoCard`)에서만 노출한다(중복 노출 금지). "병합 대표 id라 편집 불가" 판단(수정 버튼 disabled 등, `effectiveGroupItems.length > 1`)과는 별개 조건이므로 섞어 쓰지 않는다. 하위 항목이 없는 자산(현금·부동산·대출)은 카드 자체가 곧 대상이므로 거래입력 버튼을 항상 노출한다.
 - ⚙ **완납 대출(balance=0) 제외(S-4.24)** — `loanSchema.balance`는 0 허용(상환 거래내역으로 도달). `loan-tab.tsx`의 `allLoans`·`asset-report.ts`의 `loanInterest`/`investLoanBalance`가 이미 `balance > 0` 필터라 완납 대출은 목록·비중 바·이자 집계·레버리지 박스에서 자동 제외된다. `getAssetSummary().loanCount`도 동일하게 `balance > 0`만 카운트(`detail-hub` 배지·진입 게이트와 정합, `stockCount`의 `delisted` 제외 선례와 동일 논리)
 - 회귀: 부동산 임차보증금(tenantDeposit) 순자산 차감, 대출 잔액 차감
 
 ### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx))
-- 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시
+- 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시 — 종합 카드 거래입력 노출 규칙은 F-ASSET 참조(암호화폐와 동일)
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
 - 👤 요약 헤더 평가손익·전일 대비, 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
 - ⚙ `computeStockMetrics`·`mergeStockGroup`·`groupStocksByTicker` 동일 ticker 병합(1회 집계)
@@ -78,6 +79,17 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: **신규 대출 등록은 잔액 0을 거부**(`loan-input.tsx` 폼 레벨 가드, `!editData && balance<=0`) — 완납은 상환 거래내역으로만 도달해야 하며, 등록 즉시 완납 상태로 생성되는 것을 방지(수정은 허용, 상환 반영으로 0 도달 가능)
 - 회귀: 공유 토큰 `parts[13]` 왕복·`loanIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음), **R27**(`loanCount`≠존재 여부 — 아래 참조)
 - 자동: `src/lib/__tests__/loan-tx-utils.test.ts`(prune·중복탐지·잔액델타·상환초과 가드), `src/lib/report/__tests__/asset-report.test.ts`(예측 경로 단독 상환 포착·신규대출+반영거래 이중계산 방지 2건)
+
+### F-CRYPTO-TX. 암호화폐 매수/매도 거래내역 ([crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx) · [crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)) — 명세 [S-4.25](../specs/4.25-crypto-transactions.md)
+- 👤 코인 카드(병합·거래소별 하위 카드) "매수/매도 기록·내역" 진입, "자산업데이트" 플로팅 버튼(코인 선택) → "매수/매도 기록"에서도 동일 폼 진입(현금·대출과 동일 동선). 폼: 코인 선택·매수/매도 토글·수량·체결단가·날짜·메모·반영 ON/OFF·반영 후 예상 포지션 인라인 미리보기·중복 인라인 확인. 로그 뷰 총매수·총매도 통계, 기간·유형 필터
+- 👤 반영 거래 삭제 → 포지션 롤백 확인 다이얼로그(수량·평단 변화 표시) / 미반영 즉시 삭제
+- ⚙ **계산 엔진은 잔액 선형 가감(현금·대출)이 아니라 수량×평단 가중평균** — `trade-utils.ts`를 새 유틸 파일 없이 재사용(`computeNewPosition`/`recomputeFromLog`/`reverseTransaction`/`deriveBaseSnapshot`/`rollbackTransaction`/`pruneTransactions`/`findDuplicateTransaction`을 `TxLike`/`PositionLike` 구조적 타입으로 일반화, `validateReflection`도 동일). 삭제 시 단순 산술 역가감이 아니라 `rollbackTransaction`(거래로그 전체 재적용)으로 재계산
+- ⚙ 단일 저장 `addCryptoTransactionWithPosition`/`deleteCryptoTransactionWithPosition`(로그+포지션, stale-closure 방지, R4 대칭)
+- ⚙ 종합 카드는 하위 항목(거래소) 존재 시 `!hasSubItems` 조건으로 기록/내역 버튼을 항상 숨김(1개 거래소만 지정된 경우도 포함) — 개별 거래소 하위 카드(`SubCryptoCard`)에서만 기록. 주식(F-STOCK)과 동일 규칙
+- ⚙ 원인분해 `buy:crypto`/`sell:crypto`가 `reflectedCryptoFlow`(반영된 실제 거래) 기반으로 정확화 — 이전엔 스냅샷 원가 델타 추정치였음. 예측 경로 `estimatePeriodInflows`는 `tradedCryptoIds`로 반영 거래 있는 코인을 매수일 추정에서 제외(이중계산 방지, `tradedStockIds` 패턴)
+- 엣지: 초과매도 반영 차단, 미반영 로그는 포지션 무변경, 미래·보존기간(3년) 밖 날짜 차단
+- 회귀: 공유 토큰 `parts[14]` 왕복·`crIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
+- 자동: `src/lib/__tests__/trade-utils.test.ts`(코인 구조적 타입 재사용 2건), `src/lib/report/__tests__/asset-report.test.ts`(정밀/예측 분기 buy:crypto 정확화·이중계산 방지 2건)
 
 ### F-TAX. 세금 신고 안내 ([tax-notice-box.tsx](../../src/app/(main)/_components/views/home/tax-notice-box.tsx) · [tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx)) — 명세 [S-4.23](../specs/4.23-tax-calendar.md)
 - 👤 **홈 배너**: 자산 분포 카드 **아래**에 "내 자산 세금 일정" 박스. 이번 달·다음 달 항목 최대 3건 + 각 항목의 매칭 근거("상가·사무실 1건 보유 → 대상"). "월별 세금 일정 전체 보기" → `#tax`

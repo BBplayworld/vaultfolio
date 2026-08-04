@@ -278,8 +278,8 @@ export function TradeInput() {
     const finalTx = tx.reflected ? markReflected(tx) : tx;
 
     // 중복 거래(증권사·날짜·수량·가격·유형 동일) 검사 → 확인 다이얼로그
-    const dup = findDuplicateTransaction(assetData.transactions || [], {
-      stockId: tx.stockId, date: tx.date, quantity: tx.quantity, price: tx.price, type: tx.type,
+    const dup = findDuplicateTransaction(assetData.transactions || [], "stockId", {
+      assetId: tx.stockId, date: tx.date, quantity: tx.quantity, price: tx.price, type: tx.type,
     });
     if (dup) {
       setDupPending({ tx: finalTx, stock });

@@ -19,3 +19,7 @@ export function dispatchAddCashTx(cashId?: string) {
 export function dispatchAddLoanTx(loanId?: string) {
   window.dispatchEvent(new CustomEvent("trigger-add-loan-tx", { detail: { loanId } }));
 }
+
+export function dispatchAddCryptoTx(cryptoId?: string) {
+  window.dispatchEvent(new CustomEvent("trigger-add-crypto-tx", { detail: { cryptoId } }));
+}

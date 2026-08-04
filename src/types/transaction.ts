@@ -58,6 +58,29 @@ export const loanTransactionSchema = z.object({
 
 export type LoanTransaction = z.infer<typeof loanTransactionSchema>;
 
+// 암호화폐 매수/매도 거래내역 스키마 — transactionSchema(주식) 축약. 코인은 항상 KRW 취급이라
+// currency·exchangeRate·fee 필드는 없음(loanTransactionSchema가 cashTransactionSchema 대비
+// 통화 필드를 뺀 것과 동형). 수량×평단 가중평균 재계산은 stockId 자리에 cryptoId만 바꿔
+// trade-utils.ts를 그대로 재사용한다(잔액 선형 가감인 cash·loan과 계산 구조가 다르다).
+export const cryptoTransactionSchema = z.object({
+  id: z.string(), // crtx_{timestamp}
+  cryptoId: z.string(), // Crypto.id 참조
+  symbol: z.string(),
+  name: z.string(), // 거래 시점 코인명
+  type: z.enum(["buy", "sell"]),
+  quantity: z.number().min(0),
+  price: z.number().min(0), // 체결 단가(KRW)
+  date: z.string(), // YYYY-MM-DD
+  fee: z.number().optional(),
+  reflected: z.boolean(), // 보유 수량·평단에 반영됨 여부
+  reflectedAt: z.string().optional(),
+  reflectionId: z.string().optional(), // 멱등성 보장 ID
+  memo: z.string().optional(),
+  createdAt: z.string(),
+});
+
+export type CryptoTransaction = z.infer<typeof cryptoTransactionSchema>;
+
 // 포지션 스냅샷 — 재계산 기준점
 export interface PositionSnapshot {
   stockId: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction } from "@/types/asset";
+import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/snapshot-archive";
 import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
@@ -127,6 +127,11 @@ interface AssetDataContextType {
   addLoanTransactionWithBalance: (tx: LoanTransaction, loanId: string, patch: Partial<Loan>) => boolean;
   deleteLoanTransaction: (txId: string) => boolean;
   deleteLoanTransactionWithBalance: (txId: string, loanId: string, patch: Partial<Loan>) => boolean;
+  // 암호화폐 매수/매도 내역 (수량·평단 가중평균 단일 저장, S-4.25)
+  addCryptoTransaction: (tx: CryptoTransaction) => boolean;
+  addCryptoTransactionWithPosition: (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>) => boolean;
+  deleteCryptoTransaction: (txId: string) => boolean;
+  deleteCryptoTransactionWithPosition: (txId: string, cryptoId: string, patch: Partial<Crypto>) => boolean;
   unlockAndLoad: () => Promise<void>;
 }
 
@@ -142,6 +147,7 @@ const STATIC_DEFAULT_ASSET_DATA: AssetData = {
   transactions: [],
   cashTransactions: [],
   loanTransactions: [],
+  cryptoTransactions: [],
   lastUpdated: "",
   nickname: "",
 };
@@ -757,6 +763,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         netAsset,
         financialAsset,
         ...enrich,
+        date: todayStr, // 실제 마지막 기록일 — 원인분해가 월말 대신 이 날짜를 경계로 쓴다
         ...(prevMonth?.grade ? { grade: prevMonth.grade } : {}),
       });
       filteredMonthly.sort((a, b) => a.month.localeCompare(b.month));
@@ -768,7 +775,18 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const others = prev.yearlyNetAssets.filter(y => y.year !== currentYearNum);
         const updated = [...others, { year: currentYearNum, netAsset, note: "자동" }]
           .sort((a, b) => a.year - b.year);
-        const next = { ...prev, yearlyNetAssets: updated };
+        // 일요일: 토요일 스냅샷 보정에 쓴 refPrice(공식 종가)를 stocks[].currentPrice에도 반영한다.
+        // 스냅샷은 refPrice로, 홈·성적표의 라이브 값(getAssetSummary)은 currentPrice(실시간 quote)로
+        // 계산해 두 값의 소스가 갈리면 "일요일은 변동 없음"이 항등식으로 성립하지 않는다(2026-08).
+        // R23이 baseDate는 이미 금요일 슬롯으로 고정해두므로 currentPrice만 맞추면 된다.
+        const stocks = dayOfWeek === 0 && Object.keys(refMap).length > 0
+          ? prev.stocks.map(s => {
+            const t = normalizeTicker(s);
+            const entry = t ? refMap[t] : null;
+            return entry?.refPrice ? { ...s, currentPrice: entry.refPrice } : s;
+          })
+          : prev.stocks;
+        const next = { ...prev, yearlyNetAssets: updated, stocks };
         saveAssetData(next);
         return next;
       });
@@ -1329,7 +1347,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   const deleteStock = useCallback(
     (id: string) => {
-      const newData = { ...assetData, stocks: assetData.stocks.filter((item) => item.id !== id) };
+      // 종목 삭제 시 그 종목을 참조하는 거래 로그도 함께 정리한다 — 안 지우면 reflectedTradeFlow가
+      // 삭제된 종목의 반영 거래를 영원히 집계해 원인분해에 설명 안 되는 유령 원인이 새어나간다
+      // (deleteCash의 cashTransactions와 동일한 결함, 2026-08 수정).
+      const newData = {
+        ...assetData,
+        stocks: assetData.stocks.filter((item) => item.id !== id),
+        transactions: (assetData.transactions || []).filter((t) => t.stockId !== id),
+      };
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1385,7 +1410,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   const deleteCash = useCallback(
     (id: string) => {
-      const newData = { ...assetData, cash: assetData.cash.filter((item) => item.id !== id) };
+      // 계좌 삭제 시 그 계좌를 참조하는 입출금 로그도 함께 정리한다 — 안 지우면
+      // reflectedCashInflow가 삭제된 계좌로의 반영 입금을 영원히 income으로 집계하는데,
+      // 그 계좌의 잔액은 cost.total에서 이미 사라져 income과 정확히 크기가 같고 부호만
+      // 반대인 "현금 감소(추정)" 잔차가 짝으로 새어나간다(2026-08 P1 회귀, 실사용 재현).
+      const newData = {
+        ...assetData,
+        cash: assetData.cash.filter((item) => item.id !== id),
+        cashTransactions: (assetData.cashTransactions || []).filter((t) => t.cashId !== id),
+      };
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1413,7 +1446,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   const deleteLoan = useCallback(
     (id: string) => {
-      const newData = { ...assetData, loans: assetData.loans.filter((item) => item.id !== id) };
+      // 대출 삭제 시 그 대출을 참조하는 상환/추가대출 로그도 함께 정리한다 — deleteCash와 동일한
+      // 이유(2026-08 수정), reflectedLoanFlow가 삭제된 대출의 반영 거래를 영원히 집계하지 않도록.
+      const newData = {
+        ...assetData,
+        loans: assetData.loans.filter((item) => item.id !== id),
+        loanTransactions: (assetData.loanTransactions || []).filter((t) => t.loanId !== id),
+      };
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1647,6 +1686,59 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // ─── [암호화폐 매수/매도 내역] (S-4.25) ──────────────────────────────────────
+  // 현금·대출과 달리 잔액 선형 가감이 아니라 수량×평단 가중평균(주식과 동형) — patch는
+  // computeNewPosition으로 호출부가 미리 계산해 넘긴다(주식 addTransactionWithPosition과 동일 계약).
+  // 미반영 기록만 추가(포지션 무변경 — 과거 소급 로그)
+  const addCryptoTransaction = useCallback(
+    (tx: CryptoTransaction) => {
+      const newData = {
+        ...assetData,
+        cryptoTransactions: pruneTransactions([...(assetData.cryptoTransactions || []), tx]),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 거래 기록 + 코인 포지션(수량·평단) 갱신을 단일 저장으로 (stale-closure 방지, 주식 대칭)
+  const addCryptoTransactionWithPosition = useCallback(
+    (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>) => {
+      const newData = {
+        ...assetData,
+        cryptoTransactions: pruneTransactions([...(assetData.cryptoTransactions || []), tx]),
+        crypto: assetData.crypto.map((c) => (c.id === cryptoId ? { ...c, ...patch } : c)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 기록 삭제 + 포지션 롤백 단일 저장
+  const deleteCryptoTransactionWithPosition = useCallback(
+    (txId: string, cryptoId: string, patch: Partial<Crypto>) => {
+      const newData = {
+        ...assetData,
+        cryptoTransactions: (assetData.cryptoTransactions || []).filter((t) => t.id !== txId),
+        crypto: assetData.crypto.map((c) => (c.id === cryptoId ? { ...c, ...patch } : c)),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
+  // 미반영 거래 삭제(포지션 무변경)
+  const deleteCryptoTransaction = useCallback(
+    (txId: string) => {
+      const newData = {
+        ...assetData,
+        cryptoTransactions: (assetData.cryptoTransactions || []).filter((t) => t.id !== txId),
+      };
+      return saveData(newData);
+    },
+    [assetData, saveData]
+  );
+
   // ─── [자산 요약 계산] ────────────────────────────────────────────────────────
 
   const getAssetSummary = useCallback((): AssetSummary => {
@@ -1753,6 +1845,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addLoanTransactionWithBalance,
         deleteLoanTransaction,
         deleteLoanTransactionWithBalance,
+        addCryptoTransaction,
+        addCryptoTransactionWithPosition,
+        deleteCryptoTransaction,
+        deleteCryptoTransactionWithPosition,
       }}
     >
       {children}

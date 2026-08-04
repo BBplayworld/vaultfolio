@@ -106,7 +106,8 @@
       "PowerShell(\"---\")",
       "PowerShell($base=\"E:\\\\2.project\\\\js\\\\secret-asset\\\\.claude\"; foreach\\($f in @\\(\"_knowledge\\\\components.md\",\"_knowledge\\\\state-and-utils.md\",\"_knowledge\\\\architecture.md\",\"CLAUDE.md\"\\)\\){ $p=Join-Path $base $f; if\\(Test-Path $p\\){ \\('{0}: {1} lines' -f $f,\\(\\(Get-Content $p\\).Count\\)\\) } else { \\('{0}: MISSING' -f $f\\) } }; '--- settings ---'; if\\(Test-Path \"$base\\\\settings.json\"\\){'project settings.json EXISTS'}else{'no project settings.json'}; $us=\"$env:USERPROFILE\\\\.claude\\\\settings.json\"; if\\(Test-Path $us\\){ $j=Get-Content $us -Raw | ConvertFrom-Json; if\\($j.hooks\\){'user hooks: present'}else{'user hooks: none'} }else{'no user settings.json'})",
       "PowerShell(git -C E:\\\\2.project\\\\js\\\\secret-asset log --oneline -15)",
-      "PowerShell(git -C E:\\\\2.project\\\\js\\\\secret-asset show --stat 5e4fe9e)"
+      "PowerShell(git -C E:\\\\2.project\\\\js\\\\secret-asset show --stat 5e4fe9e)",
+      "PowerShell(npx tsc --noEmit; Write-Output \"EXIT:$LASTEXITCODE\")"
     ]
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, Calendar, Clock, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, ChevronDown, ArrowLeftRight, History } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
+import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
+import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
@@ -26,6 +29,12 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
   const [open, setOpen] = useState(false);
   const { value, cost, profit, profitRate } = computeCryptoMetrics(coin);
   const label = coin.exchange || `항목 ${idx + 1}`;
+  const { navigate } = useAssetNavigation();
+  const setTxTarget = useCryptoTxViewStore((s) => s.setTarget);
+  const openTxView = () => {
+    setTxTarget({ cryptoId: coin.id, name: coin.name });
+    navigate({ type: "detail", tab: "crypto-transactions" });
+  };
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className={ASSET_THEME.subCard}>
@@ -51,6 +60,15 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
               <div><p className={ASSET_THEME.cardDetailLabel}>총 매입금액</p><p className={ASSET_THEME.cardDetailValue}>{formatCurrency(cost)}</p></div>
               <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice)}</p></div>
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(value)}</p></div>
+            </div>
+            {/* 매수/매도 기록·내역 — 개별 거래소 항목은 실제 id를 가지므로 여기서 제공 */}
+            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+              <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
+                <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
+              </Button>
+              <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={openTxView}>
+                <History className="size-3.5" /> 매수/매도 내역
+              </Button>
             </div>
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
@@ -86,6 +104,12 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
   const [open, setOpen] = useState(false);
   const hasSubItems = !!subItems && subItems.length > 0;
   const effectiveGroupItems = groupItems ?? [];
+  const { navigate } = useAssetNavigation();
+  const setTxTarget = useCryptoTxViewStore((s) => s.setTarget);
+  const openTxView = () => {
+    setTxTarget({ cryptoId: coin.id, name: coin.name });
+    navigate({ type: "detail", tab: "crypto-transactions" });
+  };
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
       <div className={ASSET_THEME.cardWrapper}>
@@ -137,6 +161,18 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
               <div><p className={ASSET_THEME.cardDetailLabel}>현재가</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice)}</p></div>
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(coin.currentPrice * coin.quantity)}</p></div>
             </div>
+            {/* 매수/매도 기록·내역 — 하위 항목(거래소)이 있으면 몇 개든 종합 레벨에서는 항상 숨기고
+                아래 거래소별 항목에서만 개별 기록한다(주식 StockCard와 동일 규칙). */}
+            {!hasSubItems && (
+              <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+                <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
+                  <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
+                </Button>
+                <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={openTxView}>
+                  <History className="size-3.5" /> 매수/매도 내역
+                </Button>
+              </div>
+            )}
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={`${ASSET_THEME.cardActionButton}${hasSubItems && effectiveGroupItems.length > 1 ? " !opacity-20 cursor-not-allowed" : ""}`} disabled={hasSubItems && effectiveGroupItems.length > 1} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-crypto", { detail: { id: coin.id } }))}>
                 <Pencil className="size-3.5" />
