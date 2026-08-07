@@ -312,7 +312,8 @@ writeTutorialStatus(map): void
 ```typescript
 getAssetData(): AssetData
 saveAssetData(data): boolean
-exportAssetData(): void
+exportAssetData(currentData?): boolean   // currentData 전달 시 저장소와 어긋나면 중단하고 false
+isExportDataStale(currentData): boolean  // 화면 state ↔ localStorage 항목 **건수** 비교 (파생필드 제외)
 importAssetData(file): Promise<{ assetData, snapshotRestored }>
 clearAssetData(): boolean
 saveAssetDataRaw(data): boolean         // superRefine 우회 (스크린샷 경로)

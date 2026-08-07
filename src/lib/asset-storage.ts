@@ -150,7 +150,25 @@ export function buildExportPayload(): Record<string, unknown> {
   return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
 }
 
-export function exportAssetData(): void {
+// 화면(React state)과 저장소(localStorage)가 갈라진 순간의 항목 건수 지문.
+// 시세·baseDate·lastUpdated 같은 파생 필드는 정상적으로도 어긋나므로 **건수만** 본다(오탐 방지).
+const itemCountFingerprint = (d: AssetData): string => [
+  d.realEstate, d.stocks, d.crypto, d.cash, d.loans,
+  d.transactions, d.cashTransactions, d.loanTransactions, d.cryptoTransactions,
+].map((arr) => arr?.length ?? 0).join(",");
+
+// 백업은 localStorage(getAssetData)를 뜨지만 화면은 React state를 렌더한다 — 둘은 CRUD마다
+// setAssetData+saveAssetData 쌍으로 수동 정합되고, 같은 탭 pull은 storage 이벤트를 발화시키지
+// 않아 잠시 갈라질 수 있다. 그 순간 백업을 뜨면 최신 기록이 빠진 파일이 만들어지고, 나중에 그
+// 파일로 복원하면 그대로 유실된다(2026-08-06 실사례: 08-05 매수 2건이 빠진 백업).
+export function isExportDataStale(currentData: AssetData): boolean {
+  return itemCountFingerprint(currentData) !== itemCountFingerprint(getAssetData());
+}
+
+// currentData(화면 state)를 넘기면 저장소와 어긋날 때 내보내기를 **중단**하고 false를 반환한다.
+// 넘기지 않으면 검사 없이 기존 동작 그대로.
+export function exportAssetData(currentData?: AssetData): boolean {
+  if (currentData && isExportDataStale(currentData)) return false;
   const payload = buildExportPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -162,6 +180,7 @@ export function exportAssetData(): void {
   // 백업 시각 기록 — 호출처가 늘어도 자동 반영되도록 함수 내부에서 처리.
   // 한계: click() 이후 사용자가 다운로드를 취소해도 감지할 수 없어 "백업함"으로 남는다.
   markBackedUp();
+  return true;
 }
 
 // 동기화 병합 기준점의 항목 키 — `yearlyNetAssets`만 id가 없어 year를 키로 쓴다.

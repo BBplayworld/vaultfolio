@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { exportAssetData } from "@/lib/asset-storage";
+import { EXPORT_STALE_MSG } from "@/hooks/use-data-export";
 import { shouldShowBackupNudge, markNudgeShown, daysSinceBackup } from "@/lib/backup-status";
 
 export function BackupNudge({ onVisibilityChange }: { onVisibilityChange?: (visible: boolean) => void }) {
@@ -37,7 +38,10 @@ export function BackupNudge({ onVisibilityChange }: { onVisibilityChange?: (visi
 
   const handleBackup = () => {
     try {
-      exportAssetData();
+      if (!exportAssetData(assetData)) {
+        toast.error(EXPORT_STALE_MSG);
+        return;
+      }
       toast.success("자산 데이터가 다운로드되었습니다.");
       setVisible(false);
       onVisibilityChange?.(false);

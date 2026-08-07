@@ -177,7 +177,7 @@ export function causeShortLabel(key: AttributionCauseKey, amount: number): strin
     case "buy:realEstate": return "부동산 매수";
     case "sell:realEstate": return "부동산 매도";
     case "income": return amount >= 0 ? "현금 입금" : "현금 출금";
-    case "cash": return amount >= 0 ? "현금 증가(추정)" : "현금 감소(추정)";
+    case "cash": return amount >= 0 ? "신규 현금" : "현금 정리";
     case "deposit": return amount >= 0 ? "임차보증금 반환" : "임차보증금 증가";
     case "debt": return amount >= 0 ? "대출 상환" : "추가 대출";
   }
@@ -209,12 +209,14 @@ export function causeSentence(key: AttributionCauseKey, amount: number): string 
         ? `${label}으로 ${amt} 늘었어요.`
         : `${label}으로 ${amt} 줄었어요.`;
     case "cash":
-      // 기록된 입출금(income)과 달리 이 값은 잔차다 — 실사례 분석 결과 대부분 현금 계좌 잔액을
-      // 입출금 기록 없이 직접 수정(정정·목돈 반영 등)한 경우였다. 다만 100% 단정은 아니므로
-      // "추정"으로 표기해 실제 원인이 다를 가능성(계좌 삭제, 극히 드문 계산 오차 등)을 남긴다.
+      // 기록된 입출금(income)과 달리 이 값은 잔차다 — 주식·코인·부동산(dCostStock 등 델타)·
+      // 대출(breakdown.loans 델타)과 완전히 같은 방식(createdAt 같은 생성시점 필드 없이 스냅샷
+      // 델타만으로 감지)이라, 신규 계좌 추가든 기존 잔액 직접 수정이든 구분하지 않고 대출의
+      // "새로 추가한 대출로 ~"와 동일한 확신 톤을 쓴다("직접 수정"·"추정"으로 되돌리지 말 것 —
+      // 계좌를 정말 새로 만든 경우에도 "잔액을 몰래 고쳤다"는 오해를 주던 문제 수정, 2026-08-07).
       return amount >= 0
-        ? `현금 잔액 직접 수정으로 ${amt} 늘어난 것으로 추정돼요.`
-        : `현금 잔액 직접 수정으로 ${amt} 줄어든 것으로 추정돼요.`;
+        ? `새로 추가한 현금으로 ${amt} 늘었어요.`
+        : `현금 정리로 ${amt} 줄었어요.`;
     case "deposit":
       return amount >= 0
         ? `임차보증금 반환으로 ${amt} 늘었어요.`
@@ -465,14 +467,13 @@ function estimatePeriodInflows(
 // 기간[from, to] 내 반영된 대출 상환/추가대출 순액(Σ상환−Σ추가대출)을 집계.
 // 대출은 통화 필드가 없어(항상 KRW) rates 불필요 — reflectedCashInflow·reflectedTradeFlow와 동형.
 // 예측(estimated) 경로 전용: 정밀(bothEnriched) 경로의 debtEffect는 스냅샷 breakdown 델타로 이미 정확하다.
-// 시작일(fromDate) 당일 거래도 포함(<)한다 — 과거 "(from,to] 시작일 제외" 규칙은 "시작 스냅샷이
-// 그날 거래를 이미 반영했을 것"이란 전제였는데, 소급 기록·마지막 방문일과 같은 날짜로 남긴 거래는
-// 스냅샷에 반영되지 않은 채 통째로 걸러져 debt/income이 사라지고 무관한 cash 잔차로 둔갑했다(2026-08 P1).
-function reflectedLoanFlow(assetData: AssetData, fromDate: string, toDate: string): number {
+// 경계 규칙은 inFlowWindow 주석 참조 — 첫 구간만 시작일 당일 포함(소급 기록·마지막 방문일과 같은
+// 날짜로 남긴 거래가 통째로 걸러져 debt가 무관한 cash 잔차로 둔갑하던 2026-08 P1 보존).
+function reflectedLoanFlow(assetData: AssetData, fromDate: string, toDate: string, includeFrom: boolean): number {
   const txns = assetData.loanTransactions || [];
   let net = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
+    if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, includeFrom)) continue;
     net += t.type === "repay" ? t.amount : -t.amount;
   }
   return net;
@@ -481,13 +482,13 @@ function reflectedLoanFlow(assetData: AssetData, fromDate: string, toDate: strin
 // 기간[from, to] 내 반영된 코인 매수/매도 체결액을 매수/매도로 나눠 합산.
 // 코인은 항상 KRW 취급(currency·exchangeRate 없음)이라 rates 불필요 — reflectedTradeFlow(주식)와
 // 동형이나 통화 변환이 없다는 점만 다르다(reflectedLoanFlow와 동일한 이유로 rates 불필요).
-// 시작일(fromDate) 당일 거래 포함 이유는 reflectedCashInflow와 동일(2026-08 P1).
+// 시작일(fromDate) 당일 거래는 **항상 제외**한다 — 이유는 inFlowWindow ① 참조(자산군 축).
 function reflectedCryptoFlow(assetData: AssetData, fromDate: string, toDate: string): { buy: number; sell: number } {
   const txns = assetData.cryptoTransactions || [];
   let buy = 0;
   let sell = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
+    if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, false)) continue;
     const amount = t.quantity * t.price;
     if (t.type === "buy") buy += amount;
     else sell -= amount;
@@ -549,6 +550,10 @@ function resolveAttribution(
   exchangeHistory: Record<string, { USD: number; JPY: number }>,
   assetData: AssetData,
   rates: { USD: number; JPY: number },
+  // 전체 기간의 **첫 구간**인가 — 현금·대출 flow의 시작일 당일 포함 여부를 결정한다.
+  // 하이브리드(older+newer)의 두 번째 구간은 반드시 false여야 mid 당일 거래가 중복 계상되지 않는다
+  // (inFlowWindow ② 참조). 단일 구간 호출은 기본값 true.
+  isFirstSegment: boolean = true,
 ): PeriodAttribution {
   const deltaNet = curr.netAsset - prev.netAsset;
   const fromDate = prev._display;
@@ -556,8 +561,8 @@ function resolveAttribution(
 
   const bothEnriched = isFullyEnriched(prev) && isFullyEnriched(curr);
 
-  // 기간(prev, curr] 내 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
-  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates);
+  // 기간 내 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
+  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates, isFirstSegment);
 
   if (bothEnriched) {
     // 정밀 분해. saving은 총원가 증감이라 현금 유입(income)을 포함 → income을 떼어내 투자자산 매수만 남긴다.
@@ -668,7 +673,7 @@ function resolveAttribution(
   const debtFromBreakdown = prev.breakdown && curr.breakdown
     ? -(curr.breakdown.loans - prev.breakdown.loans)
     : null;
-  const debtEffect = debtFromBreakdown ?? (inflows.debt + reflectedLoanFlow(assetData, prev._date, curr._date));
+  const debtEffect = debtFromBreakdown ?? (inflows.debt + reflectedLoanFlow(assetData, prev._date, curr._date, isFirstSegment));
   // 예측 모드의 saving은 매수일 기반이라 현금 유입을 포함하지 않음 → income을 별도 항으로 두고 잔차(price)에서 뺀다.
   // 거래내역이 있는 주식은 estimatePeriodInflows가 건너뛰므로(권위=거래내역) buy/sell을 여기서 분리해 노출한다.
   // (매수 반영 시 purchaseDate가 안 바뀌어 추가 매수가 saving에서 통째로 누락되던 문제 해소)
@@ -706,6 +711,22 @@ function resolveAttribution(
 const krwMul = (cur: string | undefined, rates: { USD: number; JPY: number }): number =>
   cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1;
 
+// 거래 flow 윈도우 판정 — reflected*Flow 4종의 단일 출처(경계 규칙이 함수마다 갈리지 않게).
+// includeFrom=true면 [from, to], false면 (from, to].
+//
+// **경계는 두 축으로 결정된다 — 둘을 섞지 말 것:**
+//  ① 자산군 — 주식·코인은 항상 false. buy/sell이 dCostStock(스냅샷 원가 차이)에서 **차감**되는
+//     값이라, 시작 스냅샷이 그날 거래를 이미 반영했으면(반영 후 저장이 일반적) 같은 금액이 두 번
+//     계상돼 stockManual이 반대 부호로 튄다 → 입력한 적 없는 "주식 매도"가 매수와 쌍으로 표시
+//     (2026-08-06 실사례 117,515원). 현금·대출의 income/debt는 **독립 항**이라 누락되면 무관한
+//     cash 잔차로 새므로(2026-08 P1) 아래 ②에 따른다.
+//  ② 구간 위치(현금·대출만) — 전체 기간의 **첫 구간**만 true. computePeriodAttribution의 하이브리드는
+//     [prevOld,mid] + (mid,curr]로 쪼개는데, 양쪽 다 시작일을 포함하면 mid 당일 거래가 두 구간에
+//     모두 잡혀 income이 2배가 되고 반대급부로 없는 "현금 잔액 감소"가 뜬다(2026-08-06 QA에서 발견).
+//     두 구간의 합집합이 정확히 [prevOld, curr]가 되고 교집합이 비어야 한다.
+const inFlowWindow = (date: string, fromDate: string, toDate: string, includeFrom: boolean): boolean =>
+  (includeFrom ? date >= fromDate : date > fromDate) && date <= toDate;
+
 // 외화 원가(주식 매입원가·현금 잔액)가 환율 변동으로만 재평가된 KRW 증감 — 신규 투입이 아님.
 // computeAssetCost와 동일 원가 기준(주식=수량×평균단가, 현금=잔액), delisted 제외.
 // 주식 몫은 자산군별 시세 분해에서 따로 쓰이므로 나눠 반환한다.
@@ -729,19 +750,20 @@ function costFxRevaluation(
 // 앱이 잔액을 가감했으므로 cost.total 변화(savingFull)에 이미 포함 → saving에서 차감해 소득으로 귀속한다.
 // 미반영(과거 소급 기록)은 잔액을 건드리지 않아 순자산을 움직이지 않았으므로 변동 원인이 아니다 → 제외.
 // (그 입금이 실제로 잔액에 반영돼 있었다면 그 증감은 dCostCash로 이미 소득 항목에 잡힌다)
-// 시작일(fromDate) 당일 거래도 포함(<)한다 — reflectedLoanFlow와 동일 이유(2026-08 P1):
-// "(from,to] 시작일 제외"는 소급 기록·마지막 방문일과 같은 날짜의 거래를 통째로 걸러
-// income이 0으로 계산되고 그 금액이 무관한 cash 잔차("현금 잔액 증가/감소")로 새어나갔다.
+// 경계 규칙은 inFlowWindow 주석 참조 — 첫 구간만 시작일 당일 포함(2026-08 P1: 소급 기록·마지막
+// 방문일과 같은 날짜의 거래가 통째로 걸러져 income이 0이 되고 그 금액이 무관한 cash 잔차
+// "현금 잔액 증가/감소"로 새어나가던 회귀 보존).
 function reflectedCashInflow(
   assetData: AssetData,
   fromDate: string,
   toDate: string,
   rates: { USD: number; JPY: number },
+  includeFrom: boolean,
 ): number {
   const txns = assetData.cashTransactions || [];
   let reflected = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
+    if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, includeFrom)) continue;
     reflected += (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
   }
   return reflected;
@@ -753,7 +775,9 @@ function reflectedCashInflow(
 // (코인은 cryptoTransactionSchema·reflectedCryptoFlow로 동일하게 분리됨, S-4.25).
 // 한계 ②: 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로,
 //         실현손익만큼의 차이는 saving 잔여가 흡수한다(합계 정합은 유지).
-// 시작일(fromDate) 당일 거래 포함 이유는 reflectedCashInflow와 동일(2026-08 P1).
+// 시작일(fromDate) 당일 거래는 **항상 제외**한다 — 이유는 inFlowWindow ① 참조(자산군 축).
+// 제외해도 누락되지 않는다 — 스냅샷 저장 **후** 시작일자로 소급 반영한 거래는 원가가 올라가
+// stockManual이 같은 부호로 잡아 "주식 매수"로 표시된다(체결액 대신 원가 근사, 한계 ②와 같은 급).
 function reflectedTradeFlow(
   assetData: AssetData,
   fromDate: string,
@@ -764,7 +788,7 @@ function reflectedTradeFlow(
   let buy = 0;
   let sell = 0;
   for (const t of txns) {
-    if (!t.reflected || t.date < fromDate || t.date > toDate) continue;
+    if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, false)) continue;
     const rate = t.exchangeRate && t.exchangeRate > 0
       ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate)
       : krwMul(t.currency, rates);
@@ -855,11 +879,14 @@ function detectCashRoundTrip(
   startDate: string,
   assetData: AssetData,
   rates: { USD: number; JPY: number },
+  // netCashEffect(= cash cause)를 만든 구간과 **같은 경계**를 써야 두 값의 기준이 맞는다.
+  // 하이브리드의 왕복 탐지 구간은 (mid, curr]이므로 false, 단일 구간은 전체 첫 구간이라 true.
+  includeFrom: boolean,
 ): { peakAmount: number; peakDate: string } | null {
   let peak = { amount: 0, date: "" };
   for (const p of segmentDaily) {
     if (!p.breakdown) continue;
-    const incomeToDate = reflectedCashInflow(assetData, startDate, p._date, rates);
+    const incomeToDate = reflectedCashInflow(assetData, startDate, p._date, rates, includeFrom);
     const dev = p.breakdown.cash - baselineCash - incomeToDate;
     if (Math.abs(dev) > Math.abs(peak.amount)) peak = { amount: dev, date: p._date };
   }
@@ -878,11 +905,13 @@ function attachCashRoundTrip(
   curr: AttributionPoint,
   assetData: AssetData,
   rates: { USD: number; JPY: number },
+  // start가 전체 기간의 첫 구간 시작점이면 true, 하이브리드의 mid면 false (detectCashRoundTrip 주석 참조)
+  includeFrom: boolean,
 ): PeriodAttribution {
   if (!start || !start.breakdown) return attr;
   const segment = dailyPoints.filter((p) => p._date > start._date && p._date <= curr._date && p.breakdown);
   const netCash = attr.effects.find((e) => e.key === "cash")?.amount ?? 0;
-  const roundTrip = detectCashRoundTrip(segment, start.breakdown.cash, netCash, start._date, assetData, rates);
+  const roundTrip = detectCashRoundTrip(segment, start.breakdown.cash, netCash, start._date, assetData, rates, includeFrom);
   return roundTrip ? { ...attr, cashRoundTrip: roundTrip } : attr;
 }
 
@@ -941,13 +970,16 @@ export function computePeriodAttribution(
   if (!mid) {
     const attr = resolveAttribution(prevOld, curr, exchangeHistory, assetData, rates);
     // prevOld가 실측일 때만(=isFullyEnriched) daily 세부가 있어 왕복 탐지가 가능하다
-    return attachCashRoundTrip(attr, dailyPoints, isFullyEnriched(prevOld) ? prevOld : undefined, curr, assetData, rates);
+    return attachCashRoundTrip(attr, dailyPoints, isFullyEnriched(prevOld) ? prevOld : undefined, curr, assetData, rates, true);
   }
-  const older = resolveAttribution(prevOld, mid, exchangeHistory, assetData, rates);
-  const newer = resolveAttribution(mid, curr, exchangeHistory, assetData, rates);
+  // 두 구간의 flow 윈도우 합집합이 정확히 [prevOld, curr]가 되도록: older만 시작일 당일 포함,
+  // newer는 제외(false). 양쪽 다 포함하면 mid 당일 거래가 두 번 잡혀 income이 2배가 되고
+  // 반대급부로 없는 "현금 잔액 감소"가 뜬다(2026-08-06 QA).
+  const older = resolveAttribution(prevOld, mid, exchangeHistory, assetData, rates, true);
+  const newer = resolveAttribution(mid, curr, exchangeHistory, assetData, rates, false);
   const merged = mergeAttributions(older, newer, mid);
-  // 실측 구간은 (mid, curr]뿐이므로 왕복 탐지의 시작점도 mid로 한정한다
-  return attachCashRoundTrip(merged, dailyPoints, mid, curr, assetData, rates);
+  // 실측 구간은 (mid, curr]뿐이므로 왕복 탐지의 시작점도 mid로 한정한다 — newer와 같은 경계(false)
+  return attachCashRoundTrip(merged, dailyPoints, mid, curr, assetData, rates, false);
 }
 
 // "지난 접속 이후" 브리핑용: sinceDate(마지막 스냅샷 저장일) 이하 최근 스냅샷 vs 끝점 비교.

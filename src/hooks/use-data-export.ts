@@ -6,14 +6,22 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { exportAssetData } from "@/lib/asset-storage";
+import { useAssetData } from "@/contexts/asset-data-context";
+
+// 화면 데이터와 저장소가 어긋난 순간의 백업은 최신 기록이 빠진 파일이 된다 — 두 호출처가 같은 문구를 쓴다.
+export const EXPORT_STALE_MSG = "화면 데이터와 저장된 데이터가 달라 백업을 멈췄어요. 새로고침 후 다시 시도해 주세요.";
 
 export function useDataExport() {
+  const { assetData } = useAssetData();
   // 내보내기 직후 백업 상태 표시를 갱신하기 위한 tick
   const [exportTick, setExportTick] = useState(0);
 
   const exportNow = useCallback((): boolean => {
     try {
-      exportAssetData();
+      if (!exportAssetData(assetData)) {
+        toast.error(EXPORT_STALE_MSG);
+        return false;
+      }
       toast.success("자산 데이터가 다운로드되었습니다.");
       setExportTick((t) => t + 1);
       window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
@@ -22,7 +30,7 @@ export function useDataExport() {
       toast.error("데이터 내보내기에 실패했습니다.");
       return false;
     }
-  }, []);
+  }, [assetData]);
 
   return { exportNow, exportTick };
 }

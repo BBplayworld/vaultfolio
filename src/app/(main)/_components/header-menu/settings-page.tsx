@@ -34,7 +34,6 @@ import { clearBackupStatus } from "@/lib/backup-status";
 import { useDataExport } from "@/hooks/use-data-export";
 import { computeStorageStats, formatBytes } from "@/lib/storage-stats";
 import { APP_VERSION } from "@/config/app-version";
-import { APP_CONFIG } from "@/config/app";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { InfoHint } from "../layout/ui/info-hint";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -269,11 +268,9 @@ export function SettingsPage() {
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>정보</p>
+          <p className={SECTION_LABEL}>버전</p>
           <div className="px-4 py-3 rounded-xl bg-card shadow-xs">
-            <p className="text-sm text-muted-foreground">
-              {APP_CONFIG.name} <span className="tabular-nums">v{APP_VERSION}</span>
-            </p>
+            <p className="text-sm text-muted-foreground tabular-nums">v{APP_VERSION}</p>
           </div>
         </section>
       </div>

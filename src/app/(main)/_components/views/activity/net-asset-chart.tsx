@@ -635,21 +635,25 @@ export function YearlyNetAssetChart() {
                             const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
                             const prev = hasData && dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
                             const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
+                            // 모바일 셀 텍스트 가용폭은 약 42.6px = (390 − layout px-3 24 − gap 12) / 7 − p-1 8.
+                            // 금액은 text-xs로 그 안에 들어가지만, overflow-hidden으로 예상 못 한 자릿수가
+                            // 나와도 옆 칸을 침범하지 않게 봉쇄한다. (단위가 둘째 줄로 wrap되는 2줄 레이아웃이라
+                            // whitespace-nowrap은 쓰지 않는다 — 한 줄로 묶으면 오히려 확실히 넘친다)
                             return (
                               <div
                                 key={cell.date}
-                                className={`rounded-md border p-1 flex flex-col transition-colors relative ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
+                                className={`rounded-md border p-1 flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
                                 <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
                                 </p>
                                 {hasData ? (
                                   <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[25px] w-full">
-                                    <p className={`text-sm font-bold leading-none text-center w-full ${ASSET_THEME.important}`}>
+                                    <p className={`text-xs sm:text-sm font-bold leading-none text-center tabular-nums w-full ${ASSET_THEME.important}`}>
                                       {formatShortCurrencyDecimal(cell.netAsset)}
                                     </p>
                                     {diff !== null ? (
-                                      <p className={`text-sm font-semibold leading-none text-center sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
+                                      <p className={`text-xs sm:text-sm font-semibold leading-none text-center tabular-nums sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
                                         {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
                                       </p>
                                     ) : null}

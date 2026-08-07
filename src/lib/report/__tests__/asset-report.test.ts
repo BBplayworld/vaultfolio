@@ -606,6 +606,54 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
+  it("경계일(fromDate)에 이미 반영된 주식 매수는 이중계상되지 않는다 — 입력한 적 없는 '주식 매도'가 매수와 쌍으로 뜨던 버그(2026-08-06)", () => {
+    // 실사용 재현: 08-05에 매수 2건만 입력했는데 홈 "전일 대비"에 주식 매수 11.8만·주식 매도 11.8만이
+    // 동시에 표시됐다. 08-05 스냅샷은 반영 **이후**에 저장돼 cost.stock에 117,515원이 이미 들어 있어
+    // dCostStock=0인데, reflectedTradeFlow가 시작일 당일 거래를 다시 세어 buyEffect=+117,515가 되고
+    // 균형을 맞추는 stockManual=−117,515가 "주식 매도"로 둔갑했다.
+    const data = emptyData();
+    data.transactions = [
+      trade({ stockId: "s1", ticker: "314250", stockName: "KODEX 미국빅테크10(H)", quantity: 1, price: 62_235, date: "2026-08-05" }),
+      trade({ stockId: "s2", ticker: "360200", stockName: "ACE 미국S&P500", quantity: 2, price: 27_640, date: "2026-08-05" }),
+    ];
+    const prev = snapClass("2026-08-05", { stocks: 10_000_000 }, { stock: 8_117_515 });
+    const curr = snapClass("2026-08-06", { stocks: 10_200_000 }, { stock: 8_117_515 });
+    const attr = run(data, [prev, curr], "2026-08-05")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("sell:stock")).toBe(false); // 유령 매도가 뜨면 안 된다
+    expect(byKey.has("buy:stock")).toBe(false);  // 이미 스냅샷에 반영된 매수도 다시 뜨면 안 된다
+    expect(byKey.get("price:stock")).toBeCloseTo(200_000, 6);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("시작 스냅샷 저장 후 시작일자로 소급 반영한 주식 매수는 매수로 한 번만 잡힌다(부호 뒤집힘 없음)", () => {
+    // 당일 거래를 제외해도 누락되지 않음을 고정 — 스냅샷에 없던 매수는 원가가 올라가므로
+    // stockManual이 **같은 부호로** 잡아 "주식 매수"로 표시된다.
+    const data = emptyData();
+    data.transactions = [trade({ quantity: 1, price: 117_515, date: "2026-08-05" })];
+    const prev = snapClass("2026-08-05", { stocks: 10_000_000 }, { stock: 8_000_000 });
+    const curr = snapClass("2026-08-06", { stocks: 10_317_515 }, { stock: 8_117_515 });
+    const attr = run(data, [prev, curr], "2026-08-05")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("buy:stock")).toBeCloseTo(117_515, 6); // 두 배가 되면 이중계상
+    expect(byKey.has("sell:stock")).toBe(false);
+    expect(byKey.get("price:stock")).toBeCloseTo(200_000, 6);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("코인도 경계일(fromDate)에 이미 반영된 매수를 이중계상하지 않는다", () => {
+    const data = emptyData();
+    data.cryptoTransactions = [cryptoTx({ quantity: 0.1, price: 1_000_000, date: "2026-08-05" })];
+    const prev = snapClass("2026-08-05", { crypto: 10_000_000 }, { crypto: 9_000_000 });
+    const curr = snapClass("2026-08-06", { crypto: 10_100_000 }, { crypto: 9_000_000 });
+    const attr = run(data, [prev, curr], "2026-08-05")!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.has("sell:crypto")).toBe(false);
+    expect(byKey.has("buy:crypto")).toBe(false);
+    expect(byKey.get("price:crypto")).toBeCloseTo(100_000, 6);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
   it("임차보증금 증감은 독립된 deposit 원인으로 분리되고 income·cash를 오염시키지 않는다(B-2)", () => {
     const data = emptyData();
     const prev = snapClass("2026-05-01", { cash: 100_000_000 }, {});
@@ -653,6 +701,48 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     expect(attr.deltaNet).toBe(8_000_000);
     expect(attr.estimated).toBe(false); // 실측이 섞였으므로 "전체 예측"은 아님
     expect(attr.estimatedUntil).toBe("2026-06-15"); // mid 이전만 예측
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("mid 날짜에 남긴 현금 입금이 두 구간에 중복 계상되지 않는다 — income 2배 + 유령 '현금 잔액 감소' 회귀(2026-08-06 QA)", () => {
+    // 하이브리드는 [prevOld,mid] + (mid,curr]로 쪼개는데, 양쪽 다 시작일 당일을 포함하면
+    // mid 당일 거래가 두 구간에 모두 잡힌다. 합계 = deltaNet 항등식은 유지되므로(income +2배,
+    // cash −1배로 상쇄) 기존 항등식 테스트로는 잡히지 않아 key별 금액을 직접 단정한다.
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-06-15", amount: 10_000_000, type: "deposit", reflected: true })];
+    const prevOld = { date: "2026-06-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const mid = snapClass("2026-06-15", { cash: 110_000_000 }, {});
+    const curr = snapClass("2026-07-01", { cash: 110_000_000 }, {});
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBe(10_000_000); // 20,000,000이면 중복 계상
+    expect(byKey.has("cash")).toBe(false);        // 반대급부로 뜨던 유령 "현금 잔액 감소"
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("전체 기간 시작일(prevOld) 당일에 남긴 현금 입금은 하이브리드에서도 여전히 income으로 잡힌다(2026-08 P1 보존)", () => {
+    // 중복 제거를 위해 경계를 통일해버리면 이 케이스가 통째로 걸러져 무관한 cash 잔차로 샌다.
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ date: "2026-06-01", amount: 10_000_000, type: "deposit", reflected: true })];
+    const prevOld = { date: "2026-06-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const mid = snapClass("2026-06-15", { cash: 110_000_000 }, {});
+    const curr = snapClass("2026-07-01", { cash: 110_000_000 }, {});
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("income")).toBe(10_000_000);
+    expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
+  });
+
+  it("mid 날짜의 반영 주식 매수도 두 구간에 중복 계상되지 않는다", () => {
+    const data = emptyData();
+    data.transactions = [trade({ quantity: 1, price: 5_000_000, date: "2026-06-15" })];
+    const prevOld = { date: "2026-06-01", netAsset: 100_000_000, financialAsset: 100_000_000 } as DailyAssetSnapshot;
+    const mid = snapClass("2026-06-15", { stocks: 105_000_000 }, { stock: 100_000_000 });
+    const curr = snapClass("2026-07-01", { stocks: 105_000_000 }, { stock: 100_000_000 });
+    const attr = computePeriodAttribution([prevOld, mid, curr], [], {}, "1m", data, RATES)!;
+    const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
+    expect(byKey.get("buy:stock") ?? 0).toBeLessThanOrEqual(5_000_000); // 1,000만원이면 중복
+    expect(byKey.has("sell:stock")).toBe(false);                        // 유령 매도
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
 
@@ -902,7 +992,7 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
       { key: "buy:stock", label: "주식 매수", sentence: "주식 매수로 30원 늘었어요.", amount: 30, text: "+30원" },
       { key: "sell:stock", label: "주식 매도", sentence: "주식 매도로 10원 줄었어요.", amount: -10, text: "-10원" },
       { key: "income", label: "현금 입금", sentence: "현금 입금으로 20원 늘었어요.", amount: 20, text: "+20원" },
-      { key: "cash", label: "현금 잔액 증가", sentence: "현금 잔액 직접 수정으로 5원 늘어난 것으로 추정돼요.", amount: 5, text: "+5원" },
+      { key: "cash", label: "신규 현금", sentence: "새로 추가한 현금으로 5원 늘었어요.", amount: 5, text: "+5원" },
       { key: "debt", label: "대출 상환", sentence: "대출 상환으로 15원 늘었어요.", amount: 15, text: "+15원" },
     ] as ReturnType<typeof getAttributionItems>;
     const groups = groupAttributionItems(items);
