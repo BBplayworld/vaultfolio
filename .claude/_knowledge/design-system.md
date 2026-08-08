@@ -52,7 +52,7 @@
 
 **`SHARE_SAFE_PALETTE`** (theme.ts) — `MAIN_PALETTE`에서 의미가 예약된 `[1]` 빨강(부채/손실)·`[2]` 주황(임차보증금, 순자산 `important`와 유사)을 제외한 순서. **현재 소비처 없음** — 인증카드(share-card.tsx)가 주식 전용으로 바뀌며 "자산군 색 배정 → 개별 종목이 상속" 규칙은 폐기됐고, 인증카드는 주식 탭과 동일하게 `assignColors`(`MAIN_PALETTE`) 색을 그대로 쓴다. 자산군 단위 색이 필요한 새 공유 산출물을 만들 때 재사용한다.
 
-**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 480px 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R25**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
+**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 480px 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R25**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-2xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
 
 ---
 

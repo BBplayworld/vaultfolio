@@ -123,7 +123,7 @@ export const ASSET_THEME_SHOT = {
   icon: "size-7",
   iconInitial: "text-[10px]",
   badge: "text-[11px] px-1 py-0 ml-1 leading-tight",
-  summaryValue: "text-xl font-bold tabular-nums break-all leading-tight",
+  summaryValue: "text-2xl font-bold tabular-nums break-all leading-tight",
   profitAmount: "text-lg font-bold tabular-nums whitespace-nowrap",
   profitRate: "text-base font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",

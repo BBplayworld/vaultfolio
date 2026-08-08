@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ShareCard } from "./share-card";
 
-// 카드 캡처 대상은 항상 480px 고정 폭 — 좁은 화면에선 CSS transform으로 축소만 하고
-// 레이아웃 크기 자체는 바꾸지 않는다. 기기별로 다른 이미지가 나오는 걸 막기 위함.
-const CARD_WIDTH = 480;
+// 카드 캡처 대상은 항상 460px 고정 폭 — 좁은 화면에선 CSS transform으로 축소만 하고
+// 레이아웃 크기 자체는 바꾸지 않는다. 기기별로 다른 이미지가 나오는 걸 막기 위함(R25).
+const CARD_WIDTH = 460;
 
 function ScaledCardPreview({ children }: { children: React.ReactNode }) {
   const outerRef = useRef<HTMLDivElement>(null);
@@ -172,8 +172,10 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         </div>
 
         {/* 카드 미리보기. shrink-0 수정으로 스케일이 컨테이너를 꽉 채우게 됐으니, 카드가
-            다이얼로그 가장자리에 완전히 붙지 않도록 최소한의 여백(px-1)만 남긴다 */}
-        <div className="overflow-y-auto flex-1 px-2 py-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
+            다이얼로그 가장자리에 완전히 붙지 않도록 여백(px-4)을 둔다. 이 패딩은
+            outer.clientWidth(스케일 계산 기준)만 줄일 뿐 CARD_WIDTH(480, 캡처 PNG 실제 폭)와는
+            무관 — 미리보기 축소율만 살짝 커지고 저장되는 이미지 크기는 그대로다. */}
+        <div className="overflow-y-auto flex-1 px-4 py-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <ScaledCardPreview>
             <ShareCard
               hideAmounts={!showAmounts}

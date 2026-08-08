@@ -130,7 +130,7 @@ _components/
   - `dailyProfit`은 `filteredStocks` 기준 합산 (카테고리 selector 따라 즉시 변동)
 - `CATEGORY_TABS`
 
-**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 480px 고정폭이라 `sm:` 뷰포트 반응형 금지(R25). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
+**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 460px 고정폭(`CARD_WIDTH`, share-menu.tsx)이라 `sm:` 뷰포트 반응형 금지(R25). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
 
 - `StockCard` — 헤더 + 비중 그라데이션 바만 노출. Collapsible·상세 그리드·수정/삭제 버튼·담보대출·보유 메타 모두 미렌더. `maskFn`으로 hideAmounts 마스킹 전달
 - `StockRowHeader` / `StockIcon` — 이름·금액·아이콘·Badge 클래스를 SHOT 토큰으로 스왑. 비중%는 미노출(범례로 통합), `TodayChangeChip`(오늘 등락) 미렌더
@@ -204,8 +204,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음)
 - 종목 파생값은 `computeStockMetrics(stock, exchangeRates, totalValue)` 재사용
 - 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
-- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(480px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`. `innerRef`(480px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정)
-- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-1` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-1`)는 카드 폭을 최대한 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-1`(래퍼 `px-1`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+4=16px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보, 기본 `w-full`의 `%` 기반 계산이 containing block에 따라 예상보다 좁아질 수 있어 대체)로, 미리보기 컨테이너는 좌우 `px-0`(스케일 계산용, 캡처 PNG 무관)로 조정
+- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(`CARD_WIDTH`=460px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`(460 기준 3 → 최종 PNG 1380px). `innerRef`(460px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정). `CARD_WIDTH`는 기존 480→460으로 소폭 축소(2026-08-08) — 검은 카드 박스 자체의 바깥 폭을 줄이는 유일한 레버(내부 패딩은 박스 안쪽만 조정할 뿐 바깥 폭엔 무관)
+- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
 
 ### WelcomeGuide (`layout/welcome-guide.tsx`)
 

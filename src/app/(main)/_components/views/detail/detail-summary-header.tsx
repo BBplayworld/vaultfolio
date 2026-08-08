@@ -34,10 +34,10 @@ export function DetailSummaryHeader({
 }: DetailSummaryHeaderProps) {
   const { primary, secondary } = getPriceLayout(value, formatFull, formatShort);
   const valueSizeCls = screenshotMode ? ASSET_THEME_SHOT.summaryValue : "text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums break-all leading-tight";
-  // 인증카드는 배경 박스 없이 아래 비중 바·리스트 박스(래퍼 py-3.5 px-1 + 내부 px-0 = 4px)와
+  // 인증카드는 배경 박스 없이 아래 비중 바·리스트 박스(래퍼 py-3.5 px-2 + 내부 px-0 = 8px)와
   // 좌우 여백을 정확히 맞춘다(R25: screenshotMode 전용 분기). 하단 패딩은 0으로 두고
   // 다음 요소와의 시각적 간격은 바깥 margin으로만 통제해 다른 구간과 동일하게 맞춘다.
-  const boxCls = screenshotMode ? "rounded-lg px-1 pt-2" : `rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`;
+  const boxCls = screenshotMode ? "rounded-lg px-2 pt-2" : `rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`;
 
   return (
     <div className={boxCls}>
