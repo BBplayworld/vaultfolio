@@ -125,10 +125,10 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
         <DialogHeader className="px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <IdCard className="size-4 text-primary" />
-            자산 카드
+            인증카드
           </DialogTitle>
           <DialogDescription className="text-xs text-left">
-            내 자산 현황을 이미지로 만들어 저장할 수 있습니다.
+            내 주식 현황을 이미지로 만들어 저장할 수 있습니다.
           </DialogDescription>
         </DialogHeader>
 

@@ -50,7 +50,9 @@
 ### 1.3 차트 팔레트 (`MAIN_PALETTE`, 12색)
 `[0]` 인디고=최대 비율 고정 · `[1]` 빨강=대출 고정 · `[2]` 주황=임차보증금 고정 · `[3~10]` 자산 항목 순차 · `[11]` `#4e5763` 무채색 버튼. `assignColors`에서 **최댓값=`MAIN_PALETTE[0]`** 규칙 유지. (CSS `--chart-1~6`은 라이트=teal/다크=indigo 계열)
 
-**`SHARE_SAFE_PALETTE`** (theme.ts) — 자산 카드(share-card.tsx) 전용. `MAIN_PALETTE`에서 의미가 예약된 `[1]` 빨강(부채/손실)·`[2]` 주황(임차보증금, 순자산 `important`와 유사)을 제외한 순서. `[0]` 인디고는 최대 비율 고정 규칙 그대로 유지. **공유 카드의 색은 자산군(주식·부동산·코인·현금) 단위로 먼저 배정하고, 개별 종목은 자기 자산군의 색을 상속한다** — 포트폴리오 바 색과 핵심 자산 목록 색점이 항상 1:1로 매칭되게 하기 위함. 상세 탭(`assignColors`)은 부채를 포함해 `[1]`/`[2]` 예약 의미가 유효하므로 그대로 `MAIN_PALETTE` 사용, 공유 카드에서만 `SHARE_SAFE_PALETTE`를 쓴다.
+**`SHARE_SAFE_PALETTE`** (theme.ts) — `MAIN_PALETTE`에서 의미가 예약된 `[1]` 빨강(부채/손실)·`[2]` 주황(임차보증금, 순자산 `important`와 유사)을 제외한 순서. **현재 소비처 없음** — 인증카드(share-card.tsx)가 주식 전용으로 바뀌며 "자산군 색 배정 → 개별 종목이 상속" 규칙은 폐기됐고, 인증카드는 주식 탭과 동일하게 `assignColors`(`MAIN_PALETTE`) 색을 그대로 쓴다. 자산군 단위 색이 필요한 새 공유 산출물을 만들 때 재사용한다.
+
+**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 480px 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R25**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
 
 ---
 

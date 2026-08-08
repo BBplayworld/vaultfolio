@@ -48,7 +48,7 @@ export default function Page() {
     const makeHandler = (step: TutorialStep) => () => completeStep(step);
     const h1 = makeHandler(1); // 자산 업데이트(FAB)
     const h2 = makeHandler(2); // 자산 도구(더보기)
-    const h3 = makeHandler(3); // 인증샷
+    const h3 = makeHandler(3); // 인증카드
     const h4 = makeHandler(4); // 상세 탭
     const h5 = makeHandler(5); // 성과 탭
 

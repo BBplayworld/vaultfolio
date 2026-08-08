@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "detail", label: "상세", icon: PieChart },
   { id: "activity", label: "성과", icon: TrendingUp },
   { id: "update", label: "업데이트", icon: PlusCircle },
-  { id: "screenshot", label: "자산카드", icon: IdCard },
+  { id: "screenshot", label: "인증카드", icon: IdCard },
   { id: "more", label: "더보기", icon: MoreHorizontal },
 ];
 

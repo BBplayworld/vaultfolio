@@ -44,8 +44,8 @@ function ShareScreenshotButton() {
         onClick={() => setOpen(true)}
         className={`${ICON_BTN} border-none text-white`}
         style={{ backgroundColor: MAIN_PALETTE[5] }}
-        aria-label="자산 카드"
-        title="자산 카드"
+        aria-label="인증카드"
+        title="인증카드"
         data-tutorial="tutorial-screenshot-btn"
       >
         <IdCard className="size-5 sm:size-6" />

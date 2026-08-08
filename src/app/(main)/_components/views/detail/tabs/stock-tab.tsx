@@ -16,9 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatHoldingPeriod } from "@/lib/number-utils";
+import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, ASSET_THEME_SHOT, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance-service";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
@@ -69,7 +69,7 @@ export const CATEGORY_TABS = [
   { value: "unlisted", label: "비상장" },
 ] as const;
 
-function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: string; isForeign: boolean; color: string }) {
+function StockIcon({ ticker, name, isForeign, color, screenshotMode = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean }) {
   const [imgError, setImgError] = React.useState(false);
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
 
@@ -84,18 +84,22 @@ function StockIcon({ ticker, name, isForeign, color }: { ticker: string; name: s
   const showLogo = !!logoSrc && !imgError;
   const showInitial = !logoSrc;
 
+  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰으로 데스크톱 값 고정(R25)
+  const sizeCls = screenshotMode ? ASSET_THEME_SHOT.icon : "size-6 sm:size-7";
+  const initialCls = screenshotMode ? ASSET_THEME_SHOT.iconInitial : "text-[9px] sm:text-[10px]";
+
   return (
-    <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
+    <div className={`${sizeCls} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden`} style={{ backgroundColor: color }}>
       {showLogo ? (
-        <img src={logoSrc} alt={name} className="size-6 sm:size-7 rounded-full object-cover" onError={() => setImgError(true)} />
+        <img src={logoSrc} alt={name} className={`${sizeCls} rounded-full object-cover`} onError={() => setImgError(true)} />
       ) : showInitial ? (
-        <span className="text-[9px] sm:text-[10px] font-bold text-white">{initial}</span>
+        <span className={`${initialCls} font-bold text-white`}>{initial}</span>
       ) : null}
     </div>
   );
 }
 
-// 인증샷에서 재사용하는 공유 타입
+// 인증카드에서 재사용하는 공유 타입
 export interface StockRowData {
   stock: Stock;
   color: string;
@@ -309,26 +313,35 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   const fmt = maskFn ?? ((v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate));
   const hideAmounts = !!maskFn && maskFn(123456).includes("•");
   const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
+  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰으로 데스크톱 값 고정(R25)
+  const nameCls = screenshotMode ? ASSET_THEME_SHOT.cardInfoName : ASSET_THEME.cardInfoName;
+  const amountCls = screenshotMode ? ASSET_THEME_SHOT.cardAmountMain : ASSET_THEME.cardAmountMain;
+  const badgeCls = screenshotMode ? ASSET_THEME_SHOT.badge : "text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight";
   return (
     <>
-      <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} />
+      <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} screenshotMode={screenshotMode} />
       <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
-          <span className={`${ASSET_THEME.cardInfoName} line-clamp-2`} title={stock.name.length > 18 ? stock.name : undefined}>
+          <span className={`${nameCls} line-clamp-2`} title={stock.name.length > 18 ? stock.name : undefined}>
             {stock.name}
           </span>
           {stock.inactiveStatus === "halted" && (
-            <Badge variant="outline" className="text-amber-600 border-amber-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">거래정지</Badge>
+            <Badge variant="outline" className={`text-amber-600 border-amber-600 ${badgeCls}`}>거래정지</Badge>
           )}
           {stock.inactiveStatus === "delisted" && (
-            <Badge variant="outline" className="text-red-600 border-red-600 text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight">상장폐지</Badge>
+            <Badge variant="outline" className={`text-red-600 border-red-600 ${badgeCls}`}>상장폐지</Badge>
           )}
         </div>
         <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
           <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
-          <span className="text-sm text-muted-foreground">·</span>
-          <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+          {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
+          {!screenshotMode && (
+            <>
+              <span className="text-sm text-muted-foreground">·</span>
+              <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+            </>
+          )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
           {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
             <TodayChangeChip rate={dailyRate} className="text-[11px]" />
@@ -336,7 +349,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
         </div>
       </div>
       <div className={ASSET_THEME.cardInfoRight}>
-        <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
+        <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
         <div className={ASSET_THEME.cardAmountProfitRow}>
           <span className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
             {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
@@ -348,7 +361,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   );
 }
 
-// 종목 단일 로우 (인증샷용 — 편집/삭제 버튼 없음)
+// 종목 단일 로우 (인증카드용 — 편집/삭제 버튼 없음)
 export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate, maskFn, screenshotMode = false }: StockRowData & { maskFn?: (v: number) => string; screenshotMode?: boolean }) {
   return (
     <div className={`flex items-center gap-3 py-2 ${ASSET_THEME.primary.bgLight} px-2 rounded-md w-full min-w-0`}>
@@ -382,6 +395,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       valueClass={ASSET_THEME.text.default}
       formatFull={fmtFull}
       formatShort={fmt}
+      screenshotMode={screenshotMode}
       headerAction={!screenshotMode ? (
         <div className="min-h-7 flex items-center">
           {onDisplayCurrencyChange && (
@@ -405,6 +419,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
             rate={totalProfitRate}
             formatShort={fmt}
             hideAmountSign={hideAmounts}
+            screenshotMode={screenshotMode}
             prefix={!screenshotMode && currencyGain !== undefined && currencyGain !== 0
               ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
               : undefined}
@@ -783,12 +798,12 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
     onFirstInteract?.();
   };
 
-  // 인증샷 모드 — 헤더 + 비중 그라데이션 바만 노출 (펼침·상세·버튼 미렌더)
+  // 인증카드 모드 — 헤더 + 비중 그라데이션 바만 노출 (펼침·상세·버튼 미렌더)
   if (screenshotMode) {
     return (
       <div className={`${ASSET_THEME.cardWrapper} mb-3`}>
-        <div className={ASSET_THEME.cardHeader}>
-          <div className={ASSET_THEME.cardTriggerButton}>
+        <div className={ASSET_THEME_SHOT.cardHeader}>
+          <div className={ASSET_THEME_SHOT.cardTriggerButton}>
             <StockRowHeader
               stock={stock}
               color={color}
@@ -905,7 +920,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
   );
 }
 
-// 카테고리 탭 + 비중바 + 종목 목록 — 주식 상세/인증샷 공통 영역
+// 카테고리 탭 + 비중바 + 종목 목록 — 주식 상세/인증카드 공통 영역
 export interface StockCategorySectionProps {
   activeCategory: string;
   onCategoryChange: (cat: string) => void;
@@ -916,8 +931,12 @@ export interface StockCategorySectionProps {
   emptyMessage?: string;
   screenshotMode: boolean;
   renderItem: (stock: Stock, isFirstOverall: boolean, color: string) => React.ReactNode;
-  /** 종목 리스트 최대 노출 개수 — 초과분은 "외 N종목" 요약행. 비중바·범례는 전체 유지 (인증샷 축약용) */
+  /** 종목 리스트 최대 노출 개수 — 초과분은 "외 N종목" 요약행. 비중바도 같은 개수로 축약(인증카드용) */
   maxItems?: number;
+  /** 금액 마스킹 함수(인증카드 "금액 표시" 오프) — "외 N종목" 요약행 금액에 적용 */
+  maskFn?: (v: number) => string;
+  /** "외 N종목" 손익 합산용 — 미전달 시 요약행은 평가금액만 노출 */
+  exchangeRates?: { USD: number; JPY: number };
 }
 
 export function StockCategorySection({
@@ -931,15 +950,20 @@ export function StockCategorySection({
   screenshotMode = false,
   renderItem,
   maxItems,
+  maskFn,
+  exchangeRates,
 }: StockCategorySectionProps) {
   const colorOf = (stock: Stock) => {
     const idx = barItems.findIndex((b) => b.stock.id === stock.id);
     return idx >= 0 ? barColors[idx] : MAIN_PALETTE[0];
   };
+  const legendTextCls = screenshotMode ? ASSET_THEME_SHOT.legendText : "text-sm sm:text-base";
 
   return (
-    <div className="px-1 sm:px-2 space-y-3">
-      {/* 비중 바 — maxItems 지정 시 상위 N개 + "기타" 집계(인증샷 축약) */}
+    <div className={`${screenshotMode ? "px-1" : "px-1 sm:px-2"} space-y-3`}>
+      {/* 비중 바 — maxItems 지정 시 상위 N개 + "기타" 집계(인증카드 축약).
+          범례(색점 + 이름 + 비중%)는 주식 탭·인증카드 공통으로 노출한다.
+          인증카드는 캡처 폭 480px 고정이라 반응형 대신 SHOT 토큰 값을 쓴다(R25). */}
       {barItems.length > 0 && totalValue > 0 && (() => {
         const barShown = maxItems ? barItems.slice(0, maxItems) : barItems;
         const barRest = maxItems ? barItems.slice(maxItems) : [];
@@ -956,25 +980,25 @@ export function StockCategorySection({
                 );
               })}
               {barRest.length > 0 && restPct > 0 && (
-                <div className="overflow-hidden transition-all" style={{ width: `${restPct}%`, backgroundColor: ETC_COLOR }} title={`기타: ${restPct.toFixed(1)}%`} />
+                <div className="overflow-hidden transition-all" style={{ width: `${restPct}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
               )}
             </div>
-            <div className={`grid ${screenshotMode ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-x-4 gap-y-2 px-2`}>
+            <div className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2"}>
               {barShown.map(({ stock, value: v, color }) => {
                 const pct = (v / totalValue) * 100;
                 return (
                   <div key={stock.id} className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-sm sm:text-base text-foreground truncate">{stock.name}</span>
-                    <span className="text-sm sm:text-base font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    <span className={`${legendTextCls} text-foreground truncate`}>{stock.name}</span>
+                    <span className={`${legendTextCls} font-bold shrink-0`} style={{ color: color }}>{pct.toFixed(1)}%</span>
                   </div>
                 );
               })}
               {barRest.length > 0 && restPct > 0 && (
                 <div className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ETC_COLOR }} />
-                  <span className="text-sm sm:text-base text-muted-foreground truncate">기타 {barRest.length}종목</span>
-                  <span className="text-sm sm:text-base font-bold shrink-0 text-muted-foreground">{restPct.toFixed(1)}%</span>
+                  <span className={`${legendTextCls} text-muted-foreground truncate`}>그 외 {barRest.length}종목</span>
+                  <span className={`${legendTextCls} font-bold shrink-0 text-muted-foreground`}>{restPct.toFixed(1)}%</span>
                 </div>
               )}
             </div>
@@ -982,7 +1006,7 @@ export function StockCategorySection({
         );
       })()}
 
-      {/* 종목 리스트 — 주식 상세/인증샷 공통 (인증샷도 비중바+포트폴리오 하단에 노출) */}
+      {/* 종목 리스트 — 주식 상세/인증카드 공통 */}
       {filteredStocks.length === 0 ? (
         <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
           <p className="text-muted-foreground text-sm">{emptyMessage}</p>
@@ -991,14 +1015,41 @@ export function StockCategorySection({
         const shown = maxItems ? filteredStocks.slice(0, maxItems) : filteredStocks;
         const rest = maxItems ? filteredStocks.slice(maxItems) : [];
         const restValue = rest.reduce((sum, s) => sum + (barItems.find((b) => b.stock.id === s.id)?.value ?? 0), 0);
-        const restPct = totalValue > 0 ? (restValue / totalValue) * 100 : 0;
+        // 종합 수익률 = (Σ평가 − Σ원가) / Σ원가 — 개별 수익률 평균이 아님(useFilteredStockData와 동일 공식).
+        // 상장폐지 종목은 총계 기준과 맞추기 위해 합산에서 제외한다.
+        const restActive = exchangeRates ? rest.filter((s) => s.inactiveStatus !== "delisted") : [];
+        const restCost = restActive.reduce((sum, s) => sum + computeStockMetrics(s, exchangeRates!).cost, 0);
+        const restCurrentVal = restActive.reduce((sum, s) => sum + computeStockMetrics(s, exchangeRates!).currentVal, 0);
+        const restProfit = restCurrentVal - restCost;
+        const restProfitRate = restCost > 0 ? (restProfit / restCost) * 100 : 0;
+        const fmt = maskFn ?? formatShortCurrency;
+        const hideAmounts = !!maskFn && maskFn(123456).includes("•");
+        const restAmountCls = screenshotMode ? ASSET_THEME_SHOT.cardAmountMain : ASSET_THEME.cardAmountMain;
         return (
-          <div className="space-y-2 mt-8">
+          <div className={`space-y-2 ${screenshotMode ? "mt-7" : "mt-8"}`}>
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
+            {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (
-              <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5 text-sm">
-                <span className="text-muted-foreground">외 {rest.length}종목</span>
-                <span className="font-semibold tabular-nums text-foreground">비중 {restPct.toFixed(1)}%</span>
+              <div className={ASSET_THEME.cardWrapper}>
+                <div className={screenshotMode ? ASSET_THEME_SHOT.cardHeader : ASSET_THEME.cardHeader}>
+                  <div className={screenshotMode ? ASSET_THEME_SHOT.cardTriggerButton : ASSET_THEME.cardTriggerButton}>
+                    <span className={`${screenshotMode ? ASSET_THEME_SHOT.icon : "size-6 sm:size-7"} shrink-0`} aria-hidden />
+                    <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
+                      <span className="text-sm text-muted-foreground">그 외 {rest.length}종목</span>
+                    </div>
+                    <div className={ASSET_THEME.cardInfoRight}>
+                      <p className={`${restAmountCls} ${ASSET_THEME.text.default}`}>{fmt(restValue)}</p>
+                      {exchangeRates && restCost > 0 && (
+                        <div className={ASSET_THEME.cardAmountProfitRow}>
+                          <span className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(restProfit)}`}>
+                            {!hideAmounts && (restProfit >= 0 ? "+" : "")}{fmt(Math.round(restProfit))}
+                          </span>
+                          <span className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(restProfit)}`}>({restProfitRate >= 0 ? "+" : ""}{restProfitRate.toFixed(1)}%)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1107,7 +1158,7 @@ export function StockTab() {
           dailyRate={dailyProfitRate}
         />
 
-        {/* X-Ray 인사이트 스트립 (인증샷 제외) */}
+        {/* X-Ray 인사이트 스트립 (인증카드 제외) */}
         <StockInsightStrip stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
         {/* 카테고리 selector */}
@@ -1120,7 +1171,7 @@ export function StockTab() {
           />
         </div>
 
-        {/* 비중바 + 종목 목록 (인증샷과 공통) */}
+        {/* 비중바 + 종목 목록 (인증카드과 공통) */}
         <StockCategorySection
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}

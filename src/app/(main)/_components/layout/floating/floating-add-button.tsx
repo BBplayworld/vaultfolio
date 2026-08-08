@@ -66,7 +66,7 @@ export function FloatingAddButton() {
     return () => window.removeEventListener("open-add-asset-sheet", handler);
   }, []);
 
-  // 인증샷 다이얼로그 열림 상태 추적
+  // 인증카드 다이얼로그 열림 상태 추적
   useEffect(() => {
     const handler = (e: Event) => {
       const open = (e as CustomEvent<{ open: boolean }>).detail?.open;
@@ -76,7 +76,7 @@ export function FloatingAddButton() {
     return () => window.removeEventListener("screenshot-dialog-toggle", handler);
   }, []);
 
-  // 노출 페이지: 홈 + 상세 허브만. 상세 하위 탭·성과·더보기·인증샷에서는 숨김.
+  // 노출 페이지: 홈 + 상세 허브만. 상세 하위 탭·성과·더보기·인증카드에서는 숨김.
   const allowedByView = view.type === "home" || (view.type === "detail" && view.tab === "hub");
   const showBar = allowedByView && !screenshotOpen && !isStandalone;
 

@@ -109,6 +109,28 @@ export const ASSET_THEME = {
 } as const;
 
 /**
+ * 인증카드(캡처 DOM) 전용 토큰 — `sm:`/`lg:` 뷰포트 반응형을 데스크톱 값으로 고정한다.
+ *
+ * 캡처 대상은 항상 480px 고정폭인데 `sm:`은 브라우저 뷰포트 기준이라, 반응형 클래스가
+ * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R25).
+ * `screenshotMode`인 컴포넌트만 ASSET_THEME 대신 이 값을 쓴다.
+ */
+export const ASSET_THEME_SHOT = {
+  cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
+  cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
+  cardInfoName: "font-semibold text-[15px] leading-tight",
+  cardAmountMain: "text-[15px] font-bold tabular-nums leading-tight",
+  icon: "size-7",
+  iconInitial: "text-[10px]",
+  badge: "text-[11px] px-1 py-0 ml-1 leading-tight",
+  summaryValue: "text-xl font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-lg font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-base font-bold tabular-nums whitespace-nowrap",
+  legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
+  legendText: "text-sm",
+} as const;
+
+/**
  * 수익/손실에 따른 색상 클래스 반환
  */
 export function getProfitLossColor(value: number): string {

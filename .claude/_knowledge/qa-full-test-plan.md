@@ -200,15 +200,17 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
 
-### F-SCREENSHOT. 자산 카드 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx), [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))
-- 👤 상단바·하단네비 "자산 카드" 버튼(`IdCard` 아이콘)으로 다이얼로그 오픈, "저장" 단일 버튼(`variant="brand"`)으로 이미지 다운로드
-- 👤 순자산 hero(`text-foreground`, "포트폴리오 구성" 제목과 동일 색) — 라벨이 **`@닉네임 순자산` 한 문구**(닉네임은 `text-primary` 평문, 미설정 시 `순자산`만), 아래에 수익금·수익률 한 줄
+### F-SCREENSHOT. 인증카드 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx), [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))
+- 👤 상단바·하단네비 "인증카드" 버튼(`IdCard` 아이콘)으로 다이얼로그 오픈, "저장" 단일 버튼(`variant="brand"`)으로 이미지 다운로드
 - 👤 다이얼로그 헤더는 모바일 포함 전 뷰포트 좌측 정렬(`text-left`로 shadcn `DialogHeader`의 `text-center` 오버라이드), 상하 여백 균등(`py-4`)
-- 👤 포트폴리오 구성 바 — 자산군(주식·부동산·코인·현금) 단위 색상, 범례 %가 색점과 동일 색
-- 👤 핵심 자산 Top 8 — 1줄(색점·종목명·비중%·금액), 색점은 자기 자산군 색을 상속(바 색과 1:1 매칭)
-- 👤 금액 표시 스위치 끄면 금액류만 `••••` 마스킹(비중%는 항상 노출), 푸터 좌측에 "시크릿에셋"(`text-xs text-foreground`) + 도메인(`secretasset.xyz`), 우측에 날짜
-- ⚙ `SHARE_SAFE_PALETTE`(theme.ts) 사용 — 부채/손실 의미색과 충돌 안 함
-- 엣지: 닉네임 미설정 시 pill 미노출, 단일 자산군만 보유 시 바 100%
+- 👤 **내용은 주식 기준으로만** — 자산군 도넛·"포트폴리오 구성" 바·자산군 통합 랭킹("핵심 자산 Top") 없음
+- 👤 상단: **닉네임 미노출**(2026-08-08 제거) → `StockSummaryHeader`(주식 탭과 동일 컴포넌트, `DetailSummaryHeader`의 `screenshotMode` 분기) — 배경 박스 없이 아래 비중 바·리스트와 좌우 여백 동일(`px-[18px]`), "총 주식 평가금액" 히어로 숫자는 `ASSET_THEME_SHOT.summaryValue`(`text-xl`) + 평가손익(수익금·수익률). 원/달러 셀렉터·오늘 등락 칩은 미노출
+- 👤 비중 바 — **상위 5종목 색 구간 + 회색 `그 외`(#9ca3af) 구간** + 바로 아래 **범례**(색점 + 종목명 + 비중%, `그 외 N종목` 포함). 캡처 폭 고정이라 범례는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2`)·`legendText`(`text-sm`) 사용, `sm:` 금지(R25). 비중 바·범례·리스트를 감싸는 래퍼는 **배경색 없음**(카드 전체 배경과 통일, 패딩 `p-3.5`만 간격 계산용으로 유지)
+- 👤 종목 리스트 — 상세 > 주식 탭과 동일 형태(`StockCard screenshotMode`: 로고 아이콘 + 이름 + `N주`(**비중% 미노출** — 범례로 통합) + 우측 평가금액/손익 2줄 + 하단 비중 스트립). 상위 5개만, 초과분은 `그 외 N종목` 요약행 — **우측은 종목 카드와 동일 2줄**(나머지 평가금액 합 / 손익 `(+X.X%)`). 종합 수익률은 `(Σ평가−Σ원가)/Σ원가`(개별 평균 아님), 상장폐지 종목은 손익 합산에서 제외. **비중% 미노출**(범례 `그 외 N종목`과 중복)
+- 👤 헤더~범례~리스트~푸터 간격 통일: 헤더~범례·범례~리스트 실제 노출 간격 28px로 동일(숨은 패딩까지 계산해 마진값 역산), 카드 최상단↔헤더 값·푸터↔카드 최하단 간격도 대칭(`pt-2`/`pb-2`). 금액 표시 스위치 끄면 금액류만 `••••` 마스킹(비중%·수익률%는 항상 노출), 푸터 좌측에 "시크릿에셋"(`text-xs text-foreground`) + 도메인(`secretasset.xyz`), 우측에 날짜
+- ⚙ 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음). 종목 파생값은 `computeStockMetrics`
+- ⚙ 색은 주식 탭과 동일한 `assignColors`(`MAIN_PALETTE`) — `SHARE_SAFE_PALETTE`는 더 이상 쓰지 않음(현재 소비처 0, design-system.md 참조)
+- 엣지: 주식 미보유 시 `등록된 주식이 없습니다.` 빈 상태, 보유 5종목 이하면 "그 외" 구간·범례 `그 외 N종목`·"그 외 N종목" 요약행 모두 미노출
 
 ### F-IMPORT-EXPORT. 데이터 내보내기/가져오기
 - 👤 JSON 내보내기→가져오기 라운드트립, 자산·스냅샷·옵션 보존
@@ -325,7 +327,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
-- ⚙ `notice.tsx`: `NOTICE_ID="20260722"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증샷 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증샷 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너
+- ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너
 - ⚙ **수동 공지 진입** — 자동 1회 팝업(`UpdateNoticeDialog`) 외에, 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
 - ⚙ **공지 열람 상태 단일 키** — `secretasset_notice_seen`(값 `{ id, seenAt, expiresAt }`) **한 개만** 유지(구 `secretasset_notice_seen_{id}` per-id 다중 키 폐기). `readNoticeSeenId()===NOTICE_ID`면 열람. `cleanExpiredNoticeKeys(NOTICE_ID)`가 매 진입 시 현재 공지 레거시 키를 단일 키로 이관(열람 상태 보존) 후 레거시 `_*` 전부 제거 / init 경로(no-id)는 만료 레거시만 정리. 죽은 `secretasset_notice_hide_until`은 `consolidate-notice-keys` 마이그레이션으로 제거. keepKeys는 `secretasset_notice_seen`(접미 `_` 없이) 보존
@@ -445,7 +447,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R23 | **휴장일 slot 계산 순서** | `getStockCacheSlot`의 영업일 판정은 `isInSession` 체크보다 반드시 먼저 실행 — 순서가 바뀌면 휴장일에 세션-모양 시간대일 때 `effectiveDate`(달력 날짜)가 그대로 반환돼 매일 slot이 바뀌고, 실시간 quote 재조회가 원인분해에 허위 "시세 변동"으로 노출된다(F-SYNC·F-ACTIVITY 연계) |
 | R24 | **뒤로가기 콜드스타트 폴백 홈 직행** | `back()`의 `history.length<=1` 폴백은 항상 `navigate({type:"home"})`. 다른 history-의존적 화면(`more`처럼 자신도 `history.back()`을 쓰는 화면)으로 폴백하면, 그 화면에서 다시 뒤로가기 시 방금 만든 push를 되감아 원래 화면으로 돌아오는 **홈 도달 불가 루프**가 생긴다(과거 `settings`→`"more"` 폴백 버그, F-NAV) |
 | R28 | **동기화 push의 원자성·기준점 병합** | ① `/api/sync` PUT의 버전비교+저장은 반드시 `compareAndSetAssetEnvelope` 단일 호출 — read-then-write로 되돌리면 동시 push 시 lost update(어느 쪽도 409를 못 받고 나중 쓰기가 먼저 쓰기를 지움). ② pull 병합은 **반드시 `syncedIds` 기준점 기반**이어야 한다. **CAS·pull-first로는 이걸 못 막는다** — 그건 "최신을 못 본 채 쓰지 마라"(쓰기 순서)만 통제하고, 최신을 정상 수신한 기기가 그걸 **잘못 해석해 되살린 뒤 push**하는 건 baseVersion이 최신이라 CAS 관점에서 완벽히 정당한 요청이다. 기준점을 빼고 "로컬에 있고 원격에 없으면 되살림"으로 되돌리면 **다른 기기의 삭제가 부활→재-push→상대 기기에서도 부활**해 "지웠는데 1분 뒤 다시 나타남"이 무한 반복된다(삭제가 tombstone 없이 배열 제거라 부재가 신규추가/삭제 두 의미를 갖는 게 근본 원인). ③ 기준점 갱신은 pull=**병합 전 원격 키**, push=**push한 키** — pull 후 병합 결과로 갱신하면 아직 안 올라간 신규분을 다음 pull이 "삭제됨"으로 오판해 스스로 지운다. ④ `forgetRemembered`가 `syncedIds`를 보존. ⑤ armed 폴링 effect의 `online` 리스너(force pull) 유지. 하나라도 빠지면 "자산이 조용히 사라지거나 지운 게 되살아나는" P0가 재현된다(F-CLOUD-SYNC) |
-| R25 | **자산 카드 캡처 DOM에 뷰포트 기준 반응형 금지** | share-card.tsx의 캡처 대상(`cardRef`) DOM에는 `sm:` 등 뷰포트 미디어쿼리 클래스를 쓰지 않는다 — 캡처는 고정폭(480px) 카드인데 `sm:`은 브라우저 뷰포트 기준이라 PC/모바일에서 같은 사용자가 다른 크기로 캡처되는 버그가 있었다(F-SCREENSHOT). 축소 미리보기는 `ScaledCardPreview`(share-menu.tsx)의 CSS `transform: scale()`로만 처리 — 레이아웃 크기 자체는 항상 480px 고정. **`captureImage`의 `pixelRatio` 계산은 반드시 `el.offsetWidth`(레이아웃 폭) 기준이어야 한다 — `getBoundingClientRect().width`는 `ScaledCardPreview`의 transform 영향을 받아 기기마다 다른 pixelRatio·최종 해상도가 나온다(QA에서 발견, 2026-07-27 수정)** |
+| R25 | **인증카드 캡처 DOM에 뷰포트 기준 반응형 금지** | share-card.tsx의 캡처 대상(`cardRef`) DOM에는 `sm:` 등 뷰포트 미디어쿼리 클래스를 쓰지 않는다 — 캡처는 고정폭(480px) 카드인데 `sm:`은 브라우저 뷰포트 기준이라 PC/모바일에서 같은 사용자가 다른 크기로 캡처되는 버그가 있었다(F-SCREENSHOT). 축소 미리보기는 `ScaledCardPreview`(share-menu.tsx)의 CSS `transform: scale()`로만 처리 — 레이아웃 크기 자체는 항상 480px 고정. **`captureImage`의 `pixelRatio` 계산은 반드시 `el.offsetWidth`(레이아웃 폭) 기준이어야 한다 — `getBoundingClientRect().width`는 `ScaledCardPreview`의 transform 영향을 받아 기기마다 다른 pixelRatio·최종 해상도가 나온다(QA에서 발견, 2026-07-27 수정)** | **주식 탭 컴포넌트를 재사용하는 `screenshotMode` 경로(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`)는 `ASSET_THEME` 대신 `ASSET_THEME_SHOT`(theme.ts, 데스크톱 값 고정) 토큰을 쓴다 — 캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 `sm:`을 직접 쓰지 말고 이 토큰에 고정값을 추가할 것.**
 | R29 | **원인분해 flow 윈도우 경계(`inFlowWindow`)** | 경계는 **자산군 축**(주식·코인=항상 시작일 제외 / 현금·대출=포함)과 **구간 위치 축**(현금·대출은 전체 첫 구간만 포함, 하이브리드 `newer`는 제외)의 조합이다 — **네 함수를 같은 경계로 통일하면 반드시 회귀한다**(F-ACTIVITY 경계 항목 참조). 되살아나는 것: ①없는 "주식 매도"가 매수와 쌍으로(2026-08-06) ②income/debt가 무관한 `cash` 잔차로 증발(2026-08 P1) ③mid 당일 거래 이중계상으로 income 2배 + 유령 "현금 잔액 감소"(2026-08-06 QA). `resolveAttribution`에 `isFirstSegment` 인자를 추가하거나 새 호출처를 만들 때 이 값을 반드시 명시할 것(기본값 `true`라 하이브리드 2번째 구간에서 빠뜨리면 조용히 ③ 재현). `detectCashRoundTrip`도 같은 경계 사용. **합계 = `deltaNet` 항등식은 어느 쪽이든 유지되므로 기존 항등식 테스트로는 못 잡는다** — 반드시 key별 금액을 단정하는 테스트로 고정 |
 | R30 | **화면(React state) ↔ localStorage 정합** | 백업·push는 localStorage를 읽고 화면은 React state를 렌더한다. 같은 탭 pull은 `storage` 이벤트를 발화시키지 않아(브라우저 표준) 정합이 pull 후 `initAndSync(getAssetData())` 재호출 하나에만 의존한다. 갈라진 순간의 백업은 최신 기록이 빠진 파일이 되고 그걸로 복원하면 유실된다 — `exportAssetData(currentData)`의 `isExportDataStale` 가드가 유일한 방어이므로 **호출처가 화면 state를 넘기는지** 확인(F-IMPORT-EXPORT). **근본 원인(어느 경로가 localStorage를 되돌리는지)은 미추적** — 2026-08-06 실사례에서 25분 뒤 자연 복구돼 영구 유실은 없었으나 재발 시 계측(pull 완료·`syncTodayStockPrices` 저장 직전·push 직전 caller/건수 로깅)부터 할 것 |
 

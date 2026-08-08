@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-08-08
+
+### 인증카드: 닉네임 제거 + 비중 범례를 중앙으로 이동 (issue-4.22)
+
+- **왜**: ① 닉네임(`@nickname`)은 공유 시 불필요한 개인정보 노출. ② 직전 개편에서 "심플한 가로 박스" 의도로 범례를 뺐더니, 어떤 종목이 얼마인지 알려면 하단 리스트를 훑어야 해서 한눈에 안 들어왔다. ③ 범례를 살리면 리스트 행의 `N주 · 비중%`와 퍼센트가 중복된다.
+- **수정**: ① [share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx) 상단 닉네임 블록·`useNickname` 제거. ② [stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx) `StockCategorySection` 범례의 `!screenshotMode` 가드를 제거해 상위 4개 + `기타 N종목`을 인증카드에도 노출(계산은 기존 `barShown`/`barRest`/`restPct` 그대로, 신규 로직 없음). ③ `StockRowHeader`는 `screenshotMode`일 때 `· 비중%` 미렌더 — "외 N종목 · 비중 X%" 요약 행과 카드 하단 비중 게이지 바는 유지.
+- **"외 N종목" 요약 행**: 우측을 종목 카드와 동일한 2줄(나머지 평가금액 합 / 손익 `(+X.X%)`)로 맞추고 `비중 X%`는 제거(범례 `기타 N종목`과 중복). 손익은 기존 `computeStockMetrics`를 rest에 합산하고 `(Σ평가−Σ원가)/Σ원가` 공식(`useFilteredStockData`와 동일)을 쓰며, 상장폐지 종목은 총계 기준과 맞춰 제외. `StockCategorySection`에 optional `maskFn`·`exchangeRates` prop 추가(주식 탭은 `maxItems` 미지정 → rest 없음, 영향 없음). 별도 배경 박스(`bg-muted/30 px-3`)는 좌우 패딩 차이로 위 카드들과 정렬이 어긋나 제거하고, 같은 `cardWrapper`+`cardHeader`+아이콘 자리(spacer) 구조로 통일.
+- **문구·간격**: 범례 "기타 N종목"과 리스트 "외 N종목"이 서로 다른 단어를 써서 "그 외 N종목"으로 통일(범례 툴팁 포함). 인증카드 종목 행 세로 패딩을 `py-2.5`→`py-2`로 살짝 축소(`ASSET_THEME_SHOT.cardHeader` — 이 토큰은 인증카드 전용이라 다른 화면 영향 없음).
+- **간격·크기 미세조정(2026-08-08 추가)**: 요약 헤더~비중 바~종목 리스트 세 영역의 **실제 노출 여백**을 28px로 통일. 단순히 마진 값만 같게 두면 헤더 쪽은 배경 없는 박스의 자체 패딩(`py-4` 하단 16px)과 아래 박스의 상단 패딩(`p-3.5`=14px)이 마진에 더해져 legend~list보다 더 벌어져 보이는 문제가 있었다 — 헤더 하단 패딩을 0으로 없애고(`pt-4`만 유지) 마진을 `mt-3.5`(14px)로 줄여 `14(마진)+14(아래 박스 상단 패딩)=28px`로 맞춤(범례~리스트의 순수 `mt-7`=28px와 동일). 리스트~푸터는 `mt-4`(16px) 유지. 푸터에 `px-[18px]`을 추가해 좌우 여백을 헤더·비중 바·리스트와 동일하게 정렬(기존엔 패딩이 없어 카드 가장자리에 더 가깝게 붙어 위 영역과 어긋나 보였음). 비중바·리스트 래퍼의 옅은 회색 배경(`bg-muted/20 dark:bg-muted/10`)을 제거해 카드 전체 배경과 통일(패딩은 간격 계산 유지를 위해 존치). **상위 노출 개수 4→5개**(`SHOT_MAX`)로 확대 — 범례·리스트·비중 바 모두 동일 상수 하나로 축약되므로 파생 변경 없음. 카드 최상단↔"총 주식 평가금액"과 "시크릿에셋"↔카드 최하단 간격은 헤더 `pt-2`/푸터 `pb-2`로 축소해 동일값(outer `p-3`+2=20px) 유지. 리스트~푸터 간격은 "그 외 N종목" 행 자체 하단 패딩(`cardHeader py-2`=8px) + 비중바·리스트 래퍼 하단 패딩(`p-3.5`=14px)까지 포함해 계산 — 마진을 `mt-7`이 아닌 `mt-1.5`(6px)로 둬야 `6+8+14=28px`로 범례~리스트(순수 `mt-7`=28px)와 실제 노출 간격이 같아진다(이전엔 이 숨은 패딩들을 못 빼서 50px로 훨씬 넓어 보였음). `ASSET_THEME_SHOT.summaryValue`(총 주식 평가금액 히어로 숫자)를 `text-3xl`→`text-lg`(평가손익 `profitAmount`와 동일)로 축소했다가, 다시 한 단계 올려 최종 `text-xl`로 확정 — SHOT 전용 토큰이라 인증카드 외 영향 없음.
+- **헤더 내부 간격 불일치 수정**: "총 주식 평가금액"↔평가손익 간격이 종목 리스트 행의 "금액"↔"손익"(`cardAmountProfitRow`의 `mt-0.5`=2px)보다 2배(`mt-1`=4px) 넓어 눈으로 봐도 차이가 났다 — `screenshotMode`에서만 `mt-0.5`로 맞춤(다른 4개 상세 탭은 `mt-1` 불변).
+- **요약 헤더 박스 제거**: [detail-summary-header.tsx](../../src/app/(main)/_components/views/detail/detail-summary-header.tsx) `DetailSummaryHeader`에 `screenshotMode` 분기 추가 — 인증카드는 배경(`ASSET_THEME.primary.bgLight`) 없이 좌우 패딩만 아래 비중 바·리스트 박스(래퍼 `p-3.5` + 내부 `px-1` = 18px)와 정확히 맞춤(`px-[18px]`). 상세 탭(주식/부동산/암호화폐/현금/대출 공통 컴포넌트)은 배경·패딩 불변.
+- **R25 대응**: 범례가 쓰던 `grid-cols-2 sm:grid-cols-4`·`text-sm sm:text-base`를 캡처 경로에서 쓰면 뷰포트 반응형이 섞이므로 `ASSET_THEME_SHOT`에 `legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정) 토큰 추가 후 `screenshotMode`에서만 스왑. 주식 탭 렌더는 불변.
+- 스키마·저장 키·공유 토큰·API 무변경 — 명세 판정 기준 비해당. `npx tsc --noEmit` 통과(EXIT=0).
+
+### 자산 카드 → "인증카드" 개편: 내용을 주식 기준으로 되돌리고 주식 탭 리스트 이식 (issue-4.22)
+
+- **왜**: 2026-07-27 개편에서 카드를 자산군 통합 랭킹("핵심 자산 Top 8", 색점+비중%+금액 1줄)으로 압축하면서, 상세 > 주식 탭 리스트가 가진 정보 밀도와 색감(로고 아이콘·`N주 · 비중%` 메타·우측 평가금액/손익 2줄·하단 비중 스트립)을 잃었다. 사용자 판단으로 주식 탭 리스트가 더 매력적이라 그 UI를 카드에 그대로 이식하고, 카드 내용도 주식 기준으로만 좁혔다.
+- **재사용만으로 구현**: 새 리스트 컴포넌트를 만들지 않고 stock-tab.tsx가 이미 export 해둔 `screenshotMode` 경로(`StockSummaryHeader`/`StockCategorySection`/`StockCard`/`StockRowHeader`)를 부활시켰다 — 7-27 개편 이후 아무 데서도 호출되지 않던 사실상 죽은 코드였다. 데이터도 `useFilteredStockData("all")` + `computeStockMetrics` 단일 출처를 그대로 쓴다(tickerList `.sort()` 내장 → 주식 탭과 캐시 키 공유, 중복 fetch 없음).
+- **구조**([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx)): `@닉네임` → `StockSummaryHeader`(총 주식 평가금액 + 평가손익) → 비중 바(상위 4 + 회색 `기타`) → 종목 리스트(상위 4 + `외 N종목 · 비중 X%`) → 푸터. **자산군 "포트폴리오 구성" 섹션과 범례는 완전 제거** — 분포는 가로 박스 하나로만 두고 종목 식별은 아래 리스트가 담당한다. 그 결과 `SHARE_SAFE_PALETTE`(자산군 색 상속 규칙)는 소비처가 사라졌고, 카드 색은 주식 탭과 같은 `assignColors`(`MAIN_PALETTE`)를 쓴다.
+- **R25 대응**([theme.ts](../../src/config/theme.ts) `ASSET_THEME_SHOT` 신규): 이식하려는 주식 탭 컴포넌트들이 `sm:`/`lg:`를 써서, 그대로 넣으면 480px 고정폭 캡처에 뷰포트 반응형이 섞여 PC/모바일에서 다른 PNG가 나오는 R25 회귀가 재현된다. `sm:`/`lg:` 값을 데스크톱 값으로 고정한 캡처 전용 토큰 세트를 추가하고 `screenshotMode`일 때만 스왑하도록 했다(`StockIcon`·`StockRowHeader`·`StockCard`·`StockCategorySection`·`DetailSummaryHeader`·`ProfitMetric`). 기존 토큰은 건드리지 않아 일반 모드 렌더는 불변.
+- **명칭**: 사용자 노출 문구를 전부 "인증카드"로 통일(share-menu·top-bar·bottom-nav·tutorial-step-config·notice). 파일·식별자(`share-card.tsx`/`ShareCard`/`ShareScreenshotDialog`/`screenshotMode`)는 diff 최소화를 위해 유지하고, 코드 주석의 잔재 "인증샷"만 정리했다. `NOTICE_ID` `20260722`→`20260808` bump + 공지 4번째 카드 본문 교체(`APP_VERSION` 배지 유지).
+- 스키마·저장 키·공유 토큰·API 무변경 — 기존 컴포넌트 재구성 + 명칭 변경이라 명세 판정 기준 비해당.
+- `npx tsc --noEmit` 통과(EXIT=0), 변경 파일 `eslint` 0 errors(기존 `no-img-element` 경고 1건만 잔존).
+
 ## 2026-08-07
 
 ### 원인분해: "현금 잔액 직접 수정" 문구를 대출과 동일 패턴으로 통일 (issue-4.22)

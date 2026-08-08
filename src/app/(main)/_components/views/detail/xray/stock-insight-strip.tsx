@@ -15,10 +15,10 @@ interface StockInsightStripProps {
 }
 
 /**
- * 자산 카드 하단 인사이트 스트립 (Pattern 3)
+ * 인증카드 하단 인사이트 스트립 (Pattern 3)
  * - 한 줄 요약: 가장 집중된 1~2개 축
  * - 클릭 → 주식 X-Ray 페이지 이동
- * - 인증샷(ShareCard) DOM에는 포함되지 않음 — 자동 제외됨
+ * - 인증카드(ShareCard) DOM에는 포함되지 않음 — 자동 제외됨
  * - data-screenshot-hide: 향후 전체 화면 캡처 시 제외를 위한 마커 (현 구현에선 무영향)
  */
 export function StockInsightStrip({ stocks, exchangeRates }: StockInsightStripProps) {

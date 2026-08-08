@@ -130,7 +130,12 @@ _components/
   - `dailyProfit`은 `filteredStocks` 기준 합산 (카테고리 selector 따라 즉시 변동)
 - `CATEGORY_TABS`
 
-**StockCard `screenshotMode` 분기**: 인증샷 모드면 헤더 + 비중 그라데이션 바만 노출, Collapsible·상세 그리드·수정/삭제 버튼·담보대출·보유 메타 모두 미렌더. `maskFn` prop으로 hideAmounts 마스킹 전달.
+**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 480px 고정폭이라 `sm:` 뷰포트 반응형 금지(R25). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
+
+- `StockCard` — 헤더 + 비중 그라데이션 바만 노출. Collapsible·상세 그리드·수정/삭제 버튼·담보대출·보유 메타 모두 미렌더. `maskFn`으로 hideAmounts 마스킹 전달
+- `StockRowHeader` / `StockIcon` — 이름·금액·아이콘·Badge 클래스를 SHOT 토큰으로 스왑. 비중%는 미노출(범례로 통합), `TodayChangeChip`(오늘 등락) 미렌더
+- `StockCategorySection` — **범례는 인증카드도 노출**(주식 탭과 공통, `!screenshotMode` 가드 없음): 색점+종목명+비중%, `maxItems` 초과분은 `그 외 N종목 X%`. 인증카드 grid는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2` 고정)+`legendText`(`text-sm` 고정, R25). 루트 패딩 `px-1`, 리스트 상단 여백 `mt-7`(주식 탭은 `mt-8`). 리스트 초과분 "그 외 N종목" 행은 `maskFn`+`exchangeRates` prop이 있으면 종목 카드와 동일한 우측 2줄(평가금액 합 / 손익 `(+X.X%)`, `computeStockMetrics` 합산 — 개별 평균 아닌 `(Σ평가−Σ원가)/Σ원가`)로 렌더, 비중%는 미노출
+- `StockSummaryHeader` → `DetailSummaryHeader`/`ProfitMetric`의 `screenshotMode` prop으로 전달 (원/달러 셀렉터·오늘 등락 미렌더, 인증카드는 배경 박스 없이 헤더 값 텍스트 `ASSET_THEME_SHOT.summaryValue`)
 
 **StockRowHeader 비활성 Badge:**
 
@@ -175,26 +180,32 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 ### header (`header/`, 구 top-nav)
 
-- `TopBar` — 좌측: `view !== "home"`일 때 ChevronLeft + getViewTitle("상세"/"성과"). 우측: 인증샷·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
-- `ShareScreenshotButton` (Camera 아이콘만) → `ShareScreenshotDialog` → `ShareCard` (인증샷 생성)
+- `TopBar` — 좌측: `view !== "home"`일 때 ChevronLeft + getViewTitle("상세"/"성과"). 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
+- `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성)
 - `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
 - `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치)
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
 
-### ShareCard (`header/share/share-card.tsx`)
+### ShareCard = 인증카드 (`header-menu/share/share-card.tsx`)
 
-`sections.stock` 단일 토글로 stockHeader+stockList 통합. 다음 외피로 stock-tab 본체와 시각 완전 일치:
+사용자 노출 명칭은 **"인증카드"**(버튼·네비·다이얼로그·튜토리얼·공지). 파일·식별자는 `share-card.tsx` / `ShareCard` / `ShareScreenshotDialog` / `screenshotMode` 유지.
+
+**내용은 주식 기준으로만** 구성한다(자산군 도넛·포트폴리오 구성 바·자산군 통합 랭킹 없음):
 
 ```tsx
-<Card><CardHeader><CardTitle>주식</CardTitle></CardHeader>
-  <CardContent>
-    <StockSummaryHeader screenshotMode maskFn={maskFn} />
-    <StockCategorySection screenshotMode renderItem={(s,_,c) => <StockCard screenshotMode maskFn={maskFn} ... />} />
-  </CardContent>
-</Card>
+// 닉네임 미노출(2026-08-08 제거)
+<StockSummaryHeader screenshotMode maskFn={mask} />                  // 배경 없이 "총 주식 평가금액" + 평가손익
+<StockCategorySection screenshotMode maxItems={SHOT_MAX /* =5 */}    // 비중바+범례(상위5+그 외) + 종목 리스트(상위5+그 외 N종목)
+  maskFn={mask} exchangeRates={exchangeRates}
+  renderItem={(s,_,c) => <StockCard screenshotMode maskFn={mask} ... />} />
+푸터: APP_CONFIG.name + siteHost + 날짜
 ```
 
-`SectionVisibility = { donut, chart, stock }` (이전 stockHeader/stockList 통합). share-menu 체크박스 한 줄(가로 스크롤, 스크롤바 숨김).
+- 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음)
+- 종목 파생값은 `computeStockMetrics(stock, exchangeRates, totalValue)` 재사용
+- 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
+- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(480px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`
+- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 패딩(`p-3.5`)만 유지 — 헤더~범례~리스트 실제 노출 간격을 28px로 통일하기 위한 마진 계산의 기준점. 헤더·푸터 좌우 패딩은 `px-[18px]`(래퍼 `p-3.5`+내부 `px-1`과 동일), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭
 
 ### WelcomeGuide (`layout/welcome-guide.tsx`)
 
