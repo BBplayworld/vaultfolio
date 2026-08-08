@@ -204,8 +204,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음)
 - 종목 파생값은 `computeStockMetrics(stock, exchangeRates, totalValue)` 재사용
 - 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
-- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(480px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`
-- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 패딩(`p-3.5`)만 유지 — 헤더~범례~리스트 실제 노출 간격을 28px로 통일하기 위한 마진 계산의 기준점. 헤더·푸터 좌우 패딩은 `px-[18px]`(래퍼 `p-3.5`+내부 `px-1`과 동일), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭
+- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(480px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`. `innerRef`(480px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정)
+- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-1` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-1`)는 카드 폭을 최대한 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-1`(래퍼 `px-1`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+4=16px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보, 기본 `w-full`의 `%` 기반 계산이 containing block에 따라 예상보다 좁아질 수 있어 대체)로, 미리보기 컨테이너는 좌우 `px-0`(스케일 계산용, 캡처 PNG 무관)로 조정
 
 ### WelcomeGuide (`layout/welcome-guide.tsx`)
 

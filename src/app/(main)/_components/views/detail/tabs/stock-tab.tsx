@@ -960,7 +960,7 @@ export function StockCategorySection({
   const legendTextCls = screenshotMode ? ASSET_THEME_SHOT.legendText : "text-sm sm:text-base";
 
   return (
-    <div className={`${screenshotMode ? "px-1" : "px-1 sm:px-2"} space-y-3`}>
+    <div className={`${screenshotMode ? "px-0" : "px-1 sm:px-2"} space-y-3`}>
       {/* 비중 바 — maxItems 지정 시 상위 N개 + "기타" 집계(인증카드 축약).
           범례(색점 + 이름 + 비중%)는 주식 탭·인증카드 공통으로 노출한다.
           인증카드는 캡처 폭 480px 고정이라 반응형 대신 SHOT 토큰 값을 쓴다(R25). */}

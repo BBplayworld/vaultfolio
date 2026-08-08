@@ -37,7 +37,11 @@ function ScaledCardPreview({ children }: { children: React.ReactNode }) {
 
   return (
     <div ref={outerRef} className="flex justify-center w-full" style={{ height }}>
-      <div ref={innerRef} style={{ width: CARD_WIDTH, transform: `scale(${scale})`, transformOrigin: "top" }}>
+      {/* shrink-0 필수 — 없으면 flexbox가 480px 레이아웃 박스를 컨테이너 폭에 맞춰 먼저
+          축소한 뒤 transform: scale()이 그 위에 다시 곱해져 이중으로 작아진다(예: 390px
+          컨테이너에서 최종 317px). shrink-0로 레이아웃 폭을 항상 480 고정해야 scale 계산이
+          의도대로(컨테이너 꽉 채움) 반영된다. */}
+      <div ref={innerRef} className="shrink-0" style={{ width: CARD_WIDTH, transform: `scale(${scale})`, transformOrigin: "top" }}>
         {children}
       </div>
     </div>
@@ -121,7 +125,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 max-w-[520px] sm:max-w-[680px] h-[94dvh] max-h-[96dvh] flex flex-col">
+      {/* 모바일 폭은 vw 고정값으로 직접 지정 — 기본 `w-full`은 `%` 기반이라 containing block에
+          따라 예상보다 좁게 잡힐 수 있어(원인 미상), 뷰포트에 항상 상대적인 vw로 확실히 95% 확보 */}
+      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-[95vw] sm:w-full max-w-[520px] sm:max-w-[680px] h-[94dvh] max-h-[96dvh] flex flex-col">
         <DialogHeader className="px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <IdCard className="size-4 text-primary" />
@@ -165,8 +171,9 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
             </div>
         </div>
 
-        {/* 카드 미리보기 */}
-        <div className="overflow-y-auto flex-1 p-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
+        {/* 카드 미리보기. shrink-0 수정으로 스케일이 컨테이너를 꽉 채우게 됐으니, 카드가
+            다이얼로그 가장자리에 완전히 붙지 않도록 최소한의 여백(px-1)만 남긴다 */}
+        <div className="overflow-y-auto flex-1 px-2 py-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <ScaledCardPreview>
             <ShareCard
               hideAmounts={!showAmounts}
