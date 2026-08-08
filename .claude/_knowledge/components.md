@@ -204,6 +204,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음)
 - 종목 파생값은 `computeStockMetrics(stock, exchangeRates, totalValue)` 재사용
 - 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
+- 금액 포맷(2026-08-08): `mask`(→`formatCurrency`, 전체 금액 — 상세 탭 `PRICE_DISPLAY_MODE="full-only"`와 동일)를 헤더·종목 리스트·"그 외 N종목" 전부에서 공유. `StockSummaryHeader`의 `maskFn`은 `DetailSummaryHeader`의 `fmtFull`·`fmt`를 동시에 덮어쓰므로(`ProfitMetric`도 `formatShort` 단일 포매터) 축약 포매터를 넘기면 평가금액·평가손익 둘 다 축약으로 새는 점 주의(과거엔 이 버그로 헤더만 축약 표시됐었음)
 - 캡처: `share-menu.tsx`의 `ScaledCardPreview`(`CARD_WIDTH`=460px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`(460 기준 3 → 최종 PNG 1380px). `innerRef`(460px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정). `CARD_WIDTH`는 기존 480→460으로 소폭 축소(2026-08-08) — 검은 카드 박스 자체의 바깥 폭을 줄이는 유일한 레버(내부 패딩은 박스 안쪽만 조정할 뿐 바깥 폭엔 무관)
 - **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
 

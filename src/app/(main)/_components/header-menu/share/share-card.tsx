@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatCurrency } from "@/lib/number-utils";
 import { computeStockMetrics } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import {
   useFilteredStockData,
@@ -37,8 +37,9 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
     marketMap,
   } = useFilteredStockData("all");
 
-  // 금액류만 마스킹 — 비중%·수익률%는 항상 노출
-  const mask = hideAmounts ? (_: number) => "••••" : formatShortCurrency;
+  // 금액류만 마스킹 — 비중%·수익률%는 항상 노출.
+  // 상세 > 주식 탭과 동일하게 요약 헤더·종목 리스트 모두 전체 금액으로 표시(PRICE_DISPLAY_MODE="full-only").
+  const mask = hideAmounts ? (_: number) => "••••" : formatCurrency;
 
   const now = new Date().toLocaleDateString("ko-KR", {
     year: "numeric", month: "2-digit", day: "2-digit",
