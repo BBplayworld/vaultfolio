@@ -11,7 +11,7 @@ import { useAssetNavigation } from "../../../layout/navigation/navigation-contex
 import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
 import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
@@ -190,7 +190,18 @@ export function CashTab() {
     const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
     const typeLabel = cashTypes.find((t) => t.value === item.type)?.label ?? item.type;
     const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
-    return <CashCard key={item.id} item={item} value={value} pct={pct} color={color} typeLabel={typeLabel} linkedLoans={linkedLoans} onDelete={handleDelete} />;
+    return (
+      <CashCard
+        key={item.id}
+        item={item}
+        value={value}
+        pct={pct}
+        color={color}
+        typeLabel={typeLabel}
+        linkedLoans={linkedLoans}
+        onDelete={handleDelete}
+      />
+    );
   };
 
   return (
@@ -237,9 +248,7 @@ export function CashTab() {
                   const pct = (v / totalValue) * 100;
                   const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
                   return (
-                    <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                    </div>
+                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>

@@ -68,9 +68,11 @@ interface StockScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   activeTab?: string;
+  /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
+  onSaved?: (count: number) => void;
 }
 
-export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab }: StockScreenshotImportProps = {}) {
+export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab, onSaved }: StockScreenshotImportProps = {}) {
   const { saveData, refreshData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -300,6 +302,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
     if (success) {
       toast.success(`${selected.length}개 종목이 등록되었습니다.`);
+      onSaved?.(selected.length);
       handleClose();
     } else {
       toast.error("등록에 실패했습니다.");

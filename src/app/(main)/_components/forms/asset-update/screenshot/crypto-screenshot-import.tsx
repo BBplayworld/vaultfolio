@@ -41,9 +41,11 @@ type ConflictMode = "merge" | "reset";
 interface CryptoScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
+  onSaved?: (count: number) => void;
 }
 
-export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: CryptoScreenshotImportProps = {}) {
+export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSaved }: CryptoScreenshotImportProps = {}) {
   const { saveData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
 
@@ -202,6 +204,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange }: Cry
 
     if (success) {
       toast.success(`${selected.length}개 코인이 ${conflictMode === "reset" ? "등록" : "반영"}되었습니다.`);
+      onSaved?.(selected.length);
       handleClose();
     } else {
       toast.error("등록에 실패했습니다.");

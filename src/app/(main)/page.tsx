@@ -19,6 +19,8 @@ import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialo
 import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
+import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
+import { OnboardingWizardFlow } from "./_components/layout/onboarding/onboarding-wizard/onboarding-wizard-flow";
 
 export default function Page() {
   const { assetData, isDataLoaded, isSharePending } = useAssetData();
@@ -27,15 +29,16 @@ export default function Page() {
   const { view } = useAssetNavigation();
   const initTutorial = useTutorialStore((s) => s.initTutorial);
   const completeStep = useTutorialStore((s) => s.completeStep);
+  const isWizardOpen = useOnboardingWizardStore((s) => s.isOpen);
   const hideFooterInPWA = isStandalone && (view.type === "detail" || view.type === "activity");
 
-  const isWelcomeGuide =
-    isSharePending ||
-    (assetData.realEstate.length === 0 &&
-      assetData.stocks.length === 0 &&
-      assetData.crypto.length === 0 &&
-      assetData.cash.length === 0 &&
-      assetData.loans.length === 0);
+  const hasNoAssets =
+    assetData.realEstate.length === 0 &&
+    assetData.stocks.length === 0 &&
+    assetData.crypto.length === 0 &&
+    assetData.cash.length === 0 &&
+    assetData.loans.length === 0;
+  const isWelcomeGuide = isSharePending || hasNoAssets;
 
   // 튜토리얼 초기화
   useEffect(() => {
@@ -68,6 +71,19 @@ export default function Page() {
   }, [completeStep]);
 
   if (!isDataLoaded) return null;
+
+  if (isWizardOpen) {
+    return (
+      <div className="flex flex-col gap-4 md:gap-6">
+        <OnboardingWizardFlow />
+        {/* 부동산 수동 입력 진입점(dispatchAddRealEstate)이 열 다이얼로그 — 마법사 자체 스크린샷 단계는
+            각 *ScreenshotImport를 직접 마운트하므로 여기서는 부동산만 필요 */}
+        <div className="hidden" aria-hidden="true">
+          <RealEstateInput />
+        </div>
+      </div>
+    );
+  }
 
   if (isWelcomeGuide) {
     return (

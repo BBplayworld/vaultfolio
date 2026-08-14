@@ -271,7 +271,11 @@ export function LoanTab() {
     const linkedStock = loan.linkedStockId ? assetData.stocks.find((s) => s.id === loan.linkedStockId) ?? null : null;
     const linkedCash = loan.linkedCashId ? assetData.cash.find((c) => c.id === loan.linkedCashId) ?? null : null;
     return (
-      <LoanCard key={loan.id} loan={loan} pct={pct} color={color} typeLabel={typeLabel} daysElapsed={daysElapsed} dDay={dDay} linkedRealEstate={linkedRealEstate} linkedStock={linkedStock} linkedCash={linkedCash} onDelete={handleDelete} />
+      <LoanCard
+        key={loan.id}
+        loan={loan} pct={pct} color={color} typeLabel={typeLabel} daysElapsed={daysElapsed} dDay={dDay}
+        linkedRealEstate={linkedRealEstate} linkedStock={linkedStock} linkedCash={linkedCash} onDelete={handleDelete}
+      />
     );
   };
 
@@ -314,9 +318,7 @@ export function LoanTab() {
                 {loanBarItems.map(({ loan, value: v, color }) => {
                   const pct = (v / filteredTotal) * 100;
                   return (
-                    <div key={loan.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`}>
-                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                    </div>
+                    <div key={loan.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>

@@ -325,6 +325,23 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
+### F-ONBOARD-WIZARD. 스크린샷 일괄 온보딩 마법사 ([onboarding-wizard-flow.tsx](../../src/app/(main)/_components/layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx) · [onboarding-wizard-status.ts](../../src/lib/onboarding-wizard-status.ts) · [onboarding-wizard-store.ts](../../src/stores/onboarding-wizard-store.ts)) — 명세 [S-4.29](../specs/4.29-onboarding-wizard.md)
+- 👤 **자동 노출 없음**: 웰컴가이드가 항상 먼저 노출되어야 한다는 요구에 따라 `page.tsx`의 자동 오픈 effect(AC1)는 제거됨 — 자산 0건이어도 첫 진입은 항상 `WelcomeGuide`, 마법사는 CTA를 명시적으로 눌렀을 때만 열림
+- 👤 **재진입**: 웰컴가이드 하단 "스크린샷으로 자산 등록" CTA에서만 `useOnboardingWizardStore().open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨). `page.tsx`가 `isWelcomeGuide`보다 먼저 `isWizardOpen`을 체크해 마법사를 렌더
+- 👤 **재노출 억제**(AC2): X 닫기·"나중에 할게요"·완료·전체 건너뛰기 등 마법사가 닫히는 모든 경로가 `markWizardDismissed()`를 호출해 `dismissed:true`를 세움 — 한 번이라도 닫으면 이후 자동 노출 안 됨(재진입은 CTA로만 가능)
+- 👤 **4단계 순서**: 주식→코인→현금→대출, 각 단계 "스크린샷 업로드"(카테고리당 1장) 또는 "이 카테고리는 없어요"(건너뛰기). 어느 화면에서든 하단 "부동산은 직접 입력할게요" 링크로 `dispatchAddRealEstate()` 즉시 호출(부동산은 인식 엔진 없음, AC4)
+- 👤 **완료 화면**: 실제 `Dashboard` 컴포넌트를 그대로 렌더(가짜 프리뷰 아님, AC7) + "확인 완료"(목표 설정 연결 카드는 S-4.28 롤백으로 제거됨)
+- 👤 **전체 건너뛰기**(AC10): 4개 카테고리 전부 건너뛰고 부동산도 미등록이면 완료 화면을 만들지 않고 그대로 닫아(`finish()`) **실제 `WelcomeGuide`**로 복귀(별도 안내 화면을 새로 만들지 않음)
+- ⚙ **신규 인식 로직 없음**: 각 단계는 기존 `{Stock,Crypto,Cash,Loan}ScreenshotImport`를 `open`/`onOpenChange`로 직접 마운트해 그대로 재사용, `parse-screenshot` API·프롬프트·스키마 무변경
+- ⚙ **완료 신호는 `onSaved` 콜백**(4개 컴포넌트에 옵셔널 prop 추가, F-STOCK 섹션 참고): 저장 성공 시에만 호출되므로 사용자가 다이얼로그를 취소한 경우와 구분됨. `onSaved` 호출 시 `markCategoryStatus(category, "done")` → 다음 카테고리로 자동 전환
+- ⚙ **재개(AC6)**: 자동 재노출 시(위 AC1) `OnboardingWizardFlow` 마운트 시점에 `getResumeCategory`가 `pending`인 첫 카테고리를 반환해 그 단계부터 시작 — 처음부터 다시 시키지 않음. 인트로 화면에서 "시작하기"를 사용자가 직접 누르면 진행 여부와 무관하게 첫 카테고리부터 훑되, 재업로드는 각 컴포넌트의 기존 append 동작을 그대로 따라 기존 자산을 덮어쓰지 않음(AC9)
+- ⚙ **부동산 인식 불가**: `api/parse-screenshot/route.ts`의 `ParseAssetType`에 `realEstate` 없음 — v1 스코프에서 의도적으로 제외(명세 §2 확정)
+- ⚙ **카테고리당 이미지 1장**: 4개 스크린샷 컴포넌트 모두 `input`에 `multiple` 없음(단일 파일) — v1은 이 제약을 그대로 받아들임(Gemini 일일 15회 한도 대비 마법사 1회 최대 4호출로 여유 확보)
+- ⚙ **진행 상태**: `STORAGE_KEYS.onboardingWizardStatus` 단일 키 — `STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼)와 코드 패턴만 동일, 값 공유 없음. `tutorial-overlay.tsx`/`tutorial-store.ts` 무변경
+- 엣지: 카테고리 스킵 후 다음 카테고리로 정상 진행, 모든 다이얼로그는 마법사가 직접 마운트(전역 hidden `*Input` 재사용 아님) — 부동산만 예외적으로 `RealEstateInput` hidden 마운트 필요
+- 회귀: 마법사 열림 중에도 `AssetDataContext`·시세 동기화 등 기존 훅 정상 동작(별도 Provider 분기 없음), 마법사 닫으면 `assetData` 최신 상태 그대로 홈에 반영
+- 자동: `src/lib/__tests__/onboarding-wizard-status.test.ts`(재개 지점 계산, dismissed 플래그, 키 분리)
+
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
 - ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너

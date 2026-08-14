@@ -38,9 +38,11 @@ const CASH_TYPE_OPTIONS = cashTypes.map((t) => ({ value: t.value, label: t.label
 interface CashScreenshotImportProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
+  onSaved?: (count: number) => void;
 }
 
-export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashScreenshotImportProps = {}) {
+export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved }: CashScreenshotImportProps = {}) {
   const { saveData, assetData } = useAssetData();
   const geminiUsage = useGeminiUsage();
 
@@ -164,6 +166,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange }: CashS
 
     if (success) {
       toast.success(`${selected.length}개 항목이 등록되었습니다.`);
+      onSaved?.(selected.length);
       handleClose();
     } else {
       toast.error("등록에 실패했습니다.");

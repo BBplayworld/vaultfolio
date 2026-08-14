@@ -123,6 +123,11 @@ actions: {
 
 암호화폐 매수/매도 내역 뷰(`crypto-transactions` 탭) 진입 대상 전달. `target: { cryptoId, name } | null` · `setTarget`/`clear`. `CashTxViewStore` 미러링(S-4.25).
 
+## OnboardingWizardStore (`src/stores/onboarding-wizard-store.ts`)
+
+온보딩 마법사 열림 상태(S-4.29). `isOpen: boolean` · `open`/`close`. `trade-view-store`와 동일한 최소 zustand 패턴(persist 없음). `WelcomeGuide`의 "스크린샷으로 자산 등록" CTA에서만 `open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨), `page.tsx`가 `isOpen`을 최우선 분기(`isWelcomeGuide`보다 먼저 체크)로 `OnboardingWizardFlow`를 렌더.
+자동 노출 effect는 제거됨 — 웰컴가이드가 항상 먼저 보여야 한다는 요구에 따라 자산 0건이어도 첫 진입에서 마법사가 자동으로 뜨지 않고, 사용자가 CTA를 눌러야만 열린다.
+
 ## 유틸 함수
 
 ### cash-tx-utils.ts (S-4.22)
@@ -176,6 +181,16 @@ todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
 데이터는 `src/config/tax-calendar.ts`(`TAX_EVENTS`·`TAX_EVENTS_BY_MONTH`·`TAX_TAG_LABEL`·`FOREIGN_CAPITAL_GAIN_DEDUCTION`)가 단일 출처. **외부 API·네트워크 없음.**
 실현차익은 `trade-utils.computeNewPosition`으로 이동평균 원가를 replay해 산출하며, 매수 로그·체결 환율 누락 시 현재 평단·환율로 폴백하고 `estimated: true`를 세운다.
 닫기 상태는 `STORAGE_KEYS.taxNotice` 단일 키(`{ dismissedMonth: "YYYY-MM" }`) — `backup-status.ts`와 동일한 기기 로컬 메타 패턴이라 `asset-storage.ts` keepKeys에 보존되고 sync payload에는 넣지 않는다(R14 핑퐁 방지).
+
+### onboarding-wizard-status.ts (S-4.29)
+
+```typescript
+readOnboardingWizardStatus() / writeOnboardingWizardStatus(status)
+markCategoryStatus(category, "done"|"skipped"): OnboardingWizardStatus
+markWizardDismissed(): OnboardingWizardStatus
+getResumeCategory(status): WizardCategory | null   // pending인 첫 카테고리(주식→코인→현금→대출 순) — 재개 지점(AC6)
+```
+`STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼, 별개 기능)와 **코드 패턴만** 동일(단일 키+step map)하게 재사용하고 값은 절대 공유하지 않는다 — `STORAGE_KEYS.onboardingWizardStatus` 별도 키, 기기 로컬 전용.
 
 ### report/asset-report.ts — 원인분해 집계 헬퍼
 

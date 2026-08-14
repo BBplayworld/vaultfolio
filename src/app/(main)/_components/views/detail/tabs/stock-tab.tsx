@@ -34,7 +34,6 @@ import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
 
-
 const ETF_DOMAIN: Record<string, string> = {
   TIGER: "www.tigeretf.com",
   KODEX: "www.samsungfund.com",
@@ -692,14 +691,13 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
   );
 }
 
-// 거래입력·거래내역 — 라벨형 버튼으로 구분(아이콘만 쓰던 기존 혼선 해소)
-function TradeActionRow({ stockId, onViewTrades }: { stockId: string; onViewTrades: (id: string) => void }) {
+function TradeActionRow({ stock, onViewTrades }: { stock: Stock; onViewTrades: (id: string) => void }) {
   return (
     <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
-      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddTrade(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddTrade(stock.id)}>
         <ArrowLeftRight className="size-3.5" /> 거래입력
       </Button>
-      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => onViewTrades(stockId)}>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => onViewTrades(stock.id)}>
         <History className="size-3.5" /> 거래내역
       </Button>
     </div>
@@ -748,7 +746,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <StockDetailGrid stock={stock} isForeign={m.isForeign} krwMul={m.krwMul} currencyGain={m.currencyGain} currencyGainRate={m.currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} />
-            <TradeActionRow stockId={stock.id} onViewTrades={onViewTrades} />
+            <TradeActionRow stock={stock} onViewTrades={onViewTrades} />
             <div className={ASSET_THEME.cardActions}>
               <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="수정" onClick={() => window.dispatchEvent(new CustomEvent("trigger-edit-stock", { detail: { id: stock.id } }))}>
                 <Pencil className="size-3.5" />
@@ -862,7 +860,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} />
               </div>
               {/* 비분할 종목: 라벨형 거래입력·거래내역. 분할 종목은 각 증권사 항목에 노출 */}
-              {!hasSubItems && <TradeActionRow stockId={stock.id} onViewTrades={openTrades} />}
+              {!hasSubItems && <TradeActionRow stock={stock} onViewTrades={openTrades} />}
               <div className={ASSET_THEME.cardActions}>
                 <Button size="icon" variant="secondary" className={ASSET_THEME.cardActionButton} title="증권사별 나누기" onClick={() => setSplitOpen(true)}>
                   <Scissors className="size-3.5" />

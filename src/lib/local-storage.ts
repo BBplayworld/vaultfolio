@@ -34,6 +34,9 @@ export const STORAGE_KEYS = {
   syncState:            "secretasset_sync",
   // 홈 세금 안내 배너 닫기 메타 — 값 { dismissedMonth: "YYYY-MM" }(KST). 기기 로컬 전용(월 단위 재노출)
   taxNotice:            "secretasset_tax_notice",
+  // 온보딩 마법사 진행 상태 (S-4.29) — tutorialStatus(스팟라이트 튜토리얼)와 값을 공유하면 안 되는
+  // 별개 기능이라 별도 키. 기기 로컬 전용
+  onboardingWizardStatus: "secretasset_onboarding_wizard_status",
 } as const;
 
 const LEGACY_KEYS = {

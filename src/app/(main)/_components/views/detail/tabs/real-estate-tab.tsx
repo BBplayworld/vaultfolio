@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
+import { formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes, realEstateTradeDataset } from "@/config/asset-options";
 import { formatFullAddress } from "@/lib/real-estate-address";
@@ -289,7 +289,11 @@ export function RealEstateTab() {
     const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
     const typeLabel = realEstateTypes.find((t) => t.value === item.type)?.label ?? item.type;
     return (
-      <RealEstateCard key={item.id} item={item} profit={profit} profitRate={profitRate} pct={pct} color={color} typeLabel={typeLabel} linkedLoans={linkedLoans} onDelete={handleDelete} />
+      <RealEstateCard
+        key={item.id}
+        item={item} profit={profit} profitRate={profitRate} pct={pct} color={color} typeLabel={typeLabel}
+        linkedLoans={linkedLoans} onDelete={handleDelete}
+      />
     );
   };
 
@@ -322,9 +326,7 @@ export function RealEstateTab() {
                 {barItems.map(({ item, value: v, color }) => {
                   const pct = (v / totalValue) * 100;
                   return (
-                    <div key={item.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`}>
-                      {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                    </div>
+                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>

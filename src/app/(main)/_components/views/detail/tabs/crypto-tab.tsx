@@ -11,7 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
-import { formatCurrency, formatShortCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
+import { formatCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
@@ -275,9 +275,7 @@ export function CryptoTab() {
               {barItems.map(({ coin, value: v, color }) => {
                 const pct = (v / totalValue) * 100;
                 return (
-                  <div key={coin.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`}>
-                    {pct > 5 && <span className="text-white text-[11px] font-bold drop-shadow select-none px-0.5 truncate">{pct.toFixed(1)}%</span>}
-                  </div>
+                  <div key={coin.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`} />
                 );
               })}
             </div>

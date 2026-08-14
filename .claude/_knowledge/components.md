@@ -149,6 +149,8 @@ _components/
 - **미리보기 UI:** 1행(이름+티커+환산뱃지), 2행(수량/현재가/평단가/평가금액 그리드 패널 bg-muted/40), 3행(드롭다운 가로 배치 및 증권사 선택 max-w-[220px] 짤림 방지)
 - ticker 없는 종목: `saveAssetDataRaw()` 우회 저장 후 `refreshData()`
 
+**4개 스크린샷 컴포넌트(stock/crypto/cash/loan) 공통 `onSaved?: (count: number) => void` prop(S-4.29)** — 저장 성공(`toast.success` 직후) 시 등록 건수와 함께 호출. 옵셔널이라 기존 FAB 등 호출부는 영향 없음. 온보딩 마법사가 이 콜백으로 단계 완료를 판단(다른 완료 신호가 없어 추가됨 — `onOpenChange(false)`만으로는 저장 성공과 사용자 취소를 구분할 수 없었음).
+
 ---
 
 ## 대시보드 컴포넌트
@@ -164,6 +166,8 @@ _components/
 | AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
 | BackupNudge         | `views/home/backup-nudge.tsx`           | 백업 넛지 배너 — 홈 상단 알림 슬롯. dismiss 배너 구조 레퍼런스 |
 | TaxNoticeBox        | `views/home/tax-notice-box.tsx`         | 세금 안내 배너(S-4.23) — 자산 분포 카드 **아래**. **내 자산에서 파생된** 일정만(전 국민 공통 `common` 제외), 매칭 근거 문구 포함. 닫으면 그 달 미노출(월 단위 재노출) |
+| LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
+| OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |
 
 ### ProfitCard 점진 로드 (`profit-chart.tsx`)
 

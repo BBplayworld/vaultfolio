@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Building2, TrendingUp, ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
+import { ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
+import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,7 +16,7 @@ import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(m
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
-import { dispatchAddStock, dispatchAddRealEstate } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { dispatchAddStock } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 
@@ -70,6 +71,7 @@ export function WelcomeGuide() {
   const [mounted, setMounted] = useState(false);
   const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '설치 없이 바로 시작' 선택 시에만 자산 등록 노출
   const cs = useCloudSync();
+  const openWizard = useOnboardingWizardStore((s) => s.open);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -78,13 +80,9 @@ export function WelcomeGuide() {
   const mobileWeb = mounted && isMobile && !isStandalone;
   const ctaVisible = !mobileWeb || showAssetCta;
 
-  const handleStockTutorial = (mode: "screenshot" | "manual") => {
+  const handleStockManual = () => {
     setIsStockMenuOpen(false);
-    dispatchAddStock(mode);
-  };
-
-  const handleRealEstateTutorial = () => {
-    dispatchAddRealEstate();
+    dispatchAddStock("manual");
   };
 
   return (
@@ -262,52 +260,55 @@ export function WelcomeGuide() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-          <Button size="lg" className="gap-2 bg-primary" onClick={handleRealEstateTutorial}>
-            <Building2 className="size-4" />
-            부동산 추가
+          <Button size="lg" variant="brand" className="gap-2" onClick={openWizard}>
+            <ImageUp className="size-4" />
+            스크린샷으로 자산 등록
             <ArrowRight className="size-4" />
           </Button>
           <Popover open={isStockMenuOpen} onOpenChange={setIsStockMenuOpen}>
             <PopoverTrigger asChild>
-              <Button size="lg" variant="outline" className="gap-2" style={{ backgroundColor: MAIN_PALETTE[0] }}>
-                <TrendingUp className="size-4" />
-                주식 추가
-                <ArrowRight className="size-4" />
+              <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground">
+                <Pencil className="size-4" />
+                직접 입력 · 가져오기
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="center" className="w-52 p-1.5 space-y-0.5">
+            <PopoverContent align="center" className="w-56 p-1.5 space-y-0.5">
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                onClick={() => handleStockTutorial("screenshot")}
+                onClick={handleStockManual}
               >
-                <ImageUp className="size-4 text-muted-foreground shrink-0" />
+                <Pencil className="size-4 text-muted-foreground shrink-0" />
                 <div className="text-left">
-                  <p className="font-medium">스크린샷 가져오기</p>
-                  <p className="text-xs text-muted-foreground">스크린샷 화면 자동 인식</p>
+                  <p className="font-medium">주식 직접 입력</p>
+                  <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => { setIsStockMenuOpen(false); openFilePicker(); }}
+                disabled={isImporting}
+              >
+                <FolderInput className="size-4 text-muted-foreground shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium">{isImporting ? "가져오는 중..." : "기존 데이터 가져오기"}</p>
+                  <p className="text-xs text-muted-foreground">백업 JSON 파일 복원</p>
                 </div>
               </button>
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                onClick={() => handleStockTutorial("manual")}
+                onClick={() => { setIsStockMenuOpen(false); cs.setShowConnectDialog(true); }}
               >
-                <Pencil className="size-4 text-muted-foreground shrink-0" />
+                <Link2 className="size-4 text-muted-foreground shrink-0" />
                 <div className="text-left">
-                  <p className="font-medium">직접 입력</p>
-                  <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
+                  <p className="font-medium">기존 동기화 자산 연결</p>
+                  <p className="text-xs text-muted-foreground">다른 기기의 자산 불러오기</p>
                 </div>
               </button>
             </PopoverContent>
           </Popover>
-          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={openFilePicker} disabled={isImporting}>
-            <FolderInput className="size-4" />
-            {isImporting ? "가져오는 중..." : "기존 데이터 가져오기"}
-          </Button>
-          <Button size="lg" variant="outline" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => cs.setShowConnectDialog(true)}>
-            <Link2 className="size-4 text-primary" />
-            기존 동기화 자산 연결
-          </Button>
         </div>
         <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
       </div>
