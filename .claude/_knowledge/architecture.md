@@ -87,14 +87,20 @@ src/
 ├── stores/
 │   ├── preferences/                  # Zustand 테마 스토어
 │   └── tutorial/                     # Zustand 튜토리얼 스토어 (Step 0~5 + isStandaloneStep0)
-├── lib/
-│   ├── asset-storage.ts              # localStorage + 공유 토큰 v7.2
-│   ├── local-storage.ts              # STORAGE_KEYS, migrateStorageKeys
-│   ├── one-time-migrations.ts        # 1회성 마이그레이션
-│   ├── profit-utils.ts               # 기준가 캐시 + 점진 로드
-│   ├── finance-service.ts            # KIS API 연동 + classifyOverseasInactive
-│   ├── stock-cache-slot.ts           # 시장별 캐시 슬롯 유틸
-│   ├── cache-storage.ts              # 캐시 추상화 (File/Upstash, AssetEnvelope 포함)
+├── lib/                               # 도메인별 하위 디렉토리로 분류 (신규 파일도 반드시 해당 도메인 폴더 하위에 추가 — dev-rules.md 참조)
+│   ├── asset/                        # 자산 저장·백업·스냅샷
+│   │   ├── asset-storage.ts          # localStorage + 공유 토큰 v7.2
+│   │   ├── snapshot-storage.ts / snapshot-archive.ts
+│   │   ├── backup-status.ts / storage-stats.ts / asset-refresh-status.ts / holdings-conflict.ts
+│   ├── finance/                      # 시세·환율·마스터 데이터
+│   │   ├── finance-service.ts        # KIS API 연동 + classifyOverseasInactive
+│   │   ├── stock-cache-slot.ts / coin-cache-slot.ts  # 시장별 캐시 슬롯 유틸
+│   │   ├── profit-utils.ts / profit-cache-cleanup.ts
+│   │   ├── upbit-service.ts / kis-token.ts / kr-master.ts / us-master.ts / kr-holidays.ts / us-holidays.ts
+│   ├── trade/                        # 거래·현금·대출 유틸
+│   │   ├── trade-utils.ts / cash-tx-utils.ts / loan-tx-utils.ts / validate-reflection.ts
+│   ├── realestate/                   # 부동산 실거래
+│   │   ├── realestate-service.ts / real-estate-address.ts
 │   ├── cloud-sync/                   # E2EE 클라우드 동기화
 │   │   ├── config.ts                 # AssetEnvelope, SYNC_HASH_PARAM("asset"), SIG_FRESHNESS_SEC
 │   │   ├── crypto.ts                 # AssetKeys, PBKDF2→encKey+Ed25519, generateAssetId
@@ -102,9 +108,16 @@ src/
 │   │   ├── sync-client.ts            # pushAsset/pullAsset/fetchRemoteVersion, Ed25519 인증
 │   │   ├── device-key.ts             # IndexedDB 기기키 wrap/unwrap (rememberedKey 보관)
 │   │   └── cloud-sync-provider.tsx   # SYNC_HASH_PARAM 해시 감지·자동 연결
-│   ├── pwa/
+│   ├── pwa/                          # PWA 잠금·게이트·플랫폼 판별
+│   │   ├── app-lock.ts / background-gate.ts
 │   │   ├── detect-browser.ts         # 브라우저/플랫폼 판별 + isInApp + isStandaloneDisplay/isInAppGateActive(인앱 게이트 활성 판정)
 │   │   └── open-external-browser.ts  # 인앱→외부 브라우저 이동(Android=kakaotalk/intent 스킴, iOS=false 폴백)
+│   ├── report/                       # 자산 등급·리포트·기록 스트릭
+│   ├── xray/                         # 종목 X-ray 분류·프롬프트
+│   ├── data/                         # 정적 마스터 JSON (kr/us 종목·ETF)
+│   ├── cache-storage.ts              # 캐시 추상화 (File/Upstash, AssetEnvelope 포함) — 도메인 무관 공용
+│   ├── local-storage.ts              # STORAGE_KEYS, migrateStorageKeys — 도메인 무관 공용
+│   ├── one-time-migrations.ts        # 1회성 마이그레이션 — 도메인 무관 공용
 │   ├── number-utils.ts
 │   └── utils.ts
 ├── config/

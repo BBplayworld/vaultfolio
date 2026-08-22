@@ -17,7 +17,7 @@ import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/finance/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/finance/profit-cache-cleanup";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
-import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/lib/pwa/app-lock";
+import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
@@ -910,25 +910,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       void doSync();
     }
     prevHasAssetsRef.current = hasAssets;
-  }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
-
-  // 앱잠금 해제 시 오늘자 동기화 재개.
-  // initAndSync/0→양수 전환 effect는 마운트 시점에 isBackgroundWorkBlocked()가 true(잠금 중)이면
-  // 그 즉시 return하고 끝나며, 이후 사용자가 PIN을 풀어도 재시도되지 않는다(PWA_UNLOCKED_EVENT는
-  // 지금까지 cloud-sync-provider의 pull 트리거로만 소비되고 있었다) — 잠금 상태로 로드된 세션은
-  // 그 세션 내내 시세·환율·스냅샷이 영원히 오늘자로 갱신되지 않는 버그였다.
-  useEffect(() => {
-    const onUnlocked = () => {
-      if (!isDataLoaded || isBackgroundWorkBlocked()) return;
-      void (async () => {
-        await syncTodayExchangeRate();
-        const stockSynced = await syncTodayStockPrices(assetData);
-        const finalData = await syncTodayCryptoPrices(stockSynced);
-        await saveSnapshots(finalData, exchangeRatesRef.current);
-      })();
-    };
-    window.addEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
-    return () => window.removeEventListener(PWA_UNLOCKED_EVENT, onUnlocked);
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
 
   const checkAndApplyThemeMode = useCallback(() => {

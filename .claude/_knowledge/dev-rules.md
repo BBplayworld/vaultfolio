@@ -13,6 +13,9 @@
 
 > src/ 하위 신규 파일을 `Write`할 때 비차단 PreToolUse 훅(`.claude/hooks/reuse-reminder.mjs`)이 이 게이트를 상기시킨다.
 
+**신규 파일 위치 — 도메인 디렉토리 필수 (강제):**
+`src/lib/` 하위 신규 파일은 반드시 기존 도메인 하위 디렉토리([architecture.md](./architecture.md) 트리 참조: `asset/`·`finance/`·`trade/`·`realestate/`·`cloud-sync/`·`pwa/`·`report/`·`xray/`) 중 역할이 맞는 곳에 추가한다. `lib/` 최상위에 flat하게 새로 추가하는 것은 **금지** — 어느 도메인에도 속하지 않는 순수 범용 유틸(`number-utils.ts`·`utils.ts`류)일 때만 예외이며, 이 경우도 왜 특정 도메인에 속하지 않는지 한 줄 근거를 남긴다. 기존 도메인 중 맞는 곳이 없으면(2곳 이상에서 쓰일 신규 도메인) 새 하위 디렉토리를 만들고 architecture.md 트리에 등록한다. 같은 원칙이 `src/app/(main)/_components/` 등 이미 화면/도메인별로 나뉜 다른 디렉토리에도 적용된다 — 신규 파일은 flat 추가가 아니라 해당 화면/도메인 하위 디렉토리로.
+
 **검색 위치 표** (무엇을 찾을 때 어느 문서를):
 
 | 찾는 것 | 문서 |

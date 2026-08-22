@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
@@ -672,11 +672,6 @@ export function Dashboard() {
             </Tabs>
           )}
         </CardContent>
-        <CardFooter className={ASSET_THEME.contentPad}>
-          <p className={`${ASSET_THEME.distributionCard.muted} text-xs`}>
-            마지막 업데이트: {assetData.lastUpdated && !Number.isNaN(new Date(assetData.lastUpdated).getTime()) ? new Date(assetData.lastUpdated).toLocaleString("ko-KR") : ""}
-          </p>
-        </CardFooter>
       </Card>
 
       {/* ── 세금 안내 (S-4.23) — 순자산 헤더가 있는 자산 분포 카드 바로 아래.
