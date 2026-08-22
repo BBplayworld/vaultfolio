@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { useAssetData, ASSET_USER_EDIT_EVENT } from "@/contexts/asset-data-context";
 import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/lib/pwa/app-lock";
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
-import { buildExportPayload, getAssetData } from "@/lib/asset-storage";
+import { buildExportPayload, getAssetData } from "@/lib/asset/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { isInAppGateActive } from "@/lib/pwa/detect-browser";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";

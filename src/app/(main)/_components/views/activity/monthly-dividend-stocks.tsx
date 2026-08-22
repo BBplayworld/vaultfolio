@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
-import { normalizeTicker } from "@/lib/finance-service";
-import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance-service";
+import { normalizeTicker } from "@/lib/finance/finance-service";
+import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
 import type { Stock } from "@/types/asset";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 

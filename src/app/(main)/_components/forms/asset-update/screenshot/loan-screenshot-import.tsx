@@ -20,6 +20,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { loanTypes } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+import { keyOfLoan, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 
 type ImportLoan = {
   id: string;
@@ -55,16 +57,20 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
     else setInternalOpen(v);
   };
 
-  const [step, setStep] = useState<"upload" | "preview">("upload");
+  const [step, setStep] = useState<"upload" | "conflict" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [loans, setLoans] = useState<ImportLoan[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
+  const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStep("upload");
     setLoans([]);
     setIsParsing(false);
+    setConflictMode("merge");
+    setConflictCount(0);
   };
 
   const handleClose = () => {
@@ -106,7 +112,13 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
       );
 
       setLoans(importLoans);
-      setStep("preview");
+      const conflicts = countConflicts(assetData.loans, importLoans, keyOfLoan);
+      if (conflicts > 0) {
+        setConflictCount(conflicts);
+        setStep("conflict");
+      } else {
+        setStep("preview");
+      }
     } catch {
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
@@ -140,13 +152,13 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
 
     setIsRegistering(true);
 
-    const newLoans: Loan[] = [
-      ...assetData.loans,
-      ...selected.map(({ selected: _, startDateMissing: __, ...l }, idx) => ({
-        ...l,
-        id: `loan_import_${Date.now()}_${idx}`,
-      })),
-    ];
+    const registered = selected.map(({ selected: _, startDateMissing: __, ...l }, idx) => ({
+      ...l,
+      id: `loan_import_${Date.now()}_${idx}`,
+    }));
+    const importedKeys = new Set(registered.map(keyOfLoan));
+    const kept = resolveKept(assetData.loans, importedKeys, conflictMode, keyOfLoan);
+    const newLoans: Loan[] = [...kept, ...registered];
 
     const newData: AssetData = { ...assetData, loans: newLoans };
     const success = saveData(newData);
@@ -155,6 +167,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
 
     if (success) {
       toast.success(`${selected.length}개 대출이 등록되었습니다.`);
+      markCategoryRefreshed("loan");
       onSaved?.(selected.length);
       handleClose();
     } else {
@@ -256,7 +269,45 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
           </div>
         )}
 
-        {/* Step 2: 미리보기 */}
+        {/* Step 2: 중복 처리 */}
+        {step === "conflict" && (
+          <div className="space-y-4">
+            <div className="rounded-md bg-amber-500/10px-4 py-3 flex items-start gap-2">
+              <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                기존 보유 대출과 <span className="font-semibold">{conflictCount}개</span> 이름·기관·종류가 같습니다.
+                동일 대출이 맞는지 미리보기에서 확인 후 처리 방식을 선택해주세요.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {(["merge", "reset"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`w-full rounded-lg border p-4 text-left transition-colors ${conflictMode === mode ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                  onClick={() => setConflictMode(mode)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${conflictMode === mode ? "border-primary" : "border-muted-foreground"}`}>
+                      {conflictMode === mode && <div className="size-2 rounded-full bg-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{mode === "merge" ? "덮어쓰기" : "초기화 후 등록"}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {mode === "merge"
+                          ? "이름·기관·종류가 같은 대출을 스크린샷 기준으로 교체하고, 나머지 기존 대출은 유지합니다."
+                          : "기존 대출을 모두 삭제하고 스크린샷 대출로 대체합니다."}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: 미리보기 */}
         {step === "preview" && loans.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -293,6 +344,9 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                         {item.institution && (
                           <span className="text-sm text-muted-foreground">{item.institution}</span>
                         )}
+                        {conflictMode === "merge" && assetData.loans.some((l) => keyOfLoan(l) === keyOfLoan(item)) && (
+                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
+                        )}
                         {item.startDateMissing && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
                             대출일 확인 필요
@@ -328,6 +382,7 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
         )}
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {step === "conflict" && <Button variant="brand" onClick={() => setStep("preview")}>다음</Button>}
           {step === "preview" && (
             <Button variant="brand" onClick={handleRegister} disabled={isRegistering || selectedCount === 0}>
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 대출 등록`}

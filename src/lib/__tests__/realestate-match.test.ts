@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTradesXml, matchTrade, median, distinctAreas, type RealEstateTrade } from "../realestate-service";
+import { parseTradesXml, matchTrade, median, distinctAreas, type RealEstateTrade } from "../realestate/realestate-service";
 
 // MOLIT 응답은 종류마다 필드가 다르다 — 아파트 태그만 읽으면 단독·비주거용 면적이 0이 되어
 // 면적 필터가 무력화되고 시군구 전체 최근 거래가 잡히는 오매칭이 발생한다(S-4.21 AC8).

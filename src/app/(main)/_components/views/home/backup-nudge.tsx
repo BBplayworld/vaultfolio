@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
-import { exportAssetData } from "@/lib/asset-storage";
+import { exportAssetData } from "@/lib/asset/asset-storage";
 import { EXPORT_STALE_MSG } from "@/hooks/use-data-export";
-import { shouldShowBackupNudge, markNudgeShown, daysSinceBackup } from "@/lib/backup-status";
+import { shouldShowBackupNudge, markNudgeShown, daysSinceBackup } from "@/lib/asset/backup-status";
 
 export function BackupNudge({ onVisibilityChange }: { onVisibilityChange?: (visible: boolean) => void }) {
   const { assetData, getAssetSummary } = useAssetData();

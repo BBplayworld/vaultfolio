@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { importAssetData } from "@/lib/asset-storage";
+import { importAssetData } from "@/lib/asset/asset-storage";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";

@@ -6,8 +6,8 @@
  * 해외 주식 + 해외 ETF: 한국 투자자 인기 상위 (ETF/레버리지는 풀네임 키 포함)
  */
 
-import { KR_NAME_TO_CODE } from "@/lib/kr-master";
-import { US_NAME_TO_TICKER } from "@/lib/us-master";
+import { KR_NAME_TO_CODE } from "@/lib/finance/kr-master";
+import { US_NAME_TO_TICKER } from "@/lib/finance/us-master";
 
 // ─── 해외 주식 ─────────────────────────────────────────────────────────────
 export const FOREIGN_STOCK_MAP: Record<string, string> = {

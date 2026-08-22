@@ -87,7 +87,22 @@ export function getStockCacheSlot(type: "domestic" | "foreign"): string {
   const isInSession = openHHMM < closeHHMM
     ? hhmm >= openHHMM && hhmm < closeHHMM
     : hhmm >= openHHMM || hhmm < closeHHMM;
-  if (!isInSession) return effectiveDate;
+  if (!isInSession) {
+    // 오늘(bizRefDate)이 영업일이어도 "오늘 세션 개장 전" 구간이면 유효 데이터는 여전히 어제 종가다.
+    // effectiveDate만 쓰면(해외는 마감 컷오프 07:00이 개장 17:00/18:00보다 훨씬 일러) 07:00~개장 전
+    // 구간에서 "오늘" 라벨에 어제 종가가 캐싱되고, 이 라벨이 이후 휴장일 롤백 결과(81~84행)와
+    // 동일해져 어제 종가로 정상 교체돼야 할 캐시가 갱신되지 않는 버그가 있었다.
+    const beforeTodaysOpen = openHHMM < closeHHMM
+      ? hhmm < openHHMM
+      : hhmm >= closeHHMM && hhmm < openHHMM;
+    if (beforeTodaysOpen) {
+      const prevDay = new Date(bizRefDate);
+      prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+      const lastBizDate = type === "domestic" ? rollbackToBusinessDay(prevDay) : rollbackToUsBusinessDay(prevDay);
+      return lastBizDate.toISOString().split("T")[0];
+    }
+    return effectiveDate;
+  }
 
   const hour = String(nowKST.getUTCHours()).padStart(2, "0");
   return `${effectiveDate}-H${hour}`;

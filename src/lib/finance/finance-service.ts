@@ -18,6 +18,7 @@
  */
 
 import { Stock } from "@/types/asset";
+import { KR_CODE_TO_NAME, KR_ETF_CODES, getKrMarketByCode } from "@/lib/finance/kr-master";
 
 // 외부(KIS) API fetch 전역 timeout — 응답 지연 시 3초 후 TimeoutError로 중단
 const FETCH_TIMEOUT_MS = 3000;
@@ -59,6 +60,16 @@ export interface ExchangeRates {
 // ─────────────────────────────────────────────
 // KIS → 분류 매핑 헬퍼
 // ─────────────────────────────────────────────
+
+// 국내 종목 코드 → 시장 라벨("코스피"/"코스닥"/"국내ETF"). inquire-price 응답엔 이 정보가 없어
+// kr-master.ts(로컬 정적 마스터, API 호출 없음)로 대체한다. KONEX는 기존 관례대로 라벨 없음(undefined).
+function krMarketLabel(code: string): string | undefined {
+  if (KR_ETF_CODES.has(code)) return "국내ETF";
+  const market = getKrMarketByCode(code);
+  if (market === "KOSPI") return "코스피";
+  if (market === "KOSDAQ") return "코스닥";
+  return undefined;
+}
 
 function mapDomesticIndices(output: Record<string, string> | undefined): string[] {
   if (!output) return [];
@@ -193,6 +204,12 @@ function isKisResponseOk(
   return false;
 }
 
+// KIS 레이트리밋(초당 거래건수 초과) 판정 — 정확한 msg_cd는 미검증(서비스키로 실호출 후 대조 필요).
+// 알려진 KIS 공통 레이트리밋 코드(EGW00201)를 우선 반영하고, 짧은 대기 후 1회만 재시도한다.
+function isKisRateLimited(data: { msg_cd?: string } | null | undefined): boolean {
+  return data?.msg_cd === "EGW00201";
+}
+
 // 해외주식 search-info 응답을 비활성 분류 — status는 "delisted"/"halted"/null
 // delisted: 상장폐지 (자산 평가 완전 제외 대상)
 // halted: 거래정지 (마지막 가격 유지 + 표기 대상)
@@ -276,14 +293,83 @@ export async function fetchKisToken(
   }
 }
 
+// 국내주식 현재가 — 실시간 조회(inquire-price, tr_id=FHKST01010100).
+// 종목명·시장구분은 응답에 없어 kr-master.ts(로컬 정적 마스터)로 채운다.
+// KOSPI200 등 분류 정보는 별도 90일 캐시(fetchDomesticClassifications)가 담당 — 이 함수는 가격만 책임진다.
 export async function fetchStocksFromKorea(
   tickers: string[],
   todayStr: string,
   accessToken: string,
   appKey: string,
   appSecret: string
-): Promise<{ prices: Record<string, StockPriceResult>; classifications: Record<string, StockClassificationPatch> }> {
+): Promise<{ prices: Record<string, StockPriceResult> }> {
   const results: Record<string, StockPriceResult> = {};
+
+  for (let i = 0; i < tickers.length; i++) {
+    if (i > 0) await sleep(350); // 해외 조회와 동일한 레이트리밋 방어 간격
+    const ticker = tickers[i];
+
+    const call = async (): Promise<{ ok: boolean; rateLimited: boolean; data: { rt_cd?: string; msg_cd?: string; msg1?: string; output?: Record<string, string> } | null }> => {
+      const res = await fetchWithTimeout(
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            appkey: appKey,
+            appsecret: appSecret,
+            tr_id: "FHKST01010100",
+          },
+          cache: "no-store",
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error(
+          `[KIS 국내주식-현재가 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
+        );
+        return { ok: false, rateLimited: false, data: null };
+      }
+      if (isKisRateLimited(data)) return { ok: false, rateLimited: true, data };
+      if (!isKisResponseOk(data, `국내주식-현재가 ${ticker}`)) return { ok: false, rateLimited: false, data: null };
+      return { ok: true, rateLimited: false, data };
+    };
+
+    try {
+      let result = await call();
+      if (result.rateLimited) {
+        // 레이트리밋은 배치를 중단하지 않고 짧은 대기 후 해당 티커만 1회 재시도
+        await sleep(500);
+        result = await call();
+      }
+      if (!result.ok || !result.data) continue;
+
+      const output = result.data.output;
+      const price = parseFloat(output?.stck_prpr ?? "0");
+      if (price > 0) {
+        results[ticker] = {
+          price,
+          name: KR_CODE_TO_NAME[ticker] ?? "",
+          updated_at: todayStr,
+          market: krMarketLabel(ticker),
+        };
+      }
+    } catch (e) {
+      console.error(`[KIS 국내주식-현재가 오류 - ${ticker}]:`, e);
+    }
+  }
+
+  return { prices: results };
+}
+
+// 국내주식 분류 정보(region/KOSPI200 등) — search-stock-info(tr_id=CTPF1002R) 사용.
+// 90일 분류 캐시가 없는 티커에 한해서만 호출되므로(호출부: /api/finance/route.ts) 매시간 갱신되는
+// 가격 조회와 빈도가 다르다. 이 함수는 실패해도 가격 조회에 영향을 주지 않도록 완전히 독립돼 있다.
+export async function fetchDomesticClassifications(
+  tickers: string[],
+  accessToken: string,
+  appKey: string,
+  appSecret: string
+): Promise<{ classifications: Record<string, StockClassificationPatch> }> {
   const classifications: Record<string, StockClassificationPatch> = {};
 
   for (const ticker of tickers) {
@@ -303,29 +389,20 @@ export async function fetchStocksFromKorea(
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         console.error(
-          `[KIS 국내주식 조회 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
+          `[KIS 국내주식-분류 오류 - ${ticker}]: HTTP ${res.status} ${res.statusText} body=${JSON.stringify(data)}`
         );
         continue;
       }
-      if (!isKisResponseOk(data, `국내주식 ${ticker}`)) continue;
+      if (!isKisResponseOk(data, `국내주식-분류 ${ticker}`)) continue;
       const output = data.output as Record<string, string> | undefined;
-      const price = parseFloat(output?.thdt_clpr ?? "0");
-      const name: string = output?.prdt_abrv_name ?? "";
-      if (price > 0) {
-        const sctyGrp = output?.scty_grp_id_cd ?? "";
-        const mketId = output?.mket_id_cd ?? "";
-        const market = sctyGrp === "EF" ? "국내ETF" : mketId === "STK" ? "코스피" : mketId === "KSQ" ? "코스닥" : undefined;
-        results[ticker] = { price, name, updated_at: todayStr, market };
-      }
-      // 분류 추출 — 가격 조회 성공 여부와 무관하게 가능하면 추출
       const cls = extractDomesticClassification(output);
       if (cls) classifications[ticker] = cls;
     } catch (e) {
-      console.error(`[KIS 주식 조회 오류 - ${ticker}]:`, e);
+      console.error(`[KIS 국내주식-분류 오류 - ${ticker}]:`, e);
     }
   }
 
-  return { prices: results, classifications };
+  return { classifications };
 }
 
 export async function fetchStocksFromKisOverseas(

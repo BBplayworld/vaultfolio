@@ -5,7 +5,7 @@
  */
 
 import { Stock } from "@/types/asset";
-import { ExchangeRates } from "@/lib/finance-service";
+import { ExchangeRates } from "@/lib/finance/finance-service";
 import { getClassification, SECTOR_ENUM } from "./classification-store";
 
 export type XrayAxis = "region" | "theme" | "marketCap" | "index" | "currency";

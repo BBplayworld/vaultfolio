@@ -11,7 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
-import { rollbackTransaction, type PositionLike } from "@/lib/trade-utils";
+import { rollbackTransaction, type PositionLike } from "@/lib/trade/trade-utils";
 import { ASSET_THEME } from "@/config/theme";
 import type { Crypto, CryptoTransaction } from "@/types/asset";
 

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
+import { ImageUp, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,9 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { Crypto, CryptoTransaction } from "@/types/asset";
-import { computeNewPosition, findDuplicateTransaction, TRANSACTION_RETENTION_YEARS, type PositionLike } from "@/lib/trade-utils";
-import { validateReflection } from "@/lib/validate-reflection";
+import { computeNewPosition, findDuplicateTransaction, TRANSACTION_RETENTION_YEARS, type PositionLike } from "@/lib/trade/trade-utils";
+import { validateReflection } from "@/lib/trade/validate-reflection";
 import { formatCurrency } from "@/lib/number-utils";
+import { CryptoTradeScreenshotImport } from "../../trade/crypto-trade-screenshot-import";
 
 const cryptoTxFormSchema = z.object({
   cryptoId: z.string().min(1, "코인을 선택해주세요"),
@@ -53,6 +55,8 @@ function getCryptoPosition(coin: Crypto): CryptoPosition {
 export function CryptoTxInput() {
   const { assetData, addCryptoTransaction, addCryptoTransactionWithPosition } = useAssetData();
   const [isOpen, setIsOpen] = useState(false);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
+  const [mode, setMode] = useState<"select" | "manual">("select");
   const [lockedCrypto, setLockedCrypto] = useState(false); // 특정 코인 사전선택 진입
   const [dupPending, setDupPending] = useState<{ tx: CryptoTransaction; coin: Crypto } | null>(null);
 
@@ -99,9 +103,11 @@ export function CryptoTxInput() {
     const handler = (e: Event) => {
       const id = (e as CustomEvent).detail?.cryptoId;
       if (id) {
+        setMode("manual");
         setLockedCrypto(true);
         form.setValue("cryptoId", id);
       } else {
+        setMode("select");
         setLockedCrypto(false);
       }
       setIsOpen(true);
@@ -113,6 +119,7 @@ export function CryptoTxInput() {
   const resetAndClose = useCallback(() => {
     form.reset();
     setIsOpen(false);
+    setMode("select");
     setLockedCrypto(false);
     setDupPending(null);
   }, [form]);
@@ -188,13 +195,43 @@ export function CryptoTxInput() {
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetAndClose(); }}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto touch-pan-y">
         <DialogHeader>
-          <DialogTitle>매수/매도 기록</DialogTitle>
+          <DialogTitle>{mode === "select" ? "매수/매도 기록" : "매수/매도 직접 입력"}</DialogTitle>
         </DialogHeader>
 
-        {!dupPending && (
+        {mode === "select" && (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/60 hover:bg-muted/90 dark:bg-muted/30 dark:hover:bg-muted/50 transition-colors text-left w-full"
+              onClick={() => { setIsOpen(false); setScreenshotOpen(true); }}
+            >
+              <ImageUp className="size-5 text-primary shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">스크린샷 가져오기</p>
+                <p className="text-sm text-muted-foreground">체결 내역 화면 자동 인식</p>
+              </div>
+              <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/60 hover:bg-muted/90 dark:bg-muted/30 dark:hover:bg-muted/50 transition-colors text-left w-full"
+              onClick={() => setMode("manual")}
+            >
+              <Plus className="size-5 text-primary shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">직접 입력</p>
+                <p className="text-sm text-muted-foreground">매수/매도 거래 수동 입력</p>
+              </div>
+              <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+            </button>
+          </div>
+        )}
+
+        {mode === "manual" && !dupPending && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* 코인 선택 (사전선택 진입 시 숨김) */}
@@ -370,5 +407,10 @@ export function CryptoTxInput() {
         )}
       </DialogContent>
     </Dialog>
+    <CryptoTradeScreenshotImport
+      open={screenshotOpen}
+      onOpenChange={setScreenshotOpen}
+    />
+    </>
   );
 }

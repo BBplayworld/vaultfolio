@@ -20,6 +20,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { cryptoExchanges } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+import { keyOfCrypto, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 
 type ImportCrypto = {
   id: string;
@@ -35,8 +37,6 @@ type ImportCrypto = {
   description: string;
   selected: boolean;
 };
-
-type ConflictMode = "merge" | "reset";
 
 interface CryptoScreenshotImportProps {
   open?: boolean;
@@ -134,13 +134,12 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
       setCommonExchange(defaultExchange);
       const finalCryptos = importCryptos.map((c) => ({ ...c, exchange: defaultExchange }));
 
-      const existingKeys = new Set(assetData.crypto.map((c) => `${c.symbol}:${c.exchange || ""}`));
-      const duplicates = finalCryptos.filter((c) => existingKeys.has(`${c.symbol}:${c.exchange || ""}`));
+      const conflictCount = countConflicts(assetData.crypto, finalCryptos, keyOfCrypto);
 
       setCryptos(finalCryptos);
 
-      if (duplicates.length > 0) {
-        setConflictCount(duplicates.length);
+      if (conflictCount > 0) {
+        setConflictCount(conflictCount);
         setStep("conflict");
       } else {
         setStep("preview");
@@ -183,11 +182,8 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
 
     setIsRegistering(true);
 
-    const importedKeys = new Set(selected.map((c) => `${c.symbol}:${c.exchange || ""}`));
-    const kept: Crypto[] =
-      conflictMode === "reset"
-        ? []
-        : assetData.crypto.filter((c) => !importedKeys.has(`${c.symbol}:${c.exchange || ""}`));
+    const importedKeys = new Set(selected.map(keyOfCrypto));
+    const kept: Crypto[] = resolveKept(assetData.crypto, importedKeys, conflictMode, keyOfCrypto);
 
     const newCryptos: Crypto[] = [
       ...kept,
@@ -204,6 +200,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
 
     if (success) {
       toast.success(`${selected.length}개 코인이 ${conflictMode === "reset" ? "등록" : "반영"}되었습니다.`);
+      markCategoryRefreshed("crypto");
       onSaved?.(selected.length);
       handleClose();
     } else {
@@ -421,7 +418,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
                             평균단가 미확인
                           </Badge>
                         )}
-                        {conflictMode === "merge" && assetData.crypto.some((c) => c.symbol === item.symbol && (c.exchange || "") === (item.exchange || "")) && (
+                        {conflictMode === "merge" && assetData.crypto.some((c) => keyOfCrypto(c) === keyOfCrypto(item)) && (
                           <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
                         )}
                       </div>

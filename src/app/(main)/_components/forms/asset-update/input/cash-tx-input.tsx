@@ -16,8 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { Cash, CashTransaction } from "@/types/asset";
-import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade-utils";
-import { findDuplicateCashTx, isCashWithdrawalValid } from "@/lib/cash-tx-utils";
+import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
+import { findDuplicateCashTx, isCashWithdrawalValid } from "@/lib/trade/cash-tx-utils";
 import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
 
 const cashTxFormSchema = z.object({

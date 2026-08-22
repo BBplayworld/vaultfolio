@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { toUpbitMarket, fromUpbitMarket } from "../upbit-service";
-import { getCoinCacheSlot } from "../coin-cache-slot";
+import { toUpbitMarket, fromUpbitMarket } from "../finance/upbit-service";
+import { getCoinCacheSlot } from "../finance/coin-cache-slot";
 
 describe("toUpbitMarket", () => {
   it("심볼을 원화 마켓 코드로 변환한다", () => {

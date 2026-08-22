@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { STORAGE_KEYS } from "@/lib/local-storage";
-import { getAssetData, saveAssetData } from "@/lib/asset-storage";
+import { getAssetData, saveAssetData } from "@/lib/asset/asset-storage";
 
 export const NICKNAME_EVENT = "secretasset-nickname-change";
 

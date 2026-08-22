@@ -14,7 +14,7 @@ import { useTradeViewStore } from "@/stores/trade-view-store";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
-import { rollbackTransaction } from "@/lib/trade-utils";
+import { rollbackTransaction } from "@/lib/trade/trade-utils";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
 import { stockCategories } from "@/config/asset-options";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";

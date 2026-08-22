@@ -3,8 +3,8 @@
  * 업비트 코인 현재가를 스토리지 어댑터를 통해 제공한다.
  *
  * 주식(/api/finance)과 동일한 3단 흐름이되, 업비트는 여러 페어를 1회 호출로 조회할 수 있어
- * 배치 루프가 없다. 캐시 키가 마켓 단위(KRW-BTC-{slot})라 같은 코인을 보유한
- * 모든 사용자가 캐시를 공유한다.
+ * 배치 루프가 없다. 캐시는 마켓 단위(KRW-BTC) 레코드 하나에 slot·값을 함께 저장하므로
+ * 같은 코인을 보유한 모든 사용자가 캐시를 공유한다.
  *
  * Rate limit 방어 (업비트 IP 기준 초당 10회 중 20%만 사용):
  *   - 슬롯 캐시 hit → 즉시 반환
@@ -15,7 +15,7 @@
 
 import { NextResponse, after } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { getCoinCacheSlot } from "@/lib/coin-cache-slot";
+import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
 import {
   fetchUpbitKrwMarkets,
   fetchUpbitTickers,
@@ -23,7 +23,7 @@ import {
   fromUpbitMarket,
   UpbitRateLimitError,
   type CoinPriceResult,
-} from "@/lib/upbit-service";
+} from "@/lib/finance/upbit-service";
 
 // 업비트 한도(10 req/s)의 20%만 사용 — 서버리스 IP 공유·재시도 여유분 확보
 const MIN_CALL_INTERVAL_MS = 500;
@@ -33,7 +33,6 @@ const LOCK_POLL_MAX = 20;        // 최대 2초 대기 후 stale 폴백
 
 const UPBIT_UNAVAILABLE_HEADER = { "X-Upbit-Unavailable": "1" } as const;
 
-const coinCacheKey = (market: string, slot: string) => `${market}-${slot}`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // 로컬(FileCacheStorage)은 단일 프로세스라 Redis 락이 없다 →
@@ -67,7 +66,7 @@ async function fetchWithGuard(markets: string[], slot: string): Promise<Record<s
         await sleep(LOCK_POLL_INTERVAL_MS);
         const filled: Record<string, CoinPriceResult> = {};
         for (const m of markets) {
-          const c = await storage.getCoin(coinCacheKey(m, slot));
+          const c = await storage.getCoin(m, slot);
           if (c) filled[m] = c;
         }
         if (Object.keys(filled).length === markets.length) return filled;
@@ -86,7 +85,7 @@ async function fetchWithGuard(markets: string[], slot: string): Promise<Record<s
 
       const prices = await fetchUpbitTickers(markets);
       for (const [market, result] of Object.entries(prices)) {
-        await storage.setCoin(coinCacheKey(market, slot), market, result);
+        await storage.setCoin(market, slot, result);
       }
       return prices;
     } finally {
@@ -126,7 +125,7 @@ export async function GET(request: Request) {
     // 1단계: 슬롯 캐시
     const uncached: string[] = [];
     for (const { symbol, market } of targets) {
-      const cached = await storage.getCoin(coinCacheKey(market, slot));
+      const cached = await storage.getCoin(market, slot);
       if (cached) results[symbol] = cached;
       else uncached.push(market);
     }

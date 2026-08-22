@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reconcileAdditiveMerge, collectAssetIds } from "../asset-storage";
+import { reconcileAdditiveMerge, collectAssetIds } from "../asset/asset-storage";
 import type { AssetData, Cash, Stock } from "@/types/asset";
 
 // 클라우드 pull 병합 회귀 — 로컬에만 있는 항목이 "아직 안 올린 신규 추가"인지 "원격에서 삭제된

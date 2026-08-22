@@ -55,7 +55,7 @@
 
 ### 새 자산 타입 추가 체크리스트
 1. `src/types/asset.ts` — Zod 스키마 + TS 타입
-2. `src/lib/asset-storage.ts` — 저장/로드 로직
+2. `src/lib/asset/asset-storage.ts` — 저장/로드 로직
 3. `src/contexts/asset-data-context.tsx` — CRUD 함수
 4. `src/app/(main)/_components/forms/asset-update/input/xxx-input.tsx` — 입력 폼
 5. `src/app/(main)/_components/layout/navigation/asset-page-tabs.tsx` — 탭 등록

@@ -37,6 +37,8 @@ export const STORAGE_KEYS = {
   // 온보딩 마법사 진행 상태 (S-4.29) — tutorialStatus(스팟라이트 튜토리얼)와 값을 공유하면 안 되는
   // 별개 기능이라 별도 키. 기기 로컬 전용
   onboardingWizardStatus: "secretasset_onboarding_wizard_status",
+  // 자산 최신화 상태 (S-4.30) — 카테고리별 마지막 갱신 시각 + 넛지 노출일. 기기 로컬 전용
+  assetRefresh: "secretasset_asset_refresh",
 } as const;
 
 const LEGACY_KEYS = {

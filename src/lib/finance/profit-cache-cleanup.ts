@@ -12,7 +12,7 @@
  */
 
 import { STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
-import { getProfitCacheToken, type ProfitBasis, type ProfitPeriod } from "@/lib/profit-utils";
+import { getProfitCacheToken, type ProfitBasis, type ProfitPeriod } from "@/lib/finance/profit-utils";
 
 const BASES: ProfitBasis[] = ["sameBusinessDay", "kstAccessDay"];
 const PERIODS: ProfitPeriod[] = ["daily", "weekly", "monthly", "yearly"];

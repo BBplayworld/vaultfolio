@@ -82,7 +82,7 @@ AssetSnapshots: { daily: DailyAssetSnapshot[], monthly: MonthlyAssetSnapshot[] }
   // 공유 토큰 포함 시 generateShareToken의 snapshots 파라미터로 전달
 ```
 
-## 배당 관련 타입 (`src/lib/finance-service.ts`)
+## 배당 관련 타입 (`src/lib/finance/finance-service.ts`)
 
 ```typescript
 DividendFrequency = "annual" | "semiannual" | "quarterly" | "monthly"

@@ -4,7 +4,7 @@ import {
   findDuplicateLoanTx,
   reflectedLoanBalanceDelta,
   isLoanRepaymentValid,
-} from "../loan-tx-utils";
+} from "../trade/loan-tx-utils";
 import type { LoanTransaction } from "@/types/transaction";
 
 const makeTx = (overrides: Partial<LoanTransaction> = {}): LoanTransaction => ({

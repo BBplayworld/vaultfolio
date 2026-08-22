@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeNewPosition, recomputeFromLog, rollbackTransaction } from "../trade-utils";
+import { computeNewPosition, recomputeFromLog, rollbackTransaction } from "../trade/trade-utils";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 
 const makeSnapshot = (overrides: Partial<PositionSnapshot> = {}): PositionSnapshot => ({

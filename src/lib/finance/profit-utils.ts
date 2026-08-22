@@ -1,8 +1,8 @@
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import type { Stock } from "@/types/asset";
-import { normalizeTicker } from "@/lib/finance-service";
-import { isUsEasternDST } from "@/lib/stock-cache-slot";
+import { normalizeTicker } from "@/lib/finance/finance-service";
+import { isUsEasternDST } from "@/lib/finance/stock-cache-slot";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 

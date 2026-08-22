@@ -4,7 +4,7 @@
 
 import type { AssetData, Stock } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
-import { computeNewPosition } from "./trade-utils";
+import { computeNewPosition } from "./trade/trade-utils";
 import { STORAGE_KEYS } from "./local-storage";
 import {
   TAX_EVENTS_BY_MONTH,

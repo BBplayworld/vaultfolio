@@ -15,10 +15,8 @@ _components/
 │   │   │   ├── real-estate-input.tsx, cash-input.tsx, crypto-input.tsx, loan-input.tsx
 │   │   │   └── exchange-rate-input.tsx
 │   │   └── screenshot/     # 스크린샷 가져오기 다이얼로그
-│   │       ├── stock-screenshot-import.tsx   # 3단계: upload→conflict→preview
-│   │       ├── crypto-screenshot-import.tsx  # 2단계: upload→preview (conflict 있음)
-│   │       ├── cash-screenshot-import.tsx, loan-screenshot-import.tsx  # 항상 append
-│   └── trade/              # trade-input, trade-screenshot-import (매매 로그)
+│   │       └── stock/crypto/cash/loan-screenshot-import.tsx  # 4종 모두 upload→conflict(중복 시)→preview, 병합형(merge/reset, S-4.30) — `lib/holdings-conflict.ts` 공용
+│   └── trade/              # trade-input, trade-screenshot-import(주식), crypto-trade-screenshot-import.tsx(코인, S-4.30)
 │       └── guards/delete-rollback-dialog.tsx  # 반영 거래 삭제 롤백 확인
 ├── views/                 # 페이지 본문 콘텐츠
 │   ├── home/dashboard.tsx           # 도넛+필터칩(InlineSelector) — Dashboard()
@@ -74,16 +72,15 @@ _components/
 
 ---
 
-### FloatingAddButton (`layout/floating/floating-add-button.tsx`)
+### FloatingAddButton (`layout/floating/floating-add-button.tsx`, S-4.30 재설계 → 2026-08 hub 단건화)
 
-화면 하단 중앙 fixed FAB. 클릭 → Sheet → 자산 유형 6개 선택 → 방법 선택(스크린샷/직접입력) → CustomEvent dispatch.
+"자산 업데이트" 버튼 → Sheet. `Step = "hub" | "holdings" | "trade" | "select-method"`. hub는 "보유 현황 업데이트"/"매수·매도 거래 기록" 2개 상위 타일(+환율 설정 카드) — 각각 `holdings`(카테고리 6종 컴팩트 리스트)/`trade`(스크린샷 지원 4종 컴팩트 리스트)로 이동한다.
 
-- 위치 정책: `fixed bottom-5 sm:bottom-10 left-1/2` 중앙 — 모바일 thumb zone 최적, 어떤 페이지든 노출. layout.tsx 본문에 `pb-20 md:pb-24`로 카드 가림 방지
-- 색상: `bg-foreground/85 text-background` (라이트=검정 음영+흰, 다크=흰 음영+검정 자동 반전). hover 시 풀톤
-- 모바일: `side="top"`, PC/패드: `side="right"` Sheet
-- 이벤트: `trigger-add-{real-estate|stock|crypto|cash|loan|yearly-net-asset}`
-- `select-action` 스텝의 거래 진입(자산 업데이트/수정과 같은 레벨): 주식=**거래 입력**(`dispatchAddTrade`) · 현금=**입출금 기록**(`dispatchAddCashTx`, 계좌 미지정 → 폼에서 선택). 둘 다 대상 폼이 hidden 상시 마운트라 추가 마운트 불필요. 현금은 스크린샷 일괄 가져오기 미지원(S-4.22 제외 범위)이라 `select-method`를 거치지 않는다
-- 수정 액션: `navigate({type:"detail", tab})` 직접 호출 (CustomEvent 미사용)
+- **다건 체크박스·시퀀스·완료 원인분해 요약 화면은 전부 제거됨(2026-08)** — `checkedTypes`/`sequence`/`AttributionSummary`(`./attribution-summary.tsx`) 재도입 금지. 항상 행 클릭 = 즉시 단건 처리, 이벤트 dispatch 경로(`trigger-add-{type}`) 그대로
+- `holdings` 행: `navigateTab`이 있으면 우측에 연필 아이콘(`handleActionEdit`, `navigate({type:"detail", tab})` 직접 호출)만 축소 노출 — "수정" 풀폭 버튼 없음
+- hub 상단 `InfoHint`로 "보유현황=재동기화(거래 이력 없음)" vs "거래기록=손익·세금 정확 반영" 역할 구분 안내
+- 홈 `RefreshNudge`의 CTA는 `open-add-asset-sheet` 이벤트에 `detail.category`(가장 오래된 카테고리 1개, 단수)를 실어 hub/holdings를 건너뛰고 해당 카테고리의 단건 흐름(`handleHoldingsClick`)으로 직행(다건 프리셋 아님)
+- 보유현황 스크린샷 저장 성공 시 각 `*-screenshot-import.tsx`가 `markCategoryRefreshed(category)` 호출(`lib/asset/asset-refresh-status.ts`)
 
 ### ScrollToTop (`layout/floating/scroll-to-top.tsx`)
 
@@ -165,6 +162,7 @@ _components/
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
 | AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
 | BackupNudge         | `views/home/backup-nudge.tsx`           | 백업 넛지 배너 — 홈 상단 알림 슬롯. dismiss 배너 구조 레퍼런스 |
+| RefreshNudge (S-4.30) | `views/home/refresh-nudge.tsx`        | 자산 최신화 넛지(30일 기준) — `BackupNudge`와 동일 구조, `suppressed` prop으로 백업 넛지와 동시 노출 배제(dashboard.tsx가 `onVisibilityChange`로 조율). CTA는 FAB를 `preselect`와 함께 오픈 |
 | TaxNoticeBox        | `views/home/tax-notice-box.tsx`         | 세금 안내 배너(S-4.23) — 자산 분포 카드 **아래**. **내 자산에서 파생된** 일정만(전 국민 공통 `common` 제외), 매칭 근거 문구 포함. 닫으면 그 달 미노출(월 단위 재노출) |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
 | OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |

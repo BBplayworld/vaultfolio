@@ -16,8 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { Loan, LoanTransaction } from "@/types/asset";
-import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade-utils";
-import { findDuplicateLoanTx, isLoanRepaymentValid } from "@/lib/loan-tx-utils";
+import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
+import { findDuplicateLoanTx, isLoanRepaymentValid } from "@/lib/trade/loan-tx-utils";
 import { formatCurrency } from "@/lib/number-utils";
 
 const loanTxFormSchema = z.object({

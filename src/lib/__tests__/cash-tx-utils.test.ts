@@ -4,7 +4,7 @@ import {
   findDuplicateCashTx,
   reflectedBalanceDelta,
   isCashWithdrawalValid,
-} from "../cash-tx-utils";
+} from "../trade/cash-tx-utils";
 import type { CashTransaction } from "@/types/transaction";
 
 const makeTx = (overrides: Partial<CashTransaction> = {}): CashTransaction => ({

@@ -29,15 +29,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { clearAssetData, clearUserCaches } from "@/lib/asset-storage";
-import { clearBackupStatus } from "@/lib/backup-status";
+import { clearAssetData, clearUserCaches } from "@/lib/asset/asset-storage";
+import { clearBackupStatus } from "@/lib/asset/backup-status";
+import { clearAssetRefreshStatus } from "@/lib/asset/asset-refresh-status";
 import { useDataExport } from "@/hooks/use-data-export";
-import { computeStorageStats, formatBytes } from "@/lib/storage-stats";
+import { computeStorageStats, formatBytes } from "@/lib/asset/storage-stats";
 import { APP_VERSION } from "@/config/app-version";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { InfoHint } from "../layout/ui/info-hint";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import type { ProfitBasis } from "@/lib/profit-utils";
+import type { ProfitBasis } from "@/lib/finance/profit-utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { useAssetImport } from "@/hooks/use-asset-import";
@@ -134,6 +135,8 @@ export function SettingsPage() {
     // clearAssetData는 백업 시각을 보존하지만(가져오기 경로 보호), 전체 삭제는 사용자의
     // 명시적 의도이므로 여기서만 함께 지운다 — 남은 데이터가 없으니 "백업함" 상태도 무의미.
     clearBackupStatus();
+    // 자산 최신화 이력도 동일 이유로 함께 제거 — 남은 자산이 없으니 "최신화함" 상태도 무의미
+    clearAssetRefreshStatus();
     if (success) {
       refreshData();
       toast.success("모든 자산 데이터가 삭제되었습니다.");

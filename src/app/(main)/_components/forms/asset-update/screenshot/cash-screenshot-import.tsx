@@ -20,6 +20,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { cashTypes, financialInstitutions } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+import { keyOfCash, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 
 type ImportCash = {
   id: string;
@@ -54,16 +56,20 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
     else setInternalOpen(v);
   };
 
-  const [step, setStep] = useState<"upload" | "preview">("upload");
+  const [step, setStep] = useState<"upload" | "conflict" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [cashes, setCashes] = useState<ImportCash[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
+  const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStep("upload");
     setCashes([]);
     setIsParsing(false);
+    setConflictMode("merge");
+    setConflictCount(0);
   };
 
   const handleClose = () => {
@@ -109,7 +115,13 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
       );
 
       setCashes(importCashes);
-      setStep("preview");
+      const conflicts = countConflicts(assetData.cash, importCashes, keyOfCash);
+      if (conflicts > 0) {
+        setConflictCount(conflicts);
+        setStep("conflict");
+      } else {
+        setStep("preview");
+      }
     } catch {
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
@@ -151,13 +163,13 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
 
     setIsRegistering(true);
 
-    const newCashes: Cash[] = [
-      ...assetData.cash,
-      ...selected.map(({ selected: _, institutionMissing: __, ...c }, idx) => ({
-        ...c,
-        id: `cash_import_${Date.now()}_${idx}`,
-      })),
-    ];
+    const registered = selected.map(({ selected: _, institutionMissing: __, ...c }, idx) => ({
+      ...c,
+      id: `cash_import_${Date.now()}_${idx}`,
+    }));
+    const importedKeys = new Set(registered.map(keyOfCash));
+    const kept = resolveKept(assetData.cash, importedKeys, conflictMode, keyOfCash);
+    const newCashes: Cash[] = [...kept, ...registered];
 
     const newData: AssetData = { ...assetData, cash: newCashes };
     const success = saveData(newData);
@@ -166,6 +178,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
 
     if (success) {
       toast.success(`${selected.length}개 항목이 등록되었습니다.`);
+      markCategoryRefreshed("cash");
       onSaved?.(selected.length);
       handleClose();
     } else {
@@ -268,7 +281,45 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
           </div>
         )}
 
-        {/* Step 2: 미리보기 */}
+        {/* Step 2: 중복 처리 */}
+        {step === "conflict" && (
+          <div className="space-y-4">
+            <div className="rounded-md bg-amber-500/10px-4 py-3 flex items-start gap-2">
+              <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                기존 보유 계좌와 <span className="font-semibold">{conflictCount}개</span> 이름·기관이 같습니다.
+                동일 계좌가 맞는지 미리보기에서 확인 후 처리 방식을 선택해주세요.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {(["merge", "reset"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`w-full rounded-lg border p-4 text-left transition-colors ${conflictMode === mode ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                  onClick={() => setConflictMode(mode)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${conflictMode === mode ? "border-primary" : "border-muted-foreground"}`}>
+                      {conflictMode === mode && <div className="size-2 rounded-full bg-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{mode === "merge" ? "덮어쓰기" : "초기화 후 등록"}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {mode === "merge"
+                          ? "이름·기관이 같은 계좌를 스크린샷 기준으로 교체하고, 나머지 기존 계좌는 유지합니다."
+                          : "기존 계좌를 모두 삭제하고 스크린샷 계좌로 대체합니다."}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: 미리보기 */}
         {step === "preview" && cashes.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -302,6 +353,9 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                         <Badge variant="outline" className="text-[10px]">{getTypeLabel(item.type)}</Badge>
                         {item.institution && (
                           <span className="text-sm text-muted-foreground">{item.institution}</span>
+                        )}
+                        {conflictMode === "merge" && assetData.cash.some((c) => keyOfCash(c) === keyOfCash(item)) && (
+                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
                         )}
                       </div>
 
@@ -357,6 +411,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
         )}
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {step === "conflict" && <Button variant="brand" onClick={() => setStep("preview")}>다음</Button>}
           {step === "preview" && (
             <Button variant="brand" onClick={handleRegister} disabled={isRegistering || selectedCount === 0 || hasInstitutionError}>
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 항목 등록`}

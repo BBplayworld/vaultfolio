@@ -1,9 +1,9 @@
 // 저장 데이터 통계 — 설정 화면에서 "내 데이터가 얼마나 쌓였는지" 보여준다.
 // 전체 키 순회가 필요한 동기 작업이므로 설정 진입 시 1회만 계산하고 홈에서는 호출하지 않는다.
 
-import { getAssetData } from "@/lib/asset-storage";
-import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
-import { readDailyArchive } from "@/lib/snapshot-archive";
+import { getAssetData } from "@/lib/asset/asset-storage";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readDailyArchive } from "@/lib/asset/snapshot-archive";
 
 export interface StorageStats {
   itemCount: number;        // 등록된 자산·부채 항목 수

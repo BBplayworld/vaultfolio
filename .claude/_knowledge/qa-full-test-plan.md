@@ -101,14 +101,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 12월 → 다음 달 1월 롤오버, `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
 - 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
 
-### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx))
-- 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`)
-- 엣지: 통화 KRW/USD 분기, 중복 거래 처리, 매칭 실패 종목 제외
+### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx) · 코인 [crypto-trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx))
+- 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`/코인은 `saveData`)
+- 👤 **미보유 신규 종목/코인 매수 인식 시 자동 신규 등록**(`resolveMatch`/`matchMap`의 `"new"` 케이스): "신규 종목으로 추가됩니다" 표시, 주식은 카테고리 인라인 Select(기본값 국내/해외 인식 결과로 프리필), 코인은 상단 거래소 select 필수. 반영 ON/OFF 토글과 무관하게 항상 포지션 생성(참조할 기존 보유가 없으므로), `currentPrice`는 체결가로 임시 채워지고 다음 시세 갱신에서 정상 티커면 자동 교정
+- 엣지: 통화 KRW/USD 분기, 중복 거래 처리, **매도인데 미보유면 계속 매칭 실패로 차단**(신규 등록은 매수만 허용 — 팔 종목이 없는 매도 신규 생성 금지), 코인 신규 등록 시 거래소 미선택이면 등록 차단
 
-### F-CRYPTO. 코인 시세 자동 갱신 (업비트) ([upbit-service.ts](../../src/lib/upbit-service.ts) · [api/finance/crypto](../../src/app/api/finance/crypto/route.ts)) — 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
-- ⚙ **1시간 슬롯**([coin-cache-slot.ts](../../src/lib/coin-cache-slot.ts) `getCoinCacheSlot`): 코인은 24시간 무휴장이라 주식과 달리 장중/장외·영업일·DST 판정 없이 **항상** `{YYYY-MM-DD}-H{HH}`(KST). `c.baseDate === slot`이면 재조회 스킵(AC1·AC2)
-- ⚙ **공통 캐시**: 서버 키가 마켓 단위(`finance:coin:KRW-BTC-{slot}`)라 같은 코인 보유자끼리 캐시 공유 → 외부 호출이 슬롯당 1회로 수렴(AC3)
-- ⚙ **캐시 버킷 분리**: 파일 캐시는 `COINS`/`COINS_LAST`로 `STOCKS`와 분리 — `writeFinanceCache` prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 매 write마다 삭제됨. Upstash도 `finance:coin:` 접두 분리(`finance:stock:` SCAN 정리와 충돌 방지)
+### F-CRYPTO. 코인 시세 자동 갱신 (업비트) ([upbit-service.ts](../../src/lib/finance/upbit-service.ts) · [api/finance/crypto](../../src/app/api/finance/crypto/route.ts)) — 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
+- ⚙ **1시간 슬롯**([coin-cache-slot.ts](../../src/lib/finance/coin-cache-slot.ts) `getCoinCacheSlot`): 코인은 24시간 무휴장이라 주식과 달리 장중/장외·영업일·DST 판정 없이 **항상** `{YYYY-MM-DD}-H{HH}`(KST). `c.baseDate === slot`이면 재조회 스킵(AC1·AC2)
+- ⚙ **공통 캐시**: 서버 키가 마켓 단위(`finance:coin:KRW-BTC`, 2026-08 슬롯 접미 제거·market 레코드 1개로 통합)라 같은 코인 보유자끼리 캐시 공유 → 외부 호출이 슬롯당 1회로 수렴(AC3)
+- ⚙ **market 레코드 1개로 신선/stale 겸용(2026-08)** — 과거엔 `finance:coin:{market}-{slot}`(슬롯 캐시)와 `finance:coin:last:{market}`(3시간 stale 폴백)를 별개 키로 둬 `setCoin` 1회 호출이 SET을 2번 날렸다. 지금은 `{value, slot, updatedAtMs}` 레코드 하나(TTL 3시간)로 합쳐 `getCoin(market, slot)`은 `slot` 일치로, `getCoinStale(market)`은 레코드 존재(=TTL 이내)로 같은 레코드에서 판정 — SET 1회로 축소(`cache-storage.ts`). 파일 캐시도 `COINS` 단일 버킷(구 `COINS_LAST` 폐기)
+- ⚙ **캐시 버킷 분리**: 파일 캐시는 `COINS`를 `STOCKS`와 분리 — `writeFinanceCache` prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 매 write마다 삭제됨. Upstash도 `finance:coin:` 접두 분리(`finance:stock:` SCAN 정리와 충돌 방지)
 - ⚙ **rate limit 방어**(업비트 IP 기준 10 req/s의 20%만 사용): 슬롯 캐시 → stale(3시간) 즉시 반환 + `after()` 백그라운드 갱신 → 최초만 동기 대기(AC7). 외부 호출은 `finance:upbit:lock`(SET NX EX 5s)로 직렬화 + 최소 500ms 간격(AC8). 로컬은 단일 프로세스라 모듈 스코프 in-flight dedup으로 대체
 - ⚙ **무효 심볼 방어**: `market/all`(1일 캐시)과 교집합 후 조회 — 미상장 심볼이 섞이면 ticker 요청 **전체가 400 실패**하므로 필수. 응답에 없는 심볼은 수동 입력값 유지(AC4)
 - ⚙ 심볼 단위 중복 제거 — 같은 코인을 여러 거래소에 보유해도 1회 조회(AC5). epoch+AbortController로 취소된 응답 미반영(AC6)
@@ -117,13 +119,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 업비트 미상장 코인(해외 거래소 전용) 수동값 보존, 코인 0개일 때 호출 자체 스킵
 - 회귀: crypto `baseDate`·`currentPrice`가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰(packV7) crypto 섹션 8필드 유지(R3)
 
-### F-REALESTATE. 부동산 실거래 추정 ([realestate-service.ts](../../src/lib/realestate-service.ts) · [api/realestate](../../src/app/api/realestate/route.ts)) — 명세 [S-4.21](../specs/4.21-realestate-transaction-price.md)
+### F-REALESTATE. 부동산 실거래 추정 ([realestate-service.ts](../../src/lib/realestate/realestate-service.ts) · [api/realestate](../../src/app/api/realestate/route.ts)) — 명세 [S-4.21](../specs/4.21-realestate-transaction-price.md)
 - ⚙ **데이터셋별 면적 필드**(AC8): apt/offi/rh=`excluUseAr`, sh=`totalFloorAr`, nrg=`buildingAr`, 폴백 `plottageAr`. `areaKind`(exclusive/gross/plottage)가 다른 거래는 **절대 섞어 비교하지 않으며**, 후보 0건이어도 전체 풀로 되돌리지 않는다
 - ⚙ **오매칭 차단**(AC9): `matchBy:"area"`(단독 sh·상가 nrg)에서 면적 미상이면 `matchTrade`는 반드시 `null`. 과거 회귀 = 시군구 전체 최근 거래 1건이 추정치로 노출됨
 - ⚙ **매칭 점수**: 지번일치 > 단지명 > 법정동 > 면적근접 > 최근성. 면적 허용 오차는 **상대 ±10%(최소 ±3㎡)**. `resolveAddress`의 `jibun`이 estimate 요청까지 전달되는지(누락 시 정확도 급락)
 - ⚙ **단가 폴백**(AC10): 같은 법정동·같은 areaKind·±30% 표본의 ㎡당 단가 중앙값 × 내 면적. **표본 3건 미만이면 미노출**. 등급(exact/similar/approx/estimated)·표본수 응답 포함
 - ⚙ 조회 창 6→12→24개월 단계 확장, 캐시 슬롯 `${dataset}:${lawd}:${ym}` 재사용
 - 👤 아파트: 주소 조회 → 추정가·근거(단지·면적·층) 표시, 상세 카드에 면적 수치 노출. 상가·단독: 면적 입력(㎡/평 토글) 전에는 추정 미노출, 입력 후 등급 배지와 함께 표시
+- 👤 토지: 실거래가 조회 기능 없음(지목별 형평 비교·지분 문제로 신뢰 가능한 추정이 어려워 제외) — 시세는 수동 입력만
 - 회귀: `marketEstimate*` 전 필드가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰 pack/unpack 포맷 미변경(R3)
 - 자동: `src/lib/__tests__/realestate-match.test.ts`
 
@@ -205,7 +208,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 다이얼로그 헤더는 모바일 포함 전 뷰포트 좌측 정렬(`text-left`로 shadcn `DialogHeader`의 `text-center` 오버라이드), 상하 여백 균등(`py-4`)
 - 👤 **내용은 주식 기준으로만** — 자산군 도넛·"포트폴리오 구성" 바·자산군 통합 랭킹("핵심 자산 Top") 없음
 - 👤 상단: **닉네임 미노출**(2026-08-08 제거) → `StockSummaryHeader`(주식 탭과 동일 컴포넌트, `DetailSummaryHeader`의 `screenshotMode` 분기) — 배경 박스 없이 아래 비중 바·리스트와 좌우 여백 동일(`px-2`=8px, 카드 전체 좌우 오프셋 20px), "총 주식 평가금액" 히어로 숫자는 `ASSET_THEME_SHOT.summaryValue`(`text-2xl`) + 평가손익(수익금·수익률). 원/달러 셀렉터·오늘 등락 칩은 미노출. **금액 전부(헤더·종목 리스트·"그 외 N종목") 전체 금액**(`840,180,000원` 형태, 상세 탭과 동일, `share-card.tsx`의 `mask`→`formatCurrency`) — 축약(`8.4억원`) 미사용
-- 👤 비중 바 — **상위 5종목 색 구간 + 회색 `그 외`(#9ca3af) 구간** + 바로 아래 **범례**(색점 + 종목명 + 비중%, `그 외 N종목` 포함). 캡처 폭 고정이라 범례는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2`)·`legendText`(`text-sm`) 사용, `sm:` 금지(R25). 비중 바·범례·리스트를 감싸는 래퍼는 **배경색 없음**(카드 전체 배경과 통일, 패딩 `p-3.5`만 간격 계산용으로 유지)
+- 👤 비중 바 — **상위 5종목 색 구간 + 회색 `그 외`(#9ca3af) 구간** + 바로 아래 **범례**(색점 + 종목명 + 비중%, `그 외 N종목` 포함). 캡처 폭 고정이라 범례는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2`)·`legendText`(`text-sm`) 사용, `sm:` 금지(R32). 비중 바·범례·리스트를 감싸는 래퍼는 **배경색 없음**(카드 전체 배경과 통일, 패딩 `p-3.5`만 간격 계산용으로 유지)
 - 👤 종목 리스트 — 상세 > 주식 탭과 동일 형태(`StockCard screenshotMode`: 로고 아이콘 + 이름 + `N주`(**비중% 미노출** — 범례로 통합) + 우측 평가금액/손익 2줄 + 하단 비중 스트립). 상위 5개만, 초과분은 `그 외 N종목` 요약행 — **우측은 종목 카드와 동일 2줄**(나머지 평가금액 합 / 손익 `(+X.X%)`). 종합 수익률은 `(Σ평가−Σ원가)/Σ원가`(개별 평균 아님), 상장폐지 종목은 손익 합산에서 제외. **비중% 미노출**(범례 `그 외 N종목`과 중복)
 - 👤 헤더~범례~리스트~푸터 간격 통일: 헤더~범례·범례~리스트 실제 노출 간격 28px로 동일(숨은 패딩까지 계산해 마진값 역산), 카드 최상단↔헤더 값·푸터↔카드 최하단 간격도 대칭(`pt-2`/`pb-2`). 금액 표시 스위치 끄면 금액류만 `••••` 마스킹(비중%·수익률%는 항상 노출), 푸터 좌측에 "시크릿에셋"(`text-xs text-foreground`) + 도메인(`secretasset.xyz`), 우측에 날짜
 - ⚙ 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음). 종목 파생값은 `computeStockMetrics`
@@ -264,7 +267,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
 - 👤 **기기 동기화 pull 후 시세 갱신** — 다른 기기 변경 반영(pull) 직후 "오늘의 주식 및 환율 정보를 모두 업데이트했습니다." 토스트가 뜨고 현재가·환율이 갱신되는지(양쪽 기기 모두 자산 보유 상태에서)
 - ⚙ `getStockCacheSlot` 장중 1시간/장외 날짜 슬롯, outdated 판정, 3개씩 배치+1초 간격
+- ⚙ **국내주식 실시간가**(`fetchStocksFromKorea`, `inquire-price`/`FHKST01010100`): 과거엔 `search-stock-info`의 `thdt_clpr`(당일 종가)를 썼으나 실시간성이 부족해 실시간 현재가 필드(`stck_prpr`)로 전환. 종목명·시장구분("코스피"/"코스닥"/"국내ETF")은 `kr-master.ts`(로컬 정적 마스터, API 호출 없음)로 대체 — `inquire-price` 응답엔 해당 필드 없음
+- ⚙ **국내주식 분류(KOSPI200 등) 90일 캐시 분리**: 가격(1시간 슬롯)과 별도로 `fetchDomesticClassifications`(`search-stock-info`)를 90일 분류 캐시(`storage.getStockClassification`)가 없는 티커에만 호출 — 최초 등록 시에만 가격+분류 2회, 이후 매시간은 가격만 1회
+- ⚙ **국내 레이트리밋 방어**: 해외 조회와 동일하게 티커 간 350ms 간격, `msg_cd=EGW00201`(미검증) 감지 시 500ms 대기 후 1회 한정 재시도 후 skip(무한 재시도 금지). 개별 티커 실패는 try/catch로 격리돼 배치 전체에 영향 없음
 - ⚙ **휴장일 slot 고정(R23)** — 국내·해외 영업일 판정을 `isInSession` 체크보다 **먼저** 수행해, 휴장일(주말·공휴일)은 시간대·세션모양과 무관하게 직전 영업일(`rollbackToBusinessDay`/`rollbackToUsBusinessDay`)로 slot을 고정한다. 과거엔 `effectiveDate`(달력 날짜)가 휴장 중에도 매일 바뀌어 매일 실시간 재조회가 발생, quote 미세 흔들림이 원인분해에 "휴장일 시세 변동"으로 허위 노출됐다(F-ACTIVITY 연계)
+- ⚙ **해외 개장 전(pre-open) flat 라벨 고정(R24)** — 해외 마감 컷오프(`getEffectiveDateStr("foreign")`=07:00 KST)가 개장(17:00 DST/18:00 STD KST)보다 훨씬 일러, 07:00~개장 전 구간에서 "오늘" flat 라벨에 "어제 종가"가 캐싱되고 이 라벨이 이후 휴장일 롤백 결과와 우연히 동일해지면(예: 금요일 오전 캐싱 → 토요일 롤백도 "금요일") 클라이언트의 `baseDate===currentSlot` 판정이 재조회를 스킵해 하루 이상 stale한 값이 노출됐다. `getStockCacheSlot`에 `beforeTodaysOpen`(오늘 영업일이지만 세션 개장 전) 분기를 추가해 이 구간엔 직전 영업일로 명시적 롤백하도록 수정(2026-08-22, TSLA 실사용 사례로 발견)
 - ⚙ pull(`runPull`/`armWithPull`)이 `initAndSync` 경유로 시세 동기화 트리거 — 마운트·0→양수 외 추가 진입 경로(F-CLOUD-SYNC 자동 동기화)
 - 엣지: 데이터 삭제/불러오기 중 sync abort(epoch+AbortController), 취소된 응답 미반영
 - 회귀: foreign+KRW→USD 마이그레이션, market 캐시 비었을 때 재조회
@@ -275,7 +282,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NAV. 네비게이션 (drill-down)
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
-- ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R24)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
+- ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R31)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))
@@ -341,6 +348,18 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 카테고리 스킵 후 다음 카테고리로 정상 진행, 모든 다이얼로그는 마법사가 직접 마운트(전역 hidden `*Input` 재사용 아님) — 부동산만 예외적으로 `RealEstateInput` hidden 마운트 필요
 - 회귀: 마법사 열림 중에도 `AssetDataContext`·시세 동기화 등 기존 훅 정상 동작(별도 Provider 분기 없음), 마법사 닫으면 `assetData` 최신 상태 그대로 홈에 반영
 - 자동: `src/lib/__tests__/onboarding-wizard-status.test.ts`(재개 지점 계산, dismissed 플래그, 키 분리)
+
+### F-ASSET-REFRESH. 자산 최신화 (FAB 통합 카드) ([floating-add-button.tsx](../../src/app/(main)/_components/layout/floating/floating-add-button.tsx) · [holdings-conflict.ts](../../src/lib/asset/holdings-conflict.ts) · [asset-refresh-status.ts](../../src/lib/asset/asset-refresh-status.ts)) — 명세 [S-4.30](../specs/4.30-asset-refresh-fab.md)
+- 👤 **FAB "자산 업데이트" 클릭 → hub(2단계, 2026-08 재설계)** — "보유 현황 업데이트"/"매수·매도 거래 기록" 2개 상위 타일 선택 → 각각 카테고리 컴팩트 리스트(`holdings`/`trade`). 두 화면 모두 **단건 전용**(체크박스·다건 시퀀스·완료 원인분해 요약 화면 전부 2026-08 제거 — `attribution-summary.tsx` 삭제됨). 행 직접 클릭은 기존과 동일하게 즉시 단건 처리
+- 👤 hub 타일에 "어떤 메뉴를 써야 하나요?" `InfoHint` — 보유현황=재동기화(거래 이력 없음), 거래기록=손익·세금 정확 반영이라는 역할 구분 안내
+- 👤 stock/cash/loan 보유현황 스크린샷 재등록 시 기존 crypto와 동일하게 "덮어쓰기(merge)/초기화 후 등록(reset)" 선택 노출(동일 키 중복 감지). stock=`ticker:category`, cash=`name:institution`(근사), loan=`name:institution:type`
+- 👤 홈 `RefreshNudge`(카테고리 중 하나라도 30일 이상 미최신화 시 노출, 백업 넛지와 동시 노출 안 됨) CTA → hub/holdings를 건너뛰고 **가장 오래된 카테고리 1개**의 단건 흐름으로 바로 진입(다건 프리셋 아님, 2026-08). 2개 이상 밀려 있으면 "그 외 N곳도 최신화가 필요해요" 보조 텍스트만 부기
+- 👤 암호화폐 "매수/매도 기록"에 "스크린샷 가져오기" 옵션(`crypto-tx-input.tsx`) — 체결내역 화면 인식, 기존 보유 symbol 매칭, 중복 체결 감지(주식과 동형). **미보유 매수 심볼은 신규 코인으로 자동 등록**(F-TRADE-SS 참조), 매도는 계속 차단
+- ⚙ 병합형 로직은 `lib/asset/holdings-conflict.ts`(`keyOfStock/Crypto/Cash/Loan`, `countConflicts`, `resolveKept`) 공용 — crypto의 기존 merge/reset을 일반화해 stock/cash/loan에 이식(crypto 자체 동작 변경 없음)
+- ⚙ `STORAGE_KEYS.assetRefresh` 단일 키(카테고리별 lastUpdatedAt + 오늘 넛지 노출 여부), `clearAssetData` keepKeys 포함(백업 메타와 동일 근거), "모든 데이터 삭제" 시 `clearAssetRefreshStatus()`로 명시적 제거
+- ⚙ crypto 거래 스크린샷은 API `assetType="crypto-trade"` 신규 분기(`CRYPTO_TRADE_SCHEMA`/`buildCryptoTradePrompt`/`processCryptoTradeResults`, `parse-screenshot/route.ts`) — 주식 trade와 대칭이나 국내/해외 구분 없음
+- 엣지: cash/loan은 스키마에 계좌 고유 식별자가 없어 근사 매칭(동명 계좌 오매칭 가능) — preview에서 "교체" 배지 확인 후 개별 체크/해제로 대응, 완전 자동 신뢰 아님
+- 회귀: 더보기(tool-menu.tsx)에 신규 메뉴 없음, 온보딩 마법사(F-ONBOARD-WIZARD)·bottom-nav 구조·개별 상세탭 "+" 거래 추가 버튼 무변경. **다건 시퀀스 관련 코드(`checkedTypes`/`AttributionSummary`) 재도입 금지** — 요구사항 재검토로 명시적으로 제거된 기능(2026-08)
 
 ### F-NOTICE. 공지 시스템
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
@@ -462,9 +481,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R20 | **다이얼로그 여는 틱 replaceState 금지** | Next.js(App Router)는 `history.replaceState`를 패치해 라우터 갱신 유발 → Radix `Dialog`가 **열리는 같은 틱**에 호출하면 `DismissableLayer`가 즉시 `onOpenChange(false)`로 닫힘(연결/PIN 팝업 즉시 닫힘 버그). 해시 제거 등 replaceState는 **다이얼로그를 여는 경로에서 분리**(닫힘 시점에 수행) |
 | R22 | **전체화면 게이트 활성 시 자동 동작 차단** | 게이트는 **2종**(인앱 브라우저 `isInAppGateActive()` · 앱잠금 `isPwaLocked()`)이고 백그라운드 동작 가드는 **`isBackgroundWorkBlocked()`**([background-gate.ts](../../src/lib/pwa/background-gate.ts)) 하나로 통일한다 — 지점마다 따로 쓰면 한쪽을 빠뜨린다(부동산 갱신 effect가 실제로 그랬다). 적용: asset-data `initAndSync`(데이터 로드 후 조기 return)·0→양수 전환 effect·부동산 실거래 갱신 effect·cloud-sync `#sync=` 연결 모달. cloud-sync arm effect는 인앱 게이트만(armed 진입 차단, assetId/lastSyncedAt/syncLink 유지) — 앱잠금은 arm을 막지 않고 push/pull을 각각 `isPwaLocked()`로 막는다. 누락 시 게이트 뒤에서 자동 동기화·오늘자 시세/스냅샷이 계속 돎. 일반 브라우저·비잠금에선 `false`라 정상 동작(회귀 주의) |
 | R23 | **휴장일 slot 계산 순서** | `getStockCacheSlot`의 영업일 판정은 `isInSession` 체크보다 반드시 먼저 실행 — 순서가 바뀌면 휴장일에 세션-모양 시간대일 때 `effectiveDate`(달력 날짜)가 그대로 반환돼 매일 slot이 바뀌고, 실시간 quote 재조회가 원인분해에 허위 "시세 변동"으로 노출된다(F-SYNC·F-ACTIVITY 연계) |
-| R24 | **뒤로가기 콜드스타트 폴백 홈 직행** | `back()`의 `history.length<=1` 폴백은 항상 `navigate({type:"home"})`. 다른 history-의존적 화면(`more`처럼 자신도 `history.back()`을 쓰는 화면)으로 폴백하면, 그 화면에서 다시 뒤로가기 시 방금 만든 push를 되감아 원래 화면으로 돌아오는 **홈 도달 불가 루프**가 생긴다(과거 `settings`→`"more"` 폴백 버그, F-NAV) |
+| R24 | **해외 개장 전 flat 라벨 미고정 시 stale 재발** | `getStockCacheSlot("foreign")`의 `!isInSession` 분기에서 `beforeTodaysOpen`(오늘 영업일·세션 개장 전) 판정 없이 `effectiveDate`만 반환하면, 마감 컷오프(07:00 KST)~개장(17:00/18:00 KST) 구간의 flat 라벨이 "오늘"이 되어 어제 종가가 오늘 날짜로 캐싱된다. 이 라벨이 이후 휴장일 롤백 결과와 우연히 같아지면(예: 금요일 오전 캐싱="금요일" = 토요일 롤백 결과="금요일") 클라이언트가 재조회를 스킵해 하루 이상 stale 노출(2026-08-22 TSLA 실사용 사례). `beforeTodaysOpen` 분기 제거 금지 |
+| R25 | **앱잠금 해제 후 동기화 미재개** | `initAndSync`/0→양수 전환 effect는 마운트 시점에 `isBackgroundWorkBlocked()`가 true(잠금 중)면 그 즉시 return하고 끝나며, 이후 PIN을 풀어도 재시도되지 않는다 — `PWA_UNLOCKED_EVENT`가 과거엔 `cloud-sync-provider`의 pull 트리거로만 소비돼, 잠금 상태로 로드된 세션은 그 세션 내내 시세·환율·스냅샷이 오늘자로 절대 갱신되지 않았다(R24 수정 검증 중 발견). `asset-data-context.tsx`에 `PWA_UNLOCKED_EVENT` 리스너를 추가해 해제 시 `syncTodayExchangeRate`→`syncTodayStockPrices`→`syncTodayCryptoPrices`→`saveSnapshots`를 재실행하도록 수정 — 이 리스너 제거 금지 |
+| R31 | **뒤로가기 콜드스타트 폴백 홈 직행** | `back()`의 `history.length<=1` 폴백은 항상 `navigate({type:"home"})`. 다른 history-의존적 화면(`more`처럼 자신도 `history.back()`을 쓰는 화면)으로 폴백하면, 그 화면에서 다시 뒤로가기 시 방금 만든 push를 되감아 원래 화면으로 돌아오는 **홈 도달 불가 루프**가 생긴다(과거 `settings`→`"more"` 폴백 버그, F-NAV) |
 | R28 | **동기화 push의 원자성·기준점 병합** | ① `/api/sync` PUT의 버전비교+저장은 반드시 `compareAndSetAssetEnvelope` 단일 호출 — read-then-write로 되돌리면 동시 push 시 lost update(어느 쪽도 409를 못 받고 나중 쓰기가 먼저 쓰기를 지움). ② pull 병합은 **반드시 `syncedIds` 기준점 기반**이어야 한다. **CAS·pull-first로는 이걸 못 막는다** — 그건 "최신을 못 본 채 쓰지 마라"(쓰기 순서)만 통제하고, 최신을 정상 수신한 기기가 그걸 **잘못 해석해 되살린 뒤 push**하는 건 baseVersion이 최신이라 CAS 관점에서 완벽히 정당한 요청이다. 기준점을 빼고 "로컬에 있고 원격에 없으면 되살림"으로 되돌리면 **다른 기기의 삭제가 부활→재-push→상대 기기에서도 부활**해 "지웠는데 1분 뒤 다시 나타남"이 무한 반복된다(삭제가 tombstone 없이 배열 제거라 부재가 신규추가/삭제 두 의미를 갖는 게 근본 원인). ③ 기준점 갱신은 pull=**병합 전 원격 키**, push=**push한 키** — pull 후 병합 결과로 갱신하면 아직 안 올라간 신규분을 다음 pull이 "삭제됨"으로 오판해 스스로 지운다. ④ `forgetRemembered`가 `syncedIds`를 보존. ⑤ armed 폴링 effect의 `online` 리스너(force pull) 유지. 하나라도 빠지면 "자산이 조용히 사라지거나 지운 게 되살아나는" P0가 재현된다(F-CLOUD-SYNC) |
-| R25 | **인증카드 캡처 DOM에 뷰포트 기준 반응형 금지** | share-card.tsx의 캡처 대상(`cardRef`) DOM에는 `sm:` 등 뷰포트 미디어쿼리 클래스를 쓰지 않는다 — 캡처는 고정폭(`CARD_WIDTH`, share-menu.tsx — 480→460px, 2026-08-08 축소) 카드인데 `sm:`은 브라우저 뷰포트 기준이라 PC/모바일에서 같은 사용자가 다른 크기로 캡처되는 버그가 있었다(F-SCREENSHOT). 축소 미리보기는 `ScaledCardPreview`(share-menu.tsx)의 CSS `transform: scale()`로만 처리 — 레이아웃 크기 자체는 항상 `CARD_WIDTH` 고정. **`captureImage`의 `pixelRatio` 계산은 반드시 `el.offsetWidth`(레이아웃 폭) 기준이어야 한다 — `getBoundingClientRect().width`는 `ScaledCardPreview`의 transform 영향을 받아 기기마다 다른 pixelRatio·최종 해상도가 나온다(QA에서 발견, 2026-07-27 수정)** | **주식 탭 컴포넌트를 재사용하는 `screenshotMode` 경로(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`)는 `ASSET_THEME` 대신 `ASSET_THEME_SHOT`(theme.ts, 데스크톱 값 고정) 토큰을 쓴다 — 캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 `sm:`을 직접 쓰지 말고 이 토큰에 고정값을 추가할 것.**
+| R32 | **인증카드 캡처 DOM에 뷰포트 기준 반응형 금지** | share-card.tsx의 캡처 대상(`cardRef`) DOM에는 `sm:` 등 뷰포트 미디어쿼리 클래스를 쓰지 않는다 — 캡처는 고정폭(`CARD_WIDTH`, share-menu.tsx — 480→460px, 2026-08-08 축소) 카드인데 `sm:`은 브라우저 뷰포트 기준이라 PC/모바일에서 같은 사용자가 다른 크기로 캡처되는 버그가 있었다(F-SCREENSHOT). 축소 미리보기는 `ScaledCardPreview`(share-menu.tsx)의 CSS `transform: scale()`로만 처리 — 레이아웃 크기 자체는 항상 `CARD_WIDTH` 고정. **`captureImage`의 `pixelRatio` 계산은 반드시 `el.offsetWidth`(레이아웃 폭) 기준이어야 한다 — `getBoundingClientRect().width`는 `ScaledCardPreview`의 transform 영향을 받아 기기마다 다른 pixelRatio·최종 해상도가 나온다(QA에서 발견, 2026-07-27 수정)** | **주식 탭 컴포넌트를 재사용하는 `screenshotMode` 경로(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`)는 `ASSET_THEME` 대신 `ASSET_THEME_SHOT`(theme.ts, 데스크톱 값 고정) 토큰을 쓴다 — 캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 `sm:`을 직접 쓰지 말고 이 토큰에 고정값을 추가할 것.**
 | R29 | **원인분해 flow 윈도우 경계(`inFlowWindow`)** | 경계는 **자산군 축**(주식·코인=항상 시작일 제외 / 현금·대출=포함)과 **구간 위치 축**(현금·대출은 전체 첫 구간만 포함, 하이브리드 `newer`는 제외)의 조합이다 — **네 함수를 같은 경계로 통일하면 반드시 회귀한다**(F-ACTIVITY 경계 항목 참조). 되살아나는 것: ①없는 "주식 매도"가 매수와 쌍으로(2026-08-06) ②income/debt가 무관한 `cash` 잔차로 증발(2026-08 P1) ③mid 당일 거래 이중계상으로 income 2배 + 유령 "현금 잔액 감소"(2026-08-06 QA). `resolveAttribution`에 `isFirstSegment` 인자를 추가하거나 새 호출처를 만들 때 이 값을 반드시 명시할 것(기본값 `true`라 하이브리드 2번째 구간에서 빠뜨리면 조용히 ③ 재현). `detectCashRoundTrip`도 같은 경계 사용. **합계 = `deltaNet` 항등식은 어느 쪽이든 유지되므로 기존 항등식 테스트로는 못 잡는다** — 반드시 key별 금액을 단정하는 테스트로 고정 |
 | R30 | **화면(React state) ↔ localStorage 정합** | 백업·push는 localStorage를 읽고 화면은 React state를 렌더한다. 같은 탭 pull은 `storage` 이벤트를 발화시키지 않아(브라우저 표준) 정합이 pull 후 `initAndSync(getAssetData())` 재호출 하나에만 의존한다. 갈라진 순간의 백업은 최신 기록이 빠진 파일이 되고 그걸로 복원하면 유실된다 — `exportAssetData(currentData)`의 `isExportDataStale` 가드가 유일한 방어이므로 **호출처가 화면 state를 넘기는지** 확인(F-IMPORT-EXPORT). **근본 원인(어느 경로가 localStorage를 되돌리는지)은 미추적** — 2026-08-06 실사례에서 25분 뒤 자연 복구돼 영구 유실은 없었으나 재발 시 계측(pull 완료·`syncTodayStockPrices` 저장 직전·push 직전 caller/건수 로깅)부터 할 것 |
 

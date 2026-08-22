@@ -5,7 +5,7 @@
 
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { exportAssetData } from "@/lib/asset-storage";
+import { exportAssetData } from "@/lib/asset/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
 
 // 화면 데이터와 저장소가 어긋난 순간의 백업은 최신 기록이 빠진 파일이 된다 — 두 호출처가 같은 문구를 쓴다.

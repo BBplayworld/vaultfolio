@@ -6,7 +6,7 @@
  * 모든 요청은 단일 헤더 `x-sync-auth`(base64url{assetId,ts,nonce,sig})로 인증.
  */
 
-import { buildExportPayload, applyImportedPayload, collectAssetIds, getAssetData } from "@/lib/asset-storage";
+import { buildExportPayload, applyImportedPayload, collectAssetIds, getAssetData } from "@/lib/asset/asset-storage";
 import {
   encryptPayload, decryptPayload, signMessage, sha256Hex, randomNonce, toBase64, toBase64Url,
   type AssetKeys, type EncryptedBlob,

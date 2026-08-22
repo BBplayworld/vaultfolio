@@ -5,8 +5,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
-import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
-import { readExchangeHistory } from "@/lib/profit-utils";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, CAUSE_DISPLAY_MIN, type AttributionDisplayItem } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
@@ -16,6 +16,7 @@ import { DataSourceBadge } from "../data-source-badge";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { BackupNudge } from "./backup-nudge";
+import { RefreshNudge } from "./refresh-nudge";
 import { TaxNoticeBox } from "./tax-notice-box";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { ChevronRight, ChevronDown } from "lucide-react";
@@ -559,12 +560,15 @@ export function Dashboard() {
   const tenantCount = assetData.realEstate.filter((re) => (re.tenantDeposit ?? 0) > 0).length;
 
   const { visibleTabs, resolvedTab } = useDashboardTabs(activeDetailTab);
+  const [backupNudgeVisible, setBackupNudgeVisible] = useState(false);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
-      {/* ── 상단 알림 (백업 넛지) — 지난 접속 등락은 Hero로 통합됨 ── */}
+      {/* ── 상단 알림 (백업 넛지 · 자산 최신화 넛지) — 지난 접속 등락은 Hero로 통합됨.
+          최신화 넛지는 백업 넛지가 떠 있지 않을 때만 노출(넛지 과다 노출 방지, 백업 우선). ── */}
       <div className="lg:col-span-2 empty:hidden space-y-3">
-        <BackupNudge />
+        <BackupNudge onVisibilityChange={setBackupNudgeVisible} />
+        <RefreshNudge suppressed={backupNudgeVisible} />
       </div>
 
       {/* ── 자산 분포 카드 (통합) ── */}

@@ -9,10 +9,10 @@
  */
 
 import { NextResponse } from "next/server";
-import { fetchDividendDomestic, fetchDividendOverseas } from "@/lib/finance-service";
-import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance-service";
+import { fetchDividendDomestic, fetchDividendOverseas } from "@/lib/finance/finance-service";
+import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { getKisAccessToken } from "@/lib/kis-token";
+import { getKisAccessToken } from "@/lib/finance/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";

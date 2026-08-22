@@ -19,11 +19,13 @@ import {
   classifyTickers,
   fetchStocksFromKisOverseas,
   fetchStocksFromKorea,
+  fetchDomesticClassifications,
   fetchExchangeRateFromKis,
   StockPriceResult,
-} from "@/lib/finance-service";
+  StockClassificationPatch,
+} from "@/lib/finance/finance-service";
 import { getCacheStorage, getEffectiveDateStr, getStockCacheSlot } from "@/lib/cache-storage";
-import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/kis-token";
+import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/finance/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
@@ -94,21 +96,36 @@ export async function GET(request: Request) {
     const results: Record<string, StockPriceResult> = {};
     const uncachedUs: string[] = [];
     const uncachedKr: string[] = [];
+    // 국내 분류(region/KOSPI200 등)는 가격(1시간 슬롯)과 별도로 90일 캐시를 쓴다 — 가격 캐시 hit 여부와 무관하게 항상 확인
+    const uncachedClassificationKr: string[] = [];
+    const classificationKr: Record<string, StockClassificationPatch> = {};
 
-    // 1단계: 캐시 확인 (국내/해외 슬롯 각각 적용 — 장중 1시간 단위)
-    // X-Ray 분류(classification) 필드가 없는 옛 캐시는 미캐시로 처리해 재조회 트리거
+    // 1단계: 캐시 확인
+    // 해외: X-Ray 분류(classification) 필드가 없는 옛 캐시는 미캐시로 처리해 재조회 트리거(기존과 동일)
     for (const ticker of usTickers) {
       const cached = await storage.getStock(stockCacheKey(ticker, slotForeign));
       if (cached && cached.classification) results[ticker] = cached;
       else uncachedUs.push(ticker);
     }
+    // 국내: 가격 캐시(1시간)와 분류 캐시(90일)를 독립적으로 확인
     for (const ticker of krTickers) {
-      const cached = await storage.getStock(stockCacheKey(ticker, slotDomestic));
-      if (cached && cached.classification) results[ticker] = cached;
+      const cachedPrice = await storage.getStock(stockCacheKey(ticker, slotDomestic));
+      if (cachedPrice) results[ticker] = cachedPrice;
       else uncachedKr.push(ticker);
+
+      const cachedCls = await storage.getStockClassification(ticker);
+      if (cachedCls) classificationKr[ticker] = cachedCls as unknown as StockClassificationPatch;
+      else uncachedClassificationKr.push(ticker);
     }
 
-    if (uncachedUs.length === 0 && uncachedKr.length === 0) return NextResponse.json(results);
+    if (uncachedUs.length === 0 && uncachedKr.length === 0 && uncachedClassificationKr.length === 0) {
+      for (const ticker of krTickers) {
+        if (results[ticker] && classificationKr[ticker] && !results[ticker].classification) {
+          results[ticker] = { ...results[ticker], classification: classificationKr[ticker] };
+        }
+      }
+      return NextResponse.json(results);
+    }
 
     // 2단계: 미캐시 항목만 외부 API 호출
     const apiResults: Record<string, StockPriceResult> = {};
@@ -134,22 +151,42 @@ export async function GET(request: Request) {
       }
     }
 
-    // 서킷 open이 아니고 국내 미캐시가 있으면 조회 (서킷 open이면 외부 호출 스킵)
+    // 국내 가격 조회(실시간, inquire-price) — 서킷 open이면 스킵
     if (uncachedKr.length > 0 && !kisUnavailable) {
       const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
       kisUnavailable = kisUnavailable || unavailable;
       if (accessToken) {
         attemptedFetch = true;
-        const { prices, classifications } = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        const { prices } = await fetchStocksFromKorea(uncachedKr, effectiveDateDomestic, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
         if (Object.keys(prices).length > 0) anySuccess = true;
-        for (const [ticker, cls] of Object.entries(classifications)) {
-          if (prices[ticker]) prices[ticker].classification = cls;
-          await storage.setStockClassification(ticker, cls as unknown as Record<string, unknown>);
-        }
         Object.assign(apiResults, prices);
       } else {
         console.error(`[KIS 토큰 없음 - 국내주식 조회 스킵]: ${uncachedKr.join(",")}`);
       }
+    }
+
+    // 국내 분류 조회(90일 캐시 없는 티커만) — 가격 조회 성패와 무관하게 독립 수행.
+    // 실패해도 setStockClassification을 호출하지 않아 캐시를 오염시키지 않고 다음 요청에서 자연 재시도된다.
+    if (uncachedClassificationKr.length > 0 && !kisUnavailable) {
+      const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
+      kisUnavailable = kisUnavailable || unavailable;
+      if (accessToken) {
+        const { classifications } = await fetchDomesticClassifications(uncachedClassificationKr, accessToken, KIS_APP_KEY, KIS_APP_SECRET);
+        for (const [ticker, cls] of Object.entries(classifications)) {
+          classificationKr[ticker] = cls;
+          await storage.setStockClassification(ticker, cls as unknown as Record<string, unknown>);
+        }
+      } else {
+        console.error(`[KIS 토큰 없음 - 국내주식 분류 조회 스킵]: ${uncachedClassificationKr.join(",")}`);
+      }
+    }
+
+    // 국내 가격(캐시 또는 신규)에 분류(캐시 또는 신규)를 병합 — 가격 소스와 무관하게 한 번에 처리
+    for (const ticker of krTickers) {
+      const cls = classificationKr[ticker];
+      if (!cls) continue;
+      if (results[ticker] && !results[ticker].classification) results[ticker] = { ...results[ticker], classification: cls };
+      if (apiResults[ticker] && !apiResults[ticker].classification) apiResults[ticker].classification = cls;
     }
 
     // 3단계: 캐시 갱신 (국내/해외 슬롯 각각 적용 — 장중 1시간 단위)

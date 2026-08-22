@@ -11,11 +11,11 @@ import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { buildAssetReport, buildLiveAttributionCurr, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, groupAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
-import { listArchivedDates } from "@/lib/snapshot-archive";
-import { readExchangeHistory, fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/profit-utils";
+import { listArchivedDates } from "@/lib/asset/snapshot-archive";
+import { readExchangeHistory, fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/finance/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
-import { normalizeTicker } from "@/lib/finance-service";
+import { normalizeTicker } from "@/lib/finance/finance-service";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
@@ -24,7 +24,7 @@ import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
-import { readDailySnapshots, readMonthlySnapshots } from "@/lib/snapshot-storage";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {

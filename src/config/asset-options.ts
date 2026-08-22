@@ -111,7 +111,7 @@ export const realEstateTradeDataset: Record<string, {
   villa:      { dataset: "rh",    matchBy: "complex", accuracy: "mid",  areaKind: "exclusive", areaLabel: "전용면적" },
   house:      { dataset: "sh",    matchBy: "area",    accuracy: "low",  areaKind: "gross",     areaLabel: "연면적" },
   commercial: { dataset: "nrg",   matchBy: "area",    accuracy: "low",  areaKind: "gross",     areaLabel: "건물면적" },
-  land:       null, // 이번 범위 제외
+  land:       null, // 토지는 실거래가 조회 기능 제외(지목별 형평 비교·지분 문제로 신뢰 가능한 추정 어려움)
   other:      null,
 };
 

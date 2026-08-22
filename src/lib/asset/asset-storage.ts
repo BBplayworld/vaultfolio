@@ -2,12 +2,12 @@
 
 import { z } from "zod";
 import { AssetData, assetDataSchema, AssetSnapshots, DailyArchive, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
-import { readDailyArchive, writeDailyArchive, mergeDailyArchives } from "@/lib/snapshot-archive";
-import { markBackedUp } from "@/lib/backup-status";
+import { readDailyArchive, writeDailyArchive, mergeDailyArchives } from "@/lib/asset/snapshot-archive";
+import { markBackedUp } from "@/lib/asset/backup-status";
 import { transactionSchema } from "@/types/transaction";
 import LZString from "lz-string";
 import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
-import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/profit-utils";
+import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/finance/profit-utils";
 import { persistNickname } from "@/hooks/use-nickname";
 import { cryptoExchanges } from "@/config/asset-options";
 
@@ -387,6 +387,9 @@ export function clearAssetData(): boolean {
       STORAGE_KEYS.backup,
       // 세금 안내 배너 닫기 상태도 기기 로컬 메타 — 보존하지 않으면 복원·동기화 pull 때마다 닫은 배너가 되살아난다
       STORAGE_KEYS.taxNotice,
+      // 자산 최신화 상태(카테고리별 마지막 갱신일)도 기기 로컬 메타 — backup과 동일 근거로 보존하지
+      // 않으면 백업 복원·동기화 pull 때마다 "최신화한 적 없음"으로 되돌아가 넛지가 부당하게 재노출된다
+      STORAGE_KEYS.assetRefresh,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {

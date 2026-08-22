@@ -15,7 +15,7 @@ GET /api/finance?type=stock&tickers=005930,TSLA,AAPL
 → { "005930": { price, name, updated_at, market?, inactiveStatus?, inactiveReason? }, ... }
 ```
 
-캐시 슬롯: `getStockCacheSlot("domestic"|"foreign")` ([stock-cache-slot.ts](../../src/lib/stock-cache-slot.ts))
+캐시 슬롯: `getStockCacheSlot("domestic"|"foreign")` ([stock-cache-slot.ts](../../src/lib/finance/stock-cache-slot.ts))
 - 장중: `"TICKER-{date}-H{HH}"` (1시간 단위 갱신)
 - 장외: `"TICKER-{effectiveDate}"` (다음 개장까지 유지)
 
@@ -31,9 +31,9 @@ GET /api/finance/crypto?symbols=BTC,ETH,SOL
 → { "BTC": { price, market: "KRW-BTC", updated_at }, ... }
 ```
 
-캐시 슬롯: `getCoinCacheSlot()` ([coin-cache-slot.ts](../../src/lib/coin-cache-slot.ts)) — 코인은 24시간 무휴장이라 장중/장외·영업일 구분 없이 **항상** `"{date}-H{HH}"`(KST 1시간).
+캐시 슬롯: `getCoinCacheSlot()` ([coin-cache-slot.ts](../../src/lib/finance/coin-cache-slot.ts)) — 코인은 24시간 무휴장이라 장중/장외·영업일 구분 없이 **항상** `"{date}-H{HH}"`(KST 1시간).
 
-- **캐시 2겹**: `finance:coin:{market}-{slot}`(1시간) + `finance:coin:last:{market}`(3시간 stale 폴백). 파일 캐시는 `COINS`/`COINS_LAST` — **`STOCKS`와 반드시 분리**(prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 삭제됨).
+- **캐시 1키 겸용(2026-08)**: `finance:coin:{market}`(slot·값·updatedAtMs를 한 레코드에 저장, TTL 3시간) — `getCoin(market, slot)`은 slot 일치로 신선 판정, `getCoinStale(market)`은 레코드 존재(=TTL 이내)로 stale 판정. `setCoin`은 SET 1회(과거엔 슬롯 키+stale 키 2개라 SET 2회였음). 파일 캐시는 `COINS` 단일 버킷(구 `COINS_LAST` 폐기) — **`STOCKS`와 반드시 분리**(prune이 주식 유효일 문자열 매칭이라 같은 버킷이면 코인이 삭제됨).
 - **rate limit 방어**(업비트 IP 기준 10 req/s의 20%만 사용): 슬롯 캐시 → stale 즉시 반환 + `after()` 백그라운드 갱신 → 최초만 동기 대기. 외부 호출은 `finance:upbit:lock`(SET NX EX 5s) 직렬화 + 최소 500ms 간격. 로컬은 모듈 스코프 in-flight dedup.
 - **무효 심볼 방어**: `market/all`(1일 캐시)과 교집합 후 조회 — 미상장 심볼이 섞이면 요청 **전체가 400 실패**. 응답에 없는 코인은 클라이언트가 수동값 유지.
 - 429·418 → 재시도 없이 stale 유지 + `X-Upbit-Unavailable` 헤더.
@@ -179,7 +179,7 @@ Body: { message: string(필수, 최대 2000자 절단), nickname?: string, conta
 
 ---
 
-## 외부 API — 한국투자증권 OpenAPI (`src/lib/finance-service.ts`)
+## 외부 API — 한국투자증권 OpenAPI (`src/lib/finance/finance-service.ts`)
 
 ```typescript
 fetchStocksFromKorea(tickers, todayStr, token, key, secret)       // 국내 주식
@@ -203,7 +203,7 @@ classifyOverseasInactive(output): { status: "delisted"|"halted"|null, reason }
 
 ---
 
-## 공유 토큰 시스템 v7.2 (`src/lib/asset-storage.ts`)
+## 공유 토큰 시스템 v7.2 (`src/lib/asset/asset-storage.ts`)
 
 ```
 프리픽스: v71P(PIN 있음, 공유 가능) / v71N(PIN 없음, 로컬만) / v72Z(PIN+localKey, Zero-Knowledge)

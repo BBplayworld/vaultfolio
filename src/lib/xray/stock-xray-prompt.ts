@@ -7,7 +7,7 @@
  */
 
 import { Stock } from "@/types/asset";
-import { ExchangeRates } from "@/lib/finance-service";
+import { ExchangeRates } from "@/lib/finance/finance-service";
 import { formatShortCurrency } from "@/lib/number-utils";
 import type { BreakdownResult } from "./stock-xray";
 

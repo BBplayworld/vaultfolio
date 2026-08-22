@@ -8,8 +8,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { KR_SEARCH_ENTRIES } from "@/lib/kr-master";
-import { US_SEARCH_ENTRIES, US_TICKER_TO_NAME } from "@/lib/us-master";
+import { KR_SEARCH_ENTRIES } from "@/lib/finance/kr-master";
+import { US_SEARCH_ENTRIES, US_TICKER_TO_NAME } from "@/lib/finance/us-master";
 import { FOREIGN_STOCK_MAP } from "@/app/api/parse-screenshot/ticker-map";
 
 // 마스터·ticker-map과 동일한 정규화 규칙 (괄호·공백·기호 제거, 소문자)

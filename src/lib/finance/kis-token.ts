@@ -7,7 +7,7 @@
  * unavailable=true를 반환 → 라우트가 X-KIS-Unavailable 헤더로 클라이언트에 전달.
  */
 
-import { fetchKisToken } from "@/lib/finance-service";
+import { fetchKisToken } from "@/lib/finance/finance-service";
 import { getCacheStorage } from "@/lib/cache-storage";
 import { sendAdminSlack } from "@/lib/slack";
 

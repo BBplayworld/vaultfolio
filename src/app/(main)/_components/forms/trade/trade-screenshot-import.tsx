@@ -17,10 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { formatCurrency } from "@/lib/number-utils";
-import { securitiesFirms, matchBrokerHint } from "@/config/asset-options";
+import { securitiesFirms, matchBrokerHint, stockCategories } from "@/config/asset-options";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
-import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade-utils";
+import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 
 interface ImportTrade {
   id: string;
@@ -70,6 +70,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   const [reflectToHoldings, setReflectToHoldings] = useState(true);
   const [dupActions, setDupActions] = useState<Record<string, "overwrite" | "add">>({});
   const [isRegistering, setIsRegistering] = useState(false);
+  const [newCategories, setNewCategories] = useState<Record<string, Stock["category"]>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stocks = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
@@ -80,6 +81,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     setSelectedBroker("");
     setReflectToHoldings(true);
     setDupActions({});
+    setNewCategories({});
     setIsParsing(false);
   };
 
@@ -89,23 +91,26 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   };
 
   // 거래 → 보유 종목 매칭 결과
-  // existing: 기존 보유에 반영 / split: 선택 증권사 보유로 새로 분할 생성 / none: 미보유(제외)
+  // existing: 기존 보유에 반영 / split: 선택 증권사 보유로 새로 분할 생성
+  // new: 미보유 매수 → 신규 종목 등록 / none: 미보유 매도(팔 종목이 없어 차단)
   type MatchInfo =
     | { kind: "existing"; stockId: string }
     | { kind: "split"; baseStockId: string }
+    | { kind: "new" }
     | { kind: "none" };
 
   // 종목명/티커 + 증권사로 보유 종목 매칭.
   // 선택 증권사 보유가 있으면 거기에, 없는데 다른 증권사 분할 보유가 있으면 선택 증권사로 새 분할 생성,
-  // 증권사 미지정 단일 보유면 그대로 반영(방어).
-  const resolveMatch = (ticker: string, name: string, broker: string): MatchInfo => {
+  // 증권사 미지정 단일 보유면 그대로 반영(방어). 완전 미보유는 매수만 신규 등록 허용(매도는 계속 차단).
+  const resolveMatch = (ticker: string, name: string, broker: string, type: "buy" | "sell"): MatchInfo => {
     const norm = ticker.toUpperCase();
     const candidates = ticker
       ? stocks.filter((s) => s.ticker?.toUpperCase() === norm)
       : stocks.filter((s) => s.name === name);
     if (candidates.length === 0) {
       const byName = stocks.find((s) => s.name === name);
-      return byName ? { kind: "existing", stockId: byName.id } : { kind: "none" };
+      if (byName) return { kind: "existing", stockId: byName.id };
+      return type === "buy" ? { kind: "new" } : { kind: "none" };
     }
     if (broker) {
       const byBroker = candidates.find((s) => s.broker === broker);
@@ -119,10 +124,14 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   // 거래별 매칭 정보 (selectedBroker·stocks 변경 시 재산출)
   const matchMap = useMemo(() => {
     const m = new Map<string, MatchInfo>();
-    for (const t of trades) m.set(t.id, resolveMatch(t.ticker, t.name, selectedBroker));
+    for (const t of trades) m.set(t.id, resolveMatch(t.ticker, t.name, selectedBroker, t.type));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trades, selectedBroker, assetData.stocks]);
+
+  // 신규(new) 행의 카테고리 — 사용자가 바꾸지 않으면 인식된 국내/해외 구분으로 기본값 프리필
+  const categoryFor = (t: ImportTrade): Stock["category"] =>
+    newCategories[t.id] ?? (t.section === "해외" ? "foreign" : "domestic");
 
   // 거래별 기존 중복 여부(기존 보유 매칭일 때만 — 분할 신규 생성은 중복 없음)
   const dupMap = useMemo(() => {
@@ -226,14 +235,34 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     // 분할 신규 생성 종목: baseStockId → 새 stock(quantity 0 초기). 반영 ON일 때만 생성.
     const splitStocks = new Map<string, Stock>();
     const splitIdByBase = new Map<string, string>();
+    // 완전 신규(미보유) 종목: 매수 스크린샷만으로 새 Stock 생성 — 반영 여부와 무관하게 항상 생성
+    const newlyCreated = new Map<string, Stock>();
     const now = new Date().toISOString();
 
     ordered.forEach((t, i) => {
       const info = matchMap.get(t.id)!;
       if (info.kind === "none") return; // addList에서 제외되나 타입 좁힘 겸 방어
       let stockId: string;
-      // 분할 신규(반영 ON): 선택 증권사 보유 종목을 새로 만들어 그 종목에 거래 반영
-      if (info.kind === "split" && reflectToHoldings) {
+      const isNew = info.kind === "new";
+      // 신규 종목은 참조할 기존 보유가 없어 항상 포지션을 만들어야 한다(반영 OFF와 양립 불가)
+      const forceReflect = isNew || reflectToHoldings;
+      if (isNew) {
+        stockId = `stock_${Date.now()}_${i}`;
+        newlyCreated.set(stockId, {
+          id: stockId,
+          name: t.name,
+          ticker: t.ticker || undefined,
+          category: categoryFor(t),
+          currency: t.currency,
+          broker: selectedBroker,
+          quantity: 0,
+          averagePrice: 0,
+          // 라이브 시세가 아직 없어 체결가로 임시 채움 — 다음 시세 갱신에서 정상 티커면 자동 교정됨
+          currentPrice: t.price,
+          purchaseDate: t.date,
+        } as Stock);
+      } else if (info.kind === "split" && reflectToHoldings) {
+        // 분할 신규(반영 ON): 선택 증권사 보유 종목을 새로 만들어 그 종목에 거래 반영
         const existingNewId = splitIdByBase.get(info.baseStockId);
         if (existingNewId) {
           stockId = existingNewId;
@@ -254,7 +283,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         // 기존 반영 또는 (반영 OFF인 분할은 기록만 → 기준 보유에 거래내역만 연결)
         stockId = info.kind === "split" ? info.baseStockId : info.stockId;
       }
-      const stock = splitStocks.get(stockId) ?? stocks.find((s) => s.id === stockId)!;
+      const stock = newlyCreated.get(stockId) ?? splitStocks.get(stockId) ?? stocks.find((s) => s.id === stockId)!;
       const tx: Transaction = {
         id: `tx_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
         stockId,
@@ -269,15 +298,15 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
           : t.currency === "JPY" ? exchangeRates.JPY
             : undefined,
         date: t.date,
-        // 반영 ON일 때만 포지션에 반영(reflectedAt·reflectionId 부여), OFF면 기록만
-        reflected: reflectToHoldings,
-        reflectedAt: reflectToHoldings ? now : undefined,
-        reflectionId: reflectToHoldings ? `ref_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 5)}` : undefined,
+        // 반영 ON(또는 신규 종목)일 때만 포지션에 반영(reflectedAt·reflectionId 부여), OFF면 기록만
+        reflected: forceReflect,
+        reflectedAt: forceReflect ? now : undefined,
+        reflectionId: forceReflect ? `ref_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 5)}` : undefined,
         createdAt: now,
       };
       txs.push(tx);
 
-      if (!reflectToHoldings) return; // 기록만 — 포지션 누적 생략
+      if (!forceReflect) return; // 기록만 — 포지션 누적 생략
 
       const cur = posState.get(stockId) ?? getPositionSnapshot(stock);
       const preview = computeNewPosition(cur, tx);
@@ -291,7 +320,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
       });
     });
 
-    // 반영 OFF면 포지션 패치 없음(기록만). 분할 신규 종목은 newStocks로, 기존 종목은 patch로 분리.
+    // 반영 OFF면 포지션 패치 없음(기록만). 분할·완전 신규 종목은 newStocks로, 기존 종목은 patch로 분리.
     const patches: { stockId: string; patch: Partial<Stock> }[] = [];
     const newStocks: Stock[] = [];
     for (const [stockId, p] of posState.entries()) {
@@ -303,7 +332,9 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         positionEffectiveDate: p.effectiveDate,
       };
       const splitBase = splitStocks.get(stockId);
+      const newBase = newlyCreated.get(stockId);
       if (splitBase) newStocks.push({ ...splitBase, ...patch });
+      else if (newBase) newStocks.push({ ...newBase, ...patch });
       else patches.push({ stockId, patch });
     }
 
@@ -394,6 +425,12 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               </div>
             </label>
 
+            {trades.some((t) => t.selected && matchMap.get(t.id)?.kind === "new") && (
+              <p className="text-xs text-muted-foreground">
+                신규 종목 거래는 보유 반영 설정과 무관하게 항상 등록됩니다.
+              </p>
+            )}
+
             <p className="text-sm text-muted-foreground">
               인식된 거래 {trades.length}건 — 등록할 항목을 선택하세요
             </p>
@@ -407,6 +444,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                 const info = matchMap.get(t.id) ?? { kind: "none" as const };
                 const matched = info.kind !== "none";
                 const isSplit = info.kind === "split";
+                const isNew = info.kind === "new";
                 const matchedStock = info.kind === "existing" ? stocks.find((s) => s.id === info.stockId) : undefined;
                 const active = matched && t.selected;
                 return (
@@ -456,6 +494,18 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                           <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
                             ✓ {selectedBroker} 보유로 {reflectToHoldings ? "새로 추가" : "거래내역에 기록"}
                           </p>
+                        ) : isNew ? (
+                          <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">✓ 신규 종목으로 추가됩니다</p>
+                            <Select value={categoryFor(t)} onValueChange={(v) => setNewCategories((prev) => ({ ...prev, [t.id]: v as Stock["category"] }))}>
+                              <SelectTrigger className="h-7 text-[11px] w-32"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {stockCategories.map((c) => (
+                                  <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         ) : (
                           <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
                             ✓ {matchedStock?.broker ? `${matchedStock.broker} ` : ""}보유 종목{reflectToHoldings ? "에 반영" : " 거래내역에 기록"}

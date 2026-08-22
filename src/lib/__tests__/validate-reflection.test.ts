@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateReflection } from "../validate-reflection";
+import { validateReflection } from "../trade/validate-reflection";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 
 const makeSnapshot = (overrides: Partial<PositionSnapshot> = {}): PositionSnapshot => ({

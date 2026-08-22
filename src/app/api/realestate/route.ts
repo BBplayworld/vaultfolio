@@ -3,7 +3,7 @@
 // op=estimate: 종류/시군구/단지명/면적 → 최근 실거래 추정치 (없고 면적 미상이면 면적 후보 목록)
 // 캐시: 서버 모듈 메모리 TTL(시군구·월 단위). 지속 캐시(cache-storage) 이관은 후속.
 import { NextResponse } from "next/server";
-import { resolveAddress, fetchTrades, fetchTradesXml, matchTrade, distinctAreas, type RealEstateTrade, type AreaKind } from "@/lib/realestate-service";
+import { resolveAddress, fetchTrades, fetchTradesXml, matchTrade, distinctAreas, type RealEstateTrade, type AreaKind } from "@/lib/realestate/realestate-service";
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6시간
 const tradeCache = new Map<string, { at: number; data: RealEstateTrade[] }>();

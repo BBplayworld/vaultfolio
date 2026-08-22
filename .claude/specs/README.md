@@ -96,3 +96,4 @@ S-4.19 ─┬─ .claude/specs/4.19-deposit-maturity.md   ← 의도·수용기�
 | [S-4.24](./4.24-loan-transactions.md) | 대출 상환/추가 대출(마이너스통장) 거래내역 | 완료 | `issue-4.24-loan-transactions` | F-LOAN-TX |
 | [S-4.25](./4.25-crypto-transactions.md) | 암호화폐 매수/매도 거래내역 | 완료 | `issue-4.21` | F-CRYPTO-TX(예정) |
 | [S-4.29](./4.29-onboarding-wizard.md) | 스크린샷 일괄 온보딩 마법사 | 완료 | `issue-4.29-onboarding-wizard` | F-ONBOARD-WIZARD |
+| [S-4.30](./4.30-asset-refresh-fab.md) | 자산 최신화(FAB 통합 카드 화면·병합형 갱신) | 구현중 | `issue-4.30-asset-refresh-fab` | F-ASSET-REFRESH |

@@ -1,8 +1,8 @@
 "use client";
 
 import { useAssetData } from "@/contexts/asset-data-context";
-import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset-storage";
-import { getProfitBasis } from "@/lib/profit-utils";
+import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset/asset-storage";
+import { getProfitBasis } from "@/lib/finance/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 /** 일별·월별 순자산 스냅샷 수집 — 정본은 asset-storage.collectSnapshotsFromStorage */

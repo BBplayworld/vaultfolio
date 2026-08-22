@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { SECTOR_ENUM, type StockClassification } from "@/lib/xray/classification-store";
-import { KR_CODE_TO_NAME } from "@/lib/kr-master";
+import { KR_CODE_TO_NAME } from "@/lib/finance/kr-master";
 
 // 코드→약명 역맵 (KRX 전종목 마스터)
 const reverseDomesticMap: Record<string, string> = KR_CODE_TO_NAME;

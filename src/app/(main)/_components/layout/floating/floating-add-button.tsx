@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
-import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, ArrowRight, Pencil, ArrowLeftRight } from "lucide-react";
+import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,11 +11,16 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { useAssetNavigation, type DetailTab } from "../navigation/navigation-context";
+import { InfoHint } from "../ui/info-hint";
+import type { RefreshCategory } from "@/lib/asset/asset-refresh-status";
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
-type Step = "select-type" | "select-action" | "select-method";
+// hub: "보유 현황 업데이트" / "매수·매도 거래 기록" 상위 선택
+// holdings: 카테고리별 보유현황 컴팩트 리스트(단건 전용)
+// trade: 카테고리별 거래 기록 컴팩트 리스트(단건 전용)
+// select-method: 보유현황 스크린샷/직접입력 선택(holdings에서만 진입)
+type Step = "hub" | "holdings" | "trade" | "select-method";
 
 // 시트 리스트 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시)
 const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300";
@@ -41,9 +46,9 @@ const EVENT_MAP: Record<AssetType, string> = {
 export function FloatingAddButton() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<Step>("select-type");
+  const [step, setStep] = useState<Step>("hub");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
-  const { exchangeRates, exchangeRateDate, updateExchangeRate } = useAssetData();
+  const { exchangeRates, exchangeRateDate } = useAssetData();
   const { navigate, view } = useAssetNavigation();
   const { isStandalone } = usePWAInstall();
   const [isHidden, setIsHidden] = useState(false);
@@ -59,11 +64,17 @@ export function FloatingAddButton() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 하단 네비에서 시트 열기 이벤트 수신
+  // 하단 네비·넛지에서 시트 열기 이벤트 수신. detail.category가 있으면 hub/holdings를 건너뛰고
+  // 해당 카테고리의 단건 흐름으로 바로 진입(넛지 CTA — 가장 오래된 카테고리 1개)
   useEffect(() => {
-    const handler = () => setIsOpen(true);
+    const handler = (e: Event) => {
+      const category = (e as CustomEvent<{ category?: RefreshCategory }>).detail?.category;
+      setIsOpen(true);
+      if (category) handleHoldingsClick(category as AssetType);
+    };
     window.addEventListener("open-add-asset-sheet", handler);
     return () => window.removeEventListener("open-add-asset-sheet", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 인증카드 다이얼로그 열림 상태 추적
@@ -81,27 +92,23 @@ export function FloatingAddButton() {
   const showBar = allowedByView && !screenshotOpen && !isStandalone;
 
   const resetState = () => {
-    setStep("select-type");
+    setStep("hub");
     setSelectedType(null);
   };
 
-  const handleTypeSelect = (type: AssetType) => {
+  // 단건: 카드의 "보유현황" 클릭 — 즉시 처리(기존 select-type→select-action 동작과 동일, 회귀 없음)
+  const handleHoldingsClick = (type: AssetType) => {
+    const asset = ASSET_TYPES.find((a) => a.type === type);
     setSelectedType(type);
-    setStep("select-action");
-  };
-
-  const handleActionAdd = () => {
-    if (!selectedType) return;
-    const asset = ASSET_TYPES.find((a) => a.type === selectedType);
     if (!asset?.hasScreenshot) {
-      if (selectedType === "real-estate") dispatchAddRealEstate();
-      else if (selectedType === "yearly-net-asset") {
+      if (type === "real-estate") dispatchAddRealEstate();
+      else if (type === "yearly-net-asset") {
         // 순자산 페이지(YearlyNetAssetChart)가 마운트되어야 trigger 이벤트 수신 가능.
         // 허브/다른 탭에서 진입 시 먼저 netasset 페이지로 이동 후 다음 tick에 dispatch
         navigate({ type: "activity", tab: "netasset" });
-        setTimeout(() => window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType])), 50);
+        setTimeout(() => window.dispatchEvent(new CustomEvent(EVENT_MAP[type])), 50);
       }
-      else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType]));
+      else window.dispatchEvent(new CustomEvent(EVENT_MAP[type]));
       setIsOpen(false);
       resetState();
     } else {
@@ -109,9 +116,8 @@ export function FloatingAddButton() {
     }
   };
 
-  const handleActionEdit = () => {
-    if (!selectedType) return;
-    const asset = ASSET_TYPES.find((a) => a.type === selectedType);
+  const handleActionEdit = (type: AssetType) => {
+    const asset = ASSET_TYPES.find((a) => a.type === type);
     if (!asset?.navigateTab) return;
     navigate({ type: "detail", tab: asset.navigateTab as DetailTab });
     setIsOpen(false);
@@ -120,6 +126,7 @@ export function FloatingAddButton() {
 
   const handleMethodSelect = (mode: "screenshot" | "manual") => {
     if (!selectedType) return;
+
     if (selectedType === "stock") dispatchAddStock(mode);
     else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
     setIsOpen(false);
@@ -129,8 +136,9 @@ export function FloatingAddButton() {
   const selectedAsset = ASSET_TYPES.find((a) => a.type === selectedType);
 
   const sheetTitle = () => {
-    if (step === "select-type") return "자산 선택";
-    if (step === "select-action") return `${selectedAsset?.label}`;
+    if (step === "hub") return "자산 업데이트";
+    if (step === "holdings") return "보유 현황 업데이트";
+    if (step === "trade") return "매수/매도 거래 기록";
     return `${selectedAsset?.label} 추가`;
   };
 
@@ -228,21 +236,40 @@ export function FloatingAddButton() {
             <SheetTitle>{sheetTitle()}</SheetTitle>
           </SheetHeader>
 
-          {step === "select-type" && (
-            <div className="flex flex-col gap-2 px-3">
-              {ASSET_TYPES.map(({ type, label, icon: Icon }, i) => (
-                <button
-                  key={type}
-                  type="button"
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
-                  style={{ animationDelay: `${i * 40}ms` }}
-                  onClick={() => handleTypeSelect(type)}
-                >
-                  <Icon className="size-5 text-primary shrink-0" />
-                  <span className="font-medium">{label}</span>
-                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              ))}
+          {step === "hub" && (
+            <div className="flex flex-col gap-3 px-3">
+              <div className="flex items-center gap-1.5 px-1">
+                <p className="text-xs text-muted-foreground">어떤 메뉴를 써야 하는지 헷갈리나요?</p>
+                <InfoHint summary="어떤 메뉴를 써야 하나요?" inModal>
+                  <p>최초 등록이나 잔고가 어긋났을 때는 보유 현황 업데이트로 재동기화하세요.</p>
+                  <p>이후 매수·매도할 때마다 거래 기록으로 남기면 손익·세금 계산이 정확해져요.</p>
+                </InfoHint>
+              </div>
+              <button
+                type="button"
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                onClick={() => setStep("holdings")}
+              >
+                <Plus className="size-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold">보유 현황 업데이트</p>
+                  <p className="text-sm text-muted-foreground">잔고 재동기화 · 이력 없음</p>
+                </div>
+                <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+              </button>
+              <button
+                type="button"
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                style={{ animationDelay: "40ms" }}
+                onClick={() => setStep("trade")}
+              >
+                <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold">매수/매도 거래 기록</p>
+                  <p className="text-sm text-muted-foreground">신규 종목 등록 가능 · 손익·세금 반영</p>
+                </div>
+                <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+              </button>
 
               <Separator className="my-1" />
 
@@ -271,113 +298,84 @@ export function FloatingAddButton() {
             </div>
           )}
 
-          {step === "select-action" && selectedAsset && (
+          {step === "holdings" && (
             <div className="flex flex-col gap-2 px-3">
-              <button
-                type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                onClick={handleActionAdd}
-              >
-                <Plus className="size-5 text-primary shrink-0" />
-                <div>
-                  <p className="font-medium">자산 업데이트</p>
-                  <p className="text-sm text-muted-foreground">보유 상태 직접 입력</p>
+              {ASSET_TYPES.map(({ type, label, icon: Icon, navigateTab }, i) => (
+                <div
+                  key={type}
+                  className={`flex items-center gap-1 rounded-lg bg-card overflow-hidden ${ENTER}`}
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
+                  <button
+                    type="button"
+                    className="flex-1 flex items-center gap-2.5 py-3 px-3 text-left min-w-0"
+                    onClick={() => handleHoldingsClick(type)}
+                  >
+                    <Icon className="size-5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-sm">{label}</p>
+                      <p className="text-xs text-muted-foreground">{type === "yearly-net-asset" ? "기록" : "업데이트"}</p>
+                    </div>
+                    <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+                  </button>
+                  {navigateTab && (
+                    <button
+                      type="button"
+                      aria-label={`${label} 탭으로 이동`}
+                      className="shrink-0 p-3"
+                      onClick={() => handleActionEdit(type)}
+                    >
+                      <Pencil className="size-4 text-muted-foreground" />
+                    </button>
+                  )}
                 </div>
-                <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-              </button>
-              {selectedType === "stock" && (
-                <button
-                  type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                  onClick={() => {
-                    dispatchAddTrade();
-                    setIsOpen(false);
-                    resetState();
-                  }}
-                >
-                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
-                  <div>
-                    <p className="font-medium">거래 입력</p>
-                    <p className="text-sm text-muted-foreground">매수/매도 거래 기록</p>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              )}
-              {selectedType === "cash" && (
-                <button
-                  type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                  onClick={() => {
-                    dispatchAddCashTx();
-                    setIsOpen(false);
-                    resetState();
-                  }}
-                >
-                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
-                  <div>
-                    <p className="font-medium">입출금 기록</p>
-                    <p className="text-sm text-muted-foreground">입금/출금 거래 기록</p>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              )}
-              {selectedType === "loan" && (
-                <button
-                  type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                  onClick={() => {
-                    dispatchAddLoanTx();
-                    setIsOpen(false);
-                    resetState();
-                  }}
-                >
-                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
-                  <div>
-                    <p className="font-medium">상환/대출 기록</p>
-                    <p className="text-sm text-muted-foreground">상환/추가 대출 거래 기록</p>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              )}
-              {selectedType === "crypto" && (
-                <button
-                  type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                  onClick={() => {
-                    dispatchAddCryptoTx();
-                    setIsOpen(false);
-                    resetState();
-                  }}
-                >
-                  <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
-                  <div>
-                    <p className="font-medium">매수/매도 기록</p>
-                    <p className="text-sm text-muted-foreground">코인 매수/매도 거래 기록</p>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              )}
-              {selectedAsset.navigateTab && (
-                <button
-                  type="button"
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
-                  onClick={handleActionEdit}
-                >
-                  <Pencil className="size-5 text-primary shrink-0" />
-                  <div>
-                    <p className="font-medium">수정</p>
-                    <p className="text-sm text-muted-foreground">{selectedAsset.label} 탭으로 이동</p>
-                  </div>
-                  <ArrowRight className="size-4 text-muted-foreground ml-auto" />
-                </button>
-              )}
+              ))}
+
               <button
                 type="button"
                 className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
-                onClick={() => setStep("select-type")}
+                onClick={() => setStep("hub")}
               >
                 <ChevronLeft className="size-4" />
-                자산 유형 다시 선택
+                이전으로
+              </button>
+            </div>
+          )}
+
+          {step === "trade" && (
+            <div className="flex flex-col gap-2 px-3">
+              {ASSET_TYPES.filter((a) => a.hasScreenshot).map(({ type, label, icon: Icon }, i) => {
+                const tradeLabel = type === "cash" ? "입출금 기록" : type === "loan" ? "상환·대출 기록" : "매수·매도 기록";
+                const handler =
+                  type === "stock" ? dispatchAddTrade
+                  : type === "crypto" ? dispatchAddCryptoTx
+                  : type === "cash" ? dispatchAddCashTx
+                  : dispatchAddLoanTx;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                    style={{ animationDelay: `${i * 40}ms` }}
+                    onClick={() => { handler(); setIsOpen(false); resetState(); }}
+                  >
+                    <Icon className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{label}</p>
+                      <p className="text-sm text-muted-foreground">{tradeLabel}</p>
+                    </div>
+                    <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
+                onClick={() => setStep("hub")}
+              >
+                <ChevronLeft className="size-4" />
+                이전으로
               </button>
             </div>
           )}
@@ -392,7 +390,7 @@ export function FloatingAddButton() {
                 <ImageUp className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">스크린샷 가져오기</p>
-                  <p className="text-sm text-muted-foreground">스크린샷 화면 자동 인식</p>
+                  <p className="text-sm text-muted-foreground">화면 자동 인식</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
@@ -404,14 +402,14 @@ export function FloatingAddButton() {
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">직접 입력</p>
-                  <p className="text-sm text-muted-foreground">수동으로 직접 입력</p>
+                  <p className="text-sm text-muted-foreground">숫자로 직접 입력</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>
               <button
                 type="button"
                 className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
-                onClick={() => setStep("select-action")}
+                onClick={() => setStep("holdings")}
               >
                 <ChevronLeft className="size-4" />
                 이전으로

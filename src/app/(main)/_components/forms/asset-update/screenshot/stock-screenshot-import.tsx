@@ -17,12 +17,14 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Stock, AssetData } from "@/types/asset";
-import { saveAssetDataRaw } from "@/lib/asset-storage";
+import { saveAssetDataRaw } from "@/lib/asset/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { stockCategories, securitiesFirms, matchBrokerHint } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+import { keyOfStock, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 
 type ImportStock = Omit<Stock, "id"> & {
   id: string;
@@ -89,13 +91,15 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     void syncTodayExchangeRate();
   }, [isOpen, syncTodayExchangeRate]);
 
-  const [step, setStep] = useState<"upload" | "preview">("upload");
+  const [step, setStep] = useState<"upload" | "conflict" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [stocks, setStocks] = useState<ImportStock[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
   const [applyMode, setApplyMode] = useState<"common" | "individual">("common");
   const [commonCategory, setCommonCategory] = useState<Stock["category"]>("domestic");
   const [commonBroker, setCommonBroker] = useState<string>(BROKER_NONE);
+  const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
+  const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -105,6 +109,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     setApplyMode("common");
     setCommonCategory("domestic");
     setCommonBroker(BROKER_NONE);
+    setConflictMode("merge");
+    setConflictCount(0);
   };
 
   const handleClose = () => {
@@ -185,10 +191,17 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       // 기본 공통 모드이므로 파싱 직후 전 종목에 공통 카테고리·증권사를 일괄 적용
       const usdRate = exchangeRates.USD || 1380;
       const commonBrokerVal = defaultBroker === BROKER_NONE ? undefined : defaultBroker;
-      setStocks(importStocks.map((s) => ({ ...convertStockCategory(s, defaultCategory, usdRate), broker: commonBrokerVal })));
+      const finalStocks = importStocks.map((s) => ({ ...convertStockCategory(s, defaultCategory, usdRate), broker: commonBrokerVal }));
+      setStocks(finalStocks);
 
       geminiUsage.increment("stock");
-      setStep("preview");
+      const conflicts = countConflicts(assetData.stocks, finalStocks, keyOfStock);
+      if (conflicts > 0) {
+        setConflictCount(conflicts);
+        setStep("conflict");
+      } else {
+        setStep("preview");
+      }
     } catch {
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
@@ -288,8 +301,10 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       newStocks.push(data);
     }
 
-    // 기존 stocks 유지 + 새 항목 추가 (항상 추가 방식)
-    const newData: AssetData = { ...assetData, stocks: [...assetData.stocks, ...newStocks] };
+    // 병합형: 동일 ticker+category 기존 항목은 conflictMode(merge=교체/reset=전체 대체)에 따라 처리
+    const importedKeys = new Set(newStocks.map(keyOfStock));
+    const kept = resolveKept(assetData.stocks, importedKeys, conflictMode, keyOfStock);
+    const newData: AssetData = { ...assetData, stocks: [...kept, ...newStocks] };
     let success: boolean;
     if (hasTickerless) {
       success = saveAssetDataRaw(newData);
@@ -302,6 +317,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
     if (success) {
       toast.success(`${selected.length}개 종목이 등록되었습니다.`);
+      markCategoryRefreshed("stock");
       onSaved?.(selected.length);
       handleClose();
     } else {
@@ -407,7 +423,45 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
           </div>
         )}
 
-        {/* Step 2: 미리보기 */}
+        {/* Step 2: 중복 처리 */}
+        {step === "conflict" && (
+          <div className="space-y-4">
+            <div className="rounded-md bg-amber-500/10px-4 py-3 flex items-start gap-2">
+              <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                기존 보유 종목과 <span className="font-semibold">{conflictCount}개</span> 중복됩니다(동일 티커·계좌유형).
+                처리 방식을 선택해주세요.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {(["merge", "reset"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`w-full rounded-lg border p-4 text-left transition-colors ${conflictMode === mode ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                  onClick={() => setConflictMode(mode)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${conflictMode === mode ? "border-primary" : "border-muted-foreground"}`}>
+                      {conflictMode === mode && <div className="size-2 rounded-full bg-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{mode === "merge" ? "덮어쓰기" : "초기화 후 등록"}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {mode === "merge"
+                          ? "중복 종목을 스크린샷 기준으로 교체하고, 나머지 기존 종목은 유지합니다."
+                          : "기존 종목을 모두 삭제하고 스크린샷 종목으로 대체합니다."}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: 미리보기 */}
         {step === "preview" && stocks.length > 0 && (
           <div className="space-y-3">
             <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
@@ -545,6 +599,9 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                                 티커 미확인
                               </Badge>
                             )}
+                            {conflictMode === "merge" && assetData.stocks.some((s) => keyOfStock(s) === keyOfStock(stock)) && (
+                              <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0">교체</Badge>
+                            )}
                             <Input
                               placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
                               className={`h-7 w-28 text-xs px-2.5 font-mono shrink-0 ${
@@ -638,6 +695,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         )}
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {step === "conflict" && <Button variant="brand" onClick={() => setStep("preview")}>다음</Button>}
           {step === "preview" && (
             <Button
               variant="brand"

@@ -3,7 +3,7 @@
 // 미검증 주의: 외부 API 엔드포인트·응답 필드는 서비스키 발급 후 실호출로 대조 필요.
 // 키 미설정·실패 시 전부 graceful(null·빈배열)로 degrade — 앱 사용은 막지 않는다(AC5).
 
-import { fetchWithTimeout } from "./finance-service";
+import { fetchWithTimeout } from "../finance/finance-service";
 
 const KAKAO_KEY = process.env.KAKAO_REST_API_KEY || "";
 const DATA_KEY = process.env.PUBLIC_DATA_API_KEY || ""; // 공공데이터포털 서비스키(디코딩된 원문)

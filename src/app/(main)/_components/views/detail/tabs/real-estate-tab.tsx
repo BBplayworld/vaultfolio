@@ -11,7 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes, realEstateTradeDataset } from "@/config/asset-options";
-import { formatFullAddress } from "@/lib/real-estate-address";
+import { formatFullAddress } from "@/lib/realestate/real-estate-address";
 import { GradeBadge } from "../../../forms/asset-update/input/real-estate-input";
 import { assignColors } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";

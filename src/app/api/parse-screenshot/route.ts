@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { lookupTicker } from "./ticker-map";
-import { KR_CODES } from "@/lib/kr-master";
-import { US_TICKERS } from "@/lib/us-master";
+import { KR_CODES } from "@/lib/finance/kr-master";
+import { US_TICKERS } from "@/lib/finance/us-master";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 
 // 국내 종목 티커 Set — section이 "해외"여도 이 안에 있으면 domestic으로 강제
 // KRX 전종목 마스터 기준 (src/lib/kr-master.ts)
 const DOMESTIC_TICKERS = KR_CODES;
 
-type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "trade";
+type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "trade" | "crypto-trade";
 
 // ─────────────────────────────────────────────────────────
 // 주식 스키마 / 프롬프트 / 후처리
@@ -554,6 +554,70 @@ function processTradeResults(raw: GeminiTrade[], today: string) {
 }
 
 // ─────────────────────────────────────────────────────────
+// 암호화폐 거래(체결) 내역 스키마 / 프롬프트 / 후처리 (S-4.30)
+// trade(주식)와 대칭이나 국내/해외 구분·통화 분기가 없어 section/currency 필드는 두지 않는다.
+// ─────────────────────────────────────────────────────────
+
+const CRYPTO_TRADE_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      name: { type: Type.STRING },
+      symbol: { type: Type.STRING },
+      type: { type: Type.STRING, enum: ["buy", "sell"] },
+      quantity: { type: Type.NUMBER },
+      price: { type: Type.NUMBER },
+      date: { type: Type.STRING },
+      fee: { type: Type.NUMBER },
+      exchangeHint: { type: Type.STRING },
+    },
+    required: ["name", "symbol", "type", "quantity", "price"],
+  },
+};
+
+const buildCryptoTradePrompt = () => `암호화폐 거래소 앱 체결 내역(거래 내역) 화면에서 거래 정보를 추출하라.
+
+필드:
+name=코인명(그대로), symbol=심볼(예: BTC, ETH — 화면에 보이면 최우선·없으면 코인명에서 추정), type=buy(매수)|sell(매도), quantity=체결수량(숫자만), price=체결단가(1개당 가격·숫자만), date=체결일(연도가 화면에 보이면 YYYY-MM-DD·연도가 없으면 MM-DD만·아예 없으면 ""), fee=수수료(숫자·없으면 0), exchangeHint=화면에서 거래소명이 텍스트로 보이면 그대로 추출(예:"업비트"·"빗썸"·"바이낸스")·없으면 ""
+
+판단 규칙:
+- "매수" "BUY" → type=buy, "매도" "SELL" → type=sell
+- price는 1개당 단가다. "체결가격/주문가격/체결단가/단가" 컬럼 값은 이미 1개당 가격이므로 그대로 사용하고 절대 수량으로 나누지 마라.
+- "총 매수금액/정산금액/거래금액"처럼 합계 금액만 있고 1개당 단가가 전혀 없을 때만 price=합계÷수량으로 계산
+- 체결일에 연도가 화면에 표시되지 않았으면 절대 연도를 추측하지 말고 MM-DD만 반환하라
+
+무시: 지갑주소·총 평가금액·광고`;
+
+interface GeminiCryptoTrade {
+  name: string;
+  symbol: string;
+  type: "buy" | "sell";
+  quantity: number;
+  price: number;
+  date?: string;
+  fee?: number;
+  exchangeHint?: string;
+}
+
+function processCryptoTradeResults(raw: GeminiCryptoTrade[], today: string) {
+  return raw
+    .filter((t) => t.name && t.symbol && t.quantity > 0 && t.price > 0)
+    .map((t, idx) => ({
+      id: `crypto_trade_import_${Date.now()}_${idx}`,
+      name: t.name,
+      symbol: t.symbol.toUpperCase(),
+      type: t.type,
+      quantity: Math.round(t.quantity * 1000000) / 1000000,
+      price: Math.round(t.price * 100) / 100,
+      date: normalizeTradeDate(t.date, today),
+      dateMissing: !t.date,
+      fee: t.fee ?? 0,
+      exchangeHint: t.exchangeHint || "",
+    }));
+}
+
+// ─────────────────────────────────────────────────────────
 // API 핸들러
 // ─────────────────────────────────────────────────────────
 
@@ -604,7 +668,8 @@ export async function POST(request: Request) {
       : assetTypeRaw === "cash" ? "cash"
         : assetTypeRaw === "loan" ? "loan"
           : assetTypeRaw === "trade" ? "trade"
-            : "stock";
+            : assetTypeRaw === "crypto-trade" ? "crypto-trade"
+              : "stock";
 
   // 이미지 → base64 변환 (처리 후 메모리에서 소멸, 저장 없음)
   const arrayBuffer = await imageFile.arrayBuffer();
@@ -616,14 +681,16 @@ export async function POST(request: Request) {
       : assetType === "cash" ? buildCashPrompt()
         : assetType === "loan" ? buildLoanPrompt()
           : assetType === "trade" ? buildTradePrompt()
-            : buildStockPrompt();
+            : assetType === "crypto-trade" ? buildCryptoTradePrompt()
+              : buildStockPrompt();
 
   const responseSchema =
     assetType === "crypto" ? CRYPTO_SCHEMA
       : assetType === "cash" ? CASH_SCHEMA
         : assetType === "loan" ? LOAN_SCHEMA
           : assetType === "trade" ? TRADE_SCHEMA
-            : STOCK_SCHEMA;
+            : assetType === "crypto-trade" ? CRYPTO_TRADE_SCHEMA
+              : STOCK_SCHEMA;
 
   try {
     const genAI = new GoogleGenAI({ apiKey });
@@ -687,6 +754,10 @@ export async function POST(request: Request) {
     if (assetType === "trade") {
       const trades = processTradeResults(geminiRaw as GeminiTrade[], todayStr);
       return NextResponse.json({ trades, rawText });
+    }
+    if (assetType === "crypto-trade") {
+      const cryptoTrades = processCryptoTradeResults(geminiRaw as GeminiCryptoTrade[], todayStr);
+      return NextResponse.json({ cryptoTrades, rawText });
     }
 
     // stock (기본)

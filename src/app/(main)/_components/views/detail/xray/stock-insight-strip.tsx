@@ -3,7 +3,7 @@
 import { Microscope, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Stock } from "@/types/asset";
-import { ExchangeRates } from "@/lib/finance-service";
+import { ExchangeRates } from "@/lib/finance/finance-service";
 import { pickHighlights } from "@/lib/xray/stock-xray";
 import { fetchAndStoreClassifications } from "@/lib/xray/fetch-classifications";
 import { groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";

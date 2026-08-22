@@ -26,7 +26,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      duration={3500}
+      duration={2000}
       mobileOffset={{ bottom: "12px" }}
       swipeDirections={isStandalone ? ["bottom"] : undefined}
       icons={{

@@ -35,7 +35,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useDaumPostcode, extractJibun } from "@/hooks/use-daum-postcode";
 import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, quickButtonPresets, realEstateTradeDataset } from "@/config/asset-options";
-import { getAddressDetail } from "@/lib/real-estate-address";
+import { getAddressDetail } from "@/lib/realestate/real-estate-address";
 
 const realEstateQuickButtons = [...quickButtonPresets.realEstate];
 
@@ -126,6 +126,26 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
     if (selectedType === "land") return "공시지가 / 시세";
     if (selectedType === "commercial") return "시세";
     return "현재 시세";
+  };
+
+  // 상세주소 — 토지는 동·호 개념이 없고, 단독주택도 동·호보다 층·기타 정보가 자연스럽다
+  const getAddressDetailLabel = () => {
+    if (selectedType === "land") return "상세 정보";
+    if (selectedType === "house") return "상세주소";
+    return "상세주소 (동·호)";
+  };
+
+  const getAddressDetailPlaceholder = () => {
+    if (selectedType === "land") return "예: 맹지, 도로 미접 등 참고사항";
+    if (selectedType === "house") return "예: 2층";
+    if (selectedType === "commercial") return "예: 101호";
+    return "예: 101동 1203호";
+  };
+
+  const getAddressDetailDescription = () => {
+    if (selectedType === "land") return "토지는 동·호가 없습니다. 참고할 정보가 있으면 입력하세요.";
+    if (selectedType === "house") return "주소 검색은 건물까지만 찾아줍니다. 층 등 추가 정보가 있으면 입력하세요.";
+    return "주소 검색은 건물까지만 찾아줍니다. 동·호는 여기에 입력하세요.";
   };
 
   const form = useForm<RealEstate>({
@@ -445,11 +465,11 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
           name="addressDetail"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>상세주소 (동·호)</FormLabel>
+              <FormLabel>{getAddressDetailLabel()}</FormLabel>
               <FormControl>
-                <Input placeholder="예: 101동 1203호" value={field.value ?? ""} onChange={field.onChange} />
+                <Input placeholder={getAddressDetailPlaceholder()} value={field.value ?? ""} onChange={field.onChange} />
               </FormControl>
-              <FormDescription>주소 검색은 건물까지만 찾아줍니다. 동·호는 여기에 입력하세요.</FormDescription>
+              <FormDescription>{getAddressDetailDescription()}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -4,7 +4,7 @@ import {
   setProfitBasis as persistProfitBasis,
   DEFAULT_PROFIT_BASIS,
   type ProfitBasis,
-} from "@/lib/profit-utils";
+} from "@/lib/finance/profit-utils";
 
 interface ProfitBasisState {
   basis: ProfitBasis;

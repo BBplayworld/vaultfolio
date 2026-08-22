@@ -137,7 +137,7 @@ E2EE 클라우드 동기화:
 | 로컬 (UPSTASH_* 없음) | 파일 (`data/finance-cache.json`, `data/share-tokens.json`) |
 | Vercel (`KV_REST_API_URL` 있음) | Upstash Redis (Sliding TTL 30일) |
 
-**캐시 슬롯 시간 단위:** [stock-cache-slot.ts](../../src/lib/stock-cache-slot.ts)
+**캐시 슬롯 시간 단위:** [stock-cache-slot.ts](../../src/lib/finance/stock-cache-slot.ts)
 - 장중 1시간 슬롯 (domestic 09–20, foreign 17/18–익일 05/06 KST)
 - 장외에는 effectiveDate만 (cutoff: foreign 07:00, domestic 16:00, exchange 09:00 KST)
 

@@ -161,7 +161,7 @@ rollbackTransaction<P extends PositionLike, T extends TxLike & {id: string}>(cur
 pruneTransactions<T extends {date: string}>(transactions: T[], years=3)
 findDuplicateTransaction<T>(transactions: T[], assetIdKey: keyof T, {assetId,date,quantity,price,type})
 ```
-`PositionLike`/`TxLike`(같은 파일 export)는 필요한 필드만 뽑은 구조적 타입 — 주식(`Transaction`/`PositionSnapshot`, `stockId`)뿐 아니라 코인(`CryptoTransaction`, `cryptoId`, 환율 없음)도 그대로 통과한다. **잔액 선형 가감(현금·대출)이 아니라 수량×평단이 바뀌는 자산이면 여기를 재사용**하고 cash-tx-utils류를 새로 만들지 않는다. `validateReflection`(`src/lib/validate-reflection.ts`)도 동일 원리로 `TxLike`/`PositionLike` 제네릭.
+`PositionLike`/`TxLike`(같은 파일 export)는 필요한 필드만 뽑은 구조적 타입 — 주식(`Transaction`/`PositionSnapshot`, `stockId`)뿐 아니라 코인(`CryptoTransaction`, `cryptoId`, 환율 없음)도 그대로 통과한다. **잔액 선형 가감(현금·대출)이 아니라 수량×평단이 바뀌는 자산이면 여기를 재사용**하고 cash-tx-utils류를 새로 만들지 않는다. `validateReflection`(`src/lib/trade/validate-reflection.ts`)도 동일 원리로 `TxLike`/`PositionLike` 제네릭.
 
 ### crypto: cryptoTransactionSchema (S-4.25)
 
@@ -191,6 +191,26 @@ markWizardDismissed(): OnboardingWizardStatus
 getResumeCategory(status): WizardCategory | null   // pending인 첫 카테고리(주식→코인→현금→대출 순) — 재개 지점(AC6)
 ```
 `STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼, 별개 기능)와 **코드 패턴만** 동일(단일 키+step map)하게 재사용하고 값은 절대 공유하지 않는다 — `STORAGE_KEYS.onboardingWizardStatus` 별도 키, 기기 로컬 전용.
+
+### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
+
+```typescript
+keyOfStock(s) / keyOfCrypto(c) / keyOfCash(c) / keyOfLoan(l): string   // 카테고리별 중복 판정 키
+countConflicts(existing, incoming, keyOf): number
+resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge=겹치는 기존 항목만 제외, reset=전부 제외
+```
+`crypto-screenshot-import.tsx`가 최초 구현한 패턴을 일반화 — stock은 `ticker:category`, cash는 `name:institution`(근사), loan은 `name:institution:type`으로 매칭. cash/loan은 스키마에 고유 식별자가 없어 근사 매칭(오매칭 가능, preview에서 사용자가 개별 체크/해제).
+
+### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
+
+```typescript
+markCategoryRefreshed(category)              // 보유현황 스크린샷 등록 성공 시 호출
+daysSinceRefresh(category): number | null
+getStaleCategories(assetLastUpdated?): RefreshCategory[]   // 30일 이상(또는 이력 없음+유예 경과) 오래된 순
+shouldShowRefreshNudge(opts): boolean
+markRefreshNudgeShown() / clearAssetRefreshStatus()
+```
+`backup-status.ts`와 동일 패턴(단일 키 + 오늘 노출 여부). `STORAGE_KEYS.assetRefresh`, `clearAssetData` keepKeys에 포함(기기 로컬 메타). 넛지는 백업 넛지와 동시 노출하지 않음(`refresh-nudge.tsx`의 `suppressed` prop으로 배타 처리, dashboard.tsx가 `BackupNudge.onVisibilityChange`로 조율).
 
 ### report/asset-report.ts — 원인분해 집계 헬퍼
 
@@ -355,7 +375,7 @@ parseShareToken(token, pin?, localKey?): ParseResult
 
 `syncedIds`가 없으면(구버전·첫 동기화) 병합을 끄고 원격이 그대로 대체한다(안전 폴백). 파일 가져오기와 `connect`(다른 금고 채택, `pullAsset(..., { merge: false })`)도 이 대체 경로 — 남의 백업·금고에 내 로컬 잔여 항목을 섞으면 안 된다(F-CLOUD-SYNC S2 "자산 동일"). `unlock`(같은 금고)은 병합.
 
-### real-estate-address.ts (`src/lib/real-estate-address.ts`)
+### real-estate-address.ts (`src/lib/realestate/real-estate-address.ts`)
 
 부동산 주소 표기 정본. 구 입력 필드 `dongName`·`hoName`은 `addressDetail`로 통합됐으므로 **읽기 시점에 합쳐** 준다(저장분 유실 없음). 폼 기본값·상세 카드·공유 인코딩이 모두 이 함수를 쓴다 — 병합식을 인라인으로 다시 쓰지 말 것.
 
@@ -386,7 +406,7 @@ classifyOverseasInactive(output): { status: InactiveStatus|null, reason: string|
   //          last_rcvg_dtime > 30일 경과 → halted
 ```
 
-### stock-cache-slot.ts (`src/lib/stock-cache-slot.ts`)
+### stock-cache-slot.ts (`src/lib/finance/stock-cache-slot.ts`)
 
 서버·클라이언트 공용 캐시 슬롯 유틸. 순수 함수 (fs/Redis 의존 없음).
 
@@ -402,7 +422,7 @@ getStockCacheSlot(type: "domestic"|"foreign"): string
   // foreign 장중: DST 17:00~익일 05:00 / STD 18:00~익일 06:00 (프리마켓 포함)
 ```
 
-### profit-utils.ts (`src/lib/profit-utils.ts`)
+### profit-utils.ts (`src/lib/finance/profit-utils.ts`)
 
 ```typescript
 type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
