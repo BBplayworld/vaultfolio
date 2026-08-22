@@ -13,7 +13,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { APP_CONFIG } from "@/config/app";
 
 // 인증카드 축약 상수 — 비중 바·종목 리스트 모두 상위 N개만 노출하고 나머지는 "기타"/"외 N종목"으로 집계
-const SHOT_MAX = 5;
+const SHOT_MAX = 7;
 
 export interface ShareCardProps {
   hideAmounts: boolean;
@@ -59,7 +59,7 @@ export function ShareCard({ hideAmounts, cardRef }: ShareCardProps) {
         screenshotMode
       />
 
-      {/* 비중 바(상위 5 + 기타) + 종목 리스트(상위 5 + 외 N종목) — 주식 탭과 동일 컴포넌트.
+      {/* 비중 바(상위 7 + 기타) + 종목 리스트(상위 7 + 외 N종목) — 주식 탭과 동일 컴포넌트.
           배경색 없이 카드 전체 배경과 통일. 세로 패딩(py-3.5=14px)은 간격 계산(헤더 mt-3.5 등)의
           기준점이라 유지하고, 가로만(px-2=8px) 좁혀 콘텐츠가 카드 폭을 넓게 쓰게 한다.
           헤더는 하단 패딩 0이라 여기 마진(14px) + 이 박스의 상단 패딩(14px)을 더해야
