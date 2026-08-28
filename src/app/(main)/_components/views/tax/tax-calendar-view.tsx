@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME } from "@/config/theme";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/number-utils";
 import { FOREIGN_CAPITAL_GAIN_DEDUCTION, TAX_TAG_LABEL, type TaxEvent } from "@/config/tax-calendar";
 import {
   computeForeignRealizedGain,
@@ -19,14 +19,24 @@ import {
   todayKst,
   type TaxTagReasons,
 } from "@/lib/tax-utils";
+import { TaxYearEndSimulator } from "./tax-year-end-simulator";
+import { useTaxViewStore } from "@/stores/tax-view-store";
+import { ScrollToTop } from "../../layout/floating/scroll-to-top";
 
 type Filter = "mine" | "all";
+type PageTab = "schedule" | "simulator";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export function TaxCalendarView() {
   const { assetData, exchangeRates } = useAssetData();
   const [filter, setFilter] = useState<Filter>("mine");
+  // 홈 기능 팁 박스 등 외부에서 지정한 초기 탭을 1회 소비(진입 후 즉시 clear)
+  const [pageTab, setPageTab] = useState<PageTab>(() => {
+    const t = useTaxViewStore.getState().initialTab;
+    useTaxViewStore.getState().clear();
+    return t ?? "schedule";
+  });
   const currentMonthRef = useRef<HTMLElement | null>(null);
 
   const today = todayKst();
@@ -40,19 +50,39 @@ export function TaxCalendarView() {
   );
 
   useEffect(() => {
-    currentMonthRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
-  }, []);
+    if (pageTab === "schedule") currentMonthRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [pageTab]);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* 헤더+탭 고정 — 이번 달로 자동 스크롤돼도 "세금 일정관리/절세 시뮬레이션" 전환이 항상 보이도록 */}
+      <div className="sticky top-0 z-10 bg-background flex flex-col gap-3 pb-3">
+        <div className="flex items-center gap-2 min-w-0 pt-1">
           <Receipt className={`size-5 shrink-0 ${ASSET_THEME.important}`} />
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-foreground">세금 일정</h2>
-            <p className="text-sm text-muted-foreground">보유 자산에 맞춘 월별 신고·납부 안내</p>
+            <h2 className="text-base font-bold text-foreground">세금 관리</h2>
+            <p className="text-sm text-muted-foreground">세금 일정 안내와 연말 절세 시뮬레이션</p>
           </div>
         </div>
+
+        <InlineSelector<PageTab>
+          value={pageTab}
+          onChange={setPageTab}
+          ariaLabel="세금 관리 탭"
+          size="lg"
+          className="w-full"
+          options={[
+            { value: "schedule", label: "세금 일정관리" },
+            { value: "simulator", label: "절세 시뮬레이션" },
+          ]}
+        />
+      </div>
+
+      {pageTab === "simulator" ? (
+        <TaxYearEndSimulator assetData={assetData} exchangeRates={exchangeRates} />
+      ) : (
+      <>
+      <div className="flex items-center justify-end">
         <InlineSelector<Filter>
           value={filter}
           onChange={setFilter}
@@ -103,7 +133,7 @@ export function TaxCalendarView() {
           const isCurrent = month === currentMonth;
 
           return (
-            <section key={month} ref={isCurrent ? currentMonthRef : undefined} className="scroll-mt-16">
+            <section key={month} ref={isCurrent ? currentMonthRef : undefined} className="scroll-mt-32">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <p className={`text-sm font-semibold ${isCurrent ? ASSET_THEME.primary.text : ASSET_THEME.text.muted}`}>
                   {month}월
@@ -130,6 +160,9 @@ export function TaxCalendarView() {
           실제 신고·납부 여부와 세액은 국세청(홈택스) 또는 세무 전문가를 통해 확인하세요.
         </p>
       </div>
+      <ScrollToTop />
+      </>
+      )}
     </div>
   );
 }

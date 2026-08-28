@@ -61,7 +61,11 @@ _components/
 - **LoanTxView** (`views/detail/loan-tx/loan-tx-view.tsx`, S-4.24): `loan-transactions` 탭. 총상환·추가대출·순상환 통계·기간/유형 필터·반영 삭제 시 잔액 역가감·완납 배지. 진입 대상은 `useLoanTxViewStore`. 대출 카드 "상환/대출 기록·내역" 버튼으로 진입
 - **CryptoTxInput** (`forms/asset-update/input/crypto-tx-input.tsx`, S-4.25): 코인 매수/매도 기록 폼. `trigger-add-crypto-tx`(`dispatchAddCryptoTx(cryptoId)`)로 오픈. `CashTxInput` 구조 미러링이나 계산은 잔액 가감이 아니라 `trade-utils.computeNewPosition` 가중평균(주식과 동형) — 반영 시 수량·평단 재계산, 반영 후 예상 포지션 인라인 미리보기·초과매도 가드(`validateReflection`)·중복 인라인 확인. hidden 영역 상시 마운트
 - **CryptoTxView** (`views/detail/crypto-tx/crypto-tx-view.tsx`, S-4.25): `crypto-transactions` 탭. 총매수·총매도 통계·기간/유형 필터. 반영 삭제는 잔액 역가감이 아니라 `trade-utils.rollbackTransaction`(거래로그 전체 재적용)으로 포지션 롤백. 진입 대상은 `useCryptoTxViewStore`. 코인 카드(병합·거래소별 하위 카드) "매수/매도 기록·내역" 버튼 및 "자산업데이트" 플로팅 버튼(코인 선택 시)으로 진입
-- **TaxCalendarView** (`views/tax/tax-calendar-view.tsx`, S-4.23): `#tax` 뷰. 12개월 세금 일정 세로 리스트(`InlineSelector` 내 세금/전체 필터 · `Collapsible` 상세 · 현재 월 강조·`scrollIntoView`). 해외주식 실현차익 근거 박스 + 하단 면책 고정. `settings`와 동일한 더보기 하위 페이지 패턴(하단탭 미등록). shadcn `Calendar`는 날짜 선택기라 사용하지 않는다
+- **TaxCalendarView** (`views/tax/tax-calendar-view.tsx`, S-4.23·S-4.31 개편): `#tax` 뷰, 타이틀 "세금 관리". 헤더+`InlineSelector`(size="lg", "세금 일정관리"/"절세 시뮬레이션" 전환)를 `sticky top-0`로 고정(라우팅 불변, 페이지 내부 상태 전환 — 이번 달 자동 스크롤에도 탭이 항상 보이도록 2026-08-27 추가). 일정관리 탭 = 기존 12개월 세로 리스트(`InlineSelector` 내 세금/전체 필터 · `Collapsible` 상세 · 현재 월 강조·`scrollIntoView`(`scroll-mt-32`로 고정 헤더 높이만큼 여유) · 해외주식 실현차익 근거 박스 · 하단 면책). 시뮬레이션 탭 = `TaxYearEndSimulator` 렌더. `settings`와 동일한 더보기 하위 페이지 패턴(하단탭 미등록). shadcn `Calendar`는 날짜 선택기라 사용하지 않는다
+- **TaxYearEndSimulator** (`views/tax/tax-year-end-simulator.tsx`, S-4.31): 연말 절세 시뮬레이션. `TaxCalendarView`의 "절세 시뮬레이션" 탭 콘텐츠로만 존재(별도 Sheet·라우팅 없음, 개별 종목 카드의 진입 버튼도 없음 — 이 화면 하나로 통합). 입력은 **체크박스 + 버튼만**(텍스트 입력 없음): 종목 `Checkbox` 선택 → 프리셋 칩("전량"/이익 종목이면 "한도까지 · 비과세") + `±1`/`±5`/`±10` 버튼으로 수량 조정. `getYearEndTaxSimulation`(당해 실현손익 0이어도 candidates 반환)과 `simulateSelectedForeignSale`(선택이 비어 있어도 baseline 기준 결과를 항상 반환 — 2026-08-28부터 무조건 호출) 재사용.
+  - **상단 통합 결과 박스**(2026-08-28, `sticky top-28` — 부모 헤더+탭 높이만큼 오프셋을 둬 스크롤과 무관하게 항상 노출): 예상 양도소득세 큰 숫자 + 보조 수치 3개(실현손익=고정, 잔여 공제 한도=선택 반영해 실시간 갱신, 합산 손익=`text-foreground` 강조). 과거엔 baseline 박스(최상단)와 예상 세액 박스(최하단)가 분리돼 있었으나 정보 중복이라 하나로 합쳐 상단으로 이동.
+  - 손익 색상은 전역 규칙(`getProfitLossColor`, 이익=빨강/손실=파랑) 그대로 재사용. 순수 조회 UI(`assetData` 변경 없음)
+  - **"한도까지"는 종목별로 매 렌더 재계산**(2026-08-28): `lib/tax-utils.ts`의 `computeRebuyQuantity(gainPerShareKrw, quantity, baseGainKrw)` 재사용 — 각 행마다 "자기 자신을 제외한 현재 선택 전체 손익 + baseline"을 `baseGainKrw`로 넘긴다. 손실 종목을 먼저 선택한 뒤 이익 종목의 한도가 그만큼 늘어야 하는데(손익통산) 정적 `candidates[].rebuyQuantity`(선택 0개 기준 초기값)만 쓰던 버그를 수정.
 
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)
 
@@ -84,7 +88,9 @@ _components/
 
 ### ScrollToTop (`layout/floating/scroll-to-top.tsx`)
 
-화면 우하단 utility 버튼. 100px 스크롤 시 노출.
+화면 우하단 utility 버튼. 100px 스크롤 시 노출. `window.scrollTo(top:0)` 고정이라 마운트된 페이지의 스크롤 컨테이너가 `window`(일반 페이지 스크롤)일 때만 재사용 가능.
+
+- 적용처: 세금 관리 > 일정 관리 탭(`tax-calendar-view.tsx`, S-4.32) — 월별 리스트가 길어 상단 헤더+탭까지 되돌아가는 용도. 시뮬레이션 탭은 자체 상단 sticky 결과 박스가 있어 제외.
 
 - `<button>` native 태그 (shadcn Button의 outline variant `bg-background` 덮어쓰기 회피)
 - `bg-foreground/70 text-background` (선명한 무채색 회색). hover `bg-foreground/90 scale-105`
@@ -164,6 +170,7 @@ _components/
 | BackupNudge         | `views/home/backup-nudge.tsx`           | 백업 넛지 배너 — 홈 상단 알림 슬롯. dismiss 배너 구조 레퍼런스 |
 | RefreshNudge (S-4.30) | `views/home/refresh-nudge.tsx`        | 자산 최신화 넛지(30일 기준) — `BackupNudge`와 동일 구조, `suppressed` prop으로 백업 넛지와 동시 노출 배제(dashboard.tsx가 `onVisibilityChange`로 조율). CTA는 FAB를 `preselect`와 함께 오픈 |
 | TaxNoticeBox        | `views/home/tax-notice-box.tsx`         | 세금 안내 배너(S-4.23) — 자산 분포 카드 **아래**. **내 자산에서 파생된** 일정만(전 국민 공통 `common` 제외), 매칭 근거 문구 포함. 닫으면 그 달 미노출(월 단위 재노출) |
+| FeatureTipBox (S-4.32) | `views/home/feature-tip-box.tsx`     | 기능 활용 팁 박스 — 자산 분포 카드 아래·`TaxNoticeBox` 바로 위. `pickRecommendedFeature()`([state-and-utils.md](state-and-utils.md) `feature-usage.ts`)로 신규 기능(이번 릴리스) 최우선 → 저방문 기능 순으로 1개 추천, 클릭 시 해당 기능으로 즉시 이동. 닫기·클릭 이동 둘 다 해당 팁 **영구** dismiss(재노출 없음). `TaxNoticeBox`와 동일 보더리스 셸 재사용. 자동 팝업 공지(`UpdateNoticeDialog`)는 이 기능 도입과 함께 제거됨 — 공지는 더보기 > 앱 가이드의 수동 열람(`notice.tsx`)만 남음 |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
 | OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |
 
@@ -192,7 +199,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 사용자 노출 명칭은 **"인증카드"**(버튼·네비·다이얼로그·튜토리얼·공지). 파일·식별자는 `share-card.tsx` / `ShareCard` / `ShareScreenshotDialog` / `screenshotMode` 유지.
 
-**내용은 주식 기준으로만** 구성한다(자산군 도넛·포트폴리오 구성 바·자산군 통합 랭킹 없음):
+**내용은 주식 기준으로만** 구성한다(자산군 도넛·포트폴리오 구성 바·자산군 통합 랭킹 없음). 2026-08-27 도넛 차트(사각형→원형 두 차례 시도)로 교체를 시도했으나 실사용 확인 후 전면 롤백 — 원래 구성 유지:
 
 ```tsx
 // 닉네임 미노출(2026-08-08 제거)
@@ -208,6 +215,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
 - 금액 포맷(2026-08-08): `mask`(→`formatCurrency`, 전체 금액 — 상세 탭 `PRICE_DISPLAY_MODE="full-only"`와 동일)를 헤더·종목 리스트·"그 외 N종목" 전부에서 공유. `StockSummaryHeader`의 `maskFn`은 `DetailSummaryHeader`의 `fmtFull`·`fmt`를 동시에 덮어쓰므로(`ProfitMetric`도 `formatShort` 단일 포매터) 축약 포매터를 넘기면 평가금액·평가손익 둘 다 축약으로 새는 점 주의(과거엔 이 버그로 헤더만 축약 표시됐었음)
 - 캡처: `share-menu.tsx`의 `ScaledCardPreview`(`CARD_WIDTH`=460px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`(460 기준 3 → 최종 PNG 1380px). `innerRef`(460px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정). `CARD_WIDTH`는 기존 480→460으로 소폭 축소(2026-08-08) — 검은 카드 박스 자체의 바깥 폭을 줄이는 유일한 레버(내부 패딩은 박스 안쪽만 조정할 뿐 바깥 폭엔 무관)
+- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
 - **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
 
 ### WelcomeGuide (`layout/welcome-guide.tsx`)

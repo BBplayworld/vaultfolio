@@ -283,7 +283,7 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
   // 일별 수익 계산 — 선택된 카테고리(filteredStocks)만 합산
   // profit-chart는 항상 전체 기준이므로 카테고리별 값과 다를 수 있음
   const { dailyProfit, dailyProfitRate } = useMemo(
-    () => computeDailyStockProfit(filteredStocks, refData, exchangeRates),
+    () => computeDailyStockProfit(filteredStocks, refData, exchangeRates, { useLivePrice: true }),
     [refData, filteredStocks, exchangeRates],
   );
 
@@ -1185,7 +1185,7 @@ export function StockTab() {
             const linkedLoans = groupItems.flatMap((s) => assetData.loans.filter((l) => l.linkedStockId === s.id));
             const categoryLabels = Array.from(new Set(groupItems.map((s) => s.category))).map(getCategoryLabel);
             // 종목별 오늘 등락 — 홈(전일 순자산)·성과(집계 일별수익)와 중복 없는 개별 종목 단위
-            const { dailyProfitRate: dailyRate } = computeDailyStockProfit(groupItems, refData, exchangeRates);
+            const { dailyProfitRate: dailyRate } = computeDailyStockProfit(groupItems, refData, exchangeRates, { useLivePrice: true });
             return (
               <StockCard
                 key={groupKey}

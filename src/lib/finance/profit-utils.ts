@@ -6,17 +6,30 @@ import { isUsEasternDST } from "@/lib/finance/stock-cache-slot";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
+function todayKstYmd(): string {
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return nowKST.toISOString().split("T")[0];
+}
+
 // 일별 수익 계산 — profit-chart daily와 stock-tab의 "전일 대비"가 같은 값을 쓰도록 통일
 // 모든 종목의 종가 vs 종가 비교, 시점별 환율(prev=어제, ref=오늘) 적용
+//
+// useLivePrice(옵션, 기본 false — 기존 호출처는 전원 무변경): "종가 vs 종가"가 아니라
+// "실시간 currentPrice vs 가장 최근 확정 종가"로 분자만 교체한다(상세 > 주식 리스트 등락율 전용, S-4.31 후속과 무관한 별개 개선).
+// baseline은 refDate가 오늘이면(=오늘 종가 확정) prevPrice(어제), 아니면(장중이라 refDate 자체가 이미 어제) refPrice를 쓴다 —
+// 두 경우 모두 "어제 종가"로 수렴하므로 시간대와 무관하게 항상 동일한 기준을 비교한다.
 export function computeDailyStockProfit(
   stocks: Stock[],
   refData: ProfitRefResponse | undefined,
   currentRates: { USD: number; JPY: number },
+  options: { useLivePrice?: boolean } = {},
 ): { dailyProfit: number | null; dailyProfitRate: number | null } {
+  const { useLivePrice = false } = options;
   if (!refData) return { dailyProfit: null, dailyProfitRate: null };
   let profitSum = 0;
   let refSum = 0;
   let hasAny = false;
+  const today = useLivePrice ? todayKstYmd() : "";
   for (const st of stocks) {
     if (!st.ticker || st.category === "unlisted" || !st.currentPrice) continue;
     const ticker = normalizeTicker(st);
@@ -26,11 +39,24 @@ export function computeDailyStockProfit(
     const isJP = st.currency === "JPY" && !DOMESTIC_CATEGORIES.has(st.category);
     const rateFor = (rates: { USD: number; JPY: number }) =>
       isUS ? rates.USD : isJP ? rates.JPY / 100 : 1;
-    // ET 거래일 = 동일 KST 날짜의 환율 (ET 마감=KST 새벽, FX 미개장 → 전일 환율 적용)
-    const prevRate = rateFor(getRatesForDate(ref.prevDate, currentRates));
-    const refRate = rateFor(getRatesForDate(ref.refDate, currentRates));
-    const currentValue = ref.refPrice * st.quantity * refRate;
-    const refValue = ref.prevPrice * st.quantity * prevRate;
+
+    let currentValue: number;
+    let refValue: number;
+    if (useLivePrice) {
+      const baselineIsPrev = ref.refDate === today;
+      const baselinePrice = baselineIsPrev ? ref.prevPrice : ref.refPrice;
+      const baselineDate = baselineIsPrev ? ref.prevDate : ref.refDate;
+      const baselineRate = rateFor(getRatesForDate(baselineDate, currentRates));
+      currentValue = st.currentPrice * st.quantity * rateFor(currentRates);
+      refValue = baselinePrice * st.quantity * baselineRate;
+    } else {
+      // ET 거래일 = 동일 KST 날짜의 환율 (ET 마감=KST 새벽, FX 미개장 → 전일 환율 적용)
+      const prevRate = rateFor(getRatesForDate(ref.prevDate, currentRates));
+      const refRate = rateFor(getRatesForDate(ref.refDate, currentRates));
+      currentValue = ref.refPrice * st.quantity * refRate;
+      refValue = ref.prevPrice * st.quantity * prevRate;
+    }
+
     profitSum += currentValue - refValue;
     refSum += refValue;
     hasAny = true;

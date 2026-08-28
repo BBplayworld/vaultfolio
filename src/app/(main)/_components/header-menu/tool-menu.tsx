@@ -242,7 +242,7 @@ export function ToolMenuPage() {
             </button>
             <button type="button" className={ROW} onClick={() => navigate({ type: "tax" })}>
               <Receipt className="size-5 text-primary shrink-0" />
-              <span className="font-medium">세금 일정</span>
+              <span className="font-medium">세금 관리</span>
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>

@@ -15,7 +15,6 @@ import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { UpdateNoticeDialog } from "./_components/layout/onboarding/notice-dialog";
 import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
@@ -118,7 +117,6 @@ export default function Page() {
       <TradeInput />
       {!hideFooterInPWA && <CopyrightFooter />}
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
-      <UpdateNoticeDialog />
     </div>
   );
 }

@@ -123,6 +123,10 @@ actions: {
 
 암호화폐 매수/매도 내역 뷰(`crypto-transactions` 탭) 진입 대상 전달. `target: { cryptoId, name } | null` · `setTarget`/`clear`. `CashTxViewStore` 미러링(S-4.25).
 
+## TaxViewStore (`src/stores/tax-view-store.ts`, S-4.32)
+
+세금 관리(`#tax`) 페이지 진입 시 초기 탭(`"schedule"|"simulator"`) 지정. `initialTab: TaxInitialTab | null` · `setInitialTab`/`clear`. `#tax` 내부 탭은 URL이 아닌 로컬 state라 외부(홈 팁 박스 등)에서 직접 지정할 수단이 `loan-tx-view-store` 류의 "진입 대상 미리 지정 후 navigate" 패턴뿐이라 재사용. `tax-calendar-view.tsx`가 `useState` 초기값 함수에서 1회 소비 후 즉시 `clear()`.
+
 ## OnboardingWizardStore (`src/stores/onboarding-wizard-store.ts`)
 
 온보딩 마법사 열림 상태(S-4.29). `isOpen: boolean` · `open`/`close`. `trade-view-store`와 동일한 최소 zustand 패턴(persist 없음). `WelcomeGuide`의 "스크린샷으로 자산 등록" CTA에서만 `open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨), `page.tsx`가 `isOpen`을 최우선 분기(`isWelcomeGuide`보다 먼저 체크)로 `OnboardingWizardFlow`를 렌더.
@@ -177,6 +181,23 @@ getMyEvents(events, tags): TaxEvent[]            // 교집합(common 포함) —
 getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 배너 전용 — common 전용 항목 제외
 isTaxNoticeDismissed() / markTaxNoticeDismissed() / shouldShowTaxNotice(assetData)
 todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
+isForeignStock(stock)                            // category==="foreign" 또는 currency!=="KRW" (export, S-4.31에서 UI도 재사용)
+
+// S-4.31 — 연말 절세 시뮬레이션. 원가는 replay 없이 Stock.averagePrice(현재 평단) 그대로 사용
+// 후보·선택 계산 모두 증권사가 아니라 티커 기준으로 종합(dev-rules.md "주식 계산·집계는 항상 종목 기준" 참조) —
+// groupForeignStocksByTicker(내부 헬퍼)가 동일 티커의 증권사별 Stock 로우를 수량 합산·평단/매입환율 가중평균으로 병합
+getYearEndTaxSimulation(assetData, year, rates)
+  // → { baselineGainKrw, baselineEstimated, remainingDeductionKrw, candidates } (null 아님 — 거래 없으면 baseline 0)
+  // candidates: { stockId, name, quantity, gainPerShareKrw, unrealizedGainKrw, estimated, rebuyQuantity }[]
+  //   티커 종합 기준(동일 종목 여러 증권사 보유 시 후보 1건), 손실 큰 순 → 이익 큰 순 정렬.
+  //   candidates[].rebuyQuantity는 "선택 0개(baseline만)" 기준 초기값 — UI는 computeRebuyQuantity를 다른 선택 종목 반영해 매 렌더 재계산(아래)
+simulateSelectedForeignSale(assetData, selections: {stockId,quantity}[], year, rates)
+  // → { combinedGainKrw, taxKrw, baselineTaxKrw, savingsKrw, estimated } — 체크된 종목(티커 종합 id) 합산(부분 수량은 선형 계산)
+computeRebuyQuantity(gainPerShareKrw, quantity, baseGainKrw)
+  // → 잔여 공제 한도(250만원 - baseGainKrw, **클램프 없음**)를 채우는 수량, quantity로 clamp, gainPerShareKrw<=0이면 0
+  //   baseGainKrw가 음수(손실)면 한도가 250만원보다 커진다 — 손익통산. tax-year-end-simulator.tsx가 종목별로
+  //   "이 종목을 제외한 현재 선택 전체 + baseline"을 baseGainKrw로 넘겨 "한도까지" 버튼을 실시간 재계산(2026-08-28,
+  //   이전엔 baseline만으로 1회 계산돼 다른 종목 선택/해제에 반응하지 않는 버그가 있었음)
 ```
 데이터는 `src/config/tax-calendar.ts`(`TAX_EVENTS`·`TAX_EVENTS_BY_MONTH`·`TAX_TAG_LABEL`·`FOREIGN_CAPITAL_GAIN_DEDUCTION`)가 단일 출처. **외부 API·네트워크 없음.**
 실현차익은 `trade-utils.computeNewPosition`으로 이동평균 원가를 replay해 산출하며, 매수 로그·체결 환율 누락 시 현재 평단·환율로 폴백하고 `estimated: true`를 세운다.
@@ -191,6 +212,19 @@ markWizardDismissed(): OnboardingWizardStatus
 getResumeCategory(status): WizardCategory | null   // pending인 첫 카테고리(주식→코인→현금→대출 순) — 재개 지점(AC6)
 ```
 `STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼, 별개 기능)와 **코드 패턴만** 동일(단일 키+step map)하게 재사용하고 값은 절대 공유하지 않는다 — `STORAGE_KEYS.onboardingWizardStatus` 별도 키, 기기 로컬 전용.
+
+### feature-usage.ts (S-4.32) — 기능 방문 기록 + 홈 팁 박스 추천
+
+```typescript
+viewToKey(view: AssetView): string          // "type" 또는 "type:tab" — navigate 훅·카탈로그 공유 방문 버킷 키
+recordVisit(key: string): void              // 문자열 키 직접 기록(action형 항목도 자체 키로 기록 가능)
+isTipDismissed(id): boolean / dismissTip(id): void   // 영구 dismiss(재노출 없음)
+pickRecommendedFeature(): AppFeature | null
+  // 1순위: dismiss 안 된 isNew(카탈로그 순) — 2순위: dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순)
+  // 전부 dismiss면 null
+```
+onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STORAGE_KEYS.featureUsage`). 기기 로컬 전용 — 동의 UI 없음(`lastVisitDate`·`assetRefresh`·`tutorialStatus` 등 기존 로컬 전용 키들과 동일 원칙), sync payload 미포함(R14), `clearAssetData` keepKeys에도 넣지 않음(전체 초기화 시 함께 리셋되어도 무방).
+카탈로그는 `src/config/app-features.ts`의 `APP_FEATURES`(`AppFeature[]`) — `id`/`title`/`description`/`icon` + 이동 방식(`target`(navigate) 또는 `action`(이동 없이 그 자리에서 실행, 예: 인증카드 다이얼로그 오픈) 중 하나, `beforeNavigate`로 target 진입 직전 로컬 서브탭 지정). `navigation-context.tsx`의 `navigate()` 본문에 `recordVisit(viewToKey(v))` 훅 1곳으로 모든 이동을 커버하고, action형(`share-card`)은 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 `recordVisit("share-card")`를 직접 호출(asset-dispatch.ts↔feature-usage.ts 순환 참조 방지 목적으로 dispatch 함수 자체엔 기록 로직을 넣지 않음).
 
 ### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
 
@@ -425,6 +459,12 @@ getStockCacheSlot(type: "domestic"|"foreign"): string
 ### profit-utils.ts (`src/lib/finance/profit-utils.ts`)
 
 ```typescript
+computeDailyStockProfit(stocks, refData, currentRates, options?: { useLivePrice?: boolean })
+  // → { dailyProfit, dailyProfitRate } | null
+  // 기본(useLivePrice 미지정=false): 종가 vs 종가(refPrice vs prevPrice) — profit-chart.tsx·performance-hub.tsx가 쓰는 기존 동작 그대로
+  // useLivePrice:true(2026-08-27, stock-tab.tsx 상세 > 주식 리스트 등락율 전용): 분자를 st.currentPrice(실시간)로 교체,
+  //   baseline은 refDate===오늘이면 prevPrice, 아니면 refPrice — 둘 다 "가장 최근 확정 종가"로 수렴해 시간대 무관하게 일관됨
+
 type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
 type ProfitBasis = "sameBusinessDay" | "kstAccessDay"   // 기본 sameBusinessDay
 

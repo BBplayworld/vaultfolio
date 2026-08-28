@@ -39,6 +39,8 @@ export const STORAGE_KEYS = {
   onboardingWizardStatus: "secretasset_onboarding_wizard_status",
   // 자산 최신화 상태 (S-4.30) — 카테고리별 마지막 갱신 시각 + 넛지 노출일. 기기 로컬 전용
   assetRefresh: "secretasset_asset_refresh",
+  // 기능 방문 기록 + 팁 박스 dismiss 목록. 기기 로컬 전용, 서버 미전송(동의 UI 불필요 — 기존 로컬 전용 키들과 동일 원칙)
+  featureUsage: "secretasset_feature_usage",
 } as const;
 
 const LEGACY_KEYS = {

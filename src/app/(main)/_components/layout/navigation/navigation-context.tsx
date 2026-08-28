@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from "react";
+import { recordVisit, viewToKey } from "@/lib/feature-usage";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 export type ActivityTab = "hub" | "netasset" | "profit" | "dividend" | "report";
@@ -180,6 +181,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setView(v);
     // 페이지 이동 시 항상 최상단
     window.scrollTo({ top: 0, behavior: "auto" });
+    // 기능 방문 기록 — 모든 이동이 이 함수를 통과하므로 훅 지점은 여기 한 곳으로 충분(기기 로컬 전용)
+    recordVisit(viewToKey(v));
   }, []);
 
   // 터치 스와이프 제스처 이벤트 등록

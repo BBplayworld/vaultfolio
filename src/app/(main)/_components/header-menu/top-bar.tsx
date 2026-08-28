@@ -1,11 +1,12 @@
 "use client";
 
 import { IdCard, ChevronLeft, MoreHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ShareScreenshotDialog } from "./share/share-menu";
+import { recordVisit } from "@/lib/feature-usage";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallButton } from "../pwa/pwa-install-button";
@@ -28,6 +29,16 @@ function ShareScreenshotButton() {
     }
   };
   const { assetData } = useAssetData();
+
+  // 홈 기능 활용 팁 박스 등 외부에서 페이지 이동 없이 그 자리에서 여는 진입점(S-4.32)
+  useEffect(() => {
+    const handler = () => {
+      recordVisit("share-card");
+      setOpen(true);
+    };
+    window.addEventListener("trigger-open-share-card", handler);
+    return () => window.removeEventListener("trigger-open-share-card", handler);
+  }, []);
 
   const hasAssets =
     assetData.realEstate.length > 0 ||

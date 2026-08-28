@@ -47,6 +47,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시 — 종합 카드 거래입력 노출 규칙은 F-ASSET 참조(암호화폐와 동일)
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
 - 👤 요약 헤더 평가손익·전일 대비, 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
+- ⚙ **전일 대비(등락율) 실시간화(2026-08-27)**: `computeDailyStockProfit(..., { useLivePrice: true })` — 종가 vs 종가가 아니라 실시간 `currentPrice` vs "가장 최근 확정 종가"(`refDate===오늘`이면 `prevPrice`, 아니면 `refPrice`, 시간대와 무관하게 항상 어제 종가로 수렴). 장중에도 등락율이 살아 움직임(과거엔 국내 16:00 컷오프 전엔 하루 종일 갱신 안 됨). `profit-chart.tsx`·`performance-hub.tsx`는 옵션 미전달로 기존 종가 기준 그대로(회귀 없음)
 - ⚙ `computeStockMetrics`·`mergeStockGroup`·`groupStocksByTicker` 동일 ticker 병합(1회 집계)
 - 엣지: 해외주식 원화/달러 평단 입력 분기, 환차익 계산
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
@@ -100,6 +101,24 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **캘린더 뷰**: `내 세금`/`전체` 필터, 현재 월 강조·자동 스크롤, 카드 `Collapsible` 상세, 하단 면책 문구 항상 노출
 - 엣지: 12월 → 다음 달 1월 롤오버, `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
 - 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
+
+### F-TAX-SIM. 연말 절세 시뮬레이션 ([tax-year-end-simulator.tsx](../../src/app/(main)/_components/views/tax/tax-year-end-simulator.tsx)) — 명세 [S-4.31](../specs/4.31-tax-sell-simulation.md)
+- 👤 **진입 경로 1곳으로 통합**: 더보기 > 지원 "세금 관리"(`#tax`) → 최상단 `InlineSelector`로 "세금 일정관리"/"**절세 시뮬레이션**" 전환. 개별 주식 카드의 진입 버튼은 없음(전량 제거, 이 화면 하나로 통일). **탭 영역은 `sticky top-0`로 고정**(2026-08-27) — 마운트 시 이번 달로 자동 스크롤돼도 탭 전환이 항상 화면에 보임
+- ⚙ **null 게이팅 제거**(회귀 방지 핵심): `getYearEndTaxSimulation`은 당해 매도 거래가 없어도(`computeForeignRealizedGain`이 `null`이어도) `baselineGainKrw=0`으로 계산해 **항상** 후보 목록을 반환한다. 보유 해외주식이 1건도 없을 때만 "보유 중인 해외주식이 없습니다" 빈 상태 — 모든 훅(`useMemo`/`useState`)이 이 조기 return **이전에** 호출되므로 Rules of Hooks 위반 없음. 빈 상태 스타일은 2026-08-28에 앱 공통 empty-state 패턴(`border border-dashed`+`h-36`+`items-center justify-center`, `stock-tab.tsx`/`crypto-tab.tsx`/`cash-tab.tsx` 등과 동일)으로 통일 — 기존엔 `bg-muted/30 p-6 rounded-xl`로 이질적이었음
+- ⚙ **후보는 증권사가 아니라 티커 기준으로 종합**(2026-08-27 수정, dev-rules.md "주식 계산·집계는 항상 종목 기준" 참조): 동일 종목을 여러 증권사에 나눠 보유해도 `groupForeignStocksByTicker`(내부, `asset-detail-tabs.tsx`의 `groupStocksByTicker`/`mergeStockGroup`과 동형 로직 — 수량 합산, 평단·매입환율 수량 가중평균)로 병합한 뒤 후보 1건만 노출. 증권사별로 나눠 세액을 따로 계산하던 이전 버그 수정
+- 👤 **체크박스 + 버튼 전용 입력**(텍스트 입력 없음): 종목 `Checkbox` 선택 → 기본 "전량" 프리셋, 이익 종목이면 "한도까지 (N주 · 비과세)"(잔여 공제 한도를 정확히 채우는 수량) 프리셋 칩, `±1` 스테퍼 + **`±5`/`±10` 버튼**(2026-08-27 추가, 보유수량이 각 임계값을 넘는 종목에만 노출)로 수량 조정
+- ⚙ **후보 목록 계산**(`getYearEndTaxSimulation`): 보유 해외주식을 티커 기준 종합 후 전량 매도 가정으로 손익 계산(원가는 replay 없이 `Stock.averagePrice` 그대로), 손실 큰 순 → 이익 큰 순 정렬. 매입 환율 없으면 현재 환율 폴백 + "(추정)" 배지
+- ⚙ **선택 시뮬레이션**(`simulateSelectedForeignSale`): 선택 없음(빈 배열)도 유효 입력 — baseline만으로 항상 결과를 반환한다. 체크된 종목(티커 종합 id, 부분 수량은 선형 계산)을 당해 실현손익과 합산해 250만원 공제 적용 후 22% 세액 산출
+- 👤 **상단 통합 결과 박스**(2026-08-28, `sticky top-28` 고정 — 스크롤과 무관하게 항상 보임): "예상 양도소득세"(`text-3xl` 큰 숫자, 선택이 없어도 baseline 기준 세액을 항상 표시) + 하단에 3개 보조 수치를 한 줄로:
+  - **{year}년 실현손익**(`sim.baselineGainKrw`) — 이미 확정된 매도 합계라 **선택과 무관하게 고정**
+  - **잔여 공제 한도** — `FOREIGN_CAPITAL_GAIN_DEDUCTION - result.combinedGainKrw`(0 미만이면 0)로 **선택할 때마다 즉시 갱신**. 클램프 없이 그대로 뺀다 — `combinedGainKrw`가 음수(순손실)면 한도가 250만원보다 커지는 게 정상 손익통산(2026-08-28, 아래 버그 수정과 동일 원리)
+  - **합산 손익**(`result.combinedGainKrw`) — `text-foreground font-medium`으로 강조
+  - (과거엔 최상단 baseline 박스와 최하단 "선택 시 예상 세액" 박스가 분리돼 있었으나 정보 중복이라 **하나로 통합**하고 최상단으로 이동)
+- ⚙ **"한도까지" 종목별 실시간 재계산 — 손익통산 미반영 버그 수정(2026-08-28)**: 손실 종목(예: 비트마인·DIREXION TSLA 2X)을 먼저 체크한 뒤 대형 이익 종목(예: 엔비디아)의 "한도까지"를 보면, 이미 선택된 손실만큼 한도가 늘어야 하는데 그대로였던 버그를 재현·수정. 원인은 두 곳의 "잔여 한도 = `Math.max(DEDUCTION - Math.max(baseGain,0), 0)`" 공식이 baseGain(기준 손익)이 **음수일 때도 0으로 클램프**해 손익통산 효과를 지워버린 것(`getYearEndTaxSimulation`의 `remainingDeductionKrw`·`rebuyQuantity` 둘 다) — 내부 클램프를 제거해 `Math.max(DEDUCTION - baseGain, 0)` 하나로 정리(신규 export `computeRebuyQuantity`). `tax-year-end-simulator.tsx`는 종목별 행마다 **"이 종목을 제외한 현재 선택 전체 + baseline"**을 baseGain으로 넘겨 매 렌더 재계산 — 정적 `candidates[].rebuyQuantity`(선택 0개 기준 초기값)를 그대로 쓰지 않는다.
+- 👤 **재매수 절세 팁 문구 축약**(2026-08-27): 종목별로는 "한도까지" 칩 라벨에 "· 비과세"만 표기, 별도 설명 문장은 없음(하단 면책 문구로 통합)
+- 👤 **하단 면책 문구**(2026-08-28 재정리): `"한도까지" 수량은 현재 선택된 다른 종목의 손익까지 반영해 계산됩니다. 참고용 추정치이며 실제 세액은 세무 전문가 확인이 필요합니다.` — 위 버그 수정으로 실제로 다른 선택을 반영하게 됐으므로 문구도 그에 맞게 정정(이전엔 "무관하게 계산"이라고 돼 있어 수정 후엔 오히려 틀린 문구가 됨)
+- 👤 시뮬레이터 조작은 `assetData` 변경 없음(순수 계산)
+- ⚙ **통화 표기**: `formatCurrency`는 반드시 `@/lib/number-utils`(KRW 포맷)를 import — `@/lib/utils`의 동명 함수는 기본 USD/`en-US`라 "250만원"이 "$2,500,000"로 잘못 표시되는 회귀가 있었음(2026-08-27 수정, `tax-calendar-view.tsx`도 동일 버그 함께 수정)
 
 ### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx) · 코인 [crypto-trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx))
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`/코인은 `saveData`)
@@ -214,6 +233,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음). 종목 파생값은 `computeStockMetrics`
 - ⚙ 색은 주식 탭과 동일한 `assignColors`(`MAIN_PALETTE`) — `SHARE_SAFE_PALETTE`는 더 이상 쓰지 않음(현재 소비처 0, design-system.md 참조)
 - 엣지: 주식 미보유 시 `등록된 주식이 없습니다.` 빈 상태, 보유 5종목 이하면 "그 외" 구간·범례 `그 외 N종목`·"그 외 N종목" 요약행 모두 미노출
+- (2026-08-27: 도넛 차트(사각형→원형) 교체를 두 차례 시도했으나 실사용 확인 후 전면 롤백, 위 원래 구성으로 확정)
 
 ### F-IMPORT-EXPORT. 데이터 내보내기/가져오기
 - 👤 JSON 내보내기→가져오기 라운드트립, 자산·스냅샷·옵션 보존
@@ -362,12 +382,23 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 더보기(tool-menu.tsx)에 신규 메뉴 없음, 온보딩 마법사(F-ONBOARD-WIZARD)·bottom-nav 구조·개별 상세탭 "+" 거래 추가 버튼 무변경. **다건 시퀀스 관련 코드(`checkedTypes`/`AttributionSummary`) 재도입 금지** — 요구사항 재검토로 명시적으로 제거된 기능(2026-08)
 
 ### F-NOTICE. 공지 시스템
-- ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`.
-- ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump→재노출), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너
-- ⚙ **수동 공지 진입** — 자동 1회 팝업(`UpdateNoticeDialog`) 외에, 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음). 앱 가이드는 `trigger-restore-guide` 이벤트
+- ⚙ **자동 팝업(`UpdateNoticeDialog`)은 S-4.32에서 제거됨** — 홈 진입 시 별도 창 노출 없음. `notice.tsx`(`NOTICE_ID`/`NOTICE_TITLE`/`NoticeContent`)는 아래 수동 진입점 전용으로 유지.
+- ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`, `notice-config.ts`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`. **현재 이 값을 참조하는 자동 팝업이 없어 사실상 미사용**(수동 뷰어는 만료와 무관하게 항상 열람 가능).
+- ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너. **작성 3원칙**(dev-rules.md): ①기능 위치·이동 경로 명시 ②SVG로 인지성 극대화 ③핵심 위주 간결함 — `feature-tip-box.tsx`(F-TIP-BOX)에도 동일 적용
+- ⚙ **수동 공지 진입** — 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음, 유일한 진입 경로). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
-- ⚙ **공지 열람 상태 단일 키** — `secretasset_notice_seen`(값 `{ id, seenAt, expiresAt }`) **한 개만** 유지(구 `secretasset_notice_seen_{id}` per-id 다중 키 폐기). `readNoticeSeenId()===NOTICE_ID`면 열람. `cleanExpiredNoticeKeys(NOTICE_ID)`가 매 진입 시 현재 공지 레거시 키를 단일 키로 이관(열람 상태 보존) 후 레거시 `_*` 전부 제거 / init 경로(no-id)는 만료 레거시만 정리. 죽은 `secretasset_notice_hide_until`은 `consolidate-notice-keys` 마이그레이션으로 제거. keepKeys는 `secretasset_notice_seen`(접미 `_` 없이) 보존
-- 엣지: 잘못된 JSON→미표시, 만료(`expiresAt` 경과)→미표시, `NOTICE_ID` 기준 1회 노출(단일 키, PWA standalone 분리). 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능
+- ⚙ **공지 열람 상태 단일 키** — `secretasset_notice_seen`(값 `{ id, seenAt, expiresAt }`) **한 개만** 유지(구 `secretasset_notice_seen_{id}` per-id 다중 키 폐기). `cleanExpiredNoticeKeys()`는 자동 팝업 제거 후에도 `migrateStorageKeys()`(init) 경로에서 계속 호출되어 만료 레거시 키를 정리한다(currentId 인자로 부르는 이관 호출부는 없어짐 — 죽은 코드 아님, init 경로만 남음). 죽은 `secretasset_notice_hide_until`은 `consolidate-notice-keys` 마이그레이션으로 제거. keepKeys는 `secretasset_notice_seen`(접미 `_` 없이) 보존
+- 엣지: 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능(자동 팝업이 없으므로 미노출 관련 엣지 없음)
+
+### F-TIP-BOX. 기능 활용 팁 박스 ([feature-tip-box.tsx](../../src/app/(main)/_components/views/home/feature-tip-box.tsx) · [app-features.ts](../../src/config/app-features.ts) · [feature-usage.ts](../../src/lib/feature-usage.ts)) — S-4.32
+- ⚙ 홈 자산 분포 카드 아래·`TaxNoticeBox` 위. 마운트 시 `pickRecommendedFeature()` 1회 호출 — `null`이면 컴포넌트 자체가 렌더 안 됨.
+- ⚙ **추천 우선순위**: ①dismiss 안 된 `isNew`(카탈로그 순, 현재 `tax-simulator` 1건) ②dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순). `APP_FEATURES`(13개, 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 이 배열에도 등록 필수.
+- ⚙ 박스 전체 클릭 → `action`(있으면 그것만, 예: `share-card`는 인증카드 다이얼로그를 그 자리에서 오픈) 또는 `beforeNavigate?.()` 후 `navigate(target)`(`tax-simulator`는 `useTaxViewStore.setInitialTab("simulator")`로 세금 관리 진입 시 시뮬레이션 탭 직행) → 어느 경로든 마지막에 `dismissTip(id)`. X 닫기는 이동 없이 `dismissTip(id)`만.
+- ⚙ **dismiss는 영구**(재노출 없음) — 앱의 기존 "반복 리마인드 지양" 기조(2026-08-12 자산 신선도·목표 설정 알림 롤백)와 일치. 전부 dismiss되면 박스가 조용히 사라짐(재노출 설정 없음).
+- ⚙ 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점에서 `recordVisit(viewToKey(v))`로 커버되고, `navigate`를 안 쓰는 `share-card`만 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도로 `recordVisit("share-card")` 호출.
+- ⚙ 저장은 `STORAGE_KEYS.featureUsage` 단일 키(`{ visits, dismissedTipIds }`), 기기 로컬 전용 — 동의 UI 없음, sync payload 미포함, `clearAssetData` keepKeys 미포함(전체 초기화 시 함께 리셋).
+- 👤 홈 진입 → 팁 박스에 "절세 시뮬레이션" NEW 뱃지로 노출 → 클릭 시 세금 관리 > 절세 시뮬레이션 탭으로 바로 이동하는지 / X 닫기 시 새로고침해도 재노출 안 되는지
+- 엣지: 첫 방문(방문 기록 없음)에도 정상 추천, 전체 기능 dismiss 후 박스 미노출, 인증카드 항목 클릭 시 페이지 이동 없이 다이얼로그만 열리는지
 
 ### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.
