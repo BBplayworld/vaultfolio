@@ -92,9 +92,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 공유 토큰 `parts[14]` 왕복·`crIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
 - 자동: `src/lib/__tests__/trade-utils.test.ts`(코인 구조적 타입 재사용 2건), `src/lib/report/__tests__/asset-report.test.ts`(정밀/예측 분기 buy:crypto 정확화·이중계산 방지 2건)
 
-### F-TAX. 세금 신고 안내 ([tax-notice-box.tsx](../../src/app/(main)/_components/views/home/tax-notice-box.tsx) · [tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx)) — 명세 [S-4.23](../specs/4.23-tax-calendar.md)
-- 👤 **홈 배너**: 자산 분포 카드 **아래**에 "내 자산 세금 일정" 박스. 이번 달·다음 달 항목 최대 3건 + 각 항목의 매칭 근거("상가·사무실 1건 보유 → 대상"). "월별 세금 일정 전체 보기" → `#tax`
-- ⚙ **자산 파생 항목만 노출**(AC2): `getAssetDrivenHighlights`는 `common`(연말정산·건강보험료) 전용 항목을 제외한다. 자산이 없거나 해당 항목이 0건이면 **배너 자체가 렌더되지 않는다**
+### F-TAX. 세금 신고 안내 ([tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx)) — 명세 [S-4.23](../specs/4.23-tax-calendar.md)
+- **홈 배너는 F-HOME-TIP으로 통합됨(S-4.32 후속)** — 아래는 `#tax` 캘린더 화면 자체의 사양.
+- ⚙ **자산 파생 항목 판정**(AC2): `getAssetDrivenHighlights`는 `common`(연말정산·건강보험료) 전용 항목을 제외한다.
 - ⚙ **월 단위 dismiss**(AC4): `STORAGE_KEYS.taxNotice` = `{ dismissedMonth: "YYYY-MM" }`(KST). 같은 달 재방문 미노출, 달이 바뀌면 재노출
 - ⚙ **태그 매칭**(AC1): 상가(`realEstate.type==="commercial"`)→business, 부동산 보유→realestate, `category==="foreign" || currency!=="KRW"`→foreign, irp/isa/pension→pension, `mortgage-home`→loan, 현금 보유→cash
 - ⚙ **해외주식 실현차익**(AC6·AC7): `computeForeignRealizedGain`이 거래 로그를 날짜순 replay(`computeNewPosition` 재사용)해 당해 매도분 손익을 KRW 통산. 250만원 초과 시 이듬해 5월 신고 대상 표기. 매수 로그·체결 환율 누락 시 현재 평단·환율 폴백 + "추정" 표기. 거래 로그 없거나 당해 매도 0건이면 `null`(미표시). 국내주식(KRW)은 집계 제외
@@ -238,7 +238,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-IMPORT-EXPORT. 데이터 내보내기/가져오기
 - 👤 JSON 내보내기→가져오기 라운드트립, 자산·스냅샷·옵션 보존
 - ⚙ `use-asset-import`, 스키마·`validate-reflection` 검증, 악성·손상 JSON 방어
-- ⚙ **내보내기 정합 가드(2026-08-06)** — 백업은 **localStorage**(`buildExportPayload`→`getAssetData`)를 뜨는데 화면은 **React state**를 렌더한다. 둘은 CRUD마다 `setAssetData`+`saveAssetData` 쌍으로 수동 정합되고, 같은 탭 pull은 `storage` 이벤트를 발화시키지 않아(브라우저 표준: 다른 탭만) 잠시 갈라질 수 있다. 그 순간 백업하면 **최신 기록이 빠진 파일**이 만들어지고 나중에 그걸로 복원하면 그대로 유실된다(실사례: 08-05 매수 2건이 빠진 백업, 25분 뒤 재백업은 정상). `exportAssetData(currentData?)`가 `isExportDataStale`(자산 5종+거래 4종 **건수** 비교, 파생필드 제외로 오탐 방지)로 감지되면 다운로드를 중단하고 `false` 반환 → 호출처 2곳(`use-data-export`·`backup-nudge`)이 `EXPORT_STALE_MSG` 토스트. **인자를 빼면 검사가 꺼진다** — 새 호출처는 반드시 화면 state를 넘길 것
+- ⚙ **내보내기 정합 가드(2026-08-06)** — 백업은 **localStorage**(`buildExportPayload`→`getAssetData`)를 뜨는데 화면은 **React state**를 렌더한다. 둘은 CRUD마다 `setAssetData`+`saveAssetData` 쌍으로 수동 정합되고, 같은 탭 pull은 `storage` 이벤트를 발화시키지 않아(브라우저 표준: 다른 탭만) 잠시 갈라질 수 있다. 그 순간 백업하면 **최신 기록이 빠진 파일**이 만들어지고 나중에 그걸로 복원하면 그대로 유실된다(실사례: 08-05 매수 2건이 빠진 백업, 25분 뒤 재백업은 정상). `exportAssetData(currentData?)`가 `isExportDataStale`(자산 5종+거래 4종 **건수** 비교, 파생필드 제외로 오탐 방지)로 감지되면 다운로드를 중단하고 `false` 반환 → 호출처 2곳(`use-data-export`·`home-tip-box.tsx`, 구 `backup-nudge.tsx`)이 `EXPORT_STALE_MSG` 토스트. **인자를 빼면 검사가 꺼진다** — 새 호출처는 반드시 화면 state를 넘길 것
 - 회귀: 가져오기 후 `dataResetVersion`++로 진행 중 fetch abort
 
 ### F-CLOUD-SYNC. E2EE 클라우드 동기화 ([cloud-sync](../../src/lib/cloud-sync) · [api/sync](../../src/app/api/sync/route.ts))
@@ -373,7 +373,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **FAB "자산 업데이트" 클릭 → hub(2단계, 2026-08 재설계)** — "보유 현황 업데이트"/"매수·매도 거래 기록" 2개 상위 타일 선택 → 각각 카테고리 컴팩트 리스트(`holdings`/`trade`). 두 화면 모두 **단건 전용**(체크박스·다건 시퀀스·완료 원인분해 요약 화면 전부 2026-08 제거 — `attribution-summary.tsx` 삭제됨). 행 직접 클릭은 기존과 동일하게 즉시 단건 처리
 - 👤 hub 타일에 "어떤 메뉴를 써야 하나요?" `InfoHint` — 보유현황=재동기화(거래 이력 없음), 거래기록=손익·세금 정확 반영이라는 역할 구분 안내
 - 👤 stock/cash/loan 보유현황 스크린샷 재등록 시 기존 crypto와 동일하게 "덮어쓰기(merge)/초기화 후 등록(reset)" 선택 노출(동일 키 중복 감지). stock=`ticker:category`, cash=`name:institution`(근사), loan=`name:institution:type`
-- 👤 홈 `RefreshNudge`(카테고리 중 하나라도 30일 이상 미최신화 시 노출, 백업 넛지와 동시 노출 안 됨) CTA → hub/holdings를 건너뛰고 **가장 오래된 카테고리 1개**의 단건 흐름으로 바로 진입(다건 프리셋 아님, 2026-08). 2개 이상 밀려 있으면 "그 외 N곳도 최신화가 필요해요" 보조 텍스트만 부기
+- **홈 최신화 넛지는 F-HOME-TIP으로 통합됨(S-4.32 후속)** — `getStaleCategories`/`shouldShowRefreshNudge`(아래 판정 로직)는 그대로 재사용.
 - 👤 암호화폐 "매수/매도 기록"에 "스크린샷 가져오기" 옵션(`crypto-tx-input.tsx`) — 체결내역 화면 인식, 기존 보유 symbol 매칭, 중복 체결 감지(주식과 동형). **미보유 매수 심볼은 신규 코인으로 자동 등록**(F-TRADE-SS 참조), 매도는 계속 차단
 - ⚙ 병합형 로직은 `lib/asset/holdings-conflict.ts`(`keyOfStock/Crypto/Cash/Loan`, `countConflicts`, `resolveKept`) 공용 — crypto의 기존 merge/reset을 일반화해 stock/cash/loan에 이식(crypto 자체 동작 변경 없음)
 - ⚙ `STORAGE_KEYS.assetRefresh` 단일 키(카테고리별 lastUpdatedAt + 오늘 넛지 노출 여부), `clearAssetData` keepKeys 포함(백업 메타와 동일 근거), "모든 데이터 삭제" 시 `clearAssetRefreshStatus()`로 명시적 제거
@@ -384,21 +384,21 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-NOTICE. 공지 시스템
 - ⚙ **자동 팝업(`UpdateNoticeDialog`)은 S-4.32에서 제거됨** — 홈 진입 시 별도 창 노출 없음. `notice.tsx`(`NOTICE_ID`/`NOTICE_TITLE`/`NoticeContent`)는 아래 수동 진입점 전용으로 유지.
 - ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`, `notice-config.ts`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`. **현재 이 값을 참조하는 자동 팝업이 없어 사실상 미사용**(수동 뷰어는 만료와 무관하게 항상 열람 가능).
-- ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너. **작성 3원칙**(dev-rules.md): ①기능 위치·이동 경로 명시 ②SVG로 인지성 극대화 ③핵심 위주 간결함 — `feature-tip-box.tsx`(F-TIP-BOX)에도 동일 적용
+- ⚙ `notice.tsx`: `NOTICE_ID="20260808"`(내용 갱신 시 bump), `NOTICE_TITLE="자산 성적표 · 실거래가 · 인증카드 업데이트"`, `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너. **작성 3원칙**(dev-rules.md): ①기능 위치·이동 경로 명시 ②SVG로 인지성 극대화 ③핵심 위주 간결함 — `home-tip-box.tsx`(F-HOME-TIP)에도 동일 적용
 - ⚙ **수동 공지 진입** — 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음, 유일한 진입 경로). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.
 - ⚙ **공지 열람 상태 단일 키** — `secretasset_notice_seen`(값 `{ id, seenAt, expiresAt }`) **한 개만** 유지(구 `secretasset_notice_seen_{id}` per-id 다중 키 폐기). `cleanExpiredNoticeKeys()`는 자동 팝업 제거 후에도 `migrateStorageKeys()`(init) 경로에서 계속 호출되어 만료 레거시 키를 정리한다(currentId 인자로 부르는 이관 호출부는 없어짐 — 죽은 코드 아님, init 경로만 남음). 죽은 `secretasset_notice_hide_until`은 `consolidate-notice-keys` 마이그레이션으로 제거. keepKeys는 `secretasset_notice_seen`(접미 `_` 없이) 보존
 - 엣지: 수동 뷰어는 노출 이력·만료와 무관하게 항상 열람 가능(자동 팝업이 없으므로 미노출 관련 엣지 없음)
 
-### F-TIP-BOX. 기능 활용 팁 박스 ([feature-tip-box.tsx](../../src/app/(main)/_components/views/home/feature-tip-box.tsx) · [app-features.ts](../../src/config/app-features.ts) · [feature-usage.ts](../../src/lib/feature-usage.ts)) — S-4.32
-- ⚙ 홈 자산 분포 카드 아래·`TaxNoticeBox` 위. 마운트 시 `pickRecommendedFeature()` 1회 호출 — `null`이면 컴포넌트 자체가 렌더 안 됨.
-- ⚙ **추천 우선순위**: ①dismiss 안 된 `isNew`(카탈로그 순, 현재 `tax-simulator` 1건) ②dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순). `APP_FEATURES`(13개, 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 이 배열에도 등록 필수.
-- ⚙ 박스 전체 클릭 → `action`(있으면 그것만, 예: `share-card`는 인증카드 다이얼로그를 그 자리에서 오픈) 또는 `beforeNavigate?.()` 후 `navigate(target)`(`tax-simulator`는 `useTaxViewStore.setInitialTab("simulator")`로 세금 관리 진입 시 시뮬레이션 탭 직행) → 어느 경로든 마지막에 `dismissTip(id)`. X 닫기는 이동 없이 `dismissTip(id)`만.
-- ⚙ **dismiss는 영구**(재노출 없음) — 앱의 기존 "반복 리마인드 지양" 기조(2026-08-12 자산 신선도·목표 설정 알림 롤백)와 일치. 전부 dismiss되면 박스가 조용히 사라짐(재노출 설정 없음).
-- ⚙ 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점에서 `recordVisit(viewToKey(v))`로 커버되고, `navigate`를 안 쓰는 `share-card`만 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도로 `recordVisit("share-card")` 호출.
-- ⚙ 저장은 `STORAGE_KEYS.featureUsage` 단일 키(`{ visits, dismissedTipIds }`), 기기 로컬 전용 — 동의 UI 없음, sync payload 미포함, `clearAssetData` keepKeys 미포함(전체 초기화 시 함께 리셋).
-- 👤 홈 진입 → 팁 박스에 "절세 시뮬레이션" NEW 뱃지로 노출 → 클릭 시 세금 관리 > 절세 시뮬레이션 탭으로 바로 이동하는지 / X 닫기 시 새로고침해도 재노출 안 되는지
-- 엣지: 첫 방문(방문 기록 없음)에도 정상 추천, 전체 기능 dismiss 후 박스 미노출, 인증카드 항목 클릭 시 페이지 이동 없이 다이얼로그만 열리는지
+### F-HOME-TIP. 홈 알림/팁 통합 박스 ([home-tip-box.tsx](../../src/app/(main)/_components/views/home/home-tip-box.tsx) · [home-tip.ts](../../src/lib/home-tip.ts) · [app-features.ts](../../src/config/app-features.ts) · [feature-usage.ts](../../src/lib/feature-usage.ts)) — S-4.32 후속
+- ⚙ 홈 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 한 번에 1개만 노출(사용자 요청 — 알림 박스 난립 정리). 마운트 시 `pickHomeTip({assetData, hasAssets, syncArmed})` 1회 호출 — `null`이면 컴포넌트 자체가 렌더 안 됨.
+- ⚙ **위험도 순 우선순위**(사용자 확정): ①백업(`shouldShowBackupNudge` — 데이터 손실 위험) ②세금(`isTaxNoticeDismissed()===false && getAssetDrivenHighlights` — 마감 시한) ③자산 최신화(`shouldShowRefreshNudge`) ④신규 기능(`isNew`) ⑤저방문 기능. 각 판정 함수는 원본 유틸 그대로 재사용(신규 로직 없음), `pickHomeTip`은 순서대로 첫 매치만 반환.
+- ⚙ **재노출 정책은 종류별로 원래 정책 그대로 보존**(하나로 뒤섞지 않음): 백업·최신화=노출되는 순간 오늘 flag(`markNudgeShown`/`markRefreshNudgeShown`, daily), 세금=명시적으로 닫아야만 이번 달 flag(`markTaxNoticeDismissed`, monthly — 클릭 이동만으로는 안 닫힘), 기능=닫기·클릭 이동 둘 다 영구 dismiss(`dismissTip`, 재노출 없음).
+- ⚙ **승자만 "오늘 떴다" flag를 찍는다** — 마운트 effect에서 `pickHomeTip`이 반환한 `kind`가 backup/refresh일 때만 해당 mark 함수를 호출. 하위 순위라 안 보인 항목까지 flag를 찍으면 실제로 못 본 채로 그날 소비된다(과거 `RefreshNudge`가 `suppressed`일 때 mark를 건너뛰던 것과 동일 원리).
+- ⚙ **인터랙션은 4종 모두 통일** — 카드 전체 클릭(`role="button"`) = 그 종류의 유일한 동작(백업: `exportAssetData`+토스트 / 세금: `navigate({type:"tax"})` / 최신화: `open-add-asset-sheet` 이벤트 dispatch(가장 오래된 카테고리 1개) / 기능: `action` 또는 `beforeNavigate`+`navigate`), X 닫기 = 해당 종류의 dismiss만(이동 없음). 과거 백업·최신화가 갖던 별도 "지금 백업하기"/"지금 최신화하기" **버튼은 제거**되고 카드 클릭 하나로 단순화됨.
+- ⚙ 기능(feature) 카탈로그는 `APP_FEATURES`(13개, 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 등록 필수. 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점 `recordVisit(viewToKey(v))` + `share-card`(action형)는 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도 기록.
+- 👤 백업 30일 이상 미실행 상태에서 홈 진입 → 백업 카드 노출·클릭 시 즉시 파일 다운로드 / 세금 신고 대상 자산 보유 시(백업 카드보다 후순위) 세금 카드 노출·클릭 시 `#tax` 이동 / 자산 30일 이상 미갱신 시(위 둘 다 없을 때) 최신화 카드 노출·클릭 시 해당 카테고리 입력 시트 오픈 / 위 모두 해당 없으면 "절세 시뮬레이션" NEW 팁 노출·클릭 시 세금 관리 > 절세 시뮬레이션 탭 직행
+- 엣지: 여러 조건 동시 충족 시 위험도 순 1개만 노출(나머지는 flag 미기록으로 다음 기회에 재평가) · 전체 기능 dismiss + 백업/세금/최신화 조건 모두 미충족 시 박스 자체 미노출 · 인증카드 항목 클릭 시 페이지 이동 없이 다이얼로그만 열리는지
 
 ### F-APPLOCK. 앱 잠금 (PIN) ([pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ 웹·PWA 모두 동작 — `authEnabled && !sessionStorage("pwa_authenticated")` 조건(standalone 체크 제거). SHA-256 PIN 해시 비교, 세션 인증 후 `sessionStorage.setItem("pwa_authenticated","true")`.

@@ -83,7 +83,7 @@ _components/
 - **다건 체크박스·시퀀스·완료 원인분해 요약 화면은 전부 제거됨(2026-08)** — `checkedTypes`/`sequence`/`AttributionSummary`(`./attribution-summary.tsx`) 재도입 금지. 항상 행 클릭 = 즉시 단건 처리, 이벤트 dispatch 경로(`trigger-add-{type}`) 그대로
 - `holdings` 행: `navigateTab`이 있으면 우측에 연필 아이콘(`handleActionEdit`, `navigate({type:"detail", tab})` 직접 호출)만 축소 노출 — "수정" 풀폭 버튼 없음
 - hub 상단 `InfoHint`로 "보유현황=재동기화(거래 이력 없음)" vs "거래기록=손익·세금 정확 반영" 역할 구분 안내
-- 홈 `RefreshNudge`의 CTA는 `open-add-asset-sheet` 이벤트에 `detail.category`(가장 오래된 카테고리 1개, 단수)를 실어 hub/holdings를 건너뛰고 해당 카테고리의 단건 흐름(`handleHoldingsClick`)으로 직행(다건 프리셋 아님)
+- 홈 `HomeTipBox`의 최신화(refresh) 종류 클릭은 `open-add-asset-sheet` 이벤트에 `detail.category`(가장 오래된 카테고리 1개, 단수)를 실어 hub/holdings를 건너뛰고 해당 카테고리의 단건 흐름(`handleHoldingsClick`)으로 직행(다건 프리셋 아님, S-4.32 후속에서 `RefreshNudge`를 흡수)
 - 보유현황 스크린샷 저장 성공 시 각 `*-screenshot-import.tsx`가 `markCategoryRefreshed(category)` 호출(`lib/asset/asset-refresh-status.ts`)
 
 ### ScrollToTop (`layout/floating/scroll-to-top.tsx`)
@@ -167,10 +167,7 @@ _components/
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
 | AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
-| BackupNudge         | `views/home/backup-nudge.tsx`           | 백업 넛지 배너 — 홈 상단 알림 슬롯. dismiss 배너 구조 레퍼런스 |
-| RefreshNudge (S-4.30) | `views/home/refresh-nudge.tsx`        | 자산 최신화 넛지(30일 기준) — `BackupNudge`와 동일 구조, `suppressed` prop으로 백업 넛지와 동시 노출 배제(dashboard.tsx가 `onVisibilityChange`로 조율). CTA는 FAB를 `preselect`와 함께 오픈 |
-| TaxNoticeBox        | `views/home/tax-notice-box.tsx`         | 세금 안내 배너(S-4.23) — 자산 분포 카드 **아래**. **내 자산에서 파생된** 일정만(전 국민 공통 `common` 제외), 매칭 근거 문구 포함. 닫으면 그 달 미노출(월 단위 재노출) |
-| FeatureTipBox (S-4.32) | `views/home/feature-tip-box.tsx`     | 기능 활용 팁 박스 — 자산 분포 카드 아래·`TaxNoticeBox` 바로 위. `pickRecommendedFeature()`([state-and-utils.md](state-and-utils.md) `feature-usage.ts`)로 신규 기능(이번 릴리스) 최우선 → 저방문 기능 순으로 1개 추천, 클릭 시 해당 기능으로 즉시 이동. 닫기·클릭 이동 둘 다 해당 팁 **영구** dismiss(재노출 없음). `TaxNoticeBox`와 동일 보더리스 셸 재사용. 자동 팝업 공지(`UpdateNoticeDialog`)는 이 기능 도입과 함께 제거됨 — 공지는 더보기 > 앱 가이드의 수동 열람(`notice.tsx`)만 남음 |
+| HomeTipBox (S-4.32 후속) | `views/home/home-tip-box.tsx`      | 홈 알림/팁 통합 박스 — 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 화면엔 한 번에 1개만 뜬다. 판정은 [state-and-utils.md](state-and-utils.md) `home-tip.ts`의 `pickHomeTip()`이 **위험도 순**(백업>세금>자산최신화>신규기능>저방문기능)으로 골라 반환, 종류별 재노출 정책은 원래 로직 그대로(백업·최신화=노출 시 오늘 flag, 세금=명시적 닫기 시 이번 달 flag, 기능=닫기·클릭 이동 둘 다 영구 dismiss). 인터랙션은 4종 모두 "카드 전체 클릭=유일한 동작(백업 다운로드/세금 화면 이동/최신화 시트 오픈/기능 화면 이동), X=닫기"로 통일된 단일 보더리스 셸. 자동 팝업 공지(`UpdateNoticeDialog`)는 이보다 앞서(S-4.32) 이미 제거됨 — 공지는 더보기 > 앱 가이드의 수동 열람(`notice.tsx`)만 남음 |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
 | OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |
 

@@ -226,6 +226,16 @@ pickRecommendedFeature(): AppFeature | null
 onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STORAGE_KEYS.featureUsage`). 기기 로컬 전용 — 동의 UI 없음(`lastVisitDate`·`assetRefresh`·`tutorialStatus` 등 기존 로컬 전용 키들과 동일 원칙), sync payload 미포함(R14), `clearAssetData` keepKeys에도 넣지 않음(전체 초기화 시 함께 리셋되어도 무방).
 카탈로그는 `src/config/app-features.ts`의 `APP_FEATURES`(`AppFeature[]`) — `id`/`title`/`description`/`icon` + 이동 방식(`target`(navigate) 또는 `action`(이동 없이 그 자리에서 실행, 예: 인증카드 다이얼로그 오픈) 중 하나, `beforeNavigate`로 target 진입 직전 로컬 서브탭 지정). `navigation-context.tsx`의 `navigate()` 본문에 `recordVisit(viewToKey(v))` 훅 1곳으로 모든 이동을 커버하고, action형(`share-card`)은 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 `recordVisit("share-card")`를 직접 호출(asset-dispatch.ts↔feature-usage.ts 순환 참조 방지 목적으로 dispatch 함수 자체엔 기록 로직을 넣지 않음).
 
+### home-tip.ts (S-4.32 후속) — 홈 알림/팁 통합 판정
+
+```typescript
+pickHomeTip({ assetData, hasAssets, syncArmed }): HomeTip | null
+  // HomeTip = { kind: "backup", days } | { kind: "tax", matches } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  // 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) >
+  //           자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
+```
+`backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`의 기존 순수 함수를 그대로 조합만 한다(신규 판정 로직 없음). 4종을 독립 컴포넌트(`BackupNudge`/`RefreshNudge`/`TaxNoticeBox`/`FeatureTipBox`)로 각자 띄우던 것을 `home-tip-box.tsx` 1개로 통합하며 도입 — 종류별 "오늘/이번달/영구" 재노출 정책은 각 원본 유틸에 그대로 남아있고, 승자가 아닌 종류는 "오늘 떴다" flag를 찍지 않는다(호출부 책임, [components.md](components.md) `HomeTipBox` 참조).
+
 ### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
 
 ```typescript
@@ -244,7 +254,7 @@ getStaleCategories(assetLastUpdated?): RefreshCategory[]   // 30일 이상(또�
 shouldShowRefreshNudge(opts): boolean
 markRefreshNudgeShown() / clearAssetRefreshStatus()
 ```
-`backup-status.ts`와 동일 패턴(단일 키 + 오늘 노출 여부). `STORAGE_KEYS.assetRefresh`, `clearAssetData` keepKeys에 포함(기기 로컬 메타). 넛지는 백업 넛지와 동시 노출하지 않음(`refresh-nudge.tsx`의 `suppressed` prop으로 배타 처리, dashboard.tsx가 `BackupNudge.onVisibilityChange`로 조율).
+`backup-status.ts`와 동일 패턴(단일 키 + 오늘 노출 여부). `STORAGE_KEYS.assetRefresh`, `clearAssetData` keepKeys에 포함(기기 로컬 메타). 백업·세금과의 동시 노출 배제는 `home-tip.ts`의 `pickHomeTip` 우선순위가 담당(S-4.32 후속 — 과거의 `suppressed` prop 방식은 제거됨).
 
 ### report/asset-report.ts — 원인분해 집계 헬퍼
 

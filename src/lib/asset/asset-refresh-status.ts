@@ -75,7 +75,7 @@ export function getStaleCategories(assetLastUpdated?: string): RefreshCategory[]
  *  1. 자산이 있다
  *  2. 카테고리 중 하나 이상 최신화가 오래됐다(getStaleCategories 참고)
  *  3. 오늘 아직 안 띄웠다
- * 백업 넛지와의 동시 노출 배제는 호출측(RefreshNudge의 suppressed prop)이 담당한다.
+ * 백업·세금과의 동시 노출 배제는 호출측(home-tip.ts의 pickHomeTip 우선순위)이 담당한다.
  */
 export function shouldShowRefreshNudge(opts: {
   hasAssets: boolean;
