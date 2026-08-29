@@ -87,7 +87,7 @@ export function TaxYearEndSimulator({
             <Receipt className="size-5 text-amber-600 dark:text-amber-500 shrink-0" />
             <p className="text-sm font-semibold text-muted-foreground">예상 양도소득세</p>
           </div>
-          <p className={`text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
+          <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${ASSET_THEME.important}`}>
             {formatCurrency(Math.round(result.taxKrw))}
             {result.estimated && <span className="ml-1.5 text-sm font-medium text-muted-foreground">(추정)</span>}
           </p>

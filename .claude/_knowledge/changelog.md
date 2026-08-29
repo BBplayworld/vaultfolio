@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-08-29
+
+### PWA 스크롤버튼 겹침·시뮬레이터 박스 크기·공지사항 최신화
+
+- **왜**: PWA standalone에서 `ScrollToTop`(`scroll-to-top.tsx`)의 `bottom-18/22` 고정 오프셋이 `BottomNav`(pt+버튼+safe-area 반영 padding으로 실제 높이 약 95~120px)보다 낮아 하단 네비에 가려짐. 절세 시뮬레이션 상단 결과 박스의 세액 숫자가 `text-3xl` 고정이라 모바일에서 과도하게 큼. `notice.tsx`의 "인증카드 개편" 카드는 그 기능이 이후 세션에서 전면 롤백돼 **실제로 존재하지 않는 기능을 안내하는 사실 오류** 상태였음.
+- **ScrollToTop**: `usePWAInstall().isStandalone`(기존 `top-bar.tsx` 등이 쓰는 훅 재사용)으로 standalone일 때만 `bottom-[calc(7rem+env(safe-area-inset-bottom))]`로 상향, 브라우저 탭은 기존 값 유지.
+- **절세 시뮬레이션**: 세액 숫자를 `text-3xl` → `text-2xl sm:text-3xl`(`dashboard.tsx`/`net-asset-chart.tsx`와 동일한 반응형 관례).
+- **notice.tsx**: `NOTICE_ID`를 `20260829`로 bump, 사실과 다른 "인증카드 개편" 카드 제거하고 실제 신규 기능(연말 절세 시뮬레이션·홈 기능 추천 팁) 2개로 교체. 08-08 업데이트에 종속됐던 "신용대출-부동산 연계" 1회성 행동요청 배너도 이번 내용과 무관해 함께 제거.
+
 ## 2026-08-28
 
 ### 홈 알림 박스 4개(백업·최신화·세금·기능팁) → 1개로 통합
@@ -192,25 +201,4 @@
 - **온라인 복귀 pull-first**([cloud-sync-provider.tsx](../../src/lib/cloud-sync/cloud-sync-provider.tsx)): armed 폴링 effect에 `window "online"` 리스너 추가(force pull). 없으면 오프라인 중 쌓인 디바운스 push가 다음 폴링(최대 60초)보다 먼저 나가 충돌 경로로 들어갔다.
 - **왜(현금/대출)**: 자산성적표 "순자산 왜?"에서 신규 현금 자산이 "대출" 섹션에 표시되고 금액도 다르게 읽힌다는 제보. `groupAttributionItems`의 "이 기간에 `debt`가 하나라도 있으면 `cash`를 대출 그룹으로 강제 편입"(2026-08 설계)이 금액·연관성과 무관하게 트리거된 게 원인 — 8600만원 신규 현금과 전혀 무관한 소액 대출 변동이 같은 주에 겹쳤다는 이유만으로 끌려갔다. **병합 규칙을 완전히 제거해 현금·대출을 항상 각자 그룹으로 분리.** `dCostCash`는 원래도 `loans`를 참조하지 않아 금액은 정확했음을 회귀 테스트로 확정(금액 차이는 두 줄이 한 박스에 나란히 표시되며 생긴 시각적 오독).
 - 신규 테스트 16건(CAS 4·기준점 병합 11·현금대출 분리 회귀 1 + 기존 2건 갱신), 전체 141건 통과. R28 회귀 항목 신설(원자성·기준점·갱신 시점·online 리스너 5개 조건). `npx tsc --noEmit`·`npx vitest run`·`npm run lint`(0 errors)·`npm run build` 전부 통과.
-
-## 2026-08-04 (3)
-
-### 암호화폐 종합 카드 매수/매도 버튼 중복 노출 수정 + 상세탭 공통 규칙 명문화 (issue-4.21)
-
-- **왜**: 거래소가 1개만 지정된 코인은 종합 카드(`CryptoCard`)와 거래소별 하위 카드(`SubCryptoCard`) 양쪽에 동일 코인의 "매수/매도 기록·내역" 버튼이 중복 노출됐다(사용자 점검 요청으로 발견). 주식(`StockCard`)은 거래입력 노출 조건이 `!hasSubItems` 하나뿐인데, 암호화폐는 "병합 대표 id 편집 불가" 판단용 조건(`effectiveGroupItems.length > 1`)을 거래입력 노출에도 잘못 재사용해 두 자산의 기준이 벌어졌던 것이 원인.
-- **수정**: [crypto-tab.tsx:166](../../src/app/(main)/_components/views/detail/tabs/crypto-tab.tsx)의 `CryptoCard` 거래입력 행 노출 조건을 `!(hasSubItems && effectiveGroupItems.length > 1)`→`!hasSubItems`로 변경, 주식과 완전히 동일한 규칙으로 통일. 수정 버튼 disabled 조건(`effectiveGroupItems.length > 1`)은 의미가 다르므로 그대로 유지.
-- **KB 반영**: `qa-full-test-plan.md` F-ASSET에 "하위 항목 보유 자산의 거래입력 노출 규칙(필수)" 명문화, F-STOCK·F-CRYPTO-TX 상호 참조 추가. `dev-rules.md`에 "자산 상세탭 공통 적용 판단 체크리스트" 신설 — 앞으로 5탭(현금·암호화폐·주식·부동산·대출) 중 하나라도 수정 시 하위 항목(증권사·거래소) 이슈면 주식+암호화폐 동시 수정, 그 외 공통 이슈면 5탭 전체 검토를 강제.
-- `npx tsc --noEmit`·`npx vitest run`(125건 통과)·`npm run lint`(0 errors, 기존 warning 외 신규 없음)·`npm run build` 전부 통과(QA 완료).
-
-## 2026-08-04 (2)
-
-### 암호화폐 매수/매도 거래내역 신설 (issue-4.21, S-4.25)
-
-- **왜**: `crypto[]`는 `quantity`·`averagePrice`(잔고 스냅샷)만 있고 거래 이력이 없었다 — 주식(`transactions`)·현금(`cashTransactions`)·대출(`loanTransactions`)은 이미 갖춘 기능이 코인만 빠져 있었고, 원인분해의 `buy:crypto`/`sell:crypto`도 실제 거래가 아니라 스냅샷 원가 델타 추정치였다. "자산업데이트" 플로팅 버튼에도 현금·대출은 기록 액션이 있는데 코인만 진입로가 없었다(사용자 제보).
-- **계산 엔진 재사용**: [trade-utils.ts](../../src/lib/trade/trade-utils.ts)의 가중평균 재계산 함수 5개(`computeNewPosition`·`recomputeFromLog`·`reverseTransaction`·`deriveBaseSnapshot`·`rollbackTransaction`)와 `pruneTransactions`·`findDuplicateTransaction`, `validate-reflection.ts`를 `TxLike`/`PositionLike` 구조적 타입으로 일반화해 주식 코드를 복제하지 않고 코인에도 재사용(현금·대출의 잔액 선형 가감과 달리 코인은 매수 시 평단이 바뀌므로 계산 구조가 주식과 동일).
-- **진입 동선 통일**: `floating-add-button.tsx`의 "자산업데이트" 플로우에 현금 "입출금 기록"·대출 "상환/대출 기록"과 동일 위치·패턴으로 코인 "매수/매도 기록" 액션 추가([asset-dispatch.ts](../../src/app/(main)/_components/layout/navigation/asset-dispatch.ts) `dispatchAddCryptoTx`). 코인 상세 탭 카드에도 기록/내역 버튼 추가(병합 카드는 거래소 분할 보유 시 합성 id라 비활성화, 거래소별 하위 카드에서 개별 기록).
-- **신규**: [types/transaction.ts](../../src/types/transaction.ts) `cryptoTransactionSchema`(주식 `transactionSchema`에서 통화·환율·수수료 필드 제거), `assetData.cryptoTransactions[]`, [crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx)·[crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)(`crypto-transactions` 탭), `asset-data-context` CRUD 4종(단일 저장, R4 대칭).
-- **원인분해 정확화**([asset-report.ts](../../src/lib/report/asset-report.ts)): `reflectedCryptoFlow` 신설로 `buy:crypto`/`sell:crypto`를 실제 반영 거래 기반으로 계산(정밀·예측 분기 모두). `estimatePeriodInflows`에 `tradedCryptoIds` 추가해 반영 거래 있는 코인을 매수일 추정에서 제외(이중계산 방지, `tradedStockIds` 패턴).
-- **공유 토큰**: packV7 `parts[14]`에 코인 거래내역 섹션을 꼬리로 추가(`crIdx`로 부모 코인 참조). 꼬리 추가라 구버전 토큰 호환(R3).
-- 명세 [S-4.25](../specs/4.25-crypto-transactions.md) 역작성. 신규 테스트 4건(trade-utils 코인 재사용 2건, asset-report buy:crypto 정확화·이중계산 방지 2건), 전체 122건 통과. `npx tsc --noEmit`·`npx vitest run`·`npm run lint`(0 errors, 기존 warning 외 신규 없음)·`npm run build` 전부 통과(QA 완료).
 

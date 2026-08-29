@@ -1,53 +1,32 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Trophy, RefreshCw, Building2, IdCard, MessageSquareText, Link2 } from "lucide-react";
+import { Sparkles, Calculator, Lightbulb, MessageSquareText } from "lucide-react";
 import { APP_VERSION } from "@/config/app-version";
 
-export const NOTICE_ID = "20260808";
-export const NOTICE_TITLE = "자산 성적표 · 실거래가 · 인증카드 업데이트";
+export const NOTICE_ID = "20260829";
+export const NOTICE_TITLE = "연말 절세 시뮬레이션 · 기능 추천 업데이트";
 
-// 이번 릴리스 핵심 4가지 — 아이콘 + 한두 문장으로만. 스크롤 없이 훑히는 분량을 상한으로 둔다.
+// 이번 릴리스 핵심 — 아이콘 + 한두 문장으로만. 스크롤 없이 훑히는 분량을 상한으로 둔다.
 const FEATURES = [
   {
-    icon: Trophy,
-    title: "자산 성적표",
+    icon: Calculator,
+    title: "연말 절세 시뮬레이션",
     body: (
       <>
-        장기 성장·수익의 질·레버리지·분산·투자 습관 <strong className="text-foreground">5개 축을 별점과 트로피 등급으로 채점</strong>합니다.
-        넣은 돈이 이자를 내고도 남는지 <strong className="text-foreground">모든 자산 · 실투자금 · 금융투자 레버리지 세 기준으로 한눈에 비교</strong>하도록 재구성했고,
-        AI 평가 프롬프트(진단·증식·리스크)도 더 정교해졌습니다. <strong className="text-foreground">성과 탭</strong>에서 확인하세요.
+        해외주식을 <strong className="text-foreground">지금 팔면 세금이 얼마인지</strong> 실시간으로 계산합니다.
+        손실 종목을 함께 선택하면 <strong className="text-foreground">손익통산으로 얼마나 아끼는지</strong>까지 바로 보여줍니다.
+        <strong className="text-foreground">세금 관리 &gt; 절세 시뮬레이션</strong>에서 체크박스로 종목을 골라보세요.
       </>
     ),
   },
   {
-    icon: RefreshCw,
-    title: "암호화폐 시세 자동 갱신",
+    icon: Lightbulb,
+    title: "홈 기능 추천 팁",
     body: (
       <>
-        직접 입력해야 했던 코인 현재가가 이제 <strong className="text-foreground">1시간 단위로 자동 갱신</strong>됩니다.
-        손대지 않아도 순자산과 수익률이 최신 시세로 계산됩니다.
-      </>
-    ),
-  },
-  {
-    icon: Building2,
-    title: "부동산 실거래가 추정",
-    body: (
-      <>
-        주소만 입력하면 <strong className="text-foreground">국토교통부 실거래 기반 추정 시세</strong>를 내 입력값과 함께 보여줍니다.
-        어떤 단지·층·평형의 거래를 근거로 삼았는지와 신뢰도 등급을 함께 표기하며, 근거가 약하면 아예 표시하지 않습니다.
-      </>
-    ),
-  },
-  {
-    icon: IdCard,
-    title: "인증카드 개편",
-    body: (
-      <>
-        이름을 <strong className="text-foreground">인증카드</strong>로 바꾸고 내용을 <strong className="text-foreground">주식 기준으로 재구성</strong>했습니다.
-        총 주식 평가금액과 평가손익을 맨 위에 두고, 상위 4개 종목의 비중과 목록을 상세 &gt; 주식 탭과 똑같은 모습으로 보여줍니다.
-        금액은 가린 채로도 공유할 수 있습니다. 상단 카드 아이콘에서 만들어 보세요.
+        새로 나온 기능이나 그동안 안 써본 기능을 <strong className="text-foreground">홈 화면이 알아서 추천</strong>합니다.
+        카드를 누르면 바로 그 기능으로 이동합니다.
       </>
     ),
   },
@@ -66,7 +45,7 @@ export function NoticeContent() {
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary tabular-nums">v{APP_VERSION}</span>
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            이번 업데이트는 <strong className="text-foreground">내 자산을 평가하고 검증하는 기능</strong>에 집중했습니다. 아래 네 가지를 확인해 보세요.
+            이번 업데이트는 <strong className="text-foreground">세금까지 챙기는 자산관리</strong>에 집중했습니다. 아래 내용을 확인해 보세요.
           </p>
         </div>
       </div>
@@ -86,23 +65,10 @@ export function NoticeContent() {
         ))}
       </div>
 
-      {/* 행동 요청 — 기존 사용자가 직접 해줘야 계산이 맞아떨어지는 항목이라 기능 카드와 톤을 분리 */}
-      <div className="rounded-xl bg-amber-500/10 p-3.5 flex items-start gap-2.5">
-        <Link2 className="size-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-foreground">확인해 주세요 · 신용대출로 부동산을 사셨다면</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            그 대출에 <strong className="text-foreground">연계 부동산</strong>을 지정해 주세요. 지정하지 않으면 자산 성적표가 그 이자와 잔액을 주식 레버리지로 계산해 수치가 부풀려집니다.
-            <strong className="text-foreground"> 성과 → 자산 성적표 → 레버리지 → 계산 근거</strong>에서 대출을 누르면 바로 연결할 수 있습니다.
-          </p>
-        </div>
-      </div>
-
       {/* 나머지 개선 — 카드로 세울 만큼 크지 않아 한 문단으로.
           text-pretty 제외: 모바일에서 마지막 줄 균형 맞추기가 줄 길이를 줄여 우측 공백이 생겨, 전폭 greedy 줄바꿈을 우선한다(§2 국소 예외). */}
       <p className="text-sm text-muted-foreground leading-relaxed px-1">
-        그 외 순자산 변화의 원인을 시세·환율·부채 등 이름으로 더 자세히 보여주고, 홈 헤더의 전일 순자산 대비 증감과 종목별 오늘 등락을 한 줄로 확인할 수 있습니다.
-        데이터 백업 날짜 표기와 성과 화면의 지표 기준도 정확하게 다듬었습니다.
+        그 외 세금 계산을 증권사가 아닌 종목 단위로 정확히 통산하도록 다듬었고, 세금 관리 화면의 원화 표기 오류와 PWA 앱에서 스크롤 버튼이 하단 메뉴에 가려지던 문제도 함께 고쳤습니다.
       </p>
 
       {/* 의견 보내기 부탁 배너 */}
