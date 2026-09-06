@@ -79,8 +79,14 @@ GET /api/logo?domain=www.samsung.com&theme=light&size=192
                                    # 국내 — logo.dev 도메인 조회
                                    # theme: light|dark(로고가 올라갈 배경 밝기), size: ~512
                                    # 내부적으로 format=png(투명)·retina=true·fallback=404 고정
+                                   #   → retina로 반환 PNG는 요청 size의 2배. 호출부는
+                                   #     captureLogoSize(표시px)=표시px*1.5 로 요청(과대 요청 시
+                                   #     모바일 WebView가 로고 디코드 실패, 2026-09)
                                    # 실패는 항상 404(과거 302 리다이렉트 제거 — 크로스오리진이라
                                    # 인증카드 캡처의 dataURL 인라인이 CORS로 실패했음)
+                                   # upstream fetch 타임아웃 8s + 진행 중 요청 cacheKey로 dedup
+                                   #   (모듈 Map inFlight) — 캡처 시 동일 로고 동시 콜드 요청
+                                   #   stampede로 일부가 404 되던 것 방지
                                    # Redis 캐시 키 v2:{d|t}:{key}:{size}:{theme}, TTL 1년
                                    # ※ Brandfetch(cdn.brandfetch.io)는 사용 불가 — Logo Link
                                    #   가이드라인이 서버 측 fetch·프록시·캐싱을 금지하며

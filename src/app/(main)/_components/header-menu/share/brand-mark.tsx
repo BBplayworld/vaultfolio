@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { resolveLogoSrc } from "@/lib/finance/logo-source";
+import { captureLogoSize } from "@/lib/finance/logo-source";
+import { useLogoSrc } from "@/hooks/use-logo-src";
 import { pickOnColor } from "@/config/theme";
 
 /**
@@ -14,9 +14,10 @@ import { pickOnColor } from "@/config/theme";
  *   흰 박스로 뜨기 때문. 글자색은 조각색 상대휘도로 자동 선택(`pickOnColor`).
  * - 로고가 없거나 로드 실패하면 **아무것도 그리지 않는다**(`null`) — 빈 칩이 남지 않게.
  *
- * src 해석은 `resolveLogoSrc` 공용 함수와 공유 — `StockIcon`(주식 탭 원형 아바타)도 같은 함수.
+ * src 해석·로드 재시도는 `useLogoSrc` 공용 훅 — `StockIcon`(주식 탭 원형 아바타)도 같은 훅.
  * 캡처 DOM 전용 — 고정 px, `sm:` 금지(R32). `<img>`여야 `captureImage`의 dataURL 인라인
- * 루프를 타므로 인라인 `<svg>`로 바꾸지 말 것.
+ * 루프를 타므로 인라인 `<svg>`로 바꾸지 말 것. 요청 크기는 `captureLogoSize`로 표시 px 기준
+ * 환산(과대 요청 시 모바일 WebView가 로고를 못 그린다).
  */
 export function BrandMark({
   ticker,
@@ -35,7 +36,8 @@ export function BrandMark({
   /** 국내 ETF 브랜드명(TIGER/KODEX/ACE…) — 있으면 로고 대신 텍스트 배지 */
   etfBrand?: string | null;
 }) {
-  const [imgError, setImgError] = React.useState(false);
+  // 표시 크기 기준으로 요청(retina로 ×2 되어 pixelRatio 3 커버). etfBrand면 아래에서 미사용.
+  const { imgProps } = useLogoSrc(ticker, name, isForeign, { size: captureLogoSize(size) });
 
   const chip = "flex items-center justify-center rounded-full overflow-hidden";
 
@@ -54,18 +56,17 @@ export function BrandMark({
     );
   }
 
-  // 캡처 pixelRatio 3을 감안해 표시 크기보다 크게 요청(최대 512)
-  const src = resolveLogoSrc(ticker, name, isForeign, { size: Math.min(512, size * 6) });
-  if (!src || imgError) return null;
+  // src 없음(도메인 매핑 없음) 또는 재시도 소진 → 빈 칩 남기지 않게 아무것도 안 그림
+  if (!imgProps) return null;
 
   return (
     <div className={chip} style={{ width: size, height: size, backgroundColor: bgColor }}>
       <img
-        src={src}
+        key={imgProps.src}
+        {...imgProps}
         alt={name}
         className="object-cover"
         style={{ width: size, height: size }}
-        onError={() => setImgError(true)}
       />
     </div>
   );

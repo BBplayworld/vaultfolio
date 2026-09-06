@@ -28,7 +28,8 @@ import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import { resolveLogoSrc } from "@/lib/finance/logo-source";
+import { captureLogoSize } from "@/lib/finance/logo-source";
+import { useLogoSrc } from "@/hooks/use-logo-src";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
@@ -45,13 +46,15 @@ export const CATEGORY_TABS = [
 ] as const;
 
 export function StockIcon({ ticker, name, isForeign, color, screenshotMode = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean }) {
-  const [imgError, setImgError] = React.useState(false);
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
 
-  const logoSrc = resolveLogoSrc(ticker, name, isForeign);
-
-  const showLogo = !!logoSrc && !imgError;
-  const showInitial = !logoSrc;
+  // 캡처 경로만 요청 크기 축소(표시 28px 기준). 실사용 아바타는 옵션 미전달 → 기존 동작 유지.
+  const { imgProps } = useLogoSrc(
+    ticker,
+    name,
+    isForeign,
+    screenshotMode ? { size: captureLogoSize(28) } : undefined,
+  );
 
   // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰으로 데스크톱 값 고정(R25)
   const sizeCls = screenshotMode ? ASSET_THEME_SHOT.icon : "size-6 sm:size-7";
@@ -59,11 +62,12 @@ export function StockIcon({ ticker, name, isForeign, color, screenshotMode = fal
 
   return (
     <div className={`${sizeCls} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden`} style={{ backgroundColor: color }}>
-      {showLogo ? (
-        <img src={logoSrc} alt={name} className={`${sizeCls} rounded-full object-cover`} onError={() => setImgError(true)} />
-      ) : showInitial ? (
+      {imgProps ? (
+        <img key={imgProps.src} {...imgProps} alt={name} className={`${sizeCls} rounded-full object-cover`} />
+      ) : (
+        // 로고 URL 없음(도메인 매핑 없음) 또는 재시도 소진 → 이니셜 폴백
         <span className={`${initialCls} font-bold text-white`}>{initial}</span>
-      ) : null}
+      )}
     </div>
   );
 }

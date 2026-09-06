@@ -43,12 +43,18 @@ function logoDevQuery(token: string, size: number, theme: LogoTheme | null): str
   return q.toString();
 }
 
+/**
+ * 진행 중 upstream fetch를 cacheKey로 병합 — 인증카드 캡처 시 같은 로고를 동시에 여러 번
+ * 요청(프리뷰+캡처 노드 × N종목)하면 콜드 캐시에서 stampede가 나 일부가 5s 타임아웃 → 404 됐다.
+ */
+const inFlight = new Map<string, Promise<{ buf: Buffer<ArrayBuffer>; contentType: string } | null>>();
+
 /** 제공자 목록을 순서대로 시도해 첫 성공 이미지를 반환. 실패는 조용히 다음으로 넘어간다. */
 async function fetchFirstImage(urls: (string | null)[]): Promise<{ buf: Buffer<ArrayBuffer>; contentType: string } | null> {
   for (const url of urls) {
     if (!url) continue;
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000), redirect: "follow" });
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: "follow" });
       if (!res.ok) continue;
       const contentType = res.headers.get("content-type") ?? "image/png";
       if (!contentType.startsWith("image/")) continue; // 에러 HTML 등 방어
@@ -108,7 +114,12 @@ export async function GET(request: Request) {
     return imageResponse(Buffer.from(cached.data, "base64"), cached.contentType, "HIT");
   }
 
-  const found = await fetchFirstImage(upstreams);
+  let pending = inFlight.get(cacheKey);
+  if (!pending) {
+    pending = fetchFirstImage(upstreams).finally(() => inFlight.delete(cacheKey));
+    inFlight.set(cacheKey, pending);
+  }
+  const found = await pending;
   if (!found) {
     return NextResponse.json({ error: "logo not found" }, { status: 404 });
   }

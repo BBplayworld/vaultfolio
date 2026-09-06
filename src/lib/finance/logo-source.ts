@@ -60,8 +60,26 @@ export function getEtfBrand(name: string): string | null {
 export interface LogoSourceOptions {
   /** 로고가 올라갈 배경 밝기 — 어두운 배경엔 "dark"(밝은 로고 변형) */
   theme?: "light" | "dark";
-  /** 요청 픽셀 크기(최대 512). 캡처는 pixelRatio 3이라 표시 크기의 3배 이상 권장 */
+  /**
+   * `/api/logo`에 넘길 요청 픽셀 크기(최대 512). **표시 CSS px을 그대로 넣지 말고**
+   * 호출부가 `captureLogoSize(표시px)`로 환산해 전달한다(아래 주석 참고).
+   */
   size?: number;
+}
+
+/** 인증카드 캡처 `pixelRatio` — `share-menu.tsx` captureImage와 동일해야 한다 */
+export const CAPTURE_PIXEL_RATIO = 3;
+
+/**
+ * 표시 CSS px → `/api/logo` 요청 size.
+ *
+ * `/api/logo` route가 항상 `retina=true`를 강제해 **반환 PNG = 요청 size의 2배**다.
+ * 따라서 표시px×pixelRatio(3) 해상도를 얻으려면 요청 size는 그 절반(= 표시px×1.5)이면 된다.
+ * 과거엔 44~92px 칩에 512(→retina 1024px PNG)를 요청해 모바일 WebView가 디코드/메모리
+ * 한계로 로고를 통째로 못 그렸다(인증카드 저장 시 로고 누락 버그, 2026-09).
+ */
+export function captureLogoSize(displayPx: number): number {
+  return Math.ceil((displayPx * CAPTURE_PIXEL_RATIO) / 2);
 }
 
 /**

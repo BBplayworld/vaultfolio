@@ -6,9 +6,30 @@
 
 ## 2026-09-06
 
+### 인증카드 주식 현황 종목 행 텍스트 — 상세>주식 탭(모바일)과 1px 정렬 (#4.24)
+
+- "프리뷰/캡처 분리" 이후 프리뷰도 항상 `screenshotMode`(`ASSET_THEME_SHOT`)를 써서, `ASSET_THEME_SHOT`이 `sm:` 데스크톱 값으로 고정돼 있던 탓에 모바일 프리뷰의 종목 행 텍스트가 상세 탭보다 1px 커 보였다.
+- `theme.ts` `ASSET_THEME_SHOT`: `cardInfoName` `text-[15px]`→`text-sm`, `cardAmountMain` `text-[15px]`→`text-sm`, `iconInitial` `text-[10px]`→`text-[9px]`, `badge` `text-[11px]`→`text-[10px]` — 전부 모바일 `ASSET_THEME` 값과 동일. `summaryValue`·`profitAmount`·`profitRate`·`icon`은 공유 이미지 강조로 큰 값 유지(사용자 확인).
+- `ASSET_THEME_SHOT` 소비처는 `share-card.tsx`뿐 → 인증카드 프리뷰 + 저장 PNG에만 반영(PNG 종목명·금액 1px 축소, 2040px에서 비가시). R32 불변(모두 `sm:` 없는 고정값).
+
+### 인증카드 — 모바일 Whale 저장 시 종목 로고 전부 누락 수정 (#4.24)
+
+- **증상**: 모바일 Whale에서 인증카드 저장 시 주식 현황은 로고 없는 색 원형만, 포트폴리오 도넛은 로고 칩 대부분 빈 공간. PC는 정상.
+- **원인 4가지 중첩**:
+  1. **과대 요청 크기(주 원인)** — `BrandMark`가 44~92px 칩에 `size*6`(clamp 512) 요청 + `/api/logo`가 항상 `retina:true` → 실제 **1024px PNG**를 7~14장. 680px 카드 × pixelRatio 3(2040px 캔버스)와 겹쳐 모바일 WebView가 디코드/메모리 한계로 `<img> onError`.
+  2. **영구 폴백** — `BrandMark`/`StockIcon`의 `imgError` state가 한 번 true면 리셋·재시도 없이 굳어, `toPng` 실행 전 이미 로고가 사라진 상태.
+  3. **침묵 실패 pre-pass** — `captureImage`의 dataURL 인라인이 `catch {}` 완전 공백 + settle 대기·타임아웃·재시도 전무.
+  4. **콜드 stampede** — `/api/logo` in-flight dedup 없음 + upstream 5s 타임아웃 → 일부 404.
+- **조치(레이어별)**:
+  - **L1 요청 크기 정상화**: `logo-source.ts`에 `captureLogoSize(표시px)`(=×1.5, route retina로 ×2 → 표시px×3) + `CAPTURE_PIXEL_RATIO`. `BrandMark`는 `captureLogoSize(size)`, `StockIcon`은 캡처 경로만 `captureLogoSize(28)`(실사용 아바타는 무변경). 512/1024px → 84~276px로 축소.
+  - **L2 공유 훅 `src/hooks/use-logo-src.ts`**: `imgError` 영구 폴백을 유한 재시도(3회·지수 백오프·`&r=N` 캐시버스터)로 교체. `resolveLogoSrc` 재사용. `BrandMark`·`StockIcon` 채택. `StockIcon`은 로고 URL이 있어도 **최종 실패 시 이니셜 폴백**(기존엔 빈 색 원형).
+  - **L3 캡처 오케스트레이션**(`share-menu.tsx`): pre-pass 전 `settleImages`(이미지별 4s·전체 12s), pre-pass `fetch(cache:'force-cache')` + 1회 재시도 + `console.warn`, `toPng`에 `imagePlaceholder`(1x1 투명)·`fetchRequestInit`, `handleSave` `Promise.race` 20s 하드 타임아웃.
+  - **L5 `/api/logo`**: 진행 중 요청 `cacheKey` dedup(모듈 `inFlight` Map), upstream 타임아웃 5s→8s.
+- 신규 테스트 `src/lib/__tests__/logo-source.test.ts`(8). R-registry에 R34 추가.
+
 ### 인증카드 — 주식 펼침 제거 + 포트폴리오 도넛·라벨 확대 (#4.24)
 
-- **주식 현황 펼침 제거**: 위 "프리뷰/캡처 분리"에서 프리뷰 인스턴스에 `screenshotMode={!responsive}`(=false)를 넘기면서, `StockCard`의 상세>주식탭용 펼침(`Collapsible`) 기능이 프리뷰에서 되살아났다. 인증카드는 정적 이미지라 펼침이 없어야 함. → `share-card.tsx`에서 `const shot = !responsive` 삭제, `screenshotMode` 3곳(`StockSummaryHeader`/`StockCategorySection`/`StockCard`)을 **항상 true**로. `StockCard`는 `screenshotMode`면 함수 상단에서 조기 return 해 펼침 DOM 자체가 없음(`stock-tab.tsx:769`). `responsive`는 outer 폭·패딩과 `PortfolioRingCard` 스케일에만 계속 사용. 두 인스턴스의 하위 렌더가 이제 완전히 동일(`ASSET_THEME_SHOT` 고정) — 프리뷰가 저장 이미지와 1:1. 프리뷰 주식명/금액이 14px→15px로 1px 커짐(요구 "상세탭과 같거나 크게"에 부합).
+- **주식 현황 펼침 제거**: 위 "프리뷰/캡처 분리"에서 프리뷰 인스턴스에 `screenshotMode={!responsive}`(=false)를 넘기면서, `StockCard`의 상세>주식탭용 펼침(`Collapsible`) 기능이 프리뷰에서 되살아났다. 인증카드는 정적 이미지라 펼침이 없어야 함. → `share-card.tsx`에서 `const shot = !responsive` 삭제, `screenshotMode` 3곳(`StockSummaryHeader`/`StockCategorySection`/`StockCard`)을 **항상 true**로. `StockCard`는 `screenshotMode`면 함수 상단에서 조기 return 해 펼침 DOM 자체가 없음(`stock-tab.tsx:769`). `responsive`는 outer 폭·패딩과 `PortfolioRingCard` 스케일에만 계속 사용. 두 인스턴스의 하위 렌더가 이제 완전히 동일(`ASSET_THEME_SHOT` 고정) — 프리뷰가 저장 이미지와 1:1. (프리뷰 종목 행 텍스트가 잠시 15px이 됐다가 위 "1px 정렬" 항목에서 상세 탭 모바일 14px로 되돌림.)
 - **포트폴리오 도넛·라벨 확대**: 링 밖 주식명이 고정 `text-sm` + 위치별로 좁아지는 `labelMaxW` + `line-clamp-2` 조합이라 "임의로 축소된" 느낌. `portfolio-ring-card.tsx` 기하 상수 조정 — `R_INNER` 78→66(밴드 150→174, 도넛이 더 커 보임)·`R_OUTER` 228→240(지름 456→480, 카드폭의 69→73%)·`LABEL_R` 244→256·`VIEW_H` 620→664·`CY` 300→322·`MIN_LABEL_GAP` 58→66·`CHIP_MIN/MAX` 40/84→44/92. 라벨 폰트 `text-sm`→`text-[15px]`(이름·%), `labelMaxW` top/bottom 160→180(좌우 하한 80은 유지 — 올리면 라벨 박스가 카드 패딩을 넘어 짤림).
 - **`CARD_WIDTH`(680)·`VIEW_W`(656)는 불변** — `pixelRatio = ceil(1400/CARD_WIDTH)`가 700 부근에서 3→2로 급락하므로. 저장 PNG 가로 해상도·구도 동일, 세로만 pixelRatio(3)배로 +132px. 사용자 확인: 프리뷰·저장 이미지 모두 확대 적용.
 

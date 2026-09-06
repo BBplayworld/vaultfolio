@@ -29,6 +29,37 @@ const CARD_WIDTH = 680;
 // (680 기준 ceil(1400/680)=3 → 최종 약 2040px)
 const CAPTURE_TARGET_PX = 1400;
 
+// 캡처 전 로고 <img> 로드 대기 예산 (모바일에서 느린 로고 로드/디코드 대비)
+const IMG_SETTLE_PER_MS = 4000;
+const IMG_SETTLE_TOTAL_MS = 12000;
+// handleSave 전체 하드 타임아웃 — 초과 시 저장 실패로 처리하고 버튼 복구
+const SAVE_HARD_TIMEOUT_MS = 20000;
+// fetch 실패 이미지가 toPng 전체를 throw시키지 않도록 하는 1x1 투명 PNG
+const TRANSPARENT_1PX =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+/** 캡처 노드 안 모든 <img>가 로드(or 실패)될 때까지 대기 — 이미지별·전체 타임아웃 */
+async function settleImages(imgs: HTMLImageElement[]): Promise<void> {
+  await Promise.race([
+    Promise.all(
+      imgs.map(
+        (img) =>
+          new Promise<void>((res) => {
+            const done = () => res();
+            if (img.complete && img.naturalWidth > 0) {
+              img.decode?.().then(done).catch(done);
+              return;
+            }
+            img.addEventListener("load", () => img.decode?.().then(done).catch(done), { once: true });
+            img.addEventListener("error", done, { once: true });
+            setTimeout(done, IMG_SETTLE_PER_MS);
+          }),
+      ),
+    ),
+    new Promise<void>((r) => setTimeout(r, IMG_SETTLE_TOTAL_MS)),
+  ]);
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,49 +94,66 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     if (!cardRef.current) return null;
     const { toPng } = await import("html-to-image");
 
-    // 캡처 전 모든 <img>를 직접 fetch → dataURL로 인라인
-    // (html-to-image가 동일 src를 캐싱해 첫 이미지로 덮어쓰는 문제 회피)
     const imgs = Array.from(cardRef.current.querySelectorAll("img"));
+
+    // 1) 화면 밖 캡처 노드의 로고 <img>가 아직 로딩 중일 수 있으니 먼저 settle 대기
+    //    (모바일에서 프리뷰보다 뒤처지거나 디코드가 지연되는 경우 대비)
+    await settleImages(imgs);
+
+    // 2) 모든 <img>를 직접 fetch → dataURL로 인라인
+    //    (html-to-image가 동일 src를 캐싱해 첫 이미지로 덮어쓰는 문제 회피 + 원본 로드 실패분 복구)
     await Promise.all(
       imgs.map(async (img) => {
         const src = img.getAttribute("src");
         if (!src || src.startsWith("data:")) return;
-        try {
-          const res = await fetch(src);
-          if (!res.ok) return;
-          const blob = await res.blob();
-          const dataUrl: string = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          img.setAttribute("src", dataUrl);
-          if (!(img.complete && img.naturalWidth > 0)) {
-            await new Promise<void>((resolve) => {
-              img.addEventListener("load", () => resolve(), { once: true });
-              img.addEventListener("error", () => resolve(), { once: true });
+        for (let i = 0; i < 2; i++) {
+          try {
+            // 방금 프리뷰/캡처 노드가 채운 HTTP 캐시를 강제 사용 → 네트워크 없이 성공 가능
+            const res = await fetch(src, { cache: "force-cache" });
+            if (!res.ok) throw new Error(`logo ${res.status}`);
+            const blob = await res.blob();
+            const dataUrl: string = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
             });
+            img.setAttribute("src", dataUrl);
+            await img.decode?.().catch(() => {});
+            return;
+          } catch (e) {
+            if (i === 1) console.warn("[share-card] 로고 인라인 실패:", src, e);
+            else await new Promise((r) => setTimeout(r, 400));
           }
-        } catch {
-          // 실패 시 원본 src 유지 — onError로 initial 표시됨
         }
       }),
     );
 
     const el = cardRef.current;
     // offsetWidth(레이아웃 폭, 항상 CARD_WIDTH 고정) 기준 — getBoundingClientRect는 미리보기 축소
-    // transform(ScaledCardPreview)의 영향을 받아 기기마다 다른 pixelRatio·해상도가 나오므로 사용 금지
+    // transform의 영향을 받아 기기마다 다른 pixelRatio·해상도가 나오므로 사용 금지
     const pixelRatio = Math.ceil(CAPTURE_TARGET_PX / el.offsetWidth);
     // 카드의 계산된 배경색(테마 따라 흰/어두움)을 캡처 배경으로 지정 → 투명 영역까지 테마색으로 채움
     const backgroundColor = getComputedStyle(el).backgroundColor;
-    return toPng(el, { pixelRatio, skipFonts: false, backgroundColor });
+    return toPng(el, {
+      pixelRatio,
+      skipFonts: false,
+      backgroundColor,
+      // 인라인 실패한 이미지가 toPng 전체를 throw시키지 않도록 — 투명으로 대체
+      imagePlaceholder: TRANSPARENT_1PX,
+      fetchRequestInit: { cache: "force-cache" },
+    });
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const dataUrl = await captureImage();
+      const dataUrl = await Promise.race([
+        captureImage(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("capture timeout")), SAVE_HARD_TIMEOUT_MS),
+        ),
+      ]);
       if (!dataUrl) return;
       const a = document.createElement("a");
       a.href = dataUrl;

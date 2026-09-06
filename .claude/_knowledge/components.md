@@ -133,10 +133,10 @@ _components/
   - `dailyProfit`은 `filteredStocks` 기준 합산 (카테고리 selector 따라 즉시 변동)
 - `CATEGORY_TABS`
 
-**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 680px 고정폭(`CARD_WIDTH`, share-menu.tsx)이라 `sm:` 뷰포트 반응형 금지(R32). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
+**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 680px 고정폭(`CARD_WIDTH`, share-menu.tsx)이라 `sm:` 뷰포트 반응형 금지(R32). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, `sm:` 없는 고정값)을 쓴다. 프리뷰·캡처 두 인스턴스가 모두 이 토큰을 쓰므로 **종목 행 텍스트(`cardInfoName` 14px·`cardAmountMain` 14px·`iconInitial` 9px·`badge` 10px)는 모바일 `ASSET_THEME`와 동일**(모바일 프리뷰가 상세>주식 탭과 같게 보이도록, 2026-09). 히어로(`summaryValue` 24px·`profitAmount` 18px·`profitRate` 16px)는 공유 이미지 강조로 더 큰 값 유지.
 
 - `StockCard` — 헤더 + 비중 그라데이션 바만 노출. Collapsible·상세 그리드·수정/삭제 버튼·담보대출·보유 메타 모두 미렌더. `maskFn`으로 hideAmounts 마스킹 전달
-- `StockRowHeader` / `StockIcon` — 이름·금액·아이콘·Badge 클래스를 SHOT 토큰으로 스왑. 비중%는 미노출(범례로 통합), `TodayChangeChip`(오늘 등락) 미렌더
+- `StockRowHeader` / `StockIcon` — 이름·금액·아이콘·Badge 클래스를 SHOT 토큰으로 스왑. 비중%는 미노출(범례로 통합), `TodayChangeChip`(오늘 등락) 미렌더. `StockIcon`은 로고를 `useLogoSrc` 훅으로 로드(캡처 시 `captureLogoSize(28)` 요청, 재시도 3회) — **로고 URL이 있어도 최종 로드 실패 시 이니셜 폴백**(과거엔 빈 색 원형만 남았음, 2026-09 수정)
 - `StockCategorySection` — **범례는 인증카드도 노출**(주식 탭과 공통, `!screenshotMode` 가드 없음): 색점+종목명+비중%, `maxItems` 초과분은 `그 외 N종목 X%`. 인증카드 grid는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2` 고정)+`legendText`(`text-sm` 고정, R32). 루트 패딩 `px-1`, 리스트 상단 여백 `mt-7`(주식 탭은 `mt-8`). 리스트 초과분 "그 외 N종목" 행은 `maskFn`+`exchangeRates` prop이 있으면 종목 카드와 동일한 우측 2줄(평가금액 합 / 손익 `(+X.X%)`, `computeStockMetrics` 합산 — 개별 평균 아닌 `(Σ평가−Σ원가)/Σ원가`)로 렌더, 비중%는 미노출
 - `StockSummaryHeader` → `DetailSummaryHeader`/`ProfitMetric`의 `screenshotMode` prop으로 전달 (원/달러 셀렉터·오늘 등락 미렌더, 인증카드는 배경 박스 없이 헤더 값 텍스트 `ASSET_THEME_SHOT.summaryValue`)
 
@@ -223,6 +223,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
   - **두 인스턴스 공통**: 하위 컴포넌트(`StockSummaryHeader`/`StockCategorySection`/`StockCard`)에 항상 `screenshotMode` 전달 → 정적 렌더(`StockCard`는 `screenshotMode`면 함수 상단에서 조기 return, `Collapsible`/펼침 DOM 자체가 없음)·`ASSET_THEME_SHOT` 고정 토큰. (직전 시안의 `shot = !responsive` 분기는 프리뷰에서 펼침 기능이 되살아나 제거.)
   - **프리뷰**: `<ShareCard responsive />`(ref 없음) — outer `w-full`+`p-2 sm:p-3`. `PortfolioRingCard`만 `responsive` prop으로 링 서브트리에 자체 fit-to-width 스케일(`scale = min(1, floor(clientWidth)/VIEW_W)`, `overflow-hidden`) — 도넛이 모바일 폭을 꽉 채우고 가로 스크롤 없음(R33).
   - **캡처**: `share-menu.tsx`가 화면 밖에 `<div aria-hidden className="fixed left-[-9999px]" style={{width: CARD_WIDTH}}><ShareCard cardRef={cardRef} /></div>` 상시 마운트. `toPng`이 이 노드를 캡처(680 고정) — `pixelRatio = ceil(CAPTURE_TARGET_PX / el.offsetWidth)`(`CAPTURE_TARGET_PX`=1400, 680 기준 3 → 최종 PNG ~2040px). 뷰포트·기기 무관 100% 동일(R32).
+  - **`captureImage` 오케스트레이션**(2026-09, 모바일 로고 누락 수정): ① `settleImages` — 캡처 노드 `<img>` 전부 로드/디코드 완료 대기(이미지별 4s·전체 12s 예산) → ② pre-pass `fetch(src, {cache:'force-cache'})` → dataURL 인라인, 실패 시 400ms 후 1회 재시도 + `console.warn` → ③ `toPng`에 `imagePlaceholder`(1x1 투명, 실패 이미지가 전체 throw 방지)·`fetchRequestInit:{cache:'force-cache'}`. `handleSave`는 `Promise.race`로 20s 하드 타임아웃(버튼 "처리 중..." 고착 방지).
   - `CARD_WIDTH`는 480→460(2026-08-08)→520→**680**(#4.24) — 카드 박스 바깥 폭을 바꾸는 유일한 레버이며, **`portfolio-ring-card.tsx`의 `VIEW_W`(=CARD_WIDTH−24)도 반드시 함께 조정**(안 하면 도넛만 안 커지고 좌우 여백만 늘어남). 700 이상이면 `pixelRatio`가 3→2로 떨어지므로 `CAPTURE_TARGET_PX`도 함께 상향 필요.
 - **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. **모바일 미리보기 최대 확대**([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx), #4.24): `DialogContent`가 모바일 `w-screen max-w-none h-[100dvh] rounded-none border-0` 전체화면(`sm:` 이상은 `sm:max-w-[760px] sm:h-[94dvh] sm:rounded-lg sm:border` 현행 유지). `DialogDescription`은 `hidden sm:block`(모바일 세로 공간 확보), 헤더·제어바 패딩 `px-3 py-2 sm:px-5`, 미리보기 컨테이너 `px-0 py-1 sm:p-4`(좌우 여백 0으로 카드 화면 끝까지). 헤더 상단·공용 닫기(X) 버튼은 `pt-[max(0.875rem,env(safe-area-inset-top))]` / `[&_[data-slot=dialog-close]]:top-[max(0.875rem,env(safe-area-inset-top))] sm:top-4`로 노치 여백 확보(공용 `dialog.tsx`의 기본 `top-4`는 미변경). 미리보기는 위 "프리뷰/캡처 분리" 참조 — 반응형 인스턴스라 스케일 없음. **셸·프리뷰 변경 모두 저장 PNG에 무영향**(저장은 화면 밖 고정 680 캡처 인스턴스 기준 — R32)
 
@@ -249,11 +250,11 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 도넛 **조각 안**에 얹는 기업 로고 배지. **원형 칩 배경 = 해당 조각색**(`bgColor`) — 투명 여백이 있는 로고는 조각과 자연스럽게 이어지고, 흰 배경이 박힌 로고도 원형으로 정돈된다.
 
-- **props**: `{ ticker; name; isForeign; size; bgColor; etfBrand? }`. 요청 해상도는 `size*6`(최대 512) — 캡처 pixelRatio 3 대응.
+- **props**: `{ ticker; name; isForeign; size; bgColor; etfBrand? }`. 로고 요청 해상도는 **`captureLogoSize(size)`**(= 표시 px × 1.5, route retina로 ×2 되어 결국 표시px×3). 과거 `size*6`(clamp 512 → retina 1024px PNG)은 모바일 WebView가 못 그렸다(2026-09 로고 누락).
 - 칩: `rounded-full overflow-hidden` + `backgroundColor: bgColor`, 내부 `<img object-cover>`가 칩을 **꽉 채워** 완전한 원이 된다(로고 자체의 사각 모서리가 안 보임).
 - **국내 ETF는 `etfBrand` 텍스트 배지**: 운용사 로고가 흰 배경 사각 이미지라(ACE 92.9%·TIGER 97.0%가 순백 불투명, 실측) 조각 위에서 흰 박스로 뜬다 → `BrandMark`가 `etfBrand` prop 유무로 `resolveLogoSrc` 호출 **전에** 분기해 브랜드명을 원형 칩에 텍스트로 렌더(로고 요청 자체를 안 함). 글자색 `pickOnColor(bgColor)`, 폰트는 브랜드명 길이에 반비례. **`resolveLogoSrc` 자체는 국내 ETF를 배제하지 않는다** — `StockIcon`(주식 탭 원형 아바타)은 같은 함수로 운용사 로고를 그대로 쓴다(흰 배경도 원 안에서는 자연스러움).
-- **로고가 없거나 로드 실패하면 `null` 반환 — 칩 자체를 그리지 않는다.** "그 외"처럼 로고 없는 조각에 빈 배지·텍스트가 남지 않게.
-- src 해석은 `resolveLogoSrc`(`lib/finance/logo-source.ts`) 공용 함수와 **공유** — `StockIcon`도 같은 함수를 쓴다(중복 구현 금지).
+- **로고 URL이 없거나 로드 재시도 3회 소진 시 `null` 반환 — 칩 자체를 그리지 않는다.** "그 외"처럼 로고 없는 조각에 빈 배지가 남지 않게.
+- src 해석·로드 재시도는 **`useLogoSrc` 훅**(`src/hooks/use-logo-src.ts`, `state-and-utils.md`) 경유 — `resolveLogoSrc`를 직접 부르지 말 것(재시도 누락). `StockIcon`도 같은 훅. `imgError` state 영구 폴백 패턴(2026-09 로고 누락 원인)은 이 훅으로 교체됨.
 - 캡처 DOM 전용 — 고정 px, `sm:` 금지(R32). `<img>`여야 `captureImage`의 dataURL 인라인 루프를 타므로 인라인 `<svg>`로 바꾸지 말 것.
 
 ### PortfolioSectorBar (`header-menu/share/portfolio-sector-bar.tsx`)

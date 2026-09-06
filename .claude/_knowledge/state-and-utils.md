@@ -580,7 +580,17 @@ window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT))  // "secretasset-as
 
 ### 기업 로고 src 해석 (`src/lib/finance/logo-source.ts`)
 
-- `resolveLogoSrc(ticker, name, isForeign, { type?, theme? }) → string | null` — `/api/logo` 쿼리를 만드는 **단일 출처**. 해외 티커(`/^[A-Z]+$/`) → `?ticker=`, 국내 ETF 브랜드 접두(`getEtfDomain`) 또는 국내 개별주(`DOMESTIC_STOCK_DOMAIN_MAP`) → `?domain=`. 어디에도 안 걸리면 `null`(호출부가 이니셜·티커 텍스트로 폴백).
+- `resolveLogoSrc(ticker, name, isForeign, { size?, theme? }) → string | null` — `/api/logo` 쿼리를 만드는 **단일 출처**. 해외 티커(`/^[A-Z]+$/`) → `?ticker=`, 국내 ETF 브랜드 접두(`getEtfDomain`) 또는 국내 개별주(`DOMESTIC_STOCK_DOMAIN_MAP`) → `?domain=`. 어디에도 안 걸리면 `null`(호출부가 이니셜·티커 텍스트로 폴백).
+- **`captureLogoSize(displayPx) → number`** = `ceil(displayPx * CAPTURE_PIXEL_RATIO / 2)` = `displayPx * 1.5`. `/api/logo` route가 항상 `retina=true`를 강제해 **반환 PNG = 요청 `size`의 2배**이므로, 표시px×pixelRatio(3) 해상도를 얻으려면 요청 `size`는 그 절반이면 된다. `LogoSourceOptions.size`엔 **반드시 `captureLogoSize(표시px)`로 환산해 전달**한다 — 과거 `BrandMark`가 44~92px 칩에 `size*6`(clamp 512 → retina 1024px PNG)를 요청해 모바일 Web‑View가 디코드/메모리 한계로 로고를 통째로 못 그렸다(인증카드 저장 시 로고 누락, 2026-09). `CAPTURE_PIXEL_RATIO`(=3)는 `share-menu.tsx` `captureImage`의 `pixelRatio`와 동일해야 한다.
 - **`KR_ETF_BRANDS`(22개 브랜드 접두어) 단일 출처** — `stock-xray.ts`가 여기서 import한다(과거엔 양쪽에 중복 정의돼 있었고 주석이 존재하지 않는 파일을 가리켰다). `ETF_DOMAIN`(13개, 브랜드→운용사 도메인)은 그 부분집합.
 - `getEtfBrand(name)` — 국내 ETF면 브랜드명(TIGER/KODEX/ACE…) 반환. **운용사 로고가 흰 배경 사각 이미지라** 도넛 조각처럼 색면 위에 얹으면 흰 박스로 뜬다. `resolveLogoSrc` 자체는 국내 ETF를 배제하지 않는다(`StockIcon`은 원형 아바타라 흰 배경도 자연스러워 그대로 씀) — **`BrandMark`가 `etfBrand` 유무로 먼저 분기해 이 함수를 호출하지 않고 텍스트 배지로 대체**한다. 새 소비처를 추가할 때도 이 방식(호출 전 분기)을 따르고 `resolveLogoSrc`에 배제 로직을 넣지 말 것.
-- 소비처 2곳: `StockIcon`(주식 탭, 원형 아바타) / `BrandMark`(인증카드 포트폴리오 도넛, 투명 로고). **렌더 모양만 다르고 해석 규칙은 공유** — 새로 로고를 그릴 곳이 생기면 이 함수를 재사용한다.
+- 소비처 2곳: `StockIcon`(주식 탭, 원형 아바타) / `BrandMark`(인증카드 포트폴리오 도넛, 투명 로고). 둘 다 **`useLogoSrc` 훅 경유**로 이 함수를 호출한다(직접 호출 금지 — 재시도가 빠진다). 새로 로고를 그릴 곳이 생기면 `useLogoSrc`를 재사용한다.
+
+### 로고 로드 재시도 훅 (`src/hooks/use-logo-src.ts`)
+
+- `useLogoSrc(ticker, name, isForeign, opts?) → { src, failed, imgProps }`
+  - `imgProps`(`{ src, onError, onLoad }`) — `<img key={imgProps.src} {...imgProps} />`로 스프레드. `null`이면 로고 URL 없음(도메인 매핑 없음) **또는 재시도 3회 소진**.
+  - `failed` — URL은 있으나 재시도까지 실패. 호출부가 이니셜 등 폴백을 그릴 신호(`imgProps===null`과 동치이나 의미 구분용).
+- 내부: `resolveLogoSrc`(단일 출처 재사용)로 `base` URL → `onError` 시 지수 백오프(400·800·1600ms)로 `attempt++`, 3회 초과 시 `failed`. `onLoad` 시 대기 타이머 취소. `base`(종목·옵션) 변경 시 상태 리셋. 언마운트 시 `clearTimeout`.
+- 재시도 URL엔 캐시버스터 `&r=N`만 붙는다 — `/api/logo` route가 이 파라미터를 파싱하지 않아 **서버 캐시 키 불변(HIT 유지)**, 무력화 대상은 브라우저 HTTP 캐시뿐. 목적은 "모바일 WebView 1회성 디코드 실패" 복구.
+- **왜 필요**: 과거 `BrandMark`/`StockIcon`은 `imgError` state가 한 번 `true`면 영구히 폴백으로 굳어, 캡처(`toPng`) 실행 전에 이미 로고가 사라진 상태였다(인증카드 저장 시 로고 누락, 2026-09). `imgError` 영구 폴백 패턴을 이 훅으로 교체.

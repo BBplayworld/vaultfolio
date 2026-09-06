@@ -109,20 +109,26 @@ export const ASSET_THEME = {
 } as const;
 
 /**
- * 인증카드(캡처 DOM) 전용 토큰 — `sm:`/`lg:` 뷰포트 반응형을 데스크톱 값으로 고정한다.
+ * 인증카드(캡처 DOM) 전용 토큰 — `sm:`/`lg:` 뷰포트 반응형을 **고정값**으로 대체한다.
  *
- * 캡처 대상은 항상 480px 고정폭인데 `sm:`은 브라우저 뷰포트 기준이라, 반응형 클래스가
- * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R25).
+ * 캡처 대상은 `CARD_WIDTH`(680px) 고정폭인데 `sm:`은 브라우저 뷰포트 기준이라, 반응형 클래스가
+ * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R32). 그래서
+ * 여기 값엔 `sm:`이 없어야 한다 — 이게 결정성 불변식이고, 값 자체가 무엇이냐는 별개 문제다.
+ *
+ * 프리뷰·캡처 두 인스턴스 모두 이 토큰을 쓰므로(share-card.tsx), **종목 행 텍스트
+ * (`cardInfoName`·`cardAmountMain`·`iconInitial`·`badge`)는 모바일 `ASSET_THEME` 크기에 맞춘다**
+ * — 모바일 프리뷰가 상세>주식 탭과 동일하게 보이도록. 히어로(`summaryValue`·`profitAmount`·
+ * `profitRate`)는 공유 이미지 강조를 위해 더 큰 값을 유지한다.
  * `screenshotMode`인 컴포넌트만 ASSET_THEME 대신 이 값을 쓴다.
  */
 export const ASSET_THEME_SHOT = {
   cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
   cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
-  cardInfoName: "font-semibold text-[15px] leading-tight",
-  cardAmountMain: "text-[15px] font-bold tabular-nums leading-tight",
+  cardInfoName: "font-semibold text-sm leading-tight",
+  cardAmountMain: "text-sm font-bold tabular-nums leading-tight",
   icon: "size-7",
-  iconInitial: "text-[10px]",
-  badge: "text-[11px] px-1 py-0 ml-1 leading-tight",
+  iconInitial: "text-[9px]",
+  badge: "text-[10px] px-1 py-0 ml-1 leading-tight",
   summaryValue: "text-2xl font-bold tabular-nums break-all leading-tight",
   profitAmount: "text-lg font-bold tabular-nums whitespace-nowrap",
   profitRate: "text-base font-bold tabular-nums whitespace-nowrap",
