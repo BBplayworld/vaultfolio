@@ -32,11 +32,15 @@ describe("feature-usage", () => {
   });
 
   it("pickRecommendedFeature — isNew 항목이 방문 기록과 무관하게 최우선", () => {
-    // tax-simulator(isNew) 외 다른 항목을 아무리 방문해도 신규 기능이 먼저 추천된다
+    // isNew 항목 외 다른 항목을 아무리 방문해도 신규 기능이 먼저 추천된다.
+    // 카탈로그 순서상 첫 isNew 항목의 id에 결합하지 않고 "isNew가 최우선"이라는 의도만 단정한다.
+    const firstNew = APP_FEATURES.find((f) => f.isNew);
+    expect(firstNew).toBeDefined();
     recordVisit("share-card");
     recordVisit("share-card");
     const picked = pickRecommendedFeature();
-    expect(picked?.id).toBe("tax-simulator");
+    expect(picked?.isNew).toBe(true);
+    expect(picked?.id).toBe(firstNew!.id);
   });
 
   it("pickRecommendedFeature — 신규 기능 dismiss 후엔 방문횟수 오름차순(0회 우선)으로 추천", () => {

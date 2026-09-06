@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { NOTICE_TITLE, NoticeContent } from "../layout/onboarding/notice";
+import { markCurrentNoticeSeen } from "@/lib/home-tip";
 import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset/asset-storage";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/finance/profit-utils";
@@ -84,6 +85,7 @@ export function ToolMenuPage() {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showHelpChooser, setShowHelpChooser] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
+
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackContact, setFeedbackContact] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
@@ -464,6 +466,7 @@ export function ToolMenuPage() {
               onClick={() => {
                 setShowHelpChooser(false);
                 setShowNotice(true);
+                markCurrentNoticeSeen();
               }}
             >
               <BellRing className="size-5 text-primary shrink-0" />

@@ -46,14 +46,19 @@
 - **순자산/중요 수치는 주황(`important`)** 으로 1순위 강조. 브랜드 인디고는 "액션·선택"에만.
 - **주황(`important`)은 "순자산" 전용이 아니라 화면 전체의 범용 강조색이다** — 검정 배경·흰 전경·회색 제목이라는 기본 톤 위에서 **사용자가 눈여겨봐야 할 항목**(마감 임박·미백업·높은 심각도 배지 등)을 튀지 않게 부각시킬 때 1순위로 쓴다. 삭제·위험(`destructive`)만큼 강하지 않되 `text-muted-foreground`보다 확실히 눈에 띄어야 하는 "주의 유도" 톤에 적합. 예: 세금 캘린더 `severity==="high"` 배지(`bg-orange-500/10 text-orange-600 dark:text-orange-400`), 백업 미실시 경고(`backup-nudge.tsx`), 오래된 백업 안내(`tool-menu.tsx`). 새로운 강조·경고성 UI를 만들 때 색을 새로 고르지 말고 이 토큰부터 검토한다.
 - CSS 클래스 UI = `--brand`/`variant="brand"`, 차트·캔버스 등 JS/인라인 = `MAIN_PALETTE[0]`.
-- **진행률·달성도 시각화는 주황 대신 세그먼트 레벨미터를 우선 검토한다** — 주황(`important`)은 순자산 금액 등 핵심 수치 강조 전용으로 아끼고, 진행률 바에까지 재사용하면 중복된다. `LevelMeter`(`src/components/ui/level-meter.tsx`)가 `SHARE_SAFE_PALETTE`(주황·빨강 제외 9색)를 순환시키는 세그먼트 바를 공용 컴포넌트로 제공한다(현재 적용처 없음, 재사용 대기 상태). 설치 단계 등 선형 `Progress` 사용처는 기본 브랜드색 유지.
+- **진행률·달성도 시각화는 주황 대신 세그먼트 레벨미터를 우선 검토한다** — 주황(`important`)은 순자산 금액 등 핵심 수치 강조 전용으로 아끼고, 진행률 바에까지 재사용하면 중복된다. `LevelMeter`(`src/components/ui/level-meter.tsx`)가 `SHARE_SAFE_PALETTE`(§1.3, 고채도 10색)를 순환시키는 세그먼트 바를 공용 컴포넌트로 제공한다(현재 적용처 없음, 재사용 대기 상태). 설치 단계 등 선형 `Progress` 사용처는 기본 브랜드색 유지.
 
 ### 1.3 차트 팔레트 (`MAIN_PALETTE`, 12색)
 `[0]` 인디고=최대 비율 고정 · `[1]` 빨강=대출 고정 · `[2]` 주황=임차보증금 고정 · `[3~10]` 자산 항목 순차 · `[11]` `#4e5763` 무채색 버튼. `assignColors`에서 **최댓값=`MAIN_PALETTE[0]`** 규칙 유지. (CSS `--chart-1~6`은 라이트=teal/다크=indigo 계열)
 
-**`SHARE_SAFE_PALETTE`** (theme.ts) — `MAIN_PALETTE`에서 의미가 예약된 `[1]` 빨강(부채/손실)·`[2]` 주황(임차보증금, 순자산 `important`와 유사)을 제외한 순서. **현재 소비처 없음** — 인증카드(share-card.tsx)가 주식 전용으로 바뀌며 "자산군 색 배정 → 개별 종목이 상속" 규칙은 폐기됐고, 인증카드는 주식 탭과 동일하게 `assignColors`(`MAIN_PALETTE`) 색을 그대로 쓴다. 자산군 단위 색이 필요한 새 공유 산출물을 만들 때 재사용한다.
+**`PORTFOLIO_PALETTE` / `SHARE_SAFE_PALETTE` / `SHARE_ETC_COLOR` / `pickOnColor()`** (theme.ts) — 인증카드 "포트폴리오" 타입 전용 **고채도 10색**(`MAIN_PALETTE`와는 별개인 독립 팔레트 — 포트폴리오 도넛·분야 막대바·보유 유형 막대바는 계속 `SHARE_SAFE_PALETTE`로 참조).
+- "그 외"/미분류는 `SHARE_ETC_COLOR`(`#8E8E93`).
+- **다크 배경 대비 4.3~8.6:1**로 전부 안전. 라이트 배경에서는 라임·앰버가 1.8:1 수준이라 약하다 — 이 카드는 다크 우선 설계이며, 라이트에서 문제되면 해당 2색만 조정한다.
+- `pickOnColor(hex)` = 배경 상대휘도로 흰/검정 글자색 선택(조각색 위 ETF 브랜드 배지용). 6·8자리(`#RRGGBBAA`) hex를 모두 받도록 방어적으로 구현(현재 `MAIN_PALETTE`엔 8자리 값 없음, 과거 호환용).
 
-**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 480px 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R25**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-2xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
+**`--ring-divider`** (globals.css) — 인증카드 포트폴리오 도넛 **조각 구분선**. **라이트 `#ffffff` / 다크 `#000000`** 고정. 웨지 `stroke` **5px**(`GAP_DEG=0`, 인접 조각의 stroke가 공유 모서리에서 겹쳐 한 줄이 됨). **도넛 외곽 링은 없다** — 별도 테두리 없이 조각 색면만으로 마감(#4.24).
+
+**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 `CARD_WIDTH`(현재 680px) 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R32**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-2xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
 
 ---
 
@@ -184,7 +189,7 @@
 ## 8. 다크모드 · 토큰 사용 규칙
 
 - 모든 색은 시맨틱 토큰. 부득이한 의미색도 `text-orange-600 dark:text-orange-400`처럼 **라이트/다크 쌍**으로.
-- `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것.
+- `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것. 하드코딩된 사본(`pwa-guide-illustrations.tsx`의 `BRAND` 상수, `floating-add-button.tsx`의 `bg-[#5b6fbf]/10` 등)도 함께 바꿔야 한다.
 - 공유/동기화 링크 진입 시 송신 테마(`&theme=`)를 hydration 이전 단계부터 적용해 깜빡임(FOUC) 방지.
 - **라이트/다크 비대칭 pin**: 라이트에서만 인지성이 부족한 조합(예: `text-muted-foreground/NN`)은 라이트 값을 교정하고 다크는 `dark:text-muted-foreground/NN`로 기존 모습 그대로 고정한다(§11 참고).
 

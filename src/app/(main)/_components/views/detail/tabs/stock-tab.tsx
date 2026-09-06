@@ -28,35 +28,11 @@ import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import { DOMESTIC_STOCK_DOMAIN_MAP } from "@/app/api/parse-screenshot/ticker-map";
+import { resolveLogoSrc } from "@/lib/finance/logo-source";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
-
-const ETF_DOMAIN: Record<string, string> = {
-  TIGER: "www.tigeretf.com",
-  KODEX: "www.samsungfund.com",
-  ACE: "www.aceetf.co.kr",
-  KINDEX: "www.aceetf.co.kr",
-  HANARO: "www.hanaroetf.com",
-  SOL: "www.shinhansec.com",
-  RISE: "www.kbam.co.kr",
-  KBSTAR: "www.kbam.co.kr",
-  ARIRANG: "www.hanwhafund.co.kr",
-  BIG: "www.hanwhafund.co.kr",
-  PLUS: "www.hanwhafund.co.kr",
-  KOSEF: "www.wooriasset.co.kr",
-  TIMEFOLIO: "www.timefolio.co.kr",
-};
-
-function getEtfDomain(name: string): string | null {
-  const upper = name.toUpperCase();
-  for (const [brand, domain] of Object.entries(ETF_DOMAIN)) {
-    if (upper.startsWith(brand + " ") || upper === brand) return domain;
-  }
-  return null;
-}
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -68,17 +44,11 @@ export const CATEGORY_TABS = [
   { value: "unlisted", label: "비상장" },
 ] as const;
 
-function StockIcon({ ticker, name, isForeign, color, screenshotMode = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean }) {
+export function StockIcon({ ticker, name, isForeign, color, screenshotMode = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean }) {
   const [imgError, setImgError] = React.useState(false);
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
 
-  const foreignLogoSrc = isForeign && ticker && /^[A-Z]+$/.test(ticker) ? `/api/logo?ticker=${ticker}` : null;
-  const etfDomain = !isForeign ? getEtfDomain(name) : null;
-  const stockDomain = !isForeign && !etfDomain ? (DOMESTIC_STOCK_DOMAIN_MAP[ticker] ?? null) : null;
-
-  const logoSrc = foreignLogoSrc
-    ?? (etfDomain ? `/api/logo?domain=${encodeURIComponent(etfDomain)}` : null)
-    ?? (stockDomain ? `/api/logo?domain=${encodeURIComponent(stockDomain)}` : null);
+  const logoSrc = resolveLogoSrc(ticker, name, isForeign);
 
   const showLogo = !!logoSrc && !imgError;
   const showInitial = !logoSrc;

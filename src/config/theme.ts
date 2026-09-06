@@ -186,10 +186,48 @@ export const MAIN_PALETTE = [
 ] as const;
 
 /**
- * 공유 카드용 안전 팔레트 — 의미색과 충돌하는 [1] 빨강(부채/이익)·[2] 주황(임차보증금, 순자산
- * important와 유사)을 제외한다. [0] 인디고는 §1.3 "최대 비율 고정" 규칙 그대로 1위에 배정.
+ * 인증카드 "포트폴리오" 타입 전용 **고채도 팔레트**.
+ *
+ * 레퍼런스 인포그래픽(국민연금 포트폴리오 등) 수준의 선명한 색감을 위해 만든 세트.
+ * hue를 고르게 벌려 인접 조각이 확실히 구분되게 했고, 라이트/다크 배경 모두에서
+ * 조각 fill 과 라벨 % 텍스트로 함께 쓸 수 있는 명도대로 맞췄다.
+ * `[0]`은 브랜드 인디고(`--brand`)의 고채도 버전 — "최대 비율 = 브랜드색" 규약 유지.
+ *
+ * 2026-09-05(#4.24)부터 이 10색이 그대로 `MAIN_PALETTE[0~9]`로 승격돼 앱 전역 기본
+ * 팔레트가 됐다(`MAIN_PALETTE` 상단 주석 참고). 이 상수는 여전히 독립 export로 유지 —
+ * 포트폴리오 도넛·분야 막대바는 계속 이 이름(`SHARE_SAFE_PALETTE`)으로 참조한다.
  */
-export const SHARE_SAFE_PALETTE = [0, 5, 4, 6, 9, 7, 3, 8, 10].map((i) => MAIN_PALETTE[i]);
+export const PORTFOLIO_PALETTE = [
+  "#5B7CFA", // 인디고 블루 — 브랜드/1위 고정
+  "#FF4D8D", // 핑크
+  "#00C795", // 에메랄드
+  "#A855F7", // 퍼플
+  "#FF7A2F", // 오렌지
+  "#12B5E5", // 시안
+  "#84CC16", // 라임그린
+  "#F5A623", // 앰버
+  "#D946EF", // 마젠타
+  "#FF5A5A", // 코랄레드
+] as const;
+
+/** 인증카드 포트폴리오 도넛·분야 막대바 공용 — 색 조정은 PORTFOLIO_PALETTE만 손보면 된다 */
+export const SHARE_SAFE_PALETTE = PORTFOLIO_PALETTE;
+
+/**
+ * 배경색 위에 얹을 글자색(흰/검정)을 상대휘도로 고른다 — 조각색 위 브랜드 텍스트 배지용.
+ * `MAIN_PALETTE`에 `#RRGGBBAA` 8자리 hex가 섞여 있으므로 6·8자리를 모두 받는다.
+ */
+export function pickOnColor(hex: string): string {
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length < 6) return "#FFFFFF";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return luminance > 0.45 ? "#111111" : "#FFFFFF";
+}
+
+/** "그 외"/미분류 롤업 색 — 램프 밖 중립 그레이(fill·텍스트 공용) */
+export const SHARE_ETC_COLOR = "#8E8E93";
 
 /**
  * CSS 클래스 조합 헬퍼

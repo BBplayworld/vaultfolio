@@ -7,11 +7,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ShareCard } from "./share-card";
+import { useAssetData } from "@/contexts/asset-data-context";
+import { useXrayClassifications } from "@/lib/xray/use-xray-classifications";
+import type { Stock } from "@/types/asset";
+import { InlineSelector } from "../../layout/ui/inline-selector";
+import { ShareCard, type ShareCardVariant } from "./share-card";
 
-// 카드 캡처 대상은 항상 460px 고정 폭 — 좁은 화면에선 CSS transform으로 축소만 하고
-// 레이아웃 크기 자체는 바꾸지 않는다. 기기별로 다른 이미지가 나오는 걸 막기 위함(R25).
-const CARD_WIDTH = 460;
+const CARD_VARIANTS = [
+  { value: "stock", label: "주식 현황" },
+  { value: "portfolio", label: "포트폴리오" },
+] as const satisfies readonly { value: ShareCardVariant; label: string }[];
+
+// 포트폴리오가 아닐 때 useXrayClassifications 트리거를 끄기 위한 안정 참조
+const EMPTY_STOCKS: Stock[] = [];
+
+// 카드 캡처 대상은 항상 680px 고정 폭 — 좁은 화면에선 CSS transform으로 축소만 하고
+// 레이아웃 크기 자체는 바꾸지 않는다. 기기별로 다른 이미지가 나오는 걸 막기 위함(R32).
+// 폭을 바꾸면 portfolio-ring-card.tsx의 VIEW_W(= CARD_WIDTH − p-3 좌우 24)도 함께 조정해야 한다.
+const CARD_WIDTH = 680;
+// 캡처 PNG 목표 최소 폭 — pixelRatio는 이 값을 offsetWidth로 나눈 올림 정수.
+// (680 기준 ceil(1400/680)=3 → 최종 약 2040px)
+const CAPTURE_TARGET_PX = 1400;
 
 function ScaledCardPreview({ children }: { children: React.ReactNode }) {
   const outerRef = useRef<HTMLDivElement>(null);
@@ -37,9 +53,9 @@ function ScaledCardPreview({ children }: { children: React.ReactNode }) {
 
   return (
     <div ref={outerRef} className="flex justify-center w-full" style={{ height }}>
-      {/* shrink-0 필수 — 없으면 flexbox가 480px 레이아웃 박스를 컨테이너 폭에 맞춰 먼저
+      {/* shrink-0 필수 — 없으면 flexbox가 카드 레이아웃 박스를 컨테이너 폭에 맞춰 먼저
           축소한 뒤 transform: scale()이 그 위에 다시 곱해져 이중으로 작아진다(예: 390px
-          컨테이너에서 최종 317px). shrink-0로 레이아웃 폭을 항상 480 고정해야 scale 계산이
+          컨테이너에서 최종 317px). shrink-0로 레이아웃 폭을 항상 CARD_WIDTH 고정해야 scale 계산이
           의도대로(컨테이너 꽉 채움) 반영된다. */}
       <div ref={innerRef} className="shrink-0" style={{ width: CARD_WIDTH, transform: `scale(${scale})`, transformOrigin: "top" }}>
         {children}
@@ -51,14 +67,32 @@ function ScaledCardPreview({ children }: { children: React.ReactNode }) {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // 외부(홈 팁 등)에서 특정 카드 타입으로 바로 열어달라는 요청 — dispatchOpenShareCard(variant) 참고.
+  initialVariant?: ShareCardVariant;
 }
 
-export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
+export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Props) {
   // 기본은 금액 노출 — 필요 시 스위치로 숨겨 자산 규모(₩)만 가릴 수 있다
   const [showAmounts, setShowAmounts] = useState(true);
+  // 카드 타입 — 저장 안 함(다이얼로그 로컬 상태)
+  const [variant, setVariant] = useState<ShareCardVariant>("stock");
+
+  // 열릴 때 initialVariant가 지정돼 있으면 그 타입으로 맞춘다(예: 홈 "새 공지" 팁 → 포트폴리오 직행).
+  // 지정 없이 아이콘 버튼으로 열면 기존 선택을 그대로 유지(리셋 안 함).
+  useEffect(() => {
+    if (open && initialVariant) setVariant(initialVariant);
+  }, [open, initialVariant]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+
+  // 포트폴리오 타입일 때만 X-Ray 분류 캐시 자동 보충 → 완료 시 tick 증가로 분야 막대바 등장
+  const { assetData } = useAssetData();
+  const { tick: xrayTick, progress: xrayProgress } = useXrayClassifications(
+    open && variant === "portfolio" ? assetData.stocks : EMPTY_STOCKS,
+  );
+  const classifying =
+    !!xrayProgress && xrayProgress.total > 0 && xrayProgress.done < xrayProgress.total;
 
   const captureImage = async () => {
     if (!cardRef.current) return null;
@@ -97,7 +131,7 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     const el = cardRef.current;
     // offsetWidth(레이아웃 폭, 항상 CARD_WIDTH 고정) 기준 — getBoundingClientRect는 미리보기 축소
     // transform(ScaledCardPreview)의 영향을 받아 기기마다 다른 pixelRatio·해상도가 나오므로 사용 금지
-    const pixelRatio = Math.ceil(1100 / el.offsetWidth);
+    const pixelRatio = Math.ceil(CAPTURE_TARGET_PX / el.offsetWidth);
     // 카드의 계산된 배경색(테마 따라 흰/어두움)을 캡처 배경으로 지정 → 투명 영역까지 테마색으로 채움
     const backgroundColor = getComputedStyle(el).backgroundColor;
     return toPng(el, { pixelRatio, skipFonts: false, backgroundColor });
@@ -127,30 +161,29 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* 모바일 폭은 vw 고정값으로 직접 지정 — 기본 `w-full`은 `%` 기반이라 containing block에
           따라 예상보다 좁게 잡힐 수 있어(원인 미상), 뷰포트에 항상 상대적인 vw로 확실히 95% 확보 */}
-      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-[95vw] sm:w-full max-w-[520px] sm:max-w-[680px] h-[94dvh] max-h-[96dvh] flex flex-col">
+      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-[95vw] sm:w-full max-w-[560px] sm:max-w-[760px] h-[94dvh] max-h-[96dvh] flex flex-col">
         <DialogHeader className="px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <IdCard className="size-4 text-primary" />
             인증카드
           </DialogTitle>
           <DialogDescription className="text-xs text-left">
-            내 주식 현황을 이미지로 만들어 저장할 수 있습니다.
+            {variant === "portfolio"
+              ? "내 종목 구성 비중을 이미지로 만들어 저장할 수 있습니다."
+              : "내 주식 현황을 이미지로 만들어 저장할 수 있습니다."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* 제어 바 */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-b bg-muted/20 flex-wrap">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="show-amounts"
-                  checked={showAmounts}
-                  onCheckedChange={setShowAmounts}
-                  className="scale-90"
-                />
-                <Label htmlFor="show-amounts" className="text-sm cursor-pointer select-none">금액 표시</Label>
-              </div>
-            </div>
+        {/* 제어 바 — 1줄: 타입 토글 + 저장 / 2줄: (주식 현황 한정) 금액 표시 */}
+        <div className="flex flex-col gap-2 px-5 py-3 border-t border-b bg-muted/20">
+          <div className="flex items-center justify-between gap-3">
+            <InlineSelector<ShareCardVariant>
+              value={variant}
+              onChange={setVariant}
+              options={CARD_VARIANTS}
+              size="sm"
+              ariaLabel="인증카드 타입"
+            />
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
@@ -169,17 +202,38 @@ export function ShareScreenshotDialog({ open, onOpenChange }: Props) {
                 {saveSuccess ? "저장됨!" : isSaving ? "처리 중..." : "저장"}
               </Button>
             </div>
+          </div>
+
+          {variant === "stock" && (
+            <div className="flex items-center gap-1.5">
+              <Switch
+                id="show-amounts"
+                checked={showAmounts}
+                onCheckedChange={setShowAmounts}
+                className="scale-75"
+              />
+              <Label htmlFor="show-amounts" className="text-xs cursor-pointer select-none">금액 표시</Label>
+            </div>
+          )}
+          {variant === "portfolio" && classifying && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" />
+              분야 정보를 분석하는 중… 완료되면 분야 구성이 표시됩니다.
+            </div>
+          )}
         </div>
 
         {/* 카드 미리보기. shrink-0 수정으로 스케일이 컨테이너를 꽉 채우게 됐으니, 카드가
             다이얼로그 가장자리에 완전히 붙지 않도록 여백(px-4)을 둔다. 이 패딩은
-            outer.clientWidth(스케일 계산 기준)만 줄일 뿐 CARD_WIDTH(480, 캡처 PNG 실제 폭)와는
+            outer.clientWidth(스케일 계산 기준)만 줄일 뿐 CARD_WIDTH(680, 캡처 PNG 실제 폭)와는
             무관 — 미리보기 축소율만 살짝 커지고 저장되는 이미지 크기는 그대로다. */}
         <div className="overflow-y-auto flex-1 px-4 py-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <ScaledCardPreview>
             <ShareCard
+              variant={variant}
               hideAmounts={!showAmounts}
               cardRef={cardRef}
+              xrayTick={xrayTick}
             />
           </ScaledCardPreview>
         </div>

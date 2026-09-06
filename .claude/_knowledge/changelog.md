@@ -4,6 +4,147 @@
 
 ---
 
+## 2026-09-05
+
+### 홈 팁 박스에 "새 공지" 노출 재도입 (#4.24)
+
+- **배경**: NOTICE_ID를 4.24로 갱신했는데, 사용자가 "기존과 같이 신규 공지의 홈 노출 로직을 다시 적용해달라"고 요청. 조사 결과 과거 홈 진입 시 자동 팝업하던 `UpdateNoticeDialog`는 S-4.32에서 "공지보다 기능 추천 프레임이 낫다"는 이유로 **의도적으로 제거**됐던 이력이 있어, 그대로 부활시키기 전에 사용자에게 방식을 재확인함.
+- **선택**: 강제 팝업 부활 대신, **홈 팁 박스(`HomeTipBox`)에 "새 공지" 카드를 5번째 종류로 추가**하는 절충안 채택 — 기존 기능 추천 프레임은 유지하면서 새 버전 안내만 챙긴다.
+- **구현**: `home-tip.ts`에 `HomeTip`의 `{ kind: "notice" }` 추가, `pickHomeTip`이 `readNoticeSeenId() !== NOTICE_ID`면 반환. 이미 정의만 돼 있고 어디서도 안 쓰이던 `readNoticeSeenId`/`markNoticeSeen`(`local-storage.ts`)를 이번에 처음 실제로 연결. `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)을 열람 처리의 단일 출처로 둠(최종 호출 지점은 아래 후속들 참조 — 홈 팁 클릭, 더보기 메뉴 수동 열람).
+- **후속 1 — 필수 노출로 우선순위 최상단 이동**: "신규 버전 공지는 홈팁 자체가 필수로 뜨도록" 요청에 따라 `notice`를 백업·세금·최신화보다도 **먼저** 체크하도록 재조정(우선순위: **새 공지(필수)** > 백업 > 세금 > 최신화 > 기능).
+- **후속 2 — X 닫기로는 영구 dismiss 안 되게**: "X 닫기를 넘어서 최초 1회는 노출"해야 한다는 요청에 따라 `close()`에서 `notice`의 `markCurrentNoticeSeen()` 호출을 제거 — X는 이번 세션만 숨기고(`SESSION_DISMISS_KEY`), **실제로 카드를 클릭해 다이얼로그를 열어야만**(`activate()`) 열람 처리된다. 그냥 계속 닫기만 하면 다음 세션에 다시 최우선으로 뜬다.
+- **후속 3 — 다른 팁의 X 닫기가 공지 노출을 가로막지 않게**: 우선순위상 공지가 항상 먼저 뜨긴 하지만, 세션 숨김 플래그(`SESSION_DISMISS_KEY`)는 팁 종류 구분 없이 공용이라 자칫 다른 팁의 X 닫기로 세워진 플래그가 아직 못 본 공지까지 함께 가려버릴 수 있는 구조적 위험이 있었다. `home-tip.ts`에 `isNoticeUnseen()` export 추가, `home-tip-box.tsx`의 `useEffect`가 이 값이 true인 동안은 `SESSION_DISMISS_KEY` 체크 자체를 건너뛰고 `pickHomeTip`을 무조건 호출하도록 수정 — 공지의 "최초 1회 노출"이 다른 팁의 상호작용과 완전히 독립적으로 보장된다.
+- **후속 4 — 클릭 시 공지 본문 대신 홍보 기능으로 직행**: "해당 공지 클릭 시 인증카드-포트폴리오 즉시 팝업" 요청에 따라, 공지 팁 클릭 액션을 `dispatchOpenNotice()`(공지 다이얼로그)에서 `dispatchOpenShareCard("portfolio")`로 교체. `dispatchOpenShareCard(variant?)`가 이벤트 `detail.variant`를 싣고, `ShareScreenshotDialog`에 `initialVariant?` prop을 추가해 열릴 때 그 타입으로 맞춘다(`useEffect([open, initialVariant])`). 이제 안 쓰이는 `dispatchOpenNotice`/`trigger-open-notice` 리스너(`tool-menu.tsx`)는 삭제 — 더보기 메뉴 수동 열람은 `showNotice` 로컬 상태로 유지. 릴리스마다 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 함.
+- **공지 내용**(`notice.tsx`): `NOTICE_ID` "20260829"→"20260905", 제목·배너·피처 카드 2개(포트폴리오 인증카드 강화·종목 유형 분석)로 교체, 홈 팁용 한 줄 요약 `NOTICE_SUMMARY` 신규 추가.
+- **QA 수정 3건**(`/qa-full-test`에서 발견):
+  - **P1 — 공지 X 닫기 후 같은 세션 재진입 시 재노출**: 후속 3의 바이패스가 미열람인 동안 매 마운트 SESSION_DISMISS_KEY를 건너뛰어, X로 닫아도 홈 재진입 시 재노출됐다(사용자 요구 "세션내 미노출" 위반). `NOTICE_SHOWN_SESSION_KEY`(세션 플래그)를 추가해 **공지가 이번 세션에 1회 렌더되면 바이패스를 끈다** — 이후 X 닫기가 정상 작동, 새 세션에선 다시 노출.
+  - **P1 — vitest 회귀**: `feature-usage.test.ts`가 `pickRecommendedFeature()` 결과를 `"tax-simulator"`(구 isNew)에 하드코딩. isNew 이동으로 실패 → `picked?.isNew === true` + 카탈로그 첫 isNew id 대조로 의도 검증하게 변경.
+  - **P2 — "포트폴리오 인증카드" 홈 팁이 포트폴리오로 안 감**: `app-features.ts`의 `action: dispatchOpenShareCard`(bare)가 인자 없이 호출돼 주식 현황으로 열렸다 → `action: () => dispatchOpenShareCard("portfolio")`.
+
+### 홈 팁·공지사항 4.24 업데이트 (#4.24)
+
+- **홈 팁**(`config/app-features.ts`): 신규 `share-card-portfolio`(포트폴리오 인증카드, `isNew: true`) 추가 — 도넛+로고+분야/보유유형 막대바를 홍보. 기존 `stocks-xray` 설명에 "종목 유형" 축 언급을 추가하고 `isNew: true`로 전환. 지난 릴리스 스포트라이트였던 `tax-simulator`의 `isNew`는 해제(`pickRecommendedFeature`가 카탈로그 순서상 첫 `isNew` 미해제 항목만 보여주므로, 안 지우면 새 항목이 영영 안 뜬다).
+- **공지사항**(`layout/onboarding/notice.tsx`): `NOTICE_ID` "20260829"→"20260905", 제목·배너·2개 피처 카드(포트폴리오 인증카드 강화·종목 유형 분석)·마무리 문단을 4.24 내용으로 교체.
+
+### 인증카드 포트폴리오 "보유 유형 구성" — IRP·연금저축펀드 통합 (#4.24)
+
+- **변경**: `categoryItems`(share-card.tsx) 그룹핑 시 `stock.category`가 `irp`·`pension`이면 `"pension_irp"` 키로 합쳐 "연금저축펀드·IRP" 한 버킷으로 표시. 둘 다 세제혜택 은퇴 계좌라 성격이 같다고 판단.
+- **`stockCategories`(config/asset-options.ts) 자체는 불변** — 카테고리 필터 탭 등 다른 소비처(6종 그대로)는 영향 없음. 이 막대바 계산에서만 국소적으로 병합.
+- **ISA·비상장주식은 그대로 분리 유지** — ISA는 국내·해외 지수 ETF를 다 담을 수 있지만 계좌 성격 자체가 뚜렷이 달라 병합 대상 아님.
+
+### X-Ray "종목 유형" 분류 정확도 개선 — "혁신주" 신설 + 대표 ETF·우량주 결정론화 (#4.24)
+
+- **증상**: VST(비스트라 에너지)가 "배당주"로, 개별 우량주 분류가 업종명만 보고 흔들리는 문제.
+- **원인**: `buildPrompt()`의 stockType 규칙이 정량 데이터 없이 "유틸리티=배당주", "은행/자동차=가치주" 같은 **업종명 스테레오타입** 예시에만 의존. 실시간 배당수익률 연동은 조사 결과 배제(`/api/finance/dividend`가 티커당 최대 3회 순차 KIS 호출+슬립이 들어가는 무거운 API라 배치 분류에 끼워 넣으면 지연·레이트리밋 위험 큼 — 국내 종목은 이미 조회 중인 현재가 응답에 PER/PBR/EPS가 포함돼 파싱만 추가하면 저비용이지만 국내 한정이라 이번 범위에서는 보류, 향후 검토로 남김).
+- **조치 1 — 프롬프트 반스테레오타입화**: 업종명 나열 예시 제거, "실제로 잘 알려진 배당수익률·재무 프로필로 판단하라"는 지침 + VST를 교정 반례로 명시.
+- **조치 2 — 대표 ETF·우량주 결정론적 오버라이드**(`extractStockType`, 전수 목록 아님·대표 예시만): 커버드콜 ETF(JEPI/JEPQ/YMAX 등)→배당주, 배당성장 ETF(SCHD/DGRO 등)→배당성장주, 배당귀족 개별주(KO/PG/O 등)→배당성장주, 고배당 개별주(T/VZ, KT&G 등)→배당주, 전통 은행·경기민감 대형주(BAC/WFC, 국내 금융지주 등)→가치주.
+- **조치 3 — "혁신주" 신설**(`STOCK_TYPE_ENUM` 8번째 값): 로켓랩·아이온큐·초기 바이오텍처럼 검증 안 된 파괴적 기술 베팅 종목을 대형 흑자 성장주(성장주)와 분리. 테슬라는 대량 양산·상당한 매출 규모라 성장주에 유지(하드코딩 안 함, AI 판단).
+- **조치 4 — 전체 강제 재분류**: `STOCK_TYPE_PROMPT_VERSION` 버전 마커 도입. 서버 캐시 유효성 체크(`route.ts`)와 클라이언트 게이트(`fetch-classifications.ts`) **양쪽 다** 이 값을 요구해야 한다 — 하나만 걸면 그쪽에서 재분류 요청 자체가 안 나가는 버그가 난다(바로 전 커밋에서 `stockType` 필드 추가 시 클라 게이트 누락으로 실제 겪은 버그와 동일 함정, 이번엔 처음부터 양쪽 다 반영). 버전을 올려 VST·현대차 등 이미 캐시된 종목도 다음 방문 시 전부 재분류되게 함.
+
+### X-Ray "종목 유형" 축 — 전부 미분류 버그 수정 (#4.24)
+
+- **증상**: 채권/현금성(하드코딩 매핑) 1건만 정상, 나머지 전부 "미분류".
+- **원인**: `fetch-classifications.ts`의 클라이언트측 "분류 완료 여부" 게이트가 `themes`·`indices`·유효한 `sector`만 확인하고 `stockType`은 확인하지 않았다. 기존에 이미 분류된 종목(예전부터 themes/sector/indices 보유)은 "완료됨"으로 판정돼 `/api/xray-classify` 요청 목록에서 아예 빠졌다 — 서버측 `stockType` 캐시 유효성 체크(어제 추가)는 요청 자체가 안 오니 무용지물이었다.
+- **수정**: 같은 필터에 `hasValidStockType` 체크 추가(`route.ts`의 서버측 체크와 동일 조건). 다음 X-Ray 탭 방문 시 기존 캐시 종목도 재요청→백필된다.
+
+
+### X-Ray "종목 유형" 축 신설 (#4.24)
+
+- **용어 정정**: 인증카드 검토 중 제안했던 "투자 스타일"(성장주/배당성장주/배당주/지수투자) 분류가 실제로는 "투자자의 스타일"이 아니라 "종목 자체의 투자 성격"이라는 지적에 따라 **`stockType`("종목 유형")** 으로 이름을 바꿔 확정. `sector`(산업이 뭔가) 축과 나란한 별개 축.
+- **채권/현금성 신설**: 국채·SGOV·TLT류 달러 표시 채권/현금성 자산 요구에 따라 `채권/현금성` 값 추가 — 총 7종(성장주/배당성장주/배당주/지수투자/가치주/채권·현금성/기타).
+- **서버측 하드코딩 우선 매핑**: SGOV/BIL/SHV/TLT 등 대표 티커·"국채"·"채권" 등 이름 키워드는 AI 호출 전에 확정 배정(`extractStockType`, `extractIndex`의 `US_INDEX_ETF_MAP` 패턴 재사용) — 애매한 AI 판정 여지 원천 차단.
+- **범위**: 이번엔 주식 X-Ray 탭까지만(`stock-xray-view.tsx` 6번째 탭). 포트폴리오 인증카드 적용은 후속 작업.
+- **배관**: `theme`(핵심 분야) 축의 기존 패턴(분류 캐시 스키마→Gemini 응답 스키마·프롬프트→집계 엔진 extractor→UI 탭) 그대로 재사용. 서버 캐시 유효성 체크에 `stockType`을 추가해 `indices` 필드 도입 때와 동일하게 이미 캐시된 티커도 점진적으로 백필.
+- `.claude/specs/README.md` 판정 체크리스트 확인 결과 스키마·저장 키·공유 토큰·새 API 라우트·다중 화면 어디에도 해당 없어 명세(`/spec`) 없이 진행.
+
+### 인증카드 포트폴리오 — "분야 구성" 상위 5 + "그 외 N개 분야"로 통일 (#4.24)
+
+- 상위 노출 개수를 종목 리스트와 공유하던 `SHOT_MAX`(7)에서 분리해 전용 `SECTOR_MAX`(5) 도입. 항목 수가 들쭉날쭉(최대 8개까지) 늘어지던 걸 항상 **5개 + "그 외 N개 분야"** 최대 6항목으로 고정. "그 외" 라벨도 개수 없는 "그 외"에서 도넛 "그 외 N종목"과 같은 형식(`그 외 N개 분야`)으로 통일.
+
+### 인증카드 포트폴리오 — "보유 유형 구성" 비중 계산 버그 수정 (#4.24)
+
+- **증상**: 총 주식 9.1억 중 IRP 실보유 0.57억(6.3%)인데 막대바엔 1.3%로 축소 표시.
+- **원인**: `categoryItems`가 `mergedStocks`(useFilteredStockData("all")의 병합 결과)를 순회했는데, "all" 필터는 **카테고리 무관 티커 단위**로 병합한다(`groupByTickerOnly`). 같은 ETF(예: ACE 미국S&P500)를 연금 계좌와 IRP 계좌 양쪽에 보유하면 병합 대표 1건에 `category`가 하나만 남아, 다른 계좌의 보유분이 그 카테고리 합계에서 통째로 빠졌다.
+- **수정**: `mergedStocks` 대신 **병합 전 원본 `assetData.stocks`**를 순회(delisted만 제외해 `totalValue` 분모와 동일 필터)해 각 보유분을 실제 계좌 카테고리로 정확히 집계. 병합은 "같은 종목을 한 행으로 보여주는" 표시 로직이라 카테고리별 합산엔 애초에 맞지 않는 소스였음.
+
+### 인증카드 포트폴리오 — "보유 유형 구성" 막대바 추가 (#4.24)
+
+- **선정 근거**: 후보 3가지(계좌/보유유형·통화·국가) 중 `Stock.category`(국내주식/해외주식/IRP/ISA/연금저축펀드/비상장주식) 채택. 종목 등록 시 **필수 입력**이라 분류 캐시 의존이 0이고(통화 축은 국내 계좌 4종이 전부 KRW로 뭉쳐 정보량이 적고, 국가 축은 `classification-store` 캐시 의존이라 미분류 가능성 있음), 기존 "분야 구성"(무엇을 샀는지)과 상호보완적(어디에 담겨있는지).
+- **컴포넌트 재사용**: `PortfolioSectorBar`를 새로 안 만들고 `title` prop만 추가해 "분야 구성"·"보유 유형 구성" 양쪽에 재사용. 라벨도 `stockCategories`(`config/asset-options.ts`, 카테고리 필터 탭과 동일 출처)를 그대로 씀 — 신규 라벨 맵 없음.
+- 카테고리 수가 최대 6개뿐이라 "분야 구성"과 달리 상위 N 절삭·"그 외" 롤업 없이 전부 노출. 표시 조건은 `length > 0`(단일 카테고리도 항상 노출).
+
+### 인증카드 — 주식 현황 비중바 팔레트 통일·포트폴리오 텍스트 확대·도넛 확대 (#4.24)
+
+- **주식 현황 비중바 색 교체**: `ShareCard`가 훅에서 받은 `barItems`/`barColors`(`MAIN_PALETTE`, 주식 탭과 공유)를 `StockCategorySection`에 그대로 넘기지 않고, `segFill`(=`SHARE_SAFE_PALETTE`)로 색만 덮어씌운 `shareBarItems`/`shareBarColors`를 새로 만들어 전달. 포트폴리오 도넛·분야 막대바와 색 계열 통일. 주식 탭 원본 배열·`MAIN_PALETTE`는 불변(인증카드 전용 오버레이).
+- **포트폴리오 텍스트 확대**: 도넛 라벨(이름·%) `text-[13px]`→`text-sm`, 분야 막대바 캡션·범례(`text-[11px]`/`text-[12px]`)→`text-sm`. 주식 현황 쪽(`ASSET_THEME_SHOT`)은 이미 `text-sm`(범례) / `15px`(카드 이름·금액)라 기준 이상 — 변경 없음.
+- **도넛 크기 확대**: `R_OUTER` 215→**228**, `LABEL_R` 231→**244**(간격 16px 유지). `R_INNER=78`은 고정 — 중앙 홀 크기는 그대로 두고 바깥 링만 커짐. `LOGO_R`(≈168)·칩 크기 상한(chord 기반)은 공식 그대로라 재계산만 되고 로직 변경 없음.
+
+## 2026-09-04
+
+### 인증카드 포트폴리오 — 구분선·ETF 배지·고채도 팔레트·"그 외" 미니 로고 (#4.24)
+
+- **원인 실측**: logo.dev 로고 PNG를 디코드해 확인 — ACE ETF는 순백 `#FFFFFF` 불투명이 전체의 **92.9%**, TIGER(미래에셋)는 **97.0%**. KODEX(삼성)는 이미 투명, TSLA·NVDA는 브랜드 컬러로 꽉 참. 즉 흰 배경 이질감은 **국내 ETF 운용사 로고** 문제였다.
+- **국내 ETF는 브랜드 텍스트 배지**: `resolveLogoSrc`는 그대로 두고(주식 탭 `StockIcon`은 원형 아바타라 흰 배경 로고도 자연스러워 계속 사용), `BrandMark`가 `etfBrand`(TIGER/KODEX/ACE…) prop 유무로 **호출 전에** 분기해 로고 요청 없이 브랜드명을 원형 칩에 텍스트로 그린다. (최초 구현은 `resolveLogoSrc`에서 국내 ETF를 무조건 `null` 처리했는데, 이 함수가 `StockIcon`과 공유돼 주식 현황 탭의 ETF 로고까지 사라지는 회귀가 있어 즉시 되돌림.) 글자색은 조각색 휘도로 자동 선택(`pickOnColor`). 브랜드 접두어 목록(`KR_ETF_BRANDS` 22개)을 `logo-source.ts`로 일원화하고 `stock-xray.ts`가 import — 중복 정의와 존재하지 않는 파일을 가리키던 stale 주석 정리.
+- **로고 완전 원형**: `object-contain`+패딩 → `object-cover`로 칩을 꽉 채워 클립. TSLA 등의 사각 모서리 제거.
+- **고채도 팔레트 신설**: `PORTFOLIO_PALETTE`(10색, hue 고르게 분산). `MAIN_PALETTE`는 앱 다른 차트용으로 **불변**. 다크 대비 4.3~8.6:1.
+- **구분선 두께** 2.5 → **5px**.
+- **중앙 홀 축소**: `R_INNER` 108 → **78**(밴드 107→137px). 이때 `LOGO_R`을 밴드 중앙에 두면 현 길이가 짧아져 최소 조각 로고가 생략되므로 **바깥쪽 0.6 지점(≈160)** 으로 재정의.
+- **"그 외" 미니 로고 3개**: `RingSegment.subLogos`(상위 3종목)를 조각 각도 범위에 균등 배치(28px 칩). `computeRingArcs(pcts, minArcs?)`에 세그먼트별 최소각을 추가해 "그 외"에 `ETC_MIN_ARC`=40°를 보장 — 부족분은 다른 조각에서 비례 회수하되 `MIN_ARC_DEG` 바닥은 침범하지 않는 후처리 1패스(합 360·단조성 유지, 대표 입력 3종 검산 완료).
+
+## 2026-09-03
+
+### 인증카드 포트폴리오 — 선명도 개선(로고 칩 통일·무지개 복귀·구분선 제거) (#4.24)
+
+- **왜**: 레퍼런스 대비 흐릿하고 촌스러웠다. 원인 3가지 — ① logo.dev 이미지 자체가 흰 배경 사각형이라 "투명 로고"가 애초에 불가능(조각 위에 흰 박스가 뜬 모양) ② 조각 사이 반투명 구분선이 어두운 seam·앨리어싱으로 저해상도처럼 보임 ③ 인디고 단색 램프의 채도가 낮아 흐림.
+- **로고 = 흰 라운드 사각 칩으로 통일**(`BrandMark`): 제각각인 로고 배경과 싸우는 대신 모두 같은 칩(`bg-white rounded-[12px] shadow-sm`, 60×46)에 담아 *의도된 배지*로 전환. 로고 없으면 칩 안 티커 텍스트. 요청 해상도 `max(w,h)*6`로 상향.
+- **팔레트 원본 복귀**: 칩이 로고를 조각색에서 분리하므로 램프의 전제(로고 충돌 방지)가 사라짐 → `SHARE_SAFE_PALETTE` = **`MAIN_PALETTE.slice(0,11)` 원본 색 그대로**(앱 다른 차트와 동일한 쨍한 색감). 이 카드엔 부채·손익 표기가 없어 의미 예약색(빨강·주황)도 포함. 텍스트 전용 배열(`SHARE_RAMP_TEXT`/`SHARE_LABEL_TEXT`)·`onRampColor()` 전부 삭제 — **조각 fill 과 % 텍스트가 같은 색**(주식 탭 범례 규약).
+- **로고 칩 지름은 비중(조각 각도)에 비례**(`chipSizeFor`: 22°→40px … 110°→84px, sqrt 이징 + 현 길이 상한). 최소 조각각에서도 들어가도록 하한을 잡았다. 칩은 **원형 + 배경 = 해당 조각색** — 투명 여백 로고가 조각과 자연스럽게 이어진다. **로고가 없으면 칩 자체를 그리지 않는다**("그 외" 조각의 빈 배지 제거).
+- **조각 구분선 = 라이트 화이트 / 다크 검정**(`--ring-divider` 고정값). 반투명 stroke가 어두운 seam·앨리어싱으로 보이던 문제 해결. `GAP_DEG` 0.4→0.
+- **도넛 외곽 링 제거**: `--ring-hairline` `<circle>`·변수 모두 삭제 — 별도 테두리 없이 색면만으로 마감.
+
+## 2026-09-02
+
+### 인증카드 포트폴리오 — 대형 도넛 + 조각 안 기업 로고 (#4.24)
+
+- **왜**: 레퍼런스(Buffett Portfolio 인포그래픽)처럼 도넛이 카드의 절반 이상을 차지하고, 조각 안에 투명 배경 기업 로고가 박히는 형태를 목표. 기존엔 도넛이 카드 폭의 ~45%였고 로고가 링 바깥 컬러 원형 아바타였다.
+- **카드 확대**: `CARD_WIDTH` 520→**680**, 다이얼로그 `max-w-[560px] sm:max-w-[760px]`, 링 기하 `R_OUTER` 118→**215**(지름 430 ≈ 카드 폭 63%)·`R_INNER` 44→**108**(중앙 비움, 밴드 107px)·`VIEW_W/H` 656/620. pixelRatio 목표를 `CAPTURE_TARGET_PX=1400`으로 상수화(680 기준 3배 → PNG ~2040px, 그대로 뒀으면 2배로 떨어져 해상도가 낮아졌음).
+- **조각 안 로고**(신규 `brand-mark.tsx`): 원형 배경·`object-cover` 없이 투명 로고를 밴드 중앙(`LOGO_R`)에 배치. 호 18° 미만 조각은 생략. 로고 없으면 티커 텍스트 폴백. 링 바깥 라벨에서 아이콘 제거(이름+%만).
+- **로고 API 개편**(`/api/logo`): logo.dev 옵션을 실제로 사용하도록 개편 — `format=png`(**기본이 JPEG라 투명 배경이 불가능했음**, 조각 위 투명 로고의 핵심)·`size`+`retina=true`(캡처 pixelRatio 3 대응)·`theme=light|dark`(조각 밝기별 변형)·`fallback=404`(logo.dev 기본 모노그램 대신 우리 티커 텍스트 폴백). 캐시 키 `v2:{d|t}:{key}:{size}:{theme}`. **티커 실패 시 302 리다이렉트 제거** — 크로스오리진이라 캡처의 dataURL 인라인이 CORS로 실패해 저장 PNG에서 로고가 통째로 빠지던 버그 수정.
+- **Brandfetch는 도입 불가로 결론**: Logo Link 가이드라인이 서버 측 fetch·프록시·캐싱을 명시 금지하고 `x-bf-error: automated_traffic`으로 302 차단한다(유효한 client ID여도 동일 — 잘못된 키만 403). 브라우저 `<img>` 직접 hotlink만 허용인데 우리는 캡처를 위해 same-origin 바이트가 필수라 구조적으로 비호환. 관련 코드·환경변수 없음.
+- **공용화**: 로고 src 해석을 `lib/finance/logo-source.ts`의 `resolveLogoSrc`로 추출 — `StockIcon`(원형)과 `BrandMark`(투명)가 공유. `ETF_DOMAIN`도 이 파일로 이동.
+- **팔레트**: `SHARE_SAFE_PALETTE`를 무지개 → **브랜드 인디고 단색 램프 9단**(밝은 1위 → 어두운 하위). 풀컬러 로고가 어느 조각에서도 살도록. 텍스트 전용 `SHARE_RAMP_TEXT`(명도 정규화)·조각 위 대비색 `onRampColor(i)` 신설.
+- **문서 stale 정리**: components.md R25→R32 오기·중복 문단·`SHOT_MAX =5`·`MIN_LABEL_GAP`/`GAP_DEG` 값 불일치, api-reference의 "Clearbit" 오기, qa-full-test-plan의 `SHARE_SAFE_PALETTE` 소비처 0 서술.
+
+## 2026-09-01
+
+### 인증카드 포트폴리오 — 유려함 + 분야(섹터) 막대바 (#4.24)
+
+- **왜**: 포트폴리오 카드를 "글로벌 공식 포트폴리오 인포그래픽" 톤으로. 종목 도넛만으로는 분야 편중(예: "AI 및 반도체" 집중)이 안 보임.
+- **분야 막대바**(신규 `portfolio-sector-bar.tsx`): 종목 도넛 아래에 X-Ray 테마 축 분포(`computeBreakdown("theme", …)` 재사용) 상위 7 + "그 외", **분야명 + %만**(금액·개별 종목 없음). 유효 분야 2개 미만이면 조용히 생략.
+- **팔레트**: 포트폴리오 도넛·막대바를 미사용이던 `SHARE_SAFE_PALETTE`(의미색 빨강·주황 제외 9색) 공용으로 전환 — 색 조정은 이 배열만 손봄. 주식 현황 타입은 `assignColors`/`MAIN_PALETTE` 유지.
+- **도넛 유려함**: 웨지 stroke 3→2px + `GAP_DEG`(0.8°) hairline 간극, 라벨 이름 `font-bold`→`semibold tracking-tight`, %는 조각색 bold. 중앙 빈 홀 → **핵심 지표**("N 종목", `R_INNER` 35→44). **동심 헤어라인 외곽선**(`var(--border)` 1px 원선 2개).
+- **분류 자동 fetch**: 인증카드 다이얼로그가 포트폴리오 선택 시 `useXrayClassifications`(신규 공용 훅 — `stock-xray-view`·`stock-insight-strip` 복붙 통합)로 X-Ray 분류 캐시를 자동 보충 → 완료 시 분야 막대바 등장(비차단). X-Ray 탭 방문 없이도 동작.
+- **팔레트·라인**: `SHARE_SAFE_PALETTE` = `MAIN_PALETTE` 무지개 hue 유지 + 애플 시스템 톤으로 값 정제(채도 정돈·탁함 제거) 9색, `[0]` 인디고 원본 고정, "그 외"=`#8E8E93`. 도넛 조각 구분선 = `--ring-divider`(라이트 흰색 / 다크 white/22) 2.5px stroke — 다크에서도 조각이 또렷이 분리. 외곽 링 = `--ring-hairline`(라이트 black/24 / 다크 white/48) 2.5px `<circle>` — 도넛을 확실히 두르는 프레임. (기존 `var(--border)` 헤어라인이 캡처에서 안 보이던 문제 해결.)
+
+### 홈 팁 박스 — X 닫기 시 이번 세션 재노출 금지
+
+- **왜**: `HomeTipBox`의 X를 누르면 해당 종류만 억제되고 `useEffect` 재실행 때 바로 다음 순위 팁이 같은 창에 튀어나와, 닫아도 계속 새 팁이 뜨는 두더지잡기 경험이었다.
+- **변경**(`views/home/home-tip-box.tsx` 단일 파일): `close()`에서 기존 종류별 mark에 더해 `sessionStorage`에 `secretasset_home_tip_session_dismissed` 플래그를 찍고, 팁 계산 `useEffect` 최상단에서 이 플래그가 있으면 `pickHomeTip`을 건너뛰고 `null` 처리. `pwa-connect-prompt.tsx`의 세션 dismiss 패턴 재사용.
+- **재접속(새 세션)** 시 `sessionStorage`가 비므로 각 종류의 재노출 정책(기능=영구 dismiss→다음 기능, 세금=이번 달 등)에 따라 다음 팁이 정상 회전 노출. 새 localStorage 키·동기화 없음.
+
+## 2026-08-31
+
+### 인증카드 "포트폴리오" 타입 추가 (#4.24)
+
+- **왜**: 기존 인증카드는 "주식 현황" 단일 레이아웃뿐. 금액을 뺀 종목 구성 비중만 보여주는 공유용 카드 수요 — 첨부 레퍼런스("Trump's Updated Portfolio") 스타일의 원형 링.
+- **교체 아닌 타입 추가**: `ShareScreenshotDialog`에 `InlineSelector`(로컬 state, 저장 안 함)로 "주식 현황 / 포트폴리오" 전환. 과거 2회 도넛 *교체* 시도가 롤백됐던 것과 달리 기존 타입은 코드 경로 무변경.
+- **신규**: `header-menu/share/portfolio-ring-card.tsx`(`PortfolioRingCard` + `computeRingArcs` 순수 함수). 각도 압축 = 조각별 최소각(`MIN_ARC_DEG`) + 비중 구간별 최대 호 상한(`MAX_ARC_BY_PCT`) + 단조 clamp + 360° 정규화 → 단일 종목 80~90%여도 링이 한 조각에 먹히지 않음. 상수만 바꿔 튜닝.
+- **재사용**: 데이터는 `ShareCard`의 `useFilteredStockData("all")`/`computeStockMetrics`/`barColors` 그대로 주입(훅 중복 없음), 로고는 `StockIcon`(`stock-tab.tsx`에서 `export`만 추가) → `/api/logo`, 세그먼트 토글은 `InlineSelector`, 캡처는 `share-menu.tsx` 기존 파이프라인 무변경.
+- **폰트**: 종목명 디스플레이 서체로 Playfair Display(`--font-playfair`, `layout.tsx` `next/font/google`) — 라틴만, 한글은 시스템 폰트 폴백. 이 타입 밖으로 확장 금지.
+- **후속 조정 1차**: (1) 두 타입 공통 푸터에서 **날짜 제거**. (2) 포트폴리오 링 **중앙 브랜드 마크·하단 "MY PORTFOLIO" 문구 제거**. (3) 링 기하 확대. (4) 라벨 종목명 1줄 `truncate` → **2줄 `line-clamp-2`**.
+- **후속 조정 2차(가독성)**: (1) `CARD_WIDTH` 460→**520**(단일 고정값, 다이얼로그 `max-w-[520/680]` 안, 기기 무관 동일 PNG=R25 유지) — 도넛·라벨 공간 확보. (2) **비중%를 도넛 조각 안쪽 SVG `<text>`**(흰 글씨 + 어두운 `paintOrder=stroke` 외곽선)로 이동, 조각 밖 라벨은 **아이콘+종목명만**. (3) 도넛 대폭 확대 + **중앙 홀 최소화**(`R_OUTER` 122→166, `R_INNER` 74→44, 밴드 ~122px). (4) 주식 현황 "금액 표시" 스위치를 제어 바 **2번째 줄로 분리 + 축소**(`scale-75`, `text-xs`).
+- **후속 조정 3차(레퍼런스 정렬)**: (1) 도넛 **축소**(`R_OUTER` 166→124, `R_INNER` 44→64, `VIEW_H` 470→420) — 링 밖 라벨 공간 확보. (2) 비중%를 다시 **링 바깥 라벨**로(조각 안 `<text>` 제거), 이름 아래 `text-muted-foreground`로 위계 분리. (3) **Playfair(세리프) 전면 폐기**(`layout.tsx`에서 `next/font` import·body variable 제거) → 앱 기본 산세리프. 종목명 `font-bold text-foreground`. (4) **라벨 텍스트 하이브리드**: 해외=티커 / 국내=종목명. (5) 링 밖 라벨 존별 가로 배치(측면)·세로 배치(상하).
+
 ## 2026-08-29
 
 ### PWA 스크롤버튼 겹침·시뮬레이터 박스 크기·공지사항 최신화

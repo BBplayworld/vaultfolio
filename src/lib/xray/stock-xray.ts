@@ -6,9 +6,11 @@
 
 import { Stock } from "@/types/asset";
 import { ExchangeRates } from "@/lib/finance/finance-service";
-import { getClassification, SECTOR_ENUM } from "./classification-store";
+import { getClassification, SECTOR_ENUM, STOCK_TYPE_ENUM } from "./classification-store";
+// 국내 ETF 브랜드 접두어 단일 출처 — 로고 해석과 공유
+import { KR_ETF_BRANDS } from "@/lib/finance/logo-source";
 
-export type XrayAxis = "region" | "theme" | "marketCap" | "index" | "currency";
+export type XrayAxis = "region" | "theme" | "marketCap" | "index" | "currency" | "stockType";
 
 export interface BreakdownItem {
   key: string;
@@ -281,6 +283,54 @@ const extractSector: SingleExtractor = (s) => {
   return { key: sector, label: sector };
 };
 
+// 종목 유형(투자 성격) 축 — sector(산업)와는 별개. AI가 업종명 고정관념으로 흔들리기 쉬운
+// 대표 ETF·우량주만 티커·이름으로 확정 매핑해 애매한 판정 여지를 없앤다(전수 목록 아님 —
+// 그 외는 개선된 프롬프트로 AI 판단에 맡김). 아래 목록은 "대표 예시"라 주기적 재검토 필요.
+
+// 커버드콜/인컴형 ETF → 배당주(배당 증액 이력이 아니라 현재 수익률이 핵심)
+const COVERED_CALL_TICKERS = ["JEPI", "JEPQ", "QYLD", "XYLD", "RYLD", "DIVO", "QQQI", "QDVO", "GPIX", "YMAX", "YMAG", "ULTY", "NUSI", "SVOL"];
+const COVERED_CALL_NAME_KEYWORDS = ["커버드콜"];
+
+// 배당성장 ETF → 배당성장주
+const DIVIDEND_GROWTH_ETF_TICKERS = ["SCHD", "DGRO", "VIG", "NOBL", "HDV", "DVY"];
+const DIVIDEND_GROWTH_NAME_KEYWORDS = ["배당다우존스", "배당귀족", "배당성장"];
+
+// 개별 우량주 — 25년+ 연속 배당 증액 등 "배당성장주"의 정의 그 자체인 대표 종목
+const DIVIDEND_ARISTOCRAT_TICKERS = ["KO", "PG", "JNJ", "PEP", "MMM", "MCD", "WMT", "CL", "XOM", "CVX", "O", "LOW", "ADP", "LIN", "SHW"];
+
+// 개별 우량주 — 배당 증액 스토리보다 현재 고배당 자체가 핵심
+const HIGH_YIELD_VALUE_TICKERS = ["T", "VZ", "MO", "PM", "VICI", "SPG", "IBM", "AGNC", "NLY", "033780", "030200"];
+
+// 개별 우량주 — 전통 은행·경기민감 대형주(저평가·안정성이 핵심, 배당·고성장 어느 쪽도 주력 아님)
+const TRADITIONAL_VALUE_TICKERS = ["BAC", "WFC", "C", "USB", "PNC", "GS", "MS", "F", "GM", "055550", "105560", "086790", "316140", "005490"];
+
+// 혁신주 대표 티커 — 검증 안 된 파괴적 기술 베팅(매출 미미·적자, 성패가 이분법적)
+const INNOVATION_TICKERS = ["RKLB", "IONQ", "JOBY", "ACHR"];
+
+// 국채·머니마켓 등 채권/현금성 자산
+const BOND_CASH_TICKERS = ["SGOV", "BIL", "SHV", "SHY", "IEF", "TLT", "TIP", "AGG", "BND", "VGSH", "VGIT", "VTIP", "MINT", "JPST"];
+const BOND_CASH_NAME_KEYWORDS = ["국채", "국고채", "채권", "머니마켓", "MMF", "단기채"];
+
+const extractStockType: SingleExtractor = (s) => {
+  const name = s.name || "";
+  const upper = name.toUpperCase();
+  const upperTicker = (s.ticker || "").toUpperCase();
+  const make = (key: string) => ({ key, label: key });
+
+  if (COVERED_CALL_TICKERS.includes(upperTicker) || COVERED_CALL_NAME_KEYWORDS.some((k) => upper.includes(k))) return make("배당주");
+  if (DIVIDEND_GROWTH_ETF_TICKERS.includes(upperTicker) || DIVIDEND_GROWTH_NAME_KEYWORDS.some((k) => upper.includes(k))) return make("배당성장주");
+  if (DIVIDEND_ARISTOCRAT_TICKERS.includes(upperTicker)) return make("배당성장주");
+  if (HIGH_YIELD_VALUE_TICKERS.includes(upperTicker)) return make("배당주");
+  if (TRADITIONAL_VALUE_TICKERS.includes(upperTicker)) return make("가치주");
+  if (INNOVATION_TICKERS.includes(upperTicker)) return make("혁신주");
+  if (BOND_CASH_TICKERS.includes(upperTicker) || BOND_CASH_NAME_KEYWORDS.some((k) => upper.includes(k))) return make("채권/현금성");
+
+  const cls = s.ticker ? getClassification(s.ticker) : undefined;
+  const stockType = typeof cls?.stockType === "string" && cls.stockType.length > 0 ? cls.stockType : undefined;
+  if (!stockType || !STOCK_TYPE_ENUM.includes(stockType as any)) return { key: UNCLASSIFIED_KEY, label: UNCLASSIFIED_LABEL };
+  return { key: stockType, label: stockType };
+};
+
 // 원시 지수 문자열 → 핵심 지수 정규화 (코스피/코스닥/나스닥100/S&P500/그 외). 미인식은 null.
 function canonicalIndex(raw: string): { key: string; label: string } | null {
   const t = raw.trim();
@@ -298,11 +348,6 @@ function canonicalIndex(raw: string): { key: string; label: string } | null {
 const INDEX_PRIORITY = ["KOSPI", "KOSDAQ", "NASDAQ100", "SP500", "OTHER"];
 const OTHER_INDEX = { key: "OTHER", label: "그 외 핵심 지수" };
 
-// 국내 ETF 브랜드 접두어 (stock-tab.tsx ETF_DOMAIN 키와 동기화)
-const KR_ETF_BRANDS = [
-  "TIGER", "KODEX", "ACE", "KBSTAR", "SOL", "RISE", "PLUS", "ARIRANG", "KOSEF", "HANARO", "KINDEX", "TIMEFOLIO", "BIG",
-  "TIME", "KIWOOM", "KOACT", "WOORI", "HANA", "SHINHAN", "MERITZ", "DAISHIN", "UNICORN"
-];
 // 해외(미국 등) 시장 키워드 — 구체 지수 미매칭 시 "그 외 핵심 지수"로
 const FOREIGN_NAME_KEYS = ["미국", "US", "선진", "신흥", "유럽", "중국", "일본", "인도", "글로벌", "베트남", "대만", "홍콩", "다우", "DOW", "러셀", "RUSSELL", "나스닥종합"];
 
@@ -404,6 +449,7 @@ const SHARE_AXES: Record<XrayAxis, SingleExtractor> = {
   theme: extractSector,
   index: extractIndex,
   currency: extractCurrency,
+  stockType: extractStockType,
 };
 
 // ─────────────────────────────────────────────

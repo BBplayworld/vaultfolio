@@ -8,7 +8,7 @@
 
 import type { Stock } from "@/types/asset";
 import { toast } from "sonner";
-import { getAllClassifications, upsertClassifications, SECTOR_ENUM } from "./classification-store";
+import { getAllClassifications, upsertClassifications, SECTOR_ENUM, STOCK_TYPE_ENUM, STOCK_TYPE_PROMPT_VERSION } from "./classification-store";
 
 export interface ClassifyProgress {
   done: number;
@@ -45,12 +45,13 @@ export async function fetchAndStoreClassifications(
   const items = stocks
     .filter((s) => s.ticker && s.ticker.trim())
     .filter((s) => {
-      // themes·indices·유효한 sector 모두 있어야 수집 완료 — 하나라도 비거나 옛 카테고리면 재분류 대상
+      // themes·indices·유효한 sector·유효한 stockType(+최신 버전) 모두 있어야 수집 완료 — 하나라도 비거나 옛 카테고리/구버전이면 재분류 대상
       const cur = existing[s.ticker!.trim().toUpperCase()];
       const hasThemes = !!cur && Array.isArray(cur.themes) && cur.themes.length > 0;
       const hasIndices = !!cur && Array.isArray(cur.indices) && cur.indices.length > 0;
       const hasValidSector = !!cur && typeof cur.sector === "string" && (SECTOR_ENUM as readonly string[]).includes(cur.sector);
-      return !hasThemes || !hasIndices || !hasValidSector;
+      const hasValidStockType = !!cur && typeof cur.stockType === "string" && (STOCK_TYPE_ENUM as readonly string[]).includes(cur.stockType) && cur.stockTypeV === STOCK_TYPE_PROMPT_VERSION;
+      return !hasThemes || !hasIndices || !hasValidSector || !hasValidStockType;
     })
     .map((s) => ({
       ticker: s.ticker!.trim().toUpperCase(),

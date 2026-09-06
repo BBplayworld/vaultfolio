@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
-import { SECTOR_ENUM, type StockClassification } from "@/lib/xray/classification-store";
+import { SECTOR_ENUM, STOCK_TYPE_ENUM, STOCK_TYPE_PROMPT_VERSION, type StockClassification } from "@/lib/xray/classification-store";
 import { KR_CODE_TO_NAME } from "@/lib/finance/kr-master";
 
 // 코드→약명 역맵 (KRX 전종목 마스터)
@@ -45,6 +45,11 @@ const RESPONSE_SCHEMA = {
             enum: [...SECTOR_ENUM],
             description: "종목이 속한 상위 카테고리 1개 (한 종목 = 단일 sector).",
           },
+          stockType: {
+            type: Type.STRING,
+            enum: [...STOCK_TYPE_ENUM],
+            description: "종목 유형(투자 성격) 1개 — sector(산업)와는 다른 축. 아래 buildPrompt 규칙 참고.",
+          },
           themes: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
@@ -63,7 +68,7 @@ const RESPONSE_SCHEMA = {
             minItems: 1,
           },
         },
-        required: ["ticker", "sector", "themes", "themePrimary", "region", "indices"],
+        required: ["ticker", "sector", "stockType", "themes", "themePrimary", "region", "indices"],
       },
     },
   },
@@ -101,6 +106,19 @@ function buildPrompt(items: ClassifyItem[]): string {
     "  - 단일 주식을 추종하는 레버리지/커버드콜/옵션 ETF(예: TSLL/TSLY -> Tesla 추종, NVDL/NVDY -> Nvidia 추종, CONL/CONY -> Coinbase 추종, MSFL/MSFO -> Microsoft 추종, APLY -> Apple 추종, AMZY -> Amazon 추종 등)는 'ETF/펀드'가 아닌 **기초 개별 기업의 sector**(예: TSLL은 '자율주행 및 모빌리티', NVDL은 'AI 및 반도체', MSFL/APLY는 'AI 및 소프트웨어', AMZY는 '소비재 및 유통')로 분류해야 합니다.",
     "  - 반면 지수나 여러 기업을 담은 포트폴리오형 인덱스/테마 ETF(예: SPY, QQQ, VOO, MAGS, TIGER 미국나스닥100, KODEX 2차전지산업, ACE 미국S&P500 등)는 개별 기업이 아니므로 반드시 'ETF/펀드' sector로 분류해야 합니다.",
     "  - 복수 사업 영위 종목은 매출·이익 비중이 가장 큰 1개로 배정합니다.",
+    "- stockType: 종목의 **투자 성격** 1개. sector(어느 산업인가)와는 별개 축이니 혼동하지 마세요.",
+    "  **중요: 업종 카테고리만 보고 넘겨짚지 마세요.** \"유틸리티=배당주\", \"은행/자동차=가치주\" 같은 업종명 고정관념으로 판단하면 틀립니다.",
+    "  실제로 널리 알려진 그 종목의 배당수익률·성장성·재무 프로필에 근거해 판단하세요.",
+    "  반례: 유틸리티·에너지 기업이라도 배당수익률이 낮고 성장 스토리(예: AI發 전력수요 확대)가 부각되는 종목(예: Vistra Energy/VST)은 '배당주'가 아니라 '성장주'입니다.",
+    "  아래 중 정확히 1개:",
+    "    \"성장주\"       — 검증된 사업모델로 매출·이익이 상당한 규모이며 고성장이 지속되는 개별주·테마 ETF. 예) NVDA, TSLA, PLTR, 반도체/AI 대형 성장 테마 ETF(SOXL, TQQQ 등).",
+    "    \"혁신주\"       — 아직 시장에서 검증되지 않은 파괴적 기술에 베팅하는 고위험·고변동성 종목. 매출이 미미하거나 적자 지속, 성패가 기술 검증·규제 승인 등 이분법적 이벤트에 좌우되며 밸류에이션이 실적보다 내러티브 중심. 예) 로켓랩(RKLB), 아이온큐(IONQ), 조비/아처 에비에이션(JOBY/ACHR) 같은 UAM·우주·양자컴퓨팅, 임상 단계 위주라 상업화 매출이 아직 없는 바이오텍. sector가 '바이오 및 헬스케어'이면서 상업화 매출이 미미한 기업도 여기 해당.",
+    "    \"배당성장주\"   — 수십 년간 배당을 꾸준히 늘려온(배당 성장 이력 자체가 핵심 투자 포인트인) 우량 개별주·배당성장 ETF. 예) JNJ, PG, KO, SCHD, TIGER 미국배당다우존스.",
+    "    \"배당주\"       — 배당 성장 이력보다 **현재 배당수익률 자체**가 핵심인 개별주·커버드콜/인컴형 ETF. 예) 고배당 리츠·통신주, JEPI/JEPQ/YMAX/QQQI 등 커버드콜 ETF.",
+    "    \"지수투자\"     — 특정 시장 지수를 그대로 추종하는 패시브 인덱스 펀드/ETF(레버리지·인버스 제외). 테마·섹터 집중이 아닌 광범위 시장 추종. 예) SPY, QQQ, VOO, DIA, KODEX 200, ACE 미국S&P500.",
+    "    \"가치주\"       — 저평가된 전통 산업·경기민감주 개별 기업. 고성장·고배당보다 저평가·안정성이 투자 포인트. 예) 전통 은행·경기민감 대형주.",
+    "    \"채권/현금성\"  — 국채·회사채 ETF/개별채권, 머니마켓(MMF), SGOV/BIL/SHV/TLT/IEF 등 달러 표시 채권·현금성 자산.",
+    "    \"기타\"         — 위 어디에도 안 맞는 원자재·리츠 복합·혼합자산 등.",
     "- themes: 종목의 핵심 사업·기술·산업 분야 **정확히 3~4개** 다중 태그. 한국어 또는 단순 영문 가능.",
     "  중요도 높은 분야 위주로 선별. 너무 세부적인 분야는 묶어서 표현(예: '메모리/파운드리/시스템반도체' → '반도체').",
     "  좋은 예: 테슬라 → [\"전기차\",\"자율주행\",\"AI/로보틱스\",\"에너지 저장\"]",
@@ -165,8 +183,13 @@ async function callGeminiClassify(
     const sector = typeof row.sector === "string" && (SECTOR_ENUM as readonly string[]).includes(row.sector)
       ? (row.sector as StockClassification["sector"])
       : undefined;
+    const stockType = typeof row.stockType === "string" && (STOCK_TYPE_ENUM as readonly string[]).includes(row.stockType)
+      ? (row.stockType as StockClassification["stockType"])
+      : undefined;
     out[ticker] = {
       sector,
+      stockType,
+      stockTypeV: stockType ? STOCK_TYPE_PROMPT_VERSION : undefined,
       themes,
       themePrimary: typeof row.themePrimary === "string" ? row.themePrimary : themes[0],
       industry: typeof row.industry === "string" ? row.industry : undefined,
@@ -243,7 +266,8 @@ export async function POST(request: Request) {
   const misses: ClassifyItem[] = [];
   for (const it of normalized) {
     const c = await cache.getStockClassification(it.ticker);
-    // themes·sector·indices 모두 있어야 유효. indices 누락(특히 ETF) 항목은 1회 재분류 — 지수 축 보강
+    // themes·sector·stockType·indices 모두 있어야 유효. 누락 항목(신규 필드 도입 시 등)은 1회 재분류 — 해당 축 보강.
+    // stockTypeV가 최신 STOCK_TYPE_PROMPT_VERSION과 다르면(구버전 규칙으로 분류된 값) 무조건 캐시 미스 처리 — 분류 규칙이 바뀔 때마다 전체 강제 재분류.
     if (
       c &&
       Array.isArray(c.themes) &&
@@ -251,6 +275,10 @@ export async function POST(request: Request) {
       typeof c.sector === "string" &&
       c.sector.length > 0 &&
       (SECTOR_ENUM as readonly string[]).includes(c.sector) && // 현재 유효한 섹터인지 검증
+      typeof c.stockType === "string" &&
+      c.stockType.length > 0 &&
+      (STOCK_TYPE_ENUM as readonly string[]).includes(c.stockType) &&
+      c.stockTypeV === STOCK_TYPE_PROMPT_VERSION &&
       Array.isArray(c.indices) &&
       c.indices.length > 0
     ) {

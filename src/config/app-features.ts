@@ -27,7 +27,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "연말 절세 시뮬레이션",
     description: "해외주식을 지금 팔면 세금이 얼마인지, 손실 종목을 더하면 얼마나 아끼는지 세금 관리에서 바로 확인해보세요.",
     icon: Calculator,
-    isNew: true,
     target: { type: "tax" },
     beforeNavigate: () => useTaxViewStore.getState().setInitialTab("simulator"),
   },
@@ -48,8 +47,9 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: "stocks-xray",
     title: "주식 X-Ray 분석",
-    description: "상세 탭의 주식 X-Ray에서 종목·섹터·국가별 포트폴리오 비중을 분석해보세요.",
+    description: "상세 탭의 주식 X-Ray에서 성장주·배당주·지수투자 등 종목 유형부터 섹터·국가별 비중까지 분석해보세요.",
     icon: ScanSearch,
+    isNew: true,
     target: { type: "detail", tab: "stocks-xray" },
   },
   {
@@ -111,9 +111,18 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: "share-card",
     title: "인증카드",
-    description: "상단의 인증카드 버튼으로 내 자산 구성을 이미지로 저장하고 공유해보세요.",
+    description: "상단의 인증카드 버튼으로 주식 현황과 포트폴리오 구성 비중(종목별 원형 차트)을 이미지로 저장·공유해보세요.",
     icon: IdCard,
     action: dispatchOpenShareCard,
     visitKey: "share-card",
+  },
+  {
+    id: "share-card-portfolio",
+    title: "포트폴리오 인증카드",
+    description: "인증카드 > 포트폴리오에서 종목 로고가 담긴 원형 차트에 분야·보유 유형 구성까지 한 장에 담아 공유해보세요.",
+    icon: IdCard,
+    isNew: true,
+    action: () => dispatchOpenShareCard("portfolio"),
+    visitKey: "share-card-portfolio",
   },
 ];

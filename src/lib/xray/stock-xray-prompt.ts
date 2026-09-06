@@ -15,6 +15,7 @@ const AXIS_TITLE: Record<BreakdownResult["axis"], string> = {
   region: "지역",
   currency: "통화",
   theme: "핵심 분야",
+  stockType: "종목 유형",
   marketCap: "시가총액",
   index: "지수",
 };

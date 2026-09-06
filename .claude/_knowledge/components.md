@@ -133,11 +133,11 @@ _components/
   - `dailyProfit`은 `filteredStocks` 기준 합산 (카테고리 selector 따라 즉시 변동)
 - `CATEGORY_TABS`
 
-**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 460px 고정폭(`CARD_WIDTH`, share-menu.tsx)이라 `sm:` 뷰포트 반응형 금지(R25). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
+**`screenshotMode` 분기 (인증카드 = share-card 전용)** — 캡처 DOM은 680px 고정폭(`CARD_WIDTH`, share-menu.tsx)이라 `sm:` 뷰포트 반응형 금지(R32). `screenshotMode`인 컴포넌트는 `ASSET_THEME` 대신 **`ASSET_THEME_SHOT`**(theme.ts, 데스크톱 값 고정)을 쓴다.
 
 - `StockCard` — 헤더 + 비중 그라데이션 바만 노출. Collapsible·상세 그리드·수정/삭제 버튼·담보대출·보유 메타 모두 미렌더. `maskFn`으로 hideAmounts 마스킹 전달
 - `StockRowHeader` / `StockIcon` — 이름·금액·아이콘·Badge 클래스를 SHOT 토큰으로 스왑. 비중%는 미노출(범례로 통합), `TodayChangeChip`(오늘 등락) 미렌더
-- `StockCategorySection` — **범례는 인증카드도 노출**(주식 탭과 공통, `!screenshotMode` 가드 없음): 색점+종목명+비중%, `maxItems` 초과분은 `그 외 N종목 X%`. 인증카드 grid는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2` 고정)+`legendText`(`text-sm` 고정, R25). 루트 패딩 `px-1`, 리스트 상단 여백 `mt-7`(주식 탭은 `mt-8`). 리스트 초과분 "그 외 N종목" 행은 `maskFn`+`exchangeRates` prop이 있으면 종목 카드와 동일한 우측 2줄(평가금액 합 / 손익 `(+X.X%)`, `computeStockMetrics` 합산 — 개별 평균 아닌 `(Σ평가−Σ원가)/Σ원가`)로 렌더, 비중%는 미노출
+- `StockCategorySection` — **범례는 인증카드도 노출**(주식 탭과 공통, `!screenshotMode` 가드 없음): 색점+종목명+비중%, `maxItems` 초과분은 `그 외 N종목 X%`. 인증카드 grid는 `ASSET_THEME_SHOT.legendGrid`(`grid-cols-2` 고정)+`legendText`(`text-sm` 고정, R32). 루트 패딩 `px-1`, 리스트 상단 여백 `mt-7`(주식 탭은 `mt-8`). 리스트 초과분 "그 외 N종목" 행은 `maskFn`+`exchangeRates` prop이 있으면 종목 카드와 동일한 우측 2줄(평가금액 합 / 손익 `(+X.X%)`, `computeStockMetrics` 합산 — 개별 평균 아닌 `(Σ평가−Σ원가)/Σ원가`)로 렌더, 비중%는 미노출
 - `StockSummaryHeader` → `DetailSummaryHeader`/`ProfitMetric`의 `screenshotMode` prop으로 전달 (원/달러 셀렉터·오늘 등락 미렌더, 인증카드는 배경 박스 없이 헤더 값 텍스트 `ASSET_THEME_SHOT.summaryValue`)
 
 **StockRowHeader 비활성 Badge:**
@@ -167,7 +167,7 @@ _components/
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
 | AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
-| HomeTipBox (S-4.32 후속) | `views/home/home-tip-box.tsx`      | 홈 알림/팁 통합 박스 — 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 화면엔 한 번에 1개만 뜬다. 판정은 [state-and-utils.md](state-and-utils.md) `home-tip.ts`의 `pickHomeTip()`이 **위험도 순**(백업>세금>자산최신화>신규기능>저방문기능)으로 골라 반환, 종류별 재노출 정책은 원래 로직 그대로(백업·최신화=노출 시 오늘 flag, 세금=명시적 닫기 시 이번 달 flag, 기능=닫기·클릭 이동 둘 다 영구 dismiss). 인터랙션은 4종 모두 "카드 전체 클릭=유일한 동작(백업 다운로드/세금 화면 이동/최신화 시트 오픈/기능 화면 이동), X=닫기"로 통일된 단일 보더리스 셸. 자동 팝업 공지(`UpdateNoticeDialog`)는 이보다 앞서(S-4.32) 이미 제거됨 — 공지는 더보기 > 앱 가이드의 수동 열람(`notice.tsx`)만 남음 |
+| HomeTipBox (S-4.32 후속) | `views/home/home-tip-box.tsx`      | 홈 알림/팁 통합 박스 — 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 화면엔 한 번에 1개만 뜬다. 판정은 [state-and-utils.md](state-and-utils.md) `home-tip.ts`의 `pickHomeTip()`이 **새 공지(필수 노출)>백업>세금>자산최신화>신규기능>저방문기능** 순으로 골라 반환, 종류별 재노출 정책은 원래 로직 그대로(백업·최신화=노출 시 오늘 flag, 세금=명시적 닫기 시 이번 달 flag, **공지=열람(클릭)해야만 `markCurrentNoticeSeen()`으로 TTL 90일 dismiss — X 닫기는 이번 세션만 숨기고 열람 처리 안 함(최소 1회 열람 강제)**, 기능=닫기·클릭 이동 둘 다 영구 dismiss). **X 닫기는 종류별 mark에 더해 `sessionStorage` 세션 플래그(`secretasset_home_tip_session_dismissed`, `pwa-connect-prompt.tsx` 패턴)를 찍어 이번 세션(창) 동안 박스 전체를 숨긴다 — 다음 순위 팁이 바로 튀어나오는 두더지잡기 방지. 재접속(새 세션) 시 초기화되어 각 종류의 정책대로 다음 팁이 정상 회전 노출. 단, `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 안 뜸)은 이 세션 플래그를 무시하고 무조건 `pickHomeTip`을 호출한다(#4.24) — 다른 팁을 X로 닫아 세션 플래그가 서도 공지의 "최초 1회 노출"은 가로막히지 않는다. 공지가 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끄므로, 이후 공지 X 닫기 → 같은 세션 재진입 시 재노출 안 됨(QA에서 재노출 버그 발견·수정).** 인터랙션은 5종 모두 "카드 전체 클릭=유일한 동작(백업 다운로드/세금 화면 이동/최신화 시트 오픈/**공지→해당 기능 다이얼로그 오픈**/기능 화면 이동), X=닫기"로 통일된 단일 보더리스 셸. **공지(#4.24 재도입, 필수 노출)**: 홈 진입 시 강제 팝업하던 과거 `UpdateNoticeDialog`(S-4.32에서 제거)와 달리 다이얼로그를 억지로 띄우진 않지만, 팁 카드 자체는 **최우선순위**라 새 버전 공지가 있으면 백업·세금 안내보다도 먼저 반드시 노출. **클릭 시 공지 본문 다이얼로그가 아니라 이번 릴리스가 홍보하는 실제 기능으로 직행**(#4.24 후속) — 지금은 `dispatchOpenShareCard("portfolio")`로 인증카드를 포트폴리오 타입으로 즉시 오픈(릴리스마다 홍보 대상이 바뀌면 이 액션도 함께 갱신). 더보기 메뉴의 공지 수동 열람(`notice.tsx`, `tool-menu.tsx`의 `showNotice`)은 그대로 유지 |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
 | OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |
 
@@ -196,24 +196,71 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 사용자 노출 명칭은 **"인증카드"**(버튼·네비·다이얼로그·튜토리얼·공지). 파일·식별자는 `share-card.tsx` / `ShareCard` / `ShareScreenshotDialog` / `screenshotMode` 유지.
 
-**내용은 주식 기준으로만** 구성한다(자산군 도넛·포트폴리오 구성 바·자산군 통합 랭킹 없음). 2026-08-27 도넛 차트(사각형→원형 두 차례 시도)로 교체를 시도했으나 실사용 확인 후 전면 롤백 — 원래 구성 유지:
+**타입 2종** — `ShareScreenshotDialog` 제어 바의 `InlineSelector`(로컬 state `variant`, 저장 안 함)로 전환. `ShareCard`가 `variant` prop(`"stock" | "portfolio"`)을 받아 분기하고 푸터(브랜드명 + 도메인, **날짜 없음** — #4.24 후속 제거)는 공통. `ShareScreenshotDialog`는 `initialVariant?` prop을 받아, 열릴 때(`open && initialVariant`) 그 타입으로 맞춘다 — `dispatchOpenShareCard("portfolio")`(`asset-dispatch.ts`, `trigger-open-share-card` 이벤트 `detail.variant`)로 홈 "새 공지" 팁이 포트폴리오로 직행할 때 사용(#4.24). 인자 없이 상단 아이콘 버튼으로 열면 직전 선택을 그대로 유지(리셋 안 함).
+
+1. **주식 현황**(`variant="stock"`, 기본) — 아래 원래 구성. "금액 표시" 스위치는 이 타입에서만 노출.
+2. **포트폴리오**(`variant="portfolio"`) — `PortfolioRingCard`(대형 종목 도넛, 조각 안 기업 로고) + `PortfolioSectorBar` **2개**(분야 구성 · 보유 유형 구성, #4.24). 금액 완전 제외. `ShareCard`가 `mergedStocks` 상위 7 + "그 외" 1건을 `segments`로 주입(fill=`SHARE_SAFE_PALETTE`=`PORTFOLIO_PALETTE` 고채도 신규 세트 — `MAIN_PALETTE`와 별개, % 텍스트도 같은 색, "그 외"=`SHARE_ETC_COLOR`).
+   - **보유 유형 구성**(`categoryItems`): `stock.category`(국내주식/해외주식/IRP/ISA/연금저축펀드/비상장주식, `stockCategories` 라벨 재사용, `config/asset-options.ts`)별 비중 합. **IRP·연금저축펀드는 이 막대바에서만 "연금저축펀드·IRP" 한 버킷으로 통합**(세제혜택 은퇴 계좌 성격이 같음, #4.24) — `stockCategories` 자체는 6종 그대로라 카테고리 필터 탭 등 다른 소비처는 영향 없음. ISA(국내·해외 지수 ETF 혼재 가능)·비상장주식은 계좌 성격이 뚜렷이 달라 계속 분리. 종목 등록 시 **필수 입력**이라 분류 캐시 의존이 전혀 없어 "분야 구성"과 달리 미분류 가드·"그 외" 롤업이 없음(카테고리 종류 자체가 최대 5개 버킷).
+   - **분류 자동 fetch**: `ShareScreenshotDialog`가 `open && variant==="portfolio"`일 때 `useXrayClassifications(assetData.stocks)` 실행 → 완료 시 `xrayTick` prop 증가 → `sectorItems` useMemo 재계산으로 분야 막대바 등장. **비차단**(저장 버튼 안 막음), 진행 중엔 제어 바에 "분야 정보를 분석하는 중…" 안내(캡처 DOM 밖).
+
+**주식 현황 타입 구성** — 2026-08-27 도넛 차트(사각형→원형 두 차례 시도)로 **교체**를 시도했으나 실사용 확인 후 전면 롤백. 교체가 아닌 별도 타입은 위 "포트폴리오"로 추가(#4.24). 원래 구성 유지:
 
 ```tsx
 // 닉네임 미노출(2026-08-08 제거)
 <StockSummaryHeader screenshotMode maskFn={mask} />                  // 배경 없이 "총 주식 평가금액" + 평가손익
-<StockCategorySection screenshotMode maxItems={SHOT_MAX /* =5 */}    // 비중바+범례(상위5+그 외) + 종목 리스트(상위5+그 외 N종목)
+<StockCategorySection screenshotMode maxItems={SHOT_MAX /* =7 */}    // 비중바+범례(상위7+그 외) + 종목 리스트(상위7+그 외 N종목)
   maskFn={mask} exchangeRates={exchangeRates}
   renderItem={(s,_,c) => <StockCard screenshotMode maskFn={mask} ... />} />
-푸터: APP_CONFIG.name + siteHost + 날짜
+푸터: APP_CONFIG.name + siteHost
 ```
 
 - 데이터는 `useFilteredStockData("all")` 단일 출처 — 주식 탭과 캐시 키 공유(중복 fetch 없음)
+- **비중바·리스트 색**: 훅이 주는 `barItems`/`barColors`(`MAIN_PALETTE`, 주식 탭과 동일)를 그대로 쓰지 않고, `ShareCard`가 `segFill`(=`SHARE_SAFE_PALETTE` 인덱스 순환, 포트폴리오 도넛과 동일 팔레트)로 색만 덮어씌운 `shareBarItems`/`shareBarColors`를 만들어 `StockCategorySection`에 넘긴다(#4.24). 주식 탭 원본 배열·`MAIN_PALETTE`는 불변 — 인증카드 전용 색 오버레이일 뿐 값 자체(정렬·비중)는 그대로 재사용.
 - 종목 파생값은 `computeStockMetrics(stock, exchangeRates, totalValue)` 재사용
 - 마스킹 규약: 금액만 `••••`, 비중%·수익률%는 항상 노출
 - 금액 포맷(2026-08-08): `mask`(→`formatCurrency`, 전체 금액 — 상세 탭 `PRICE_DISPLAY_MODE="full-only"`와 동일)를 헤더·종목 리스트·"그 외 N종목" 전부에서 공유. `StockSummaryHeader`의 `maskFn`은 `DetailSummaryHeader`의 `fmtFull`·`fmt`를 동시에 덮어쓰므로(`ProfitMetric`도 `formatShort` 단일 포매터) 축약 포매터를 넘기면 평가금액·평가손익 둘 다 축약으로 새는 점 주의(과거엔 이 버그로 헤더만 축약 표시됐었음)
-- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(`CARD_WIDTH`=460px 고정폭 + CSS scale), `pixelRatio = ceil(1100 / el.offsetWidth)`(460 기준 3 → 최종 PNG 1380px). `innerRef`(460px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정). `CARD_WIDTH`는 기존 480→460으로 소폭 축소(2026-08-08) — 검은 카드 박스 자체의 바깥 폭을 줄이는 유일한 레버(내부 패딩은 박스 안쪽만 조정할 뿐 바깥 폭엔 무관)
-- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
-- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=480` 고정인 캡처 PNG와는 무관)로 조정
+- 캡처: `share-menu.tsx`의 `ScaledCardPreview`(`CARD_WIDTH`=680px 고정폭 + CSS scale), `pixelRatio = ceil(CAPTURE_TARGET_PX / el.offsetWidth)`(`CAPTURE_TARGET_PX`=1400, 680 기준 3 → 최종 PNG ~2040px. 폭을 바꾸면 배율이 계단식으로 점프하므로 이 상수를 함께 검토). `innerRef`(680px 박스) 는 반드시 `shrink-0` — 없으면 flex가 레이아웃 단계에서 먼저 축소하고 `transform: scale()`이 그 위에 또 곱해져 이중 축소(2026-08-08 회귀 수정). `CARD_WIDTH`는 480→460(2026-08-08)→520→**680**(#4.24, 레퍼런스급 대형 도넛. 다이얼로그 `max-w-[560px] sm:max-w-[760px]`와 짝. 단일 고정값이라 기기 무관 동일 PNG=R32 유지) — 카드 박스 바깥 폭을 바꾸는 유일한 레버이며, **`portfolio-ring-card.tsx`의 `VIEW_W`(=CARD_WIDTH−24)도 반드시 함께 조정**(안 하면 도넛만 안 커지고 좌우 여백만 늘어남)
+- **간격(2026-08-08)**: 비중바·리스트 래퍼는 배경 없이 `py-3.5 px-2` — 세로(`py-3.5`)는 헤더~범례~리스트 실제 노출 간격 28px 통일용 마진 계산의 기준점(절대 변경 금지), 가로(`px-2`)는 카드 폭을 넓게 쓰기 위한 좌우 여백. 헤더·푸터 좌우 패딩은 `px-2`(래퍼 `px-2`+내부 `px-0`와 동일, 카드 전체 좌우 오프셋 `outer p-3`+8=20px), 카드 최상단~헤더값/푸터~카드 최하단 간격도 `pt-2`/`pb-2`로 대칭. 모바일 미리보기([share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))는 `DialogContent` 폭을 `w-[95vw] sm:w-full`(뷰포트 상대 단위로 확실히 95% 확보)로, 미리보기 컨테이너는 좌우 `px-4`(스케일 계산 기준 `outer.clientWidth`만 줄임 — `CARD_WIDTH=680` 고정인 캡처 PNG와는 무관)로 조정
+
+### PortfolioRingCard (`header-menu/share/portfolio-ring-card.tsx`)
+
+인증카드 "포트폴리오" 타입 = **대형 종목 도넛 + 하단 분야 막대바(`PortfolioSectorBar`)** 2단(#4.24). 레퍼런스(Buffett Portfolio 인포그래픽) 형태 — 도넛이 카드 폭의 **63%**를 차지하고 **조각 안에 투명 배경 기업 로고**가 박힌다. 데이터는 `ShareCard`에서 계산해 props로 주입(로컬 훅 호출 없음).
+
+- **props**: `segments: RingSegment[]` 만. (중앙 지표 `holdingsCount`는 제거 — 중앙은 비움)
+- **`RingSegment`**: `{ key; name; ticker; isForeign; truePct; color; etfBrand?; subLogos? }`. `subLogos`(최대 3, `SubLogo[]`)가 있으면 그 조각은 미니 칩 여러 개로 렌더된다("그 외" 전용). 상위 7 + "그 외" = 최대 8. `color`=조각 fill, `labelColor`=링 밖 % 텍스트, `color`는 조각 fill 과 링 밖 % 텍스트에 공용.
+- **중앙**: **비움**(두꺼운 밴드 확보용). 과거의 "N 종목" 지표 블록은 삭제됨.
+- **각도 압축**(`computeRingArcs(pcts, minArcs?)` export, 순수 함수): ① 조각별 최소각 `MIN_ARC_DEG`(22°) + 나머지를 비중 비례 배분 → ② 실제 비중 구간별 최대 호 상한 `MAX_ARC_BY_PCT`(`[[90,110],[80,100],[70,92],[60,84],[50,76]]`, <50%는 무제한) 초과분을 미고정 조각에 재분배(수렴까지) → ③ 실제 비중 내림차순 단조 clamp(역전 방지) → ④ 합 360° 정규화. 조각 1개면 360°. → ⑤ `minArcs`가 있으면 `enforceMinArcs`가 세그먼트별 최소각을 보장(부족분을 다른 조각에서 비례 회수하되 각자 `MIN_ARC_DEG` 바닥은 침범 안 함, 합 360·단조성 유지). **상수만 바꿔 튜닝**.
+- **렌더**: SVG 도넛 웨지 `<path>` — `stroke="var(--ring-divider)" strokeWidth={5} strokeLinejoin="round"`, `GAP_DEG=0`. 구분선 색은 **라이트 `#ffffff` / 다크 `#000000`** 고정. 인접 조각의 stroke가 공유 모서리에서 겹쳐 한 줄 구분선이 된다. **외곽 링·안쪽 홀 라인 모두 없음** — 별도 테두리 없이 색면만으로 마감.
+  - **조각 안 로고**: 로고 반경 `LOGO_R = R_INNER + (R_OUTER−R_INNER)*0.6`(밴드 바깥쪽 0.6 지점), 조각 `mid` 각도에 HTML 절대배치(`translate(-50%,-50%)`)로 `<BrandMark size={chipSizeFor(arc)} bgColor={seg.color} />`(**조각색 원형** 칩). **칩 지름은 조각 각도(=비중)에 비례**(`chipSizeFor`) — `MIN_ARC_DEG`(22°)~`CHIP_REF_ARC`(110°)를 `CHIP_MIN`(40px)~`CHIP_MAX`(84px)로 sqrt 이징 보간하고, 로고 반경에서의 현(chord)×0.7로 상한을 걸어 조각 밖으로 넘치지 않게 한다. 하한도 못 채우는 좁은 조각이나 **로고가 없으면 생략**.
+  - **"그 외" 조각**: `subLogos`가 있으면 큰 칩 1개 대신 **`SUB_CHIP`(28px) 미니 칩 3개**를 조각 각도 범위에 균등 배치(`SUB_CHIP_GAP`=6px 간격). 이를 위해 `computeRingArcs`에 **세그먼트별 최소각**(`ETC_MIN_ARC`=40°)을 넘긴다.
+  - **링 바깥 라벨** = 이름 + 비중%만(**아이콘은 조각 안으로 이동**). 존별 정렬: `right` 좌측정렬 / `left` 우측정렬 / `top`·`bottom` 가운데정렬, 모두 `flex-col`.
+  - **라벨 텍스트 = 하이브리드**: 해외 종목(`seg.isForeign && seg.ticker`) → **티커**, 그 외 → **`seg.name`**.
+  - **색·서체**: 앱 기본 산세리프(Inter). 이름 = `text-sm font-semibold tracking-tight text-foreground`, % = `text-sm font-bold tabular-nums` + `style={{ color: seg.labelColor }}`(가독성 위해 `text-sm` 이상 통일, #4.24).
+  - **종목명 짤림 원천 차단**: 라벨 컨테이너 `overflow-hidden` + `maxWidth`, 텍스트 컬럼 `min-w-0 max-w-full`, 이름 span `[overflow-wrap:anywhere] line-clamp-2 max-w-full`. `break-keep`은 줄바꿈을 막아 카드 밖 짤림을 유발하므로 **사용 금지**.
+  - **라벨 겹침 방지**(`spreadVertically`): 좌/우 그룹의 `ly`를 `MIN_LABEL_GAP`(58px)만큼 벌린 뒤(아래로 밀고 그룹 중심 복원) 렌더. `lx`는 불변. `top`/`bottom` 존은 미적용.
+- **라벨 폭**: 존별 기하 계산 — `right`는 `VIEW_W - lx - 4`, `left`는 `lx - 4`, `top`/`bottom`은 160(px).
+- **링 기하 상수**(고정 px, `CARD_WIDTH=680` 기준): `VIEW_W=656`(=CARD_WIDTH−24, **CARD_WIDTH 변경 시 반드시 동반 조정**) · `VIEW_H=620` · `CX=328` · `CY=300` · **`R_OUTER=228`**(중앙 홀 `R_INNER`는 고정하고 바깥쪽만 확대, #4.24) · `R_INNER=78`(중앙 비움, 밴드 150px) · `LABEL_R=244`(R_OUTER와 16px 간격 유지) · `LOGO_R = R_INNER + (R_OUTER−R_INNER)*0.6`(≈168 — 밴드 중앙에 두면 최소 조각의 칩이 `CHIP_MIN` 아래로 떨어져 로고가 생략된다)/`CHIP_MIN=40`/`CHIP_MAX=84`/`CHIP_REF_ARC=110`/`SUB_CHIP=28`/`ETC_MIN_ARC=40` · `MIN_LABEL_GAP=58` · `GAP_DEG=0`. 캡처 DOM이라 뷰포트 반응형 클래스 금지.
+
+### BrandMark (`header-menu/share/brand-mark.tsx`)
+
+도넛 **조각 안**에 얹는 기업 로고 배지. **원형 칩 배경 = 해당 조각색**(`bgColor`) — 투명 여백이 있는 로고는 조각과 자연스럽게 이어지고, 흰 배경이 박힌 로고도 원형으로 정돈된다.
+
+- **props**: `{ ticker; name; isForeign; size; bgColor; etfBrand? }`. 요청 해상도는 `size*6`(최대 512) — 캡처 pixelRatio 3 대응.
+- 칩: `rounded-full overflow-hidden` + `backgroundColor: bgColor`, 내부 `<img object-cover>`가 칩을 **꽉 채워** 완전한 원이 된다(로고 자체의 사각 모서리가 안 보임).
+- **국내 ETF는 `etfBrand` 텍스트 배지**: 운용사 로고가 흰 배경 사각 이미지라(ACE 92.9%·TIGER 97.0%가 순백 불투명, 실측) 조각 위에서 흰 박스로 뜬다 → `BrandMark`가 `etfBrand` prop 유무로 `resolveLogoSrc` 호출 **전에** 분기해 브랜드명을 원형 칩에 텍스트로 렌더(로고 요청 자체를 안 함). 글자색 `pickOnColor(bgColor)`, 폰트는 브랜드명 길이에 반비례. **`resolveLogoSrc` 자체는 국내 ETF를 배제하지 않는다** — `StockIcon`(주식 탭 원형 아바타)은 같은 함수로 운용사 로고를 그대로 쓴다(흰 배경도 원 안에서는 자연스러움).
+- **로고가 없거나 로드 실패하면 `null` 반환 — 칩 자체를 그리지 않는다.** "그 외"처럼 로고 없는 조각에 빈 배지·텍스트가 남지 않게.
+- src 해석은 `resolveLogoSrc`(`lib/finance/logo-source.ts`) 공용 함수와 **공유** — `StockIcon`도 같은 함수를 쓴다(중복 구현 금지).
+- 캡처 DOM 전용 — 고정 px, `sm:` 금지(R32). `<img>`여야 `captureImage`의 dataURL 인라인 루프를 타므로 인라인 `<svg>`로 바꾸지 말 것.
+
+### PortfolioSectorBar (`header-menu/share/portfolio-sector-bar.tsx`)
+
+인증카드 "포트폴리오" 타입 도넛 **하단** — X-Ray 테마(분야) 축 분포. **금액 미표기**(분야명 + 비중%만, 개별 종목 서브 항목 없음). 캡처 DOM 전용(고정 px).
+
+- **props**: `title: string`(캡션), `items: { key; label; pct; color }[]`. **범용 컴포넌트** — "분야 구성"·"보유 유형 구성" 두 곳에서 재사용(#4.24, 캡션만 다름).
+- **데이터 1 — 분야 구성**(`ShareCard.sectorItems`): `computeBreakdown("theme", mergedStocks, exchangeRates)`(`lib/xray/stock-xray.ts`, X-Ray 탭과 동일 엔진) → `items` 평가액 desc → 상위 `SECTOR_MAX`(5) + 나머지 `ratio` 합산 "그 외 N개 분야"(최대 6항목으로 통일, #4.24). fill = `SHARE_SAFE_PALETTE[i]`(도넛과 공용), % 텍스트도 같은 색, "그 외"=`SHARE_ETC_COLOR`.
+  - **가드**: `key !== "unclassified" && ratio > 0`인 분야가 2개 미만이면 `[]` 반환 → 막대바 섹션 미렌더. 분류 fetch는 `ShareScreenshotDialog`가 `useXrayClassifications`로 자동 수행(위 ShareCard 항목 참조).
+- **데이터 2 — 보유 유형 구성**(`ShareCard.categoryItems`): **`assetData.stocks` 원본**(병합 전)을 `stock.category`로 그룹핑해 `computeStockMetrics(...).pct` 합산 → 값 desc 정렬(delisted만 제외, `totalValue` 분모와 동일 필터). **`mergedStocks`를 쓰면 안 됨** — "all" 필터는 카테고리 무관 티커 단위로 병합해(예: 같은 ETF를 연금+IRP 양쪽에 보유) 병합 대표 1건의 category만 남아 다른 카테고리 보유분이 누락된다(#4.24 회귀 발견·수정). **`irp`·`pension`은 그룹핑 시점에 `"pension_irp"` 키로 합쳐 "연금저축펀드·IRP" 라벨 하나로 표시**(#4.24) — `stockCategories` 값 자체는 안 바꾸고 이 계산에서만 병합. 나머지 라벨은 `stockCategories`(`config/asset-options.ts`) 재사용. 필수 입력 필드라 미분류 가드 불필요, `items.length > 0`이면 항상 렌더(단일 카테고리만 있어도 노출 — 프로젝트 규칙: 목록 표시 조건은 `length > 0`, `> 1` 금지).
+- **렌더**: `분야 구성` 캡션(`text-sm text-muted-foreground`) + 가로 스택바(`h-2.5 rounded-full`) + 2열 범례(색점 + 분야명 truncate `text-sm` + `pct%` 조각색 bold `text-sm`). 재사용 참고: `dashboard.tsx` `SectionBar` 구조 / `stock-tab.tsx` `StockBarChart` 스타일(단 ₩ 제거).
 
 ### WelcomeGuide (`layout/welcome-guide.tsx`)
 

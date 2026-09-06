@@ -74,7 +74,18 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&b
 종목 로고 이미지 프록시.
 
 ```
-GET /api/logo?ticker=AAPL          # 해외 주식 (Clearbit 또는 대체 소스)
+GET /api/logo?ticker=AAPL&theme=dark&size=192   # 해외 주식 — logo.dev /ticker
+GET /api/logo?domain=www.samsung.com&theme=light&size=192
+                                   # 국내 — logo.dev 도메인 조회
+                                   # theme: light|dark(로고가 올라갈 배경 밝기), size: ~512
+                                   # 내부적으로 format=png(투명)·retina=true·fallback=404 고정
+                                   # 실패는 항상 404(과거 302 리다이렉트 제거 — 크로스오리진이라
+                                   # 인증카드 캡처의 dataURL 인라인이 CORS로 실패했음)
+                                   # Redis 캐시 키 v2:{d|t}:{key}:{size}:{theme}, TTL 1년
+                                   # ※ Brandfetch(cdn.brandfetch.io)는 사용 불가 — Logo Link
+                                   #   가이드라인이 서버 측 fetch·프록시·캐싱을 금지하며
+                                   #   (x-bf-error: automated_traffic로 302) 브라우저 <img>
+                                   #   직접 hotlink만 허용. 캡처용 same-origin 바이트와 비호환
 GET /api/logo?domain=www.samsung.com  # 도메인 기반 (ETF, 국내 주식)
 ```
 
@@ -115,6 +126,19 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
+
+### POST /api/xray-classify
+X-Ray 종목 분류(NDJSON 스트리밍). **파일:** `src/app/api/xray-classify/route.ts`
+
+```
+Body: { items: { ticker, name?, market?, category? }[] }
+→ NDJSON 라인들: { type: "meta"|"chunk"|"done"|"error", ... }
+```
+
+- 응답 분류 필드: `sector`(산업, 단일)·**`stockType`(종목 유형=투자 성격, 단일, #4.24)**·`themes`(다중)·`themePrimary`·`industry`·`region`·`marketCapTier`·`indices`(다중).
+- `stockType` 7종: 성장주/배당성장주/배당주/지수투자/가치주/채권·현금성/기타 — `sector`와 나란히 매 종목 필수 응답.
+- 서버 캐시(Redis, 90일 TTL, `v2:...` 키) — `themes`·`sector`·`stockType`·`indices` **모두 있어야 유효**, 하나라도 없으면 캐시 미스로 간주해 재분류(신규 필드 도입 시 점진적 백필).
+- 서버 일일 한도 `GEMINI_SERVER_DAILY_LIMIT`, 초과 시 429.
 
 ### PUT /api/sync — E2EE 클라우드 동기화 업로드
 ```
