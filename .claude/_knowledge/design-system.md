@@ -192,6 +192,7 @@
 - `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것. 하드코딩된 사본(`pwa-guide-illustrations.tsx`의 `BRAND` 상수, `floating-add-button.tsx`의 `bg-[#5b6fbf]/10` 등)도 함께 바꿔야 한다.
 - 공유/동기화 링크 진입 시 송신 테마(`&theme=`)를 hydration 이전 단계부터 적용해 깜빡임(FOUC) 방지.
 - **라이트/다크 비대칭 pin**: 라이트에서만 인지성이 부족한 조합(예: `text-muted-foreground/NN`)은 라이트 값을 교정하고 다크는 `dark:text-muted-foreground/NN`로 기존 모습 그대로 고정한다(§11 참고).
+- **가로 스크롤바 전역 금지**(R33): `globals.css`의 `body { overflow-x: hidden }` + `html { touch-action: pan-y }`로 페이지 레벨 가로 스크롤을 원천 차단한다. 어떤 컴포넌트도 뷰포트를 가로로 넘겨선 안 되며, 넘칠 위험이 있으면 스크롤바로 해결하지 말고 그 컴포넌트를 `min-w-0`/`max-w-full`/`truncate`로 수렴시킨다(날짜 input R10, 인증카드 미리보기 fit-to-width와 동일 원칙). 의도적 가로 스크롤(넓은 표·코드블록·X-Ray)은 **내부 `overflow-x-auto` 컨테이너**로만 — `body` 규칙은 이걸 막지 않는다.
 
 ---
 

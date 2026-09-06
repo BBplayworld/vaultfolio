@@ -31,12 +31,16 @@ export type ShareCardVariant = "stock" | "portfolio";
 export interface ShareCardProps {
   variant: ShareCardVariant;
   hideAmounts: boolean;
-  cardRef: React.RefObject<HTMLDivElement>;
+  // 캡처 인스턴스만 전달(저장 대상). 화면용 반응형 프리뷰 인스턴스는 생략.
+  cardRef?: React.RefObject<HTMLDivElement>;
   // 분류 캐시 갱신 감지용 — 다이얼로그가 useXrayClassifications로 fetch 후 증가시킴
   xrayTick?: number;
+  // true = 화면용 프리뷰(뷰포트 반응형 · ASSET_THEME · 스케일 없음).
+  // 미전달(기본) = 캡처용(680px 고정 · ASSET_THEME_SHOT). 저장 PNG는 항상 캡처 인스턴스 기준.
+  responsive?: boolean;
 }
 
-export function ShareCard({ variant, hideAmounts, cardRef, xrayTick }: ShareCardProps) {
+export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive }: ShareCardProps) {
   const { assetData, exchangeRates } = useAssetData();
   // 주식 탭과 동일한 단일 출처 — 전체 카테고리 기준. 내부에서 tickerList를 정렬해
   // 캐시 키를 공유하므로 주식 탭과 중복 fetch가 생기지 않는다.
@@ -163,12 +167,18 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick }: ShareCard
       }));
   }, [assetData.stocks, exchangeRates, totalValue]);
 
+  // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음, ASSET_THEME_SHOT 고정).
+  // 프리뷰/캡처 차이는 outer 폭·패딩과 도넛 스케일(responsive)뿐 — 렌더 구조는 동일.
+
   return (
-    <div ref={cardRef} className="p-3 rounded-2xl bg-background dark:bg-card">
+    <div
+      ref={cardRef}
+      className={responsive ? "p-2 sm:p-3 rounded-2xl bg-background dark:bg-card w-full" : "p-3 rounded-2xl bg-background dark:bg-card"}
+    >
 
       {variant === "portfolio" ? (
         <div className="py-4">
-          <PortfolioRingCard segments={ringSegments} />
+          <PortfolioRingCard segments={ringSegments} responsive={responsive} />
           {sectorItems.length > 0 && (
             <div className="mt-5 px-2">
               <PortfolioSectorBar title="분야 구성" items={sectorItems} />

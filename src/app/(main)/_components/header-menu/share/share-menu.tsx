@@ -21,48 +21,13 @@ const CARD_VARIANTS = [
 // 포트폴리오가 아닐 때 useXrayClassifications 트리거를 끄기 위한 안정 참조
 const EMPTY_STOCKS: Stock[] = [];
 
-// 카드 캡처 대상은 항상 680px 고정 폭 — 좁은 화면에선 CSS transform으로 축소만 하고
-// 레이아웃 크기 자체는 바꾸지 않는다. 기기별로 다른 이미지가 나오는 걸 막기 위함(R32).
+// 캡처 전용 인스턴스는 항상 680px 고정 폭(화면 밖). 프리뷰는 별도 반응형 인스턴스라
+// 저장 PNG는 기기·뷰포트 무관 100% 동일(R32).
 // 폭을 바꾸면 portfolio-ring-card.tsx의 VIEW_W(= CARD_WIDTH − p-3 좌우 24)도 함께 조정해야 한다.
 const CARD_WIDTH = 680;
 // 캡처 PNG 목표 최소 폭 — pixelRatio는 이 값을 offsetWidth로 나눈 올림 정수.
 // (680 기준 ceil(1400/680)=3 → 최종 약 2040px)
 const CAPTURE_TARGET_PX = 1400;
-
-function ScaledCardPreview({ children }: { children: React.ReactNode }) {
-  const outerRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [height, setHeight] = useState<number>();
-
-  useEffect(() => {
-    const outer = outerRef.current;
-    const inner = innerRef.current;
-    if (!outer || !inner) return;
-    const update = () => {
-      const nextScale = Math.min(1, outer.clientWidth / CARD_WIDTH);
-      setScale(nextScale);
-      setHeight(inner.scrollHeight * nextScale);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(outer);
-    ro.observe(inner);
-    return () => ro.disconnect();
-  }, []);
-
-  return (
-    <div ref={outerRef} className="flex justify-center w-full" style={{ height }}>
-      {/* shrink-0 필수 — 없으면 flexbox가 카드 레이아웃 박스를 컨테이너 폭에 맞춰 먼저
-          축소한 뒤 transform: scale()이 그 위에 다시 곱해져 이중으로 작아진다(예: 390px
-          컨테이너에서 최종 317px). shrink-0로 레이아웃 폭을 항상 CARD_WIDTH 고정해야 scale 계산이
-          의도대로(컨테이너 꽉 채움) 반영된다. */}
-      <div ref={innerRef} className="shrink-0" style={{ width: CARD_WIDTH, transform: `scale(${scale})`, transformOrigin: "top" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 interface Props {
   open: boolean;
@@ -159,15 +124,19 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 모바일 폭은 vw 고정값으로 직접 지정 — 기본 `w-full`은 `%` 기반이라 containing block에
-          따라 예상보다 좁게 잡힐 수 있어(원인 미상), 뷰포트에 항상 상대적인 vw로 확실히 95% 확보 */}
-      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-[95vw] sm:w-full max-w-[560px] sm:max-w-[760px] h-[94dvh] max-h-[96dvh] flex flex-col">
-        <DialogHeader className="px-5 py-4 text-left">
-          <DialogTitle className="flex items-center gap-2 text-base">
+      {/* 모바일: 전체화면(100vw × 100dvh, 테두리·라운드 제거)으로 프리뷰를 최대 확대.
+          sm: 이상은 기존 값(760px, 94dvh) 유지. 여기는 캡처 대상(share-card.tsx)이 아니라
+          다이얼로그 셸이라 sm: 반응형 사용 가능(R32 무관).
+          닫기(X) 버튼(공용 DialogContent 기본 top-4)을 헤더 상단 여백과 동일하게 —
+          모바일은 max(14px, 노치 safe-area-inset-top), 데스크톱은 top-4(py-4 헤더). */}
+      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-screen max-w-none rounded-none border-0 h-[100dvh] max-h-[100dvh] sm:w-full sm:max-w-[760px] sm:rounded-lg sm:border sm:h-[94dvh] sm:max-h-[96dvh] flex flex-col [&_[data-slot=dialog-close]]:top-[max(0.875rem,env(safe-area-inset-top))] sm:[&_[data-slot=dialog-close]]:top-4">
+        <DialogHeader className="px-3 pb-2 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-5 sm:py-4 text-left">
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             <IdCard className="size-4 text-primary" />
             인증카드
           </DialogTitle>
-          <DialogDescription className="text-xs text-left">
+          {/* 설명 문구는 데스크톱만 — 모바일은 타입 토글 라벨로 충분(세로 공간 확보) */}
+          <DialogDescription className="hidden sm:block text-xs text-left">
             {variant === "portfolio"
               ? "내 종목 구성 비중을 이미지로 만들어 저장할 수 있습니다."
               : "내 주식 현황을 이미지로 만들어 저장할 수 있습니다."}
@@ -175,7 +144,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
         </DialogHeader>
 
         {/* 제어 바 — 1줄: 타입 토글 + 저장 / 2줄: (주식 현황 한정) 금액 표시 */}
-        <div className="flex flex-col gap-2 px-5 py-3 border-t border-b bg-muted/20">
+        <div className="flex flex-col gap-2 px-3 py-2 sm:px-5 sm:py-3 border-t border-b bg-muted/20">
           <div className="flex items-center justify-between gap-3">
             <InlineSelector<ShareCardVariant>
               value={variant}
@@ -223,19 +192,30 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
           )}
         </div>
 
-        {/* 카드 미리보기. shrink-0 수정으로 스케일이 컨테이너를 꽉 채우게 됐으니, 카드가
-            다이얼로그 가장자리에 완전히 붙지 않도록 여백(px-4)을 둔다. 이 패딩은
-            outer.clientWidth(스케일 계산 기준)만 줄일 뿐 CARD_WIDTH(680, 캡처 PNG 실제 폭)와는
-            무관 — 미리보기 축소율만 살짝 커지고 저장되는 이미지 크기는 그대로다. */}
-        <div className="overflow-y-auto flex-1 px-4 py-2 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
-          <ScaledCardPreview>
-            <ShareCard
-              variant={variant}
-              hideAmounts={!showAmounts}
-              cardRef={cardRef}
-              xrayTick={xrayTick}
-            />
-          </ScaledCardPreview>
+        {/* 카드 미리보기 — 뷰포트에 맞춘 반응형 렌더(스케일 없음). 모바일은 좌우 여백 0(px-0)으로
+            프리뷰를 화면 끝까지. 텍스트·막대바는 상세>주식탭과 동일한 네이티브 크기(ASSET_THEME). */}
+        <div className="overflow-y-auto flex-1 px-0 py-1 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
+          <ShareCard
+            variant={variant}
+            hideAmounts={!showAmounts}
+            xrayTick={xrayTick}
+            responsive
+          />
+        </div>
+
+        {/* 캡처 전용 — 화면 밖 고정 680px 인스턴스. toPng은 이걸 캡처하므로 저장 PNG는
+            기기·뷰포트 무관 100% 동일(R32). 항상 마운트돼 있어야 handleSave 시점에 레이아웃됨. */}
+        <div
+          aria-hidden
+          className="fixed left-[-9999px] top-0 pointer-events-none"
+          style={{ width: CARD_WIDTH }}
+        >
+          <ShareCard
+            variant={variant}
+            hideAmounts={!showAmounts}
+            xrayTick={xrayTick}
+            cardRef={cardRef}
+          />
         </div>
       </DialogContent>
     </Dialog>

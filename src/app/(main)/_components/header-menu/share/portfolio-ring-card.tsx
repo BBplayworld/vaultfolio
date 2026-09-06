@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 
 // 인증카드 "포트폴리오" 타입 — 금액 없이 종목 구성 비중만 원형 링으로 표현.
@@ -41,26 +42,26 @@ const MAX_ARC_BY_PCT: readonly (readonly [number, number])[] = [
 // 링 크기(R_OUTER)와 캔버스 높이(VIEW_H)는 독립 — 링을 작게, 캔버스를 크게 잡으면
 // 링 밖 종목명 라벨의 여백·간격이 넉넉해진다.
 const VIEW_W = 656; // 카드 안쪽 폭 (CARD_WIDTH 680 − p-3 좌우 24)
-const VIEW_H = 620; // 캔버스(=카드) 높이 — 링 + 상하 라벨 여백
+const VIEW_H = 664; // 캔버스(=카드) 높이 — 링 + 상하 라벨 여백
 const CX = 328;
-const CY = 300;
-const R_OUTER = 228; // 도넛 바깥 반경 — 중앙 홀(R_INNER)은 고정하고 바깥쪽만 확대
-const R_INNER = 78; // 중앙 홀(비움) — 밴드 150px로 두껍게, 중앙 검정 영역 축소
-const LABEL_R = 244; // 라벨 앵커 반경(링 바깥) — R_OUTER와의 간격(16px) 유지
-// 로고 반경은 밴드 중앙(=153)이 아니라 **바깥쪽 0.6 지점**(≈168). 중앙 홀을 줄이면서
+const CY = 322;
+const R_OUTER = 240; // 도넛 바깥 반경 — 중앙 홀(R_INNER) 축소분 + 확대
+const R_INNER = 66; // 중앙 홀(비움) — 밴드 174px로 두껍게, 중앙 검정 영역 축소
+const LABEL_R = 256; // 라벨 앵커 반경(링 바깥) — R_OUTER와의 간격(16px) 유지
+// 로고 반경은 밴드 중앙(=153)이 아니라 **바깥쪽 0.6 지점**(≈170). 중앙 홀을 줄이면서
 // 밴드 중앙에 두면 반경이 안쪽으로 당겨져 같은 각도의 현(chord)이 짧아지고,
 // 최소 조각(22°)의 칩이 CHIP_MIN 아래로 떨어져 로고가 통째로 생략된다.
 const LOGO_R = R_INNER + (R_OUTER - R_INNER) * 0.6;
 // 조각 안 로고 칩은 **비중(조각 각도)에 비례**해 커진다.
 // 하한(CHIP_MIN)은 최소 조각각(MIN_ARC_DEG=22°)에서도 들어가는 크기로 잡는다 —
-// LOGO_R(≈168)에서 22° 현(chord) 길이가 ≈64px이라 40px는 여유 있게 수용된다.
-const CHIP_MIN = 40; // 최소 조각의 칩 지름(px)
-const CHIP_MAX = 84; // 1위(최대 호) 조각의 칩 지름(px) — 밴드 두께 150px 안에 들어감
+// LOGO_R(≈170)에서 22° 현(chord) 길이가 ≈65px이라 44px는 여유 있게 수용된다.
+const CHIP_MIN = 44; // 최소 조각의 칩 지름(px)
+const CHIP_MAX = 92; // 1위(최대 호) 조각의 칩 지름(px) — 밴드 두께 174px 안에 들어감
 const CHIP_REF_ARC = 110; // 이 각도(°) 이상이면 CHIP_MAX (MAX_ARC_BY_PCT 상한과 동일)
 const SUB_CHIP = 28; // "그 외" 조각 안 미니 로고 칩 지름(px)
 const SUB_CHIP_GAP = 6; // 미니 칩 사이 간격(px)
 const ETC_MIN_ARC = 40; // "그 외" 조각 최소 각도(°) — 미니 칩 3개 + 간격이 들어가도록
-const MIN_LABEL_GAP = 58; // 같은 쪽(좌/우) 인접 라벨의 세로 최소 간격(px)
+const MIN_LABEL_GAP = 66; // 같은 쪽(좌/우) 인접 라벨의 세로 최소 간격(px)
 const GAP_DEG = 0; // 각도 간극 없음 — 분리는 카드 배경색 stroke(--ring-divider)가 담당
 
 const RADIAN = Math.PI / 180;
@@ -218,7 +219,22 @@ function spreadVertically(items: Placed[]): Placed[] {
   return sorted.map((it) => ({ ...it, ly: Math.min(max, Math.max(min, it.ly + shift)) }));
 }
 
-export function PortfolioRingCard({ segments }: { segments: RingSegment[] }) {
+export function PortfolioRingCard({ segments, responsive }: { segments: RingSegment[]; responsive?: boolean }) {
+  // responsive=true(화면용 프리뷰)면 링을 컨테이너 폭에 맞춰 fit-to-width 스케일(가로 스크롤 없이 도넛이 폭을 꽉 채움).
+  // responsive 미전달(캡처 인스턴스)이면 VIEW_W 고정 — 저장 PNG 구도 불변.
+  const outerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    if (!responsive) return;
+    const el = outerRef.current;
+    if (!el) return;
+    const update = () => setScale(Math.min(1, Math.floor(el.clientWidth) / VIEW_W));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [responsive]);
+
   if (segments.length === 0) return null;
 
   // "그 외"(subLogos 보유)는 미니 칩 3개가 들어가도록 더 큰 최소각을 요구한다
@@ -244,9 +260,16 @@ export function PortfolioRingCard({ segments }: { segments: RingSegment[] }) {
     ...drawn.filter((d) => d.zone === "top" || d.zone === "bottom"),
   ];
 
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: VIEW_W, height: VIEW_H }}>
+  // 링 본체(svg + HTML 라벨/로고 오버레이). responsive면 transform:scale로 폭 맞춤.
+  const ring = (
+    <div
+      className="relative"
+      style={{
+        width: VIEW_W,
+        height: VIEW_H,
+        ...(responsive ? { transform: `scale(${scale})`, transformOrigin: "top left" } : {}),
+      }}
+    >
         <svg
           width={VIEW_W}
           height={VIEW_H}
@@ -328,7 +351,7 @@ export function PortfolioRingCard({ segments }: { segments: RingSegment[] }) {
           const labelMaxW =
             zone === "right" ? Math.max(80, VIEW_W - lx - 4)
               : zone === "left" ? Math.max(80, lx - 4)
-                : 160;
+                : 180;
           const alignCls =
             zone === "right" ? "items-start text-left"
               : zone === "left" ? "items-end text-right"
@@ -344,16 +367,28 @@ export function PortfolioRingCard({ segments }: { segments: RingSegment[] }) {
                   overflow-wrap:anywhere + line-clamp-2 로 긴 한글 종목명이 반드시 2줄 안에서
                   줄바꿈·말줄임 되도록 강제 — 가로 오버플로우(카드 밖 짤림) 원천 차단 */}
               <div className="flex flex-col leading-tight min-w-0 max-w-full">
-                <span className="text-sm font-semibold tracking-tight text-foreground line-clamp-2 [overflow-wrap:anywhere] max-w-full">
+                <span className="text-[15px] font-semibold tracking-tight text-foreground line-clamp-2 [overflow-wrap:anywhere] max-w-full">
                   {label}
                 </span>
-                <span className="text-sm font-bold tabular-nums" style={{ color: seg.color }}>
+                <span className="text-[15px] font-bold tabular-nums" style={{ color: seg.color }}>
                   {seg.truePct.toFixed(1)}%
                 </span>
               </div>
             </div>
           );
         })}
+      </div>
+  );
+
+  // 캡처 인스턴스: VIEW_W 고정 그대로(저장 PNG 구도 불변)
+  if (!responsive) {
+    return <div className="flex flex-col items-center">{ring}</div>;
+  }
+  // 화면용 프리뷰: 링을 컨테이너 폭에 맞춰 축소(레이아웃 박스도 스케일된 크기로 잡아 가로 넘침 없음)
+  return (
+    <div ref={outerRef} className="w-full flex justify-center overflow-hidden" style={{ height: VIEW_H * scale }}>
+      <div className="shrink-0" style={{ width: VIEW_W * scale, height: VIEW_H * scale }}>
+        {ring}
       </div>
     </div>
   );

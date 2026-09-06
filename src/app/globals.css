@@ -255,6 +255,10 @@ These serve as the fallback; there is no separate default.css file. */
 
   body {
     @apply bg-background text-foreground overscroll-none;
+    /* 가로 스크롤바 전역 금지 — 페이지 레벨 가로 넘침만 차단(내부 overflow-x-auto 컨테이너는 무영향).
+       컴포넌트에서 뷰포트를 넘기면 스크롤바가 아니라 그 컴포넌트를 min-w-0/max-w-full로 수렴시킬 것
+       (R33, 날짜 input R10과 동일 원칙). html { touch-action: pan-y }와 짝. */
+    overflow-x: hidden;
   }
 
   /* 모든 버튼과 클릭 가능한 요소에 cursor: pointer 적용 */

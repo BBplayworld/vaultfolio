@@ -4,7 +4,35 @@
 
 ---
 
+## 2026-09-06
+
+### 인증카드 — 주식 펼침 제거 + 포트폴리오 도넛·라벨 확대 (#4.24)
+
+- **주식 현황 펼침 제거**: 위 "프리뷰/캡처 분리"에서 프리뷰 인스턴스에 `screenshotMode={!responsive}`(=false)를 넘기면서, `StockCard`의 상세>주식탭용 펼침(`Collapsible`) 기능이 프리뷰에서 되살아났다. 인증카드는 정적 이미지라 펼침이 없어야 함. → `share-card.tsx`에서 `const shot = !responsive` 삭제, `screenshotMode` 3곳(`StockSummaryHeader`/`StockCategorySection`/`StockCard`)을 **항상 true**로. `StockCard`는 `screenshotMode`면 함수 상단에서 조기 return 해 펼침 DOM 자체가 없음(`stock-tab.tsx:769`). `responsive`는 outer 폭·패딩과 `PortfolioRingCard` 스케일에만 계속 사용. 두 인스턴스의 하위 렌더가 이제 완전히 동일(`ASSET_THEME_SHOT` 고정) — 프리뷰가 저장 이미지와 1:1. 프리뷰 주식명/금액이 14px→15px로 1px 커짐(요구 "상세탭과 같거나 크게"에 부합).
+- **포트폴리오 도넛·라벨 확대**: 링 밖 주식명이 고정 `text-sm` + 위치별로 좁아지는 `labelMaxW` + `line-clamp-2` 조합이라 "임의로 축소된" 느낌. `portfolio-ring-card.tsx` 기하 상수 조정 — `R_INNER` 78→66(밴드 150→174, 도넛이 더 커 보임)·`R_OUTER` 228→240(지름 456→480, 카드폭의 69→73%)·`LABEL_R` 244→256·`VIEW_H` 620→664·`CY` 300→322·`MIN_LABEL_GAP` 58→66·`CHIP_MIN/MAX` 40/84→44/92. 라벨 폰트 `text-sm`→`text-[15px]`(이름·%), `labelMaxW` top/bottom 160→180(좌우 하한 80은 유지 — 올리면 라벨 박스가 카드 패딩을 넘어 짤림).
+- **`CARD_WIDTH`(680)·`VIEW_W`(656)는 불변** — `pixelRatio = ceil(1400/CARD_WIDTH)`가 700 부근에서 3→2로 급락하므로. 저장 PNG 가로 해상도·구도 동일, 세로만 pixelRatio(3)배로 +132px. 사용자 확인: 프리뷰·저장 이미지 모두 확대 적용.
+
+### 인증카드 — 프리뷰/캡처 인스턴스 분리 (#4.24)
+
+- **문제**: `ScaledCardPreview`가 680 고정 카드를 통째로 `transform: scale(~0.57)` 축소 → 모바일 프리뷰의 텍스트·도넛이 상세>주식탭보다 훨씬 작게 보였다. 카드 내부 텍스트(`ASSET_THEME_SHOT` 15px)는 이미 상세탭(`ASSET_THEME` 모바일 14px)보다 크거나 같아, 작아 보인 원인은 100% 스케일 축소였다.
+- **결정**(사용자): "프리뷰는 모바일에 맞춰 노출, **저장할 때만** 고정 680px." → 미리보기와 캡처를 **별개 `ShareCard` 인스턴스**로 분리.
+- **조치**:
+  - `share-card.tsx`에 `responsive?: boolean` prop. `responsive`면 전 하위 `screenshotMode={false}` → `ASSET_THEME`(`sm:` 반응형), outer `w-full`. 미전달(캡처 기본)은 현행 `ASSET_THEME_SHOT` 고정.
+  - `portfolio-ring-card.tsx`에 `responsive?` prop — 링 서브트리만 자체 fit-to-width 스케일(`min(1, floor(clientWidth)/VIEW_W)`, `overflow-hidden`). 도넛이 모바일 폭을 꽉 채움. 캡처 인스턴스는 `VIEW_W`(656) 고정 불변.
+  - `share-menu.tsx`: `ScaledCardPreview` **제거**. 프리뷰 컨테이너에 `<ShareCard responsive />`(ref 없음). 화면 밖(`fixed left-[-9999px] aria-hidden`)에 고정 680 `<ShareCard cardRef={cardRef} />` 상시 마운트 → `toPng`이 이걸 캡처. `pixelRatio = ceil(1400/680) = 3` 불변 → **저장 PNG(~2040px) 변경 전과 100% 동일**.
+- **R32 범위 조정**: `sm:` 금지는 캡처 인스턴스(`screenshotMode` 경로)에만 적용. 반응형 프리뷰 인스턴스는 `ASSET_THEME`(`sm:` 포함) 사용, 저장 결정성은 캡처 인스턴스가 담당.
+- **X 버튼/헤더 상단 여백**(사용자 추가 요청): `DialogHeader` `pt-[max(0.875rem,env(safe-area-inset-top))]`, 닫기 X `[&_[data-slot=dialog-close]]:top-[max(0.875rem,env(safe-area-inset-top))] sm:top-4` — 노치·상태바 겹침 방지. 좌측은 이미 여백 충분해 그대로.
+- **한계**: 도넛은 폭을 꽉 채우지만 링 밖 라벨 폰트는 도넛 비율로 축소됨. 라벨 네이티브화는 viewBox SVG + %-좌표 재설계가 필요(범위 밖, 필요 시 후속).
+
 ## 2026-09-05
+
+### 인증카드 다이얼로그 모바일 확대 + 가로 스크롤 전역 금지 (#4.24)
+
+- **문제**: 캡처 대상 카드는 항상 680px 고정(R32)이라 `ScaledCardPreview`가 fit-to-width로 축소 → 모바일에서 scale ≈ 0.5, 도넛·텍스트가 안 보임.
+- **제약 확정**(사용자): 저장 PNG는 기기 무관 동일(680 아트보드 유지) · 가로 스크롤바 금지 · 확대 버튼/핀치줌 안 함 · 좌우 여백 제거해 최대 확대. → 물리적 상한 = 뷰포트폭÷680(가로 스크롤 없이 680 고정이면 <680 폰에선 축소 불가피).
+- **조치**(`share-menu.tsx` 단독): `DialogContent` 모바일 전체화면(`w-screen h-[100dvh]`, 테두리·라운드 제거, `sm:`는 현행 유지), `DialogDescription` `hidden sm:block`, 헤더·제어바 패딩 축소, 프리뷰 컨테이너 `px-0`(좌우 여백 0). 헤더 패딩 축소에 맞춰 공용 닫기(X) 버튼도 `[&_[data-slot=dialog-close]]:top-1.5 sm:top-3.5` 오버라이드로 제목과 같은 높이 라인에 맞춤(`dialog.tsx` 공용 기본은 미변경). `ScaledCardPreview`는 `floor(clientWidth)` 사용 + outer `overflow-x-hidden`로 서브픽셀 넘침 방어. **캡처 파이프라인·`pixelRatio`·`share-card.tsx` 전부 불변** — `offsetWidth`가 transform 무관 항상 680이라 저장 PNG(~2040px) 동일.
+- **가로 스크롤 전역 금지(R33)**: `globals.css` `body { overflow-x: hidden }` 추가. 페이지 레벨만 차단하고 내부 `overflow-x-auto`(X-Ray 표 등)는 무영향. `design-system.md` §8·qa R-registry에 규칙 명문화 — 신규 UI가 뷰포트를 넘기면 스크롤바가 아니라 `min-w-0`로 수렴.
+- 페이지 라우트 전환은 검토 후 기각(다이얼로그가 이미 사실상 전체화면, 내비 배관 대비 이득 미미).
 
 ### 홈 팁 박스에 "새 공지" 노출 재도입 (#4.24)
 
