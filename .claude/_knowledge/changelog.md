@@ -6,6 +6,31 @@
 
 ## 2026-09-06
 
+### 비중바 ↔ 종목 리스트 간격 36px 통일 (상세>주식 · 인증카드>주식 현황) (#4.24)
+
+- `StockCategorySection`(공유) 리스트 블록 `screenshotMode ? "mt-7" : "mt-8"` → `mt-9` 고정(인증카드 28→36px, 상세 32→36px, 두 표면 동일). 섹션 `space-y-3`(12px)은 마진 상쇄로 계속 안 보임 → 이 `mt` 단일 값이 실제 간격.
+- 상세 탭은 상쇄 후 마진 하나뿐이라 비대칭 없음. **인증카드는 `mt-7`이 4개 세로 이음새(헤더→범례·범례→리스트·리스트→푸터)를 28px로 맞춘 시스템의 일부**라, `mt`만 키우면 저장 PNG에서 한 이음새만 넓어진다 → `share-card.tsx` 래퍼 `py-3.5`→`py-[22px]`(14→22)로 4개를 함께 36px로 통일. 주석 수치 갱신.
+- 저장 PNG 세로만 소폭 증가(pixelRatio 3 → ~+48px). 해상도·구도·텍스트 크기·프리뷰 불변.
+
+### 인증카드 저장 텍스트 배율 조정(1.57→1.42→1.5→1.46) + `SHOT_BIG_SCALE` 문서 상수화 (#4.24)
+
+- **값 조정**: 캡처(저장 PNG) 텍스트 배율 ~1.57 → 1.42 → 1.5 → **1.46**. `ASSET_THEME_SHOT_BIG` 값 재계산(base×1.46): 14→20·20→29·16→23·9→13·10→15px, `icon` `size-[35px]`, footer 18/20. `PortfolioSectorBar big` `text-[20px]`·`size-[15px]`. 도넛 `rLabelFont = round(12*SHOT_BIG_SCALE)` → 18.
+- **`SHOT_BIG_SCALE`** 상수를 theme.ts에 도입 — **문서용 배율 기준**. Tailwind JIT가 `text-` 임의값을 소스 문자열로 스캔하므로 CSS 변수/런타임 계산으로는 못 만든다(calc + `--shot-scale` CSS 변수 임의값 방식을 시도했으나 프리뷰에서 아이콘이 원본 크기로 blowout·비중바가 사라져 **롤백**). 이 값을 바꾸면 `ASSET_THEME_SHOT_BIG` 값들을 `base×SCALE` 반올림으로 재계산해 교체(theme.ts 주석에 base 표). `rLabelFont`만 JS 숫자라 `SHOT_BIG_SCALE` import로 자동 파생.
+- 프리뷰·`CARD_WIDTH`·`pixelRatio`·`VIEW_W/H`·간격 불변. R35 갱신.
+
+### 인증카드 저장 PNG — 캡처 텍스트를 프리뷰 비율만큼 확대 (680px 아트보드 유지) (#4.24)
+
+- **문제**: 프리뷰(~374px)와 저장 PNG(680px 아트보드)가 같은 `ASSET_THEME_SHOT` 토큰(절대 px 동일)을 써서, 저장 이미지의 텍스트가 카드에서 차지하는 비율이 프리뷰의 ~55%로 작아 보임.
+- **조치**: 캡처 전용 큰 토큰 세트. `theme.ts`에 `ASSET_THEME_SHOT_BIG`(폰트·아이콘 ~×1.57: 14→22·20→32·16→26·9→14·10→16px, `icon` `size-[38px]`, 신규 `bodyText` 키) 추가. (실기기 확인 후 초기 ×1.8에서 소폭 축소.) `share-card.tsx`가 `const shotBig = !responsive`를 만들어 `StockSummaryHeader`/`StockCategorySection`/`StockCard`(→`StockRowHeader`→`StockIcon`)·`DetailSummaryHeader`/`ProfitMetric`·`PortfolioSectorBar`(`big` prop)에 스레딩. 각 `screenshotMode ? SHOT.x : "…"` → `screenshotMode ? (shotBig ? SHOT_BIG.x : SHOT.x) : "…"`. 토큰 미경유 하드코딩(`text-sm` "N주"·우측 손익/률·"그 외 N종목"·헤더 라벨/secondary·푸터)도 `bodyText` 또는 인라인으로 분기.
+- **도넛 라벨 짤림 방지(프리뷰·캡처 공통)**: `portfolio-ring-card.tsx` — 캡처 `rLabelFont` `null`→`19`, `line-clamp-2`→`line-clamp-3`, top/bottom `labelMaxW` `180`→`208`, `rGap` 프리뷰 `rLabelFont*4`→`*4.5`·캡처 `96`. **좌우 하한은 `Math.max(96,…)`로 올렸다가 9/3시 방향 라벨 박스가 링 좌표계를 벗어나 화면 밖으로 짤려서 `Math.max(64,…)`로 정정** — 가용폭(≈68) 이하로만. 프리뷰는 `scale`에 `PREVIEW_SIDE_INSET`(8px×2)를 빼 좌우 최소 공백도 확보. 좁은 존 긴 이름은 3줄 + 말줄임으로 수렴(화면 밖 짤림 아님). `PortfolioSectorBar`는 `big`이면 텍스트 `text-sm`→`text-[22px]`·막대/색점 `2.5`→`16px`. `StockIcon` 캡처 로고 요청도 `captureLogoSize(28)`→`captureLogoSize(44)`.
+- **불변**: `screenshotMode`(정적 렌더·펼침 제거)는 재사용 그대로 — `!responsive`에 재결속 금지(과거 프리뷰 펼침 부활 회귀). `CARD_WIDTH`(680)·`pixelRatio`(3)·`VIEW_W`/`VIEW_H`·간격 토큰 전부 불변 → PNG 해상도·구도·프리뷰 크기 모두 동일. `zoom`/`transform:scale` 래퍼는 `offsetWidth×zoom` Chromium 버전 의존(R32 회귀)·도넛 오버플로로 기각.
+- R-registry에 R35 추가.
+
+### 인증카드 프리뷰 텍스트 크기 — 주식현황 히어로 상세탭 통일 + 포트폴리오 도넛 라벨 확대 (#4.24)
+
+- **주식 현황 히어로/아이콘**: 직전 "1px 정렬"에서 종목 행만 맞췄는데, 히어로("총 주식 평가금액")·평가손익·로고 아이콘이 여전히 상세탭 모바일보다 큼. `theme.ts` `ASSET_THEME_SHOT`: `summaryValue` `text-2xl`→`text-xl`(24→20px), `profitAmount` `text-lg`→`text-base`(18→16px), `profitRate` `text-base`→`text-sm`(16→14px), `icon` `size-7`→`size-6`(28→24px). 이제 `ASSET_THEME_SHOT` = `ASSET_THEME` 모바일값에서 `sm:`/`lg:`만 제거한 세트(`cardHeader`/`cardTriggerButton` 간격만 컴팩트 예외). 프리뷰·캡처 공용이라 저장 PNG 히어로도 같이 축소(2040px에서 비가시).
+- **포트폴리오 도넛 라벨 프리뷰**: `PortfolioRingCard`가 `responsive`면 링 전체를 `transform: scale(~0.57)`로 축소해 `text-[15px]` 라벨이 모바일에서 ~8.6px로 렌더됨(바로 아래 "분야 구성" `PortfolioSectorBar`는 scale 밖이라 14px 그대로 → 확연히 작음). `portfolio-ring-card.tsx`: `rLabelFont = Math.max(15, 12/scale)`를 라벨 `<span>` 인라인 `fontSize`로(실효 ~12px), `spreadVertically`에 `gap` 파라미터 추가해 `responsive`면 `rGap = max(MIN_LABEL_GAP, rLabelFont*4)`로 세로 겹침 방지. `responsive` 미전달(캡처)이면 분기 안 타므로 **저장 PNG 라벨 15px 완전 불변**(R32).
+
 ### 인증카드 주식 현황 종목 행 텍스트 — 상세>주식 탭(모바일)과 1px 정렬 (#4.24)
 
 - "프리뷰/캡처 분리" 이후 프리뷰도 항상 `screenshotMode`(`ASSET_THEME_SHOT`)를 써서, `ASSET_THEME_SHOT`이 `sm:` 데스크톱 값으로 고정돼 있던 탓에 모바일 프리뷰의 종목 행 텍스트가 상세 탭보다 1px 커 보였다.

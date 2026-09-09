@@ -12,7 +12,7 @@ import {
 import { useAssetData } from "@/contexts/asset-data-context";
 import { APP_CONFIG } from "@/config/app";
 import { stockCategories } from "@/config/asset-options";
-import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR } from "@/config/theme";
+import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
@@ -167,8 +167,11 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       }));
   }, [assetData.stocks, exchangeRates, totalValue]);
 
-  // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음, ASSET_THEME_SHOT 고정).
-  // 프리뷰/캡처 차이는 outer 폭·패딩과 도넛 스케일(responsive)뿐 — 렌더 구조는 동일.
+  // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음).
+  // 캡처(!responsive)만 shotBig → ASSET_THEME_SHOT_BIG(폰트 ×SHOT_BIG_SCALE)로 680px 아트보드에서 프리뷰 비율 재현.
+  // screenshotMode 자체를 responsive에 재결속하지 않는다(과거 프리뷰 펼침 부활 회귀).
+  const shotBig = !responsive;
+  const footerTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
 
   return (
     <div
@@ -181,12 +184,12 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
           <PortfolioRingCard segments={ringSegments} responsive={responsive} />
           {sectorItems.length > 0 && (
             <div className="mt-5 px-2">
-              <PortfolioSectorBar title="분야 구성" items={sectorItems} />
+              <PortfolioSectorBar title="분야 구성" items={sectorItems} big={shotBig} />
             </div>
           )}
           {categoryItems.length > 0 && (
             <div className="mt-5 px-2">
-              <PortfolioSectorBar title="보유 유형 구성" items={categoryItems} />
+              <PortfolioSectorBar title="보유 유형 구성" items={categoryItems} big={shotBig} />
             </div>
           )}
         </div>
@@ -200,14 +203,15 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
         currencyGain={summary.stockCurrencyGain}
         maskFn={mask}
         screenshotMode
+        shotBig={shotBig}
       />
 
       {/* 비중 바(상위 7 + 기타) + 종목 리스트(상위 7 + 외 N종목) — 주식 탭과 동일 컴포넌트.
-          배경색 없이 카드 전체 배경과 통일. 세로 패딩(py-3.5=14px)은 간격 계산(헤더 mt-3.5 등)의
+          배경색 없이 카드 전체 배경과 통일. 세로 패딩(py-[22px]=22px)은 간격 계산(헤더 mt-3.5 등)의
           기준점이라 유지하고, 가로만(px-2=8px) 좁혀 콘텐츠가 카드 폭을 넓게 쓰게 한다.
-          헤더는 하단 패딩 0이라 여기 마진(14px) + 이 박스의 상단 패딩(14px)을 더해야
-          범례~리스트 간격(mt-7=28px)과 실제 노출 여백이 같아진다. */}
-      <div className="mt-3.5 rounded-lg py-3.5 px-2">
+          헤더는 하단 패딩 0이라 여기 마진(14px) + 이 박스의 상단 패딩(22px)을 더해야
+          범례~리스트 간격(mt-9=36px)과 실제 노출 여백이 같아진다(2026-09 28→36px 상향, 상세 탭과 통일). */}
+      <div className="mt-3.5 rounded-lg py-[22px] px-2">
         <StockCategorySection
           activeCategory="all"
           onCategoryChange={() => { /* 인증카드는 카테고리 고정 */ }}
@@ -216,6 +220,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
           barItems={shareBarItems}
           barColors={shareBarColors}
           screenshotMode
+          shotBig={shotBig}
           maxItems={SHOT_MAX}
           maskFn={mask}
           exchangeRates={exchangeRates}
@@ -245,6 +250,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 totalValue={totalValue}
                 marketMap={marketMap}
                 screenshotMode
+                shotBig={shotBig}
                 maskFn={mask}
               />
             );
@@ -258,10 +264,10 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
           하단 패딩(pb-2)도 헤더의 상단 패딩(pt-2)과 맞춰 카드 최상단~"총 주식 평가금액"과
           "시크릿에셋"~카드 최하단 간격이 같아지게 한다.
           리스트~푸터 실제 노출 간격 = 마진(mt-1.5=6px) + 마지막 행 자체 하단 패딩(cardHeader py-2=8px)
-          + 비중바·리스트 래퍼 하단 패딩(py-3.5=14px) = 28px로, 범례~리스트(순수 mt-7=28px)와 동일하다. */}
+          + 비중바·리스트 래퍼 하단 패딩(py-[22px]=22px) = 36px로, 범례~리스트(순수 mt-9=36px)와 동일하다. */}
       <div className="mt-1.5 flex items-baseline gap-1.5 px-2 pb-2">
-        <span className="text-xs text-foreground font-semibold">{APP_CONFIG.name}</span>
-        <span className="text-sm text-muted-foreground">{siteHost}</span>
+        <span className={`${footerTok.footerBrand} text-foreground font-semibold`}>{APP_CONFIG.name}</span>
+        <span className={`${footerTok.footerDomain} text-muted-foreground`}>{siteHost}</span>
       </div>
     </div>
   );

@@ -115,25 +115,55 @@ export const ASSET_THEME = {
  * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R32). 그래서
  * 여기 값엔 `sm:`이 없어야 한다 — 이게 결정성 불변식이고, 값 자체가 무엇이냐는 별개 문제다.
  *
- * 프리뷰·캡처 두 인스턴스 모두 이 토큰을 쓰므로(share-card.tsx), **종목 행 텍스트
- * (`cardInfoName`·`cardAmountMain`·`iconInitial`·`badge`)는 모바일 `ASSET_THEME` 크기에 맞춘다**
- * — 모바일 프리뷰가 상세>주식 탭과 동일하게 보이도록. 히어로(`summaryValue`·`profitAmount`·
- * `profitRate`)는 공유 이미지 강조를 위해 더 큰 값을 유지한다.
- * `screenshotMode`인 컴포넌트만 ASSET_THEME 대신 이 값을 쓴다.
+ * base(프리뷰) 크기 = 상세>주식 탭 모바일(`ASSET_THEME`의 `sm:`/`lg:` 미적용값)과 동일.
+ * (`cardHeader` `py-2`·`cardTriggerButton` `gap-4`는 카드 전용 컴팩트 레이아웃이라 의도적 예외.)
+ * `screenshotMode`인 컴포넌트가 프리뷰(작은 값)면 이 세트, 저장 PNG 캡처면 아래 `ASSET_THEME_SHOT_BIG`.
  */
 export const ASSET_THEME_SHOT = {
   cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
   cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
   cardInfoName: "font-semibold text-sm leading-tight",
   cardAmountMain: "text-sm font-bold tabular-nums leading-tight",
-  icon: "size-7",
+  icon: "size-6",
   iconInitial: "text-[9px]",
   badge: "text-[10px] px-1 py-0 ml-1 leading-tight",
-  summaryValue: "text-2xl font-bold tabular-nums break-all leading-tight",
-  profitAmount: "text-lg font-bold tabular-nums whitespace-nowrap",
-  profitRate: "text-base font-bold tabular-nums whitespace-nowrap",
+  summaryValue: "text-xl font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-base font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-sm font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
   legendText: "text-sm",
+  bodyText: "text-sm", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨·푸터 도메인 등) 공용
+  footerBrand: "text-xs",
+  footerDomain: "text-sm",
+} as const;
+
+/**
+ * 캡처(저장 PNG) 전용 — `ASSET_THEME_SHOT`의 폰트·아이콘 키를 **`SHOT_BIG_SCALE`배 한 결과**를
+ * 하드코딩한 것. 680px 아트보드에서 프리뷰(~374px)와 비슷한 시각 비율. `sm:` 없음(R32).
+ *
+ * ⚠ Tailwind JIT가 `text-[Npx]`를 소스 문자열로 스캔하므로 런타임 계산·CSS 변수로 못 만든다.
+ *    **`SHOT_BIG_SCALE`을 바꾸면 아래 값들을 `base × SCALE`(반올림)로 다시 계산해 교체할 것.**
+ *    base: cardInfoName/cardAmountMain 14, iconInitial 9, badge 10, summaryValue 20, profitAmount 16,
+ *          profitRate 14, icon 24, legendText/bodyText 14, footerBrand 12, footerDomain 14.
+ */
+export const SHOT_BIG_SCALE = 1.46;
+
+export const ASSET_THEME_SHOT_BIG = {
+  cardHeader: ASSET_THEME_SHOT.cardHeader,
+  cardTriggerButton: ASSET_THEME_SHOT.cardTriggerButton,
+  cardInfoName: "font-semibold text-[20px] leading-tight",
+  cardAmountMain: "text-[20px] font-bold tabular-nums leading-tight",
+  icon: "size-[35px]",
+  iconInitial: "text-[13px]",
+  badge: "text-[15px] px-1 py-0 ml-1 leading-tight",
+  summaryValue: "text-[29px] font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-[23px] font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-[20px] font-bold tabular-nums whitespace-nowrap",
+  legendGrid: ASSET_THEME_SHOT.legendGrid,
+  legendText: "text-[20px]",
+  bodyText: "text-[20px]",
+  footerBrand: "text-[18px]",
+  footerDomain: "text-[20px]",
 } as const;
 
 /**

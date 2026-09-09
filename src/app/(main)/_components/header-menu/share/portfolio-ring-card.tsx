@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { SHOT_BIG_SCALE } from "@/config/theme";
 import { BrandMark } from "./brand-mark";
 
 // 인증카드 "포트폴리오" 타입 — 금액 없이 종목 구성 비중만 원형 링으로 표현.
@@ -29,6 +30,8 @@ export interface SubLogo {
 // ── 튜닝 상수 ────────────────────────────────────────────────────────────────
 // 조각별 최소 각도(°). 모든 종목이 최소한 이 각도는 확보해 링이 한 조각에 먹히지 않게 한다.
 const MIN_ARC_DEG = 22;
+// 프리뷰 좌우 최소 공백(px) — 9/3시 방향 라벨이 화면 끝에 붙어 짤리지 않게 스케일 링을 이만큼 좁힌다.
+const PREVIEW_SIDE_INSET = 8;
 // 실제 비중 구간별 최대 호(arc, °) 상한 — 내림차순 매칭, 구간(<50%)은 상한 없음.
 const MAX_ARC_BY_PCT: readonly (readonly [number, number])[] = [
   [90, 110],
@@ -204,18 +207,18 @@ type Placed = { seg: RingSegment; a0: number; a1: number; mid: number; lx: numbe
  * 겹침을 아래로 밀어 해소한 뒤 그룹 전체를 원래 중심으로 되돌려 쏠림을 막는다.
  * lx(가로 위치)는 건드리지 않는다 — 조각과의 근접성으로 식별.
  */
-function spreadVertically(items: Placed[]): Placed[] {
+function spreadVertically(items: Placed[], gap: number = MIN_LABEL_GAP): Placed[] {
   if (items.length < 2) return items;
   const sorted = [...items].sort((a, b) => a.ly - b.ly);
   for (let i = 1; i < sorted.length; i++) {
-    const min = sorted[i - 1].ly + MIN_LABEL_GAP;
+    const min = sorted[i - 1].ly + gap;
     if (sorted[i].ly < min) sorted[i] = { ...sorted[i], ly: min };
   }
   const origCenter = items.reduce((s, it) => s + it.ly, 0) / items.length;
   const newCenter = sorted.reduce((s, it) => s + it.ly, 0) / sorted.length;
   const shift = origCenter - newCenter;
-  const min = MIN_LABEL_GAP / 2;
-  const max = VIEW_H - MIN_LABEL_GAP / 2;
+  const min = gap / 2;
+  const max = VIEW_H - gap / 2;
   return sorted.map((it) => ({ ...it, ly: Math.min(max, Math.max(min, it.ly + shift)) }));
 }
 
@@ -228,7 +231,8 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     if (!responsive) return;
     const el = outerRef.current;
     if (!el) return;
-    const update = () => setScale(Math.min(1, Math.floor(el.clientWidth) / VIEW_W));
+    const update = () =>
+      setScale(Math.min(1, Math.max(0, Math.floor(el.clientWidth) - PREVIEW_SIDE_INSET * 2) / VIEW_W));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -243,6 +247,16 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     segments.map((s) => (s.subLogos?.length ? ETC_MIN_ARC : MIN_ARC_DEG)),
   );
 
+  // responsive 프리뷰: 링 전체가 transform:scale(<1)로 축소돼 text-[15px] 라벨이 ~8px로 렌더 → 폰트를
+  //   12/scale로 키워 상쇄(실효 ~12px, "분야 구성" 14px과 비슷). scale≈1(데스크톱)이면 15px 유지.
+  // 캡처(저장 PNG, !responsive): SHOT_BIG_SCALE에서 파생(계수 12 → 1.46에서 18, 1.42에서 17). 도넛 라벨은
+  //   좁은 존 짤림 때문에 본문(계수 14)보다 조금 작게. 나머지 짤림 방지는 아래 labelMaxW·line-clamp-3.
+  const rLabelFont = responsive ? Math.max(15, 12 / scale) : Math.round(12 * SHOT_BIG_SCALE);
+  const rGap = responsive
+    ? Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 4.5))
+    : Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 5));
+  const labelClampCls = "line-clamp-3";
+
   let acc = 0;
   const drawn: Placed[] = segments.map((seg, i) => {
     const a0 = acc;
@@ -255,8 +269,8 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
 
   // 좌/우로 몰린 라벨은 세로 간격을 벌려 겹침 해소(top/bottom은 그대로)
   const labels: Placed[] = [
-    ...spreadVertically(drawn.filter((d) => d.zone === "left")),
-    ...spreadVertically(drawn.filter((d) => d.zone === "right")),
+    ...spreadVertically(drawn.filter((d) => d.zone === "left"), rGap),
+    ...spreadVertically(drawn.filter((d) => d.zone === "right"), rGap),
     ...drawn.filter((d) => d.zone === "top" || d.zone === "bottom"),
   ];
 
@@ -348,10 +362,12 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
               : zone === "left" ? "translate(-100%, -50%)"
                 : zone === "top" ? "translate(-50%, -100%)"
                   : "translate(-50%, 0)";
+          // 라벨 폭 하한 64 — 9/3시 방향(가용폭 ≈68)에서 하한이 가용폭을 넘으면 박스가 링 좌표계
+          // (0..VIEW_W)를 벗어나 화면 밖으로 짤린다. 좁은 존은 line-clamp-3 + 말줄임으로 수렴.
           const labelMaxW =
-            zone === "right" ? Math.max(80, VIEW_W - lx - 4)
-              : zone === "left" ? Math.max(80, lx - 4)
-                : 180;
+            zone === "right" ? Math.max(64, VIEW_W - lx - 4)
+              : zone === "left" ? Math.max(64, lx - 4)
+                : 208;
           const alignCls =
             zone === "right" ? "items-start text-left"
               : zone === "left" ? "items-end text-right"
@@ -364,13 +380,19 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
               style={{ left: lx, top: ly, transform, maxWidth: labelMaxW }}
             >
               {/* min-w-0 + max-w-full 로 상위 maxWidth 가 텍스트 노드까지 전파되게 하고,
-                  overflow-wrap:anywhere + line-clamp-2 로 긴 한글 종목명이 반드시 2줄 안에서
+                  overflow-wrap:anywhere + line-clamp(2~3) 로 긴 한글 종목명이 클램프 줄 수 안에서
                   줄바꿈·말줄임 되도록 강제 — 가로 오버플로우(카드 밖 짤림) 원천 차단 */}
               <div className="flex flex-col leading-tight min-w-0 max-w-full">
-                <span className="text-[15px] font-semibold tracking-tight text-foreground line-clamp-2 [overflow-wrap:anywhere] max-w-full">
+                <span
+                  className={`text-[15px] font-semibold tracking-tight text-foreground ${labelClampCls} [overflow-wrap:anywhere] max-w-full`}
+                  style={rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : undefined}
+                >
                   {label}
                 </span>
-                <span className="text-[15px] font-bold tabular-nums" style={{ color: seg.color }}>
+                <span
+                  className="text-[15px] font-bold tabular-nums"
+                  style={{ color: seg.color, ...(rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : {}) }}
+                >
                   {seg.truePct.toFixed(1)}%
                 </span>
               </div>

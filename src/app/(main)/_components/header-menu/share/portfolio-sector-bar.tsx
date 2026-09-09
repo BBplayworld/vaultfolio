@@ -12,12 +12,16 @@ export interface SectorBarItem {
   color: string; // 막대 구간 fill — 범례 % 텍스트에도 같은 색을 쓴다
 }
 
-export function PortfolioSectorBar({ title, items }: { title: string; items: SectorBarItem[] }) {
+export function PortfolioSectorBar({ title, items, big = false }: { title: string; items: SectorBarItem[]; big?: boolean }) {
   if (items.length === 0) return null;
+  // big = 캡처(저장 PNG) 전용 — 680px 아트보드에서 프리뷰 비율을 내려고 텍스트/막대를 ×SHOT_BIG_SCALE(1.46)
+  const txt = big ? "text-[20px]" : "text-sm";
+  const dot = big ? "size-[15px]" : "size-2.5";
+  const barH = big ? "h-[15px]" : "h-2.5";
   return (
     <div className="space-y-2.5">
-      <p className="text-sm font-semibold text-muted-foreground">{title}</p>
-      <div className="flex h-2.5 w-full rounded-full overflow-hidden gap-px">
+      <p className={`${txt} font-semibold text-muted-foreground`}>{title}</p>
+      <div className={`flex ${barH} w-full rounded-full overflow-hidden gap-px`}>
         {items.map((it) => (
           <div key={it.key} style={{ width: `${it.pct}%`, backgroundColor: it.color }} />
         ))}
@@ -25,9 +29,9 @@ export function PortfolioSectorBar({ title, items }: { title: string; items: Sec
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {items.map((it) => (
           <div key={it.key} className="flex items-center gap-1.5 min-w-0">
-            <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: it.color }} />
-            <span className="flex-1 min-w-0 truncate text-sm text-foreground">{it.label}</span>
-            <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: it.color }}>
+            <span className={`${dot} rounded-full shrink-0`} style={{ backgroundColor: it.color }} />
+            <span className={`flex-1 min-w-0 truncate ${txt} text-foreground`}>{it.label}</span>
+            <span className={`shrink-0 ${txt} font-bold tabular-nums`} style={{ color: it.color }}>
               {it.pct.toFixed(1)}%
             </span>
           </div>

@@ -18,7 +18,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
-import { ASSET_THEME, ASSET_THEME_SHOT, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
@@ -45,20 +45,21 @@ export const CATEGORY_TABS = [
   { value: "unlisted", label: "비상장" },
 ] as const;
 
-export function StockIcon({ ticker, name, isForeign, color, screenshotMode = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean }) {
+export function StockIcon({ ticker, name, isForeign, color, screenshotMode = false, shotBig = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean; shotBig?: boolean }) {
   const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
+  const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
 
-  // 캡처 경로만 요청 크기 축소(표시 28px 기준). 실사용 아바타는 옵션 미전달 → 기존 동작 유지.
+  // 인증카드 로고 요청은 표시 px 기준(프리뷰 28 / 저장 PNG 34). 실사용 아바타는 옵션 미전달.
   const { imgProps } = useLogoSrc(
     ticker,
     name,
     isForeign,
-    screenshotMode ? { size: captureLogoSize(28) } : undefined,
+    screenshotMode ? { size: captureLogoSize(shotBig ? 34 : 28) } : undefined,
   );
 
-  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰으로 데스크톱 값 고정(R25)
-  const sizeCls = screenshotMode ? ASSET_THEME_SHOT.icon : "size-6 sm:size-7";
-  const initialCls = screenshotMode ? ASSET_THEME_SHOT.iconInitial : "text-[9px] sm:text-[10px]";
+  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰 고정(R25). shotBig=저장 PNG(×SHOT_BIG_SCALE).
+  const sizeCls = screenshotMode ? shotTok.icon : "size-6 sm:size-7";
+  const initialCls = screenshotMode ? shotTok.iconInitial : "text-[9px] sm:text-[10px]";
 
   return (
     <div className={`${sizeCls} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden`} style={{ backgroundColor: color }}>
@@ -275,10 +276,11 @@ function TodayChangeChip({ rate, className = "" }: { rate: number; className?: s
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
-export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, displayCurrency = "KRW", usdRate = 1, dailyRate }: StockRowData & {
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, shotBig = false, displayCurrency = "KRW", usdRate = 1, dailyRate }: StockRowData & {
   categoryLabels?: string[];
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
+  shotBig?: boolean;
   displayCurrency?: StockDisplayCurrency;
   usdRate?: number;
   dailyRate?: number | null;
@@ -286,13 +288,16 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   const fmt = maskFn ?? ((v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate));
   const hideAmounts = !!maskFn && maskFn(123456).includes("•");
   const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
-  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰으로 데스크톱 값 고정(R25)
-  const nameCls = screenshotMode ? ASSET_THEME_SHOT.cardInfoName : ASSET_THEME.cardInfoName;
-  const amountCls = screenshotMode ? ASSET_THEME_SHOT.cardAmountMain : ASSET_THEME.cardAmountMain;
-  const badgeCls = screenshotMode ? ASSET_THEME_SHOT.badge : "text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight";
+  // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰 고정(R25). shotBig=저장 PNG(×SHOT_BIG_SCALE).
+  const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
+  const nameCls = screenshotMode ? shotTok.cardInfoName : ASSET_THEME.cardInfoName;
+  const amountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
+  const badgeCls = screenshotMode ? shotTok.badge : "text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight";
+  const subCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
+  const qtyCls = screenshotMode ? shotTok.bodyText : "text-sm";
   return (
     <>
-      <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} screenshotMode={screenshotMode} />
+      <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} screenshotMode={screenshotMode} shotBig={shotBig} />
       <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
@@ -307,7 +312,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
         <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
-          <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
+          <span className={`${qtyCls} text-foreground tabular-nums`}>{stock.quantity.toLocaleString()}주</span>
           {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
           {!screenshotMode && (
             <>
@@ -324,10 +329,10 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <div className={ASSET_THEME.cardInfoRight}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
         <div className={ASSET_THEME.cardAmountProfitRow}>
-          <span className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>
+          <span className={`${subCls} ${getProfitLossColor(profit)}`}>
             {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
           </span>
-          <span className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
+          <span className={`${subCls} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
         </div>
       </div>
     </>
@@ -344,13 +349,14 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, dailyRate }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, dailyRate }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
   currencyGain?: number;
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
+  shotBig?: boolean;
   displayCurrency?: StockDisplayCurrency;
   onDisplayCurrencyChange?: (v: StockDisplayCurrency) => void;
   usdRate?: number;
@@ -369,6 +375,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       formatFull={fmtFull}
       formatShort={fmt}
       screenshotMode={screenshotMode}
+      shotBig={shotBig}
       headerAction={!screenshotMode ? (
         <div className="min-h-7 flex items-center">
           {onDisplayCurrencyChange && (
@@ -393,6 +400,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
             formatShort={fmt}
             hideAmountSign={hideAmounts}
             screenshotMode={screenshotMode}
+            shotBig={shotBig}
             prefix={!screenshotMode && currencyGain !== undefined && currencyGain !== 0
               ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
               : undefined}
@@ -430,6 +438,7 @@ interface StockCardProps {
   groupItems?: Stock[];
   marketMap?: Record<string, string>;
   screenshotMode?: boolean;
+  shotBig?: boolean;
   maskFn?: (v: number) => string;
   displayCurrency?: StockDisplayCurrency;
   dailyRate?: number | null;
@@ -745,7 +754,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   );
 }
 
-export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, maskFn, displayCurrency = "KRW", dailyRate }: StockCardProps) {
+export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, shotBig = false, maskFn, displayCurrency = "KRW", dailyRate }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const usdRate = exchangeRates.USD;
   const [splitOpen, setSplitOpen] = useState(false);
@@ -786,6 +795,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
               categoryLabels={categoryLabels}
               maskFn={maskFn}
               screenshotMode
+              shotBig={shotBig}
             />
           </div>
         </div>
@@ -902,6 +912,8 @@ export interface StockCategorySectionProps {
   barColors: string[];
   emptyMessage?: string;
   screenshotMode: boolean;
+  /** 캡처 저장 PNG 전용 — 텍스트 ×SHOT_BIG_SCALE */
+  shotBig?: boolean;
   renderItem: (stock: Stock, isFirstOverall: boolean, color: string) => React.ReactNode;
   /** 종목 리스트 최대 노출 개수 — 초과분은 "외 N종목" 요약행. 비중바도 같은 개수로 축약(인증카드용) */
   maxItems?: number;
@@ -920,6 +932,7 @@ export function StockCategorySection({
   barColors,
   emptyMessage = "등록된 주식이 없습니다.",
   screenshotMode = false,
+  shotBig = false,
   renderItem,
   maxItems,
   maskFn,
@@ -929,7 +942,8 @@ export function StockCategorySection({
     const idx = barItems.findIndex((b) => b.stock.id === stock.id);
     return idx >= 0 ? barColors[idx] : MAIN_PALETTE[0];
   };
-  const legendTextCls = screenshotMode ? ASSET_THEME_SHOT.legendText : "text-sm sm:text-base";
+  const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
+  const legendTextCls = screenshotMode ? shotTok.legendText : "text-sm sm:text-base";
 
   return (
     <div className={`${screenshotMode ? "px-0" : "px-1 sm:px-2"} space-y-3`}>
@@ -996,27 +1010,28 @@ export function StockCategorySection({
         const restProfitRate = restCost > 0 ? (restProfit / restCost) * 100 : 0;
         const fmt = maskFn ?? formatShortCurrency;
         const hideAmounts = !!maskFn && maskFn(123456).includes("•");
-        const restAmountCls = screenshotMode ? ASSET_THEME_SHOT.cardAmountMain : ASSET_THEME.cardAmountMain;
+        const restAmountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
+        const restSubCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
         return (
-          <div className={`space-y-2 ${screenshotMode ? "mt-7" : "mt-8"}`}>
+          <div className="space-y-2 mt-9">
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
             {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (
               <div className={ASSET_THEME.cardWrapper}>
                 <div className={screenshotMode ? ASSET_THEME_SHOT.cardHeader : ASSET_THEME.cardHeader}>
                   <div className={screenshotMode ? ASSET_THEME_SHOT.cardTriggerButton : ASSET_THEME.cardTriggerButton}>
-                    <span className={`${screenshotMode ? ASSET_THEME_SHOT.icon : "size-6 sm:size-7"} shrink-0`} aria-hidden />
+                    <span className={`${screenshotMode ? shotTok.icon : "size-6 sm:size-7"} shrink-0`} aria-hidden />
                     <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
-                      <span className="text-sm text-muted-foreground">그 외 {rest.length}종목</span>
+                      <span className={`${screenshotMode ? shotTok.bodyText : "text-sm"} text-muted-foreground`}>그 외 {rest.length}종목</span>
                     </div>
                     <div className={ASSET_THEME.cardInfoRight}>
                       <p className={`${restAmountCls} ${ASSET_THEME.text.default}`}>{fmt(restValue)}</p>
                       {exchangeRates && restCost > 0 && (
                         <div className={ASSET_THEME.cardAmountProfitRow}>
-                          <span className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(restProfit)}`}>
+                          <span className={`${restSubCls} ${getProfitLossColor(restProfit)}`}>
                             {!hideAmounts && (restProfit >= 0 ? "+" : "")}{fmt(Math.round(restProfit))}
                           </span>
-                          <span className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(restProfit)}`}>({restProfitRate >= 0 ? "+" : ""}{restProfitRate.toFixed(1)}%)</span>
+                          <span className={`${restSubCls} ${getProfitLossColor(restProfit)}`}>({restProfitRate >= 0 ? "+" : ""}{restProfitRate.toFixed(1)}%)</span>
                         </div>
                       )}
                     </div>
