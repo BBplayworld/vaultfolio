@@ -1013,7 +1013,7 @@ export function StockCategorySection({
         const restAmountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
         const restSubCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
         return (
-          <div className="space-y-2 mt-9">
+          <div className="space-y-2 mt-10">
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
             {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (

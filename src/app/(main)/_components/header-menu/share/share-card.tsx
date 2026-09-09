@@ -207,11 +207,11 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       />
 
       {/* 비중 바(상위 7 + 기타) + 종목 리스트(상위 7 + 외 N종목) — 주식 탭과 동일 컴포넌트.
-          배경색 없이 카드 전체 배경과 통일. 세로 패딩(py-[22px]=22px)은 간격 계산(헤더 mt-3.5 등)의
+          배경색 없이 카드 전체 배경과 통일. 세로 패딩(py-[26px]=26px)은 간격 계산(헤더 mt-3.5 등)의
           기준점이라 유지하고, 가로만(px-2=8px) 좁혀 콘텐츠가 카드 폭을 넓게 쓰게 한다.
-          헤더는 하단 패딩 0이라 여기 마진(14px) + 이 박스의 상단 패딩(22px)을 더해야
-          범례~리스트 간격(mt-9=36px)과 실제 노출 여백이 같아진다(2026-09 28→36px 상향, 상세 탭과 통일). */}
-      <div className="mt-3.5 rounded-lg py-[22px] px-2">
+          헤더는 하단 패딩 0이라 여기 마진(14px) + 이 박스의 상단 패딩(26px)을 더해야
+          범례~리스트 간격(mt-10=40px)과 실제 노출 여백이 같아진다(2026-09 28→40px 상향, 상세 탭과 통일). */}
+      <div className="mt-3.5 rounded-lg py-[26px] px-2">
         <StockCategorySection
           activeCategory="all"
           onCategoryChange={() => { /* 인증카드는 카테고리 고정 */ }}
@@ -264,7 +264,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
           하단 패딩(pb-2)도 헤더의 상단 패딩(pt-2)과 맞춰 카드 최상단~"총 주식 평가금액"과
           "시크릿에셋"~카드 최하단 간격이 같아지게 한다.
           리스트~푸터 실제 노출 간격 = 마진(mt-1.5=6px) + 마지막 행 자체 하단 패딩(cardHeader py-2=8px)
-          + 비중바·리스트 래퍼 하단 패딩(py-[22px]=22px) = 36px로, 범례~리스트(순수 mt-9=36px)와 동일하다. */}
+          + 비중바·리스트 래퍼 하단 패딩(py-[26px]=26px) = 40px로, 범례~리스트(순수 mt-10=40px)와 동일하다. */}
       <div className="mt-1.5 flex items-baseline gap-1.5 px-2 pb-2">
         <span className={`${footerTok.footerBrand} text-foreground font-semibold`}>{APP_CONFIG.name}</span>
         <span className={`${footerTok.footerDomain} text-muted-foreground`}>{siteHost}</span>
