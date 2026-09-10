@@ -6,6 +6,18 @@
 
 ## 2026-09-06
 
+### 인증카드 포트폴리오 도넛 ↔ 종목명 간격 +8px (#4.24)
+
+- `portfolio-ring-card.tsx` `LABEL_R` 256 → **264**(R_OUTER 240과의 간격 16→24px). 도넛 바깥과 링 밖 종목명 라벨이 살짝 더 떨어진다. 프리뷰·캡처 공통(기하 상수).
+- 264가 상한 — 그 이상이면 3/9시 방향 라벨 박스가 `VIEW_W`(656)를 넘어 짤린다(`labelMaxW` 하한 64 기준). `labelMaxW`·`VIEW_W`·`R_OUTER` 등 나머지 불변.
+
+### 인증카드 모달 — 모바일 전체화면 → 12px 인셋(가장자리 블러 오버레이 노출) (#4.24)
+
+- `share-menu.tsx` `DialogContent` 모바일 override를 `w-screen h-[100dvh] rounded-none border-0`(전체화면) → **상하좌우 12px 인셋**: `left-3 right-3` + `top/bottom-[max(0.75rem,env(safe-area-inset-*))]`(노치·홈 인디케이터 우선), `translate-x/y-0`로 공용 중앙 배치 해제, `w-auto h-auto max-w/h-none`, `rounded-2xl border shadow-lg`. 가장자리로 공용 `DialogOverlay`(`bg-black/70 backdrop-blur-sm`)가 살짝 비친다.
+- `sm:` 이상은 `sm:top/left-[50%] sm:translate-x/y-[-50%] sm:bottom/right-auto sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:rounded-lg`로 기존 중앙 배치 복귀.
+- 다이얼로그가 노치 아래로 인셋되므로 헤더 `pt-[max(0.875rem,env(safe-area-inset-top))]`→`pt-3`, X 버튼 `top-[max(...)]`→`top-3`.
+- 저장 PNG(캡처 인스턴스)·프리뷰 렌더는 무영향(R32).
+
 ### 비중바 ↔ 종목 리스트 간격 40px 통일 (상세>주식 · 인증카드>주식 현황) (#4.24)
 
 - `StockCategorySection`(공유) 리스트 블록 `screenshotMode ? "mt-7" : "mt-8"` → `mt-10` 고정(인증카드 28→40px, 상세 32→40px, 두 표면 동일). 섹션 `space-y-3`(12px)은 마진 상쇄로 계속 안 보임 → 이 `mt` 단일 값이 실제 간격.

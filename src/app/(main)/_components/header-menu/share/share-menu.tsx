@@ -172,13 +172,13 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 모바일: 전체화면(100vw × 100dvh, 테두리·라운드 제거)으로 프리뷰를 최대 확대.
-          sm: 이상은 기존 값(760px, 94dvh) 유지. 여기는 캡처 대상(share-card.tsx)이 아니라
+      {/* 모바일: 상하좌우 12px(노치·홈 인디케이터는 safe-area 우선) 인셋 — 가장자리로 블러된
+          오버레이(공용 DialogOverlay `bg-black/70 backdrop-blur-sm`)가 살짝 비친다. 라운드·테두리 복원.
+          sm: 이상은 기존 중앙 배치(760px, 94dvh)로 복귀. 여기는 캡처 대상(share-card.tsx)이 아니라
           다이얼로그 셸이라 sm: 반응형 사용 가능(R32 무관).
-          닫기(X) 버튼(공용 DialogContent 기본 top-4)을 헤더 상단 여백과 동일하게 —
-          모바일은 max(14px, 노치 safe-area-inset-top), 데스크톱은 top-4(py-4 헤더). */}
-      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 w-screen max-w-none rounded-none border-0 h-[100dvh] max-h-[100dvh] sm:w-full sm:max-w-[760px] sm:rounded-lg sm:border sm:h-[94dvh] sm:max-h-[96dvh] flex flex-col [&_[data-slot=dialog-close]]:top-[max(0.875rem,env(safe-area-inset-top))] sm:[&_[data-slot=dialog-close]]:top-4">
-        <DialogHeader className="px-3 pb-2 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-5 sm:py-4 text-left">
+          다이얼로그가 노치 아래로 인셋되므로 헤더·X 버튼의 safe-area 패딩은 제거(단순 top-3). */}
+      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 flex flex-col border shadow-lg top-[max(0.75rem,env(safe-area-inset-top))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 translate-x-0 translate-y-0 w-auto max-w-none h-auto max-h-none rounded-2xl sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg [&_[data-slot=dialog-close]]:top-3 sm:[&_[data-slot=dialog-close]]:top-4">
+        <DialogHeader className="px-3 pt-3 pb-2 sm:px-5 sm:py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             <IdCard className="size-4 text-primary" />
             인증카드
