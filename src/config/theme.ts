@@ -134,9 +134,7 @@ export const ASSET_THEME_SHOT = {
   profitRate: "text-xs font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
   legendText: "text-xs",
-  bodyText: "text-xs", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨·푸터 도메인 등) 공용
-  footerBrand: "text-[10px]",
-  footerDomain: "text-xs",
+  bodyText: "text-xs", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨 등) 공용
 } as const;
 
 /**
@@ -148,7 +146,7 @@ export const ASSET_THEME_SHOT = {
  *    여기 `base`는 캡처 기준 고정 참조값이며, 2026-09부터 `ASSET_THEME_SHOT`(프리뷰) 실제
  *    값과는 분리됐다(프리뷰만 ~2px 낮춤 — 캡처 PNG 크기는 불변).
  *    base: cardInfoName/cardAmountMain 14, iconInitial 9, badge 10, summaryValue 20, profitAmount 16,
- *          profitRate 14, icon 24, legendText/bodyText 14, footerBrand 12, footerDomain 14.
+ *          profitRate 14, icon 24, legendText/bodyText 14.
  */
 export const SHOT_BIG_SCALE = 1.46;
 
@@ -166,8 +164,6 @@ export const ASSET_THEME_SHOT_BIG = {
   legendGrid: ASSET_THEME_SHOT.legendGrid,
   legendText: "text-[20px]",
   bodyText: "text-[20px]",
-  footerBrand: "text-[18px]",
-  footerDomain: "text-[20px]",
 } as const;
 
 /**

@@ -178,7 +178,10 @@ export function PwaLockScreen() {
           value={pin}
           disabled={checking}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH))}
-          className="w-40 text-center text-2xl tracking-[0.6em] tabular-nums"
+          // 공용 Input은 다크모드에서 미포커스 시 border-0(배경 채움만)이라 어두운 배경 위에서
+          // 잠금화면 input 위치를 찾기 어려움 — 이 화면에서만 포커스 때와 같은 border-ring을
+          // 항상 노출(공용 input.tsx는 다른 화면에 영향 없게 그대로 두고 여기서만 오버라이드).
+          className="w-40 text-center text-2xl tracking-[0.6em] tabular-nums dark:border dark:border-ring"
           aria-label="비밀번호 4자리"
         />
       ) : (

@@ -2,6 +2,7 @@
 
 import { IdCard, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/logo";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -147,13 +148,23 @@ export function TopBar() {
             <span className="text-lg sm:text-2xl lg:text-2xl font-bold truncate">{title}</span>
           </button>
         ) : (
-          <InlineSelector
-            value={"" as HomeTop}
-            onChange={onHomeTabChange}
-            options={HOME_TOP_OPTIONS}
-            size="xl"
-            ariaLabel="페이지 선택"
-          />
+          <>
+            {/* 홈 화면 전용 서비스 로고 — "상세/성과" 세그먼트 왼쪽. 하위 화면(isSubView)에서는
+                이 분기 자체가 안 렌더돼 뒤로가기 버튼만 보인다(기존과 동일).
+                좌측 정렬 기준은 대시보드 최상단 카드(NetAssetSummaryBox, dashboard.tsx)의 실제
+                텍스트 시작선 — 카드는 색상 박스 자체에 px-4(16px) 안쪽 패딩이 있어 페이지 콘텐츠
+                좌측 끝(px-3)보다 16px 더 안쪽에서 시작한다. 로고 컨테이너는 그 오프셋이 전혀 없어
+                카드보다 왼쪽에 있었으므로 ml-4로 동일하게 밀어 맞춘다(ChevronLeft의 -ml-1 sm:-ml-2는
+                아이콘 SVG 내부 여백 보정용으로 방향이 반대라 착오 적용했던 것 — 되돌림). */}
+            <Logo size={22} className="text-foreground shrink-0 ml-4" />
+            <InlineSelector
+              value={"" as HomeTop}
+              onChange={onHomeTabChange}
+              options={HOME_TOP_OPTIONS}
+              size="xl"
+              ariaLabel="페이지 선택"
+            />
+          </>
         )}
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pwa-hide-actions">

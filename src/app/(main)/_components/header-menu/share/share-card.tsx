@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Logo } from "@/components/logo";
 import { formatCurrency } from "@/lib/number-utils";
 import { computeStockMetrics } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import {
@@ -10,9 +11,8 @@ import {
   StockCard,
 } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { APP_CONFIG } from "@/config/app";
 import { stockCategories } from "@/config/asset-options";
-import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG } from "@/config/theme";
+import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
@@ -23,6 +23,10 @@ const SHOT_MAX = 7;
 // 포트폴리오 "분야 구성" 막대바 전용 — 항목이 많아지면 범례가 늘어지므로 5개 + "그 외 N개 분야"로 통일(최대 6항목)
 const SECTOR_MAX = 5;
 const ETC_COLOR = SHARE_ETC_COLOR; // 포트폴리오 도넛·막대바 "그 외"/미분류 — 중립 그레이
+// 워터마크(Logo) 프리뷰 크기(px) — 캡처는 카드 텍스트와 동일한 SHOT_BIG_SCALE(1.46)로 파생시켜
+// 프리뷰↔캡처 배율을 카드 전체 규칙과 통일한다(개별 반올림 누적으로 배율이 벌어지는 것 방지).
+const LOGO_SIZE_PREVIEW = 24;
+const LOGO_SIZE_CAPTURE = Math.round(LOGO_SIZE_PREVIEW * SHOT_BIG_SCALE);
 // 포트폴리오 타입 도넛·분야 막대바 공용 팔레트. 색 조정은 theme.ts 배열만 손보면 된다.
 const segFill = (i: number) => SHARE_SAFE_PALETTE[i % SHARE_SAFE_PALETTE.length];
 
@@ -72,8 +76,6 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
   // 금액류만 마스킹 — 비중%·수익률%는 항상 노출.
   // 상세 > 주식 탭과 동일하게 요약 헤더·종목 리스트 모두 전체 금액으로 표시(PRICE_DISPLAY_MODE="full-only").
   const mask = hideAmounts ? (_: number) => "••••" : formatCurrency;
-
-  const siteHost = APP_CONFIG.siteUrl.replace(/^https?:\/\//, "");
 
   // 포트폴리오 타입: 상위 7 + "그 외" 1건 = 최대 8조각. mergedStocks는 평가액 내림차순이라
   // 1위가 자동으로 팔레트 [0](브랜드 인디고). "그 외"는 팔레트 밖 중립 그레이.
@@ -171,13 +173,32 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
   // 캡처(!responsive)만 shotBig → ASSET_THEME_SHOT_BIG(폰트 ×SHOT_BIG_SCALE)로 680px 아트보드에서 프리뷰 비율 재현.
   // screenshotMode 자체를 responsive에 재결속하지 않는다(과거 프리뷰 펼침 부활 회귀).
   const shotBig = !responsive;
-  const footerTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
 
   return (
     <div
       ref={cardRef}
-      className={responsive ? "p-2 sm:p-3 rounded-2xl bg-background w-full" : "p-3 rounded-2xl bg-background"}
+      // 캡처(!responsive) 배경은 순수 흑/백(`bg-white dark:bg-black`) — 프리뷰가 쓰는 `bg-background`
+      // (테마 oklch, 라이트 0.96·다크 0.145)는 모바일 기기·뷰어에 따라 "옅은 검정/흰색"으로 보일 수
+      // 있어(2026-09), 저장 PNG는 톤 편차 없는 완전한 흑/백으로 고정한다.
+      className={responsive ? "relative p-2 sm:p-3 rounded-2xl bg-background w-full" : "relative p-3 rounded-2xl bg-white dark:bg-black"}
     >
+      {/* 워터마크 — 브랜드 텍스트/도메인 푸터 완전 제거(2026-09) 이후, 서비스 로고(공용 `Logo`
+          컴포넌트, `src/components/logo.tsx` — 파비콘과 동일한 Leckerli One 서체 "S")로만 출처를
+          남긴다. 위치는 좌측 "총 주식 평가금액" 라벨의 **최상단**과 맞춘다(라벨 top 실측값 재사용:
+          프리뷰 모바일 outer p-2 기준 16px, ≥sm p-3 기준 20px, 캡처 p-3 고정 20px). 필기체 폰트는
+          어센더 여백 때문에 완벽한 픽셀 일치는 스크린샷으로 재확인 필요.
+          이 파일 + `src/components/logo.tsx`로 완결 — 상세>주식 탭과 공유하는 StockSummaryHeader/
+          DetailSummaryHeader는 건드리지 않는다. 두 variant(주식현황/포트폴리오) 모두 같은 outer div
+          좌표계라 위치가 항상 동일. sm:은 프리뷰 branch에만(캡처는 R32상 금지, 출력 폭이 항상 p-3
+          고정이라 분기 불필요). */}
+      <Logo
+        size={responsive ? LOGO_SIZE_PREVIEW : LOGO_SIZE_CAPTURE}
+        // 우측 여백은 하단 리스트·막대바 래퍼(px-2=8px)와 동일한 카드 우측 인셋(outer padding+8px)
+        // 이 되도록 정렬 — 캡처 12(p-3)+8=20px, 프리뷰 모바일 8(p-2)+8=16px·≥sm 12(p-3)+8=20px.
+        className={responsive
+          ? "absolute top-4 sm:top-5 right-4 sm:right-5 text-foreground pointer-events-none"
+          : "absolute top-5 right-5 text-foreground pointer-events-none"}
+      />
 
       {variant === "portfolio" ? (
         <div className="py-4">
@@ -259,16 +280,6 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       </div>
       </>
       )}
-
-      {/* 푸터 — 브랜드명 + 도메인. 좌우 여백은 위 헤더·비중 바·리스트와 동일(8px),
-          하단 패딩(pb-2)도 헤더의 상단 패딩(pt-2)과 맞춰 카드 최상단~"총 주식 평가금액"과
-          "시크릿에셋"~카드 최하단 간격이 같아지게 한다.
-          리스트~푸터 실제 노출 간격 = 마진(mt-1.5=6px) + 마지막 행 자체 하단 패딩(cardHeader py-2=8px)
-          + 비중바·리스트 래퍼 하단 패딩(py-[26px]=26px) = 40px로, 범례~리스트(순수 mt-10=40px)와 동일하다. */}
-      <div className="mt-1.5 flex items-baseline gap-1.5 px-2 pb-2">
-        <span className={`${footerTok.footerBrand} text-foreground font-semibold`}>{APP_CONFIG.name}</span>
-        <span className={`${footerTok.footerDomain} text-muted-foreground`}>{siteHost}</span>
-      </div>
     </div>
   );
 }

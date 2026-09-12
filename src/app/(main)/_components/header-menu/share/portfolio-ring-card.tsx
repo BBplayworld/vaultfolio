@@ -248,11 +248,14 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     segments.map((s) => (s.subLogos?.length ? ETC_MIN_ARC : MIN_ARC_DEG)),
   );
 
-  // responsive 프리뷰: 링 전체가 transform:scale(<1)로 축소돼 text-[15px] 라벨이 ~8px로 렌더 → 폰트를
-  //   12/scale로 키워 상쇄(실효 ~12px, "분야 구성" 14px과 비슷). scale≈1(데스크톱)이면 15px 유지.
+  // responsive 프리뷰: 링 전체가 transform:scale(<1)로 축소돼 text-[12px] 라벨이 더 작게 렌더 → 폰트를
+  //   12/scale로 키워 상쇄(실효 항상 12px, 나머지 프리뷰 본문 ASSET_THEME_SHOT.bodyText=text-xs와 동일).
+  //   scale≤1이 보장되므로 12/scale은 항상 ≥12 — Math.max(12, …)는 부동소수 안전장치일 뿐.
+  //   (과거 플로어 15는 프리뷰 본문이 14px이던 시절 값 — 2026-09 본문 12px 축소 때 갱신 누락돼 PC
+  //   화면(scale≈1)에서만 도넛 라벨이 나머지 텍스트보다 커 보이는 회귀가 있었다.)
   // 캡처(저장 PNG, !responsive): SHOT_BIG_SCALE에서 파생(계수 12 → 1.46에서 18, 1.42에서 17). 도넛 라벨은
   //   좁은 존 짤림 때문에 본문(계수 14)보다 조금 작게. 나머지 짤림 방지는 아래 labelMaxW·line-clamp-3.
-  const rLabelFont = responsive ? Math.max(15, 12 / scale) : Math.round(12 * SHOT_BIG_SCALE);
+  const rLabelFont = responsive ? Math.max(12, 12 / scale) : Math.round(12 * SHOT_BIG_SCALE);
   const rGap = responsive
     ? Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 4.5))
     : Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 5));
@@ -329,6 +332,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                     etfBrand={sub.etfBrand}
                     size={SUB_CHIP}
                     bgColor={seg.color}
+                    scale={scale}
                   />
                 </div>
               );
@@ -351,6 +355,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                 etfBrand={seg.etfBrand}
                 size={chip}
                 bgColor={seg.color}
+                scale={scale}
               />
             </div>
           );

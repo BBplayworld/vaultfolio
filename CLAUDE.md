@@ -14,8 +14,12 @@ alwaysApply: true
 - **재사용 우선 · 작업 최소화 (강제)**:
   - **기존 구현 방식이 이후 모든 작업의 기본 방향.** 신규 라이브러리·상태관리 방식·색/간격/컴포넌트 패턴·데이터 접근 방식을 새로 도입하기 전, 기존 방식으로 가능한지 먼저 확인. 불가피할 때만 근거를 남기고 도입.
   - **신규·수정 구현 전 재사용 지도를 반드시 먼저 검색**(중복 코드 작성 금지): UI→`components.md`·`design-system.md`, 유틸·Context·Store→`state-and-utils.md`, 코드 패턴·주의→`dev-rules.md`, 현행 사양→`qa-full-test-plan.md` `F-*`. 동일 역할이 있으면 재사용, 없을 때만 신규.
-  - **재사용 가능한 신규 공용 코드(컴포넌트·유틸·패턴·토큰)는 생성과 동시에 해당 카탈로그에 등록**(components.md / state-and-utils.md / design-system.md). 등록 없는 신규 공용 자산 금지.
+  - **재사용 가능한 신규 공용 코드(컴포넌트·유틸·패턴·토큰)는 반드시 해당 카탈로그에 등록**(components.md / state-and-utils.md / design-system.md) — 단, 등록 시점은 매 작업 직후가 아니라 아래 **"KB 문서 갱신은 배치로"** 규칙을 따른다. 등록 누락 상태로 최종 push하는 것만 금지.
   - 상세 절차는 [`dev-rules.md`](.claude/_knowledge/dev-rules.md)의 **"재사용 우선 체크리스트"**를 단일 출처로 따른다. (src 신규 파일 생성 시 `.claude/hooks/reuse-reminder.mjs` 훅이 상기시킴)
+- **KB 문서 갱신은 배치로 — 작업마다 하지 않는다 (토큰 낭비 방지, 강제)**:
+  - 자잘한 수정·기능 작업을 진행하는 동안에는 `qa-full-test-plan.md`/`components.md`/`state-and-utils.md`/`design-system.md`/`changelog.md`를 **매번 갱신하지 않는다.** 코드 변경만 하고 다음 작업으로 넘어간다.
+  - **사용자가 최종 push를 요청하면**, push 실행 전 반드시 이 순서를 거친다: ① `/qa-full-test` 실행(그 세션에서 누적된 변경 전체 대상) → ② Phase 4 결과로 위 KB 문서를 **한 번에 일괄** 갱신(드리프트 탐지·신규 공용 자산 카탈로그 등록·changelog 반영 포함) → ③ 커밋·푸시.
+  - 예외: 사용자가 특정 작업에서 "지금 바로 문서화해줘" 등으로 즉시 갱신을 명시적으로 요청하면 그 요청을 따른다.
 - **계획 md 파일(`C:/Users/궁빈/.claude/plans/*.md`)은 완료된 작업은 모두 제거하고 신규 작업 계획만 유지한다.**
 - **라이브 프리뷰 및 동작 검증 제외** (preview_start·browser eval 등으로 앱을 띄워 확인하는 절차 생략. 타입 체크·코드 변경 결과 보고로 마무리)
 - **확인·제출 버튼은 `Button variant="brand"`(= `--brand`/`MAIN_PALETTE[0]`), 체크박스는 기본 `Checkbox`(자동 brand)로 색상 통일. 매수=빨강/매도=파랑, 삭제=destructive 등 의미색만 예외.**

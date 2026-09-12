@@ -4,6 +4,60 @@
 
 ---
 
+## 2026-09-12
+
+### CLAUDE.md — "KB 문서 갱신은 배치로" 규칙 신설
+
+- **왜**: 작업마다 `qa-full-test-plan.md`/`components.md`/`state-and-utils.md`/`changelog.md`를 매번 갱신하는 게 비효율적이라는 지적 — 작은 단위 작업을 이어서 진행한 뒤 최종 push 직전에 한 번에 몰아서 갱신하도록 규칙화.
+- `CLAUDE.md`에 규칙 추가: 작업 중엔 KB 문서를 갱신하지 않고, **최종 push 요청 시** `/qa-full-test` 실행(Phase 0 자동 검증) → Phase 4에서 KB 일괄 갱신 → 커밋·푸시 순서로 진행. `qa-full-test` 스킬·`qa-full-test-plan.md` Phase 4·`dev-rules.md`의 "신규 공용 자산 등록 시점" 문구도 이 규칙을 참조하도록 함께 정정.
+
+### 인증카드 워터마크 — 서비스 로고(`Logo`) 확정 + 공용 컴포넌트 분리 (#4.24)
+
+- **왜**: 인증카드에 아주 작은 서비스 출처 표시가 필요 — "파비콘 수준"으로 시작해 여러 차례 반려·재설계를 거쳐 확정. 이력: 앱 로고 PNG(스탬프 느낌, 정렬·크기 실패) → lucide `IdCard` 아이콘("기업 로고가 아니다"로 반려) → 파비콘과 동일한 **Leckerli One 서체 "S"** 텍스트 마크로 확정, 사용자가 "여러 서비스 페이지에서 재사용 가능한 별도 컴포넌트로 구성" 요청 → 공용 컴포넌트로 분리.
+- 신규 `src/components/logo.tsx`(`Logo`) — `next/font/google`의 `Leckerli_One` 로더를 이 파일 모듈 스코프에서 호출(다른 파일 무변경). `size`/`className`/`style` props로 배치를 호출부에 위임하는 순수 마크. 도메인에 속하지 않는 범용 브랜드 UI 원자라 `(main)/_components/` 도메인 트리가 아니라 `src/components/`(shadcn 전용 `ui/`와 별도)에 배치.
+- `share-card.tsx`: 워터마크를 `Logo`로 확정, 크기는 `SHOT_BIG_SCALE`로 프리뷰(24px)→캡처(`Math.round(24×1.46)`=35px) 자동 파생. 위치는 좌측 "총 주식 평가금액" 라벨 최상단과 정렬, 우측 여백은 하단 리스트·막대바(`px-2`)와 동일한 인셋(`right-4 sm:right-5`/`right-5`)으로 통일. 투명도는 최종 100%(불투명), 크기는 사용자 요청에 따라 여러 차례 축소를 거쳐 확정.
+
+### 홈 영역 로고 추가 — 상단바·PWA 하단 네비 (#4.24)
+
+- **왜**: 인증카드 워터마크에 이어 앱의 홈 진입점에도 브랜드 마크 노출.
+- `top-bar.tsx`: 홈 화면 좌측("상세/성과" 옆)에 `<Logo size={22}>` 추가. 정렬은 대시보드 최상단 카드(`NetAssetSummaryBox`, `px-4`) 텍스트 시작선 기준 `ml-4` — 처음엔 `ChevronLeft`의 `-ml-1 sm:-ml-2`(아이콘 SVG 내부 여백 보정용)를 같은 이유일 거라 잘못 유추해 반대 방향으로 옮겼다가, 카드가 페이지 콘텐츠(`px-3`)보다 `px-4`만큼 더 안쪽에서 시작한다는 걸 재조사해 정정.
+- `bottom-nav.tsx`: PWA standalone 하단 네비 "홈" 탭만 `Home`(lucide) → `<Logo size={20}>`로 교체(활성 시 `MAIN_PALETTE[0]` 색상, 다른 5개 탭 무변경 — 폰트가 단일 weight라 `strokeWidth` 굵기 차이는 재현하지 않음).
+- **서브페이지 뒤로가기 버튼(`TopBar`의 `ChevronLeft`)에는 의도적으로 미적용** — 구현 자체는 공용 컴포넌트 1곳뿐이라 단순하지만, 방향 신호(뒤로가기)와 브랜드(홈) 의미가 한 버튼에서 충돌하고 `back()`의 실제 목적지가 대부분 홈이 아니라 상위 허브/이전 화면이라 오히려 혼란을 유발할 수 있어 스킵.
+
+### 인증카드 포트폴리오 도넛 라벨 — PC 프리뷰 크기 불일치 수정 (#4.24)
+
+- **왜**: PC 버전 인증카드에서 도넛 라벨(종목명·%)만 나머지 텍스트(`text-xs`=12px)보다 크게(`text-sm`급) 보인다는 지적. 원인: `rLabelFont = Math.max(15, 12/scale)`의 하한 `15`가 2026-09 프리뷰 본문 축소(14→12px) 이전 값으로 남아있어, PC처럼 도넛이 축소 없이(`scale≈1`) 렌더될 때만 `12/scale=12` 대신 `15`가 이겨 커 보였음(모바일은 `scale<1`이라 `12/scale`이 항상 15를 넘어 문제 없었음 — PC에서만 드러나는 회귀).
+- `portfolio-ring-card.tsx`: 하한을 `15`→`12`로 정정(`Math.max(12, 12/scale)`) — PC·모바일 모두 실효 12px로 통일.
+- 같은 패턴을 `brand-mark.tsx`(도넛 조각 안 ETF 브랜드 배지 폰트)에서도 발견 — `/scale` 보정이 전혀 없어 모바일처럼 `scale`이 작을 때 배지 글자가 사실상 안 보이는 크기까지 줄어들 수 있었음. `BrandMark`에 `scale?: number`(기본 1) prop 추가해 도넛 라벨과 동일하게 보정, `portfolio-ring-card.tsx`의 두 호출부(메인 칩·"그 외" 미니 칩)에서 `scale={scale}` 전달.
+- 재점검 결과 캡처(680px)와 프리뷰(~374px) 텍스트 비율이 소폭(0.2~0.6pp, 워터마크는 1.27pp) 어긋나 있으나, 이는 2026-09 "프리뷰만 축소, 캡처는 유지" 결정의 의도된 부작용이라 별도 수정하지 않음(사용자 확인).
+
+### PWA 잠금화면 — 비밀번호 input 다크모드 테두리 상시 노출 (#4.24)
+
+- **왜**: PC 다크모드에서 미포커스 시 공용 `Input`이 `dark:border-0`(배경 채움만)이라 어두운 배경 위에서 input 위치를 찾기 어려움.
+- `pwa-lock-screen.tsx`의 `<Input>`에만 `dark:border dark:border-ring` 추가(공용 `input.tsx`는 무변경) — 포커스 때와 동일한 테두리를 항상 노출.
+
+### 인증카드 저장 배경 — 순수 흑/백으로 고정 (#4.24)
+
+- **왜**: 모바일 환경에서 저장한 PNG 전체 배경이 "옅은 검정"으로 보임 — `bg-background`(다크 `oklch(0.145 0 0)`)가 이론상 거의 검정이지만 oklch 퍼센트 값이라 기기·뷰어에 따라 완전한 `#000`이 아닌 미묘한 톤으로 렌더될 수 있음.
+- `share-card.tsx` 캡처(`!responsive`) 분기의 배경을 `bg-background` → **`bg-white dark:bg-black`**로 교체 — 톤 편차 없는 완전한 흰/검정. 프리뷰(`responsive`)는 다이얼로그와의 시각적 통일을 위해 기존 `bg-background` 유지(변경 범위는 저장 PNG로 한정).
+- `toPng`의 `backgroundColor`는 캡처 엘리먼트의 `getComputedStyle` 값을 그대로 쓰므로(share-menu.tsx) 이 클래스 교체만으로 저장 이미지 배경이 순수 흑/백이 된다.
+
+### 인증카드 푸터 — 도메인까지 완전 제거 (#4.24)
+
+- **왜**: 직전에 서비스 이름 텍스트만 지웠는데도 도메인(`secretasset.xyz`)이 남아 여전히 출처가 노출됨 → 푸터 전체 제거 요청.
+- `share-card.tsx`에서 푸터 `<div>`(도메인 `<span>`) 전체 삭제. 연쇄로 `siteHost`·`APP_CONFIG` import·`footerTok` 변수·`theme.ts`의 `footerDomain` 토큰(양쪽 `ASSET_THEME_SHOT(_BIG)`)까지 죽은 코드가 되어 함께 정리.
+- 종목 리스트(주식 현황)/막대바(포트폴리오)가 이제 카드의 마지막 콘텐츠. 카드 하단 여백은 리스트·막대바 래퍼 자체 패딩 + outer padding만 적용(이전의 "헤더 pt-2 ↔ 푸터 pb-2 대칭" 계산은 더 이상 해당 없음 — 별도 조정 요청 시 처리).
+
+### 인증카드 푸터 — 서비스 이름 텍스트 노출 제거 (#4.24)
+
+- **왜**: 공유용 이미지 하단에 "시크릿에셋" 브랜드 텍스트가 노출되는 것을 원치 않음.
+- `share-card.tsx` 푸터에서 `APP_CONFIG.name`("시크릿에셋") `<span>`을 제거 — **도메인만**(`secretasset.xyz`) 남김. `theme.ts` `ASSET_THEME_SHOT`/`ASSET_THEME_SHOT_BIG`의 `footerBrand` 토큰(소비처가 없어져 죽은 코드가 됨)도 함께 삭제, `footerDomain`만 유지.
+- 프리뷰·저장 PNG 공통(둘 다 같은 `share-card.tsx` 렌더 경로). 간격 토큰(`mt-1.5`/`pb-2`)은 도메인 한 줄 기준으로 그대로 — 레이아웃 변화 없음.
+
+### 인증카드 다크 배경 확인 — preview/저장 이미 동일 적용됨 (#4.24, 코드 변경 없음)
+
+- "저장 시 프리뷰에서 제거된 옅은검정 배경을 동일하게 제거해달라"는 요청 확인 결과: `share-card.tsx`의 `dark:bg-card` 제거(2026-09-06 커밋)가 `responsive`(프리뷰)·`!responsive`(캡처) **두 분기 모두**에 이미 적용돼 있음(`share-card.tsx:179`, [git log](../../src/app/(main)/_components/header-menu/share/share-card.tsx) 확인). 저장 PNG는 캡처 인스턴스의 `getComputedStyle(el).backgroundColor`를 그대로 `toPng` 배경으로 쓰므로(share-menu.tsx) 프리뷰와 동일한 `--background`(다크 `oklch(0.145)`)가 반영된다. 추가 코드 변경 불필요 — 여전히 옅은 검정이 보이면 캐시된 빌드/PWA 서비스워커 문제일 가능성이 높다.
+
 ## 2026-09-06
 
 ### 인증카드 프리뷰 텍스트 ~2px 축소 (주식 현황 + 포트폴리오 막대바) (#4.24)
