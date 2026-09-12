@@ -172,12 +172,12 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 모바일: 상하좌우 12px(노치·홈 인디케이터는 safe-area 우선) 인셋 — 가장자리로 블러된
-          오버레이(공용 DialogOverlay `bg-black/70 backdrop-blur-sm`)가 살짝 비친다. 라운드·테두리 복원.
-          sm: 이상은 기존 중앙 배치(760px, 94dvh)로 복귀. 여기는 캡처 대상(share-card.tsx)이 아니라
-          다이얼로그 셸이라 sm: 반응형 사용 가능(R32 무관).
-          다이얼로그가 노치 아래로 인셋되므로 헤더·X 버튼의 safe-area 패딩은 제거(단순 top-3). */}
-      <DialogContent className="p-0 gap-0 overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 flex flex-col border shadow-lg top-[max(0.75rem,env(safe-area-inset-top))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 translate-x-0 translate-y-0 w-auto max-w-none h-auto max-h-none rounded-2xl sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg [&_[data-slot=dialog-close]]:top-3 sm:[&_[data-slot=dialog-close]]:top-4">
+      {/* 모바일: 좌우 12px 인셋(노치·홈 인디케이터는 safe-area 우선), 세로는 top 앵커 + h-auto라
+          팝업 높이가 내부 주식현황/포트폴리오 콘텐츠 높이만큼 늘어난다(화면 고정 아님). 콘텐츠가
+          뷰포트를 넘으면 팝업 전체가 스크롤(max-h + overflow-y-auto) — 내부 프리뷰 영역엔 별도
+          스크롤바 없음. 가장자리로 블러된 오버레이(`bg-black/70 backdrop-blur-sm`)가 살짝 비친다.
+          sm: 이상은 기존 중앙 배치(760px, 94dvh)로 복귀. 여기는 캡처 대상이 아니라 셸이라 sm: 허용(R32 무관). */}
+      <DialogContent className="p-0 gap-0 overflow-x-hidden overflow-y-auto sm:overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 flex flex-col border shadow-lg top-[max(0.75rem,env(safe-area-inset-top))] left-3 right-3 translate-x-0 translate-y-0 w-auto max-w-none h-auto max-h-[calc(100dvh_-_max(0.75rem,env(safe-area-inset-top))_-_max(0.75rem,env(safe-area-inset-bottom)))] rounded-2xl sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg [&_[data-slot=dialog-close]]:top-3 sm:[&_[data-slot=dialog-close]]:top-4">
         <DialogHeader className="px-3 pt-3 pb-2 sm:px-5 sm:py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             <IdCard className="size-4 text-primary" />
@@ -241,8 +241,11 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
         </div>
 
         {/* 카드 미리보기 — 뷰포트에 맞춘 반응형 렌더(스케일 없음). 모바일은 좌우 여백 0(px-0)으로
-            프리뷰를 화면 끝까지. 텍스트·막대바는 상세>주식탭과 동일한 네이티브 크기(ASSET_THEME). */}
-        <div className="overflow-y-auto flex-1 px-0 py-1 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
+            프리뷰를 화면 끝까지. 텍스트·막대바는 인증카드 프리뷰 전용 크기(ASSET_THEME_SHOT,
+            2026-09부터 상세>주식탭보다 ~2px 작게 조정).
+            모바일: flex-none + 자연 높이라 이 영역엔 자체 스크롤바가 없다(팝업 셸이 통째로 늘어남).
+            sm: 이상은 고정 높이 다이얼로그의 스크롤 본문(flex-1 + overflow-y-auto). */}
+        <div className="flex-none overflow-visible sm:flex-1 sm:overflow-y-auto px-0 py-1 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <ShareCard
             variant={variant}
             hideAmounts={!showAmounts}

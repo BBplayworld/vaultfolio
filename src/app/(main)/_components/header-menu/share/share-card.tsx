@@ -176,7 +176,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
   return (
     <div
       ref={cardRef}
-      className={responsive ? "p-2 sm:p-3 rounded-2xl bg-background dark:bg-card w-full" : "p-3 rounded-2xl bg-background dark:bg-card"}
+      className={responsive ? "p-2 sm:p-3 rounded-2xl bg-background w-full" : "p-3 rounded-2xl bg-background"}
     >
 
       {variant === "portfolio" ? (

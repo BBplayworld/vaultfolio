@@ -58,7 +58,7 @@
 
 **`--ring-divider`** (globals.css) — 인증카드 포트폴리오 도넛 **조각 구분선**. **라이트 `#ffffff` / 다크 `#000000`** 고정. 웨지 `stroke` **5px**(`GAP_DEG=0`, 인접 조각의 stroke가 공유 모서리에서 겹쳐 한 줄이 됨). **도넛 외곽 링은 없다** — 별도 테두리 없이 조각 색면만으로 마감(#4.24).
 
-**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드(캡처 DOM) 전용 토큰**. 캡처 대상은 항상 `CARD_WIDTH`(현재 680px) 고정폭인데 `sm:`/`lg:`는 브라우저 뷰포트 기준이라, 반응형 클래스가 남으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan **R32**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-2xl`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-sm` 고정)를 **데스크톱 값으로 고정**해 둔 세트다. `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
+**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드 프리뷰 전용 토큰**(캡처 저장 PNG는 별도 `ASSET_THEME_SHOT_BIG`, 아래 참조). 인증카드는 프리뷰·캡처 두 인스턴스 모두 뷰포트 미디어쿼리(`sm:`/`lg:`) 없는 고정값을 써야 PC/모바일에서 같은 사용자가 다른 PNG를 얻는 버그가 없다(qa-full-test-plan **R32**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-[17px]`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-xs` 고정)를 값으로 고정해 둔 세트다. 2026-09부터 상세>주식 탭 모바일보다 ~2px 작게 의도 조정(포트폴리오 도넛 라벨과 밀도 정렬). `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **프리뷰 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
 
 ---
 

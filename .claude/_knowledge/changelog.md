@@ -6,15 +6,28 @@
 
 ## 2026-09-06
 
+### 인증카드 프리뷰 텍스트 ~2px 축소 (주식 현황 + 포트폴리오 막대바) (#4.24)
+
+- **왜**: 프리뷰에서 "주식 현황" 타입 텍스트(본문 14px·히어로 20px)가 "포트폴리오" 타입(도넛 라벨 실효 ~12px)보다 커 보여, 타입 전환 시 밀도가 튐. 막대바 범례(14px)는 주식 현황 본문과 동일, 도넛 라벨만 작았던 것.
+- `theme.ts` `ASSET_THEME_SHOT`(인증카드 프리뷰 전용 토큰) 폰트·아이콘을 ≈12/14로 축소: 본문/범례/수익률/도메인 `text-sm`→`text-xs`(12), `summaryValue` `text-xl`→`text-[17px]`, `profitAmount` `text-base`→`text-sm`(14), `iconInitial` 9→`text-[8px]`, `badge` 10→`text-[9px]`, `footerBrand` `text-xs`→`text-[10px]`, `icon` `size-6`→`size-5`(20).
+- `portfolio-sector-bar.tsx` 프리뷰 분기 `big ? "text-[20px]" : "text-sm"` → `… : "text-xs"`(막대·색점 `2.5`는 유지 — 텍스트만). 축소 후 본문·범례·도넛 라벨이 모두 12px대로 수렴.
+- **불변**: 저장 PNG(`ASSET_THEME_SHOT_BIG` × `SHOT_BIG_SCALE` 1.46, 이제 프리뷰와 base 분리), 상세>주식 탭(별도 클래스), 간격 토큰, 도넛 기하·`rLabelFont`. `shotBig` 삼항으로 프리뷰/캡처 분리 유지.
+
+### 인증카드 — 다크모드 카드 배경의 옅은검정(`dark:bg-card`) 제거 (#4.24)
+
+- `share-card.tsx` outer div `bg-background dark:bg-card` → **`bg-background`**(프리뷰·캡처 두 브랜치 공통). 다크모드에서 `--card`(`oklch(0.205)`)가 모달 `--background`(`oklch(0.145)`)보다 밝아 카드가 옅은검정 박스로 떠 보이던 것을 제거 — 카드가 모달/앱 배경과 완전히 같은 검정으로 융화.
+- 라이트모드는 원래 `dark:` 프리픽스라 무영향. 저장 PNG 배경은 `getComputedStyle(el).backgroundColor` 추적이라 다크 저장 시에도 동일하게 `oklch(0.145)`로 통일. 간격·텍스트·구도 불변.
+
 ### 인증카드 포트폴리오 도넛 ↔ 종목명 간격 +8px (#4.24)
 
 - `portfolio-ring-card.tsx` `LABEL_R` 256 → **264**(R_OUTER 240과의 간격 16→24px). 도넛 바깥과 링 밖 종목명 라벨이 살짝 더 떨어진다. 프리뷰·캡처 공통(기하 상수).
 - 264가 상한 — 그 이상이면 3/9시 방향 라벨 박스가 `VIEW_W`(656)를 넘어 짤린다(`labelMaxW` 하한 64 기준). `labelMaxW`·`VIEW_W`·`R_OUTER` 등 나머지 불변.
 
-### 인증카드 모달 — 모바일 전체화면 → 12px 인셋(가장자리 블러 오버레이 노출) (#4.24)
+### 인증카드 모달 — 모바일 전체화면 → 12px 인셋 + 콘텐츠 높이(가장자리 블러 오버레이 노출) (#4.24)
 
-- `share-menu.tsx` `DialogContent` 모바일 override를 `w-screen h-[100dvh] rounded-none border-0`(전체화면) → **상하좌우 12px 인셋**: `left-3 right-3` + `top/bottom-[max(0.75rem,env(safe-area-inset-*))]`(노치·홈 인디케이터 우선), `translate-x/y-0`로 공용 중앙 배치 해제, `w-auto h-auto max-w/h-none`, `rounded-2xl border shadow-lg`. 가장자리로 공용 `DialogOverlay`(`bg-black/70 backdrop-blur-sm`)가 살짝 비친다.
-- `sm:` 이상은 `sm:top/left-[50%] sm:translate-x/y-[-50%] sm:bottom/right-auto sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:rounded-lg`로 기존 중앙 배치 복귀.
+- `share-menu.tsx` `DialogContent` 모바일 override를 `w-screen h-[100dvh] rounded-none border-0`(전체화면) → **좌우 12px 인셋**(`left-3 right-3`) + **세로는 `top-[max(0.75rem,env(safe-area-inset-top))]` 앵커 + `h-auto`**: 팝업 세로 길이가 내부 주식현황/포트폴리오 콘텐츠만큼 늘어난다(뷰포트 고정 아님). `translate-x/y-0`로 공용 중앙 배치 해제, `w-auto max-w-none`, `rounded-2xl border shadow-lg`. 가장자리로 공용 `DialogOverlay`(`bg-black/70 backdrop-blur-sm`)가 살짝 비친다.
+- **내부 스크롤바 제거**: 직전 시안은 `top`+`bottom` 동시 앵커로 팝업이 뷰포트에 고정돼 프리뷰 영역(`flex-1 overflow-y-auto`)에 자체 세로 스크롤바가 생겼다 → 프리뷰 컨테이너를 모바일 `flex-none overflow-visible`(자연 높이) / `sm:flex-1 sm:overflow-y-auto`로 분기. 콘텐츠가 뷰포트를 넘으면 팝업 셸 전체가 스크롤: `max-h-[calc(100dvh - safe-area top - safe-area bottom)]` + `overflow-x-hidden overflow-y-auto`(`sm:overflow-hidden`).
+- `sm:` 이상은 `sm:top/left-[50%] sm:translate-x/y-[-50%] sm:bottom/right-auto sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg`로 기존 중앙 배치 복귀.
 - 다이얼로그가 노치 아래로 인셋되므로 헤더 `pt-[max(0.875rem,env(safe-area-inset-top))]`→`pt-3`, X 버튼 `top-[max(...)]`→`top-3`.
 - 저장 PNG(캡처 인스턴스)·프리뷰 렌더는 무영향(R32).
 

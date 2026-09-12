@@ -115,26 +115,28 @@ export const ASSET_THEME = {
  * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R32). 그래서
  * 여기 값엔 `sm:`이 없어야 한다 — 이게 결정성 불변식이고, 값 자체가 무엇이냐는 별개 문제다.
  *
- * base(프리뷰) 크기 = 상세>주식 탭 모바일(`ASSET_THEME`의 `sm:`/`lg:` 미적용값)과 동일.
+ * base(프리뷰) 크기 = 상세>주식 탭 모바일보다 **의도적으로 ~2px 작다**(2026-09 조정 —
+ * 인증카드 프리뷰에서 "주식 현황"이 "포트폴리오"(도넛 라벨 실효 ~12px)보다 커 보여, 본문
+ * 14→12px·히어로 20→17px로 낮춰 두 타입의 시각 밀도를 맞춤). 상세 탭·저장 PNG는 무관.
  * (`cardHeader` `py-2`·`cardTriggerButton` `gap-4`는 카드 전용 컴팩트 레이아웃이라 의도적 예외.)
  * `screenshotMode`인 컴포넌트가 프리뷰(작은 값)면 이 세트, 저장 PNG 캡처면 아래 `ASSET_THEME_SHOT_BIG`.
  */
 export const ASSET_THEME_SHOT = {
   cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
   cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
-  cardInfoName: "font-semibold text-sm leading-tight",
-  cardAmountMain: "text-sm font-bold tabular-nums leading-tight",
-  icon: "size-6",
-  iconInitial: "text-[9px]",
-  badge: "text-[10px] px-1 py-0 ml-1 leading-tight",
-  summaryValue: "text-xl font-bold tabular-nums break-all leading-tight",
-  profitAmount: "text-base font-bold tabular-nums whitespace-nowrap",
-  profitRate: "text-sm font-bold tabular-nums whitespace-nowrap",
+  cardInfoName: "font-semibold text-xs leading-tight",
+  cardAmountMain: "text-xs font-bold tabular-nums leading-tight",
+  icon: "size-5",
+  iconInitial: "text-[8px]",
+  badge: "text-[9px] px-1 py-0 ml-1 leading-tight",
+  summaryValue: "text-[17px] font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-sm font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-xs font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
-  legendText: "text-sm",
-  bodyText: "text-sm", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨·푸터 도메인 등) 공용
-  footerBrand: "text-xs",
-  footerDomain: "text-sm",
+  legendText: "text-xs",
+  bodyText: "text-xs", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨·푸터 도메인 등) 공용
+  footerBrand: "text-[10px]",
+  footerDomain: "text-xs",
 } as const;
 
 /**
@@ -143,6 +145,8 @@ export const ASSET_THEME_SHOT = {
  *
  * ⚠ Tailwind JIT가 `text-[Npx]`를 소스 문자열로 스캔하므로 런타임 계산·CSS 변수로 못 만든다.
  *    **`SHOT_BIG_SCALE`을 바꾸면 아래 값들을 `base × SCALE`(반올림)로 다시 계산해 교체할 것.**
+ *    여기 `base`는 캡처 기준 고정 참조값이며, 2026-09부터 `ASSET_THEME_SHOT`(프리뷰) 실제
+ *    값과는 분리됐다(프리뷰만 ~2px 낮춤 — 캡처 PNG 크기는 불변).
  *    base: cardInfoName/cardAmountMain 14, iconInitial 9, badge 10, summaryValue 20, profitAmount 16,
  *          profitRate 14, icon 24, legendText/bodyText 14, footerBrand 12, footerDomain 14.
  */

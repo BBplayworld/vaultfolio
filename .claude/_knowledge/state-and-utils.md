@@ -509,11 +509,14 @@ ASSET_THEME = { important, primary: {text, bg, bgLight}, text: {default, muted},
 getProfitLossColor(value: number): string   // >0 수익색 / <0 손실색 / =0 기본색
 
 // 인증카드 캡처 DOM 전용 토큰 (sm: 없음 — R32).
-ASSET_THEME_SHOT      // 프리뷰용 = ASSET_THEME 모바일값(sm:/lg: 제거): cardInfoName/cardAmountMain 14, summaryValue 20,
-                      //   profitAmount 16, profitRate 14, icon size-6, iconInitial 9, badge 10, bodyText/legendText 14,
-                      //   footerBrand text-xs, footerDomain text-sm. 간격 키(cardHeader/cardTriggerButton/legendGrid) 고정.
-ASSET_THEME_SHOT_BIG  // 저장 PNG 캡처용 = 위 폰트/아이콘을 SHOT_BIG_SCALE배 한 결과를 하드코딩(현재 1.46:
-                      //   20/29/23/20/35px, iconInitial 13, badge 15, footer 18/20). 간격 키는 SHOT과 동일.
+ASSET_THEME_SHOT      // 프리뷰 전용. 상세>주식 탭 모바일보다 ~2px 작다(2026-09 축소): cardInfoName/cardAmountMain
+                      //   text-xs(12), summaryValue text-[17px], profitAmount text-sm(14), profitRate text-xs(12),
+                      //   icon size-5(20), iconInitial text-[8px], badge text-[9px], bodyText/legendText text-xs(12),
+                      //   footerBrand text-[10px], footerDomain text-xs. 간격 키(cardHeader/cardTriggerButton/legendGrid) 고정.
+ASSET_THEME_SHOT_BIG  // 저장 PNG 캡처용 = 캡처 기준 base(cardInfoName/legendText/bodyText 14, summaryValue 20,
+                      //   profitAmount 16, icon 24 …)를 SHOT_BIG_SCALE배 하드코딩(현재 1.46: 20/29/23/20/35px,
+                      //   iconInitial 13, badge 15, footer 18/20). 2026-09부터 프리뷰(SHOT)와 base 분리 — 캡처 크기 불변.
+                      //   간격 키는 SHOT과 동일.
 SHOT_BIG_SCALE = 1.46 // 캡처 텍스트 배율의 **단일 출처(문서용 상수)**. Tailwind JIT가 text-[Npx]를 소스에서 스캔하므로
                       //   런타임 계산 불가 → 이 값을 바꾸면 ASSET_THEME_SHOT_BIG 값들을 base×SCALE 반올림으로 재계산해
                       //   교체할 것(theme.ts 주석에 base 표 있음). portfolio-ring-card.tsx는 도넛 라벨이 JS 숫자라

@@ -15,7 +15,7 @@ export interface SectorBarItem {
 export function PortfolioSectorBar({ title, items, big = false }: { title: string; items: SectorBarItem[]; big?: boolean }) {
   if (items.length === 0) return null;
   // big = 캡처(저장 PNG) 전용 — 680px 아트보드에서 프리뷰 비율을 내려고 텍스트/막대를 ×SHOT_BIG_SCALE(1.46)
-  const txt = big ? "text-[20px]" : "text-sm";
+  const txt = big ? "text-[20px]" : "text-xs";
   const dot = big ? "size-[15px]" : "size-2.5";
   const barH = big ? "h-[15px]" : "h-2.5";
   return (
