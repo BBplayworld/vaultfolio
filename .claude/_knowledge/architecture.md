@@ -204,6 +204,21 @@ NEXT_PUBLIC_NOTICE                     # 공지 시스템 단일 JSON
 NEXT_PUBLIC_CLOUD_SYNC                 # "off" 설정 시 클라우드 동기화 비활성화 (운영 비상 차단용)
 ```
 
+## 애널리틱스 (GA)
+
+`src/app/layout.tsx`(`RootLayout`, 서버 컴포넌트) — gtag.js 수동 삽입(전용 라이브러리 없음), 측정
+ID `G-PZXY31JVEW`(코드에 하드코딩, `layout.tsx` 2곳 + `settings-page.tsx`의 숨겨진 수동 옵트아웃
+토글 1곳 — 단일 출처 없이 중복, 알려진 부채).
+
+- **`gaEnabled = process.env.VERCEL_ENV === "production"`**(2026-09) — GA 스크립트 블록(옵트아웃
+  인라인 스크립트 + gtag.js 로더 + config 스크립트) 전체를 이 조건으로 감싼다. Vercel이 자동 주입하는
+  `VERCEL_ENV`는 프로젝트의 Production Branch(기본 `main`) 배포일 때만 `"production"`이라, **Preview
+  배포·로컬 `next dev`/`next build`에서는 GA 스크립트 자체가 서버에서 렌더되지 않는다**(네트워크
+  요청 자체가 없음 — main 외 브랜치는 자동 제외).
+- 블록 내부의 호스트명 기반 `isLocal` 체크·`?ga-optout=1` 쿼리 기반 개인 옵트아웃(`localStorage`)은
+  그대로 유지 — production 안에서 로컬 접속(예: 회사 네트워크 프록시 도메인)이나 QA 계정을 여전히
+  걸러내는 이중 방어. `settings-page.tsx`의 "화면" 라벨 7연속 탭 → 옵트아웃 토글도 무변경.
+
 ## 스크린샷 가져오기
 
 Gemini `gemini-2.5-flash-lite`로 증권·거래소·은행 앱 스크린샷 분석. **주식·암호화폐·현금성자산·대출** 4종.

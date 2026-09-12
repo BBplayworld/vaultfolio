@@ -26,7 +26,6 @@ export function BrandMark({
   size,
   bgColor,
   etfBrand,
-  scale = 1,
 }: {
   ticker: string;
   name: string;
@@ -36,9 +35,6 @@ export function BrandMark({
   bgColor: string;
   /** 국내 ETF 브랜드명(TIGER/KODEX/ACE…) — 있으면 로고 대신 텍스트 배지 */
   etfBrand?: string | null;
-  /** 프리뷰에서 링 전체가 transform:scale(<1)로 축소될 때(PortfolioRingCard) 배지 텍스트만 실효
-   * 크기를 유지하기 위한 보정값 — 도넛 라벨(rLabelFont)과 동일 패턴. 캡처는 항상 1(무영향, R32). */
-  scale?: number;
 }) {
   // 표시 크기 기준으로 요청(retina로 ×2 되어 pixelRatio 3 커버). etfBrand면 아래에서 미사용.
   const { imgProps } = useLogoSrc(ticker, name, isForeign, { size: captureLogoSize(size) });
@@ -46,10 +42,11 @@ export function BrandMark({
   const chip = "flex items-center justify-center rounded-full overflow-hidden";
 
   if (etfBrand) {
-    // 긴 브랜드명(TIMEFOLIO 등)은 지름 대비 글자수로 축소 + /scale로 실효 크기 보정(모바일처럼
-    // scale이 작아지면 보정 없이는 배지 글자가 사실상 안 보일 만큼 줄어든다).
-    const baseFontSize = Math.max(9, Math.round((size * 1.55) / Math.max(4, etfBrand.length)));
-    const fontSize = Math.round(baseFontSize / scale);
+    // 긴 브랜드명(TIMEFOLIO 등)은 지름 대비 글자수로 축소. 칩(size)이 scale과 무관한 고정 px에
+    // 딱 맞춰 튜닝된 좁은 컨테이너라 폰트를 /scale로 키우면(도넛 라벨과 동일 패턴 시도) transform
+    // 적용 전에 이미 칩보다 텍스트가 커져 넘친다(2026-09 회귀 확인·롤백) — scale 보정 없이 칩과
+    // 같은 비율로 자연 축소되게 둔다.
+    const fontSize = Math.max(9, Math.round((size * 1.55) / Math.max(4, etfBrand.length)));
     return (
       <div className={chip} style={{ width: size, height: size, backgroundColor: bgColor }}>
         <span

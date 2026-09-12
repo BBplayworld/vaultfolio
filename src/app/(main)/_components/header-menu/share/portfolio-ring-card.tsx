@@ -332,7 +332,6 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                     etfBrand={sub.etfBrand}
                     size={SUB_CHIP}
                     bgColor={seg.color}
-                    scale={scale}
                   />
                 </div>
               );
@@ -355,7 +354,6 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                 etfBrand={seg.etfBrand}
                 size={chip}
                 bgColor={seg.color}
-                scale={scale}
               />
             </div>
           );

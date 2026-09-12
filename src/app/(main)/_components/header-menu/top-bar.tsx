@@ -151,17 +151,18 @@ export function TopBar() {
           <>
             {/* 홈 화면 전용 서비스 로고 — "상세/성과" 세그먼트 왼쪽. 하위 화면(isSubView)에서는
                 이 분기 자체가 안 렌더돼 뒤로가기 버튼만 보인다(기존과 동일).
-                좌측 정렬 기준은 대시보드 최상단 카드(NetAssetSummaryBox, dashboard.tsx)의 실제
-                텍스트 시작선 — 카드는 색상 박스 자체에 px-4(16px) 안쪽 패딩이 있어 페이지 콘텐츠
-                좌측 끝(px-3)보다 16px 더 안쪽에서 시작한다. 로고 컨테이너는 그 오프셋이 전혀 없어
-                카드보다 왼쪽에 있었으므로 ml-4로 동일하게 밀어 맞춘다(ChevronLeft의 -ml-1 sm:-ml-2는
-                아이콘 SVG 내부 여백 보정용으로 방향이 반대라 착오 적용했던 것 — 되돌림). */}
-            <Logo size={22} className="text-foreground shrink-0 ml-4" />
+                좌측 정렬 기준은 대시보드 최상단 카드의 텍스트 시작선이 아니라 **카드 색상 박스(bg-primary/10)
+                자체의 외곽 모서리**(사용자 확인) — 이 모서리는 페이지 콘텐츠 영역(data-content-area)
+                좌측 끝과 같은 지점이라, top-bar 컨테이너의 px-3 패딩만으로 이미 정렬된다. 추가
+                마진 불필요(직전엔 카드 "텍스트" 시작선(px-4만큼 더 안쪽)에 맞추려 ml-4를 넣었다가
+                모바일에서 카드보다 오른쪽으로 처지는 회귀 — 되돌림). */}
+            <Logo size={22} className="text-foreground shrink-0" />
             <InlineSelector
               value={"" as HomeTop}
               onChange={onHomeTabChange}
               options={HOME_TOP_OPTIONS}
               size="xl"
+              className="ml-2"
               ariaLabel="페이지 선택"
             />
           </>

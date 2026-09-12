@@ -27,7 +27,9 @@ export function InlineSelector<T extends string>({
 }) {
   const base =
     size === "sm" ? "text-[12px] sm:text-[13px] lg:text-sm px-1.5 py-1"
-      : size === "xl" ? "text-lg sm:text-2xl lg:text-2xl font-bold px-4 py-1 lg:py-0.5"
+      // xl은 현재 top-bar.tsx 홈 화면 좌측(로고 옆 상세/성과)에서만 쓴다 — 로고와 박스 사이
+      // 여백이 붙어 보인다는 피드백으로 px-4→px-3 축소(2026-09). 다른 소비처 생기면 영향 확인할 것.
+      : size === "xl" ? "text-lg sm:text-2xl lg:text-2xl font-bold px-3 py-1 lg:py-0.5"
         : size === "lg" ? "text-sm sm:text-base lg:text-lg px-3 py-2"
           : "text-[13px] sm:text-sm lg:text-base px-2 py-1.5";
   return (

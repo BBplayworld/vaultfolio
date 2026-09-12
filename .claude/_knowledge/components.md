@@ -193,7 +193,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 ### header-menu (`header-menu/`, 구 header/top-nav)
 
-- `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `Logo`(`src/components/logo.tsx`, size=22, `ml-4`) + `InlineSelector`(상세/성과)** — 2026-09 추가. `ml-4`는 대시보드 최상단 카드(`NetAssetSummaryBox`, `px-4`) 텍스트 시작선과 좌측 정렬(카드가 페이지 콘텐츠 `px-3`보다 16px 더 안쪽에서 시작하기 때문 — `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 반대 방향이라 혼용 금지). 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
+- `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `Logo`(`src/components/logo.tsx`, size=22, 추가 마진 없음) + `InlineSelector`(상세/성과, `className="ml-2"`)** — 2026-09 추가. 로고 정렬 기준은 대시보드 최상단 카드 텍스트가 아니라 **카드 색상 박스(`bg-primary/10`) 자체의 외곽 모서리** — 이 모서리가 페이지 콘텐츠 영역(`data-content-area`) 좌측 끝과 같은 지점이라 top-bar `px-3` 패딩만으로 이미 정렬됨(카드 "텍스트" 시작선에 맞추려 `ml-4`를 넣었다가 모바일에서 카드보다 오른쪽으로 처지는 회귀가 있었음 — 되돌림). `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 이 로고와는 무관. 로고~`InlineSelector` 사이 여유 공간은 `InlineSelector`의 `className="ml-2"`로 확보(박스만 우측 이동, 로고 위치 불변). `InlineSelector`의 `size="xl"` 변형(이 자리 전용, 다른 소비처 없음)은 버튼 좌우 패딩을 `px-4`→`px-3`로 축소. 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
 - `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성)
 - `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
 - `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치)
@@ -271,7 +271,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 
 도넛 **조각 안**에 얹는 기업 로고 배지. **원형 칩 배경 = 해당 조각색**(`bgColor`) — 투명 여백이 있는 로고는 조각과 자연스럽게 이어지고, 흰 배경이 박힌 로고도 원형으로 정돈된다.
 
-- **props**: `{ ticker; name; isForeign; size; bgColor; etfBrand?; scale? }`. 로고 요청 해상도는 **`captureLogoSize(size)`**(= 표시 px × 1.5, route retina로 ×2 되어 결국 표시px×3). 과거 `size*6`(clamp 512 → retina 1024px PNG)은 모바일 WebView가 못 그렸다(2026-09 로고 누락). `scale?: number`(기본 1, 2026-09 추가)는 `etfBrand` 텍스트 배지 폰트만 보정 — `PortfolioRingCard`가 프리뷰에서 링 전체를 `transform: scale(<1)`로 축소할 때 `/scale`로 실효 크기를 유지한다(도넛 라벨 `rLabelFont`와 동일 패턴). 보정 없으면 모바일처럼 scale이 작을 때 배지 글자가 사실상 안 보이는 크기까지 줄어든다. 캡처는 `scale` 항상 1이라 무영향.
+- **props**: `{ ticker; name; isForeign; size; bgColor; etfBrand? }`. 로고 요청 해상도는 **`captureLogoSize(size)`**(= 표시 px × 1.5, route retina로 ×2 되어 결국 표시px×3). 과거 `size*6`(clamp 512 → retina 1024px PNG)은 모바일 WebView가 못 그렸다(2026-09 로고 누락). `etfBrand` 텍스트 배지 폰트는 **scale 보정을 걸지 않는다** — 도넛 라벨(`rLabelFont`)과 달리 칩(`size`)이 scale과 무관한 고정 px에 딱 맞춰 튜닝된 좁은 정사각 컨테이너라, `/scale`로 폰트만 키우면 `transform` 적용 전에 이미 텍스트가 칩보다 커져 넘친다(2026-09 시도 후 회귀 확인·롤백 — "여유 폭 넉넉한 라벨 텍스트"와 "꽉 찬 고정 칩 텍스트"는 같은 처방을 쓰면 안 됨).
 - 칩: `rounded-full overflow-hidden` + `backgroundColor: bgColor`, 내부 `<img object-cover>`가 칩을 **꽉 채워** 완전한 원이 된다(로고 자체의 사각 모서리가 안 보임).
 - **국내 ETF는 `etfBrand` 텍스트 배지**: 운용사 로고가 흰 배경 사각 이미지라(ACE 92.9%·TIGER 97.0%가 순백 불투명, 실측) 조각 위에서 흰 박스로 뜬다 → `BrandMark`가 `etfBrand` prop 유무로 `resolveLogoSrc` 호출 **전에** 분기해 브랜드명을 원형 칩에 텍스트로 렌더(로고 요청 자체를 안 함). 글자색 `pickOnColor(bgColor)`, 폰트는 브랜드명 길이에 반비례. **`resolveLogoSrc` 자체는 국내 ETF를 배제하지 않는다** — `StockIcon`(주식 탭 원형 아바타)은 같은 함수로 운용사 로고를 그대로 쓴다(흰 배경도 원 안에서는 자연스러움).
 - **로고 URL이 없거나 로드 재시도 3회 소진 시 `null` 반환 — 칩 자체를 그리지 않는다.** "그 외"처럼 로고 없는 조각에 빈 배지가 남지 않게.
