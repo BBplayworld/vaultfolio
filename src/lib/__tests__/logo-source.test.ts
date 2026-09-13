@@ -2,14 +2,14 @@ import { describe, it, expect } from "vitest";
 import { captureLogoSize, resolveLogoSrc, CAPTURE_PIXEL_RATIO } from "../finance/logo-source";
 
 describe("captureLogoSize", () => {
-  it("표시 px에 캡처 배율(1)의 절반을 곱한다 — route가 retina로 ×2 하므로 최종 표시px×1", () => {
-    expect(captureLogoSize(28)).toBe(14); // 리스트 아이콘: 14 요청 → retina 28px PNG = 28×1
-    expect(captureLogoSize(44)).toBe(22);
-    expect(captureLogoSize(92)).toBe(46); // 46 → 92px PNG = 92×1
+  it("표시 px에 캡처 배율(3)의 절반을 곱한다 — route가 retina로 ×2 하므로 최종 표시px×3", () => {
+    expect(captureLogoSize(28)).toBe(42); // 리스트 아이콘: 42 요청 → retina 84px PNG = 28×3
+    expect(captureLogoSize(44)).toBe(66); // 최소 조각 칩
+    expect(captureLogoSize(92)).toBe(138); // 최대 조각 칩: 138 → 276px PNG = 92×3
   });
 
-  it("CAPTURE_PIXEL_RATIO는 1(captureImage pixelRatio와 일치)", () => {
-    expect(CAPTURE_PIXEL_RATIO).toBe(1);
+  it("CAPTURE_PIXEL_RATIO는 3(captureImage pixelRatio와 일치)", () => {
+    expect(CAPTURE_PIXEL_RATIO).toBe(3);
   });
 
   it("과거 과대 요청(size*6, 최대 512)보다 훨씬 작다", () => {
@@ -22,7 +22,7 @@ describe("resolveLogoSrc", () => {
     const src = resolveLogoSrc("NVDA", "NVIDIA", true, { size: captureLogoSize(92) });
     expect(src).toContain("/api/logo?");
     expect(src).toContain("ticker=NVDA");
-    expect(src).toContain("size=46");
+    expect(src).toContain("size=138");
   });
 
   it("국내 ETF 브랜드 → ?domain= (운용사 도메인)", () => {

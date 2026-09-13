@@ -26,12 +26,8 @@ const EMPTY_STOCKS: Stock[] = [];
 // 폭을 바꾸면 portfolio-ring-card.tsx의 VIEW_W(= CARD_WIDTH − p-3 좌우 24)도 함께 조정해야 한다.
 const CARD_WIDTH = 680;
 // 캡처 PNG 목표 최소 폭 — pixelRatio는 이 값을 offsetWidth로 나눈 올림 정수.
-// 외부 공유(카페 등 재업로드) 시 원본 픽셀이 그대로(1600px 이상) 노출되는 문제 — 저장 파일
-// 자체 해상도를 카드 레이아웃 폭과 같게 낮춰 어디서든 680px 안팎으로 노출되게 한다(2026-09,
-// 사용자 선택: 확대/인쇄 선명도보다 외부 공유 시 크기 제어 우선). CARD_WIDTH와 동일 → pixelRatio=1.
-// (변경 시 logo-source.ts의 CAPTURE_PIXEL_RATIO를 반드시 함께 맞출 것 — 로고 요청 해상도가
-// 이 pixelRatio를 그대로 가정하고 있어, 어긋나면 과대 요청(R34 로고 누락 회귀) 또는 저해상도 로고가 됨)
-const CAPTURE_TARGET_PX = 680;
+// (680 기준 ceil(1400/680)=3 → 최종 약 2040px)
+const CAPTURE_TARGET_PX = 1400;
 
 // 캡처 전 로고 <img> 로드 대기 예산 (모바일에서 느린 로고 로드/디코드 대비)
 const IMG_SETTLE_PER_MS = 4000;
