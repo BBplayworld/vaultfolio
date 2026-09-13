@@ -31,6 +31,24 @@ export const SECTOR_ENUM = [
 ] as const;
 export type Sector = (typeof SECTOR_ENUM)[number];
 
+// 종목 유형(투자 성격) — "이 종목 자체가 어떤 성격의 자산인가"를 나타내는 축.
+// sector(산업이 무엇인가)와는 다른 축이라 혼용 금지. 한 종목당 정확히 1개.
+export const STOCK_TYPE_ENUM = [
+  "성장주",       // 검증된 사업모델로 고성장 지속 — 매출·이익 규모 상당(예: NVDA, PLTR)
+  "혁신주",       // 아직 검증 안 된 파괴적 기술 베팅 — 매출 미미·적자, 성패가 이분법적(예: RKLB, IONQ, 임상단계 바이오텍)
+  "배당성장주",
+  "배당주",
+  "지수투자",
+  "가치주",
+  "채권/현금성", // 국채·머니마켓·SGOV/TLT류 달러 채권·현금성 자산
+  "기타",
+] as const;
+export type StockType = (typeof STOCK_TYPE_ENUM)[number];
+
+// stockType 분류 규칙(프롬프트·오버라이드 목록)이 바뀔 때마다 올린다 — 캐시 유효성 체크가
+// 이 값을 요구하므로, 이미 (구버전 규칙으로) 분류된 종목도 다음 방문 때 전부 재분류된다.
+export const STOCK_TYPE_PROMPT_VERSION = 2;
+
 // 알려진 키 — 자동완성용. 확장 가능 (string index).
 export interface KnownClassification {
   sector?: Sector | string;   // 상위 카테고리 (단일) — 핵심 분야 축의 share 기준
@@ -41,6 +59,8 @@ export interface KnownClassification {
   regionName?: string;        // 표시용 (선택)
   marketCapTier?: "large" | "mid" | "small" | "etf" | "unknown";
   indices?: string[];         // ["KOSPI","KOSPI 200"], ["NASDAQ","S&P 500"] 등
+  stockType?: StockType | string; // 종목 유형(투자 성격) — 단일
+  stockTypeV?: number;         // stockType을 채운 분류 규칙 버전(STOCK_TYPE_PROMPT_VERSION) — 캐시 유효성 판정용
 }
 
 export type StockClassification = KnownClassification & Record<string, unknown>;

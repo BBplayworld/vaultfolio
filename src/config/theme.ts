@@ -109,25 +109,64 @@ export const ASSET_THEME = {
 } as const;
 
 /**
- * 인증카드(캡처 DOM) 전용 토큰 — `sm:`/`lg:` 뷰포트 반응형을 데스크톱 값으로 고정한다.
+ * 인증카드 화면 프리뷰(screenshotMode + !shotBig) 전용 토큰.
  *
- * 캡처 대상은 항상 480px 고정폭인데 `sm:`은 브라우저 뷰포트 기준이라, 반응형 클래스가
- * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R25).
- * `screenshotMode`인 컴포넌트만 ASSET_THEME 대신 이 값을 쓴다.
+ * R32(캡처 결정성: `CARD_WIDTH` 680px 고정폭 PNG가 PC/모바일 무관 항상 동일)는 저장 PNG를 만드는
+ * **캡처 인스턴스**(`shotBig=true` → 아래 `ASSET_THEME_SHOT_BIG`)에만 적용된다. 이 세트는 화면에만
+ * 보이고 캡처엔 전혀 관여하지 않으므로 `sm:` 반응형이 안전하다(2026-09부터 PC 프리뷰만 본문 텍스트를
+ * text-sm로 한 단계 ↑ — 모바일은 기존 text-xs 유지).
+ *
+ * base(모바일 프리뷰) 크기 = 상세>주식 탭 모바일보다 **의도적으로 ~2px 작다**(2026-09 조정 —
+ * 인증카드 프리뷰에서 "주식 현황"이 "포트폴리오"(도넛 라벨 실효 ~12px)보다 커 보여, 본문
+ * 14→12px·히어로 20→17px로 낮춰 두 타입의 시각 밀도를 맞춤). 상세 탭·저장 PNG는 무관.
+ * (`cardHeader` `py-2`·`cardTriggerButton` `gap-4`는 카드 전용 컴팩트 레이아웃이라 의도적 예외.)
+ * `screenshotMode`인 컴포넌트가 프리뷰(작은 값)면 이 세트, 저장 PNG 캡처면 아래 `ASSET_THEME_SHOT_BIG`.
  */
 export const ASSET_THEME_SHOT = {
   cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
   cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
-  cardInfoName: "font-semibold text-[15px] leading-tight",
-  cardAmountMain: "text-[15px] font-bold tabular-nums leading-tight",
-  icon: "size-7",
-  iconInitial: "text-[10px]",
-  badge: "text-[11px] px-1 py-0 ml-1 leading-tight",
-  summaryValue: "text-2xl font-bold tabular-nums break-all leading-tight",
-  profitAmount: "text-lg font-bold tabular-nums whitespace-nowrap",
-  profitRate: "text-base font-bold tabular-nums whitespace-nowrap",
+  // sm:(PC 프리뷰)은 text-sm으로 한 단계 ↑ — R32(캡처 결정성)는 ASSET_THEME_SHOT_BIG에만 적용되고
+  // 이 프리뷰 전용 세트는 화면 표시일 뿐 저장 PNG에 영향 없어 뷰포트 반응형이 안전하다.
+  cardInfoName: "font-semibold text-xs sm:text-sm leading-tight",
+  cardAmountMain: "text-xs sm:text-sm font-bold tabular-nums leading-tight",
+  icon: "size-5",
+  iconInitial: "text-[8px]",
+  badge: "text-[9px] px-1 py-0 ml-1 leading-tight",
+  summaryValue: "text-[17px] font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-sm font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-xs sm:text-sm font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
-  legendText: "text-sm",
+  legendText: "text-xs sm:text-sm",
+  bodyText: "text-xs sm:text-sm", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨 등) 공용
+} as const;
+
+/**
+ * 캡처(저장 PNG) 전용 — `ASSET_THEME_SHOT`의 폰트·아이콘 키를 **`SHOT_BIG_SCALE`배 한 결과**를
+ * 하드코딩한 것. 680px 아트보드에서 프리뷰(~374px)와 비슷한 시각 비율. `sm:` 없음(R32).
+ *
+ * ⚠ Tailwind JIT가 `text-[Npx]`를 소스 문자열로 스캔하므로 런타임 계산·CSS 변수로 못 만든다.
+ *    **`SHOT_BIG_SCALE`을 바꾸면 아래 값들을 `base × SCALE`(반올림)로 다시 계산해 교체할 것.**
+ *    여기 `base`는 캡처 기준 고정 참조값이며, 2026-09부터 `ASSET_THEME_SHOT`(프리뷰) 실제
+ *    값과는 분리됐다(프리뷰만 ~2px 낮춤 — 캡처 PNG 크기는 불변).
+ *    base: cardInfoName/cardAmountMain 14, iconInitial 9, badge 10, summaryValue 20, profitAmount 16,
+ *          profitRate 14, icon 24, legendText/bodyText 14.
+ */
+export const SHOT_BIG_SCALE = 1.46;
+
+export const ASSET_THEME_SHOT_BIG = {
+  cardHeader: ASSET_THEME_SHOT.cardHeader,
+  cardTriggerButton: ASSET_THEME_SHOT.cardTriggerButton,
+  cardInfoName: "font-semibold text-[20px] leading-tight",
+  cardAmountMain: "text-[20px] font-bold tabular-nums leading-tight",
+  icon: "size-[35px]",
+  iconInitial: "text-[13px]",
+  badge: "text-[15px] px-1 py-0 ml-1 leading-tight",
+  summaryValue: "text-[29px] font-bold tabular-nums break-all leading-tight",
+  profitAmount: "text-[23px] font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-[20px] font-bold tabular-nums whitespace-nowrap",
+  legendGrid: ASSET_THEME_SHOT.legendGrid,
+  legendText: "text-[20px]",
+  bodyText: "text-[20px]",
 } as const;
 
 /**
@@ -186,10 +225,62 @@ export const MAIN_PALETTE = [
 ] as const;
 
 /**
- * 공유 카드용 안전 팔레트 — 의미색과 충돌하는 [1] 빨강(부채/이익)·[2] 주황(임차보증금, 순자산
- * important와 유사)을 제외한다. [0] 인디고는 §1.3 "최대 비율 고정" 규칙 그대로 1위에 배정.
+ * 인증카드 "포트폴리오" 타입 전용 **고채도 팔레트**.
+ *
+ * 레퍼런스 인포그래픽(국민연금 포트폴리오 등) 수준의 선명한 색감을 위해 만든 세트.
+ * hue를 고르게 벌려 인접 조각이 확실히 구분되게 했고, 라이트/다크 배경 모두에서
+ * 조각 fill 과 라벨 % 텍스트로 함께 쓸 수 있는 명도대로 맞췄다.
+ * `[0]`은 브랜드 인디고(`--brand`)의 고채도 버전 — "최대 비율 = 브랜드색" 규약 유지.
+ *
+ * 2026-09-05(#4.24)부터 이 10색이 그대로 `MAIN_PALETTE[0~9]`로 승격돼 앱 전역 기본
+ * 팔레트가 됐다(`MAIN_PALETTE` 상단 주석 참고). 이 상수는 여전히 독립 export로 유지 —
+ * 포트폴리오 도넛·분야 막대바는 계속 이 이름(`SHARE_SAFE_PALETTE`)으로 참조한다.
  */
-export const SHARE_SAFE_PALETTE = [0, 5, 4, 6, 9, 7, 3, 8, 10].map((i) => MAIN_PALETTE[i]);
+export const PORTFOLIO_PALETTE = [
+  "#5B7CFA", // 인디고 블루 — 브랜드/1위 고정
+  "#FF4D8D", // 핑크
+  "#00C795", // 에메랄드
+  "#A855F7", // 퍼플
+  "#FF7A2F", // 오렌지
+  "#12B5E5", // 시안
+  "#84CC16", // 라임그린
+  "#F5A623", // 앰버
+  "#D946EF", // 마젠타
+  "#FF5A5A", // 코랄레드
+] as const;
+
+/** 인증카드 포트폴리오 도넛·분야 막대바 공용 — 색 조정은 PORTFOLIO_PALETTE만 손보면 된다 */
+export const SHARE_SAFE_PALETTE = PORTFOLIO_PALETTE;
+
+/**
+ * 배경색 위에 얹을 글자색(흰/검정)을 상대휘도로 고른다 — 조각색 위 브랜드 텍스트 배지용.
+ * `MAIN_PALETTE`에 `#RRGGBBAA` 8자리 hex가 섞여 있으므로 6·8자리를 모두 받는다.
+ */
+export function pickOnColor(hex: string): string {
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length < 6) return "#FFFFFF";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return luminance > 0.45 ? "#111111" : "#FFFFFF";
+}
+
+/** "그 외"/미분류 롤업 색 — 램프 밖 중립 그레이(fill·텍스트 공용) */
+export const SHARE_ETC_COLOR = "#8E8E93";
+
+/**
+ * hex 색상을 검정 쪽으로 `factor`만큼 혼합해 어둡게 — 인증카드 ETF 배지 원형처럼 "원래 색과
+ * 같은 색조를 유지하되 흰/검정 고정 2톤보다 다양하고, 항상 밝은 텍스트와 대비되는 어두운 배경"이
+ * 필요할 때 재사용. 기본 0.55는 `SHARE_SAFE_PALETTE`(채도 높은 중간~밝은 톤) 전체를 어떤 값이든
+ * 상대휘도 0.45 미만(=밝은 텍스트로 충분히 대비)까지 낮추도록 실측 검증된 값.
+ */
+export function darkenColor(hex: string, factor = 0.55): string {
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length < 6) return hex;
+  const mix = (c: number) => Math.round(c * (1 - factor));
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
+  return `#${[0, 2, 4].map((i) => toHex(mix(parseInt(h.slice(i, i + 2), 16)))).join("")}`;
+}
 
 /**
  * CSS 클래스 조합 헬퍼

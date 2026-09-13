@@ -2,6 +2,7 @@
 
 import { IdCard, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/logo";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -22,6 +23,8 @@ const ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w
 
 function ShareScreenshotButton() {
   const [open, setOpenState] = useState(false);
+  // 외부(홈 팁 등)에서 특정 카드 타입으로 바로 열어달라고 요청한 값 — dispatchOpenShareCard(variant)
+  const [initialVariant, setInitialVariant] = useState<"stock" | "portfolio" | undefined>(undefined);
   const setOpen = (next: boolean) => {
     setOpenState(next);
     if (typeof window !== "undefined") {
@@ -32,8 +35,10 @@ function ShareScreenshotButton() {
 
   // 홈 기능 활용 팁 박스 등 외부에서 페이지 이동 없이 그 자리에서 여는 진입점(S-4.32)
   useEffect(() => {
-    const handler = () => {
+    const handler = (e: Event) => {
       recordVisit("share-card");
+      const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" }>).detail;
+      setInitialVariant(detail?.variant);
       setOpen(true);
     };
     window.addEventListener("trigger-open-share-card", handler);
@@ -61,7 +66,7 @@ function ShareScreenshotButton() {
       >
         <IdCard className="size-5 sm:size-6" />
       </button>
-      <ShareScreenshotDialog open={open} onOpenChange={setOpen} />
+      <ShareScreenshotDialog open={open} onOpenChange={setOpen} initialVariant={initialVariant} />
     </>
   );
 }
@@ -143,13 +148,24 @@ export function TopBar() {
             <span className="text-lg sm:text-2xl lg:text-2xl font-bold truncate">{title}</span>
           </button>
         ) : (
-          <InlineSelector
-            value={"" as HomeTop}
-            onChange={onHomeTabChange}
-            options={HOME_TOP_OPTIONS}
-            size="xl"
-            ariaLabel="페이지 선택"
-          />
+          <>
+            {/* 홈 화면 전용 서비스 로고 — "상세/성과" 세그먼트 왼쪽. 하위 화면(isSubView)에서는
+                이 분기 자체가 안 렌더돼 뒤로가기 버튼만 보인다(기존과 동일).
+                좌측 정렬 기준은 대시보드 최상단 카드의 텍스트 시작선이 아니라 **카드 색상 박스(bg-primary/10)
+                자체의 외곽 모서리**(사용자 확인) — 이 모서리는 페이지 콘텐츠 영역(data-content-area)
+                좌측 끝과 같은 지점이라, top-bar 컨테이너의 px-3 패딩만으로 이미 정렬된다. 추가
+                마진 불필요(직전엔 카드 "텍스트" 시작선(px-4만큼 더 안쪽)에 맞추려 ml-4를 넣었다가
+                모바일에서 카드보다 오른쪽으로 처지는 회귀 — 되돌림). */}
+            <Logo size={22} className="text-foreground shrink-0" />
+            <InlineSelector
+              value={"" as HomeTop}
+              onChange={onHomeTabChange}
+              options={HOME_TOP_OPTIONS}
+              size="xl"
+              className="ml-3"
+              ariaLabel="페이지 선택"
+            />
+          </>
         )}
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pwa-hide-actions">

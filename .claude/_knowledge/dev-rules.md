@@ -38,7 +38,7 @@
 - 공용 컴포넌트 → `components.md` 해당 그룹에 1줄(경로·역할·핵심 props).
 - 유틸/Context/Store → `state-and-utils.md`에 시그니처.
 - 새 색·간격·컴포넌트/모션 패턴 → `design-system.md` 관련 §.
-- 등록은 코드와 **같은 작업 단위**에서 처리(KB 동시 갱신 관행과 짝).
+- 등록 시점은 CLAUDE.md **"KB 문서 갱신은 배치로"** 규칙을 따른다 — 작업마다 즉시 등록하지 않고, 최종 push 직전 `/qa-full-test` Phase 4에서 세션 누적분을 한 번에 등록한다(등록 누락 상태로 push하는 것만 금지).
 
 ---
 

@@ -63,6 +63,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const themeMode = await getPreference<ThemeMode>("theme_mode", THEME_MODE_VALUES, "dark");
+  // Vercel이 자동 주입 — Production Branch(main) 배포일 때만 "production".
+  // 로컬 `next dev`/`next build`는 미설정이라 자동으로 false(개발 환경 제외 겸함).
+  // preview 배포도 "preview"라 false — GA 스크립트 자체가 렌더 안 돼 네트워크 요청도 없음.
+  const gaEnabled = process.env.VERCEL_ENV === "production";
 
   return (
     <html
@@ -112,40 +116,44 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             `
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var GA_ID = 'G-PZXY31JVEW';
-                var host = window.location.hostname;
-                // 로컬 개발 환경은 자동 제외
-                // 인라인 스크립트 문자열이라 정규식의 점 이스케이프는 역슬래시 2개로 써야 한다.
-                // 1개만 쓰면 템플릿 리터럴이 삼켜 점이 와일드카드가 되고, "local"로 끝나는 모든 호스트가 매칭된다.
-                var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\\.local$/.test(host);
-                var params = new URLSearchParams(window.location.search);
-                // 특정 URL로 본인 기기에 플래그 기록/해제
-                if (params.get('ga-optout') === '1') localStorage.setItem('ga-optout', '1');
-                if (params.get('ga-optout') === '0') localStorage.removeItem('ga-optout');
-                // 로컬 접속이거나 플래그 있으면 GA 전송 완전 차단
-                if (isLocal || localStorage.getItem('ga-optout') === '1') {
-                  window['ga-disable-' + GA_ID] = true;
-                }
-              } catch (_) {}
-            `
-          }}
-        />
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-PZXY31JVEW');
-          `}
-        </Script>
+        {gaEnabled && (
+          <>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  try {
+                    var GA_ID = 'G-PZXY31JVEW';
+                    var host = window.location.hostname;
+                    // 로컬 개발 환경은 자동 제외
+                    // 인라인 스크립트 문자열이라 정규식의 점 이스케이프는 역슬래시 2개로 써야 한다.
+                    // 1개만 쓰면 템플릿 리터럴이 삼켜 점이 와일드카드가 되고, "local"로 끝나는 모든 호스트가 매칭된다.
+                    var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\\.local$/.test(host);
+                    var params = new URLSearchParams(window.location.search);
+                    // 특정 URL로 본인 기기에 플래그 기록/해제
+                    if (params.get('ga-optout') === '1') localStorage.setItem('ga-optout', '1');
+                    if (params.get('ga-optout') === '0') localStorage.removeItem('ga-optout');
+                    // 로컬 접속이거나 플래그 있으면 GA 전송 완전 차단
+                    if (isLocal || localStorage.getItem('ga-optout') === '1') {
+                      window['ga-disable-' + GA_ID] = true;
+                    }
+                  } catch (_) {}
+                `
+              }}
+            />
+            <Script
+              src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-PZXY31JVEW');
+              `}
+            </Script>
+          </>
+        )}
       </head>
       <body className={`${inter.className} min-h-screen antialiased`}>
         <PreferencesStoreProvider themeMode={themeMode}>

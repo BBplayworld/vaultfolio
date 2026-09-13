@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { fetchAndStoreClassifications } from "@/lib/xray/fetch-classifications";
+import { useMemo, useState } from "react";
+import { useXrayClassifications } from "@/lib/xray/use-xray-classifications";
 import { Microscope, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { truncateName } from "@/lib/utils";
 
 const AXIS_OPTIONS = [
   { value: "theme" as XrayAxis, label: "🎯 핵심 분야" },
+  { value: "stockType" as XrayAxis, label: "🏷️ 종목 유형" },
   { value: "marketCap" as XrayAxis, label: "📊 시가총액" },
   { value: "index" as XrayAxis, label: "📈 지수" },
   { value: "region" as XrayAxis, label: "🌏 지역" },
@@ -105,25 +106,10 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
 export function StockXrayView() {
   const { assetData, exchangeRates } = useAssetData();
   const [axis, setAxis] = useState<XrayAxis>("theme");
-  const [tick, setTick] = useState(0);
   const [promptOpen, setPromptOpen] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
-  // X-Ray 페이지 진입 시 분류 fetch (캐시 hit이면 no-op). 스트리밍 진행률로 % 표시
-  useEffect(() => {
-    let mounted = true;
-    fetchAndStoreClassifications(assetData.stocks, (p) => {
-      if (mounted) setProgress(p);
-    }).then(() => {
-      if (mounted) {
-        setTick((v) => v + 1); // localStorage 갱신 반영 위해 useMemo 재계산 트리거
-        setProgress(null);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [assetData.stocks]);
+  // X-Ray 페이지 진입 시 분류 fetch (캐시 hit이면 no-op). 스트리밍 진행률로 % 표시 (공용 훅)
+  const { tick, progress } = useXrayClassifications(assetData.stocks);
 
   const classifying = progress !== null && progress.total > 0 && progress.done < progress.total;
   const progressPct = classifying ? Math.round((progress!.done / progress!.total) * 100) : 0;
@@ -141,13 +127,14 @@ export function StockXrayView() {
     [axis, mergedStocks, exchangeRates, tick],
   );
 
-  const incomplete = (axis === "theme" || axis === "marketCap" || axis === "index") && result.unclassifiedRatio > 0;
+  const incomplete = (axis === "theme" || axis === "marketCap" || axis === "index" || axis === "stockType") && result.unclassifiedRatio > 0;
   const unclassPct = Math.round(result.unclassifiedRatio * 1000) / 10;
   const showWarning = unclassPct > 0;
   const conc = CONCENTRATION_LABEL[result.concentration];
 
   const buildXrayPromptText = () => buildStockXrayPrompt(mergedStocks, exchangeRates, [
     computeBreakdown("theme", mergedStocks, exchangeRates),
+    computeBreakdown("stockType", mergedStocks, exchangeRates),
     computeBreakdown("marketCap", mergedStocks, exchangeRates),
     computeBreakdown("index", mergedStocks, exchangeRates),
     computeBreakdown("region", mergedStocks, exchangeRates),

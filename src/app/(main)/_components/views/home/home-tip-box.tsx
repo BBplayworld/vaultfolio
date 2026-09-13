@@ -2,11 +2,13 @@
 
 // 홈 알림/팁 통합 박스 — 백업 안내(backup-nudge.tsx)·세금 안내(tax-notice-box.tsx)·
 // 자산 최신화 안내(refresh-nudge.tsx)·기능 활용 팁(feature-tip-box.tsx) 4종을 이 박스 1개로 흡수(S-4.32 후속).
-// 판정은 home-tip.ts의 pickHomeTip이 위험도 순(백업>세금>최신화>기능)으로 1개만 고른다.
-// 인터랙션은 4종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
+// 새 공지(notice)는 #4.24에서 5번째 종류로 추가 — 필수 노출: 최초 1회는 세션 숨김 플래그를 무시하고
+// 반드시 뜨며, X로 닫으면 이번 세션만 숨겨지고(영구 dismiss 아님) 실제로 열어봐야만(activate) 영구 열람 처리된다.
+// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>최신화>기능 순으로 1개만 고른다.
+// 인터랙션은 5종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
 import { useEffect, useState } from "react";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -16,7 +18,9 @@ import { markNudgeShown } from "@/lib/asset/backup-status";
 import { markRefreshNudgeShown } from "@/lib/asset/asset-refresh-status";
 import { markTaxNoticeDismissed } from "@/lib/tax-utils";
 import { dismissTip } from "@/lib/feature-usage";
-import { pickHomeTip, type HomeTip } from "@/lib/home-tip";
+import { pickHomeTip, markCurrentNoticeSeen, isNoticeUnseen, type HomeTip } from "@/lib/home-tip";
+import { NOTICE_TITLE, NOTICE_SUMMARY } from "../../layout/onboarding/notice";
+import { dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 
@@ -27,6 +31,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   loan: "대출",
 };
 
+// X 닫기 시 이번 세션(창) 동안 팁 박스를 완전히 숨긴다 — 다음 순위 팁이 바로 튀어나오지 않게.
+// sessionStorage라 재접속(새 세션) 시 초기화 → 각 종류의 재노출 정책대로 다음 팁이 정상 노출.
+// (pwa-connect-prompt.tsx의 세션 dismiss 패턴과 동일)
+const SESSION_DISMISS_KEY = "secretasset_home_tip_session_dismissed";
+// 미열람 공지를 이번 세션에 이미 1회라도 노출했는지 — 이 플래그가 서기 전까지만 SESSION_DISMISS_KEY를
+// 무시하고 공지를 강제 노출한다. 서고 나면 X 닫기(→ SESSION_DISMISS_KEY)로 세션 내 재노출이 정상 차단된다.
+const NOTICE_SHOWN_SESSION_KEY = "secretasset_home_tip_notice_shown";
+
 export function HomeTipBox() {
   const { assetData, getAssetSummary } = useAssetData();
   const cs = useCloudSync();
@@ -36,10 +48,22 @@ export function HomeTipBox() {
   const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
 
   useEffect(() => {
+    let noticeShownThisSession = false;
+    try { noticeShownThisSession = sessionStorage.getItem(NOTICE_SHOWN_SESSION_KEY) === "true"; } catch { /* 무시 */ }
+    // 미열람 공지가 이번 세션에 아직 한 번도 안 떴을 때만 세션 숨김 플래그를 무시하고 강제 노출한다
+    // (다른 팁의 X 닫기가 공지의 "최초 1회 노출"을 가로막지 못하게). 한 번 뜬 뒤엔 X 닫기가 정상 작동.
+    if (!(isNoticeUnseen() && !noticeShownThisSession)) {
+      try {
+        if (sessionStorage.getItem(SESSION_DISMISS_KEY) === "true") { setTip(null); return; }
+      } catch { /* 무시 */ }
+    }
     const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed" });
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
     if (picked?.kind === "refresh") markRefreshNudgeShown();
+    if (picked?.kind === "notice") {
+      try { sessionStorage.setItem(NOTICE_SHOWN_SESSION_KEY, "true"); } catch { /* 무시 */ }
+    }
     setTip(picked);
   }, [assetData, hasAssets, cs.status]);
 
@@ -48,7 +72,12 @@ export function HomeTipBox() {
   const close = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (tip.kind === "tax") markTaxNoticeDismissed();
+    // "notice"는 X로는 영구 dismiss 안 함(markCurrentNoticeSeen 미호출) — 실제로 열어봐야(activate)
+    // 열람 처리된다. X 닫기는 SESSION_DISMISS_KEY만 세워 이번 세션 내 재노출을 막고(NOTICE_SHOWN_SESSION_KEY가
+    // 이미 서 있어 강제 노출 바이패스가 꺼진 상태), 새 세션에선 다시 최우선으로 떠서 실제 열람을 유도한다.
     if (tip.kind === "feature") dismissTip(tip.feature.id);
+    // 이번 세션 동안 팁 박스 전체를 숨김 (다음 순위 팁도 안 뜨게). 재접속 시 초기화.
+    try { sessionStorage.setItem(SESSION_DISMISS_KEY, "true"); } catch { /* 무시 */ }
     setTip(null);
   };
 
@@ -73,6 +102,14 @@ export function HomeTipBox() {
     }
     if (tip.kind === "refresh") {
       window.dispatchEvent(new CustomEvent("open-add-asset-sheet", { detail: { category: tip.staleCategories[0] } }));
+      setTip(null);
+      return;
+    }
+    if (tip.kind === "notice") {
+      markCurrentNoticeSeen();
+      // 이번 공지의 핵심 기능(포트폴리오 인증카드)으로 바로 이동 — 공지 본문 대신 실제 결과물을 보여준다.
+      // 다음 릴리스에서 홍보 대상이 바뀌면 이 액션도 함께 갱신할 것(notice.tsx 콘텐츠와 짝).
+      dispatchOpenShareCard("portfolio");
       setTip(null);
       return;
     }
@@ -154,6 +191,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "최신화",
       title: `${CATEGORY_LABEL[tip.staleCategories[0]]} 최신화가 오래됐어요`,
       description: `보유 현황이 오래되면 순자산 원인분해·성적표가 실제와 달라질 수 있어요.${rest > 0 ? ` 그 외 ${rest}곳도 최신화가 필요해요.` : ""}`,
+    };
+  }
+  if (tip.kind === "notice") {
+    return {
+      Icon: Sparkles,
+      badgeLabel: "공지",
+      title: NOTICE_TITLE,
+      description: NOTICE_SUMMARY,
     };
   }
   // feature

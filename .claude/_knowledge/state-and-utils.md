@@ -230,11 +230,18 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 
 ```typescript
 pickHomeTip({ assetData, hasAssets, syncArmed }): HomeTip | null
-  // HomeTip = { kind: "backup", days } | { kind: "tax", matches } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
-  // 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) >
-  //           자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
+  // HomeTip = { kind: "notice" } | { kind: "backup", days } | { kind: "tax", matches }
+  //         | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  // 새 공지는 **필수 노출**(readNoticeSeenId()!==NOTICE_ID) — 다른 무엇보다 최우선, 안전 안내(백업·세금)보다도 먼저 반환.
+  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) >
+  //                 자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
 ```
 `backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`의 기존 순수 함수를 그대로 조합만 한다(신규 판정 로직 없음). 4종을 독립 컴포넌트(`BackupNudge`/`RefreshNudge`/`TaxNoticeBox`/`FeatureTipBox`)로 각자 띄우던 것을 `home-tip-box.tsx` 1개로 통합하며 도입 — 종류별 "오늘/이번달/영구" 재노출 정책은 각 원본 유틸에 그대로 남아있고, 승자가 아닌 종류는 "오늘 떴다" flag를 찍지 않는다(호출부 책임, [components.md](components.md) `HomeTipBox` 참조).
+
+**`notice` 종류(#4.24 재도입, 필수 노출)** — 과거 홈 진입 시 자동 팝업하던 `UpdateNoticeDialog`는 S-4.32에서 "기능 추천" 프레임으로 대체하며 의도적으로 제거됐었다. 이번엔 그 방식(강제 팝업) 대신 **다른 팁과 동일한 카드 1장**으로 재도입하되, **우선순위를 맨 위로**(백업·세금보다도 먼저) 둬 신규 버전 안내가 사용자가 보거나 닫기 전까지 반드시 뜨게 한다 — `isNoticeUnseen()`(`readNoticeSeenId() !== NOTICE_ID`, `home-tip.ts` export)이 true면 노출.
+- **최초 1회 노출 보장**: `home-tip-box.tsx`의 `useEffect`는 `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 한 번도 안 뜸)만 `SESSION_DISMISS_KEY`(공용 세션 숨김 플래그) 체크를 **건너뛰고** `pickHomeTip`을 호출한다 — 다른 팁의 X 닫기가 공지의 "최초 1회 노출"을 못 막게. 공지 tip이 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끈다. 그 뒤부터는 X 닫기(→`SESSION_DISMISS_KEY`)가 정상 작동해 **같은 세션 내 재진입 시 재노출 안 됨**. 새 세션(sessionStorage 초기화)에선 다시 바이패스 활성 → 미열람 공지 재노출(#4.24 후속, QA에서 "X 닫고 홈 재진입 시 재노출" 버그 수정).
+- **열람 처리는 클릭에서만, 공지 본문이 아니라 해당 기능으로 직행**(#4.24 후속): 클릭 시 `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)으로 영구 열람 처리하면서 `dispatchOpenNotice()`(공지 다이얼로그) 대신 **이번 릴리스가 홍보하는 실제 기능**을 바로 연다 — `dispatchOpenShareCard("portfolio")`(`asset-dispatch.ts`, `variant` 인자 지원)로 인증카드를 포트폴리오 타입으로 즉시 오픈. 공지 문구만 보여주고 끝나지 않고 결과물을 바로 체험시키는 의도. **다음 릴리스에서 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 한다** — 자동 연동 아님. 이제 아무도 안 쓰는 `dispatchOpenNotice`/`trigger-open-notice`는 삭제(더보기 메뉴의 수동 열람은 `tool-menu.tsx`의 `showNotice` 로컬 상태로 그대로 유지).
+- **X 닫기는 세션 숨김만**(#4.24 후속, 영구 dismiss 아님) — `markCurrentNoticeSeen()`을 호출하지 않고 `SESSION_DISMISS_KEY`만 세워 이번 세션에서만 숨긴다. 다음 세션엔 `isNoticeUnseen()`이 여전히 true라 다시 최우선으로 떠서, 사용자가 실제로 공지를 최소 1번 열어보게(또는 더보기 메뉴에서 수동으로 열람) 강제한다.
 
 ### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
 
@@ -500,6 +507,23 @@ fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
 ```typescript
 ASSET_THEME = { important, primary: {text, bg, bgLight}, text: {default, muted}, categoryBox, todayBox, liability, ... }
 getProfitLossColor(value: number): string   // >0 수익색 / <0 손실색 / =0 기본색
+
+// 인증카드 캡처 DOM 전용 토큰 (sm: 없음 — R32).
+ASSET_THEME_SHOT      // 프리뷰 전용. 상세>주식 탭 모바일보다 ~2px 작다(2026-09 축소): cardInfoName/cardAmountMain
+                      //   text-xs(12), summaryValue text-[17px], profitAmount text-sm(14), profitRate text-xs(12),
+                      //   icon size-5(20), iconInitial text-[8px], badge text-[9px], bodyText/legendText text-xs(12).
+                      //   간격 키(cardHeader/cardTriggerButton/legendGrid) 고정. footerBrand/footerDomain은
+                      //   2026-09 푸터(브랜드명+도메인) 전체 제거와 함께 삭제됨.
+ASSET_THEME_SHOT_BIG  // 저장 PNG 캡처용 = 캡처 기준 base(cardInfoName/legendText/bodyText 14, summaryValue 20,
+                      //   profitAmount 16, icon 24 …)를 SHOT_BIG_SCALE배 하드코딩(현재 1.46: 20/29/23/20/35px,
+                      //   iconInitial 13, badge 15). 2026-09부터 프리뷰(SHOT)와 base 분리 — 캡처 크기 불변.
+                      //   간격 키는 SHOT과 동일.
+SHOT_BIG_SCALE = 1.46 // 캡처 텍스트 배율의 **단일 출처(문서용 상수)**. Tailwind JIT가 text-[Npx]를 소스에서 스캔하므로
+                      //   런타임 계산 불가 → 이 값을 바꾸면 ASSET_THEME_SHOT_BIG 값들을 base×SCALE 반올림으로 재계산해
+                      //   교체할 것(theme.ts 주석에 base 표 있음). portfolio-ring-card.tsx는 도넛 라벨이 JS 숫자라
+                      //   SHOT_BIG_SCALE을 import해 rLabelFont=round(12*SCALE)로 직접 파생.
+                      // share-card.tsx가 shotBig=!responsive로 골라 하위(StockRowHeader/StockIcon/StockCategorySection/
+                      //   DetailSummaryHeader/ProfitMetric/PortfolioSectorBar `big`)에 스레딩.
 ```
 
 ---
@@ -553,3 +577,37 @@ window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT))  // "secretasset-as
 - `persistNickname(next)`: `sanitizeNickname`(한글·영문·숫자, 최대 8자) → `assetData.nickname` 저장 + `NICKNAME_EVENT` 발행. 공유/가져오기/pull 복원(`applyImportedPayload`)도 이 함수 사용.
 - `useNickname()`: `[nickname, setNickname]`. `NICKNAME_EVENT`·`storage` 수신해 상태 동기화.
 - **커밋 시점 = 더보기 탭 이탈(언마운트) 1회** ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)): 입력란은 로컬 `draft` state로 분리해 키 입력 중엔 저장·push 안 함. `useEffect([nickname])`로 외부 pull 변경을 draft에 반영, 언마운트 `commitRef`에서 `draft!==nickname`일 때만 `setNickname` 커밋(no-op 가드 → stale 닉네임 재push 차단). 키 입력마다 즉시 저장하던 ping-pong 동기화 버그 해결.
+
+### X-Ray 분류 자동 fetch (`src/lib/xray/use-xray-classifications.ts`)
+
+- `useXrayClassifications(stocks) → { tick, progress }` — 마운트/`stocks` 변경 시 `fetchAndStoreClassifications(stocks, onProgress)` 실행(캐시 완비면 즉시 no-op, 모듈 `inflight` dedup), 완료 시 `tick++`.
+- **사용법**: `tick`을 `computeBreakdown`/`pickHighlights`를 감싸는 `useMemo` deps에 넣어 localStorage 분류 갱신을 재계산에 반영(`classification-store`엔 구독 메커니즘이 없음).
+- **트리거 끄기**: 빈 배열(`[]`, 안정 참조)을 넘기면 no-op — 조건부 실행에 사용(예: 인증카드 다이얼로그는 `open && variant==="portfolio"`일 때만 `assetData.stocks` 전달).
+- 소비처 3곳: `stock-xray-view.tsx`(진행률 % 표시), `stock-insight-strip.tsx`(백그라운드), `ShareScreenshotDialog`(포트폴리오 분야 막대바). 이전엔 앞 2곳이 동일 useEffect+tick 패턴을 복붙했으나 이 훅으로 통합.
+
+### 종목 유형 분류 (`STOCK_TYPE_ENUM`, `src/lib/xray/classification-store.ts`)
+
+- `STOCK_TYPE_ENUM`(8개: 성장주/**혁신주**/배당성장주/배당주/지수투자/가치주/채권·현금성/기타) — 한 종목당 정확히 1개 배정하는 **"종목 유형(투자 성격)"** 축(#4.24). `SECTOR_ENUM`(산업이 뭔가)과는 별개 축이라 혼용 금지 — 의도적으로 "투자 스타일"이라 부르지 않는다(투자자의 스타일이 아니라 종목 자체의 성격). **혁신주**는 검증 안 된 파괴적 기술 베팅(매출 미미·적자, 성패가 이분법적 — 로켓랩·아이온큐·임상단계 바이오텍류)을 대형 흑자 성장주(성장주)와 분리하기 위해 추가.
+- `KnownClassification.stockType`에 저장, Gemini 분류(`api/xray-classify/route.ts`)가 `sector`와 나란히 채운다.
+- `stock-xray.ts`의 `extractStockType`이 소비 — AI가 업종명 고정관념으로 흔들리기 쉬운 대표 ETF·우량주는 티커·이름 하드코딩 매핑으로 우선 확정(전수 목록 아님, 대표 예시만 — `extractIndex`의 `US_INDEX_ETF_MAP`·`extractSector`의 `domesticOverrides`와 동일한 "확실한 것만 하드코딩" 철학):
+  - `COVERED_CALL_TICKERS`(JEPI/JEPQ/QYLD/YMAX 등) → 배당주, `DIVIDEND_GROWTH_ETF_TICKERS`(SCHD/DGRO/VIG 등) → 배당성장주 — 두 상품군이 AI 판단으로 뒤바뀌는 걸 원천 차단.
+  - `DIVIDEND_ARISTOCRAT_TICKERS`(KO/PG/JNJ/O 등 25년+ 연속 증액) → 배당성장주, `HIGH_YIELD_VALUE_TICKERS`(T/VZ/MO, KT&G/KT 등) → 배당주, `TRADITIONAL_VALUE_TICKERS`(BAC/WFC, 국내 금융지주 등) → 가치주, `INNOVATION_TICKERS`(RKLB/IONQ/JOBY/ACHR) → 혁신주.
+  - `BOND_CASH_TICKERS`/`BOND_CASH_NAME_KEYWORDS`(SGOV/TLT/국채 등) → 채권/현금성(최우선순위 아님, 위 개별 오버라이드 뒤에 체크).
+- **`STOCK_TYPE_PROMPT_VERSION`**(classification-store.ts) — stockType 분류 규칙(프롬프트·오버라이드 목록)이 바뀔 때마다 올리는 버전 마커. 서버 캐시 유효성 체크(`xray-classify/route.ts`)와 클라이언트 게이트(`fetch-classifications.ts`) **양쪽 다** 이 값과 일치해야 "분류 완료"로 인정한다 — 하나라도 빠뜨리면 그쪽에서 재분류 요청 자체가 안 나가는 버그가 난다(2026-09-05 실제 발생·수정). 버전을 올리면 이미 (구버전 규칙으로) 캐시된 종목도 전부 강제 재분류된다.
+
+### 기업 로고 src 해석 (`src/lib/finance/logo-source.ts`)
+
+- `resolveLogoSrc(ticker, name, isForeign, { size?, theme? }) → string | null` — `/api/logo` 쿼리를 만드는 **단일 출처**. 해외 티커(`/^[A-Z]+$/`) → `?ticker=`, 국내 ETF 브랜드 접두(`getEtfDomain`) 또는 국내 개별주(`DOMESTIC_STOCK_DOMAIN_MAP`) → `?domain=`. 어디에도 안 걸리면 `null`(호출부가 이니셜·티커 텍스트로 폴백).
+- **`captureLogoSize(displayPx) → number`** = `ceil(displayPx * CAPTURE_PIXEL_RATIO / 2)` = `displayPx * 1.5`. `/api/logo` route가 항상 `retina=true`를 강제해 **반환 PNG = 요청 `size`의 2배**이므로, 표시px×pixelRatio(3) 해상도를 얻으려면 요청 `size`는 그 절반이면 된다. `LogoSourceOptions.size`엔 **반드시 `captureLogoSize(표시px)`로 환산해 전달**한다 — 과거 `BrandMark`가 44~92px 칩에 `size*6`(clamp 512 → retina 1024px PNG)를 요청해 모바일 Web‑View가 디코드/메모리 한계로 로고를 통째로 못 그렸다(인증카드 저장 시 로고 누락, 2026-09). `CAPTURE_PIXEL_RATIO`(=3)는 `share-menu.tsx` `captureImage`의 `pixelRatio`와 동일해야 한다.
+- **`KR_ETF_BRANDS`(22개 브랜드 접두어) 단일 출처** — `stock-xray.ts`가 여기서 import한다(과거엔 양쪽에 중복 정의돼 있었고 주석이 존재하지 않는 파일을 가리켰다). `ETF_DOMAIN`(13개, 브랜드→운용사 도메인)은 그 부분집합.
+- `getEtfBrand(name)` — 국내 ETF면 브랜드명(TIGER/KODEX/ACE…) 반환. **운용사 로고가 흰 배경 사각 이미지라** 도넛 조각처럼 색면 위에 얹으면 흰 박스로 뜬다. `resolveLogoSrc` 자체는 국내 ETF를 배제하지 않는다(`StockIcon`은 원형 아바타라 흰 배경도 자연스러워 그대로 씀) — **`BrandMark`가 `etfBrand` 유무로 먼저 분기해 이 함수를 호출하지 않고 텍스트 배지로 대체**한다. 새 소비처를 추가할 때도 이 방식(호출 전 분기)을 따르고 `resolveLogoSrc`에 배제 로직을 넣지 말 것.
+- 소비처 2곳: `StockIcon`(주식 탭, 원형 아바타) / `BrandMark`(인증카드 포트폴리오 도넛, 투명 로고). 둘 다 **`useLogoSrc` 훅 경유**로 이 함수를 호출한다(직접 호출 금지 — 재시도가 빠진다). 새로 로고를 그릴 곳이 생기면 `useLogoSrc`를 재사용한다.
+
+### 로고 로드 재시도 훅 (`src/hooks/use-logo-src.ts`)
+
+- `useLogoSrc(ticker, name, isForeign, opts?) → { src, failed, imgProps }`
+  - `imgProps`(`{ src, onError, onLoad }`) — `<img key={imgProps.src} {...imgProps} />`로 스프레드. `null`이면 로고 URL 없음(도메인 매핑 없음) **또는 재시도 3회 소진**.
+  - `failed` — URL은 있으나 재시도까지 실패. 호출부가 이니셜 등 폴백을 그릴 신호(`imgProps===null`과 동치이나 의미 구분용).
+- 내부: `resolveLogoSrc`(단일 출처 재사용)로 `base` URL → `onError` 시 지수 백오프(400·800·1600ms)로 `attempt++`, 3회 초과 시 `failed`. `onLoad` 시 대기 타이머 취소. `base`(종목·옵션) 변경 시 상태 리셋. 언마운트 시 `clearTimeout`.
+- 재시도 URL엔 캐시버스터 `&r=N`만 붙는다 — `/api/logo` route가 이 파라미터를 파싱하지 않아 **서버 캐시 키 불변(HIT 유지)**, 무력화 대상은 브라우저 HTTP 캐시뿐. 목적은 "모바일 WebView 1회성 디코드 실패" 복구.
+- **왜 필요**: 과거 `BrandMark`/`StockIcon`은 `imgError` state가 한 번 `true`면 영구히 폴백으로 굳어, 캡처(`toPng`) 실행 전에 이미 로고가 사라진 상태였다(인증카드 저장 시 로고 누락, 2026-09). `imgError` 영구 폴백 패턴을 이 훅으로 교체.

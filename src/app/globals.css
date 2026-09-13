@@ -74,6 +74,8 @@ These serve as the fallback; there is no separate default.css file. */
   --destructive: oklch(0.577 0.245 27.325);
   /* --border: oklch(0.85 0 0); */
   --border: oklch(0.65 0 0);
+  /* 인증카드 포트폴리오 도넛 조각 구분선 — 라이트=화이트 / 다크=검정 */
+  --ring-divider: #ffffff;
   /* 더 어둡게: 0.922 → 0.85 */
   /* 인터랙티브 경계 대비(WCAG 1.4.11 3:1): 0.85 → 0.58 (캔버스 0.96 대비 ≥3:1). 입력·체크박스 border-input 공용. 다크는 .dark에서 별도 pin */
   --input: oklch(0.58 0 0);
@@ -133,6 +135,7 @@ These serve as the fallback; there is no separate default.css file. */
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
+  --ring-divider: #000000;
   --ring: oklch(0.585 0.233 277.117);
   /* Indigo-based chart colors for dark mode */
   --chart-1: oklch(0.673 0.182 276.935);
@@ -252,6 +255,10 @@ These serve as the fallback; there is no separate default.css file. */
 
   body {
     @apply bg-background text-foreground overscroll-none;
+    /* 가로 스크롤바 전역 금지 — 페이지 레벨 가로 넘침만 차단(내부 overflow-x-auto 컨테이너는 무영향).
+       컴포넌트에서 뷰포트를 넘기면 스크롤바가 아니라 그 컴포넌트를 min-w-0/max-w-full로 수렴시킬 것
+       (R33, 날짜 input R10과 동일 원칙). html { touch-action: pan-y }와 짝. */
+    overflow-x: hidden;
   }
 
   /* 모든 버튼과 클릭 가능한 요소에 cursor: pointer 적용 */

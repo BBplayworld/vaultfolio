@@ -4,6 +4,349 @@
 
 ---
 
+## 2026-09-13
+
+### 홈 화면 — 자산 성적표 트로피·점수 미니 배지 추가 (#4.24)
+
+- **왜**: "자산 성적표"(F-REPORT, S-4.18)는 이미 완전히 구현돼 있지만 홈에서 진입 동선이 없었음 — 흥미 유발용 티저를 순자산 헤더에 노출해달라는 요청.
+- `dashboard.tsx`: `useLatestAssetGrade()` 신규 훅이 `readDailySnapshots()`에서 `grade` 필드가 있는 최신 스냅샷을 읽는다(재계산 없음 — `computeAssetGrade()` 재호출은 profit-ref 등 무거운 입력이 필요해 중복 계산). `NetAssetSummaryBox`에 옵션 `grade?`/`onGradeClick?` prop 추가, `grade && !hasRightSide`일 때만 우상단 `absolute` 배치로 트로피(티어색+글로우)+점수 노출, 클릭 시 `navigate({type:"activity", tab:"report"})`. `asset-report-view.tsx`의 `TIER_STYLE`을 export해 색 재사용(새 팔레트 없음). `welcome-guide.tsx` 프리뷰 호출부는 두 prop 다 안 넘겨 무영향. 성적표 미방문 계정은 배지 자체가 렌더 안 됨.
+
+### 상단바 로고~InlineSelector 간격 재조정 (`ml-2`→`ml-3`)
+
+- **왜**: 여전히 약간 붙어 보인다는 피드백 — 좌/우 그룹 폭 예산 분석(320px 최소 지원 폭 기준 여유 확인) 후 4px만 더 확보.
+
+### 인증카드 — PC 프리뷰 본문 텍스트 `text-sm` 확대
+
+- **왜**: PC(넓은 화면) 프리뷰가 모바일과 같은 축소 크기(`text-xs`)라 가독성이 아쉽다는 지적. 모바일은 기존 유지(포트폴리오 도넛 라벨과의 시각 밀도 균형 때문에 의도적으로 작게 잡은 값이라 손대지 않음).
+- `theme.ts`의 `ASSET_THEME_SHOT`(프리뷰 전용 세트 — 저장 PNG는 항상 별도 `ASSET_THEME_SHOT_BIG`이라 무관, R32 안전) `cardInfoName`/`cardAmountMain`/`profitRate`/`legendText`/`bodyText`에 `sm:text-sm` 추가. `portfolio-ring-card.tsx`의 도넛 라벨(`rLabelFont`)도 같은 640px 기준(`matchMedia`)으로 PC는 14px, 모바일은 12px 유지하도록 분기.
+
+### 인증카드 포트폴리오 도넛 — 조각 안 로고·ETF 배지 크기 통일 + "그 외" 세로 배치 + 대비 원형 배경
+
+- **왜**: 3단계 반복 요청 — ①ETF 브랜드 라벨이 조각 크기에 비례해 커져 조각마다 들쭉날쭉해 보임 ②"그 외" 미니 로고가 가로로 좁게 배치돼 작음 ③ETF 배지 배경이 항상 흰색이라 단조로움.
+- **라벨/칩 크기 통일**: `chipSizeFor()`를 `CHIP_MIN`(44→**50**px) 고정 타깃 + chord 안전장치로 단순화(기존 `CHIP_MAX`/`CHIP_REF_ARC` sqrt 비례 보간 폐기). 목표 크기와 "너무 좁으면 생략" 기준을 `CHIP_HIDE_BELOW`(32px)로 분리해, 확대해도 극단적으로 좁은 조각에서 로고가 갑자기 사라지지 않게 함. `BrandMark`에 `fontSize?` prop 추가 — 메인·서브 조각 모두 `ETF_LABEL_FONT_SIZE`(14px 고정) 전달.
+- **6자 이상 브랜드 축약**: `ETF_BRAND_ABBR`(수동 매핑 10종 — KBSTAR→KBST 등, 4자 슬라이스 자동 규칙은 HANARO→HANA처럼 실제 브랜드와 겹쳐 반려) 도입. 5자 이하(TIGER/KODEX 등)는 14px에서 이미 안 잘려 축약 불필요.
+- **"그 외" 세로 배치 + 확대**: 서브칩 배치를 원주(각도) 오프셋 → **반지름(세로) 오프셋**으로 전환(밴드 두께가 원주 방향 여유폭보다 넓어 더 큰 칩이 안전) — `SUB_CHIP` 28→**38**px, `SUB_CHIP_GAP` 6→7.
+- **ETF 배지 대비 원형**: 배경을 조각색 그대로(초안) → `pickOnColor(bgColor)` 흰/검정 2톤(팔레트 대부분이 흰색으로 수렴해 "무조건 흰색" 문제) → 최종 `darkenColor(bgColor)`(신규 유틸, theme.ts — 조각색을 검정 쪽 55% 혼합)로 조각마다 다른 톤 확보, 글자색은 `pickOnColor(badgeBg)`로 재계산.
+
+### 인증카드 저장 PNG 해상도 축소 시도 → 효과 없음 확인 후 즉시 원복 (`a7c0340` → `2f2faa2` revert)
+
+- **왜**: 아이폰에서 저장한 PNG가 2040×3174px라 네이버 카페 등에 재업로드하면 원본 그대로(1600px 이상) 크게 노출된다는 신고 — 저장 파일 자체 해상도를 카드 레이아웃과 같은 680px(`CAPTURE_TARGET_PX` 1400→680, `pixelRatio` 3→1)로 낮춰 외부 공유 시 작게 보이게 하려 시도.
+- **원복 이유**: 실사용 확인 결과 **네이버 카페 앱은 업로드 이미지를 원본 해상도와 무관하게 컨테이너 폭(PC/모바일 각각)에 강제로 늘려(stretch) 표시** — 파일 해상도를 낮춰도 화면에 보이는 "크기(폭)"는 똑같이 컨테이너 100%로 고정되고, 오히려 680px 원본을 업스케일하며 글자만 흐려지는 손해만 남았다. **다운로드 이후 제3자 사이트에 재업로드된 정적 파일의 표시 크기는 그 사이트의 렌더링 규칙(CSS)이 전적으로 결정 — 앱이 제어할 수 있는 영역이 아니다**(PNG의 DPI/pHYs 메타데이터도 웹 `<img>` 렌더링에서 대부분 무시됨). `share-menu.tsx`/`logo-source.ts`/`brand-mark.tsx`/`logo-source.test.ts` 4개 파일을 `git revert`로 정확히 원상복구(`pixelRatio=3`, 2040px, `CAPTURE_PIXEL_RATIO=3` 그대로).
+- **교훈**: "저장 파일 해상도"로 "외부 사이트에서의 표시 크기"를 제어하려는 시도는 재발 금지 — 대상 플랫폼이 이미지를 컨테이너 폭에 강제로 맞추는 반응형 뷰어를 쓰는 이상 근본적으로 불가능하다.
+
+---
+
+## 2026-09-12
+
+### GA(Google Analytics) 수집을 프로덕션(main)에서만 활성화
+
+- **왜**: preview·로컬 개발 환경까지 GA 수집이 섞여 실제 사용자 데이터가 오염됨 — main 브랜치(프로덕션) 배포에서만 수집되게 요청.
+- `src/app/layout.tsx`에 `gaEnabled = process.env.VERCEL_ENV === "production"` 게이트 추가, GA 스크립트 블록(옵트아웃 인라인 스크립트 + gtag.js 로더 + config) 전체를 조건부 렌더로 감쌈. Vercel의 `VERCEL_ENV`는 Production Branch(기본 `main`) 배포일 때만 `"production"`이라 preview·로컬은 자동 제외 — 기존 "로드는 되고 런타임에 옵트아웃 플래그" 방식보다 강력(스크립트 자체가 서버에서 렌더 안 됨, 네트워크 요청 없음).
+- 블록 내부(호스트명 기반 로컬 차단, `ga-optout` 개인 옵트아웃, `settings-page.tsx` 수동 토글)는 무변경.
+
+### 상단바 로고~InlineSelector 간격 확보
+
+- **왜**: 로고와 "상세/성과" 배경 박스가 너무 붙어 보임.
+- `top-bar.tsx`의 `InlineSelector`에 `className="ml-2"` 추가(로고는 그대로, 박스만 우측 이동). `inline-selector.tsx`의 `xl` 변형(이 자리 전용) 버튼 패딩도 `px-4`→`px-3`로 축소.
+
+### 직전 커밋 회귀 2건 수정 — ETF 배지 오버플로우 롤백 + 상단바 로고 재정렬 (#4.24)
+
+- **ETF 배지 오버플로우**: 도넛 라벨과 같은 패턴으로 `BrandMark`(ETF 브랜드 배지)에 넣은 `/scale` 보정이 모바일 프리뷰에서 배지 글자가 칩 밖으로 크게 넘쳐 잘리는 회귀를 일으킴 — 원인은 칩(`size`)이 scale과 무관한 고정 px에 딱 맞춰 튜닝된 좁은 정사각 컨테이너인데 폰트만 `/scale`로 키워 `transform` 적용 전에 이미 넘쳤기 때문(여유 폭 넉넉한 도넛 라벨과 근본적으로 다른 케이스). `scale` prop과 보정 로직 전부 롤백 — 원래대로 칩과 같은 비율로 자연 축소.
+- **상단바 로고 재정렬**: `top-bar.tsx`의 `<Logo>`에 넣은 `ml-4`(대시보드 카드 "텍스트" 시작선 기준)가 모바일에서 카드보다 오른쪽으로 처지는 회귀를 일으킴 — 정렬 기준이 카드 텍스트가 아니라 **카드 색상 박스 자체의 외곽 모서리**(사용자 확인)였고, 이 모서리는 top-bar 컨테이너의 `px-3`만으로 이미 일치하는 지점이라 `ml-4` 자체가 불필요했음. 마진 제거.
+- 두 회귀 모두 직전 커밋(`fd42883`)에서 "도넛 라벨과 같은 문제일 것"·"카드와 정렬 맞춘 것"이라는 유추만으로 고쳤다가 실제 스크린샷 확인 후 뒤집힌 사례 — 시각적 정렬/스케일 보정은 코드 추론만으로 확정하지 말고 스크린샷으로 재확인할 것.
+
+### CLAUDE.md — "KB 문서 갱신은 배치로" 규칙 신설
+
+- **왜**: 작업마다 `qa-full-test-plan.md`/`components.md`/`state-and-utils.md`/`changelog.md`를 매번 갱신하는 게 비효율적이라는 지적 — 작은 단위 작업을 이어서 진행한 뒤 최종 push 직전에 한 번에 몰아서 갱신하도록 규칙화.
+- `CLAUDE.md`에 규칙 추가: 작업 중엔 KB 문서를 갱신하지 않고, **최종 push 요청 시** `/qa-full-test` 실행(Phase 0 자동 검증) → Phase 4에서 KB 일괄 갱신 → 커밋·푸시 순서로 진행. `qa-full-test` 스킬·`qa-full-test-plan.md` Phase 4·`dev-rules.md`의 "신규 공용 자산 등록 시점" 문구도 이 규칙을 참조하도록 함께 정정.
+
+### 인증카드 워터마크 — 서비스 로고(`Logo`) 확정 + 공용 컴포넌트 분리 (#4.24)
+
+- **왜**: 인증카드에 아주 작은 서비스 출처 표시가 필요 — "파비콘 수준"으로 시작해 여러 차례 반려·재설계를 거쳐 확정. 이력: 앱 로고 PNG(스탬프 느낌, 정렬·크기 실패) → lucide `IdCard` 아이콘("기업 로고가 아니다"로 반려) → 파비콘과 동일한 **Leckerli One 서체 "S"** 텍스트 마크로 확정, 사용자가 "여러 서비스 페이지에서 재사용 가능한 별도 컴포넌트로 구성" 요청 → 공용 컴포넌트로 분리.
+- 신규 `src/components/logo.tsx`(`Logo`) — `next/font/google`의 `Leckerli_One` 로더를 이 파일 모듈 스코프에서 호출(다른 파일 무변경). `size`/`className`/`style` props로 배치를 호출부에 위임하는 순수 마크. 도메인에 속하지 않는 범용 브랜드 UI 원자라 `(main)/_components/` 도메인 트리가 아니라 `src/components/`(shadcn 전용 `ui/`와 별도)에 배치.
+- `share-card.tsx`: 워터마크를 `Logo`로 확정, 크기는 `SHOT_BIG_SCALE`로 프리뷰(24px)→캡처(`Math.round(24×1.46)`=35px) 자동 파생. 위치는 좌측 "총 주식 평가금액" 라벨 최상단과 정렬, 우측 여백은 하단 리스트·막대바(`px-2`)와 동일한 인셋(`right-4 sm:right-5`/`right-5`)으로 통일. 투명도는 최종 100%(불투명), 크기는 사용자 요청에 따라 여러 차례 축소를 거쳐 확정.
+
+### 홈 영역 로고 추가 — 상단바·PWA 하단 네비 (#4.24)
+
+- **왜**: 인증카드 워터마크에 이어 앱의 홈 진입점에도 브랜드 마크 노출.
+- `top-bar.tsx`: 홈 화면 좌측("상세/성과" 옆)에 `<Logo size={22}>` 추가. 정렬은 대시보드 최상단 카드(`NetAssetSummaryBox`, `px-4`) 텍스트 시작선 기준 `ml-4` — 처음엔 `ChevronLeft`의 `-ml-1 sm:-ml-2`(아이콘 SVG 내부 여백 보정용)를 같은 이유일 거라 잘못 유추해 반대 방향으로 옮겼다가, 카드가 페이지 콘텐츠(`px-3`)보다 `px-4`만큼 더 안쪽에서 시작한다는 걸 재조사해 정정.
+- `bottom-nav.tsx`: PWA standalone 하단 네비 "홈" 탭만 `Home`(lucide) → `<Logo size={20}>`로 교체(활성 시 `MAIN_PALETTE[0]` 색상, 다른 5개 탭 무변경 — 폰트가 단일 weight라 `strokeWidth` 굵기 차이는 재현하지 않음).
+- **서브페이지 뒤로가기 버튼(`TopBar`의 `ChevronLeft`)에는 의도적으로 미적용** — 구현 자체는 공용 컴포넌트 1곳뿐이라 단순하지만, 방향 신호(뒤로가기)와 브랜드(홈) 의미가 한 버튼에서 충돌하고 `back()`의 실제 목적지가 대부분 홈이 아니라 상위 허브/이전 화면이라 오히려 혼란을 유발할 수 있어 스킵.
+
+### 인증카드 포트폴리오 도넛 라벨 — PC 프리뷰 크기 불일치 수정 (#4.24)
+
+- **왜**: PC 버전 인증카드에서 도넛 라벨(종목명·%)만 나머지 텍스트(`text-xs`=12px)보다 크게(`text-sm`급) 보인다는 지적. 원인: `rLabelFont = Math.max(15, 12/scale)`의 하한 `15`가 2026-09 프리뷰 본문 축소(14→12px) 이전 값으로 남아있어, PC처럼 도넛이 축소 없이(`scale≈1`) 렌더될 때만 `12/scale=12` 대신 `15`가 이겨 커 보였음(모바일은 `scale<1`이라 `12/scale`이 항상 15를 넘어 문제 없었음 — PC에서만 드러나는 회귀).
+- `portfolio-ring-card.tsx`: 하한을 `15`→`12`로 정정(`Math.max(12, 12/scale)`) — PC·모바일 모두 실효 12px로 통일.
+- 같은 패턴을 `brand-mark.tsx`(도넛 조각 안 ETF 브랜드 배지 폰트)에서도 발견 — `/scale` 보정이 전혀 없어 모바일처럼 `scale`이 작을 때 배지 글자가 사실상 안 보이는 크기까지 줄어들 수 있었음. `BrandMark`에 `scale?: number`(기본 1) prop 추가해 도넛 라벨과 동일하게 보정, `portfolio-ring-card.tsx`의 두 호출부(메인 칩·"그 외" 미니 칩)에서 `scale={scale}` 전달.
+- 재점검 결과 캡처(680px)와 프리뷰(~374px) 텍스트 비율이 소폭(0.2~0.6pp, 워터마크는 1.27pp) 어긋나 있으나, 이는 2026-09 "프리뷰만 축소, 캡처는 유지" 결정의 의도된 부작용이라 별도 수정하지 않음(사용자 확인).
+
+### PWA 잠금화면 — 비밀번호 input 다크모드 테두리 상시 노출 (#4.24)
+
+- **왜**: PC 다크모드에서 미포커스 시 공용 `Input`이 `dark:border-0`(배경 채움만)이라 어두운 배경 위에서 input 위치를 찾기 어려움.
+- `pwa-lock-screen.tsx`의 `<Input>`에만 `dark:border dark:border-ring` 추가(공용 `input.tsx`는 무변경) — 포커스 때와 동일한 테두리를 항상 노출.
+
+### 인증카드 저장 배경 — 순수 흑/백으로 고정 (#4.24)
+
+- **왜**: 모바일 환경에서 저장한 PNG 전체 배경이 "옅은 검정"으로 보임 — `bg-background`(다크 `oklch(0.145 0 0)`)가 이론상 거의 검정이지만 oklch 퍼센트 값이라 기기·뷰어에 따라 완전한 `#000`이 아닌 미묘한 톤으로 렌더될 수 있음.
+- `share-card.tsx` 캡처(`!responsive`) 분기의 배경을 `bg-background` → **`bg-white dark:bg-black`**로 교체 — 톤 편차 없는 완전한 흰/검정. 프리뷰(`responsive`)는 다이얼로그와의 시각적 통일을 위해 기존 `bg-background` 유지(변경 범위는 저장 PNG로 한정).
+- `toPng`의 `backgroundColor`는 캡처 엘리먼트의 `getComputedStyle` 값을 그대로 쓰므로(share-menu.tsx) 이 클래스 교체만으로 저장 이미지 배경이 순수 흑/백이 된다.
+
+### 인증카드 푸터 — 도메인까지 완전 제거 (#4.24)
+
+- **왜**: 직전에 서비스 이름 텍스트만 지웠는데도 도메인(`secretasset.xyz`)이 남아 여전히 출처가 노출됨 → 푸터 전체 제거 요청.
+- `share-card.tsx`에서 푸터 `<div>`(도메인 `<span>`) 전체 삭제. 연쇄로 `siteHost`·`APP_CONFIG` import·`footerTok` 변수·`theme.ts`의 `footerDomain` 토큰(양쪽 `ASSET_THEME_SHOT(_BIG)`)까지 죽은 코드가 되어 함께 정리.
+- 종목 리스트(주식 현황)/막대바(포트폴리오)가 이제 카드의 마지막 콘텐츠. 카드 하단 여백은 리스트·막대바 래퍼 자체 패딩 + outer padding만 적용(이전의 "헤더 pt-2 ↔ 푸터 pb-2 대칭" 계산은 더 이상 해당 없음 — 별도 조정 요청 시 처리).
+
+### 인증카드 푸터 — 서비스 이름 텍스트 노출 제거 (#4.24)
+
+- **왜**: 공유용 이미지 하단에 "시크릿에셋" 브랜드 텍스트가 노출되는 것을 원치 않음.
+- `share-card.tsx` 푸터에서 `APP_CONFIG.name`("시크릿에셋") `<span>`을 제거 — **도메인만**(`secretasset.xyz`) 남김. `theme.ts` `ASSET_THEME_SHOT`/`ASSET_THEME_SHOT_BIG`의 `footerBrand` 토큰(소비처가 없어져 죽은 코드가 됨)도 함께 삭제, `footerDomain`만 유지.
+- 프리뷰·저장 PNG 공통(둘 다 같은 `share-card.tsx` 렌더 경로). 간격 토큰(`mt-1.5`/`pb-2`)은 도메인 한 줄 기준으로 그대로 — 레이아웃 변화 없음.
+
+### 인증카드 다크 배경 확인 — preview/저장 이미 동일 적용됨 (#4.24, 코드 변경 없음)
+
+- "저장 시 프리뷰에서 제거된 옅은검정 배경을 동일하게 제거해달라"는 요청 확인 결과: `share-card.tsx`의 `dark:bg-card` 제거(2026-09-06 커밋)가 `responsive`(프리뷰)·`!responsive`(캡처) **두 분기 모두**에 이미 적용돼 있음(`share-card.tsx:179`, [git log](../../src/app/(main)/_components/header-menu/share/share-card.tsx) 확인). 저장 PNG는 캡처 인스턴스의 `getComputedStyle(el).backgroundColor`를 그대로 `toPng` 배경으로 쓰므로(share-menu.tsx) 프리뷰와 동일한 `--background`(다크 `oklch(0.145)`)가 반영된다. 추가 코드 변경 불필요 — 여전히 옅은 검정이 보이면 캐시된 빌드/PWA 서비스워커 문제일 가능성이 높다.
+
+## 2026-09-06
+
+### 인증카드 프리뷰 텍스트 ~2px 축소 (주식 현황 + 포트폴리오 막대바) (#4.24)
+
+- **왜**: 프리뷰에서 "주식 현황" 타입 텍스트(본문 14px·히어로 20px)가 "포트폴리오" 타입(도넛 라벨 실효 ~12px)보다 커 보여, 타입 전환 시 밀도가 튐. 막대바 범례(14px)는 주식 현황 본문과 동일, 도넛 라벨만 작았던 것.
+- `theme.ts` `ASSET_THEME_SHOT`(인증카드 프리뷰 전용 토큰) 폰트·아이콘을 ≈12/14로 축소: 본문/범례/수익률/도메인 `text-sm`→`text-xs`(12), `summaryValue` `text-xl`→`text-[17px]`, `profitAmount` `text-base`→`text-sm`(14), `iconInitial` 9→`text-[8px]`, `badge` 10→`text-[9px]`, `footerBrand` `text-xs`→`text-[10px]`, `icon` `size-6`→`size-5`(20).
+- `portfolio-sector-bar.tsx` 프리뷰 분기 `big ? "text-[20px]" : "text-sm"` → `… : "text-xs"`(막대·색점 `2.5`는 유지 — 텍스트만). 축소 후 본문·범례·도넛 라벨이 모두 12px대로 수렴.
+- **불변**: 저장 PNG(`ASSET_THEME_SHOT_BIG` × `SHOT_BIG_SCALE` 1.46, 이제 프리뷰와 base 분리), 상세>주식 탭(별도 클래스), 간격 토큰, 도넛 기하·`rLabelFont`. `shotBig` 삼항으로 프리뷰/캡처 분리 유지.
+
+### 인증카드 — 다크모드 카드 배경의 옅은검정(`dark:bg-card`) 제거 (#4.24)
+
+- `share-card.tsx` outer div `bg-background dark:bg-card` → **`bg-background`**(프리뷰·캡처 두 브랜치 공통). 다크모드에서 `--card`(`oklch(0.205)`)가 모달 `--background`(`oklch(0.145)`)보다 밝아 카드가 옅은검정 박스로 떠 보이던 것을 제거 — 카드가 모달/앱 배경과 완전히 같은 검정으로 융화.
+- 라이트모드는 원래 `dark:` 프리픽스라 무영향. 저장 PNG 배경은 `getComputedStyle(el).backgroundColor` 추적이라 다크 저장 시에도 동일하게 `oklch(0.145)`로 통일. 간격·텍스트·구도 불변.
+
+### 인증카드 포트폴리오 도넛 ↔ 종목명 간격 +8px (#4.24)
+
+- `portfolio-ring-card.tsx` `LABEL_R` 256 → **264**(R_OUTER 240과의 간격 16→24px). 도넛 바깥과 링 밖 종목명 라벨이 살짝 더 떨어진다. 프리뷰·캡처 공통(기하 상수).
+- 264가 상한 — 그 이상이면 3/9시 방향 라벨 박스가 `VIEW_W`(656)를 넘어 짤린다(`labelMaxW` 하한 64 기준). `labelMaxW`·`VIEW_W`·`R_OUTER` 등 나머지 불변.
+
+### 인증카드 모달 — 모바일 전체화면 → 12px 인셋 + 콘텐츠 높이(가장자리 블러 오버레이 노출) (#4.24)
+
+- `share-menu.tsx` `DialogContent` 모바일 override를 `w-screen h-[100dvh] rounded-none border-0`(전체화면) → **좌우 12px 인셋**(`left-3 right-3`) + **세로는 `top-[max(0.75rem,env(safe-area-inset-top))]` 앵커 + `h-auto`**: 팝업 세로 길이가 내부 주식현황/포트폴리오 콘텐츠만큼 늘어난다(뷰포트 고정 아님). `translate-x/y-0`로 공용 중앙 배치 해제, `w-auto max-w-none`, `rounded-2xl border shadow-lg`. 가장자리로 공용 `DialogOverlay`(`bg-black/70 backdrop-blur-sm`)가 살짝 비친다.
+- **내부 스크롤바 제거**: 직전 시안은 `top`+`bottom` 동시 앵커로 팝업이 뷰포트에 고정돼 프리뷰 영역(`flex-1 overflow-y-auto`)에 자체 세로 스크롤바가 생겼다 → 프리뷰 컨테이너를 모바일 `flex-none overflow-visible`(자연 높이) / `sm:flex-1 sm:overflow-y-auto`로 분기. 콘텐츠가 뷰포트를 넘으면 팝업 셸 전체가 스크롤: `max-h-[calc(100dvh - safe-area top - safe-area bottom)]` + `overflow-x-hidden overflow-y-auto`(`sm:overflow-hidden`).
+- `sm:` 이상은 `sm:top/left-[50%] sm:translate-x/y-[-50%] sm:bottom/right-auto sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg`로 기존 중앙 배치 복귀.
+- 다이얼로그가 노치 아래로 인셋되므로 헤더 `pt-[max(0.875rem,env(safe-area-inset-top))]`→`pt-3`, X 버튼 `top-[max(...)]`→`top-3`.
+- 저장 PNG(캡처 인스턴스)·프리뷰 렌더는 무영향(R32).
+
+### 비중바 ↔ 종목 리스트 간격 40px 통일 (상세>주식 · 인증카드>주식 현황) (#4.24)
+
+- `StockCategorySection`(공유) 리스트 블록 `screenshotMode ? "mt-7" : "mt-8"` → `mt-10` 고정(인증카드 28→40px, 상세 32→40px, 두 표면 동일). 섹션 `space-y-3`(12px)은 마진 상쇄로 계속 안 보임 → 이 `mt` 단일 값이 실제 간격.
+- 상세 탭은 상쇄 후 마진 하나뿐이라 비대칭 없음. **인증카드는 `mt-7`이 4개 세로 이음새(헤더→범례·범례→리스트·리스트→푸터)를 28px로 맞춘 시스템의 일부**라, `mt`만 키우면 저장 PNG에서 한 이음새만 넓어진다 → `share-card.tsx` 래퍼 `py-3.5`→`py-[26px]`(14→26)로 4개를 함께 40px로 통일. 주석 수치 갱신.
+- 저장 PNG 세로만 소폭 증가(pixelRatio 3 → ~+72px). 해상도·구도·텍스트 크기·프리뷰 불변.
+
+### 인증카드 저장 텍스트 배율 조정(1.57→1.42→1.5→1.46) + `SHOT_BIG_SCALE` 문서 상수화 (#4.24)
+
+- **값 조정**: 캡처(저장 PNG) 텍스트 배율 ~1.57 → 1.42 → 1.5 → **1.46**. `ASSET_THEME_SHOT_BIG` 값 재계산(base×1.46): 14→20·20→29·16→23·9→13·10→15px, `icon` `size-[35px]`, footer 18/20. `PortfolioSectorBar big` `text-[20px]`·`size-[15px]`. 도넛 `rLabelFont = round(12*SHOT_BIG_SCALE)` → 18.
+- **`SHOT_BIG_SCALE`** 상수를 theme.ts에 도입 — **문서용 배율 기준**. Tailwind JIT가 `text-` 임의값을 소스 문자열로 스캔하므로 CSS 변수/런타임 계산으로는 못 만든다(calc + `--shot-scale` CSS 변수 임의값 방식을 시도했으나 프리뷰에서 아이콘이 원본 크기로 blowout·비중바가 사라져 **롤백**). 이 값을 바꾸면 `ASSET_THEME_SHOT_BIG` 값들을 `base×SCALE` 반올림으로 재계산해 교체(theme.ts 주석에 base 표). `rLabelFont`만 JS 숫자라 `SHOT_BIG_SCALE` import로 자동 파생.
+- 프리뷰·`CARD_WIDTH`·`pixelRatio`·`VIEW_W/H`·간격 불변. R35 갱신.
+
+### 인증카드 저장 PNG — 캡처 텍스트를 프리뷰 비율만큼 확대 (680px 아트보드 유지) (#4.24)
+
+- **문제**: 프리뷰(~374px)와 저장 PNG(680px 아트보드)가 같은 `ASSET_THEME_SHOT` 토큰(절대 px 동일)을 써서, 저장 이미지의 텍스트가 카드에서 차지하는 비율이 프리뷰의 ~55%로 작아 보임.
+- **조치**: 캡처 전용 큰 토큰 세트. `theme.ts`에 `ASSET_THEME_SHOT_BIG`(폰트·아이콘 ~×1.57: 14→22·20→32·16→26·9→14·10→16px, `icon` `size-[38px]`, 신규 `bodyText` 키) 추가. (실기기 확인 후 초기 ×1.8에서 소폭 축소.) `share-card.tsx`가 `const shotBig = !responsive`를 만들어 `StockSummaryHeader`/`StockCategorySection`/`StockCard`(→`StockRowHeader`→`StockIcon`)·`DetailSummaryHeader`/`ProfitMetric`·`PortfolioSectorBar`(`big` prop)에 스레딩. 각 `screenshotMode ? SHOT.x : "…"` → `screenshotMode ? (shotBig ? SHOT_BIG.x : SHOT.x) : "…"`. 토큰 미경유 하드코딩(`text-sm` "N주"·우측 손익/률·"그 외 N종목"·헤더 라벨/secondary·푸터)도 `bodyText` 또는 인라인으로 분기.
+- **도넛 라벨 짤림 방지(프리뷰·캡처 공통)**: `portfolio-ring-card.tsx` — 캡처 `rLabelFont` `null`→`19`, `line-clamp-2`→`line-clamp-3`, top/bottom `labelMaxW` `180`→`208`, `rGap` 프리뷰 `rLabelFont*4`→`*4.5`·캡처 `96`. **좌우 하한은 `Math.max(96,…)`로 올렸다가 9/3시 방향 라벨 박스가 링 좌표계를 벗어나 화면 밖으로 짤려서 `Math.max(64,…)`로 정정** — 가용폭(≈68) 이하로만. 프리뷰는 `scale`에 `PREVIEW_SIDE_INSET`(8px×2)를 빼 좌우 최소 공백도 확보. 좁은 존 긴 이름은 3줄 + 말줄임으로 수렴(화면 밖 짤림 아님). `PortfolioSectorBar`는 `big`이면 텍스트 `text-sm`→`text-[22px]`·막대/색점 `2.5`→`16px`. `StockIcon` 캡처 로고 요청도 `captureLogoSize(28)`→`captureLogoSize(44)`.
+- **불변**: `screenshotMode`(정적 렌더·펼침 제거)는 재사용 그대로 — `!responsive`에 재결속 금지(과거 프리뷰 펼침 부활 회귀). `CARD_WIDTH`(680)·`pixelRatio`(3)·`VIEW_W`/`VIEW_H`·간격 토큰 전부 불변 → PNG 해상도·구도·프리뷰 크기 모두 동일. `zoom`/`transform:scale` 래퍼는 `offsetWidth×zoom` Chromium 버전 의존(R32 회귀)·도넛 오버플로로 기각.
+- R-registry에 R35 추가.
+
+### 인증카드 프리뷰 텍스트 크기 — 주식현황 히어로 상세탭 통일 + 포트폴리오 도넛 라벨 확대 (#4.24)
+
+- **주식 현황 히어로/아이콘**: 직전 "1px 정렬"에서 종목 행만 맞췄는데, 히어로("총 주식 평가금액")·평가손익·로고 아이콘이 여전히 상세탭 모바일보다 큼. `theme.ts` `ASSET_THEME_SHOT`: `summaryValue` `text-2xl`→`text-xl`(24→20px), `profitAmount` `text-lg`→`text-base`(18→16px), `profitRate` `text-base`→`text-sm`(16→14px), `icon` `size-7`→`size-6`(28→24px). 이제 `ASSET_THEME_SHOT` = `ASSET_THEME` 모바일값에서 `sm:`/`lg:`만 제거한 세트(`cardHeader`/`cardTriggerButton` 간격만 컴팩트 예외). 프리뷰·캡처 공용이라 저장 PNG 히어로도 같이 축소(2040px에서 비가시).
+- **포트폴리오 도넛 라벨 프리뷰**: `PortfolioRingCard`가 `responsive`면 링 전체를 `transform: scale(~0.57)`로 축소해 `text-[15px]` 라벨이 모바일에서 ~8.6px로 렌더됨(바로 아래 "분야 구성" `PortfolioSectorBar`는 scale 밖이라 14px 그대로 → 확연히 작음). `portfolio-ring-card.tsx`: `rLabelFont = Math.max(15, 12/scale)`를 라벨 `<span>` 인라인 `fontSize`로(실효 ~12px), `spreadVertically`에 `gap` 파라미터 추가해 `responsive`면 `rGap = max(MIN_LABEL_GAP, rLabelFont*4)`로 세로 겹침 방지. `responsive` 미전달(캡처)이면 분기 안 타므로 **저장 PNG 라벨 15px 완전 불변**(R32).
+
+### 인증카드 주식 현황 종목 행 텍스트 — 상세>주식 탭(모바일)과 1px 정렬 (#4.24)
+
+- "프리뷰/캡처 분리" 이후 프리뷰도 항상 `screenshotMode`(`ASSET_THEME_SHOT`)를 써서, `ASSET_THEME_SHOT`이 `sm:` 데스크톱 값으로 고정돼 있던 탓에 모바일 프리뷰의 종목 행 텍스트가 상세 탭보다 1px 커 보였다.
+- `theme.ts` `ASSET_THEME_SHOT`: `cardInfoName` `text-[15px]`→`text-sm`, `cardAmountMain` `text-[15px]`→`text-sm`, `iconInitial` `text-[10px]`→`text-[9px]`, `badge` `text-[11px]`→`text-[10px]` — 전부 모바일 `ASSET_THEME` 값과 동일. `summaryValue`·`profitAmount`·`profitRate`·`icon`은 공유 이미지 강조로 큰 값 유지(사용자 확인).
+- `ASSET_THEME_SHOT` 소비처는 `share-card.tsx`뿐 → 인증카드 프리뷰 + 저장 PNG에만 반영(PNG 종목명·금액 1px 축소, 2040px에서 비가시). R32 불변(모두 `sm:` 없는 고정값).
+
+### 인증카드 — 모바일 Whale 저장 시 종목 로고 전부 누락 수정 (#4.24)
+
+- **증상**: 모바일 Whale에서 인증카드 저장 시 주식 현황은 로고 없는 색 원형만, 포트폴리오 도넛은 로고 칩 대부분 빈 공간. PC는 정상.
+- **원인 4가지 중첩**:
+  1. **과대 요청 크기(주 원인)** — `BrandMark`가 44~92px 칩에 `size*6`(clamp 512) 요청 + `/api/logo`가 항상 `retina:true` → 실제 **1024px PNG**를 7~14장. 680px 카드 × pixelRatio 3(2040px 캔버스)와 겹쳐 모바일 WebView가 디코드/메모리 한계로 `<img> onError`.
+  2. **영구 폴백** — `BrandMark`/`StockIcon`의 `imgError` state가 한 번 true면 리셋·재시도 없이 굳어, `toPng` 실행 전 이미 로고가 사라진 상태.
+  3. **침묵 실패 pre-pass** — `captureImage`의 dataURL 인라인이 `catch {}` 완전 공백 + settle 대기·타임아웃·재시도 전무.
+  4. **콜드 stampede** — `/api/logo` in-flight dedup 없음 + upstream 5s 타임아웃 → 일부 404.
+- **조치(레이어별)**:
+  - **L1 요청 크기 정상화**: `logo-source.ts`에 `captureLogoSize(표시px)`(=×1.5, route retina로 ×2 → 표시px×3) + `CAPTURE_PIXEL_RATIO`. `BrandMark`는 `captureLogoSize(size)`, `StockIcon`은 캡처 경로만 `captureLogoSize(28)`(실사용 아바타는 무변경). 512/1024px → 84~276px로 축소.
+  - **L2 공유 훅 `src/hooks/use-logo-src.ts`**: `imgError` 영구 폴백을 유한 재시도(3회·지수 백오프·`&r=N` 캐시버스터)로 교체. `resolveLogoSrc` 재사용. `BrandMark`·`StockIcon` 채택. `StockIcon`은 로고 URL이 있어도 **최종 실패 시 이니셜 폴백**(기존엔 빈 색 원형).
+  - **L3 캡처 오케스트레이션**(`share-menu.tsx`): pre-pass 전 `settleImages`(이미지별 4s·전체 12s), pre-pass `fetch(cache:'force-cache')` + 1회 재시도 + `console.warn`, `toPng`에 `imagePlaceholder`(1x1 투명)·`fetchRequestInit`, `handleSave` `Promise.race` 20s 하드 타임아웃.
+  - **L5 `/api/logo`**: 진행 중 요청 `cacheKey` dedup(모듈 `inFlight` Map), upstream 타임아웃 5s→8s.
+- 신규 테스트 `src/lib/__tests__/logo-source.test.ts`(8). R-registry에 R34 추가.
+
+### 인증카드 — 주식 펼침 제거 + 포트폴리오 도넛·라벨 확대 (#4.24)
+
+- **주식 현황 펼침 제거**: 위 "프리뷰/캡처 분리"에서 프리뷰 인스턴스에 `screenshotMode={!responsive}`(=false)를 넘기면서, `StockCard`의 상세>주식탭용 펼침(`Collapsible`) 기능이 프리뷰에서 되살아났다. 인증카드는 정적 이미지라 펼침이 없어야 함. → `share-card.tsx`에서 `const shot = !responsive` 삭제, `screenshotMode` 3곳(`StockSummaryHeader`/`StockCategorySection`/`StockCard`)을 **항상 true**로. `StockCard`는 `screenshotMode`면 함수 상단에서 조기 return 해 펼침 DOM 자체가 없음(`stock-tab.tsx:769`). `responsive`는 outer 폭·패딩과 `PortfolioRingCard` 스케일에만 계속 사용. 두 인스턴스의 하위 렌더가 이제 완전히 동일(`ASSET_THEME_SHOT` 고정) — 프리뷰가 저장 이미지와 1:1. (프리뷰 종목 행 텍스트가 잠시 15px이 됐다가 위 "1px 정렬" 항목에서 상세 탭 모바일 14px로 되돌림.)
+- **포트폴리오 도넛·라벨 확대**: 링 밖 주식명이 고정 `text-sm` + 위치별로 좁아지는 `labelMaxW` + `line-clamp-2` 조합이라 "임의로 축소된" 느낌. `portfolio-ring-card.tsx` 기하 상수 조정 — `R_INNER` 78→66(밴드 150→174, 도넛이 더 커 보임)·`R_OUTER` 228→240(지름 456→480, 카드폭의 69→73%)·`LABEL_R` 244→256·`VIEW_H` 620→664·`CY` 300→322·`MIN_LABEL_GAP` 58→66·`CHIP_MIN/MAX` 40/84→44/92. 라벨 폰트 `text-sm`→`text-[15px]`(이름·%), `labelMaxW` top/bottom 160→180(좌우 하한 80은 유지 — 올리면 라벨 박스가 카드 패딩을 넘어 짤림).
+- **`CARD_WIDTH`(680)·`VIEW_W`(656)는 불변** — `pixelRatio = ceil(1400/CARD_WIDTH)`가 700 부근에서 3→2로 급락하므로. 저장 PNG 가로 해상도·구도 동일, 세로만 pixelRatio(3)배로 +132px. 사용자 확인: 프리뷰·저장 이미지 모두 확대 적용.
+
+### 인증카드 — 프리뷰/캡처 인스턴스 분리 (#4.24)
+
+- **문제**: `ScaledCardPreview`가 680 고정 카드를 통째로 `transform: scale(~0.57)` 축소 → 모바일 프리뷰의 텍스트·도넛이 상세>주식탭보다 훨씬 작게 보였다. 카드 내부 텍스트(`ASSET_THEME_SHOT` 15px)는 이미 상세탭(`ASSET_THEME` 모바일 14px)보다 크거나 같아, 작아 보인 원인은 100% 스케일 축소였다.
+- **결정**(사용자): "프리뷰는 모바일에 맞춰 노출, **저장할 때만** 고정 680px." → 미리보기와 캡처를 **별개 `ShareCard` 인스턴스**로 분리.
+- **조치**:
+  - `share-card.tsx`에 `responsive?: boolean` prop. `responsive`면 전 하위 `screenshotMode={false}` → `ASSET_THEME`(`sm:` 반응형), outer `w-full`. 미전달(캡처 기본)은 현행 `ASSET_THEME_SHOT` 고정.
+  - `portfolio-ring-card.tsx`에 `responsive?` prop — 링 서브트리만 자체 fit-to-width 스케일(`min(1, floor(clientWidth)/VIEW_W)`, `overflow-hidden`). 도넛이 모바일 폭을 꽉 채움. 캡처 인스턴스는 `VIEW_W`(656) 고정 불변.
+  - `share-menu.tsx`: `ScaledCardPreview` **제거**. 프리뷰 컨테이너에 `<ShareCard responsive />`(ref 없음). 화면 밖(`fixed left-[-9999px] aria-hidden`)에 고정 680 `<ShareCard cardRef={cardRef} />` 상시 마운트 → `toPng`이 이걸 캡처. `pixelRatio = ceil(1400/680) = 3` 불변 → **저장 PNG(~2040px) 변경 전과 100% 동일**.
+- **R32 범위 조정**: `sm:` 금지는 캡처 인스턴스(`screenshotMode` 경로)에만 적용. 반응형 프리뷰 인스턴스는 `ASSET_THEME`(`sm:` 포함) 사용, 저장 결정성은 캡처 인스턴스가 담당.
+- **X 버튼/헤더 상단 여백**(사용자 추가 요청): `DialogHeader` `pt-[max(0.875rem,env(safe-area-inset-top))]`, 닫기 X `[&_[data-slot=dialog-close]]:top-[max(0.875rem,env(safe-area-inset-top))] sm:top-4` — 노치·상태바 겹침 방지. 좌측은 이미 여백 충분해 그대로.
+- **한계**: 도넛은 폭을 꽉 채우지만 링 밖 라벨 폰트는 도넛 비율로 축소됨. 라벨 네이티브화는 viewBox SVG + %-좌표 재설계가 필요(범위 밖, 필요 시 후속).
+
+## 2026-09-05
+
+### 인증카드 다이얼로그 모바일 확대 + 가로 스크롤 전역 금지 (#4.24)
+
+- **문제**: 캡처 대상 카드는 항상 680px 고정(R32)이라 `ScaledCardPreview`가 fit-to-width로 축소 → 모바일에서 scale ≈ 0.5, 도넛·텍스트가 안 보임.
+- **제약 확정**(사용자): 저장 PNG는 기기 무관 동일(680 아트보드 유지) · 가로 스크롤바 금지 · 확대 버튼/핀치줌 안 함 · 좌우 여백 제거해 최대 확대. → 물리적 상한 = 뷰포트폭÷680(가로 스크롤 없이 680 고정이면 <680 폰에선 축소 불가피).
+- **조치**(`share-menu.tsx` 단독): `DialogContent` 모바일 전체화면(`w-screen h-[100dvh]`, 테두리·라운드 제거, `sm:`는 현행 유지), `DialogDescription` `hidden sm:block`, 헤더·제어바 패딩 축소, 프리뷰 컨테이너 `px-0`(좌우 여백 0). 헤더 패딩 축소에 맞춰 공용 닫기(X) 버튼도 `[&_[data-slot=dialog-close]]:top-1.5 sm:top-3.5` 오버라이드로 제목과 같은 높이 라인에 맞춤(`dialog.tsx` 공용 기본은 미변경). `ScaledCardPreview`는 `floor(clientWidth)` 사용 + outer `overflow-x-hidden`로 서브픽셀 넘침 방어. **캡처 파이프라인·`pixelRatio`·`share-card.tsx` 전부 불변** — `offsetWidth`가 transform 무관 항상 680이라 저장 PNG(~2040px) 동일.
+- **가로 스크롤 전역 금지(R33)**: `globals.css` `body { overflow-x: hidden }` 추가. 페이지 레벨만 차단하고 내부 `overflow-x-auto`(X-Ray 표 등)는 무영향. `design-system.md` §8·qa R-registry에 규칙 명문화 — 신규 UI가 뷰포트를 넘기면 스크롤바가 아니라 `min-w-0`로 수렴.
+- 페이지 라우트 전환은 검토 후 기각(다이얼로그가 이미 사실상 전체화면, 내비 배관 대비 이득 미미).
+
+### 홈 팁 박스에 "새 공지" 노출 재도입 (#4.24)
+
+- **배경**: NOTICE_ID를 4.24로 갱신했는데, 사용자가 "기존과 같이 신규 공지의 홈 노출 로직을 다시 적용해달라"고 요청. 조사 결과 과거 홈 진입 시 자동 팝업하던 `UpdateNoticeDialog`는 S-4.32에서 "공지보다 기능 추천 프레임이 낫다"는 이유로 **의도적으로 제거**됐던 이력이 있어, 그대로 부활시키기 전에 사용자에게 방식을 재확인함.
+- **선택**: 강제 팝업 부활 대신, **홈 팁 박스(`HomeTipBox`)에 "새 공지" 카드를 5번째 종류로 추가**하는 절충안 채택 — 기존 기능 추천 프레임은 유지하면서 새 버전 안내만 챙긴다.
+- **구현**: `home-tip.ts`에 `HomeTip`의 `{ kind: "notice" }` 추가, `pickHomeTip`이 `readNoticeSeenId() !== NOTICE_ID`면 반환. 이미 정의만 돼 있고 어디서도 안 쓰이던 `readNoticeSeenId`/`markNoticeSeen`(`local-storage.ts`)를 이번에 처음 실제로 연결. `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)을 열람 처리의 단일 출처로 둠(최종 호출 지점은 아래 후속들 참조 — 홈 팁 클릭, 더보기 메뉴 수동 열람).
+- **후속 1 — 필수 노출로 우선순위 최상단 이동**: "신규 버전 공지는 홈팁 자체가 필수로 뜨도록" 요청에 따라 `notice`를 백업·세금·최신화보다도 **먼저** 체크하도록 재조정(우선순위: **새 공지(필수)** > 백업 > 세금 > 최신화 > 기능).
+- **후속 2 — X 닫기로는 영구 dismiss 안 되게**: "X 닫기를 넘어서 최초 1회는 노출"해야 한다는 요청에 따라 `close()`에서 `notice`의 `markCurrentNoticeSeen()` 호출을 제거 — X는 이번 세션만 숨기고(`SESSION_DISMISS_KEY`), **실제로 카드를 클릭해 다이얼로그를 열어야만**(`activate()`) 열람 처리된다. 그냥 계속 닫기만 하면 다음 세션에 다시 최우선으로 뜬다.
+- **후속 3 — 다른 팁의 X 닫기가 공지 노출을 가로막지 않게**: 우선순위상 공지가 항상 먼저 뜨긴 하지만, 세션 숨김 플래그(`SESSION_DISMISS_KEY`)는 팁 종류 구분 없이 공용이라 자칫 다른 팁의 X 닫기로 세워진 플래그가 아직 못 본 공지까지 함께 가려버릴 수 있는 구조적 위험이 있었다. `home-tip.ts`에 `isNoticeUnseen()` export 추가, `home-tip-box.tsx`의 `useEffect`가 이 값이 true인 동안은 `SESSION_DISMISS_KEY` 체크 자체를 건너뛰고 `pickHomeTip`을 무조건 호출하도록 수정 — 공지의 "최초 1회 노출"이 다른 팁의 상호작용과 완전히 독립적으로 보장된다.
+- **후속 4 — 클릭 시 공지 본문 대신 홍보 기능으로 직행**: "해당 공지 클릭 시 인증카드-포트폴리오 즉시 팝업" 요청에 따라, 공지 팁 클릭 액션을 `dispatchOpenNotice()`(공지 다이얼로그)에서 `dispatchOpenShareCard("portfolio")`로 교체. `dispatchOpenShareCard(variant?)`가 이벤트 `detail.variant`를 싣고, `ShareScreenshotDialog`에 `initialVariant?` prop을 추가해 열릴 때 그 타입으로 맞춘다(`useEffect([open, initialVariant])`). 이제 안 쓰이는 `dispatchOpenNotice`/`trigger-open-notice` 리스너(`tool-menu.tsx`)는 삭제 — 더보기 메뉴 수동 열람은 `showNotice` 로컬 상태로 유지. 릴리스마다 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 함.
+- **공지 내용**(`notice.tsx`): `NOTICE_ID` "20260829"→"20260905", 제목·배너·피처 카드 2개(포트폴리오 인증카드 강화·종목 유형 분석)로 교체, 홈 팁용 한 줄 요약 `NOTICE_SUMMARY` 신규 추가.
+- **QA 수정 3건**(`/qa-full-test`에서 발견):
+  - **P1 — 공지 X 닫기 후 같은 세션 재진입 시 재노출**: 후속 3의 바이패스가 미열람인 동안 매 마운트 SESSION_DISMISS_KEY를 건너뛰어, X로 닫아도 홈 재진입 시 재노출됐다(사용자 요구 "세션내 미노출" 위반). `NOTICE_SHOWN_SESSION_KEY`(세션 플래그)를 추가해 **공지가 이번 세션에 1회 렌더되면 바이패스를 끈다** — 이후 X 닫기가 정상 작동, 새 세션에선 다시 노출.
+  - **P1 — vitest 회귀**: `feature-usage.test.ts`가 `pickRecommendedFeature()` 결과를 `"tax-simulator"`(구 isNew)에 하드코딩. isNew 이동으로 실패 → `picked?.isNew === true` + 카탈로그 첫 isNew id 대조로 의도 검증하게 변경.
+  - **P2 — "포트폴리오 인증카드" 홈 팁이 포트폴리오로 안 감**: `app-features.ts`의 `action: dispatchOpenShareCard`(bare)가 인자 없이 호출돼 주식 현황으로 열렸다 → `action: () => dispatchOpenShareCard("portfolio")`.
+
+### 홈 팁·공지사항 4.24 업데이트 (#4.24)
+
+- **홈 팁**(`config/app-features.ts`): 신규 `share-card-portfolio`(포트폴리오 인증카드, `isNew: true`) 추가 — 도넛+로고+분야/보유유형 막대바를 홍보. 기존 `stocks-xray` 설명에 "종목 유형" 축 언급을 추가하고 `isNew: true`로 전환. 지난 릴리스 스포트라이트였던 `tax-simulator`의 `isNew`는 해제(`pickRecommendedFeature`가 카탈로그 순서상 첫 `isNew` 미해제 항목만 보여주므로, 안 지우면 새 항목이 영영 안 뜬다).
+- **공지사항**(`layout/onboarding/notice.tsx`): `NOTICE_ID` "20260829"→"20260905", 제목·배너·2개 피처 카드(포트폴리오 인증카드 강화·종목 유형 분석)·마무리 문단을 4.24 내용으로 교체.
+
+### 인증카드 포트폴리오 "보유 유형 구성" — IRP·연금저축펀드 통합 (#4.24)
+
+- **변경**: `categoryItems`(share-card.tsx) 그룹핑 시 `stock.category`가 `irp`·`pension`이면 `"pension_irp"` 키로 합쳐 "연금저축펀드·IRP" 한 버킷으로 표시. 둘 다 세제혜택 은퇴 계좌라 성격이 같다고 판단.
+- **`stockCategories`(config/asset-options.ts) 자체는 불변** — 카테고리 필터 탭 등 다른 소비처(6종 그대로)는 영향 없음. 이 막대바 계산에서만 국소적으로 병합.
+- **ISA·비상장주식은 그대로 분리 유지** — ISA는 국내·해외 지수 ETF를 다 담을 수 있지만 계좌 성격 자체가 뚜렷이 달라 병합 대상 아님.
+
+### X-Ray "종목 유형" 분류 정확도 개선 — "혁신주" 신설 + 대표 ETF·우량주 결정론화 (#4.24)
+
+- **증상**: VST(비스트라 에너지)가 "배당주"로, 개별 우량주 분류가 업종명만 보고 흔들리는 문제.
+- **원인**: `buildPrompt()`의 stockType 규칙이 정량 데이터 없이 "유틸리티=배당주", "은행/자동차=가치주" 같은 **업종명 스테레오타입** 예시에만 의존. 실시간 배당수익률 연동은 조사 결과 배제(`/api/finance/dividend`가 티커당 최대 3회 순차 KIS 호출+슬립이 들어가는 무거운 API라 배치 분류에 끼워 넣으면 지연·레이트리밋 위험 큼 — 국내 종목은 이미 조회 중인 현재가 응답에 PER/PBR/EPS가 포함돼 파싱만 추가하면 저비용이지만 국내 한정이라 이번 범위에서는 보류, 향후 검토로 남김).
+- **조치 1 — 프롬프트 반스테레오타입화**: 업종명 나열 예시 제거, "실제로 잘 알려진 배당수익률·재무 프로필로 판단하라"는 지침 + VST를 교정 반례로 명시.
+- **조치 2 — 대표 ETF·우량주 결정론적 오버라이드**(`extractStockType`, 전수 목록 아님·대표 예시만): 커버드콜 ETF(JEPI/JEPQ/YMAX 등)→배당주, 배당성장 ETF(SCHD/DGRO 등)→배당성장주, 배당귀족 개별주(KO/PG/O 등)→배당성장주, 고배당 개별주(T/VZ, KT&G 등)→배당주, 전통 은행·경기민감 대형주(BAC/WFC, 국내 금융지주 등)→가치주.
+- **조치 3 — "혁신주" 신설**(`STOCK_TYPE_ENUM` 8번째 값): 로켓랩·아이온큐·초기 바이오텍처럼 검증 안 된 파괴적 기술 베팅 종목을 대형 흑자 성장주(성장주)와 분리. 테슬라는 대량 양산·상당한 매출 규모라 성장주에 유지(하드코딩 안 함, AI 판단).
+- **조치 4 — 전체 강제 재분류**: `STOCK_TYPE_PROMPT_VERSION` 버전 마커 도입. 서버 캐시 유효성 체크(`route.ts`)와 클라이언트 게이트(`fetch-classifications.ts`) **양쪽 다** 이 값을 요구해야 한다 — 하나만 걸면 그쪽에서 재분류 요청 자체가 안 나가는 버그가 난다(바로 전 커밋에서 `stockType` 필드 추가 시 클라 게이트 누락으로 실제 겪은 버그와 동일 함정, 이번엔 처음부터 양쪽 다 반영). 버전을 올려 VST·현대차 등 이미 캐시된 종목도 다음 방문 시 전부 재분류되게 함.
+
+### X-Ray "종목 유형" 축 — 전부 미분류 버그 수정 (#4.24)
+
+- **증상**: 채권/현금성(하드코딩 매핑) 1건만 정상, 나머지 전부 "미분류".
+- **원인**: `fetch-classifications.ts`의 클라이언트측 "분류 완료 여부" 게이트가 `themes`·`indices`·유효한 `sector`만 확인하고 `stockType`은 확인하지 않았다. 기존에 이미 분류된 종목(예전부터 themes/sector/indices 보유)은 "완료됨"으로 판정돼 `/api/xray-classify` 요청 목록에서 아예 빠졌다 — 서버측 `stockType` 캐시 유효성 체크(어제 추가)는 요청 자체가 안 오니 무용지물이었다.
+- **수정**: 같은 필터에 `hasValidStockType` 체크 추가(`route.ts`의 서버측 체크와 동일 조건). 다음 X-Ray 탭 방문 시 기존 캐시 종목도 재요청→백필된다.
+
+
+### X-Ray "종목 유형" 축 신설 (#4.24)
+
+- **용어 정정**: 인증카드 검토 중 제안했던 "투자 스타일"(성장주/배당성장주/배당주/지수투자) 분류가 실제로는 "투자자의 스타일"이 아니라 "종목 자체의 투자 성격"이라는 지적에 따라 **`stockType`("종목 유형")** 으로 이름을 바꿔 확정. `sector`(산업이 뭔가) 축과 나란한 별개 축.
+- **채권/현금성 신설**: 국채·SGOV·TLT류 달러 표시 채권/현금성 자산 요구에 따라 `채권/현금성` 값 추가 — 총 7종(성장주/배당성장주/배당주/지수투자/가치주/채권·현금성/기타).
+- **서버측 하드코딩 우선 매핑**: SGOV/BIL/SHV/TLT 등 대표 티커·"국채"·"채권" 등 이름 키워드는 AI 호출 전에 확정 배정(`extractStockType`, `extractIndex`의 `US_INDEX_ETF_MAP` 패턴 재사용) — 애매한 AI 판정 여지 원천 차단.
+- **범위**: 이번엔 주식 X-Ray 탭까지만(`stock-xray-view.tsx` 6번째 탭). 포트폴리오 인증카드 적용은 후속 작업.
+- **배관**: `theme`(핵심 분야) 축의 기존 패턴(분류 캐시 스키마→Gemini 응답 스키마·프롬프트→집계 엔진 extractor→UI 탭) 그대로 재사용. 서버 캐시 유효성 체크에 `stockType`을 추가해 `indices` 필드 도입 때와 동일하게 이미 캐시된 티커도 점진적으로 백필.
+- `.claude/specs/README.md` 판정 체크리스트 확인 결과 스키마·저장 키·공유 토큰·새 API 라우트·다중 화면 어디에도 해당 없어 명세(`/spec`) 없이 진행.
+
+### 인증카드 포트폴리오 — "분야 구성" 상위 5 + "그 외 N개 분야"로 통일 (#4.24)
+
+- 상위 노출 개수를 종목 리스트와 공유하던 `SHOT_MAX`(7)에서 분리해 전용 `SECTOR_MAX`(5) 도입. 항목 수가 들쭉날쭉(최대 8개까지) 늘어지던 걸 항상 **5개 + "그 외 N개 분야"** 최대 6항목으로 고정. "그 외" 라벨도 개수 없는 "그 외"에서 도넛 "그 외 N종목"과 같은 형식(`그 외 N개 분야`)으로 통일.
+
+### 인증카드 포트폴리오 — "보유 유형 구성" 비중 계산 버그 수정 (#4.24)
+
+- **증상**: 총 주식 9.1억 중 IRP 실보유 0.57억(6.3%)인데 막대바엔 1.3%로 축소 표시.
+- **원인**: `categoryItems`가 `mergedStocks`(useFilteredStockData("all")의 병합 결과)를 순회했는데, "all" 필터는 **카테고리 무관 티커 단위**로 병합한다(`groupByTickerOnly`). 같은 ETF(예: ACE 미국S&P500)를 연금 계좌와 IRP 계좌 양쪽에 보유하면 병합 대표 1건에 `category`가 하나만 남아, 다른 계좌의 보유분이 그 카테고리 합계에서 통째로 빠졌다.
+- **수정**: `mergedStocks` 대신 **병합 전 원본 `assetData.stocks`**를 순회(delisted만 제외해 `totalValue` 분모와 동일 필터)해 각 보유분을 실제 계좌 카테고리로 정확히 집계. 병합은 "같은 종목을 한 행으로 보여주는" 표시 로직이라 카테고리별 합산엔 애초에 맞지 않는 소스였음.
+
+### 인증카드 포트폴리오 — "보유 유형 구성" 막대바 추가 (#4.24)
+
+- **선정 근거**: 후보 3가지(계좌/보유유형·통화·국가) 중 `Stock.category`(국내주식/해외주식/IRP/ISA/연금저축펀드/비상장주식) 채택. 종목 등록 시 **필수 입력**이라 분류 캐시 의존이 0이고(통화 축은 국내 계좌 4종이 전부 KRW로 뭉쳐 정보량이 적고, 국가 축은 `classification-store` 캐시 의존이라 미분류 가능성 있음), 기존 "분야 구성"(무엇을 샀는지)과 상호보완적(어디에 담겨있는지).
+- **컴포넌트 재사용**: `PortfolioSectorBar`를 새로 안 만들고 `title` prop만 추가해 "분야 구성"·"보유 유형 구성" 양쪽에 재사용. 라벨도 `stockCategories`(`config/asset-options.ts`, 카테고리 필터 탭과 동일 출처)를 그대로 씀 — 신규 라벨 맵 없음.
+- 카테고리 수가 최대 6개뿐이라 "분야 구성"과 달리 상위 N 절삭·"그 외" 롤업 없이 전부 노출. 표시 조건은 `length > 0`(단일 카테고리도 항상 노출).
+
+### 인증카드 — 주식 현황 비중바 팔레트 통일·포트폴리오 텍스트 확대·도넛 확대 (#4.24)
+
+- **주식 현황 비중바 색 교체**: `ShareCard`가 훅에서 받은 `barItems`/`barColors`(`MAIN_PALETTE`, 주식 탭과 공유)를 `StockCategorySection`에 그대로 넘기지 않고, `segFill`(=`SHARE_SAFE_PALETTE`)로 색만 덮어씌운 `shareBarItems`/`shareBarColors`를 새로 만들어 전달. 포트폴리오 도넛·분야 막대바와 색 계열 통일. 주식 탭 원본 배열·`MAIN_PALETTE`는 불변(인증카드 전용 오버레이).
+- **포트폴리오 텍스트 확대**: 도넛 라벨(이름·%) `text-[13px]`→`text-sm`, 분야 막대바 캡션·범례(`text-[11px]`/`text-[12px]`)→`text-sm`. 주식 현황 쪽(`ASSET_THEME_SHOT`)은 이미 `text-sm`(범례) / `15px`(카드 이름·금액)라 기준 이상 — 변경 없음.
+- **도넛 크기 확대**: `R_OUTER` 215→**228**, `LABEL_R` 231→**244**(간격 16px 유지). `R_INNER=78`은 고정 — 중앙 홀 크기는 그대로 두고 바깥 링만 커짐. `LOGO_R`(≈168)·칩 크기 상한(chord 기반)은 공식 그대로라 재계산만 되고 로직 변경 없음.
+
+## 2026-09-04
+
+### 인증카드 포트폴리오 — 구분선·ETF 배지·고채도 팔레트·"그 외" 미니 로고 (#4.24)
+
+- **원인 실측**: logo.dev 로고 PNG를 디코드해 확인 — ACE ETF는 순백 `#FFFFFF` 불투명이 전체의 **92.9%**, TIGER(미래에셋)는 **97.0%**. KODEX(삼성)는 이미 투명, TSLA·NVDA는 브랜드 컬러로 꽉 참. 즉 흰 배경 이질감은 **국내 ETF 운용사 로고** 문제였다.
+- **국내 ETF는 브랜드 텍스트 배지**: `resolveLogoSrc`는 그대로 두고(주식 탭 `StockIcon`은 원형 아바타라 흰 배경 로고도 자연스러워 계속 사용), `BrandMark`가 `etfBrand`(TIGER/KODEX/ACE…) prop 유무로 **호출 전에** 분기해 로고 요청 없이 브랜드명을 원형 칩에 텍스트로 그린다. (최초 구현은 `resolveLogoSrc`에서 국내 ETF를 무조건 `null` 처리했는데, 이 함수가 `StockIcon`과 공유돼 주식 현황 탭의 ETF 로고까지 사라지는 회귀가 있어 즉시 되돌림.) 글자색은 조각색 휘도로 자동 선택(`pickOnColor`). 브랜드 접두어 목록(`KR_ETF_BRANDS` 22개)을 `logo-source.ts`로 일원화하고 `stock-xray.ts`가 import — 중복 정의와 존재하지 않는 파일을 가리키던 stale 주석 정리.
+- **로고 완전 원형**: `object-contain`+패딩 → `object-cover`로 칩을 꽉 채워 클립. TSLA 등의 사각 모서리 제거.
+- **고채도 팔레트 신설**: `PORTFOLIO_PALETTE`(10색, hue 고르게 분산). `MAIN_PALETTE`는 앱 다른 차트용으로 **불변**. 다크 대비 4.3~8.6:1.
+- **구분선 두께** 2.5 → **5px**.
+- **중앙 홀 축소**: `R_INNER` 108 → **78**(밴드 107→137px). 이때 `LOGO_R`을 밴드 중앙에 두면 현 길이가 짧아져 최소 조각 로고가 생략되므로 **바깥쪽 0.6 지점(≈160)** 으로 재정의.
+- **"그 외" 미니 로고 3개**: `RingSegment.subLogos`(상위 3종목)를 조각 각도 범위에 균등 배치(28px 칩). `computeRingArcs(pcts, minArcs?)`에 세그먼트별 최소각을 추가해 "그 외"에 `ETC_MIN_ARC`=40°를 보장 — 부족분은 다른 조각에서 비례 회수하되 `MIN_ARC_DEG` 바닥은 침범하지 않는 후처리 1패스(합 360·단조성 유지, 대표 입력 3종 검산 완료).
+
+## 2026-09-03
+
+### 인증카드 포트폴리오 — 선명도 개선(로고 칩 통일·무지개 복귀·구분선 제거) (#4.24)
+
+- **왜**: 레퍼런스 대비 흐릿하고 촌스러웠다. 원인 3가지 — ① logo.dev 이미지 자체가 흰 배경 사각형이라 "투명 로고"가 애초에 불가능(조각 위에 흰 박스가 뜬 모양) ② 조각 사이 반투명 구분선이 어두운 seam·앨리어싱으로 저해상도처럼 보임 ③ 인디고 단색 램프의 채도가 낮아 흐림.
+- **로고 = 흰 라운드 사각 칩으로 통일**(`BrandMark`): 제각각인 로고 배경과 싸우는 대신 모두 같은 칩(`bg-white rounded-[12px] shadow-sm`, 60×46)에 담아 *의도된 배지*로 전환. 로고 없으면 칩 안 티커 텍스트. 요청 해상도 `max(w,h)*6`로 상향.
+- **팔레트 원본 복귀**: 칩이 로고를 조각색에서 분리하므로 램프의 전제(로고 충돌 방지)가 사라짐 → `SHARE_SAFE_PALETTE` = **`MAIN_PALETTE.slice(0,11)` 원본 색 그대로**(앱 다른 차트와 동일한 쨍한 색감). 이 카드엔 부채·손익 표기가 없어 의미 예약색(빨강·주황)도 포함. 텍스트 전용 배열(`SHARE_RAMP_TEXT`/`SHARE_LABEL_TEXT`)·`onRampColor()` 전부 삭제 — **조각 fill 과 % 텍스트가 같은 색**(주식 탭 범례 규약).
+- **로고 칩 지름은 비중(조각 각도)에 비례**(`chipSizeFor`: 22°→40px … 110°→84px, sqrt 이징 + 현 길이 상한). 최소 조각각에서도 들어가도록 하한을 잡았다. 칩은 **원형 + 배경 = 해당 조각색** — 투명 여백 로고가 조각과 자연스럽게 이어진다. **로고가 없으면 칩 자체를 그리지 않는다**("그 외" 조각의 빈 배지 제거).
+- **조각 구분선 = 라이트 화이트 / 다크 검정**(`--ring-divider` 고정값). 반투명 stroke가 어두운 seam·앨리어싱으로 보이던 문제 해결. `GAP_DEG` 0.4→0.
+- **도넛 외곽 링 제거**: `--ring-hairline` `<circle>`·변수 모두 삭제 — 별도 테두리 없이 색면만으로 마감.
+
+## 2026-09-02
+
+### 인증카드 포트폴리오 — 대형 도넛 + 조각 안 기업 로고 (#4.24)
+
+- **왜**: 레퍼런스(Buffett Portfolio 인포그래픽)처럼 도넛이 카드의 절반 이상을 차지하고, 조각 안에 투명 배경 기업 로고가 박히는 형태를 목표. 기존엔 도넛이 카드 폭의 ~45%였고 로고가 링 바깥 컬러 원형 아바타였다.
+- **카드 확대**: `CARD_WIDTH` 520→**680**, 다이얼로그 `max-w-[560px] sm:max-w-[760px]`, 링 기하 `R_OUTER` 118→**215**(지름 430 ≈ 카드 폭 63%)·`R_INNER` 44→**108**(중앙 비움, 밴드 107px)·`VIEW_W/H` 656/620. pixelRatio 목표를 `CAPTURE_TARGET_PX=1400`으로 상수화(680 기준 3배 → PNG ~2040px, 그대로 뒀으면 2배로 떨어져 해상도가 낮아졌음).
+- **조각 안 로고**(신규 `brand-mark.tsx`): 원형 배경·`object-cover` 없이 투명 로고를 밴드 중앙(`LOGO_R`)에 배치. 호 18° 미만 조각은 생략. 로고 없으면 티커 텍스트 폴백. 링 바깥 라벨에서 아이콘 제거(이름+%만).
+- **로고 API 개편**(`/api/logo`): logo.dev 옵션을 실제로 사용하도록 개편 — `format=png`(**기본이 JPEG라 투명 배경이 불가능했음**, 조각 위 투명 로고의 핵심)·`size`+`retina=true`(캡처 pixelRatio 3 대응)·`theme=light|dark`(조각 밝기별 변형)·`fallback=404`(logo.dev 기본 모노그램 대신 우리 티커 텍스트 폴백). 캐시 키 `v2:{d|t}:{key}:{size}:{theme}`. **티커 실패 시 302 리다이렉트 제거** — 크로스오리진이라 캡처의 dataURL 인라인이 CORS로 실패해 저장 PNG에서 로고가 통째로 빠지던 버그 수정.
+- **Brandfetch는 도입 불가로 결론**: Logo Link 가이드라인이 서버 측 fetch·프록시·캐싱을 명시 금지하고 `x-bf-error: automated_traffic`으로 302 차단한다(유효한 client ID여도 동일 — 잘못된 키만 403). 브라우저 `<img>` 직접 hotlink만 허용인데 우리는 캡처를 위해 same-origin 바이트가 필수라 구조적으로 비호환. 관련 코드·환경변수 없음.
+- **공용화**: 로고 src 해석을 `lib/finance/logo-source.ts`의 `resolveLogoSrc`로 추출 — `StockIcon`(원형)과 `BrandMark`(투명)가 공유. `ETF_DOMAIN`도 이 파일로 이동.
+- **팔레트**: `SHARE_SAFE_PALETTE`를 무지개 → **브랜드 인디고 단색 램프 9단**(밝은 1위 → 어두운 하위). 풀컬러 로고가 어느 조각에서도 살도록. 텍스트 전용 `SHARE_RAMP_TEXT`(명도 정규화)·조각 위 대비색 `onRampColor(i)` 신설.
+- **문서 stale 정리**: components.md R25→R32 오기·중복 문단·`SHOT_MAX =5`·`MIN_LABEL_GAP`/`GAP_DEG` 값 불일치, api-reference의 "Clearbit" 오기, qa-full-test-plan의 `SHARE_SAFE_PALETTE` 소비처 0 서술.
+
+## 2026-09-01
+
+### 인증카드 포트폴리오 — 유려함 + 분야(섹터) 막대바 (#4.24)
+
+- **왜**: 포트폴리오 카드를 "글로벌 공식 포트폴리오 인포그래픽" 톤으로. 종목 도넛만으로는 분야 편중(예: "AI 및 반도체" 집중)이 안 보임.
+- **분야 막대바**(신규 `portfolio-sector-bar.tsx`): 종목 도넛 아래에 X-Ray 테마 축 분포(`computeBreakdown("theme", …)` 재사용) 상위 7 + "그 외", **분야명 + %만**(금액·개별 종목 없음). 유효 분야 2개 미만이면 조용히 생략.
+- **팔레트**: 포트폴리오 도넛·막대바를 미사용이던 `SHARE_SAFE_PALETTE`(의미색 빨강·주황 제외 9색) 공용으로 전환 — 색 조정은 이 배열만 손봄. 주식 현황 타입은 `assignColors`/`MAIN_PALETTE` 유지.
+- **도넛 유려함**: 웨지 stroke 3→2px + `GAP_DEG`(0.8°) hairline 간극, 라벨 이름 `font-bold`→`semibold tracking-tight`, %는 조각색 bold. 중앙 빈 홀 → **핵심 지표**("N 종목", `R_INNER` 35→44). **동심 헤어라인 외곽선**(`var(--border)` 1px 원선 2개).
+- **분류 자동 fetch**: 인증카드 다이얼로그가 포트폴리오 선택 시 `useXrayClassifications`(신규 공용 훅 — `stock-xray-view`·`stock-insight-strip` 복붙 통합)로 X-Ray 분류 캐시를 자동 보충 → 완료 시 분야 막대바 등장(비차단). X-Ray 탭 방문 없이도 동작.
+- **팔레트·라인**: `SHARE_SAFE_PALETTE` = `MAIN_PALETTE` 무지개 hue 유지 + 애플 시스템 톤으로 값 정제(채도 정돈·탁함 제거) 9색, `[0]` 인디고 원본 고정, "그 외"=`#8E8E93`. 도넛 조각 구분선 = `--ring-divider`(라이트 흰색 / 다크 white/22) 2.5px stroke — 다크에서도 조각이 또렷이 분리. 외곽 링 = `--ring-hairline`(라이트 black/24 / 다크 white/48) 2.5px `<circle>` — 도넛을 확실히 두르는 프레임. (기존 `var(--border)` 헤어라인이 캡처에서 안 보이던 문제 해결.)
+
+### 홈 팁 박스 — X 닫기 시 이번 세션 재노출 금지
+
+- **왜**: `HomeTipBox`의 X를 누르면 해당 종류만 억제되고 `useEffect` 재실행 때 바로 다음 순위 팁이 같은 창에 튀어나와, 닫아도 계속 새 팁이 뜨는 두더지잡기 경험이었다.
+- **변경**(`views/home/home-tip-box.tsx` 단일 파일): `close()`에서 기존 종류별 mark에 더해 `sessionStorage`에 `secretasset_home_tip_session_dismissed` 플래그를 찍고, 팁 계산 `useEffect` 최상단에서 이 플래그가 있으면 `pickHomeTip`을 건너뛰고 `null` 처리. `pwa-connect-prompt.tsx`의 세션 dismiss 패턴 재사용.
+- **재접속(새 세션)** 시 `sessionStorage`가 비므로 각 종류의 재노출 정책(기능=영구 dismiss→다음 기능, 세금=이번 달 등)에 따라 다음 팁이 정상 회전 노출. 새 localStorage 키·동기화 없음.
+
+## 2026-08-31
+
+### 인증카드 "포트폴리오" 타입 추가 (#4.24)
+
+- **왜**: 기존 인증카드는 "주식 현황" 단일 레이아웃뿐. 금액을 뺀 종목 구성 비중만 보여주는 공유용 카드 수요 — 첨부 레퍼런스("Trump's Updated Portfolio") 스타일의 원형 링.
+- **교체 아닌 타입 추가**: `ShareScreenshotDialog`에 `InlineSelector`(로컬 state, 저장 안 함)로 "주식 현황 / 포트폴리오" 전환. 과거 2회 도넛 *교체* 시도가 롤백됐던 것과 달리 기존 타입은 코드 경로 무변경.
+- **신규**: `header-menu/share/portfolio-ring-card.tsx`(`PortfolioRingCard` + `computeRingArcs` 순수 함수). 각도 압축 = 조각별 최소각(`MIN_ARC_DEG`) + 비중 구간별 최대 호 상한(`MAX_ARC_BY_PCT`) + 단조 clamp + 360° 정규화 → 단일 종목 80~90%여도 링이 한 조각에 먹히지 않음. 상수만 바꿔 튜닝.
+- **재사용**: 데이터는 `ShareCard`의 `useFilteredStockData("all")`/`computeStockMetrics`/`barColors` 그대로 주입(훅 중복 없음), 로고는 `StockIcon`(`stock-tab.tsx`에서 `export`만 추가) → `/api/logo`, 세그먼트 토글은 `InlineSelector`, 캡처는 `share-menu.tsx` 기존 파이프라인 무변경.
+- **폰트**: 종목명 디스플레이 서체로 Playfair Display(`--font-playfair`, `layout.tsx` `next/font/google`) — 라틴만, 한글은 시스템 폰트 폴백. 이 타입 밖으로 확장 금지.
+- **후속 조정 1차**: (1) 두 타입 공통 푸터에서 **날짜 제거**. (2) 포트폴리오 링 **중앙 브랜드 마크·하단 "MY PORTFOLIO" 문구 제거**. (3) 링 기하 확대. (4) 라벨 종목명 1줄 `truncate` → **2줄 `line-clamp-2`**.
+- **후속 조정 2차(가독성)**: (1) `CARD_WIDTH` 460→**520**(단일 고정값, 다이얼로그 `max-w-[520/680]` 안, 기기 무관 동일 PNG=R25 유지) — 도넛·라벨 공간 확보. (2) **비중%를 도넛 조각 안쪽 SVG `<text>`**(흰 글씨 + 어두운 `paintOrder=stroke` 외곽선)로 이동, 조각 밖 라벨은 **아이콘+종목명만**. (3) 도넛 대폭 확대 + **중앙 홀 최소화**(`R_OUTER` 122→166, `R_INNER` 74→44, 밴드 ~122px). (4) 주식 현황 "금액 표시" 스위치를 제어 바 **2번째 줄로 분리 + 축소**(`scale-75`, `text-xs`).
+- **후속 조정 3차(레퍼런스 정렬)**: (1) 도넛 **축소**(`R_OUTER` 166→124, `R_INNER` 44→64, `VIEW_H` 470→420) — 링 밖 라벨 공간 확보. (2) 비중%를 다시 **링 바깥 라벨**로(조각 안 `<text>` 제거), 이름 아래 `text-muted-foreground`로 위계 분리. (3) **Playfair(세리프) 전면 폐기**(`layout.tsx`에서 `next/font` import·body variable 제거) → 앱 기본 산세리프. 종목명 `font-bold text-foreground`. (4) **라벨 텍스트 하이브리드**: 해외=티커 / 국내=종목명. (5) 링 밖 라벨 존별 가로 배치(측면)·세로 배치(상하).
+
 ## 2026-08-29
 
 ### PWA 스크롤버튼 겹침·시뮬레이터 박스 크기·공지사항 최신화

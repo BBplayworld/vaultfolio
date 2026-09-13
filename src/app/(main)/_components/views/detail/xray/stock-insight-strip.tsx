@@ -1,11 +1,11 @@
 "use client";
 
 import { Microscope, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Stock } from "@/types/asset";
 import { ExchangeRates } from "@/lib/finance/finance-service";
 import { pickHighlights } from "@/lib/xray/stock-xray";
-import { fetchAndStoreClassifications } from "@/lib/xray/fetch-classifications";
+import { useXrayClassifications } from "@/lib/xray/use-xray-classifications";
 import { groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 
@@ -23,18 +23,8 @@ interface StockInsightStripProps {
  */
 export function StockInsightStrip({ stocks, exchangeRates }: StockInsightStripProps) {
   const { navigate } = useAssetNavigation();
-  const [tick, setTick] = useState(0);
-
-  // 주식 목록이 바뀌면 분류 미수집 ticker만 모아 백그라운드 fetch
-  useEffect(() => {
-    let mounted = true;
-    fetchAndStoreClassifications(stocks).then(() => {
-      if (mounted) setTick((v) => v + 1);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [stocks]);
+  // 주식 목록이 바뀌면 분류 미수집 ticker만 모아 백그라운드 fetch (공용 훅)
+  const { tick } = useXrayClassifications(stocks);
 
   // 증권사별 분리 항목을 ticker 단위로 병합 (집계 시 1회만 카운트)
   const mergedStocks = useMemo(() => {
