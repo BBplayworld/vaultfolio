@@ -11,13 +11,15 @@ import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionDat
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
-import { DailyAssetSnapshot } from "@/types/asset";
+import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
 import { DataSourceBadge } from "../data-source-badge";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Trophy } from "lucide-react";
+import { tierLabel } from "@/lib/report/asset-grade";
+import { TIER_STYLE } from "../activity/asset-report-view";
 import type { ReactNode } from "react";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
@@ -194,6 +196,8 @@ export function NetAssetSummaryBox({
   visibleTabs = [],
   screenshotMode = false,
   showRealtimeBadge = false,
+  grade,
+  onGradeClick,
 }: {
   netAsset: number;
   totalAsset?: number;
@@ -206,6 +210,9 @@ export function NetAssetSummaryBox({
   visibleTabs?: { value: string; label: string }[];
   screenshotMode?: boolean;
   showRealtimeBadge?: boolean;
+  /** 자산 성적표 최신 등급(성적표 화면 방문 시 기록됨) — 있으면 우상단에 미니 트로피 배지 노출 */
+  grade?: SnapshotGrade | null;
+  onGradeClick?: () => void;
 }) {
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
@@ -214,7 +221,20 @@ export function NetAssetSummaryBox({
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4 ${hasRightSide ? "flex items-center justify-between" : ""}`}>
+      <div className={`relative rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4 ${hasRightSide ? "flex items-center justify-between" : ""}`}>
+        {/* 자산 성적표 미니 배지 — 성적표 화면이 기록해둔 최신 등급(재계산 없음)을 트로피+점수로
+            압축 노출. hasRightSide(총자산/총부채 컬럼)와 자리가 겹치므로 그때는 생략(방어). */}
+        {grade && !hasRightSide && onGradeClick && (
+          <button
+            type="button"
+            onClick={onGradeClick}
+            aria-label={`자산 성적표 보기 — ${tierLabel(grade.tier)} ${grade.overall}점`}
+            className="absolute top-2 right-2 p-2 inline-flex items-center gap-1 sm:gap-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <Trophy className={`size-4 sm:size-5 lg:size-6 ${TIER_STYLE[grade.tier].color} ${TIER_STYLE[grade.tier].shadow}`} strokeWidth={2} />
+            <span className={`text-sm sm:text-base lg:text-lg font-bold tabular-nums ${TIER_STYLE[grade.tier].color}`}>{grade.overall}</span>
+          </button>
+        )}
         <div>
           <div className="flex items-center gap-1.5">
             {nickname && (
@@ -357,6 +377,18 @@ function useLast7DailySnapshots() {
     setSnapshots([...all].sort((a, b) => a.date.localeCompare(b.date)).slice(-7));
   }, [snapshotVersion]);
   return snapshots;
+}
+
+// 홈 순자산 헤더의 미니 트로피 배지용 — 성적표 화면(asset-report-view.tsx)이 확정 시 기록해둔
+// 최신 등급을 그대로 읽는다(재계산 안 함, 성적표 미방문이면 null).
+function useLatestAssetGrade(): SnapshotGrade | null {
+  const { snapshotVersion } = useAssetData();
+  const [grade, setGrade] = useState<SnapshotGrade | null>(null);
+  useEffect(() => {
+    const sorted = [...readDailySnapshots()].sort((a, b) => b.date.localeCompare(a.date));
+    setGrade(sorted.find((s) => s.grade)?.grade ?? null);
+  }, [snapshotVersion]);
+  return grade;
 }
 
 // Hero 통합 등락 뷰모델 — "지난 접속일 종가 → 실시간 현재"를 원인분해까지 한 줄에 표기.
@@ -522,6 +554,8 @@ export function Dashboard() {
   const summary = getAssetSummary();
   // Hero 통합 등락 — 지난 접속일 종가 → 실시간 현재 (원인분해 포함)
   const headerChange = useHeaderNetChange();
+  // 자산 성적표 미니 배지 — 저장된 최신 등급만 읽음(재계산 없음)
+  const latestGrade = useLatestAssetGrade();
 
   const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -581,6 +615,8 @@ export function Dashboard() {
                   onSegmentClick={setActiveDetailTab}
                   visibleTabs={visibleTabs}
                   showRealtimeBadge
+                  grade={latestGrade}
+                  onGradeClick={() => navigate({ type: "activity", tab: "report" })}
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}

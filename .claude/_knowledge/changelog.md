@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-09-13
+
+### 홈 화면 — 자산 성적표 트로피·점수 미니 배지 추가 (#4.24)
+
+- **왜**: "자산 성적표"(F-REPORT, S-4.18)는 이미 완전히 구현돼 있지만 홈에서 진입 동선이 없었음 — 흥미 유발용 티저를 순자산 헤더에 노출해달라는 요청.
+- `dashboard.tsx`: `useLatestAssetGrade()` 신규 훅이 `readDailySnapshots()`에서 `grade` 필드가 있는 최신 스냅샷을 읽는다(재계산 없음 — `computeAssetGrade()` 재호출은 profit-ref 등 무거운 입력이 필요해 중복 계산). `NetAssetSummaryBox`에 옵션 `grade?`/`onGradeClick?` prop 추가, `grade && !hasRightSide`일 때만 우상단 `absolute` 배치로 트로피(티어색+글로우)+점수 노출, 클릭 시 `navigate({type:"activity", tab:"report"})`. `asset-report-view.tsx`의 `TIER_STYLE`을 export해 색 재사용(새 팔레트 없음). `welcome-guide.tsx` 프리뷰 호출부는 두 prop 다 안 넘겨 무영향. 성적표 미방문 계정은 배지 자체가 렌더 안 됨.
+
+### 상단바 로고~InlineSelector 간격 재조정 (`ml-2`→`ml-3`)
+
+- **왜**: 여전히 약간 붙어 보인다는 피드백 — 좌/우 그룹 폭 예산 분석(320px 최소 지원 폭 기준 여유 확인) 후 4px만 더 확보.
+
+### 인증카드 — PC 프리뷰 본문 텍스트 `text-sm` 확대
+
+- **왜**: PC(넓은 화면) 프리뷰가 모바일과 같은 축소 크기(`text-xs`)라 가독성이 아쉽다는 지적. 모바일은 기존 유지(포트폴리오 도넛 라벨과의 시각 밀도 균형 때문에 의도적으로 작게 잡은 값이라 손대지 않음).
+- `theme.ts`의 `ASSET_THEME_SHOT`(프리뷰 전용 세트 — 저장 PNG는 항상 별도 `ASSET_THEME_SHOT_BIG`이라 무관, R32 안전) `cardInfoName`/`cardAmountMain`/`profitRate`/`legendText`/`bodyText`에 `sm:text-sm` 추가. `portfolio-ring-card.tsx`의 도넛 라벨(`rLabelFont`)도 같은 640px 기준(`matchMedia`)으로 PC는 14px, 모바일은 12px 유지하도록 분기.
+
+### 인증카드 포트폴리오 도넛 — 조각 안 로고·ETF 배지 크기 통일 + "그 외" 세로 배치 + 대비 원형 배경
+
+- **왜**: 3단계 반복 요청 — ①ETF 브랜드 라벨이 조각 크기에 비례해 커져 조각마다 들쭉날쭉해 보임 ②"그 외" 미니 로고가 가로로 좁게 배치돼 작음 ③ETF 배지 배경이 항상 흰색이라 단조로움.
+- **라벨/칩 크기 통일**: `chipSizeFor()`를 `CHIP_MIN`(44→**50**px) 고정 타깃 + chord 안전장치로 단순화(기존 `CHIP_MAX`/`CHIP_REF_ARC` sqrt 비례 보간 폐기). 목표 크기와 "너무 좁으면 생략" 기준을 `CHIP_HIDE_BELOW`(32px)로 분리해, 확대해도 극단적으로 좁은 조각에서 로고가 갑자기 사라지지 않게 함. `BrandMark`에 `fontSize?` prop 추가 — 메인·서브 조각 모두 `ETF_LABEL_FONT_SIZE`(14px 고정) 전달.
+- **6자 이상 브랜드 축약**: `ETF_BRAND_ABBR`(수동 매핑 10종 — KBSTAR→KBST 등, 4자 슬라이스 자동 규칙은 HANARO→HANA처럼 실제 브랜드와 겹쳐 반려) 도입. 5자 이하(TIGER/KODEX 등)는 14px에서 이미 안 잘려 축약 불필요.
+- **"그 외" 세로 배치 + 확대**: 서브칩 배치를 원주(각도) 오프셋 → **반지름(세로) 오프셋**으로 전환(밴드 두께가 원주 방향 여유폭보다 넓어 더 큰 칩이 안전) — `SUB_CHIP` 28→**38**px, `SUB_CHIP_GAP` 6→7.
+- **ETF 배지 대비 원형**: 배경을 조각색 그대로(초안) → `pickOnColor(bgColor)` 흰/검정 2톤(팔레트 대부분이 흰색으로 수렴해 "무조건 흰색" 문제) → 최종 `darkenColor(bgColor)`(신규 유틸, theme.ts — 조각색을 검정 쪽 55% 혼합)로 조각마다 다른 톤 확보, 글자색은 `pickOnColor(badgeBg)`로 재계산.
+
+---
+
 ## 2026-09-12
 
 ### GA(Google Analytics) 수집을 프로덕션(main)에서만 활성화

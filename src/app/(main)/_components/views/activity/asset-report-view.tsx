@@ -116,7 +116,8 @@ function StarRating({ score, size = "sm", muted = false }: { score: number | nul
 
 // 트로피 티어 색 — 테두리 대신 그림자(드롭섀도) 관례.
 // 등급이 높을수록 채도·글로우가 강해진다(bronze 은은 → platinum 강렬한 블룸).
-const TIER_STYLE: Record<GradeTier, { color: string; shadow: string }> = {
+// export: 홈 화면 순자산 헤더의 미니 트로피 배지(dashboard.tsx)도 같은 팔레트 재사용.
+export const TIER_STYLE: Record<GradeTier, { color: string; shadow: string }> = {
   bronze: { color: "text-amber-700/80", shadow: "drop-shadow-[0_2px_6px_rgba(180,83,9,0.28)]" },
   silver: { color: "text-slate-400", shadow: "drop-shadow-[0_2px_9px_rgba(148,163,184,0.45)]" },
   gold: { color: "text-amber-500", shadow: "drop-shadow-[0_2px_13px_rgba(245,158,11,0.6)]" },

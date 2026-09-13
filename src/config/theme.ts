@@ -109,13 +109,14 @@ export const ASSET_THEME = {
 } as const;
 
 /**
- * 인증카드(캡처 DOM) 전용 토큰 — `sm:`/`lg:` 뷰포트 반응형을 **고정값**으로 대체한다.
+ * 인증카드 화면 프리뷰(screenshotMode + !shotBig) 전용 토큰.
  *
- * 캡처 대상은 `CARD_WIDTH`(680px) 고정폭인데 `sm:`은 브라우저 뷰포트 기준이라, 반응형 클래스가
- * 남아 있으면 PC/모바일에서 같은 사용자가 다른 PNG를 얻는다(qa-full-test-plan R32). 그래서
- * 여기 값엔 `sm:`이 없어야 한다 — 이게 결정성 불변식이고, 값 자체가 무엇이냐는 별개 문제다.
+ * R32(캡처 결정성: `CARD_WIDTH` 680px 고정폭 PNG가 PC/모바일 무관 항상 동일)는 저장 PNG를 만드는
+ * **캡처 인스턴스**(`shotBig=true` → 아래 `ASSET_THEME_SHOT_BIG`)에만 적용된다. 이 세트는 화면에만
+ * 보이고 캡처엔 전혀 관여하지 않으므로 `sm:` 반응형이 안전하다(2026-09부터 PC 프리뷰만 본문 텍스트를
+ * text-sm로 한 단계 ↑ — 모바일은 기존 text-xs 유지).
  *
- * base(프리뷰) 크기 = 상세>주식 탭 모바일보다 **의도적으로 ~2px 작다**(2026-09 조정 —
+ * base(모바일 프리뷰) 크기 = 상세>주식 탭 모바일보다 **의도적으로 ~2px 작다**(2026-09 조정 —
  * 인증카드 프리뷰에서 "주식 현황"이 "포트폴리오"(도넛 라벨 실효 ~12px)보다 커 보여, 본문
  * 14→12px·히어로 20→17px로 낮춰 두 타입의 시각 밀도를 맞춤). 상세 탭·저장 PNG는 무관.
  * (`cardHeader` `py-2`·`cardTriggerButton` `gap-4`는 카드 전용 컴팩트 레이아웃이라 의도적 예외.)
@@ -124,17 +125,19 @@ export const ASSET_THEME = {
 export const ASSET_THEME_SHOT = {
   cardHeader: "flex flex-wrap items-center gap-4 py-2 transition-colors",
   cardTriggerButton: "flex items-center gap-4 flex-1 min-w-0 text-left",
-  cardInfoName: "font-semibold text-xs leading-tight",
-  cardAmountMain: "text-xs font-bold tabular-nums leading-tight",
+  // sm:(PC 프리뷰)은 text-sm으로 한 단계 ↑ — R32(캡처 결정성)는 ASSET_THEME_SHOT_BIG에만 적용되고
+  // 이 프리뷰 전용 세트는 화면 표시일 뿐 저장 PNG에 영향 없어 뷰포트 반응형이 안전하다.
+  cardInfoName: "font-semibold text-xs sm:text-sm leading-tight",
+  cardAmountMain: "text-xs sm:text-sm font-bold tabular-nums leading-tight",
   icon: "size-5",
   iconInitial: "text-[8px]",
   badge: "text-[9px] px-1 py-0 ml-1 leading-tight",
   summaryValue: "text-[17px] font-bold tabular-nums break-all leading-tight",
   profitAmount: "text-sm font-bold tabular-nums whitespace-nowrap",
-  profitRate: "text-xs font-bold tabular-nums whitespace-nowrap",
+  profitRate: "text-xs sm:text-sm font-bold tabular-nums whitespace-nowrap",
   legendGrid: "grid grid-cols-2 gap-x-4 gap-y-2 px-2",
-  legendText: "text-xs",
-  bodyText: "text-xs", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨 등) 공용
+  legendText: "text-xs sm:text-sm",
+  bodyText: "text-xs sm:text-sm", // 토큰 미경유 본문(수량·"그 외 N종목"·헤더 라벨 등) 공용
 } as const;
 
 /**
@@ -264,6 +267,20 @@ export function pickOnColor(hex: string): string {
 
 /** "그 외"/미분류 롤업 색 — 램프 밖 중립 그레이(fill·텍스트 공용) */
 export const SHARE_ETC_COLOR = "#8E8E93";
+
+/**
+ * hex 색상을 검정 쪽으로 `factor`만큼 혼합해 어둡게 — 인증카드 ETF 배지 원형처럼 "원래 색과
+ * 같은 색조를 유지하되 흰/검정 고정 2톤보다 다양하고, 항상 밝은 텍스트와 대비되는 어두운 배경"이
+ * 필요할 때 재사용. 기본 0.55는 `SHARE_SAFE_PALETTE`(채도 높은 중간~밝은 톤) 전체를 어떤 값이든
+ * 상대휘도 0.45 미만(=밝은 텍스트로 충분히 대비)까지 낮추도록 실측 검증된 값.
+ */
+export function darkenColor(hex: string, factor = 0.55): string {
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length < 6) return hex;
+  const mix = (c: number) => Math.round(c * (1 - factor));
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
+  return `#${[0, 2, 4].map((i) => toHex(mix(parseInt(h.slice(i, i + 2), 16)))).join("")}`;
+}
 
 /**
  * CSS 클래스 조합 헬퍼

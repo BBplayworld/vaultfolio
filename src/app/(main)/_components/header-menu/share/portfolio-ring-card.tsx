@@ -54,16 +54,29 @@ const LABEL_R = 264; // 라벨 앵커 반경(링 바깥) — R_OUTER와의 간�
                      // 264 이상이면 3/9시 라벨 박스가 VIEW_W를 넘어 짤리므로 상한(labelMaxW 하한 64 기준)
 // 로고 반경은 밴드 중앙(=153)이 아니라 **바깥쪽 0.6 지점**(≈170). 중앙 홀을 줄이면서
 // 밴드 중앙에 두면 반경이 안쪽으로 당겨져 같은 각도의 현(chord)이 짧아지고,
-// 최소 조각(22°)의 칩이 CHIP_MIN 아래로 떨어져 로고가 통째로 생략된다.
+// 최소 조각(22°)의 칩이 CHIP_HIDE_BELOW 아래로 떨어져 로고가 통째로 생략된다.
 const LOGO_R = R_INNER + (R_OUTER - R_INNER) * 0.6;
-// 조각 안 로고 칩은 **비중(조각 각도)에 비례**해 커진다.
-// 하한(CHIP_MIN)은 최소 조각각(MIN_ARC_DEG=22°)에서도 들어가는 크기로 잡는다 —
-// LOGO_R(≈170)에서 22° 현(chord) 길이가 ≈65px이라 44px는 여유 있게 수용된다.
-const CHIP_MIN = 44; // 최소 조각의 칩 지름(px)
-const CHIP_MAX = 92; // 1위(최대 호) 조각의 칩 지름(px) — 밴드 두께 174px 안에 들어감
-const CHIP_REF_ARC = 110; // 이 각도(°) 이상이면 CHIP_MAX (MAX_ARC_BY_PCT 상한과 동일)
-const SUB_CHIP = 28; // "그 외" 조각 안 미니 로고 칩 지름(px)
-const SUB_CHIP_GAP = 6; // 미니 칩 사이 간격(px)
+// 조각 안 로고 칩(이미지 로고 + ETF 텍스트 배지)은 조각 각도(비중)와 무관하게 항상 이 크기로
+// 고정된다(2026-09, 사용자 요청 — 도넛 밴드 물리 크기가 고정 상수라 "조각이 커도 로고가 더 커질
+// 공간"의 실익이 없다고 판단, 조각 크기는 차등이되 그 안 로고·라벨은 통일감 있게 동일 크기).
+// 목표값 50은 실사용 최소 비중대(0.7~1%대, 실제 계산되는 각도는 MIN_ARC_DEG=22°보다 살짝 큰
+// 23~24° 수준)에서 chord 안전 상한이 48~50px대라 거의 그대로 나오고, 그보다 더 극단적으로 좁은
+// (거의 0%) 조각만 `chipSizeFor()`의 chord 안전장치로 방어적으로 축소되며, 그 결과가
+// `CHIP_HIDE_BELOW`보다 작아지면 로고 자체를 생략한다(2026-09 — 44→50로 확대 요청 반영, 목표
+// 크기와 "너무 작으면 생략" 기준을 분리해 확대해도 극단값에서 로고가 갑자기 사라지지 않게 함).
+const CHIP_MIN = 50; // 메인 조각 로고 칩 고정 지름(px, 목표값)
+const CHIP_HIDE_BELOW = 32; // 안전장치로 이보다 작아지면 로고 생략(극단적으로 좁은 조각만 해당)
+// 메인 조각 ETF 브랜드 라벨(BrandMark) 고정 폰트 크기(px) — 조각 각도(칩 지름)와 무관하게 모든
+// 메인 조각 브랜드 라벨을 이 크기로 통일해 조각마다 글자 크기가 들쭉날쭉해 보이지 않게 한다
+// (2026-09 — 이전엔 size 비례 계산이라 큰 조각일수록 라벨이 과도하게 커졌다).
+const ETF_LABEL_FONT_SIZE = 14;
+// "그 외" 조각 안 미니 로고 칩 지름(px)·간격(px) — 세로(반지름) 배치 도입으로 확대(2026-09,
+// 사용자 요청). 근거: ETC_MIN_ARC=40° 최소각 기준, 반지름 배치 중 가장 안쪽 위치(LOGO_R-45≈125.4)
+// 에서 40° 현(chord)≈85.8px → 안전 상한(×0.7)≈60px로 38px에 여유 있음. 가장 바깥 위치
+// (LOGO_R+45≈215.4)의 칩 외곽(+19)도 R_OUTER(240)보다 5.6px 안쪽, 가장 안쪽 위치의 칩 내곽(-19)도
+// R_INNER(66)보다 40.4px 바깥이라 밴드를 벗어나지 않는다.
+const SUB_CHIP = 38;
+const SUB_CHIP_GAP = 7; // 미니 칩 사이 간격(px)
 const ETC_MIN_ARC = 40; // "그 외" 조각 최소 각도(°) — 미니 칩 3개 + 간격이 들어가도록
 const MIN_LABEL_GAP = 66; // 같은 쪽(좌/우) 인접 라벨의 세로 최소 간격(px)
 const GAP_DEG = 0; // 각도 간극 없음 — 분리는 카드 배경색 stroke(--ring-divider)가 담당
@@ -71,17 +84,12 @@ const GAP_DEG = 0; // 각도 간극 없음 — 분리는 카드 배경색 stroke
 const RADIAN = Math.PI / 180;
 
 /**
- * 조각 각도(=비중) → 로고 칩 지름.
- * 1) `MIN_ARC_DEG`~`CHIP_REF_ARC` 구간을 `CHIP_MIN`~`CHIP_MAX`로 보간(sqrt 이징 —
- *    선형이면 중간 비중들이 하한에 몰려 차등이 안 보인다)
- * 2) 조각 안에 물리적으로 들어가도록 로고 반경에서의 현(chord) 길이로 상한을 건다
+ * 조각 각도(=비중) → 로고 칩 지름. 고정 타깃(`CHIP_MIN`)을 그대로 쓰되, 조각 안에 물리적으로
+ * 들어가도록 로고 반경에서의 현(chord) 길이로 상한만 건다(정상 범위에선 항상 CHIP_MIN 그대로).
  */
 function chipSizeFor(arcDeg: number): number {
-  const span = CHIP_REF_ARC - MIN_ARC_DEG;
-  const t = Math.min(1, Math.max(0, (arcDeg - MIN_ARC_DEG) / span));
-  const byArc = CHIP_MIN + (CHIP_MAX - CHIP_MIN) * Math.sqrt(t);
   const chord = 2 * LOGO_R * Math.sin((arcDeg / 2) * RADIAN);
-  return Math.round(Math.min(byArc, chord * 0.7));
+  return Math.round(Math.min(CHIP_MIN, chord * 0.7));
 }
 
 function maxArcForPct(pct: number): number {
@@ -223,6 +231,10 @@ function spreadVertically(items: Placed[], gap: number = MIN_LABEL_GAP): Placed[
   return sorted.map((it) => ({ ...it, ly: Math.min(max, Math.max(min, it.ly + shift)) }));
 }
 
+// Tailwind `sm:` 브레이크포인트와 동일 기준(640px) — 프리뷰 전용 도넛 라벨 크기도
+// ASSET_THEME_SHOT(theme.ts)의 다른 프리뷰 본문 텍스트와 같은 기준으로 PC/모바일을 가른다.
+const PC_PREVIEW_QUERY = "(min-width: 640px)";
+
 export function PortfolioRingCard({ segments, responsive }: { segments: RingSegment[]; responsive?: boolean }) {
   // responsive=true(화면용 프리뷰)면 링을 컨테이너 폭에 맞춰 fit-to-width 스케일(가로 스크롤 없이 도넛이 폭을 꽉 채움).
   // responsive 미전달(캡처 인스턴스)이면 VIEW_W 고정 — 저장 PNG 구도 불변.
@@ -240,6 +252,18 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     return () => ro.disconnect();
   }, [responsive]);
 
+  // PC 프리뷰(뷰포트 ≥640px)는 도넛 라벨(종목명·%)도 나머지 본문 텍스트(ASSET_THEME_SHOT.bodyText)와
+  // 같이 text-sm(14px)로, 모바일은 기존 text-xs(12px) 유지.
+  const [isPcPreview, setIsPcPreview] = useState(false);
+  useEffect(() => {
+    if (!responsive || typeof window === "undefined") return;
+    const mql = window.matchMedia(PC_PREVIEW_QUERY);
+    const update = () => setIsPcPreview(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, [responsive]);
+
   if (segments.length === 0) return null;
 
   // "그 외"(subLogos 보유)는 미니 칩 3개가 들어가도록 더 큰 최소각을 요구한다
@@ -248,14 +272,14 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     segments.map((s) => (s.subLogos?.length ? ETC_MIN_ARC : MIN_ARC_DEG)),
   );
 
-  // responsive 프리뷰: 링 전체가 transform:scale(<1)로 축소돼 text-[12px] 라벨이 더 작게 렌더 → 폰트를
-  //   12/scale로 키워 상쇄(실효 항상 12px, 나머지 프리뷰 본문 ASSET_THEME_SHOT.bodyText=text-xs와 동일).
-  //   scale≤1이 보장되므로 12/scale은 항상 ≥12 — Math.max(12, …)는 부동소수 안전장치일 뿐.
-  //   (과거 플로어 15는 프리뷰 본문이 14px이던 시절 값 — 2026-09 본문 12px 축소 때 갱신 누락돼 PC
-  //   화면(scale≈1)에서만 도넛 라벨이 나머지 텍스트보다 커 보이는 회귀가 있었다.)
+  // responsive 프리뷰: 링 전체가 transform:scale(<1)로 축소돼 text-[Npx] 라벨이 더 작게 렌더 → 폰트를
+  //   floor/scale로 키워 상쇄(실효 항상 floor px). floor는 모바일 12(text-xs)·PC 14(text-sm) —
+  //   나머지 프리뷰 본문(ASSET_THEME_SHOT.bodyText="text-xs sm:text-sm")과 같은 기준(2026-09).
+  //   scale≤1이 보장되므로 floor/scale은 항상 ≥floor — Math.max(floor, …)는 부동소수 안전장치일 뿐.
   // 캡처(저장 PNG, !responsive): SHOT_BIG_SCALE에서 파생(계수 12 → 1.46에서 18, 1.42에서 17). 도넛 라벨은
   //   좁은 존 짤림 때문에 본문(계수 14)보다 조금 작게. 나머지 짤림 방지는 아래 labelMaxW·line-clamp-3.
-  const rLabelFont = responsive ? Math.max(12, 12 / scale) : Math.round(12 * SHOT_BIG_SCALE);
+  const previewFloor = isPcPreview ? 14 : 12;
+  const rLabelFont = responsive ? Math.max(previewFloor, previewFloor / scale) : Math.round(12 * SHOT_BIG_SCALE);
   const rGap = responsive
     ? Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 4.5))
     : Math.max(MIN_LABEL_GAP, Math.round(rLabelFont * 5));
@@ -315,10 +339,12 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
           // "그 외" — 구성 상위 종목 미니 칩을 조각 각도 범위에 균등 배치
           if (seg.subLogos?.length) {
             const subs = seg.subLogos;
-            const stepDeg = ((SUB_CHIP + SUB_CHIP_GAP) / LOGO_R) * (180 / Math.PI);
+            // 가로(원주) 오프셋 대신 세로(반지름) 오프셋 — 밴드 두께가 최소 조각각 기준 원주
+            // 방향 여유폭보다 넓어 더 큰 칩을 안전하게 세로로 쌓을 수 있다(2026-09, 사용자 요청).
+            const rStep = SUB_CHIP + SUB_CHIP_GAP;
             return subs.map((sub, i) => {
-              const off = (i - (subs.length - 1) / 2) * stepDeg;
-              const [sx, sy] = polar(LOGO_R, mid + off);
+              const rOffset = (i - (subs.length - 1) / 2) * rStep;
+              const [sx, sy] = polar(LOGO_R + rOffset, mid);
               return (
                 <div
                   key={`logo-${seg.key}-${sub.key}`}
@@ -332,6 +358,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                     etfBrand={sub.etfBrand}
                     size={SUB_CHIP}
                     bgColor={seg.color}
+                    fontSize={ETF_LABEL_FONT_SIZE}
                   />
                 </div>
               );
@@ -339,7 +366,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
           }
 
           const chip = chipSizeFor(a1 - a0);
-          if (chip < CHIP_MIN) return null; // 하한도 못 채우는 좁은 조각은 생략
+          if (chip < CHIP_HIDE_BELOW) return null; // 하한도 못 채우는 좁은 조각은 생략
           const [gx, gy] = polar(LOGO_R, mid);
           return (
             <div
@@ -354,6 +381,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                 etfBrand={seg.etfBrand}
                 size={chip}
                 bgColor={seg.color}
+                fontSize={ETF_LABEL_FONT_SIZE}
               />
             </div>
           );
