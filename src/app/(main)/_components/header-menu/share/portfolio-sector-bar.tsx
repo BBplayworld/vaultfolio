@@ -3,7 +3,8 @@
 // 인증카드 "포트폴리오" 타입 하단 — 범용 비중 분포 막대바. 금액 없이 항목명 + 비중%만.
 // "분야 구성"(computeBreakdown("theme", ...))과 "보유 유형 구성"(stock.category) 두 곳에서
 // 같은 컴포넌트를 재사용한다(캡션은 title prop). 데이터는 ShareCard가 만들어 주입.
-// 캡처 DOM 전용 — 뷰포트 반응형 클래스 금지(고정 px).
+// 캡처(big=true) 전용 값은 뷰포트 반응형 클래스 금지(고정 px, R32) — 프리뷰(!big)는 화면
+// 표시일 뿐 저장 PNG에 안 쓰이므로 `sm:`이 안전하다(theme.ts의 ASSET_THEME_SHOT과 동일 원칙).
 
 export interface SectorBarItem {
   key: string;
@@ -15,7 +16,9 @@ export interface SectorBarItem {
 export function PortfolioSectorBar({ title, items, big = false }: { title: string; items: SectorBarItem[]; big?: boolean }) {
   if (items.length === 0) return null;
   // big = 캡처(저장 PNG) 전용 — 680px 아트보드에서 프리뷰 비율을 내려고 텍스트/막대를 ×SHOT_BIG_SCALE(1.46)
-  const txt = big ? "text-[20px]" : "text-xs";
+  // 프리뷰(!big)는 나머지 인증카드 본문(ASSET_THEME_SHOT.bodyText 등)과 같은 640px 기준으로
+  // PC에서 한 단계 확대(2026-09 — 이 컴포넌트만 누락돼 있었음).
+  const txt = big ? "text-[20px]" : "text-xs sm:text-sm";
   const dot = big ? "size-[15px]" : "size-2.5";
   const barH = big ? "h-[15px]" : "h-2.5";
   return (

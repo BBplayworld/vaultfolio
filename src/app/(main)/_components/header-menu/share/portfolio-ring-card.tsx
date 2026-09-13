@@ -416,13 +416,13 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                   줄바꿈·말줄임 되도록 강제 — 가로 오버플로우(카드 밖 짤림) 원천 차단 */}
               <div className="flex flex-col leading-tight min-w-0 max-w-full">
                 <span
-                  className={`text-[15px] font-semibold tracking-tight text-foreground ${labelClampCls} [overflow-wrap:anywhere] max-w-full`}
+                  className={`font-semibold tracking-tight text-foreground ${labelClampCls} [overflow-wrap:anywhere] max-w-full`}
                   style={rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : undefined}
                 >
                   {label}
                 </span>
                 <span
-                  className="text-[15px] font-bold tabular-nums"
+                  className="font-bold tabular-nums"
                   style={{ color: seg.color, ...(rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : {}) }}
                 >
                   {seg.truePct.toFixed(1)}%
