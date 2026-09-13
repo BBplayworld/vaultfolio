@@ -61,7 +61,7 @@ export function BrandMark({
    *  커져도 라벨 크기는 커지지 않게" 고정하는 용도. 미지정(서브칩 등)이면 기존 계산식 유지. */
   fontSize?: number;
 }) {
-  // 표시 크기 기준으로 요청(retina로 ×2 되어 pixelRatio 3 커버). etfBrand면 아래에서 미사용.
+  // 표시 크기 기준으로 요청(retina로 ×2 되어 pixelRatio 1 커버). etfBrand면 아래에서 미사용.
   const { imgProps } = useLogoSrc(ticker, name, isForeign, { size: captureLogoSize(size) });
 
   const chip = "flex items-center justify-center rounded-full overflow-hidden";

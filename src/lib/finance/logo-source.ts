@@ -67,14 +67,15 @@ export interface LogoSourceOptions {
   size?: number;
 }
 
-/** 인증카드 캡처 `pixelRatio` — `share-menu.tsx` captureImage와 동일해야 한다 */
-export const CAPTURE_PIXEL_RATIO = 3;
+/** 인증카드 캡처 `pixelRatio` — `share-menu.tsx` captureImage와 동일해야 한다
+ *  (2026-09 3→1: 저장 PNG 해상도를 680px로 낮춘 변경과 반드시 함께 맞출 것) */
+export const CAPTURE_PIXEL_RATIO = 1;
 
 /**
  * 표시 CSS px → `/api/logo` 요청 size.
  *
  * `/api/logo` route가 항상 `retina=true`를 강제해 **반환 PNG = 요청 size의 2배**다.
- * 따라서 표시px×pixelRatio(3) 해상도를 얻으려면 요청 size는 그 절반(= 표시px×1.5)이면 된다.
+ * 따라서 표시px×pixelRatio(1) 해상도를 얻으려면 요청 size는 그 절반(= 표시px×0.5)이면 된다.
  * 과거엔 44~92px 칩에 512(→retina 1024px PNG)를 요청해 모바일 WebView가 디코드/메모리
  * 한계로 로고를 통째로 못 그렸다(인증카드 저장 시 로고 누락 버그, 2026-09).
  */
