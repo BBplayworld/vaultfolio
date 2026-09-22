@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { IdCard, Check, Loader2, Download } from "lucide-react";
+import { IdCard, Check, Loader2, Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +14,7 @@ import { InlineSelector } from "../../layout/ui/inline-selector";
 import { ShareCard, type ShareCardVariant } from "./share-card";
 
 const CARD_VARIANTS = [
+  { value: "type", label: "투자 유형" },
   { value: "stock", label: "주식 현황" },
   { value: "portfolio", label: "포트폴리오" },
 ] as const satisfies readonly { value: ShareCardVariant; label: string }[];
@@ -70,8 +71,8 @@ interface Props {
 export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Props) {
   // 기본은 금액 노출 — 필요 시 스위치로 숨겨 자산 규모(₩)만 가릴 수 있다
   const [showAmounts, setShowAmounts] = useState(true);
-  // 카드 타입 — 저장 안 함(다이얼로그 로컬 상태)
-  const [variant, setVariant] = useState<ShareCardVariant>("stock");
+  // 카드 타입 — 저장 안 함(다이얼로그 로컬 상태). 최우선 기능인 "투자 유형"을 기본 진입 화면으로.
+  const [variant, setVariant] = useState<ShareCardVariant>("type");
 
   // 열릴 때 initialVariant가 지정돼 있으면 그 타입으로 맞춘다(예: 홈 "새 공지" 팁 → 포트폴리오 직행).
   // 지정 없이 아이콘 버튼으로 열면 기존 선택을 그대로 유지(리셋 안 함).
@@ -82,10 +83,10 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   const [saveSuccess, setSaveSuccess] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
-  // 포트폴리오 타입일 때만 X-Ray 분류 캐시 자동 보충 → 완료 시 tick 증가로 분야 막대바 등장
+  // 포트폴리오/투자유형 타입일 때만 X-Ray 분류 캐시 자동 보충 → 완료 시 tick 증가로 분야 막대바·유형 등장
   const { assetData } = useAssetData();
   const { tick: xrayTick, progress: xrayProgress } = useXrayClassifications(
-    open && variant === "portfolio" ? assetData.stocks : EMPTY_STOCKS,
+    open && (variant === "portfolio" || variant === "type") ? assetData.stocks : EMPTY_STOCKS,
   );
   const classifying =
     !!xrayProgress && xrayProgress.total > 0 && xrayProgress.done < xrayProgress.total;
@@ -170,6 +171,46 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     }
   };
 
+  // dataURL은 base64 디코드일 뿐 네트워크 요청이 아니라 로고 인라인화 fetch와 무관하게 안전
+  async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type || "image/png" });
+  }
+
+  // Web Share API 지원 기기(대부분 모바일)는 실제 공유 시트(카카오톡·인스타그램 등)를 바로 띄우고,
+  // 미지원(대부분 데스크톱)이거나 실패하면 기존 다운로드로 폴백한다.
+  const handleShare = async () => {
+    setIsSaving(true);
+    try {
+      const dataUrl = await Promise.race([
+        captureImage(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("capture timeout")), SAVE_HARD_TIMEOUT_MS),
+        ),
+      ]);
+      if (!dataUrl) return;
+      const filename = `secretasset-${variant}-${new Date().toISOString().slice(0, 10)}.png`;
+      const file = await dataUrlToFile(dataUrl, filename);
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "인증카드" });
+        setSaveSuccess(true);
+        window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
+        setTimeout(() => setSaveSuccess(false), 2000);
+        return;
+      }
+      await handleSave();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      console.error("공유 실패", e);
+      await handleSave();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* 모바일: 좌우 12px 인셋(노치·홈 인디케이터는 safe-area 우선), 세로는 top 앵커 + h-auto라
@@ -185,7 +226,9 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
           </DialogTitle>
           {/* 설명 문구는 데스크톱만 — 모바일은 타입 토글 라벨로 충분(세로 공간 확보) */}
           <DialogDescription className="hidden sm:block text-xs text-left">
-            {variant === "portfolio"
+            {variant === "type"
+              ? "내 투자 유형을 확인하고 친구에게 공유해보세요."
+              : variant === "portfolio"
               ? "내 종목 구성 비중을 이미지로 만들어 저장할 수 있습니다."
               : "내 주식 현황을 이미지로 만들어 저장할 수 있습니다."}
           </DialogDescription>
@@ -202,10 +245,22 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
               ariaLabel="인증카드 타입"
             />
             <div className="flex items-center gap-2">
+              {canNativeShare && (
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="h-8 w-8"
+                  aria-label="이미지로 저장"
+                >
+                  <Download className="size-3.5" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="brand"
-                onClick={handleSave}
+                onClick={canNativeShare ? handleShare : handleSave}
                 disabled={isSaving}
                 className="h-8 px-3 text-sm gap-1.5"
               >
@@ -213,10 +268,12 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   <Loader2 className="size-3 animate-spin" />
                 ) : saveSuccess ? (
                   <Check className="size-3" />
+                ) : canNativeShare ? (
+                  <Share2 className="size-3" />
                 ) : (
                   <Download className="size-3" />
                 )}
-                {saveSuccess ? "저장됨!" : isSaving ? "처리 중..." : "저장"}
+                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : canNativeShare ? "공유" : "저장"}
               </Button>
             </div>
           </div>
@@ -232,10 +289,12 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
               <Label htmlFor="show-amounts" className="text-xs cursor-pointer select-none">금액 표시</Label>
             </div>
           )}
-          {variant === "portfolio" && classifying && (
+          {(variant === "portfolio" || variant === "type") && classifying && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
-              분야 정보를 분석하는 중… 완료되면 분야 구성이 표시됩니다.
+              {variant === "type"
+                ? "투자 유형을 분석하는 중… 완료되면 결과가 표시됩니다."
+                : "분야 정보를 분석하는 중… 완료되면 분야 구성이 표시됩니다."}
             </div>
           )}
         </div>

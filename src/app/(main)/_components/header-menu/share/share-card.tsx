@@ -15,8 +15,11 @@ import { stockCategories } from "@/config/asset-options";
 import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
+import { resolveInvestorType, type AccountKey, type RegionKey } from "@/lib/xray/investor-type";
+import type { Sector } from "@/lib/xray/classification-store";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
 import { PortfolioSectorBar, type SectorBarItem } from "./portfolio-sector-bar";
+import { InvestorAvatar } from "./investor-avatar";
 
 // 인증카드 축약 상수 — 비중 바·종목 리스트 모두 상위 N개만 노출하고 나머지는 "기타"/"외 N종목"으로 집계
 const SHOT_MAX = 7;
@@ -30,7 +33,7 @@ const LOGO_SIZE_CAPTURE = Math.round(LOGO_SIZE_PREVIEW * SHOT_BIG_SCALE);
 // 포트폴리오 타입 도넛·분야 막대바 공용 팔레트. 색 조정은 theme.ts 배열만 손보면 된다.
 const segFill = (i: number) => SHARE_SAFE_PALETTE[i % SHARE_SAFE_PALETTE.length];
 
-export type ShareCardVariant = "stock" | "portfolio";
+export type ShareCardVariant = "stock" | "portfolio" | "type";
 
 export interface ShareCardProps {
   variant: ShareCardVariant;
@@ -169,6 +172,26 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       }));
   }, [assetData.stocks, exchangeRates, totalValue]);
 
+  // "투자 유형 테스트" 카드 전용 — 테마·지역·계좌 축 top 값을 결정적으로 조합해 숫자 없는
+  // 유형 이름 + 캐릭터를 만든다. 다른 variant에서는 계산하지 않는다(불필요한 computeBreakdown 방지).
+  const investorType = React.useMemo(() => {
+    if (variant !== "type") return null;
+    const theme = computeBreakdown("theme", mergedStocks, exchangeRates);
+    const region = computeBreakdown("region", mergedStocks, exchangeRates);
+    const accountKey = (categoryItems[0]?.key ?? "domestic") as AccountKey;
+    // theme 축은 분류 캐시가 비어 있으면 top이 "unclassified"일 수 있음 — 그 경우 "기타"로 대체
+    const topThemeKey = theme.items[0]?.key;
+    const themeKey = (!topThemeKey || topThemeKey === "unclassified" ? "기타" : topThemeKey) as Sector;
+    return resolveInvestorType({
+      themeKey,
+      concentration: theme.concentration,
+      regionKey: (region.items[0]?.key ?? "KR") as RegionKey,
+      accountKey,
+    });
+    // xrayTick: 분류 fetch 완료 후 localStorage 갱신을 재계산에 반영
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variant, mergedStocks, exchangeRates, categoryItems, xrayTick]);
+
   // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음).
   // 캡처(!responsive)만 shotBig → ASSET_THEME_SHOT_BIG(폰트 ×SHOT_BIG_SCALE)로 680px 아트보드에서 프리뷰 비율 재현.
   // screenshotMode 자체를 responsive에 재결속하지 않는다(과거 프리뷰 펼침 부활 회귀).
@@ -213,6 +236,22 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
               <PortfolioSectorBar title="보유 유형 구성" items={categoryItems} big={shotBig} />
             </div>
           )}
+        </div>
+      ) : variant === "type" && investorType ? (
+        // "투자 유형 테스트" — 캐릭터가 메인, 숫자·금액·비율은 전혀 노출하지 않는다.
+        <div className="py-6 flex flex-col items-center gap-5">
+          <InvestorAvatar spec={investorType.avatar} size={responsive ? 176 : 208} />
+          <div className="flex flex-col items-center gap-1.5 text-center px-4">
+            <div className={responsive ? "text-xl sm:text-2xl font-extrabold tracking-tight" : "text-[30px] font-extrabold tracking-tight"}>
+              {investorType.title}
+            </div>
+            <div className="inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              {investorType.subtitle}
+            </div>
+            <div className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-1" : "text-[17px] text-muted-foreground mt-1"}>
+              {investorType.description}
+            </div>
+          </div>
         </div>
       ) : (
       <>
