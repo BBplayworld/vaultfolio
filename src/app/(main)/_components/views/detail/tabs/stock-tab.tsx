@@ -28,7 +28,7 @@ import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import { captureLogoSize } from "@/lib/finance/logo-source";
+import { captureLogoSize, getLogoInitial } from "@/lib/finance/logo-source";
 import { useLogoSrc } from "@/hooks/use-logo-src";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
@@ -46,7 +46,7 @@ export const CATEGORY_TABS = [
 ] as const;
 
 export function StockIcon({ ticker, name, isForeign, color, screenshotMode = false, shotBig = false }: { ticker: string; name: string; isForeign: boolean; color: string; screenshotMode?: boolean; shotBig?: boolean }) {
-  const initial = (ticker || name).replace(/[^A-Za-z가-힣]/g, "").slice(0, 2).toUpperCase() || "";
+  const initial = getLogoInitial(ticker, name);
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
 
   // 인증카드 로고 요청은 표시 px 기준(프리뷰 28 / 저장 PNG 34). 실사용 아바타는 옵션 미전달.

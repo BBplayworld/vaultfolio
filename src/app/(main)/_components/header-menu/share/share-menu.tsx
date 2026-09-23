@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { IdCard, Check, Loader2, Download, Share2 } from "lucide-react";
+import { IdCard, Check, Loader2, Download, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -82,6 +82,9 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  // Web Share는 파일을 동기 시점에 넘겨야 클릭의 사용자 제스처 컨텍스트 안에서 동작한다(WebKit 등).
+  // variant/옵션이 바뀔 때마다 미리 캡처해 여기 캐시해두고, 공유 버튼 클릭 시 await 없이 바로 사용한다.
+  const preparedShareRef = useRef<File | null>(null);
 
   // 포트폴리오/투자유형 타입일 때만 X-Ray 분류 캐시 자동 보충 → 완료 시 tick 증가로 분야 막대바·유형 등장
   const { assetData } = useAssetData();
@@ -178,9 +181,36 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     return new File([blob], filename, { type: blob.type || "image/png" });
   }
 
-  // Web Share API 지원 기기(대부분 모바일)는 실제 공유 시트(카카오톡·인스타그램 등)를 바로 띄우고,
-  // 미지원(대부분 데스크톱)이거나 실패하면 기존 다운로드로 폴백한다.
-  const handleShare = async () => {
+  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  const canCopyImage =
+    typeof navigator !== "undefined" &&
+    typeof ClipboardItem !== "undefined" &&
+    !!navigator.clipboard?.write;
+
+  // 다이얼로그가 열려 있는 동안 카드 내용이 바뀔 때마다 미리 캡처해 preparedShareRef에 캐시해둔다.
+  // (공유 버튼 클릭 시 캡처를 기다리지 않고 바로 navigator.share를 호출하기 위함 — 아래 handleShareClick 참고)
+  useEffect(() => {
+    if (!open || !canNativeShare) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const dataUrl = await captureImage();
+        if (cancelled || !dataUrl) return;
+        const filename = `secretasset-${variant}-${new Date().toISOString().slice(0, 10)}.png`;
+        preparedShareRef.current = await dataUrlToFile(dataUrl, filename);
+      } catch {
+        // 사전 캡처 실패는 조용히 무시 — 클릭 시 handleShareSlow 폴백이 처리
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, canNativeShare, variant, showAmounts, xrayTick]);
+
+  // 폴백 경로 — 사전 캡처가 아직 준비되지 않았을 때만 사용(캡처를 기다린 뒤 공유하므로 일부 기기에서
+  // 사용자 제스처 컨텍스트가 만료돼 실패할 수 있으나, 최후의 안전망으로 유지).
+  const handleShareSlow = async () => {
     setIsSaving(true);
     try {
       const dataUrl = await Promise.race([
@@ -209,7 +239,57 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     }
   };
 
-  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  // 공유 버튼 클릭 핸들러 — 사전 캡처가 준비돼 있으면 await 없이 그 자리에서 바로 navigator.share를
+  // 호출해 클릭의 사용자 제스처 컨텍스트를 그대로 사용한다(WebKit 등에서 카카오톡 공유가 실패하던 원인).
+  const handleShareClick = () => {
+    const file = preparedShareRef.current;
+    if (!file || !navigator.canShare?.({ files: [file] })) {
+      void handleShareSlow();
+      return;
+    }
+    setIsSaving(true);
+    navigator
+      .share({ files: [file], title: "인증카드" })
+      .then(() => {
+        setSaveSuccess(true);
+        window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
+        setTimeout(() => setSaveSuccess(false), 2000);
+      })
+      .catch((e: unknown) => {
+        if (e instanceof Error && e.name === "AbortError") return;
+        console.error("공유 실패", e);
+        void handleSave();
+      })
+      .finally(() => setIsSaving(false));
+  };
+
+  // PC 등 Web Share 미지원 환경 — 이미지를 클립보드에 복사해 카카오톡 PC앱/웹 등에 Ctrl+V로
+  // 붙여넣을 수 있게 한다. WebKit 제스처 만료를 피하려면 클릭 시점에 write를 동기 호출하고,
+  // 캡처가 끝나지 않은 Promise를 ClipboardItem에 그대로 담아야 한다(pwa-install-flow.tsx와 동일 패턴).
+  const handleCopyImage = () => {
+    setIsSaving(true);
+    const blobPromise = Promise.race([
+      captureImage(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("capture timeout")), SAVE_HARD_TIMEOUT_MS),
+      ),
+    ]).then((dataUrl) => {
+      if (!dataUrl) throw new Error("capture failed");
+      return fetch(dataUrl).then((res) => res.blob());
+    });
+    navigator.clipboard
+      .write([new ClipboardItem({ "image/png": blobPromise })])
+      .then(() => {
+        toast.success("이미지가 복사됐어요! 카카오톡 등에 Ctrl+V로 붙여넣어보세요.");
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+      })
+      .catch((e: unknown) => {
+        console.error("이미지 복사 실패", e);
+        toast.error("이미지 복사에 실패했습니다.");
+      })
+      .finally(() => setIsSaving(false));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -257,10 +337,22 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   <Download className="size-3.5" />
                 </Button>
               )}
+              {!canNativeShare && canCopyImage && (
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={handleCopyImage}
+                  disabled={isSaving}
+                  className="h-8 w-8"
+                  aria-label="이미지 복사"
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="brand"
-                onClick={canNativeShare ? handleShare : handleSave}
+                onClick={canNativeShare ? handleShareClick : handleSave}
                 disabled={isSaving}
                 className="h-8 px-3 text-sm gap-1.5"
               >

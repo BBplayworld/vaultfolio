@@ -125,4 +125,13 @@ export const APP_FEATURES: AppFeature[] = [
     action: () => dispatchOpenShareCard("portfolio"),
     visitKey: "share-card-portfolio",
   },
+  {
+    id: "share-card-type",
+    title: "투자 유형 인증카드",
+    description: "인증카드 > 투자 유형에서 내 포트폴리오를 분석한 투자 유형과 캐릭터 아바타를 확인하고 공유해보세요.",
+    icon: IdCard,
+    isNew: true,
+    action: () => dispatchOpenShareCard("type"),
+    visitKey: "share-card-type",
+  },
 ];
