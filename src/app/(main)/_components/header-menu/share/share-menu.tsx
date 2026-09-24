@@ -355,7 +355,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   size="icon"
                   variant="secondary"
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || classifying}
                   className="h-8 w-8"
                   aria-label="이미지로 저장"
                 >
@@ -367,7 +367,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   size="icon"
                   variant="secondary"
                   onClick={handleCopyImage}
-                  disabled={isSaving}
+                  disabled={isSaving || classifying}
                   className="h-8 w-8"
                   aria-label="이미지 복사"
                 >
@@ -378,10 +378,10 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 size="sm"
                 variant="brand"
                 onClick={canNativeShare ? handleShareClick : handleSave}
-                disabled={isSaving || sharePreparing}
+                disabled={isSaving || sharePreparing || classifying}
                 className="h-8 px-3 text-sm gap-1.5"
               >
-                {isSaving || sharePreparing ? (
+                {isSaving || sharePreparing || classifying ? (
                   <Loader2 className="size-3 animate-spin" />
                 ) : saveSuccess ? (
                   <Check className="size-3" />
@@ -390,7 +390,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 ) : (
                   <Download className="size-3" />
                 )}
-                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : sharePreparing ? "준비 중..." : canNativeShare ? "공유" : "저장"}
+                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : classifying ? "분석 중..." : sharePreparing ? "준비 중..." : canNativeShare ? "공유" : "저장"}
               </Button>
             </div>
           </div>

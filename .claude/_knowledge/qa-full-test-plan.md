@@ -407,7 +407,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-NOTICE. 공지 시스템
 - ⚙ **자동 팝업(`UpdateNoticeDialog`)은 S-4.32에서 제거됨** — 홈 진입 시 별도 창 노출 없음. `notice.tsx`(`NOTICE_ID`/`NOTICE_TITLE`/`NoticeContent`)는 아래 수동 진입점 전용으로 유지.
-- ⚙ `NEXT_PUBLIC_NOTICE` JSON: `{ enabled, expiresAt }` 만 평가 (`getNoticeWindow()`, `notice-config.ts`). id·title·items 없음 — 본문은 branch 코드 `notice.tsx`. **현재 이 값을 참조하는 자동 팝업이 없어 사실상 미사용**(수동 뷰어는 만료와 무관하게 항상 열람 가능).
+- ⚙ (2026-09) 자동 팝업이 참조하지 않아 미사용이던 `NEXT_PUBLIC_NOTICE` 환경변수·`notice-config.ts`(`getNoticeWindow()`)는 제거됨 — 공지 노출은 `NOTICE_ID`(코드 상수)와 열람 여부만으로 결정. 본문은 `notice.tsx`.
 - ⚙ `notice.tsx`: `NOTICE_ID="20260924"`(내용 갱신 시 bump, #4.26에 20260905→20260924), `NOTICE_TITLE="투자 유형 인증카드 · 공유 개선 업데이트"`(본문 FEATURES 2장: 투자 유형 인증카드 · 이미지 공유 개선, 기존 포트폴리오·X-Ray는 "그 외" 문단), `NoticeContent` export. `pointer-events-none` + `select-none`으로 인터랙션 차단. **상태·브라우저 분기 없는 정적 컴포넌트**(SVG 애니메이션 미사용). 본문 = 강조 배너(+`v{APP_VERSION}` 뱃지) → `FEATURES` 배열 카드 4장(**①자산 성적표 ②암호화폐 시세 자동 갱신 ③부동산 실거래가 추정 ④인증카드 개편**, 아이콘+텍스트만) → **행동 요청 콜아웃(amber, 신용대출-부동산 연계 지정 안내)** → 기타 개선 1문단(자산 변동 노출) → 의견 보내기 배너. **작성 3원칙**(dev-rules.md): ①기능 위치·이동 경로 명시 ②SVG로 인지성 극대화 ③핵심 위주 간결함 — `home-tip-box.tsx`(F-HOME-TIP)에도 동일 적용
 - ⚙ **수동 공지 진입** — 더보기 > **"앱 가이드 · 공지사항"** 통합 진입점([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) 선택기 → 공지 뷰어가 **동일 `NoticeContent`·`NOTICE_TITLE` 재사용**(중복 본문 없음, 유일한 진입 경로). 앱 가이드는 `trigger-restore-guide` 이벤트
 - ⚙ PWA standalone: `NEXT_PUBLIC_*` 빌드 타임 인라인, SW 자동 갱신(`controllerchange`→reload, `updateViaCache:'none'`)으로 재방문 시 새 번들 즉시 반영 → 별도 업데이트 불필요.

@@ -246,6 +246,8 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
   // 유형 이름 + 캐릭터를 만든다. 다른 variant에서는 계산하지 않는다(불필요한 computeBreakdown 방지).
   const investorType = React.useMemo(() => {
     if (variant !== "type") return null;
+    // xrayTick: 분류 fetch 완료 후 localStorage(분류 캐시) 갱신을 재계산에 반영하는 무효화 키
+    void xrayTick;
     const theme = computeBreakdown("theme", mergedStocks, exchangeRates);
     const region = computeBreakdown("region", mergedStocks, exchangeRates);
     const stockType = computeBreakdown("stockType", mergedStocks, exchangeRates);
@@ -317,9 +319,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       topIndexAccountLabel,
       krUsBalance,
     });
-    // xrayTick: 분류 fetch 완료 후 localStorage 갱신을 재계산에 반영
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant, mergedStocks, exchangeRates, categoryItems, xrayTick]);
+  }, [variant, mergedStocks, exchangeRates, categoryItems, xrayTick, assetData.stocks, totalValue]);
 
   // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음).
   // 캡처(!responsive)만 shotBig → ASSET_THEME_SHOT_BIG(폰트 ×SHOT_BIG_SCALE)로 680px 아트보드에서 프리뷰 비율 재현.
