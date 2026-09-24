@@ -84,7 +84,9 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   const cardRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   // Web Share는 파일을 동기 시점에 넘겨야 클릭의 사용자 제스처 컨텍스트 안에서 동작한다(WebKit 등).
   // variant/옵션이 바뀔 때마다 미리 캡처해 여기 캐시해두고, 공유 버튼 클릭 시 await 없이 바로 사용한다.
-  const preparedShareRef = useRef<File | null>(null);
+  // key = 캡처 내용을 결정하는 값(variant|금액표시|분류진행) — 클릭 시 현재 값과 다르면 이전 이미지라 사용 금지
+  const preparedShareRef = useRef<{ file: File; key: string } | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   // 포트폴리오/투자유형 타입일 때만 X-Ray 분류 캐시 자동 보충 → 완료 시 tick 증가로 분야 막대바·유형 등장
   const { assetData } = useAssetData();
@@ -182,6 +184,8 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   }
 
   const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  // 모바일(Web Share) 사전 캡처 준비 중 — 이때 공유하면 이전 이미지가 나가거나 캡처를 기다리다 제스처가 만료된다
+  const sharePreparing = canNativeShare && isPreparing;
   const canCopyImage =
     typeof navigator !== "undefined" &&
     typeof ClipboardItem !== "undefined" &&
@@ -190,16 +194,32 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   // 다이얼로그가 열려 있는 동안 카드 내용이 바뀔 때마다 미리 캡처해 preparedShareRef에 캐시해둔다.
   // (공유 버튼 클릭 시 캡처를 기다리지 않고 바로 navigator.share를 호출하기 위함 — 아래 handleShareClick 참고)
   useEffect(() => {
-    if (!open || !canNativeShare) return;
+    // 내용이 바뀌었거나 다이얼로그가 닫혔으니 이전 이미지는 즉시 폐기(탭 전환 직후 이전 타입이 공유되던 P1)
+    preparedShareRef.current = null;
+    if (!open || !canNativeShare) {
+      setIsPreparing(false);
+      return;
+    }
+    setIsPreparing(true);
+    const key = `${variant}|${showAmounts}|${xrayTick}`;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const dataUrl = await captureImage();
+        const dataUrl = await Promise.race([
+          captureImage(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("capture timeout")), SAVE_HARD_TIMEOUT_MS),
+          ),
+        ]);
         if (cancelled || !dataUrl) return;
         const filename = `secretasset-${variant}-${new Date().toISOString().slice(0, 10)}.png`;
-        preparedShareRef.current = await dataUrlToFile(dataUrl, filename);
+        const file = await dataUrlToFile(dataUrl, filename);
+        if (cancelled) return; // 변환 중 내용이 또 바뀌었으면 늦게 끝난 이전 캡처가 캐시를 덮어쓰지 못하게
+        preparedShareRef.current = { file, key };
       } catch {
         // 사전 캡처 실패는 조용히 무시 — 클릭 시 handleShareSlow 폴백이 처리
+      } finally {
+        if (!cancelled) setIsPreparing(false);
       }
     }, 400);
     return () => {
@@ -242,14 +262,19 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
   // 공유 버튼 클릭 핸들러 — 사전 캡처가 준비돼 있으면 await 없이 그 자리에서 바로 navigator.share를
   // 호출해 클릭의 사용자 제스처 컨텍스트를 그대로 사용한다(WebKit 등에서 카카오톡 공유가 실패하던 원인).
   const handleShareClick = () => {
-    const file = preparedShareRef.current;
-    if (!file || !navigator.canShare?.({ files: [file] })) {
+    const prepared = preparedShareRef.current;
+    // 현재 카드 내용(variant|금액표시|분류진행)과 키가 같은 사전 캡처만 사용 — 아니면 이전 이미지
+    if (
+      !prepared ||
+      prepared.key !== `${variant}|${showAmounts}|${xrayTick}` ||
+      !navigator.canShare?.({ files: [prepared.file] })
+    ) {
       void handleShareSlow();
       return;
     }
     setIsSaving(true);
     navigator
-      .share({ files: [file] })
+      .share({ files: [prepared.file] })
       .then(() => {
         setSaveSuccess(true);
         window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
@@ -353,10 +378,10 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 size="sm"
                 variant="brand"
                 onClick={canNativeShare ? handleShareClick : handleSave}
-                disabled={isSaving}
+                disabled={isSaving || sharePreparing}
                 className="h-8 px-3 text-sm gap-1.5"
               >
-                {isSaving ? (
+                {isSaving || sharePreparing ? (
                   <Loader2 className="size-3 animate-spin" />
                 ) : saveSuccess ? (
                   <Check className="size-3" />
@@ -365,7 +390,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 ) : (
                   <Download className="size-3" />
                 )}
-                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : canNativeShare ? "공유" : "저장"}
+                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : sharePreparing ? "준비 중..." : canNativeShare ? "공유" : "저장"}
               </Button>
             </div>
           </div>

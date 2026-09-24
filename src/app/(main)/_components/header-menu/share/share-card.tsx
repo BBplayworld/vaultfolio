@@ -405,7 +405,8 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 보이므로 — 실측 확인, 2026-09).
                 캡처 기준: 상단 체감 간격은 유형 배지 박스(저대비라 경계가 안 보임)가 아니라 배지
                 "글자" 하단 → 첫 줄 ≈37px. 하단은 "가장 위 압정 머리 상단" 기준으로 여기에 맞추되
-                고채도 쪽지 덩어리의 번짐 착시를 감안해 +2px → mt-8(하단 ≈ 29 + (mt−22) ≈ 39px).
+                고채도 쪽지 덩어리의 번짐 착시를 감안해 +2px → mt-8로 잡았다가 사용자 확인 후 한 단계 줄여
+                mt-7(하단 ≈ 29 + (mt−22) ≈ 35px).
                 한쪽을 바꾸면 다른 쪽도 함께 확인할 것. 설명 문구 길이·폰트가 바뀌면 baseline도
                 바뀌므로 이 공식부터 다시 계산.
                 쪽지 크기: 캡처는 설명이 17px로 커서 프리뷰와 같은 12px 쪽지면 비율이 작아 보여,
@@ -415,7 +416,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
             <div
               className={responsive
                 ? "flex flex-wrap justify-center items-start gap-x-3 gap-y-4 mt-8 px-2 min-h-[100px] sm:min-h-[112px] max-w-[300px] sm:max-w-[340px]"
-                : "flex flex-wrap justify-center items-start gap-x-3.5 gap-y-[18px] mt-8 px-2 min-h-[115px] max-w-[400px]"}
+                : "flex flex-wrap justify-center items-start gap-x-3.5 gap-y-[18px] mt-7 px-2 min-h-[115px] max-w-[400px]"}
             >
               {investorType.tags.map((tag, i) => {
                 const bg = segFill(i);
