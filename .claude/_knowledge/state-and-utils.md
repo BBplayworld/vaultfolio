@@ -253,7 +253,11 @@ pick<T>(pool: readonly T[], seed: string): T   // pool[hashString(seed) % pool.l
 
 ### investor-type.ts (`src/lib/xray/investor-type.ts`, #4.26) — 인증카드 투자 유형 산출
 
-`resolveInvestorType(params)` → `{ title, subtitle, description, tags, highlightTerms, avatar: InvestorAvatarSpec }`. 입력은 섹터(`themeKey`)·집중도(`concentration`)·지역(`regionKey`)·계좌(`accountKey`)·종목유형(`stockTypeKey`)·통화(`topCurrencyLabel`) 필수 + 선택(`topStockName`·`secondStockName`·`subThemeLabel`·`secondAccountLabel`·`topIndexLabel`·`topIndexAccountLabel`·`krUsBalance`). 모든 문구 선택은 `pick(pool, seed)`(결정적)이고, 설명은 sentence1~6을 연결어(`FLOW_CONNECTOR_MID`/`CLOSING`)로 이어 "나열이 아닌 자연스러운 서술"로 조합하며 종성 판별 조사 처리·민감어(종교·국수주의) 배제·제목/설명 단어 일관성을 유지한다. `highlightTerms`는 설명에서 굵게 강조할 종목·섹터·지수명(긴 것부터 매칭, `share-card.tsx`의 `renderDescriptionWithHighlights`). `avatar`는 `InvestorAvatar` 입력(`concentration`·`stockTypeKey` 포함). 종목명은 `stock.name` 원문(주식 현황·도넛 라벨과 동일 표기).
+`resolveInvestorType(params)` → `{ title, subtitle, description, tags, highlightTerms, avatar: InvestorAvatarSpec }`. 입력은 섹터(`themeKey`)·집중도(`concentration`)·지역(`regionKey`)·계좌(`accountKey`)·종목유형(`stockTypeKey`)·통화(`topCurrencyLabel`) 필수 + 선택(`topStockName`·`secondStockName`·`subThemeLabel`·`secondAccountLabel`·`topIndexLabel`·`topIndexAccountLabel`·`krUsBalance`·`topHoldings`(상위 3종목 이름·티커)). 모든 문구 선택은 `pick(pool, seed)`(결정적)이고, 설명은 sentence1~6을 연결어(`FLOW_CONNECTOR_MID`/`CLOSING`)로 이어 "나열이 아닌 자연스러운 서술"로 조합하며 종성 판별 조사 처리·민감어(종교·국수주의) 배제·제목/설명 단어 일관성을 유지한다. `highlightTerms`는 설명에서 굵게 강조할 종목·섹터·지수명(긴 것부터 매칭, `share-card.tsx`의 `renderDescriptionWithHighlights`). `avatar`는 `InvestorAvatar` 입력(`concentration`·`stockTypeKey` 포함). 종목명은 `stock.name` 원문(주식 현황·도넛 라벨과 동일 표기).
+
+**어휘 풀·가드 규칙**: 제목 앞말 8/8/8(집중도별)·뒷말 8(섹터별)·배지 지역 6~7·계좌 7·쪽지 성향 7, 설명 첫 문장 10(집중도별) 등 풀을 대폭 확장(시뮬 기준 고유 제목 351→876·배지 270→1284). ① `pickFilled` — 직전 문장과 끝 어절이 같은 후보는 건너뛰어 어미("~는 편") 반복 억제 ② 슬롯(`{stock}` 등) 바로 뒤에 받침 의존 조사(이/가·은/는·을/를·과/와·이면·으로) 금지 ③ 모든 첫 문장 템플릿에 `{theme}` 포함(제목↔설명 일관) ④ 쪽지 태그는 공백 제거 후 9자 이하(`pickTag`, `TAG_MAX_LEN`) ⑤ **섹터·카테고리 수준의 일반 어휘만** 사용 — 지역·섹터 키로만 고르는 풀이라 특정 기술·사업·거래소(라이다·배터리·H주 등)를 단정하는 표현은 오해를 낳으므로 금지.
+
+**미국 배지 컨텍스트 풀(`regionPool`)**: `REGION_MOD.US`는 공통 6개, 조건부로 합류 — 개별 빅테크(상위 3종목 중 1위가 MAG7 또는 2종목 이상, 종목유형≠지수투자)면 "빅테크 동행자"·"나스닥 러버", ETF 중심(종목유형=지수투자 또는 테마=ETF/펀드)이면 1위 지수가 나스닥이면 "기술주 동행자"·"나스닥 러버", S&P면 "S&P 탐험가". ETF 위주 포트폴리오에 "빅테크 동행자"가 붙지 않도록 하는 규칙. 1위 지수는 `topIndexLabel`(비중 최대 1개).
 
 ### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
 
