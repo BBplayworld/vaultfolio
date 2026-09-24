@@ -367,7 +367,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       ) : variant === "type" && investorType ? (
         // "투자 유형 테스트" — 캐릭터가 메인, 숫자·금액·비율은 전혀 노출하지 않는다.
         <div className="py-7 flex flex-col items-center gap-7">
-          <InvestorAvatar spec={investorType.avatar} size={responsive ? 176 : 208} />
+          <InvestorAvatar spec={investorType.avatar} size={responsive ? 176 : 208} flat={!responsive} />
           <div className="flex flex-col items-center gap-2.5 text-center px-4 w-full">
             <div className={responsive ? "text-xl sm:text-2xl font-extrabold tracking-tight" : "text-[30px] font-extrabold tracking-tight"}>
               {investorType.title}
@@ -435,7 +435,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                     <span
                       className={responsive
                         ? "absolute left-1/2 -top-2 size-2.5 -translate-x-1/2 rounded-full shadow-sm ring-2 ring-background"
-                        : "absolute left-1/2 -top-[9px] size-[11px] -translate-x-1/2 rounded-full shadow-sm ring-2 ring-background"}
+                        : "absolute left-1/2 -top-[11px] size-[15px] -translate-x-1/2 rounded-full border-2 border-background box-border"}
                       style={{ backgroundColor: TAG_PIN_COLOR }}
                     />
                     #{tag}

@@ -180,11 +180,16 @@ function Mouth({ kind }: { kind: MouthKind }) {
 export interface InvestorAvatarProps {
   spec: InvestorAvatarSpec;
   size?: number;
+  // 캡처(저장 PNG) 전용 — 코너 요소의 box-shadow를 뺀다. 검은 카드에선 섀도가 보이지도 않는데
+  // 웨일 등에서 foreignObject 래스터 시 요소 옆에 어두운 띠 아티팩트를 남겼다(2026-09).
+  flat?: boolean;
 }
 
 /** 인증카드 "투자 유형 테스트" 캐릭터 — 얼굴(테마 13색)·표정(집중도·투자성향)·바깥 원(30색
  *  팔레트, 테마와 무관) + 코너 배지 2개(지역·계좌). */
-export function InvestorAvatar({ spec, size = 208 }: InvestorAvatarProps) {
+export function InvestorAvatar({ spec, size = 208, flat = false }: InvestorAvatarProps) {
+  const tileShadow = flat ? "" : "shadow-md";
+  const badgeShadow = flat ? "" : "shadow-sm";
   const visual = THEME_VISUAL[spec.themeKey] ?? THEME_VISUAL["기타"];
   const AccessoryIcon = visual.icon;
   const AccountIcon = ACCOUNT_ICON[spec.accountKey] ?? Home;
@@ -215,7 +220,7 @@ export function InvestorAvatar({ spec, size = 208 }: InvestorAvatarProps) {
       </svg>
 
       <div
-        className="absolute rounded-2xl flex items-center justify-center shadow-md"
+        className={`absolute rounded-2xl flex items-center justify-center ${tileShadow}`}
         style={{
           width: accessorySize,
           height: accessorySize,
@@ -230,14 +235,14 @@ export function InvestorAvatar({ spec, size = 208 }: InvestorAvatarProps) {
 
       {/* 배지 글자·아이콘도 size에 비례(176→10px/24px, 208→12px/28px) — 고정값이면 캡처(208)에서 상대적으로 작아 보임 */}
       <div
-        className="absolute rounded-full bg-white dark:bg-black flex items-center justify-center font-bold px-2 shadow-sm"
+        className={`absolute rounded-full bg-white dark:bg-black flex items-center justify-center font-bold px-2 ${badgeShadow}`}
         style={{ height: badgeSize, top: size * 0.02, right: size * 0.02, fontSize: Math.round(size * 0.057) }}
       >
         {spec.regionKey === "KR" ? "국내" : "해외"}
       </div>
 
       <div
-        className="absolute rounded-full bg-white dark:bg-black flex items-center justify-center shadow-sm"
+        className={`absolute rounded-full bg-white dark:bg-black flex items-center justify-center ${badgeShadow}`}
         style={{ width: badgeSize, height: badgeSize, bottom: size * 0.03, left: 0 }}
       >
         <AccountIcon size={Math.round(badgeSize * 0.83)} style={{ color: visual.mid }} />
