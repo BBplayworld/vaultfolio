@@ -22,6 +22,7 @@ import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-r
 import { PortfolioSectorBar, type SectorBarItem } from "./portfolio-sector-bar";
 import { InvestorAvatar } from "./investor-avatar";
 import { usePcPreview } from "./use-pc-preview";
+import { useKoreanAdvanceScale } from "./use-korean-advance-scale";
 
 // 인증카드 축약 상수 — 비중 바·종목 리스트 모두 상위 N개만 노출하고 나머지는 "기타"/"외 N종목"으로 집계
 const SHOT_MAX = 7;
@@ -66,7 +67,9 @@ function renderDescriptionWithHighlights(text: string, terms: string[]) {
 // 문장 길이가 제각각이라 "N문장마다 개행"은 짧은 문장 조합에서 빈 줄, 긴 문장 조합에서 이중 줄바꿈이
 // 생겨 리듬이 들쭉날쭉해진다. 대신 문장을 순서대로 누적하다 목표 글자수(대략 2줄 분량)를 넘기 직전에
 // 개행하는 그리디 방식으로 실제 렌더 폭에 맞게 자연스럽게 묶는다.
-function renderDescriptionInLines(text: string, terms: string[], targetChars: number) {
+// fixedLinePx(캡처 전용): 한 줄 예상 묶음(글자수 ≤ targetChars)을 고정 높이 블록으로 감싸 OS 한글 폰트와
+// Inter가 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
+function renderDescriptionInLines(text: string, terms: string[], targetChars: number, fixedLinePx?: number) {
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
@@ -79,6 +82,13 @@ function renderDescriptionInLines(text: string, terms: string[], targetChars: nu
     }
   }
   if (current) lines.push(current);
+  if (fixedLinePx) {
+    return lines.map((line, i) => (
+      <div key={i} style={line.length <= targetChars ? { height: fixedLinePx } : { minHeight: fixedLinePx }}>
+        {renderDescriptionWithHighlights(line, terms)}
+      </div>
+    ));
+  }
   return lines.map((line, i) => (
     <React.Fragment key={i}>
       {i > 0 && <br />}
@@ -106,6 +116,9 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
   // "투자 유형" 설명 줄바꿈(targetChars) 기준 — max-w와 짝을 이루는 값이라 renderDescriptionInLines
   // 호출부에서 함께 정한다(아래 "향후 유지보수 원칙" 주석 참고).
   const isPcPreview = usePcPreview(!!responsive);
+  // 캡처 전용 글자 크기 보정 — OS 한글 폰트 자폭 차이(iOS가 PC보다 ≈5~6% 좁음)를 맞춘다(프리뷰는 1)
+  const krScale = useKoreanAdvanceScale(!responsive);
+  const krPx = (px: number) => px * krScale;
   // 주식 탭과 동일한 단일 출처 — 전체 카테고리 기준. 내부에서 tickerList를 정렬해
   // 캐시 키를 공유하므로 주식 탭과 중복 fetch가 생기지 않는다.
   const {
@@ -344,7 +357,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
         <Logo size={responsive ? LOGO_SIZE_PREVIEW : LOGO_SIZE_CAPTURE} className="text-foreground" />
         <span
           className="text-muted-foreground leading-none select-none whitespace-nowrap"
-          style={{ fontSize: responsive ? BRAND_TEXT_SIZE_PREVIEW : BRAND_TEXT_SIZE_CAPTURE }}
+          style={{ fontSize: responsive ? BRAND_TEXT_SIZE_PREVIEW : krPx(BRAND_TEXT_SIZE_CAPTURE) }}
         >
           {APP_CONFIG.name}
         </span>
@@ -369,12 +382,19 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
         <div className="py-7 flex flex-col items-center gap-7">
           <InvestorAvatar spec={investorType.avatar} size={responsive ? 176 : 208} flat={!responsive} />
           <div className="flex flex-col items-center gap-2.5 text-center px-4 w-full">
-            <div className={responsive ? "text-xl sm:text-2xl font-extrabold tracking-tight" : "text-[30px] font-extrabold tracking-tight"}>
+            {/* 캡처: 글자 크기는 krPx(OS 한글 자폭 보정), 높이는 명목값으로 고정(글자가 커져도·폰트가 달라도 불변) */}
+            <div
+              className={responsive ? "text-xl sm:text-2xl font-extrabold tracking-tight" : "h-[45px] leading-[45px] font-extrabold tracking-tight"}
+              style={responsive ? undefined : { fontSize: krPx(30) }}
+            >
               {investorType.title}
             </div>
-            <div className={responsive
-              ? "inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
-              : "inline-block rounded-full bg-primary/10 px-3 py-[5px] text-[14px] font-semibold text-primary"}>
+            <div
+              className={responsive
+                ? "inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+                : "inline-flex items-center h-[31px] rounded-full bg-primary/10 px-3 font-semibold text-primary"}
+              style={responsive ? undefined : { fontSize: krPx(14) }}
+            >
               {investorType.subtitle}
             </div>
             {/* 향후 유지보수 원칙: max-w(폭)와 아래 targetChars(문장 단위 강제 개행 글자수)는
@@ -387,11 +407,15 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 680px 기준 ≈512px·38자). 래퍼에 w-full이 있어야 % 가 카드 폭 기준으로 확정된다 —
                 없으면 래퍼가 가장 긴 문장 묶음 폭에 맞춰 줄어들어 % 가 그 폭 기준이 돼, 가장 긴
                 묶음이 항상 줄바꿈되며 고아 줄이 생긴다(2026-09 스크린샷으로 확인). */}
-            <div className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[84%] sm:max-w-[90%] mx-auto" : "text-[17px] text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[82%] mx-auto"}>
+            <div
+              className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[84%] sm:max-w-[90%] mx-auto" : "text-muted-foreground mt-3 text-pretty max-w-[82%] mx-auto"}
+              style={responsive ? undefined : { fontSize: krPx(17), lineHeight: "31px" }}
+            >
               {renderDescriptionInLines(
                 investorType.description,
                 investorType.highlightTerms,
                 !responsive ? 35 : isPcPreview ? 50 : 25,
+                responsive ? undefined : 31,
               )}
             </div>
             {/* 대자보에 핀으로 꽂은 공고 쪽지 느낌 — 태그마다 회전각·세로 위치를 고정 배열에서
@@ -400,7 +424,8 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 (segFill) 순환으로 채도 높게, 텍스트는 pickOnColor로 배경 대비 자동 보정.
                 설명↔쪽지 실제 간격 = 부모 gap-2.5(10px, 프리뷰·캡처 공통) + 설명 마지막 줄
                 leading-[1.85]의 하단 half-leading(폰트 비례 — 캡처 17px≈7px, 프리뷰 14px≈6px,
-                항상 존재) + 여기 mt − 압정 돌출(-top-[9px]). 프리뷰(mt-8=32px)는 mt가 간격을
+                항상 존재 — 단 캡처는 설명 줄을 31px 고정 높이 블록으로 감싸 폰트 조합에 따른 줄 박스
+                성장을 막았으므로 이 half-leading 수치는 Windows 기준 근사값) + 여기 mt − 압정 돌출(-top-[9px]). 프리뷰(mt-8=32px)는 mt가 간격을
                 주도하고, 캡처는 baseline이 대부분을 차지해 mt가 더 작다(같은 px여도 캡처가 더 커
                 보이므로 — 실측 확인, 2026-09).
                 캡처 기준: 상단 체감 간격은 유형 배지 박스(저대비라 경계가 안 보임)가 아니라 배지
@@ -425,8 +450,9 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                     key={tag}
                     className={responsive
                       ? "relative inline-block rounded-[4px] px-3.5 py-2 text-xs font-semibold shadow-sm"
-                      : "relative inline-block rounded-[4px] px-4 py-[9px] text-[14px] font-semibold shadow-sm"}
+                      : "relative inline-flex items-center h-[39px] whitespace-nowrap rounded-[4px] px-4 font-semibold shadow-sm"}
                     style={{
+                      ...(responsive ? {} : { fontSize: krPx(14) }),
                       backgroundColor: bg,
                       color: pickOnColor(bg),
                       transform: `rotate(${TAG_ROTATE[i % TAG_ROTATE.length]}deg) translateY(${TAG_OFFSET_Y[i % TAG_OFFSET_Y.length]}px)`,
