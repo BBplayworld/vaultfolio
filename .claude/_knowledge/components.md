@@ -300,6 +300,10 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 
 `usePcPreview(responsive: boolean): boolean` — 프리뷰(`responsive`)에서만 `matchMedia("(min-width: 640px)")`(Tailwind `sm:`과 같은 기준)를 추적, 캡처는 항상 `false`. `portfolio-ring-card.tsx`(도넛 라벨 폰트 12/14px)와 `share-card.tsx`(설명 `targetChars` PC/모바일 분기)가 공유하는 단일 출처 — 새로 PC/모바일 프리뷰 분기가 필요하면 이 훅 재사용.
 
+### useKoreanAdvanceScale (`header-menu/share/use-korean-advance-scale.ts`)
+
+`useKoreanAdvanceScale(enabled: boolean): number` — 인증카드 **캡처(`!responsive`) 전용**. 한글이 OS 폰트로 그려져 기기마다 글자 폭이 달라지는 문제(iOS가 PC보다 ≈5~6% 좁음)를 보정: 화면 밖 `<span>`에 "가"×20을 100px로 그려 자폭(em)을 재고 `scale = clamp(TARGET_ADVANCE / advance, 1, 1.12)`(줄이지 않고 키우기만, `document.fonts.ready` 뒤 재측정). `TARGET_ADVANCE = 0.92`(Windows 맑은 고딕 실측, PC=1 불변). `share-card.tsx`의 `krPx(px)`가 투자 유형 캡처의 제목 30·설명 17·유형 배지 14·쪽지 14·워터마크 글자에 적용. 개발 모드 콘솔 `[share] 한글 자폭(em)`으로 기기별 값 확인. 캡처 DOM에 글자 크기를 새로 넣을 때 재사용.
+
 ### WelcomeGuide (`layout/welcome-guide.tsx`)
 
 첫 진입 안내 페이지. `page.tsx`의 `isWelcomeGuide` 분기에서 `<AppGuide />` 위에 표시.
