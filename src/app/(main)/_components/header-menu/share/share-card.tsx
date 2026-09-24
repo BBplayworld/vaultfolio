@@ -318,6 +318,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
       secondAccountLabel: categoryItems[1]?.label, // 2위 계좌 카테고리(ISA/연금 등) — 이미 계산된 값 재사용
       topIndexAccountLabel,
       krUsBalance,
+      topHoldings: mergedStocks.slice(0, 3).map((s) => ({ name: s.name, ticker: s.ticker })),
     });
   }, [variant, mergedStocks, exchangeRates, categoryItems, xrayTick, assetData.stocks, totalValue]);
 
@@ -403,18 +404,18 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 2026-09 PC 프리뷰에서 실제로 겪은 문제).
                 계산식: 실효 폭 = (카드 폭 − 카드 패딩 − 래퍼 px-4 32px) × max-w%, 1줄 수용 글자수 ≈
                 실효 폭 ÷ (글자 크기 × 0.79, 실측 보정 추정치), targetChars = 수용 글자수 − 3.
-                (모바일 폰 390px 기준 ≈267px·28자 / PC 다이얼로그 760px 기준 ≈605px·54자 / 캡처
+                (모바일 폰 390px 기준 97% ≈308px·32자(targetChars 27, 360px 폰 ≈29자 — 100%로 넓혀도 노출 차이가 없어 97%로 확정) / PC 다이얼로그 760px 기준 ≈605px·54자 / 캡처
                 680px 기준 ≈512px·38자). 래퍼에 w-full이 있어야 % 가 카드 폭 기준으로 확정된다 —
                 없으면 래퍼가 가장 긴 문장 묶음 폭에 맞춰 줄어들어 % 가 그 폭 기준이 돼, 가장 긴
                 묶음이 항상 줄바꿈되며 고아 줄이 생긴다(2026-09 스크린샷으로 확인). */}
             <div
-              className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[84%] sm:max-w-[90%] mx-auto" : "text-muted-foreground mt-3 text-pretty max-w-[82%] mx-auto"}
+              className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty break-keep [overflow-wrap:anywhere] leading-[1.85] max-w-[97%] sm:max-w-[90%]" : "text-muted-foreground mt-3 text-pretty break-keep [overflow-wrap:anywhere] max-w-[82%] mx-auto"}
               style={responsive ? undefined : { fontSize: krPx(17), lineHeight: "31px" }}
             >
               {renderDescriptionInLines(
                 investorType.description,
                 investorType.highlightTerms,
-                !responsive ? 35 : isPcPreview ? 50 : 25,
+                !responsive ? 35 : isPcPreview ? 50 : 27,
                 responsive ? undefined : 31,
               )}
             </div>
