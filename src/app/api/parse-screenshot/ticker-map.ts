@@ -900,6 +900,7 @@ export const DOMESTIC_STOCK_DOMAIN_MAP: Record<string, string> = {
   "010950": "www.s-oil.com",
   "009830": "www.hanwha.com",
   "267250": "www.hd-hyundai.com",
+  "015760": "home.kepco.co.kr",
   // ── 통신 ──────────────────────────────────────────────────────────────────
   "017670": "www.sktelecom.com",
   "030200": "www.kt.com",
@@ -925,4 +926,5 @@ export const DOMESTIC_STOCK_DOMAIN_MAP: Record<string, string> = {
   "352820": "www.hybe.com",
   "041510": "www.smtown.com",
   "035900": "www.jype.com",
+  "088980": "www.mkif.co.kr",
 };

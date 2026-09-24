@@ -749,13 +749,27 @@ export function AssetReportView() {
               </div>
               {attribution ? (
                 <div className="space-y-3">
-                  <p className={`${CAPTION} text-pretty tabular-nums`}>
-                    {attribution.fromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
-                    {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
-                    {!attribution.estimated && attribution.estimatedUntil && (
-                      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">일부 예측</span>
-                    )}
-                  </p>
+                  {/* "올해" 시작일 표시 보정 — 계산 자체(엔진)는 기간별 특수 취급이 없고, 1/1 정각
+                      스냅샷이 없으면 그 이하 중 가장 최근 스냅샷(대개 작년 12/31)을 기준값으로 쓴다
+                      (금액상 정확 — 전년말 종가=금년초 시가). 다만 fromDate를 그대로 찍으면 "올해"인데
+                      "작년 12/31부터"로 보여 혼란을 준다 — ytd이고 실제 fromDate가 그 해 1/1 이하일
+                      때만(=정상 폴백) 라벨을 1/1로 보정한다. fromDate가 1/1보다 나중인 경우(연중
+                      가입 등 1/1 이전 기록이 아예 없는 엣지 케이스, asset-report.test.ts:903)는
+                      실제 시작일이 사라지면 안 되므로 보정하지 않는다. */}
+                  {(() => {
+                    const yearStart = `${attribution.toDate.slice(0, 4)}-01-01`;
+                    const displayFromDate =
+                      attrPeriod === "ytd" && attribution.fromDate <= yearStart ? yearStart : attribution.fromDate;
+                    return (
+                      <p className={`${CAPTION} text-pretty tabular-nums`}>
+                        {displayFromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
+                        {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
+                        {!attribution.estimated && attribution.estimatedUntil && (
+                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">일부 예측</span>
+                        )}
+                      </p>
+                    );
+                  })()}
                   {/* 주 원인과 나머지 원인을 같은 목록으로 — 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
                       홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
                       (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). 자산 타입이

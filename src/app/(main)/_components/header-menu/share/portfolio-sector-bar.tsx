@@ -19,11 +19,13 @@ export function PortfolioSectorBar({ title, items, big = false }: { title: strin
   // 프리뷰(!big)는 나머지 인증카드 본문(ASSET_THEME_SHOT.bodyText 등)과 같은 640px 기준으로
   // PC에서 한 단계 확대(2026-09 — 이 컴포넌트만 누락돼 있었음).
   const txt = big ? "text-[20px]" : "text-xs sm:text-sm";
+  // 섹션 제목은 범례보다 한 단계 크고 굵게(foreground) — 범례 글자와 같은 크기·회색이면 위계가 약했다
+  const titleTxt = big ? "text-[22px]" : "text-sm sm:text-base";
   const dot = big ? "size-[15px]" : "size-2.5";
   const barH = big ? "h-[15px]" : "h-2.5";
   return (
     <div className="space-y-2.5">
-      <p className={`${txt} font-semibold text-muted-foreground`}>{title}</p>
+      <p className={`${titleTxt} font-bold text-foreground`}>{title}</p>
       <div className={`flex ${barH} w-full rounded-full overflow-hidden gap-px`}>
         {items.map((it) => (
           <div key={it.key} style={{ width: `${it.pct}%`, backgroundColor: it.color }} />
@@ -31,9 +33,10 @@ export function PortfolioSectorBar({ title, items, big = false }: { title: strin
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {items.map((it) => (
-          <div key={it.key} className="flex items-center gap-1.5 min-w-0">
+          // 주식 현황 범례(stock-tab.tsx)와 같은 "이름 %" 인라인 — 이름에 flex-1을 주면 %가 열 끝으로 벌어진다
+          <div key={it.key} className="flex items-center gap-1 min-w-0">
             <span className={`${dot} rounded-full shrink-0`} style={{ backgroundColor: it.color }} />
-            <span className={`flex-1 min-w-0 truncate ${txt} text-foreground`}>{it.label}</span>
+            <span className={`min-w-0 truncate ${txt} text-foreground`}>{it.label}</span>
             <span className={`shrink-0 ${txt} font-bold tabular-nums`} style={{ color: it.color }}>
               {it.pct.toFixed(1)}%
             </span>

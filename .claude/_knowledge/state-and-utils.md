@@ -240,8 +240,20 @@ pickHomeTip({ assetData, hasAssets, syncArmed }): HomeTip | null
 
 **`notice` 종류(#4.24 재도입, 필수 노출)** — 과거 홈 진입 시 자동 팝업하던 `UpdateNoticeDialog`는 S-4.32에서 "기능 추천" 프레임으로 대체하며 의도적으로 제거됐었다. 이번엔 그 방식(강제 팝업) 대신 **다른 팁과 동일한 카드 1장**으로 재도입하되, **우선순위를 맨 위로**(백업·세금보다도 먼저) 둬 신규 버전 안내가 사용자가 보거나 닫기 전까지 반드시 뜨게 한다 — `isNoticeUnseen()`(`readNoticeSeenId() !== NOTICE_ID`, `home-tip.ts` export)이 true면 노출.
 - **최초 1회 노출 보장**: `home-tip-box.tsx`의 `useEffect`는 `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 한 번도 안 뜸)만 `SESSION_DISMISS_KEY`(공용 세션 숨김 플래그) 체크를 **건너뛰고** `pickHomeTip`을 호출한다 — 다른 팁의 X 닫기가 공지의 "최초 1회 노출"을 못 막게. 공지 tip이 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끈다. 그 뒤부터는 X 닫기(→`SESSION_DISMISS_KEY`)가 정상 작동해 **같은 세션 내 재진입 시 재노출 안 됨**. 새 세션(sessionStorage 초기화)에선 다시 바이패스 활성 → 미열람 공지 재노출(#4.24 후속, QA에서 "X 닫고 홈 재진입 시 재노출" 버그 수정).
-- **열람 처리는 클릭에서만, 공지 본문이 아니라 해당 기능으로 직행**(#4.24 후속): 클릭 시 `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)으로 영구 열람 처리하면서 `dispatchOpenNotice()`(공지 다이얼로그) 대신 **이번 릴리스가 홍보하는 실제 기능**을 바로 연다 — `dispatchOpenShareCard("portfolio")`(`asset-dispatch.ts`, `variant` 인자 지원)로 인증카드를 포트폴리오 타입으로 즉시 오픈. 공지 문구만 보여주고 끝나지 않고 결과물을 바로 체험시키는 의도. **다음 릴리스에서 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 한다** — 자동 연동 아님. 이제 아무도 안 쓰는 `dispatchOpenNotice`/`trigger-open-notice`는 삭제(더보기 메뉴의 수동 열람은 `tool-menu.tsx`의 `showNotice` 로컬 상태로 그대로 유지).
+- **열람 처리는 클릭에서만, 공지 본문이 아니라 해당 기능으로 직행**(#4.24 후속): 클릭 시 `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)으로 영구 열람 처리하면서 `dispatchOpenNotice()`(공지 다이얼로그) 대신 **이번 릴리스가 홍보하는 실제 기능**을 바로 연다 — `dispatchOpenShareCard("type")`(`asset-dispatch.ts`, `variant` 인자 지원 — "type"|"stock"|"portfolio")로 인증카드를 투자 유형 타입으로 즉시 오픈(#4.26, 이전엔 portfolio). 공지 문구만 보여주고 끝나지 않고 결과물을 바로 체험시키는 의도. **다음 릴리스에서 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 한다** — 자동 연동 아님. 이제 아무도 안 쓰는 `dispatchOpenNotice`/`trigger-open-notice`는 삭제(더보기 메뉴의 수동 열람은 `tool-menu.tsx`의 `showNotice` 로컬 상태로 그대로 유지).
 - **X 닫기는 세션 숨김만**(#4.24 후속, 영구 dismiss 아님) — `markCurrentNoticeSeen()`을 호출하지 않고 `SESSION_DISMISS_KEY`만 세워 이번 세션에서만 숨긴다. 다음 세션엔 `isNoticeUnseen()`이 여전히 true라 다시 최우선으로 떠서, 사용자가 실제로 공지를 최소 1번 열어보게(또는 더보기 메뉴에서 수동으로 열람) 강제한다.
+
+### seeded-pick.ts (`src/lib/xray/seeded-pick.ts`, #4.26) — 결정적 seed 선택 단일 출처
+
+```typescript
+hashString(input: string): number          // djb2 계열 — 같은 입력이면 항상 같은 값
+pick<T>(pool: readonly T[], seed: string): T   // pool[hashString(seed) % pool.length]
+```
+`investor-type.ts`(문구 선택)와 `investor-avatar.tsx`(표정·바깥 원 색)가 공유. 랜덤이 필요해 보여도 `Math.random`은 쓰지 않는다(캡처 PNG·재렌더마다 결과가 달라지면 안 됨) — seed는 카테고리형 값만 조합.
+
+### investor-type.ts (`src/lib/xray/investor-type.ts`, #4.26) — 인증카드 투자 유형 산출
+
+`resolveInvestorType(params)` → `{ title, subtitle, description, tags, highlightTerms, avatar: InvestorAvatarSpec }`. 입력은 섹터(`themeKey`)·집중도(`concentration`)·지역(`regionKey`)·계좌(`accountKey`)·종목유형(`stockTypeKey`)·통화(`topCurrencyLabel`) 필수 + 선택(`topStockName`·`secondStockName`·`subThemeLabel`·`secondAccountLabel`·`topIndexLabel`·`topIndexAccountLabel`·`krUsBalance`). 모든 문구 선택은 `pick(pool, seed)`(결정적)이고, 설명은 sentence1~6을 연결어(`FLOW_CONNECTOR_MID`/`CLOSING`)로 이어 "나열이 아닌 자연스러운 서술"로 조합하며 종성 판별 조사 처리·민감어(종교·국수주의) 배제·제목/설명 단어 일관성을 유지한다. `highlightTerms`는 설명에서 굵게 강조할 종목·섹터·지수명(긴 것부터 매칭, `share-card.tsx`의 `renderDescriptionWithHighlights`). `avatar`는 `InvestorAvatar` 입력(`concentration`·`stockTypeKey` 포함). 종목명은 `stock.name` 원문(주식 현황·도넛 라벨과 동일 표기).
 
 ### holdings-conflict.ts (S-4.30) — 보유현황 스크린샷 재등록 시 병합(merge)/전체교체(reset) 공용
 

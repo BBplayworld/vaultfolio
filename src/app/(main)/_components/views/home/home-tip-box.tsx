@@ -107,9 +107,9 @@ export function HomeTipBox() {
     }
     if (tip.kind === "notice") {
       markCurrentNoticeSeen();
-      // 이번 공지의 핵심 기능(포트폴리오 인증카드)으로 바로 이동 — 공지 본문 대신 실제 결과물을 보여준다.
+      // 이번 공지의 핵심 기능(투자 유형 인증카드)으로 바로 이동 — 공지 본문 대신 실제 결과물을 보여준다.
       // 다음 릴리스에서 홍보 대상이 바뀌면 이 액션도 함께 갱신할 것(notice.tsx 콘텐츠와 짝).
-      dispatchOpenShareCard("portfolio");
+      dispatchOpenShareCard("type");
       setTip(null);
       return;
     }

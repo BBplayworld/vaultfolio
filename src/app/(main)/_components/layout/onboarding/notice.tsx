@@ -1,34 +1,33 @@
 "use client";
 
 import React from "react";
-import { Sparkles, IdCard, ScanSearch, MessageSquareText } from "lucide-react";
+import { Sparkles, IdCard, Share2, MessageSquareText } from "lucide-react";
 import { APP_VERSION } from "@/config/app-version";
 
-export const NOTICE_ID = "20260905";
-export const NOTICE_TITLE = "포트폴리오 인증카드 · 종목 유형 분석 업데이트";
+export const NOTICE_ID = "20260924";
+export const NOTICE_TITLE = "투자 유형 인증카드 · 공유 개선 업데이트";
 // 홈 "새 공지" 팁 박스용 한 줄 요약(home-tip-box.tsx) — 다이얼로그 본문(FEATURES)과 별개로 짧게 유지.
-export const NOTICE_SUMMARY = "포트폴리오 인증카드가 원형 차트+로고로 강화되고, 종목 유형(성장/배당/지수 등) 분석이 추가됐어요.";
+export const NOTICE_SUMMARY = "인증카드에 내 투자 유형이 추가되고, 카카오톡·PC로 이미지 공유가 쉬워졌어요.";
 
 // 이번 릴리스 핵심 — 아이콘 + 한두 문장으로만. 스크롤 없이 훑히는 분량을 상한으로 둔다.
 const FEATURES = [
   {
     icon: IdCard,
-    title: "포트폴리오 인증카드 강화",
+    title: "투자 유형 인증카드",
     body: (
       <>
-        보유 종목 구성을 <strong className="text-foreground">원형 차트 + 종목 로고</strong>로 한눈에 보여주고,
-        아래에 <strong className="text-foreground">분야 구성·보유 유형(계좌) 구성</strong> 막대바까지 함께 담았습니다.
-        <strong className="text-foreground">인증카드 &gt; 포트폴리오</strong>에서 확인해 보세요.
+        보유 종목을 분석해 <strong className="text-foreground">나만의 투자 유형(캐릭터·제목·설명·해시태그)</strong>을 만들어 드립니다.
+        <strong className="text-foreground">인증카드 &gt; 투자 유형</strong>에서 확인하고 친구에게 공유해 보세요.
       </>
     ),
   },
   {
-    icon: ScanSearch,
-    title: "종목 유형 분석(X-Ray)",
+    icon: Share2,
+    title: "이미지 공유가 쉬워졌어요",
     body: (
       <>
-        보유 종목이 <strong className="text-foreground">성장주·배당주·지수투자·가치주</strong> 중 어떤 성격인지
-        자동으로 분류해 비중을 보여줍니다. <strong className="text-foreground">주식 X-Ray</strong>에서 새 탭으로 확인하세요.
+        모바일은 <strong className="text-foreground">카카오톡 등으로 이미지가 바로 공유</strong>되고, PC는{" "}
+        <strong className="text-foreground">이미지 복사 후 붙여넣기(Ctrl+V)</strong>로 카카오톡 PC에 보낼 수 있습니다.
       </>
     ),
   },
@@ -47,7 +46,7 @@ export function NoticeContent() {
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary tabular-nums">v{APP_VERSION}</span>
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            이번 업데이트는 <strong className="text-foreground">포트폴리오를 더 보기 좋게 공유하고 분석</strong>하는 데 집중했습니다. 아래 내용을 확인해 보세요.
+            이번 업데이트는 <strong className="text-foreground">나만의 투자 유형을 확인하고 공유</strong>하는 데 집중했습니다. 아래 내용을 확인해 보세요.
           </p>
         </div>
       </div>
@@ -70,7 +69,7 @@ export function NoticeContent() {
       {/* 나머지 개선 — 카드로 세울 만큼 크지 않아 한 문단으로.
           text-pretty 제외: 모바일에서 마지막 줄 균형 맞추기가 줄 길이를 줄여 우측 공백이 생겨, 전폭 greedy 줄바꿈을 우선한다(§2 국소 예외). */}
       <p className="text-sm text-muted-foreground leading-relaxed px-1">
-        그 외 인증카드 “보유 유형 구성”에서 IRP·연금저축펀드를 하나로 합쳐 보여주도록 다듬었고, 국내 ETF 로고가 흰 배경으로 어색하게 뜨던 문제도 함께 고쳤습니다.
+        그 외 포트폴리오 인증카드의 종목 표기를 이름으로 통일하고 도넛 여백·범례를 정리했습니다. 종목 유형(성장/배당/지수 등) 분석은 주식 X-Ray에서 계속 확인할 수 있어요.
       </p>
 
       {/* 의견 보내기 부탁 배너 */}

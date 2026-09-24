@@ -24,7 +24,7 @@ const ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w
 function ShareScreenshotButton() {
   const [open, setOpenState] = useState(false);
   // 외부(홈 팁 등)에서 특정 카드 타입으로 바로 열어달라고 요청한 값 — dispatchOpenShareCard(variant)
-  const [initialVariant, setInitialVariant] = useState<"stock" | "portfolio" | undefined>(undefined);
+  const [initialVariant, setInitialVariant] = useState<"stock" | "portfolio" | "type" | undefined>(undefined);
   const setOpen = (next: boolean) => {
     setOpenState(next);
     if (typeof window !== "undefined") {
@@ -37,7 +37,7 @@ function ShareScreenshotButton() {
   useEffect(() => {
     const handler = (e: Event) => {
       recordVisit("share-card");
-      const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" }>).detail;
+      const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" | "type" }>).detail;
       setInitialVariant(detail?.variant);
       setOpen(true);
     };
