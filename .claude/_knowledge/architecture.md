@@ -200,7 +200,6 @@ KV_REST_API_URL / KV_REST_API_TOKEN   # Upstash Redis (Vercel)
 GEMINI_API_KEY                         # Google Gemini AI
 SLACK_WEBHOOK_URL                      # 의견·요청 보내기 → Slack (/api/feedback)
 BLOB_READ_WRITE_TOKEN                  # Vercel Blob (공지 이미지)
-NEXT_PUBLIC_NOTICE                     # 공지 시스템 단일 JSON
 NEXT_PUBLIC_CLOUD_SYNC                 # "off" 설정 시 클라우드 동기화 비활성화 (운영 비상 차단용)
 ```
 
