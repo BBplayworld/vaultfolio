@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SHOT_BIG_SCALE } from "@/config/theme";
 import { BrandMark } from "./brand-mark";
+import { usePcPreview } from "./use-pc-preview";
 
 // 인증카드 "포트폴리오" 타입 — 금액 없이 종목 구성 비중만 원형 링으로 표현.
 // 데이터는 ShareCard에서 계산해 props(segments)로 주입한다(훅 중복 호출 금지).
@@ -231,10 +232,6 @@ function spreadVertically(items: Placed[], gap: number = MIN_LABEL_GAP): Placed[
   return sorted.map((it) => ({ ...it, ly: Math.min(max, Math.max(min, it.ly + shift)) }));
 }
 
-// Tailwind `sm:` 브레이크포인트와 동일 기준(640px) — 프리뷰 전용 도넛 라벨 크기도
-// ASSET_THEME_SHOT(theme.ts)의 다른 프리뷰 본문 텍스트와 같은 기준으로 PC/모바일을 가른다.
-const PC_PREVIEW_QUERY = "(min-width: 640px)";
-
 export function PortfolioRingCard({ segments, responsive }: { segments: RingSegment[]; responsive?: boolean }) {
   // responsive=true(화면용 프리뷰)면 링을 컨테이너 폭에 맞춰 fit-to-width 스케일(가로 스크롤 없이 도넛이 폭을 꽉 채움).
   // responsive 미전달(캡처 인스턴스)이면 VIEW_W 고정 — 저장 PNG 구도 불변.
@@ -254,15 +251,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
 
   // PC 프리뷰(뷰포트 ≥640px)는 도넛 라벨(종목명·%)도 나머지 본문 텍스트(ASSET_THEME_SHOT.bodyText)와
   // 같이 text-sm(14px)로, 모바일은 기존 text-xs(12px) 유지.
-  const [isPcPreview, setIsPcPreview] = useState(false);
-  useEffect(() => {
-    if (!responsive || typeof window === "undefined") return;
-    const mql = window.matchMedia(PC_PREVIEW_QUERY);
-    const update = () => setIsPcPreview(mql.matches);
-    update();
-    mql.addEventListener("change", update);
-    return () => mql.removeEventListener("change", update);
-  }, [responsive]);
+  const isPcPreview = usePcPreview(responsive ?? false);
 
   if (segments.length === 0) return null;
 
@@ -302,20 +291,42 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     ...drawn.filter((d) => d.zone === "top" || d.zone === "bottom"),
   ];
 
+  // 라벨 최대폭(존별) — 라벨 렌더와 아래 캔버스 높이 추정이 같은 값을 쓰도록 함수로 공유
+  const labelMaxWOf = (zone: Zone, lx: number) =>
+    zone === "right" ? Math.max(64, VIEW_W - lx - 4)
+      : zone === "left" ? Math.max(64, lx - 4)
+        : 208;
+  // 이름 폭(한글 1em·그 외 0.62em)으로 줄 수(≤3)를 보수적으로 잡아 라벨(이름+%) 높이를 추정
+  const estLabelHeight = (name: string, maxW: number) => {
+    const em = [...name].reduce((s, ch) => s + (/[가-힣]/.test(ch) ? 1 : 0.62), 0);
+    const lines = Math.min(3, Math.max(1, Math.ceil((em * rLabelFont) / maxW)));
+    return (lines + 1) * rLabelFont * 1.15;
+  };
+  // 캔버스 높이 — 라벨이 실제로 차지하는 최하단(링 하단 포함)까지만. 6시 방향 라벨이 없으면 링 아래
+  // 빈 공간(VIEW_H가 항상 하단 라벨 자리를 잡던 ≈100px)이 회수된다. 데이터로만 결정돼 기기 무관(R32).
+  const labelsBottom = Math.max(
+    ...labels.map(({ seg, lx, ly, zone }) => {
+      const h = estLabelHeight(seg.name, labelMaxWOf(zone, lx));
+      return zone === "bottom" ? ly + h : zone === "top" ? ly : ly + h / 2;
+    }),
+  );
+  // 하단 여백 40px: 16px로 줄였더니 "분야 구성"과 너무 붙어 보여(2026-09) 조금 되돌림(원래 ≈100px은 과했음)
+  const viewH = Math.min(VIEW_H, Math.ceil(Math.max(CY + R_OUTER, labelsBottom) + 40));
+
   // 링 본체(svg + HTML 라벨/로고 오버레이). responsive면 transform:scale로 폭 맞춤.
   const ring = (
     <div
       className="relative"
       style={{
         width: VIEW_W,
-        height: VIEW_H,
+        height: viewH,
         ...(responsive ? { transform: `scale(${scale})`, transformOrigin: "top left" } : {}),
       }}
     >
         <svg
           width={VIEW_W}
-          height={VIEW_H}
-          viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+          height={viewH}
+          viewBox={`0 0 ${VIEW_W} ${viewH}`}
           className="absolute inset-0 [&_*]:outline-none [&_path]:outline-none"
         >
           {drawn.map(({ seg, a0, a1 }) => {
@@ -396,15 +407,13 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                   : "translate(-50%, 0)";
           // 라벨 폭 하한 64 — 9/3시 방향(가용폭 ≈68)에서 하한이 가용폭을 넘으면 박스가 링 좌표계
           // (0..VIEW_W)를 벗어나 화면 밖으로 짤린다. 좁은 존은 line-clamp-3 + 말줄임으로 수렴.
-          const labelMaxW =
-            zone === "right" ? Math.max(64, VIEW_W - lx - 4)
-              : zone === "left" ? Math.max(64, lx - 4)
-                : 208;
+          const labelMaxW = labelMaxWOf(zone, lx);
           const alignCls =
             zone === "right" ? "items-start text-left"
               : zone === "left" ? "items-end text-right"
                 : "items-center text-center";
-          const label = seg.isForeign && seg.ticker ? seg.ticker : seg.name;
+          // 이름으로 통일(주식 현황 범례·투자 유형 설명과 동일) — 티커는 로고(BrandMark)에만 사용
+          const label = seg.name;
           return (
             <div
               key={seg.key}
@@ -416,7 +425,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                   줄바꿈·말줄임 되도록 강제 — 가로 오버플로우(카드 밖 짤림) 원천 차단 */}
               <div className="flex flex-col leading-tight min-w-0 max-w-full">
                 <span
-                  className={`font-semibold tracking-tight text-foreground ${labelClampCls} [overflow-wrap:anywhere] max-w-full`}
+                  className={`font-semibold tracking-tight text-foreground ${labelClampCls} [word-break:keep-all] [overflow-wrap:anywhere] max-w-full`}
                   style={rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : undefined}
                 >
                   {label}
@@ -440,8 +449,8 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
   }
   // 화면용 프리뷰: 링을 컨테이너 폭에 맞춰 축소(레이아웃 박스도 스케일된 크기로 잡아 가로 넘침 없음)
   return (
-    <div ref={outerRef} className="w-full flex justify-center overflow-hidden" style={{ height: VIEW_H * scale }}>
-      <div className="shrink-0" style={{ width: VIEW_W * scale, height: VIEW_H * scale }}>
+    <div ref={outerRef} className="w-full flex justify-center overflow-hidden" style={{ height: viewH * scale }}>
+      <div className="shrink-0" style={{ width: VIEW_W * scale, height: viewH * scale }}>
         {ring}
       </div>
     </div>

@@ -21,6 +21,7 @@ import type { Sector, StockType } from "@/lib/xray/classification-store";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
 import { PortfolioSectorBar, type SectorBarItem } from "./portfolio-sector-bar";
 import { InvestorAvatar } from "./investor-avatar";
+import { usePcPreview } from "./use-pc-preview";
 
 // 인증카드 축약 상수 — 비중 바·종목 리스트 모두 상위 N개만 노출하고 나머지는 "기타"/"외 N종목"으로 집계
 const SHOT_MAX = 7;
@@ -29,7 +30,7 @@ const SECTOR_MAX = 5;
 const ETC_COLOR = SHARE_ETC_COLOR; // 포트폴리오 도넛·막대바 "그 외"/미분류 — 중립 그레이
 // 워터마크(Logo) 프리뷰 크기(px) — 캡처는 카드 텍스트와 동일한 SHOT_BIG_SCALE(1.46)로 파생시켜
 // 프리뷰↔캡처 배율을 카드 전체 규칙과 통일한다(개별 반올림 누적으로 배율이 벌어지는 것 방지).
-const LOGO_SIZE_PREVIEW = 24;
+const LOGO_SIZE_PREVIEW = 21;
 const LOGO_SIZE_CAPTURE = Math.round(LOGO_SIZE_PREVIEW * SHOT_BIG_SCALE);
 // "S" 옆 병기하는 한글 서비스명 워드마크 — 인증카드 단독 노출 시 최소 브랜딩용.
 // 과거(#4.24) 완전 제거했던 풀 브랜드 문구 대신 로고 옆 작은 글자 하나로 최소화한 절충안.
@@ -62,6 +63,30 @@ function renderDescriptionWithHighlights(text: string, terms: string[]) {
   );
 }
 
+// 문장 길이가 제각각이라 "N문장마다 개행"은 짧은 문장 조합에서 빈 줄, 긴 문장 조합에서 이중 줄바꿈이
+// 생겨 리듬이 들쭉날쭉해진다. 대신 문장을 순서대로 누적하다 목표 글자수(대략 2줄 분량)를 넘기 직전에
+// 개행하는 그리디 방식으로 실제 렌더 폭에 맞게 자연스럽게 묶는다.
+function renderDescriptionInLines(text: string, terms: string[], targetChars: number) {
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const s of sentences) {
+    if (current && current.length + 1 + s.length > targetChars) {
+      lines.push(current);
+      current = s;
+    } else {
+      current = current ? `${current} ${s}` : s;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.map((line, i) => (
+    <React.Fragment key={i}>
+      {i > 0 && <br />}
+      {renderDescriptionWithHighlights(line, terms)}
+    </React.Fragment>
+  ));
+}
+
 export type ShareCardVariant = "stock" | "portfolio" | "type";
 
 export interface ShareCardProps {
@@ -78,6 +103,9 @@ export interface ShareCardProps {
 
 export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive }: ShareCardProps) {
   const { assetData, exchangeRates } = useAssetData();
+  // "투자 유형" 설명 줄바꿈(targetChars) 기준 — max-w와 짝을 이루는 값이라 renderDescriptionInLines
+  // 호출부에서 함께 정한다(아래 "향후 유지보수 원칙" 주석 참고).
+  const isPcPreview = usePcPreview(!!responsive);
   // 주식 탭과 동일한 단일 출처 — 전체 카테고리 기준. 내부에서 tickerList를 정렬해
   // 캐시 키를 공유하므로 주식 탭과 중복 fetch가 생기지 않는다.
   const {
@@ -338,33 +366,65 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
         </div>
       ) : variant === "type" && investorType ? (
         // "투자 유형 테스트" — 캐릭터가 메인, 숫자·금액·비율은 전혀 노출하지 않는다.
-        <div className="py-6 flex flex-col items-center gap-5">
+        <div className="py-7 flex flex-col items-center gap-7">
           <InvestorAvatar spec={investorType.avatar} size={responsive ? 176 : 208} />
-          <div className="flex flex-col items-center gap-1.5 text-center px-4">
+          <div className="flex flex-col items-center gap-2.5 text-center px-4 w-full">
             <div className={responsive ? "text-xl sm:text-2xl font-extrabold tracking-tight" : "text-[30px] font-extrabold tracking-tight"}>
               {investorType.title}
             </div>
-            <div className="inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+            <div className={responsive
+              ? "inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+              : "inline-block rounded-full bg-primary/10 px-3 py-[5px] text-[14px] font-semibold text-primary"}>
               {investorType.subtitle}
             </div>
-            <div className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-1 text-pretty leading-relaxed" : "text-[17px] text-muted-foreground mt-1 text-pretty leading-relaxed"}>
-              {renderDescriptionWithHighlights(investorType.description, investorType.highlightTerms)}
+            {/* 향후 유지보수 원칙: max-w(폭)와 아래 targetChars(문장 단위 강제 개행 글자수)는
+                이 블록의 줄바꿈을 함께 결정하는 한 쌍이다 — 하나를 조정하면 반드시 다른 하나도
+                같이 재검토할 것(폭만 넓히고 글자수 기준을 그대로 두면 넓힌 공간이 무용지물이 됨,
+                2026-09 PC 프리뷰에서 실제로 겪은 문제).
+                계산식: 실효 폭 = (카드 폭 − 카드 패딩 − 래퍼 px-4 32px) × max-w%, 1줄 수용 글자수 ≈
+                실효 폭 ÷ (글자 크기 × 0.79, 실측 보정 추정치), targetChars = 수용 글자수 − 3.
+                (모바일 폰 390px 기준 ≈267px·28자 / PC 다이얼로그 760px 기준 ≈605px·54자 / 캡처
+                680px 기준 ≈512px·38자). 래퍼에 w-full이 있어야 % 가 카드 폭 기준으로 확정된다 —
+                없으면 래퍼가 가장 긴 문장 묶음 폭에 맞춰 줄어들어 % 가 그 폭 기준이 돼, 가장 긴
+                묶음이 항상 줄바꿈되며 고아 줄이 생긴다(2026-09 스크린샷으로 확인). */}
+            <div className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[84%] sm:max-w-[90%] mx-auto" : "text-[17px] text-muted-foreground mt-3 text-pretty leading-[1.85] max-w-[82%] mx-auto"}>
+              {renderDescriptionInLines(
+                investorType.description,
+                investorType.highlightTerms,
+                !responsive ? 35 : isPcPreview ? 50 : 25,
+              )}
             </div>
             {/* 대자보에 핀으로 꽂은 공고 쪽지 느낌 — 태그마다 회전각·세로 위치를 고정 배열에서
                 순환 픽업해, 같은 tags 배열이면 항상 같은 배치가 나오도록 결정적으로 처리
                 (Math.random 금지 — 캡처 PNG가 리렌더마다 달라지면 안 됨). 배경은 팔레트
-                (segFill) 순환으로 채도 높게, 텍스트는 pickOnColor로 배경 대비 자동 보정. */}
+                (segFill) 순환으로 채도 높게, 텍스트는 pickOnColor로 배경 대비 자동 보정.
+                설명↔쪽지 실제 간격 = 부모 gap-2.5(10px, 프리뷰·캡처 공통) + 설명 마지막 줄
+                leading-[1.85]의 하단 half-leading(폰트 비례 — 캡처 17px≈7px, 프리뷰 14px≈6px,
+                항상 존재) + 여기 mt − 압정 돌출(-top-[9px]). 프리뷰(mt-8=32px)는 mt가 간격을
+                주도하고, 캡처는 baseline이 대부분을 차지해 mt가 더 작다(같은 px여도 캡처가 더 커
+                보이므로 — 실측 확인, 2026-09).
+                캡처 기준: 상단 체감 간격은 유형 배지 박스(저대비라 경계가 안 보임)가 아니라 배지
+                "글자" 하단 → 첫 줄 ≈37px. 하단은 "가장 위 압정 머리 상단" 기준으로 여기에 맞추되
+                고채도 쪽지 덩어리의 번짐 착시를 감안해 +2px → mt-8(하단 ≈ 29 + (mt−22) ≈ 39px).
+                한쪽을 바꾸면 다른 쪽도 함께 확인할 것. 설명 문구 길이·폰트가 바뀌면 baseline도
+                바뀌므로 이 공식부터 다시 계산.
+                쪽지 크기: 캡처는 설명이 17px로 커서 프리뷰와 같은 12px 쪽지면 비율이 작아 보여,
+                캡처만 약 1.15배(14px·패딩·압정·간격)로 키우고 3-3-1 줄 배치가 유지되도록
+                컨테이너 max-w도 400px로 넓혔다(1.25배는 면적상 과해 보여 축소 — 쪽지를 더
+                키우면 max-w도 함께 재검토). */}
             <div
               className={responsive
-                ? "flex flex-wrap justify-center items-start gap-x-3 gap-y-4 mt-6 sm:mt-7 px-2 min-h-[100px] sm:min-h-[112px] max-w-[300px] sm:max-w-[340px]"
-                : "flex flex-wrap justify-center items-start gap-x-3 gap-y-4 mt-8 px-2 min-h-[100px] max-w-[340px]"}
+                ? "flex flex-wrap justify-center items-start gap-x-3 gap-y-4 mt-8 px-2 min-h-[100px] sm:min-h-[112px] max-w-[300px] sm:max-w-[340px]"
+                : "flex flex-wrap justify-center items-start gap-x-3.5 gap-y-[18px] mt-8 px-2 min-h-[115px] max-w-[400px]"}
             >
               {investorType.tags.map((tag, i) => {
                 const bg = segFill(i);
                 return (
                   <span
                     key={tag}
-                    className="relative inline-block rounded-[4px] px-3.5 py-2 text-xs font-semibold shadow-sm"
+                    className={responsive
+                      ? "relative inline-block rounded-[4px] px-3.5 py-2 text-xs font-semibold shadow-sm"
+                      : "relative inline-block rounded-[4px] px-4 py-[9px] text-[14px] font-semibold shadow-sm"}
                     style={{
                       backgroundColor: bg,
                       color: pickOnColor(bg),
@@ -373,7 +433,9 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                   >
                     {/* 압정 머리 — 태그 상단 중앙에 절반 걸치도록 배치, 채도 높은 고정 레드로 실제 압정 느낌 */}
                     <span
-                      className="absolute left-1/2 -top-2 size-2.5 -translate-x-1/2 rounded-full shadow-sm ring-2 ring-background"
+                      className={responsive
+                        ? "absolute left-1/2 -top-2 size-2.5 -translate-x-1/2 rounded-full shadow-sm ring-2 ring-background"
+                        : "absolute left-1/2 -top-[9px] size-[11px] -translate-x-1/2 rounded-full shadow-sm ring-2 ring-background"}
                       style={{ backgroundColor: TAG_PIN_COLOR }}
                     />
                     #{tag}

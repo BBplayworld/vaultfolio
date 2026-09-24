@@ -223,7 +223,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
       const filename = `secretasset-${variant}-${new Date().toISOString().slice(0, 10)}.png`;
       const file = await dataUrlToFile(dataUrl, filename);
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "인증카드" });
+        await navigator.share({ files: [file] });
         setSaveSuccess(true);
         window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -249,7 +249,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     }
     setIsSaving(true);
     navigator
-      .share({ files: [file], title: "인증카드" })
+      .share({ files: [file] })
       .then(() => {
         setSaveSuccess(true);
         window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
@@ -308,9 +308,9 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
           <DialogDescription className="hidden sm:block text-xs text-left">
             {variant === "type"
               ? "내 투자 유형을 확인하고 친구에게 공유해보세요."
-              : variant === "portfolio"
-              ? "내 종목 구성 비중을 이미지로 만들어 저장할 수 있습니다."
-              : "내 주식 현황을 이미지로 만들어 저장할 수 있습니다."}
+              : variant === "stock"
+              ? "내 주식 현황을 이미지로 만들어 친구에게 공유해보세요."
+              : "내 종목 구성 비중을 이미지로 만들어 친구에게 공유해보세요."}
           </DialogDescription>
         </DialogHeader>
 

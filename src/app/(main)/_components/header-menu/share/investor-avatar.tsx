@@ -225,12 +225,13 @@ export function InvestorAvatar({ spec, size = 208 }: InvestorAvatarProps) {
           background: visual.mid,
         }}
       >
-        <AccessoryIcon className="text-white" />
+        <AccessoryIcon className="text-white" size={Math.round(accessorySize * 0.5)} />
       </div>
 
+      {/* 배지 글자·아이콘도 size에 비례(176→10px/24px, 208→12px/28px) — 고정값이면 캡처(208)에서 상대적으로 작아 보임 */}
       <div
-        className="absolute rounded-full bg-white dark:bg-black flex items-center justify-center text-[10px] font-bold px-2 shadow-sm"
-        style={{ height: badgeSize, top: size * 0.02, right: size * 0.02 }}
+        className="absolute rounded-full bg-white dark:bg-black flex items-center justify-center font-bold px-2 shadow-sm"
+        style={{ height: badgeSize, top: size * 0.02, right: size * 0.02, fontSize: Math.round(size * 0.057) }}
       >
         {spec.regionKey === "KR" ? "국내" : "해외"}
       </div>
@@ -239,7 +240,7 @@ export function InvestorAvatar({ spec, size = 208 }: InvestorAvatarProps) {
         className="absolute rounded-full bg-white dark:bg-black flex items-center justify-center shadow-sm"
         style={{ width: badgeSize, height: badgeSize, bottom: size * 0.03, left: 0 }}
       >
-        <AccountIcon style={{ color: visual.mid }} />
+        <AccountIcon size={Math.round(badgeSize * 0.83)} style={{ color: visual.mid }} />
       </div>
     </div>
   );
