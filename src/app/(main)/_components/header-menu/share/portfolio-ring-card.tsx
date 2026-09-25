@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { SHOT_BIG_SCALE } from "@/config/theme";
 import { BrandMark } from "./brand-mark";
 import { usePcPreview } from "./use-pc-preview";
@@ -33,6 +33,14 @@ export interface SubLogo {
 const MIN_ARC_DEG = 22;
 // 프리뷰 좌우 최소 공백(px) — 9/3시 방향 라벨이 화면 끝에 붙어 짤리지 않게 스케일 링을 이만큼 좁힌다.
 const PREVIEW_SIDE_INSET = 8;
+// 프리뷰 전용 좌우 라벨 여유(px, 링 좌표 기준·각 쪽) — 모바일은 링을 축소하고 폰트를 키우므로 9/3시 방향
+// 라벨이 쓸 수 있는 폭이 좁아 종목명이 잘린다. 캔버스를 이만큼 넓혀(=링이 더 작아짐) 좌우 폭을 확보한다.
+const PREVIEW_SIDE_EXTRA = 64;
+// 좌/우 라벨 박스 "모서리"가 링에서 최소 14px 떨어지도록 밀어내는 기준(PUSH_R = R_OUTER + 14)의 이동 상한(px).
+const PUSH_MAX = 24;
+// 링 상단 근처(중심에서 세로 150px 초과) 좌/우 라벨을 위로 올리는 기준·이동량(px) — 조각과 위치를 맞춘다.
+const UPPER_LABEL_DY = 150;
+const UPPER_SHIFT_UP = 20;
 // 실제 비중 구간별 최대 호(arc, °) 상한 — 내림차순 매칭, 구간(<50%)은 상한 없음.
 const MAX_ARC_BY_PCT: readonly (readonly [number, number])[] = [
   [90, 110],
@@ -51,6 +59,7 @@ const CX = 328;
 const CY = 322;
 const R_OUTER = 240; // 도넛 바깥 반경 — 중앙 홀(R_INNER) 축소분 + 확대
 const R_INNER = 66; // 중앙 홀(비움) — 밴드 174px로 두껍게, 중앙 검정 영역 축소
+const PUSH_R = R_OUTER + 14; // 좌/우 라벨 박스 모서리 기준 반경(pushOutside)
 const LABEL_R = 264; // 라벨 앵커 반경(링 바깥) — R_OUTER와의 간격 24px(도넛↔종목명 살짝 더 벌림).
                      // 264 이상이면 3/9시 라벨 박스가 VIEW_W를 넘어 짤리므로 상한(labelMaxW 하한 64 기준)
 // 로고 반경은 밴드 중앙(=153)이 아니라 **바깥쪽 0.6 지점**(≈170). 중앙 홀을 줄이면서
@@ -83,6 +92,93 @@ const MIN_LABEL_GAP = 66; // 같은 쪽(좌/우) 인접 라벨의 세로 최소 
 const GAP_DEG = 0; // 각도 간극 없음 — 분리는 카드 배경색 stroke(--ring-divider)가 담당
 
 const RADIAN = Math.PI / 180;
+
+// ── name-split start ──
+// 공백 없는 긴 한글 종목명("테슬라밸류체인액티브")을 단어 단위로 나누기 위한 어휘 사전(2자 이상, ETF 마스터
+// 빈출 어휘 + 지수·테마·대표 기업). 사전으로 **전부** 덮일 때만 분할(all-or-nothing) — 하나라도 모르는 조각이
+// 남으면 원형 유지라 오분할이 없다. 어휘 추가는 자유(최장 일치, 조각 수 최소 우선).
+const NAME_LEXICON: ReadonlySet<string> = new Set([
+  // 국가·지수·시장
+  "미국", "미국채", "글로벌", "코리아", "차이나", "중국", "일본", "인도", "베트남", "유럽", "신흥국", "선진국", "대만", "한국", "다우존스", "나스닥", "필라델피아", "코스피", "코스닥", "지수", "종합",
+  // 테마·섹터
+  "반도체", "전기차", "배터리", "이차전지", "전지", "밸류체인", "데이터센터", "헬스케어", "바이오", "로봇", "인공지능", "소프트웨어", "게임", "농업", "경제", "에너지", "인프라", "리츠", "리얼티", "리얼티인컴", "부동산", "원자재", "소부장", "테크", "전략기술", "산업", "기업", "그룹", "포커스", "성장", "가치", "주주가치", "우량", "대형주", "중소형", "모멘텀", "퀀트", "저변동", "핵심", "카카오",
+  // 상품 유형·전략
+  "액티브", "인버스", "레버리지", "커버드콜", "타겟", "위클리", "데일리", "단기", "만기", "자동연장", "선물", "채권", "채권혼합", "혼합", "국채", "국고채", "회사채", "특수채", "통안채", "머니마켓", "고배당", "배당", "단일종목", "코어", "플러스",
+  // 보강(미분할 빈출 조각 — 검증 스크립트로 추출)
+  "달러", "밸류업", "알파", "은행채", "국공채", "금융채", "비만", "수소", "원자력", "클린", "테크놀로지", "자산배분", "주식", "분산", "사회책임투자", "중기",
+  "바이오시밀러", "양극재", "차전지", "셀렉트", "다이나믹", "미래", "내수주", "네트워크", "월만기", "년국채", "년선물", "년물", "단일종", "고배당주", "다우", "존스", "종목", "전략", "금리", "합성", "원유", "천연가스", "골드", "실버", "리츠", "미디어", "콘텐츠", "금융", "은행", "증권", "보험", "자동차", "조선", "방산", "우주항공", "화장품", "소비재", "필수소비", "경기소비", 
+  // 대표 기업
+  "테슬라", "삼성", "하이닉스", "엔비디아", "애플", "마이크로소프트", "구글", "아마존", "현대차", "네이버",
+]);
+const NAME_SPLIT_MIN_LEN = 6; // 이보다 짧은 한글 토큰("미국나스닥")은 그대로 둔다
+
+/** 한글 토큰을 사전으로 전부 덮어 분할(조각 수 최소). 덮을 수 없으면 null. */
+function segmentByLexicon(tok: string): string[] | null {
+  const n = tok.length;
+  const best: (string[] | null | undefined)[] = new Array(n + 1);
+  const solve = (i: number): string[] | null => {
+    if (i === n) return [];
+    if (best[i] !== undefined) return best[i] ?? null;
+    let res: string[] | null = null;
+    for (let j = i + 2; j <= n; j++) {
+      const w = tok.slice(i, j);
+      if (!NAME_LEXICON.has(w)) continue;
+      const rest = solve(j);
+      if (rest && (!res || rest.length + 1 < res.length)) res = [w, ...rest];
+    }
+    best[i] = res;
+    return res;
+  };
+  return solve(0);
+}
+
+/**
+ * 종목명 → 단어별 토큰(줄바꿈 후보). 공백으로 나누고, 각 단어를 한글 ↔ 영문·숫자 경계에서 추가 분리한 뒤,
+ * 긴 한글 토큰은 어휘 사전으로 단어 단위 분할한다.
+ * `word-break: keep-all`은 한글↔영문·숫자 경계를 분리 기회로 취급하지 않아 "미국나스닥100"이 폭을 넘으면
+ * 글자 중간("…1/00")에서 잘리므로, 경계에 직접 줄바꿈 기회를 둔다.
+ * 예) "ACE 미국나스닥100" → [["ACE"], ["미국나스닥", "100"]]
+ */
+export function splitNameWords(name: string): string[][] {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) =>
+      w
+        .replace(/([가-힣])(?=[A-Za-z0-9])/g, "$1\0")
+        .replace(/([A-Za-z0-9)])(?=[가-힣])/g, "$1\0")
+        .replace(/([가-힣])(?=\()/g, "$1\0") // "…혼합(합성)" — 괄호 앞도 분리 기회
+        .split("\0")
+        .flatMap((t) => (/^[가-힣]+$/.test(t) && t.length >= NAME_SPLIT_MIN_LEN ? (segmentByLexicon(t) ?? [t]) : [t])),
+    );
+}
+// ── name-split end ──
+
+const tokenEm = (t: string) => [...t].reduce((s, ch) => s + (/[가-힣]/.test(ch) ? 1 : 0.62), 0);
+
+/** 토큰 그리디 줄바꿈 시뮬레이션 → 줄 수(≤3, line-clamp-3와 동일). 폭보다 긴 토큰은 마지막 수단으로 글자 분리. */
+function wrappedLineCount(name: string, fontPx: number, maxW: number): number {
+  let lines = 1;
+  let cur = 0;
+  splitNameWords(name).forEach((word, wi) => {
+    word.forEach((tok, ti) => {
+      const w = tokenEm(tok) * fontPx;
+      const gap = ti === 0 && wi > 0 ? 0.3 * fontPx : 0; // 단어 사이 공백만 폭을 가진다
+      if (w > maxW) {
+        if (cur > 0) lines++;
+        const rows = Math.ceil(w / maxW);
+        lines += rows - 1;
+        cur = w - (rows - 1) * maxW;
+      } else if (cur > 0 && cur + gap + w > maxW) {
+        lines++;
+        cur = w;
+      } else {
+        cur += (cur > 0 ? gap : 0) + w;
+      }
+    });
+  });
+  return Math.min(3, lines);
+}
 
 /**
  * 조각 각도(=비중) → 로고 칩 지름. 고정 타깃(`CHIP_MIN`)을 그대로 쓰되, 조각 안에 물리적으로
@@ -237,12 +333,14 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
   // responsive 미전달(캡처 인스턴스)이면 VIEW_W 고정 — 저장 PNG 구도 불변.
   const outerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const sideExtra = responsive ? PREVIEW_SIDE_EXTRA : 0;
+  const canvasW = VIEW_W + sideExtra * 2;
   useEffect(() => {
     if (!responsive) return;
     const el = outerRef.current;
     if (!el) return;
     const update = () =>
-      setScale(Math.min(1, Math.max(0, Math.floor(el.clientWidth) - PREVIEW_SIDE_INSET * 2) / VIEW_W));
+      setScale(Math.min(1, Math.max(0, Math.floor(el.clientWidth) - PREVIEW_SIDE_INSET * 2) / (VIEW_W + PREVIEW_SIDE_EXTRA * 2)));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -284,24 +382,41 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     return { seg, a0, a1, mid, lx, ly, zone: zoneOf(mid) };
   });
 
-  // 좌/우로 몰린 라벨은 세로 간격을 벌려 겹침 해소(top/bottom은 그대로)
-  const labels: Placed[] = [
-    ...spreadVertically(drawn.filter((d) => d.zone === "left"), rGap),
-    ...spreadVertically(drawn.filter((d) => d.zone === "right"), rGap),
-    ...drawn.filter((d) => d.zone === "top" || d.zone === "bottom"),
-  ];
-
   // 라벨 최대폭(존별) — 라벨 렌더와 아래 캔버스 높이 추정이 같은 값을 쓰도록 함수로 공유
   const labelMaxWOf = (zone: Zone, lx: number) =>
-    zone === "right" ? Math.max(64, VIEW_W - lx - 4)
-      : zone === "left" ? Math.max(64, lx - 4)
+    zone === "right" ? Math.max(64, VIEW_W + sideExtra - lx - 4)
+      : zone === "left" ? Math.max(64, lx + sideExtra - 4)
         : 208;
-  // 이름 폭(한글 1em·그 외 0.62em)으로 줄 수(≤3)를 보수적으로 잡아 라벨(이름+%) 높이를 추정
-  const estLabelHeight = (name: string, maxW: number) => {
-    const em = [...name].reduce((s, ch) => s + (/[가-힣]/.test(ch) ? 1 : 0.62), 0);
-    const lines = Math.min(3, Math.max(1, Math.ceil((em * rLabelFont) / maxW)));
-    return (lines + 1) * rLabelFont * 1.15;
-  };
+  // 단어(토큰) 단위 줄바꿈 시뮬레이션으로 줄 수(≤3)를 구해 라벨(이름+%) 높이를 추정 — 렌더의 줄바꿈과 동일 규칙
+  const estLabelHeight = (name: string, maxW: number) =>
+    (wrappedLineCount(name, rLabelFont, maxW) + 1) * rLabelFont * 1.15;
+
+  // spreadVertically가 ly만 옮기면 앵커가 LABEL_R 원주 안쪽으로 들어오고, 박스(세로 중앙 정렬)의 링 쪽
+  // 모서리는 앵커보다 링에 더 가깝다 → 박스에서 CY에 가장 가까운 세로 변이 LABEL_R 원 밖에 오도록 lx를 바깥으로 민다.
+  const pushOutside = (items: Placed[]): Placed[] =>
+    items.map((it) => {
+      const h = estLabelHeight(it.seg.name, labelMaxWOf(it.zone, it.lx));
+      // 링 상단 근처(|ly − CY| > UPPER_LABEL_DY) 좌/우 라벨은 조금 위로 올려 하단 변을 링에서 멀리 → 왼/오른쪽 밀림 감소.
+      // 박스 상단이 캔버스 위로 나가지 않도록 상한(ly − h/2 ≥ 0).
+      const isUpper = it.ly < CY && CY - it.ly > UPPER_LABEL_DY;
+      const ly = isUpper ? it.ly - Math.min(UPPER_SHIFT_UP, Math.max(0, it.ly - h / 2)) : it.ly;
+      const pushR = isUpper ? R_OUTER + 10 : PUSH_R;
+      const nearEdge = ly < CY ? Math.min(CY, ly + h / 2) : Math.max(CY, ly - h / 2);
+      const edgeX = Math.sqrt(Math.max(0, pushR * pushR - (nearEdge - CY) ** 2));
+      // 이동량은 원래 위치 대비 PUSH_MAX 이내로 제한 — 줄 수(h)가 늘어도 라벨이 조각에서 멀리 튀거나
+      // 이동으로 가용폭이 줄어 줄 수가 더 늘어나는 악순환을 막는다.
+      const lx = it.zone === "left"
+        ? Math.max(68 - sideExtra, it.lx - PUSH_MAX, Math.min(it.lx, CX - edgeX))
+        : Math.min(VIEW_W + sideExtra - 68, it.lx + PUSH_MAX, Math.max(it.lx, CX + edgeX));
+      return { ...it, lx, ly };
+    });
+
+  // 좌/우로 몰린 라벨은 세로 간격을 벌려 겹침 해소(top/bottom은 그대로)
+  const labels: Placed[] = [
+    ...pushOutside(spreadVertically(drawn.filter((d) => d.zone === "left"), rGap)),
+    ...pushOutside(spreadVertically(drawn.filter((d) => d.zone === "right"), rGap)),
+    ...drawn.filter((d) => d.zone === "top" || d.zone === "bottom"),
+  ];
   // 캔버스 높이 — 라벨이 실제로 차지하는 최하단(링 하단 포함)까지만. 6시 방향 라벨이 없으면 링 아래
   // 빈 공간(VIEW_H가 항상 하단 라벨 자리를 잡던 ≈100px)이 회수된다. 데이터로만 결정돼 기기 무관(R32).
   const labelsBottom = Math.max(
@@ -311,22 +426,36 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
     }),
   );
   // 하단 여백 40px: 16px로 줄였더니 "분야 구성"과 너무 붙어 보여(2026-09) 조금 되돌림(원래 ≈100px은 과했음)
-  const viewH = Math.min(VIEW_H, Math.ceil(Math.max(CY + R_OUTER, labelsBottom) + 40));
+  // 프리뷰는 폰트가 floor/scale로 커져 하단 라벨(이름 2줄+%)이 VIEW_H 상한을 넘으므로 상한을 두지 않는다
+  // (캡처는 기존 상한 유지 — 저장 PNG 구도 불변).
+  const ringNeed = Math.ceil(Math.max(CY + R_OUTER, labelsBottom) + 40);
+  const ringH = responsive ? ringNeed : Math.min(VIEW_H, ringNeed);
+  // 프리뷰 전용 상단 여유 — 12시 방향 라벨은 앵커(ly) 위로 자라는데, 프리뷰는 폰트가 floor/scale로
+  // 커져 줄 수가 늘어 앵커 위 여백을 넘으면 바깥 overflow-hidden 에 상단이 짤린다. 초과분만큼 링을 아래로 민다.
+  // 캡처(!responsive)는 0 고정 — 저장 PNG 구도 불변.
+  const topInset = responsive
+    ? Math.max(
+        0,
+        ...labels.filter((l) => l.zone === "top").map((l) => Math.ceil(estLabelHeight(l.seg.name, labelMaxWOf(l.zone, l.lx)) - l.ly) + 4),
+      )
+    : 0;
+  const viewH = ringH + topInset;
 
   // 링 본체(svg + HTML 라벨/로고 오버레이). responsive면 transform:scale로 폭 맞춤.
   const ring = (
     <div
       className="relative"
       style={{
-        width: VIEW_W,
+        width: canvasW,
         height: viewH,
         ...(responsive ? { transform: `scale(${scale})`, transformOrigin: "top left" } : {}),
       }}
     >
+      <div className="absolute" style={{ top: topInset, left: sideExtra, width: VIEW_W, height: ringH }}>
         <svg
           width={VIEW_W}
-          height={viewH}
-          viewBox={`0 0 ${VIEW_W} ${viewH}`}
+          height={ringH}
+          viewBox={`0 0 ${VIEW_W} ${ringH}`}
           className="absolute inset-0 [&_*]:outline-none [&_path]:outline-none"
         >
           {drawn.map(({ seg, a0, a1 }) => {
@@ -420,18 +549,28 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
               className={`absolute flex flex-col ${alignCls} overflow-hidden`}
               style={{ left: lx, top: ly, transform, maxWidth: labelMaxW }}
             >
-              {/* min-w-0 + max-w-full 로 상위 maxWidth 가 텍스트 노드까지 전파되게 하고,
-                  overflow-wrap:anywhere + line-clamp(2~3) 로 긴 한글 종목명이 클램프 줄 수 안에서
-                  줄바꿈·말줄임 되도록 강제 — 가로 오버플로우(카드 밖 짤림) 원천 차단 */}
+              {/* min-w-0 + max-w-full 로 상위 maxWidth 가 텍스트 노드까지 전파되게 하고, 단어(토큰) 경계에만
+                  <wbr>를 둬 줄바꿈이 단어 단위로 일어나게 한다. 한 토큰이 폭보다 길 때만 overflow-wrap:break-word
+                  로 글자 분리 + line-clamp(3) 말줄임 — 가로 오버플로우(카드 밖 짤림) 차단 */}
               <div className="flex flex-col leading-tight min-w-0 max-w-full">
                 <span
-                  className={`font-semibold tracking-tight text-foreground ${labelClampCls} [word-break:keep-all] [overflow-wrap:anywhere] max-w-full`}
+                  className={`font-semibold tracking-tight text-foreground ${labelClampCls} [word-break:keep-all] [overflow-wrap:break-word] max-w-full`}
                   style={rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : undefined}
                 >
-                  {label}
+                  {splitNameWords(label).map((toks, wi) => (
+                    <Fragment key={wi}>
+                      {wi > 0 && " "}
+                      {toks.map((t, ti) => (
+                        <Fragment key={ti}>
+                          {ti > 0 && <wbr />}
+                          {t}
+                        </Fragment>
+                      ))}
+                    </Fragment>
+                  ))}
                 </span>
                 <span
-                  className="font-bold tabular-nums"
+                  className="font-bold tabular-nums whitespace-nowrap"
                   style={{ color: seg.color, ...(rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : {}) }}
                 >
                   {seg.truePct.toFixed(1)}%
@@ -441,6 +580,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
           );
         })}
       </div>
+    </div>
   );
 
   // 캡처 인스턴스: VIEW_W 고정 그대로(저장 PNG 구도 불변)
@@ -450,7 +590,7 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
   // 화면용 프리뷰: 링을 컨테이너 폭에 맞춰 축소(레이아웃 박스도 스케일된 크기로 잡아 가로 넘침 없음)
   return (
     <div ref={outerRef} className="w-full flex justify-center overflow-hidden" style={{ height: viewH * scale }}>
-      <div className="shrink-0" style={{ width: VIEW_W * scale, height: viewH * scale }}>
+      <div className="shrink-0" style={{ width: canvasW * scale, height: viewH * scale }}>
         {ring}
       </div>
     </div>
