@@ -70,7 +70,8 @@ inactiveCheckedAt: result.updated_at,
 ```typescript
 const themeMode = usePreferencesStore(s => s.themeMode);  // "light"|"dark"
 const setThemeMode = usePreferencesStore(s => s.setThemeMode);
-// 쿠키 저장: src/server/server-actions.ts (hydration mismatch 방지)
+// 쿠키 저장: persistThemeModeCookie(value) (src/lib/theme-utils.ts, 클라이언트 document.cookie — 공개 Server Action 제거, S-4.28)
+// 쿠키 조회: getPreference(key, allowed, fallback) (src/server/preferences.ts, server-only, layout 전용)
 ```
 
 **테마 URL 동기화**:
@@ -384,6 +385,35 @@ cn(...inputs: ClassValue[]): string     // clsx + tailwind-merge
 getInitials(str): string                // "홍길동" → "홍"
 ```
 
+### analytics/ga.ts (`src/lib/analytics/ga.ts`, S-4.28) — GA4 계측 **단일 진입점**
+
+```typescript
+track(name: GaEvent, params?: GaParams): void     // 이벤트 20종 union, 파라미터는 PARAM_VALUES enum만
+trackScreen(viewKey, navSource = "tap"): void     // page_view(/v/<viewKey>, page_title 한국어), 같은 화면 연속 호출 무시
+setUserProps(props: GaUserProps): void            // app_mode·asset_count_bucket·sync_enabled·onboarding_state·theme, 값 바뀔 때만
+trackAssetSave(params, prevAssetCount): void      // asset_save + 기기당 1회 first_asset_saved(gaFlags)
+trackParse(importType, result): void              // screenshot_parse (거래 스크린샷은 주식·코인으로 집계)
+sanitizeParams(raw): Record<string,string>        // 사전 외 키·값·비문자열 제거 → 한국어 라벨로 치환
+labelOf(key, code): string                        // PARAM_LABELS 조회
+countAssets(data) / assetCountBucket(n) / toGaAssetType(kebab) / screenPath(viewKey)
+```
+- gtag 부재(로컬·preview·옵트아웃)·예외 시 no-op — 앱 흐름 영향 0. `window.gtag` 직접 호출 금지, 금액·종목·티커·닉네임·ID 전송 금지.
+- 신규 이벤트·값은 `GaEvent`·`PARAM_VALUES`에 추가하고 `PARAM_LABELS`에 한국어 라벨을 함께 추가(누락 시 타입 오류).
+- 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
+
+### server/api-guard.ts (`src/server/api-guard.ts`, S-4.28) — 공개 API 공통 방어
+
+```typescript
+guardRequest(req, { route, maxBodyBytes?, l1PerMinute? }): Response|null  // cross-site 403 · 411/413 · L1 429
+guardRateLimit(req, route, limit, windowSec): Promise<Response|null>       // L2 rl:{route}:{ip} — 캐시 미스에서만 호출
+withinUpstreamBudget(upstream: "kis"|"molit"|"kakao"|"logo", weight?): Promise<boolean>
+reserveGeminiCalls(req, n, msg): Promise<Response|null>                     // IP 일 30회 + 전역 원자 예약
+getClientIp(req)        // x-vercel-forwarded-for → x-real-ip → XFF 우측
+isCrossSiteRequest(req) / badRequest(msg) / cdnCacheHeaders(maxAge, swr?) / secondsUntilNextHour(now?)
+isValidTicker(t) / parseTickerList(raw, max) / isOneOf(v, list) / cleanText(v, max)
+```
+- 신규 API 라우트는 반드시 `guardRequest`로 시작하고 `export const maxDuration`을 둔다. 라우트별 `getClientIp`·rate limit 복붙 금지.
+
 ### local-storage.ts (`src/lib/local-storage.ts`)
 
 ```typescript
@@ -393,7 +423,8 @@ STORAGE_KEYS = {
   noticeHideUntil, geminiUsage,
   shareOwnerId, financeApiErrorCount,
   profitBasis,    // "secretasset_profit_basis" — 종가 기준 옵션
-  tutorialStatus  // "secretasset_tutorial_status"
+  tutorialStatus, // "secretasset_tutorial_status"
+  gaFlags         // "secretasset_ga_flags" — GA 1회성 플래그({firstAssetSent}), clearAssetData keepKeys 보존(S-4.28)
 }
 STORAGE_KEY_PREFIXES = { profit: "secretasset_profit:" }
 migrateStorageKeys(): void

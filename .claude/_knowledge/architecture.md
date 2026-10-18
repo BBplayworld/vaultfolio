@@ -68,7 +68,7 @@ src/
 │   │   │   ├── route.ts              # 주식·환율 조회 (장중 1시간 슬롯 캐시)
 │   │   │   ├── profit/route.ts       # 기준가 조회 (2단 캐시: refDateMap + refPrice)
 │   │   │   ├── dividend/route.ts     # 배당 조회
-│   │   │   └── debug-overseas/route.ts
+│   │   │   └── crypto/route.ts       # 코인 시세(업비트)
 │   │   ├── sync/route.ts             # E2EE 클라우드 동기화 (PUT/GET AssetEnvelope)
 │   │   ├── xray-classify/route.ts    # X-Ray AI 분류 (스트리밍)
 │   │   ├── logo/route.ts             # 종목 로고 프록시
@@ -115,11 +115,15 @@ src/
 │   ├── report/                       # 자산 등급·리포트·기록 스트릭
 │   ├── xray/                         # 종목 X-ray 분류·프롬프트
 │   ├── data/                         # 정적 마스터 JSON (kr/us 종목·ETF)
+│   ├── analytics/ga.ts               # GA4 래퍼(track·trackScreen·setUserProps·sanitizer·한국어 라벨, S-4.28)
 │   ├── cache-storage.ts              # 캐시 추상화 (File/Upstash, AssetEnvelope 포함) — 도메인 무관 공용
 │   ├── local-storage.ts              # STORAGE_KEYS, migrateStorageKeys — 도메인 무관 공용
 │   ├── one-time-migrations.ts        # 1회성 마이그레이션 — 도메인 무관 공용
 │   ├── number-utils.ts
 │   └── utils.ts
+├── server/                           # 서버 전용(`server-only`) — "use server" Server Action 파일 없음(공개 액션 0개)
+│   ├── api-guard.ts                  # 공개 API 공통 방어 계층(출처·크기·L1/L2 한도·업스트림 예산·Gemini 예약·입력 검증·CDN 헤더)
+│   └── preferences.ts                # getPreference(쿠키 allowlist 조회, layout 전용)
 ├── config/
 │   ├── app.ts / asset-options.ts / theme.ts / navigation.ts
 └── components/ui/                    # shadcn/ui 컴포넌트
@@ -149,10 +153,22 @@ E2EE 클라우드 동기화:
 |------|------|
 | 로컬 (UPSTASH_* 없음) | 파일 (`data/finance-cache.json`, `data/share-tokens.json`) |
 | Vercel (`KV_REST_API_URL` 있음) | Upstash Redis (Sliding TTL 30일) |
+| Vercel production·preview인데 KV 미설정 | **즉시 throw(fail-closed)** — 조용히 파일 모드로 떨어져 rate limit이 꺼지는 것 방지 |
+
+**공개 API 엣지 캐시**: 시세·배당·로고·검색·부동산 추정 응답에 `cdnCacheHeaders()`(`Vercel-CDN-Cache-Control`만 설정, 브라우저 `Cache-Control` 미변경) — 같은 URL 반복 트래픽을 CDN이 흡수(함수·Redis·KIS 호출 0).
 
 **캐시 슬롯 시간 단위:** [stock-cache-slot.ts](../../src/lib/finance/stock-cache-slot.ts)
 - 장중 1시간 슬롯 (domestic 09–20, foreign 17/18–익일 05/06 KST)
 - 장외에는 effectiveDate만 (cutoff: foreign 07:00, domestic 16:00, exchange 09:00 KST)
+
+## 공개 API 보안 (S-4.28 보안 범위, `src/server/api-guard.ts`)
+
+- **최소 공개 표면**: 클라이언트 호출처가 있는 라우트만 유지(`finance`·`finance/crypto`·`finance/profit`·`finance/dividend`·`ticker-search`·`logo`·`realestate`·`parse-screenshot`·`xray-classify`·`share`·`feedback`·`sync`). `finance/debug-overseas`·`server-actions.ts`(공개 Server Action)·`realestate op=raw` 삭제, `/_next/image` 비활성(`images.unoptimized`).
+- **싼 순서 조기 거부**: `guardRequest`(cross-site 403 → Content-Length 411/413 → L1 메모리 버킷 429) → 캐시 히트면 즉시 반환 → **캐시 미스만** `guardRateLimit`(L2 Redis `rl:{route}:{ip}`, Lua 원자) → `withinUpstreamBudget`(kis 900·molit 120·kakao 120·logo 300/분, 초과 시 stale 또는 `X-KIS-Unavailable`) → Gemini는 `reserveGeminiCalls`(IP 일 30회·과사용 IP는 전역 한도 70%까지).
+- 라우트마다 `export const maxDuration`. 에러 응답은 고정 문구만(SDK 원문·rawText 미노출).
+- **브라우저 헤더**(`next.config.mjs` `SECURITY_HEADERS`): CSP는 **Report-Only**(위반 확인 후 enforce 전환 예정), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `poweredByHeader:false`. `robots.ts`는 `/api/` disallow.
+- 테마 쿠키는 클라이언트 `persistThemeModeCookie`(`theme-utils.ts`)로 기록, 서버는 `getPreference` allowlist로 재검증.
+- 동기화(`/api/sync`·`cloud-sync/*`) 처리 로직은 이번 범위에서 **무변경** — 인접 보안 항목(S6)은 별도 승인 대상.
 
 ## 레이아웃
 
@@ -199,15 +215,20 @@ KIS_APP_KEY / KIS_APP_SECRET          # 한국투자증권 OpenAPI
 KV_REST_API_URL / KV_REST_API_TOKEN   # Upstash Redis (Vercel)
 GEMINI_API_KEY                         # Google Gemini AI
 SLACK_WEBHOOK_URL                      # 의견·요청 보내기 → Slack (/api/feedback)
-BLOB_READ_WRITE_TOKEN                  # Vercel Blob (공지 이미지)
+SLACK_ADMIN_WEBHOOK_URL                # 관리자 알림 (src/lib/slack.ts)
 NEXT_PUBLIC_CLOUD_SYNC                 # "off" 설정 시 클라우드 동기화 비활성화 (운영 비상 차단용)
 ```
 
 ## 애널리틱스 (GA)
 
 `src/app/layout.tsx`(`RootLayout`, 서버 컴포넌트) — gtag.js 수동 삽입(전용 라이브러리 없음), 측정
-ID `G-PZXY31JVEW`(코드에 하드코딩, `layout.tsx` 2곳 + `settings-page.tsx`의 숨겨진 수동 옵트아웃
-토글 1곳 — 단일 출처 없이 중복, 알려진 부채).
+ID는 **`APP_CONFIG.gaId`(`src/config/app.ts`) 단일 출처**(S-4.28).
+
+- **이벤트 계측은 `src/lib/analytics/ga.ts` 래퍼로만**(`window.gtag` 직접 호출 금지) — 명세 [S-4.28](../specs/4.28-ga-event-tracking.md), 사양 F-ANALYTICS.
+  - config는 `send_page_view:false` + `page_location=origin+pathname`(해시 `#share=`/`#sync=`·쿼리 미전송). 화면은 `navigation-context`가 `trackScreen(viewKey, navSource)`로 가상 경로 `/v/<viewKey>` page_view 전송.
+  - gtag 큐(`dataLayer`/`gtag`) 정의는 head 인라인 스크립트에서 **try 블록 밖·앞**(localStorage 예외에도 큐 보장).
+  - `?ga-debug=1|0` → localStorage 플래그 → 전 이벤트 `debug_mode:true`(DebugView).
+  - 전송 값은 **한국어 라벨**(`PARAM_LABELS`·`USER_PROP_LABELS`로 전송 직전 치환). 코드 쪽 enum은 영문.
 
 - **`gaEnabled = process.env.VERCEL_ENV === "production"`**(2026-09) — GA 스크립트 블록(옵트아웃
   인라인 스크립트 + gtag.js 로더 + config 스크립트) 전체를 이 조건으로 감싼다. Vercel이 자동 주입하는
