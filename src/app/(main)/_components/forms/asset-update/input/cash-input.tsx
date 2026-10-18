@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ interface CashFormProps {
 }
 
 function CashForm({ editData, onClose }: CashFormProps) {
-    const { addCash, updateCash } = useAssetData();
+    const { addCash, updateCash, assetData } = useAssetData();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedType, setSelectedType] = useState<Cash["type"]>(editData?.type || "deposit");
 
@@ -85,6 +86,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
             if (editData) {
                 const success = updateCash(editData.id, data);
                 if (success) {
+                  trackAssetSave({ asset_type: "cash", method: "manual", result: "update" }, countAssets(assetData));
                     toast.success("현금성 자산이 수정되었습니다.");
                     onClose();
                 } else {
@@ -97,6 +99,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                 };
                 const success = addCash(newData);
                 if (success) {
+                  trackAssetSave({ asset_type: "cash", method: "manual", result: "create" }, countAssets(assetData));
                     toast.success("현금성 자산이 추가되었습니다.");
                     onClose();
                 } else {

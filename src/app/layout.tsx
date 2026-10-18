@@ -121,8 +121,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <script
               dangerouslySetInnerHTML={{
                 __html: `
+                  // gtag 큐를 hydration 전에 정의 — 초기 화면 page_view 등 앱 이벤트가 gtag.js 로드 전에도 유실되지 않게.
+                  // localStorage 예외(사생활 보호 모드 등)와 무관하게 항상 정의되도록 플래그 처리보다 앞에 둔다.
+                  var GA_ID = '${APP_CONFIG.gaId}';
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  window.gtag = gtag;
+                  var gaDebug = false;
                   try {
-                    var GA_ID = 'G-PZXY31JVEW';
                     var host = window.location.hostname;
                     // 로컬 개발 환경은 자동 제외
                     // 인라인 스크립트 문자열이라 정규식의 점 이스케이프는 역슬래시 2개로 써야 한다.
@@ -132,26 +138,28 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                     // 특정 URL로 본인 기기에 플래그 기록/해제
                     if (params.get('ga-optout') === '1') localStorage.setItem('ga-optout', '1');
                     if (params.get('ga-optout') === '0') localStorage.removeItem('ga-optout');
+                    // DebugView 검증용 디버그 플래그(S-4.28) — ga-optout과 동일 패턴
+                    if (params.get('ga-debug') === '1') localStorage.setItem('ga-debug', '1');
+                    if (params.get('ga-debug') === '0') localStorage.removeItem('ga-debug');
+                    gaDebug = localStorage.getItem('ga-debug') === '1';
                     // 로컬 접속이거나 플래그 있으면 GA 전송 완전 차단
                     if (isLocal || localStorage.getItem('ga-optout') === '1') {
                       window['ga-disable-' + GA_ID] = true;
                     }
                   } catch (_) {}
+                  gtag('js', new Date());
+                  // 자동 page_view 끔 — 화면 전환은 앱이 가상 경로(/v/<화면>)로 직접 보낸다.
+                  // page_location을 origin+pathname으로 고정해 URL 해시(#share·#sync)·쿼리(?url)가 전송되지 않게 한다.
+                  var gaConfig = { send_page_view: false, page_location: window.location.origin + window.location.pathname };
+                  if (gaDebug) gaConfig.debug_mode = true;
+                  gtag('config', GA_ID, gaConfig);
                 `
               }}
             />
             <Script
-              src="https://www.googletagmanager.com/gtag/js?id=G-PZXY31JVEW"
+              src={`https://www.googletagmanager.com/gtag/js?id=${APP_CONFIG.gaId}`}
               strategy="afterInteractive"
             />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', 'G-PZXY31JVEW');
-              `}
-            </Script>
           </>
         )}
       </head>

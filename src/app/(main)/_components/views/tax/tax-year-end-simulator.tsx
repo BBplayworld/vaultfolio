@@ -4,6 +4,7 @@
 // 체크박스+버튼(프리셋·스테퍼)만으로 조작한다 — 텍스트 입력 없음. 순수 조회/계산 UI, assetData 변경 없음.
 
 import { useMemo, useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { Minus, Plus, Info, Receipt } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,8 @@ export function TaxYearEndSimulator({
     [sim.candidates],
   );
 
-  const setQuantity = (stockId: string, qty: number, max: number) => {
+  const setQuantity = (stockId: string, qty: number, max: number, method: "sell_all" | "rebuy" | "step" = "step") => {
+    track("feature_use", { category: "tax_sim", method });
     setSelected((prev) => {
       const next = new Map(prev);
       if (qty <= 0) next.delete(stockId);
@@ -132,7 +134,7 @@ export function TaxYearEndSimulator({
                 <div className="flex items-center gap-2 flex-wrap pl-7">
                   <Button
                     type="button" variant="secondary" size="sm" className="h-7 text-xs"
-                    onClick={() => setQuantity(c.stockId, c.quantity, c.quantity)}
+                    onClick={() => setQuantity(c.stockId, c.quantity, c.quantity, "sell_all")}
                     disabled={qty === c.quantity}
                   >
                     전량 ({c.quantity.toLocaleString()}주)
@@ -140,7 +142,7 @@ export function TaxYearEndSimulator({
                   {showRebuyChip && (
                     <Button
                       type="button" variant="secondary" size="sm" className="h-7 text-xs"
-                      onClick={() => setQuantity(c.stockId, rebuyQuantity, c.quantity)}
+                      onClick={() => setQuantity(c.stockId, rebuyQuantity, c.quantity, "rebuy")}
                       disabled={qty === rebuyQuantity}
                     >
                       한도까지 ({rebuyQuantity.toLocaleString()}주 · 비과세)

@@ -41,6 +41,8 @@ export const STORAGE_KEYS = {
   assetRefresh: "secretasset_asset_refresh",
   // 기능 방문 기록 + 팁 박스 dismiss 목록. 기기 로컬 전용, 서버 미전송(동의 UI 불필요 — 기존 로컬 전용 키들과 동일 원칙)
   featureUsage: "secretasset_feature_usage",
+  // GA 계측 1회성 플래그 (S-4.28) — 값 { firstAssetSent?: true }. 기기 로컬 전용, 서버·sync payload 미포함
+  gaFlags: "secretasset_ga_flags",
 } as const;
 
 const LEGACY_KEYS = {

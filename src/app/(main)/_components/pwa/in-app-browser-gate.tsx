@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { track } from "@/lib/analytics/ga";
 import { ExternalLink, Loader2, Lock, Unlock, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ export function InAppBrowserGate() {
   // 대상 URL을 외부 브라우저로 이동. Android는 자동 이동, iOS는 클립보드 복사 후 수동 가이드.
   // urlOrPromise를 받아 iOS에서 사용자 제스처가 만료되기 전에 ClipboardItem에 Promise를 담아 복사한다.
   const go = async (urlOrPromise: string | Promise<string>) => {
+    track("pwa_install", { method: "inapp_move", source: "inapp" });
     if (isIOS) {
       // WebKit: await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은 ClipboardItem 전달
       const blobPromise = Promise.resolve(urlOrPromise).then(u => new Blob([u], { type: "text/plain" }));

@@ -4,6 +4,7 @@
 // 백업 시각 기록은 exportAssetData 내부에서 처리되므로 여기서 따로 하지 않는다.
 
 import { useCallback, useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { toast } from "sonner";
 import { exportAssetData } from "@/lib/asset/asset-storage";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -20,14 +21,17 @@ export function useDataExport() {
     try {
       if (!exportAssetData(assetData)) {
         toast.error(EXPORT_STALE_MSG);
+        track("data_action", { method: "export", source: "more", result: "blocked" });
         return false;
       }
       toast.success("자산 데이터가 다운로드되었습니다.");
+      track("data_action", { method: "export", source: "more", result: "success" });
       setExportTick((t) => t + 1);
       window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       return true;
     } catch {
       toast.error("데이터 내보내기에 실패했습니다.");
+      track("data_action", { method: "export", source: "more", result: "fail" });
       return false;
     }
   }, [assetData]);

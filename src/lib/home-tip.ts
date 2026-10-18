@@ -4,6 +4,7 @@
 // 다른 어떤 팁보다도 먼저 반드시 뜬다(안전 안내인 백업·세금보다도 우선).
 
 import type { AssetData } from "@/types/asset";
+import { track } from "@/lib/analytics/ga";
 import { shouldShowBackupNudge, daysSinceBackup } from "./asset/backup-status";
 import { shouldShowRefreshNudge, getStaleCategories, type RefreshCategory } from "./asset/asset-refresh-status";
 import { isTaxNoticeDismissed, getAssetDrivenHighlights, type TaxEventMatch } from "./tax-utils";
@@ -26,6 +27,7 @@ const NOTICE_SEEN_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90일
 /** 홈 팁·더보기 메뉴 등 "공지를 봤다"고 기록하는 모든 지점이 공유하는 단일 출처. */
 export function markCurrentNoticeSeen(): void {
   markNoticeSeen(NOTICE_ID, Date.now() + NOTICE_SEEN_TTL_MS);
+  track("feature_use", { category: "notice", method: "view" });
 }
 
 /**

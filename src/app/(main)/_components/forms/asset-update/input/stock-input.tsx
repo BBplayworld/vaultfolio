@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Search, Loader2 } from "lucide-react";
@@ -44,7 +45,7 @@ interface StockFormProps {
 }
 
 function StockForm({ editData, onClose }: StockFormProps) {
-  const { addStock, updateStock, exchangeRates } = useAssetData();
+  const { addStock, updateStock, exchangeRates, assetData } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Stock["category"]>(editData?.category || "domestic");
@@ -147,6 +148,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
       if (editData) {
         const success = updateStock(editData.id, data);
         if (success) {
+          trackAssetSave({ asset_type: "stock", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("주식 정보가 수정되었습니다.");
           onClose();
         } else {
@@ -159,6 +161,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
         };
         const success = addStock(newData);
         if (success) {
+          trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("주식이 추가되었습니다.");
           onClose();
         } else {

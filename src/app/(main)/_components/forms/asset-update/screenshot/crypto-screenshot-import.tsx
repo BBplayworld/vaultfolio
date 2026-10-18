@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { countAssets, trackAssetSave, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -88,6 +89,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
+      trackParse("crypto", "limit");
       toast.error(`오늘의 AI 인식 한도(${geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.`);
       return;
     }
@@ -104,16 +106,19 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
       const data = await res.json();
 
       if (!res.ok) {
+        trackParse("crypto", "fail");
         toast.error(data.error || "파싱에 실패했습니다.");
         return;
       }
 
       if (!data.cryptos || data.cryptos.length === 0) {
+        trackParse("crypto", "empty");
         toast.error("인식된 코인이 없습니다. 다른 스크린샷을 시도해보세요.");
         return;
       }
 
       geminiUsage.increment("crypto");
+      trackParse("crypto", "success");
 
       const usdRate = exchangeRates.USD || 1380;
       const importCryptos: ImportCrypto[] = data.cryptos.map(
@@ -145,6 +150,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
         setStep("preview");
       }
     } catch {
+      trackParse("crypto", "fail");
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
       setIsParsing(false);
@@ -201,6 +207,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
     if (success) {
       toast.success(`${selected.length}개 코인이 ${conflictMode === "reset" ? "등록" : "반영"}되었습니다.`);
       markCategoryRefreshed("crypto");
+      trackAssetSave({ asset_type: "crypto", method: "screenshot", result: "create" }, countAssets(assetData));
       onSaved?.(selected.length);
       handleClose();
     } else {

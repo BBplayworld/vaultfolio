@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { track } from "@/lib/analytics/ga";
 import { Cloud, Loader2, KeyRound, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -129,6 +130,7 @@ export function CloudSyncConnectDialog() {
     setBusy(true);
     const r = await cs.connect(targetAssetId, passphrase, remember);
     setBusy(false);
+    track("sync_action", { method: "connect", result: r.ok ? "success" : "error" });
 
     if (r.ok) {
       toast.success("이 기기가 연결되었습니다. 자동 동기화가 시작됩니다.");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { track } from "@/lib/analytics/ga";
 import { ShieldCheck, AlertTriangle, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ export function PwaLockScreen() {
         // ① 세션 인증부터 기록 — 이게 없으면 unlockAndLoad가 백그라운드 가드에 스스로 막힌다
         markPwaAuthenticated();
         setLocked(false);
+        track("app_lock", { method: "unlock", result: "success" });
         // ② 로컬 로드를 먼저 끝내고 ③ 해제 이벤트로 원격 pull을 트리거한다.
         // 병렬로 두면 pull(clearAssetData→전체 교체)과 구 데이터 기준 시세·스냅샷 저장이
         // 동시에 진행돼 서로를 덮어쓴다. finally로 감싸야 unlockAndLoad가 throw해도
@@ -120,6 +122,7 @@ export function PwaLockScreen() {
         }
       } else {
         setFailCount((c) => c + 1);
+        track("app_lock", { method: "unlock", result: "pin_mismatch" });
         setPin("");
       }
     })();

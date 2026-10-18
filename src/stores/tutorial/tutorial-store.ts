@@ -1,5 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import { readTutorialStatus, writeTutorialStatus } from "@/lib/local-storage";
+import { track } from "@/lib/analytics/ga";
 
 export type TutorialStep = 1 | 2 | 3 | 4 | 5;
 export type StepStatus = "pending" | "done" | "skipped";
@@ -50,6 +51,7 @@ export const tutorialStore = createStore<TutorialState>()((set, get) => ({
     const { statuses } = get();
     if (statuses[step] !== "pending") return; // 이미 처리됨
 
+    const wasFresh = Object.values(statuses).every((v) => v === "pending");
     const newStatuses = { ...statuses, [step]: "done" as StepStatus };
     writeTutorialStatus(newStatuses);
 
@@ -57,6 +59,11 @@ export const tutorialStore = createStore<TutorialState>()((set, get) => ({
     const isTutorialFinished = activeStep === null;
 
     set({ statuses: newStatuses, activeStep, isTutorialFinished, isWaiting: false });
+
+    // GA 튜토리얼 퍼널(S-4.28) — 이미 처리된 스텝은 위에서 걸러지므로 스텝당 1회
+    if (wasFresh) track("tutorial_begin");
+    track("tutorial_step", { step: String(step) as "1" | "2" | "3" | "4" | "5" });
+    if (isTutorialFinished) track("tutorial_complete");
   },
 
   skipStep: (step: TutorialStep) => {

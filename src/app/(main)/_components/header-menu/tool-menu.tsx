@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { track } from "@/lib/analytics/ga";
 import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Receipt } from "lucide-react";
 import { useDataExport } from "@/hooks/use-data-export";
 import { formatLastBackup, isBackupStale } from "@/lib/asset/backup-status";
@@ -107,9 +108,11 @@ export function ToolMenuPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || "전송에 실패했습니다.");
+        track("feature_use", { category: "feedback", method: "submit", result: "fail" });
         return;
       }
       toast.success("의견이 전달되었습니다. 감사합니다!");
+      track("feature_use", { category: "feedback", method: "submit", result: "success" });
       setShowFeedbackDialog(false);
       setFeedbackMessage("");
       setFeedbackContact("");
@@ -169,6 +172,7 @@ export function ToolMenuPage() {
     try {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
       toast.success("공유 URL이 복사되었습니다.");
+      track("share", { method: "link", content_type: "link" });
       window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {

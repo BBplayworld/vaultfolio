@@ -5,6 +5,7 @@
 // resolveMatch도 symbol 단일 매칭으로 단순화했다(S-4.30).
 
 import { useState, useRef, useMemo } from "react";
+import { track, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 
@@ -110,6 +111,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
+      trackParse("crypto-trade", "limit");
       toast.error(`오늘의 AI 인식 한도(${geminiUsage.limit}회)를 모두 사용했습니다.`);
       return;
     }
@@ -124,10 +126,12 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
       const data = await res.json();
 
       if (!res.ok) {
+        trackParse("crypto-trade", "fail");
         toast.error(data.error || "파싱에 실패했습니다.");
         return;
       }
       if (!data.cryptoTrades || data.cryptoTrades.length === 0) {
+        trackParse("crypto-trade", "empty");
         toast.error("인식된 거래가 없습니다. 다른 스크린샷을 시도해보세요.");
         return;
       }
@@ -140,8 +144,10 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
       setTrades(imported);
       if (imported[0]?.exchangeHint) setSelectedExchange(imported[0].exchangeHint);
       geminiUsage.increment("crypto-trade");
+      trackParse("crypto-trade", "success");
       setStep("preview");
     } catch {
+      trackParse("crypto-trade", "fail");
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
       setIsParsing(false);
@@ -260,6 +266,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
         (overwriteSkipCount > 0 ? ` (중복 ${overwriteSkipCount}건은 기존 유지)` : "")
       );
       markCategoryRefreshed("crypto");
+      track("transaction_save", { asset_type: "crypto", method: "screenshot" });
       onSaved?.(ordered.length);
       handleClose();
     } else {

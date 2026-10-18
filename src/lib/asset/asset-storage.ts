@@ -390,6 +390,9 @@ export function clearAssetData(): boolean {
       // 자산 최신화 상태(카테고리별 마지막 갱신일)도 기기 로컬 메타 — backup과 동일 근거로 보존하지
       // 않으면 백업 복원·동기화 pull 때마다 "최신화한 적 없음"으로 되돌아가 넛지가 부당하게 재노출된다
       STORAGE_KEYS.assetRefresh,
+      // GA 1회성 플래그(S-4.28)도 기기 로컬 메타 — 보존하지 않으면 백업 복원·동기화 pull·재입력 때마다
+      // first_asset_saved가 중복 발생해 활성화 전환 지표가 부풀려진다
+      STORAGE_KEYS.gaFlags,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {

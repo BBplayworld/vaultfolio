@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -264,6 +265,7 @@ export function TradeInput() {
       // 보유 초과 매도·중복 반영만 차단. 평단 재계산(manual_override)·과거날짜(backdated)는
       // 하단 인라인 미리보기로 사전 고지하므로 별도 팝업 없이 바로 반영.
       if (guard.level === "restrict") {
+        track("transaction_save", { asset_type: "stock", method: "manual", result: "blocked" });
         if (guard.reason === "oversell") {
           form.setError("quantity", {
             message: `보유 수량(${guard.maxQty}주)을 초과합니다`,
@@ -295,6 +297,7 @@ export function TradeInput() {
       ? addTransactionWithPosition(finalTx, stock.id, buildReflectionPatch(finalTx, stock))
       : addTransaction(finalTx);
     if (ok) {
+      track("transaction_save", { asset_type: "stock", method: "manual", result: finalTx.reflected ? "reflected" : "unreflected" });
       toast.success(finalTx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { countAssets, trackAssetSave, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -79,6 +80,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
+      trackParse("cash", "limit");
       toast.error(`오늘의 AI 인식 한도(${geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.`);
       return;
     }
@@ -95,16 +97,19 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
       const data = await res.json();
 
       if (!res.ok) {
+        trackParse("cash", "fail");
         toast.error(data.error || "파싱에 실패했습니다.");
         return;
       }
 
       if (!data.cashes || data.cashes.length === 0) {
+        trackParse("cash", "empty");
         toast.error("인식된 계좌·예금이 없습니다. 다른 스크린샷을 시도해보세요.");
         return;
       }
 
       geminiUsage.increment("cash");
+      trackParse("cash", "success");
 
       const importCashes: ImportCash[] = data.cashes.map(
         (s: Omit<ImportCash, "selected" | "institutionMissing">) => ({
@@ -123,6 +128,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
         setStep("preview");
       }
     } catch {
+      trackParse("cash", "fail");
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
       setIsParsing(false);
@@ -179,6 +185,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
     if (success) {
       toast.success(`${selected.length}개 항목이 등록되었습니다.`);
       markCategoryRefreshed("cash");
+      trackAssetSave({ asset_type: "cash", method: "screenshot", result: "create" }, countAssets(assetData));
       onSaved?.(selected.length);
       handleClose();
     } else {

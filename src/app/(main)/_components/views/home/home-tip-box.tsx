@@ -8,6 +8,7 @@
 // 인터랙션은 5종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
 import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -65,6 +66,7 @@ export function HomeTipBox() {
       try { sessionStorage.setItem(NOTICE_SHOWN_SESSION_KEY, "true"); } catch { /* 무시 */ }
     }
     setTip(picked);
+    if (picked) track("feature_use", { category: "home_tip", method: "view" });
   }, [assetData, hasAssets, cs.status]);
 
   if (!tip) return null;
@@ -78,19 +80,24 @@ export function HomeTipBox() {
     if (tip.kind === "feature") dismissTip(tip.feature.id);
     // 이번 세션 동안 팁 박스 전체를 숨김 (다음 순위 팁도 안 뜨게). 재접속 시 초기화.
     try { sessionStorage.setItem(SESSION_DISMISS_KEY, "true"); } catch { /* 무시 */ }
+    track("feature_use", { category: "home_tip", method: "close" });
     setTip(null);
   };
 
   const activate = () => {
+    track("feature_use", { category: "home_tip", method: "click" });
     if (tip.kind === "backup") {
       try {
         if (!exportAssetData(assetData)) {
           toast.error(EXPORT_STALE_MSG);
+          track("data_action", { method: "export", source: "home_tip", result: "blocked" });
           return;
         }
         toast.success("자산 데이터가 다운로드되었습니다.");
+        track("data_action", { method: "export", source: "home_tip", result: "success" });
       } catch {
         toast.error("데이터 내보내기에 실패했습니다.");
+        track("data_action", { method: "export", source: "home_tip", result: "fail" });
         return;
       }
       setTip(null);

@@ -18,6 +18,8 @@ import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { dispatchAddStock } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
+import { track } from "@/lib/analytics/ga";
+import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 
 // 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시) — delay는 style로 분산
@@ -73,7 +75,16 @@ export function WelcomeGuide() {
   const cs = useCloudSync();
   const openWizard = useOnboardingWizardStore((s) => s.open);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // 활성화 퍼널 1단계(S-4.28)
+    track("welcome_view", { source: isStandaloneDisplay() ? "pwa" : detectBrowserEnv().isInApp ? "inapp" : "web" });
+  }, []);
+
+  const handleWizard = () => {
+    track("onboarding_action", { method: "wizard" });
+    openWizard();
+  };
 
   const canInstallPWA = mounted && !isStandalone;
   // 모바일 웹(미설치): PWA 설치 우선 — 자산 등록 CTA는 기본 숨김, 선택 시 노출
@@ -81,6 +92,7 @@ export function WelcomeGuide() {
   const ctaVisible = !mobileWeb || showAssetCta;
 
   const handleStockManual = () => {
+    track("onboarding_action", { method: "manual" });
     setIsStockMenuOpen(false);
     dispatchAddStock("manual");
   };
@@ -239,7 +251,7 @@ export function WelcomeGuide() {
         <div className="text-center">
           <button
             type="button"
-            onClick={() => setShowAssetCta(true)}
+            onClick={() => { track("onboarding_action", { method: "skip_install" }); setShowAssetCta(true); }}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
           >
             설치 없이 웹에서 바로 시작
@@ -260,7 +272,7 @@ export function WelcomeGuide() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-          <Button size="lg" variant="brand" className="gap-2" onClick={openWizard}>
+          <Button size="lg" variant="brand" className="gap-2" onClick={handleWizard}>
             <ImageUp className="size-4" />
             스크린샷으로 자산 등록
             <ArrowRight className="size-4" />
@@ -287,7 +299,7 @@ export function WelcomeGuide() {
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => { setIsStockMenuOpen(false); openFilePicker(); }}
+                onClick={() => { track("onboarding_action", { method: "import" }); setIsStockMenuOpen(false); openFilePicker(); }}
                 disabled={isImporting}
               >
                 <FolderInput className="size-4 text-muted-foreground shrink-0" />
@@ -299,7 +311,7 @@ export function WelcomeGuide() {
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                onClick={() => { setIsStockMenuOpen(false); cs.setShowConnectDialog(true); }}
+                onClick={() => { track("onboarding_action", { method: "sync_connect" }); setIsStockMenuOpen(false); cs.setShowConnectDialog(true); }}
               >
                 <Link2 className="size-4 text-muted-foreground shrink-0" />
                 <div className="text-left">

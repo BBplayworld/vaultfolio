@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { track } from "@/lib/analytics/ga";
 import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
+import { APP_CONFIG } from "@/config/app";
 import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
@@ -75,15 +77,14 @@ export function SettingsPage() {
     s.timer = window.setTimeout(() => (s.count = 0), 3000);
     if (s.count < 7) return;
     s.count = 0;
-    const GA_ID = "G-PZXY31JVEW";
     const on = localStorage.getItem("ga-optout") === "1";
     if (on) {
       localStorage.removeItem("ga-optout");
-      (window as any)["ga-disable-" + GA_ID] = false;
+      window[`ga-disable-${APP_CONFIG.gaId}`] = false;
       toast.success("GA 수집 제외 OFF");
     } else {
       localStorage.setItem("ga-optout", "1");
-      (window as any)["ga-disable-" + GA_ID] = true;
+      window[`ga-disable-${APP_CONFIG.gaId}`] = true;
       toast.success("GA 수집 제외 ON");
     }
   };
@@ -104,12 +105,14 @@ export function SettingsPage() {
     updateThemeMode(next);
     setThemeMode(next);
     persistThemeModeCookie(next);
+    track("feature_use", { category: "theme", method: "toggle" });
   };
 
   const handleClearCache = () => {
     const count = clearUserCaches();
     refreshData();
     toast.success(`캐시 ${count}개를 초기화했습니다.`);
+    track("data_action", { method: "clear_cache", source: "settings", result: "success" });
   };
 
   // 저장 현황 갱신용 tick (가져오기/삭제 직후 재계산)
@@ -142,6 +145,7 @@ export function SettingsPage() {
     } else {
       toast.error("데이터 삭제에 실패했습니다.");
     }
+    track("data_action", { method: "clear_all", source: "settings", result: success ? "success" : "fail" });
     setShowClearDialog(false);
   };
 
@@ -160,11 +164,13 @@ export function SettingsPage() {
       await setPwaAuthPin(authPin);
       setPwaAuthEnabled(true);
       toast.success("앱 잠금이 활성화되었습니다.");
+      track("app_lock", { method: "enable", result: "success" });
       setShowAuthDialog(false);
     } else {
       const ok = await verifyPwaAuthPin(authPin);
       if (!ok) {
         toast.error("비밀번호가 일치하지 않습니다.");
+        track("app_lock", { method: "disable", result: "pin_mismatch" });
         setAuthPin("");
         setTimeout(() => otpRef.current?.focus(), 100);
         return;
@@ -172,6 +178,7 @@ export function SettingsPage() {
       disablePwaAuth();
       setPwaAuthEnabled(false);
       toast.success("앱 잠금이 해제되었습니다.");
+      track("app_lock", { method: "disable", result: "success" });
       setShowAuthDialog(false);
     }
   };

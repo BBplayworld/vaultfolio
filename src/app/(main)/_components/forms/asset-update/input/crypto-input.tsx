@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -39,7 +40,7 @@ interface CryptoFormProps {
 }
 
 function CryptoForm({ editData, onClose }: CryptoFormProps) {
-  const { addCrypto, updateCrypto } = useAssetData();
+  const { addCrypto, updateCrypto, assetData } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCrypto, setSelectedCrypto] = useState<string>(editData?.symbol || "");
 
@@ -97,6 +98,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       if (editData) {
         const success = updateCrypto(editData.id, data);
         if (success) {
+          trackAssetSave({ asset_type: "crypto", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("암호화폐 정보가 수정되었습니다.");
           onClose();
         } else {
@@ -109,6 +111,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
         };
         const success = addCrypto(newData);
         if (success) {
+          trackAssetSave({ asset_type: "crypto", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("암호화폐 정보가 추가되었습니다.");
           onClose();
         } else {

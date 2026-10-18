@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -119,6 +120,7 @@ export function CashTxInput() {
 
     // 출금 반영 초과 가드 (주식 oversell 대칭)
     if (data.reflected && data.type === "withdrawal" && !isCashWithdrawalValid(cash.balance, data.amount)) {
+      track("transaction_save", { asset_type: "cash", method: "manual", result: "blocked" });
       form.setError("amount", { message: `현재 잔액(${formatCurrencyDisplay(cash.balance, cash.currency)})을 초과합니다` });
       return;
     }
@@ -139,6 +141,7 @@ export function CashTxInput() {
       ? addCashTransactionWithBalance(tx, cash.id, balancePatch(tx, cash))
       : addCashTransaction(tx);
     if (ok) {
+      track("transaction_save", { asset_type: "cash", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
       toast.success(tx.type === "deposit" ? "입금이 기록되었습니다." : "출금이 기록되었습니다.");
       resetAndClose();
     }
