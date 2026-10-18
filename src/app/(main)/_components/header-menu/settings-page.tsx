@@ -3,8 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
-import { updateThemeMode } from "@/lib/theme-utils";
-import { setValueToCookie } from "@/server/server-actions";
+import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -100,11 +99,11 @@ export function SettingsPage() {
     setPwaAuthEnabled(isPwaAuthEnabled());
   }, []);
 
-  const handleToggleTheme = async () => {
+  const handleToggleTheme = () => {
     const next = themeMode === "dark" ? "light" : "dark";
     updateThemeMode(next);
     setThemeMode(next);
-    await setValueToCookie("theme_mode", next);
+    persistThemeModeCookie(next);
   };
 
   const handleClearCache = () => {

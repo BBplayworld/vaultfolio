@@ -66,3 +66,54 @@ describe("FileCacheStorage.compareAndSetAssetEnvelope", () => {
     expect(stored?.ciphertext).toBe("ct1");
   });
 });
+
+// ── 보안 강화(4.28) 회귀 ──
+import { getCacheStorage } from "../cache-storage";
+
+describe("getCacheStorage fail-closed", () => {
+  const saved = { env: process.env.VERCEL_ENV, url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN };
+  afterEach(() => {
+    process.env.VERCEL_ENV = saved.env;
+    if (saved.url === undefined) delete process.env.KV_REST_API_URL; else process.env.KV_REST_API_URL = saved.url;
+    if (saved.token === undefined) delete process.env.KV_REST_API_TOKEN; else process.env.KV_REST_API_TOKEN = saved.token;
+    if (saved.env === undefined) delete process.env.VERCEL_ENV;
+  });
+
+  it("production·preview에서 KV 미설정이면 파일 모드로 폴백하지 않고 throw", () => {
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
+    for (const env of ["production", "preview"]) {
+      process.env.VERCEL_ENV = env;
+      expect(() => getCacheStorage()).toThrow();
+    }
+  });
+
+  it("로컬(VERCEL_ENV 없음)은 파일 모드 유지", () => {
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
+    delete process.env.VERCEL_ENV;
+    expect(getCacheStorage()).toBeInstanceOf(FileCacheStorage);
+  });
+});
+
+describe("FileCacheStorage 카운터·락", () => {
+  it("incrementCounter는 누적값을 반환하고 키별로 독립", async () => {
+    const s = new FileCacheStorage();
+    const k = `t:${Math.random()}`;
+    expect(await s.incrementCounter(k, 1, 60)).toBe(1);
+    expect(await s.incrementCounter(k, 2, 60)).toBe(3);
+    expect(await s.incrementCounter(`${k}:other`, 1, 60)).toBe(1);
+  });
+
+  it("acquireLock은 보유 중 재획득 불가, 소유 토큰으로만 해제", async () => {
+    const s = new FileCacheStorage();
+    const k = `lock:${Math.random()}`;
+    const t1 = await s.acquireLock(k, 10);
+    expect(t1).toBeTruthy();
+    expect(await s.acquireLock(k, 10)).toBeNull();
+    await s.releaseLock(k, "wrong-token");
+    expect(await s.acquireLock(k, 10)).toBeNull();
+    await s.releaseLock(k, t1!);
+    expect(await s.acquireLock(k, 10)).toBeTruthy();
+  });
+});

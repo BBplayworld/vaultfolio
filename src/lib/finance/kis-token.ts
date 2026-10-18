@@ -3,7 +3,7 @@
  * KIS access_token 발급 공유 헬퍼 + 서킷 브레이커.
  *
  * 토큰은 하루 1개를 전 사용자가 공유하므로, 발급 실패도 서버 공유 캐시로 카운트한다.
- * 5회 이상 연속 실패(timeout/발급 오류) 시 쿨다운(10분) 동안 외부 호출을 멈추고
+ * 3회 이상 연속 실패(timeout/발급 오류) 시 쿨다운(10분) 동안 외부 호출을 멈추고
  * unavailable=true를 반환 → 라우트가 X-KIS-Unavailable 헤더로 클라이언트에 전달.
  */
 
@@ -16,6 +16,36 @@ const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 
 const KIS_FAIL_THRESHOLD = 3; // 이 횟수 이상 실패 시 서킷 open
 const KIS_CIRCUIT_COOLDOWN_SEC = 600; // 쿨다운 10분 (경과 후 1회 재시도)
+// 토큰 발급 single-flight — 동시 캐시 미스 시 인스턴스 내 1회 + 인스턴스 간 Redis 락으로 발급 폭주 방지
+const KIS_TOKEN_LOCK_KEY = "finance:kis_token:lock";
+const KIS_TOKEN_LOCK_TTL_SEC = 15;
+const KIS_TOKEN_WAIT_POLLS = 10;
+const KIS_TOKEN_WAIT_MS = 300;
+
+let inflightIssue: Promise<{ token: string | null; waited: boolean }> | null = null;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// 실제 발급 — 락 획득자만 KIS 호출, 미획득자는 다른 인스턴스가 저장할 토큰을 짧게 대기
+async function issueKisToken(todayStr: string): Promise<{ token: string | null; waited: boolean }> {
+  const storage = getCacheStorage();
+  const lock = await storage.acquireLock(KIS_TOKEN_LOCK_KEY, KIS_TOKEN_LOCK_TTL_SEC);
+  if (!lock) {
+    for (let i = 0; i < KIS_TOKEN_WAIT_POLLS; i++) {
+      await sleep(KIS_TOKEN_WAIT_MS);
+      const t = await storage.getKisToken(todayStr);
+      if (t) return { token: t, waited: true };
+    }
+    return { token: null, waited: true };
+  }
+  try {
+    const token = await fetchKisToken(KIS_APP_KEY, KIS_APP_SECRET);
+    if (token) await storage.setKisToken(token, todayStr);
+    return { token, waited: false };
+  } finally {
+    await storage.releaseLock(KIS_TOKEN_LOCK_KEY, lock);
+  }
+}
 
 export interface KisTokenResult {
   token: string | null;
@@ -54,7 +84,7 @@ export async function recordKisSuccess(): Promise<void> {
   if (state) await storage.clearKisFailState();
 }
 
-// 오늘자 캐시 확인 → 없으면 신규 발급. 3회 이상 실패 시 서킷 open으로 외부 호출 차단.
+// 오늘자 캐시 확인 → 없으면 신규 발급(single-flight). 3회 이상 실패 시 서킷 open으로 외부 호출 차단.
 export async function getKisAccessToken(todayStr: string): Promise<KisTokenResult> {
   const storage = getCacheStorage();
 
@@ -71,12 +101,18 @@ export async function getKisAccessToken(todayStr: string): Promise<KisTokenResul
     return { token: null, unavailable: true };
   }
 
-  const token = await fetchKisToken(KIS_APP_KEY, KIS_APP_SECRET);
+  if (!inflightIssue) {
+    inflightIssue = issueKisToken(todayStr).finally(() => {
+      inflightIssue = null;
+    });
+  }
+  const { token, waited } = await inflightIssue;
   if (token) {
-    await storage.setKisToken(token, todayStr);
     await recordKisSuccess();
     return { token, unavailable: false };
   }
+  // 다른 인스턴스 발급을 기다리다 시간 초과 — 발급 실패가 아니므로 서킷에 반영하지 않고 이번 요청만 일시 오류
+  if (waited) return { token: null, unavailable: false };
 
   const open = await recordKisFailure();
   return { token: null, unavailable: open };

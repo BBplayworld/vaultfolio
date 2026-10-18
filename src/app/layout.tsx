@@ -6,7 +6,7 @@ import Script from "next/script";
 
 import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app";
-import { getPreference } from "@/server/server-actions";
+import { getPreference } from "@/server/preferences";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
 

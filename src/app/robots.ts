@@ -8,14 +8,17 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
+        disallow: "/api/",
       },
       {
         userAgent: "Googlebot",
         allow: "/",
+        disallow: "/api/",
       },
       {
         userAgent: "Yeti", // 네이버 검색봇
         allow: "/",
+        disallow: "/api/",
       },
     ],
     sitemap: `${APP_CONFIG.siteUrl}/sitemap.xml`,

@@ -5,10 +5,11 @@
  * 쿼리 파라미터:
  *   ticker  - 종목코드 (국내: 6자리, 해외: 영문)
  *   type    - "domestic" | "foreign"
- *   excd    - 거래소 코드 (해외 시 선택, 기본 NAS)
+ *   (excd는 받지 않음 — 해외 배당 조회 URL에 쓰이지 않아 서버 고정값 사용)
  */
 
 import { NextResponse } from "next/server";
+import { badRequest, cdnCacheHeaders, guardRateLimit, guardRequest, isOneOf, isValidTicker, withinUpstreamBudget } from "@/server/api-guard";
 import { fetchDividendDomestic, fetchDividendOverseas } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
 import { getCacheStorage } from "@/lib/cache-storage";
@@ -16,7 +17,14 @@ import { getKisAccessToken } from "@/lib/finance/kis-token";
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
-const DIVIDEND_CACHE_VERSION = "v11";
+// v12: 캐시 키에 type 포함(type=domestic으로 해외 티커를 조회해 빈 배열을 30일 저장 → 전 사용자 배당 공백되던 오염 경로 차단)
+const DIVIDEND_CACHE_VERSION = "v12";
+// 실패·빈 결과 음성 캐시 — 반복 호출 방지용 짧은 TTL(정상 결과 30일과 분리)
+const DIVIDEND_EMPTY_TTL_SEC = 600;
+const DIVIDEND_TYPES = ["domestic", "foreign"] as const;
+const IS_DEV = process.env.NODE_ENV === "development";
+
+export const maxDuration = 20;
 
 // 해외주식 이상값 필터: 전년도 중앙값 기준으로 올해 이상값 제거
 function filterOverseasOutliers(
@@ -166,26 +174,31 @@ function inferEstimatedPayouts(
 }
 
 export async function GET(request: Request) {
-  // 단계별 메시지는 응답에 포함되어 클라이언트 로그로 전달됨 (서버 콘솔에는 error만 출력)
+  const blocked = guardRequest(request, { route: "dividend", l1PerMinute: 120 });
+  if (blocked) return blocked;
+
+  // 단계별 메시지는 개발 환경에서만 응답에 포함(운영은 내부 처리 정보 비노출, 서버 콘솔에는 error만 출력)
   const messages: string[] = [];
   const log = (msg: string, type: "log" | "error" = "log") => {
     if (type === "error") console.error(msg);
-    messages.push(`[${new Date().toISOString()}] ${msg}`);
+    if (IS_DEV) messages.push(`[${new Date().toISOString()}] ${msg}`);
   };
+  const withMessages = <T extends object>(body: T) => (IS_DEV ? { ...body, messages } : body);
 
   try {
     const { searchParams } = new URL(request.url);
     const ticker = searchParams.get("ticker")?.trim().toUpperCase();
     const type = searchParams.get("type");
-    const excd = searchParams.get("excd") || "NAS";
+    // excd는 해외 배당 조회 URL에 쓰이지 않는 로그용 값 — 클라이언트 입력을 받지 않고 고정
+    const excd = "NAS";
 
-    if (!ticker || !type) {
-      return NextResponse.json({ error: "ticker, type 파라미터 필요", messages }, { status: 400 });
+    if (!ticker || !isValidTicker(ticker) || !isOneOf(type, DIVIDEND_TYPES)) {
+      return badRequest("ticker, type 파라미터 필요");
     }
 
     const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = nowKST.toISOString().split("T")[0];
-    const cacheKey = `${ticker}-${DIVIDEND_CACHE_VERSION}`;
+    const cacheKey = `${ticker}-${type}-${DIVIDEND_CACHE_VERSION}`;
 
     const storage = getCacheStorage();
 
@@ -198,11 +211,18 @@ export async function GET(request: Request) {
       const retagged = (cached as DividendPayoutResult[]).map((p) =>
         p.isEstimated && p.payoutDate <= currentMonthEnd ? { ...p, isEstimated: false } : p
       );
-      return NextResponse.json({ data: retagged, messages });
+      return NextResponse.json(withMessages({ data: retagged }), { headers: cdnCacheHeaders(retagged.length === 0 ? DIVIDEND_EMPTY_TTL_SEC : 6 * 3600, 600) });
     }
 
     if (!KIS_APP_KEY || !KIS_APP_SECRET) {
-      return NextResponse.json({ data: [], messages }, { status: 200 });
+      return NextResponse.json(withMessages({ data: [] }), { status: 200 });
+    }
+
+    // 캐시 미스만 L2 rate limit·전역 예산(연도별 조회 최대 3회 × 해외 prdtType 3종) 적용
+    const limited = await guardRateLimit(request, "dividend", 30, 60);
+    if (limited) return limited;
+    if (!(await withinUpstreamBudget("kis", type === "foreign" ? 9 : 3))) {
+      return NextResponse.json(withMessages({ data: [] }), { status: 200, headers: { "X-KIS-Unavailable": "1" } });
     }
 
     const year = nowKST.getUTCFullYear();
@@ -210,7 +230,7 @@ export async function GET(request: Request) {
     const { token: accessToken, unavailable } = await getKisAccessToken(todayStr);
     if (!accessToken) {
       return NextResponse.json(
-        { data: [], messages },
+        withMessages({ data: [] }),
         { status: 200, headers: unavailable ? { "X-KIS-Unavailable": "1" } : undefined }
       );
     }
@@ -310,13 +330,13 @@ export async function GET(request: Request) {
       }
     }
 
-    // 9단계: 캐시 저장
-    await storage.setDividend(cacheKey, results);
+    // 9단계: 캐시 저장 — 빈 결과(무배당·조회 실패 구분 불가)는 짧은 음성 캐시로만 저장
+    await storage.setDividend(cacheKey, results, results.length === 0 ? DIVIDEND_EMPTY_TTL_SEC : undefined);
 
-    return NextResponse.json({ data: results, messages });
-  } catch (err: any) {
+    return NextResponse.json(withMessages({ data: results }), { headers: cdnCacheHeaders(results.length === 0 ? DIVIDEND_EMPTY_TTL_SEC : 6 * 3600, 600) });
+  } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     log(`[배당 조회 서버 오류]: ${errorMsg}`, "error");
-    return NextResponse.json({ error: errorMsg, messages }, { status: 500 });
+    return NextResponse.json(withMessages({ error: "배당 조회 중 오류가 발생했습니다." }), { status: 500 });
   }
 }

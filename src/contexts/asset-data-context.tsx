@@ -22,8 +22,7 @@ import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
-import { updateThemeMode } from "@/lib/theme-utils";
-import { setValueToCookie } from "@/server/server-actions";
+import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 // 사용자가 명시적으로 저장한 편집(add/update/delete = saveData 경로) 알림 이벤트.
@@ -919,7 +918,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (themeParam === "light" || themeParam === "dark") {
       updateThemeMode(themeParam);
       setThemeMode(themeParam);
-      void setValueToCookie("theme_mode", themeParam);
+      persistThemeModeCookie(themeParam);
     }
   }, [setThemeMode]);
 

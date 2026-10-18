@@ -24,6 +24,12 @@ import {
   UpbitRateLimitError,
   type CoinPriceResult,
 } from "@/lib/finance/upbit-service";
+import { cdnCacheHeaders, guardRateLimit, guardRequest, secondsUntilNextHour } from "@/server/api-guard";
+
+export const maxDuration = 10;
+
+const MAX_SYMBOLS = 30;
+const SYMBOL_RE = /^[A-Z0-9]{1,10}$/;
 
 // 업비트 한도(10 req/s)의 20%만 사용 — 서버리스 IP 공유·재시도 여유분 확보
 const MIN_CALL_INTERVAL_MS = 500;
@@ -59,8 +65,8 @@ async function fetchWithGuard(markets: string[], slot: string): Promise<Record<s
   if (existing) return existing;
 
   const run = async (): Promise<Record<string, CoinPriceResult>> => {
-    const locked = await storage.acquireUpbitLock(LOCK_TTL_SEC);
-    if (!locked) {
+    const lockToken = await storage.acquireUpbitLock(LOCK_TTL_SEC);
+    if (!lockToken) {
       // 다른 인스턴스가 조회 중 — 채워질 때까지 짧게 폴링 후 캐시에서 회수
       for (let i = 0; i < LOCK_POLL_MAX; i++) {
         await sleep(LOCK_POLL_INTERVAL_MS);
@@ -89,7 +95,7 @@ async function fetchWithGuard(markets: string[], slot: string): Promise<Record<s
       }
       return prices;
     } finally {
-      await storage.releaseUpbitLock();
+      await storage.releaseUpbitLock(lockToken);
     }
   };
 
@@ -103,10 +109,14 @@ async function fetchWithGuard(markets: string[], slot: string): Promise<Record<s
 }
 
 export async function GET(request: Request) {
+  const blocked = guardRequest(request, { route: "crypto", l1PerMinute: 120 });
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
+  // 형식 위반 심볼 제외 + 개수 상한 — 마켓 목록 조회 실패(검증 생략) 시에도 임의 문자열이 업비트 요청에 섞이지 않게
   const symbols = [...new Set(
-    (searchParams.get("symbols")?.split(",").map((s) => s.trim().toUpperCase()) ?? []).filter(Boolean),
-  )];
+    (searchParams.get("symbols")?.split(",").map((s) => s.trim().toUpperCase()) ?? []).filter((s) => SYMBOL_RE.test(s)),
+  )].slice(0, MAX_SYMBOLS);
   if (symbols.length === 0) {
     return NextResponse.json({ error: "심볼 없음" }, { status: 400 });
   }
@@ -129,7 +139,12 @@ export async function GET(request: Request) {
       if (cached) results[symbol] = cached;
       else uncached.push(market);
     }
-    if (uncached.length === 0) return NextResponse.json(results);
+    // 슬롯(1시간) 캐시 완전 히트 — 같은 URL 반복은 CDN이 흡수
+    if (uncached.length === 0) return NextResponse.json(results, { headers: cdnCacheHeaders(secondsUntilNextHour()) });
+
+    // 캐시 미스만 L2 rate limit
+    const limited = await guardRateLimit(request, "crypto", 60, 60);
+    if (limited) return limited;
 
     // 2단계: stale이 모두 있으면 즉시 반환하고 갱신은 백그라운드로
     const staleMap: Record<string, CoinPriceResult> = {};

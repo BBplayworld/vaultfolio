@@ -11,6 +11,12 @@ import { NextResponse } from "next/server";
 import { KR_SEARCH_ENTRIES } from "@/lib/finance/kr-master";
 import { US_SEARCH_ENTRIES, US_TICKER_TO_NAME } from "@/lib/finance/us-master";
 import { FOREIGN_STOCK_MAP } from "@/app/api/parse-screenshot/ticker-map";
+import { cdnCacheHeaders, guardRequest } from "@/server/api-guard";
+
+export const maxDuration = 10;
+
+// 검색어 길이 상한 — 전체 마스터 순회 CPU 비용을 긴 문자열로 증폭하지 못하게
+const MAX_QUERY_LEN = 50;
 
 // 마스터·ticker-map과 동일한 정규화 규칙 (괄호·공백·기호 제거, 소문자)
 function norm(s: string): string {
@@ -80,8 +86,11 @@ function searchUs(tokens: string[], normQ: string, upperQ: string, limit: number
 }
 
 export async function GET(request: Request) {
+  const blocked = guardRequest(request, { route: "ticker-search", l1PerMinute: 120 });
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
-  const rawQ = (searchParams.get("q") ?? "").trim();
+  const rawQ = (searchParams.get("q") ?? "").trim().slice(0, MAX_QUERY_LEN);
   const market = searchParams.get("market");
   const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get("limit") ?? "", 10) || DEFAULT_LIMIT));
 
@@ -96,5 +105,6 @@ export async function GET(request: Request) {
   const results = market === "kr"
     ? searchKr(tokens, normQ, upperQ, limit)
     : searchUs(tokens, normQ, upperQ, limit);
-  return NextResponse.json({ results });
+  // 정적 마스터 결과 — 같은 URL이면 항상 같은 응답이라 CDN 1일 캐시
+  return NextResponse.json({ results }, { headers: cdnCacheHeaders(86400, 3600) });
 }

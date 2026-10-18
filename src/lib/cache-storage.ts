@@ -43,7 +43,7 @@ export interface ICacheStorage {
   setStock(cacheKey: string, result: StockPriceResult, todayStr: string, ticker: string): Promise<void>;
   getKisToken(todayStr: string): Promise<string | null>;
   setKisToken(token: string, todayStr: string): Promise<void>;
-  // KIS 토큰 발급 실패 서킷 브레이커 상태 (5회 이상 실패 시 쿨다운 동안 외부 호출 차단)
+  // KIS 토큰 발급 실패 서킷 브레이커 상태 (3회 이상 실패 시 쿨다운 동안 외부 호출 차단)
   getKisFailState(): Promise<{ count: number; openUntil: number } | null>;
   setKisFailState(state: { count: number; openUntil: number }, ttlSec: number): Promise<void>;
   clearKisFailState(): Promise<void>;
@@ -55,7 +55,8 @@ export interface ICacheStorage {
   setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
   // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
   getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null>;
-  setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void>;
+  // ttlSec 미지정 시 30일. 실패·빈 결과는 짧은 TTL로 저장(음성 캐시)해 오염·반복 호출을 막는다.
+  setDividend(cacheKey: string, data: DividendPayoutResult[], ttlSec?: number): Promise<void>;
   // 과거 기준일 종가 캐시 (수익률 계산용, period별 차등 TTL)
   // dateStr은 KIS 응답의 실거래일(res.date) 기준
   getRefPrice(ticker: string, dateStr: string): Promise<number | null>;
@@ -63,12 +64,20 @@ export interface ICacheStorage {
   // 요청일 → 응답일(실거래일) 매핑. 휴장/공휴일로 요청일과 응답일이 다른 경우 영구 hit 보장
   getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null>;
   setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void>;
-  // Rate Limit (로컬 개발에서는 항상 통과)
+  // Rate Limit (로컬 개발에서는 항상 통과) — 레거시 단일 버킷(sync 라우트 전용). 신규 라우트는 incrementCounter 사용
   checkRateLimit(ip: string): Promise<boolean>;
+  // 원자 카운터 — INCRBY 후 TTL이 없으면 ttlSec 설정(TTL 없는 키 잔존 방지). 증가 후 값을 반환.
+  // rate limit(rl:*)·업스트림 예산(budget:*) 공용. 키 접두는 호출자가 네임스페이스로 분리한다.
+  incrementCounter(key: string, by: number, ttlSec: number): Promise<number>;
+  // 범용 분산 락 — 획득 시 소유 토큰, 실패 시 null. 해제는 소유 토큰 일치 시에만(타 인스턴스 락 오해제 방지)
+  acquireLock(key: string, ttlSec: number): Promise<string | null>;
+  releaseLock(key: string, token: string): Promise<void>;
   // Gemini 사용량 관리
   getGeminiDailyCount(todayStr: string): Promise<number>;
   incrementGeminiDailyCount(todayStr: string): Promise<number>;
   checkGeminiDailyLimit(todayStr: string): Promise<boolean>;
+  // 호출 전 원자 예약 — n회분을 한도 내에서 선차감. 성공 시 예약 후 누적값, 한도 초과 시 null(차감 없음)
+  reserveGeminiDaily(todayStr: string, n: number, limit: number): Promise<number | null>;
   // 기업/ETF 로고 캐시 (TTL 1년)
   getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null>;
   setTickerLogo(key: string, base64: string, contentType: string): Promise<void>;
@@ -85,9 +94,9 @@ export interface ICacheStorage {
   // 원화 마켓 페어 목록 (TTL 1일) — 무효 심볼로 ticker 요청 전체가 실패하는 것 방지
   getUpbitMarkets(): Promise<string[] | null>;
   setUpbitMarkets(markets: string[]): Promise<void>;
-  // 외부 호출 직렬화용 락 — 획득 성공 시 true. TTL 후 자동 해제
-  acquireUpbitLock(ttlSec: number): Promise<boolean>;
-  releaseUpbitLock(): Promise<void>;
+  // 외부 호출 직렬화용 락 — 획득 성공 시 소유 토큰, 실패 시 null. TTL 후 자동 해제, 해제는 소유자만
+  acquireUpbitLock(ttlSec: number): Promise<string | null>;
+  releaseUpbitLock(token: string): Promise<void>;
   // 마지막 외부 호출 시각(ms) — 최소 호출 간격 강제용
   getUpbitLastCallAt(): Promise<number | null>;
   setUpbitLastCallAt(ms: number): Promise<void>;
@@ -100,6 +109,11 @@ export interface ICacheStorage {
 export function getCacheStorage(): ICacheStorage {
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
     return new UpstashCacheStorage();
+  }
+  // fail-closed — Vercel 배포(production·preview)에서 KV 미설정이면 파일 모드로 조용히 폴백하지 않는다.
+  // 파일 모드는 rate limit·Gemini 한도가 사실상 꺼지고(읽기 전용 FS 쓰기 실패) 서버 방어가 무력화되기 때문.
+  if (process.env.VERCEL_ENV === "production" || process.env.VERCEL_ENV === "preview") {
+    throw new Error("[cache-storage] KV_REST_API_URL/KV_REST_API_TOKEN 미설정 — 배포 환경에서 파일 저장소 폴백 금지");
   }
   return new FileCacheStorage();
 }
@@ -123,6 +137,14 @@ const COIN_STALE_TTL_SEC = 3 * 3600;
 const COIN_STALE_TTL_MS = COIN_STALE_TTL_SEC * 1000;
 const UPBIT_MARKETS_TTL_SEC = 24 * 3600;
 const UPBIT_MARKETS_TTL_MS = UPBIT_MARKETS_TTL_SEC * 1000;
+const DIVIDEND_TTL_SEC = 30 * 24 * 3600; // 30일
+
+// 파일 모드(로컬) 전용 메모리 카운터·락
+const localCounters = new Map<string, { count: number; expiresAt: number }>();
+const localLocks = new Map<string, { owner: string; expiresAt: number }>();
+function randomToken(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 // 서버/클라이언트 공통 캐시 슬롯 유틸 (stock-cache-slot.ts에서 re-export)
 import { getEffectiveDateStr as _getEffectiveDateStr, getStockCacheSlot as _getStockCacheSlot } from "./finance/stock-cache-slot";
@@ -315,7 +337,11 @@ export class FileCacheStorage implements ICacheStorage {
     if (!fs.existsSync(SHARE_TOKENS_PATH)) return { tokens: {}, owners: {} };
     try {
       const raw = JSON.parse(fs.readFileSync(SHARE_TOKENS_PATH, "utf8")) as ShareTokensData;
-      return { tokens: raw.tokens ?? {}, owners: raw.owners ?? {} };
+      // 프로토타입 없는 맵 — key=__proto__ 등으로 Object.prototype이 entry로 잡히는 것 방지
+      return {
+        tokens: Object.assign(Object.create(null), raw.tokens ?? {}),
+        owners: Object.assign(Object.create(null), raw.owners ?? {}),
+      };
     } catch {
       return { tokens: {}, owners: {} };
     }
@@ -520,7 +546,7 @@ export class FileCacheStorage implements ICacheStorage {
     return this.readFinanceCache().DIVIDENDS?.[cacheKey] ?? null;
   }
 
-  async setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void> {
+  async setDividend(cacheKey: string, data: DividendPayoutResult[], _ttlSec?: number): Promise<void> {
     const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = nowKST.toISOString().split("T")[0];
     const cache = this.readFinanceCache();
@@ -562,6 +588,29 @@ export class FileCacheStorage implements ICacheStorage {
     return true;
   }
 
+  // 로컬 단일 프로세스 — 메모리 카운터·락으로 동작 동형 유지(재시작 시 초기화)
+  async incrementCounter(key: string, by: number, ttlSec: number): Promise<number> {
+    const now = Date.now();
+    const cur = localCounters.get(key);
+    const entry = cur && cur.expiresAt > now ? cur : { count: 0, expiresAt: now + ttlSec * 1000 };
+    entry.count += by;
+    localCounters.set(key, entry);
+    return entry.count;
+  }
+
+  async acquireLock(key: string, ttlSec: number): Promise<string | null> {
+    const now = Date.now();
+    const cur = localLocks.get(key);
+    if (cur && cur.expiresAt > now) return null;
+    const owner = randomToken();
+    localLocks.set(key, { owner, expiresAt: now + ttlSec * 1000 });
+    return owner;
+  }
+
+  async releaseLock(key: string, owner: string): Promise<void> {
+    if (localLocks.get(key)?.owner === owner) localLocks.delete(key);
+  }
+
   // 로컬 개발에서는 로고 캐시 없음 (파일 비대화 방지)
   async getTickerLogo(_key: string): Promise<null> {
     return null;
@@ -589,6 +638,15 @@ export class FileCacheStorage implements ICacheStorage {
   async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
     const count = await this.getGeminiDailyCount(todayStr);
     return count < GEMINI_SERVER_DAILY_LIMIT;
+  }
+
+  async reserveGeminiDaily(todayStr: string, n: number, limit: number): Promise<number | null> {
+    const cache = this.readFinanceCache();
+    const current = cache.GEMINI_COUNT?.date === todayStr ? cache.GEMINI_COUNT.count : 0;
+    if (current + n > limit) return null;
+    cache.GEMINI_COUNT = { count: current + n, date: todayStr };
+    this.writeFinanceCache(cache, todayStr);
+    return current + n;
   }
 
   async getStockClassification(ticker: string): Promise<StockClassification | null> {
@@ -656,11 +714,11 @@ export class FileCacheStorage implements ICacheStorage {
   }
 
   // 로컬은 단일 프로세스 — 라우트의 in-flight dedup이 직렬화를 담당하므로 락은 항상 성공 처리
-  async acquireUpbitLock(_ttlSec: number): Promise<boolean> {
-    return true;
+  async acquireUpbitLock(_ttlSec: number): Promise<string | null> {
+    return "local";
   }
 
-  async releaseUpbitLock(): Promise<void> {
+  async releaseUpbitLock(_token: string): Promise<void> {
     // no-op
   }
 
@@ -773,28 +831,11 @@ class UpstashCacheStorage implements ICacheStorage {
     return this.redis.get<StockPriceResult>(`finance:stock:${cacheKey}`);
   }
 
-  async setStock(cacheKey: string, result: StockPriceResult, _todayStr: string, ticker: string): Promise<void> {
+  async setStock(cacheKey: string, result: StockPriceResult, _todayStr: string, _ticker: string): Promise<void> {
     const fullKey = `finance:stock:${cacheKey}`;
     // 슬롯 단위(1시간) 캐시 — 장중엔 매시간 갱신, 장외엔 다음 슬롯 전환까지 유지
+    // 옛 슬롯 키는 1시간 TTL로 자연 만료 — 쓰기마다 전체 키공간 SCAN(키 폭증 시 지연·과금 전이, 글롭 문자 주입)을 하지 않는다.
     await this.redis.set(fullKey, result, { ex: 3600 });
-    // 같은 티커의 옛 날짜 키 정리 (best-effort)
-    try {
-      const pattern = `finance:stock:${ticker}-*`;
-      let cursor = "0";
-      const stale: string[] = [];
-      do {
-        const result = await this.redis.scan(cursor, { match: pattern, count: 50 });
-        const next = String(result[0]);
-        const keys = result[1] as string[];
-        for (const k of keys) {
-          if (k !== fullKey) stale.push(k);
-        }
-        cursor = next;
-      } while (cursor !== "0");
-      if (stale.length > 0) await this.redis.del(...stale);
-    } catch (e) {
-      console.error("[setStock 옛 키 정리 실패]:", e);
-    }
   }
 
   async getKisToken(_todayStr: string): Promise<string | null> {
@@ -858,19 +899,44 @@ class UpstashCacheStorage implements ICacheStorage {
   }
 
   async checkRateLimit(ip: string): Promise<boolean> {
-    const key = `share:rl:${ip}`;
-    const count = await this.redis.incr(key);
-    if (count === 1) await this.redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
+    // rl: 네임스페이스로 분리 — share:{key} 조회(GET /api/share)로 카운터 키에 접근·TTL 연장 불가
+    const count = await this.incrementCounter(`rl:legacy:${ip}`, 1, RATE_LIMIT_WINDOW_SECONDS);
     return count <= RATE_LIMIT_MAX;
+  }
+
+  // INCRBY + (TTL 없으면) EXPIRE를 Lua로 원자 실행 — 중간 실패로 TTL 없는 키가 남아 영구 차단되는 문제 방지
+  private static readonly COUNTER_SCRIPT = `
+    local c = redis.call('INCRBY', KEYS[1], ARGV[1])
+    if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[2]) end
+    return c
+  `;
+
+  async incrementCounter(key: string, by: number, ttlSec: number): Promise<number> {
+    const c = await this.redis.eval(UpstashCacheStorage.COUNTER_SCRIPT, [key], [String(by), String(Math.max(1, Math.floor(ttlSec)))]);
+    return Number(c);
+  }
+
+  async acquireLock(key: string, ttlSec: number): Promise<string | null> {
+    const token = randomToken();
+    const res = await this.redis.set(key, token, { nx: true, ex: Math.max(1, Math.floor(ttlSec)) });
+    return res === "OK" ? token : null;
+  }
+
+  private static readonly RELEASE_SCRIPT = `
+    if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
+    return 0
+  `;
+
+  async releaseLock(key: string, token: string): Promise<void> {
+    await this.redis.eval(UpstashCacheStorage.RELEASE_SCRIPT, [key], [token]);
   }
 
   async getDividend(cacheKey: string): Promise<DividendPayoutResult[] | null> {
     return this.redis.get<DividendPayoutResult[]>(`finance:dividend:${cacheKey}`);
   }
 
-  async setDividend(cacheKey: string, data: DividendPayoutResult[]): Promise<void> {
-    const DIVIDEND_TTL = 30 * 24 * 3600; // 30일
-    await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: DIVIDEND_TTL });
+  async setDividend(cacheKey: string, data: DividendPayoutResult[], ttlSec?: number): Promise<void> {
+    await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: ttlSec ?? DIVIDEND_TTL_SEC });
   }
 
   async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
@@ -908,6 +974,26 @@ class UpstashCacheStorage implements ICacheStorage {
   async checkGeminiDailyLimit(todayStr: string): Promise<boolean> {
     const count = await this.getGeminiDailyCount(todayStr);
     return count < GEMINI_SERVER_DAILY_LIMIT;
+  }
+
+  // 한도 판정·차감을 Lua로 원자 실행 — check→increment 분리 시 동시 요청이 한도를 넘겨 통과하던 문제 제거
+  private static readonly RESERVE_SCRIPT = `
+    local c = redis.call('INCRBY', KEYS[1], ARGV[1])
+    if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[3]) end
+    if c > tonumber(ARGV[2]) then
+      redis.call('DECRBY', KEYS[1], ARGV[1])
+      return -1
+    end
+    return c
+  `;
+
+  async reserveGeminiDaily(todayStr: string, n: number, limit: number): Promise<number | null> {
+    const c = Number(await this.redis.eval(
+      UpstashCacheStorage.RESERVE_SCRIPT,
+      [`gemini:daily:${todayStr}`],
+      [String(n), String(limit), String(secondsUntilMidnightKST())],
+    ));
+    return c < 0 ? null : c;
   }
 
   async getTickerLogo(key: string): Promise<{ data: string; contentType: string } | null> {
@@ -967,14 +1053,13 @@ class UpstashCacheStorage implements ICacheStorage {
     await this.redis.set("finance:upbit:markets", markets, { ex: UPBIT_MARKETS_TTL_SEC });
   }
 
-  // SET NX EX — 획득자만 외부 호출. TTL로 홀더가 죽어도 자동 해제
-  async acquireUpbitLock(ttlSec: number): Promise<boolean> {
-    const res = await this.redis.set("finance:upbit:lock", "1", { nx: true, ex: ttlSec });
-    return res === "OK";
+  // SET NX EX — 획득자만 외부 호출. TTL로 홀더가 죽어도 자동 해제. 해제는 소유 토큰 일치 시에만
+  async acquireUpbitLock(ttlSec: number): Promise<string | null> {
+    return this.acquireLock("finance:upbit:lock", ttlSec);
   }
 
-  async releaseUpbitLock(): Promise<void> {
-    await this.redis.del("finance:upbit:lock");
+  async releaseUpbitLock(token: string): Promise<void> {
+    await this.releaseLock("finance:upbit:lock", token);
   }
 
   async getUpbitLastCallAt(): Promise<number | null> {

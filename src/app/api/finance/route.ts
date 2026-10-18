@@ -26,18 +26,31 @@ import {
 } from "@/lib/finance/finance-service";
 import { getCacheStorage, getEffectiveDateStr, getStockCacheSlot } from "@/lib/cache-storage";
 import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/finance/kis-token";
+import { KR_CODES } from "@/lib/finance/kr-master";
+import { US_TICKERS } from "@/lib/finance/us-master";
+import { cdnCacheHeaders, guardRateLimit, guardRequest, parseTickerList, secondsUntilNextHour, withinUpstreamBudget } from "@/server/api-guard";
+
+export const maxDuration = 15;
 
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 
-// KIS 외부 API 일시 오류 신호 헤더 (5회 이상 토큰 발급 실패 시)
+// KIS 외부 API 일시 오류 신호 헤더 (3회 이상 연속 실패로 서킷 open 시)
 const KIS_UNAVAILABLE_HEADER = { "X-KIS-Unavailable": "1" } as const;
 
 function stockCacheKey(ticker: string, date: string): string {
   return `${ticker}-${date}`;
 }
 
+// 마스터에 있는 티커 여부 — 무효 티커만 담긴 요청의 "전량 실패"가 전역 KIS 서킷을 열지 못하게 판정에 사용
+function hasKnownTicker(tickers: string[]): boolean {
+  return tickers.some((t) => KR_CODES.has(t) || US_TICKERS.has(t.toUpperCase()));
+}
+
 export async function GET(request: Request) {
+  const blocked = guardRequest(request, { route: "finance", l1PerMinute: 120 });
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -50,10 +63,16 @@ export async function GET(request: Request) {
     // 1단계: 캐시 확인 (유효 날짜 기준)
     const cached = await storage.getExchange();
     if (cached?.updated_at === effectiveDateExchange) {
-      return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() });
+      return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() }, { headers: cdnCacheHeaders(secondsUntilNextHour()) });
     }
 
-    // 2단계: 외부 API 호출
+    // 2단계: 외부 API 호출 (캐시 미스만 L2 rate limit·전역 예산 적용)
+    const limited = await guardRateLimit(request, "finance", 60, 60);
+    if (limited) return limited;
+    if (!(await withinUpstreamBudget("kis"))) {
+      if (cached) return NextResponse.json({ ...cached, history: await storage.getExchangeHistory() }, { headers: KIS_UNAVAILABLE_HEADER });
+      return NextResponse.json({ error: "환율 조회 실패" }, { status: 503, headers: { ...KIS_UNAVAILABLE_HEADER, "Retry-After": "60" } });
+    }
     const { token: accessTokenForExchange, unavailable } = await getKisAccessToken(todayStr);
     const rates = accessTokenForExchange
       ? await fetchExchangeRateFromKis(accessTokenForExchange, KIS_APP_KEY, KIS_APP_SECRET, effectiveDateExchange)
@@ -80,9 +99,8 @@ export async function GET(request: Request) {
   // ── 주식 현재가 조회 ──────────────────────────────────────────────────
 
   if (type === "stock") {
-    const tickers = (
-      searchParams.get("tickers")?.split(",").map((t) => t.trim()) || []
-    ).slice(0, 3);
+    // 형식 위반(쿼리 구분자·글롭·공백 등) 티커는 제외, 최대 3개
+    const tickers = parseTickerList(searchParams.get("tickers"), 3);
     if (tickers.length === 0) {
       return NextResponse.json({ error: "티커 없음" }, { status: 400 });
     }
@@ -124,10 +142,16 @@ export async function GET(request: Request) {
           results[ticker] = { ...results[ticker], classification: classificationKr[ticker] };
         }
       }
-      return NextResponse.json(results);
+      return NextResponse.json(results, { headers: cdnCacheHeaders(secondsUntilNextHour()) });
     }
 
-    // 2단계: 미캐시 항목만 외부 API 호출
+    // 2단계: 미캐시 항목만 외부 API 호출 (L2 rate limit·전역 예산 — 초과 시 외부 호출 없이 일시 오류 신호)
+    const limited = await guardRateLimit(request, "finance", 60, 60);
+    if (limited) return limited;
+    const uncachedAll = [...uncachedUs, ...uncachedKr, ...uncachedClassificationKr];
+    if (!(await withinUpstreamBudget("kis", new Set(uncachedAll).size))) {
+      return NextResponse.json(results, { headers: KIS_UNAVAILABLE_HEADER });
+    }
     const apiResults: Record<string, StockPriceResult> = {};
     let kisUnavailable = false;
     let attemptedFetch = false;
@@ -201,7 +225,8 @@ export async function GET(request: Request) {
     if (attemptedFetch) {
       if (anySuccess) {
         await recordKisSuccess();
-      } else {
+      } else if (hasKnownTicker([...uncachedUs, ...uncachedKr])) {
+        // 마스터에 없는 티커만으로 이뤄진 전량 실패는 서킷에 반영하지 않는다(무효 티커 반복 요청으로 전 사용자 시세 차단 방지)
         kisUnavailable = await recordKisFailure();
       }
     }

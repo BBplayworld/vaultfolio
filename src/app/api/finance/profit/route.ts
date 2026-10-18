@@ -10,6 +10,15 @@ import { getDailyClosingRefDates } from "@/lib/finance/profit-utils";
 import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/finance/stock-cache-slot";
 import { isKrBusinessDay } from "@/lib/finance/kr-holidays";
 import { isUsBusinessDay } from "@/lib/finance/us-holidays";
+import { KR_CODES } from "@/lib/finance/kr-master";
+import { US_TICKERS } from "@/lib/finance/us-master";
+import { badRequest, cdnCacheHeaders, guardRateLimit, guardRequest, isOneOf, parseTickerList, secondsUntilNextHour, withinUpstreamBudget } from "@/server/api-guard";
+
+export const maxDuration = 20;
+
+const PERIODS = ["daily", "weekly", "monthly", "yearly"] as const;
+// 클라이언트 배치는 3개(profit-utils PROFIT_BATCH_SIZE) — 여유를 두되 fan-out 상한
+const MAX_TICKERS = 10;
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -92,18 +101,18 @@ function getDates(period: ProfitPeriod, market: "domestic" | "foreign"): { refDa
 }
 
 export async function GET(req: NextRequest) {
+  const blocked = guardRequest(req, { route: "profit", l1PerMinute: 120 });
+  if (blocked) return blocked;
+
   const { searchParams } = req.nextUrl;
-  const tickersParam = searchParams.get("tickers") ?? "";
-  const period = (searchParams.get("period") ?? "daily") as ProfitPeriod;
+  const periodRaw = searchParams.get("period") ?? "daily";
+  // 임의 period가 yearly 경로로 흘러 1년 TTL 쓰레기 키를 만들던 문제 차단 — 4종만 허용
+  if (!isOneOf(periodRaw, PERIODS)) return badRequest();
+  const period: ProfitPeriod = periodRaw;
   // 종가 기준 옵션 (기본 kstAccessDay = 현행 동작)
   const basis = searchParams.get("basis") === "sameBusinessDay" ? "sameBusinessDay" : "kstAccessDay";
 
-  const tickers = Array.from(new Set(
-    tickersParam
-      .split(",")
-      .map((t) => t.trim().toUpperCase())
-      .filter(Boolean)
-  ));
+  const tickers = parseTickerList(searchParams.get("tickers")?.toUpperCase() ?? null, MAX_TICKERS);
 
   if (tickers.length === 0) {
     return NextResponse.json({});
@@ -190,7 +199,17 @@ export async function GET(req: NextRequest) {
     for (const ticker of [...allKr, ...allUs]) {
       if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
     }
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: cdnCacheHeaders(secondsUntilNextHour()) });
+  }
+
+  // 캐시 미스만 L2 rate limit·전역 예산 적용 — 예산 초과 시 외부 호출 없이 일시 오류 신호
+  const limited = await guardRateLimit(req, "profit", 30, 60);
+  if (limited) return limited;
+  if (!(await withinUpstreamBudget("kis", fetchQueue.length))) {
+    for (const ticker of [...allKr, ...allUs]) {
+      if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
+    }
+    return NextResponse.json(result, { headers: { "X-KIS-Unavailable": "1" } });
   }
 
   const appKey = process.env.KIS_APP_KEY ?? "";
@@ -205,7 +224,7 @@ export async function GET(req: NextRequest) {
     for (const ticker of [...allKr, ...allUs]) {
       if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
     }
-    // 5회 이상 토큰 실패 시 클라이언트에 일시 오류 신호
+    // 서킷 open(3회 이상 연속 실패) 시 클라이언트에 일시 오류 신호
     return NextResponse.json(result, unavailable ? { headers: { "X-KIS-Unavailable": "1" } } : undefined);
   }
 
@@ -270,7 +289,8 @@ export async function GET(req: NextRequest) {
   // 토큰은 유효했으나(캐시 hit) 전량 실패 = 토큰 발급 후·만료 전에 KIS 점검이 시작된 경우 →
   // 서킷에 반영해 클라이언트에 일시 오류 신호 전달. 개별 티커 1~2개 실패(신규상장 등)는 정상 범위.
   let unavailableNow = false;
-  if (fetchQueue.length > 0 && successCount === 0) {
+  // 마스터에 없는 티커만으로 이뤄진 전량 실패는 서킷에 반영하지 않는다(무효 티커 반복 요청으로 전 사용자 차단 방지)
+  if (fetchQueue.length > 0 && successCount === 0 && fetchQueue.some((t) => KR_CODES.has(t.ticker) || US_TICKERS.has(t.ticker))) {
     unavailableNow = await recordKisFailure();
   } else if (successCount > 0) {
     await recordKisSuccess();
