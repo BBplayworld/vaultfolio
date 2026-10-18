@@ -6,6 +6,7 @@
 // 신규 인식 로직 없음, onSaved 콜백으로 단계 완료만 감지한다.
 
 import { useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -73,6 +74,7 @@ function CategoryStep({ category, onDone, onSkip }: { category: WizardCategory; 
 
   const handleSaved = () => {
     markCategoryStatus(category, "done");
+    track("wizard_step", { step: category, result: "done" });
     onDone();
   };
 
@@ -91,7 +93,7 @@ function CategoryStep({ category, onDone, onSkip }: { category: WizardCategory; 
         <Button variant="brand" size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
           <ImageUp className="size-4" /> 스크린샷 업로드
         </Button>
-        <Button variant="secondary" size="lg" onClick={() => { markCategoryStatus(category, "skipped"); onSkip(); }}>
+        <Button variant="secondary" size="lg" onClick={() => { markCategoryStatus(category, "skipped"); track("wizard_step", { step: category, result: "skipped" }); onSkip(); }}>
           이 카테고리는 없어요
         </Button>
       </div>
@@ -129,6 +131,8 @@ export function OnboardingWizardFlow() {
   });
 
   const finish = () => {
+    // 완료 화면 이후 닫기는 이탈이 아니므로 exit은 그 전 단계에서 닫을 때만 기록
+    if (phase !== "complete") track("wizard_step", { step: "exit" });
     markWizardDismissed();
     close();
   };
@@ -140,7 +144,7 @@ export function OnboardingWizardFlow() {
     if (next) { setPhase(next); return; }
     // 4개 카테고리 모두 처리됨. 아무것도 등록 안 됐으면(전부 건너뜀) 가짜 완료 화면 대신 그냥 닫아
     // 기존 WelcomeGuide(자산 0건 화면)로 돌아가게 한다(AC10) — 별도 안내 화면을 새로 만들지 않는다.
-    if (hasAnyAsset(assetData)) { setPhase("complete"); return; }
+    if (hasAnyAsset(assetData)) { track("wizard_step", { step: "complete" }); setPhase("complete"); return; }
     finish();
   };
 
@@ -149,7 +153,7 @@ export function OnboardingWizardFlow() {
       <WizardHeader onClose={finish} />
       {phase === "intro" && (
         <IntroScreen
-          onStart={() => setPhase(WIZARD_CATEGORIES[0])}
+          onStart={() => { track("wizard_step", { step: "start" }); setPhase(WIZARD_CATEGORIES[0]); }}
           onClose={finish}
         />
       )}

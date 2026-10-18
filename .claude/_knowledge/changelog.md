@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-10-18
+
+### 공개 API 보안 강화 — 최소 표면·악성 요청·DDoS 방어 (#4.28)
+- **왜**: AI 기반 자동화 공격 증가. 공개 API를 통한 Vercel 함수·Redis·외부 API(KIS·Gemini 등) 자원 소모와 캐시 오염, 미사용 엔드포인트 악용, 악성 사이트가 방문자 브라우저를 동원하는 분산 요청(좀비형)을 애플리케이션 계층에서 차단.
+- **표면 축소**: `finance/debug-overseas`·`server-actions.ts`(공개 Server Action)·`realestate op=raw` 삭제, `/_next/image` 비활성, 미사용 의존성(axios·vercel·@vercel/blob·dom-to-image-more·simple-icons·ts-node) 제거, next 16.4.2(`npm audit --omit=dev` 0건). 테마 쿠키는 클라이언트 `persistThemeModeCookie`로 대체.
+- **공통 가드 `src/server/api-guard.ts`**: cross-site 403 → 본문 크기 411/413 → L1 메모리 버킷 → 캐시 우선 → (미스만) L2 `rl:{route}:{ip}` → 업스트림 분당 예산 → Gemini 원자 예약(IP 30/일). 라우트별 입력 화이트리스트·개수 상한, `maxDuration`, 에러 원문 미노출.
+- **DDoS 흡수**: 공개 시세류 응답 `Vercel-CDN-Cache-Control` 엣지 캐시, KIS 토큰 single-flight, upbit 락 소유자 토큰, `setStock` 전체 SCAN 제거, KV 미설정 시 fail-closed.
+- **브라우저**: CSP(Report-Only)·`X-Frame-Options: DENY`·nosniff·Referrer/Permissions-Policy, `robots` `/api/` 차단. xray 프롬프트는 서버 마스터 이름만(프롬프트 인젝션·캐시 오염 차단).
+- **동기화(`/api/sync`·`cloud-sync/*`) 로직 무변경** — 인접 항목(S6)은 별도 승인 대상.
+- 사양: qa-full-test-plan `F-API-SECURITY`. 사용자 작업: Vercel Firewall·Spend Management, CSP 위반 확인 후 enforce.
+
+### GA4 사용자 행동 추적 — 이벤트 20종·한국어 전송값 (#4.28, S-4.28)
+- **왜**: GA4 보고서·탐색 분석에서 별도 가공 없이 활성화 퍼널·스크린샷 성공률·공유·동기화 채택을 바로 분석하기 위해. 기존엔 page_view만 있었고 `#share=` 해시(복호화 키)가 page_location에 실릴 위험이 있었다.
+- `src/lib/analytics/ga.ts` 단일 진입점(`track`·`trackScreen`·`setUserProps`·sanitizer), `APP_CONFIG.gaId` 단일 출처, config `send_page_view:false`·해시/쿼리 미전송, 가상 경로 `/v/<viewKey>` page_view, `?ga-debug=1` DebugView 플래그, `first_asset_saved` 기기당 1회(`STORAGE_KEYS.gaFlags`).
+- 공용 파라미터 8개(이벤트 범위)+사용자 속성 5개만으로 전 이벤트 교차 분석. 전송 값은 한국어 라벨(코드 enum은 영문 유지).
+- 동기화 이벤트는 수동 동작 결과 후 UI에서만 기록(자동 폴링 미발생, 동기화 로직 무변경).
+- 사양: qa-full-test-plan `F-ANALYTICS`. 사용자 작업: 향상된 측정 페이지 변경 끄기, 맞춤 측정기준 13개 등록(명세 §3-C).
+
+---
+
 ## 2026-09-25
 
 ### 인증카드 포트폴리오 도넛 — 모바일 프리뷰 라벨 잘림·치우침 수정 + 종목명 단어 단위 줄바꿈 (#4.27)

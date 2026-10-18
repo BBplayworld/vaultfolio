@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { toast } from "sonner";
 import { importAssetData } from "@/lib/asset/asset-storage";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -30,6 +31,7 @@ export function useAssetImport() {
       const { assetData: imported, snapshotRestored } = await importAssetData(file);
       useProfitBasisStore.getState().hydrate(); // 복원된 종가 기준 옵션을 store에 반영
       toast.success("자산 데이터를 불러왔습니다.");
+      track("data_action", { method: "import", result: "success" });
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
       bumpSnapshotVersion(); // 차트(useDailySnapshots/useMonthlySnapshots) localStorage 재구독 트리거
       skipAllTutorialSteps();
@@ -39,6 +41,7 @@ export function useAssetImport() {
     } catch (error) {
       console.error("[데이터 가져오기 실패]:", error);
       toast.error("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
+      track("data_action", { method: "import", result: "fail" });
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

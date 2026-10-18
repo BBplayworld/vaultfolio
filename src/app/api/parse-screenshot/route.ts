@@ -3,7 +3,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { lookupTicker } from "./ticker-map";
 import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
-import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
+import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
+import { guardRequest, reserveGeminiCalls } from "@/server/api-guard";
+
+export const maxDuration = 30;
 
 // 국내 종목 티커 Set — section이 "해외"여도 이 안에 있으면 domestic으로 강제
 // KRX 전종목 마스터 기준 (src/lib/kr-master.ts)
@@ -621,24 +624,37 @@ function processCryptoTradeResults(raw: GeminiCryptoTrade[], today: string) {
 // API 핸들러
 // ─────────────────────────────────────────────────────────
 
+// 업로드 이미지 실제 형식 검증(매직 바이트) — 클라이언트가 선언한 MIME만 믿지 않는다
+function matchesImageSignature(bytes: Uint8Array, mime: string): boolean {
+  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+  switch (mime) {
+    case "image/jpeg":
+      return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    case "image/png":
+      return bytes[0] === 0x89 && ascii(1, 4) === "PNG";
+    case "image/webp":
+      return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
+    case "image/heic":
+      return ascii(4, 8) === "ftyp";
+    default:
+      return false;
+  }
+}
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 export async function POST(request: Request) {
+  // 본문 파싱 전 출처·크기(이미지 10MB + multipart 여유) 검사 — 대용량 본문을 메모리에 올리기 전에 차단
+  const blocked = guardRequest(request, { route: "parse-screenshot", maxBodyBytes: MAX_IMAGE_BYTES + 512 * 1024, l1PerMinute: 20 });
+  if (blocked) return blocked;
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." }, { status: 500 });
+    return NextResponse.json({ error: "AI 분석을 사용할 수 없습니다." }, { status: 500 });
   }
 
   // KST 기준 오늘 날짜
   const todayStr = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split("T")[0];
-
-  // 서버 전역 하루 한도 체크
-  const cache = getCacheStorage();
-  const allowed = await cache.checkGeminiDailyLimit(todayStr);
-  if (!allowed) {
-    return NextResponse.json(
-      { error: `오늘의 AI 분석 한도(${GEMINI_SERVER_DAILY_LIMIT}회)가 초과되었습니다. 내일 다시 시도해주세요.` },
-      { status: 429 }
-    );
-  }
 
   let formData: FormData;
   try {
@@ -652,7 +668,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "이미지 파일이 없습니다." }, { status: 400 });
   }
 
-  if (imageFile.size > 10 * 1024 * 1024) {
+  if (imageFile.size > MAX_IMAGE_BYTES) {
     return NextResponse.json({ error: "이미지 크기는 10MB 이하여야 합니다." }, { status: 400 });
   }
 
@@ -673,6 +689,18 @@ export async function POST(request: Request) {
 
   // 이미지 → base64 변환 (처리 후 메모리에서 소멸, 저장 없음)
   const arrayBuffer = await imageFile.arrayBuffer();
+  if (!matchesImageSignature(new Uint8Array(arrayBuffer, 0, Math.min(16, arrayBuffer.byteLength)), imageFile.type)) {
+    return NextResponse.json({ error: "JPG, PNG, WEBP, HEIC 형식만 지원합니다." }, { status: 400 });
+  }
+
+  // Gemini 호출 전 원자 예약(IP 일 한도 + 전역 한도) — 실패 응답도 비용이 발생하므로 차감 유지
+  const denied = await reserveGeminiCalls(
+    request,
+    1,
+    `오늘의 AI 분석 한도(${GEMINI_SERVER_DAILY_LIMIT}회)가 초과되었습니다. 내일 다시 시도해주세요.`,
+  );
+  if (denied) return denied;
+
   const base64 = Buffer.from(arrayBuffer).toString("base64");
 
   // 타입별 프롬프트·스키마 선택
@@ -729,40 +757,37 @@ export async function POST(request: Request) {
       if (!Array.isArray(geminiRaw)) throw new Error("배열이 아닌 응답");
     } catch {
       return NextResponse.json(
-        { error: "파싱 결과를 읽을 수 없습니다. 다른 스크린샷으로 시도해보세요.", rawText },
+        { error: "파싱 결과를 읽을 수 없습니다. 다른 스크린샷으로 시도해보세요." },
         { status: 422 }
       );
     }
 
-    // Gemini 호출 성공 후 카운트 증가 (실패 시 카운트 제외)
-    await cache.incrementGeminiDailyCount(todayStr);
-
     // 타입별 후처리
     if (assetType === "crypto") {
       const cryptos = processCryptoResults(geminiRaw as GeminiCrypto[], todayStr);
-      return NextResponse.json({ cryptos, rawText });
+      return NextResponse.json({ cryptos });
     }
     if (assetType === "cash") {
       const cashes = processCashResults(geminiRaw as GeminiCash[], todayStr);
-      return NextResponse.json({ cashes, rawText });
+      return NextResponse.json({ cashes });
     }
     if (assetType === "loan") {
       const loans = processLoanResults(geminiRaw as GeminiLoan[], todayStr);
-      return NextResponse.json({ loans, rawText });
+      return NextResponse.json({ loans });
     }
 
     if (assetType === "trade") {
       const trades = processTradeResults(geminiRaw as GeminiTrade[], todayStr);
-      return NextResponse.json({ trades, rawText });
+      return NextResponse.json({ trades });
     }
     if (assetType === "crypto-trade") {
       const cryptoTrades = processCryptoTradeResults(geminiRaw as GeminiCryptoTrade[], todayStr);
-      return NextResponse.json({ cryptoTrades, rawText });
+      return NextResponse.json({ cryptoTrades });
     }
 
     // stock (기본)
     const stocks = processStockResults(geminiRaw as GeminiStock[], todayStr);
-    return NextResponse.json({ stocks, rawText });
+    return NextResponse.json({ stocks });
 
   } catch (e) {
     const message = e instanceof Error ? e.message : "알 수 없는 오류";
@@ -774,7 +799,7 @@ export async function POST(request: Request) {
       ? "AI 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해주세요."
       : isQuotaExceeded
         ? "AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."
-        : `AI 인식 오류: ${message}`;
+        : "AI 인식 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
     return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }

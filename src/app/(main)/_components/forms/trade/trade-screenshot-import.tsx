@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import { track, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 
@@ -153,6 +154,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
+      trackParse("trade", "limit");
       toast.error(`오늘의 AI 인식 한도(${geminiUsage.limit}회)를 모두 사용했습니다.`);
       return;
     }
@@ -167,10 +169,12 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
       const data = await res.json();
 
       if (!res.ok) {
+        trackParse("trade", "fail");
         toast.error(data.error || "파싱에 실패했습니다.");
         return;
       }
       if (!data.trades || data.trades.length === 0) {
+        trackParse("trade", "empty");
         toast.error("인식된 거래가 없습니다. 다른 스크린샷을 시도해보세요.");
         return;
       }
@@ -185,8 +189,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
       const autoBroker = matchBrokerHint(importTrades[0]?.brokerHint ?? "");
       if (autoBroker) setSelectedBroker(autoBroker);
       geminiUsage.increment("trade");
+      trackParse("trade", "success");
       setStep("preview");
     } catch {
+      trackParse("trade", "fail");
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
       setIsParsing(false);
@@ -339,6 +345,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     }
 
     addTransactionsBatch(txs, patches, newStocks);
+    track("transaction_save", { asset_type: "stock", method: "screenshot" });
     toast.success(
       `${ordered.length}건의 거래가 등록되었습니다.` +
       (overwriteSkipCount > 0 ? ` (중복 ${overwriteSkipCount}건은 기존 유지)` : "")

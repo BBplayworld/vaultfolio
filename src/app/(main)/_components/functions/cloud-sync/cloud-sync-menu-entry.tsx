@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { track } from "@/lib/analytics/ga";
 import {
   Cloud, CloudUpload, CloudDownload, Loader2, KeyRound, AlertTriangle, RefreshCw, Lock, Copy, QrCode, Share2, Link2, Sparkles,
 } from "lucide-react";
@@ -84,6 +85,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
     setBusy(true);
     const r = await cs.enableSync(passphrase, remember);
     setBusy(false);
+    track("sync_action", { method: "enable", result: r.ok ? "success" : "error" });
     if (r.ok) { toast.success("기기 동기화가 켜졌습니다."); setPassphrase(""); }
     else toast.error(r.message || "동기화 시작에 실패했습니다.");
   };
@@ -100,6 +102,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
   const doPull = async () => {
     setConfirmPull(false);
     const r = await cs.pullNow();
+    track("sync_action", { method: "pull", result: r.status === "ok" ? "success" : r.status === "empty" ? "empty" : "error" });
     if (r.status === "ok") toast.success("클라우드에서 불러왔습니다.");
     else if (r.status === "empty") toast.info("클라우드에 저장된 금고가 없습니다.");
     else toast.error(r.message);
@@ -283,7 +286,10 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             </div>
 
             <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
-              <Button variant="brand" onClick={async () => { await cs.pushNow(); }} disabled={cs.syncing}>
+              <Button variant="brand" onClick={async () => {
+                const r = await cs.pushNow();
+                track("sync_action", { method: "push", result: r.status === "ok" ? "success" : r.status === "conflict" ? "conflict" : "error" });
+              }} disabled={cs.syncing}>
                 {cs.syncing ? <Loader2 className="mr-2 size-4 animate-spin" /> : <CloudUpload className="mr-2 size-4" />} 지금 동기화
               </Button>
               {!confirmPull ? (

@@ -311,7 +311,7 @@ export async function fetchStocksFromKorea(
 
     const call = async (): Promise<{ ok: boolean; rateLimited: boolean; data: { rt_cd?: string; msg_cd?: string; msg1?: string; output?: Record<string, string> } | null }> => {
       const res = await fetchWithTimeout(
-        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}`,
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(ticker)}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -375,7 +375,7 @@ export async function fetchDomesticClassifications(
   for (const ticker of tickers) {
     try {
       const res = await fetchWithTimeout(
-        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${ticker}`,
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PRDT_TYPE_CD=300&PDNO=${encodeURIComponent(ticker)}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -428,7 +428,7 @@ export async function fetchStocksFromKisOverseas(
     for (const prdtTypeCd of ["512", "513", "529"]) {
       try {
         const res = await fetchWithTimeout(
-          `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/search-info?PRDT_TYPE_CD=${prdtTypeCd}&PDNO=${ticker}`,
+          `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/search-info?PRDT_TYPE_CD=${prdtTypeCd}&PDNO=${encodeURIComponent(ticker)}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -504,7 +504,7 @@ async function fetchKisRate(
   appSecret: string
 ): Promise<number> {
   const res = await fetchWithTimeout(
-    `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=${excd}&SYMB=${symb}`,
+    `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(symb)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -588,7 +588,7 @@ export async function fetchDividendDomestic(
   rawLog?: Record<string, unknown>
 ): Promise<DividendPayoutResult[]> {
   try {
-    const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ksdinfo/dividend?CTS=&GB1=0&F_DT=${fdt}&T_DT=${tdt}&SHT_CD=${ticker}&HIGH_GB=`;
+    const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ksdinfo/dividend?CTS=&GB1=0&F_DT=${fdt}&T_DT=${tdt}&SHT_CD=${encodeURIComponent(ticker)}&HIGH_GB=`;
     const res = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -651,7 +651,7 @@ export async function fetchDividendOverseas(
   // 512: 나스닥, 513: 뉴욕, 529: 미국아멕스 순으로 시도
   for (const prdtTypeCd of ["512", "513", "529"]) {
     try {
-      const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${ticker}&PRDT_TYPE_CD=${prdtTypeCd}&CTX_AREA_NK50=&CTX_AREA_FK50=`;
+      const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/period-rights?RGHT_TYPE_CD=03&INQR_DVSN_CD=02&INQR_STRT_DT=${fdt}&INQR_END_DT=${tdt}&PDNO=${encodeURIComponent(ticker)}&PRDT_TYPE_CD=${prdtTypeCd}&CTX_AREA_NK50=&CTX_AREA_FK50=`;
       const res = await fetchWithTimeout(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -738,7 +738,7 @@ export async function fetchDomesticHistoricalPrice(
     const tryDate = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
     try {
       const res = await fetchWithTimeout(
-        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}&FID_INPUT_DATE_1=${tryDate}&FID_INPUT_DATE_2=${tryDate}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(ticker)}&FID_INPUT_DATE_1=${tryDate}&FID_INPUT_DATE_2=${tryDate}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -791,7 +791,7 @@ export async function fetchOverseasHistoricalPrice(
     try {
       // NCNT=5로 최대 5개 row 조회 → xymd 날짜 일치하는 row 탐색 (휴장일 처리)
       const res = await fetchWithTimeout(
-        `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${ticker}&GUBN=0&MODP=0&BYMD=${targetDate}&NCNT=5`,
+        `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(ticker)}&GUBN=0&MODP=0&BYMD=${targetDate}&NCNT=5`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

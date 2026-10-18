@@ -13,6 +13,8 @@ export const APP_CONFIG = {
   version: packageJson.version,
   copyright: `© ${currentYear}, 시크릿에셋.`,
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://secretasset.xyz",
+  // GA4 측정 ID 단일 출처(S-4.28) — layout 스크립트·설정 옵트아웃 토글이 모두 이 값을 쓴다
+  gaId: "G-PZXY31JVEW",
   meta: {
     title: "시크릿에셋 — 안전하게 보관되는 오프라인 자산 관리 시스템",
     description:

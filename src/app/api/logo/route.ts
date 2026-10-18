@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
+import { cdnCacheHeaders, guardRateLimit, guardRequest, withinUpstreamBudget } from "@/server/api-guard";
+
+export const maxDuration = 15;
 
 /**
  * 기업 로고 프록시 (logo.dev)
@@ -26,9 +29,20 @@ const DOMAIN_RE = /^[a-z0-9][a-z0-9\-.]{1,98}[a-z0-9]$/i;
 const THEMES = ["light", "dark"] as const;
 type LogoTheme = (typeof THEMES)[number];
 const DEFAULT_SIZE = 256;
-const MAX_SIZE = 512;
+// 허용 size 버킷 — 임의 실수 size마다 캐시 키(1년 TTL)·업스트림 호출이 생기던 남용 차단. 요청값 이상 최소 버킷으로 올림
+const SIZE_BUCKETS = [32, 48, 64, 96, 128, 192, 256, 384, 512] as const;
+// 업스트림 응답 상한 — 비정상 대용량 응답으로 메모리·Redis 용량을 소모하지 못하게
+const MAX_UPSTREAM_BYTES = 512 * 1024;
+// SVG(동일 출처에서 스크립트 실행 가능)는 거부하고 래스터만 허용
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
-const CACHE_HEADERS = { "Cache-Control": "public, max-age=31536000" } as const;
+const CACHE_HEADERS = { "Cache-Control": "public, max-age=31536000", "X-Content-Type-Options": "nosniff" } as const;
+
+function snapSize(raw: string | null): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_SIZE;
+  return SIZE_BUCKETS.find((b) => b >= n) ?? SIZE_BUCKETS[SIZE_BUCKETS.length - 1];
+}
 
 /** logo.dev 공통 옵션 — 투명 PNG + 고해상도 + 테마 변형 + 미존재 시 404 */
 function logoDevQuery(token: string, size: number, theme: LogoTheme | null): string {
@@ -56,10 +70,12 @@ async function fetchFirstImage(urls: (string | null)[]): Promise<{ buf: Buffer<A
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: "follow" });
       if (!res.ok) continue;
-      const contentType = res.headers.get("content-type") ?? "image/png";
-      if (!contentType.startsWith("image/")) continue; // 에러 HTML 등 방어
+      const contentType = (res.headers.get("content-type") ?? "image/png").split(";")[0].trim().toLowerCase();
+      if (!ALLOWED_IMAGE_TYPES.includes(contentType)) continue; // 에러 HTML·SVG 등 방어
+      const declared = Number(res.headers.get("content-length"));
+      if (Number.isFinite(declared) && declared > MAX_UPSTREAM_BYTES) continue;
       const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.byteLength === 0) continue;
+      if (buf.byteLength === 0 || buf.byteLength > MAX_UPSTREAM_BYTES) continue;
       return { buf, contentType };
     } catch {
       // 다음 제공자로
@@ -75,14 +91,16 @@ function imageResponse(buf: Buffer<ArrayBuffer>, contentType: string, cacheState
 }
 
 export async function GET(request: Request) {
+  const blocked = guardRequest(request, { route: "logo", l1PerMinute: 240 });
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const ticker = searchParams.get("ticker");
   const domain = searchParams.get("domain");
 
   const rawTheme = searchParams.get("theme");
   const theme: LogoTheme | null = THEMES.includes(rawTheme as LogoTheme) ? (rawTheme as LogoTheme) : null;
-  const parsedSize = Number(searchParams.get("size"));
-  const size = Number.isFinite(parsedSize) && parsedSize > 0 ? Math.min(parsedSize, MAX_SIZE) : DEFAULT_SIZE;
+  const size = snapSize(searchParams.get("size"));
 
   // 캐시 키에 옵션을 포함해야 size/theme 별 결과가 서로 덮어쓰지 않는다.
   const mode = domain ? "d" : "t";
@@ -114,14 +132,22 @@ export async function GET(request: Request) {
     return imageResponse(Buffer.from(cached.data, "base64"), cached.contentType, "HIT");
   }
 
+  // 캐시 미스만 L2 rate limit·전역 예산 — 초과 시 404(클라이언트 텍스트 폴백)
+  const limited = await guardRateLimit(request, "logo", 120, 60);
+  if (limited) return limited;
+
   let pending = inFlight.get(cacheKey);
   if (!pending) {
+    if (!(await withinUpstreamBudget("logo"))) {
+      return NextResponse.json({ error: "logo not found" }, { status: 404 });
+    }
     pending = fetchFirstImage(upstreams).finally(() => inFlight.delete(cacheKey));
     inFlight.set(cacheKey, pending);
   }
   const found = await pending;
   if (!found) {
-    return NextResponse.json({ error: "logo not found" }, { status: 404 });
+    // 미존재 로고는 CDN 음성 캐시(1일) — 같은 URL 반복 시 업스트림 재호출·8초 대기 방지
+    return NextResponse.json({ error: "logo not found" }, { status: 404, headers: cdnCacheHeaders(86400, 0) });
   }
 
   await storage.setTickerLogo(cacheKey, found.buf.toString("base64"), found.contentType);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -80,7 +81,7 @@ interface RealEstateFormProps {
 }
 
 function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
-  const { addRealEstate, updateRealEstate } = useAssetData();
+  const { addRealEstate, updateRealEstate, assetData } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState<RealEstate["type"]>(editData?.type || "apartment");
   const [lookingUp, setLookingUp] = useState(false);
@@ -333,6 +334,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
       if (editData) {
         const success = updateRealEstate(editData.id, data);
         if (success) {
+          trackAssetSave({ asset_type: "real_estate", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("부동산 정보가 수정되었습니다.");
           onClose();
         } else {
@@ -345,6 +347,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
         };
         const success = addRealEstate(newData);
         if (success) {
+          trackAssetSave({ asset_type: "real_estate", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("부동산이 추가되었습니다.");
           onClose();
         } else {

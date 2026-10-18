@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -109,6 +110,7 @@ export function LoanTxInput() {
 
     // 상환 반영 초과 가드 (현금 출금 가드 대칭)
     if (data.reflected && data.type === "repay" && !isLoanRepaymentValid(loan.balance, data.amount)) {
+      track("transaction_save", { asset_type: "loan", method: "manual", result: "blocked" });
       form.setError("amount", { message: `현재 잔액(${formatCurrency(loan.balance)})을 초과합니다` });
       return;
     }
@@ -129,6 +131,7 @@ export function LoanTxInput() {
       ? addLoanTransactionWithBalance(tx, loan.id, balancePatch(tx, loan))
       : addLoanTransaction(tx);
     if (ok) {
+      track("transaction_save", { asset_type: "loan", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
       toast.success(tx.type === "repay" ? "상환이 기록되었습니다." : "추가 대출이 기록되었습니다.");
       resetAndClose();
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -165,6 +166,7 @@ export function CryptoTxInput() {
       const pos = getCryptoPosition(coin);
       const guard = validateReflection(tx, pos);
       if (guard.level === "restrict") {
+        track("transaction_save", { asset_type: "crypto", method: "manual", result: "blocked" });
         if (guard.reason === "oversell") {
           form.setError("quantity", { message: `보유 수량(${pos.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개)을 초과합니다` });
         } else if (guard.reason === "already_reflected") {
@@ -189,6 +191,7 @@ export function CryptoTxInput() {
       ? addCryptoTransactionWithPosition(tx, coin.id, buildReflectionPatch(tx, coin))
       : addCryptoTransaction(tx);
     if (ok) {
+      track("transaction_save", { asset_type: "crypto", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
       toast.success(tx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }

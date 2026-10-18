@@ -4,6 +4,24 @@
 
 ## 내부 API 라우트
 
+> **공통 가드(S-4.28, `src/server/api-guard.ts`)** — 모든 공개 라우트는 `guardRequest`(cross-site 403·Content-Length 411/413·L1 429)로 시작하고, **캐시 미스일 때만** `guardRateLimit`(L2 `rl:{route}:{ip}`)·`withinUpstreamBudget`을 거친다. 429에는 `Retry-After`. 공개 시세류 성공 응답은 `cdnCacheHeaders()`(`Vercel-CDN-Cache-Control`). 상세는 [architecture.md](./architecture.md) "공개 API 보안".
+>
+> | 라우트 | L1/분 | L2(캐시 미스) | 입력 상한 |
+> | --- | --- | --- | --- |
+> | finance | 120 | 60/분 | `tickers` ≤3(형식 위반 제외) · `type` stock\|exchange |
+> | finance/crypto | 120 | 60/분 | `symbols` ≤30(`SYMBOL_RE`) |
+> | finance/profit | 120 | 30/분 | `tickers` ≤10 · `period` 4종 화이트리스트 |
+> | finance/dividend | 120 | 30/분 | `type` 2종, `excd`는 무시(서버 NAS 고정) |
+> | ticker-search | 120 | — | `q` ≤50자 · `limit` ≤30 |
+> | logo | 240 | 120/분 | `size` 버킷 스냅(32~512) · 업스트림 ≤512KB · SVG 거부 |
+> | realestate | 60 | 20/분 | `op` resolve\|estimate · query ≤100자 · 음성 캐시 |
+> | parse-screenshot | 20 | Gemini 예약(IP 30/일) | 본문 ≤10.5MB · 매직바이트 검사 |
+> | xray-classify | 20 | Gemini 예약 | 본문 ≤256KB · items ≤200 |
+> | share GET/POST | 60/20 | 30/10 per 분 | key `^[0-9a-f]{10}$` · POST `v72Z`만 · ≤900k자 |
+> | feedback | 10 | 5/10분 | 본문 ≤16KB · Slack 이스케이프 |
+>
+> 삭제된 표면: `finance/debug-overseas`, `server-actions.ts`(Server Action), `realestate op=raw`, `/_next/image`.
+
 ### GET /api/finance
 주식 현재가·환율 조회. KST 기준 시장 마감 시간별 + 장중 1시간 슬롯 캐시.
 
@@ -102,14 +120,15 @@ GET /api/logo?domain=www.samsung.com  # 도메인 기반 (ETF, 국내 주식)
 Body: { token: "v71P...|v72Z...", owner_id?: string }
 → { key: "a3f8b2c1ab", owner_id: "uuid" }
 ```
-- `v71N`(PIN 없음) 거부, `v71P`(PIN) / `v72Z`(PIN+localKey) 허용
+- **`v72Z`(PIN+localKey)만 저장**, 그 외(v71N·v71P·구버전) 400. 토큰 ≤900k자, 본문 ≤1MB
 - 키: `sha256(token)[:10]`
-- `owner_id`로 이전 키 자동 삭제, IP Rate Limit 분당 10회
+- `owner_id`(UUID 형식만, 아니면 신규 발급)로 이전 키 자동 삭제, L2 분당 10회(`rl:share-post`)
 
 ### GET /api/share?key=a3f8b2c1ab
 ```
-→ { token: "v71P..." }
+→ { token: "v72Z..." }
 ```
+- `key`는 `^[0-9a-f]{10}$`만 허용(그 외 400 — `rl:` 등 내부 키 접근 차단), L2 분당 30회
 GET 시마다 TTL 30일 리셋 (Sliding TTL)
 
 ---
@@ -119,7 +138,7 @@ GET 시마다 TTL 30일 리셋 (Sliding TTL)
 
 ```
 Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock"|"crypto"|"cash"|"loan" }
-→ { stocks|cryptos|cashes|loans: Array<{...}>, rawText: string }
+→ { stocks|cryptos|cashes|loans: Array<{...}> }   // rawText 미반환(S-4.28)
 ```
 
 **주요 응답 필드:**
@@ -128,7 +147,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`), 초과 시 429
+**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
@@ -144,7 +163,8 @@ Body: { items: { ticker, name?, market?, category? }[] }
 - 응답 분류 필드: `sector`(산업, 단일)·**`stockType`(종목 유형=투자 성격, 단일, #4.24)**·`themes`(다중)·`themePrimary`·`industry`·`region`·`marketCapTier`·`indices`(다중).
 - `stockType` 7종: 성장주/배당성장주/배당주/지수투자/가치주/채권·현금성/기타 — `sector`와 나란히 매 종목 필수 응답.
 - 서버 캐시(Redis, 90일 TTL, `v2:...` 키) — `themes`·`sector`·`stockType`·`indices` **모두 있어야 유효**, 하나라도 없으면 캐시 미스로 간주해 재분류(신규 필드 도입 시 점진적 백필).
-- 서버 일일 한도 `GEMINI_SERVER_DAILY_LIMIT`, 초과 시 429.
+- 서버 일일 한도 `GEMINI_SERVER_DAILY_LIMIT` + IP 한도, 배치 수만큼 `reserveGeminiCalls` 원자 예약, 초과 시 429.
+- 프롬프트의 종목명은 **서버 마스터(kr/us-master) 이름**만 사용(클라이언트 `name` 무시 → 캐시 오염 차단), 요청에 포함된 티커만 캐시 저장.
 
 ### PUT /api/sync — E2EE 클라우드 동기화 업로드
 ```
@@ -184,16 +204,6 @@ GET /api/sync?meta=1
 
 ---
 
-### GET /api/pwa-manifest — PWA manifest 동적 생성
-```
-GET /api/pwa-manifest?startUrl=/path
-→ manifest JSON (start_url 필드만 동적, 나머지는 /manifest.webmanifest 동일)
-```
-- PC/Android 설치 시 `prepareInstall(startUrl)`에서 `<link rel="manifest">` href를 이 엔드포인트로 교체 → Chrome이 `beforeinstallprompt` 재발생 → 유효한 이벤트로 `installPWA()` 호출
-- iOS는 직접 API 없음 — `setManifestStartUrl(startUrl)` 로만 manifest 교체 후 홈 화면 추가 가이드 표시
-
----
-
 ### POST /api/feedback — 의견·요청 Slack 전달
 사용자 의견을 Slack Incoming Webhook으로 전달. **서버 저장 없음.** **파일:** `src/app/api/feedback/route.ts`
 
@@ -203,7 +213,7 @@ Body: { message: string(필수, 최대 2000자 절단), nickname?: string, conta
 ```
 
 - `SLACK_WEBHOOK_URL` 환경변수로 `{ text }` POST (`*[secretasset 의견·요청]*` + 닉네임/연락처/본문)
-- IP `checkRateLimit` 재사용(`share/route.ts`와 동일 버킷, 분당 10회), `getClientIp` 동일 패턴
+- `guardRequest`(본문 ≤16KB) + L2 `rl:feedback` 10분 5회. Slack `& < >` 이스케이프(멘션 무력화)
 - **에러:** 400(message 공백/잘못된 요청) / 429(rate limit) / 500(`SLACK_WEBHOOK_URL` 미설정) / 502(웹훅 실패)
 - 호출처: [tool-menu.tsx](file:///e:/2.project/js/secret-asset/src/app/(main)/_components/header-menu/tool-menu.tsx) 더보기 > "의견·요청 보내기"
 
@@ -270,9 +280,13 @@ interface ICacheStorage {
   getKisToken() / setKisToken(token, expiresIn)
   getShareToken(key) / setShareToken(key, token) / deleteShareToken(key)
   getOwnerKey(ownerId) / setOwnerKey(ownerId, key)
-  checkRateLimit(ip): boolean
+  checkRateLimit(ip): boolean                          // 레거시(rl:legacy:{ip}, sync 라우트 전용) — 신규 라우트는 api-guard 사용
+  incrementCounter(key, by, ttlSec): number            // Lua INCR+EXPIRE 원자(TTL 없는 키 방지) — L2·업스트림 예산
+  acquireLock(key, ttlSec): token|null / releaseLock(key, token)   // 소유자 토큰 확인 후 해제
+  acquireUpbitLock(ttlSec): string|null / releaseUpbitLock(token)
+  reserveGeminiDaily(todayStr, n, limit): number|null     // Lua 원자 예약(null=한도 초과)
 
-  getDividend(cacheKey) / setDividend(cacheKey, data)
+  getDividend(cacheKey) / setDividend(cacheKey, data, ttlSec?)   // 키 v12(type 포함), 빈 결과 TTL 600
   getRefPrice(ticker, actualDate) / setRefPrice(ticker, actualDate, price, period)
     // dateStr은 KIS 실거래일 (res.date) — 응답일 기준 저장
   getRefDateForRequest(ticker, requestDate, period) / setRefDateForRequest(...)
@@ -288,7 +302,8 @@ interface ICacheStorage {
 
 getCacheStorage(): ICacheStorage
 // KV_REST_API_URL 있으면 → UpstashStorage (Redis)
-// 없으면 → FileStorage (data/*.json)
+// 없으면 → FileStorage (data/*.json) — 단 VERCEL_ENV production·preview면 throw(fail-closed)
+// setStock은 전체 SCAN 없음, share 토큰 맵은 Object.create(null)
 
 // 파일 캐시 필드:
 // STOCKS, EXCHANGE, DIVIDENDS, REF_PRICES, REF_DATE_MAP, GEMINI_COUNT

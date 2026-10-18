@@ -22,8 +22,7 @@ import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
-import { updateThemeMode } from "@/lib/theme-utils";
-import { setValueToCookie } from "@/server/server-actions";
+import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 // 사용자가 명시적으로 저장한 편집(add/update/delete = saveData 경로) 알림 이벤트.
@@ -67,6 +66,10 @@ import { Label } from "@/components/ui/label";
 import { Lock, Share2 } from "lucide-react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTradeDataset } from "@/config/asset-options";
+import { assetCountBucket, countAssets, setUserProps, track } from "@/lib/analytics/ga";
+import { readOnboardingWizardStatus } from "@/lib/onboarding-wizard-status";
+import { getAssetId } from "@/lib/cloud-sync/sync-state";
+import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -912,6 +915,20 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     prevHasAssetsRef.current = hasAssets;
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
 
+  // GA 사용자 속성(S-4.28) — 세그먼트 분석용 버킷 값만. 값이 바뀔 때만 전송(setUserProps 내부 비교)
+  useEffect(() => {
+    if (!isDataLoaded || typeof window === "undefined") return;
+    const wizard = readOnboardingWizardStatus();
+    const wizardDone = Object.values(wizard.categories).includes("done");
+    setUserProps({
+      app_mode: isStandaloneDisplay() ? "pwa" : detectBrowserEnv().isInApp ? "inapp" : "web",
+      asset_count_bucket: assetCountBucket(countAssets(assetData)),
+      sync_enabled: getAssetId() ? "y" : "n",
+      onboarding_state: wizardDone ? "wizard_done" : wizard.dismissed ? "skipped" : "new",
+      theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
+    });
+  }, [assetData, isDataLoaded]);
+
   const checkAndApplyThemeMode = useCallback(() => {
     if (typeof window === "undefined") return;
     const urlParams = new URLSearchParams(window.location.hash.substring(1));
@@ -919,7 +936,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (themeParam === "light" || themeParam === "dark") {
       updateThemeMode(themeParam);
       setThemeMode(themeParam);
-      void setValueToCookie("theme_mode", themeParam);
+      persistThemeModeCookie(themeParam);
     }
   }, [setThemeMode]);
 
@@ -957,6 +974,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const shareTokenRes = await resolveShareToken(rawToken);
 
     if (!shareTokenRes) {
+      track("share_restore", { result: "invalid" });
       window.location.replace("/invalid-access");
       return;
     }
@@ -975,7 +993,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      track("share_restore", { result: "success" });
     } else {
+      track("share_restore", { result: "invalid" });
       window.location.replace("/invalid-access");
     }
   }, [applySharedData]);
@@ -1012,10 +1032,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       setPendingToken(null);
       setInputPin("");
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      track("share_restore", { result: "success" });
     } else if (pendingToken.token.startsWith("v72Z")) {
       // v72Z: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
+      track("share_restore", { result: "pin_mismatch" });
       window.location.replace("/invalid-access");
     } else {
+      track("share_restore", { result: "pin_mismatch" });
       notify.error(MSG.PIN_MISMATCH);
       setInputPin("");
       setTimeout(() => otpRef.current?.focus(), 100);
@@ -1023,6 +1046,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, [pendingToken, inputPin, applySharedData]);
 
   const handlePinCancel = useCallback(() => {
+    track("share_restore", { result: "cancel" });
     setShowPinPrompt(false);
     setPendingToken(null);
     setInputPin("");
@@ -1107,6 +1131,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       localData.loans.length > 0;
 
     if (shareTokenRaw && isStandaloneDisplay() && hasLocalAssets) {
+      track("share_restore", { result: "ignored" });
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       await initAndSync(localData);
       return;
@@ -1206,6 +1231,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const deleteRealEstate = useCallback(
     (id: string) => {
       const newData = { ...assetData, realEstate: assetData.realEstate.filter((item) => item.id !== id) };
+      track("asset_delete", { asset_type: "real_estate" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1355,6 +1381,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         stocks: assetData.stocks.filter((item) => item.id !== id),
         transactions: (assetData.transactions || []).filter((t) => t.stockId !== id),
       };
+      track("asset_delete", { asset_type: "stock" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1383,6 +1410,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const deleteCrypto = useCallback(
     (id: string) => {
       const newData = { ...assetData, crypto: assetData.crypto.filter((item) => item.id !== id) };
+      track("asset_delete", { asset_type: "crypto" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1419,6 +1447,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cash: assetData.cash.filter((item) => item.id !== id),
         cashTransactions: (assetData.cashTransactions || []).filter((t) => t.cashId !== id),
       };
+      track("asset_delete", { asset_type: "cash" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1453,6 +1482,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         loans: assetData.loans.filter((item) => item.id !== id),
         loanTransactions: (assetData.loanTransactions || []).filter((t) => t.loanId !== id),
       };
+      track("asset_delete", { asset_type: "loan" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1492,6 +1522,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         ...assetData,
         yearlyNetAssets: assetData.yearlyNetAssets.filter((item) => item.year !== year),
       };
+      track("asset_delete", { asset_type: "yearly_net_asset" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1517,6 +1548,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         ...assetData,
         transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
       };
+      track("transaction_delete", { asset_type: "stock", result: "unreflected" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1579,6 +1611,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
         stocks: assetData.stocks.map((s) => (s.id === stockId ? { ...s, ...patch } : s)),
       };
+      track("transaction_delete", { asset_type: "stock", result: "rollback" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1618,6 +1651,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cashTransactions: (assetData.cashTransactions || []).filter((t) => t.id !== txId),
         cash: assetData.cash.map((c) => (c.id === cashId ? { ...c, ...patch } : c)),
       };
+      track("transaction_delete", { asset_type: "cash", result: "rollback" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1630,6 +1664,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         ...assetData,
         cashTransactions: (assetData.cashTransactions || []).filter((t) => t.id !== txId),
       };
+      track("transaction_delete", { asset_type: "cash", result: "unreflected" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1669,6 +1704,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         loanTransactions: (assetData.loanTransactions || []).filter((t) => t.id !== txId),
         loans: assetData.loans.map((l) => (l.id === loanId ? { ...l, ...patch } : l)),
       };
+      track("transaction_delete", { asset_type: "loan", result: "rollback" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1681,6 +1717,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         ...assetData,
         loanTransactions: (assetData.loanTransactions || []).filter((t) => t.id !== txId),
       };
+      track("transaction_delete", { asset_type: "loan", result: "unreflected" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1722,6 +1759,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cryptoTransactions: (assetData.cryptoTransactions || []).filter((t) => t.id !== txId),
         crypto: assetData.crypto.map((c) => (c.id === cryptoId ? { ...c, ...patch } : c)),
       };
+      track("transaction_delete", { asset_type: "crypto", result: "rollback" });
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1734,6 +1772,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         ...assetData,
         cryptoTransactions: (assetData.cryptoTransactions || []).filter((t) => t.id !== txId),
       };
+      track("transaction_delete", { asset_type: "crypto", result: "unreflected" });
       return saveData(newData);
     },
     [assetData, saveData]

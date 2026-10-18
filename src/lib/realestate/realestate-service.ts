@@ -74,9 +74,10 @@ export async function fetchTrades(dataset: string, lawdCd: string, dealYmd: stri
   return xml ? parseTradesXml(xml, dataset) : [];
 }
 
-// 원문 XML — 파싱 전 태그명 대조(op=raw)에도 재사용
+// 원문 XML
 export async function fetchTradesXml(dataset: string, lawdCd: string, dealYmd: string): Promise<string | null> {
-  const endpoint = MOLIT_ENDPOINTS[dataset];
+  // 프로토타입 키(constructor·__proto__) 차단 — 자체 속성만 허용
+  const endpoint = Object.prototype.hasOwnProperty.call(MOLIT_ENDPOINTS, dataset) ? MOLIT_ENDPOINTS[dataset] : undefined;
   if (!endpoint || !DATA_KEY || !/^\d{5}$/.test(lawdCd) || !/^\d{6}$/.test(dealYmd)) return null;
   try {
     const url = `${endpoint}?serviceKey=${encodeURIComponent(DATA_KEY)}&LAWD_CD=${lawdCd}&DEAL_YMD=${dealYmd}&numOfRows=1000&pageNo=1`;

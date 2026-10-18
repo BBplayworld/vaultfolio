@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { countAssets, trackAssetSave, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -120,6 +121,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
+      trackParse("stock", "limit");
       toast.error(`오늘의 AI 인식 한도(${geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.`);
       return;
     }
@@ -138,11 +140,13 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       const data = await res.json();
 
       if (!res.ok) {
+        trackParse("stock", "fail");
         toast.error(data.error || "파싱에 실패했습니다.");
         return;
       }
 
       if (!data.stocks || data.stocks.length === 0) {
+        trackParse("stock", "empty");
         toast.error("인식된 종목이 없습니다. 다른 스크린샷을 시도해보세요.");
         return;
       }
@@ -195,6 +199,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       setStocks(finalStocks);
 
       geminiUsage.increment("stock");
+      trackParse("stock", "success");
       const conflicts = countConflicts(assetData.stocks, finalStocks, keyOfStock);
       if (conflicts > 0) {
         setConflictCount(conflicts);
@@ -203,6 +208,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         setStep("preview");
       }
     } catch {
+      trackParse("stock", "fail");
       toast.error("네트워크 오류가 발생했습니다.");
     } finally {
       setIsParsing(false);
@@ -318,6 +324,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     if (success) {
       toast.success(`${selected.length}개 종목이 등록되었습니다.`);
       markCategoryRefreshed("stock");
+      trackAssetSave({ asset_type: "stock", method: "screenshot", result: "create" }, countAssets(assetData));
       onSaved?.(selected.length);
       handleClose();
     } else {

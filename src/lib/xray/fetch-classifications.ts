@@ -7,6 +7,7 @@
  */
 
 import type { Stock } from "@/types/asset";
+import { track } from "@/lib/analytics/ga";
 import { toast } from "sonner";
 import { getAllClassifications, upsertClassifications, SECTOR_ENUM, STOCK_TYPE_ENUM, STOCK_TYPE_PROMPT_VERSION } from "./classification-store";
 
@@ -80,6 +81,7 @@ export async function fetchAndStoreClassifications(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
       });
+      track("feature_use", { category: "xray", method: "open", result: res.ok ? "success" : res.status === 429 ? "limit" : "fail" });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.warn("[xray-classify 실패]", res.status, text.slice(0, 200));

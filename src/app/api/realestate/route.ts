@@ -3,18 +3,39 @@
 // op=estimate: 종류/시군구/단지명/면적 → 최근 실거래 추정치 (없고 면적 미상이면 면적 후보 목록)
 // 캐시: 서버 모듈 메모리 TTL(시군구·월 단위). 지속 캐시(cache-storage) 이관은 후속.
 import { NextResponse } from "next/server";
-import { resolveAddress, fetchTrades, fetchTradesXml, matchTrade, distinctAreas, type RealEstateTrade, type AreaKind } from "@/lib/realestate/realestate-service";
+import { resolveAddress, fetchTrades, matchTrade, distinctAreas, type RealEstateTrade, type AreaKind } from "@/lib/realestate/realestate-service";
+import { cdnCacheHeaders, guardRateLimit, guardRequest, withinUpstreamBudget } from "@/server/api-guard";
+
+// 최대 24개월 순차 조회가 있어 상한을 넉넉히 두되 무한 점유는 막는다
+export const maxDuration = 30;
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6시간
-const tradeCache = new Map<string, { at: number; data: RealEstateTrade[] }>();
+// 빈 결과 음성 캐시 — 거래 없는 시군구·월을 반복 요청해 요청당 최대 24회 공공데이터 호출을 유발하던 증폭 차단
+const EMPTY_TTL_MS = 10 * 60 * 1000;
+// 인스턴스 메모리 상한(LRU) — 임의 시군구·월 조합으로 메모리를 무한 증가시키지 못하게
+const TRADE_CACHE_MAX = 500;
+const MAX_QUERY_LEN = 100;
+const tradeCache = new Map<string, { at: number; ttl: number; data: RealEstateTrade[] }>();
+
+class UpstreamBudgetExceeded extends Error {}
 
 async function getTrades(dataset: string, lawd: string, ym: string): Promise<RealEstateTrade[]> {
   const key = `${dataset}:${lawd}:${ym}`;
   const hit = tradeCache.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
+  if (hit && Date.now() - hit.at < hit.ttl) {
+    // LRU — 최근 사용 항목을 맨 뒤로
+    tradeCache.delete(key);
+    tradeCache.set(key, hit);
+    return hit.data;
+  }
+  if (!(await withinUpstreamBudget("molit"))) throw new UpstreamBudgetExceeded();
   const data = await fetchTrades(dataset, lawd, ym);
-  // 빈 결과는 짧게만 유지되도록 성공(비어있지 않음)일 때만 캐시
-  if (data.length > 0) tradeCache.set(key, { at: Date.now(), data });
+  tradeCache.set(key, { at: Date.now(), ttl: data.length > 0 ? TTL_MS : EMPTY_TTL_MS, data });
+  while (tradeCache.size > TRADE_CACHE_MAX) {
+    const oldest = tradeCache.keys().next().value;
+    if (oldest === undefined) break;
+    tradeCache.delete(oldest);
+  }
   return data;
 }
 
@@ -34,33 +55,36 @@ async function recentTrades(dataset: string, lawd: string, from: number, to: num
 }
 
 export async function GET(request: Request) {
+  const blocked = guardRequest(request, { route: "realestate", l1PerMinute: 60 });
+  if (blocked) return blocked;
+  const limited = await guardRateLimit(request, "realestate", 20, 60);
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const op = searchParams.get("op") || "estimate";
+  // 실제 기능이 쓰는 분기만 허용 — 그 외 op(구 디버그 op=raw 등)는 거부
+  if (op !== "resolve" && op !== "estimate") return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
 
   try {
     if (op === "resolve") {
-      const query = searchParams.get("query") || "";
+      const query = (searchParams.get("query") || "").trim().slice(0, MAX_QUERY_LEN);
+      if (!query) return NextResponse.json({ error: "주소를 해석하지 못했습니다." }, { status: 200 });
+      if (!(await withinUpstreamBudget("kakao"))) {
+        return NextResponse.json({ error: "조회 중 오류가 발생했습니다." }, { status: 200, headers: { "X-RealEstate-Unavailable": "1" } });
+      }
       const result = await resolveAddress(query);
       if (!result) return NextResponse.json({ error: "주소를 해석하지 못했습니다." }, { status: 200 });
-      return NextResponse.json(result);
+      return NextResponse.json(result, { headers: cdnCacheHeaders(86400, 3600) });
     }
 
     const dataset = searchParams.get("dataset") || "apt";
     const lawd = searchParams.get("lawd") || "";
 
-    // op=raw — 실제 응답 태그명 대조용(서버 전용 디버그). 첫 item 블록 원문만 반환.
-    if (op === "raw") {
-      const ym = searchParams.get("ym") || ymOf(1);
-      const xml = await fetchTradesXml(dataset, lawd, ym);
-      const item = xml?.match(/<item>[\s\S]*?<\/item>/)?.[0] ?? null;
-      return NextResponse.json({ ym, item, hasXml: !!xml });
-    }
-
     // op=estimate
     const matchBy = (searchParams.get("matchBy") as "complex" | "area") || "complex";
-    const complexName = searchParams.get("complexName") || undefined;
-    const legalDong = searchParams.get("legalDong") || undefined;
-    const jibun = searchParams.get("jibun") || undefined;
+    const complexName = searchParams.get("complexName")?.slice(0, MAX_QUERY_LEN) || undefined;
+    const legalDong = searchParams.get("legalDong")?.slice(0, MAX_QUERY_LEN) || undefined;
+    const jibun = searchParams.get("jibun")?.slice(0, MAX_QUERY_LEN) || undefined;
     const areaKind = (searchParams.get("areaKind") as AreaKind) || undefined;
     const areaRaw = searchParams.get("area");
     const area = areaRaw ? parseFloat(areaRaw) : undefined;
@@ -99,7 +123,7 @@ export async function GET(request: Request) {
       matchedLegalDong: match?.legalDong ?? null,
       matchedFloor: match?.floor ?? null,
       areas, // 평형 수동 선택용 후보 (㎡)
-    });
+    }, { headers: cdnCacheHeaders(6 * 3600, 600) });
   } catch {
     return NextResponse.json({ error: "조회 중 오류가 발생했습니다." }, { status: 200, headers: { "X-RealEstate-Unavailable": "1" } });
   }

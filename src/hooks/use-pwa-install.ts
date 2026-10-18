@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { track } from "@/lib/analytics/ga";
 import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
+
+// 설치 완료 GA 이벤트 1회 가드(훅이 여러 컴포넌트에서 마운트됨)
+let installedTracked = false;
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -56,6 +59,11 @@ export function usePWAInstall() {
     // 설치 완료 이벤트 리스닝
     const handleAppInstalled = () => {
       console.log("PWA installed successfully");
+      // 훅이 여러 컴포넌트에서 마운트되므로 설치 이벤트는 모듈 단위 1회만 계측
+      if (!installedTracked) {
+        installedTracked = true;
+        track("pwa_install", { method: "installed" });
+      }
       setIsInstallable(false);
       setDeferredPrompt(null);
       setIsStandalone(true);
@@ -81,8 +89,10 @@ export function usePWAInstall() {
     }
 
     try {
+      track("pwa_install", { method: "prompt_view" });
       await evt.prompt();
       const choiceResult = await evt.userChoice;
+      track("pwa_install", { method: choiceResult.outcome === "accepted" ? "accepted" : "dismissed" });
       if (choiceResult.outcome === "accepted") {
         console.log("User accepted the A2HS prompt");
         (window as any).__bipEvent = null;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics/ga";
 import { IdCard, Check, Loader2, Download, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -165,6 +166,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
       a.href = dataUrl;
       a.download = `secretasset-${new Date().toISOString().slice(0, 10)}.png`;
       a.click();
+      track("share", { method: "save", content_type: variant });
       setSaveSuccess(true);
       window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
       setTimeout(() => setSaveSuccess(false), 2000);
@@ -244,6 +246,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
       const file = await dataUrlToFile(dataUrl, filename);
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
+        track("share", { method: "share", content_type: variant });
         setSaveSuccess(true);
         window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -276,6 +279,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
     navigator
       .share({ files: [prepared.file] })
       .then(() => {
+        track("share", { method: "share", content_type: variant });
         setSaveSuccess(true);
         window.dispatchEvent(new CustomEvent("tutorial-complete-step3"));
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -306,6 +310,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
       .write([new ClipboardItem({ "image/png": blobPromise })])
       .then(() => {
         toast.success("이미지가 복사됐어요! 카카오톡 등에 Ctrl+V로 붙여넣어보세요.");
+        track("share", { method: "copy", content_type: variant });
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       })

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toGaAssetType, track } from "@/lib/analytics/ga";
 import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
@@ -101,6 +102,7 @@ export function FloatingAddButton() {
     const asset = ASSET_TYPES.find((a) => a.type === type);
     setSelectedType(type);
     if (!asset?.hasScreenshot) {
+      track("asset_add_start", { asset_type: toGaAssetType(type), method: "manual" });
       if (type === "real-estate") dispatchAddRealEstate();
       else if (type === "yearly-net-asset") {
         // 순자산 페이지(YearlyNetAssetChart)가 마운트되어야 trigger 이벤트 수신 가능.
@@ -127,6 +129,7 @@ export function FloatingAddButton() {
   const handleMethodSelect = (mode: "screenshot" | "manual") => {
     if (!selectedType) return;
 
+    track("asset_add_start", { asset_type: toGaAssetType(selectedType), method: mode });
     if (selectedType === "stock") dispatchAddStock(mode);
     else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
     setIsOpen(false);
