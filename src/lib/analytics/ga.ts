@@ -3,7 +3,7 @@
  *
  * 원칙
  * - 전송값은 사전 정의 enum만(금액·수량·종목·티커·닉네임·assetId·공유키·URL 해시·에러 문구 금지).
- *   타입(union)으로 1차, 런타임 sanitizer로 2차 차단한다.
+ *   타입(union)으로 1차, 런타임 sanitizer로 2차 차단한다. 전송 직전 한국어 라벨로 치환(GA 화면 가독성).
  * - window.gtag가 없으면(로컬·preview — layout이 GA 스크립트를 렌더하지 않음) 전부 no-op.
  *   옵트아웃(ga-disable-*)은 gtag가 자체적으로 전송을 막는다.
  * - 내부 예외는 절대 호출부로 전파하지 않는다 — 계측이 저장·동기화·화면 흐름을 바꾸면 안 된다.
@@ -40,7 +40,7 @@ export type GaEvent =
   | "pwa_install"
   | "feature_use";
 
-const PARAM_VALUES = {
+export const PARAM_VALUES = {
   asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "yearly_net_asset"],
   method: [
     // 입력 방식
@@ -77,6 +77,51 @@ const PARAM_VALUES = {
 
 type ParamKey = keyof typeof PARAM_VALUES;
 export type GaParams = { [K in ParamKey]?: (typeof PARAM_VALUES)[K][number] };
+
+// GA에 실제 전송되는 한국어 라벨 — GA 보고서·탐색 분석에서 해설 없이 바로 읽히도록.
+// 코드 쪽 사전·타입은 영문 키 그대로 두고 전송 직전에만 치환한다. 같은 코드라도 매개변수별로 라벨이 다르다.
+// Record<코드, string> 타입이라 사전에 값을 추가하고 라벨을 빠뜨리면 컴파일 오류가 난다.
+const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], string> } = {
+  asset_type: {
+    stock: "주식", crypto: "암호화폐", cash: "현금", loan: "대출", real_estate: "부동산", yearly_net_asset: "연도별 순자산",
+  },
+  method: {
+    manual: "직접 입력", screenshot: "스크린샷",
+    wizard: "마법사", import: "백업 가져오기", sync_connect: "동기화 연결", skip_install: "설치 없이 시작",
+    save: "이미지 저장", share: "공유하기", copy: "이미지 복사", link: "링크 복사",
+    enable: "켜기", connect: "연결", push: "클라우드 백업", pull: "클라우드 불러오기",
+    export: "백업 내보내기", clear_all: "전체 삭제", clear_cache: "캐시 초기화",
+    disable: "끄기", unlock: "잠금 해제",
+    prompt_view: "설치 안내 노출", accepted: "설치 수락", dismissed: "설치 거절", installed: "설치 완료", inapp_move: "외부 브라우저 이동",
+    open: "실행", click: "클릭", close: "닫기", view: "노출", sell_all: "전량 매도", rebuy: "재매수", step: "수량 조정", submit: "전송", toggle: "전환",
+  },
+  result: {
+    success: "성공", fail: "실패", empty: "결과 없음", limit: "한도 초과", cancel: "취소",
+    done: "완료", skipped: "건너뜀",
+    create: "신규", update: "수정",
+    reflected: "반영", unreflected: "미반영", blocked: "차단", rollback: "롤백",
+    invalid: "유효하지 않음", pin_mismatch: "PIN 불일치", ignored: "무시됨",
+    conflict: "충돌", error: "오류",
+  },
+  source: {
+    web: "웹", pwa: "PWA 앱", inapp: "인앱 브라우저", settings: "설정", more: "더보기", home_tip: "홈 팁", share_card: "인증카드",
+    install: "설치 화면", fab: "추가 버튼", wizard: "마법사", welcome: "웰컴", dashboard: "대시보드", top_bar: "상단바", detail: "상세",
+  },
+  category: {
+    xray: "X-Ray", tax_sim: "절세 시뮬레이션", home_tip: "홈 팁", notice: "공지", feedback: "의견 보내기", theme: "테마",
+  },
+  step: {
+    "1": "1단계", "2": "2단계", "3": "3단계", "4": "4단계", "5": "5단계",
+    start: "시작", stock: "주식 단계", crypto: "암호화폐 단계", cash: "현금 단계", loan: "대출 단계", complete: "완료", exit: "중단",
+  },
+  nav_source: { tap: "탭", back: "뒤로가기", swipe: "스와이프", initial: "첫 진입" },
+  content_type: { stock: "주식 카드", portfolio: "포트폴리오 카드", type: "투자 유형 카드", link: "공유 링크" },
+};
+
+/** 코드 → 전송 라벨(테스트·명세 대조용으로 공개) */
+export function labelOf<K extends ParamKey>(key: K, code: (typeof PARAM_VALUES)[K][number]): string {
+  return (PARAM_LABELS[key] as Record<string, string>)[code];
+}
 export type GaAssetType = NonNullable<GaParams["asset_type"]>;
 
 // ─────────────────────────────────────────────────────────
@@ -99,13 +144,13 @@ function isDebug(): boolean {
   }
 }
 
-/** 사전에 정의된 키·값만 통과(AC2). 그 외 문자열·객체·배열·숫자는 제거 */
+/** 사전에 정의된 키·값만 통과(AC2)시키고 한국어 라벨로 치환. 그 외 문자열·객체·배열·숫자는 제거 */
 export function sanitizeParams(params: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(params)) {
     if (!(k in PARAM_VALUES)) continue;
     const allowed = PARAM_VALUES[k as ParamKey] as readonly string[];
-    if (typeof v === "string" && allowed.includes(v)) out[k] = v;
+    if (typeof v === "string" && allowed.includes(v)) out[k] = (PARAM_LABELS[k as ParamKey] as Record<string, string>)[v];
   }
   return out;
 }
@@ -182,7 +227,7 @@ export function trackScreen(viewKey: string, navSource: NonNullable<GaParams["na
       page_location: pageLocation(),
       page_path: screenPath(viewKey),
       page_title: SCREEN_TITLES[viewKey] ?? viewKey,
-      nav_source: navSource,
+      nav_source: PARAM_LABELS.nav_source[navSource],
     };
     if (isDebug()) payload.debug_mode = true;
     gtag("event", "page_view", payload);
@@ -201,7 +246,26 @@ export interface GaUserProps {
 
 let lastUserPropsJson = "";
 
-/** 사용자 속성 갱신(AC10) — 값이 바뀔 때만 전송 */
+// 사용자 속성 전송 라벨(한국어)
+const USER_PROP_LABELS: { [K in keyof GaUserProps]: Record<GaUserProps[K], string> } = {
+  app_mode: { pwa: "PWA 앱", web: "웹 브라우저", inapp: "인앱 브라우저" },
+  asset_count_bucket: { "0": "0개", "1": "1개", "2-5": "2~5개", "6+": "6개 이상" },
+  sync_enabled: { y: "사용", n: "미사용" },
+  onboarding_state: { new: "신규", wizard_done: "마법사 완료", skipped: "건너뜀" },
+  theme: { light: "라이트", dark: "다크" },
+};
+
+function labelUserProps(props: GaUserProps): Record<keyof GaUserProps, string> {
+  return {
+    app_mode: USER_PROP_LABELS.app_mode[props.app_mode],
+    asset_count_bucket: USER_PROP_LABELS.asset_count_bucket[props.asset_count_bucket],
+    sync_enabled: USER_PROP_LABELS.sync_enabled[props.sync_enabled],
+    onboarding_state: USER_PROP_LABELS.onboarding_state[props.onboarding_state],
+    theme: USER_PROP_LABELS.theme[props.theme],
+  };
+}
+
+/** 사용자 속성 갱신(AC10) — 값이 바뀔 때만 한국어 라벨로 전송 */
 export function setUserProps(props: GaUserProps): void {
   try {
     const json = JSON.stringify(props);
@@ -209,7 +273,7 @@ export function setUserProps(props: GaUserProps): void {
     const gtag = getGtag();
     if (!gtag) return;
     lastUserPropsJson = json;
-    gtag("set", "user_properties", props);
+    gtag("set", "user_properties", labelUserProps(props));
   } catch {
     // 무시
   }

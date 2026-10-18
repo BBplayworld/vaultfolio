@@ -11,6 +11,8 @@ import {
   assetCountBucket,
   toGaAssetType,
   screenPath,
+  labelOf,
+  PARAM_VALUES,
   __resetGaStateForTest,
 } from "@/lib/analytics/ga";
 import { STORAGE_KEYS } from "@/lib/local-storage";
@@ -84,7 +86,7 @@ describe("AC2 sanitizer", () => {
       source: { nested: true },
       step: 3,
     });
-    expect(out).toEqual({ asset_type: "stock", method: "screenshot" });
+    expect(out).toEqual({ asset_type: "주식", method: "스크린샷" });
   });
 
   it("track 전송 파라미터에 사전 외 값이 실리지 않는다", () => {
@@ -93,7 +95,7 @@ describe("AC2 sanitizer", () => {
     expect(name).toBe("asset_save");
     expect(payload).not.toHaveProperty("amount");
     expect(payload).not.toHaveProperty("nickname");
-    expect(payload).toMatchObject({ asset_type: "stock", method: "manual", result: "create" });
+    expect(payload).toMatchObject({ asset_type: "주식", method: "직접 입력", result: "신규" });
   });
 });
 
@@ -106,7 +108,7 @@ describe("AC3 page_location에 해시·쿼리 미포함", () => {
     expect(payload.page_location).toBe("https://secretasset.xyz/v/detail/stocks");
     expect(payload.page_path).toBe("/v/detail/stocks");
     expect(payload.page_title).toBe("상세·주식");
-    expect(payload.nav_source).toBe("initial");
+    expect(payload.nav_source).toBe("첫 진입");
     expect(JSON.stringify(payload)).not.toMatch(/[#?]|secretkey|share=/);
   });
 
@@ -167,7 +169,11 @@ describe("AC10 사용자 속성", () => {
     setUserProps(p);
     setUserProps({ ...p, asset_count_bucket: "2-5" });
     expect(gtag.mock.calls.filter((c) => c[0] === "set")).toHaveLength(2);
-    expect(gtag.mock.calls[0]).toEqual(["set", "user_properties", p]);
+    expect(gtag.mock.calls[0]).toEqual([
+      "set",
+      "user_properties",
+      { app_mode: "PWA 앱", asset_count_bucket: "1개", sync_enabled: "미사용", onboarding_state: "신규", theme: "다크" },
+    ]);
   });
 
   it("버킷·건수 유틸", () => {
@@ -204,8 +210,24 @@ describe("매핑 유틸", () => {
     trackParse("trade", "success");
     trackParse("crypto-trade", "limit");
     expect(gtag.mock.calls.map((c) => [c[1], c[2].asset_type, c[2].result])).toEqual([
-      ["screenshot_parse", "stock", "success"],
-      ["screenshot_parse", "crypto", "limit"],
+      ["screenshot_parse", "주식", "성공"],
+      ["screenshot_parse", "암호화폐", "한도 초과"],
     ]);
+  });
+});
+
+describe("한국어 라벨", () => {
+  it("사전의 모든 값에 비어 있지 않은 라벨이 있고 매개변수 안에서 중복되지 않는다", () => {
+    for (const [key, codes] of Object.entries(PARAM_VALUES)) {
+      const labels = (codes as readonly string[]).map((c) => labelOf(key as never, c as never));
+      for (const l of labels) expect(typeof l === "string" && l.length > 0 && l.length <= 100).toBe(true);
+      expect(new Set(labels).size).toBe(labels.length);
+    }
+  });
+
+  it("같은 코드도 매개변수별로 다르게 라벨링된다", () => {
+    expect(labelOf("asset_type", "stock")).toBe("주식");
+    expect(labelOf("content_type", "stock")).toBe("주식 카드");
+    expect(labelOf("step", "stock")).toBe("주식 단계");
   });
 });
