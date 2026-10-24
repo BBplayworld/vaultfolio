@@ -232,6 +232,7 @@
 
 **색 — 상태·정보**
 - 활성/선택은 **배경+굵기**로 강조(`bg-muted … font-semibold`), 비활성은 `text-muted-foreground`.
+- **선택 카드(목록 중 1개 고르기)** — 선택 = `bg-card shadow-sm ring-2 ring-brand` + 우측 `Check`(`text-brand`), 비선택 = `bg-muted/40 hover:bg-muted/70`(다크 `/25`·`/40`), 최소 높이 `min-h-10`, `aria-pressed`, press `scale-[0.96]`. 체크박스 대신 카드 전체가 히트영역(예: `StockTargetPicker`, #4.29).
 - 정보성 텍스트는 파랑 금지(손익 전용) → 중립 회색. **info 아이콘만 sky** 허용(`text-sky-600/70 dark:text-sky-400/70`, hover sky-700/300) — 형태로 손익 숫자와 구분.
 
 **정보 처리**

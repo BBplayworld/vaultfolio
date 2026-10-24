@@ -120,6 +120,9 @@ export interface AttributionCause {
 export interface PeriodAttribution {
   fromDate: string;
   toDate: string;
+  // 기록 필터용 실제 구간 경계(YYYY-MM-DD) — fromDate/toDate는 표시용이라 월별 시작점이면 "YYYY-MM"이다(S-4.33)
+  windowFrom?: string;
+  windowTo?: string;
   deltaNet: number;
   priceEffect: number;   // 투자 성과(시세)
   fxEffect: number;      // 환율 영향
@@ -274,6 +277,9 @@ export interface AttributionDisplayItem {
   amount: number;   // 색상 판정용 원값
   text: string;     // 부호+만원 표기
   estimated?: boolean; // 이 항목 금액에 예측치가 섞여 있는지 — 뷰의 항목별 "일부 예측" 배지
+  // 근거 기록 날짜(S-4.33) — attachCauseDates가 부여. 기록이 없는 원인(시세·환율·신규 현금 등)은 없음
+  dateLabel?: string;  // "10/21" 또는 "10/20~10/23"
+  firstDate?: string;  // 정렬용 최초 기록일(YYYY-MM-DD)
 }
 
 export function getAttributionItems(attr: PeriodAttribution): AttributionDisplayItem[] {
@@ -360,6 +366,101 @@ export function formatAttributionDate(d: string): string {
   const parts = d.split("-");
   if (parts.length >= 3) return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
   return `${parseInt(parts[1])}월`;
+}
+
+// ── 기록 타임라인 (S-4.33) ─────────────────────────────────────────────
+// 원인분해 구간 안의 **반영된** 입출금·매매·대출 기록을 건별로 나열 — 합계 원인만으로는 "언제 무엇이"
+// 일어났는지 알 수 없어 흐름이 이상하게 느껴지는 문제를 보완한다. 금액 계산은 하지 않는 순수 파생.
+// 경계·환산은 reflected*Flow와 같은 규칙(inFlowWindow·krwMul·tradeKrwRate)을 쓴다.
+export interface AttributionRecord {
+  id: string;
+  date: string;       // YYYY-MM-DD
+  createdAt: string;  // 같은 날짜 내 입력 순 정렬용
+  causeKey: AttributionCauseKey;
+  label: string;      // 원인 라벨과 같은 표기("현금 출금"·"주식 매수" 등)
+  title: string;      // 계좌·종목·대출명
+  amount: number;     // KRW, 순자산 원인 방향 부호(입금·매수·상환 +, 출금·매도·추가 대출 −)
+}
+
+export function getAttributionRecords(
+  attr: PeriodAttribution,
+  assetData: AssetData,
+  rates: { USD: number; JPY: number },
+): AttributionRecord[] {
+  const from = attr.windowFrom ?? attr.fromDate;
+  const to = attr.windowTo ?? attr.toDate;
+  const records: AttributionRecord[] = [];
+  const push = (r: Omit<AttributionRecord, "label">) =>
+    records.push({ ...r, label: causeShortLabel(r.causeKey, r.amount) });
+
+  // 현금·대출: [from, to] (전체 기간 첫 구간 규칙), 주식·코인: (from, to]
+  for (const t of assetData.cashTransactions || []) {
+    if (!t.reflected || !inFlowWindow(t.date, from, to, true)) continue;
+    const amount = (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
+    const title = (assetData.cash ?? []).find((c) => c.id === t.cashId)?.name ?? "삭제된 계좌";
+    push({ id: t.id, date: t.date, createdAt: t.createdAt, causeKey: "income", title, amount });
+  }
+  for (const t of assetData.transactions || []) {
+    if (!t.reflected || !inFlowWindow(t.date, from, to, false)) continue;
+    const krw = t.quantity * t.price * tradeKrwRate(t, rates);
+    push({
+      id: t.id, date: t.date, createdAt: t.createdAt,
+      causeKey: t.type === "buy" ? "buy:stock" : "sell:stock",
+      title: `${t.stockName} ${t.quantity.toLocaleString()}주`,
+      amount: t.type === "buy" ? krw : -krw,
+    });
+  }
+  for (const t of assetData.cryptoTransactions || []) {
+    if (!t.reflected || !inFlowWindow(t.date, from, to, false)) continue;
+    const krw = t.quantity * t.price;
+    push({
+      id: t.id, date: t.date, createdAt: t.createdAt,
+      causeKey: t.type === "buy" ? "buy:crypto" : "sell:crypto",
+      title: `${t.name} ${t.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}개`,
+      amount: t.type === "buy" ? krw : -krw,
+    });
+  }
+  for (const t of assetData.loanTransactions || []) {
+    if (!t.reflected || !inFlowWindow(t.date, from, to, true)) continue;
+    const title = (assetData.loans ?? []).find((l) => l.id === t.loanId)?.name ?? "삭제된 대출";
+    push({
+      id: t.id, date: t.date, createdAt: t.createdAt, causeKey: "debt", title,
+      amount: t.type === "repay" ? t.amount : -t.amount,
+    });
+  }
+  return records.sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+}
+
+// 원인 항목에 근거 기록 날짜 부착 — 같은 key 기록의 최초~최신일. 기록 없는 원인은 그대로 둔다.
+export function attachCauseDates(
+  items: AttributionDisplayItem[],
+  records: AttributionRecord[],
+): AttributionDisplayItem[] {
+  const range = new Map<AttributionCauseKey, { min: string; max: string }>();
+  for (const r of records) {
+    const cur = range.get(r.causeKey);
+    if (!cur) range.set(r.causeKey, { min: r.date, max: r.date });
+    else range.set(r.causeKey, { min: r.date < cur.min ? r.date : cur.min, max: r.date > cur.max ? r.date : cur.max });
+  }
+  return items.map((item) => {
+    const d = range.get(item.key);
+    if (!d) return item;
+    const dateLabel = d.min === d.max
+      ? formatAttributionDate(d.min)
+      : `${formatAttributionDate(d.min)}~${formatAttributionDate(d.max)}`;
+    return { ...item, dateLabel, firstDate: d.min };
+  });
+}
+
+// 날짜 기반 표시 순서 — 구간 전체에 걸친 시장 요인(시세·환율) → 날짜 있는 항목(최초일 오름차순)
+// → 날짜 없는 나머지. 같은 순위 안에서는 기존 CAUSE_ORDER를 유지한다.
+const MARKET_CAUSES = new Set<AttributionCauseKey>(["price", "price:stock", "price:crypto", "price:realEstate", "fx"]);
+export function sortCausesByDate(items: AttributionDisplayItem[]): AttributionDisplayItem[] {
+  const tier = (i: AttributionDisplayItem) => (MARKET_CAUSES.has(i.key) ? 0 : i.firstDate ? 1 : 2);
+  return [...items].sort((a, b) =>
+    tier(a) - tier(b)
+    || (a.firstDate && b.firstDate ? a.firstDate.localeCompare(b.firstDate) : 0)
+    || CAUSE_ORDER[a.key] - CAUSE_ORDER[b.key]);
 }
 
 // 효과 목록에서 절대값 상위 1~2개를 topCauses로 선정 (2위가 1위의 25% 미만이면 1개만).
@@ -648,7 +749,7 @@ function resolveAttribution(
       { key: "deposit", amount: depositEffect },
       { key: "debt", amount: debtEffect },
     ]);
-    return { fromDate, toDate, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, effects, topCauses, restEffect, restCauses };
+    return { fromDate, toDate, windowFrom: prev._date, windowTo: curr._date, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, effects, topCauses, restEffect, restCauses };
   }
 
   // 예측 분해: 시작 스냅샷이 레거시(netAsset만) — Δ순자산은 실측 그대로 쓰고,
@@ -701,7 +802,7 @@ function resolveAttribution(
     { key: "debt", amount: debtEffect, estimated: debtFromBreakdown === null },
   ]);
   return {
-    fromDate, toDate, deltaNet,
+    fromDate, toDate, windowFrom: prev._date, windowTo: curr._date, deltaNet,
     priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect,
     estimated: true, estimatedUntil: toDate, effects, topCauses, restEffect, restCauses,
   };
@@ -710,6 +811,16 @@ function resolveAttribution(
 // KRW 환산 배수 — 원인분해 전 구간 공용 (JPY는 100엔당)
 const krwMul = (cur: string | undefined, rates: { USD: number; JPY: number }): number =>
   cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1;
+
+// 주식 체결 KRW 환산 배수 — 체결 환율 우선(JPY는 100엔당), 없으면 현재 환율.
+// reflectedTradeFlow·getAttributionRecords 공용(두 곳의 환산이 갈리면 기록 합계와 원인 금액이 어긋난다)
+const tradeKrwRate = (
+  t: { currency: string; exchangeRate?: number },
+  rates: { USD: number; JPY: number },
+): number =>
+  t.exchangeRate && t.exchangeRate > 0
+    ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate)
+    : krwMul(t.currency, rates);
 
 // 거래 flow 윈도우 판정 — reflected*Flow 4종의 단일 출처(경계 규칙이 함수마다 갈리지 않게).
 // includeFrom=true면 [from, to], false면 (from, to].
@@ -789,10 +900,7 @@ function reflectedTradeFlow(
   let sell = 0;
   for (const t of txns) {
     if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, false)) continue;
-    const rate = t.exchangeRate && t.exchangeRate > 0
-      ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate)
-      : krwMul(t.currency, rates);
-    const amount = t.quantity * t.price * rate;
+    const amount = t.quantity * t.price * tradeKrwRate(t, rates);
     if (t.type === "buy") buy += amount;
     else sell -= amount;
   }
@@ -848,6 +956,8 @@ function mergeAttributions(older: PeriodAttribution, newer: PeriodAttribution, m
   return {
     fromDate: older.fromDate,
     toDate: newer.toDate,
+    windowFrom: older.windowFrom,
+    windowTo: newer.windowTo,
     deltaNet: older.deltaNet + newer.deltaNet,
     priceEffect: older.priceEffect + newer.priceEffect,
     fxEffect: older.fxEffect + newer.fxEffect,

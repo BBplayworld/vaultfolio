@@ -109,6 +109,12 @@ _components/
 
 ---
 
+### StockTargetPicker · PositionChangePreview (`forms/trade/stock-target-picker.tsx`, #4.29)
+
+- `StockTargetPicker({ candidates, value, onChange, allowNew, defaultCategory, defaultBroker? })` — 거래를 반영할 **보유 자산 항목 직접 선택** 카드 목록(타입 배지·증권사·종목명·수량·평단). `TradeTarget = { kind:"existing"; stockId } | { kind:"new"; broker; category }`. `allowNew`(매수만)이면 마지막 "신규 자산 등록" 카드 → 증권사·주식 타입 Select 인라인. 수동 거래 입력(`trade-input.tsx`)·거래 스크린샷(`trade-screenshot-import.tsx`) 공용 — 증권사로 자동 라우팅하지 않는다(같은 증권사 IRP·ISA·연금저축 구분 불가)
+- `PositionChangePreview({ before, after, currency, title? })` — 반영 후 예상 포지션(보유 수량·평단 before → after) 박스. 두 거래 입력 화면 공용
+- 같은 파일 헬퍼 export: `formatPrice(value, currency)`(USD $·JPY ¥·KRW), `getPositionSnapshot(stock, lockedByManual=false)`(수동 입력은 수동 포지션을 lockedByManual로 래핑해 사용), `categoryLabel(category)`
+
 ### stock-input.tsx 카드 레이어
 
 | Layer          | 내용                                                    |
@@ -173,6 +179,7 @@ _components/
 | ProfitCard          | `main-nav/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드)   |
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
+| AttributionRecordList (S-4.33) | `views/attribution-records.tsx` | 원인분해 구간의 반영 기록(입출금·매매·대출) "기록 내역 N건" 펼침 — 날짜·구분·계좌/종목명·금액 시간순. 홈 순자산 헤더 펼침·성과 순자산 변화 공용, 기록 0건이면 미렌더 |
 | AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
 | HomeTipBox (S-4.32 후속) | `views/home/home-tip-box.tsx`      | 홈 알림/팁 통합 박스 — 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 화면엔 한 번에 1개만 뜬다. 판정은 [state-and-utils.md](state-and-utils.md) `home-tip.ts`의 `pickHomeTip()`이 **새 공지(필수 노출)>백업>세금>자산최신화>신규기능>저방문기능** 순으로 골라 반환, 종류별 재노출 정책은 원래 로직 그대로(백업·최신화=노출 시 오늘 flag, 세금=명시적 닫기 시 이번 달 flag, **공지=열람(클릭)해야만 `markCurrentNoticeSeen()`으로 TTL 90일 dismiss — X 닫기는 이번 세션만 숨기고 열람 처리 안 함(최소 1회 열람 강제)**, 기능=닫기·클릭 이동 둘 다 영구 dismiss). **X 닫기는 종류별 mark에 더해 `sessionStorage` 세션 플래그(`secretasset_home_tip_session_dismissed`, `pwa-connect-prompt.tsx` 패턴)를 찍어 이번 세션(창) 동안 박스 전체를 숨긴다 — 다음 순위 팁이 바로 튀어나오는 두더지잡기 방지. 재접속(새 세션) 시 초기화되어 각 종류의 정책대로 다음 팁이 정상 회전 노출. 단, `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 안 뜸)은 이 세션 플래그를 무시하고 무조건 `pickHomeTip`을 호출한다(#4.24) — 다른 팁을 X로 닫아 세션 플래그가 서도 공지의 "최초 1회 노출"은 가로막히지 않는다. 공지가 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끄므로, 이후 공지 X 닫기 → 같은 세션 재진입 시 재노출 안 됨(QA에서 재노출 버그 발견·수정).** 인터랙션은 5종 모두 "카드 전체 클릭=유일한 동작(백업 다운로드/세금 화면 이동/최신화 시트 오픈/**공지→해당 기능 다이얼로그 오픈**/기능 화면 이동), X=닫기"로 통일된 단일 보더리스 셸. **공지(#4.24 재도입, 필수 노출)**: 홈 진입 시 강제 팝업하던 과거 `UpdateNoticeDialog`(S-4.32에서 제거)와 달리 다이얼로그를 억지로 띄우진 않지만, 팁 카드 자체는 **최우선순위**라 새 버전 공지가 있으면 백업·세금 안내보다도 먼저 반드시 노출. **클릭 시 공지 본문 다이얼로그가 아니라 이번 릴리스가 홍보하는 실제 기능으로 직행**(#4.24 후속) — 지금은 `dispatchOpenShareCard("type")`로 인증카드를 투자 유형 타입으로 즉시 오픈(#4.26, 이전엔 portfolio)(릴리스마다 홍보 대상이 바뀌면 이 액션도 함께 갱신). 더보기 메뉴의 공지 수동 열람(`notice.tsx`, `tool-menu.tsx`의 `showNotice`)은 그대로 유지 |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |

@@ -53,7 +53,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
 ### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
-- 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기, 중복 거래 인라인 확인
+- 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기(`PositionChangePreview`), 중복 거래 인라인 확인
+- 👤 **반영할 자산 항목 직접 선택(#4.29)** — 카테고리·종목 선택 후 그 종목의 **전체 보유 항목**(카테고리 필터 무관)을 `StockTargetPicker` 카드(타입 배지·증권사·수량·평단)로 고른다. 증권사 Select·`resolveMatch` 자동 라우팅은 제거(같은 증권사 안 IRP·ISA·연금저축 구분 불가 문제). 후보 1개면 자동 선택. **신규 자산 등록**(매수만) = 증권사+주식 타입 선택 → 종목 메타 복제·포지션 0 초안(`NEW_STOCK_ID` 자리표시)으로 미리보기 후 `addTransactionsBatch([tx], [], [newStock])` 저장, 반영 강제(체크박스 비활성)·중복 검사 생략. 매도로 바꾸면 신규 선택 해제. 상세 진입(`lockedStock`)은 종전대로
 - 👤 거래 삭제 → 미반영 즉시삭제 / 반영 롤백 다이얼로그
 - ⚙ `trade-utils`: 가중평균 평단·환율, 매도 차감, 미반영 스킵, **역산 롤백(수동 보유분 보존)**, `findDuplicateTransaction`, `pruneTransactions` 3년 롤링
 - ⚙ `validate-reflection`: oversell/중복반영 restrict, manual_override/backdated confirm
@@ -67,7 +68,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 단일 저장 `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
 - 엣지: 출금 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단, 통화(USD·JPY/100) 환산
 - ⚙ **날짜 필드 KST 기준(2026-08)** — 기본값·`max`(`todayStr`)이 `Date.now() + 9시간` 기준(구 UTC 자정 기준은 KST 00~09시에 오늘 날짜 선택 자체가 불가능했고, 기록된 거래가 하루 전으로 저장돼 F-ACTIVITY 원인분해 `income` 집계에서 누락되는 부작용도 있었음)
-- 회귀: 공유 토큰 `parts[12]` 왕복·`caIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
+- 회귀: 공유 토큰 `parts[12]` 왕복·`caIdx` 재연결·구버전 파싱(R3), 사용자 편집 신호(`saveData`→`ASSET_USER_EDIT_EVENT`)로 push(R14)
 
 ### F-LOAN-TX. 대출 상환/추가 대출 거래내역 ([loan-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-tx-input.tsx) · [loan-tx-view.tsx](../../src/app/(main)/_components/views/detail/loan-tx/loan-tx-view.tsx)) — 명세 [S-4.24](../specs/4.24-loan-transactions.md)
 - 👤 대출 카드 "상환/대출 기록·내역" 진입 → 상환/추가대출 토글·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총상환·총추가대출·순상환 통계, 기간·유형 필터. 전역 "자산 업데이트" 플로팅 버튼의 대출 선택 → "상환/대출 기록"에서도 동일 폼 진입(대상 미지정, 폼에서 대출 직접 선택 — 현금과 대칭)
@@ -78,7 +79,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **원인분해 `debt` cause 정확화(예측 경로 한정)** — 정밀(bothEnriched) 경로의 `debtEffect`는 스냅샷 `breakdown.loans` 델타라 이미 정확해 미변경. 예측 경로의 `estimatePeriodInflows`는 `loan.startDate` 기반 **신규 대출만** 포착해 기존 대출의 기간 내 상환을 놓쳤다 — `reflectedLoanFlow(assetData, from, to)`(통화 무관, `reflectedCashInflow`/`reflectedTradeFlow`와 동형)로 보강. 신규 대출이면서 동시에 반영 거래도 있는 경우 이중계산 방지를 위해 `estimatePeriodInflows`가 해당 대출을 `loanTxLoanIds`로 skip(`tradedStockIds` 패턴 미러링). 신규 cause 키는 만들지 않음(기존 `debt` 그대로)
 - 엣지: 상환 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단
 - 엣지: **신규 대출 등록은 잔액 0을 거부**(`loan-input.tsx` 폼 레벨 가드, `!editData && balance<=0`) — 완납은 상환 거래내역으로만 도달해야 하며, 등록 즉시 완납 상태로 생성되는 것을 방지(수정은 허용, 상환 반영으로 0 도달 가능)
-- 회귀: 공유 토큰 `parts[13]` 왕복·`loanIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음), **R27**(`loanCount`≠존재 여부 — 아래 참조)
+- 회귀: 공유 토큰 `parts[13]` 왕복·`loanIdx` 재연결·구버전 파싱(R3), 사용자 편집 신호(`saveData`→`ASSET_USER_EDIT_EVENT`)로 push(R14), **R27**(`loanCount`≠존재 여부 — 아래 참조)
 - 자동: `src/lib/__tests__/loan-tx-utils.test.ts`(prune·중복탐지·잔액델타·상환초과 가드), `src/lib/report/__tests__/asset-report.test.ts`(예측 경로 단독 상환 포착·신규대출+반영거래 이중계산 방지 2건)
 
 ### F-CRYPTO-TX. 암호화폐 매수/매도 거래내역 ([crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx) · [crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)) — 명세 [S-4.25](../specs/4.25-crypto-transactions.md)
@@ -89,7 +90,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 종합 카드는 하위 항목(거래소) 존재 시 `!hasSubItems` 조건으로 기록/내역 버튼을 항상 숨김(1개 거래소만 지정된 경우도 포함) — 개별 거래소 하위 카드(`SubCryptoCard`)에서만 기록. 주식(F-STOCK)과 동일 규칙
 - ⚙ 원인분해 `buy:crypto`/`sell:crypto`가 `reflectedCryptoFlow`(반영된 실제 거래) 기반으로 정확화 — 이전엔 스냅샷 원가 델타 추정치였음. 예측 경로 `estimatePeriodInflows`는 `tradedCryptoIds`로 반영 거래 있는 코인을 매수일 추정에서 제외(이중계산 방지, `tradedStockIds` 패턴)
 - 엣지: 초과매도 반영 차단, 미반영 로그는 포지션 무변경, 미래·보존기간(3년) 밖 날짜 차단
-- 회귀: 공유 토큰 `parts[14]` 왕복·`crIdx` 재연결·구버전 파싱(R3), `getComparablePayloadString` 포함(사용자 편집 push, R14 핑퐁 없음)
+- 회귀: 공유 토큰 `parts[14]` 왕복·`crIdx` 재연결·구버전 파싱(R3), 사용자 편집 신호(`saveData`→`ASSET_USER_EDIT_EVENT`)로 push(R14)
 - 자동: `src/lib/__tests__/trade-utils.test.ts`(코인 구조적 타입 재사용 2건), `src/lib/report/__tests__/asset-report.test.ts`(정밀/예측 분기 buy:crypto 정확화·이중계산 방지 2건)
 
 ### F-TAX. 세금 신고 안내 ([tax-calendar-view.tsx](../../src/app/(main)/_components/views/tax/tax-calendar-view.tsx)) — 명세 [S-4.23](../specs/4.23-tax-calendar.md)
@@ -99,7 +100,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **태그 매칭**(AC1): 상가(`realEstate.type==="commercial"`)→business, 부동산 보유→realestate, `category==="foreign" || currency!=="KRW"`→foreign, irp/isa/pension→pension, `mortgage-home`→loan, 현금 보유→cash
 - ⚙ **해외주식 실현차익**(AC6·AC7): `computeForeignRealizedGain`이 거래 로그를 날짜순 replay(`computeNewPosition` 재사용)해 당해 매도분 손익을 KRW 통산. 250만원 초과 시 이듬해 5월 신고 대상 표기. 매수 로그·체결 환율 누락 시 현재 평단·환율 폴백 + "추정" 표기. 거래 로그 없거나 당해 매도 0건이면 `null`(미표시). 국내주식(KRW)은 집계 제외
 - 👤 **캘린더 뷰**: `내 세금`/`전체` 필터, 현재 월 강조·자동 스크롤, 카드 `Collapsible` 상세, 하단 면책 문구 항상 노출
-- 엣지: 12월 → 다음 달 1월 롤오버, `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
+- ⚙ **홈 배너 정렬·마감 필터(#4.29)** — `getAssetDrivenHighlights`는 **이번 달 우선 → 같은 달 내 high 우선**(종전 severity 우선이라 다음 달 high가 이번 달 일정을 밀어내던 문제). 이번 달 항목 중 `dueLabel` 마지막 `M/D`(`dueEndDate`)가 오늘보다 이전이면 제외, 날짜 없는 라벨("2월 급여"·"시행 예정")은 월말까지 유지
+- 엣지: 12월 → 다음 달 1월 롤오버, 같은 달 내 `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
 - 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
 
 ### F-TAX-SIM. 연말 절세 시뮬레이션 ([tax-year-end-simulator.tsx](../../src/app/(main)/_components/views/tax/tax-year-end-simulator.tsx)) — 명세 [S-4.31](../specs/4.31-tax-sell-simulation.md)
@@ -122,7 +124,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-TRADE-SS. 거래 스크린샷 가져오기 ([trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/trade-screenshot-import.tsx) · 코인 [crypto-trade-screenshot-import.tsx](../../src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx))
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`/코인은 `saveData`)
-- 👤 **미보유 신규 종목/코인 매수 인식 시 자동 신규 등록**(`resolveMatch`/`matchMap`의 `"new"` 케이스): "신규 종목으로 추가됩니다" 표시, 주식은 카테고리 인라인 Select(기본값 국내/해외 인식 결과로 프리필), 코인은 상단 거래소 select 필수. 반영 ON/OFF 토글과 무관하게 항상 포지션 생성(참조할 기존 보유가 없으므로), `currentPrice`는 체결가로 임시 채워지고 다음 시세 갱신에서 정상 티커면 자동 교정
+- 👤 **주식: 거래마다 반영할 자산 항목 직접 선택(#4.29)** — 전역 증권사 Select·`resolveMatch`/`MatchInfo` 자동 라우팅 제거. 후보 = 티커 일치 → 정규화 종목명 일치 → (티커 미인식 시) 보유 종목명 유사 일치(`findClosestNames`, OCR 오타). 기본값: 후보 1개(정확 일치)면 자동 선택, 2개 이상·유사 일치는 미선택+안내, 미보유 매수는 "신규 자산"(인식 증권사·국내/해외 프리필). 각 행에 `StockTargetPicker` + 체결일 오름차순 누적 `PositionChangePreview`(반영 OFF+기존="거래내역에만 기록"), 보유 초과 매도는 경고+등록 차단. 신규 자산은 (종목·증권사·타입) 단위로 묶어 1개 생성(보유 후보가 있으면 메타 복제). **코인**: 미보유 매수 인식 시 자동 신규 등록(상단 거래소 select 필수), 반영 ON/OFF와 무관하게 항상 포지션 생성, `currentPrice`는 체결가로 임시 채움
+- ⚙ **종목명 OCR 오타 보정(#4.29)** — `lookupTicker`([ticker-map.ts](../../src/app/api/parse-screenshot/ticker-map.ts)) 단계: exact → prefix(잘린 이름 우선) → **국내 오타 보정**(`name-match.ts` 편집거리, 길이<6 금지·<12 ≤1·이상 ≤2, **유일 최근접만**) → 오타 후보가 2개 이상이면 suffix·substring 추정 금지("") → US. 회귀 테스트 [ticker-lookup-kr-etf.test.ts](../../src/lib/__tests__/ticker-lookup-kr-etf.test.ts)가 국내 ETF 전 종목 정확명 100%·오타 시뮬레이션 오매칭 0건을 고정(잘린 이름과 구별 불가 2건은 제외 집계)
 - 엣지: 통화 KRW/USD 분기, 중복 거래 처리, **매도인데 미보유면 계속 매칭 실패로 차단**(신규 등록은 매수만 허용 — 팔 종목이 없는 매도 신규 생성 금지), 코인 신규 등록 시 거래소 미선택이면 등록 차단
 
 ### F-CRYPTO. 코인 시세 자동 갱신 (업비트) ([upbit-service.ts](../../src/lib/finance/upbit-service.ts) · [api/finance/crypto](../../src/app/api/finance/crypto/route.ts)) — 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
@@ -136,7 +139,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 429·418 수신 시 재시도 없이 stale 유지 + `X-Upbit-Unavailable` 헤더(AC9)
 - 👤 코인 보유 상태로 접속 → 현재가가 업비트 시세로 갱신, 같은 시간 내 재접속 시 외부 호출 없음
 - 엣지: 업비트 미상장 코인(해외 거래소 전용) 수동값 보존, 코인 0개일 때 호출 자체 스킵
-- 회귀: crypto `baseDate`·`currentPrice`가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰(packV7) crypto 섹션 8필드 유지(R3)
+- 회귀: 코인 시세 갱신(`baseDate`·`currentPrice`)이 push를 유발하지 않는지(R14 — 자동 push는 사용자 편집 신호만), 공유 토큰(packV7) crypto 섹션 8필드 유지(R3)
 
 ### F-REALESTATE. 부동산 실거래 추정 ([realestate-service.ts](../../src/lib/realestate/realestate-service.ts) · [api/realestate](../../src/app/api/realestate/route.ts)) — 명세 [S-4.21](../specs/4.21-realestate-transaction-price.md)
 - ⚙ **데이터셋별 면적 필드**(AC8): apt/offi/rh=`excluUseAr`, sh=`totalFloorAr`, nrg=`buildingAr`, 폴백 `plottageAr`. `areaKind`(exclusive/gross/plottage)가 다른 거래는 **절대 섞어 비교하지 않으며**, 후보 0건이어도 전체 풀로 되돌리지 않는다
@@ -146,7 +149,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 조회 창 6→12→24개월 단계 확장, 캐시 슬롯 `${dataset}:${lawd}:${ym}` 재사용
 - 👤 아파트: 주소 조회 → 추정가·근거(단지·면적·층) 표시, 상세 카드에 면적 수치 노출. 상가·단독: 면적 입력(㎡/평 토글) 전에는 추정 미노출, 입력 후 등급 배지와 함께 표시
 - 👤 토지: 실거래가 조회 기능 없음(지목별 형평 비교·지분 문제로 신뢰 가능한 추정이 어려워 제외) — 시세는 수동 입력만
-- 회귀: `marketEstimate*` 전 필드가 `getComparablePayloadString`에서 제외되는지(R14 핑퐁), 공유 토큰 pack/unpack 포맷 미변경(R3)
+- 회귀: 실거래 추정 자동 갱신(`marketEstimate*`)이 push를 유발하지 않는지(R14 — `saveAssetData` 직접 호출이라 사용자 편집 신호 없음), 공유 토큰 pack/unpack 포맷 미변경(R3)
 - 자동: `src/lib/__tests__/realestate-match.test.ts`
 
 ### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
@@ -186,6 +189,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **`cashRoundTrip` 힌트(2026-08)** — 기간 중 `breakdown.cash`가 baseline에서 크게 벗어났다가 순변화 없이 되돌아오면(왕복) `resolveAttribution`이 두 끝점만 비교하는 특성상 `cash` 원인이 통째로 사라진다. `detectCashRoundTrip`이 실측 daily 구간(`mid`~`curr` 또는 이미 실측인 `prevOld`~`curr`)에서 최대 이탈폭·날짜를 찾아 `cashRoundTrip`으로 붙이고, 뷰가 "{날짜}에 최대 N만원 변동 후 복귀돼 순변화엔 반영 안 됐어요" 캡션으로 노출(`estimatedUntil` 캡션과 같은 자리, 둘 다 축약형 — 2026-08 문구 축약). 순변화가 최고 이탈폭의 절반 이상이면 조용히 생략(진짜 왕복이 아니라 단조 변화로 판단). `cash`만 대상(시세 등은 상시 변동이 정상이라 일반화 시 노이즈), 성적표 기간 선택기(`computePeriodAttribution`)에만 적용.
   - **오탐 회귀(2026-08 수정)**: 이탈폭(`breakdown.cash`, 기록된 입금 포함)과 왕복 판정(`cash` cause 잔차, 기록된 입금은 `income`으로 분리돼 제외)이 서로 다른 기준을 썼다. `cashTransactions`에 반영된 큰 입금이 있으면 잔액은 영구히 오르는데 `cash` 잔차는 ≈0이라 "왕복 후 복귀"로 오판되고, 이미 "월급·목돈 유입으로 +N만원 늘었어요"(`income`)가 표시된 화면에 모순되는 힌트가 함께 떴다(실사용 재현: 입금일=구간 끝 날짜인데도 힌트 노출). `detectCashRoundTrip`의 이탈폭 계산에서 시점별 `reflectedCashInflow`(시작점~해당 일자 누적)를 빼 **기록으로 설명되지 않는 변동만**으로 두 값의 기준을 맞춤. 진짜 왕복(현금이 실제로 나갔다 돌아온 경우)은 그대로 감지된다 — 그 이동은 기록이 없거나 입출금이 상쇄돼 누적 income이 0이기 때문.
 - ⚙ **`estimated`→`estimatedUntil` 계약 확장** — `estimated: boolean`은 하위호환용(전체 구간이 예측일 때만 true). 부분예측(하이브리드 병합 결과)은 `estimatedUntil?: string`(이 날짜 **이전**만 예측)으로 표현. 뷰는 `estimated` → "예측" 배지, `!estimated && estimatedUntil` → "일부 예측" 배지로 구분(`asset-report-view.tsx`). `computeAttributionSince`(홈 "지난 접속 이후")는 **하이브리드 대상이 아니다** — 기존 `?? candidates[0]` 폴백만 유지
+- ⚙ **항목별 날짜·기록 타임라인(S-4.33)** — `getAttributionRecords(attr, assetData, rates)`가 구간(`windowFrom`/`windowTo` = 시작·끝 스냅샷 `_date`, monthly 시작점의 표시용 "YYYY-MM"과 분리) 안 **반영된** 현금·주식·코인·대출 기록을 날짜→입력순으로 나열(경계는 `inFlowWindow`: 매매 `(from,to]`, 현금·대출 `[from,to]`, 주식 환산은 `tradeKrwRate` 공용). `attachCauseDates`가 key별 최초~최신일을 `dateLabel`("10/21"·"10/20~10/23")로 부착, `sortCausesByDate`는 시세·환율 → 날짜 있는 항목(최초일순) → 날짜 없는 항목(`CAUSE_ORDER`). 금액·합계 불변. 홈 펼침=비교 구간 캡션+날짜+`AttributionRecordList`(스크린샷 모드 제외), 성과=그룹 순서 유지·그룹 내부만 날짜 정렬+목록 하단 기록 내역
 - ⚙ **원인 표시 카테고리 순서(`getOrderedCauses`)** — 절대값 크기순이 아닌 주식시세→코인시세→부동산시세→(예측)시세→환율→주식매수→주식매도→코인매수→코인매도→부동산매수→부동산매도→소득(income)→현금잔차(cash)→대출→임차보증금(deposit) 고정 순서로 나열(연관 원인이 나란히 보이도록). `topCauses[0]`(절대값 최대)의 선정 로직은 그대로, 나열 순서만 결정
 - ⚙ **잔차 흡수는 부호가 같은 원인에만**(`getAttributionItems`, 2026-08) — 임계값 미만 잔차 합을 절대값 최대 원인에 얹되, 부호가 다르면 얹지 않는다(방향 고정 라벨에 반대 부호가 붙어 "주식 매수로 −3만원 늘었어요" 같은 모순 문장이 나오는 것 방지). 부호가 맞는 원인이 없으면 `cash`로(없으면 신설)
 - ⚙ **용어**: 신규투입은 자산군별 "매수/매도"로 통일(`주식 매수`·`코인 매수`·`부동산 매도` …), 시세도 자산군 접두("주식 시세 상승"). 통합(자산군 미분리) `price`="보유자산 시세 상승/하락"(2026-08, 구 "시세 상승/하락"에서 명확화 — `price:stock` 등 실측 자산군별 라벨과 구분). `income`="현금 입금"/"현금 출금"(2026-08, 구 "소득 유입"/"인출·지출"에서 매수·매도와 같은 패턴으로 통일, 문장도 "현금 입금으로 ~ 늘었어요" 패턴), `cash`="현금 잔액 증가"/"현금 잔액 감소"(짧은 라벨은 사건을 단정하지 않지만, 서술형 문장은 "현금 잔액 직접 수정으로 ~ 추정돼요" — 실사례 디버깅으로 대부분 직접 잔액 수정이 원인임을 확인해 "추정" 어투로 반영, 2026-08), `deposit`="임차보증금 반환"/"임차보증금 증가", `debt`="대출 상환"/"신규 대출"(임차보증금 제외, 실제로 대출 잔액만 반영하므로 "부채"보다 정확). "그 외" 라벨은 없다. **라벨 단일 출처는 `causeShortLabel`** — `AttributionCause.label`·`causeSentence`가 모두 여기서 파생되므로 두 표기가 어긋날 수 없다(구 `CAUSE_LABELS` 소비처 0이라 제거)
@@ -206,7 +210,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
 - ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양)
-- 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → `getComparablePayloadString`이 두 곳을 이미 제외하므로 등급 확정이 push를 유발하지 않음(R14 핑퐁 없음). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)
+- 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → 등급 기록은 사용자 편집 신호가 아니므로 push를 유발하지 않음(R14). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)
 - ⚙ **홈 진입점(2026-09)** — `dashboard.tsx`의 `NetAssetSummaryBox`가 우상단에 트로피+점수 미니 배지 노출(`components.md` 대시보드 표 참고). 성적표 화면 방문 이력이 있어야(스냅샷 `grade` 필드 존재) 뜨고, 재계산 없이 저장된 최신값만 읽음 — 미방문 계정은 배지 자체가 렌더 안 됨(조용한 생략)
 - 👤 성적표를 한 번도 안 연 계정은 홈에 배지가 안 뜨는지, 한 번 연 뒤에는 홈에 트로피+점수 배지가 뜨고 탭하면 성적표 화면으로 바로 이동하는지, 다크·라이트 모두 티어별 색이 잘 보이는지
 - 자동: `src/lib/report/__tests__/asset-grade.test.ts` (미작성 — 후속 과제)
@@ -275,12 +279,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **`#sync=` 해시 삭제 시점** — `detect`는 `aid`를 `pendingConnectAssetId` state로 캡처만, **해시 제거는 연결 모달이 닫힐 때 `clearPendingConnect`(291-303)에서** 수행(성공·취소 공통). **detect(다이얼로그 여는 틱)에서 replaceState 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(R20). `#sync=`는 비밀 없는 assetId 포인터(E2EE 금고암호 별도)라 모달 표시 중 잔존 허용·완료 시 제거. 연결 모달은 `pendingConnectAssetId` state 기반(해시 비의존, [connect-dialog:87,100,130,178](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx)) ([provider:149-162,291-303](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **앱잠금 중 pull 차단(잠금 우회·인증키 삭제 방지)** — `autoPullIfNewer` 진입부 `if (isPwaLocked()) return`로 잠금화면 위 자동 pull(→`clearAssetData`) 차단. 잠금 해제 시 `PwaLockScreen`이 `PWA_UNLOCKED_EVENT`(`secretasset:pwa-unlocked`) 발행 → 폴링 effect 리스너가 즉시 1회 pull. `isPwaLocked`/`PWA_UNLOCKED_EVENT`는 `pwa-lock-screen.tsx` export 단일 소스 ([provider:221-245](../../src/lib/cloud-sync/cloud-sync-provider.tsx) · [pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
 - ⚙ **3-상태 모델**: `none`(금고 미설정) / `locked`(assetId만 보유, 이번 세션 미무장) / `armed`(키 메모리 보유→자동 동기화). 마운트 시 `loadRememberedMaster` unwrap 성공+assetId 존재 → 자동 `armed`, 아니면 `locked`/`none` ([provider:124-146](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
-- ⚙ **자동 동기화** — 송신: 자산(`assetData`)·닉네임(`NICKNAME_EVENT`→`changeTick`) 변경 → `AUTO_PUSH_DEBOUNCE_MS=2500` 디바운스 무음 push. 수신: **`POLL_INTERVAL_MS=60000`(60s)** 폴링(`document.visibilityState==="visible"`일 때만)+`focus`+`visibilitychange`+effect 셋업 즉시 1회 → `fetchRemoteVersion > getVersion()`이면 자동 pull. (문서가 오래 "30s"로 적혀 있었으나 코드는 도입 이후 `60000` 불변 — 2026-08 정정)
-- ⚙ **push 트리거 2경로** — ① 파생값 제외 비교(`getComparablePayloadString`) 불일치 ② `ASSET_USER_EDIT_EVENT`(`saveData`·`addStockRaw`만 발행) → `userEditRef`. ②는 pull 직후 skip과 파생값 비교를 **모두 우회**한다. 파생 갱신(시세·코인·스냅샷·부동산·마이그레이션)은 `saveAssetData`를 직접 호출해 ②를 내지 않는 것이 규약 — `saveData`로 되돌리면 자동 정리만으로 push가 강제된다.
+- ⚙ **자동 동기화** — 송신: 사용자 편집(`ASSET_USER_EDIT_EVENT`)·닉네임(`NICKNAME_EVENT`) → `userEditRef`+`changeTick` → `AUTO_PUSH_DEBOUNCE_MS=2500` 디바운스 무음 push. 수신: **`POLL_INTERVAL_MS=60000`(60s)** 폴링(`document.visibilityState==="visible"`일 때만)+`focus`+`visibilitychange`+effect 셋업 즉시 1회 → `fetchRemoteVersion > getVersion()`이면 자동 pull. (문서가 오래 "30s"로 적혀 있었으나 코드는 도입 이후 `60000` 불변 — 2026-08 정정)
+- ⚙ **push 트리거 = 사용자 편집 신호만(2026-10)** — `ASSET_USER_EDIT_EVENT`(`saveData`·`addStockRaw`·`notifyAssetUserEdit()` — 무티커 스크린샷 등록·파일 가져오기·공유 반영) + `NICKNAME_EVENT` → `userEditRef`. 파생값 제외 payload 비교(구 `getComparablePayloadString`)·`lastPushedRef`·`skipNextChangeRef`는 **제거**됐다 — 제외 목록에 없는 파생 변화(2026-07 `baseDate`, 2026-10 daily 30일 롤링 절단·`dailyArchive` 이관)가 생길 때마다 조회만 한 기기가 push해 편집 기기에 "다른 기기의 변경을 반영했습니다" 토스트가 반복됐다. 파생 갱신(시세·코인·스냅샷·부동산·마이그레이션)은 `saveAssetData` 직접 호출로 신호를 내지 않는 것이 규약이고, 다음 사용자 편집 push에 함께 실린다. **새 사용자 편집 경로가 `saveData`를 우회하면 반드시 `notifyAssetUserEdit()`** — 누락 시 그 편집이 다른 기기로 안 간다. 비교 트리거 재도입 금지
 - ⚙ **편집 대기 중 자동 pull 보류(시간 상한 필수)** — `autoPullIfNewer({ force })`는 `Date.now() - userEditAtRef.current < USER_EDIT_PULL_HOLD_MS`(디바운스 2.5s×4=10s)면 return한다. pull은 로컬을 통째로 덮어쓰면서 `userEditRef`까지 지우므로, 디바운스 대기 중 pull이 끼어들면 **방금 한 편집이 push되지도 복구되지도 않고 소실**된다(무음). **`userEditRef`(boolean)만으로 막으면 안 된다** — push 실패(오프라인·busy·conflict)로 플래그가 안 풀리면 타 기기 변경이 영구히 안 들어온다(과거 회귀). 409 conflict 화해는 `autoPullRef.current({ force: true })`로 이 보류를 우회 — conflict는 push가 서버에 거부된 상태라 pull이 유일한 진로다.
-- ⚙ **실패한 pull은 `skipNextChangeRef`를 되돌린다** — `empty`/`error`로 끝났는데 skip 예약이 남으면 다음 비-사용자편집 변경 1회를 삼킨다(닉네임 변경은 `changeTick`만 올리고 `userEditRef`는 안 올려 그대로 걸린다).
+- ⚙ **pull 직후 되-push 없음** — `runPull` 성공 시 `userEditRef=false`(덮어쓴 로컬엔 대기 편집이 없다). 신호 기반이라 pull로 바뀐 `assetData`가 자동 push를 일으키지 않는다(구 `skipNextChangeRef` 불필요)
 - ⚙ **서버 push는 원자적 CAS(2026-08 P0)** — `/api/sync` PUT의 버전 비교+저장은 `compareAndSetAssetEnvelope`([cache-storage.ts](../../src/lib/cache-storage.ts)) 단일 호출로 처리한다. 과거처럼 `getAssetEnvelope`(읽기)→비교→`setAssetEnvelope`(쓰기)로 쪼개면 두 기기가 거의 동시에 push할 때 **둘 다 버전 체크를 통과해(TOCTOU) 나중 쓰기가 먼저 쓰기를 조용히 지운다(lost update) — 어느 쪽도 409를 못 받는다.** Upstash는 Lua 스크립트(`redis.eval`)로 GET→비교→SET을 Redis 내부 단일 원자 연산으로 실행하고, 로컬 `FileCacheStorage`는 읽기·비교·쓰기를 **중간 `await` 없이 동기 fs 호출로만** 구성해 같은 보장을 만든다. pubKey 교체 불가(403) 체크만 원자성 밖(사전 체크, 최악도 데이터 손실 아닌 거부)
-- ⚙ **pull의 기준점(syncedIds) 병합(2026-08 P0)** — `applyImportedPayload`가 pull 한정으로 덮어쓰기 직전 로컬을 읽어 **원격에 없는 로컬 항목 중 "아직 서버에 올라간 적 없는 것"만 되살린다**(`reconcileAdditiveMerge`, state-and-utils 참조). 없으면 "A가 추가 → B가 편집하다 409 → 복구 pull이 로컬 통째 교체 → B의 추가분 소실"이 정상 멀티기기 사용에서 구조적으로 반복됐다. **판별 기준점이 반드시 필요하다** — 삭제가 tombstone 없이 배열 제거라 "로컬에 있고 원격에 없다"만으로는 신규 추가와 원격 삭제를 구분할 수 없고, 무조건 되살리면 **다른 기기의 삭제가 부활해 재-push까지 되어 삭제가 무력화**된다(R28). 되살린 게 있으면 `runPull`이 `lastPushedRef=null`로 파생값 비교를 건너뛰고 **즉시 재-push**한다. 기준점은 pull 시 **병합 전 원격 키**로, push 시 **push한 키**로 갱신(순서 틀리면 지켜낸 자산을 다음 pull이 스스로 지운다). 같은 id를 양쪽이 다르게 수정한 충돌은 여전히 원격 우선(범위 밖). `connect`는 `merge:false`로 원격 완전 대체(S2 "자산 동일"), `unlock`은 병합
+- ⚙ **pull의 기준점(syncedIds) 병합(2026-08 P0)** — `applyImportedPayload`가 pull 한정으로 덮어쓰기 직전 로컬을 읽어 **원격에 없는 로컬 항목 중 "아직 서버에 올라간 적 없는 것"만 되살린다**(`reconcileAdditiveMerge`, state-and-utils 참조). 없으면 "A가 추가 → B가 편집하다 409 → 복구 pull이 로컬 통째 교체 → B의 추가분 소실"이 정상 멀티기기 사용에서 구조적으로 반복됐다. **판별 기준점이 반드시 필요하다** — 삭제가 tombstone 없이 배열 제거라 "로컬에 있고 원격에 없다"만으로는 신규 추가와 원격 삭제를 구분할 수 없고, 무조건 되살리면 **다른 기기의 삭제가 부활해 재-push까지 되어 삭제가 무력화**된다(R28). 되살린 게 있으면 `runPull`이 `runPushRef.current(true)`로 **즉시 재-push**한다. 기준점은 pull 시 **병합 전 원격 키**로, push 시 **push한 키**로 갱신(순서 틀리면 지켜낸 자산을 다음 pull이 스스로 지운다). 같은 id를 양쪽이 다르게 수정한 충돌은 여전히 원격 우선(범위 밖). `connect`는 `merge:false`로 원격 완전 대체(S2 "자산 동일"), `unlock`은 병합
 - ⚙ **온라인 복귀 시 pull-first 보장(2026-08)** — armed 폴링 effect가 `window "online"` 리스너로 `autoPullRef.current({ force: true })`를 호출한다. 없으면 오프라인 중 쌓인 디바운스 push가 다음 폴링(최대 60초)보다 먼저 나가, 오프라인 동안 다른 기기가 올린 변경을 모르는 채 충돌 경로로 들어간다(마운트 pull-first와 같은 취지)
 - ⚙ **pull은 "없으면 유지"** — 원격 payload에 스냅샷 키가 없으면(`buildExportPayload`는 스냅샷이 비면 키 자체를 넣지 않음) `clearAssetData`가 지운 로컬 daily/monthly를 **되돌려 쓴다**. 미보완 시 스냅샷 없는 새 기기가 push한 걸 기존 기기가 pull하면 이력이 통째로 증발한다(`dailyArchive`는 이미 merge 복원).
 - ⚙ **pull 후 전체 동기화(R-신규)** — `runPull`·`armWithPull`(연결)은 복원 직후 `refreshData()`가 아니라 **`initAndSync(getAssetData())`** 호출 → 환율→주식 현재가→스냅샷 전체 재동기화. `refreshData`는 진행 중 sync만 취소하고 오늘자 주식·환율을 갱신하지 않아, 양쪽 기기 모두 자산 보유 시 pull 후 시세 미갱신 버그가 있었음. `initAndSync` 진입의 `syncTodayStockPrices`가 이전 sync abort·`saveSnapshotsBlockedRef=false`·`dataResetVersion++`를 모두 수행(기존 `refreshData` 역할 포함) ([provider:205,280](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
@@ -303,12 +307,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - **S7 암호 오류**: 틀린 금고 암호 → pull 401/복호화 실패 → "금고 암호가 올바르지 않습니다." + **기존 로컬 데이터 보존**(keysRef null 복귀)
 - **S8 기억/해제**: remember ON→`saveRememberedMaster`→재진입 무암호 자동 armed. armed 화면 "이 기기 연결 끊기"(`forget`)→clearSyncState→none
 - **S9 pull 후 자격 재기록(전제 무효 — 중복 방어로 유지)**: `clearAssetData` keepKeys에 `STORAGE_KEYS.syncState`가 **이미 포함**되어 `secretasset_sync`는 삭제되지 않는다. `runPushAfterRestoreFix`의 재기록은 현재 no-op에 가까운 이중 방어다(2026-08 확인). 코드·주석의 "clearAssetData가 secretasset_sync를 지움" 서술은 낡음
-- **S10 push-loop/동시성 가드**: pull 직후 `skipNextChangeRef`로 디바운스 push 미발생, `busyRef` 뮤텍스로 push/pull 동시 실행 차단("동기화 중입니다.")
+- **S10 push-loop/동시성 가드**: 조회만 한 기기(편집 없음)는 시세·스냅샷 갱신 후에도 push하지 않음 → 편집 기기에 "다른 기기의 변경" 토스트 미노출. pull 직후 디바운스 push 미발생, `busyRef` 뮤텍스로 push/pull 동시 실행 차단("동기화 중입니다.")
 - **S11 앱잠금+동기화 첫 진입(P0 회귀)**: 앱잠금 ON + remembered 기기 첫 진입 → 잠금화면 위에서 자동 pull·**자동 push 모두 미실행**(`isPwaLocked()` 가드 양쪽). PIN 해제 → `unlockAndLoad` 완료 후 `PWA_UNLOCKED_EVENT` → pull로 다른 기기 변경 반영(F-APPLOCK 해제 순서 참조 — 병렬로 두면 서로 덮어씀). **해제 후 PIN 재검증 정상**(pull의 `clearAssetData`가 `secretasset_pwa_auth_*` 보존 → "비밀번호 불일치" 버그 없음)
 
 #### 엣지·회귀
 - 엣지: 첫 pull(404→`empty`), 서명 만료(ts±300s 초과→401), assetId 없는 상태 push/pull 차단("잠금 해제가 필요합니다."), 4MB 초과(413), 동일 출처 XSS는 device-key decrypt 호출 가능(완전 방어 아님, 표준 완화)
-- 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), `getComparablePayloadString()`이 `lastUpdated` 제외 비교로 무한 push 루프 차단, **`clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존(S11 앱잠금 해시 유실 방지)**
+- 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), 자동 push는 사용자 편집 신호만(파생 변경·pull로 무한 push 루프 없음), **`clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존(S11 앱잠금 해시 유실 방지)**
 
 ### F-SYNC. 가격·환율 동기화
 - 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
@@ -551,7 +555,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 | R11 | **PWA 설치 흐름 공용화** | 홈 버튼·웰컴가이드가 `PwaInstallFlow` 단일 소스 공유 — 한쪽 트리거/문구만 고쳐 다른 진입점이 어긋나지 않는지. `PwaInstallButton` 공개 API 시그니처 보존. 설치 가이드는 `InstallGuideContent({ env })` 단일 소스(iosStep·guideStep 공유) |
 | R12 | **transition:all 잔존** | UI 컴포넌트에 `transition-all` 재유입 금지 — 변하는 속성만 명시(레이아웃 thrash·원치 않는 transition 방지) |
 | R13 | **pull 후 sync-state 재기록** (전제 무효) | `clearAssetData` keepKeys에 `STORAGE_KEYS.syncState`가 이미 있어 `secretasset_sync`는 삭제되지 않는다 — `runPushAfterRestoreFix`는 이중 방어로만 남아 있다. keepKeys에서 `syncState`를 빼면 이 항목이 다시 살아난다(F-CLOUD-SYNC S9) |
-| R14 | **자동 push 무한루프/동시성 가드** | pull 직후 `skipNextChangeRef` 스킵(**실패 시 되돌리기 필수**) + `getComparablePayloadString()` 제외 목록 + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). **제외 전량**: `lastUpdated` / 올해 `yearlyNetAssets` / **오늘·어제 daily**·이번달 monthly / 부동산 `marketEstimate*` 9개 + `regionCode`·`legalDong`·`complexName` / 코인 `baseDate`·`currentPrice` / API 종목 `baseDate`·`name`·`inactiveCheckedAt`(halted 포함)·활성종목 `currentPrice`·`inactiveStatus`·`inactiveReason`. **어제자까지 제외하는 이유**: `saveSnapshots`가 일요일에 토요일 스냅샷을 생성하고 등급도 토요일 항목에 기록하며, 자정을 넘겨 켜두면 어제자가 비교에 편입돼 파생 변경만으로 push된다. **`baseDate`(장외=매일·장중=매시간 슬롯 도장)가 비교에 남으면 자산 미변경에도 핑퐁** — 제외 필수. `buildExportPayload`(실제 push)는 불변. R5(sync abort)와 연계 |
+| R14 | **자동 push 트리거·동시성 가드** | 자동 push는 **사용자 편집 신호만**(`ASSET_USER_EDIT_EVENT`·`notifyAssetUserEdit()`·`NICKNAME_EVENT`) + `busyRef` 뮤텍스로 push↔pull 동시 실행 차단(S10). 파생값 제외 payload 비교(구 `getComparablePayloadString`)를 **재도입 금지** — 제외 목록 방식은 파생 필드가 늘 때마다 새서(2026-07 `baseDate` 매시간 핑퐁, 2026-10 daily 롤링 절단·`dailyArchive` 이관으로 조회 기기 push) 편집 기기에 "다른 기기의 변경" 토스트가 반복됐다. 반대 방향 위험: `saveData`를 우회하는 **사용자 편집 경로가 신호를 안 쏘면 동기화 누락** — 신규 경로 추가 시 `notifyAssetUserEdit()` 호출 확인. 파생 갱신은 `saveAssetData` 직접 호출(신호 없음) 유지. R5(sync abort)와 연계 |
 | R26 | **pull이 로컬을 지우기만 하고 복원하지 않는 필드** | `applyImportedPayload`는 `clearAssetData` **전에** 로컬을 읽어두고 수신분이 없으면 되돌려 써야 한다(daily/monthly 스냅샷·`dailyArchive`). "payload에 없음"을 "삭제"로 처리하면 스냅샷 없는 기기가 push한 순간 다른 기기의 이력이 증발한다. 신규 payload 필드를 추가할 때 이 패턴을 따를지 판단할 것 |
 | R27 | **집계 카운트 ≠ 존재 여부** | `getAssetSummary()`의 `*Count` 필드가 특정 조건(예: `loanCount`는 `balance>0`만, S-4.24)으로 필터링되면, 그 필드를 "탭에 갈 데이터가 있는가"를 묻는 네비게이션 게이트(`onClick={() => s.xCount ? go(...) : ''}` 류)에 그대로 재사용하지 않는다 — 필터링된 항목만 있으면 카운트가 0이 되어 그 데이터로 진입할 방법이 없어진다(대출 전부 완납 시 상세 허브 "대출" 카드가 no-op이 되던 회귀, 2026-08 QA). 네비게이션 게이트는 원본 배열의 `length > 0`(존재 여부)로, 표시용 숫자는 `*Count`(현황)로 **분리**할 것. 새 `*Count` 필드에 필터를 추가할 때마다 그 필드의 모든 소비처(KPI 표시·게이트·AI 프롬프트 헤더-본문 정합 등)를 함께 점검 |
 | R15 | **동기화 해시·코드 호환** | `#sync=` 신규, `#asset=`/`#vault=` 구 진입 호환 유지(provider detect·clearPendingConnect). `sync:`(동기화 코드) ↔ `share:`(복원 코드) 구분 보존 |

@@ -8,6 +8,7 @@
 
 import { KR_NAME_TO_CODE } from "@/lib/finance/kr-master";
 import { US_NAME_TO_TICKER } from "@/lib/finance/us-master";
+import { normalizeStockName as normalizeName, findClosestNames } from "@/lib/name-match";
 
 // ─── 해외 주식 ─────────────────────────────────────────────────────────────
 export const FOREIGN_STOCK_MAP: Record<string, string> = {
@@ -759,13 +760,6 @@ export const FOREIGN_STOCK_MAP: Record<string, string> = {
 
 // ─── 통합 매핑 (정규화 키) ──────────────────────────────────────────────────
 
-function normalizeName(name: string): string {
-  return name
-    .replace(/[()（）\s\-·&…]/g, "")
-    .replace(/\.+$/, "") // 뒷부분의 줄임표(.) 제거
-    .toLowerCase();
-}
-
 const _allMap: Record<string, string> = {
   ...KR_NAME_TO_CODE,
   ...FOREIGN_STOCK_MAP,
@@ -774,6 +768,22 @@ const _allMap: Record<string, string> = {
 export const TICKER_MAP_NORMALIZED: Record<string, string> = Object.fromEntries(
   Object.entries(_allMap).map(([k, v]) => [normalizeName(k), v])
 );
+
+// 국내(ETF·주식) 정규화 키 — OCR 오타 보정 단계 전용
+const KR_NORMALIZED: Record<string, string> = Object.fromEntries(
+  Object.entries(KR_NAME_TO_CODE).map(([k, v]) => [normalizeName(k), v])
+);
+const KR_NORMALIZED_KEYS = Object.keys(KR_NORMALIZED);
+
+// 국내 종목명 OCR 오타 보정 — 허용 거리 이내 최근접 키(동률 전부)
+const closestKrKeys = (normalized: string) => findClosestNames(normalized, KR_NORMALIZED_KEYS);
+
+// 유일 최근접만 코드 반환(동률이면 "")
+// 예: "SOL 미국TOP5채권합50"(혼 누락) → "SOL 미국TOP5채권혼합50"
+export function fuzzyLookupKr(name: string): string {
+  const hits = closestKrKeys(normalizeName(name));
+  return hits.length === 1 ? KR_NORMALIZED[hits[0]] : "";
+}
 
 // 미국 주식·ETF 영문명 인덱스 — KR/FOREIGN 미스 시에만 exact + prefix(보수적)로 사용
 const US_NORMALIZED: Record<string, string> = Object.fromEntries(
@@ -803,6 +813,14 @@ export function lookupTicker(name: string): string {
   }
   if (bestPrefixMatch) return bestPrefixMatch;
 
+  // 2.5단계: 국내 종목명 OCR 오타 보정(중간 글자 누락·치환). 잘린 이름(입력이 키의 앞부분)은 위 prefix 단계가 우선
+  // (오타 보정을 먼저 두면 잘린 이름 83건이 다른 종목으로 바뀌는 회귀 — 전 ETF 점검 테스트로 확인)
+  const krClose = closestKrKeys(normalized);
+  if (krClose.length === 1) return KR_NORMALIZED[krClose[0]];
+  // 오타 거리 이내 실존 종목이 2개 이상 = 오타가 확실하나 어느 종목인지 불명 → suffix·substring 추정 금지
+  // (예: "KODEX 200IT TR" 오타가 suffix 단계에서 "KODEX 200"으로 오매칭되던 문제)
+  const ambiguousTypo = krClose.length > 1;
+
   // 3단계: suffix 매칭 — 등록된 키가 입력의 앞부분인 경우 (입력이 키보다 긴 경우)
   // 예: "kodex미국배당커버드콜액티브etf" → "kodex미국배당커버드콜액티브" 키에 매칭
   let bestKeyPrefixMatch = "";
@@ -813,12 +831,12 @@ export function lookupTicker(name: string): string {
       bestKeyPrefixLen = key.length;
     }
   }
-  if (bestKeyPrefixMatch) return bestKeyPrefixMatch;
+  if (bestKeyPrefixMatch && !ambiguousTypo) return bestKeyPrefixMatch;
 
   // 4단계: 부분 일치 (includes) — 입력이 5자 이상이고 키에 포함되는 경우
   // 예: "미국필라델피아반도체" (앞의 TIGER 누락) -> "tiger미국필라델피아반도체나스닥" 매칭
   // 오탐 방지를 위해 입력 문자열이 최소 5자 이상일 때만 적용
-  if (normalized.length >= 5) {
+  if (normalized.length >= 5 && !ambiguousTypo) {
     let bestSubstringMatch = "";
     let bestSubstringKeyLen = Infinity;
     for (const key of Object.keys(TICKER_MAP_NORMALIZED)) {

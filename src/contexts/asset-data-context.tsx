@@ -27,8 +27,15 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 // 사용자가 명시적으로 저장한 편집(add/update/delete = saveData 경로) 알림 이벤트.
 // 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다.
-// 클라우드 동기화가 이 신호를 받으면 파생값 비교 결과와 무관하게 push한다(변경 감지 누락 방지).
+// 클라우드 동기화는 **이 신호(와 닉네임 변경)만** push 트리거로 본다 — 파생 변경은 push하지 않는다.
+// 따라서 사용자 편집은 반드시 saveData를 경유하거나, 우회 저장(saveAssetDataRaw·가져오기·공유 반영)이면
+// notifyAssetUserEdit()를 호출해야 한다. 누락하면 그 편집이 다른 기기로 동기화되지 않는다.
 export const ASSET_USER_EDIT_EVENT = "secretasset-asset-user-edit";
+
+export function notifyAssetUserEdit(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
+}
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
 let lastToastAt = 0;
@@ -957,6 +964,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     // 공유자가 선택한 종가 기준 옵션 적용 (localStorage + store 동시 갱신)
     if (profitBasis) useProfitBasisStore.getState().setBasis(profitBasis);
     notify.success(MSG.SHARED_DATA_LOADED);
+    notifyAssetUserEdit(); // 공유 데이터 반영은 사용자 행동 — 동기화 push 트리거
     setSnapshotVersion(v => v + 1);
     skipAllTutorialSteps();
     tutorialStore.getState().initTutorial();
@@ -1183,8 +1191,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const success = saveAssetData(data);
     if (success) {
       setAssetData({ ...data, lastUpdated: new Date().toISOString() });
-      // 사용자 명시 편집 신호 — 동기화가 파생값 비교를 건너뛰고 반드시 push하게 한다
-      window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
+      // 사용자 명시 편집 신호 — 클라우드 동기화 push 트리거
+      notifyAssetUserEdit();
     }
     return success;
   }, []);
@@ -1349,12 +1357,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 스크린샷 가져오기 전용: ticker 없는 종목도 허용 (superRefine 우회)
   // 스키마 검증만 우회할 뿐 명백한 사용자 편집이므로 saveData와 동일하게 편집 신호를 발행한다
-  // (없으면 push가 호출처 refreshData로 인한 파생값 비교 우연 통과에 의존하게 된다)
   const addStockRaw = useCallback(
     (stock: Stock) => {
       const newData = { ...assetData, stocks: [...assetData.stocks, stock] };
       const success = saveAssetDataRaw(newData);
-      if (success) window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
+      if (success) notifyAssetUserEdit();
       return success;
     },
     [assetData]

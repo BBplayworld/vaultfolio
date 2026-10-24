@@ -34,10 +34,17 @@ import { Stock, type Transaction } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
-import { formatCurrency } from "@/lib/number-utils";
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
-import { stockCategories, securitiesFirms } from "@/config/asset-options";
+import { stockCategories } from "@/config/asset-options";
+import {
+  StockTargetPicker,
+  PositionChangePreview,
+  formatPrice,
+  getPositionSnapshot as getBasePositionSnapshot,
+  categoryLabel,
+  type TradeTarget,
+} from "./stock-target-picker";
 
 // 거래 입력 폼 스키마
 const tradeFormSchema = z.object({
@@ -53,33 +60,22 @@ const tradeFormSchema = z.object({
 
 type TradeFormValues = z.infer<typeof tradeFormSchema>;
 
-const formatPrice = (value: number, currency: string) => {
-  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  return formatCurrency(value);
-};
+// 신규 자산 선택 시 form.stockId 자리표시 값(저장 시 실제 id로 교체)
+const NEW_STOCK_ID = "__new_stock__";
 
-function getPositionSnapshot(stock: Stock): PositionSnapshot {
-  return {
-    stockId: stock.id,
-    quantity: stock.quantity,
-    avgPrice: stock.averagePrice,
-    avgExchangeRate: stock.purchaseExchangeRate ?? 0,
-    source: stock.positionSource ?? "manual",
-    effectiveDate: stock.positionEffectiveDate ?? stock.purchaseDate,
-    lockedByManual: stock.positionSource === "manual" || !stock.positionSource,
-  };
-}
+// 수동 입력은 수동 포지션을 재계산 대상으로 표시(lockedByManual) — 가드 판정용
+const getPositionSnapshot = (stock: Stock): PositionSnapshot =>
+  getBasePositionSnapshot(stock, stock.positionSource === "manual" || !stock.positionSource);
 
 export function TradeInput() {
-  const { assetData, addTransaction, addTransactionWithPosition, exchangeRates } = useAssetData();
+  const { assetData, addTransaction, addTransactionWithPosition, addTransactionsBatch, exchangeRates } = useAssetData();
   const [isOpen, setIsOpen] = useState(false);
   const [screenshotOpen, setScreenshotOpen] = useState(false);
   const [mode, setMode] = useState<"select" | "manual">("select");
   const [priceInKrw, setPriceInKrw] = useState(false);
   const [dupPending, setDupPending] = useState<{ tx: Transaction; stock: Stock } | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState(""); // 종목(티커) 대표 id
-  const [selectedBroker, setSelectedBroker] = useState(""); // 증권사 (필수)
+  const [target, setTarget] = useState<TradeTarget | undefined>(); // 반영할 보유 자산 항목(직접 선택) 또는 신규 자산
   const [filterCategory, setFilterCategory] = useState("all");
   const [lockedStock, setLockedStock] = useState(false); // 상세에서 종목 사전선택으로 진입
 
@@ -114,8 +110,34 @@ export function TradeInput() {
     },
   });
 
+  // 선택 종목(티커)의 전체 보유 항목 — 카테고리 필터와 무관하게 계좌·타입별로 모두 노출해 직접 선택
+  const groupRep = stocks.find((s) => s.id === selectedGroupId);
+  const groupCandidates = useMemo(() => {
+    if (!groupRep) return [];
+    return Array.from(groupStocksByTicker(stocks).values()).find((g) => g.some((s) => s.id === groupRep.id)) ?? [];
+  }, [groupRep, stocks]);
+
+  // 신규 자산 초안 — 같은 종목 메타(티커·통화 등) 복제 + 선택한 증권사·주식 타입, 포지션 0
+  const newStockDraft = useMemo<Stock | undefined>(() => {
+    if (target?.kind !== "new" || !groupRep) return undefined;
+    return {
+      ...groupRep,
+      id: NEW_STOCK_ID,
+      broker: target.broker,
+      category: target.category,
+      quantity: 0,
+      averagePrice: 0,
+      purchaseExchangeRate: undefined,
+      positionSource: undefined,
+      positionEffectiveDate: undefined,
+    };
+  }, [target, groupRep]);
+  const isNewTarget = !!newStockDraft;
+
+  const resolveStock = (id: string) => (id === NEW_STOCK_ID ? newStockDraft : stocks.find((s) => s.id === id));
+
   const selectedStockId = form.watch("stockId");
-  const selectedStock = stocks.find((s) => s.id === selectedStockId);
+  const selectedStock = resolveStock(selectedStockId);
   const isForeign = selectedStock?.currency === "USD" || selectedStock?.currency === "JPY";
   const isUsd = selectedStock?.currency === "USD";
   const tradeType = form.watch("type");
@@ -126,7 +148,7 @@ export function TradeInput() {
 
   // 반영 후 예상 포지션 인라인 미리보기 (팝업 대체)
   const reflectionPreview = useMemo(() => {
-    if (!reflected || !selectedStock || !(watchedQty > 0) || !(watchedPrice > 0)) return null;
+    if (!(reflected || isNewTarget) || !selectedStock || !(watchedQty > 0) || !(watchedPrice > 0)) return null;
     // 유효 체결 단가 — USD 원화 입력 시 달러 환산(저장 로직과 동일)
     let price = watchedPrice;
     if (selectedStock.currency === "USD" && priceInKrw) {
@@ -137,33 +159,34 @@ export function TradeInput() {
     if (tradeType === "sell" && watchedQty > pos.quantity) return { oversell: true as const };
     const tentativeTx = { type: tradeType, quantity: watchedQty, price, exchangeRate: watchedExRate } as Transaction;
     return { before: pos, after: computeNewPosition(pos, tentativeTx) };
-  }, [reflected, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
+  }, [reflected, isNewTarget, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
 
   // 종목(티커) 대표 목록 — 그룹당 1개
   const tickerReps = useMemo(() => stockGroups.map((g) => g[0]).filter(Boolean), [stockGroups]);
 
-  // 종목(티커) + 증권사 → 보유 항목 라우팅. 분할 없으면 기존 보유, 분할 있으면 해당 증권사 항목.
-  const resolveMatch = (ticker: string, name: string, broker: string): string => {
-    const norm = (ticker || "").toUpperCase();
-    const candidates = ticker
-      ? stocks.filter((s) => s.ticker?.toUpperCase() === norm)
-      : stocks.filter((s) => s.name === name);
-    if (candidates.length === 0) return stocks.find((s) => s.name === name)?.id ?? "";
-    if (broker) {
-      const byBroker = candidates.find((s) => s.broker === broker);
-      if (byBroker) return byBroker.id;
-    }
-    return candidates[0].id;
-  };
-
-  // (종목 + 증권사) 선택 시 실제 보유 stockId 해석 → form.stockId 반영. 상세 진입(locked)은 stockId 직접 사용.
+  // 종목 선택 시 대상 기본값 — 후보(필터 기준) 1개면 자동 선택, 2개 이상은 직접 선택
   useEffect(() => {
     if (lockedStock) return;
-    const rep = stocks.find((s) => s.id === selectedGroupId);
-    if (!rep || !selectedBroker) { form.setValue("stockId", ""); return; }
-    form.setValue("stockId", resolveMatch(rep.ticker || "", rep.name, selectedBroker));
+    const filtered = stockGroups.find((g) => g.some((s) => s.id === selectedGroupId)) ?? [];
+    const only = filtered.length === 1 ? filtered[0] : groupCandidates.length === 1 ? groupCandidates[0] : undefined;
+    setTarget(only ? { kind: "existing", stockId: only.id } : undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedGroupId, selectedBroker, lockedStock, assetData.stocks]);
+  }, [selectedGroupId, lockedStock]);
+
+  // 매도는 신규 자산 불가 — 매도로 바꾸면 신규 선택 해제
+  useEffect(() => {
+    if (tradeType === "sell" && target?.kind === "new") setTarget(undefined);
+  }, [tradeType, target]);
+
+  // 대상 → form.stockId 반영(신규는 자리표시 id, 증권사 미선택이면 미확정). 상세 진입(locked)은 stockId 직접 사용.
+  useEffect(() => {
+    if (lockedStock) return;
+    const id = target?.kind === "existing" ? target.stockId
+      : target?.kind === "new" && target.broker ? NEW_STOCK_ID
+        : "";
+    form.setValue("stockId", id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, lockedStock]);
 
   // 체결일 입력 제한 — 미래 금지(max=오늘), 보존기간 밖 금지(min=오늘-N년)
   const todayStr = new Date().toISOString().split("T")[0];
@@ -201,11 +224,11 @@ export function TradeInput() {
     setLockedStock(false);
     setDupPending(null);
     setSelectedGroupId("");
-    setSelectedBroker("");
+    setTarget(undefined);
   }, [form]);
 
   const buildTransaction = (data: TradeFormValues): Transaction => {
-    const stock = stocks.find((s) => s.id === data.stockId)!;
+    const stock = resolveStock(data.stockId)!;
     // 해외(USD) 원화 입력 시 달러 환산 — 체결환율 우선, 없으면 현재환율
     let price = data.price;
     if (stock.currency === "USD" && priceInKrw) {
@@ -253,10 +276,23 @@ export function TradeInput() {
   };
 
   const onSubmit = (data: TradeFormValues) => {
-    const stock = stocks.find((s) => s.id === data.stockId);
+    const stock = resolveStock(data.stockId);
     if (!stock) return;
 
     const tx = buildTransaction(data);
+
+    // 신규 자산: 참조할 보유가 없어 항상 반영 — 새 Stock 생성과 거래를 한 번에 저장(중복 검사 대상 없음)
+    if (stock.id === NEW_STOCK_ID) {
+      const stockId = `stock_${Date.now()}`;
+      const finalTx = markReflected({ ...tx, stockId, reflected: true });
+      const newStock: Stock = { ...stock, id: stockId, purchaseDate: finalTx.date, ...buildReflectionPatch(finalTx, stock) };
+      if (addTransactionsBatch([finalTx], [], [newStock])) {
+        track("transaction_save", { asset_type: "stock", method: "manual", result: "reflected" });
+        toast.success("매수 거래가 기록되었습니다.");
+        resetAndClose();
+      }
+      return;
+    }
 
     if (data.reflected) {
       const pos = getPositionSnapshot(stock);
@@ -383,34 +419,33 @@ export function TradeInput() {
                 </FormItem>
               )}
 
-              {/* 증권사 선택 (필수) — 분할 없으면 기존 보유, 나뉜 보유 있으면 해당 항목에 반영 */}
-              {!lockedStock && (
+              {/* 반영할 자산 항목 직접 선택 — 계좌·타입별 보유 + 신규 자산 등록(매수만) */}
+              {!lockedStock && groupRep && (
                 <FormItem>
-                  <FormLabel>증권사 *</FormLabel>
-                  <Select value={selectedBroker} onValueChange={setSelectedBroker}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="증권사 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {securitiesFirms.map((g) => g.items.map((f) => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      )))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    증권사별로 나뉜 보유가 있으면 해당 항목에, 분할이 없으면 기존 보유 종목에 반영됩니다.
-                  </p>
+                  <FormLabel>자산 항목 *</FormLabel>
+                  <StockTargetPicker
+                    candidates={groupCandidates}
+                    value={target}
+                    onChange={setTarget}
+                    allowNew={tradeType === "buy"}
+                    defaultCategory={groupRep.category}
+                  />
+                  {!target && <p className="text-sm text-muted-foreground">거래를 반영할 자산 항목을 선택하세요.</p>}
+                  {target?.kind === "new" && !target.broker && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요.</p>
+                  )}
+                  {form.formState.errors.stockId && (
+                    <p className="text-sm text-destructive">{form.formState.errors.stockId.message}</p>
+                  )}
                 </FormItem>
               )}
 
               {/* 선택 종목 보유 정보 (사용자 확인용) */}
-              {selectedStock && (
+              {lockedStock && selectedStock && (
                 <div className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-xs">
-                  {lockedStock && (
-                    <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
-                      {stockCategories.find((c) => c.value === selectedStock.category)?.label ?? selectedStock.category}
-                    </span>
-                  )}
+                  <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+                    {categoryLabel(selectedStock.category)}
+                  </span>
                   <span className="font-medium truncate">
                     {selectedStock.name}{selectedStock.ticker ? ` (${selectedStock.ticker})` : ""}
                   </span>
@@ -596,8 +631,9 @@ export function TradeInput() {
                   <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
+                        checked={field.value || isNewTarget}
                         onCheckedChange={field.onChange}
+                        disabled={isNewTarget}
                       />
                     </FormControl>
                     <div className="leading-none">
@@ -605,7 +641,9 @@ export function TradeInput() {
                         보유 수량에 즉시 반영
                       </FormLabel>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다
+                        {isNewTarget
+                          ? "신규 자산은 보유 반영 설정과 무관하게 항상 반영됩니다"
+                          : "해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다"}
                       </p>
                     </div>
                   </FormItem>
@@ -619,27 +657,11 @@ export function TradeInput() {
                     보유 수량({selectedStock.quantity.toLocaleString()}주)을 초과합니다
                   </div>
                 ) : (
-                  <div className="rounded-lg bg-muted/40 dark:bg-muted/25 p-3 space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">반영 후 예상 포지션</p>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-sm text-muted-foreground">보유 수량</p>
-                        <p className="tabular-nums">
-                          <span className="text-muted-foreground">{reflectionPreview.before.quantity.toLocaleString()}</span>
-                          <span className="text-muted-foreground/60"> → </span>
-                          <span className="font-semibold">{reflectionPreview.after.quantity.toLocaleString()}주</span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">평단가</p>
-                        <p className="tabular-nums">
-                          <span className="text-muted-foreground">{formatPrice(reflectionPreview.before.avgPrice, selectedStock.currency || "KRW")}</span>
-                          <span className="text-muted-foreground/60"> → </span>
-                          <span className="font-semibold">{formatPrice(reflectionPreview.after.avgPrice, selectedStock.currency || "KRW")}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <PositionChangePreview
+                    before={reflectionPreview.before}
+                    after={reflectionPreview.after}
+                    currency={selectedStock.currency || "KRW"}
+                  />
                 )
               )}
 

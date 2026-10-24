@@ -353,8 +353,20 @@ function currentMonthKst(): string {
 }
 
 /**
+ * dueLabel의 마지막 "M/D"를 마감일(YYYY-MM-DD)로 해석. 날짜가 없는 라벨("2월 급여"·"시행 예정")은 null(월 전체 유효)
+ * 예: "~10/25" → 10-25, "12/1~12/15" → 12-15
+ */
+function dueEndDate(event: TaxEvent, year: string): string | null {
+  const matches = [...event.dueLabel.matchAll(/(\d{1,2})\/(\d{1,2})/g)];
+  const last = matches[matches.length - 1];
+  if (!last) return null;
+  return `${year}-${last[1].padStart(2, "0")}-${last[2].padStart(2, "0")}`;
+}
+
+/**
  * 홈 배너용 — 이번 달·다음 달 중 **내 자산에서 파생된** 일정만.
  * 전 국민 공통(common) 태그로만 걸리는 항목은 제외한다(자산과 무관하므로 홈에 띄우지 않는다).
+ * 이번 달 일정이 항상 먼저(같은 달 안에서는 high 우선)이며, 이번 달 중 마감일이 지난 항목은 제외한다.
  */
 export function getAssetDrivenHighlights(
   assetData: AssetData,
@@ -372,10 +384,17 @@ export function getAssetDrivenHighlights(
         const matched = event.tags.filter((t) => t !== "common" && tags.has(t));
         return { event, reasons: matched.map((t) => tags.get(t) as string) };
       })
-      .filter((m) => m.reasons.length > 0);
+      .filter((m) => m.reasons.length > 0)
+      // 이번 달 항목 중 마감일이 지난 것은 제외(다음 달 항목은 아직 도래 전)
+      .filter((m) => {
+        if (month !== thisMonth) return true;
+        const due = dueEndDate(m.event, today.slice(0, 4));
+        return !due || today <= due;
+      });
 
+  // 이번 달 우선 → 같은 달 안에서 high 우선
   const rank = (m: TaxEventMatch, month: number) =>
-    (m.event.severity === "high" ? 0 : 1) * 10 + (month === thisMonth ? 0 : 1);
+    (month === thisMonth ? 0 : 1) * 10 + (m.event.severity === "high" ? 0 : 1);
 
   return [
     ...collect(thisMonth).map((m) => ({ m, month: thisMonth })),
