@@ -99,3 +99,4 @@ S-4.19 ─┬─ .claude/specs/4.19-deposit-maturity.md   ← 의도·수용기�
 | [S-4.29](./4.29-onboarding-wizard.md) | 스크린샷 일괄 온보딩 마법사 | 완료 | `issue-4.29-onboarding-wizard` | F-ONBOARD-WIZARD |
 | [S-4.30](./4.30-asset-refresh-fab.md) | 자산 최신화(FAB 통합 카드 화면·병합형 갱신) | 구현중 | `issue-4.30-asset-refresh-fab` | F-ASSET-REFRESH |
 | [S-4.31](./4.31-tax-sell-simulation.md) | 연말 절세 시뮬레이션(해외주식 양도소득세, 세금 관리 탭 통합) | 완료 | `issue-4.31-tax-sell-simulation` | F-TAX-SIM |
+| [S-4.33](./4.33-attribution-timeline.md) | 자산 변화 원인분해 항목별 날짜·기록 타임라인(홈·성과) | 완료 | `issue-4.29` | F-ACTIVITY |

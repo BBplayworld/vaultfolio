@@ -7,7 +7,7 @@ import { importAssetData } from "@/lib/asset/asset-storage";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
-import { useAssetData } from "@/contexts/asset-data-context";
+import { useAssetData, notifyAssetUserEdit } from "@/contexts/asset-data-context";
 import { useAssetNavigation } from "@/app/(main)/_components/layout/navigation/navigation-context";
 
 /**
@@ -30,6 +30,7 @@ export function useAssetImport() {
     try {
       const { assetData: imported, snapshotRestored } = await importAssetData(file);
       useProfitBasisStore.getState().hydrate(); // 복원된 종가 기준 옵션을 store에 반영
+      notifyAssetUserEdit(); // 파일 가져오기는 사용자 행동 — 동기화 push 트리거
       toast.success("자산 데이터를 불러왔습니다.");
       track("data_action", { method: "import", result: "success" });
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");

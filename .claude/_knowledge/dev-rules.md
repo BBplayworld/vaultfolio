@@ -92,6 +92,10 @@ const success = addStock(data);
 if (success) toast.success("..."); else toast.error("...");
 ```
 
+### 클라우드 동기화 push = 사용자 편집 신호 (강제, 2026-10)
+- 자산 사용자 편집은 `saveData` 경유가 원칙. 스키마 우회(`saveAssetDataRaw`)·파일 가져오기·공유 반영처럼 `saveData`를 안 거치면 **반드시 `notifyAssetUserEdit()`** 호출 — 자동 push 트리거가 이 신호(+닉네임)뿐이라 누락 시 다른 기기로 동기화되지 않는다.
+- 시세·스냅샷·부동산 추정 등 파생 갱신은 `saveAssetData` 직접 호출(신호 없음) 유지. 파생값 비교 트리거 재도입 금지(R14).
+
 ### 통화 표시 패턴
 ```typescript
 const formatCurrencyDisplay = (value: number, currency = "KRW") => {

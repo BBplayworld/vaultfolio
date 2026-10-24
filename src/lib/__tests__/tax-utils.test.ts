@@ -156,6 +156,29 @@ describe("tax-utils · getAssetDrivenHighlights (AC2·AC3)", () => {
     const matches = getAssetDrivenHighlights(data, "2026-07-01", 3);
     expect(matches[0].event.severity).toBe("high");
   });
+
+  it("이번 달 일정이 다음 달 high 일정보다 먼저 정렬된다", () => {
+    const data = emptyData();
+    data.realEstate = [makeRealEstate({ type: "commercial" })];
+    const matches = getAssetDrivenHighlights(data, "2026-10-24", 10);
+    expect(matches[0].event.id).toBe("vat-2h-prelim-notice");
+    expect(matches.some((m) => m.event.id === "income-tax-interim")).toBe(true);
+  });
+
+  it("이번 달 마감일이 지난 항목은 제외된다", () => {
+    const data = emptyData();
+    data.realEstate = [makeRealEstate({ type: "commercial" })];
+    const matches = getAssetDrivenHighlights(data, "2026-10-26", 10);
+    expect(matches.some((m) => m.event.id === "vat-2h-prelim-notice")).toBe(false);
+    expect(matches[0].event.id).toBe("income-tax-interim");
+  });
+
+  it("날짜 없는 라벨(2월 급여)은 월말까지 유지된다", () => {
+    const data = emptyData();
+    data.stocks = [makeStock({ category: "pension" })];
+    const matches = getAssetDrivenHighlights(data, "2026-02-28", 10);
+    expect(matches.some((m) => m.event.id === "year-end-settlement")).toBe(true);
+  });
 });
 
 describe("tax-utils · computeForeignRealizedGain (AC6·AC7)", () => {

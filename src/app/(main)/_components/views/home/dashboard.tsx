@@ -7,12 +7,13 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
-import { buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, CAUSE_DISPLAY_MIN, type AttributionDisplayItem } from "@/lib/report/asset-report";
+import { attachCauseDates, buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, getAttributionRecords, sortCausesByDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
 import { DataSourceBadge } from "../data-source-badge";
+import { AttributionRecordList } from "../attribution-records";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
@@ -278,15 +279,26 @@ export function NetAssetSummaryBox({
                 {change.estimated && (
                   <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
                 )}
-                {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·금액(손익색) 분리 */}
+                {/* 비교 구간 — 오랜만의 접속에서도 어느 기간의 변화인지 바로 읽히게(S-4.33) */}
+                {change.rangeLabel && (
+                  <p className="text-xs tabular-nums text-muted-foreground">{change.rangeLabel}</p>
+                )}
+                {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·기록 날짜(muted)·금액(손익색) 분리.
+                    시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(sortCausesByDate) */}
                 <ul className="w-full max-w-xs space-y-0.5">
                   {change.causes.map((c) => (
                     <li key={c.key} className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm text-foreground break-keep">{c.label}</span>
+                      <span className="text-sm text-foreground break-keep">
+                        {c.label}
+                        {c.dateLabel && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{c.dateLabel}</span>}
+                      </span>
                       <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
                     </li>
                   ))}
                 </ul>
+                {!screenshotMode && change.records && (
+                  <AttributionRecordList records={change.records} className="w-full max-w-xs" />
+                )}
               </div>
             )}
           </div>
@@ -401,6 +413,8 @@ interface HeaderChange {
   estimated: boolean;
   sentence: string | null;  // 원인 전체를 한 줄로 결합(원인 유무 판정·스크린샷용)
   causes: AttributionDisplayItem[]; // 원인 리스트(항목별 색상 렌더)
+  rangeLabel?: string;              // 비교 구간 "M/D → M/D"(S-4.33)
+  records?: AttributionRecord[];    // 구간 내 반영 기록(입출금·매매·대출) 시간순(S-4.33)
 }
 
 // 헤더 통합 등락: 끝점을 실시간 현재값(buildLiveAttributionCurr)으로 잡아 Hero 순자산과 기준 일치.
@@ -427,6 +441,7 @@ function useHeaderNetChange(): HeaderChange | null {
       liveCurr,
     );
     if (!attr) return null;
+    const records = getAttributionRecords(attr, assetData, exchangeRates);
     const prevNet = summary.netAsset - attr.deltaNet;
     const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
     const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`;
@@ -438,7 +453,9 @@ function useHeaderNetChange(): HeaderChange | null {
       label,
       estimated: attr.estimated,
       sentence: formatAttributionSentence(attr),
-      causes: getAttributionItems(attr),
+      causes: sortCausesByDate(attachCauseDates(getAttributionItems(attr), records)),
+      rangeLabel: `${formatAttributionDate(attr.fromDate)} → ${formatAttributionDate(attr.toDate)}`,
+      records,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previousVisitDate, todayStr, assetData, exchangeRates, snapshotVersion]);

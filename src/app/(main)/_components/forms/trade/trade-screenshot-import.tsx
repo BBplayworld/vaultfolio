@@ -13,15 +13,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
-import { formatCurrency } from "@/lib/number-utils";
-import { securitiesFirms, matchBrokerHint, stockCategories } from "@/config/asset-options";
+import { matchBrokerHint } from "@/config/asset-options";
+import { normalizeStockName, findClosestNames } from "@/lib/name-match";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import {
+  StockTargetPicker,
+  PositionChangePreview,
+  formatPrice,
+  getPositionSnapshot,
+  type TradeTarget,
+} from "./stock-target-picker";
 
 interface ImportTrade {
   id: string;
@@ -38,23 +44,11 @@ interface ImportTrade {
   selected: boolean;
 }
 
-const formatPrice = (value: number, currency: string) => {
-  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  return formatCurrency(value);
-};
-
-function getPositionSnapshot(stock: Stock): PositionSnapshot {
-  return {
-    stockId: stock.id,
-    quantity: stock.quantity,
-    avgPrice: stock.averagePrice,
-    avgExchangeRate: stock.purchaseExchangeRate ?? 0,
-    source: stock.positionSource ?? "manual",
-    effectiveDate: stock.positionEffectiveDate ?? stock.purchaseDate,
-    lockedByManual: false,
-  };
-}
+// 거래별 반영 시뮬레이션 결과 — 미리보기 표시와 등록 시 포지션 패치에 공용
+type SimResult =
+  | { kind: "record" }
+  | { kind: "oversell"; held: number }
+  | { kind: "preview"; before: PositionSnapshot; after: PositionSnapshot };
 
 interface TradeScreenshotImportProps {
   open: boolean;
@@ -67,11 +61,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   const [step, setStep] = useState<"upload" | "preview">("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [trades, setTrades] = useState<ImportTrade[]>([]);
-  const [selectedBroker, setSelectedBroker] = useState<string>("");
+  const [targets, setTargets] = useState<Record<string, TradeTarget | undefined>>({});
   const [reflectToHoldings, setReflectToHoldings] = useState(true);
   const [dupActions, setDupActions] = useState<Record<string, "overwrite" | "add">>({});
   const [isRegistering, setIsRegistering] = useState(false);
-  const [newCategories, setNewCategories] = useState<Record<string, Stock["category"]>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stocks = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
@@ -79,10 +72,9 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   const reset = () => {
     setStep("upload");
     setTrades([]);
-    setSelectedBroker("");
+    setTargets({});
     setReflectToHoldings(true);
     setDupActions({});
-    setNewCategories({});
     setIsParsing(false);
   };
 
@@ -91,66 +83,98 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     reset();
   };
 
-  // 거래 → 보유 종목 매칭 결과
-  // existing: 기존 보유에 반영 / split: 선택 증권사 보유로 새로 분할 생성
-  // new: 미보유 매수 → 신규 종목 등록 / none: 미보유 매도(팔 종목이 없어 차단)
-  type MatchInfo =
-    | { kind: "existing"; stockId: string }
-    | { kind: "split"; baseStockId: string }
-    | { kind: "new" }
-    | { kind: "none" };
-
-  // 종목명/티커 + 증권사로 보유 종목 매칭.
-  // 선택 증권사 보유가 있으면 거기에, 없는데 다른 증권사 분할 보유가 있으면 선택 증권사로 새 분할 생성,
-  // 증권사 미지정 단일 보유면 그대로 반영(방어). 완전 미보유는 매수만 신규 등록 허용(매도는 계속 차단).
-  const resolveMatch = (ticker: string, name: string, broker: string, type: "buy" | "sell"): MatchInfo => {
-    const norm = ticker.toUpperCase();
-    const candidates = ticker
-      ? stocks.filter((s) => s.ticker?.toUpperCase() === norm)
-      : stocks.filter((s) => s.name === name);
-    if (candidates.length === 0) {
-      const byName = stocks.find((s) => s.name === name);
-      if (byName) return { kind: "existing", stockId: byName.id };
-      return type === "buy" ? { kind: "new" } : { kind: "none" };
-    }
-    if (broker) {
-      const byBroker = candidates.find((s) => s.broker === broker);
-      if (byBroker) return { kind: "existing", stockId: byBroker.id };
-      // 선택 증권사 보유는 없지만 다른 증권사로 분할 관리 중 → 선택 증권사로 새 분할 생성
-      if (candidates.some((s) => s.broker)) return { kind: "split", baseStockId: candidates[0].id };
-    }
-    return { kind: "existing", stockId: candidates[0].id };
+  // 인식 종목의 보유 후보 — 티커 일치 → 종목명 일치 → (티커 미인식 시) 종목명 유사 일치(OCR 오타).
+  // 증권사·계좌 자동 라우팅 없음. fuzzy=유사 일치로만 찾은 후보(자동 선택 금지)
+  const candidatesOf = (t: { ticker: string; name: string }): { list: Stock[]; fuzzy: boolean } => {
+    const norm = t.ticker.toUpperCase();
+    const byTicker = t.ticker ? stocks.filter((s) => s.ticker?.toUpperCase() === norm) : [];
+    if (byTicker.length > 0) return { list: byTicker, fuzzy: false };
+    const inputName = normalizeStockName(t.name);
+    const byName = stocks.filter((s) => normalizeStockName(s.name) === inputName);
+    if (byName.length > 0 || t.ticker) return { list: byName, fuzzy: false };
+    const close = new Set(findClosestNames(inputName, new Set(stocks.map((s) => normalizeStockName(s.name)))));
+    return { list: stocks.filter((s) => close.has(normalizeStockName(s.name))), fuzzy: true };
   };
 
-  // 거래별 매칭 정보 (selectedBroker·stocks 변경 시 재산출)
-  const matchMap = useMemo(() => {
-    const m = new Map<string, MatchInfo>();
-    for (const t of trades) m.set(t.id, resolveMatch(t.ticker, t.name, selectedBroker, t.type));
+  const candidateMap = useMemo(() => {
+    const m = new Map<string, { list: Stock[]; fuzzy: boolean }>();
+    for (const t of trades) m.set(t.id, candidatesOf(t));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trades, selectedBroker, assetData.stocks]);
+  }, [trades, assetData.stocks]);
 
-  // 신규(new) 행의 카테고리 — 사용자가 바꾸지 않으면 인식된 국내/해외 구분으로 기본값 프리필
-  const categoryFor = (t: ImportTrade): Stock["category"] =>
-    newCategories[t.id] ?? (t.section === "해외" ? "foreign" : "domestic");
+  // 보유 없는 매도는 팔 자산이 없어 제외
+  const isExcluded = (t: ImportTrade) => t.type === "sell" && (candidateMap.get(t.id)?.list.length ?? 0) === 0;
+  // 반영 대상 확정 여부(신규는 증권사 필수)
+  const isTargetReady = (target: TradeTarget | undefined) =>
+    !!target && (target.kind === "existing" || !!target.broker);
 
-  // 거래별 기존 중복 여부(기존 보유 매칭일 때만 — 분할 신규 생성은 중복 없음)
+  const defaultCategoryOf = (t: ImportTrade): Stock["category"] => (t.section === "해외" ? "foreign" : "domestic");
+
+  // 동일 대상 묶음 키 — 기존은 stockId, 신규는 (종목, 증권사, 타입)
+  const targetKey = (t: ImportTrade, target: TradeTarget) =>
+    target.kind === "existing" ? target.stockId : `new|${(t.ticker || t.name).toUpperCase()}|${target.broker}|${target.category}`;
+
+  // 거래별 기존 중복 여부(기존 보유 대상일 때만 — 신규 자산은 중복 없음)
   const dupMap = useMemo(() => {
     const m = new Map<string, boolean>();
     const existing = assetData.transactions || [];
     for (const t of trades) {
-      const info = matchMap.get(t.id);
-      const stockId = info?.kind === "existing" ? info.stockId : "";
+      const target = targets[t.id];
+      const stockId = target?.kind === "existing" ? target.stockId : "";
       m.set(t.id, stockId ? !!findDuplicateTransaction(existing, "stockId", {
         assetId: stockId, date: t.date, quantity: t.quantity, price: t.price, type: t.type,
       }) : false);
     }
     return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trades, matchMap, assetData.transactions]);
+  }, [trades, targets, assetData.transactions]);
 
   // 중복 행의 처리: 기본 overwrite
   const dupActionOf = (id: string): "overwrite" | "add" => dupActions[id] ?? "overwrite";
+
+  // 선택됨 + 제외 아님
+  const registerList = trades.filter((t) => t.selected && !isExcluded(t));
+  const unresolvedCount = registerList.filter((t) => !isTargetReady(targets[t.id])).length;
+  // 실제 추가 대상 = 위 중 (중복+덮어쓰기) 제외
+  const addList = registerList.filter((t) => !(dupMap.get(t.id) && dupActionOf(t.id) === "overwrite"));
+  const overwriteSkipCount = registerList.length - addList.length;
+
+  const txExchangeRate = (currency: string) =>
+    currency === "USD" ? exchangeRates.USD : currency === "JPY" ? exchangeRates.JPY : undefined;
+
+  // 추가 대상을 체결일 오름차순으로 순차 반영 시뮬레이션 — 같은 대상 다건의 누적 평단까지 미리보기
+  const simulation = useMemo(() => {
+    const results = new Map<string, SimResult>();
+    const finalPos = new Map<string, PositionSnapshot>();
+    const ordered = addList
+      .filter((t) => isTargetReady(targets[t.id]))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    for (const t of ordered) {
+      const target = targets[t.id]!;
+      // 신규 자산은 참조할 기존 보유가 없어 항상 반영(반영 OFF와 양립 불가)
+      if (target.kind === "existing" && !reflectToHoldings) {
+        results.set(t.id, { kind: "record" });
+        continue;
+      }
+      const key = targetKey(t, target);
+      const base = target.kind === "existing" ? stocks.find((s) => s.id === target.stockId) : undefined;
+      const cur: PositionSnapshot = finalPos.get(key) ?? (base
+        ? getPositionSnapshot(base)
+        : { stockId: key, quantity: 0, avgPrice: 0, avgExchangeRate: 0, source: "computed", effectiveDate: t.date, lockedByManual: false });
+      if (t.type === "sell" && t.quantity > cur.quantity) {
+        results.set(t.id, { kind: "oversell", held: cur.quantity });
+        continue;
+      }
+      const p = computeNewPosition(cur, { type: t.type, quantity: t.quantity, price: t.price, exchangeRate: txExchangeRate(t.currency) } as Transaction);
+      const after: PositionSnapshot = { ...cur, quantity: p.quantity, avgPrice: p.avgPrice, avgExchangeRate: p.avgExchangeRate, source: "computed", effectiveDate: t.date };
+      results.set(t.id, { kind: "preview", before: cur, after });
+      finalPos.set(key, after);
+    }
+    return { results, finalPos, ordered };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addList.map((t) => t.id).join(","), targets, reflectToHoldings, assetData.stocks, exchangeRates.USD, exchangeRates.JPY]);
+
+  const oversellCount = [...simulation.results.values()].filter((r) => r.kind === "oversell").length;
 
   const handleFileChange = async (file: File) => {
     if (!geminiUsage.canUse()) {
@@ -184,10 +208,17 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         selected: true,
       }));
 
+      // 대상 기본값: 후보 1개면 자동 선택, 미보유 매수는 신규(인식 증권사·국내/해외 프리필), 후보 2개 이상은 직접 선택
+      const autoBroker = matchBrokerHint(importTrades[0]?.brokerHint ?? "") ?? "";
+      const initTargets: Record<string, TradeTarget | undefined> = {};
+      for (const t of importTrades) {
+        const { list: c, fuzzy } = candidatesOf(t);
+        if (c.length === 1 && !fuzzy) initTargets[t.id] = { kind: "existing", stockId: c[0].id };
+        else if (c.length === 0 && t.type === "buy") initTargets[t.id] = { kind: "new", broker: autoBroker, category: defaultCategoryOf(t) };
+      }
+
       setTrades(importTrades);
-      // 인식된 증권사명을 증권사 select에 자동 설정(매칭 실패 시 빈값 유지 → 수동 선택)
-      const autoBroker = matchBrokerHint(importTrades[0]?.brokerHint ?? "");
-      if (autoBroker) setSelectedBroker(autoBroker);
+      setTargets(initTargets);
       geminiUsage.increment("trade");
       trackParse("trade", "success");
       setStep("preview");
@@ -206,23 +237,22 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
   };
 
   const toggleSelect = (id: string) => {
-    if (matchMap.get(id)?.kind === "none") return; // 미보유(미매칭)는 선택 불가
-    setTrades((prev) => prev.map((t) => (t.id === id ? { ...t, selected: !t.selected } : t)));
+    const t = trades.find((x) => x.id === id);
+    if (!t || isExcluded(t)) return; // 보유 없는 매도는 선택 불가
+    setTrades((prev) => prev.map((x) => (x.id === id ? { ...x, selected: !x.selected } : x)));
   };
 
-  // 선택됨 + 매칭됨(기존 반영 또는 분할 신규)
-  const registerList = trades.filter((t) => t.selected && matchMap.get(t.id)?.kind !== "none");
-  // 실제 추가 대상 = 위 중 (중복+덮어쓰기) 제외
-  const addList = registerList.filter((t) => !(dupMap.get(t.id) && dupActionOf(t.id) === "overwrite"));
-  const overwriteSkipCount = registerList.length - addList.length;
-
   const handleRegister = () => {
-    if (!selectedBroker) {
-      toast.error("증권사를 선택해주세요.");
-      return;
-    }
     if (registerList.length === 0) {
       toast.error("등록할 거래를 선택해주세요.");
+      return;
+    }
+    if (unresolvedCount > 0) {
+      toast.error("반영할 자산 항목을 모두 선택해주세요.");
+      return;
+    }
+    if (oversellCount > 0) {
+      toast.error("보유 수량을 초과하는 매도가 있습니다.");
       return;
     }
     if (addList.length === 0) {
@@ -233,64 +263,53 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     }
     setIsRegistering(true);
 
-    // 동일 종목 다건은 체결일 오름차순으로 순차 재계산해야 누적 평단이 정확
-    const ordered = [...addList].sort((a, b) => a.date.localeCompare(b.date));
-
     const txs: Transaction[] = [];
-    const posState = new Map<string, PositionSnapshot>();
-    // 분할 신규 생성 종목: baseStockId → 새 stock(quantity 0 초기). 반영 ON일 때만 생성.
-    const splitStocks = new Map<string, Stock>();
-    const splitIdByBase = new Map<string, string>();
-    // 완전 신규(미보유) 종목: 매수 스크린샷만으로 새 Stock 생성 — 반영 여부와 무관하게 항상 생성
+    // 신규 자산: 묶음 키 → 새 Stock(quantity 0 초기). 반영 여부와 무관하게 항상 생성
     const newlyCreated = new Map<string, Stock>();
     const now = new Date().toISOString();
 
-    ordered.forEach((t, i) => {
-      const info = matchMap.get(t.id)!;
-      if (info.kind === "none") return; // addList에서 제외되나 타입 좁힘 겸 방어
+    simulation.ordered.forEach((t, i) => {
+      const target = targets[t.id]!;
+      const key = targetKey(t, target);
       let stockId: string;
-      const isNew = info.kind === "new";
-      // 신규 종목은 참조할 기존 보유가 없어 항상 포지션을 만들어야 한다(반영 OFF와 양립 불가)
-      const forceReflect = isNew || reflectToHoldings;
-      if (isNew) {
-        stockId = `stock_${Date.now()}_${i}`;
-        newlyCreated.set(stockId, {
-          id: stockId,
-          name: t.name,
-          ticker: t.ticker || undefined,
-          category: categoryFor(t),
-          currency: t.currency,
-          broker: selectedBroker,
-          quantity: 0,
-          averagePrice: 0,
-          // 라이브 시세가 아직 없어 체결가로 임시 채움 — 다음 시세 갱신에서 정상 티커면 자동 교정됨
-          currentPrice: t.price,
-          purchaseDate: t.date,
-        } as Stock);
-      } else if (info.kind === "split" && reflectToHoldings) {
-        // 분할 신규(반영 ON): 선택 증권사 보유 종목을 새로 만들어 그 종목에 거래 반영
-        const existingNewId = splitIdByBase.get(info.baseStockId);
-        if (existingNewId) {
-          stockId = existingNewId;
+      if (target.kind === "existing") {
+        stockId = target.stockId;
+      } else {
+        const created = newlyCreated.get(key);
+        if (created) {
+          stockId = created.id;
         } else {
-          const base = stocks.find((s) => s.id === info.baseStockId)!;
           stockId = `stock_${Date.now()}_${i}`;
-          splitIdByBase.set(info.baseStockId, stockId);
-          splitStocks.set(stockId, {
+          // 같은 종목 보유가 있으면 메타(티커·통화 등) 복제, 없으면 인식값으로 생성
+          const base = candidateMap.get(t.id)?.list[0];
+          newlyCreated.set(key, base ? {
             ...base,
             id: stockId,
-            broker: selectedBroker,
+            broker: target.broker,
+            category: target.category,
             quantity: 0,
             averagePrice: 0,
+            purchaseExchangeRate: undefined,
+            positionSource: undefined,
+            positionEffectiveDate: undefined,
             purchaseDate: t.date,
-          });
+          } : {
+            id: stockId,
+            name: t.name,
+            ticker: t.ticker || undefined,
+            category: target.category,
+            currency: t.currency,
+            broker: target.broker,
+            quantity: 0,
+            averagePrice: 0,
+            // 라이브 시세가 아직 없어 체결가로 임시 채움 — 다음 시세 갱신에서 정상 티커면 자동 교정됨
+            currentPrice: t.price,
+            purchaseDate: t.date,
+          } as Stock);
         }
-      } else {
-        // 기존 반영 또는 (반영 OFF인 분할은 기록만 → 기준 보유에 거래내역만 연결)
-        stockId = info.kind === "split" ? info.baseStockId : info.stockId;
       }
-      const stock = newlyCreated.get(stockId) ?? splitStocks.get(stockId) ?? stocks.find((s) => s.id === stockId)!;
-      const tx: Transaction = {
+      const reflect = simulation.results.get(t.id)?.kind === "preview";
+      txs.push({
         id: `tx_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
         stockId,
         ticker: t.ticker,
@@ -300,36 +319,20 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         price: t.price,
         currency: t.currency,
         // 스크린샷엔 체결환율이 없어 오늘자 환율 적용(주식 스샷 가져오기와 동일 방향)
-        exchangeRate: t.currency === "USD" ? exchangeRates.USD
-          : t.currency === "JPY" ? exchangeRates.JPY
-            : undefined,
+        exchangeRate: txExchangeRate(t.currency),
         date: t.date,
-        // 반영 ON(또는 신규 종목)일 때만 포지션에 반영(reflectedAt·reflectionId 부여), OFF면 기록만
-        reflected: forceReflect,
-        reflectedAt: forceReflect ? now : undefined,
-        reflectionId: forceReflect ? `ref_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 5)}` : undefined,
+        // 반영(기존 반영 ON 또는 신규 자산)일 때만 reflectedAt·reflectionId 부여, 아니면 기록만
+        reflected: reflect,
+        reflectedAt: reflect ? now : undefined,
+        reflectionId: reflect ? `ref_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 5)}` : undefined,
         createdAt: now,
-      };
-      txs.push(tx);
-
-      if (!forceReflect) return; // 기록만 — 포지션 누적 생략
-
-      const cur = posState.get(stockId) ?? getPositionSnapshot(stock);
-      const preview = computeNewPosition(cur, tx);
-      posState.set(stockId, {
-        ...cur,
-        quantity: preview.quantity,
-        avgPrice: preview.avgPrice,
-        avgExchangeRate: preview.avgExchangeRate,
-        source: "computed",
-        effectiveDate: tx.date,
       });
     });
 
-    // 반영 OFF면 포지션 패치 없음(기록만). 분할·완전 신규 종목은 newStocks로, 기존 종목은 patch로 분리.
+    // 시뮬레이션 최종 포지션 → 신규 자산은 newStocks로, 기존 자산은 patch로 분리
     const patches: { stockId: string; patch: Partial<Stock> }[] = [];
     const newStocks: Stock[] = [];
-    for (const [stockId, p] of posState.entries()) {
+    for (const [key, p] of simulation.finalPos.entries()) {
       const patch: Partial<Stock> = {
         quantity: p.quantity,
         averagePrice: p.avgPrice,
@@ -337,17 +340,15 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         positionSource: "computed" as const,
         positionEffectiveDate: p.effectiveDate,
       };
-      const splitBase = splitStocks.get(stockId);
-      const newBase = newlyCreated.get(stockId);
-      if (splitBase) newStocks.push({ ...splitBase, ...patch });
-      else if (newBase) newStocks.push({ ...newBase, ...patch });
-      else patches.push({ stockId, patch });
+      const created = newlyCreated.get(key);
+      if (created) newStocks.push({ ...created, ...patch });
+      else patches.push({ stockId: key, patch });
     }
 
     addTransactionsBatch(txs, patches, newStocks);
     track("transaction_save", { asset_type: "stock", method: "screenshot" });
     toast.success(
-      `${ordered.length}건의 거래가 등록되었습니다.` +
+      `${txs.length}건의 거래가 등록되었습니다.` +
       (overwriteSkipCount > 0 ? ` (중복 ${overwriteSkipCount}건은 기존 유지)` : "")
     );
     setIsRegistering(false);
@@ -401,26 +402,6 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
 
         {step === "preview" && (
           <div className="space-y-3">
-            {/* 증권사 선택 — 전체 거래 공통, 필수 (스크린샷은 보통 한 증권사 화면) */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">증권사 *</label>
-              <Select value={selectedBroker} onValueChange={setSelectedBroker}>
-                <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
-                <SelectContent>
-                  {securitiesFirms.map((g) => g.items.map((f) => (
-                    <SelectItem key={f} value={f} className="text-sm">{f}</SelectItem>
-                  )))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                {!selectedBroker
-                  ? "증권사를 먼저 선택하세요. 증권사별로 나뉜 보유가 있으면 해당 항목에, 분할이 없으면 기존 보유 종목에 반영됩니다."
-                  : reflectToHoldings
-                    ? "증권사별로 나뉜 보유가 있으면 해당 항목에 반영됩니다. 분할이 없으면 기존 보유에 그대로 반영됩니다."
-                    : "기록만 저장 모드 — 증권사는 거래내역이 연결될 보유 항목 선택에만 사용됩니다."}
-              </p>
-            </div>
-
             {/* 반영 토글 — 수동 입력과 동일한 옵션 */}
             <label className="flex flex-row items-center gap-2 rounded-lg border p-3 cursor-pointer">
               <Checkbox checked={reflectToHoldings} onCheckedChange={(v) => setReflectToHoldings(!!v)} />
@@ -432,14 +413,14 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               </div>
             </label>
 
-            {trades.some((t) => t.selected && matchMap.get(t.id)?.kind === "new") && (
+            {trades.some((t) => t.selected && targets[t.id]?.kind === "new") && (
               <p className="text-xs text-muted-foreground">
-                신규 종목 거래는 보유 반영 설정과 무관하게 항상 등록됩니다.
+                신규 자산 거래는 보유 반영 설정과 무관하게 항상 등록됩니다.
               </p>
             )}
 
             <p className="text-sm text-muted-foreground">
-              인식된 거래 {trades.length}건 — 등록할 항목을 선택하세요
+              인식된 거래 {trades.length}건 — 거래마다 반영할 자산 항목을 선택하세요
             </p>
             {trades.some((t) => t.currency !== "KRW") && (
               <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -448,80 +429,98 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
             )}
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">
               {trades.map((t) => {
-                const info = matchMap.get(t.id) ?? { kind: "none" as const };
-                const matched = info.kind !== "none";
-                const isSplit = info.kind === "split";
-                const isNew = info.kind === "new";
-                const matchedStock = info.kind === "existing" ? stocks.find((s) => s.id === info.stockId) : undefined;
-                const active = matched && t.selected;
+                const excluded = isExcluded(t);
+                const active = !excluded && t.selected;
+                const target = targets[t.id];
+                const { list: candidates, fuzzy: fuzzyCandidates } = candidateMap.get(t.id) ?? { list: [], fuzzy: false };
+                const sim = simulation.results.get(t.id);
+                const isDup = dupMap.get(t.id);
+                const previewCurrency = target?.kind === "existing"
+                  ? (stocks.find((s) => s.id === target.stockId)?.currency || "KRW")
+                  : t.currency;
                 return (
                   <div
                     key={t.id}
-                    className={`flex items-start gap-2 rounded-lg border p-3 transition-colors ${!matched ? "bg-muted/20 opacity-50 cursor-not-allowed"
+                    className={`flex items-start gap-2 rounded-lg border p-3 transition-colors ${excluded ? "bg-muted/20 opacity-50 cursor-not-allowed"
                         : active ? "bg-card cursor-pointer" : "bg-muted/30 opacity-60 cursor-pointer"
                       }`}
                     onClick={() => toggleSelect(t.id)}
                   >
-                    <button type="button" className="mt-0.5 shrink-0" disabled={!matched}>
+                    <button type="button" className="mt-0.5 shrink-0" disabled={excluded}>
                       {active
                         ? <CheckSquare className="size-4 text-primary" />
                         : <Square className="size-4 text-muted-foreground" />}
                     </button>
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold ${t.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
-                          {t.type === "buy" ? "매수" : "매도"}
-                        </span>
-                        <span className="text-sm font-medium truncate">{t.name}</span>
-                        {t.ticker && <span className="text-[11px] text-muted-foreground">({t.ticker})</span>}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold ${t.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
+                            {t.type === "buy" ? "매수" : "매도"}
+                          </span>
+                          <span className="text-sm font-medium truncate">{t.name}</span>
+                          {t.ticker && <span className="text-[11px] text-muted-foreground">({t.ticker})</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
+                          <span>{t.quantity}주</span>
+                          <span>{formatPrice(t.price, t.currency)}</span>
+                          <span>{t.date}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                        <span>{t.quantity}주</span>
-                        <span>{formatPrice(t.price, t.currency)}</span>
-                        <span>{t.date}</span>
-                      </div>
-                      {matched ? (
-                        dupMap.get(t.id) ? (
-                          <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
-                            <div className="inline-flex rounded-md border overflow-hidden text-[11px]">
-                              {(["overwrite", "add"] as const).map((act) => (
-                                <button
-                                  key={act}
-                                  type="button"
-                                  className={`px-2 py-1 transition-colors ${dupActionOf(t.id) === act ? "bg-brand text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted/50"}`}
-                                  onClick={() => setDupActions((prev) => ({ ...prev, [t.id]: act }))}
-                                >
-                                  {act === "overwrite" ? "덮어쓰기(기존 유지)" : "새로 추가"}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ) : isSplit ? (
-                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                            ✓ {selectedBroker} 보유로 {reflectToHoldings ? "새로 추가" : "거래내역에 기록"}
-                          </p>
-                        ) : isNew ? (
-                          <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">✓ 신규 종목으로 추가됩니다</p>
-                            <Select value={categoryFor(t)} onValueChange={(v) => setNewCategories((prev) => ({ ...prev, [t.id]: v as Stock["category"] }))}>
-                              <SelectTrigger className="h-7 text-[11px] w-32"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {stockCategories.map((c) => (
-                                  <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
+
+                      {excluded ? (
+                        <p className="text-[11px] text-muted-foreground">보유 종목 없음 — 가져오기 제외</p>
+                      ) : active && (
+                        <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                          {fuzzyCandidates && candidates.length > 0 && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">인식된 종목명과 유사한 보유 항목입니다 — 확인 후 선택하세요</p>
+                          )}
+                          {/* 반영할 자산 항목 직접 선택 — 보유 후보 + 신규 자산 등록(매수만) */}
+                          <StockTargetPicker
+                            candidates={candidates}
+                            value={target}
+                            onChange={(v) => setTargets((prev) => ({ ...prev, [t.id]: v }))}
+                            allowNew={t.type === "buy"}
+                            defaultCategory={defaultCategoryOf(t)}
+                            defaultBroker={matchBrokerHint(t.brokerHint ?? "") ?? ""}
+                          />
+                          {!target && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">반영할 자산 항목을 선택하세요</p>
+                          )}
+                          {target?.kind === "new" && !target.broker && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요</p>
+                          )}
+
+                          {isDup && (
+                            <div className="space-y-1">
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
+                              <div className="inline-flex rounded-md border overflow-hidden text-[11px]">
+                                {(["overwrite", "add"] as const).map((act) => (
+                                  <button
+                                    key={act}
+                                    type="button"
+                                    className={`px-2 py-1 transition-colors ${dupActionOf(t.id) === act ? "bg-brand text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted/50"}`}
+                                    onClick={() => setDupActions((prev) => ({ ...prev, [t.id]: act }))}
+                                  >
+                                    {act === "overwrite" ? "덮어쓰기(기존 유지)" : "새로 추가"}
+                                  </button>
                                 ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                            ✓ {matchedStock?.broker ? `${matchedStock.broker} ` : ""}보유 종목{reflectToHoldings ? "에 반영" : " 거래내역에 기록"}
-                          </p>
-                        )
-                      ) : (
-                        <p className="text-[11px] text-muted-foreground">
-                          보유 종목 없음 — 가져오기 제외
-                        </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 선택 자산의 변경 미리보기 */}
+                          {sim?.kind === "preview" && (
+                            <PositionChangePreview before={sim.before} after={sim.after} currency={previewCurrency} />
+                          )}
+                          {sim?.kind === "record" && (
+                            <p className="text-[11px] text-muted-foreground">보유 수량·평단 변경 없이 거래내역에만 기록됩니다</p>
+                          )}
+                          {sim?.kind === "oversell" && (
+                            <div className="rounded-lg bg-destructive/10 dark:bg-destructive/20 p-2 text-xs text-destructive font-medium">
+                              보유 수량({sim.held.toLocaleString()}주)을 초과합니다
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -533,7 +532,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               <Button
                 onClick={handleRegister}
                 variant="brand"
-                disabled={isRegistering || !selectedBroker || registerList.length === 0}
+                disabled={isRegistering || registerList.length === 0 || unresolvedCount > 0 || oversellCount > 0}
                 className="flex-1 sm:flex-initial"
               >
                 {isRegistering ? <Loader2 className="size-4 animate-spin mr-2" /> : null}

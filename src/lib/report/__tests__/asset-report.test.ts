@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CAUSE_DISPLAY_MIN, computeAttributionSince, computePeriodAttribution, getAttributionItems, getOrderedCauses, groupAttributionItems } from "../asset-report";
+import { CAUSE_DISPLAY_MIN, attachCauseDates, computeAttributionSince, computePeriodAttribution, getAttributionItems, getAttributionRecords, getOrderedCauses, groupAttributionItems, sortCausesByDate } from "../asset-report";
 import type { AssetData, Crypto, DailyAssetSnapshot, Loan, MonthlyAssetSnapshot, SnapshotBreakdown, SnapshotCost, Stock } from "@/types/asset";
 import type { CashTransaction, CryptoTransaction, LoanTransaction, Transaction } from "@/types/transaction";
 
@@ -1059,5 +1059,90 @@ describe("asset-report 원인분해 — computePeriodAttribution 하이브리드
     ] as ReturnType<typeof getAttributionItems>;
     const groups = groupAttributionItems(items);
     expect(groups.map((g) => g.key)).toEqual(["crypto", "stock"]); // 코인(40) > 주식 순변동(2)
+  });
+});
+
+// S-4.33 항목별 날짜·기록 타임라인 — 금액 계산은 그대로, 파생 정보만 검증
+describe("asset-report 기록 타임라인 (S-4.33)", () => {
+  const timelineData = () => {
+    const data = emptyData();
+    data.cash = [{ id: "c1", type: "bank", name: "급여통장", balance: 5_000_000, currency: "KRW" }];
+    data.loans = [loan({ id: "l1", name: "신용대출" })];
+    data.cashTransactions = [
+      cashTx({ id: "c-a", date: "2026-05-01", type: "withdrawal", amount: 6_710_000, createdAt: "2026-05-01T01:00:00Z" }),
+      cashTx({ id: "c-b", date: "2026-05-03", amount: 1_000_000, createdAt: "2026-05-03T01:00:00Z" }),
+      cashTx({ id: "c-x", date: "2026-05-02", amount: 9_999_999, reflected: false }), // 미반영 — 제외
+    ];
+    data.transactions = [
+      trade({ id: "t-a", date: "2026-05-02", quantity: 10, price: 70_000, createdAt: "2026-05-02T02:00:00Z" }),
+      trade({ id: "t-b", date: "2026-05-02", type: "sell", quantity: 2, price: 100, currency: "USD", exchangeRate: 1300, createdAt: "2026-05-02T03:00:00Z" }),
+      trade({ id: "t-x", date: "2026-05-01", quantity: 1, price: 1 }), // 시작일 당일 매매 — 제외
+    ];
+    data.cryptoTransactions = [cryptoTx({ id: "cr-a", date: "2026-05-04", quantity: 0.1, price: 100_000_000 })];
+    data.loanTransactions = [loanTx({ id: "l-a", date: "2026-05-01", type: "borrow", amount: 2_000_000, createdAt: "2026-05-01T00:00:00Z" })];
+    return data;
+  };
+  const prev = snapClass("2026-05-01", { cash: 10_000_000, loans: 3_000_000 }, {});
+  const curr = snapClass("2026-05-05", { cash: 9_000_000, loans: 5_000_000 }, {});
+
+  it("AC4·AC5: 반영 기록만 시간순, 매매는 시작일 제외·현금/대출은 시작일 포함", () => {
+    const data = timelineData();
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const records = getAttributionRecords(attr, data, RATES);
+    expect(records.map((r) => r.id)).toEqual(["l-a", "c-a", "t-a", "t-b", "c-b", "cr-a"]);
+    const byId = new Map(records.map((r) => [r.id, r]));
+    expect(byId.get("c-a")).toMatchObject({ label: "현금 출금", title: "급여통장", amount: -6_710_000 });
+    expect(byId.get("l-a")).toMatchObject({ label: "추가 대출", title: "신용대출", amount: -2_000_000 });
+    expect(byId.get("t-a")).toMatchObject({ label: "주식 매수", amount: 700_000 });
+  });
+
+  it("AC6: 체결 환율 우선 환산, 원인별 기록 합 = 원인 기록 기반 금액", () => {
+    const data = timelineData();
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const records = getAttributionRecords(attr, data, RATES);
+    const sum = (key: string) => records.filter((r) => r.causeKey === key).reduce((s, r) => s + r.amount, 0);
+    expect(records.find((r) => r.id === "t-b")!.amount).toBeCloseTo(-2 * 100 * 1300, 6);
+    expect(sum("income")).toBeCloseTo(attr.incomeEffect, 6);
+    expect(sum("buy:stock")).toBeCloseTo(attr.buyEffect, 6);
+    expect(sum("sell:stock")).toBeCloseTo(attr.sellEffect, 6);
+  });
+
+  it("AC5: 월별 스냅샷이 시작점이면 표시용 YYYY-MM이 아닌 실제 기준일로 경계를 판정한다", () => {
+    const data = emptyData();
+    data.cashTransactions = [cashTx({ id: "m-a", date: "2026-04-15" }), cashTx({ id: "m-b", date: "2026-05-02" })];
+    const monthly = [{ month: "2026-04", date: "2026-04-30", netAsset: 1_000_000, financialAsset: 1_000_000 } as MonthlyAssetSnapshot];
+    const attr = computeAttributionSince([snap("2026-05-05", 2_000_000, 0)], monthly, {}, "2026-04-30", data, RATES)!;
+    expect(attr.fromDate.length).toBe(7); // 표시용은 YYYY-MM
+    expect(getAttributionRecords(attr, data, RATES).map((r) => r.id)).toEqual(["m-b"]);
+  });
+
+  it("AC1·AC2·AC3: 기록 있는 원인에만 날짜(단일·범위), 시세·환율 → 날짜순 → 날짜 없는 항목 순", () => {
+    const items = [
+      { key: "cash", label: "신규 현금", sentence: "", amount: 5, text: "" },
+      { key: "income", label: "현금 출금", sentence: "", amount: -10, text: "" },
+      { key: "buy:stock", label: "주식 매수", sentence: "", amount: 7, text: "" },
+      { key: "price:stock", label: "주식 시세 하락", sentence: "", amount: -5, text: "" },
+    ] as ReturnType<typeof getAttributionItems>;
+    const records = [
+      { id: "1", date: "2026-10-23", createdAt: "", causeKey: "buy:stock", label: "", title: "", amount: 7 },
+      { id: "2", date: "2026-10-20", createdAt: "", causeKey: "income", label: "", title: "", amount: -4 },
+      { id: "3", date: "2026-10-22", createdAt: "", causeKey: "income", label: "", title: "", amount: -6 },
+    ] as ReturnType<typeof getAttributionRecords>;
+    const dated = attachCauseDates(items, records);
+    const byKey = new Map(dated.map((i) => [i.key, i]));
+    expect(byKey.get("income")!.dateLabel).toBe("10/20~10/22");
+    expect(byKey.get("buy:stock")!.dateLabel).toBe("10/23");
+    expect(byKey.get("cash")!.dateLabel).toBeUndefined();
+    expect(byKey.get("price:stock")!.dateLabel).toBeUndefined();
+    expect(sortCausesByDate(dated).map((i) => i.key)).toEqual(["price:stock", "income", "buy:stock", "cash"]);
+  });
+
+  it("AC8: 날짜 부착·정렬은 항목 금액·합계를 바꾸지 않는다", () => {
+    const data = timelineData();
+    const attr = run(data, [prev, curr], "2026-05-01")!;
+    const base = getAttributionItems(attr);
+    const decorated = sortCausesByDate(attachCauseDates(base, getAttributionRecords(attr, data, RATES)));
+    expect(decorated.reduce((s, i) => s + i.amount, 0)).toBeCloseTo(sumDisplayed(attr), 6);
+    expect(new Map(decorated.map((i) => [i.key, i.amount]))).toEqual(new Map(base.map((i) => [i.key, i.amount])));
   });
 });

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { buildAssetReport, buildLiveAttributionCurr, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, groupAttributionItems, type AttributionPeriod } from "@/lib/report/asset-report";
+import { attachCauseDates, buildAssetReport, buildLiveAttributionCurr, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, getAttributionRecords, groupAttributionItems, sortCausesByDate, type AttributionPeriod } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
@@ -25,6 +25,7 @@ import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { AttributionRecordList } from "../attribution-records";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -331,6 +332,11 @@ export function AssetReportView() {
       buildLiveAttributionCurr(assetData, exchangeRates, summary),
     ),
     [dailySnapshots, monthlySnapshots, attrPeriod, assetData, exchangeRates, summary],
+  );
+  // 구간 내 반영 기록(입출금·매매·대출) — 항목별 날짜 부착·기록 내역 펼침용(S-4.33)
+  const attributionRecords = useMemo(
+    () => (attribution ? getAttributionRecords(attribution, assetData, exchangeRates) : []),
+    [attribution, assetData, exchangeRates],
   );
 
   const getPromptContext = (): AssetPromptContext => ({
@@ -775,11 +781,15 @@ export function AssetReportView() {
                       (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). 자산 타입이
                       같은 원인(시세·매수·매도, 입금·직접수정)은 groupAttributionItems로 박스 하나에 묶는다. */}
                   <div className="space-y-2">
-                    {groupAttributionItems(getAttributionItems(attribution)).map((group) => {
+                    {/* 그룹 순서는 유지하고 그룹 내부만 시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(S-4.33) */}
+                    {groupAttributionItems(sortCausesByDate(attachCauseDates(getAttributionItems(attribution), attributionRecords))).map((group) => {
                       const row = (cause: ReturnType<typeof getAttributionItems>[number]) => (
                         <div key={cause.key} className="flex items-center justify-between gap-3">
                           <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">
                             {cause.sentence}
+                            {cause.dateLabel && (
+                              <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground align-middle">{cause.dateLabel}</span>
+                            )}
                             {/* 구간 전체가 예측(attribution.estimated)이면 위 "예측" 배지로 이미 충분 —
                                 여기서는 실측·예측이 한 줄에 섞인 항목에만 "일부 예측"을 개별로 붙인다 */}
                             {!attribution.estimated && cause.estimated && (
@@ -808,6 +818,7 @@ export function AssetReportView() {
                       );
                     })}
                   </div>
+                  <AttributionRecordList records={attributionRecords} />
                   {attribution.estimated && (
                     <p className={`${CAPTION} text-pretty`}>
                       과거 구간은 현재 자산의 매수일·대출일 기반 예측치예요. 지금부터 쌓이는 기록은 실측으로 분해됩니다.

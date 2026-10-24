@@ -179,7 +179,9 @@ resolveTaxTags(assetData): Map<TaxTag, string>   // 보유 자산 → 세금 태
 computeForeignRealizedGain(assetData, year, rates)  // 해외주식 당해 실현손익 KRW 통산 → { gainKrw, sellCount, estimated, overDeduction } | null
 getEventsForMonth(month): readonly TaxEvent[]
 getMyEvents(events, tags): TaxEvent[]            // 교집합(common 포함) — 캘린더 "내 세금" 필터
-getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 배너 전용 — common 전용 항목 제외
+getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 배너 전용 — common 전용 항목 제외.
+  // 정렬 = 이번 달 우선 → 같은 달 내 high 우선(#4.29). 이번 달 항목 중 마감 지난 것 제외 — 내부 dueEndDate(event, year)가
+  // dueLabel 마지막 "M/D"를 마감일로 해석("~10/25"→10-25, "12/1~12/15"→12-15), 날짜 없는 라벨("2월 급여")은 null=월말까지 유지
 isTaxNoticeDismissed() / markTaxNoticeDismissed() / shouldShowTaxNotice(assetData)
 todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
 isForeignStock(stock)                            // category==="foreign" 또는 currency!=="KRW" (export, S-4.31에서 UI도 재사용)
@@ -287,6 +289,7 @@ markRefreshNudgeShown() / clearAssetRefreshStatus()
 krwMul(currency, rates)                              // KRW 환산 배수 (JPY는 100엔당) — 원인분해 공용
 reflectedCashInflow(data, from, to, rates): number   // 반영된 현금 순유입만 합산 (미반영 소급 기록은 순자산 무변동 → 제외)
 reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
+tradeKrwRate(t, rates)                               // 주식 체결 KRW 배수(체결 환율 우선, JPY 100엔당, 없으면 현재 환율) — reflectedTradeFlow·getAttributionRecords 공용
 costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
 fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
 byDateThenDaily(a, b)                                // 시계열 포인트 정렬 — 같은 날짜면 daily 우선(monthly보다 뒤) → 시작점이 daily로 잡힌다
@@ -304,6 +307,12 @@ getAttributionItems(attr): AttributionDisplayItem[]  // **표시 항목의 단�
 groupAttributionItems(items): AttributionItemGroup[] // getAttributionItems 결과를 자산 타입(stock/crypto/realEstate/cash/loan)별로 묶어 그룹 합계 절대값 큰 순서로 정렬(2026-08, 성적표 "순자산 변화, 왜?" 박스 그룹핑). fx·deposit·통합 price는 그룹 없음(key: null)
 formatAttributionSentence(attr): string | null       // 위 항목을 한 줄로 결합(스크린샷·폴백용)
 formatAttributionDate(d): string                     // YYYY-MM-DD→M/D, YYYY-MM→M월 (홈·성적표 공용)
+// S-4.33 — 항목별 날짜·기록 타임라인 (금액 계산 무관, 순수 파생)
+getAttributionRecords(attr, assetData, rates): AttributionRecord[]
+  // 구간 내 **반영된** 현금·주식·코인·대출 기록 { id,date,createdAt,causeKey,label,title,amount(원인 방향 부호, KRW) }를 날짜→입력순.
+  // 경계는 inFlowWindow(매매 (from,to], 현금·대출 [from,to]), 구간은 PeriodAttribution.windowFrom/windowTo(스냅샷 _date — 표시용 fromDate는 monthly면 "YYYY-MM")
+attachCauseDates(items, records): AttributionDisplayItem[]  // key별 기록 최초~최신일 → dateLabel("10/21"·"10/20~10/23")·firstDate. 기록 없는 원인은 그대로
+sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날짜 있는 항목(firstDate순) → 날짜 없는 항목(CAUSE_ORDER). 성과는 groupAttributionItems 전에 적용해 그룹 내부만 정렬
 ```
 
 `resolveAttribution`이 Δ순자산을 분해한다. **원인 키는 자산군까지 명시한다**:
@@ -366,6 +375,17 @@ UI(`pwa-lock-screen.tsx`)가 아니라 순수 모듈에 두는 이유: 잠금화
 isBackgroundWorkBlocked(): boolean       // isInAppGateActive() || isPwaLocked()
 ```
 전체화면 게이트(인앱 브라우저 게이트·앱 잠금)가 덮고 있는 동안 시세·환율·코인·스냅샷 저장·부동산 재조회·연결 모달 등 **사용자가 인지하지 못하는 부작용**을 막는다. 게이트가 2종이라 지점마다 따로 쓰면 한쪽을 빠뜨리므로 반드시 이 함수를 경유한다(R22).
+
+### name-match.ts (`src/lib/name-match.ts`, #4.29) — 종목명 오타 허용 매칭
+
+```typescript
+normalizeStockName(name)                    // 괄호·공백·-·&… 제거, 끝 "." 제거, 소문자 — ticker-map(normalizeName 별칭)·거래 스크린샷 후보 매칭 공용
+fuzzyThreshold(len)                         // 허용 편집거리: <6 → 0(퍼지 금지), <12 → 1, 이상 → 2
+editDistance(a, b, max)                     // Levenshtein, max 초과 확정 시 max+1 조기 종료
+findClosestNames(normalizedInput, keys)     // 허용 거리 이내 최소 거리 키 전부(동률 포함). exact는 호출부가 먼저 처리
+```
+- 서버 `lookupTicker`는 prefix(잘린 이름) **다음**에 국내 오타 보정을 두고 **유일 최근접만** 채택(`fuzzyLookupKr`), 동률이면 suffix·substring 추정까지 막는다 — 순서를 바꾸면 잘린 이름 83건이 다른 종목으로 바뀌는 회귀(전 ETF 점검 테스트 `ticker-lookup-kr-etf.test.ts`)
+- 클라이언트(거래 스크린샷)는 티커 미인식일 때만 보유 종목명에 적용하고, 유사 일치 후보는 자동 선택하지 않는다
 
 ### number-utils.ts
 
@@ -610,13 +630,14 @@ window.dispatchEvent(new CustomEvent("trigger-dismiss-guide"))
 // 파일 임포트 트리거: → ToolMenu에서 수신
 window.dispatchEvent(new CustomEvent("trigger-import"))
 
-// 닉네임 변경: persistNickname() → useNickname·cloud-sync(changeTick)에서 수신
+// 닉네임 변경: persistNickname() → useNickname·cloud-sync(사용자 편집으로 취급 → push)에서 수신
 window.dispatchEvent(new CustomEvent(NICKNAME_EVENT))  // "secretasset-nickname-change"
 
-// 사용자 명시 편집: AssetDataContext의 saveData(자산 CRUD 전용) 성공 시 → cloud-sync에서 수신
-window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT))  // "secretasset-asset-user-edit"
-// 수신 측은 파생값 비교·pull 직후 skip을 우회해 반드시 push한다 (api-reference.md "자동 push 변경 감지").
-// 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다 → 핑퐁 없음.
+// 사용자 명시 편집: AssetDataContext의 saveData·addStockRaw 성공 시, 우회 저장 경로는 notifyAssetUserEdit()
+// (무티커 스크린샷 등록·파일 가져오기·공유 반영) → cloud-sync에서 수신
+notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-user-edit"
+// 클라우드 동기화의 **유일한** 자동 push 트리거(닉네임 제외) — api-reference.md "자동 push 트리거".
+// 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다 → 조회 기기 push 없음.
 ```
 
 ### 닉네임 (`src/hooks/use-nickname.ts`)

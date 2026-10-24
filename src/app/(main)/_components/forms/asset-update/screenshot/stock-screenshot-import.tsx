@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Stock, AssetData } from "@/types/asset";
 import { saveAssetDataRaw } from "@/lib/asset/asset-storage";
-import { useAssetData } from "@/contexts/asset-data-context";
+import { useAssetData, notifyAssetUserEdit } from "@/contexts/asset-data-context";
 import { stockCategories, securitiesFirms, matchBrokerHint } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
@@ -314,7 +314,10 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     let success: boolean;
     if (hasTickerless) {
       success = saveAssetDataRaw(newData);
-      if (success) refreshData();
+      if (success) {
+        refreshData();
+        notifyAssetUserEdit(); // saveData 우회 경로 — 동기화 push 트리거를 직접 발행
+      }
     } else {
       success = saveData(newData);
     }
