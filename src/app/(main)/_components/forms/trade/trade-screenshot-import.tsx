@@ -401,7 +401,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         )}
 
         {step === "preview" && (
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             {/* 반영 토글 — 수동 입력과 동일한 옵션 */}
             <label className="flex flex-row items-center gap-2 rounded-lg border p-3 cursor-pointer">
               <Checkbox checked={reflectToHoldings} onCheckedChange={(v) => setReflectToHoldings(!!v)} />
@@ -441,18 +441,19 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                 return (
                   <div
                     key={t.id}
-                    className={`flex items-start gap-2 rounded-lg border p-3 transition-colors ${excluded ? "bg-muted/20 opacity-50 cursor-not-allowed"
+                    className={`space-y-2 rounded-lg border p-3 transition-colors ${excluded ? "bg-muted/20 opacity-50 cursor-not-allowed"
                         : active ? "bg-card cursor-pointer" : "bg-muted/30 opacity-60 cursor-pointer"
                       }`}
                     onClick={() => toggleSelect(t.id)}
                   >
-                    <button type="button" className="mt-0.5 shrink-0" disabled={excluded}>
-                      {active
-                        ? <CheckSquare className="size-4 text-primary" />
-                        : <Square className="size-4 text-muted-foreground" />}
-                    </button>
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="space-y-0.5">
+                    {/* 헤더: 체크박스 + 거래 정보 */}
+                    <div className="flex items-start gap-2">
+                      <button type="button" className="mt-0.5 shrink-0" disabled={excluded}>
+                        {active
+                          ? <CheckSquare className="size-4 text-primary" />
+                          : <Square className="size-4 text-muted-foreground" />}
+                      </button>
+                      <div className="flex-1 min-w-0 space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className={`text-xs font-bold ${t.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
                             {t.type === "buy" ? "매수" : "매도"}
@@ -466,8 +467,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                           <span>{t.date}</span>
                         </div>
                       </div>
+                    </div>
 
-                      {excluded ? (
+                    {/* 본문: 자산 선택·미리보기는 체크박스 들여쓰기 없이 카드 전체 폭 사용 */}
+                    {excluded ? (
                         <p className="text-[11px] text-muted-foreground">보유 종목 없음 — 가져오기 제외</p>
                       ) : active && (
                         <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
@@ -522,7 +525,6 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                           )}
                         </div>
                       )}
-                    </div>
                   </div>
                 );
               })}

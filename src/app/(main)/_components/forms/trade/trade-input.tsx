@@ -378,7 +378,7 @@ export function TradeInput() {
 
           {mode === "manual" && !dupPending && (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-0 space-y-4">
               {/* 카테고리 필터 (종목 사전선택 진입 시 숨김) */}
               {!lockedStock && categoryOptions.length > 0 && (
                 <FormItem>

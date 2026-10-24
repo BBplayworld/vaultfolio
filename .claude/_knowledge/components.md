@@ -111,7 +111,7 @@ _components/
 
 ### StockTargetPicker · PositionChangePreview (`forms/trade/stock-target-picker.tsx`, #4.29)
 
-- `StockTargetPicker({ candidates, value, onChange, allowNew, defaultCategory, defaultBroker? })` — 거래를 반영할 **보유 자산 항목 직접 선택** 카드 목록(타입 배지·증권사·종목명·수량·평단). `TradeTarget = { kind:"existing"; stockId } | { kind:"new"; broker; category }`. `allowNew`(매수만)이면 마지막 "신규 자산 등록" 카드 → 증권사·주식 타입 Select 인라인. 수동 거래 입력(`trade-input.tsx`)·거래 스크린샷(`trade-screenshot-import.tsx`) 공용 — 증권사로 자동 라우팅하지 않는다(같은 증권사 IRP·ISA·연금저축 구분 불가)
+- `StockTargetPicker({ candidates, value, onChange, allowNew, defaultCategory, defaultBroker? })` — 거래를 반영할 **보유 자산 항목 직접 선택** 카드 목록 — 2줄(1줄 증권사·종목명, 2줄 수량·평단) + 타입 배지는 주식 상세 `CATEGORY_TABS` 축약 표기(국내·해외·IRP·ISA·연금·비상장). 거래 스크린샷에서는 체크박스 들여쓰기 없이 거래 카드 전체 폭, 다이얼로그 그리드 아이템에 `min-w-0` 필수(누락 시 truncate 텍스트가 다이얼로그 폭을 밀어 모바일 가로 잘림). `TradeTarget = { kind:"existing"; stockId } | { kind:"new"; broker; category }`. `allowNew`(매수만)이면 마지막 "신규 자산 등록" 카드 → 증권사·주식 타입 Select 인라인. 수동 거래 입력(`trade-input.tsx`)·거래 스크린샷(`trade-screenshot-import.tsx`) 공용 — 증권사로 자동 라우팅하지 않는다(같은 증권사 IRP·ISA·연금저축 구분 불가)
 - `PositionChangePreview({ before, after, currency, title? })` — 반영 후 예상 포지션(보유 수량·평단 before → after) 박스. 두 거래 입력 화면 공용
 - 같은 파일 헬퍼 export: `formatPrice(value, currency)`(USD $·JPY ¥·KRW), `getPositionSnapshot(stock, lockedByManual=false)`(수동 입력은 수동 포지션을 lockedByManual로 래핑해 사용), `categoryLabel(category)`
 
