@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/number-utils";
 import { securitiesFirms, stockCategories } from "@/config/asset-options";
 import type { Stock } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
+import { CATEGORY_TABS } from "../../views/detail/tabs/stock-tab";
 
 // 거래 반영 대상 — 기존 보유 항목 직접 선택 또는 신규 자산(증권사 + 주식 타입) 등록
 export type TradeTarget =
@@ -34,6 +35,10 @@ export function getPositionSnapshot(stock: Stock, lockedByManual = false): Posit
 export const categoryLabel = (category: string) =>
   stockCategories.find((c) => c.value === category)?.label ?? category;
 
+// 좁은 카드용 축약 — 주식 상세 카테고리 탭(CATEGORY_TABS)과 동일 표기(국내·해외·IRP·ISA·연금·비상장)
+const categoryShortLabel = (category: string) =>
+  CATEGORY_TABS.find((c) => c.value === category)?.label ?? categoryLabel(category);
+
 
 interface StockTargetPickerProps {
   candidates: Stock[];
@@ -57,13 +62,16 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
         const selected = value?.kind === "existing" && value.stockId === s.id;
         return (
           <button key={s.id} type="button" aria-pressed={selected} className={cardClass(selected)} onClick={() => onChange({ kind: "existing", stockId: s.id })}>
-            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">{categoryLabel(s.category)}</span>
-            <span className="min-w-0 flex-1 truncate">
-              <span className="font-medium">{s.broker || "증권사 미지정"}</span>
-              <span className="text-muted-foreground"> · {s.name}</span>
-            </span>
-            <span className="shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-              {s.quantity.toLocaleString()}주 · {formatPrice(s.averagePrice, s.currency || "KRW")}
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">{categoryShortLabel(s.category)}</span>
+            {/* 좁은 폭에서도 종목명이 과하게 잘리지 않도록 증권사·종목명 / 수량·평단 2줄 */}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">
+                <span className="font-medium">{s.broker || "증권사 미지정"}</span>
+                <span className="text-muted-foreground"> · {s.name}</span>
+              </span>
+              <span className="block truncate text-xs tabular-nums text-muted-foreground">
+                {s.quantity.toLocaleString()}주 · 평단 {formatPrice(s.averagePrice, s.currency || "KRW")}
+              </span>
             </span>
             {selected && <Check className="size-4 shrink-0 text-brand" />}
           </button>
@@ -85,7 +93,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
           {value?.kind === "new" && (
             <div className="grid grid-cols-2 gap-2 px-3 pb-3">
               <Select value={value.broker} onValueChange={(v) => onChange({ ...value, broker: v })}>
-                <SelectTrigger className="h-9 w-full text-sm"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full min-w-0 text-sm"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                 <SelectContent>
                   {securitiesFirms.map((g) => g.items.map((f) => (
                     <SelectItem key={f} value={f} className="text-sm">{f}</SelectItem>
@@ -93,7 +101,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
                 </SelectContent>
               </Select>
               <Select value={value.category} onValueChange={(v) => onChange({ ...value, category: v as Stock["category"] })}>
-                <SelectTrigger className="h-9 w-full text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full min-w-0 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {stockCategories.map((c) => (
                     <SelectItem key={c.value} value={c.value} className="text-sm">{c.label}</SelectItem>
