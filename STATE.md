@@ -23,7 +23,7 @@
 
 ## 후보 목록 (주간 기획 탈락·대기)
 - [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
-- [type:bug 의심] 월 스냅샷이 연 경계(1월 첫 접속)에 전년분 삭제 (`asset-data-context.tsx` `s.month.startsWith(currentYear)`) — #32 선행 조건으로 13개월 롤링 보존 처리 예정
+- [type:bug, qa 확정 2026-10-27] 월 스냅샷이 연 경계(1월 첫 저장)에 전년분 삭제 (`src/contexts/asset-data-context.tsx:770`) — 운영 사용자에게 이미 발생(2025→2026 전년분 소실, 복구 불가). #32 선행 조건으로 13개월 롤링 보존 처리 예정. 근거 issues/32-monthly-settlement/qa-report.md
 
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
