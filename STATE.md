@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-27 (초기 설정)
+마지막 갱신: 2026-10-27 (첫 수동 실행: #32 planning ①② 완료)
 
 ## 대표 결정 대기
 - 없음
@@ -9,7 +9,7 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #31 시드0 preview 안전장치·데모 데이터 | — | planning | planner-designer + business-pm | 방향 정의 (최우선, 끝나야 다른 개발 시작) |
-| #32 시드1 성과 메뉴·월말 결산 | — | planning | planner-designer + business-pm | 방향 정의 (첫 실행에서 착수) |
+| #32 시드1 성과 메뉴·월말 결산 | — | planning ③ | planner-designer(spec.md) + business-pm(business.md) | direction 합의(축소 반영본)·challenge 통과 완료 → spec.md·business.md 작성 (challenge.md spec 조건 1~12 준수, 경험 절 대신 합의 절 근거) |
 | #33 시드2 투자 유형 온보딩 | — | planning | planner-designer + business-pm | 방향 정의 |
 | #34 시드3 채널 운영 | — | planning | business-pm | 방향 정의 → 초안 |
 
@@ -22,7 +22,8 @@
 - 가장 큰 버전: 4.33 (`.claude/specs/4.33-*`) → 다음 배정 4.34
 
 ## 후보 목록 (주간 기획 탈락·대기)
-- 없음
+- [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
+- [type:bug 의심] 월 스냅샷이 연 경계(1월 첫 접속)에 전년분 삭제 (`asset-data-context.tsx` `s.month.startsWith(currentYear)`) — #32 선행 조건으로 13개월 롤링 보존 처리 예정
 
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
