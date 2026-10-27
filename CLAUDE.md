@@ -48,3 +48,84 @@ alwaysApply: true
 > **UI/화면 작업 시 `design-system.md`를 단일 출처로 준수한다 — 색·간격·반경·고도·컴포넌트 규약(§1~§5)·모션/디테일 폴리시(§6)·접근성(§7)·정보 설계 휴리스틱(§11).**
 
 > **문서 계층**: `CLAUDE.md`(규칙) · `_knowledge/`(현재 코드가 어떤가) · [`specs/`](.claude/specs/)(이번에 무엇을 왜 만드나) · `skills/`(어떻게 작업하나). 기존 기능의 현행 사양은 `qa-full-test-plan.md`의 `F-*`가 담당하며 specs로 복제하지 않는다.
+
+# 에이전트 팀 운영 (시크릿에셋)
+
+이 저장소는 5인 AI 에이전트 팀이 클라우드 예약 작업으로도 운영한다. 모든 세션은 기억 없이 새로 시작하므로,
+**팀의 기억은 `memory` 브랜치에 있고, 매 예약 실행은 그것을 읽고 시작해서 그것을 갱신하고 끝난다.**
+위 "# 규칙"·"# KB"는 에이전트에게도 그대로 적용된다. 아래 "8. 기존 규칙과의 관계"만 예외.
+
+## 1. 실행 시작 시 반드시 읽을 것 (순서대로)
+1. 팀 메모리 (`memory` 브랜치, `.memory/` 로 체크아웃)
+   ```bash
+   git fetch origin memory
+   git worktree add -B memory .memory origin/memory 2>/dev/null || git -C .memory pull origin memory
+   ```
+   - `.memory/STATE.md` 현재 상태
+   - `.memory/DECISIONS.md` 확정된 결정 — **이와 다른 방향 제안 금지**
+   - `.memory/LEARNINGS.md` 대표의 반려 사유 — **같은 제안 반복 금지**
+   - `.memory/HISTORY.md` 지금까지의 흐름
+2. `docs/product/PRINCIPLES.md` 제품 원칙
+3. `docs/ops/WORKFLOW.md` 단계·라벨·산출물 규칙
+4. 작업 중인 이슈 폴더 `.memory/issues/<GitHub 이슈번호>-<slug>/`
+
+## 2. 실행 끝에 반드시 할 것
+`.memory/` 를 갱신하고 `memory` 브랜치에 push한다 (규칙: `.memory/README.md`).
+```bash
+git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .memory push origin memory
+```
+메모리 갱신 없이 끝난 실행은 실패한 실행이다.
+
+## 3. 팀 구성 (`.claude/agents/`)
+| 에이전트 | 역할 |
+|---|---|
+| `planner-designer` | 서비스 기획, UI/UX 정의 (사업 PM과 기획 방향 공동 정의) |
+| `business-pm` | 초기 사업 확장, 지표, 마케팅 (기획 디자이너와 기획 방향 공동 정의) |
+| `developer` | 프론트엔드·백엔드 구현, preview 배포 확인 |
+| `qa` | 모든 결과물의 품질 검증 |
+| `cto` | 대표 결정을 위한 판정 보고서 작성, 위험 등급 판정. **최종 결정권 없음** |
+
+에이전트 이름이 subagent_type으로 등록되지 않은 세션이면 `general-purpose` 에이전트에 해당 `.claude/agents/<이름>.md` 본문(frontmatter 제외)과 frontmatter의 model을 넘겨 호출한다.
+
+**대표(사람, GitHub `BBplayworld`, 레벨 1)의 결정은 마지막 한 번: "이 개선을 라이브에 반영할지"** — PR 머지 = 반영, PR 닫기 = 미반영.
+기획·사업 검토, 개발, QA(preview 실제 점검 포함)는 팀이 끝까지 해낸다. **대표에게 QA·화면 확인·중간 판단을 요청하지 않는다.** `needs-human`은 제품 원칙 변경이 필요할 때만.
+과제는 신규뿐 아니라 개선·버그·통합·축소·제거·정리를 모두 포함하며, 같은 기여도면 줄이기·고치기를 우선한다.
+
+## 4. 절대 규칙
+- **사용자 자산 데이터(보유수량, 매입단가, 평가금액, 잔액, 부채)는 서버로 보내지 않는다.** 서버는 시세 조회와 E2EE 동기화 중계만 한다.
+- 투자 조언 문구 금지.
+- 마케팅 문구에 구체적 금액 금지. 브랜드는 "안전한 자산 관리, 시크릿에셋".
+- 로컬 저장소 스키마를 바꾸면 마이그레이션 코드 + "이전 버전 데이터 → 새 버전" 복원 테스트 필수. 자동으로 `risk:high`.
+- `main` 직접 push 금지, PR 머지 금지 (머지는 대표만).
+- 비밀값을 파일·이슈·커밋·로그·메모리에 쓰지 않는다.
+- 외부 채널 실제 게시 금지. 마케팅은 초안까지.
+- 제품 원칙(PRINCIPLES.md)을 바꿔야만 진행 가능하면 `status:needs-human` + 이유. 그 밖의 불확실성은 cto 판정으로 팀 안에서 해결.
+
+## 5. 브랜치·버전과 Vercel preview
+- **버전 = 브랜치 = 서비스 표시 버전.** 이슈당 브랜치 하나: **`issue-4.NN`** (기존 관행 유지, 서비스에 4.NN으로 표시됨).
+  - 버전 배정: **development 진입 시** developer가 기존 브랜치·`.claude/specs/`·커밋의 가장 큰 4.NN + 0.01로 배정 (planning 반려 시 번호 공백 방지)
+  - 배정 후 GitHub 이슈 제목 앞에 `[4.NN]`, `.memory/STATE.md` 진행 표와 DECISIONS에 `#<이슈번호> = 4.NN` 매핑 기록
+  - QA 수정도 같은 브랜치에 push한다.
+- Vercel이 브랜치 push마다 preview를 배포한다. 같은 브랜치는 고정 URL을 가진다 (**브랜치명의 점(.)은 빠진다**):
+  `https://secretasset-git-issue-4NN-bbplayworlds-projects.vercel.app` (예: `issue-4.34` → `issue-434`)
+- 최신 배포 상태는 GitHub MCP로 PR의 커밋 상태·체크(`pull_request_read` / `get_commit`)에서 Vercel 항목의 URL을 확인한다.
+- preview 환경에서는 실제 동기화 쓰기가 꺼져 있고 데모 데이터로 확인한다 (시드0 이슈에서 구현).
+- 운영 배포는 Vercel이 `main` 머지 시 자동으로 한다. 에이전트는 배포 명령을 실행하지 않는다.
+- `memory` 브랜치는 Vercel 빌드 제외 (`vercel.json`).
+
+## 6. 기술 정보
+- 프론트엔드: Next.js(App Router, turbopack) + TypeScript + Tailwind / 백엔드(시세·동기화): Next.js API 라우트 (`src/app/api/`)
+- 설치 `npm ci` · 테스트 `npx vitest run` · 린트 `npm run lint` · 빌드 `npm run build` · 타입 `npx tsc --noEmit`
+- GitHub 조작(이슈·라벨·코멘트·PR)은 `gh` CLI 대신 **GitHub MCP 도구(`mcp__github__*`)** 를 쓴다. 저장소: `BBplayworld/vaultfolio`. MCP를 쓸 수 없으면 **git CLI 전용 모드**(`docs/ops/ORCHESTRATOR.md` "GitHub 접근 방식")로 진행한다.
+- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 owner-review 진입·운영 이상 때만 (`ORCHESTRATOR.md` "대표 알림").
+
+## 7. 커밋·PR·소통
+- 커밋: `[#4.NN] <무엇을 왜>` (기존 관행), PR 본문 첫 줄 `Closes #<GitHub 이슈번호>`
+- 모든 산출물 한국어, 문서는 1~2쪽 이내
+- 단계 완료 시 이슈 코멘트 1개: `[역할] 결과 / 산출물 경로 / 다음 단계`
+
+## 8. 기존 규칙과의 관계 (에이전트 실행에만 적용)
+- "라이브 프리뷰 및 동작 검증 제외" → 에이전트는 로컬 앱 실행 대신 **Vercel preview URL**로 확인한다.
+- "구현 전 `/spec`" → 에이전트 이슈는 이슈 폴더의 `spec.md`가 명세를 대신한다. `.claude/specs/`에 중복 작성하지 않는다.
+- "KB 문서 갱신은 배치로" → developer가 PR을 qa로 넘기기 직전 1회, 변경분을 KB(`components.md`·`state-and-utils.md`·`design-system.md`·`changelog.md`·`qa-full-test-plan.md`)에 일괄 반영해 같은 PR에 포함한다. qa는 `qa-full-test-plan.md`의 관련 `F-*` 항목을 회귀 검사에 사용한다.
+- 계획 md(`C:/Users/...plans`) 규칙은 대표 로컬 작업 전용, 에이전트와 무관.
