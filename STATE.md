@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-27 (첫 수동 실행: #32 planning ①② 완료)
+마지막 갱신: 2026-10-27 (설정 PR #35 머지, 월간 결산 라인만 진행)
 
 ## 대표 결정 대기
 - 없음
@@ -8,13 +8,13 @@
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #31 시드0 preview 안전장치·데모 데이터 | — | planning | planner-designer + business-pm | 방향 정의 (최우선, 끝나야 다른 개발 시작) |
+| #31 시드0 preview 안전장치·데모 데이터 | — | planning | planner-designer + business-pm | 방향 정의 (#32 개발·QA의 선행 조건이라 함께 진행. 데모 데이터에 2개월 이상·입출금·매수매도·환율·부동산 재평가 포함) |
 | #32 시드1 성과 메뉴·월말 결산 | — | planning ③ | planner-designer(spec.md) + business-pm(business.md) | direction 합의(축소 반영본)·challenge 통과 완료 → spec.md·business.md 작성 (challenge.md spec 조건 1~12 준수, 경험 절 대신 합의 절 근거) |
-| #33 시드2 투자 유형 온보딩 | — | planning | planner-designer + business-pm | 방향 정의 |
-| #34 시드3 채널 운영 | — | planning | business-pm | 방향 정의 → 초안 |
+| #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
+| #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
 ## 막힌 것
-- 설정 PR 머지 전에는 main에 ORCHESTRATOR.md가 없어 예약 실행이 동작하지 않음
+- 없음
 
 ## 확인 필요 (첫 실행에서 처리)
 - 2차 라운드 스펙(평가금액 알림, 목표 설정, 온보딩 마법사) 실제 구현 여부: changelog상 알림·신선도·목표 설정은 철회(4.22 후속), 온보딩 마법사는 4.29에서 구현 — 코드로 재확인
