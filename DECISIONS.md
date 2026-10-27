@@ -35,3 +35,6 @@
 | 2026-10-27 | #32 | cto 반대 검토 축소 → 재검토 통과: 주식 범위 결산·일주연 원인분해·홈 헤더 라벨 변경·변동 없음 확인·안내 접기 저장·13개월 초과 과거 달 제외, 엔진·홈 헤더 미변경, 월 스냅샷 13개월 롤링 보존 선행, 위험 medium | cto | 범위·회귀 최소화, 연 경계 데이터 소실 해소 |
 | 2026-10-27 | — | 품질 최종 사인·결함 확정은 qa만. 다른 역할은 "결함 의심"으로 넘긴다. 대표 알림은 owner-review 진입·운영 이상 때만. GitHub MCP 불가 시 git CLI 전용 모드 | 대표 | 역할 분리, 알림 최소화 |
 | 2026-10-27 | — | 설정 PR #35 머지(자동화 즉시 반영). 당분간 월간 결산 라인(#32 + 선행 #31)만 예약 실행으로 진행, #33·#34 on-hold | 대표 | 집중 |
+| 2026-10-27 | #31 | direction 합의: `isCloudSyncEnabled()` preview false로 동기화 읽기·쓰기 차단, 배지 `PREVIEW · v4.NN`(data-screenshot-hide), 데모 고정 JSON(유형당 1~3개·거래 월 3~5건)을 applyImportedPayload로 주입, 진입 `?demo=1`/`?demo=empty` | business-pm·planner-designer | 기존 스위치·주입 경로 재사용 |
+| 2026-10-27 | #31 | cto 반대 검토 통과: 서버 /api/sync 변경 제외, 운영 컴포넌트 미수정, sync-client 입구 가드+테스트 3개, 데모 날짜 월 오프셋, 실제 공개 티커·가상 수량, 위험 초안 high | cto | 범위 최소·preview 쓰기 0건 보장 |
+| 2026-10-27 | #32 | spec·business 승인: 결산 기준일 = 직전 기록→해당 기록(25일 이상 간격은 날짜 구간만), 13개월 롤링 보존 순수 함수, `settlement_view` result=settled/in_progress/first_month, 화면키 `activity:change`, .ics RFC 5545 자동 검증(iOS 실동작은 알려진 한계·사람 확인 없음), 미갱신 자산은 기존 "예측" 배지+"N일 전 값 기준" | planner-designer·business-pm | 교차 검토 |

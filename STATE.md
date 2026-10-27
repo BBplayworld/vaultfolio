@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-27 (설정 PR #35 머지, 월간 결산 라인만 진행)
+마지막 갱신: 2026-10-27 20:30 KST (정기 실행: #31 planning ①② 통과, #32 planning ③ 완료 → design-review)
 
 ## 대표 결정 대기
 - 없음
@@ -8,8 +8,8 @@
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #31 시드0 preview 안전장치·데모 데이터 | — | planning | planner-designer + business-pm | 방향 정의 (#32 개발·QA의 선행 조건이라 함께 진행. 데모 데이터에 2개월 이상·입출금·매수매도·환율·부동산 재평가 포함) |
-| #32 시드1 성과 메뉴·월말 결산 | — | planning ③ | planner-designer(spec.md) + business-pm(business.md) | direction 합의(축소 반영본)·challenge 통과 완료 → spec.md·business.md 작성 (challenge.md spec 조건 1~12 준수, 경험 절 대신 합의 절 근거) |
+| #31 시드0 preview 안전장치·데모 데이터 | — | planning ③ | planner-designer(spec.md) + business-pm(business.md) | direction 합의·challenge 통과(spec 조건 1~10, 위험 초안 high: 동기화 경로 분기) → spec.md·business.md |
+| #32 시드1 성과 메뉴·월말 결산 | — | design-review | developer(tech-review.md) + planner-designer(ui.md) | spec·business 상호 승인 완료. development는 #31 완료 후(WORKFLOW 8장) |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
