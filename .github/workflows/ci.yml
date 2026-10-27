@@ -1,5 +1,5 @@
 # PR마다 테스트·린트·빌드. 배포는 Vercel GitHub 연동이 담당한다.
-#   - issue-<번호> 브랜치 push → Vercel preview (브랜치 고정 URL)
+#   - issue-4.NN 브랜치 push → Vercel preview (브랜치 고정 URL)
 #   - main 머지 → Vercel production
 # Settings → Branches 에서 main 보호 규칙의 필수 체크로 이 워크플로우를 지정한다.
 name: ci
@@ -16,11 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - name: Install
-        run: '{{INSTALL_CMD}}'
+        run: npm ci
       - name: Test
-        run: '{{TEST_CMD}}'
+        run: npx vitest run
       - name: Lint
-        run: '{{LINT_CMD}}'
+        run: npm run lint
       - name: Build
-        run: '{{BUILD_CMD}}'
+        run: npm run build

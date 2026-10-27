@@ -1,7 +1,7 @@
 ---
 name: 시크릿에셋 이슈
 about: 기획·개발·마케팅 모든 일의 단위
-labels: ["status:idea"]
+labels: ["status:planning"]
 ---
 
 ## 한 줄 요약
@@ -19,4 +19,4 @@ labels: ["status:idea"]
 -
 
 ## 유형
-<!-- type:feature / type:improvement / type:bug / type:marketing 중 라벨로 지정 -->
+<!-- type:feature / type:improvement / type:bug / type:simplify(통합·축소·정리) / type:marketing 중 라벨로 지정 -->

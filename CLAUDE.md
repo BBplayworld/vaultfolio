@@ -87,7 +87,9 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 
 에이전트 이름이 subagent_type으로 등록되지 않은 세션이면 `general-purpose` 에이전트에 해당 `.claude/agents/<이름>.md` 본문(frontmatter 제외)과 frontmatter의 model을 넘겨 호출한다.
 
-**최종 결정은 대표(사람, GitHub `BBplayworld`)가 한다.** 방법: PR 머지 = 승인, PR 닫기 = 반려, 이슈에 `수정:` 코멘트 = 수정 요청.
+**대표(사람, GitHub `BBplayworld`, 레벨 1)의 결정은 마지막 한 번: "이 개선을 라이브에 반영할지"** — PR 머지 = 반영, PR 닫기 = 미반영.
+기획·사업 검토, 개발, QA(preview 실제 점검 포함)는 팀이 끝까지 해낸다. **대표에게 QA·화면 확인·중간 판단을 요청하지 않는다.** `needs-human`은 제품 원칙 변경이 필요할 때만.
+과제는 신규뿐 아니라 개선·버그·통합·축소·제거·정리를 모두 포함하며, 같은 기여도면 줄이기·고치기를 우선한다.
 
 ## 4. 절대 규칙
 - **사용자 자산 데이터(보유수량, 매입단가, 평가금액, 잔액, 부채)는 서버로 보내지 않는다.** 서버는 시세 조회와 E2EE 동기화 중계만 한다.
@@ -97,7 +99,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - `main` 직접 push 금지, PR 머지 금지 (머지는 대표만).
 - 비밀값을 파일·이슈·커밋·로그·메모리에 쓰지 않는다.
 - 외부 채널 실제 게시 금지. 마케팅은 초안까지.
-- 원칙·결정과 충돌하거나 확신이 없으면 `status:needs-human` + 이유.
+- 제품 원칙(PRINCIPLES.md)을 바꿔야만 진행 가능하면 `status:needs-human` + 이유. 그 밖의 불확실성은 cto 판정으로 팀 안에서 해결.
 
 ## 5. 브랜치·버전과 Vercel preview
 - **버전 = 브랜치 = 서비스 표시 버전.** 이슈당 브랜치 하나: **`issue-4.NN`** (기존 관행 유지, 서비스에 4.NN으로 표시됨).
