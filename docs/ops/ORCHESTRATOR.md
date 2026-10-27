@@ -2,7 +2,21 @@
 
 예약 작업 프롬프트에는 "docs/ops/ORCHESTRATOR.md 의 '<실행 종류>'를 수행하라"만 적는다.
 모든 실행은 **0단계(메모리 읽기)로 시작하고 마지막 단계(메모리 저장)로 끝난다.** 예외 없음.
-GitHub 조작은 전부 GitHub MCP 도구(`mcp__github__*`, 저장소 `BBplayworld/vaultfolio`)로 한다. `gh` CLI는 쓰지 않는다.
+**대표에게 가는 알림은 두 경우뿐이다: ① owner-review 진입(반영 여부 결정 요청) ② 운영 이상(C).** 그 밖의 실행은 알림 없이 조용히 끝낸다.
+
+## GitHub 접근 방식
+1. **기본: GitHub MCP 도구**(`mcp__github__*`, 저장소 `BBplayworld/vaultfolio`). 세션에 저장소가 없으면 `add_repo`(access push)로 붙인다. `gh` CLI는 쓰지 않는다.
+2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
+   - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<번호>-<slug>/log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
+   - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
+   - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
+   - 실행 요약 첫 줄에 "git 전용 모드" 표시
+
+## 대표 알림 (owner-review 진입 · 운영 이상 때만)
+- `PushNotification` 도구가 있으면 호출: 제목 `[시크릿에셋] 반영 결정 필요: [4.NN] <이슈 제목>`, 본문에 권고 한 줄 + PR(또는 비교) 링크 + decision-brief 링크
+- GitHub MCP 가능 시 이슈 코멘트에 `@BBplayworld` 멘션 (GitHub 앱 알림)
+- 실행 최종 요약 **첫 줄**을 `🔔 대표 결정 필요: ...` 로 시작 (예약 작업 완료 푸시에 그대로 노출)
+- 알림이 필요 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>` 로 쓴다
 **대표에게 QA·화면 확인을 요청하지 않는다.** 대표에게 가는 것은 owner-review의 반영 여부 결정 요청뿐이다.
 
 ---
@@ -30,7 +44,7 @@ GitHub 조작은 전부 GitHub MCP 도구(`mcp__github__*`, 저장소 `BBplaywor
    | qa | `qa` → FAIL이면 `developer` 수정 후 같은 실행에서 `qa` 1회 재검증 가능 |
    | qa PASS 직후 | `cto` → decision-brief.md 작성 후 `status:owner-review` |
 4. **단계 전환**: 완료 조건 충족 시에만 `issue_write`로 라벨 변경. 미충족이면 막힌 이유 코멘트. 막힘은 WORKFLOW.md 5장대로 팀 안에서 해결
-5. **owner-review 진입 시**: 이슈 코멘트에 `@BBplayworld` 멘션 + 권고 한 줄 + decision-brief 링크 + PR 링크 ("반영하려면 PR 머지, 아니면 닫기")
+5. **owner-review 진입 시**: 위 "대표 알림" 수행 (권고 한 줄 + decision-brief 링크 + PR 링크, "반영하려면 PR 머지, 아니면 닫기")
 6. **마지막 단계 — 메모리 저장** (아래)
 
 처리할 것이 없으면: 메모리 STATE.md의 "마지막 갱신"만 바꾸고 저장 후 종료. 일을 만들어내지 않는다.
@@ -54,7 +68,7 @@ GitHub 조작은 전부 GitHub MCP 도구(`mcp__github__*`, 저장소 `BBplaywor
 ## C. 배포 후 점검 (매일, 머지가 있었던 날만)
 1. **0단계 수행**. 지난 24시간 머지가 없으면 메모리 저장 후 종료
 2. `qa`: 운영 URL 스모크 점검 (qa.md 참조)
-3. 이상 시 `type:bug` + `priority:p0` + `status:planning` 이슈 생성(팀이 바로 수정 착수) + 대표 멘션으로 상황 알림. 롤백은 대표가 Vercel에서 직접 (Instant Rollback)
+3. 이상 시 `type:bug` + `priority:p0` + `status:planning` 이슈 생성(팀이 바로 수정 착수) + 위 "대표 알림" 수행. 롤백은 대표가 Vercel에서 직접 (Instant Rollback)
 4. **마지막 단계 — 메모리 저장**
 
 ---
