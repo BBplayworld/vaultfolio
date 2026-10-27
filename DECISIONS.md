@@ -38,3 +38,6 @@
 | 2026-10-27 | #31 | direction 합의: `isCloudSyncEnabled()` preview false로 동기화 읽기·쓰기 차단, 배지 `PREVIEW · v4.NN`(data-screenshot-hide), 데모 고정 JSON(유형당 1~3개·거래 월 3~5건)을 applyImportedPayload로 주입, 진입 `?demo=1`/`?demo=empty` | business-pm·planner-designer | 기존 스위치·주입 경로 재사용 |
 | 2026-10-27 | #31 | cto 반대 검토 통과: 서버 /api/sync 변경 제외, 운영 컴포넌트 미수정, sync-client 입구 가드+테스트 3개, 데모 날짜 월 오프셋, 실제 공개 티커·가상 수량, 위험 초안 high | cto | 범위 최소·preview 쓰기 0건 보장 |
 | 2026-10-27 | #32 | spec·business 승인: 결산 기준일 = 직전 기록→해당 기록(25일 이상 간격은 날짜 구간만), 13개월 롤링 보존 순수 함수, `settlement_view` result=settled/in_progress/first_month, 화면키 `activity:change`, .ics RFC 5545 자동 검증(iOS 실동작은 알려진 한계·사람 확인 없음), 미갱신 자산은 기존 "예측" 배지+"N일 전 값 기준" | planner-designer·business-pm | 교차 검토 |
+| 2026-10-28 | #31 | spec·business 상호 승인: 완료 기준 17개(vitest 9·Playwright 8, 사람 확인 없음), 데모 월 오프셋 -3~0·fx 월별 변화 | planner-designer·business-pm | 교차 검토 |
+| 2026-10-28 | #32 | design-review: tech-review·ui 상호 승인. deposit은 내부 이동 분류, 월 선택기 InlineSelector 확장(testId·size lg·스크롤), SpecRow·SectionHeader 공용 이동, 엔진 래퍼 export 1개 | developer·planner-designer | 교차 검토 |
+| 2026-10-28 | #32 | 위험 high 확정(결산 금액 매핑·스냅샷 보존 교체), 동기화 pull 병합 v1 제외 | cto | 애매하면 높은 쪽, 최악도 현행과 동일 |

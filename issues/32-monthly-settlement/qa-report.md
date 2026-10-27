@@ -20,3 +20,22 @@ saveSnapshots가 월 스냅샷을 `s.month.startsWith(currentYear)`로 걸러 1�
 
 ### 임시 파일 점검
 `src/__qa_tmp__/` 삭제 확인. `git status -s`에 남은 변경은 사전 존재한 .claude/agents, CLAUDE.md, docs/ops 수정뿐(본 작업 무관).
+
+### 결함 확인 2 — tech-review.md 결함 의심 4건 (2026-10-27, main 4234d0d, 코드 읽기 기반 판정)
+
+| # | 의심 | 판정 |
+|---|---|---|
+| ① | 엔진 끝점이 항상 오늘이라 과거 구간 API 부재 | 해당 없음(신규 기능 설계 사항) |
+| ② | deposit이 "기록 안 된 변화"로 분류돼 기록이 있어도 안내 노출 | 해당 없음(신규 기능 설계 사항) — spec 보완 필요 |
+| ③ | getStaleCategories가 payload 밖 갱신 기록 사용 | 해당 없음(신규 기능 설계 사항) — #31 데모 준비 사항 |
+| ④ | 공유 토큰 복원 기기의 월 스냅샷이 병합 시 정상 기록을 덮어씀 | 해당 없음(신규 기능 설계 사항) — 현행 교체 동작은 별도 관찰 |
+
+**① 해당 없음.** `computePeriodAttribution`(asset-report.ts:1037)은 `liveCurr ?? pickAttributionCurr(dailyPoints)`를 끝점으로 쓴다. 이 함수의 계약은 "오늘까지의 1w/1m/3m/ytd 기간 분해"이며 기존 화면(홈·성적표)은 모두 이 계약대로 정확히 동작한다. 과거 두 시점 구간은 현재 어떤 화면에도 없는 신규 요구(지난 달 결산)라서 기존 사용자에게 잘못 표시되는 값이 없다. `computeAttributionBetween` 래퍼 신설은 기능 추가이고 결함 수정이 아니다. 영향 범위: 없음.
+
+**② 해당 없음.** 현행 코드에는 "기록 안 된 변화" 개념과 안내 문구가 없다. `deposit`(asset-report.ts:728,749)은 임차보증금 증감 효과이고 현행 화면에서는 라벨 "임차보증금 반환/증가"로 정상 표시된다. 문제는 신규 spec.md:64 매핑(`deposit` -> 기록 안 된 변화)과 :68 안내 규칙이 결합할 때만 생기며, 이는 spec 설계 보완 사항이다. 권고: spec 소유자가 deposit을 내부 이동 풀(G)로 옮기거나 "기록 안 된 변화" 임계 계산에서 제외하도록 확정하고, mapSettlementCauses 테스트에 "보증금 변동만 있는 달은 안내 미노출" 케이스를 추가한다. 영향 범위: 구현 시 보증금 보유 사용자에게만 해당(구현 전이라 운영 영향 없음).
+
+**③ 해당 없음.** `getStaleCategories`(asset-refresh-status.ts:55)는 localStorage `assetRefresh` 메타와 `assetLastUpdated` 유예(NEW_USER_GRACE_DAYS)를 쓰는 홈 배너용 함수이며 의도된 설계다(이력 없는 신규 사용자는 유예 후 stale). 결산 블록 7이 이를 재사용할 때 데모 payload(`applyImportedPayload`)만으로는 메타가 없어 비어 보일 수 있으나, 이는 데모 데이터 준비 사항이다. 영향 범위: 운영 영향 없음. #31 데모 spec에 "assetRefresh 메타 또는 오래된 lastUpdated 주입"을 포함시키거나 블록 7을 순수 함수(메타를 인자로 받음)로 테스트한다.
+
+**④ 해당 없음.** 월 스냅샷 합집합 병합(`mergeMonthlySnapshots`)은 아직 코드에 없는 신규 설계이고, 현행 pull(asset-storage.ts:333)은 수신분이 비어 있지 않으면 통째로 교체한다. 따라서 "병합이 덮어쓴다"는 현재 재현 대상이 아니다. 참고 관찰: 공유 토큰은 month·netAsset·financialAsset만 인코딩(`packSnapshots` :594, `unpackSnapshots` :607)해 enrich/date가 없고, `applySharedData`(asset-data-context.tsx:952-961)는 복원 후 `notifyAssetUserEdit()`으로 push를 트리거한다. 그래서 현행 코드에서도 복원 기기가 push하면 다른 기기가 enrich 없는 월 스냅샷으로 교체될 수 있다(결산 정확도 저하는 신규 기능이 enrich를 쓰기 시작할 때 비로소 사용자에게 드러남). 병합 구현 시 같은 달 충돌 규칙을 "enrich 있는 쪽 우선, 동률이면 date가 늦은 쪽, 그다음 수신값"으로 정하고 테스트로 고정할 것(tech-review 제안과 같은 방향이되 enrich 유무를 1순위로 둔다). 영향 범위: 공유 토큰 복원 후 동기화하는 사용자, 신규 기능 출시 후.
+
+참고: 소스 수정·임시 테스트 없음(읽기 전용 판정). 앞선 "결함 확인"(1월 전년 월 스냅샷 삭제)은 확정 상태 유지.

@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-27 20:30 KST (정기 실행: #31 planning ①② 통과, #32 planning ③ 완료 → design-review)
+마지막 갱신: 2026-10-28 03:30 KST (정기 실행: #31 planning ③ 완료 → design-review, #32 design-review 완료 → #31 대기)
 
 ## 대표 결정 대기
 - 없음
@@ -8,8 +8,8 @@
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #31 시드0 preview 안전장치·데모 데이터 | — | planning ③ | planner-designer(spec.md) + business-pm(business.md) | direction 합의·challenge 통과(spec 조건 1~10, 위험 초안 high: 동기화 경로 분기) → spec.md·business.md |
-| #32 시드1 성과 메뉴·월말 결산 | — | design-review | developer(tech-review.md) + planner-designer(ui.md) | spec·business 상호 승인 완료. development는 #31 완료 후(WORKFLOW 8장) |
+| #31 시드0 preview 안전장치·데모 데이터 | — | design-review | developer(tech-review.md) + planner-designer(ui.md) | spec·business 상호 승인(완료 기준 17: vitest 9·Playwright 8). #32 요구: assetRefresh 메타 주입 포함 |
+| #32 시드1 성과 메뉴·월말 결산 | — | design-review 완료(대기) | developer | tech-review·ui 상호 승인, 위험 high 확정, 동기화 병합 v1 제외. #31 머지 후 main에서 분기해 development(WORKFLOW 8장) |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
@@ -22,6 +22,7 @@
 - 가장 큰 버전: 4.33 (`.claude/specs/4.33-*`) → 다음 배정 4.34
 
 ## 후보 목록 (주간 기획 탈락·대기)
+- [type:improvement] 동기화 pull 월 스냅샷 합집합 병합(같은 달 충돌: enrich 우선→date 늦은 쪽) — #32 v1에서 제외(cto 2026-10-28), 착수 조건은 #32 spec §5-1
 - [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
 - [type:bug, qa 확정 2026-10-27] 월 스냅샷이 연 경계(1월 첫 저장)에 전년분 삭제 (`src/contexts/asset-data-context.tsx:770`) — 운영 사용자에게 이미 발생(2025→2026 전년분 소실, 복구 불가). #32 선행 조건으로 13개월 롤링 보존 처리 예정. 근거 issues/32-monthly-settlement/qa-report.md
 
