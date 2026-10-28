@@ -2,22 +2,24 @@
 
 예약 작업 프롬프트에는 "docs/ops/ORCHESTRATOR.md 의 '<실행 종류>'를 수행하라"만 적는다.
 모든 실행은 **0단계(메모리 읽기)로 시작하고 마지막 단계(메모리 저장)로 끝난다.** 예외 없음.
-**대표에게 가는 알림은 두 경우뿐이다: ① owner-review 진입(반영 여부 결정 요청) ② 운영 이상(C).** 그 밖의 실행은 알림 없이 조용히 끝낸다.
+**대표 알림은 아래 "대표 알림" 표의 두 경우뿐이다.** 그 밖의 실행은 조용히 끝낸다.
 
 ## GitHub 접근 방식
 1. **기본: GitHub MCP 도구**(`mcp__github__*`, 저장소 `BBplayworld/vaultfolio`). 세션에 저장소가 없으면 `add_repo`(access push)로 붙인다. `gh` CLI는 쓰지 않는다.
 2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
-   - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<번호>-<slug>/log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
+   - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<버전>-<번호>-<slug>/<버전>-log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
    - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
    - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
    - 실행 요약 첫 줄에 "git 전용 모드" 표시
 
-## 대표 알림 (owner-review 진입 · 운영 이상 때만)
-- `PushNotification` 도구가 있으면 호출: 제목 `[시크릿에셋] 반영 결정 필요: [4.NN] <이슈 제목>`, 본문에 권고 한 줄 + PR(또는 비교) 링크 + decision-brief 링크
-- GitHub MCP 가능 시 이슈 코멘트에 `@BBplayworld` 멘션 (GitHub 앱 알림)
-- 실행 최종 요약 **첫 줄**을 `🔔 대표 결정 필요: ...` 로 시작 (예약 작업 완료 푸시에 그대로 노출)
-- 알림이 필요 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>` 로 쓴다
-**대표에게 QA·화면 확인을 요청하지 않는다.** 대표에게 가는 것은 owner-review의 반영 여부 결정 요청뿐이다.
+## 대표 알림 (아래 두 경우에만, 실행당 최대 1건으로 묶음)
+| 알림 | 언제 | 제목 |
+|---|---|---|
+| 🆕 새 과제 방향 확정 | 이슈의 기획+사업 방향 정의(direction.md 공동 합의)가 완료됐을 때. 운영 이상 버그는 방향 정의가 없으므로 qa 확정 직후 | `[시크릿에셋] 새 과제: #<번호> <제목>` + 유형·합의된 방향 2줄 |
+| 🔔 대표 결정 필요 | 릴리스 owner-review 진입(포함 이슈 전부 qa PASS, 최종 정리본 완성) | `[시크릿에셋] 반영 결정 필요: v4.NN` + 포함 이슈 목록 + 권고 한 줄 + PR·decision-brief 링크 |
+- 전달: `PushNotification`(가능 시) + 실행 최종 요약 **첫 줄**에 같은 문구. owner-review는 이슈 코멘트 `@BBplayworld` 멘션도 함께
+- 그 밖의 단계 이동·문서 작성·검토 왕복은 알리지 않는다. 알림이 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>`
+**대표에게 QA·화면 확인을 요청하지 않는다.**
 
 ---
 
@@ -30,8 +32,9 @@
 
 ---
 
-## A. 정기 실행 (하루 2회)
+## A. 정기 실행 (하루 3회, 8시간 간격)
 1. **0단계 수행**
+1-1. **배포 후 점검 겸함**: 직전 실행 이후 main에 머지가 있었으면 먼저 C를 수행한다 (별도 예약 없음)
 2. **작업 큐**: 열린 이슈 중 `needs-human / on-hold / rejected / done / owner-review / idea` 제외, 우선순위→오래된 순, WORKFLOW.md 7장 제한 적용해 최대 2건
 3. **담당 호출** (Agent 도구, subagent_type = 에이전트 이름, 미등록이면 CLAUDE.md 에이전트 3장 방식). 넘길 정보: 이슈 번호, 이슈 폴더, 이번 할 일, 완료 조건, **`.memory/STATE.md` 전문과 관련 DECISIONS·LEARNINGS 줄**
    | 상태 | 호출 |
@@ -65,11 +68,16 @@
 
 ---
 
-## C. 배포 후 점검 (매일, 머지가 있었던 날만)
-1. **0단계 수행**. 지난 24시간 머지가 없으면 메모리 저장 후 종료
-2. `qa`: 운영 URL 스모크 점검 (qa.md 참조)
-3. 이상 시 `type:bug` + `priority:p0` + `status:planning` 이슈 생성(팀이 바로 수정 착수) + 위 "대표 알림" 수행. 롤백은 대표가 Vercel에서 직접 (Instant Rollback)
-4. **마지막 단계 — 메모리 저장**
+## C. 배포 후 점검 (정기 실행 1-1에서 수행)
+1. `qa`: 운영 URL 스모크 점검 (qa.md 참조)
+2. **이상 시 즉시 수정 착수 (빠른 경로)** — 사람 판단을 기다리지 않는다
+   - `type:bug` + `priority:p0` 이슈 생성
+   - `qa`가 재현·확정 → 원인 파일 특정 → "🆕 새 과제 방향 확정" 알림
+   - planning·design-review 생략: `developer`가 같은 실행에서 바로 수정 — 열린 릴리스 `issue-4.NN`이 있으면 거기에, 없으면 다음 버전 → PR → preview
+   - `qa` 검증 PASS → `cto` decision-brief → owner-review ("🔔 대표 결정 필요"). 수정 범위는 버그 원인에 한정
+   - 확정 결함이 아니면(재현 안 됨) 이슈를 닫고 LEARNINGS 기록
+   - 롤백이 더 빠르면 decision-brief에 Vercel Instant Rollback 권고를 함께 적는다
+3. **마지막 단계 — 메모리 저장**
 
 ---
 

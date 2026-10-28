@@ -24,7 +24,7 @@
 ```
 
 ## 1. 팀 메모리
-- 저장소의 **`memory` 브랜치**: `STATE`·`DECISIONS`(추가만)·`LEARNINGS`(추가만)·`HISTORY`·`run-log` + 이슈별 산출물 `issues/<번호>-<slug>/` + 마케팅 초안 `marketing/`
+- 저장소의 **`memory` 브랜치**: `STATE`·`DECISIONS`(추가만)·`LEARNINGS`(추가만)·`HISTORY`·`run-log` + 이슈별 산출물 `issues/<버전>-<번호>-<slug>/<버전>-<문서>.md` + 마케팅 초안 `marketing/`
 - **모든 실행은 메모리를 읽고 시작해서 메모리를 저장하고 끝난다.**
 - main과 분리한 이유: main은 PR 없이 쓸 수 없고, 메모리 갱신이 배포를 일으키면 안 되기 때문 (`vercel.json`에서 빌드 제외).
 
@@ -74,7 +74,7 @@ CLAUDE.md                          기존 규칙 + 에이전트 팀 운영 규�
 docs/product/PRINCIPLES.md         제품 원칙 (대표만 변경)
 docs/ops/WORKFLOW.md               단계·라벨·반대 검토·과제 유형
 docs/ops/ORCHESTRATOR.md           예약 실행 지시서
-docs/seed-issues/00~03             시드 이슈 본문
+docs/seed-issues/<버전>-0N-*.md   시드 이슈 본문 (버전 미배정은 4.xx)
 .github/workflows/ci.yml           PR 테스트·린트·빌드
 .github/ISSUE_TEMPLATE/issue.md    이슈 템플릿
 vercel.json                        memory 브랜치 빌드 제외

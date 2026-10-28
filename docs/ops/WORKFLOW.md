@@ -1,7 +1,8 @@
 # 이슈 워크플로우
 
+문서명(direction.md 등)은 축약 표기, 실제 파일명은 `<버전>-<문서>.md` (CLAUDE.md 에이전트 9장).
 모든 일은 GitHub 이슈 1개 단위. 현재 단계는 `status:*` 라벨 하나로만 표시한다.
-산출물은 `memory` 브랜치의 `.memory/issues/<GitHub 이슈번호>-<slug>/` (기획부터 결정까지 한 폴더, 코드 PR과 분리), 팀 기억도 `memory` 브랜치.
+산출물은 `memory` 브랜치의 `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/` (파일명 `<버전>-<문서>.md`, 버전 미배정 시 `4.xx` — CLAUDE.md 에이전트 9장) (기획부터 결정까지 한 폴더, 코드 PR과 분리), 팀 기억도 `memory` 브랜치.
 GitHub 조작은 GitHub MCP 도구(`mcp__github__*`)로 한다.
 
 **대표(레벨 1)의 결정은 마지막 한 번뿐이다: "이 개선을 라이브에 반영할지" (PR 머지 / 닫기).**
@@ -18,13 +19,15 @@ status:idea          (주간 기획 후보 — cto 반대 검토 통과 시 자�
        ② 반대 검토   cto → challenge.md (통과 / 축소 / 폐기)
        ③ 상세 기획   planner-designer → spec.md / business-pm → business.md (교차 승인)
   → status:design-review   developer → tech-review.md / planner-designer → ui.md
-  → status:development     developer → 버전 4.NN 배정 → PR (브랜치 issue-4.NN) → Vercel preview
+  → status:development     developer → 열린 릴리스 issue-4.NN에 추가(없으면 새 버전 배정) → 릴리스 PR → Vercel preview
   → status:qa              qa → qa-report.md (자동 테스트 + preview 실제 점검 + 스크린샷)
        FAIL → development 자동 복귀, 최대 3회 → 이후 cto가 축소/폐기 판정
-  → status:owner-review    cto → decision-brief.md → 대표가 머지(반영) / 닫기(미반영)
+  → status:owner-review    cto → 릴리스 decision-brief(포함 이슈 전부 qa PASS 시) → 대표가 릴리스 PR 머지(반영) / 닫기(미반영)
   → status:done            Vercel 운영 자동 배포
 ```
 분기: `status:rejected`(폐기·미반영), `status:on-hold`, `status:needs-human`(**제품 원칙 변경이 필요한 경우에만**)
+
+**운영 이상(버그) 빠른 경로**: `type:bug`+`priority:p0` → qa 확정 → development(기획·설계 생략, 수정 범위는 원인에 한정) → qa → owner-review. ORCHESTRATOR.md C.
 
 마케팅 이슈(`type:marketing`): `planning(① 공동 방향 → business-pm 초안) → qa → owner-review → done`. 게시는 대표가 직접 한다.
 
@@ -102,7 +105,7 @@ challenge.md `통과` 후에만 spec.md·business.md를 쓴다. 상호 `승인` 
 ```
 [역할] <단계> 완료
 - 결과: <한두 줄>
-- 산출물: memory 브랜치 issues/<번호>-<slug>/<파일>
+- 산출물: memory 브랜치 issues/<버전>-<번호>-<slug>/<버전>-<문서>.md
 - preview: <URL, 해당 시>
 - 다음: <다음 단계 / 담당>
 ```

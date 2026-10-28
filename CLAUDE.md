@@ -67,7 +67,7 @@ alwaysApply: true
    - `.memory/HISTORY.md` 지금까지의 흐름
 2. `docs/product/PRINCIPLES.md` 제품 원칙
 3. `docs/ops/WORKFLOW.md` 단계·라벨·산출물 규칙
-4. 작업 중인 이슈 폴더 `.memory/issues/<GitHub 이슈번호>-<slug>/`
+4. 작업 중인 이슈 폴더 `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/` (파일명도 `<버전>-<문서>.md`, 9장)
 
 ## 2. 실행 끝에 반드시 할 것
 `.memory/` 를 갱신하고 `memory` 브랜치에 push한다 (규칙: `.memory/README.md`).
@@ -102,10 +102,13 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 제품 원칙(PRINCIPLES.md)을 바꿔야만 진행 가능하면 `status:needs-human` + 이유. 그 밖의 불확실성은 cto 판정으로 팀 안에서 해결.
 
 ## 5. 브랜치·버전과 Vercel preview
-- **버전 = 브랜치 = 서비스 표시 버전.** 이슈당 브랜치 하나: **`issue-4.NN`** (기존 관행 유지, 서비스에 4.NN으로 표시됨).
-  - 버전 배정: **development 진입 시** developer가 기존 브랜치·`.claude/specs/`·커밋의 가장 큰 4.NN + 0.01로 배정 (planning 반려 시 번호 공백 방지)
-  - 배정 후 GitHub 이슈 제목 앞에 `[4.NN]`, `.memory/STATE.md` 진행 표와 DECISIONS에 `#<이슈번호> = 4.NN` 매핑 기록
-  - QA 수정도 같은 브랜치에 push한다.
+- **버전 = 브랜치 = 서비스 표시 버전 = 릴리스 1건.** 버전은 작업마다가 아니라 **묶음(릴리스) 단위**로만 올린다. 브랜치 **`issue-4.NN`** 하나에 관련 GitHub 이슈 여러 개를 함께 담는다 (기존 관행: 4.29에 여러 기능 포함).
+  - **열린 릴리스는 항상 1개.** 머지되지 않은 `issue-4.NN`이 있으면 development에 들어가는 모든 이슈(같은 흐름의 기능·개선·버그·정리)는 **그 브랜치·그 PR에 추가**한다. 새 버전을 만들지 않는다.
+  - 새 버전 배정은 열린 릴리스가 없을 때만: developer가 기존 브랜치·`.claude/specs/`·커밋의 가장 큰 4.NN + 0.01로 배정
+  - QA 수정, 교차 검토 반영, 작은 후속 변경은 전부 같은 브랜치에 push (새 브랜치·새 버전 금지)
+  - 매핑 기록: GitHub 이슈 제목 앞 `[4.NN]`, `.memory/STATE.md` "열린 릴리스" 절과 DECISIONS에 `4.NN = #a, #b…`
+  - 릴리스 PR은 1개: 본문에 포함 이슈마다 `Closes #<번호>`. 반영 결정(owner-review)도 릴리스 단위 1회 — 포함된 모든 이슈가 qa PASS일 때
+  - 예외: 운영 이상 긴급 수정은 열린 릴리스가 있으면 거기에 추가, 없을 때만 다음 버전
 - Vercel이 브랜치 push마다 preview를 배포한다. 같은 브랜치는 고정 URL을 가진다 (**브랜치명의 점(.)은 빠진다**):
   `https://secretasset-git-issue-4NN-bbplayworlds-projects.vercel.app` (예: `issue-4.34` → `issue-434`)
 - 최신 배포 상태는 GitHub MCP로 PR의 커밋 상태·체크(`pull_request_read` / `get_commit`)에서 Vercel 항목의 URL을 확인한다.
@@ -117,10 +120,11 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 프론트엔드: Next.js(App Router, turbopack) + TypeScript + Tailwind / 백엔드(시세·동기화): Next.js API 라우트 (`src/app/api/`)
 - 설치 `npm ci` · 테스트 `npx vitest run` · 린트 `npm run lint` · 빌드 `npm run build` · 타입 `npx tsc --noEmit`
 - GitHub 조작(이슈·라벨·코멘트·PR)은 `gh` CLI 대신 **GitHub MCP 도구(`mcp__github__*`)** 를 쓴다. 저장소: `BBplayworld/vaultfolio`. MCP를 쓸 수 없으면 **git CLI 전용 모드**(`docs/ops/ORCHESTRATOR.md` "GitHub 접근 방식")로 진행한다.
-- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 owner-review 진입·운영 이상 때만 (`ORCHESTRATOR.md` "대표 알림").
+- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 새 과제 방향 확정(기획+사업 합의 완료)·owner-review 진입 때만 (`ORCHESTRATOR.md` "대표 알림"). 운영 이상은 즉시 버그 수정 빠른 경로로 착수.
+- 수동 실행: 어느 세션에서든 `/secretasset-run` (정기 실행 1회, `weekly` 인자 시 주간 기획).
 
 ## 7. 커밋·PR·소통
-- 커밋: `[#4.NN] <무엇을 왜>` (기존 관행), PR 본문 첫 줄 `Closes #<GitHub 이슈번호>`
+- 커밋: `[#4.NN] <무엇을 왜>` (기존 관행), 릴리스 PR 본문에 포함 이슈별 `Closes #<GitHub 이슈번호>`
 - 모든 산출물 한국어, 문서는 1~2쪽 이내
 - 단계 완료 시 이슈 코멘트 1개: `[역할] 결과 / 산출물 경로 / 다음 단계`
 
@@ -129,3 +133,9 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - "구현 전 `/spec`" → 에이전트 이슈는 이슈 폴더의 `spec.md`가 명세를 대신한다. `.claude/specs/`에 중복 작성하지 않는다.
 - "KB 문서 갱신은 배치로" → developer가 PR을 qa로 넘기기 직전 1회, 변경분을 KB(`components.md`·`state-and-utils.md`·`design-system.md`·`changelog.md`·`qa-full-test-plan.md`)에 일괄 반영해 같은 PR에 포함한다. qa는 `qa-full-test-plan.md`의 관련 `F-*` 항목을 회귀 검사에 사용한다.
 - 계획 md(`C:/Users/...plans`) 규칙은 대표 로컬 작업 전용, 에이전트와 무관.
+
+## 9. 이슈별 문서 파일명 — 버전 표기
+- **이슈 단위로 생성되는 문서는 폴더·파일명 모두 버전을 앞에 붙인다.** 공통 문서(CLAUDE.md, docs/ops·product, 에이전트 정의, memory의 STATE·DECISIONS 등)는 공통 이름 유지.
+- memory 이슈 폴더: `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/`, 파일: `<버전>-direction.md`, `<버전>-challenge.md`, `<버전>-spec.md`, `<버전>-business.md`, `<버전>-tech-review.md`, `<버전>-ui.md`, `<버전>-dev-notes.md`, `<버전>-qa-report.md`, `<버전>-decision-brief.md`, `<버전>-log.md` (스크린샷 폴더는 `screenshots/`)
+- 시드·이슈 본문: `docs/seed-issues/<버전>-<순번>-<slug>.md`
+- 버전 미배정(planning~design-review) 동안은 `4.xx`로 쓰고, development 진입 시 버전이 정해지면 developer가 폴더·파일명을 `git mv`로 `4.NN`으로 바꾸고 STATE·DECISIONS 경로도 갱신한다.

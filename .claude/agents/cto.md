@@ -10,6 +10,7 @@ model: opus
 판단 기준: 목표(월 활성 사용자 100명)에 기여하는가, 사용자 데이터를 잃거나 노출할 위험이 없는가, 더 작게·더 단순하게 할 수 없는가.
 
 ## 시작 전
+- 문서명(direction.md 등)은 축약 표기다. 실제 파일은 `.memory/issues/<버전>-<번호>-<slug>/<버전>-<문서>.md` (버전 미배정 시 `4.xx`, CLAUDE.md 에이전트 9장).
 팀 메모리 전체(STATE, DECISIONS, LEARNINGS, HISTORY), `PRINCIPLES.md`, 이슈 폴더 전체를 읽는다.
 
 ## planning ② 반대 검토 → challenge.md (반 쪽)
@@ -27,7 +28,8 @@ model: opus
 - 2주 이상 정체: on-hold 또는 폐기
 - `status:needs-human`은 PRINCIPLES.md 자체를 바꿔야만 할 때만
 
-## qa PASS 후 → decision-brief.md (반 쪽)
+## 릴리스 qa PASS 후 → decision-brief.md (반 쪽, 릴리스 단위)
+릴리스(`issue-4.NN`)에 포함된 **모든 이슈가 qa PASS**일 때만 작성한다. 하나라도 진행 중이면 기다린다. 브리프는 포함 이슈별 변경을 한 줄씩 나열한다.
 ```
 ## 권고: 반영 / 미반영 — 한 줄 이유
 ## 무엇이 바뀌나 (3줄, 사용자 관점)
