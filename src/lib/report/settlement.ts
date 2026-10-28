@@ -309,6 +309,12 @@ function foldLine(line: string): string {
  * "시크릿에셋 월말 결산" 반복 일정 1개 — 매월 마지막 날 21:00 KST(=12:00Z), 금액 없음.
  * 첫 일정은 now가 속한 KST 달의 말일. 서버 호출 없음(클라이언트 Blob 다운로드).
  */
+// 정적 배포본(public/calendar) — iOS 서드파티 브라우저(WKWebView)·인앱은 blob 다운로드를 처리하지 못해
+// 같은 출처 URL(text/calendar)로 연다(C19). 내용은 사용자 데이터 없는 고정 반복 일정이라 기준 시각을 고정한다.
+// 파일 = buildSettlementIcs(SETTLEMENT_ICS_STAMP) — settlement-ics-static.test.ts가 일치를 고정
+export const SETTLEMENT_ICS_PATH = "/calendar/secretasset-monthly-settlement.ics";
+export const SETTLEMENT_ICS_STAMP = new Date("2026-10-01T00:00:00Z");
+
 export function buildSettlementIcs(now: Date = new Date()): string {
   const kst = new Date(now.getTime() + 9 * 3_600_000);
   const y = kst.getUTCFullYear();

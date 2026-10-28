@@ -5,7 +5,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode } from "@/lib/number-utils";
@@ -14,7 +13,7 @@ import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr, computeAttributionBetween } from "@/lib/report/asset-report";
 import {
-  buildSettlementIcs, listSettlementMonths, mapSettlementCauses, pickSettlementMonth,
+  listSettlementMonths, SETTLEMENT_ICS_PATH, mapSettlementCauses, pickSettlementMonth,
   resolveSettlementWindow, settlementGaResult, settlementRangeLabel,
   SETTLEMENT_CAUSE_LABEL, type SettlementCauses, type SettlementWindow,
 } from "@/lib/report/settlement";
@@ -238,21 +237,6 @@ function getStaleRows(assetData: ReturnType<typeof useAssetData>["assetData"]): 
 function PrepBlock() {
   const { assetData } = useAssetData();
   const rows = getStaleRows(assetData);
-  const downloadIcs = () => {
-    try {
-      const blob = new Blob([buildSettlementIcs()], { type: "text/calendar;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "secretasset-monthly-settlement.ics";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch {
-      toast.error("일정 파일을 만들지 못했어요");
-    }
-  };
   return (
     <section id={PREP_ID} className={`${SECTION} scroll-mt-20`} data-screenshot-hide>
       <SectionHeader icon={CalendarPlus} title="다음 달 준비" tone="info" />
@@ -277,8 +261,9 @@ function PrepBlock() {
           ))}
         </div>
       )}
-      <Button data-testid="prep-ics-button" variant="brand" className="w-full min-h-10" onClick={downloadIcs}>
-        캘린더에 매월 결산일 추가
+      {/* blob·download 속성 대신 같은 출처 정적 .ics URL로 이동 — iOS 웨일·크롬 등 WKWebView에서도 캘린더로 넘어간다(C19) */}
+      <Button asChild variant="brand" className="w-full min-h-10">
+        <a data-testid="prep-ics-button" href={SETTLEMENT_ICS_PATH}>캘린더에 매월 결산일 추가</a>
       </Button>
       <p data-testid="prep-ics-note" className={CAPTION}>캘린더 앱에서 매월 말일 저녁에 반복 일정을 추가해 주세요</p>
     </section>
