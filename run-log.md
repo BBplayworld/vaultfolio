@@ -2,6 +2,7 @@
 
 | 일시 (KST) | 실행 종류 | 처리 이슈 | 단계 변화 | 특이사항 |
 |---|---|---|---|---|
+| 2026-10-28 11:40 (수동) | A. 정기 실행(대표 요청 #32 개발) | #32 | development→qa PASS→owner-review(v4.34) | developer MCP 부재로 PR 본문·라벨은 오케스트레이터 처리 |
 | 2026-10-28 10:04 (수동) | A. 정기 실행 | #31 | design-review→development→qa PASS | developer는 MCP 없이 git 전용 → PR #37은 오케스트레이터가 생성. vercel.app 허용 후 preview 점검 성공 |
 | 2026-10-28 02:47 | A. 정기 실행 | #31 #32 | #31 planning ③→design-review / #32 design-review 완료(#31 대기) | qa 결함 의심 4건 모두 신규 설계 사항(운영 결함 0), cto 위험 high 재판정 |
 | 2026-10-27 20:30 (수동 테스트) | A. 정기 실행(설정 세션, GitHub MCP 사용) | #31 #32 | #31 planning ①→③ / #32 planning ③→design-review | 교차 검토 수정 왕복 1회. iOS 실기기 확인 요구를 자동 검증으로 대체 |

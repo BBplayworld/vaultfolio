@@ -1,20 +1,20 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-28 11:00 KST (수동 실행: #31 development→qa PASS, 릴리스 4.34 운영 도입)
+마지막 갱신: 2026-10-28 11:40 KST (수동 실행: #32 development→qa PASS, v4.34 owner-review)
 
 ## 대표 결정 대기
-- 없음
+- **v4.34** (#31 + #32) — PR #37 머지 여부. 권고: 반영. 위험 high, 롤백 PR revert. 브리프 issues/4.34-32-monthly-settlement/4.34-decision-brief.md
 
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #31 시드0 preview 안전장치·데모 데이터 | 4.34 | qa PASS (릴리스 대기) | — | PR #37. 릴리스 4.34의 나머지 이슈(#32) qa PASS 후 cto decision-brief → owner-review |
-| #32 시드1 성과 메뉴·월말 결산 | 4.34 | development 완료 → qa 대기 | qa | issue-4.34 fecbbbd, dev-notes.md. PR #37 본문 `Closes #32`·이슈 코멘트 미반영(MCP 없음) |
+| #31 시드0 preview 안전장치·데모 데이터 | 4.34 | owner-review | 대표 | qa PASS, 릴리스 v4.34 반영 결정 대기 |
+| #32 시드1 성과 메뉴·월말 결산 | 4.34 | owner-review | 대표 | qa PASS(302 테스트·preview 15/15), 릴리스 v4.34 반영 결정 대기 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
 ## 열린 릴리스
-- **v4.34** (`issue-4.34`, PR #37, preview https://secretasset-git-issue-434-bbplayworlds-projects.vercel.app): #31(qa PASS) + #32(개발 대기). 반영 결정은 둘 다 qa PASS 후 1회
+- **v4.34** (`issue-4.34`, PR #37): #31 + #32 모두 qa PASS → owner-review
 
 ## 막힌 것
 - 없음
