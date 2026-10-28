@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Wallet, BadgeDollarSign, Trophy, CalendarCheck } from "lucide-react";
+import { Wallet, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode } from "@/lib/number-utils";
@@ -13,7 +13,8 @@ import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/na
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
-import { pickSettlementCard, settlementCardTitle, settlementRangeLabel } from "@/lib/report/settlement";
+import { pickSettlementCard, resolveSettlementWindow, settlementRangeLabel } from "@/lib/report/settlement";
+import { settlementDelta, settlementName } from "./change-hero";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -87,28 +88,19 @@ export function PerformanceHub() {
   const allNet = summary.totalProfit - report.annualInterest;
   const allNetRate = summary.totalCost > 0 ? (allNet / summary.totalCost) * 100 : 0;
 
-  // 순자산 — 전년 대비
-  const yearly = [...assetData.yearlyNetAssets].sort((a, b) => a.year - b.year);
-  const currentYear = new Date().getFullYear();
-  const prevYearItem = yearly.find((y) => y.year === currentYear - 1);
-  const netDiff = prevYearItem ? summary.netAsset - prevYearItem.netAsset : null;
-  const netDiffPct = prevYearItem && prevYearItem.netAsset !== 0
-    ? (netDiff! / Math.abs(prevYearItem.netAsset)) * 100
-    : null;
-
-  // 월말 결산 카드(#32) — 말일−3일~다음 달 10일, 비교할 직전 기록이 있을 때만. 자산 0건이면 숨김.
+  // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
+  // 창 밖이면 이번 달 진행 중 증감, 첫 달·자산 0건이면 금액 없이 안내. 증감은 결산 Hero와 같은 settlementDelta.
   const hasAssets = assetData.stocks.length + assetData.crypto.length + assetData.cash.length + assetData.loans.length + assetData.realEstate.length > 0;
-  const settlement = useMemo(() => {
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const changeCard = useMemo(() => {
     if (!hasAssets || snapshotVersion < 0) return null;
-    const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
-    return pickSettlementCard(readMonthlySnapshots(), today);
-  }, [hasAssets, snapshotVersion]);
-  const settlementDelta = settlement?.start
-    ? (settlement.end ? settlement.end.netAsset : summary.netAsset) - settlement.start.netAsset
-    : 0;
-  const settlementPct = settlement?.start && settlement.start.netAsset !== 0
-    ? (settlementDelta / Math.abs(settlement.start.netAsset)) * 100
-    : null;
+    const monthly = readMonthlySnapshots();
+    const settled = pickSettlementCard(monthly, today);
+    if (settled) return { window: settled, inWindow: true };
+    const w = resolveSettlementWindow(monthly, today.slice(0, 7), today);
+    return w.kind === "first_month" ? null : { window: w, inWindow: false };
+  }, [hasAssets, snapshotVersion, today]);
+  const change = changeCard ? settlementDelta(changeCard.window, summary.netAsset) : null;
 
   // 배당 — 올해 연간 합계 (실제 + 예상)
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
@@ -120,48 +112,41 @@ export function PerformanceHub() {
         <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 변화·배당·성적표를 확인하세요</p>
       </div>
 
-      {settlement && (
-        <div data-testid="settlement-card">
-          <KpiCard
-            icon={CalendarCheck}
-            title={
-              <span className="inline-flex flex-wrap items-center gap-1.5">
-                {settlementCardTitle(settlement)}
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">이번 달 결산</span>
-              </span>
-            }
-            description={settlementRangeLabel(settlement)}
-            primary={`${settlementDelta >= 0 ? "+" : ""}${formatPriceByMode(settlementDelta)}`}
-            primaryClassName={getProfitLossColor(settlementDelta)}
-            secondary={settlementPct !== null ? (
-              <span className={`font-semibold tabular-nums ${getProfitLossColor(settlementDelta)}`}>
-                {settlementPct >= 0 ? "+" : ""}{settlementPct.toFixed(1)}%
-                <span className="text-muted-foreground font-medium ml-1.5">지난 기록 대비</span>
-              </span>
-            ) : null}
-            onClick={() => navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: settlement.month, source: "card" } })}
-          />
-        </div>
-      )}
-
       {/* 지난 접속 등락은 홈 Hero(순자산 헤더)로 통합 — 앱을 켜자마자 보는 정보라 중복 노출하지 않는다 */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <div data-testid="hub-card-change">
         <KpiCard
           icon={Wallet}
-          title="자산 변화"
-          description="순자산 추이와 월말 결산"
-          primary={formatPriceByMode(summary.netAsset)}
-          secondary={netDiff !== null && netDiffPct !== null ? (
-            <>
-              <span className={`font-semibold tabular-nums ${getProfitLossColor(netDiff)}`}>
-                {netDiff >= 0 ? "+" : ""}{formatPriceByMode(netDiff)} ({netDiff >= 0 ? "+" : ""}{netDiffPct.toFixed(1)}%)
-              </span>
-              <span className="text-muted-foreground"> 전년 대비</span>
-            </>
-          ) : <span className="text-muted-foreground">전년 데이터 없음</span>}
-          onClick={() => go("change")}
+          title={
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              자산 변화
+              {changeCard?.inWindow && (
+                <span data-testid="hub-change-settlement-badge" className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
+                  {settlementName(changeCard.window.month, today, true)}
+                </span>
+              )}
+            </span>
+          }
+          description={
+            !changeCard ? "다음 달부터 결산이 열려요"
+              : changeCard.inWindow ? settlementRangeLabel(changeCard.window)
+                : `${settlementName(changeCard.window.month, today, false)} · 진행 중`
+          }
+          primary={change ? `${change.delta >= 0 ? "+" : ""}${formatPriceByMode(change.delta)}` : undefined}
+          primaryClassName={change ? getProfitLossColor(change.delta) : undefined}
+          secondary={change && change.pct !== null ? (
+            <span className={`font-semibold tabular-nums ${getProfitLossColor(change.delta)}`}>
+              {change.pct >= 0 ? "+" : ""}{change.pct.toFixed(1)}%
+              <span className="text-muted-foreground font-medium ml-1.5">지난 기록 대비</span>
+            </span>
+          ) : null}
+          onClick={() => navigate({
+            type: "activity", tab: "change",
+            init: changeCard?.inWindow
+              ? { scope: "all", period: "month", month: changeCard.window.month, source: "card" }
+              : { scope: "all", period: "month", source: "menu" },
+          })}
         />
         </div>
 
