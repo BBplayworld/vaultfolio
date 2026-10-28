@@ -40,8 +40,8 @@ import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { resolveYearWindow } from "@/lib/report/settlement";
-import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses } from "./change-hero";
+import { resolveYearChain } from "@/lib/report/settlement";
+import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
 
@@ -312,22 +312,22 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     heroEnd = latest?.netAsset;
   }
 
-  // 연 탭 변화 원인(#32 보완) — 전년 12월 스냅샷 → 오늘, 합계 = Hero 증감. 첫 해(직전 해 없음)는 미표시
+  // 연 탭 변화 원인(#32 보완 B안) — 작년 수동 순자산(또는 전년 12월 스냅샷) → 올해 enrich 월 → 오늘 체인, 합계 = Hero 증감.
+  // 첫 해(직전 해 없음)는 미표시
   const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
   const yearCauses = useMemo(() => {
     if (!view || activeView !== "yearly" || heroPrevYear === null || diff === null) return null;
     try {
-      const w = resolveYearWindow(snapshotVersion >= 0 ? readMonthlySnapshots() : [], heroPrevYear, todayKst);
-      if (!w) return { status: "insufficient" as const };
-      return computeSettlementCauses({
-        start: w.start, end: null, live: buildLiveAttributionCurr(assetData, exchangeRates, summary), deltaNet: diff,
-        startDate: w.startDate, endDate: todayKst, liveCash: summary.cashValue,
-        exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
+      const points = resolveYearChain(snapshotVersion >= 0 ? readMonthlySnapshots() : [], heroPrevYear, heroStart ?? null, todayKst);
+      if (!points) return { status: "insufficient" as const };
+      return computeChainCauses({
+        points, live: buildLiveAttributionCurr(assetData, exchangeRates, summary), deltaNet: diff, endDate: todayKst,
+        liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
       });
     } catch {
       return { status: "error" as const };
     }
-  }, [view, activeView, heroPrevYear, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
+  }, [view, activeView, heroPrevYear, heroStart, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:gap-4">

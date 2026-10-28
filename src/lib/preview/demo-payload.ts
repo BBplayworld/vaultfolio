@@ -45,6 +45,7 @@ function daysInMonth(y: number, m: number): number {
 //  @M<오프셋>D<일> → YYYY-MM-DD (말일·오늘을 넘지 않게 보정)
 //  @M<오프셋>      → YYYY-MM
 //  @D<일 오프셋>   → YYYY-MM-DD
+//  @PY            → 전년 연도(숫자, walk에서 처리)
 //  @NOW            → 기준일 ISO 시각
 function resolveToken(value: string, today: string): string {
   if (value === "@NOW") return `${today}T00:00:00.000Z`;
@@ -71,6 +72,8 @@ function resolveToken(value: string, today: string): string {
 }
 
 function walk(node: unknown, today: string): unknown {
+  // @PY → 기준일의 전년(숫자) — 연도별 순자산 year 필드용(작년 수동 입력값을 가진 운영 사용자 형태, #32 연 탭 원인)
+  if (node === "@PY") return Number(today.slice(0, 4)) - 1;
   if (typeof node === "string") return resolveToken(node, today);
   if (Array.isArray(node)) return node.map((v) => walk(v, today));
   if (node && typeof node === "object") {

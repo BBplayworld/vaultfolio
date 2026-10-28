@@ -169,6 +169,38 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
   return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
 }
 
+/**
+ * 연 탭 원인 — 체인 점(앵커 → 올해 enrich 월 …) → 실시간을 구간마다 월 탭과 같은 함수·경계(시작일 제외)로 분해해
+ * effects를 이어 붙인다. 실측 구간의 원인은 해당 달 월 탭 원인의 합과 같다. 합계는 deltaNet(Hero 증감)으로 맞춘다.
+ */
+export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, exchangeHistory, assetData, rates }: {
+  points: MonthlyAssetSnapshot[];
+  live: ReturnType<typeof buildLiveAttributionCurr>;
+  deltaNet: number;
+  endDate: string;
+  liveCash: number;
+  exchangeHistory: Record<string, { USD: number; JPY: number }>;
+  assetData: AssetData;
+  rates: { USD: number; JPY: number };
+}): { mapped: SettlementCauses; estimatedLabel: "예측" | "일부 예측" } {
+  const effects: Parameters<typeof mapSettlementCauses>[0] = [];
+  let estimatedSegments = 0;
+  for (let i = 0; i < points.length; i++) {
+    const attr = computeAttributionBetween(points[i], points[i + 1] ?? live, exchangeHistory, assetData, rates, false);
+    if (!attr) continue; // 끝점 레거시(체인은 enrich만이라 실시간 끝 외엔 없음) — 차이는 기록 안 된 변화로 흡수
+    if (attr.estimated) estimatedSegments++;
+    effects.push(...attr.effects);
+  }
+  const start = points[0];
+  const startDate = start ? (start.date ?? null) : null;
+  const hasCashRecords = (assetData.cashTransactions ?? []).some(
+    (t) => !!startDate && t.date > startDate && t.date <= endDate,
+  );
+  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || hasCashRecords;
+  const mapped = mapSettlementCauses(effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }], { deltaNet, cashTracked });
+  return { mapped, estimatedLabel: effects.length === 0 || estimatedSegments === points.length ? "예측" : "일부 예측" };
+}
+
 const CAUSE_TESTID: Record<string, string> = {
   price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", unrecorded: "cause-row-unrecorded",
 };

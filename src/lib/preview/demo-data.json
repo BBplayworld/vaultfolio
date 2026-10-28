@@ -25,7 +25,7 @@
     "loans": [
       { "id": "demo_loan_credit", "type": "credit", "name": "신용대출", "balance": 20500000, "interestRate": 5.2, "startDate": "@M-12D01", "institution": "데모은행" }
     ],
-    "yearlyNetAssets": [],
+    "yearlyNetAssets": [{ "year": "@PY", "netAsset": 600000000, "note": "데모 — 작년 말 수동 입력" }],
     "transactions": [
       { "id": "demo_tx_1", "stockId": "demo_st_samsung", "ticker": "005930", "stockName": "삼성전자", "type": "buy", "quantity": 10, "price": 60000, "currency": "KRW", "date": "@M-3D15", "reflected": true, "reflectedAt": "@M-3D15", "createdAt": "@M-3D15" },
       { "id": "demo_tx_2", "stockId": "demo_st_samsung", "ticker": "005930", "stockName": "삼성전자", "type": "buy", "quantity": 10, "price": 62000, "currency": "KRW", "date": "@M-2D08", "reflected": true, "reflectedAt": "@M-2D08", "createdAt": "@M-2D08" },

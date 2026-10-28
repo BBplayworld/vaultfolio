@@ -341,21 +341,34 @@ export function buildSettlementIcs(now: Date = new Date()): string {
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
 
-// ── 전체·연: 올해 변화 원인 구간(#32 보완) ─────────────────────────
+// ── 전체·연: 올해 변화 원인 체인(#32 보완, B안) ──────────────────
+
+const isEnriched = (s: MonthlyAssetSnapshot): boolean => !!(s.breakdown && s.fx && s.fxBase && s.cost);
 
 /**
- * 연 탭 원인 시작점 = Hero 직전 해(prevYear)의 12월 월 스냅샷 1건(끝 = 오늘 실시간).
- * 13개월 보존분에 섞인 전년 1~11월은 후보에서 뺀다(배열 첫 원소·slice 미사용, C8).
- * 12월 스냅샷이 없거나 그 기준일이 오늘 이후면 null(기록 부족).
+ * 연 탭 원인 체인 점 — [앵커, 올해 enrich 월 스냅샷(이번 달 제외)…]. 끝(실시간)은 호출부가 붙인다.
+ * 앵커 = 전년 12월 월 스냅샷(있으면) 또는 Hero 시작과 같은 전년 수동 순자산(`${prevYear}-12-31`, netAsset만 → 예측 경로).
+ * 체인은 올해(today 기준) 월만 쓴다 — 13개월 보존분의 전년 1~11월은 쓰지 않는다(C8). 레거시 달은 건너뛰어
+ * 첫 구간(예측)에 흡수된다. 이번 달은 월 탭처럼 "직전 기록 → 실시간"이 되도록 점에서 뺀다.
+ * 앵커를 만들 근거(전년 12월 스냅샷·수동값)가 없으면 null(기록 부족).
  */
-export function resolveYearWindow(
+export function resolveYearChain(
   monthly: MonthlyAssetSnapshot[],
   prevYear: number,
+  prevYearNetAsset: number | null,
   today: string,
-): { start: MonthlyAssetSnapshot; startDate: string; startLegacy: boolean } | null {
-  const start = monthly.find((s) => s?.month === `${prevYear}-12`);
-  if (!start) return null;
-  const startDate = snapshotDate(start);
-  if (startDate >= today) return null;
-  return { start, startDate, startLegacy: !start.date };
+): MonthlyAssetSnapshot[] | null {
+  const dec = monthly.find((s) => s?.month === `${prevYear}-12`);
+  const anchor: MonthlyAssetSnapshot | null = dec
+    ?? (prevYearNetAsset !== null
+      ? { month: `${prevYear}-12`, date: `${prevYear}-12-31`, netAsset: prevYearNetAsset, financialAsset: prevYearNetAsset }
+      : null);
+  if (!anchor || snapshotDate(anchor) >= today) return null;
+  const year = today.slice(0, 4);
+  const currentMonth = today.slice(0, 7);
+  const anchorDate = snapshotDate(anchor);
+  const rest = monthly
+    .filter((s) => typeof s?.month === "string" && s.month.startsWith(year) && s.month < currentMonth && isEnriched(s) && snapshotDate(s) > anchorDate)
+    .sort((a, b) => a.month.localeCompare(b.month));
+  return [anchor, ...rest];
 }
