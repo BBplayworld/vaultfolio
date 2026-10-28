@@ -41,3 +41,4 @@
 | 2026-10-28 | #31 | spec·business 상호 승인: 완료 기준 17개(vitest 9·Playwright 8, 사람 확인 없음), 데모 월 오프셋 -3~0·fx 월별 변화 | planner-designer·business-pm | 교차 검토 |
 | 2026-10-28 | #32 | design-review: tech-review·ui 상호 승인. deposit은 내부 이동 분류, 월 선택기 InlineSelector 확장(testId·size lg·스크롤), SpecRow·SectionHeader 공용 이동, 엔진 래퍼 export 1개 | developer·planner-designer | 교차 검토 |
 | 2026-10-28 | #32 | 위험 high 확정(결산 금액 매핑·스냅샷 보존 교체), 동기화 pull 병합 v1 제외 | cto | 애매하면 높은 쪽, 최악도 현행과 동일 |
+| 2026-10-28 | #31 | 버전 배정 `#31 = 4.34`(브랜치 `issue-4.34`). 배지 위치를 ui.md top-0에서 헤더 바로 아래(top 52px)로 조정 — 375px에서 top-0이면 헤더 탭·아이콘과 겹쳐 완료 기준 14 미충족 | developer | 완료 기준 우선 |
