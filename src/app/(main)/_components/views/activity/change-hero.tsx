@@ -138,16 +138,48 @@ export function ChangeHero({ title, titleTestId, range, badge, actions, delta = 
 
 // ── 변화 원인(월 탭 = 그 달, 연 탭 = 올해) — 계산·표시 공용(#32 보완) ──
 
-// 구간 (from, to] 현금 거래 — 시작일 당일은 앞 구간 몫(C15). 출금 합은 KRW 환산(JPY는 100엔당)
-function cashFlowsIn(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): { has: boolean; outflow: number } {
-  let has = false;
-  let outflow = 0;
-  for (const t of assetData.cashTransactions ?? []) {
-    if (!from || !(t.date > from && t.date <= to)) continue;
-    has = true;
-    if (t.reflected && t.type === "withdrawal") outflow += t.amount * (t.currency === "USD" ? rates.USD : t.currency === "JPY" ? rates.JPY / 100 : 1);
+// 구간 (from, to] 현금 거래 존재 여부 — 시작일 당일은 앞 구간 몫(C15)
+function hasCashIn(assetData: AssetData, from: string | null, to: string): boolean {
+  return !!from && (assetData.cashTransactions ?? []).some((t) => t.date > from && t.date <= to);
+}
+
+const MATCH_DAYS = 3;
+const dayDiff = (a: string, b: string) => Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
+
+/**
+ * 기록된 출금 ↔ 기록된 매수(주식·코인)·대출 상환 짝짓기(qa R4·R5, cto 판정 b). 구간 (from, to]의 반영 거래만 본다.
+ * 출금을 날짜순(같으면 id순)으로, 각 출금은 ±3일 안 후보 중 날짜가 가장 가까운 것부터(같으면 날짜·id순) 남은 금액 한도까지 짝짓는다.
+ * 후보 금액은 여러 출금에 나눠 쓸 수 있으나 합계를 넘지 않는다. 금액 허용 오차·메모는 쓰지 않는다. 결정적.
+ */
+export function matchRecordedTransfers(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): number {
+  if (!from) return 0;
+  const inWin = (d: string) => d > from && d <= to;
+  const krw = (cur: string | undefined) => (cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1);
+  const outs = (assetData.cashTransactions ?? [])
+    .filter((t) => t.reflected && t.type === "withdrawal" && inWin(t.date))
+    .map((t) => ({ id: t.id, date: t.date, left: t.amount * krw(t.currency) }))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const cands = [
+    ...(assetData.transactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({
+      id: `s:${t.id}`, date: t.date,
+      // 엔진 reflectedTradeFlow와 같은 환산 — 체결 환율 우선(JPY 100엔당), 없으면 현재 환율
+      left: t.quantity * t.price * (t.exchangeRate && t.exchangeRate > 0 ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate) : krw(t.currency)),
+    })),
+    ...(assetData.cryptoTransactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({ id: `c:${t.id}`, date: t.date, left: t.quantity * t.price })),
+    ...(assetData.loanTransactions ?? []).filter((t) => t.reflected && t.type === "repay" && inWin(t.date)).map((t) => ({ id: `l:${t.id}`, date: t.date, left: t.amount })),
+  ];
+  let matched = 0;
+  for (const o of outs) {
+    const near = cands
+      .filter((c) => c.left > 0 && dayDiff(c.date, o.date) <= MATCH_DAYS)
+      .sort((a, b) => dayDiff(a.date, o.date) - dayDiff(b.date, o.date) || a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+    for (const c of near) {
+      if (o.left <= 0) break;
+      const m = Math.min(o.left, c.left);
+      o.left -= m; c.left -= m; matched += m;
+    }
   }
-  return { has, outflow };
+  return matched;
 }
 
 /**
@@ -174,10 +206,12 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
     (t) => !!startDate && t.date >= startDate && t.date <= endDate,
   );
   const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
-  const flows = cashFlowsIn(assetData, startDate, endDate, rates);
   const mapped = mapSettlementCauses(
     attr ? attr.effects : [{ key: "cash", amount: deltaNet, estimated: true }],
-    { deltaNet, cashTracked, cashOutflow: flows.outflow, hasCashRecords: flows.has, estimatedPriceAsUnrecorded: true },
+    {
+      deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
+      hasCashRecords: hasCashIn(assetData, startDate, endDate), estimatedPriceAsUnrecorded: true,
+    },
   );
   return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
 }
@@ -206,11 +240,14 @@ export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, 
   }
   const start = points[0];
   const startDate = start ? (start.date ?? null) : null;
-  const flows = cashFlowsIn(assetData, startDate, endDate, rates);
-  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || flows.has;
+  const hasCash = hasCashIn(assetData, startDate, endDate);
+  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || hasCash;
   const mapped = mapSettlementCauses(
     effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }],
-    { deltaNet, cashTracked, cashOutflow: flows.outflow, hasCashRecords: flows.has, estimatedPriceAsUnrecorded: true },
+    {
+      deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
+      hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
+    },
   );
   return { mapped, estimatedLabel: effects.length === 0 || estimatedSegments === points.length ? "예측" : "일부 예측" };
 }

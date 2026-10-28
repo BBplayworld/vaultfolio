@@ -211,25 +211,17 @@ export function mapSettlementCauses(
   ctx: {
     deltaNet: number;
     cashTracked: boolean;
-    // 아래 3개는 월·연 탭 화면이 넘긴다(미지정 시 종전 동작, qa R1~R3)
-    cashOutflow?: number;               // 구간 안 반영된 현금 출금 합(KRW, 양수)
+    // 아래 3개는 월·연 탭 화면이 넘긴다(미지정 시 종전 동작, qa R1~R5)
+    matchedTransfer?: number;           // 기록된 출금 ↔ 기록된 매수·상환으로 짝지어진 금액(KRW, 양수)
     hasCashRecords?: boolean;           // 구간 안 현금 거래 존재 — 있으면 "입출금을 기록하면" 안내를 띄우지 않음
     estimatedPriceAsUnrecorded?: boolean; // 예측 구간의 통합 시세 잔차는 시세가 아니라 기록 안 된 변화(예측)
   },
 ): SettlementCauses {
   const acc = { price: 0, valuation: 0, fx: 0, income: 0 };
   const est = { price: false, valuation: false, fx: false, income: false, unrecorded: false };
-  // 출금 → 매수·대출 상환은 앱 안 이동이다. 출금(순유입 −)과 짝인 매수(+)·상환(+)이 내부 이동 풀로 가면
-  // "순유입 −, 기록 안 된 변화 +"로 갈라 보이므로, 출금으로 설명되는 만큼(min)만 순유입으로 되돌려 상쇄한다(qa R1).
-  if (ctx.cashTracked && ctx.cashOutflow && ctx.cashOutflow > 0) {
-    let spend = 0;
-    let spendEst = false;
-    for (const e of effects) {
-      if ((e.key.startsWith("buy:") || e.key === "debt") && e.amount > 0) { spend += e.amount; spendEst ||= !!e.estimated; }
-    }
-    const matched = Math.min(ctx.cashOutflow, spend);
-    if (matched > 0) { acc.income += matched; est.income ||= spendEst; }
-  }
+  // 기록으로 짝이 확인된 출금 → 매수·상환은 앱 안 이동 — 출금(순유입 −)을 그 금액만큼 되돌려, 같은 금액의 매수·상환
+  // (내부 이동 풀)과 함께 0이 되게 한다(C23). 짝 없는 출금은 순유입 −로 남는다(qa R4·R5, cto 판정 b).
+  if (ctx.matchedTransfer && ctx.matchedTransfer > 0) acc.income += ctx.matchedTransfer;
   for (const e of effects) {
     const flag = !!e.estimated;
     if (ctx.estimatedPriceAsUnrecorded && e.key === "price" && flag) { est.unrecorded = true; continue; } // qa R3
