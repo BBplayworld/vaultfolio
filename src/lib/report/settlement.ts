@@ -208,12 +208,31 @@ export const UNRECORDED_HINT_RATIO = 0.5;
  */
 export function mapSettlementCauses(
   effects: { key: AttributionCauseKey; amount: number; estimated?: boolean }[],
-  ctx: { deltaNet: number; cashTracked: boolean },
+  ctx: {
+    deltaNet: number;
+    cashTracked: boolean;
+    // 아래 3개는 월·연 탭 화면이 넘긴다(미지정 시 종전 동작, qa R1~R3)
+    cashOutflow?: number;               // 구간 안 반영된 현금 출금 합(KRW, 양수)
+    hasCashRecords?: boolean;           // 구간 안 현금 거래 존재 — 있으면 "입출금을 기록하면" 안내를 띄우지 않음
+    estimatedPriceAsUnrecorded?: boolean; // 예측 구간의 통합 시세 잔차는 시세가 아니라 기록 안 된 변화(예측)
+  },
 ): SettlementCauses {
   const acc = { price: 0, valuation: 0, fx: 0, income: 0 };
   const est = { price: false, valuation: false, fx: false, income: false, unrecorded: false };
+  // 출금 → 매수·대출 상환은 앱 안 이동이다. 출금(순유입 −)과 짝인 매수(+)·상환(+)이 내부 이동 풀로 가면
+  // "순유입 −, 기록 안 된 변화 +"로 갈라 보이므로, 출금으로 설명되는 만큼(min)만 순유입으로 되돌려 상쇄한다(qa R1).
+  if (ctx.cashTracked && ctx.cashOutflow && ctx.cashOutflow > 0) {
+    let spend = 0;
+    let spendEst = false;
+    for (const e of effects) {
+      if ((e.key.startsWith("buy:") || e.key === "debt") && e.amount > 0) { spend += e.amount; spendEst ||= !!e.estimated; }
+    }
+    const matched = Math.min(ctx.cashOutflow, spend);
+    if (matched > 0) { acc.income += matched; est.income ||= spendEst; }
+  }
   for (const e of effects) {
     const flag = !!e.estimated;
+    if (ctx.estimatedPriceAsUnrecorded && e.key === "price" && flag) { est.unrecorded = true; continue; } // qa R3
     if (PRICE_KEYS.has(e.key)) { acc.price += e.amount; est.price ||= flag; }
     else if (e.key === "price:realEstate") { acc.valuation += e.amount; est.valuation ||= flag; }
     else if (e.key === "fx") { acc.fx += e.amount; est.fx ||= flag; }
@@ -245,7 +264,7 @@ export function mapSettlementCauses(
     // 0원 항목 숨김. 엔진 합계의 부동소수 오차로 생기는 10원 미만 잔차도 0원으로 본다.
     causes: all.filter((c) => Math.abs(c.amount) >= NOISE_WON),
     deltaNet,
-    showUnrecordedHint: Math.abs(unrecorded) >= NOISE_WON && Math.abs(unrecorded) >= Math.abs(deltaNet) * UNRECORDED_HINT_RATIO,
+    showUnrecordedHint: !ctx.hasCashRecords && Math.abs(unrecorded) >= NOISE_WON && Math.abs(unrecorded) >= Math.abs(deltaNet) * UNRECORDED_HINT_RATIO,
   };
 }
 

@@ -138,6 +138,18 @@ export function ChangeHero({ title, titleTestId, range, badge, actions, delta = 
 
 // ── 변화 원인(월 탭 = 그 달, 연 탭 = 올해) — 계산·표시 공용(#32 보완) ──
 
+// 구간 (from, to] 현금 거래 — 시작일 당일은 앞 구간 몫(C15). 출금 합은 KRW 환산(JPY는 100엔당)
+function cashFlowsIn(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): { has: boolean; outflow: number } {
+  let has = false;
+  let outflow = 0;
+  for (const t of assetData.cashTransactions ?? []) {
+    if (!from || !(t.date > from && t.date <= to)) continue;
+    has = true;
+    if (t.reflected && t.type === "withdrawal") outflow += t.amount * (t.currency === "USD" ? rates.USD : t.currency === "JPY" ? rates.JPY / 100 : 1);
+  }
+  return { has, outflow };
+}
+
 /**
  * 구간 원인 5항목 — 월·연이 같은 규칙을 쓴다. 시작일 당일 거래는 앞 구간(앞 달 결산·12월 결산)에 이미 포함이라
  * 제외(includeStartDay=false, C15). deltaNet은 화면 Hero 증감 — 스냅샷 효과와의 차이는 "기록 안 된 변화"로 흡수.
@@ -162,9 +174,10 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
     (t) => !!startDate && t.date >= startDate && t.date <= endDate,
   );
   const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
+  const flows = cashFlowsIn(assetData, startDate, endDate, rates);
   const mapped = mapSettlementCauses(
     attr ? attr.effects : [{ key: "cash", amount: deltaNet, estimated: true }],
-    { deltaNet, cashTracked },
+    { deltaNet, cashTracked, cashOutflow: flows.outflow, hasCashRecords: flows.has, estimatedPriceAsUnrecorded: true },
   );
   return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
 }
@@ -193,11 +206,12 @@ export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, 
   }
   const start = points[0];
   const startDate = start ? (start.date ?? null) : null;
-  const hasCashRecords = (assetData.cashTransactions ?? []).some(
-    (t) => !!startDate && t.date > startDate && t.date <= endDate,
+  const flows = cashFlowsIn(assetData, startDate, endDate, rates);
+  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || flows.has;
+  const mapped = mapSettlementCauses(
+    effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }],
+    { deltaNet, cashTracked, cashOutflow: flows.outflow, hasCashRecords: flows.has, estimatedPriceAsUnrecorded: true },
   );
-  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || hasCashRecords;
-  const mapped = mapSettlementCauses(effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }], { deltaNet, cashTracked });
   return { mapped, estimatedLabel: effects.length === 0 || estimatedSegments === points.length ? "예측" : "일부 예측" };
 }
 

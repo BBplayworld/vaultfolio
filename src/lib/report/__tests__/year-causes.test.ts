@@ -79,7 +79,9 @@ describe("연 원인 — 운영 형태 픽스처(C20)", () => {
     expect(keys).toContain("valuation");
     expect(keys).toContain("income");
     expect(r.mapped.causes.reduce((s, c) => s + c.amount, 0)).toBe(HERO_DELTA);
-    expect(r.mapped.causes.find((c) => c.key === "price")!.estimated).toBe(true); // 연초~8/28 예측 포함
+    // 연초~8/28 예측 구간의 통합 시세 잔차는 시세가 아니라 기록 안 된 변화(예측)로(qa R3) — 시세 변동은 실측 구간만
+    expect(r.mapped.causes.find((c) => c.key === "price")!.estimated).toBe(false);
+    expect(r.mapped.causes.find((c) => c.key === "unrecorded")!.estimated).toBe(true);
     expect(r.estimatedLabel).toBe("일부 예측");
     expect(r.mapped.causes.find((c) => c.key === "income")!.amount).toBe(2_500_000); // 올해 입금 전액(실측)
   });
