@@ -180,6 +180,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     trackScreen(viewToKey(initial), "initial");
     const onPop = () => {
       const next = parseHash(window.location.hash);
+      if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
+        window.history.replaceState(null, "", toHash(next));
+      }
       setSlideDir(computeSlideDir(viewRef.current, next));
       viewRef.current = next;
       setView(next);
