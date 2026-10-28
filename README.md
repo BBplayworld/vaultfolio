@@ -12,6 +12,7 @@
 | `DECISIONS.md` | 확정된 결정 (대표 결정 + 에이전트 결정) | **추가만**. 수정·삭제 금지. 뒤집히면 새 줄로 "번복" 기록 |
 | `LEARNINGS.md` | 대표가 반려·수정한 이유, 반복하면 안 되는 실수 | **추가만**. 같은 교훈이 쌓이면 월 1회 묶어서 정리 |
 | `HISTORY.md` | 시간순 진행 이력 (이슈 단위 요약) | 이슈가 끝날 때 한 단락 추가 |
+| `CHECKLIST.md` | 누적 최종 점검 항목(대표 지적·qa FAIL·결함에서 추출). qa가 매 릴리스 전 항목 판정 | **추가만**. cto 회고로 추가 |
 | `run-log.md` | 매 예약 실행 한 줄 기록 | 맨 위에 추가, 60줄 넘으면 월별 요약 |
 | `issues/<번호>-<slug>/` | 이슈 산출물 (direction·challenge·spec·business·tech-review·ui·dev-notes·qa-report·screenshots·decision-brief) | 단계별 담당이 작성 |
 | `marketing/<YYYY-WW>/` | 주간 마케팅 초안 | business-pm 작성, qa 검사 |
