@@ -1,0 +1,34 @@
+# #32 dev-notes — developer (2026-10-28, 브랜치 `issue-4.34`, 202f05f..fecbbbd)
+
+## 변경 요약
+- 순수 함수 `src/lib/report/settlement.ts`: `pruneMonthlySnapshots`(13개월 롤링), `resolveSettlementWindow`·`pickSettlementMonth`·`pickSettlementCard`·`listSettlementMonths`(21·25·35일 임계), `mapSettlementCauses`(15키→5항목, 항등식), `buildWeekRows`, `buildSettlementIcs`(RFC 5545)
+- 엔진 `asset-report.ts`: `computeAttributionBetween` export 1개만 추가(단일 구간, isFirstSegment=true). 기존 함수·`asset-report.test.ts` 무수정
+- 보존: `asset-data-context.tsx` 월 업서트의 `startsWith(올해)` → `pruneMonthlySnapshots`. 스키마·저장 키·`asset-storage.ts`(pull·백업·공유) diff 없음
+- 내비: `ActivityTab = hub|change|dividend|report`, `AssetView.activity.init?: ChangeInit`. 옛 `#activity/netasset`(전체·연)·`#activity/profit`(주식·일) 리다이렉트 + 주소창 replaceState. top-bar·FAB(연도별 순자산 → 전체·연)·성적표 growth(→ 월)·app-features(15→14)·GA 화면키 `activity:change`
+- 화면: 신규 `asset-change-view.tsx`(범위×기간, 주 목록), `settlement-view.tsx`(블록 1·2·3·7), 허브 카드 3개 + 결산 카드, `net-asset-chart`(`view` prop, 월별 막대·목록 삭제), `profit-chart`(`period` prop), `layout/ui/report-section.tsx`(SectionHeader·SpecRow 등 성적표에서 동작 불변 이동, `titleTestId` 추가), `InlineSelector` `options[].testId`, `home-tip-box` `CATEGORY_LABEL` export
+- GA: `settlement_view`(source card/menu, result settled/in_progress/first_month), 월 탭 마운트당 1회
+- tutorial-store step5 `profit` 하위 단계: 참조처 없음(대상은 상단 성과 탭) → 변경 불필요
+- 데모 보강 불필요: 기존 #31 데모(월 스냅샷 -3 레거시·-2~0 enrich, assetRefresh 현금·대출 40일 전)로 블록 1~7·예측 배지·첫 달 모두 재현됨
+- KB 일괄 반영: changelog·components·state-and-utils·dev-rules(testid 관행)·qa-full-test-plan(F-ACTIVITY·F-SNAPSHOT·F-NAV·F-HOME-TIP·F-ANALYTICS)
+
+## 테스트 방법
+- `npx vitest run` 21파일 302건 통과. 신규 `src/lib/report/__tests__/settlement.test.ts`(보존 연 경계 2026-01·2027-01, 예시 ①②③, 1월 경계, 노출 창, 매핑 15키·현금 등록/미등록·보증금·항등식, R29 경계 key별 금액, .ics), `src/lib/__tests__/activity-hash.test.ts`, `ga.test.ts` settlement_view 추가(기존 화면키 단정은 activity:change로 갱신)
+- `npx tsc --noEmit`·`npm run build` 통과. `npm run lint`: src 오류 0. 단 `.memory/qa/*.mjs`가 worktree로 있으면 eslint 파싱 오류 1건(설정 ignores에 `.memory/` 없음, 코드 무관)
+- Playwright: `node .memory/qa/settlement-check.mjs <previewURL> .memory/issues/32-monthly-settlement/shots` → 15/15 PASS(fecbbbd)
+
+## preview에서 qa가 볼 경로·순서
+URL https://secretasset-git-issue-434-bbplayworlds-projects.vercel.app (375×812). 튜토리얼 오버레이는 `secretasset_tutorial_status` 완료 처리로 건너뜀
+1. `/?demo=1` → `html[data-demo-ready="1"]` 대기 → `#activity`: `hub-card-change/dividend/report` 3개, 수익 카드 없음, `settlement-card`(10/28은 말일−3일이라 노출, 제목 "9/28 → 10/28 변화")
+2. 결산 카드 탭 → 월 탭: `settlement-title`·`settlement-range`·블록 2·3·7. `cause-row-*` data-value 합 = `settlement-delta` data-value, 매수·매도·상환 문구 없음
+3. 월 선택기 13개 중 활성 4개(7~10월). 8월 → "2026-07 기록 → 8/28 기준"(레거시 시작), `cause-estimated-badge` "예측". 7월 → `settlement-first-month`
+4. 블록 7: 현금성 자산·대출 "40일 전 값 기준" → 탭 시 입력 시트, `.ics` 버튼·안내
+5. 범위 주식 → 수익 현황(결산 블록 없음), 기간 주 → `week-list`
+6. `#activity/netasset` → 전체·연 + 주소 `#activity/change`, `#activity/profit` → 주식·일. FAB 연도별 순자산 입력·성적표 "순자산 변화, 왜?" 링크·뒤로가기(→ 허브)
+7. 회귀: 홈 헤더 원인분해·성적표 값(엔진 무변경), F-SYNC·F-SHARE(코드 diff 없음)
+
+## 알려진 한계
+- 동기화 pull은 수신분 통째 교체 그대로(cto v1 제외) — 구버전 기기 혼재 시 13개월이 올해분으로 줄 수 있음(최악=현행)
+- iOS 홈 화면 PWA에서 `.ics` 다운로드 실동작 미검증(안내 문구 상시 노출로 대체)
+- 허브 카드 금액은 실시간 순자산 기준이라 시세 갱신 전후로 값이 바뀐다(결산 화면과 같은 시점이면 일치)
+- 끝점이 레거시(enrich 없음)인 달은 원인 분해 없이 전액 "기록 안 된 변화"(예측)로 표시
+- 이번 실행에 GitHub MCP 도구가 없어 PR #37 본문(`Closes #32`)·이슈 #32 코멘트 미반영 → 오케스트레이터가 처리 필요
