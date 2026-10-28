@@ -3,7 +3,8 @@
 // 자산 변화 Hero(#32 r2) — 일·주·월·연·주식 5개 본문이 같은 4단 구조(이름 → 증감 → 시작→끝 → 기간 선택)로 그린다.
 // 타이포는 홈 Hero(dashboard.tsx 순자산 헤더)와 같다. views/activity 로컬 전용(카탈로그 미등록).
 
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
 import type { SettlementWindow } from "@/lib/report/settlement";
@@ -44,13 +45,32 @@ export interface ChangeHeroProps {
   aside?: ReactNode;         // 시작→끝 줄 오른쪽(일부 이전 값 배지)
   note?: ReactNode;          // Hero 아래 보조 문구(간격 안내)
   contentKey?: string;       // 바뀌면 숫자 영역만 fade-in(위치 고정)
-  period: ReactNode;         // 기간 선택(InlineSelector fullWidth)
+  period?: ReactNode;        // 기간 선택 — ChangeHeroFrame 밖에서 단독으로 쓸 때만
+}
+
+// Hero 틀 — 자산 변화 화면이 1회 렌더한다. 본문(일·주·월·연·주식)의 ChangeHero 내용은 슬롯으로 포털되고
+// 기간 선택은 틀 맨 아래에 고정돼 본문 전환에도 다시 마운트되지 않는다(썸이 칸 사이를 미끄러짐)
+const HeroSlotContext = createContext<HTMLDivElement | null | undefined>(undefined);
+
+export function ChangeHeroFrame({ period, children }: { period: ReactNode; children: ReactNode }) {
+  const [slot, setSlot] = useState<HTMLDivElement | null>(null);
+  return (
+    <HeroSlotContext.Provider value={slot}>
+      <section data-testid="change-hero" className={SECTION}>
+        <div>
+          <div ref={setSlot} />
+          <div className="mt-4">{period}</div>
+        </div>
+      </section>
+      {children}
+    </HeroSlotContext.Provider>
+  );
 }
 
 export function ChangeHero({ title, titleTestId, range, badge, actions, delta = null, pct = null, start, end, loading, message, aside, note, contentKey, period }: ChangeHeroProps) {
-  return (
-    <section data-testid="change-hero" className={SECTION}>
-      <div>
+  const slot = useContext(HeroSlotContext);
+  const content = (
+    <>
         {(title || actions) && <div className="flex min-h-10 items-center gap-2">
           <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span data-testid={titleTestId ?? "change-hero-title"} className="text-sm font-semibold text-foreground">{title}</span>
@@ -98,8 +118,15 @@ export function ChangeHero({ title, titleTestId, range, badge, actions, delta = 
           )}
           {note && <p className="mt-1 text-sm text-muted-foreground text-pretty">{note}</p>}
         </div>
-
-        <div className="mt-4">{period}</div>
+    </>
+  );
+  // 틀 안이면 슬롯으로 포털(슬롯 준비 전 첫 렌더는 비움), 틀 밖이면 단독 섹션
+  if (slot !== undefined) return slot ? createPortal(content, slot) : null;
+  return (
+    <section data-testid="change-hero" className={SECTION}>
+      <div>
+        {content}
+        {period && <div className="mt-4">{period}</div>}
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Minus, Globe, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +73,12 @@ const HERO_LABELS: Record<ProfitPeriod, string> = {
   monthly: "1개월 주식 수익",
   yearly: "1년 주식 수익",
 };
-const fmtMD = (d?: string) => (d ? `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}` : "");
+// 기준 종가 구간 — 같은 해면 "10/27 → 10/28", 해가 다르면 "25.10.28 → 26.10.27"(연도 없이 거꾸로 읽히지 않게)
+export function formatRefRange(from: string, to: string): string {
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  const ymd = (d: string) => `${d.slice(2, 4)}.${Number(d.slice(5, 7))}.${Number(d.slice(8, 10))}`;
+  return from.slice(0, 4) === to.slice(0, 4) ? `${md(from)} → ${md(to)}` : `${ymd(from)} → ${ymd(to)}`;
+}
 
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
@@ -199,7 +204,7 @@ function getExpectedRefDate(period: ProfitPeriod, market: "domestic" | "foreign"
 
 // period를 넘기면 바깥(자산 변화 기간 탭)이 제어하고 내부 기간 선택기는 숨긴다(#32).
 // 제어 모드에서는 제목·설명·요약 박스 대신 자산 변화 공통 Hero에 기존 합계를 그린다(r2)
-export function ProfitCard({ isActive = true, period: controlledPeriod, periodSelector }: { isActive?: boolean; period?: ProfitPeriod; periodSelector?: ReactNode }) {
+export function ProfitCard({ isActive = true, period: controlledPeriod }: { isActive?: boolean; period?: ProfitPeriod }) {
   const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const usdRate = exchangeRates.USD;
   const jpyRate = exchangeRates.JPY;
@@ -366,7 +371,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod, periodSe
 
   if (mergedStocks.length === 0) {
     if (controlledPeriod) {
-      return <ChangeHero title={HERO_LABELS[period]} message="현재가가 등록된 주식이 없어요" contentKey={period} period={periodSelector} />;
+      return <ChangeHero title={HERO_LABELS[period]} message="현재가가 등록된 주식이 없어요" contentKey={period} />;
     }
     return (
       <Card className={ASSET_THEME.contentCard}>
@@ -395,7 +400,6 @@ export function ProfitCard({ isActive = true, period: controlledPeriod, periodSe
           title={HERO_LABELS[period]}
           message={<>점검 중 · 외부 증권 API 점검으로 정보를 불러올 수 없어요</>}
           contentKey={period}
-          period={periodSelector}
         />
       );
     }
@@ -551,14 +555,13 @@ export function ProfitCard({ isActive = true, period: controlledPeriod, periodSe
       {controlled && (
         <ChangeHero
           title={`${marketView === "all" ? "" : `${MARKET_LABELS[marketView]} · `}${HERO_LABELS[period]}`}
-          range={heroFrom && heroTo ? `${fmtMD(heroFrom)} → ${fmtMD(heroTo)}` : undefined}
+          range={heroFrom && heroTo ? formatRefRange(heroFrom, heroTo) : undefined}
           loading={isLoading ? "기준가 조회 중…" : undefined}
           delta={totalProfit}
           pct={totalRate}
           start={heroStart}
           end={heroEnd}
           contentKey={`${period}-${marketView}`}
-          period={periodSelector}
         />
       )}
       <Card className={controlled ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>

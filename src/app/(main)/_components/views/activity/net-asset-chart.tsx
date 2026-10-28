@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import {
   Area, AreaChart,
@@ -214,8 +214,8 @@ function useRecordStats(snapshotVersion: number): RecordStats | null {
 
 
 // view를 넘기면 바깥(자산 변화 기간 탭)이 제어한다(#32). 이때 자체 제목·"현재 순자산" Hero 대신
-// 자산 변화 공통 Hero(ChangeHero)에 기존 대비 계산값을 그리고, 기간 선택(periodSelector)을 그 안에 둔다(r2)
-export function YearlyNetAssetChart({ view, periodSelector }: { view?: NetAssetView; periodSelector?: ReactNode } = {}) {
+// 자산 변화 공통 Hero(ChangeHero)에 기존 대비 계산값을 그린다(r2)
+export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
   const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -316,7 +316,6 @@ export function YearlyNetAssetChart({ view, periodSelector }: { view?: NetAssetV
           end={heroEnd}
           message="기록이 쌓이면 더 보여드려요"
           contentKey={activeView}
-          period={periodSelector}
         />
       )}
       <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>

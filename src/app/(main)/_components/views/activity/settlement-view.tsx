@@ -1,9 +1,9 @@
 "use client";
 
-// 자산 변화 · 전체 · 월 탭 = N월 결산(#32 r2). Hero(이름·증감·시작→끝·월 화살표·기간 선택) → 변화 원인 → 다음 달 준비.
+// 자산 변화 · 전체 · 월 탭 = N월 결산(#32 r2). Hero(이름·증감·시작→끝·월 화살표, 기간 선택은 상위 고정) → 변화 원인 → 다음 달 준비.
 // 계산은 전부 기기 안(로컬 스냅샷 + 엔진 래퍼). 서버로 보내는 값 없음 — GA는 source·result 열거형만.
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ interface SettlementResult {
   estimatedLabel: "예측" | "일부 예측";
 }
 
-export function SettlementView({ initialMonth, source, periodSelector }: { initialMonth?: string; source: "card" | "menu"; periodSelector: ReactNode }) {
+export function SettlementView({ initialMonth, source }: { initialMonth?: string; source: "card" | "menu" }) {
   const { assetData, exchangeRates, getAssetSummary, snapshotVersion } = useAssetData();
   // getAssetSummary는 자산·환율이 바뀔 때만 새로 만들어지므로 요약도 그때만 다시 계산한다(매 렌더 재계산 방지)
   const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);
@@ -100,7 +100,6 @@ export function SettlementView({ initialMonth, source, periodSelector }: { initi
       <div data-testid="settlement-root" className="flex flex-col gap-3 sm:gap-4">
         <ChangeHero
           message={<span data-testid="settlement-empty">아직 기록된 달이 없어요. 앱을 계속 쓰면 다음 달부터 결산이 열려요</span>}
-          period={periodSelector}
         />
       </div>
     );
@@ -115,7 +114,6 @@ export function SettlementView({ initialMonth, source, periodSelector }: { initi
           actions={arrows}
           message={<span data-testid="settlement-error">결산을 불러오지 못했어요. 다른 달을 선택해 보세요</span>}
           contentKey={month}
-          period={periodSelector}
         />
       </div>
     );
@@ -151,7 +149,6 @@ export function SettlementView({ initialMonth, source, periodSelector }: { initi
         ) : undefined}
         note={w.longGap ? <span data-testid="settlement-gap-note">기록 간격이 길어 {w.gapDays}일 구간이에요</span> : undefined}
         contentKey={month}
-        period={periodSelector}
       />
 
       {!firstMonth && <CauseBlock key={month} mapped={mapped} estimatedLabel={estimatedLabel} />}

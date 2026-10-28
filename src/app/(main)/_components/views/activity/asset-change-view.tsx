@@ -3,7 +3,7 @@
 // 성과 · 자산 변화(#32) — 순자산·수익 화면을 기간(일·주·월·연) × 범위(전체·주식) 하나로 합친 셸.
 // 기존 화면은 분해하지 않고 제어 prop(view/period)만 넘긴다. 전체·월 = 월말 결산, 전체·주 = 최근 7일 목록.
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { formatPriceByMode } from "@/lib/number-utils";
@@ -13,7 +13,7 @@ import type { ProfitPeriod } from "@/lib/finance/profit-utils";
 import type { ChangeInit, ChangePeriod, ChangeScope } from "../../layout/navigation/navigation-context";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { SECTION } from "../../layout/ui/report-section";
-import { BODY_ENTER, ChangeHero } from "./change-hero";
+import { BODY_ENTER, ChangeHero, ChangeHeroFrame } from "./change-hero";
 import { YearlyNetAssetChart } from "./net-asset-chart";
 import { ProfitCard } from "./profit-chart";
 import { SettlementView } from "./settlement-view";
@@ -57,7 +57,8 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
     setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu" }));
   };
 
-  // 기간 선택 — 각 본문의 Hero 맨 아래에 놓인다(공유 캡처에도 상태 표시로 남김)
+  // 기간 선택 — Hero 틀(ChangeHeroFrame) 맨 아래에 1회만 렌더해 본문이 바뀌어도 같은 노드로 유지(썸 슬라이드).
+  // 공유 캡처에도 상태 표시로 남김
   const periodSelector = (
     <InlineSelector fullWidth value={period} onChange={changePeriod} options={PERIODS} ariaLabel="기간 선택" className="w-full sm:max-w-md" />
   );
@@ -69,21 +70,23 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
         <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] shrink-0" />
       </div>
 
+      <ChangeHeroFrame period={periodSelector}>
       {scope === "stock" ? (
-        <ProfitCard isActive period={PROFIT_PERIOD[period]} periodSelector={periodSelector} />
+        <ProfitCard isActive period={PROFIT_PERIOD[period]} />
       ) : period === "month" ? (
-        <SettlementView key={entry.key} initialMonth={entry.month} source={entry.source} periodSelector={periodSelector} />
+        <SettlementView key={entry.key} initialMonth={entry.month} source={entry.source} />
       ) : period === "week" ? (
-        <WeekList periodSelector={periodSelector} />
+        <WeekList />
       ) : (
-        <YearlyNetAssetChart view={period === "year" ? "yearly" : "daily"} periodSelector={periodSelector} />
+        <YearlyNetAssetChart view={period === "year" ? "yearly" : "daily"} />
       )}
+      </ChangeHeroFrame>
     </div>
   );
 }
 
 // 전체·주 — 기존 일별 스냅샷(30일 롤링)에서 최근 7일. 신규 계산·원인 분해 없음.
-function WeekList({ periodSelector }: { periodSelector: ReactNode }) {
+function WeekList() {
   const { snapshotVersion } = useAssetData();
   const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { rows, weekDiff } = useMemo(
@@ -103,7 +106,6 @@ function WeekList({ periodSelector }: { periodSelector: ReactNode }) {
         end={end}
         message="기록이 쌓이면 더 보여드려요"
         contentKey="week"
-        period={periodSelector}
       />
       {rows.length > 0 && (
         <section data-testid="week-list" className={`${SECTION} ${BODY_ENTER}`}>
