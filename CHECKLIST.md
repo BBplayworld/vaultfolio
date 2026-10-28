@@ -23,3 +23,4 @@ cto는 회고 때 항목을 추가한다(ORCHESTRATOR.md "자기 개선 — 회�
 | C16 | 2026-10-28 | 데이터 안전 최종 점검(v4.34) | 새 코드가 렌더·effect에서 notifyAssetUserEdit·saveAssetData·setAssetData를 호출하지 않는다(push 트리거 불변) | qa | grep + 렌더 카운트 |
 | C17 | 2026-10-28 | 데이터 안전 최종 점검(v4.34) | 손실 가능 시 복구 경로(백업·아카이브)와 복구 범위(enrich 등 영구 소실 여부)를 qa-report에 명시했다 | qa | 보고서 점검 |
 | C18 | 2026-10-28 | 회고(#32 데이터 점검) | qa 종합 판정에 '조건부 PASS'를 쓰지 않는다 — 기록 손실·소비처 결과 변경이 하나라도 있으면 FAIL | qa | qa-report 판정 문구 |
+| C19 | 2026-10-28 | 대표 지적(iOS 웨일 .ics 미동작) | 파일 다운로드·캘린더 추가·공유 같은 기기 연동은 iOS 서드파티 브라우저(웨일·크롬 iOS 등 WKWebView)와 홈 화면 PWA에서 동작하는 방식(blob URL·download 속성 의존 금지, 같은 출처 URL + 올바른 Content-Type)으로 구현했다 | design-review(tech-review) · qa | 구현 방식 코드 점검 + 응답 헤더·형식 검증, 실기기 미검증은 알려진 한계로 명시 |
