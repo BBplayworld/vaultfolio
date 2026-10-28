@@ -7,7 +7,7 @@
 ## GitHub 접근 방식
 1. **기본: GitHub MCP 도구**(`mcp__github__*`, 저장소 `BBplayworld/vaultfolio`). 세션에 저장소가 없으면 `add_repo`(access push)로 붙인다. `gh` CLI는 쓰지 않는다.
 2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
-   - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<번호>-<slug>/log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
+   - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<버전>-<번호>-<slug>/<버전>-log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
    - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
    - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
    - 실행 요약 첫 줄에 "git 전용 모드" 표시
