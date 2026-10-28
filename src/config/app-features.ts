@@ -3,7 +3,7 @@
 // 신규 공용 기능을 추가하면 이 파일에도 등록한다(누락 시 팁 추천 대상에서 빠진다).
 
 import type { LucideIcon } from "lucide-react";
-import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, PiggyBank, Gift, FileBarChart, IdCard } from "lucide-react";
+import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard } from "lucide-react";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { useTaxViewStore } from "@/stores/tax-view-store";
 import { dispatchOpenShareCard } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
@@ -81,18 +81,11 @@ export const APP_FEATURES: AppFeature[] = [
     target: { type: "detail", tab: "loans" },
   },
   {
-    id: "netasset",
-    title: "순자산 변화",
-    description: "성과 탭의 순자산 변화에서 자산 추이를 그래프로 확인하세요.",
+    id: "change",
+    title: "자산 변화",
+    description: "성과 탭의 자산 변화에서 순자산 추이와 월말 결산을 확인하세요.",
     icon: LineChart,
-    target: { type: "activity", tab: "netasset" },
-  },
-  {
-    id: "profit",
-    title: "수익",
-    description: "성과 탭의 수익에서 기간별 투자 수익률을 확인하세요.",
-    icon: PiggyBank,
-    target: { type: "activity", tab: "profit" },
+    target: { type: "activity", tab: "change" },
   },
   {
     id: "dividend",

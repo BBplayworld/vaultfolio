@@ -97,6 +97,17 @@ describe("AC2 sanitizer", () => {
     expect(payload).not.toHaveProperty("nickname");
     expect(payload).toMatchObject({ asset_type: "주식", method: "직접 입력", result: "신규" });
   });
+
+  it("settlement_view는 source·result 열거형만 싣고 금액·날짜는 버린다(#32)", () => {
+    track("settlement_view", { source: "card", result: "settled", ...({ delta: 1e7, month: "2026-10" } as object) });
+    const [, name, payload] = gtag.mock.calls[0];
+    expect(name).toBe("settlement_view");
+    expect(payload).toMatchObject({ source: "결산 카드", result: "결산" });
+    expect(payload).not.toHaveProperty("delta");
+    expect(payload).not.toHaveProperty("month");
+    expect(sanitizeParams({ source: "menu", result: "in_progress" })).toEqual({ source: "메뉴", result: "진행 중" });
+    expect(sanitizeParams({ result: "first_month" })).toEqual({ result: "첫 달" });
+  });
 });
 
 describe("AC3 page_location에 해시·쿼리 미포함", () => {
@@ -113,10 +124,10 @@ describe("AC3 page_location에 해시·쿼리 미포함", () => {
   });
 
   it("일반 이벤트의 page_location도 현재 화면 가상 경로로 고정된다", () => {
-    trackScreen("activity:profit");
+    trackScreen("activity:change");
     track("share", { method: "link", content_type: "link" });
     const payload = gtag.mock.calls[1][2];
-    expect(payload.page_location).toBe("https://secretasset.xyz/v/activity/profit");
+    expect(payload.page_location).toBe("https://secretasset.xyz/v/activity/change");
   });
 
   it("화면 키 형식이 아니면 무시한다", () => {
