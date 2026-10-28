@@ -18,8 +18,9 @@ status:idea          (주간 기획 후보 — cto 반대 검토 통과 시 자�
        ① 방향 정의   planner-designer + business-pm 공동 → direction.md (두 사람 합의)
        ② 반대 검토   cto → challenge.md (통과 / 축소 / 폐기)
        ③ 상세 기획   planner-designer → spec.md / business-pm → business.md (교차 승인)
-  → status:design-review   developer → tech-review.md / planner-designer → ui.md
+  → status:design-review   developer → tech-review.md / ui-designer → ui.md (planner-designer 흐름 검토)
   → status:development     developer → 열린 릴리스 issue-4.NN에 추가(없으면 새 버전 배정) → 릴리스 PR → Vercel preview
+       → ui-designer UI 검수(ui-review.md) `UI 승인` 후 qa (UI 변경 시)
   → status:qa              qa → qa-report.md (자동 테스트 + preview 실제 점검 + 스크린샷)
        FAIL → development 자동 복귀, 최대 3회 → 이후 cto가 축소/폐기 판정
   → status:owner-review    cto → 릴리스 decision-brief(포함 이슈 전부 qa PASS 시) → 대표가 릴리스 PR 머지(반영) / 닫기(미반영)
@@ -54,9 +55,9 @@ challenge.md `통과` 후에만 spec.md·business.md를 쓴다. 상호 `승인` 
 | planning ① | planner-designer + business-pm | 상호 합의 | `direction.md` | 둘 다 `합의함` |
 | planning ② | cto | — | `challenge.md` | `통과` |
 | planning ③ | planner-designer, business-pm | 교차 검토 | `spec.md`, `business.md` | 상호 `승인` |
-| design-review | developer, planner-designer | 교차 검토 | `tech-review.md`, `ui.md` | 위험 등급 초안 + 범위 확정 |
+| design-review | developer, ui-designer | 교차 검토(+planner-designer 흐름) | `tech-review.md`, `ui.md` | 위험 등급 초안 + 범위 확정 + 데이터 영향 범위 명시 |
 | development | developer | qa | PR, `dev-notes.md`, preview URL | CI 통과 + preview 배포 성공 |
-| qa | qa | — | `qa-report.md`, `screenshots/` | PASS |
+| qa | qa | CHECKLIST.md 전 항목 + 데이터 안전 점검 | `qa-report.md`, `screenshots/` | PASS |
 | owner-review | cto | — | `decision-brief.md` | 대표가 머지/닫기 |
 
 ## 4. 대표 결정 읽기 (매 실행 시작 시)
