@@ -186,11 +186,13 @@ function getExpectedRefDate(period: ProfitPeriod, market: "domestic" | "foreign"
   return toDateStr(subtractCalendarYears(now, 1));
 }
 
-export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
+// period를 넘기면 바깥(자산 변화 기간 탭)이 제어하고 내부 기간 선택기는 숨긴다(#32)
+export function ProfitCard({ isActive = true, period: controlledPeriod }: { isActive?: boolean; period?: ProfitPeriod }) {
   const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const usdRate = exchangeRates.USD;
   const jpyRate = exchangeRates.JPY;
-  const [period, setPeriod] = useState<ProfitPeriod>("daily");
+  const [innerPeriod, setPeriod] = useState<ProfitPeriod>("daily");
+  const period = controlledPeriod ?? innerPeriod;
   const [marketView, setMarketView] = useState<MarketView>("all");
   // 기준 종가 비교 표 접힘 상태 (기본 접힘 — 종목별 손익에 시선 집중)
   const [closeTableOpen, setCloseTableOpen] = useState(false);
@@ -524,12 +526,14 @@ export function ProfitCard({ isActive = true }: { isActive?: boolean }) {
               </div>
               <CardDescription>보유 주식의 기간별 수익</CardDescription>
             </div>
-            <InlineSelector
-              value={period}
-              onChange={setPeriod}
-              options={PERIOD_OPTIONS}
-              ariaLabel="기간 선택"
-            />
+            {!controlledPeriod && (
+              <InlineSelector
+                value={period}
+                onChange={setPeriod}
+                options={PERIOD_OPTIONS}
+                ariaLabel="기간 선택"
+              />
+            )}
           </div>
         </CardHeader>
         <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>

@@ -273,7 +273,7 @@ describe("buildSettlementIcs — RFC 5545", () => {
     expect(VEVENTS).toHaveLength(1);
   });
   it("금액·숫자 금액이 없고 줄 길이 75옥텟 이하", () => {
-    expect(ics).not.toMatch(/원|₩|\d{1,3}(,\d{3})+/);
+    expect(ics).not.toMatch(/원|₩|\d,\d{3}/);
     for (const line of ics.split("\r\n")) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
   });
 });

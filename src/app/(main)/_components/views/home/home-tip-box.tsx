@@ -25,7 +25,7 @@ import { dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 
-const CATEGORY_LABEL: Record<string, string> = {
+export const CATEGORY_LABEL: Record<string, string> = {
   stock: "주식",
   crypto: "암호화폐",
   cash: "현금성 자산",

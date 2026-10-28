@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Wallet, TrendingUp, BadgeDollarSign, Trophy } from "lucide-react";
+import { useMemo } from "react";
+import { Wallet, BadgeDollarSign, Trophy, CalendarCheck } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
-import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
+import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { pickSettlementCard, settlementCardTitle, settlementRangeLabel } from "@/lib/report/settlement";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -77,7 +76,7 @@ export function useDividendAnnualTotals() {
 }
 
 export function PerformanceHub() {
-  const { assetData, exchangeRates, getAssetSummary } = useAssetData();
+  const { assetData, getAssetSummary, snapshotVersion } = useAssetData();
   const summary = getAssetSummary();
   const { navigate } = useAssetNavigation();
 
@@ -97,46 +96,19 @@ export function PerformanceHub() {
     ? (netDiff! / Math.abs(prevYearItem.netAsset)) * 100
     : null;
 
-  // 수익 — 일별(profit 페이지 디폴트와 동일)
-  // profit-chart와 같은 tickerList 산출 (정렬 필수, 캐시 키 안정)
-  const tickerList = Array.from(
-    new Set(
-      assetData.stocks
-        .filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted")
-        .map((s) => normalizeTicker(s))
-        .filter(Boolean),
-    ),
-  ).sort().join(",");
-
-  const profitBasis = useProfitBasisStore((s) => s.basis);
-  const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
-  const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
-  useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
-
-  const [refData, setRefData] = useState<ProfitRefResponse | undefined>(undefined);
-  // KIS 외부 API 점검(5회 이상 토큰 실패) — 무한 "조회 중…" 방지용
-  const [kisUnavailable, setKisUnavailable] = useState(false);
-  useEffect(() => {
-    if (!profitBasisHydrated || !tickerList) return;
-    const controller = new AbortController();
-    setRefData(undefined);
-    setKisUnavailable(false);
-    fetchProfitRef(tickerList, "daily", {
-      signal: controller.signal,
-      caller: "performance-hub:daily",
-      basis: profitBasis,
-      onProgress: (data) => setRefData({ ...data }),
-      onKisUnavailable: () => setKisUnavailable(true),
-    }).catch(() => { /* abort 등 무시 */ });
-    return () => controller.abort();
-  }, [profitBasisHydrated, tickerList, profitBasis]);
-
-  const { dailyProfit, dailyProfitRate } = computeDailyStockProfit(
-    assetData.stocks,
-    refData,
-    exchangeRates,
-  );
-  const dailyReady = refData !== undefined && dailyProfit !== null;
+  // 월말 결산 카드(#32) — 말일−3일~다음 달 10일, 비교할 직전 기록이 있을 때만. 자산 0건이면 숨김.
+  const hasAssets = assetData.stocks.length + assetData.crypto.length + assetData.cash.length + assetData.loans.length + assetData.realEstate.length > 0;
+  const settlement = useMemo(() => {
+    if (!hasAssets || snapshotVersion < 0) return null;
+    const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+    return pickSettlementCard(readMonthlySnapshots(), today);
+  }, [hasAssets, snapshotVersion]);
+  const settlementDelta = settlement?.start
+    ? (settlement.end ? settlement.end.netAsset : summary.netAsset) - settlement.start.netAsset
+    : 0;
+  const settlementPct = settlement?.start && settlement.start.netAsset !== 0
+    ? (settlementDelta / Math.abs(settlement.start.netAsset)) * 100
+    : null;
 
   // 배당 — 올해 연간 합계 (실제 + 예상)
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
@@ -145,16 +117,41 @@ export function PerformanceHub() {
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div>
         <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>
-        <p className="text-sm text-muted-foreground mt-0.5 text-pretty">순자산·수익·배당을 각각 자세히 확인하세요</p>
+        <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 변화·배당·성적표를 확인하세요</p>
       </div>
+
+      {settlement && (
+        <div data-testid="settlement-card">
+          <KpiCard
+            icon={CalendarCheck}
+            title={
+              <span className="inline-flex flex-wrap items-center gap-1.5">
+                {settlementCardTitle(settlement)}
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">이번 달 결산</span>
+              </span>
+            }
+            description={settlementRangeLabel(settlement)}
+            primary={`${settlementDelta >= 0 ? "+" : ""}${formatPriceByMode(settlementDelta)}`}
+            primaryClassName={getProfitLossColor(settlementDelta)}
+            secondary={settlementPct !== null ? (
+              <span className={`font-semibold tabular-nums ${getProfitLossColor(settlementDelta)}`}>
+                {settlementPct >= 0 ? "+" : ""}{settlementPct.toFixed(1)}%
+                <span className="text-muted-foreground font-medium ml-1.5">지난 기록 대비</span>
+              </span>
+            ) : null}
+            onClick={() => navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: settlement.month, source: "card" } })}
+          />
+        </div>
+      )}
 
       {/* 지난 접속 등락은 홈 Hero(순자산 헤더)로 통합 — 앱을 켜자마자 보는 정보라 중복 노출하지 않는다 */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        <div data-testid="hub-card-change">
         <KpiCard
           icon={Wallet}
-          title="순자산"
-          description="자산 총액과 추이"
+          title="자산 변화"
+          description="순자산 추이와 월말 결산"
           primary={formatPriceByMode(summary.netAsset)}
           secondary={netDiff !== null && netDiffPct !== null ? (
             <>
@@ -164,30 +161,11 @@ export function PerformanceHub() {
               <span className="text-muted-foreground"> 전년 대비</span>
             </>
           ) : <span className="text-muted-foreground">전년 데이터 없음</span>}
-          onClick={() => go("netasset")}
+          onClick={() => go("change")}
         />
+        </div>
 
-        <KpiCard
-          icon={TrendingUp}
-          title="수익"
-          description="기간별 수익"
-          primary={kisUnavailable
-            ? "점검 중"
-            : dailyReady
-              ? `${dailyProfit! >= 0 ? "+" : ""}${formatPriceByMode(dailyProfit!)}`
-              : "조회 중…"}
-          primaryClassName={ASSET_THEME.text.default}
-          secondary={kisUnavailable ? (
-            <span className="text-muted-foreground">외부 증권 API 점검으로 인한 오류</span>
-          ) : dailyReady ? (
-            <span className={`font-semibold tabular-nums ${getProfitLossColor(dailyProfit!)}`}>
-              {dailyProfit! >= 0 ? "+" : ""}{(dailyProfitRate ?? 0).toFixed(2)}%
-              <span className="text-muted-foreground font-medium ml-1.5">일별 대비</span>
-            </span>
-          ) : null}
-          onClick={() => go("profit")}
-        />
-
+        <div data-testid="hub-card-dividend">
         <KpiCard
           icon={BadgeDollarSign}
           title="배당"
@@ -203,7 +181,9 @@ export function PerformanceHub() {
           ) : null}
           onClick={() => go("dividend")}
         />
+        </div>
 
+        <div data-testid="hub-card-report">
         <KpiCard
           icon={Trophy}
           title={
@@ -225,6 +205,7 @@ export function PerformanceHub() {
           ) : <span className="text-muted-foreground">자산 등록 후 계산</span>}
           onClick={() => go("report")}
         />
+        </div>
       </div>
     </div>
   );

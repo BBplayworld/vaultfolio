@@ -9,7 +9,7 @@ import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
 import { CashTab } from "../../views/detail/tabs/cash-tab";
 import { LoanTab } from "../../views/detail/tabs/loan-tab";
-import { YearlyNetAssetChart, DividendCard, ProfitCard, AssetReportView } from "../../views/activity";
+import { DividendCard, AssetReportView, AssetChangeView } from "../../views/activity";
 import { PerformanceHub } from "../../views/activity/performance-hub";
 import { DetailHub } from "../../views/detail/detail-hub";
 import { ToolMenuPage } from "../../header-menu/tool-menu";
@@ -26,7 +26,7 @@ import { LoanTxInput } from "../../forms/asset-update/input/loan-tx-input";
 import { CashTxView } from "../../views/detail/cash-tx/cash-tx-view";
 import { LoanTxView } from "../../views/detail/loan-tx/loan-tx-view";
 import { CryptoTxView } from "../../views/detail/crypto-tx/crypto-tx-view";
-import { useAssetNavigation, type DetailTab, type ActivityTab } from "./navigation-context";
+import { useAssetNavigation, type DetailTab, type ActivityTab, type ChangeInit } from "./navigation-context";
 
 // 홈 1차 탭(상세/성과)은 TopBar 좌측에 노출됨 — 본문은 Dashboard만.
 function HomeView() {
@@ -56,12 +56,11 @@ function DetailView({ tab }: { tab: DetailTab }) {
   );
 }
 
-function ActivityView({ tab }: { tab: ActivityTab }) {
+function ActivityView({ tab, init }: { tab: ActivityTab; init?: ChangeInit }) {
   if (tab === "hub") return <PerformanceHub />;
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      {tab === "netasset" && <YearlyNetAssetChart />}
-      {tab === "profit"   && <ProfitCard isActive />}
+      {tab === "change"   && <AssetChangeView init={init} />}
       {tab === "dividend" && <DividendCard isActive />}
       {tab === "report"   && <AssetReportView />}
     </div>
@@ -107,7 +106,7 @@ export function AssetPageTabs() {
         {view.type === "settings" && <SettingsPage />}
         {view.type === "tax" && <TaxCalendarView />}
         {view.type === "detail" && <DetailView tab={view.tab} />}
-        {view.type === "activity" && <ActivityView tab={view.tab} />}
+        {view.type === "activity" && <ActivityView tab={view.tab} init={view.init} />}
       </div>
     </>
   );
