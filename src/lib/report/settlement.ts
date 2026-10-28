@@ -22,11 +22,12 @@ export function shiftMonth(month: string, delta: number): string {
 /**
  * 월 스냅샷 보존 규칙 — `month >= 현재월 − 12개월`만 남긴다(현재월 포함 최대 13개).
  * 종전 `startsWith(올해)` 필터는 1월 첫 저장에 전년분을 모두 지웠다(qa 확정 결함).
- * 입력보다 건수가 늘지 않고, 형식이 깨진 항목(month 없음)은 버린다.
+ * 입력보다 건수가 늘지 않고, 형식이 깨진 항목(month 없음)·현재월보다 미래인 달은 버린다.
  */
 export function pruneMonthlySnapshots<T extends { month: string }>(all: T[], currentMonth: string): T[] {
   const cutoff = shiftMonth(currentMonth, -(SETTLEMENT_KEEP_MONTHS - 1));
-  return all.filter((s) => typeof s?.month === "string" && /^\d{4}-\d{2}$/.test(s.month) && s.month >= cutoff);
+  // 상한 = 현재월 — 시계가 앞선 기기가 보낸 미래 달이 병합·저장에 남아 결산·습관 축을 왜곡하지 않게(cto 축소 판정)
+  return all.filter((s) => typeof s?.month === "string" && /^\d{4}-\d{2}$/.test(s.month) && s.month >= cutoff && s.month <= currentMonth);
 }
 
 // ── 결산 구간 ───────────────────────────────────────────────────
