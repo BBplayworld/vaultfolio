@@ -80,6 +80,11 @@ export function formatRefRange(from: string, to: string): string {
   return from.slice(0, 4) === to.slice(0, 4) ? `${md(from)} → ${md(to)}` : `${ymd(from)} → ${ymd(to)}`;
 }
 
+// 조회가 끝났는데 표시 종목 전부 기준가가 없으면 증감(0원)·시작→끝을 그리지 않는다(ui-review)
+export function isRefMissing(isLoading: boolean, profits: readonly { hasRef: boolean }[]): boolean {
+  return !isLoading && profits.length > 0 && profits.every((r) => !r.hasRef);
+}
+
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
   return `${sign}${rate.toFixed(2)}%`;
@@ -557,7 +562,8 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
           title={`${marketView === "all" ? "" : `${MARKET_LABELS[marketView]} · `}${HERO_LABELS[period]}`}
           range={heroFrom && heroTo ? formatRefRange(heroFrom, heroTo) : undefined}
           loading={isLoading ? "기준가 조회 중…" : undefined}
-          delta={totalProfit}
+          delta={isRefMissing(isLoading, filteredProfits) ? null : totalProfit}
+          message="기준가를 불러오지 못했어요. 잠시 후 다시 확인해 주세요"
           pct={totalRate}
           start={heroStart}
           end={heroEnd}

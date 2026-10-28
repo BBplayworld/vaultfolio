@@ -77,7 +77,7 @@ export function ChangeHero({ title, titleTestId, range, badge, actions, delta = 
             {range && <span className="text-sm text-muted-foreground tabular-nums">{range}</span>}
           </p>
           {badge}
-          {actions && <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>}
+          {actions && <div className="ml-auto sm:ml-2 flex shrink-0 items-center gap-1">{actions}</div>}
         </div>}
 
         <div key={contentKey} aria-live="polite" className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
