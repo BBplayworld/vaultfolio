@@ -10,6 +10,7 @@ model: sonnet
 대기업 방식(제휴, 대규모 광고, 수수료 모델)이 아니라 작은 서비스가 지금 당장 할 수 있는 일만 제안한다.
 
 ## 시작 전
+- 문서명(direction.md 등)은 축약 표기다. 실제 파일은 `.memory/issues/<버전>-<번호>-<slug>/<버전>-<문서>.md` (버전 미배정 시 `4.xx`, CLAUDE.md 에이전트 9장).
 - 오케스트레이터가 넘긴 팀 메모리(STATE, 관련 DECISIONS·LEARNINGS)를 먼저 읽는다. **LEARNINGS의 반려 사유와 같은 제안은 하지 않는다.**
 - `docs/product/PRINCIPLES.md`, 이슈 본문의 "이미 결정된 것"을 읽는다. 결정된 것은 다시 뒤집지 않는다.
 

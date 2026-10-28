@@ -1,7 +1,8 @@
 # 이슈 워크플로우
 
+문서명(direction.md 등)은 축약 표기, 실제 파일명은 `<버전>-<문서>.md` (CLAUDE.md 에이전트 9장).
 모든 일은 GitHub 이슈 1개 단위. 현재 단계는 `status:*` 라벨 하나로만 표시한다.
-산출물은 `memory` 브랜치의 `.memory/issues/<GitHub 이슈번호>-<slug>/` (기획부터 결정까지 한 폴더, 코드 PR과 분리), 팀 기억도 `memory` 브랜치.
+산출물은 `memory` 브랜치의 `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/` (파일명 `<버전>-<문서>.md`, 버전 미배정 시 `4.xx` — CLAUDE.md 에이전트 9장) (기획부터 결정까지 한 폴더, 코드 PR과 분리), 팀 기억도 `memory` 브랜치.
 GitHub 조작은 GitHub MCP 도구(`mcp__github__*`)로 한다.
 
 **대표(레벨 1)의 결정은 마지막 한 번뿐이다: "이 개선을 라이브에 반영할지" (PR 머지 / 닫기).**
@@ -104,7 +105,7 @@ challenge.md `통과` 후에만 spec.md·business.md를 쓴다. 상호 `승인` 
 ```
 [역할] <단계> 완료
 - 결과: <한두 줄>
-- 산출물: memory 브랜치 issues/<번호>-<slug>/<파일>
+- 산출물: memory 브랜치 issues/<버전>-<번호>-<slug>/<버전>-<문서>.md
 - preview: <URL, 해당 시>
 - 다음: <다음 단계 / 담당>
 ```

@@ -67,7 +67,7 @@ alwaysApply: true
    - `.memory/HISTORY.md` 지금까지의 흐름
 2. `docs/product/PRINCIPLES.md` 제품 원칙
 3. `docs/ops/WORKFLOW.md` 단계·라벨·산출물 규칙
-4. 작업 중인 이슈 폴더 `.memory/issues/<GitHub 이슈번호>-<slug>/`
+4. 작업 중인 이슈 폴더 `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/` (파일명도 `<버전>-<문서>.md`, 9장)
 
 ## 2. 실행 끝에 반드시 할 것
 `.memory/` 를 갱신하고 `memory` 브랜치에 push한다 (규칙: `.memory/README.md`).
@@ -133,3 +133,9 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - "구현 전 `/spec`" → 에이전트 이슈는 이슈 폴더의 `spec.md`가 명세를 대신한다. `.claude/specs/`에 중복 작성하지 않는다.
 - "KB 문서 갱신은 배치로" → developer가 PR을 qa로 넘기기 직전 1회, 변경분을 KB(`components.md`·`state-and-utils.md`·`design-system.md`·`changelog.md`·`qa-full-test-plan.md`)에 일괄 반영해 같은 PR에 포함한다. qa는 `qa-full-test-plan.md`의 관련 `F-*` 항목을 회귀 검사에 사용한다.
 - 계획 md(`C:/Users/...plans`) 규칙은 대표 로컬 작업 전용, 에이전트와 무관.
+
+## 9. 이슈별 문서 파일명 — 버전 표기
+- **이슈 단위로 생성되는 문서는 폴더·파일명 모두 버전을 앞에 붙인다.** 공통 문서(CLAUDE.md, docs/ops·product, 에이전트 정의, memory의 STATE·DECISIONS 등)는 공통 이름 유지.
+- memory 이슈 폴더: `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/`, 파일: `<버전>-direction.md`, `<버전>-challenge.md`, `<버전>-spec.md`, `<버전>-business.md`, `<버전>-tech-review.md`, `<버전>-ui.md`, `<버전>-dev-notes.md`, `<버전>-qa-report.md`, `<버전>-decision-brief.md`, `<버전>-log.md` (스크린샷 폴더는 `screenshots/`)
+- 시드·이슈 본문: `docs/seed-issues/<버전>-<순번>-<slug>.md`
+- 버전 미배정(planning~design-review) 동안은 `4.xx`로 쓰고, development 진입 시 버전이 정해지면 developer가 폴더·파일명을 `git mv`로 `4.NN`으로 바꾸고 STATE·DECISIONS 경로도 갱신한다.

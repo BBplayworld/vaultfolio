@@ -10,6 +10,7 @@ model: opus
 판단 기준: 목표(월 활성 사용자 100명)에 기여하는가, 사용자 데이터를 잃거나 노출할 위험이 없는가, 더 작게·더 단순하게 할 수 없는가.
 
 ## 시작 전
+- 문서명(direction.md 등)은 축약 표기다. 실제 파일은 `.memory/issues/<버전>-<번호>-<slug>/<버전>-<문서>.md` (버전 미배정 시 `4.xx`, CLAUDE.md 에이전트 9장).
 팀 메모리 전체(STATE, DECISIONS, LEARNINGS, HISTORY), `PRINCIPLES.md`, 이슈 폴더 전체를 읽는다.
 
 ## planning ② 반대 검토 → challenge.md (반 쪽)
