@@ -143,6 +143,16 @@ const checked = (page, id) => tid(page, id).getAttribute("aria-checked");
   const afterTab = await page.evaluate(() => !!document.activeElement?.closest('[aria-label="기간 선택"]'));
   check("10 → 키 선택·포커스 유지·Tab 1회로 이탈", yearOn === "true" && focused === "change-period-year" && !afterTab, `year=${yearOn} focus=${focused} inGroupAfterTab=${afterTab}`);
 
+  // 13. 기간 전환에도 썸이 같은 노드로 유지(재마운트 없음)되고 transform만 바뀌어 미끄러진다
+  await page.evaluate(() => { window.__thumb = document.querySelector('[data-testid="change-hero"] [aria-label="기간 선택"] [data-slot="thumb"]'); window.__tx = window.__thumb?.style.transform; });
+  for (const p of ["week", "day", "month", "stock-scope", "day"]) {
+    if (p === "stock-scope") { await tid(page, "change-scope-stock").click(); } else await tid(page, `change-period-${p}`).click();
+    await page.waitForTimeout(150);
+  }
+  const sameNode = await page.evaluate(() => document.querySelector('[data-testid="change-hero"] [aria-label="기간 선택"] [data-slot="thumb"]') === window.__thumb && window.__thumb.style.transform !== window.__tx);
+  check("13 기간·범위 전환 후 썸 동일 노드 + transform 변경", sameNode);
+  await tid(page, "change-scope-all").click(); await page.waitForTimeout(600);
+
   // 13. 모션 클래스
   const thumbCls = await page.locator('[aria-label="기간 선택"] [data-slot="thumb"]').getAttribute("class");
   const btnCls = await tid(page, "change-period-day").getAttribute("class");
