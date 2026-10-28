@@ -1,7 +1,7 @@
 // InlineSelector 기본 경로 회귀 방지(#32 r2 S1) — fullWidth 미지정 렌더 HTML을 변경 전 기준으로 고정한다.
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { InlineSelector } from "../inline-selector";
+import { InlineSelector, nextEnabledIndex, thumbStyle } from "../inline-selector";
 
 const OPTS = [
   { value: "a", label: "가" },
@@ -27,5 +27,33 @@ describe("InlineSelector 기본 경로 스냅샷", () => {
     expect(renderToStaticMarkup(
       <InlineSelector value="a" onChange={noop} options={OPTS} disabledValues={["c"]} disabledTitle="사용 불가" ariaLabel="선택" />,
     )).toMatchInlineSnapshot(`"<div role="radiogroup" aria-label="선택" class="inline-flex items-center gap-0.5 rounded-md bg-muted/60 dark:bg-muted/40 p-0.5 "><button type="button" role="radio" aria-checked="true" class="text-[13px] sm:text-sm lg:text-base px-2 py-1.5 whitespace-nowrap shrink-0 rounded transition-colors bg-background text-foreground font-semibold shadow-sm">가</button><button type="button" role="radio" aria-checked="false" data-testid="opt-b" class="text-[13px] sm:text-sm lg:text-base px-2 py-1.5 whitespace-nowrap shrink-0 rounded transition-colors text-muted-foreground hover:text-foreground">나</button><button type="button" role="radio" aria-checked="false" disabled="" title="사용 불가" data-tutorial="tut-c" class="text-[13px] sm:text-sm lg:text-base px-2 py-1.5 whitespace-nowrap shrink-0 rounded transition-colors text-muted-foreground/40 cursor-not-allowed">다</button></div>"`);
+  });
+});
+
+describe("InlineSelector fullWidth", () => {
+  it("선택 index별 썸이 translateX(index*100%)로 한 칸 폭만큼 이동한다", () => {
+    expect(thumbStyle(0, 4).transform).toBe("translateX(0%)");
+    expect(thumbStyle(2, 4).transform).toBe("translateX(200%)");
+    expect(thumbStyle(1, 2).width).toBe("calc((100% - 0.25rem) / 2)");
+    const html = renderToStaticMarkup(<InlineSelector fullWidth value="c" onChange={noop} options={OPTS} ariaLabel="기간 선택" />);
+    expect(html).toContain("transform:translateX(200%)");
+    expect(html).toContain("grid-template-columns:repeat(3, minmax(0, 1fr))");
+    expect(html).not.toContain("transition-all");
+    expect(html).not.toMatch(/(^|\s)border(\s|-)/);
+  });
+  it("로빙 tabindex — 선택 칸만 tabindex 0", () => {
+    const html = renderToStaticMarkup(<InlineSelector fullWidth value="b" onChange={noop} options={OPTS} />);
+    expect(html.match(/tabindex="0"/g)?.length).toBe(1);
+    expect(html.match(/tabindex="-1"/g)?.length).toBe(2);
+  });
+  it("nextEnabledIndex — 비활성 건너뛰기·Home/End·끝에서 정지", () => {
+    const dis = [false, true, false, false];
+    expect(nextEnabledIndex(0, "ArrowRight", dis)).toBe(2);
+    expect(nextEnabledIndex(2, "ArrowLeft", dis)).toBe(0);
+    expect(nextEnabledIndex(3, "ArrowRight", dis)).toBe(3);
+    expect(nextEnabledIndex(0, "ArrowLeft", dis)).toBe(0);
+    expect(nextEnabledIndex(2, "Home", dis)).toBe(0);
+    expect(nextEnabledIndex(0, "End", dis)).toBe(3);
+    expect(nextEnabledIndex(1, "Enter", dis)).toBe(1);
   });
 });
