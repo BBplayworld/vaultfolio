@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 type Option<T extends string> = { value: T; label: ReactNode; dataTutorial?: string; testId?: string };
 
@@ -87,6 +87,9 @@ export function thumbStyle(index: number, count: number): { width: string; trans
   return { width: `calc((100% - 0.25rem) / ${count})`, transform: `translateX(${index * 100}%)` };
 }
 
+// 선택으로 화면이 바뀌어 선택기가 다시 마운트되면(자산 변화 기간 전환) 포커스를 선택 칸으로 되돌린다
+let pendingFocusLabel: string | null = null;
+
 function FullWidthSelector<T extends string>({ value, onChange, options, className, ariaLabel, disabledValues, disabledTitle }: {
   value: T;
   onChange: (v: T) => void;
@@ -101,13 +104,21 @@ function FullWidthSelector<T extends string>({ value, onChange, options, classNa
   const activeIdx = options.findIndex((o) => o.value === value);
   // 로빙 tabindex — 선택 칸(없으면 첫 활성 칸)만 Tab 순서에 들어간다
   const focusIdx = activeIdx >= 0 && !disabled[activeIdx] ? activeIdx : disabled.indexOf(false);
+  useLayoutEffect(() => {
+    if (!ariaLabel || pendingFocusLabel !== ariaLabel) return;
+    pendingFocusLabel = null;
+    if (focusIdx >= 0 && document.activeElement !== refs.current[focusIdx]) refs.current[focusIdx]?.focus();
+  }, [ariaLabel, focusIdx]);
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
     e.preventDefault();
     const next = nextEnabledIndex(focusIdx, e.key, disabled);
     if (next === focusIdx || next < 0) return;
+    pendingFocusLabel = ariaLabel ?? null;
     onChange(options[next].value);
     refs.current[next]?.focus();
+    // 다시 마운트되지 않으면 다음 프레임에 표식을 지워 다른 화면이 포커스를 가져가지 않게 한다
+    requestAnimationFrame(() => { pendingFocusLabel = null; });
   };
   return (
     <div
