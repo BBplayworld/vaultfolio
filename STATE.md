@@ -1,15 +1,15 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-28 11:40 KST (수동 실행: #32 development→qa PASS, v4.34 owner-review)
+마지막 갱신: 2026-10-28 (수동: #32 r2 qa PASS → v4.34 owner-review)
 
 ## 대표 결정 대기
-- 없음 (v4.34는 #32 재검토로 보류)
+- **v4.34** (#31 + #32 r2) — PR #37 머지 여부. 권고: 반영. 위험 high. 브리프 issues/4.34-32-monthly-settlement/4.34-decision-brief.md
 
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #31 시드0 preview 안전장치·데모 데이터 | 4.34 | owner-review | 대표 | qa PASS, 릴리스 v4.34 반영 결정 대기 |
-| #32 시드1 성과 메뉴·월말 결산 | 4.34 | qa(r2) | qa | qa FAIL(1/3) F1 수정 @8fab78c, thumb-check true·settlement-check 25/25. qa 재검증 |
+| #32 시드1 성과 메뉴·월말 결산 | 4.34 | owner-review | 대표 | r2 qa 재검증 PASS(8fab78c), v4.34 반영 결정 대기 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 

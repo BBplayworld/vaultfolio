@@ -52,3 +52,5 @@
 | 2026-10-28 | #32 | r2 cto 축소→재검토 통과: 홈 Hero 어휘 통일 v4.34 제외(다음 릴리스 첫 후보), Hero는 views/activity 내부, r1 월 칩 코드·tabList2/3 토큰 제거, 월 이동 모션 fade만, 미사용 엔진 함수 정리 후보. 위험: 릴리스 high, r2 증분 medium | cto | 범위·회귀 최소화 |
 | 2026-10-28 | #32 | r2 design-review 상호 승인(tech-review·ui), 결산 뷰 useMemo 무효(r1 코드) r2에서 수정, 완료 기준 3 유지 | developer·planner-designer·qa | 교차 검토 |
 | 2026-10-28 | #32 | r2 구현: 주식 Hero 이름은 "하루/1주/1개월/1년 주식 수익"(기준 종가 거리 표기, ui.md "10월·올해"는 사실과 달라 변경), 기간 선택 sm 이상 max-w-md, 오류·빈 상태는 데모로 재현 불가해 코드 분기로만 확인 | developer | 사실과 다른 기능 설명 금지·1280 품질 |
+| 2026-10-28 | #32 | r2 qa FAIL 1회(F1 기간 썸 재마운트) → 수정 → 재검증 PASS(8fab78c) | qa | 품질 사인 |
+| 2026-10-28 | v4.34 | r2 decision-brief: 권고 반영, 위험 high(r2 증분 medium) | cto | 대표 수정 지시 반영 |
