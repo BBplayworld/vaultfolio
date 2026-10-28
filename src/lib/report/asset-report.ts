@@ -1120,6 +1120,25 @@ export function computeAttributionSince(
   return resolveAttribution(prev, curr, exchangeHistory, assetData, rates);
 }
 
+// 월말 결산(#32)용: 과거 두 시점(월 스냅샷 → 월 스냅샷 또는 실시간 끝점) 사이의 단일 구간 분해.
+// computePeriodAttribution은 끝점이 항상 최신 daily/실시간이라 "10/5 → 11/5" 같은 과거 구간을 못 다룬다.
+// 새 경로를 만들지 않고 resolveAttribution(첫 구간=true)만 호출한다 — 하이브리드 mid 분할은 하지 않으므로
+// 시작점이 레거시면 구간 전체가 "예측"이다. 끝점에 fx·fxBase가 없으면(레거시 끝점) 분해 불가로 null.
+export function computeAttributionBetween(
+  prev: MonthlyAssetSnapshot,
+  curr: MonthlyAssetSnapshot | ReturnType<typeof buildLiveAttributionCurr>,
+  exchangeHistory: Record<string, { USD: number; JPY: number }>,
+  assetData: AssetData,
+  rates: { USD: number; JPY: number },
+): PeriodAttribution | null {
+  const prevPoint = buildAttributionPoints([], [prev]).monthlyPoints[0];
+  const currPoint: AttributionPoint = "_date" in curr
+    ? curr
+    : buildAttributionPoints([], [curr as MonthlyAssetSnapshot]).monthlyPoints[0];
+  if (!currPoint.fx || !currPoint.fxBase) return null;
+  return resolveAttribution(prevPoint, currPoint, exchangeHistory, assetData, rates, true);
+}
+
 // 실시간 현재값으로 원인분해 끝점(curr) 생성 — saveSnapshots의 enrich와 동일 수식(현재가 기준).
 // getAssetSummary·computeFxExposure 결과를 재사용해 중복 수식을 만들지 않는다.
 export function buildLiveAttributionCurr(
