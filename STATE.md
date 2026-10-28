@@ -25,6 +25,8 @@
 - 가장 큰 버전: 4.34(#31) → 다음 배정 4.35
 
 ## 후보 목록 (주간 기획 탈락·대기)
+- [다음 릴리스 첫 후보] 홈 Hero 원인 어휘를 결산 5항목으로 통일(반영 기록 라벨·S-4.33 날짜 라벨·표시 단위 함께) — #32 r2 cto 판정
+- [type:simplify] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리, InlineSelector 다크 선택 칸 전역 수정
 - [type:improvement] 동기화 pull 월 스냅샷 합집합 병합(같은 달 충돌: enrich 우선→date 늦은 쪽) — #32 v1에서 제외(cto 2026-10-28), 착수 조건은 #32 spec §5-1
 - [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
 - [type:bug, qa 확정 2026-10-27] 월 스냅샷이 연 경계(1월 첫 저장)에 전년분 삭제 (`src/contexts/asset-data-context.tsx:770`) — 운영 사용자에게 이미 발생(2025→2026 전년분 소실, 복구 불가). #32 선행 조건으로 13개월 롤링 보존 처리 예정. 근거 issues/4.34-32-monthly-settlement/qa-report.md
