@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-28 (수동: #32 r2 qa PASS → v4.34 owner-review)
+마지막 갱신: 2026-10-28 (cto 회고: 연 탭 B안 실데이터 결함 R1~R3 → CHECKLIST C21~C23)
 
 ## 대표 결정 대기
 - 없음 (v4.34: 연 탭 원인 계산 기준 수정 중 — 수정 후 재요청)
@@ -12,12 +12,13 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #31 시드0 preview 안전장치·데모 데이터 | 4.34 | owner-review | 대표 | qa PASS, 릴리스 v4.34 반영 결정 대기 |
-| #32 시드1 성과 메뉴·월말 결산 | 4.34 | development(연 탭 원인 기준 수정) | developer·planner-designer | 대표 지적: 실사용자는 전년 12월 스냅샷 없음 → 작년 수동 순자산 시작 + 올해 기록 기반 원인 |
+| #32 시드1 성과 메뉴·월말 결산 | 4.34 | development(연 탭 B안 결함 R1~R3 수정) | developer | R1 출금↔매수·상환 순유입 상쇄, R2 안내 조건, R3 예측 구간 잔차 → 기록 안 된 변화(예측). 실사용 패턴 픽스처(C21~C23)로 qa 재검증 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
 ## 열린 릴리스
-- **v4.34** (`issue-4.34`, PR #37): #31 + #32 모두 qa PASS → owner-review
+- **v4.34** (`issue-4.34`, PR #37): #31 qa PASS, #32 development(연 탭 B안 결함 수정) → 재검증 PASS 후 decision-brief 갱신·owner-review
+- **v4.34 #32 qa FAIL 누적 4회**: ① r2 기간 썸(F1) ② 데이터 안전 최종 점검(조건부 PASS→FAIL 정정) ③ 데이터 안전 재검증(미래 달·롤백 문구) ④ 연 탭 B안 실데이터(R1~R3, PASS→FAIL 정정). 3회 시 cto 축소 판정 적용. 4회째는 대표 수정 지시로 생긴 새 범위(연 탭 원인)에서 났다. cto 판정: R1~R3만 수정하고, 재검증이 또 FAIL이면 연 탭 원인 블록을 v4.34에서 빼고(월 탭·나머지 유지) 다음 릴리스로 미룬다
 
 ## 막힌 것
 - 없음
@@ -33,7 +34,7 @@
 - [type:bug, qa 확정 2026-10-28] FAB "과거 순자산" 50ms 고정 대기 — 화면 마운트 전 이벤트 유실 시 입력창 미오픈 가능(`floating-add-button.tsx:111`, main 기존 코드). #32 범위 밖, 다음 릴리스 후보
 - [다음 릴리스 첫 후보] 홈 Hero 원인 어휘를 결산 5항목으로 통일(반영 기록 라벨·S-4.33 날짜 라벨·표시 단위 함께) — #32 r2 cto 판정
 - [type:simplify] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리, InlineSelector 다크 선택 칸 전역 수정
-- [type:improvement] 동기화 pull 월 스냅샷 합집합 병합(같은 달 충돌: enrich 우선→date 늦은 쪽) — #32 v1에서 제외(cto 2026-10-28), 착수 조건은 #32 spec §5-1
+- [type:improvement] 동기화 pull 월 병합의 같은 달 충돌을 `date` 늦은 쪽 우선으로(병합 자체는 v4.34 포함, cto 2026-10-28)
 - [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
 - [type:bug, qa 확정 2026-10-27] 월 스냅샷이 연 경계(1월 첫 저장)에 전년분 삭제 (`src/contexts/asset-data-context.tsx:770`) — 운영 사용자에게 이미 발생(2025→2026 전년분 소실, 복구 불가). #32 선행 조건으로 13개월 롤링 보존 처리 예정. 근거 issues/4.34-32-monthly-settlement/qa-report.md
 

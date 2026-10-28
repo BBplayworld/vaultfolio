@@ -2,6 +2,7 @@
 
 | 일시 (KST) | 실행 종류 | 처리 이슈 | 단계 변화 | 특이사항 |
 |---|---|---|---|---|
+| 2026-10-29 (수동) | cto 회고 | #32 | 변화 없음(development, R1~R3 수정) | 연 탭 B안 실데이터 결함 회고 → CHECKLIST C21~C23, qa FAIL 누적 4회 STATE 반영 |
 | 2026-10-29 01:54 (예약·새벽) | A. 정기 실행 | #32 | 변화 없음(연 탭 B안 ui 검수·qa 증분 진행 중, 실데이터 픽스처 추가) | 대표 신규 결정 없음. 새벽 회차 → 알림 없음 |
 | 2026-10-28 11:40 (수동) | A. 정기 실행(대표 요청 #32 개발) | #32 | development→qa PASS→owner-review(v4.34) | developer MCP 부재로 PR 본문·라벨은 오케스트레이터 처리 |
 | 2026-10-28 10:04 (수동) | A. 정기 실행 | #31 | design-review→development→qa PASS | developer는 MCP 없이 git 전용 → PR #37은 오케스트레이터가 생성. vercel.app 허용 후 preview 점검 성공 |
