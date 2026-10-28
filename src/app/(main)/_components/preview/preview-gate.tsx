@@ -110,12 +110,13 @@ function PreviewGateInner({ children }: { children?: ReactNode }) {
   return (
     <>
       {renderChildren && children}
+      {/* 헤더(mt-1 h-12 = 52px) 바로 아래 중앙 — 375px에서 top-0이면 상세/성과 탭·우측 아이콘과 겹친다(헤더는 비고정이라 스크롤 시 본문 위에 뜨며 클릭은 통과) */}
       <div
         data-testid="preview-badge"
         data-screenshot-hide
         aria-hidden="true"
         style={{ zIndex: Z_LAYER.modal - 1 }}
-        className="pointer-events-none fixed top-0 left-1/2 flex h-5 -translate-x-1/2 select-none items-center whitespace-nowrap rounded-b-md bg-muted px-2 text-xs font-medium tabular-nums text-muted-foreground opacity-90 shadow-sm"
+        className="pointer-events-none fixed top-[3.25rem] left-1/2 flex h-5 -translate-x-1/2 select-none items-center whitespace-nowrap rounded-md bg-muted px-2 text-xs font-medium tabular-nums text-muted-foreground opacity-90 shadow-sm"
       >
         PREVIEW · v{APP_VERSION}
       </div>
