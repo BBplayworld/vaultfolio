@@ -9,7 +9,7 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #31 시드0 preview 안전장치·데모 데이터 | 4.34 | owner-review | 대표 | qa PASS, 릴리스 v4.34 반영 결정 대기 |
-| #32 시드1 성과 메뉴·월말 결산 | 4.34 | planning 재시작(r2) | business-pm + planner-designer | 대표 수정 지시: 결산·자산 변화·성적표 중복 제거·핵심 항목 통일 처음부터 재검토 + 상단 탭 UI 품질 상향. r1 문서는 r1/ 보관, 코드는 issue-4.34에 있음(재설계 후 수정) |
+| #32 시드1 성과 메뉴·월말 결산 | 4.34 | development(r2) | developer | r2 direction·challenge·spec·business·tech-review·ui 상호 승인. issue-4.34의 r1 구현을 r2 사양으로 수정 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 
@@ -25,6 +25,7 @@
 - 가장 큰 버전: 4.34(#31) → 다음 배정 4.35
 
 ## 후보 목록 (주간 기획 탈락·대기)
+- [type:bug, qa 확정 2026-10-28] FAB "과거 순자산" 50ms 고정 대기 — 화면 마운트 전 이벤트 유실 시 입력창 미오픈 가능(`floating-add-button.tsx:111`, main 기존 코드). #32 범위 밖, 다음 릴리스 후보
 - [다음 릴리스 첫 후보] 홈 Hero 원인 어휘를 결산 5항목으로 통일(반영 기록 라벨·S-4.33 날짜 라벨·표시 단위 함께) — #32 r2 cto 판정
 - [type:simplify] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리, InlineSelector 다크 선택 칸 전역 수정
 - [type:improvement] 동기화 pull 월 스냅샷 합집합 병합(같은 달 충돌: enrich 우선→date 늦은 쪽) — #32 v1에서 제외(cto 2026-10-28), 착수 조건은 #32 spec §5-1
