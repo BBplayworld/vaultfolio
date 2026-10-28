@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-28 (정기 실행: #31 development 완료 → qa, git 전용 모드)
+마지막 갱신: 2026-10-28 11:00 KST (수동 실행: #31 development→qa PASS, 릴리스 4.34 운영 도입)
 
 ## 대표 결정 대기
 - 없음
@@ -8,10 +8,13 @@
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #31 시드0 preview 안전장치·데모 데이터 | 4.34 | development 완료 → qa | qa | preview https://secretasset-git-issue-434-bbplayworlds-projects.vercel.app 에서 `node .memory/qa/preview-check.mjs <URL>` + dev-notes 순서 점검. git 전용 모드라 PR·이슈 제목·코멘트는 log.md 대기(다음 MCP 실행에서 반영) |
-| #32 시드1 성과 메뉴·월말 결산 | — | design-review 완료(대기) | developer | tech-review·ui 상호 승인, 위험 high 확정, 동기화 병합 v1 제외. #31 머지 후 main에서 분기해 development(WORKFLOW 8장) |
+| #31 시드0 preview 안전장치·데모 데이터 | 4.34 | qa PASS (릴리스 대기) | — | PR #37. 릴리스 4.34의 나머지 이슈(#32) qa PASS 후 cto decision-brief → owner-review |
+| #32 시드1 성과 메뉴·월말 결산 | 4.34 | development 대기 | developer | design-review 완료. 열린 릴리스 issue-4.34(PR #37)에 추가해 개발 — #31 머지 기다릴 필요 없음(같은 preview에 데모 포함) |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 (월간 결산 라인 우선) |
+
+## 열린 릴리스
+- **v4.34** (`issue-4.34`, PR #37, preview https://secretasset-git-issue-434-bbplayworlds-projects.vercel.app): #31(qa PASS) + #32(개발 대기). 반영 결정은 둘 다 qa PASS 후 1회
 
 ## 막힌 것
 - 없음
