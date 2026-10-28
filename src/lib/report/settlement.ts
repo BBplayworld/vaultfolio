@@ -340,3 +340,22 @@ export function buildSettlementIcs(now: Date = new Date()): string {
   ];
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
+
+// ── 전체·연: 올해 변화 원인 구간(#32 보완) ─────────────────────────
+
+/**
+ * 연 탭 원인 시작점 = Hero 직전 해(prevYear)의 12월 월 스냅샷 1건(끝 = 오늘 실시간).
+ * 13개월 보존분에 섞인 전년 1~11월은 후보에서 뺀다(배열 첫 원소·slice 미사용, C8).
+ * 12월 스냅샷이 없거나 그 기준일이 오늘 이후면 null(기록 부족).
+ */
+export function resolveYearWindow(
+  monthly: MonthlyAssetSnapshot[],
+  prevYear: number,
+  today: string,
+): { start: MonthlyAssetSnapshot; startDate: string; startLegacy: boolean } | null {
+  const start = monthly.find((s) => s?.month === `${prevYear}-12`);
+  if (!start) return null;
+  const startDate = snapshotDate(start);
+  if (startDate >= today) return null;
+  return { start, startDate, startLegacy: !start.date };
+}

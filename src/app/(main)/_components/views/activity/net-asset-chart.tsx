@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import {
   Area, AreaChart,
@@ -36,8 +36,12 @@ import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import { DataSourceBadge } from "../data-source-badge";
-import { SECTION } from "../../layout/ui/report-section";
-import { BODY_ENTER, ChangeHero } from "./change-hero";
+import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
+import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readExchangeHistory } from "@/lib/finance/profit-utils";
+import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
+import { resolveYearWindow } from "@/lib/report/settlement";
+import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
 
@@ -216,8 +220,9 @@ function useRecordStats(snapshotVersion: number): RecordStats | null {
 // view를 넘기면 바깥(자산 변화 기간 탭)이 제어한다(#32). 이때 자체 제목·"현재 순자산" Hero 대신
 // 자산 변화 공통 Hero(ChangeHero)에 기존 대비 계산값을 그린다(r2)
 export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
-  const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary } = useAssetData();
-  const summary = getAssetSummary();
+  const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary, exchangeRates } = useAssetData();
+  // 자산·환율이 바뀔 때만 다시 계산(연 원인 useMemo가 매 렌더 무효화되지 않게)
+  const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
   const [innerView, setActiveView] = useState<NetAssetView>("yearly");
@@ -278,6 +283,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
   let heroTitle = "";
   let heroStart: number | undefined;
   let heroEnd: number | undefined;
+  let heroPrevYear: number | null = null; // 연: Hero 직전 해(원인 시작 = 그해 12월 스냅샷)
 
   if (activeView === "yearly") {
     const lastIdx = allYearlyData.length - 1;
@@ -289,6 +295,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
       : null;
     comparisonLabel = "전년 대비";
     heroTitle = prev ? `${prev.year}년 말 대비` : "전년 대비";
+    heroPrevYear = prev ? prev.year : null;
     heroStart = prev?.netAsset;
     heroEnd = latest?.netAsset;
   } else if (activeView === "daily") {
@@ -305,6 +312,23 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     heroEnd = latest?.netAsset;
   }
 
+  // 연 탭 변화 원인(#32 보완) — 전년 12월 스냅샷 → 오늘, 합계 = Hero 증감. 첫 해(직전 해 없음)는 미표시
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const yearCauses = useMemo(() => {
+    if (!view || activeView !== "yearly" || heroPrevYear === null || diff === null) return null;
+    try {
+      const w = resolveYearWindow(snapshotVersion >= 0 ? readMonthlySnapshots() : [], heroPrevYear, todayKst);
+      if (!w) return { status: "insufficient" as const };
+      return computeSettlementCauses({
+        start: w.start, end: null, live: buildLiveAttributionCurr(assetData, exchangeRates, summary), deltaNet: diff,
+        startDate: w.startDate, endDate: todayKst, liveCash: summary.cashValue,
+        exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
+      });
+    } catch {
+      return { status: "error" as const };
+    }
+  }, [view, activeView, heroPrevYear, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:gap-4">
       {view && (
@@ -315,8 +339,16 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           start={heroStart}
           end={heroEnd}
           message="기록이 쌓이면 더 보여드려요"
+          badge={activeView === "yearly" && heroPrevYear !== null
+            ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
+            : undefined}
           contentKey={activeView}
         />
+      )}
+      {yearCauses && (
+        "status" in yearCauses
+          ? <CauseBlock key="year" scope="year" status={yearCauses.status} />
+          : <CauseBlock key="year" scope="year" mapped={yearCauses.mapped} estimatedLabel={yearCauses.estimatedLabel} />
       )}
       <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
         {!view && <CardHeader className={ASSET_THEME.contentPad}>

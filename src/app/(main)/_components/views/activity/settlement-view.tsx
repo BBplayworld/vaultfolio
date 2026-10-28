@@ -4,29 +4,24 @@
 // 계산은 전부 기기 안(로컬 스냅샷 + 엔진 래퍼). 서버로 보내는 값 없음 — GA는 source·result 열거형만.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatPriceByMode } from "@/lib/number-utils";
-import { getProfitLossColor } from "@/config/theme";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
-import { buildLiveAttributionCurr, computeAttributionBetween } from "@/lib/report/asset-report";
+import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import {
-  listSettlementMonths, SETTLEMENT_ICS_PATH, mapSettlementCauses, pickSettlementMonth,
+  listSettlementMonths, SETTLEMENT_ICS_PATH, pickSettlementMonth,
   resolveSettlementWindow, settlementGaResult, settlementRangeLabel,
-  SETTLEMENT_CAUSE_LABEL, type SettlementCauses, type SettlementWindow,
+  type SettlementCauses, type SettlementWindow,
 } from "@/lib/report/settlement";
 import { daysSinceRefresh, getStaleCategories, type RefreshCategory } from "@/lib/asset/asset-refresh-status";
 import { track } from "@/lib/analytics/ga";
-import { InfoHint } from "../../layout/ui/info-hint";
-import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
+import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-section";
 import { CATEGORY_LABEL } from "../home/home-tip-box";
-import { BODY_ENTER, ChangeHero, settlementDelta, settlementName } from "./change-hero";
+import { CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
-const signed = (v: number) => `${v >= 0 ? "+" : ""}${formatPriceByMode(v)}`;
-const BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 const CAPTION = "text-sm text-muted-foreground text-pretty";
 const PREP_ID = "settlement-prep";
 
@@ -55,20 +50,11 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
       const start = w.start;
       const live = buildLiveAttributionCurr(assetData, exchangeRates, summary);
       const { prevValue, currValue, delta, pct } = settlementDelta(w, summary.netAsset);
-      // 시작점은 앞 달 결산의 끝점이라 시작일 당일 거래는 앞 달에 이미 포함 → 당일 제외(경계일 이중 계상 방지)
-      const attr = start ? computeAttributionBetween(start, w.end ?? live, readExchangeHistory(), assetData, exchangeRates, false) : null;
-      // 결정 4-4 예외 판정: 시작·끝 현금이 모두 0이고 구간 안 입출금 기록도 없으면 현금 미등록 사용자
-      const endCash = w.end ? w.end.breakdown?.cash ?? 0 : summary.cashValue;
-      const hasCashRecords = (assetData.cashTransactions ?? []).some(
-        (t) => !!w.startDate && t.date >= w.startDate && t.date <= w.endDate,
-      );
-      const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
-      const mapped = mapSettlementCauses(
-        // 끝점이 레거시라 분해할 수 없으면 전부 "기록 안 된 변화"(예측)로 둔다 — 합계 항등식은 유지
-        attr ? attr.effects : [{ key: "cash", amount: delta, estimated: true }],
-        { deltaNet: delta, cashTracked },
-      );
-      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" } };
+      const { mapped, estimatedLabel } = computeSettlementCauses({
+        start, end: w.end, live, deltaNet: delta, startDate: w.startDate, endDate: w.endDate,
+        liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
+      });
+      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, estimatedLabel } };
     } catch {
       return { ok: false };
     }
@@ -151,7 +137,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
         contentKey={month}
       />
 
-      {!firstMonth && <CauseBlock key={month} mapped={mapped} estimatedLabel={estimatedLabel} />}
+      {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
 
       <PrepBlock />
     </div>
@@ -173,50 +159,6 @@ function MonthArrow({ dir, target, onMove }: { dir: "prev" | "next"; target?: st
     >
       <Icon className="size-4" />
     </button>
-  );
-}
-
-const CAUSE_TESTID: Record<string, string> = {
-  price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", unrecorded: "cause-row-unrecorded",
-};
-
-// 블록 3 — 변화 원인(5항목). 매수·매도·상환 문구는 쓰지 않는다.
-function CauseBlock({ mapped, estimatedLabel }: { mapped: SettlementCauses; estimatedLabel: string }) {
-  return (
-    <section className={`${SECTION} ${BODY_ENTER}`}>
-      <SectionHeader icon={ListChecks} title="변화 원인" />
-      {mapped.causes.length === 0 ? (
-        <p className={CAPTION}>뚜렷한 변화 원인이 없어요</p>
-      ) : (
-        mapped.causes.map((c, i) => (
-          // 원인 행 40ms 간격 등장(motion-safe) — 지연 동안은 첫 프레임 상태로 둔다
-          <div
-            key={c.key}
-            data-testid={CAUSE_TESTID[c.key]}
-            data-value={c.amount}
-            className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
-            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "backwards" }}
-          >
-            <SpecRow
-              label={
-                <span className="inline-flex flex-wrap items-center gap-1.5">
-                  {SETTLEMENT_CAUSE_LABEL[c.key]}
-                  {c.key === "income" && (
-                    <span data-screenshot-hide><InfoHint summary="입금에서 출금을 뺀 금액이에요" /></span>
-                  )}
-                  {c.estimated && <span data-testid="cause-estimated-badge" className={BADGE}>{estimatedLabel}</span>}
-                </span>
-              }
-            >
-              <span className={getProfitLossColor(c.amount)}>{signed(c.amount)}</span>
-            </SpecRow>
-          </div>
-        ))
-      )}
-      {mapped.showUnrecordedHint && (
-        <p data-testid="cause-unrecorded-hint" className={CAPTION}>이번 달 입출금을 기록하면 더 정확해져요</p>
-      )}
-    </section>
   );
 }
 

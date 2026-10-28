@@ -5,10 +5,14 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { ListChecks } from "lucide-react";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
-import type { SettlementWindow } from "@/lib/report/settlement";
-import { SECTION } from "../../layout/ui/report-section";
+import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
+import { computeAttributionBetween, type buildLiveAttributionCurr } from "@/lib/report/asset-report";
+import { mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
+import { InfoHint } from "../../layout/ui/info-hint";
+import { SECTION, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
 // 본문 진입 — Hero 숫자는 자리 고정(fade만), Hero 아래 본문만 살짝 올라온다
 export const BODY_ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300";
@@ -128,6 +132,94 @@ export function ChangeHero({ title, titleTestId, range, badge, actions, delta = 
         {content}
         {period && <div className="mt-4">{period}</div>}
       </div>
+    </section>
+  );
+}
+
+// ── 변화 원인(월 탭 = 그 달, 연 탭 = 올해) — 계산·표시 공용(#32 보완) ──
+
+/**
+ * 구간 원인 5항목 — 월·연이 같은 규칙을 쓴다. 시작일 당일 거래는 앞 구간(앞 달 결산·12월 결산)에 이미 포함이라
+ * 제외(includeStartDay=false, C15). deltaNet은 화면 Hero 증감 — 스냅샷 효과와의 차이는 "기록 안 된 변화"로 흡수.
+ * 시작이 없거나 끝이 레거시라 분해할 수 없으면 전액을 "기록 안 된 변화"(예측)로 둔다(합계 항등식 유지).
+ */
+export function computeSettlementCauses({ start, end, live, deltaNet, startDate, endDate, liveCash, exchangeHistory, assetData, rates }: {
+  start: MonthlyAssetSnapshot | null;
+  end: MonthlyAssetSnapshot | null;          // null = 끝이 오늘 실시간
+  live: ReturnType<typeof buildLiveAttributionCurr>;
+  deltaNet: number;
+  startDate: string | null;
+  endDate: string;
+  liveCash: number;
+  exchangeHistory: Record<string, { USD: number; JPY: number }>;
+  assetData: AssetData;
+  rates: { USD: number; JPY: number };
+}): { mapped: SettlementCauses; estimatedLabel: "예측" | "일부 예측" } {
+  const attr = start ? computeAttributionBetween(start, end ?? live, exchangeHistory, assetData, rates, false) : null;
+  // 결정 4-4 예외 판정: 시작·끝 현금이 모두 0이고 구간 안 입출금 기록도 없으면 현금 미등록 사용자
+  const endCash = end ? end.breakdown?.cash ?? 0 : liveCash;
+  const hasCashRecords = (assetData.cashTransactions ?? []).some(
+    (t) => !!startDate && t.date >= startDate && t.date <= endDate,
+  );
+  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
+  const mapped = mapSettlementCauses(
+    attr ? attr.effects : [{ key: "cash", amount: deltaNet, estimated: true }],
+    { deltaNet, cashTracked },
+  );
+  return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
+}
+
+const CAUSE_TESTID: Record<string, string> = {
+  price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", unrecorded: "cause-row-unrecorded",
+};
+const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
+const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
+
+// 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 다른 점은 입출금 안내의 기간 표현("이번 달"/"올해")뿐
+export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
+  scope: "month" | "year";
+  mapped?: SettlementCauses;
+  estimatedLabel?: string;
+  status?: "insufficient" | "error";
+}) {
+  return (
+    <section data-testid="cause-block" data-scope={scope} className={`${SECTION} ${BODY_ENTER}`}>
+      <SectionHeader icon={ListChecks} title="변화 원인" />
+      {status === "insufficient" ? (
+        <p data-testid="cause-insufficient" className={CAUSE_CAPTION}>올해 기록이 쌓이면 원인을 나눠 보여드려요</p>
+      ) : status === "error" || !mapped ? (
+        <p data-testid="cause-error" className={CAUSE_CAPTION}>변화 원인을 불러오지 못했어요</p>
+      ) : mapped.causes.length === 0 ? (
+        <p className={CAUSE_CAPTION}>뚜렷한 변화 원인이 없어요</p>
+      ) : (
+        mapped.causes.map((c, i) => (
+          // 원인 행 40ms 간격 등장(motion-safe) — 지연 동안은 첫 프레임 상태로 둔다
+          <div
+            key={c.key}
+            data-testid={CAUSE_TESTID[c.key]}
+            data-value={c.amount}
+            className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
+            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "backwards" }}
+          >
+            <SpecRow
+              label={
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  {SETTLEMENT_CAUSE_LABEL[c.key]}
+                  {c.key === "income" && (
+                    <span data-screenshot-hide><InfoHint summary="입금에서 출금을 뺀 금액이에요" /></span>
+                  )}
+                  {c.estimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
+                </span>
+              }
+            >
+              <span className={getProfitLossColor(c.amount)}>{signed(c.amount)}</span>
+            </SpecRow>
+          </div>
+        ))
+      )}
+      {!status && mapped?.showUnrecordedHint && (
+        <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해" : "이번 달"} 입출금을 기록하면 더 정확해져요</p>
+      )}
     </section>
   );
 }
