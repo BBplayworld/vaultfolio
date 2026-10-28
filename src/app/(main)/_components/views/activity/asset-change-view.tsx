@@ -59,7 +59,7 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
 
   // 기간 선택 — 각 본문의 Hero 맨 아래에 놓인다(공유 캡처에도 상태 표시로 남김)
   const periodSelector = (
-    <InlineSelector fullWidth value={period} onChange={changePeriod} options={PERIODS} ariaLabel="기간 선택" className="w-full" />
+    <InlineSelector fullWidth value={period} onChange={changePeriod} options={PERIODS} ariaLabel="기간 선택" className="w-full sm:max-w-md" />
   );
 
   return (
