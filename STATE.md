@@ -25,6 +25,8 @@
 - 가장 큰 버전: 4.34(#31) → 다음 배정 4.35
 
 ## 후보 목록 (주간 기획 탈락·대기)
+- [type:bug, C19] 백업 JSON 다운로드·공유 PNG 저장이 blob 방식 — iOS 서드파티 브라우저 미동작 가능(qa 2026-10-28, 기존 코드)
+- [UI] 연 빈 상태 문구 "위의 버튼을 눌러…"가 버튼 없는 화면과 불일치(ui-designer)
 - [type:bug, qa 확정 2026-10-28] FAB "과거 순자산" 50ms 고정 대기 — 화면 마운트 전 이벤트 유실 시 입력창 미오픈 가능(`floating-add-button.tsx:111`, main 기존 코드). #32 범위 밖, 다음 릴리스 후보
 - [다음 릴리스 첫 후보] 홈 Hero 원인 어휘를 결산 5항목으로 통일(반영 기록 라벨·S-4.33 날짜 라벨·표시 단위 함께) — #32 r2 cto 판정
 - [type:simplify] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리, InlineSelector 다크 선택 칸 전역 수정
