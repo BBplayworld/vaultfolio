@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-28
+
+### Vercel preview 안전장치·데모 데이터 (#4.34, 이슈 #31)
+- **왜**: preview가 운영과 같은 `/api/sync`를 써서 검증 전 코드가 실제 금고에 쓸 수 있었고, origin이 달라 빈 화면이라 qa가 사람 없이 점검할 수 없었다.
+- `next.config.mjs` `env`에 `NEXT_PUBLIC_VERCEL_ENV` 주입 → `isPreviewEnv()`(정확히 `"preview"`만 true). `isCloudSyncEnabled()`는 preview에서 false, `sync-client`의 `pushAsset`·`pullAsset`·`fetchRemoteVersion` 입구 가드(fetch 0건). 운영·로컬 반환값 불변, 서버 `/api/sync` 무변경.
+- preview 전용 `PreviewGate`(`(main)/layout.tsx`에서 preview일 때만 `AssetDataProvider` 바깥을 감쌈): `PREVIEW · v4.NN` 배지, `?demo=1`(데모 JSON 동적 import → `applyImportedPayload`, 멱등)·`?demo=empty`(`clearAssetData`), 처리 후 쿼리 제거 + `html[data-demo-ready="1"]`, 자산 0건이면 하단 선택 카드. 스키마·저장 키 변경 없음.
+
+---
+
 ## 2026-10-24
 
 ### 매수/매도 기록 — 보유 자산 항목 직접 선택 + 변경 미리보기 (#4.29)

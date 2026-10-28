@@ -74,6 +74,8 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: resolveAppVersion(),
+    // preview 판별용(isPreviewEnv) — Vercel 시스템 변수. 로컬은 빈 문자열이라 운영과 같이 취급
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "",
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",

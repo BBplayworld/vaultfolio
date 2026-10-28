@@ -324,6 +324,12 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 - **모바일 웹 PWA-우선 분기**: `mobileWeb = mounted && useIsMobile() && !isStandalone`. 참이면 PWA 설치 유도를 메인 CTA로 강조, 즉시 자산 등록 CTA는 기본 숨김(`showAssetCta` 토글, "설치 없이 웹에서 바로 시작" 링크로 노출). `ctaVisible = !mobileWeb || showAssetCta`. 데스크톱·standalone은 기존 레이아웃.
 - 설치 버튼은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출 — `PwaInstallGuideDialog` 직접 호출 제거
 
+### PreviewGate (`preview/preview-gate.tsx`, #4.34) — Vercel preview 전용
+- `(main)/layout.tsx`가 `isPreviewEnv()`일 때만 `next/dynamic`으로 렌더해 `AssetDataProvider` 바깥을 감싼다. 운영·로컬은 children 그대로(DOM 추가 0)
+- `?demo` 처리 중에는 children 렌더 보류 → provider가 주입된 데이터를 처음부터 읽는다(컨텍스트 연동 코드 0)
+- 고정 셀렉터(qa 계약): `[data-testid="preview-badge"]`·`preview-demo-btn`·`preview-empty-btn`·`html[data-demo-ready="1"]`. 배지·카드 모두 `data-screenshot-hide`, z-index `Z_LAYER.modal - 1`
+- 운영 컴포넌트(`WelcomeGuide` 등) 미수정 — 선택 카드는 fixed 하단 카드로 띄운다
+
 ### TutorialOverlay (`tutorial/tutorial-overlay.tsx`)
 
 Step 1~5 오버레이(Step 0 제거됨). Step 5 내부 sub-step: activity → profit.

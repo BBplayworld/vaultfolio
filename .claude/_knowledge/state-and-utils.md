@@ -387,6 +387,13 @@ findClosestNames(normalizedInput, keys)     // 허용 거리 이내 최소 거�
 - 서버 `lookupTicker`는 prefix(잘린 이름) **다음**에 국내 오타 보정을 두고 **유일 최근접만** 채택(`fuzzyLookupKr`), 동률이면 suffix·substring 추정까지 막는다 — 순서를 바꾸면 잘린 이름 83건이 다른 종목으로 바뀌는 회귀(전 ETF 점검 테스트 `ticker-lookup-kr-etf.test.ts`)
 - 클라이언트(거래 스크린샷)는 티커 미인식일 때만 보유 종목명에 적용하고, 유사 일치 후보는 자동 선택하지 않는다
 
+### preview/demo-payload.ts (`src/lib/preview/demo-payload.ts`, #4.34) — preview 데모 진입 순수 함수
+- `resolvePreviewAction(isPreview, search, hasAssets, choiceDismissed?)` → `"none"|"demo"|"empty"|"choose"`. `isPreview` false면 항상 `"none"`(운영 무동작 보증)
+- `materializeDemo(raw, today)` — 날짜 토큰(`@M<월오프셋>D<일>`·`@M<오프셋>`·`@D<일오프셋>`·`@NOW`)을 기준일(KST) 날짜로 변환. 이번 달 날짜는 오늘을 넘지 않게 보정
+- `buildDemoRefreshMeta(now)` — 기존 `secretasset_asset_refresh` 형식(현금·대출 40일 전, 주식·코인 2일 전)
+- 데모 원본 `src/lib/preview/demo-data.json`은 **동적 import 전용**(정적 import 금지, `preview-safety.test.ts`가 소스 검색으로 강제)
+- preview 판별은 `cloud-sync/config.ts`의 `isPreviewEnv()` 단일 출처(`NEXT_PUBLIC_VERCEL_ENV === "preview"`). `isCloudSyncEnabled()`는 preview에서 false
+
 ### number-utils.ts
 
 ```typescript

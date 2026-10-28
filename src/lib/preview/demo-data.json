@@ -1,0 +1,77 @@
+{
+  "_comment": "preview 전용 데모 데이터(#31). 실제 공개 티커 + 가상 수량·금액. 날짜는 월 오프셋 토큰(@M<오프셋>D<일>, @M<오프셋>, @D<일 오프셋>, @NOW)으로 두고 materializeDemo가 오늘 기준으로 변환한다. 정적 import 금지(동적 import 전용).",
+  "nickname": "데모",
+  "assetData": {
+    "nickname": "데모",
+    "lastUpdated": "@NOW",
+    "realEstate": [
+      { "id": "demo_re_1", "type": "apartment", "name": "데모 아파트", "purchasePrice": 500000000, "currentValue": 630000000, "purchaseDate": "@M-36D15", "tenantDeposit": 0 }
+    ],
+    "stocks": [
+      { "id": "demo_st_samsung", "category": "domestic", "name": "삼성전자", "ticker": "005930", "quantity": 65, "averagePrice": 61000, "currentPrice": 70000, "currency": "KRW", "purchaseDate": "@M-8D12", "broker": "데모증권" },
+      { "id": "demo_st_hynix", "category": "domestic", "name": "SK하이닉스", "ticker": "000660", "quantity": 5, "averagePrice": 150000, "currentPrice": 190000, "currency": "KRW", "purchaseDate": "@M-7D20", "broker": "데모증권" },
+      { "id": "demo_st_aapl", "category": "foreign", "name": "Apple", "ticker": "AAPL", "quantity": 12, "averagePrice": 185, "currentPrice": 225, "currency": "USD", "purchaseDate": "@M-6D05", "purchaseExchangeRate": 1335, "broker": "데모증권" },
+      { "id": "demo_st_nvda", "category": "foreign", "name": "NVIDIA", "ticker": "NVDA", "quantity": 8, "averagePrice": 110, "currentPrice": 130, "currency": "USD", "purchaseDate": "@M-5D18", "purchaseExchangeRate": 1340, "broker": "데모증권" },
+      { "id": "demo_st_pension", "category": "pension", "name": "TIGER 미국S&P500", "ticker": "360750", "quantity": 105, "averagePrice": 18000, "currentPrice": 21000, "currency": "KRW", "purchaseDate": "@M-10D03", "broker": "연금저축" },
+      { "id": "demo_st_isa", "category": "isa", "name": "KODEX 200", "ticker": "069500", "quantity": 40, "averagePrice": 34000, "currentPrice": 37000, "currency": "KRW", "purchaseDate": "@M-9D08", "broker": "ISA" }
+    ],
+    "crypto": [
+      { "id": "demo_cr_btc", "name": "비트코인", "symbol": "BTC", "quantity": 0.05, "averagePrice": 120000000, "currentPrice": 140000000, "purchaseDate": "@M-12D10", "exchange": "업비트" }
+    ],
+    "cash": [
+      { "id": "demo_cash_bank", "type": "bank", "name": "생활비 통장", "balance": 3000000, "currency": "KRW", "institution": "데모은행" },
+      { "id": "demo_cash_savings", "type": "savings", "name": "비상금 적금", "balance": 10000000, "currency": "KRW", "institution": "데모은행" }
+    ],
+    "loans": [
+      { "id": "demo_loan_credit", "type": "credit", "name": "신용대출", "balance": 20500000, "interestRate": 5.2, "startDate": "@M-12D01", "institution": "데모은행" }
+    ],
+    "yearlyNetAssets": [],
+    "transactions": [
+      { "id": "demo_tx_1", "stockId": "demo_st_samsung", "ticker": "005930", "stockName": "삼성전자", "type": "buy", "quantity": 10, "price": 60000, "currency": "KRW", "date": "@M-3D15", "reflected": true, "reflectedAt": "@M-3D15", "createdAt": "@M-3D15" },
+      { "id": "demo_tx_2", "stockId": "demo_st_samsung", "ticker": "005930", "stockName": "삼성전자", "type": "buy", "quantity": 10, "price": 62000, "currency": "KRW", "date": "@M-2D08", "reflected": true, "reflectedAt": "@M-2D08", "createdAt": "@M-2D08" },
+      { "id": "demo_tx_3", "stockId": "demo_st_isa", "ticker": "069500", "stockName": "KODEX 200", "type": "buy", "quantity": 10, "price": 35000, "currency": "KRW", "date": "@M-2D12", "reflected": true, "reflectedAt": "@M-2D12", "createdAt": "@M-2D12" },
+      { "id": "demo_tx_4", "stockId": "demo_st_samsung", "ticker": "005930", "stockName": "삼성전자", "type": "sell", "quantity": 5, "price": 68000, "currency": "KRW", "date": "@M-1D10", "reflected": true, "reflectedAt": "@M-1D10", "createdAt": "@M-1D10" },
+      { "id": "demo_tx_5", "stockId": "demo_st_aapl", "ticker": "AAPL", "stockName": "Apple", "type": "buy", "quantity": 2, "price": 220, "currency": "USD", "exchangeRate": 1380, "date": "@M-1D14", "reflected": true, "reflectedAt": "@M-1D14", "createdAt": "@M-1D14" },
+      { "id": "demo_tx_6", "stockId": "demo_st_pension", "ticker": "360750", "stockName": "TIGER 미국S&P500", "type": "buy", "quantity": 5, "price": 20800, "currency": "KRW", "date": "@M0D02", "reflected": true, "reflectedAt": "@M0D02", "createdAt": "@M0D02" }
+    ],
+    "cashTransactions": [
+      { "id": "demo_ctx_1", "cashId": "demo_cash_bank", "type": "deposit", "amount": 3000000, "currency": "KRW", "recurring": true, "date": "@M-3D25", "memo": "월급", "reflected": true, "reflectedAt": "@M-3D25", "createdAt": "@M-3D25" },
+      { "id": "demo_ctx_2", "cashId": "demo_cash_bank", "type": "deposit", "amount": 1000000, "currency": "KRW", "recurring": false, "date": "@M-2D25", "memo": "외부 입금", "reflected": true, "reflectedAt": "@M-2D25", "createdAt": "@M-2D25" },
+      { "id": "demo_ctx_3", "cashId": "demo_cash_bank", "type": "withdrawal", "amount": 1500000, "currency": "KRW", "date": "@M-1D20", "memo": "외부 출금", "reflected": true, "reflectedAt": "@M-1D20", "createdAt": "@M-1D20" },
+      { "id": "demo_ctx_4", "cashId": "demo_cash_savings", "type": "deposit", "amount": 500000, "currency": "KRW", "recurring": true, "date": "@M0D01", "memo": "적금 입금", "reflected": true, "reflectedAt": "@M0D01", "createdAt": "@M0D01" }
+    ],
+    "loanTransactions": [
+      { "id": "demo_ltx_1", "loanId": "demo_loan_credit", "type": "repay", "amount": 500000, "date": "@M-3D28", "reflected": true, "reflectedAt": "@M-3D28", "createdAt": "@M-3D28" },
+      { "id": "demo_ltx_2", "loanId": "demo_loan_credit", "type": "repay", "amount": 500000, "date": "@M-2D28", "reflected": true, "reflectedAt": "@M-2D28", "createdAt": "@M-2D28" },
+      { "id": "demo_ltx_3", "loanId": "demo_loan_credit", "type": "repay", "amount": 500000, "date": "@M-1D28", "reflected": true, "reflectedAt": "@M-1D28", "createdAt": "@M-1D28" },
+      { "id": "demo_ltx_4", "loanId": "demo_loan_credit", "type": "repay", "amount": 500000, "date": "@M0D03", "reflected": true, "reflectedAt": "@M0D03", "createdAt": "@M0D03" }
+    ],
+    "cryptoTransactions": [
+      { "id": "demo_crtx_1", "cryptoId": "demo_cr_btc", "symbol": "BTC", "name": "비트코인", "type": "buy", "quantity": 0.01, "price": 130000000, "date": "@M-1D18", "reflected": true, "reflectedAt": "@M-1D18", "createdAt": "@M-1D18" }
+    ]
+  },
+  "snapshots": {
+    "monthly": [
+      { "month": "@M-3", "netAsset": 612000000, "financialAsset": 40000000 },
+      { "month": "@M-2", "date": "@M-2D28", "netAsset": 621000000, "financialAsset": 42500000,
+        "breakdown": { "realEstate": 600000000, "stocks": 25000000, "crypto": 5500000, "cash": 12000000, "loans": 21500000, "tenantDeposit": 0 },
+        "fx": { "USD": 1350, "JPY": 905 }, "fxBase": { "USD": 3800000, "JPY": 0 },
+        "cost": { "total": 538000000, "stock": 21000000, "crypto": 5000000, "realEstate": 500000000 } },
+      { "month": "@M-1", "date": "@M-1D28", "netAsset": 644450000, "financialAsset": 45300000,
+        "breakdown": { "realEstate": 620000000, "stocks": 27000000, "crypto": 6800000, "cash": 11500000, "loans": 21000000, "tenantDeposit": 0 },
+        "fx": { "USD": 1380, "JPY": 915 }, "fxBase": { "USD": 4900000, "JPY": 0 },
+        "cost": { "total": 539500000, "stock": 21500000, "crypto": 6300000, "realEstate": 500000000 } },
+      { "month": "@M0", "date": "@M0D03", "netAsset": 657500000, "financialAsset": 48000000,
+        "breakdown": { "realEstate": 630000000, "stocks": 28000000, "crypto": 7000000, "cash": 13000000, "loans": 20500000, "tenantDeposit": 0 },
+        "fx": { "USD": 1400, "JPY": 925 }, "fxBase": { "USD": 5100000, "JPY": 0 },
+        "cost": { "total": 541600000, "stock": 22300000, "crypto": 6300000, "realEstate": 500000000 } }
+    ],
+    "daily": [
+      { "date": "@D-28", "netAsset": 643900000, "financialAsset": 44900000 },
+      { "date": "@D-21", "netAsset": 645200000, "financialAsset": 45600000 },
+      { "date": "@D-14", "netAsset": 650100000, "financialAsset": 46400000 },
+      { "date": "@D-7", "netAsset": 654300000, "financialAsset": 47300000 },
+      { "date": "@D-2", "netAsset": 656800000, "financialAsset": 47800000 }
+    ]
+  }
+}
