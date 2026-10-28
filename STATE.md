@@ -6,7 +6,7 @@
 - 없음 (v4.34: 연 탭 원인 계산 기준 수정 중 — 수정 후 재요청)
 
 ## 보류 알림 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
-- 없음
+- 🔔 `[시크릿에셋] 반영 결정 필요: v4.34` — #31·#32, 권고 반영(최종본 @0779957, 실데이터 연 순유입 +98·원인 합=Hero), PR https://github.com/BBplayworld/vaultfolio/pull/37 , 브리프 memory issues/4.34-32-monthly-settlement/4.34-decision-brief.md. 전달 방법: PushNotification + PR #37에 `@BBplayworld` 멘션 코멘트 1줄(본문 코멘트는 2026-10-29 03시 게시됨)
 
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
