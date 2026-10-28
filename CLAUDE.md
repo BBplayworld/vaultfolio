@@ -117,7 +117,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 프론트엔드: Next.js(App Router, turbopack) + TypeScript + Tailwind / 백엔드(시세·동기화): Next.js API 라우트 (`src/app/api/`)
 - 설치 `npm ci` · 테스트 `npx vitest run` · 린트 `npm run lint` · 빌드 `npm run build` · 타입 `npx tsc --noEmit`
 - GitHub 조작(이슈·라벨·코멘트·PR)은 `gh` CLI 대신 **GitHub MCP 도구(`mcp__github__*`)** 를 쓴다. 저장소: `BBplayworld/vaultfolio`. MCP를 쓸 수 없으면 **git CLI 전용 모드**(`docs/ops/ORCHESTRATOR.md` "GitHub 접근 방식")로 진행한다.
-- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 새 과제 생성·새 검토 시작·owner-review 진입 때만 (`ORCHESTRATOR.md` "대표 알림"). 운영 이상은 즉시 버그 수정 빠른 경로로 착수.
+- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 새 과제 방향 확정(기획+사업 합의 완료)·owner-review 진입 때만 (`ORCHESTRATOR.md` "대표 알림"). 운영 이상은 즉시 버그 수정 빠른 경로로 착수.
 - 수동 실행: 어느 세션에서든 `/secretasset-run` (정기 실행 1회, `weekly` 인자 시 주간 기획).
 
 ## 7. 커밋·PR·소통
