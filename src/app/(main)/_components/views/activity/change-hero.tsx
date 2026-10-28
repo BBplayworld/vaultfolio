@@ -214,9 +214,15 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
   estimatedLabel?: string;
   status?: "insufficient" | "error";
 }) {
+  // 예측 행이 2개 이상이면 행마다 같은 배지를 반복하지 않고 제목 옆에 1개만 둔다(연 탭 B안은 첫 구간이 늘 예측, ui-review)
+  const groupEstimated = !status && (mapped?.causes.filter((c) => c.estimated).length ?? 0) >= 2;
   return (
     <section data-testid="cause-block" data-scope={scope} className={`${SECTION} ${BODY_ENTER}`}>
-      <SectionHeader icon={ListChecks} title="변화 원인" />
+      <SectionHeader
+        icon={ListChecks}
+        title="변화 원인"
+        badge={groupEstimated ? <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span> : undefined}
+      />
       {status === "insufficient" ? (
         <p data-testid="cause-insufficient" className={CAUSE_CAPTION}>올해 기록이 쌓이면 원인을 나눠 보여드려요</p>
       ) : status === "error" || !mapped ? (
@@ -240,7 +246,7 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
                   {c.key === "income" && (
                     <span data-screenshot-hide><InfoHint summary="입금에서 출금을 뺀 금액이에요" /></span>
                   )}
-                  {c.estimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
+                  {c.estimated && !groupEstimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
                 </span>
               }
             >
