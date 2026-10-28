@@ -211,6 +211,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 레버리지 축: 무부채(loanBalance≤0)=**5.0**(건전성 만점, AC3) / 자본잠식(equity≤0 & 부채>0)=**0.5**(AC4). 부채비율 40/60%·평균금리 6%·이자 커버리지 감가점
 - ⚙ 채점 컷 전부 `GRADE_THRESHOLDS` 단일 소스(AC5) — 티어 4.5/3.5/2.5(platinum/gold/silver), 컷 근거는 각 score 함수 주석
 - ⚙ 전 축 non-pending 확정 시 오늘 daily·이번 달 monthly `grade` 기록(`recordGradeSnapshot`, **동일 값 스킵=멱등**, 과거 불소급, AC6). `diffGrade`로 종합·축별 ▲▼·티어 승·강등(AC7) — 최근 과거 daily 우선, 없으면 이전 달 monthly 대비
+- ⚙ **habit 순자산 상승 비교 범위(#4.34)** — 월 스냅샷이 13개월 보존돼도 가장 최근 기록 달의 해(올해)만 최근 7개(비교쌍 6)로 본다(종전 올해분 저장과 같은 결과, 1~6월 전년 달 혼입 방지)
 - ⚙ **habit 저축 규칙성**(S-4.22) — ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월, `savingsRhythm`)** 중 높은 비율로 채점(저축을 시세와 분리). 가중치 0.1·재정규화·티어 불변. 현금 거래 없으면 순자산 상승 폴백. habit 카드 → 현금 상세 딥링크
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
@@ -335,7 +336,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: foreign+KRW→USD 마이그레이션, market 캐시 비었을 때 재조회
 
 ### F-SNAPSHOT. 자산 스냅샷
-- ⚙ 일별(이번 달)·월별(**최근 13개월 롤링**, `pruneMonthlySnapshots` — #4.34에서 `startsWith(올해)` 필터의 1월 전년분 삭제 결함 수정, 스키마·키 불변)·년도별 종가 기준 저장, 토/일 보완. 동기화 pull은 수신분 통째 교체 그대로(구버전 기기 혼재 시 최악도 현행과 같음)
+- ⚙ 일별(이번 달)·월별(**최근 13개월 롤링**, `pruneMonthlySnapshots` — #4.34에서 `startsWith(올해)` 필터의 1월 전년분 삭제 결함 수정, 스키마·키 불변)·년도별 종가 기준 저장, 토/일 보완. 동기화 pull(`keepLocalSnapshots`)은 월 스냅샷을 **월 단위 병합**(`mergeMonthlySnapshots`: 로컬 전용 달 보존, 같은 달은 수신값 — 단 수신값에 `breakdown`이 없고 로컬에 있으면 로컬) 후 13개월 롤링 — 구버전(올해분만 보존) 기기가 섞여도 신버전 기기 보존분이 줄지 않음(`monthly-sync-merge.test.ts` 순환 증명). 파일 가져오기·공유 링크는 기존처럼 교체. 일별은 교체 그대로
 - 회귀: `saveSnapshotsBlockedRef` 차단, tickerList 정렬, 종가(refPrice) 폴백
 
 ### F-NAV. 네비게이션 (drill-down)
