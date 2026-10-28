@@ -27,7 +27,8 @@ model: opus
 - 2주 이상 정체: on-hold 또는 폐기
 - `status:needs-human`은 PRINCIPLES.md 자체를 바꿔야만 할 때만
 
-## qa PASS 후 → decision-brief.md (반 쪽)
+## 릴리스 qa PASS 후 → decision-brief.md (반 쪽, 릴리스 단위)
+릴리스(`issue-4.NN`)에 포함된 **모든 이슈가 qa PASS**일 때만 작성한다. 하나라도 진행 중이면 기다린다. 브리프는 포함 이슈별 변경을 한 줄씩 나열한다.
 ```
 ## 권고: 반영 / 미반영 — 한 줄 이유
 ## 무엇이 바뀌나 (3줄, 사용자 관점)

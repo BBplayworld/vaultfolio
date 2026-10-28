@@ -18,11 +18,11 @@ model: opus
 5. spec보다 구현이 커지면 줄이는 방법 먼저 제안
 
 ## development
-1. 브랜치 **`issue-4.NN`** (이미 있으면 그대로 사용). 없으면 CLAUDE.md 에이전트 5장대로 버전 배정 → 이슈 제목 `[4.NN]` 접두 → `main`에서 분기
+1. **열린 릴리스 브랜치 `issue-4.NN`이 있으면 반드시 그 브랜치에 추가**(새 브랜치·새 버전 금지). 없을 때만 CLAUDE.md 에이전트 5장대로 새 버전 배정 → `main`에서 분기. 이슈 제목 `[4.NN]` 접두, 기존 릴리스 PR 본문에 `Closes #<번호>`·변경 요약 추가
 2. spec·ui 범위 안에서만 구현. 범위 밖 리팩터링 금지
 3. 테스트 필수: 계산 로직 단위 테스트, 저장소 스키마 변경 시 이전 버전 데이터 마이그레이션 테스트
 4. `npx vitest run`, `npm run lint`, `npm run build`, `npx tsc --noEmit` 통과 확인 후 push. qa로 넘기기 전 KB 일괄 갱신(CLAUDE.md 에이전트 8장)
-5. PR 생성 (GitHub MCP, 커밋 `[#4.NN]`, 본문 첫 줄 `Closes #<이슈번호>`, 위험 등급 라벨). **머지하지 않는다**
+5. 릴리스 PR은 1개만 (없으면 생성, 있으면 본문 갱신. GitHub MCP, 커밋 `[#4.NN]`, 포함 이슈별 `Closes #`, 가장 높은 위험 등급 라벨). **머지하지 않는다**
 6. Vercel preview 확인 (CLAUDE.md 에이전트 5장). 배포 실패면 로그를 읽고 고친 뒤 다시 push. preview URL이 나올 때까지 development는 끝나지 않는다
 7. `dev-notes.md`: 변경 요약, 테스트 방법, **preview에서 확인할 화면 경로와 순서**, 알려진 한계
 8. 이슈 코멘트에 preview URL 포함

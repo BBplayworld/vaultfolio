@@ -18,10 +18,10 @@ status:idea          (주간 기획 후보 — cto 반대 검토 통과 시 자�
        ② 반대 검토   cto → challenge.md (통과 / 축소 / 폐기)
        ③ 상세 기획   planner-designer → spec.md / business-pm → business.md (교차 승인)
   → status:design-review   developer → tech-review.md / planner-designer → ui.md
-  → status:development     developer → 버전 4.NN 배정 → PR (브랜치 issue-4.NN) → Vercel preview
+  → status:development     developer → 열린 릴리스 issue-4.NN에 추가(없으면 새 버전 배정) → 릴리스 PR → Vercel preview
   → status:qa              qa → qa-report.md (자동 테스트 + preview 실제 점검 + 스크린샷)
        FAIL → development 자동 복귀, 최대 3회 → 이후 cto가 축소/폐기 판정
-  → status:owner-review    cto → decision-brief.md → 대표가 머지(반영) / 닫기(미반영)
+  → status:owner-review    cto → 릴리스 decision-brief(포함 이슈 전부 qa PASS 시) → 대표가 릴리스 PR 머지(반영) / 닫기(미반영)
   → status:done            Vercel 운영 자동 배포
 ```
 분기: `status:rejected`(폐기·미반영), `status:on-hold`, `status:needs-human`(**제품 원칙 변경이 필요한 경우에만**)
