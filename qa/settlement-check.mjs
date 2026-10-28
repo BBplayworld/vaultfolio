@@ -94,6 +94,19 @@ const checked = (page, id) => tid(page, id).getAttribute("aria-checked");
   check("6 순자산 비교·배지·월 칩 없음, 'N월 결산' 1회", bad.length === 0 && (await tid(page, "settlement-month-item").count()) === 0 && (await tid(page, "settlement-range").count()) === 0 && titleCount === 1, `bad=${bad} titleCount=${titleCount}`);
   check("6 매수·매도·상환 문구 없음", !/매수|매도|상환/.test((await tid(page, "settlement-root").textContent()) || ""));
 
+  // C19. 캘린더 추가 = 같은 출처 정적 .ics 링크(blob·download 미사용) + text/calendar 응답
+  const icsBtn = tid(page, "prep-ics-button");
+  const icsHref = await icsBtn.getAttribute("href");
+  const icsDownloadAttr = await icsBtn.getAttribute("download");
+  const [icsReq] = await Promise.all([
+    page.waitForRequest((r) => r.url().includes("/calendar/secretasset-monthly-settlement.ics"), { timeout: 10000 }).catch(() => null),
+    icsBtn.click({ noWaitAfter: true }),
+  ]);
+  const icsResp = icsReq ? await icsReq.response().catch(() => null) : null;
+  const icsType = icsResp ? icsResp.headers()["content-type"] : null;
+  check("C19 캘린더 버튼 → 정적 .ics URL 이동·text/calendar", icsHref === "/calendar/secretasset-monthly-settlement.ics" && icsDownloadAttr === null && !!icsReq && /text\/calendar/.test(icsType || ""), `href=${icsHref} download=${icsDownloadAttr} type=${icsType}`);
+  if (!page.url().includes("#activity/change")) { await page.goBack().catch(() => {}); await page.waitForTimeout(1500); }
+
   // 15. 공유 캡처 숨김 속성
   const hideArrows = await page.locator('[data-screenshot-hide] [data-testid="settlement-prev-month"]').count();
   const hideSel = await page.locator('[data-screenshot-hide] [role="radiogroup"]').count();
