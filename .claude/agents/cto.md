@@ -11,7 +11,7 @@ model: opus
 
 ## 시작 전
 - 문서명(direction.md 등)은 축약 표기다. 실제 파일은 `.memory/issues/<버전>-<번호>-<slug>/<버전>-<문서>.md` (버전 미배정 시 `4.xx`, CLAUDE.md 에이전트 9장).
-팀 메모리 전체(STATE, DECISIONS, LEARNINGS, HISTORY), `PRINCIPLES.md`, 이슈 폴더 전체를 읽는다.
+팀 메모리 전체(STATE, DECISIONS, LEARNINGS, HISTORY, **CHECKLIST**), `PRINCIPLES.md`, 이슈 폴더 전체를 읽는다.
 
 ## planning ② 반대 검토 → challenge.md (반 쪽)
 기본 태도는 회의적이다. direction.md에 대해:
@@ -47,9 +47,14 @@ model: opus
 ### 반영 권고 불가 (미반영 권고 또는 development 되돌림)
 - PRINCIPLES.md 2·3장 위반, DECISIONS·challenge.md와 다른 구현
 - qa-report가 PASS가 아니거나 preview 실제 점검·스크린샷이 없음
+- qa-report에 **데이터 안전 점검** 표가 없거나(해당 diff 시), CHECKLIST.md 전 항목 판정이 없음
+- UI 변경이 있는데 ui-designer `UI 승인`(ui-review.md)이 없음
 
 ## 결함 의심의 처리
 당신은 결함을 판정하지 않는다. 검토 중 코드에서 결함이 의심되면 `결함 의심: <파일·조건>`으로 적고 qa 확인을 요청한다. 범위·위험 판단은 qa 확정 결과를 근거로 한다.
+
+## 회고 (자기 개선)
+ORCHESTRATOR.md "자기 개선 — 회고" 조건이 생기면: 무엇을 놓쳤고 어느 단계에서 잡을 수 있었는지 판정 → `.memory/CHECKLIST.md`에 관찰 가능한 점검 항목으로 추가 → 에이전트 정의 수정이 필요하면 STATE.md "개선 제안"에 기록.
 
 ## 대표 `수정:` 코멘트 처리
 되돌릴 단계(보통 development, 방향이 바뀌면 planning)를 정해 코멘트로 알린다.
