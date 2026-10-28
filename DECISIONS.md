@@ -59,3 +59,4 @@
 | 2026-10-28 | v4.34 | qa 최종 PASS @5460581(데이터 안전 7/7·CHECKLIST 18/18), ui-designer UI 승인, cto 최종 브리프 권고 반영(위험 high, 롤백 2026-12-31까지 PR revert / 이후 UI만 revert) | qa·ui-designer·cto | 반영 결정 요청 |
 | 2026-10-28 | #32 | 대표 지적: iOS 웨일 브라우저에서 캘린더 추가(.ics) 미동작 → v4.34 반영 결정 보류, development 복귀. 원인: blob URL + download 속성(iOS WKWebView 미지원) | 대표 | 기기 연동 품질 |
 | 2026-10-28 | #32 | 대표 수정 지시: 변화 원인을 월 탭뿐 아니라 **연 탭에도** 표시(정본 원칙 유지: 월 탭=그 달 원인, 연 탭=올해 원인). v4.34에 포함, design-review로 되돌려 spec·ui 보완 후 개발 | 대표 | 연간 변화 이해 |
+| 2026-10-28 | v4.34 | 대표 수정 2건(iOS .ics·연 탭 원인) 반영 후 qa PASS @8a5338c(CHECKLIST 19/19), UI 승인, cto 권고 반영 | qa·ui-designer·cto | 반영 결정 재요청 |
