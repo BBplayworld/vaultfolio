@@ -26,6 +26,8 @@ status:idea          (주간 기획 후보 — cto 반대 검토 통과 시 자�
 ```
 분기: `status:rejected`(폐기·미반영), `status:on-hold`, `status:needs-human`(**제품 원칙 변경이 필요한 경우에만**)
 
+**운영 이상(버그) 빠른 경로**: `type:bug`+`priority:p0` → qa 확정 → development(기획·설계 생략, 수정 범위는 원인에 한정) → qa → owner-review. ORCHESTRATOR.md C.
+
 마케팅 이슈(`type:marketing`): `planning(① 공동 방향 → business-pm 초안) → qa → owner-review → done`. 게시는 대표가 직접 한다.
 
 ## 2. 기획 — 치열한 검토
