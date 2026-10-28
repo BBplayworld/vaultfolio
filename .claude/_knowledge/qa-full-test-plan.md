@@ -161,9 +161,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: ticker 병합 후 집계(1회 노출)
 
 ### F-ACTIVITY. 성과 (자산 변화·배당·성적표) ([views/activity](../../src/app/(main)/_components/views/activity))
-- 👤 **성과 허브 카드 3개(#4.34, 이슈 #32)** — 자산 변화(`hub-card-change`)·배당·자산 성적표. 순자산·수익 카드 없음. 말일−3일~다음 달 10일이고 비교할 직전 월 기록이 있을 때만 최상단 결산 카드(`settlement-card`, 자산 0건·첫 달·기간 밖이면 DOM 없음) → 탭 시 자산 변화·월 탭의 해당 달(`source=card`)
-- 👤 **자산 변화(`#activity/change`, [asset-change-view.tsx](../../src/app/(main)/_components/views/activity/asset-change-view.tsx))** — 범위 전체/주식 × 기간 일/주/월/연, 범위 칩 상시 표시. 전체·일/연 = 기존 `YearlyNetAssetChart`(`view` 제어, 월별 막대·목록 삭제), 전체·주 = 일별 스냅샷 최근 7일 목록(`buildWeekRows`), 전체·월 = 월말 결산, 주식·* = 기존 `ProfitCard`(`period` 제어, 월 탭에도 결산 블록 없음)
-- 👤 **월말 결산([settlement-view.tsx](../../src/app/(main)/_components/views/activity/settlement-view.tsx))** — 블록 1 헤더(제목·"M/D → M/D 기준"·35일 초과 안내·월 선택기 13개월, 저장된 달+이번 달만 활성) / 2 순자산 비교 / 3 변화 원인 5항목(시세 변동·평가 갱신·환율 효과·순유입·기록 안 된 변화, 0원 숨김, 매수·매도·상환 문구 없음) / 7 다음 달 준비(`getStaleCategories` 보유 카테고리 "N일 전 값 기준" → 입력 시트, `.ics` 버튼 + 안내 상시). 빈/첫 달/오류 상태 `settlement-empty`/`settlement-first-month`/`settlement-error`. `data-value`(원 단위) 합계 = `settlement-delta`
+- 👤 **성과 허브 카드 3개(#4.34, 이슈 #32 r2)** — 자산 변화(`hub-card-change`)·배당·자산 성적표. 별도 결산 카드 없음(`settlement-card` 삭제). 자산 변화 카드: 말일−3일~다음 달 10일이고 비교할 직전 월 기록이 있으면 배지 "N월 결산"(`hub-change-settlement-badge`) + 구간 + 증감·% "지난 기록 대비" → 탭 시 월 탭 해당 달(`source=card`), 창 밖이면 "N월 · 진행 중" 증감(`source=menu`), 첫 달·자산 0건이면 금액 없이 "다음 달부터 결산이 열려요". 순자산·전년 대비 표시 없음
+- 👤 **자산 변화(`#activity/change`, [asset-change-view.tsx](../../src/app/(main)/_components/views/activity/asset-change-view.tsx))** — 제목 행 h-11 오른쪽 범위 선택(`[role=radiogroup][aria-label=범위 선택]`, 전체/주식) + 각 본문 `change-hero`(이름 → `change-hero-delta` → `change-hero-start`→`change-hero-end` → 기간 선택 `[aria-label=기간 선택]` 일/주/월/연). Radix `[role=tablist]` 없음, 범위 배지 없음. 375×812 전체·월에서 증감 y ≤ 200. 칸·화살표 히트영역 ≥ 40×40, ←/→·Home/End 이동·Tab 1회 이탈, reduced-motion이면 썸 전환 0s. 전체·일/연 = `YearlyNetAssetChart`(`view` 제어 → 제목·"현재 순자산" 숨김, Hero "M/D 기록 대비"/"YYYY년 말 대비"), 전체·주 = Hero "7일 전 대비" + 최근 7일 목록, 전체·월 = 월말 결산, 주식·* = `ProfitCard`(`period` 제어 → 제목·요약 박스 숨김, Hero "하루/1주/1개월/1년 주식 수익"·시장 필터 시 "국내 · …", 조회 중 스켈레톤 `change-hero-loading`, API 점검 시 "점검 중")
+- 👤 **월말 결산([settlement-view.tsx](../../src/app/(main)/_components/views/activity/settlement-view.tsx))** — Hero 이름 `settlement-title` "10월 결산"(진행 중 "11월"+`settlement-inprogress`, 전년 "25년 10월 결산", 첫 달 "7월") + 구간 "9/28 → 10/28"(레거시 "YYYY-MM 기록"), 35일 초과 `settlement-gap-note`, 이전 값 자산이 있으면 `hero-stale-badge` "일부 이전 값"(→ 다음 달 준비로 스크롤). ‹ › `settlement-prev-month`/`settlement-next-month`: 기록 없는 달 건너뜀, 끝에서 disabled, 공유 캡처 숨김. 본문 변화 원인 5항목(시세 변동·평가 갱신·환율 효과·순유입·기록 안 된 변화, 0원 숨김, 매수·매도·상환 문구 없음) / 다음 달 준비(`getStaleCategories` "N일 전 값 기준" → 입력 시트, `.ics` 버튼 + 안내). 빈/첫 달/오류 `settlement-empty`/`settlement-first-month`/`settlement-error`. `cause-row-*` `data-value` 합계 = `change-hero-delta` = end − start. "순자산 비교"·월 칩 없음
 - ⚙ **결산 매핑([settlement.ts](../../src/lib/report/settlement.ts) `mapSettlementCauses`)** — 엔진 키 15종 → 5항목. 내부 이동 풀(매수·매도·debt·deposit·cash)은 상쇄 후 잔여만 "기록 안 된 변화"(= Δ순자산 − 표시 4항목, 항등식). 현금 미등록(시작·끝 `breakdown.cash` 0 + 구간 입출금 0)이면 매수·매도만 순유입. 엔진·홈 헤더 무변경, 과거 두 시점은 `computeAttributionBetween`(단일 구간, `isFirstSegment=true`, R29)
 - ⚙ **결산 구간(`resolveSettlementWindow`)** — 시작 = 대상 달 직전 최근 스냅샷, 지난 달 끝 = 그 달 스냅샷, 이번 달 끝 = 실시간. 이번 달은 간격 25일 이상이면 날짜 구간 제목(`range`), 미만이면 "진행 중". 1~10일엔 전월 기록일이 21일 이후일 때만 전월 결산(`pickSettlementMonth`). 임계 21·25·35일·50%는 추정값
 - 👤 순자산 차트(현재+전년 대비), 수익 차트(기간별 일/주/월/연, basis 토글), 배당 차트(연간+월평균, 예상/실제)·월별 배당 종목
@@ -214,7 +214,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **habit 저축 규칙성**(S-4.22) — ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월, `savingsRhythm`)** 중 높은 비율로 채점(저축을 시세와 분리). 가중치 0.1·재정규화·티어 불변. 현금 거래 없으면 순자산 상승 폴백. habit 카드 → 현금 상세 딥링크
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
-- ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양)
+- ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양) — #4.34에 "순자산 변화, 왜?" 섹션 삭제(변화 원인 정본은 자산 변화 월 탭), 현재 3개
 - 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → 등급 기록은 사용자 편집 신호가 아니므로 push를 유발하지 않음(R14). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)
 - ⚙ **홈 진입점(2026-09)** — `dashboard.tsx`의 `NetAssetSummaryBox`가 우상단에 트로피+점수 미니 배지 노출(`components.md` 대시보드 표 참고). 성적표 화면 방문 이력이 있어야(스냅샷 `grade` 필드 존재) 뜨고, 재계산 없이 저장된 최신값만 읽음 — 미방문 계정은 배지 자체가 렌더 안 됨(조용한 생략)
 - 👤 성적표를 한 번도 안 연 계정은 홈에 배지가 안 뜨는지, 한 번 연 뒤에는 홈에 트로피+점수 배지가 뜨고 탭하면 성적표 화면으로 바로 이동하는지, 다크·라이트 모두 티어별 색이 잘 보이는지
@@ -341,7 +341,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-NAV. 네비게이션 (drill-down)
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R31)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
-- ⚙ **옛 성과 해시 리다이렉트(#4.34)** — `#activity/netasset` → 자산 변화(전체·연), `#activity/profit` → 자산 변화(주식·일). `parseHash`가 `init`을 붙이고 첫 진입 시 주소창을 `#activity/change`로 `replaceState`. FAB 연도별 순자산 입력·성적표 "순자산 변화, 왜?"·결산 카드도 `init`으로 탭 지정
+- ⚙ **옛 성과 해시 리다이렉트(#4.34)** — `#activity/netasset` → 자산 변화(전체·연), `#activity/profit` → 자산 변화(주식·일). `parseHash`가 `init`을 붙이고 첫 진입 시 주소창을 `#activity/change`로 `replaceState`. FAB 연도별 순자산 입력·성적표 growth 축 링크(→ 전체·연)·허브 자산 변화 카드도 `init`으로 탭 지정
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))
@@ -486,7 +486,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-ANALYTICS. GA4 사용자 행동 추적 ([ga.ts](../../src/lib/analytics/ga.ts)) — 명세 [S-4.28](../specs/4.28-ga-event-tracking.md)
 - ⚙ config `send_page_view:false` + `page_location`에 해시·쿼리 없음(`#share=`·`#sync=`·`?url=` 미전송), 화면은 `trackScreen` 가상 경로 `/v/<viewKey>`
-- ⚙ **`settlement_view`(#4.34)** — 월 탭 마운트당 1회(월 선택기 변경은 재전송 없음), `source`=card/menu, `result`=settled/in_progress/first_month만. 화면키 `activity:netasset`·`activity:profit` → `activity:change`
+- ⚙ **`settlement_view`(#4.34)** — 월 탭 마운트당 1회(월 화살표 이동·같은 칸 재선택은 재전송 없음, 다른 기간·범위에서 월(전체)로 돌아오면 재마운트로 1회 `source=menu`, 주식 범위는 0회), `source`=card/menu, `result`=settled/in_progress/first_month만. 화면키 `activity:netasset`·`activity:profit` → `activity:change`
 - ⚙ sanitizer: 사전 외 키·값·비문자열 제거, 전송 값은 한국어 라벨(`PARAM_LABELS`·`USER_PROP_LABELS`, 매개변수별 라벨 상이·중복 없음)
 - ⚙ gtag 부재·예외 시 no-op(AC1·AC4), 같은 화면 연속 page_view 1회(AC7), `first_asset_saved` 기기당 1회(`gaFlags`, 공유 복원·가져오기·pull 제외)(AC8)
 - ⚙ `sync_action`은 수동 enable·connect·push·pull 결과에서만 — 60초 폴링·focus·online 자동 동기화 미발생(AC9). 동기화 로직 무변경

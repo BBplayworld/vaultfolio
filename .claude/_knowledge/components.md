@@ -28,10 +28,10 @@ _components/
 │   │   ├── trades/stock-trades-view.tsx
 │   │   └── xray/                    # stock-xray-view, stock-insight-strip
 │   └── activity/
-│       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/일별 InlineSelector(CardHeader, view prop 시 숨김)
+│       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/일별 InlineSelector(CardHeader). view prop(제어) 시 제목·Hero 숨기고 ChangeHero로 대비값
 │       ├── asset-change-view.tsx    # 자산 변화 셸(범위×기간) + 전체·주 목록 (#4.34)
 │       ├── settlement-view.tsx      # 전체·월 = 월말 결산 블록 1·2·3·7 (#4.34)
-│       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표
+│       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표. period prop(제어) 시 제목·요약 박스 숨기고 ChangeHero(로딩 스켈레톤·점검 중 포함)
 │       ├── dividend-chart.tsx       # Hero(연간/월 배당) + InfoHint + 카테고리 범례 + 예상/실제 토글
 │       └── performance-hub.tsx, monthly-dividend-stocks.tsx
 ├── layout/                # 라우팅·공용 UI
@@ -179,8 +179,9 @@ _components/
 | AssetDetailTabs     | `main-nav/detail/asset-detail-tabs.tsx` | 5탭 상세 목록                  |
 | YearlyNetAssetChart | `views/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/일별(월별은 #4.34에 결산으로 흡수). `view?: "yearly"\|"daily"`를 넘기면 외부 제어·내부 선택기 숨김 |
 | ProfitCard          | `views/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드). `period?: ProfitPeriod`를 넘기면 외부 제어·내부 선택기 숨김 |
-| AssetChangeView (#4.34) | `views/activity/asset-change-view.tsx` | 성과·자산 변화 셸 — 범위(전체/주식, `tabList2`)×기간(일/주/월/연, `tabList3`) 탭. 전체·일/연=YearlyNetAssetChart, 전체·주=최근 7일 목록, 전체·월=SettlementView, 주식=ProfitCard. `init: ChangeInit` 변경 시 탭 재지정 |
-| SettlementView (#4.34) | `views/activity/settlement-view.tsx` | 월말 결산 블록 1·2·3·7 + 월 선택기(InlineSelector 13개월, `testId`). 마운트당 `settlement_view` 1회. `data-testid`·`data-value`(원 단위) qa 셀렉터 규약은 이슈 ui.md §8 |
+| AssetChangeView (#4.34, r2) | `views/activity/asset-change-view.tsx` | 성과·자산 변화 셸 — 제목 행 오른쪽 범위 선택(전체/주식, `InlineSelector fullWidth` `w-[164px]`) + 기간 선택(일/주/월/연, fullWidth) 노드를 각 본문 Hero 맨 아래로 전달(`periodSelector`). 전체·일/연=YearlyNetAssetChart, 전체·주=WeekList(Hero "7일 전 대비"+일자 목록), 전체·월=SettlementView, 주식=ProfitCard. 같은 칸 재선택은 무시(결산 재마운트 방지). `init: ChangeInit` 변경 시 탭 재지정 |
+| SettlementView (#4.34, r2) | `views/activity/settlement-view.tsx` | N월 결산 = ChangeHero(이름 "10월 결산"/진행 중 "11월"+배지/전년 "25년 10월 결산", 구간, ‹ › 월 화살표 `size-10` — 기록 없는 달 건너뜀·끝에서 disabled, "일부 이전 값" 배지 → 다음 달 준비로 스크롤) → 변화 원인(5항목, 40ms stagger) → 다음 달 준비. 마운트당 `settlement_view` 1회(화살표 이동 재전송 없음) |
+| ChangeHero (#4.34 r2, 로컬) | `views/activity/change-hero.tsx` | 자산 변화 5개 본문 공통 Hero(이름 줄 min-h-10 → 증감 text-2xl/3xl → 시작→끝 → 기간 선택 mt-4), `aria-live`, `contentKey` 변경 시 fade만. `settlementDelta`(허브 카드·결산 Hero 공용 월 증감)·`settlementName`·`BODY_ENTER` 함께 export. views/activity 전용(공용 아님) |
 | SECTION·GROUP_BADGE·SectionHeader·SpecRow (#4.34 이동) | `layout/ui/report-section.tsx` | 성적표 로컬 정의를 동작 불변으로 공용화 — 섹션 외피·소그룹 뱃지·아이콘 칩 헤더(tone brand/gold/important/info)·라벨/값 행. 성적표·결산 공용 |
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
@@ -398,7 +399,7 @@ Alert (hidden prop으로 표시 제어)
 
 ```typescript
 ASSET_THEME = {
-  // tab* 토큰은 더 이상 사용 안 함 — 모든 탭이 InlineSelector로 통일됨 (legacy 잔존)
+  // tab* 토큰은 더 이상 사용 안 함 — 모든 탭이 InlineSelector로 통일됨 (tabList1·tabList3Wrap legacy 잔존, tabList2/3은 #4.34 삭제)
   cardWrapper, cardHeader, cardActions("flex justify-end gap-2 px-3 py-2 bg-muted/10"),
   cardActionButton, cardTriggerButton, cardInfoLeft/Right/Title/Meta/Name,
   cardAmountMain/Sub/Rate/ProfitRow,
@@ -415,6 +416,6 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 
 **디자인 토큰 (이번 세션 정리):**
 - 카드 액션 버튼 (수정/삭제)은 `ASSET_THEME.cardActions` (별도 라인, `flex justify-end ... bg-muted/10`) — 5탭 통일
-- InlineSelector 배경: `bg-muted/60 dark:bg-muted/40` (라이트 짙음)
+- InlineSelector 배경: `bg-muted/60 dark:bg-muted/40` (라이트 짙음). `fullWidth` 모드(#4.34): 같은 폭 grid 칸 + 절대 위치 썸(`translateX(index*100%)`, `bg-card dark:bg-foreground/15 shadow-sm`) + ←/→·Home/End 로빙 tabindex, 칸 `min-h-10 text-sm`. 기본 경로는 스냅샷 테스트로 고정(`layout/ui/__tests__/inline-selector.test.tsx`)
 - FAB·ScrollToTop: `bg-foreground/{85,70}` 무채색 토큰 (라이트 검정/다크 흰 자동 반전)
 - Card 모바일 padding: `px-4 sm:px-6` (CardHeader/CardContent/CardFooter)
