@@ -330,6 +330,14 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - **`estimated` per-item 배지 + 부동산 제외 안분(2026-08)** — `resolveAttribution`의 예측 분기가 만드는 `effects`는 전부 `estimated:true`(단, `income`은 기록된 거래 그대로라 예외), 정밀 분기는 전부 `estimated`가 없음(false 취급). `mergeAttributions`가 하이브리드 병합 시 older(예측)의 통합 `price`를 `reallocatePriceEffects`로 **mid 시점 breakdown의 주식·코인 비중에만** 안분해 newer(실측)의 `price:stock`/`price:crypto`와 합친다 — **부동산은 안분 대상에서 제외**한다(`real-estate-input.tsx`의 `currentValue`는 시장가 자동 갱신이 없고 사용자가 실거래가 조회 후 수동으로만 바꾸는 계단식 값이라, 정체불명 시세 잔차를 부동산 비중만큼 떼어주면 사용자가 값을 건드리지도 않았는데 "부동산 시세 하락"이 뜨는 근거 없는 추정이 된다). 부동산의 실제 시세 변동은 정밀 분해(`bothEnriched`, `price:realEstate`)로만 노출. 주식+코인 구성이 0(mid breakdown 없음·부동산뿐 등)이면 안분하지 않고 통합 `price` 그대로 남아 `causeShortLabel`이 "보유자산 시세"로 라벨링한다(자산군 통합임을 명시). `AttributionDisplayItem.estimated`가 true인 항목에 뷰가 "일부 예측" 배지를 개별로 붙인다(구간 전체가 `attribution.estimated`면 상단 배지로 이미 충분하므로 중복 생략).
 - **`groupAttributionItems`(2026-08)** — `getAttributionItems` 출력(이미 `CAUSE_ORDER` 정렬됨)을 자산 타입별로 묶는다: `price:X`/`buy:X`/`sell:X`(X=stock/crypto/realEstate) → 해당 자산군 그룹, `income`/`cash` → `cash` 그룹, `debt` → `loan` 그룹. `fx`/`deposit`/통합 `price`는 그룹 없음(`key: null`, 단독 박스). 그룹 소속 판정은 첫 등장 순서를 보존하되, **최종 나열 순서는 그룹 내 금액 순합(양음 상쇄 반영)의 절대값이 큰 순서로 재정렬**한다 — 변동이 큰 자산 타입이 위로. 성적표 뷰가 이 그룹 단위로 박스 하나에 여러 줄을 묶어 렌더한다(`GROUP_BADGE` 라벨 재사용).
 
+### report/settlement.ts (#4.34, 이슈 #32) — 월말 결산 순수 함수
+
+- `pruneMonthlySnapshots(all, currentMonth)` — `month >= 현재월−12`만(최대 13개, 연 경계 무관). `saveSnapshots` 월 업서트가 사용. `shiftMonth(month, delta)`
+- `resolveSettlementWindow(monthly, month, today)` → `SettlementWindow {kind: settled|range|in_progress|first_month, start, end(null=진행 중·실시간), startDate, endDate, gapDays, longGap}`. `pickSettlementMonth`(1~10일+전월 기록일 ≥21일 → 전월), `isSettlementCardPeriod`(말일−3~10일), `pickSettlementCard`, `listSettlementMonths`(13개월·활성 여부), 문구 `settlementTitle`/`settlementCardTitle`/`settlementRangeLabel`/`formatSettlementPoint`, GA `settlementGaResult`(range→settled)
+- `mapSettlementCauses(effects, {deltaNet, cashTracked})` → 5항목(`price|valuation|fx|income|unrecorded`, 원 단위 정수, 10원 미만 숨김) + `showUnrecordedHint`(≥50%). 기록 안 된 변화 = Δ순자산 − 표시 4항목(항등식). `SETTLEMENT_CAUSE_LABEL`
+- `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
+- 엔진 쪽 유일한 추가: `asset-report.ts`의 `computeAttributionBetween(prevMonthly, currMonthly|liveCurr, …)` — `resolveAttribution(…, isFirstSegment=true)` 단일 구간, 하이브리드 없음(레거시 시작=전체 예측), 끝점에 fx·fxBase 없으면 null
+
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
 
 기간별 특수 처리를 두지 않는다. **네 기간 모두 같은 코드 경로**를 타고, 기간마다 다른 것은 시작일(`targetStr`) 계산뿐이다. 규칙: **실측 스냅샷이 있는 구간은 실측으로 분해하고, 그 이전의 부족한 구간만 예측으로 채운다.**
@@ -346,7 +354,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `isFullyEnriched(p)` = `!!(p.breakdown && p.fx && p.fxBase && p.cost)` — `resolveAttribution`의 `bothEnriched` 판정과 **같은 술어**를 공유해야 실측/예측 경계가 어긋나지 않는다.
 - **3번 가드 누락 시 회귀(2026-08 확인)**: `prevOld`가 이미 실측인데도(예: 1주는 daily 30일 창 안이라 거의 항상 실측) `mid`를 무조건 찾으면, 사이에 있는 아무 enriched daily나 붙잡아 불필요하게 두 구간으로 쪼갠다. 이때 `mergeAttributions`가 `older.estimated`를 확인하지 않고 무조건 `estimatedUntil`을 채우면(과거엔 그랬음), 전부 실측인데 "그 날짜 이전은 추정치" 배지가 근거 없이 붙는다. `mergeAttributions`는 방어적으로 **`older.estimated`가 실제 `true`일 때만** `estimatedUntil`을 채우도록 되어 있지만, 3번 가드가 없으면 애초에 실측끼리도 쪼개져 불필요한 연산과 혼란을 만든다 — 두 방어 모두 유지해야 한다.
 - `mid`는 **daily만** 허용(monthly 제외) — monthly의 `_date`는 월말로 강제되는데 값 시점은 그 달 마지막 접속일이라 최대 30일 어긋나고, 그 사이 거래·입출금이 flow 윈도우에서 누락된다.
-- `yearlyAnchorPoints(assetData)` — `assetData.yearlyNetAssets`(연도별 종가 순자산, netAsset만)를 `YYYY-12-31` 앵커로 승격해 후보 풀에 추가. enrich가 없어 항상 예측 경로로만 쓰이지만, daily(30일 롤링)·monthly(올해분만)가 못 미치는 먼 과거에서도 "기록 없음" 대신 예측 시작점을 잡을 수 있게 한다.
+- `yearlyAnchorPoints(assetData)` — `assetData.yearlyNetAssets`(연도별 종가 순자산, netAsset만)를 `YYYY-12-31` 앵커로 승격해 후보 풀에 추가. enrich가 없어 항상 예측 경로로만 쓰이지만, daily(30일 롤링)·monthly(최근 13개월, #4.34 전엔 올해분만)가 못 미치는 먼 과거에서도 "기록 없음" 대신 예측 시작점을 잡을 수 있게 한다.
 - `mergeAttributions(older, newer, mid)` — `older.effects`를 `reallocatePriceEffects(effects, mid)`로 먼저 안분(통합 `price`→`price:stock`/`price:crypto`, 부동산 제외)한 뒤 `newer.effects`와 key별로 합산, `pickTopCauses`를 **1회만** 다시 돌려 표시용 top/rest를 재선정한다. `deltaNet`·집계 필드는 단순 합(텔레스코핑) — 합계=deltaNet 항등식은 자동 유지.
 - `estimated: boolean` → 전체 구간이 예측일 때만 `true`(하위호환). 부분예측은 **`estimatedUntil?: string`**(이 날짜 **이전**만 예측)으로 표현 — `estimated===false`이면서 `estimatedUntil`이 있으면 "일부 예측" 배지.
 - `PeriodAttribution.effects`는 `pickTopCauses`가 버리지 않고 반환하는 key별 raw 벡터 — 하이브리드 합성의 전제(합산 후 재선정 가능하게 하는 유일한 이유).
@@ -415,7 +423,7 @@ getInitials(str): string                // "홍길동" → "홍"
 ### analytics/ga.ts (`src/lib/analytics/ga.ts`, S-4.28) — GA4 계측 **단일 진입점**
 
 ```typescript
-track(name: GaEvent, params?: GaParams): void     // 이벤트 20종 union, 파라미터는 PARAM_VALUES enum만
+track(name: GaEvent, params?: GaParams): void     // 이벤트 21종 union(#4.34 settlement_view: source card/menu·result settled/in_progress/first_month), 파라미터는 PARAM_VALUES enum만
 trackScreen(viewKey, navSource = "tap"): void     // page_view(/v/<viewKey>, page_title 한국어), 같은 화면 연속 호출 무시
 setUserProps(props: GaUserProps): void            // app_mode·asset_count_bucket·sync_enabled·onboarding_state·theme, 값 바뀔 때만
 trackAssetSave(params, prevAssetCount): void      // asset_save + 기기당 1회 first_asset_saved(gaFlags)

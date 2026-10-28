@@ -6,6 +6,12 @@
 
 ## 2026-10-28
 
+### 성과 메뉴 정리 + 자산 변화 월 탭 = 월말 결산 (#4.34, 이슈 #32)
+- **왜**: 스크린샷 갱신 구조라 다시 열 이유가 없었고(월 1회 의식 필요), 성과의 순자산·수익이 "기간 대비 변화"로 겹쳐 혼동됐다. 월 스냅샷이 1월 첫 저장에 전년분을 지우는 결함(qa 확정)도 결산의 전제를 깨고 있었다.
+- 월 스냅샷 보존을 올해분 → 최근 13개월 롤링(`pruneMonthlySnapshots`)으로. 스키마·저장 키·동기화 pull 경로 불변.
+- 성과 허브 카드 4→3(자산 변화·배당·성적표) + 말일−3일~다음 달 10일 결산 카드. 자산 변화 = 범위(전체/주식)×기간(일/주/월/연), 전체·월 = 결산 블록(헤더·순자산 비교·변화 원인 5항목·다음 달 준비 + `.ics`). 엔진은 `computeAttributionBetween` 래퍼 1개만 추가, 홈 헤더 무변경.
+- 옛 `#activity/netasset`·`#activity/profit` 리다이렉트, 기능 카탈로그 15→14, GA `settlement_view`(source·result 열거형만), 화면키 `activity:change`.
+
 ### Vercel preview 안전장치·데모 데이터 (#4.34, 이슈 #31)
 - **왜**: preview가 운영과 같은 `/api/sync`를 써서 검증 전 코드가 실제 금고에 쓸 수 있었고, origin이 달라 빈 화면이라 qa가 사람 없이 점검할 수 없었다.
 - `next.config.mjs` `env`에 `NEXT_PUBLIC_VERCEL_ENV` 주입 → `isPreviewEnv()`(정확히 `"preview"`만 true). `isCloudSyncEnabled()`는 preview에서 false, `sync-client`의 `pushAsset`·`pullAsset`·`fetchRemoteVersion` 입구 가드(fetch 0건). 운영·로컬 반환값 불변, 서버 `/api/sync` 무변경.

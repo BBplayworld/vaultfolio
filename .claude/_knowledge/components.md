@@ -28,7 +28,9 @@ _components/
 │   │   ├── trades/stock-trades-view.tsx
 │   │   └── xray/                    # stock-xray-view, stock-insight-strip
 │   └── activity/
-│       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/월별/일별 InlineSelector(CardHeader)
+│       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/일별 InlineSelector(CardHeader, view prop 시 숨김)
+│       ├── asset-change-view.tsx    # 자산 변화 셸(범위×기간) + 전체·주 목록 (#4.34)
+│       ├── settlement-view.tsx      # 전체·월 = 월말 결산 블록 1·2·3·7 (#4.34)
 │       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표
 │       ├── dividend-chart.tsx       # Hero(연간/월 배당) + InfoHint + 카테고리 범례 + 예상/실제 토글
 │       └── performance-hub.tsx, monthly-dividend-stocks.tsx
@@ -53,7 +55,7 @@ _components/
 
 - **HomeView**: InlineSelector size="lg" (홈/상세/성과) + Dashboard. 상세/성과 클릭 = drill-down 진입
 - **DetailView({tab})**: InlineSelector(주식/부동산/암호화폐/현금/대출) + 해당 탭 컴포넌트 (1개만 mount)
-- **ActivityView({tab})**: InlineSelector(순자산/수익/배당) + YearlyNetAssetChart/ProfitCard/DividendCard
+- **ActivityView({tab, init})**: 허브(`PerformanceHub`) 또는 `AssetChangeView`(`change`, `view.init` 전달)·DividendCard·AssetReportView (#4.34에 netasset/profit 탭 → change 통합)
 - 입력 폼 8종(자산 5종 + Cash/Loan/CryptoTx) `<div className="hidden">` 래핑으로 DOM에 상시 마운트 (편집 다이얼로그용)
 - **CashTxInput** (`forms/asset-update/input/cash-tx-input.tsx`, S-4.22): 현금 입출금 기록 폼. `trigger-add-cash-tx`(`dispatchAddCashTx(cashId)`)로 오픈. 입금/출금·정기 토글·반영·출금초과 가드·중복 인라인 확인. hidden 영역 상시 마운트
 - **CashTxView** (`views/detail/cash-tx/cash-tx-view.tsx`, S-4.22): `cash-transactions` 탭. 총입금·출금·순유입 통계·기간/유형 필터·반영 삭제 시 잔액 역가감. 진입 대상은 `useCashTxViewStore`. 현금 카드 "입출금 기록/내역" 버튼·성적표 habit 딥링크로 진입
@@ -69,7 +71,7 @@ _components/
 
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)
 
-- `AssetView = home | detail/{tab} | activity/{tab}` 상태 + hash 동기화 + popstate 리스너
+- `AssetView = home | detail/{tab} | activity/{tab, init?}` 상태 + hash 동기화 + popstate 리스너. `ActivityTab = hub|change|dividend|report`, `ChangeInit {scope?, period?, month?, source?}`는 해시에 싣지 않는 자산 변화 초기 탭 지정(옛 `#activity/netasset`·`profit` 리다이렉트·결산 카드·FAB·성적표 링크, #4.34)
 - `navigate(view)`: pushState + scrollTo(0,0)
 - `back()`: 항상 `navigate({type:"home"})` (history.back() 아님 — 어디서나 홈 복귀)
 - `parseHash`/`toHash`/`getViewTitle` export
@@ -175,12 +177,15 @@ _components/
 | ------------------- | --------------------------------------- | ------------------------------ |
 | Dashboard           | `main-nav/home/dashboard.tsx`           | 총자산/순자산/손익 요약 + 분포. `NetAssetSummaryBox`(순자산 헤더)에 옵션 `grade?: SnapshotGrade | null`/`onGradeClick?`(2026-09, 자산 성적표 미니 배지) — `useLatestAssetGrade()` 훅이 `readDailySnapshots()`에서 `grade` 필드가 있는 최신 스냅샷을 찾아 전달(재계산 없음, `asset-report-view.tsx`가 성적표 화면 방문 시 기록해둔 값을 그대로 읽음 — 방문 전이면 `null`, 배지 미노출). `grade && !hasRightSide`일 때만 헤더 우상단에 `absolute` 배치(트로피+점수, `asset-report-view.tsx`의 `TIER_STYLE` export 재사용), 클릭 시 `navigate({type:"activity", tab:"report"})`. `welcome-guide.tsx` 프리뷰 호출부는 두 prop 모두 안 넘겨 기존과 동일(무영향) |
 | AssetDetailTabs     | `main-nav/detail/asset-detail-tabs.tsx` | 5탭 상세 목록                  |
-| YearlyNetAssetChart | `main-nav/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/월별/일별 |
-| ProfitCard          | `main-nav/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드)   |
+| YearlyNetAssetChart | `views/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/일별(월별은 #4.34에 결산으로 흡수). `view?: "yearly"\|"daily"`를 넘기면 외부 제어·내부 선택기 숨김 |
+| ProfitCard          | `views/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드). `period?: ProfitPeriod`를 넘기면 외부 제어·내부 선택기 숨김 |
+| AssetChangeView (#4.34) | `views/activity/asset-change-view.tsx` | 성과·자산 변화 셸 — 범위(전체/주식, `tabList2`)×기간(일/주/월/연, `tabList3`) 탭. 전체·일/연=YearlyNetAssetChart, 전체·주=최근 7일 목록, 전체·월=SettlementView, 주식=ProfitCard. `init: ChangeInit` 변경 시 탭 재지정 |
+| SettlementView (#4.34) | `views/activity/settlement-view.tsx` | 월말 결산 블록 1·2·3·7 + 월 선택기(InlineSelector 13개월, `testId`). 마운트당 `settlement_view` 1회. `data-testid`·`data-value`(원 단위) qa 셀렉터 규약은 이슈 ui.md §8 |
+| SECTION·GROUP_BADGE·SectionHeader·SpecRow (#4.34 이동) | `layout/ui/report-section.tsx` | 성적표 로컬 정의를 동작 불변으로 공용화 — 섹션 외피·소그룹 뱃지·아이콘 칩 헤더(tone brand/gold/important/info)·라벨/값 행. 성적표·결산 공용 |
 | DividendCard        | `main-nav/activity/dividend-chart.tsx`  | 배당 카드                      |
 | DataSourceBadge     | `main-nav/data-source-badge.tsx`        | "실시간"/"캐시" 출처 Badge     |
 | AttributionRecordList (S-4.33) | `views/attribution-records.tsx` | 원인분해 구간의 반영 기록(입출금·매매·대출) "기록 내역 N건" 펼침 — 날짜·구분·계좌/종목명·금액 시간순. 홈 순자산 헤더 펼침·성과 순자산 변화 공용, 기록 0건이면 미렌더 |
-| AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
+| AssetReportView     | `views/activity/asset-report-view.tsx`  | 자산 성적표 — 재사용 UI 패턴(섹션 구분·뱃지 라벨·비교 그리드·SpecRow, SpecRow·SectionHeader는 `layout/ui/report-section.tsx`) 레퍼런스, [design-system.md](design-system.md) §5.1 참조 |
 | HomeTipBox (S-4.32 후속) | `views/home/home-tip-box.tsx`      | 홈 알림/팁 통합 박스 — 자산 분포 카드 **아래** 1곳에만 존재. 과거 상단 `BackupNudge`/`RefreshNudge` + 하단 `TaxNoticeBox`/`FeatureTipBox` **4개를 흡수**해 화면엔 한 번에 1개만 뜬다. 판정은 [state-and-utils.md](state-and-utils.md) `home-tip.ts`의 `pickHomeTip()`이 **새 공지(필수 노출)>백업>세금>자산최신화>신규기능>저방문기능** 순으로 골라 반환, 종류별 재노출 정책은 원래 로직 그대로(백업·최신화=노출 시 오늘 flag, 세금=명시적 닫기 시 이번 달 flag, **공지=열람(클릭)해야만 `markCurrentNoticeSeen()`으로 TTL 90일 dismiss — X 닫기는 이번 세션만 숨기고 열람 처리 안 함(최소 1회 열람 강제)**, 기능=닫기·클릭 이동 둘 다 영구 dismiss). **X 닫기는 종류별 mark에 더해 `sessionStorage` 세션 플래그(`secretasset_home_tip_session_dismissed`, `pwa-connect-prompt.tsx` 패턴)를 찍어 이번 세션(창) 동안 박스 전체를 숨긴다 — 다음 순위 팁이 바로 튀어나오는 두더지잡기 방지. 재접속(새 세션) 시 초기화되어 각 종류의 정책대로 다음 팁이 정상 회전 노출. 단, `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 안 뜸)은 이 세션 플래그를 무시하고 무조건 `pickHomeTip`을 호출한다(#4.24) — 다른 팁을 X로 닫아 세션 플래그가 서도 공지의 "최초 1회 노출"은 가로막히지 않는다. 공지가 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끄므로, 이후 공지 X 닫기 → 같은 세션 재진입 시 재노출 안 됨(QA에서 재노출 버그 발견·수정).** 인터랙션은 5종 모두 "카드 전체 클릭=유일한 동작(백업 다운로드/세금 화면 이동/최신화 시트 오픈/**공지→해당 기능 다이얼로그 오픈**/기능 화면 이동), X=닫기"로 통일된 단일 보더리스 셸. **공지(#4.24 재도입, 필수 노출)**: 홈 진입 시 강제 팝업하던 과거 `UpdateNoticeDialog`(S-4.32에서 제거)와 달리 다이얼로그를 억지로 띄우진 않지만, 팁 카드 자체는 **최우선순위**라 새 버전 공지가 있으면 백업·세금 안내보다도 먼저 반드시 노출. **클릭 시 공지 본문 다이얼로그가 아니라 이번 릴리스가 홍보하는 실제 기능으로 직행**(#4.24 후속) — 지금은 `dispatchOpenShareCard("type")`로 인증카드를 투자 유형 타입으로 즉시 오픈(#4.26, 이전엔 portfolio)(릴리스마다 홍보 대상이 바뀌면 이 액션도 함께 갱신). 더보기 메뉴의 공지 수동 열람(`notice.tsx`, `tool-menu.tsx`의 `showNotice`)은 그대로 유지 |
 | LevelMeter           | `ui/level-meter.tsx`                    | 세그먼트 레벨미터(범용) — 진행률을 칸(기본 10)으로 나눠 `SHARE_SAFE_PALETTE` 색을 순환시키며 채움. 순자산 목표 진행률 바(S-4.28, 롤백됨)에서 처음 만든 디자인을 재사용 컴포넌트로 보존 — **현재 적용처 없음**, 진행률/달성도 시각화가 필요할 때 우선 검토 |
 | OnboardingWizardFlow | `layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx` | 스크린샷 일괄 온보딩 마법사(S-4.29) — 주식→코인→현금→대출 4단계(카테고리당 이미지 1장), 부동산은 `dispatchAddRealEstate()`로 즉시 수동 입력 연결. 각 단계는 기존 `*-screenshot-import.tsx`를 `onSaved` 콜백과 함께 직접 마운트해 재사용(신규 인식 로직 없음). 완료 화면은 실제 `<Dashboard/>` 렌더. `useOnboardingWizardStore`로 열림 제어, 웰컴가이드 CTA를 명시적으로 눌렀을 때만 열림(자동 노출 없음) |

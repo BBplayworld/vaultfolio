@@ -117,6 +117,10 @@ const getMultiplier = (currency?: string) =>
 </div>
 ```
 
+### qa 고정 셀렉터 `data-testid` (#4.34 신설 관행)
+
+preview 무인 점검(Playwright)용. 이슈 ui.md에 목록을 정의하고 그대로 붙인다. 해당 상태가 아니면 요소 자체를 렌더하지 않는다(숨김 금지). 합계 검사가 필요한 금액은 `data-value`에 원 단위 정수 병기. `InlineSelector` 항목은 `options[].testId`, `KpiCard`는 감싸는 `div`에 붙인다(컴포넌트 무수정).
+
 ### localStorage 직접 접근 패턴
 ```typescript
 import { STORAGE_KEYS } from "@/lib/local-storage";
