@@ -79,7 +79,8 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 ## 3. 팀 구성 (`.claude/agents/`)
 | 에이전트 | 역할 |
 |---|---|
-| `planner-designer` | 서비스 기획, UI/UX 정의 (사업 PM과 기획 방향 공동 정의) |
+| `planner-designer` | 서비스 기획·정보 구조·사용자 흐름 (사업 PM과 기획 방향 공동 정의) |
+| `ui-designer` | UI/UX 비주얼·인터랙션 사양(ui.md), 구현 UI 검수(ui-review.md) — developer와 역할 분리 |
 | `business-pm` | 초기 사업 확장, 지표, 마케팅 (기획 디자이너와 기획 방향 공동 정의) |
 | `developer` | 프론트엔드·백엔드 구현, preview 배포 확인 |
 | `qa` | 모든 결과물의 품질 검증 |
@@ -120,7 +121,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 프론트엔드: Next.js(App Router, turbopack) + TypeScript + Tailwind / 백엔드(시세·동기화): Next.js API 라우트 (`src/app/api/`)
 - 설치 `npm ci` · 테스트 `npx vitest run` · 린트 `npm run lint` · 빌드 `npm run build` · 타입 `npx tsc --noEmit`
 - GitHub 조작(이슈·라벨·코멘트·PR)은 `gh` CLI 대신 **GitHub MCP 도구(`mcp__github__*`)** 를 쓴다. 저장소: `BBplayworld/vaultfolio`. MCP를 쓸 수 없으면 **git CLI 전용 모드**(`docs/ops/ORCHESTRATOR.md` "GitHub 접근 방식")로 진행한다.
-- **품질 최종 사인·결함 확정은 qa만** 한다. 대표 알림은 새 과제 방향 확정(기획+사업 합의 완료)·owner-review 진입 때만 (`ORCHESTRATOR.md` "대표 알림"). 운영 이상은 즉시 버그 수정 빠른 경로로 착수.
+- **품질 최종 사인·결함 확정은 qa만** 한다. qa는 매번 `.memory/CHECKLIST.md`(누적 최종 점검 항목) 전체와 **데이터 안전 점검**(사용자 자산 데이터·기록의 하위호환·구버전 혼재·롤백)을 수행한다. 대표 지적·qa FAIL·결함은 cto 회고로 CHECKLIST에 추가해 같은 실수를 반복하지 않는다. 대표 알림은 새 과제 방향 확정(기획+사업 합의 완료)·owner-review 진입 때만 (`ORCHESTRATOR.md` "대표 알림"). 운영 이상은 즉시 버그 수정 빠른 경로로 착수.
 - 수동 실행: 어느 세션에서든 `/secretasset-run` (정기 실행 1회, `weekly` 인자 시 주간 기획).
 
 ## 7. 커밋·PR·소통
@@ -136,6 +137,6 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 
 ## 9. 이슈별 문서 파일명 — 버전 표기
 - **이슈 단위로 생성되는 문서는 폴더·파일명 모두 버전을 앞에 붙인다.** 공통 문서(CLAUDE.md, docs/ops·product, 에이전트 정의, memory의 STATE·DECISIONS 등)는 공통 이름 유지.
-- memory 이슈 폴더: `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/`, 파일: `<버전>-direction.md`, `<버전>-challenge.md`, `<버전>-spec.md`, `<버전>-business.md`, `<버전>-tech-review.md`, `<버전>-ui.md`, `<버전>-dev-notes.md`, `<버전>-qa-report.md`, `<버전>-decision-brief.md`, `<버전>-log.md` (스크린샷 폴더는 `screenshots/`)
+- memory 이슈 폴더: `.memory/issues/<버전>-<GitHub 이슈번호>-<slug>/`, 파일: `<버전>-direction.md`, `<버전>-challenge.md`, `<버전>-spec.md`, `<버전>-business.md`, `<버전>-tech-review.md`, `<버전>-ui.md`, `<버전>-ui-review.md`, `<버전>-dev-notes.md`, `<버전>-qa-report.md`, `<버전>-decision-brief.md`, `<버전>-log.md` (스크린샷 폴더는 `screenshots/`)
 - 시드·이슈 본문: `docs/seed-issues/<버전>-<순번>-<slug>.md`
 - 버전 미배정(planning~design-review) 동안은 `4.xx`로 쓰고, development 진입 시 버전이 정해지면 developer가 폴더·파일명을 `git mv`로 `4.NN`으로 바꾸고 STATE·DECISIONS 경로도 갱신한다.
