@@ -1130,13 +1130,16 @@ export function computeAttributionBetween(
   exchangeHistory: Record<string, { USD: number; JPY: number }>,
   assetData: AssetData,
   rates: { USD: number; JPY: number },
+  // 시작일 당일 현금·대출 흐름 포함 여부. 월 결산처럼 앞 구간의 끝점이 곧 이 구간의 시작점이면 false —
+  // 그날 거래는 앞 구간(끝일 포함)에 이미 잡혀 있어 두 달에 중복 계상된다(qa D6). 기본 true(기존 동작)
+  includeStartDay: boolean = true,
 ): PeriodAttribution | null {
   const prevPoint = buildAttributionPoints([], [prev]).monthlyPoints[0];
   const currPoint: AttributionPoint = "_date" in curr
     ? curr
     : buildAttributionPoints([], [curr as MonthlyAssetSnapshot]).monthlyPoints[0];
   if (!currPoint.fx || !currPoint.fxBase) return null;
-  return resolveAttribution(prevPoint, currPoint, exchangeHistory, assetData, rates, true);
+  return resolveAttribution(prevPoint, currPoint, exchangeHistory, assetData, rates, includeStartDay);
 }
 
 // 실시간 현재값으로 원인분해 끝점(curr) 생성 — saveSnapshots의 enrich와 동일 수식(현재가 기준).

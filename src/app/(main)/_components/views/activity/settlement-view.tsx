@@ -56,7 +56,8 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
       const start = w.start;
       const live = buildLiveAttributionCurr(assetData, exchangeRates, summary);
       const { prevValue, currValue, delta, pct } = settlementDelta(w, summary.netAsset);
-      const attr = start ? computeAttributionBetween(start, w.end ?? live, readExchangeHistory(), assetData, exchangeRates) : null;
+      // 시작점은 앞 달 결산의 끝점이라 시작일 당일 거래는 앞 달에 이미 포함 → 당일 제외(경계일 이중 계상 방지)
+      const attr = start ? computeAttributionBetween(start, w.end ?? live, readExchangeHistory(), assetData, exchangeRates, false) : null;
       // 결정 4-4 예외 판정: 시작·끝 현금이 모두 0이고 구간 안 입출금 기록도 없으면 현금 미등록 사용자
       const endCash = w.end ? w.end.breakdown?.cash ?? 0 : summary.cashValue;
       const hasCashRecords = (assetData.cashTransactions ?? []).some(
