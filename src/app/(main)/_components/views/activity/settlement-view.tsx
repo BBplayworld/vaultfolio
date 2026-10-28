@@ -140,7 +140,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
     <div data-testid="settlement-root" className="flex flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
       {/* 블록 1 — 헤더 */}
       <section className={SECTION}>
-        <SectionHeader icon={CalendarCheck} title={settlementTitle(w)}>
+        <SectionHeader icon={CalendarCheck} title={settlementTitle(w)} titleTestId="settlement-title">
           {w.kind === "in_progress" && (
             <span data-testid="settlement-inprogress" className={GROUP_BADGE}>진행 중</span>
           )}

@@ -21,15 +21,16 @@ const SECTION_TONE = {
 } as const;
 
 // 대주제 섹션 헤더 — 아이콘을 채운 원형 칩에 담아 각 섹션의 시작을 시각적으로 announce 한다.
-export function SectionHeader({ icon: Icon, title, badge, children, tone = "brand" }: {
+export function SectionHeader({ icon: Icon, title, badge, children, tone = "brand", titleTestId }: {
   icon: LucideIcon; title: string; badge?: ReactNode; children?: ReactNode; tone?: keyof typeof SECTION_TONE;
+  titleTestId?: string; // qa 고정 셀렉터(제목 텍스트만 담는 span에 부착)
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className={`flex size-7 items-center justify-center rounded-lg shrink-0 ${SECTION_TONE[tone]}`}>
         <Icon className="size-4" />
       </span>
-      <span className="text-sm sm:text-base font-bold text-foreground">{title}</span>
+      <span data-testid={titleTestId} className="text-sm sm:text-base font-bold text-foreground">{title}</span>
       {badge}
       {children}
     </div>
