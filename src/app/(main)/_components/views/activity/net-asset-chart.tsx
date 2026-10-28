@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import {
   Area, AreaChart,
@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import { DataSourceBadge } from "../data-source-badge";
+import { SECTION } from "../../layout/ui/report-section";
+import { BODY_ENTER, ChangeHero } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
 
@@ -211,8 +213,9 @@ function useRecordStats(snapshotVersion: number): RecordStats | null {
 
 
 
-// view를 넘기면 바깥(자산 변화 기간 탭)이 제어하고 내부 기간 선택기는 숨긴다(#32)
-export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
+// view를 넘기면 바깥(자산 변화 기간 탭)이 제어한다(#32). 이때 자체 제목·"현재 순자산" Hero 대신
+// 자산 변화 공통 Hero(ChangeHero)에 기존 대비 계산값을 그리고, 기간 선택(periodSelector)을 그 안에 둔다(r2)
+export function YearlyNetAssetChart({ view, periodSelector }: { view?: NetAssetView; periodSelector?: ReactNode } = {}) {
   const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -268,10 +271,56 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     axisLine: false,
   };
 
+  // 선택된 뷰의 대비 금액 — 연: 연도별 마지막 2건, 일: 이번 달 일별 스냅샷 마지막 2건
+  let diff: number | null = null;
+  let diffPct: number | null = null;
+  let comparisonLabel = "대비";
+  let heroTitle = "";
+  let heroStart: number | undefined;
+  let heroEnd: number | undefined;
+
+  if (activeView === "yearly") {
+    const lastIdx = allYearlyData.length - 1;
+    const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
+    const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
+    diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+    diffPct = diff !== null && prev && prev.netAsset !== 0
+      ? (diff / Math.abs(prev.netAsset)) * 100
+      : null;
+    comparisonLabel = "전년 대비";
+    heroTitle = prev ? `${prev.year}년 말 대비` : "전년 대비";
+    heroStart = prev?.netAsset;
+    heroEnd = latest?.netAsset;
+  } else if (activeView === "daily") {
+    const lastIdx = dailySnapshots.length - 1;
+    const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
+    const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
+    diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+    diffPct = diff !== null && prev && prev.netAsset !== 0
+      ? (diff / Math.abs(prev.netAsset)) * 100
+      : null;
+    comparisonLabel = "전일 대비";
+    heroTitle = prev ? `${Number(prev.date.slice(5, 7))}/${Number(prev.date.slice(8, 10))} 기록 대비` : "전일 대비";
+    heroStart = prev?.netAsset;
+    heroEnd = latest?.netAsset;
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      <Card className={ASSET_THEME.contentCard}>
-        <CardHeader className={ASSET_THEME.contentPad}>
+    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+      {view && (
+        <ChangeHero
+          title={heroTitle}
+          delta={diff}
+          pct={diffPct}
+          start={heroStart}
+          end={heroEnd}
+          message="기록이 쌓이면 더 보여드려요"
+          contentKey={activeView}
+          period={periodSelector}
+        />
+      )}
+      <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
+        {!view && <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -280,43 +329,17 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
               </div>
               <CardDescription>순자산 추이와 이번 달 일별 변화</CardDescription>
             </div>
-            {!view && (
-              <InlineSelector
-                value={activeView}
-                onChange={setActiveView}
-                options={NET_ASSET_OPTIONS}
-                ariaLabel="기간 선택"
-              />
-            )}
+            <InlineSelector
+              value={activeView}
+              onChange={setActiveView}
+              options={NET_ASSET_OPTIONS}
+              ariaLabel="기간 선택"
+            />
           </div>
-        </CardHeader>
+        </CardHeader>}
         <CardContent className={`space-y-6 ${ASSET_THEME.contentPad}`}>
-          {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액 */}
-          {(() => {
-            let diff: number | null = null;
-            let diffPct: number | null = null;
-            let comparisonLabel = "대비";
-
-            if (activeView === "yearly") {
-              const lastIdx = allYearlyData.length - 1;
-              const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
-              const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
-              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-              diffPct = diff !== null && prev && prev.netAsset !== 0
-                ? (diff / Math.abs(prev.netAsset)) * 100
-                : null;
-              comparisonLabel = "전년 대비";
-            } else if (activeView === "daily") {
-              const lastIdx = dailySnapshots.length - 1;
-              const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
-              const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
-              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-              diffPct = diff !== null && prev && prev.netAsset !== 0
-                ? (diff / Math.abs(prev.netAsset)) * 100
-                : null;
-              comparisonLabel = "전일 대비";
-            }
-
+          {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액(비제어 모드만, 제어 모드는 위 ChangeHero) */}
+          {!view && (() => {
             const netAssetLayout = getPriceLayout(summary.netAsset);
             return (
               <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { TrendingUp, TrendingDown, Minus, Globe, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { DataSourceBadge } from "../data-source-badge";
+import { SECTION } from "../../layout/ui/report-section";
+import { BODY_ENTER, ChangeHero } from "./change-hero";
 
 const PROFIT_SYNC_COMPLETE_MSG = "보유 주식의 기간별 수익 동기화 완료";
 
@@ -63,6 +65,15 @@ const MARKET_OPTIONS = (Object.keys(MARKET_LABELS) as MarketView[]).map((m) => (
   value: m,
   label: MARKET_LABELS[m],
 }));
+
+// 자산 변화 Hero 이름(#32 r2) — 기간은 기준 종가 거리(직전 거래일·5거래일·1개월·1년)라 달력 기간명 대신 길이로 표기
+const HERO_LABELS: Record<ProfitPeriod, string> = {
+  daily: "하루 주식 수익",
+  weekly: "1주 주식 수익",
+  monthly: "1개월 주식 수익",
+  yearly: "1년 주식 수익",
+};
+const fmtMD = (d?: string) => (d ? `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}` : "");
 
 function formatRate(rate: number): string {
   const sign = rate >= 0 ? "+" : "";
@@ -186,8 +197,9 @@ function getExpectedRefDate(period: ProfitPeriod, market: "domestic" | "foreign"
   return toDateStr(subtractCalendarYears(now, 1));
 }
 
-// period를 넘기면 바깥(자산 변화 기간 탭)이 제어하고 내부 기간 선택기는 숨긴다(#32)
-export function ProfitCard({ isActive = true, period: controlledPeriod }: { isActive?: boolean; period?: ProfitPeriod }) {
+// period를 넘기면 바깥(자산 변화 기간 탭)이 제어하고 내부 기간 선택기는 숨긴다(#32).
+// 제어 모드에서는 제목·설명·요약 박스 대신 자산 변화 공통 Hero에 기존 합계를 그린다(r2)
+export function ProfitCard({ isActive = true, period: controlledPeriod, periodSelector }: { isActive?: boolean; period?: ProfitPeriod; periodSelector?: ReactNode }) {
   const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const usdRate = exchangeRates.USD;
   const jpyRate = exchangeRates.JPY;
@@ -353,6 +365,9 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   const isLoading = refData === undefined || (period !== "daily" && dailyData === undefined);
 
   if (mergedStocks.length === 0) {
+    if (controlledPeriod) {
+      return <ChangeHero title={HERO_LABELS[period]} message="현재가가 등록된 주식이 없어요" contentKey={period} period={periodSelector} />;
+    }
     return (
       <Card className={ASSET_THEME.contentCard}>
         <CardHeader className={ASSET_THEME.contentPad}>
@@ -374,6 +389,16 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   // KIS 외부 API 일시 오류 → 항상 통일된 배너 노출 (캐시 히트로 isLoading이 꺼져도
   // 종목별 "기준가 없음"으로 새지 않도록 우선순위를 최상단에 둠)
   if (kisUnavailable) {
+    if (controlledPeriod) {
+      return (
+        <ChangeHero
+          title={HERO_LABELS[period]}
+          message={<>점검 중 · 외부 증권 API 점검으로 정보를 불러올 수 없어요</>}
+          contentKey={period}
+          period={periodSelector}
+        />
+      );
+    }
     return (
       <Card className={ASSET_THEME.contentCard}>
         <CardHeader className={ASSET_THEME.contentPad}>
@@ -514,10 +539,30 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
 
   const TrendIcon = totalProfit > 0 ? TrendingUp : totalProfit < 0 ? TrendingDown : Minus;
 
+  // Hero 시작→끝 — 아래 "기준 종가 비교" 합계와 같은 값(전체=합계, 국내/해외=해당 시장)
+  const heroStart = marketView === "all" ? totalRefValue : marketView === "kr" ? krRefSum : usRefSum;
+  const heroEnd = marketView === "all" ? totalCurrentValue : marketView === "kr" ? krCurrentSum : usCurrentSum;
+  const heroFrom = marketView === "us" ? usRefDate : krRefDate ?? usRefDate;
+  const heroTo = marketView === "us" ? usCompareDate : krCompareDate ?? usCompareDate;
+  const controlled = !!controlledPeriod;
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      <Card className={ASSET_THEME.contentCard}>
-        <CardHeader className={ASSET_THEME.contentPad}>
+    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+      {controlled && (
+        <ChangeHero
+          title={`${marketView === "all" ? "" : `${MARKET_LABELS[marketView]} · `}${HERO_LABELS[period]}`}
+          range={heroFrom && heroTo ? `${fmtMD(heroFrom)} → ${fmtMD(heroTo)}` : undefined}
+          loading={isLoading ? "기준가 조회 중…" : undefined}
+          delta={totalProfit}
+          pct={totalRate}
+          start={heroStart}
+          end={heroEnd}
+          contentKey={`${period}-${marketView}`}
+          period={periodSelector}
+        />
+      )}
+      <Card className={controlled ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
+        {!controlled && <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -526,16 +571,14 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
               </div>
               <CardDescription>보유 주식의 기간별 수익</CardDescription>
             </div>
-            {!controlledPeriod && (
-              <InlineSelector
-                value={period}
-                onChange={setPeriod}
-                options={PERIOD_OPTIONS}
-                ariaLabel="기간 선택"
-              />
-            )}
+            <InlineSelector
+              value={period}
+              onChange={setPeriod}
+              options={PERIOD_OPTIONS}
+              ariaLabel="기간 선택"
+            />
           </div>
-        </CardHeader>
+        </CardHeader>}
         <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
           <Tabs value={period} onValueChange={(v) => setPeriod(v as ProfitPeriod)}>
             {(Object.keys(PERIOD_LABELS) as ProfitPeriod[]).map((p) => (
@@ -551,12 +594,13 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
-                    <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
+                    {/* 제어 모드는 Hero가 합계 스켈레톤·안내를 맡는다 */}
+                    {!controlled && <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
                       <div className="h-4 w-24 rounded bg-muted" />
                       <div className="h-6 w-36 rounded bg-muted" />
-                    </div>
+                    </div>}
                     {mergedStocks.slice(0, 5).map((stock) => (
-                      <div key={stock.id} className="rounded-lg border overflow-hidden">
+                      <div key={stock.id} className={`rounded-lg overflow-hidden ${controlled ? "bg-muted/20" : "border"}`}>
                         <div className="flex items-center justify-between px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <span className="inline-block w-2 h-2 rounded-full bg-muted" />
@@ -577,15 +621,15 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                         </div>
                       </div>
                     ))}
-                    <p className="text-sm text-muted-foreground text-center py-1">
+                    {!controlled && <p className="text-sm text-muted-foreground text-center py-1">
                       {PERIOD_LABELS[p]} 기준가 조회 중 ({mergedStocks.length}개 종목)...
-                    </p>
+                    </p>}
                   </div>
                 ) : (
                   <>
-                    {/* 전체 요약 */}
-                    <div className="rounded-lg bg-muted/20 px-4 py-3 space-y-2">
-                      <div className="flex items-center justify-between gap-4">
+                    {/* 전체 요약 — 제어 모드에서는 Hero가 대신하고 기준 종가 비교만 남긴다 */}
+                    <div className={controlled ? "" : "rounded-lg bg-muted/20 px-4 py-3 space-y-2"}>
+                      {!controlled && <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                           <TrendIcon className={`size-5 ${getProfitLossColor(totalProfit)}`} />
                           <div>
@@ -601,7 +645,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                             {formatRate(totalRate)}
                           </p>
                         </div>
-                      </div>
+                      </div>}
                       {(() => {
                         const isAll = marketView === "all";
                         const isKr = marketView === "kr";
@@ -614,7 +658,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                         const leftSum = isAll ? totalRefValue : isKr ? krRefSum : usRefSum;
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
-                          <div className="pt-1.5 border-t border-border/50 space-y-1.5">
+                          <div className={controlled ? "space-y-1.5" : "pt-1.5 border-t border-border/50 space-y-1.5"}>
                             {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
                             <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
                               <CollapsibleTrigger asChild>
