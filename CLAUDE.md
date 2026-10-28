@@ -102,10 +102,13 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 제품 원칙(PRINCIPLES.md)을 바꿔야만 진행 가능하면 `status:needs-human` + 이유. 그 밖의 불확실성은 cto 판정으로 팀 안에서 해결.
 
 ## 5. 브랜치·버전과 Vercel preview
-- **버전 = 브랜치 = 서비스 표시 버전.** 이슈당 브랜치 하나: **`issue-4.NN`** (기존 관행 유지, 서비스에 4.NN으로 표시됨).
-  - 버전 배정: **development 진입 시** developer가 기존 브랜치·`.claude/specs/`·커밋의 가장 큰 4.NN + 0.01로 배정 (planning 반려 시 번호 공백 방지)
-  - 배정 후 GitHub 이슈 제목 앞에 `[4.NN]`, `.memory/STATE.md` 진행 표와 DECISIONS에 `#<이슈번호> = 4.NN` 매핑 기록
-  - QA 수정도 같은 브랜치에 push한다.
+- **버전 = 브랜치 = 서비스 표시 버전 = 릴리스 1건.** 버전은 작업마다가 아니라 **묶음(릴리스) 단위**로만 올린다. 브랜치 **`issue-4.NN`** 하나에 관련 GitHub 이슈 여러 개를 함께 담는다 (기존 관행: 4.29에 여러 기능 포함).
+  - **열린 릴리스는 항상 1개.** 머지되지 않은 `issue-4.NN`이 있으면 development에 들어가는 모든 이슈(같은 흐름의 기능·개선·버그·정리)는 **그 브랜치·그 PR에 추가**한다. 새 버전을 만들지 않는다.
+  - 새 버전 배정은 열린 릴리스가 없을 때만: developer가 기존 브랜치·`.claude/specs/`·커밋의 가장 큰 4.NN + 0.01로 배정
+  - QA 수정, 교차 검토 반영, 작은 후속 변경은 전부 같은 브랜치에 push (새 브랜치·새 버전 금지)
+  - 매핑 기록: GitHub 이슈 제목 앞 `[4.NN]`, `.memory/STATE.md` "열린 릴리스" 절과 DECISIONS에 `4.NN = #a, #b…`
+  - 릴리스 PR은 1개: 본문에 포함 이슈마다 `Closes #<번호>`. 반영 결정(owner-review)도 릴리스 단위 1회 — 포함된 모든 이슈가 qa PASS일 때
+  - 예외: 운영 이상 긴급 수정은 열린 릴리스가 있으면 거기에 추가, 없을 때만 다음 버전
 - Vercel이 브랜치 push마다 preview를 배포한다. 같은 브랜치는 고정 URL을 가진다 (**브랜치명의 점(.)은 빠진다**):
   `https://secretasset-git-issue-4NN-bbplayworlds-projects.vercel.app` (예: `issue-4.34` → `issue-434`)
 - 최신 배포 상태는 GitHub MCP로 PR의 커밋 상태·체크(`pull_request_read` / `get_commit`)에서 Vercel 항목의 URL을 확인한다.
@@ -121,7 +124,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 수동 실행: 어느 세션에서든 `/secretasset-run` (정기 실행 1회, `weekly` 인자 시 주간 기획).
 
 ## 7. 커밋·PR·소통
-- 커밋: `[#4.NN] <무엇을 왜>` (기존 관행), PR 본문 첫 줄 `Closes #<GitHub 이슈번호>`
+- 커밋: `[#4.NN] <무엇을 왜>` (기존 관행), 릴리스 PR 본문에 포함 이슈별 `Closes #<GitHub 이슈번호>`
 - 모든 산출물 한국어, 문서는 1~2쪽 이내
 - 단계 완료 시 이슈 코멘트 1개: `[역할] 결과 / 산출물 경로 / 다음 단계`
 

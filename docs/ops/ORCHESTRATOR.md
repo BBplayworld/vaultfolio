@@ -16,7 +16,7 @@
 | 알림 | 언제 | 제목 |
 |---|---|---|
 | 🆕 새 과제 방향 확정 | 이슈의 기획+사업 방향 정의(direction.md 공동 합의)가 완료됐을 때. 운영 이상 버그는 방향 정의가 없으므로 qa 확정 직후 | `[시크릿에셋] 새 과제: #<번호> <제목>` + 유형·합의된 방향 2줄 |
-| 🔔 대표 결정 필요 | owner-review 진입(최종 정리본 완성) | `[시크릿에셋] 반영 결정 필요: [4.NN] <제목>` + 권고 한 줄 + PR·decision-brief 링크 |
+| 🔔 대표 결정 필요 | 릴리스 owner-review 진입(포함 이슈 전부 qa PASS, 최종 정리본 완성) | `[시크릿에셋] 반영 결정 필요: v4.NN` + 포함 이슈 목록 + 권고 한 줄 + PR·decision-brief 링크 |
 - 전달: `PushNotification`(가능 시) + 실행 최종 요약 **첫 줄**에 같은 문구. owner-review는 이슈 코멘트 `@BBplayworld` 멘션도 함께
 - 그 밖의 단계 이동·문서 작성·검토 왕복은 알리지 않는다. 알림이 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>`
 **대표에게 QA·화면 확인을 요청하지 않는다.**
@@ -73,7 +73,7 @@
 2. **이상 시 즉시 수정 착수 (빠른 경로)** — 사람 판단을 기다리지 않는다
    - `type:bug` + `priority:p0` 이슈 생성
    - `qa`가 재현·확정 → 원인 파일 특정 → "🆕 새 과제 방향 확정" 알림
-   - planning·design-review 생략: `developer`가 같은 실행에서 바로 `issue-4.NN` 수정 → PR → preview
+   - planning·design-review 생략: `developer`가 같은 실행에서 바로 수정 — 열린 릴리스 `issue-4.NN`이 있으면 거기에, 없으면 다음 버전 → PR → preview
    - `qa` 검증 PASS → `cto` decision-brief → owner-review ("🔔 대표 결정 필요"). 수정 범위는 버그 원인에 한정
    - 확정 결함이 아니면(재현 안 됨) 이슈를 닫고 LEARNINGS 기록
    - 롤백이 더 빠르면 decision-brief에 Vercel Instant Rollback 권고를 함께 적는다
