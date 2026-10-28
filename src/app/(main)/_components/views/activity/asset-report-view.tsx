@@ -1,22 +1,21 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Trophy, Star, TrendingUp, Landmark, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
+import { Trophy, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { attachCauseDates, buildAssetReport, buildLiveAttributionCurr, computeFxExposure, computePeriodAttribution, formatAttributionDate, getAttributionItems, getAttributionRecords, groupAttributionItems, sortCausesByDate, type AttributionPeriod } from "@/lib/report/asset-report";
+import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
-import { readExchangeHistory, fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/finance/profit-utils";
+import { fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/finance/profit-utils";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import { InlineSelector } from "../../layout/ui/inline-selector";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { groupStocksByTicker, mergeStockGroup } from "../detail/asset-detail-tabs";
@@ -25,7 +24,6 @@ import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
-import { AttributionRecordList } from "../attribution-records";
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
@@ -278,23 +276,6 @@ export function AssetReportView() {
     return null;
   }, [gradeSettled, dailySnapshots, monthlySnapshots, grade, todayStr]);
 
-  // ── 원인분해 (기간 선택) ──
-  const [attrPeriod, setAttrPeriod] = useState<AttributionPeriod>("1m");
-  const attribution = useMemo(
-    () => computePeriodAttribution(
-      dailySnapshots, monthlySnapshots, readExchangeHistory(), attrPeriod, assetData, exchangeRates,
-      // 끝점을 실시간 값으로 — 세션 중 기록한 자산 변경이 다음 스냅샷 저장 전까지 누락되던 문제,
-      // 일요일에 curr이 토요일에 고정돼 당일 거래가 범위 밖으로 밀리던 문제 해소(홈 헤더와 동일 기준).
-      buildLiveAttributionCurr(assetData, exchangeRates, summary),
-    ),
-    [dailySnapshots, monthlySnapshots, attrPeriod, assetData, exchangeRates, summary],
-  );
-  // 구간 내 반영 기록(입출금·매매·대출) — 항목별 날짜 부착·기록 내역 펼침용(S-4.33)
-  const attributionRecords = useMemo(
-    () => (attribution ? getAttributionRecords(attribution, assetData, exchangeRates) : []),
-    [attribution, assetData, exchangeRates],
-  );
-
   const getPromptContext = (): AssetPromptContext => ({
     data: assetData,
     summary,
@@ -376,7 +357,7 @@ export function AssetReportView() {
   // 축별 액션 링크 (관련 화면 이동)
   const axisNavigate = (key: AxisKey) => {
     if (key === "diversification") navigate({ type: "detail", tab: "stocks-xray" });
-    else if (key === "growth") navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", source: "menu" } });
+    else if (key === "growth") navigate({ type: "activity", tab: "change", init: { scope: "all", period: "year", source: "menu" } });
     else if (key === "habit") navigate({ type: "detail", tab: "cash" });
   };
   const axisHasLink = (key: AxisKey) =>
@@ -683,120 +664,6 @@ export function AssetReportView() {
                   );
                 })}
               </div>
-            </div>
-
-            {/* ── 순자산 변화, 왜? (기간별 주요 원인 1~2가지) ── */}
-            <div className={SECTION}>
-              <div className="flex items-center justify-between gap-2">
-                <SectionHeader icon={Landmark} title="순자산 변화, 왜?" tone="important">
-                  <InfoHint summary="순자산 변화를 자산별 시세·환율·매수/매도·소득·대출 원인으로 나눠 큰 것만 보여드려요.">
-                    <p>선택 기간의 순자산 변화를 <span className="font-semibold text-foreground">주식·코인·부동산 시세 · 환율 · 자산별 매수/매도 · 소득·저축 유입 · 대출 증감</span>으로 나눠 영향이 큰 것만 표시합니다.</p>
-                    <p><span className="font-semibold text-foreground">주식 매수·매도</span>는 기록한 <span className="font-semibold text-foreground">주식 거래내역</span>에서, <span className="font-semibold text-foreground">소득·저축 유입</span>은 <span className="font-semibold text-foreground">현금 입출금 내역</span>에서 나옵니다(과거 소급 기록 포함). 거래내역 없이 수량·평단을 직접 수정한 분은 같은 자산의 매수·매도에 합쳐집니다.</p>
-                    <p><span className="font-semibold text-foreground">&quot;예측&quot;</span>은 과거 기록에 원인 분해용 상세(자산군별 평가액·당시 환율)가 없어, 현재 자산의 매수일·대출일과 환율 이력으로 추정한 값입니다. 이때는 시세가 자산별로 나뉘지 않고 <span className="font-semibold text-foreground">보유자산 시세</span>로 통합 표시됩니다. <span className="font-semibold text-foreground">&quot;일부 예측&quot;</span>은 기간 앞부분만 상세가 없어 그 구간만 추정하고, 상세가 쌓인 이후 구간은 실측으로 정밀 분해해 합친 것입니다 — 항목 옆 개별 &quot;일부 예측&quot; 배지는 그 줄의 금액에 추정치가 섞여 있다는 뜻입니다. 지금부터 쌓이는 기록은 실측으로 정밀 분해됩니다.</p>
-                    <p>예측 구간도 <span className="font-semibold text-foreground">순자산 변화 자체(맨 위 금액)는 실제 스냅샷 기준 값</span>이라 정확합니다 — 예측은 그 변화를 시세·환율·저축 등 원인으로 나누는 분해 과정에만 적용됩니다.</p>
-                  </InfoHint>
-                </SectionHeader>
-                <InlineSelector
-                  value={attrPeriod}
-                  onChange={setAttrPeriod}
-                  options={[
-                    { value: "1w", label: "1주" },
-                    { value: "1m", label: "1개월" },
-                    { value: "3m", label: "3개월" },
-                    { value: "ytd", label: "올해" },
-                  ]}
-                  size="sm"
-                  ariaLabel="원인분해 기간"
-                />
-              </div>
-              {attribution ? (
-                <div className="space-y-3">
-                  {/* "올해" 시작일 표시 보정 — 계산 자체(엔진)는 기간별 특수 취급이 없고, 1/1 정각
-                      스냅샷이 없으면 그 이하 중 가장 최근 스냅샷(대개 작년 12/31)을 기준값으로 쓴다
-                      (금액상 정확 — 전년말 종가=금년초 시가). 다만 fromDate를 그대로 찍으면 "올해"인데
-                      "작년 12/31부터"로 보여 혼란을 준다 — ytd이고 실제 fromDate가 그 해 1/1 이하일
-                      때만(=정상 폴백) 라벨을 1/1로 보정한다. fromDate가 1/1보다 나중인 경우(연중
-                      가입 등 1/1 이전 기록이 아예 없는 엣지 케이스, asset-report.test.ts:903)는
-                      실제 시작일이 사라지면 안 되므로 보정하지 않는다. */}
-                  {(() => {
-                    const yearStart = `${attribution.toDate.slice(0, 4)}-01-01`;
-                    const displayFromDate =
-                      attrPeriod === "ytd" && attribution.fromDate <= yearStart ? yearStart : attribution.fromDate;
-                    return (
-                      <p className={`${CAPTION} text-pretty tabular-nums`}>
-                        {displayFromDate} → {attribution.toDate} · 순자산 <Signed value={attribution.deltaNet} />
-                        {attribution.estimated && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>}
-                        {!attribution.estimated && attribution.estimatedUntil && (
-                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">일부 예측</span>
-                        )}
-                      </p>
-                    );
-                  })()}
-                  {/* 주 원인과 나머지 원인을 같은 목록으로 — 한 덩어리로 접으면 환율·대출이 뭉쳐 보인다.
-                      홈 헤더와 동일한 항목 집합·잔차 처리를 쓰도록 getAttributionItems 하나만 거친다
-                      (뷰가 잔차를 각자 계산하면 임계값이 갈려 두 화면 합계가 어긋난다). 자산 타입이
-                      같은 원인(시세·매수·매도, 입금·직접수정)은 groupAttributionItems로 박스 하나에 묶는다. */}
-                  <div className="space-y-2">
-                    {/* 그룹 순서는 유지하고 그룹 내부만 시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(S-4.33) */}
-                    {groupAttributionItems(sortCausesByDate(attachCauseDates(getAttributionItems(attribution), attributionRecords))).map((group) => {
-                      const row = (cause: ReturnType<typeof getAttributionItems>[number]) => (
-                        <div key={cause.key} className="flex items-center justify-between gap-3">
-                          <p className="text-sm sm:text-[15px] font-medium text-foreground text-pretty break-keep">
-                            {cause.sentence}
-                            {cause.dateLabel && (
-                              <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground align-middle">{cause.dateLabel}</span>
-                            )}
-                            {/* 구간 전체가 예측(attribution.estimated)이면 위 "예측" 배지로 이미 충분 —
-                                여기서는 실측·예측이 한 줄에 섞인 항목에만 "일부 예측"을 개별로 붙인다 */}
-                            {!attribution.estimated && cause.estimated && (
-                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">일부 예측</span>
-                            )}
-                          </p>
-                          <Signed value={Math.round(cause.amount)} className="shrink-0" />
-                        </div>
-                      );
-                      if (group.key === null) {
-                        return (
-                          <div key={group.items[0].key} className="rounded-lg bg-muted/30 px-3 py-2.5">
-                            {row(group.items[0])}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={group.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-2">
-                          <span className={GROUP_BADGE}>{group.label}</span>
-                          <div className="divide-y divide-border/30">
-                            {group.items.map((cause) => (
-                              <div key={cause.key} className="py-2 first:pt-0 last:pb-0">{row(cause)}</div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <AttributionRecordList records={attributionRecords} />
-                  {attribution.estimated && (
-                    <p className={`${CAPTION} text-pretty`}>
-                      과거 구간은 현재 자산의 매수일·대출일 기반 예측치예요. 지금부터 쌓이는 기록은 실측으로 분해됩니다.
-                    </p>
-                  )}
-                  {!attribution.estimated && attribution.estimatedUntil && (
-                    <p className={`${CAPTION} text-pretty`}>
-                      {formatAttributionDate(attribution.estimatedUntil)} 이전은 추정치, 이후는 실측이에요.
-                    </p>
-                  )}
-                  {attribution.cashRoundTrip && (
-                    <p className={`${CAPTION} text-pretty`}>
-                      {formatAttributionDate(attribution.cashRoundTrip.peakDate)}에 최대 {Math.abs(Math.round(attribution.cashRoundTrip.peakAmount / 10000)).toLocaleString()}만원 변동 후 복귀돼 순변화엔 반영 안 됐어요.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="py-6 text-center space-y-1">
-                  <p className={CAPTION}>이 기간을 비교할 기록이 아직 없습니다.</p>
-                  <p className={`${CAPTION} text-pretty`}>접속할 때마다 자산 기록이 쌓여 변화 원인을 알려드립니다.</p>
-                </div>
-              )}
             </div>
 
             {/* ── AI 평가 프롬프트 ── */}
