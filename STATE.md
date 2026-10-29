@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-29 (cto·COO 최종 점검 @90f1ee5 전 항목 PASS → v4.34 decision-brief 확정)
+마지막 갱신: 2026-10-29 (cto D. 자율 과제 발굴 선정: 백업·이미지 저장 iOS 신뢰, 후보 순위 갱신)
 
 ## 대표 결정 대기
 - v4.34 (PR #37, @90f1ee5): qa 최종 PASS·UI 승인·cto/COO 반영 권고 완료 — owner-review 전환·알림은 오케스트레이터(Vercel 배포 확인 후)
@@ -29,20 +29,23 @@
 - 현재 테스트: vitest 30파일 411건 통과 (2026-10-29, issue-4.34 e862ea1)
 - 가장 큰 버전: 4.34(#31) → 다음 배정 4.35
 
-## 후보 목록 (주간 기획 탈락·대기)
-- [type:improvement, risk:high 스키마] 새로 등록한 자산·계좌를 결산 원인에서 분리("새로 등록") — 자산·현금 계좌 등록일 필드 필요(스키마 변경·마이그레이션). v4.34 8월 기록 안 된 변화의 98%가 신규 계좌 잔액(qa·COO 2026-10-29)
-- [UI, ui-designer 2026-10-29] 공용 `InfoHint` children(상세 본문) 래퍼에도 `break-keep` — 성적표 "투입 대비 성과" 상세가 음절 단위로 끊김(기존 동작)
-- [UI, ui-designer 2026-10-29] 공용 `InfoHint` 히트영역 전역 개선(현재 14~16px → 보이지 않는 확장으로 40px, 행 간격 32px 이웃 겹침 점검)
-- [type:improvement, COO 2026-10-29] 연 탭 "대출" 값이 예측 구간 시세 잔차를 상한(|U|)으로 받아 실행 시각에 따라 변동(실데이터 −19~−38) — 예측 구간 시세 잔차 처리 재검토
-- [UI, ui-designer 2026-10-28] 연 차트 375에서 연도 수가 많으면 첫 점 라벨이 y축 눈금 라벨과 겹치고 마지막 점 라벨이 오른쪽 끝에서 잘림(기존 차트, v4.34 범위 밖)
-- [type:bug, C19] 백업 JSON 다운로드·공유 PNG 저장이 blob 방식 — iOS 서드파티 브라우저 미동작 가능(qa 2026-10-28, 기존 코드)
-- [UI] 연 빈 상태 문구 "위의 버튼을 눌러…"가 버튼 없는 화면과 불일치(ui-designer)
-- [type:bug, qa 확정 2026-10-28] FAB "과거 순자산" 50ms 고정 대기 — 화면 마운트 전 이벤트 유실 시 입력창 미오픈 가능(`floating-add-button.tsx:111`, main 기존 코드). #32 범위 밖, 다음 릴리스 후보
-- [다음 릴리스 첫 후보] 홈 Hero 원인 어휘를 결산 5항목으로 통일(반영 기록 라벨·S-4.33 날짜 라벨·표시 단위 함께) — #32 r2 cto 판정
-- [type:simplify] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리, InlineSelector 다크 선택 칸 전역 수정
-- [type:improvement] 동기화 pull 월 병합의 같은 달 충돌을 `date` 늦은 쪽 우선으로(병합 자체는 v4.34 포함, cto 2026-10-28)
-- [type:simplify] 홈 헤더 원인분해의 "주식 매수/매도·대출 상환" 라벨 정리 — LEARNINGS(앱 안 이동은 원인 아님)와 어긋난 기존 부채. #32 v1에서 분리 (cto, 2026-10-27)
-- [type:bug, qa 확정 2026-10-27] 월 스냅샷이 연 경계(1월 첫 저장)에 전년분 삭제 (`src/contexts/asset-data-context.tsx:770`) — 운영 사용자에게 이미 발생(2025→2026 전년분 소실, 복구 불가). #32 선행 조건으로 13개월 롤링 보존 처리 예정. 근거 issues/4.34-32-monthly-settlement/qa-report.md
+## 후보 목록 (주간 기획·자율 발굴 탈락·대기, cto 2026-10-29 순위)
+- **[선정 2026-10-29] 백업 JSON·공유 PNG 저장 iOS 신뢰(D2+B2)** — `issues/4.xx-new-backup-ios-trust/4.xx-challenge.md` 통과. qa 결함 확정 후 이슈 생성·planning
+- [2위, type:bug, 결함 의심 D1] 거래·대출 입력 "오늘"이 UTC(KST 00~09시 전날) — `trade-input.tsx:107,192,600`, `loan-tx-input.tsx:49,60,209`. 결산 짝짓기·월 귀속 어긋남. qa 확정 필요. 탈락 사유: 원인·화면이 선정 과제와 달라 다음 순번. B3와 "결산 입력 정확도"로 묶음 후보
+- [3위, type:feature P1] 결산 창 열리면 홈 팁 1회 안내(home-tip `pickHomeTip`, 새 저장 키 없음) — v4.34 반영 결정 전이라 보류, 머지 후 1순위
+- [4위, type:bug, qa 확정 2026-10-28 B3] FAB "과거 순자산" 50ms 고정 대기 — 입력창 미오픈 가능(`floating-add-button.tsx:111`). 연 탭 시작점 입력 경로
+- [5위, type:bug(UI) U2] 배당 종목 표 375 붕괴(금액·헤더 음절 끊김, 정보 텍스트 하늘색·전방위 테두리) — M
+- [6위, type:improvement B1+U1 묶음] 홈 Hero 원인 어휘를 결산 항목으로 통일 + "주식 매수/매도·대출 상환" 라벨 정리 + 375 금액 줄바꿈(break-keep). 같은 화면이라 한 과제로
+- [type:improvement U3] 2차 필터 칩 32px·홈 "변동 원인 보기" 30px → 40px (InlineSelector 공용), InlineSelector 다크 선택 칸 전역 수정과 묶음
+- [type:improvement P3] 백업 내보내기(더보기)·가져오기(설정) 분산 → 설정 "데이터" 통합 — 선정 과제에서 제외(화면 재배치는 별도)
+- [type:simplify D3] 미사용 엔진 함수 computePeriodAttribution·groupAttributionItems 정리 — 사용자 영향 0
+- [탈락 P2] "Plus" 배지 4곳 제거 — 원칙 위반 아님(needs-human 불필요), 대표 의도 표기 가능성·오해 근거 없음 → 현행 유지
+- [type:improvement, risk:high 스키마] 새로 등록한 자산·계좌를 결산 원인에서 분리("새로 등록") — 등록일 필드 필요(스키마 변경·마이그레이션). v4.34 8월 기록 안 된 변화의 98%가 신규 계좌 잔액
+- [UI] 공용 `InfoHint` 히트영역 40px 확장 + children 래퍼 `break-keep` (ui-designer 2026-10-29)
+- [type:improvement, COO] 연 탭 "대출" 값이 예측 구간 시세 잔차를 상한으로 받아 실행 시각에 따라 변동 — 예측 구간 시세 잔차 처리 재검토
+- [UI] 연 차트 375 라벨 겹침·잘림(기존 차트), 연 빈 상태 문구 "위의 버튼을 눌러…" 불일치
+- [type:improvement] 동기화 pull 월 병합의 같은 달 충돌을 `date` 늦은 쪽 우선으로
+- (제거) 월 스냅샷 연 경계 삭제 — v4.34(13개월 보존)로 해소
 
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)

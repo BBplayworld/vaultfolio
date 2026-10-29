@@ -73,3 +73,4 @@
 | 2026-10-29 | v4.34 | COO 재점검 @90f1ee5: 5항목 + C24 전부 PASS(8월 기록 안 된 변화 설명을 사용자 행동 예시 문구로 교체 반영). 최종 decision-brief @90f1ee5: 권고 반영, 위험 high(최근 증분 low), 롤백 2026-12-31까지 PR revert / 이후 UI만 revert·기록 보존 코드 유지 | cto(COO) | 포함 이슈 전부 qa PASS·UI 승인 |
 | 2026-10-29 | v4.34 | 최종 커밋 90f1ee5 기준 qa 최종 PASS·UI 승인·cto(COO) 사용자 관점 점검 PASS·Vercel preview 배포 확인 → #32 status:owner-review, 반영 결정 요청(이슈별 한 줄 요약 포함, Push + PR #37 @멘션) | qa·ui-designer·cto | 반영 결정 재요청 |
 | 2026-10-29 | v4.34 | 대표 승인 → PR #37 main 머지(b44168f, squash). #31·#32 status:done. 운영 스모크는 qa 수행 | 대표 | 라이브 반영 |
+| 2026-10-29 | 자율 발굴 | 후보 12건 중 "백업 JSON·공유 PNG 저장 iOS 신뢰(D2+B2)" 선정·반대 검토 통과(P3 제외, 사용자 데이터 서버 경유 금지, 실패 시 백업함 기록 금지). D1·D2는 qa 결함 확정 필요. P2 Plus 배지는 원칙 변경 아님 → 팀 판정 현행 유지. 차순위 D1 → P1(v4.34 머지 후) → B3 | cto(COO) | 데이터 안전·대표 사용 환경 |
