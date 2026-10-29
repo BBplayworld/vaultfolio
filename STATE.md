@@ -9,6 +9,8 @@
 - 없음
 
 ## 진행 중
+- #45 백업 JSON·공유 이미지 저장 iOS 신뢰 (type:bug p1) — planning: direction 합의·challenge 통과 → 다음 spec.md·business.md
+- #46 주식·대출 입력 날짜 KST (type:bug p1) — planning: direction 합의 → 다음 cto 반대 검토
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #31 시드0 preview 안전장치·데모 데이터 | 4.34 | owner-review | 대표 | qa PASS, 릴리스 v4.34 반영 결정 대기 |
