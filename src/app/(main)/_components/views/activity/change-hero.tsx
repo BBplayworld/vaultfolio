@@ -280,7 +280,7 @@ const CAUSE_TESTID: Record<string, string> = {
 const CAUSE_HINT: Partial<Record<string, string>> = {
   income: "입금에서 출금을 뺀 금액이에요",
   loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
-  unrecorded: "시세·환율·입출금·대출로 설명되지 않고 자산 잔액만 바뀐 금액만 남아요",
+  unrecorded: "시세·환율·입출금·대출로 설명되지 않고, 자산 잔액만 바뀐 금액이에요",
 };
 const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
