@@ -9,7 +9,7 @@
 - 없음
 
 ## 다음 정기 실행 지시
-- [선정 2026-10-29] 첫 화면 "가치 먼저" 재배열 + OG 최소 동승 — `issues/4.xx-new-welcome-value-first/4.xx-challenge.md` 통과(축소 반영). 이슈 생성(type:improvement, p1, status:planning) 후 planning ① 방향 정의
+- [선정 2026-10-29] 첫 화면 "가치 먼저" 재배열 + OG 최소 동승 — `issues/4.xx-48-welcome-value-first/4.xx-challenge.md` 통과(축소 반영). 이슈 생성(type:improvement, p1, status:planning) 후 planning ① 방향 정의
 - 자율 과제 기준: 월 활성 사용자 100명 직접 기여 서비스 과제 우선, 소규모 신뢰성 수정은 p2 동승(대표 2026-10-29)
 
 ## 진행 중
@@ -35,7 +35,7 @@
 - GA4 데이터 보존 기간(2개월/14개월) — 첫 화면 재배열 지표 판독 기한 결정. 에이전트 GA 조회 수단 없음(판독 한계)
 
 ## 후보 목록 (자율 발굴 탈락·대기, cto 2026-10-29 2차 순위 — 서비스 성장 우선)
-- **[선정 2026-10-29 2차] E1 첫 화면 가치 우선 재배열 + G2 OG 이미지·twitter 카드 최소 동승** — `issues/4.xx-new-welcome-value-first/4.xx-challenge.md`
+- **[선정 2026-10-29 2차] E1 첫 화면 가치 우선 재배열 + G2 OG 이미지·twitter 카드 최소 동승** — `issues/4.xx-48-welcome-value-first/4.xx-challenge.md`
 - [2위, type:feature] E3 결산 창 홈 팁(home-tip `pickHomeTip`) + 첫 달 사용자 "다음 결산 N월 말" + 기존 .ics 연결 — 재방문·S. 화면·지표가 달라 묶지 않음. 다음 자율 과제 1순위(같은 릴리스 별도 이슈 가능)
 - [3위, type:feature] G3 #33 투자 유형 온보딩 재개 — 원칙 4장 2순위와 같은 방향, 팀 판정 가능. E1 히어로 주 버튼 자리에 얹는 후속, E1 지표 확인 후
 - [4위, type:feature] E2/G1 "예시로 먼저 둘러보기" 체험 모드(#31 데모 주입 재사용) — M·위험 medium+(실데이터 격리). E1 효과 확인 후. 새 URL 금지 조건 유지
