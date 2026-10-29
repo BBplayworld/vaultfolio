@@ -72,3 +72,4 @@
 | 2026-10-29 | v4.34 | COO 사용자 관점 점검 @dafda96: 1·3·4·5 PASS, 2 수정 필요(8월 기록 안 된 변화 +207이 그 달 최대 항목인데 설명 문구로 "새로 등록한 계좌" 연결 불가). decision-brief 미확정, #32 development로 문구 1줄 수정(계산 변경 없음). 연 탭 대출 값 시세 변동은 알려진 한계. CHECKLIST C24(COO) 추가 | cto(COO) | 사용자 납득 |
 | 2026-10-29 | v4.34 | COO 재점검 @90f1ee5: 5항목 + C24 전부 PASS(8월 기록 안 된 변화 설명을 사용자 행동 예시 문구로 교체 반영). 최종 decision-brief @90f1ee5: 권고 반영, 위험 high(최근 증분 low), 롤백 2026-12-31까지 PR revert / 이후 UI만 revert·기록 보존 코드 유지 | cto(COO) | 포함 이슈 전부 qa PASS·UI 승인 |
 | 2026-10-29 | v4.34 | 최종 커밋 90f1ee5 기준 qa 최종 PASS·UI 승인·cto(COO) 사용자 관점 점검 PASS·Vercel preview 배포 확인 → #32 status:owner-review, 반영 결정 요청(이슈별 한 줄 요약 포함, Push + PR #37 @멘션) | qa·ui-designer·cto | 반영 결정 재요청 |
+| 2026-10-29 | v4.34 | 대표 승인 → PR #37 main 머지(b44168f, squash). #31·#32 status:done. 운영 스모크는 qa 수행 | 대표 | 라이브 반영 |
