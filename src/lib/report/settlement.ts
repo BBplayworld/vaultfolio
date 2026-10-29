@@ -177,7 +177,7 @@ export function settlementGaResult(w: SettlementWindow): "settled" | "in_progres
 
 // ── 표시 매핑: 엔진 키 15종 → 결산 5항목 ──────────────────────────────
 
-export type SettlementCauseKey = "price" | "valuation" | "fx" | "income" | "unrecorded";
+export type SettlementCauseKey = "price" | "valuation" | "fx" | "income" | "loan" | "unrecorded";
 
 export interface SettlementCause {
   key: SettlementCauseKey;
@@ -265,8 +265,48 @@ export const SETTLEMENT_CAUSE_LABEL: Record<SettlementCauseKey, string> = {
   valuation: "평가 갱신",
   fx: "환율 효과",
   income: "순유입",
+  loan: "대출",
   unrecorded: "기록 안 된 변화",
 };
+
+// ── 대출 항목(대표 수정 2026-10-29) — 기록 안 된 변화 U에서 대출 이자·대출 순증 사용분만 떼어낸다 ──
+
+/** 구간 이자 추정 = Σ(현재 잔액 × 금리 ÷ 100) × 일수 ÷ 365 — 잔액·금리 > 0 대출 전체(성적표 annualInterest와 같은 식) */
+export function estimateLoanInterest(loans: readonly { balance: number; interestRate: number }[], days: number): number {
+  if (!(days > 0)) return 0;
+  const annual = loans.reduce((s, l) => s + (l.balance > 0 && l.interestRate > 0 ? (l.balance * l.interestRate) / 100 : 0), 0);
+  return (annual * days) / 365;
+}
+
+/**
+ * 기록 안 된 변화 U가 음수일 때만, |U|를 넘지 않게 "대출" = −min(|U|, 대출 순증 B + 이자 추정 I)를 떼어낸다.
+ * 대출과 남은 기록 안 된 변화는 같은 부호이거나 0 — 큰 +/−가 나란히 나오지 않는다. 합 = Δ순자산 불변.
+ * 예측 표시: 이자 몫이 금액에 들어가면 true, B 몫만이면 엔진 debt의 estimated를 따른다(B를 먼저 채운다).
+ */
+export function splitLoanCause(
+  mapped: SettlementCauses,
+  { interest, debtIncrease, debtEstimated = false, hasCashRecords = false }: { interest: number; debtIncrease: number; debtEstimated?: boolean; hasCashRecords?: boolean },
+): SettlementCauses {
+  const others = mapped.causes.filter((c) => c.key !== "unrecorded");
+  const prevU = mapped.causes.find((c) => c.key === "unrecorded");
+  const u = mapped.deltaNet - others.reduce((s, c) => s + c.amount, 0);
+  const b = Math.max(0, debtIncrease);
+  const i = Math.max(0, interest);
+  const take = Math.round(Math.min(Math.max(0, -u), b + i));
+  const loan = -take;
+  const rest = u - loan;
+  const estimated = (take > b && i > 0) || (Math.min(take, b) > 0 && debtEstimated);
+  const causes: SettlementCause[] = [
+    ...others,
+    ...(Math.abs(loan) >= NOISE_WON ? [{ key: "loan" as const, amount: loan, estimated }] : []),
+    ...(Math.abs(rest) >= NOISE_WON ? [{ key: "unrecorded" as const, amount: rest, estimated: prevU?.estimated ?? false }] : []),
+  ];
+  return {
+    causes,
+    deltaNet: mapped.deltaNet,
+    showUnrecordedHint: !hasCashRecords && Math.abs(rest) >= NOISE_WON && Math.abs(rest) >= Math.abs(mapped.deltaNet) * UNRECORDED_HINT_RATIO,
+  };
+}
 
 // ── 전체·주: 최근 7일 목록 ──────────────────────────────────────
 

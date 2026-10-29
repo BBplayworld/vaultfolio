@@ -10,7 +10,7 @@ import { formatPriceByMode } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 import { computeAttributionBetween, type buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
+import { estimateLoanInterest, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { SECTION, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
@@ -143,6 +143,25 @@ function hasCashIn(assetData: AssetData, from: string | null, to: string): boole
   return !!from && (assetData.cashTransactions ?? []).some((t) => t.date > from && t.date <= to);
 }
 
+// 대출 항목 후처리 — 이자 추정(현재 잔액×금리×구간 일수)과 엔진 대출 순증(B)으로 기록 안 된 변화에서 대출 몫만 뗀다
+function withLoanCause(
+  mapped: SettlementCauses,
+  effects: readonly { key: string; amount: number; estimated?: boolean }[],
+  assetData: AssetData,
+  startDate: string | null,
+  endDate: string,
+  hasCashRecords: boolean,
+): SettlementCauses {
+  const debts = effects.filter((e) => e.key === "debt");
+  const debtNet = debts.reduce((s, e) => s + e.amount, 0);
+  return splitLoanCause(mapped, {
+    interest: startDate ? estimateLoanInterest(assetData.loans ?? [], dayDiff(startDate, endDate)) : 0,
+    debtIncrease: Math.max(0, -debtNet),
+    debtEstimated: debts.some((e) => e.estimated),
+    hasCashRecords,
+  });
+}
+
 const MATCH_DAYS = 3;
 const dayDiff = (a: string, b: string) => Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
@@ -206,13 +225,15 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
     (t) => !!startDate && t.date >= startDate && t.date <= endDate,
   );
   const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
-  const mapped = mapSettlementCauses(
-    attr ? attr.effects : [{ key: "cash", amount: deltaNet, estimated: true }],
+  const effects = attr ? attr.effects : [{ key: "cash" as const, amount: deltaNet, estimated: true }];
+  const hasCash = hasCashIn(assetData, startDate, endDate);
+  const mapped = withLoanCause(mapSettlementCauses(
+    effects,
     {
       deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
-      hasCashRecords: hasCashIn(assetData, startDate, endDate), estimatedPriceAsUnrecorded: true,
+      hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
     },
-  );
+  ), effects, assetData, startDate, endDate, hasCash);
   return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
 }
 
@@ -242,18 +263,24 @@ export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, 
   const startDate = start ? (start.date ?? null) : null;
   const hasCash = hasCashIn(assetData, startDate, endDate);
   const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || hasCash;
-  const mapped = mapSettlementCauses(
+  const mapped = withLoanCause(mapSettlementCauses(
     effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }],
     {
       deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
       hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
     },
-  );
+  ), effects, assetData, startDate, endDate, hasCash);
   return { mapped, estimatedLabel: effects.length === 0 || estimatedSegments === points.length ? "예측" : "일부 예측" };
 }
 
 const CAUSE_TESTID: Record<string, string> = {
-  price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", unrecorded: "cause-row-unrecorded",
+  price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", loan: "cause-row-loan", unrecorded: "cause-row-unrecorded",
+};
+// 항목 설명(InfoHint) — 대출에는 "상환"·"매수" 문구를 쓰지 않는다(앱 안 이동은 원인이 아님)
+const CAUSE_HINT: Partial<Record<string, string>> = {
+  income: "입금에서 출금을 뺀 금액이에요",
+  loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
+  unrecorded: "시세·환율·입출금·대출로 설명되지 않고 자산 잔액만 바뀐 금액만 남아요",
 };
 const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
@@ -294,8 +321,8 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
               label={
                 <span className="inline-flex flex-wrap items-center gap-1.5">
                   {SETTLEMENT_CAUSE_LABEL[c.key]}
-                  {c.key === "income" && (
-                    <span data-screenshot-hide><InfoHint summary="입금에서 출금을 뺀 금액이에요" /></span>
+                  {CAUSE_HINT[c.key] && (
+                    <span data-screenshot-hide><InfoHint summary={CAUSE_HINT[c.key]!} /></span>
                   )}
                   {c.estimated && !groupEstimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
                 </span>
