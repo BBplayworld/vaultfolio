@@ -45,10 +45,11 @@ export function InfoHint({
       <PopoverContent
         side={side}
         sideOffset={4}
+        collisionPadding={12}
         style={{ zIndex: z }}
         className="w-72 p-3 text-sm leading-relaxed text-left space-y-1.5"
       >
-        <p className="font-semibold text-foreground text-pretty">{summary}</p>
+        <p className="font-semibold text-foreground text-pretty break-keep">{summary}</p>
         {children && <div className="space-y-1 text-muted-foreground">{children}</div>}
       </PopoverContent>
     </Popover>
