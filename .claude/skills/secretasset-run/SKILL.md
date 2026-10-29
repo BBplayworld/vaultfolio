@@ -17,7 +17,7 @@ memory 브랜치를 기준으로 예약 실행과 동일하게 1회 수행한다
    - 미커밋 변경이 없으면 `git checkout -q main && git reset -q --hard origin/main`.
 2. `CLAUDE.md`(특히 "# 에이전트 팀 운영")를 읽는다.
 3. `docs/ops/ORCHESTRATOR.md`를 수행한다.
-   - 인자 없음: "A. 정기 실행" (머지가 있었으면 1-1의 C 포함)
+   - 인자 없음: "A. 정기 실행" (머지가 있었으면 1-1의 C 포함, 작업 큐가 비면 "D. 자율 과제 발굴" 필수)
    - 인자 `weekly`: "B. 주간 기획 실행"
 4. 에이전트는 `.claude/agents/*.md` 등록 에이전트(subagent_type)로 호출한다.
 5. 품질 사인·결함 확정은 qa만. 대표(BBplayworld)에게 QA·화면 확인 요청 금지.

@@ -13,7 +13,7 @@ GitHub 조작은 GitHub MCP 도구(`mcp__github__*`)로 한다.
 ## 1. 단계 흐름
 
 ```
-status:idea          (주간 기획 후보 — cto 반대 검토 통과 시 자동으로 planning)
+status:idea          (주간 기획·자율 과제 발굴 후보 — cto 반대 검토 통과 시 자동으로 planning)
   → status:planning
        ① 방향 정의   planner-designer + business-pm 공동 → direction.md (두 사람 합의)
        ② 반대 검토   cto → challenge.md (통과 / 축소 / 폐기)
@@ -87,7 +87,7 @@ challenge.md `통과` 후에만 spec.md·business.md를 쓴다. 상호 `승인` 
 - 한 번의 정기 실행에서 단계를 전진시키는 이슈 **최대 2건**
 - `status:development` 동시 **최대 1건**
 - `status:owner-review` 가 **3건 이상 쌓이면** 새 개발을 시작하지 않는다
-- 새 과제(idea → planning)는 주간 기획 실행에서만, 주 1건 이하
+- 새 과제는 주간 기획(B)과, **정기 실행에서 작업 큐가 비었을 때의 자율 과제 발굴(ORCHESTRATOR D, 실행당 1건)**로 만든다. 열린 이슈가 없는 상태로 정기 실행을 끝내지 않는다
 
 ## 8. 우선순위
 `priority:p0` > `p1` > `p2`, 같으면 오래된 것부터. 시드0(preview 안전장치·데모 데이터)이 끝나기 전에는 다른 이슈를 development로 넘기지 않는다 (QA 자동 점검의 전제).
