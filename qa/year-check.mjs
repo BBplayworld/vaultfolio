@@ -98,6 +98,9 @@ const rowsAndSum = async (page) => {
   r = await rowsAndSum(page);
   check("27 운영 형태 — 행 ≥ 1, 기록 부족 0, 합계 = Hero", r.vals.length >= 1 && (await tid(page, "cause-insufficient").count()) === 0 && Math.abs(r.sum - r.d) < 10000, `delta=${r.d} sum=${r.sum} rows=${r.vals.length}`);
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "r3-year-ops-375-dark.png") });
+  const loanV = await page.locator('[data-testid="cause-row-loan"]').evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-value"))));
+  const unrecV = await page.locator('[data-testid="cause-row-unrecorded"]').evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-value"))));
+  check("28 대출 ≤ 0, 기록 안 된 변화와 반대 부호 아님", loanV.every((v) => v <= 0) && !(loanV[0] < 0 && unrecV[0] > 0), `loan=${loanV} unrec=${unrecV}`);
 
   // 24. 첫 해(작년 값 없음): 블록 없음, 연도별 카드 정상
   await inject(page, "first");
