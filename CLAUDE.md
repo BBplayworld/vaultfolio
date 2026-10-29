@@ -84,7 +84,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 | `business-pm` | 초기 사업 확장, 지표, 마케팅 (기획 디자이너와 기획 방향 공동 정의) |
 | `developer` | 프론트엔드·백엔드 구현, preview 배포 확인 |
 | `qa` | 모든 결과물의 품질 검증 |
-| `cto` | 대표 결정을 위한 판정 보고서 작성, 위험 등급 판정. **최종 결정권 없음** |
+| `cto` | CTO 겸 COO. 반대 검토·위험 등급 판정, 대표 결정 직전 **사용자 관점 최종 점검**(COO) 후 판정 보고서 작성. **최종 결정권 없음** |
 
 에이전트 이름이 subagent_type으로 등록되지 않은 세션이면 `general-purpose` 에이전트에 해당 `.claude/agents/<이름>.md` 본문(frontmatter 제외)과 frontmatter의 model을 넘겨 호출한다.
 
