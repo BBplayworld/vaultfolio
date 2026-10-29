@@ -6,13 +6,14 @@
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
 
 ## 보류 알림 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
-- 없음
+- 🆕 `[시크릿에셋] 새 과제: #48 첫 화면 \"가치 먼저\" 재배열 + 링크 미리보기 정비` (개선, p1) — 첫 화면을 히어로→신뢰 한 줄→예시 미리보기→시작 CTA로, 보안 3카드는 접힘·모바일 웹 \"바로 시작\" 노출·OG 이미지(금액 없음). 지표: 28일 first_asset_saved÷welcome_view 상대 +30%, 설치율 가드레일. 링크 https://github.com/BBplayworld/vaultfolio/issues/48 (PushNotification만, 이슈 @멘션 불필요)
 
 ## 다음 정기 실행 지시
 - [선정 2026-10-29] 첫 화면 "가치 먼저" 재배열 + OG 최소 동승 — `issues/4.xx-48-welcome-value-first/4.xx-challenge.md` 통과(축소 반영). 이슈 생성(type:improvement, p1, status:planning) 후 planning ① 방향 정의
 - 자율 과제 기준: 월 활성 사용자 100명 직접 기여 서비스 과제 우선, 소규모 신뢰성 수정은 p2 동승(대표 2026-10-29)
 
 ## 진행 중
+- #48 첫 화면 "가치 먼저" 재배열 + 링크 미리보기 (type:improvement p1) — planning: challenge 통과(축소)·direction 합의 → 다음 spec.md·business.md
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | (신규) 첫 화면 가치 우선 재배열 | 4.xx | planning ① 예정 | business-pm → planner-designer | 이슈 생성 후 direction.md (challenge 범위 고정) |
