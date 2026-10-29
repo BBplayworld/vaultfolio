@@ -83,12 +83,6 @@ export const ASSET_THEME = {
   // 1단계: 페이지 메인 탭
   tabList1: "flex items-center gap-2 p-1.5 sm:p-2 rounded-xl bg-muted/50 border border-border w-full sm:w-fit overflow-hidden",
   tabTrigger1: "rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold",
-  // 2단계: 상세 탭 (주식/부동산/암호화폐/현금/대출) — segment control 캡슐 스타일
-  tabList2: "flex items-center gap-0.5 p-1 rounded-xl bg-muted/50 border border-border w-full overflow-hidden",
-  tabTrigger2: "rounded-lg px-2 py-2 sm:py-2.5 text-xs sm:text-sm font-medium flex items-center justify-center gap-1 min-w-0 flex-1 text-muted-foreground bg-transparent shadow-none hover:text-foreground transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
-  // 3단계: 카테고리 서브탭 (주식 국내/해외/IRP 등) — 라운드 + border-2 (예전 방식)
-  tabList3: "flex items-center gap-0.5 p-1 rounded-lg border border-border bg-muted/30 overflow-hidden w-full",
-  tabTrigger3: "rounded-md px-2 py-2 text-xs sm:text-[13px] font-medium min-w-0 flex-1 text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계 래핑(두 줄) 변형 — 카테고리 항목 많을 때 (부동산/현금/대출). 라운드 + border-2
   tabList3Wrap: "flex flex-wrap gap-0.5 p-1 rounded-lg border border-border bg-muted/30 w-full mb-2 h-fit",
   tabTrigger3Wrap: "rounded-md px-2 py-1 text-xs sm:text-[13px] font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",

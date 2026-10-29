@@ -70,10 +70,22 @@ const nextConfig = {
   // next/image 미사용 — 이미지 최적화 엔드포인트(/_next/image) 비활성화로 공개 표면·관련 CVE 노출 제거
   images: { unoptimized: true },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // 월말 결산 반복 일정(.ics) — iOS 서드파티 브라우저·인앱이 캘린더 앱으로 넘기도록 같은 출처 URL + text/calendar(C19)
+      {
+        source: "/calendar/:file*",
+        headers: [
+          { key: "Content-Type", value: "text/calendar; charset=utf-8" },
+          { key: "Content-Disposition", value: 'inline; filename="secretasset-monthly-settlement.ics"' },
+        ],
+      },
+    ];
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: resolveAppVersion(),
+    // preview 판별용(isPreviewEnv) — Vercel 시스템 변수. 로컬은 빈 문자열이라 운영과 같이 취급
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "",
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",

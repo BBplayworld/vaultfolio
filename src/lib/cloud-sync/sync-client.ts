@@ -11,7 +11,7 @@ import {
   encryptPayload, decryptPayload, signMessage, sha256Hex, randomNonce, toBase64, toBase64Url,
   type AssetKeys, type EncryptedBlob,
 } from "./crypto";
-import { SYNC_AUTH_HEADER } from "./config";
+import { SYNC_AUTH_HEADER, isCloudSyncEnabled } from "./config";
 import { getVersion, markSynced, getSyncedIds, setSyncedIds } from "./sync-state";
 
 export { getLastSyncedAt } from "./sync-state";
@@ -40,7 +40,11 @@ export type PullResult =
   | { status: "empty" }
   | { status: "error"; message: string };
 
+// 입구 가드 — 동기화가 꺼진 환경(preview·비상 차단)에서는 UI와 무관하게 /api/sync 요청을 보내지 않는다.
+const DISABLED_MESSAGE = "동기화를 사용할 수 없는 환경입니다.";
+
 export async function pushAsset(assetId: string, keys: AssetKeys): Promise<PushResult> {
+  if (!isCloudSyncEnabled()) return { status: "error", message: DISABLED_MESSAGE };
   try {
     // 기준점 갱신용으로 같은 시점의 assetData를 함께 잡는다(사이에 await가 없어 payload와 동일 원본).
     const pushedIds = collectAssetIds(getAssetData());
@@ -78,6 +82,7 @@ export async function pushAsset(assetId: string, keys: AssetKeys): Promise<PushR
  *  기준점(syncedIds)이 없으면(구버전·첫 동기화) merge 값과 무관하게 원격이 그대로 대체한다.
  */
 export async function pullAsset(assetId: string, keys: AssetKeys, { merge = true } = {}): Promise<PullResult> {
+  if (!isCloudSyncEnabled()) return { status: "error", message: DISABLED_MESSAGE };
   try {
     // clearAssetData 전에 미리 읽어둔다(keepKeys로 보존되지만 순서 의존을 만들지 않는다)
     const syncedIds = merge ? getSyncedIds() : null;
@@ -113,6 +118,7 @@ export async function pullAsset(assetId: string, keys: AssetKeys, { merge = true
 
 // 폴링용 버전 조회. 미존재/오류 → null.
 export async function fetchRemoteVersion(assetId: string, keys: AssetKeys): Promise<number | null> {
+  if (!isCloudSyncEnabled()) return null;
   try {
     const token = await makeAuthToken("GET", assetId, keys.privKey);
     const res = await fetch("/api/sync?meta=1", { method: "GET", headers: { [SYNC_AUTH_HEADER]: token } });

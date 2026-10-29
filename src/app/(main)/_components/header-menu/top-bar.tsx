@@ -108,7 +108,7 @@ export function TopBar() {
   const showShare =
     view.type === "home" ||
     (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) ||
-    (view.type === "activity" && (view.tab === "hub" || view.tab === "netasset" || view.tab === "profit"));
+    (view.type === "activity" && (view.tab === "hub" || view.tab === "change"));
   const showMore = view.type === "home" && !isWelcomeGuide;
   const showInstall = true;
 

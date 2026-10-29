@@ -288,7 +288,7 @@ function scoreDiversification(
 // ── ⑤ 투자 습관 ──────────────────────────────────────────────────────
 // recordRate(이번 달 기록률) 측정 가능 시: 비중 2.0 + 꾸준함 2.0 + 기록률 1.0 배점.
 // 미측정(null)이면 기존 배점(2.5+2.5) 유지 — 하위호환.
-function scoreHabit(
+export function scoreHabit(
   summary: AssetSummary,
   monthly: MonthlyAssetSnapshot[],
   recordRate?: number | null,
@@ -322,7 +322,11 @@ function scoreHabit(
 
   // 꾸준함: 저축 규칙성(현금 입금 관측 개월) 우선, 없으면 순자산 상승 개월로 폴백.
   // 저축은 직접 관측이 시세상승과 뒤섞이지 않아 더 정확 → 둘 다 있으면 높은 쪽을 택한다.
-  const sorted = [...monthly].sort((a, b) => a.month.localeCompare(b.month)).slice(-7); // 비교쌍 6개
+  // 비교 범위는 가장 최근 기록 달의 해(올해)로 고정 — #4.34에서 월 스냅샷을 13개월 보존하게 되면서
+  // 1~6월에 전년 달이 섞여 점수가 바뀌던 것을 막는다(종전 저장분 = 올해분과 같은 결과, qa D4)
+  const latestYear = monthly.reduce((y, s) => (s.month > y ? s.month : y), "").slice(0, 4);
+  const sorted = monthly.filter((s) => s.month.startsWith(latestYear))
+    .sort((a, b) => a.month.localeCompare(b.month)).slice(-7); // 비교쌍 6개
   const hasSavings = !!savingsRhythm && savingsRhythm.windowMonths >= 3;
   const savingsRatio = hasSavings ? savingsRhythm!.depositMonths / savingsRhythm!.windowMonths : null;
   let score: number;

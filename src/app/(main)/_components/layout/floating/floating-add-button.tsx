@@ -105,9 +105,9 @@ export function FloatingAddButton() {
       track("asset_add_start", { asset_type: toGaAssetType(type), method: "manual" });
       if (type === "real-estate") dispatchAddRealEstate();
       else if (type === "yearly-net-asset") {
-        // 순자산 페이지(YearlyNetAssetChart)가 마운트되어야 trigger 이벤트 수신 가능.
-        // 허브/다른 탭에서 진입 시 먼저 netasset 페이지로 이동 후 다음 tick에 dispatch
-        navigate({ type: "activity", tab: "netasset" });
+        // 연도별 순자산(YearlyNetAssetChart)이 마운트되어야 trigger 이벤트 수신 가능.
+        // 허브/다른 탭에서 진입 시 먼저 자산 변화·전체·연 탭으로 이동 후 다음 tick에 dispatch
+        navigate({ type: "activity", tab: "change", init: { scope: "all", period: "year" } });
         setTimeout(() => window.dispatchEvent(new CustomEvent(EVENT_MAP[type])), 50);
       }
       else window.dispatchEvent(new CustomEvent(EVENT_MAP[type]));

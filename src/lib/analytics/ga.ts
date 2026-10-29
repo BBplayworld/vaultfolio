@@ -38,7 +38,8 @@ export type GaEvent =
   | "data_action"
   | "app_lock"
   | "pwa_install"
-  | "feature_use";
+  | "feature_use"
+  | "settlement_view";
 
 export const PARAM_VALUES = {
   asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "yearly_net_asset"],
@@ -67,8 +68,10 @@ export const PARAM_VALUES = {
     "reflected", "unreflected", "blocked", "rollback",
     "invalid", "pin_mismatch", "ignored",
     "conflict", "error",
+    // 월말 결산(#32): 전월 결산(월 1회 방문자의 날짜 구간 포함) / 진행 중 구간 / 첫 달
+    "settled", "in_progress", "first_month",
   ],
-  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail"],
+  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu"],
   category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   nav_source: ["tap", "back", "swipe", "initial"],
@@ -102,10 +105,12 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
     reflected: "반영", unreflected: "미반영", blocked: "차단", rollback: "롤백",
     invalid: "유효하지 않음", pin_mismatch: "PIN 불일치", ignored: "무시됨",
     conflict: "충돌", error: "오류",
+    settled: "결산", in_progress: "진행 중", first_month: "첫 달",
   },
   source: {
     web: "웹", pwa: "PWA 앱", inapp: "인앱 브라우저", settings: "설정", more: "더보기", home_tip: "홈 팁", share_card: "인증카드",
     install: "설치 화면", fab: "추가 버튼", wizard: "마법사", welcome: "웰컴", dashboard: "대시보드", top_bar: "상단바", detail: "상세",
+    card: "결산 카드", menu: "메뉴",
   },
   category: {
     xray: "X-Ray", tax_sim: "절세 시뮬레이션", home_tip: "홈 팁", notice: "공지", feedback: "의견 보내기", theme: "테마",
@@ -188,8 +193,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "detail:loans": "상세·대출",
   "detail:loan-transactions": "상세·대출 거래내역",
   "activity:hub": "성과",
-  "activity:netasset": "성과·순자산",
-  "activity:profit": "성과·수익",
+  "activity:change": "성과·자산 변화",
   "activity:dividend": "성과·배당",
   "activity:report": "성과·자산 성적표",
 };

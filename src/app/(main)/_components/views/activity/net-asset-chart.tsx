@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import {
   Area, AreaChart,
-  Bar, BarChart,
   XAxis, YAxis, CartesianGrid, ResponsiveContainer,
-  LabelList, Cell,
+  LabelList,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,8 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatShortCurrencyDecimal, formatCurrency, formatPriceByMode, formatPriceDecimalByMode, getPriceLayout } from "@/lib/number-utils";
-import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
+import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { computeRecordStats, type RecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
@@ -37,13 +36,19 @@ import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import { DataSourceBadge } from "../data-source-badge";
+import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
+import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readExchangeHistory } from "@/lib/finance/profit-utils";
+import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
+import { resolveYearChain } from "@/lib/report/settlement";
+import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
 
-type NetAssetView = "yearly" | "monthly" | "daily";
+// 월별 막대·목록은 자산 변화 월 탭(월말 결산)으로 흡수되어 삭제(#32)
+export type NetAssetView = "yearly" | "daily";
 const NET_ASSET_OPTIONS: { value: NetAssetView; label: string }[] = [
   { value: "yearly", label: "년도별" },
-  { value: "monthly", label: "월별" },
   { value: "daily", label: "일별" },
 ];
 
@@ -210,29 +215,18 @@ function useRecordStats(snapshotVersion: number): RecordStats | null {
   return stats;
 }
 
-function useMonthlySnapshots(snapshotVersion: number): MonthlyAssetSnapshot[] {
-  const [snapshots, setSnapshots] = useState<MonthlyAssetSnapshot[]>([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
-      if (!raw) return;
-      const all: MonthlyAssetSnapshot[] = JSON.parse(raw);
-      const currentYear = new Date().getFullYear().toString();
-      setSnapshots(
-        all.filter(s => s.month.startsWith(currentYear)).sort((a, b) => a.month.localeCompare(b.month))
-      );
-    } catch { /* 무시 */ }
-  }, [snapshotVersion]);
-  return snapshots;
-}
 
 
-export function YearlyNetAssetChart() {
-  const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary } = useAssetData();
-  const summary = getAssetSummary();
+// view를 넘기면 바깥(자산 변화 기간 탭)이 제어한다(#32). 이때 자체 제목·"현재 순자산" Hero 대신
+// 자산 변화 공통 Hero(ChangeHero)에 기존 대비 계산값을 그린다(r2)
+export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
+  const { assetData, deleteYearlyNetAsset, snapshotVersion, getAssetSummary, exchangeRates } = useAssetData();
+  // 자산·환율이 바뀔 때만 다시 계산(연 원인 useMemo가 매 렌더 무효화되지 않게)
+  const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
-  const [activeView, setActiveView] = useState<NetAssetView>("yearly");
+  const [innerView, setActiveView] = useState<NetAssetView>("yearly");
+  const activeView = view ?? innerView;
   const openAddDialog = useCallback(() => {
     setEditingItem(undefined);
     setIsDialogOpen(true);
@@ -244,7 +238,6 @@ export function YearlyNetAssetChart() {
   }, [openAddDialog]);
 
   const dailySnapshots = useDailySnapshots(snapshotVersion);
-  const monthlySnapshots = useMonthlySnapshots(snapshotVersion);
   const recordStats = useRecordStats(snapshotVersion);
 
   const handleDelete = (year: number) => {
@@ -266,17 +259,10 @@ export function YearlyNetAssetChart() {
   };
 
   const currentYear = new Date().getFullYear();
-  const currentMonth = `${parseInt(new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0].substring(5, 7))}월`;
 
   // 올해 항목은 saveSnapshots에서 종가 기준으로 자동 upsert됨
   const allYearlyData = [...assetData.yearlyNetAssets].sort((a, b) => a.year - b.year);
   const last5YearsData = allYearlyData.slice(-5);
-
-  const monthlyData = monthlySnapshots.map(s => ({
-    month: `${parseInt(s.month.split("-")[1])}월`,
-    netAsset: s.netAsset,
-    financialAsset: s.financialAsset,
-  }));
 
   const dailyChartData = dailySnapshots.map(s => ({
     date: s.date.slice(5).replace("-", "/"),
@@ -290,17 +276,89 @@ export function YearlyNetAssetChart() {
     axisLine: false,
   };
 
+  // 선택된 뷰의 대비 금액 — 연: 연도별 마지막 2건, 일: 이번 달 일별 스냅샷 마지막 2건
+  let diff: number | null = null;
+  let diffPct: number | null = null;
+  let comparisonLabel = "대비";
+  let heroTitle = "";
+  let heroStart: number | undefined;
+  let heroEnd: number | undefined;
+  let heroPrevYear: number | null = null; // 연: Hero 직전 해(원인 시작 = 그해 12월 스냅샷)
+
+  if (activeView === "yearly") {
+    const lastIdx = allYearlyData.length - 1;
+    const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
+    const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
+    diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+    diffPct = diff !== null && prev && prev.netAsset !== 0
+      ? (diff / Math.abs(prev.netAsset)) * 100
+      : null;
+    comparisonLabel = "전년 대비";
+    heroTitle = prev ? `${prev.year}년 말 대비` : "전년 대비";
+    heroPrevYear = prev ? prev.year : null;
+    heroStart = prev?.netAsset;
+    heroEnd = latest?.netAsset;
+  } else if (activeView === "daily") {
+    const lastIdx = dailySnapshots.length - 1;
+    const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
+    const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
+    diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
+    diffPct = diff !== null && prev && prev.netAsset !== 0
+      ? (diff / Math.abs(prev.netAsset)) * 100
+      : null;
+    comparisonLabel = "전일 대비";
+    heroTitle = prev ? `${Number(prev.date.slice(5, 7))}/${Number(prev.date.slice(8, 10))} 기록 대비` : "전일 대비";
+    heroStart = prev?.netAsset;
+    heroEnd = latest?.netAsset;
+  }
+
+  // 연 탭 변화 원인(#32 보완 B안) — 작년 수동 순자산(또는 전년 12월 스냅샷) → 올해 enrich 월 → 오늘 체인, 합계 = Hero 증감.
+  // 첫 해(직전 해 없음)는 미표시
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const yearCauses = useMemo(() => {
+    if (!view || activeView !== "yearly" || heroPrevYear === null || diff === null) return null;
+    try {
+      const points = resolveYearChain(snapshotVersion >= 0 ? readMonthlySnapshots() : [], heroPrevYear, heroStart ?? null, todayKst);
+      if (!points) return { status: "insufficient" as const };
+      return computeChainCauses({
+        points, live: buildLiveAttributionCurr(assetData, exchangeRates, summary), deltaNet: diff, endDate: todayKst,
+        liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
+      });
+    } catch {
+      return { status: "error" as const };
+    }
+  }, [view, activeView, heroPrevYear, heroStart, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      <Card className={ASSET_THEME.contentCard}>
-        <CardHeader className={ASSET_THEME.contentPad}>
+    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+      {view && (
+        <ChangeHero
+          title={heroTitle}
+          delta={diff}
+          pct={diffPct}
+          start={heroStart}
+          end={heroEnd}
+          message="기록이 쌓이면 더 보여드려요"
+          badge={activeView === "yearly" && heroPrevYear !== null
+            ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
+            : undefined}
+          contentKey={activeView}
+        />
+      )}
+      {yearCauses && (
+        "status" in yearCauses
+          ? <CauseBlock key="year" scope="year" status={yearCauses.status} />
+          : <CauseBlock key="year" scope="year" mapped={yearCauses.mapped} estimatedLabel={yearCauses.estimatedLabel} />
+      )}
+      <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
+        {!view && <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
                 <CardTitle>순자산 변화</CardTitle>
                 <DataSourceBadge kind="closing" />
               </div>
-              <CardDescription>순자산 추이 및 올해 월별·일별 변화</CardDescription>
+              <CardDescription>순자산 추이와 이번 달 일별 변화</CardDescription>
             </div>
             <InlineSelector
               value={activeView}
@@ -309,43 +367,10 @@ export function YearlyNetAssetChart() {
               ariaLabel="기간 선택"
             />
           </div>
-        </CardHeader>
+        </CardHeader>}
         <CardContent className={`space-y-6 ${ASSET_THEME.contentPad}`}>
-          {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액 */}
-          {(() => {
-            let diff: number | null = null;
-            let diffPct: number | null = null;
-            let comparisonLabel = "대비";
-
-            if (activeView === "yearly") {
-              const lastIdx = allYearlyData.length - 1;
-              const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
-              const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
-              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-              diffPct = diff !== null && prev && prev.netAsset !== 0
-                ? (diff / Math.abs(prev.netAsset)) * 100
-                : null;
-              comparisonLabel = "전년 대비";
-            } else if (activeView === "monthly") {
-              const lastIdx = monthlySnapshots.length - 1;
-              const latest = lastIdx >= 0 ? monthlySnapshots[lastIdx] : null;
-              const prev = lastIdx >= 1 ? monthlySnapshots[lastIdx - 1] : null;
-              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-              diffPct = diff !== null && prev && prev.netAsset !== 0
-                ? (diff / Math.abs(prev.netAsset)) * 100
-                : null;
-              comparisonLabel = "전월 대비";
-            } else if (activeView === "daily") {
-              const lastIdx = dailySnapshots.length - 1;
-              const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
-              const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
-              diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-              diffPct = diff !== null && prev && prev.netAsset !== 0
-                ? (diff / Math.abs(prev.netAsset)) * 100
-                : null;
-              comparisonLabel = "전일 대비";
-            }
-
+          {/* Hero — 현재 순자산 + 선택된 뷰에 따른 대비 금액(비제어 모드만, 제어 모드는 위 ChangeHero) */}
+          {!view && (() => {
             const netAssetLayout = getPriceLayout(summary.netAsset);
             return (
               <div>
@@ -480,97 +505,6 @@ export function YearlyNetAssetChart() {
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* ── 월별 탭 (바 차트) ── */}
-            <TabsContent value="monthly">
-              {monthlyData.length === 0 ? (
-                <div className="flex h-32 items-center justify-center rounded-lg border border-dashed">
-                  <div className="text-center">
-                    <p className="text-muted-foreground text-sm">올해 월별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-sm">페이지 접속 시 자동으로 기록됩니다.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <ChartContainer config={chartConfig} className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyData} margin={{ top: 46, right: 10, bottom: 5, left: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                        <XAxis dataKey="month" {...commonAxisProps} />
-                        <YAxis
-                          {...commonAxisProps}
-                          tickFormatter={(v) => formatShortCurrency(v)}
-                          width={55}
-                        />
-                        <ChartTooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const row = payload[0]?.payload;
-                            const idx = monthlyData.findIndex(d => d.month === row.month);
-                            const prev = idx > 0 ? monthlyData[idx - 1] : null;
-                            const diff = prev ? row.netAsset - prev.netAsset : null;
-                            return (
-                              <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm space-y-1 min-w-[130px]">
-                                <p className="font-semibold text-foreground">{row.month}</p>
-                                <div className="flex justify-between gap-3">
-                                  <span className="text-muted-foreground">순자산</span>
-                                  <span className={`font-bold tabular-nums ${ASSET_THEME.important}`}>{formatPriceDecimalByMode(row.netAsset)}</span>
-                                </div>
-                                {diff !== null && (
-                                  <div className="flex justify-between gap-3 border-t pt-1">
-                                    <span className="text-muted-foreground">전월대비</span>
-                                    <span className={`font-semibold tabular-nums ${getProfitLossColor(diff)}`}>{diff >= 0 ? "+" : ""}{formatPriceByMode(diff)}</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="netAsset" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                          {monthlyData.map((_, idx) => (
-                            <Cell key={idx} fill={MAIN_PALETTE[0]} />
-                          ))}
-                          <LabelList
-                            dataKey="netAsset"
-                            position="top"
-                            offset={13}
-                            formatter={(v: number) => formatShortCurrencyDecimal(v)}
-                            style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
-                          />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-
-                  {/* 월별 순자산 목록 — 년도별 리스트와 동일한 스택 레이아웃(고정폭 그리드 대신 자연 줄바꿈) */}
-                  <div className="space-y-2">
-                    {monthlyData.map((row, idx, arr) => {
-                      const isCurrentMonth = row.month === currentMonth;
-                      const prev = arr[idx - 1];
-                      const diff = prev ? row.netAsset - prev.netAsset : null;
-                      const diffPct = prev && prev.netAsset !== 0
-                        ? ((diff! / Math.abs(prev.netAsset)) * 100).toFixed(1)
-                        : null;
-                      return (
-                        <div key={row.month} className="rounded-lg p-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-muted-foreground">{row.month}</span>
-                            {diff !== null && (
-                              <span className={`text-sm font-semibold ${getProfitLossColor(diff)}`}>
-                                {diff >= 0 ? "+" : ""}{formatPriceByMode(diff)} ({diff >= 0 ? "+" : ""}{diffPct}%)
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
-                            <p className={`text-sm font-bold ${isCurrentMonth ? ASSET_THEME.important : ASSET_THEME.text.default}`}>{formatPriceDecimalByMode(row.netAsset)}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               )}

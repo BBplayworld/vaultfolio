@@ -10,6 +10,7 @@ import { STORAGE_KEYS, STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/finance/profit-utils";
 import { persistNickname } from "@/hooks/use-nickname";
 import { cryptoExchanges } from "@/config/asset-options";
+import { pruneMonthlySnapshots } from "@/lib/report/settlement";
 
 // 구버전 스크린샷 임포트가 저장한 영문 거래소 값("upbit") → 한글 라벨("업비트") 매핑
 // (수동 입력·신규 임포트는 한글 라벨을 저장하므로, 옛 영문 값만 정규화하여 통일)
@@ -274,6 +275,27 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
  *  살려둔 로컬 신규분은 아직 서버에 없으므로 기준점에 넣으면 안 된다(넣으면 다음 pull이 그걸
  *  "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다).
  */
+/**
+ * 동기화 pull 월 스냅샷 병합(qa B) — 수신분으로 통째 교체하면 구버전(올해분만 보존) 기기가 push한 배열이
+ * 이 기기의 13개월 보존분을 지운다. 월 키 합집합: 로컬에만 있는 달은 보존, 같은 달은 수신값.
+ * 단 같은 달에서 수신값에 원인분해 상세(breakdown)가 없고 로컬에 있으면 로컬을 유지한다 — 상세는 나중에
+ * 다시 만들 수 없고(당시 평가액·환율), 구버전·레거시가 보낸 상세 없는 값이 덮으면 결산이 "예측"으로 떨어진다.
+ * 그 뒤 13개월 롤링(pruneMonthlySnapshots). 파일 가져오기(백업 복원)는 이 함수를 쓰지 않고 교체한다.
+ */
+export function mergeMonthlySnapshots(local: unknown[], incoming: unknown[], currentMonth: string): MonthlyAssetSnapshot[] {
+  const isSnap = (s: unknown): s is MonthlyAssetSnapshot => !!s && typeof (s as MonthlyAssetSnapshot).month === "string";
+  const byMonth = new Map<string, MonthlyAssetSnapshot>();
+  for (const s of local) if (isSnap(s)) byMonth.set(s.month, s);
+  for (const s of incoming) {
+    if (!isSnap(s)) continue;
+    const prev = byMonth.get(s.month);
+    if (prev?.breakdown && !s.breakdown) continue;
+    byMonth.set(s.month, s);
+  }
+  const merged = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month));
+  return pruneMonthlySnapshots(merged, currentMonth);
+}
+
 export function applyImportedPayload(
   parsed: unknown,
   { keepLocalSnapshots = false, syncedIds }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null } = {},
@@ -330,7 +352,13 @@ export function applyImportedPayload(
     // `[]`도 truthy이므로 반드시 length로 판정해야 폴백이 우회되지 않는다.
     if (dailySnapshot?.length) localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(dailySnapshot));
     else if (localDaily) localStorage.setItem(STORAGE_KEYS.dailySnapshots, localDaily);
-    if (monthlySnapshot?.length) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
+    if (monthlySnapshot?.length && localMonthly) {
+      // pull: 월 단위 병합(로컬 전용 달 보존) — keepLocalSnapshots일 때만 localMonthly가 있다
+      let localParsed: unknown[] = [];
+      try { const v = JSON.parse(localMonthly); if (Array.isArray(v)) localParsed = v; } catch { /* 손상분은 무시 */ }
+      const currentMonth = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 7);
+      localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(mergeMonthlySnapshots(localParsed, monthlySnapshot, currentMonth)));
+    } else if (monthlySnapshot?.length) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(monthlySnapshot));
     else if (localMonthly) localStorage.setItem(STORAGE_KEYS.monthlySnapshots, localMonthly);
     snapshotRestored = !!(dailySnapshot?.length || monthlySnapshot?.length);
   } catch {

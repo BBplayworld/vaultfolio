@@ -77,6 +77,7 @@ import { assetCountBucket, countAssets, setUserProps, track } from "@/lib/analyt
 import { readOnboardingWizardStatus } from "@/lib/onboarding-wizard-status";
 import { getAssetId } from "@/lib/cloud-sync/sync-state";
 import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
+import { pruneMonthlySnapshots } from "@/lib/report/settlement";
 
 interface AssetDataContextType {
   assetData: AssetData;
@@ -763,11 +764,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         recordTodayExchangeRate(latestRates);
       }
 
-      // ── 월별: 올해 12개월치 유지 (이번 달 업서트) ──
+      // ── 월별: 최근 13개월 롤링 유지 (이번 달 업서트) ──
+      // 종전 올해분 필터는 1월 첫 저장에 전년분을 모두 지웠다(#32) — 연 경계 없이 현재월−12개월까지 보존
       const rawMonthly = localStorage.getItem(STORAGE_KEYS.monthlySnapshots);
       const allMonthly: MonthlyAssetSnapshot[] = rawMonthly ? JSON.parse(rawMonthly) : [];
       const prevMonth = allMonthly.find(s => s.month === currentMonth);
-      const filteredMonthly = allMonthly.filter(s => s.month.startsWith(currentYear) && s.month !== currentMonth);
+      const filteredMonthly = pruneMonthlySnapshots(allMonthly, currentMonth).filter(s => s.month !== currentMonth);
       filteredMonthly.push({
         month: currentMonth,
         netAsset,

@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-10-28
+
+### 변화 원인 정확도 — 순유입 짝짓기·대출 항목 (#4.34, qa R1~R5·대표 수정)
+- **왜**: 실데이터에서 출금→매수·상환이 "순유입 −, 기록 안 된 변화 +"로 갈렸고, 대출 이자·마이너스통장 사용이 기록 안 된 변화에 섞였다.
+- 기록된 출금↔기록된 매수·상환을 ±3일 안에서 짝지어서만 상쇄(`matchRecordedTransfers`), 예측 구간 시세 잔차는 기록 안 된 변화(예측), 기록 안 된 변화에서 대출 이자·순증 사용분을 "대출" 항목으로 분리(`splitLoanCause`). 엔진·홈·성적표 무변경.
+
+### 연 탭 변화 원인 (#4.34 보완, 대표 수정 지시)
+- **왜**: 월 탭에만 원인이 있어 "올해 왜 바뀌었나"를 볼 수 없었다. 월 원인 블록·계산을 그대로 재사용해 연 Hero 아래 올해 원인 1벌을 둔다.
+- 운영 사용자는 전년 12월 월 스냅샷이 없어(과거 1월 삭제 결함) 작년 수동 순자산을 앵커로 쓴다: `resolveYearChain`(앵커 → 올해 enrich 월) → 실시간을 월 탭과 같은 함수로 구간별 분해(`computeChainCauses`). `CauseBlock`·계산을 `change-hero.tsx`로 옮겨 월·연 공용. 엔진 무변경, 합계 = Hero 증감, 연초~첫 enrich 달은 예측.
+
+### 월 스냅샷 데이터 안전 보강 (#4.34, qa 데이터 안전 점검)
+- **왜**: 구버전(v4.33) 기기가 1월에 올해분만 남겨 push하면 pull의 통째 교체로 신버전 기기의 13개월 보존분이 지워졌다(#32 수정 무력화). 13개월 보존으로 습관 축이 1~6월에 전년 달을 섞어 점수가 바뀌었고, 인접 월 결산이 경계일 입금을 두 달에 모두 잡았다.
+- pull 월 스냅샷 월 단위 병합(`mergeMonthlySnapshots`, 상세 있는 쪽 우선) 후 13개월 롤링. 습관 축 비교를 올해분으로 고정. `computeAttributionBetween(…, includeStartDay)` 추가(기본 true 기존 동작), 결산은 false. 키·스키마 불변.
+
+### 성과 정보 구조 r2 — 지표 정본 1곳 + 자산 변화 상단 컨트롤 C안 (#4.34, 이슈 #32)
+- **왜**: r1이 메뉴만 줄이고 항목은 복제했다(변화 원인이 결산·성적표 두 곳, 월 증감 4곳). 상단 컨트롤 3~4줄이 Hero보다 먼저 와 375px에서 결산 증감이 y≈525였고, 탭 스타일 두 종류(`border-2` 외곽선 포함)가 섞여 있었다.
+- 자산 변화: 제목 행 오른쪽 범위 선택 + 본문별 공통 `ChangeHero`(이름→증감→시작→끝→기간 선택). Radix Tabs·범위 배지 삭제, `InlineSelector fullWidth` 신설(기본 경로 스냅샷 고정). 월 탭 = "N월 결산" Hero + ‹ › 화살표(월 칩·순자산 비교·범위 캡션 삭제).
+- 허브 4→3카드(결산 카드를 자산 변화 카드에 흡수, `settlementDelta` 공용), 성적표 "순자산 변화, 왜?" 삭제·growth 링크 → 연 탭, `tabList2/3` 토큰 삭제. 결산 계산 useMemo가 매 렌더 무효였던 결함(qa 확정) 수정. 엔진·스키마·저장 키·GA 정의 무변경.
+
+### 성과 메뉴 정리 + 자산 변화 월 탭 = 월말 결산 (#4.34, 이슈 #32)
+- **왜**: 스크린샷 갱신 구조라 다시 열 이유가 없었고(월 1회 의식 필요), 성과의 순자산·수익이 "기간 대비 변화"로 겹쳐 혼동됐다. 월 스냅샷이 1월 첫 저장에 전년분을 지우는 결함(qa 확정)도 결산의 전제를 깨고 있었다.
+- 월 스냅샷 보존을 올해분 → 최근 13개월 롤링(`pruneMonthlySnapshots`)으로. 스키마·저장 키·동기화 pull 경로 불변.
+- 성과 허브 카드 4→3(자산 변화·배당·성적표) + 말일−3일~다음 달 10일 결산 카드. 자산 변화 = 범위(전체/주식)×기간(일/주/월/연), 전체·월 = 결산 블록(헤더·순자산 비교·변화 원인 5항목·다음 달 준비 + `.ics`). 엔진은 `computeAttributionBetween` 래퍼 1개만 추가, 홈 헤더 무변경.
+- 옛 `#activity/netasset`·`#activity/profit` 리다이렉트, 기능 카탈로그 15→14, GA `settlement_view`(source·result 열거형만), 화면키 `activity:change`.
+
+### Vercel preview 안전장치·데모 데이터 (#4.34, 이슈 #31)
+- **왜**: preview가 운영과 같은 `/api/sync`를 써서 검증 전 코드가 실제 금고에 쓸 수 있었고, origin이 달라 빈 화면이라 qa가 사람 없이 점검할 수 없었다.
+- `next.config.mjs` `env`에 `NEXT_PUBLIC_VERCEL_ENV` 주입 → `isPreviewEnv()`(정확히 `"preview"`만 true). `isCloudSyncEnabled()`는 preview에서 false, `sync-client`의 `pushAsset`·`pullAsset`·`fetchRemoteVersion` 입구 가드(fetch 0건). 운영·로컬 반환값 불변, 서버 `/api/sync` 무변경.
+- preview 전용 `PreviewGate`(`(main)/layout.tsx`에서 preview일 때만 `AssetDataProvider` 바깥을 감쌈): `PREVIEW · v4.NN` 배지, `?demo=1`(데모 JSON 동적 import → `applyImportedPayload`, 멱등)·`?demo=empty`(`clearAssetData`), 처리 후 쿼리 제거 + `html[data-demo-ready="1"]`, 자산 0건이면 하단 선택 카드. 스키마·저장 키 변경 없음.
+
+---
+
 ## 2026-10-24
 
 ### 매수/매도 기록 — 보유 자산 항목 직접 선택 + 변경 미리보기 (#4.29)

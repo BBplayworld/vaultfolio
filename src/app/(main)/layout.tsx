@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import dynamic from "next/dynamic";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,10 @@ import { PwaLockScreen } from "./_components/pwa/pwa-lock-screen";
 import { PwaConnectPrompt } from "./_components/pwa/pwa-connect-prompt";
 import { InAppBrowserGate } from "./_components/pwa/in-app-browser-gate";
 import { AppGuide } from "./_components/header-menu/app-guide";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
+
+// preview 전용(#31) — 운영 빌드에서는 렌더 분기 자체가 없어 로드되지 않는다
+const PreviewGate = dynamic(() => import("./_components/preview/preview-gate").then((m) => m.PreviewGate));
 
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
@@ -25,8 +30,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   // Configuration forms have been removed; hardcode best-looking defaults
   const contentLayout = "centered";
 
-  return (
-    <ReactQueryProvider>
+  const tree = (
       <AssetDataProvider>
         <CloudSyncProvider>
         <CloudSyncConnectDialog />
@@ -52,6 +56,11 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         </NavigationProvider>
         </CloudSyncProvider>
       </AssetDataProvider>
+  );
+
+  return (
+    <ReactQueryProvider>
+      {isPreviewEnv() ? <PreviewGate>{tree}</PreviewGate> : tree}
     </ReactQueryProvider>
   );
 

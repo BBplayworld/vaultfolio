@@ -160,7 +160,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 전량 미분류 시 "준비 중", 집중도 임계값 0.6/0.35, delisted 가치 0
 - 회귀: ticker 병합 후 집계(1회 노출)
 
-### F-ACTIVITY. 성과 (순자산·수익·배당) ([views/activity](../../src/app/(main)/_components/views/activity))
+### F-ACTIVITY. 성과 (자산 변화·배당·성적표) ([views/activity](../../src/app/(main)/_components/views/activity))
+- 👤 **성과 허브 카드 3개(#4.34, 이슈 #32 r2)** — 자산 변화(`hub-card-change`)·배당·자산 성적표. 별도 결산 카드 없음(`settlement-card` 삭제). 자산 변화 카드: 말일−3일~다음 달 10일이고 비교할 직전 월 기록이 있으면 배지 "N월 결산"(`hub-change-settlement-badge`) + 구간 + 증감·% "지난 기록 대비" → 탭 시 월 탭 해당 달(`source=card`), 창 밖이면 "N월 · 진행 중" 증감(`source=menu`), 첫 달·자산 0건이면 금액 없이 "다음 달부터 결산이 열려요". 순자산·전년 대비 표시 없음
+- 👤 **자산 변화(`#activity/change`, [asset-change-view.tsx](../../src/app/(main)/_components/views/activity/asset-change-view.tsx))** — 제목 행 h-11 오른쪽 범위 선택(`[role=radiogroup][aria-label=범위 선택]`, 전체/주식) + 각 본문 `change-hero`(이름 → `change-hero-delta` → `change-hero-start`→`change-hero-end` → 기간 선택 `[aria-label=기간 선택]` 일/주/월/연). Radix `[role=tablist]` 없음, 범위 배지 없음. 375×812 전체·월에서 증감 y ≤ 200. 칸·화살표 히트영역 ≥ 40×40, ←/→·Home/End 이동·Tab 1회 이탈, reduced-motion이면 썸 전환 0s. 전체·일/연 = `YearlyNetAssetChart`(`view` 제어 → 제목·"현재 순자산" 숨김, Hero "M/D 기록 대비"/"YYYY년 말 대비"), 전체·주 = Hero "7일 전 대비" + 최근 7일 목록, 전체·월 = 월말 결산, 주식·* = `ProfitCard`(`period` 제어 → 제목·요약 박스 숨김, Hero "하루/1주/1개월/1년 주식 수익"·시장 필터 시 "국내 · …", 조회 중 스켈레톤 `change-hero-loading`, API 점검 시 "점검 중")
+- 👤 **변화 원인 6항목(#4.34, 대표 수정 2026-10-29)** — 월·연 탭 공통 순서 시세 변동 → 평가 갱신 → 환율 효과 → 순유입 → **대출**(`cause-row-loan`, 항상 ≤ 0) → 기록 안 된 변화, 0원 숨김. 대출 = 기록 안 된 변화 U가 음수일 때만 −min(|U|, 대출 순증 + 이자 추정(현재 잔액×금리×일수/365)), 이자 포함 시 예측 배지. 대출과 기록 안 된 변화는 반대 부호가 아니다. 순유입은 기록된 출금↔기록된 매수·상환 ±3일 짝짓기만 상쇄(짝 없는 출금은 순유입 −). 현금 거래가 있는 구간은 입출금 안내 없음
+- 👤 **연 탭 변화 원인(#4.34 보완, B안)** — 전체·연에서 Hero("YYYY년 말 대비" + `year-inprogress` "진행 중") 아래 `cause-block[data-scope=year]`, 그 아래 차트·연도별 목록. 체인 = 앵커(작년 수동 순자산 `YYYY-12-31`, 전년 12월 월 스냅샷이 있으면 그것) → 올해 enrich 월 스냅샷(이번 달 제외, `resolveYearChain`) → 실시간. 구간마다 월 탭과 같은 `computeAttributionBetween(…, false)`라 실측 구간 원인 = 월 탭 원인 합, 첫 구간(앵커가 수동값이면 예측)은 "일부 예측"/"예측" 배지. 합계 = `change-hero-delta`(실시간↔종가 차는 "기록 안 된 변화"). 전년 1~11월 월 스냅샷 미사용(C8), 시작일 당일 제외(C15). 첫 해는 블록 없음, `cause-insufficient`는 앵커 근거가 없을 때만, 예외는 `cause-error`. 주식·연 원인 없음, 연 진입 `settlement_view` 0회. preview 데모에 작년 수동값(`@PY` 토큰) 포함
+- 👤 **월말 결산([settlement-view.tsx](../../src/app/(main)/_components/views/activity/settlement-view.tsx))** — Hero 이름 `settlement-title` "10월 결산"(진행 중 "11월"+`settlement-inprogress`, 전년 "25년 10월 결산", 첫 달 "7월") + 구간 "9/28 → 10/28"(레거시 "YYYY-MM 기록"), 35일 초과 `settlement-gap-note`, 이전 값 자산이 있으면 `hero-stale-badge` "일부 이전 값"(→ 다음 달 준비로 스크롤). ‹ › `settlement-prev-month`/`settlement-next-month`: 기록 없는 달 건너뜀, 끝에서 disabled, 공유 캡처 숨김. 본문 변화 원인 5항목(시세 변동·평가 갱신·환율 효과·순유입·기록 안 된 변화, 0원 숨김, 매수·매도·상환 문구 없음) / 다음 달 준비(`getStaleCategories` "N일 전 값 기준" → 입력 시트, `.ics` 버튼 + 안내). 빈/첫 달/오류 `settlement-empty`/`settlement-first-month`/`settlement-error`. `cause-row-*` `data-value` 합계 = `change-hero-delta` = end − start. "순자산 비교"·월 칩 없음
+- ⚙ **결산 매핑([settlement.ts](../../src/lib/report/settlement.ts) `mapSettlementCauses`)** — 엔진 키 15종 → 5항목. 내부 이동 풀(매수·매도·debt·deposit·cash)은 상쇄 후 잔여만 "기록 안 된 변화"(= Δ순자산 − 표시 4항목, 항등식). 현금 미등록(시작·끝 `breakdown.cash` 0 + 구간 입출금 0)이면 매수·매도만 순유입. 엔진·홈 헤더 무변경, 과거 두 시점은 `computeAttributionBetween`(단일 구간, `isFirstSegment=true`, R29)
+- ⚙ **결산 구간(`resolveSettlementWindow`)** — 시작 = 대상 달 직전 최근 스냅샷, 지난 달 끝 = 그 달 스냅샷, 이번 달 끝 = 실시간. 이번 달은 간격 25일 이상이면 날짜 구간 제목(`range`), 미만이면 "진행 중". 1~10일엔 전월 기록일이 21일 이후일 때만 전월 결산(`pickSettlementMonth`). 임계 21·25·35일·50%는 추정값
 - 👤 순자산 차트(현재+전년 대비), 수익 차트(기간별 일/주/월/연, basis 토글), 배당 차트(연간+월평균, 예상/실제)·월별 배당 종목
 - 👤 수익 차트 "기준 종가 비교": 시작 종가가 휴장으로 직전 영업일에 폴백되면 "휴장제외" 최소 표시 — 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKr/UsHoliday`)
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리
@@ -206,10 +213,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 레버리지 축: 무부채(loanBalance≤0)=**5.0**(건전성 만점, AC3) / 자본잠식(equity≤0 & 부채>0)=**0.5**(AC4). 부채비율 40/60%·평균금리 6%·이자 커버리지 감가점
 - ⚙ 채점 컷 전부 `GRADE_THRESHOLDS` 단일 소스(AC5) — 티어 4.5/3.5/2.5(platinum/gold/silver), 컷 근거는 각 score 함수 주석
 - ⚙ 전 축 non-pending 확정 시 오늘 daily·이번 달 monthly `grade` 기록(`recordGradeSnapshot`, **동일 값 스킵=멱등**, 과거 불소급, AC6). `diffGrade`로 종합·축별 ▲▼·티어 승·강등(AC7) — 최근 과거 daily 우선, 없으면 이전 달 monthly 대비
+- ⚙ **habit 순자산 상승 비교 범위(#4.34)** — 월 스냅샷이 13개월 보존돼도 가장 최근 기록 달의 해(올해)만 최근 7개(비교쌍 6)로 본다(종전 올해분 저장과 같은 결과, 1~6월 전년 달 혼입 방지)
 - ⚙ **habit 저축 규칙성**(S-4.22) — ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월, `savingsRhythm`)** 중 높은 비율로 채점(저축을 시세와 분리). 가중치 0.1·재정규화·티어 불변. 현금 거래 없으면 순자산 상승 폴백. habit 카드 → 현금 상세 딥링크
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
-- ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양)
+- ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양) — #4.34에 "순자산 변화, 왜?" 섹션 삭제(변화 원인 정본은 자산 변화 월 탭), 현재 3개
 - 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → 등급 기록은 사용자 편집 신호가 아니므로 push를 유발하지 않음(R14). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)
 - ⚙ **홈 진입점(2026-09)** — `dashboard.tsx`의 `NetAssetSummaryBox`가 우상단에 트로피+점수 미니 배지 노출(`components.md` 대시보드 표 참고). 성적표 화면 방문 이력이 있어야(스냅샷 `grade` 필드 존재) 뜨고, 재계산 없이 저장된 최신값만 읽음 — 미방문 계정은 배지 자체가 렌더 안 됨(조용한 생략)
 - 👤 성적표를 한 번도 안 연 계정은 홈에 배지가 안 뜨는지, 한 번 연 뒤에는 홈에 트로피+점수 배지가 뜨고 탭하면 성적표 화면으로 바로 이동하는지, 다크·라이트 모두 티어별 색이 잘 보이는지
@@ -275,6 +283,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-CLOUD-SYNC. E2EE 클라우드 동기화 ([cloud-sync](../../src/lib/cloud-sync) · [api/sync](../../src/app/api/sync/route.ts))
 
 #### 코드레벨(⚙)
+- ⚙ **preview 동기화 차단(#4.34)** — `isPreviewEnv()`(`NEXT_PUBLIC_VERCEL_ENV === "preview"`)면 `isCloudSyncEnabled()` false → provider 자동 pull·폴링·push·연결 진입점 비활성. 추가로 `sync-client`의 `pushAsset`·`pullAsset`·`fetchRemoteVersion` 입구 가드가 UI와 무관하게 fetch 0건 보장. 운영·로컬 반환값은 `NEXT_PUBLIC_CLOUD_SYNC`만으로 결정(불변). 자동: `src/lib/__tests__/preview-safety.test.ts`
+- 👤 **preview 데모 점검(#4.34)** — `<preview>/?demo=1` → `html[data-demo-ready="1"]` 후 홈에 자산·쿼리 제거, 재접속 멱등. `?demo=empty` → 웰컴. 쿼리 없는 첫 접속 + 자산 0건 → `preview-demo-btn`/`preview-empty-btn`. 전 과정 `/api/sync`·GA 요청 0건. 스크립트: memory 브랜치 `.memory/qa/preview-check.mjs`
 - ⚙ 용어 표준화 — `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`, Redis 키 `csync:asset:{assetId}`. **URL 해시 `#sync=<assetId>`, `SYNC_HASH_PARAM = "sync"`**(구 `#asset=`/`#vault=` 진입 호환 — provider `detect`·`clearPendingConnect` 모두 신구 처리) ([config.ts:27](../../src/lib/cloud-sync/config.ts) · [provider:153,291-295](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **`#sync=` 해시 삭제 시점** — `detect`는 `aid`를 `pendingConnectAssetId` state로 캡처만, **해시 제거는 연결 모달이 닫힐 때 `clearPendingConnect`(291-303)에서** 수행(성공·취소 공통). **detect(다이얼로그 여는 틱)에서 replaceState 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(R20). `#sync=`는 비밀 없는 assetId 포인터(E2EE 금고암호 별도)라 모달 표시 중 잔존 허용·완료 시 제거. 연결 모달은 `pendingConnectAssetId` state 기반(해시 비의존, [connect-dialog:87,100,130,178](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx)) ([provider:149-162,291-303](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **앱잠금 중 pull 차단(잠금 우회·인증키 삭제 방지)** — `autoPullIfNewer` 진입부 `if (isPwaLocked()) return`로 잠금화면 위 자동 pull(→`clearAssetData`) 차단. 잠금 해제 시 `PwaLockScreen`이 `PWA_UNLOCKED_EVENT`(`secretasset:pwa-unlocked`) 발행 → 폴링 effect 리스너가 즉시 1회 pull. `isPwaLocked`/`PWA_UNLOCKED_EVENT`는 `pwa-lock-screen.tsx` export 단일 소스 ([provider:221-245](../../src/lib/cloud-sync/cloud-sync-provider.tsx) · [pwa-lock-screen.tsx](../../src/app/(main)/_components/pwa/pwa-lock-screen.tsx))
@@ -328,12 +338,13 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: foreign+KRW→USD 마이그레이션, market 캐시 비었을 때 재조회
 
 ### F-SNAPSHOT. 자산 스냅샷
-- ⚙ 일별(이번 달)·월별(올해 12개월)·년도별 종가 기준 저장, 토/일 보완
+- ⚙ 일별(이번 달)·월별(**최근 13개월 롤링**, `pruneMonthlySnapshots` — #4.34에서 `startsWith(올해)` 필터의 1월 전년분 삭제 결함 수정, 스키마·키 불변)·년도별 종가 기준 저장, 토/일 보완. 동기화 pull(`keepLocalSnapshots`)은 월 스냅샷을 **월 단위 병합**(`mergeMonthlySnapshots`: 로컬 전용 달 보존, 같은 달은 수신값 — 단 수신값에 `breakdown`이 없고 로컬에 있으면 로컬) 후 13개월 롤링 — 구버전(올해분만 보존) 기기가 섞여도 신버전 기기 보존분이 줄지 않음(`monthly-sync-merge.test.ts` 순환 증명). 파일 가져오기·공유 링크는 기존처럼 교체. 일별은 교체 그대로
 - 회귀: `saveSnapshotsBlockedRef` 차단, tickerList 정렬, 종가(refPrice) 폴백
 
 ### F-NAV. 네비게이션 (drill-down)
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R31)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
+- ⚙ **옛 성과 해시 리다이렉트(#4.34)** — `#activity/netasset` → 자산 변화(전체·연), `#activity/profit` → 자산 변화(주식·일). `parseHash`가 `init`을 붙이고 첫 진입 시 주소창을 `#activity/change`로 `replaceState`. FAB 연도별 순자산 입력·성적표 growth 축 링크(→ 전체·연)·허브 자산 변화 카드도 `init`으로 탭 지정
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))
@@ -428,7 +439,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **재노출 정책은 종류별로 원래 정책 그대로 보존**(하나로 뒤섞지 않음): 백업·최신화=노출되는 순간 오늘 flag(`markNudgeShown`/`markRefreshNudgeShown`, daily), 세금=명시적으로 닫아야만 이번 달 flag(`markTaxNoticeDismissed`, monthly — 클릭 이동만으로는 안 닫힘), 공지=클릭에서만 영구 열람(위 참조), 기능=닫기·클릭 이동 둘 다 영구 dismiss(`dismissTip`, 재노출 없음).
 - ⚙ **승자만 "오늘 떴다" flag를 찍는다** — 마운트 effect에서 `pickHomeTip`이 반환한 `kind`가 backup/refresh일 때만 해당 mark 함수를 호출. 하위 순위라 안 보인 항목까지 flag를 찍으면 실제로 못 본 채로 그날 소비된다(과거 `RefreshNudge`가 `suppressed`일 때 mark를 건너뛰던 것과 동일 원리).
 - ⚙ **인터랙션은 5종 모두 통일** — 카드 전체 클릭(`role="button"`) = 그 종류의 유일한 동작(백업: `exportAssetData`+토스트 / 세금: `navigate({type:"tax"})` / 최신화: `open-add-asset-sheet` 이벤트 dispatch(가장 오래된 카테고리 1개) / 공지: `dispatchOpenShareCard("portfolio")` + `markCurrentNoticeSeen()` / 기능: `action` 또는 `beforeNavigate`+`navigate`), X 닫기 = 해당 종류의 dismiss만(이동 없음). 과거 백업·최신화가 갖던 별도 "지금 백업하기"/"지금 최신화하기" **버튼은 제거**되고 카드 클릭 하나로 단순화됨.
-- ⚙ 기능(feature) 카탈로그는 `APP_FEATURES`(15개, #4.24에 `share-card-portfolio`, #4.26에 `share-card-type`("투자 유형 인증카드", `dispatchOpenShareCard("type")`) 추가. `recordVisit`은 리스너가 `"share-card"`만 기록하므로 세부 타입 팁은 클릭 시 `dismissTip`으로만 소진. 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 등록 필수. **`isNew`는 이번 릴리스 신규만** — 지난 릴리스 항목의 `isNew`는 해제해야 다음 신규가 `pickRecommendedFeature`의 `.find(isNew)`에 걸린다(#4.24에 `tax-simulator` isNew 해제·`stocks-xray`/`share-card-portfolio` isNew 설정). 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점 `recordVisit(viewToKey(v))` + `share-card`(action형)는 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도 기록.
+- ⚙ 기능(feature) 카탈로그는 `APP_FEATURES`(14개 — #4.34에 `netasset`·`profit`을 `change`("자산 변화") 1개로 통합, 저장된 옛 id 방문 기록은 무시. #4.24에 `share-card-portfolio`, #4.26에 `share-card-type`("투자 유형 인증카드", `dispatchOpenShareCard("type")`) 추가. `recordVisit`은 리스너가 `"share-card"`만 기록하므로 세부 타입 팁은 클릭 시 `dismissTip`으로만 소진. 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 등록 필수. **`isNew`는 이번 릴리스 신규만** — 지난 릴리스 항목의 `isNew`는 해제해야 다음 신규가 `pickRecommendedFeature`의 `.find(isNew)`에 걸린다(#4.24에 `tax-simulator` isNew 해제·`stocks-xray`/`share-card-portfolio` isNew 설정). 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점 `recordVisit(viewToKey(v))` + `share-card`(action형)는 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도 기록.
 - 👤 (신규 공지 미열람 상태) 홈 진입 → **공지 카드가 백업·세금보다 먼저** 노출·클릭 시 인증카드 투자 유형 다이얼로그 오픈(#4.26, 이전엔 포트폴리오) / 공지 열람 후 → 백업 30일 이상 미실행 시 백업 카드·클릭 시 파일 다운로드 / 세금 신고 대상 자산 보유 시 세금 카드·클릭 시 `#tax` / 자산 30일 이상 미갱신 시 최신화 카드·클릭 시 입력 시트 / 위 모두 없으면 "종목 유형 분석(X-Ray)" 또는 "포트폴리오 인증카드" NEW 팁
 - 엣지: 여러 조건 동시 충족 시 우선순위 1개만 노출 · 공지를 X로 닫은 뒤 같은 세션 내 홈 재진입 시 다시 뜨지 않아야 함(세션내 미노출) · 다른 팁을 X로 닫아도 미열람 공지는 최초 1회는 반드시 노출 · 전체 기능 dismiss + 공지 열람 + 백업/세금/최신화 미충족 시 박스 미노출 · 공지·인증카드 항목 클릭 시 페이지 이동 없이 다이얼로그만 열리는지
 
@@ -478,6 +489,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-ANALYTICS. GA4 사용자 행동 추적 ([ga.ts](../../src/lib/analytics/ga.ts)) — 명세 [S-4.28](../specs/4.28-ga-event-tracking.md)
 - ⚙ config `send_page_view:false` + `page_location`에 해시·쿼리 없음(`#share=`·`#sync=`·`?url=` 미전송), 화면은 `trackScreen` 가상 경로 `/v/<viewKey>`
+- ⚙ **`settlement_view`(#4.34)** — 월 탭 마운트당 1회(월 화살표 이동·같은 칸 재선택은 재전송 없음, 다른 기간·범위에서 월(전체)로 돌아오면 재마운트로 1회 `source=menu`, 주식 범위는 0회), `source`=card/menu, `result`=settled/in_progress/first_month만. 화면키 `activity:netasset`·`activity:profit` → `activity:change`
 - ⚙ sanitizer: 사전 외 키·값·비문자열 제거, 전송 값은 한국어 라벨(`PARAM_LABELS`·`USER_PROP_LABELS`, 매개변수별 라벨 상이·중복 없음)
 - ⚙ gtag 부재·예외 시 no-op(AC1·AC4), 같은 화면 연속 page_view 1회(AC7), `first_asset_saved` 기기당 1회(`gaFlags`, 공유 복원·가져오기·pull 제외)(AC8)
 - ⚙ `sync_action`은 수동 enable·connect·push·pull 결과에서만 — 60초 폴링·focus·online 자동 동기화 미발생(AC9). 동기화 로직 무변경

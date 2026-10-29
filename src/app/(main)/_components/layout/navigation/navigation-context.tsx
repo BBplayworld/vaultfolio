@@ -5,7 +5,17 @@ import { recordVisit, viewToKey } from "@/lib/feature-usage";
 import { trackScreen } from "@/lib/analytics/ga";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
-export type ActivityTab = "hub" | "netasset" | "profit" | "dividend" | "report";
+export type ActivityTab = "hub" | "change" | "dividend" | "report";
+
+// 자산 변화 화면 진입 상태(#32) — 해시에는 싣지 않는다(옛 해시 리다이렉트·결산 카드·FAB가 초기 탭을 지정)
+export type ChangeScope = "all" | "stock";
+export type ChangePeriod = "day" | "week" | "month" | "year";
+export interface ChangeInit {
+  scope?: ChangeScope;
+  period?: ChangePeriod;
+  month?: string;           // 월 탭에서 선택할 달(YYYY-MM)
+  source?: "card" | "menu"; // settlement_view 진입 경로
+}
 
 export type AssetView =
   | { type: "home" }
@@ -13,10 +23,15 @@ export type AssetView =
   | { type: "settings" }
   | { type: "tax" }
   | { type: "detail"; tab: DetailTab }
-  | { type: "activity"; tab: ActivityTab };
+  | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
-const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "netasset", "profit", "dividend", "report"];
+const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "dividend", "report"];
+// 옛 해시(북마크·공유 링크 보호) → 자산 변화의 해당 범위·기간으로 리다이렉트(#32)
+const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {
+  netasset: { scope: "all", period: "year" },
+  profit: { scope: "stock", period: "day" },
+};
 
 // 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
 const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
@@ -42,6 +57,7 @@ export function parseHash(hash: string): AssetView {
     // #activity (탭 생략) → hub
     if (!tab) return { type: "activity", tab: "hub" };
     if (ACTIVITY_TABS.includes(tab as ActivityTab)) return { type: "activity", tab: tab as ActivityTab };
+    if (tab && Object.hasOwn(LEGACY_ACTIVITY_TABS, tab)) return { type: "activity", tab: "change", init: { ...LEGACY_ACTIVITY_TABS[tab] } };
   }
   return { type: "home" };
 }
@@ -58,7 +74,7 @@ export function toHash(view: AssetView): string {
 
 // 뒤로가기 버튼에 표시할 라벨 — 현재 view가 아니라 "돌아갈 view"를 표시
 // - 허브(detail/activity)에서 뒤로 → 홈
-// - 하위 페이지(stocks/netasset 등)에서 뒤로 → 해당 허브("상세"/"성과")
+// - 하위 페이지(stocks/change 등)에서 뒤로 → 해당 허브("상세"/"성과")
 export function getBackLabel(view: AssetView): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
@@ -154,12 +170,19 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // 초기 hash 1회 동기화 (SSR 안전)
   useEffect(() => {
     const initial = parseHash(window.location.hash);
+    // 옛 해시(#activity/netasset 등)로 들어오면 주소창도 새 해시로 바꿔 둔다(히스토리 추가 없음)
+    if (initial.type === "activity" && initial.init && window.location.hash !== toHash(initial)) {
+      window.history.replaceState(null, "", toHash(initial));
+    }
     viewRef.current = initial;
     setView(initial);
     // GA 화면 page_view(S-4.28) — 해시가 아닌 가상 경로(/v/<화면키>)로 전송. #share·#sync는 parseHash가 home으로 처리
     trackScreen(viewToKey(initial), "initial");
     const onPop = () => {
       const next = parseHash(window.location.hash);
+      if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
+        window.history.replaceState(null, "", toHash(next));
+      }
       setSlideDir(computeSlideDir(viewRef.current, next));
       viewRef.current = next;
       setView(next);

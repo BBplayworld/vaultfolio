@@ -136,7 +136,7 @@
 
 - **버튼**: 확인·제출 = `variant="brand"`. 보조·취소·리스트 내 아이콘(수정/삭제/나누기) = `variant="secondary"`(테두리 없는 플랫). `outline` 신규 사용 지양. 카드 액션 아이콘 버튼 = `size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5). `Button`은 누름 피드백 `active:not-disabled:scale-[0.96]` 내장(link·`static` 제외).
 - **체크박스**: 기본 `Checkbox`(checked 시 자동 brand). 별도 색 금지.
-- **탭/세그먼트**: `ASSET_THEME.tabList1/2/3`·`tabTrigger1/2/3`. 1단계=메인, 2단계=상세(캡슐), 3단계=카테고리(border-2). InlineSelector로 전 차수 통일.
+- **탭/세그먼트**: InlineSelector로 전 차수 통일(`tabList2/3` 토큰은 #4.34에 삭제, `tabList1`·`tabList3Wrap`만 legacy 잔존). 화면 폭을 채우는 1차 선택(자산 변화 범위·기간)은 `InlineSelector fullWidth` — 같은 폭 칸·채운 썸+굵은 글자(외곽선 없음)·썸 `motion-safe:transition-[transform] duration-200`·칸 `min-h-10 text-sm active:scale-[0.96]`·화살표 키 이동.
 - **카드**: 접힘행 왼쪽=핵심 식별(이름·비중%), 상세(종류·금리·매입가 등)는 펼침(Collapsible)에. 비종목 자산도 주식 카드와 동일 패턴. 토큰: `cardWrapper`/`cardHeader`/`cardInfoName`/`cardAmountMain`…
 - **다이얼로그**: 설명형(공유·동기화·가이드)은 `<DialogHeader className="text-left">`(모바일 중앙 정렬 방지). 짧은 확인 모달만 중앙 허용.
 - **팝업 취소/닫기 버튼(통일 규약)**: ① 색 = `variant="secondary"`(테두리 없는 플랫, `outline` 금지). `AlertDialogCancel`도 secondary 기본. ② 순서 = DOM은 `[주요 버튼, 취소/닫기]` 순 → 모바일 취소 하단·PC 취소 우측(`DialogFooter`/`AlertDialogFooter` 기본 `flex-col ... sm:flex-row sm:justify-end`, 개별 오버라이드·`flex-col-reverse` 금지). ③ 텍스트 = 맥락별: 폼·설정·실행형(입력/제출/삭제/연결/앱잠금 등)은 **"취소"**, 읽기전용 정보(공지·미리보기·가이드 등)는 **"닫기"**.

@@ -10,7 +10,7 @@ interface KpiCardProps {
   icon: LucideIcon;
   title: ReactNode;
   description: string;
-  primary: string;
+  primary?: string; // 없으면 금액 줄 생략(안내만 보여줄 때)
   secondary?: ReactNode;
   onClick: () => void;
   dataTutorial?: string;
@@ -34,9 +34,11 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
             <ChevronRight className="size-4 text-muted-foreground shrink-0" />
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
-          <p className={`text-xl sm:text-2xl lg:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
-            {primary}
-          </p>
+          {primary !== undefined && (
+            <p className={`text-xl sm:text-2xl lg:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
+              {primary}
+            </p>
+          )}
           {secondary && <div className="text-sm lg:text-base font-medium mt-1">{secondary}</div>}
         </div>
       </div>
