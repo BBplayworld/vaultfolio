@@ -30,7 +30,7 @@
 - 가장 큰 버전: 4.34(#31) → 다음 배정 4.35
 
 ## 후보 목록 (주간 기획·자율 발굴 탈락·대기, cto 2026-10-29 순위)
-- **[선정 2026-10-29] 백업 JSON·공유 PNG 저장 iOS 신뢰(D2+B2)** — `issues/4.xx-new-backup-ios-trust/4.xx-challenge.md` 통과. qa 결함 확정 후 이슈 생성·planning
+- **[선정 2026-10-29] 백업 JSON·공유 PNG 저장 iOS 신뢰(D2+B2)** — `issues/4.xx-45-backup-ios-trust/4.xx-challenge.md` 통과. qa 결함 확정 후 이슈 생성·planning
 - [2위, type:bug, 결함 의심 D1] 거래·대출 입력 "오늘"이 UTC(KST 00~09시 전날) — `trade-input.tsx:107,192,600`, `loan-tx-input.tsx:49,60,209`. 결산 짝짓기·월 귀속 어긋남. qa 확정 필요. 탈락 사유: 원인·화면이 선정 과제와 달라 다음 순번. B3와 "결산 입력 정확도"로 묶음 후보
 - [3위, type:feature P1] 결산 창 열리면 홈 팁 1회 안내(home-tip `pickHomeTip`, 새 저장 키 없음) — v4.34 반영 결정 전이라 보류, 머지 후 1순위
 - [4위, type:bug, qa 확정 2026-10-28 B3] FAB "과거 순자산" 50ms 고정 대기 — 입력창 미오픈 가능(`floating-add-button.tsx:111`). 연 탭 시작점 입력 경로
