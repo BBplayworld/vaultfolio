@@ -5,6 +5,7 @@
  *  - PREVIEW · v4.NN 배지
  *  - ?demo=1 데모 주입 / ?demo=empty 빈 상태 → 쿼리 제거 → html[data-demo-ready="1"]
  *  - 쿼리 없이 자산 0건이면 하단 선택 카드(데모 데이터로 보기 / 빈 상태로 보기)
+ *  - 데모 주입 상태에서는 튜토리얼을 띄우지 않는다(#4.36). ?demo=empty는 데모가 건너뛴 튜토리얼만 원상복구
  * AssetDataProvider 바깥에 두고 주입이 끝날 때까지 children을 렌더하지 않아, provider가 새 데이터를 처음부터 읽는다.
  */
 
@@ -17,10 +18,30 @@ import { Z_LAYER } from "@/config/theme";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { applyImportedPayload, clearAssetData, getAssetData, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { buildDemoRefreshMeta, kstToday, materializeDemo, resolvePreviewAction } from "@/lib/preview/demo-payload";
+import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import type { AssetData } from "@/types/asset";
 
 const hasAnyAssets = (d: AssetData) =>
   d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length > 0;
+
+// 데모가 튜토리얼을 건너뛰었다는 preview 전용 표식 — clearAssetData가 지우는 secretasset_ 키라 ?demo=empty·전체 삭제 때 함께 사라진다
+export const DEMO_TUTORIAL_MARKER = "secretasset_preview_demo_tutorial_skipped";
+
+/** ?demo=1 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps) + 표식 */
+export function applyDemoTutorialSkip(): void {
+  skipAllTutorialSteps();
+  localStorage.setItem(DEMO_TUTORIAL_MARKER, "1");
+  tutorialStore.getState().initTutorial();
+}
+
+/** ?demo=empty 처리 직전: 데모가 건너뛴 튜토리얼만 첫 사용 상태로 되돌린다(데모 이력 없으면 무동작 — 기존 동작 그대로) */
+export function resetDemoTutorialSkip(): void {
+  if (localStorage.getItem(DEMO_TUTORIAL_MARKER) !== "1") return;
+  localStorage.removeItem(STORAGE_KEYS.tutorialStatus);
+  localStorage.removeItem(DEMO_TUTORIAL_MARKER);
+  tutorialStore.getState().initTutorial();
+}
 
 // 데모 주입 — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다
 async function injectDemo(): Promise<void> {
@@ -28,6 +49,7 @@ async function injectDemo(): Promise<void> {
   applyImportedPayload(materializeDemo(mod.default, kstToday()));
   // assetRefresh는 clearAssetData의 보존 키라 import로 덮이지 않음 → 기존 키·형식으로 직접 기록(멱등)
   localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
+  applyDemoTutorialSkip();
 }
 
 // 처리한 ?demo 쿼리 제거 — 새로고침 시 재주입 방지(사용자가 preview에서 만든 변경 보존)
@@ -72,6 +94,7 @@ function PreviewGateInner({ children }: { children?: ReactNode }) {
       return;
     }
     if (action === "empty") {
+      resetDemoTutorialSkip(); // clearAssetData가 표식을 지우기 전에 판정
       clearAssetData();
       stripDemoQuery();
       setPhase("ready");
