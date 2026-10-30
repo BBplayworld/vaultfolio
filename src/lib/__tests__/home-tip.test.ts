@@ -9,29 +9,42 @@ const h = vi.hoisted(() => ({
   refresh: false,
   feature: null as null | { id: string },
   monthly: [] as unknown[],
+  taxDismissed: false,
+  seen: [] as unknown[][],
+  tracked: [] as unknown[][],
 }));
 
 vi.mock("@/app/(main)/_components/layout/onboarding/notice", () => ({ NOTICE_ID: "n1" }));
 vi.mock("../local-storage", () => ({
   readNoticeSeenId: () => (h.noticeUnseen ? null : "n1"),
-  markNoticeSeen: () => {},
+  markNoticeSeen: (...a: unknown[]) => void h.seen.push(a),
 }));
 vi.mock("../asset/backup-status", () => ({ shouldShowBackupNudge: () => h.backup, daysSinceBackup: () => 30 }));
-vi.mock("../tax-utils", () => ({ isTaxNoticeDismissed: () => false, getAssetDrivenHighlights: () => h.tax }));
+// isImminentTaxMatch·todayKst는 실제 구현 사용(경계 검증), 노출 대상 목록만 스텁
+vi.mock("../tax-utils", async (orig) => ({
+  ...(await orig<typeof import("../tax-utils")>()),
+  isTaxNoticeDismissed: () => h.taxDismissed,
+  getAssetDrivenHighlights: () => h.tax,
+}));
+vi.mock("../analytics/ga", async (orig) => ({
+  ...(await orig<typeof import("../analytics/ga")>()),
+  track: (...a: unknown[]) => void h.tracked.push(a),
+}));
 vi.mock("../asset/asset-refresh-status", () => ({ shouldShowRefreshNudge: () => h.refresh, getStaleCategories: () => ["stock"] }));
 vi.mock("../feature-usage", () => ({ pickRecommendedFeature: () => h.feature }));
 vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
 
-import { pickHomeTip } from "../home-tip";
+import { pickHomeTip, markCurrentNoticeSeen } from "../home-tip";
 import { PARAM_VALUES } from "../analytics/ga";
 
 const assetData = { lastUpdated: "2026-11-01T00:00:00.000Z" } as AssetData;
 const snap = (month: string, date: string): MonthlyAssetSnapshot => ({ month, date, netAsset: 1, financialAsset: 1 });
 const TWO = [snap("2026-09", "2026-09-28"), snap("2026-10", "2026-10-28")];
+const tax = (month: number, dueLabel: string) => ({ event: { id: `t${month}${dueLabel}`, month, dueLabel, severity: "high" }, reasons: ["x"] });
 const pick = (today?: string, hasAssets = true) => pickHomeTip({ assetData, hasAssets, syncArmed: false, today });
 
 beforeEach(() => {
-  Object.assign(h, { noticeUnseen: false, backup: false, tax: [], refresh: false, feature: null, monthly: TWO });
+  Object.assign(h, { noticeUnseen: false, backup: false, tax: [], refresh: false, feature: null, monthly: TWO, taxDismissed: false, seen: [], tracked: [] });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -77,12 +90,12 @@ describe("결산 창 경계", () => {
 });
 
 describe("우선순위: 공지 > 백업 > 세금 > 결산 > 최신화 > 기능", () => {
-  it("5. 공지·백업·세금이 결산보다 먼저", () => {
+  it("5. 공지·백업·임박 세금이 결산보다 먼저", () => {
     h.noticeUnseen = true;
     expect(pick("2026-11-27")?.kind).toBe("notice");
     h.noticeUnseen = false; h.backup = true;
     expect(pick("2026-11-27")?.kind).toBe("backup");
-    h.backup = false; h.tax = [{ event: {} }];
+    h.backup = false; h.tax = [tax(11, "~11/30")];
     expect(pick("2026-11-27")?.kind).toBe("tax");
   });
   it("6. 결산과 최신화가 동시에 참이면 결산", () => {
@@ -99,4 +112,65 @@ describe("우선순위: 공지 > 백업 > 세금 > 결산 > 최신화 > 기능",
 
 it("GA source 허용 값에 home_tip이 있다(새 값 추가 없음)", () => {
   expect(PARAM_VALUES.source).toContain("home_tip");
+});
+
+describe("세금 임박 경계(결산 창 11/5 = 10월 결산)", () => {
+  it("① 다음 달 일정만 → settlement", () => {
+    h.tax = [tax(12, "~12/10")];
+    expect(pick("2026-11-05")?.kind).toBe("settlement");
+  });
+  it("② 이번 달 마감 D-6 → tax, D-7 → settlement", () => {
+    h.tax = [tax(11, "~11/11")];
+    expect(pick("2026-11-05")?.kind).toBe("tax");
+    h.tax = [tax(11, "~11/12")];
+    expect(pick("2026-11-05")?.kind).toBe("settlement");
+    h.tax = [tax(11, "~11/05")]; // 당일(D-0) 포함
+    expect(pick("2026-11-05")?.kind).toBe("tax");
+  });
+  it("③ 마감일 지남 → settlement", () => {
+    h.tax = [tax(11, "~11/03")];
+    expect(pick("2026-11-05")?.kind).toBe("settlement");
+  });
+  it("④ 창 밖 + 세금(다음 달) → tax(기존 노출 유지)", () => {
+    h.tax = [tax(12, "~12/10")];
+    expect(pick("2026-11-15")?.kind).toBe("tax");
+  });
+  it("⑤ 세금 닫힘 → settlement", () => {
+    h.tax = [tax(11, "~11/08")]; h.taxDismissed = true;
+    expect(pick("2026-11-05")?.kind).toBe("settlement");
+  });
+  it("⑥ 마감일 없는 월 전체 일정 → settlement", () => {
+    h.tax = [tax(11, "11월 중")];
+    expect(pick("2026-11-05")?.kind).toBe("settlement");
+  });
+  it("임박 세금이면 표시 내용은 매치 전체(기존 tax 팁 그대로)", () => {
+    h.tax = [tax(11, "~11/08"), tax(12, "~12/10")];
+    const t = pick("2026-11-05");
+    expect(t?.kind === "tax" && t.matches.length).toBe(2);
+  });
+});
+
+describe("공지 X = 읽음(#4.36)", () => {
+  it("markCurrentNoticeSeen({track:false})는 열람 기록만, GA notice view 0회", () => {
+    markCurrentNoticeSeen({ track: false });
+    expect(h.seen[0]?.[0]).toBe("n1");
+    expect(h.tracked).toHaveLength(0);
+  });
+  it("기본 호출(공지 열기·더보기)은 기존대로 notice view 1회", () => {
+    markCurrentNoticeSeen();
+    expect(h.tracked).toEqual([["feature_use", { category: "notice", method: "view" }]]);
+  });
+  it("19. 미열람 공지는 여전히 최우선(결산 창·임박 세금보다 먼저)", () => {
+    h.noticeUnseen = true; h.tax = [tax(11, "~11/08")];
+    expect(pick("2026-11-05")?.kind).toBe("notice");
+  });
+  it("홈 팁 X: notice면 track:false 열람 처리 + home_tip close, 최초 1회 강제 노출 바이패스 유지(grep)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/views/home/home-tip-box.tsx"), "utf8");
+    const close = src.slice(src.indexOf("const close ="), src.indexOf("const activate ="));
+    expect(close).toContain('if (tip.kind === "notice") markCurrentNoticeSeen({ track: false });');
+    expect(close).toContain('track("feature_use", { category: "home_tip", method: "close" })');
+    expect(src).toMatch(/if \(!\(isNoticeUnseen\(\) && !noticeShownThisSession\)\)/);
+  });
 });

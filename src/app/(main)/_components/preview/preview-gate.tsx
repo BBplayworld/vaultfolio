@@ -5,7 +5,8 @@
  *  - PREVIEW · v4.NN 배지
  *  - ?demo=1 데모 주입 / ?demo=empty 빈 상태 → 쿼리 제거 → html[data-demo-ready="1"]
  *  - 쿼리 없이 자산 0건이면 하단 선택 카드(데모 데이터로 보기 / 빈 상태로 보기)
- *  - 데모 주입 상태에서는 튜토리얼을 띄우지 않는다(#4.36). ?demo=empty는 데모가 건너뛴 튜토리얼만 원상복구
+ *  - 데모 주입 상태에서는 튜토리얼을 띄우지 않고 현재 공지를 읽음 처리한다(#4.36). ?demo=empty는 데모가 건너뛴 튜토리얼만 원상복구
+ *    (공지 열람 키는 clearAssetData가 보존하지 않아 ?demo=empty 때 자연히 미열람으로 돌아간다)
  * AssetDataProvider 바깥에 두고 주입이 끝날 때까지 children을 렌더하지 않아, provider가 새 데이터를 처음부터 읽는다.
  */
 
@@ -20,6 +21,7 @@ import { applyImportedPayload, clearAssetData, getAssetData, STORAGE_KEYS } from
 import { buildDemoRefreshMeta, kstToday, materializeDemo, resolvePreviewAction } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
+import { markCurrentNoticeSeen } from "@/lib/home-tip";
 import type { AssetData } from "@/types/asset";
 
 const hasAnyAssets = (d: AssetData) =>
@@ -28,9 +30,10 @@ const hasAnyAssets = (d: AssetData) =>
 // 데모가 튜토리얼을 건너뛰었다는 preview 전용 표식 — clearAssetData가 지우는 secretasset_ 키라 ?demo=empty·전체 삭제 때 함께 사라진다
 export const DEMO_TUTORIAL_MARKER = "secretasset_preview_demo_tutorial_skipped";
 
-/** ?demo=1 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps) + 표식 */
+/** ?demo=1 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps) + 현재 공지 읽음(GA 없음) + 표식 */
 export function applyDemoTutorialSkip(): void {
   skipAllTutorialSteps();
+  markCurrentNoticeSeen({ track: false });
   localStorage.setItem(DEMO_TUTORIAL_MARKER, "1");
   tutorialStore.getState().initTutorial();
 }

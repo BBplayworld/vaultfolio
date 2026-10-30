@@ -75,9 +75,10 @@ export function HomeTipBox() {
   const close = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (tip.kind === "tax") markTaxNoticeDismissed();
-    // "notice"는 X로는 영구 dismiss 안 함(markCurrentNoticeSeen 미호출) — 실제로 열어봐야(activate)
-    // 열람 처리된다. X 닫기는 SESSION_DISMISS_KEY만 세워 이번 세션 내 재노출을 막고(NOTICE_SHOWN_SESSION_KEY가
-    // 이미 서 있어 강제 노출 바이패스가 꺼진 상태), 새 세션에선 다시 최우선으로 떠서 실제 열람을 유도한다.
+    // "notice" X = 읽음 처리(#4.36 cto 판정) — X로만 닫는 사용자에게 공지가 세션마다 최우선으로 되살아나
+    // 백업·결산 등 하위 팁을 영영 가리던 문제 해소. 기존 열람 키 재사용, GA notice view는 보내지 않는다.
+    // 최초 1회 강제 노출(NOTICE_SHOWN_SESSION_KEY 바이패스)은 그대로. 공지 본문은 더보기 메뉴에서 계속 볼 수 있다.
+    if (tip.kind === "notice") markCurrentNoticeSeen({ track: false });
     if (tip.kind === "feature") dismissTip(tip.feature.id);
     // 이번 세션 동안 팁 박스 전체를 숨김 (다음 순위 팁도 안 뜨게). 재접속 시 초기화.
     try { sessionStorage.setItem(SESSION_DISMISS_KEY, "true"); } catch { /* 무시 */ }

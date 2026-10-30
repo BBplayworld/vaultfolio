@@ -269,6 +269,15 @@ describe("10. 데모 주입 상태에서는 튜토리얼 미노출(#4.36)", () =
     expect(ls.getItem(DEMO_TUTORIAL_MARKER)).toBe("1");
     expect(tutorialStore.getState().activeStep).toBeNull();
     expect(tutorialStore.getState().isTutorialFinished).toBe(true);
+    // 20. 현재 공지도 읽음(기존 열람 키) — 새 브라우저 데모에서 결산 등 하위 팁이 바로 보이게
+    const { NOTICE_ID } = await import("@/app/(main)/_components/layout/onboarding/notice");
+    expect(JSON.parse(ls.getItem("secretasset_notice_seen")!).id).toBe(NOTICE_ID);
+  });
+
+  it("20. ?demo=empty: 공지 열람 키는 clearAssetData 보존 목록에 없어 함께 지워진다(미열람 복귀)", () => {
+    const src = readFileSync(path.resolve(__dirname, "../asset/asset-storage.ts"), "utf8");
+    const keep = src.slice(src.indexOf("const keepKeys"), src.indexOf("];", src.indexOf("const keepKeys")));
+    expect(keep).not.toContain("noticeSeen");
   });
 
   it("이미 완료한 단계는 done 유지(건너뜀으로 덮지 않음)", async () => {

@@ -364,6 +364,18 @@ function dueEndDate(event: TaxEvent, year: string): string | null {
 }
 
 /**
+ * 홈 팁 "임박 세금"(#4.36) — 이번 달 일정이고 마감일이 오늘~오늘+6일(KST, 오늘 포함 7일 안)인지.
+ * 마감일 없는 월 전체 일정·다음 달 일정·마감 지난 일정은 false
+ */
+export function isImminentTaxMatch(match: TaxEventMatch, today: string = todayKst()): boolean {
+  if (match.event.month !== Number(today.slice(5, 7))) return false;
+  const due = dueEndDate(match.event, today.slice(0, 4));
+  if (!due) return false;
+  const days = Math.round((Date.parse(`${due}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  return days >= 0 && days <= 6;
+}
+
+/**
  * 홈 배너용 — 이번 달·다음 달 중 **내 자산에서 파생된** 일정만.
  * 전 국민 공통(common) 태그로만 걸리는 항목은 제외한다(자산과 무관하므로 홈에 띄우지 않는다).
  * 이번 달 일정이 항상 먼저(같은 달 안에서는 high 우선)이며, 이번 달 중 마감일이 지난 항목은 제외한다.
