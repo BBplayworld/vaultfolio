@@ -9,14 +9,14 @@
 - 🆕 `[시크릿에셋] 새 과제: #48 첫 화면 \"가치 먼저\" 재배열 + 링크 미리보기 정비` (개선, p1) — 첫 화면을 히어로→신뢰 한 줄→예시 미리보기→시작 CTA로, 보안 3카드는 접힘·모바일 웹 \"바로 시작\" 노출·OG 이미지(금액 없음). 지표: 28일 first_asset_saved÷welcome_view 상대 +30%, 설치율 가드레일. 링크 https://github.com/BBplayworld/vaultfolio/issues/48 (PushNotification만, 이슈 @멘션 불필요)
 
 ## 다음 정기 실행 지시
-- [선정 2026-10-30 17:54] E3 결산 창 홈 팁 + p2 동승 2건(홈 Hero 375 금액 줄바꿈·하단 고지 break-keep) — `issues/4.xx-new-settlement-home-tip/4.xx-challenge.md` 통과(축소). 이슈 생성(type:feature, p1, status:planning) 후 planning ① 방향 정의. **2026-11-26까지 머지돼야 11월 결산 창 측정**
+- [선정 2026-10-30 17:54] E3 결산 창 홈 팁 + p2 동승 2건(홈 Hero 375 금액 줄바꿈·하단 고지 break-keep) — `issues/4.xx-51-settlement-home-tip/4.xx-challenge.md` 통과(축소). 이슈 생성(type:feature, p1, status:planning) 후 planning ① 방향 정의. **2026-11-26까지 머지돼야 11월 결산 창 측정**
 - #48 지표 판독 전(마감 2026-12-25경) #33·체험 모드 착수 금지(같은 첫 화면 퍼널 → 효과 측정 오염)
 - 자율 과제 기준: 월 활성 사용자 100명 직접 기여 서비스 과제 우선, 소규모 신뢰성 수정은 p2 동승(대표 2026-10-29)
 
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| (신규) E3 결산 창 홈 팁 (p1) | 4.xx | planning ① 대기 | business-pm → planner-designer | 이슈 생성 후 direction (`issues/4.xx-new-settlement-home-tip/4.xx-challenge.md`) |
+| (신규) E3 결산 창 홈 팁 (p1) | 4.xx | planning ① 대기 | business-pm → planner-designer | 이슈 생성 후 direction (`issues/4.xx-51-settlement-home-tip/4.xx-challenge.md`) |
 | #45 백업 iOS 신뢰 | — | rejected | — | 대표 미반영 판단(2026-10-29), 닫음 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | #48 지표 판독(2026-12-25경) 후 판정 — 그 전 착수 시 측정 오염 |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
@@ -35,7 +35,7 @@
 - GA4 데이터 보존 기간(2개월/14개월) — 첫 화면 재배열 지표 판독 기한 결정. 에이전트 GA 조회 수단 없음(판독 한계)
 
 ## 후보 목록 (cto 2026-10-30 17:54 3차 순위 — 서비스 성장 우선, #48 판독 전 첫 화면 퍼널 동결)
-- **[선정 2026-10-30] E3 결산 창 홈 팁** (feature, p1) — `issues/4.xx-new-settlement-home-tip/4.xx-challenge.md`. 첫 달 "다음 결산" 안내·홈 .ics는 v1 제외
+- **[선정 2026-10-30] E3 결산 창 홈 팁** (feature, p1) — `issues/4.xx-51-settlement-home-tip/4.xx-challenge.md`. 첫 달 "다음 결산" 안내·홈 .ics는 v1 제외
 - [p2 동승 확정] 홈 Hero 증감 375 금액 단위 줄바꿈, 공용 하단 고지 `copyright-footer.tsx` break-keep → E3 릴리스에 함께
 - [2위, 판독 후] G3 #33 투자 유형 온보딩 — #48과 같은 첫 화면 퍼널(오염). 판독(2026-12-25경) 또는 8주 경과 정성 판정 후
 - [3위, 판독 후] E2/G1 체험 모드(#31 데모 주입 재사용) — 오염 + 위험 medium+. 새 URL 금지 유지
