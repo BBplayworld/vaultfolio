@@ -127,10 +127,9 @@ export function WelcomeGuide() {
       <div data-testid="welcome-trust" className={`w-full flex flex-col items-center ${ENTER}`} style={{ animationDelay: "60ms" }}>
         <p className="max-w-xl text-sm text-muted-foreground leading-relaxed text-balance text-center">
           <ShieldCheck aria-hidden className="inline size-4 -mt-0.5 mr-1.5 text-primary" />
-          <span className="whitespace-nowrap">로그인 없음</span>
-          <span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span>
-          <span className="whitespace-nowrap">자산은 내 기기에만</span>
-          <span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span>
+          {/* 구분자를 앞 항목과 한 덩어리로 묶어 줄바꿈은 구분자 뒤에서만 일어나게 */}
+          <span className="whitespace-nowrap">로그인 없음<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
+          <span className="whitespace-nowrap">자산은 내 기기에만<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
           <span className="whitespace-nowrap">기기 간 암호화 동기화 지원</span>
         </p>
         <button
