@@ -274,10 +274,19 @@ describe("10. 데모 주입 상태에서는 튜토리얼 미노출(#4.36)", () =
     expect(JSON.parse(ls.getItem("secretasset_notice_seen")!).id).toBe(NOTICE_ID);
   });
 
-  it("20. ?demo=empty: 공지 열람 키는 clearAssetData 보존 목록에 없어 함께 지워진다(미열람 복귀)", () => {
-    const src = readFileSync(path.resolve(__dirname, "../asset/asset-storage.ts"), "utf8");
-    const keep = src.slice(src.indexOf("const keepKeys"), src.indexOf("];", src.indexOf("const keepKeys")));
-    expect(keep).not.toContain("noticeSeen");
+  it("20. ?demo=empty: 데모가 남긴 공지 열람 기록도 지운다(clearAssetData는 공지 키를 보존하므로 직접 삭제)", async () => {
+    const { applyDemoTutorialSkip, resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    applyDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).not.toBeNull();
+    resetDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).toBeNull();
+  });
+
+  it("20. 데모 이력 없으면 ?demo=empty가 사용자의 공지 열람 기록을 건드리지 않는다", async () => {
+    const { resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    ls.setItem("secretasset_notice_seen", JSON.stringify({ id: "x", seenAt: 1, expiresAt: 9e15 }));
+    resetDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).not.toBeNull();
   });
 
   it("이미 완료한 단계는 done 유지(건너뜀으로 덮지 않음)", async () => {

@@ -5,8 +5,8 @@
  *  - PREVIEW · v4.NN 배지
  *  - ?demo=1 데모 주입 / ?demo=empty 빈 상태 → 쿼리 제거 → html[data-demo-ready="1"]
  *  - 쿼리 없이 자산 0건이면 하단 선택 카드(데모 데이터로 보기 / 빈 상태로 보기)
- *  - 데모 주입 상태에서는 튜토리얼을 띄우지 않고 현재 공지를 읽음 처리한다(#4.36). ?demo=empty는 데모가 건너뛴 튜토리얼만 원상복구
- *    (공지 열람 키는 clearAssetData가 보존하지 않아 ?demo=empty 때 자연히 미열람으로 돌아간다)
+ *  - 데모 주입 상태에서는 튜토리얼을 띄우지 않고 현재 공지를 읽음 처리한다(#4.36). ?demo=empty는 데모가 건너뛴 튜토리얼과
+ *    공지 열람 기록을 원상복구(공지 열람 키는 clearAssetData가 보존하므로 여기서 직접 지운다)
  * AssetDataProvider 바깥에 두고 주입이 끝날 때까지 children을 렌더하지 않아, provider가 새 데이터를 처음부터 읽는다.
  */
 
@@ -38,10 +38,11 @@ export function applyDemoTutorialSkip(): void {
   tutorialStore.getState().initTutorial();
 }
 
-/** ?demo=empty 처리 직전: 데모가 건너뛴 튜토리얼만 첫 사용 상태로 되돌린다(데모 이력 없으면 무동작 — 기존 동작 그대로) */
+/** ?demo=empty 처리 직전: 데모가 건너뛴 튜토리얼·공지 열람 기록을 첫 사용 상태로 되돌린다(데모 이력 없으면 무동작 — 기존 동작 그대로) */
 export function resetDemoTutorialSkip(): void {
   if (localStorage.getItem(DEMO_TUTORIAL_MARKER) !== "1") return;
   localStorage.removeItem(STORAGE_KEYS.tutorialStatus);
+  localStorage.removeItem(STORAGE_KEYS.noticeSeen);
   localStorage.removeItem(DEMO_TUTORIAL_MARKER);
   tutorialStore.getState().initTutorial();
 }

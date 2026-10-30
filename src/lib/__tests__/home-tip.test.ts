@@ -15,7 +15,8 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/app/(main)/_components/layout/onboarding/notice", () => ({ NOTICE_ID: "n1" }));
-vi.mock("../local-storage", () => ({
+vi.mock("../local-storage", async (orig) => ({
+  ...(await orig<typeof import("../local-storage")>()),
   readNoticeSeenId: () => (h.noticeUnseen ? null : "n1"),
   markNoticeSeen: (...a: unknown[]) => void h.seen.push(a),
 }));
@@ -172,5 +173,24 @@ describe("공지 X = 읽음(#4.36)", () => {
     expect(close).toContain('if (tip.kind === "notice") markCurrentNoticeSeen({ track: false });');
     expect(close).toContain('track("feature_use", { category: "home_tip", method: "close" })');
     expect(src).toMatch(/if \(!\(isNoticeUnseen\(\) && !noticeShownThisSession\)\)/);
+  });
+});
+
+describe("노출 GA 중복 방지 키(#4.36 qa R2)", () => {
+  it("같은 종류·같은 결산 월은 같은 키, 달·기능이 다르면 다른 키", async () => {
+    const { homeTipViewKey } = await import("@/app/(main)/_components/views/home/home-tip-box");
+    const s = (month: string) => ({ kind: "settlement", window: { month }, today: "2026-11-05" }) as unknown as Parameters<typeof homeTipViewKey>[0];
+    expect(homeTipViewKey(s("2026-10"))).toBe(homeTipViewKey(s("2026-10")));
+    expect(homeTipViewKey(s("2026-10"))).not.toBe(homeTipViewKey(s("2026-11")));
+    const f = (id: string) => ({ kind: "feature", feature: { id } }) as unknown as Parameters<typeof homeTipViewKey>[0];
+    expect(homeTipViewKey(f("a"))).not.toBe(homeTipViewKey(f("b")));
+    expect(homeTipViewKey({ kind: "notice" })).toBe("notice");
+  });
+  it("effect의 view 전송은 ref 키가 바뀔 때만(grep)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/views/home/home-tip-box.tsx"), "utf8");
+    expect(src.match(/method: "view"/g)?.length).toBe(1);
+    expect(src).toMatch(/if \(lastViewKey\.current !== key\) \{\s*lastViewKey\.current = key;\s*track\("feature_use", \{ category: "home_tip", method: "view" \}\);/);
   });
 });

@@ -7,7 +7,7 @@
 // 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>결산(#4.36)>최신화>기능 순으로 1개만 고른다.
 // 인터랙션은 6종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics/ga";
 import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, X } from "lucide-react";
 import { toast } from "sonner";
@@ -41,11 +41,19 @@ const SESSION_DISMISS_KEY = "secretasset_home_tip_session_dismissed";
 // 무시하고 공지를 강제 노출한다. 서고 나면 X 닫기(→ SESSION_DISMISS_KEY)로 세션 내 재노출이 정상 차단된다.
 const NOTICE_SHOWN_SESSION_KEY = "secretasset_home_tip_notice_shown";
 
+/** 노출 GA 중복 방지 키 — 같은 페이지에서 같은 팁(종류·결산 월·기능)은 1회만 view 전송(#4.36) */
+export function homeTipViewKey(tip: HomeTip): string {
+  if (tip.kind === "settlement") return `settlement:${tip.window.month}`;
+  if (tip.kind === "feature") return `feature:${tip.feature.id}`;
+  return tip.kind;
+}
+
 export function HomeTipBox() {
   const { assetData, getAssetSummary } = useAssetData();
   const cs = useCloudSync();
   const { navigate } = useAssetNavigation();
   const [tip, setTip] = useState<HomeTip | null>(null);
+  const lastViewKey = useRef<string | null>(null); // assetData 갱신마다 effect가 다시 돌아도 같은 팁 노출 GA는 1회
 
   const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
 
@@ -67,7 +75,13 @@ export function HomeTipBox() {
       try { sessionStorage.setItem(NOTICE_SHOWN_SESSION_KEY, "true"); } catch { /* 무시 */ }
     }
     setTip(picked);
-    if (picked) track("feature_use", { category: "home_tip", method: "view" });
+    if (picked) {
+      const key = homeTipViewKey(picked);
+      if (lastViewKey.current !== key) {
+        lastViewKey.current = key;
+        track("feature_use", { category: "home_tip", method: "view" });
+      }
+    }
   }, [assetData, hasAssets, cs.status]);
 
   if (!tip) return null;
