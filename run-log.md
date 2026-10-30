@@ -2,6 +2,7 @@
 
 | 일시 (KST) | 실행 종류 | 처리 이슈 | 단계 변화 | 특이사항 |
 |---|---|---|---|---|
+| 2026-10-31 01:53~02:26 (예약·새벽) | A | #51 | 대표 지적(preview 팁 미노출·데모 튜토리얼) 반영: 진단→cto 우선순위 판정→구현→qa FAIL 2(R1·R2)→수정 8d5c9e1→qa·UI·COO PASS → owner-review | 새벽 → 🟥 Push·@멘션 보류(09:53) |
 | 2026-10-30 17:54~18:30 (예약) | A | #51 | planning③→design-review→development(v4.36)→UI 수정 1건→qa PASS→COO PASS @05f73bd → owner-review | 🔔 반영 결정 요청(Push·PR #52 @멘션, preview URL 포함) |
 | 2026-10-30 17:54 (예약) | A + D. 자율 과제 발굴 3차 | #51 신규 | 같은 날 수집 후보로 cto 선정(결산 창 홈 팁, #48 측정 오염 회피로 #33·체험 모드 판독 후) → direction 합의 | 🆕 알림. 다음: spec·business |
 | 2026-10-30 (대표 지시) | C. 배포 후 점검 | v4.35 | 대표 승인 머지 5232db5 → 운영 스모크 PASS(Vercel 별칭, secretasset.xyz는 프록시 차단) | 후속 p2: 홈 Hero 금액 줄바꿈·하단 고지 |

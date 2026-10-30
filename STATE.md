@@ -6,7 +6,7 @@
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
 
 ## 보류 알림 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
-- 🆕 `[시크릿에셋] 새 과제: #48 첫 화면 \"가치 먼저\" 재배열 + 링크 미리보기 정비` (개선, p1) — 첫 화면을 히어로→신뢰 한 줄→예시 미리보기→시작 CTA로, 보안 3카드는 접힘·모바일 웹 \"바로 시작\" 노출·OG 이미지(금액 없음). 지표: 28일 first_asset_saved÷welcome_view 상대 +30%, 설치율 가드레일. 링크 https://github.com/BBplayworld/vaultfolio/issues/48 (PushNotification만, 이슈 @멘션 불필요)
+- 🟥 `[대표 승인 요청] v4.36 — 결산 기간 홈에 \"N월 결산이 열렸어요\" 팁(공지·세금 우선순위 정리) · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1` — PushNotification + PR #52 @BBplayworld 멘션 1줄(🟥 본문 코멘트는 2026-10-31 02:26 게시됨)
 
 ## 다음 정기 실행 지시
 - [선정 2026-10-30 17:54] E3 결산 창 홈 팁 + p2 동승 2건(홈 Hero 375 금액 줄바꿈·하단 고지 break-keep) — `issues/4.36-51-settlement-home-tip/4.36-challenge.md` 통과(축소). 이슈 생성(type:feature, p1, status:planning) 후 planning ① 방향 정의. **2026-11-26까지 머지돼야 11월 결산 창 측정**
