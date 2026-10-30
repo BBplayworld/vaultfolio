@@ -118,7 +118,7 @@ export function WelcomeGuide() {
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
           나만의 비밀 자산 금고
         </h1>
-        <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed text-pretty">
+        <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed text-pretty break-keep">
           흩어진 자산을 한 화면에서 정리해 보세요.
         </p>
       </section>
@@ -237,7 +237,7 @@ export function WelcomeGuide() {
           />
         </div>
       </div>
-      <p className={`text-[11px] text-center ${ASSET_THEME.distributionCard.muted}`}>
+      <p className={`text-[11px] text-center break-keep ${ASSET_THEME.distributionCard.muted}`}>
         실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
       </p>
 
@@ -417,7 +417,7 @@ function FeatureCard({
         <div className="rounded-lg bg-primary/10 p-2 shrink-0">
           <Icon className="size-4 text-primary" />
         </div>
-        <h3 className="text-[15px] font-semibold text-balance">{title}</h3>
+        <h3 className="text-[15px] font-semibold text-balance break-keep">{title}</h3>
       </div>
       <p className="text-[13px] text-muted-foreground leading-7 tracking-[0.01em] break-keep text-pretty">{desc}</p>
     </div>
