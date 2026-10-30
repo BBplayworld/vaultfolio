@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-30 (cto: #51 대표 지적 후 홈 팁 우선순위 판정, development 복귀)
+마지막 갱신: 2026-10-30 (cto: v4.36 COO 재점검 @8d5c9e1 PASS, decision-brief 재작성)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -22,7 +22,7 @@
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.36** = #51 · 브랜치 `issue-4.36` · 최신 41a2bf5 · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · **대표 지적(preview 결산 팁 안 보임) → cto 우선순위 판정 → development**: 공지 X=읽음, 공지(미열람)>백업>임박 세금(이번 달 마감 0~6일)>결산>그 외 세금>최신화>기능, `?demo=1`은 공지 열람 처리, kstToday→todayKst (`4.36-challenge.md` "우선순위 판정"). 이전 decision-brief(@05f73bd)는 무효, qa·ui·COO 재점검 후 재작성 · 11월 창 조건: 2026-11-26까지 머지
+- **v4.36** = #51 · 브랜치 `issue-4.36` · 기준 8d5c9e1 = qa 최종 PASS = preview 200 · UI 승인 @5964511(이후 화면 diff 0), ui 최종 확인 @8d5c9e1 기록 후 owner-review · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 재작성(`issues/4.36-51-settlement-home-tip/4.36-decision-brief.md`, 권고 반영, 🟥 문안 포함) · 기한 11/26 머지 시 11월 측정 · 가드레일(닫기÷노출)은 기기 수로 판독(기준 창 노출 이벤트 중복 집계)
 
 ## 막힌 것
 - 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
