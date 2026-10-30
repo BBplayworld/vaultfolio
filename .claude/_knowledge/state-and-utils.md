@@ -183,7 +183,7 @@ getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 �
   // 정렬 = 이번 달 우선 → 같은 달 내 high 우선(#4.29). 이번 달 항목 중 마감 지난 것 제외 — 내부 dueEndDate(event, year)가
   // dueLabel 마지막 "M/D"를 마감일로 해석("~10/25"→10-25, "12/1~12/15"→12-15), 날짜 없는 라벨("2월 급여")은 null=월말까지 유지
 isTaxNoticeDismissed() / markTaxNoticeDismissed() / shouldShowTaxNotice(assetData)
-todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM
+todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM — 거래 입력(주식·대출·현금) 기본 날짜·max의 단일 출처(#4.35, UTC toISOString 금지)
 isForeignStock(stock)                            // category==="foreign" 또는 currency!=="KRW" (export, S-4.31에서 UI도 재사용)
 
 // S-4.31 — 연말 절세 시뮬레이션. 원가는 replay 없이 Stock.averagePrice(현재 평단) 그대로 사용

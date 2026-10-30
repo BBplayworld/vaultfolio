@@ -34,6 +34,7 @@ import { Stock, type Transaction } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import { todayKst } from "@/lib/tax-utils";
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
 import { stockCategories } from "@/config/asset-options";
@@ -104,7 +105,7 @@ export function TradeInput() {
       type: "buy",
       quantity: 0,
       price: 0,
-      date: new Date().toISOString().split("T")[0],
+      date: todayKst(), // KST 오늘 — 한국시간 00~09시에도 전날로 잡히지 않게(#46)
       memo: "",
       reflected: true,
     },
@@ -189,7 +190,7 @@ export function TradeInput() {
   }, [target, lockedStock]);
 
   // 체결일 입력 제한 — 미래 금지(max=오늘), 보존기간 밖 금지(min=오늘-N년)
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayKst(); // 상한도 KST 오늘(현금 입력과 동일 기준)
   const minTradeDate = (() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - TRANSACTION_RETENTION_YEARS);

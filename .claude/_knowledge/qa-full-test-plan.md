@@ -53,6 +53,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
 ### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
+- ⚙ **체결일 기본값·max = KST 오늘(#4.35, `todayKst()`)** — KST 00:00~08:59에도 전날이 아닌 오늘. 현금·대출 입력과 같은 함수. 기존 저장 날짜는 보정하지 않음(`src/lib/__tests__/today-kst-inputs.test.ts`)
 - 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기(`PositionChangePreview`), 중복 거래 인라인 확인
 - 👤 **반영할 자산 항목 직접 선택(#4.29)** — 카테고리·종목 선택 후 그 종목의 **전체 보유 항목**(카테고리 필터 무관)을 `StockTargetPicker` 카드(타입 배지·증권사·수량·평단)로 고른다. 증권사 Select·`resolveMatch` 자동 라우팅은 제거(같은 증권사 안 IRP·ISA·연금저축 구분 불가 문제). 후보 1개면 자동 선택. **신규 자산 등록**(매수만) = 증권사+주식 타입 선택 → 종목 메타 복제·포지션 0 초안(`NEW_STOCK_ID` 자리표시)으로 미리보기 후 `addTransactionsBatch([tx], [], [newStock])` 저장, 반영 강제(체크박스 비활성)·중복 검사 생략. 매도로 바꾸면 신규 선택 해제. 상세 진입(`lockedStock`)은 종전대로
 - 👤 거래 삭제 → 미반영 즉시삭제 / 반영 롤백 다이얼로그
@@ -71,6 +72,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 공유 토큰 `parts[12]` 왕복·`caIdx` 재연결·구버전 파싱(R3), 사용자 편집 신호(`saveData`→`ASSET_USER_EDIT_EVENT`)로 push(R14)
 
 ### F-LOAN-TX. 대출 상환/추가 대출 거래내역 ([loan-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-tx-input.tsx) · [loan-tx-view.tsx](../../src/app/(main)/_components/views/detail/loan-tx/loan-tx-view.tsx)) — 명세 [S-4.24](../specs/4.24-loan-transactions.md)
+- ⚙ **날짜 기본값·max = KST 오늘(#4.35, `todayKst()`)** — 주식·현금 입력과 동일 기준
 - 👤 대출 카드 "상환/대출 기록·내역" 진입 → 상환/추가대출 토글·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총상환·총추가대출·순상환 통계, 기간·유형 필터. 전역 "자산 업데이트" 플로팅 버튼의 대출 선택 → "상환/대출 기록"에서도 동일 폼 진입(대상 미지정, 폼에서 대출 직접 선택 — 현금과 대칭)
 - 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 미반영 즉시 삭제
 - ⚙ `loan-tx-utils`: `pruneLoanTransactions`(3년 롤링)·`findDuplicateLoanTx`(대출·날짜·금액·유형)·`reflectedLoanBalanceDelta`(반영분만)·`isLoanRepaymentValid`(상환초과 가드). `loans[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경. 대출은 통화 필드 없음(항상 KRW) — `cashTransactionSchema` 대비 `currency`·`recurring` 필드 없음
@@ -388,9 +390,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
-- 👤 **모바일 웹 PWA 우선 레이아웃**(`useIsMobile() && !isStandalone`): 보안 소개+포트폴리오 미리보기 노출 후 PWA 설치 유도 섹션 강조. "웹앱 설치하기" 버튼이 홈 버튼과 동일한 `PwaInstallFlow` 공용 흐름 호출(iOS는 브라우저 칩+SVG 가이드). 즉시 자산 등록 CTA는 **기본 숨김**, "설치 없이 웹에서 바로 시작" 링크 클릭 시에만 노출(`showAssetCta` 토글)
-- 👤 **데스크톱·standalone(설치된 앱)**: 기존 레이아웃 유지(자산 등록 CTA 항상 노출), 모바일 전용 분기 미적용 확인
-- ⚙ 웰컴가이드는 `PwaInstallGuideDialog` 직접 호출 제거(공용 `PwaInstallFlow`로 대체). 분기 키: `mobileWeb = mounted && isMobile && !isStandalone`, `ctaVisible = !mobileWeb || showAssetCta`
+- 👤 **첫 화면 순서(#4.35)**: 히어로 < 신뢰 한 줄(+자세히 보기) < 보안 상세 < 예시 순자산 < CTA 슬롯 < 주식 미리보기 (< 설치 박스: 데스크톱만). 375×812 스크롤 0(진입 모션 후)에 제목·신뢰 줄·순자산 금액·설치/바로 시작 버튼이 보인다. 접힘 상태 가시 텍스트에 PBKDF2·Ed25519·blob 없음, "로그인 없" 1회
+- 👤 **보안 상세 펼침**: 토글 1회 탭 → 기존 3카드 원문 노출, 재탭 접힘, 새로고침 시 접힘(저장 없음). 같은 노드 유지(grid-rows 전환), 닫힘 `inert`·`invisible`. 토글은 gtag 호출 0
+- 👤 **모바일 웹 미설치**: CTA 슬롯 `data-state=install` — "웹앱 설치하기"(brand, `PwaInstallFlow` 공용 흐름, iOS는 브라우저 칩+SVG 가이드) + "웹에서 바로 시작"(secondary) + 캡션. 설치 박스 없음, 설치 버튼 화면에 1개. "웹에서 바로 시작" 탭 → `onboarding_action{skip_install}` 1회 + 같은 슬롯이 `asset`으로 바뀌고 포커스가 "스크린샷으로 자산 등록"으로 이동
+- 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출, "웹에서 바로 시작" 없음). 데스크톱 미설치는 주식 미리보기 아래 설치 박스(설치 버튼 1개)
+- 👤 **링크 미리보기(#4.35)**: `og:image` = `${siteUrl}/og-image.png`(1200×630, 텍스트 "안전한 자산 관리,"·"시크릿에셋"만), `twitter:card=summary_large_image`. 이미지 교체 시 파일명 변경(크롤러 캐시)
+- ⚙ 분기 키: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall })` → pending/install/asset. 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
