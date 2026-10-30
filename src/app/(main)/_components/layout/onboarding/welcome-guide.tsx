@@ -334,12 +334,13 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
   };
 
   return (
+    <>
     <div className={`space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200 ${focusOnMount ? "motion-safe:slide-in-from-bottom-1" : ""}`}>
       <div className="text-center space-y-1">
         <h2 className="text-lg font-semibold text-balance">
           {standalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
         </h2>
-        <p className="text-sm text-muted-foreground text-pretty">
+        <p className="text-sm text-muted-foreground text-pretty break-keep">
           부동산, 주식, 암호화폐, 현금, 대출까지 — 모든 자산을 한 곳에서 관리하세요.
         </p>
       </div>
@@ -394,8 +395,10 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
           </PopoverContent>
         </Popover>
       </div>
-      <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
     </div>
+    {/* 숨은 file input은 space-y 밖 — 마지막 자식이면 버튼 행에 하단 여백이 붙는다 */}
+    <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
+    </>
   );
 }
 
