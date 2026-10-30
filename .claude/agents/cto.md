@@ -53,7 +53,7 @@ qa는 "명세대로 맞는가"를, 당신은 COO로서 "실제 사용자가 보�
 - 반영: PR #<n> 머지 → Vercel 운영 자동 배포
 - 미반영: PR 닫기 (+ 이유 코멘트 시 LEARNINGS에 기록)
 ```
-브리프의 기준 커밋은 qa 최종 PASS 커밋과 같고 Vercel preview에 배포된 커밋이어야 한다(다르면 작성하지 않고 qa 재점검 요청). 대표에게 "확인해 주세요" 같은 QA 요청 문장을 쓰지 않는다. 작성 후 위험 등급 라벨을 PR·이슈에 붙이고 `status:owner-review`.
+브리프의 기준 커밋은 qa 최종 PASS 커밋과 같고 Vercel preview에 배포된 커밋이어야 한다(다르면 작성하지 않고 qa 재점검 요청). 대표 알림 문안은 ORCHESTRATOR.md "대표 메시지 고정 포맷" ① 🟥 승인 요청 양식 그대로 쓴다. 대표에게 "확인해 주세요" 같은 QA 요청 문장을 쓰지 않는다. 작성 후 위험 등급 라벨을 PR·이슈에 붙이고 `status:owner-review`.
 
 ### 반영 권고 불가 (미반영 권고 또는 development 되돌림)
 - PRINCIPLES.md 2·3장 위반, DECISIONS·challenge.md와 다른 구현
