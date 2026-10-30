@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-30 (cto: v4.35 COO 점검 @45fb967 — 수정 필요 1건, development 복귀)
+마지막 갱신: 2026-10-30 (cto: v4.35 COO 재점검 @c28b476 PASS, decision-brief 확정)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -22,7 +22,7 @@
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.35** = #48, #46 · 브랜치 `issue-4.35`(main c5a7a48에서 분기) · 기준 45fb967(qa PASS·UI 승인) · PR #49 · preview https://secretasset-git-issue-435-bbplayworlds-projects.vercel.app · 위험 low(스키마·저장 키 변경 없음) · **cto(COO) 점검 수정 필요 1건**(히어로 쉬운 말 한 줄 320 어절 중간 줄바꿈 → `welcome-guide.tsx:121` `break-keep`) → development → qa 320·375 재측정(C25) → decision-brief 확정. 상세 `issues/4.35-48-welcome-value-first/4.35-log.md`
+- **v4.35** = #48, #46 · 브랜치 `issue-4.35` · 기준 c28b476 = qa 최종 PASS = UI 승인 = preview 배포 · PR #49 · preview https://secretasset-git-issue-435-bbplayworlds-projects.vercel.app · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 확정(`issues/4.35-48-welcome-value-first/4.35-decision-brief.md`, 권고 반영) → owner-review
 
 ## 막힌 것
 - 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
@@ -41,6 +41,7 @@
 - [4위, type:feature] E2/G1 "예시로 먼저 둘러보기" 체험 모드(#31 데모 주입 재사용) — M·위험 medium+(실데이터 격리). E1 효과 확인 후. 새 URL 금지 조건 유지
 - [5위, type:improvement] G2 나머지: sitemap 확장·홈 서버 렌더(크롤러 본문) — 구조 변경 비용 큼, #34 블로그 재개 때
 - [p2 동승] #46 거래·대출 입력 날짜 KST(D1) — 다음 릴리스에 함께
+- [p2 동승 후보, type:bug(UI)] 공용 하단 고지 `copyright-footer.tsx` "투자 조언을 포함하지 않습니다" 320·375 어절 중간 줄바꿈 — `break-keep` 1줄, 다음 릴리스 동승(cto 2026-10-30: v4.35 동승 불필요, 기존 코드·화면 맨 아래 공용 요소)
 - [p2 동승 후보, type:bug qa 확정 B3] FAB "과거 순자산" 50ms 고정 대기(`floating-add-button.tsx:111`) — 소규모, 주력 제외
 - [type:bug(UI) U2] 배당 종목 표 375 붕괴 — M, 기존 사용자 체감. 성장 직접 기여 약해 대기
 - [type:improvement B1+U1] 홈 Hero 원인 어휘 통일 + 라벨 정리 + 375 금액 줄바꿈 — 기존 사용자 화면 품질, 대기
