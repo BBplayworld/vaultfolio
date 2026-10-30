@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-30 (developer: v4.35 development — #48·#46 구현·push, preview 확인)
+마지막 갱신: 2026-10-30 (cto: v4.35 COO 점검 @45fb967 — 수정 필요 1건, development 복귀)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -22,7 +22,7 @@
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.35** = #48, #46 · 브랜치 `issue-4.35`(main c5a7a48에서 분기) · 최신 9ee9171 · preview https://secretasset-git-issue-435-bbplayworlds-projects.vercel.app · 릴리스 PR은 오케스트레이터 생성 예정 · 위험 low(스키마·저장 키 변경 없음)
+- **v4.35** = #48, #46 · 브랜치 `issue-4.35`(main c5a7a48에서 분기) · 기준 45fb967(qa PASS·UI 승인) · PR #49 · preview https://secretasset-git-issue-435-bbplayworlds-projects.vercel.app · 위험 low(스키마·저장 키 변경 없음) · **cto(COO) 점검 수정 필요 1건**(히어로 쉬운 말 한 줄 320 어절 중간 줄바꿈 → `welcome-guide.tsx:121` `break-keep`) → development → qa 320·375 재측정(C25) → decision-brief 확정. 상세 `issues/4.35-48-welcome-value-first/4.35-log.md`
 
 ## 막힌 것
 - 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
