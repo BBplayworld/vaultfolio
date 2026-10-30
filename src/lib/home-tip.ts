@@ -1,4 +1,4 @@
-// 홈 알림/팁 통합 판정 (S-4.32 후속) — 새 공지·백업·세금·자산 최신화·기능 팁 5종을 우선순위대로 1개만 고른다.
+// 홈 알림/팁 통합 판정 (S-4.32 후속) — 새 공지·백업·세금·결산(#4.36)·자산 최신화·기능 팁 6종을 우선순위대로 1개만 고른다.
 // 판정 로직 자체는 기존 순수 함수를 그대로 재사용 — 여기서는 우선순위대로 조합만 한다.
 // 새 공지는 "필수 노출"(#4.24) — 신규 버전 업데이트 안내는 사용자가 실제로 보거나 닫기 전까지
 // 다른 어떤 팁보다도 먼저 반드시 뜬다(안전 안내인 백업·세금보다도 우선).
@@ -10,12 +10,16 @@ import { shouldShowRefreshNudge, getStaleCategories, type RefreshCategory } from
 import { isTaxNoticeDismissed, getAssetDrivenHighlights, type TaxEventMatch } from "./tax-utils";
 import { pickRecommendedFeature } from "./feature-usage";
 import { readNoticeSeenId, markNoticeSeen } from "./local-storage";
+import { readMonthlySnapshots } from "./asset/snapshot-storage";
+import { pickSettlementCard, type SettlementWindow } from "./report/settlement";
+import { kstToday } from "./preview/demo-payload";
 import { NOTICE_ID } from "@/app/(main)/_components/layout/onboarding/notice";
 import type { AppFeature } from "@/config/app-features";
 
 export type HomeTip =
   | { kind: "backup"; days: number | null }
   | { kind: "tax"; matches: TaxEventMatch[] }
+  | { kind: "settlement"; window: SettlementWindow; today: string } // today = 판정에 쓴 KST 날짜(문구 N월 계산도 같은 값)
   | { kind: "refresh"; staleCategories: RefreshCategory[] }
   | { kind: "notice" }
   | { kind: "feature"; feature: AppFeature };
@@ -43,11 +47,12 @@ export interface HomeTipInputs {
   assetData: AssetData;
   hasAssets: boolean;
   syncArmed: boolean;
+  today?: string; // KST YYYY-MM-DD — 테스트 고정용, 기본값 현재 KST
 }
 
 // 새 공지(신규 버전 업데이트 안내)는 필수 노출 — 다른 어떤 안내보다 먼저 반드시 한 번은 뜬다.
-// 그 다음은 위험도 순: 데이터 손실 위험(백업) > 마감 시한(세금) > 자산 최신화 > 신규 기능 > 저방문 기능
-export function pickHomeTip({ assetData, hasAssets, syncArmed }: HomeTipInputs): HomeTip | null {
+// 그 다음은 위험도 순: 데이터 손실 위험(백업) > 마감 시한(세금) > 월 결산 창(#4.36) > 자산 최신화 > 신규 기능 > 저방문 기능
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = kstToday() }: HomeTipInputs): HomeTip | null {
   if (isNoticeUnseen()) {
     return { kind: "notice" };
   }
@@ -59,6 +64,12 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed }: HomeTipInputs):
   if (!isTaxNoticeDismissed()) {
     const matches = getAssetDrivenHighlights(assetData);
     if (matches.length > 0) return { kind: "tax", matches };
+  }
+
+  // 결산 창(말일−3일~다음 달 10일, 첫 달 제외) — 판정은 허브 카드와 같은 pickSettlementCard 그대로
+  if (hasAssets) {
+    const win = pickSettlementCard(readMonthlySnapshots(), today);
+    if (win) return { kind: "settlement", window: win, today };
   }
 
   if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated })) {

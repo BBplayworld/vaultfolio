@@ -14,7 +14,7 @@ export interface ChangeInit {
   scope?: ChangeScope;
   period?: ChangePeriod;
   month?: string;           // 월 탭에서 선택할 달(YYYY-MM)
-  source?: "card" | "menu"; // settlement_view 진입 경로
+  source?: "card" | "menu" | "home_tip"; // settlement_view 진입 경로(home_tip = 홈 결산 팁, #4.36)
 }
 
 export type AssetView =

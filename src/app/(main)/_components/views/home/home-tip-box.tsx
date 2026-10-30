@@ -4,12 +4,12 @@
 // 자산 최신화 안내(refresh-nudge.tsx)·기능 활용 팁(feature-tip-box.tsx) 4종을 이 박스 1개로 흡수(S-4.32 후속).
 // 새 공지(notice)는 #4.24에서 5번째 종류로 추가 — 필수 노출: 최초 1회는 세션 숨김 플래그를 무시하고
 // 반드시 뜨며, X로 닫으면 이번 세션만 숨겨지고(영구 dismiss 아님) 실제로 열어봐야만(activate) 영구 열람 처리된다.
-// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>최신화>기능 순으로 1개만 고른다.
-// 인터랙션은 5종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
+// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>결산(#4.36)>최신화>기능 순으로 1개만 고른다.
+// 인터랙션은 6종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -24,6 +24,7 @@ import { NOTICE_TITLE, NOTICE_SUMMARY } from "../../layout/onboarding/notice";
 import { dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
+import { settlementName } from "../activity/change-hero";
 
 export const CATEGORY_LABEL: Record<string, string> = {
   stock: "주식",
@@ -107,6 +108,11 @@ export function HomeTipBox() {
       navigate({ type: "tax" });
       return;
     }
+    if (tip.kind === "settlement") {
+      // 허브 결산 카드와 같은 진입 형태 — source만 home_tip
+      navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: tip.window.month, source: "home_tip" } });
+      return;
+    }
     if (tip.kind === "refresh") {
       window.dispatchEvent(new CustomEvent("open-add-asset-sheet", { detail: { category: tip.staleCategories[0] } }));
       setTip(null);
@@ -136,6 +142,8 @@ export function HomeTipBox() {
     <div
       role="button"
       tabIndex={0}
+      data-testid="home-tip"
+      data-kind={tip.kind}
       onClick={activate}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -155,15 +163,16 @@ export function HomeTipBox() {
             {tip.kind === "feature" && tip.feature.isNew && (
               <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">NEW</span>
             )}
-            <p className="text-sm sm:text-[15px] font-semibold text-foreground text-pretty">{title}</p>
+            <p data-testid="home-tip-title" className="text-sm sm:text-[15px] font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 text-pretty">{description}</p>
+          <p className="text-sm text-muted-foreground mt-1 text-pretty break-keep wrap-break-word">{description}</p>
         </div>
         <button
           type="button"
           onClick={close}
           aria-label="닫기"
-          className="shrink-0 -m-2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="home-tip-close"
+          className="relative shrink-0 -m-2 p-2 text-muted-foreground hover:text-foreground transition-colors after:absolute after:-inset-1"
         >
           <X className="size-4" />
         </button>
@@ -189,6 +198,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "세금",
       title: `[${top.event.dueLabel}] ${top.event.title}`,
       description: rest > 0 ? `${top.event.summary} 그 외 ${rest}건도 확인하세요.` : top.event.summary,
+    };
+  }
+  if (tip.kind === "settlement") {
+    return {
+      Icon: CalendarCheck,
+      badgeLabel: "결산",
+      title: `${settlementName(tip.window.month, tip.today, true)}이 열렸어요`,
+      description: "한 달 동안 순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
     };
   }
   if (tip.kind === "refresh") {

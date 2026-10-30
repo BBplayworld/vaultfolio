@@ -255,10 +255,11 @@ export function NetAssetSummaryBox({
                 <span className="text-sm font-medium text-muted-foreground">{change.label} 변동 없음</span>
               )}
               {change && !change.negligible && (
-                <span className={`inline-flex items-center text-base lg:text-lg font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
-                  {change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}
-                  <span className="text-sm lg:text-base font-bold ml-1">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
-                  <span className="text-sm font-medium text-muted-foreground ml-1.5">{change.label}</span>
+                // 금액·%는 각각 한 덩어리(금액·단위 분리 방지), 좁은 폭에선 flex-wrap으로 %·라벨이 다음 행(#4.36)
+                <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base lg:text-lg font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
+                  <span className="whitespace-nowrap">{change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}</span>
+                  <span className="text-sm lg:text-base font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
+                  <span className="text-sm font-medium text-muted-foreground ml-1.5 break-keep">{change.label}</span>
                   {/* 원인 문구는 기본 접힘 — 헤더에 상시 노출하면 숫자보다 문장이 시선을 끈다 */}
                   {hasCause && !screenshotMode && (
                     <button
