@@ -48,7 +48,7 @@ qa는 "명세대로 맞는가"를, 당신은 COO로서 "실제 사용자가 보�
 ## 검증 결과: 자동 테스트 n건 통과, preview 점검 경로 n개, 회귀 F-* n개 — qa-report 링크
 ## 화면: screenshots/ 대표 이미지 2~3장 링크
 ## 위험 등급: low / medium / high — 근거 한 줄, 롤백 방법
-## preview: <URL> (참고용, 확인 의무 없음)
+## preview: <URL> (필수 기재. 이슈별로 바로 볼 경로 — 예: `?demo=1` 데모 화면, `?demo=empty` 신규 방문자 화면. 확인 의무 없음)
 ## 결정 방법
 - 반영: PR #<n> 머지 → Vercel 운영 자동 배포
 - 미반영: PR 닫기 (+ 이유 코멘트 시 LEARNINGS에 기록)
