@@ -327,8 +327,11 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 - 미리보기 데이터: `welcome-preview-data.json`
 - 미리보기 대시보드: 실제 `dashboard.tsx` 컴포넌트를 공통 공유하여 동일 포맷으로 노출하되, 내부의 클릭이나 인터랙션은 차단/방지 처리.
 - `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
-- **모바일 웹 PWA-우선 분기**: `mobileWeb = mounted && useIsMobile() && !isStandalone`. 참이면 PWA 설치 유도를 메인 CTA로 강조, 즉시 자산 등록 CTA는 기본 숨김(`showAssetCta` 토글, "설치 없이 웹에서 바로 시작" 링크로 노출). `ctaVisible = !mobileWeb || showAssetCta`. 데스크톱·standalone은 기존 레이아웃.
-- 설치 버튼은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출 — `PwaInstallGuideDialog` 직접 호출 제거
+- **블록 순서(#4.35 "가치 먼저")**: ① 히어로(제목+쉬운 말 한 줄, 배지 없음) ② 신뢰 한 줄 + "자세히 보기" 토글 + 보안 상세(기존 `FeatureCard` 3장 원문, 제자리 grid-rows 펼침·기본 접힘·`inert`, 저장 안 함, GA 없음) ③ 예시 순자산(`NetAssetSummaryBox`) ④ **CTA 단일 슬롯**(#33 대체 지점) ⑤ 주식 미리보기("주식 미리보기"+예시 데이터 라벨) + 안내 문구 ⑥ 설치 박스(데스크톱·태블릿 미설치만, 1행). 루트 `space-y-5`
+- **CTA 슬롯**: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall })` → `pending`(마운트 전, 빈 셸 `min-h-[152px]`, SSR 동일) / `install`(모바일 웹 미설치: `WelcomeInstallCta` = 설치 brand + "웹에서 바로 시작" secondary + 캡션) / `asset`(`WelcomeAssetCta` = 스크린샷 등록 brand + 직접 입력·가져오기 secondary Popover). 셸 노드 유지, 콘텐츠만 교체. 바로 시작 후 포커스 → `welcome-cta-wizard`
+- GA 매핑 순수 함수: `welcomeSource(standalone, inApp)`, `WELCOME_CTA_METHODS`(값은 기존 `PARAM_VALUES`와 동일)
+- 고정 testid(qa 계약): `welcome-hero`·`welcome-trust`·`welcome-security-toggle`·`welcome-security-detail`·`welcome-preview-net`·`welcome-cta-slot`(`data-state`)·`welcome-install-btn`·`welcome-skip-install-btn`·`welcome-cta-wizard`·`welcome-cta-more`·`welcome-preview-stock`·`welcome-install-box`
+- 설치 버튼(`InstallButton`, 파일 내부)은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출. 모바일은 슬롯, 데스크톱은 설치 박스에만 렌더(화면당 1개)
 
 ### PreviewGate (`preview/preview-gate.tsx`, #4.34) — Vercel preview 전용
 - `(main)/layout.tsx`가 `isPreviewEnv()`일 때만 `next/dynamic`으로 렌더해 `AssetDataProvider` 바깥을 감싼다. 운영·로컬은 children 그대로(DOM 추가 0)

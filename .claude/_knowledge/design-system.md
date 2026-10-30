@@ -171,6 +171,7 @@
 - **진입(enter)**: 뷰 컨테이너 `motion-safe:animate-in fade-in slide-in-from-bottom-*`, 리스트는 `animationDelay`로 **stagger** 분산(예: 40ms 간격). **인터럽터블**(중간 조작 시 부드럽게 가로채기).
 - **퇴장(exit)은 절제** — subtle하게.
 - **순환 단계 애니메이션**: 공용 `StepAnimationPlayer`(설치/동기화 가이드). 활성 컷 1개만 `key={active}` remount 렌더(구형 Safari opacity repaint 회피), 진입 페이드 `motion-safe`, 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`.
+- **높이 펼침(재마운트 없음, #4.35)**: 조건부 렌더(`{open && …}`) 대신 **항상 마운트**하고 바깥 `grid motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-300 ease-out` + 닫힘 `grid-rows-[0fr] opacity-0 invisible` + `inert` / 열림 `grid-rows-[1fr] opacity-100 visible`, 안쪽 `min-h-0 overflow-hidden`. 전환 중 재탭은 CSS가 현재 값에서 역전(인터럽터블), reduced-motion은 즉시. 토글은 `aria-expanded`·`aria-controls`. 접힌 상세가 부모 `space-y-*` 여백을 남기지 않게 토글과 같은 블록 안에 둔다. 예: `welcome-guide.tsx` 보안 상세
 - **`will-change` 절제**, 불필요한 합성 레이어 금지.
 - **광학 정렬**: 아이콘·텍스트는 수치가 아니라 눈으로 맞춘다(시각 중심).
 - **이미지 outline**: 이미지에 `outline`(1px, 토큰색)으로 경계 또렷하게.
