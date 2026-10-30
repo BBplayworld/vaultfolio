@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-30 (cto: v4.36 COO 점검 @05f73bd PASS, decision-brief 확정)
+마지막 갱신: 2026-10-30 (cto: #51 대표 지적 후 홈 팁 우선순위 판정, development 복귀)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -22,7 +22,7 @@
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.36** = #51 · 브랜치 `issue-4.36`(main 5232db5에서 분기) · 기준 05f73bd = qa PASS = UI 승인 = preview 배포 · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · cto(COO) 점검 전부 PASS · decision-brief 확정(`issues/4.36-51-settlement-home-tip/4.36-decision-brief.md`, 권고 반영) → owner-review · 11월 창 측정 조건: 2026-11-26까지 머지
+- **v4.36** = #51 · 브랜치 `issue-4.36` · 최신 41a2bf5 · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · **대표 지적(preview 결산 팁 안 보임) → cto 우선순위 판정 → development**: 공지 X=읽음, 공지(미열람)>백업>임박 세금(이번 달 마감 0~6일)>결산>그 외 세금>최신화>기능, `?demo=1`은 공지 열람 처리, kstToday→todayKst (`4.36-challenge.md` "우선순위 판정"). 이전 decision-brief(@05f73bd)는 무효, qa·ui·COO 재점검 후 재작성 · 11월 창 조건: 2026-11-26까지 머지
 
 ## 막힌 것
 - 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
@@ -36,7 +36,6 @@
 
 ## 후보 목록 (cto 2026-10-30 17:54 3차 순위 — 서비스 성장 우선, #48 판독 전 첫 화면 퍼널 동결)
 - **[선정 2026-10-30] E3 결산 창 홈 팁** (feature, p1) — `issues/4.36-51-settlement-home-tip/4.36-challenge.md`. 첫 달 "다음 결산" 안내·홈 .ics는 v1 제외
-- [p2 정리 후보, type:simplify] `home-tip.ts`의 `kstToday`(preview/demo-payload) → 단일 출처 `todayKst()`(tax-utils)로 통일, 운영 경로의 preview 모듈 import 제거 — 동작 동일·위험 0, v4.36 동승 불필요(cto 2026-10-30)
 - [p2 동승 후보, type:bug(UI)] 홈 순자산 추이 막대 라벨 320 "6.43억/원" 단위 분리 · 시세 갱신 토스트 375 "업데이트/했습니다" 끊김 · Hero 증감 2행 라벨 `ml-1.5` → 컨테이너 `gap-x-1.5`(줄 첫머리 6px 어긋남) — 기존 문구·소규모, 다음 릴리스 동승
 - [p2 동승 확정] 홈 Hero 증감 375 금액 단위 줄바꿈, 공용 하단 고지 `copyright-footer.tsx` break-keep → E3 릴리스에 함께
 - [2위, 판독 후] G3 #33 투자 유형 온보딩 — #48과 같은 첫 화면 퍼널(오염). 판독(2026-12-25경) 또는 8주 경과 정성 판정 후
@@ -59,3 +58,4 @@
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
 - 목표: 100명 이상
+
