@@ -16,7 +16,7 @@
 | 알림 | 언제 | 제목 |
 |---|---|---|
 | 🆕 새 과제 방향 확정 | 이슈의 기획+사업 방향 정의(direction.md 공동 합의)가 완료됐을 때. 운영 이상 버그는 방향 정의가 없으므로 qa 확정 직후 | `[시크릿에셋] 새 과제: #<번호> <제목>` + 유형·합의된 방향 2줄 |
-| 🔔 대표 결정 필요 | 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② cto(COO 겸임) 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief·preview 링크 |
+| 🔔 대표 결정 필요 | 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② cto(COO 겸임) 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief 링크 + **preview URL(필수, 화면 확인 경로 포함: 데모는 `?demo=1`, 신규 방문자 화면은 `?demo=empty`)** |
 - 전달: `PushNotification`(가능 시) + 실행 최종 요약 **첫 줄**에 같은 문구. owner-review는 이슈 코멘트 `@BBplayworld` 멘션도 함께
 - **새벽 실행(KST 00:00~06:59, 현재 01:53 회차)은 알림을 보내지 않는다** (PushNotification·`@BBplayworld` 멘션 모두). 라벨 전환·문서·PR 코멘트 본문은 그대로 진행하고, 보낼 알림 문구는 `.memory/STATE.md` "보류 알림" 절에 적는다. 다음 비새벽 실행(09:53)이 0단계 직후 보류 알림을 묶어 보내고 절을 비운다
 - 그 밖의 단계 이동·문서 작성·검토 왕복은 알리지 않는다. 알림이 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>`
@@ -48,7 +48,7 @@
    | qa | `qa` (CHECKLIST.md 전 항목 + 데이터 안전 점검 필수) → FAIL이면 `developer` 수정 후 같은 실행에서 `qa` 1회 재검증 가능 |
    | qa PASS 직후 | `cto` → decision-brief.md 작성 후 `status:owner-review` |
 4. **단계 전환**: 완료 조건 충족 시에만 `issue_write`로 라벨 변경. 미충족이면 막힌 이유 코멘트. 막힘은 WORKFLOW.md 5장대로 팀 안에서 해결
-5. **owner-review 진입 시**: 위 "대표 알림" ①②③ 조건을 PR head SHA로 확인한 뒤 수행 (포함 이슈별 한 줄 요약 + 권고 한 줄 + decision-brief·PR·preview 링크, "반영하려면 PR 머지, 아니면 닫기"). 하나라도 미충족이면 `status:owner-review`로 바꾸지 않고 알리지 않는다. 결정 요청 뒤 커밋이 추가되면 ①②③을 새 커밋 기준으로 다시 거친다
+5. **owner-review 진입 시**: 위 "대표 알림" ①②③ 조건을 PR head SHA로 확인한 뒤 수행 (포함 이슈별 한 줄 요약 + 권고 한 줄 + decision-brief·PR 링크 + preview URL 필수 — 알림·PR 코멘트·최종 요약 모두, "반영하려면 PR 머지, 아니면 닫기"). 하나라도 미충족이면 `status:owner-review`로 바꾸지 않고 알리지 않는다. 결정 요청 뒤 커밋이 추가되면 ①②③을 새 커밋 기준으로 다시 거친다
 6. **마지막 단계 — 메모리 저장** (아래)
 
 **작업 큐가 비면(진행할 열린 이슈 0건, 또는 남은 것이 `priority:p2` 소규모 수정뿐) 반드시 "D. 자율 과제 발굴"을 같은 실행에서 수행한다.** p2 소규모 수정은 다음 릴리스에 함께 실어 처리한다. "처리할 것 없음"으로 끝내지 않는다.
