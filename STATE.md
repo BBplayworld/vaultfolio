@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-30 (cto: v4.35 COO 재점검 @c28b476 PASS, decision-brief 확정)
+마지막 갱신: 2026-10-30 17:54 (cto: D 2단계 선정 — E3 결산 창 홈 팁)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -9,20 +9,20 @@
 - 🆕 `[시크릿에셋] 새 과제: #48 첫 화면 \"가치 먼저\" 재배열 + 링크 미리보기 정비` (개선, p1) — 첫 화면을 히어로→신뢰 한 줄→예시 미리보기→시작 CTA로, 보안 3카드는 접힘·모바일 웹 \"바로 시작\" 노출·OG 이미지(금액 없음). 지표: 28일 first_asset_saved÷welcome_view 상대 +30%, 설치율 가드레일. 링크 https://github.com/BBplayworld/vaultfolio/issues/48 (PushNotification만, 이슈 @멘션 불필요)
 
 ## 다음 정기 실행 지시
-- [선정 2026-10-29] 첫 화면 "가치 먼저" 재배열 + OG 최소 동승 — `issues/4.35-48-welcome-value-first/4.35-challenge.md` 통과(축소 반영). 이슈 생성(type:improvement, p1, status:planning) 후 planning ① 방향 정의
+- [선정 2026-10-30 17:54] E3 결산 창 홈 팁 + p2 동승 2건(홈 Hero 375 금액 줄바꿈·하단 고지 break-keep) — `issues/4.xx-new-settlement-home-tip/4.xx-challenge.md` 통과(축소). 이슈 생성(type:feature, p1, status:planning) 후 planning ① 방향 정의. **2026-11-26까지 머지돼야 11월 결산 창 측정**
+- #48 지표 판독 전(마감 2026-12-25경) #33·체험 모드 착수 금지(같은 첫 화면 퍼널 → 효과 측정 오염)
 - 자율 과제 기준: 월 활성 사용자 100명 직접 기여 서비스 과제 우선, 소규모 신뢰성 수정은 p2 동승(대표 2026-10-29)
 
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
-| #48 첫 화면 가치 먼저 + 링크 미리보기 (p1) | 4.35 | development 완료 → ui-review | ui-designer → qa | preview UI 검수(`issues/4.35-48-welcome-value-first/4.35-dev-notes.md`), 이후 qa |
-| #46 주식·대출 입력 날짜 KST (p2 동승) | 4.35 | development 완료 → qa | qa | `issues/4.35-46-trade-date-kst/4.35-dev-notes.md` |
+| (신규) E3 결산 창 홈 팁 (p1) | 4.xx | planning ① 대기 | business-pm → planner-designer | 이슈 생성 후 direction (`issues/4.xx-new-settlement-home-tip/4.xx-challenge.md`) |
 | #45 백업 iOS 신뢰 | — | rejected | — | 대표 미반영 판단(2026-10-29), 닫음 |
-| #33 시드2 투자 유형 온보딩 | — | on-hold | — | 첫 화면 재배열 지표 확인 후 판정 |
+| #33 시드2 투자 유형 온보딩 | — | on-hold | — | #48 지표 판독(2026-12-25경) 후 판정 — 그 전 착수 시 측정 오염 |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.35** = #48, #46 · 브랜치 `issue-4.35` · 기준 c28b476 = qa 최종 PASS = UI 승인 = preview 배포 · PR #49 · preview https://secretasset-git-issue-435-bbplayworlds-projects.vercel.app · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 확정(`issues/4.35-48-welcome-value-first/4.35-decision-brief.md`, 권고 반영) → owner-review
+- 없음 (v4.35 = #48·#46 머지 5232db5, 2026-10-30). 다음 배정 4.36
 
 ## 막힌 것
 - 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
@@ -34,27 +34,25 @@
 - 가장 큰 버전: 4.35(#48·#46, 열림) → 다음 배정 4.36
 - GA4 데이터 보존 기간(2개월/14개월) — 첫 화면 재배열 지표 판독 기한 결정. 에이전트 GA 조회 수단 없음(판독 한계)
 
-## 후보 목록 (자율 발굴 탈락·대기, cto 2026-10-29 2차 순위 — 서비스 성장 우선)
-- [p2, UI] 375 줄바꿈 정리 묶음: 홈 Hero 증감 "+661만/원" 금액 단위 분리, 하단 고지(copyright-footer.tsx) 단어 중간 끊김 — 다음 릴리스 동승 (qa 운영 스모크 2026-10-30)
-- **[선정 2026-10-29 2차] E1 첫 화면 가치 우선 재배열 + G2 OG 이미지·twitter 카드 최소 동승** — `issues/4.35-48-welcome-value-first/4.35-challenge.md`
-- [2위, type:feature] E3 결산 창 홈 팁(home-tip `pickHomeTip`) + 첫 달 사용자 "다음 결산 N월 말" + 기존 .ics 연결 — 재방문·S. 화면·지표가 달라 묶지 않음. 다음 자율 과제 1순위(같은 릴리스 별도 이슈 가능)
-- [3위, type:feature] G3 #33 투자 유형 온보딩 재개 — 원칙 4장 2순위와 같은 방향, 팀 판정 가능. E1 히어로 주 버튼 자리에 얹는 후속, E1 지표 확인 후
-- [4위, type:feature] E2/G1 "예시로 먼저 둘러보기" 체험 모드(#31 데모 주입 재사용) — M·위험 medium+(실데이터 격리). E1 효과 확인 후. 새 URL 금지 조건 유지
-- [5위, type:improvement] G2 나머지: sitemap 확장·홈 서버 렌더(크롤러 본문) — 구조 변경 비용 큼, #34 블로그 재개 때
-- [p2 동승] #46 거래·대출 입력 날짜 KST(D1) — 다음 릴리스에 함께
-- [p2 동승 후보, type:bug(UI)] 공용 하단 고지 `copyright-footer.tsx` "투자 조언을 포함하지 않습니다" 320·375 어절 중간 줄바꿈 — `break-keep` 1줄, 다음 릴리스 동승(cto 2026-10-30: v4.35 동승 불필요, 기존 코드·화면 맨 아래 공용 요소)
-- [p2 동승 후보, type:bug qa 확정 B3] FAB "과거 순자산" 50ms 고정 대기(`floating-add-button.tsx:111`) — 소규모, 주력 제외
-- [type:bug(UI) U2] 배당 종목 표 375 붕괴 — M, 기존 사용자 체감. 성장 직접 기여 약해 대기
-- [type:improvement B1+U1] 홈 Hero 원인 어휘 통일 + 라벨 정리 + 375 금액 줄바꿈 — 기존 사용자 화면 품질, 대기
-- [type:improvement U3] 필터 칩·"변동 원인 보기" 40px(InlineSelector 공용) + 다크 선택 칸 — 소규모
+## 후보 목록 (cto 2026-10-30 17:54 3차 순위 — 서비스 성장 우선, #48 판독 전 첫 화면 퍼널 동결)
+- **[선정 2026-10-30] E3 결산 창 홈 팁** (feature, p1) — `issues/4.xx-new-settlement-home-tip/4.xx-challenge.md`. 첫 달 "다음 결산" 안내·홈 .ics는 v1 제외
+- [p2 동승 확정] 홈 Hero 증감 375 금액 단위 줄바꿈, 공용 하단 고지 `copyright-footer.tsx` break-keep → E3 릴리스에 함께
+- [2위, 판독 후] G3 #33 투자 유형 온보딩 — #48과 같은 첫 화면 퍼널(오염). 판독(2026-12-25경) 또는 8주 경과 정성 판정 후
+- [3위, 판독 후] E2/G1 체험 모드(#31 데모 주입 재사용) — 오염 + 위험 medium+. 새 URL 금지 유지
+- [4위] G2 나머지: sitemap 확장·홈 서버 렌더 — #34 재개 때
+- [후속 후보] E3 v2: 첫 달 사용자 "다음 결산 N월 말" 안내 — E3 지표 확인 후
+- [p2 동승 후보, type:bug qa 확정 B3] FAB "과거 순자산" 50ms 고정 대기(`floating-add-button.tsx:111`)
+- [type:bug(UI) U2] 배당 종목 표 375 붕괴 — M, 성장 직접 기여 약해 대기
+- [type:improvement B1+U1] 홈 Hero 원인 어휘 통일 + 라벨 정리 — 기존 화면 의미 변경, 대기
+- [type:improvement U3] 필터 칩·"변동 원인 보기" 40px(InlineSelector 공용) + 다크 선택 칸 — 공용 파급, 대기
 - [type:improvement P3] 백업 내보내기·가져오기 설정 "데이터" 통합 — 대기
-- [type:simplify D3] 미사용 엔진 함수 정리 — 사용자 영향 0, p2 동승 가능
+- [type:simplify D3] 미사용 엔진 함수 정리 — p2 동승 가능
 - [UI] 공용 `InfoHint` 히트영역 40px + break-keep / 연 차트 375 라벨 겹침·빈 상태 문구 불일치
-- [type:improvement, risk:high 스키마] 새로 등록한 자산·계좌를 결산 원인에서 분리(등록일 필드) — 스키마 변경
-- [type:improvement, COO] 연 탭 "대출" 값 예측 구간 시세 잔차 상한 문제 재검토
+- [type:improvement, risk:high 스키마] 새로 등록한 자산·계좌를 결산 원인에서 분리(등록일 필드)
+- [type:improvement, COO] 연 탭 "대출" 값 예측 구간 시세 잔차 상한 재검토
 - [type:improvement] 동기화 pull 같은 달 충돌 `date` 늦은 쪽 우선
-- [반려] #45 백업 JSON·공유 PNG iOS 신뢰 — 대표 미반영(2026-10-29, 성장 기여 낮음). 재제안 금지
-- [탈락] P2 "Plus" 배지 제거 — 현행 유지 판정
+- [반려] #45 백업 JSON·공유 PNG iOS 신뢰 — 재제안 금지
+- [탈락] P2 "Plus" 배지 제거 — 현행 유지
 
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
