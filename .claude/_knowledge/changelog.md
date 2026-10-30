@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-30 (v4.36)
+
+### 결산 창 홈 팁 (#4.36, 이슈 #51)
+- **왜**: 월 결산은 활동 탭 허브 카드에서만 열려 홈만 보는 사용자는 결산 창이 열린 걸 몰랐다.
+- `pickHomeTip`에 결산 1종(공지>백업>세금>**결산**>최신화>기능), 판정은 허브와 같은 `pickSettlementCard`. 문구 "{N}월 결산이 열렸어요"(금액 없음), 탭 → 월 결산(`settlement_view` source `home_tip`, 기존 허용 값). `ChangeInit.source`에 `home_tip` 추가. 저장 키·스키마·GA 이벤트 무변경.
+- 동승: 팁 셸 제목·설명 `break-keep wrap-break-word`·X 40px, 홈 Hero 증감 금액·% `whitespace-nowrap` + `flex-wrap`, 하단 고지 `break-keep`.
+
+---
+
 ## 2026-10-30
 
 ### 첫 화면 "가치 먼저" 재배열 + 링크 미리보기 (#4.35, 이슈 #48)

@@ -232,11 +232,12 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 ### home-tip.ts (S-4.32 후속) — 홈 알림/팁 통합 판정
 
 ```typescript
-pickHomeTip({ assetData, hasAssets, syncArmed }): HomeTip | null
+pickHomeTip({ assetData, hasAssets, syncArmed, today? }): HomeTip | null   // today 기본값 kstToday()(#4.36, 테스트 고정용)
   // HomeTip = { kind: "notice" } | { kind: "backup", days } | { kind: "tax", matches }
-  //         | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  //         | { kind: "settlement", window, today } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  // 결산(#4.36): 세금 다음·최신화 앞. hasAssets && pickSettlementCard(readMonthlySnapshots(), today)≠null(말일−3일~다음 달 10일, 첫 달 제외) — 허브 카드와 같은 판정
   // 새 공지는 **필수 노출**(readNoticeSeenId()!==NOTICE_ID) — 다른 무엇보다 최우선, 안전 안내(백업·세금)보다도 먼저 반환.
-  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) >
+  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) > 결산 >
   //                 자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
 ```
 `backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`의 기존 순수 함수를 그대로 조합만 한다(신규 판정 로직 없음). 4종을 독립 컴포넌트(`BackupNudge`/`RefreshNudge`/`TaxNoticeBox`/`FeatureTipBox`)로 각자 띄우던 것을 `home-tip-box.tsx` 1개로 통합하며 도입 — 종류별 "오늘/이번달/영구" 재노출 정책은 각 원본 유틸에 그대로 남아있고, 승자가 아닌 종류는 "오늘 떴다" flag를 찍지 않는다(호출부 책임, [components.md](components.md) `HomeTipBox` 참조).
