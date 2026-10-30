@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { Cash, CashTransaction } from "@/types/asset";
 import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
+import { todayKst } from "@/lib/tax-utils";
 import { findDuplicateCashTx, isCashWithdrawalValid } from "@/lib/trade/cash-tx-utils";
 import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
 
@@ -47,7 +48,7 @@ export function CashTxInput() {
       cashId: "",
       type: "deposit",
       amount: 0,
-      date: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0],
+      date: todayKst(),
       recurring: false,
       memo: "",
       reflected: true,
@@ -62,7 +63,7 @@ export function CashTxInput() {
 
   // 스냅샷·다른 "오늘" 계산과 동일하게 KST 기준 — UTC 자정 기준이면 한국시간 00~09시에 기록한
   // 거래가 하루 전 날짜로 저장돼 원인분해(income)에서 누락되고 "현금 잔액 직접 수정"으로 잘못 잡힌다.
-  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const todayStr = todayKst();
   const minDate = (() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - TRANSACTION_RETENTION_YEARS);

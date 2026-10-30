@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { Loan, LoanTransaction } from "@/types/asset";
 import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
+import { todayKst } from "@/lib/tax-utils";
 import { findDuplicateLoanTx, isLoanRepaymentValid } from "@/lib/trade/loan-tx-utils";
 import { formatCurrency } from "@/lib/number-utils";
 
@@ -46,7 +47,7 @@ export function LoanTxInput() {
       loanId: "",
       type: "repay",
       amount: 0,
-      date: new Date().toISOString().split("T")[0],
+      date: todayKst(), // KST 오늘 — 한국시간 00~09시에도 전날로 잡히지 않게(#46)
       memo: "",
       reflected: true,
     },
@@ -57,7 +58,7 @@ export function LoanTxInput() {
   const reflected = form.watch("reflected");
   const selectedLoan = loans.find((l) => l.id === selectedLoanId);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayKst(); // 상한도 KST 오늘(현금 입력과 동일 기준)
   const minDate = (() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - TRANSACTION_RETENTION_YEARS);
