@@ -20,6 +20,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const OG_IMAGE = {
+  url: `${APP_CONFIG.siteUrl}/og-image.png`,
+  width: 1200,
+  height: 630,
+  alt: "안전한 자산 관리, 시크릿에셋",
+} as const;
+
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,
@@ -41,11 +48,14 @@ export const metadata: Metadata = {
     siteName: APP_CONFIG.name,
     title: APP_CONFIG.meta.title,
     description: APP_CONFIG.meta.description,
+    // 링크 미리보기 정적 이미지(#48) — 브랜드 문구만, 금액·사용자 데이터 없음. 교체 시 파일명 변경(크롤러 캐시)
+    images: [{ url: OG_IMAGE.url, width: OG_IMAGE.width, height: OG_IMAGE.height, alt: OG_IMAGE.alt }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: APP_CONFIG.meta.title,
     description: APP_CONFIG.meta.description,
+    images: [OG_IMAGE.url],
   },
   other: {
     "naver-site-verification": "7a749c9de7f929519b80424a0fac9c56fb9deb03",
