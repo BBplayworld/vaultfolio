@@ -4,7 +4,7 @@
 // 계산은 전부 기기 안(로컬 스냅샷 + 엔진 래퍼). 서버로 보내는 값 없음 — GA는 source·result 열거형만.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
@@ -19,7 +19,9 @@ import { daysSinceRefresh, getStaleCategories, type RefreshCategory } from "@/li
 import { track } from "@/lib/analytics/ga";
 import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-section";
 import { CATEGORY_LABEL } from "../home/home-tip-box";
-import { CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
+import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
+import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
+import { buildSettlementPrompt } from "@/lib/ai-prompts";
 import type { ChangeInit } from "../../layout/navigation/navigation-context";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -44,6 +46,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
   // snapshotVersion이 바뀌면(저장·복원) 다시 읽는다
   const monthly = useMemo(() => (snapshotVersion >= 0 ? readMonthlySnapshots() : []), [snapshotVersion]);
   const [month, setMonth] = useState(() => initialMonth ?? pickSettlementMonth(readMonthlySnapshots(), kstToday()));
+  const [aiOpen, setAiOpen] = useState(false);
 
   const computed = useMemo((): { ok: true; value: SettlementResult } | { ok: false } => {
     try {
@@ -140,8 +143,60 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
 
       {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
 
+      {!firstMonth && (() => {
+        // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)
+        const name = settlementName(w.month, today, false);
+        return (
+          <>
+            <SettlementAiButton name={name} onOpen={() => setAiOpen(true)} />
+            <PromptPreviewDialog
+              open={aiOpen}
+              onOpenChange={setAiOpen}
+              title={<><Sparkles className="size-5 text-primary" />{name} 변화 AI 질문</>}
+              description={<><span className="break-keep">아래 질문을 복사해 Grok·Gemini·GPT 등 AI에 붙여넣어 보세요.</span><span data-testid="settlement-ai-notice" className="mt-1 block break-keep font-medium text-orange-600 dark:text-orange-400">질문에 내 순자산 금액이 들어 있어요. 붙여넣기 전에 확인하세요.</span></>}
+              tabs={[{
+                id: "settlement",
+                label: "결산",
+                getPrompt: () => buildSettlementPrompt({
+                  name, rangeLabel: settlementRangeLabel(w), kind: w.kind, longGap: w.longGap, gapDays: w.gapDays,
+                  prevValue, currValue, delta, pct, causes: mapped.causes, estimatedLabel,
+                }),
+              }]}
+              copySuccessMessage="결산 질문이 복사되었습니다."
+              onCopy={() => track("feature_use", { category: "ai_prompt", method: "prompt_copy", source: "settlement" })}
+            />
+          </>
+        );
+      })()}
+
       <PrepBlock />
     </div>
+  );
+}
+
+// SECTION 외피(면·hairline·그림자·radius)만 재사용 — 섹션 안쪽 패딩·간격은 행 버튼에 맞게 따로
+const AI_ROW_SURFACE = SECTION.replace(" p-4 space-y-3", "");
+
+// AI 질문 행 버튼(#54) — 보조 카드형(brand 아님: 아래 "캘린더 추가"가 주 버튼). 외피는 SECTION과 같은 면·그림자
+export function SettlementAiButton({ name, onOpen }: { name: string; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      data-testid="settlement-ai-button"
+      data-screenshot-hide
+      onClick={onOpen}
+      className={`${AI_ROW_SURFACE} flex w-full min-h-14 items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 motion-safe:active:scale-[0.99] motion-safe:transition-[background-color,scale] motion-safe:duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${BODY_ENTER}`}
+      style={{ animationDelay: "120ms", animationFillMode: "backwards" }}
+    >
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
+        <Sparkles className="size-4" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep">AI에게 {name} 변화 물어보기</span>
+        <span className="block text-sm text-muted-foreground break-keep">복사해서 외부 AI에 붙여넣기</span>
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </button>
   );
 }
 

@@ -1,5 +1,6 @@
 import { AssetData, AssetSummary } from "@/types/asset";
-import { formatShortCurrency } from "@/lib/number-utils";
+import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { SETTLEMENT_CAUSE_LABEL, type SettlementCause, type SettlementKind } from "@/lib/report/settlement";
 
 export interface AssetPromptContext {
   data: AssetData;
@@ -429,3 +430,47 @@ ${[data.loans.some(l => l.linkedRealEstateId || l.linkedStockId || l.linkedCashI
     },
   },
 ];
+
+// ─── 월 결산 AI 질문(#54) ─────────────────────────────────────────────────────
+// 결산 화면에 이미 보이는 값만 쓴다(새 계산·화면에 없는 숫자 금지). 이름·기간 라벨은 UI가 만든 문자열을 받는다.
+export interface SettlementPromptInput {
+  name: string;              // 화면 Hero와 같은 settlementName 결과 (예: "10월", "25년 12월")
+  rangeLabel: string;        // settlementRangeLabel (예: "9/28 → 10/28")
+  kind: SettlementKind;
+  longGap: boolean;
+  gapDays: number | null;
+  prevValue: number;
+  currValue: number;
+  delta: number;
+  pct: number | null;
+  causes: SettlementCause[];
+  estimatedLabel: string;    // "예측" | "일부 예측"
+}
+
+// 화면과 같은 표기(change-hero의 signed·% 표기와 동일 규칙)
+const signedPrice = (v: number) => `${v >= 0 ? "+" : ""}${formatPriceByMode(v)}`;
+
+export function buildSettlementPrompt(i: SettlementPromptInput): string {
+  const notes: string[] = [];
+  if (i.kind === "in_progress" || i.kind === "range") notes.push("- 아직 끝나지 않은 진행 중 구간이라 끝 값은 오늘 기준입니다.");
+  if (i.longGap && i.gapDays !== null) notes.push(`- 기록 간격이 길어 ${i.gapDays}일 구간입니다.`);
+  const causeLines = i.causes.length === 0
+    ? "  - 뚜렷한 원인 항목이 없음"
+    : i.causes.map((c) => `  - ${SETTLEMENT_CAUSE_LABEL[c.key]}: ${signedPrice(c.amount)}${c.estimated ? ` (${i.estimatedLabel})` : ""}`).join("\n");
+  const pctText = i.pct !== null ? ` (${i.pct >= 0 ? "+" : ""}${i.pct.toFixed(1)}%)` : "";
+
+  return `${GUARDRAIL}
+[${i.name} 순자산 변화 — ${i.rangeLabel}]
+- 시작 순자산: ${formatPriceByMode(i.prevValue)}
+- 끝 순자산: ${formatPriceByMode(i.currValue)}
+- 증감: ${signedPrice(i.delta)}${pctText}
+${notes.length ? `${notes.join("\n")}\n` : ""}
+[변화 원인]
+${causeLines}
+- '기록 안 된 변화'는 새로 등록한 자산·직접 고친 잔액처럼 시세·환율·입출금·대출로 설명되지 않는 금액이며, 실제 원인을 알 수 없으니 단정하지 마세요.
+
+[요청]
+1. 무엇이 ${i.name} 순자산을 바꿨는지 쉬운 말로 해석해 주세요.
+2. 다음 달 기록을 더 정확하게 하려면 무엇을 확인하면 좋은지 질문 3개 이내로 알려주세요.
+`;
+}

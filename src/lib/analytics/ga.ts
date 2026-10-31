@@ -60,6 +60,8 @@ export const PARAM_VALUES = {
     "prompt_view", "accepted", "dismissed", "installed", "inapp_move",
     // 기능 사용 세부
     "open", "click", "close", "view", "sell_all", "rebuy", "step", "submit", "toggle",
+    // AI 질문 복사(#54)
+    "prompt_copy",
   ],
   result: [
     "success", "fail", "empty", "limit", "cancel",
@@ -71,8 +73,8 @@ export const PARAM_VALUES = {
     // 월말 결산(#32): 전월 결산(월 1회 방문자의 날짜 구간 포함) / 진행 중 구간 / 첫 달
     "settled", "in_progress", "first_month",
   ],
-  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme"],
+  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   nav_source: ["tap", "back", "swipe", "initial"],
   content_type: ["stock", "portfolio", "type", "link"],
@@ -97,6 +99,7 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
     disable: "끄기", unlock: "잠금 해제",
     prompt_view: "설치 안내 노출", accepted: "설치 수락", dismissed: "설치 거절", installed: "설치 완료", inapp_move: "외부 브라우저 이동",
     open: "실행", click: "클릭", close: "닫기", view: "노출", sell_all: "전량 매도", rebuy: "재매수", step: "수량 조정", submit: "전송", toggle: "전환",
+    prompt_copy: "프롬프트 복사",
   },
   result: {
     success: "성공", fail: "실패", empty: "결과 없음", limit: "한도 초과", cancel: "취소",
@@ -110,10 +113,11 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
   source: {
     web: "웹", pwa: "PWA 앱", inapp: "인앱 브라우저", settings: "설정", more: "더보기", home_tip: "홈 팁", share_card: "인증카드",
     install: "설치 화면", fab: "추가 버튼", wizard: "마법사", welcome: "웰컴", dashboard: "대시보드", top_bar: "상단바", detail: "상세",
-    card: "결산 카드", menu: "메뉴",
+    card: "결산 카드", menu: "메뉴", settlement: "결산 화면", report: "자산 성적표",
   },
   category: {
     xray: "X-Ray", tax_sim: "절세 시뮬레이션", home_tip: "홈 팁", notice: "공지", feedback: "의견 보내기", theme: "테마",
+    ai_prompt: "AI 프롬프트",
   },
   step: {
     "1": "1단계", "2": "2단계", "3": "3단계", "4": "4단계", "5": "5단계",

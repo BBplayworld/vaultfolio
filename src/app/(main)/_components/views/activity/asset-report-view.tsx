@@ -21,6 +21,7 @@ import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { groupStocksByTicker, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
+import { track } from "@/lib/analytics/ga";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
@@ -698,6 +699,7 @@ export function AssetReportView() {
           getPrompt: () => t.generate(getPromptContext()),
         }))}
         copySuccessMessage="AI 평가 프롬프트가 복사되었습니다."
+        onCopy={() => track("feature_use", { category: "ai_prompt", method: "prompt_copy", source: "report" })}
       />
     </Card>
   );

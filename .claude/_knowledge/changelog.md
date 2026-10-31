@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-31 (v4.37)
+
+### 결산 화면 AI에게 N월 변화 물어보기 (#4.37, 이슈 #54)
+- **왜**: 결산은 숫자·원인을 보여주고 끝나 "왜 이랬나"를 풀어 줄 다음 행동이 없었고, AI 프롬프트 복사 계측이 0이었다.
+- 결산 화면 원인 블록 아래 보조 카드형 버튼 → 화면 값만 담은 질문(`buildSettlementPrompt`) 미리보기·복사, 금액 포함 주황 고지. `PromptPreviewDialog`에 `onCopy`(복사 성공 후만)·`copyPrompt` 헬퍼. GA enum 4개 추가(`ai_prompt`·`prompt_copy`·`settlement`·`report`), 성적표 복사도 계측. 서버 전송·저장 키·새 이벤트명 없음.
+- design-system §6: Tailwind 4.1 scale 전환은 `transition-[…,scale]`.
+
+---
+
 ## 2026-10-30 (v4.36)
 
 ### 결산 창 홈 팁 (#4.36, 이슈 #51)

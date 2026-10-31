@@ -36,7 +36,7 @@ _components/
 │       └── performance-hub.tsx, monthly-dividend-stocks.tsx
 ├── layout/                # 라우팅·공용 UI
 │   ├── navigation/        # navigation-context(NavigationProvider+useAssetNavigation), asset-page-tabs(view 분기 라우터), asset-dispatch
-│   ├── ui/                # inline-selector(size sm/md/lg), kpi-card, info-hint, prompt-preview-dialog
+│   ├── ui/                # inline-selector(size sm/md/lg), kpi-card, info-hint, prompt-preview-dialog(onCopy·copyPrompt, #4.37)
 │   ├── floating/          # floating-add-button(bg-foreground/85 FAB), scroll-to-top
 │   ├── onboarding/        # welcome-guide, notice, notice-dialog
 │   └── copyright-footer.tsx
