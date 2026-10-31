@@ -21,6 +21,10 @@ import previewData from "./welcome-preview-data.json";
 import { track, type GaParams } from "@/lib/analytics/ga";
 import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
+import { SECURITY_COPY, type SecurityCopyId } from "@/config/security-copy";
+
+// 보안 카드 id → 아이콘(순서 ShieldCheck·CloudLightning·EyeOff 유지)
+const SECURITY_ICONS: Record<SecurityCopyId, React.ElementType> = { local: ShieldCheck, sync: CloudLightning, admin: EyeOff };
 
 // 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시) — delay는 style로 분산
 const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500";
@@ -129,8 +133,8 @@ export function WelcomeGuide() {
           <ShieldCheck aria-hidden className="inline size-4 -mt-0.5 mr-1.5 text-primary" />
           {/* 구분자를 앞 항목과 한 덩어리로 묶어 줄바꿈은 구분자 뒤에서만 일어나게 */}
           <span className="whitespace-nowrap">로그인 없음<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
-          <span className="whitespace-nowrap">자산은 내 기기에만<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
-          <span className="whitespace-nowrap">기기 간 암호화 동기화 지원</span>
+          <span className="whitespace-nowrap">자산은 내 기기에 저장<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
+          <span className="whitespace-nowrap">원하면 암호화 동기화</span>
         </p>
         <button
           type="button"
@@ -153,23 +157,11 @@ export function WelcomeGuide() {
           className={`grid w-full ease-out motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-300 ${securityOpen ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
         >
           <div className="min-h-0 overflow-hidden">
-            {/* 보안 특징 카드 3개 — 앱가이드와 동일 원문 */}
+            {/* 보안 특징 카드 3개 — 앱가이드와 같은 SECURITY_COPY 렌더 */}
             <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <FeatureCard
-                icon={ShieldCheck}
-                title="영지식(Zero-Knowledge) 로컬 격리"
-                desc="모든 자산 데이터는 브라우저 내부(localStorage 및 기기 비추출 키 기반 IndexedDB)에만 안전하게 보관됩니다. 자격 증명이나 사용자 동의 없이는 데이터가 기기를 절대 벗어나지 않습니다."
-              />
-              <FeatureCard
-                icon={CloudLightning}
-                title="이중 종단간 암호화(E2EE) 동기화"
-                desc="기기 내부에서 금고 암호로부터 PBKDF2 (200k 반복 연산)를 통해 강력한 대칭키와 인증용 서명 키쌍(Ed25519)을 파생합니다. 전송되는 모든 데이터는 기기 내에서 암호화됩니다."
-              />
-              <FeatureCard
-                icon={EyeOff}
-                title="서버 관리자 자산 열람 원천 불가"
-                desc="서버는 오직 암호문(blob)과 공개키(pubKey)만 보관하며 해독 수단이 전혀 없습니다. 링크 공유 시에도 복호화 키의 절반은 브라우저 주소에만 전달됩니다."
-              />
+              {SECURITY_COPY.map(({ id, title, desc }) => (
+                <FeatureCard key={id} icon={SECURITY_ICONS[id]} title={title} desc={desc} />
+              ))}
             </div>
           </div>
         </div>

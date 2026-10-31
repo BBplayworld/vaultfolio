@@ -23,6 +23,7 @@ import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfCrypto, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
 
 type ImportCrypto = {
   id: string;
@@ -244,8 +245,8 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
         {/* Step 1: 업로드 */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
-              본인 계좌 스크린샷을 본인 앱에 입력하는 행위로, 저작권·약관·개인정보 측면에서 문제없습니다.
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
+              {SCREENSHOT_UPLOAD_NOTICE}
             </div>
 
             <div

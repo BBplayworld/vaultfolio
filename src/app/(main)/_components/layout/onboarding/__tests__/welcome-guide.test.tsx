@@ -24,6 +24,7 @@ import {
   WELCOME_CTA_METHODS,
 } from "../welcome-guide";
 import { labelOf, PARAM_VALUES } from "@/lib/analytics/ga";
+import { SECURITY_COPY } from "@/config/security-copy";
 
 const SRC = readFileSync(path.resolve(__dirname, "../welcome-guide.tsx"), "utf8");
 
@@ -91,9 +92,11 @@ describe("WelcomeGuide 초기 마크업", () => {
     // 접힘 상세 바깥 가시 텍스트에 기술 용어 없음
     const visible = html.slice(0, pos("welcome-security-detail")) + html.slice(pos("welcome-preview-net"));
     for (const word of ["PBKDF2", "Ed25519", "blob"]) expect(visible).not.toContain(word);
-    // 상세 안에는 기존 3카드 원문
-    expect(html).toContain("영지식(Zero-Knowledge) 로컬 격리");
-    expect(html).toContain("PBKDF2 (200k 반복 연산)");
+    // 상세 안에는 SECURITY_COPY 3카드(앱가이드와 같은 상수, #61)
+    for (const c of SECURITY_COPY) {
+      expect(html).toContain(c.title);
+      expect(html).toContain(c.desc);
+    }
   });
 
   it("삭제 항목 없음 + '로그인 없' 1회(C1)", () => {

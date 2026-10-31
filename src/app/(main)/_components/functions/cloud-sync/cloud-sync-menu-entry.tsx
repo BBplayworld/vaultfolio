@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { SyncQr } from "./sync-qr";
 import { SyncSetupAnimation } from "../../pwa/pwa-guide-illustrations";
+import { SYNC_MENU_SECURITY_DESC } from "@/config/security-copy";
 
 function validatePassphrase(passphrase: string): { ok: boolean; message?: string } {
   if (!passphrase) {
@@ -142,8 +143,8 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             <Cloud className="size-5 text-primary" /> 기기 동기화
             <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-sm font-bold text-primary">Plus</span>
           </DialogTitle>
-          <DialogDescription className="text-left">
-            새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). 서버는 E2EE 암호문만 보관하므로 금고 암호 없이는 열 수 없습니다.
+          <DialogDescription className="text-left text-pretty break-keep">
+            새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). {SYNC_MENU_SECURITY_DESC}
           </DialogDescription>
         </DialogHeader>
 
