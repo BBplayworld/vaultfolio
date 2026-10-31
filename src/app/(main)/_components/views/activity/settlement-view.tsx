@@ -20,6 +20,7 @@ import { track } from "@/lib/analytics/ga";
 import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-section";
 import { CATEGORY_LABEL } from "../home/home-tip-box";
 import { CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
+import type { ChangeInit } from "../../layout/navigation/navigation-context";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 const CAPTION = "text-sm text-muted-foreground text-pretty";
@@ -35,7 +36,7 @@ interface SettlementResult {
   estimatedLabel: "예측" | "일부 예측";
 }
 
-export function SettlementView({ initialMonth, source }: { initialMonth?: string; source: "card" | "menu" }) {
+export function SettlementView({ initialMonth, source }: { initialMonth?: string; source: NonNullable<ChangeInit["source"]> }) {
   const { assetData, exchangeRates, getAssetSummary, snapshotVersion } = useAssetData();
   // getAssetSummary는 자산·환율이 바뀔 때만 새로 만들어지므로 요약도 그때만 다시 계산한다(매 렌더 재계산 방지)
   const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);

@@ -238,3 +238,87 @@ describe("9. 데모 JSON 정적 import 0건", () => {
     expect(dynamicUsers.map((f) => path.basename(f))).toEqual(["preview-gate.tsx"]);
   });
 });
+
+describe("10. 데모 주입 상태에서는 튜토리얼 미노출(#4.36)", () => {
+  const TUTORIAL_KEY = "secretasset_tutorial_status";
+  const makeStorage = () => {
+    const m = new Map<string, string>();
+    return {
+      getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+      setItem: (k: string, v: string) => void m.set(k, String(v)),
+      removeItem: (k: string) => void m.delete(k),
+      clear: () => m.clear(),
+      key: (i: number) => [...m.keys()][i] ?? null,
+      get length() { return m.size; },
+      _m: m,
+    };
+  };
+  let ls: ReturnType<typeof makeStorage>;
+  beforeEach(() => {
+    ls = makeStorage();
+    vi.stubGlobal("localStorage", ls);
+    vi.stubGlobal("window", { localStorage: ls });
+  });
+
+  it("?demo=1 주입 후 튜토리얼 5단계 모두 건너뜀 + 표식, 스토어 activeStep 없음", async () => {
+    const { applyDemoTutorialSkip, DEMO_TUTORIAL_MARKER } = await import("@/app/(main)/_components/preview/preview-gate");
+    const { tutorialStore } = await import("@/stores/tutorial/tutorial-store");
+    applyDemoTutorialSkip();
+    const map = JSON.parse(ls.getItem(TUTORIAL_KEY)!);
+    expect(Object.values(map).every((v) => v === "skipped" || v === "done")).toBe(true);
+    expect(ls.getItem(DEMO_TUTORIAL_MARKER)).toBe("1");
+    expect(tutorialStore.getState().activeStep).toBeNull();
+    expect(tutorialStore.getState().isTutorialFinished).toBe(true);
+    // 20. 현재 공지도 읽음(기존 열람 키) — 새 브라우저 데모에서 결산 등 하위 팁이 바로 보이게
+    const { NOTICE_ID } = await import("@/app/(main)/_components/layout/onboarding/notice");
+    expect(JSON.parse(ls.getItem("secretasset_notice_seen")!).id).toBe(NOTICE_ID);
+  });
+
+  it("20. ?demo=empty: 데모가 남긴 공지 열람 기록도 지운다(clearAssetData는 공지 키를 보존하므로 직접 삭제)", async () => {
+    const { applyDemoTutorialSkip, resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    applyDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).not.toBeNull();
+    resetDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).toBeNull();
+  });
+
+  it("20. 데모 이력 없으면 ?demo=empty가 사용자의 공지 열람 기록을 건드리지 않는다", async () => {
+    const { resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    ls.setItem("secretasset_notice_seen", JSON.stringify({ id: "x", seenAt: 1, expiresAt: 9e15 }));
+    resetDemoTutorialSkip();
+    expect(ls.getItem("secretasset_notice_seen")).not.toBeNull();
+  });
+
+  it("이미 완료한 단계는 done 유지(건너뜀으로 덮지 않음)", async () => {
+    const { applyDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    ls.setItem(TUTORIAL_KEY, JSON.stringify({ 1: "done", 2: "pending", 3: "pending", 4: "pending", 5: "pending" }));
+    applyDemoTutorialSkip();
+    expect(JSON.parse(ls.getItem(TUTORIAL_KEY)!)["1"]).toBe("done");
+  });
+
+  it("?demo=empty: 데모가 건너뛴 튜토리얼만 첫 사용 상태로 복구", async () => {
+    const { applyDemoTutorialSkip, resetDemoTutorialSkip, DEMO_TUTORIAL_MARKER } = await import("@/app/(main)/_components/preview/preview-gate");
+    const { tutorialStore } = await import("@/stores/tutorial/tutorial-store");
+    applyDemoTutorialSkip();
+    resetDemoTutorialSkip();
+    expect(ls.getItem(TUTORIAL_KEY)).toBeNull();
+    expect(ls.getItem(DEMO_TUTORIAL_MARKER)).toBeNull();
+    expect(tutorialStore.getState().activeStep).toBe(1);
+  });
+
+  it("?demo=empty: 데모 이력 없으면 기존 튜토리얼 상태 그대로(무동작)", async () => {
+    const { resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
+    const prev = JSON.stringify({ 1: "done", 2: "skipped", 3: "pending", 4: "pending", 5: "pending" });
+    ls.setItem(TUTORIAL_KEY, prev);
+    resetDemoTutorialSkip();
+    expect(ls.getItem(TUTORIAL_KEY)).toBe(prev);
+  });
+
+  it("운영(비 preview)에서는 게이트가 데모·튜토리얼 처리를 하지 않는다", () => {
+    const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/preview-gate.tsx"), "utf8");
+    // 튜토리얼 처리 호출은 injectDemo·empty 분기 안에만(PreviewGateInner는 isPreviewEnv()일 때만 렌더)
+    expect(src.match(/applyDemoTutorialSkip\(\);/g)?.length).toBe(1);
+    expect(src.match(/resetDemoTutorialSkip\(\);/g)?.length).toBe(1);
+    expect(src).toMatch(/if \(!isPreviewEnv\(\)\) return <>\{children\}<\/>;/);
+  });
+});

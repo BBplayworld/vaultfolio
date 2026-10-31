@@ -4,12 +4,12 @@
 // 자산 최신화 안내(refresh-nudge.tsx)·기능 활용 팁(feature-tip-box.tsx) 4종을 이 박스 1개로 흡수(S-4.32 후속).
 // 새 공지(notice)는 #4.24에서 5번째 종류로 추가 — 필수 노출: 최초 1회는 세션 숨김 플래그를 무시하고
 // 반드시 뜨며, X로 닫으면 이번 세션만 숨겨지고(영구 dismiss 아님) 실제로 열어봐야만(activate) 영구 열람 처리된다.
-// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>최신화>기능 순으로 1개만 고른다.
-// 인터랙션은 5종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
+// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>결산(#4.36)>최신화>기능 순으로 1개만 고른다.
+// 인터랙션은 6종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -24,6 +24,7 @@ import { NOTICE_TITLE, NOTICE_SUMMARY } from "../../layout/onboarding/notice";
 import { dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
+import { settlementName } from "../activity/change-hero";
 
 export const CATEGORY_LABEL: Record<string, string> = {
   stock: "주식",
@@ -40,11 +41,19 @@ const SESSION_DISMISS_KEY = "secretasset_home_tip_session_dismissed";
 // 무시하고 공지를 강제 노출한다. 서고 나면 X 닫기(→ SESSION_DISMISS_KEY)로 세션 내 재노출이 정상 차단된다.
 const NOTICE_SHOWN_SESSION_KEY = "secretasset_home_tip_notice_shown";
 
+/** 노출 GA 중복 방지 키 — 같은 페이지에서 같은 팁(종류·결산 월·기능)은 1회만 view 전송(#4.36) */
+export function homeTipViewKey(tip: HomeTip): string {
+  if (tip.kind === "settlement") return `settlement:${tip.window.month}`;
+  if (tip.kind === "feature") return `feature:${tip.feature.id}`;
+  return tip.kind;
+}
+
 export function HomeTipBox() {
   const { assetData, getAssetSummary } = useAssetData();
   const cs = useCloudSync();
   const { navigate } = useAssetNavigation();
   const [tip, setTip] = useState<HomeTip | null>(null);
+  const lastViewKey = useRef<string | null>(null); // assetData 갱신마다 effect가 다시 돌아도 같은 팁 노출 GA는 1회
 
   const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
 
@@ -66,7 +75,13 @@ export function HomeTipBox() {
       try { sessionStorage.setItem(NOTICE_SHOWN_SESSION_KEY, "true"); } catch { /* 무시 */ }
     }
     setTip(picked);
-    if (picked) track("feature_use", { category: "home_tip", method: "view" });
+    if (picked) {
+      const key = homeTipViewKey(picked);
+      if (lastViewKey.current !== key) {
+        lastViewKey.current = key;
+        track("feature_use", { category: "home_tip", method: "view" });
+      }
+    }
   }, [assetData, hasAssets, cs.status]);
 
   if (!tip) return null;
@@ -74,9 +89,10 @@ export function HomeTipBox() {
   const close = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (tip.kind === "tax") markTaxNoticeDismissed();
-    // "notice"는 X로는 영구 dismiss 안 함(markCurrentNoticeSeen 미호출) — 실제로 열어봐야(activate)
-    // 열람 처리된다. X 닫기는 SESSION_DISMISS_KEY만 세워 이번 세션 내 재노출을 막고(NOTICE_SHOWN_SESSION_KEY가
-    // 이미 서 있어 강제 노출 바이패스가 꺼진 상태), 새 세션에선 다시 최우선으로 떠서 실제 열람을 유도한다.
+    // "notice" X = 읽음 처리(#4.36 cto 판정) — X로만 닫는 사용자에게 공지가 세션마다 최우선으로 되살아나
+    // 백업·결산 등 하위 팁을 영영 가리던 문제 해소. 기존 열람 키 재사용, GA notice view는 보내지 않는다.
+    // 최초 1회 강제 노출(NOTICE_SHOWN_SESSION_KEY 바이패스)은 그대로. 공지 본문은 더보기 메뉴에서 계속 볼 수 있다.
+    if (tip.kind === "notice") markCurrentNoticeSeen({ track: false });
     if (tip.kind === "feature") dismissTip(tip.feature.id);
     // 이번 세션 동안 팁 박스 전체를 숨김 (다음 순위 팁도 안 뜨게). 재접속 시 초기화.
     try { sessionStorage.setItem(SESSION_DISMISS_KEY, "true"); } catch { /* 무시 */ }
@@ -105,6 +121,11 @@ export function HomeTipBox() {
     }
     if (tip.kind === "tax") {
       navigate({ type: "tax" });
+      return;
+    }
+    if (tip.kind === "settlement") {
+      // 허브 결산 카드와 같은 진입 형태 — source만 home_tip
+      navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: tip.window.month, source: "home_tip" } });
       return;
     }
     if (tip.kind === "refresh") {
@@ -136,6 +157,8 @@ export function HomeTipBox() {
     <div
       role="button"
       tabIndex={0}
+      data-testid="home-tip"
+      data-kind={tip.kind}
       onClick={activate}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -155,15 +178,16 @@ export function HomeTipBox() {
             {tip.kind === "feature" && tip.feature.isNew && (
               <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">NEW</span>
             )}
-            <p className="text-sm sm:text-[15px] font-semibold text-foreground text-pretty">{title}</p>
+            <p data-testid="home-tip-title" className="text-sm sm:text-[15px] font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 text-pretty">{description}</p>
+          <p className="text-sm text-muted-foreground mt-1 text-pretty break-keep wrap-break-word">{description}</p>
         </div>
         <button
           type="button"
           onClick={close}
           aria-label="닫기"
-          className="shrink-0 -m-2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="home-tip-close"
+          className="relative shrink-0 -m-2 p-2 text-muted-foreground hover:text-foreground transition-colors after:absolute after:-inset-1"
         >
           <X className="size-4" />
         </button>
@@ -189,6 +213,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "세금",
       title: `[${top.event.dueLabel}] ${top.event.title}`,
       description: rest > 0 ? `${top.event.summary} 그 외 ${rest}건도 확인하세요.` : top.event.summary,
+    };
+  }
+  if (tip.kind === "settlement") {
+    return {
+      Icon: CalendarCheck,
+      badgeLabel: "결산",
+      title: `${settlementName(tip.window.month, tip.today, true)}이 열렸어요`,
+      description: "한 달 동안 순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
     };
   }
   if (tip.kind === "refresh") {

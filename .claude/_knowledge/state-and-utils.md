@@ -183,6 +183,7 @@ getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 �
   // 정렬 = 이번 달 우선 → 같은 달 내 high 우선(#4.29). 이번 달 항목 중 마감 지난 것 제외 — 내부 dueEndDate(event, year)가
   // dueLabel 마지막 "M/D"를 마감일로 해석("~10/25"→10-25, "12/1~12/15"→12-15), 날짜 없는 라벨("2월 급여")은 null=월말까지 유지
 isTaxNoticeDismissed() / markTaxNoticeDismissed() / shouldShowTaxNotice(assetData)
+isImminentTaxMatch(match, today?)                 // 이번 달 일정 && 마감일이 오늘~+6일(KST) — 홈 팁 임박 세금(#4.36)
 todayKst() / currentMonthKst()                   // KST YYYY-MM-DD / YYYY-MM — 거래 입력(주식·대출·현금) 기본 날짜·max의 단일 출처(#4.35, UTC toISOString 금지)
 isForeignStock(stock)                            // category==="foreign" 또는 currency!=="KRW" (export, S-4.31에서 UI도 재사용)
 
@@ -232,11 +233,14 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 ### home-tip.ts (S-4.32 후속) — 홈 알림/팁 통합 판정
 
 ```typescript
-pickHomeTip({ assetData, hasAssets, syncArmed }): HomeTip | null
+pickHomeTip({ assetData, hasAssets, syncArmed, today? }): HomeTip | null   // today 기본값 todayKst()(#4.36, 테스트 고정용)
   // HomeTip = { kind: "notice" } | { kind: "backup", days } | { kind: "tax", matches }
-  //         | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  //         | { kind: "settlement", window, today } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
+  // #4.36 순서: 공지(미열람) > 백업 > 임박 세금(isImminentTaxMatch) > 결산 > 그 외 세금 > 최신화 > 기능
+  // 결산: hasAssets && pickSettlementCard(readMonthlySnapshots(), today)≠null(말일−3일~다음 달 10일, 첫 달 제외) — 허브 카드와 같은 판정
+markCurrentNoticeSeen({ track? = true })  // 공지 열람 기록 단일 출처. track:false = 홈 팁 X·preview 데모(GA notice view 미전송)
   // 새 공지는 **필수 노출**(readNoticeSeenId()!==NOTICE_ID) — 다른 무엇보다 최우선, 안전 안내(백업·세금)보다도 먼저 반환.
-  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) >
+  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) > 결산 >
   //                 자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
 ```
 `backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`의 기존 순수 함수를 그대로 조합만 한다(신규 판정 로직 없음). 4종을 독립 컴포넌트(`BackupNudge`/`RefreshNudge`/`TaxNoticeBox`/`FeatureTipBox`)로 각자 띄우던 것을 `home-tip-box.tsx` 1개로 통합하며 도입 — 종류별 "오늘/이번달/영구" 재노출 정책은 각 원본 유틸에 그대로 남아있고, 승자가 아닌 종류는 "오늘 떴다" flag를 찍지 않는다(호출부 책임, [components.md](components.md) `HomeTipBox` 참조).
