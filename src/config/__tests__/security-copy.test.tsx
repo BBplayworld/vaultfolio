@@ -81,6 +81,10 @@ describe("새 문구 규칙(완료 기준 4)", () => {
   it("'서버'가 주어로 나오는 문장 없음", () => {
     for (const s of all) expect(s).not.toMatch(/서버(는|가|에서)/);
   });
+  it("카드2 '저장·전송'은 가운뎃점 앞뒤 WORD JOINER로 묶음(C25)", () => {
+    expect(SECURITY_COPY[1].desc).toContain("저장⁠·⁠전송되지 않아요.");
+    expect(SECURITY_COPY[1].desc).not.toContain("저장·전송");
+  });
   it("카드 3개 순서·id 고정", () => {
     expect(SECURITY_COPY.map((c) => c.id)).toEqual(["local", "sync", "admin"]);
     expect(SECURITY_COPY.map((c) => c.title)).toEqual(["내 기기에 저장", "이중 암호화 동기화", "관리자도 알 수 없어요"]);

@@ -132,7 +132,7 @@ export function WelcomeGuide() {
 
       {/* ② 신뢰 한 줄 + 자세히 보기 + 보안 상세(제자리 펼침) — 접힌 상세가 여백을 남기지 않게 gap 없음 */}
       <div data-testid="welcome-trust" className={`w-full flex flex-col items-center ${ENTER}`} style={{ animationDelay: "60ms" }}>
-        <p className="max-w-xl text-sm text-muted-foreground leading-relaxed text-balance text-center">
+        <p className="max-w-xl text-sm text-muted-foreground leading-relaxed text-center">
           <ShieldCheck aria-hidden className="inline size-4 -mt-0.5 mr-1.5 text-primary" />
           {/* 구분자를 앞 항목과 한 덩어리로 묶어 줄바꿈은 구분자 뒤에서만 일어나게 */}
           <span className="whitespace-nowrap">로그인 없음<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
