@@ -9,7 +9,7 @@
 - 없음
 
 ## 다음 정기 실행 지시
-- [선정 2026-10-31 09:53] 결산 AI 질문 프롬프트(feature, p1) — `issues/4.xx-54-settlement-ai-prompt/4.xx-challenge.md` 통과(축소). 이슈 생성(status:planning) 후 planning ① 방향 정의. **v4.36 머지 후 다음 버전(4.37)으로 개발 시작**(planning·design-review는 선행 가능). 홈 팁·공지로 알리기 금지(#51 오염)
+- [선정 2026-10-31 09:53] 결산 AI 질문 프롬프트(feature, p1) — `issues/4.37-54-settlement-ai-prompt/4.37-challenge.md` 통과(축소). 이슈 생성(status:planning) 후 planning ① 방향 정의. **v4.36 머지 후 다음 버전(4.37)으로 개발 시작**(planning·design-review는 선행 가능). 홈 팁·공지로 알리기 금지(#51 오염)
 - [선정 2026-10-30 17:54] E3 결산 창 홈 팁 + p2 동승 2건(홈 Hero 375 금액 줄바꿈·하단 고지 break-keep) — `issues/4.36-51-settlement-home-tip/4.36-challenge.md` 통과(축소). 이슈 생성(type:feature, p1, status:planning) 후 planning ① 방향 정의. **2026-11-26까지 머지돼야 11월 결산 창 측정**
 - #48 지표 판독 전(마감 2026-12-25경) #33·체험 모드 착수 금지(같은 첫 화면 퍼널 → 효과 측정 오염)
 - 자율 과제 기준: 월 활성 사용자 100명 직접 기여 서비스 과제 우선, 소규모 신뢰성 수정은 p2 동승(대표 2026-10-29)
@@ -17,12 +17,14 @@
 ## 진행 중
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
+| #54 결산 AI 질문 (p1) | 4.37 | development 완료 → ui-review | ui-designer → qa | preview UI 검수(`issues/4.37-54-settlement-ai-prompt/4.37-dev-notes.md`), 이후 qa |
 | #51 결산 창 홈 팁 (p1) + p2 동승 | 4.36 | development 완료 → ui-review | ui-designer → qa | preview UI 검수(`issues/4.36-51-settlement-home-tip/4.36-dev-notes.md`), 이후 qa |
 | #45 백업 iOS 신뢰 | — | rejected | — | 대표 미반영 판단(2026-10-29), 닫음 |
 | #33 시드2 투자 유형 온보딩 | — | on-hold | — | #48 지표 판독(2026-12-25경) 후 판정 — 그 전 착수 시 측정 오염 |
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
+- **v4.37** = #54 · 브랜치 `issue-4.37`(main 8a0f840에서 분기) · 최신 e4f27c6 · preview https://secretasset-git-issue-437-bbplayworlds-projects.vercel.app · 릴리스 PR은 오케스트레이터 생성 예정 · 위험 low(저장 키·스키마·이벤트명 무변경, GA enum 4개 추가)
 - **v4.36** = #51 · 브랜치 `issue-4.36` · 기준 8d5c9e1 = qa 최종 PASS = preview 200 · UI 승인 @5964511(이후 화면 diff 0), ui 최종 확인 @8d5c9e1 기록 후 owner-review · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 재작성(`issues/4.36-51-settlement-home-tip/4.36-decision-brief.md`, 권고 반영, 🟥 문안 포함) · 기한 11/26 머지 시 11월 측정 · 가드레일(닫기÷노출)은 기기 수로 판독(기준 창 노출 이벤트 중복 집계)
 
 ## 막힌 것
@@ -36,7 +38,7 @@
 - GA4 데이터 보존 기간(2개월/14개월) — 첫 화면 재배열 지표 판독 기한 결정. 에이전트 GA 조회 수단 없음(판독 한계)
 
 ## 후보 목록 (cto 2026-10-31 09:53 4차 순위 — #48 판독 전 첫 화면 퍼널 동결, #51 홈 팁 칸 무접촉)
-- **[선정 2026-10-31] 결산 AI 질문 프롬프트** (feature, p1) — `issues/4.xx-54-settlement-ai-prompt/4.xx-challenge.md`. 결산 화면 버튼 1개+기존 PromptPreviewDialog, `feature_use` ai_prompt 계측(성적표 기준선 포함). v4.36 머지 후 4.37
+- **[선정 2026-10-31] 결산 AI 질문 프롬프트** (feature, p1) — `issues/4.37-54-settlement-ai-prompt/4.37-challenge.md`. 결산 화면 버튼 1개+기존 PromptPreviewDialog, `feature_use` ai_prompt 계측(성적표 기준선 포함). v4.36 머지 후 4.37
 - [선정 2026-10-30, v4.36 owner-review] E3 결산 창 홈 팁 #51
 - [2위, #48 판독 후] G2 SSR 소개 문구·sitemap 확장 — 사실: `(main)/page.tsx` `!isDataLoaded`면 null(크롤러 본문 0), sitemap 루트 1건. 검색 유입 코호트가 #48 분모를 바꿔 판독 후. #34 재개와 묶기
 - [3위, 판독 후] G3 #33 투자 유형 온보딩 — #48과 같은 첫 화면 퍼널(오염). 판독(2026-12-25경) 또는 8주 경과 정성 판정 후
