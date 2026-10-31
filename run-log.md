@@ -2,6 +2,7 @@
 
 | 일시 (KST) | 실행 종류 | 처리 이슈 | 단계 변화 | 특이사항 |
 |---|---|---|---|---|
+| 2026-10-31 (대표 지시 후 연속) | A | #54 | v4.36 머지·운영 스모크 PASS → #54 planning③→design→development(v4.37)→UI 승인→qa PASS→COO PASS @e4f27c6 → owner-review. 에이전트 모델 조정(PR #56) | 🟥 승인 요청(Push·PR #55 @멘션, preview 포함) |
 | 2026-10-31 09:53 (예약) | A + D 4차 | #54 신규 | 보류 🟥 v4.36 전달 → cto 선정 결산 AI 프롬프트 → direction 합의 | 🆕 알림. 다음: spec·business (개발은 v4.36 머지 후 4.37) |
 | 2026-10-31 01:53~02:26 (예약·새벽) | A | #51 | 대표 지적(preview 팁 미노출·데모 튜토리얼) 반영: 진단→cto 우선순위 판정→구현→qa FAIL 2(R1·R2)→수정 8d5c9e1→qa·UI·COO PASS → owner-review | 새벽 → 🟥 Push·@멘션 보류(09:53) |
 | 2026-10-30 17:54~18:30 (예약) | A | #51 | planning③→design-review→development(v4.36)→UI 수정 1건→qa PASS→COO PASS @05f73bd → owner-review | 🔔 반영 결정 요청(Push·PR #52 @멘션, preview URL 포함) |
