@@ -6,6 +6,8 @@ import { Copy, MoreHorizontal } from "lucide-react";
 interface InAppExternalGuideProps {
   /** 3단계(이동 후) 문구. 설치 흐름은 '앱 설치', 게이트는 '접속하면 이어짐' 등 맥락별로 주입. */
   lastStep?: ReactNode;
+  /** 상단 앰버 블록 안쪽 내용(제목+문장) 대체. 미전달 시 기존 문구(설치 흐름·게이트). 웰컴 인앱 슬롯이 캡션으로 주입(#60). */
+  notice?: ReactNode;
 }
 
 /**
@@ -13,17 +15,19 @@ interface InAppExternalGuideProps {
  * iOS는 자동 이동 스킴이 없어 이 가이드로 폴백한다. 진입 전 현재 주소를 클립보드에 복사해 둔다.
  * PWA 설치 흐름(inAppStep)·인앱 브라우저 게이트에서 공용 재사용한다.
  */
-export function InAppExternalGuide({ lastStep }: InAppExternalGuideProps = {}) {
+export function InAppExternalGuide({ lastStep, notice }: InAppExternalGuideProps = {}) {
   return (
     <div className="flex flex-col gap-4 py-1">
       <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 leading-relaxed">
         <Copy className="size-4 shrink-0 mt-0.5" />
-        <div>
-          <strong>현재 웹페이지 주소가 복사되었습니다!</strong>
-          <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-            카카오톡, 인스타그램 등의 브라우저에서는 앱 설치 기능이 지원되지 않으므로 Chrome, Safari 등 외부 브라우저로 접속해 주세요.
-          </p>
-        </div>
+        {notice ?? (
+          <div>
+            <strong>현재 웹페이지 주소가 복사되었습니다!</strong>
+            <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+              카카오톡, 인스타그램 등의 브라우저에서는 앱 설치 기능이 지원되지 않으므로 Chrome, Safari 등 외부 브라우저로 접속해 주세요.
+            </p>
+          </div>
+        )}
       </div>
 
       <ol className="space-y-3.5 py-1">

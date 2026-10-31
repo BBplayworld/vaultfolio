@@ -63,6 +63,11 @@ const EMPTY_ASSET_DATA: AssetData = {
   nickname: "",
 };
 
+/** 5개 카테고리(부동산·주식·코인·현금·대출) 중 1건이라도 있으면 true. 배열 존재 전제 — 원본 JSON은 정규화 후 호출 */
+export function hasAnyAssets(d: Pick<AssetData, "realEstate" | "stocks" | "crypto" | "cash" | "loans">): boolean {
+  return d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length > 0;
+}
+
 export function getAssetData(): AssetData {
   if (typeof window === "undefined") return EMPTY_ASSET_DATA;
   try {

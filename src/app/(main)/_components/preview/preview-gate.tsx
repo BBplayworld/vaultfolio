@@ -17,15 +17,11 @@ import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/config/app-version";
 import { Z_LAYER } from "@/config/theme";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
-import { applyImportedPayload, clearAssetData, getAssetData, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { applyImportedPayload, clearAssetData, getAssetData, hasAnyAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { buildDemoRefreshMeta, kstToday, materializeDemo, resolvePreviewAction } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { markCurrentNoticeSeen } from "@/lib/home-tip";
-import type { AssetData } from "@/types/asset";
-
-const hasAnyAssets = (d: AssetData) =>
-  d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length > 0;
 
 // 데모가 튜토리얼을 건너뛰었다는 preview 전용 표식 — clearAssetData가 지우는 secretasset_ 키라 ?demo=empty·전체 삭제 때 함께 사라진다
 export const DEMO_TUTORIAL_MARKER = "secretasset_preview_demo_tutorial_skipped";

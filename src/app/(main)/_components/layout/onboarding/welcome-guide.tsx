@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2 } from "lucide-react";
+import { ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2, ExternalLink, Loader2 } from "lucide-react";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(m
 import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
+import { InAppExternalGuide } from "../../pwa/in-app-external-guide";
+import { useExternalMove } from "@/hooks/use-external-move";
 import { dispatchAddStock } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 import { track, type GaParams } from "@/lib/analytics/ga";
@@ -84,16 +86,17 @@ export const WELCOME_CTA_METHODS = {
   skipInstall: "skip_install",
 } as const satisfies Record<string, NonNullable<GaParams["method"]>>;
 
-/** CTA 슬롯 상태 — pending: 마운트 전(SSR 동일) / install: 모바일 웹 미설치 / asset: 자산 등록 */
-export type WelcomeCtaState = "pending" | "install" | "asset";
-export function welcomeCtaState(env: { mounted: boolean; isMobile: boolean; isStandalone: boolean; skipInstall: boolean }): WelcomeCtaState {
+/** CTA 슬롯 상태 — pending: 마운트 전(SSR 동일) / inapp: 인앱 브라우저(외부 이동 안내, #60) / install: 모바일 웹 미설치 / asset: 자산 등록 */
+export type WelcomeCtaState = "pending" | "inapp" | "install" | "asset";
+export function welcomeCtaState(env: { mounted: boolean; isMobile: boolean; isStandalone: boolean; skipInstall: boolean; isInApp: boolean }): WelcomeCtaState {
   if (!env.mounted) return "pending";
+  if (env.isInApp && !env.isStandalone) return "inapp";
   if (env.isMobile && !env.isStandalone && !env.skipInstall) return "install";
   return "asset";
 }
 
 export function WelcomeGuide() {
-  const { isStandalone } = usePWAInstall();
+  const { isStandalone, isInApp, isIOS } = usePWAInstall();
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '웹에서 바로 시작' 선택 시에만 자산 등록 노출
@@ -105,9 +108,9 @@ export function WelcomeGuide() {
     track("welcome_view", { source: welcomeSource(isStandaloneDisplay(), detectBrowserEnv().isInApp) });
   }, []);
 
-  const ctaState = welcomeCtaState({ mounted, isMobile: !!isMobile, isStandalone, skipInstall: showAssetCta });
-  // 설치 박스는 데스크톱·태블릿 미설치만 — 모바일 웹은 CTA 슬롯이 설치를 대신한다
-  const showInstallBox = mounted && !isStandalone && !isMobile;
+  const ctaState = welcomeCtaState({ mounted, isMobile: !!isMobile, isStandalone, skipInstall: showAssetCta, isInApp });
+  // 설치 박스는 데스크톱·태블릿 미설치만 — 모바일 웹은 CTA 슬롯이 설치를 대신한다. 인앱은 외부 이동만 안내(설치 버튼 미렌더, #60)
+  const showInstallBox = mounted && !isStandalone && !isMobile && ctaState !== "inapp";
 
   const handleSkipInstall = () => {
     track("onboarding_action", { method: WELCOME_CTA_METHODS.skipInstall });
@@ -186,6 +189,7 @@ export function WelcomeGuide() {
         className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[152px] sm:min-h-[160px] ${ENTER}`}
         style={{ animationDelay: "180ms" }}
       >
+        {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
         {ctaState === "install" && <WelcomeInstallCta onSkipInstall={handleSkipInstall} />}
         {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={showAssetCta} />}
       </div>
@@ -283,6 +287,70 @@ function InstallButton({ className = "" }: { className?: string }) {
         </Button>
       )}
     </PwaInstallFlow>
+  );
+}
+
+/** CTA 슬롯 inapp 상태(#60): 등록 진입점 없이 외부 브라우저 이동만. iOS는 주소 복사 + 수동 가이드 펼침 */
+export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
+  const { go, iosFallback } = useExternalMove(isIOS);
+  const [busy, setBusy] = useState(false);
+
+  const handleMove = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await go(window.location.origin + "/");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
+      <div className="text-center space-y-1">
+        <h2 className="text-lg font-semibold text-balance break-keep">
+          자산 등록은 <span className="whitespace-nowrap">Chrome·Safari에서</span> 시작해요
+        </h2>
+        <p className="text-sm text-muted-foreground text-pretty break-keep">이 화면에서는 입력한 내용이 사라질 수 있어요.</p>
+      </div>
+      <div className="flex justify-center">
+        <Button
+          variant="brand"
+          size="lg"
+          data-testid="welcome-cta-inapp"
+          className="w-full gap-2 break-keep sm:w-auto"
+          onClick={handleMove}
+          disabled={busy}
+          aria-controls="welcome-inapp-guide"
+          {...(isIOS ? { "aria-expanded": iosFallback } : {})}
+        >
+          {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
+          외부 브라우저에서 시작하기
+        </Button>
+      </div>
+      {/* iOS 수동 가이드 — 항상 마운트 + grid-rows 0fr↔1fr 높이 전환(재마운트 없음). 닫힘은 inert */}
+      <div
+        id="welcome-inapp-guide"
+        data-testid="welcome-inapp-guide"
+        role="region"
+        aria-label="외부 브라우저 이동 방법"
+        {...(iosFallback ? {} : { inert: true })}
+        className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-300 ${iosFallback ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="pt-1 text-left">
+            <InAppExternalGuide
+              notice={
+                <p role="status" data-testid="welcome-inapp-caption" className="text-sm font-semibold break-keep text-pretty">
+                  주소가 복사됐어요. 브라우저에 붙여넣어 주세요.
+                </p>
+              }
+              lastStep="이동한 브라우저에서 주소로 접속하면 이어집니다."
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

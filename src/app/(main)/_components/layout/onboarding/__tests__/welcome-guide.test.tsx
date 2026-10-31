@@ -19,6 +19,7 @@ import {
   WelcomeGuide,
   WelcomeAssetCta,
   WelcomeInstallCta,
+  WelcomeInAppCta,
   welcomeSource,
   welcomeCtaState,
   WELCOME_CTA_METHODS,
@@ -52,7 +53,7 @@ describe("GA 매핑(위치 이동 후에도 값·라벨 동일)", () => {
 });
 
 describe("CTA 슬롯 상태", () => {
-  const base = { mounted: true, isMobile: false, isStandalone: false, skipInstall: false };
+  const base = { mounted: true, isMobile: false, isStandalone: false, skipInstall: false, isInApp: false };
   it("마운트 전은 환경과 무관하게 pending(SSR·첫 렌더 동일)", () => {
     expect(welcomeCtaState({ ...base, mounted: false, isMobile: true })).toBe("pending");
   });
@@ -63,6 +64,13 @@ describe("CTA 슬롯 상태", () => {
   it("데스크톱·PWA standalone → asset (바로 시작 버튼 없음)", () => {
     expect(welcomeCtaState(base)).toBe("asset");
     expect(welcomeCtaState({ ...base, isMobile: true, isStandalone: true })).toBe("asset");
+  });
+  it("인앱(#60): install·asset보다 우선, 바로 시작 후에도 inapp, standalone이면 아님, 마운트 전은 pending", () => {
+    expect(welcomeCtaState({ ...base, isInApp: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, skipInstall: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, isStandalone: true })).toBe("asset");
+    expect(welcomeCtaState({ ...base, isInApp: true, mounted: false })).toBe("pending");
   });
 });
 
@@ -125,6 +133,34 @@ describe("CTA 슬롯 콘텐츠", () => {
     expect(html).toContain('data-testid="welcome-skip-install-btn"');
     expect(html).toContain("웹에서 바로 시작");
     expect(html).toContain("설치하면 홈 화면에서 바로 열립니다.");
+  });
+});
+
+describe("CTA 슬롯 inapp(#60)", () => {
+  const html = renderToStaticMarkup(<WelcomeInAppCta isIOS />);
+  it("등록·설치 진입점 없음, 외부 이동 버튼 1개", () => {
+    for (const id of ["welcome-cta-wizard", "welcome-cta-more", "welcome-install-btn", "welcome-skip-install-btn"]) {
+      expect(html).not.toContain(`data-testid="${id}"`);
+    }
+    expect(html).not.toContain('type="file"');
+    expect(html.match(/data-testid="welcome-cta-inapp"/g)?.length).toBe(1);
+    expect(html.match(/<button/g)?.length).toBe(1);
+    expect(html).toContain("외부 브라우저에서 시작하기");
+    expect(html).toContain("이 화면에서는 입력한 내용이 사라질 수 있어요.");
+    expect(html).toContain('<span class="whitespace-nowrap">Chrome·Safari에서</span>');
+  });
+  it("iOS 가이드: 항상 마운트·기본 닫힘(inert·0fr), 캡션 1회, 앱 설치 문장·기존 앰버 제목 없음", () => {
+    const guide = html.match(/<div[^>]*data-testid="welcome-inapp-guide"[^>]*>/)?.[0] ?? "";
+    expect(guide).toContain("inert");
+    expect(guide).toContain("grid-rows-[0fr]");
+    expect(html).toMatch(/data-testid="welcome-cta-inapp"[^>]*aria-expanded="false"/);
+    expect(html.match(/주소가 복사됐어요\. 브라우저에 붙여넣어 주세요\./g)?.length).toBe(1);
+    expect(html).not.toContain("앱 설치 기능");
+    expect(html).not.toContain("현재 웹페이지 주소가 복사되었습니다!");
+    expect(html).toContain("이동한 브라우저에서 주소로 접속하면 이어집니다.");
+  });
+  it("Android: aria-expanded 없음", () => {
+    expect(renderToStaticMarkup(<WelcomeInAppCta isIOS={false} />)).not.toContain("aria-expanded");
   });
 });
 

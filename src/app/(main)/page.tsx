@@ -13,6 +13,7 @@ import { FloatingAddButton } from "./_components/layout/floating/floating-add-bu
 import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
@@ -31,12 +32,7 @@ export default function Page() {
   const isWizardOpen = useOnboardingWizardStore((s) => s.isOpen);
   const hideFooterInPWA = isStandalone && (view.type === "detail" || view.type === "activity");
 
-  const hasNoAssets =
-    assetData.realEstate.length === 0 &&
-    assetData.stocks.length === 0 &&
-    assetData.crypto.length === 0 &&
-    assetData.cash.length === 0 &&
-    assetData.loans.length === 0;
+  const hasNoAssets = !hasAnyAssets(assetData);
   const isWelcomeGuide = isSharePending || hasNoAssets;
 
   // 튜토리얼 초기화
