@@ -28,7 +28,7 @@
 - **v4.36** = #51 · 브랜치 `issue-4.36` · 기준 8d5c9e1 = qa 최종 PASS = preview 200 · UI 승인 @5964511(이후 화면 diff 0), ui 최종 확인 @8d5c9e1 기록 후 owner-review · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 재작성(`issues/4.36-51-settlement-home-tip/4.36-decision-brief.md`, 권고 반영, 🟥 문안 포함) · 기한 11/26 머지 시 11월 측정 · 가드레일(닫기÷노출)은 기기 수로 판독(기준 창 노출 이벤트 중복 집계)
 
 ## 막힌 것
-- 운영 사용자 도메인 secretasset.xyz는 클라우드 환경 네트워크 정책에 막힘(403) → 운영 스모크는 Vercel 운영 별칭으로 대체. 대표가 허용 도메인에 추가하면 해소
+- 운영 사용자 도메인: `https://www.secretasset.xyz`는 접속 가능(2026-10-31 확인). 루트 `secretasset.xyz`는 www로 리다이렉트되며 이 환경에서는 여전히 차단 → 운영 스모크는 `https://www.secretasset.xyz`로 수행
 - 없음
 
 ## 확인 필요 (첫 실행에서 처리)
