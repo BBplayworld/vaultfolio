@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-10-31 09:53 (cto: D 자율 발굴 4차 선정 — 결산 AI 질문 프롬프트)
+마지막 갱신: 2026-10-31 (cto: v4.37 COO 점검 @e4f27c6 PASS, decision-brief 확정)
 
 ## 대표 결정 대기
 - 없음 (v4.34 반영 완료 — PR #37 → main b44168f)
@@ -24,7 +24,7 @@
 | #34 시드3 채널 운영 | — | on-hold | — | 대표 지시로 보류 |
 
 ## 열린 릴리스
-- **v4.37** = #54 · 브랜치 `issue-4.37`(main 8a0f840에서 분기) · 최신 e4f27c6 · preview https://secretasset-git-issue-437-bbplayworlds-projects.vercel.app · 릴리스 PR은 오케스트레이터 생성 예정 · 위험 low(저장 키·스키마·이벤트명 무변경, GA enum 4개 추가)
+- **v4.37** = #54 · 브랜치 `issue-4.37`(main 8a0f840에서 분기) · 기준 e4f27c6 = qa PASS = UI 승인 = preview 200 · PR #55 · preview https://secretasset-git-issue-437-bbplayworlds-projects.vercel.app/?demo=1 (성과 → 자산 변화 월 탭) · 위험 low · cto(COO) 점검 전부 PASS · decision-brief 확정(`issues/4.37-54-settlement-ai-prompt/4.37-decision-brief.md`, 권고 반영, 🟥 문안 포함) → owner-review · 기한 11/26 머지 시 11월 창 측정
 - **v4.36** = #51 · 브랜치 `issue-4.36` · 기준 8d5c9e1 = qa 최종 PASS = preview 200 · UI 승인 @5964511(이후 화면 diff 0), ui 최종 확인 @8d5c9e1 기록 후 owner-review · PR #52 · preview https://secretasset-git-issue-436-bbplayworlds-projects.vercel.app/?demo=1 · 위험 low · cto(COO) 재점검 전부 PASS · decision-brief 재작성(`issues/4.36-51-settlement-home-tip/4.36-decision-brief.md`, 권고 반영, 🟥 문안 포함) · 기한 11/26 머지 시 11월 측정 · 가드레일(닫기÷노출)은 기기 수로 판독(기준 창 노출 이벤트 중복 집계)
 
 ## 막힌 것
@@ -38,6 +38,7 @@
 - GA4 데이터 보존 기간(2개월/14개월) — 첫 화면 재배열 지표 판독 기한 결정. 에이전트 GA 조회 수단 없음(판독 한계)
 
 ## 후보 목록 (cto 2026-10-31 09:53 4차 순위 — #48 판독 전 첫 화면 퍼널 동결, #51 홈 팁 칸 무접촉)
+- [p2 정리 후보, type:improvement] 결산 range kind 표현 통일 — 화면은 "N월 결산 M/D → M/D", AI 프롬프트는 "진행 중 구간"(사실은 맞음, 어조 차이). 화면 range 표기와 함께 한 곳에서 정리 / 성적표 AI 섹션 설명 375 "붙여넣/어" 끊김(C25 정리)
 - **[선정 2026-10-31] 결산 AI 질문 프롬프트** (feature, p1) — `issues/4.37-54-settlement-ai-prompt/4.37-challenge.md`. 결산 화면 버튼 1개+기존 PromptPreviewDialog, `feature_use` ai_prompt 계측(성적표 기준선 포함). v4.36 머지 후 4.37
 - [선정 2026-10-30, v4.36 owner-review] E3 결산 창 홈 팁 #51
 - [2위, #48 판독 후] G2 SSR 소개 문구·sitemap 확장 — 사실: `(main)/page.tsx` `!isDataLoaded`면 null(크롤러 본문 0), sitemap 루트 1건. 검색 유입 코호트가 #48 분모를 바꿔 판독 후. #34 재개와 묶기
