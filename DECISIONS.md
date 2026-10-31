@@ -90,3 +90,4 @@
 | 2026-10-31 | D 4차 | #54 결산 AI 질문 프롬프트 선정(핵심 가치 체감·재방문, #48·#51 측정 무오염). G2(SSR·sitemap)는 #48 판독 후. 개발은 v4.36 머지 후 4.37 | cto | 서비스 성장 |
 | 2026-10-31 | v4.36 | 대표 승인 → PR #52 main 머지(8a0f840, squash). #51 status:done. 지표: 결산 창 11-27~12-10 settlement_view(source별) 기기 비율, 12-11 이후 판독 | 대표 | 라이브 반영 |
 | 2026-10-31 | v4.37 | 4.37 = #54. 브랜치 `issue-4.37`(main 8a0f840에서 분기). `buildSettlementPrompt`는 lib 순수 함수(이름·기간 라벨은 UI 문자열 입력), 복사 계측은 `PromptPreviewDialog onCopy`+`copyPrompt`, PARAM_VALUES 스냅샷은 추가 4줄만 갱신. 요청 문구 '이번 달'→'{N}월'. scale 전환 9곳은 조사만(별도 과제) | developer | 재사용 우선·범위 최소 |
+| 2026-11-01 | 운영 | 에이전트 모델: business-pm·planner-designer·cto(COO)=opus, developer·qa·ui-designer=sonnet (토큰 절감, PR #56). 진행 중 에이전트도 새로 띄울 때 이 모델 적용 | 대표 | 비용 |
