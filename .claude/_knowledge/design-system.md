@@ -168,6 +168,7 @@
 
 - **`transition: all` 금지** → `transition-[color,box-shadow,transform]` 등 **변하는 속성만 명시**(레이아웃 thrash 방지).
 - **누름 피드백**: 버튼 `active:not-disabled:scale-[0.96]`, 카드류 `0.98~0.99`.
+- **Tailwind 4.1 `scale-*`·`active:scale-*`는 CSS `scale` 속성**이다 — 전환 목록에 `transform`이 아니라 `scale`을 넣는다(`transition-[background-color,scale]`, 또는 v4 `transition-transform`은 scale 포함). `transform`만 적으면 보간 없이 즉시 바뀐다(#4.37 조사: 공용 `Button` 포함 9곳 해당, 수정은 별도 과제).
 - **진입(enter)**: 뷰 컨테이너 `motion-safe:animate-in fade-in slide-in-from-bottom-*`, 리스트는 `animationDelay`로 **stagger** 분산(예: 40ms 간격). **인터럽터블**(중간 조작 시 부드럽게 가로채기).
 - **퇴장(exit)은 절제** — subtle하게.
 - **순환 단계 애니메이션**: 공용 `StepAnimationPlayer`(설치/동기화 가이드). 활성 컷 1개만 `key={active}` remount 렌더(구형 Safari opacity repaint 회피), 진입 페이드 `motion-safe`, 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`.

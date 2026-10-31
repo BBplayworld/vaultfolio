@@ -334,6 +334,11 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - **`estimated` per-item 배지 + 부동산 제외 안분(2026-08)** — `resolveAttribution`의 예측 분기가 만드는 `effects`는 전부 `estimated:true`(단, `income`은 기록된 거래 그대로라 예외), 정밀 분기는 전부 `estimated`가 없음(false 취급). `mergeAttributions`가 하이브리드 병합 시 older(예측)의 통합 `price`를 `reallocatePriceEffects`로 **mid 시점 breakdown의 주식·코인 비중에만** 안분해 newer(실측)의 `price:stock`/`price:crypto`와 합친다 — **부동산은 안분 대상에서 제외**한다(`real-estate-input.tsx`의 `currentValue`는 시장가 자동 갱신이 없고 사용자가 실거래가 조회 후 수동으로만 바꾸는 계단식 값이라, 정체불명 시세 잔차를 부동산 비중만큼 떼어주면 사용자가 값을 건드리지도 않았는데 "부동산 시세 하락"이 뜨는 근거 없는 추정이 된다). 부동산의 실제 시세 변동은 정밀 분해(`bothEnriched`, `price:realEstate`)로만 노출. 주식+코인 구성이 0(mid breakdown 없음·부동산뿐 등)이면 안분하지 않고 통합 `price` 그대로 남아 `causeShortLabel`이 "보유자산 시세"로 라벨링한다(자산군 통합임을 명시). `AttributionDisplayItem.estimated`가 true인 항목에 뷰가 "일부 예측" 배지를 개별로 붙인다(구간 전체가 `attribution.estimated`면 상단 배지로 이미 충분하므로 중복 생략).
 - **`groupAttributionItems`(2026-08)** — `getAttributionItems` 출력(이미 `CAUSE_ORDER` 정렬됨)을 자산 타입별로 묶는다: `price:X`/`buy:X`/`sell:X`(X=stock/crypto/realEstate) → 해당 자산군 그룹, `income`/`cash` → `cash` 그룹, `debt` → `loan` 그룹. `fx`/`deposit`/통합 `price`는 그룹 없음(`key: null`, 단독 박스). 그룹 소속 판정은 첫 등장 순서를 보존하되, **최종 나열 순서는 그룹 내 금액 순합(양음 상쇄 반영)의 절대값이 큰 순서로 재정렬**한다 — 변동이 큰 자산 타입이 위로. 성적표 뷰가 이 그룹 단위로 박스 하나에 여러 줄을 묶어 렌더한다(`GROUP_BADGE` 라벨 재사용).
 
+### ai-prompts.ts — AI 질문 프롬프트
+
+- `AI_PROMPT_TEMPLATES`(성적표 종합 현황), `GUARDRAIL`(종목 추천·목표가·타이밍·단정 예측 금지, 모든 프롬프트 맨 앞)
+- `buildSettlementPrompt({ name, rangeLabel, kind, longGap, gapDays, prevValue, currValue, delta, pct, causes, estimatedLabel })`(#4.37) — 결산 화면 값만(`formatPriceByMode`·`SETTLEMENT_CAUSE_LABEL`), 이름·기간 라벨은 UI 문자열로 받음(lib→views import 금지). 진행 중·N일 구간·원인 0건·예측 라벨·'기록 안 된 변화' 설명 1줄
+
 ### report/settlement.ts (#4.34, 이슈 #32) — 월말 결산 순수 함수
 
 - `pruneMonthlySnapshots(all, currentMonth)` — `month >= 현재월−12`만(최대 13개, 연 경계 무관). `saveSnapshots` 월 업서트가 사용. `shiftMonth(month, delta)`
@@ -437,6 +442,7 @@ labelOf(key, code): string                        // PARAM_LABELS 조회
 countAssets(data) / assetCountBucket(n) / toGaAssetType(kebab) / screenPath(viewKey)
 ```
 - gtag 부재(로컬·preview·옵트아웃)·예외 시 no-op — 앱 흐름 영향 0. `window.gtag` 직접 호출 금지, 금액·종목·티커·닉네임·ID 전송 금지.
+- #4.37 추가 값: category `ai_prompt`("AI 프롬프트"), method `prompt_copy`("프롬프트 복사"), source `settlement`("결산 화면")·`report`("자산 성적표") — AI 질문 복사 성공 시 `feature_use`
 - 신규 이벤트·값은 `GaEvent`·`PARAM_VALUES`에 추가하고 `PARAM_LABELS`에 한국어 라벨을 함께 추가(누락 시 타입 오류).
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
 
