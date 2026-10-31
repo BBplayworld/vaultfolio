@@ -153,7 +153,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
               open={aiOpen}
               onOpenChange={setAiOpen}
               title={<><Sparkles className="size-5 text-primary" />{name} 변화 AI 질문</>}
-              description={<>아래 질문을 복사해 Grok·Gemini·GPT 등 AI에 붙여넣어 보세요.<span data-testid="settlement-ai-notice" className="mt-1 block font-medium text-orange-600 dark:text-orange-400">질문에 내 순자산 금액이 들어 있어요. 붙여넣기 전에 확인하세요.</span></>}
+              description={<><span className="break-keep">아래 질문을 복사해 Grok·Gemini·GPT 등 AI에 붙여넣어 보세요.</span><span data-testid="settlement-ai-notice" className="mt-1 block break-keep font-medium text-orange-600 dark:text-orange-400">질문에 내 순자산 금액이 들어 있어요. 붙여넣기 전에 확인하세요.</span></>}
               tabs={[{
                 id: "settlement",
                 label: "결산",
