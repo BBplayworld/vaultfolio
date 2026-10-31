@@ -17,6 +17,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "notice",
     "feedback",
     "theme",
+    "ai_prompt",
   ],
   "content_type": [
     "stock",
@@ -58,6 +59,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "step",
     "submit",
     "toggle",
+    "prompt_copy",
   ],
   "nav_source": [
     "tap",
@@ -105,6 +107,8 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "detail",
     "card",
     "menu",
+    "settlement",
+    "report",
   ],
   "step": [
     "1",

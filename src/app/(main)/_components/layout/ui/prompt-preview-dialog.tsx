@@ -22,6 +22,24 @@ interface PromptPreviewDialogProps {
   description?: ReactNode;
   tabs: PromptTab[];        // 1개면 탭 영역 숨김
   copySuccessMessage?: string;
+  onCopy?: () => void;      // 클립보드 쓰기 성공 후에만 호출(계측용, #54). 미지정이면 동작 불변
+}
+
+/** 복사 본문 — 성공 시 onSuccess 후 onCopy, 실패 시 onFail만(onCopy 미호출). 단위 테스트용으로 분리(#54) */
+export async function copyPrompt(
+  text: string,
+  write: (t: string) => Promise<void>,
+  { onSuccess, onFail, onCopy }: { onSuccess?: () => void; onFail?: () => void; onCopy?: () => void } = {},
+): Promise<boolean> {
+  try {
+    await write(text);
+  } catch {
+    onFail?.();
+    return false;
+  }
+  onSuccess?.();
+  onCopy?.();
+  return true;
 }
 
 // AI 프롬프트 미리보기 + 복사 공용 다이얼로그
@@ -34,6 +52,7 @@ export function PromptPreviewDialog({
   description,
   tabs,
   copySuccessMessage = "프롬프트가 복사되었습니다.",
+  onCopy,
 }: PromptPreviewDialogProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -45,16 +64,16 @@ export function PromptPreviewDialog({
     [open, activeTab],
   );
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(promptText);
-      setCopied(true);
-      toast.success(copySuccessMessage);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("복사에 실패했습니다.");
-    }
-  };
+  const handleCopy = () =>
+    copyPrompt(promptText, (t) => navigator.clipboard.writeText(t), {
+      onSuccess: () => {
+        setCopied(true);
+        toast.success(copySuccessMessage);
+        setTimeout(() => setCopied(false), 2000);
+      },
+      onFail: () => toast.error("복사에 실패했습니다."),
+      onCopy,
+    });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
