@@ -306,27 +306,30 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
   };
 
   return (
-    <div className="space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
-      <div className="text-center space-y-1">
-        <h2 className="text-lg font-semibold text-balance break-keep">
-          자산 등록은 <span className="whitespace-nowrap">Chrome·Safari에서</span> 시작해요
-        </h2>
-        <p className="text-sm text-muted-foreground text-pretty break-keep">이 화면에서는 입력한 내용이 사라질 수 있어요.</p>
-      </div>
-      <div className="flex justify-center">
-        <Button
-          variant="brand"
-          size="lg"
-          data-testid="welcome-cta-inapp"
-          className="w-full gap-2 break-keep sm:w-auto"
-          onClick={handleMove}
-          disabled={busy}
-          aria-controls="welcome-inapp-guide"
-          {...(isIOS ? { "aria-expanded": iosFallback } : {})}
-        >
-          {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
-          외부 브라우저에서 시작하기
-        </Button>
+    <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
+      {/* 제목 묶음 + 버튼만 space-y — 닫힌 가이드 앞에 아래 여백이 남지 않게 가이드는 형제로 둔다 */}
+      <div className="space-y-5">
+        <div className="text-center space-y-1">
+          <h2 className="text-lg font-semibold text-balance break-keep">
+            자산 등록은 <span className="whitespace-nowrap">Chrome·Safari에서</span> 시작해요
+          </h2>
+          <p className="text-sm text-muted-foreground text-pretty break-keep">이 화면에서는 입력한 내용이 사라질 수 있어요.</p>
+        </div>
+        <div className="flex justify-center">
+          <Button
+            variant="brand"
+            size="lg"
+            data-testid="welcome-cta-inapp"
+            className="w-full gap-2 break-keep sm:w-auto"
+            onClick={handleMove}
+            disabled={busy}
+            aria-controls="welcome-inapp-guide"
+            {...(isIOS ? { "aria-expanded": iosFallback } : {})}
+          >
+            {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
+            외부 브라우저에서 시작하기
+          </Button>
+        </div>
       </div>
       {/* iOS 수동 가이드 — 항상 마운트 + grid-rows 0fr↔1fr 높이 전환(재마운트 없음). 닫힘은 inert */}
       <div
@@ -338,7 +341,8 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
         className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-300 ${iosFallback ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="pt-1 text-left">
+          {/* 간격(pt-5)은 펼침 영역 안에 — 닫힘 높이 0. break-keep은 상속돼 공용 가이드는 무변경 */}
+          <div className="pt-5 text-left break-keep">
             <InAppExternalGuide
               notice={
                 <p role="status" data-testid="welcome-inapp-caption" className="text-sm font-semibold break-keep text-pretty">

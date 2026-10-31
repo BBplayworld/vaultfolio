@@ -158,6 +158,9 @@ describe("CTA 슬롯 inapp(#60)", () => {
     expect(html).not.toContain("앱 설치 기능");
     expect(html).not.toContain("현재 웹페이지 주소가 복사되었습니다!");
     expect(html).toContain("이동한 브라우저에서 주소로 접속하면 이어집니다.");
+    // 가이드 래퍼 break-keep(상속) + 간격은 펼침 영역 안(pt-5), 가이드는 space-y 밖 형제(ui-review R1·R2)
+    expect(html).toContain('class="pt-5 text-left break-keep"');
+    expect(html).toMatch(/^<div class="motion-safe:animate-in[^"]*"><div class="space-y-5">/);
   });
   it("Android: aria-expanded 없음", () => {
     expect(renderToStaticMarkup(<WelcomeInAppCta isIOS={false} />)).not.toContain("aria-expanded");
