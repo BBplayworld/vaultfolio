@@ -21,9 +21,9 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #57 가족 금고 함께 쓰기 | 4.38 | on-hold | — | 신규 유입 기여 미미로 보류(2026-10-31). 동기화 사용 4기기 중 2대가 대표 기기. 문서(issues/4.38-57-family-vault/)는 보존, 충돌 덮임 결함 의심은 qa 확인 후 type:bug로 분리 |
-| #59 체험 모드 | 4.38 | planning | planner-designer | spec·tech-review 11/1~11/7, 개발 11/8~11/21, qa 11/22~11/26(미달 시 12/11) |
-| #60 인앱 브라우저 도착 개선 | 4.38 | planning | planner-designer | 체험 모드와 같은 릴리스 |
-| #61 보안 안내 문구 정정 | 4.38 | planning | planner-designer | 대표 확정 기준(DECISIONS 2026-10-31) 반영, PRINCIPLES 2장 포함 |
+| #59 체험 모드 | 4.38 | design-review 확정 → development 대기(#60 뒤) | developer | design-final 반영, 개발 11/7~11/17, 컷 11/24 |
+| #60 인앱 브라우저 도착 개선 | 4.38 | development 대기(#61 뒤) | developer | 개발 11/2~11/5 |
+| #61 보안 안내 문구 정정 | 4.38 | development | developer | 브랜치 issue-4.38 첫 커밋, 11/1 |
 | #58 기타 자산 등록 | 4.39(예정) | planning(문서만) | planner-designer | 사양·tech-review만. 대표 risk:high 착수 승인 전 코드 무변경, 승인 시 12/11 개발 |
 
 ## 열린 릴리스
