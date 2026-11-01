@@ -45,6 +45,7 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- [p2 동승 후보, 문구] /ratio 예시 결과 화면 캡션 '저장을 누를 때만 이 기기에 저장돼요'가 저장 버튼 없는 예시 상태에서 어색(v4.40 운영 스모크 관찰). 다음 /ratio 변경 때 동승
 - [bug 후보, qa 확인 필요] 동기화 충돌 화해 때 기존 항목 수정이 원격으로 덮임(cloud-sync-provider.tsx:216-224, asset-storage.ts:223) — 동기화 사용 외부 기기 약 2대, 1인 다기기도 해당. #57 spec의 덮인 항목 감지 설계 재사용 가능
  (cto 2026-10-31 17:54 5차 — 선정 없음. #48 판독 전 첫 화면 동결, #51·#54 판독(12/11) 전 홈 팁·결산 화면 무접촉)
 - [p2 정리 후보, type:improvement, 결산 화면이라 12/11 판독 후 동승] 결산 range kind 표현 통일 — 화면은 "N월 결산 M/D → M/D", AI 프롬프트는 "진행 중 구간"(사실은 맞음, 어조 차이). 화면 range 표기와 함께 한 곳에서 정리 / 성적표 AI 섹션 설명 375 "붙여넣/어" 끊김(C25 정리)
