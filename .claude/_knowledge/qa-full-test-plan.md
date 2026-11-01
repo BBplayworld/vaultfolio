@@ -403,6 +403,17 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
+### F-TRIAL. 체험 모드 `/?trial=1` ([trial-gate.tsx](../../src/app/(main)/_components/trial/trial-gate.tsx) · [trial-boot.ts](../../src/lib/trial/trial-boot.ts) · [trial-banner.tsx](../../src/app/(main)/_components/views/home/trial-banner.tsx)) — #4.38 #59, risk high
+- 👤 **진입**: 웰컴(0건) ③ 행 "직접 둘러보기" 칩 → `feature_use{demo}` 1건(연타 1건, 이동 직전 실제 페이지) → 로딩 덮개(문구 0, 300ms 전 투명) → 체험 홈, URL 쿼리 제거. `#share`·`#sync` 해시·공유 대기 웰컴에는 칩 없음. 375에서 CTA 슬롯 top 불변, 320 배지만 둘째 줄
+- 👤 **체험 홈**: `trial-banner` 1개(홈만, static), Hero "순자산"(닉네임 없음). FAB·상단 더보기/설치·하단 update/more 부재, 인증카드 유지. 상세 행 편집은 메모리만(새로고침 시 소멸). 성과·결산은 "기록 부족" 없이 월 결산·연 탭(작년 `@PY` 수동값)
+- 👤 **네트워크**: 무조작 탐색 중 자동 시세 0건(`/api/finance?type=exchange|stock`·`/api/finance/crypto`·`/api/realestate`). 스크린샷 탭 업로드 → 합성 403 토스트 "체험 중에는 사용할 수 없어요", `/api/parse-screenshot`·`/api/share`·`/api/sync*`·`/api/feedback` 실제 요청 0. `/api/finance/dividend`·`/api/finance/profit`·`/api/xray-classify`(예시 티커)는 허용. `indexedDB.open` 0회
+- 👤 **GA**: 체험 페이지 앱 gtag 호출 0(`settlement_view`·`page_view`·`asset_count_bucket` 포함), 인라인 스크립트가 `trial=1`에서 `ga-disable-<ID>`. 종료 복귀 웰컴 `onboarding_action{trial_start}` 1건
+- 👤 **종료**: "내 자산으로 시작" → `/` 웰컴 슬롯 `asset`, `welcome-cta-wizard` 포커스, 원본 저장소 빈 상태. 새로고침·탭 닫기 = 일반 화면. 인앱 UA는 외부 이동(iOS 가이드 펼침)
+- 👤 **데이터 안전(S1~S5)**: 원본 `secretasset_*` 키·값 해시가 진입·탐색·종료 후 불변(새 기기 체험 중 원본 키 0). 원본에 자산 1건 / 구버전 `secretasset-asset-data` / 손상 JSON / `secretasset_sync` / `secretasset_pwa_auth*` / 복원 해시 → 일반 화면, 원본 바이트 동일. 인앱 UA + 체험 → 인앱 게이트 미렌더. 다른 탭 실제 데이터 수정 → 체험 탭·원본 무해
+- ⚙ **쿼리 없을 때 main과 동일**: TrialGate는 children 그대로(마크업 동일, 첫 렌더 지연 0). trial-boot 정적 import 0. preview `?demo=1` 데모 닉네임 '데모' 유지
+- ⚙ 자동: `src/lib/__tests__/trial-boot.test.ts`(거부 판정·S1 모킹 ①~⑤·정상 경로·닉네임), `trial-guards.test.ts`(GA no-op·trackThenNavigate·가드·숨김 정적 검사), `trial/__tests__/trial-gate.test.tsx`, `preview-safety.test.ts` 9번(데모 JSON 동적 import = `demo-inject.ts`)
+- ⚠ 알려진 한계(C9): iOS Safari·WKWebView·삼성 실기기 defineProperty 미검증(fail-closed), 인앱 체험 종료 후 `trial_start`·`inapp_move` 미집계, sessionStorage 미격리, 거부·실패된 1회 로드 GA 미집계, 상세·성과 예시 표기 없음
+
 ### F-ONBOARD-WIZARD. 스크린샷 일괄 온보딩 마법사 ([onboarding-wizard-flow.tsx](../../src/app/(main)/_components/layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx) · [onboarding-wizard-status.ts](../../src/lib/onboarding-wizard-status.ts) · [onboarding-wizard-store.ts](../../src/stores/onboarding-wizard-store.ts)) — 명세 [S-4.29](../specs/4.29-onboarding-wizard.md)
 - 👤 **자동 노출 없음**: 웰컴가이드가 항상 먼저 노출되어야 한다는 요구에 따라 `page.tsx`의 자동 오픈 effect(AC1)는 제거됨 — 자산 0건이어도 첫 진입은 항상 `WelcomeGuide`, 마법사는 CTA를 명시적으로 눌렀을 때만 열림
 - 👤 **재진입**: 웰컴가이드 하단 "스크린샷으로 자산 등록" CTA에서만 `useOnboardingWizardStore().open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨). `page.tsx`가 `isWelcomeGuide`보다 먼저 `isWizardOpen`을 체크해 마법사를 렌더
