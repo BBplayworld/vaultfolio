@@ -88,6 +88,19 @@ async function fetchRates(): Promise<{ USD: number; JPY: number; estimated: bool
   return { USD: FALLBACK_USD, JPY: FALLBACK_JPY, estimated: true };
 }
 
+/** Unfold가 열리는 첫 프레임엔 visibility가 hidden이라 focus가 거부된다 → 성공할 때까지 프레임마다 재시도(최대 ~30프레임). 취소 함수를 반환 */
+function focusWhenVisible(getEl: () => HTMLElement | null): () => void {
+  let raf = 0;
+  let tries = 0;
+  const attempt = () => {
+    const el = getEl();
+    el?.focus({ preventScroll: true });
+    if (el && document.activeElement !== el && tries++ < 30) raf = requestAnimationFrame(attempt);
+  };
+  raf = requestAnimationFrame(attempt);
+  return () => cancelAnimationFrame(raf);
+}
+
 function smoothBehavior(): ScrollBehavior {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
@@ -132,9 +145,12 @@ export function RatioPreview() {
     const id = requestAnimationFrame(() => setGrown(true));
     // 예시는 결과 맨 위 표시를, 실제 결과는 요약 제목을 포커스 대상으로 삼는다
     const target = status === "sample" ? sampleLabelRef.current : resultRef.current;
-    target?.focus({ preventScroll: true });
     target?.scrollIntoView({ block: "start", behavior: smoothBehavior() });
-    return () => cancelAnimationFrame(id);
+    const cancelFocus = focusWhenVisible(() => (status === "sample" ? sampleLabelRef.current : resultRef.current));
+    return () => {
+      cancelAnimationFrame(id);
+      cancelFocus();
+    };
   }, [status, result]);
 
   const fail = (kind: ErrorKind, text: string, gaResult?: "fail" | "empty" | "limit") => {
@@ -201,10 +217,8 @@ export function RatioPreview() {
     } else {
       setStatus("idle");
     }
-    requestAnimationFrame(() => {
-      dropzoneRef.current?.focus({ preventScroll: true });
-      window.scrollTo({ top: 0, behavior: smoothBehavior() });
-    });
+    focusWhenVisible(() => dropzoneRef.current);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: smoothBehavior() }));
   };
 
   const handleSave = () => {

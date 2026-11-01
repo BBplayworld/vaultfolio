@@ -61,11 +61,18 @@ describe("예시 모드 동작(정적)", () => {
   it("복귀: 한도 오류만 복원, 파일창 자동 열림 없음", () => {
     expect(sample).toMatch(/errorKind === "limit" \|\| errorKind === "device"/);
     expect(exit).not.toContain(".click()");
-    expect(exit).toContain("dropzoneRef.current?.focus");
+    expect(exit).toContain("focusWhenVisible(() => dropzoneRef.current)");
   });
   it("예시에서 저장·인앱·재선택·노트 DOM 분기 제외", () => {
     expect(preview).toContain("{isSample ? (");
     expect(preview).toContain("!isSample && (result.zeroPriceCount");
     expect(preview).toContain('data-testid="ratio-sample-btn"');
+  });
+});
+
+describe("포커스 이동(U1)", () => {
+  it("열림 직후 hidden 거부를 activeElement 확인 재시도로 처리", () => {
+    expect(preview).toContain("document.activeElement !== el");
+    expect(preview).toContain("focusWhenVisible(() => (status === \"sample\"");
   });
 });
