@@ -30,3 +30,6 @@ export const SYNC_MENU_SECURITY_DESC = DEVICE_ENCRYPTION_COPY.syncMenuDesc;
 
 /** 스크린샷 업로드 박스 고지(주식·코인·현금·대출 4곳 공용) */
 export const SCREENSHOT_UPLOAD_NOTICE = "스크린샷은 AI 인식을 위해 전송돼요. 인식된 자산 값은 이 기기에 저장돼요.";
+
+/** 비중 미리보기(/ratio) 업로드 고지 — 저장 전이라 SCREENSHOT_UPLOAD_NOTICE("기기에 저장")를 함께 쓰지 않는다 */
+export const RATIO_PREVIEW_UPLOAD_NOTICE = "스크린샷은 AI 인식을 위해 전송돼요. 결과는 이 화면에만 보이고, 저장을 누를 때만 이 기기에 저장돼요.";

@@ -242,3 +242,27 @@ describe("한국어 라벨", () => {
     expect(labelOf("step", "stock")).toBe("주식 단계");
   });
 });
+
+describe("#63 /ratio UTM 귀속", () => {
+  const setLoc = (pathname: string, search: string) => {
+    (g.window as { location: { pathname: string; search: string } }).location.pathname = pathname;
+    (g.window as { location: { pathname: string; search: string } }).location.search = search;
+  };
+  it("/ratio에서만 허용 UTM이 page_location에 붙는다", () => {
+    setLoc("/ratio", "?utm_source=threads&utm_medium=social&utm_campaign=nov&foo=1");
+    trackScreen("ratio");
+    expect(gtag.mock.calls.at(-1)?.[2].page_location).toBe(
+      "https://secretasset.xyz/v/ratio?utm_source=threads&utm_medium=social&utm_campaign=nov",
+    );
+    track("feature_use", { category: "ratio_preview", method: "submit", result: "success" });
+    expect(gtag.mock.calls.at(-1)?.[2].page_location).toContain("utm_source=threads");
+  });
+  it("/로 이동하면 UTM이 붙지 않는다", () => {
+    setLoc("/", "?utm_source=threads");
+    trackScreen("home");
+    expect(gtag.mock.calls.at(-1)?.[2].page_location).toBe("https://secretasset.xyz/v/home");
+  });
+  it("ratio_preview는 sanitize를 통과한다", () => {
+    expect(sanitizeParams({ category: "ratio_preview" })).toEqual({ category: "비중 미리보기" });
+  });
+});

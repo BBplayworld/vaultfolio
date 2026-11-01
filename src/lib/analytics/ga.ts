@@ -12,6 +12,7 @@
  */
 
 import { APP_CONFIG } from "@/config/app";
+import { allowedUtmQuery } from "@/lib/analytics/utm-allow";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import type { AssetData } from "@/types/asset";
@@ -78,7 +79,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   nav_source: ["tap", "back", "swipe", "initial"],
   content_type: ["stock", "portfolio", "type", "link"],
@@ -124,6 +125,7 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
     xray: "X-Ray", tax_sim: "절세 시뮬레이션", home_tip: "홈 팁", notice: "공지", feedback: "의견 보내기", theme: "테마",
     ai_prompt: "AI 프롬프트",
     demo: "체험 모드",
+    ratio_preview: "비중 미리보기",
   },
   step: {
     "1": "1단계", "2": "2단계", "3": "3단계", "4": "4단계", "5": "5단계",
@@ -182,12 +184,15 @@ export function screenPath(viewKey: string): string {
 
 function pageLocation(): string {
   const origin = typeof window !== "undefined" ? window.location.origin : APP_CONFIG.siteUrl;
-  return `${origin}${screenPath(currentScreenKey)}`;
+  // /ratio 도착 URL의 허용 UTM만 가상 경로 뒤에 붙인다(캠페인 귀속, #63). 그 밖의 쿼리·해시는 제외
+  const utm = typeof window !== "undefined" ? allowedUtmQuery(window.location.pathname, window.location.search) : "";
+  return `${origin}${screenPath(currentScreenKey)}${utm}`;
 }
 
 // 화면 키 → 사람용 한국어 제목(GA "페이지 및 화면" 보고서에 그대로 노출)
 const SCREEN_TITLES: Record<string, string> = {
   home: "홈",
+  ratio: "비중 미리보기",
   more: "더보기",
   settings: "설정",
   tax: "세금 관리",
