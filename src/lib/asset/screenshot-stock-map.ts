@@ -13,7 +13,11 @@ export type ImportStock = Omit<Stock, "id"> & {
 };
 
 /** 파싱 응답의 종목 1건 (서버 원본) */
-export type ParsedStock = Stock & { section: "국내" | "해외" | "기타"; brokerHint?: string };
+export type ParsedStock = Stock & {
+  section: "국내" | "해외" | "기타";
+  brokerHint?: string;
+  originalCurrency?: "KRW" | "USD" | "JPY";
+};
 
 export const DOMESTIC_CATEGORIES = new Set(["domestic", "isa", "irp", "pension", "unlisted"]);
 export const BROKER_NONE = "__none__";
