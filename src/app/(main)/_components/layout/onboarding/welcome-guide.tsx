@@ -17,10 +17,12 @@ import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_
 import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { InAppExternalGuide } from "../../pwa/in-app-external-guide";
+import { hasRestoreHash } from "../../pwa/in-app-browser-gate";
 import { useExternalMove } from "@/hooks/use-external-move";
 import { dispatchAddStock } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
-import { track, type GaParams } from "@/lib/analytics/ga";
+import { track, trackThenNavigate, type GaParams } from "@/lib/analytics/ga";
+import { TRIAL_ENTRY_URL, TRIAL_EXIT_KEY } from "@/lib/trial/trial-mode";
 import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { SECURITY_COPY, type SecurityCopyId } from "@/config/security-copy";
@@ -84,6 +86,7 @@ export const WELCOME_CTA_METHODS = {
   import: "import",
   syncConnect: "sync_connect",
   skipInstall: "skip_install",
+  trialStart: "trial_start",
 } as const satisfies Record<string, NonNullable<GaParams["method"]>>;
 
 /** CTA 슬롯 상태 — pending: 마운트 전(SSR 동일) / inapp: 인앱 브라우저(외부 이동 안내, #60) / install: 모바일 웹 미설치 / asset: 자산 등록 */
@@ -95,17 +98,31 @@ export function welcomeCtaState(env: { mounted: boolean; isMobile: boolean; isSt
   return "asset";
 }
 
-export function WelcomeGuide() {
+export function WelcomeGuide({ allowTrial = false }: { allowTrial?: boolean } = {}) {
   const { isStandalone, isInApp, isIOS } = usePWAInstall();
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '웹에서 바로 시작' 선택 시에만 자산 등록 노출
   const [securityOpen, setSecurityOpen] = useState(false); // 보안 상세 펼침 — 메모리 상태만(저장 안 함)
+  const [restoreHash, setRestoreHash] = useState(false); // #share·#sync 링크 진입이면 체험 링크 숨김(#59)
 
   useEffect(() => {
     setMounted(true);
     // 활성화 퍼널 1단계(S-4.28)
     track("welcome_view", { source: welcomeSource(isStandaloneDisplay(), detectBrowserEnv().isInApp) });
+  }, []);
+
+  // 체험 종료(#59) 복귀: 표식 1회 소비 → trial_start 전송 → CTA 슬롯을 asset 상태로(기존 '웹에서 바로 시작' 경로 재사용)
+  useEffect(() => {
+    setRestoreHash(hasRestoreHash(window.location.hash));
+    try {
+      if (sessionStorage.getItem(TRIAL_EXIT_KEY) !== "1") return;
+      sessionStorage.removeItem(TRIAL_EXIT_KEY);
+    } catch {
+      return;
+    }
+    track("onboarding_action", { method: WELCOME_CTA_METHODS.trialStart });
+    setShowAssetCta(true);
   }, []);
 
   const ctaState = welcomeCtaState({ mounted, isMobile: !!isMobile, isStandalone, skipInstall: showAssetCta, isInApp });
@@ -172,7 +189,10 @@ export function WelcomeGuide() {
 
       {/* ③ 예시 순자산 미리보기 */}
       <div data-testid="welcome-preview-net" className={`space-y-3 ${ENTER}`} style={{ animationDelay: "120ms" }}>
-        <PreviewLabel title="포트폴리오 미리보기" />
+        <PreviewLabel
+          title="포트폴리오 미리보기"
+          action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink /> : undefined}
+        />
         <NetAssetSummaryBox
           netAsset={netAsset}
           treemapData={PREVIEW_TREEMAP}
@@ -260,12 +280,47 @@ export function WelcomeGuide() {
   );
 }
 
-function PreviewLabel({ title }: { title: string }) {
+function PreviewLabel({ title, action }: { title: string; action?: React.ReactNode }) {
+  if (!action) {
+    return (
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <Badge variant="secondary" className="text-[10px] px-2 py-0.5">예시 데이터</Badge>
+      </div>
+    );
+  }
+  // 액션이 있으면 제목+배지 묶음은 줄바꿈 허용(320에서 배지만 둘째 줄), 액션은 첫 줄 오른쪽 고정
   return (
-    <div className="flex items-center gap-2">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <Badge variant="secondary" className="text-[10px] px-2 py-0.5">예시 데이터</Badge>
+    <div className="flex items-start gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <Badge variant="secondary" className="text-[10px] px-2 py-0.5">예시 데이터</Badge>
+      </div>
+      {action}
     </div>
+  );
+}
+
+/** 웰컴 ③ "직접 둘러보기" 칩(#59) — 진입 이벤트를 실제 페이지에서 보낸 뒤 /?trial=1로 이동(연타 1회) */
+export function WelcomeTrialLink() {
+  const [busy, setBusy] = useState(false);
+  const handleClick = () => {
+    if (busy) return;
+    setBusy(true);
+    trackThenNavigate("feature_use", { category: "demo" }, TRIAL_ENTRY_URL);
+  };
+  return (
+    <button
+      type="button"
+      data-testid="welcome-trial-link"
+      onClick={handleClick}
+      disabled={busy}
+      aria-busy={busy || undefined}
+      className="relative -my-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 text-sm font-semibold text-foreground break-keep whitespace-nowrap hover:bg-brand/25 dark:bg-brand/20 dark:hover:bg-brand/30 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:not-disabled:scale-[0.96] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 after:absolute after:-inset-1 after:content-['']"
+    >
+      직접 둘러보기
+      {busy ? <Loader2 aria-hidden className="size-3.5 motion-safe:animate-spin" /> : <ArrowRight aria-hidden className="size-3.5 text-brand" />}
+    </button>
   );
 }
 

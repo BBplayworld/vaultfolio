@@ -11,6 +11,7 @@ import { TradeInput } from "./_components/forms/trade/trade-input";
 import { CopyrightFooter } from "./_components/layout/copyright-footer";
 import { FloatingAddButton } from "./_components/layout/floating/floating-add-button";
 import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
+import { TrialBanner } from "./_components/views/home/trial-banner";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
@@ -84,7 +85,8 @@ export default function Page() {
   if (isWelcomeGuide) {
     return (
       <div className="flex flex-col gap-4 md:gap-6">
-        <WelcomeGuide />
+        {/* 체험 진입 링크는 공유 대기 중에는 숨김(#59) */}
+        <WelcomeGuide allowTrial={!isSharePending} />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
           <StockInput />
@@ -109,6 +111,8 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
+      {/* 체험 모드(#59) 예시 표기 정본 1곳 — 홈에서만, in-flow */}
+      {isTrialMode() && view.type === "home" && <TrialBanner />}
       <AssetPageTabs />
       {/* 체험 모드(#59): FAB(스크린샷 AI 인식·등록) 숨김 */}
       {!isTrialMode() && <FloatingAddButton />}

@@ -18,6 +18,7 @@ import { PwaConnectPrompt } from "./_components/pwa/pwa-connect-prompt";
 import { InAppBrowserGate } from "./_components/pwa/in-app-browser-gate";
 import { AppGuide } from "./_components/header-menu/app-guide";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import { TrialGate } from "./_components/trial/trial-gate";
 
 // preview 전용(#31) — 운영 빌드에서는 렌더 분기 자체가 없어 로드되지 않는다
 const PreviewGate = dynamic(() => import("./_components/preview/preview-gate").then((m) => m.PreviewGate));
@@ -60,7 +61,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <ReactQueryProvider>
-      {isPreviewEnv() ? <PreviewGate>{tree}</PreviewGate> : tree}
+      {/* 체험 게이트(#59)는 PreviewGate 바깥 — 데모를 넣은 메모리를 PreviewGate가 읽어 0건 선택 카드가 뜨지 않게 */}
+      <TrialGate>
+        {isPreviewEnv() ? <PreviewGate>{tree}</PreviewGate> : tree}
+      </TrialGate>
     </ReactQueryProvider>
   );
 
