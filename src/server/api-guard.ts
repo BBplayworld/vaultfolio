@@ -244,30 +244,77 @@ function secondsUntilKstMidnight(now = Date.now()): number {
   return Math.max(60, 86400 - Math.floor((kstMs % 86_400_000) / 1000));
 }
 
+/** 비중 미리보기(/ratio) 입구 전용 풀 한도 — 앱 사용자 몫(전역 300 중 240)을 보호 */
+export const RATIO_POOL = { name: "ratio", dailyLimit: 60, perIpDailyLimit: 5 } as const;
+
+export interface GeminiPool {
+  name: "ratio";
+  dailyLimit: number;
+  perIpDailyLimit: number;
+}
+
+/** 입구 판정: entry 표시가 "ratio"이거나 Referer 경로가 /ratio(말미 슬래시 허용). 파싱 실패는 false */
+export function isRatioEntry(request: Request, entry?: unknown): boolean {
+  if (entry === "ratio") return true;
+  const referer = request.headers.get("referer");
+  if (!referer) return false;
+  try {
+    return new URL(referer).pathname.replace(/\/$/, "") === "/ratio";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 외부 호출 전 n회분 원자 예약. 통과 시 null, 차단 시 429 응답.
  * 실패한 호출도 차감된다(비용은 이미 발생) — 실패 반복으로 한도를 우회하지 못하게 한다.
+ * pool 지정 시 순서: IP 일반 → 입구 IP → 입구 전역 → 전역. 실패하면 앞 단계를 전부 -n으로 되돌린다.
  */
 export async function reserveGeminiCalls(
   request: Request,
   n: number,
   limitMessage: string,
+  pool?: GeminiPool,
 ): Promise<NextResponse | null> {
   const storage = getCacheStorage();
   const today = kstDateStr();
   const ip = getClientIp(request);
   const ttl = secondsUntilKstMidnight();
 
-  const ipUsed = await storage.incrementCounter(`rl:gemini:${ip}:${today}`, n, ttl);
+  const ipKey = `rl:gemini:${ip}:${today}`;
+  const poolIpKey = pool ? `rl:gemini-${pool.name}:${ip}:${today}` : "";
+  const poolKey = pool ? `rl:gemini-${pool.name}:${today}` : "";
+  // 지금까지 증가시킨 카운터를 되돌리는 롤백 목록
+  const done: string[] = [];
+  const rollback = async () => {
+    for (const k of done) await storage.incrementCounter(k, -n, ttl);
+  };
+
+  const ipUsed = await storage.incrementCounter(ipKey, n, ttl);
+  done.push(ipKey);
   if (ipUsed > GEMINI_PER_IP_DAILY_LIMIT) {
-    await storage.incrementCounter(`rl:gemini:${ip}:${today}`, -n, ttl);
+    await rollback();
     return tooMany(ttl, limitMessage);
+  }
+  if (pool) {
+    const poolIpUsed = await storage.incrementCounter(poolIpKey, n, ttl);
+    done.push(poolIpKey);
+    if (poolIpUsed > pool.perIpDailyLimit) {
+      await rollback();
+      return tooMany(ttl, limitMessage);
+    }
+    const poolUsed = await storage.incrementCounter(poolKey, n, ttl);
+    done.push(poolKey);
+    if (poolUsed > pool.dailyLimit) {
+      await rollback();
+      return tooMany(ttl, limitMessage);
+    }
   }
   const heavy = ipUsed - n >= LIGHT_USER_CALLS;
   const effectiveLimit = heavy ? Math.floor(GEMINI_SERVER_DAILY_LIMIT * HEAVY_POOL_RATIO) : GEMINI_SERVER_DAILY_LIMIT;
   const reserved = await storage.reserveGeminiDaily(today, n, effectiveLimit);
   if (reserved === null) {
-    await storage.incrementCounter(`rl:gemini:${ip}:${today}`, -n, ttl);
+    await rollback();
     return tooMany(ttl, limitMessage);
   }
   return null;

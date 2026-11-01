@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { countAssets, trackAssetSave, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
@@ -27,46 +27,17 @@ import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfStock, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
+import {
+  type ImportStock,
+  type ParsedStock,
+  BROKER_NONE,
+  DOMESTIC_CATEGORIES,
+  applyCommonDefaults,
+  convertStockCategory,
+  mapParsedStocks,
+} from "@/lib/asset/screenshot-stock-map";
 
-type ImportStock = Omit<Stock, "id"> & {
-  id: string;
-  section: "국내" | "해외" | "기타";
-  selected: boolean;
-  tickerInput?: string;
-  originalCurrency?: "KRW" | "USD" | "JPY";
-  broker?: string;
-};
-
-const DOMESTIC_CATEGORIES = new Set(["domestic", "isa", "irp", "pension", "unlisted"]);
 const CATEGORY_OPTIONS = stockCategories.map((c) => ({ value: c.value, label: c.label }));
-const BROKER_NONE = "__none__";
-
-// 카테고리 변경에 따른 가격/통화 환산 (foreign↔domestic). 공통·개별 모드 공용.
-function convertStockCategory(stock: ImportStock, category: Stock["category"], usdRate: number): ImportStock {
-  const wasForeign = stock.category === "foreign";
-  const becomeForeign = category === "foreign";
-  if (!wasForeign && becomeForeign) {
-    return {
-      ...stock, category,
-      currentPrice: Math.round((stock.currentPrice / usdRate) * 10000) / 10000,
-      averagePrice: Math.round((stock.averagePrice / usdRate) * 10000) / 10000,
-      originalCurrency: "USD" as const,
-    };
-  }
-  if (wasForeign && !becomeForeign) {
-    const aiSawUSD = stock.originalCurrency === "USD";
-    if (aiSawUSD) {
-      return {
-        ...stock, category,
-        currentPrice: Math.round(stock.currentPrice * usdRate),
-        averagePrice: Math.round(stock.averagePrice * usdRate),
-        originalCurrency: "KRW" as const,
-      };
-    }
-    return { ...stock, category, originalCurrency: "KRW" as const };
-  }
-  return { ...stock, category };
-}
 
 interface StockScreenshotImportProps {
   open?: boolean;
@@ -74,9 +45,11 @@ interface StockScreenshotImportProps {
   activeTab?: string;
   /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
   onSaved?: (count: number) => void;
+  /** 비중 미리보기(/ratio) 인계(#63): 이미 파싱된 응답 배열. 업로드 단계를 건너뛰고 충돌/미리보기로 열린다(AI 호출·사용량 증가 없음) */
+  initialParsed?: ParsedStock[];
 }
 
-export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab, onSaved }: StockScreenshotImportProps = {}) {
+export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab, onSaved, initialParsed }: StockScreenshotImportProps = {}) {
   const { saveData, refreshData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -103,6 +76,27 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
   const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 인계 데이터는 같은 배열에 대해 1회만 처리한다(저장 후 assetData 갱신으로 재실행돼도 다시 열리지 않음)
+  const handoffAppliedRef = useRef<ParsedStock[] | null>(null);
+
+  // 인계 경로: 업로드와 같은 매핑 + 개별 모드로 시작(공통 일괄 변환 생략). geminiUsage·trackParse 미호출
+  useLayoutEffect(() => {
+    if (!isOpen || !initialParsed || handoffAppliedRef.current === initialParsed) return;
+    handoffAppliedRef.current = initialParsed;
+    const { stocks: mapped, defaultCategory, defaultBroker } = mapParsedStocks(initialParsed, { activeTab });
+    setCommonCategory(defaultCategory);
+    setCommonBroker(defaultBroker);
+    setApplyMode("individual");
+    setStocks(mapped);
+    const conflicts = countConflicts(assetData.stocks, mapped, keyOfStock);
+    if (conflicts > 0) {
+      setConflictCount(conflicts);
+      setStep("conflict");
+    } else {
+      setStep("preview");
+    }
+  }, [isOpen, initialParsed, activeTab, assetData.stocks]);
 
   const reset = () => {
     setStep("upload");
@@ -152,51 +146,18 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
         return;
       }
 
-      // 동일 ticker:category 그룹 내 순서 카운터 (broker 기본값 지정용)
-      const groupIndex = new Map<string, number>();
-
-      const importStocks: ImportStock[] = data.stocks.map(
-        (s: Stock & { section: "국내" | "해외" | "기타"; brokerHint?: string }) => {
-          const resolvedCategory: Stock["category"] =
-            s.section === "해외"
-              ? "foreign"
-              : activeTab && DOMESTIC_CATEGORIES.has(activeTab)
-              ? (activeTab as Stock["category"])
-              : s.category;
-
-          const groupKey = `${s.ticker || s.name}:${resolvedCategory}`;
-          const idx = (groupIndex.get(groupKey) ?? 0) + 1;
-          groupIndex.set(groupKey, idx);
-
-          // broker 자동 설정: brokerHint 매칭 우선, 없으면 동일 그룹 2번째부터 "항목 N"
-          const matchedBroker = matchBrokerHint(s.brokerHint ?? "");
-          const broker = matchedBroker ?? (idx > 1 ? `항목 ${idx}` : undefined);
-
-          return {
-            ...s,
-            category: resolvedCategory,
-            selected: true,
-            broker,
-          };
-        }
+      const usdRate = exchangeRates.USD || 1380;
+      const { stocks: importStocks, defaultCategory, defaultBroker, isMixed } = mapParsedStocks(
+        data.stocks as ParsedStock[],
+        { activeTab, usdRate },
       );
-
-      // 공통 모드 기본값(기본 모드): 다수 종목이 해외면 foreign, 아니면 activeTab 국내계열/도메스틱
-      const foreignCount = importStocks.filter((s) => s.category === "foreign").length;
-      const defaultCategory: Stock["category"] =
-        foreignCount * 2 > importStocks.length
-          ? "foreign"
-          : activeTab && DOMESTIC_CATEGORIES.has(activeTab)
-          ? (activeTab as Stock["category"])
-          : "domestic";
-      const defaultBroker = matchBrokerHint(data.stocks[0]?.brokerHint ?? "") ?? BROKER_NONE;
       setCommonCategory(defaultCategory);
       setCommonBroker(defaultBroker);
 
-      // 기본 공통 모드이므로 파싱 직후 전 종목에 공통 카테고리·증권사를 일괄 적용
-      const usdRate = exchangeRates.USD || 1380;
-      const commonBrokerVal = defaultBroker === BROKER_NONE ? undefined : defaultBroker;
-      const finalStocks = importStocks.map((s) => ({ ...convertStockCategory(s, defaultCategory, usdRate), broker: commonBrokerVal }));
+      // 국내·해외 혼합 인식은 개별 선택 모드로 시작(공통 일괄 변환 생략 — 소수 쪽 카테고리·가격이 바뀌는 결함 방지, #64)
+      // 단일 section 결과는 기존대로 전 종목에 공통 카테고리·증권사를 일괄 적용
+      const finalStocks = isMixed ? importStocks : applyCommonDefaults(importStocks, defaultCategory, defaultBroker, usdRate);
+      setApplyMode(isMixed ? "individual" : "common");
       setStocks(finalStocks);
 
       geminiUsage.increment("stock");

@@ -21,6 +21,7 @@ import {
   APP_GUIDE_SECURITY_DESC,
   SYNC_MENU_SECURITY_DESC,
   SCREENSHOT_UPLOAD_NOTICE,
+  RATIO_PREVIEW_UPLOAD_NOTICE,
 } from "../security-copy";
 import { AppGuideContent } from "@/app/(main)/_components/header-menu/app-guide";
 import { CloudSyncMenuEntry } from "@/app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry";
@@ -77,7 +78,7 @@ describe("동기화 암호화 문장은 security-copy.ts 한 블록에만(완료
 });
 
 describe("새 문구 규칙(완료 기준 4)", () => {
-  const all = [...SECURITY_COPY.flatMap((c) => [c.title, c.desc]), APP_GUIDE_SECURITY_DESC, SYNC_MENU_SECURITY_DESC, SCREENSHOT_UPLOAD_NOTICE];
+  const all = [...SECURITY_COPY.flatMap((c) => [c.title, c.desc]), APP_GUIDE_SECURITY_DESC, SYNC_MENU_SECURITY_DESC, SCREENSHOT_UPLOAD_NOTICE, RATIO_PREVIEW_UPLOAD_NOTICE];
   it("'서버'가 주어로 나오는 문장 없음", () => {
     for (const s of all) expect(s).not.toMatch(/서버(는|가|에서)/);
   });
@@ -88,6 +89,14 @@ describe("새 문구 규칙(완료 기준 4)", () => {
   it("카드 3개 순서·id 고정", () => {
     expect(SECURITY_COPY.map((c) => c.id)).toEqual(["local", "sync", "admin"]);
     expect(SECURITY_COPY.map((c) => c.title)).toEqual(["내 기기에 저장", "기기에서 암호화하는 동기화", "관리자도 알 수 없어요"]);
+  });
+});
+
+describe("비중 미리보기 고지(#63)", () => {
+  it("서버 보관·삭제 단정과 보증 표현이 없고, 저장 전 '기기 저장' 단정과 병치되지 않는다", () => {
+    expect(RATIO_PREVIEW_UPLOAD_NOTICE).not.toMatch(/서버에 저장하지 않|즉시 삭제|안전하게 분석/);
+    expect(RATIO_PREVIEW_UPLOAD_NOTICE).toContain("저장을 누를 때만");
+    expect(RATIO_PREVIEW_UPLOAD_NOTICE).not.toBe(SCREENSHOT_UPLOAD_NOTICE);
   });
 });
 

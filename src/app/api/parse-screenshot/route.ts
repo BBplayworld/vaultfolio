@@ -4,7 +4,7 @@ import { lookupTicker } from "./ticker-map";
 import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
-import { guardRequest, reserveGeminiCalls } from "@/server/api-guard";
+import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
 
@@ -642,6 +642,8 @@ function matchesImageSignature(bytes: Uint8Array, mime: string): boolean {
 }
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+/** /ratio 입구 요청의 모든 429 문구(일반 IP·입구·전역 공통) */
+const RATIO_LIMIT_MESSAGE = "오늘 미리보기 이용이 많아 마감됐어요. 내일 다시 시도해 주세요.";
 
 export async function POST(request: Request) {
   // 본문 파싱 전 출처·크기(이미지 10MB + multipart 여유) 검사 — 대용량 본문을 메모리에 올리기 전에 차단
@@ -693,11 +695,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JPG, PNG, WEBP, HEIC 형식만 지원합니다." }, { status: 400 });
   }
 
-  // Gemini 호출 전 원자 예약(IP 일 한도 + 전역 한도) — 실패 응답도 비용이 발생하므로 차감 유지
+  // 비중 미리보기(/ratio) 입구 요청은 전용 풀 한도를 추가로 적용하고 429 문구도 마감 안내로 바꾼다
+  const ratioEntry = isRatioEntry(request, formData.get("entry"));
+
+  // Gemini 호출 전 원자 예약(IP 일 한도 + 입구 풀 + 전역 한도) — 실패 응답도 비용이 발생하므로 차감 유지
   const denied = await reserveGeminiCalls(
     request,
     1,
-    `오늘의 AI 분석 한도(${GEMINI_SERVER_DAILY_LIMIT}회)가 초과되었습니다. 내일 다시 시도해주세요.`,
+    ratioEntry
+      ? RATIO_LIMIT_MESSAGE
+      : `오늘의 AI 분석 한도(${GEMINI_SERVER_DAILY_LIMIT}회)가 초과되었습니다. 내일 다시 시도해주세요.`,
+    ratioEntry ? RATIO_POOL : undefined,
   );
   if (denied) return denied;
 

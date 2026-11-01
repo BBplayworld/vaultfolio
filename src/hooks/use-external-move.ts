@@ -48,7 +48,7 @@ export async function moveExternal({ isIOS, url, copy, openExternal, onTrack }: 
 }
 
 /** 외부 이동 훅 — go(url): 이동 실행, iosFallback: iOS 수동 가이드 표시 여부 */
-export function useExternalMove(isIOS: boolean) {
+export function useExternalMove(isIOS: boolean, onTrack?: () => void) {
   const [iosFallback, setIosFallback] = useState(false);
 
   const go = useCallback(async (urlOrPromise: string | Promise<string>) => {
@@ -57,10 +57,11 @@ export function useExternalMove(isIOS: boolean) {
       url: urlOrPromise,
       copy: copyUrlForIOS,
       openExternal: openExternalBrowser,
-      onTrack: () => track("pwa_install", { method: "inapp_move", source: "inapp" }),
+      // onTrack 미전달 시 기존 pwa_install 계측 그대로(#63: /ratio는 자체 이벤트로 대체해 #60 판독 오염 방지)
+      onTrack: onTrack ?? (() => track("pwa_install", { method: "inapp_move", source: "inapp" })),
     });
     if (result === "ios-fallback") setIosFallback(true);
-  }, [isIOS]);
+  }, [isIOS, onTrack]);
 
   return { go, iosFallback };
 }

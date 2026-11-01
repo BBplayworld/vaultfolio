@@ -431,6 +431,15 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 마법사 열림 중에도 `AssetDataContext`·시세 동기화 등 기존 훅 정상 동작(별도 Provider 분기 없음), 마법사 닫으면 `assetData` 최신 상태 그대로 홈에 반영
 - 자동: `src/lib/__tests__/onboarding-wizard-status.test.ts`(재개 지점 계산, dismissed 플래그, 키 분리)
 
+### F-RATIO. 스크린샷 비중 미리보기 `/ratio` ([ratio-preview.tsx](../../src/app/ratio/ratio-preview.tsx) · [ratio-list.ts](../../src/lib/ratio-preview/ratio-list.ts) · [handoff.ts](../../src/lib/ratio-preview/handoff.ts) · [ratio-handoff-host.tsx](../../src/app/(main)/_components/ratio/ratio-handoff-host.tsx)) — #4.39 #63, risk medium
+- 👤 `/ratio`는 로그인·금고 없이 열리고 SSR 본문(제목·설명·고지·업로드 버튼)과 canonical/og:url=`/ratio`·og:image·twitter summary_large_image가 JS 없이 보인다. 결과에 금액이 없고 종목 목록·국내/해외 막대 합이 100.0
+- 👤 저장 버튼 → `/` 이동 후 확인 창(충돌/미리보기, 개별 모드)이 다시 업로드 없이 열리고 등록 결과·종목 수가 미리보기와 같다. 새로고침·취소·10분 경과 후 미재오픈. 앱 잠금·공유 대기·마법사 중 대기 후 해제 시 오픈, 0건·튜토리얼 미완료 기기에서도 오픈(웰컴 위 겹침 없음)
+- 👤 인앱 UA(카카오톡·barcelona)는 "브라우저에서 열어 저장하기" + 재업로드 안내(GA `open`만, `pwa_install` 미전송)
+- ⚙ 입구 한도: 입구 전역 60·IP 5/일(entry 또는 Referer `/ratio`), 초과 시 마감 문구 429, 실패 시 앞 단계 카운터 롤백, 일반 요청 영향 없음(`api-guard.test.ts`). 기기 15회 초과는 업로드 안 함
+- ⚙ GA: `/v/ratio` page_view, `feature_use{ratio_preview, submit success|fail|empty|limit / click / open / create}`, UTM은 `/ratio`에서만 page_location에 부착, 종목명·금액·비중 파라미터 없음. `screenshot_parse` 미전송
+- ⚙ 회귀(#64): 국내·해외 혼합 인식은 앱 내 업로드도 개별 모드로 시작해 카테고리·가격 유지, 단일 section은 현행 동일(`screenshot-stock-map.test.ts`). 웰컴·결산·홈 팁·`page.tsx` diff 0
+- 자동: `ratio-preview.test.ts`·`screenshot-stock-map.test.ts`·`utm-allow.test.ts`·`api-guard.test.ts`·`ga.test.ts`·`app/ratio/__tests__/ratio-page.test.ts`
+
 ### F-ASSET-REFRESH. 자산 최신화 (FAB 통합 카드) ([floating-add-button.tsx](../../src/app/(main)/_components/layout/floating/floating-add-button.tsx) · [holdings-conflict.ts](../../src/lib/asset/holdings-conflict.ts) · [asset-refresh-status.ts](../../src/lib/asset/asset-refresh-status.ts)) — 명세 [S-4.30](../specs/4.30-asset-refresh-fab.md)
 - 👤 **FAB "자산 업데이트" 클릭 → hub(2단계, 2026-08 재설계)** — "보유 현황 업데이트"/"매수·매도 거래 기록" 2개 상위 타일 선택 → 각각 카테고리 컴팩트 리스트(`holdings`/`trade`). 두 화면 모두 **단건 전용**(체크박스·다건 시퀀스·완료 원인분해 요약 화면 전부 2026-08 제거 — `attribution-summary.tsx` 삭제됨). 행 직접 클릭은 기존과 동일하게 즉시 단건 처리
 - 👤 hub 타일에 "어떤 메뉴를 써야 하나요?" `InfoHint` — 보유현황=재동기화(거래 이력 없음), 거래기록=손익·세금 정확 반영이라는 역할 구분 안내

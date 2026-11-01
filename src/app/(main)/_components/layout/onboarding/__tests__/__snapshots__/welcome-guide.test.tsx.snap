@@ -19,6 +19,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "theme",
     "ai_prompt",
     "demo",
+    "ratio_preview",
   ],
   "content_type": [
     "stock",

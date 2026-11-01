@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 
 import {
   getClientIp,
@@ -12,6 +12,8 @@ import {
   cdnCacheHeaders,
   reserveGeminiCalls,
   GEMINI_PER_IP_DAILY_LIMIT,
+  RATIO_POOL,
+  isRatioEntry,
 } from "@/server/api-guard";
 import { getCacheStorage } from "@/lib/cache-storage";
 
@@ -149,5 +151,68 @@ describe("reserveGeminiCalls", () => {
     await reserveGeminiCalls(r, 1, "limit");
     const heavyLimit = spy.mock.calls[5][2];
     expect(heavyLimit).toBeLessThan(lightLimit as number);
+  });
+});
+
+describe("reserveGeminiCalls — /ratio 입구 풀", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const MSG = "마감";
+  const todayKst = () => new Date(Date.now() + 9 * 3600_000).toISOString().split("T")[0];
+  // 테스트 간 격리: 입구 전역 카운터를 0으로 되돌린다
+  const resetPoolCounter = async () => {
+    const storage = getCacheStorage();
+    const key = `rl:gemini-ratio:${todayKst()}`;
+    const used = await storage.incrementCounter(key, 0, 3600);
+    if (used > 0) await storage.incrementCounter(key, -used, 3600);
+  };
+  beforeEach(resetPoolCounter);
+
+  it("isRatioEntry: entry 표시 또는 Referer 경로 /ratio(슬래시·쿼리 허용), /ratio-x·파싱 실패는 false", () => {
+    expect(isRatioEntry(req("http://a.test/api"), "ratio")).toBe(true);
+    expect(isRatioEntry(req("http://a.test/api", { referer: "https://x.test/ratio?utm_source=a" }))).toBe(true);
+    expect(isRatioEntry(req("http://a.test/api", { referer: "https://x.test/ratio/" }))).toBe(true);
+    expect(isRatioEntry(req("http://a.test/api", { referer: "https://x.test/ratio-x" }))).toBe(false);
+    expect(isRatioEntry(req("http://a.test/api", { referer: "not a url" }))).toBe(false);
+    expect(isRatioEntry(req("http://a.test/api"), "other")).toBe(false);
+  });
+
+  it("같은 IP의 입구 6번째 요청은 429이고, 직후 일반 요청은 통과한다", async () => {
+    const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
+    for (let i = 0; i < RATIO_POOL.perIpDailyLimit; i++) {
+      expect(await reserveGeminiCalls(r, 1, MSG, RATIO_POOL)).toBeNull();
+    }
+    const denied = await reserveGeminiCalls(r, 1, MSG, RATIO_POOL);
+    expect(denied?.status).toBe(429);
+    expect(await denied?.json()).toEqual({ error: MSG });
+    expect(await reserveGeminiCalls(r, 1, "limit")).toBeNull();
+  });
+
+  it("입구 전역 60회 초과(서로 다른 IP)의 61번째는 429이고 일반 풀 카운터가 되돌려진다", async () => {
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
+    for (let i = 0; i < RATIO_POOL.dailyLimit; i++) {
+      expect(await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": uniqueIp() }), 1, MSG, RATIO_POOL)).toBeNull();
+    }
+    const ip = uniqueIp();
+    const denied = await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": ip }), 1, MSG, RATIO_POOL);
+    expect(denied?.status).toBe(429);
+    // 실패한 IP는 일반·입구 IP 카운터가 되돌려져 일반 요청 30회를 온전히 쓸 수 있다
+    const r = req("http://a.test/api", { "x-real-ip": ip });
+    expect(await reserveGeminiCalls(r, GEMINI_PER_IP_DAILY_LIMIT, "limit")).toBeNull();
+  });
+
+  it("전역 예약 실패 시 입구 카운터까지 되돌려진다", async () => {
+    const ip = uniqueIp();
+    const r = req("http://a.test/api", { "x-real-ip": ip });
+    const storage = getCacheStorage();
+    const spy = vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(null);
+    for (let i = 0; i < RATIO_POOL.perIpDailyLimit + 2; i++) {
+      expect((await reserveGeminiCalls(r, 1, MSG, RATIO_POOL))?.status).toBe(429);
+    }
+    spy.mockResolvedValue(1);
+    // 롤백이 없었다면 입구 IP 5회를 이미 소진해 첫 호출부터 막힌다
+    expect(await reserveGeminiCalls(r, 1, MSG, RATIO_POOL)).toBeNull();
   });
 });

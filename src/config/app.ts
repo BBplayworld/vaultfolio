@@ -28,3 +28,11 @@ export const APP_CONFIG = {
     ],
   },
 } as const;
+
+/** 공용 OG 이미지 — 루트 layout과 /ratio metadata가 함께 쓴다(교체 시 한 곳만 수정) */
+export const OG_IMAGE = {
+  url: `${APP_CONFIG.siteUrl}/og-image.png`,
+  width: 1200,
+  height: 630,
+  alt: "안전한 자산 관리, 시크릿에셋",
+} as const;

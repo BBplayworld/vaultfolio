@@ -340,6 +340,11 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 - 게이트는 `resolveInAppGate(env)`(state-and-utils) 결과만 따른다: `none`·`welcome` 미렌더 / `cover` = 데이터 로드 전 문구 없는 `fixed inset-0 bg-background`(`Z_LAYER.gate`, `data-testid="inapp-gate-cover"`, `aria-hidden`) / `gate` = **같은 루트 노드**에 기존 경고·PIN 내용(노드 교체 없음). 외부 이동은 `useExternalMove`(#4.38)
 - `InAppExternalGuide({ lastStep?, notice? })` — `notice`(#4.38)를 넘기면 앰버 블록 안쪽(제목+"앱 설치 기능…" 문장)만 대체, 아이콘·1~3단계·하단 안내 유지. 미전달 시 기존 문구(설치 흐름·1건 이상 게이트). 소비처: 게이트, `pwa-install-flow` inAppStep, 웰컴 inapp 슬롯
 
+### RatioPreview (`src/app/ratio/ratio-preview.tsx`, #4.39 #63) · RatioHandoffHost (`(main)/_components/ratio/ratio-handoff-host.tsx`)
+- `/ratio`(`(main)` 밖, 서버 `page.tsx`가 metadata·SSR 본문): 업로드·결과를 한 클라이언트 컴포넌트가 노드 유지 + 높이 펼침(`Unfold`, 이 파일 전용)으로 전환. `useAssetData`·react-query·토스트 사용 금지(provider 밖). 문구는 `ratio-copy.ts`
+- `RatioHandoffHost`: `(main)/layout.tsx`에 1줄. 마운트 시 `peekHandoff()` null이면 영구 null. 조건 충족 시 `takeHandoff()` 후 `StockScreenshotImport open initialParsed`, `onSaved`에서 `feature_use{ratio_preview, submit, create}` 1회
+- `StockScreenshotImport`에 `initialParsed?: ParsedStock[]`(#4.39): open 시 같은 배열 1회만 처리, 업로드 단계 생략(`increment`·`trackParse` 미호출), 개별 모드로 conflict/preview 진입
+
 ### TrialGate (`trial/trial-gate.tsx`, #4.38 #59) — 체험 모드 게이트(운영 포함)
 - `(main)/layout.tsx`에서 `ReactQueryProvider` 안·**PreviewGate 바깥**(데모를 넣은 메모리를 PreviewGate가 읽게)·`AssetDataProvider` 바깥
 - `useSearchParams()`로 `?trial=1`을 첫 렌더에 1회 고정(SSR 동일). 없으면 `<>{children}</>`(DOM 추가 0). 있으면 children 보류 + 로딩 덮개(`trial-gate-loading`, `fixed inset-0 bg-background`·`Z_LAYER.gate`, 문구 없음·sr-only "불러오는 중", 페이드는 바깥 span 300ms 지연·회전은 안쪽 Loader2 — 같은 `animation` 속성이라 노드 분리) → `trial-boot` 동적 import → `trial`/`rejected`는 children, `failed`는 `location.reload()`

@@ -5,7 +5,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 
 import { Toaster } from "@/components/ui/sonner";
-import { APP_CONFIG } from "@/config/app";
+import { APP_CONFIG, OG_IMAGE } from "@/config/app";
 import { getPreference } from "@/server/preferences";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
@@ -19,13 +19,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   initialScale: 1,
 };
-
-const OG_IMAGE = {
-  url: `${APP_CONFIG.siteUrl}/og-image.png`,
-  width: 1200,
-  height: 630,
-  alt: "안전한 자산 관리, 시크릿에셋",
-} as const;
 
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
