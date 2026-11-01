@@ -33,6 +33,16 @@ export const metadata: Metadata = {
   },
 };
 
+// 슬래시 어구는 줄바꿈 기회가 되므로 nowrap으로 묶는다(C25)
+const [DESC_HEAD, DESC_TAIL] = RATIO_DESC.split("국내/해외");
+const RATIO_DESC_NODE = (
+  <>
+    {DESC_HEAD}
+    <span className="whitespace-nowrap">국내/해외</span>
+    {DESC_TAIL}
+  </>
+);
+
 export default function RatioPage() {
   return (
     <main id="ratio-page" data-testid="ratio-page" className="min-h-dvh bg-background">
@@ -43,7 +53,7 @@ export default function RatioPage() {
         </header>
         <div>
           <h1 className="text-xl font-bold leading-snug text-balance break-keep sm:text-2xl">{RATIO_TITLE}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">{RATIO_DESC}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">{RATIO_DESC_NODE}</p>
         </div>
         <RatioPreview />
       </div>

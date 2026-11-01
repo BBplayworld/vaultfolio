@@ -40,7 +40,7 @@ function Unfold({ open, children, className, ...rest }: { open: boolean; childre
   return (
     <div
       className={cn(
-        "grid motion-safe:transition-[grid-template-rows,opacity,visibility] duration-300 ease-out",
+        "grid motion-safe:transition-[grid-template-rows,opacity,visibility] duration-300 ease-out motion-reduce:transition-none",
         open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 invisible",
         className,
       )}
@@ -184,7 +184,7 @@ export function RatioPreview() {
   const colors = result ? splitColors(result.split) : null;
 
   return (
-    <div className="flex flex-col gap-5" data-testid="ratio-page-body">
+    <div className="flex flex-col break-keep" data-testid="ratio-page-body">
       <input
         ref={fileRef}
         data-testid="ratio-file-input"
@@ -200,7 +200,7 @@ export function RatioPreview() {
       />
 
       <Unfold open={dropzoneOpen}>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pb-5">
           <button
             type="button"
             data-testid="ratio-dropzone"
@@ -238,14 +238,14 @@ export function RatioPreview() {
         </div>
       </Unfold>
 
-      <div aria-live="polite" className="flex flex-col gap-5">
+      <div aria-live="polite">
         {status === "error" && errorKind && (
           <div
             data-testid="ratio-error"
             data-kind={errorKind}
             role="alert"
             className={cn(
-              "flex items-start gap-2 rounded-md px-3 py-2 text-sm leading-relaxed text-pretty break-keep motion-safe:animate-in motion-safe:fade-in duration-150",
+              "mb-5 flex items-start gap-2 rounded-md px-3 py-2 text-sm leading-relaxed text-pretty break-keep motion-safe:animate-in motion-safe:fade-in duration-150",
               errorKind === "empty" ? "bg-muted/50 text-muted-foreground" : "bg-orange-500/10 text-orange-600 dark:text-orange-400",
             )}
           >
@@ -255,7 +255,7 @@ export function RatioPreview() {
         )}
 
         <Unfold open={loading} data-testid="ratio-loading">
-          <div className="flex flex-col gap-3" aria-hidden>
+          <div className="flex flex-col gap-3 pb-5" aria-hidden>
             <Skeleton className="h-28 w-full rounded-lg" />
             <div className="flex flex-col gap-2 rounded-lg bg-card p-4 shadow-xs">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -321,7 +321,7 @@ export function RatioPreview() {
                     <div aria-hidden className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
                       <div
                         className={cn(
-                          "h-full origin-left rounded-full motion-safe:transition-[scale] duration-500 ease-out",
+                          "h-full origin-left rounded-full motion-safe:transition-[scale] duration-500 ease-out motion-reduce:transition-none",
                           grown ? "scale-x-100" : "scale-x-0",
                         )}
                         style={{ width: `${Math.max(r.pct, 2)}%`, backgroundColor: rowColor(i, r.isEtc) }}
