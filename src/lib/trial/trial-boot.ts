@@ -207,7 +207,8 @@ export async function runTrialBoot(): Promise<TrialBootResult> {
       original,
       hash: window.location.hash,
       inject: async () => {
-        await injectDemoPayload();
+        // 체험은 닉네임을 비운다 — Hero가 "데모 순자산"이 아니라 기본 "순자산"(예시 표기는 배너 1곳, ui-review R2)
+        await injectDemoPayload({ nickname: "" });
         skipDemoTutorial();
       },
     });

@@ -26,7 +26,9 @@ describe("TrialGate — 쿼리 없을 때 main과 동일(완료 기준 5)", () =
     expect(html).toContain('data-testid="trial-gate-loading"');
     expect(html).toContain('aria-busy="true"');
     expect(html).toContain('<span class="sr-only">불러오는 중</span>');
-    expect(html).toContain("animation-delay:300ms");
+    // 페이드(바깥 span, 300ms 지연)와 회전(안쪽 svg)은 다른 노드(ui-review R1)
+    expect(html).toMatch(/<span aria-hidden="true" class="motion-safe:animate-in motion-safe:fade-in" style="animation-delay:300ms;animation-fill-mode:backwards"><svg[^>]*class="[^"]*motion-safe:animate-spin/);
+    expect(html).not.toMatch(/<svg[^>]*animate-in/);
   });
   it("layout: TrialGate는 PreviewGate 바깥·AssetDataProvider 바깥", () => {
     const src = read("app/(main)/layout.tsx");

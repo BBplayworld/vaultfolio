@@ -304,8 +304,10 @@ function PreviewLabel({ title, action }: { title: string; action?: React.ReactNo
 /** 웰컴 ③ "직접 둘러보기" 칩(#59) — 진입 이벤트를 실제 페이지에서 보낸 뒤 /?trial=1로 이동(연타 1회) */
 export function WelcomeTrialLink() {
   const [busy, setBusy] = useState(false);
+  const firedRef = useRef(false); // 한 태스크 안 동기 다중 click도 1회만(state 반영 전)
   const handleClick = () => {
-    if (busy) return;
+    if (firedRef.current) return;
+    firedRef.current = true;
     setBusy(true);
     trackThenNavigate("feature_use", { category: "demo" }, TRIAL_ENTRY_URL);
   };

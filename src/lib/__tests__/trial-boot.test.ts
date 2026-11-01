@@ -172,6 +172,28 @@ describe("정상 경로 — 메모리에만 주입, 원본 불변", () => {
   });
 });
 
+describe("체험 주입 닉네임(ui-review R2)", () => {
+  const nick = (m: Storage) => JSON.parse(m.getItem("secretasset_asset_data")!).nickname;
+  it("체험 경로는 닉네임을 비운다, preview ?demo=1 경로(기본)는 '데모' 그대로, 데모 JSON 원본 불변", async () => {
+    const raw = readFileSync(path.resolve(__dirname, "../preview/demo-data.json"), "utf8");
+    const { injectDemoPayload } = await import("../preview/demo-inject");
+    const a = createMemoryStorage();
+    stubBrowser(a);
+    await injectDemoPayload({ nickname: "" });
+    expect(nick(a)).toBe("");
+    vi.unstubAllGlobals();
+    const b = createMemoryStorage();
+    stubBrowser(b);
+    await injectDemoPayload();
+    expect(nick(b)).toBe("데모");
+    expect(JSON.parse(raw).nickname).toBe("데모"); // 데모 JSON은 fs로만 읽는다(preview-safety 9번)
+    expect(readFileSync(path.resolve(__dirname, "../preview/demo-data.json"), "utf8")).toBe(raw);
+  });
+  it("runTrialBoot은 닉네임 빈 값으로 주입", () => {
+    expect(readFileSync(path.resolve(__dirname, "../trial/trial-boot.ts"), "utf8")).toContain('await injectDemoPayload({ nickname: "" });');
+  });
+});
+
 describe("S1 모킹 — 실패하면 주입 0·원본 해시 동일·체험 아님", () => {
   const run = async (win: unknown, original: Storage) => {
     const inject = vi.fn(async () => {});

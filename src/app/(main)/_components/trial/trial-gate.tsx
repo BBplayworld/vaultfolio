@@ -56,11 +56,14 @@ function TrialGateInner({ children }: { children?: ReactNode }) {
       className="fixed inset-0 flex items-center justify-center bg-background"
       style={{ zIndex: Z_LAYER.gate }}
     >
-      <Loader2
+      {/* 페이드(바깥)와 회전(안쪽)은 같은 animation 속성이라 노드를 나눈다 — 300ms 지연은 페이드에만 */}
+      <span
         aria-hidden
-        className="size-5 text-muted-foreground motion-safe:animate-spin motion-safe:animate-in motion-safe:fade-in"
+        className="motion-safe:animate-in motion-safe:fade-in"
         style={{ animationDelay: "300ms", animationFillMode: "backwards" }}
-      />
+      >
+        <Loader2 className="size-5 text-muted-foreground motion-safe:animate-spin" />
+      </span>
       <span className="sr-only">불러오는 중</span>
     </div>
   );

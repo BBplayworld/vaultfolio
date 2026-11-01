@@ -11,12 +11,23 @@ import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { markCurrentNoticeSeen } from "@/lib/home-tip";
 
-/** 데모 payload 주입 — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다 */
-export async function injectDemoPayload(): Promise<void> {
+/**
+ * 데모 payload 주입 — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다.
+ * nickname을 주면 주입본의 닉네임만 바꾼다(체험 #59: "" → Hero 기본 라벨 "순자산"). 데모 JSON 원본은 바꾸지 않는다.
+ */
+export async function injectDemoPayload({ nickname }: { nickname?: string } = {}): Promise<void> {
   const mod = await import("@/lib/preview/demo-data.json");
-  applyImportedPayload(materializeDemo(mod.default, kstToday()));
+  const payload = materializeDemo(mod.default, kstToday());
+  applyImportedPayload(nickname === undefined ? payload : withNickname(payload, nickname));
   // assetRefresh는 clearAssetData의 보존 키라 import로 덮이지 않음 → 기존 키·형식으로 직접 기록(멱등)
   localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
+}
+
+// materializeDemo 결과(새 객체)의 최상위·assetData 닉네임만 교체한 사본
+function withNickname(payload: unknown, nickname: string): unknown {
+  const p = payload as Record<string, unknown>;
+  const assetData = p.assetData && typeof p.assetData === "object" ? { ...(p.assetData as Record<string, unknown>), nickname } : p.assetData;
+  return { ...p, nickname, assetData };
 }
 
 /**
