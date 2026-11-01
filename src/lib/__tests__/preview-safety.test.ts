@@ -233,9 +233,9 @@ describe("9. 데모 JSON 정적 import 0건", () => {
     const staticImport = /import\s+[^("']*from\s+["'][^"']*demo-data\.json["']/;
     const offenders = files.filter((f) => staticImport.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
-    // 동적 import는 게이트 1곳에만 존재
+    // 동적 import는 공용 주입 모듈 1곳에만 존재(#59: preview-gate·체험 게이트가 demo-inject를 공유 — 의도된 갱신)
     const dynamicUsers = files.filter((f) => /import\(\s*["'][^"']*demo-data\.json["']\s*\)/.test(readFileSync(f, "utf8")));
-    expect(dynamicUsers.map((f) => path.basename(f))).toEqual(["preview-gate.tsx"]);
+    expect(dynamicUsers.map((f) => path.basename(f))).toEqual(["demo-inject.ts"]);
   });
 });
 
