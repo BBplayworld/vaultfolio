@@ -402,6 +402,22 @@ copyUrlForIOS(urlOrPromise)                                  // 제스처 보존
 ```
 - 인앱 감지 `IN_APP_BROWSER_RE`(detect-browser.ts)에 #4.38 `barcelona`(Threads)·`daumapps`(다음)·`band\/`(밴드) 추가. 오탐은 `isBackgroundWorkBlocked`로 시세 갱신까지 멈추므로 토큰 추가 시 음성 UA 고정 테스트(`detect-browser-inapp.test.ts`) 필수
 
+### asset/screenshot-stock-map.ts (#4.39) — 주식 스크린샷 응답 → 등록용 매핑 **단일 구현**
+```typescript
+mapParsedStocks(raw: ParsedStock[], { activeTab }) → { stocks, defaultCategory, defaultBroker, isMixed }  // 공통 일괄 변환은 하지 않음
+applyCommonDefaults(stocks, defaultCategory, defaultBroker, usdRate)  // 공통 모드 일괄 적용(카테고리 변환+증권사)
+convertStockCategory(stock, category, usdRate)  // foreign↔domestic 가격/통화 환산
+isMixedSections(raw)  // 국내(또는 기타)와 해외 section 공존
+```
+- `StockScreenshotImport` 업로드 경로와 인계 경로(`initialParsed`)가 공용. **혼합(`isMixed`)이거나 인계면 개별 모드로 시작**, 단일 section 업로드만 공통 모드(#64)
+
+### ratio-preview/ (#4.39 #63) — 비중 미리보기 순수 로직
+- `ratio-list.ts`: `buildRatioList(raw, {USD, JPY(100엔당)}) → RatioResult`(비중 %·종목 수만, 금액 필드 없음), `largestRemainderTenths`(0.1% 단위 합 1000 보정), `stockValueKrw`. 종목 수는 인식 전체, 비중은 가격 있는 종목 기준
+- `handoff.ts`: `setHandoff/peekHandoff/takeHandoff`(모듈 메모리, 10분 타이머로 참조 삭제, 1회 소비), `canOpenHandoff(gate)`(isDataLoaded·!잠금·!공유대기·!마법사·!체험; 튜토리얼 activeStep은 조건 아님)
+- `analytics/utm-allow.ts` `allowedUtmQuery(pathname, search)`: `/ratio`에서만 utm_source|medium|campaign(`[A-Za-z0-9._-]{1,50}`)을 `ga.ts pageLocation()`에 부착
+- 서버 `api-guard.ts`: `reserveGeminiCalls(request, n, msg, pool?)` + `RATIO_POOL`(입구 전역 60·IP 5/일)·`isRatioEntry(request, entry)`. 순서 IP일반→입구IP→입구전역→전역, 실패 시 앞 단계 전부 −n
+- `config/app.ts` `OG_IMAGE`(루트 layout·/ratio 공용), `security-copy.ts` `RATIO_PREVIEW_UPLOAD_NOTICE`(저장 전용 고지, `SCREENSHOT_UPLOAD_NOTICE`와 병치 금지), `useExternalMove(isIOS, onTrack?)`(미전달 시 기존 pwa_install 계측)
+
 ### config/security-copy.ts (#4.38) — 보안 안내 문구 **단일 출처**
 - `SECURITY_COPY`(카드 3 `{ id: local|sync|admin, title, desc }`, 웰컴 보안 상세·앱가이드 공용), `APP_GUIDE_SECURITY_DESC`, `SYNC_MENU_SECURITY_DESC`(동기화 메뉴 설명 마지막 문장), `SCREENSHOT_UPLOAD_NOTICE`(업로드 박스 4종). 텍스트만(React·아이콘 import 없음)
 - **동기화 암호화 설명 5문장은 `DEVICE_ENCRYPTION_COPY` 한 블록**(대표 지시로 실제 방식 기준 명칭 확정: "기기에서 암호화하는 동기화", 본문은 "기기에서 암호화…(종단간 암호화)"). 바꿀 때 블록만 교체. 옛 표현 재유입은 테스트가 `src/` 전체에서 막는다. "관리자도 알 수 없어요"는 동기화 자산 한정. "저장·전송"은 `\u2060` 묶음

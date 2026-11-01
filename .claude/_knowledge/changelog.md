@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-01 (v4.39)
+
+### 주식 스크린샷 국내·해외 혼합 인식 결함 수정 (#4.39, 이슈 #64)
+- **왜**: 공통 모드가 파싱 직후 전 종목을 한 카테고리로 변환해, 혼합 캡처의 소수 쪽 종목이 카테고리·통화·가격(×/÷환율)까지 바뀐 채 저장될 수 있었다.
+- 매핑을 `lib/asset/screenshot-stock-map.ts` 순수 함수로 분리, 국내·해외가 섞이면 개별 선택 모드로 시작(공통 적용은 사용자가 누를 때만). 단일 section 결과는 현행과 동일(vitest 고정). 저장 경로·기존 기록 보정 없음.
+
+### 스크린샷 비중 미리보기 `/ratio` (#4.39, 이슈 #63, risk medium)
+- **왜**: 설치·금고 없이 캡처 1장으로 종목 비중을 먼저 보여 줄 입구가 없어 첫 방문 → 첫 저장 전환이 0이었다.
+- `(main)` 밖 공개 라우트. 업로드(`entry=ratio`) → 비중 %·국내/해외 비율·종목 수만 표시(금액 없음, largest remainder로 합 100.0). 저장 버튼은 모듈 메모리 인계(`ratio-preview/handoff.ts`, 10분·1회) 후 `/` 이동, `(main)/layout.tsx`의 `RatioHandoffHost`가 조건(`canOpenHandoff`) 충족 시 `StockScreenshotImport initialParsed`(개별 모드)로 연다. 인앱은 외부 열기 안내(인계 없음, 재업로드).
+- 서버: `reserveGeminiCalls` 선택 인자 `pool`(입구 전역 60·IP 5/일, entry 또는 Referer 판정, 실패 시 앞 단계 전부 롤백) — 입구 요청의 429는 마감 문구.
+- GA: `/v/ratio`, category `ratio_preview`, UTM 3키는 `ga.ts pageLocation()`에서만 `/ratio`일 때 부착(`utm-allow.ts`). `useExternalMove(isIOS, onTrack?)`. `OG_IMAGE`는 `config/app.ts`로 이동. 스키마·저장 키 무변경.
+
+---
+
 ## 2026-11-01 (v4.38)
 
 ### 보안 안내 문구 정정 (#4.38, 이슈 #61)
