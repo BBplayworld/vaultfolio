@@ -15,7 +15,8 @@ export interface BrowserEnv {
 }
 
 // 인앱 브라우저(홈 화면 추가 불가 → 외부 브라우저 유도)
-export const IN_APP_BROWSER_RE = /kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp/;
+// barcelona=Threads, daumapps=다음, band/=밴드(#60). 오탐은 백그라운드 갱신 차단으로 이어지므로 토큰 추가 시 음성 UA 테스트 필수
+export const IN_APP_BROWSER_RE = /kakaotalk|instagram|fbav|fban|fb_iab|line\/|naver\(inapp|barcelona|daumapps|band\//;
 
 // iOS Safari 신형 가이드(⋯ 메뉴 → 공유) 적용 최소 메이저 버전.
 // iOS 18부터 하단 단일 바에 ⋯ 더보기 메뉴 도입 → 그 안에서 공유. iOS 17 이하는 공유 버튼 직접 탭(구형).

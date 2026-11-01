@@ -108,6 +108,7 @@ _components/
 - `open/onOpenChange` props로 외부 제어
 - `useGeminiUsage()` hook으로 클라이언트 하루 한도(15회) 체크
 - **중복 처리:** stock/crypto → merge/reset 선택, cash/loan → 항상 append
+- **업로드 전 고지 박스(#4.38)**: stock·crypto·cash·loan 4종 동일 — `rounded-md bg-muted/50 px-3 py-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep`(테두리 없음) + `SCREENSHOT_UPLOAD_NOTICE`(`src/config/security-copy.ts`). 문구를 파일에 직접 쓰지 않는다
 
 ---
 
@@ -209,7 +210,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 - `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `Logo`(`src/components/logo.tsx`, size=22, 추가 마진 없음) + `InlineSelector`(상세/성과, `className="ml-2"`)** — 2026-09 추가. 로고 정렬 기준은 대시보드 최상단 카드 텍스트가 아니라 **카드 색상 박스(`bg-primary/10`) 자체의 외곽 모서리** — 이 모서리가 페이지 콘텐츠 영역(`data-content-area`) 좌측 끝과 같은 지점이라 top-bar `px-3` 패딩만으로 이미 정렬됨(카드 "텍스트" 시작선에 맞추려 `ml-4`를 넣었다가 모바일에서 카드보다 오른쪽으로 처지는 회귀가 있었음 — 되돌림). `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 이 로고와는 무관. 로고~`InlineSelector` 사이 여유 공간은 `InlineSelector`의 `className="ml-2"`로 확보(박스만 우측 이동, 로고 위치 불변). `InlineSelector`의 `size="xl"` 변형(이 자리 전용, 다른 소비처 없음)은 버튼 좌우 패딩을 `px-4`→`px-3`로 축소. 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
 - `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성)
 - `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
-- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치)
+- `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치). `AppGuideContent` 카드 3개는 `SECURITY_COPY.map`(웰컴 보안 상세와 같은 상수, id→아이콘 `ShieldCheck`·`CloudLightning`·`EyeOff`), 설명 마지막 문장 `APP_GUIDE_SECURITY_DESC`(#4.38). 기술 용어 강조 span 없음
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
 
 ### BottomNav (`pwa/bottom-nav.tsx`)
@@ -324,14 +325,29 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 첫 진입 안내 페이지. `page.tsx`의 `isWelcomeGuide` 분기에서 `<AppGuide />` 위에 표시.
 
 - 순자산 카드: `DataSourceBadge kind="realtime"` 포함, `bgLight` 토대
+- 보안 상세 카드 3장 = `SECURITY_COPY`(#4.38, 앱가이드와 같은 상수). 신뢰 한 줄은 "로그인 없음 · 자산은 내 기기에 저장 · 원하면 암호화 동기화"(nowrap 묶음 3개, `text-balance` 없음)
 - 미리보기 데이터: `welcome-preview-data.json`
 - 미리보기 대시보드: 실제 `dashboard.tsx` 컴포넌트를 공통 공유하여 동일 포맷으로 노출하되, 내부의 클릭이나 인터랙션은 차단/방지 처리.
 - `StockSummaryHeader`에 `currencyGain`/`dailyProfit`/`dailyProfitRate`/`screenshotMode={false}` 전달
 - **블록 순서(#4.35 "가치 먼저")**: ① 히어로(제목+쉬운 말 한 줄, 배지 없음) ② 신뢰 한 줄 + "자세히 보기" 토글 + 보안 상세(기존 `FeatureCard` 3장 원문, 제자리 grid-rows 펼침·기본 접힘·`inert`, 저장 안 함, GA 없음) ③ 예시 순자산(`NetAssetSummaryBox`) ④ **CTA 단일 슬롯**(#33 대체 지점) ⑤ 주식 미리보기("주식 미리보기"+예시 데이터 라벨) + 안내 문구 ⑥ 설치 박스(데스크톱·태블릿 미설치만, 1행). 루트 `space-y-5`
-- **CTA 슬롯**: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall })` → `pending`(마운트 전, 빈 셸 `min-h-[152px]`, SSR 동일) / `install`(모바일 웹 미설치: `WelcomeInstallCta` = 설치 brand + "웹에서 바로 시작" secondary + 캡션) / `asset`(`WelcomeAssetCta` = 스크린샷 등록 brand + 직접 입력·가져오기 secondary Popover). 셸 노드 유지, 콘텐츠만 교체. 바로 시작 후 포커스 → `welcome-cta-wizard`
+- **CTA 슬롯**: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall, isInApp })` → `pending`(마운트 전, 빈 셸 `min-h-[152px]`, SSR 동일) / **`inapp`(#4.38, 인앱 브라우저·standalone 아님 — mounted 다음 최우선)**: `WelcomeInAppCta({ isIOS })` = 제목 "자산 등록은 Chrome·Safari에서 시작해요"(nowrap 묶음)·본문·brand "외부 브라우저에서 시작하기"(`useExternalMove`, 처리 중 disabled+Loader2). iOS는 버튼 아래 항상 마운트된 grid-rows 펼침(`welcome-inapp-guide`, 래퍼 `pt-5 break-keep`) 안에 `InAppExternalGuide notice={캡션} lastStep=…`. 제목+버튼만 `space-y-5`, 가이드는 형제(닫힘 여백 0). 등록·설치·바로 시작·file input 미렌더, 데스크톱 설치 박스도 숨김 / `install`(모바일 웹 미설치: `WelcomeInstallCta` = 설치 brand + "웹에서 바로 시작" secondary + 캡션) / `asset`(`WelcomeAssetCta` = 스크린샷 등록 brand + 직접 입력·가져오기 secondary Popover). 셸 노드 유지, 콘텐츠만 교체. 바로 시작 후 포커스 → `welcome-cta-wizard`
 - GA 매핑 순수 함수: `welcomeSource(standalone, inApp)`, `WELCOME_CTA_METHODS`(값은 기존 `PARAM_VALUES`와 동일)
-- 고정 testid(qa 계약): `welcome-hero`·`welcome-trust`·`welcome-security-toggle`·`welcome-security-detail`·`welcome-preview-net`·`welcome-cta-slot`(`data-state`)·`welcome-install-btn`·`welcome-skip-install-btn`·`welcome-cta-wizard`·`welcome-cta-more`·`welcome-preview-stock`·`welcome-install-box`
+- **③ 라벨 행 "직접 둘러보기"(#4.38 #59)**: `PreviewLabel`에 선택 prop `action`(있으면 제목+배지 `flex-wrap` 묶음 + 액션 첫 줄 오른쪽, `items-start`). `WelcomeTrialLink` 칩(`welcome-trial-link`, `bg-brand/15` 틴트·`h-8 -my-1.5`+`after:-inset-1` 40px 히트·연타는 ref 가드 1회) → `trackThenNavigate("feature_use",{category:"demo"},"/?trial=1")`. 노출 = 마운트 후 && `allowTrial`(page: `!isSharePending`) && 복원 해시 없음. 체험 종료 복귀: 별도 effect가 `trial_exit` 소비 → `onboarding_action{trial_start}` 1회 → `showAssetCta`(asset 상태·wizard 포커스)
+- 고정 testid(qa 계약): `welcome-trial-link`(#59)·`welcome-cta-inapp`·`welcome-inapp-guide`·`welcome-inapp-caption`(#4.38)·`welcome-hero`·`welcome-trust`·`welcome-security-toggle`·`welcome-security-detail`·`welcome-preview-net`·`welcome-cta-slot`(`data-state`)·`welcome-install-btn`·`welcome-skip-install-btn`·`welcome-cta-wizard`·`welcome-cta-more`·`welcome-preview-stock`·`welcome-install-box`
 - 설치 버튼(`InstallButton`, 파일 내부)은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출. 모바일은 슬롯, 데스크톱은 설치 박스에만 렌더(화면당 1개)
+
+### InAppBrowserGate (`pwa/in-app-browser-gate.tsx`) · InAppExternalGuide (`pwa/in-app-external-guide.tsx`)
+- 게이트는 `resolveInAppGate(env)`(state-and-utils) 결과만 따른다: `none`·`welcome` 미렌더 / `cover` = 데이터 로드 전 문구 없는 `fixed inset-0 bg-background`(`Z_LAYER.gate`, `data-testid="inapp-gate-cover"`, `aria-hidden`) / `gate` = **같은 루트 노드**에 기존 경고·PIN 내용(노드 교체 없음). 외부 이동은 `useExternalMove`(#4.38)
+- `InAppExternalGuide({ lastStep?, notice? })` — `notice`(#4.38)를 넘기면 앰버 블록 안쪽(제목+"앱 설치 기능…" 문장)만 대체, 아이콘·1~3단계·하단 안내 유지. 미전달 시 기존 문구(설치 흐름·1건 이상 게이트). 소비처: 게이트, `pwa-install-flow` inAppStep, 웰컴 inapp 슬롯
+
+### TrialGate (`trial/trial-gate.tsx`, #4.38 #59) — 체험 모드 게이트(운영 포함)
+- `(main)/layout.tsx`에서 `ReactQueryProvider` 안·**PreviewGate 바깥**(데모를 넣은 메모리를 PreviewGate가 읽게)·`AssetDataProvider` 바깥
+- `useSearchParams()`로 `?trial=1`을 첫 렌더에 1회 고정(SSR 동일). 없으면 `<>{children}</>`(DOM 추가 0). 있으면 children 보류 + 로딩 덮개(`trial-gate-loading`, `fixed inset-0 bg-background`·`Z_LAYER.gate`, 문구 없음·sr-only "불러오는 중", 페이드는 바깥 span 300ms 지연·회전은 안쪽 Loader2 — 같은 `animation` 속성이라 노드 분리) → `trial-boot` 동적 import → `trial`/`rejected`는 children, `failed`는 `location.reload()`
+
+### TrialBanner (`views/home/trial-banner.tsx`, #4.38 #59) — 체험 "예시" 표기 정본 1곳
+- `page.tsx` 정상 분기 `isTrialMode() && view.type === "home"`일 때 `AssetPageTabs` 앞 in-flow(고정 아님). 상세·성과에는 배지 추가 금지
+- 중립 카드 면 + 주황 아이콘 칩(`Compass`) + brand "내 자산으로 시작"(`trial-start-btn`) 1개, `data-screenshot-hide`. 탭 → sessionStorage `trial_exit=1` → `location.assign("/")`. 인앱은 `useExternalMove`(iOS는 `trial-inapp-guide` 펼침, 표식 없음)
+- 체험 중 숨김(1줄 가드): FAB(`page.tsx`), TopBar 더보기·설치(`PwaInstallButton` — 설치 흐름이 /api/share 사용), BottomNav `update`·`more`. 인증카드 유지
 
 ### PreviewGate (`preview/preview-gate.tsx`, #4.34) — Vercel preview 전용
 - `(main)/layout.tsx`가 `isPreviewEnv()`일 때만 `next/dynamic`으로 렌더해 `AssetDataProvider` 바깥을 감싼다. 운영·로컬은 children 그대로(DOM 추가 0)

@@ -8,6 +8,7 @@ import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { ShareScreenshotDialog } from "../header-menu/share/share-menu";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 type NavItem = {
   id: string;
@@ -109,7 +110,8 @@ export function BottomNav() {
     <>
       <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border" style={{ zIndex: Z_LAYER.nav }}>
         <div className="flex items-center justify-around px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+          {/* 체험 모드(#59): 업데이트(등록)·더보기(설정·외부 전송) 숨김 — justify-around라 빈 자리 없음 */}
+          {(isTrialMode() ? NAV_ITEMS.filter(({ id }) => id !== "update" && id !== "more") : NAV_ITEMS).map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;
             const isCenter = id === "update";
             const isAction = id === "update" || id === "screenshot";

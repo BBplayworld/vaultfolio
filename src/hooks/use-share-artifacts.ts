@@ -1,7 +1,7 @@
 "use client";
 
 import { useAssetData } from "@/contexts/asset-data-context";
-import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset/asset-storage";
+import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage, hasAnyAssets } from "@/lib/asset/asset-storage";
 import { getProfitBasis } from "@/lib/finance/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
@@ -17,12 +17,7 @@ export function useShareArtifacts() {
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const nickname = assetData.nickname || "";
 
-  const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+  const hasAssets = hasAnyAssets(assetData);
 
   /** 자산 없거나 서버 실패 시 null. pin이 있으면 v72Z(Zero-Knowledge), 없으면 서버 저장 거부됨. */
   const generateShareArtifacts = async (

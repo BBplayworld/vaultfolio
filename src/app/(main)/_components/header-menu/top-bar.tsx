@@ -11,6 +11,7 @@ import { recordVisit } from "@/lib/feature-usage";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallButton } from "../pwa/pwa-install-button";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
@@ -109,8 +110,10 @@ export function TopBar() {
     view.type === "home" ||
     (view.type === "detail" && (view.tab === "hub" || view.tab === "stocks")) ||
     (view.type === "activity" && (view.tab === "hub" || view.tab === "change"));
-  const showMore = view.type === "home" && !isWelcomeGuide;
-  const showInstall = true;
+  // 체험 모드(#59): 더보기(공유·피드백·동기화·설정)·설치(설치 흐름이 /api/share 사용) 숨김, 인증카드(로컬 PNG)는 유지
+  const trial = isTrialMode();
+  const showMore = view.type === "home" && !isWelcomeGuide && !trial;
+  const showInstall = !trial;
 
   const onHomeTabChange = (tab: HomeTop) => {
     if (tab === "detail") navigate({ type: "detail", tab: "hub" });

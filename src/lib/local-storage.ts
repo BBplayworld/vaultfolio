@@ -45,7 +45,7 @@ export const STORAGE_KEYS = {
   gaFlags: "secretasset_ga_flags",
 } as const;
 
-const LEGACY_KEYS = {
+export const LEGACY_KEYS = {
   assetData:            "secretasset-asset-data",
   exchangeRate:         "exchange-rate-usd-krw",
   collapsibleUsed:      "stock-tab-collapsible-used",

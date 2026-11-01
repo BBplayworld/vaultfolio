@@ -386,10 +386,49 @@ UI(`pwa-lock-screen.tsx`)가 아니라 순수 모듈에 두는 이유: 잠금화
 **해제 순서 = `markPwaAuthenticated()` → `try { await unlockAndLoad() } finally { emitPwaUnlocked() }`.** 기록을 먼저 하지 않으면 `unlockAndLoad`가 자기 가드에 막히고, 뒤 둘을 병렬로 두면 원격 pull과 로컬 시세·스냅샷 저장이 서로를 덮어쓴다. `finally`가 없으면 `unlockAndLoad`가 throw할 때 해제 알림이 유실된다.
 **`setPwaAuthPin`은 반드시 `markPwaAuthenticated()`를 함께 호출한다** — 방금 잠금을 설정한 세션은 정의상 인증된 세션이다. 빠뜨리면 설정 직후 `isPwaLocked()`가 true로 굳는데 잠금화면은 마운트 시에만 판정해 뜨지 않고, 그 세션의 push·pull·시세·스냅샷이 전부 무증상 정지한다(과거 회귀).
 
+### pwa/in-app-browser-gate.tsx 순수 함수 (#4.38) — 인앱 게이트 판정
+```typescript
+resolveInAppGate(env) → "none" | "cover" | "welcome" | "gate"
+  // !mounted ‖ standalone ‖ !isInApp → none / !isDataLoaded → cover(빈 덮개)
+  // 자산 0건 && !isSharePending && !syncAssetId && !restoreHash → welcome(게이트 미렌더, 웰컴 inapp 슬롯이 안내) / 그 외 gate(현행)
+hasRestoreHash(hash): boolean   // share·sync·asset·vault 해시 — 처리 후 replaceState로 지워지므로 게이트는 첫 렌더에 1회 캡처(useState 초기화)
+```
+
+### hooks/use-external-move.ts (#4.38) — 인앱 → 외부 브라우저 이동 **단일 구현**
+```typescript
+useExternalMove(isIOS) → { go(urlOrPromise), iosFallback }   // 게이트·웰컴 inapp 슬롯 공용
+moveExternal({ isIOS, url, copy, openExternal, onTrack })    // 순수 판정: iOS 복사 → "ios-fallback" / 그 외 openExternalBrowser → "opened", GA pwa_install inapp_move 호출당 1회
+copyUrlForIOS(urlOrPromise)                                  // 제스처 보존 ClipboardItem(Promise) → 실패 시 writeText
+```
+- 인앱 감지 `IN_APP_BROWSER_RE`(detect-browser.ts)에 #4.38 `barcelona`(Threads)·`daumapps`(다음)·`band\/`(밴드) 추가. 오탐은 `isBackgroundWorkBlocked`로 시세 갱신까지 멈추므로 토큰 추가 시 음성 UA 고정 테스트(`detect-browser-inapp.test.ts`) 필수
+
+### config/security-copy.ts (#4.38) — 보안 안내 문구 **단일 출처**
+- `SECURITY_COPY`(카드 3 `{ id: local|sync|admin, title, desc }`, 웰컴 보안 상세·앱가이드 공용), `APP_GUIDE_SECURITY_DESC`, `SYNC_MENU_SECURITY_DESC`(동기화 메뉴 설명 마지막 문장), `SCREENSHOT_UPLOAD_NOTICE`(업로드 박스 4종). 텍스트만(React·아이콘 import 없음)
+- **동기화 암호화 설명 5문장은 `DEVICE_ENCRYPTION_COPY` 한 블록**(대표 지시로 실제 방식 기준 명칭 확정: "기기에서 암호화하는 동기화", 본문은 "기기에서 암호화…(종단간 암호화)"). 바꿀 때 블록만 교체. 옛 표현 재유입은 테스트가 `src/` 전체에서 막는다. "관리자도 알 수 없어요"는 동기화 자산 한정. "저장·전송"은 `\u2060` 묶음
+- 근거 1줄: 자산 암호화는 AES-256-GCM 1겹(기기 종단) + 전송 구간 HTTPS = "기기 종단 암호화 + 전송 구간 암호화". 새 안내 문구에 "서버"를 주어로 한 역할 나열 금지
+
+### trial/ — 체험 모드 (#4.38 #59, risk high)
+- `trial-mode.ts`(정적·의존 0): `isTrialMode()`, `markTrialActive()`(게이트 전용, 되돌리는 경로 없음), `TRIAL_QUERY_KEY`·`TRIAL_ENTRY_URL`·`TRIAL_EXIT_KEY`(sessionStorage)·`TRIAL_BLOCKED_PATHS`(`/api/parse-screenshot`·`/api/share`·`/api/sync`·`/api/feedback` 및 하위)·`TRIAL_BLOCKED_MESSAGE`("체험 중에는 사용할 수 없어요")
+- `trial-boot.ts`(**동적 import 전용**, 정적 import 0건 테스트):
+  - `trialRejectReason(original, hash)` — 메모리 설치 **전** 원본을 `getItem`·`Object.keys`·`JSON.parse`로만(getAssetData 금지 — 구버전 마이그레이션 쓰기). 거부: 자산 데이터 손상·비객체·배열 아닌 값·1건 이상 / 구버전 `secretasset-asset-data` / `secretasset_sync` / `secretasset_pwa_auth*` / 복원 해시
+  - `createMemoryStorage()` — 키를 own 열거 속성으로(`clearAssetData`의 `Object.keys(localStorage)` 정리 동작). GA `ga-optout`·`ga-debug`만 원본에서 복사
+  - `bootTrial(deps)` → `"trial" | "rejected" | "failed"`: `window.localStorage` defineProperty + `window.fetch = createTrialFetch(...)`(복구 코드 없음) → 검증 5종(window·전역 식별자·probe 원본 미누출·열거·fetch) 통과 시에만 `markTrialActive` + 주입. 원본 쓰기는 probe 누출 시 removeItem 1건뿐
+  - `isTrialBlockedRequest(input, base)`(같은 출처 + 거부 경로, 해석 실패=거부) · `trialBlockedResponse()`(합성 403 `{error}` — 호출처가 토스트로 띄움)
+  - `runTrialBoot()` — 실제 주입은 `injectDemoPayload({ nickname: "" })`(Hero "순자산") + `skipDemoTutorial()`, 결과와 무관하게 `?trial` 제거
+- 가드(1줄씩): `isCloudSyncEnabled() && !isTrialMode()`, `isBackgroundWorkBlocked() … || isTrialMode()`, `resolveInAppGate({ isTrial })` 맨 앞 none, ga.ts 3함수 no-op, 루트 layout 인라인 GA `trial=1 → ga-disable-<ID>`
+- sessionStorage는 격리하지 않음(알려진 한계)
+
+### preview/demo-inject.ts (#4.38) — 데모 주입 공용 절차(preview `?demo=1`·체험)
+```typescript
+injectDemoPayload({ nickname? })   // 데모 JSON 동적 import(이 파일만) → materializeDemo → applyImportedPayload(전역 localStorage 대상) + assetRefresh 메타. nickname 주면 주입본 사본만 교체
+skipDemoTutorial({ marker? })      // 튜토리얼 전체 건너뛰기 + 공지 읽음(GA 없음) + initTutorial, marker는 preview 표식
+stripQueryParams(keys)             // replaceState로 쿼리 키 제거(해시 유지)
+```
+
 ### pwa/background-gate.ts — 자동 백그라운드 동작 차단 판정
 
 ```typescript
-isBackgroundWorkBlocked(): boolean       // isInAppGateActive() || isPwaLocked()
+isBackgroundWorkBlocked(): boolean       // isInAppGateActive() || isPwaLocked() || isTrialMode()(#4.38)
 ```
 전체화면 게이트(인앱 브라우저 게이트·앱 잠금)가 덮고 있는 동안 시세·환율·코인·스냅샷 저장·부동산 재조회·연결 모달 등 **사용자가 인지하지 못하는 부작용**을 막는다. 게이트가 2종이라 지점마다 따로 쓰면 한쪽을 빠뜨리므로 반드시 이 함수를 경유한다(R22).
 
@@ -442,6 +481,8 @@ labelOf(key, code): string                        // PARAM_LABELS 조회
 countAssets(data) / assetCountBucket(n) / toGaAssetType(kebab) / screenPath(viewKey)
 ```
 - gtag 부재(로컬·preview·옵트아웃)·예외 시 no-op — 앱 흐름 영향 0. `window.gtag` 직접 호출 금지, 금액·종목·티커·닉네임·ID 전송 금지.
+- `trackThenNavigate(name, params, url, navigate?)`(#4.38 #59) — 이벤트 후 이동. `event_callback` 또는 `NAVIGATE_TRACK_TIMEOUT_MS`(300) 중 먼저 오는 쪽에서 1회 `location.assign`. 체험 중·gtag 없음·예외는 즉시 이동. 체험 페이지에서는 `track`·`trackScreen`·`setUserProps` 전부 no-op
+- #4.38 추가 값: category `demo`("체험 모드", 진입 `feature_use`), method `trial_start`("체험 후 시작", 복귀 웰컴 `onboarding_action`)
 - #4.37 추가 값: category `ai_prompt`("AI 프롬프트"), method `prompt_copy`("프롬프트 복사"), source `settlement`("결산 화면")·`report`("자산 성적표") — AI 질문 복사 성공 시 `feature_use`
 - 신규 이벤트·값은 `GaEvent`·`PARAM_VALUES`에 추가하고 `PARAM_LABELS`에 한국어 라벨을 함께 추가(누락 시 타입 오류).
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
@@ -488,6 +529,7 @@ writeTutorialStatus(map): void
 ### asset-storage.ts
 
 ```typescript
+hasAnyAssets(d): boolean   // #4.38 5배열(부동산·주식·코인·현금·대출) 1건 이상. page.tsx·use-share-artifacts·preview-gate 공용(배열 존재 전제 — 원본 JSON은 정규화 후). top-bar·bottom-nav·asset-data-context의 같은 식은 미교체(후보)
 getAssetData(): AssetData
 saveAssetData(data): boolean
 exportAssetData(currentData?): boolean   // currentData 전달 시 저장소와 어긋나면 중단하고 false

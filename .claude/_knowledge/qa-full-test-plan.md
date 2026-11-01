@@ -372,9 +372,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 PWA 외부 공유 대상(Web Share Target)을 통해 자산 동기화 링크가 공유 되었을 때, 진입 즉시 쿼리 파라미터(`url`/`text`)에서 해시를 추출하여 연결/복구 창으로 즉각 라우팅하는지 확인
 
 #### 인앱 브라우저 하드 게이트 (R22)
-- ⚙ **게이트 렌더 조건**([in-app-browser-gate.tsx](../../src/app/(main)/_components/pwa/in-app-browser-gate.tsx)): `isInApp && !isStandalone`일 때만 전체화면 오버레이(`layout.tsx`에 `AssetDataProvider`·`CloudSyncProvider` 하위 마운트). 일반 브라우저·PWA standalone은 `null`(앱 정상)
+- ⚙ **게이트 렌더 조건**([in-app-browser-gate.tsx](../../src/app/(main)/_components/pwa/in-app-browser-gate.tsx)): `resolveInAppGate` — 일반 브라우저·PWA standalone은 `null`(앱 정상) / 인앱 + 로드 전 = 문구 없는 빈 덮개(`inapp-gate-cover`) / **인앱 + 자산 0건 + 공유 대기·동기화 assetId·복원 해시(share·sync·asset·vault, 첫 렌더 캡처) 없음 = 게이트 미렌더 → 웰컴 inapp 슬롯**(#4.38) / 그 외 = 같은 노드에 현행 게이트(`layout.tsx`에 `AssetDataProvider`·`CloudSyncProvider` 하위 마운트)
+- 👤 **인앱 도착(#4.38)**: 카톡 UA + 0건 + 해시 없음 → 웰컴, 슬롯 `data-state=inapp`, `welcome-cta-wizard`·`welcome-cta-more`·설치 버튼 부재. Android 버튼 → `kakaotalk://`/`intent://`, iOS → 주소 복사 + `welcome-inapp-guide` 0fr→1fr, "주소가 복사됐어요…" 1회·"앱 설치 기능" 문장 없음. 1건 이상·`#share`·`#sync`·동기화 보유 → 로드 전 빈 덮개 → 같은 노드에 현행 게이트. 설치 흐름·1건 이상 게이트의 iOS 가이드는 기존 문구(`notice` 미전달)
+- ⚙ **인앱 감지 토큰**: 기존 + `barcelona`·`daumapps`·`band/`. 양성(Threads·다음·밴드)·음성(Chrome·Safari·삼성·웨일·Edge·Firefox iOS/Android, 데스크톱) UA 고정 테스트 `src/lib/__tests__/detect-browser-inapp.test.ts`. 실기기 UA 미수집(C9, 추정)
 - ⚙ **외부 이동 유틸**([open-external-browser.ts](../../src/lib/pwa/open-external-browser.ts) `openExternalBrowser`): Android 카카오톡=`kakaotalk://web/openExternal?url=`, Android 그 외=`intent://<host><path>#Intent;scheme=https;S.browser_fallback_url=<enc>;end`(원본 해시는 intent `#Intent` 구분자 충돌 방지 위해 fallback_url에만 담음), **iOS=`false` 반환**(자동 이동 스킴 없음→호출측 수동 폴백)
-- ⚙ **자산 이동 분기**: 자산 없음→origin URL 이동 / 자산 있음→PIN 4자리 입력 후 `useShareArtifacts().generateShareArtifacts(pin)`로 `#share=` URL 생성 이동(실패 시 origin 폴백) / 동기화 기기→PIN 없이 `syncLink` 이동. iOS는 `go()`가 제스처 보존 `ClipboardItem` Promise로 대상 URL 복사 후 `InAppExternalGuide`(3단계 수동 가이드, `pwa-install-flow` inAppStep과 공용) 노출
+- ⚙ **자산 이동 분기**: 자산 없음→origin URL 이동 / 자산 있음→PIN 4자리 입력 후 `useShareArtifacts().generateShareArtifacts(pin)`로 `#share=` URL 생성 이동(실패 시 origin 폴백) / 동기화 기기→PIN 없이 `syncLink` 이동. iOS는 `go()`(`useExternalMove`, #4.38 게이트·웰컴 공용)가 제스처 보존 `ClipboardItem` Promise로 대상 URL 복사 후 `InAppExternalGuide`(3단계 수동 가이드, `pwa-install-flow` inAppStep과 공용) 노출
 - ⚙ **자동 동작 차단(R22)**: 게이트 활성 시 `isInAppGateActive()`로 cloud-sync 자동 arm·`#sync=` 모달·`initAndSync` 시세/스냅샷·0→양수 동기화 전부 차단(데이터 로드·assetId/syncLink는 유지)
 - 👤 PC Chrome DevTools 커스텀 UA로 카카오톡(Android)/네이버/인스타/iOS 카카오톡 진입 → 게이트 노출, Android는 스킴 이동 시도·iOS는 주소 복사+가이드. 일반 UA 복귀 시 게이트 사라짐. Network 탭에 `/api/sync`·`/api/finance` 자동 요청 없음, 동기화 기기 UA에서 연결 모달 미노출
 
@@ -392,13 +394,25 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
 - 👤 **첫 화면 순서(#4.35)**: 히어로 < 신뢰 한 줄(+자세히 보기) < 보안 상세 < 예시 순자산 < CTA 슬롯 < 주식 미리보기 (< 설치 박스: 데스크톱만). 375×812 스크롤 0(진입 모션 후)에 제목·신뢰 줄·순자산 금액·설치/바로 시작 버튼이 보인다. 접힘 상태 가시 텍스트에 PBKDF2·Ed25519·blob 없음, "로그인 없" 1회
-- 👤 **보안 상세 펼침**: 토글 1회 탭 → 기존 3카드 원문 노출, 재탭 접힘, 새로고침 시 접힘(저장 없음). 같은 노드 유지(grid-rows 전환), 닫힘 `inert`·`invisible`. 토글은 gtag 호출 0
+- 👤 **보안 안내 문구(#4.38)**: 웰컴 보안 상세·앱가이드 카드 3쌍이 문자 단위로 같다(`SECURITY_COPY`). 구 문구 0건("절대 벗어나지"·"원천 불가"·"문제없습니다"·"(blob)"·"(pubKey)"·"E2EE 암호학적" — 정정 7파일+`security-copy.ts` 한정), 업로드 박스 4종 문구·클래스 동일·테두리 0, 동기화 메뉴 설명 마지막 문장 상수(preview에선 `cs.enabled=false`라 미렌더 → 정적 테스트). 320·375에서 "저장·/전송" 분리 0, 신뢰 한 줄 "… 저장 · / 원하면 암호화 동기화". 금고 암호 문장(cloud-sync-menu-entry·connect-dialog)·home-tip 백업 팁·config/app.ts 무변경. 자동: `src/config/__tests__/security-copy.test.tsx`
+- 👤 **보안 상세 펼침**: 토글 1회 탭 → 3카드(`SECURITY_COPY`) 노출, 재탭 접힘, 새로고침 시 접힘(저장 없음). 같은 노드 유지(grid-rows 전환), 닫힘 `inert`·`invisible`. 토글은 gtag 호출 0
 - 👤 **모바일 웹 미설치**: CTA 슬롯 `data-state=install` — "웹앱 설치하기"(brand, `PwaInstallFlow` 공용 흐름, iOS는 브라우저 칩+SVG 가이드) + "웹에서 바로 시작"(secondary) + 캡션. 설치 박스 없음, 설치 버튼 화면에 1개. "웹에서 바로 시작" 탭 → `onboarding_action{skip_install}` 1회 + 같은 슬롯이 `asset`으로 바뀌고 포커스가 "스크린샷으로 자산 등록"으로 이동
 - 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출, "웹에서 바로 시작" 없음). 데스크톱 미설치는 주식 미리보기 아래 설치 박스(설치 버튼 1개)
 - 👤 **링크 미리보기(#4.35)**: `og:image` = `${siteUrl}/og-image.png`(1200×630, 텍스트 "안전한 자산 관리,"·"시크릿에셋"만), `twitter:card=summary_large_image`. 이미지 교체 시 파일명 변경(크롤러 캐시)
-- ⚙ 분기 키: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall })` → pending/install/asset. 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
+- ⚙ 분기 키: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall, isInApp })` → pending/inapp/install/asset(#4.38 inapp은 mounted 다음 최우선, standalone이면 제외). 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
+
+### F-TRIAL. 체험 모드 `/?trial=1` ([trial-gate.tsx](../../src/app/(main)/_components/trial/trial-gate.tsx) · [trial-boot.ts](../../src/lib/trial/trial-boot.ts) · [trial-banner.tsx](../../src/app/(main)/_components/views/home/trial-banner.tsx)) — #4.38 #59, risk high
+- 👤 **진입**: 웰컴(0건) ③ 행 "직접 둘러보기" 칩 → `feature_use{demo}` 1건(연타 1건, 이동 직전 실제 페이지) → 로딩 덮개(문구 0, 300ms 전 투명) → 체험 홈, URL 쿼리 제거. `#share`·`#sync` 해시·공유 대기 웰컴에는 칩 없음. 375에서 CTA 슬롯 top 불변, 320 배지만 둘째 줄
+- 👤 **체험 홈**: `trial-banner` 1개(홈만, static), Hero "순자산"(닉네임 없음). FAB·상단 더보기/설치·하단 update/more 부재, 인증카드 유지. 상세 행 편집은 메모리만(새로고침 시 소멸). 성과·결산은 "기록 부족" 없이 월 결산·연 탭(작년 `@PY` 수동값)
+- 👤 **네트워크**: 무조작 탐색 중 자동 시세 0건(`/api/finance?type=exchange|stock`·`/api/finance/crypto`·`/api/realestate`). 스크린샷 탭 업로드 → 합성 403 토스트 "체험 중에는 사용할 수 없어요", `/api/parse-screenshot`·`/api/share`·`/api/sync*`·`/api/feedback` 실제 요청 0. `/api/finance/dividend`·`/api/finance/profit`·`/api/xray-classify`(예시 티커)는 허용. `indexedDB.open` 0회
+- 👤 **GA**: 체험 페이지 앱 gtag 호출 0(`settlement_view`·`page_view`·`asset_count_bucket` 포함), 인라인 스크립트가 `trial=1`에서 `ga-disable-<ID>`. 종료 복귀 웰컴 `onboarding_action{trial_start}` 1건
+- 👤 **종료**: "내 자산으로 시작" → `/` 웰컴 슬롯 `asset`, `welcome-cta-wizard` 포커스, 원본 저장소 빈 상태. 새로고침·탭 닫기 = 일반 화면. 인앱 UA는 외부 이동(iOS 가이드 펼침)
+- 👤 **데이터 안전(S1~S5)**: 원본 `secretasset_*` 키·값 해시가 진입·탐색·종료 후 불변(새 기기 체험 중 원본 키 0). 원본에 자산 1건 / 구버전 `secretasset-asset-data` / 손상 JSON / `secretasset_sync` / `secretasset_pwa_auth*` / 복원 해시 → 일반 화면, 원본 바이트 동일. 인앱 UA + 체험 → 인앱 게이트 미렌더. 다른 탭 실제 데이터 수정 → 체험 탭·원본 무해
+- ⚙ **쿼리 없을 때 main과 동일**: TrialGate는 children 그대로(마크업 동일, 첫 렌더 지연 0). trial-boot 정적 import 0. preview `?demo=1` 데모 닉네임 '데모' 유지
+- ⚙ 자동: `src/lib/__tests__/trial-boot.test.ts`(거부 판정·S1 모킹 ①~⑤·정상 경로·닉네임), `trial-guards.test.ts`(GA no-op·trackThenNavigate·가드·숨김 정적 검사), `trial/__tests__/trial-gate.test.tsx`, `preview-safety.test.ts` 9번(데모 JSON 동적 import = `demo-inject.ts`)
+- ⚠ 알려진 한계(C9): iOS Safari·WKWebView·삼성 실기기 defineProperty 미검증(fail-closed), 인앱 체험 종료 후 `trial_start`·`inapp_move` 미집계, sessionStorage 미격리, 거부·실패된 1회 로드 GA 미집계, 상세·성과 예시 표기 없음
 
 ### F-ONBOARD-WIZARD. 스크린샷 일괄 온보딩 마법사 ([onboarding-wizard-flow.tsx](../../src/app/(main)/_components/layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx) · [onboarding-wizard-status.ts](../../src/lib/onboarding-wizard-status.ts) · [onboarding-wizard-store.ts](../../src/stores/onboarding-wizard-store.ts)) — 명세 [S-4.29](../specs/4.29-onboarding-wizard.md)
 - 👤 **자동 노출 없음**: 웰컴가이드가 항상 먼저 노출되어야 한다는 요구에 따라 `page.tsx`의 자동 오픈 effect(AC1)는 제거됨 — 자산 0건이어도 첫 진입은 항상 `WelcomeGuide`, 마법사는 CTA를 명시적으로 눌렀을 때만 열림

@@ -1,5 +1,6 @@
 import { isInAppGateActive } from "./detect-browser";
 import { isPwaLocked } from "./app-lock";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 /**
  * 전체화면 게이트(인앱 브라우저 하드 게이트·앱 잠금)가 화면을 덮고 있어
@@ -10,7 +11,8 @@ import { isPwaLocked } from "./app-lock";
  *
  * 두 게이트를 호출 지점마다 따로 쓰면 새 effect를 추가할 때 한쪽을 빠뜨린다
  * (실제로 부동산 갱신 effect가 인앱 게이트 가드 없이 돌고 있었다) — 그래서 하나로 묶는다.
+ * 체험 모드(#59)도 포함 — 예시 금고의 자동 시세·환율·스냅샷 갱신 네트워크 0.
  */
 export function isBackgroundWorkBlocked(): boolean {
-  return isInAppGateActive() || isPwaLocked();
+  return isInAppGateActive() || isPwaLocked() || isTrialMode();
 }

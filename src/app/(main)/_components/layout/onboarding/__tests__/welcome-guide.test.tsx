@@ -19,11 +19,13 @@ import {
   WelcomeGuide,
   WelcomeAssetCta,
   WelcomeInstallCta,
+  WelcomeInAppCta,
   welcomeSource,
   welcomeCtaState,
   WELCOME_CTA_METHODS,
 } from "../welcome-guide";
 import { labelOf, PARAM_VALUES } from "@/lib/analytics/ga";
+import { SECURITY_COPY } from "@/config/security-copy";
 
 const SRC = readFileSync(path.resolve(__dirname, "../welcome-guide.tsx"), "utf8");
 
@@ -51,7 +53,7 @@ describe("GA 매핑(위치 이동 후에도 값·라벨 동일)", () => {
 });
 
 describe("CTA 슬롯 상태", () => {
-  const base = { mounted: true, isMobile: false, isStandalone: false, skipInstall: false };
+  const base = { mounted: true, isMobile: false, isStandalone: false, skipInstall: false, isInApp: false };
   it("마운트 전은 환경과 무관하게 pending(SSR·첫 렌더 동일)", () => {
     expect(welcomeCtaState({ ...base, mounted: false, isMobile: true })).toBe("pending");
   });
@@ -62,6 +64,13 @@ describe("CTA 슬롯 상태", () => {
   it("데스크톱·PWA standalone → asset (바로 시작 버튼 없음)", () => {
     expect(welcomeCtaState(base)).toBe("asset");
     expect(welcomeCtaState({ ...base, isMobile: true, isStandalone: true })).toBe("asset");
+  });
+  it("인앱(#60): install·asset보다 우선, 바로 시작 후에도 inapp, standalone이면 아님, 마운트 전은 pending", () => {
+    expect(welcomeCtaState({ ...base, isInApp: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, skipInstall: true })).toBe("inapp");
+    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, isStandalone: true })).toBe("asset");
+    expect(welcomeCtaState({ ...base, isInApp: true, mounted: false })).toBe("pending");
   });
 });
 
@@ -91,9 +100,11 @@ describe("WelcomeGuide 초기 마크업", () => {
     // 접힘 상세 바깥 가시 텍스트에 기술 용어 없음
     const visible = html.slice(0, pos("welcome-security-detail")) + html.slice(pos("welcome-preview-net"));
     for (const word of ["PBKDF2", "Ed25519", "blob"]) expect(visible).not.toContain(word);
-    // 상세 안에는 기존 3카드 원문
-    expect(html).toContain("영지식(Zero-Knowledge) 로컬 격리");
-    expect(html).toContain("PBKDF2 (200k 반복 연산)");
+    // 상세 안에는 SECURITY_COPY 3카드(앱가이드와 같은 상수, #61)
+    for (const c of SECURITY_COPY) {
+      expect(html).toContain(c.title);
+      expect(html).toContain(c.desc);
+    }
   });
 
   it("삭제 항목 없음 + '로그인 없' 1회(C1)", () => {
@@ -122,6 +133,37 @@ describe("CTA 슬롯 콘텐츠", () => {
     expect(html).toContain('data-testid="welcome-skip-install-btn"');
     expect(html).toContain("웹에서 바로 시작");
     expect(html).toContain("설치하면 홈 화면에서 바로 열립니다.");
+  });
+});
+
+describe("CTA 슬롯 inapp(#60)", () => {
+  const html = renderToStaticMarkup(<WelcomeInAppCta isIOS />);
+  it("등록·설치 진입점 없음, 외부 이동 버튼 1개", () => {
+    for (const id of ["welcome-cta-wizard", "welcome-cta-more", "welcome-install-btn", "welcome-skip-install-btn"]) {
+      expect(html).not.toContain(`data-testid="${id}"`);
+    }
+    expect(html).not.toContain('type="file"');
+    expect(html.match(/data-testid="welcome-cta-inapp"/g)?.length).toBe(1);
+    expect(html.match(/<button/g)?.length).toBe(1);
+    expect(html).toContain("외부 브라우저에서 시작하기");
+    expect(html).toContain("이 화면에서는 입력한 내용이 사라질 수 있어요.");
+    expect(html).toContain('<span class="whitespace-nowrap">Chrome·Safari에서</span>');
+  });
+  it("iOS 가이드: 항상 마운트·기본 닫힘(inert·0fr), 캡션 1회, 앱 설치 문장·기존 앰버 제목 없음", () => {
+    const guide = html.match(/<div[^>]*data-testid="welcome-inapp-guide"[^>]*>/)?.[0] ?? "";
+    expect(guide).toContain("inert");
+    expect(guide).toContain("grid-rows-[0fr]");
+    expect(html).toMatch(/data-testid="welcome-cta-inapp"[^>]*aria-expanded="false"/);
+    expect(html.match(/주소가 복사됐어요\. 브라우저에 붙여넣어 주세요\./g)?.length).toBe(1);
+    expect(html).not.toContain("앱 설치 기능");
+    expect(html).not.toContain("현재 웹페이지 주소가 복사되었습니다!");
+    expect(html).toContain("이동한 브라우저에서 주소로 접속하면 이어집니다.");
+    // 가이드 래퍼 break-keep(상속) + 간격은 펼침 영역 안(pt-5), 가이드는 space-y 밖 형제(ui-review R1·R2)
+    expect(html).toContain('class="pt-5 text-left break-keep"');
+    expect(html).toMatch(/^<div class="motion-safe:animate-in[^"]*"><div class="space-y-5">/);
+  });
+  it("Android: aria-expanded 없음", () => {
+    expect(renderToStaticMarkup(<WelcomeInAppCta isIOS={false} />)).not.toContain("aria-expanded");
   });
 });
 

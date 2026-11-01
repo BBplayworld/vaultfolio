@@ -17,25 +17,17 @@ import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/config/app-version";
 import { Z_LAYER } from "@/config/theme";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
-import { applyImportedPayload, clearAssetData, getAssetData, STORAGE_KEYS } from "@/lib/asset/asset-storage";
-import { buildDemoRefreshMeta, kstToday, materializeDemo, resolvePreviewAction } from "@/lib/preview/demo-payload";
-import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { clearAssetData, getAssetData, hasAnyAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { resolvePreviewAction } from "@/lib/preview/demo-payload";
+import { injectDemoPayload, skipDemoTutorial, stripQueryParams } from "@/lib/preview/demo-inject";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
-import { markCurrentNoticeSeen } from "@/lib/home-tip";
-import type { AssetData } from "@/types/asset";
-
-const hasAnyAssets = (d: AssetData) =>
-  d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length > 0;
 
 // 데모가 튜토리얼을 건너뛰었다는 preview 전용 표식 — clearAssetData가 지우는 secretasset_ 키라 ?demo=empty·전체 삭제 때 함께 사라진다
 export const DEMO_TUTORIAL_MARKER = "secretasset_preview_demo_tutorial_skipped";
 
 /** ?demo=1 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps) + 현재 공지 읽음(GA 없음) + 표식 */
 export function applyDemoTutorialSkip(): void {
-  skipAllTutorialSteps();
-  markCurrentNoticeSeen({ track: false });
-  localStorage.setItem(DEMO_TUTORIAL_MARKER, "1");
-  tutorialStore.getState().initTutorial();
+  skipDemoTutorial({ marker: DEMO_TUTORIAL_MARKER });
 }
 
 /** ?demo=empty 처리 직전: 데모가 건너뛴 튜토리얼·공지 열람 기록을 첫 사용 상태로 되돌린다(데모 이력 없으면 무동작 — 기존 동작 그대로) */
@@ -47,20 +39,15 @@ export function resetDemoTutorialSkip(): void {
   tutorialStore.getState().initTutorial();
 }
 
-// 데모 주입 — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다
+// 데모 주입(공용 절차는 demo-inject) — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다
 async function injectDemo(): Promise<void> {
-  const mod = await import("@/lib/preview/demo-data.json");
-  applyImportedPayload(materializeDemo(mod.default, kstToday()));
-  // assetRefresh는 clearAssetData의 보존 키라 import로 덮이지 않음 → 기존 키·형식으로 직접 기록(멱등)
-  localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
+  await injectDemoPayload();
   applyDemoTutorialSkip();
 }
 
 // 처리한 ?demo 쿼리 제거 — 새로고침 시 재주입 방지(사용자가 preview에서 만든 변경 보존)
 function stripDemoQuery() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("demo");
-  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  stripQueryParams(["demo"]);
 }
 
 export function PreviewGate({ children }: { children?: ReactNode }) {
