@@ -24,7 +24,7 @@
 | #58 기타 자산 등록 | 4.39(예정) | planning(문서만) | planner-designer | 사양·tech-review만. 대표 risk:high 착수 승인 전 코드 무변경, 승인 시 12/11 개발 |
 
 ## 열린 릴리스
-- 없음 (최근 반영: v4.38 = #59·#60·#61 → main 5eebe74, 2026-11-01, 운영 스모크 대기). 다음 배정 4.39
+- 없음 (최근 반영: v4.38 = #59·#60·#61 → main 5eebe74, 2026-11-01, 운영 스모크 PASS 2026-11-01). 다음 배정 4.39
 - 운영 사용자 도메인: `https://www.secretasset.xyz`는 접속 가능(2026-10-31 확인). 루트 `secretasset.xyz`는 www로 리다이렉트되며 이 환경에서는 여전히 차단 → 운영 스모크는 `https://www.secretasset.xyz`로 수행
 - 없음
 
