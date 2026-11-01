@@ -156,6 +156,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                     if (isLocal || localStorage.getItem('ga-optout') === '1') {
                       window['ga-disable-' + GA_ID] = true;
                     }
+                    // 체험 페이지(#59 ?trial=1)는 GA 전부 끔 — gtag.js 자동 측정까지 차단(앱 track 가드와 별개)
+                    if (params.get('trial') === '1') window['ga-disable-' + GA_ID] = true;
                   } catch (_) {}
                   gtag('js', new Date());
                   // 자동 page_view 끔 — 화면 전환은 앱이 가상 경로(/v/<화면>)로 직접 보낸다.

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { InAppExternalGuide } from "./in-app-external-guide";
 import { Z_LAYER } from "@/config/theme";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 /**
  * 인앱 브라우저 하드 게이트 — 카카오톡·네이버 등 인앱 브라우저 진입 시 앱 전체를 가리고
@@ -38,6 +39,8 @@ export type InAppGateState = "none" | "cover" | "welcome" | "gate";
 
 /** 게이트 판정(순수) — none: 미렌더 / cover: 로드 전 빈 덮개 / welcome: 웰컴에 맡김(미렌더) / gate: 현행 게이트 */
 export function resolveInAppGate(env: {
+  /** 체험 모드(#59) — 메모리 금고라 PIN 이동(generateShareArtifacts → /api/share)이 체험을 덮지 않게 맨 앞에서 none */
+  isTrial: boolean;
   mounted: boolean;
   isStandalone: boolean;
   isInApp: boolean;
@@ -47,6 +50,7 @@ export function resolveInAppGate(env: {
   syncAssetId: string | null;
   restoreHash: boolean;
 }): InAppGateState {
+  if (env.isTrial) return "none";
   if (!env.mounted || env.isStandalone || !env.isInApp) return "none";
   if (!env.isDataLoaded) return "cover";
   if (!env.hasAssets && !env.isSharePending && !env.syncAssetId && !env.restoreHash) return "welcome";
@@ -72,7 +76,7 @@ export function InAppBrowserGate() {
   const syncAssetId = mounted && isCloudSyncEnabled() ? getAssetId() : null;
   const isSyncMode = !!syncAssetId;
 
-  const gate = resolveInAppGate({ mounted, isStandalone, isInApp, isDataLoaded, hasAssets, isSharePending, syncAssetId, restoreHash });
+  const gate = resolveInAppGate({ isTrial: isTrialMode(), mounted, isStandalone, isInApp, isDataLoaded, hasAssets, isSharePending, syncAssetId, restoreHash });
   if (gate === "none" || gate === "welcome") return null;
 
   const handleMove = async () => {

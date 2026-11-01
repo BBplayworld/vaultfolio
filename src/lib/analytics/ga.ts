@@ -8,10 +8,12 @@
  *   옵트아웃(ga-disable-*)은 gtag가 자체적으로 전송을 막는다.
  * - 내부 예외는 절대 호출부로 전파하지 않는다 — 계측이 저장·동기화·화면 흐름을 바꾸면 안 된다.
  * - page_location은 항상 origin + "/v/<화면키>"로 덮어써 URL 해시(#share·#sync)·쿼리(?url)가 나가지 않게 한다.
+ * - 체험 모드(#59) 페이지에서는 track·trackScreen·setUserProps 전부 no-op(허용 목록 없음).
  */
 
 import { APP_CONFIG } from "@/config/app";
 import { STORAGE_KEYS } from "@/lib/local-storage";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 import type { AssetData } from "@/types/asset";
 
 // ─────────────────────────────────────────────────────────
@@ -209,6 +211,7 @@ const SCREEN_TITLES: Record<string, string> = {
 /** 이벤트 전송. gtag 부재·예외 시 무시(AC1·AC4) */
 export function track(name: GaEvent, params: GaParams = {}): void {
   try {
+    if (isTrialMode()) return;
     const gtag = getGtag();
     if (!gtag) return;
     const payload: Record<string, unknown> = { ...sanitizeParams(params), page_location: pageLocation() };
@@ -219,12 +222,50 @@ export function track(name: GaEvent, params: GaParams = {}): void {
   }
 }
 
+/** trackThenNavigate 최대 대기(ms) — 이 시간 안에 전송 확인이 없어도 이동한다 */
+export const NAVIGATE_TRACK_TIMEOUT_MS = 300;
+
+/**
+ * 이벤트를 보낸 뒤 페이지 이동(#59 체험 진입). gtag.js가 늦게 로드되면 이동과 함께 큐가 유실되므로
+ * event_callback 또는 300ms 타임아웃 중 먼저 오는 쪽에서 1회만 이동한다. 체험 중·gtag 없음·예외는 즉시 이동.
+ */
+export function trackThenNavigate(
+  name: GaEvent,
+  params: GaParams,
+  url: string,
+  navigate: (url: string) => void = (u) => window.location.assign(u),
+): void {
+  let moved = false;
+  const go = () => {
+    if (moved) return;
+    moved = true;
+    navigate(url);
+  };
+  try {
+    if (isTrialMode()) return go();
+    const gtag = getGtag();
+    if (!gtag) return go();
+    const payload: Record<string, unknown> = {
+      ...sanitizeParams(params),
+      page_location: pageLocation(),
+      event_callback: go,
+      event_timeout: NAVIGATE_TRACK_TIMEOUT_MS,
+    };
+    if (isDebug()) payload.debug_mode = true;
+    gtag("event", name, payload);
+    setTimeout(go, NAVIGATE_TRACK_TIMEOUT_MS);
+  } catch {
+    go();
+  }
+}
+
 /**
  * 화면 전환 page_view(AC7) — 가상 경로 /v/<화면키>, 같은 화면 연속 호출은 무시.
  * URL 해시·쿼리는 절대 포함하지 않는다(AC3).
  */
 export function trackScreen(viewKey: string, navSource: NonNullable<GaParams["nav_source"]> = "tap"): void {
   try {
+    if (isTrialMode()) return;
     if (!SCREEN_KEY_RE.test(viewKey)) return;
     currentScreenKey = viewKey;
     if (lastTrackedScreenKey === viewKey) return;
@@ -276,6 +317,7 @@ function labelUserProps(props: GaUserProps): Record<keyof GaUserProps, string> {
 /** 사용자 속성 갱신(AC10) — 값이 바뀔 때만 한국어 라벨로 전송 */
 export function setUserProps(props: GaUserProps): void {
   try {
+    if (isTrialMode()) return;
     const json = JSON.stringify(props);
     if (json === lastUserPropsJson) return;
     const gtag = getGtag();

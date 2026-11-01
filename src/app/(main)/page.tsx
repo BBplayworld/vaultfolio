@@ -14,6 +14,7 @@ import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
@@ -109,7 +110,8 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
       <AssetPageTabs />
-      <FloatingAddButton />
+      {/* 체험 모드(#59): FAB(스크린샷 AI 인식·등록) 숨김 */}
+      {!isTrialMode() && <FloatingAddButton />}
       <TradeInput />
       {!hideFooterInPWA && <CopyrightFooter />}
       <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />

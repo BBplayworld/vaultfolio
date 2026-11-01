@@ -40,7 +40,7 @@ describe("hasRestoreHash", () => {
 
 describe("resolveInAppGate (spec 5절 경계 표)", () => {
   const base = {
-    mounted: true, isStandalone: false, isInApp: true, isDataLoaded: true,
+    isTrial: false, mounted: true, isStandalone: false, isInApp: true, isDataLoaded: true,
     hasAssets: false, isSharePending: false, syncAssetId: null as string | null, restoreHash: false,
   };
   it("마운트 전·standalone·일반 브라우저 → none", () => {
@@ -55,6 +55,11 @@ describe("resolveInAppGate (spec 5절 경계 표)", () => {
   });
   it("인앱 0건·동기화 없음·해시 없음 → welcome", () => {
     expect(resolveInAppGate(base)).toBe("welcome");
+  });
+  it("체험 모드(#59) → 어떤 조건이든 none(PIN 게이트가 체험을 덮지 않음)", () => {
+    expect(resolveInAppGate({ ...base, isTrial: true, hasAssets: true })).toBe("none");
+    expect(resolveInAppGate({ ...base, isTrial: true, isDataLoaded: false })).toBe("none");
+    expect(resolveInAppGate({ ...base, isTrial: true, restoreHash: true })).toBe("none");
   });
   it("1건 이상 / 공유 대기 / 동기화 assetId / 복원 해시 → gate(현행)", () => {
     expect(resolveInAppGate({ ...base, hasAssets: true })).toBe("gate");

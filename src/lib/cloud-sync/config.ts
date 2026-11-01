@@ -6,6 +6,8 @@
  * 로컬 상태는 단일 키 `secretasset_sync`(sync-state.ts).
  */
 
+import { isTrialMode } from "@/lib/trial/trial-mode";
+
 // Vercel preview 배포 여부(next.config.mjs가 빌드 시 VERCEL_ENV를 NEXT_PUBLIC_VERCEL_ENV로 주입).
 // 정확히 "preview"일 때만 true — 미설정(로컬)·production·development는 운영과 같이 취급한다.
 export function isPreviewEnv(): boolean {
@@ -13,9 +15,9 @@ export function isPreviewEnv(): boolean {
 }
 
 // 기본 노출. 운영 비상 차단만 `NEXT_PUBLIC_CLOUD_SYNC=off`.
-// preview는 검증 전 코드가 실제 금고에 쓰지 않도록 항상 끈다.
+// preview는 검증 전 코드가 실제 금고에 쓰지 않도록 항상 끈다. 체험 모드(#59)도 끈다(메모리 금고, 이중 안전장치).
 export function isCloudSyncEnabled(): boolean {
-  return !isPreviewEnv() && process.env.NEXT_PUBLIC_CLOUD_SYNC !== "off";
+  return !isPreviewEnv() && process.env.NEXT_PUBLIC_CLOUD_SYNC !== "off" && !isTrialMode();
 }
 
 // 서버 저장 금고(없으면 null). 자산 내용·salt·비밀 없음 — pubKey만.
