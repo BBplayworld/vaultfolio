@@ -117,3 +117,4 @@
 - 2026-11-01 4.39 = #63 스크린샷 비중 미리보기 + #64 혼합 인식 결함(type:bug, 같은 PR). design-final 확정: 인계 호스트 (main)/layout.tsx, activeStep 조건 제거(!isTrialMode 추가), OG_IMAGE config 이동, /ratio 전용 문구 상수, UTM은 ga.ts pageLocation에서 /ratio 한정, useExternalMove onTrack 인자. 컷: 11/10 #64 vitest 미통과 시 4.40, 11/19 인계 qa FAIL 2회 시 인계 제외
 - 2026-11-01 4.39 COO PASS @0f6fc31, 반영 권고(medium). PR #65 owner-review. 관찰: CGNAT IP 공유 시 일반 카운터 가산(낮음), 확인 창 머리말 문구(4.40 이후)
 - 2026-11-01 대표 승인 → PR #65 squash 머지 eaf494a(v4.39 = #63 /ratio 스크린샷 비중 미리보기 + #64 혼합 인식 결함). 함께 확정: /ratio 입구 한도 전역 60/일·IP 5/일, UTM 규약(utm_source=threads|cafe|blog, utm_campaign=ratio_v1), 8주 판독(/v/ratio 방문·업로드 성공 기기, #48 판독 시 ratio_preview click 기기 제외). 머지일 11/1 = 효과 판독 기준일
+- 2026-11-01 v4.39 운영 스모크 PASS(main eaf494a): /ratio SSR·메타, 운영 실제 업로드 1회(비중 합 100.0, 금액 비노출), 인계 확인 창, 인앱 외부 브라우저 안내, 체험·웰컴 회귀, 앱 오류 0. 한계: 자산 보유 기기에서 인계 확인 창은 운영 미확인(체험 홈으로 대체), 인앱 UA 1종
