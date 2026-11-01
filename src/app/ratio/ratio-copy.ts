@@ -23,3 +23,11 @@ export const RATIO_NOTES = {
   fx: "환율은 추정값이에요.",
   saveCaption: "금액은 저장 후 확인 창에서 볼 수 있어요.",
 } as const;
+
+/** "예시로 먼저 보기" 문구 (#66) */
+export const RATIO_SAMPLE = {
+  button: "예시로 먼저 보기",
+  label: "예시 데이터예요. 가상 종목으로 계산한 비중이에요.",
+  cta: "내 캡처로 해보기",
+  caption: "내 캡처를 올리면 이 화면처럼 보여드려요.",
+} as const;

@@ -17,6 +17,7 @@ import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
 import type { ParsedStock } from "@/lib/asset/screenshot-stock-map";
 import { setHandoff } from "@/lib/ratio-preview/handoff";
 import { buildRatioList, FALLBACK_JPY, FALLBACK_USD, type RatioResult, type RatioSplitItem } from "@/lib/ratio-preview/ratio-list";
+import { RATIO_SAMPLE_RATES, RATIO_SAMPLE_STOCKS } from "@/lib/ratio-preview/ratio-sample";
 import { cn } from "@/lib/utils";
 import { InAppExternalGuide } from "@/app/(main)/_components/pwa/in-app-external-guide";
 import {
@@ -25,10 +26,11 @@ import {
   RATIO_INAPP_LAST_STEP,
   RATIO_INAPP_NOTICE,
   RATIO_NOTES,
+  RATIO_SAMPLE,
   deviceLimitMessage,
 } from "./ratio-copy";
 
-type Status = "idle" | "loading" | "result" | "error";
+type Status = "idle" | "loading" | "result" | "sample" | "error";
 type ErrorKind = "empty" | "fail" | "limit" | "device";
 
 const NOTICE_BOX = "rounded-md bg-muted/50 px-3 py-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep";
@@ -86,11 +88,32 @@ async function fetchRates(): Promise<{ USD: number; JPY: number; estimated: bool
   return { USD: FALLBACK_USD, JPY: FALLBACK_JPY, estimated: true };
 }
 
+/** Unfold가 열리는 첫 프레임엔 visibility가 hidden이라 focus가 거부된다 → 성공할 때까지 프레임마다 재시도(최대 ~30프레임). 취소 함수를 반환 */
+function focusWhenVisible(getEl: () => HTMLElement | null): () => void {
+  let raf = 0;
+  let tries = 0;
+  const attempt = () => {
+    const el = getEl();
+    el?.focus({ preventScroll: true });
+    if (el && document.activeElement !== el && tries++ < 30) raf = requestAnimationFrame(attempt);
+  };
+  raf = requestAnimationFrame(attempt);
+  return () => cancelAnimationFrame(raf);
+}
+
+function smoothBehavior(): ScrollBehavior {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
 export function RatioPreview() {
   const router = useRouter();
   const geminiUsage = useGeminiUsage();
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLHeadingElement>(null);
+  const sampleLabelRef = useRef<HTMLParagraphElement>(null);
+  const dropzoneRef = useRef<HTMLButtonElement>(null);
+  // 예시 진입 직전의 한도 오류(limit·device) — 복귀 시 복원. empty·fail은 복원하지 않는다
+  const restoreErrorRef = useRef<{ kind: ErrorKind; text: string } | null>(null);
 
   const [status, setStatus] = useState<Status>("idle");
   const [errorKind, setErrorKind] = useState<ErrorKind | null>(null);
@@ -98,6 +121,7 @@ export function RatioPreview() {
   const [result, setResult] = useState<RatioResult | null>(null);
   const [fxEstimated, setFxEstimated] = useState(false);
   const [raw, setRaw] = useState<ParsedStock[] | null>(null);
+  const [resultMode, setResultMode] = useState<"real" | "sample">("real");
   const [grown, setGrown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [env, setEnv] = useState({ isInApp: false, isIOS: false });
@@ -114,14 +138,19 @@ export function RatioPreview() {
 
   // 결과 진입: 막대 fill을 다음 프레임에 펼친다(reduced-motion은 transition이 없어 즉시 최종값)
   useEffect(() => {
-    if (status !== "result") {
+    if (status !== "result" && status !== "sample") {
       setGrown(false);
       return;
     }
     const id = requestAnimationFrame(() => setGrown(true));
-    resultRef.current?.focus({ preventScroll: true });
-    resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-    return () => cancelAnimationFrame(id);
+    // 예시는 결과 맨 위 표시를, 실제 결과는 요약 제목을 포커스 대상으로 삼는다
+    const target = status === "sample" ? sampleLabelRef.current : resultRef.current;
+    target?.scrollIntoView({ block: "start", behavior: smoothBehavior() });
+    const cancelFocus = focusWhenVisible(() => (status === "sample" ? sampleLabelRef.current : resultRef.current));
+    return () => {
+      cancelAnimationFrame(id);
+      cancelFocus();
+    };
   }, [status, result]);
 
   const fail = (kind: ErrorKind, text: string, gaResult?: "fail" | "empty" | "limit") => {
@@ -155,12 +184,41 @@ export function RatioPreview() {
       if (built.allZero) return fail("empty", RATIO_ERROR.emptyPrice, "empty");
       setRaw(stocks);
       setResult(built);
+      setResultMode("real");
       setFxEstimated(rates.estimated && stocks.some((s) => s.section === "해외"));
       setStatus("result");
       track("feature_use", { category: "ratio_preview", method: "submit", result: "success" });
     } catch {
       fail("fail", RATIO_ERROR.network, "fail");
     }
+  };
+
+  // 예시 보기: 고정 데이터로 로컬 계산만 한다(서버 호출·한도 소모·인계 저장 없음)
+  const handleSample = () => {
+    if (status === "loading" || status === "sample") return;
+    restoreErrorRef.current = status === "error" && errorKind && (errorKind === "limit" || errorKind === "device") ? { kind: errorKind, text: errorText } : null;
+    setErrorKind(null);
+    setRaw(null);
+    setResult(buildRatioList(RATIO_SAMPLE_STOCKS, RATIO_SAMPLE_RATES));
+    setFxEstimated(false);
+    setResultMode("sample");
+    setStatus("sample");
+    track("feature_use", { category: "ratio_preview", method: "sample" });
+  };
+
+  // 예시 → 업로드 화면 복귀: 파일 선택창은 열지 않고 dropzone에 포커스만 둔다
+  const handleSampleExit = () => {
+    const restore = restoreErrorRef.current;
+    restoreErrorRef.current = null;
+    if (restore) {
+      setErrorKind(restore.kind);
+      setErrorText(restore.text);
+      setStatus("error");
+    } else {
+      setStatus("idle");
+    }
+    focusWhenVisible(() => dropzoneRef.current);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: smoothBehavior() }));
   };
 
   const handleSave = () => {
@@ -179,7 +237,8 @@ export function RatioPreview() {
 
   const blocked = errorKind === "limit" || errorKind === "device";
   const loading = status === "loading";
-  const showResult = status === "result" && result !== null;
+  const isSample = resultMode === "sample";
+  const showResult = (status === "result" || status === "sample") && result !== null;
   const dropzoneOpen = !showResult;
   const colors = result ? splitColors(result.split) : null;
 
@@ -203,6 +262,7 @@ export function RatioPreview() {
         <div className="flex flex-col gap-3 pb-5">
           <button
             type="button"
+            ref={dropzoneRef}
             data-testid="ratio-dropzone"
             disabled={loading || blocked}
             aria-disabled={loading || blocked}
@@ -235,6 +295,9 @@ export function RatioPreview() {
           <p data-testid="ratio-notice" className={NOTICE_BOX}>
             {RATIO_PREVIEW_UPLOAD_NOTICE}
           </p>
+          <Button data-testid="ratio-sample-btn" variant="secondary" className="h-11 w-full text-sm font-medium break-keep" disabled={loading} onClick={handleSample}>
+            {RATIO_SAMPLE.button}
+          </Button>
         </div>
       </Unfold>
 
@@ -266,9 +329,21 @@ export function RatioPreview() {
         </Unfold>
       </div>
 
-      <Unfold open={showResult} data-testid="ratio-result">
+      <Unfold open={showResult} data-testid="ratio-result" data-mode={resultMode}>
         {result && colors && (
           <div className="flex flex-col gap-5 pb-1">
+            {isSample && (
+              <p
+                ref={sampleLabelRef}
+                tabIndex={-1}
+                role="note"
+                data-testid="ratio-sample-label"
+                className={cn(NOTICE_BOX, "flex items-start gap-2 outline-none")}
+              >
+                <Info aria-hidden className="mt-1 size-3.5 shrink-0 text-sky-600/70 dark:text-sky-400/70" />
+                <span>{RATIO_SAMPLE.label}</span>
+              </p>
+            )}
             {/* 요약: 종목 수 + 국내/해외 비율 */}
             <section className="flex flex-col gap-3 rounded-lg bg-card p-4 shadow-xs motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1">
               <h2 ref={resultRef} tabIndex={-1} className="flex items-baseline gap-1 outline-none" data-testid="ratio-count">
@@ -330,7 +405,7 @@ export function RatioPreview() {
                   </li>
                 ))}
               </ul>
-              {(result.zeroPriceCount > 0 || fxEstimated) && (
+              {!isSample && (result.zeroPriceCount > 0 || fxEstimated) && (
                 <div className="flex flex-col gap-1 border-t border-border/40 pt-3 text-sm text-muted-foreground text-pretty break-keep">
                   {result.zeroPriceCount > 0 && <p data-testid="ratio-zero-price-note">{RATIO_NOTES.zeroPrice(result.zeroPriceCount)}</p>}
                   {fxEstimated && <p data-testid="ratio-fx-note">{RATIO_NOTES.fx}</p>}
@@ -339,6 +414,14 @@ export function RatioPreview() {
             </section>
 
             {/* 액션 */}
+            {isSample ? (
+              <div className="flex flex-col gap-2">
+                <Button data-testid="ratio-sample-cta" variant="brand" className="h-11 w-full text-sm font-semibold break-keep" onClick={handleSampleExit}>
+                  {RATIO_SAMPLE.cta}
+                </Button>
+                <p className="text-center text-sm text-muted-foreground text-pretty break-keep">{RATIO_SAMPLE.caption}</p>
+              </div>
+            ) : (
             <div className="flex flex-col gap-2">
               {env.isInApp ? (
                 <>
@@ -369,6 +452,7 @@ export function RatioPreview() {
               </Button>
               <p className="text-center text-sm text-muted-foreground text-pretty break-keep">{RATIO_NOTES.saveCaption}</p>
             </div>
+            )}
           </div>
         )}
       </Unfold>

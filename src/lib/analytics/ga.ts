@@ -67,6 +67,8 @@ export const PARAM_VALUES = {
     "prompt_copy",
     // 체험 모드 종료 후 내 자산으로 시작(#59)
     "trial_start",
+    // /ratio 예시로 먼저 보기(#66)
+    "sample",
   ],
   result: [
     "success", "fail", "empty", "limit", "cancel",
@@ -106,6 +108,7 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
     open: "실행", click: "클릭", close: "닫기", view: "노출", sell_all: "전량 매도", rebuy: "재매수", step: "수량 조정", submit: "전송", toggle: "전환",
     prompt_copy: "프롬프트 복사",
     trial_start: "체험 후 시작",
+    sample: "예시 보기",
   },
   result: {
     success: "성공", fail: "실패", empty: "결과 없음", limit: "한도 초과", cancel: "취소",

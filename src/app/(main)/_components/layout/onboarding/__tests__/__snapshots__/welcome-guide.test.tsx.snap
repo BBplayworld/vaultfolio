@@ -63,6 +63,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "toggle",
     "prompt_copy",
     "trial_start",
+    "sample",
   ],
   "nav_source": [
     "tap",

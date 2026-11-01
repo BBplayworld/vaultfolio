@@ -343,6 +343,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 ### RatioPreview (`src/app/ratio/ratio-preview.tsx`, #4.39 #63) · RatioHandoffHost (`(main)/_components/ratio/ratio-handoff-host.tsx`)
 - `/ratio`(`(main)` 밖, 서버 `page.tsx`가 metadata·SSR 본문): 업로드·결과를 한 클라이언트 컴포넌트가 노드 유지 + 높이 펼침(`Unfold`, 이 파일 전용)으로 전환. `useAssetData`·react-query·토스트 사용 금지(provider 밖). 문구는 `ratio-copy.ts`
 - `RatioHandoffHost`: `(main)/layout.tsx`에 1줄. 마운트 시 `peekHandoff()` null이면 영구 null. 조건 충족 시 `takeHandoff()` 후 `StockScreenshotImport open initialParsed`, `onSaved`에서 `feature_use{ratio_preview, submit, create}` 1회
+- 예시 모드(#4.40 #66): `status "sample"` + `resultMode`("sample|real", `ratio-result[data-mode]`). dropzone Unfold 안 `ratio-sample-btn`(secondary) → `handleSample`이 `RATIO_SAMPLE_STOCKS`를 `buildRatioList`로 로컬 계산(서버 호출·`geminiUsage`·`setHandoff` 없음, GA `method: sample` 1건). 결과 맨 위 `ratio-sample-label`(포커스 대상), 액션은 brand `ratio-sample-cta`+캡션만(저장·인앱·다시보기·노트 숨김). 복귀 `handleSampleExit`: limit·device 오류만 복원, dropzone 포커스·파일창 미오픈. 문구는 `ratio-copy.ts` `RATIO_SAMPLE`
 - `StockScreenshotImport`에 `initialParsed?: ParsedStock[]`(#4.39): open 시 같은 배열 1회만 처리, 업로드 단계 생략(`increment`·`trackParse` 미호출), 개별 모드로 conflict/preview 진입
 
 ### TrialGate (`trial/trial-gate.tsx`, #4.38 #59) — 체험 모드 게이트(운영 포함)
