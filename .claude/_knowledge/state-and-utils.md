@@ -413,6 +413,7 @@ isMixedSections(raw)  // 국내(또는 기타)와 해외 section 공존
 
 ### ratio-preview/ (#4.39 #63) — 비중 미리보기 순수 로직
 - `ratio-list.ts`: `buildRatioList(raw, {USD, JPY(100엔당)}) → RatioResult`(비중 %·종목 수만, 금액 필드 없음), `largestRemainderTenths`(0.1% 단위 합 1000 보정), `stockValueKrw`. 종목 수는 인식 전체, 비중은 가격 있는 종목 기준
+- `ratio-sample.ts`(#4.40 #66): `RATIO_SAMPLE_STOCKS`(가상 6종목, 티커 없음, 비중 28/22/16/14/12/8 · 국내 58/해외 42)·`RATIO_SAMPLE_RATES`(고정 환율). `/ratio` 예시 모드 전용. `ga.ts` `PARAM_VALUES.method`에 `sample`(라벨 "예시 보기")
 - `handoff.ts`: `setHandoff/peekHandoff/takeHandoff`(모듈 메모리, 10분 타이머로 참조 삭제, 1회 소비), `canOpenHandoff(gate)`(isDataLoaded·!잠금·!공유대기·!마법사·!체험; 튜토리얼 activeStep은 조건 아님)
 - `analytics/utm-allow.ts` `allowedUtmQuery(pathname, search)`: `/ratio`에서만 utm_source|medium|campaign(`[A-Za-z0-9._-]{1,50}`)을 `ga.ts pageLocation()`에 부착
 - 서버 `api-guard.ts`: `reserveGeminiCalls(request, n, msg, pool?)` + `RATIO_POOL`(입구 전역 60·IP 5/일)·`isRatioEntry(request, entry)`. 순서 IP일반→입구IP→입구전역→전역, 실패 시 앞 단계 전부 −n

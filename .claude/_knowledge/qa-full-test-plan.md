@@ -435,6 +435,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 `/ratio`는 로그인·금고 없이 열리고 SSR 본문(제목·설명·고지·업로드 버튼)과 canonical/og:url=`/ratio`·og:image·twitter summary_large_image가 JS 없이 보인다. 결과에 금액이 없고 종목 목록·국내/해외 막대 합이 100.0
 - 👤 저장 버튼 → `/` 이동 후 확인 창(충돌/미리보기, 개별 모드)이 다시 업로드 없이 열리고 등록 결과·종목 수가 미리보기와 같다. 새로고침·취소·10분 경과 후 미재오픈. 앱 잠금·공유 대기·마법사 중 대기 후 해제 시 오픈, 0건·튜토리얼 미완료 기기에서도 오픈(웰컴 위 겹침 없음)
 - 👤 인앱 UA(카카오톡·barcelona)는 "브라우저에서 열어 저장하기" + 재업로드 안내(GA `open`만, `pwa_install` 미전송)
+- 👤 예시 모드(#4.40 #66): 첫 화면 고지 아래 "예시로 먼저 보기" → 로딩 없이 예시 결과(맨 위 "예시 데이터예요…", 6행 28/22/16/14/12/8, 국내 58·해외 42, 금액·티커 0). 저장·인앱·다시보기·노트 DOM 없음, brand "내 캡처로 해보기" → dropzone 복귀(파일창 미오픈, 포커스), 이어서 업로드는 현행. limit·device 오류는 복귀 시 복원, empty·fail은 idle. 예시 중 `/api/*`·저장소·`peekHandoff` 변화 0, GA `method: sample` 1건만(`ratio-sample.test.ts`)
 - ⚙ 입구 한도: 입구 전역 60·IP 5/일(entry 또는 Referer `/ratio`), 초과 시 마감 문구 429, 실패 시 앞 단계 카운터 롤백, 일반 요청 영향 없음(`api-guard.test.ts`). 기기 15회 초과는 업로드 안 함
 - ⚙ GA: `/v/ratio` page_view, `feature_use{ratio_preview, submit success|fail|empty|limit / click / open / create}`, UTM은 `/ratio`에서만 page_location에 부착, 종목명·금액·비중 파라미터 없음. `screenshot_parse` 미전송
 - ⚙ 회귀(#64): 국내·해외 혼합 인식은 앱 내 업로드도 개별 모드로 시작해 카테고리·가격 유지, 단일 section은 현행 동일(`screenshot-stock-map.test.ts`). 웰컴·결산·홈 팁·`page.tsx` diff 0
