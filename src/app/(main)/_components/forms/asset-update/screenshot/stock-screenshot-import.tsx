@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { countAssets, trackAssetSave, trackParse } from "@/lib/analytics/ga";
 import { ImageUp, Loader2, AlertTriangle, CheckSquare, Square, X } from "lucide-react";
 import { toast } from "sonner";
@@ -45,9 +45,11 @@ interface StockScreenshotImportProps {
   activeTab?: string;
   /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
   onSaved?: (count: number) => void;
+  /** 비중 미리보기(/ratio) 인계(#63): 이미 파싱된 응답 배열. 업로드 단계를 건너뛰고 충돌/미리보기로 열린다(AI 호출·사용량 증가 없음) */
+  initialParsed?: ParsedStock[];
 }
 
-export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab, onSaved }: StockScreenshotImportProps = {}) {
+export function StockScreenshotImport({ open: externalOpen, onOpenChange, activeTab, onSaved, initialParsed }: StockScreenshotImportProps = {}) {
   const { saveData, refreshData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -74,6 +76,27 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
   const [conflictCount, setConflictCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 인계 데이터는 같은 배열에 대해 1회만 처리한다(저장 후 assetData 갱신으로 재실행돼도 다시 열리지 않음)
+  const handoffAppliedRef = useRef<ParsedStock[] | null>(null);
+
+  // 인계 경로: 업로드와 같은 매핑 + 개별 모드로 시작(공통 일괄 변환 생략). geminiUsage·trackParse 미호출
+  useLayoutEffect(() => {
+    if (!isOpen || !initialParsed || handoffAppliedRef.current === initialParsed) return;
+    handoffAppliedRef.current = initialParsed;
+    const { stocks: mapped, defaultCategory, defaultBroker } = mapParsedStocks(initialParsed, { activeTab });
+    setCommonCategory(defaultCategory);
+    setCommonBroker(defaultBroker);
+    setApplyMode("individual");
+    setStocks(mapped);
+    const conflicts = countConflicts(assetData.stocks, mapped, keyOfStock);
+    if (conflicts > 0) {
+      setConflictCount(conflicts);
+      setStep("conflict");
+    } else {
+      setStep("preview");
+    }
+  }, [isOpen, initialParsed, activeTab, assetData.stocks]);
 
   const reset = () => {
     setStep("upload");
