@@ -64,6 +64,8 @@ export const PARAM_VALUES = {
     "open", "click", "close", "view", "sell_all", "rebuy", "step", "submit", "toggle",
     // AI 질문 복사(#54)
     "prompt_copy",
+    // 체험 모드 종료 후 내 자산으로 시작(#59)
+    "trial_start",
   ],
   result: [
     "success", "fail", "empty", "limit", "cancel",
@@ -76,7 +78,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   nav_source: ["tap", "back", "swipe", "initial"],
   content_type: ["stock", "portfolio", "type", "link"],
@@ -102,6 +104,7 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
     prompt_view: "설치 안내 노출", accepted: "설치 수락", dismissed: "설치 거절", installed: "설치 완료", inapp_move: "외부 브라우저 이동",
     open: "실행", click: "클릭", close: "닫기", view: "노출", sell_all: "전량 매도", rebuy: "재매수", step: "수량 조정", submit: "전송", toggle: "전환",
     prompt_copy: "프롬프트 복사",
+    trial_start: "체험 후 시작",
   },
   result: {
     success: "성공", fail: "실패", empty: "결과 없음", limit: "한도 초과", cancel: "취소",
@@ -120,6 +123,7 @@ const PARAM_LABELS: { [K in ParamKey]: Record<(typeof PARAM_VALUES)[K][number], 
   category: {
     xray: "X-Ray", tax_sim: "절세 시뮬레이션", home_tip: "홈 팁", notice: "공지", feedback: "의견 보내기", theme: "테마",
     ai_prompt: "AI 프롬프트",
+    demo: "체험 모드",
   },
   step: {
     "1": "1단계", "2": "2단계", "3": "3단계", "4": "4단계", "5": "5단계",

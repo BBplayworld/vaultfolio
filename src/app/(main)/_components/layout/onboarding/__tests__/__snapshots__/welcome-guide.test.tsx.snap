@@ -18,6 +18,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "feedback",
     "theme",
     "ai_prompt",
+    "demo",
   ],
   "content_type": [
     "stock",
@@ -60,6 +61,7 @@ exports[`GA 매핑(위치 이동 후에도 값·라벨 동일) > PARAM_VALUES �
     "submit",
     "toggle",
     "prompt_copy",
+    "trial_start",
   ],
   "nav_source": [
     "tap",

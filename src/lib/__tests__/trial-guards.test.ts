@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { track, trackScreen, setUserProps, trackThenNavigate, NAVIGATE_TRACK_TIMEOUT_MS, __resetGaStateForTest } from "@/lib/analytics/ga";
+import { track, trackScreen, setUserProps, trackThenNavigate, NAVIGATE_TRACK_TIMEOUT_MS, labelOf, __resetGaStateForTest } from "@/lib/analytics/ga";
 import { __resetTrialModeForTest, markTrialActive } from "@/lib/trial/trial-mode";
 import { isCloudSyncEnabled } from "@/lib/cloud-sync/config";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
@@ -86,6 +86,19 @@ describe("trackThenNavigate", () => {
     trackThenNavigate("feature_use", { category: "xray" }, "/y", nav);
     expect(gtag).not.toHaveBeenCalled();
     expect(nav).toHaveBeenLastCalledWith("/y");
+  });
+});
+
+describe("체험 GA 값(진입·시작 2값)", () => {
+  it("feature_use{category: demo}·onboarding_action{method: trial_start} 라벨", () => {
+    expect(labelOf("category", "demo")).toBe("체험 모드");
+    expect(labelOf("method", "trial_start")).toBe("체험 후 시작");
+    track("feature_use", { category: "demo" });
+    track("onboarding_action", { method: "trial_start" });
+    expect(gtag.mock.calls.map((c) => [c[1], c[2].category ?? c[2].method])).toEqual([
+      ["feature_use", "체험 모드"],
+      ["onboarding_action", "체험 후 시작"],
+    ]);
   });
 });
 
