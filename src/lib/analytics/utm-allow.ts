@@ -4,11 +4,11 @@ const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign"] as const;
 const UTM_VALUE_RE = /^[A-Za-z0-9._-]{1,50}$/;
 
 /** pathname이 /ratio(말미 슬래시 허용)일 때만 허용 UTM 쿼리("?a=b&…")를, 아니면 ""를 반환 */
-export function allowedUtmQuery(pathname: string, search: string): string {
-  if (pathname.replace(/\/$/, "") !== "/ratio") return "";
+export function allowedUtmQuery(pathname: string | undefined, search: string | undefined): string {
+  if (typeof pathname !== "string" || (pathname.replace(/\/$/, "") !== "/ratio")) return "";
   let params: URLSearchParams;
   try {
-    params = new URLSearchParams(search);
+    params = new URLSearchParams(search ?? "");
   } catch {
     return "";
   }
