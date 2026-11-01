@@ -27,7 +27,7 @@
 | #58 기타 자산 등록 | 4.39(예정) | planning(문서만) | planner-designer | 사양·tech-review만. 대표 risk:high 착수 승인 전 코드 무변경, 승인 시 12/11 개발 |
 
 ## 열린 릴리스
-- **4.38 = #61, #60, #59** (브랜치 issue-4.38, 현재 #61 ad617bf·b0d9131, #60 fe17e98·59731e0 push됨, #59 미착수). PR 미생성. 컷 규칙: 11/24 24:00까지 #59 qa PASS 아니면 #59 revert. 다음 배정 4.39(#58)
+- **4.38 = #61, #60, #59** (브랜치 issue-4.38 HEAD 2d98daf, PR #62 https://github.com/BBplayworld/vaultfolio/pull/62). qa: #61·#60 PASS, #59 1e31e5a PASS+95dab16 회귀 재확인 중. 다음: cto COO 최종 점검→decision-brief→반영 요청. 결산 창(11/27~12/10) 전 결정 필요. 컷 규칙: 11/24 24:00까지 #59 qa PASS 아니면 #59 revert. 다음 배정 4.39(#58)
 
 ## 막힌 것
 - 운영 사용자 도메인: `https://www.secretasset.xyz`는 접속 가능(2026-10-31 확인). 루트 `secretasset.xyz`는 www로 리다이렉트되며 이 환경에서는 여전히 차단 → 운영 스모크는 `https://www.secretasset.xyz`로 수행
