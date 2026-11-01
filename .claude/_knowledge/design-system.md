@@ -158,6 +158,8 @@
   - 한 표 안에서 금액 포맷을 섞지 않는다(`formatShortCurrency` 억/만 표기 vs `formatPriceByMode`가 `full-only`일 때의 9자리 전체 표기 → 열 폭이 2배 이상 벌어짐).
 - **명세 행(SpecRow)** — 값 + 짧은 설명을 한 캡션에 욱여넣지 말고 라벨/값 분리: 라벨(좌, `text-sm text-muted-foreground text-pretty break-keep`, 선택 `· hint`는 `text-muted-foreground/70`) + 값(우, `text-sm text-foreground font-semibold tabular-nums shrink-0 ml-auto`). 컨테이너는 `flex flex-wrap`으로 두어, 한 줄에 안 들어가면 라벨을 부수는 대신 값을 다음 줄 우측으로 내린다. 위계·집중도 판단은 §11 참조.
 - **한글 줄바꿈** — 한글은 기본 `word-break`에서 **음절 단위로 쪼개진다**. 좁은 컬럼·카드에 들어가는 한글 라벨·캡션은 `text-pretty`와 함께 **`break-keep`**(word-break: keep-all)을 붙인다. 전역 상수(`CAPTION` 등)에는 넣지 말고 폭이 좁은 지점에만 적용.
+  - **가운뎃점(`·`, U+00B7)은 keep-all에서도 줄바꿈 기회**다(#4.38). 문장 속 "저장·전송"처럼 묶여야 하는 어구는 상수 문자열에 `\u2060`(WORD JOINER)을 앞뒤로 넣고(`security-copy.ts`), JSX 제목의 "Chrome·Safari"처럼 짧은 묶음은 `whitespace-nowrap` span으로 감싼다. nowrap 묶음 여러 개를 나열한 줄(웰컴 신뢰 한 줄)에는 `text-balance`를 쓰지 않는다 — 묶음을 1/2로 나눠 첫 줄에 구분자만 남긴다.
+  - 공용 컴포넌트 안 문구의 줄바꿈이 한 소비처에서만 문제면 공용을 고치지 말고 그 소비처 래퍼에 `break-keep`(상속)을 붙인다(#4.38 웰컴 인앱 가이드).
 - **행 안의 부가 뱃지** — `truncate`는 잘려도 되는 텍스트(이름)에만 걸고, 뒤따르는 상태 뱃지·어포던스 라벨(`비교 제외`, `부동산 연결` 등)은 `shrink-0` + 컨테이너 `flex-wrap`으로 둘째 줄에 내려가게 한다. 래퍼 전체에 `truncate`를 걸면 뱃지가 말줄임에 먹혀 **기능 자체가 보이지 않는다**.
 
 ---

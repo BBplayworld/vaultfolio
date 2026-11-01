@@ -386,6 +386,27 @@ UI(`pwa-lock-screen.tsx`)가 아니라 순수 모듈에 두는 이유: 잠금화
 **해제 순서 = `markPwaAuthenticated()` → `try { await unlockAndLoad() } finally { emitPwaUnlocked() }`.** 기록을 먼저 하지 않으면 `unlockAndLoad`가 자기 가드에 막히고, 뒤 둘을 병렬로 두면 원격 pull과 로컬 시세·스냅샷 저장이 서로를 덮어쓴다. `finally`가 없으면 `unlockAndLoad`가 throw할 때 해제 알림이 유실된다.
 **`setPwaAuthPin`은 반드시 `markPwaAuthenticated()`를 함께 호출한다** — 방금 잠금을 설정한 세션은 정의상 인증된 세션이다. 빠뜨리면 설정 직후 `isPwaLocked()`가 true로 굳는데 잠금화면은 마운트 시에만 판정해 뜨지 않고, 그 세션의 push·pull·시세·스냅샷이 전부 무증상 정지한다(과거 회귀).
 
+### pwa/in-app-browser-gate.tsx 순수 함수 (#4.38) — 인앱 게이트 판정
+```typescript
+resolveInAppGate(env) → "none" | "cover" | "welcome" | "gate"
+  // !mounted ‖ standalone ‖ !isInApp → none / !isDataLoaded → cover(빈 덮개)
+  // 자산 0건 && !isSharePending && !syncAssetId && !restoreHash → welcome(게이트 미렌더, 웰컴 inapp 슬롯이 안내) / 그 외 gate(현행)
+hasRestoreHash(hash): boolean   // share·sync·asset·vault 해시 — 처리 후 replaceState로 지워지므로 게이트는 첫 렌더에 1회 캡처(useState 초기화)
+```
+
+### hooks/use-external-move.ts (#4.38) — 인앱 → 외부 브라우저 이동 **단일 구현**
+```typescript
+useExternalMove(isIOS) → { go(urlOrPromise), iosFallback }   // 게이트·웰컴 inapp 슬롯 공용
+moveExternal({ isIOS, url, copy, openExternal, onTrack })    // 순수 판정: iOS 복사 → "ios-fallback" / 그 외 openExternalBrowser → "opened", GA pwa_install inapp_move 호출당 1회
+copyUrlForIOS(urlOrPromise)                                  // 제스처 보존 ClipboardItem(Promise) → 실패 시 writeText
+```
+- 인앱 감지 `IN_APP_BROWSER_RE`(detect-browser.ts)에 #4.38 `barcelona`(Threads)·`daumapps`(다음)·`band\/`(밴드) 추가. 오탐은 `isBackgroundWorkBlocked`로 시세 갱신까지 멈추므로 토큰 추가 시 음성 UA 고정 테스트(`detect-browser-inapp.test.ts`) 필수
+
+### config/security-copy.ts (#4.38) — 보안 안내 문구 **단일 출처**
+- `SECURITY_COPY`(카드 3 `{ id: local|sync|admin, title, desc }`, 웰컴 보안 상세·앱가이드 공용), `APP_GUIDE_SECURITY_DESC`, `SYNC_MENU_SECURITY_DESC`(동기화 메뉴 설명 마지막 문장), `SCREENSHOT_UPLOAD_NOTICE`(업로드 박스 4종). 텍스트만(React·아이콘 import 없음)
+- **"이중 암호화" 5문장은 `DUAL_ENCRYPTION_COPY` 한 블록 — 대표 확인 대기.** 바꿀 때 블록만 교체(대안 문구: 4.38 #61 design-final). `src/` 다른 파일에 `이중 암호화|이중으로 암호화` 0건(테스트 강제). "저장·전송"은 `\u2060` 묶음
+- 근거 1줄: 자산 암호화는 AES-256-GCM 1겹(기기 종단) + 전송 구간 HTTPS = "기기 종단 암호화 + 전송 구간 암호화". 새 안내 문구에 "서버"를 주어로 한 역할 나열 금지
+
 ### pwa/background-gate.ts — 자동 백그라운드 동작 차단 판정
 
 ```typescript
@@ -488,6 +509,7 @@ writeTutorialStatus(map): void
 ### asset-storage.ts
 
 ```typescript
+hasAnyAssets(d): boolean   // #4.38 5배열(부동산·주식·코인·현금·대출) 1건 이상. page.tsx·use-share-artifacts·preview-gate 공용(배열 존재 전제 — 원본 JSON은 정규화 후). top-bar·bottom-nav·asset-data-context의 같은 식은 미교체(후보)
 getAssetData(): AssetData
 saveAssetData(data): boolean
 exportAssetData(currentData?): boolean   // currentData 전달 시 저장소와 어긋나면 중단하고 false
