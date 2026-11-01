@@ -404,7 +404,7 @@ copyUrlForIOS(urlOrPromise)                                  // 제스처 보존
 
 ### config/security-copy.ts (#4.38) — 보안 안내 문구 **단일 출처**
 - `SECURITY_COPY`(카드 3 `{ id: local|sync|admin, title, desc }`, 웰컴 보안 상세·앱가이드 공용), `APP_GUIDE_SECURITY_DESC`, `SYNC_MENU_SECURITY_DESC`(동기화 메뉴 설명 마지막 문장), `SCREENSHOT_UPLOAD_NOTICE`(업로드 박스 4종). 텍스트만(React·아이콘 import 없음)
-- **"이중 암호화" 5문장은 `DUAL_ENCRYPTION_COPY` 한 블록 — 대표 확인 대기.** 바꿀 때 블록만 교체(대안 문구: 4.38 #61 design-final). `src/` 다른 파일에 `이중 암호화|이중으로 암호화` 0건(테스트 강제). "저장·전송"은 `\u2060` 묶음
+- **동기화 암호화 설명 5문장은 `DEVICE_ENCRYPTION_COPY` 한 블록**(대표 지시로 실제 방식 기준 명칭 확정: "기기에서 암호화하는 동기화", 본문은 "기기에서 암호화…(종단간 암호화)"). 바꿀 때 블록만 교체. 옛 표현 재유입은 테스트가 `src/` 전체에서 막는다. "관리자도 알 수 없어요"는 동기화 자산 한정. "저장·전송"은 `\u2060` 묶음
 - 근거 1줄: 자산 암호화는 AES-256-GCM 1겹(기기 종단) + 전송 구간 HTTPS = "기기 종단 암호화 + 전송 구간 암호화". 새 안내 문구에 "서버"를 주어로 한 역할 나열 금지
 
 ### trial/ — 체험 모드 (#4.38 #59, risk high)

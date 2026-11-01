@@ -57,22 +57,22 @@ describe("구 문구 제거(완료 기준 1)", () => {
   });
 });
 
-describe("'이중 암호화' 문장은 security-copy.ts 한 블록에만(완료 기준 8)", () => {
-  it("src/ 다른 파일 UI 문자열에 0건", () => {
-    const hits = walk(path.join(ROOT, "src"))
-      .filter((p) => !p.endsWith(path.join("config", "security-copy.ts")))
-      .filter((p) => /이중 암호화|이중으로 암호화/.test(stripComments(readFileSync(p, "utf8"))));
+// 대표 지시(4.38): 실제 방식(기기에서 AES-256-GCM 암호화 후 전송, 종단간 암호화) 기준 명칭. 옛 표현 재유입 방지
+const OLD_ENCRYPTION_TERM = /이중\s*(으로\s*)?(종단간\s*)?암호화/;
+
+describe("동기화 암호화 문장은 security-copy.ts 한 블록에만(완료 기준 8 갱신)", () => {
+  it("src 전체(주석 포함)에 옛 암호화 명칭 0건", () => {
+    const hits = walk(path.join(ROOT, "src")).filter((p) => OLD_ENCRYPTION_TERM.test(readFileSync(p, "utf8")));
     expect(hits).toEqual([]);
   });
-  it("security-copy.ts 안에서는 대표 확인 대기 블록 1개에 5문장", () => {
+  it("DEVICE_ENCRYPTION_COPY 블록 1개에 5문장, 모두 '기기에서 암호화' 기준", () => {
     const src = read("src/config/security-copy.ts");
-    const blockStart = src.indexOf("const DUAL_ENCRYPTION_COPY");
+    const blockStart = src.indexOf("const DEVICE_ENCRYPTION_COPY");
     const blockEnd = src.indexOf("} as const;", blockStart);
-    expect(src).toContain("// 대표 확인 대기: '이중 암호화' 표현");
-    const block = src.slice(blockStart, blockEnd);
-    const outside = src.slice(0, blockStart) + src.slice(blockEnd);
-    expect(block.match(/이중 암호화|이중으로 암호화/g)?.length).toBe(5);
-    expect(stripComments(outside)).not.toMatch(/이중 암호화|이중으로 암호화/);
+    expect(blockStart).toBeGreaterThan(0);
+    const block = stripComments(src.slice(blockStart, blockEnd));
+    expect(block.match(/기기에서 암호화/g)?.length).toBe(5);
+    expect(stripComments(src.slice(0, blockStart) + src.slice(blockEnd))).not.toMatch(/기기에서 암호화/);
   });
 });
 
@@ -87,7 +87,7 @@ describe("새 문구 규칙(완료 기준 4)", () => {
   });
   it("카드 3개 순서·id 고정", () => {
     expect(SECURITY_COPY.map((c) => c.id)).toEqual(["local", "sync", "admin"]);
-    expect(SECURITY_COPY.map((c) => c.title)).toEqual(["내 기기에 저장", "이중 암호화 동기화", "관리자도 알 수 없어요"]);
+    expect(SECURITY_COPY.map((c) => c.title)).toEqual(["내 기기에 저장", "기기에서 암호화하는 동기화", "관리자도 알 수 없어요"]);
   });
 });
 
