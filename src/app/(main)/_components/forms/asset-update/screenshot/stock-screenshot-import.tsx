@@ -579,7 +579,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                               className={`h-7 w-28 text-xs px-2.5 font-mono shrink-0 ${
                                 stock.selected && !stock.ticker && !(stock.tickerInput?.trim())
                                   ? "border-destructive focus-visible:ring-destructive"
-                                  : "border-border/60"
+                                  : ""
                               }`}
                               value={stock.tickerInput ?? (stock.ticker || "")}
                               onChange={(e) => {

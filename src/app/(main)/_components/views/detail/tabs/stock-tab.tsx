@@ -532,7 +532,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
         <div className="space-y-2 py-1">
           <p className="text-sm text-muted-foreground">총 {maxQty.toLocaleString()}주를 항목별로 나눕니다.</p>
           {items.map((it, idx) => (
-            <div key={idx} className="rounded-md border border-border/60 bg-muted/5 p-3 space-y-2">
+            <div key={idx} className="rounded-md border border-border dark:border-border/60 bg-muted/5 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-muted-foreground">항목 {idx + 1}</span>
                 {items.length > 2 && (
@@ -822,7 +822,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
             <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
           {!open && (
-            <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
+            <div className="h-1.5 bg-muted/20" />
           )}
           <CollapsibleContent>
             <div className={ASSET_THEME.cardExpandBox}>

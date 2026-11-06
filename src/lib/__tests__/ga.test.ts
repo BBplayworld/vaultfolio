@@ -6,6 +6,7 @@ import {
   trackAssetSave,
   trackParse,
   featureTitleOf,
+  trackThemeMode,
   countAssets,
   toGaAssetType,
   screenPath,
@@ -30,7 +31,7 @@ function memoryStorage(): Storage {
 
 type GtagMock = ReturnType<typeof vi.fn>;
 let gtag: GtagMock;
-const g = globalThis as unknown as { window?: unknown; localStorage?: Storage };
+const g = globalThis as unknown as { window?: unknown; localStorage?: Storage; sessionStorage?: Storage };
 
 function installWindow(withGtag = true) {
   gtag = vi.fn();
@@ -39,6 +40,7 @@ function installWindow(withGtag = true) {
     ...(withGtag ? { gtag } : {}),
   };
   g.localStorage = memoryStorage();
+  g.sessionStorage = memoryStorage();
 }
 
 beforeEach(() => {
@@ -49,6 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   delete g.window;
   delete g.localStorage;
+  delete g.sessionStorage;
 });
 
 describe("gtag 부재·예외", () => {
@@ -105,6 +108,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "demo" }, "체험 모드"],
     ["feature_use", { category: "share_card" }, "인증카드 열기"],
     ["feature_use", { category: "app_guide" }, "앱 가이드 열기"],
+    ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
+    ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {
     expect(featureTitleOf(name, params, "home")).toBe(title);
   });
@@ -300,5 +305,34 @@ describe("#63 /ratio UTM 귀속", () => {
     trackScreen("ratio");
     track("feature_use", { category: "ratio_preview", method: "sample" });
     expect(gtag.mock.calls.at(-1)?.[2].page_title).toBe("비중 미리보기");
+  });
+});
+
+describe("테마 모드 계측(#4.42)", () => {
+  it("세션당 모드별 1회만 보내고 page_title만 싣는다", () => {
+    trackThemeMode("dark");
+    trackThemeMode("dark");
+    expect(gtag).toHaveBeenCalledTimes(1);
+    const [, name, payload] = gtag.mock.calls[0];
+    expect(name).toBe("theme_mode");
+    expect(payload.page_title).toBe("다크 모드 사용");
+    expect(Object.keys(payload).sort()).toEqual(["page_location", "page_title"]);
+  });
+
+  it("테마를 전환하면 새 모드로 1회 다시 보낸다", () => {
+    trackThemeMode("dark");
+    trackThemeMode("light");
+    expect(gtag).toHaveBeenCalledTimes(2);
+    expect(gtag.mock.calls[1][2].page_title).toBe("라이트 모드 사용");
+  });
+
+  it("체험 모드에서는 전송하지 않는다", () => {
+    markTrialActive();
+    try {
+      trackThemeMode("dark");
+      expect(gtag).not.toHaveBeenCalled();
+    } finally {
+      __resetTrialModeForTest();
+    }
   });
 });

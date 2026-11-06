@@ -11,7 +11,7 @@
 
 1. **다크 우선·블랙 기반.** 배경=블랙, 전경=화이트의 고대비 위에 의미색만 절제해서 얹는다. 라이트 모드도 동일 토큰으로 자동 대응(하드코딩 색 금지).
 2. **핵심 데이터에 집중.** 화면당 시선 1순위는 Hero 지표(순자산·수익). 부차 정보는 접거나 약화.
-3. **보더리스 플랫.** 테두리보다 **배경 톤차·그림자**로 면을 나눈다. 보조 액션은 `outline`(테두리) 대신 `secondary`(은은한 배경).
+3. **보더리스 플랫.** 테두리보다 **배경 톤차·그림자**로 면을 나눈다. 라이트는 카드 외곽선·그림자 없이 **배경 톤차가 1순위**(#4.42). 보조 액션은 `outline`(테두리) 대신 `secondary`(은은한 배경).
 4. **토큰만 사용.** `text-black`/`bg-white`/원시 `#hex` className 금지 → 시맨틱 토큰(`text-foreground`/`bg-background`/`bg-card`…).
 
 ---
@@ -21,13 +21,15 @@
 ### 1.1 표면·전경 (시맨틱, 라이트/다크 자동)
 | 용도 | 토큰 | 라이트 | 다크 |
 |---|---|---|---|
-| 배경 | `bg-background`/`text-foreground` | 화이트 / 블랙 | 블랙(oklch .145) / 화이트(oklch .985) |
-| 카드 | `bg-card` `text-card-foreground` | 화이트 | oklch .205 |
-| 팝오버·시트 | `bg-popover` | 화이트 | 반투명 다크 |
-| 약화 면/텍스트 | `bg-muted` `text-muted-foreground` | — | — |
+| 배경 | `bg-background`/`text-foreground` | `oklch(0.96 0.004 250)` #F0F2F4 / 블랙 | `oklch(0.16 0.010 265)` #0B0D12 / foreground `oklch(0.965 0.004 265)` |
+| 카드 | `bg-card` `text-card-foreground` | 화이트 | `oklch(0.225 0.012 265)` #191C22 |
+| 팝오버·시트·다이얼로그 | `bg-popover` (다크 한정 Dialog·AlertDialog·Sheet·Drawer·FAB 시트 `dark:bg-popover`) | 화이트 | `oklch(0.275 0.014 265)` #24282F (불투명) |
+| 약화 면/텍스트 | `bg-muted` `text-muted-foreground` | — | muted·secondary `oklch(0.31 0.014 265)` / mf `oklch(0.74 0.016 265)` / accent(hover) `oklch(0.33 0.014 265)` |
 | 보조 액션 | `bg-secondary` / `variant="secondary"` | — | — |
-| 보더 | `border-border` (다크는 `white/10`) | oklch .65 | white 10% |
+| 보더 | `border-border` (다크는 `white/10`) | `oklch(0.91)` 장식 헤어라인(인터랙티브 경계는 `--input` .58) | white 10% |
 | 포커스 링 | 전역 `outline-ring/50` (globals.css base) | — | — |
+
+다크 고도(#4.42 후속): bg < card < popover < muted < accent, 청남색 hue 265·채도 0.010~0.016(초과 금지). 다크 카드·다이얼로그·시트는 테두리 없이 톤차로 분리하고, Input·Select 트리거만 `border-input` 경계를 유지한다(WCAG 1.4.11). 새 색 토큰 없이 값만 교체.
 
 ### 1.2 의미색 (이것만 색을 쓴다)
 | 의미 | 토큰 | 값 |
@@ -91,15 +93,17 @@
 - 페이지 컨테이너 좌우 거터 `px-3`(TopBar 버튼 라인과 일치) → 본문 카드 추가 패딩 0 (`ASSET_THEME.contentPad = "px-0"`).
 
 ### 3.2 반경(radius) — 동심 정렬
-`--radius: 0.625rem`(10px) 기준. `rounded-sm`(6) `rounded-md`(8) `rounded-lg`(10) `rounded-xl`(14) `rounded-2xl`(16).
+`--radius: 0.75rem`(12px) 기준. `rounded-sm`(8) `rounded-md`(10) `rounded-lg`(12) `rounded-xl`(16) `rounded-2xl`(20, `--radius-2xl` 신규).
 - **동심 radius**: 바깥 컨테이너가 둥글면 안쪽 요소는 더 작은 radius로 정렬(바깥 `rounded-xl` → 안쪽 `rounded-lg`).
-- 카드 `rounded-lg`, 다이얼로그/시트 `rounded-2xl`, 칩·점 `rounded-full`.
+- 역할표: 카드 `xl` / 내부박스·컨트롤(Button·Input·Select) `lg` / 다이얼로그·시트·배너·Drawer 상단 `2xl` / 칩·배지·점·키패드 `full`. 세그먼트 트랙(`tabList1` xl, p-1.5) 안 트리거는 `md`. Select content `lg`(p-1 안 item `sm`), Popover `xl`.
+- 장식용 색 그림자·그라데이션 금지(그림자는 중립 검정 저불투명). 컬러 아이콘 칩 금지 — 아이콘은 단색, 의미는 색·굵기로. 폰트는 시스템 스택 `--font-sans`(Inter 제거, 외부 폰트 로드 0).
 
 ### 3.3 고도(elevation) — 테두리보다 그림자
 - 면 분리는 **배경 톤차(`bg-muted/40`, `bg-card/50`) → 그림자** 순으로. 테두리는 최후.
 - **[필수] 보더리스 박스**: 박스·카드·의미색 콜아웃 컨테이너는 **테두리 없이 배경 톤차(+`shadow-xs`)로 표현**한다(팝업 내부 포함 전 영역). `border`(전방위 테두리)는 다음에만 허용 — hairline 구분선(`border-t`/`border-b`), 기능성(선택상태 표시·업로드 `border-dashed` 드롭존·segmented 트랙·인라인 코드/키캡 칩·`Badge`·단계 점 컨트롤), 다이얼로그/시트 프레임 외곽. 예: `border bg-card` → `bg-card shadow-xs`, `border border-amber-500/20 bg-amber-500/10` → `bg-amber-500/10`.
 - 팝오버·시트·드롭다운 `shadow-2xl`, 활성 탭·작은 떠오름 `shadow-sm`.
-- **[필수] 라이트 뉴트럴 계조**(보더리스와 짝): 라이트는 순백 단일톤 금지 → **캔버스 `bg-background`(그레이 `oklch 0.91`) < 리세스 `bg-muted`(`0.88`) < 부상 `bg-card`(화이트)** 3단 + `shadow-xs/sm` 소프트 섀도우로 박스 분리. 다크는 card(`.205`)>background(`.145`) 톤차 유지. 토큰 출처 [globals.css](../../src/app/globals.css) `:root`/`.dark`. 소프트 섀도우는 `--shadow-2xs/xs/sm` + `:root .shadow-*` 무조건 오버라이드(프리셋 미설정 상태에서도 적용).
+- **[필수] 라이트 박스 분리(#4.42)**: 카드·SECTION·ROW·KPI는 `border`·`shadow` 없이 `bg-card` 톤차(다크만 `dark:border`/`dark:shadow-*`). 헤어라인 구분선은 `border-border dark:border-border/NN`(`/NN` 알파 단독 금지 — 라이트에서 사라짐). 점검: 카드 vs 캔버스 상대 대비 ≥1.10:1, 중첩 박스 ≥1.08:1(흰 부모 위 최소 `bg-muted/30`), 같은 색끼리 겹치는 Popover·Sheet는 헤어라인 border 또는 `shadow-md` 이상 유지. `--input` 경계(≥3:1)는 불변.
+- **[필수] 라이트 뉴트럴 계조**(보더리스와 짝): 라이트는 순백 단일톤 금지 → **캔버스 `bg-background`(`oklch 0.96 0.004 250`) < 리세스 `bg-muted`(`0.88`) < 부상 `bg-card`(화이트)** 3단 + `shadow-xs/sm` 소프트 섀도우로 박스 분리. 다크는 card(`.205`)>background(`.145`) 톤차 유지. 토큰 출처 [globals.css](../../src/app/globals.css) `:root`/`.dark`. 소프트 섀도우는 `--shadow-2xs/xs/sm`(불투명도 .03~.06) + `:root:not(.dark) .shadow-*` 오버라이드(프리셋 미설정 상태에서도 적용).
 - **[필수] 자산 카드 표면 계층**([theme.ts](../../src/config/theme.ts) `ASSET_THEME`): 라이트 모드는 다크 모드와 동일 구조(미러링)를 적용하되, 대조를 높이고 은은한 경계선을 두어 영역을 명확히 구분합니다. 자산 상세 콘텐츠(cardWrapper·섹션·subCard)는 캔버스와 통일(투명/faint 톤, 양 모드 동일 클래스 구조)하여 불필요한 레이어를 없애되, 상세 구분 영역(cardSection/subItemsWell 등)에는 불투명도를 높인 faint 톤(`bg-muted/40` 및 `/20`)과 아주 부드러운 소프트 보더(`border-border/10`, `divide-border/10`)를 적용하여 시각적 구분을 명확히 합니다. 허브·메뉴 카드만 `bg-card`(화이트)+은은한 보더(`border-border/10`)로 명도 pop을 구현합니다. 다크 모드는 현행 디자인(borderless 또는 기존 다크 전용 보더/디바이더)을 그대로 보존합니다.
 - **구분선 2종**: **중립 헤어라인** `border-border/40`·`h-px bg-border/40`(§5.1) = 일반 행·헤더 분리 / **강조(accent) 구분선** `ASSET_THEME.dividerAccent`(=`border-t border-amber-400/25`, §1 별점 amber 톤) = 논리 그룹·섹션 경계('큰 단락')만. 강조 구분선도 위 "hairline 구분선(`border-t`/`border-b`)" 허용 범위 내 장식 구분선이며 박스 전방위 보더가 아니다. 색 하드코딩 금지 — 반드시 토큰 사용.
 - **[필수] 인터랙티브 경계 대비(WCAG 1.4.11)**: 입력 필드·체크박스 등 조작 요소의 경계는 **3:1 이상**. 라이트는 헤드룸이 좁아 `border-input`(=`--input` `oklch(0.58)`)로 가시 경계를 준다(`Input`은 `border border-input dark:border-0`, `Checkbox`는 `border-input`). **다크는 보더리스 fill 유지**(`dark:border-0`, `--input` 별도 pin). 장식용 구분선(`--border`)은 1.4.11 대상이 아니므로 헤어라인을 무겁게 하지 않는다.
@@ -135,6 +139,7 @@
 ## 5. 컴포넌트 규약
 
 - **버튼**: 확인·제출 = `variant="brand"`. 보조·취소·리스트 내 아이콘(수정/삭제/나누기) = `variant="secondary"`(테두리 없는 플랫). `outline` 신규 사용 지양. 카드 액션 아이콘 버튼 = `size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5). `Button`은 누름 피드백 `active:not-disabled:scale-[0.96]` 내장(link·`static` 제외).
+- **키패드(잠금 화면)**: 테두리·배경 없는 72px 숫자(`text-2xl font-medium`), 눌림만 `active:bg-muted` 원형. 낮은 화면(`max-height:620px`) 64px.
 - **체크박스**: 기본 `Checkbox`(checked 시 자동 brand). 별도 색 금지.
 - **탭/세그먼트**: InlineSelector로 전 차수 통일(`tabList2/3` 토큰은 #4.34에 삭제, `tabList1`·`tabList3Wrap`만 legacy 잔존). 화면 폭을 채우는 1차 선택(자산 변화 범위·기간)은 `InlineSelector fullWidth` — 같은 폭 칸·채운 썸+굵은 글자(외곽선 없음)·썸 `motion-safe:transition-[transform] duration-200`·칸 `min-h-10 text-sm active:scale-[0.96]`·화살표 키 이동.
 - **카드**: 접힘행 왼쪽=핵심 식별(이름·비중%), 상세(종류·금리·매입가 등)는 펼침(Collapsible)에. 비종목 자산도 주식 카드와 동일 패턴. 토큰: `cardWrapper`/`cardHeader`/`cardInfoName`/`cardAmountMain`…
@@ -150,8 +155,8 @@
 
 > 긴 데이터 화면(성적표·허브·상세 등)에서 위계·구분·정렬을 통일하는 레시피. 소비처 2곳 이상 되면 shared 컴포넌트로 추출.
 
-- **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card border border-border/10 dark:border-0 shadow-sm p-4 space-y-3`(테두리보다 그림자 §3.3) + 헤더 = **채운 아이콘 칩**(`flex size-7 items-center justify-center rounded-lg` 안에 `size-4` 아이콘) + 굵은 제목(`text-sm sm:text-base font-bold`, 톤과 무관하게 `text-foreground` 고정) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
-  - **아이콘 칩 톤 구분(2026-08)** — 한 화면에 여러 대주제 섹션이 나란히 있을 때(`asset-report-view.tsx` `SectionHeader`의 `tone` prop) 제목 텍스트는 그대로 두고 아이콘 배경·색만 섹션별로 달리해 은은하게 구분한다. 임의의 새 색을 만들지 않고 이미 의미가 정해진 토큰만 재사용: `brand`(`bg-primary/15 text-primary`, 기본) · `important`(`bg-orange-500/15 text-orange-600 dark:text-orange-400`, §1.2 순자산 강조 토큰) · `gold`(`bg-amber-500/15 text-amber-600 dark:text-amber-400`, 별점·등급 톤과 통일) · `info`(`bg-sky-500/15 text-sky-600 dark:text-sky-400`, 정보/보조 도구 성격). 섹션이 3~4개를 넘거나 새 의미가 필요하면 이 팔레트 안에서 먼저 고르고, 부족할 때만 새 토큰을 design-system.md에 추가한다.
+- **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card p-4 space-y-3 dark:shadow-sm`(라이트 톤차 §3.3) + 헤더 = **칩 없는 단색 아이콘 `size-5`** + 굵은 제목(`text-sm sm:text-base font-bold`, 톤과 무관하게 `text-foreground` 고정) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
+  - **아이콘 색 톤 구분(2026-08, #4.42에 칩 제거)** — 한 화면에 여러 대주제 섹션이 나란히 있을 때(`asset-report-view.tsx` `SectionHeader`의 `tone` prop) 제목 텍스트는 그대로 두고 아이콘 글자색만 섹션별로 달리해 은은하게 구분한다. 임의의 새 색을 만들지 않고 이미 의미가 정해진 토큰만 재사용: `brand`(`text-primary`, 기본) · `important`(`text-orange-600 dark:text-orange-400`, §1.2 순자산 강조 토큰) · `gold`(`text-amber-600 dark:text-amber-400`, 별점·등급 톤과 통일) · `info`(`text-sky-600 dark:text-sky-400`, 정보/보조 도구 성격). 섹션이 3~4개를 넘거나 새 의미가 필요하면 이 팔레트 안에서 먼저 고르고, 부족할 때만 새 토큰을 design-system.md에 추가한다.
 - **소그룹 뱃지 라벨** — 섹션 안에서 산식 체인·목록 카테고리 등 하위 묶음의 시작을 표시: `inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary`. muted 텍스트 라벨 대신 brand 톤 뱃지를 쓴다(§1.2 info 아이콘 sky와 구분 — 이건 라벨).
 - **비교 표(그리드)** — 여러 기준을 컬럼 정렬로 대조: `overflow-x-auto` 래퍼(모바일 가로 넘침 보호) + `grid grid-cols-[1fr_auto_…] items-baseline gap-x-… gap-y-…` + 헤더행 + `col-span-N h-px bg-border/40` 구분선. 라벨 좌측, 값 우측(`text-right tabular-nums`), 폭 압축은 `formatShortCurrency`, `min-w-[…]`로 하한. 강조 컬럼만 `font-bold` + 부호색(`getProfitLossColor`).
   - **`auto` 값 열은 모바일에서 `1fr` 라벨 열을 0으로 붕괴시킨다**(라벨이 한 글자씩 세로로 깨짐). `min-w-[…]`는 반드시 **모든 열의 자연 폭 합 이상**이어야 가로 스크롤이 실제로 동작한다. 그 폭을 잡을 수 없으면 **모바일은 기준별 세로 스택(`sm:hidden`, 라벨-값 쌍 블록) + `hidden sm:grid`로 표**를 쓴다. 두 레이아웃은 반드시 같은 행 배열 소스를 map 해 JSX 중복을 만들지 않는다(예: `asset-report-view.tsx`의 `perfRows`).
@@ -194,7 +199,7 @@
 ## 8. 다크모드 · 토큰 사용 규칙
 
 - 모든 색은 시맨틱 토큰. 부득이한 의미색도 `text-orange-600 dark:text-orange-400`처럼 **라이트/다크 쌍**으로.
-- `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것. 하드코딩된 사본(`pwa-guide-illustrations.tsx`의 `BRAND` 상수, `floating-add-button.tsx`의 `bg-[#5b6fbf]/10` 등)도 함께 바꿔야 한다.
+- `--brand`(globals.css)와 `MAIN_PALETTE[0]`(theme.ts)는 **동일 hex(#5b6fbf) 동기화 유지** — 한쪽만 바꾸지 말 것. 하드코딩된 사본(`pwa-guide-illustrations.tsx`의 `BRAND` 상수 등; FAB은 #4.42에 `bg-brand/10`으로 토큰화)도 함께 바꿔야 한다.
 - 공유/동기화 링크 진입 시 송신 테마(`&theme=`)를 hydration 이전 단계부터 적용해 깜빡임(FOUC) 방지.
 - **라이트/다크 비대칭 pin**: 라이트에서만 인지성이 부족한 조합(예: `text-muted-foreground/NN`)은 라이트 값을 교정하고 다크는 `dark:text-muted-foreground/NN`로 기존 모습 그대로 고정한다(§11 참고).
 - **가로 스크롤바 전역 금지**(R33): `globals.css`의 `body { overflow-x: hidden }` + `html { touch-action: pan-y }`로 페이지 레벨 가로 스크롤을 원천 차단한다. 어떤 컴포넌트도 뷰포트를 가로로 넘겨선 안 되며, 넘칠 위험이 있으면 스크롤바로 해결하지 말고 그 컴포넌트를 `min-w-0`/`max-w-full`/`truncate`로 수렴시킨다(날짜 input R10, 인증카드 미리보기 fit-to-width와 동일 원칙). 의도적 가로 스크롤(넓은 표·코드블록·X-Ray)은 **내부 `overflow-x-auto` 컨테이너**로만 — `body` 규칙은 이걸 막지 않는다.

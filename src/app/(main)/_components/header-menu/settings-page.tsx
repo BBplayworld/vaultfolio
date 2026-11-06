@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { track } from "@/lib/analytics/ga";
+import { track, trackThemeMode } from "@/lib/analytics/ga";
 import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { APP_CONFIG } from "@/config/app";
@@ -106,6 +106,7 @@ export function SettingsPage() {
     setThemeMode(next);
     persistThemeModeCookie(next);
     track("feature_use", { category: "theme", method: "toggle" });
+    trackThemeMode(next);
   };
 
   const handleClearCache = () => {
@@ -185,7 +186,7 @@ export function SettingsPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card border border-border/10 dark:border-0 shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:shadow-xs hover:bg-accent dark:hover:bg-accent/60 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
   const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-rose-500/5 border border-rose-500/10 dark:border-0 shadow-xs hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 

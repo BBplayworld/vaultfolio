@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, ExternalLink, Smartphone } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useShareArtifacts } from "@/hooks/use-share-artifacts";
-import { MAIN_PALETTE } from "@/config/theme";
 import { getAssetId } from "@/lib/cloud-sync/sync-state";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
@@ -235,7 +234,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
       <Dialog open={showDialog} onOpenChange={handleDialogChange}>
         <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
-          <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border/50">
+          <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border dark:border-border/50">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : guideStep ? <Smartphone className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
               {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : guideStep ? "앱 설치 가이드" : "홈 화면에 앱 설치"}
@@ -294,9 +293,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             ) : isSyncMode ? (
               /* 동기화 기기: PIN 입력 없이 안내만 — 새 기기에서 금고 암호로 복원 */
               <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                <div className="flex items-center justify-center size-14 rounded-2xl text-white" style={{ backgroundColor: MAIN_PALETTE[0] }}>
-                  <CheckCircle2 className="size-7" />
-                </div>
+                <CheckCircle2 aria-hidden className="size-7 text-primary" />
                 <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-xs">
                   기기 동기화 중인 기기입니다.<br />
                   아래 <span className="font-semibold text-foreground">설치하기</span>를 누르면 바로 설치되고,<br />
@@ -327,7 +324,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <DialogFooter className="px-6 py-4 border-t border-border dark:border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
             {iosStep || inAppStep || guideStep ? (
               <Button variant="brand" onClick={() => handleDialogChange(false)} type="button" className="text-sm h-10 px-5 shadow-sm font-semibold text-white">
                 가이드 확인 완료

@@ -43,7 +43,8 @@ export type GaEvent =
   | "app_lock"
   | "pwa_install"
   | "feature_use"
-  | "settlement_view";
+  | "settlement_view"
+  | "theme_mode";
 
 export const PARAM_VALUES = {
   asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "yearly_net_asset"],
@@ -85,6 +86,8 @@ export const PARAM_VALUES = {
   category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
+  // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
+  theme: ["dark", "light"],
 } as const;
 
 type ParamKey = keyof typeof PARAM_VALUES;
@@ -212,6 +215,8 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
       return "앱 설치";
     case "settlement_view":
       return "월 결산";
+    case "theme_mode":
+      return params.theme === "dark" ? "다크 모드 사용" : "라이트 모드 사용";
     case "feature_use": {
       const t = params.category ? CATEGORY_TITLES[params.category] : undefined;
       if (t) return t;
@@ -239,6 +244,23 @@ export function track(name: GaEvent, params: GaParams = {}): void {
     const payload = withTitle({ page_location: pageLocation() }, name, params);
     if (isDebug()) payload.debug_mode = true;
     gtag("event", name, payload);
+  } catch {
+    // 계측 실패는 무시
+  }
+}
+
+const THEME_SENT_KEY = "secretasset_ga_theme_sent";
+
+/**
+ * 화면 테마 사용 계측(#4.42) — 세션(sessionStorage)당 모드별 1회. 앱 시작 시 현재 모드, 설정에서 전환하면 새 모드로 1회 재전송.
+ * 직전에 보낸 모드와 같으면 생략한다. 체험 모드는 track이 no-op이며 중복 기록도 하지 않는다.
+ */
+export function trackThemeMode(mode: "dark" | "light"): void {
+  try {
+    if (isTrialMode()) return;
+    if (sessionStorage.getItem(THEME_SENT_KEY) === mode) return;
+    sessionStorage.setItem(THEME_SENT_KEY, mode);
+    track("theme_mode", { theme: mode });
   } catch {
     // 계측 실패는 무시
   }

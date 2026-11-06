@@ -42,7 +42,7 @@ export function TrialBanner() {
       data-testid="trial-banner"
       data-screenshot-hide
       aria-label="체험 안내"
-      className="flex flex-col rounded-xl bg-card shadow-xs border border-border/10 dark:border-0 p-3 sm:px-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200"
+      className="flex flex-col rounded-xl bg-card dark:shadow-xs p-3 sm:px-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">

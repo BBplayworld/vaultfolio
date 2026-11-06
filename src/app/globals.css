@@ -48,12 +48,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  /* 시스템 글꼴 스택 — 외부 폰트 로드 없음 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", "Malgun Gothic", Roboto, system-ui, sans-serif;
 }
 
 /* Default theme styles (used when no data-theme-preset is set or when 'default' is selected).
 These serve as the fallback; there is no separate default.css file. */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -73,7 +76,8 @@ These serve as the fallback; there is no separate default.css file. */
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   /* --border: oklch(0.85 0 0); */
-  --border: oklch(0.65 0 0);
+  /* 장식 헤어라인(WCAG 1.4.11 비대상). 인터랙티브 경계는 --input */
+  --border: oklch(0.91 0 0);
   /* 인증카드 포트폴리오 도넛 조각 구분선 — 라이트=화이트 / 다크=검정 */
   --ring-divider: #ffffff;
   /* 더 어둡게: 0.922 → 0.85 */
@@ -102,36 +106,36 @@ These serve as the fallback; there is no separate default.css file. */
   --sidebar-border: oklch(0.85 0 0);
   /* 더 어둡게: 0.922 → 0.85 */
   --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(0.96 0 0);
+  --background: oklch(0.96 0.004 250);
   --foreground: oklch(13.604% 0.00969 18.328);
   /* 강조 청록 — 라이트: 흰 배경에 눈 피로 없는 진한 청록(cyan-700), 다크: .dark에서 덮어씀 */
   --accent-teal: #0e7490;
   /* 라이트: 카드 부상용 소프트 섀도우(다층) — 그레이 캔버스 위 화이트 카드 분리 */
-  --shadow-2xs: 0 1px 2px 0 oklch(0 0 0 / 0.08);
-  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.12);
-  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.15), 0 1px 2px -1px oklch(0 0 0 / 0.10);
+  --shadow-2xs: 0 1px 1px 0 oklch(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.04);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --background: oklch(0.16 0.010 265);
+  --foreground: oklch(0.965 0.004 265);
+  --card: oklch(0.225 0.012 265);
+  --card-foreground: oklch(0.965 0.004 265);
   /* --popover: oklch(0.205 0 0); */
-  --popover: oklch(30.118% 0.00003 271.152 / 0.999);
-  --popover-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.275 0.014 265);
+  --popover-foreground: oklch(0.965 0.004 265);
   /* Indigo primary color */
   --primary: oklch(0.704 0.040 256.788);
   --primary-foreground: oklch(1 0 0);
   /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.31 0.014 265);
+  --secondary-foreground: oklch(0.965 0.004 265);
+  --muted: oklch(0.31 0.014 265);
+  --muted-foreground: oklch(0.74 0.016 265);
+  --accent: oklch(0.33 0.014 265);
+  --accent-foreground: oklch(0.965 0.004 265);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -150,11 +154,11 @@ These serve as the fallback; there is no separate default.css file. */
   /* indigo-700 */
   --chart-6: oklch(0.398 0.195 277.366);
   /* indigo-800 */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.225 0.012 265);
+  --sidebar-foreground: oklch(0.965 0.004 265);
   --sidebar-primary: oklch(0.585 0.233 277.117);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.31 0.014 265);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.585 0.233 277.117);

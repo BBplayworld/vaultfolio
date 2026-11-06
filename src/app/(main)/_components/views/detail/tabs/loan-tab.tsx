@@ -78,7 +78,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
         <div className="h-0.5 w-full bg-muted">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
+        {!open && <div className="h-1.5 bg-muted/20" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <div className={`grid grid-cols-2 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>

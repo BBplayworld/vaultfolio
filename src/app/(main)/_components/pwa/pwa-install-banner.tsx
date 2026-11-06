@@ -45,10 +45,7 @@ export function PwaInstallBanner() {
   if (isInstallable) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-xl bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
-          {/* 브랜드 데코 그라디언트 */}
-          <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: MAIN_PALETTE[0] }} />
-
+        <div className="rounded-2xl bg-card shadow-lg dark:bg-popover/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
           <button
             onClick={handleDismiss}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
@@ -58,9 +55,7 @@ export function PwaInstallBanner() {
           </button>
 
           <div className="flex gap-3 items-start pr-6">
-            <div className="rounded-lg p-2 shrink-0 bg-primary/10 text-primary">
-              <Sparkles className="size-5" />
-            </div>
+            <Sparkles aria-hidden className="size-5 shrink-0 text-primary mt-0.5" />
             <div>
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 앱으로 더 안전하고 빠르게!
@@ -99,9 +94,7 @@ export function PwaInstallBanner() {
   if (isIOS) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-xl bg-background/95 backdrop-blur-md shadow-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: MAIN_PALETTE[0] }} />
-
+        <div className="rounded-2xl bg-card shadow-lg dark:bg-popover/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
           <button
             onClick={handleDismiss}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
@@ -111,9 +104,7 @@ export function PwaInstallBanner() {
           </button>
 
           <div className="flex gap-3 items-start pr-6">
-            <div className="rounded-lg p-2 shrink-0 bg-primary/10 text-primary">
-              <Sparkles className="size-5" />
-            </div>
+            <Sparkles aria-hidden className="size-5 shrink-0 text-primary mt-0.5" />
             <div>
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 홈 화면에 추가하고 앱처럼 사용!

@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 
 import { Toaster } from "@/components/ui/sonner";
@@ -11,8 +10,6 @@ import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provi
 import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
 
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
   userScalable: false,
@@ -168,7 +165,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </>
         )}
       </head>
-      <body className={`${inter.className} min-h-screen antialiased`}>
+      <body className="min-h-screen antialiased">
         <PreferencesStoreProvider themeMode={themeMode}>
           {children}
           <Toaster />

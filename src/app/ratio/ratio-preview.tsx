@@ -378,7 +378,7 @@ export function RatioPreview() {
             {/* 종목별 비중 */}
             <section className="flex flex-col gap-3 rounded-lg bg-card p-4 shadow-xs motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1">
               <p className="text-sm font-semibold">종목별 비중</p>
-              <ul role="list" data-testid="ratio-list" className="divide-y divide-border/40">
+              <ul role="list" data-testid="ratio-list" className="divide-y divide-border dark:divide-border/40">
                 {result.rows.map((r, i) => (
                   <li
                     key={r.key}
@@ -406,7 +406,7 @@ export function RatioPreview() {
                 ))}
               </ul>
               {!isSample && (result.zeroPriceCount > 0 || fxEstimated) && (
-                <div className="flex flex-col gap-1 border-t border-border/40 pt-3 text-sm text-muted-foreground text-pretty break-keep">
+                <div className="flex flex-col gap-1 border-t border-border dark:border-border/40 pt-3 text-sm text-muted-foreground text-pretty break-keep">
                   {result.zeroPriceCount > 0 && <p data-testid="ratio-zero-price-note">{RATIO_NOTES.zeroPrice(result.zeroPriceCount)}</p>}
                   {fxEstimated && <p data-testid="ratio-fx-note">{RATIO_NOTES.fx}</p>}
                 </div>

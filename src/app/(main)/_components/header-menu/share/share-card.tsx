@@ -68,7 +68,7 @@ function renderDescriptionWithHighlights(text: string, terms: string[]) {
 // 생겨 리듬이 들쭉날쭉해진다. 대신 문장을 순서대로 누적하다 목표 글자수(대략 2줄 분량)를 넘기 직전에
 // 개행하는 그리디 방식으로 실제 렌더 폭에 맞게 자연스럽게 묶는다.
 // fixedLinePx(캡처 전용): 한 줄 예상 묶음(글자수 ≤ targetChars)을 고정 높이 블록으로 감싸 OS 한글 폰트와
-// Inter가 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
+// 글꼴이 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
 function renderDescriptionInLines(text: string, terms: string[], targetChars: number, fixedLinePx?: number) {
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
   const lines: string[] = [];

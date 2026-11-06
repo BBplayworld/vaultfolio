@@ -22,12 +22,10 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
     <Card
       onClick={onClick}
       data-tutorial={dataTutorial}
-      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.98] transition-[color,background-color,box-shadow,transform] duration-150 ease-out shadow-xs border border-border/10 dark:border-0"
+      className="cursor-pointer p-4 sm:p-5 hover:bg-accent/50 active:scale-[0.98] transition-[color,background-color,box-shadow,transform] duration-150 ease-out dark:shadow-xs dark:border-0"
     >
       <div className="flex items-start gap-3">
-        <div className="size-9 sm:size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          <Icon className="size-5" />
-        </div>
+        <Icon aria-hidden className="size-6 shrink-0 text-primary mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm lg:text-base font-semibold text-foreground">{title}</h3>
