@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Download, Share, Lock, Unlock, Loader2, CheckCircle2, ExternalLink, Smartphone } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useShareArtifacts } from "@/hooks/use-share-artifacts";
-import { MAIN_PALETTE } from "@/config/theme";
 import { getAssetId } from "@/lib/cloud-sync/sync-state";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { isCloudSyncEnabled, SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
@@ -294,9 +293,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             ) : isSyncMode ? (
               /* 동기화 기기: PIN 입력 없이 안내만 — 새 기기에서 금고 암호로 복원 */
               <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                <div className="flex items-center justify-center size-14 rounded-2xl text-white" style={{ backgroundColor: MAIN_PALETTE[0] }}>
-                  <CheckCircle2 className="size-7" />
-                </div>
+                <CheckCircle2 aria-hidden className="size-7 text-primary" />
                 <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-xs">
                   기기 동기화 중인 기기입니다.<br />
                   아래 <span className="font-semibold text-foreground">설치하기</span>를 누르면 바로 설치되고,<br />

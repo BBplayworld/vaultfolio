@@ -173,7 +173,7 @@ export function StockXrayView() {
         </div>
 
         {/* 분포 시각화 */}
-        <div className="rounded-lg bg-muted/30 dark:bg-card p-4">
+        <div className="rounded-lg bg-muted/50 dark:bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-muted-foreground tracking-wide">
               분포 분석
@@ -207,7 +207,7 @@ export function StockXrayView() {
         </div>
 
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
-        <div className="rounded-lg bg-muted/20 p-4 space-y-3">
+        <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
           <div>
             <p className="text-sm sm:text-base font-bold">📋 주식 X-Ray AI 프롬프트</p>
             <p className="text-sm text-muted-foreground mt-1">

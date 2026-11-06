@@ -31,7 +31,7 @@ export const ASSET_THEME = {
   summaryHeader: "rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between",
 
   // 본문 최상위 카드 — border/배경/그림자 제거, 풀블리드
-  contentCard: "border-0 bg-transparent shadow-none py-0 gap-3",
+  contentCard: "border-0 bg-transparent shadow-none dark:border-0 dark:shadow-none py-0 gap-3",
   // 본문 좌우 거터 — 전 페이지 공통. 페이지 컨테이너 px-3가 TopBar 버튼 거터와 동일 라인이므로 내부 추가 패딩은 0
   contentPad: "px-0 sm:px-0",
 

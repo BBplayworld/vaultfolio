@@ -501,7 +501,7 @@ export function AssetReportView() {
 
               {/* 계산 근거 · 대출 상세 (압축 접기) — 부채가 있을 때만 노출 */}
               {debt > 0 && (
-                <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/10">
+                <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/30 dark:bg-muted/10">
                   <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-3 text-sm font-semibold text-foreground">
                     <span>레버리지 계산 근거 · 대출 상세</span>
                     <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${leverageDetailOpen ? "rotate-180" : ""}`} />
@@ -668,7 +668,7 @@ export function AssetReportView() {
             </div>
 
             {/* ── AI 평가 프롬프트 ── */}
-            <div className="rounded-lg bg-muted/20 p-4 space-y-3">
+            <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
               <div>
                 <SectionHeader icon={Sparkles} title="전체 자산 AI 평가 프롬프트" tone="info" />
                 <p className={`${CAPTION} mt-1 text-pretty`}>

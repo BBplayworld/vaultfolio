@@ -8,7 +8,7 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
+import { Z_LAYER } from "@/config/theme";
 import { SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
 
 const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
@@ -74,12 +74,7 @@ export function PwaConnectPrompt() {
   return (
     <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6 px-6" style={{ zIndex: Z_LAYER.floating }}>
       <div className="flex flex-col items-center gap-3 text-center">
-        <div
-          className="flex items-center justify-center size-16 rounded-2xl text-white"
-          style={{ backgroundColor: MAIN_PALETTE[0] }}
-        >
-          <Link2 className="size-8" />
-        </div>
+        <Link2 aria-hidden className="size-8 text-foreground" />
         <h1 className="text-lg font-bold">웹에서 쓰던 자산이 있나요?</h1>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
           웹에서 <span className="font-semibold text-foreground">앱 설치</span> 시 복사된 <span className="font-semibold text-foreground">동기화 코드·복원 코드</span>를 붙여넣으면 자산을 그대로 가져옵니다.

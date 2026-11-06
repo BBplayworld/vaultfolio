@@ -11,7 +11,7 @@ export function ExchangeRateInput() {
     const { exchangeRates } = useAssetData();
 
     return (
-        <Card className="bg-muted/30 border-0 shadow-none">
+        <Card className="bg-muted/30 border-0 shadow-none dark:border-0 dark:shadow-none">
             <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2 mr-4">
                     <div className="bg-primary/10 p-2 rounded-full">
