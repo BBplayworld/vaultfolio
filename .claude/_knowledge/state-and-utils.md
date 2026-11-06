@@ -347,6 +347,12 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
 - 엔진 쪽 유일한 추가: `asset-report.ts`의 `computeAttributionBetween(prevMonthly, currMonthly|liveCurr, …)` — `resolveAttribution(…, isFirstSegment=true)` 단일 구간, 하이브리드 없음(레거시 시작=전체 예측), 끝점에 fx·fxBase 없으면 null
 
+### report/composition.ts (#4.43, 이슈 #72) — 자산 구성 변화·외화 노출 순수 함수
+
+- `computeCompositionSeries(monthly, live, currentMonth)` → `{state: hidden|single|bars, cells, filled, sentence, legendKeys, colors}`. `pruneMonthlySnapshots`로 13개월 이내만, 이번 달 스냅샷은 버리고 실시간 값. 축 = 첫 구성(`breakdown`·총자산>0) 달~이번 달, 중간 공백은 `empty` 칸. 분모 = 네 자산군 합(음수 0). 색은 이번 달 기준 1회(최대=`MAIN_PALETTE[0]`, 나머지 [3]부터; 홈 dashboard 로컬 `assignColors`와 같은 규칙의 로컬 구현).
+- `describeCompositionCell`·`compositionCellAria` — 선택 줄·aria 문구(금액 없음). `COMPOSITION_KEYS/LABELS`, `COMPOSITION_FORBIDDEN_WORDS`(문구 금지어 테스트용).
+- `buildFxExposureLines(fxExposures, totalValue)` → `{ratioLine, impactLine|null, caption}` 또는 null. `computeFxExposure` 결과를 재사용(재계산 없음), X = Σ`exposureKrw`×0.01.
+
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
 
 기간별 특수 처리를 두지 않는다. **네 기간 모두 같은 코드 경로**를 타고, 기간마다 다른 것은 시작일(`targetStr`) 계산뿐이다. 규칙: **실측 스냅샷이 있는 구간은 실측으로 분해하고, 그 이전의 부족한 구간만 예측으로 채운다.**
