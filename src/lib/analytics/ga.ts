@@ -16,6 +16,7 @@ import { APP_CONFIG } from "@/config/app";
 import { allowedUtmQuery } from "@/lib/analytics/utm-allow";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { isTrialMode } from "@/lib/trial/trial-mode";
+import { markFirstSave } from "@/lib/pwa/first-save-signal";
 import type { AssetData } from "@/types/asset";
 
 // ─────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -135,6 +136,8 @@ function pageLocation(): string {
 const SCREEN_TITLES: Record<string, string> = {
   home: "홈",
   ratio: "비중 미리보기",
+  "guide:stock-ratio": "가이드·주식 비중",
+  "guide:net-worth": "가이드·순자산 정리",
   more: "더보기",
   settings: "설정",
   tax: "세금 관리",
@@ -178,6 +181,8 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   demo: "체험 모드",
   share_card: "인증카드 열기",
   app_guide: "앱 가이드 열기",
+  install_nudge: "설치 안내",
+  install_nudge_tap: "설치 안내 누름",
 };
 
 /**
@@ -388,6 +393,7 @@ export function trackAssetSave(
     const flags = readFlags();
     if (flags.firstAssetSent) return;
     writeFlags({ ...flags, firstAssetSent: true });
+    markFirstSave(); // 설치 안내(#78) 세션 메모리 신호 — gtag 유무와 무관
     track("first_asset_saved", { asset_type: params.asset_type, method: params.method });
   } catch {
     // 무시

@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
 import { Toaster } from "@/components/ui/sonner";
-import { APP_CONFIG, OG_IMAGE } from "@/config/app";
+import { APP_CONFIG, OG_IMAGE, WEB_APPLICATION_JSON_LD } from "@/config/app";
 import { getPreference } from "@/server/preferences";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 import { THEME_MODE_VALUES, type ThemeMode } from "@/types/preferences/theme";
@@ -75,6 +75,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(WEB_APPLICATION_JSON_LD).replace(/</g, "\\u003c") }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -11,6 +11,7 @@ import { recordVisit } from "@/lib/feature-usage";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallButton } from "../pwa/pwa-install-button";
+import { InstallNudge } from "../pwa/install-nudge";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { track } from "@/lib/analytics/ga";
 
@@ -139,7 +140,7 @@ export function TopBar() {
       data-navbar-style="scroll"
       className={cn(
         "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative",
-        "bg-background rounded-t-[inherit] overflow-hidden",
+        "bg-background rounded-t-[inherit] overflow-x-clip",
         "mt-1",
         isNestedView && "pwa-show-header"
       )}
@@ -178,6 +179,7 @@ export function TopBar() {
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pwa-hide-actions">
         {showInstall && <PwaInstallButton />}
+        {showInstall && <InstallNudge />}
         {showShare && <ShareScreenshotButton />}
         {showMore && <MoreButton />}
       </div>
