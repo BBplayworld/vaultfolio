@@ -65,7 +65,7 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
       ) : (
         <>
           <p data-testid="composition-sentence" className="text-sm font-medium text-foreground text-pretty break-keep">{series.sentence}</p>
-          <div className="flex justify-between gap-1" role="group" aria-label="월별 자산 구성">
+          <div className="flex justify-center gap-1 sm:gap-2" role="group" aria-label="월별 자산 구성">
             {cells.map((cell, idx) => {
               const isActive = cell.month === active.month;
               return (
