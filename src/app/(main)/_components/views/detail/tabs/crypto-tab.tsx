@@ -144,7 +144,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
         <div className="h-0.5 w-full bg-muted">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
+        {!open && <div className="h-1.5 bg-muted/20" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             {/* 종합 — 거래소 분할 여부와 무관하게 병합 대표(coin)의 합산 상세를 항상 노출 (주식과 동일 형태) */}

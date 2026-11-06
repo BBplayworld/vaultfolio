@@ -387,7 +387,7 @@ export function AssetReportView() {
         ) : (
           <>
             {/* ── 등급 Hero: 트로피 티어 + 종합 별점 ── */}
-            <div className="rounded-xl border border-border/10 bg-card dark:border-0 shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
+            <div className="rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
               <div>
                 <p className={`text-2xl sm:text-3xl font-bold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
@@ -503,12 +503,12 @@ export function AssetReportView() {
 
               {/* 계산 근거 · 대출 상세 (압축 접기) — 부채가 있을 때만 노출 */}
               {debt > 0 && (
-                <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/10">
+                <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/30 dark:bg-muted/10">
                   <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-3 text-sm font-semibold text-foreground">
                     <span>레버리지 계산 근거 · 대출 상세</span>
                     <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${leverageDetailOpen ? "rotate-180" : ""}`} />
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-4 space-y-5 border-t border-border/40">
+                  <CollapsibleContent className="px-3 pb-3 pt-4 space-y-5 border-t border-border dark:border-border/40">
                     {/* 그룹 1 — 두 관점을 같은 항목명으로 2열 대조.
                         동일한 7단계 계산(빌린돈÷투입원가=비율, 수익×비율=몫수익, 몫수익−이자=남긴돈)을
                         범위만 달리 적용한 것이라, 나란히 두면 금융자산·연간이 전 자산의 부분집합임이 드러난다. */}
@@ -543,7 +543,7 @@ export function AssetReportView() {
                               const amount = `text-sm tabular-nums text-foreground${last ? " font-bold" : ""}`;
                               const finReady = !needsKis || ready; // 조회가 필요 없는 값은 즉시 노출
                               return (
-                                <div key={label} className={`space-y-1 ${groupStart ? `${ASSET_THEME.dividerAccent} pt-3` : ""}${last ? "border-t border-border/40 pt-2.5" : ""}`}>
+                                <div key={label} className={`space-y-1 ${groupStart ? `${ASSET_THEME.dividerAccent} pt-3` : ""}${last ? "border-t border-border dark:border-border/40 pt-2.5" : ""}`}>
                                   <p className={`text-sm text-muted-foreground break-keep${last ? " font-medium" : ""}`}>{label}</p>
                                   <div className={`grid ${annualOn ? "grid-cols-2" : "grid-cols-1"} gap-x-3`}>
                                     <span className="flex min-w-0 items-baseline gap-1.5">
@@ -677,7 +677,7 @@ export function AssetReportView() {
             </div>
 
             {/* ── AI 평가 프롬프트 ── */}
-            <div className="rounded-lg bg-muted/20 p-4 space-y-3">
+            <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
               <div>
                 <SectionHeader icon={Sparkles} title="전체 자산 AI 평가 프롬프트" tone="info" />
                 <p className={`${CAPTION} mt-1 text-pretty`}>

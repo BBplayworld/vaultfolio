@@ -185,7 +185,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Cloud className="mr-2 size-4" />} 동기화 시작
             </Button>
 
-            <div className="border-t border-border/50 pt-3 mt-3 flex flex-col gap-2">
+            <div className="border-t border-border dark:border-border/50 pt-3 mt-3 flex flex-col gap-2">
               <p className="text-sm text-muted-foreground text-center">다른 기기에서 이미 기기 동기화를 사용 중이신가요?</p>
               <Button
                 variant="outline"
@@ -259,7 +259,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                 </Button>
               </div>
               {showQr && cs.syncLink && (
-                <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-border/50">
+                <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-border dark:border-border/50">
                   <SyncQr value={cs.syncLink} />
                   <p className="text-sm text-muted-foreground">다른 기기 카메라로 스캔</p>
                 </div>
@@ -286,7 +286,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
+            <div className="flex flex-col gap-2 pt-2 border-t border-border dark:border-border/50">
               <Button variant="brand" onClick={async () => {
                 const r = await cs.pushNow();
                 track("sync_action", { method: "push", result: r.status === "ok" ? "success" : r.status === "conflict" ? "conflict" : "error" });

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldCheck, AlertTriangle, Delete } from "lucide-react";
+import { Lock, AlertTriangle, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
+import { Z_LAYER } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -23,13 +23,11 @@ const KEYPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 function KeypadKey({
   label,
   onPress,
-  variant = "secondary",
   className,
   children,
 }: {
   label: string;
   onPress: () => void;
-  variant?: "secondary" | "ghost";
   className?: string;
   children: ReactNode;
 }) {
@@ -37,12 +35,14 @@ function KeypadKey({
   return (
     <Button
       type="button"
-      variant={variant}
+      variant="ghost"
+      static
       aria-label={label}
       className={cn(
+        // 테두리·배경 없는 72px 숫자 — 눌린 순간만 bg-muted 원형 하이라이트(hover 제거: 터치 sticky hover 방지).
         // touch-none: 세로 팬을 허용하면 iOS가 "탭 vs 스크롤"을 판별하느라 pointerdown을 늦춘다.
         // 잠금화면은 스크롤할 것이 없으므로 모호성을 없애 즉시 발화시킨다.
-        "h-14 duration-50 select-none touch-none [-webkit-tap-highlight-color:transparent]",
+        "h-[72px] w-[72px] rounded-full bg-transparent text-2xl font-medium tabular-nums text-foreground hover:bg-transparent active:bg-muted transition-[background-color] duration-50 select-none touch-none [-webkit-tap-highlight-color:transparent] [@media(max-height:620px)]:size-16",
         className,
       )}
       onPointerDown={() => { pressedAt.current = Date.now(); onPress(); }}
@@ -143,20 +143,15 @@ export function PwaLockScreen() {
   if (!mounted || !locked) return null;
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-5 px-6" style={{ zIndex: Z_LAYER.lock }}>
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-8 px-6 pb-8 overflow-y-auto [@media(max-height:620px)]:gap-5" style={{ zIndex: Z_LAYER.lock }}>
       <div className="flex flex-col items-center gap-3">
-        <div
-          className="flex items-center justify-center size-16 rounded-2xl text-white"
-          style={{ backgroundColor: MAIN_PALETTE[0] }}
-        >
-          <ShieldCheck className="size-8" />
-        </div>
+        <Lock data-testid="lock-icon" aria-hidden className="size-8 text-foreground" strokeWidth={1.75} />
         <h1 className="text-lg font-bold">시크릿에셋</h1>
         <p className="text-sm text-muted-foreground">비밀번호를 입력해주세요</p>
       </div>
 
       {/* 입력 자릿수 표시 — 값을 담는 input이 아니라 순수 표시용 */}
-      <div className="flex items-center gap-3" role="status" aria-label={`${pin.length}자리 입력됨`}>
+      <div className="flex items-center gap-4" role="status" aria-label={`${pin.length}자리 입력됨`}>
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
           <span
             key={i}
@@ -167,6 +162,20 @@ export function PwaLockScreen() {
             )}
           />
         ))}
+      </div>
+
+      {/* 오류 문구 슬롯 — 항상 마운트해 문구 유무로 레이아웃이 움직이지 않게 한다 */}
+      <div data-testid="lock-error" className="min-h-5 -mt-4 flex items-center justify-center" role="alert" aria-live="polite">
+        {failCount >= 3 ? (
+          <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="size-3.5" />
+            <span>비밀번호를 다시 확인해주세요</span>
+          </div>
+        ) : failCount > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            비밀번호가 일치하지 않습니다
+          </p>
+        ) : null}
       </div>
 
       {isPC ? (
@@ -184,37 +193,26 @@ export function PwaLockScreen() {
           // 공용 Input은 다크모드에서 미포커스 시 border-0(배경 채움만)이라 어두운 배경 위에서
           // 잠금화면 input 위치를 찾기 어려움 — 이 화면에서만 포커스 때와 같은 border-ring을
           // 항상 노출(공용 input.tsx는 다른 화면에 영향 없게 그대로 두고 여기서만 오버라이드).
-          className="w-40 text-center text-2xl tracking-[0.6em] tabular-nums dark:border dark:border-ring"
+          className="h-12 w-48 rounded-xl text-center text-2xl tracking-[0.6em] tabular-nums dark:border dark:border-ring"
           aria-label="비밀번호 4자리"
         />
       ) : (
-        <div className={cn("grid grid-cols-3 gap-3 w-full max-w-[260px]", checking && "pointer-events-none opacity-60")}>
+        <div role="group" aria-label="비밀번호 숫자 키패드" data-testid="lock-keypad" className={cn("grid grid-cols-3 gap-x-5 gap-y-2 w-fit", checking && "pointer-events-none opacity-60")}>
           {KEYPAD_DIGITS.map((d) => (
-            <KeypadKey key={d} label={`숫자 ${d}`} className="text-xl font-semibold tabular-nums" onPress={() => push(d)}>
+            <KeypadKey key={d} label={`숫자 ${d}`} onPress={() => push(d)}>
               {d}
             </KeypadKey>
           ))}
-          <span />
-          <KeypadKey label="숫자 0" className="text-xl font-semibold tabular-nums" onPress={() => push("0")}>
+          <span aria-hidden className="size-[72px] [@media(max-height:620px)]:size-16" />
+          <KeypadKey label="숫자 0" onPress={() => push("0")}>
             0
           </KeypadKey>
-          <KeypadKey label="한 자리 지우기" variant="ghost" onPress={pop}>
-            <Delete className="size-5" />
+          <KeypadKey label="한 자리 지우기" onPress={pop}>
+            <Delete className="size-6" />
           </KeypadKey>
         </div>
       )}
 
-      {failCount >= 3 && (
-        <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="size-3.5" />
-          <span>비밀번호를 다시 확인해주세요</span>
-        </div>
-      )}
-      {failCount > 0 && failCount < 3 && (
-        <p className="text-sm text-muted-foreground">
-          비밀번호가 일치하지 않습니다
-        </p>
-      )}
     </div>
   );
 }

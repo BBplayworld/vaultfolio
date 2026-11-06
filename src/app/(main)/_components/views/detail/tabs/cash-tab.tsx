@@ -71,7 +71,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
         <div className="h-0.5 w-full bg-muted">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />}
+        {!open && <div className="h-1.5 bg-muted/20" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
@@ -214,7 +214,7 @@ export function CashTab() {
 
         {/* 통화별 외화 노출 — 환율이 움직일 때 얼마가 흔들리는가 */}
         {fxCash.length > 0 && (
-          <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4 space-y-2">
+          <div className="rounded-lg bg-muted/30 dark:bg-card p-4 space-y-2">
             <p className="text-sm font-bold text-foreground">통화별 노출</p>
             {fxCash.map((fx) => (
               <div key={fx.currency} className="flex items-baseline justify-between gap-2 text-sm">

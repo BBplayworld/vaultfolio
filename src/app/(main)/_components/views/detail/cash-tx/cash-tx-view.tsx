@@ -135,7 +135,7 @@ export function CashTxView() {
 
         {/* 목록 */}
         {list.length > 0 ? (
-          <div className="divide-y divide-border/10 dark:divide-border/50">
+          <div className="divide-y divide-border dark:divide-border/50">
             {list.map((t) => {
               const isDep = t.type === "deposit";
               return (

@@ -148,9 +148,9 @@ export function FloatingAddButton() {
   const buttonEl = (
     <button
       onClick={() => setIsOpen(true)}
-      className="w-full max-w-xs flex items-center justify-center gap-2 rounded-2xl
+      className="w-full max-w-xs flex items-center justify-center gap-2 rounded-xl
       py-3 text-base font-bold active:scale-[0.98] transition-colors
-      bg-[#5b6fbf]/10 text-foreground/90 hover:bg-[#5b6fbf]/20"
+      bg-brand/10 text-foreground/90 hover:bg-brand/20"
       aria-label="자산 업데이트"
       data-tutorial="tutorial-fab"
     >
@@ -161,23 +161,22 @@ export function FloatingAddButton() {
 
   return (
     <>
-      {/* 모바일: 하단 고정 바 (배경·그라데이션·스크롤 hide 포함) */}
+      {/* 모바일: 하단 고정 바 (배경·헤어라인·스크롤 hide 포함) */}
       {showBar && isMobile && (
         <div
           style={{ zIndex: Z_LAYER.floating }}
           className={`pwa-fab-container fixed bottom-0 left-0 right-0 transition-[transform,opacity] duration-150
           ${isHidden ? "translate-y-[calc(100%+1rem)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
         >
-          <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
           <div
-            className="relative bg-background/95 backdrop-blur-sm flex justify-center
+            className="relative bg-background border-t border-border dark:border-t-0 flex justify-center
             px-4 py-2 pb-[max(0.8rem,env(safe-area-inset-bottom))]"
           >
             <button
               onClick={() => setIsOpen(true)}
               className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
               py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
-              bg-[#5b6fbf]/10 text-foreground hover:bg-[#5b6fbf]/20"
+              bg-brand/10 text-foreground hover:bg-brand/20"
               aria-label="자산 업데이트"
               data-tutorial="tutorial-fab"
             >
@@ -250,7 +249,7 @@ export function FloatingAddButton() {
               </div>
               <button
                 type="button"
-                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                 onClick={() => setStep("holdings")}
               >
                 <Plus className="size-5 text-primary shrink-0" />
@@ -262,7 +261,7 @@ export function FloatingAddButton() {
               </button>
               <button
                 type="button"
-                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                 style={{ animationDelay: "40ms" }}
                 onClick={() => setStep("trade")}
               >
@@ -276,7 +275,7 @@ export function FloatingAddButton() {
 
               <Separator className="my-1" />
 
-              <div className="rounded-xl bg-card px-4 py-3 flex flex-col gap-3">
+              <div className="rounded-xl bg-card dark:bg-muted px-4 py-3 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <BadgeDollarSign className="size-4 text-primary shrink-0" />
                   <div>
@@ -306,7 +305,7 @@ export function FloatingAddButton() {
               {ASSET_TYPES.map(({ type, label, icon: Icon, navigateTab }, i) => (
                 <div
                   key={type}
-                  className={`flex items-center gap-1 rounded-lg bg-card overflow-hidden ${ENTER}`}
+                  className={`flex items-center gap-1 rounded-lg bg-card dark:bg-muted overflow-hidden ${ENTER}`}
                   style={{ animationDelay: `${i * 40}ms` }}
                 >
                   <button
@@ -358,7 +357,7 @@ export function FloatingAddButton() {
                   <button
                     key={type}
                     type="button"
-                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => { handler(); setIsOpen(false); resetState(); }}
                   >
@@ -387,7 +386,7 @@ export function FloatingAddButton() {
             <div className="flex flex-col gap-2 px-3">
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("screenshot")}
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
@@ -399,7 +398,7 @@ export function FloatingAddButton() {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("manual")}
               >
                 <Plus className="size-5 text-primary shrink-0" />

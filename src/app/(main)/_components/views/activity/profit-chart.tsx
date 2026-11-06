@@ -120,7 +120,7 @@ function MarketDateRow({
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
-    <div className={`${CLOSE_TABLE_COLS} items-start py-1.5 border-b border-border/30`}>
+    <div className={`${CLOSE_TABLE_COLS} items-start py-1.5 border-b border-border dark:border-border/30`}>
       <span className="text-muted-foreground">{label}</span>
       {cell(startDate, undefined, startSub, startNote)}
       {cell(endDate, "text-right", endSub)}
@@ -667,7 +667,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                         const leftSum = isAll ? totalRefValue : isKr ? krRefSum : usRefSum;
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
-                          <div className={controlled ? "space-y-1.5" : "pt-1.5 border-t border-border/50 space-y-1.5"}>
+                          <div className={controlled ? "space-y-1.5" : "pt-1.5 border-t border-border dark:border-border/50 space-y-1.5"}>
                             {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
                             <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
                               <CollapsibleTrigger asChild>
@@ -684,16 +684,16 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                                     <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
                                     {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>동일 영업일</span>
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>동일 영업일</span>
                                   <Switch
                                     checked={profitBasis === "kstAccessDay"}
                                     onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
                                     aria-label="종가 기준 옵션"
                                   />
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>KST 접속일</span>
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>KST 접속일</span>
                                 </div>
                                 {/* 헤더 */}
-                                <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border/50 text-muted-foreground`}>
+                                <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border dark:border-border/50 text-muted-foreground`}>
                                   <span className="text-xs font-medium self-end">(KST)</span>
                                   <span>시작 종가</span>
                                   <span className="text-right">종료 종가</span>
