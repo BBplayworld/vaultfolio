@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { track, trackScreen, setUserProps, trackThenNavigate, NAVIGATE_TRACK_TIMEOUT_MS, labelOf, __resetGaStateForTest } from "@/lib/analytics/ga";
+import { track, trackScreen, trackThenNavigate, NAVIGATE_TRACK_TIMEOUT_MS, __resetGaStateForTest } from "@/lib/analytics/ga";
 import { __resetTrialModeForTest, markTrialActive } from "@/lib/trial/trial-mode";
 import { isCloudSyncEnabled } from "@/lib/cloud-sync/config";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
@@ -31,22 +31,18 @@ afterEach(() => {
   __resetTrialModeForTest();
 });
 
-const props = { app_mode: "web", asset_count_bucket: "6+", sync_enabled: "n", onboarding_state: "new", theme: "dark" } as const;
-
 describe("GA 체험 중 no-op", () => {
   it("체험 아님: 기존대로 전송", () => {
     track("settlement_view", { result: "settled" });
     trackScreen("activity:report");
-    setUserProps(props);
-    expect(gtag).toHaveBeenCalledTimes(3);
+    expect(gtag).toHaveBeenCalledTimes(2);
   });
-  it("체험 중: track·trackScreen·setUserProps 호출 0(settlement_view·page_view·asset_count_bucket 포함)", () => {
+  it("체험 중: track·trackScreen 호출 0(settlement_view·page_view 포함)", () => {
     markTrialActive();
     track("settlement_view", { result: "settled" });
     track("feature_use", { category: "xray" });
-    trackScreen("home", "initial");
+    trackScreen("home");
     trackScreen("activity:report");
-    setUserProps(props);
     expect(gtag).not.toHaveBeenCalled();
   });
 });
@@ -59,7 +55,8 @@ describe("trackThenNavigate", () => {
     expect(gtag).toHaveBeenCalledTimes(1);
     const [, name, payload] = gtag.mock.calls[0];
     expect(name).toBe("feature_use");
-    expect(payload.category).toBe("X-Ray");
+    expect(payload.page_title).toBe("X-Ray");
+    expect(payload).not.toHaveProperty("category");
     expect(payload.event_timeout).toBe(NAVIGATE_TRACK_TIMEOUT_MS);
     expect(nav).not.toHaveBeenCalled();
     payload.event_callback();
@@ -90,14 +87,12 @@ describe("trackThenNavigate", () => {
 });
 
 describe("체험 GA 값(진입·시작 2값)", () => {
-  it("feature_use{category: demo}·onboarding_action{method: trial_start} 라벨", () => {
-    expect(labelOf("category", "demo")).toBe("체험 모드");
-    expect(labelOf("method", "trial_start")).toBe("체험 후 시작");
+  it("feature_use{category: demo}·onboarding_action{method: trial_start} page_title", () => {
     track("feature_use", { category: "demo" });
     track("onboarding_action", { method: "trial_start" });
-    expect(gtag.mock.calls.map((c) => [c[1], c[2].category ?? c[2].method])).toEqual([
+    expect(gtag.mock.calls.map((c) => [c[1], c[2].page_title])).toEqual([
       ["feature_use", "체험 모드"],
-      ["onboarding_action", "체험 후 시작"],
+      ["onboarding_action", "웰컴"],
     ]);
   });
 });

@@ -432,7 +432,7 @@ isMixedSections(raw)  // 국내(또는 기타)와 해외 section 공존
   - `bootTrial(deps)` → `"trial" | "rejected" | "failed"`: `window.localStorage` defineProperty + `window.fetch = createTrialFetch(...)`(복구 코드 없음) → 검증 5종(window·전역 식별자·probe 원본 미누출·열거·fetch) 통과 시에만 `markTrialActive` + 주입. 원본 쓰기는 probe 누출 시 removeItem 1건뿐
   - `isTrialBlockedRequest(input, base)`(같은 출처 + 거부 경로, 해석 실패=거부) · `trialBlockedResponse()`(합성 403 `{error}` — 호출처가 토스트로 띄움)
   - `runTrialBoot()` — 실제 주입은 `injectDemoPayload({ nickname: "" })`(Hero "순자산") + `skipDemoTutorial()`, 결과와 무관하게 `?trial` 제거
-- 가드(1줄씩): `isCloudSyncEnabled() && !isTrialMode()`, `isBackgroundWorkBlocked() … || isTrialMode()`, `resolveInAppGate({ isTrial })` 맨 앞 none, ga.ts 3함수 no-op, 루트 layout 인라인 GA `trial=1 → ga-disable-<ID>`
+- 가드(1줄씩): `isCloudSyncEnabled() && !isTrialMode()`, `isBackgroundWorkBlocked() … || isTrialMode()`, `resolveInAppGate({ isTrial })` 맨 앞 none, ga.ts `track`·`trackScreen`·`trackThenNavigate` no-op, 루트 layout 인라인 GA `trial=1 → ga-disable-<ID>`
 - sessionStorage는 격리하지 않음(알려진 한계)
 
 ### preview/demo-inject.ts (#4.38) — 데모 주입 공용 절차(preview `?demo=1`·체험)
@@ -485,23 +485,22 @@ cn(...inputs: ClassValue[]): string     // clsx + tailwind-merge
 getInitials(str): string                // "홍길동" → "홍"
 ```
 
-### analytics/ga.ts (`src/lib/analytics/ga.ts`, S-4.28) — GA4 계측 **단일 진입점**
+### analytics/ga.ts (`src/lib/analytics/ga.ts`, S-4.28 · 4.41 #68 단순화) — GA4 계측 **단일 진입점**
 
 ```typescript
-track(name: GaEvent, params?: GaParams): void     // 이벤트 21종 union(#4.34 settlement_view: source card/menu·result settled/in_progress/first_month), 파라미터는 PARAM_VALUES enum만
-trackScreen(viewKey, navSource = "tap"): void     // page_view(/v/<viewKey>, page_title 한국어), 같은 화면 연속 호출 무시
-setUserProps(props: GaUserProps): void            // app_mode·asset_count_bucket·sync_enabled·onboarding_state·theme, 값 바뀔 때만
+track(name: GaEvent, params?: GaParams): void     // 이벤트 21종 union. 전송 = { page_title, page_location }만(맞춤 매개변수 전송 없음)
+trackScreen(viewKey): void                        // page_view(/v/<viewKey>, page_title=SCREEN_TITLES), 같은 화면 연속 호출 무시
+featureTitleOf(eventName, params, currentScreenKey): string | undefined  // 순수. 이벤트→사용 기능 이름. 매핑 없으면 현재 화면 title, 그것도 없으면 undefined(title 생략)
 trackAssetSave(params, prevAssetCount): void      // asset_save + 기기당 1회 first_asset_saved(gaFlags)
 trackParse(importType, result): void              // screenshot_parse (거래 스크린샷은 주식·코인으로 집계)
-sanitizeParams(raw): Record<string,string>        // 사전 외 키·값·비문자열 제거 → 한국어 라벨로 치환
-labelOf(key, code): string                        // PARAM_LABELS 조회
-countAssets(data) / assetCountBucket(n) / toGaAssetType(kebab) / screenPath(viewKey)
+countAssets(data) / toGaAssetType(kebab) / screenPath(viewKey)
 ```
+- 호출부의 의미 인자(`PARAM_VALUES` enum: asset_type·method·category 등)는 **title 결정용 내부 인자**일 뿐 GA로 나가지 않는다. 신규 이벤트는 `GaEvent`에 추가하고 `featureTitleOf` 매핑(없으면 화면 title로 귀결)과 테스트 표를 함께 갱신.
+- 기능 이름 목록: 화면(SCREEN_TITLES) + 웰컴·온보딩·자산 추가 시작·자산 저장·스크린샷 등록·거래 입력(각 `·자산종류` 접미)·인증카드 저장·공유·인증카드 열기·앱 가이드 열기·기기 동기화·백업·데이터 관리·앱 설치·월 결산·X-Ray·절세 시뮬레이션·홈 팁·의견 보내기·테마 변경·AI 프롬프트 복사·체험 모드.
+- **폐기(4.41)**: `PARAM_LABELS`·한국어 라벨 치환·`labelOf`·`sanitizeParams`·`setUserProps`/`GaUserProps`/사용자 속성·`assetCountBucket`·`nav_source` 전송. GA 맞춤 정의(이벤트 8·사용자 5)는 대표가 보관처리, 신규 판독은 "페이지 및 화면" 보고서 한 장.
 - gtag 부재(로컬·preview·옵트아웃)·예외 시 no-op — 앱 흐름 영향 0. `window.gtag` 직접 호출 금지, 금액·종목·티커·닉네임·ID 전송 금지.
-- `trackThenNavigate(name, params, url, navigate?)`(#4.38 #59) — 이벤트 후 이동. `event_callback` 또는 `NAVIGATE_TRACK_TIMEOUT_MS`(300) 중 먼저 오는 쪽에서 1회 `location.assign`. 체험 중·gtag 없음·예외는 즉시 이동. 체험 페이지에서는 `track`·`trackScreen`·`setUserProps` 전부 no-op
-- #4.38 추가 값: category `demo`("체험 모드", 진입 `feature_use`), method `trial_start`("체험 후 시작", 복귀 웰컴 `onboarding_action`)
-- #4.37 추가 값: category `ai_prompt`("AI 프롬프트"), method `prompt_copy`("프롬프트 복사"), source `settlement`("결산 화면")·`report`("자산 성적표") — AI 질문 복사 성공 시 `feature_use`
-- 신규 이벤트·값은 `GaEvent`·`PARAM_VALUES`에 추가하고 `PARAM_LABELS`에 한국어 라벨을 함께 추가(누락 시 타입 오류).
+- `trackThenNavigate(name, params, url, navigate?)`(#4.38 #59) — 이벤트 후 이동. `event_callback` 또는 `NAVIGATE_TRACK_TIMEOUT_MS`(300) 중 먼저 오는 쪽에서 1회 `location.assign`. 체험 중·gtag 없음·예외는 즉시 이동. 체험 페이지에서는 `track`·`trackScreen` no-op
+- 4.41 신규 추적: `feature_use{category:"share_card"}`(인증카드 열기: 상단 버튼·홈 팁 dispatch), `{category:"app_guide"}`(앱 가이드 열기)
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
 
 ### server/api-guard.ts (`src/server/api-guard.ts`, S-4.28) — 공개 API 공통 방어

@@ -115,7 +115,7 @@ src/
 │   ├── report/                       # 자산 등급·리포트·기록 스트릭
 │   ├── xray/                         # 종목 X-ray 분류·프롬프트
 │   ├── data/                         # 정적 마스터 JSON (kr/us 종목·ETF)
-│   ├── analytics/ga.ts               # GA4 래퍼(track·trackScreen·setUserProps·sanitizer·한국어 라벨, S-4.28)
+│   ├── analytics/ga.ts               # GA4 래퍼(track·trackScreen·featureTitleOf — page_title 단일 전송, S-4.28·4.41)
 │   ├── cache-storage.ts              # 캐시 추상화 (File/Upstash, AssetEnvelope 포함) — 도메인 무관 공용
 │   ├── local-storage.ts              # STORAGE_KEYS, migrateStorageKeys — 도메인 무관 공용
 │   ├── one-time-migrations.ts        # 1회성 마이그레이션 — 도메인 무관 공용

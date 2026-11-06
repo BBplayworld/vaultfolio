@@ -12,6 +12,7 @@ import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigatio
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallButton } from "../pwa/pwa-install-button";
 import { isTrialMode } from "@/lib/trial/trial-mode";
+import { track } from "@/lib/analytics/ga";
 
 type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
@@ -38,6 +39,7 @@ function ShareScreenshotButton() {
   useEffect(() => {
     const handler = (e: Event) => {
       recordVisit("share-card");
+      track("feature_use", { category: "share_card", method: "open", source: "home_tip" });
       const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" | "type" }>).detail;
       setInitialVariant(detail?.variant);
       setOpen(true);
@@ -58,7 +60,10 @@ function ShareScreenshotButton() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          track("feature_use", { category: "share_card", method: "open", source: "top_bar" });
+          setOpen(true);
+        }}
         className={`${ICON_BTN} border-none text-white`}
         style={{ backgroundColor: MAIN_PALETTE[5] }}
         aria-label="인증카드"

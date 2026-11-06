@@ -525,12 +525,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-ANALYTICS. GA4 사용자 행동 추적 ([ga.ts](../../src/lib/analytics/ga.ts)) — 명세 [S-4.28](../specs/4.28-ga-event-tracking.md)
 - ⚙ config `send_page_view:false` + `page_location`에 해시·쿼리 없음(`#share=`·`#sync=`·`?url=` 미전송), 화면은 `trackScreen` 가상 경로 `/v/<viewKey>`
 - ⚙ **`settlement_view`(#4.34)** — 월 탭 마운트당 1회(월 화살표 이동·같은 칸 재선택은 재전송 없음, 다른 기간·범위에서 월(전체)로 돌아오면 재마운트로 1회 `source=menu`, 주식 범위는 0회), `source`=card/menu, `result`=settled/in_progress/first_month만. 화면키 `activity:netasset`·`activity:profit` → `activity:change`
-- ⚙ sanitizer: 사전 외 키·값·비문자열 제거, 전송 값은 한국어 라벨(`PARAM_LABELS`·`USER_PROP_LABELS`, 매개변수별 라벨 상이·중복 없음)
+- ⚙ **4.41 단순화(#68)**: 모든 이벤트·page_view payload는 `page_title`·`page_location`만(debug 플래그 시 `debug_mode` 추가). 맞춤 매개변수·`gtag('set','user_properties')` 호출 0, `nav_source` 미전송. `featureTitleOf` 전수 매핑(자산 종류 접미 `·주식` 등), 매핑 없는 이벤트는 현재 화면 title, 화면 title 불변. 체험 모드 전송 0. 인증카드 열기(상단 버튼·홈 팁)·앱 가이드 열기 `feature_use` 1회씩. (옛 sanitizer·한국어 라벨·`USER_PROP_LABELS`는 폐기)
 - ⚙ gtag 부재·예외 시 no-op(AC1·AC4), 같은 화면 연속 page_view 1회(AC7), `first_asset_saved` 기기당 1회(`gaFlags`, 공유 복원·가져오기·pull 제외)(AC8)
 - ⚙ `sync_action`은 수동 enable·connect·push·pull 결과에서만 — 60초 폴링·focus·online 자동 동기화 미발생(AC9). 동기화 로직 무변경
 - ⚙ head 인라인 스크립트: gtag 큐 정의가 try 블록 밖·앞(localStorage 예외에도 큐 보장)
-- 👤 `?ga-debug=1` → DebugView에서 이벤트·한국어 값·page_location 해시 없음 확인, `?ga-debug=0` 해제
-- 👤 GA 관리: 향상된 측정 "브라우저 기록 기반 페이지 변경" 끄기, 맞춤 측정기준 13개 등록(명세 §3-C), 핵심 이벤트 지정
+- 👤 `?ga-debug=1` → DebugView에서 이벤트 page_title이 기능 이름으로 붙고 page_location 해시 없음 확인, `?ga-debug=0` 해제
+- 👤 GA 관리: 향상된 측정 "브라우저 기록 기반 페이지 변경" 끄기, 기존 맞춤 정의 12개 보관처리(폐기), 핵심 이벤트 지정. 배포 24~48시간 뒤 "페이지 및 화면"에서 기본 title("시크릿에셋 — …") 행 소멸 확인
 - 테스트: `src/lib/__tests__/ga.test.ts`
 
 ---

@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-06 (v4.41)
+
+### GA 단순화 — page_title 하나로 통일 (#4.41, 이슈 #68, risk low)
+- **왜**: `track()`이 `page_title`을 안 보내 액션 이벤트가 문서 기본 title 행에 몰렸고, 맞춤 정의(이벤트 8·사용자 속성 4~5)는 대표가 쓰지 않는 분해용이었다. "어떤 기능·페이지를 주로 쓰는가"만 보면 된다.
+- `ga.ts`: 모든 이벤트·page_view가 `{ page_title(사용 기능 이름), page_location }`만 전송. 신규 순수 함수 `featureTitleOf`. 폐기: `PARAM_LABELS`·`labelOf`·`sanitizeParams`·`setUserProps`·`GaUserProps`·`assetCountBucket`·`nav_source` 전송, `asset-data-context`의 사용자 속성 effect.
+- 신규 추적 2곳: 인증카드 열기(`feature_use` category `share_card`), 앱 가이드 열기(`app_guide`).
+- 저장·스키마·동기화·서버 전송 무변경. 대표 GA 작업: 맞춤 정의 12개 보관처리, 배포 24~48시간 뒤 "페이지 및 화면" CSV 공유.
+
 ## 2026-11-01 (v4.40)
 
 ### /ratio 예시로 먼저 보기 (#4.40, 이슈 #66, risk low)
@@ -140,7 +148,7 @@
 - **동기화(`/api/sync`·`cloud-sync/*`) 로직 무변경** — 인접 항목(S6)은 별도 승인 대상.
 - 사양: qa-full-test-plan `F-API-SECURITY`. 사용자 작업: Vercel Firewall·Spend Management, CSP 위반 확인 후 enforce.
 
-### GA4 사용자 행동 추적 — 이벤트 20종·한국어 전송값 (#4.28, S-4.28)
+### GA4 사용자 행동 추적 — 이벤트 20종 (#4.28, S-4.28) — 맞춤 매개변수·한국어 라벨·사용자 속성은 4.41에서 폐기
 - **왜**: GA4 보고서·탐색 분석에서 별도 가공 없이 활성화 퍼널·스크린샷 성공률·공유·동기화 채택을 바로 분석하기 위해. 기존엔 page_view만 있었고 `#share=` 해시(복호화 키)가 page_location에 실릴 위험이 있었다.
 - `src/lib/analytics/ga.ts` 단일 진입점(`track`·`trackScreen`·`setUserProps`·sanitizer), `APP_CONFIG.gaId` 단일 출처, config `send_page_view:false`·해시/쿼리 미전송, 가상 경로 `/v/<viewKey>` page_view, `?ga-debug=1` DebugView 플래그, `first_asset_saved` 기기당 1회(`STORAGE_KEYS.gaFlags`).
 - 공용 파라미터 8개(이벤트 범위)+사용자 속성 5개만으로 전 이벤트 교차 분석. 전송 값은 한국어 라벨(코드 enum은 영문 유지).
