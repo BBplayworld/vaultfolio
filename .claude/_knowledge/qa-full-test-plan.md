@@ -210,7 +210,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
-- 👤 **연 탭 자산 구성 변화 카드(#4.43, `[data-testid=composition-card]`)** — 연 탭 맨 아래, `총자산 기준` 뱃지. 이번 달 총자산 0이면 DOM 없음 / 이번 달만이면 "다음 달 기록부터 구성 변화가 보여요" / 2칸 이상이면 문장(`composition-sentence`)·막대·선택 줄(`composition-selected`)·범례(2칸이면 캡션). 구성 없는 과거 달은 숨기고 축 중간 공백은 점선 칸("이 달은 구성 기록이 없어요"). 금액·금지어 없음, 칸 aria-label, 320px 13칸 가로 스크롤 없음. 월·주·일 탭·홈·결산 불변. GA: 카드 50% 노출 시 page_view 1회(`성과·자산 변화·구성`), N=1·체험 모드 0회
+- ~~연 탭 자산 구성 변화 카드(#4.43)~~ — #4.44에서 제거됨(`composition-card` DOM 없음). 외화 노출 줄(성적표 분산·비중)은 유지.
 - ⚙ 구성 카드 데이터 규칙: 총자산 분모(부채 제외), 이번 달=실시간 `getAssetSummary` 값, 음수 0 처리, 색은 이번 달 기준 1회(13칸 공통)
 
 ### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)
