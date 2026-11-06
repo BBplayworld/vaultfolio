@@ -172,6 +172,11 @@ function computeForeignTax(gainKrw: number): { taxableKrw: number; taxKrw: numbe
   return { taxableKrw, taxKrw: taxableKrw * FOREIGN_CAPITAL_GAIN_TAX_RATE };
 }
 
+/** 연말 양도세 시뮬레이션 대상 종목 판정 (해외·거래 가능·수량 > 0) */
+export function isTaxSimCandidate(s: Stock): boolean {
+  return isForeignStock(s) && s.inactiveStatus !== "delisted" && s.inactiveStatus !== "halted" && s.quantity > 0;
+}
+
 /**
  * 보유 해외주식을 증권사(broker)와 무관하게 티커 기준으로 종합한다.
  * 동일 종목을 증권사별로 나눠 세금을 계산하는 것은 실제 세법과 맞지 않다(양도소득세는
@@ -182,7 +187,7 @@ function computeForeignTax(gainKrw: number): { taxableKrw: number; taxKrw: numbe
 function groupForeignStocksByTicker(assetData: AssetData): Stock[] {
   const groups = new Map<string, Stock[]>();
   for (const s of assetData.stocks) {
-    if (!isForeignStock(s) || s.inactiveStatus === "delisted" || s.inactiveStatus === "halted" || s.quantity <= 0) continue;
+    if (!isTaxSimCandidate(s)) continue;
     const key = s.ticker ? `t:${s.ticker}` : s.id;
     const arr = groups.get(key);
     if (arr) arr.push(s);
@@ -345,6 +350,12 @@ export interface TaxEventMatch {
 /** KST 기준 오늘 (YYYY-MM-DD) */
 function todayKst(): string {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+}
+
+/** 해외주식 연말 세금 시즌 여부 (KST 11/1~12/31). 시각 주입 가능 */
+export function isForeignTaxSeason(today: string = todayKst()): boolean {
+  const md = today.slice(5, 10);
+  return md >= "11-01" && md <= "12-31";
 }
 
 /** KST 기준 이번 달 (YYYY-MM) */

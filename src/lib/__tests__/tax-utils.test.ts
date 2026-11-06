@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   resolveTaxTags,
   computeForeignRealizedGain,
@@ -9,6 +9,8 @@ import {
   getYearEndTaxSimulation,
   simulateSelectedForeignSale,
   computeRebuyQuantity,
+  isTaxSimCandidate,
+  isForeignTaxSeason,
 } from "../tax-utils";
 import { STORAGE_KEYS } from "../local-storage";
 import type { AssetData, RealEstate, Stock, Loan, Cash } from "@/types/asset";
@@ -435,5 +437,47 @@ describe("tax-utils · simulateSelectedForeignSale (S-4.31)", () => {
     const mergedId = sim.candidates[0].stockId;
     const r = simulateSelectedForeignSale(data, [{ stockId: mergedId, quantity: 15 }], 2026, RATES);
     expect(r.combinedGainKrw).toBeCloseTo(210_000, 0);
+  });
+});
+
+describe("tax-utils · 연말 세금 진입 판정 (4.45 #79)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("isForeignTaxSeason: 10/31 false, 11/1 true, 12/31 true, 1/1 false", () => {
+    expect(isForeignTaxSeason("2026-10-31")).toBe(false);
+    expect(isForeignTaxSeason("2026-11-01")).toBe(true);
+    expect(isForeignTaxSeason("2026-12-31")).toBe(true);
+    expect(isForeignTaxSeason("2027-01-01")).toBe(false);
+  });
+
+  it("isForeignTaxSeason: 기본 인자는 KST 기준 (UTC 10/31 15:30 = KST 11/1)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-31T15:30:00Z"));
+    expect(isForeignTaxSeason()).toBe(true);
+    vi.setSystemTime(new Date("2026-12-31T15:30:00Z"));
+    expect(isForeignTaxSeason()).toBe(false);
+  });
+
+  it("isTaxSimCandidate: 국내·상폐·거래정지·수량0은 false, 해외는 true", () => {
+    expect(isTaxSimCandidate(makeStock())).toBe(false);
+    expect(isTaxSimCandidate(makeStock({ category: "foreign", currency: "USD" }))).toBe(true);
+    expect(isTaxSimCandidate(makeStock({ category: "foreign", currency: "USD", inactiveStatus: "delisted" }))).toBe(false);
+    expect(isTaxSimCandidate(makeStock({ category: "foreign", currency: "USD", inactiveStatus: "halted" }))).toBe(false);
+    expect(isTaxSimCandidate(makeStock({ category: "foreign", currency: "USD", quantity: 0 }))).toBe(false);
+  });
+
+  it("후보 판정이 시뮬레이션 candidates와 일치한다", () => {
+    const cases: Stock[][] = [
+      [],
+      [makeStock()],
+      [makeStock({ category: "foreign", currency: "USD", quantity: 0 })],
+      [makeStock(), makeStock({ category: "foreign", currency: "USD", averagePrice: 100, currentPrice: 120, purchaseExchangeRate: 1400 })],
+    ];
+    for (const stocks of cases) {
+      const data = emptyData();
+      data.stocks = stocks;
+      const r = getYearEndTaxSimulation(data, 2026, RATES);
+      expect(stocks.some(isTaxSimCandidate)).toBe(r.candidates.length > 0);
+    }
   });
 });

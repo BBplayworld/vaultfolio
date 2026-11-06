@@ -24,6 +24,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
 import { StockInsightStrip } from "../xray/stock-insight-strip";
+import { TaxSeasonStrip } from "../tax-season-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
@@ -1153,6 +1154,7 @@ export function StockTab() {
 
         {/* X-Ray 인사이트 스트립 (인증카드 제외) */}
         <StockInsightStrip stocks={assetData.stocks} exchangeRates={exchangeRates} />
+        <TaxSeasonStrip stocks={assetData.stocks} />
 
         {/* 카테고리 selector */}
         <div className="flex justify-start">
