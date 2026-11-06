@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-06 (v4.42)
+
+### 공식적 UI 고도화 (#4.42, 이슈 #70, 대표 데모 후 반영 결정)
+- **왜**: AI/개인 사이트 느낌을 줄이고 애플·토스처럼 절제된 인상으로. 원칙 "테두리·그림자 대신 배경 톤차, 장식 제거".
+- 토큰: `--radius` 0.75rem·`--radius-2xl` 신설, 라이트 `--border` .91·`--background` #F0F2F4·`--shadow-*` 저불투명, 시스템 글꼴 스택(Inter 제거). 다크 토큰 불변.
+- 프리미티브(Card·Button·Input·Select·Dialog·Sheet·Popover·Drawer)·SECTION/ROW/KpiCard/ASSET_THEME 라이트 border·shadow 제거(다크 보존), `border-border/NN` 라이트 헤어라인 치환, 컬러 아이콘 칩 제거.
+- 잠금 화면 `Lock` 아이콘·72px 키패드·오류 슬롯 상시 마운트(동작·문구 불변), 하단 네비 알약/색 그림자 제거, 설치 배너·FAB 정리, 그라데이션 제거(인증카드 제외). 저장·동기화·스키마 무변경.
+
 ## 2026-11-06 (v4.41)
 
 ### GA 단순화 — page_title 하나로 통일 (#4.41, 이슈 #68, risk low)
