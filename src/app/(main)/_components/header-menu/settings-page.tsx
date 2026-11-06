@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { track } from "@/lib/analytics/ga";
+import { track, trackThemeMode } from "@/lib/analytics/ga";
 import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { APP_CONFIG } from "@/config/app";
@@ -106,6 +106,7 @@ export function SettingsPage() {
     setThemeMode(next);
     persistThemeModeCookie(next);
     track("feature_use", { category: "theme", method: "toggle" });
+    trackThemeMode(next);
   };
 
   const handleClearCache = () => {

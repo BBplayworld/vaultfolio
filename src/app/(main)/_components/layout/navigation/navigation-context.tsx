@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 import { recordVisit, viewToKey } from "@/lib/feature-usage";
-import { trackScreen } from "@/lib/analytics/ga";
+import { trackScreen, trackThemeMode } from "@/lib/analytics/ga";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 export type ActivityTab = "hub" | "change" | "dividend" | "report";
@@ -179,6 +179,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setView(initial);
     // GA 화면 page_view(S-4.28) — 해시가 아닌 가상 경로(/v/<화면키>)로 전송. #share·#sync는 parseHash가 home으로 처리
     trackScreen(viewToKey(initial));
+    // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
+    trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
       const next = parseHash(window.location.hash);
       if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
