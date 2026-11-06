@@ -684,13 +684,13 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                                     <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
                                     {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>동일 영업일</span>
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>동일 영업일</span>
                                   <Switch
                                     checked={profitBasis === "kstAccessDay"}
                                     onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
                                     aria-label="종가 기준 옵션"
                                   />
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-gray-700" : "text-muted-foreground"}`}>KST 접속일</span>
+                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>KST 접속일</span>
                                 </div>
                                 {/* 헤더 */}
                                 <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border dark:border-border/50 text-muted-foreground`}>

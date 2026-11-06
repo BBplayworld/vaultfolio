@@ -249,7 +249,7 @@ export function FloatingAddButton() {
               </div>
               <button
                 type="button"
-                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                 onClick={() => setStep("holdings")}
               >
                 <Plus className="size-5 text-primary shrink-0" />
@@ -261,7 +261,7 @@ export function FloatingAddButton() {
               </button>
               <button
                 type="button"
-                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                className={`flex items-center gap-3 px-4 py-4 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                 style={{ animationDelay: "40ms" }}
                 onClick={() => setStep("trade")}
               >
@@ -275,7 +275,7 @@ export function FloatingAddButton() {
 
               <Separator className="my-1" />
 
-              <div className="rounded-xl bg-card px-4 py-3 flex flex-col gap-3">
+              <div className="rounded-xl bg-card dark:bg-muted px-4 py-3 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <BadgeDollarSign className="size-4 text-primary shrink-0" />
                   <div>
@@ -305,7 +305,7 @@ export function FloatingAddButton() {
               {ASSET_TYPES.map(({ type, label, icon: Icon, navigateTab }, i) => (
                 <div
                   key={type}
-                  className={`flex items-center gap-1 rounded-lg bg-card overflow-hidden ${ENTER}`}
+                  className={`flex items-center gap-1 rounded-lg bg-card dark:bg-muted overflow-hidden ${ENTER}`}
                   style={{ animationDelay: `${i * 40}ms` }}
                 >
                   <button
@@ -357,7 +357,7 @@ export function FloatingAddButton() {
                   <button
                     key={type}
                     type="button"
-                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left ${ENTER}`}
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => { handler(); setIsOpen(false); resetState(); }}
                   >
@@ -386,7 +386,7 @@ export function FloatingAddButton() {
             <div className="flex flex-col gap-2 px-3">
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("screenshot")}
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
@@ -398,7 +398,7 @@ export function FloatingAddButton() {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card hover:bg-accent transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left"
                 onClick={() => handleMethodSelect("manual")}
               >
                 <Plus className="size-5 text-primary shrink-0" />

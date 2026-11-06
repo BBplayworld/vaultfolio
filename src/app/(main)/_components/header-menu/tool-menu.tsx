@@ -187,7 +187,7 @@ export function ToolMenuPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:shadow-xs hover:bg-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
+  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:shadow-xs hover:bg-accent dark:hover:bg-accent/60 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
   const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
 
   return (

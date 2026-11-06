@@ -45,7 +45,7 @@ export function PwaInstallBanner() {
   if (isInstallable) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-2xl bg-card shadow-lg dark:bg-background/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
+        <div className="rounded-2xl bg-card shadow-lg dark:bg-popover/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
           <button
             onClick={handleDismiss}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
@@ -94,7 +94,7 @@ export function PwaInstallBanner() {
   if (isIOS) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[380px] z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-        <div className="rounded-2xl bg-card shadow-lg dark:bg-background/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
+        <div className="rounded-2xl bg-card shadow-lg dark:bg-popover/95 dark:backdrop-blur-md p-4 flex flex-col gap-3 relative overflow-hidden">
           <button
             onClick={handleDismiss}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted/50 after:absolute after:-inset-2 after:content-['']"
