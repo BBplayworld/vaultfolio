@@ -259,11 +259,9 @@ export function WelcomeGuide({ allowTrial = false }: { allowTrial?: boolean } = 
 
       {/* ⑥ PWA 웹앱 설치 유도(데스크톱·태블릿 미설치) — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
       {showInstallBox && (
-        <div data-testid="welcome-install-box" className="rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div data-testid="welcome-install-box" className="rounded-xl bg-primary/5 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2.5 shrink-0">
-              <Smartphone aria-hidden className="size-5 text-primary" />
-            </div>
+            <Smartphone aria-hidden className="size-5 shrink-0 text-primary" />
             <div>
               <h2 className="text-base font-semibold">웹앱으로 설치하세요</h2>
               <p className="text-sm text-muted-foreground mt-0.5">

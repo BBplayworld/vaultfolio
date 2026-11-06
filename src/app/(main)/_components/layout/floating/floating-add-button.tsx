@@ -148,9 +148,9 @@ export function FloatingAddButton() {
   const buttonEl = (
     <button
       onClick={() => setIsOpen(true)}
-      className="w-full max-w-xs flex items-center justify-center gap-2 rounded-2xl
+      className="w-full max-w-xs flex items-center justify-center gap-2 rounded-xl
       py-3 text-base font-bold active:scale-[0.98] transition-colors
-      bg-[#5b6fbf]/10 text-foreground/90 hover:bg-[#5b6fbf]/20"
+      bg-brand/10 text-foreground/90 hover:bg-brand/20"
       aria-label="자산 업데이트"
       data-tutorial="tutorial-fab"
     >
@@ -161,23 +161,22 @@ export function FloatingAddButton() {
 
   return (
     <>
-      {/* 모바일: 하단 고정 바 (배경·그라데이션·스크롤 hide 포함) */}
+      {/* 모바일: 하단 고정 바 (배경·헤어라인·스크롤 hide 포함) */}
       {showBar && isMobile && (
         <div
           style={{ zIndex: Z_LAYER.floating }}
           className={`pwa-fab-container fixed bottom-0 left-0 right-0 transition-[transform,opacity] duration-150
           ${isHidden ? "translate-y-[calc(100%+1rem)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
         >
-          <div className="pointer-events-none absolute -top-4 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background" />
           <div
-            className="relative bg-background/95 backdrop-blur-sm flex justify-center
+            className="relative bg-background border-t border-border dark:border-t-0 flex justify-center
             px-4 py-2 pb-[max(0.8rem,env(safe-area-inset-bottom))]"
           >
             <button
               onClick={() => setIsOpen(true)}
               className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
               py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
-              bg-[#5b6fbf]/10 text-foreground hover:bg-[#5b6fbf]/20"
+              bg-brand/10 text-foreground hover:bg-brand/20"
               aria-label="자산 업데이트"
               data-tutorial="tutorial-fab"
             >

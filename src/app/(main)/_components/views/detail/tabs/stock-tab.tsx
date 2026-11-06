@@ -822,7 +822,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
             <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
           {!open && (
-            <div className="h-1.5 bg-gradient-to-b from-muted/30 to-muted/5" />
+            <div className="h-1.5 bg-muted/20" />
           )}
           <CollapsibleContent>
             <div className={ASSET_THEME.cardExpandBox}>
