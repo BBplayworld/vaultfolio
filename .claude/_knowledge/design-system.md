@@ -21,13 +21,15 @@
 ### 1.1 표면·전경 (시맨틱, 라이트/다크 자동)
 | 용도 | 토큰 | 라이트 | 다크 |
 |---|---|---|---|
-| 배경 | `bg-background`/`text-foreground` | `oklch(0.96 0.004 250)` #F0F2F4 / 블랙 | 블랙(oklch .145) / 화이트(oklch .985) |
-| 카드 | `bg-card` `text-card-foreground` | 화이트 | oklch .205 |
-| 팝오버·시트 | `bg-popover` | 화이트 | 반투명 다크 |
-| 약화 면/텍스트 | `bg-muted` `text-muted-foreground` | — | — |
+| 배경 | `bg-background`/`text-foreground` | `oklch(0.96 0.004 250)` #F0F2F4 / 블랙 | `oklch(0.16 0.010 265)` #0B0D12 / foreground `oklch(0.965 0.004 265)` |
+| 카드 | `bg-card` `text-card-foreground` | 화이트 | `oklch(0.225 0.012 265)` #191C22 |
+| 팝오버·시트·다이얼로그 | `bg-popover` (다크 한정 Dialog·AlertDialog·Sheet·Drawer·FAB 시트 `dark:bg-popover`) | 화이트 | `oklch(0.275 0.014 265)` #24282F (불투명) |
+| 약화 면/텍스트 | `bg-muted` `text-muted-foreground` | — | muted·secondary `oklch(0.31 0.014 265)` / mf `oklch(0.74 0.016 265)` / accent(hover) `oklch(0.33 0.014 265)` |
 | 보조 액션 | `bg-secondary` / `variant="secondary"` | — | — |
 | 보더 | `border-border` (다크는 `white/10`) | `oklch(0.91)` 장식 헤어라인(인터랙티브 경계는 `--input` .58) | white 10% |
 | 포커스 링 | 전역 `outline-ring/50` (globals.css base) | — | — |
+
+다크 고도(#4.42 후속): bg < card < popover < muted < accent, 청남색 hue 265·채도 0.010~0.016(초과 금지). 다크 카드·다이얼로그·시트는 테두리 없이 톤차로 분리하고, Input·Select 트리거만 `border-input` 경계를 유지한다(WCAG 1.4.11). 새 색 토큰 없이 값만 교체.
 
 ### 1.2 의미색 (이것만 색을 쓴다)
 | 의미 | 토큰 | 값 |
