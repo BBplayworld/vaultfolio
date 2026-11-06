@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-06 (v4.43)
+
+### 자산 구성 변화 + 외화 노출 (#4.43, 이슈 #72, risk low)
+- **왜**: 자산군 비중이 시간에 따라 어떻게 바뀌었는지, 주식·현금을 합친 외화 노출이 얼마인지 보는 화면이 없었다. 저장 데이터를 읽기만 하고 금액은 노출하지 않는다.
+- 연 탭(`net-asset-chart.tsx`, 제어 모드) 맨 아래에 `CompositionCard`: 월 스냅샷 `breakdown` 기반 최대 13칸 100% 막대(총자산 기준)·사실 문장(`지난 기록(10월) 대비 주식 +4%p, …`)·범례. 이번 달은 실시간 값. 계산은 `lib/report/composition.ts` 순수 함수.
+- 성적표 분산·비중 카드(`axis.key === "diversification"`)의 reason 아래에 외화 사실 2줄+캡션(`buildFxExposureLines`, `computeFxExposure` 결과 재사용·채점 무변경).
+- GA: `SCREEN_TITLES`에 `activity:change:composition`("성과·자산 변화·구성") 추가, 카드 50% 노출 시 1회 `trackScreen`.
+- 스키마·저장 키·동기화·서버 전송 무변경. 결산 파일·홈 팁 diff 0.
+
 ## 2026-11-06 (v4.42)
 
 ### 공식적 UI 고도화 (#4.42, 이슈 #70, 대표 데모 후 반영 결정)

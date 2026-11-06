@@ -210,6 +210,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
+- 👤 **연 탭 자산 구성 변화 카드(#4.43, `[data-testid=composition-card]`)** — 연 탭 맨 아래, `총자산 기준` 뱃지. 이번 달 총자산 0이면 DOM 없음 / 이번 달만이면 "다음 달 기록부터 구성 변화가 보여요" / 2칸 이상이면 문장(`composition-sentence`)·막대·선택 줄(`composition-selected`)·범례(2칸이면 캡션). 구성 없는 과거 달은 숨기고 축 중간 공백은 점선 칸("이 달은 구성 기록이 없어요"). 금액·금지어 없음, 칸 aria-label, 320px 13칸 가로 스크롤 없음. 월·주·일 탭·홈·결산 불변. GA: 카드 50% 노출 시 page_view 1회(`성과·자산 변화·구성`), N=1·체험 모드 0회
+- ⚙ 구성 카드 데이터 규칙: 총자산 분모(부채 제외), 이번 달=실시간 `getAssetSummary` 값, 음수 0 처리, 색은 이번 달 기준 1회(13칸 공통)
+
 ### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)
 > 레버리지 박스(이자 vs 투자 수익)는 F-ACTIVITY에 있음 — 여기선 **5축 채점·티어·재정규화·이력화·delta**만 다룬다(중복 금지).
 - ⚙ 5축 가중(growth .3 / earning .2 / leverage .2 / diversification .2 / habit .1). 측정 불가 축은 `null` → **측정 가능한 축만 가중 재정규화**해 종합 산출(신규 사용자도 등급, AC2)
@@ -219,6 +222,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **habit 순자산 상승 비교 범위(#4.34)** — 월 스냅샷이 13개월 보존돼도 가장 최근 기록 달의 해(올해)만 최근 7개(비교쌍 6)로 본다(종전 올해분 저장과 같은 결과, 1~6월 전년 달 혼입 방지)
 - ⚙ **habit 저축 규칙성**(S-4.22) — ②'꾸준함'을 순자산 상승개월과 **현금 입금 관측 개월(최근 6개월, `savingsRhythm`)** 중 높은 비율로 채점(저축을 시세와 분리). 가중치 0.1·재정규화·티어 불변. 현금 거래 없으면 순자산 상승 폴백. habit 카드 → 현금 상세 딥링크
 - ⚙ 투자 레버리지(부동산 담보 제외) 有 + 코인/부동산 보유 시 "암호화폐·부동산 수익 측정 불가 비교 제외" 캡션 + InfoHint(AC8)
+- 👤 **외화 노출 2줄(#4.43)** — 분산·비중 카드 reason 아래 `외화 자산 비중 N% (달러 a% · 엔 b%)`·`환율이 1% 움직이면 순자산이 약 ±X 움직여요`·캡션(`[data-testid=fx-exposure-lines]`). N은 `fxRatioSum.toFixed(0)`(reason "외화 비중 N%"와 동일), 통화 1개면 `(달러)`만, 외화 0·총자산 0이면 DOM 없음. 채점·reason·action 불변
 - 👤 자산 0 → "자산을 등록하면 성적표가 계산됩니다"만 표시(AC1). 자산 등록 → Hero 티어(트로피 글로우)·종합 별점·축별 카드(reason/action·딥링크) 표시
 - ⚙ **4대 섹션 아이콘 톤 구분(2026-08)** — "투입 대비 성과"(Wallet)·"5축 측정"(Star)·"순자산 변화, 왜?"(Landmark)·"AI 평가 프롬프트"(Sparkles) 4개 대주제 섹션이 `SectionHeader`의 `tone` prop(`brand`/`gold`/`important`/`info`, `asset-report-view.tsx`)으로 아이콘 배경·색만 구분(제목 텍스트는 `text-foreground` 공통 유지). AI 프롬프트도 이때 `SectionHeader` 사용으로 전환(이전엔 아이콘 배경 칩 없는 인라인 구조)돼 나머지 3개와 시각적 무게가 맞춰졌다. 새 톤을 추가할 색은 design-system.md에 이미 의미가 정해진 토큰만 재사용(신규 색 지양) — #4.34에 "순자산 변화, 왜?" 섹션 삭제(변화 원인 정본은 자산 변화 월 탭), 현재 3개
 - 회귀: `grade`는 오늘 daily·이번 달 monthly에만 기록 → 등급 기록은 사용자 편집 신호가 아니므로 push를 유발하지 않음(R14). `SnapshotGrade` optional → 구버전 백업/공유 토큰(packV7)과 호환(R3)

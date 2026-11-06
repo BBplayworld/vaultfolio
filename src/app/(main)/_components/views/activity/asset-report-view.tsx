@@ -9,6 +9,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
+import { buildFxExposureLines } from "@/lib/report/composition";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
@@ -192,6 +193,7 @@ export function AssetReportView() {
     [assetData, exchangeRates, summary.totalValue],
   );
   const fxRatioSum = fxExposures.reduce((s, fx) => s + fx.ratio, 0);
+  const fxLines = useMemo(() => buildFxExposureLines(fxExposures, summary.totalValue), [fxExposures, summary.totalValue]);
 
   // 주식 집중도 (X-Ray theme topShare — 분산 축 입력)
   const stockConcentration = useMemo(() => {
@@ -649,6 +651,13 @@ export function AssetReportView() {
                       </span>
                     </div>
                     <p className={`${CAPTION} text-pretty break-keep`}>{axis.reason}</p>
+                    {axis.key === "diversification" && fxLines && (
+                      <div data-testid="fx-exposure-lines" className="space-y-0.5">
+                        <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.ratioLine}</p>
+                        {fxLines.impactLine && <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.impactLine}</p>}
+                        <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
+                      </div>
+                    )}
                     {linked ? (
                       <button
                         type="button"

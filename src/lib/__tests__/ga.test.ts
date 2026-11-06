@@ -176,7 +176,7 @@ describe("page_location에 해시·쿼리 미포함", () => {
       "detail:stocks-trades": "상세·주식 거래내역", "detail:real-estate": "상세·부동산", "detail:crypto": "상세·암호화폐",
       "detail:crypto-transactions": "상세·암호화폐 거래내역", "detail:cash": "상세·현금", "detail:cash-transactions": "상세·현금 거래내역",
       "detail:loans": "상세·대출", "detail:loan-transactions": "상세·대출 거래내역",
-      "activity:hub": "성과", "activity:change": "성과·자산 변화", "activity:dividend": "성과·배당", "activity:report": "성과·자산 성적표",
+      "activity:hub": "성과", "activity:change": "성과·자산 변화", "activity:change:composition": "성과·자산 변화·구성", "activity:dividend": "성과·배당", "activity:report": "성과·자산 성적표",
     };
     for (const [key, title] of Object.entries(expected)) {
       expect(featureTitleOf("asset_delete", {}, key)).toBe(title);
@@ -187,6 +187,15 @@ describe("page_location에 해시·쿼리 미포함", () => {
     trackScreen("activity:change");
     track("share", { method: "link", content_type: "link" });
     expect(gtag.mock.calls[1][2].page_location).toBe("https://secretasset.xyz/v/activity/change");
+  });
+
+  it("구성 카드 화면은 가상 경로·title을 보내고, 매핑 없는 이벤트는 같은 title로 폴백한다", () => {
+    trackScreen("activity:change:composition");
+    const [, name, payload] = gtag.mock.calls[0];
+    expect(name).toBe("page_view");
+    expect(payload.page_location).toBe("https://secretasset.xyz/v/activity/change/composition");
+    expect(payload.page_title).toBe("성과·자산 변화·구성");
+    expect(featureTitleOf("asset_delete", {}, "activity:change:composition")).toBe("성과·자산 변화·구성");
   });
 
   it("화면 키 형식이 아니면 무시한다", () => {
