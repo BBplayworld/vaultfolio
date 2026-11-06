@@ -19,11 +19,11 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #57 가족 금고 함께 쓰기 | 4.38 | on-hold | — | 신규 유입 기여 미미로 보류(2026-10-31). 동기화 사용 4기기 중 2대가 대표 기기. 문서(issues/4.38-57-family-vault/)는 보존, 충돌 덮임 결함 의심은 qa 확인 후 type:bug로 분리 |
-| #72 자산 구성 변화+외화 노출 | 4.43 | owner-review | 대표 | PR #74 머지/닫기 |
-| #58 실물 자산 등록(금 등) | 4.44 | planning(문서만) | planner-designer | 대표 범위 축소 승인, 코드는 12/11 이후, owner-review 12/23 |
+| #75 상세 다크 BOX·구분선 정리·모바일 주식 비중 % 제거·연 탭 구성 카드 제거 | 4.44 | owner-review | 대표 | PR #76 머지/닫기(기준 e3ed78c, 11/26까지 권장). 브리프 issues/4.44-75-detail-dark-surfaces/4.44-decision-brief.md |
+| #58 실물 자산 등록(금 등) | 4.45 | planning(문서만) | planner-designer | 대표 범위 축소 승인, 코드는 12/11 이후, owner-review 12/23 |
 
 ## 열린 릴리스
-- **열린 릴리스 4.44 = #75** (PR #76, 상세 탭 다크 면 구조 + 자산 구성 변화 막대 개선). qa PASS·UI 검수 반영 완료, 대표 반영 결정 대기. v4.43(#74, a37f87f) 머지·운영 스모크 PASS(2026-11-06). #58은 4.45로 이동
+- **열린 릴리스 4.44 = #75** (PR #76, 기준 e3ed78c: 상세 다크 BOX·펼친 항목만 구분선·모바일 주식 비중 % 제거(라이트 포함)·연 탭 자산 구성 변화 카드 제거). qa PASS(전체 재점검)·UI 승인 v4·COO PASS·Vercel success, 위험 low, 대표 반영 결정 대기(11/26까지 권장). 월 탭 구성 블록은 4.45(challenge-v3). v4.43(#74, a37f87f) 머지·운영 스모크 PASS(2026-11-06). #58은 4.45로 이동
 - 이전: (최근 반영: v4.38 = #59·#60·#61 → main 5eebe74, 2026-11-01, 운영 스모크 PASS 2026-11-01). 다음 배정 4.39
 - 운영 사용자 도메인: `https://www.secretasset.xyz`는 접속 가능(2026-10-31 확인). 루트 `secretasset.xyz`는 www로 리다이렉트되며 이 환경에서는 여전히 차단 → 운영 스모크는 `https://www.secretasset.xyz`로 수행
 - 없음
@@ -47,6 +47,7 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- [4.45 확정 후보, #75 후속, risk:low] 월 탭 결산 원인 아래 '자산 구성 변화' 블록(전월 말→지금 두 시점, 사실 1줄·100% 막대 2줄·자산군 행, 클릭 없음) — settlement-view.tsx 수정이라 #54 판독(12/11) 후 12/11~12/26 머지(12/28 결산 창 전). 근거 issues/4.44-75-detail-dark-surfaces/4.44-direction-v3.md 3절·4.44-challenge-v3.md. GA 키 activity:change:composition 재사용. #58·12/11 D 선정과 결산 파일 동시 수정 시 순서 조정, 용량 초과면 먼저 미룸. 연 탭 '작년 말 대비'는 2027-02 재검토
 - [p2 동승 후보, 문구] /ratio 예시 결과 화면 캡션 '저장을 누를 때만 이 기기에 저장돼요'가 저장 버튼 없는 예시 상태에서 어색(v4.40 운영 스모크 관찰). 다음 /ratio 변경 때 동승
 - [bug 후보, qa 확인 필요] 동기화 충돌 화해 때 기존 항목 수정이 원격으로 덮임(cloud-sync-provider.tsx:216-224, asset-storage.ts:223) — 동기화 사용 외부 기기 약 2대, 1인 다기기도 해당. #57 spec의 덮인 항목 감지 설계 재사용 가능
  (cto 2026-10-31 17:54 5차 — 선정 없음. #48 판독 전 첫 화면 동결, #51·#54 판독(12/11) 전 홈 팁·결산 화면 무접촉)
