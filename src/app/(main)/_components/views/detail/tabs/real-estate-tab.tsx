@@ -47,7 +47,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
   const datasetInfo = realEstateTradeDataset[item.type];
   const areaLabel = datasetInfo?.areaLabel ?? "면적";
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2 dark:mb-0">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>

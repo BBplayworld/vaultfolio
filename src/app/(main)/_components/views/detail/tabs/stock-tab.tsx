@@ -316,8 +316,8 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
           {!screenshotMode && (
             <>
-              <span className="text-sm text-muted-foreground">·</span>
-              <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+              <span className="text-sm text-muted-foreground max-sm:hidden">·</span>
+              <span className="text-sm font-semibold text-primary max-sm:hidden">{pct.toFixed(1)}%</span>
             </>
           )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
@@ -808,7 +808,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-2 dark:mb-0">
+      <Collapsible open={open} onOpenChange={handleOpenChange} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
         <div className={ASSET_THEME.cardWrapper}>
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>

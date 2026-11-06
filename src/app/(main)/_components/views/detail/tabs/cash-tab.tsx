@@ -44,7 +44,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
     navigate({ type: "detail", tab: "cash-transactions" });
   };
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2 dark:mb-0">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>

@@ -52,7 +52,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
     navigate({ type: "detail", tab: "loan-transactions" });
   };
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2 dark:mb-0">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
@@ -364,7 +364,7 @@ export function LoanTab() {
         {paidOffLoans.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">완납된 대출</p>
-            <div className={`space-y-2 ${ASSET_THEME.listBox}`}>
+            <div className={`space-y-2 ${ASSET_THEME.listBox} dark:divide-y dark:divide-border/40`}>
             {paidOffLoans.map((loan) => (
               <div key={loan.id} className="flex items-center gap-3 px-3 dark:px-4 py-2.5 dark:py-3 rounded-lg dark:rounded-none bg-muted/20 dark:bg-transparent">
                 <span className="text-sm font-medium truncate flex-1">{loan.name}</span>

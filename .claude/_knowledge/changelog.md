@@ -9,6 +9,7 @@
 ### 상세 다크 BOX 구조 + 자산 구성 변화 리본 차트 (#4.44, 이슈 #75, 대표 반려 후 재설계)
 - **왜**: 항목별 면(3단계)은 검정 well·모서리 불일치를 낳음. 리스트 전체를 card 1장으로 감싸고 항목은 헤어라인으로만 구분(성과 카드 방식). 구성 변화 막대는 작아 비중 변화가 안 보임.
 - `theme.ts`: `listBox`(rounded-xl card shadow-sm)·`summaryBoxDark` 신설, `cardExpandBox/Section/Meta/Actions` 다크 투명, `subCard dark:bg-popover`, `subItemsWell` 투명, `cardHeader dark:px-4 py-3`. 5개 탭 리스트·완납 대출·거래내역·현금/대출 거래·X-Ray·요약 박스에 적용. 라이트·인증카드·SHOT 상수 무변경.
+- v3: 다크 `listBox`의 항목 사이 divide-y 제거 → 닫힌 항목은 비중 바만, 펼친 항목(마지막 제외)만 `cardOpenDivider` 하단선(5탭). **라이트 모바일 변경**: 주식 탭 `StockRowHeader`의 보유 비중 `·`+% 를 `max-sm:hidden`(모바일 <640px 숨김, 라이트 포함; PC·인증카드·비중 바 불변).
 - 구성 변화: SVG 리본+막대 차트, 보정 스케일(`compositionScaleMode`·`compositionDisplayScale`), 선택 칸 후광·스크럽·←→ 키.
 - 검수 반영: 막대 폭<40px면 막대 안 % 생략, 리본 다크 0.24/선택 접촉 0.38, 비선택 막대 fill만 0.7(라벨 유지), 4칸 이하 BAR_MAX 120, 가상자산 헤더 수량·비중 nowrap(다크), 요약 inline 줄 다크 flex(하단 여백 제거).
 - 스키마·저장·동기화·서버 전송 무변경.

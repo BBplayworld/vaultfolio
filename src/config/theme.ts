@@ -50,7 +50,9 @@ export const ASSET_THEME = {
   dividerAccent: "border-t border-amber-400/25", // 논리 그룹·섹션 경계 강조 구분선(별점 text-amber-400 톤 통일). 중립 헤어라인과 구별해 '큰 단락' 분리에만.
   subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-transparent dark:hover:bg-muted/30", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
   // 다크 리스트 box(#4.44): 항목 배경 없이 리스트 전체를 card 면 1장+둥근 모서리로 감싸고 항목은 헤어라인으로만 구분. 라이트 불변
-  listBox: "dark:rounded-xl dark:bg-card dark:shadow-sm dark:overflow-hidden dark:space-y-0 dark:divide-y dark:divide-border/40",
+  listBox: "dark:rounded-xl dark:bg-card dark:shadow-sm dark:overflow-hidden dark:space-y-0",
+  // 펼친 항목(마지막 제외) 하단 구분선 — 닫힌 항목은 비중 바가 구분 역할(#4.44 v3). 카드 루트 Collapsible에 부여
+  cardOpenDivider: "dark:not-last:data-[state=open]:border-b dark:border-border/40",
   // 다크 요약 박스(#4.44): 리스트 box와 같은 card 면
   summaryBoxDark: "dark:bg-card dark:rounded-xl dark:shadow-sm",
   cardActionButton: "size-7.5 sm:size-8.5",
