@@ -125,9 +125,9 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
                   {coin.symbol && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm text-foreground">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
+                  <span className="text-sm text-foreground dark:whitespace-nowrap">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
                   <span className="text-sm text-muted-foreground">·</span>
-                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span className="text-sm font-semibold text-primary dark:whitespace-nowrap">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>

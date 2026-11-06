@@ -19,6 +19,7 @@ const CAPTION = "text-sm text-muted-foreground text-pretty break-keep";
 const BAR_FRAC = 0.55; // 칸(zone) 폭 대비 막대 폭
 const BAR_MIN = 14;
 const BAR_MAX = 72;
+const BAR_MAX_FEW = 120; // 4칸 이하는 넓은 화면에서 휑하지 않게 막대를 키운다
 const SEG_LABEL_MIN_PX = 18; // 막대 안 % 표기 최소 세그먼트 높이
 const SEG_LABEL_MIN_BAR = 40; // 막대 안 % 상시 표기 최소 막대 폭
 
@@ -46,7 +47,7 @@ function CompositionChart({ cells, colors, activeMonth, labelShown, mode, onSele
 
   const n = cells.length;
   const zone = size.w / n;
-  const barW = Math.min(BAR_MAX, Math.max(BAR_MIN, zone * BAR_FRAC));
+  const barW = Math.min(n <= 4 ? BAR_MAX_FEW : BAR_MAX, Math.max(BAR_MIN, zone * BAR_FRAC));
   const left = (i: number) => zone * i + (zone - barW) / 2;
   const activeIdx = Math.max(0, cells.findIndex((c) => c.month === activeMonth));
   const showAllPct = barW >= SEG_LABEL_MIN_BAR;
@@ -107,8 +108,7 @@ function CompositionChart({ cells, colors, activeMonth, labelShown, mode, onSele
                 key={`${k}-${i}`}
                 d={`M${ax},${y(a[k].hi)} C${mx},${y(a[k].hi)} ${mx},${y(b[k].hi)} ${bx},${y(b[k].hi)} L${bx},${y(b[k].lo)} C${mx},${y(b[k].lo)} ${mx},${y(a[k].lo)} ${ax},${y(a[k].lo)} Z`}
                 fill={colors[k]}
-                className="transition-opacity duration-150 motion-reduce:transition-none"
-                style={{ opacity: touchesActive ? 0.3 : 0.16 }}
+                className={`transition-opacity duration-150 motion-reduce:transition-none ${touchesActive ? "opacity-30 dark:opacity-[0.38]" : "opacity-[0.16] dark:opacity-[0.24]"}`}
               />
             );
           }))}
@@ -119,7 +119,7 @@ function CompositionChart({ cells, colors, activeMonth, labelShown, mode, onSele
           return (
             <div
               key={c.month}
-              className={`absolute inset-y-0 transition-opacity duration-150 motion-reduce:transition-none ${st ? (isActive ? "opacity-100" : "opacity-55") : "opacity-40"}`}
+              className={`absolute inset-y-0 transition-opacity duration-150 motion-reduce:transition-none ${st ? "" : "opacity-40"}`}
               style={{ left: left(i), width: barW }}
             >
               <div
@@ -133,11 +133,12 @@ function CompositionChart({ cells, colors, activeMonth, labelShown, mode, onSele
                     data-testid={`composition-seg-${c.month}-${k}`}
                     data-ratio={c.ratios![k].toFixed(1)}
                     data-display={st[k].display.toFixed(1)}
-                    className="flex items-center justify-center overflow-hidden rounded-[4px] border-t-2 border-card transition-[height] duration-300 first:border-t-0 motion-reduce:transition-none"
-                    style={{ height: `${st[k].display}%`, backgroundColor: colors[k] }}
+                    className="relative flex items-center justify-center overflow-hidden rounded-[4px] border-t-2 border-card transition-[height] duration-300 first:border-t-0 motion-reduce:transition-none"
+                    style={{ height: `${st[k].display}%` }}
                   >
-                    {(showAllPct || isActive) && (st[k].display / 100) * size.h >= SEG_LABEL_MIN_PX && (
-                      <span aria-hidden="true" className="text-xs font-semibold tabular-nums" style={{ color: pickOnColor(colors[k]) }}>
+                    <span aria-hidden="true" className={`absolute inset-0 transition-opacity duration-150 motion-reduce:transition-none ${isActive ? "opacity-100" : "opacity-70"}`} style={{ backgroundColor: colors[k] }} />
+                    {showAllPct && (st[k].display / 100) * size.h >= SEG_LABEL_MIN_PX && (
+                      <span aria-hidden="true" className="relative text-xs font-semibold tabular-nums" style={{ color: pickOnColor(colors[k]) }}>
                         {c.ratios![k].toFixed(0)}%
                       </span>
                     )}

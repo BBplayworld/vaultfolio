@@ -62,7 +62,7 @@ export function DetailSummaryHeader({
       </div>
       {/* 인증카드는 리스트 행(cardAmountProfitRow)의 금액~손익 간격(mt-0.5=2px)과 맞춘다 —
           기존 mt-1(4px)은 리스트보다 2배 넓어 보였다(screenshotMode 전용 분기, 다른 탭 불변) */}
-      {inline && <div className={screenshotMode ? "mt-0.5" : "mt-1"}>{inline}</div>}
+      {inline && <div className={screenshotMode ? "mt-0.5" : "mt-1 dark:flex"}>{inline}</div>}
     </div>
   );
 }
