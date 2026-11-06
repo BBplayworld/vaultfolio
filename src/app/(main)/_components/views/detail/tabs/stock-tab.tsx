@@ -301,7 +301,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
-          <span className={`${nameCls} line-clamp-2`} title={stock.name.length > 18 ? stock.name : undefined}>
+          <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}`} title={stock.name.length > 18 ? stock.name : undefined}>
             {stock.name}
           </span>
           {stock.inactiveStatus === "halted" && (
@@ -322,7 +322,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
           {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
-            <TodayChangeChip rate={dailyRate} className="text-[11px]" />
+            <TodayChangeChip rate={dailyRate} className="text-[11px] max-sm:hidden" />
           )}
         </div>
       </div>
@@ -334,6 +334,12 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           </span>
           <span className={`${subCls} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
         </div>
+        {/* 모바일 전용 — 좌측 3줄 초과 방지로 오늘 등락 칩을 손익 줄 아래 우측 정렬(PC는 좌측 인라인) */}
+        {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
+          <div className="mt-1 flex justify-end sm:hidden">
+            <TodayChangeChip rate={dailyRate} className="text-[11px]" />
+          </div>
+        )}
       </div>
     </>
   );

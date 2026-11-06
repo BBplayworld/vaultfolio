@@ -425,7 +425,7 @@ Alert (hidden prop으로 표시 제어)
 ```typescript
 ASSET_THEME = {
   // tab* 토큰은 더 이상 사용 안 함 — 모든 탭이 InlineSelector로 통일됨 (tabList1·tabList3Wrap legacy 잔존, tabList2/3은 #4.34 삭제)
-  cardWrapper, listBox(다크 리스트 box, #4.44)·cardOpenDivider(펼친 항목 하단선), summaryBoxDark, cardHeader, cardActions("flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-popover"),
+  cardWrapper, listBox(다크 리스트 box, #4.44)·cardOpenDivider(펼친 항목 하단선)·StockRowHeader 오늘 등락 칩 모바일 우측 이동(#4.44), summaryBoxDark, cardHeader, cardActions("flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-popover"),
   cardActionButton, cardTriggerButton, cardInfoLeft/Right/Title/Meta/Name,
   cardAmountMain/Sub/Rate/ProfitRow,
   cardDetailLabel/Value/ValueBold/PriceKRW/Meta,
