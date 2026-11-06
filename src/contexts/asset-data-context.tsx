@@ -73,10 +73,7 @@ import { Label } from "@/components/ui/label";
 import { Lock, Share2 } from "lucide-react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTradeDataset } from "@/config/asset-options";
-import { assetCountBucket, countAssets, setUserProps, track } from "@/lib/analytics/ga";
-import { readOnboardingWizardStatus } from "@/lib/onboarding-wizard-status";
-import { getAssetId } from "@/lib/cloud-sync/sync-state";
-import { detectBrowserEnv } from "@/lib/pwa/detect-browser";
+import { track } from "@/lib/analytics/ga";
 import { pruneMonthlySnapshots } from "@/lib/report/settlement";
 
 interface AssetDataContextType {
@@ -923,20 +920,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     prevHasAssetsRef.current = hasAssets;
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
-
-  // GA 사용자 속성(S-4.28) — 세그먼트 분석용 버킷 값만. 값이 바뀔 때만 전송(setUserProps 내부 비교)
-  useEffect(() => {
-    if (!isDataLoaded || typeof window === "undefined") return;
-    const wizard = readOnboardingWizardStatus();
-    const wizardDone = Object.values(wizard.categories).includes("done");
-    setUserProps({
-      app_mode: isStandaloneDisplay() ? "pwa" : detectBrowserEnv().isInApp ? "inapp" : "web",
-      asset_count_bucket: assetCountBucket(countAssets(assetData)),
-      sync_enabled: getAssetId() ? "y" : "n",
-      onboarding_state: wizardDone ? "wizard_done" : wizard.dismissed ? "skipped" : "new",
-      theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
-    });
-  }, [assetData, isDataLoaded]);
 
   const checkAndApplyThemeMode = useCallback(() => {
     if (typeof window === "undefined") return;

@@ -4,6 +4,7 @@ import { APP_CONFIG } from "@/config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ShieldCheck, CloudLightning, EyeOff, Info } from "lucide-react";
 import React, { useState, useEffect } from "react";
+import { track } from "@/lib/analytics/ga";
 import { SECURITY_COPY, APP_GUIDE_SECURITY_DESC, type SecurityCopyId } from "@/config/security-copy";
 
 const SECURITY_ICONS: Record<SecurityCopyId, React.ElementType> = { local: ShieldCheck, sync: CloudLightning, admin: EyeOff };
@@ -33,7 +34,10 @@ export function AppGuide() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const restore = () => setOpen(true);
+    const restore = () => {
+      track("feature_use", { category: "app_guide", method: "open" });
+      setOpen(true);
+    };
     const dismiss = () => setOpen(false);
     window.addEventListener("trigger-restore-guide", restore);
     window.addEventListener("trigger-dismiss-guide", dismiss);

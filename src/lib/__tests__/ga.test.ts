@@ -5,19 +5,16 @@ import {
   trackScreen,
   trackAssetSave,
   trackParse,
-  setUserProps,
-  sanitizeParams,
+  featureTitleOf,
   countAssets,
-  assetCountBucket,
   toGaAssetType,
   screenPath,
-  labelOf,
-  PARAM_VALUES,
   __resetGaStateForTest,
 } from "@/lib/analytics/ga";
 import { STORAGE_KEYS } from "@/lib/local-storage";
+import { __resetTrialModeForTest, markTrialActive } from "@/lib/trial/trial-mode";
 
-// S-4.28 GA4 래퍼 회귀 — node 환경에 window·localStorage 최소 스텁을 깔고 gtag 호출 인자를 검증한다.
+// S-4.28 GA4 래퍼 회귀(4.41 단순화) — node 환경에 window·localStorage 최소 스텁을 깔고 gtag 호출 인자를 검증한다.
 
 function memoryStorage(): Storage {
   const m = new Map<string, string>();
@@ -54,80 +51,137 @@ afterEach(() => {
   delete g.localStorage;
 });
 
-describe("AC1·AC4 gtag 부재·예외", () => {
-  it("AC1 gtag가 없으면 track·trackScreen·setUserProps가 예외 없이 무시된다", () => {
+describe("gtag 부재·예외", () => {
+  it("gtag가 없으면 track·trackScreen이 예외 없이 무시된다", () => {
     installWindow(false);
     expect(() => track("asset_save", { asset_type: "stock" })).not.toThrow();
     expect(() => trackScreen("home")).not.toThrow();
-    expect(() => setUserProps({ app_mode: "web", asset_count_bucket: "0", sync_enabled: "n", onboarding_state: "new", theme: "dark" })).not.toThrow();
   });
 
-  it("AC1 window 자체가 없어도(SSR) 무시된다", () => {
+  it("window 자체가 없어도(SSR) 무시된다", () => {
     delete g.window;
     expect(() => track("share", { method: "save" })).not.toThrow();
   });
 
-  it("AC4 gtag가 throw해도 호출부로 전파되지 않는다", () => {
+  it("gtag가 throw해도 호출부로 전파되지 않는다", () => {
     gtag.mockImplementation(() => { throw new Error("boom"); });
     expect(() => track("data_action", { method: "export" })).not.toThrow();
     expect(() => trackScreen("detail:stocks")).not.toThrow();
   });
 });
 
-describe("AC2 sanitizer", () => {
-  it("사전 외 키·값·비문자열은 제거하고 허용 enum만 남긴다", () => {
-    const out = sanitizeParams({
-      asset_type: "stock",
-      method: "screenshot",
-      result: "not-a-value",
-      amount: 123456789,
-      name: "삼성전자",
-      ticker: "AAPL",
-      source: { nested: true },
-      step: 3,
-    });
-    expect(out).toEqual({ asset_type: "주식", method: "스크린샷" });
+describe("featureTitleOf 매핑", () => {
+  it.each([
+    ["welcome_view", {}, "웰컴"],
+    ["onboarding_action", { method: "wizard" }, "웰컴"],
+    ["tutorial_begin", {}, "온보딩"],
+    ["tutorial_step", { step: "2" }, "온보딩"],
+    ["tutorial_complete", {}, "온보딩"],
+    ["wizard_step", { step: "stock" }, "온보딩"],
+    ["asset_add_start", {}, "자산 추가 시작"],
+    ["asset_add_start", { asset_type: "stock", method: "manual" }, "자산 추가 시작·주식"],
+    ["asset_save", { asset_type: "crypto" }, "자산 저장·암호화폐"],
+    ["asset_save", { asset_type: "real_estate" }, "자산 저장·부동산"],
+    ["first_asset_saved", { asset_type: "cash" }, "자산 저장·현금"],
+    ["screenshot_parse", { asset_type: "loan", result: "fail" }, "스크린샷 등록·대출"],
+    ["transaction_save", { asset_type: "stock" }, "거래 입력·주식"],
+    ["share", { method: "save", content_type: "stock" }, "인증카드 저장"],
+    ["share", { method: "copy" }, "공유"],
+    ["share", { method: "link" }, "공유"],
+    ["share_restore", { result: "success" }, "공유"],
+    ["sync_action", { method: "push" }, "기기 동기화"],
+    ["data_action", { method: "export" }, "백업"],
+    ["data_action", { method: "import" }, "백업"],
+    ["data_action", { method: "clear_all" }, "데이터 관리"],
+    ["pwa_install", { method: "accepted" }, "앱 설치"],
+    ["settlement_view", { source: "card" }, "월 결산"],
+    ["feature_use", { category: "xray" }, "X-Ray"],
+    ["feature_use", { category: "tax_sim" }, "절세 시뮬레이션"],
+    ["feature_use", { category: "home_tip" }, "홈 팁"],
+    ["feature_use", { category: "notice" }, "홈 팁"],
+    ["feature_use", { category: "feedback" }, "의견 보내기"],
+    ["feature_use", { category: "theme" }, "테마 변경"],
+    ["feature_use", { category: "ai_prompt" }, "AI 프롬프트 복사"],
+    ["feature_use", { category: "demo" }, "체험 모드"],
+    ["feature_use", { category: "share_card" }, "인증카드 열기"],
+    ["feature_use", { category: "app_guide" }, "앱 가이드 열기"],
+  ] as const)("%s %j → %s", (name, params, title) => {
+    expect(featureTitleOf(name, params, "home")).toBe(title);
   });
 
-  it("track 전송 파라미터에 사전 외 값이 실리지 않는다", () => {
-    track("asset_save", { asset_type: "stock", method: "manual", result: "create", ...({ amount: 1e9, nickname: "x" } as object) });
-    const [, name, payload] = gtag.mock.calls[0];
-    expect(name).toBe("asset_save");
-    expect(payload).not.toHaveProperty("amount");
-    expect(payload).not.toHaveProperty("nickname");
-    expect(payload).toMatchObject({ asset_type: "주식", method: "직접 입력", result: "신규" });
+  it("매핑 없는 이벤트·카테고리는 현재 화면 title로", () => {
+    expect(featureTitleOf("asset_delete", { asset_type: "stock" }, "detail:stocks")).toBe("상세·주식");
+    expect(featureTitleOf("app_lock", { method: "enable" }, "settings")).toBe("설정");
+    expect(featureTitleOf("feature_use", { category: "ratio_preview" }, "ratio")).toBe("비중 미리보기");
+    expect(featureTitleOf("feature_use", {}, "tax")).toBe("세금 관리");
   });
 
-  it("settlement_view는 source·result 열거형만 싣고 금액·날짜는 버린다(#32)", () => {
-    track("settlement_view", { source: "card", result: "settled", ...({ delta: 1e7, month: "2026-10" } as object) });
-    const [, name, payload] = gtag.mock.calls[0];
-    expect(name).toBe("settlement_view");
-    expect(payload).toMatchObject({ source: "결산 카드", result: "결산" });
-    expect(payload).not.toHaveProperty("delta");
-    expect(payload).not.toHaveProperty("month");
-    expect(sanitizeParams({ source: "menu", result: "in_progress" })).toEqual({ source: "메뉴", result: "진행 중" });
-    expect(sanitizeParams({ result: "first_month" })).toEqual({ result: "첫 달" });
+  it("화면 title도 없으면 undefined", () => {
+    expect(featureTitleOf("asset_delete", {}, "unknown-screen")).toBeUndefined();
   });
 });
 
-describe("AC3 page_location에 해시·쿼리 미포함", () => {
-  it("trackScreen은 가상 경로 /v/<화면>을 보내고 URL 해시·쿼리를 쓰지 않는다", () => {
-    trackScreen("detail:stocks", "initial");
+describe("전송 payload는 page_title·page_location만", () => {
+  it("track은 page_title과 page_location 외 키를 보내지 않는다(의미 인자·잡값 제거)", () => {
+    track("asset_save", { asset_type: "stock", method: "manual", result: "create", ...({ amount: 1e9, nickname: "x" } as object) });
+    const [cmd, name, payload] = gtag.mock.calls[0];
+    expect(cmd).toBe("event");
+    expect(name).toBe("asset_save");
+    expect(Object.keys(payload).sort()).toEqual(["page_location", "page_title"]);
+    expect(payload.page_title).toBe("자산 저장·주식");
+  });
+
+  it("매핑 없고 화면 title도 없으면 page_title을 생략한다", () => {
+    trackScreen("zzz-unknown");
+    gtag.mockClear();
+    track("asset_delete", { asset_type: "stock" });
+    expect(Object.keys(gtag.mock.calls[0][2])).toEqual(["page_location"]);
+  });
+
+  it("화면 이동 후 매핑 없는 이벤트는 그 화면 title을 붙인다", () => {
+    trackScreen("detail:stocks");
+    track("asset_delete", { asset_type: "stock" });
+    expect(gtag.mock.calls[1][2].page_title).toBe("상세·주식");
+  });
+
+  it("사용자 속성 gtag('set') 호출은 없다", () => {
+    trackScreen("home");
+    track("feature_use", { category: "theme", method: "toggle" });
+    expect(gtag.mock.calls.filter((c) => c[0] === "set")).toHaveLength(0);
+  });
+});
+
+describe("page_location에 해시·쿼리 미포함", () => {
+  it("trackScreen은 가상 경로를 보내고 화면 page_title은 기존과 동일, nav_source는 보내지 않는다", () => {
+    trackScreen("detail:stocks");
     const [cmd, name, payload] = gtag.mock.calls[0];
     expect(cmd).toBe("event");
     expect(name).toBe("page_view");
     expect(payload.page_location).toBe("https://secretasset.xyz/v/detail/stocks");
     expect(payload.page_path).toBe("/v/detail/stocks");
     expect(payload.page_title).toBe("상세·주식");
-    expect(payload.nav_source).toBe("첫 진입");
+    expect(payload).not.toHaveProperty("nav_source");
     expect(JSON.stringify(payload)).not.toMatch(/[#?]|secretkey|share=/);
+  });
+
+  it("화면 title 전수 불변", () => {
+    const expected: Record<string, string> = {
+      home: "홈", ratio: "비중 미리보기", more: "더보기", settings: "설정", tax: "세금 관리",
+      "detail:hub": "상세", "detail:stocks": "상세·주식", "detail:stocks-xray": "상세·주식 X-Ray",
+      "detail:stocks-trades": "상세·주식 거래내역", "detail:real-estate": "상세·부동산", "detail:crypto": "상세·암호화폐",
+      "detail:crypto-transactions": "상세·암호화폐 거래내역", "detail:cash": "상세·현금", "detail:cash-transactions": "상세·현금 거래내역",
+      "detail:loans": "상세·대출", "detail:loan-transactions": "상세·대출 거래내역",
+      "activity:hub": "성과", "activity:change": "성과·자산 변화", "activity:dividend": "성과·배당", "activity:report": "성과·자산 성적표",
+    };
+    for (const [key, title] of Object.entries(expected)) {
+      expect(featureTitleOf("asset_delete", {}, key)).toBe(title);
+    }
   });
 
   it("일반 이벤트의 page_location도 현재 화면 가상 경로로 고정된다", () => {
     trackScreen("activity:change");
     track("share", { method: "link", content_type: "link" });
-    const payload = gtag.mock.calls[1][2];
-    expect(payload.page_location).toBe("https://secretasset.xyz/v/activity/change");
+    expect(gtag.mock.calls[1][2].page_location).toBe("https://secretasset.xyz/v/activity/change");
   });
 
   it("화면 키 형식이 아니면 무시한다", () => {
@@ -141,13 +195,23 @@ describe("AC3 page_location에 해시·쿼리 미포함", () => {
   });
 });
 
-describe("AC7 화면 전환 page_view", () => {
+describe("화면 전환 page_view", () => {
   it("같은 화면 연속 호출은 1회만 보낸다", () => {
-    trackScreen("home", "initial");
-    trackScreen("home", "tap");
-    trackScreen("detail:hub", "tap");
-    trackScreen("home", "back");
+    trackScreen("home");
+    trackScreen("home");
+    trackScreen("detail:hub");
+    trackScreen("home");
     expect(gtag.mock.calls.map((c) => c[2].page_path)).toEqual(["/v/home", "/v/detail/hub", "/v/home"]);
+  });
+});
+
+describe("체험 모드", () => {
+  it("체험 중에는 track·trackScreen 전송 0", () => {
+    markTrialActive();
+    track("feature_use", { category: "xray" });
+    trackScreen("home");
+    expect(gtag).not.toHaveBeenCalled();
+    __resetTrialModeForTest();
   });
 });
 
@@ -173,22 +237,8 @@ describe("AC8 first_asset_saved 기기당 1회", () => {
   });
 });
 
-describe("AC10 사용자 속성", () => {
-  it("값이 바뀔 때만 user_properties를 설정한다", () => {
-    const p = { app_mode: "pwa", asset_count_bucket: "1", sync_enabled: "n", onboarding_state: "new", theme: "dark" } as const;
-    setUserProps(p);
-    setUserProps(p);
-    setUserProps({ ...p, asset_count_bucket: "2-5" });
-    expect(gtag.mock.calls.filter((c) => c[0] === "set")).toHaveLength(2);
-    expect(gtag.mock.calls[0]).toEqual([
-      "set",
-      "user_properties",
-      { app_mode: "PWA 앱", asset_count_bucket: "1개", sync_enabled: "미사용", onboarding_state: "신규", theme: "다크" },
-    ]);
-  });
-
-  it("버킷·건수 유틸", () => {
-    expect([0, 1, 2, 5, 6, 40].map(assetCountBucket)).toEqual(["0", "1", "2-5", "2-5", "6+", "6+"]);
+describe("건수 유틸", () => {
+  it("countAssets는 보유 자산 건수만 센다", () => {
     expect(countAssets({ stocks: [{}, {}], crypto: [{}], cash: [], loans: [{}], realEstate: [] } as never)).toBe(4);
     expect(countAssets(null)).toBe(0);
   });
@@ -217,29 +267,13 @@ describe("매핑 유틸", () => {
     expect(toGaAssetType("unknown")).toBeUndefined();
   });
 
-  it("trackParse는 거래 스크린샷을 주식·코인으로 집계한다", () => {
+  it("trackParse는 거래 스크린샷을 주식·코인으로 집계해 title에 반영한다", () => {
     trackParse("trade", "success");
     trackParse("crypto-trade", "limit");
-    expect(gtag.mock.calls.map((c) => [c[1], c[2].asset_type, c[2].result])).toEqual([
-      ["screenshot_parse", "주식", "성공"],
-      ["screenshot_parse", "암호화폐", "한도 초과"],
+    expect(gtag.mock.calls.map((c) => [c[1], c[2].page_title])).toEqual([
+      ["screenshot_parse", "스크린샷 등록·주식"],
+      ["screenshot_parse", "스크린샷 등록·암호화폐"],
     ]);
-  });
-});
-
-describe("한국어 라벨", () => {
-  it("사전의 모든 값에 비어 있지 않은 라벨이 있고 매개변수 안에서 중복되지 않는다", () => {
-    for (const [key, codes] of Object.entries(PARAM_VALUES)) {
-      const labels = (codes as readonly string[]).map((c) => labelOf(key as never, c as never));
-      for (const l of labels) expect(typeof l === "string" && l.length > 0 && l.length <= 100).toBe(true);
-      expect(new Set(labels).size).toBe(labels.length);
-    }
-  });
-
-  it("같은 코드도 매개변수별로 다르게 라벨링된다", () => {
-    expect(labelOf("asset_type", "stock")).toBe("주식");
-    expect(labelOf("content_type", "stock")).toBe("주식 카드");
-    expect(labelOf("step", "stock")).toBe("주식 단계");
   });
 });
 
@@ -262,7 +296,9 @@ describe("#63 /ratio UTM 귀속", () => {
     trackScreen("home");
     expect(gtag.mock.calls.at(-1)?.[2].page_location).toBe("https://secretasset.xyz/v/home");
   });
-  it("ratio_preview는 sanitize를 통과한다", () => {
-    expect(sanitizeParams({ category: "ratio_preview" })).toEqual({ category: "비중 미리보기" });
+  it("/ratio의 ratio_preview 이벤트 title은 화면 title(비중 미리보기)", () => {
+    trackScreen("ratio");
+    track("feature_use", { category: "ratio_preview", method: "sample" });
+    expect(gtag.mock.calls.at(-1)?.[2].page_title).toBe("비중 미리보기");
   });
 });

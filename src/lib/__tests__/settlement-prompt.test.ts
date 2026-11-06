@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildSettlementPrompt, type SettlementPromptInput } from "../ai-prompts";
 import { formatPriceByMode } from "../number-utils";
-import { labelOf, PARAM_VALUES } from "../analytics/ga";
+import { featureTitleOf, PARAM_VALUES } from "../analytics/ga";
 import { copyPrompt } from "@/app/(main)/_components/layout/ui/prompt-preview-dialog";
 
 const base: SettlementPromptInput = {
@@ -76,15 +76,12 @@ describe("3. 상황별 안내", () => {
 });
 
 describe("4. GA 값·라벨", () => {
-  it("추가 값 4개와 한글 라벨", () => {
+  it("추가 값 4개와 기능 이름(page_title)", () => {
     expect(PARAM_VALUES.category).toContain("ai_prompt");
     expect(PARAM_VALUES.method).toContain("prompt_copy");
     expect(PARAM_VALUES.source).toContain("settlement");
     expect(PARAM_VALUES.source).toContain("report");
-    expect(labelOf("category", "ai_prompt")).toBe("AI 프롬프트");
-    expect(labelOf("method", "prompt_copy")).toBe("프롬프트 복사");
-    expect(labelOf("source", "settlement")).toBe("결산 화면");
-    expect(labelOf("source", "report")).toBe("자산 성적표");
+    expect(featureTitleOf("feature_use", { category: "ai_prompt", method: "prompt_copy", source: "settlement" }, "activity:report")).toBe("AI 프롬프트 복사");
   });
 });
 

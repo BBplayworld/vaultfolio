@@ -24,31 +24,34 @@ import {
   welcomeCtaState,
   WELCOME_CTA_METHODS,
 } from "../welcome-guide";
-import { labelOf, PARAM_VALUES } from "@/lib/analytics/ga";
+import { featureTitleOf } from "@/lib/analytics/ga";
 import { SECURITY_COPY } from "@/config/security-copy";
 
 const SRC = readFileSync(path.resolve(__dirname, "../welcome-guide.tsx"), "utf8");
 
-describe("GA 매핑(위치 이동 후에도 값·라벨 동일)", () => {
+describe("GA 매핑(위치 이동 후에도 값 동일)", () => {
   it.each([
-    [true, false, "PWA 앱"],
-    [true, true, "PWA 앱"],
-    [false, true, "인앱 브라우저"],
-    [false, false, "웹"],
-  ])("welcome_view source: standalone=%s inApp=%s → %s", (standalone, inApp, label) => {
-    expect(labelOf("source", welcomeSource(standalone, inApp))).toBe(label);
+    [true, false, "pwa"],
+    [true, true, "pwa"],
+    [false, true, "inapp"],
+    [false, false, "web"],
+  ])("welcome_view source: standalone=%s inApp=%s → %s", (standalone, inApp, code) => {
+    expect(welcomeSource(standalone, inApp)).toBe(code);
   });
 
-  it("CTA 버튼별 onboarding_action 라벨", () => {
-    expect(labelOf("method", WELCOME_CTA_METHODS.skipInstall)).toBe("설치 없이 시작");
-    expect(labelOf("method", WELCOME_CTA_METHODS.wizard)).toBe("마법사");
-    expect(labelOf("method", WELCOME_CTA_METHODS.manual)).toBe("직접 입력");
-    expect(labelOf("method", WELCOME_CTA_METHODS.import)).toBe("백업 가져오기");
-    expect(labelOf("method", WELCOME_CTA_METHODS.syncConnect)).toBe("동기화 연결");
+  it("CTA 버튼별 method 값 고정", () => {
+    expect(WELCOME_CTA_METHODS).toMatchObject({
+      skipInstall: "skip_install",
+      wizard: "wizard",
+      manual: "manual",
+      import: "import",
+      syncConnect: "sync_connect",
+    });
   });
 
-  it("PARAM_VALUES 고정(키·값 diff 0)", () => {
-    expect(PARAM_VALUES).toMatchSnapshot();
+  it("웰컴 이벤트 page_title은 웰컴", () => {
+    expect(featureTitleOf("welcome_view", { source: "web" }, "home")).toBe("웰컴");
+    expect(featureTitleOf("onboarding_action", { method: WELCOME_CTA_METHODS.wizard }, "home")).toBe("웰컴");
   });
 });
 
