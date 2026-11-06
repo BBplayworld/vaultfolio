@@ -131,3 +131,4 @@
 - 2026-11-06 대표 승인: 등록 자산 기반 확장 → #72 [4.43] 자산 구성 변화+외화 노출(risk:low) 생성. #70 개발 완료(issue-4.42 c7d3baf) → ui-review·qa 진행
 - 2026-11-06 사용량 한도(5시간)로 COO(#70)·qa(#72) 중단, 05:50 UTC 이후 SendMessage로 재개(cto a808e6c7de0352204, qa ae868fc4af734f217)
 - 2026-11-06 4.42 COO PASS @6834394, 반영 권고(low). PR #73 owner-review
+- 2026-11-06 4.43 COO PASS @2c7f522, 반영 권고(low). PR #74 owner-review. 비차단 권고 2건(외화 '약' 줄끝·캡션 text-xs)은 #73 머지 후 rebase 커밋에 동승 또는 12/11 이후 p2
