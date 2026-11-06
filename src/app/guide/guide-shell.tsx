@@ -48,7 +48,7 @@ export function GuideShell({ slug }: { slug: GuideSlug }) {
           <Link
             data-testid="guide-other-link"
             href={`/guide/${other.slug}`}
-            className="inline-flex min-h-10 items-center text-sm font-medium text-primary break-keep"
+            className="inline-flex min-h-10 items-center text-sm font-medium text-foreground underline underline-offset-4 dark:text-primary break-keep"
           >
             {other.title} →
           </Link>

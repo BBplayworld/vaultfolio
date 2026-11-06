@@ -78,13 +78,14 @@ function NudgeCard({ trigger }: { trigger: PwaInstallTrigger }) {
         </div>
       </div>
       <div className="mt-3 flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={dismissInstallNudge}>
+        <Button type="button" variant="ghost" size="sm" className="h-10" onClick={dismissInstallNudge}>
           나중에
         </Button>
         <Button
           type="button"
           variant="brand"
           size="sm"
+          className="h-10"
           onClick={() => {
             track("feature_use", { category: "install_nudge_tap" });
             dismissInstallNudge();

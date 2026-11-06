@@ -35,7 +35,7 @@ export function TaxSeasonStrip({ stocks }: TaxSeasonStripProps) {
       <span className="flex-1 min-w-0 text-sm font-medium break-keep text-pretty">
         해외주식 양도소득은 1년 단위로 합산해 기본공제를 적용해요
       </span>
-      <span className="text-[11px] text-muted-foreground shrink-0">세금 계산해 보기</span>
+      <span className="hidden sm:inline text-[11px] text-muted-foreground shrink-0">세금 계산해 보기</span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
     </button>
   );

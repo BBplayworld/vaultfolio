@@ -4,26 +4,29 @@ import type { ReactNode } from "react";
 import type { GuideDoc } from "../guide-copy";
 import { GuideActions } from "../guide-actions";
 
-// 슬래시 어구는 줄바꿈 기회가 되므로 nowrap으로 묶는다(C25)
-const NOWRAP_PHRASE = "국내/해외";
+// '·'·'/'로 이어진 어구(국내/해외, 증권사·은행·거래소 등)는 줄바꿈 기회가 되므로 통째로 nowrap으로 묶는다(C25)
+const JOINED_PHRASE = /[가-힣·/]+/g;
 function withNowrap(text: string): ReactNode {
-  const parts = text.split(NOWRAP_PHRASE);
-  if (parts.length === 1) return text;
-  return parts.flatMap((part, i) =>
-    i === 0
-      ? [part]
-      : [
-          <span key={i} className="whitespace-nowrap">
-            {NOWRAP_PHRASE}
-          </span>,
-          part,
-        ],
-  );
+  const out: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(JOINED_PHRASE)) {
+    if (!/[·/]/.test(m[0])) continue;
+    out.push(text.slice(last, m.index));
+    out.push(
+      <span key={m.index} className="whitespace-nowrap">
+        {m[0]}
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last === 0) return text;
+  out.push(text.slice(last));
+  return out;
 }
 
 const BODY = "text-sm sm:text-[15px] leading-7 text-foreground/90 text-pretty break-keep";
 const H2 = "text-base font-semibold leading-snug text-balance break-keep";
-const INLINE_LINK = "block min-h-10 py-2 text-sm font-medium text-primary underline underline-offset-4 break-keep";
+const INLINE_LINK = "block min-h-10 py-2 text-sm font-medium text-foreground underline underline-offset-4 dark:text-primary break-keep";
 
 /** 가이드 본문(h1·단계·fact box·행동 블록) — 서버 컴포넌트, 행동 버튼만 클라이언트 */
 export function GuideArticle({ doc }: { doc: GuideDoc }) {
