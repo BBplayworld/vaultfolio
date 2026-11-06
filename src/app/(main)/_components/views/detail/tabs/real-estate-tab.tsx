@@ -47,7 +47,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
   const datasetInfo = realEstateTradeDataset[item.type];
   const areaLabel = datasetInfo?.areaLabel ?? "면적";
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
@@ -74,10 +74,10 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
             </button>
           </CollapsibleTrigger>
         </div>
-        <div className="h-0.5 w-full bg-muted">
+        <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-muted/20" />}
+        {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
@@ -357,13 +357,13 @@ export function RealEstateTab() {
                 return (
                   <div key={cat.value}>
                     <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                    <div className="space-y-2">{catItems.map(renderCard)}</div>
+                    <div data-testid="detail-list-box-real-estate" className={`space-y-2 ${ASSET_THEME.listBox}`}>{catItems.map(renderCard)}</div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="space-y-2 mt-8">{filteredItems.map(renderCard)}</div>
+            <div data-testid="detail-list-box-real-estate" className={`space-y-2 mt-8 ${ASSET_THEME.listBox}`}>{filteredItems.map(renderCard)}</div>
           )}
         </div>
       </CardContent>

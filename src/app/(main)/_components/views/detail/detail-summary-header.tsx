@@ -42,7 +42,7 @@ export function DetailSummaryHeader({
   // 인증카드는 배경 박스 없이 아래 비중 바·리스트 박스(래퍼 py-3.5 px-2 + 내부 px-0 = 8px)와
   // 좌우 여백을 정확히 맞춘다(R25: screenshotMode 전용 분기). 하단 패딩은 0으로 두고
   // 다음 요소와의 시각적 간격은 바깥 margin으로만 통제해 다른 구간과 동일하게 맞춘다.
-  const boxCls = screenshotMode ? "rounded-lg px-2 pt-2" : `rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`;
+  const boxCls = screenshotMode ? "rounded-lg px-2 pt-2" : `rounded-lg ${ASSET_THEME.primary.bgLight} ${ASSET_THEME.summaryBoxDark} px-4 py-4`;
 
   return (
     <div className={boxCls}>
@@ -62,7 +62,7 @@ export function DetailSummaryHeader({
       </div>
       {/* 인증카드는 리스트 행(cardAmountProfitRow)의 금액~손익 간격(mt-0.5=2px)과 맞춘다 —
           기존 mt-1(4px)은 리스트보다 2배 넓어 보였다(screenshotMode 전용 분기, 다른 탭 불변) */}
-      {inline && <div className={screenshotMode ? "mt-0.5" : "mt-1"}>{inline}</div>}
+      {inline && <div className={screenshotMode ? "mt-0.5" : "mt-1 dark:flex"}>{inline}</div>}
     </div>
   );
 }

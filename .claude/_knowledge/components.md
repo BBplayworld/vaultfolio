@@ -180,7 +180,6 @@ _components/
 | AssetDetailTabs     | `main-nav/detail/asset-detail-tabs.tsx` | 5탭 상세 목록                  |
 | YearlyNetAssetChart | `views/activity/net-asset-chart.tsx` | 순자산 추이 — 년도별/일별(월별은 #4.34에 결산으로 흡수). `view?: "yearly"\|"daily"`를 넘기면 외부 제어·내부 선택기 숨김 |
 | ProfitCard          | `views/activity/profit-chart.tsx`    | 기간별 수익 차트 (점진 로드). `period?: ProfitPeriod`를 넘기면 외부 제어·내부 선택기 숨김 |
-| CompositionCard (#4.43) | `views/activity/composition-card.tsx` | 연 탭 "자산 구성 변화" 카드(`SECTION`+`SectionHeader`+`총자산 기준` 뱃지). props `snapshotVersion·live·currentMonth`. 칸=버튼(탭/호버/포커스로 선택 줄 갱신, 기본 이번 달), 빈 칸은 점선, 상태 hidden/single/bars. bars일 때 IntersectionObserver 50% 1회 `trackScreen("activity:change:composition")` |
 | AssetChangeView (#4.34, r2) | `views/activity/asset-change-view.tsx` | 성과·자산 변화 셸 — 제목 행 오른쪽 범위 선택(전체/주식, `InlineSelector fullWidth` `w-[164px]`) + 기간 선택(일/주/월/연, fullWidth) 노드를 각 본문 Hero 맨 아래로 전달(`periodSelector`). 전체·일/연=YearlyNetAssetChart, 전체·주=WeekList(Hero "7일 전 대비"+일자 목록), 전체·월=SettlementView, 주식=ProfitCard. 같은 칸 재선택은 무시(결산 재마운트 방지). `init: ChangeInit` 변경 시 탭 재지정 |
 | SettlementView (#4.34, r2) | `views/activity/settlement-view.tsx` | N월 결산 = ChangeHero(이름 "10월 결산"/진행 중 "11월"+배지/전년 "25년 10월 결산", 구간, ‹ › 월 화살표 `size-10` — 기록 없는 달 건너뜀·끝에서 disabled, "일부 이전 값" 배지 → 다음 달 준비로 스크롤) → 변화 원인(5항목, 40ms stagger) → 다음 달 준비. 마운트당 `settlement_view` 1회(화살표 이동 재전송 없음) |
 | ChangeHero (#4.34 r2, 로컬) | `views/activity/change-hero.tsx` | 자산 변화 5개 본문 공통 Hero(이름 줄 min-h-10 → 증감 text-2xl/3xl → 시작→끝 → 기간 선택 mt-4), `aria-live`, `contentKey` 변경 시 fade만. `settlementDelta`(허브 카드·결산 Hero 공용 월 증감)·`settlementName`·`BODY_ENTER`·`CauseBlock`(변화 원인 5항목, `scope` month/year·`status` insufficient/error, 루트 `cause-block[data-scope]`)·`computeSettlementCauses`(월 원인 계산)·`computeChainCauses`(연 원인 체인, 구간별 같은 함수) — 시작일 당일 제외·합계 = Hero 증감, 함께 export. views/activity 전용(공용 아님) |
@@ -426,7 +425,7 @@ Alert (hidden prop으로 표시 제어)
 ```typescript
 ASSET_THEME = {
   // tab* 토큰은 더 이상 사용 안 함 — 모든 탭이 InlineSelector로 통일됨 (tabList1·tabList3Wrap legacy 잔존, tabList2/3은 #4.34 삭제)
-  cardWrapper, cardHeader, cardActions("flex justify-end gap-2 px-3 py-2 bg-muted/10"),
+  cardWrapper, listBox(다크 리스트 box, #4.44)·cardOpenDivider(펼친 항목 하단선)·StockRowHeader 오늘 등락 칩 모바일 우측 이동(#4.44), summaryBoxDark, cardHeader, cardActions("flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-popover"),
   cardActionButton, cardTriggerButton, cardInfoLeft/Right/Title/Meta/Name,
   cardAmountMain/Sub/Rate/ProfitRow,
   cardDetailLabel/Value/ValueBold/PriceKRW/Meta,

@@ -52,7 +52,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
     navigate({ type: "detail", tab: "loan-transactions" });
   };
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
@@ -75,10 +75,10 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
             </button>
           </CollapsibleTrigger>
         </div>
-        <div className="h-0.5 w-full bg-muted">
+        <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-muted/20" />}
+        {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <div className={`grid grid-cols-2 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
@@ -127,7 +127,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
               )}
             </div>
             {/* 상환/대출 기록·내역 — 현금 입출금과 대칭 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+            <div className="px-3 dark:px-4 py-2 flex items-center gap-2 bg-muted/5 dark:bg-transparent">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddLoanTx(loan.id)}>
                 <ArrowLeftRight className="size-3.5" /> 상환/대출 기록
               </Button>
@@ -350,13 +350,13 @@ export function LoanTab() {
                 return (
                   <div key={cat.value}>
                     <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                    <div className="space-y-2">{catLoans.map(renderLoanCard)}</div>
+                    <div data-testid="detail-list-box-loans" className={`space-y-2 ${ASSET_THEME.listBox}`}>{catLoans.map(renderLoanCard)}</div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="space-y-2 mt-8">{filteredLoans.map(renderLoanCard)}</div>
+            <div data-testid="detail-list-box-loans" className={`space-y-2 mt-8 ${ASSET_THEME.listBox}`}>{filteredLoans.map(renderLoanCard)}</div>
           )}
         </div>
 
@@ -364,8 +364,9 @@ export function LoanTab() {
         {paidOffLoans.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">완납된 대출</p>
+            <div className={`space-y-2 ${ASSET_THEME.listBox} dark:divide-y dark:divide-border/40`}>
             {paidOffLoans.map((loan) => (
-              <div key={loan.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/20">
+              <div key={loan.id} className="flex items-center gap-3 px-3 dark:px-4 py-2.5 dark:py-3 rounded-lg dark:rounded-none bg-muted/20 dark:bg-transparent">
                 <span className="text-sm font-medium truncate flex-1">{loan.name}</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-tight shrink-0">완납</Badge>
                 <Button variant="secondary" size="sm" className="h-8 text-sm gap-1 shrink-0" onClick={() => openPaidOffTxView(loan)}>
@@ -376,6 +377,7 @@ export function LoanTab() {
                 </Button>
               </div>
             ))}
+            </div>
           </div>
         )}
       </CardContent>

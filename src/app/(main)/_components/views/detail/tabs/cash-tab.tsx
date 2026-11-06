@@ -44,7 +44,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
     navigate({ type: "detail", tab: "cash-transactions" });
   };
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
+    <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
@@ -68,10 +68,10 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
             </button>
           </CollapsibleTrigger>
         </div>
-        <div className="h-0.5 w-full bg-muted">
+        <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-muted/20" />}
+        {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             <div className={`grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 ${ASSET_THEME.cardSection}`}>
@@ -92,7 +92,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
               )}
             </div>
             {/* 입출금 기록·내역 — 주식 거래내역과 대칭 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+            <div className="px-3 dark:px-4 py-2 flex items-center gap-2 bg-muted/5 dark:bg-transparent">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCashTx(item.id)}>
                 <ArrowLeftRight className="size-3.5" /> 입출금 기록
               </Button>
@@ -214,7 +214,7 @@ export function CashTab() {
 
         {/* 통화별 외화 노출 — 환율이 움직일 때 얼마가 흔들리는가 */}
         {fxCash.length > 0 && (
-          <div className="rounded-lg bg-muted/30 dark:bg-card p-4 space-y-2">
+          <div className="rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm p-4 space-y-2">
             <p className="text-sm font-bold text-foreground">통화별 노출</p>
             {fxCash.map((fx) => (
               <div key={fx.currency} className="flex items-baseline justify-between gap-2 text-sm">
@@ -280,13 +280,13 @@ export function CashTab() {
                 return (
                   <div key={cat.value}>
                     <p className="text-sm font-semibold text-muted-foreground px-1 pb-1.5">{cat.label}</p>
-                    <div className="space-y-2">{catItems.map(renderCard)}</div>
+                    <div data-testid="detail-list-box-cash" className={`space-y-2 ${ASSET_THEME.listBox}`}>{catItems.map(renderCard)}</div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="space-y-2 mt-8">{filteredSorted.map(renderCard)}</div>
+            <div data-testid="detail-list-box-cash" className={`space-y-2 mt-8 ${ASSET_THEME.listBox}`}>{filteredSorted.map(renderCard)}</div>
           )}
         </div>
       </CardContent>

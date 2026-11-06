@@ -39,16 +39,22 @@ export const ASSET_THEME = {
   // 라이트=흰 패널+그림자(그레이 캔버스 위 부상), 다크=현행(투명·그림자 없음) 보존
   cardWrapper: "rounded-lg overflow-hidden border-0 bg-transparent",
   // cardHeader: "flex flex-wrap items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2.5 bg-primary/10 transition-colors hover:bg-primary/20",
-  cardHeader: "flex flex-wrap items-center gap-3 sm:gap-4 py-2.5 transition-colors",
-  cardActions: "flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-muted/10",
+  cardHeader: "flex flex-wrap items-center gap-3 sm:gap-4 py-2.5 dark:px-4 dark:py-3 dark:hover:bg-muted/20 transition-colors",
+  cardActions: "flex justify-end gap-2 px-3 py-2 bg-muted/40 dark:bg-transparent dark:px-4",
   // ===== 표면 계층 토큰 (라이트 강화 + dark: 현행 보존) =====
-  cardSection: "bg-muted/40 dark:bg-muted/10", // 섹션 strip(name/ticker 등)
-  cardSectionMeta: "bg-muted/20 dark:bg-muted/5", // 메타 strip(보유·매수일)
-  cardExpandBox: "divide-y divide-border dark:divide-border/50 border-t border-border dark:border-t", // 확장부 래퍼: 라이트=헤어라인, 다크=현행 선
-  subItemsWell: "bg-muted/20 dark:bg-muted/5", // 증권사별 항목 컨테이너(라이트 회색 well)
-  subCard: "rounded-lg overflow-hidden bg-card dark:bg-transparent dark:border dark:border-border/60", // 서브카드 외피
+  cardSection: "bg-muted/40 dark:bg-transparent", // 섹션 strip(name/ticker 등)
+  cardSectionMeta: "bg-muted/20 dark:bg-transparent dark:pb-3", // 메타 strip(보유·매수일)
+  cardExpandBox: "divide-y divide-border dark:divide-border/30 border-t border-border dark:border-t-0 dark:bg-transparent", // 확장부 래퍼: 라이트=헤어라인, 다크=listBox card 면 위(상단선 없음, 행 사이 헤어라인 border/30)
+  subItemsWell: "bg-muted/20 dark:bg-transparent dark:px-3 dark:pb-3 dark:pt-1 dark:space-y-2 dark:divide-y-0", // 증권사별 항목 컨테이너(라이트 회색 well)
+  subCard: "rounded-lg overflow-hidden bg-card dark:bg-popover dark:rounded-lg", // 서브카드 외피
   dividerAccent: "border-t border-amber-400/25", // 논리 그룹·섹션 경계 강조 구분선(별점 text-amber-400 톤 통일). 중립 헤어라인과 구별해 '큰 단락' 분리에만.
-  subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-primary/6 dark:hover:bg-primary/10", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
+  subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-transparent dark:hover:bg-muted/30", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
+  // 다크 리스트 box(#4.44): 항목 배경 없이 리스트 전체를 card 면 1장+둥근 모서리로 감싸고 항목은 헤어라인으로만 구분. 라이트 불변
+  listBox: "dark:rounded-xl dark:bg-card dark:shadow-sm dark:overflow-hidden dark:space-y-0",
+  // 펼친 항목(마지막 제외) 하단 구분선 — 닫힌 항목은 비중 바가 구분 역할(#4.44 v3). 카드 루트 Collapsible에 부여
+  cardOpenDivider: "dark:not-last:data-[state=open]:border-b dark:border-border/40",
+  // 다크 요약 박스(#4.44): 리스트 box와 같은 card 면
+  summaryBoxDark: "dark:bg-card dark:rounded-xl dark:shadow-sm",
   cardActionButton: "size-7.5 sm:size-8.5",
   cardTriggerButton: "flex items-center gap-2 sm:gap-4 flex-1 min-w-0 text-left",
   cardInfoLeft: "flex-1",
