@@ -626,7 +626,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
   const currencyGainDisplay = displayCurrency === "USD" ? formatByDisplayCurrency(currencyGain, "USD", usdRate) : formatCurrencyDisplay(Math.round(currencyGain));
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10 dark:bg-popover">
         <div>
           <p className={ASSET_THEME.cardDetailLabel}>평단가</p>
           <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
@@ -652,7 +652,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
         </div>
       </div>
       {isForeign && displayCurrency !== "USD" && (
-        <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5">
+        <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5 dark:bg-popover">
           <div>
             <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
             <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
@@ -676,7 +676,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
 
 function TradeActionRow({ stock, onViewTrades }: { stock: Stock; onViewTrades: (id: string) => void }) {
   return (
-    <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+    <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
       <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddTrade(stock.id)}>
         <ArrowLeftRight className="size-3.5" /> 거래입력
       </Button>
@@ -741,7 +741,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5">
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-popover">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
               <AnnualizedReturn totalRatePct={m.profitRate} sinceDate={stock.purchaseDate} />
@@ -782,7 +782,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
   // 인증카드 모드 — 헤더 + 비중 그라데이션 바만 노출 (펼침·상세·버튼 미렌더)
   if (screenshotMode) {
     return (
-      <div className={`${ASSET_THEME.cardWrapper} mb-3`}>
+      <div className={`${ASSET_THEME.cardWrapperShot} mb-3`}>
         <div className={ASSET_THEME_SHOT.cardHeader}>
           <div className={ASSET_THEME_SHOT.cardTriggerButton}>
             <StockRowHeader
@@ -1017,7 +1017,7 @@ export function StockCategorySection({
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
             {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (
-              <div className={ASSET_THEME.cardWrapper}>
+              <div className={screenshotMode ? ASSET_THEME.cardWrapperShot : ASSET_THEME.cardWrapper}>
                 <div className={screenshotMode ? ASSET_THEME_SHOT.cardHeader : ASSET_THEME.cardHeader}>
                   <div className={screenshotMode ? ASSET_THEME_SHOT.cardTriggerButton : ASSET_THEME.cardTriggerButton}>
                     <span className={`${screenshotMode ? shotTok.icon : "size-6 sm:size-7"} shrink-0`} aria-hidden />

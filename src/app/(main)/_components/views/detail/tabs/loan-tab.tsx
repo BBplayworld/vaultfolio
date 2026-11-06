@@ -127,7 +127,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
               )}
             </div>
             {/* 상환/대출 기록·내역 — 현금 입출금과 대칭 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddLoanTx(loan.id)}>
                 <ArrowLeftRight className="size-3.5" /> 상환/대출 기록
               </Button>

@@ -62,7 +62,7 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(value)}</p></div>
             </div>
             {/* 매수/매도 기록·내역 — 개별 거래소 항목은 실제 id를 가지므로 여기서 제공 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
                 <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
               </Button>
@@ -81,7 +81,7 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5">
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-popover">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{coin.purchaseDate} 매수</span></span>
               {coin.description && <span className="w-full text-primary truncate"># {coin.description}</span>}
@@ -164,7 +164,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
             {/* 매수/매도 기록·내역 — 하위 항목(거래소)이 있으면 몇 개든 종합 레벨에서는 항상 숨기고
                 아래 거래소별 항목에서만 개별 기록한다(주식 StockCard와 동일 규칙). */}
             {!hasSubItems && (
-              <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+              <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
                 <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
                   <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
                 </Button>

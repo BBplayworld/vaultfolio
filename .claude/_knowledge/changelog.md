@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-06 (v4.44)
+
+### 상세 탭 다크 3단계 면 + 자산 구성 변화 막대 슬림화 (#4.44, 이슈 #75)
+- **왜**: 다크 상세 탭(주식·가상자산·부동산·현금·대출)은 카드·펼침 영역이 muted/5~10이라 명도차가 거의 없었음. 4.42 면 구조(background < card < popover)로 통일. 자산 구성 변화 막대는 칸이 적을 때 flex-1로 거대해짐.
+- `theme.ts`: `cardWrapper dark:bg-card`·`cardWrapperShot` 신설(인증카드 유지)·`cardHeader dark:px-4`·`cardSection/Meta/cardActions dark:bg-popover`·`subItemsWell dark:bg-background`·`subCard dark:bg-popover`(테두리 제거)·`cardExpandBox` 다크 상단선 제거. 탭 내 하드코딩 `bg-muted/5·/10`에 `dark:bg-popover` 병기. 라이트 불변.
+- `composition-card.tsx`: 칸 `max-w-9`·막대 `h-28→h-20`·`justify-between gap-1`.
+- 스키마·저장·동기화·서버 전송 무변경.
+
 ## 2026-11-06 (v4.43)
 
 ### 자산 구성 변화 + 외화 노출 (#4.43, 이슈 #72, risk low)

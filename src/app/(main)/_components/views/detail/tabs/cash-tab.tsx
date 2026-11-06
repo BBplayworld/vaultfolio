@@ -92,7 +92,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
               )}
             </div>
             {/* 입출금 기록·내역 — 주식 거래내역과 대칭 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5">
+            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCashTx(item.id)}>
                 <ArrowLeftRight className="size-3.5" /> 입출금 기록
               </Button>

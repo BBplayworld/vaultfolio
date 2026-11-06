@@ -65,7 +65,7 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
       ) : (
         <>
           <p data-testid="composition-sentence" className="text-sm font-medium text-foreground text-pretty break-keep">{series.sentence}</p>
-          <div className="flex gap-0.5" role="group" aria-label="월별 자산 구성">
+          <div className="flex justify-between gap-1" role="group" aria-label="월별 자산 구성">
             {cells.map((cell, idx) => {
               const isActive = cell.month === active.month;
               return (
@@ -77,10 +77,10 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
                   onClick={() => setSelected(cell.month)}
                   onMouseEnter={() => setSelected(cell.month)}
                   onFocus={() => setSelected(cell.month)}
-                  className="group flex min-h-10 min-w-0 flex-1 flex-col items-center gap-1 outline-none"
+                  className="group flex min-h-10 min-w-0 max-w-9 flex-1 flex-col items-center gap-1 outline-none"
                 >
                   <span
-                    className={`flex h-28 w-full flex-col-reverse gap-px overflow-hidden rounded-md transition-opacity duration-150 group-focus-visible:ring-2 group-focus-visible:ring-ring ${
+                    className={`flex h-20 w-full flex-col-reverse gap-px overflow-hidden rounded-md transition-opacity duration-150 group-focus-visible:ring-2 group-focus-visible:ring-ring ${
                       cell.empty ? "border border-dashed border-muted-foreground/40" : ""
                     } ${isActive ? "opacity-100" : "opacity-60"}`}
                   >
