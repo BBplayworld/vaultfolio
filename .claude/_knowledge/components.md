@@ -340,6 +340,11 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 - 게이트는 `resolveInAppGate(env)`(state-and-utils) 결과만 따른다: `none`·`welcome` 미렌더 / `cover` = 데이터 로드 전 문구 없는 `fixed inset-0 bg-background`(`Z_LAYER.gate`, `data-testid="inapp-gate-cover"`, `aria-hidden`) / `gate` = **같은 루트 노드**에 기존 경고·PIN 내용(노드 교체 없음). 외부 이동은 `useExternalMove`(#4.38)
 - `InAppExternalGuide({ lastStep?, notice? })` — `notice`(#4.38)를 넘기면 앰버 블록 안쪽(제목+"앱 설치 기능…" 문장)만 대체, 아이콘·1~3단계·하단 안내 유지. 미전달 시 기존 문구(설치 흐름·1건 이상 게이트). 소비처: 게이트, `pwa-install-flow` inAppStep, 웰컴 inapp 슬롯
 
+### 가이드 페이지 (`src/app/guide/*`, #4.45 #77) · InstallNudge · TaxSeasonStrip
+- 가이드 2편(`/guide/stock-ratio`·`/guide/net-worth`): `(main)` 밖 정적 서버 문서(`/ratio`와 같은 껍데기·`max-w-[480px]`). 문구 정본 `guide-copy.ts`(`GUIDES`·`GUIDE_SLUGS`, 보안 문장은 `security-copy` 원문 import, 슬러그·lastModified는 sitemap이 import). `guideMetadata(slug)`(guide-shell)가 canonical·openGraph·twitter(images 포함) 재선언. 본문 `_components/guide-article.tsx`(라우트 로컬, 공용 아님·단계 번호 `aria-hidden`·`guide-fact-box` 카드 1장), 클라이언트 `guide-actions.tsx`(`GuideScreenTracker`·`GuideActions`: 체험은 `<a href>` + `trackThenNavigate` 연타 1회 가드). 새 가이드 추가 = copy 항목 + 폴더 1개 + sitemap 자동 반영
+- `InstallNudge`(`(main)/_components/pwa/install-nudge.tsx`): 상단바 설치 아이콘 옆 1회 카드(모바일). 신호 `lib/pwa/first-save-signal.ts`(모듈 메모리), 판정 `shouldShowInstallNudge`(튜토리얼은 `isTutorialFinished === true`만). `PwaInstallFlow` render-prop 재사용, 누른 뒤엔 카드만 `hidden`·마운트 유지(설치 다이얼로그 보존)
+- `TaxSeasonStrip`(`views/detail/tax-season-strip.tsx`): 상세>주식 `StockInsightStrip` 아래 한 줄. `setInitialTab("simulator")` 후 `navigate({type:"tax"})`, `data-screenshot-hide`
+
 ### RatioPreview (`src/app/ratio/ratio-preview.tsx`, #4.39 #63) · RatioHandoffHost (`(main)/_components/ratio/ratio-handoff-host.tsx`)
 - `/ratio`(`(main)` 밖, 서버 `page.tsx`가 metadata·SSR 본문): 업로드·결과를 한 클라이언트 컴포넌트가 노드 유지 + 높이 펼침(`Unfold`, 이 파일 전용)으로 전환. `useAssetData`·react-query·토스트 사용 금지(provider 밖). 문구는 `ratio-copy.ts`
 - `RatioHandoffHost`: `(main)/layout.tsx`에 1줄. 마운트 시 `peekHandoff()` null이면 영구 null. 조건 충족 시 `takeHandoff()` 후 `StockScreenshotImport open initialParsed`, `onSaved`에서 `feature_use{ratio_preview, submit, create}` 1회

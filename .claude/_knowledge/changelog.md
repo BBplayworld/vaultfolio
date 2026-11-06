@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-07 (v4.45)
+
+### 검색 입구 정비 + 첫 저장 설치 안내 + 연말 세금 줄 (#4.45, 이슈 #77·#78·#79, risk low)
+- **왜**: 검색으로 닿을 문서가 없고(sitemap 루트 1건, 정본이 리다이렉트되는 비 www), 첫 저장 직후 설치 제안과 연말 세금 진입이 없었다. 모두 저장 키·서버 전송 추가 0.
+- #77: `config/app.ts` `siteUrl` 기본값 `https://www.secretasset.xyz`(환경변수 신설 없음), 안내 그림 `DOMAIN`은 리터럴 `"secretasset.xyz"`로 고정. `sitemap.ts` 4건(루트·/ratio·/guide/stock-ratio·/guide/net-worth, 문서별 고정 lastModified). `app/guide/*` 정적 가이드 2편(`guide-copy.ts` 문구 정본·`guide-shell.tsx`·`_components/guide-article.tsx`·`guide-actions.tsx`). 루트 head `WebApplication` JSON-LD(`WEB_APPLICATION_JSON_LD`). ga `SCREEN_TITLES` `guide:*` 2행, `utm-allow.ts`가 `/guide/<slug>` 허용.
+- #78: 첫 저장 직후 `ga.ts trackAssetSave`가 세션 메모리 신호(`lib/pwa/first-save-signal.ts`)를 켜고, 튜토리얼 종료 후 상단바 설치 아이콘 아래 1회 카드(`pwa/install-nudge.tsx`, 판정 `install-nudge-policy.ts`). 설치 흐름은 `PwaInstallFlow` 재사용(diff 0). `manifest.ts` 512 any 아이콘·`lang ko`·`categories finance` 추가. ga category `install_nudge`/`install_nudge_tap`. 상단바 헤더 `overflow-hidden`→`overflow-x-clip`(카드 세로 클리핑 해소).
+- #79: KST 11/1~12/31 + 해외주식 시뮬 후보 보유 시 상세>주식에 `tax-season-strip.tsx` 한 줄 → 세금 관리 시뮬레이터. `tax-utils.ts`에 `isTaxSimCandidate`(추출, 동작 불변)·`isForeignTaxSeason`.
+- 스키마·저장 키·동기화·서버 전송 무변경. 홈·홈 팁·세금 일정·결산·웰컴·security-copy·`/ratio` diff 0.
+
 ## 2026-11-06 (v4.44)
 
 ### 상세 다크 BOX 구조 + 자산 구성 변화 리본 차트 (#4.44, 이슈 #75, 대표 반려 후 재설계)

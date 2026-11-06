@@ -537,6 +537,25 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 GA 관리: 향상된 측정 "브라우저 기록 기반 페이지 변경" 끄기, 기존 맞춤 정의 12개 보관처리(폐기), 핵심 이벤트 지정. 배포 24~48시간 뒤 "페이지 및 화면"에서 기본 title("시크릿에셋 — …") 행 소멸 확인
 - 테스트: `src/lib/__tests__/ga.test.ts`
 
+### F-GUIDE. 검색 입구·가이드 ([app/guide](../../src/app/guide)) — #4.45 #77
+- ⚙ `/sitemap.xml` 4건(루트·/ratio·/guide/stock-ratio·/guide/net-worth) 모두 `https://www.` 접두, lastModified 호출마다 동일(고정). canonical·og:url·twitter images가 편마다 재선언
+- ⚙ 가이드 본문은 JS 없이 HTML에 h1 1·h2 전부·`/ratio`·`/?trial=1` 링크·브랜드 문장 포함. 금액·예시 %·권유어·세금 0, 보안 문장은 `security-copy` 원문 일치, 본문 800~1,500자
+- ⚙ GA: `guide:*` page_title 2종, 체험 이동 `feature_use demo`(page_location `/v/guide/<slug>`), UTM은 `/ratio`·`/guide/<slug>`만 허용
+- ⚙ 루트 JSON-LD `WebApplication` 1개(offers 없음), 안내 그림 도메인은 `secretasset.xyz` 리터럴
+- 👤 preview 320/375/1280 × 라이트/다크에서 어절 중간 줄바꿈 0·버튼 높이 44 이상·헤어라인 노출, `/ratio` 파일 diff 0, 운영 스모크에서 canonical이 www인지(Vercel `NEXT_PUBLIC_SITE_URL` 잔존 시 대표 설정)
+- 테스트: `src/app/guide/__tests__/guide.test.tsx`, `src/lib/__tests__/utm-allow.test.ts`
+
+### F-INSTALL-NUDGE. 첫 저장 설치 안내 ([install-nudge.tsx](../../src/app/(main)/_components/pwa/install-nudge.tsx)) — #4.45 #78
+- ⚙ `trackAssetSave` 첫 저장 판정(create·직전 0건·플래그 없음)에서만 신호 on(gtag 없어도), 기존 보유·update·플래그 있음은 off. 새 저장 키 0
+- ⚙ `shouldShowInstallNudge` 조건 1개씩 false면 미노출(체험·인앱·데스크톱·홈 아님·튜토리얼 미종료·마법사/다이얼로그). `manifest.ts` 아이콘 3항목·lang ko·categories finance·id/start_url/scope/share_target 불변
+- 👤 375 iOS UA 새 세션에서 첫 저장→튜토리얼 종료 후 카드 1개, 추가하기→기존 PIN 다이얼로그(카드 숨김·다이얼로그 유지), 나중에→카드만 사라짐, 새로고침·재저장 시 재노출 0, 상단바 가로 클리핑·레이아웃 회귀 없음
+- 테스트: `src/lib/__tests__/install-nudge-policy.test.ts`, `manifest.test.ts`, `ga.test.ts`
+
+### F-TAX-SEASON. 연말 세금 줄 ([tax-season-strip.tsx](../../src/app/(main)/_components/views/detail/tax-season-strip.tsx)) — #4.45 #79
+- ⚙ `isForeignTaxSeason` 10/31 false·11/1 true·12/31 true·1/1 false(KST 변환 포함), `isTaxSimCandidate`(국내·상폐·정지·수량0 제외)와 시뮬 `candidates` 판정 일치
+- 👤 11/1~12/31 + 해외주식 보유 시 상세>주식 X-Ray 줄 아래에 줄 1개, 누르면 세금 관리 시뮬레이터 탭, 뒤로가기로 주식 탭 복귀, 국내만 보유·시즌 밖·체험/데모(해외 없음)는 미노출
+- 테스트: `src/lib/__tests__/tax-utils.test.ts`
+
 ---
 
 ## Phase 1B — UI 품질 유지 (코드레벨 상시 점검)

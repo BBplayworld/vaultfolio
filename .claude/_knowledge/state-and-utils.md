@@ -768,3 +768,14 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 - 내부: `resolveLogoSrc`(단일 출처 재사용)로 `base` URL → `onError` 시 지수 백오프(400·800·1600ms)로 `attempt++`, 3회 초과 시 `failed`. `onLoad` 시 대기 타이머 취소. `base`(종목·옵션) 변경 시 상태 리셋. 언마운트 시 `clearTimeout`.
 - 재시도 URL엔 캐시버스터 `&r=N`만 붙는다 — `/api/logo` route가 이 파라미터를 파싱하지 않아 **서버 캐시 키 불변(HIT 유지)**, 무력화 대상은 브라우저 HTTP 캐시뿐. 목적은 "모바일 WebView 1회성 디코드 실패" 복구.
 - **왜 필요**: 과거 `BrandMark`/`StockIcon`은 `imgError` state가 한 번 `true`면 영구히 폴백으로 굳어, 캡처(`toPng`) 실행 전에 이미 로고가 사라진 상태였다(인증카드 저장 시 로고 누락, 2026-09). `imgError` 영구 폴백 패턴을 이 훅으로 교체.
+
+### 첫 저장 설치 안내 신호·판정 (`src/lib/pwa/first-save-signal.ts` · `install-nudge-policy.ts`, #4.45 #78)
+- `markFirstSave()`는 `ga.ts trackAssetSave`의 첫 저장 판정 분기(`writeFlags` 직후)에서만 호출 — 모듈 메모리뿐(새 저장 키·gaFlags 쓰기 추가 0, 새로고침 시 소멸). `dismissInstallNudge`·`markNudgeShown`(노출 GA 세션당 1회)·`subscribeFirstSave`(`useSyncExternalStore`용)
+- `shouldShowInstallNudge(input)` 순수 함수: 신호·미닫힘·체험 아님·인앱 아님·모바일·`isIOS||isInstallable`·홈·자산≥1·`tutorialFinished===true`·마법사/다이얼로그 없음. `isTutorialFinished`는 `skipStep`/`skipAllTutorialSteps`로도 true
+
+### 연말 세금 시즌 판정 (`src/lib/tax-utils.ts`, #4.45 #79)
+- `isTaxSimCandidate(stock)`: 해외·거래 가능·수량>0 — `groupForeignStocksByTicker`와 줄이 같은 정본. `isForeignTaxSeason(today = todayKst())`: KST `MM-DD`가 11-01~12-31
+
+### sitemap·정본 호스트·UTM (#4.45 #77)
+- `APP_CONFIG.siteUrl` 기본값은 www. 정본 URL(canonical·og·sitemap)은 모두 이 값에서 파생하고 표시용 도메인 문자열은 리터럴로 분리. `sitemap.ts`는 `new Date()` 금지(문서별 고정 lastModified). `allowedUtmQuery`는 `/ratio`·`/guide/<slug>`만 UTM 3키 허용. `WEB_APPLICATION_JSON_LD`(`config/app.ts`)는 루트 layout head에 1개
+
