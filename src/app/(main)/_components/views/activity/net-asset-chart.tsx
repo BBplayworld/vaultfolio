@@ -42,6 +42,7 @@ import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { resolveYearChain } from "@/lib/report/settlement";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
+import { CompositionCard } from "./composition-card";
 
 const NET_COLOR = "#ffffffff";
 
@@ -609,6 +610,15 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* 자산 구성 변화(#72) — 연 탭(제어 모드)의 마지막 카드 */}
+      {view && activeView === "yearly" && (
+        <CompositionCard
+          snapshotVersion={snapshotVersion}
+          currentMonth={todayKst.slice(0, 7)}
+          live={{ realEstateValue: summary.realEstateValue, stockValue: summary.stockValue, cryptoValue: summary.cryptoValue, cashValue: summary.cashValue }}
+        />
+      )}
 
       {/* 년도별 추가/수정 다이얼로그 — 트리거는 외부(CustomEvent)에서 발화 */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -148,6 +148,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "detail:loan-transactions": "상세·대출 거래내역",
   "activity:hub": "성과",
   "activity:change": "성과·자산 변화",
+  "activity:change:composition": "성과·자산 변화·구성",
   "activity:dividend": "성과·배당",
   "activity:report": "성과·자산 성적표",
 };
