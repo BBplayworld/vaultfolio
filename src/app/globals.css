@@ -117,25 +117,25 @@ These serve as the fallback; there is no separate default.css file. */
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --background: oklch(0.16 0.010 265);
+  --foreground: oklch(0.965 0.004 265);
+  --card: oklch(0.225 0.012 265);
+  --card-foreground: oklch(0.965 0.004 265);
   /* --popover: oklch(0.205 0 0); */
-  --popover: oklch(30.118% 0.00003 271.152 / 0.999);
-  --popover-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.275 0.014 265);
+  --popover-foreground: oklch(0.965 0.004 265);
   /* Indigo primary color */
   --primary: oklch(0.704 0.040 256.788);
   --primary-foreground: oklch(1 0 0);
   /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.31 0.014 265);
+  --secondary-foreground: oklch(0.965 0.004 265);
+  --muted: oklch(0.31 0.014 265);
+  --muted-foreground: oklch(0.74 0.016 265);
+  --accent: oklch(0.33 0.014 265);
+  --accent-foreground: oklch(0.965 0.004 265);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -154,11 +154,11 @@ These serve as the fallback; there is no separate default.css file. */
   /* indigo-700 */
   --chart-6: oklch(0.398 0.195 277.366);
   /* indigo-800 */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.225 0.012 265);
+  --sidebar-foreground: oklch(0.965 0.004 265);
   --sidebar-primary: oklch(0.585 0.233 277.117);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.31 0.014 265);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.585 0.233 277.117);
