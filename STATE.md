@@ -19,7 +19,8 @@
 | 이슈 | 버전 | 단계 | 담당 | 다음 할 일 |
 |---|---|---|---|---|
 | #57 가족 금고 함께 쓰기 | 4.38 | on-hold | — | 신규 유입 기여 미미로 보류(2026-10-31). 동기화 사용 4기기 중 2대가 대표 기기. 문서(issues/4.38-57-family-vault/)는 보존, 충돌 덮임 결함 의심은 qa 확인 후 type:bug로 분리 |
-| #70 공식적 UI 고도화(토스·애플 톤) | 4.42 | design-review | ui-designer | UI 사양→개발→UI 검수→QA→COO, 대표가 preview 데모로 반영 여부 결정 |
+| #70 공식적 UI 고도화(토스·애플 톤) | 4.42 | qa/ui-review | ui-designer·qa | 개발 완료(issue-4.42 c7d3baf), 검수 후 대표 preview 데모 결정 |
+| #72 자산 구성 변화+외화 노출 | 4.43 | planning | planner-designer | 대표 승인 2026-11-06, 개발 11/10~14, owner-review 11/24, #70과 독립 |
 | #58 실물 자산 등록(금 등) | 4.44 | planning(문서만) | planner-designer | 대표 범위 축소 승인, 코드는 12/11 이후, owner-review 12/23 |
 
 ## 열린 릴리스
