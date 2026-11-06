@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { trackScreen } from "@/lib/analytics/ga";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import {
-  COMPOSITION_KEYS, COMPOSITION_LABELS, compositionCellAria, computeCompositionSeries, describeCompositionCell,
+  COMPOSITION_KEYS, COMPOSITION_LABELS, compositionCellAria, compositionLabelVisibility, computeCompositionSeries, describeCompositionCell,
   type CompositionLive,
 } from "@/lib/report/composition";
 import { GROUP_BADGE, SECTION, SectionHeader } from "../../layout/ui/report-section";
@@ -50,6 +50,7 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
 
   if (series.state === "hidden") return null;
   const cells = series.cells;
+  const labelShown = compositionLabelVisibility(cells.length);
   const active = cells.find((c) => c.month === selected) ?? cells[cells.length - 1];
 
   return (
@@ -65,7 +66,7 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
         <>
           <p data-testid="composition-sentence" className="text-sm font-medium text-foreground text-pretty break-keep">{series.sentence}</p>
           <div className="flex gap-0.5" role="group" aria-label="월별 자산 구성">
-            {cells.map((cell) => {
+            {cells.map((cell, idx) => {
               const isActive = cell.month === active.month;
               return (
                 <button
@@ -87,8 +88,8 @@ export function CompositionCard({ snapshotVersion, live, currentMonth }: {
                       <span key={k} style={{ height: `${cell.ratios![k]}%`, backgroundColor: series.colors[k] }} />
                     ))}
                   </span>
-                  <span className={`whitespace-nowrap text-[10px] leading-none tabular-nums ${isActive ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-                    {cell.label}
+                  <span aria-hidden="true" className={`whitespace-nowrap text-[10px] leading-none tabular-nums ${isActive ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                    {labelShown[idx] ? cell.label : "\u00a0"}
                   </span>
                 </button>
               );

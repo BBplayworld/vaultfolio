@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  COMPOSITION_FORBIDDEN_WORDS, buildFxExposureLines, compositionCellAria, computeCompositionSeries, describeCompositionCell,
+  COMPOSITION_FORBIDDEN_WORDS, compositionLabelVisibility, buildFxExposureLines, compositionCellAria, computeCompositionSeries, describeCompositionCell,
   type CompositionLive,
 } from "../composition";
 import { computeFxExposure } from "../asset-report";
@@ -154,5 +154,20 @@ describe("금지어", () => {
     const texts = [l.ratioLine, l.impactLine, l.caption, s.sentence, ...s.cells.map(describeCompositionCell), ...s.cells.map(compositionCellAria),
       "이 달은 구성 기록이 없어요", "다음 달 기록부터 구성 변화가 보여요", "기록이 쌓이면 최대 13개월까지 보여요", "자산 구성 변화", "총자산 기준"].join("\n");
     for (const w of COMPOSITION_FORBIDDEN_WORDS) expect(texts).not.toContain(w);
+  });
+});
+
+describe("compositionLabelVisibility", () => {
+  const shown = (n: number) => compositionLabelVisibility(n).map((v) => (v ? 1 : 0)).join("");
+  it("8칸 이하는 전부 표시, 마지막 칸은 항상 표시", () => {
+    expect(shown(2)).toBe("11");
+    expect(shown(5)).toBe("11111");
+    expect(shown(8)).toBe("11111111");
+  });
+  it("9칸 이상은 마지막부터 한 칸씩 건너뛰어 표시 — 표시 라벨끼리 인접하지 않는다", () => {
+    expect(shown(13)).toBe("1010101010101");
+    expect(shown(9)).toBe("101010101");
+    expect(shown(10)).toBe("0101010101");
+    for (const n of [9, 10, 11, 12, 13]) expect(shown(n)).not.toMatch(/11/);
   });
 });

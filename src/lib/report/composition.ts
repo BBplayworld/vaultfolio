@@ -97,6 +97,16 @@ function buildSentence(prev: CompositionCell, last: CompositionCell, currentMont
   return `지난 기록(${label}) 대비 ${diffs.map(({ k, d }) => `${COMPOSITION_LABELS[k]} ${d > 0 ? "+" : "-"}${Math.abs(d)}%p`).join(", ")}`;
 }
 
+/**
+ * 칸 아래 월 라벨 표시 규칙 — 칸이 많으면 좁은 칸에서 라벨이 겹치므로 간격 표시한다.
+ * 8칸 이하는 전부, 9칸 이상은 마지막(이번 달)부터 한 칸씩 건너뛰어 표시(최악 320px·13칸에서 중심 간격 37px > 라벨 반폭 합 28px).
+ * 숨긴 칸의 이름은 칸 aria-label이 유지한다.
+ */
+export function compositionLabelVisibility(count: number): boolean[] {
+  const step = count <= 8 ? 1 : 2;
+  return Array.from({ length: count }, (_, i) => (count - 1 - i) % step === 0);
+}
+
 /** 선택한 칸 아래 1줄 — 금액 없이 비중만 */
 export function describeCompositionCell(cell: CompositionCell): string {
   if (cell.empty || !cell.ratios) return "이 달은 구성 기록이 없어요";
