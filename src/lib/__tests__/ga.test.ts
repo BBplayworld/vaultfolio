@@ -12,6 +12,7 @@ import {
   screenPath,
   __resetGaStateForTest,
 } from "@/lib/analytics/ga";
+import { getFirstSave, __resetFirstSaveSignalForTest } from "@/lib/pwa/first-save-signal";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { __resetTrialModeForTest, markTrialActive } from "@/lib/trial/trial-mode";
 
@@ -108,6 +109,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "demo" }, "체험 모드"],
     ["feature_use", { category: "share_card" }, "인증카드 열기"],
     ["feature_use", { category: "app_guide" }, "앱 가이드 열기"],
+    ["feature_use", { category: "install_nudge" }, "설치 안내"],
+    ["feature_use", { category: "install_nudge_tap" }, "설치 안내 누름"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
     ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {
@@ -343,5 +346,28 @@ describe("테마 모드 계측(#4.42)", () => {
     } finally {
       __resetTrialModeForTest();
     }
+  });
+});
+
+describe("설치 안내 첫 저장 신호 (#78)", () => {
+  beforeEach(() => __resetFirstSaveSignalForTest());
+
+  it("첫 저장 판정이면 신호가 켜지고, 기존 보유·수정·플래그 있음이면 켜지지 않는다", () => {
+    trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, 3);
+    trackAssetSave({ asset_type: "stock", method: "manual", result: "update" }, 0);
+    expect(getFirstSave()).toBe(false);
+    trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, 0);
+    expect(getFirstSave()).toBe(true);
+    __resetFirstSaveSignalForTest();
+    trackAssetSave({ asset_type: "cash", method: "manual", result: "create" }, 0); // 플래그 이미 있음
+    expect(getFirstSave()).toBe(false);
+  });
+
+  it("gtag가 없어도 신호는 켜진다", () => {
+    const g = (window as unknown as { gtag?: unknown }).gtag;
+    (window as unknown as { gtag?: unknown }).gtag = undefined;
+    trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, 0);
+    expect(getFirstSave()).toBe(true);
+    (window as unknown as { gtag?: unknown }).gtag = g;
   });
 });
