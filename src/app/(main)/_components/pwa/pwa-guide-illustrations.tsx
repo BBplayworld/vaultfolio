@@ -19,7 +19,7 @@ import type { GuidePlatform, GuideBrowser } from "@/lib/pwa/detect-browser";
 
 const BRAND = "#5b6fbf"; // MAIN_PALETTE[0]
 const ACCENT = "#37a98e"; // 새 기기 구분용 보조 색(teal) — "다른 기기" 인식 강화
-const DOMAIN = APP_CONFIG.siteUrl.replace(/^https?:\/\//, ""); // "secretasset.xyz"
+const DOMAIN = "secretasset.xyz"; // 표시용 리터럴 고정(siteUrl 파생 시 www로 바뀜)
 
 // 다크/라이트 모드 대응 컬러 토큰 클래스
 const FRAME = "text-border/80 dark:text-border/30";

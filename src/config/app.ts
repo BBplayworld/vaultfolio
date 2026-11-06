@@ -12,7 +12,7 @@ export const APP_CONFIG = {
   name: "시크릿에셋",
   version: packageJson.version,
   copyright: `© ${currentYear}, 시크릿에셋.`,
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://secretasset.xyz",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.secretasset.xyz",
   // GA4 측정 ID 단일 출처(S-4.28) — layout 스크립트·설정 옵트아웃 토글이 모두 이 값을 쓴다
   gaId: "G-PZXY31JVEW",
   meta: {
@@ -35,4 +35,15 @@ export const OG_IMAGE = {
   width: 1200,
   height: 630,
   alt: "안전한 자산 관리, 시크릿에셋",
+} as const;
+
+/** 루트 JSON-LD(WebApplication) — 기존 메타 문구만 사용, 가격 정보 없음 */
+export const WEB_APPLICATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: APP_CONFIG.name,
+  url: APP_CONFIG.siteUrl,
+  description: APP_CONFIG.meta.description,
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web",
 } as const;

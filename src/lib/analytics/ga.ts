@@ -136,6 +136,8 @@ function pageLocation(): string {
 const SCREEN_TITLES: Record<string, string> = {
   home: "홈",
   ratio: "비중 미리보기",
+  "guide:stock-ratio": "가이드·주식 비중",
+  "guide:net-worth": "가이드·순자산 정리",
   more: "더보기",
   settings: "설정",
   tax: "세금 관리",
