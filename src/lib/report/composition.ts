@@ -175,6 +175,57 @@ export function computeCompositionSeries(
   return { state: "bars", cells, filled: filledCells.length, sentence: buildSentence(prev, last, currentMonth), legendKeys, colors };
 }
 
+/** 막대 표시용 최소 높이(%) — 실제 비중이 아니라 시각 보정값 */
+export const COMPOSITION_MIN_DISPLAY_PCT = 7;
+
+/**
+ * 막대 표시용 보정 스케일 — 0%보다 크지만 min% 미만인 자산군을 min%로 올리고,
+ * 나머지 자산군을 비례 축소해 합을 100으로 유지한다. 화면 높이에만 쓰며 문구·aria·라벨은 실제 비중을 쓴다.
+ */
+export function compositionDisplayRatios(
+  ratios: Record<CompositionKey, number>,
+  min: number = COMPOSITION_MIN_DISPLAY_PCT,
+): Record<CompositionKey, number> {
+  const out = { ...ratios };
+  const small = COMPOSITION_KEYS.filter((k) => ratios[k] > 0 && ratios[k] < min);
+  if (small.length === 0) return out;
+  const big = COMPOSITION_KEYS.filter((k) => ratios[k] >= min);
+  const bigSum = big.reduce((sum, k) => sum + ratios[k], 0);
+  if (bigSum <= 0) return out;
+  const rem = 100 - min * small.length;
+  for (const k of small) out[k] = min;
+  for (const k of big) out[k] = (ratios[k] * rem) / bigSum;
+  return out;
+}
+
+/** 보정 모드 판정 기준(%) — 값 있는 칸에 이보다 작은 비중이 있으면 corrected */
+export const COMPOSITION_CORRECTION_THRESHOLD_PCT = 10;
+export type CompositionScaleMode = "linear" | "corrected";
+
+/** 차트 전체 1회 모드 결정: 0 < 비중 < 10%인 자산군이 어느 칸에든 있으면 corrected, 아니면 linear(칸마다 바꾸지 않는다) */
+export function compositionScaleMode(cells: CompositionCell[]): CompositionScaleMode {
+  const small = cells.some((c) => c.ratios && COMPOSITION_KEYS.some((k) => c.ratios![k] > 0 && c.ratios![k] < COMPOSITION_CORRECTION_THRESHOLD_PCT));
+  return small ? "corrected" : "linear";
+}
+
+/**
+ * 막대 높이용 표시 스케일 — linear면 실제 비중 그대로, corrected면 √비중 정규화 후 최소 7% 바닥.
+ * 높이 전용이며 숫자·문구·aria는 항상 실제 비중을 쓴다.
+ */
+export function compositionDisplayScale(
+  ratios: Record<CompositionKey, number>,
+  mode: CompositionScaleMode,
+): Record<CompositionKey, number> {
+  if (mode === "linear") return { ...ratios };
+  const w = {} as Record<CompositionKey, number>;
+  let sum = 0;
+  for (const k of COMPOSITION_KEYS) { w[k] = Math.sqrt(Math.max(0, ratios[k])); sum += w[k]; }
+  if (sum <= 0) return { ...ratios };
+  const d = {} as Record<CompositionKey, number>;
+  for (const k of COMPOSITION_KEYS) d[k] = (w[k] / sum) * 100;
+  return compositionDisplayRatios(d, COMPOSITION_MIN_DISPLAY_PCT);
+}
+
 // ── 외화 노출 ───────────────────────────────────────────────
 
 export interface FxExposureLines {

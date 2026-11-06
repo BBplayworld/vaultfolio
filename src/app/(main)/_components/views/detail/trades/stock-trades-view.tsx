@@ -213,7 +213,7 @@ export function StockTradesView() {
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 종목 헤더 */}
-        <div className="rounded-xl bg-muted/20 px-4 py-3">
+        <div data-testid="trades-summary" className="rounded-xl bg-muted/20 dark:bg-card dark:shadow-sm px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-bold">{target.name}</span>
             {target.ticker && <span className="text-sm font-mono text-muted-foreground">({target.ticker})</span>}
@@ -286,12 +286,12 @@ export function StockTradesView() {
 
         {/* 기간 요약 스탯 */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-red-500/5 px-3 py-2">
+          <div data-testid="trades-stat-buy" className="rounded-xl bg-red-500/5 dark:bg-card dark:shadow-sm px-3 py-2">
             <p className="flex items-center gap-1 text-sm text-red-500"><TrendingUp className="size-3" /> 매수</p>
             <p className="font-bold tabular-nums">{stats.buyQty.toLocaleString()}주</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
           </div>
-          <div className="rounded-xl bg-blue-500/5 px-3 py-2">
+          <div data-testid="trades-stat-sell" className="rounded-xl bg-blue-500/5 dark:bg-card dark:shadow-sm px-3 py-2">
             <p className="flex items-center gap-1 text-sm text-blue-500"><TrendingDown className="size-3" /> 매도</p>
             <p className="font-bold tabular-nums">{stats.sellQty.toLocaleString()}주</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
@@ -300,20 +300,21 @@ export function StockTradesView() {
 
         {/* 거래 리스트 */}
         {filtered.length === 0 ? (
-          <div className="flex h-36 items-center justify-center rounded-lg">
+          <div className="flex h-36 items-center justify-center rounded-lg dark:rounded-xl dark:bg-card dark:shadow-sm">
             <p className="text-muted-foreground text-sm">해당 조건의 거래내역이 없습니다.</p>
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-[11px] text-muted-foreground tabular-nums">총 {filtered.length.toLocaleString()}건</p>
+            <div data-testid="trades-list-box" className="space-y-3 dark:space-y-0 dark:divide-y dark:divide-border/40 dark:rounded-xl dark:bg-card dark:shadow-sm dark:overflow-hidden">
             {Object.entries(grouped).map(([date, txs]) => (
-              <div key={date}>
+              <div key={date} className="dark:px-4 dark:py-3">
                 <p className="text-sm text-muted-foreground mb-1.5">{date}</p>
                 <div className="space-y-1.5">
                   {txs.map((tx) => {
                     const amt = tx.price * tx.quantity * (tx.currency === "KRW" ? 1 : mul);
                     return (
-                      <div key={tx.id} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm group/item">
+                      <div key={tx.id} className="flex items-center gap-2 rounded-lg px-3 dark:px-0 py-2.5 text-sm group/item">
                         <span className={`text-xs font-bold shrink-0 w-8 ${tx.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
                           {tx.type === "buy" ? "매수" : "매도"}
                         </span>
@@ -351,6 +352,7 @@ export function StockTradesView() {
                 </div>
               </div>
             ))}
+            </div>
 
             {/* 더보기 — PC는 버튼, 모바일은 자동 로드 sentinel */}
             {hasMore && (

@@ -37,7 +37,7 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
   };
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className={ASSET_THEME.subCard}>
+      <div data-testid="detail-sub-tile" className={ASSET_THEME.subCard}>
         <div className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 ${ASSET_THEME.subCardHeader}`}>
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
@@ -62,7 +62,7 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
               <div><p className={ASSET_THEME.cardDetailLabel}>총 평가금액</p><p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrency(value)}</p></div>
             </div>
             {/* 매수/매도 기록·내역 — 개별 거래소 항목은 실제 id를 가지므로 여기서 제공 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
+            <div className="px-3 dark:px-4 py-2 flex items-center gap-2 bg-muted/5 dark:bg-transparent">
               <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
                 <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
               </Button>
@@ -81,7 +81,7 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-popover">
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-transparent">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(coin.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{coin.purchaseDate} 매수</span></span>
               {coin.description && <span className="w-full text-primary truncate"># {coin.description}</span>}
@@ -111,7 +111,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
     navigate({ type: "detail", tab: "crypto-transactions" });
   };
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-2">
+    <Collapsible open={open} onOpenChange={setOpen} className="mb-2 dark:mb-0">
       <div className={ASSET_THEME.cardWrapper}>
         <div className={ASSET_THEME.cardHeader}>
           <CollapsibleTrigger asChild>
@@ -141,10 +141,10 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
             </button>
           </CollapsibleTrigger>
         </div>
-        <div className="h-0.5 w-full bg-muted">
+        <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
           <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {!open && <div className="h-1.5 bg-muted/20" />}
+        {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
           <div className={ASSET_THEME.cardExpandBox}>
             {/* 종합 — 거래소 분할 여부와 무관하게 병합 대표(coin)의 합산 상세를 항상 노출 (주식과 동일 형태) */}
@@ -164,7 +164,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
             {/* 매수/매도 기록·내역 — 하위 항목(거래소)이 있으면 몇 개든 종합 레벨에서는 항상 숨기고
                 아래 거래소별 항목에서만 개별 기록한다(주식 StockCard와 동일 규칙). */}
             {!hasSubItems && (
-              <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
+              <div className="px-3 dark:px-4 py-2 flex items-center gap-2 bg-muted/5 dark:bg-transparent">
                 <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
                   <ArrowLeftRight className="size-3.5" /> 매수/매도 기록
                 </Button>
@@ -196,7 +196,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
               </div>
             )}
             {hasSubItems && (
-              <div className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
+              <div data-testid="detail-subitems" className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
                 <p className="text-sm font-semibold text-muted-foreground px-1 pb-0.5">거래소별 항목</p>
                 {subItems!.map((sub, idx) => (
                   <SubCryptoCard key={sub.id} coin={sub} idx={idx} onDelete={onDelete} />
@@ -299,7 +299,7 @@ export function CryptoTab() {
             <p className="text-muted-foreground text-sm">등록된 암호화폐가 없습니다.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div data-testid="detail-list-box-crypto" className={`space-y-2 ${ASSET_THEME.listBox}`}>
             {sorted.map(({ coin, groupItems, subItems, value, profit, profitRate }, idx) => {
               const pct = totalValue > 0 ? (value / totalValue) * 100 : 0;
               const color = cryptoColors[idx] ?? MAIN_PALETTE[0];

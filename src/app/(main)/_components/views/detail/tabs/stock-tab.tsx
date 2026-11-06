@@ -532,7 +532,7 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
         <div className="space-y-2 py-1">
           <p className="text-sm text-muted-foreground">총 {maxQty.toLocaleString()}주를 항목별로 나눕니다.</p>
           {items.map((it, idx) => (
-            <div key={idx} className="rounded-md border border-border dark:border-border/60 bg-muted/5 p-3 space-y-2">
+            <div key={idx} className="rounded-md border border-border dark:border-border/60 bg-muted/5 dark:bg-muted/20 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-muted-foreground">항목 {idx + 1}</span>
                 {items.length > 2 && (
@@ -626,7 +626,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
   const currencyGainDisplay = displayCurrency === "USD" ? formatByDisplayCurrency(currencyGain, "USD", usdRate) : formatCurrencyDisplay(Math.round(currencyGain));
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10 dark:bg-popover">
+      <div className="grid grid-cols-2 sm:grid-cols-4 px-4 py-2.5 gap-4 bg-muted/10 dark:bg-transparent">
         <div>
           <p className={ASSET_THEME.cardDetailLabel}>평단가</p>
           <p className={ASSET_THEME.cardDetailValue}>{formatCurrencyDisplay(stock.averagePrice, stock.currency)}</p>
@@ -652,7 +652,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
         </div>
       </div>
       {isForeign && displayCurrency !== "USD" && (
-        <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5 dark:bg-popover">
+        <div className="grid grid-cols-2 px-4 py-2.5 gap-4 bg-muted/5 dark:bg-transparent">
           <div>
             <p className={ASSET_THEME.cardDetailLabel}>환차손익</p>
             <p className={`${ASSET_THEME.cardDetailValueBold} ${getProfitLossColor(currencyGain)}`}>
@@ -676,7 +676,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
 
 function TradeActionRow({ stock, onViewTrades }: { stock: Stock; onViewTrades: (id: string) => void }) {
   return (
-    <div className="px-3 py-2 flex items-center gap-2 bg-muted/5 dark:bg-popover">
+    <div className="px-3 dark:px-4 py-2 flex items-center gap-2 bg-muted/5 dark:bg-transparent">
       <Button variant="secondary" size="sm" className="h-8 flex-1 text-sm gap-1" onClick={() => dispatchAddTrade(stock.id)}>
         <ArrowLeftRight className="size-3.5" /> 거래입력
       </Button>
@@ -700,7 +700,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   const label = stock.broker || `항목 ${idx + 1}`;
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className={ASSET_THEME.subCard}>
+      <div data-testid="detail-sub-tile" className={ASSET_THEME.subCard}>
         <div className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-2 ${ASSET_THEME.subCardHeader}`}>
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
@@ -741,7 +741,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-popover">
+            <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground bg-muted/5 dark:bg-transparent">
               <span className="flex items-center gap-1"><Clock className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{formatHoldingPeriod(stock.purchaseDate)} 보유</span></span>
               <span className="flex items-center gap-1"><Calendar className="size-3" /><span className={`font-medium ${ASSET_THEME.text.default}`}>{stock.purchaseDate} 매수</span></span>
               <AnnualizedReturn totalRatePct={m.profitRate} sinceDate={stock.purchaseDate} />
@@ -782,7 +782,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
   // 인증카드 모드 — 헤더 + 비중 그라데이션 바만 노출 (펼침·상세·버튼 미렌더)
   if (screenshotMode) {
     return (
-      <div className={`${ASSET_THEME.cardWrapperShot} mb-3`}>
+      <div className={`${ASSET_THEME.cardWrapper} mb-3`}>
         <div className={ASSET_THEME_SHOT.cardHeader}>
           <div className={ASSET_THEME_SHOT.cardTriggerButton}>
             <StockRowHeader
@@ -808,7 +808,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-2">
+      <Collapsible open={open} onOpenChange={handleOpenChange} className="mb-2 dark:mb-0">
         <div className={ASSET_THEME.cardWrapper}>
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>
@@ -818,11 +818,11 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
               </button>
             </CollapsibleTrigger>
           </div>
-          <div className="h-0.5 w-full bg-muted">
+          <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
             <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
           {!open && (
-            <div className="h-1.5 bg-muted/20" />
+            <div className="h-1.5 bg-muted/20 dark:hidden" />
           )}
           <CollapsibleContent>
             <div className={ASSET_THEME.cardExpandBox}>
@@ -886,7 +886,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 </div>
               )}
               {hasSubItems && (
-                <div className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
+                <div data-testid="detail-subitems" className={`px-3 py-2.5 space-y-1.5 ${ASSET_THEME.subItemsWell}`}>
                   <p className="text-sm font-semibold text-muted-foreground px-1 pb-0.5">증권사별 항목</p>
                   {subItems!.map((sub, idx) => (
                     <SubStockCard key={sub.id} stock={sub} idx={idx} onDelete={onDelete} exchangeRates={exchangeRates} totalValue={totalValue} onViewTrades={openTrades} displayCurrency={displayCurrency} />
@@ -1013,11 +1013,11 @@ export function StockCategorySection({
         const restAmountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
         const restSubCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
         return (
-          <div className="space-y-2 mt-10">
+          <div data-testid="detail-list-box-stocks" className={`space-y-2 mt-10 ${screenshotMode ? "" : ASSET_THEME.listBox}`}>
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
             {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (
-              <div className={screenshotMode ? ASSET_THEME.cardWrapperShot : ASSET_THEME.cardWrapper}>
+              <div className={ASSET_THEME.cardWrapper}>
                 <div className={screenshotMode ? ASSET_THEME_SHOT.cardHeader : ASSET_THEME.cardHeader}>
                   <div className={screenshotMode ? ASSET_THEME_SHOT.cardTriggerButton : ASSET_THEME.cardTriggerButton}>
                     <span className={`${screenshotMode ? shotTok.icon : "size-6 sm:size-7"} shrink-0`} aria-hidden />

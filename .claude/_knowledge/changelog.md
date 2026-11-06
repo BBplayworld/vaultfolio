@@ -6,10 +6,10 @@
 
 ## 2026-11-06 (v4.44)
 
-### 상세 탭 다크 3단계 면 + 자산 구성 변화 막대 슬림화 (#4.44, 이슈 #75)
-- **왜**: 다크 상세 탭(주식·가상자산·부동산·현금·대출)은 카드·펼침 영역이 muted/5~10이라 명도차가 거의 없었음. 4.42 면 구조(background < card < popover)로 통일. 자산 구성 변화 막대는 칸이 적을 때 flex-1로 거대해짐.
-- `theme.ts`: `cardWrapper dark:bg-card`·`cardWrapperShot` 신설(인증카드 유지)·`cardHeader dark:px-4`·`cardSection/Meta/cardActions dark:bg-popover`·`subItemsWell dark:bg-background`·`subCard dark:bg-popover`(테두리 제거)·`cardExpandBox` 다크 상단선 제거. 탭 내 하드코딩 `bg-muted/5·/10`에 `dark:bg-popover` 병기. 라이트 불변.
-- `composition-card.tsx`: 칸 `max-w-9`·막대 `h-28→h-20`·`justify-between gap-1`.
+### 상세 다크 BOX 구조 + 자산 구성 변화 리본 차트 (#4.44, 이슈 #75, 대표 반려 후 재설계)
+- **왜**: 항목별 면(3단계)은 검정 well·모서리 불일치를 낳음. 리스트 전체를 card 1장으로 감싸고 항목은 헤어라인으로만 구분(성과 카드 방식). 구성 변화 막대는 작아 비중 변화가 안 보임.
+- `theme.ts`: `listBox`(rounded-xl card shadow-sm)·`summaryBoxDark` 신설, `cardExpandBox/Section/Meta/Actions` 다크 투명, `subCard dark:bg-popover`, `subItemsWell` 투명, `cardHeader dark:px-4 py-3`. 5개 탭 리스트·완납 대출·거래내역·현금/대출 거래·X-Ray·요약 박스에 적용. 라이트·인증카드·SHOT 상수 무변경.
+- 구성 변화: SVG 리본+막대 차트, 보정 스케일(`compositionScaleMode`·`compositionDisplayScale`), 선택 칸 후광·스크럽·←→ 키.
 - 스키마·저장·동기화·서버 전송 무변경.
 
 ## 2026-11-06 (v4.43)

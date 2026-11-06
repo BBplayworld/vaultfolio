@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  COMPOSITION_FORBIDDEN_WORDS, compositionLabelVisibility, buildFxExposureLines, compositionCellAria, computeCompositionSeries, describeCompositionCell,
+  COMPOSITION_FORBIDDEN_WORDS, compositionDisplayRatios, compositionDisplayScale, compositionScaleMode, compositionLabelVisibility, buildFxExposureLines, compositionCellAria, computeCompositionSeries, describeCompositionCell,
   type CompositionLive,
 } from "../composition";
 import { computeFxExposure } from "../asset-report";
@@ -169,5 +169,39 @@ describe("compositionLabelVisibility", () => {
     expect(shown(9)).toBe("101010101");
     expect(shown(10)).toBe("0101010101");
     for (const n of [9, 10, 11, 12, 13]) expect(shown(n)).not.toMatch(/11/);
+  });
+});
+
+describe("표시용 보정 스케일(#4.44)", () => {
+  const r = (realEstate: number, stocks: number, crypto: number, cash: number) => ({ realEstate, stocks, crypto, cash });
+  it("작은 비중을 최소 높이로 올리고 합 100을 유지한다", () => {
+    const d = compositionDisplayRatios(r(95, 3, 1, 1));
+    expect(d.stocks).toBe(7);
+    expect(d.crypto).toBe(7);
+    expect(d.cash).toBe(7);
+    expect(d.realEstate).toBeCloseTo(79, 5);
+    expect(d.realEstate + d.stocks + d.crypto + d.cash).toBeCloseTo(100, 5);
+  });
+  it("0%는 0 유지, 충분히 큰 비중은 그대로", () => {
+    expect(compositionDisplayRatios(r(60, 40, 0, 0))).toEqual(r(60, 40, 0, 0));
+    const d = compositionDisplayRatios(r(90, 8, 2, 0));
+    expect(d.cash).toBe(0);
+    expect(d.crypto).toBe(7);
+    expect(d.realEstate + d.stocks + d.crypto).toBeCloseTo(100, 5);
+  });
+  it("모드 결정: 10% 미만 자산군이 있으면 corrected, 없으면 linear", () => {
+    const a = computeCompositionSeries([snap("2026-10", bd(60, 30, 5, 5))], live(70, 20, 5, 5), NOW);
+    expect(compositionScaleMode(a.cells)).toBe("corrected");
+    const b = computeCompositionSeries([snap("2026-10", bd(50, 30, 10, 10))], live(40, 30, 15, 15), NOW);
+    expect(compositionScaleMode(b.cells)).toBe("linear");
+  });
+  it("표시 스케일: linear는 그대로, corrected는 √ 보정 + 최소 7%, 95/3/1/1에서 3% > 1%", () => {
+    const x = r(95, 3, 1, 1);
+    expect(compositionDisplayScale(x, "linear")).toEqual(x);
+    const d = compositionDisplayScale(x, "corrected");
+    expect(d.stocks).toBeGreaterThan(d.crypto);
+    expect(d.crypto).toBeGreaterThanOrEqual(7);
+    expect(d.realEstate + d.stocks + d.crypto + d.cash).toBeCloseTo(100, 5);
+    expect(d.realEstate).toBeLessThan(80);
   });
 });

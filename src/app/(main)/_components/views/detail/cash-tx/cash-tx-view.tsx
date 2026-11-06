@@ -107,7 +107,7 @@ export function CashTxView() {
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
         {/* 요약 */}
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/30 px-3 py-3">
+        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
           <div>
             <p className="text-sm text-muted-foreground">입금</p>
             <p className="text-sm font-bold tabular-nums text-red-500">+{formatCurrencyDisplay(stats.dep, currency)}</p>
@@ -135,7 +135,7 @@ export function CashTxView() {
 
         {/* 목록 */}
         {list.length > 0 ? (
-          <div className="divide-y divide-border dark:divide-border/50">
+          <div className="divide-y divide-border dark:divide-border/40 dark:rounded-xl dark:bg-card dark:shadow-sm dark:px-4">
             {list.map((t) => {
               const isDep = t.type === "deposit";
               return (
@@ -169,7 +169,7 @@ export function CashTxView() {
       {/* 반영 거래 삭제 확인 (잔액 역가감) */}
       {deleteTarget && (
         <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-background p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl bg-background dark:bg-popover p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <p className="text-base font-bold">반영된 기록 삭제</p>
             <p className="text-sm text-muted-foreground">
               이 기록은 잔액에 반영되어 있습니다. 삭제하면 잔액이 되돌아갑니다.
