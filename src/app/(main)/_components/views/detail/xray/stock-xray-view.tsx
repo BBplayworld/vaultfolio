@@ -173,7 +173,7 @@ export function StockXrayView() {
         </div>
 
         {/* 분포 시각화 */}
-        <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4">
+        <div className="rounded-lg bg-muted/30 dark:bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-muted-foreground tracking-wide">
               분포 분석

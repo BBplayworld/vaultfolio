@@ -109,7 +109,7 @@ function WeekList() {
       />
       {rows.length > 0 && (
         <section data-testid="week-list" className={`${SECTION} ${BODY_ENTER}`}>
-          <div className="flex flex-col divide-y divide-border/40">
+          <div className="flex flex-col divide-y divide-border dark:divide-border/40">
             {rows.map((r) => (
               <div key={r.date} data-testid="week-row" className="flex items-baseline justify-between gap-3 py-2">
                 <span className="text-sm text-muted-foreground tabular-nums">

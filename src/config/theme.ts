@@ -44,9 +44,9 @@ export const ASSET_THEME = {
   // ===== 표면 계층 토큰 (라이트 강화 + dark: 현행 보존) =====
   cardSection: "bg-muted/40 dark:bg-muted/10", // 섹션 strip(name/ticker 등)
   cardSectionMeta: "bg-muted/20 dark:bg-muted/5", // 메타 strip(보유·매수일)
-  cardExpandBox: "divide-y divide-border/10 dark:divide-border/50 border-t border-border/10 dark:border-t", // 확장부 래퍼: 라이트=선 없음(톤차 구분), 다크=현행 선
+  cardExpandBox: "divide-y divide-border dark:divide-border/50 border-t border-border dark:border-t", // 확장부 래퍼: 라이트=헤어라인, 다크=현행 선
   subItemsWell: "bg-muted/20 dark:bg-muted/5", // 증권사별 항목 컨테이너(라이트 회색 well)
-  subCard: "rounded-md overflow-hidden bg-transparent border border-border/10 dark:border-border/60", // 서브카드 외피
+  subCard: "rounded-lg overflow-hidden bg-card dark:bg-transparent dark:border dark:border-border/60", // 서브카드 외피
   dividerAccent: "border-t border-amber-400/25", // 논리 그룹·섹션 경계 강조 구분선(별점 text-amber-400 톤 통일). 중립 헤어라인과 구별해 '큰 단락' 분리에만.
   subCardHeader: "bg-muted/30 hover:bg-muted/40 dark:bg-primary/6 dark:hover:bg-primary/10", // 서브카드 헤더(라이트=중립 회색, 다크=슬레이트)
   cardActionButton: "size-7.5 sm:size-8.5",
@@ -82,7 +82,7 @@ export const ASSET_THEME = {
   // ===== 탭 공통 스타일 =====
   // 1단계: 페이지 메인 탭
   tabList1: "flex items-center gap-2 p-1.5 sm:p-2 rounded-xl bg-muted/50 border border-border w-full sm:w-fit overflow-hidden",
-  tabTrigger1: "rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger1: "rounded-md px-3 py-2 sm:py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계 래핑(두 줄) 변형 — 카테고리 항목 많을 때 (부동산/현금/대출). 라운드 + border-2
   tabList3Wrap: "flex flex-wrap gap-0.5 p-1 rounded-lg border border-border bg-muted/30 w-full mb-2 h-fit",
   tabTrigger3Wrap: "rounded-md px-2 py-1 text-xs sm:text-[13px] font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",

@@ -235,7 +235,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
 
       <Dialog open={showDialog} onOpenChange={handleDialogChange}>
         <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
-          <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border/50">
+          <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border dark:border-border/50">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : guideStep ? <Smartphone className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
               {inAppStep ? "기본 브라우저에서 실행하기" : iosStep ? "시크릿에셋 앱 설치 가이드" : guideStep ? "앱 설치 가이드" : "홈 화면에 앱 설치"}
@@ -327,7 +327,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <DialogFooter className="px-6 py-4 border-t border-border dark:border-border/50 bg-muted/20 flex flex-col gap-2 sm:flex-row sm:justify-end">
             {iosStep || inAppStep || guideStep ? (
               <Button variant="brand" onClick={() => handleDialogChange(false)} type="button" className="text-sm h-10 px-5 shadow-sm font-semibold text-white">
                 가이드 확인 완료

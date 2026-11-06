@@ -4,7 +4,7 @@ export function CopyrightFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-4 py-4 border-t border-border/50 text-center">
+    <footer className="mt-4 py-4 border-t border-border dark:border-border/50 text-center">
       <p className="text-sm text-muted-foreground break-keep text-pretty">
         © {year} {APP_CONFIG.name}. All rights reserved.
       </p>

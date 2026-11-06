@@ -214,7 +214,7 @@ export function CashTab() {
 
         {/* 통화별 외화 노출 — 환율이 움직일 때 얼마가 흔들리는가 */}
         {fxCash.length > 0 && (
-          <div className="rounded-lg border border-border/10 bg-transparent dark:border-0 dark:bg-card p-4 space-y-2">
+          <div className="rounded-lg bg-muted/30 dark:bg-card p-4 space-y-2">
             <p className="text-sm font-bold text-foreground">통화별 노출</p>
             {fxCash.map((fx) => (
               <div key={fx.currency} className="flex items-baseline justify-between gap-2 text-sm">

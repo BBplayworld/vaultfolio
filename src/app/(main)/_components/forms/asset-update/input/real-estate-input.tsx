@@ -441,7 +441,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
               </div>
               {/* 앱 다이얼로그 안에서 바로 검색 — 별도 브라우저 팝업 없음 */}
               {addressSearchOpen && (
-                <div className="rounded-lg border border-border/60 overflow-hidden">
+                <div className="rounded-lg border border-border dark:border-border/60 overflow-hidden">
                   <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-muted/40">
                     <span className="text-xs font-medium text-muted-foreground">주소를 검색해 선택하세요</span>
                     <Button
@@ -480,7 +480,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
 
         {/* 실거래가 조회 (S-4.21) — 데이터셋 있는 종류만. currentValue와 병기(참고용) */}
         {datasetInfo && (
-          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2.5">
+          <div className="rounded-lg border border-border dark:border-border/60 bg-muted/20 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-foreground">실거래가 조회 <span className="text-xs font-normal text-muted-foreground">참고용</span></p>
               <Button type="button" size="sm" variant="outline" onClick={() => lookupPrice()} disabled={lookingUp} className="h-8">
