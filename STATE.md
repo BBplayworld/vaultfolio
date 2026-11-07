@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-07 KST (cto: #84 challenge 축소·착수 가능, issue-4.47)
+마지막 갱신: 2026-11-07 KST (cto: 4.47 #84 COO PASS·decision-brief 작성, owner-review 진입 대기)
 
 ## 대표 결정 대기
 - 없음 (2026-11-01 대표 답변: #63 승인, #58 범위 축소 승인). 이후 안건 없음 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
@@ -27,7 +27,7 @@
 | #57 가족 금고 함께 쓰기 | 4.38 | on-hold | — | 신규 유입 기여 미미로 보류(2026-10-31). 동기화 사용 4기기 중 2대가 대표 기기. 문서(issues/4.38-57-family-vault/)는 보존, 충돌 덮임 결함 의심은 qa 확인 후 type:bug로 분리 |
 | #75 상세 다크 BOX 등 | 4.44 | done | — | 2026-11-06 머지 dee5be9, 운영 스모크 대기 |
 | #80·#81·#82 (배당률·더보기 정돈·홈 도넛) | 4.46 | planning ② 통과(cto 2026-11-07, 각 이슈 폴더 4.46-challenge.md) → development 즉시 | developer·qa | 4.46 브랜치 개설·구현, qa PASS ~11/19, 위임 머지 ≤11/26 목표. #84(high) 동승 시 릴리스 전체 대표 승인 — 11/24까지 #84 미PASS면 4.47로 분리(DECISIONS 2026-11-07) |
-| #84 동기화 소실 방지(A안) | 4.47(예정) | planning ② 축소 판정(cto 2026-11-07) → planner 합의·spec 확정 완료(2026-11-07) → development 착수 가능. 문서 `issues/4.47-84-sync-overwrite/4.47-*.md` | developer·qa (ui-designer는 ui.md 4절 보조 버튼 삭제·확인 문구 교체만) | `issue-4.47` 단독 PR, 개발 11/8~11/11, qa·ui-review ~11/13, owner-review 11/14(risk:high 대표 승인). 결산 영역 릴리스는 4.48로 이동 |
+| #84 동기화 소실 방지(A안) | 4.47 | qa PASS(fdd376e)·UI 승인·COO PASS → decision-brief 완료(2026-11-07, 권고 반영). 문서 `issues/4.47-84-sync-overwrite/4.47-*.md` | 오케스트레이터 | PR #88 `status:owner-review`·risk:high 라벨, 대표 승인 요청 ① 발송. 이슈 #84 제목 [4.46]→[4.47] 정정 필요 |
 | #58 실물 자산 등록(금 등) | 4.47 | design-review(문서만) | planner-designer·developer | D6 선정: 지금 tech-review 완료(~11/30), 코드 12/5~(4.46 머지 후), owner-review 12/21, 머지 12/11~12/26(대표 승인, high). 12/21 qa 미PASS면 4.47에서 제외 |
 
 ## 열린 릴리스
