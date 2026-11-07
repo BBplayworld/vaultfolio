@@ -784,3 +784,7 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 
 ### 도넛 라벨 글자색 (`config/theme.ts` `pickDonutLabelColor`, #4.46 #82)
 - 조각색 위에서 흰/검정 중 WCAG 대비가 큰 쪽(알파 없음). `pickOnColor`(휘도 0.45 컷)와 별개 — MAIN_PALETTE 12색 모두 4.5:1 이상이 테스트로 고정
+
+### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
+- 메모리 전용(저장 키·sync 상태 필드 0). `beginPush`/`commitPush`(push 성공 시 기준 갱신), `beginPull(data, auto)`/`commitPull(before, data)`(자동 pull 직전·직후 비교 → 덮인 내 항목 목록 합치기, 기준 갱신), `refreshEntries`(R1), `resetOverwriteGuard`(연결 끊기·다른 금고 연결). 순수: `captureSnapshot`·`detectOverwrites`·`planRevert`·`applyRevert`. 비교는 사용자 입력 필드만(`currentPrice`·`baseDate`·`inactive*`·`marketEstimate*` 파생값 제외)
+- 규약: 감지 함수에서 save·push·notify 호출 금지(C16). 되돌리기 저장은 호출측이 `saveData` 경로로만 한다(`applyImportedPayload`·`clearAssetData` 금지). 기준 없는 폴백 알림 금지(남의 변경을 내 변경으로 오탐)
