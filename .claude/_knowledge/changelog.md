@@ -9,7 +9,7 @@
 ### 배당 투입 대비 배당 + 더보기·설정 정돈 + 홈 도넛 정돈 (#4.46, 이슈 #80·#81·#82, risk low)
 - #80: 배당 카드 Hero 아래 "투입 대비 배당 N%" + 캡션(`lib/finance/dividend-yield.ts` `computeDividendYield`). 분자=Hero와 같은 올해 배당(예상 포함/지급만), 분모=평단×수량×(USD면 현재 환율). 평단 0 이하·JPY 제외("N종목 제외"), 월 막대 선택 시 `opacity-0`+`aria-hidden`(레이아웃 유지), InfoHint 문장 1개 추가. 허브 성적표의 "투입 대비"(손익률)와 구분하려 라벨에 '배당'을 넣음.
 - #81: 더보기 섹션 프로필 · 공유 · 백업 · 도구 · 지원(+설정 행). 데이터 가져오기·저장 현황 줄을 설정에서 더보기로 이동(숨은 file input은 조건부 밖 항상 렌더, 설정에서 훅·ref·input 제거). 세금 관리는 도구로. 설정 순서 보안·화면·표시·데이터·버전, 삭제 행 맨 아래, 다크 모드 ON/OFF 배지. 공용 `header-menu/menu-styles.ts`. 행·토스트·확인 창 문구 무변경.
-- #82: 홈 도넛 라벨 이름+% 2줄(`DONUT_LABEL_MIN_PCT`로 조각 안에 들어갈 때만), 조각색별 글자색 `pickDonutLabelColor`, 조각 경계 `var(--background)`, 범례 금액·% 열 정렬(tabular-nums, 행 40px). 웰컴 미리보기(`screenshotMode`)는 `legacy`로 현행 유지, 마크업을 vitest 스냅샷으로 고정.
+- #82: 홈 도넛 라벨 이름+% 2줄(`DONUT_LABEL_MIN_PCT`로 조각 안에 들어갈 때만), 조각색별 글자색 `pickDonutLabelColor`, 조각 경계 `var(--background)`, 범례 금액·% 열 정렬(tabular-nums, 행 40px). 홈 선택 조각 `brightness(1.15)` 제거(라벨 대비 4.5:1·경계 링 보존, 웰컴만 유지). 웰컴 미리보기(`screenshotMode`)는 `legacy`로 현행 유지, 마크업을 vitest 스냅샷으로 고정.
 - 스키마·저장 키·동기화·서버 전송·GA 무변경. 결산·홈 팁·웰컴 파일 diff 0.
 
 ## 2026-11-07 (v4.45)

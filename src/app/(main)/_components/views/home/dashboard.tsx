@@ -145,7 +145,8 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
                   tabIndex={-1}
                   style={{
                     opacity: isAll || isActive ? 1 : 0.1,
-                    filter: isActive ? "brightness(1.15)" : undefined,
+                    // 홈은 선택 시 밝기 필터 없음(라벨 대비·배경색 경계 보존), 웰컴(screenshotMode)만 기존 유지
+                    filter: isActive && screenshotMode ? "brightness(1.15)" : undefined,
                     transition: "opacity 0.2s, filter 0.2s",
                     cursor: screenshotMode ? "default" : "pointer",
                     outline: "none",
