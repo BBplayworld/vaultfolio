@@ -322,6 +322,46 @@ describe("되돌리기 (R1·R2·R3)", () => {
   });
 });
 
+describe("앱 자동 갱신 필드는 내 변경이 아니다", () => {
+  const thisYear = new Date().getFullYear();
+  const data = (mut: (d: AssetData) => void): AssetData => {
+    const d = getFixtureData();
+    d.stocks = [stock(10)] as never;
+    d.crypto = [{ id: "k1", name: "비트", symbol: "BTC", quantity: 1, averagePrice: 1, currentPrice: 10, purchaseDate: "2024-01-01", baseDate: "a" }] as never;
+    d.realEstate = [{ id: "r1", type: "apartment", name: "집", purchasePrice: 1, currentValue: 5, purchaseDate: "2020-01-01", tenantDeposit: 0 }] as never;
+    d.yearlyNetAssets = [{ year: thisYear, netAsset: 100, note: "자동" }, { year: 2020, netAsset: 1 }] as never;
+    mut(d);
+    return d;
+  };
+  const auto = (d: AssetData) => {
+    d.stocks = d.stocks.map((s) => ({ ...s, currentPrice: 99999, baseDate: "x", name: "삼성전자(보정)", inactiveStatus: "halted" as const, inactiveReason: "r", inactiveCheckedAt: "t" }));
+    d.crypto = d.crypto.map((c) => ({ ...c, currentPrice: 777, baseDate: "b" }));
+    d.realEstate = d.realEstate.map((r) => ({ ...r, marketEstimate: 123, marketEstimateDate: "2026-01-01", marketEstimateGrade: "exact" as const }));
+    d.yearlyNetAssets = d.yearlyNetAssets.map((y) => (y.year === thisYear ? { ...y, netAsset: 555 } : y));
+  };
+  it("자동 갱신만 일어난 로컬이 pull로 원격 값에 덮여도 알림 0", () => {
+    const baseline = captureSnapshot(data(() => {}));
+    const before = captureSnapshot(data(auto));
+    const after = captureSnapshot(data((d) => { d.stocks = d.stocks.map((s) => ({ ...s, currentPrice: 1 })); }));
+    expect(detectOverwrites(baseline, before, after)).toEqual([]);
+  });
+  it("올해 연도별 순자산 자동 업서트로 항목이 바뀌거나 사라져도 알림 0", () => {
+    const baseline = captureSnapshot(data(() => {}));
+    const before = captureSnapshot(data((d) => { d.yearlyNetAssets = d.yearlyNetAssets.filter((y) => y.year !== thisYear); }));
+    expect(detectOverwrites(baseline, before, captureSnapshot(data(() => {})))).toEqual([]);
+  });
+  it("부동산 currentValue·주식 수량 같은 사용자 입력 변경은 여전히 감지", () => {
+    const baseline = captureSnapshot(data(() => {}));
+    const before = captureSnapshot(data((d) => {
+      auto(d);
+      d.realEstate = d.realEstate.map((r) => ({ ...r, currentValue: 9 }));
+      d.stocks = d.stocks.map((s) => ({ ...s, quantity: 99 }));
+    }));
+    const after = captureSnapshot(data(() => {}));
+    expect(detectOverwrites(baseline, before, after).map((e) => e.coll).sort()).toEqual(["realEstate", "stocks"]);
+  });
+});
+
 describe("순수 함수", () => {
   const snap = (cashItems: Record<string, number>, nickname = ""): SyncSnapshot =>
     captureSnapshot({

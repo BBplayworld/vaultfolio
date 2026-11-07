@@ -20,9 +20,21 @@ const COLLS: OverwriteColl[] = [
 ];
 const ARRAY_COLLS = COLLS.filter((c) => c !== "nickname" && c !== "yearlyNetAssets") as Exclude<OverwriteColl, "nickname" | "yearlyNetAssets">[];
 
-/** 시세·추정 등 파생값 — 사용자 입력이 아니므로 비교에서 제외 */
-const DERIVED_KEYS = new Set(["currentPrice", "baseDate", "inactiveStatus", "inactiveReason", "inactiveCheckedAt"]);
-const isDerived = (k: string) => DERIVED_KEYS.has(k) || k.startsWith("marketEstimate");
+/**
+ * 앱이 자동으로 쓰는 필드 — 사용자 입력이 아니므로 비교(내 변경 판정)에서 제외한다.
+ * | 컬렉션 | 자동 갱신 필드 | 쓰는 곳 |
+ * | stocks | currentPrice, baseDate, name(종목명 자동 보정), inactiveStatus/Reason/CheckedAt | asset-data-context 시세 동기화·일요일 종가 보정 |
+ * | crypto | currentPrice, baseDate | 업비트 시세 동기화 |
+ * | realEstate | marketEstimate* (추정 시세·근거 9개) — currentValue는 앱이 쓰지 않음(사용자 입력) | 실거래 추정 갱신 |
+ * | yearlyNetAssets | 올해 항목(note "자동", 스냅샷마다 업서트) | 스냅샷 저장 |
+ * | cash / loans / 거래 4종 | 없음(잔액·수량 반영은 사용자 거래 입력의 결과) | — |
+ */
+const COMMON_DERIVED = new Set(["currentPrice", "baseDate", "inactiveStatus", "inactiveReason", "inactiveCheckedAt"]);
+const isDerived = (coll: OverwriteColl | undefined, k: string) => {
+  if (k.startsWith("marketEstimate")) return true;
+  if (coll === "stocks" && k === "name") return true;
+  return COMMON_DERIVED.has(k);
+};
 
 type Rec = Record<string, unknown>;
 
@@ -52,27 +64,31 @@ function clone<T>(v: T): T {
 
 export function captureSnapshot(data: AssetData): SyncSnapshot {
   const items = new Map<string, { coll: OverwriteColl; value: Rec }>();
+  const thisYear = new Date().getFullYear();
   for (const coll of [...ARRAY_COLLS, "yearlyNetAssets" as const]) {
     for (const v of (data[coll] ?? []) as unknown as Rec[]) {
+      // 올해 연도별 순자산은 스냅샷마다 앱이 업서트("자동") — 내 변경이 아니다
+      if (coll === "yearlyNetAssets" && (v.note === "자동" || v.year === thisYear)) continue;
       items.set(itemKey(coll, v), { coll, value: clone(v) });
     }
   }
   return { items, nickname: data.nickname ?? "" };
 }
 
-function stable(v: unknown): string {
-  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+function stable(v: unknown, coll?: OverwriteColl): string {
+  if (Array.isArray(v)) return `[${v.map((x) => stable(x)).join(",")}]`;
   if (v && typeof v === "object") {
     const o = v as Rec;
     return `{${Object.keys(o)
-      .filter((k) => !isDerived(k) && o[k] !== undefined)
+      .filter((k) => !isDerived(coll, k) && o[k] !== undefined)
       .sort()
       .map((k) => `${JSON.stringify(k)}:${stable(o[k])}`)
       .join(",")}}`;
   }
   return JSON.stringify(v);
 }
-const same = (a: Rec | null | undefined, b: Rec | null | undefined) => (!a || !b ? a === b : stable(a) === stable(b));
+const same = (a: Rec | null | undefined, b: Rec | null | undefined, coll?: OverwriteColl) =>
+  !a || !b ? a === b : stable(a, coll) === stable(b, coll);
 
 const TYPE_LABEL: Record<string, string> = { buy: "매수", sell: "매도", deposit: "입금", withdrawal: "출금", repay: "상환", borrow: "추가 대출" };
 
@@ -102,9 +118,9 @@ export function detectOverwrites(baseline: SyncSnapshot | null, before: SyncSnap
     const me = before.items.get(key);
     const aft = after.items.get(key);
     if (me) {
-      if (same(b.value, me.value)) continue; // 내가 안 바꾼 항목
+      if (same(b.value, me.value, b.coll)) continue; // 내가 안 바꾼 항목
       if (!aft) out.push({ key, coll: b.coll, kind: "remoteDeleted", label: labelOf(b.coll, me.value), mine: me.value, landed: null });
-      else if (!same(aft.value, me.value)) out.push({ key, coll: b.coll, kind: "modified", label: labelOf(b.coll, me.value), mine: me.value, landed: aft.value });
+      else if (!same(aft.value, me.value, b.coll)) out.push({ key, coll: b.coll, kind: "modified", label: labelOf(b.coll, me.value), mine: me.value, landed: aft.value });
     } else if (aft) {
       out.push({ key, coll: b.coll, kind: "resurrected", label: labelOf(b.coll, b.value), mine: null, landed: aft.value });
     }
@@ -138,15 +154,15 @@ export function planRevert(entries: OverwriteEntry[], current: SyncSnapshot): Re
     if (e.coll === "nickname") return current.nickname === String(e.landed?.value ?? "");
     const cur = current.items.get(e.key)?.value ?? null;
     if (e.kind === "remoteDeleted") return cur === null;
-    return cur !== null && same(cur, e.landed);
+    return cur !== null && same(cur, e.landed, e.coll);
   });
   return { valid, dropped: entries.length - valid.length };
 }
 
-function pickDerived(from: Rec | undefined): Rec {
+function pickDerived(coll: OverwriteColl, from: Rec | undefined): Rec {
   const out: Rec = {};
   if (!from) return out;
-  for (const k of Object.keys(from)) if (isDerived(k)) out[k] = from[k];
+  for (const k of Object.keys(from)) if (isDerived(coll, k)) out[k] = from[k];
   return out;
 }
 
@@ -162,7 +178,7 @@ export function applyRevert(data: AssetData, valid: OverwriteEntry[]): AssetData
       if (e.kind === "resurrected") {
         if (idx >= 0) list.splice(idx, 1);
       } else if (e.mine) {
-        const merged = { ...clone(e.mine), ...pickDerived(idx >= 0 ? list[idx] : undefined) };
+        const merged = { ...clone(e.mine), ...pickDerived(coll, idx >= 0 ? list[idx] : undefined) };
         if (idx >= 0) list[idx] = merged;
         else list.push(merged);
       }

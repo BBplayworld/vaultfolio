@@ -260,10 +260,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     // 고정 id — 재발생 시 쌓이지 않고 건수만 갱신
     toast.info("다른 기기 변경을 반영했어요", {
       id: "sync-overwrite",
+      testId: "sync-overwrite-toast",
       description: `이 기기에서 고친 ${count}건이 바뀌었어요. 앱을 닫기 전까지 되돌릴 수 있어요.`,
       duration: 12000,
       closeButton: true,
       action: { label: "확인하기", onClick: () => setShowOverwriteList(true) },
+      actionButtonStyle: { background: "var(--brand)", color: "#fff" },
       classNames: { description: "!text-sm text-pretty break-keep", actionButton: "!h-10 !px-3 !text-sm" },
     });
     if (!overwriteNoticeTrackedRef.current) {

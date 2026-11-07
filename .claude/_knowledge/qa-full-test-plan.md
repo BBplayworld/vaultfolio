@@ -554,6 +554,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-SYNC-OVERWRITE. 동기화 덮임 알림·되돌리기 ([overwrite-guard.ts](../../src/lib/cloud-sync/overwrite-guard.ts)) — #4.47 #84
 - ⚙ 기기 2개 localStorage 분리 + 409 모의 하네스(`sync-overwrite.test.ts`): 같은 항목 수정·무관 항목 수정·삭제 부활·신규 추가(목록 제외)·원격 삭제·오프라인 복귀, 재시작 후(기준 없음) 알림 0, 편집 없는 pull 알림 0, 되돌리기 없는 흐름의 localStorage가 guard 없는 흐름과 동일(C13)
 - ⚙ 되돌리기: 목록 항목만 내 값으로(목록 밖 원격 변경 보존), R1 이후 변경 항목 제외, 월 스냅샷·설정 불변, 되돌리기 push 409면 같은 감지 재진입, 그대로 두기·새로고침 후 메모리 0·새 저장 키 0
+- ⚙ 앱 자동 갱신 필드(시세·종목명 보정·추정 시세·올해 순자산 자동 업서트)만 달라진 pull은 알림 0, 사용자 입력 변경(부동산 currentValue·주식 수량)은 감지
+- ⚙ 알려진 한계: 되돌리기 push 실패 시 안내 토스트 없음(기존 silent 실패와 동일)
 - ⚙ 정적: 감지 모듈에 저장·push·notify 호출 없음, sync-client/state·asset-storage에 덮임 로직 없음, GA는 UI 계층만, 새 문구에 '서버'·보안 수식어 0
 - 👤 (두 기기 필요, preview는 동기화 꺼짐) 토스트 1개(기존 2종 대체)·12초·[확인하기]→목록, 카드·목록·확인 단계 320/375/1280 라이트·다크 줄바꿈, 확정 시 건수 변동 문구
 ### F-DIVIDEND-YIELD. 배당 투입 대비 배당 ([dividend-yield.ts](../../src/lib/finance/dividend-yield.ts)) — #4.46 #80
