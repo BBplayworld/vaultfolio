@@ -145,7 +145,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
 
       {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
 
-      {!firstMonth && <CompositionBlock key={month} w={w} liveBreakdown={live.breakdown} />}
+      {!firstMonth && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 
       {!firstMonth && (() => {
         // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)

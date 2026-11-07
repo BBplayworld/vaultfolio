@@ -49,7 +49,7 @@ function Bar({ side, items, delay }: { side: "start" | "end"; items: MonthCompos
             className={`flex items-center justify-center overflow-hidden whitespace-nowrap text-xs font-semibold tabular-nums motion-safe:transition-[width] motion-safe:duration-300 ${idx > 0 ? "shadow-[-2px_0_0_0_var(--card)]" : ""}`}
             style={{ width: `${ratio}%`, backgroundColor: color, color: pickOnColor(color) }}
           >
-            {ratio >= 10 ? `${pct}%` : null}
+            {ratio >= 11 ? `${pct}%` : null}
           </div>
         );
       })}

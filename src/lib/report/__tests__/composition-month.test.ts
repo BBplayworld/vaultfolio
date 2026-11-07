@@ -112,7 +112,7 @@ describe("문구·색·렌더", () => {
     expect(html).toContain("−4%p");
     expect(html).toContain('aria-hidden="true"');
     expect(html).not.toMatch(/text-(red|blue)-|profit|loss|aria-pressed|원</);
-    // 막대 안 %는 10% 이상만 — 3%(암호화폐 시작)에는 글자 없음
+    // 막대 안 %는 11% 이상만 — 3%(암호화폐 시작)에는 글자 없음
     expect(html).not.toMatch(/composition-seg-start-crypto[^>]*>3%</);
     expect(renderToStaticMarkup(createElement(CompositionBlock, { w: win(monthly, "2026-09") }))).toBe("");
   });
@@ -125,6 +125,12 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     expect(view).toContain("<CauseBlock key={month} scope=\"month\" mapped={mapped} estimatedLabel={estimatedLabel} />");
     expect(view.indexOf("<CauseBlock")).toBeLessThan(view.indexOf("<CompositionBlock"));
     expect(view.indexOf("<CompositionBlock")).toBeLessThan(view.indexOf("SettlementAiButton name"));
+  });
+  it("같은 부모 안 형제 key가 겹치지 않는다(월 이동 시 cause-block 누적 방지)", () => {
+    const keys = [...view.matchAll(/<(CauseBlock|CompositionBlock) key=(\{[^}]*\}(?:`[^`]*`\})?)/g)].map((m) => m[2]);
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
+    expect(view).toContain("<CompositionBlock key={`composition-${month}`}");
   });
   it("origin/main 대비 settlement-view diff 허용 줄만(+import, live 3곳, +렌더(빈 줄 포함)), 무변경 파일은 diff 0", () => {
     let diff = "";
