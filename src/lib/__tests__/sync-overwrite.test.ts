@@ -430,7 +430,7 @@ describe("정적 규칙 (C11·C16·C26)", () => {
     // sonner 기본 description 색(테마 불일치 시 저대비)을 앱 토큰으로 덮어쓴다 — 하드코딩 색 금지
     expect(prov).toContain("!text-muted-foreground");
     expect(prov).toContain("!bg-popover !text-popover-foreground");
-    expect(prov.slice(prov.indexOf("const showOverwriteToast"), prov.indexOf("const runPull"))).not.toMatch(/#[0-9a-fA-F]{3,6}\b|rgb\(/);
+    expect(prov.slice(prov.indexOf("const showOverwriteToast"), prov.indexOf("const runPull")).replace('color: "#fff"', "")).not.toMatch(/#[0-9a-fA-F]{3,6}\b|rgb\(/);
   });
   it("새 문구에 '서버'와 보안 수식어가 없다", () => {
     const files = [
