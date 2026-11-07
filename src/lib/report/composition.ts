@@ -1,4 +1,4 @@
-// 외화 노출(성적표 분산·비중 카드) 순수 계산(#72) + 월 탭 자산 구성 변화 계산(#83, 4.48).
+// 외화 노출(성적표 분산·비중 카드) 순수 계산(#72) + 월 탭 자산 구성 변화 계산(#83, 4.51).
 
 import type { FxExposure } from "./asset-report";
 import { formatShortCurrency } from "@/lib/number-utils";

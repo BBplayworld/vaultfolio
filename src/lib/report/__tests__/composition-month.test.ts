@@ -1,4 +1,4 @@
-// 월 탭 자산 구성 변화(#83, 4.48) — 비교 구간·반올림 차·숨김 조건·금지어·끝값 출처·결산 파일 diff 범위
+// 월 탭 자산 구성 변화(#83, 4.51) — 비교 구간·반올림 차·숨김 조건·금지어·끝값 출처·결산 파일 diff 범위
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";

@@ -1,6 +1,6 @@
 "use client";
 
-// 월 탭 "자산 구성 변화" 블록(#83, 4.48) — 결산 구간 시작→끝 자산군 비중(총자산 기준). 계산은 computeMonthComposition.
+// 월 탭 "자산 구성 변화" 블록(#83, 4.51) — 결산 구간 시작→끝 자산군 비중(총자산 기준). 계산은 computeMonthComposition.
 // 금액·버튼(InfoHint 제외)·리본·범례 없음. 숨김이면 null.
 
 import { useEffect, useRef } from "react";
