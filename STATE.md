@@ -85,6 +85,7 @@
 - [type:improvement] 동기화 pull 같은 달 충돌 `date` 늦은 쪽 우선
 - [반려] #45 백업 JSON·공유 PNG iOS 신뢰 — 재제안 금지
 - [탈락] P2 "Plus" 배지 제거 — 현행 유지
+- (p2) 공용 `InfoHint` 아이콘 히트영역 14×14 → 40px 확장(전 화면 공용, 4.48 UI 검수 권장, 별도 릴리스 후보) | developer
 
 ## 지표
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
