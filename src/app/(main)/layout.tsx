@@ -12,6 +12,7 @@ import { TutorialStoreProvider } from "@/stores/tutorial/tutorial-provider";
 import { NavigationProvider } from "./_components/layout/navigation/navigation-context";
 import { CloudSyncProvider } from "@/lib/cloud-sync/cloud-sync-provider";
 import { CloudSyncConnectDialog } from "./_components/functions/cloud-sync/cloud-sync-connect-dialog";
+import { SyncOverwriteDialog } from "./_components/functions/cloud-sync/sync-overwrite-dialog";
 import { BottomNav } from "./_components/pwa/bottom-nav";
 import { PwaLockScreen } from "./_components/pwa/pwa-lock-screen";
 import { PwaConnectPrompt } from "./_components/pwa/pwa-connect-prompt";
@@ -36,6 +37,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
       <AssetDataProvider>
         <CloudSyncProvider>
         <CloudSyncConnectDialog />
+        <SyncOverwriteDialog />
         <NavigationProvider>
           <TutorialStoreProvider>
             <SidebarProvider defaultOpen={defaultOpen} className="bg-sidebar">
