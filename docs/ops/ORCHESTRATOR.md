@@ -9,6 +9,7 @@
 2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
    - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<버전>-<번호>-<slug>/<버전>-log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
    - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
+   - **위임 머지**: CLAUDE.md "머지 위임(저위험)" 조건 ①~⑧을 모두 충족하면(근거: COO decision-brief의 조건 대조) 오케스트레이터가 PR에 `risk:low`를 확인한 뒤 직접 squash 머지 → 즉시 qa 운영 스모크 → 대표에게는 승인 요청이 아니라 한 줄 결과 알림(새벽 규칙 적용). 하나라도 미충족·불확실하면 기존 owner-review 승인 요청
    - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
    - 실행 요약 첫 줄에 "git 전용 모드" 표시
 
