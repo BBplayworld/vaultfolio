@@ -211,7 +211,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
 - ~~연 탭 자산 구성 변화 카드(#4.43)~~ — #4.44에서 제거됨(`composition-card` DOM 없음). 외화 노출 줄(성적표 분산·비중)은 유지.
-- ⚙ 구성 카드 데이터 규칙: 총자산 분모(부채 제외), 이번 달=실시간 `getAssetSummary` 값, 음수 0 처리, 색은 이번 달 기준 1회(13칸 공통)
+- **월 탭 자산 구성 변화 블록(#4.48, `composition-block`)**: 변화 원인 바로 아래·AI 행 위, 배지 "총자산 기준"+InfoHint 1개, 막대 2줄(라벨=Hero 시작·끝점, 이번 달 "지금")·증감 행(반올림 차 0이면 "변화 없음", 손익색 0). 숨김: 첫 달·시작/끝 breakdown 없음(7월 결산·레거시)·총자산 0·두 시점 단일 자산군. 이번 달 끝값=`buildLiveAttributionCurr().breakdown`(Hero·원인과 같은 출처). 자동: `report/__tests__/composition-month.test.ts`. 대출 많은 사용자는 홈 도넛과 %가 달라야 정상(분모 차이).
+- ⚙ (제거된 4.43 카드) 구성 카드 데이터 규칙: 총자산 분모(부채 제외), 이번 달=실시간 `getAssetSummary` 값, 음수 0 처리, 색은 이번 달 기준 1회(13칸 공통)
 
 ### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)
 > 레버리지 박스(이자 vs 투자 수익)는 F-ACTIVITY에 있음 — 여기선 **5축 채점·티어·재정규화·이력화·delta**만 다룬다(중복 금지).
