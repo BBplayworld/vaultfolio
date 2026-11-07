@@ -266,7 +266,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       closeButton: true,
       action: { label: "확인하기", onClick: () => setShowOverwriteList(true) },
       actionButtonStyle: { background: "var(--brand)", color: "#fff" },
-      classNames: { description: "!text-sm text-pretty break-keep", actionButton: "!h-10 !px-3 !text-sm", closeButton: "after:absolute after:-inset-2.5" },
+      // OS 라이트 + 앱 다크처럼 sonner 테마와 앱 테마가 어긋나도 4.5:1이 되게 설명·닫기 버튼 색을 앱 토큰(토스트 배경 popover과 짝)으로 지정
+      classNames: {
+        description: "!text-sm !text-muted-foreground text-pretty break-keep",
+        actionButton: "!h-10 !px-3 !text-sm",
+        closeButton: "!bg-popover !text-popover-foreground !border-border after:absolute after:-inset-2.5",
+      },
     });
     if (!overwriteNoticeTrackedRef.current) {
       overwriteNoticeTrackedRef.current = true;
