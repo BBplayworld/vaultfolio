@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-08 (v4.47)
+
+### 동기화 충돌 시 내 수정 덮임 알림·되돌리기 (#4.47, 이슈 #84, risk high)
+- **왜**: 자동 pull이 로컬을 원격으로 통째 교체해, 아직 올라가지 않은 수정·삭제가 알림 없이 사라졌다(수정 소실·삭제 부활). 저장 형식을 바꾸는 항목 단위 병합(B안)은 후속으로 두고, 저장 형식 무변경 A안으로 "모르는 손실"을 "알림 + 앱을 닫기 전까지 되돌리기"로 바꿨다. 덮임 자체를 막지는 않는다.
+- `lib/cloud-sync/overwrite-guard.ts`: 마지막 push/pull 성공 시점 사본(메모리)을 기준으로 pull 직전·직후와 비교해 덮인 내 항목(수정 덮임·삭제 부활·원격 삭제)을 찾는 순수 함수 + `planRevert`(R1 재계산)·`applyRevert`. 새 저장 키·`secretasset_sync` 필드·payload·`/api/sync` 변경 0. 기준이 없으면(앱 시작 직후) 감지·폴백 알림 없음.
+- `cloud-sync-provider.tsx`: runPush/runPull에 기준 갱신·감지 연결, 덮임이 있으면 토스트 1개(고정 id `sync-overwrite`)로 기존 "다른 기기의 변경을 반영했습니다."·"클라우드가 더 최신이라…"를 대체(후자는 pull 완료 뒤 필요할 때만). `showOverwriteList` 상태 노출, `revertOverwrites`는 `saveData`(사용자 편집과 같은 저장 + `notifyAssetUserEdit`) 후 일반 디바운스 push.
+- UI: `sync-overwrite-dialog.tsx`(layout에 마운트, 목록·되돌리기 확인 단계·R1 건수 변동 문구), 기기 동기화 다이얼로그 armed 상태줄 아래 안내 카드. GA `feature_use` category `sync_overwrite_notice`(실행당 1회)·`sync_overwrite_undo`.
+- 알려진 한계: 앱을 다시 연 직후 동기화에서 덮인 경우(오프라인 편집 후 재시작)는 알림도 되돌리기도 없음(현행과 같음). 되돌리기 push 실패 시 별도 안내 토스트는 두지 않음(기존 silent push 실패와 동일, 자동 push 재시도 경로). 덮임 토스트 설명·닫기 버튼 색을 앱 토큰(`text-muted-foreground`, `bg-popover`/`text-popover-foreground`)으로 지정해 OS·앱 테마 불일치 4조합에서도 4.5:1 확보(sonner 기본 색 덮어쓰기). 알려진 한계 추가: 사용자가 직접 바꾼 주식 종목명, 사용자가 직접 입력한 올해 연도별 순자산이 덮여도 감지하지 않음(자동 보정과 구분 불가, main과 동일해 악화 아님). UI 재검수 권고 반영(확인 박스 제목 `break-keep`, 토스트 닫기 히트영역 `-inset-2.5`). UI 검수 반영: 시세 토스트 정리(`dismissStaleToasts`)가 덮임 토스트를 닫지 않도록 id 제외, '되돌렸어요'는 이전 토스트 옵션 병합 없이 새로 표시, 확인 단계에서 목록 축소·포커스 이동. 비교에서 제외하는 앱 자동 갱신 필드: stocks(currentPrice·baseDate·name 보정·inactive*), crypto(currentPrice·baseDate), realEstate(marketEstimate*; currentValue는 사용자 입력), 올해 연도별 순자산(자동 업서트).
+
 ## 2026-11-07 (v4.46)
 
 ### 배당 투입 대비 배당 + 더보기·설정 정돈 + 홈 도넛 정돈 (#4.46, 이슈 #80·#81·#82, risk low)

@@ -10,7 +10,7 @@
 import { useState, useEffect } from "react";
 import { track } from "@/lib/analytics/ga";
 import {
-  Cloud, CloudUpload, CloudDownload, Loader2, KeyRound, AlertTriangle, RefreshCw, Lock, Copy, QrCode, Share2, Link2, Sparkles,
+  Cloud, CloudUpload, CloudDownload, Loader2, KeyRound, AlertTriangle, RefreshCw, Lock, Copy, QrCode, Share2, Link2, Sparkles, History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -237,6 +237,27 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
                 자동 동기화 켜짐{cs.syncing ? " · 동기화 중…" : ""}
               </span>
               <span className="text-muted-foreground">{cs.lastSyncedAt ? new Date(cs.lastSyncedAt).toLocaleTimeString("ko-KR") : "-"}</span>
+            </div>
+
+            {/* 덮임 안내(#84) — 덮인 내 변경이 1건 이상일 때만. 라이브 영역은 항상 마운트 */}
+            <div aria-live="polite">
+              {cs.overwriteEntries.length > 0 && (
+                <div data-testid="sync-overwrite-card" className="rounded-lg bg-card shadow-xs p-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 duration-200">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <History aria-hidden className="size-3.5 shrink-0 text-primary" /> <span>바뀐 내 변경 <span className="tabular-nums">{cs.overwriteEntries.length}</span>건</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed text-pretty break-keep">앱을 닫기 전까지 되돌릴 수 있어요.</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="min-h-10 w-full sm:ml-auto sm:flex sm:w-auto"
+                    data-testid="sync-overwrite-open"
+                    onClick={() => { onOpenChange(false); cs.setShowOverwriteList(true); }}
+                  >
+                    확인하기
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* 카드 1: 다른 기기 동기화 링크 */}
