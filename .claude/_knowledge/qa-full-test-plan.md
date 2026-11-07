@@ -551,6 +551,20 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 375 iOS UA 새 세션에서 첫 저장→튜토리얼 종료 후 카드 1개, 추가하기→기존 PIN 다이얼로그(카드 숨김·다이얼로그 유지), 나중에→카드만 사라짐, 새로고침·재저장 시 재노출 0, 상단바 가로 클리핑·레이아웃 회귀 없음
 - 테스트: `src/lib/__tests__/install-nudge-policy.test.ts`, `manifest.test.ts`, `ga.test.ts`
 
+### F-DIVIDEND-YIELD. 배당 투입 대비 배당 ([dividend-yield.ts](../../src/lib/finance/dividend-yield.ts)) — #4.46 #80
+- ⚙ 평단 0·JPY는 분자·분모 제외 + 제외 수, 지급만은 예상분 제외(지급 0이면 null), USD만 보유 시 환율 변경에도 % 동일, 운영 형태 픽스처(추정 평단·올해 매수·무배당 종목) 값 존재, 0.1% 미만 표기
+- 👤 성과 › 배당: Hero 아래 "투입 대비 배당 N%"·캡션, 월 막대 선택 시 보이지 않음(막대 위치 불변), 조회 중·배당 0이면 줄 없음, 허브 배당 카드·월별 종목 표·성적표 텍스트 main과 동일
+- 테스트: `src/lib/__tests__/dividend-yield.test.ts`
+
+### F-MORE-SETTINGS. 더보기·설정 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) — #4.46 #81
+- 👤 더보기 섹션 순서 프로필 · 공유 · 백업 · 도구 · 지원 + 설정 행, 공유·백업 안 순서 공유·동기화 → 백업 → 가져오기 → 저장 현황, 자산 0에서도 가져오기 동작(숨은 input 항상 렌더), 설정에 가져오기·저장 현황 없음·순서 보안→화면→표시→데이터→버전·삭제 행 맨 아래, 다크 모드 ON/OFF 배지(`aria-pressed`), 백업·가져오기·캐시·삭제 문구 변경 0
+- 1280 행 폭 672px 이하 좌정렬, 320 어절 줄바꿈 0
+
+### F-HOME-DONUT. 홈 도넛 ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx)) — #4.46 #82
+- ⚙ 웰컴 도넛(`screenshotMode`) 마크업 스냅샷 불변(`donut-welcome-snapshot.test.tsx`), 라벨 최소 비율·금액 없음·필터 시 선택 조각만, `pickDonutLabelColor` 12색 4.5:1
+- 👤 [92/5/3]·[80/12/8]·[50/50]·[100]·[60/39.9/0.1] 라벨이 조각 안, 조각 바깥 링 없음, 범례 금액·% 끝 x 정렬, 행 40px, 카드 높이 증가 16px 이하, 필터 이동 유지
+- 테스트: `src/app/(main)/_components/views/home/__tests__/`
+
 ### F-TAX-SEASON. 연말 세금 줄 ([tax-season-strip.tsx](../../src/app/(main)/_components/views/detail/tax-season-strip.tsx)) — #4.45 #79
 - ⚙ `isForeignTaxSeason` 10/31 false·11/1 true·12/31 true·1/1 false(KST 변환 포함), `isTaxSimCandidate`(국내·상폐·정지·수량0 제외)와 시뮬 `candidates` 판정 일치
 - 👤 11/1~12/31 + 해외주식 보유 시 상세>주식 X-Ray 줄 아래에 줄 1개, 누르면 세금 관리 시뮬레이터 탭, 뒤로가기로 주식 탭 복귀, 국내만 보유·시즌 밖·체험/데모(해외 없음)는 미노출

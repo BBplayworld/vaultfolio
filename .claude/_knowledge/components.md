@@ -449,3 +449,8 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - InlineSelector 배경: `bg-muted/60 dark:bg-muted/40` (라이트 짙음). `fullWidth` 모드(#4.34): 같은 폭 grid 칸 + 절대 위치 썸(`translateX(index*100%)`, `bg-card dark:bg-foreground/15 shadow-sm`) + ←/→·Home/End 로빙 tabindex, 칸 `min-h-10 text-sm`. 기본 경로는 스냅샷 테스트로 고정(`layout/ui/__tests__/inline-selector.test.tsx`)
 - FAB·ScrollToTop: `bg-foreground/{85,70}` 무채색 토큰 (라이트 검정/다크 흰 자동 반전)
 - Card 모바일 padding: `px-4 sm:px-6` (CardHeader/CardContent/CardFooter)
+
+### 배당 투입 대비 배당 줄 · 메뉴 행 상수 · 홈 도넛 (#4.46)
+- `DividendCard`(`views/activity/dividend-chart.tsx`): Hero 금액 아래 `data-testid="dividend-yield"` 블록(값 줄 "투입 대비 배당 N%" + 캡션). 계산은 `computeDividendYield(items, usdRate, mode)` 순수 함수(`lib/finance/dividend-yield.ts`). 조회 중·배당 0·계산 불가면 미렌더, 월 선택 시 언마운트 대신 `opacity-0 aria-hidden`
+- `menu-styles.ts`(`header-menu/`): 더보기·설정 공용 `MENU_COLUMN`(max-w-2xl 좌정렬)·`MENU_ROW`·`MENU_ROW_DESTRUCTIVE`·`MENU_SECTION_LABEL`(muted)·`MENU_ICON`(단색)·`MENU_LABEL`·`MENU_DESC`·`menuBadge(on)`(앱 잠금·다크 모드 ON/OFF 배지)
+- `AssetDonutChart`/`DonutLabel`(`views/home/dashboard.tsx`): 홈은 이름+% 2줄·`DONUT_LABEL_MIN_PCT(name)` 미만이면 라벨 없음·`pickDonutLabelColor(color)` 글자색·조각 stroke `var(--background)`·범례 열 정렬. `screenshotMode`(웰컴)는 `legacy` 경로로 3줄 라벨·`var(--card)`·기존 범례 유지(스냅샷 `__tests__/donut-welcome-snapshot.test.tsx`)

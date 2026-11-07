@@ -14,6 +14,7 @@ import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import type { Stock } from "@/types/asset";
+import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { InfoHint } from "../../layout/ui/info-hint";
@@ -219,6 +220,9 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
     ? (isPastMonth ? "actual" : "estimated")
     : null;
 
+  // 투입 대비 배당(#4.46) — 조회가 모두 끝난 뒤에만 계산
+  const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(dividendItems, usdRate, estimateMode) : null;
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <Card className={ASSET_THEME.contentCard}>
@@ -231,6 +235,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
                   <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
                   <p><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</p>
+                  <p>투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
                 </InfoHint>
                 {selectedMonth !== undefined && (
                   <Badge
@@ -277,6 +282,32 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               <p className={`text-2xl sm:text-3xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                 {formatPriceByMode(heroValue)}
               </p>
+              {dividendYield && (
+                <div
+                  data-testid="dividend-yield"
+                  aria-hidden={selectedMonth !== undefined}
+                  className={`mt-2 transition-opacity duration-150 motion-reduce:transition-none ${
+                    selectedMonth !== undefined ? "opacity-0 select-none" : "opacity-100"
+                  }`}
+                >
+                  <p className="flex items-baseline gap-1.5 leading-tight">
+                    <span className="text-sm font-medium text-muted-foreground">투입 대비 배당</span>
+                    <span data-testid="dividend-yield-value" className="text-base font-semibold tabular-nums text-foreground whitespace-nowrap">
+                      {dividendYield.text}
+                    </span>
+                  </p>
+                  <p data-testid="dividend-yield-caption" className="mt-1 text-[11px] leading-relaxed text-muted-foreground text-pretty break-keep">
+                    <span className="whitespace-nowrap">보유 주식 매입금액 기준 ·</span>{" "}
+                    <span className="whitespace-nowrap">해외는 현재 환율</span>
+                    {dividendYield.excluded > 0 && (
+                      <>
+                        {" "}
+                        <span className="whitespace-nowrap">· <span className="tabular-nums">{dividendYield.excluded}</span>종목 제외</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

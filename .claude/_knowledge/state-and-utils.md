@@ -779,3 +779,8 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 ### sitemap·정본 호스트·UTM (#4.45 #77)
 - `APP_CONFIG.siteUrl` 기본값은 www. 정본 URL(canonical·og·sitemap)은 모두 이 값에서 파생하고 표시용 도메인 문자열은 리터럴로 분리. `sitemap.ts`는 `new Date()` 금지(문서별 고정 lastModified). `allowedUtmQuery`는 `/ratio`·`/guide/<slug>`만 UTM 3키 허용. `WEB_APPLICATION_JSON_LD`(`config/app.ts`)는 루트 layout head에 1개
 
+### 배당 투입 대비 배당 계산 (`src/lib/finance/dividend-yield.ts`, #4.46 #80)
+- `computeDividendYield(items, usdRate, mode, currentYM?)` → `{pct, text, excluded}|null`. 포함 종목=평단>0이고 KRW/USD, 분모 Σ평단×수량×(USD면 현재 환율), 분자는 Hero와 같은 규칙(매수일 이전 지급 제외, 지급월≤이번 달 KST면 지급, `actual` 모드는 지급만). 0<값<0.05는 "0.1% 미만". `currentYearMonthKst()` 제공
+
+### 도넛 라벨 글자색 (`config/theme.ts` `pickDonutLabelColor`, #4.46 #82)
+- 조각색 위에서 흰/검정 중 WCAG 대비가 큰 쪽(알파 없음). `pickOnColor`(휘도 0.45 컷)와 별개 — MAIN_PALETTE 12색 모두 4.5:1 이상이 테스트로 고정
