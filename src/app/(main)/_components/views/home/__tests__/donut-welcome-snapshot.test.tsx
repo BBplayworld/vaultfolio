@@ -15,8 +15,8 @@ describe("웰컴 도넛(screenshotMode) 고정 스냅샷", () => {
   it("DonutLabel 3줄 라벨", () => {
     const html = renderToStaticMarkup(
       <svg>
-        <DonutLabel cx={100} cy={100} midAngle={45} innerRadius={45} outerRadius={110} name="부동산" pct={60} value={300_000_000} activeTab="all" itemKey="realEstate" />
-        <DonutLabel cx={100} cy={100} midAngle={200} innerRadius={45} outerRadius={110} name="부채" pct={4} value={5_000_000} activeTab="all" itemKey="liability" />
+        <DonutLabel cx={100} cy={100} midAngle={45} innerRadius={45} outerRadius={110} name="부동산" pct={60} value={300_000_000} activeTab="all" itemKey="realEstate" legacy />
+        <DonutLabel cx={100} cy={100} midAngle={200} innerRadius={45} outerRadius={110} name="부채" pct={4} value={5_000_000} activeTab="all" itemKey="liability" legacy />
       </svg>,
     );
     expect(html).toMatchSnapshot();

@@ -265,6 +265,21 @@ export function pickOnColor(hex: string): string {
   return luminance > 0.45 ? "#111111" : "#FFFFFF";
 }
 
+/**
+ * 도넛 조각 라벨 글자색 — 조각색 위에서 흰색/검정 중 WCAG 대비가 큰 쪽(#4.46 #82).
+ * `pickOnColor`는 휘도 0.45 컷이라 빨강·초록 조각에서 4.5:1을 못 넘겨 별도로 둔다.
+ */
+export function pickDonutLabelColor(hex: string): string {
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length < 6) return "#FFFFFF";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const whiteContrast = 1.05 / (lum + 0.05);
+  const blackContrast = (lum + 0.05) / 0.05;
+  return whiteContrast >= blackContrast ? "#FFFFFF" : "#000000";
+}
+
 /** "그 외"/미분류 롤업 색 — 램프 밖 중립 그레이(fill·텍스트 공용) */
 export const SHARE_ETC_COLOR = "#8E8E93";
 

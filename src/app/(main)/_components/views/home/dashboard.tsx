@@ -8,7 +8,7 @@ import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } fr
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { attachCauseDates, buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, getAttributionRecords, sortCausesByDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor, pickDonutLabelColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
@@ -68,17 +68,30 @@ export type TreemapItem = { key: string; name: string; value: number; color: str
 
 const RADIAN = Math.PI / 180;
 
-export function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, value, activeTab, itemKey, maskFn }: {
+/** 라벨 상자(이름 글자수 기준)가 조각 안에 들어가는 최소 비율(%) — 3자 9 / 4자 11 / 5자 13 */
+export const DONUT_LABEL_MIN_PCT = (name: string) => 9 + Math.max(0, name.length - 3) * 2;
+
+// legacy(웰컴 미리보기, screenshotMode)는 기존 3줄 라벨을 그대로 유지한다. 홈은 이름+% 2줄, 조각색별 글자색.
+export function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, value, activeTab, itemKey, maskFn, legacy = false, color }: {
   cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number;
   name: string; pct: number; value: number; activeTab?: string; itemKey?: string;
-  maskFn?: (v: number) => string;
+  maskFn?: (v: number) => string; legacy?: boolean; color?: string;
 }) {
   const fmt = maskFn ?? formatShortCurrency;
-  if (pct < 5) return null;
+  if (legacy ? pct < 5 : pct < DONUT_LABEL_MIN_PCT(name)) return null;
   if (activeTab && activeTab !== "all" && itemKey !== activeTab) return null;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (!legacy) {
+    const fill = pickDonutLabelColor(color ?? "#000000");
+    return (
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }} data-testid={`donut-label-${itemKey}`}>
+        <tspan x={x} dy="-7" fontSize={11} fontWeight={700} fill={fill}>{name}</tspan>
+        <tspan x={x} dy="22" fontSize={13} fontWeight={700} fill={fill} style={{ fontVariantNumeric: "tabular-nums" }}>{pct.toFixed(1)}%</tspan>
+      </text>
+    );
+  }
   return (
     <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>
       <tspan x={x - 1} dy="-16" fontSize={11} fontWeight={700} fill="white">{name}</tspan>
@@ -98,8 +111,10 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
 }) {
   const fmt = maskFn ?? formatShortCurrency;
   if (items.length === 0) return null;
+  // 홈은 투명 카드 위라 조각 경계를 배경색으로, 웰컴 미리보기(screenshotMode)는 기존 card 색 유지
+  const sliceStroke = screenshotMode ? "var(--card)" : "var(--background)";
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid={screenshotMode ? undefined : "home-donut"}>
       <ResponsiveContainer width="100%" height={screenshotMode ? 220 : 260} className={`[&_*]:outline-none [&_path]:outline-none ${screenshotMode ? "" : "sm:!h-[360px]"}`} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
         <PieChart style={{ outline: "none" }}>
           <Pie
@@ -109,9 +124,9 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
             innerRadius={screenshotMode ? 45 : 55}
             outerRadius={screenshotMode ? 110 : 130}
             strokeWidth={2}
-            stroke="var(--card)"
+            stroke={sliceStroke}
             labelLine={false}
-            label={({ key, ...props }) => <DonutLabel key={key} itemKey={key} activeTab={activeTab} maskFn={maskFn} {...props} />}
+            label={({ key, ...props }) => <DonutLabel key={key} itemKey={key} activeTab={activeTab} maskFn={maskFn} legacy={screenshotMode} color={items.find((it) => it.key === key)?.color} {...props} />}
             onClick={(data) => { if (!screenshotMode && data?.key && onSegmentClick) onSegmentClick(data.key as string); }}
             style={{ cursor: screenshotMode ? "default" : "pointer", outline: "none" }}
             rootTabIndex={-1}
@@ -125,7 +140,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
                 <Cell
                   key={i}
                   fill={item.color}
-                  stroke="var(--card)"
+                  stroke={sliceStroke}
                   strokeWidth={2}
                   tabIndex={-1}
                   style={{
@@ -162,21 +177,38 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
         </PieChart>
       </ResponsiveContainer>
       {/* 범례 */}
-      <div className={`grid gap-x-2 ${screenshotMode ? "hidden gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-1 grid-cols-1 sm:grid-cols-2"}`}>
+      <div className={`grid gap-x-2 ${screenshotMode ? "hidden gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-0 grid-cols-1 sm:grid-cols-2"}`}>
         {items.map(({ key, name, value, color, pct }) => {
           const isAll = !activeTab || activeTab === "all";
           const isActive = key === activeTab;
+          if (screenshotMode) {
+            return (
+              <div
+                key={name}
+                className={`flex items-center gap-1 min-w-0 rounded-md transition-all px-1.5 py-2 cursor-pointer`}
+                style={{ opacity: isAll || isActive ? 1 : 0.35 }}
+                onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
+              >
+                <span className={`rounded-full flex-shrink-0 size-2.5`} style={{ backgroundColor: color }} />
+                <span className={`text-foreground truncate text-sm`}>{name}</span>
+                <span className={`ml-auto text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.default}`}>{fmt(value)}</span>
+                <span className={`font-bold text-sm`} style={{ color: color }}>({pct.toFixed(1)}%)</span>
+              </div>
+            );
+          }
+          // 홈: 금액·% 열 정렬(tabular-nums, % 고정폭), 행 높이 40px(상하 gap 0으로 카드 높이 유지)
           return (
             <div
               key={name}
-              className={`flex items-center gap-1 min-w-0 rounded-md transition-all px-1.5 py-2 cursor-pointer`}
+              data-testid={`donut-legend-row-${key}`}
+              className="flex items-center gap-2 min-w-0 min-h-10 rounded-md transition-opacity px-1.5 cursor-pointer"
               style={{ opacity: isAll || isActive ? 1 : 0.35 }}
-              onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
+              onClick={() => { if (onSegmentClick) onSegmentClick(key); }}
             >
-              <span className={`rounded-full flex-shrink-0 size-2.5`} style={{ backgroundColor: color }} />
-              <span className={`text-foreground truncate text-sm`}>{name}</span>
-              <span className={`ml-auto text-sm ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.default}`}>{fmt(value)}</span>
-              <span className={`font-bold text-sm`} style={{ color: color }}>({pct.toFixed(1)}%)</span>
+              <span className="rounded-full flex-shrink-0 size-2.5" style={{ backgroundColor: color }} />
+              <span className="text-foreground truncate text-sm min-w-0 whitespace-nowrap">{name}</span>
+              <span data-testid={`donut-legend-amount-${key}`} className={`ml-auto text-sm tabular-nums whitespace-nowrap ${key === 'liability' ? ASSET_THEME.liability : ASSET_THEME.text.default}`}>{fmt(value)}</span>
+              <span data-testid={`donut-legend-pct-${key}`} className="w-[4.5rem] shrink-0 text-right font-bold text-sm tabular-nums" style={{ color: color }}>({pct.toFixed(1)}%)</span>
             </div>
           );
         })}
