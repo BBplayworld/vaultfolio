@@ -2,11 +2,10 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { track } from "@/lib/analytics/ga";
-import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Receipt } from "lucide-react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Download, Receipt } from "lucide-react";
 import { useDataExport } from "@/hooks/use-data-export";
 import { formatLastBackup, isBackupStale } from "@/lib/asset/backup-status";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
-import { MAIN_PALETTE, ASSET_THEME } from "@/config/theme";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { toast } from "sonner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -33,6 +32,9 @@ import { getProfitBasis } from "@/lib/finance/profit-utils";
 import type { AssetSnapshots } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
+import { useAssetImport } from "@/hooks/use-asset-import";
+import { computeStorageStats, formatBytes } from "@/lib/asset/storage-stats";
+import { MENU_COLUMN, MENU_ROW, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC } from "./menu-styles";
 
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
@@ -62,6 +64,11 @@ export function ToolMenuPage() {
   const lastBackup = useMemo(() => formatLastBackup(), [exportTick]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const backupStale = useMemo(() => isBackupStale(), [exportTick]);
+
+  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
+  // 저장 현황 — 전체 키 순회 동기 작업이라 진입·백업/가져오기 직후에만 계산
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stats = useMemo(() => computeStorageStats(), [exportTick]);
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -187,16 +194,13 @@ export function ToolMenuPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:shadow-xs hover:bg-accent dark:hover:bg-accent/60 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
-
   return (
     <>
-      <div className="flex flex-col gap-5">
+      <div className={MENU_COLUMN}>
         <section>
-          <p className={SECTION_LABEL}>프로필</p>
+          <p className={MENU_SECTION_LABEL}>프로필</p>
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card shadow-xs">
-            <User className="size-5 text-primary shrink-0" />
+            <User className={MENU_ICON} />
             <input
               type="text"
               value={draft}
@@ -210,55 +214,76 @@ export function ToolMenuPage() {
           </div>
         </section>
 
-        <section>
-          <p className={SECTION_LABEL}>공유 · 동기화</p>
+        <section data-testid="more-section-share-backup">
+          <p className={MENU_SECTION_LABEL}>공유 · 백업</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={() => setShowShareSyncChooser(true)} disabled={!hasAssets}>
-              <Cloud className="size-5 text-primary shrink-0" />
-              <span className="font-medium">자산 공유 · 동기화</span>
+            <button type="button" data-testid="more-row-share-sync" className={MENU_ROW} onClick={() => setShowShareSyncChooser(true)} disabled={!hasAssets}>
+              <Cloud className={MENU_ICON} />
+              <span className={MENU_LABEL}>자산 공유 · 동기화</span>
               {cs.status === "armed" && (
                 <RefreshCw className={`size-4 text-primary shrink-0 ${cs.syncing ? "animate-spin" : ""}`} />
               )}
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
             {/* 백업은 데이터 유실을 막는 핵심 동작이라 설정 3뎁스에 숨기지 않고 1단에 노출 */}
-            <button type="button" className={ROW} onClick={exportNow} disabled={!hasAssets}>
-              <Upload className="size-5 text-primary shrink-0" />
+            <button type="button" data-testid="more-row-backup" className={MENU_ROW} onClick={exportNow} disabled={!hasAssets}>
+              <Upload className={MENU_ICON} />
               <div className="flex-1 min-w-0">
-                <span className="font-medium">데이터 백업</span>
+                <span className={MENU_LABEL}>데이터 백업</span>
                 <p className={`text-sm mt-0.5 ${backupStale ? "text-orange-600 dark:text-orange-400 font-medium" : "text-muted-foreground"}`}>
                   {lastBackup ? `마지막 백업: ${lastBackup}` : "아직 백업하지 않았습니다"}
                 </p>
               </div>
             </button>
+            <button type="button" data-testid="more-row-import" className={MENU_ROW} onClick={openFilePicker} disabled={isImporting}>
+              <Download className={MENU_ICON} />
+              <div className="flex-1 min-w-0">
+                <span className={MENU_LABEL}>{isImporting ? "데이터 가져오는 중..." : "데이터 가져오기"}</span>
+                <p className={MENU_DESC}>JSON 백업 파일로부터 자산 복원</p>
+              </div>
+            </button>
+            {/* 저장 현황 — 내 데이터가 얼마나 쌓였는지 (읽기 전용) */}
+            {stats.itemCount > 0 && (
+              <p data-testid="more-storage-stats" className="px-4 pt-1 text-sm text-muted-foreground tabular-nums text-pretty break-keep">
+                <span className="whitespace-nowrap">자산 {stats.itemCount}개</span> · <span className="whitespace-nowrap">일별 기록 {stats.dailyCount}일</span>
+                {stats.archivedMonths > 0 && <>{" "}<span className="whitespace-nowrap">(+보관 {stats.archivedMonths}개월)</span></>}
+                {" · "}<span className="whitespace-nowrap">약 {formatBytes(stats.approxBytes)}</span>
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section data-testid="more-section-tools">
+          <p className={MENU_SECTION_LABEL}>도구</p>
+          <div className="flex flex-col gap-2">
+            <button type="button" data-testid="more-row-tax" className={MENU_ROW} onClick={() => navigate({ type: "tax" })}>
+              <Receipt className={MENU_ICON} />
+              <span className={MENU_LABEL}>세금 관리</span>
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
+            </button>
+          </div>
+        </section>
+
+        <section data-testid="more-section-support">
+          <p className={MENU_SECTION_LABEL}>지원</p>
+          <div className="flex flex-col gap-2">
+            <button type="button" className={MENU_ROW} onClick={() => setShowFeedbackDialog(true)}>
+              <MessageSquarePlus className={MENU_ICON} />
+              <span className={MENU_LABEL}>의견·요청 보내기</span>
+            </button>
+            <button type="button" className={MENU_ROW} onClick={() => setShowHelpChooser(true)}>
+              <Info className={MENU_ICON} />
+              <span className={MENU_LABEL}>앱 가이드 · 공지사항</span>
+              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
+            </button>
           </div>
         </section>
 
         <section>
-          <p className={SECTION_LABEL}>지원</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={() => setShowFeedbackDialog(true)}>
-              <MessageSquarePlus className="size-5 text-primary shrink-0" />
-              <span className="font-medium">의견·요청 보내기</span>
-            </button>
-            <button type="button" className={ROW} onClick={() => setShowHelpChooser(true)}>
-              <Info className="size-5 text-primary shrink-0" />
-              <span className="font-medium">앱 가이드 · 공지사항</span>
-              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-            </button>
-            <button type="button" className={ROW} onClick={() => navigate({ type: "tax" })}>
-              <Receipt className="size-5 text-primary shrink-0" />
-              <span className="font-medium">세금 관리</span>
-              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-            </button>
-          </div>
-        </section>
-
-        <section>
-          <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={() => navigate({ type: "settings" })}>
-              <Settings className="size-5 text-primary shrink-0" />
-              <span className="font-medium">설정</span>
+            <button type="button" data-testid="more-row-settings" className={MENU_ROW} onClick={() => navigate({ type: "settings" })}>
+              <Settings className={MENU_ICON} />
+              <span className={MENU_LABEL}>설정</span>
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>
@@ -331,6 +356,9 @@ export function ToolMenuPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 가져오기용 숨은 file input — 조건부 블록 밖에 항상 렌더(자산 0에서도 동작) */}
+      <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
 
       <CloudSyncMenuEntry open={showCloudSync} onOpenChange={setShowCloudSync} />
 

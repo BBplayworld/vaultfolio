@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { track, trackThemeMode } from "@/lib/analytics/ga";
-import { Moon, Sun, RefreshCw, Trash2, ShieldCheck, Download } from "lucide-react";
-import { ASSET_THEME } from "@/config/theme";
+import { Moon, RefreshCw, Trash2, ShieldCheck } from "lucide-react";
 import { APP_CONFIG } from "@/config/app";
 import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -33,8 +32,6 @@ import { Button } from "@/components/ui/button";
 import { clearAssetData, clearUserCaches } from "@/lib/asset/asset-storage";
 import { clearBackupStatus } from "@/lib/asset/backup-status";
 import { clearAssetRefreshStatus } from "@/lib/asset/asset-refresh-status";
-import { useDataExport } from "@/hooks/use-data-export";
-import { computeStorageStats, formatBytes } from "@/lib/asset/storage-stats";
 import { APP_VERSION } from "@/config/app-version";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { InfoHint } from "../layout/ui/info-hint";
@@ -42,7 +39,7 @@ import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitBasis } from "@/lib/finance/profit-utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
-import { useAssetImport } from "@/hooks/use-asset-import";
+import { MENU_COLUMN, MENU_ROW, MENU_ROW_DESTRUCTIVE, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC, menuBadge } from "./menu-styles";
 import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
 
 export function SettingsPage() {
@@ -50,7 +47,6 @@ export function SettingsPage() {
   const cs = useCloudSync();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
-  const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
 
   const hasAssets =
     assetData.realEstate.length > 0 ||
@@ -116,13 +112,6 @@ export function SettingsPage() {
     track("data_action", { method: "clear_cache", source: "settings", result: "success" });
   };
 
-  // 저장 현황 갱신용 tick (가져오기/삭제 직후 재계산)
-  const { exportTick } = useDataExport();
-
-  // 저장 현황 — 전체 키 순회가 필요한 동기 작업이라 설정 진입 시 1회만 계산
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stats = useMemo(() => computeStorageStats(), [exportTick]);
-
   // 종가 기준 — 성과 탭에만 있던 설정값을 설정 화면에서도 바꿀 수 있게 노출
   const profitBasis = useProfitBasisStore((s) => s.basis);
   const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
@@ -186,73 +175,40 @@ export function SettingsPage() {
 
   if (!mounted) return null;
 
-  const ROW = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:shadow-xs hover:bg-accent dark:hover:bg-accent/60 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed";
-  const ROW_DESTRUCTIVE = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-rose-500/5 border border-rose-500/10 dark:border-0 shadow-xs hover:bg-rose-500/10 transition-colors text-left text-rose-600 dark:text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed";
-  const SECTION_LABEL = `text-sm font-semibold ${ASSET_THEME.primary.text} mb-2 mt-1 px-1`;
-
   return (
     <>
-      <div className="flex flex-col gap-5">
-        <section>
-          <p className={SECTION_LABEL}>보안</p>
+      <div className={MENU_COLUMN}>
+        <section data-testid="settings-section-security">
+          <p className={MENU_SECTION_LABEL}>보안</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={handleToggleAuth}>
-              <ShieldCheck className="size-5 text-primary shrink-0" />
+            <button type="button" className={MENU_ROW} aria-pressed={pwaAuthEnabled} onClick={handleToggleAuth}>
+              <ShieldCheck className={MENU_ICON} />
               <div className="flex-1 min-w-0">
-                <span className="font-medium">앱 잠금 설정 (App Lock)</span>
-                <p className="text-sm text-muted-foreground mt-0.5">앱 실행 시 4자리 PIN 번호 잠금</p>
+                <span className={MENU_LABEL}>앱 잠금 설정 (App Lock)</span>
+                <p className={MENU_DESC}>앱 실행 시 4자리 PIN 번호 잠금</p>
               </div>
-              <span className={`text-sm font-semibold px-2 py-0.5 rounded ${pwaAuthEnabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+              <span className={menuBadge(pwaAuthEnabled)}>
                 {pwaAuthEnabled ? "ON" : "OFF"}
               </span>
             </button>
           </div>
         </section>
 
-        <section>
-          <p className={SECTION_LABEL} onClick={handleGaOptoutTap}>화면</p>
+        <section data-testid="settings-section-screen">
+          <p className={MENU_SECTION_LABEL} onClick={handleGaOptoutTap}>화면</p>
           <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={handleToggleTheme}>
-              {themeMode === "dark" ? <Sun className="size-5 text-primary shrink-0" /> : <Moon className="size-5 text-primary shrink-0" />}
-              <span className="font-medium">{themeMode === "dark" ? "라이트 모드" : "다크 모드"}</span>
+            <button type="button" data-testid="settings-row-theme" className={MENU_ROW} aria-pressed={themeMode === "dark"} onClick={handleToggleTheme}>
+              <Moon className={MENU_ICON} />
+              <span className={`${MENU_LABEL} flex-1`}>다크 모드</span>
+              <span data-testid="settings-theme-badge" className={menuBadge(themeMode === "dark")}>
+                {themeMode === "dark" ? "ON" : "OFF"}
+              </span>
             </button>
           </div>
         </section>
 
-        <section>
-          <p className={SECTION_LABEL}>데이터</p>
-          <div className="flex flex-col gap-2">
-            <button type="button" className={ROW} onClick={openFilePicker} disabled={isImporting}>
-              <Download className="size-5 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="font-medium">{isImporting ? "데이터 가져오는 중..." : "데이터 가져오기"}</span>
-                <p className="text-sm text-muted-foreground mt-0.5">JSON 백업 파일로부터 자산 복원</p>
-              </div>
-            </button>
-            <button type="button" className={ROW} onClick={handleClearCache} disabled={!hasAssets}>
-              <RefreshCw className="size-5 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="font-medium">캐시 초기화</span>
-                <p className="text-sm text-muted-foreground mt-0.5">수익·환율 캐시 재설정</p>
-              </div>
-            </button>
-            <button type="button" className={ROW_DESTRUCTIVE} onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
-              <Trash2 className="size-5 shrink-0" />
-              <span className="font-medium">모든 데이터 삭제</span>
-            </button>
-            {/* 저장 현황 — 내 데이터가 얼마나 쌓였는지 (읽기 전용) */}
-            {stats.itemCount > 0 && (
-              <p className="px-4 pt-1 text-sm text-muted-foreground tabular-nums text-pretty">
-                자산 {stats.itemCount}개 · 일별 기록 {stats.dailyCount}일
-                {stats.archivedMonths > 0 && ` (+보관 ${stats.archivedMonths}개월)`}
-                {" · 약 "}{formatBytes(stats.approxBytes)}
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section>
-          <p className={SECTION_LABEL}>표시</p>
+        <section data-testid="settings-section-display">
+          <p className={MENU_SECTION_LABEL}>표시</p>
           <div className="px-4 py-3 rounded-xl bg-card shadow-xs space-y-2">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium">기간 수익 종가 기준</span>
@@ -277,8 +233,25 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <section>
-          <p className={SECTION_LABEL}>버전</p>
+        <section data-testid="settings-section-data">
+          <p className={MENU_SECTION_LABEL}>데이터</p>
+          <div className="flex flex-col gap-2">
+            <button type="button" data-testid="settings-row-clear-cache" className={MENU_ROW} onClick={handleClearCache} disabled={!hasAssets}>
+              <RefreshCw className={MENU_ICON} />
+              <div className="flex-1 min-w-0">
+                <span className={MENU_LABEL}>캐시 초기화</span>
+                <p className={MENU_DESC}>수익·환율 캐시 재설정</p>
+              </div>
+            </button>
+            <button type="button" data-testid="settings-row-delete-all" className={MENU_ROW_DESTRUCTIVE} onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
+              <Trash2 className="size-5 shrink-0" />
+              <span className="font-medium">모든 데이터 삭제</span>
+            </button>
+          </div>
+        </section>
+
+        <section data-testid="settings-section-version">
+          <p className={MENU_SECTION_LABEL}>버전</p>
           <div className="px-4 py-3 rounded-xl bg-card shadow-xs">
             <p className="text-sm text-muted-foreground tabular-nums">v{APP_VERSION}</p>
           </div>
@@ -348,14 +321,6 @@ export function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleFileChange}
-        className="hidden"
-      />
     </>
   );
 }
