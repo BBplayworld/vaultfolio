@@ -242,9 +242,9 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             {/* 덮임 안내(#84) — 덮인 내 변경이 1건 이상일 때만. 라이브 영역은 항상 마운트 */}
             <div aria-live="polite">
               {cs.overwriteEntries.length > 0 && (
-                <div data-testid="sync-overwrite-card" className="rounded-lg bg-muted/40 shadow-xs p-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 duration-200">
+                <div data-testid="sync-overwrite-card" className="rounded-lg bg-card shadow-xs p-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 duration-200">
                   <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    <History aria-hidden className="size-3.5 text-primary" /> 바뀐 내 변경 <span className="tabular-nums">{cs.overwriteEntries.length}</span>건
+                    <History aria-hidden className="size-3.5 shrink-0 text-primary" /> <span>바뀐 내 변경 <span className="tabular-nums">{cs.overwriteEntries.length}</span>건</span>
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed text-pretty break-keep">앱을 닫기 전까지 되돌릴 수 있어요.</p>
                   <Button

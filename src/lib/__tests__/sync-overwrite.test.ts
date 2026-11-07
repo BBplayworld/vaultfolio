@@ -410,6 +410,22 @@ describe("정적 규칙 (C11·C16·C26)", () => {
     const runPush = provider.slice(provider.indexOf("const runPush"), provider.indexOf("const showOverwriteToast"));
     expect(runPush).not.toMatch(/sync_overwrite/);
   });
+  it("UI 검수 반영: 전체 토스트 닫기에서 덮임 토스트 제외·되돌렸어요 토스트는 이전 옵션 병합 방지·제목 span 묶음·확인 단계 목록 축소·포커스", () => {
+    const ctx = read("../contexts/asset-data-context.tsx");
+    expect(ctx).toContain('!== "sync-overwrite"');
+    expect(ctx).not.toMatch(/toast\.dismiss\(\);/);
+    const dlg = read("../app/(main)/_components/functions/cloud-sync/sync-overwrite-dialog.tsx");
+    expect(dlg.indexOf('toast.dismiss("sync-overwrite")')).toBeLessThan(dlg.indexOf('toast.success("되돌렸어요"'));
+    expect(dlg).toContain("duration: 2000");
+    expect(dlg).toContain('<span>바뀐 내 변경 <span className="tabular-nums">{count}</span>건</span>');
+    expect(dlg).toContain('confirming ? "max-h-[20vh]"');
+    expect(dlg).toContain("titleRef.current?.focus()");
+    expect(dlg).toContain("revertBtnRef.current?.focus()");
+    expect(dlg).toContain("scrollbar-themed");
+    const card = read("../app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx");
+    expect(card).toContain('<span>바뀐 내 변경 <span className="tabular-nums">');
+    expect(read("cloud-sync/cloud-sync-provider.tsx")).toContain('closeButton: "after:absolute after:-inset-2"');
+  });
   it("새 문구에 '서버'와 보안 수식어가 없다", () => {
     const files = [
       "cloud-sync/cloud-sync-provider.tsx",

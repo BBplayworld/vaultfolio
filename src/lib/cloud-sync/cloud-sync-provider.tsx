@@ -266,7 +266,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       closeButton: true,
       action: { label: "확인하기", onClick: () => setShowOverwriteList(true) },
       actionButtonStyle: { background: "var(--brand)", color: "#fff" },
-      classNames: { description: "!text-sm text-pretty break-keep", actionButton: "!h-10 !px-3 !text-sm" },
+      classNames: { description: "!text-sm text-pretty break-keep", actionButton: "!h-10 !px-3 !text-sm", closeButton: "after:absolute after:-inset-2" },
     });
     if (!overwriteNoticeTrackedRef.current) {
       overwriteNoticeTrackedRef.current = true;

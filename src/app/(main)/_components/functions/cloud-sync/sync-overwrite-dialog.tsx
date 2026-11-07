@@ -5,7 +5,7 @@
  * 목록 정본은 overwrite-guard(메모리). 열 때·확정 때 목록을 다시 계산한다(R1).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { History } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,6 +26,9 @@ export function SyncOverwriteDialog() {
   const open = cs.showOverwriteList;
   const [confirming, setConfirming] = useState(false);
   const [droppedNote, setDroppedNote] = useState(0);
+  const titleRef = useRef<HTMLParagraphElement>(null);
+  const revertBtnRef = useRef<HTMLButtonElement>(null);
+  const firstOpenRef = useRef(false);
 
   // 열 때 재계산(R1)
   useEffect(() => {
@@ -35,6 +38,16 @@ export function SyncOverwriteDialog() {
     cs.refreshOverwrites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // 포커스: 확인 단계 진입·건수 변동 시 확인 박스 제목, 취소하면 [되돌리기]
+  useEffect(() => {
+    if (confirming) titleRef.current?.focus();
+  }, [confirming, droppedNote]);
+  const cancelConfirm = () => {
+    setConfirming(false);
+    setDroppedNote(0);
+    setTimeout(() => revertBtnRef.current?.focus(), 0);
+  };
 
   const entries = cs.overwriteEntries;
   const count = entries.length;
@@ -49,7 +62,9 @@ export function SyncOverwriteDialog() {
     if (remain === 0) return;
     track("feature_use", { category: "sync_overwrite_undo" });
     cs.revertOverwrites();
-    toast.success("되돌렸어요", { id: "sync-overwrite" });
+    // 같은 id의 이전 description·action·duration이 병합되지 않도록 닫고 새 토스트로 띄운다
+    toast.dismiss("sync-overwrite");
+    toast.success("되돌렸어요", { duration: 2000, closeButton: false });
   };
 
   return (
@@ -58,7 +73,7 @@ export function SyncOverwriteDialog() {
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
             <History aria-hidden className="size-5 text-primary" />
-            바뀐 내 변경 <span className="tabular-nums">{count}</span>건
+            <span>바뀐 내 변경 <span className="tabular-nums">{count}</span>건</span>
           </DialogTitle>
           <DialogDescription className="text-left text-pretty break-keep">
             다른 기기에서 먼저 저장한 내용이 반영됐어요. 이 기기에서 아직 올라가지 않은 변경이 아래처럼 바뀌었어요.
@@ -74,7 +89,7 @@ export function SyncOverwriteDialog() {
             <ul
               data-testid="sync-overwrite-list"
               tabIndex={0}
-              className="max-h-[40vh] overflow-y-auto rounded-lg bg-muted/40 divide-y divide-border dark:divide-border/40"
+              className={`${confirming ? "max-h-[20vh]" : "max-h-[40vh]"} scrollbar-themed overflow-y-auto rounded-lg bg-muted/40 divide-y divide-border dark:divide-border/40`}
             >
               {entries.map((e) => (
                 <li key={e.key} data-testid="sync-overwrite-row" className="flex min-h-10 flex-col gap-0.5 px-3 py-2.5">
@@ -89,7 +104,7 @@ export function SyncOverwriteDialog() {
 
         {count > 0 && confirming ? (
           <div data-testid="sync-overwrite-confirm" role="group" aria-labelledby="sync-overwrite-confirm-title" className="space-y-2 rounded-lg bg-muted/40 p-3 motion-safe:animate-in motion-safe:fade-in duration-150">
-            <p id="sync-overwrite-confirm-title" tabIndex={-1} className="text-sm font-semibold text-foreground">이 기기에서 고친 값으로 되돌릴까요?</p>
+            <p id="sync-overwrite-confirm-title" ref={titleRef} tabIndex={-1} className="text-sm font-semibold text-foreground text-balance outline-none">이 기기에서 고친 값으로 되돌릴까요?</p>
             {droppedNote > 0 && (
               <p className="text-sm text-foreground text-pretty break-keep">그사이 바뀐 <span className="tabular-nums">{droppedNote}</span>건은 목록에서 뺐어요.</p>
             )}
@@ -98,13 +113,13 @@ export function SyncOverwriteDialog() {
             </p>
             <div className="flex gap-2">
               <Button variant="brand" className="min-h-10 flex-1" onClick={confirmRevert}>되돌리기 확정</Button>
-              <Button variant="secondary" className="min-h-10 flex-1" onClick={() => { setConfirming(false); setDroppedNote(0); }}>취소</Button>
+              <Button variant="secondary" className="min-h-10 flex-1" onClick={cancelConfirm}>취소</Button>
             </div>
           </div>
         ) : (
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             {count > 0 && (
-              <Button variant="brand" className="min-h-10" onClick={() => setConfirming(true)}>되돌리기</Button>
+              <Button ref={revertBtnRef} variant="brand" className="min-h-10" onClick={() => setConfirming(true)}>되돌리기</Button>
             )}
             <Button variant="secondary" className="min-h-10" onClick={count > 0 ? cs.dismissOverwrites : () => cs.setShowOverwriteList(false)}>
               {count > 0 ? "그대로 두기" : "닫기"}
