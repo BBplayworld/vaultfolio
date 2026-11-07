@@ -422,9 +422,10 @@ describe("정적 규칙 (C11·C16·C26)", () => {
     expect(dlg).toContain("titleRef.current?.focus()");
     expect(dlg).toContain("revertBtnRef.current?.focus()");
     expect(dlg).toContain("scrollbar-themed");
+    expect(dlg).toContain("text-balance break-keep");
     const card = read("../app/(main)/_components/functions/cloud-sync/cloud-sync-menu-entry.tsx");
     expect(card).toContain('<span>바뀐 내 변경 <span className="tabular-nums">');
-    expect(read("cloud-sync/cloud-sync-provider.tsx")).toContain('closeButton: "after:absolute after:-inset-2"');
+    expect(read("cloud-sync/cloud-sync-provider.tsx")).toContain('closeButton: "after:absolute after:-inset-2.5"');
   });
   it("새 문구에 '서버'와 보안 수식어가 없다", () => {
     const files = [

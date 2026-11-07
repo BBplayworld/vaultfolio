@@ -104,7 +104,7 @@ export function SyncOverwriteDialog() {
 
         {count > 0 && confirming ? (
           <div data-testid="sync-overwrite-confirm" role="group" aria-labelledby="sync-overwrite-confirm-title" className="space-y-2 rounded-lg bg-muted/40 p-3 motion-safe:animate-in motion-safe:fade-in duration-150">
-            <p id="sync-overwrite-confirm-title" ref={titleRef} tabIndex={-1} className="text-sm font-semibold text-foreground text-balance outline-none">이 기기에서 고친 값으로 되돌릴까요?</p>
+            <p id="sync-overwrite-confirm-title" ref={titleRef} tabIndex={-1} className="text-sm font-semibold text-foreground text-balance break-keep outline-none">이 기기에서 고친 값으로 되돌릴까요?</p>
             {droppedNote > 0 && (
               <p className="text-sm text-foreground text-pretty break-keep">그사이 바뀐 <span className="tabular-nums">{droppedNote}</span>건은 목록에서 뺐어요.</p>
             )}
