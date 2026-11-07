@@ -302,6 +302,10 @@ function Hint({ children }: { children: ReactNode }) {
 - `(main)` 밖 정적 글 페이지는 `/ratio` 껍데기(480px 컬럼·헤더 복사·홈 링크 없음)를 따른다. 단계 번호는 단색 `tabular-nums` 숫자(`aria-hidden`, 칩·아이콘 배경 금지), 단계 구분은 헤어라인(`border-border dark:border-border/40`), 카드는 "시크릿에셋으로 하면" 면 1장만. 행동 블록은 brand 주 버튼 + secondary 보조 버튼 `h-11`, 본문 링크는 `text-primary` + 밑줄 + `min-h-10`. 슬래시 어구(국내/해외)는 nowrap, 모든 한글 블록 `break-keep`.
 - 상단바 1회 안내 카드: 헤더 `overflow-x-clip`(세로 허용) 안 `absolute right-3 top-full`, `bg-card rounded-xl shadow-lg`, 확인=brand·취소=ghost. 한 줄 안내 스트립(세금 시즌)은 X-Ray 스트립과 같은 클래스 복제.
 
+## 13. 메뉴 행 화면 · 차트 라벨 규약 (#4.46)
+- 더보기·설정 메뉴: 섹션 제목 `text-muted-foreground`(라이트·다크 같은 위계, 인디고 금지), 행 아이콘 단색 muted(삭제 행만 rose), 최대 폭 `max-w-2xl` 좌정렬, 상태는 ON/OFF 배지(`menuBadge`). 한 줄 안내가 길면 단위 구간을 `whitespace-nowrap`으로 묶는다.
+- 차트 조각 라벨 글자색은 조각색 대비 4.5:1 이상인 흰/검정(`pickDonutLabelColor`), 투명 카드 위 조각 경계는 `--card`가 아니라 `--background`. 조각 안에 들어가지 않는 라벨은 숨기고 범례로 대체한다(`DONUT_LABEL_MIN_PCT`).
+
 ---
 
 _최종 정의: 2026-06-25 · 색 토큰(블랙/화이트/순자산 주황·브랜드 인디고)·간격/반경/고도·컴포넌트 규약·모션 폴리시(UI 디테일)·정보 설계 휴리스틱(구 ui-design-guidelines.md 흡수)·접근성 종합. **단일 출처**._
