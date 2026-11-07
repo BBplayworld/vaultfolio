@@ -26,6 +26,7 @@
 |---|---|---|---|---|
 | #57 가족 금고 함께 쓰기 | 4.38 | on-hold | — | 신규 유입 기여 미미로 보류(2026-10-31). 동기화 사용 4기기 중 2대가 대표 기기. 문서(issues/4.38-57-family-vault/)는 보존, 충돌 덮임 결함 의심은 qa 확인 후 type:bug로 분리 |
 | #75 상세 다크 BOX 등 | 4.44 | done | — | 2026-11-06 머지 dee5be9, 운영 스모크 대기 |
+| #80 배당 투입 대비 배당률 | 4.46 | planning ①(direction·spec 초안) | business-pm·cto | business-pm 사업 절 확정 → cto challenge → spec 승인 → ui.md |
 | #58 실물 자산 등록(금 등) | 4.47 | design-review(문서만) | planner-designer·developer | D6 선정: 지금 tech-review 완료(~11/30), 코드 12/5~(4.46 머지 후), owner-review 12/21, 머지 12/11~12/26(대표 승인, high). 12/21 qa 미PASS면 4.47에서 제외 |
 
 ## 열린 릴리스
@@ -53,6 +54,7 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- [type:bug 후보, #80 기획 중 발견, 기존 현상] 배당 금액 계산이 엔화(JPY) 종목을 환산하지 않음(`dividend-chart.tsx`·`performance-hub.tsx` rate = USD ? usdRate : 1). 해외 API excd NAS 고정이라 실제 영향 작을 수 있음 → qa 재현 후 p2 동승 판단
 - [D6 선정 2026-11-06] 배치는 '다음 정기 실행 지시' D6 절 참조. **D6 탈락**: 공개 배당 달력(앱 배당 화면과 중복 = #71 반려 패턴) · 웹 바이탈 GA 이벤트(11-06 GA 단순화 결정과 충돌) · CSP enforce(체감 0·medium) · 상세 허브 비중 %(홈 도넛과 지표 중복 C1, 4.44 비중 % 제거 방향 역행) · `/asset` 서버 redirect(start_url `/`, 링크 유입 0) · SW 캐시 정리·viewport userScalable(근거 부족, 보류) · AGENTS.md(현행 유지) · 세금 일정 12월 항목(홈 세금 팁이 결산 팁을 밀어냄 + 휴장 의존 날짜 정확성) · 배당 종목별 % 열(U2 375 붕괴 악화) · manifest screenshots·shortcuts(에셋·데모 필요, 효과 불명)
 - [p2 후보, type:bug(UI), 기존 현상] 상세 주식 행 320px: 손익 억 단위면 우측 열이 폭을 거의 차지해 종목명 1~2자·손익 줄이 수량/배지와 겹침, 일반 금액도 긴 이름 어절 중간 줄바꿈 → 모바일 손익 줄 축약 또는 이름 최소 폭(4.44 ui-review 4d3a024 참고, 375 정상)
 - [4.47로 이동(D6), #75 후속, risk:low] 월 탭 결산 원인 아래 '자산 구성 변화' 블록(전월 말→지금 두 시점, 사실 1줄·100% 막대 2줄·자산군 행, 클릭 없음) — settlement-view.tsx 수정이라 #54 판독(12/11) 후 12/11~12/26 머지(12/28 결산 창 전). 근거 issues/4.44-75-detail-dark-surfaces/4.44-direction-v3.md 3절·4.44-challenge-v3.md. GA 키 activity:change:composition 재사용. #58·12/11 D 선정과 결산 파일 동시 수정 시 순서 조정, 용량 초과면 먼저 미룸. 연 탭 '작년 말 대비'는 2027-02 재검토
