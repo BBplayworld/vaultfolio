@@ -68,7 +68,7 @@ export type TreemapItem = { key: string; name: string; value: number; color: str
 
 const RADIAN = Math.PI / 180;
 
-function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, value, activeTab, itemKey, maskFn }: {
+export function DonutLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, pct, value, activeTab, itemKey, maskFn }: {
   cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number;
   name: string; pct: number; value: number; activeTab?: string; itemKey?: string;
   maskFn?: (v: number) => string;
