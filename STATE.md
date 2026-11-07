@@ -28,6 +28,7 @@
 | #75 상세 다크 BOX 등 | 4.44 | done | — | 2026-11-06 머지 dee5be9, 운영 스모크 대기 |
 | #80·#81·#82 (배당률·더보기 정돈·홈 도넛) | 4.46 | planning ② 통과(cto 2026-11-07, 각 이슈 폴더 4.46-challenge.md) → development 즉시 | developer·qa | 4.46 브랜치 개설·구현, qa PASS ~11/19, 위임 머지 ≤11/26 목표. #84(high) 동승 시 릴리스 전체 대표 승인 — 11/24까지 #84 미PASS면 4.47로 분리(DECISIONS 2026-11-07) |
 | #84 동기화 소실 방지(A안) | 4.47 | qa PASS(fdd376e)·UI 승인·COO PASS → decision-brief 완료(2026-11-07, 권고 반영). 문서 `issues/4.47-84-sync-overwrite/4.47-*.md` | 오케스트레이터 | PR #88 `status:owner-review`·risk:high 라벨, 대표 승인 요청 ① 발송. 이슈 #84 제목 [4.46]→[4.47] 정정 필요 |
+| #83 월 탭 자산 구성 변화 블록 | 4.48 | planning ①② 초안(planner 2026-11-07, `issues/4.48-83-month-composition/4.48-direction.md`·`4.48-spec.md`). 사업 절은 대리 초안 | business-pm·ui-designer | business-pm 사업 절 확정·합의 → ui.md(4.44-ui-v3-composition 리본 제외 재사용) → cto challenge. 코드 12/5~, 머지 12/11 판독 후 ≤12/26(결산 화면이라 대표 승인), #58 동승 시 같은 PR에서 physical 키 추가 |
 | #58 실물 자산 등록(금 등) | 4.47 | design-review(문서만) | planner-designer·developer | D6 선정: 지금 tech-review 완료(~11/30), 코드 12/5~(4.46 머지 후), owner-review 12/21, 머지 12/11~12/26(대표 승인, high). 12/21 qa 미PASS면 4.47에서 제외 |
 
 ## 열린 릴리스
