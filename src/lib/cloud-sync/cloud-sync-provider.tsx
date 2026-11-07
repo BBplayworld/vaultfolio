@@ -18,6 +18,12 @@ import { useAssetData, ASSET_USER_EDIT_EVENT } from "@/contexts/asset-data-conte
 import { isPwaLocked, PWA_UNLOCKED_EVENT } from "@/lib/pwa/app-lock";
 import { NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { getAssetData } from "@/lib/asset/asset-storage";
+import { persistNickname } from "@/hooks/use-nickname";
+import { track } from "@/lib/analytics/ga";
+import {
+  applyRevert, beginPull, beginPush, captureSnapshot, commitPull, commitPush, getBaseline, getEntries,
+  refreshEntries, resetOverwriteGuard, setBaseline, setEntries, type OverwriteEntry,
+} from "./overwrite-guard";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { isInAppGateActive } from "@/lib/pwa/detect-browser";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
@@ -61,6 +67,15 @@ interface CloudSyncContextValue {
   pushNow: () => Promise<PushResult>;
   pullNow: () => Promise<PullResult>;
   forget: () => void;
+  /** 동기화로 덮인 내 변경 목록(이 앱 실행 동안만 보관, #84) */
+  overwriteEntries: OverwriteEntry[];
+  showOverwriteList: boolean;
+  setShowOverwriteList: (show: boolean) => void;
+  /** 목록 재계산(R1) — 뺀 건수와 남은 건수를 반환 */
+  refreshOverwrites: () => { dropped: number; count: number };
+  /** 목록 항목만 내 값으로 되돌린다(사용자 편집과 같은 저장 경로 + 일반 push) */
+  revertOverwrites: () => number;
+  dismissOverwrites: () => void;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue | null>(null);
@@ -80,7 +95,7 @@ function buildLink(assetId: string): string {
 
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const enabled = isCloudSyncEnabled();
-  const { assetData, initAndSync } = useAssetData();
+  const { assetData, initAndSync, saveData } = useAssetData();
 
   const keysRef = useRef<AssetKeys | null>(null);
   const assetIdRef = useRef<string | null>(null);
@@ -105,6 +120,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const [showConnectDialog, setShowConnectDialog] = useState(false);
   // 사용자 편집 신호마다 증가 → 자동 push 효과 재실행 (닉네임은 assetData state를 바꾸지 않으므로 tick 필수)
   const [changeTick, setChangeTick] = useState(0);
+  // 덮임 알림(#84) — 목록 정본은 overwrite-guard(메모리), 여기는 렌더용 미러
+  const [overwriteEntries, setOverwriteEntries] = useState<OverwriteEntry[]>([]);
+  const [showOverwriteList, setShowOverwriteList] = useState(false);
+  const overwriteNoticeTrackedRef = useRef(false); // 덮임 알림 GA는 실행당 1회
+  const lastPullOverwroteRef = useRef(false); // 직전 pull이 덮임 토스트를 띄웠는지(기존 토스트 대체 판단)
 
   // 사용자 명시 편집(자산 CRUD·닉네임) → push 대기 플래그 + tick 증가
   useEffect(() => {
@@ -128,6 +148,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     setAssetIdState(assetId);
     setStatus("armed");
     setLastSyncedAt(getLastSyncedAt());
+    // 기준이 없으면 지금 상태를 기준으로(이후 이 실행에서 바꾼 것만 내 변경) — 연결 직후 pull은 감지 대상이 아니다
+    if (!getBaseline()) setBaseline(captureSnapshot(getAssetData()));
   }, []);
 
   // 마운트: 기억된 기기면 자동 무장, 아니면 locked/none.
@@ -157,6 +179,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         // force:true로 편집-보류 가드를 우회 — 아직 armed 전이라 사용자 편집이 있을 수 없다.
         await autoPullRef.current({ force: true });
         if (cancelled) return;
+        // 원격이 더 새롭지 않아 pull이 없었던 경우에도 기준을 잡아 둔다(이후 편집만 내 변경으로 본다)
+        if (!getBaseline()) setBaseline(captureSnapshot(getAssetData()));
         setStatus("armed");
       } else {
         setStatus(aid ? "locked" : "none");
@@ -204,9 +228,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!keys || !aid) return { status: "error", message: "잠금 해제가 필요합니다." };
     if (busyRef.current) return { status: "error", message: "동기화 중입니다." };
     busyRef.current = true; setSyncing(true);
+    const pushedSnap = beginPush(getAssetData()); // pushAsset이 payload를 만드는 시점과 같은 동기 구간의 사본
     const r = await pushAsset(aid, keys);
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
+      commitPush(pushedSnap);
       userEditRef.current = false;
       setLastSyncedAt(getLastSyncedAt());
       // lastBackupAt은 건드리지 않는다 — "데이터 백업(파일 내보내기)"만의 사실이다.
@@ -214,7 +240,6 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       // 넛지 오탐은 shouldShowBackupNudge가 syncArmed로 이미 차단하므로 여기서 기록할 필요가 없다.
       if (!silent) toast.success("클라우드에 백업했습니다.");
     } else if (r.status === "conflict") {
-      if (!silent) toast.info("클라우드가 더 최신이라 최신 데이터를 반영합니다.");
       // conflict는 push 성공이 아니라 userEditAt이 남아 있다 → force로 편집 보류 가드를 넘긴다.
       // 넘기지 않으면 push→conflict→pull차단이 반복되며 영구히 수렴하지 않는다.
       // await + 실패 시 짧은 재시도 — fire-and-forget이면 실패(네트워크 등)가 다음 60초 폴링까지
@@ -223,10 +248,35 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       if (!recovered || recovered.status !== "ok") {
         setTimeout(() => { void autoPullRef.current({ force: true }); }, 3000);
       }
+      // pull이 끝난 뒤에만 안내한다 — 덮임 토스트가 떴으면 그것 하나만(동시 2개 금지)
+      if (!silent && !lastPullOverwroteRef.current) toast.info("클라우드가 더 최신이라 최신 데이터를 반영합니다.");
     } else if (!silent) {
       toast.error(r.message);
     }
     return r;
+  }, []);
+
+  const showOverwriteToast = useCallback((count: number) => {
+    // 고정 id — 재발생 시 쌓이지 않고 건수만 갱신
+    toast.info("다른 기기 변경을 반영했어요", {
+      id: "sync-overwrite",
+      testId: "sync-overwrite-toast",
+      description: `이 기기에서 고친 ${count}건이 바뀌었어요. 앱을 닫기 전까지 되돌릴 수 있어요.`,
+      duration: 12000,
+      closeButton: true,
+      action: { label: "확인하기", onClick: () => setShowOverwriteList(true) },
+      actionButtonStyle: { background: "var(--brand)", color: "#fff" },
+      // OS 라이트 + 앱 다크처럼 sonner 테마와 앱 테마가 어긋나도 4.5:1이 되게 설명·닫기 버튼 색을 앱 토큰(토스트 배경 popover과 짝)으로 지정
+      classNames: {
+        description: "!text-sm !text-muted-foreground text-pretty break-keep",
+        actionButton: "!h-10 !px-3 !text-sm",
+        closeButton: "!bg-popover !text-popover-foreground !border-border after:absolute after:-inset-2.5",
+      },
+    });
+    if (!overwriteNoticeTrackedRef.current) {
+      overwriteNoticeTrackedRef.current = true;
+      track("feature_use", { category: "sync_overwrite_notice" });
+    }
   }, []);
 
   const runPull = useCallback(async (auto: boolean): Promise<PullResult> => {
@@ -234,6 +284,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!keys || !aid) return { status: "error", message: "잠금 해제가 필요합니다." };
     if (busyRef.current) return { status: "error", message: "동기화 중입니다." };
     busyRef.current = true; setSyncing(true);
+    lastPullOverwroteRef.current = false;
+    const beforeSnap = beginPull(getAssetData(), auto); // 기준이 없으면 null → 감지 안 함
     const r = await pullAsset(aid, keys);
     busyRef.current = false; setSyncing(false);
     if (r.status === "ok") {
@@ -242,14 +294,21 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       // pull이 로컬을 덮어썼으므로 대기 중이던 사용자 편집도 더는 존재하지 않는다(즉시 되-push 방지)
       userEditRef.current = false;
       setLastSyncedAt(getLastSyncedAt());
-      if (auto) toast.info("다른 기기의 변경을 반영했습니다.");
+      const overwrite = commitPull(beforeSnap, getAssetData());
+      setOverwriteEntries(getEntries());
+      if (overwrite.added > 0) {
+        lastPullOverwroteRef.current = true;
+        showOverwriteToast(overwrite.total);
+      } else if (auto) {
+        toast.info("다른 기기의 변경을 반영했습니다.");
+      }
       // 원격에 없던 로컬 항목을 되살렸으면 그 병합 결과를 서버에도 즉시 올린다 — 올리지 않으면
       // 이 기기에만 남아 다음 pull 때 또 사라진다(추가 전용 병합의 반쪽만 적용되는 상태 방지).
       // busyRef가 이미 해제된 뒤라 재진입 가능하고, baseVersion도 방금 pull로 최신이라 통과한다.
       if (r.mergedAdditions) void runPushRef.current(true);
     }
     return r;
-  }, [initAndSync, runPushAfterRestoreFix]);
+  }, [initAndSync, runPushAfterRestoreFix, showOverwriteToast]);
 
   // 사용자 편집(자산·닉네임) → 무장 시 디바운스 push
   useEffect(() => {
@@ -312,6 +371,8 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!passphrase) return { ok: false, message: "금고 암호를 입력하세요." };
     const aid = generateAssetId();
     clearSyncState();            // 이전 금고 흔적 제거(버전·기억 초기화)
+    resetOverwriteGuard();
+    setOverwriteEntries([]);
     setAssetId(aid);
     assetIdRef.current = aid;
     const keys = await deriveKeys(passphrase, aid);
@@ -328,10 +389,14 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     const keys = await deriveKeys(passphrase, aid);
     keysRef.current = keys;
     assetIdRef.current = aid;
+    // 연결 직후 pull은 사용자가 덮어쓰기를 확인한 경로 — 감지하지 않고 기준·목록을 비운다
+    resetOverwriteGuard();
+    setOverwriteEntries([]);
     const r = await pullAsset(aid, keys, { merge });
     if (r.status === "error") { keysRef.current = null; return { ok: false, message: r.message }; }
     if (r.status === "empty") { keysRef.current = null; return { ok: false, message: "클라우드에 금고가 없습니다." }; }
     await arm(aid, keys, remember);
+    setBaseline(captureSnapshot(getAssetData())); // 방금 pull한 상태가 새 기준(이전 기준이 남아 있으면 오탐)
     // 외부 데이터로 연동된 기기는 튜토리얼 전체 스킵 (공유 경로 applySharedData와 동일)
     skipAllTutorialSteps();
     tutorialStore.getState().initTutorial();
@@ -366,9 +431,40 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     keysRef.current = null;
     assetIdRef.current = null;
     clearSyncState();
+    resetOverwriteGuard();
+    setOverwriteEntries([]);
+    setShowOverwriteList(false);
     setAssetIdState(null);
     setStatus("none");
     setLastSyncedAt(null);
+  }, []);
+
+  // ── 덮임 되돌리기(#84) ──
+  const refreshOverwrites = useCallback(() => {
+    const plan = refreshEntries(getAssetData());
+    setOverwriteEntries(getEntries());
+    return { dropped: plan.dropped, count: plan.valid.length };
+  }, []);
+
+  const revertOverwrites = useCallback((): number => {
+    const plan = refreshEntries(getAssetData());
+    const entries = plan.valid;
+    if (entries.length === 0) { setOverwriteEntries([]); return 0; }
+    const current = getAssetData();
+    const next = applyRevert(current, entries);
+    // 사용자 편집과 같은 경로: saveData(저장 + notifyAssetUserEdit) → 일반 디바운스 push
+    saveData(next);
+    if (next.nickname !== current.nickname) persistNickname(next.nickname ?? "");
+    setEntries([]);
+    setOverwriteEntries([]);
+    setShowOverwriteList(false);
+    return entries.length;
+  }, [saveData]);
+
+  const dismissOverwrites = useCallback(() => {
+    setEntries([]);
+    setOverwriteEntries([]);
+    setShowOverwriteList(false);
   }, []);
 
   const pushNow = useCallback(() => runPush(false), [runPush]);
@@ -381,6 +477,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         syncing, lastSyncedAt, pendingConnectAssetId,
         showConnectDialog, setShowConnectDialog,
         enableSync, unlock, connect, clearPendingConnect, pushNow, pullNow, forget,
+        overwriteEntries, showOverwriteList, setShowOverwriteList, refreshOverwrites, revertOverwrites, dismissOverwrites,
       }}
     >
       {children}

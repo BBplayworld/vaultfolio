@@ -44,7 +44,10 @@ const TOAST_STALE_MS = 4_000;
 const dismissStaleToasts = () => {
   const now = Date.now();
   if (lastToastAt > 0 && now - lastToastAt > TOAST_STALE_MS) {
-    toast.dismiss();
+    // 동기화 덮임 토스트(#84)는 12초 유지가 사양 — 전체 닫기에서 제외
+    for (const t of toast.getToasts()) {
+      if ((t as { id?: string | number }).id !== "sync-overwrite") toast.dismiss((t as { id?: string | number }).id);
+    }
   }
   lastToastAt = now;
 };

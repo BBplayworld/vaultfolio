@@ -454,3 +454,6 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - `DividendCard`(`views/activity/dividend-chart.tsx`): Hero 금액 아래 `data-testid="dividend-yield"` 블록(값 줄 "투입 대비 배당 N%" + 캡션). 계산은 `computeDividendYield(items, usdRate, mode)` 순수 함수(`lib/finance/dividend-yield.ts`). 조회 중·배당 0·계산 불가면 미렌더, 월 선택 시 언마운트 대신 `opacity-0 aria-hidden`
 - `menu-styles.ts`(`header-menu/`): 더보기·설정 공용 `MENU_COLUMN`(max-w-2xl 좌정렬)·`MENU_ROW`·`MENU_ROW_DESTRUCTIVE`·`MENU_SECTION_LABEL`(muted)·`MENU_ICON`(단색)·`MENU_LABEL`·`MENU_DESC`·`menuBadge(on)`(앱 잠금·다크 모드 ON/OFF 배지)
 - `AssetDonutChart`/`DonutLabel`(`views/home/dashboard.tsx`): 홈은 이름+% 2줄·`DONUT_LABEL_MIN_PCT(name)` 미만이면 라벨 없음·`pickDonutLabelColor(color)` 글자색·조각 stroke `var(--background)`·범례 열 정렬. `screenshotMode`(웰컴)는 `legacy` 경로로 3줄 라벨·`var(--card)`·기존 범례 유지(스냅샷 `__tests__/donut-welcome-snapshot.test.tsx`)
+
+### 동기화 덮임 알림·되돌리기 (#4.47 #84)
+- `SyncOverwriteDialog`(`functions/cloud-sync/sync-overwrite-dialog.tsx`): `CloudSyncProvider` 하위 항상 마운트(layout). `useCloudSync()`의 `showOverwriteList`·`overwriteEntries`·`refreshOverwrites`·`revertOverwrites`·`dismissOverwrites` 사용. 열 때·확정 때 목록 재계산(R1), 확정 시 건수가 줄면 "그사이 바뀐 M건은 목록에서 뺐어요." 후 재확정. 기기 동기화 다이얼로그(`cloud-sync-menu-entry.tsx`) armed 상태줄 아래 `sync-overwrite-card`가 같은 다이얼로그를 연다
