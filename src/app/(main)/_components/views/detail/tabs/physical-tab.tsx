@@ -34,8 +34,8 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
               <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLOR }}>
                 <Gem className="size-3.5 sm:size-4 text-white" />
               </div>
-              <div className={ASSET_THEME.cardInfoLeft}>
-                <div className={ASSET_THEME.cardInfoTitle}>
+              <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
+                <div className={`${ASSET_THEME.cardInfoTitle} min-w-0 flex-nowrap`}>
                   <span className={`${ASSET_THEME.cardInfoName} truncate min-w-0`}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>

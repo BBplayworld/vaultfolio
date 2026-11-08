@@ -83,7 +83,7 @@ function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose
                 size="md"
                 value={selectedType}
                 onChange={(v) => { field.onChange(v); setSelectedType(v); }}
-                options={physicalAssetTypes.map((t) => ({ value: t.value, label: t.shortLabel }))}
+                options={physicalAssetTypes.map((t) => ({ value: t.value, label: t.shortLabel, testId: `physical-type-${t.value}` }))}
                 ariaLabel="실물 자산 종류 선택"
               />
               <FormMessage />

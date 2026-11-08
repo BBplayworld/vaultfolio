@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-08 (v4.55)
+
+### 실물 자산 등록 (#4.55, 이슈 #58, risk high)
+- **왜**: 금 등 실물이 현금·부동산 'other'로 위장 입력되거나 빠졌다. 평가액 방식(매입가·현재 평가액, 시세 없음)으로 5유형(금·은·귀금속·수집품·기타) 등록.
+- **저장**: 분리 키 `secretasset.physical_assets`(secretasset_ 접두 아님 → 구버전 clearAssetData·접두 정리에 안 걸려 롤백해도 보존). `saveAssetData`/`saveAssetDataRaw`는 `physicalAssets===undefined`면 분리 키 미변경, `[]`는 삭제 의도, 본 키에는 쓰지 않음. `getAssetData`가 합쳐 `assetData.physicalAssets`로 제공. 읽기는 완화(모르는 type→other, passthrough, 제약 위반 항목 유지).
+- **동기화·가져오기**: 원격 키 없음=로컬 유지, 있으면 mergeById. 구 백업 가져오기는 유지+토스트(`physicalKept`). 공유 반영·모든 삭제·데모 주입은 `clearPhysicalAssets`. 월 스냅샷 병합은 구버전(physical 필드 없음)이 로컬 실물 스냅샷을 덮지 못함. 체험 거부는 분리 키도 확인.
+- **합산·결산**: `computeNetAsset/Cost`·스냅샷(`breakdown.physical`·`cost.physical`, 0도 기록)·요약, `hasAnyAssets` 인라인 5종 체인 교체. 원인 키 `price/buy/sell:physical`(평가 갱신은 부동산과 합산, 매입은 내부 이동 풀, `matchRecordedTransfers` 후보에 실물 신규분), #84 COLLS·#83 구성 키(색 MAIN_PALETTE[8]).
+- **UI**: `physical-input.tsx`·`physical-tab.tsx`, 허브 카드(1건 이상), FAB 행, 홈 도넛 조각(색 고정, 클릭→실물 탭), 복원 코드 미포함 안내. GA는 page_title '자산 저장·실물 자산'만.
+- 알려진 한계 4개: 구버전 '모든 삭제' 후 잔존·노출 / 구버전 기기가 쓴 날 일별 그래프 하락 / 복원 코드 제외 / 구 백업 가져오기 시 실물 기존 값 유지.
+
+---
+
 ## 2026-11-08 (v4.51)
 
 ### 월 탭 자산 구성 변화 블록 (#4.51, 이슈 #83, risk low)

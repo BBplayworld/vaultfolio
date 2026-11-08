@@ -4,6 +4,9 @@
 
 ## 자산 컴포넌트 (`src/app/(main)/_components/`)
 
+### PhysicalInput · PhysicalTab (`forms/asset-update/input/physical-input.tsx`, `views/detail/tabs/physical-tab.tsx`, #4.55)
+- 실물 자산 폼(Dialog+react-hook-form, 이벤트 `trigger-add-physical`/`trigger-edit-physical{id}`, `dispatchAddPhysical`)과 상세 탭(real-estate-tab 복제·축소: 카테고리 선택기·비중 막대 없음). 색은 `MAIN_PALETTE[8]` 고정. 허브 카드는 `physicalCount>0`일 때만. 신규 공용 컴포넌트·토큰 없음.
+
 > **구조 변경(2026-06)**: `(main)/asset/` 레이어 제거 → `(main)/_components/`로 평탄화, `header` → `header-menu`로 rename. (이전 2026-05-23 rename: `bottom-nav`→`forms`, `main-nav`→`views`, `top-nav`→`header`)
 
 ```

@@ -144,6 +144,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 업비트 미상장 코인(해외 거래소 전용) 수동값 보존, 코인 0개일 때 호출 자체 스킵
 - 회귀: 코인 시세 갱신(`baseDate`·`currentPrice`)이 push를 유발하지 않는지(R14 — 자동 push는 사용자 편집 신호만), 공유 토큰(packV7) crypto 섹션 8필드 유지(R3)
 
+### F-PHYSICAL. 실물 자산 (#4.55, 이슈 #58) — 분리 키 `secretasset.physical_assets`
+- 등록: FAB → 보유 현황 업데이트 → 실물 자산(0건이면 연필 없음) → 폼(종류 5칩·이름·평가액·매입가 선택·매입일·메모, 등록 시 이중 계상 안내). 저장 토스트 "실물 자산을 저장했어요."
+- 표시: 허브 카드(1건 이상)·실물 탭(평가액 내림차순, 삭제 마지막 1건이면 허브 복귀)·홈 도넛 "실물" 조각(색 #7a6236, 클릭→실물 탭). 순자산에 합산, 금융자산엔 미포함.
+- 데이터: 본 키에 physicalAssets 없음, 구버전 pull·가져오기·저장 후에도 보존, 구 백업 가져오기는 유지+토스트, 복원 코드 미포함 안내, 모든 삭제·공유 반영 시 비움, `/?trial=1` 거부.
+- 결산: 평가액 수정=평가 갱신, 등록=내부 이동 풀(출금 ±3일 짝짓기), 월·연 원인 합계=Δ순자산. 실물 0건이면 기존 화면과 동일.
+
 ### F-REALESTATE. 부동산 실거래 추정 ([realestate-service.ts](../../src/lib/realestate/realestate-service.ts) · [api/realestate](../../src/app/api/realestate/route.ts)) — 명세 [S-4.21](../specs/4.21-realestate-transaction-price.md)
 - ⚙ **데이터셋별 면적 필드**(AC8): apt/offi/rh=`excluUseAr`, sh=`totalFloorAr`, nrg=`buildingAr`, 폴백 `plottageAr`. `areaKind`(exclusive/gross/plottage)가 다른 거래는 **절대 섞어 비교하지 않으며**, 후보 0건이어도 전체 풀로 되돌리지 않는다
 - ⚙ **오매칭 차단**(AC9): `matchBy:"area"`(단독 sh·상가 nrg)에서 면적 미상이면 `matchTrade`는 반드시 `null`. 과거 회귀 = 시군구 전체 최근 거래 1건이 추정치로 노출됨
