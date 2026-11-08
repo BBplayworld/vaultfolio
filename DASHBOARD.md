@@ -17,8 +17,8 @@
 ## 🔄 진행 중 (팀 자율 — #83·#58은 대표 위임 판단: cto 통과)
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
 |---|---|---|---|---|
-| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa PASS·COO PASS @757c9b0 → **11/11 00:05 위임 머지 예약**(10월 결산 창 10/28~11/10 종료 후) ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | qa → COO → 머지 ≤11/19 (컷 11/26) | 위임 머지 (risk:low) |
-| 4.54 | #58 실물 자산 | spec·tech-review 정정 완료 → **개발 착수(11/09, 앞당김)** — 저장 계층·복원/동기화 테스트부터 | 개발 11/18~12/2 → qa ~12/9 → 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high, 복원·왕복·동기화 테스트 필수) |
+| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa PASS·COO PASS @757c9b0 → **11/11 00:05 위임 머지 예약**(10월 결산 창 10/28~11/10 종료 후) ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | 11/11 머지 → 운영 스모크 | 위임 머지 (risk:low) |
+| 4.54 | #58 실물 자산 | spec·tech-review 정정 완료 → **개발 착수(11/09, 앞당김)** — 저장 계층·복원/동기화 테스트부터 | 개발 ~11/30 → qa ~12/9(하네스 여유) → 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high, 복원·왕복·동기화 테스트 필수) |
 | 다음 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | D8 선정(cto 축소 통과) → 방향 정의 중 | 기획·설계 즉시, 개발 4.52 머지(11/11) 뒤 → 위임 머지 ≤11/26 | 위임 머지 (risk:low) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
