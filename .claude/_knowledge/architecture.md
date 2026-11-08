@@ -37,7 +37,7 @@ src/
 │   │   └── _components/
 │   │       ├── forms/                # (구 bottom-nav) 자산 입력 폼 + 스크린샷/거래 다이얼로그
 │   │       │   ├── asset-update/
-│   │       │   │   ├── input/        # stock/crypto/cash/loan/real-estate/exchange-rate-input
+│   │       │   │   ├── input/        # stock/crypto/cash/loan/real-estate-input
 │   │       │   │   └── screenshot/   # stock/crypto/cash/loan-screenshot-import
 │   │       │   └── trade/            # trade-input, trade-screenshot-import, guards/delete-rollback-dialog
 │   │       ├── views/                # (구 main-nav) 페이지 본문 콘텐츠

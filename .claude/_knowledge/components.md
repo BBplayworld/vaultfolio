@@ -12,8 +12,8 @@ _components/
 │   ├── asset-update/
 │   │   ├── input/          # 자산 입력 폼 + 목록 렌더링
 │   │   │   ├── stock-input.tsx          # 주식 (국내/해외/IRP/ISA/연금/비상장)
-│   │   │   ├── real-estate-input.tsx, cash-input.tsx, crypto-input.tsx, loan-input.tsx
-│   │   │   └── exchange-rate-input.tsx
+│   │   │   └── real-estate-input.tsx, cash-input.tsx, crypto-input.tsx, loan-input.tsx
+│   │   ├── balance-resync-dialog.tsx   # 현금·대출 잔액 맞추기(#4.52 #93)
 │   │   └── screenshot/     # 스크린샷 가져오기 다이얼로그
 │   │       └── stock/crypto/cash/loan-screenshot-import.tsx  # 4종 모두 upload→conflict(중복 시)→preview, 병합형(merge/reset, S-4.30) — `lib/holdings-conflict.ts` 공용
 │   └── trade/              # trade-input, trade-screenshot-import(주식), crypto-trade-screenshot-import.tsx(코인, S-4.30)
@@ -457,5 +457,7 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - `AssetDonutChart`/`DonutLabel`(`views/home/dashboard.tsx`): 홈은 이름+% 2줄·`DONUT_LABEL_MIN_PCT(name)` 미만이면 라벨 없음·`pickDonutLabelColor(color)` 글자색·조각 stroke `var(--background)`·범례 열 정렬. `screenshotMode`(웰컴)는 `legacy` 경로로 3줄 라벨·`var(--card)`·기존 범례 유지(스냅샷 `__tests__/donut-welcome-snapshot.test.tsx`)
 
 ### 동기화 덮임 알림·되돌리기 (#4.47 #84)
+- `BalanceResyncDialog`(`forms/asset-update/balance-resync-dialog.tsx`, #4.52 #93): 현금·대출 보유 ≥1건일 때 FAB `직접 입력`이 `trigger-resync-balance`(`dispatchResyncBalance`)로 여는 잔액 맞추기. prop `category="cash"|"loan"`, `CashInput`·`LoanInput`이 각각 마운트. Dialog 3분할(헤더/스크롤 본문/고정 푸터)·행 2줄 스택(이름·`현재 …`/입력)·`변경` 라벨+brand ring·오류(현금 0)·경고(자릿수)·`바뀐 N개 저장`. 계산은 `lib/asset/balance-edits.ts`, 저장은 `getAssetData()`+`saveData` 1회. 변경 ≥1이면 바깥 탭·Esc 차단.
+- `YearlyAddLink`(`views/activity/net-asset-chart.tsx` 로컬): 연도별 순자산 입력 창을 여는 인라인 링크(`dispatchOpenYearlyNetAsset`), 연 탭 빈 상태·1점 Hero 공용
 - `HoldingsResyncDialog`(`forms/asset-update/screenshot/holdings-resync-dialog.tsx`, #4.50 #91): 주식·코인 보유 ≥1건일 때 `stock-input`·`crypto-input` 진입 분기가 여는 `스크린샷으로 보유 현황 맞추기`. props `open`·`onOpenChange`·`kind="stock"|"crypto"`. 3단계(올리기·인식 최대 5장 순차 → 변경 미리보기 → 결과·되돌리기), 문구 증권사/거래소·주식/코인은 `COPY`+`KindCtx`. 계산은 `lib/asset/resync`, 저장은 적용·되돌리기 핸들러의 `saveData` 1회. 로컬 조각: `UploadStep`·`ShotThumb`·`PreviewStep`·`ItemRow`·`NeedsRow`·`CheckRow`(공용 승격 시 등록)
 - `SyncOverwriteDialog`(`functions/cloud-sync/sync-overwrite-dialog.tsx`): `CloudSyncProvider` 하위 항상 마운트(layout). `useCloudSync()`의 `showOverwriteList`·`overwriteEntries`·`refreshOverwrites`·`revertOverwrites`·`dismissOverwrites` 사용. 열 때·확정 때 목록 재계산(R1), 확정 시 건수가 줄면 "그사이 바뀐 M건은 목록에서 뺐어요." 후 재확정. 기기 동기화 다이얼로그(`cloud-sync-menu-entry.tsx`) armed 상태줄 아래 `sync-overwrite-card`가 같은 다이얼로그를 연다
