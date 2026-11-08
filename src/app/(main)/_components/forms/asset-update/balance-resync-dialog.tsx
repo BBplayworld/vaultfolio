@@ -217,11 +217,11 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
 
         <DialogFooter className="border-t border-border/40 px-5 pb-5 pt-3">
           {saveError && <p className="text-sm text-destructive sm:mr-auto sm:self-center" role="alert">{saveError}</p>}
-          <Button ref={saveRef} type="button" variant="brand" data-testid="balance-resync-save" disabled={!canSave} onClick={handleSave} className="whitespace-nowrap tabular-nums">
+          <Button ref={saveRef} type="button" variant="brand" data-testid="balance-resync-save" disabled={!canSave} onClick={handleSave} className="h-10 whitespace-nowrap tabular-nums">
             {saving && <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden />}
             {changedCount > 0 ? `바뀐 ${changedCount}개 저장` : "저장"}
           </Button>
-          <Button type="button" variant="secondary" data-testid="balance-resync-cancel" onClick={() => setOpen(false)} className={flashCancel ? "motion-safe:ring-2 motion-safe:ring-ring/50" : ""}>
+          <Button type="button" variant="secondary" data-testid="balance-resync-cancel" onClick={() => setOpen(false)} className={`h-10 ${flashCancel ? "motion-safe:ring-2 motion-safe:ring-ring/50" : ""}`}>
             취소
           </Button>
         </DialogFooter>
