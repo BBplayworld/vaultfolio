@@ -188,11 +188,19 @@ describe("동기화 병합 단위 (collectAssetIds·reconcileAdditiveMerge)", ()
     expect(collectAssetIds({ ...emptyData(), physicalAssets: [gold("P1")] })).toContain("P1");
     expect(collectAssetIds(emptyData())).toEqual([]);
   });
-  it("원격에 키가 없으면 병합하지 않는다(changed=false, 원격 그대로)", () => {
+  it("원격에 키가 없고 로컬 실물이 있으면 로컬 실물을 실어 changed=true(재-push 유도), 로컬도 없으면 changed=false", () => {
     const before = { ...emptyData(), physicalAssets: [gold("P1")] };
     const r = reconcileAdditiveMerge(before, emptyData(), new Set());
+    expect(r.changed).toBe(true);
+    expect(r.data.physicalAssets).toEqual([gold("P1")]);
+    const none = reconcileAdditiveMerge(emptyData(), emptyData(), new Set());
+    expect(none.changed).toBe(false);
+    expect(none.data.physicalAssets).toBeUndefined();
+  });
+  it("원격 [](삭제 의도)는 키 없음과 구분된다: 기준점에 있던 항목은 삭제 존중", () => {
+    const r = reconcileAdditiveMerge({ ...emptyData(), physicalAssets: [gold("P1")] }, { ...emptyData(), physicalAssets: [] }, new Set(["P1"]));
     expect(r.changed).toBe(false);
-    expect(r.data.physicalAssets).toBeUndefined();
+    expect(r.data.physicalAssets).toEqual([]);
   });
   it("원격에 키가 있으면: 로컬 신규는 되살리고, 기준점에 있던 항목은 삭제로 존중", () => {
     const before = { ...emptyData(), physicalAssets: [gold("NEW"), gold("OLD")] };

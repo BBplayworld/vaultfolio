@@ -291,9 +291,13 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
   const cashTransactions = mergeById(before.cashTransactions, after.cashTransactions, syncedIds);
   const loanTransactions = mergeById(before.loanTransactions, after.loanTransactions, syncedIds);
   const cryptoTransactions = mergeById(before.cryptoTransactions, after.cryptoTransactions, syncedIds);
-  // 실물: 원격에 키가 없으면(구버전 기기 payload) 병합하지 않는다 — 저장 단계에서 undefined는 로컬 유지
+  // 실물: 원격에 키가 없으면(구버전 기기가 push해 클라우드 사본에서 키가 빠짐) 로컬 실물을 실어 changed=true로 돌려준다 —
+  // 호출측이 즉시 재-push해 클라우드 사본에 실물을 복구한다(안 그러면 새 기기가 복원할 때 실물이 없다).
+  // 원격 `[]`(삭제 의도)는 키가 있으므로 기존 mergeById 규칙을 그대로 탄다. 구버전 기기는 편집할 때만 push하므로 핑퐁은 없다.
   const physical = after.physicalAssets === undefined
-    ? { arr: undefined, changed: false }
+    ? ((before.physicalAssets?.length ?? 0) > 0
+      ? { arr: before.physicalAssets, changed: true }
+      : { arr: undefined, changed: false })
     : mergeById(before.physicalAssets ?? [], after.physicalAssets, syncedIds);
 
   // yearlyNetAssets는 id가 아니라 year 기준 (기준점 판별도 동일하게 yearKey로)

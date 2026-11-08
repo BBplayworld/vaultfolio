@@ -37,7 +37,7 @@ async function oldPull() {
 }
 
 beforeEach(async () => {
-  g.window = globalThis;
+  g.window = Object.assign(globalThis, { dispatchEvent: () => true }) as never; // 닉네임 복원(persistNickname)이 이벤트를 발행
   dev.A = memoryStorage(); dev.B = memoryStorage(); dev.C = memoryStorage();
   server = { version: 0 };
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -90,6 +90,36 @@ describe("A(신) / B(구) 순환", () => {
     await (async () => { addPhys("A", gold("P1")); await push("A"); })();
     await oldPull();                       // 구버전 pull = clearAssetData
     expect(ids("B")).toEqual(["PB"]);
+  });
+  it("D1: 구버전 B가 push해 클라우드 키가 빠져도 A pull이 mergedAdditions=true로 재-push하고, 새 신 기기 C가 실물을 복원한다", async () => {
+    addPhys("A", gold("P1"));
+    await push("A");
+    await oldPull();
+    on("B"); legacy.save({ ...legacy.read(), nickname: "B 편집" });
+    expect(await oldPush()).toBe("ok");           // 클라우드 사본에서 physicalAssets 키 소실
+    const r = await pull("A");
+    expect(r.status === "ok" && r.mergedAdditions).toBe(true);
+    expect(ids("A")).toEqual(["P1"]);
+    expect((await push("A")).status).toBe("ok");  // provider가 하는 즉시 재-push
+    expect((await pull("C")).status).toBe("ok");  // 새 신 기기 복원
+    expect(ids("C")).toEqual(["P1"]);
+  });
+  it("D1: B가 다시 편집·push해도 A가 다시 복구하고, 변화가 없으면 재-push 연쇄가 없다(핑퐁 없음)", async () => {
+    addPhys("A", gold("P1"));
+    await push("A");
+    for (let round = 0; round < 3; round++) {
+      await oldPull();
+      on("B"); legacy.save({ ...legacy.read(), nickname: `B${round}` });
+      expect(await oldPush()).toBe("ok");
+      const r = await pull("A");
+      expect(r.status === "ok" && r.mergedAdditions).toBe(true);
+      expect((await push("A")).status).toBe("ok");
+      // B가 편집하지 않으면 A의 pull은 추가 병합이 없다 → 더 push할 것이 없다
+      const again = await pull("A");
+      expect(again.status === "ok" && again.mergedAdditions).toBe(false);
+    }
+    expect((await pull("C")).status).toBe("ok");
+    expect(ids("C")).toEqual(["P1"]);
   });
   it("동시 추가: 두 신버전 기기의 항목이 모두 남는다", async () => {
     addPhys("A", gold("P0"));
