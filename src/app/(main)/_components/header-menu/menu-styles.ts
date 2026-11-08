@@ -10,4 +10,4 @@ export const MENU_LABEL = "font-medium break-keep";
 export const MENU_DESC = "mt-0.5 text-sm text-muted-foreground text-pretty break-keep";
 /** ON/OFF 배지(앱 잠금·다크 모드 공용) */
 export const menuBadge = (on: boolean) =>
-  `text-sm font-semibold px-2 py-0.5 rounded shrink-0 ${on ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`;
+  `text-sm font-semibold px-2 py-0.5 rounded shrink-0 ${on ? "bg-primary/15 text-primary dark:bg-brand/15 dark:text-indigo-300" : "bg-muted text-muted-foreground"}`;
