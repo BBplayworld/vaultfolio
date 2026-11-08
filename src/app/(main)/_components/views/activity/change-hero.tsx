@@ -166,7 +166,7 @@ const MATCH_DAYS = 3;
 const dayDiff = (a: string, b: string) => Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
 /**
- * 기록된 출금 ↔ 기록된 매수(주식·코인)·대출 상환 짝짓기(qa R4·R5, cto 판정 b). 구간 (from, to]의 반영 거래만 본다.
+ * 기록된 출금 ↔ 기록된 매수(주식·코인)·대출 상환·실물 신규 등록 짝짓기(qa R4·R5, cto 판정 b). 구간 (from, to]의 반영 거래만 본다.
  * 출금을 날짜순(같으면 id순)으로, 각 출금은 ±3일 안 후보 중 날짜가 가장 가까운 것부터(같으면 날짜·id순) 남은 금액 한도까지 짝짓는다.
  * 후보 금액은 여러 출금에 나눠 쓸 수 있으나 합계를 넘지 않는다. 금액 허용 오차·메모는 쓰지 않는다. 결정적.
  */
@@ -186,6 +186,8 @@ export function matchRecordedTransfers(assetData: AssetData, from: string | null
     })),
     ...(assetData.cryptoTransactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({ id: `c:${t.id}`, date: t.date, left: t.quantity * t.price })),
     ...(assetData.loanTransactions ?? []).filter((t) => t.reflected && t.type === "repay" && inWin(t.date)).map((t) => ({ id: `l:${t.id}`, date: t.date, left: t.amount })),
+    // 실물(#58): 거래내역이 없으므로 구간 안 매입일이 있는 신규분을 후보로 둔다(금액 = 매입가, 부동산과 달리 엔진 buy:physical과 같은 값)
+    ...(assetData.physicalAssets ?? []).filter((p) => p.purchaseDate && inWin(p.purchaseDate) && p.purchasePrice > 0).map((p) => ({ id: `p:${p.id}`, date: p.purchaseDate, left: p.purchasePrice })),
   ];
   let matched = 0;
   for (const o of outs) {

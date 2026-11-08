@@ -192,7 +192,7 @@ export interface SettlementCauses {
 }
 
 const PRICE_KEYS = new Set<AttributionCauseKey>(["price", "price:stock", "price:crypto"]);
-const TRADE_KEYS = new Set<AttributionCauseKey>(["buy:stock", "sell:stock", "buy:crypto", "sell:crypto", "buy:realEstate", "sell:realEstate"]);
+const TRADE_KEYS = new Set<AttributionCauseKey>(["buy:stock", "sell:stock", "buy:crypto", "sell:crypto", "buy:realEstate", "sell:realEstate", "buy:physical", "sell:physical"]);
 const POOL_EXTRA_KEYS = new Set<AttributionCauseKey>(["debt", "deposit"]);
 
 const NOISE_WON = 10;
@@ -226,7 +226,7 @@ export function mapSettlementCauses(
     const flag = !!e.estimated;
     if (ctx.estimatedPriceAsUnrecorded && e.key === "price" && flag) { est.unrecorded = true; continue; } // qa R3
     if (PRICE_KEYS.has(e.key)) { acc.price += e.amount; est.price ||= flag; }
-    else if (e.key === "price:realEstate") { acc.valuation += e.amount; est.valuation ||= flag; }
+    else if (e.key === "price:realEstate" || e.key === "price:physical") { acc.valuation += e.amount; est.valuation ||= flag; }
     else if (e.key === "fx") { acc.fx += e.amount; est.fx ||= flag; }
     else if (e.key === "income") { acc.income += e.amount; est.income ||= flag; }
     else if (TRADE_KEYS.has(e.key)) {
