@@ -164,7 +164,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
                       <span className="truncate text-sm font-medium" title={row.name}>{row.name}</span>
                       {foreign && <span className="shrink-0 text-sm text-muted-foreground">{row.currency}</span>}
                       {changed && (
-                        <span data-testid={`balance-resync-changed-${row.id}`} className="shrink-0 text-sm font-semibold text-brand motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">변경</span>
+                        <span data-testid={`balance-resync-changed-${row.id}`} className="shrink-0 text-sm font-semibold text-brand dark:text-indigo-300 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">변경</span>
                       )}
                     </div>
                     <span className="shrink-0 whitespace-nowrap text-sm tabular-nums text-muted-foreground">{fmtCurrent(row)}</span>
@@ -208,7 +208,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
             data-testid="balance-resync-add-link"
             disabled={changedCount > 0}
             onClick={goAdd}
-            className="mt-1 inline-flex min-h-10 items-center gap-1 text-sm font-medium text-brand disabled:pointer-events-none disabled:opacity-40"
+            className="mt-1 inline-flex min-h-10 items-center gap-1 text-sm font-medium text-brand dark:text-indigo-300 disabled:pointer-events-none disabled:opacity-40"
           >
             <Plus className="size-4" aria-hidden />
             {copy.addLabel}
