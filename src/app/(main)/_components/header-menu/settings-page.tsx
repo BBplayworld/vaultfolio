@@ -227,6 +227,7 @@ export function SettingsPage() {
                   { value: "kstAccessDay", label: "KST 접속일" },
                 ]}
                 size="sm"
+                className="relative z-10"
                 ariaLabel="기간 수익 종가 기준"
               />
             )}
