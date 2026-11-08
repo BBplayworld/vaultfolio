@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-08 (v4.53)
+
+### /api/sync 남용 방어 (#4.53, 이슈 #97, risk medium)
+- **왜**: sync 라우트만 자체 `getClientIp`(XFF 맨 왼쪽 신뢰)를 써 rate limit이 헤더 조작에 취약했고, GET은 한도 없이 서명 검증 전 Redis 조회를 수행했다.
+- `getClientIp`를 `api-guard`로 통일, `guardL1Only`(`api-guard.ts`) 신설해 GET 120/분/IP, 토큰(assetId·nonce·sig·ts) 형식을 저장소 조회 전 401. 프로토콜·저장 포맷·스키마·서버 전송 값 무변경. 테스트 `sync-route-guard.test.ts`.
+
 ## 2026-11-08 (v4.51)
 
 ### 월 탭 자산 구성 변화 블록 (#4.51, 이슈 #83, risk low)

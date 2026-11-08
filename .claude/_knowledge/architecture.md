@@ -168,7 +168,7 @@ E2EE 클라우드 동기화:
 - 라우트마다 `export const maxDuration`. 에러 응답은 고정 문구만(SDK 원문·rawText 미노출).
 - **브라우저 헤더**(`next.config.mjs` `SECURITY_HEADERS`): CSP는 **Report-Only**(위반 확인 후 enforce 전환 예정), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `poweredByHeader:false`. `robots.ts`는 `/api/` disallow.
 - 테마 쿠키는 클라이언트 `persistThemeModeCookie`(`theme-utils.ts`)로 기록, 서버는 `getPreference` allowlist로 재검증.
-- 동기화(`/api/sync`·`cloud-sync/*`) 처리 로직은 이번 범위에서 **무변경** — 인접 보안 항목(S6)은 별도 승인 대상.
+- 동기화(`/api/sync`·`cloud-sync/*`) 처리 로직은 이번 범위에서 **무변경** — 인접 보안 항목(S6)은 4.53(#97)에서 처리: `/api/sync`가 `api-guard.getClientIp`·`guardL1Only`(GET 120/분)·토큰 형식 조기 거부를 사용(프로토콜·저장 포맷 무변경).
 
 ## 레이아웃
 

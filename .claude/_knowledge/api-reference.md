@@ -172,8 +172,10 @@ Headers: x-sync-auth: base64url({ assetId, ts, nonce, sig })  // Ed25519 서명,
 Body: { iv: string, ciphertext: string, baseVersion: number, pubKey: string }
 → 200: { version: number }
 → 409: { asset: { version: number } }  // conflict — 원격이 더 새로움
-→ 401: 서명 검증 실패
+→ 401: 서명 검증 실패 / 토큰 형식 불량
+→ 429: PUT IP당 분당 10회 초과
 ```
+- 토큰 형식(4.53): assetId `[A-Za-z0-9_-]{8,128}`·nonce `[A-Za-z0-9_-]{1,64}`·sig ≤200자·ts 유한 숫자 — 저장소 조회·서명 검증 **전에** 401. IP는 `api-guard.getClientIp`(x-vercel-forwarded-for 우선, XFF 우측)
 - 서버 저장: `csync:asset:{assetId}` (Upstash Redis or 파일). 구조: `AssetEnvelope { pubKey, iv, ciphertext, version, updatedAt }`
 - TOFU(처음 PUT이면 pubKey 등록), 이후 PUT은 등록된 pubKey로 서명 검증
 - `baseVersion` < 서버 version → 409 conflict 반환
@@ -183,7 +185,8 @@ Body: { iv: string, ciphertext: string, baseVersion: number, pubKey: string }
 Headers: x-sync-auth: base64url({ assetId, ts, nonce, sig })
 → 200: { asset: { iv, ciphertext, version, pubKey, updatedAt } }
 → 404: 금고 미존재 (첫 pull)
-→ 401: 서명 검증 실패
+→ 401: 서명 검증 실패 / 토큰 형식 불량
+→ 429: IP당 분당 120회 초과(L1 `guardL1Only`, Redis 호출 전 차단 — 폴링 `fetchRemoteVersion`은 429를 null로 무시)
 
 GET /api/sync?meta=1
 → 200: { version: number }  // 폴링용 버전 조회만
