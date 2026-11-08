@@ -1,0 +1,249 @@
+// #91 S8 — 4.50 보유 현황 맞추기 ↔ #84 동기화 덮임 감지·되돌리기 하네스(기기 2개 localStorage 분리 + 409 모의).
+// sync-overwrite.test.ts의 하네스 형태를 따른다(해당 파일은 헬퍼를 export하지 않아 최소 복사).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { getAssetData, saveAssetData } from "../asset/asset-storage";
+import { deriveKeys, type AssetKeys } from "../cloud-sync/crypto";
+import { pullAsset, pushAsset } from "../cloud-sync/sync-client";
+import {
+  beginPull, beginPush, captureSnapshot, commitPull, commitPush, getBaseline, getEntries,
+  resetOverwriteGuard, setBaseline, setEntries, type OverwriteEntry, type SyncSnapshot,
+} from "../cloud-sync/overwrite-guard";
+import { applyResync, buildUndoEntries, computeDiff, defaultRemoveIds, mergeScreens, planUndo, resolveScreens } from "../asset/resync";
+import { assetDataSchema, stockSchema } from "@/types/asset";
+import type { AssetData, Stock } from "@/types/asset";
+import { emptySel, row, screen, st } from "../asset/resync/__tests__/fixtures";
+
+function memoryStorage(): Storage {
+  const s = {} as Record<string, string>;
+  const def = (k: string, value: unknown) => Object.defineProperty(s, k, { value, enumerable: false });
+  def("getItem", (k: string) => (Object.prototype.hasOwnProperty.call(s, k) ? s[k] : null));
+  def("setItem", (k: string, v: string) => { s[k] = String(v); });
+  def("removeItem", (k: string) => { delete s[k]; });
+  def("clear", () => { for (const k of Object.keys(s)) delete s[k]; });
+  def("key", (i: number) => Object.keys(s)[i] ?? null);
+  Object.defineProperty(s, "length", { get: () => Object.keys(s).length, enumerable: false });
+  return s as unknown as Storage;
+}
+
+const g = globalThis as unknown as { window?: unknown; localStorage?: Storage; fetch?: unknown };
+const AID = "test-asset-id-1234567890";
+interface Server { version: number; iv?: string; ciphertext?: string }
+interface Device { name: string; storage: Storage; baseline: SyncSnapshot | null; entries: OverwriteEntry[] }
+
+let server: Server;
+let keys: AssetKeys;
+let A: Device, B: Device;
+let current: Device | null = null;
+
+function switchTo(d: Device) {
+  if (current) { current.baseline = getBaseline(); current.entries = getEntries(); }
+  current = d;
+  g.localStorage = d.storage;
+  setBaseline(d.baseline);
+  setEntries(d.entries);
+}
+const stocksOf = (d: Device) => { switchTo(d); return getAssetData().stocks; };
+function edit(d: Device, fn: (data: AssetData) => void) {
+  switchTo(d);
+  const data = getAssetData();
+  fn(data);
+  saveAssetData(data);
+}
+async function push(d: Device) {
+  switchTo(d);
+  const snap = beginPush(getAssetData());
+  const r = await pushAsset(AID, keys);
+  if (r.status === "ok") commitPush(snap);
+  return r;
+}
+async function pull(d: Device) {
+  switchTo(d);
+  const before = beginPull(getAssetData(), true);
+  const r = await pullAsset(AID, keys);
+  const res = r.status === "ok" ? commitPull(before, getAssetData()) : { added: 0, total: 0 };
+  return { r, ...res };
+}
+
+const S1 = st("S1", "005930", "domestic", "토스증권", 10, 70000);
+const S2 = st("S2", "000660", "domestic", "토스증권", 5, 120000);
+const S3 = st("S3", "AAPL", "foreign", "키움증권", 3, 150);
+
+/** 클릭 핸들러가 하는 일: 선택 → applyResync → 일반 편집 저장 1회 */
+function doResync(d: Device, items: ReturnType<typeof row>[], remove: string[] = []) {
+  switchTo(d);
+  const data = getAssetData();
+  const screens = resolveScreens([screen(0, items)], data.stocks, { usdRate: 1400 });
+  const diff = computeDiff(data.stocks, mergeScreens(screens), screens);
+  const sel = { ...emptySel(), remove: defaultRemoveIds(diff) };
+  remove.forEach((id) => sel.remove.add(id));
+  const result = applyResync(data.stocks, diff, sel, { today: "2026-11-08", usdRate: 1400, now: 7 });
+  saveAssetData({ ...data, stocks: result.stocks });
+  return { before: data.stocks, after: result.stocks, data };
+}
+
+async function setup() {
+  g.window = globalThis;
+  server = { version: 0 };
+  A = { name: "A", storage: memoryStorage(), baseline: null, entries: [] };
+  B = { name: "B", storage: memoryStorage(), baseline: null, entries: [] };
+  current = null;
+  resetOverwriteGuard();
+  for (const d of [A, B]) {
+    switchTo(d);
+    saveAssetData({ ...getAssetData(), stocks: [S1, S2, S3] });
+  }
+  expect((await push(A)).status).toBe("ok"); // v1
+  switchTo(B);
+  resetOverwriteGuard();
+  expect((await pullAsset(AID, keys, { merge: false })).status).toBe("ok");
+  setBaseline(captureSnapshot(getAssetData()));
+}
+
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-08T03:00:00Z"));
+  g.fetch = vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    const json = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body });
+    if (init?.method === "PUT") {
+      const b = JSON.parse(init.body as string) as { baseVersion: number; iv: string; ciphertext: string };
+      if (b.baseVersion !== server.version) return json(409, { asset: { version: server.version } });
+      server = { version: server.version + 1, iv: b.iv, ciphertext: b.ciphertext };
+      return json(200, { version: server.version });
+    }
+    if (String(url).includes("meta=1")) return json(200, { version: server.version });
+    if (!server.iv) return json(404, {});
+    return json(200, { asset: { iv: server.iv, ciphertext: server.ciphertext, version: server.version } });
+  });
+  keys = await deriveKeys("test-pass-123!", AID);
+});
+afterEach(() => {
+  vi.useRealTimers();
+  delete g.window; delete g.localStorage; delete g.fetch;
+  resetOverwriteGuard();
+});
+
+const hint = { brokerHint: "토스증권" };
+// 토스증권 국내 화면: S1 수량 12, S2 삭제 후보(1/2 미만이 되도록 S4 추가 후 맞춤), 신규 035420
+const screenItems = () => [row("005930", 12, 70000, hint), row("035420", 4, 50000)];
+
+describe("S8 동기화 하네스", () => {
+  it("A 맞추기 → push → B pull: B가 A와 같다", async () => {
+    await setup();
+    doResync(A, screenItems(), ["S2"]);
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    expect(stocksOf(B)).toEqual(stocksOf(A));
+    expect(stocksOf(B).find((s) => s.id === "S1")).toMatchObject({ quantity: 12, positionSource: "manual" });
+    expect(stocksOf(B).some((s) => s.id === "S2")).toBe(false);
+    expect(stocksOf(B).find((s) => s.id === "S3")).toEqual(S3);
+  });
+
+  it("B 미push 편집 + A 맞추기 → B pull에서 #84 알림(modified·remoteDeleted)이 생긴다", async () => {
+    await setup();
+    doResync(A, screenItems(), ["S2"]);
+    expect((await push(A)).status).toBe("ok"); // v2
+    edit(B, (d) => { d.stocks = d.stocks.map((s) => (s.id === "S1" || s.id === "S2" ? { ...s, quantity: 99 } : s)); });
+    expect((await push(B)).status).toBe("conflict");
+    const res = await pull(B);
+    expect(res.added).toBe(2);
+    expect(getEntries().map((e) => `${e.coll}:${e.kind}:${e.key}`).sort()).toEqual(["stocks:modified:stocks:S1", "stocks:remoteDeleted:stocks:S2"]);
+    expect(stocksOf(B).find((s) => s.id === "S1")!.quantity).toBe(12);
+  });
+
+  it("A 되돌리기 → push → B pull: B도 맞추기 전으로 복원, 삭제 항목은 목록 끝", async () => {
+    await setup();
+    const { before } = doResync(A, screenItems(), ["S2"]);
+    switchTo(A);
+    const entries = buildUndoEntries(before, getAssetData().stocks);
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    const overwriteBefore = getEntries().length;
+    // 되돌리는 순간 보유 현황을 새로 읽는다
+    switchTo(A);
+    const undo = planUndo(entries, getAssetData());
+    expect(undo.skipped).toBe(0);
+    saveAssetData(undo.data);
+    expect(getEntries()).toHaveLength(overwriteBefore); // #84 목록은 건드리지 않는다
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    expect(stocksOf(B)).toEqual(stocksOf(A));
+    const ids = stocksOf(B).map((s) => s.id);
+    expect(ids).toEqual(["S1", "S3", "S2"]); // 복원된 S2는 끝에 추가
+    expect(stocksOf(B).find((s) => s.id === "S1")).toMatchObject({ quantity: 10 });
+    expect(stocksOf(B).some((s) => s.ticker === "035420")).toBe(false);
+  });
+
+  it("4.50 → 4.49 롤백: 저장된 데이터는 기존 스키마로 그대로 읽히고 새 필드가 없다", async () => {
+    await setup();
+    doResync(A, screenItems(), ["S2"]);
+    switchTo(A);
+    const saved = getAssetData();
+    expect(assetDataSchema.safeParse(saved).success).toBe(true);
+    // 4.49 reader = 같은 stockSchema. 스키마에 없는 키가 새로 생기면 안 된다
+    const known = new Set(Object.keys(stockSchema.innerType().shape));
+    expect(known.size).toBeGreaterThan(10);
+    for (const s of saved.stocks) for (const k of Object.keys(s)) expect(known.has(k), k).toBe(true);
+  });
+});
+
+describe("되돌리기 순수 동작", () => {
+  const base = (stocks: Stock[]): AssetData => ({
+    realEstate: [], stocks, crypto: [], cash: [], loans: [], yearlyNetAssets: [],
+    transactions: [], cashTransactions: [], loanTransactions: [], cryptoTransactions: [],
+    lastUpdated: "x", nickname: "",
+  });
+  const apply = (before: Stock[], items: ReturnType<typeof row>[], remove: string[]) => {
+    const sc = resolveScreens([screen(0, items)], before, { usdRate: 1400 });
+    const diff = computeDiff(before, mergeScreens(sc), sc);
+    const sel = { ...emptySel(), remove: new Set(remove) };
+    return applyResync(before, diff, sel, { today: "2026-11-08", usdRate: 1400, now: 9 }).stocks;
+  };
+  it("적용 → 되돌리기 후 stocks가 이전과 같다(변경·추가·삭제 혼합), 거래 배열 참조 불변", () => {
+    const before = [S1, S2, S3];
+    const after = apply(before, screenItems(), ["S2"]);
+    const entries = buildUndoEntries(before, after);
+    expect(entries.map((e) => e.kind).sort()).toEqual(["modified", "remoteDeleted", "resurrected"]);
+    const d = base(after);
+    const undo = planUndo(entries, d);
+    expect(undo.restored).toBe(3);
+    expect(undo.data.stocks.find((s) => s.id === "S1")).toEqual(S1);
+    expect(undo.data.stocks.map((s) => s.id)).toEqual(["S1", "S3", "S2"]);
+    expect(undo.data.transactions).toBe(d.transactions);
+  });
+  it("R1: 맞춘 뒤 직접 고친 항목은 그대로 두고 건수를 센다", () => {
+    const before = [S1, S2, S3];
+    const after = apply(before, screenItems(), []);
+    const entries = buildUndoEntries(before, after);
+    const edited = after.map((s) => (s.id === "S1" ? { ...s, quantity: 50 } : s));
+    const undo = planUndo(entries, base(edited));
+    expect(undo.skipped).toBe(1);
+    expect(undo.data.stocks.find((s) => s.id === "S1")!.quantity).toBe(50);
+  });
+  it("R2: 현재가 같은 자동 필드는 유지하고 되돌린다", () => {
+    const before = [S1];
+    const after = apply(before, [row("005930", 12, 70000, hint)], []);
+    const entries = buildUndoEntries(before, after);
+    const refreshed = after.map((s) => ({ ...s, currentPrice: 99999 }));
+    const undo = planUndo(entries, base(refreshed));
+    expect(undo.data.stocks[0]).toMatchObject({ quantity: 10, currentPrice: 99999 });
+  });
+  it("변경 없는 항목은 entries에 없다", () => {
+    const before = [S1, S3];
+    const after = apply(before, [row("005930", 10, 70000, hint)], []);
+    expect(buildUndoEntries(before, after)).toEqual([]);
+  });
+});
+
+describe("정적 규칙 (C11·C16·S6)", () => {
+  const dir = join(__dirname, "..", "asset", "resync");
+  const files = ["types.ts", "match.ts", "merge.ts", "diff.ts", "apply.ts", "undo.ts", "index.ts"];
+  it("순수 함수 모듈은 저장·push·notify·모듈 상태·저장 키를 쓰지 않는다", () => {
+    for (const f of files) {
+      const src = readFileSync(join(dir, f), "utf8").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(src, f).not.toMatch(/localStorage|sessionStorage|STORAGE_KEYS|saveAssetData|saveData|notifyAssetUserEdit|pushAsset|pullAsset|applyImportedPayload|clearAssetData|setEntries|setBaseline|"use client"|from "react"/);
+    }
+  });
+});
