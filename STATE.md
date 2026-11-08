@@ -59,6 +59,10 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- **[D7 선정 2026-11-08, cto] 현금·대출 잔액 한 번에 맞추기**(type:improvement, p1, risk:low, issues/_discovery/2026-11-08-d7-selection.md) — 4.50 머지 후 새 버전(예상 4.51), 개발 11/27~12/5, **위임 머지 12/11**(결산 행 도착지 변경 → 결산 창 후), 마감 12/18. #83은 그 다음 번호
+  - D7 p2 동승(같은 릴리스, 12/11 이후 머지): 연 탭 빈 상태 문구·작년 말 입력 링크(12월 내·#58 전 필수) · 직접 갱신 `markCategoryRefreshed`(B) · 기능 팁 isNew 정리+공지 ID 교체(12/11 머지일 때만) · 업로드 '클릭·드래그' 문구·`bg-amber-500/10px-3` 오타 4파일 · 저장 실패 알림 헬퍼(M, 용량 초과 시 먼저 컷) · FAB 환율 블록 '오늘 환율'+미사용 ExchangeRateInput 삭제
+  - D7 대표 승인 대상 p2: /api/sync getClientIp·GET L1 가드(risk:medium, 위임 ④ 불충족) → #83 릴리스 동승, 다기기 pull 임계 테스트 필수
+  - D7 보류·탈락: 가이드 '엑셀 옮기기'(4.45 가이드 판독 전, 12/5 재검토) · FAB 과거 순자산 위치 이동·'헷갈리나요' 힌트 제거(A 이후 판단) · 미사용 UI·의존성·.agents 정리(p3 동승 전용) · 채널 패키지(선정 대상 아님, 상시 진행)
 - [type:bug 후보, #80 기획 중 발견, 기존 현상] 배당 금액 계산이 엔화(JPY) 종목을 환산하지 않음(`dividend-chart.tsx`·`performance-hub.tsx` rate = USD ? usdRate : 1). 해외 API excd NAS 고정이라 실제 영향 작을 수 있음 → qa 재현 후 p2 동승 판단
 - [D6 선정 2026-11-06] 배치는 '다음 정기 실행 지시' D6 절 참조. **D6 탈락**: 공개 배당 달력(앱 배당 화면과 중복 = #71 반려 패턴) · 웹 바이탈 GA 이벤트(11-06 GA 단순화 결정과 충돌) · CSP enforce(체감 0·medium) · 상세 허브 비중 %(홈 도넛과 지표 중복 C1, 4.44 비중 % 제거 방향 역행) · `/asset` 서버 redirect(start_url `/`, 링크 유입 0) · SW 캐시 정리·viewport userScalable(근거 부족, 보류) · AGENTS.md(현행 유지) · 세금 일정 12월 항목(홈 세금 팁이 결산 팁을 밀어냄 + 휴장 의존 날짜 정확성) · 배당 종목별 % 열(U2 375 붕괴 악화) · manifest screenshots·shortcuts(에셋·데모 필요, 효과 불명)
 - [p2 후보, type:bug(UI), 기존 현상] 상세 주식 행 320px: 손익 억 단위면 우측 열이 폭을 거의 차지해 종목명 1~2자·손익 줄이 수량/배지와 겹침, 일반 금액도 긴 이름 어절 중간 줄바꿈 → 모바일 손익 줄 축약 또는 이름 최소 폭(4.44 ui-review 4d3a024 참고, 375 정상)
