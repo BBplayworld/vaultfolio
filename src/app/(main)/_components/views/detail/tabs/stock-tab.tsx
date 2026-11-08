@@ -299,7 +299,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   return (
     <>
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} screenshotMode={screenshotMode} shotBig={shotBig} />
-      <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`} data-testid="stock-row-left">
+      <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`} data-testid={screenshotMode ? undefined : "stock-row-left"}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
           <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}${screenshotMode ? "" : " break-keep [overflow-wrap:anywhere]"}`} title={stock.name.length > 18 ? stock.name : undefined}>
@@ -327,7 +327,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
       </div>
-      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-sm:max-w-[58%]"}`} data-testid="stock-row-right">
+      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-sm:max-w-[50%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
         <div className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
           <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>
