@@ -95,6 +95,15 @@ export const realEstateTypes = [
   { value: "other", label: "기타", shortLabel: "기타" },
 ] as const;
 
+// 실물 자산 유형(#58) — placeholder는 이름 입력칸 예시
+export const physicalAssetTypes = [
+  { value: "gold", label: "금", shortLabel: "금", placeholder: "예: 골드바 100g" },
+  { value: "silver", label: "은", shortLabel: "은", placeholder: "예: 실버바 1kg" },
+  { value: "jewelry", label: "귀금속·보석", shortLabel: "귀금속", placeholder: "예: 다이아 반지" },
+  { value: "collectible", label: "수집품·미술품", shortLabel: "수집품", placeholder: "예: 한정판 시계" },
+  { value: "other", label: "기타 실물", shortLabel: "기타", placeholder: "예: 기타 실물" },
+] as const;
+
 // 실거래가 연동(S-4.21) — 부동산 종류 → MOLIT 데이터셋·매칭 방식 매핑
 // dataset: realestate-service의 fetchTrades 분기 키. complex=단지명 매칭, area-only=법정동+면적 근사
 // areaKind/areaLabel: MOLIT가 종류별로 다른 면적을 공개한다(전용면적 vs 연면적 vs 건물면적).
@@ -167,6 +176,11 @@ export const quickButtonPresets = {
     { label: "5천만", value: 50000000 },
     { label: "1억", value: 100000000 },
     { label: "5억", value: 500000000 },
+  ],
+  physical: [
+    { label: "10만", value: 100000 },
+    { label: "100만", value: 1000000 },
+    { label: "1천만", value: 10000000 },
   ],
   loanDefault: [
     { label: "100만", value: 1000000 },

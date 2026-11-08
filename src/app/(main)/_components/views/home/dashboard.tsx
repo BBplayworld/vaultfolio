@@ -386,7 +386,7 @@ export function useAssetTreemapData() {
   const { getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
 
-  const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
+  const totalAsset = summary.realEstateValue + summary.physicalValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const financialAssetValue = summary.stockValue + summary.cryptoValue + summary.cashValue;
   const liabilityValue = summary.loanBalance + summary.tenantDepositTotal;
   const grossTotal = totalAsset + liabilityValue;
@@ -397,12 +397,18 @@ export function useAssetTreemapData() {
   ].filter((d) => d.value > 0);
 
   const assetPaletteColors = assignColors(treemapRawAssets);
+  // 실물(#58)은 assignColors 입력에서 빼고 색을 MAIN_PALETTE[8]로 고정 — 넣으면 [1] 빨강·[2] 주황이 배정돼 부채·순자산 의미색과 충돌하고
+  // 부동산/금융자산의 기존 색 배정도 실물 유무에 따라 달라진다
+  const physicalItem = summary.physicalValue > 0
+    ? [{ key: "physical", name: "실물", value: summary.physicalValue, color: MAIN_PALETTE[8], pct: grossTotal > 0 ? (summary.physicalValue / grossTotal) * 100 : 0 }]
+    : [];
   const treemapData: TreemapItem[] = [
     ...treemapRawAssets.map((d, i) => ({
       ...d,
       color: assetPaletteColors[i],
       pct: grossTotal > 0 ? (d.value / grossTotal) * 100 : 0,
     })),
+    ...physicalItem,
     ...(liabilityValue > 0
       ? [{
         key: "liability",
@@ -611,9 +617,15 @@ export function Dashboard() {
   // 자산 성적표 미니 배지 — 저장된 최신 등급만 읽음(재계산 없음)
   const latestGrade = useLatestAssetGrade();
 
-  const totalAsset = summary.realEstateValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
+  const totalAsset = summary.realEstateValue + summary.physicalValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
   const grossTotal = totalAsset + totalLiability;
+
+  // 홈 탭에 physical이 없으므로 실물 조각은 상세 실물 탭으로 이동, 그 외는 기존 필터 전환(탭 필터에도 "실물"은 넣지 않는다)
+  const handleSegmentClick = (key: string) => {
+    if (key === "physical") navigate({ type: "detail", tab: "physical" });
+    else setActiveDetailTab(key);
+  };
 
   // 도넛 데이터는 공용 훅 재사용 (ShareCard 등과 동일 계산 — 로컬 복제 금지)
   const { treemapData } = useAssetTreemapData();
@@ -666,7 +678,7 @@ export function Dashboard() {
                   change={headerChange}
                   treemapData={treemapData}
                   activeTab={resolvedTab}
-                  onSegmentClick={setActiveDetailTab}
+                  onSegmentClick={handleSegmentClick}
                   visibleTabs={visibleTabs}
                   showRealtimeBadge
                   grade={latestGrade}

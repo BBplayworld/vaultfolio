@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toGaAssetType, track } from "@/lib/analytics/ga";
-import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
-import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
+import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddPhysical, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight, Gem } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -16,7 +16,7 @@ import { useAssetNavigation, type DetailTab } from "../navigation/navigation-con
 import { InfoHint } from "../ui/info-hint";
 import type { RefreshCategory } from "@/lib/asset/asset-refresh-status";
 
-type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
+type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "physical" | "yearly-net-asset";
 // hub: "보유 현황 업데이트" / "매수·매도 거래 기록" 상위 선택
 // holdings: 카테고리별 보유현황 컴팩트 리스트(단건 전용)
 // trade: 카테고리별 거래 기록 컴팩트 리스트(단건 전용)
@@ -31,6 +31,7 @@ const ASSET_TYPES = [
   { type: "stock" as AssetType, label: "주식", icon: TrendingUp, hasScreenshot: true, navigateTab: "stocks" as string | null },
   { type: "crypto" as AssetType, label: "암호화폐", icon: Bitcoin, hasScreenshot: true, navigateTab: "crypto" as string | null },
   { type: "cash" as AssetType, label: "현금성 자산", icon: Wallet, hasScreenshot: true, navigateTab: "cash" as string | null },
+  { type: "physical" as AssetType, label: "실물 자산", icon: Gem, hasScreenshot: false, navigateTab: "physical" as string | null },
   { type: "loan" as AssetType, label: "대출", icon: CreditCard, hasScreenshot: true, navigateTab: "loans" as string | null },
   { type: "yearly-net-asset" as AssetType, label: "과거 순자산", icon: History, hasScreenshot: false, navigateTab: null },
 ];
@@ -41,6 +42,7 @@ const EVENT_MAP: Record<AssetType, string> = {
   "crypto": "trigger-add-crypto",
   "cash": "trigger-add-cash",
   "loan": "trigger-add-loan",
+  "physical": "trigger-add-physical",
   "yearly-net-asset": "trigger-add-yearly-net-asset",
 };
 
@@ -49,7 +51,7 @@ export function FloatingAddButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<Step>("hub");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
-  const { exchangeRates, exchangeRateDate } = useAssetData();
+  const { exchangeRates, exchangeRateDate, assetData } = useAssetData();
   const { navigate, view } = useAssetNavigation();
   const { isStandalone } = usePWAInstall();
   const [isHidden, setIsHidden] = useState(false);
@@ -104,6 +106,7 @@ export function FloatingAddButton() {
     if (!asset?.hasScreenshot) {
       track("asset_add_start", { asset_type: toGaAssetType(type), method: "manual" });
       if (type === "real-estate") dispatchAddRealEstate();
+      else if (type === "physical") dispatchAddPhysical();
       else if (type === "yearly-net-asset") {
         // 연도별 순자산(YearlyNetAssetChart)이 마운트되어야 열 수 있다 — 이동 후 열기 요청 1회를 남기면
         // 차트가 마운트 시/이벤트 수신 시 꺼내 쓴다(타이머 없음). 이미 연 탭이면 이벤트로 바로 열린다.
@@ -311,6 +314,7 @@ export function FloatingAddButton() {
                   <button
                     type="button"
                     className="flex-1 flex items-center gap-2.5 py-3 px-3 text-left min-w-0"
+                    data-testid={type === "physical" ? "fab-asset-physical" : undefined}
                     onClick={() => handleHoldingsClick(type)}
                   >
                     <Icon className="size-5 text-primary shrink-0" />
@@ -320,7 +324,7 @@ export function FloatingAddButton() {
                     </div>
                     <ChevronRight className="size-4 text-muted-foreground shrink-0" />
                   </button>
-                  {navigateTab && (
+                  {navigateTab && !(type === "physical" && (assetData.physicalAssets?.length ?? 0) === 0) && ( // 실물 0건이면 이동할 탭이 비어 연필 숨김
                     <button
                       type="button"
                       aria-label={`${label} 탭으로 이동`}

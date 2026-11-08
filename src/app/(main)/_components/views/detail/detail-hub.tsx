@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp, Building2, Bitcoin, Wallet, CreditCard } from "lucide-react";
+import { TrendingUp, Building2, Bitcoin, Wallet, CreditCard, Gem } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
@@ -81,6 +81,21 @@ export function DetailHub() {
           secondary={countLine(s.cashCount, "건")}
           onClick={() => s.cashCount > 0 ? go("cash") : ''}
         />
+
+        {/* 실물 자산(#58) — 0건이면 숨김(진입은 FAB 시트). 손익 비율은 매입가 0이면 생략 */}
+        {s.physicalCount > 0 && (
+          <div data-testid="detail-hub-card-physical" className="contents">
+            <KpiCard
+              icon={Gem}
+              title="실물 자산"
+              description="금·은·귀금속 등 직접 보관 자산"
+              primary={formatPriceByMode(s.physicalValue)}
+              primaryClassName={ASSET_THEME.text.default}
+              secondary={profitLine(s.physicalProfit, s.physicalCost > 0 ? (s.physicalProfit / s.physicalCost) * 100 : null)}
+              onClick={() => go("physical")}
+            />
+          </div>
+        )}
 
         <KpiCard
           icon={CreditCard}

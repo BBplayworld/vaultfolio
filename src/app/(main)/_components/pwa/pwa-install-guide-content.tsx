@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { BrowserEnv, GuideBrowser } from "@/lib/pwa/detect-browser";
 import { PwaSetupAnimation } from "./pwa-guide-illustrations";
+import { useAssetData } from "@/contexts/asset-data-context";
 
 interface InstallGuideContentProps {
   env: BrowserEnv;
@@ -61,6 +62,9 @@ export function InstallGuideContent({
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [troubleOpen, setTroubleOpen] = useState(false);
+  const { assetData } = useAssetData();
+  // 복원 코드(공유 토큰)에는 실물이 들어가지 않는다(#58). 동기화 코드(E2EE 동기화)는 실물까지 옮기므로 안내하지 않는다
+  const showPhysicalNote = !isSyncMode && (assetData.physicalAssets?.length ?? 0) > 0;
 
   const handleCopyAppsLink = async () => {
     try {
@@ -126,6 +130,11 @@ export function InstallGuideContent({
                 {codeCopied ? "복사됨" : "복사"}
               </Button>
             </div>
+            {showPhysicalNote && (
+              <p data-testid="backup-code-physical-note" className="text-xs text-muted-foreground break-keep text-pretty">
+                실물 자산은 복원 코드에 포함되지 않아요. 백업 파일로 옮겨 주세요.
+              </p>
+            )}
           </div>
         )}
 

@@ -4,6 +4,10 @@ export function dispatchAddRealEstate() {
   window.dispatchEvent(new CustomEvent("trigger-add-real-estate"));
 }
 
+export function dispatchAddPhysical() {
+  window.dispatchEvent(new CustomEvent("trigger-add-physical"));
+}
+
 export function dispatchAddStock(mode: AssetMode) {
   window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode } }));
 }

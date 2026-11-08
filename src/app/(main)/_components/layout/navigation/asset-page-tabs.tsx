@@ -6,6 +6,7 @@ import { StockTab } from "../../views/detail/tabs/stock-tab";
 import { StockXrayView } from "../../views/detail/xray/stock-xray-view";
 import { StockTradesView } from "../../views/detail/trades/stock-trades-view";
 import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
+import { PhysicalTab } from "../../views/detail/tabs/physical-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
 import { CashTab } from "../../views/detail/tabs/cash-tab";
 import { LoanTab } from "../../views/detail/tabs/loan-tab";
@@ -16,6 +17,7 @@ import { ToolMenuPage } from "../../header-menu/tool-menu";
 import { SettingsPage } from "../../header-menu/settings-page";
 import { TaxCalendarView } from "../../views/tax/tax-calendar-view";
 import { RealEstateInput } from "../../forms/asset-update/input/real-estate-input";
+import { PhysicalInput } from "../../forms/asset-update/input/physical-input";
 import { StockInput } from "../../forms/asset-update/input/stock-input";
 import { CryptoInput } from "../../forms/asset-update/input/crypto-input";
 import { CryptoTxInput } from "../../forms/asset-update/input/crypto-tx-input";
@@ -46,6 +48,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
       {tab === "stocks-xray" && <StockXrayView />}
       {tab === "stocks-trades" && <StockTradesView />}
       {tab === "real-estate" && <RealEstateTab />}
+      {tab === "physical"    && <PhysicalTab />}
       {tab === "crypto"      && <CryptoTab />}
       {tab === "crypto-transactions" && <CryptoTxView />}
       {tab === "cash"        && <CashTab />}
@@ -84,6 +87,7 @@ export function AssetPageTabs() {
     <>
       <div className="hidden" aria-hidden="true">
         <RealEstateInput />
+        <PhysicalInput />
         <StockInput />
         <CryptoInput />
         <CryptoTxInput />

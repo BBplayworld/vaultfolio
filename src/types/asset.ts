@@ -175,10 +175,10 @@ export const physicalAssetSchema = z
   .passthrough();
 // 입력 폼 전용 엄격 스키마
 export const physicalAssetInputSchema = physicalAssetSchema.extend({
-  name: z.string().min(1, "이름을 입력해주세요"),
-  currentValue: z.number().refine((v) => v > 0, "현재 평가액을 입력해주세요"),
-  purchasePrice: z.number().min(0, "매입가는 0 이상이어야 합니다"),
-  purchaseDate: z.string().min(1, "매입일을 선택해주세요"),
+  name: z.string().min(1, "이름을 입력해 주세요."),
+  currentValue: z.number().refine((v) => v > 0, "평가액을 1원 이상 입력해 주세요."),
+  purchasePrice: z.number().min(0, "매입가는 0 이상이어야 해요."),
+  purchaseDate: z.string().min(1, "매입일을 선택해 주세요."),
 });
 
 // 전체 자산 데이터 스키마

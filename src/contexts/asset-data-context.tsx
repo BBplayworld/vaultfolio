@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
-import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
+import { AssetData, RealEstate, PhysicalAsset, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
 import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
@@ -103,6 +103,9 @@ interface AssetDataContextType {
   addRealEstate: (realEstate: RealEstate) => boolean;
   updateRealEstate: (id: string, realEstate: Partial<RealEstate>) => boolean;
   deleteRealEstate: (id: string) => boolean;
+  addPhysicalAsset: (item: PhysicalAsset) => boolean;
+  updatePhysicalAsset: (id: string, patch: Partial<PhysicalAsset>) => boolean;
+  deletePhysicalAsset: (id: string) => boolean;
   addStock: (stock: Stock) => boolean;
   addStockRaw: (stock: Stock) => boolean;
   updateStock: (id: string, stock: Partial<Stock>) => boolean;
@@ -1228,6 +1231,26 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
+  // 실물 자산(#58) — 저장은 saveData → saveAssetData 한 곳(분리 키 처리는 거기서)
+  const addPhysicalAsset = useCallback(
+    (item: PhysicalAsset) => saveData({ ...assetData, physicalAssets: [...(assetData.physicalAssets ?? []), item] }),
+    [assetData, saveData]
+  );
+
+  const updatePhysicalAsset = useCallback(
+    (id: string, patch: Partial<PhysicalAsset>) =>
+      saveData({ ...assetData, physicalAssets: (assetData.physicalAssets ?? []).map((item) => (item.id === id ? { ...item, ...patch } : item)) }),
+    [assetData, saveData]
+  );
+
+  const deletePhysicalAsset = useCallback(
+    (id: string) => {
+      track("asset_delete", { asset_type: "physical" });
+      return saveData({ ...assetData, physicalAssets: (assetData.physicalAssets ?? []).filter((item) => item.id !== id) });
+    },
+    [assetData, saveData]
+  );
+
   // 접속 시 부동산 실거래 추정치 자동 갱신 (S-4.21) — 주식 현재가와 동일 취지.
   // 지원 종류(dataset)이고 주소 또는 시군구코드가 있으면 대상. regionCode 없으면 주소를 먼저 해석해 채운다.
   // 최초 로드 1회. marketEstimate·regionCode·legalDong·complexName은 sync 비교 제외라 push 핑퐁 없음.
@@ -1848,6 +1871,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addRealEstate,
         updateRealEstate,
         deleteRealEstate,
+        addPhysicalAsset,
+        updatePhysicalAsset,
+        deletePhysicalAsset,
         addStock,
         addStockRaw,
         updateStock,

@@ -48,7 +48,7 @@ export type GaEvent =
   | "theme_mode";
 
 export const PARAM_VALUES = {
-  asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "yearly_net_asset"],
+  asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "physical", "yearly_net_asset"],
   method: [
     // 입력 방식
     "manual", "screenshot",
@@ -166,6 +166,7 @@ const ASSET_TYPE_TITLES: Record<GaAssetType, string> = {
   cash: "현금",
   loan: "대출",
   real_estate: "부동산",
+  physical: "실물 자산",
   yearly_net_asset: "연도별 순자산",
 };
 
