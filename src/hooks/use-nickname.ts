@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { STORAGE_KEYS } from "@/lib/local-storage";
-import { getAssetData, saveAssetData } from "@/lib/asset/asset-storage";
+import { getAssetData } from "@/lib/asset/asset-storage";
+import { saveAssetDataNotify } from "@/lib/asset/save-failure";
 
 export const NICKNAME_EVENT = "secretasset-nickname-change";
 
@@ -19,7 +20,7 @@ export function persistNickname(next: string): void {
   try {
     const data = getAssetData();
     data.nickname = clean;
-    saveAssetData(data);
+    saveAssetDataNotify(data);
     // 단독 키 제거(마이그레이션 완료)
     localStorage.removeItem(STORAGE_KEYS.nickname);
   } catch { /* ignore */ }

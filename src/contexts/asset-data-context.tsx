@@ -22,6 +22,7 @@ import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
+import { saveAssetDataNotify } from "@/lib/asset/save-failure";
 import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
@@ -562,7 +563,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           current = { ...current, stocks: updatedStocks };
           if (isCanceled()) return current;
           setAssetData(current);
-          saveAssetData(current);
+          saveAssetDataNotify(current);
         }
       } catch (e) {
         // AbortError는 정상 취소 — toast 표시 없이 종료
@@ -623,7 +624,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       const next = { ...data, crypto: updated };
       if (isCanceled()) return data;
       setAssetData(next);
-      saveAssetData(next);
+      saveAssetDataNotify(next);
       return next;
     } catch {
       // abort·네트워크 오류: 기존 값 유지 (토스트 없음 — 코인은 보조 동기화)
@@ -799,7 +800,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           })
           : prev.stocks;
         const next = { ...prev, yearlyNetAssets: updated, stocks };
-        saveAssetData(next);
+        saveAssetDataNotify(next);
         return next;
       });
 
@@ -888,7 +889,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           };
         });
         const newData = { ...prev, stocks: fixed };
-        saveAssetData(newData);
+        saveAssetDataNotify(newData);
         return newData;
       });
     }
@@ -942,7 +943,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       data.nickname = nickname;
       persistNickname(nickname);
     }
-    saveAssetData(data);
+    saveAssetDataNotify(data);
     if (snapshots) {
       try {
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(snapshots.daily));
@@ -1328,7 +1329,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       if (Object.keys(patches).length === 0) return;
       setAssetData((prev) => {
         const next = { ...prev, realEstate: prev.realEstate.map((item) => (patches[item.id] ? { ...item, ...patches[item.id] } : item)) };
-        saveAssetData(next);
+        saveAssetDataNotify(next);
         return next;
       });
     })();
