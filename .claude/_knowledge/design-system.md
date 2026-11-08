@@ -192,6 +192,7 @@
 - 클릭 가능 요소는 `<button>`/`<a>` (onClick만 단 `<div>/<span>` 금지 — 키보드·스크린리더 불가).
 - 아이콘 전용 버튼에 `aria-label`/`title`. `<img>`에 `alt`(의미 없으면 `alt=""`). 폼 입력에 `<Label>`.
 - **최소 히트영역 40×40px**: 작은 닫기/dismiss·단계 점은 `after:absolute after:-inset-*`로 터치영역 확장. 아이콘 버튼 `size-7.5`(≈30px) 이상, 헤더 아이콘 `h-10 sm:h-11`.
+  - **`pointer-coarse:` 변형(#4.49)**: 시각 크기를 바꾸지 않는 작은 인라인 버튼(InfoHint 14~16px)은 래퍼 없이 버튼에 `relative pointer-coarse:after:absolute pointer-coarse:after:content-[''] pointer-coarse:after:-inset-[13px] sm:pointer-coarse:after:-inset-3`로 터치 기기에서만 40×40 확장(마우스 hover 영역 불변). 확장 영역이 이웃 인터랙티브 요소를 덮으면 그 이웃에 `relative z-10`(예: 설정 InlineSelector, 배당 월 배지). 월 배지처럼 상시 노출 버튼은 `h-6 after:-inset-y-2`(=40px).
 - hover 전용 노출 금지(터치 도달 불가). 전역 `cursor: pointer`(인터랙티브)·`not-allowed`(disabled)는 globals.css base에서 처리.
 - 환경 감지는 `detectBrowserEnv()` 단일 소스(iPad 데스크톱 위장 UA는 `maxTouchPoints>1` 보정).
 
@@ -303,7 +304,7 @@ function Hint({ children }: { children: ReactNode }) {
 - 상단바 1회 안내 카드: 헤더 `overflow-x-clip`(세로 허용) 안 `absolute right-3 top-full`, `bg-card rounded-xl shadow-lg`, 확인=brand·취소=ghost. 한 줄 안내 스트립(세금 시즌)은 X-Ray 스트립과 같은 클래스 복제.
 
 ## 13. 메뉴 행 화면 · 차트 라벨 규약 (#4.46)
-- 더보기·설정 메뉴: 섹션 제목 `text-muted-foreground`(라이트·다크 같은 위계, 인디고 금지), 행 아이콘 단색 muted(삭제 행만 rose), 최대 폭 `max-w-2xl` 좌정렬, 상태는 ON/OFF 배지(`menuBadge`). 한 줄 안내가 길면 단위 구간을 `whitespace-nowrap`으로 묶는다.
+- 더보기·설정 메뉴: 섹션 제목 `text-muted-foreground`(라이트·다크 같은 위계, 인디고 금지), 행 아이콘 단색 muted(삭제 행만 rose), 최대 폭 `max-w-2xl` 좌정렬, 상태는 ON/OFF 배지(`menuBadge`) — 다크 ON 배지 전용 `dark:bg-brand/15 dark:text-indigo-300`(대비 8.44:1(실측), 팔레트 직접 사용이라 다른 곳에 재사용하려면 토큰화). 한 줄 안내가 길면 단위 구간을 `whitespace-nowrap`으로 묶는다.
 - 차트 조각 라벨 글자색은 조각색 대비 4.5:1 이상인 흰/검정(`pickDonutLabelColor`), 투명 카드 위 조각 경계는 `--card`가 아니라 `--background`. 조각 안에 들어가지 않는 라벨은 숨기고 범례로 대체한다(`DONUT_LABEL_MIN_PCT`).
 
 ---

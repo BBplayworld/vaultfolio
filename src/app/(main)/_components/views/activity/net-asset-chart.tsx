@@ -41,6 +41,7 @@ import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { resolveYearChain } from "@/lib/report/settlement";
+import { consumeYearlyNetAssetOpenRequest } from "../../layout/navigation/asset-dispatch";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
@@ -232,9 +233,14 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     setIsDialogOpen(true);
   }, []);
 
+  // FAB의 열기 요청은 마운트 시·이벤트 수신 시 모두 확인하되 1회만 소비(입력창 2개 불가)
   useEffect(() => {
-    window.addEventListener("trigger-add-yearly-net-asset", openAddDialog);
-    return () => window.removeEventListener("trigger-add-yearly-net-asset", openAddDialog);
+    if (consumeYearlyNetAssetOpenRequest()) openAddDialog();
+    const onTrigger = () => {
+      if (consumeYearlyNetAssetOpenRequest()) openAddDialog();
+    };
+    window.addEventListener("trigger-add-yearly-net-asset", onTrigger);
+    return () => window.removeEventListener("trigger-add-yearly-net-asset", onTrigger);
   }, [openAddDialog]);
 
   const dailySnapshots = useDailySnapshots(snapshotVersion);

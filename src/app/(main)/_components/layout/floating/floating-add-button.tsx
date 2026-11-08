@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toGaAssetType, track } from "@/lib/analytics/ga";
-import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -105,10 +105,10 @@ export function FloatingAddButton() {
       track("asset_add_start", { asset_type: toGaAssetType(type), method: "manual" });
       if (type === "real-estate") dispatchAddRealEstate();
       else if (type === "yearly-net-asset") {
-        // 연도별 순자산(YearlyNetAssetChart)이 마운트되어야 trigger 이벤트 수신 가능.
-        // 허브/다른 탭에서 진입 시 먼저 자산 변화·전체·연 탭으로 이동 후 다음 tick에 dispatch
+        // 연도별 순자산(YearlyNetAssetChart)이 마운트되어야 열 수 있다 — 이동 후 열기 요청 1회를 남기면
+        // 차트가 마운트 시/이벤트 수신 시 꺼내 쓴다(타이머 없음). 이미 연 탭이면 이벤트로 바로 열린다.
         navigate({ type: "activity", tab: "change", init: { scope: "all", period: "year" } });
-        setTimeout(() => window.dispatchEvent(new CustomEvent(EVENT_MAP[type])), 50);
+        dispatchOpenYearlyNetAsset();
       }
       else window.dispatchEvent(new CustomEvent(EVENT_MAP[type]));
       setIsOpen(false);

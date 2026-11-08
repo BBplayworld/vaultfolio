@@ -31,3 +31,20 @@ export function dispatchAddCryptoTx(cryptoId?: string) {
 export function dispatchOpenShareCard(variant?: "stock" | "portfolio" | "type") {
   window.dispatchEvent(new CustomEvent("trigger-open-share-card", { detail: { variant } }));
 }
+
+// 과거 순자산 입력창 열기 요청(1회성) — FAB가 연 탭으로 이동한 뒤 YearlyNetAssetChart가 마운트되는 시점이
+// 불확실해 타이머 대신 요청을 기록해 두고, 차트가 ⓐ마운트 시 ⓑ이벤트 수신 시 꺼내 쓴다(한 번 쓰면 소멸).
+// 이동 중 다른 화면으로 가면 짧은 유효시간이 지나 폐기된다(setTimeout 없이 요청 시각 비교).
+export const YEARLY_NET_ASSET_OPEN_TTL_MS = 3000;
+let yearlyOpenRequestedAt: number | null = null;
+
+export function dispatchOpenYearlyNetAsset(now: number = Date.now()) {
+  yearlyOpenRequestedAt = now;
+  window.dispatchEvent(new CustomEvent("trigger-add-yearly-net-asset"));
+}
+
+export function consumeYearlyNetAssetOpenRequest(now: number = Date.now()): boolean {
+  const at = yearlyOpenRequestedAt;
+  yearlyOpenRequestedAt = null;
+  return at !== null && now - at <= YEARLY_NET_ASSET_OPEN_TTL_MS;
+}

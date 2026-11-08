@@ -50,6 +50,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **전일 대비(등락율) 실시간화(2026-08-27)**: `computeDailyStockProfit(..., { useLivePrice: true })` — 종가 vs 종가가 아니라 실시간 `currentPrice` vs "가장 최근 확정 종가"(`refDate===오늘`이면 `prevPrice`, 아니면 `refPrice`, 시간대와 무관하게 항상 어제 종가로 수렴). 장중에도 등락율이 살아 움직임(과거엔 국내 16:00 컷오프 전엔 하루 종일 갱신 안 됨). `profit-chart.tsx`·`performance-hub.tsx`는 옵션 미전달로 기존 종가 기준 그대로(회귀 없음)
 - ⚙ `computeStockMetrics`·`mergeStockGroup`·`groupStocksByTicker` 동일 ticker 병합(1회 집계)
 - 엣지: 해외주식 원화/달러 평단 입력 분기, 환차익 계산
+- ⚙ **320 주식 행(#4.49)** — 억 단위 손익에서 `stock-row-left`/`stock-row-right` 겹침 0·가로 스크롤 0, 375 일반 행 높이 불변, screenshotMode(웰컴·인증카드) 클래스 불변
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
 ### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
@@ -172,6 +173,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **결산 매핑([settlement.ts](../../src/lib/report/settlement.ts) `mapSettlementCauses`)** — 엔진 키 15종 → 5항목. 내부 이동 풀(매수·매도·debt·deposit·cash)은 상쇄 후 잔여만 "기록 안 된 변화"(= Δ순자산 − 표시 4항목, 항등식). 현금 미등록(시작·끝 `breakdown.cash` 0 + 구간 입출금 0)이면 매수·매도만 순유입. 엔진·홈 헤더 무변경, 과거 두 시점은 `computeAttributionBetween`(단일 구간, `isFirstSegment=true`, R29)
 - ⚙ **결산 구간(`resolveSettlementWindow`)** — 시작 = 대상 달 직전 최근 스냅샷, 지난 달 끝 = 그 달 스냅샷, 이번 달 끝 = 실시간. 이번 달은 간격 25일 이상이면 날짜 구간 제목(`range`), 미만이면 "진행 중". 1~10일엔 전월 기록일이 21일 이후일 때만 전월 결산(`pickSettlementMonth`). 임계 21·25·35일·50%는 추정값
 - 👤 순자산 차트(현재+전년 대비), 수익 차트(기간별 일/주/월/연, basis 토글), 배당 차트(연간+월평균, 예상/실제)·월별 배당 종목
+- ⚙ **배당 월 배지(#4.49)** — 월 선택·해제 시 차트 top 불변(`dividend-sub-slot` 공유 칸), 배지는 `button`(Tab 포커스·Enter 해제, 히트 40px), 320에서 "배당" 제목 1줄. InfoHint 9곳 coarse 포인터 ≥40×40·이웃 `elementFromPoint` 검사, 다크 설정 ON 배지 대비 ≥4.5
 - 👤 수익 차트 "기준 종가 비교": 시작 종가가 휴장으로 직전 영업일에 폴백되면 "휴장제외" 최소 표시 — 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKr/UsHoliday`)
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리
 - ⚙ `computeDailyStockProfit` 전일 종가 대비, `ProfitBasis`(sameBusinessDay/kstAccessDay), `getDailyClosingRefDates` 시장별 컷오프(국내16:00·해외06:00/07:00 KST)
@@ -349,6 +351,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: `saveSnapshotsBlockedRef` 차단, tickerList 정렬, 종가(refPrice) 폴백
 
 ### F-NAV. 네비게이션 (drill-down)
+- ⚙ **FAB 과거 순자산(#4.49)** — 연 탭 이동 후 입력창 1개(타이머 없음, 연타 시 1개), 이동 중 이탈 후 3초 경과 시 자동 열림 0
 - 👤 `#detail/stocks` 직접진입·새로고침·뒤로가기, InlineSelector 탭 전환, scrollTo(0,0)
 - ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R31)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
 - ⚙ **옛 성과 해시 리다이렉트(#4.34)** — `#activity/netasset` → 자산 변화(전체·연), `#activity/profit` → 자산 변화(주식·일). `parseHash`가 `init`을 붙이고 첫 진입 시 주소창을 `#activity/change`로 `replaceState`. FAB 연도별 순자산 입력·성적표 growth 축 링크(→ 전체·연)·허브 자산 변화 카드도 `init`으로 탭 지정

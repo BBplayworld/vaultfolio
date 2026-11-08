@@ -299,10 +299,10 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   return (
     <>
       <StockIcon ticker={normalizeTicker(stock)} name={stock.name} isForeign={isForeign} color={color} screenshotMode={screenshotMode} shotBig={shotBig} />
-      <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
+      <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`} data-testid={screenshotMode ? undefined : "stock-row-left"}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
-          <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}`} title={stock.name.length > 18 ? stock.name : undefined}>
+          <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}${screenshotMode ? "" : " break-keep [overflow-wrap:anywhere]"}`} title={stock.name.length > 18 ? stock.name : undefined}>
             {stock.name}
           </span>
           {stock.inactiveStatus === "halted" && (
@@ -327,13 +327,13 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
       </div>
-      <div className={ASSET_THEME.cardInfoRight}>
+      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
-        <div className={ASSET_THEME.cardAmountProfitRow}>
-          <span className={`${subCls} ${getProfitLossColor(profit)}`}>
+        <div className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
+          <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>
             {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
           </span>
-          <span className={`${subCls} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
+          <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
         </div>
         {/* 모바일 전용 — 좌측 3줄 초과 방지로 오늘 등락 칩을 손익 줄 아래 우측 정렬(PC는 좌측 인라인) */}
         {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
