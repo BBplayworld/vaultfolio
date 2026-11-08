@@ -8,13 +8,13 @@
 import type { AssetData } from "@/types/asset";
 
 export type OverwriteColl =
-  | "realEstate" | "stocks" | "crypto" | "cash" | "loans"
+  | "realEstate" | "stocks" | "crypto" | "cash" | "loans" | "physicalAssets"
   | "transactions" | "cashTransactions" | "loanTransactions" | "cryptoTransactions"
   | "yearlyNetAssets" | "nickname";
 
 /** 표시·되돌리기 순서(spec: 자산류 → 거래 → 연도별 순자산 → 닉네임) */
 const COLLS: OverwriteColl[] = [
-  "realEstate", "stocks", "crypto", "cash", "loans",
+  "realEstate", "stocks", "crypto", "cash", "loans", "physicalAssets",
   "transactions", "cashTransactions", "loanTransactions", "cryptoTransactions",
   "yearlyNetAssets", "nickname",
 ];
@@ -27,6 +27,7 @@ const ARRAY_COLLS = COLLS.filter((c) => c !== "nickname" && c !== "yearlyNetAsse
  * | crypto | currentPrice, baseDate | 업비트 시세 동기화 |
  * | realEstate | marketEstimate* (추정 시세·근거 9개) — currentValue는 앱이 쓰지 않음(사용자 입력) | 실거래 추정 갱신 |
  * | yearlyNetAssets | 올해 항목(note "자동", 스냅샷마다 업서트) | 스냅샷 저장 |
+ * | physicalAssets | 없음(평가액은 사용자 입력, 시세 연동 없음) — 저장은 분리 키지만 getAssetData가 합쳐 줘 일반 경로 | — |
  * | cash / loans / 거래 4종 | 없음(잔액·수량 반영은 사용자 거래 입력의 결과) | — |
  */
 const COMMON_DERIVED = new Set(["currentPrice", "baseDate", "inactiveStatus", "inactiveReason", "inactiveCheckedAt"]);
@@ -95,7 +96,7 @@ const TYPE_LABEL: Record<string, string> = { buy: "매수", sell: "매도", depo
 export function labelOf(coll: OverwriteColl, v: Rec): string {
   const s = (x: unknown) => (typeof x === "string" ? x : "");
   switch (coll) {
-    case "realEstate": case "stocks": case "crypto": case "cash": case "loans":
+    case "realEstate": case "stocks": case "crypto": case "cash": case "loans": case "physicalAssets":
       return s(v.name) || "이름 없음";
     case "transactions": case "cryptoTransactions":
       return `${s(v.stockName) || s(v.name) || s(v.symbol)} ${TYPE_LABEL[s(v.type)] ?? "거래"} ${s(v.date)}`.trim();
