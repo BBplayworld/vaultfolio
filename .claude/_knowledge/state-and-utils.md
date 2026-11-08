@@ -699,6 +699,8 @@ quickButtonPresets: { stock, realEstate, loan }
 
 ## 커스텀 이벤트 (컴포넌트 간 통신)
 
+> `navigation/asset-dispatch.ts`: `dispatchOpenYearlyNetAsset()`(FAB → 과거 순자산 입력창) — 이벤트 + **1회 요청 기록**(`YEARLY_NET_ASSET_OPEN_TTL_MS` 3초). `YearlyNetAssetChart`가 마운트 시·이벤트 수신 시 `consumeYearlyNetAssetOpenRequest()`로 꺼내 쓰고(1회 소멸) 유효시간이 지나면 폐기 — setTimeout 의존 없음(#4.49).
+
 ```typescript
 // 추가 이벤트: FloatingAddButton → *-input.tsx에서 수신
 window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode: "screenshot"|"manual" } }))

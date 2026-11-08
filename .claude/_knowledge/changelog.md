@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-08 (v4.49)
+
+### 품질 정돈 묶음 (#4.49, 이슈 #89, risk low)
+- **왜**: 검수에서 '비차단 후속'으로 쌓인 소형 화면·조작 결함 정리. 새 문구·저장 변경 0.
+- ④ 320 주식 행: `stock-tab.tsx` StockRowHeader 비스크린샷에 `max-sm:` 가산(우측 열 `max-w-[58%]`·손익 줄 wrap·금액/(%) nowrap·이름 `break-keep`). 웰컴·인증카드(screenshotMode) 클래스 불변. testid `stock-row-left/right`.
+- ⑤ FAB 과거 순자산: 50ms `setTimeout` 제거 → `asset-dispatch.ts` 1회 요청 + `net-asset-chart.tsx` 마운트/이벤트 소비(3초 유효). `asset-change-view` 무변경.
+- ① InfoHint 터치 40px 확장(`pointer-coarse` after, 래퍼 없음) + 설정 InlineSelector `relative z-10`.
+- ③ 다크 ON 배지 `dark:bg-brand/15 dark:text-indigo-300`(라이트 불변).
+- ② 배당 월 배지: 설명과 같은 grid 칸에 겹쳐 월 선택·해제 시 차트가 밀리지 않음, 배지는 `button`(키보드 해제), 히트 40px. testid `dividend-sub-slot`·`dividend-month-badge`.
+- ⑥ 미사용 shadcn UI 27개 삭제(level-meter 보존).
+
 ## 2026-11-08 (v4.47)
 
 ### 동기화 충돌 시 내 수정 덮임 알림·되돌리기 (#4.47, 이슈 #84, risk high)
