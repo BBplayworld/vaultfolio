@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 11:10 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 14:20 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 | 릴리스 | 내용 | 위험 | 확인 방법 | 결정 |
@@ -18,7 +18,7 @@
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
 |---|---|---|---|---|
 | 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa PASS·COO PASS @757c9b0 → **11/11 00:05 위임 머지 예약**(10월 결산 창 10/28~11/10 종료 후) ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | 11/11 머지 → 운영 스모크 | 위임 머지 (risk:low) |
-| 4.55 | #58 실물 자산 ([draft PR #101](https://github.com/BBplayworld/vaultfolio/pull/101)) | 핵심 구현 완료(저장 계층·결산·UI·GA, vitest 1047) → UI 검수 중 → 4.52·4.53 머지 후 main 병합·KB·qa | 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high) |
+| 4.55 | #58 실물 자산 ([draft PR #101](https://github.com/BBplayworld/vaultfolio/pull/101)) | UI 승인 · qa 1차 FAIL(구버전 기기 혼재 시 클라우드 사본 실물 탈락) → 수정 c7a3bda → **qa 증분 PASS**. 남은 것: 4.52·4.53 머지 후 main 병합·완료 기준 22·최종 qa·COO | 머지 12/11~12/14 (결산 창 밖, 컷 12/18) | 조건부 팀 머지 (risk:high) |
 | 4.54 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | 개발 착수(11/09, 4.52 브랜치 위 로컬 선행 — 원격 issue-4.54 정리 대기) | 4.52 머지 후 main 병합 → qa ~11/22 → 위임 머지 ≤11/26 | 위임 머지 (risk:low) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
