@@ -34,7 +34,7 @@
 | #91 스크린샷으로 보유 현황 맞추기 | 4.50 (PR #92) | **done** — 2026-11-08 대표 승인, squash 머지 be509af. 운영 스모크 PASS | — | #51/#54/#48 판독 메모에 머지일 기록 |
 | #93 현금·대출 잔액 한 번에 맞추기 | 4.52 (risk:low, 위임 머지) | design-review 완료(2026-11-08). 문서 `issues/4.52-93-cash-loan-resync/` | developer | 지금 개발 착수(main be509af 분기) 11/9~11/14 → qa 11/15~17 → COO 11/18 → 위임 머지 ≤11/19(컷 11/26, 넘기면 12/11~12/18). 공지 ID 교체 제외 유지 |
 | /api/sync 남용 방어 | 4.53 (단독, risk:medium, 대표 승인) | #83 동승 번복(cto 2026-11-08) | developer·qa | 개발 11/15~17(getClientIp→api-guard, GET L1·assetId 검증, 다기기 pull 임계 테스트) → qa 11/18 → 대표 승인 요청 ~11/19 |
-| #58 실물 자산 등록(금 등) | 4.54 (risk:high, 대표 위임 → 팀 머지 조건부) | cto 재점검 통과(범위 유지, 정정 4). 문서 `issues/4.xx-58-physical-assets/` | planner-designer·developer → ui-designer·qa → cto | 11/9~11/14 spec 정정(GA page_title·줄 번호 be509af 재grep·resync/#93 저장 경로 physicalAssets 보존 조건) → 개발 11/18~12/2 → qa 12/3~12/9 → COO 12/10 → 팀 머지 12/11~12/14(컷 12/18, 12/19~12/27 금지, 넘기면 1/12~1/26). 새 알려진 한계 생기면 대표 승인 전환 |
+| #58 실물 자산 등록(금 등) | 4.54 (risk:high, 대표 위임 → 팀 머지 조건부) | cto 재점검 통과(범위 유지, 정정 4). 문서 `issues/4.54-58-physical-assets/` | planner-designer·developer → ui-designer·qa → cto | 11/9~11/14 spec 정정(GA page_title·줄 번호 be509af 재grep·resync/#93 저장 경로 physicalAssets 보존 조건) → 개발 11/18~12/2 → qa 12/3~12/9 → COO 12/10 → 팀 머지 12/11~12/14(컷 12/18, 12/19~12/27 금지, 넘기면 1/12~1/26). 새 알려진 한계 생기면 대표 승인 전환 |
 
 ## 열린 릴리스
 - **(2026-11-08 cto 재정리)** 개발 순서 4.51 #83(cherry-pick·재검증만) → 4.52 #93 → 4.53 /api/sync → 4.54 #58. 열린 개발 릴리스 1개·parked 규칙 유지, 번호는 머지 순서대로. 아래 옛 줄의 #83=4.50/4.51·#58=4.49/4.52 표기는 이 줄로 대체.
