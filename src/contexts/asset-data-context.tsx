@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
-import { getAssetData, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
+import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName, type StockClassificationPatch } from "@/lib/finance/finance-service";
@@ -202,6 +202,7 @@ export interface NetAssetBreakdown {
   cryptoValue: number;
   cashValue: number;
   realEstateValue: number;
+  physicalValue: number; // 실물 자산 평가액(#58) — 금융자산(financialAsset)에는 넣지 않는다
   loanBalance: number;
   tenantDepositTotal: number;
   financialAsset: number;
@@ -227,12 +228,13 @@ export function computeNetAsset(
   const cryptoValue = data.crypto.reduce((sum, c) => sum + c.quantity * c.currentPrice, 0);
   const cashValue = data.cash ? data.cash.reduce((sum, c) => sum + c.balance * mul(c.currency), 0) : 0;
   const realEstateValue = data.realEstate.reduce((sum, r) => sum + r.currentValue, 0);
+  const physicalValue = (data.physicalAssets ?? []).reduce((sum, p) => sum + (p.currentValue || 0), 0);
   const loanBalance = data.loans.reduce((sum, l) => sum + l.balance, 0);
   const tenantDepositTotal = data.realEstate.reduce((sum, r) => sum + (r.tenantDeposit ?? 0), 0);
   const financialAsset = stockValue + cryptoValue + cashValue;
-  const totalValue = realEstateValue + financialAsset;
+  const totalValue = realEstateValue + physicalValue + financialAsset;
   const netAsset = totalValue - loanBalance - tenantDepositTotal;
-  return { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
+  return { stockValue, cryptoValue, cashValue, realEstateValue, physicalValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
 }
 
 // 투입원가 분해 — getAssetSummary와 saveSnapshots가 동일 수식을 공유(중복·발산 방지)
@@ -241,6 +243,7 @@ export interface AssetCostBreakdown {
   stockCost: number;
   stockCurrencyGain: number; // 해외주식 환차손익
   cryptoCost: number;
+  physicalCost: number; // 실물 매입가 합(#58)
 }
 export function computeAssetCost(
   data: AssetData,
@@ -269,7 +272,8 @@ export function computeAssetCost(
       return sum + (curr - purchase) * s.quantity * s.averagePrice;
     }, 0);
   const cryptoCost = data.crypto.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
-  return { realEstateCost, stockCost, stockCurrencyGain, cryptoCost };
+  const physicalCost = (data.physicalAssets ?? []).reduce((sum, item) => sum + (item.purchasePrice || 0), 0);
+  return { realEstateCost, stockCost, stockCurrencyGain, cryptoCost, physicalCost };
 }
 
 // Short URL(share:KEY_LOCALKEY, 구 s:)을 전체 토큰으로 변환하는 순수 유틸
@@ -703,14 +707,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cash: nab.cashValue,
         loans: nab.loanBalance,
         tenantDeposit: nab.tenantDepositTotal,
+        physical: nab.physicalValue, // 0이어도 기록 — 필드 없는 스냅샷(구버전 기기)과 구분(mergeMonthlySnapshots)
       },
       fx: { USD: latestRates.USD, JPY: latestRates.JPY },
       fxBase,
       cost: {
-        total: cost.realEstateCost + cost.stockCost + cost.cryptoCost + nab.cashValue,
+        total: cost.realEstateCost + cost.physicalCost + cost.stockCost + cost.cryptoCost + nab.cashValue,
         stock: cost.stockCost,
         crypto: cost.cryptoCost,
         realEstate: cost.realEstateCost,
+        physical: cost.physicalCost,
       },
     };
 
@@ -855,11 +861,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 순서: initAssetData → INITIAL_SYNC_DELAY_MS 대기 → 환율 → 주식 현재가 → 스냅샷
   const initAndSync = useCallback(async (data: AssetData, { skipSnapshots = false }: { skipSnapshots?: boolean } = {}) => {
     const hasAssets =
-      data.stocks.length > 0 ||
-      data.realEstate.length > 0 ||
-      data.crypto.length > 0 ||
-      data.cash.length > 0 ||
-      data.loans.length > 0;
+      hasAnyAssets(data);
     prevHasAssetsRef.current = hasAssets;
     initAssetData(data);
     setIsDataLoaded(true);
@@ -907,11 +909,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (!isDataLoaded) return;
     if (isBackgroundWorkBlocked()) return; // 인앱 게이트·앱 잠금 활성 시 자동 동기화 차단
     const hasAssets =
-      assetData.stocks.length > 0 ||
-      assetData.realEstate.length > 0 ||
-      assetData.crypto.length > 0 ||
-      assetData.cash.length > 0 ||
-      assetData.loans.length > 0;
+      hasAnyAssets(assetData);
     if (hasAssets && !prevHasAssetsRef.current) {
       const doSync = async () => {
         await syncTodayExchangeRate();
@@ -942,6 +940,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       data.nickname = nickname;
       persistNickname(nickname);
     }
+    clearPhysicalAssets(); // 공유 반영은 교체 의미 — 공유 토큰에는 실물이 없으므로 로컬 실물을 비운다(#58)
     saveAssetData(data);
     if (snapshots) {
       try {
@@ -1120,11 +1119,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const shareTokenRaw = new URLSearchParams(window.location.hash.substring(1)).get("share");
     const localData = getAssetData();
     const hasLocalAssets =
-      localData.realEstate.length > 0 ||
-      localData.stocks.length > 0 ||
-      localData.crypto.length > 0 ||
-      localData.cash.length > 0 ||
-      localData.loans.length > 0;
+      hasAnyAssets(localData);
 
     if (shareTokenRaw && isStandaloneDisplay() && hasLocalAssets) {
       track("share_restore", { result: "ignored" });
@@ -1778,16 +1773,17 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const getAssetSummary = useCallback((): AssetSummary => {
     // 합산값은 공통 헬퍼 사용 — saveSnapshots와 동일 수식 보장
     const breakdown = computeNetAsset(assetData, exchangeRates);
-    const { stockValue, cryptoValue, cashValue, realEstateValue, loanBalance, tenantDepositTotal, totalValue, netAsset } = breakdown;
+    const { stockValue, cryptoValue, cashValue, realEstateValue, physicalValue, loanBalance, tenantDepositTotal, totalValue, netAsset } = breakdown;
 
     // 원가·환차익은 공통 헬퍼 사용 — saveSnapshots와 동일 수식 보장
-    const { realEstateCost, stockCost, stockCurrencyGain, cryptoCost } = computeAssetCost(assetData, exchangeRates);
+    const { realEstateCost, stockCost, stockCurrencyGain, cryptoCost, physicalCost } = computeAssetCost(assetData, exchangeRates);
+    const physicalProfit = physicalValue - physicalCost;
     const realEstateProfit = realEstateValue - realEstateCost;
     const stockProfit = stockValue - stockCost;
     const stockFxProfit = stockProfit + stockCurrencyGain;
     const cryptoProfit = cryptoValue - cryptoCost;
 
-    const totalCost = realEstateCost + stockCost + cryptoCost + cashValue; // 현금은 원금=현재가로 취급
+    const totalCost = realEstateCost + physicalCost + stockCost + cryptoCost + cashValue; // 현금은 원금=현재가로 취급
     const totalProfit = totalValue - totalCost;
     const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
@@ -1807,10 +1803,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       cryptoValue,
       cryptoCost,
       cryptoProfit,
+      physicalValue,
+      physicalCost,
+      physicalProfit,
       cashValue,
       loanBalance,
       tenantDepositTotal,
       netAsset,
+      physicalCount: (assetData.physicalAssets ?? []).length,
       realEstateCount: assetData.realEstate.length,
       stockCount: assetData.stocks.filter((s) => s.inactiveStatus !== "delisted").length,
       cryptoCount: assetData.crypto.length,

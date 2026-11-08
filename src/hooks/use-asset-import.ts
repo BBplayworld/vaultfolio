@@ -28,12 +28,13 @@ export function useAssetImport() {
 
     setIsImporting(true);
     try {
-      const { assetData: imported, snapshotRestored } = await importAssetData(file);
+      const { assetData: imported, snapshotRestored, physicalKept } = await importAssetData(file);
       useProfitBasisStore.getState().hydrate(); // 복원된 종가 기준 옵션을 store에 반영
       notifyAssetUserEdit(); // 파일 가져오기는 사용자 행동 — 동기화 push 트리거
       toast.success("자산 데이터를 불러왔습니다.");
       track("data_action", { method: "import", result: "success" });
       if (snapshotRestored) toast.info("순자산 히스토리(일별·월별)도 복원되었습니다.");
+      if (physicalKept) toast.info("실물 자산은 기존 값을 유지했어요."); // 구 백업엔 실물이 없어 로컬 값을 지키는 경우
       bumpSnapshotVersion(); // 차트(useDailySnapshots/useMonthlySnapshots) localStorage 재구독 트리거
       skipAllTutorialSteps();
       tutorialStore.getState().initTutorial();

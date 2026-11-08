@@ -17,7 +17,7 @@ export function computeStorageStats(): StorageStats {
   const data = getAssetData();
   const itemCount =
     data.realEstate.length + data.stocks.length + data.crypto.length +
-    data.cash.length + data.loans.length;
+    data.cash.length + data.loans.length + (data.physicalAssets?.length ?? 0);
 
   let approxBytes = 0;
   if (typeof window !== "undefined") {

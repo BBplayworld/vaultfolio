@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/config/app-version";
 import { Z_LAYER } from "@/config/theme";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
-import { clearAssetData, getAssetData, hasAnyAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { clearAssetData, clearPhysicalAssets, getAssetData, hasAnyAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { resolvePreviewAction } from "@/lib/preview/demo-payload";
 import { injectDemoPayload, skipDemoTutorial, stripQueryParams } from "@/lib/preview/demo-inject";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
@@ -87,6 +87,7 @@ function PreviewGateInner({ children }: { children?: ReactNode }) {
     if (action === "empty") {
       resetDemoTutorialSkip(); // clearAssetData가 표식을 지우기 전에 판정
       clearAssetData();
+      clearPhysicalAssets();
       stripDemoQuery();
       setPhase("ready");
       setDemoDone(true); // 선택 카드는 이 페이지 수명 동안 띄우지 않는다

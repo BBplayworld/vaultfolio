@@ -43,6 +43,9 @@ export const STORAGE_KEYS = {
   featureUsage: "secretasset_feature_usage",
   // GA 계측 1회성 플래그 (S-4.28) — 값 { firstAssetSent?: true }. 기기 로컬 전용, 서버·sync payload 미포함
   gaFlags: "secretasset_ga_flags",
+  // 실물 자산 배열(#58) — 의도적으로 `secretasset_` 접두를 쓰지 않는다(점 구분).
+  // 구버전 clearAssetData(동기화 pull·가져오기마다 secretasset_* 삭제)와 접두 순회 정리에 걸리지 않아 롤백해도 보존된다.
+  physicalAssets: "secretasset.physical_assets",
 } as const;
 
 export const LEGACY_KEYS = {

@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { clearAssetData, clearUserCaches } from "@/lib/asset/asset-storage";
+import { clearAssetData, clearPhysicalAssets, clearUserCaches } from "@/lib/asset/asset-storage";
 import { clearBackupStatus } from "@/lib/asset/backup-status";
 import { clearAssetRefreshStatus } from "@/lib/asset/asset-refresh-status";
 import { APP_VERSION } from "@/config/app-version";
@@ -41,6 +41,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { MENU_COLUMN, MENU_ROW, MENU_ROW_DESTRUCTIVE, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC, menuBadge } from "./menu-styles";
 import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 export function SettingsPage() {
   const { refreshData, assetData } = useAssetData();
@@ -49,11 +50,7 @@ export function SettingsPage() {
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
 
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -124,6 +121,7 @@ export function SettingsPage() {
     // 덮어써지는 것을 차단한다. 클라우드 금고 자체는 보존(다른 기기·재연결로 복구 가능).
     cs.forget();
     const success = clearAssetData();
+    clearPhysicalAssets(); // 분리 키(secretasset. 접두)는 clearAssetData에 걸리지 않으므로 명시 삭제
     // clearAssetData는 백업 시각을 보존하지만(가져오기 경로 보호), 전체 삭제는 사용자의
     // 명시적 의도이므로 여기서만 함께 지운다 — 남은 데이터가 없으니 "백업함" 상태도 무의미.
     clearBackupStatus();

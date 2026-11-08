@@ -26,6 +26,7 @@ import {
   type WizardCategory,
 } from "@/lib/onboarding-wizard-status";
 import { Dashboard } from "../../../views/home/dashboard";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 const CATEGORY_META: Record<WizardCategory, { label: string; icon: typeof TrendingUp; guide: string }> = {
   stock: { label: "주식", icon: TrendingUp, guide: "증권사 앱의 보유 종목 화면을 캡처해 올려주세요." },
@@ -35,11 +36,6 @@ const CATEGORY_META: Record<WizardCategory, { label: string; icon: typeof Trendi
 };
 
 type Phase = "intro" | WizardCategory | "complete";
-
-function hasAnyAsset(assetData: ReturnType<typeof useAssetData>["assetData"]): boolean {
-  return assetData.realEstate.length > 0 || assetData.stocks.length > 0 || assetData.crypto.length > 0
-    || assetData.cash.length > 0 || assetData.loans.length > 0;
-}
 
 function WizardHeader({ onClose }: { onClose: () => void }) {
   return (
@@ -144,7 +140,7 @@ export function OnboardingWizardFlow() {
     if (next) { setPhase(next); return; }
     // 4개 카테고리 모두 처리됨. 아무것도 등록 안 됐으면(전부 건너뜀) 가짜 완료 화면 대신 그냥 닫아
     // 기존 WelcomeGuide(자산 0건 화면)로 돌아가게 한다(AC10) — 별도 안내 화면을 새로 만들지 않는다.
-    if (hasAnyAsset(assetData)) { track("wizard_step", { step: "complete" }); setPhase("complete"); return; }
+    if (hasAnyAssets(assetData)) { track("wizard_step", { step: "complete" }); setPhase("complete"); return; }
     finish();
   };
 

@@ -354,9 +354,9 @@ export function trackParse(
 }
 
 /** 보유 자산 건수(연도별 순자산 기록·거래내역 제외) */
-export function countAssets(data: Pick<AssetData, "stocks" | "crypto" | "cash" | "loans" | "realEstate"> | null | undefined): number {
+export function countAssets(data: Pick<AssetData, "stocks" | "crypto" | "cash" | "loans" | "realEstate"> & { physicalAssets?: unknown[] } | null | undefined): number {
   if (!data) return 0;
-  return (data.stocks?.length ?? 0) + (data.crypto?.length ?? 0) + (data.cash?.length ?? 0) + (data.loans?.length ?? 0) + (data.realEstate?.length ?? 0);
+  return (data.stocks?.length ?? 0) + (data.crypto?.length ?? 0) + (data.cash?.length ?? 0) + (data.loans?.length ?? 0) + (data.realEstate?.length ?? 0) + (data.physicalAssets?.length ?? 0);
 }
 
 // ── 첫 자산 저장 1회 판정(AC8) — 기기당 1회, secretasset_ga_flags에 기록 ──

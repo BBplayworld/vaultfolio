@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import { AssetData, assetDataSchema, AssetSnapshots, DailyArchive, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import { AssetData, assetDataSchema, physicalAssetSchema, type PhysicalAsset, AssetSnapshots, DailyArchive, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { readDailyArchive, writeDailyArchive, mergeDailyArchives } from "@/lib/asset/snapshot-archive";
 import { markBackedUp } from "@/lib/asset/backup-status";
 import { transactionSchema } from "@/types/transaction";
@@ -63,9 +63,58 @@ const EMPTY_ASSET_DATA: AssetData = {
   nickname: "",
 };
 
-/** 5개 카테고리(부동산·주식·코인·현금·대출) 중 1건이라도 있으면 true. 배열 존재 전제 — 원본 JSON은 정규화 후 호출 */
-export function hasAnyAssets(d: Pick<AssetData, "realEstate" | "stocks" | "crypto" | "cash" | "loans">): boolean {
-  return d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length > 0;
+/** 6개 카테고리(부동산·주식·코인·현금·대출·실물) 중 1건이라도 있으면 true. 배열 존재 전제(실물은 undefined 허용) — 원본 JSON은 정규화 후 호출 */
+export function hasAnyAssets(d: Pick<AssetData, "realEstate" | "stocks" | "crypto" | "cash" | "loans"> & { physicalAssets?: unknown[] }): boolean {
+  return d.realEstate.length + d.stocks.length + d.crypto.length + d.cash.length + d.loans.length + (d.physicalAssets?.length ?? 0) > 0;
+}
+
+// ─── 실물 자산 분리 키(#58) ─────────────────────────────────────────────────
+// 실물 배열은 본 키(secretasset_asset_data)에 두지 않고 `secretasset.physical_assets`에 둔다 —
+// 구버전이 본 키를 zod strip으로 읽고 다시 저장해도, 동기화 pull의 clearAssetData(secretasset_*)가 돌아도 지워지지 않게 하려는 것.
+// 메모리·Context·동기화·백업 payload에서는 getAssetData가 이 키를 assetData.physicalAssets로 합쳐 준다.
+// 규칙: physicalAssets === undefined → 분리 키를 **손대지 않는다**(전개 누락·구버전 payload가 실물을 지우지 않는 안전 기본값),
+//       [] → 삭제 의도로 [] 기록. 호출부별 개별 처리 없이 saveAssetData/saveAssetDataRaw 두 곳에서만 처리한다.
+
+/** 읽기 정규화 — 항목 단위 완화 파싱(모르는 type→other, 미래 필드 보존). 파싱 실패 항목도 id가 있으면 원본 유지(영구 소실 차단) */
+function normalizePhysical(arr: unknown[]): PhysicalAsset[] {
+  const out: PhysicalAsset[] = [];
+  for (const item of arr) {
+    const r = physicalAssetSchema.safeParse(item);
+    if (r.success) out.push(r.data);
+    else if (item && typeof item === "object" && typeof (item as { id?: unknown }).id === "string") out.push(item as PhysicalAsset);
+  }
+  return out;
+}
+
+/** 분리 키 읽기 — 키가 없거나 배열이 아니면 undefined */
+export function readPhysicalAssets(): PhysicalAsset[] | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.physicalAssets);
+    if (raw === null) return undefined;
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? normalizePhysical(v) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** 분리 키 쓰기(undefined면 무변경). 실패 시 throw — 호출한 저장 함수가 false로 처리 */
+function writePhysicalAssets(arr: PhysicalAsset[] | undefined): void {
+  if (arr === undefined) return;
+  localStorage.setItem(STORAGE_KEYS.physicalAssets, JSON.stringify(normalizePhysical(arr)));
+}
+
+/** 분리 키 명시 삭제 — 모든 데이터 삭제·공유 반영·데모 주입 등 "교체" 의미의 경로 전용 */
+export function clearPhysicalAssets(): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(STORAGE_KEYS.physicalAssets); } catch { /* ignore */ }
+}
+
+/** 본 키에 새기면 안 되는 필드(physicalAssets)를 떼어낸다 */
+function splitPhysical<T extends { physicalAssets?: unknown }>(data: T): { rest: Omit<T, "physicalAssets">; physical: PhysicalAsset[] | undefined } {
+  const { physicalAssets, ...rest } = data;
+  return { rest, physical: physicalAssets as PhysicalAsset[] | undefined };
 }
 
 export function getAssetData(): AssetData {
@@ -108,7 +157,11 @@ export function getAssetData(): AssetData {
       }
     }
 
-    return assetDataSchemaLoose.parse(parsed) as AssetData;
+    // 본 키에 (구버전·오염으로) physicalAssets가 있어도 분리 키가 정본 — 본 키 값은 무시
+    const { rest } = splitPhysical(parsed);
+    const base = assetDataSchemaLoose.parse(rest) as AssetData;
+    const physical = readPhysicalAssets();
+    return physical === undefined ? base : { ...base, physicalAssets: physical };
   } catch (error) {
     console.error("Failed to load asset data:", error);
     return EMPTY_ASSET_DATA;
@@ -118,8 +171,10 @@ export function getAssetData(): AssetData {
 export function saveAssetData(data: AssetData): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const validated = assetDataSchemaLoose.parse(data);
+    const { rest, physical } = splitPhysical(data);
+    const validated = assetDataSchemaLoose.parse(rest);
     validated.lastUpdated = new Date().toISOString();
+    writePhysicalAssets(physical); // 분리 키 먼저 → 본 키 (실패하면 본 키는 그대로)
     localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(validated));
     return true;
   } catch (error) {
@@ -160,7 +215,7 @@ export function buildExportPayload(): Record<string, unknown> {
 // 시세·baseDate·lastUpdated 같은 파생 필드는 정상적으로도 어긋나므로 **건수만** 본다(오탐 방지).
 const itemCountFingerprint = (d: AssetData): string => [
   d.realEstate, d.stocks, d.crypto, d.cash, d.loans,
-  d.transactions, d.cashTransactions, d.loanTransactions, d.cryptoTransactions,
+  d.transactions, d.cashTransactions, d.loanTransactions, d.cryptoTransactions, d.physicalAssets,
 ].map((arr) => arr?.length ?? 0).join(",");
 
 // 백업은 localStorage(getAssetData)를 뜨지만 화면은 React state를 렌더한다 — 둘은 CRUD마다
@@ -205,6 +260,7 @@ export function collectAssetIds(data: AssetData): string[] {
     ...data.cashTransactions.map((i) => i.id),
     ...data.loanTransactions.map((i) => i.id),
     ...data.cryptoTransactions.map((i) => i.id),
+    ...(data.physicalAssets ?? []).map((i) => i.id), // 키 없는 payload(구버전 기기)는 로컬 실물 id를 넣지 않는다
     ...data.yearlyNetAssets.map((y) => yearKey(y.year)),
   ];
 }
@@ -235,6 +291,10 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
   const cashTransactions = mergeById(before.cashTransactions, after.cashTransactions, syncedIds);
   const loanTransactions = mergeById(before.loanTransactions, after.loanTransactions, syncedIds);
   const cryptoTransactions = mergeById(before.cryptoTransactions, after.cryptoTransactions, syncedIds);
+  // 실물: 원격에 키가 없으면(구버전 기기 payload) 병합하지 않는다 — 저장 단계에서 undefined는 로컬 유지
+  const physical = after.physicalAssets === undefined
+    ? { arr: undefined, changed: false }
+    : mergeById(before.physicalAssets ?? [], after.physicalAssets, syncedIds);
 
   // yearlyNetAssets는 id가 아니라 year 기준 (기준점 판별도 동일하게 yearKey로)
   let yearlyNetAssets = after.yearlyNetAssets;
@@ -250,7 +310,7 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
 
   const changed = realEstate.changed || stocks.changed || crypto.changed || cash.changed || loans.changed
     || transactions.changed || cashTransactions.changed || loanTransactions.changed || cryptoTransactions.changed
-    || yearlyChanged;
+    || physical.changed || yearlyChanged;
   if (!changed) return { data: after, changed: false };
   return {
     data: {
@@ -258,6 +318,7 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
       realEstate: realEstate.arr, stocks: stocks.arr, crypto: crypto.arr, cash: cash.arr, loans: loans.arr,
       transactions: transactions.arr, cashTransactions: cashTransactions.arr,
       loanTransactions: loanTransactions.arr, cryptoTransactions: cryptoTransactions.arr,
+      ...(physical.arr ? { physicalAssets: physical.arr } : {}),
       yearlyNetAssets,
     },
     changed: true,
@@ -295,6 +356,8 @@ export function mergeMonthlySnapshots(local: unknown[], incoming: unknown[], cur
     if (!isSnap(s)) continue;
     const prev = byMonth.get(s.month);
     if (prev?.breakdown && !s.breakdown) continue;
+    // 구버전 기기가 쓴 같은 달(breakdown.physical 필드 자체가 없음)이 로컬의 실물 포함 스냅샷을 덮지 않게 한다(#58)
+    if ((prev?.breakdown?.physical ?? 0) > 0 && s.breakdown && s.breakdown.physical === undefined) continue;
     byMonth.set(s.month, s);
   }
   const merged = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month));
@@ -304,7 +367,7 @@ export function mergeMonthlySnapshots(local: unknown[], incoming: unknown[], cur
 export function applyImportedPayload(
   parsed: unknown,
   { keepLocalSnapshots = false, syncedIds }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null } = {},
-): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[] } {
+): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[]; physicalKept: boolean } {
   const p = (parsed ?? {}) as Record<string, unknown>;
   // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
   const rawAsset = (p.assetData ?? p) as unknown;
@@ -373,10 +436,17 @@ export function applyImportedPayload(
   const mergedArchive = mergeDailyArchives(localArchive, incomingArchive ?? {});
   if (Object.keys(mergedArchive).length > 0) writeDailyArchive(mergedArchive);
 
-  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds };
+  // 수신 payload에 실물 키가 없는데(구 백업·구버전 기기) 로컬 실물이 남아 있으면 true — 가져오기 UI가 토스트 1줄을 띄운다
+  const physicalKept = validated.physicalAssets === undefined && (readPhysicalAssets()?.length ?? 0) > 0;
+  // 반환 assetData(화면 state 갱신용)도 저장소와 같게 — 키 없음=로컬 유지이므로 로컬 실물을 합쳐 돌려준다
+  if (validated.physicalAssets === undefined) {
+    const kept = readPhysicalAssets();
+    if (kept) validated = { ...validated, physicalAssets: kept };
+  }
+  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds, physicalKept };
 }
 
-export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean }> {
+export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean; physicalKept: boolean }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -396,7 +466,9 @@ export function importAssetData(file: File): Promise<{ assetData: AssetData; sna
 export function saveAssetDataRaw(data: AssetData): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const payload = { ...data, lastUpdated: new Date().toISOString() };
+    const { rest, physical } = splitPhysical(data);
+    const payload = { ...rest, lastUpdated: new Date().toISOString() };
+    writePhysicalAssets(physical);
     localStorage.setItem(STORAGE_KEYS.assetData, JSON.stringify(payload));
     return true;
   } catch {

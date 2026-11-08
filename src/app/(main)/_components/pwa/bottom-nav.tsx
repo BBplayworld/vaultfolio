@@ -9,6 +9,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
 import { ShareScreenshotDialog } from "../header-menu/share/share-menu";
 import { isTrialMode } from "@/lib/trial/trial-mode";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 type NavItem = {
   id: string;
@@ -54,22 +55,14 @@ export function BottomNav() {
   // 웰컴가이드(자산 없음·공유 대기) 시 숨김
   const isWelcomeGuide =
     isSharePending ||
-    (assetData.realEstate.length === 0 &&
-      assetData.stocks.length === 0 &&
-      assetData.crypto.length === 0 &&
-      assetData.cash.length === 0 &&
-      assetData.loans.length === 0);
+    !hasAnyAssets(assetData);
 
   if (isWelcomeGuide) return null;
 
   const activeId = getActiveId(view.type);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
 
   const handleTap = (id: string) => {
     // 전 탭 햅틱 (안드로이드만 동작 — iOS는 Web Vibration 미지원으로 no-op)

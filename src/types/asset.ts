@@ -157,6 +157,30 @@ export const yearlyNetAssetSchema = z.object({
   note: z.string().optional(),
 });
 
+// 실물 자산(금·은·귀금속·수집품·기타) — 평가액 방식(#58).
+// 읽기용 완화 스키마: 모르는 type은 other로 읽고(.catch), 미래 필드는 passthrough로 보존한다.
+// 제약(이름 필수·평가액>0)은 폼 스키마(physicalAssetInputSchema)에서만 검증 — 읽기 탈락으로 다음 저장 때 영구 소실되는 것을 막는다.
+export const PHYSICAL_ASSET_TYPES = ["gold", "silver", "jewelry", "collectible", "other"] as const;
+export type PhysicalAssetType = (typeof PHYSICAL_ASSET_TYPES)[number];
+export const physicalAssetSchema = z
+  .object({
+    id: z.string(),
+    type: z.enum(PHYSICAL_ASSET_TYPES).catch("other"),
+    name: z.string().catch(""),
+    currentValue: z.number().catch(0),
+    purchasePrice: z.number().catch(0),
+    purchaseDate: z.string().catch(""),
+    description: z.string().optional().catch(undefined),
+  })
+  .passthrough();
+// 입력 폼 전용 엄격 스키마
+export const physicalAssetInputSchema = physicalAssetSchema.extend({
+  name: z.string().min(1, "이름을 입력해주세요"),
+  currentValue: z.number().refine((v) => v > 0, "현재 평가액을 입력해주세요"),
+  purchasePrice: z.number().min(0, "매입가는 0 이상이어야 합니다"),
+  purchaseDate: z.string().min(1, "매입일을 선택해주세요"),
+});
+
 // 전체 자산 데이터 스키마
 export const assetDataSchema = z.object({
   realEstate: z.array(realEstateSchema),
@@ -169,6 +193,9 @@ export const assetDataSchema = z.object({
   cashTransactions: z.array(cashTransactionSchema).default([]),
   loanTransactions: z.array(loanTransactionSchema).default([]),
   cryptoTransactions: z.array(cryptoTransactionSchema).default([]),
+  // 실물 자산 — 저장은 분리 키(secretasset.physical_assets, 본 키에는 쓰지 않음). `.default([])` 금지:
+  // undefined(키 없음/손대지 않음)와 [](삭제 의도)를 구분해야 구버전 payload·구 백업이 실물을 지우지 않는다.
+  physicalAssets: z.array(physicalAssetSchema).optional(),
   lastUpdated: z.string(),
   nickname: z.string().optional().default(""),
 });
@@ -179,6 +206,7 @@ export type Stock = z.infer<typeof stockSchema>;
 export type Crypto = z.infer<typeof cryptoSchema>;
 export type Cash = z.infer<typeof cashSchema>;
 export type Loan = z.infer<typeof loanSchema>;
+export type PhysicalAsset = z.infer<typeof physicalAssetSchema>;
 export type YearlyNetAsset = z.infer<typeof yearlyNetAssetSchema>;
 export type AssetData = z.infer<typeof assetDataSchema>;
 export type { Transaction, CashTransaction, LoanTransaction, CryptoTransaction, PositionSnapshot, PositionPreview, GuardResult, GuardLevel } from "./transaction";
@@ -197,12 +225,15 @@ export interface SnapshotBreakdown {
   // 없으면 breakdown 합만으로는 netAsset을 복원할 수 없어 그 차액이 원인분해 잔차로 흘러간다.
   // 과거 스냅샷(필드 부재)은 여전히 잔차 처리된다 — 소급 불가.
   tenantDeposit?: number;
+  // v5(optional, 하위호환): 실물 자산 평가액. 필드 없는 과거 스냅샷은 0으로 읽는다(기능 이전엔 실제로 0)
+  physical?: number;
 }
 export interface SnapshotCost {
   total: number;      // 총 투입원가 (현금은 원금=현재가로 취급)
   stock: number;
   crypto: number;
   realEstate: number;
+  physical?: number;  // 실물 자산 투입원가(optional, 하위호환)
 }
 
 // v3: 자산 성적표 이력 — 성적표 뷰가 등급 확정(전 축 non-pending) 시점에 기록.
@@ -273,6 +304,9 @@ export interface AssetSummary {
   cryptoValue: number;
   cryptoCost: number;
   cryptoProfit: number;
+  physicalValue: number;
+  physicalCost: number;
+  physicalProfit: number;
   cashValue: number;
   loanBalance: number;
   tenantDepositTotal: number; // 임차인 보증금 합계
@@ -282,4 +316,5 @@ export interface AssetSummary {
   cryptoCount: number;
   cashCount: number;
   loanCount: number;
+  physicalCount: number;
 }

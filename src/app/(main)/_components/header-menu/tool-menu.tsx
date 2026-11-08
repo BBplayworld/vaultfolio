@@ -35,6 +35,7 @@ import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetImport } from "@/hooks/use-asset-import";
 import { computeStorageStats, formatBytes } from "@/lib/asset/storage-stats";
 import { MENU_COLUMN, MENU_ROW, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC } from "./menu-styles";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
@@ -71,11 +72,7 @@ export function ToolMenuPage() {
   const stats = useMemo(() => computeStorageStats(), [exportTick]);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
 

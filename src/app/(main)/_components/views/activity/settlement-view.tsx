@@ -24,6 +24,7 @@ import { CompositionBlock } from "./composition-block";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { buildSettlementPrompt } from "@/lib/ai-prompts";
 import type { ChangeInit } from "../../layout/navigation/navigation-context";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 const CAPTION = "text-sm text-muted-foreground text-pretty";
@@ -85,7 +86,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
     </div>
   );
 
-  const hasAssets = assetData.stocks.length + assetData.crypto.length + assetData.cash.length + assetData.loans.length + assetData.realEstate.length > 0;
+  const hasAssets = hasAnyAssets(assetData);
 
   if (monthly.length === 0 || !hasAssets) {
     return (

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Z_LAYER } from "@/config/theme";
 import { SYNC_HASH_PARAM } from "@/lib/cloud-sync/config";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 const DISMISS_KEY = "secretasset_pwa_connect_dismissed";
 
@@ -33,11 +34,7 @@ export function PwaConnectPrompt() {
   }, []);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
 
   if (!mounted || !isStandalone || hasAssets || dismissed) return null;
 

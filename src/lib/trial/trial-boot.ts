@@ -80,6 +80,13 @@ export function trialRejectReason(original: Pick<Storage, "getItem">, hash: stri
       }
       if (hasAnyAssets(normalized as Parameters<typeof hasAnyAssets>[0])) return "asset_data";
     }
+    // 실물 분리 키(#58): 비어 있지 않거나 해석할 수 없으면 거부(보수적)
+    const phys = original.getItem(STORAGE_KEYS.physicalAssets);
+    if (phys !== null) {
+      let pv: unknown;
+      try { pv = JSON.parse(phys); } catch { return "asset_data"; }
+      if (!Array.isArray(pv) || pv.length > 0) return "asset_data";
+    }
     if (original.getItem(LEGACY_KEYS.assetData) !== null) return "legacy_asset_data";
     if (original.getItem(STORAGE_KEYS.syncState) !== null) return "sync";
     if (Object.keys(original).some((k) => k.startsWith("secretasset_pwa_auth"))) return "app_lock";
