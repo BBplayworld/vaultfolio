@@ -86,7 +86,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const NOTICE_1 = "거래 기록은 그대로 남아요. 손익·세금 계산에 쓸 매수·매도는 거래 기록으로 남겨 주세요.";
+const NR = ({ children }: { children: React.ReactNode }) => <span className="whitespace-nowrap">{children}</span>;
 const NOTICE_TAX = "팔아서 없어진 종목이면 매도 기록을 남겨야 양도세 계산에 들어가요";
 
 export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Props) {
@@ -115,6 +115,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
   const [undoing, setUndoing] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const nextIdRef = useRef(0);
@@ -130,6 +131,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
 
   // 단계가 바뀌면 새 제목으로 포커스를 옮긴다
   useEffect(() => {
+    setScrolled(false);
     if (open && step !== "upload") titleRef.current?.focus();
   }, [open, step]);
 
@@ -199,6 +201,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
       toast("보유 현황을 맞췄어요", {
         id: TOAST_ID,
         duration: 8000,
+        actionButtonStyle: { minHeight: 40 },
         action: { label: "되돌리기", onClick: () => void doUndo(u) },
       });
     }
@@ -371,15 +374,16 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
           if (running || applying) e.preventDefault();
         }}
       >
-        <DialogHeader className="px-5 pt-5 pb-3 text-left">
+        <DialogHeader className={`px-5 pt-5 pb-3 text-left ${scrolled ? "border-b border-border/40" : ""}`}>
           <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">
             {titleText}
           </DialogTitle>
         </DialogHeader>
 
-        <div key={step} className="scrollbar-themed min-h-0 flex-1 touch-pan-y overflow-y-auto px-5 pb-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
+        <div key={step} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)} className="scrollbar-themed min-h-0 flex-1 touch-pan-y overflow-y-auto px-5 pb-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
           {step === "upload" && (
             <UploadStep
+              failedRemoved={failedRemoved}
               shots={shots}
               running={running}
               remaining={remaining}
@@ -411,7 +415,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
           )}
           {step === "result" && applied && (
             <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
-              <p className="text-sm text-foreground tabular-nums">{summaryLine({ ...applied, same: 0, needs: 0 }, ["add", "change", "remove"])}</p>
+              <p className="text-sm text-foreground tabular-nums">{summaryParts({ ...applied, same: 0, needs: 0 })}</p>
               <p className="text-sm text-muted-foreground text-pretty break-keep">
                 {undoInfo
                   ? undoInfo.skipped > 0
@@ -452,12 +456,12 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
           {step === "preview" && (
             <>
               {counts.needs > 0 && (
-                <p className="text-sm text-muted-foreground sm:mr-auto sm:self-center" aria-live="polite">
+                <p className="text-sm text-muted-foreground text-pretty break-keep sm:mr-auto sm:self-center" aria-live="polite">
                   확인 필요 {counts.needs}개는 맞추지 않고 그대로 둬요
                 </p>
               )}
               {changes === 0 && (
-                <p className="text-sm text-muted-foreground sm:mr-auto sm:self-center">바뀌는 내용이 없어요</p>
+                <p className="text-sm text-muted-foreground text-pretty break-keep sm:mr-auto sm:self-center">바뀌는 내용이 없어요</p>
               )}
               <Button variant="brand" data-testid="resync-apply" disabled={applying || changes === 0} onClick={handleApply}>
                 {applying ? (
@@ -499,15 +503,10 @@ function existingBrokers(stocks: Stock[], listed: string[]): string[] {
   return [...new Set(stocks.map((s) => s.broker ?? "").filter((b) => !isUnassignedBroker(b) && !listed.includes(b)))];
 }
 
-function summaryLine(c: ResyncCounts, keys: (keyof ResyncCounts)[] = ["add", "change", "remove", "same", "needs"]) {
-  const label: Record<keyof ResyncCounts, string> = { add: "추가", change: "변경", remove: "삭제", same: "그대로", needs: "확인 필요" };
-  const parts = keys.filter((k) => c[k] > 0).map((k) => `${label[k]} ${c[k]}`);
-  return parts.length > 0 ? parts.join(" · ") : "바뀌는 내용이 없어요";
-}
-
 // ── 1단계 올리기·인식 ────────────────────────────────────────────────
 
 interface UploadProps {
+  failedRemoved: boolean;
   shots: Shot[];
   running: boolean;
   remaining: number;
@@ -521,13 +520,14 @@ interface UploadProps {
   onAccount: (id: number, v: Stock["category"]) => void;
 }
 
-function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine, fileInputRef, onFiles, onRemove, onRetry, onBroker, onAccount }: UploadProps) {
+function UploadStep({ failedRemoved, shots, running, remaining, resolved, existingBrokers: mine, fileInputRef, onFiles, onRemove, onRetry, onBroker, onAccount }: UploadProps) {
   const T = useT();
   const kind = useKind();
   const [dragOver, setDragOver] = useState(false);
   const full = shots.length >= MAX_SHOTS;
   const done = shots.filter((s) => s.status === "ok").length;
   const finished = shots.filter((s) => s.status !== "pending" && s.status !== "parsing").length;
+  const hadFailure = failedRemoved || shots.some((s) => s.status === "failed" || s.status === "truncated" || s.status === "limit");
   const unconfirmed = resolved.some((r) => r.status === "ok" && r.broker === undefined);
 
   return (
@@ -643,6 +643,11 @@ function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine
             </div>
           );
         })}
+      {hadFailure && (
+        <p data-testid="resync-incomplete-note" className="text-sm text-muted-foreground text-pretty break-keep">
+          인식 못 한 장이 있어서 삭제는 모두 꺼 둘게요. 다시 시도가 성공하면 다시 계산해요
+        </p>
+      )}
       {unconfirmed && (
         <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker}를 고르지 않으면 이 화면에 없는 종목은 지우지 않아요</p>
       )}
@@ -657,6 +662,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={shot.url} alt={`사진 ${index + 1}`} className="size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10" />
+        <span className="absolute top-1 left-1 rounded bg-black/60 px-1.5 text-sm text-white tabular-nums" aria-hidden>{index + 1}</span>
         {!busy && (
           <button
             type="button"
@@ -680,7 +686,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
         {shot.status === "ok" && (
           <p className="flex items-center gap-1 text-foreground">
             <Check className="size-4 text-brand" aria-hidden />
-            완료 · 종목 {shot.items.length}개
+            종목 {shot.items.length}개
           </p>
         )}
         {(shot.status === "failed" || shot.status === "truncated" || shot.status === "limit") && (
@@ -689,10 +695,11 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
               <AlertCircle className="mt-0.5 size-4 shrink-0" style={{ color: ASSET_THEME.importantHex }} aria-hidden />
               <span>
                 {shot.status === "failed" && "인식하지 못했어요"}
-                {shot.status === "truncated" && "일부만 인식됐어요. 나눠서 찍어 주세요"}
+                {shot.status === "truncated" && "일부만 인식됐어요"}
                 {shot.status === "limit" && "오늘 인식 횟수를 다 썼어요"}
               </span>
             </p>
+            {shot.status === "truncated" && <p className="text-muted-foreground text-pretty break-keep">나눠서 찍어 주세요</p>}
             {shot.status !== "truncated" && (
               <Button type="button" size="sm" variant="secondary" data-testid={`resync-retry-${index}`} className="min-h-10" disabled={running || remaining <= 0} onClick={() => onRetry(shot)}>
                 다시 시도
@@ -757,6 +764,9 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
       <p data-testid="resync-summary" aria-live="polite" aria-atomic className="text-sm text-foreground tabular-nums text-pretty break-keep">
         {summaryParts(counts)}
       </p>
+      {diff.rows.some((r) => r.reasons.includes("brokerUnconfirmed")) && (
+        <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker}를 못 정한 장이 있어서 삭제는 모두 꺼 뒀어요</p>
+      )}
 
       {[...groups.entries()].map(([title, rows]) => (
         <section key={title} data-testid={`resync-group-${title}`} className="space-y-1 rounded-xl bg-muted/40 p-4" data-screenshot-hide>
@@ -798,7 +808,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
             {off && <p className="text-sm text-muted-foreground text-pretty break-keep">화면이 다 안 담겼을 수 있어요</p>}
             <ul className="divide-y divide-border/40">
               {rows.map((r) => (
-                <CheckRow key={r.rowId} id={r.stock.id} testId={`resync-delete-check-${r.stock.id}`} checked={removeChecked(r.stock.id)} onChange={(on) => toggleRemove(r.stock.id, on)} name={r.stock.name} label={removeChecked(r.stock.id) ? "삭제" : "유지"} labelClass={removeChecked(r.stock.id) ? "text-destructive" : "text-muted-foreground"} sub={`수량 ${fmt(r.stock.quantity)}`} />
+                <CheckRow key={r.rowId} id={r.stock.id} testId={`resync-delete-check-${r.stock.id}`} checked={removeChecked(r.stock.id)} onChange={(on) => toggleRemove(r.stock.id, on)} name={r.stock.name} label={removeChecked(r.stock.id) ? "삭제" : "유지"} labelClass={removeChecked(r.stock.id) ? "text-destructive" : "text-muted-foreground"} sub={`수량 ${fmt(r.stock.quantity)}`} note={r.stock.inactiveStatus ? "거래정지·상장폐지 종목은 기본으로 그대로 둬요" : undefined} noteId={`resync-inactive-note-${r.stock.id}`} />
               ))}
             </ul>
             {foreignDeleteCandidate && rows.some((r) => r.stock.category === "foreign") && (
@@ -812,7 +822,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         <Collapsible open={openKept} onOpenChange={setOpenKept}>
           <CollapsibleTrigger data-testid="resync-kept-toggle" className="flex min-h-10 w-full items-center justify-between gap-2 text-left text-sm font-medium text-pretty break-keep">
             <span>
-              스크린샷에 없는 {T.broker}·{T.broker} 미지정 종목 {diff.kept.length}개
+              스크린샷에 없는 다른 {T.broker}·미지정{kind === "stock" ? "·비상장" : ""} 종목 {diff.kept.length}개
               <span className="block text-sm font-normal text-muted-foreground">기본으로 그대로 둬요</span>
             </span>
             <ChevronDown className={`size-4 shrink-0 motion-safe:transition-[rotate] ${openKept ? "rotate-180" : ""}`} aria-hidden />
@@ -879,11 +889,11 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
       <div className="space-y-2">
         <p data-testid="resync-notice-1" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-          <span>{NOTICE_1}</span>
+          <span>거래 기록은 그대로 남아요. <NR>손익·세금</NR> 계산에 쓸 <NR>매수·매도</NR>는 거래 기록으로 남겨 주세요.</span>
         </p>
         <p data-testid="resync-notice-2" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-          <span>바뀐 수량·평단은 이번 달 결산에 {T.unit} 매수·매도로 잡혀요</span>
+          <span>바뀐 수량·평단은 이번 달 결산에 <NR>{T.unit} 매수·매도</NR>로 잡혀요</span>
         </p>
       </div>
     </div>
@@ -931,13 +941,13 @@ function ItemRow({ row }: { row: DiffRow }) {
     if (row.change.brokerFill) parts.push(<Arrow key="b" a={`${T.broker} 미지정`} b={row.change.brokerFill.to} />);
   }
   return (
-    <li data-testid={`resync-row-${row.rowId}`} className="min-h-10 py-2.5">
+    <li data-testid={`resync-row-${row.rowId}`} className="min-h-10 py-2.5 last:pb-0">
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-sm font-medium">{row.stock?.name ?? item.name}</span>
         <span className={`shrink-0 text-sm ${isAdd ? "text-brand" : "text-foreground"}`}>{isAdd ? "추가" : "변경"}</span>
       </div>
       <p className="flex flex-wrap gap-x-2 text-sm text-muted-foreground tabular-nums">{parts}</p>
-      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
     </li>
   );
@@ -965,7 +975,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
   const blocked = row.reasons.includes("brokerUnconfirmed");
   const applicable = resolveRow(row, sel).type !== "skip";
   return (
-    <li data-testid={`resync-needs-input-${row.rowId}`} className="space-y-2 py-2.5">
+    <li data-testid={`resync-needs-input-${row.rowId}`} className="space-y-2 py-2.5 last:pb-0">
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-sm font-medium">{row.stock?.name ?? item.name}</span>
         <span className="shrink-0 text-sm" style={{ color: ASSET_THEME.importantHex }}>
@@ -976,7 +986,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         {item.broker ?? `${T.broker} 미정`} · 수량 {fmt(item.quantity)}
         {row.change?.qty ? ` (기존 ${fmt(row.change.qty.before)})` : ""}
       </p>
-      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
       {row.reasons.map((r) => REASON_TEXT[r] && <p key={r} className="text-sm text-muted-foreground">{REASON_TEXT[r]}</p>)}
       {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}주`).join("·")}로 읽혔어요</p>}
@@ -1012,7 +1022,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
       )}
       {!blocked && (
         <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
-          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="after:absolute after:-inset-3" />
+          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="relative after:absolute after:-inset-3" />
           맞추기에 포함
         </label>
       )}
@@ -1020,9 +1030,9 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
   );
 }
 
-function CheckRow({ id, testId, checked, onChange, name, label, labelClass, sub }: { id: string; testId: string; checked: boolean; onChange: (on: boolean) => void; name: string; label: string; labelClass: string; sub: string }) {
+function CheckRow({ id, testId, checked, onChange, name, label, labelClass, sub, note, noteId }: { note?: string; noteId?: string; id: string; testId: string; checked: boolean; onChange: (on: boolean) => void; name: string; label: string; labelClass: string; sub: string }) {
   return (
-    <li className="min-h-10">
+    <li className="min-h-10 [&:last-child>label]:pb-0">
       <label htmlFor={`resync-chk-${id}`} className="flex min-h-10 cursor-pointer items-start gap-3 py-2.5">
         <Checkbox id={`resync-chk-${id}`} data-testid={testId} checked={checked} onCheckedChange={(v) => onChange(v === true)} className="relative mt-0.5 after:absolute after:-inset-3" />
         <span className="min-w-0 flex-1">
@@ -1031,6 +1041,7 @@ function CheckRow({ id, testId, checked, onChange, name, label, labelClass, sub 
             <span className={`shrink-0 text-sm ${labelClass}`}>{label}</span>
           </span>
           <span className="block text-sm text-muted-foreground tabular-nums text-pretty break-keep">{sub}</span>
+          {note && <span data-testid={noteId} className="block text-sm text-muted-foreground text-pretty break-keep">{note}</span>}
         </span>
       </label>
     </li>

@@ -313,7 +313,8 @@ describe("정적 규칙 (C11·C16·S6)", () => {
 describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
   const root = join(__dirname, "..", "..");
   const dialog = readFileSync(join(root, "app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
-  const code = dialog.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  // `accept="image/*"` 같은 문자열이 블록 주석으로 오인되지 않게, 공백·`{` 뒤의 `/*`만 주석으로 본다
+  const code = dialog.replace(/^\s*\/\/.*$/gm, "").replace(/(^|[\s{])\/\*[\s\S]*?\*\//g, "$1");
   it("맞추기·되돌리기 경로에 asset_save·가져오기 저장·초기화가 없다", () => {
     expect(code).not.toMatch(/trackAssetSave|asset_save|applyImportedPayload|clearAssetData|saveAssetDataRaw|refreshData|STORAGE_KEYS|localStorage/);
   });
@@ -333,6 +334,19 @@ describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
     for (const f of ["app/(main)/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx", "app/(main)/_components/forms/asset-update/screenshot/crypto-screenshot-import.tsx", "lib/asset/holdings-conflict.ts"]) {
       expect(readFileSync(join(root, f), "utf8")).not.toMatch(/resync/i);
     }
+  });
+  it("UI 검수 P0: after 가상요소로 히트영역을 넓히는 요소는 반드시 위치 기준(relative/absolute)을 가진다(푸터 클릭 가로채기 회귀)", () => {
+    const classes = [...dialog.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)].map((m) => m[1] ?? m[2]);
+    const withAfter = classes.filter((c) => /after:absolute/.test(c));
+    expect(withAfter.length).toBeGreaterThanOrEqual(3);
+    for (const c of withAfter) expect(c, c).toMatch(/(^|\s)(relative|absolute)(\s|$)/);
+  });
+  it("UI 검수 문구: 삭제 해제 이유 2종·유지 묶음 제목·거래정지 안내·토스트 액션 40px", () => {
+    expect(dialog).toMatch(/를 못 정한 장이 있어서 삭제는 모두 꺼 뒀어요/);
+    expect(dialog).toMatch(/인식 못 한 장이 있어서 삭제는 모두 꺼 둘게요\. 다시 시도가 성공하면 다시 계산해요/);
+    expect(dialog).toMatch(/스크린샷에 없는 다른 /);
+    expect(dialog).toMatch(/거래정지·상장폐지 종목은 기본으로 그대로 둬요/);
+    expect(dialog).toMatch(/actionButtonStyle: \{ minHeight: 40 \}/);
   });
   it("서버 라우트: 잘림은 422 + code truncated, 수량 미인식·평단 역산 플래그를 덧붙인다", () => {
     const route = readFileSync(join(root, "app/api/parse-screenshot/route.ts"), "utf8");
