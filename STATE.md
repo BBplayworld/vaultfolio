@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-08 KST (planner: #91 4.50 direction 합의·spec 작성, design-review 진입)
+마지막 갱신: 2026-11-08 KST (orchestrator: #91 4.50 qa 전체 PASS·UI 승인·COO PASS → owner-review, D7 발굴 진행)
 
 ## 대표 결정 대기
 - 없음 (2026-11-01 대표 답변: #63 승인, #58 범위 축소 승인). 이후 안건 없음 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
@@ -30,7 +30,7 @@
 | #80·#81·#82 (배당률·더보기 정돈·홈 도넛) | 4.46 | planning ② 통과(cto 2026-11-07, 각 이슈 폴더 4.46-challenge.md) → development 즉시 | developer·qa | 4.46 브랜치 개설·구현, qa PASS ~11/19, 위임 머지 ≤11/26 목표. #84(high) 동승 시 릴리스 전체 대표 승인 — 11/24까지 #84 미PASS면 4.47로 분리(DECISIONS 2026-11-07) |
 | #84 동기화 소실 방지(A안) | 4.47 | qa PASS(fdd376e)·UI 승인·COO PASS → decision-brief 완료(2026-11-07, 권고 반영). 문서 `issues/4.47-84-sync-overwrite/4.47-*.md` | 오케스트레이터 | PR #88 `status:owner-review`·risk:high 라벨, 대표 승인 요청 ① 발송. 이슈 #84 제목 [4.46]→[4.47] 정정 필요 |
 | #83 월 탭 자산 구성 변화 블록 | 4.48 (단독) | design-review 완료·COO 통과(low, 대표 승인 근거 ⑦). planner 확정 11-07: 배지 '총자산 기준' + InfoHint 1개(문구 spec 4절 2번), 끝값 = `live.breakdown`(buildLiveAttributionCurr), COMPOSITION_KEYS 4개. 문서 `issues/4.48-83-month-composition/4.48-*.md` | developer | 브랜치 12/1 이후(열린 릴리스 없을 때) 개설·개발 즉시, PR 12/11 전 머지 대기, qa ~12/10, owner-review 12/11, 머지 ≤12/18(마감 12/26, 넘기면 1/11~) |
-| #91 스크린샷으로 보유 현황 맞추기 | 4.50 (열린 릴리스, risk:high) | planning ② 완료 → design-review(development 진입 전). direction `planner-designer 합의함`(COO K1~K4·S1~S8 반영), spec 작성·tech-review 팀 결정 3건 반영(서버 응답 필드 3건 additive, 실패 장 시 전 범위 삭제 해제, 되돌린 삭제 항목은 목록 끝)(2026-11-08). 11/17 체크포인트 미달 시 코인 분리. 문서 `issues/4.50-91-screenshot-resync/4.50-*.md` | ui-designer(ui.md)·planner(교차 검토)·developer(tech-review) | ui.md·tech-review ~11/12 → 개발 11/12~11/20(11/17 주식 핵심 미인계 시 코인 분리) → qa 11/21~23 → 대표 승인 요청 ~11/24 |
+| #91 스크린샷으로 보유 현황 맞추기 | 4.50 (열린 릴리스, PR #92, risk:high) | **owner-review** — f2661d7 기준 qa 전체 PASS(D1·D2·D3 해소)·UI 재확인 승인·COO PASS·Vercel success(2026-11-08). 대표 승인 요청 발송. 브리프 `issues/4.50-91-screenshot-resync/4.50-decision-brief.md` | 대표 | 반영 결정 대기(결산 창 제약 없음). 머지 후 qa 운영 스모크 |
 | #58 실물 자산 등록(금 등) | 4.49 (단독) | design-review(문서만). COO 통과(high) 조건 7개 spec 12절 반영(planner 11-07). 문서 `issues/4.xx-58-physical-assets/4.49-*.md`(4.40-challenge·4.48-challenge는 이력 파일명 유지) | ui-designer(ui-review 대비)·developer | 4.48 머지 직후 `issue-4.49` 개설, 개발 12/27~1/8, qa·owner-review 1/12, 머지 1/12~1/26(대표 승인). 1월 결산 영역 후보와 순서는 12/11 판독 직후 1회 재확인 |
 
 ## 열린 릴리스
