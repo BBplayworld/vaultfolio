@@ -2,15 +2,17 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 01:10 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 01:50 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-없음.
+| 릴리스 | 내용 | 위험 | 확인 방법 | 결정 |
+|---|---|---|---|---|
+| **4.53** [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) (#97) | `/api/sync` 남용 방어 — 헤더 위조로 호출 제한 우회 차단, 조회 분당 120회/IP 제한, 잘못된 형식 요청은 저장소 조회 전 거절 | medium (동기화 서버 수정) | 서버 전용 변경이라 화면 확인 불가(preview는 동기화 꺼짐). qa가 기존 동기화 ID 하위호환·다기기 시나리오 검증, 머지 후 운영 2기기 스모크 | 머지=반영 / 닫기=미반영 · 결산 창 제약 없음 |
+
+검증: qa PASS · COO PASS @6efe730 · Vercel success. 정상 사용자 끊김 위험 없음(ID 생성 4.5 이후 불변, 실제 ID 300개 통과), 제한에 걸려도 조용히 60초 뒤 재시도·덮어쓰기 없음. 한계: 서버 인스턴스별 한도라 다중 인스턴스 시 느슨. 롤백 revert 1회. 상세: [decision-brief](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.53-97-sync-guard/4.53-decision-brief.md)
 
 ## 🟨 대표 승인 예정 (미리 알림)
-| 예정일 | 대상 | 이유 |
-|---|---|---|
-| ~11/19 (앞당김 가능) | 4.53 [#97](https://github.com/BBplayworld/vaultfolio/issues/97) `/api/sync` 남용 방어 — [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) 구현 완료, 기존 동기화 ID 하위호환 증명 중 → qa → COO | 동기화 라우트 수정 risk:medium |
+없음.
 
 ## 🔄 진행 중 (팀 자율 — #83·#58은 대표 위임 판단: cto 통과)
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
