@@ -327,7 +327,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
       </div>
-      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-sm:max-w-[50%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
+      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
         <div className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
           <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>

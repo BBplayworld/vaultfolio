@@ -8,7 +8,7 @@
 
 ### 품질 정돈 묶음 (#4.49, 이슈 #89, risk low)
 - **왜**: 검수에서 '비차단 후속'으로 쌓인 소형 화면·조작 결함 정리. 새 문구·저장 변경 0.
-- ④ 320 주식 행: `stock-tab.tsx` StockRowHeader 비스크린샷에 `max-sm:` 가산(우측 열 `max-w-[58%]`·손익 줄 wrap·금액/(%) nowrap·이름 `break-keep`). 웰컴·인증카드(screenshotMode) 클래스 불변. testid `stock-row-left/right`.
+- ④ 320 주식 행: `stock-tab.tsx` StockRowHeader 비스크린샷에 `max-sm:` 가산(우측 열 `max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]` — 폭 구간 분리, 로컬 Playwright 실측: 320 '삼성전자' 이름 66px 1줄, 360+ 일반 금액(≤8천만) 행 39.5px 유지·375 이상은 억 단위도 1줄, 360 억 단위만 줄바꿈 63.5px, 320·340은 우측 50%라 일반 금액도 63.5px, 1280 40.8px 불변·손익 줄 wrap·금액/(%) nowrap·이름 `break-keep`). 웰컴·인증카드(screenshotMode) 클래스 불변. testid `stock-row-left/right`.
 - ⑤ FAB 과거 순자산: 50ms `setTimeout` 제거 → `asset-dispatch.ts` 1회 요청 + `net-asset-chart.tsx` 마운트/이벤트 소비(3초 유효). `asset-change-view` 무변경.
 - ① InfoHint 터치 40px 확장(`pointer-coarse` after, 래퍼 없음) + 설정 InlineSelector `relative z-10`.
 - ③ 다크 ON 배지 `dark:bg-brand/15 dark:text-indigo-300`(라이트 불변).
