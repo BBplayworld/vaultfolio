@@ -1,5 +1,6 @@
 "use client";
 
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -87,6 +88,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
             if (editData) {
                 const success = updateCash(editData.id, data);
                 if (success) {
+                  markCategoryRefreshed("cash");
                   trackAssetSave({ asset_type: "cash", method: "manual", result: "update" }, countAssets(assetData));
                     toast.success("현금성 자산이 수정되었습니다.");
                     onClose();
@@ -100,6 +102,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                 };
                 const success = addCash(newData);
                 if (success) {
+                  markCategoryRefreshed("cash");
                   trackAssetSave({ asset_type: "cash", method: "manual", result: "create" }, countAssets(assetData));
                     toast.success("현금성 자산이 추가되었습니다.");
                     onClose();

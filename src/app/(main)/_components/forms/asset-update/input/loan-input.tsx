@@ -1,5 +1,6 @@
 "use client";
 
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -105,6 +106,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
       if (editData) {
         const success = updateLoan(editData.id, data);
         if (success) {
+          markCategoryRefreshed("loan");
           trackAssetSave({ asset_type: "loan", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("대출 정보가 수정되었습니다.");
           onClose();
@@ -118,6 +120,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
         };
         const success = addLoan(newData);
         if (success) {
+          markCategoryRefreshed("loan");
           trackAssetSave({ asset_type: "loan", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("대출이 추가되었습니다.");
           onClose();
