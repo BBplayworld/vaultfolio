@@ -588,7 +588,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
       </div>
 
       {shots.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-5">
           {shots.map((s, i) => (
             <ShotThumb key={s.id} shot={s} index={i} remaining={remaining} running={running} onRemove={onRemove} onRetry={onRetry} />
           ))}
@@ -696,7 +696,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
           <>
             <p className="flex items-start gap-1 text-pretty break-keep">
               <AlertCircle className="mt-0.5 size-4 shrink-0" style={{ color: ASSET_THEME.importantHex }} aria-hidden />
-              <span className="min-w-0 [overflow-wrap:anywhere]">
+              <span className="min-w-0">
                 {shot.status === "failed" && "인식하지 못했어요"}
                 {shot.status === "truncated" && "일부만 인식됐어요"}
                 {shot.status === "limit" && "오늘 인식 횟수를 다 썼어요"}
@@ -704,7 +704,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
             </p>
             {shot.status === "truncated" && <p className="text-muted-foreground text-pretty break-keep">나눠서 찍어 주세요</p>}
             {shot.status !== "truncated" && (
-              <Button type="button" size="sm" variant="secondary" data-testid={`resync-retry-${index}`} className="min-h-10" disabled={running || remaining <= 0} onClick={() => onRetry(shot)}>
+              <Button type="button" size="sm" variant="secondary" data-testid={`resync-retry-${index}`} className="min-h-10 max-w-full" disabled={running || remaining <= 0} onClick={() => onRetry(shot)}>
                 다시 시도
               </Button>
             )}
@@ -991,7 +991,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         {row.change?.qty ? ` (기존 ${fmt(row.change.qty.before)})` : ""}
       </p>
       {row.change?.brokerFill && <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker} 미지정 → {row.change.brokerFill.to}</p>}
-      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
       {row.reasons.map((r) => REASON_TEXT[r] && <p key={r} className="text-sm text-muted-foreground">{REASON_TEXT[r]}</p>)}
       {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}${T.qty}`).join("·")}로 읽혔어요</p>}

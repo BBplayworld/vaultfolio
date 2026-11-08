@@ -364,10 +364,14 @@ describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
     const apply = dialog.slice(dialog.indexOf("const handleApply"), dialog.indexOf("const doUndo"));
     expect(apply).toMatch(/setUndoInfo\(null\)/);
   });
+  it("qa D3: 썸네일 상태 문구는 어절 중간에서 끊지 않고 320에서는 2열이다", () => {
+    expect(dialog).not.toMatch(/overflow-wrap:anywhere/);
+    expect(dialog).toMatch(/grid-cols-2 gap-2 min-\[360px\]:grid-cols-3/);
+  });
   it("qa D2: 확인 필요 행에도 증권사 채움 화살표와 연결 문구가 있다(수량 감소 연결 행)", () => {
     const needsRow = dialog.slice(dialog.indexOf("function NeedsRow"), dialog.indexOf("function CheckRow"));
     expect(needsRow).toMatch(/row\.change\?\.brokerFill &&/);
-    expect(needsRow).toMatch(/row\.linkedBy === "unassigned" && <p[^>]*>\{T\.broker\} 미지정 줄과 연결/);
+    expect(needsRow).toMatch(/row\.linkedBy === "unassigned" && !row\.change\?\.brokerFill && <p[^>]*>\{T\.broker\} 미지정 줄과 연결/);
     expect(needsRow).toMatch(/tickerMissing/);
   });
   it("qa 기록: 코인 수량 충돌 단위는 코인에서 '개'", () => {
