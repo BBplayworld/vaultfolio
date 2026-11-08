@@ -200,6 +200,8 @@ describe("S3 연결 사실·수량 감소 확인 필요", () => {
     const e = [st("a", "005930", "domestic", "", 10, 70000)];
     const { diff, result } = run(e, [screen(0, [row("005930", 7, 70000, { brokerHint: "토스증권" })])]);
     expect(diff.rows[0]).toMatchObject({ status: "needs", reasons: ["qtyDecrease"], linkedBy: "unassigned" });
+    // 미리보기가 연결 사실(증권사 미지정 → 증권사)을 보일 수 있도록 채움 정보가 행에 있다(qa D2)
+    expect(diff.rows[0].change?.brokerFill).toEqual({ from: "", to: "토스증권" });
     expect(result.stocks[0]).toBe(e[0]);
   });
   it("체크하면 적용된다", () => {

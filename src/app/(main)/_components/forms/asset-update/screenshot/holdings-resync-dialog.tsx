@@ -57,8 +57,8 @@ const LISTED_EXCHANGES: string[] = cryptoExchanges.map((e) => e.label);
 export type ResyncKind = "stock" | "crypto";
 // 주식·코인 공용: 달라지는 말은 증권사→거래소, 주식→코인뿐이다
 const COPY = {
-  stock: { broker: "증권사", unit: "주식", item: "종목" },
-  crypto: { broker: "거래소", unit: "코인", item: "코인" },
+  stock: { broker: "증권사", unit: "주식", item: "종목", qty: "주" },
+  crypto: { broker: "거래소", unit: "코인", item: "코인", qty: "개" },
 } as const;
 const KindCtx = createContext<ResyncKind>("stock");
 const useKind = () => useContext(KindCtx);
@@ -202,7 +202,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
         id: TOAST_ID,
         duration: 8000,
         actionButtonStyle: { minHeight: 40 },
-        action: { label: "되돌리기", onClick: () => void doUndo(u) },
+        action: { label: "되돌리기", onClick: () => void doUndo(u, true) },
       });
     }
     onOpenChange(false);
@@ -306,6 +306,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const handleApply = () => {
     if (applying || changes === 0) return;
     setApplying(true);
+    setUndoInfo(null);
+    setUndoing(false);
     // 저장 직전 최신 보유 현황으로 다시 계산한다(그 사이 시세 갱신 등으로 낡은 값을 덮지 않게)
     const fresh = getAssetData();
     const before = isCrypto ? fresh.crypto.map(cryptoToStock) : fresh.stocks;
@@ -329,9 +331,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   };
 
   // ── 되돌리기(결과 화면 버튼·닫은 직후 토스트 두 곳뿐) ─────────────────
-  const doUndo = async (u: { entries: OverwriteEntry[]; done: boolean } | null = undoRef.current) => {
+  // fromToast: 닫은 직후 토스트에서 부른 경우 — 이미 닫힌(초기화된) 대화상자 상태를 건드리지 않는다
+  const doUndo = async (u: { entries: OverwriteEntry[]; done: boolean } | null = undoRef.current, fromToast = false) => {
     if (!u || u.done) return;
-    const fromToast = u !== undoRef.current || step !== "result";
     u.done = true;
     if (!fromToast) setUndoing(true);
     // 되돌리는 순간 보유 현황을 새로 읽는다(낡은 값 금지)
@@ -659,7 +661,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
   const T = useT();
   const busy = shot.status === "parsing";
   return (
-    <div className="space-y-1.5" data-testid={`resync-thumb-${index}`}>
+    <div className="min-w-0 space-y-1.5" data-testid={`resync-thumb-${index}`}>
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={shot.url} alt={`사진 ${index + 1}`} className="size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10" />
@@ -694,7 +696,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
           <>
             <p className="flex items-start gap-1 text-pretty break-keep">
               <AlertCircle className="mt-0.5 size-4 shrink-0" style={{ color: ASSET_THEME.importantHex }} aria-hidden />
-              <span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 {shot.status === "failed" && "인식하지 못했어요"}
                 {shot.status === "truncated" && "일부만 인식됐어요"}
                 {shot.status === "limit" && "오늘 인식 횟수를 다 썼어요"}
@@ -957,6 +959,7 @@ function ItemRow({ row }: { row: DiffRow }) {
 const REASON_TEXT: Partial<Record<NeedsReason, string>> = {
   qtyDecrease: "수량이 줄었어요",
   quantityMissing: "수량을 읽지 못했어요",
+  tickerMissing: "티커를 읽지 못했어요",
 };
 
 interface NeedsRowProps {
@@ -987,10 +990,11 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         {item.broker ?? `${T.broker} 미정`} · 수량 {fmt(item.quantity)}
         {row.change?.qty ? ` (기존 ${fmt(row.change.qty.before)})` : ""}
       </p>
-      {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
+      {row.change?.brokerFill && <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker} 미지정 → {row.change.brokerFill.to}</p>}
+      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
       {row.reasons.map((r) => REASON_TEXT[r] && <p key={r} className="text-sm text-muted-foreground">{REASON_TEXT[r]}</p>)}
-      {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}주`).join("·")}로 읽혔어요</p>}
+      {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}${T.qty}`).join("·")}로 읽혔어요</p>}
       {row.reasons.includes("ambiguous") && row.candidates && (
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">어느 줄인가요</p>

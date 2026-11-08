@@ -356,6 +356,24 @@ describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
     expect((dialog.match(/onInclude\(true\)/g) ?? []).length).toBe(3);
     expect(dialog).toMatch(/dark:border-white\/10/);
   });
+  it("qa D1: 토스트 되돌리기는 대화상자 상태를 건드리지 않고, 재적용 시 되돌림 상태를 초기화한다", () => {
+    expect(dialog).toMatch(/onClick: \(\) => void doUndo\(u, true\)/);
+    expect(dialog).not.toMatch(/fromToast = u !== undoRef\.current/);
+    const doUndo = dialog.slice(dialog.indexOf("const doUndo"), dialog.indexOf("const parsedOk"));
+    expect(doUndo.match(/if \(!fromToast\)/g)).toHaveLength(3); // 시작·실패·성공의 상태 갱신 모두 토스트 경로에서 제외
+    const apply = dialog.slice(dialog.indexOf("const handleApply"), dialog.indexOf("const doUndo"));
+    expect(apply).toMatch(/setUndoInfo\(null\)/);
+  });
+  it("qa D2: 확인 필요 행에도 증권사 채움 화살표와 연결 문구가 있다(수량 감소 연결 행)", () => {
+    const needsRow = dialog.slice(dialog.indexOf("function NeedsRow"), dialog.indexOf("function CheckRow"));
+    expect(needsRow).toMatch(/row\.change\?\.brokerFill &&/);
+    expect(needsRow).toMatch(/row\.linkedBy === "unassigned" && <p[^>]*>\{T\.broker\} 미지정 줄과 연결/);
+    expect(needsRow).toMatch(/tickerMissing/);
+  });
+  it("qa 기록: 코인 수량 충돌 단위는 코인에서 '개'", () => {
+    expect(dialog).toMatch(/qty: "개"/);
+    expect(dialog).not.toMatch(/\$\{fmt\(q\)\}주/);
+  });
   it("서버 라우트: 잘림은 422 + code truncated, 수량 미인식·평단 역산 플래그를 덧붙인다", () => {
     const route = readFileSync(join(root, "app/api/parse-screenshot/route.ts"), "utf8");
     expect(route).toMatch(/MAX_TOKENS[\s\S]{0,200}code: "truncated"[\s\S]{0,60}status: 422/);
