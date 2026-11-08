@@ -23,6 +23,8 @@ import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfCrypto, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { ScreenshotFailNotice } from "./screenshot-fail-notice";
+import { emptyFailTitle, mapParseErrorTitle, makeScreenshotFail, SCREENSHOT_FAIL_NETWORK, type ScreenshotFail } from "@/lib/asset/screenshot-fail";
 import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
 
 type ImportCrypto = {
@@ -45,9 +47,11 @@ interface CryptoScreenshotImportProps {
   onOpenChange?: (open: boolean) => void;
   /** 저장 성공 시 등록 건수와 함께 호출(S-4.29 온보딩 마법사가 단계 완료 판단에 사용) — 옵셔널, 기존 호출부는 영향 없음 */
   onSaved?: (count: number) => void;
+  /** "add" = 온보딩 마법사: 실패 박스 [직접 입력]이 항상 추가 폼으로 간다(#99) */
+  directInput?: "add";
 }
 
-export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSaved }: CryptoScreenshotImportProps = {}) {
+export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSaved, directInput }: CryptoScreenshotImportProps = {}) {
   const { saveData, assetData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
 
@@ -68,8 +72,10 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
   const [applyMode, setApplyMode] = useState<"common" | "individual">("common");
   const [commonExchange, setCommonExchange] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fail, setFail] = useState<ScreenshotFail | null>(null);
 
   const reset = () => {
+    setFail(null);
     setStep("upload");
     setCryptos([]);
     setIsParsing(false);
@@ -95,6 +101,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
       return;
     }
 
+    setFail(null);
     setIsParsing(true);
     setStep("upload");
 
@@ -104,17 +111,17 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
 
     try {
       const res = await fetch("/api/parse-screenshot", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = await res.json().catch(() => (res.ok ? null : {}));
 
       if (!res.ok) {
         trackParse("crypto", "fail");
-        toast.error(data.error || "파싱에 실패했습니다.");
+        setFail(makeScreenshotFail("error", mapParseErrorTitle(res.status, data?.error)));
         return;
       }
 
       if (!data.cryptos || data.cryptos.length === 0) {
         trackParse("crypto", "empty");
-        toast.error("인식된 코인이 없습니다. 다른 스크린샷을 시도해보세요.");
+        setFail(makeScreenshotFail("empty", emptyFailTitle("crypto")));
         return;
       }
 
@@ -152,7 +159,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
       }
     } catch {
       trackParse("crypto", "fail");
-      toast.error("네트워크 오류가 발생했습니다.");
+      setFail(makeScreenshotFail("network", SCREENSHOT_FAIL_NETWORK));
     } finally {
       setIsParsing(false);
     }
@@ -249,27 +256,39 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
               {SCREENSHOT_UPLOAD_NOTICE}
             </div>
 
-            <div
-              className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-10 transition-colors ${geminiUsage.canUse() ? "hover:border-primary/60 hover:bg-primary/10 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
-              onClick={() => geminiUsage.canUse() && fileInputRef.current?.click()}
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-            >
-              {isParsing ? (
-                <>
-                  <Loader2 className="size-10 text-muted-foreground animate-spin" />
-                  <p className="text-sm text-muted-foreground">AI가 코인을 인식하는 중...</p>
-                </>
-              ) : (
-                <>
-                  <ImageUp className="size-10 text-muted-foreground/50" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium">눌러서 사진 고르기</p>
-                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
-                  </div>
-                </>
-              )}
-            </div>
+            {fail && !isParsing ? (
+              <ScreenshotFailNotice
+                key={fail.seq}
+                fail={fail}
+                assetType="crypto"
+                canRetry={geminiUsage.canUse()}
+                onRetry={() => fileInputRef.current?.click()}
+                onClose={handleClose}
+                directInput={directInput}
+              />
+            ) : (
+              <div
+                className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-10 transition-colors ${geminiUsage.canUse() ? "hover:border-primary/60 hover:bg-primary/10 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+                onClick={() => geminiUsage.canUse() && fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                {isParsing ? (
+                  <>
+                    <Loader2 className="size-10 text-muted-foreground animate-spin" />
+                    <p className="text-sm text-muted-foreground">AI가 코인을 인식하는 중...</p>
+                  </>
+                ) : (
+                  <>
+                    <ImageUp className="size-10 text-muted-foreground/50" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">눌러서 사진 고르기</p>
+                      <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <input
               ref={fileInputRef}
@@ -289,7 +308,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
               </Badge>
             </div>
 
-            {!geminiUsage.canUse() && (
+            {!geminiUsage.canUse() && !(fail && !isParsing) && (
               <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
                 오늘의 AI 인식 한도({geminiUsage.limit}회)를 모두 사용했습니다. 내일 다시 시도해주세요.
               </div>
