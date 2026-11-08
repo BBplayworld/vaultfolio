@@ -374,7 +374,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
           if (running || applying) e.preventDefault();
         }}
       >
-        <DialogHeader className={`px-5 pt-5 pb-3 text-left ${scrolled ? "border-b border-border/40" : ""}`}>
+        <DialogHeader className={`px-5 pt-5 pb-3 text-left ${scrolled ? "border-b border-border/40 dark:border-white/10" : ""}`}>
           <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">
             {titleText}
           </DialogTitle>
@@ -572,7 +572,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
         </button>
       )}
       <p className="text-sm text-muted-foreground text-pretty break-keep">
-        보이는 종목 화면과 똑같이 맞춰요. 평단가와 매입 환율이 화면에 없으면 기존 값을 그대로 둬요.
+        {kind === "crypto" ? "보이는 코인 화면과 똑같이 맞춰요. 평단가가 화면에 없으면 기존 값을 그대로 둬요." : "보이는 종목 화면과 똑같이 맞춰요. 평단가와 매입 환율이 화면에 없으면 기존 값을 그대로 둬요."}
       </p>
 
       <div className="flex flex-col gap-1 text-sm tabular-nums text-muted-foreground" aria-live="polite">
@@ -603,7 +603,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
               <p className="text-sm font-medium break-keep">사진 {i + 1}</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Select value={r.broker ?? ""} onValueChange={(v) => onBroker(r.index, v)}>
-                  <SelectTrigger data-testid={`resync-broker-select-${r.index}`} className="h-10 w-full text-sm sm:max-w-[220px]">
+                  <SelectTrigger data-testid={`resync-broker-select-${r.index}`} className="h-10 w-full text-sm data-[size=default]:h-10 sm:max-w-[220px]">
                     <SelectValue placeholder={`${T.broker} 선택`} />
                   </SelectTrigger>
                   <SelectContent>
@@ -629,7 +629,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
                 </Select>
                 {hasLocal && kind === "stock" && (
                   <Select value={r.account} onValueChange={(v) => onAccount(r.index, v as Stock["category"])}>
-                    <SelectTrigger className="h-10 w-full text-sm sm:max-w-[180px]">
+                    <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10 sm:max-w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -656,6 +656,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
 }
 
 function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { shot: Shot; index: number; remaining: number; running: boolean; onRemove: (s: Shot) => void; onRetry: (s: Shot) => void }) {
+  const T = useT();
   const busy = shot.status === "parsing";
   return (
     <div className="space-y-1.5" data-testid={`resync-thumb-${index}`}>
@@ -686,7 +687,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
         {shot.status === "ok" && (
           <p className="flex items-center gap-1 text-foreground">
             <Check className="size-4 text-brand" aria-hidden />
-            종목 {shot.items.length}개
+            {T.item} {shot.items.length}개
           </p>
         )}
         {(shot.status === "failed" || shot.status === "truncated" || shot.status === "limit") && (
@@ -822,7 +823,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         <Collapsible open={openKept} onOpenChange={setOpenKept}>
           <CollapsibleTrigger data-testid="resync-kept-toggle" className="flex min-h-10 w-full items-center justify-between gap-2 text-left text-sm font-medium text-pretty break-keep">
             <span>
-              스크린샷에 없는 다른 {T.broker}·미지정{kind === "stock" ? "·비상장" : ""} 종목 {diff.kept.length}개
+              스크린샷에 없는 다른 <NR>{T.broker}·미지정{kind === "stock" ? "·비상장" : ""}</NR> 종목 {diff.kept.length}개
               <span className="block text-sm font-normal text-muted-foreground">기본으로 그대로 둬요</span>
             </span>
             <ChevronDown className={`size-4 shrink-0 motion-safe:transition-[rotate] ${openKept ? "rotate-180" : ""}`} aria-hidden />
@@ -993,8 +994,8 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
       {row.reasons.includes("ambiguous") && row.candidates && (
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">어느 줄인가요</p>
-          <Select onValueChange={onPick}>
-            <SelectTrigger className="h-10 w-full text-sm"><SelectValue placeholder="줄 선택" /></SelectTrigger>
+          <Select onValueChange={(id) => { onPick(id); onInclude(true); }}>
+            <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10"><SelectValue placeholder="줄 선택" /></SelectTrigger>
             <SelectContent>
               {row.candidates.map((c) => (
                 <SelectItem key={c.id} value={c.id} className="text-sm">
@@ -1010,14 +1011,14 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
           inputMode="decimal"
           className="h-10 w-28 tabular-nums"
           placeholder={row.reasons.includes("quantityMissing") ? "수량 입력" : String(item.quantity)}
-          onChange={(e) => onQty(Number(e.target.value.replace(/[^0-9.]/g, "")) || 0)}
+          onChange={(e) => { const n = Number(e.target.value.replace(/[^0-9.]/g, "")) || 0; onQty(n); if (n > 0) onInclude(true); }}
         />
       )}
       {row.reasons.includes("tickerMissing") && (
         <Input
           className="h-10 w-32 font-mono"
           placeholder="티커 입력"
-          onChange={(e) => onTicker(e.target.value.toUpperCase().replace(/[^A-Z0-9./]/g, "").slice(0, 8))}
+          onChange={(e) => { const t = e.target.value.toUpperCase().replace(/[^A-Z0-9./]/g, "").slice(0, 8); onTicker(t); if (t) onInclude(true); }}
         />
       )}
       {!blocked && (

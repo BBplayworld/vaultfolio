@@ -348,6 +348,14 @@ describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
     expect(dialog).toMatch(/거래정지·상장폐지 종목은 기본으로 그대로 둬요/);
     expect(dialog).toMatch(/actionButtonStyle: \{ minHeight: 40 \}/);
   });
+  it("UI 권고 R1~R4: 유지 묶음 nowrap·Select 40px·코인 문구 분기·자동 포함·다크 구분선", () => {
+    expect(dialog).toMatch(/스크린샷에 없는 다른 <NR>/);
+    expect((dialog.match(/data-\[size=default\]:h-10/g) ?? []).length).toBe(3);
+    expect(dialog).toMatch(/보이는 코인 화면과 똑같이 맞춰요\. 평단가가 화면에 없으면/);
+    expect(dialog).toMatch(/\{T\.item\} \{shot\.items\.length\}개/);
+    expect((dialog.match(/onInclude\(true\)/g) ?? []).length).toBe(3);
+    expect(dialog).toMatch(/dark:border-white\/10/);
+  });
   it("서버 라우트: 잘림은 422 + code truncated, 수량 미인식·평단 역산 플래그를 덧붙인다", () => {
     const route = readFileSync(join(root, "app/api/parse-screenshot/route.ts"), "utf8");
     expect(route).toMatch(/MAX_TOKENS[\s\S]{0,200}code: "truncated"[\s\S]{0,60}status: 422/);
