@@ -230,24 +230,30 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
-                <CardTitle>배당</CardTitle>
+                <CardTitle className="shrink-0 whitespace-nowrap">배당</CardTitle>
                 <InfoHint summary="아직 안 받은 달은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
                   <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
                   <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
                   <p><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</p>
                   <p>투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
                 </InfoHint>
+              </div>
+              {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
+              <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
+                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>보유 주식 기준 올해 배당금</CardDescription>
                 {selectedMonth !== undefined && (
-                  <Badge
-                    variant="outline"
-                    className="cursor-pointer text-xs"
-                    onClick={() => setSelectedMonth(undefined)}
-                  >
-                    {selectedMonth}월 · 전체 보기 ×
+                  <Badge asChild variant="outline">
+                    <button
+                      type="button"
+                      data-testid="dividend-month-badge"
+                      onClick={() => setSelectedMonth(undefined)}
+                      className="relative z-10 h-6 justify-self-start cursor-pointer overflow-visible px-2.5 text-xs after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-accent focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/40 motion-safe:transition-[transform,background-color,box-shadow] motion-safe:active:scale-[0.96] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150"
+                    >
+                      {selectedMonth}월 · 전체 보기 ×
+                    </button>
                   </Badge>
                 )}
               </div>
-              <CardDescription>보유 주식 기준 올해 배당금</CardDescription>
             </div>
             <div className={selectedMonth !== undefined ? "opacity-40 pointer-events-none" : ""}>
               <InlineSelector
