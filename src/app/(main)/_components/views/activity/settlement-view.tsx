@@ -20,6 +20,7 @@ import { track } from "@/lib/analytics/ga";
 import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-section";
 import { CATEGORY_LABEL } from "../home/home-tip-box";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
+import { CompositionBlock } from "./composition-block";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { buildSettlementPrompt } from "@/lib/ai-prompts";
 import type { ChangeInit } from "../../layout/navigation/navigation-context";
@@ -35,6 +36,7 @@ interface SettlementResult {
   delta: number;
   pct: number | null;
   mapped: SettlementCauses;
+  live: ReturnType<typeof buildLiveAttributionCurr>;
   estimatedLabel: "예측" | "일부 예측";
 }
 
@@ -58,7 +60,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
         start, end: w.end, live, deltaNet: delta, startDate: w.startDate, endDate: w.endDate,
         liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
       });
-      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, estimatedLabel } };
+      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } };
     } catch {
       return { ok: false };
     }
@@ -109,7 +111,7 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
     );
   }
 
-  const { window: w, prevValue, currValue, delta, pct, mapped, estimatedLabel } = computed.value;
+  const { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } = computed.value;
   const stale = getStaleRows(assetData).length > 0;
   const firstMonth = w.kind === "first_month";
 
@@ -142,6 +144,8 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
       />
 
       {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
+
+      {!firstMonth && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 
       {!firstMonth && (() => {
         // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)
