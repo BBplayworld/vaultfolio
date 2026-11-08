@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-08 (v4.50)
+
+### 스크린샷으로 보유 현황 맞추기 — 주식·코인 (#4.50, 이슈 #91, risk high)
+- **왜**: 기존 `덮어쓰기`는 증권사를 구분하지 않아 다른 증권사 줄을 지우고, `초기화 후 등록`은 전부 지우며, 둘 다 새 id로 교체해 매수일·매입 환율·메모가 사라지고 거래 기록이 끊겼다. 1장만·미리보기 없음·되돌리기 없음.
+- 주식(코인)을 1건 이상 보유하면 `StockInput`(`CryptoInput`)이 `HoldingsResyncDialog`(`screenshot/holdings-resync-dialog.tsx`, `kind="stock"|"crypto"`)를 연다(열 때 1회 고정). 0건 첫 등록·온보딩·/ratio 인계는 기존 `StockScreenshotImport`·`CryptoScreenshotImport` 그대로(diff 0).
+- `src/lib/asset/resync/`(순수, 저장·React 0): `merge`(장 증권사·계좌 확정, 장 사이 중복 합침 K1)·`match`(티커+category+증권사 ①①'②③④, 실데이터 broker 형태)·`diff`(추가·변경·삭제·그대로·확인 필요, 삭제 범위 증권사×category S1, 기본 체크 해제 S2)·`apply`(id·매수일·매입 환율·메모 승계, 평단은 화면 실값만, 수량·평단이 바뀐 항목만 positionSource manual)·`undo`(overwrite-guard 순수 함수 재사용, #84 목록 불변)·`crypto`(코인→Stock 어댑터, 범위=거래소).
+- 서버 `/api/parse-screenshot` 응답에 additive 3개: 잘림 시 422+`code:"truncated"`, 주식 `quantityMissing`·`averagePriceEstimated`. 서버로 가는 자산 값 증가 0.
+- 적용·되돌리기는 각각 클릭 핸들러의 `saveData` 1회(일반 편집 경로). 거래 기록은 만들지도 지우지도 않는다. 되돌리기는 결과 화면과 닫은 직후 토스트까지.
+- GA `feature_use` category `resync_start`·`resync_apply`·`resync_undo`(맞추기 경로 `asset_save` 0).
+- 알려진 한계: 화면에 없는 평단·매입 환율은 기존 값 유지, `rollbackTransaction`의 음수 기준 0 절단은 기존 현상(후속 이슈), 되돌리기 이후 복구는 백업뿐.
+
 ## 2026-11-08 (v4.49)
 
 ### 품질 정돈 묶음 (#4.49, 이슈 #89, risk low)

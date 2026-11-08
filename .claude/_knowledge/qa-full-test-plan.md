@@ -554,6 +554,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 375 iOS UA 새 세션에서 첫 저장→튜토리얼 종료 후 카드 1개, 추가하기→기존 PIN 다이얼로그(카드 숨김·다이얼로그 유지), 나중에→카드만 사라짐, 새로고침·재저장 시 재노출 0, 상단바 가로 클리핑·레이아웃 회귀 없음
 - 테스트: `src/lib/__tests__/install-nudge-policy.test.ts`, `manifest.test.ts`, `ga.test.ts`
 
+### F-HOLDINGS-RESYNC. 스크린샷으로 보유 현황 맞추기 ([holdings-resync-dialog.tsx](../../src/app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx)) — #4.50 #91
+- ⚙ vitest: `lib/asset/resync/__tests__`(매칭 표·C20 ①~⑧·S1~S5·K1~K3·코인 대응), `report/__tests__/resync-flows.test.ts`·`resync-crypto-flows.test.ts`(C21 (a)~(g), rollback 음수 기준 0 절단 현상 고정), `lib/__tests__/resync-sync.test.ts`(S8 2기기 하네스: A 맞추기→B 동일, B 미push→알림, A 되돌리기→B 복원, 4.49 스키마 키, 정적 규칙: saveData 2곳·asset_save 0·금지 문구 0), `ga.test.ts`(category 3개)
+- 진입: 주식(코인) 보유 ≥1건이면 제목 `스크린샷으로 보유 현황 맞추기`, `덮어쓰기`·`초기화 후 등록` 0건. 0건이면 기존 첫 등록(`StockScreenshotImport`/`CryptoScreenshotImport`)
+- 올리기: 최대 5장, 6장 선택 시 5장만+토스트, 남은 횟수 0이면 올리기 비활성, 장별 상태(인식 중·완료·인식하지 못했어요·일부만 인식됐어요·오늘 인식 횟수를 다 썼어요), 실패 장만 `다시 시도`
+- 미리보기: 요약 1줄, 변경 행은 바뀌는 칸만 전→후, 삭제 후보 기본 체크는 S1·S2, 확인 필요 `맞추기에 포함`, 평가금액·손익·비중·총액 0건, 고지 2줄(+해외 삭제 후보일 때 양도세 1줄)이 320·375에서 어절 중간 줄바꿈 0
+- 적용: 저장 1회, 변경 0이면 버튼 비활성, 거래 기록 배열 불변, 결과 화면·닫은 직후 토스트 외 되돌리기 입구 0, `앱을 닫기 전까지` 0건
+- preview(`?demo=1` → FAB → 보유 현황 업데이트 → 주식/코인 → 스크린샷): `데모증권` 장은 ②로 확정 또는 1회 선택 경로, 합성 잔고 이미지 2~3장(실캡처 금지)
+
 ### F-SYNC-OVERWRITE. 동기화 덮임 알림·되돌리기 ([overwrite-guard.ts](../../src/lib/cloud-sync/overwrite-guard.ts)) — #4.47 #84
 - ⚙ 기기 2개 localStorage 분리 + 409 모의 하네스(`sync-overwrite.test.ts`): 같은 항목 수정·무관 항목 수정·삭제 부활·신규 추가(목록 제외)·원격 삭제·오프라인 복귀, 재시작 후(기준 없음) 알림 0, 편집 없는 pull 알림 0, 되돌리기 없는 흐름의 localStorage가 guard 없는 흐름과 동일(C13)
 - ⚙ 되돌리기: 목록 항목만 내 값으로(목록 밖 원격 변경 보존), R1 이후 변경 항목 제외, 월 스냅샷·설정 불변, 되돌리기 push 409면 같은 감지 재진입, 그대로 두기·새로고침 후 메모리 0·새 저장 키 0
