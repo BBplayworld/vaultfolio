@@ -104,3 +104,4 @@
 
 ## ⏭️ 07:53 실행 인계 (2026-11-09 00:3x KST 기록)
 - 4.52(PR #96): qa FAIL D1(다크 brand 텍스트 대비 3.16) → 수정 로컬 커밋 757c9b0 (worktree /home/user/vaultfolio-4.52, issue-4.52가 origin보다 1커밋 앞섬, tsc·lint·vitest 1006·build 통과, 다크 7.42:1). 새벽 규칙으로 push 보류 → **07:00 이후 push → Vercel success 확인(e91576a는 pending 정체였음, 계속 pending이면 대표에게 Vercel 대시보드 확인 요청) → qa 증분(D1·h-10 40px·4.51 병합본 preview) → COO → 위임 머지(≤11/19, 컷 11/26) → 운영 스모크**.
+- 2026-11-09 00:10 4.52(PR #96) 증분 qa PASS @757c9b0·Vercel success·**COO PASS → 위임 머지 가(머지 시각 11/11 00:00~11/26 23:59 KST, head 757c9b0 불변)**. 10월 결산 창(~11/10) 중 머지 금지. 다음: 11/11 이후 오케스트레이터 squash 머지(제목 `[#4.52]`) → qa 운영 스모크 6항목 → 대표 한 줄 알림·DASHBOARD. 브리프 issues/4.52-93-cash-loan-resync/4.52-decision-brief.md. p2 후보 3건(저장 실패 토스트 백업 위치·10배 경고 입력 중 노출·indigo-300 토큰화)
