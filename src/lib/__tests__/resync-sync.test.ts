@@ -247,3 +247,35 @@ describe("정적 규칙 (C11·C16·S6)", () => {
     }
   });
 });
+
+describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
+  const root = join(__dirname, "..", "..");
+  const dialog = readFileSync(join(root, "app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
+  const code = dialog.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  it("맞추기·되돌리기 경로에 asset_save·가져오기 저장·초기화가 없다", () => {
+    expect(code).not.toMatch(/trackAssetSave|asset_save|applyImportedPayload|clearAssetData|saveAssetDataRaw|refreshData|STORAGE_KEYS|localStorage/);
+  });
+  it("saveData 호출은 적용·되돌리기 핸들러 2곳뿐이고 effect 안에 없다", () => {
+    expect(code.match(/saveData\(/g)).toHaveLength(2);
+    for (const m of code.matchAll(/useEffect\(\(\) => \{[\s\S]*?\n {2}\}, \[/g)) expect(m[0]).not.toMatch(/saveData\(/);
+  });
+  it("보안 문구는 SCREENSHOT_UPLOAD_NOTICE 하나뿐이고 금지 문구가 없다", () => {
+    expect(code).toMatch(/SCREENSHOT_UPLOAD_NOTICE/);
+    expect(dialog).not.toMatch(/덮어쓰기|초기화 후 등록|앱을 닫기 전까지|공통 적용|개별 선택/);
+    expect(code).not.toMatch(/서버|안전하게|암호화|보안/);
+  });
+  it("GA는 시작·적용·되돌리기 3개 category만 쓴다", () => {
+    expect([...code.matchAll(/category: "(\w+)"/g)].map((m) => m[1]).sort()).toEqual(["resync_apply", "resync_start", "resync_undo"]);
+  });
+  it("기존 첫 등록 컴포넌트·보유 충돌 모듈은 맞추기를 모른다", () => {
+    for (const f of ["app/(main)/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx", "lib/asset/holdings-conflict.ts"]) {
+      expect(readFileSync(join(root, f), "utf8")).not.toMatch(/resync/i);
+    }
+  });
+  it("서버 라우트: 잘림은 422 + code truncated, 수량 미인식·평단 역산 플래그를 덧붙인다", () => {
+    const route = readFileSync(join(root, "app/api/parse-screenshot/route.ts"), "utf8");
+    expect(route).toMatch(/MAX_TOKENS[\s\S]{0,200}code: "truncated"[\s\S]{0,60}status: 422/);
+    expect(route).toMatch(/quantityMissing: !!s\.quantityMissing/);
+    expect(route).toMatch(/averagePriceEstimated,/);
+  });
+});
