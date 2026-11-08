@@ -103,6 +103,9 @@ _components/
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
 2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어 (`hideList` prop)
 
+### ScreenshotFailNotice (`forms/asset-update/screenshot/screenshot-fail-notice.tsx`, #4.54)
+- 추가 import 4종(주식·코인·현금·대출) 업로드 단계 공용 실패 박스. props `fail`(`makeScreenshotFail`)·`assetType`·`canRetry`·`onRetry`·`onClose`·`directInput?:"add"`(마법사). 테스트 id `screenshot-fail-notice/-retry/-manual`, `data-kind`. 제목 매핑은 `lib/asset/screenshot-fail.ts`. 거래 스크린샷·맞추기에는 쓰지 않는다.
+
 ### 스크린샷 다이얼로그 공통 패턴
 
 - `open/onOpenChange` props로 외부 제어
