@@ -3,6 +3,7 @@
 마지막 갱신: 2026-11-08 22:50 KST (cto: #83·#58 대표 위임 재점검 판정 — 4.51 #83 → 4.52 #93 → 4.53 /api/sync → 4.54 #58, issues/_discovery/2026-11-08-recheck-83-58.md)
 
 ## 대표 결정 대기
+- **v4.53 PR #98(#97 /api/sync 남용 방어, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @6efe730**(issues/4.53-97-sync-guard/4.53-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review` 라벨 처리. 머지 시 qa 운영 2기기 스모크(qa-report 10절)
 - 없음 (2026-11-01 대표 답변: #63 승인, #58 범위 축소 승인). 이후 안건 없음 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
 - 없음
 
