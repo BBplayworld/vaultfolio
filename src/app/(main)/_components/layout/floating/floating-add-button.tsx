@@ -290,7 +290,7 @@ export function FloatingAddButton() {
                   <BadgeDollarSign className="size-4 text-primary shrink-0" />
                   <div>
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold">적용 환율
-                      <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                      <span className="text-sm text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                          {exchangeRateDate ? `기준일: ${exchangeRateDate}` : "외화 자산의 원화 환산 기준"}
                       </span>
                     </p>
