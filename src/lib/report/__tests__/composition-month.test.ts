@@ -33,7 +33,7 @@ describe("computeMonthComposition — 비교 구간·반올림 차", () => {
     for (const i of c.items) expect(i.delta).toBe(Math.round(i.endRatio) - Math.round(i.startRatio));
     expect(Math.abs(c.items.reduce((s, i) => s + i.startRatio, 0) - 100)).toBeLessThan(1e-9);
     expect(c.sentence).toBe("이 구간 동안 부동산 −4%p, 주식 +4%p");
-    expect(COMPOSITION_KEYS).toHaveLength(4);
+    expect(COMPOSITION_KEYS).toHaveLength(5);
   });
   it("실제 차가 1%p 미만이라도 반올림 차 0이면 '변화 없음', 전부 0이면 '거의 같아요'", () => {
     const m2 = [snap("2026-09", "2026-09-30", bd(500, 500, 0, 0)), snap("2026-10", "2026-10-31", bd(504, 496, 0, 0))];
@@ -98,7 +98,7 @@ describe("문구·색·렌더", () => {
     expect(COMPOSITION_HINT).toBe("홈 도넛은 부채도 함께 나눠 보여줘서 같은 항목도 %가 다를 수 있어요. 이 블록은 부동산·주식·암호화폐·현금성의 합을 100%로 봐요.");
   });
   it("색은 MAIN_PALETTE 고정 매핑", () => {
-    expect(COMPOSITION_COLORS).toEqual({ realEstate: MAIN_PALETTE[0], stocks: MAIN_PALETTE[4], crypto: MAIN_PALETTE[3], cash: MAIN_PALETTE[5] });
+    expect(COMPOSITION_COLORS).toEqual({ realEstate: MAIN_PALETTE[0], physical: MAIN_PALETTE[8], stocks: MAIN_PALETTE[4], crypto: MAIN_PALETTE[3], cash: MAIN_PALETTE[5] });
   });
   it("블록 DOM: 배지·막대 2줄·행·손익색 0·금액 0·실제 비중 폭, 숨김이면 빈 출력", () => {
     const monthly = [snap("2026-09", "2026-09-30", bd(620, 200, 30, 150)), snap("2026-10", "2026-10-31", bd(580, 240, 20, 160))];
@@ -139,8 +139,36 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     const added = diff.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
     expect(added.length).toBeLessThanOrEqual(6);
     expect(diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---")).length).toBeLessThanOrEqual(2);
-    for (const f of ["src/lib/report/settlement.ts", "src/app/(main)/_components/views/activity/change-hero.tsx", "src/app/(main)/_components/views/activity/asset-change-view.tsx", "src/lib/ai-prompts.ts"]) {
+    // 4.54(#58)가 결산 엔진 매핑(settlement.ts)·짝짓기(change-hero.tsx)·AI 프롬프트(ai-prompts.ts)를 의도적으로 바꾸므로 4.51 범위 가드에서 제외
+    for (const f of ["src/app/(main)/_components/views/activity/asset-change-view.tsx"]) {
       expect(execSync(`git diff origin/main -- '${f}'`, { encoding: "utf8" })).toBe("");
     }
+  });
+});
+
+describe("실물(physical) 합류 (#58)", () => {
+  const bdp = (re: number, st: number, phys?: number) => ({ realEstate: re, stocks: st, crypto: 0, cash: 0, loans: 0, ...(phys === undefined ? {} : { physical: phys }) });
+  it("키 순서는 부동산 다음 실물, 라벨 '실물', 색 MAIN_PALETTE[8]", () => {
+    expect(COMPOSITION_KEYS).toEqual(["realEstate", "physical", "stocks", "crypto", "cash"]);
+    expect(COMPOSITION_COLORS.physical).toBe(MAIN_PALETTE[8]);
+  });
+  it("physical 필드가 없는 과거 스냅샷은 0으로 읽고, 비중 합은 100%", () => {
+    const m = [snap("2026-09", "2026-09-30", bdp(600, 400)), snap("2026-10", "2026-10-31", bdp(500, 300, 200))];
+    const c = computeMonthComposition(win(m, "2026-10"))!;
+    const p = c.items.find((i) => i.key === "physical")!;
+    expect([p.startText, p.endText, p.deltaText]).toEqual(["0%", "20%", "+20%p"]);
+    expect(Math.abs(c.items.reduce((s, i) => s + i.endRatio, 0) - 100)).toBeLessThan(1e-9);
+    expect(Math.abs(c.items.reduce((s, i) => s + i.startRatio, 0) - 100)).toBeLessThan(1e-9);
+  });
+  it("실물 0건(필드 없음 = 0)은 main 결과와 같다: 항목·문장·텍스트", () => {
+    const a = [snap("2026-09", "2026-09-30", bdp(600, 400)), snap("2026-10", "2026-10-31", bdp(500, 500))];
+    const b = [snap("2026-09", "2026-09-30", bdp(600, 400, 0)), snap("2026-10", "2026-10-31", bdp(500, 500, 0))];
+    expect(computeMonthComposition(win(b, "2026-10"))).toEqual(computeMonthComposition(win(a, "2026-10")));
+    expect(computeMonthComposition(win(a, "2026-10"))!.items.map((i) => i.key)).toEqual(["realEstate", "stocks"]);
+  });
+  it("이번 달 끝값은 liveBreakdown(buildLiveAttributionCurr의 breakdown.physical)에서 나온다", () => {
+    const m = [snap("2026-09", "2026-09-30", bdp(600, 400)), snap("2026-10", "2026-10-31", bdp(500, 500))];
+    const c = computeMonthComposition(win(m, "2026-11"), bdp(400, 400, 200))!;
+    expect(c.items.find((i) => i.key === "physical")!.endPct).toBe(20);
   });
 });
