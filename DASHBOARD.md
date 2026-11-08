@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-08 23:40 KST** · 정기 실행: 매일 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07)
+> **마지막 갱신: 2026-11-09 00:50 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 없음.
@@ -10,13 +10,13 @@
 ## 🟨 대표 승인 예정 (미리 알림)
 | 예정일 | 대상 | 이유 |
 |---|---|---|
-| ~11/19 | 4.53 `/api/sync` 남용 방어 (단독 릴리스) | 동기화 라우트 수정 risk:medium |
+| ~11/19 (앞당김 가능) | 4.53 [#97](https://github.com/BBplayworld/vaultfolio/issues/97) `/api/sync` 남용 방어 — 개발 착수(11/09) | 동기화 라우트 수정 risk:medium |
 
 ## 🔄 진행 중 (팀 자율 — #83·#58은 대표 위임 판단: cto 통과)
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
 |---|---|---|---|---|
-| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa 1차 FAIL(다크 글자 대비 1건, 수정 완료·07시 이후 반영) → qa 재확인 ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | qa → COO → 머지 ≤11/19 (컷 11/26) | 위임 머지 (risk:low) |
-| 4.54 | #58 실물 자산 | spec·tech-review 정정 4건 ~11/14 | 개발 11/18~12/2 → qa ~12/9 → 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high, 복원·왕복·동기화 테스트 필수) |
+| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa 1차 FAIL(다크 글자 대비 1건) → 수정 push 757c9b0 → qa 재확인 중 ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | qa → COO → 머지 ≤11/19 (컷 11/26) | 위임 머지 (risk:low) |
+| 4.54 | #58 실물 자산 | spec·tech-review 정정 진행 중 | 개발 11/18~12/2 → qa ~12/9 → 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high, 복원·왕복·동기화 테스트 필수) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -33,6 +33,9 @@
 | 4.47 [PR #88](https://github.com/BBplayworld/vaultfolio/pull/88) | 11/07 | 동기화 충돌 시 로컬 편집 소실 알림·되돌리기 |
 | 문서 [PR #87](https://github.com/BBplayworld/vaultfolio/pull/87) | 11/07 | 머지 위임(저위험) 규칙 반영 |
 | 4.44 [PR #76](https://github.com/BBplayworld/vaultfolio/pull/76) | 11/06 | 상세 다크 BOX·구분선 정리 |
+
+## 🔍 발굴 중 (병렬)
+- D8: 사업·기획 후보 풀 작성 중 → cto 선정 → 이슈 슬롯(2~3개) 비면 착수
 
 ## 📅 주요 일정·제약
 - 결산 창 11/27~12/10: 결산 화면·홈 결산 팁·첫 화면 변경 머지 금지
