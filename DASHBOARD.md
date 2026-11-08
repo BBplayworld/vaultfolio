@@ -15,7 +15,7 @@
 ## 🔄 진행 중 (팀 자율 — #83·#58은 대표 위임 판단: cto 통과)
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
 |---|---|---|---|---|
-| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) 개발 완료·UI 검수 반영 → qa 점검 중 ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | qa → COO → 머지 ≤11/19 (컷 11/26) | 위임 머지 (risk:low) |
+| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa 1차 FAIL(다크 글자 대비 1건, 수정 완료·07시 이후 반영) → qa 재확인 ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | qa → COO → 머지 ≤11/19 (컷 11/26) | 위임 머지 (risk:low) |
 | 4.54 | #58 실물 자산 | spec·tech-review 정정 4건 ~11/14 | 개발 11/18~12/2 → qa ~12/9 → 머지 12/11~12/14 (컷 12/18) | 조건부 팀 머지 (risk:high, 복원·왕복·동기화 테스트 필수) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)

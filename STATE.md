@@ -101,3 +101,6 @@
 - 월 활성 사용자: 약 50명 (2026-10 기준, 집계 방식 미정 — GA 이벤트 `.claude/specs/4.28-ga-event-tracking.md` 참고)
 - 목표: 100명 이상
 
+
+## ⏭️ 07:53 실행 인계 (2026-11-09 00:3x KST 기록)
+- 4.52(PR #96): qa FAIL D1(다크 brand 텍스트 대비 3.16) → 수정 로컬 커밋 757c9b0 (worktree /home/user/vaultfolio-4.52, issue-4.52가 origin보다 1커밋 앞섬, tsc·lint·vitest 1006·build 통과, 다크 7.42:1). 새벽 규칙으로 push 보류 → **07:00 이후 push → Vercel success 확인(e91576a는 pending 정체였음, 계속 pending이면 대표에게 Vercel 대시보드 확인 요청) → qa 증분(D1·h-10 40px·4.51 병합본 preview) → COO → 위임 머지(≤11/19, 컷 11/26) → 운영 스모크**.
