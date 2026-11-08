@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-08 22:50 KST (cto: #83·#58 대표 위임 재점검 판정 — 4.51 #83 → 4.52 #93 → 4.53 /api/sync → 4.54 #58, issues/_discovery/2026-11-08-recheck-83-58.md)
+마지막 갱신: 2026-11-09 KST (cto: D8 선정 — 스크린샷 실패 다음 행동 + p2 최신화 팁 결함·연 탭 기록일, issues/_discovery/2026-11-09-d8-selection.md)
 
 ## 대표 결정 대기
 - **v4.53 PR #98(#97 /api/sync 남용 방어, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @6efe730**(issues/4.53-97-sync-guard/4.53-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review` 라벨 처리. 머지 시 qa 운영 2기기 스모크(qa-report 10절)
@@ -63,6 +63,8 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- **[D8 선정 2026-11-09, cto] 스크린샷 인식 실패 뒤 다음 행동 남기기**(type:bug, risk:low, 위임 머지 가능, issues/_discovery/2026-11-09-d8-selection.md) — 축소 통과: 추가 모드 4종 인라인 박스+[다른 캡처]·[직접 입력](FAB manual 도착지 재사용), 티커 빼고 등록·맞추기 모드 제외. **p2-1 필수**: 홈 최신화 팁 보유 자산군 필터(asset-refresh-status·home-tip, 결산 분기 diff 0, settlement-view 리팩터는 ≤11/26 머지 때만). **p2-2 컷 가능**: 연 탭 '자동' 기준값 기록일 캡션+고치기(수정 모드, 날짜 확신 없으면 날짜 생략) — 연말 전 필수 아님, 빠지면 #58 뒤 12/15~12/26 단독. 일정: 11/11 4.52 머지 직후 이슈 생성·main 분기 → design-review ~11/13 → 개발 11/13~18 → qa 11/19~21 → COO 11/22 → 위임 머지 ≤11/26(넘기면 p2-1 리팩터·p2-2 빼고 settlement-view diff 0이면 창 안 머지 가). 버전은 머지 순서(먼저 머지 시 4.54, #58→4.55 git mv)
+  - D8 보류·탈락: UX A 이어서 맞추기(#58 FAB 충돌·C39 → #58 머지 뒤 재선정 1순위, design 12/15~) · UX C 첫 결산 공백(①은 E3 v2로 흡수, ②캘린더 팁은 E3 v2와 함께 12/11 판독 후) · 사업3 미사용 기능 판독(이슈화 안 함, 12/4 CSV 수신 시 business-pm 상시, 인증카드 판독과 같은 표)
 - **[D7 선정 2026-11-08, cto] 현금·대출 잔액 한 번에 맞추기** — **일정 정정(cto 재점검 11-08 22:50): 4.52, 위임 머지 ≤11/19·컷 11/26. 아래 '4.51·12/11' 표기는 대체**(type:improvement, p1, risk:low, issues/_discovery/2026-11-08-d7-selection.md) — 4.50 머지 후 새 버전(예상 4.51), 개발 11/27~12/5, **위임 머지 12/11**(결산 행 도착지 변경 → 결산 창 후), 마감 12/18. #83은 그 다음 번호
   - **#93 planning ② cto challenge(2026-11-08): 축소 — p2-3 공지 ID 교체 제외, 본 v1 통과.** 조건: 일괄 저장은 saveData 1회(단건 update 반복 금지, C37), 현금 0원 문구 삭제 권유 금지, 월초 귀속·C24·대출 직접 수정 픽스처. 일정: #93=4.51 먼저(4.50 머지 후 개설), #83은 4.51 머지 직후 다음 번호·owner-review ≤12/18·마감 12/26 유지, 12/16까지 4.51 qa 미PASS면 p2 4~6 컷→#83에 슬롯 양보. 문서 issues/4.52-93-cash-loan-resync/4.52-challenge.md → 다음: spec·design-review
   - D7 p2 동승(같은 릴리스, 12/11 이후 머지): 연 탭 빈 상태 문구·작년 말 입력 링크(12월 내·#58 전 필수) · 직접 갱신 `markCategoryRefreshed`(B) · 기능 팁 isNew 정리+공지 ID 교체(12/11 머지일 때만) · 업로드 '클릭·드래그' 문구·`bg-amber-500/10px-3` 오타 4파일 · 저장 실패 알림 헬퍼(M, 용량 초과 시 먼저 컷) · FAB 환율 블록 '오늘 환율'+미사용 ExchangeRateInput 삭제
