@@ -1,7 +1,9 @@
-// 외화 노출(성적표 분산·비중 카드) 순수 계산(#72). 자산 구성 변화 카드는 #4.44에서 제거(키·라벨·금지어는 4.45 재사용을 위해 유지).
+// 외화 노출(성적표 분산·비중 카드) 순수 계산(#72) + 월 탭 자산 구성 변화 계산(#83, 4.51).
 
 import type { FxExposure } from "./asset-report";
 import { formatShortCurrency } from "@/lib/number-utils";
+import { formatSettlementPoint, type SettlementWindow } from "./settlement";
+import type { SnapshotBreakdown } from "@/types/asset";
 
 export type CompositionKey = "realEstate" | "stocks" | "crypto" | "cash";
 /** 표시 순서(동률 비교·범례·색 배정 순서) */
@@ -40,5 +42,82 @@ export function buildFxExposureLines(exposures: FxExposure[], totalValue: number
     ratioLine: `외화 자산 비중 ${total} (${parts})`,
     impactLine: x > 0 ? `환율이 1% 움직이면 순자산이 약 ±${formatShortCurrency(x)} 움직여요` : null,
     caption: "주식·현금 중 달러·엔 자산, 총자산 기준",
+  };
+}
+
+// ── 월 탭 자산 구성 변화(#83) ───────────────────────────────────
+
+/** 비교에 쓰는 breakdown의 자산군 값만 (스냅샷 breakdown·buildLiveAttributionCurr의 live.breakdown 모두 만족) */
+export type CompositionBreakdown = Pick<SnapshotBreakdown, CompositionKey>;
+
+export interface MonthCompositionItem {
+  key: CompositionKey;
+  label: string;
+  /** 실제 비중(0~100, 반올림 전) */
+  startRatio: number;
+  endRatio: number;
+  /** 반올림 정수 비중 */
+  startPct: number;
+  endPct: number;
+  /** round(끝) − round(시작) */
+  delta: number;
+  /** 행 표시용: "62%" / "<1%" / "0%" */
+  startText: string;
+  endText: string;
+  /** 행 표시용: "+4%p" / "−4%p" / "변화 없음" */
+  deltaText: string;
+}
+
+export interface MonthComposition {
+  startLabel: string;
+  endLabel: string;
+  sentence: string;
+  items: MonthCompositionItem[];
+}
+
+const MINUS = "\u2212"; // U+2212
+const pctText = (ratio: number, pct: number) => (ratio > 0 && pct === 0 ? "<1%" : `${pct}%`);
+export const formatDeltaPp = (d: number) => (d === 0 ? "변화 없음" : `${d > 0 ? "+" : MINUS}${Math.abs(d)}%p`);
+
+const sumOf = (b: CompositionBreakdown) => COMPOSITION_KEYS.reduce((s, k) => s + (b[k] > 0 ? b[k] : 0), 0);
+
+/**
+ * 결산 구간 시작→끝 자산군 비중. 비교 구간은 resolveSettlementWindow의 w 그대로:
+ * 시작 = w.start.breakdown, 끝 = w.end.breakdown(없으면 이번 달 → liveBreakdown, Hero·원인과 같은 출처).
+ * 첫 달·breakdown 없음·합 0·두 시점 모두 자산군 1개면 null(블록 숨김).
+ */
+export function computeMonthComposition(w: SettlementWindow, liveBreakdown?: CompositionBreakdown | null): MonthComposition | null {
+  if (w.kind === "first_month" || !w.start) return null;
+  const sb = w.start.breakdown;
+  const eb = w.end ? w.end.breakdown : liveBreakdown;
+  if (!sb || !eb) return null;
+  const sTotal = sumOf(sb), eTotal = sumOf(eb);
+  if (sTotal <= 0 || eTotal <= 0) return null;
+  const sCount = COMPOSITION_KEYS.filter((k) => sb[k] > 0).length;
+  const eCount = COMPOSITION_KEYS.filter((k) => eb[k] > 0).length;
+  if (sCount <= 1 && eCount <= 1) return null;
+
+  const items: MonthCompositionItem[] = [];
+  for (const key of COMPOSITION_KEYS) {
+    const sv = sb[key] > 0 ? sb[key] : 0, ev = eb[key] > 0 ? eb[key] : 0;
+    if (sv <= 0 && ev <= 0) continue;
+    const startRatio = (sv / sTotal) * 100, endRatio = (ev / eTotal) * 100;
+    const startPct = Math.round(startRatio), endPct = Math.round(endRatio);
+    const delta = endPct - startPct;
+    items.push({
+      key, label: COMPOSITION_LABELS[key], startRatio, endRatio, startPct, endPct, delta,
+      startText: pctText(startRatio, startPct), endText: pctText(endRatio, endPct), deltaText: formatDeltaPp(delta),
+    });
+  }
+  const movers = items.filter((i) => i.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)) // 동률은 COMPOSITION_KEYS 순서 유지(안정 정렬)
+    .slice(0, 2);
+  const sentence = movers.length === 0
+    ? "이 구간 동안 구성이 거의 같아요"
+    : `이 구간 동안 ${movers.map((i) => `${i.label} ${formatDeltaPp(i.delta)}`).join(", ")}`;
+  return {
+    startLabel: formatSettlementPoint(w.startDate, w.startLegacy ? w.start.month : undefined),
+    endLabel: w.end ? formatSettlementPoint(w.endDate, w.endLegacy ? w.end.month : undefined) : "지금",
+    sentence, items,
   };
 }

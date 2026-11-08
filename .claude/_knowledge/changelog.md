@@ -15,6 +15,13 @@
 - 스키마·저장 키·동기화·서버 전송·스냅샷·결산 코드 diff 0. 결산 픽스처 ①~④·월초 귀속은 `lib/asset/__tests__/balance-resync-settlement.test.ts`로 고정(외화 직접 수정+환율 변동 시 늘어난 수량의 환율 변동분은 현행 엔진상 시세 변동에 남음 — v1 무변경).
 - 알려진 한계: 그대로 확인 저장 없음, `assetRefresh`는 기기 로컬, 직접 고친 차액은 `기록 안 된 변화`.
 
+## 2026-11-08 (v4.51)
+
+### 월 탭 자산 구성 변화 블록 (#4.51, 이슈 #83, risk low)
+- **왜**: 월 결산은 금액·원인만 보여주고 "구간 동안 자산 비중이 어떻게 바뀌었나"는 앱 어디에도 없었다. 4.44에서 제거한 연 탭 카드와 달리 월 탭 Hero와 같은 구간(`resolveSettlementWindow`의 w)을 비교한다.
+- `lib/report/composition.ts` `computeMonthComposition`(키 4개, 부채 제외, 반올림 정수 차), `views/activity/composition-block.tsx`(배지 "총자산 기준"+InfoHint 1개, 막대 2줄, 증감 행). `settlement-view.tsx`는 import·렌더 1줄·memo의 `live` 전달만 변경. 이번 달 끝값은 Hero·원인과 같은 `buildLiveAttributionCurr` breakdown.
+- 스키마·저장 키·동기화·서버 전송·AI 프롬프트 무변경. GA는 기존 화면 키 `activity:change:composition`만 사용. 실물 키는 4.49(#58).
+
 ## 2026-11-08 (v4.50)
 
 ### 스크린샷으로 보유 현황 맞추기 — 주식·코인 (#4.50, 이슈 #91, risk high)
