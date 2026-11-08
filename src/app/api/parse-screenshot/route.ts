@@ -180,6 +180,7 @@ function processStockResults(raw: GeminiStock[], today: string) {
       currentPrice = (s.currentPrice ?? 0) > 0 ? s.currentPrice! : (s.currentValue ?? 0);
     }
 
+    const averagePriceEstimated = !((s.averagePrice ?? 0) > 0);
     const divisor = 1 + s.profitRate / 100;
     const averagePrice = (s.averagePrice ?? 0) > 0
       ? Math.round(s.averagePrice! * 100) / 100
@@ -214,6 +215,9 @@ function processStockResults(raw: GeminiStock[], today: string) {
       description: "",
       section: category === "foreign" ? "해외" as const : category === "irp" ? "기타" as const : "국내" as const,
       brokerHint: s.brokerHint || "",
+      // 수량 미인식(조용히 1로 채운 값)·평단 역산 여부 — 값 노출만, 기존 필드는 그대로
+      quantityMissing: !!s.quantityMissing || !(s.quantity > 0),
+      averagePriceEstimated,
     };
   });
 }
@@ -755,6 +759,14 @@ export async function POST(request: Request) {
         },
       ],
     });
+
+    // 출력 한도에서 잘린 응답은 일부 종목만 담겼을 수 있다(#91 보유 현황 맞추기가 구분해 표시) — 기존 error 문구는 그대로
+    if (String(result.candidates?.[0]?.finishReason) === "MAX_TOKENS") {
+      return NextResponse.json(
+        { error: "파싱 결과를 읽을 수 없습니다. 다른 스크린샷으로 시도해보세요.", code: "truncated" },
+        { status: 422 }
+      );
+    }
 
     const rawText = result.text?.trim() ?? "";
 

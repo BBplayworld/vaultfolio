@@ -38,6 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { MAIN_PALETTE } from "@/config/theme";
 import { stockCategories, quickButtonPresets, securitiesFirms } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
+import { HoldingsResyncDialog } from "../screenshot/holdings-resync-dialog";
 
 interface StockFormProps {
   editData?: Stock;
@@ -649,6 +650,13 @@ export function StockInput() {
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [activeTab] = useState("all");
+  // 보유 현황 맞추기 분기(#91): 스크린샷 대화상자를 열 때 주식 보유 ≥1건이면 새 대화상자, 아니면 기존 첫 등록. 열 때 1회 고정
+  const [useResync, setUseResync] = useState(false);
+  const [wasScreenshotOpen, setWasScreenshotOpen] = useState(false);
+  if (isScreenshotOpen !== wasScreenshotOpen) {
+    setWasScreenshotOpen(isScreenshotOpen);
+    if (isScreenshotOpen) setUseResync(assetData.stocks.length > 0);
+  }
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -685,7 +693,11 @@ export function StockInput() {
 
   return (
     <>
-      <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
+      {useResync ? (
+        <HoldingsResyncDialog open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      ) : (
+        <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
+      )}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>

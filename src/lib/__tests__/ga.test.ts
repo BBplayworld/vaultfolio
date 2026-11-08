@@ -113,6 +113,9 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "install_nudge_tap" }, "설치 안내 누름"],
     ["feature_use", { category: "sync_overwrite_notice" }, "동기화 덮임 알림"],
     ["feature_use", { category: "sync_overwrite_undo" }, "동기화 되돌리기"],
+    ["feature_use", { category: "resync_start" }, "보유 현황 맞추기 시작"],
+    ["feature_use", { category: "resync_apply" }, "보유 현황 맞추기 적용"],
+    ["feature_use", { category: "resync_undo" }, "보유 현황 맞추기 되돌리기"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
     ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {
