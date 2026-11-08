@@ -1,6 +1,6 @@
 // 보유 현황 맞추기(#91) — 되돌리기 계획. cloud-sync/overwrite-guard.ts의 순수 함수(planRevert·applyRevert)만 재사용한다.
 // 모듈 전역 상태(setEntries 등)는 쓰지 않아 #84 알림 목록을 건드리지 않는다. 사본은 호출측 클로저 메모리에만 둔다.
-import type { AssetData, Stock } from "@/types/asset";
+import type { AssetData } from "@/types/asset";
 import {
   applyRevert,
   captureSnapshot,
@@ -11,18 +11,19 @@ import {
 
 type Rec = Record<string, unknown>;
 
-/** 적용 전(before)·후(after) stocks로 되돌릴 항목 목록을 만든다. 변경=modified, 추가=resurrected(되돌리면 제거), 삭제=remoteDeleted(되돌리면 복원) */
-export function buildUndoEntries(before: Stock[], after: Stock[]): OverwriteEntry[] {
+/** 적용 전(before)·후(after) 항목으로 되돌릴 목록을 만든다. 변경=modified, 추가=resurrected(되돌리면 제거), 삭제=remoteDeleted(되돌리면 복원). 코인은 coll="crypto" */
+export function buildUndoEntries<T extends { id: string }>(before: T[], after: T[], coll: "stocks" | "crypto" = "stocks"): OverwriteEntry[] {
   const out: OverwriteEntry[] = [];
   const beforeMap = new Map(before.map((s) => [s.id, s]));
   const afterMap = new Map(after.map((s) => [s.id, s]));
+  const rec = (v: T) => v as unknown as Rec;
   for (const b of before) {
     const a = afterMap.get(b.id);
-    if (!a) out.push({ key: `stocks:${b.id}`, coll: "stocks", kind: "remoteDeleted", label: labelOf("stocks", b as unknown as Rec), mine: b as unknown as Rec, landed: null });
-    else if (a !== b) out.push({ key: `stocks:${b.id}`, coll: "stocks", kind: "modified", label: labelOf("stocks", b as unknown as Rec), mine: b as unknown as Rec, landed: a as unknown as Rec });
+    if (!a) out.push({ key: `${coll}:${b.id}`, coll, kind: "remoteDeleted", label: labelOf(coll, rec(b)), mine: rec(b), landed: null });
+    else if (a !== b) out.push({ key: `${coll}:${b.id}`, coll, kind: "modified", label: labelOf(coll, rec(b)), mine: rec(b), landed: rec(a) });
   }
   for (const a of after) {
-    if (!beforeMap.has(a.id)) out.push({ key: `stocks:${a.id}`, coll: "stocks", kind: "resurrected", label: labelOf("stocks", a as unknown as Rec), mine: null, landed: a as unknown as Rec });
+    if (!beforeMap.has(a.id)) out.push({ key: `${coll}:${a.id}`, coll, kind: "resurrected", label: labelOf(coll, rec(a)), mine: null, landed: rec(a) });
   }
   return out;
 }

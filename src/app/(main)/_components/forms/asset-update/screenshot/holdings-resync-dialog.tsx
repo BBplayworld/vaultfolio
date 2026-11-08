@@ -4,8 +4,8 @@
 // 증권사 화면 최대 5장을 순차 인식 → 변경 미리보기 → 맞추기 1회(저장 1회) → 결과·되돌리기.
 // 순수 계산은 `@/lib/asset/resync`가 맡고, 이 파일은 상태·표시·저장 호출(클릭 핸들러에서만)만 한다.
 // 0건 첫 등록·온보딩·/ratio 인계는 기존 StockScreenshotImport를 그대로 쓴다(이 컴포넌트는 진입 분기에서만 열린다).
-// 코인은 같은 5함수 시그니처의 어댑터가 생기면 kind="crypto"로 이어 붙인다(이번 단계는 주식만).
-import { useEffect, useMemo, useRef, useState } from "react";
+// 코인은 `resync/crypto.ts` 어댑터로 같은 5함수를 쓴다(kind="crypto": 범위=거래소, 문구만 증권사→거래소·주식→코인).
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, ChevronDown, ImagePlus, Info, Loader2, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
-import { securitiesFirms, stockCategories } from "@/config/asset-options";
+import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asset-options";
 import { ASSET_THEME } from "@/config/theme";
 import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
@@ -26,6 +26,10 @@ import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
   buildUndoEntries,
+  cryptoToStock,
+  matchExchangeHint,
+  parsedCryptoToRaw,
+  stocksToCrypto,
   changeCount,
   computeDiff,
   defaultRemoveIds,
@@ -48,11 +52,22 @@ import type { Stock } from "@/types/asset";
 
 const MAX_SHOTS = 5;
 const LISTED_FIRMS: string[] = securitiesFirms.flatMap((g) => [...g.items]);
+const LISTED_EXCHANGES: string[] = cryptoExchanges.map((e) => e.label);
+
+export type ResyncKind = "stock" | "crypto";
+// 주식·코인 공용: 달라지는 말은 증권사→거래소, 주식→코인뿐이다
+const COPY = {
+  stock: { broker: "증권사", unit: "주식", item: "종목" },
+  crypto: { broker: "거래소", unit: "코인", item: "코인" },
+} as const;
+const KindCtx = createContext<ResyncKind>("stock");
+const useKind = () => useContext(KindCtx);
+const useT = () => COPY[useKind()];
 const TOAST_ID = "holdings-resync-undo";
 const ACCOUNT_OPTIONS = stockCategories.filter((c) => c.value !== "foreign" && c.value !== "unlisted");
 const categoryShort = (c: Stock["category"]) => stockCategories.find((x) => x.value === c)?.shortLabel ?? c;
 const todayKst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().split("T")[0];
-const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 8 });
 
 type ShotStatus = "pending" | "parsing" | "ok" | "failed" | "truncated" | "limit";
 interface Shot {
@@ -66,18 +81,22 @@ interface Shot {
 type Step = "upload" | "preview" | "result";
 
 interface Props {
+  kind?: ResyncKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const NOTICE_1 = "거래 기록은 그대로 남아요. 손익·세금 계산에 쓸 매수·매도는 거래 기록으로 남겨 주세요.";
-const NOTICE_2 = "바뀐 수량·평단은 이번 달 결산에 주식 매수·매도로 잡혀요";
 const NOTICE_TAX = "팔아서 없어진 종목이면 매도 기록을 남겨야 양도세 계산에 들어가요";
 
-export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
+export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Props) {
   const { assetData, saveData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const usdRate = exchangeRates.USD || 1380;
+  const isCrypto = kind === "crypto";
+  // 맞출 대상 목록(코인은 Stock 모양으로 옮긴 사본)
+  const existing = useMemo<Stock[]>(() => (isCrypto ? assetData.crypto.map(cryptoToStock) : assetData.stocks), [isCrypto, assetData.crypto, assetData.stocks]);
+  const resolveOpts = { usdRate, matchHint: isCrypto ? matchExchangeHint : undefined };
 
   const [step, setStep] = useState<Step>("upload");
   const [shots, setShots] = useState<Shot[]>([]);
@@ -132,10 +151,11 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
   );
   const { resolved, diff } = useMemo(() => {
     const screens: RawScreen[] = failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens;
-    const res = resolveScreens(screens, assetData.stocks, { usdRate, brokerOverrides, accountOverrides });
-    const d = computeDiff(assetData.stocks, mergeScreens(res), res);
+    const res = resolveScreens(screens, existing, { ...resolveOpts, brokerOverrides, accountOverrides });
+    const d = computeDiff(existing, mergeScreens(res), res);
     return { resolved: res, diff: d };
-  }, [rawScreens, failedRemoved, assetData.stocks, usdRate, brokerOverrides, accountOverrides]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawScreens, failedRemoved, existing, usdRate, brokerOverrides, accountOverrides, isCrypto]);
 
   const sel = useMemo<ResyncSelection>(() => {
     const remove = new Set<string>();
@@ -194,30 +214,32 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
     try {
       const form = new FormData();
       form.append("image", shot.file);
+      if (isCrypto) form.append("assetType", "crypto");
       const res = await fetch("/api/parse-screenshot", { method: "POST", body: form, signal });
-      const data = (await res.json().catch(() => ({}))) as { stocks?: RawScreenItem[]; code?: string };
+      const data = (await res.json().catch(() => ({}))) as { stocks?: RawScreenItem[]; cryptos?: Parameters<typeof parsedCryptoToRaw>[0][]; code?: string };
       if (res.status === 429) {
-        trackParse("stock", "limit");
+        trackParse(kind, "limit");
         update(shot.id, { status: "limit" });
         return "limit-all";
       }
       // 서버는 실패한 호출도 차감하므로 응답을 받은 호출은 남은 횟수에 반영한다
-      if (res.ok || res.status === 422) geminiUsage.increment("stock");
+      if (res.ok || res.status === 422) geminiUsage.increment(kind);
       setRemaining(geminiUsage.remaining());
-      if (res.ok && data.stocks && data.stocks.length > 0) {
-        trackParse("stock", "success");
-        update(shot.id, { status: "ok", items: data.stocks });
+      const parsed = isCrypto ? data.cryptos?.map((c) => parsedCryptoToRaw(c, usdRate)) : data.stocks;
+      if (res.ok && parsed && parsed.length > 0) {
+        trackParse(kind, "success");
+        update(shot.id, { status: "ok", items: parsed });
       } else if (res.status === 422 && data.code === "truncated") {
-        trackParse("stock", "fail");
+        trackParse(kind, "fail");
         update(shot.id, { status: "truncated" });
       } else {
-        trackParse("stock", res.ok ? "empty" : "fail");
+        trackParse(kind, res.ok ? "empty" : "fail");
         update(shot.id, { status: "failed" });
       }
       return "ok";
     } catch (e) {
       if ((e as Error).name === "AbortError") return "aborted";
-      trackParse("stock", "fail");
+      trackParse(kind, "fail");
       update(shot.id, { status: "failed" });
       return "ok";
     }
@@ -232,7 +254,7 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
     for (const shot of targets) {
       if (ctrl.signal.aborted) break;
       if (limitHit || geminiUsage.remaining() <= 0) {
-        if (!limitHit) trackParse("stock", "limit");
+        if (!limitHit) trackParse(kind, "limit");
         update(shot.id, { status: "limit" });
         continue;
       }
@@ -283,18 +305,20 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
     setApplying(true);
     // 저장 직전 최신 보유 현황으로 다시 계산한다(그 사이 시세 갱신 등으로 낡은 값을 덮지 않게)
     const fresh = getAssetData();
-    const res = resolveScreens(failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens, fresh.stocks, { usdRate, brokerOverrides, accountOverrides });
-    const d = computeDiff(fresh.stocks, mergeScreens(res), res);
-    const result = applyResync(fresh.stocks, d, sel, { today: todayKst(), usdRate, now: Date.now() });
-    const ok = saveData({ ...fresh, stocks: result.stocks });
+    const before = isCrypto ? fresh.crypto.map(cryptoToStock) : fresh.stocks;
+    const res = resolveScreens(failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens, before, { ...resolveOpts, brokerOverrides, accountOverrides });
+    const d = computeDiff(before, mergeScreens(res), res);
+    const result = applyResync(before, d, sel, { today: todayKst(), usdRate, now: Date.now() });
+    const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
+    const ok = saveData(isCrypto ? { ...fresh, crypto: nextCrypto } : { ...fresh, stocks: result.stocks });
     if (!ok) {
       setApplying(false);
       toast.error("맞추기에 실패했어요");
       return;
     }
     toast.dismiss(TOAST_ID);
-    undoRef.current = { entries: buildUndoEntries(fresh.stocks, result.stocks), done: false };
-    markCategoryRefreshed("stock");
+    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildUndoEntries(fresh.stocks, result.stocks), done: false };
+    markCategoryRefreshed(kind);
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
     setApplying(false);
@@ -332,6 +356,7 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
   const titleText = step === "upload" ? "스크린샷으로 보유 현황 맞추기" : step === "preview" ? "바뀌는 내용을 확인해 주세요" : "보유 현황을 맞췄어요";
 
   return (
+    <KindCtx.Provider value={kind}>
     <Dialog
       open={open}
       onOpenChange={(o) => {
@@ -359,7 +384,7 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
               running={running}
               remaining={remaining}
               resolved={resolved}
-              existingBrokers={existingBrokers(assetData.stocks)}
+              existingBrokers={existingBrokers(existing, isCrypto ? LISTED_EXCHANGES : LISTED_FIRMS)}
               fileInputRef={fileInputRef}
               onFiles={addFiles}
               onRemove={removeShot}
@@ -464,13 +489,14 @@ export function HoldingsResyncDialog({ open, onOpenChange }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </KindCtx.Provider>
   );
 }
 
 // ── 공통 조각 ─────────────────────────────────────────────────────────
 
-function existingBrokers(stocks: Stock[]): string[] {
-  return [...new Set(stocks.map((s) => s.broker ?? "").filter((b) => !isUnassignedBroker(b) && !LISTED_FIRMS.includes(b)))];
+function existingBrokers(stocks: Stock[], listed: string[]): string[] {
+  return [...new Set(stocks.map((s) => s.broker ?? "").filter((b) => !isUnassignedBroker(b) && !listed.includes(b)))];
 }
 
 function summaryLine(c: ResyncCounts, keys: (keyof ResyncCounts)[] = ["add", "change", "remove", "same", "needs"]) {
@@ -496,6 +522,8 @@ interface UploadProps {
 }
 
 function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine, fileInputRef, onFiles, onRemove, onRetry, onBroker, onAccount }: UploadProps) {
+  const T = useT();
+  const kind = useKind();
   const [dragOver, setDragOver] = useState(false);
   const full = shots.length >= MAX_SHOTS;
   const done = shots.filter((s) => s.status === "ok").length;
@@ -539,7 +567,7 @@ function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine
           className={`flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl p-6 text-center transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 ${dragOver ? "bg-muted/70" : "bg-muted/40 hover:bg-muted/60"}`}
         >
           <ImagePlus className="size-6 text-muted-foreground" aria-hidden />
-          <span className="text-sm font-medium text-balance break-keep">증권사 보유 종목 화면을 골라 주세요</span>
+          <span className="text-sm font-medium text-balance break-keep">{T.broker} 보유 {T.item} 화면을 골라 주세요</span>
           <span className="text-sm text-muted-foreground text-balance break-keep">최대 5장 · JPG, PNG, WEBP, HEIC · 장당 10MB</span>
         </button>
       )}
@@ -576,16 +604,20 @@ function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Select value={r.broker ?? ""} onValueChange={(v) => onBroker(r.index, v)}>
                   <SelectTrigger data-testid={`resync-broker-select-${r.index}`} className="h-10 w-full text-sm sm:max-w-[220px]">
-                    <SelectValue placeholder="증권사 선택" />
+                    <SelectValue placeholder={`${T.broker} 선택`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {r.broker && !mine.includes(r.broker) && !LISTED_FIRMS.includes(r.broker) && (
+                    {r.broker && !mine.includes(r.broker) && !(kind === "crypto" ? LISTED_EXCHANGES : LISTED_FIRMS).includes(r.broker) && (
                       <SelectItem value={r.broker} className="text-sm">{r.broker}</SelectItem>
                     )}
                     {mine.map((b) => (
                       <SelectItem key={b} value={b} className="text-sm">{b}</SelectItem>
                     ))}
-                    {securitiesFirms.map((group) => (
+                    {kind === "crypto" &&
+                      cryptoExchanges.map((ex) => (
+                        <SelectItem key={ex.value} value={ex.label} className="text-sm">{ex.label}</SelectItem>
+                      ))}
+                    {kind === "stock" && securitiesFirms.map((group) => (
                       <div key={group.group}>
                         <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">{group.group}</div>
                         {group.items.map((firm) => (
@@ -595,7 +627,7 @@ function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine
                     ))}
                   </SelectContent>
                 </Select>
-                {hasLocal && (
+                {hasLocal && kind === "stock" && (
                   <Select value={r.account} onValueChange={(v) => onAccount(r.index, v as Stock["category"])}>
                     <SelectTrigger className="h-10 w-full text-sm sm:max-w-[180px]">
                       <SelectValue />
@@ -612,7 +644,7 @@ function UploadStep({ shots, running, remaining, resolved, existingBrokers: mine
           );
         })}
       {unconfirmed && (
-        <p className="text-sm text-muted-foreground text-pretty break-keep">증권사를 고르지 않으면 이 화면에 없는 종목은 지우지 않아요</p>
+        <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker}를 고르지 않으면 이 화면에 없는 종목은 지우지 않아요</p>
       )}
     </div>
   );
@@ -691,6 +723,9 @@ interface PreviewProps {
 }
 
 function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
+  const T = useT();
+  const kind = useKind();
+  const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
   const [openKept, setOpenKept] = useState(false);
   const [openSame, setOpenSame] = useState(false);
   const changed = diff.rows.filter((r) => r.status === "add" || r.status === "change");
@@ -700,7 +735,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
   // 같은 증권사·계좌 묶음 (증권사 미확정 장은 `증권사 미정`)
   const groups = new Map<string, DiffRow[]>();
   for (const r of changed) {
-    const key = `${r.item!.broker ?? "증권사 미정"} · ${categoryShort(r.item!.category)}`;
+    const key = groupTitle(r.item!.broker ?? `${T.broker} 미정`, r.item!.category);
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
   const removeScopes = diff.scopes.filter((s) => diff.removes.some((r) => r.scopeKey === s.key));
@@ -759,7 +794,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         const off = rows.some((r) => r.offReason === "incomplete" || r.offReason === "half");
         return (
           <section key={scope.key} className="space-y-1 rounded-xl bg-muted/40 p-4" data-screenshot-hide>
-            <GroupHead title={`${scope.broker} 화면에 없는 종목 · ${categoryShort(scope.category)}`} count={rows.length} />
+            <GroupHead title={`${scope.broker} 화면에 없는 종목${kind === "crypto" ? "" : ` · ${categoryShort(scope.category)}`}`} count={rows.length} />
             {off && <p className="text-sm text-muted-foreground text-pretty break-keep">화면이 다 안 담겼을 수 있어요</p>}
             <ul className="divide-y divide-border/40">
               {rows.map((r) => (
@@ -777,7 +812,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         <Collapsible open={openKept} onOpenChange={setOpenKept}>
           <CollapsibleTrigger data-testid="resync-kept-toggle" className="flex min-h-10 w-full items-center justify-between gap-2 text-left text-sm font-medium text-pretty break-keep">
             <span>
-              스크린샷에 없는 증권사·증권사 미지정 종목 {diff.kept.length}개
+              스크린샷에 없는 {T.broker}·{T.broker} 미지정 종목 {diff.kept.length}개
               <span className="block text-sm font-normal text-muted-foreground">기본으로 그대로 둬요</span>
             </span>
             <ChevronDown className={`size-4 shrink-0 motion-safe:transition-[rotate] ${openKept ? "rotate-180" : ""}`} aria-hidden />
@@ -794,7 +829,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
                   name={s.name}
                   label={removeChecked(s.id) ? "삭제" : "유지"}
                   labelClass={removeChecked(s.id) ? "text-destructive" : "text-muted-foreground"}
-                  sub={s.category === "unlisted" ? "비상장은 직접 입력한 값이라 기본으로 둬요" : `${isUnassignedBroker(s.broker) ? "증권사 미지정" : s.broker} · ${categoryShort(s.category)} · 수량 ${fmt(s.quantity)}`}
+                  sub={s.category === "unlisted" ? "비상장은 직접 입력한 값이라 기본으로 둬요" : `${isUnassignedBroker(s.broker) ? `${T.broker} 미지정` : s.broker}${kind === "crypto" ? "" : ` · ${categoryShort(s.category)}`} · 수량 ${fmt(s.quantity)}`}
                 />
               ))}
             </ul>
@@ -848,7 +883,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         </p>
         <p data-testid="resync-notice-2" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-          <span>{NOTICE_2}</span>
+          <span>바뀐 수량·평단은 이번 달 결산에 {T.unit} 매수·매도로 잡혀요</span>
         </p>
       </div>
     </div>
@@ -883,6 +918,7 @@ const Arrow = ({ a, b }: { a: string; b: string }) => (
 );
 
 function ItemRow({ row }: { row: DiffRow }) {
+  const T = useT();
   const item = row.item!;
   const isAdd = row.status === "add";
   const parts: React.ReactNode[] = [];
@@ -892,7 +928,7 @@ function ItemRow({ row }: { row: DiffRow }) {
   } else if (row.change) {
     if (row.change.qty) parts.push(<Arrow key="q" a={`수량 ${fmt(row.change.qty.before)}`} b={fmt(row.change.qty.after)} />);
     if (row.change.avg) parts.push(<Arrow key="a" a={`평단 ${fmt(row.change.avg.before)}`} b={fmt(row.change.avg.after)} />);
-    if (row.change.brokerFill) parts.push(<Arrow key="b" a="증권사 미지정" b={row.change.brokerFill.to} />);
+    if (row.change.brokerFill) parts.push(<Arrow key="b" a={`${T.broker} 미지정`} b={row.change.brokerFill.to} />);
   }
   return (
     <li data-testid={`resync-row-${row.rowId}`} className="min-h-10 py-2.5">
@@ -901,7 +937,7 @@ function ItemRow({ row }: { row: DiffRow }) {
         <span className={`shrink-0 text-sm ${isAdd ? "text-brand" : "text-foreground"}`}>{isAdd ? "추가" : "변경"}</span>
       </div>
       <p className="flex flex-wrap gap-x-2 text-sm text-muted-foreground tabular-nums">{parts}</p>
-      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">증권사 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
     </li>
   );
@@ -923,6 +959,7 @@ interface NeedsRowProps {
 }
 
 function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: NeedsRowProps) {
+  const T = useT();
   const item = row.item!;
   const cand = item.quantityCandidates;
   const blocked = row.reasons.includes("brokerUnconfirmed");
@@ -936,10 +973,10 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         </span>
       </div>
       <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">
-        {item.broker ?? "증권사 미정"} · 수량 {fmt(item.quantity)}
+        {item.broker ?? `${T.broker} 미정`} · 수량 {fmt(item.quantity)}
         {row.change?.qty ? ` (기존 ${fmt(row.change.qty.before)})` : ""}
       </p>
-      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">증권사 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
       {row.reasons.map((r) => REASON_TEXT[r] && <p key={r} className="text-sm text-muted-foreground">{REASON_TEXT[r]}</p>)}
       {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}주`).join("·")}로 읽혔어요</p>}
@@ -951,7 +988,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
             <SelectContent>
               {row.candidates.map((c) => (
                 <SelectItem key={c.id} value={c.id} className="text-sm">
-                  {c.name} · {isUnassignedBroker(c.broker) ? "증권사 미지정" : c.broker} · 수량 {fmt(c.quantity)}
+                  {c.name} · {isUnassignedBroker(c.broker) ? `${T.broker} 미지정` : c.broker} · 수량 {fmt(c.quantity)}
                 </SelectItem>
               ))}
             </SelectContent>

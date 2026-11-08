@@ -32,11 +32,12 @@ const DOMESTIC_FAMILY = new Set<Stock["category"]>(["domestic", "isa", "irp", "p
 export function confirmScreenBroker(
   items: RawScreenItem[],
   existing: Stock[],
+  matchHint: (hint: string) => string | undefined = matchBrokerHint,
 ): { broker: string; source: BrokerSource } | null {
   // ① 화면 글자 brokerHint → 목록명 (가장 많이 나온 것)
   const tally = new Map<string, number>();
   for (const it of items) {
-    const m = matchBrokerHint(it.brokerHint ?? "");
+    const m = matchHint(it.brokerHint ?? "");
     if (m) tally.set(m, (tally.get(m) ?? 0) + 1);
   }
   const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];

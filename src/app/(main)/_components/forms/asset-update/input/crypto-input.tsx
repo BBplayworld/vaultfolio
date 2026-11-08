@@ -32,6 +32,7 @@ import { Crypto, cryptoSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { cryptoExchanges as exchanges, popularCryptos } from "@/config/asset-options";
 import { CryptoScreenshotImport } from "../screenshot/crypto-screenshot-import";
+import { HoldingsResyncDialog } from "../screenshot/holdings-resync-dialog";
 import { MAIN_PALETTE } from "@/config/theme";
 
 interface CryptoFormProps {
@@ -331,6 +332,13 @@ export function CryptoInput() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Crypto | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
+  // 보유 현황 맞추기 분기(#91): 스크린샷 대화상자를 열 때 코인 보유 ≥1건이면 새 대화상자, 아니면 기존 첫 등록. 열 때 1회 고정
+  const [useResync, setUseResync] = useState(false);
+  const [wasScreenshotOpen, setWasScreenshotOpen] = useState(false);
+  if (isScreenshotOpen !== wasScreenshotOpen) {
+    setWasScreenshotOpen(isScreenshotOpen);
+    if (isScreenshotOpen) setUseResync(assetData.crypto.length > 0);
+  }
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -363,7 +371,11 @@ export function CryptoInput() {
 
   return (
     <>
-      <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      {useResync ? (
+        <HoldingsResyncDialog kind="crypto" open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      ) : (
+        <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      )}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>

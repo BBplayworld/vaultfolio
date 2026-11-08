@@ -12,6 +12,8 @@ export interface ResolveOptions {
   brokerOverrides?: Record<number, string>;
   /** 사용자가 바꾼 국내 계좌(장 번호 → category) */
   accountOverrides?: Record<number, Stock["category"]>;
+  /** 화면 글자 → 증권사(코인은 거래소) 목록명. 기본은 증권사 목록 */
+  matchHint?: (hint: string) => string | undefined;
 }
 
 function toScreenItem(it: RawScreenItem, screenIndex: number, row: number, account: Stock["category"], usdRate: number): ScreenItem {
@@ -44,7 +46,7 @@ export function resolveScreens(screens: RawScreen[], existing: Stock[], opts: Re
   return screens.map((s) => {
     const ok = s.status === "ok";
     const override = opts.brokerOverrides?.[s.index];
-    const auto = ok && !override ? confirmScreenBroker(s.items, existing) : null;
+    const auto = ok && !override ? confirmScreenBroker(s.items, existing, opts.matchHint) : null;
     const broker = override || auto?.broker || undefined;
     const account = opts.accountOverrides?.[s.index] ?? inferScreenAccount(ok ? s.items : [], existing, broker);
     return {

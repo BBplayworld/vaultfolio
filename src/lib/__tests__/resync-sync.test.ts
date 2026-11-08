@@ -12,8 +12,9 @@ import {
   resetOverwriteGuard, setBaseline, setEntries, type OverwriteEntry, type SyncSnapshot,
 } from "../cloud-sync/overwrite-guard";
 import { applyResync, buildUndoEntries, computeDiff, defaultRemoveIds, mergeScreens, planUndo, resolveScreens } from "../asset/resync";
-import { assetDataSchema, stockSchema } from "@/types/asset";
-import type { AssetData, Stock } from "@/types/asset";
+import { assetDataSchema, cryptoSchema, stockSchema } from "@/types/asset";
+import type { AssetData, Crypto, Stock } from "@/types/asset";
+import { cryptoToStock, matchExchangeHint, parsedCryptoToRaw, stocksToCrypto } from "../asset/resync";
 import { emptySel, row, screen, st } from "../asset/resync/__tests__/fixtures";
 
 function memoryStorage(): Storage {
@@ -70,6 +71,28 @@ async function pull(d: Device) {
 const S1 = st("S1", "005930", "domestic", "토스증권", 10, 70000);
 const S2 = st("S2", "000660", "domestic", "토스증권", 5, 120000);
 const S3 = st("S3", "AAPL", "foreign", "키움증권", 3, 150);
+const co = (id: string, symbol: string, exchange: string, quantity: number, averagePrice: number): Crypto =>
+  ({ id, name: symbol, symbol, quantity, averagePrice, currentPrice: averagePrice, purchaseDate: "2025-01-01", exchange });
+const C1 = co("C1", "BTC", "업비트", 1, 50_000_000);
+const C2 = co("C2", "ETH", "업비트", 2, 3_000_000);
+const C3 = co("C3", "BTC", "빗썸", 1, 49_000_000);
+
+/** 코인 맞추기 — 클릭 핸들러와 같은 순서(어댑터 → applyResync → 일반 편집 저장 1회) */
+function doCryptoResync(d: Device, items: ReturnType<typeof parsedCryptoToRaw>[], remove: string[] = []) {
+  switchTo(d);
+  const data = getAssetData();
+  const before = data.crypto.map(cryptoToStock);
+  const screens = resolveScreens([screen(0, items)], before, { usdRate: 1400, matchHint: matchExchangeHint });
+  const diff = computeDiff(before, mergeScreens(screens), screens);
+  const sel = { ...emptySel(), remove: defaultRemoveIds(diff) };
+  remove.forEach((id) => sel.remove.add(id));
+  const result = applyResync(before, diff, sel, { today: "2026-11-08", usdRate: 1400, now: 8 });
+  const next = stocksToCrypto(data.crypto, before, result.stocks);
+  saveAssetData({ ...data, crypto: next });
+  return { before: data.crypto, after: next };
+}
+const cryptoOf = (d: Device) => { switchTo(d); return getAssetData().crypto; };
+const rawC = (symbol: string, q: number, avg: number, exchange = "") => parsedCryptoToRaw({ name: symbol, symbol, quantity: q, averagePrice: avg, currentPrice: avg, exchange, currency: "KRW" }, 1400);
 
 /** 클릭 핸들러가 하는 일: 선택 → applyResync → 일반 편집 저장 1회 */
 function doResync(d: Device, items: ReturnType<typeof row>[], remove: string[] = []) {
@@ -93,7 +116,7 @@ async function setup() {
   resetOverwriteGuard();
   for (const d of [A, B]) {
     switchTo(d);
-    saveAssetData({ ...getAssetData(), stocks: [S1, S2, S3] });
+    saveAssetData({ ...getAssetData(), stocks: [S1, S2, S3], crypto: [C1, C2, C3] });
   }
   expect((await push(A)).status).toBe("ok"); // v1
   switchTo(B);
@@ -189,6 +212,45 @@ describe("S8 동기화 하네스", () => {
   });
 });
 
+describe("S8 동기화 하네스 — 코인", () => {
+  const items = () => [rawC("BTC", 2, 50_000_000, "업비트"), rawC("SOL", 5, 100_000)];
+  it("A 맞추기 → push → B pull: B가 A와 같고 빗썸 줄은 불변", async () => {
+    await setup();
+    doCryptoResync(A, items(), ["C2"]);
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    expect(cryptoOf(B)).toEqual(cryptoOf(A));
+    expect(cryptoOf(B).find((c) => c.id === "C3")).toEqual(C3);
+    expect(cryptoOf(B).find((c) => c.id === "C1")).toMatchObject({ quantity: 2, positionSource: "manual" });
+  });
+  it("B 미push 편집 + A 맞추기 → B pull에서 crypto modified·remoteDeleted 알림", async () => {
+    await setup();
+    doCryptoResync(A, items(), ["C2"]);
+    expect((await push(A)).status).toBe("ok");
+    edit(B, (d) => { d.crypto = d.crypto.map((c) => (c.id === "C1" || c.id === "C2" ? { ...c, quantity: 99 } : c)); });
+    expect((await push(B)).status).toBe("conflict");
+    await pull(B);
+    expect(getEntries().map((e) => `${e.kind}:${e.key}`).sort()).toEqual(["modified:crypto:C1", "remoteDeleted:crypto:C2"]);
+  });
+  it("A 되돌리기 → push → B pull: B 복원, 코인 4.49 스키마 키만", async () => {
+    await setup();
+    const { before, after } = doCryptoResync(A, items(), ["C2"]);
+    const entries = buildUndoEntries(before, after, "crypto");
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    switchTo(A);
+    const known = new Set(Object.keys(cryptoSchema.shape));
+    for (const c of getAssetData().crypto) for (const k of Object.keys(c)) expect(known.has(k), k).toBe(true);
+    saveAssetData(planUndo(entries, getAssetData()).data);
+    expect((await push(A)).status).toBe("ok");
+    expect((await pull(B)).r.status).toBe("ok");
+    expect(cryptoOf(B)).toEqual(cryptoOf(A));
+    expect(cryptoOf(B).map((c) => c.id)).toEqual(["C1", "C3", "C2"]);
+    expect(cryptoOf(B).find((c) => c.id === "C1")).toEqual(C1);
+    expect(cryptoOf(B).some((c) => c.symbol === "SOL")).toBe(false);
+  });
+});
+
 describe("되돌리기 순수 동작", () => {
   const base = (stocks: Stock[]): AssetData => ({
     realEstate: [], stocks, crypto: [], cash: [], loans: [], yearlyNetAssets: [],
@@ -268,7 +330,7 @@ describe("정적 규칙 — 대화상자·서버 (C16·C26·GA)", () => {
     expect([...code.matchAll(/category: "(\w+)"/g)].map((m) => m[1]).sort()).toEqual(["resync_apply", "resync_start", "resync_undo"]);
   });
   it("기존 첫 등록 컴포넌트·보유 충돌 모듈은 맞추기를 모른다", () => {
-    for (const f of ["app/(main)/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx", "lib/asset/holdings-conflict.ts"]) {
+    for (const f of ["app/(main)/_components/forms/asset-update/screenshot/stock-screenshot-import.tsx", "app/(main)/_components/forms/asset-update/screenshot/crypto-screenshot-import.tsx", "lib/asset/holdings-conflict.ts"]) {
       expect(readFileSync(join(root, f), "utf8")).not.toMatch(/resync/i);
     }
   });
