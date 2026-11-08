@@ -116,6 +116,7 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "resync_start" }, "보유 현황 맞추기 시작"],
     ["feature_use", { category: "resync_apply" }, "보유 현황 맞추기 적용"],
     ["feature_use", { category: "resync_undo" }, "보유 현황 맞추기 되돌리기"],
+    ["feature_use", { category: "balance_resync" }, "잔액 맞추기 저장"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
     ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {

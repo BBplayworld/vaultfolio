@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toGaAssetType, track } from "@/lib/analytics/ga";
-import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset, dispatchResyncBalance } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAssetNavigation, type DetailTab } from "../navigation/navigation-context";
 import { InfoHint } from "../ui/info-hint";
 import type { RefreshCategory } from "@/lib/asset/asset-refresh-status";
+import { getAssetData } from "@/lib/asset/asset-storage";
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "yearly-net-asset";
 // hub: "보유 현황 업데이트" / "매수·매도 거래 기록" 상위 선택
@@ -54,6 +55,8 @@ export function FloatingAddButton() {
   const { isStandalone } = usePWAInstall();
   const [isHidden, setIsHidden] = useState(false);
   const [screenshotOpen, setScreenshotOpen] = useState(false);
+  // 현금·대출 보유자 여부 — select-method 진입 시 1회 판정(#93). 보유자는 추가가 아니라 잔액 맞추기로 간다
+  const [holderResync, setHolderResync] = useState(false);
 
   // 최상단(scrollY ≤ 50)에서만 노출 — 스크롤 다운 시 즉시 숨김
   useEffect(() => {
@@ -95,6 +98,7 @@ export function FloatingAddButton() {
   const resetState = () => {
     setStep("hub");
     setSelectedType(null);
+    setHolderResync(false);
   };
 
   // 단건: 카드의 "보유현황" 클릭 — 즉시 처리(기존 select-type→select-action 동작과 동일, 회귀 없음)
@@ -114,6 +118,10 @@ export function FloatingAddButton() {
       setIsOpen(false);
       resetState();
     } else {
+      if (type === "cash" || type === "loan") {
+        const fresh = getAssetData();
+        setHolderResync((type === "cash" ? fresh.cash : fresh.loans).length > 0);
+      } else setHolderResync(false);
       setStep("select-method");
     }
   };
@@ -131,6 +139,7 @@ export function FloatingAddButton() {
 
     track("asset_add_start", { asset_type: toGaAssetType(selectedType), method: mode });
     if (selectedType === "stock") dispatchAddStock(mode);
+    else if (mode === "manual" && holderResync && (selectedType === "cash" || selectedType === "loan")) dispatchResyncBalance(selectedType);
     else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
     setIsOpen(false);
     resetState();
@@ -142,6 +151,7 @@ export function FloatingAddButton() {
     if (step === "hub") return "자산 업데이트";
     if (step === "holdings") return "보유 현황 업데이트";
     if (step === "trade") return "매수/매도 거래 기록";
+    if (holderResync) return `${selectedAsset?.label} 업데이트`;
     return `${selectedAsset?.label} 추가`;
   };
 
@@ -404,7 +414,9 @@ export function FloatingAddButton() {
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
                   <p className="font-medium">직접 입력</p>
-                  <p className="text-sm text-muted-foreground">숫자로 직접 입력</p>
+                  <p className="text-sm text-muted-foreground">
+                    {holderResync ? (selectedType === "loan" ? "대출별 잔액 고치기" : "계좌별 잔액 고치기") : "숫자로 직접 입력"}
+                  </p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
               </button>

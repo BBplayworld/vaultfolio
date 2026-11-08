@@ -78,3 +78,18 @@ export function applyBalanceEdits<T extends BalanceItem>(list: T[], edits: Recor
   });
   return { list: applied > 0 ? next : list, applied };
 }
+
+/**
+ * 잔액 맞추기 행 순서 = 상세 탭 순서. 현금은 원화 환산액 큰 순, 대출은 잔액 큰 순(완납은 뒤로).
+ * mul은 통화 → 원화 배수(getMultiplier). 동률은 원래 순서 유지.
+ */
+export function orderBalanceRows<T extends BalanceItem & { currency?: string }>(category: BalanceCategory, list: T[], mul: (currency?: string) => number): T[] {
+  const key = (x: T) => (category === "cash" ? x.balance * mul(x.currency) : x.balance);
+  return list
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => {
+      if (category === "loan" && (a.item.balance > 0) !== (b.item.balance > 0)) return a.item.balance > 0 ? -1 : 1;
+      return key(b.item) - key(a.item) || a.i - b.i;
+    })
+    .map((x) => x.item);
+}

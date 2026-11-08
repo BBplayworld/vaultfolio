@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBalanceEdits, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
+import { applyBalanceEdits, orderBalanceRows, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
 import type { Cash, Loan } from "@/types/asset";
 
 const cash = (id: string, balance: number, extra: Partial<Cash> = {}): Cash => ({
@@ -80,5 +80,17 @@ describe("입력 문자열", () => {
     expect(formatBalanceText("1234.5")).toBe("1,234.5");
     expect(formatBalanceText("12.")).toBe("12.");
     expect(formatBalanceText("")).toBe("");
+  });
+});
+
+describe("orderBalanceRows (상세 탭 순서)", () => {
+  const mul = (c?: string) => (c === "USD" ? 1400 : 1);
+  it("현금은 원화 환산액 큰 순", () => {
+    const r = orderBalanceRows("cash", [cash("a", 1_000_000), cash("u", 1000, { currency: "USD" }), cash("b", 3_000_000)], mul);
+    expect(r.map((x) => x.id)).toEqual(["b", "u", "a"]);
+  });
+  it("대출은 잔액 큰 순, 완납(0)은 맨 뒤", () => {
+    const r = orderBalanceRows("loan", [loan("z", 0), loan("a", 100), loan("b", 300)], mul);
+    expect(r.map((x) => x.id)).toEqual(["b", "a", "z"]);
   });
 });

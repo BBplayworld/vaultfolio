@@ -32,6 +32,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { cashTypes, financialInstitutions } from "@/config/asset-options";
 import { CashScreenshotImport } from "../screenshot/cash-screenshot-import";
 import { MAIN_PALETTE } from "@/config/theme";
+import { BalanceResyncDialog } from "../balance-resync-dialog";
 
 interface CashFormProps {
     editData?: Cash;
@@ -307,6 +308,7 @@ export function CashInput() {
     return (
         <>
             <CashScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+            <BalanceResyncDialog category="cash" />
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
                     <DialogHeader>

@@ -32,6 +32,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets } from "@/config/asset-options";
 import { LoanScreenshotImport } from "../screenshot/loan-screenshot-import";
 import { MAIN_PALETTE } from "@/config/theme";
+import { BalanceResyncDialog } from "../balance-resync-dialog";
 
 // 대출 종류별 빠른 입력 버튼
 const getQuickButtonsByType = (type: string) => {
@@ -435,6 +436,7 @@ export function LoanInput() {
   return (
     <>
       <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      <BalanceResyncDialog category="loan" />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>
