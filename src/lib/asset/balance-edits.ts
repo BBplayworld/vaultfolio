@@ -93,3 +93,41 @@ export function orderBalanceRows<T extends BalanceItem & { currency?: string }>(
     })
     .map((x) => x.item);
 }
+
+// ── 입출금 기록과 잔액 맞추기의 이중 반영 경고(#93 후속, cto 권고 (a)②) ──
+// 맞추기는 잔액 절대값이라 그 시점까지의 입출금·매수·상환이 이미 녹아 있다. 거래일 이후에 그 카테고리를 맞춘 기록이
+// 있는데 '즉시 반영'으로 기록하면 같은 돈이 두 번 빠질 수 있다. 기록은 기기 로컬 assetRefresh(스키마 변경 0)를 쓴다.
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** ISO 시각 → KST 날짜(YYYY-MM-DD). 잘못된 값은 null */
+export function kstDateOfIso(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  return new Date(t + KST_OFFSET_MS).toISOString().split("T")[0];
+}
+
+/**
+ * 거래일(YYYY-MM-DD) 이후(같은 날 포함)에 그 카테고리를 맞춘 기록이 있고 '즉시 반영'이면 true.
+ * 반영하지 않는(과거 소급 기록용) 거래는 잔액을 바꾸지 않으므로 경고하지 않는다.
+ */
+export function shouldWarnTxAfterResync(opts: { txDate: string; reflected: boolean; refreshedAtIso: string | null | undefined }): boolean {
+  if (!opts.reflected || !opts.txDate) return false;
+  const refreshed = kstDateOfIso(opts.refreshedAtIso);
+  return refreshed !== null && refreshed >= opts.txDate;
+}
+
+/** 경고 문구(spec 14-2). 맞춘 날이 오늘(KST)이면 `오늘`, 아니면 `{M월 D일}에` */
+export function resyncWarningText(category: BalanceCategory, refreshedAtIso: string, todayKst: string): string {
+  const d = kstDateOfIso(refreshedAtIso) ?? "";
+  const [, m, day] = d.split("-");
+  const when = d === todayKst ? "오늘" : `${Number(m)}월 ${Number(day)}일에`;
+  return `${when} 맞춘 ${category === "cash" ? "현금" : "대출"} 잔액에 이미 들어간 금액이면 체크를 꺼 주세요`;
+}
+
+/** 잔액 맞추기 머리말(spec 14-1) */
+export const BALANCE_RESYNC_INTRO: Record<BalanceCategory, string> = {
+  cash: "은행·증권 앱 잔액을 그대로 넣으면 돼요. 매수·매도·상환·배당·이자로 바뀐 돈도 함께 맞춰져서, 입출금 기록은 따로 안 남겨도 돼요.",
+  loan: "은행 앱 대출 잔액을 그대로 넣으면 돼요. 상환·추가 대출로 바뀐 금액도 함께 맞춰져서, 상환 기록은 따로 안 남겨도 돼요.",
+};

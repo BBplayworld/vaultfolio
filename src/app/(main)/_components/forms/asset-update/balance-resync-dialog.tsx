@@ -14,7 +14,7 @@ import { countAssets, track, trackAssetSave } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
-  applyBalanceEdits, checkBalanceRow, formatBalanceText, maxDecimalsOf, orderBalanceRows, parseBalanceText, sanitizeBalanceText,
+  applyBalanceEdits, BALANCE_RESYNC_INTRO, checkBalanceRow, formatBalanceText, maxDecimalsOf, orderBalanceRows, parseBalanceText, sanitizeBalanceText,
   type BalanceCategory, type BalanceCurrency,
 } from "@/lib/asset/balance-edits";
 import { getMultiplier } from "../../views/detail/asset-detail-tabs";
@@ -144,7 +144,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
           <DialogTitle className="text-base font-bold text-balance break-keep">{copy.title}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-pretty break-keep leading-relaxed">
-            바뀐 잔액만 입력하세요. 입출금 기록은 생기지 않아요.
+            {BALANCE_RESYNC_INTRO[category]}
           </DialogDescription>
         </DialogHeader>
 

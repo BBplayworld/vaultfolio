@@ -275,7 +275,7 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 ```
 `crypto-screenshot-import.tsx`가 최초 구현한 패턴을 일반화 — stock은 `ticker:category`, cash는 `name:institution`(근사), loan은 `name:institution:type`으로 매칭. cash/loan은 스키마에 고유 식별자가 없어 근사 매칭(오매칭 가능, preview에서 사용자가 개별 체크/해제).
 
-### #4.54 신규 유틸
+### #4.55 신규 유틸
 - `lib/asset/screenshot-fail.ts`: `mapParseErrorTitle(status, error)`·`emptyFailTitle`·`makeScreenshotFail`·`SCREENSHOT_FAIL_NETWORK`.
 - `lib/asset/yearly-auto.ts`: `yearlyAutoCaption`·`yearlyAutoCaptionText`·`yearlyEditDefaults`(연 탭 자동 기록 안내·고치기 폼 기본값).
 - `lib/asset/asset-refresh-status.ts`: `heldRefreshCategories(assetData)`, `getStaleCategories(last, held?)`·`shouldShowRefreshNudge({held?})` 선택 인자(미지정 = 전체, 홈 팁만 지정).
@@ -518,6 +518,7 @@ countAssets(data) / toGaAssetType(kebab) / screenPath(viewKey)
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
 
 ### server/api-guard.ts (`src/server/api-guard.ts`, S-4.28) — 공개 API 공통 방어
+- `guardL1Only(request, route, l1PerMinute)`(4.53): 출처·본문 검사 없이 L1만. sync(서명 인증 라우트)용
 
 ```typescript
 guardRequest(req, { route, maxBodyBytes?, l1PerMinute? }): Response|null  // cross-site 403 · 411/413 · L1 429
@@ -802,6 +803,8 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 
 ### 잔액 맞추기·저장 실패 알림 (`src/lib/asset/balance-edits.ts`·`save-failure.ts`, #4.52 #93)
 - `balance-edits.ts`(순수): `applyBalanceEdits(list, edits)`→`{list, applied}`(balance만 교체, 없는 id 건너뜀, 같은 값 미계산)·`checkBalanceRow(category, current, next)`→`{changed, issue: "cash-zero"|"magnitude"|null}`·`sanitizeBalanceText`/`parseBalanceText`/`formatBalanceText`·`maxDecimalsOf`·`orderBalanceRows`(상세 탭 순서). 호출부는 `getAssetData()` 최신 목록에 적용해 `saveData` 1회(렌더 클로저의 `updateCash` 반복 금지)
+- 이중 반영 경고: `shouldWarnTxAfterResync({txDate, reflected, refreshedAtIso})`·`kstDateOfIso`·`TX_AFTER_RESYNC_WARNING`(balance-edits.ts), `lastRefreshedAt(category)`(asset-refresh-status.ts). `cash-tx-input`·`loan-tx-input`이 사용
+- 시세 응답 병합(#104): `lib/asset/price-patch.ts` `buildStockPricePatches`/`buildCryptoPricePatches`(응답->id별 시세 필드 패치)·`applyPricePatches(latest, patches, keyOf)`(최신 목록에 id로 적용, 삭제 부활 0·키 바뀐 항목 건너뜀). 자동 시세 동기화는 시작 시점 data를 되쓰지 말고 `getAssetData()` 최신본에 병합해 저장한다
 - `save-failure.ts`: `saveAssetDataNotify(data)` — `saveAssetData` 래퍼, 실패 시 세션당 1회 토스트 + GA `feature_use save_failed`. 자동 저장 경로(시세·스냅샷·마이그레이션·공유 반영·닉네임)는 `saveAssetData` 대신 이 함수를 쓴다(반환값 버리기 금지). 사용자 편집은 `saveData` 경로의 각자 실패 토스트
 
 ### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
