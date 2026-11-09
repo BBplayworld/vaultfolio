@@ -84,7 +84,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "save_failed"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -189,6 +189,8 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   resync_start: "보유 현황 맞추기 시작",
   resync_apply: "보유 현황 맞추기 적용",
   resync_undo: "보유 현황 맞추기 되돌리기",
+  balance_resync: "잔액 맞추기 저장",
+  save_failed: "저장 실패",
 };
 
 /**

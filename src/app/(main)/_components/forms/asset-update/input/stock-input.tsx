@@ -1,5 +1,6 @@
 "use client";
 
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect, useRef } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -149,6 +150,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
       if (editData) {
         const success = updateStock(editData.id, data);
         if (success) {
+          markCategoryRefreshed("stock");
           trackAssetSave({ asset_type: "stock", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("주식 정보가 수정되었습니다.");
           onClose();
@@ -162,6 +164,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
         };
         const success = addStock(newData);
         if (success) {
+          markCategoryRefreshed("stock");
           trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("주식이 추가되었습니다.");
           onClose();

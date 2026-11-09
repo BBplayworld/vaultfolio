@@ -49,7 +49,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "주식 X-Ray 분석",
     description: "상세 탭의 주식 X-Ray에서 성장주·배당주·지수투자 등 종목 유형부터 섹터·국가별 비중까지 분석해보세요.",
     icon: ScanSearch,
-    isNew: true,
     target: { type: "detail", tab: "stocks-xray" },
   },
   {
@@ -114,7 +113,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "포트폴리오 인증카드",
     description: "인증카드 > 포트폴리오에서 종목 로고가 담긴 원형 차트에 분야·보유 유형 구성까지 한 장에 담아 공유해보세요.",
     icon: IdCard,
-    isNew: true,
     action: () => dispatchOpenShareCard("portfolio"),
     visitKey: "share-card-portfolio",
   },
@@ -123,7 +121,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "투자 유형 인증카드",
     description: "인증카드 > 투자 유형에서 내 포트폴리오를 분석한 투자 유형과 캐릭터 아바타를 확인하고 공유해보세요.",
     icon: IdCard,
-    isNew: true,
     action: () => dispatchOpenShareCard("type"),
     visitKey: "share-card-type",
   },
