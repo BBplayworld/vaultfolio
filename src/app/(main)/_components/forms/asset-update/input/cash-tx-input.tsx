@@ -22,7 +22,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import type { Cash, CashTransaction } from "@/types/asset";
 import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
-import { findDuplicateCashTx, isCashWithdrawalValid } from "@/lib/trade/cash-tx-utils";
+import { findDuplicateCashTx, isCashWithdrawalValid, isCashWithdrawalBelowFloor } from "@/lib/trade/cash-tx-utils";
 import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
 
 const cashTxFormSchema = z.object({
@@ -129,6 +129,12 @@ export function CashTxInput() {
       form.setError("amount", { message: `현재 잔액(${formatCurrencyDisplay(cash.balance, cash.currency)})을 초과합니다` });
       return;
     }
+    // 전액 출금 → 잔액 0원은 저장할 수 없어 사전 차단
+    if (data.reflected && data.type === "withdrawal" && isCashWithdrawalBelowFloor(cash.balance, data.amount, cash.currency)) {
+      track("transaction_save", { asset_type: "cash", method: "manual", result: "blocked" });
+      form.setError("amount", { message: `${cash.name} 잔액을 0원으로 둘 수 없어요. 반영을 끄고 기록하거나 출금액을 줄여 주세요.` });
+      return;
+    }
 
     const tx = buildTx(data);
     const dup = findDuplicateCashTx(assetData.cashTransactions || [], {
@@ -149,6 +155,8 @@ export function CashTxInput() {
       track("transaction_save", { asset_type: "cash", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
       toast.success(tx.type === "deposit" ? "입금이 기록되었습니다." : "출금이 기록되었습니다.");
       resetAndClose();
+    } else {
+      toast.error("저장하지 못했어요. 입력값을 확인해 주세요.");
     }
   };
 

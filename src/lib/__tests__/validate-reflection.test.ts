@@ -78,4 +78,13 @@ describe("validateReflection", () => {
     expect(result.preview).toBeDefined();
     expect(result.preview!.quantity).toBe(150);
   });
+
+  // #107 ① 코인 즉시 반영: reflectionId 미부여 상태의 반영 거래는 차단되지 않아야 한다
+  it("#107: 반영 직전 reflectionId 없는 반영 거래는 restrict 아님, 미리 부여하면 already_reflected", () => {
+    const pos = makeSnapshot();
+    expect(validateReflection(makeTx({ reflected: true, reflectionId: undefined }), pos).level).not.toBe("restrict");
+    const dup = validateReflection(makeTx({ reflected: true, reflectionId: "ref_1" }), pos);
+    expect(dup.level).toBe("restrict");
+    expect(dup.reason).toBe("already_reflected");
+  });
 });
