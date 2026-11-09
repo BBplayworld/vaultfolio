@@ -47,6 +47,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
   const [saveError, setSaveError] = useState("");
   const [flashCancel, setFlashCancel] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const saveRef = useRef<HTMLButtonElement>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goAddRef = useRef(false);
@@ -152,10 +153,12 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
         className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
         onInteractOutside={guard}
         onEscapeKeyDown={guard}
+        // 열린 직후 포커스는 창 제목으로 — 입력칸에 주면 모바일 키보드가 올라와 화면을 가린다(#118)
+        onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
         onCloseAutoFocus={restoreFocus}
       >
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
-          <DialogTitle className="text-base font-bold text-balance break-keep">{copy.title}</DialogTitle>
+          <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">{copy.title}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-pretty break-keep leading-relaxed">
             {BALANCE_RESYNC_INTRO[category]}
           </DialogDescription>

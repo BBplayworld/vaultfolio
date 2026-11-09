@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
@@ -333,6 +334,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
 export function CryptoInput() {
   const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<Crypto | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   // 보유 현황 맞추기 분기(#91): 스크린샷 대화상자를 열 때 코인 보유 ≥1건이면 새 대화상자, 아니면 기존 첫 등록. 열 때 1회 고정
@@ -380,7 +382,7 @@ export function CryptoInput() {
         <CryptoScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
       )}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+        <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>
             <DialogTitle>{editingItem ? "암호화폐 수정" : "암호화폐 추가"}</DialogTitle>
             <DialogDescription>

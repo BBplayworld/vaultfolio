@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
@@ -275,6 +276,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
 export function CashInput() {
     const { assetData } = useAssetData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
     const [editingItem, setEditingItem] = useState<Cash | undefined>();
     const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
 
@@ -313,7 +315,7 @@ export function CashInput() {
             <CashScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
             <BalanceResyncDialog category="cash" />
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+                <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
                     <DialogHeader>
                         <DialogTitle>{editingItem ? "현금성 자산 수정" : "현금성 자산 추가"}</DialogTitle>
                         <DialogDescription>

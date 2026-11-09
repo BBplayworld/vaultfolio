@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect, useRef } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
@@ -650,6 +651,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
 export function StockInput() {
   const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<Stock | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [activeTab] = useState("all");
@@ -702,7 +704,7 @@ export function StockInput() {
         <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
       )}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+        <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>
             <DialogTitle>{editingItem ? "주식 수정" : "주식 추가"}</DialogTitle>
             <DialogDescription>

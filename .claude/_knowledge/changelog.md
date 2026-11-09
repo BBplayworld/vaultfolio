@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-09 (v4.64)
+
+### 12월 결산 대비 결함 수정 — 반영 매도 실현손익 시세 분류·미리보기 문구 + 품질 정돈 묶음 3 (#4.64, 이슈 #117·#118, risk medium)
+- **왜**: 12월 결산 창 리허설(qa)에서 반영된 이익·손실 매도의 실현손익이 월 결산 `기록 안 된 변화`·홈 `주식 매수 +`로 표시됨(Hero·합계는 정확, 원인 분류만 오류).
+- **D1**: `asset-report.ts` 정밀 분기(`bothEnriched`)에서만 `realizedSellGains`(신규 내부 함수)가 반영 매도마다 `R = 체결액(tradeKrwRate) − 수량 × 매도 직전 평단 × 월초 환율(prev.fx)`을 계산(직전 평단 = `deriveBaseSnapshot`로 현재 포지션에서 그 매도 이후 거래 역순 제거). `priceEffect`·`price:stock/crypto`에 +R, `stockManual/cryptoManual`·`savingEffect`에서 −R (키 간 이동, 합계 불변). 매도 대금(`sellEffect`·`reflectedTradeFlow`·짝 함수) 불변. 평단 역산 불가(전량 매도 평단 소거 등)면 R=0. 예측 분기 diff 0. 저장·스키마·동기화 diff 0.
+- **D4**: 보유 현황 맞추기 미리보기 `resync-notice-2` → "바뀐 수량·평단은 이번 달 결산 증감에 함께 반영돼요"(주식·코인 동일).
+- **#118**: 연 수익률 0.0% 회색(`AnnualizedReturn`이 `profitTone(cagr,cagr,1)` 재사용), 허브 `평가손익` 라벨 `whitespace-nowrap`, 보유 현황·잔액 맞추기 창 열림 시 포커스=제목, FAB 경유 창 닫힘 포커스 복귀 공용 훅 `useReturnFocusOnClose`(`lib/restore-focus.ts`).
+- 알려진 한계: 외화 매도의 환율 몫은 R에 함께 들어가 시세로 감(2차 오차). 전량 매도는 평단이 지워져 R=0(현행 동작). D3(기간 중 산 외화 주식 재평가)는 이번에 제외.
+
+---
+
 ## 2026-11-09 (v4.63)
 
 ### 거래 연결 계좌 — 해외주식을 원화 계좌·대출로 연결 (#4.63, 이슈 #119, risk medium)

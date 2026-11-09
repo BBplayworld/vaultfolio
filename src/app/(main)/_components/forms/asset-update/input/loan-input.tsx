@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
@@ -403,6 +404,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
 export function LoanInput() {
   const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<Loan | undefined>();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
 
@@ -441,7 +443,7 @@ export function LoanInput() {
       <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
       <BalanceResyncDialog category="loan" />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
+        <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>
             <DialogTitle>{editingItem ? "대출 수정" : "대출 추가"}</DialogTitle>
             <DialogDescription>대출 정보를 입력하세요.</DialogDescription>
