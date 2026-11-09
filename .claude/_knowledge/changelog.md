@@ -15,6 +15,19 @@
 - 알려진 한계 4개: 구버전 '모든 삭제' 후 잔존·노출 / 구버전 기기가 쓴 날 일별 그래프 하락 / 복원 코드 제외 / 구 백업 가져오기 시 실물 기존 값 유지.
 
 ---
+## 2026-11-09 (v4.55)
+
+### 스크린샷 인식 실패 뒤 다음 행동 + 최신화 팁 보유 자산군만 + 연 탭 자동 기록 안내 (#4.55, 이슈 #99, risk low)
+- **왜**: 추가 스크린샷(주식·코인·현금·대출) 인식 실패 시 토스트만 남아 직접 입력으로 가려면 FAB부터 다시 들어가야 했고, 마법사엔 갈 곳이 없었다. 실패와 성공이 같은 GA title이라 누수 판정도 불가.
+- `ScreenshotFailNotice`(`forms/asset-update/screenshot/screenshot-fail-notice.tsx`) 신설: 업로드 칸 자리 박스(role=alert, [다른 캡처 고르기]/[직접 입력]). 서버 오류는 `lib/asset/screenshot-fail.ts` `mapParseErrorTitle` 목록 매핑(원문 미노출). [직접 입력]=`runDirectInput`(asset_add_start manual 1건 + FAB와 같은 도착지, 현금·대출 보유자는 잔액 맞추기, 마법사 `directInput="add"`는 항상 추가 폼). 남은 횟수 0이면 [다른 캡처] 숨김·한도 박스 미렌더. 같은 사건 토스트 제거, 티커 누락 토스트에 `체크를 풀면 나머지만 등록돼요` 추가.
+- 마법사: `page.tsx` 마법사 분기에 입력 폼 4종 숨김 마운트, `CategoryStep`은 `createStepCompleter`(onSaved와 건수 증가 중 먼저 온 1회만, `key={phase}`로 초기화).
+- GA: `screenshot_parse` result fail·empty → `스크린샷 등록 실패·<자산>`(ga.test 갱신).
+- p2-1: `heldRefreshCategories`·`getStaleCategories(…, held?)`·`shouldShowRefreshNudge({held?})` — `home-tip.ts`만 보유 필터 적용(결산 화면 diff 0).
+- p2-2: 연 탭 Hero `note` 슬롯에 `작년 말 값은 … 기록이에요 · 고치기`(`lib/asset/yearly-auto.ts`), 지난 연도 `자동` 항목은 수정 폼 메모를 빈 칸으로 시작(저장 = 확정).
+- 스키마·저장 키·동기화·overwrite-guard 코드 변경 0. `ADD_TRIGGER_EVENTS`를 `asset-dispatch.ts`로 이동(FAB `EVENT_MAP` 단일 정의).
+
+---
+
 ## 2026-11-09 (v4.52)
 
 ### 현금·대출 잔액 한 번에 맞추기 + 소형 정리 6건 (#4.52, 이슈 #93, risk low)

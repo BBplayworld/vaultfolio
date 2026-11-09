@@ -90,7 +90,10 @@ describe("featureTitleOf 매핑", () => {
     ["asset_save", { asset_type: "physical" }, "자산 저장·실물 자산"],
     ["asset_add_start", { asset_type: "physical", method: "manual" }, "자산 추가 시작·실물 자산"],
     ["first_asset_saved", { asset_type: "physical" }, "자산 저장·실물 자산"],
-    ["screenshot_parse", { asset_type: "loan", result: "fail" }, "스크린샷 등록·대출"],
+    ["screenshot_parse", { asset_type: "loan", result: "fail" }, "스크린샷 등록 실패·대출"],
+    ["screenshot_parse", { asset_type: "stock", result: "empty" }, "스크린샷 등록 실패·주식"],
+    ["screenshot_parse", { asset_type: "cash", result: "success" }, "스크린샷 등록·현금"],
+    ["screenshot_parse", { asset_type: "crypto", result: "limit" }, "스크린샷 등록·암호화폐"],
     ["transaction_save", { asset_type: "stock" }, "거래 입력·주식"],
     ["share", { method: "save", content_type: "stock" }, "인증카드 저장"],
     ["share", { method: "copy" }, "공유"],
@@ -307,6 +310,12 @@ describe("매핑 유틸", () => {
     expect(toGaAssetType("yearly-net-asset")).toBe("yearly_net_asset");
     expect(toGaAssetType("stock")).toBe("stock");
     expect(toGaAssetType("unknown")).toBeUndefined();
+  });
+
+  it("trade 스크린샷 실패는 실패 title로 집계된다", () => {
+    trackParse("trade", "fail");
+    expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["스크린샷 등록 실패·주식"]);
+    expect(Object.keys(gtag.mock.calls[0][2]).sort()).not.toContain("file_name");
   });
 
   it("trackParse는 거래 스크린샷을 주식·코인으로 집계해 title에 반영한다", () => {

@@ -350,6 +350,17 @@ describe("앱 자동 갱신 필드는 내 변경이 아니다", () => {
     const before = captureSnapshot(data((d) => { d.yearlyNetAssets = d.yearlyNetAssets.filter((y) => y.year !== thisYear); }));
     expect(detectOverwrites(baseline, before, captureSnapshot(data(() => {})))).toEqual([]);
   });
+  it("D4 확정(note 빈 값)된 지난 연도 항목은 보호 대상, '자동' 지난 연도·올해 항목은 제외", () => {
+    const snap = captureSnapshot(data((d) => {
+      d.yearlyNetAssets = [
+        { year: thisYear, netAsset: 1, note: "" },
+        { year: thisYear - 1, netAsset: 2, note: "" },
+        { year: thisYear - 2, netAsset: 3, note: "자동" },
+      ] as never;
+    }));
+    const keys = [...snap.items.keys()].filter((k) => k.startsWith("yearlyNetAssets:"));
+    expect(keys).toEqual([`yearlyNetAssets:${thisYear - 1}`]);
+  });
   it("부동산 currentValue·주식 수량 같은 사용자 입력 변경은 여전히 감지", () => {
     const baseline = captureSnapshot(data(() => {}));
     const before = captureSnapshot(data((d) => {

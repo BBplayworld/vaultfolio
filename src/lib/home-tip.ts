@@ -6,7 +6,7 @@
 import type { AssetData } from "@/types/asset";
 import { track } from "@/lib/analytics/ga";
 import { shouldShowBackupNudge, daysSinceBackup } from "./asset/backup-status";
-import { shouldShowRefreshNudge, getStaleCategories, type RefreshCategory } from "./asset/asset-refresh-status";
+import { shouldShowRefreshNudge, getStaleCategories, heldRefreshCategories, type RefreshCategory } from "./asset/asset-refresh-status";
 import { isTaxNoticeDismissed, getAssetDrivenHighlights, isImminentTaxMatch, todayKst, type TaxEventMatch } from "./tax-utils";
 import { pickRecommendedFeature } from "./feature-usage";
 import { readNoticeSeenId, markNoticeSeen } from "./local-storage";
@@ -75,8 +75,9 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
 
   if (taxMatches.length > 0) return { kind: "tax", matches: taxMatches };
 
-  if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated })) {
-    return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated) };
+  const held = heldRefreshCategories(assetData);
+  if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated, held })) {
+    return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated, held) };
   }
 
   const feature = pickRecommendedFeature();

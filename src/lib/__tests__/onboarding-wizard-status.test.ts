@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   readOnboardingWizardStatus,
   markCategoryStatus,
@@ -51,5 +51,32 @@ describe("onboarding-wizard-status", () => {
     markCategoryStatus("stock", "done");
     expect(store.has(STORAGE_KEYS.onboardingWizardStatus)).toBe(true);
     expect(STORAGE_KEYS.onboardingWizardStatus).not.toBe(STORAGE_KEYS.tutorialStatus);
+  });
+});
+
+import { createStepCompleter } from "../onboarding-wizard-status";
+
+describe("createStepCompleter (#99 doneRef 가드)", () => {
+  it("스크린샷 저장 1회(onSaved + 건수 증가 동시) → 완료 1회만", () => {
+    const done = vi.fn();
+    const c = createStepCompleter(0, done);
+    c.saved();
+    c.observe(3);
+    c.observe(3);
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+  it("건수 증가가 먼저 와도 뒤의 onSaved는 무시", () => {
+    const done = vi.fn();
+    const c = createStepCompleter(2, done);
+    c.observe(3);
+    c.saved();
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+  it("재개 시 이미 1건 이상이면 저장 전 자동 진행 0, 취소(변화 없음)면 머문다", () => {
+    const done = vi.fn();
+    const c = createStepCompleter(2, done);
+    c.observe(2);
+    c.observe(2);
+    expect(done).not.toHaveBeenCalled();
   });
 });

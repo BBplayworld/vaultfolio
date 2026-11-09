@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { yearlyAutoCaption, yearlyAutoCaptionText, yearlyEditDefaults } from "@/lib/asset/yearly-auto";
 import {
   Area, AreaChart,
   XAxis, YAxis, CartesianGrid, ResponsiveContainer,
@@ -85,7 +86,7 @@ function YearlyAddLink() {
       type="button"
       data-testid="yearly-add-link"
       onClick={() => dispatchOpenYearlyNetAsset()}
-      className="inline-flex min-h-10 items-center text-sm font-medium text-brand underline underline-offset-2"
+      className="inline-flex min-h-10 items-center text-sm font-medium text-brand dark:text-indigo-300 underline underline-offset-2"
     >
       작년 말 순자산 넣기
     </button>
@@ -98,7 +99,7 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
 
   const form = useForm<YearlyNetAsset>({
     resolver: zodResolver(yearlyNetAssetSchema),
-    defaultValues: editData || {
+    defaultValues: editData ? yearlyEditDefaults(editData, new Date().getFullYear()) : {
       year: new Date().getFullYear() - 1,
       netAsset: 0,
       note: "",
@@ -308,6 +309,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
   let heroStart: number | undefined;
   let heroEnd: number | undefined;
   let heroPrevYear: number | null = null; // 연: Hero 직전 해(원인 시작 = 그해 12월 스냅샷)
+  let heroPrev: YearlyNetAsset | null = null; // 연: Hero 비교 기준 항목(자동 기록 캡션 판정)
 
   if (activeView === "yearly") {
     const lastIdx = allYearlyData.length - 1;
@@ -320,6 +322,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     comparisonLabel = "전년 대비";
     heroTitle = prev ? `${prev.year}년 말 대비` : "전년 대비";
     heroPrevYear = prev ? prev.year : null;
+    heroPrev = prev;
     heroStart = prev?.netAsset;
     heroEnd = latest?.netAsset;
   } else if (activeView === "daily") {
@@ -353,6 +356,9 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     }
   }, [view, activeView, heroPrevYear, heroStart, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
 
+  // 렌더마다 prev.note를 재판정(동기화로 값이 바뀌어도 저장 0)
+  const autoCaption = view && activeView === "yearly" ? yearlyAutoCaption(heroPrev, snapshotVersion >= 0 ? readMonthlySnapshots() : []) : null;
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:gap-4">
       {view && (
@@ -366,6 +372,23 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
+          note={autoCaption && heroPrev ? (
+            <span data-testid="yearly-auto-caption" data-screenshot-hide className="leading-5 break-keep">
+              {yearlyAutoCaptionText(autoCaption)}{" "}
+              <span className="whitespace-nowrap">
+                <span aria-hidden="true">· </span>
+                <button
+                  type="button"
+                  data-testid="yearly-auto-caption-fix"
+                  aria-label={`${autoCaption.year}년 말 값 고치기`}
+                  onClick={() => handleEdit(heroPrev as YearlyNetAsset)}
+                  className="-my-2 inline-flex min-h-10 items-center align-baseline font-medium text-brand dark:text-indigo-300 underline underline-offset-2"
+                >
+                  고치기
+                </button>
+              </span>
+            </span>
+          ) : undefined}
           contentKey={activeView}
         />
       )}
