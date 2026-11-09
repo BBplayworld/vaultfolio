@@ -1,6 +1,6 @@
 import json, os, subprocess, shutil, sys
 SP="/tmp/claude-0/-home-user-vaultfolio/35b35548-5942-5886-b0bd-2d4a3cbe1dd9/scratchpad"
-H=SP+"/qah"; NEW=SP+"/new39"; OLD=SP+"/old028"; W=H+"/work"
+H=SP+"/qah"; NEW=SP+"/new58"; OLD=SP+"/old457"; W=H+"/work"
 shutil.rmtree(W,ignore_errors=True); os.makedirs(W)
 for t in (NEW,OLD): shutil.copy(H+"/qa-dev.test.ts", t+"/src/lib/__tests__/qa-dev.test.ts")
 SRV=W+"/server.json"; n=[0]; fails=[]
