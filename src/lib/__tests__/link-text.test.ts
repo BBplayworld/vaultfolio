@@ -88,7 +88,7 @@ describe("미리보기 줄바꿈 구조(320px 10억 이상 금액)", () => {
     expect(src).toMatch(/link-preview-before" className="whitespace-nowrap"/);
     expect(src).toMatch(/link-preview-after" className="whitespace-nowrap font-semibold"/);
     const block = src.slice(src.indexOf('data-testid="cash-link-preview"'), src.indexOf("preview?.sub"));
-    expect((block.match(/whitespace-nowrap/g) ?? []).length).toBe(2);
+    expect((block.match(/whitespace-nowrap/g) ?? []).length).toBe(3); // 금액 2개 + 환산식 1덩어리(#119)
     expect(block).toContain('<span className="text-muted-foreground"> → </span>'); // 공백 포함 화살표 = 줄바꿈 가능 지점
   });
 });

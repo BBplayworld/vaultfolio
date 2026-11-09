@@ -1,6 +1,7 @@
 import type { AssetData, Cash, Loan } from "@/types/asset";
 import type { CashTransaction, CryptoTransaction, LoanTransaction, Transaction } from "@/types/transaction";
 import { todayKst } from "@/lib/tax-utils";
+import { tradeKrwRate } from "@/lib/report/asset-report";
 import { cashBalanceFloor, isCashWithdrawalValid, pruneCashTransactions } from "./cash-tx-utils";
 import { isLoanRepaymentValid, pruneLoanTransactions } from "./loan-tx-utils";
 
@@ -22,13 +23,15 @@ export interface LinkTrade {
   price: number;
   fee?: number;
   currency: "KRW" | "USD" | "JPY";
+  /** 체결 환율(USD 원/$, JPY 원/100엔). 외화 거래를 원화 계좌·대출에 연결할 때만 쓴다(#119) */
+  exchangeRate?: number;
   date: string;
   name: string;
 }
 
 /** 주식 거래 -> 연결 대상 거래 */
 export const stockLinkTrade = (t: Transaction): LinkTrade => ({
-  id: t.id, type: t.type, quantity: t.quantity, price: t.price, fee: t.fee, currency: t.currency, date: t.date, name: t.stockName,
+  id: t.id, type: t.type, quantity: t.quantity, price: t.price, fee: t.fee, currency: t.currency, exchangeRate: t.exchangeRate, date: t.date, name: t.stockName,
 });
 /** 코인 거래 -> 연결 대상 거래(항상 KRW) */
 export const cryptoLinkTrade = (t: CryptoTransaction): LinkTrade => ({
@@ -37,7 +40,8 @@ export const cryptoLinkTrade = (t: CryptoTransaction): LinkTrade => ({
 
 export type LinkFailReason =
   | "no-account" // 선택 계좌가 없음
-  | "currency" // 통화 불일치(현금) 또는 외화 거래의 대출 연결
+  | "currency" // 통화 불일치(다른 외화 현금, 원화 거래의 외화 현금)
+  | "rate" // 외화 거래를 원화 계좌·대출에 연결하는데 체결 환율이 없음(#119)
   | "amount" // 연결 금액 0 이하
   | "balance" // 출금·상환이 잔액 초과
   | "zero" // 현금 출금 결과가 하한(0원 현금 저장 불가) 미만
@@ -76,19 +80,38 @@ export function isLinkDateAllowed(date: string, today: string = todayKst()): boo
   return date.length >= 7 && date.slice(0, 7) === today.slice(0, 7);
 }
 
-/** 후보 계좌: 같은 통화 현금 + (KRW 거래일 때만) 대출. 잔액 0 대출은 매도(상환) 후보에서 제외 */
+/** 외화 거래(USD·JPY)를 원화 계좌·대출에 연결하는 환산인지 */
+export const needsKrwConversion = (tradeCurrency: "KRW" | "USD" | "JPY", accountCurrency: "KRW" | "USD" | "JPY"): boolean =>
+  tradeCurrency !== "KRW" && accountCurrency === "KRW";
+
+/** 연결 계좌 통화 기준 금액(#119). 같은 통화 = linkAmount, 원화 환산 = (수량×단가±수수료)×배수를 마지막에 한 번만 원 반올림 */
+export function linkAmountIn(t: LinkTrade, accountCurrency: "KRW" | "USD" | "JPY"): number | "rate" {
+  if (!needsKrwConversion(t.currency, accountCurrency)) return linkAmount(t);
+  if (!(t.exchangeRate && t.exchangeRate > 0)) return "rate";
+  const gross = t.quantity * t.price;
+  const fee = t.fee ?? 0;
+  return roundMoney((t.type === "buy" ? gross + fee : gross - fee) * tradeKrwRate({ currency: t.currency, exchangeRate: t.exchangeRate }, { USD: 0, JPY: 0 }), "KRW");
+}
+
+/** 선택 계좌의 통화(대출은 항상 KRW). 계좌 없으면 null */
+export function linkAccountCurrency(data: Pick<AssetData, "cash" | "loans">, link: LinkChoice): "KRW" | "USD" | "JPY" | null {
+  if (link.kind === "loan") return (data.loans || []).some((l) => l.id === link.loanId) ? "KRW" : null;
+  const c = (data.cash || []).find((x) => x.id === link.cashId);
+  return c ? c.currency || "KRW" : null;
+}
+
+/** 후보 계좌: 같은 통화 현금 → (외화 거래만) 원화 현금 → 대출. 잔액 0 대출은 매도(상환) 후보에서 제외 */
 export function linkCandidates(
   data: Pick<AssetData, "cash" | "loans">,
   trade: Pick<LinkTrade, "type" | "currency" | "date">,
   today?: string,
 ): { cash: Cash[]; loans: Loan[] } {
   if (!isLinkDateAllowed(trade.date, today)) return { cash: [], loans: [] };
-  const cash = (data.cash || []).filter((c) => (c.currency || "KRW") === trade.currency);
-  const loans =
-    trade.currency === "KRW"
-      ? (data.loans || []).filter((l) => (trade.type === "sell" ? l.balance > 0 : true))
-      : [];
-  return { cash, loans };
+  const all = data.cash || [];
+  const same = all.filter((c) => (c.currency || "KRW") === trade.currency);
+  const krw = trade.currency === "KRW" ? [] : all.filter((c) => (c.currency || "KRW") === "KRW");
+  const loans = (data.loans || []).filter((l) => (trade.type === "sell" ? l.balance > 0 : true));
+  return { cash: [...same, ...krw], loans };
 }
 
 /** 거래 id의 짝 기록 조회(현금 → 대출 순, 1개 또는 null) */
@@ -113,22 +136,24 @@ export function buildLink(
 ): BuildLinkResult {
   if (!isLinkDateAllowed(trade.date, today)) return { ok: false, reason: "month" };
   if (findLinkedRecord(data, trade.id)) return { ok: false, reason: "duplicate" };
-  const amount = linkAmount(trade);
-  if (!(amount > 0)) return { ok: false, reason: "amount" };
   const memo = `${trade.name} ${trade.type === "buy" ? "매수" : "매도"}`;
   const stamp = { reflected: true, reflectedAt: now.toISOString(), reflectionId: `ref_${now.getTime()}`, createdAt: now.toISOString() };
 
   if (link.kind === "cash") {
     const cash = (data.cash || []).find((c) => c.id === link.cashId);
     if (!cash) return { ok: false, reason: "no-account" };
-    if ((cash.currency || "KRW") !== trade.currency) return { ok: false, reason: "currency" };
+    const cur = cash.currency || "KRW";
+    if (cur !== trade.currency && !needsKrwConversion(trade.currency, cur)) return { ok: false, reason: "currency" };
+    const amount = linkAmountIn(trade, cur);
+    if (amount === "rate") return { ok: false, reason: "rate" };
+    if (!(amount > 0)) return { ok: false, reason: "amount" };
     const isBuy = trade.type === "buy";
     if (isBuy && !isCashWithdrawalValid(cash.balance, amount)) return { ok: false, reason: "balance" };
-    const after = roundMoney(cash.balance + (isBuy ? -amount : amount), trade.currency);
-    if (after < cashBalanceFloor(trade.currency)) return { ok: false, reason: "zero" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
+    const after = roundMoney(cash.balance + (isBuy ? -amount : amount), cur);
+    if (after < cashBalanceFloor(cur)) return { ok: false, reason: "zero" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
     const rec: CashTransaction = {
       id: cashLinkId(trade.id), cashId: cash.id, type: isBuy ? "withdrawal" : "deposit",
-      amount, currency: trade.currency, date: trade.date, memo, ...stamp,
+      amount, currency: cur, date: trade.date, memo, ...stamp,
     };
     return {
       ok: true, amount, before: cash.balance, after,
@@ -142,7 +167,9 @@ export function buildLink(
 
   const loan = (data.loans || []).find((l) => l.id === link.loanId);
   if (!loan) return { ok: false, reason: "no-account" };
-  if (trade.currency !== "KRW") return { ok: false, reason: "currency" };
+  const amount = linkAmountIn(trade, "KRW");
+  if (amount === "rate") return { ok: false, reason: "rate" };
+  if (!(amount > 0)) return { ok: false, reason: "amount" };
   const isBuy = trade.type === "buy";
   if (!isBuy && !isLoanRepaymentValid(loan.balance, amount)) return { ok: false, reason: "balance" };
   const after = loan.balance + (isBuy ? amount : -amount);

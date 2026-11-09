@@ -37,7 +37,8 @@ import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransacti
 import { todayKst } from "@/lib/tax-utils";
 import { LinkAccountRow } from "./link-account-row";
 import { trackLinkedTrade } from "@/lib/trade/link-track";
-import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
+import { evaluateLink, LINK_NONE, linkSavedToast, parseLinkValue, type LinkEval } from "@/lib/trade/link-text";
+import { linkAccountCurrency, needsKrwConversion } from "@/lib/trade/linked-record";
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
 import { stockCategories } from "@/config/asset-options";
@@ -176,8 +177,11 @@ export function TradeInput() {
     return watchedPrice;
   }, [selectedStock?.currency, priceInKrw, watchedExRate, exchangeRates.USD, watchedPrice]);
   const watchedDate = form.watch("date");
+  // 외화 거래의 원화 환산 환율 — 체결 환율 칸 값, 비었으면 현재 환율(미리보기·저장·짝 기록이 같은 값, #119)
+  const currentRate = selectedStock?.currency === "USD" ? exchangeRates.USD : selectedStock?.currency === "JPY" ? exchangeRates.JPY : 0;
+  const linkRate = watchedExRate && watchedExRate > 0 ? watchedExRate : currentRate > 0 ? currentRate : undefined;
   const linkTrade = selectedStock
-    ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", date: watchedDate, name: selectedStock.name }
+    ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", exchangeRate: isForeign ? linkRate : undefined, date: watchedDate, name: selectedStock.name }
     : null;
   const linkEval: LinkEval = linkTrade && watchedQty > 0 && effectivePrice > 0
     ? evaluateLink(assetData, linkTrade, linkValue, effReflected)
@@ -250,6 +254,17 @@ export function TradeInput() {
     setLinkValue(LINK_NONE);
   }, [form]);
 
+  // 원화 계좌·대출 선택 시 빈 체결 환율 칸을 현재 환율로 채워 보여 준다(수정 가능, 연결 안 함으로 돌려도 유지)
+  const handleLinkChange = (v: string) => {
+    setLinkValue(v);
+    const choice = parseLinkValue(v);
+    if (!choice || !selectedStock || !isForeign || currentRate <= 0) return;
+    const acctCur = linkAccountCurrency(assetData, choice);
+    if (acctCur && needsKrwConversion(selectedStock.currency || "KRW", acctCur) && !(form.getValues("exchangeRate")! > 0)) {
+      form.setValue("exchangeRate", currentRate, { shouldDirty: true });
+    }
+  };
+
   const buildTransaction = (data: TradeFormValues): Transaction => {
     const stock = resolveStock(data.stockId)!;
     // 해외(USD) 원화 입력 시 달러 환산 — 체결환율 우선, 없으면 현재환율
@@ -258,6 +273,8 @@ export function TradeInput() {
       const rate = data.exchangeRate || exchangeRates.USD;
       if (rate) price = Math.round((price / rate) * 1000) / 1000;
     }
+    // 원화 계좌·대출 연결이면 체결 환율을 저장 시점에 반드시 채운다(칸을 지워도 — 엔진 환산과 짝 금액이 같아야 함)
+    const exchangeRate = !(data.exchangeRate! > 0) && linkEval.state === "ok" && linkEval.conv ? linkEval.conv.rate : data.exchangeRate;
     return {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       stockId: data.stockId,
@@ -267,7 +284,7 @@ export function TradeInput() {
       quantity: data.quantity,
       price,
       currency: stock.currency || "KRW",
-      exchangeRate: data.exchangeRate,
+      exchangeRate,
       date: data.date,
       reflected: data.reflected,
       // 반영 식별자는 실제 반영 시점에 부여(빌드 시 부여하면 정합성 가드가 오진)
@@ -689,7 +706,7 @@ export function TradeInput() {
 
               {/* 연결 계좌 — 즉시 반영 박스 바로 아래(#103) */}
               {linkTrade && (
-                <LinkAccountRow data={assetData} trade={linkTrade} reflected={effReflected} value={linkValue} onChange={setLinkValue} ev={linkEval} />
+                <LinkAccountRow data={assetData} trade={linkTrade} reflected={effReflected} value={linkValue} onChange={handleLinkChange} ev={linkEval} />
               )}
 
               {/* 반영 후 예상 포지션 미리보기 */}

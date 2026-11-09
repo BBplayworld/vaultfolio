@@ -66,8 +66,9 @@ describe("금액·날짜·후보", () => {
     expect(linkCandidates(d, trade(), TODAY).loans.map((l) => l.id)).toEqual(["l1", "l0"]);
     expect(linkCandidates(d, trade({ type: "sell" }), TODAY).loans.map((l) => l.id)).toEqual(["l1"]);
     const usd = linkCandidates(d, trade({ currency: "USD" }), TODAY);
-    expect(usd.cash.map((c) => c.id)).toEqual(["u"]);
-    expect(usd.loans).toEqual([]);
+    expect(usd.cash.map((c) => c.id)).toEqual(["u", "a"]); // #119: 같은 통화 현금 → 원화 현금
+    expect(usd.loans.map((l) => l.id)).toEqual(["l1", "l0"]); // #119: 외화 거래도 대출 후보
+    expect(linkCandidates(d, trade({ currency: "USD", type: "sell" }), TODAY).loans.map((l) => l.id)).toEqual(["l1"]);
     expect(linkCandidates(d, trade({ date: "2026-10-31" }), TODAY)).toEqual({ cash: [], loans: [] });
   });
 });
@@ -109,7 +110,9 @@ describe("buildLink — 저장", () => {
     expect(link(d, trade({ type: "sell", fee: 1000 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
     expect(link(d, trade({ quantity: 0 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
     expect(link(d, trade(), { kind: "cash", cashId: "u" })).toEqual({ ok: false, reason: "currency" });
-    expect(link(d, trade({ currency: "USD" }), { kind: "loan", loanId: "l" })).toEqual({ ok: false, reason: "currency" });
+    expect(link(d, trade({ currency: "USD" }), { kind: "loan", loanId: "l" })).toEqual({ ok: false, reason: "rate" }); // #119: 외화 거래 + 대출은 환율 필요
+    expect(link(d, trade({ currency: "USD", exchangeRate: 1400 }), { kind: "cash", cashId: "u" }).ok).toBe(true);
+    expect(link(data({ cash: [cash("j", 1e6, "JPY")] }), trade({ currency: "USD", exchangeRate: 1400 }), { kind: "cash", cashId: "j" })).toEqual({ ok: false, reason: "currency" });
     expect(link(d, trade({ date: "2026-10-30" }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "month" });
     expect(link(d, trade(), { kind: "cash", cashId: "zz" })).toEqual({ ok: false, reason: "no-account" });
     const ok = link(data({ cash: [cash("a", 5000)] }), trade(), { kind: "cash", cashId: "a" });
