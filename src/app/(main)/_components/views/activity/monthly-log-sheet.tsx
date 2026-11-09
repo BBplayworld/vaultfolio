@@ -70,11 +70,11 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
       <MonthCell row={row} today={today} />
       {columns.map((k) => (
         row.kind === "full" ? (
-          <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} className={`${cell} min-w-[56px] text-right text-foreground`}>
+          <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} className={`${cell} min-w-[52px] text-right text-foreground`}>
             <Amount value={row.values[k]} debt={MONTHLY_LOG_DEBT_KEYS.has(k)} />
           </td>
         ) : (
-          <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} aria-label="종류별 기록 없음" className={`${cell} min-w-[56px] text-right text-muted-foreground`}>—</td>
+          <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} aria-label="종류별 기록 없음" className={`${cell} min-w-[52px] text-right text-muted-foreground`}>—</td>
         )
       ))}
       <td
@@ -111,7 +111,7 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
                 key={k}
                 scope="col"
                 data-testid={`monthly-log-head-${k}`}
-                className={`${head} min-w-[56px] text-right whitespace-normal break-keep`}
+                className={`${head} min-w-[52px] text-right whitespace-normal break-keep`}
                 style={Z_EDGE}
               >
                 {k === "tenantDeposit" ? <>임차<wbr />보증금</> : MONTHLY_LOG_LABELS[k]}
