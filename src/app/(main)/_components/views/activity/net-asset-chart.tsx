@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { yearlyAutoCaption, yearlyAutoCaptionText, yearlyEditDefaults } from "@/lib/asset/yearly-auto";
@@ -244,6 +245,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
   // 자산·환율이 바뀔 때만 다시 계산(연 원인 useMemo가 매 렌더 무효화되지 않게)
   const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<YearlyNetAsset | undefined>();
   const [innerView, setActiveView] = useState<NetAssetView>("yearly");
   const activeView = view ?? innerView;
@@ -659,7 +661,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
 
       {/* 년도별 추가/수정 다이얼로그 — 트리거는 외부(CustomEvent)에서 발화 */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent onCloseAutoFocus={returnFocus}>
           <DialogHeader>
             <DialogTitle>{editingItem ? "년도별 순자산 수정" : "년도별 순자산 추가"}</DialogTitle>
             <DialogDescription>

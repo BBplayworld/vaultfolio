@@ -312,6 +312,7 @@ markRefreshNudgeShown() / clearAssetRefreshStatus()
 krwMul(currency, rates)                              // KRW 환산 배수 (JPY는 100엔당) — 원인분해 공용
 reflectedCashInflow(data, from, to, rates): number   // 반영된 현금 순유입만 합산 (미반영 소급 기록은 순자산 무변동 → 제외)
 reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
+realizedSellGains(data, from, to, prevFx, rates)    // (내부, #4.64 D1) 정밀 분기 반영 매도 실현손익 R {stock, crypto} — priceStock/Crypto +R, manual −R, 합계 불변
 tradeKrwRate(t, rates)                               // 주식 체결 KRW 배수(체결 환율 우선, JPY 100엔당, 없으면 현재 환율) — reflectedTradeFlow·getAttributionRecords 공용
 costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
 fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
@@ -831,7 +832,7 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 
 
 ### restore-focus.ts (#4.62) — 창 닫힘 포커스 복귀 공용 함수
-`restoreFocusAfterDialog(opener, { skipIfOtherDialog? })` (`src/lib/restore-focus.ts`) — onCloseAutoFocus에서 `e.preventDefault()` 후 호출. 순서: 보이는 `[data-tutorial="tutorial-fab"]`(opacity-0 제외) → 열기 직전 요소(DOM에 있을 때) → `main`(tabindex -1, `preventScroll`). `skipIfOtherDialog`면 닫는 창(`#fab-sheet`) 외 열린 `[role=dialog]`가 있을 때 생략. 사용처: `balance-resync-dialog`(#4.60, goAddRef로 '새로 추가' 시 호출측이 생략), FAB 시트(`floating-add-button`, `handoffRef`로 다른 창이 이어서 열리면 생략). 다른 FAB 경유 창은 쓰지 않는다.
+`restoreFocusAfterDialog(opener, { skipIfOtherDialog? })` (`src/lib/restore-focus.ts`) — onCloseAutoFocus에서 `e.preventDefault()` 후 호출. 순서: 보이는 `[data-tutorial="tutorial-fab"]`(opacity-0 제외) → 열기 직전 요소(DOM에 있을 때) → `main`(tabindex -1, `preventScroll`). `skipIfOtherDialog`면 닫는 창(`#fab-sheet`) 외 열린 `[role=dialog]`가 있을 때 생략. 사용처: `balance-resync-dialog`(#4.60, goAddRef로 '새로 추가' 시 호출측이 생략), FAB 시트(`floating-add-button`, `handoffRef`로 다른 창이 이어서 열리면 생략). 다른 FAB 경유 창은 이 함수를 직접 쓰지 않고 훅 `useReturnFocusOnClose(open)`(#4.64, 같은 파일)을 쓴다 — 열릴 때 직전 포커스 요소를 기억(layout effect), 닫힐 때 그 요소가 사라졌으면(FAB 시트 버튼) 이 함수로 복귀, 남아 있으면 Radix 기본 복귀. 반환 핸들러를 `DialogContent onCloseAutoFocus`에 연결. 적용: 부동산·실물·현금·대출·코인·주식 입력 창, 연도별 순자산 창, 보유 현황 맞추기 창.
 
 ### profitTone (#4.62) — 상세 화면 손익 0 표기 단일 출처
 `profitTone(value, rate = value, digits = 0)` → `{ isZero, sign, colorClass, amount, rate }` (`views/detail/detail-summary-header.tsx`). `Math.round(value*10^digits) === 0`이면 부호 없음·`text-muted-foreground`·amount/rate 0(-0 방지), 아니면 `getProfitLossColor` + `+`. `ProfitMetric`·상세 탭 카드 행/펼침(코인·주식·부동산·실물)·허브 행이 사용. digits=1은 부동산 실투자금 수익률처럼 수익률 값 자체로 판정할 때. 공용 `theme.ts`·결산·Hero·성적표는 사용하지 않는다(환차손익·등락 칩도 범위 밖).

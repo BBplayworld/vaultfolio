@@ -5,6 +5,7 @@
 // 순수 계산은 `@/lib/asset/resync`가 맡고, 이 파일은 상태·표시·저장 호출(클릭 핸들러에서만)만 한다.
 // 0건 첫 등록·온보딩·/ratio 인계는 기존 StockScreenshotImport를 그대로 쓴다(이 컴포넌트는 진입 분기에서만 열린다).
 // 코인은 `resync/crypto.ts` 어댑터로 같은 5함수를 쓴다(kind="crypto": 범위=거래소, 문구만 증권사→거래소·주식→코인).
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, ChevronDown, ImagePlus, Info, Loader2, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
@@ -133,6 +134,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const undoRef = useRef<ResyncUndo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const returnFocus = useReturnFocusOnClose(open); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const urlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -386,6 +388,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
         data-testid="resync-dialog"
         className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
         aria-describedby={undefined}
+        // 열린 직후 포커스는 창 제목으로 — 입력칸·버튼에 주면 모바일 키보드·오조작 위험(#118)
+        onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
+        onCloseAutoFocus={returnFocus}
         onEscapeKeyDown={(e) => {
           if (running || applying) e.preventDefault();
         }}
@@ -910,7 +915,7 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
         </p>
         <p data-testid="resync-notice-2" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-          <span>바뀐 수량·평단은 이번 달 결산에 <NR>{T.unit} 매수·매도</NR>로 잡혀요</span>
+          <span>바뀐 수량·평단은 이번 달 <NR>결산 증감</NR>에 함께 반영돼요</span>
         </p>
       </div>
     </div>

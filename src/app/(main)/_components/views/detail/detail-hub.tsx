@@ -23,7 +23,7 @@ export function DetailHub() {
         {rate !== null && (
           <> ({tone.sign}{tone.rate.toFixed(2)}%)</>
         )}
-        <span className="text-muted-foreground font-medium ml-1.5">평가손익</span>
+        <span data-testid="hub-profit-label" className="text-muted-foreground font-medium ml-1.5 whitespace-nowrap">평가손익</span>
       </span>
     );
   };

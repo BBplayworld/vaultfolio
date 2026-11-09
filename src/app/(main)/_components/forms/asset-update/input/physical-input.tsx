@@ -4,6 +4,7 @@
 // 골격은 real-estate-input.tsx(Dialog + react-hook-form)를 따르고, 신규 공용 컴포넌트는 만들지 않는다.
 // 이벤트: trigger-add-physical(등록) / trigger-edit-physical{id}(수정).
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -183,6 +184,7 @@ function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose
 export function PhysicalInput() {
   const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<PhysicalAsset | undefined>();
   const physical = assetData.physicalAssets;
 
@@ -206,7 +208,7 @@ export function PhysicalInput() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o) setEditingItem(undefined); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
+      <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
         <DialogHeader>
           <DialogTitle>{editingItem ? "실물 자산 수정" : "실물 자산 추가"}</DialogTitle>
           <DialogDescription className="break-keep text-pretty">금, 은, 귀금속처럼 직접 보관하는 자산을 평가액으로 기록해요.</DialogDescription>

@@ -3,6 +3,7 @@
 // - 시계열 원인분해 델타: 인리치드 스냅샷 2건으로 Δ순자산을 시세/환율/입출금으로 분해
 // 투자 조언 아님 — 사용자 자신의 자산의 사실·구조·변화만 계산
 
+import { deriveBaseSnapshot, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 
 // ── point-in-time 성적표 ──────────────────────────────────────────────
@@ -793,7 +794,10 @@ function resolveAttribution(
     // 거래내역으로 설명되는 매수·매도를 떼어내고 나머지만 saving으로 남긴다.
     // (buy + sell + saving = savingInvest 항등식이라 표시 합계는 그대로 deltaNet)
     const { buy: buyEffect, sell: sellEffect } = reflectedTradeFlow(assetData, prev._date, curr._date, rates);
-    const savingEffect = savingInvest - buyEffect - sellEffect;
+    // 반영 매도의 실현손익(R) — 매도 대금 쪽(sellEffect)은 그대로 두고 실현손익만 시세로 보낸다(4.64 D1).
+    // 합계는 키 간 이동이라 불변: priceEffect·priceStock(+R) ↔ stockManual(−R). 계산 불가 매도는 R=0(현행).
+    const realized = realizedSellGains(assetData, prev._date, curr._date, prev.fx!, rates);
+    const savingEffect = savingInvest - buyEffect - sellEffect - realized.stock - realized.crypto;
     const debtEffect = -(curr.breakdown!.loans - prev.breakdown!.loans);     // 부채 증감 (상환=+)
     const fxByCurrency = (["USD", "JPY"] as const).map((c) => ({
       currency: c,
@@ -802,7 +806,7 @@ function resolveAttribution(
     const fxEffect = fxByCurrency.reduce((sum, e) => sum + e.effect, 0);
     // 잔차 = 시세. income은 savingFull에 이미 포함돼 차감됐고,
     // costFx는 fxEffect가 담당하므로 여기선 제외.
-    const priceEffect = deltaNet - savingFullReal - debtEffect - fxEffect;
+    const priceEffect = deltaNet - savingFullReal - debtEffect - fxEffect + realized.stock + realized.crypto;
 
     // ── 자산군별 분해 ─────────────────────────────────────────────
     // 스냅샷의 breakdown(자산군별 평가액)·cost(자산군별 원가)로 시세·매수를 자산군까지 쪼갠다.
@@ -819,21 +823,21 @@ function resolveAttribution(
     const fxStock = fxEffect - costFx.cash;
 
     // 주식 평가손익의 환차익 = (평가액 기준 환차익) − (원가 기준 환차익) → 시세에서 제외
-    const priceStock = (curr.breakdown!.stocks - prev.breakdown!.stocks - dCostStockRaw) - (fxStock - costFx.stock);
-    const priceCrypto = (curr.breakdown!.crypto - prev.breakdown!.crypto) - dCostCrypto;
+    const priceStock = (curr.breakdown!.stocks - prev.breakdown!.stocks - dCostStockRaw) - (fxStock - costFx.stock) + realized.stock;
+    const priceCrypto = (curr.breakdown!.crypto - prev.breakdown!.crypto) - dCostCrypto + realized.crypto;
     const priceRealEstate = (curr.breakdown!.realEstate - prev.breakdown!.realEstate) - dCostRealEstate;
     const pricePhysical = ((curr.breakdown!.physical ?? 0) - (prev.breakdown!.physical ?? 0)) - dCostPhysical;
 
     // 거래내역 없이 수량·평단을 직접 수정한 분(스크린샷 일괄 등록 등)은 방향별로 매수/매도에 합산
     // — 같은 라벨이 두 줄로 갈라지지 않게 한다.
-    const stockManual = dCostStock - buyEffect - sellEffect;
+    const stockManual = dCostStock - buyEffect - sellEffect - realized.stock;
     const buyStock = buyEffect + Math.max(stockManual, 0);
     const sellStock = sellEffect + Math.min(stockManual, 0);
 
     // 코인도 주식과 동형 — 반영된 매수/매도 거래(reflectedCryptoFlow)를 권위 소스로 쓰고,
     // 거래내역 없이 수량·평단만 직접 수정한 나머지(cryptoManual)는 방향별로 합산한다(S-4.25).
     const { buy: buyCryptoEffect, sell: sellCryptoEffect } = reflectedCryptoFlow(assetData, prev._date, curr._date);
-    const cryptoManual = dCostCrypto - buyCryptoEffect - sellCryptoEffect;
+    const cryptoManual = dCostCrypto - buyCryptoEffect - sellCryptoEffect - realized.crypto;
     const buyCrypto = buyCryptoEffect + Math.max(cryptoManual, 0);
     const sellCrypto = sellCryptoEffect + Math.min(cryptoManual, 0);
 
@@ -1028,6 +1032,74 @@ function reflectedTradeFlow(
     else sell -= amount;
   }
   return { buy, sell };
+}
+
+// 반영 매도의 실현손익 R(KRW) — 정밀 분기 전용(4.64 D1).
+// R = 체결액(tradeKrwRate, reflectedTradeFlow와 동일 환산) − 매도 수량 × 매도 직전 평단 × 월초 환율(prev.fx).
+// 월초 환율을 쓰는 이유: 시작 스냅샷 원가가 prev.fx로 환산돼 dCostStock(매도분) = −수량×평단×prev.fx 이기 때문
+// (매도 외화 몫의 환율 차는 R에 함께 들어가 시세로 간다 — 2차 오차).
+// 매도 직전 평단 = 현재 포지션에서 그 매도 이후(포함) 반영 거래를 역순 제거(deriveBaseSnapshot 재사용).
+// 직전 수량 < 매도 수량이거나 평단 ≤ 0(전량 매도로 평단이 지워진 경우 등)이면 그 매도는 R=0(현행 동작).
+function realizedSellGains(
+  data: AssetData,
+  fromDate: string,
+  toDate: string,
+  prevFx: { USD: number; JPY: number },
+  rates: { USD: number; JPY: number },
+): { stock: number; crypto: number } {
+  type Tx = TxLike & { id: string; _pid: string };
+  const gainsOf = (
+    txs: Tx[],
+    positionOf: (pid: string) => { quantity: number; avgPrice: number; avgExchangeRate: number; mul: number } | null,
+    proceedsOf: (t: Tx) => number,
+  ): number => {
+    const byAsset = new Map<string, Tx[]>();
+    for (const t of txs) {
+      if (!t.reflected) continue;
+      byAsset.set(t._pid, [...(byAsset.get(t._pid) ?? []), t]);
+    }
+    let total = 0;
+    for (const [pid, list] of byAsset) {
+      const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+      const pos = positionOf(pid);
+      if (!pos) continue;
+      sorted.forEach((t, i) => {
+        if (t.type !== "sell" || !inFlowWindow(t.date, fromDate, toDate, false)) return;
+        const base: PositionLike = {
+          quantity: pos.quantity, avgPrice: pos.avgPrice, avgExchangeRate: pos.avgExchangeRate,
+          source: "computed", effectiveDate: t.date, lockedByManual: false,
+        };
+        const before = deriveBaseSnapshot(base, sorted.slice(i));
+        if (!(before.avgPrice > 0) || before.quantity < t.quantity - 1e-9) return;
+        total += proceedsOf(t) - t.quantity * before.avgPrice * pos.mul;
+      });
+    }
+    return total;
+  };
+
+  const stockTxs: Tx[] = (data.transactions || []).map((t) => ({ ...t, _pid: t.stockId }));
+  const stock = gainsOf(
+    stockTxs,
+    (id) => {
+      const s = data.stocks.find((x) => x.id === id);
+      if (!s || s.inactiveStatus === "delisted") return null;
+      return { quantity: s.quantity, avgPrice: s.averagePrice, avgExchangeRate: s.purchaseExchangeRate ?? 0, mul: krwMul(s.currency, prevFx) };
+    },
+    (t) => {
+      const raw = data.transactions!.find((x) => x.id === t.id)!;
+      return raw.quantity * raw.price * tradeKrwRate(raw, rates);
+    },
+  );
+  const cryptoTxs: Tx[] = (data.cryptoTransactions || []).map((t) => ({ ...t, _pid: t.cryptoId }));
+  const crypto = gainsOf(
+    cryptoTxs,
+    (id) => {
+      const c = data.crypto.find((x) => x.id === id);
+      return c ? { quantity: c.quantity, avgPrice: c.averagePrice, avgExchangeRate: 0, mul: 1 } : null;
+    },
+    (t) => t.quantity * t.price,
+  );
+  return { stock, crypto };
 }
 
 // 작년 이전 yearlyNetAssets(연도별 종가 순자산, netAsset만)를 12/31 앵커 포인트로 승격 —

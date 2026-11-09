@@ -1,5 +1,6 @@
 "use client";
 
+import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -682,6 +683,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
 export function RealEstateInput() {
   const { assetData } = useAssetData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const returnFocus = useReturnFocusOnClose(isDialogOpen); // FAB 시트 경유로 열렸다면 닫힘 후 FAB로 복귀(#118)
   const [editingItem, setEditingItem] = useState<RealEstate | undefined>();
 
   useEffect(() => {
@@ -707,7 +709,7 @@ export function RealEstateInput() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
+      <DialogContent onCloseAutoFocus={returnFocus} className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
         <DialogHeader>
           <DialogTitle>{editingItem ? "부동산 수정" : "부동산 추가"}</DialogTitle>
           <DialogDescription>
