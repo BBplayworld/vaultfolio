@@ -15,16 +15,16 @@ import { NextResponse } from "next/server";
 import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC } from "@/lib/cloud-sync/config";
 import { fromBase64, sha256Hex, verifySignature } from "@/lib/cloud-sync/crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
+import { getClientIp, guardL1Only } from "@/server/api-guard";
 
 interface AuthToken { assetId: string; ts: number; nonce: string; sig: string }
 
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip")?.trim() ??
-    "unknown"
-  );
-}
+// assetId = 128bit 랜덤의 base64url(22자). 구형 여유를 두어 8~128자 URL-safe 문자만 허용
+const ASSET_ID_RE = /^[A-Za-z0-9_-]{8,128}$/;
+const NONCE_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const MAX_SIG_LEN = 200; // Ed25519 서명(64B) base64 ≈ 88자
+// GET(pull·폴링) L1 한도: 기기 1대 ≈ 분당 1회 + 포커스/가시성 전환. 다기기·공용 IP 여유를 두고 폭주만 차단
+const GET_L1_PER_MINUTE = 120;
 
 function parseAuth(request: Request): AuthToken | null {
   const raw = request.headers.get(SYNC_AUTH_HEADER);
@@ -33,7 +33,10 @@ function parseAuth(request: Request): AuthToken | null {
     const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
     const json = new TextDecoder().decode(fromBase64(b64));
     const t = JSON.parse(json) as AuthToken;
-    if (!t.assetId || typeof t.ts !== "number" || !t.nonce || !t.sig) return null;
+    if (typeof t.assetId !== "string" || typeof t.nonce !== "string" || typeof t.sig !== "string") return null;
+    if (typeof t.ts !== "number" || !Number.isFinite(t.ts)) return null;
+    // 저장소·서명 검증 전 형식 거부 — 임의 문자열로 Redis 조회·암호 연산을 유발하지 못하게 한다
+    if (!ASSET_ID_RE.test(t.assetId) || !NONCE_RE.test(t.nonce) || t.sig.length === 0 || t.sig.length > MAX_SIG_LEN) return null;
     return t;
   } catch {
     return null;
@@ -47,6 +50,9 @@ function freshTs(ts: number): boolean {
 const MAX_CIPHERTEXT = 4 * 1024 * 1024; // 4MB 상한(남용 방지)
 
 export async function GET(request: Request) {
+  // 헤더 파싱·Redis 조회 전에 폭주 IP 차단(Redis 호출 0)
+  const limited = guardL1Only(request, "sync-get", GET_L1_PER_MINUTE);
+  if (limited) return limited;
   const auth = parseAuth(request);
   if (!auth || !freshTs(auth.ts)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
