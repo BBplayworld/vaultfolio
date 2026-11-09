@@ -511,6 +511,7 @@ countAssets(data) / toGaAssetType(kebab) / screenPath(viewKey)
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
 
 ### server/api-guard.ts (`src/server/api-guard.ts`, S-4.28) — 공개 API 공통 방어
+- `guardL1Only(request, route, l1PerMinute)`(4.53): 출처·본문 검사 없이 L1만. sync(서명 인증 라우트)용
 
 ```typescript
 guardRequest(req, { route, maxBodyBytes?, l1PerMinute? }): Response|null  // cross-site 403 · 411/413 · L1 429

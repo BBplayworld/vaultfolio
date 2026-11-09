@@ -15,6 +15,12 @@
 - 스키마·저장 키·동기화·서버 전송·스냅샷·결산 코드 diff 0. 결산 픽스처 ①~④·월초 귀속은 `lib/asset/__tests__/balance-resync-settlement.test.ts`로 고정(외화 직접 수정+환율 변동 시 늘어난 수량의 환율 변동분은 현행 엔진상 시세 변동에 남음 — v1 무변경).
 - 알려진 한계: 그대로 확인 저장 없음, `assetRefresh`는 기기 로컬, 직접 고친 차액은 `기록 안 된 변화`.
 
+## 2026-11-08 (v4.53)
+
+### /api/sync 남용 방어 (#4.53, 이슈 #97, risk medium)
+- **왜**: sync 라우트만 자체 `getClientIp`(XFF 맨 왼쪽 신뢰)를 써 rate limit이 헤더 조작에 취약했고, GET은 한도 없이 서명 검증 전 Redis 조회를 수행했다.
+- `getClientIp`를 `api-guard`로 통일, `guardL1Only`(`api-guard.ts`) 신설해 GET 120/분/IP, 토큰(assetId·nonce·sig·ts) 형식을 저장소 조회 전 401. 프로토콜·저장 포맷·스키마·서버 전송 값 무변경. 테스트 `sync-route-guard.test.ts`.
+
 ## 2026-11-08 (v4.51)
 
 ### 월 탭 자산 구성 변화 블록 (#4.51, 이슈 #83, risk low)
