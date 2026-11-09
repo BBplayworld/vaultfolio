@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 14:20 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 15:10 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 없음.
@@ -12,15 +12,12 @@
 - [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09) · 운영 스모크 PASS**
 
 ## 🟨 대표 승인 예정 (미리 알림)
-- 4.56 → v4.57 #103 연결 계좌 (high) — 목표 ~11/13 요청
+- v4.58 #103 연결 계좌 (high) — 최종 qa·COO 후 요청 (목표 11/10)
 
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| 4.52 → **v4.54** [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 잔액 맞추기 + 전 자산 흐름 보강(이중 반영 경고) | qa·UI·COO PASS. 핫픽스 병합(import 1줄) → 증분 qa 후 🟥 승인 요청 | 오늘 11/09 요청 → 승인 즉시 머지 | 대표 승인 |
-| 4.54 → **v4.55** [PR #102](https://github.com/BBplayworld/vaultfolio/pull/102) | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 | qa·COO PASS. 4.52 머지 뒤 병합·증분 qa | 4.52 머지 당일 | 위임 머지 (low) |
-| 4.55 → **v4.56** [PR #101](https://github.com/BBplayworld/vaultfolio/pull/101) | #58 실물 자산 + [#103](https://github.com/BBplayworld/vaultfolio/issues/103) A 홈 원인 상쇄 | UI 승인·qa 증분 PASS. 남은 것: 4.52 병합 확인 테스트 → 최종 qa·COO | 4.52 머지 +1일 (~11/10~11) | 팀 머지 (#58 대표 위임) |
-| 4.56 → **v4.57** | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 — 주식·코인 매수·매도 시 현금 또는 대출 함께 증감, 삭제 시 되돌림 | 개발 중 → qa(데이터 안전·구버전 기기 혼재) → COO → 🟥 | 개발 ~11/11 → 승인 요청·머지 목표 ≤11/14 | 대표 승인 (high, 저장 형식 변경 없음) |
+| 4.56 → **v4.58** [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 — 주식·코인 매수·매도 시 현금 또는 대출 함께 증감, 삭제 시 되돌림 | 개발·main(v4.57) 병합 완료(869984a), UI 검수 경미 2건 반영 → 최종 qa 진행 중 · 현금 하한 통화 단위 통일(JPY) COO 확인 중 → 🟥 | 승인 요청 목표 11/10 | 대표 승인 (high, 저장 형식 변경 없음) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
