@@ -248,3 +248,4 @@
 - risk:low·risk:medium 릴리스는 qa PASS·UI 승인(UI 변경 시)·COO PASS(cto decision-brief에 '자체 승인' 판정 명시)·Vercel success(머지 커밋=qa PASS 커밋)·운영 스모크 계획이 갖춰지면 팀이 머지하고 사후 한 줄 보고 + DASHBOARD 갱신.
 - **대표 승인 유지**: risk:high, 제품 원칙 변경, 결제, 외부 게시, COO가 '대표 확인 필요'로 판정한 건(대표가 직접 지적·반려한 영역의 재시도 등).
 - 머지 직후 운영 스모크 필수, 이상 시 즉시 revert.
+- 2026-11-09 4.55(PR #101, 4ca9d1c, #58+#103 A) COO PASS → **팀 머지 가**(#58 대표 위임 11-08 조건 ①~⑤ 충족·새 한계 0, #103 A는 저장 0 표시 계산이라 11-09 medium 자체 승인 범위, 결산 창 조건 ⑧은 11-09 폐지로 소멸 — qa의 '12/11~12/18만'은 무효). 단 머지 전 게이트: G1 #99 PR #102 `[#4.55]` 선머지 → G2 origin/main merge(시뮬레이션 충돌: floating-add-button import·EVENT_MAP, ga.test, changelog + **의미 충돌 `ADD_TRIGGER_EVENTS`에 physical 키 추가 필수**) → G3 새 head 증분 qa·Vercel success → G4 ui-designer 증분(R6 수정 모드 도움말 320·375, FAB 실물 행). 불충족 시 대표 승인 전환. squash `[#4.56]`, PR 본문 일정 줄 삭제·`Refs #103`(Closes 아님), 스모크 D0·D+1, 롤백 PR revert 1개. CHECKLIST C45·C46 추가 (4.55-decision-brief.md) | cto(COO) |
