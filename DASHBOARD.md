@@ -15,12 +15,15 @@
 - ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · '홈' 제목이 여전히 비어 보이면 `수정: 제목 크기`
 
-**⏸ (R2 수정 중, 승인 보류) v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
+**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
 - 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
 - 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
 - 🔁 대표 지적 R1 반영: ① 구성 변화 막대 자산군별 최소 폭 7%(실제 %는 아래 목록 그대로) [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-composition.png) ② 월별 기록 표 가로 스크롤 1개로 통일 — 열 순서 `월 | 순자산 | 부동산…`, 월 열만 고정 [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet.png) · [밀었을 때](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet-scrolled.png)
-- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @755a654 · iOS Safari 실기기는 미검증(Chromium 터치 에뮬레이션)
+- ℹ️ iOS 실기기 재현은 못 했습니다(팀 환경에 iOS Safari 없음). 대표님 캡처를 픽셀 단위로 대조해 원인을 확정하고 조치했습니다.
+- 🔁 R2 원인: 가로 스크롤은 처음부터 1개, iOS가 고정된 '월' 칸을 스크롤 막대 위에 그려 막대가 두 조각으로 보임 → 고정 칸을 막대 아래로·표 아래 여백 12px·끝에서 튕김 차단(저장·데이터 변경 0)
+- 📱 iPhone 확인: preview `?trial=1` › 성과 › 월 탭 › 월별 기록에서 표를 좌우 끝까지 밀었을 때 아래 막대가 한 줄로 이어지면 반영된 상태
+- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @0c05de1
 - ⚠️ 한계: 값은 '그 달 마지막으로 앱을 연 날' 기준(캡션으로 안내) · 375에서 자산군 5개 이상·10억 이상이면 가로 스크롤 · 7/23 이전 달은 순자산만
 - #32 관계: 결산 Hero로 옮긴 월별 증감은 다시 넣지 않았고, 사라졌던 '여러 달 한눈에'만 금액 표로 되살림
 - 📏 판독: 머지~1/10 사용자 3명 이상 유지 / 0~1명 제거 후보 · ↩️ 롤백: PR revert 1회
@@ -36,7 +39,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 R2 지적(iOS 가로 스크롤 2개 여전) → 실기기 캡처로 원인 분석·수정 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R2 반영(iOS 스크롤 막대 가림 원인 확정·조치) 완료(0c05de1) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 대표 R2 지적('홈' 글씨 어색, 공식 느낌 필요) → 상단 브랜드 재설계 중 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
