@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 14:20 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 17:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 | 릴리스 | 내용 | 위험 | 확인 방법 | 결정 |
@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa PASS·COO PASS @757c9b0 → **11/11 00:05 위임 머지 예약**(10월 결산 창 10/28~11/10 종료 후) ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | 11/11 머지 → 운영 스모크 | 위임 머지 (risk:low) |
 | 4.55 | #58 실물 자산 ([draft PR #101](https://github.com/BBplayworld/vaultfolio/pull/101)) | UI 승인 · qa 1차 FAIL(구버전 기기 혼재 시 클라우드 사본 실물 탈락) → 수정 c7a3bda → **qa 증분 PASS**. 남은 것: 4.52·4.53 머지 후 main 병합·완료 기준 22·최종 qa·COO | 머지 12/11~12/14 (결산 창 밖, 컷 12/18) | 조건부 팀 머지 (risk:high) |
-| 4.54 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | 개발 착수(11/09, 4.52 브랜치 위 로컬 선행 — 원격 issue-4.54 정리 대기) | 4.52 머지 후 main 병합 → qa ~11/22 → 위임 머지 ≤11/26 | 위임 머지 (risk:low) |
+| 4.54 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | [PR #102](https://github.com/BBplayworld/vaultfolio/pull/102) UI 승인·qa PASS·COO PASS @fd0e8b3 ([preview](https://secretasset-git-issue-454-99-bbplayworlds-projects.vercel.app/?demo=1)) | 11/11 4.52 머지 → main 병합·증분 qa → 위임 머지 (≤11/26) | 위임 머지 (risk:low) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -38,6 +38,7 @@
 | 4.44 [PR #76](https://github.com/BBplayworld/vaultfolio/pull/76) | 11/06 | 상세 다크 BOX·구분선 정리 |
 
 ## 🔍 발굴 중 (병렬)
+- 참고: 4.53이 4.54보다 늦게 승인되면 머지 시 다음 번호로 재배정(표시 버전 역전 방지), #58도 그만큼 밀림.
 - D8 완료: #99 선정. 보류 — 이어서 맞추기(#58 머지 뒤 1순위), 첫 결산 공백(12/11 판독 뒤), 미사용 기능 판독(12/4 상시)
 
 ## 📅 주요 일정·제약
