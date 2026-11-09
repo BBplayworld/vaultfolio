@@ -132,13 +132,15 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     expect(new Set(keys).size).toBe(2);
     expect(view).toContain("<CompositionBlock key={`composition-${month}`}");
   });
-  it("origin/main 대비 settlement-view diff 허용 줄만(+import, live 3곳, +렌더(빈 줄 포함)), 무변경 파일은 diff 0", () => {
+  it("origin/main 대비 settlement-view 기존 줄 삭제는 import·AI 행 지연만, 무변경 파일은 diff 0", () => {
     let diff = "";
     try { diff = execSync("git diff origin/main -- 'src/app/(main)/_components/views/activity/settlement-view.tsx'", { encoding: "utf8" }); } catch { return; }
     if (!diff) return;
-    const added = diff.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
-    expect(added.length).toBeLessThanOrEqual(6);
-    expect(diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---")).length).toBeLessThanOrEqual(2);
+    // 4.67(#127)이 월별 기록 진입 행·시트를 의도적으로 추가하므로 추가 줄 수 상한은 해제.
+    // 기존 줄 삭제는 import 확장·AI 행 stagger 지연(120→160ms, ui.md)만 허용 — Hero·원인·구성 블록 줄은 그대로
+    const removed = diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"))
+      .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"'));
+    expect(removed).toEqual([]);
     // 4.54(#58)가 결산 엔진 매핑(settlement.ts)·짝짓기(change-hero.tsx)·AI 프롬프트(ai-prompts.ts)를 의도적으로 바꾸므로 4.51 범위 가드에서 제외
     for (const f of ["src/app/(main)/_components/views/activity/asset-change-view.tsx"]) {
       expect(execSync(`git diff origin/main -- '${f}'`, { encoding: "utf8" })).toBe("");

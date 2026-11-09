@@ -155,6 +155,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "activity:hub": "성과",
   "activity:change": "성과·자산 변화",
   "activity:change:composition": "성과·자산 변화·구성", // 현재 사용처 없음(#4.44에서 카드 제거) — 4.45 재사용 예정
+  "activity:change:monthly-log": "성과·자산 변화·월별 기록", // 월별 기록 시트(#127) — 열 때 1회
   "activity:dividend": "성과·배당",
   "activity:report": "성과·자산 성적표",
 };

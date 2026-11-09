@@ -373,6 +373,13 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `computeMonthComposition(w, liveBreakdown?)`(#4.51) → `{startLabel, endLabel("지금"=이번 달), sentence, items[{key,label,startRatio,endRatio,startPct,endPct,delta,startText,endText,deltaText}]}` 또는 null(첫 달·breakdown 없음·합 0·두 시점 모두 자산군 1개). 비교 구간은 `resolveSettlementWindow`의 w 그대로(시작 `w.start.breakdown`, 끝 `w.end.breakdown`, 이번 달은 `buildLiveAttributionCurr().breakdown`을 호출부가 전달 — 블록 전용 합산 금지). 키 4개(부동산·주식·암호화폐·현금성, 부채 제외), 증감 = round(끝)−round(시작), `formatDeltaPp`(U+2212). 실물 키는 4.49.
 - `buildFxExposureLines(fxExposures, totalValue)` → `{ratioLine, impactLine|null, caption}` 또는 null. `computeFxExposure` 결과를 재사용(재계산 없음), X = Σ`exposureKrw`×0.01.
 
+### report/monthly-log.ts (#4.67 #127) — 월별 기록 줄 조립 순수 함수
+
+- `buildMonthlyLog(monthly, today, { breakdown?, netAsset })` → `{ rows(최신순), columns, recordedCount, firstMonth, currentMonth, hasNetOnly, atLimit }`. 월 범위는 `listSettlementMonths`(현재월 포함 13개월, 저장된 달·이번 달만 기록) 그대로 — 첫 기록 달 앞은 줄 없음, 사이 빈 달은 `{kind:"gap"}`. 지난 달 = 스냅샷 `breakdown`·`netAsset`(= `settlementDelta`의 `w.end.netAsset`, 같은 달 중복 시 첫 항목), 이번 달 = 호출부가 넘긴 `buildLiveAttributionCurr().breakdown`·`summary.netAsset`(저장된 이번 달 스냅샷 무시). 줄 단위 합 검증 `|부동산+실물+주식+코인+현금−대출−임차보증금−순자산| > 1원` 또는 breakdown 없음 → `{kind:"net-only"}`(순자산만). `columns` = full 줄 중 반올림 값이 0이 아닌 키만(`MONTHLY_LOG_KEYS` 순서: 자산 5종 → 대출·임차보증금). `recordLabel` = `오늘` / `formatSettlementPoint(date)` / 레거시 `YYYY-MM 기록`. 새 금액 계산·환산·보간·저장 0.
+- `monthlyLogRangeLabel(first, last)` — `8월~11월`, 해가 다르면 `25년 12월~26년 3월`.
+- `formatMonthlyLogAmount(v, "short"|"full", debt?)` — short = `formatShortCurrency`에서 `만원`/`억원` 끝 `원` 생략(1만원 미만·0은 `원` 유지), full = `formatCurrency`. 부채는 −절댓값, 음수 부호 U+2212, |v|<0.5는 `0원`.
+- 자동: `report/__tests__/monthly-log.test.ts`(S9 실사용 픽스처·Hero 끝값 일치·13개월·연 경계), `views/activity/__tests__/monthly-log.test.tsx`(진입 행 조건·표 렌더).
+
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
 
 기간별 특수 처리를 두지 않는다. **네 기간 모두 같은 코드 경로**를 타고, 기간마다 다른 것은 시작일(`targetStr`) 계산뿐이다. 규칙: **실측 스냅샷이 있는 구간은 실측으로 분해하고, 그 이전의 부족한 구간만 예측으로 채운다.**
