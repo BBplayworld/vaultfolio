@@ -40,3 +40,8 @@ export function nextDialogWatch(seen: boolean, present: boolean): { seen: boolea
   if (present) return { seen: true, release: false };
   return { seen, release: seen };
 }
+
+/** 보유 현황 맞추기 창을 닫을 때 복귀 신호를 보낼지 — 결과 화면이고 되돌리지 않았을 때만(되돌린 뒤엔 복귀 목록 없음, #115) */
+export function shouldNotifyResyncClose(step: string, undo: { done: boolean } | null): boolean {
+  return step === "result" && !!undo && !undo.done;
+}

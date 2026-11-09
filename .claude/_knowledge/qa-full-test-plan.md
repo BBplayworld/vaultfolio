@@ -593,6 +593,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-QUALITY-109. 품질 정돈 묶음 — 삭제 고아 거래·외화 문구·반올림·손익 0·포커스·작은 이미지 — #4.60 #109
 - ⚙ (a) `delete-assets-flow.test.ts`: 흐름 표 A1~A8(코인·주식, today 2026-11-05 고정, 모든 행 10월 causes = main, 지난달 연결 거래 A4·A6 보존, 경계 10-31/11-01), 단건·코인 묶음·주식 묶음, 코인 잔량 1e-12·시세 0·주식 전량 매도 후 삭제(거래 보존), 평가액 1원 이상 삭제(거래 0건), 항목별 판정, 연결 짝 기록·잔액 불변. `quality-batch-109.test.ts`: saveData 1회·탭 직접 saveData 없음. `linked-c42.test.ts` F24에 `deleteStocks`·`deleteCryptos` 포함
 - ⚙ (c) ProfitMetric 0 회색·부호 없음, ±1원 이상 불변 / (d) USD 전액 차단 `$0으로`, KRW 문구 불변 / (e) USD 1000−999.99 = 0.01 (`quality-batch-109.test.ts`)
+- ⚙ **#4.62(#115) 품질 정돈 묶음 2** (`quality-batch-115.test.ts`): (A) 홈 팁 `keepShown` — 승자(backup·refresh)는 effect 재실행에도 유지, 비승자 종류엔 미적용, 결산 판정은 keepShown 유무·결산 창 안/밖과 무관, 결산 창 안 백업 유지 시 그 마운트는 백업 팁(재마운트 때 결산) / (B) `profitTone` 0 회색·부호 없음(코인·주식·부동산·실물 카드/하위 행/펼침·허브 행·공유 캡처 주식 카드, 실투자금 수익률은 값 자체 판정), ±1원 이상 불변 / (C) 되돌린 맞추기 — 결과 화면 되돌리기→닫기(원복·신호 없음), 토스트 되돌리기(원복), 되돌리기 실패(원복 없음·신호 있음), 이전 값 null(키만 삭제·nudgeShownOn 보존), appliedAt 불일치(원복 없음) / (D) FAB 시트 닫힘 포커스 FAB→opener→main, 방법 선택 시 생략, 잔액 맞추기 4.60 동작 불변 / (E) 현금·대출 입출금 도움말 `break-keep text-pretty`
 - ⚙ (f) `parse-screenshot/__tests__/tiny-image-guard.test.ts`: 1×1 PNG·50×50 JPEG 미호출·reserve 0·빈 결과 형태 동일, 1080×150 통과, HEIC·판독 실패 통과, 판독 경계
 - 👤 preview 375px: 코인 삭제 후 홈·결산 원인에 그 코인 줄 없음 / FAB → 현금 → 직접 입력 → 맞추기 창 취소·Esc·저장 후 `document.activeElement`가 '자산 업데이트' 버튼 / 달러 계좌 전액 출금 문구 320·375 줄바꿈 / 매입가 빈 실물 탭 `0원 (0.0%)` 회색
 - 알려진 한계: 일부 매도 후 잔량째 삭제 시 `입금 +Y`·`시세 −V` 두 줄 / 이미 남은 고아 거래는 정리 안 함

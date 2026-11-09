@@ -37,8 +37,10 @@ describe("(b) 잔액 맞추기 닫힘 포커스", () => {
   const dlg = read("app/(main)/_components/forms/asset-update/balance-resync-dialog.tsx");
   it("이 창만 onCloseAutoFocus를 쓴다: FAB → 열기 직전 요소 → main", () => {
     expect(dlg).toContain("onCloseAutoFocus={restoreFocus}");
-    expect(dlg).toContain('[data-tutorial="tutorial-fab"]');
-    expect(dlg.indexOf("(fab ?? opener ?? main)")).toBeGreaterThan(0);
+    expect(dlg).toContain("restoreFocusAfterDialog(openerRef.current)"); // #115: FAB → 열기 직전 요소 → main 순서는 공용 함수(restore-focus.ts)로 이동
+    const util = read("lib/restore-focus.ts");
+    expect(util).toContain('[data-tutorial="tutorial-fab"]');
+    expect(util.indexOf("(fab ?? connected ?? main)")).toBeGreaterThan(0);
     const others = ["forms/asset-update/cash-tx-dialog.tsx"].filter((f) => { try { read(`app/(main)/_components/${f}`); return true; } catch { return false; } });
     expect(others).toHaveLength(0);
   });

@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-09 (v4.62)
+
+### 품질 정돈 묶음 2 — 최신화 팁 유지·손익 0 회색·되돌린 맞추기·시트 포커스·320 줄바꿈 (#4.62, 이슈 #115, risk low)
+- **왜**: 4.59·4.60 qa에서 나온 사용자 영향 5건(저장 스키마·저장 키·동기화·서버 전송·문구 변경 0).
+- **A 홈 팁 유지**: `pickHomeTip`에 선택 입력 `keepShown?: "backup"|"refresh"` 추가, `shouldShowBackupNudge`·`shouldShowRefreshNudge`에 선택 옵션 `keepShown`(해당 종류 '오늘 노출' 검사만 건너뜀, 미지정 = 현행). `HomeTipBox`가 이번 마운트 승자(backup·refresh)를 ref로 기억해 effect 재실행(시세 동기화 등)에도 같은 팁 유지, activate·X 닫기에서 해제. 결산·세금·공지 분기 diff 0.
+- **B 손익 0**: 상세 전용 `profitTone(value, rate?, digits?)`(detail-summary-header.tsx)로 `ProfitMetric`의 0 판정을 단일 출처화. 코인·주식·부동산·실물 카드/하위 행/펼침, 그 외 N종목, 공유 캡처 주식 카드, 허브 행이 0이면 회색·부호 없음. 부동산 '실투자금 수익률'은 수익률 값(소수 1자리)으로 판정. 테스트용 `data-testid="profit-text"`·`hub-profit` + `data-zero`. `theme.ts`(`getProfitLossColor`)·결산·Hero·성적표 diff 0.
+- **C 되돌린 맞추기**: `holdings-resync-dialog`의 `undoRef` 사본에 `kind·prevRefreshedAt·appliedAt` 추가, `markCategoryRefreshed`가 쓴 시각을 반환, `restoreCategoryRefreshed`(compare-and-restore, `nudgeShownOn`·다른 자산군 보존)로 되돌리기 성공 시 refresh 메타 원복. 되돌린 뒤 닫으면 복귀 신호 없음(`shouldNotifyResyncClose`).
+- **D 시트 포커스**: 공용 `lib/restore-focus.ts`(`restoreFocusAfterDialog`)로 잔액 맞추기 창 복귀 순서를 추출해 FAB 시트도 사용. 방법 선택 등으로 다른 창이 이어서 열리면 `handoffRef` 플래그로 복귀 생략(1순위), 열린 다른 대화상자가 있으면 생략(보조).
+- **E**: 현금·대출 입출금 도움말 `<p>`에 `break-keep text-pretty`(+`data-testid="tx-help"`).
+- 알려진 한계: 토스트 되돌리기는 이미 열린 복귀 목록의 ✓를 닫기 전까지 유지. 허브 행 수익률은 기존 소수 2자리 유지(`0원 (0.00%)`).
+
+---
+
 ## 2026-11-09 (v4.61)
 
 ### 첫 화면 빈 화면 없애기 — 웰컴 첫 부분 먼저 보여 주기 (#4.61, 이슈 #113, risk medium)

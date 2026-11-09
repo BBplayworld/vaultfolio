@@ -22,7 +22,8 @@ import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asse
 import { ASSET_THEME } from "@/config/theme";
 import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
-import { markCategoryRefreshed, notifyCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
+import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
   buildUndoEntries,
@@ -89,6 +90,15 @@ interface Props {
 const NR = ({ children }: { children: React.ReactNode }) => <span className="whitespace-nowrap">{children}</span>;
 const NOTICE_TAX = "팔아서 없어진 종목이면 매도 기록을 남겨야 양도세 계산에 들어가요";
 
+/** 적용 1건의 되돌리기 사본 — 결과 화면 버튼과 닫은 뒤 토스트가 같은 사본을 쓴다(#115 C1) */
+interface ResyncUndo {
+  entries: OverwriteEntry[];
+  done: boolean;
+  kind: ResyncKind;
+  prevRefreshedAt: string | null; // 적용 직전 refresh 메타
+  appliedAt: string; // 적용 때 markCategoryRefreshed가 쓴 값 — 원복 비교용
+}
+
 export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Props) {
   const { assetData, saveData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
@@ -120,7 +130,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const abortRef = useRef<AbortController | null>(null);
   const nextIdRef = useRef(0);
   const startedRef = useRef(false);
-  const undoRef = useRef<{ entries: OverwriteEntry[]; done: boolean } | null>(null);
+  const undoRef = useRef<ResyncUndo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const urlsRef = useRef<Set<string>>(new Set());
@@ -205,7 +215,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
         action: { label: "되돌리기", onClick: () => void doUndo(u, true) },
       });
     }
-    const applied = step === "result";
+    const applied = shouldNotifyResyncClose(step, u); // 되돌린 뒤 닫으면 복귀 신호 없음(#115 C3)
     onOpenChange(false);
     resetAll();
     if (applied) notifyCategoryRefreshed(kind); // 이어서 맞추기 복귀(#110) — 적용 후 닫을 때만
@@ -324,8 +334,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
       return;
     }
     toast.dismiss(TOAST_ID);
-    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildUndoEntries(fresh.stocks, result.stocks), done: false };
-    markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
+    const prevRefreshedAt = lastRefreshedAt(kind);
+    const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
+    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildUndoEntries(fresh.stocks, result.stocks), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
     setApplying(false);
@@ -334,7 +345,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
 
   // ── 되돌리기(결과 화면 버튼·닫은 직후 토스트 두 곳뿐) ─────────────────
   // fromToast: 닫은 직후 토스트에서 부른 경우 — 이미 닫힌(초기화된) 대화상자 상태를 건드리지 않는다
-  const doUndo = async (u: { entries: OverwriteEntry[]; done: boolean } | null = undoRef.current, fromToast = false) => {
+  const doUndo = async (u: ResyncUndo | null = undoRef.current, fromToast = false) => {
     if (!u || u.done) return;
     u.done = true;
     if (!fromToast) setUndoing(true);
@@ -347,6 +358,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
       toast.error("되돌리지 못했어요");
       return;
     }
+    restoreCategoryRefreshed(u.kind, u.prevRefreshedAt, u.appliedAt); // 맞춤 표시 원복(그 사이 다시 맞췄다면 유지)
     track("feature_use", { category: "resync_undo" });
     if (!fromToast) {
       setUndoInfo({ skipped: plan.skipped });

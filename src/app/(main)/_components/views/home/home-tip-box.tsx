@@ -53,6 +53,7 @@ export function HomeTipBox() {
   const cs = useCloudSync();
   const { navigate } = useAssetNavigation();
   const [tip, setTip] = useState<HomeTip | null>(null);
+  const keepShownRef = useRef<"backup" | "refresh" | undefined>(undefined); // 이번 마운트에서 승자였던 backup·refresh 종류 — effect 재실행에도 유지(#115)
   const lastViewKey = useRef<string | null>(null); // assetData 갱신마다 effect가 다시 돌아도 같은 팁 노출 GA는 1회
 
   const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
@@ -67,7 +68,8 @@ export function HomeTipBox() {
         if (sessionStorage.getItem(SESSION_DISMISS_KEY) === "true") { setTip(null); return; }
       } catch { /* 무시 */ }
     }
-    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed" });
+    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current });
+    keepShownRef.current = picked?.kind === "backup" || picked?.kind === "refresh" ? picked.kind : undefined;
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
     if (picked?.kind === "refresh") markRefreshNudgeShown();
@@ -88,6 +90,7 @@ export function HomeTipBox() {
 
   const close = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
+    keepShownRef.current = undefined;
     if (tip.kind === "tax") markTaxNoticeDismissed();
     // "notice" X = 읽음 처리(#4.36 cto 판정) — X로만 닫는 사용자에게 공지가 세션마다 최우선으로 되살아나
     // 백업·결산 등 하위 팁을 영영 가리던 문제 해소. 기존 열람 키 재사용, GA notice view는 보내지 않는다.
@@ -101,6 +104,7 @@ export function HomeTipBox() {
   };
 
   const activate = () => {
+    keepShownRef.current = undefined;
     track("feature_use", { category: "home_tip", method: "click" });
     if (tip.kind === "backup") {
       try {

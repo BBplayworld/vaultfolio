@@ -50,17 +50,19 @@ export interface HomeTipInputs {
   hasAssets: boolean;
   syncArmed: boolean;
   today?: string; // KST YYYY-MM-DD — 테스트 고정용, 기본값 todayKst()
+  /** 이번 홈 마운트에서 이미 승자였던 backup·refresh 팁 — 그 종류의 '오늘 노출' 검사만 건너뛰어 effect 재실행에도 유지(#115) */
+  keepShown?: "backup" | "refresh";
 }
 
 // 새 공지(신규 버전 업데이트 안내)는 필수 노출 — 다른 어떤 안내보다 먼저 반드시 한 번은 뜬다.
 // 그 다음(#4.36 cto 판정): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 그 외 세금 > 자산 최신화 > 신규 기능 > 저방문 기능
 // 세금을 무조건 위에 두면 이번 달·다음 달 일정이 결산 창 내내 결산을 가린다 — 급한 마감만 결산보다 위
-export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst() }: HomeTipInputs): HomeTip | null {
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown }: HomeTipInputs): HomeTip | null {
   if (isNoticeUnseen()) {
     return { kind: "notice" };
   }
 
-  if (shouldShowBackupNudge({ hasAssets, syncArmed, assetLastUpdated: assetData.lastUpdated })) {
+  if (shouldShowBackupNudge({ hasAssets, syncArmed, assetLastUpdated: assetData.lastUpdated, keepShown: keepShown === "backup" })) {
     return { kind: "backup", days: daysSinceBackup() };
   }
 
@@ -76,7 +78,7 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
   if (taxMatches.length > 0) return { kind: "tax", matches: taxMatches };
 
   const held = heldRefreshCategories(assetData);
-  if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated, held })) {
+  if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated, held, keepShown: keepShown === "refresh" })) {
     return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated, held) };
   }
 

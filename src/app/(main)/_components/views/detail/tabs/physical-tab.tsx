@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { physicalAssetTypes } from "@/config/asset-options";
 import { dispatchAddPhysical } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
-import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
+import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import type { PhysicalAsset } from "@/types/asset";
 
 const COLOR = MAIN_PALETTE[8]; // 홈 도넛 실물 조각과 같은 고정색
@@ -23,7 +23,7 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
   const [open, setOpen] = useState(false);
   const profit = item.currentValue - item.purchasePrice;
   const profitRate = item.purchasePrice > 0 ? (profit / item.purchasePrice) * 100 : 0;
-  const color0 = profit === 0 ? "text-muted-foreground" : getProfitLossColor(profit); // 0은 빨강·파랑이 아니다
+  const tone = profitTone(profit, profitRate); // 0은 빨강·파랑이 아니다
   const type = typeOf(item.type);
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={`mb-2 dark:mb-0 ${ASSET_THEME.cardOpenDivider}`}>
@@ -44,9 +44,9 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} whitespace-nowrap`}>{formatPriceByMode(item.currentValue)}</p>
-                <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${color0}`}>{profit > 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${color0}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass}`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
@@ -74,7 +74,7 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${color0}`}>{profit > 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
+                <p data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
               </div>
               {item.description && (
                 <div className="col-span-2 sm:col-span-4">

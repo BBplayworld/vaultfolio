@@ -2,6 +2,7 @@
 
 // 현금·대출 잔액 맞추기(#93) — 카테고리 인자 1컴포넌트. FAB `직접 입력`(보유자)이 trigger-resync-balance로 연다.
 // 저장은 getAssetData() 최신 목록에 applyBalanceEdits를 적용해 saveData 1회(C37). 합계·비중·순자산은 보여주지 않는다(C1).
+import { restoreFocusAfterDialog } from "@/lib/restore-focus";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -135,11 +136,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
   const restoreFocus = (e: Event) => {
     e.preventDefault();
     if (goAddRef.current) { goAddRef.current = false; return; } // '새로 추가'로 다른 창이 이어서 열리면 그 창에 포커스를 맡긴다
-    const fab = Array.from(document.querySelectorAll<HTMLElement>('[data-tutorial="tutorial-fab"]')).find((el) => el.getClientRects().length > 0 && !el.closest(".opacity-0")); // 스크롤로 숨은 FAB(opacity-0)는 제외
-    const opener = openerRef.current?.isConnected ? openerRef.current : null;
-    const main = document.querySelector<HTMLElement>("main");
-    if (main && !main.hasAttribute("tabindex")) { main.setAttribute("tabindex", "-1"); main.classList.add("outline-none"); }
-    (fab ?? opener ?? main)?.focus({ preventScroll: true });
+    restoreFocusAfterDialog(openerRef.current);
   };
 
   const goAdd = () => {
