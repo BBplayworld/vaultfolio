@@ -12,7 +12,7 @@
 계좌 연결(매수·매도 시 현금·대출 함께 증감)은 #103(v4.57)에서. 상세: [decision-brief](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.52-93-cash-loan-resync/4.52-decision-brief.md)
 
 ## 🔴 운영 결함 (p0)
-- [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09)**, 운영 스모크 진행 중
+- [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09) · 운영 스모크 PASS**
 
 ## 🟨 대표 승인 예정 (미리 알림)
 - 4.56 → v4.57 #103 연결 계좌 (high) — 목표 ~11/13 요청
