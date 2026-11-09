@@ -21,10 +21,9 @@ const SURFACE = "bg-background dark:bg-popover";
 // 경계선 2종(ui-review): 고정 칸·머리줄 경계 = 불투명 border(가로 스크롤 시 겹침 경계), 행 구분 = 중립 헤어라인.
 // 한 칸에 두 경계가 겹쳐도 색이 섞이지 않게 변(side)별 색 클래스로 지정
 const EDGE_R = "border-r border-r-border";
-const EDGE_L = "border-l border-l-border";
 const EDGE_B = "border-b border-b-border";
 const ROW_B = "border-b border-b-border dark:border-b-border/40";
-// sticky 겹침 순서(§3.4 Z_LAYER): 양끝 머리 칸 > 머리줄·양끝 열 > 본문
+// sticky 겹침 순서(§3.4 Z_LAYER): 월 머리 칸 > 머리줄·월 열 > 본문
 const Z_EDGE = { zIndex: Z_LAYER.base };
 const Z_CORNER = { zIndex: Z_LAYER.raised };
 
@@ -68,6 +67,12 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
   return (
     <tr data-testid={`monthly-log-row-${row.month}`} data-kind={row.kind} data-current={row.current ? "" : undefined}>
       <MonthCell row={row} today={today} />
+      <td
+        data-testid={`monthly-log-cell-${row.month}-netAsset`}
+        className={`${cell} text-right font-semibold text-foreground ${EDGE_R}`}
+      >
+        <Amount value={row.netAsset} />
+      </td>
       {columns.map((k) => (
         row.kind === "full" ? (
           <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} className={`${cell} min-w-[52px] text-right text-foreground`}>
@@ -77,17 +82,11 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
           <td key={k} data-testid={`monthly-log-cell-${row.month}-${k}`} aria-label="종류별 기록 없음" className={`${cell} min-w-[52px] text-right text-muted-foreground`}>—</td>
         )
       ))}
-      <td
-        data-testid={`monthly-log-cell-${row.month}-netAsset`}
-        className={`${cell} text-right font-semibold text-foreground ${EDGE_L}`}
-      >
-        <Amount value={row.netAsset} />
-      </td>
     </tr>
   );
 }
 
-/** 표 본체(단일 스크롤 컨테이너 — sticky 머리줄·월 열만 고정, 자산군·순자산은 함께 가로 이동). 시트 열린 채 갱신돼도 key 없이 같은 노드라 스크롤 유지 */
+/** 표 본체(단일 스크롤 컨테이너 — sticky 머리줄·월 열만 고정, 순자산(월 다음 2번째 열)·자산군은 함께 가로 이동). 시트 열린 채 갱신돼도 key 없이 같은 노드라 스크롤 유지 */
 export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string }) {
   const { rows, columns } = log;
   const head = `sticky top-0 px-1 py-2 text-xs font-medium text-muted-foreground ${EDGE_B} ${SURFACE}`;
@@ -105,6 +104,7 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
         <thead>
           <tr>
             <th scope="col" data-testid="monthly-log-head-month" className={`${head} left-0 w-14 min-w-14 text-left ${EDGE_R}`} style={Z_CORNER}>월</th>
+            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} text-right ${EDGE_R}`} style={Z_EDGE}>순자산</th>
             {columns.map((k) => (
               <th
                 key={k}
@@ -116,7 +116,6 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
                 {k === "tenantDeposit" ? <>임차<wbr />보증금</> : MONTHLY_LOG_LABELS[k]}
               </th>
             ))}
-            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} text-right ${EDGE_L}`} style={Z_EDGE}>순자산</th>
           </tr>
         </thead>
         <tbody>
@@ -139,7 +138,7 @@ export function MonthlyLogSheet({ open, onOpenChange, log, today }: {
         side="bottom"
         hideClose
         data-testid="monthly-log-sheet"
-        className="max-h-[85dvh] gap-0 pb-[max(1rem,env(safe-area-inset-bottom))] motion-reduce:animate-none!"
+        className="max-h-[85dvh] gap-0 overflow-x-clip pb-[max(1rem,env(safe-area-inset-bottom))] motion-reduce:animate-none!"
       >
         {/* 닫기 X — 기본 X와 같은 위치·크기, 히트영역만 40px로 확장. Tab 순서상 표보다 앞 */}
         <SheetClose
@@ -148,14 +147,14 @@ export function MonthlyLogSheet({ open, onOpenChange, log, today }: {
         >
           <XIcon className="size-5 sm:size-6" aria-hidden />
         </SheetClose>
-        <div className="mx-auto flex w-full max-w-[1040px] min-h-0 flex-col">
+        <div className="mx-auto flex w-full max-w-[1040px] min-h-0 min-w-0 flex-col overflow-x-clip">
           <SheetHeader className="gap-0 p-0 px-4 pt-4 lg:px-6">
             <SheetTitle className="pr-10 text-base font-bold text-balance">월별 기록</SheetTitle>
             <SheetDescription data-testid="monthly-log-caption" className={NOTE}>{MONTHLY_LOG_CAPTION}</SheetDescription>
             {log.hasNetOnly && <p data-testid="monthly-log-note-legacy" className={NOTE}>—인 달은 순자산만 기록돼 있어요</p>}
             {log.atLimit && <p data-testid="monthly-log-note-limit" className={NOTE}>최근 13개월까지 보여요</p>}
           </SheetHeader>
-          <div className="mt-3 px-2 lg:px-6">
+          <div className="mt-3 min-w-0 overflow-x-clip px-2 lg:px-6">
             <MonthlyLogTable log={log} today={today} />
           </div>
         </div>

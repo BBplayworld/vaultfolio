@@ -112,6 +112,13 @@ describe("표 MonthlyLogTable", () => {
     expect(html).toContain('data-testid="monthly-log-table"');
     expect(html).toMatch(/data-testid="monthly-log-table"[^>]*tabindex="0"/i);
   });
+  it("열 순서: 월 다음이 순자산(머리·본문), 그 뒤 자산군. 월 열만 sticky", () => {
+    const head = html.match(/data-testid="monthly-log-head-[A-Za-z]+"/g)!;
+    expect(head.slice(0, 3)).toEqual(['data-testid="monthly-log-head-month"', 'data-testid="monthly-log-head-netAsset"', 'data-testid="monthly-log-head-realEstate"']);
+    const row = html.slice(html.indexOf('monthly-log-row-2026-11"'));
+    expect(row.indexOf("monthly-log-cell-2026-11-netAsset")).toBeLessThan(row.indexOf("monthly-log-cell-2026-11-realEstate"));
+    expect(html.match(/<th[^>]*monthly-log-head-netAsset[^>]*>/)![0]).not.toContain("sticky right");
+  });
   it("최신순, 이번 달 '진행 중'·'오늘', 레거시 '2026-07 기록'", () => {
     const order = ["2026-11", "2026-10", "2026-09", "2026-08", "2026-07"].map((m) => html.indexOf(`monthly-log-row-${m}"`));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -136,7 +143,7 @@ describe("표 MonthlyLogTable", () => {
     expect(html).not.toMatch(/>-\d/);
   });
   it("경계선: 고정 칸 border-border, 행 구분 dark /40, /10 단독 없음 · 진행 중 배지 px-1(px-1.5 아님)", () => {
-    expect(html).toMatch(/data-testid="monthly-log-head-netAsset" class="[^"]*border-l border-l-border/);
+    expect(html).toMatch(/data-testid="monthly-log-head-netAsset" class="[^"]*border-r border-r-border/);
     expect(html).toMatch(/monthly-log-cell-2026-10-stocks" class="[^"]*border-b border-b-border dark:border-b-border\/40/);
     expect(html).not.toContain("border-border/10");
     const badge = html.match(/<span class="([^"]*)">진행 중<\/span>/)![1].split(" ");
