@@ -18,6 +18,7 @@ interface DeleteRollbackDialogProps {
   tx: Transaction;
   stock: Stock;
   rollbackPreview: PositionPreview;
+  linkedNote?: string; // 연결 계좌 되돌림 안내 1줄(#103) — 짝 기록이 실제로 있을 때만
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -33,6 +34,7 @@ export function DeleteRollbackDialog({
   tx,
   stock,
   rollbackPreview,
+  linkedNote,
   onConfirm,
   onCancel,
 }: DeleteRollbackDialogProps) {
@@ -76,6 +78,12 @@ export function DeleteRollbackDialog({
               </span>
             </div>
           </div>
+
+          {linkedNote && (
+            <p data-testid="delete-linked-record-note" className="text-sm text-muted-foreground break-keep text-pretty tabular-nums">
+              {linkedNote}
+            </p>
+          )}
         </div>
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

@@ -579,6 +579,13 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - p2: 연 탭 `작년 말 순자산 넣기` 링크(기존 입력 창)·연도별 저장 GA / 직접 추가·수정 후 최신화 기록 / `isNew` 0 / 업로드 문구 `눌러서 사진 고르기` / FAB `적용 환율` / 자동 저장 실패 토스트 세션당 1회
 - preview(`?demo=1` → FAB → 보유 현황 업데이트 → 현금성/대출 → 직접 입력): 현금 3개(USD 1개 포함), 대출 1개
 
+### F-LINKED-TRADE. 거래 연결 계좌 ([linked-record.ts](../../src/lib/trade/linked-record.ts)) — #4.58 #103
+- ⚙ 짝 id 규칙·금액 반올림·가드(잔액 부족·초과 상환·대금 0 이하·통화·중복·이번 달 아님)·저장 합성 1회·저장 실패 시 전부 이전 값(`linked-record.test.ts`·`linked-save.test.ts`), 되돌림 픽스처 3종(하한, 대출 완납 복귀)·짝 기록 현재 값 기준·`reflected:false`·고아 불변
+- ⚙ 결산·홈: F5·F6·F13·F14·F23·경계(`linked-settlement.test.ts`) + 4.55 함수 골든 사본 대비 무작위 400건 신/구 detail 동일(과거 결산 diff 0), 기존 settlement/cross-asset/physical 테스트 파일 수정 0
+- ⚙ 문구·금지어(`link-text.test.ts`), GA `거래 저장·계좌 함께 반영`(`ga.test.ts`)
+- 👤 preview: `?demo=1` → 주식 거래 직접 입력(즉시 반영 ✓) → `연결 계좌` 현금/대출 각 1회 → 홈 원인·캡션 → 거래 삭제(다이얼로그 1줄·토스트) → 입출금·대출 기록 확인, 외화 종목 + 같은 통화 계좌 0개면 행 없음, 375·1280 × 라이트·다크
+- 알려진 한계: 구버전 기기 삭제 시 짝 기록 잔존 / 토큰 이동 시 연결 풀림 / 동시 편집 갈라짐 / 현금 0원 불가(스키마)
+
 ### F-SYNC-OVERWRITE. 동기화 덮임 알림·되돌리기 ([overwrite-guard.ts](../../src/lib/cloud-sync/overwrite-guard.ts)) — #4.47 #84
 - ⚙ 기기 2개 localStorage 분리 + 409 모의 하네스(`sync-overwrite.test.ts`): 같은 항목 수정·무관 항목 수정·삭제 부활·신규 추가(목록 제외)·원격 삭제·오프라인 복귀, 재시작 후(기준 없음) 알림 0, 편집 없는 pull 알림 0, 되돌리기 없는 흐름의 localStorage가 guard 없는 흐름과 동일(C13)
 - ⚙ 되돌리기: 목록 항목만 내 값으로(목록 밖 원격 변경 보존), R1 이후 변경 항목 제외, 월 스냅샷·설정 불변, 되돌리기 push 409면 같은 감지 재진입, 그대로 두기·새로고침 후 메모리 0·새 저장 키 0

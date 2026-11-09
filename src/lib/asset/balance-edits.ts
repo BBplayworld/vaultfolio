@@ -126,6 +126,11 @@ export function resyncWarningText(category: BalanceCategory, refreshedAtIso: str
   return `${when} 맞춘 ${category === "cash" ? "현금" : "대출"} 잔액에 이미 들어간 금액이면 체크를 꺼 주세요`;
 }
 
+/** 거래 입력 '연결 계좌' 행 전용 경고 — 앞부분은 resyncWarningText와 같고 끝맺음만 '연결 안 함으로 바꿔 주세요'(거래 폼엔 이 체크박스가 없음) */
+export function linkResyncWarningText(category: BalanceCategory, refreshedAtIso: string, todayKst: string): string {
+  return resyncWarningText(category, refreshedAtIso, todayKst).replace("체크를 꺼 주세요", "연결 안 함으로 바꿔 주세요");
+}
+
 /** 잔액 맞추기 머리말(spec 14-1) */
 export const BALANCE_RESYNC_INTRO: Record<BalanceCategory, string> = {
   cash: "은행·증권 앱 잔액을 그대로 넣으면 돼요. 매수·매도·상환·배당·이자로 바뀐 돈도 함께 맞춰져서, 입출금 기록은 따로 안 남겨도 돼요.",

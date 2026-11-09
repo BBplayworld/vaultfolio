@@ -69,6 +69,7 @@ describe("cash-tx-utils (S-4.22)", () => {
   it("#107: 반영 입금 삭제로 0원 이하가 되면 1원(USD 0.01)으로 고정", () => {
     expect(cashBalanceFloor("KRW")).toBe(1);
     expect(cashBalanceFloor("USD")).toBe(0.01);
+    expect(cashBalanceFloor("JPY")).toBe(1); // 통화 최소 단위 기준 통일(#103 병합)
     expect(reflectedDeleteBalance(500, { type: "deposit", amount: 500 })).toBe(1);
     expect(reflectedDeleteBalance(300, { type: "deposit", amount: 500 })).toBe(1);
     expect(reflectedDeleteBalance(600, { type: "deposit", amount: 500 })).toBe(100);

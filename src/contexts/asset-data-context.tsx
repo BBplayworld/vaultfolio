@@ -10,6 +10,7 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/finance/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
+import { buildLink, cryptoLinkTrade, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
 import { pruneTransactions } from "@/lib/trade/trade-utils";
 import { pruneCashTransactions } from "@/lib/trade/cash-tx-utils";
 import { pruneLoanTransactions } from "@/lib/trade/loan-tx-utils";
@@ -130,9 +131,10 @@ interface AssetDataContextType {
   deleteTransaction: (txId: string) => boolean;
   updateTransaction: (txId: string, tx: Partial<Transaction>) => boolean;
   // 거래 + 포지션 원자적 반영 (단일 저장으로 stale-closure 덮어쓰기 방지)
-  addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>) => boolean;
-  addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[]) => boolean;
-  deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>) => boolean;
+  // link/revertLink: 거래 ↔ 현금·대출 연결 계좌(#103). 옵션을 안 넘기면 기존 동작 그대로
+  addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>, link?: LinkChoice) => boolean;
+  addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[], link?: LinkChoice) => boolean;
+  deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>, opts?: { revertLink?: boolean }) => boolean;
   // 현금 입출금 내역 (잔액 가감 단일 저장)
   addCashTransaction: (tx: CashTransaction) => boolean;
   addCashTransactionWithBalance: (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => boolean;
@@ -145,9 +147,9 @@ interface AssetDataContextType {
   deleteLoanTransactionWithBalance: (txId: string, loanId: string, patch: Partial<Loan>) => boolean;
   // 암호화폐 매수/매도 내역 (수량·평단 가중평균 단일 저장, S-4.25)
   addCryptoTransaction: (tx: CryptoTransaction) => boolean;
-  addCryptoTransactionWithPosition: (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>) => boolean;
+  addCryptoTransactionWithPosition: (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>, link?: LinkChoice) => boolean;
   deleteCryptoTransaction: (txId: string) => boolean;
-  deleteCryptoTransactionWithPosition: (txId: string, cryptoId: string, patch: Partial<Crypto>) => boolean;
+  deleteCryptoTransactionWithPosition: (txId: string, cryptoId: string, patch: Partial<Crypto>, opts?: { revertLink?: boolean }) => boolean;
   unlockAndLoad: () => Promise<void>;
 }
 
@@ -1558,12 +1560,18 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 거래 추가 + 종목 포지션 갱신을 단일 저장으로 처리 (두 번 saveData 시 stale-closure가
   // 먼저 저장한 transactions를 덮어쓰는 문제 방지)
   const addTransactionWithPosition = useCallback(
-    (tx: Transaction, stockId: string, patch: Partial<Stock>) => {
-      const newData = {
+    (tx: Transaction, stockId: string, patch: Partial<Stock>, link?: LinkChoice) => {
+      let newData: AssetData = {
         ...assetData,
         transactions: pruneTransactions([...(assetData.transactions || []), tx]),
         stocks: assetData.stocks.map((s) => (s.id === stockId ? { ...s, ...patch } : s)),
       };
+      // 연결 계좌: 짝 기록·잔액 패치는 buildLink가 만들고, 거래와 함께 saveData 1회로 저장한다(실패/가드 불통과면 전부 미저장)
+      if (link) {
+        const b = buildLink(newData, stockLinkTrade(tx), link);
+        if (!b.ok) return false;
+        newData = b.data;
+      }
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1575,10 +1583,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     (
       txs: Transaction[],
       patches: { stockId: string; patch: Partial<Stock> }[],
-      newStocks: Stock[] = []
+      newStocks: Stock[] = [],
+      link?: LinkChoice
     ) => {
       const patchMap = new Map(patches.map((p) => [p.stockId, p.patch]));
-      const newData = {
+      let newData: AssetData = {
         ...assetData,
         transactions: pruneTransactions([...(assetData.transactions || []), ...txs]),
         stocks: [
@@ -1586,6 +1595,12 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           ...newStocks,
         ],
       };
+      if (link) {
+        if (txs.length !== 1) return false; // 연결은 신규 종목 단건 저장에서만
+        const b = buildLink(newData, stockLinkTrade(txs[0]), link);
+        if (!b.ok) return false;
+        newData = b.data;
+      }
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1593,12 +1608,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 거래 삭제 + 포지션 롤백을 단일 저장으로 처리 (동일 사유)
   const deleteTransactionWithPosition = useCallback(
-    (txId: string, stockId: string, patch: Partial<Stock>) => {
-      const newData = {
+    (txId: string, stockId: string, patch: Partial<Stock>, opts?: { revertLink?: boolean }) => {
+      let newData: AssetData = {
         ...assetData,
         transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
         stocks: assetData.stocks.map((s) => (s.id === stockId ? { ...s, ...patch } : s)),
       };
+      if (opts?.revertLink) newData = removeLink(newData, txId).data; // 짝 기록 삭제 + 잔액 역가감(없으면 그대로)
       track("transaction_delete", { asset_type: "stock", result: "rollback" });
       return saveData(newData);
     },
@@ -1728,12 +1744,17 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 거래 기록 + 코인 포지션(수량·평단) 갱신을 단일 저장으로 (stale-closure 방지, 주식 대칭)
   const addCryptoTransactionWithPosition = useCallback(
-    (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>) => {
-      const newData = {
+    (tx: CryptoTransaction, cryptoId: string, patch: Partial<Crypto>, link?: LinkChoice) => {
+      let newData: AssetData = {
         ...assetData,
         cryptoTransactions: pruneTransactions([...(assetData.cryptoTransactions || []), tx]),
         crypto: assetData.crypto.map((c) => (c.id === cryptoId ? { ...c, ...patch } : c)),
       };
+      if (link) {
+        const b = buildLink(newData, cryptoLinkTrade(tx), link);
+        if (!b.ok) return false;
+        newData = b.data;
+      }
       return saveData(newData);
     },
     [assetData, saveData]
@@ -1741,12 +1762,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // 기록 삭제 + 포지션 롤백 단일 저장
   const deleteCryptoTransactionWithPosition = useCallback(
-    (txId: string, cryptoId: string, patch: Partial<Crypto>) => {
-      const newData = {
+    (txId: string, cryptoId: string, patch: Partial<Crypto>, opts?: { revertLink?: boolean }) => {
+      let newData: AssetData = {
         ...assetData,
         cryptoTransactions: (assetData.cryptoTransactions || []).filter((t) => t.id !== txId),
         crypto: assetData.crypto.map((c) => (c.id === cryptoId ? { ...c, ...patch } : c)),
       };
+      if (opts?.revertLink) newData = removeLink(newData, txId).data;
       track("transaction_delete", { asset_type: "crypto", result: "rollback" });
       return saveData(newData);
     },

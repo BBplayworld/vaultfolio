@@ -12,6 +12,8 @@ import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { rollbackTransaction, type PositionLike } from "@/lib/trade/trade-utils";
+import { planRemoveLink } from "@/lib/trade/linked-record";
+import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { ASSET_THEME } from "@/config/theme";
 import type { Crypto, CryptoTransaction } from "@/types/asset";
 
@@ -100,12 +102,13 @@ export function CryptoTxView() {
   const runReflectedDelete = () => {
     if (!deleteTarget || !coin) return;
     const { tx, preview } = deleteTarget;
+    const linkPlan = planRemoveLink(assetData, tx.id);
     if (deleteCryptoTransactionWithPosition(tx.id, coin.id, {
       quantity: preview.quantity,
       averagePrice: preview.avgPrice,
       positionSource: "computed",
-    })) {
-      toast.success("삭제하고 포지션을 되돌렸습니다.");
+    }, linkPlan ? { revertLink: true } : undefined)) {
+      toast.success(`삭제하고 포지션을 되돌렸습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
     }
     setDeleteTarget(null);
   };
@@ -206,6 +209,12 @@ export function CryptoTxView() {
                 <span className="font-semibold">{formatCurrency(deleteTarget.preview.avgPrice)}</span>
               </p>
             </div>
+            {(() => {
+              const p = planRemoveLink(assetData, deleteTarget.tx.id);
+              return p ? (
+                <p data-testid="delete-linked-record-note" className="text-sm text-muted-foreground break-keep text-pretty tabular-nums">{revertNoteText(p)}</p>
+              ) : null;
+            })()}
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>취소</Button>
               <Button variant="destructive" onClick={runReflectedDelete}>삭제</Button>
