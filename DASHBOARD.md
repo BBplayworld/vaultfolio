@@ -18,7 +18,7 @@
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
 | **4.63** [PR #120](https://github.com/BBplayworld/vaultfolio/pull/120) | [#119](https://github.com/BBplayworld/vaultfolio/issues/119) 거래 연결 계좌 — 해외주식을 원화 계좌·대출로 연결(대표 지적, 기획 누락 보완) | 진단·기획·COO(축소 통과)·UI 완료 → 개발 완료(7bb10b1) → UI 검수·qa 진행 중 → COO | 11/26 전 | COO 자체 승인 (버그·누락) |
-| **#117** | [#117](https://github.com/BBplayworld/vaultfolio/issues/117) 12월 결산 창 리허설 — 11월 새 기록 경로 7개 조합 점검 | qa 리허설 진행 중 → 결함 시 수정 | 11/26 전 | COO 자체 승인 |
+| **#117** | [#117](https://github.com/BBplayworld/vaultfolio/issues/117) 12월 결산 창 리허설 — 11월 새 기록 경로 7개 조합 점검 | 리허설 완료: 합계 오류 0, 원인 이름·분류 결함 6건(매도 이익이 매수로 보임 등) → COO 수정 범위 판정 중 → 개발 | 11/26 전 | COO 자체 승인 |
 | **#118** | [#118](https://github.com/BBplayworld/vaultfolio/issues/118) 품질 정돈 묶음 3 — 연 수익률 0 빨강·허브 320·맞추기 창 포커스 | 대기(#117 수정 릴리스 동승 또는 단독) | 11/26 전 | COO 자체 승인 (low) |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
