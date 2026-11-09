@@ -40,6 +40,7 @@ export type LinkFailReason =
   | "currency" // 통화 불일치(현금) 또는 외화 거래의 대출 연결
   | "amount" // 연결 금액 0 이하
   | "balance" // 출금·상환이 잔액 초과
+  | "zero" // 현금 출금 결과가 하한(0원 현금 저장 불가) 미만
   | "duplicate" // 같은 거래 id의 짝 기록이 이미 있음
   | "month"; // 거래일이 이번 달(KST)이 아님
 
@@ -131,7 +132,7 @@ export function buildLink(
     const isBuy = trade.type === "buy";
     if (isBuy && !isCashWithdrawalValid(cash.balance, amount)) return { ok: false, reason: "balance" };
     const after = roundMoney(cash.balance + (isBuy ? -amount : amount), trade.currency);
-    if (after < CASH_FLOOR[trade.currency]) return { ok: false, reason: "balance" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
+    if (after < CASH_FLOOR[trade.currency]) return { ok: false, reason: "zero" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
     const rec: CashTransaction = {
       id: cashLinkId(trade.id), cashId: cash.id, type: isBuy ? "withdrawal" : "deposit",
       amount, currency: trade.currency, date: trade.date, memo, ...stamp,

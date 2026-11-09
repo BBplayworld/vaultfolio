@@ -104,7 +104,7 @@ describe("buildLink — 저장", () => {
   it("가드: 잔액 부족·초과 상환·대금 0 이하·중복·통화·지난달·계좌 없음 -> 실패", () => {
     const d = data({ cash: [cash("a", 999), cash("u", 99999, "USD")], loans: [loan("l", 999)] });
     expect(link(d, trade(), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "balance" });
-    expect(link(data({ cash: [cash("e", 1000)] }), trade(), { kind: "cash", cashId: "e" })).toEqual({ ok: false, reason: "balance" }); // 전액 사용 = 0원 현금 저장 불가
+    expect(link(data({ cash: [cash("e", 1000)] }), trade(), { kind: "cash", cashId: "e" })).toEqual({ ok: false, reason: "zero" }); // 전액 사용 = 0원 현금 저장 불가
     expect(link(d, trade({ type: "sell" }), { kind: "loan", loanId: "l" })).toEqual({ ok: false, reason: "balance" });
     expect(link(d, trade({ type: "sell", fee: 1000 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
     expect(link(d, trade({ quantity: 0 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
@@ -145,6 +145,14 @@ describe("removeLink — 되돌림(cto 5-5 픽스처)", () => {
     const r = removeLink(d, "tx_1");
     expect(r.data.cash[0].balance).toBe(1);
     expect(r.data.cashTransactions.map((x) => x.id)).toEqual(["ctx_1_x"]);
+  });
+  it("F28 불변식: 되돌림 Δ = -min(금액, 현재 잔액 - 하한), 현금 하한 KRW 1·USD 0.01, 이미 하한이면 Δ 0", () => {
+    const mk = (bal: number, cur: "KRW" | "USD", amt: number) => data({ cash: [cash("a", bal, cur)], cashTransactions: [{ id: cashLinkId("tx_1"), cashId: "a", type: "deposit", amount: amt, currency: cur, date: "2026-11-10", reflected: true, createdAt: "x" } as AssetData["cashTransactions"][number]] });
+    for (const [bal, cur, amt, floor] of [[150, "KRW", 500, 1], [800, "KRW", 500, 1], [1, "KRW", 500, 1], [3, "USD", 10, 0.01], [20, "USD", 10, 0.01]] as const) {
+      const r = removeLink(mk(bal, cur, amt), "tx_1");
+      expect(r.data.cash[0].balance - bal).toBeCloseTo(-Math.min(amt, bal - floor), 6);
+      expect(r.data.cashTransactions).toHaveLength(0);
+    }
   });
   it("픽스처2(F19): 대출 300 -> 매도 상환 300(0) -> 삭제: 대출 300, 상환 기록 -1", () => {
     const rep = { id: loanLinkId("tx_1"), loanId: "l", type: "repay", amount: 300, date: "2026-11-10", reflected: true, createdAt: "x" } as AssetData["loanTransactions"][number];

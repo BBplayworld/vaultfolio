@@ -1,5 +1,5 @@
 import type { AssetData } from "@/types/asset";
-import { buildLink, linkCandidates, type BuildLinkResult, type LinkChoice, type LinkTrade, type RemoveLinkPlan } from "./linked-record";
+import { buildLink, CASH_FLOOR, linkCandidates, type BuildLinkResult, type LinkChoice, type LinkTrade, type RemoveLinkPlan } from "./linked-record";
 
 // 연결 계좌 화면 문구·선택값 해석(#103). 금지어(연동·계좌 연결·자동 반영·자동 차감·자동·동기화)는 쓰지 않는다(ui.md 5절).
 
@@ -40,6 +40,7 @@ export function evaluateLink(data: AssetData, trade: Omit<LinkTrade, "id">, valu
         : `${acct.name} 잔액보다 많이 갚을 수 없어요. 다른 계좌를 고르거나 연결 안 함으로 저장해 주세요.`,
     };
   }
+  if (r.reason === "zero") return { state: "error", choice, testId, message: `${acct.name}은 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요.` };
   if (r.reason === "amount") return { state: "error", choice, testId: "cash-link-error", message: "연결할 금액이 0원 이하예요. 수수료를 확인하거나 연결 안 함으로 저장해 주세요." };
   return { state: "error", choice, testId, message: "이 계좌는 연결할 수 없어요. 다른 계좌를 고르거나 연결 안 함으로 저장해 주세요." };
 }
@@ -61,11 +62,11 @@ export const linkSavedToast = (type: "buy" | "sell", kind: "cash" | "loan") =>
 export function revertNoteText(plan: RemoveLinkPlan): string {
   const kindLabel = plan.kind === "cash" ? "현금" : "대출";
   const head = `연결된 ${kindLabel} 기록도 함께 지워져요.`;
-  if (plan.clamped && plan.delta === 0) return `${head} ${plan.accountName} 잔액은 이미 0원이에요`;
+  if (plan.clamped && plan.delta === 0) return plan.kind === "cash" ? `${head} ${plan.accountName} 잔액은 더 줄지 않아요` : `${head} ${plan.accountName} 잔액은 이미 0원이에요`;
   const sign = plan.delta > 0 ? "+" : plan.delta < 0 ? "-" : "";
   const amount = `${plan.accountName} 잔액 ${sign}${fmtMoney(Math.abs(plan.delta), plan.currency)}`;
   if (!plan.clamped) return `${head} ${amount}`;
-  return `${head} ${amount}, ${plan.kind === "cash" ? "잔액이 부족해 0원이 돼요" : "남은 대출보다 커서 0원이 돼요"}`;
+  return `${head} ${amount}, ${plan.kind === "cash" ? `잔액이 부족해 ${fmtMoney(CASH_FLOOR[plan.currency], plan.currency)}만 남아요` : "남은 대출보다 커서 0원이 돼요"}`;
 }
 
 /** 삭제 완료 토스트 꼬리 */

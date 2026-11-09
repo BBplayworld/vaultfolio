@@ -40,6 +40,12 @@ describe("evaluateLink", () => {
     const zero = evaluateLink(data(), trade({ quantity: 0.0000001, price: 1 }), "cash:a", true);
     expect(zero).toMatchObject({ state: "error", message: "연결할 금액이 0원 이하예요. 수수료를 확인하거나 연결 안 함으로 저장해 주세요." });
   });
+  it("잔액 = 대금(전액 사용): zero 문구, 초과는 부족 문구", () => {
+    now();
+    const d = data({ cash: [{ id: "a", type: "bank", name: "주거래", balance: 1_000_000, currency: "KRW" }] });
+    expect(evaluateLink(d, trade(), "cash:a", true)).toMatchObject({ state: "error", testId: "cash-link-error", message: "주거래은 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요." });
+    expect(evaluateLink(d, trade({ quantity: 11 }), "cash:a", true)).toMatchObject({ message: expect.stringContaining("잔액이 부족해요") });
+  });
   it("토스트 문구", () => {
     expect(linkSavedToast("buy", "cash")).toBe("매수 거래가 기록되었습니다. 현금 기록도 남겼어요");
     expect(linkSavedToast("sell", "loan")).toBe("매도 거래가 기록되었습니다. 대출 기록도 남겼어요");
@@ -55,7 +61,7 @@ describe("삭제 안내 문구", () => {
   });
   it("하한에 걸리면 실제 감소액 + 꼬리", () => {
     const plan = planRemoveLink(data({ cash: [{ id: "a", type: "bank", name: "주거래", balance: 150, currency: "KRW" }], cashTransactions: [rec("deposit", 500)] }), "tx_1")!;
-    expect(revertNoteText(plan)).toBe("연결된 현금 기록도 함께 지워져요. 주거래 잔액 -149원, 잔액이 부족해 0원이 돼요");
+    expect(revertNoteText(plan)).toBe("연결된 현금 기록도 함께 지워져요. 주거래 잔액 -149원, 잔액이 부족해 1원만 남아요");
     const loanRec = { id: "ltx_link_tx_1", loanId: "l", type: "borrow", amount: 400, date: "2026-11-10", reflected: true, createdAt: "x" } as AssetData["loanTransactions"][number];
     const lp = planRemoveLink(data({ loans: [{ id: "l", type: "credit", name: "신용대출", balance: 100, interestRate: 3, startDate: "2025-01-01" }], loanTransactions: [loanRec] }), "tx_1")!;
     expect(revertNoteText(lp)).toBe("연결된 대출 기록도 함께 지워져요. 신용대출 잔액 -100원, 남은 대출보다 커서 0원이 돼요");

@@ -64,7 +64,7 @@ describe("연결 저장 합성 + 저장 1회", () => {
   it("현금 전액 사용(0원 현금)은 저장 불가 -> 연결 차단, 일부 사용은 저장", () => {
     const t = tx();
     const full = { ...seed(), cash: [cashItem("a", 1_000_000)] };
-    expect(buildLink({ ...full, transactions: [t] }, stockLinkTrade(t), { kind: "cash", cashId: "a" }, TODAY)).toEqual({ ok: false, reason: "balance" });
+    expect(buildLink({ ...full, transactions: [t] }, stockLinkTrade(t), { kind: "cash", cashId: "a" }, TODAY)).toEqual({ ok: false, reason: "zero" });
     const part = { ...seed(), cash: [cashItem("a", 1_000_001)] };
     const b = buildLink({ ...part, transactions: [t] }, stockLinkTrade(t), { kind: "cash", cashId: "a" }, TODAY);
     if (!b.ok) throw new Error();
