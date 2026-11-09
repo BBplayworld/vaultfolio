@@ -7,7 +7,7 @@ import { BrandSymbol } from "../brand-symbol";
 import { BrandLockup } from "../brand-lockup";
 
 describe("BrandSymbol", () => {
-  it("인스턴스마다 gradient·clip id가 고유하고 참조가 자기 id를 가리킨다", () => {
+  it("인스턴스마다 clip id가 고유하고 참조가 자기 id를 가리킨다", () => {
     const html = renderToStaticMarkup(
       <>
         <BrandSymbol />
@@ -15,8 +15,8 @@ describe("BrandSymbol", () => {
       </>,
     );
     const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
-    expect(ids).toHaveLength(8);
-    expect(new Set(ids).size).toBe(8);
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
     ids.forEach((id) => {
       expect(id).toMatch(/^[a-zA-Z0-9_-]+$/);
       expect(html).toContain(`url(#${id})`);
@@ -32,11 +32,14 @@ describe("BrandSymbol", () => {
     expect((midTop + midBottom) / 2).toBeCloseTo(15.5, 5);
     expect(midBottom - midTop).toBeCloseTo(1.1, 5);
   });
-  it("stop 색은 CSS 변수(라이트/다크 globals.css 정의)", () => {
+  it("R5 흑백: 두 면 모두 단색 CSS 변수(라이트 검정/다크 흰색), 그라데이션 없음", () => {
     const html = renderToStaticMarkup(<BrandSymbol />);
-    ["t0", "t1", "b0", "b1"].forEach((k) => expect(html).toContain(`var(--brand-symbol-${k})`));
+    expect(html.split("stroke:var(--brand-symbol)").length - 1).toBe(2);
+    expect(html).not.toContain("Gradient");
     const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
-    ["t0", "t1", "b0", "b1"].forEach((k) => expect(css.split(`--brand-symbol-${k}:`).length - 1).toBe(2));
+    const defs = [...css.matchAll(/--brand-symbol:\s*(#[0-9a-fA-F]{6});/g)].map((m) => m[1].toLowerCase());
+    expect(defs).toEqual(["#000000", "#ffffff"]);
+    expect(css).not.toMatch(/--brand-symbol-(t|b)\d/);
     expect(css.split("--brand-wordmark:").length - 1).toBe(2);
   });
 });
@@ -51,5 +54,9 @@ describe("BrandLockup", () => {
     const src = readFileSync(join(process.cwd(), "src/components/brand-wordmark.tsx"), "utf8");
     expect(src).toContain("SIL OFL");
     expect(src).not.toMatch(/\.(otf|ttf|woff2?)["']/);
+  });
+  it("R5 자간 0: 워드마크 잉크 폭 8788(= -0.04em 8460 + 글자 사이 4곳 × 82 units)", () => {
+    const html = renderToStaticMarkup(<BrandLockup />);
+    expect(html).toContain('viewBox="20 -1644 8788 1840"');
   });
 });

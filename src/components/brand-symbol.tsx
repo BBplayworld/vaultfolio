@@ -12,20 +12,20 @@ export interface BrandSymbolProps {
 const S_PATH =
   "M23.25 9.68C23.25 6.53 20.06 5 16 5C11.75 5 8.75 6.72 8.75 9.68C8.75 12.83 12.13 13.93 16 15.5C20 17.13 23.5 18.43 23.5 21.88C23.5 25.12 20.4 27 16 27C11.8 27 8.5 25.33 8.5 21.88";
 // 대각 틈: 중심선이 척추 교차점 (16,15.5)를 지남, 각도 유지(약 18°). 폭 1.6 → 1.1로 축소 — 20~32px에서 1.6은 사선 슬래시처럼 S를 끊어 보여
-// 0.7~0.9px 이음선으로 줄이고 두 면 구분은 톤 차이로 전달(#4.66 R3 크기별 비교 근거)
+// 0.7~0.9px 이음선으로 줄임(#4.66 R3 크기별 비교 근거). R5 단색화 후 두 면 구분은 이 틈만으로 전달
 const CLIP_TOP = "M0 0H32V9.65L0 20.25Z";
 const CLIP_BOTTOM = "M0 21.35L32 10.75V32H0Z";
 
 /**
- * 시크릿에셋 브랜드 심볼 — C 레이어 S(두 톤 인디고 그라데이션, 타일 없음). 대표 결정 #4.66 R3, R4 상하 균형.
- * stop 색은 CSS 변수(`--brand-symbol-*`, globals.css 라이트/다크)로 분리. gradient·clip id는 인스턴스별 고유(useId).
+ * 시크릿에셋 브랜드 심볼 — C 레이어 S(단색, 타일 없음). 대표 결정 #4.66 R3, R4 상하 균형, R5 흑백화.
+ * R5: 기존 파비콘·앱 아이콘(검정 바탕 흰 S)과 같은 흑백 체계 — 다크 흰색 / 라이트 검정(`--brand-symbol`, globals.css).
+ * 두 면 구분은 톤 차 없이 대각 틈만으로(톤 차는 밝은 면이 커 보여 R4 상하 균형을 다시 깨뜨림). clip id는 인스턴스별 고유(useId).
  */
 export function BrandSymbol({ size = 32, className }: BrandSymbolProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const top = `bs-t-${uid}`;
-  const bottom = `bs-b-${uid}`;
   const clipTop = `bs-ct-${uid}`;
   const clipBottom = `bs-cb-${uid}`;
+  const stroke = { stroke: "var(--brand-symbol)" };
   return (
     <svg
       aria-hidden
@@ -36,14 +36,6 @@ export function BrandSymbol({ size = 32, className }: BrandSymbolProps) {
       className={`shrink-0${className ? ` ${className}` : ""}`}
     >
       <defs>
-        <linearGradient id={top} x1="8" y1="4" x2="24" y2="15.5" gradientUnits="userSpaceOnUse">
-          <stop offset="0" style={{ stopColor: "var(--brand-symbol-t0)" }} />
-          <stop offset="1" style={{ stopColor: "var(--brand-symbol-t1)" }} />
-        </linearGradient>
-        <linearGradient id={bottom} x1="8" y1="15.5" x2="24" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0" style={{ stopColor: "var(--brand-symbol-b0)" }} />
-          <stop offset="1" style={{ stopColor: "var(--brand-symbol-b1)" }} />
-        </linearGradient>
         <clipPath id={clipTop}>
           <path d={CLIP_TOP} />
         </clipPath>
@@ -51,8 +43,8 @@ export function BrandSymbol({ size = 32, className }: BrandSymbolProps) {
           <path d={CLIP_BOTTOM} />
         </clipPath>
       </defs>
-      <path d={S_PATH} strokeWidth={4.8} stroke={`url(#${top})`} clipPath={`url(#${clipTop})`} />
-      <path d={S_PATH} strokeWidth={4.8} stroke={`url(#${bottom})`} clipPath={`url(#${clipBottom})`} />
+      <path d={S_PATH} strokeWidth={4.8} style={stroke} clipPath={`url(#${clipTop})`} />
+      <path d={S_PATH} strokeWidth={4.8} style={stroke} clipPath={`url(#${clipBottom})`} />
     </svg>
   );
 }

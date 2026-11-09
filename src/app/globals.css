@@ -67,11 +67,8 @@ These serve as the fallback; there is no separate default.css file. */
   /* 브랜드 액션 색 — 확인/제출 버튼·체크박스 공용. MAIN_PALETTE[0](config/theme.ts)과 동일 hex 유지 */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
-  /* 브랜드 심볼(C 레이어 S) 그라데이션 stop·워드마크 색(#4.66 R3) — 라이트는 옅은 시작색이 배경에 묻혀 한 단계 진하게 */
-  --brand-symbol-t0: #97a8f0;
-  --brand-symbol-t1: #6379d8;
-  --brand-symbol-b0: #4c60bc;
-  --brand-symbol-b1: #2f3c85;
+  /* 브랜드 심볼(C 레이어 S)·워드마크 색(#4.66 R3, R5 흑백화) — 심볼은 파비콘과 같은 순흑/순백, 워드마크는 한 단계 부드러운 톤 */
+  --brand-symbol: #000000;
   --brand-wordmark: #191f28;
   --secondary: oklch(0.895 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -136,10 +133,7 @@ These serve as the fallback; there is no separate default.css file. */
   /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
-  --brand-symbol-t0: #c3ccf8;
-  --brand-symbol-t1: #8396e4;
-  --brand-symbol-b0: #6a7fd0;
-  --brand-symbol-b1: #43529f;
+  --brand-symbol: #ffffff;
   --brand-wordmark: #e5e8eb;
   --secondary: oklch(0.31 0.014 265);
   --secondary-foreground: oklch(0.965 0.004 265);
