@@ -86,7 +86,7 @@ function YearlyAddLink() {
       type="button"
       data-testid="yearly-add-link"
       onClick={() => dispatchOpenYearlyNetAsset()}
-      className="inline-flex min-h-10 items-center text-sm font-medium text-brand underline underline-offset-2"
+      className="inline-flex min-h-10 items-center text-sm font-medium text-brand dark:text-indigo-300 underline underline-offset-2"
     >
       작년 말 순자산 넣기
     </button>
@@ -373,7 +373,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
           note={autoCaption && heroPrev ? (
-            <span data-testid="yearly-auto-caption" data-screenshot-hide className="leading-5">
+            <span data-testid="yearly-auto-caption" data-screenshot-hide className="leading-5 break-keep">
               {yearlyAutoCaptionText(autoCaption)}{" "}
               <span className="whitespace-nowrap">
                 <span aria-hidden="true">· </span>
@@ -382,7 +382,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                   data-testid="yearly-auto-caption-fix"
                   aria-label={`${autoCaption.year}년 말 값 고치기`}
                   onClick={() => handleEdit(heroPrev as YearlyNetAsset)}
-                  className="-my-2 inline-flex min-h-10 items-center align-baseline font-medium text-brand underline underline-offset-2"
+                  className="-my-2 inline-flex min-h-10 items-center align-baseline font-medium text-brand dark:text-indigo-300 underline underline-offset-2"
                 >
                   고치기
                 </button>

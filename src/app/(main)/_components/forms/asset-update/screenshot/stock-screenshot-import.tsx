@@ -236,7 +236,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
 
     const missingTicker = selected.filter((s) => !(s.tickerInput?.trim() || s.ticker || ""));
     if (missingTicker.length > 0) {
-      toast.error(`티커(종목코드)를 입력해주세요: ${missingTicker.map((s) => s.name).join(", ")} · 체크를 풀면 나머지만 등록돼요`, { duration: 6000 });
+      toast.error(`티커(종목코드)를 입력해주세요: ${missingTicker.map((s) => s.name).join(", ")} · 체크를 풀면 나머지만 등록돼요`, { duration: 6000, className: "break-keep" });
       return;
     }
 
