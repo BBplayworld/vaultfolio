@@ -146,7 +146,9 @@ export function FloatingAddButton() {
   useEffect(() => {
     if (!isOpen || step !== "holdings" || !resumeNotice) return;
     const id = requestAnimationFrame(() => {
-      document.querySelector<HTMLElement>('[data-resync-first="true"]')?.focus();
+      const el = document.querySelector<HTMLElement>('[data-resync-first="true"]');
+      el?.focus({ preventScroll: true }); // 하단 [완료]로 포커스가 가도 상단 상태 줄이 가려지지 않게 스크롤 금지
+      el?.closest<HTMLElement>('[data-slot="sheet-content"]')?.scrollTo({ top: 0 });
     });
     return () => cancelAnimationFrame(id);
   }, [isOpen, step, resumeNotice]);
