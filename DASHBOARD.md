@@ -2,16 +2,10 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 13:15 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 14:00 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-**v4.58 반영 결정 — [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) (#103 거래 연결 계좌, risk:high)**
-- ✅ 권고: 반영 — 매수·매도 때 현금·대출이 함께 바뀌고 지우면 되돌아감, 기본값 `연결 안 함`이라 기존 사용 변화 없음·기록 손실 0
-- 🔗 preview: https://secretasset-git-issue-456-bbplayworlds-projects.vercel.app/?demo=1 — 주식 상세 → 매수 입력 → 즉시 반영 → '연결 계좌' 줄
-- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @e7c4810
-- ⚠️ 알려진 한계(손실 아님): 오늘 이전에 현금을 손으로 미리 줄인 뒤 연결하면 이중 차감 가능(미리보기에 결과 잔액 표시·거래 삭제로 원복)
-- ↩️ 롤백: PR revert 1개 · 브리프: [4.56-decision-brief.md](issues/4.56-103-cross-asset-flow/4.56-decision-brief.md)
-- 👉 결정: PR #106 머지 = 반영 / 닫기 = 미반영
+없음.
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
@@ -23,8 +17,8 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| 4.56 → **v4.58** [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 | 🟥 대표 승인 대기 (qa·UI·COO PASS @e7c4810) | 승인 즉시 머지·운영 스모크 | 대표 승인 (high) |
-| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 · (예정) [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 동승 | #110 개발·UI 검수 수정 반영(0b0febc) → UI 재확인·qa · #109는 기획·COO 판정 완료, v4.58 머지 뒤 개발 | 11/10~11 | 팀 자체 승인 (low·medium) |
+| **4.60** (예정) | [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 — 코인·묶음 삭제 고아 거래 외 5건 | 개발 중 → UI·qa·COO | 11/10 | 팀 자체 승인 (medium) |
+| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 | UI 승인 · qa D1(취소 후 시트 튀어나옴) 수정(a9e7c64) → 증분 qa → COO | 11/10~11 | 팀 자체 승인 (low·medium) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -40,6 +34,7 @@
 ## ✅ 대표 승인 머지 완료 (최근)
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
+| v4.58 [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | 11/09 | 거래 연결 계좌 — 매수·매도 시 현금·대출 함께 증감, 삭제 시 되돌림(#103) · 운영 스모크 진행 중 |
 | v4.54 [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) | 11/09 | 현금·대출 잔액 한 번에 맞추기 + 전 자산 흐름 보강 · 운영 스모크 PASS |
 | v4.53 핫픽스 [PR #105](https://github.com/BBplayworld/vaultfolio/pull/105) | 11/09 | 시세 갱신 중 저장한 편집 되돌아감 결함(#104) · 운영 스모크 PASS |
 | 4.53 [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) | 11/09 | /api/sync 남용 방어 · 운영 스모크 PASS(2기기 생성·pull·폴링·409 수렴·401) |
