@@ -5,7 +5,7 @@
 > **마지막 갱신: 2026-11-09 23:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-**v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)** · 승인 시 표시 버전 v4.69(main 반영·증분 qa 후 머지)
+**⏸ (R2 수정 중, 승인 보류) v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)** · 승인 시 표시 버전 v4.69(main 반영·증분 qa 후 머지)
 - ✅ 권고: 반영 — 대표 지시대로 인증카드는 핵심 기능으로 **상단 오른쪽**(설치 앱도 브라우저와 동일), 더보기는 설정 전용 그대로. 하단은 홈·상세·[업데이트]·성과·더보기 5칸(업데이트 가운데)
 - 🖼 전/후(설치 앱 홈 375): [ui2-compare-before-after-375-light.png](issues/4.66-125-nav-restructure/screenshots/ui2-compare-before-after-375-light.png)
 - 🔗 preview: https://secretasset-git-issue-466-bbplayworlds-projects.vercel.app — 하단 메뉴는 설치 앱에서만 보임(휴대폰 '홈 화면에 추가' → '데모 데이터로 보기'). 브라우저 화면은 변화 없음
@@ -15,7 +15,7 @@
 - ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · '홈' 제목이 여전히 비어 보이면 `수정: 제목 크기`
 
-**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
+**⏸ (R2 수정 중, 승인 보류) v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
 - 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
 - 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
@@ -36,8 +36,8 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R1 반영(최소 폭·스크롤 1개·순자산 2번째 열) 완료(755a654) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
-| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | R1 반영(상단 '홈' 제목) 완료(94e54ec) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 R2 지적(iOS 가로 스크롤 2개 여전) → 실기기 캡처로 원인 분석·수정 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 대표 R2 지적('홈' 글씨 어색, 공식 느낌 필요) → 상단 브랜드 재설계 중 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
