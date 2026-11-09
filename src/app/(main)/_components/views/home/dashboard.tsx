@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
-import { attachCauseDates, buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, getAttributionRecords, sortCausesByDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
+import { attachCauseDates, buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, getAttributionRecords, getAttributionOffset, sortCausesByDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionTransfer, type AttributionRecord } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor, pickDonutLabelColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -21,6 +21,7 @@ import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { ChevronRight, ChevronDown, Trophy } from "lucide-react";
 import { tierLabel } from "@/lib/report/asset-grade";
 import { TIER_STYLE } from "../activity/asset-report-view";
+import { matchRecordedTransferDetail } from "../activity/change-hero";
 import type { ReactNode } from "react";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
@@ -333,6 +334,11 @@ export function NetAssetSummaryBox({
                     </li>
                   ))}
                 </ul>
+                {(change.offsetTotal ?? 0) >= CAUSE_DISPLAY_MIN && (
+                  <p data-testid="home-cause-offset-caption" className="mt-1.5 text-xs text-muted-foreground break-keep text-pretty leading-relaxed max-w-xs">
+                    자산 사이에 옮긴 돈은 원인에서 뺐어요
+                  </p>
+                )}
                 {!screenshotMode && change.records && (
                   <AttributionRecordList records={change.records} className="w-full max-w-xs" />
                 )}
@@ -458,6 +464,7 @@ interface HeaderChange {
   causes: AttributionDisplayItem[]; // 원인 리스트(항목별 색상 렌더)
   rangeLabel?: string;              // 비교 구간 "M/D → M/D"(S-4.33)
   records?: AttributionRecord[];    // 구간 내 반영 기록(입출금·매매·대출) 시간순(S-4.33)
+  offsetTotal?: number;             // 내부 이동 상쇄 합(원) — 1만 이상이면 캡션(#103)
 }
 
 // 헤더 통합 등락: 끝점을 실시간 현재값(buildLiveAttributionCurr)으로 잡아 Hero 순자산과 기준 일치.
@@ -485,6 +492,8 @@ function useHeaderNetChange(): HeaderChange | null {
     );
     if (!attr) return null;
     const records = getAttributionRecords(attr, assetData, exchangeRates);
+    // 내부 이동 상쇄(#103): 결산과 같은 짝 함수의 내역을 넘긴다. 기록 짝이 없어도 잔차 짝(매수↔현금 정리 등)은 상쇄된다
+    const transfer: AttributionTransfer = matchRecordedTransferDetail(assetData, attr.windowFrom ?? attr.fromDate, attr.windowTo ?? attr.toDate, exchangeRates);
     const prevNet = summary.netAsset - attr.deltaNet;
     const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
     const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`;
@@ -495,8 +504,9 @@ function useHeaderNetChange(): HeaderChange | null {
       negligible: Math.abs(attr.deltaNet) < CAUSE_DISPLAY_MIN,
       label,
       estimated: attr.estimated,
-      sentence: formatAttributionSentence(attr),
-      causes: sortCausesByDate(attachCauseDates(getAttributionItems(attr), records)),
+      sentence: formatAttributionSentence(attr, transfer),
+      causes: sortCausesByDate(attachCauseDates(getAttributionItems(attr, transfer), records)),
+      offsetTotal: getAttributionOffset(attr, transfer),
       rangeLabel: `${formatAttributionDate(attr.fromDate)} → ${formatAttributionDate(attr.toDate)}`,
       records,
     };
