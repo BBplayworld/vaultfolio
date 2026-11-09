@@ -235,7 +235,7 @@ export function CashTxInput() {
                       </FormControl>
                       <div className="leading-none">
                         <FormLabel className="text-sm font-medium cursor-pointer">매월 정기 입금 (월급·목돈)</FormLabel>
-                        <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 비정기(성과급 등)로 기록됩니다</p>
+                        <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 <span className="whitespace-nowrap">비정기(성과급 등)로</span> 기록됩니다</p>
                       </div>
                     </FormItem>
                   )}
