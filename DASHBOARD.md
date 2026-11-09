@@ -25,6 +25,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
+| **#127** (신규 기능) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액을 앱 안에서 한눈에(엑셀 월별 시트 대체) | 사업 선정·COO 축소 통과 → 기획 경험 절·UI → 개발 | 11/26 전 목표 | 🟥 대표 승인 예정 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 6칸 → 5칸 — 인증카드를 더보기 '도구'로, 업데이트를 가운데로 | 기획·사업·COO(축소 통과, 12/4 보류 해제)·UI 완료 → 개발 완료(82e5186) → UI 승인·qa PASS·COO PASS → 🟥 대표 승인 대기 | 11/26 전 목표 | 🟥 대표 승인 예정 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
