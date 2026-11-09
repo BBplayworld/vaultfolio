@@ -2,23 +2,29 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 16:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 13:15 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-없음.
+**v4.58 반영 결정 — [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) (#103 거래 연결 계좌, risk:high)**
+- ✅ 권고: 반영 — 매수·매도 때 현금·대출이 함께 바뀌고 지우면 되돌아감, 기본값 `연결 안 함`이라 기존 사용 변화 없음·기록 손실 0
+- 🔗 preview: https://secretasset-git-issue-456-bbplayworlds-projects.vercel.app/?demo=1 — 주식 상세 → 매수 입력 → 즉시 반영 → '연결 계좌' 줄
+- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @e7c4810
+- ⚠️ 알려진 한계(손실 아님): 오늘 이전에 현금을 손으로 미리 줄인 뒤 연결하면 이중 차감 가능(미리보기에 결과 잔액 표시·거래 삭제로 원복)
+- ↩️ 롤백: PR revert 1개 · 브리프: [4.56-decision-brief.md](issues/4.56-103-cross-asset-flow/4.56-decision-brief.md)
+- 👉 결정: PR #106 머지 = 반영 / 닫기 = 미반영
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
 - [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09) · 운영 스모크 PASS**
 
 ## 🟨 대표 승인 예정 (미리 알림)
-- v4.58 #103 연결 계좌 (high) — 최종 qa·COO 후 요청 (목표 11/10)
+- 없음
 
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| 4.56 → **v4.58** [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 — 주식·코인 매수·매도 시 현금 또는 대출 함께 증감, 삭제 시 되돌림 | 개발·main(v4.57) 병합 완료(869984a), UI 검수 경미 2건 반영 → 최종 qa 진행 중 · 현금 하한 통화 단위 통일(JPY) COO 확인 중 → 🟥 | 승인 요청 목표 11/10 | 대표 승인 (high, 저장 형식 변경 없음) |
-| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 · (예정) [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 동승 | #110 개발 완료(74d5f55, Vercel success) → UI 검수 중 → qa · #109는 기획·COO 판정 완료, v4.58 머지 뒤 개발 | 11/10~11 | 팀 자체 승인 (low·medium) |
+| 4.56 → **v4.58** [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 | 🟥 대표 승인 대기 (qa·UI·COO PASS @e7c4810) | 승인 즉시 머지·운영 스모크 | 대표 승인 (high) |
+| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 · (예정) [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 동승 | #110 개발·UI 검수 수정 반영(0b0febc) → UI 재확인·qa · #109는 기획·COO 판정 완료, v4.58 머지 뒤 개발 | 11/10~11 | 팀 자체 승인 (low·medium) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
