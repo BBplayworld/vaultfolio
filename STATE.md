@@ -48,7 +48,7 @@
 
 ## 열린 릴리스
 
-- **[developer 2026-11-09] 4.67 = #127 월별 기록(지난 여러 달 자산군별 금액 시트)** (브랜치 issue-4.67, origin/main dc4133d 분기, HEAD 308ca39(ui-review 2건·COO U1 반영), PR #128 draft, 폴더 `issues/4.67-127-monthly-log`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui-designer 재측정(375 4열 2px 넘침·레거시 기록일 줄바꿈) → qa → COO).
+- **[developer 2026-11-09] 4.67 = #127 월별 기록(지난 여러 달 자산군별 금액 시트)** (브랜치 issue-4.67, origin/main dc4133d 분기, HEAD 9ad2363(ui-review 2건·COO U1·ui 재측정 반영), PR #128 draft, 폴더 `issues/4.67-127-monthly-log`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui 확인 → qa → COO).
 - **[developer 2026-11-09] 4.66 = #125 하단 네비 6칸 → 5칸(인증카드 더보기 도구로, 업데이트 가운데)** (브랜치 issue-4.66, origin/main dc4133d 분기, 커밋 82e5186, PR #126 draft, 폴더 `issues/4.66-125-nav-restructure`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui-review·qa).
 - **[developer 2026-11-09] 4.65 = #122 외화 환율 잔차를 환율 원인으로(#117 D3+P5b)** (브랜치 issue-4.65, origin/main eb204e4 분기, 커밋 c984e0c, PR #123 draft, 폴더 `issues/4.65-122-fx-residual`, risk:medium, COO 자체 승인 트랙). → **머지 완료 dc4133d(v4.65, 11-09), 운영 스모크 PASS.**
 - **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). → **머지 완료 f68adc3(v4.63), 운영 스모크 PASS.**
