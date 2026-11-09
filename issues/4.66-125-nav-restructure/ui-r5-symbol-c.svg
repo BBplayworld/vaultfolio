@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- #4.66 R5: C 레이어 S 흑백화 — R4 형태(척추 교차점 y15.5, 위 볼 반폭 7.25, 틈 1.1) 유지, 인디고 그라데이션 제거.
+       색: 다크 #ffffff / 라이트 #000000(파비콘·앱 아이콘과 같은 순백·순흑). 아래는 라이트(검정) 기준, 다크는 stroke를 #ffffff로. -->
+  <defs>
+    <clipPath id="sc-ct"><path d="M0 0H32V9.65L0 20.25Z"/></clipPath>
+    <clipPath id="sc-cb"><path d="M0 21.35L32 10.75V32H0Z"/></clipPath>
+    <path id="sc-s" d="M23.25 9.68C23.25 6.53 20.06 5 16 5C11.75 5 8.75 6.72 8.75 9.68C8.75 12.83 12.13 13.93 16 15.5C20 17.13 23.5 18.43 23.5 21.88C23.5 25.12 20.4 27 16 27C11.8 27 8.5 25.33 8.5 21.88" stroke-width="4.8"/>
+  </defs>
+  <g stroke="#000000">
+    <g clip-path="url(#sc-ct)"><use href="#sc-s"/></g>
+    <g clip-path="url(#sc-cb)"><use href="#sc-s"/></g>
+  </g>
+</svg>
