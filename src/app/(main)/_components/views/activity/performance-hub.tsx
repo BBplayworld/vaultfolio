@@ -112,7 +112,7 @@ export function PerformanceHub() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>
-          <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 변화·배당·성적표를 확인하세요</p>
+          <p className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">자산 변화·배당·성적표를 확인하세요</p>
         </div>
         <HubShareButton />
       </div>

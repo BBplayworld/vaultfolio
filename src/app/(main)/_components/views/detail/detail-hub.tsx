@@ -38,7 +38,7 @@ export function DetailHub() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">상세</h2>
-          <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
+          <p className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
         </div>
         <HubShareButton />
       </div>
