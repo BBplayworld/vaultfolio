@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
-import { RootFirstPaint, WELCOME_PAGE_WRAP } from "./_components/layout/onboarding/welcome-intro";
+import { RootFirstPaint, WELCOME_PAGE_WRAP, shouldSkipHeroEnter } from "./_components/layout/onboarding/welcome-intro";
 import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
 import { StockInput } from "./_components/forms/asset-update/input/stock-input";
 import { CryptoInput } from "./_components/forms/asset-update/input/crypto-input";
@@ -39,7 +39,15 @@ export default function Page() {
   const isWelcomeGuide = isSharePending || hasNoAssets;
 
   // 루트 사전 조각을 거친 첫 웰컴 mount만 히어로·신뢰 줄 진입 애니메이션 생략(#113) — 다른 화면이 한 번이라도 렌더되면 해제
-  const skipHeroEnterRef = useRef(!isDataLoaded);
+  const skipHeroEnterRef = useRef(false);
+  const mountedLoadedRef = useRef(isDataLoaded);
+  useEffect(() => {
+    // 마운트 시점 판정(SSR 안전) — 조각이 실제로 보인 기기(속성 없음)만 true
+    skipHeroEnterRef.current = shouldSkipHeroEnter({
+      isDataLoaded: mountedLoadedRef.current,
+      hasAssetsAttr: document.documentElement.hasAttribute("data-has-assets"),
+    });
+  }, []);
   const isWelcomeView = isWelcomeGuide && !isWizardOpen;
   useEffect(() => {
     if (isDataLoaded && !isWelcomeView) skipHeroEnterRef.current = false;

@@ -11,6 +11,12 @@ export const WELCOME_PAGE_WRAP = "flex flex-col gap-4 md:gap-6";
 export const WELCOME_ROOT = "w-full py-2 space-y-5";
 export const WELCOME_TRUST_WRAP = "w-full flex flex-col items-center";
 
+/** 사전 조각이 실제로 보였는지(마운트 시점 판정) — 로드 전 첫 렌더이고 보유자 숨김 속성이 없을 때만 true.
+ *  키만 남은 0건 기기는 조각이 숨겨졌으므로 false(웰컴 ENTER 유지) */
+export function shouldSkipHeroEnter(env: { isDataLoaded: boolean; hasAssetsAttr: boolean }): boolean {
+  return !env.isDataLoaded && !env.hasAssetsAttr;
+}
+
 /** ① 히어로 — enter=false면 진입 애니메이션 없음(사전 조각 직후 웰컴·조각 자체) */
 export function WelcomeHero({ enter }: { enter: boolean }) {
   return (

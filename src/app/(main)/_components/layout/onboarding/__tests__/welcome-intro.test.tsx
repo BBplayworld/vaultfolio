@@ -15,7 +15,7 @@ vi.mock("@/hooks/use-share-artifacts", () => ({
 }));
 
 import { WelcomeGuide } from "../welcome-guide";
-import { RootFirstPaint, WelcomeHero, WelcomeTrustLine, ENTER } from "../welcome-intro";
+import { RootFirstPaint, WelcomeHero, WelcomeTrustLine, ENTER, shouldSkipHeroEnter } from "../welcome-intro";
 import { STORAGE_KEYS, LEGACY_KEYS } from "@/lib/local-storage";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, "");
@@ -55,6 +55,18 @@ describe("루트 사전 조각 ↔ WelcomeGuide 공용 조각", () => {
     expect(heroTag(withEnter)).toContain("animate-in");
     expect(trustTag(withEnter)).toContain("animate-in");
     expect(ENTER).toContain("animate-in");
+  });
+});
+
+describe("shouldSkipHeroEnter(O1) — 조각이 실제로 보인 경우만 ENTER 생략", () => {
+  it("로드 전 + 속성 없음 → true", () => {
+    expect(shouldSkipHeroEnter({ isDataLoaded: false, hasAssetsAttr: false })).toBe(true);
+  });
+  it("속성 있음(키만 남은 0건 기기, 조각 숨김) → false(ENTER 유지)", () => {
+    expect(shouldSkipHeroEnter({ isDataLoaded: false, hasAssetsAttr: true })).toBe(false);
+  });
+  it("이미 로드된 상태로 mount → false", () => {
+    expect(shouldSkipHeroEnter({ isDataLoaded: true, hasAssetsAttr: false })).toBe(false);
   });
 });
 
