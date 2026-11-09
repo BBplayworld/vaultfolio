@@ -411,23 +411,23 @@ html[data-has-assets] [data-first-paint] {
     padding-top: 0.25rem !important;
   }
 
-  /* 홈 헤더(#4.66 logo-spec·R6): 심볼 + SVG 워드마크 락업, 워드마크는 PWA에서만 노출.
-     심볼 19.58px(S 잉크 16.4, lg 22.6px·S 잉크 18.92), 음수 좌측 여백 = 심볼 박스 좌측 여백(6.1058/32) → S 잉크 좌측이 카드 외곽(px-3)과 정렬 */
+  /* 홈 헤더(#4.66 logo-spec·R7): 심볼 + SVG 워드마크 락업, 워드마크는 PWA에서만 노출.
+     심볼 17.31px(S 잉크 14.5, lg 19.98px·S 잉크 16.73), 음수 좌측 여백 = 심볼 박스 좌측 여백(6.1058/32) → S 잉크 좌측이 카드 외곽(px-3)과 정렬 */
   .pwa-home-wordmark {
     display: block !important;
   }
 
   .pwa-home-symbol {
-    width: 19.58px;
-    height: 19.58px;
-    margin-left: -3.74px;
+    width: 17.31px;
+    height: 17.31px;
+    margin-left: -3.3px;
   }
 
   @media (min-width: 1024px) {
     .pwa-home-symbol {
-      width: 22.6px;
-      height: 22.6px;
-      margin-left: -4.31px;
+      width: 19.98px;
+      height: 19.98px;
+      margin-left: -3.81px;
     }
   }
 

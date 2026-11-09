@@ -6,7 +6,7 @@ import { BrandLockup } from "@/components/brand-lockup";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { HEADER_ICON_BTN } from "./menu-styles";
+import { HEADER_ENTRY_BTN_INVERT, HEADER_ICON_BTN } from "./menu-styles";
 import { ShareScreenshotDialog } from "./share/share-menu";
 import { recordVisit } from "@/lib/feature-usage";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
@@ -64,8 +64,7 @@ function ShareScreenshotButton() {
           track("feature_use", { category: "share_card", method: "open", source: "top_bar" });
           setOpen(true);
         }}
-        className={`${ICON_BTN} border-none text-white`}
-        style={{ backgroundColor: MAIN_PALETTE[5] }}
+        className={`${ICON_BTN} ${HEADER_ENTRY_BTN_INVERT}`}
         aria-label="인증카드"
         title="인증카드"
         data-tutorial="tutorial-screenshot-btn"

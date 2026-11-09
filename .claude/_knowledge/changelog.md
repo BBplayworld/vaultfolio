@@ -11,6 +11,11 @@
 - **변경**: `bottom-nav.tsx` 홈·상세·업데이트·성과·더보기 `grid-cols-5`(체험 3), 인증카드 칸·다이얼로그 제거, `aria-current`·testId. `top-bar.tsx` 홈에 `pwa-home-header`(PWA 한 줄 헤더: 로고+인증카드, 높이 40px+safe-area), 설치·더보기·선택기만 `contents pwa-hide-actions`로 숨기고 인증카드는 standalone에서 노출, 클릭 시 `recordVisit("share-card")`, 리스너 출처 `detail.source ?? "home_tip"`. 상세·성과 허브 제목 줄에 PWA 전용 발송 버튼 `HubShareButton`(`dispatchOpenShareCard(undefined,"top_bar")`). `globals.css` `pwa-home-header`·`pwa-home-logo`(PC PWA 숨김)·`pwa-only-action`. `tool-menu.tsx`·`app-features.ts` main과 동일.
 - **범위**: 저장 키·스키마·동기화·서버 전송 diff 0, 브라우저 화면·FAB·홈 결산 팁·`PAGE_ORDER` 무변경. 인증카드 대화상자·리스너는 top-bar 1곳. 테스트 `bottom-nav-5col.test.ts`.
 
+### 인증카드 버튼 foreground 반전 + 락업 S 추가 축소 (#4.66 이슈 #125 R7)
+- **왜**: 청록(`MAIN_PALETTE[5]`) 버튼은 차트 데이터색 재사용이고 흑백 로고와 이질, 인디고는 하단 업데이트 버튼과 겹침(대표 의견) → 로고와 같은 흑백 체계. 대표 "S 사이즈 확실히 줄여줘".
+- **변경**: `menu-styles.ts` `HEADER_ENTRY_BTN_INVERT`(`bg-foreground text-background`·누름 0.96) 신설, `top-bar.tsx`·`hub-share-button.tsx` 인라인 청록 제거 후 적용. `.pwa-home-symbol` 19.58→17.31px(S 잉크 16.4→14.5, lg 22.6→19.98px·16.73), 음수 여백 -3.3/-3.81px, 워드마크 `ml-[1.22px] lg:ml-[1.41px]`(간격 규칙 42.3% 유지). design-system §5 진입 버튼 규약 1줄.
+- **범위**: 저장·스키마·동기화·서버 전송 diff 0. 크기·히트영역·aria 불변, 더보기 회색 버튼 불변. 테스트 `brand-lockup.test.tsx`·`bottom-nav-5col.test.ts`.
+
 ### 홈 상단 공식 로고 락업 — S 심볼 + 워드마크, 단일색 `--brand-logo` (#4.66 이슈 #125 R2~R6, logo-spec)
 - **왜**: PWA 홈 맨 위 줄이 "홈" 글자·필기체 S라 공식 서비스 느낌이 없다는 대표 지적. 대표 R3~R6 피드백(C 레이어 S, 크기 축소, 흑백, 글자 간격·S 크기)을 ui-designer 확정 사양(logo-spec)으로 고정.
 - **변경**: `brand-symbol.tsx` 외곽선 면 path 2개(`bs-hi` 틈 1.3 / `bs-lo` 틈 1.7, 1x 화면 교체), `brand-wordmark.tsx` Pretendard Variable 750 아웃라인(자간 +110/2048em + 커닝 시크 -15·크릿 -80·릿에 +40·에셋 +60, R6에서 +50→+110), `brand-lockup.tsx` 워드마크 여백·무게중심 하향, `globals.css` `--brand-symbol`·`--brand-wordmark` → `--brand-logo`(라이트 #111111/다크 #F2F3F6), `.pwa-home-symbol` 19.58px(S 잉크 16.4, R6에서 17.6→16.4, lg 22.6px). design-system.md §14 신설.

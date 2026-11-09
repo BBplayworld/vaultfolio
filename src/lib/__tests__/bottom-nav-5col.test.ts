@@ -49,6 +49,17 @@ describe("인증카드 상단 통일 (#125 v2)", () => {
     expect(top).toContain('source: detail?.source ?? "home_tip"');
     expect(top).toMatch(/recordVisit\("share-card"\);\s*track\("feature_use", \{ category: "share_card", method: "open", source: "top_bar" \}\)/);
   });
+  it("인증카드 버튼 2곳 = foreground 반전 공용 상수(R7), 청록 MAIN_PALETTE[5]·흰 아이콘 제거, 크기·aria 유지", () => {
+    const styles = read("app/(main)/_components/header-menu/menu-styles.ts");
+    expect(styles).toMatch(/HEADER_ENTRY_BTN_INVERT =\s*"[^"]*bg-foreground text-background[^"]*motion-safe:active:scale-\[0\.96\]/);
+    expect(top).toContain("className={`${ICON_BTN} ${HEADER_ENTRY_BTN_INVERT}`}");
+    expect(hub).toContain("className={`${HEADER_ICON_BTN} ${HEADER_ENTRY_BTN_INVERT} pwa-only-action`}");
+    [top, hub].forEach((src) => {
+      expect(src).not.toContain("MAIN_PALETTE[5]");
+      expect(count(src, 'aria-label="인증카드"')).toBe(1);
+    });
+    expect(hub).not.toContain("text-white");
+  });
   it("인증카드 버튼은 pwa-hide-actions 밖, 설치·더보기·선택기는 안", () => {
     expect(top).toMatch(/<div className="contents pwa-hide-actions">\s*\{showInstall && <PwaInstallButton \/>\}/);
     expect(top).toMatch(/\{showShare && <ShareScreenshotButton \/>\}\s*<div className="contents pwa-hide-actions">\s*\{showMore/);

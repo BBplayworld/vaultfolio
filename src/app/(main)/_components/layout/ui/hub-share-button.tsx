@@ -1,10 +1,9 @@
 "use client";
 
 import { IdCard } from "lucide-react";
-import { MAIN_PALETTE } from "@/config/theme";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
-import { HEADER_ICON_BTN } from "../../header-menu/menu-styles";
+import { HEADER_ENTRY_BTN_INVERT, HEADER_ICON_BTN } from "../../header-menu/menu-styles";
 import { dispatchOpenShareCard } from "../navigation/asset-dispatch";
 
 // PWA 전용 인증카드 발송 버튼(상세·성과 허브 제목 줄, #4.66) — 대화상자·리스너 없이 이벤트만 보낸다(열기는 top-bar 인스턴스).
@@ -16,8 +15,7 @@ export function HubShareButton() {
     <button
       type="button"
       onClick={() => dispatchOpenShareCard(undefined, "top_bar")}
-      className={`${HEADER_ICON_BTN} pwa-only-action border-none text-white`}
-      style={{ backgroundColor: MAIN_PALETTE[5] }}
+      className={`${HEADER_ICON_BTN} ${HEADER_ENTRY_BTN_INVERT} pwa-only-action`}
       aria-label="인증카드"
       title="인증카드"
       data-testid="hub-share-card"

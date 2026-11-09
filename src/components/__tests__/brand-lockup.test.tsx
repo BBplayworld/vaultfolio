@@ -50,15 +50,25 @@ describe("BrandLockup", () => {
     const html = renderToStaticMarkup(<BrandLockup />);
     expect(html).toContain('viewBox="25 -1641 9224 1833"');
   });
-  it("R6 S 축소: 심볼 박스 19.58px(S 잉크 16.4)·lg 22.6px, 음수 여백 = 박스 × 6.1058/32", () => {
+  it("R7 S 축소: 심볼 박스 17.31px(S 잉크 14.5 ≥ 사양 최소 14)·lg 19.98px, 음수 여백 = 박스 × 6.1058/32", () => {
     const c = css();
     const m = c.match(/\.pwa-home-symbol\s*\{\s*width:\s*([\d.]+)px;\s*height:\s*([\d.]+)px;\s*margin-left:\s*(-[\d.]+)px;/g)!;
     expect(m).toHaveLength(2);
     const [base, lg] = m.map((r) => r.match(/-?[\d.]+(?=px)/g)!.map(Number));
-    expect(base).toEqual([19.58, 19.58, -3.74]);
-    expect(lg).toEqual([22.6, 22.6, -4.31]);
-    expect(base[0] * (26.8 / 32)).toBeCloseTo(16.4, 1);
-    expect(lg[0] * (26.8 / 32)).toBeCloseTo(18.92, 1);
+    expect(base).toEqual([17.31, 17.31, -3.3]);
+    expect(lg).toEqual([19.98, 19.98, -3.81]);
+    expect(base[0] * (26.8 / 32)).toBeCloseTo(14.5, 1);
+    expect(base[0] * (26.8 / 32)).toBeGreaterThanOrEqual(14);
+    expect(lg[0] * (26.8 / 32)).toBeCloseTo(14.5 * 15 / 13, 1);
     [base, lg].forEach(([w, , ml]) => expect(ml).toBeCloseTo((-w * 6.1058) / 32, 2));
+  });
+  it("R7 간격 규칙: 워드마크 margin-left = S 잉크 폭 42.3% − 심볼 박스 우측 여백(1.22px, lg 1.41px)", () => {
+    const html = renderToStaticMarkup(<BrandLockup />);
+    expect(html).toContain("ml-[1.22px]");
+    expect(html).toContain("lg:ml-[1.41px]");
+    [[17.31, 1.22], [19.98, 1.41]].forEach(([box, ml]) => {
+      const gap = 0.423 * (19.78 / 32) * box;
+      expect(ml).toBeCloseTo(gap - (box * 6.11) / 32, 1);
+    });
   });
 });

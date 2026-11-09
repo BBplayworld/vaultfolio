@@ -14,3 +14,7 @@ export const menuBadge = (on: boolean) =>
 
 // 상단 아이콘 버튼 공용 크기(top-bar·PWA 허브 인증카드 발송 버튼, #4.66) — Logo(next/font) 의존을 피하려 순수 상수 파일에 둔다.
 export const HEADER_ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";
+// 헤더 아이콘 진입 버튼(인증카드) 채움 — foreground 반전(다크 밝은 채움·라이트 어두운 채움, 아이콘=배경색), 로고 --brand-logo와 같은 흑백 체계(#4.66 R7).
+// 확인·제출이 아닌 진입(오버레이 열기) 버튼이라 액션=brand 규약 예외. hover는 HEADER_ICON_BTN의 opacity-85, 누름 scale 0.96(Tailwind v4 scale 속성이라 전환 대상도 scale).
+export const HEADER_ENTRY_BTN_INVERT =
+  "border-none bg-foreground text-background motion-safe:transition-[opacity,scale] motion-safe:active:scale-[0.96]";

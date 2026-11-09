@@ -140,6 +140,7 @@
 ## 5. 컴포넌트 규약
 
 - **버튼**: 확인·제출 = `variant="brand"`. 보조·취소·리스트 내 아이콘(수정/삭제/나누기) = `variant="secondary"`(테두리 없는 플랫). `outline` 신규 사용 지양. 카드 액션 아이콘 버튼 = `size="icon" variant="secondary"` + `ASSET_THEME.cardActionButton`(size-7.5 sm:size-8.5). `Button`은 누름 피드백 `active:not-disabled:scale-[0.96]` 내장(link·`static` 제외).
+- **헤더 아이콘 진입 버튼(인증카드)** = foreground 반전 `bg-foreground text-background`(공용 상수 `HEADER_ENTRY_BTN_INVERT`, 다크 밝은 채움·라이트 어두운 채움, 로고 `--brand-logo`와 같은 흑백 체계) — 확인·제출이 아닌 진입(오버레이 열기) 버튼이라 액션=brand 예외(#4.66 R7). hover `opacity-85`·누름 `scale-[0.96]`·40/44px 히트영역.
 - **키패드(잠금 화면)**: 테두리·배경 없는 72px 숫자(`text-2xl font-medium`), 눌림만 `active:bg-muted` 원형. 낮은 화면(`max-height:620px`) 64px.
 - **체크박스**: 기본 `Checkbox`(checked 시 자동 brand). 별도 색 금지.
 - **탭/세그먼트**: InlineSelector로 전 차수 통일(`tabList2/3` 토큰은 #4.34에 삭제, `tabList1`·`tabList3Wrap`만 legacy 잔존). 화면 폭을 채우는 1차 선택(자산 변화 범위·기간)은 `InlineSelector fullWidth` — 같은 폭 칸·채운 썸+굵은 글자(외곽선 없음)·썸 `motion-safe:transition-[transform] duration-200`·칸 `min-h-10 text-sm active:scale-[0.96]`·화살표 키 이동.
@@ -310,10 +311,10 @@ function Hint({ children }: { children: ReactNode }) {
 - 구성 비교 막대(#4.51): 자산군 고정 색(부동산 `MAIN_PALETTE[0]`·주식 `[4]`·암호화폐 `[3]`·현금성 `[5]`, 실물 `[8]`은 4.49), 선형 폭·막대 안 11%↑만 %, 구분선은 `shadow-[-2px_0_0_0_var(--card)]`로 폭 소비 없음. 증감은 손익색 대신 전경색+부호(+, U+2212). 신규 토큰 0.
 
 
-## 14. 브랜드 로고 (#4.66 logo-spec·대표 R6)
+## 14. 브랜드 로고 (#4.66 logo-spec·대표 R6·R7)
 - **구성**: 심볼 `BrandSymbol`(C 레이어 S) + 워드마크 `BrandWordmark`(Pretendard Variable wght 750 아웃라인, 자간 +110/2048em + 쌍별 커닝) = 가로 락업 `BrandLockup`. 앱 안 홈 상단 왼쪽 전용(PWA = 락업, 브라우저 = 심볼만 32px 박스).
 - **색 토큰 `--brand-logo`(신규, 로고 전용 단일색)**: 라이트 `#111111` / 다크 `#F2F3F6`(= 다크 foreground 계열). 심볼·워드마크 같은 값, 톤 차·그라데이션 없음(톤 차는 밝은 면이 커 보여 상하 균형을 깸). 로고 밖 용도로 쓰지 않는다.
-- **크기·정렬(375 기준)**: S 잉크 16.4px(박스 19.58px) · 워드마크 잉크 높이 13px · 잉크 간격 = S 잉크 폭의 42.3%(5.12px) · S 잉크 좌측 = 카드 외곽 · 세로 = 두 잉크 중심 일치 + 워드마크 0.25px 하향(무게중심). lg는 15/13배(S 잉크 18.92 · 워드마크 15 · 간격 5.91 · 0.3px 하향).
+- **크기·정렬(375 기준)**: S 잉크 14.5px(박스 17.31px, R7) · 워드마크 잉크 높이 13px · 잉크 간격 = S 잉크 폭의 42.3%(4.53px) · S 잉크 좌측 = 카드 외곽 · 세로 = 두 잉크 중심 일치 + 워드마크 0.25px 하향(무게중심). lg는 15/13배(S 잉크 16.73 · 박스 19.98 · 워드마크 15 · 간격 5.22 · 0.3px 하향).
 - **클리어 스페이스·최소 크기**: 사방 S 잉크 높이 × 0.33. 최소 락업 S 잉크 14px·워드마크 10.5px, 심볼 단독 16px 박스. 1x 화면은 소형 path(`bs-lo`, 틈 1.7) 자동 교체.
 - **금지**: 헤더에 타일·배경, 브랜드 인디고·그라데이션 재채색, 그림자·외곽선, 비율 변형, 워드마크를 시스템 폰트로 대체, 심볼과 워드마크 다른 색, 같은 화면에 S 글리프를 다른 역할로 두 번(하단 홈 탭은 lucide `Home`).
 - 앱 아이콘·파비콘(필기체 S, `Logo`)은 별도 체계로 유지 중 — 통일은 대표 결정 대상(logo-spec 4장).
