@@ -3,7 +3,6 @@
 // 월별 기록 시트(#127, 4.67) — 달마다 한 줄(월·기록일·가진 자산군 금액·순자산), 최신순. 읽기 전용(닫기 외 누를 것 없음).
 // 줄 조립은 buildMonthlyLog(lib/report/monthly-log.ts). 증감·%·비중·손익 색 없음. 서버 전송·저장 없음.
 
-import { Fragment } from "react";
 import { XIcon } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Z_LAYER } from "@/config/theme";
@@ -46,12 +45,8 @@ function MonthCell({ row, today }: { row: MonthlyLogRow; today: string }) {
       style={Z_EDGE}
     >
       <span className="block font-medium text-foreground">{settlementName(row.month, today, false)}</span>
-      {/* 'YYYY-MM 기록'이 하이픈에서 끊기지 않게 낱말 단위로만 줄바꿈 */}
-      {row.kind !== "gap" && (
-        <span className="block text-xs text-muted-foreground">
-          {row.recordLabel.split(" ").map((w, i) => <Fragment key={i}>{i > 0 && " "}<span className="whitespace-nowrap">{w}</span></Fragment>)}
-        </span>
-      )}
+      {/* 레거시 'YYYY-MM 기록'은 56px 열에서 '2026-'/'08 기록'으로 줄바꿈 허용(nowrap이면 열이 63px로 넓어져 375 무스크롤 깨짐) */}
+      {row.kind !== "gap" && <span className="block text-xs text-muted-foreground">{row.recordLabel}</span>}
       {/* 배지 기본 px-1.5 → px-1: 월 열이 56px 안에 들어가 375px 자산군 4개 무스크롤 유지 */}
       {row.kind !== "gap" && row.current && <span className={cn(GROUP_BADGE, "mt-0.5 whitespace-nowrap px-1")}>진행 중</span>}
     </th>
