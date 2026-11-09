@@ -49,8 +49,8 @@
 ## 열린 릴리스
 
 - **[developer 2026-11-09] 4.65 = #122 외화 환율 잔차를 환율 원인으로(#117 D3+P5b)** (브랜치 issue-4.65, origin/main eb204e4 분기, 커밋 c984e0c, PR #123 draft, 폴더 `issues/4.65-122-fx-residual`, risk:medium, COO 자체 승인 트랙). → **머지 완료 dc4133d(v4.65, 11-09), 운영 스모크 PASS.**
-- **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). 개발 완료·draft PR·qa 대기(G1~G7).
-- **[developer 2026-11-09] 4.62 = #115 품질 정돈 묶음 2** (브랜치 issue-4.62, origin/main 9709e2e 분기, 커밋 a7a71ad, 폴더 `issues/4.62-115-quality-batch-2`, 병행: 4.61 머지 후 origin/main merge). 개발 완료·qa 대기.
+- **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). → **머지 완료 f68adc3(v4.63), 운영 스모크 PASS.**
+- **[developer 2026-11-09] 4.62 = #115 품질 정돈 묶음 2** (브랜치 issue-4.62, origin/main 9709e2e 분기, 커밋 a7a71ad, 폴더 `issues/4.62-115-quality-batch-2`, 병행: 4.61 머지 후 origin/main merge). → **머지 완료 9a28a9f(v4.62), 운영 스모크 PASS.**
 - **개발 중 4.61 = #113 첫 화면 빈 화면 없애기(risk:medium, COO 자체 승인 범위)**: 브랜치 issue-4.61(main f77abef 기준, 독립 릴리스 — 열린 #109 issue-4.60과 분리). 문서 `issues/4.61-113-root-first-paint/`. 개발 완료 후 qa 대기. CLAUDE.md 4장 위임 ⑥ 문구 정정(11-09 결정)을 같은 PR에 포함.
 - **(2026-11-08 cto 재정리)** 개발 순서 4.51 #83(cherry-pick·재검증만) → 4.52 #93 → 4.53 /api/sync → 4.54 #58. 열린 개발 릴리스 1개·parked 규칙 유지, 번호는 머지 순서대로. 아래 옛 줄의 #83=4.50/4.51·#58=4.49/4.52 표기는 이 줄로 대체.
 - **개발 중 4.50 = #91 주식·코인 스크린샷 보유 현황 맞추기(risk:high, 대표 승인, 대표 직접 요청)**: COO 축소 판정(K1~K4·S1~S8), design-review ~11/12, 개발 11/12~11/20(11/17까지 주식 핵심 qa 인계 불가 시 코인 분리), qa 11/21~23, 대표 승인 요청 ~11/24, 목표 머지 ≤11/26(마감 아님). #83(issue-4.48 대기)은 머지 준비 시 남은 번호 중 최소(예상 4.51), #58은 개발 진입 시 배정(예상 4.52).
