@@ -211,7 +211,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
 }
 
 export function CryptoTab() {
-  const { assetData, deleteCrypto, saveData, getAssetSummary } = useAssetData();
+  const { assetData, deleteCrypto, deleteCryptos, getAssetSummary } = useAssetData();
   const summary = getAssetSummary();
 
   const handleDelete = (id: string) => {
@@ -220,8 +220,7 @@ export function CryptoTab() {
   };
 
   const handleDeleteGroup = (ids: string[]) => {
-    const idSet = new Set(ids);
-    saveData({ ...assetData, crypto: assetData.crypto.filter((c) => !idSet.has(c.id)) });
+    deleteCryptos(ids);
     toast.success("삭제되었습니다.");
   };
 

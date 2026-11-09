@@ -102,8 +102,10 @@ export function ProfitMetric({
   shotBig = false,
 }: ProfitMetricProps) {
   const effectiveRate = rate ?? (cost && cost > 0 ? (profit / cost) * 100 : 0);
-  const sign = profit >= 0 ? "+" : "";
-  const color = getProfitLossColor(profit);
+  // 표시 기준(반올림 원 단위)이 0이면 부호 없이 회색 — 매입가 비운 실물 '+0원' 붉은색 방지(#109). getProfitLossColor는 공용이라 건드리지 않는다
+  const isZero = Math.round(profit) === 0;
+  const sign = profit >= 0 && !isZero ? "+" : "";
+  const color = isZero ? "text-muted-foreground" : getProfitLossColor(profit);
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
   const amountCls = screenshotMode ? shotTok.profitAmount : "text-base lg:text-lg font-bold tabular-nums whitespace-nowrap";
   const rateCls = screenshotMode ? shotTok.profitRate : "text-sm lg:text-base font-bold tabular-nums whitespace-nowrap";
@@ -111,7 +113,7 @@ export function ProfitMetric({
     <span className="inline-flex items-baseline gap-1">
       {prefix}
       <span className={`${amountCls} ${color}`}>
-        {!hideAmountSign && sign}{formatShort(Math.round(profit))}
+        {!hideAmountSign && sign}{formatShort(isZero ? 0 : Math.round(profit))}
       </span>
       <span className={`${rateCls} ${color}`}>
         ({sign}{effectiveRate.toFixed(decimals)}%)

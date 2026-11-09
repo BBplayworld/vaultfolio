@@ -48,11 +48,14 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
   const bodyRef = useRef<HTMLDivElement>(null);
   const saveRef = useRef<HTMLButtonElement>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goAddRef = useRef(false);
+  const openerRef = useRef<HTMLElement | null>(null); // 열기 직전 포커스 요소(FAB가 숨은 화면의 복귀 후보)
 
   // 열 때 1회: 최신 보유 목록을 읽어 행을 고정한다(열려 있는 동안 현재 값은 바뀌지 않음)
   useEffect(() => {
     const handler = (e: Event) => {
       if ((e as CustomEvent<{ category?: BalanceCategory }>).detail?.category !== category) return;
+      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       const fresh = getAssetData();
       const mul = (c?: string) => getMultiplier(c, exchangeRates);
       const list = category === "cash"
@@ -128,7 +131,19 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
     else saveRef.current?.focus();
   };
 
+  // 여는 버튼(FAB 시트 안)이 같은 클릭에서 사라져 Radix가 돌려줄 요소가 없다 → 보이는 FAB → 열기 직전 요소 → main 순으로 복귀(#109)
+  const restoreFocus = (e: Event) => {
+    e.preventDefault();
+    if (goAddRef.current) { goAddRef.current = false; return; } // '새로 추가'로 다른 창이 이어서 열리면 그 창에 포커스를 맡긴다
+    const fab = Array.from(document.querySelectorAll<HTMLElement>('[data-tutorial="tutorial-fab"]')).find((el) => el.getClientRects().length > 0 && !el.closest(".opacity-0")); // 스크롤로 숨은 FAB(opacity-0)는 제외
+    const opener = openerRef.current?.isConnected ? openerRef.current : null;
+    const main = document.querySelector<HTMLElement>("main");
+    if (main && !main.hasAttribute("tabindex")) { main.setAttribute("tabindex", "-1"); main.classList.add("outline-none"); }
+    (fab ?? opener ?? main)?.focus({ preventScroll: true });
+  };
+
   const goAdd = () => {
+    goAddRef.current = true;
     setOpen(false);
     window.dispatchEvent(new CustomEvent(copy.addEvent, { detail: { mode: "manual" } }));
   };
@@ -140,6 +155,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
         className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
         onInteractOutside={guard}
         onEscapeKeyDown={guard}
+        onCloseAutoFocus={restoreFocus}
       >
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
           <DialogTitle className="text-base font-bold text-balance break-keep">{copy.title}</DialogTitle>

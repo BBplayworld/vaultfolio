@@ -4,6 +4,7 @@ import { lookupTicker } from "./ticker-map";
 import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
+import { isTinyImage } from "./image-size";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
@@ -649,6 +650,18 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 /** /ratio 입구 요청의 모든 429 문구(일반 IP·입구·전역 공통) */
 const RATIO_LIMIT_MESSAGE = "오늘 미리보기 이용이 많아 마감됐어요. 내일 다시 시도해 주세요.";
 
+// 타입별 후처리 + 응답 — Gemini 결과와 작은 이미지 가드(빈 배열)가 같은 응답 형태를 쓴다
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function respondParsed(assetType: ParseAssetType, geminiRaw: any[], todayStr: string) {
+  if (assetType === "crypto") return NextResponse.json({ cryptos: processCryptoResults(geminiRaw as GeminiCrypto[], todayStr) });
+  if (assetType === "cash") return NextResponse.json({ cashes: processCashResults(geminiRaw as GeminiCash[], todayStr) });
+  if (assetType === "loan") return NextResponse.json({ loans: processLoanResults(geminiRaw as GeminiLoan[], todayStr) });
+  if (assetType === "trade") return NextResponse.json({ trades: processTradeResults(geminiRaw as GeminiTrade[], todayStr) });
+  if (assetType === "crypto-trade") return NextResponse.json({ cryptoTrades: processCryptoTradeResults(geminiRaw as GeminiCryptoTrade[], todayStr) });
+  // stock (기본)
+  return NextResponse.json({ stocks: processStockResults(geminiRaw as GeminiStock[], todayStr) });
+}
+
 export async function POST(request: Request) {
   // 본문 파싱 전 출처·크기(이미지 10MB + multipart 여유) 검사 — 대용량 본문을 메모리에 올리기 전에 차단
   const blocked = guardRequest(request, { route: "parse-screenshot", maxBodyBytes: MAX_IMAGE_BYTES + 512 * 1024, l1PerMinute: 20 });
@@ -697,6 +710,12 @@ export async function POST(request: Request) {
   const arrayBuffer = await imageFile.arrayBuffer();
   if (!matchesImageSignature(new Uint8Array(arrayBuffer, 0, Math.min(16, arrayBuffer.byteLength)), imageFile.type)) {
     return NextResponse.json({ error: "JPG, PNG, WEBP, HEIC 형식만 지원합니다." }, { status: 400 });
+  }
+
+  // 너무 작은 이미지(긴 변 < 200px)는 Gemini를 부르지 않고 빈 결과를 돌려준다 — 한도 차감 전에 거른다.
+  // 판독 실패·HEIC는 통과. 크기·바이트는 로그하지 않는다(#109)
+  if (isTinyImage(new Uint8Array(arrayBuffer), imageFile.type)) {
+    return respondParsed(assetType, [], todayStr);
   }
 
   // 비중 미리보기(/ratio) 입구 요청은 전용 풀 한도를 추가로 적용하고 429 문구도 마감 안내로 바꾼다
@@ -782,32 +801,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 타입별 후처리
-    if (assetType === "crypto") {
-      const cryptos = processCryptoResults(geminiRaw as GeminiCrypto[], todayStr);
-      return NextResponse.json({ cryptos });
-    }
-    if (assetType === "cash") {
-      const cashes = processCashResults(geminiRaw as GeminiCash[], todayStr);
-      return NextResponse.json({ cashes });
-    }
-    if (assetType === "loan") {
-      const loans = processLoanResults(geminiRaw as GeminiLoan[], todayStr);
-      return NextResponse.json({ loans });
-    }
-
-    if (assetType === "trade") {
-      const trades = processTradeResults(geminiRaw as GeminiTrade[], todayStr);
-      return NextResponse.json({ trades });
-    }
-    if (assetType === "crypto-trade") {
-      const cryptoTrades = processCryptoTradeResults(geminiRaw as GeminiCryptoTrade[], todayStr);
-      return NextResponse.json({ cryptoTrades });
-    }
-
-    // stock (기본)
-    const stocks = processStockResults(geminiRaw as GeminiStock[], todayStr);
-    return NextResponse.json({ stocks });
+    return respondParsed(assetType, geminiRaw, todayStr);
 
   } catch (e) {
     const message = e instanceof Error ? e.message : "알 수 없는 오류";

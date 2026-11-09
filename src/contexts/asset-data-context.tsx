@@ -10,7 +10,8 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/finance/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
-import { buildLink, cryptoLinkTrade, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
+import { todayKst } from "@/lib/tax-utils";
+import { buildLink, cryptoLinkTrade, findLinkedRecord, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
 import { pruneTransactions } from "@/lib/trade/trade-utils";
 import { pruneCashTransactions } from "@/lib/trade/cash-tx-utils";
 import { pruneLoanTransactions } from "@/lib/trade/loan-tx-utils";
@@ -113,9 +114,11 @@ interface AssetDataContextType {
   addStockRaw: (stock: Stock) => boolean;
   updateStock: (id: string, stock: Partial<Stock>) => boolean;
   deleteStock: (id: string) => boolean;
+  deleteStocks: (ids: string[]) => boolean;
   addCrypto: (crypto: Crypto) => boolean;
   updateCrypto: (id: string, crypto: Partial<Crypto>) => boolean;
   deleteCrypto: (id: string) => boolean;
+  deleteCryptos: (ids: string[]) => boolean;
   addCash: (cash: Cash) => boolean;
   updateCash: (id: string, cash: Partial<Cash>) => boolean;
   deleteCash: (id: string) => boolean;
@@ -242,6 +245,47 @@ export function computeNetAsset(
   const totalValue = realEstateValue + physicalValue + financialAsset;
   const netAsset = totalValue - loanBalance - tenantDepositTotal;
   return { stockValue, cryptoValue, cashValue, realEstateValue, physicalValue, loanBalance, tenantDepositTotal, financialAsset, totalValue, netAsset };
+}
+
+// 자산 삭제 계획(순수) — 삭제 시점 평가액(스냅샷 합계와 같은 computeNetAsset, 원화 환산)이 반올림 0원 이하인
+// 항목(전량 매도·코인 부동소수 잔량·시세 0·상장폐지)은 거래를 남긴다: 삭제가 스냅샷 값을 바꾸지 않으므로
+// 거래까지 지우면 매도 입금↔시세 두 다리가 새로 생긴다(C24). 그 외 항목은 id 기준으로 거래를 전부 지운다 —
+// 안 지우면 반영 거래가 결산·홈 원인에 영원히 집계된다(deleteStock 2026-08 수정과 같은 원리, #109).
+// 예외 ②: 연결 짝 기록이 있고 거래일 또는 짝 기록일이 이번 달 1일 이전인 거래는 평가액과 무관하게 남긴다 —
+// 닫힌 달의 id 짝 상쇄가 깨져 순자산 변화 0인 달에 '출금 −X / 기록 안 된 변화 +X' 두 줄이 새로 생기는 것을 막는다(C24).
+// 연결 짝 기록(현금·대출)·계좌 잔액은 건드리지 않는다(4.58 F24: 고아 짝 기록 유지, 잔액 불변).
+const EMPTY_AFTER_DELETE: Partial<AssetData> = { realEstate: [], stocks: [], crypto: [], cash: [], loans: [], physicalAssets: [] };
+function keepClosedMonthLinked(data: AssetData, txId: string, txDate: string, today: string): boolean {
+  const link = findLinkedRecord(data, txId);
+  if (!link) return false;
+  const monthStart = `${today.slice(0, 7)}-01`;
+  return txDate < monthStart || link.record.date < monthStart;
+}
+export function planDeleteCryptos(data: AssetData, ids: string[], rates: { USD: number; JPY: number }, today: string = todayKst()): AssetData {
+  const idSet = new Set(ids);
+  const keepTx = new Set(
+    data.crypto
+      .filter((c) => idSet.has(c.id) && Math.round(computeNetAsset({ ...data, ...EMPTY_AFTER_DELETE, crypto: [c] }, rates).cryptoValue) <= 0)
+      .map((c) => c.id),
+  );
+  return {
+    ...data,
+    crypto: data.crypto.filter((c) => !idSet.has(c.id)),
+    cryptoTransactions: (data.cryptoTransactions || []).filter((t) => !idSet.has(t.cryptoId) || keepTx.has(t.cryptoId) || keepClosedMonthLinked(data, t.id, t.date, today)),
+  };
+}
+export function planDeleteStocks(data: AssetData, ids: string[], rates: { USD: number; JPY: number }, today: string = todayKst()): AssetData {
+  const idSet = new Set(ids);
+  const keepTx = new Set(
+    data.stocks
+      .filter((s) => idSet.has(s.id) && Math.round(computeNetAsset({ ...data, ...EMPTY_AFTER_DELETE, stocks: [s] }, rates).stockValue) <= 0)
+      .map((s) => s.id),
+  );
+  return {
+    ...data,
+    stocks: data.stocks.filter((s) => !idSet.has(s.id)),
+    transactions: (data.transactions || []).filter((t) => !idSet.has(t.stockId) || keepTx.has(t.stockId) || keepClosedMonthLinked(data, t.id, t.date, today)),
+  };
 }
 
 // 투입원가 분해 — getAssetSummary와 saveSnapshots가 동일 수식을 공유(중복·발산 방지)
@@ -1361,21 +1405,16 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
-  const deleteStock = useCallback(
-    (id: string) => {
-      // 종목 삭제 시 그 종목을 참조하는 거래 로그도 함께 정리한다 — 안 지우면 reflectedTradeFlow가
-      // 삭제된 종목의 반영 거래를 영원히 집계해 원인분해에 설명 안 되는 유령 원인이 새어나간다
-      // (deleteCash의 cashTransactions와 동일한 결함, 2026-08 수정).
-      const newData = {
-        ...assetData,
-        stocks: assetData.stocks.filter((item) => item.id !== id),
-        transactions: (assetData.transactions || []).filter((t) => t.stockId !== id),
-      };
+  // 묶음 삭제 본체 — saveData 1회. 거래 정리 규칙은 planDeleteStocks 주석 참조(2026-08 거래 정리 + #109 평가액 0 예외)
+  const deleteStocks = useCallback(
+    (ids: string[]) => {
       track("asset_delete", { asset_type: "stock" });
-      return saveData(newData);
+      return saveData(planDeleteStocks(assetData, ids, exchangeRates));
     },
-    [assetData, saveData]
+    [assetData, exchangeRates, saveData]
   );
+
+  const deleteStock = useCallback((id: string) => deleteStocks([id]), [deleteStocks]);
 
   // 코인
   const addCrypto = useCallback(
@@ -1397,14 +1436,15 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
-  const deleteCrypto = useCallback(
-    (id: string) => {
-      const newData = { ...assetData, crypto: assetData.crypto.filter((item) => item.id !== id) };
+  const deleteCryptos = useCallback(
+    (ids: string[]) => {
       track("asset_delete", { asset_type: "crypto" });
-      return saveData(newData);
+      return saveData(planDeleteCryptos(assetData, ids, exchangeRates));
     },
-    [assetData, saveData]
+    [assetData, exchangeRates, saveData]
   );
+
+  const deleteCrypto = useCallback((id: string) => deleteCryptos([id]), [deleteCryptos]);
 
   // 현금
   const addCash = useCallback(
@@ -1875,9 +1915,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         addStockRaw,
         updateStock,
         deleteStock,
+        deleteStocks,
         addCrypto,
         updateCrypto,
         deleteCrypto,
+        deleteCryptos,
         addCash,
         updateCash,
         deleteCash,
