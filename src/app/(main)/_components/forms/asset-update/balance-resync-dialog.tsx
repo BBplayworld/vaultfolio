@@ -144,7 +144,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
           <DialogTitle className="text-base font-bold text-balance break-keep">{copy.title}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-pretty break-keep leading-relaxed">
-            바뀐 잔액만 입력하세요. 입출금 기록은 생기지 않아요.
+            은행 앱 잔액을 그대로 넣으면 돼요. 매수·매도·상환으로 바뀐 돈도 이걸로 맞춰져요(입출금 기록을 따로 남기지 않아도 돼요)
           </DialogDescription>
         </DialogHeader>
 

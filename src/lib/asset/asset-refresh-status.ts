@@ -42,6 +42,11 @@ export function markCategoryRefreshed(category: RefreshCategory): void {
   writeMeta({ categories: { ...meta.categories, [category]: new Date().toISOString() } });
 }
 
+/** 카테고리의 마지막 최신화 시각(ISO). 기록 없으면 null */
+export function lastRefreshedAt(category: RefreshCategory): string | null {
+  return readMeta().categories?.[category] ?? null;
+}
+
 /** 마지막 갱신 이후 경과 일수. 이력이 없으면 null */
 export function daysSinceRefresh(category: RefreshCategory): number | null {
   const raw = readMeta().categories?.[category];

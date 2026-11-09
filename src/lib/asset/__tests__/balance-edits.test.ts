@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBalanceEdits, orderBalanceRows, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
+import { kstDateOfIso, shouldWarnTxAfterResync, applyBalanceEdits, orderBalanceRows, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
 import type { Cash, Loan } from "@/types/asset";
 
 const cash = (id: string, balance: number, extra: Partial<Cash> = {}): Cash => ({
@@ -92,5 +92,23 @@ describe("orderBalanceRows (상세 탭 순서)", () => {
   it("대출은 잔액 큰 순, 완납(0)은 맨 뒤", () => {
     const r = orderBalanceRows("loan", [loan("z", 0), loan("a", 100), loan("b", 300)], mul);
     expect(r.map((x) => x.id)).toEqual(["b", "a", "z"]);
+  });
+});
+
+describe("shouldWarnTxAfterResync (맞춘 뒤 입출금 기록 이중 반영 경고)", () => {
+  it("KST 날짜 변환: UTC 15시 이후는 다음 날", () => {
+    expect(kstDateOfIso("2026-11-28T14:59:00.000Z")).toBe("2026-11-28");
+    expect(kstDateOfIso("2026-11-28T15:00:00.000Z")).toBe("2026-11-29");
+    expect(kstDateOfIso("bad")).toBeNull();
+    expect(kstDateOfIso(null)).toBeNull();
+  });
+  it("거래일 이후(같은 날 포함) 맞춘 기록 + 즉시 반영이면 경고, 그 외 없음", () => {
+    const at = "2026-11-28T03:00:00.000Z";
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-27", reflected: true, refreshedAtIso: at })).toBe(true);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-28", reflected: true, refreshedAtIso: at })).toBe(true);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-29", reflected: true, refreshedAtIso: at })).toBe(false);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-27", reflected: false, refreshedAtIso: at })).toBe(false);
+    expect(shouldWarnTxAfterResync({ txDate: "", reflected: true, refreshedAtIso: at })).toBe(false);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-27", reflected: true, refreshedAtIso: undefined })).toBe(false);
   });
 });

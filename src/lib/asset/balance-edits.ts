@@ -93,3 +93,30 @@ export function orderBalanceRows<T extends BalanceItem & { currency?: string }>(
     })
     .map((x) => x.item);
 }
+
+// ── 입출금 기록과 잔액 맞추기의 이중 반영 경고(#93 후속, cto 권고 (a)②) ──
+// 맞추기는 잔액 절대값이라 그 시점까지의 입출금·매수·상환이 이미 녹아 있다. 거래일 이후에 그 카테고리를 맞춘 기록이
+// 있는데 '즉시 반영'으로 기록하면 같은 돈이 두 번 빠질 수 있다. 기록은 기기 로컬 assetRefresh(스키마 변경 0)를 쓴다.
+
+/** 임시 문구 — planner가 4.52 spec에 확정본을 쓰면 교체 */
+export const TX_AFTER_RESYNC_WARNING = "이 날짜 이후에 잔액을 맞춘 기록이 있어요. 맞춘 잔액에 이미 들어 있다면 즉시 반영을 해제하세요.";
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** ISO 시각 → KST 날짜(YYYY-MM-DD). 잘못된 값은 null */
+export function kstDateOfIso(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  return new Date(t + KST_OFFSET_MS).toISOString().split("T")[0];
+}
+
+/**
+ * 거래일(YYYY-MM-DD) 이후(같은 날 포함)에 그 카테고리를 맞춘 기록이 있고 '즉시 반영'이면 true.
+ * 반영하지 않는(과거 소급 기록용) 거래는 잔액을 바꾸지 않으므로 경고하지 않는다.
+ */
+export function shouldWarnTxAfterResync(opts: { txDate: string; reflected: boolean; refreshedAtIso: string | null | undefined }): boolean {
+  if (!opts.reflected || !opts.txDate) return false;
+  const refreshed = kstDateOfIso(opts.refreshedAtIso);
+  return refreshed !== null && refreshed >= opts.txDate;
+}

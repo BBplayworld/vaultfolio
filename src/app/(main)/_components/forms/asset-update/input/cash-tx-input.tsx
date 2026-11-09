@@ -1,5 +1,9 @@
 "use client";
 
+import { AlertCircle } from "lucide-react";
+import { ASSET_THEME } from "@/config/theme";
+import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
+import { shouldWarnTxAfterResync, TX_AFTER_RESYNC_WARNING } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -268,6 +272,13 @@ export function CashTxInput() {
                   </FormItem>
                 )}
               />
+
+              {shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("cash") }) && (
+                <p data-testid="tx-after-resync-warning" className="flex items-start gap-1.5 text-sm break-keep text-pretty" style={{ color: ASSET_THEME.importantHex }}>
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <span>{TX_AFTER_RESYNC_WARNING}</span>
+                </p>
+              )}
 
               {reflected && selectedCash && form.watch("amount") > 0 && (
                 <div className="rounded-lg bg-muted/40 dark:bg-muted/25 p-3 text-sm">

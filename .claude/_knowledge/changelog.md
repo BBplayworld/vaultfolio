@@ -13,6 +13,7 @@
 - 변경 ≥1이면 바깥 탭·Esc 차단, `새 계좌 추가` 링크 비활성. 데모 시드에 USD 현금 1개 추가(1,000 USD).
 - p2: ① 연 탭 빈 상태·1점 Hero 인라인 링크 `작년 말 순자산 넣기`+연도별 저장 `asset_save` 계측 ② 현금·대출·주식·코인 직접 추가·수정 성공 시 `markCategoryRefreshed` ③ 기능 팁 `isNew` 3개 해제 ④ 업로드 문구 `눌러서 사진 고르기`·`bg-amber-500/10 px-3` 오타 ⑤ FAB `환율 설정`→`적용 환율`, `exchange-rate-input.tsx` 삭제 ⑥ 자동 저장 실패 알림 `saveAssetDataNotify`(`lib/asset/save-failure.ts`, 세션당 1회 토스트+GA `저장 실패`).
 - 스키마·저장 키·동기화·서버 전송·스냅샷·결산 코드 diff 0. 결산 픽스처 ①~④·월초 귀속은 `lib/asset/__tests__/balance-resync-settlement.test.ts`로 고정(외화 직접 수정+환율 변동 시 늘어난 수량의 환율 변동분은 현행 엔진상 시세 변동에 남음 — v1 무변경).
+- 후속(cto 권고 (a)): 머리말 교체(임시), 현금·대출 입출금 기록에서 거래일 이후 맞춘 기록(`assetRefresh`)이 있으면 `즉시 반영` 아래 경고 1줄(`shouldWarnTxAfterResync`·`TX_AFTER_RESYNC_WARNING`, 문구 임시), 자산 간 흐름 시나리오 S1~S7을 `cross-asset-flow-scenarios.test.ts`로 현재 동작 고정.
 - 알려진 한계: 그대로 확인 저장 없음, `assetRefresh`는 기기 로컬, 직접 고친 차액은 `기록 안 된 변화`.
 
 ## 2026-11-08 (v4.53)

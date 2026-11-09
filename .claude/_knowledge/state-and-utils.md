@@ -796,6 +796,7 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 
 ### 잔액 맞추기·저장 실패 알림 (`src/lib/asset/balance-edits.ts`·`save-failure.ts`, #4.52 #93)
 - `balance-edits.ts`(순수): `applyBalanceEdits(list, edits)`→`{list, applied}`(balance만 교체, 없는 id 건너뜀, 같은 값 미계산)·`checkBalanceRow(category, current, next)`→`{changed, issue: "cash-zero"|"magnitude"|null}`·`sanitizeBalanceText`/`parseBalanceText`/`formatBalanceText`·`maxDecimalsOf`·`orderBalanceRows`(상세 탭 순서). 호출부는 `getAssetData()` 최신 목록에 적용해 `saveData` 1회(렌더 클로저의 `updateCash` 반복 금지)
+- 이중 반영 경고: `shouldWarnTxAfterResync({txDate, reflected, refreshedAtIso})`·`kstDateOfIso`·`TX_AFTER_RESYNC_WARNING`(balance-edits.ts), `lastRefreshedAt(category)`(asset-refresh-status.ts). `cash-tx-input`·`loan-tx-input`이 사용
 - `save-failure.ts`: `saveAssetDataNotify(data)` — `saveAssetData` 래퍼, 실패 시 세션당 1회 토스트 + GA `feature_use save_failed`. 자동 저장 경로(시세·스냅샷·마이그레이션·공유 반영·닉네임)는 `saveAssetData` 대신 이 함수를 쓴다(반환값 버리기 금지). 사용자 편집은 `saveData` 경로의 각자 실패 토스트
 
 ### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
