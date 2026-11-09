@@ -17,6 +17,16 @@
 
 ---
 
+## 2026-11-09 (v4.59)
+
+### 이어서 맞추기 — 보유 현황 정렬·저장 후 목록 복귀 (#4.59, 이슈 #110, risk low)
+- **왜**: 자산군마다 저장할 때마다 시트가 닫혀 3~4탭을 반복하고 "다 했나"를 기억해야 했다.
+- `markCategoryRefreshed(category, {notify?})`가 저장 후 window 이벤트 `asset-category-refreshed`를 발행(호출부 수정 0). 보유 현황 맞추기는 결과 화면이 열려 있어 `notify:false` + 닫을 때 `notifyCategoryRefreshed`, 거래 스크린샷 2곳은 `notify:false`.
+- FAB: 보유 우선 정렬·`추가`·오늘 맞춤 ✓, 창 선택 시 메모리 ref로 대기 → 같은 자산군 신호에 holdings로 복귀(상단 줄·[완료]). 홈 팁·결산 진입 동일. 순수 함수 `lib/asset/resync-return.ts`, `isRefreshedToday`(KST).
+- GA는 `feature_use` category `resync_continue`(page_title `이어서 맞추기`) 1개만 추가. 스키마·저장 키·동기화·서버 전송 변경 0.
+
+---
+
 ## 2026-11-09 (v4.58)
 
 ### 거래 연결 계좌 — 거래 저장 시 현금·대출을 함께 증감 (#4.58, 이슈 #103, risk high)

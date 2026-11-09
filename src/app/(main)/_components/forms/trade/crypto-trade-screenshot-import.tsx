@@ -180,7 +180,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
     }
     if (addList.length === 0) {
       toast.success(`기존 거래 ${overwriteSkipCount}건을 유지했습니다.`);
-      markCategoryRefreshed("crypto");
+      markCategoryRefreshed("crypto", { notify: false });
       onSaved?.(0);
       handleClose();
       return;
@@ -265,7 +265,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
         `${ordered.length}건의 거래가 등록되었습니다.` +
         (overwriteSkipCount > 0 ? ` (중복 ${overwriteSkipCount}건은 기존 유지)` : "")
       );
-      markCategoryRefreshed("crypto");
+      markCategoryRefreshed("crypto", { notify: false });
       track("transaction_save", { asset_type: "crypto", method: "screenshot" });
       onSaved?.(ordered.length);
       handleClose();

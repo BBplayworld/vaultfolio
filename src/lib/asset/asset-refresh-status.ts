@@ -37,10 +37,31 @@ function writeMeta(patch: Partial<AssetRefreshMeta>): void {
   } catch { /* 기록 실패 무시 */ }
 }
 
-/** 보유현황 저장 성공 시 호출 — 단건 카드 클릭이든 다건 시퀀스든 동일하게 호출한다 */
-export function markCategoryRefreshed(category: RefreshCategory): void {
+/** 저장 완료 신호 — FAB가 "이어서 맞추기" 복귀에 쓴다(#110). 로컬 window 이벤트라 서버·저장과 무관 */
+export const CATEGORY_REFRESHED_EVENT = "asset-category-refreshed";
+
+export function notifyCategoryRefreshed(category: RefreshCategory): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent?.(new CustomEvent(CATEGORY_REFRESHED_EVENT, { detail: { category } }));
+}
+
+/**
+ * 보유현황 저장 성공 시 호출 — 단건 카드 클릭이든 다건 시퀀스든 동일하게 호출한다.
+ * 저장 후 창이 바로 닫히지 않거나(보유 현황 맞추기 결과 화면) 맞추기와 무관한 경로(거래 스크린샷)는 notify:false.
+ */
+export function markCategoryRefreshed(category: RefreshCategory, opts?: { notify?: boolean }): void {
   const meta = readMeta();
   writeMeta({ categories: { ...meta.categories, [category]: new Date().toISOString() } });
+  if (opts?.notify !== false) notifyCategoryRefreshed(category);
+}
+
+/** 오늘(KST) 이미 맞춘 자산군인가 — lastRefreshedAt(UTC ISO)의 KST 날짜 == 오늘 */
+export function isRefreshedToday(category: RefreshCategory): boolean {
+  const iso = lastRefreshedAt(category);
+  if (!iso) return false;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return false;
+  return new Date(t + 9 * 60 * 60 * 1000).toISOString().split("T")[0] === todayStr();
 }
 
 /** 카테고리의 마지막 최신화 시각(ISO). 기록 없으면 null */
