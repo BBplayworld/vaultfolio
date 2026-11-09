@@ -12,7 +12,7 @@ export function restoreFocusAfterDialog(opener: HTMLElement | null, opts?: { ski
   // 보조 안전장치: 닫는 창 외에 열린 대화상자가 있으면 그 창이 포커스를 갖는다(포커스 탈취 방지)
   if (opts?.skipIfOtherDialog && document.querySelector('[role="dialog"]:not([data-state="closed"]):not(#fab-sheet)')) return;
   const fab = findVisibleFab();
-  const connected = opener?.isConnected ? opener : null;
+  const connected = opener && opener !== document.body && opener.isConnected ? opener : null; // body는 포커스 대상이 아니므로 main으로
   const main = document.querySelector<HTMLElement>("main");
   if (main && !main.hasAttribute("tabindex")) { main.setAttribute("tabindex", "-1"); main.classList.add("outline-none"); }
   (fab ?? connected ?? main)?.focus({ preventScroll: true });
