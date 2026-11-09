@@ -21,6 +21,8 @@ import type { Crypto, CryptoTransaction } from "@/types/asset";
 import { computeNewPosition, findDuplicateTransaction, TRANSACTION_RETENTION_YEARS, type PositionLike } from "@/lib/trade/trade-utils";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { formatCurrency } from "@/lib/number-utils";
+import { LinkAccountRow } from "../../trade/link-account-row";
+import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
 import { CryptoTradeScreenshotImport } from "../../trade/crypto-trade-screenshot-import";
 
 const cryptoTxFormSchema = z.object({
@@ -60,6 +62,7 @@ export function CryptoTxInput() {
   const [mode, setMode] = useState<"select" | "manual">("select");
   const [lockedCrypto, setLockedCrypto] = useState(false); // 특정 코인 사전선택 진입
   const [dupPending, setDupPending] = useState<{ tx: CryptoTransaction; coin: Crypto } | null>(null);
+  const [linkValue, setLinkValue] = useState(LINK_NONE); // 연결 계좌 — 매번 '연결 안 함'으로 열림
 
   const cryptoAssets = assetData.crypto;
 
@@ -82,6 +85,15 @@ export function CryptoTxInput() {
   const watchedQty = form.watch("quantity");
   const watchedPrice = form.watch("price");
   const selectedCrypto = cryptoAssets.find((c) => c.id === selectedCryptoId);
+  const watchedDate = form.watch("date");
+
+  // 연결 계좌 평가 — 화면 표시(미리보기·오류)와 제출 차단이 같은 값(코인은 항상 KRW)
+  const linkTrade = selectedCrypto
+    ? { type: txType, quantity: watchedQty || 0, price: watchedPrice || 0, currency: "KRW" as const, date: watchedDate, name: selectedCrypto.name }
+    : null;
+  const linkEval: LinkEval = linkTrade && watchedQty > 0 && watchedPrice > 0
+    ? evaluateLink(assetData, linkTrade, linkValue, reflected)
+    : { state: "none" };
 
   // 반영 후 예상 포지션 인라인 미리보기 (주식 trade-input.tsx와 동일 패턴)
   const reflectionPreview = useMemo(() => {
@@ -123,6 +135,7 @@ export function CryptoTxInput() {
     setMode("select");
     setLockedCrypto(false);
     setDupPending(null);
+    setLinkValue(LINK_NONE);
   }, [form]);
 
   const buildTx = (data: CryptoTxFormValues): CryptoTransaction => {
@@ -176,6 +189,12 @@ export function CryptoTxInput() {
       }
     }
 
+    // 연결 계좌 오류(잔액 부족·초과 상환·대금 0 이하)는 거래 포함 전체 저장 차단 — 오류 문구는 화면에 이미 표시 중
+    if (data.reflected && linkEval.state === "error") {
+      track("transaction_save", { asset_type: "crypto", method: "manual", result: "blocked" });
+      return;
+    }
+
     const dup = findDuplicateTransaction(assetData.cryptoTransactions || [], "cryptoId", {
       assetId: tx.cryptoId, date: tx.date, quantity: tx.quantity, price: tx.price, type: tx.type,
     });
@@ -187,12 +206,14 @@ export function CryptoTxInput() {
   };
 
   const commit = (tx: CryptoTransaction, coin: Crypto) => {
+    const link = tx.reflected && linkEval.state === "ok" ? linkEval.choice : undefined;
     const ok = tx.reflected
-      ? addCryptoTransactionWithPosition(tx, coin.id, buildReflectionPatch(tx, coin))
+      ? addCryptoTransactionWithPosition(tx, coin.id, buildReflectionPatch(tx, coin), link)
       : addCryptoTransaction(tx);
     if (ok) {
       track("transaction_save", { asset_type: "crypto", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      toast.success(tx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
+      if (link) track("feature_use", { category: "linked_trade" });
+      toast.success(link ? linkSavedToast(tx.type, link.kind) : tx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }
   };
@@ -351,6 +372,11 @@ export function CryptoTxInput() {
                   </FormItem>
                 )}
               />
+
+              {/* 연결 계좌 — 즉시 반영 박스 바로 아래(#103) */}
+              {linkTrade && (
+                <LinkAccountRow data={assetData} trade={linkTrade} reflected={reflected} value={linkValue} onChange={setLinkValue} ev={linkEval} />
+              )}
 
               {/* 반영 후 예상 포지션 미리보기 */}
               {reflectionPreview && selectedCrypto && (

@@ -15,6 +15,8 @@ import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
 import { rollbackTransaction } from "@/lib/trade/trade-utils";
+import { planRemoveLink } from "@/lib/trade/linked-record";
+import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
 import { stockCategories } from "@/config/asset-options";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
@@ -180,13 +182,16 @@ export function StockTradesView() {
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
     const { tx, stock, preview } = deleteTarget;
-    deleteTransactionWithPosition(tx.id, stock.id, {
+    // 연결 계좌: 짝 기록이 실제로 있고 계좌도 있을 때만 함께 되돌린다(다이얼로그 안내와 같은 계산)
+    const linkPlan = planRemoveLink(assetData, tx.id);
+    const ok = deleteTransactionWithPosition(tx.id, stock.id, {
       quantity: preview.quantity,
       averagePrice: preview.avgPrice,
       purchaseExchangeRate: preview.avgExchangeRate || undefined,
       positionSource: "computed",
-    });
-    toast.success("거래가 삭제되고 포지션이 롤백되었습니다.");
+    }, linkPlan ? { revertLink: true } : undefined);
+    if (!ok) { setDeleteTarget(null); return; }
+    toast.success(`거래가 삭제되고 포지션이 롤백되었습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
     setDeleteTarget(null);
   };
 
@@ -376,6 +381,7 @@ export function StockTradesView() {
           tx={deleteTarget.tx}
           stock={deleteTarget.stock}
           rollbackPreview={deleteTarget.preview}
+          linkedNote={(() => { const p = planRemoveLink(assetData, deleteTarget.tx.id); return p ? revertNoteText(p) : undefined; })()}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
         />
