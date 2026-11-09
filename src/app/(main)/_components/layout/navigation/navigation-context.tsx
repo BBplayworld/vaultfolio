@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, useRef, ty
 import { recordVisit, viewToKey } from "@/lib/feature-usage";
 import { trackScreen, trackThemeMode } from "@/lib/analytics/ga";
 
-export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
+export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "physical" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 export type ActivityTab = "hub" | "change" | "dividend" | "report";
 
 // 자산 변화 화면 진입 상태(#32) — 해시에는 싣지 않는다(옛 해시 리다이렉트·결산 카드·FAB가 초기 탭을 지정)
@@ -25,7 +25,7 @@ export type AssetView =
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
-const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
+const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "dividend", "report"];
 // 옛 해시(북마크·공유 링크 보호) → 자산 변화의 해당 범위·기간으로 리다이렉트(#32)
 const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {

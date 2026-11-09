@@ -48,7 +48,7 @@ export type GaEvent =
   | "theme_mode";
 
 export const PARAM_VALUES = {
-  asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "yearly_net_asset"],
+  asset_type: ["stock", "crypto", "cash", "loan", "real_estate", "physical", "yearly_net_asset"],
   method: [
     // 입력 방식
     "manual", "screenshot",
@@ -166,6 +166,7 @@ const ASSET_TYPE_TITLES: Record<GaAssetType, string> = {
   cash: "현금",
   loan: "대출",
   real_estate: "부동산",
+  physical: "실물 자산",
   yearly_net_asset: "연도별 순자산",
 };
 
@@ -357,9 +358,9 @@ export function trackParse(
 }
 
 /** 보유 자산 건수(연도별 순자산 기록·거래내역 제외) */
-export function countAssets(data: Pick<AssetData, "stocks" | "crypto" | "cash" | "loans" | "realEstate"> | null | undefined): number {
+export function countAssets(data: Pick<AssetData, "stocks" | "crypto" | "cash" | "loans" | "realEstate"> & { physicalAssets?: unknown[] } | null | undefined): number {
   if (!data) return 0;
-  return (data.stocks?.length ?? 0) + (data.crypto?.length ?? 0) + (data.cash?.length ?? 0) + (data.loans?.length ?? 0) + (data.realEstate?.length ?? 0);
+  return (data.stocks?.length ?? 0) + (data.crypto?.length ?? 0) + (data.cash?.length ?? 0) + (data.loans?.length ?? 0) + (data.realEstate?.length ?? 0) + (data.physicalAssets?.length ?? 0);
 }
 
 // ── 첫 자산 저장 1회 판정(AC8) — 기기당 1회, secretasset_ga_flags에 기록 ──

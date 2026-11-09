@@ -166,28 +166,37 @@ const MATCH_DAYS = 3;
 const dayDiff = (a: string, b: string) => Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
 /**
- * 기록된 출금 ↔ 기록된 매수(주식·코인)·대출 상환 짝짓기(qa R4·R5, cto 판정 b). 구간 (from, to]의 반영 거래만 본다.
+ * 기록된 출금 ↔ 기록된 매수(주식·코인)·대출 상환·실물 신규 등록 짝짓기(qa R4·R5, cto 판정 b). 구간 (from, to]의 반영 거래만 본다.
  * 출금을 날짜순(같으면 id순)으로, 각 출금은 ±3일 안 후보 중 날짜가 가장 가까운 것부터(같으면 날짜·id순) 남은 금액 한도까지 짝짓는다.
  * 후보 금액은 여러 출금에 나눠 쓸 수 있으나 합계를 넘지 않는다. 금액 허용 오차·메모는 쓰지 않는다. 결정적.
  */
-export function matchRecordedTransfers(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): number {
-  if (!from) return 0;
+export interface RecordedTransferDetail {
+  out: { stock: number; crypto: number; physical: number; loan: number }; // 출금 ↔ 매수·실물 등록·상환 짝 금액(KRW)
+  in: { stock: number; crypto: number };                                   // 입금 ↔ 매도 짝 금액 — ② 확정 전이라 항상 0
+}
+
+/** 짝 내역(#103) — 결산 `matchedTransfer`와 홈 헤더 상쇄의 단일 출처. 규칙은 matchRecordedTransfers 주석과 같다 */
+export function matchRecordedTransferDetail(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): RecordedTransferDetail {
+  const detail: RecordedTransferDetail = { out: { stock: 0, crypto: 0, physical: 0, loan: 0 }, in: { stock: 0, crypto: 0 } };
+  if (!from) return detail;
+  type Kind = keyof RecordedTransferDetail["out"];
   const inWin = (d: string) => d > from && d <= to;
   const krw = (cur: string | undefined) => (cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1);
   const outs = (assetData.cashTransactions ?? [])
     .filter((t) => t.reflected && t.type === "withdrawal" && inWin(t.date))
     .map((t) => ({ id: t.id, date: t.date, left: t.amount * krw(t.currency) }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  const cands = [
+  const cands: { id: string; date: string; left: number; kind: Kind }[] = [
     ...(assetData.transactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({
-      id: `s:${t.id}`, date: t.date,
+      id: `s:${t.id}`, date: t.date, kind: "stock" as const,
       // 엔진 reflectedTradeFlow와 같은 환산 — 체결 환율 우선(JPY 100엔당), 없으면 현재 환율
       left: t.quantity * t.price * (t.exchangeRate && t.exchangeRate > 0 ? (t.currency === "JPY" ? t.exchangeRate / 100 : t.currency === "KRW" ? 1 : t.exchangeRate) : krw(t.currency)),
     })),
-    ...(assetData.cryptoTransactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({ id: `c:${t.id}`, date: t.date, left: t.quantity * t.price })),
-    ...(assetData.loanTransactions ?? []).filter((t) => t.reflected && t.type === "repay" && inWin(t.date)).map((t) => ({ id: `l:${t.id}`, date: t.date, left: t.amount })),
+    ...(assetData.cryptoTransactions ?? []).filter((t) => t.reflected && t.type === "buy" && inWin(t.date)).map((t) => ({ id: `c:${t.id}`, date: t.date, kind: "crypto" as const, left: t.quantity * t.price })),
+    ...(assetData.loanTransactions ?? []).filter((t) => t.reflected && t.type === "repay" && inWin(t.date)).map((t) => ({ id: `l:${t.id}`, date: t.date, kind: "loan" as const, left: t.amount })),
+    // 실물(#58): 거래내역이 없으므로 구간 안 매입일이 있는 신규분을 후보로 둔다(금액 = 매입가, 엔진 buy:physical과 같은 값)
+    ...(assetData.physicalAssets ?? []).filter((p) => p.purchaseDate && inWin(p.purchaseDate) && p.purchasePrice > 0).map((p) => ({ id: `p:${p.id}`, date: p.purchaseDate, kind: "physical" as const, left: p.purchasePrice })),
   ];
-  let matched = 0;
   for (const o of outs) {
     const near = cands
       .filter((c) => c.left > 0 && dayDiff(c.date, o.date) <= MATCH_DAYS)
@@ -195,10 +204,15 @@ export function matchRecordedTransfers(assetData: AssetData, from: string | null
     for (const c of near) {
       if (o.left <= 0) break;
       const m = Math.min(o.left, c.left);
-      o.left -= m; c.left -= m; matched += m;
+      o.left -= m; c.left -= m; detail.out[c.kind] += m;
     }
   }
-  return matched;
+  return detail;
+}
+
+export function matchRecordedTransfers(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): number {
+  const d = matchRecordedTransferDetail(assetData, from, to, rates).out;
+  return d.stock + d.crypto + d.physical + d.loan;
 }
 
 /**

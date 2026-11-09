@@ -4,6 +4,9 @@
 
 ## AssetDataContext (`src/contexts/asset-data-context.tsx`)
 
+- (#4.55) `addPhysicalAsset`/`updatePhysicalAsset`/`deletePhysicalAsset`, `computeNetAsset().physicalValue`, `computeAssetCost().physicalCost`, `AssetSummary.physical*`. 저장은 `saveData`→`saveAssetData` 한 곳.
+- (#4.55) `asset-storage.ts`: `readPhysicalAssets`·`clearPhysicalAssets`, 분리 키 `STORAGE_KEYS.physicalAssets`(`secretasset.physical_assets`). `hasAnyAssets`가 실물 포함 — 자산 보유 판정은 인라인 합산 금지(grep 테스트).
+
 `const { ... } = useAssetData()`
 
 ### 상태

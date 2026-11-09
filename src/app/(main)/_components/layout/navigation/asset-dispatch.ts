@@ -4,6 +4,10 @@ export function dispatchAddRealEstate() {
   window.dispatchEvent(new CustomEvent("trigger-add-real-estate"));
 }
 
+export function dispatchAddPhysical() {
+  window.dispatchEvent(new CustomEvent("trigger-add-physical"));
+}
+
 export function dispatchAddStock(mode: AssetMode) {
   window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode } }));
 }
@@ -61,5 +65,6 @@ export const ADD_TRIGGER_EVENTS = {
   "crypto": "trigger-add-crypto",
   "cash": "trigger-add-cash",
   "loan": "trigger-add-loan",
+  "physical": "trigger-add-physical", // 실물 자산(#58) — 빠지면 FAB 실물 행이 무반응
   "yearly-net-asset": "trigger-add-yearly-net-asset",
 } as const;

@@ -62,6 +62,26 @@ function buildRealEstateList(data: AssetData): string {
   }).join("\n");
 }
 
+const PHYSICAL_TYPE: Record<string, string> = { gold: "금", silver: "은", jewelry: "귀금속·보석", collectible: "수집품·미술품", other: "기타 실물" };
+
+// 실물 자산(#58) 절 — 0건이면 절 자체를 넣지 않아 기존 프롬프트가 바이트 단위로 같다. 평가액은 사용자가 직접 입력한 값
+function buildPhysicalSection(data: AssetData, summary: AssetSummary): string {
+  const items = data.physicalAssets ?? [];
+  if (items.length === 0) return "";
+  const lines = items.map((item) => {
+    const profit = item.currentValue - item.purchasePrice;
+    const rate = item.purchasePrice > 0 ? ((profit / item.purchasePrice) * 100).toFixed(1) : "0.0";
+    return `  • ${item.name} (${PHYSICAL_TYPE[item.type] ?? "기타 실물"})
+    매입가 ${formatShortCurrency(item.purchasePrice)} → 평가액 ${formatShortCurrency(item.currentValue)}(직접 입력) | 손익 ${profit >= 0 ? "+" : ""}${rate}%`;
+  }).join("\n");
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💎 실물 자산 (${formatShortCurrency(summary.physicalValue)}, ${summary.physicalCount}건)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${lines}
+`;
+}
+
 function buildStockList(data: AssetData, exchangeRates?: { USD: number; JPY: number }): string {
   if (data.stocks.length === 0) return "  - 등록된 주식 없음";
   const getMultiplier = (currency?: string) => {
@@ -241,7 +261,7 @@ ${fxSection ? `• 해외주식 환차손익: ${summary.stockCurrencyGain >= 0 ?
 🏠 부동산 (${formatShortCurrency(summary.realEstateValue)}, ${summary.realEstateCount}건 | 손익 ${realEstateProfitRate}%)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${buildRealEstateList(data)}
-
+${buildPhysicalSection(data, summary)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 주식 (${formatShortCurrency(summary.stockValue)}, ${summary.stockCount}종목 | 손익 ${stockProfitRate}%)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━

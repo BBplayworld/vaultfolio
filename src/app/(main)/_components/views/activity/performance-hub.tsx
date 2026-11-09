@@ -15,6 +15,7 @@ import { buildAssetReport } from "@/lib/report/asset-report";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { pickSettlementCard, resolveSettlementWindow, settlementRangeLabel } from "@/lib/report/settlement";
 import { settlementDelta, settlementName } from "./change-hero";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -90,7 +91,7 @@ export function PerformanceHub() {
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
   // 창 밖이면 이번 달 진행 중 증감, 첫 달·자산 0건이면 금액 없이 안내. 증감은 결산 Hero와 같은 settlementDelta.
-  const hasAssets = assetData.stocks.length + assetData.crypto.length + assetData.cash.length + assetData.loans.length + assetData.realEstate.length > 0;
+  const hasAssets = hasAnyAssets(assetData);
   const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
   const changeCard = useMemo(() => {
     if (!hasAssets || snapshotVersion < 0) return null;

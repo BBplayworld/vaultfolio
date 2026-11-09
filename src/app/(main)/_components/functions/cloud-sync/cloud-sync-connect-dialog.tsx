@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 function validateSyncCode(input: string): { ok: boolean; assetId?: string; message?: string } {
   const trimmed = input.trim();
@@ -79,11 +80,7 @@ export function CloudSyncConnectDialog() {
   const [busy, setBusy] = useState(false);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
 
   const isManual = !cs.pendingConnectAssetId;
   const open = cs.enabled && cs.showConnectDialog;

@@ -5,11 +5,11 @@ import { formatShortCurrency } from "@/lib/number-utils";
 import { formatSettlementPoint, type SettlementWindow } from "./settlement";
 import type { SnapshotBreakdown } from "@/types/asset";
 
-export type CompositionKey = "realEstate" | "stocks" | "crypto" | "cash";
+export type CompositionKey = "realEstate" | "physical" | "stocks" | "crypto" | "cash";
 /** 표시 순서(동률 비교·범례·색 배정 순서) */
-export const COMPOSITION_KEYS: CompositionKey[] = ["realEstate", "stocks", "crypto", "cash"];
+export const COMPOSITION_KEYS: CompositionKey[] = ["realEstate", "physical", "stocks", "crypto", "cash"];
 export const COMPOSITION_LABELS: Record<CompositionKey, string> = {
-  realEstate: "부동산", stocks: "주식", crypto: "암호화폐", cash: "현금성",
+  realEstate: "부동산", physical: "실물", stocks: "주식", crypto: "암호화폐", cash: "현금성",
 };
 
 /** 새로 쓰는 문자열 금지어(spec 6장) */
@@ -48,7 +48,9 @@ export function buildFxExposureLines(exposures: FxExposure[], totalValue: number
 // ── 월 탭 자산 구성 변화(#83) ───────────────────────────────────
 
 /** 비교에 쓰는 breakdown의 자산군 값만 (스냅샷 breakdown·buildLiveAttributionCurr의 live.breakdown 모두 만족) */
-export type CompositionBreakdown = Pick<SnapshotBreakdown, CompositionKey>;
+// physical은 과거 스냅샷에 필드가 없을 수 있어(optional) 0으로 읽는다
+export type CompositionBreakdown = Pick<SnapshotBreakdown, Exclude<CompositionKey, "physical">> & { physical?: number };
+const valueOf = (b: CompositionBreakdown, k: CompositionKey): number => b[k] ?? 0;
 
 export interface MonthCompositionItem {
   key: CompositionKey;
@@ -79,7 +81,7 @@ const MINUS = "\u2212"; // U+2212
 const pctText = (ratio: number, pct: number) => (ratio > 0 && pct === 0 ? "<1%" : `${pct}%`);
 export const formatDeltaPp = (d: number) => (d === 0 ? "변화 없음" : `${d > 0 ? "+" : MINUS}${Math.abs(d)}%p`);
 
-const sumOf = (b: CompositionBreakdown) => COMPOSITION_KEYS.reduce((s, k) => s + (b[k] > 0 ? b[k] : 0), 0);
+const sumOf = (b: CompositionBreakdown) => COMPOSITION_KEYS.reduce((s, k) => s + Math.max(valueOf(b, k), 0), 0);
 
 /**
  * 결산 구간 시작→끝 자산군 비중. 비교 구간은 resolveSettlementWindow의 w 그대로:
@@ -93,13 +95,13 @@ export function computeMonthComposition(w: SettlementWindow, liveBreakdown?: Com
   if (!sb || !eb) return null;
   const sTotal = sumOf(sb), eTotal = sumOf(eb);
   if (sTotal <= 0 || eTotal <= 0) return null;
-  const sCount = COMPOSITION_KEYS.filter((k) => sb[k] > 0).length;
-  const eCount = COMPOSITION_KEYS.filter((k) => eb[k] > 0).length;
+  const sCount = COMPOSITION_KEYS.filter((k) => valueOf(sb, k) > 0).length;
+  const eCount = COMPOSITION_KEYS.filter((k) => valueOf(eb, k) > 0).length;
   if (sCount <= 1 && eCount <= 1) return null;
 
   const items: MonthCompositionItem[] = [];
   for (const key of COMPOSITION_KEYS) {
-    const sv = sb[key] > 0 ? sb[key] : 0, ev = eb[key] > 0 ? eb[key] : 0;
+    const sv = Math.max(valueOf(sb, key), 0), ev = Math.max(valueOf(eb, key), 0);
     if (sv <= 0 && ev <= 0) continue;
     const startRatio = (sv / sTotal) * 100, endRatio = (ev / eTotal) * 100;
     const startPct = Math.round(startRatio), endPct = Math.round(endRatio);

@@ -14,6 +14,7 @@ import { PwaInstallButton } from "../pwa/pwa-install-button";
 import { InstallNudge } from "../pwa/install-nudge";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { track } from "@/lib/analytics/ga";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
@@ -50,11 +51,7 @@ function ShareScreenshotButton() {
   }, []);
 
   const hasAssets =
-    assetData.realEstate.length > 0 ||
-    assetData.stocks.length > 0 ||
-    assetData.crypto.length > 0 ||
-    assetData.cash.length > 0 ||
-    assetData.loans.length > 0;
+    hasAnyAssets(assetData);
 
   if (!hasAssets) return null;
 
@@ -105,11 +102,7 @@ export function TopBar() {
   // 웰컴가이드(자산 없음·공유 대기) 시 상단 상세/성과·더보기 영역 숨김
   const isWelcomeGuide =
     isSharePending ||
-    (assetData.realEstate.length === 0 &&
-      assetData.stocks.length === 0 &&
-      assetData.crypto.length === 0 &&
-      assetData.cash.length === 0 &&
-      assetData.loans.length === 0);
+    !hasAnyAssets(assetData);
 
   // 우측 아이콘 노출 규칙 (PWA standalone 모드에선 CSS로 완전히 가림)
   const showShare =

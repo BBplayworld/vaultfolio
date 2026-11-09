@@ -18,9 +18,11 @@ import { BODY_ENTER } from "./change-hero";
 // change-hero의 CAUSE_BADGE와 같은 값(해당 파일 무변경 조건으로 비공개 상수를 복제하지 않고 값만 맞춘다)
 const BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 export const COMPOSITION_HINT = "홈 도넛은 부채도 함께 나눠 보여줘서 같은 항목도 %가 다를 수 있어요. 이 블록은 부동산·주식·암호화폐·현금성의 합을 100%로 봐요.";
-/** 자산군 고정 색 — 같은 자산군은 두 시점·모든 달에서 같은 색(실물 [8]은 4.49) */
+// 실물이 비중에 들어 있을 때만 쓰는 문구(실물 0건은 위 COMPOSITION_HINT 그대로)
+export const COMPOSITION_HINT_PHYSICAL = "홈 도넛은 부채도 함께 나눠 보여줘서 같은 항목도 %가 다를 수 있어요. 이 블록은 부동산·실물·주식·암호화폐·현금성의 합을 100%로 봐요.";
+/** 자산군 고정 색 — 같은 자산군은 두 시점·모든 달에서 같은 색(실물 = 홈 도넛 실물 [8]) */
 export const COMPOSITION_COLORS: Record<CompositionKey, string> = {
-  realEstate: MAIN_PALETTE[0], stocks: MAIN_PALETTE[4], crypto: MAIN_PALETTE[3], cash: MAIN_PALETTE[5],
+  realEstate: MAIN_PALETTE[0], physical: MAIN_PALETTE[8], stocks: MAIN_PALETTE[4], crypto: MAIN_PALETTE[3], cash: MAIN_PALETTE[5],
 };
 const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-2 motion-safe:duration-300";
 
@@ -88,7 +90,7 @@ export function CompositionBlock({ w, liveBreakdown }: { w: SettlementWindow; li
         badge={
           <>
             <span data-testid="composition-badge" className={BADGE}>총자산 기준</span>
-            <span data-screenshot-hide data-testid="composition-hint"><InfoHint summary={COMPOSITION_HINT} /></span>
+            <span data-screenshot-hide data-testid="composition-hint"><InfoHint summary={c.items.some((i) => i.key === "physical") ? COMPOSITION_HINT_PHYSICAL : COMPOSITION_HINT} /></span>
           </>
         }
       />

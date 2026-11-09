@@ -87,6 +87,9 @@ describe("featureTitleOf 매핑", () => {
     ["asset_save", { asset_type: "crypto" }, "자산 저장·암호화폐"],
     ["asset_save", { asset_type: "real_estate" }, "자산 저장·부동산"],
     ["first_asset_saved", { asset_type: "cash" }, "자산 저장·현금"],
+    ["asset_save", { asset_type: "physical" }, "자산 저장·실물 자산"],
+    ["asset_add_start", { asset_type: "physical", method: "manual" }, "자산 추가 시작·실물 자산"],
+    ["first_asset_saved", { asset_type: "physical" }, "자산 저장·실물 자산"],
     ["screenshot_parse", { asset_type: "loan", result: "fail" }, "스크린샷 등록 실패·대출"],
     ["screenshot_parse", { asset_type: "stock", result: "empty" }, "스크린샷 등록 실패·주식"],
     ["screenshot_parse", { asset_type: "cash", result: "success" }, "스크린샷 등록·현금"],
@@ -261,6 +264,21 @@ describe("AC8 first_asset_saved 기기당 1회", () => {
     trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, 3);
     trackAssetSave({ asset_type: "stock", method: "manual", result: "update" }, 0);
     expect(names()).toEqual(["asset_save", "asset_save"]);
+  });
+});
+
+describe("#58 실물 자산 GA — page_title·page_location만, 이름·유형 세부·금액 없음", () => {
+  it("실물 저장(첫 자산)은 asset_save·first_asset_saved 모두 page_title '자산 저장·실물 자산'", () => {
+    trackAssetSave({ asset_type: "physical", method: "manual", result: "create", ...({ name: "골드바", type: "gold", currentValue: 123456789 } as object) }, 0);
+    expect(gtag.mock.calls.map((c) => c[1])).toEqual(["asset_save", "first_asset_saved"]);
+    for (const [, , payload] of gtag.mock.calls) {
+      expect(Object.keys(payload).sort()).toEqual(["page_location", "page_title"]);
+      expect(payload.page_title).toBe("자산 저장·실물 자산");
+      expect(JSON.stringify(payload)).not.toMatch(/골드바|gold|123456789/);
+    }
+  });
+  it("toGaAssetType('physical')이 통과한다", () => {
+    expect(toGaAssetType("physical")).toBe("physical");
   });
 });
 

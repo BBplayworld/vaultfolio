@@ -5,7 +5,7 @@
  * 저장은 호출 시점의 전역 localStorage로 간다 — 체험은 메모리 Storage 설치·검증 뒤에만 호출해야 한다.
  */
 
-import { applyImportedPayload, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { applyImportedPayload, clearPhysicalAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { buildDemoRefreshMeta, kstToday, materializeDemo } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
@@ -18,7 +18,11 @@ import { markCurrentNoticeSeen } from "@/lib/home-tip";
 export async function injectDemoPayload({ nickname }: { nickname?: string } = {}): Promise<void> {
   const mod = await import("@/lib/preview/demo-data.json");
   const payload = materializeDemo(mod.default, kstToday());
-  applyImportedPayload(nickname === undefined ? payload : withNickname(payload, nickname));
+  const next = nickname === undefined ? payload : withNickname(payload, nickname);
+  applyImportedPayload(next);
+  // 데모 주입은 교체 의미 — 데모 payload에 실물 키가 없으면(applyImportedPayload는 키 없음=로컬 유지) 기존 실물을 비운다(#58)
+  const ad = (next as { assetData?: { physicalAssets?: unknown } }).assetData;
+  if (!Array.isArray(ad?.physicalAssets)) clearPhysicalAssets();
   // assetRefresh는 clearAssetData의 보존 키라 import로 덮이지 않음 → 기존 키·형식으로 직접 기록(멱등)
   localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
 }
