@@ -17,7 +17,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **#122** | [#122](https://github.com/BBplayworld/vaultfolio/issues/122) 외화 환율 잔차가 '대출 일부 예측'·'주식 매도'로 보이는 문제(#117 D3 + P5b, p1) | 개발 중(issue-4.65) | 11/26 전 목표 | COO 자체 승인 (버그) |
+| **4.65** [PR #123](https://github.com/BBplayworld/vaultfolio/pull/123) | [#122](https://github.com/BBplayworld/vaultfolio/issues/122) 외화 환율 잔차가 '대출 일부 예측'·'주식 매도'로 보이는 문제(#117 D3 + P5b, p1) | 개발 완료(c984e0c, 리허설 39조합 합계 불변) → qa 중 → COO | 11/26 전 목표 | COO 자체 승인 (버그) |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
