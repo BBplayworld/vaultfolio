@@ -806,3 +806,10 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 ### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
 - 메모리 전용(저장 키·sync 상태 필드 0). `beginPush`/`commitPush`(push 성공 시 기준 갱신), `beginPull(data, auto)`/`commitPull(before, data)`(자동 pull 직전·직후 비교 → 덮인 내 항목 목록 합치기, 기준 갱신), `refreshEntries`(R1), `resetOverwriteGuard`(연결 끊기·다른 금고 연결). 순수: `captureSnapshot`·`detectOverwrites`·`planRevert`·`applyRevert`. 비교는 사용자 입력 필드만 — 앱이 자동으로 쓰는 필드는 제외: stocks(`currentPrice`·`baseDate`·`name` 자동 보정·`inactive*`), crypto(`currentPrice`·`baseDate`), realEstate(`marketEstimate*`, `currentValue`는 사용자 입력이라 비교), 올해 연도별 순자산(note "자동"). 새 자동 갱신 경로를 추가하면 `overwrite-guard.ts` 표에 함께 등록
 - 규약: 감지 함수에서 save·push·notify 호출 금지(C16). 되돌리기 저장은 호출측이 `saveData` 경로로만 한다(`applyImportedPayload`·`clearAssetData` 금지). 기준 없는 폴백 알림 금지(남의 변경을 내 변경으로 오탐)
+
+### 거래 연결 계좌 (`src/lib/trade/linked-record.ts`·`link-text.ts`, #4.56 #103)
+- `linked-record.ts`(순수, 정본): `cashLinkId`/`loanLinkId`(`ctx_link_<거래id>`·`ltx_link_<거래id>`)·`linkedTradeIdOf`·`findLinkedRecord`·`linkAmount`(수량×단가±수수료, 통화 최소 단위 반올림)·`isLinkDateAllowed`(거래일이 오늘 KST와 같은 달)·`linkCandidates`(같은 통화 현금 + KRW 거래의 대출, 0원 대출은 매도 후보 제외)·`buildLink`(기록+잔액 patch 생성, 가드 실패 시 `{ok:false, reason}`)·`planRemoveLink`/`removeLink`(짝 기록 현재 값 기준 되돌림, `CASH_FLOOR`)·`stockLinkTrade`/`cryptoLinkTrade`. 접두어 문자열은 이 파일 밖에서 쓰지 않는다(`linked-record.test.ts` grep 단언).
+- `link-text.ts`: `evaluateLink`·`linkPreviewText`·`linkSavedToast`·`revertNoteText`·`revertToastSuffix`·`LINK_NONE`/`parseLinkValue`/`linkValueOf`. 신규 화면 문자열 금지어 단언은 `link-text.test.ts`.
+- Context: `addTransactionWithPosition(tx, id, patch, link?)`·`addTransactionsBatch(…, newStocks, link?)`·`addCryptoTransactionWithPosition(…, link?)`·`delete{Transaction,CryptoTransaction}WithPosition(…, {revertLink?})` — 모두 `saveData` 1회.
+- 결산: `matchRecordedTransferDetail` → `{out, in, viaLoan}`, `matchRecordedTransfers` = out − in. 골든 테스트 `report/__tests__/linked-settlement.test.ts`.
+
