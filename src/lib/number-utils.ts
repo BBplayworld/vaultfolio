@@ -25,7 +25,8 @@ export function formatShortCurrency(value: number): string {
 
   const length = Math.floor(abs).toString().length;
   if (length >= 9) {
-    return `${sign}${formatNumberWithCommas(Math.floor((abs / 100000000) * 10) / 10)}억원`;
+    // 0.1억(1,000만원) 단위 버림 — 곱셈 뒤 버림은 부동소수 오차로 한 칸 더 버릴 수 있어 정수 나눗셈으로 계산
+    return `${sign}${formatTruncatedUnits(Math.floor(abs / 10000000), 1)}억원`;
   }
   if (length >= 5) {
     return `${sign}${formatNumberWithCommas(Math.floor(abs / 10000))}만원`;
@@ -33,32 +34,35 @@ export function formatShortCurrency(value: number): string {
   return `${sign}${formatNumberWithCommas(Math.floor(abs))}원`;
 }
 
-// 짧은 화폐 단위 포맷 (억, 만, 백만) - 소수점 2자리 (버림)
-const truncToFixed = (n: number, digits: number) => {
-  const factor = Math.pow(10, digits);
-  return (Math.floor(n * factor) / factor).toFixed(digits);
-};
+// units(정수, 소수 digits자리까지의 개수)를 "정수부(천 단위 콤마).소수부" 문자열로 — 끝 0 제거.
+// 예: (230, 2) → "2.3", (201, 2) → "2.01", (1200, 2) → "12", (123456, 2) → "1,234.56"
+function formatTruncatedUnits(units: number, digits: number): string {
+  const factor = 10 ** digits;
+  const intPart = Math.floor(units / factor);
+  const frac = String(units % factor).padStart(digits, "0").replace(/0+$/, "");
+  return `${intPart.toLocaleString("ko-KR")}${frac ? `.${frac}` : ""}`;
+}
 
+// 짧은 화폐 단위 포맷 (억, 만, 백만) - 소수점 2자리 (버림)
+// 원 단위 정수로 맞춘 뒤 표시 최소 단위(0.01억=100만원 등)로 정수 나눗셈해 버린다.
+// 부동소수 곱셈 뒤 Math.floor는 2.3억→2.29억처럼 한 칸 더 버리므로 쓰지 않는다(#129, CHECKLIST C59).
 export function formatShortCurrencyDecimal(value: number): string {
   if (value === 0) return "0원";
 
-  const abs = Math.abs(value);
+  const won = Math.round(Math.abs(value)); // 전체 금액 표기(formatCurrency)와 같은 원 단위 기준
   const sign = value < 0 ? "-" : "";
 
-  if (abs >= 100000000) {
-    // 1억 이상: 소수점 2자리 (버림)
-    const formatted = truncToFixed(abs / 100000000, 2).replace(/\.?0+$/, "");
-    return `${sign}${formatNumberWithCommas(formatted)}억원`;
+  if (won >= 100000000) {
+    // 1억 이상: 소수점 2자리 (버림) — 0.01억 = 100만원 단위
+    return `${sign}${formatTruncatedUnits(Math.floor(won / 1000000), 2)}억원`;
   }
-  if (abs >= 1000000) {
-    // 100만 이상: 백만 단위 소수점 2자리 (버림)
-    const formatted = truncToFixed(abs / 1000000, 2).replace(/\.?0+$/, "");
-    return `${sign}${formatted}백만원`;
+  if (won >= 1000000) {
+    // 100만 이상: 백만 단위 소수점 2자리 (버림) — 0.01백만 = 1만원 단위
+    return `${sign}${formatTruncatedUnits(Math.floor(won / 10000), 2)}백만원`;
   }
-  if (abs >= 10000) {
-    // 1만 이상: 소수점 2자리 (버림)
-    const formatted = truncToFixed(abs / 10000, 2).replace(/\.?0+$/, "");
-    return `${sign}${formatted}만원`;
+  if (won >= 10000) {
+    // 1만 이상: 소수점 2자리 (버림) — 0.01만 = 100원 단위
+    return `${sign}${formatTruncatedUnits(Math.floor(won / 100), 2)}만원`;
   }
   return formatCurrency(value);
 }

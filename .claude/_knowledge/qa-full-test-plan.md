@@ -654,6 +654,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 위계: Hero→필터→리스트 순서, InlineSelector 탭 통일
 - 파괴적 액션(삭제) 확인 단계(`confirm`/다이얼로그)
 - 숫자 표기 `tabular-nums`, 통화 포맷 일관(`formatCurrency`/`formatShortCurrency`)
+- ⚙ **축약 금액 버림 정확도(#4.68 #129)**: `formatShortCurrency`(0.1억)·`formatShortCurrencyDecimal`(0.01억·0.01백만·0.01만)은 원 단위 정수(`Math.round`)를 표시 최소 단위로 **정수 나눗셈 후 버림** — 딱 떨어지는 값이 원 단위 표기와 같은 숫자(230,000,000 → `2.3억원`, 201,000,000 → `2.01억원`, 1,130,000 → `1.13백만원`). 부동소수 곱셈 뒤 `Math.floor` 금지(이전엔 2.3억→`2.29억`). 회귀 = `number-utils-short.test.ts` 1억~50억 100만원 배수 전수 루프. 사용처: 홈 최근 순자산 막대(`dashboard.tsx`)·순자산 달력 칸(`net-asset-chart.tsx`)
 - 리스트 카드 위계: 접힘행 왼쪽=핵심 식별(이름·비중), 상세는 펼침에 — 비종목 자산도 동일(`design-system.md §11`)
 
 ### U5. 디테일 폴리시 (design-system.md §6)
