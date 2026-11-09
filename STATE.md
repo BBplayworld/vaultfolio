@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-09 KST (cto: D8 선정 — 스크린샷 실패 다음 행동 + p2 최신화 팁 결함·연 탭 기록일, issues/_discovery/2026-11-09-d8-selection.md)
+마지막 갱신: 2026-11-09 KST (cto: #103 대표 결정 ②+③ 재계획 — 짝 기록 id 연결·4.55와 분리 4.56, issues/4.xx-103-cross-asset-flow/4.xx-challenge.md 5절)
 
 ## 대표 결정 대기
 - **v4.53 PR #98(#97 /api/sync 남용 방어, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @6efe730**(issues/4.53-97-sync-guard/4.53-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review` 라벨 처리. 머지 시 qa 운영 2기기 스모크(qa-report 10절)
@@ -38,6 +38,7 @@
 | #93 현금·대출 잔액 한 번에 맞추기 | 4.52 (risk:low, 위임 머지) | design-review 완료(2026-11-08). 문서 `issues/4.52-93-cash-loan-resync/` | developer | 지금 개발 착수(main be509af 분기) 11/9~11/14 → qa 11/15~17 → COO 11/18 → 위임 머지 ≤11/19(컷 11/26, 넘기면 12/11~12/18). 공지 ID 교체 제외 유지 |
 | /api/sync 남용 방어 | 4.53 (단독, risk:medium, 대표 승인) | #83 동승 번복(cto 2026-11-08) | developer·qa | 개발 11/15~17(getClientIp→api-guard, GET L1·assetId 검증, 다기기 pull 임계 테스트) → qa 11/18 → 대표 승인 요청 ~11/19 |
 | #58 실물 자산 등록(금 등) | 4.55 (risk:high, 대표 위임 → 팀 머지 조건부) | cto 재점검 통과(범위 유지, 정정 4). 문서 `issues/4.55-58-physical-assets/` | planner-designer·developer → ui-designer·qa → cto | 11/9~11/14 spec 정정(GA page_title·줄 번호 be509af 재grep·resync/#93 저장 경로 physicalAssets 보존 조건) → 개발 11/18~12/2 → qa 12/3~12/9 → COO 12/10 → 팀 머지 12/11~12/14(컷 12/18, 12/19~12/27 금지, 넘기면 1/12~1/26). 새 알려진 한계 생기면 대표 승인 전환 |
+| #103 자산 간 돈의 흐름(홈 원인 상쇄 A + 거래 연결 계좌 ②+③) | A = 4.55 포함(9a582ac) / 연결 계좌 = 4.55 다음 번호(예상 4.56, risk:high, 대표 승인) | 대표 결정 ②+③ → cto 재계획 통과(11-09, challenge 5절): 짝 기록 id 연결(스키마 0), 주식·코인 × 같은 통화 현금·원화 대출, 삭제 시 되돌림, 결산은 연결 쌍만 id 짝 | planner·ui·developer·business-pm 병렬 → qa 교차 | 개정 ~11/13(spec 3-L·ui 증분·tech-review·GA) → 개발 11/14~27(origin/issue-4.55 위 로컬, 4.52·#104 병합 후) → qa 11/30~12/4 → COO ~12/8 → 승인 요청 ~12/9 → 4.55 머지 후 12/15~12/18(컷 12/18, 놓치면 1/12~) |
 
 ## 열린 릴리스
 - **(2026-11-08 cto 재정리)** 개발 순서 4.51 #83(cherry-pick·재검증만) → 4.52 #93 → 4.53 /api/sync → 4.54 #58. 열린 개발 릴리스 1개·parked 규칙 유지, 번호는 머지 순서대로. 아래 옛 줄의 #83=4.50/4.51·#58=4.49/4.52 표기는 이 줄로 대체.
