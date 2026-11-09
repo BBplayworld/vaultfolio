@@ -69,11 +69,10 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
               {preview && (
                 <>
                   <span>{preview.main[0]} </span>
-                  <span className="whitespace-nowrap">
-                    {preview.main[1]}
-                    <span className="text-muted-foreground"> → </span>
-                    <span className="font-semibold">{preview.main[2]}</span>
-                  </span>
+                  {/* 금액은 각각 한 덩어리(nowrap), 화살표 앞뒤 공백에서만 줄바꿈 — 320px에서 10억 이상도 넘치지 않게 */}
+                  <span data-testid="link-preview-before" className="whitespace-nowrap">{preview.main[1]}</span>
+                  <span className="text-muted-foreground"> → </span>
+                  <span data-testid="link-preview-after" className="whitespace-nowrap font-semibold">{preview.main[2]}</span>
                 </>
               )}
             </p>

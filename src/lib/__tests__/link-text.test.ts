@@ -81,3 +81,14 @@ describe("신규 화면 문자열 금지어", () => {
     expect(noComments).not.toMatch(FORBIDDEN);
   });
 });
+
+describe("미리보기 줄바꿈 구조(320px 10억 이상 금액)", () => {
+  it("금액 두 개는 각각 nowrap, 둘을 감싸는 nowrap 덩어리는 없다", () => {
+    const src = readFileSync(path.join(path.resolve(__dirname, "../.."), "app/(main)/_components/forms/trade/link-account-row.tsx"), "utf8");
+    expect(src).toMatch(/link-preview-before" className="whitespace-nowrap"/);
+    expect(src).toMatch(/link-preview-after" className="whitespace-nowrap font-semibold"/);
+    const block = src.slice(src.indexOf('data-testid="cash-link-preview"'), src.indexOf("preview?.sub"));
+    expect((block.match(/whitespace-nowrap/g) ?? []).length).toBe(2);
+    expect(block).toContain('<span className="text-muted-foreground"> → </span>'); // 공백 포함 화살표 = 줄바꿈 가능 지점
+  });
+});
