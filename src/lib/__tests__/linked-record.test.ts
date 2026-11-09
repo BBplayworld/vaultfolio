@@ -104,6 +104,7 @@ describe("buildLink — 저장", () => {
   it("가드: 잔액 부족·초과 상환·대금 0 이하·중복·통화·지난달·계좌 없음 -> 실패", () => {
     const d = data({ cash: [cash("a", 999), cash("u", 99999, "USD")], loans: [loan("l", 999)] });
     expect(link(d, trade(), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "balance" });
+    expect(link(data({ cash: [cash("e", 1000)] }), trade(), { kind: "cash", cashId: "e" })).toEqual({ ok: false, reason: "balance" }); // 전액 사용 = 0원 현금 저장 불가
     expect(link(d, trade({ type: "sell" }), { kind: "loan", loanId: "l" })).toEqual({ ok: false, reason: "balance" });
     expect(link(d, trade({ type: "sell", fee: 1000 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
     expect(link(d, trade({ quantity: 0 }), { kind: "cash", cashId: "a" })).toEqual({ ok: false, reason: "amount" });
@@ -134,14 +135,15 @@ describe("removeLink — 되돌림(cto 5-5 픽스처)", () => {
     expect(back.data.cashTransactions).toHaveLength(0);
     expect(back.plan).toMatchObject({ delta: -1000, clamped: false });
   });
-  it("픽스처1: 현금 100 -> 매도 입금 500 -> 출금 450 -> 삭제: 잔액 0, -150 + 꼬리, 출금 기록 유지", () => {
+  it("픽스처1: 현금 100 -> 매도 입금 500 -> 출금 450 -> 삭제: 잔액 하한(1원), -149 + 꼬리, 출금 기록 유지", () => {
     const wd = { id: "ctx_1_x", cashId: "a", type: "withdrawal", amount: 450, currency: "KRW", date: "2026-11-11", reflected: true, createdAt: "x" } as AssetData["cashTransactions"][number];
     const dep = { id: cashLinkId("tx_1"), cashId: "a", type: "deposit", amount: 500, currency: "KRW", date: "2026-11-10", reflected: true, createdAt: "x" } as AssetData["cashTransactions"][number];
     const d = data({ cash: [cash("a", 150)], cashTransactions: [dep, wd] });
     const plan = planRemoveLink(d, "tx_1")!;
-    expect(plan).toMatchObject({ delta: -150, clamped: true });
+    // 현금은 0원 저장 불가(cashSchema > 0) -> 하한 1원 (대출은 0)
+    expect(plan).toMatchObject({ delta: -149, clamped: true });
     const r = removeLink(d, "tx_1");
-    expect(r.data.cash[0].balance).toBe(0);
+    expect(r.data.cash[0].balance).toBe(1);
     expect(r.data.cashTransactions.map((x) => x.id)).toEqual(["ctx_1_x"]);
   });
   it("픽스처2(F19): 대출 300 -> 매도 상환 300(0) -> 삭제: 대출 300, 상환 기록 -1", () => {
