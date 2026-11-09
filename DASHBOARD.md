@@ -8,7 +8,7 @@
 없음.
 
 ## 🔴 운영 결함 (p0)
-- [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57), 운영 스모크 진행 중
+- [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
 - [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09) · 운영 스모크 PASS**
 
 ## 🟨 대표 승인 예정 (미리 알림)
@@ -22,7 +22,7 @@
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
-| v4.57 핫픽스 [PR #108](https://github.com/BBplayworld/vaultfolio/pull/108) | 11/09 | 코인 즉시 반영 저장 차단·현금 0원 저장 실패 수정(#107) | 진행 중 |
+| v4.57 핫픽스 [PR #108](https://github.com/BBplayworld/vaultfolio/pull/108) | 11/09 | 코인 즉시 반영 저장 차단·현금 0원 저장 실패 수정(#107) | PASS |
 | v4.56 [PR #101](https://github.com/BBplayworld/vaultfolio/pull/101) | 11/09 | 실물 자산 등록(#58, 대표 위임)·홈 원인에서 자산 간 이동 상쇄(#103 A) | D0 PASS(동기화 pull은 D+1에서) · D+1 11/10 |
 | v4.55 [PR #102](https://github.com/BBplayworld/vaultfolio/pull/102) | 11/09 | 스크린샷 인식 실패 뒤 다음 행동·최신화 팁 보유 자산군만·연 탭 자동 값 기록일(#99) | PASS |
 | 4.51 [PR #95](https://github.com/BBplayworld/vaultfolio/pull/95) | 11/08 23:15 | 성과 월 탭 자산 구성 변화 블록(#83, 대표 위임 판단) ⚠️ 10월 결산 창 안 머지(판정 누락, 블록 추가뿐이라 유지·C39 추가) | PASS |
