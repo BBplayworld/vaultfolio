@@ -1,9 +1,8 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
-import { ASSET_THEME } from "@/config/theme";
+import { ResyncTxWarning } from "../resync-tx-warning";
 import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
-import { resyncWarningText, shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
+import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -60,6 +59,7 @@ export function LoanTxInput() {
   const selectedLoanId = form.watch("loanId");
   const txType = form.watch("type");
   const reflected = form.watch("reflected");
+  const warnResync = shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("loan") });
   const selectedLoan = loans.find((l) => l.id === selectedLoanId);
 
   const todayStr = todayKst(); // 상한도 KST 오늘(현금 입력과 동일 기준)
@@ -235,7 +235,7 @@ export function LoanTxInput() {
                 name="reflected"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby={warnResync ? "loan-tx-resync-warning-text" : undefined} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">현재 잔액에 즉시 반영</FormLabel>
                       <p className="text-sm text-muted-foreground mt-0.5">해제 시 기록만 남기고 잔액은 변경하지 않습니다 (과거 소급용)</p>
@@ -244,12 +244,13 @@ export function LoanTxInput() {
                 )}
               />
 
-              {shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("loan") }) && (
-                <p data-testid="tx-after-resync-warning" className="flex items-start gap-1.5 text-sm break-keep text-pretty" style={{ color: ASSET_THEME.importantHex }}>
-                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <span>{resyncWarningText("loan", lastRefreshedAt("loan") ?? "", todayStr)}</span>
-                </p>
-              )}
+              <ResyncTxWarning
+                category="loan"
+                show={warnResync}
+                refreshedAtIso={lastRefreshedAt("loan")}
+                todayKst={todayStr}
+                id="loan-tx-resync-warning-text"
+              />
 
               {reflected && selectedLoan && form.watch("amount") > 0 && (
                 <div className="rounded-lg bg-muted/40 dark:bg-muted/25 p-3 text-sm">
