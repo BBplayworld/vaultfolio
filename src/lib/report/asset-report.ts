@@ -788,8 +788,11 @@ function resolveAttribution(
     const savingFull = curr.cost!.total - prev.cost!.total;                   // Δ총원가(현금 포함)
     // 외화 원가(주식·현금)는 cost.total이 현재 환율로 환산돼 환율만 움직여도 savingFull에 잡힌다 —
     // 신규 투입이 아니므로 제외한다. (fxEffect가 평가액 기준으로 환차익을 이미 잡으므로 saving에 남기면 이중 귀속)
-    const costFx = costFxRevaluation(assetData, prev.fx!, curr.fx!);
+    const costFx = costFxRevaluation(assetData, prev.fx!, curr.fx!, prev._date, curr._date, rates, isFirstSegment);
     const savingFullReal = savingFull - (costFx.stock + costFx.cash);
+    // 구간 안 외화 매수·입출금의 (끝 환율 − 체결 환율) 몫(4.65 #122) — 환율 원인으로 옮기고 manual 잔차에서 같은 금액을 뺀다
+    // (키 간 이동, 합계 불변). 시세·시작 보유분 환율 계산(fxEffectBase)은 건드리지 않는다.
+    const flowFx = costFx.flowFxStock + costFx.flowFxCash;
     const savingInvest = savingFullReal - incomeEffect;                       // 투자자산 신규 매수
     // 거래내역으로 설명되는 매수·매도를 떼어내고 나머지만 saving으로 남긴다.
     // (buy + sell + saving = savingInvest 항등식이라 표시 합계는 그대로 deltaNet)
@@ -797,16 +800,17 @@ function resolveAttribution(
     // 반영 매도의 실현손익(R) — 매도 대금 쪽(sellEffect)은 그대로 두고 실현손익만 시세로 보낸다(4.64 D1).
     // 합계는 키 간 이동이라 불변: priceEffect·priceStock(+R) ↔ stockManual(−R). 계산 불가 매도는 R=0(현행).
     const realized = realizedSellGains(assetData, prev._date, curr._date, prev.fx!, rates);
-    const savingEffect = savingInvest - buyEffect - sellEffect - realized.stock - realized.crypto;
+    const savingEffect = savingInvest - buyEffect - sellEffect - realized.stock - realized.crypto - flowFx;
     const debtEffect = -(curr.breakdown!.loans - prev.breakdown!.loans);     // 부채 증감 (상환=+)
     const fxByCurrency = (["USD", "JPY"] as const).map((c) => ({
       currency: c,
       effect: !prev.fx![c] || prev.fx![c] <= 0 ? 0 : prev.fxBase![c] * (curr.fx![c] / prev.fx![c] - 1),
     }));
-    const fxEffect = fxByCurrency.reduce((sum, e) => sum + e.effect, 0);
+    const fxEffectBase = fxByCurrency.reduce((sum, e) => sum + e.effect, 0);
+    const fxEffect = fxEffectBase + flowFx;
     // 잔차 = 시세. income은 savingFull에 이미 포함돼 차감됐고,
     // costFx는 fxEffect가 담당하므로 여기선 제외.
-    const priceEffect = deltaNet - savingFullReal - debtEffect - fxEffect + realized.stock + realized.crypto;
+    const priceEffect = deltaNet - savingFullReal - debtEffect - fxEffectBase + realized.stock + realized.crypto;
 
     // ── 자산군별 분해 ─────────────────────────────────────────────
     // 스냅샷의 breakdown(자산군별 평가액)·cost(자산군별 원가)로 시세·매수를 자산군까지 쪼갠다.
@@ -820,7 +824,7 @@ function resolveAttribution(
 
     // 환율효과 중 주식 몫 = 전체 − 현금 몫. 현금은 원가=잔액이라 costFxRevaluation이 정확히 계산하므로,
     // 나머지를 주식 몫으로 두면 안분 근사 오차가 0이 된다(= 설명되지 않는 잔차가 남지 않는다).
-    const fxStock = fxEffect - costFx.cash;
+    const fxStock = fxEffectBase - costFx.cash;
 
     // 주식 평가손익의 환차익 = (평가액 기준 환차익) − (원가 기준 환차익) → 시세에서 제외
     const priceStock = (curr.breakdown!.stocks - prev.breakdown!.stocks - dCostStockRaw) - (fxStock - costFx.stock) + realized.stock;
@@ -830,7 +834,7 @@ function resolveAttribution(
 
     // 거래내역 없이 수량·평단을 직접 수정한 분(스크린샷 일괄 등록 등)은 방향별로 매수/매도에 합산
     // — 같은 라벨이 두 줄로 갈라지지 않게 한다.
-    const stockManual = dCostStock - buyEffect - sellEffect - realized.stock;
+    const stockManual = dCostStock - buyEffect - sellEffect - realized.stock - costFx.flowFxStock;
     const buyStock = buyEffect + Math.max(stockManual, 0);
     const sellStock = sellEffect + Math.min(stockManual, 0);
 
@@ -856,7 +860,7 @@ function resolveAttribution(
     // 투자자산 3종+임차보증금으로 설명되지 않는 원가 증감 = 현금성 잔액 변동. 입출금 기록 없이
     // 잔액을 직접 수정한 경우가 여기 남는다 — "income"과 합치지 않고 별도 "cash"로 방출해
     // incomeEffect(실제 기록)가 대수적으로 소거되지 않게 한다(기록 없이도 표시가 바뀌던 회귀 수정).
-    const dCostCash = savingInvest - dCostStock - dCostCrypto - dCostRealEstate - dCostPhysical + priceResidual - depositEffect;
+    const dCostCash = savingInvest - dCostStock - dCostCrypto - dCostRealEstate - dCostPhysical + priceResidual - depositEffect - costFx.flowFxCash;
 
     const { effects, topCauses, restEffect, restCauses } = pickTopCauses([
       { key: "price:stock", amount: priceStock },
@@ -968,20 +972,62 @@ const inFlowWindow = (date: string, fromDate: string, toDate: string, includeFro
 // 외화 원가(주식 매입원가·현금 잔액)가 환율 변동으로만 재평가된 KRW 증감 — 신규 투입이 아님.
 // computeAssetCost와 동일 원가 기준(주식=수량×평균단가, 현금=잔액), delisted 제외.
 // 주식 몫은 자산군별 시세 분해에서 따로 쓰이므로 나눠 반환한다.
+// 4.65(#122): 재평가 대상은 **구간 시작 보유분**이다 — 현재 포지션·잔액에서 구간 안 반영 거래를 역산(주식은
+// deriveBaseSnapshot 재사용, 현금은 입출금 역가감)한다. 구간 안에서 산 외화 주식·들어온 외화 현금까지
+// 시작부터 보유한 것처럼 재평가하면 환율 몫이 시세·잔차로 새 '대출 일부 예측'·'주식 매도'로 보였다.
+// flowFx = 구간 안 외화 거래·입출금의 (끝 환율 − 체결 환율) 몫 → 호출부가 환율 원인으로 옮긴다(manual 잔차에서 같은 금액 차감).
+// 구간 안 외화 거래가 없으면 시작 보유분 = 현재 포지션이라 반환값이 이전과 동일하다(diff 0).
 function costFxRevaluation(
   data: AssetData,
   prevFx: { USD: number; JPY: number },
   currFx: { USD: number; JPY: number },
-): { stock: number; cash: number } {
+  fromDate: string,
+  toDate: string,
+  rates: { USD: number; JPY: number },
+  includeFromCash: boolean,
+): { stock: number; cash: number; flowFxStock: number; flowFxCash: number } {
   const d = (cur: string | undefined) => krwMul(cur, currFx) - krwMul(cur, prevFx); // KRW은 0
   let stock = 0;
+  let flowFxStock = 0;
+  const stockTxs = (data.transactions || []).filter((t) => t.reflected && inFlowWindow(t.date, fromDate, toDate, false));
   for (const s of data.stocks) {
     if (s.inactiveStatus === "delisted") continue;
-    stock += s.quantity * s.averagePrice * d(s.currency);
+    const mine = s.currency === "KRW" ? [] : stockTxs.filter((t) => t.stockId === s.id);
+    let qty = s.quantity;
+    let avg = s.averagePrice;
+    if (mine.length > 0) {
+      const base = deriveBaseSnapshot<PositionLike>(
+        { quantity: s.quantity, avgPrice: s.averagePrice, avgExchangeRate: s.purchaseExchangeRate ?? 0, source: "computed", effectiveDate: toDate, lockedByManual: false },
+        mine,
+      );
+      // 시작 보유분 중 구간 안에 팔지 않은 몫만 재평가한다 — 판 몫은 환율 효과(fxEffect)가 시작 평가액 기준으로 이미 담고,
+      // 매도 대금은 체결액·실현손익(R)으로 분류돼 이전 동작(현재 수량 기준)과 같다. 역산 불가면 현행 동작.
+      if (base.quantity >= 0 && base.avgPrice >= 0 && Number.isFinite(base.avgPrice)) {
+        const sold = mine.reduce((sum, t) => sum + (t.type === "sell" ? t.quantity : 0), 0);
+        qty = Math.max(0, base.quantity - sold);
+        avg = base.avgPrice;
+      }
+    }
+    stock += qty * avg * d(s.currency);
+    // 구간 안 매수: 체결 환율 → 끝 환율 사이 환차익. (매도는 체결액이 시세 R로 이미 분류돼 별도 몫 없음)
+    for (const t of mine) if (t.type === "buy") flowFxStock += t.quantity * t.price * (krwMul(s.currency, currFx) - tradeKrwRate(t, rates));
   }
   let cash = 0;
-  for (const c of data.cash ?? []) cash += c.balance * d(c.currency);
-  return { stock, cash };
+  let flowFxCash = 0;
+  const cashTxs = (data.cashTransactions || []).filter((t) => t.reflected && inFlowWindow(t.date, fromDate, toDate, includeFromCash));
+  for (const c of data.cash ?? []) {
+    let bal = c.balance;
+    if (c.currency !== "KRW") {
+      for (const t of cashTxs) {
+        if (t.cashId !== c.id || t.currency !== c.currency) continue;
+        const signed = t.type === "deposit" ? t.amount : -t.amount;
+        bal -= signed;
+        flowFxCash += signed * (krwMul(c.currency, currFx) - krwMul(t.currency, rates));
+      }
+    }
+    cash += bal * d(c.currency);
+  }
+  return { stock, cash, flowFxStock, flowFxCash };
 }
 
 // 기간[from, to] 내 **반영된** 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.
@@ -1011,11 +1057,14 @@ function reflectedCashInflow(
 // 체결 시 환율(exchangeRate)이 있으면 그걸, 없으면 현재 환율로 환산한다.
 // 한계 ①: transactionSchema는 주식 전용(stockId·ticker) — 부동산 매수는 saving 잔여로 남는다
 // (코인은 cryptoTransactionSchema·reflectedCryptoFlow로 동일하게 분리됨, S-4.25).
-// 한계 ②: 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로,
-//         실현손익만큼의 차이는 saving 잔여가 흡수한다(합계 정합은 유지).
+// 한계 ②(4.64·4.65 이후 상태): 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로 실현손익만큼의 차이가
+//         남는데, **정밀(bothEnriched) 분기**에서는 realizedSellGains가 이 차이를 계산해 시세로 옮긴다(4.64 D1 — 합계 불변).
+//         **예측 분기**(레거시 시작점)는 여전히 이 차이를 saving 잔여가 흡수한다(diff 0 유지, 알려진 한계).
+//         남는 2차 오차: 외화 매도 체결 환율 ≠ 끝 환율이면 (끝−체결)×매도 외화 몫이 시세(−)·순유입(+) 한 쌍으로 남는다(합 0, 대출·기록 안 된 변화로는 안 감).
+//         외화 매수·입출금의 (끝 환율 − 체결 환율) 몫은 costFxRevaluation(4.65 #122)이 환율 원인으로 옮긴다.
 // 시작일(fromDate) 당일 거래는 **항상 제외**한다 — 이유는 inFlowWindow ① 참조(자산군 축).
 // 제외해도 누락되지 않는다 — 스냅샷 저장 **후** 시작일자로 소급 반영한 거래는 원가가 올라가
-// stockManual이 같은 부호로 잡아 "주식 매수"로 표시된다(체결액 대신 원가 근사, 한계 ②와 같은 급).
+// stockManual이 같은 부호로 잡아 "주식 매수"로 표시된다(체결액 대신 원가 근사).
 function reflectedTradeFlow(
   assetData: AssetData,
   fromDate: string,
