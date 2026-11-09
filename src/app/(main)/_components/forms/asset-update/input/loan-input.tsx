@@ -1,5 +1,6 @@
 "use client";
 
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -32,6 +33,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets } from "@/config/asset-options";
 import { LoanScreenshotImport } from "../screenshot/loan-screenshot-import";
 import { MAIN_PALETTE } from "@/config/theme";
+import { BalanceResyncDialog } from "../balance-resync-dialog";
 
 // 대출 종류별 빠른 입력 버튼
 const getQuickButtonsByType = (type: string) => {
@@ -104,6 +106,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
       if (editData) {
         const success = updateLoan(editData.id, data);
         if (success) {
+          markCategoryRefreshed("loan");
           trackAssetSave({ asset_type: "loan", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("대출 정보가 수정되었습니다.");
           onClose();
@@ -117,6 +120,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
         };
         const success = addLoan(newData);
         if (success) {
+          markCategoryRefreshed("loan");
           trackAssetSave({ asset_type: "loan", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("대출이 추가되었습니다.");
           onClose();
@@ -435,6 +439,7 @@ export function LoanInput() {
   return (
     <>
       <LoanScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+      <BalanceResyncDialog category="loan" />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y">
           <DialogHeader>

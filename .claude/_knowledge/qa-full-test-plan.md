@@ -300,6 +300,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 #### 코드레벨(⚙)
 - ⚙ **preview 동기화 차단(#4.34)** — `isPreviewEnv()`(`NEXT_PUBLIC_VERCEL_ENV === "preview"`)면 `isCloudSyncEnabled()` false → provider 자동 pull·폴링·push·연결 진입점 비활성. 추가로 `sync-client`의 `pushAsset`·`pullAsset`·`fetchRemoteVersion` 입구 가드가 UI와 무관하게 fetch 0건 보장. 운영·로컬 반환값은 `NEXT_PUBLIC_CLOUD_SYNC`만으로 결정(불변). 자동: `src/lib/__tests__/preview-safety.test.ts`
+- ⚙ **/api/sync 남용 방어(#4.53)** — IP는 `api-guard.getClientIp`(XFF 좌측 위조 불가), GET L1 120/분/IP(429, 저장소 호출 0), assetId·nonce·sig·ts 형식 불량은 저장소 조회 전 401(정상 id=22자 base64url, 연결 입력 20~24자 ⊂ 8~128자). 정상 다기기 폴링·409 충돌 흐름 무영향. 자동: `src/lib/__tests__/sync-route-guard.test.ts`. 운영 스모크: 2기기 pull·push·409
 - 👤 **preview 데모 점검(#4.34)** — `<preview>/?demo=1` → `html[data-demo-ready="1"]` 후 홈에 자산·쿼리 제거, 재접속 멱등. `?demo=empty` → 웰컴. 쿼리 없는 첫 접속 + 자산 0건 → `preview-demo-btn`/`preview-empty-btn`. 전 과정 `/api/sync`·GA 요청 0건. 스크립트: memory 브랜치 `.memory/qa/preview-check.mjs`
 - ⚙ 용어 표준화 — `AssetEnvelope`(구 VaultEnvelope), `assetId`(구 syncId), `pushAsset/pullAsset`, Redis 키 `csync:asset:{assetId}`. **URL 해시 `#sync=<assetId>`, `SYNC_HASH_PARAM = "sync"`**(구 `#asset=`/`#vault=` 진입 호환 — provider `detect`·`clearPendingConnect` 모두 신구 처리) ([config.ts:27](../../src/lib/cloud-sync/config.ts) · [provider:153,291-295](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
 - ⚙ **`#sync=` 해시 삭제 시점** — `detect`는 `aid`를 `pendingConnectAssetId` state로 캡처만, **해시 제거는 연결 모달이 닫힐 때 `clearPendingConnect`(291-303)에서** 수행(성공·취소 공통). **detect(다이얼로그 여는 틱)에서 replaceState 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(R20). `#sync=`는 비밀 없는 assetId 포인터(E2EE 금고암호 별도)라 모달 표시 중 잔존 허용·완료 시 제거. 연결 모달은 `pendingConnectAssetId` state 기반(해시 비의존, [connect-dialog:87,100,130,178](../../src/app/(main)/_components/functions/cloud-sync/cloud-sync-connect-dialog.tsx)) ([provider:149-162,291-303](../../src/lib/cloud-sync/cloud-sync-provider.tsx))
@@ -568,6 +569,14 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 미리보기: 요약 1줄, 변경 행은 바뀌는 칸만 전→후, 삭제 후보 기본 체크는 S1·S2, 확인 필요 `맞추기에 포함`, 평가금액·손익·비중·총액 0건, 고지 2줄(+해외 삭제 후보일 때 양도세 1줄)이 320·375에서 어절 중간 줄바꿈 0
 - 적용: 저장 1회, 변경 0이면 버튼 비활성, 거래 기록 배열 불변, 결과 화면·닫은 직후 토스트 외 되돌리기 입구 0, `앱을 닫기 전까지` 0건
 - preview(`?demo=1` → FAB → 보유 현황 업데이트 → 주식/코인 → 스크린샷): `데모증권` 장은 ②로 확정 또는 1회 선택 경로, 합성 잔고 이미지 2~3장(실캡처 금지)
+
+### F-BALANCE-RESYNC. 현금·대출 잔액 맞추기 ([balance-resync-dialog.tsx](../../src/app/(main)/_components/forms/asset-update/balance-resync-dialog.tsx) · [balance-edits.ts](../../src/lib/asset/balance-edits.ts)) — #4.52 #93
+- ⚙ vitest: `lib/asset/__tests__/balance-edits.test.ts`(저장 1회·깊은 동등·없는 id·행 검사 표·입력 문자열), `balance-resync-settlement.test.ts`(결산 픽스처 ①~④·월초 귀속), `direct-save-refresh-static.test.ts`(p2-2), `save-failure.test.ts`(p2-6)
+- 진입: 현금(대출) 보유 ≥1건이면 FAB 제목 `현금성 자산 업데이트`(`대출 업데이트`), `직접 입력` 보조 `계좌별(대출별) 잔액 고치기` → `… 잔액 맞추기` 화면. 0건(`?demo=empty`)은 `… 추가`·기존 추가 대화상자, `first_asset_saved` 퍼널 diff 0
+- 행: 상세 탭 순서, `현재 …원`(외화 원통화 단위), 빈 칸·같은 값은 변경 아님, 현금 0 차단(문구에 `삭제` 0)·대출 0 허용, 10배·1/10 경고(저장 가능), 합계·비중·순자산 노출 0
+- 저장: `바뀐 N개 저장` → 토스트 `잔액 N개를 고쳤어요`, `balance` 외 필드·거래 기록 불변, `getStaleCategories`에서 해당 카테고리 제거, GA `자산 저장·현금/대출` 1건 + `잔액 맞추기 저장` 1건. 변경 ≥1이면 바깥 탭·Esc 불가·`새 계좌 추가` 링크 비활성, 취소 시 저장 0·GA 0
+- p2: 연 탭 `작년 말 순자산 넣기` 링크(기존 입력 창)·연도별 저장 GA / 직접 추가·수정 후 최신화 기록 / `isNew` 0 / 업로드 문구 `눌러서 사진 고르기` / FAB `적용 환율` / 자동 저장 실패 토스트 세션당 1회
+- preview(`?demo=1` → FAB → 보유 현황 업데이트 → 현금성/대출 → 직접 입력): 현금 3개(USD 1개 포함), 대출 1개
 
 ### F-SYNC-OVERWRITE. 동기화 덮임 알림·되돌리기 ([overwrite-guard.ts](../../src/lib/cloud-sync/overwrite-guard.ts)) — #4.47 #84
 - ⚙ 기기 2개 localStorage 분리 + 409 모의 하네스(`sync-overwrite.test.ts`): 같은 항목 수정·무관 항목 수정·삭제 부활·신규 추가(목록 제외)·원격 삭제·오프라인 복귀, 재시작 후(기준 없음) 알림 0, 편집 없는 pull 알림 0, 되돌리기 없는 흐름의 localStorage가 guard 없는 흐름과 동일(C13)

@@ -16,6 +16,25 @@
 
 ---
 
+## 2026-11-09 (v4.52)
+
+### 현금·대출 잔액 한 번에 맞추기 + 소형 정리 6건 (#4.52, 이슈 #93, risk low)
+- **왜**: 현금·대출 갱신 입구 3곳(FAB·홈 최신화 팁·결산 '다음 달 준비')이 모두 `○○ 추가` 폼을 열어, 기존 잔액은 계좌마다 상세 수정(필드 6~10개)으로만 고칠 수 있었다.
+- 현금(대출) 보유 ≥1건이면 FAB `select-method` 제목이 `현금성 자산 업데이트`(`대출 업데이트`), `직접 입력`은 `계좌별(대출별) 잔액 고치기`로 열리는 `BalanceResyncDialog`(`forms/asset-update/balance-resync-dialog.tsx`, `category="cash"|"loan"`). 바뀐 행만 입력 → 저장 1번. 보유 판정은 `handleHoldingsClick`에서 1회(`getAssetData()`), 0건은 기존 추가 흐름 diff 0.
+- 순수 로직 `lib/asset/balance-edits.ts`: `applyBalanceEdits`(저장 시점 최신 목록 map 교체, balance 외 필드 보존·없는 id 건너뜀)·`checkBalanceRow`(현금 0 차단·대출 0 허용·10배/1/10 경고)·입력 문자열 정리·`orderBalanceRows`(상세 탭 순서). 저장은 `getAssetData()` 기반 `saveData` 1회(`updateCash`/`updateLoan` 반복 금지, C37), 성공 후 `markCategoryRefreshed`·`asset_save(update, manual)`·`feature_use balance_resync`(`잔액 맞추기 저장`).
+- 변경 ≥1이면 바깥 탭·Esc 차단, `새 계좌 추가` 링크 비활성. 데모 시드에 USD 현금 1개 추가(1,000 USD).
+- p2: ① 연 탭 빈 상태·1점 Hero 인라인 링크 `작년 말 순자산 넣기`+연도별 저장 `asset_save` 계측 ② 현금·대출·주식·코인 직접 추가·수정 성공 시 `markCategoryRefreshed` ③ 기능 팁 `isNew` 3개 해제 ④ 업로드 문구 `눌러서 사진 고르기`·`bg-amber-500/10 px-3` 오타 ⑤ FAB `환율 설정`→`적용 환율`, `exchange-rate-input.tsx` 삭제 ⑥ 자동 저장 실패 알림 `saveAssetDataNotify`(`lib/asset/save-failure.ts`, 세션당 1회 토스트+GA `저장 실패`).
+- 스키마·저장 키·동기화·서버 전송·스냅샷·결산 코드 diff 0. 결산 픽스처 ①~④·월초 귀속은 `lib/asset/__tests__/balance-resync-settlement.test.ts`로 고정(외화 직접 수정+환율 변동 시 늘어난 수량의 환율 변동분은 현행 엔진상 시세 변동에 남음 — v1 무변경).
+- 후속(cto 권고 (a)): 머리말 교체(임시), 현금·대출 입출금 기록에서 거래일 이후 맞춘 기록(`assetRefresh`)이 있으면 `즉시 반영` 아래 경고 1줄(`shouldWarnTxAfterResync`·`TX_AFTER_RESYNC_WARNING`, 문구 임시), 자산 간 흐름 시나리오 S1~S7을 `cross-asset-flow-scenarios.test.ts`로 현재 동작 고정.
+- 결함 수정 #104(p0): 주식·코인 시세 동기화가 시작 시점 data 전체를 되써 요청 중 사용자 저장(현금·종목 추가/삭제)을 덮던 문제 -> 응답을 저장 시점 최신본에 시세 필드만 병합(`price-patch.ts`).
+- 알려진 한계: 그대로 확인 저장 없음, `assetRefresh`는 기기 로컬, 직접 고친 차액은 `기록 안 된 변화`.
+
+## 2026-11-08 (v4.53)
+
+### /api/sync 남용 방어 (#4.53, 이슈 #97, risk medium)
+- **왜**: sync 라우트만 자체 `getClientIp`(XFF 맨 왼쪽 신뢰)를 써 rate limit이 헤더 조작에 취약했고, GET은 한도 없이 서명 검증 전 Redis 조회를 수행했다.
+- `getClientIp`를 `api-guard`로 통일, `guardL1Only`(`api-guard.ts`) 신설해 GET 120/분/IP, 토큰(assetId·nonce·sig·ts) 형식을 저장소 조회 전 401. 프로토콜·저장 포맷·스키마·서버 전송 값 무변경. 테스트 `sync-route-guard.test.ts`.
+
 ## 2026-11-08 (v4.51)
 
 ### 월 탭 자산 구성 변화 블록 (#4.51, 이슈 #83, risk low)

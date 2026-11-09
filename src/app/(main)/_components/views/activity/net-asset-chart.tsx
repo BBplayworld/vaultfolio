@@ -41,7 +41,8 @@ import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { resolveYearChain } from "@/lib/report/settlement";
-import { consumeYearlyNetAssetOpenRequest } from "../../layout/navigation/asset-dispatch";
+import { consumeYearlyNetAssetOpenRequest, dispatchOpenYearlyNetAsset } from "../../layout/navigation/asset-dispatch";
+import { trackAssetSave } from "@/lib/analytics/ga";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
 
 const NET_COLOR = "#ffffffff";
@@ -77,6 +78,20 @@ interface YearlyNetAssetFormProps {
   onClose: () => void;
 }
 
+// 연도별 순자산 입력 창 열기 인라인 링크(빈 상태·1점 Hero 공용, 새 버튼 아님)
+function YearlyAddLink() {
+  return (
+    <button
+      type="button"
+      data-testid="yearly-add-link"
+      onClick={() => dispatchOpenYearlyNetAsset()}
+      className="inline-flex min-h-10 items-center text-sm font-medium text-brand underline underline-offset-2"
+    >
+      작년 말 순자산 넣기
+    </button>
+  );
+}
+
 function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
   const { addYearlyNetAsset, updateYearlyNetAsset } = useAssetData();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,6 +111,8 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
       if (editData) {
         const success = updateYearlyNetAsset(editData.year, data);
         if (success) {
+          // 연도별 순자산은 보유 건수에 안 세므로 prevAssetCount=1로 first_asset_saved를 막는다
+          trackAssetSave({ asset_type: "yearly_net_asset", method: "manual", result: "update" }, 1);
           toast.success("년도별 순자산이 수정되었습니다.");
           onClose();
         } else {
@@ -104,6 +121,7 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
       } else {
         const success = addYearlyNetAsset(data);
         if (success) {
+          trackAssetSave({ asset_type: "yearly_net_asset", method: "manual", result: "create" }, 1);
           toast.success("년도별 순자산이 추가되었습니다.");
           onClose();
         } else {
@@ -344,7 +362,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           pct={diffPct}
           start={heroStart}
           end={heroEnd}
-          message="기록이 쌓이면 더 보여드려요"
+          message={<>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
@@ -405,7 +423,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                 <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
                   <div className="text-center">
                     <p className="text-muted-foreground text-sm">등록된 년도별 데이터가 없습니다.</p>
-                    <p className="text-muted-foreground text-sm">위의 버튼을 눌러 과거 순자산을 추가하세요.</p>
+                    <YearlyAddLink />
                   </div>
                 </div>
               ) : (

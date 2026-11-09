@@ -15,7 +15,7 @@ import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage"
  *   4) L2 Redis rate limit(캐시 미스로 외부 호출이 필요한 경우만)
  *   5) 업스트림 전역 예산(초과 시 외부 호출 생략 → 기존 "일시 오류" 응답 경로로 우아한 저하)
  *
- * sync 라우트는 이 모듈을 사용하지 않는다(동기화 로직 무변경 원칙).
+ * sync 라우트는 동기화 로직 무변경 원칙에 따라 getClientIp·guardL1Only(L1 한도)만 사용한다.
  */
 
 // ─────────────────────────────────────────────────────────
@@ -172,6 +172,13 @@ export function guardRequest(request: Request, policy: GuardPolicy): NextRespons
   if (!hitL1(`${policy.route}:${ip}`, ip === "unknown" ? Math.ceil(l1Limit / 4) : l1Limit)) {
     return tooMany(60);
   }
+  return null;
+}
+
+/** L1(인스턴스 메모리) 한도만 검사 — 출처·본문 검사 없음(sync처럼 서명 인증 라우트용). 통과 시 null */
+export function guardL1Only(request: Request, route: string, l1PerMinute: number): NextResponse | null {
+  const ip = getClientIp(request);
+  if (!hitL1(`${route}:${ip}`, ip === "unknown" ? Math.ceil(l1PerMinute / 4) : l1PerMinute)) return tooMany(60);
   return null;
 }
 

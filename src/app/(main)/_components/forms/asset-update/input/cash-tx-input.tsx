@@ -1,5 +1,8 @@
 "use client";
 
+import { ResyncTxWarning } from "../resync-tx-warning";
+import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
+import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -58,8 +61,9 @@ export function CashTxInput() {
   const selectedCashId = form.watch("cashId");
   const txType = form.watch("type");
   const reflected = form.watch("reflected");
+  const warnResync = shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("cash") });
   const selectedCash = cashAccounts.find((c) => c.id === selectedCashId);
-  const isForeign = selectedCash?.currency !== "KRW";
+  const isForeign = !!selectedCash && selectedCash.currency !== "KRW"; // 계좌 미선택이면 원화 라벨(undefined 표시 방지)
 
   // 스냅샷·다른 "오늘" 계산과 동일하게 KST 기준 — UTC 자정 기준이면 한국시간 00~09시에 기록한
   // 거래가 하루 전 날짜로 저장돼 원인분해(income)에서 누락되고 "현금 잔액 직접 수정"으로 잘못 잡힌다.
@@ -260,13 +264,21 @@ export function CashTxInput() {
                 name="reflected"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby={warnResync ? "cash-tx-resync-warning-text" : undefined} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">현재 잔액에 즉시 반영</FormLabel>
                       <p className="text-sm text-muted-foreground mt-0.5">해제 시 기록만 남기고 잔액은 변경하지 않습니다 (과거 소급용)</p>
                     </div>
                   </FormItem>
                 )}
+              />
+
+              <ResyncTxWarning
+                category="cash"
+                show={warnResync}
+                refreshedAtIso={lastRefreshedAt("cash")}
+                todayKst={todayStr}
+                id="cash-tx-resync-warning-text"
               />
 
               {reflected && selectedCash && form.watch("amount") > 0 && (
