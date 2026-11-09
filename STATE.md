@@ -48,6 +48,7 @@
 
 ## 열린 릴리스
 
+- **[developer 2026-11-09] 4.65 = #122 외화 환율 잔차를 환율 원인으로(#117 D3+P5b)** (브랜치 issue-4.65, origin/main eb204e4 분기, 커밋 c984e0c, PR #123 draft, 폴더 `issues/4.65-122-fx-residual`, risk:medium, COO 자체 승인 트랙). 개발 완료·Vercel success·qa 대기.
 - **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). 개발 완료·draft PR·qa 대기(G1~G7).
 - **[developer 2026-11-09] 4.62 = #115 품질 정돈 묶음 2** (브랜치 issue-4.62, origin/main 9709e2e 분기, 커밋 a7a71ad, 폴더 `issues/4.62-115-quality-batch-2`, 병행: 4.61 머지 후 origin/main merge). 개발 완료·qa 대기.
 - **개발 중 4.61 = #113 첫 화면 빈 화면 없애기(risk:medium, COO 자체 승인 범위)**: 브랜치 issue-4.61(main f77abef 기준, 독립 릴리스 — 열린 #109 issue-4.60과 분리). 문서 `issues/4.61-113-root-first-paint/`. 개발 완료 후 qa 대기. CLAUDE.md 4장 위임 ⑥ 문구 정정(11-09 결정)을 같은 PR에 포함.
