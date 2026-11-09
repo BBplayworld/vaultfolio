@@ -23,6 +23,7 @@ import { useProfitBasisStore } from "@/stores/profit-basis-store";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { toast } from "sonner";
 import { saveAssetDataNotify } from "@/lib/asset/save-failure";
+import { applyPricePatches, buildCryptoPricePatches, buildStockPricePatches, cryptoKeyOf, stockKeyOf, type StockQuote } from "@/lib/asset/price-patch";
 import { persistThemeModeCookie, updateThemeMode } from "@/lib/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
@@ -533,35 +534,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(STORAGE_KEYS.stockMarkets, JSON.stringify(saved));
           } catch { /* ignore */ }
           harvestClassifications(stocksData);
-          const updatedStocks = current.stocks.map(stock => {
-            const ticker = normalizeTicker(stock);
-            const result = stocksData[ticker] as {
-              price?: number;
-              updated_at?: string;
-              name?: string;
-              inactiveStatus?: "delisted" | "halted";
-              inactiveReason?: string;
-            } | undefined;
-            if (result?.price !== undefined && result?.updated_at) {
-              const isForeignStock = stock.category === "foreign";
-              // 거래정지(halted): 기존 currentPrice 유지 (마지막 알려진 가격 보존)
-              // 상장폐지(delisted): API가 준 0으로 덮어쓰기 (평가에서 어차피 제외됨)
-              // 활성 회복: result.price로 갱신 + inactiveStatus undefined로 리셋
-              const isHalted = result.inactiveStatus === "halted";
-              return {
-                ...stock,
-                currentPrice: isHalted ? stock.currentPrice : result.price,
-                baseDate: isForeignStock ? slotForeign : slotDomestic,
-                name: resolveStockName(stock.category, result.name ?? "", stock.name),
-                inactiveStatus: result.inactiveStatus,
-                inactiveReason: result.inactiveReason,
-                inactiveCheckedAt: result.updated_at,
-              };
-            }
-            return stock;
-          });
-          current = { ...current, stocks: updatedStocks };
+          // 응답은 저장 시점의 최신본에 시세 필드만 병합(#104) — 요청이 도는 동안의 사용자 편집·삭제를 되돌리지 않는다
+          const patches = buildStockPricePatches(current.stocks, stocksData as Record<string, StockQuote | undefined>, { domestic: slotDomestic, foreign: slotForeign });
           if (isCanceled()) return current;
+          const latest = getAssetData();
+          current = { ...latest, stocks: applyPricePatches(latest.stocks, patches, stockKeyOf) };
           setAssetData(current);
           saveAssetDataNotify(current);
         }
@@ -615,14 +592,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       if (isCanceled() || !priceMap || (priceMap as { error?: string }).error) return data;
 
       // 업비트 응답에 없는 심볼(미상장·해외 전용)은 수동 입력값을 그대로 유지
-      const updated = data.crypto.map((c) => {
-        const symbol = c.symbol?.trim().toUpperCase();
-        const price = symbol ? priceMap[symbol]?.price : undefined;
-        if (typeof price !== "number" || price <= 0) return c;
-        return { ...c, currentPrice: price, baseDate: slot };
-      });
-      const next = { ...data, crypto: updated };
+      const patches = buildCryptoPricePatches(data.crypto, priceMap, slot);
       if (isCanceled()) return data;
+      // 저장 시점의 최신본에 시세 필드만 병합(#104)
+      const latest = getAssetData();
+      const next = { ...latest, crypto: applyPricePatches(latest.crypto, patches, cryptoKeyOf) };
       setAssetData(next);
       saveAssetDataNotify(next);
       return next;
