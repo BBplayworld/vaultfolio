@@ -79,8 +79,7 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
       ))}
       <td
         data-testid={`monthly-log-cell-${row.month}-netAsset`}
-        className={`${cell} sticky right-0 text-right font-semibold text-foreground ${EDGE_L} ${SURFACE}`}
-        style={Z_EDGE}
+        className={`${cell} text-right font-semibold text-foreground ${EDGE_L}`}
       >
         <Amount value={row.netAsset} />
       </td>
@@ -88,7 +87,7 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
   );
 }
 
-/** 표 본체(단일 스크롤 컨테이너 — sticky 머리줄·양끝 열). 시트 열린 채 갱신돼도 key 없이 같은 노드라 스크롤 유지 */
+/** 표 본체(단일 스크롤 컨테이너 — sticky 머리줄·월 열만 고정, 자산군·순자산은 함께 가로 이동). 시트 열린 채 갱신돼도 key 없이 같은 노드라 스크롤 유지 */
 export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string }) {
   const { rows, columns } = log;
   const head = `sticky top-0 px-1 py-2 text-xs font-medium text-muted-foreground ${EDGE_B} ${SURFACE}`;
@@ -117,7 +116,7 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
                 {k === "tenantDeposit" ? <>임차<wbr />보증금</> : MONTHLY_LOG_LABELS[k]}
               </th>
             ))}
-            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} right-0 text-right ${EDGE_L}`} style={Z_CORNER}>순자산</th>
+            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} text-right ${EDGE_L}`} style={Z_EDGE}>순자산</th>
           </tr>
         </thead>
         <tbody>

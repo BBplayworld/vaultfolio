@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COMPOSITION_FORBIDDEN_WORDS, COMPOSITION_KEYS, COMPOSITION_LABELS, buildFxExposureLines } from "../composition";
+import { COMPOSITION_FORBIDDEN_WORDS, COMPOSITION_KEYS, COMPOSITION_LABELS, buildFxExposureLines, displayBarWidths } from "../composition";
 import { computeFxExposure } from "../asset-report";
 import { formatShortCurrency } from "@/lib/number-utils";
 import type { AssetData } from "@/types/asset";
@@ -52,5 +52,32 @@ describe("금지어", () => {
     const l = buildFxExposureLines(ex, 20_000_000)!;
     const texts = [l.ratioLine, l.impactLine, l.caption, ...COMPOSITION_KEYS.map((k) => COMPOSITION_LABELS[k])].join("\n");
     for (const w of COMPOSITION_FORBIDDEN_WORDS) expect(texts).not.toContain(w);
+  });
+});
+
+describe("displayBarWidths (구성 막대 표시 최소 폭)", () => {
+  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
+  it("합 100, 0보다 큰 항목은 최소 폭 보장", () => {
+    const w = displayBarWidths([95, 3, 2, 0]);
+    expect(sum(w)).toBeCloseTo(100, 6);
+    expect(w[1]).toBeGreaterThanOrEqual(7 - 1e-9);
+    expect(w[2]).toBeGreaterThanOrEqual(7 - 1e-9);
+  });
+  it("실제 비중 순서 유지", () => {
+    const w = displayBarWidths([60, 25, 10, 4, 1]);
+    for (let i = 1; i < w.length; i++) expect(w[i - 1]).toBeGreaterThanOrEqual(w[i] - 1e-9);
+    expect(sum(w)).toBeCloseTo(100, 6);
+  });
+  it("0 이하는 표시하지 않음(0)", () => {
+    expect(displayBarWidths([0, 50, 50, -1])).toEqual([0, 50, 50, 0]);
+  });
+  it("1개만 있으면 100", () => {
+    expect(displayBarWidths([0, 100, 0])).toEqual([0, 100, 0]);
+  });
+  it("최소 폭 이상이면 실제 비중 그대로", () => {
+    expect(displayBarWidths([50, 30, 20])).toEqual([50, 30, 20]);
+  });
+  it("모두 0이면 전부 0", () => {
+    expect(displayBarWidths([0, 0])).toEqual([0, 0]);
   });
 });

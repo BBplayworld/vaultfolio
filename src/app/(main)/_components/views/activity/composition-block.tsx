@@ -8,7 +8,7 @@ import { ChartColumnStacked } from "lucide-react";
 import { MAIN_PALETTE, pickOnColor } from "@/config/theme";
 import { trackScreen } from "@/lib/analytics/ga";
 import {
-  COMPOSITION_LABELS, computeMonthComposition, type CompositionBreakdown, type CompositionKey, type MonthCompositionItem,
+  COMPOSITION_LABELS, computeMonthComposition, displayBarWidths, type CompositionBreakdown, type CompositionKey, type MonthCompositionItem,
 } from "@/lib/report/composition";
 import type { SettlementWindow } from "@/lib/report/settlement";
 import { InfoHint } from "../../layout/ui/info-hint";
@@ -32,6 +32,8 @@ function ariaRow(i: MonthCompositionItem): string {
 }
 
 function Bar({ side, items, delay }: { side: "start" | "end"; items: MonthCompositionItem[]; delay: number }) {
+  // 안내용 막대: 표시 폭만 최소 비중 보장(숫자는 실제 값)
+  const widths = displayBarWidths(items.map((it) => (side === "start" ? it.startRatio : it.endRatio)));
   return (
     <div
       data-testid={`composition-bar-${side}`}
@@ -42,6 +44,7 @@ function Bar({ side, items, delay }: { side: "start" | "end"; items: MonthCompos
         const ratio = side === "start" ? it.startRatio : it.endRatio;
         const pct = side === "start" ? it.startPct : it.endPct;
         if (ratio <= 0) return null;
+        const width = widths[idx];
         const color = COMPOSITION_COLORS[it.key];
         return (
           <div
@@ -49,9 +52,9 @@ function Bar({ side, items, delay }: { side: "start" | "end"; items: MonthCompos
             data-testid={`composition-seg-${side}-${it.key}`}
             data-ratio={ratio}
             className={`flex items-center justify-center overflow-hidden whitespace-nowrap text-xs font-semibold tabular-nums motion-safe:transition-[width] motion-safe:duration-300 ${idx > 0 ? "shadow-[-2px_0_0_0_var(--card)]" : ""}`}
-            style={{ width: `${ratio}%`, backgroundColor: color, color: pickOnColor(color) }}
+            style={{ width: `${width}%`, backgroundColor: color, color: pickOnColor(color) }}
           >
-            {ratio >= 11 ? `${pct}%` : null}
+            {width >= 11 ? `${pct}%` : null}
           </div>
         );
       })}
