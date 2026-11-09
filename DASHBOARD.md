@@ -17,7 +17,8 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **#127** (신규 기능) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액을 앱 안에서 한눈에(엑셀 월별 시트 대체) | 사업 선정·COO 축소 통과 → 기획 경험 절·UI → 개발 | 11/26 전 목표 | 🟥 대표 승인 예정 |
+| **#129** (버그) | [#129](https://github.com/BBplayworld/vaultfolio/issues/129) 억 단위 축약 표기 오차 — 홈·순자산 차트에서 2.3억이 2.29억으로 보임 | #127 COO 점검 중 발견 → 개발 중 | 즉시 | COO 자체 승인 (버그) |
+| **#127** (신규 기능) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액을 앱 안에서 한눈에(엑셀 월별 시트 대체) | 개발 완료 [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) → UI·qa → COO 보류 2회(금액 표기 정밀도·소수 오차) 수정 중 → 🟥 승인 요청 | 11/26 전 목표 | 🟥 대표 승인 예정 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트를 가운데로, 인증카드는 핵심 기능으로 보이는 자리에 | 대표 방향 수정(11/09): 더보기 이동안 철회 → 인증카드를 페이지 안/상단에 두는 안으로 재기획 중(PR draft) | 11/26 전 목표 | 🟥 대표 승인 예정 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
