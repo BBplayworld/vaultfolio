@@ -254,3 +254,4 @@
 
 ## 2026-11-09 cto(COO): #107 핫픽스 PR #108 위임 머지 가
 - squash `[#4.57] 핫픽스 — 코인 즉시 반영 저장 차단·현금 0원 저장 실패(#107)`, main 충돌 0. 이에 따라 #103 ②③ 릴리스(issue-4.56)는 squash 제목 `[#4.58]`로 재배정, main 병합 시 crypto-tx-input 충돌 해소 + cashBalanceFloor→CASH_FLOOR 통합 (issues/_hotfix/107-decision-brief.md) | cto(COO)
+- 2026-11-09: #107 핫픽스 PR #108 팀 위임 머지 41fbc03(표시 v4.57).
