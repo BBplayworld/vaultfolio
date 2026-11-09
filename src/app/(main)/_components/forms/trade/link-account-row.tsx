@@ -1,14 +1,14 @@
 "use client";
 
 // 거래 입력 '연결 계좌' 행(#103, ui.md 2절) — 주식·코인 수동 입력 폼 공용.
-// 즉시 반영 박스 바로 아래 별도 박스. 후보(같은 통화 현금 + 원화 거래의 대출)가 없으면 행 자체를 숨긴다.
+// 즉시 반영 박스 바로 아래 별도 박스. 후보(같은 통화 현금 + 외화 거래의 원화 현금 + 대출)가 없으면 행 자체를 숨긴다.
 import { useEffect } from "react";
 import { ResyncTxWarning } from "../asset-update/resync-tx-warning";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
 import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { todayKst } from "@/lib/tax-utils";
-import { linkCandidates, type LinkTrade } from "@/lib/trade/linked-record";
+import { isLinkDateAllowed, linkCandidates, type LinkTrade } from "@/lib/trade/linked-record";
 import { LINK_NONE, linkPreviewText, linkValueOf, type LinkEval } from "@/lib/trade/link-text";
 import type { AssetData } from "@/types/asset";
 
@@ -30,8 +30,23 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
   useEffect(() => {
     if (value !== LINK_NONE && (!visible || !inList)) onChange(LINK_NONE);
   }, [visible, inList, value, onChange]);
-  if (!visible) return null;
+  // 후보는 있는데 거래일이 이번 달이 아니어서 숨기는 경우만 안내 1줄(즉시 반영 끔·후보 0개는 줄 없음, #119)
+  const showNote = reflected && !visible && trade.date.length >= 7 && !isLinkDateAllowed(trade.date)
+    && (() => { const c = linkCandidates(data, { ...trade, date: todayKst() }); return c.cash.length + c.loans.length > 0; })();
+  if (!visible) {
+    return showNote ? (
+      <p data-testid="account-link-note" className="px-1 text-xs text-muted-foreground break-keep text-pretty">지난달 거래는 계좌 잔액을 바꾸지 않아요</p>
+    ) : null;
+  }
 
+  // 현금 그룹: 외화 거래는 같은 통화 현금(달러·엔화) → 원화 현금, 원화 거래는 현금 계좌 하나(ui.md 1절)
+  const foreignLabel = trade.currency === "USD" ? "달러 현금" : "엔화 현금";
+  const cashGroups = trade.currency === "KRW"
+    ? [{ label: "현금 계좌", items: cands.cash }]
+    : [
+        { label: foreignLabel, items: cands.cash.filter((c) => (c.currency || "KRW") === trade.currency) },
+        { label: "원화 현금", items: cands.cash.filter((c) => (c.currency || "KRW") === "KRW") },
+      ].filter((g) => g.items.length > 0);
   const chosenKind = ev.state === "none" ? null : ev.choice.kind;
   const preview = ev.state === "ok" ? linkPreviewText(ev, trade.type, hasFee) : null;
   const warnResync = chosenKind !== null && shouldWarnTxAfterResync({ txDate: trade.date, reflected, refreshedAtIso: lastRefreshedAt(chosenKind) });
@@ -47,12 +62,12 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={LINK_NONE}>연결 안 함</SelectItem>
-              {cands.cash.length > 0 && (
-                <SelectGroup>
-                  <SelectLabel>현금 계좌</SelectLabel>
-                  {cands.cash.map((c) => <SelectItem key={c.id} value={linkValueOf({ kind: "cash", cashId: c.id })}>{c.name}</SelectItem>)}
+              {cashGroups.map((g) => (
+                <SelectGroup key={g.label}>
+                  <SelectLabel>{g.label}</SelectLabel>
+                  {g.items.map((c) => <SelectItem key={c.id} value={linkValueOf({ kind: "cash", cashId: c.id })}>{c.name}</SelectItem>)}
                 </SelectGroup>
-              )}
+              ))}
               {cands.loans.length > 0 && (
                 <SelectGroup>
                   <SelectLabel>대출</SelectLabel>
@@ -76,7 +91,14 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
                 </>
               )}
             </p>
-            <p className="break-keep text-pretty text-xs text-muted-foreground">{preview?.sub}</p>
+            <p className="break-keep text-pretty text-xs text-muted-foreground">
+              {preview?.formula && preview.sub.startsWith(preview.formula) ? (
+                <>
+                  <span className="whitespace-nowrap">{preview.formula}</span>
+                  {preview.sub.slice(preview.formula.length)}
+                </>
+              ) : preview?.sub}
+            </p>
           </div>
         </div>
       </div>
