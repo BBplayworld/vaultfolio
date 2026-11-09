@@ -22,6 +22,7 @@ import { computeNewPosition, findDuplicateTransaction, TRANSACTION_RETENTION_YEA
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { formatCurrency } from "@/lib/number-utils";
 import { LinkAccountRow } from "../../trade/link-account-row";
+import { trackLinkedTrade } from "@/lib/trade/link-track";
 import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
 import { CryptoTradeScreenshotImport } from "../../trade/crypto-trade-screenshot-import";
 
@@ -212,7 +213,7 @@ export function CryptoTxInput() {
       : addCryptoTransaction(tx);
     if (ok) {
       track("transaction_save", { asset_type: "crypto", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      if (link) track("feature_use", { category: "linked_trade" });
+      trackLinkedTrade(link);
       toast.success(link ? linkSavedToast(tx.type, link.kind) : tx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }

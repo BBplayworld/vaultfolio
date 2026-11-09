@@ -85,6 +85,7 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
           refreshedAtIso={lastRefreshedAt(chosenKind)}
           todayKst={todayKst()}
           id="link-resync-warning"
+          linkVariant
         />
       )}
       {ev.state === "error" && (

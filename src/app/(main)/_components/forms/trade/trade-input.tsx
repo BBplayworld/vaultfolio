@@ -36,6 +36,7 @@ import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
 import { LinkAccountRow } from "./link-account-row";
+import { trackLinkedTrade } from "@/lib/trade/link-track";
 import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
@@ -315,7 +316,7 @@ export function TradeInput() {
       const link = linkEval.state === "ok" ? linkEval.choice : undefined;
       if (addTransactionsBatch([finalTx], [], [newStock], link)) {
         track("transaction_save", { asset_type: "stock", method: "manual", result: "reflected" });
-        if (link) track("feature_use", { category: "linked_trade" });
+        trackLinkedTrade(link);
         toast.success(link ? linkSavedToast("buy", link.kind) : "매수 거래가 기록되었습니다.");
         resetAndClose();
       }
@@ -369,7 +370,7 @@ export function TradeInput() {
       : addTransaction(finalTx);
     if (ok) {
       track("transaction_save", { asset_type: "stock", method: "manual", result: finalTx.reflected ? "reflected" : "unreflected" });
-      if (link) track("feature_use", { category: "linked_trade" });
+      trackLinkedTrade(link);
       toast.success(link ? linkSavedToast(finalTx.type, link.kind) : finalTx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }
