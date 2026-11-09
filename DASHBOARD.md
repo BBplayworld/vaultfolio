@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 15:40 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 16:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 없음.
@@ -18,6 +18,7 @@
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
 | 4.56 → **v4.58** [PR #106](https://github.com/BBplayworld/vaultfolio/pull/106) | [#103](https://github.com/BBplayworld/vaultfolio/issues/103) 연결 계좌 — 주식·코인 매수·매도 시 현금 또는 대출 함께 증감, 삭제 시 되돌림 | 개발·main(v4.57) 병합 완료(869984a), UI 검수 경미 2건 반영 → 최종 qa 진행 중 · 현금 하한 통화 단위 통일(JPY) COO 확인 중 → 🟥 | 승인 요청 목표 11/10 | 대표 승인 (high, 저장 형식 변경 없음) |
+| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 · (예정) [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 동승 | #110 개발 완료(74d5f55, Vercel success) → UI 검수 중 → qa · #109는 기획·COO 판정 완료, v4.58 머지 뒤 개발 | 11/10~11 | 팀 자체 승인 (low·medium) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -42,9 +43,7 @@
 | 4.44 [PR #76](https://github.com/BBplayworld/vaultfolio/pull/76) | 11/06 | 상세 다크 BOX·구분선 정리 |
 
 ## 🔍 발굴·기획 중 (병렬)
-- [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 — 코인·묶음 삭제 시 거래 기록이 남아 결산 원인에 계속 잡히는 결함 외 5건 (medium 제안, 스키마 변경 0) · COO 반대 검토 중 → v4.58 머지 뒤 개발 · 팀 자체 승인 예정
-- [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 (low 제안) · 사업 확인 ∥ UI 사양 작성 중
-- 보류: 첫 결산 공백(12/11 판독 뒤), 미사용 기능 판독(12/4)
+- 보류: 첫 결산 공백(12/11 판독 뒤), 미사용 기능 판독(12/4), 기존 고아 거래 일괄 정리(1월 이후, high)
 
 ## 📅 주요 일정·제약
 - 결산 기간 머지 금지: **11/09 대표 결정으로 해제** — 준비된 릴리스는 결산 기간에도 바로 머지(판독 경계일 기록은 유지)
