@@ -1,6 +1,6 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-09 KST (cto: #103 대표 결정 ②+③ 재계획 — 짝 기록 id 연결·4.55와 분리 4.56, issues/4.xx-103-cross-asset-flow/4.xx-challenge.md 5절)
+마지막 갱신: 2026-11-09 KST (cto: #103 대표 결정 ②+③ 재계획 — 짝 기록 id 연결·4.55와 분리 4.56, issues/4.56-103-cross-asset-flow/4.56-challenge.md 5절)
 
 ## 대표 결정 대기
 - **v4.53 핫픽스 PR #105(#104 시세 갱신 중 편집 되돌림, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @a3565e7**(issues/4.52-93-cash-loan-resync/4.53hf-104-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review`. 머지 squash 제목 `[#4.53]`, 직후 qa 운영 스모크(104-repro-main.js). 4.52는 머지 시 squash `[#4.54]`로 재배정(이후 릴리스도 순차)
