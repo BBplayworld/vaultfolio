@@ -22,6 +22,11 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { physicalAssetTypes, quickButtonPresets } from "@/config/asset-options";
 
 const quickButtons = [...quickButtonPresets.physical];
+// 매입가 도움말은 모드별 1줄 — 수정 모드는 일부 매도 안내(평가액·매입가를 판 금액만큼 함께 줄이면 결산에 평가 갱신으로 새지 않는다, R6)
+export const PURCHASE_PRICE_HELP = {
+  create: "비우면 현재 평가액과 같게 기록돼요(손익 0).",
+  edit: "일부 팔았다면 평가액과 매입가를 판 금액만큼 함께 줄여 주세요.",
+} as const;
 const HELP = "text-xs text-muted-foreground break-keep text-pretty";
 
 function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose: () => void }) {
@@ -129,7 +134,7 @@ function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose
               <FormControl>
                 <NumberInput data-testid="physical-purchase-price" value={field.value} onChange={field.onChange} placeholder="0" maxLength={15} quickButtons={quickButtons} />
               </FormControl>
-              <FormDescription className={HELP}>비우면 현재 평가액과 같게 기록돼요(손익 0).</FormDescription>
+              <FormDescription data-testid="physical-purchase-price-help" className={HELP}>{PURCHASE_PRICE_HELP[editData ? "edit" : "create"]}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
