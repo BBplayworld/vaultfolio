@@ -328,3 +328,6 @@
 - developer = **난이도별**: 오케스트레이터가 호출 시 지정. opus — 결산·원인 엔진(asset-report·change-hero 등), 저장·동기화·마이그레이션, 자산 간 돈 흐름(연결 계좌·환율), risk:medium 이상, qa FAIL 원인 규명. sonnet — 문구·스타일·단순 UI·포커스·문서 정정·main 병합·low 단순 수정.
 - qa·ui-designer = **sonnet**(정의 그대로).
 - (보강, 같은 날) 대표: "사업, 기획, coo는 effort 높여서 적용" → business-pm·planner-designer·cto 호출 시 **effort: high** 지정(오케스트레이터·정기 실행 공통). 개발자 opus 배정 건도 effort high.
+
+## 2026-11-09 대표 결정: #125 방향 수정
+- 인증카드 = 주요 핵심 기능. **더보기는 설정 전용**(기능 진입점 이동 금지). #125는 하단 칸 정리 목표는 유지하되 인증카드를 페이지 안 또는 상단에 배치하는 안으로 재기획. PR #126(더보기 이동안)은 draft로 되돌림·재작업.
