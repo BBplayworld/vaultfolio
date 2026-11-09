@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 14:00 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 14:20 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 없음.
@@ -17,12 +17,12 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.60** (예정) | [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 — 코인·묶음 삭제 고아 거래 외 5건 | 개발 중 → UI·qa·COO | 11/10 | 팀 자체 승인 (medium) |
-| **4.59** [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | [#110](https://github.com/BBplayworld/vaultfolio/issues/110) 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기 | UI 승인 · qa D1(취소 후 시트 튀어나옴) 수정(a9e7c64) → 증분 qa → COO | 11/10~11 | 팀 자체 승인 (low·medium) |
+| **4.60** (예정) | [#109](https://github.com/BBplayworld/vaultfolio/issues/109) 품질 정돈 묶음 — 코인·묶음 삭제 고아 거래 외 5건 | 개발·UI 승인 → COO 구현 후 판정 반영(98d4954) → qa 진행 중 → main(v4.59) 병합 → COO | 11/10 | 팀 자체 승인 (medium) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
+| v4.59 [PR #111](https://github.com/BBplayworld/vaultfolio/pull/111) | 11/09 14:19 | 이어서 맞추기 — 저장 후 추가 시트가 목록으로 돌아와 다음 자산군 바로 맞추기, 오늘 맞춘 자산군 ✓(#110) | 진행 중 |
 | v4.57 핫픽스 [PR #108](https://github.com/BBplayworld/vaultfolio/pull/108) | 11/09 | 코인 즉시 반영 저장 차단·현금 0원 저장 실패 수정(#107) | PASS |
 | v4.56 [PR #101](https://github.com/BBplayworld/vaultfolio/pull/101) | 11/09 | 실물 자산 등록(#58, 대표 위임)·홈 원인에서 자산 간 이동 상쇄(#103 A) | D0 PASS(동기화 pull은 D+1에서) · D+1 11/10 |
 | v4.55 [PR #102](https://github.com/BBplayworld/vaultfolio/pull/102) | 11/09 | 스크린샷 인식 실패 뒤 다음 행동·최신화 팁 보유 자산군만·연 탭 자동 값 기록일(#99) | PASS |
