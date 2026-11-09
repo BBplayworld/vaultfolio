@@ -11,6 +11,7 @@ import { getProfitLossColor } from "@/config/theme";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 import { computeAttributionBetween, type buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { estimateLoanInterest, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
+import { linkedTradeIdOf } from "@/lib/trade/linked-record";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { SECTION, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
@@ -151,9 +152,11 @@ function withLoanCause(
   startDate: string | null,
   endDate: string,
   hasCashRecords: boolean,
+  viaLoan: { buy: number; sell: number } = { buy: 0, sell: 0 },
 ): SettlementCauses {
   const debts = effects.filter((e) => e.key === "debt");
-  const debtNet = debts.reduce((s, e) => s + e.amount, 0);
+  // 연결 대출 증가↔매수·상환↔매도 id 짝은 매수·매도 대금이 오간 것이므로 '대출 순증' 몫에서 뺀다(#103)
+  const debtNet = debts.reduce((s, e) => s + e.amount, 0) + viaLoan.buy - viaLoan.sell;
   return splitLoanCause(mapped, {
     interest: startDate ? estimateLoanInterest(assetData.loans ?? [], dayDiff(startDate, endDate)) : 0,
     debtIncrease: Math.max(0, -debtNet),
@@ -172,12 +175,13 @@ const dayDiff = (a: string, b: string) => Math.round(Math.abs(Date.parse(`${a}T0
  */
 export interface RecordedTransferDetail {
   out: { stock: number; crypto: number; physical: number; loan: number }; // 출금 ↔ 매수·실물 등록·상환 짝 금액(KRW)
-  in: { stock: number; crypto: number };                                   // 입금 ↔ 매도 짝 금액 — ② 확정 전이라 항상 0
+  in: { stock: number; crypto: number };                                   // 연결 입금 ↔ 매도 id 짝 금액(비연결 추정 짝은 만들지 않음)
+  viaLoan: { buy: number; sell: number };                                  // 연결 대출 증가 ↔ 매수 / 상환 ↔ 매도 id 짝 금액(현금을 거치지 않음)
 }
 
 /** 짝 내역(#103) — 결산 `matchedTransfer`와 홈 헤더 상쇄의 단일 출처. 규칙은 matchRecordedTransfers 주석과 같다 */
 export function matchRecordedTransferDetail(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): RecordedTransferDetail {
-  const detail: RecordedTransferDetail = { out: { stock: 0, crypto: 0, physical: 0, loan: 0 }, in: { stock: 0, crypto: 0 } };
+  const detail: RecordedTransferDetail = { out: { stock: 0, crypto: 0, physical: 0, loan: 0 }, in: { stock: 0, crypto: 0 }, viaLoan: { buy: 0, sell: 0 } };
   if (!from) return detail;
   type Kind = keyof RecordedTransferDetail["out"];
   const inWin = (d: string) => d > from && d <= to;
@@ -197,6 +201,49 @@ export function matchRecordedTransferDetail(assetData: AssetData, from: string |
     // 실물(#58): 거래내역이 없으므로 구간 안 매입일이 있는 신규분을 후보로 둔다(금액 = 매입가, 엔진 buy:physical과 같은 값)
     ...(assetData.physicalAssets ?? []).filter((p) => p.purchaseDate && inWin(p.purchaseDate) && p.purchasePrice > 0).map((p) => ({ id: `p:${p.id}`, date: p.purchaseDate, kind: "physical" as const, left: p.purchasePrice })),
   ];
+  // 0단계(#103 연결 계좌): 짝 기록 id로 거래와 정확히 짝지은 몫을 먼저 쓰고 양쪽 left에서 뺀다 — 같은 날짜라 달 경계 분리 없음.
+  // 남은 몫만 아래 ±3일 추정(기존 코드, 무변경)으로 간다. 연결 기록이 없으면 이 단계는 아무것도 하지 않는다.
+  const stockTx = new Map((assetData.transactions ?? []).filter((t) => t.reflected && inWin(t.date)).map((t) => [t.id, t]));
+  const cryptoTx = new Map((assetData.cryptoTransactions ?? []).filter((t) => t.reflected && inWin(t.date)).map((t) => [t.id, t]));
+  const tradeOf = (txId: string) => {
+    const s = stockTx.get(txId);
+    if (s) return { type: s.type, kind: "stock" as const, cand: `s:${s.id}`, krw: s.quantity * s.price * (s.exchangeRate && s.exchangeRate > 0 ? (s.currency === "JPY" ? s.exchangeRate / 100 : s.currency === "KRW" ? 1 : s.exchangeRate) : krw(s.currency)) };
+    const c = cryptoTx.get(txId);
+    if (c) return { type: c.type, kind: "crypto" as const, cand: `c:${c.id}`, krw: c.quantity * c.price };
+    return null;
+  };
+  const sellLeft = new Map<string, number>(); // 매도 거래별 id 짝에 쓰고 남은 금액(여러 짝 기록이 같은 거래를 두 번 쓰지 않도록)
+  for (const t of assetData.cashTransactions ?? []) {
+    const txId = t.reflected && inWin(t.date) ? linkedTradeIdOf(t) : null;
+    const tr = txId ? tradeOf(txId) : null;
+    if (!tr || !txId) continue;
+    const o = outs.find((x) => x.id === t.id);
+    if (t.type === "withdrawal" && tr.type === "buy" && o) {
+      const c = cands.find((x) => x.id === tr.cand);
+      if (!c) continue;
+      const m = Math.min(o.left, c.left);
+      if (m > 0) { o.left -= m; c.left -= m; detail.out[tr.kind] += m; }
+    } else if (t.type === "deposit" && tr.type === "sell") {
+      const left = sellLeft.get(txId) ?? tr.krw;
+      const m = Math.min(t.amount * krw(t.currency), left);
+      if (m > 0) { sellLeft.set(txId, left - m); detail.in[tr.kind] += m; }
+    }
+  }
+  for (const t of assetData.loanTransactions ?? []) {
+    const txId = t.reflected && inWin(t.date) ? linkedTradeIdOf(t) : null;
+    const tr = txId ? tradeOf(txId) : null;
+    if (!tr || !txId) continue;
+    if (t.type === "borrow" && tr.type === "buy") {
+      const c = cands.find((x) => x.id === tr.cand);
+      const m = Math.min(t.amount, c ? c.left : 0);
+      if (c && m > 0) { c.left -= m; detail.viaLoan.buy += m; }
+    } else if (t.type === "repay" && tr.type === "sell") {
+      const c = cands.find((x) => x.id === `l:${t.id}`);
+      const left = sellLeft.get(txId) ?? tr.krw;
+      const m = Math.min(t.amount, left);
+      if (m > 0) { sellLeft.set(txId, left - m); detail.viaLoan.sell += m; if (c) c.left -= Math.min(m, c.left); }
+    }
+  }
   for (const o of outs) {
     const near = cands
       .filter((c) => c.left > 0 && dayDiff(c.date, o.date) <= MATCH_DAYS)
@@ -211,8 +258,8 @@ export function matchRecordedTransferDetail(assetData: AssetData, from: string |
 }
 
 export function matchRecordedTransfers(assetData: AssetData, from: string | null, to: string, rates: { USD: number; JPY: number }): number {
-  const d = matchRecordedTransferDetail(assetData, from, to, rates).out;
-  return d.stock + d.crypto + d.physical + d.loan;
+  const { out, in: inn } = matchRecordedTransferDetail(assetData, from, to, rates);
+  return out.stock + out.crypto + out.physical + out.loan - inn.stock - inn.crypto; // 연결 입금 짝은 음수 기여
 }
 
 /**
@@ -247,7 +294,7 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
       deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
       hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
     },
-  ), effects, assetData, startDate, endDate, hasCash);
+  ), effects, assetData, startDate, endDate, hasCash, matchRecordedTransferDetail(assetData, startDate, endDate, rates).viaLoan);
   return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
 }
 
@@ -283,7 +330,7 @@ export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, 
       deltaNet, cashTracked, matchedTransfer: matchRecordedTransfers(assetData, startDate, endDate, rates),
       hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
     },
-  ), effects, assetData, startDate, endDate, hasCash);
+  ), effects, assetData, startDate, endDate, hasCash, matchRecordedTransferDetail(assetData, startDate, endDate, rates).viaLoan);
   return { mapped, estimatedLabel: effects.length === 0 || estimatedSegments === points.length ? "예측" : "일부 예측" };
 }
 

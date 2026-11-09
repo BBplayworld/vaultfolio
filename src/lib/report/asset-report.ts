@@ -301,7 +301,8 @@ export interface AttributionDisplayItem {
 // transfer 인자가 없거나 지울 것이 없으면 호출 결과는 기존과 같다.
 export interface AttributionTransfer {
   out: { stock: number; crypto: number; physical: number; loan: number }; // 반영 출금 ↔ 매수·실물 등록·상환 짝(KRW, 양수)
-  in: { stock: number; crypto: number };                                   // 반영 입금 ↔ 매도 짝(② 확정 후 사용, A 단독이면 0)
+  in: { stock: number; crypto: number };                                   // 연결 입금 ↔ 매도 id 짝(비연결은 0)
+  viaLoan?: { buy: number; sell: number };                                  // 연결 대출 짝(홈은 풀 상쇄로 이미 0이라 소비하지 않음 — 결산 대출 몫에서만 제외)
 }
 type Eff = { key: AttributionCauseKey; amount: number; estimated?: boolean };
 const POOL_KEYS = new Set<AttributionCauseKey>([

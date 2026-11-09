@@ -35,6 +35,9 @@ import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
+import { LinkAccountRow } from "./link-account-row";
+import { trackLinkedTrade } from "@/lib/trade/link-track";
+import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
 import { stockCategories } from "@/config/asset-options";
@@ -79,6 +82,7 @@ export function TradeInput() {
   const [target, setTarget] = useState<TradeTarget | undefined>(); // 반영할 보유 자산 항목(직접 선택) 또는 신규 자산
   const [filterCategory, setFilterCategory] = useState("all");
   const [lockedStock, setLockedStock] = useState(false); // 상세에서 종목 사전선택으로 진입
+  const [linkValue, setLinkValue] = useState(LINK_NONE); // 연결 계좌 선택 — 매번 '연결 안 함'으로 열림(기억 저장 없음)
 
   // 보유 주식 목록 (delisted 제외)
   const stocks = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
@@ -162,6 +166,23 @@ export function TradeInput() {
     return { before: pos, after: computeNewPosition(pos, tentativeTx) };
   }, [reflected, isNewTarget, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
 
+  // 연결 계좌 평가 — 화면 표시(미리보기·오류)와 제출 차단이 같은 값을 쓴다
+  const effReflected = reflected || isNewTarget;
+  const effectivePrice = useMemo(() => {
+    if (selectedStock?.currency === "USD" && priceInKrw) {
+      const rate = watchedExRate || exchangeRates.USD;
+      return rate ? Math.round((watchedPrice / rate) * 1000) / 1000 : watchedPrice;
+    }
+    return watchedPrice;
+  }, [selectedStock?.currency, priceInKrw, watchedExRate, exchangeRates.USD, watchedPrice]);
+  const watchedDate = form.watch("date");
+  const linkTrade = selectedStock
+    ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", date: watchedDate, name: selectedStock.name }
+    : null;
+  const linkEval: LinkEval = linkTrade && watchedQty > 0 && effectivePrice > 0
+    ? evaluateLink(assetData, linkTrade, linkValue, effReflected)
+    : { state: "none" };
+
   // 종목(티커) 대표 목록 — 그룹당 1개
   const tickerReps = useMemo(() => stockGroups.map((g) => g[0]).filter(Boolean), [stockGroups]);
 
@@ -226,6 +247,7 @@ export function TradeInput() {
     setDupPending(null);
     setSelectedGroupId("");
     setTarget(undefined);
+    setLinkValue(LINK_NONE);
   }, [form]);
 
   const buildTransaction = (data: TradeFormValues): Transaction => {
@@ -287,9 +309,15 @@ export function TradeInput() {
       const stockId = `stock_${Date.now()}`;
       const finalTx = markReflected({ ...tx, stockId, reflected: true });
       const newStock: Stock = { ...stock, id: stockId, purchaseDate: finalTx.date, ...buildReflectionPatch(finalTx, stock) };
-      if (addTransactionsBatch([finalTx], [], [newStock])) {
+      if (linkEval.state === "error") {
+        track("transaction_save", { asset_type: "stock", method: "manual", result: "blocked" });
+        return;
+      }
+      const link = linkEval.state === "ok" ? linkEval.choice : undefined;
+      if (addTransactionsBatch([finalTx], [], [newStock], link)) {
         track("transaction_save", { asset_type: "stock", method: "manual", result: "reflected" });
-        toast.success("매수 거래가 기록되었습니다.");
+        trackLinkedTrade(link);
+        toast.success(link ? linkSavedToast("buy", link.kind) : "매수 거래가 기록되었습니다.");
         resetAndClose();
       }
       return;
@@ -314,6 +342,12 @@ export function TradeInput() {
       }
     }
 
+    // 연결 계좌 오류(잔액 부족·초과 상환·대금 0 이하)는 거래 포함 전체 저장 차단 — 오류 문구는 화면에 이미 표시 중
+    if (data.reflected && linkEval.state === "error") {
+      track("transaction_save", { asset_type: "stock", method: "manual", result: "blocked" });
+      return;
+    }
+
     const finalTx = tx.reflected ? markReflected(tx) : tx;
 
     // 중복 거래(증권사·날짜·수량·가격·유형 동일) 검사 → 확인 다이얼로그
@@ -330,12 +364,14 @@ export function TradeInput() {
 
   // 거래 커밋(반영/미반영 분기) + 토스트 + 닫기
   const commitTransaction = (finalTx: Transaction, stock: Stock) => {
+    const link = finalTx.reflected && linkEval.state === "ok" ? linkEval.choice : undefined;
     const ok = finalTx.reflected
-      ? addTransactionWithPosition(finalTx, stock.id, buildReflectionPatch(finalTx, stock))
+      ? addTransactionWithPosition(finalTx, stock.id, buildReflectionPatch(finalTx, stock), link)
       : addTransaction(finalTx);
     if (ok) {
       track("transaction_save", { asset_type: "stock", method: "manual", result: finalTx.reflected ? "reflected" : "unreflected" });
-      toast.success(finalTx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
+      trackLinkedTrade(link);
+      toast.success(link ? linkSavedToast(finalTx.type, link.kind) : finalTx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
       resetAndClose();
     }
   };
@@ -650,6 +686,11 @@ export function TradeInput() {
                   </FormItem>
                 )}
               />
+
+              {/* 연결 계좌 — 즉시 반영 박스 바로 아래(#103) */}
+              {linkTrade && (
+                <LinkAccountRow data={assetData} trade={linkTrade} reflected={effReflected} value={linkValue} onChange={setLinkValue} ev={linkEval} />
+              )}
 
               {/* 반영 후 예상 포지션 미리보기 */}
               {reflectionPreview && selectedStock && (

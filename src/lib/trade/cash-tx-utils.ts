@@ -37,9 +37,9 @@ export function isCashWithdrawalValid(currentBalance: number, amount: number): b
   return amount <= currentBalance;
 }
 
-/** 현금 잔액 하한 — cashSchema balance > 0 때문에 0원은 저장 불가(KRW 1원, 외화 0.01). 4.56 CASH_FLOOR와 같은 규칙(병합 시 통합) */
+/** 현금 잔액 하한 = 통화 최소 단위 — cashSchema balance > 0 때문에 0원은 저장 불가(KRW·JPY 1, USD 등 0.01). 하한 정본 1곳(#103 연결 계좌도 사용) */
 export function cashBalanceFloor(currency = "KRW"): number {
-  return currency === "KRW" ? 1 : 0.01;
+  return currency === "KRW" || currency === "JPY" ? 1 : 0.01;
 }
 
 /** 반영 출금 후 잔액이 하한 미만(0원 포함)이 되는지 — 초과 출금(amount > balance)은 별도 가드가 담당 */
