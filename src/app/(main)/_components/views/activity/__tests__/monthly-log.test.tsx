@@ -118,7 +118,7 @@ describe("표 MonthlyLogTable", () => {
     expect(html).toMatch(/monthly-log-row-2026-11" data-kind="full" data-current=""/);
     expect(html).toContain("진행 중");
     expect(html).toContain("오늘");
-    expect(html).toContain("2026-07 기록");
+    expect(html).toContain('<span class="whitespace-nowrap">2026-07</span> <span class="whitespace-nowrap">기록</span>'); // 하이픈에서 안 끊김
     expect(html).toContain("10/28");
   });
   it("기록 없음 줄은 한 칸(colSpan = 자산군 수 + 1), 레거시 줄 자산군 칸은 — + aria-label", () => {
