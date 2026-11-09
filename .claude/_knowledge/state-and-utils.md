@@ -314,7 +314,7 @@ reflectedCashInflow(data, from, to, rates): number   // 반영된 현금 순유�
 reflectedTradeFlow(data, from, to, rates)            // → { buy, sell } 반영된 주식 체결액 (체결 환율 우선)
 realizedSellGains(data, from, to, prevFx, rates)    // (내부, #4.64 D1) 정밀 분기 반영 매도 실현손익 R {stock, crypto} — priceStock/Crypto +R, manual −R, 합계 불변
 tradeKrwRate(t, rates)                               // 주식 체결 KRW 배수(체결 환율 우선, JPY 100엔당, 없으면 현재 환율) — reflectedTradeFlow·getAttributionRecords 공용
-costFxRevaluation(data, prevFx, currFx)              // → { stock, cash } 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
+costFxRevaluation(data, prevFx, currFx, from, to, rates, includeFromCash)  // (#4.65) → { stock, cash, flowFxStock, flowFxCash } 구간 시작 보유분 기준(주식 deriveBaseSnapshot 역산·현금 입출금 역가감); flowFx = 구간 안 외화 매수·입출금의 (끝−체결 환율) 몫 → fx로 이동·manual에서 차감. 이하 종전: 외화 원가의 환율만으로 인한 재평가분 — saving에서 제외해 fx와 이중귀속 방지
 fxBaseByClass(data, rates)                           // → { stock, cash } 통화별 외화노출 기준액(KRW) — computeFxExposure용 단일 수식
 byDateThenDaily(a, b)                                // 시계열 포인트 정렬 — 같은 날짜면 daily 우선(monthly보다 뒤) → 시작점이 daily로 잡힌다
 makeCause(key, amount, estimated?): AttributionCause // label=causeShortLabel·sentence=causeSentence 파생. estimated 플래그가 있으면 AttributionCause.estimated=true

@@ -224,7 +224,9 @@ export function matchRecordedTransferDetail(assetData: AssetData, from: string |
       const m = Math.min(o.left, c.left);
       if (m > 0) { o.left -= m; c.left -= m; detail.out[tr.kind] += m; }
     } else if (t.type === "deposit" && tr.type === "sell") {
-      const left = sellLeft.get(txId) ?? tr.krw;
+      // 같은 외화 현금 계좌 연결 입금(4.65 #122): 엔진 매도 줄이 입금과 같은 환산(realizedSellGains)이라 짝 금액도 입금 환산으로 맞춘다
+      const sameFx = t.currency !== "KRW" && stockTx.get(txId)?.currency === t.currency;
+      const left = sellLeft.get(txId) ?? (sameFx ? t.amount * krw(t.currency) : tr.krw);
       const m = Math.min(t.amount * krw(t.currency), left);
       if (m > 0) { sellLeft.set(txId, left - m); detail.in[tr.kind] += m; }
     }
