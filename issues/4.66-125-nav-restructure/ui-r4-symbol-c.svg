@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- #4.66 R4: C 레이어 S 상하 균형(광학 보정) — 척추 교차점 y15.5, 위 볼 반폭 7.25, 틈 1.1 -->
+  <defs>
+    <linearGradient id="sc-t" x1="8" y1="4" x2="24" y2="15.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c3ccf8"/><stop offset="1" stop-color="#8396e4"/>
+    </linearGradient>
+    <linearGradient id="sc-b" x1="8" y1="15.5" x2="24" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6a7fd0"/><stop offset="1" stop-color="#43529f"/>
+    </linearGradient>
+    <clipPath id="sc-ct"><path d="M0 0H32V9.65L0 20.25Z"/></clipPath>
+    <clipPath id="sc-cb"><path d="M0 21.35L32 10.75V32H0Z"/></clipPath>
+    <path id="sc-s" d="M23.25 9.68C23.25 6.53 20.06 5 16 5C11.75 5 8.75 6.72 8.75 9.68C8.75 12.83 12.13 13.93 16 15.5C20 17.13 23.5 18.43 23.5 21.88C23.5 25.12 20.4 27 16 27C11.8 27 8.5 25.33 8.5 21.88" stroke-width="4.8"/>
+  </defs>
+  <g clip-path="url(#sc-ct)"><use href="#sc-s" stroke="url(#sc-t)"/></g>
+  <g clip-path="url(#sc-cb)"><use href="#sc-s" stroke="url(#sc-b)"/></g>
+</svg>
