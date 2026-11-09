@@ -19,11 +19,12 @@
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
 - 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
 - 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
-- 🧪 qa PASS · UI 승인 · COO PASS(보류 2회 해소: 금액 정밀도·소수 오차) · Vercel success @ccd939c
+- 🔁 대표 지적 R1 반영: ① 구성 변화 막대 자산군별 최소 폭 7%(실제 %는 아래 목록 그대로) [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-composition.png) ② 월별 기록 표 가로 스크롤 1개로 통일 — 열 순서 `월 | 순자산 | 부동산…`, 월 열만 고정 [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet.png) · [밀었을 때](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet-scrolled.png)
+- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @755a654 · iOS Safari 실기기는 미검증(Chromium 터치 에뮬레이션)
 - ⚠️ 한계: 값은 '그 달 마지막으로 앱을 연 날' 기준(캡션으로 안내) · 375에서 자산군 5개 이상·10억 이상이면 가로 스크롤 · 7/23 이전 달은 순자산만
 - #32 관계: 결산 Hero로 옮긴 월별 증감은 다시 넣지 않았고, 사라졌던 '여러 달 한눈에'만 금액 표로 되살림
 - 📏 판독: 머지~1/10 사용자 3명 이상 유지 / 0~1명 제거 후보 · ↩️ 롤백: PR revert 1회
-- 👉 결정: PR #128 머지 = 반영 / 닫기 = 미반영 · 브리프: [4.67-decision-brief.md](issues/4.67-127-monthly-log/4.67-decision-brief.md)
+- 👉 결정: PR #128 머지 = 반영 / 닫기 = 미반영 · 폰에서 스크롤이 여전히 2개로 보이면 캡처와 함께 `수정:` · 브리프: [4.67-decision-brief.md](issues/4.67-127-monthly-log/4.67-decision-brief.md)
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
@@ -35,7 +36,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 지적 R1 수정 중(구성 바 최소 비중·상세 표 가로 스크롤 1개로) → qa·COO 후 🟥 재승인 요청 | 11/26 전 | 🟥 대표 승인 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R1 반영(최소 폭·스크롤 1개·순자산 2번째 열) 완료(755a654) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | R1 반영(상단 '홈' 제목) 완료(94e54ec) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
