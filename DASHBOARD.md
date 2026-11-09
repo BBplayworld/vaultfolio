@@ -40,7 +40,7 @@
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
 | **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R2 반영(iOS 스크롤 막대 가림 원인 확정·조치) 완료(0c05de1) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
-| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 대표 R2 지적('홈' 글씨 어색, 공식 느낌 필요) → 상단 브랜드 재설계 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 로고 R7 최종 시안(8f566d8: 흑백 레이어 S 14.5px·워드마크·인증카드 foreground 반전) → 🟥 대표 시안 승인 대기(승인 시 UI검수·qa·COO 후 머지) | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
