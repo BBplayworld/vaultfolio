@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Home, PieChart, TrendingUp, PlusCircle, IdCard, MoreHorizontal } from "lucide-react";
+import { Home, PieChart, TrendingUp, PlusCircle, MoreHorizontal } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { MAIN_PALETTE, Z_LAYER } from "@/config/theme";
-import { ShareScreenshotDialog } from "../header-menu/share/share-menu";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
@@ -20,9 +19,8 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "홈", icon: Home },
   { id: "detail", label: "상세", icon: PieChart },
-  { id: "activity", label: "성과", icon: TrendingUp },
   { id: "update", label: "업데이트", icon: PlusCircle },
-  { id: "screenshot", label: "인증카드", icon: IdCard },
+  { id: "activity", label: "성과", icon: TrendingUp },
   { id: "more", label: "더보기", icon: MoreHorizontal },
 ];
 
@@ -38,7 +36,6 @@ export function BottomNav() {
   const { isStandalone } = usePWAInstall();
   const { view, navigate } = useAssetNavigation();
   const { assetData, isSharePending } = useAssetData();
-  const [screenshotOpen, setScreenshotOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -61,9 +58,6 @@ export function BottomNav() {
 
   const activeId = getActiveId(view.type);
 
-  const hasAssets =
-    hasAnyAssets(assetData);
-
   const handleTap = (id: string) => {
     // 전 탭 햅틱 (안드로이드만 동작 — iOS는 Web Vibration 미지원으로 no-op)
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
@@ -82,41 +76,31 @@ export function BottomNav() {
       case "update":
         window.dispatchEvent(new CustomEvent("open-add-asset-sheet"));
         break;
-      case "screenshot":
-        if (hasAssets) {
-          setScreenshotOpen(true);
-          window.dispatchEvent(new CustomEvent("screenshot-dialog-toggle", { detail: { open: true } }));
-        }
-        break;
       case "more":
         navigate({ type: "more" });
         break;
     }
   };
 
-  const handleScreenshotChange = (open: boolean) => {
-    setScreenshotOpen(open);
-    window.dispatchEvent(new CustomEvent("screenshot-dialog-toggle", { detail: { open } }));
-  };
-
   return (
-    <>
-      <nav className="pwa-nav-container fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border" style={{ zIndex: Z_LAYER.nav }}>
-        <div className="flex items-center justify-around px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
-          {/* 체험 모드(#59): 업데이트(등록)·더보기(설정·외부 전송) 숨김 — justify-around라 빈 자리 없음 */}
+    <nav data-testid="bottom-nav" className="pwa-nav-container fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border" style={{ zIndex: Z_LAYER.nav }}>
+        <div className={`grid items-center ${isTrialMode() ? "grid-cols-3" : "grid-cols-5"} px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]`}>
+          {/* 체험 모드(#59): 업데이트(등록)·더보기(설정·외부 전송) 숨김 — grid-cols-3 균등이라 빈 자리 없음 */}
           {(isTrialMode() ? NAV_ITEMS.filter(({ id }) => id !== "update" && id !== "more") : NAV_ITEMS).map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;
             const isCenter = id === "update";
-            const isAction = id === "update" || id === "screenshot";
+            const isAction = id === "update";
 
             return (
               <button
                 key={id}
                 type="button"
                 onClick={() => handleTap(id)}
-                className="flex flex-col items-center justify-center gap-0.5 min-w-[3.25rem] min-h-[44px] py-1.5 select-none transition-transform duration-100 active:scale-95 [-webkit-tap-highlight-color:transparent]"
+                className="flex flex-col items-center justify-center gap-0.5 w-full min-h-[44px] py-1.5 select-none transition-transform duration-100 active:scale-95 [-webkit-tap-highlight-color:transparent]"
                 style={{ touchAction: "manipulation" }}
                 aria-label={label}
+                aria-current={isActive ? "page" : undefined}
+                data-testid={`bottom-nav-${id}`}
               >
                 {isCenter ? (
                   <div
@@ -155,8 +139,5 @@ export function BottomNav() {
           })}
         </div>
       </nav>
-
-      <ShareScreenshotDialog open={screenshotOpen} onOpenChange={handleScreenshotChange} />
-    </>
   );
 }

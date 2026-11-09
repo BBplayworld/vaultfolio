@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-09 (v4.66)
+
+### 하단 네비 6칸 → 5칸 — 인증카드는 더보기 도구로, 업데이트를 가운데로 (#4.66, 이슈 #125, risk low, 대표 승인 대상)
+- **왜**: 강조 버튼 '업데이트'가 4번째 칸이라 가운데가 아니고 탭 순서가 스와이프 순서와 어긋남. 인증카드 진입은 GA·`recordVisit` 기록 누락.
+- **변경**: `bottom-nav.tsx` 홈·상세·업데이트·성과·더보기 `grid-cols-5`(체험 3), 인증카드 칸·다이얼로그 제거, `aria-current`·testId. `tool-menu.tsx` 도구 섹션에 `more-row-share-card`(다이얼로그 직접 오픈, GA `source:"more"`+`recordVisit`). `top-bar.tsx` 버튼 클릭에 `recordVisit("share-card")`. `app-features.ts` 인증카드 설명의 위치 표현 제거.
+- **범위**: 저장 키·스키마·동기화·서버 전송 diff 0, 브라우저 상단 바·FAB·홈 결산 팁·`PAGE_ORDER` 무변경. 테스트 `bottom-nav-5col.test.ts`.
+
+---
+
 ## 2026-11-09 (v4.65)
 
 ### 외화 환율 잔차를 환율 원인으로 — 대출 예측·주식 매도 오표시 해소 (#4.65, 이슈 #122, risk medium)

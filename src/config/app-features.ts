@@ -103,7 +103,7 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: "share-card",
     title: "인증카드",
-    description: "상단의 인증카드 버튼으로 주식 현황과 포트폴리오 구성 비중(종목별 원형 차트)을 이미지로 저장·공유해보세요.",
+    description: "인증카드로 주식 현황과 포트폴리오 구성 비중(종목별 원형 차트)을 이미지로 저장·공유해보세요.",
     icon: IdCard,
     action: dispatchOpenShareCard,
     visitKey: "share-card",

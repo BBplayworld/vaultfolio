@@ -59,6 +59,7 @@ function ShareScreenshotButton() {
     <>
       <button
         onClick={() => {
+          recordVisit("share-card");
           track("feature_use", { category: "share_card", method: "open", source: "top_bar" });
           setOpen(true);
         }}
