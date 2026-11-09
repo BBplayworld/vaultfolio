@@ -22,6 +22,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import type { Cash, CashTransaction } from "@/types/asset";
 import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
+import { roundMoney } from "@/lib/trade/linked-record";
 import { findDuplicateCashTx, isCashWithdrawalValid, isCashWithdrawalBelowFloor } from "@/lib/trade/cash-tx-utils";
 import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
 
@@ -116,7 +117,7 @@ export function CashTxInput() {
 
   // 반영 시 계좌 잔액 패치 (입금=+ / 출금=−)
   const balancePatch = (tx: CashTransaction, cash: Cash): Partial<Cash> => ({
-    balance: cash.balance + (tx.type === "deposit" ? tx.amount : -tx.amount),
+    balance: roundMoney(cash.balance + (tx.type === "deposit" ? tx.amount : -tx.amount), cash.currency || "KRW"),
   });
 
   const onSubmit = (data: CashTxFormValues) => {
@@ -132,7 +133,7 @@ export function CashTxInput() {
     // 전액 출금 → 잔액 0원은 저장할 수 없어 사전 차단
     if (data.reflected && data.type === "withdrawal" && isCashWithdrawalBelowFloor(cash.balance, data.amount, cash.currency)) {
       track("transaction_save", { asset_type: "cash", method: "manual", result: "blocked" });
-      form.setError("amount", { message: `${cash.name} 잔액을 0원으로 둘 수 없어요. 반영을 끄고 기록하거나 출금액을 줄여 주세요.` });
+      form.setError("amount", { message: `${cash.name} 잔액을 ${formatCurrencyDisplay(0, cash.currency)}으로 둘 수 없어요. 반영을 끄고 기록하거나 출금액을 줄여 주세요.` });
       return;
     }
 
@@ -295,7 +296,7 @@ export function CashTxInput() {
                   <p className="tabular-nums mt-0.5">
                     <span className="text-muted-foreground">{formatCurrencyDisplay(selectedCash.balance, selectedCash.currency)}</span>
                     <span className="text-muted-foreground/60"> → </span>
-                    <span className="font-semibold">{formatCurrencyDisplay(selectedCash.balance + (txType === "deposit" ? form.watch("amount") : -form.watch("amount")), selectedCash.currency)}</span>
+                    <span className="font-semibold">{formatCurrencyDisplay(roundMoney(selectedCash.balance + (txType === "deposit" ? form.watch("amount") : -form.watch("amount")), selectedCash.currency || "KRW"), selectedCash.currency)}</span>
                   </p>
                 </div>
               )}

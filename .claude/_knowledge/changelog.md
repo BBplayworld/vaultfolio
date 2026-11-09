@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-09 (v4.60)
+
+### 품질 정돈 묶음 — 삭제 고아 거래·외화 문구·반올림·손익 0 색·포커스·작은 이미지 (#4.60, 이슈 #109, risk medium)
+- **왜**: 결산 원인·입력 안내가 "내 숫자가 맞나"를 의심하게 만드는 결함 6건(저장 스키마·저장 키·동기화 변경 0).
+- **(a) 자산 삭제**: `deleteCryptos(ids)`·`deleteStocks(ids)`로 일원화(단건 `deleteCrypto`·`deleteStock`은 래퍼, 코인·주식 탭의 직접 `saveData` 제거, `saveData` 1회). 순수 계획 `planDeleteCryptos`·`planDeleteStocks`(asset-data-context.tsx)는 항목마다 삭제 시점 평가액을 `computeNetAsset`(스냅샷 합계와 같은 식, 원화 환산)으로 구해 반올림 0원 이하(전량 매도·코인 부동소수 잔량·시세 0·상장폐지)면 그 항목 거래를 보존하고 나머지는 id 기준 전부 삭제. 연결 짝 기록·계좌 잔액은 건드리지 않음(4.58 F24). 흐름 표 A1~A8 vitest 고정.
+- **(b)** 잔액 맞추기 창 `onCloseAutoFocus`: 보이는 `[data-tutorial="tutorial-fab"]` → 열기 직전 요소 → `main`(이 창만).
+- **(c)** `ProfitMetric` 안에서만 반올림 0이면 부호 없이 `text-muted-foreground`(`getProfitLossColor` 불변).
+- **(d)(e)** 외화 전액 차단 문구 통화 표기(`cash-tx-input`·`link-text`), USD 반영 입출금 잔액·미리보기 `roundMoney` 반올림.
+- **(f)** `parse-screenshot`: PNG·JPEG·WEBP 헤더 판독(`image-size.ts`)으로 긴 변 < 200px이면 Gemini 미호출·한도 차감 0, Gemini 빈 배열과 같은 응답(`respondParsed` 공유). 판독 실패·HEIC 통과, 프롬프트·로그 변경 0.
+- 알려진 한계: 일부 매도 후 잔량째 삭제하면 `입금 +Y`·`시세 −V` 두 줄이 남음(주식 단건 main 현행과 동일) / 이미 남은 고아 거래는 정리하지 않음(연 탭 원인에 올해 말까지) / 원가 있는 스냅샷은 지난달 원인 라벨이 옮겨 가지 않음(Hero·합계 불변).
+
+---
+
 ## 2026-11-09 (v4.58)
 
 ### 거래 연결 계좌 — 거래 저장 시 현금·대출을 함께 증감 (#4.58, 이슈 #103, risk high)

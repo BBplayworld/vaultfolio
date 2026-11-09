@@ -1054,7 +1054,7 @@ export function StockCategorySection({
 }
 
 export function StockTab() {
-  const { assetData, deleteStock, saveData } = useAssetData();
+  const { assetData, deleteStock, deleteStocks, saveData } = useAssetData();
   const [activeCategory, setActiveCategory] = useState("all");
   const [hasInteracted, setHasInteracted] = useState(() => {
     try { return !!localStorage.getItem(STORAGE_KEYS.collapsibleUsed); } catch { return true; }
@@ -1128,8 +1128,7 @@ export function StockTab() {
   };
 
   const handleDeleteGroup = (ids: string[]) => {
-    const idSet = new Set(ids);
-    saveData({ ...assetData, stocks: assetData.stocks.filter((s) => !idSet.has(s.id)) });
+    deleteStocks(ids);
     toast.success("삭제되었습니다.");
   };
 
