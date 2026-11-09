@@ -327,3 +327,4 @@
 - business-pm·planner-designer·cto(COO) = **opus** 유지(정의 frontmatter 이미 opus) — 과제 발굴·검토 품질 강화 요구.
 - developer = **난이도별**: 오케스트레이터가 호출 시 지정. opus — 결산·원인 엔진(asset-report·change-hero 등), 저장·동기화·마이그레이션, 자산 간 돈 흐름(연결 계좌·환율), risk:medium 이상, qa FAIL 원인 규명. sonnet — 문구·스타일·단순 UI·포커스·문서 정정·main 병합·low 단순 수정.
 - qa·ui-designer = **sonnet**(정의 그대로).
+- (보강, 같은 날) 대표: "사업, 기획, coo는 effort 높여서 적용" → business-pm·planner-designer·cto 호출 시 **effort: high** 지정(오케스트레이터·정기 실행 공통). 개발자 opus 배정 건도 effort high.
