@@ -941,7 +941,7 @@ const krwMul = (cur: string | undefined, rates: { USD: number; JPY: number }): n
 
 // 주식 체결 KRW 환산 배수 — 체결 환율 우선(JPY는 100엔당), 없으면 현재 환율.
 // reflectedTradeFlow·getAttributionRecords 공용(두 곳의 환산이 갈리면 기록 합계와 원인 금액이 어긋난다)
-const tradeKrwRate = (
+export const tradeKrwRate = (
   t: { currency: string; exchangeRate?: number },
   rates: { USD: number; JPY: number },
 ): number =>
