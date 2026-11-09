@@ -377,7 +377,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 
 - `buildMonthlyLog(monthly, today, { breakdown?, netAsset })` → `{ rows(최신순), columns, recordedCount, firstMonth, currentMonth, hasNetOnly, atLimit }`. 월 범위는 `listSettlementMonths`(현재월 포함 13개월, 저장된 달·이번 달만 기록) 그대로 — 첫 기록 달 앞은 줄 없음, 사이 빈 달은 `{kind:"gap"}`. 지난 달 = 스냅샷 `breakdown`·`netAsset`(= `settlementDelta`의 `w.end.netAsset`, 같은 달 중복 시 첫 항목), 이번 달 = 호출부가 넘긴 `buildLiveAttributionCurr().breakdown`·`summary.netAsset`(저장된 이번 달 스냅샷 무시). 줄 단위 합 검증 `|부동산+실물+주식+코인+현금−대출−임차보증금−순자산| > 1원` 또는 breakdown 없음 → `{kind:"net-only"}`(순자산만). `columns` = full 줄 중 반올림 값이 0이 아닌 키만(`MONTHLY_LOG_KEYS` 순서: 자산 5종 → 대출·임차보증금). `recordLabel` = `오늘` / `formatSettlementPoint(date)` / 레거시 `YYYY-MM 기록`. 새 금액 계산·환산·보간·저장 0.
 - `monthlyLogRangeLabel(first, last)` — `8월~11월`, 해가 다르면 `25년 12월~26년 3월`.
-- `formatMonthlyLogAmount(v, "short"|"full", debt?)` — short = 1억 미만 `formatShortCurrency`·1억 이상 `formatShortCurrencyDecimal` 억 규칙(소수 둘째 자리 버림·끝 0 제거, `6.44억`, COO U1)에서 `만원`/`억원` 끝 `원` 생략(1만원 미만·0은 `원` 유지), full = `formatCurrency`. 부채는 −절댓값, 음수 부호 U+2212, |v|<0.5는 `0원`.
+- `formatMonthlyLogAmount(v, "short"|"full", debt?)` — short = 1억 미만 `formatShortCurrency`·1억 이상 억 단위 소수 둘째 자리 버림·끝 0 제거(`6.44억`, COO U1 — 정수 연산 `floor(|v|/100만)/100`, 공용 `formatShortCurrencyDecimal`은 부동소수 오차로 2.3억→2.29억이라 미사용, COO U2)에서 `만원`/`억원` 끝 `원` 생략(1만원 미만·0은 `원` 유지), full = `formatCurrency`. 부채는 −절댓값, 음수 부호 U+2212, |v|<0.5는 `0원`.
 - 자동: `report/__tests__/monthly-log.test.ts`(S9 실사용 픽스처·Hero 끝값 일치·13개월·연 경계), `views/activity/__tests__/monthly-log.test.tsx`(진입 행 조건·표 렌더).
 
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)

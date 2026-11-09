@@ -3,7 +3,7 @@
 // 읽기 전용 — 저장·서버 전송 없음. 증감·%·비중은 만들지 않는다(정본은 결산 Hero·구성 블록).
 
 import type { MonthlyAssetSnapshot, SnapshotBreakdown } from "@/types/asset";
-import { formatCurrency, formatShortCurrency, formatShortCurrencyDecimal } from "@/lib/number-utils";
+import { formatCurrency, formatNumberWithCommas, formatShortCurrency } from "@/lib/number-utils";
 import { COMPOSITION_KEYS, COMPOSITION_LABELS, type CompositionKey } from "./composition";
 import { formatSettlementPoint, listSettlementMonths, SETTLEMENT_KEEP_MONTHS } from "./settlement";
 
@@ -101,16 +101,25 @@ export function monthlyLogRangeLabel(first: string, last: string): string {
 
 const MINUS = "−"; // U+2212
 
+/** 1억 이상 짧은 표기 — 0.01억(100만원) 단위 정수 내림 후 끝 0 제거. 예 230,000,000 → `2.3억원`, −401,000,000 → `-4.01억원` */
+function formatEokShort(v: number): string {
+  const hundredths = Math.floor(Math.abs(v) / 1_000_000); // 0.01억 단위 정수
+  const frac = String(hundredths % 100).padStart(2, "0").replace(/0+$/, "");
+  return `${v < 0 ? "-" : ""}${formatNumberWithCommas(Math.floor(hundredths / 100))}${frac ? `.${frac}` : ""}억원`;
+}
+
 /**
- * 표 금액 표기. short(<sm) = 1억 미만은 formatShortCurrency(`1,234만`), 1억 이상은 formatShortCurrencyDecimal의 억 규칙
- * (소수 둘째 자리 버림·끝 0 제거, `6.44억`·`6.6억`) — 0.1억 버림으로 달 사이 순자산 변화가 사라지지 않게(COO U1).
+ * 표 금액 표기. short(<sm) = 1억 미만은 formatShortCurrency(`1,234만`), 1억 이상은 억 단위 소수 둘째 자리 버림·끝 0 제거
+ * (`6.44억`·`6.6억`) — 0.1억 버림으로 달 사이 순자산 변화가 사라지지 않게(COO U1).
+ * 억 경로는 정수 연산(100만원 단위 내림) — 공용 formatShortCurrencyDecimal의 truncToFixed는 부동소수 오차로
+ * 2.3억→2.29억처럼 0.01억을 더 버린다(COO U2, 공용 함수 수정은 별도 이슈).
  * 1만원 이상은 끝 '원' 생략. full(sm↑) = 원 단위.
  * 부채 열은 −+절댓값, 0은 부호 없이 `0원`. 음수 부호는 전부 U+2212.
  */
 export function formatMonthlyLogAmount(value: number, mode: "short" | "full", debt = false): string {
   if (Math.abs(value) < 0.5) return "0원";
   const v = debt ? -Math.abs(value) : value;
-  const short = Math.abs(v) >= 100_000_000 ? formatShortCurrencyDecimal(v) : formatShortCurrency(v);
+  const short = Math.abs(v) >= 100_000_000 ? formatEokShort(v) : formatShortCurrency(v);
   const text = mode === "full" ? formatCurrency(v) : short.replace(/([만억])원$/, "$1");
   return text.replace(/^-/, MINUS);
 }

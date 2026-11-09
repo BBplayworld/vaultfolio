@@ -211,6 +211,29 @@ describe("표기", () => {
     expect(formatMonthlyLogAmount(612_000_000, "short")).not.toBe(formatMonthlyLogAmount(621_000_000, "short"));
   });
 
+  it("1억 이상 짧은 표기 부동소수 오차 없음(COO U2) — 대표 사례", () => {
+    expect(formatMonthlyLogAmount(230_000_000, "short")).toBe("2.3억");
+    expect(formatMonthlyLogAmount(410_000_000, "short")).toBe("4.1억");
+    expect(formatMonthlyLogAmount(870_000_000, "short")).toBe("8.7억");
+    expect(formatMonthlyLogAmount(201_000_000, "short")).toBe("2.01억");
+    expect(formatMonthlyLogAmount(113_000_000, "short")).toBe("1.13억");
+    expect(formatMonthlyLogAmount(230_000_000, "short", true)).toBe("\u22122.3억");
+    expect(formatMonthlyLogAmount(-113_000_000, "short")).toBe("\u22121.13억");
+    expect(formatMonthlyLogAmount(229_999_999, "short")).toBe("2.29억"); // 100만원 미만은 내림
+  });
+
+  it("1억~50억 100만원 배수 전체가 정수 계산 기대값과 일치(양수·부채)", () => {
+    const mismatches: string[] = [];
+    for (let k = 100; k <= 5_000; k++) {
+      const frac = k % 100;
+      const expected = `${Math.floor(k / 100).toLocaleString("ko-KR")}${frac ? `.${String(frac).padStart(2, "0").replace(/0+$/, "")}` : ""}억`;
+      const v = k * 1_000_000;
+      if (formatMonthlyLogAmount(v, "short") !== expected) mismatches.push(`${v}:${formatMonthlyLogAmount(v, "short")}≠${expected}`);
+      if (formatMonthlyLogAmount(v, "short", true) !== `\u2212${expected}`) mismatches.push(`debt ${v}`);
+    }
+    expect(mismatches).toEqual([]);
+  });
+
   it("원 단위(sm 이상): 콤마 원, 부채 −", () => {
     expect(formatMonthlyLogAmount(1_234_567_890, "full")).toBe("1,234,567,890원");
     expect(formatMonthlyLogAmount(200_000_000, "full", true)).toBe("−200,000,000원");
