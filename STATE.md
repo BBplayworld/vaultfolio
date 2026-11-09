@@ -48,6 +48,7 @@
 
 ## 열린 릴리스
 
+- **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). 개발 완료·draft PR·qa 대기(G1~G7).
 - **[developer 2026-11-09] 4.62 = #115 품질 정돈 묶음 2** (브랜치 issue-4.62, origin/main 9709e2e 분기, 커밋 a7a71ad, 폴더 `issues/4.62-115-quality-batch-2`, 병행: 4.61 머지 후 origin/main merge). 개발 완료·qa 대기.
 - **개발 중 4.61 = #113 첫 화면 빈 화면 없애기(risk:medium, COO 자체 승인 범위)**: 브랜치 issue-4.61(main f77abef 기준, 독립 릴리스 — 열린 #109 issue-4.60과 분리). 문서 `issues/4.61-113-root-first-paint/`. 개발 완료 후 qa 대기. CLAUDE.md 4장 위임 ⑥ 문구 정정(11-09 결정)을 같은 PR에 포함.
 - **(2026-11-08 cto 재정리)** 개발 순서 4.51 #83(cherry-pick·재검증만) → 4.52 #93 → 4.53 /api/sync → 4.54 #58. 열린 개발 릴리스 1개·parked 규칙 유지, 번호는 머지 순서대로. 아래 옛 줄의 #83=4.50/4.51·#58=4.49/4.52 표기는 이 줄로 대체.
