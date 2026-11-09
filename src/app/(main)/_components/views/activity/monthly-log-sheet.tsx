@@ -7,6 +7,7 @@ import { Fragment } from "react";
 import { XIcon } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Z_LAYER } from "@/config/theme";
+import { cn } from "@/lib/utils";
 import {
   formatMonthlyLogAmount, MONTHLY_LOG_DEBT_KEYS, MONTHLY_LOG_LABELS,
   type MonthlyLog, type MonthlyLogKey, type MonthlyLogRow,
@@ -18,7 +19,12 @@ export const MONTHLY_LOG_CAPTION = "그 달 마지막으로 앱을 연 날, 그�
 const NOTE = "text-sm text-muted-foreground text-pretty break-keep mt-1";
 // sticky 칸·머리줄은 시트 면과 같은 불투명 면(가로·세로 스크롤 시 뒤 글자가 비치지 않게)
 const SURFACE = "bg-background dark:bg-popover";
-const LINE = "border-border/10";
+// 경계선 2종(ui-review): 고정 칸·머리줄 경계 = 불투명 border(가로 스크롤 시 겹침 경계), 행 구분 = 중립 헤어라인.
+// 한 칸에 두 경계가 겹쳐도 색이 섞이지 않게 변(side)별 색 클래스로 지정
+const EDGE_R = "border-r border-r-border";
+const EDGE_L = "border-l border-l-border";
+const EDGE_B = "border-b border-b-border";
+const ROW_B = "border-b border-b-border dark:border-b-border/40";
 // sticky 겹침 순서(§3.4 Z_LAYER): 양끝 머리 칸 > 머리줄·양끝 열 > 본문
 const Z_EDGE = { zIndex: Z_LAYER.base };
 const Z_CORNER = { zIndex: Z_LAYER.raised };
@@ -36,7 +42,7 @@ function MonthCell({ row, today }: { row: MonthlyLogRow; today: string }) {
   return (
     <th
       scope="row"
-      className={`sticky left-0 w-14 min-w-14 px-1 py-2 text-left align-top font-normal whitespace-normal break-keep border-r ${LINE} ${SURFACE}`}
+      className={`sticky left-0 w-14 min-w-14 px-1 py-2 text-left align-top font-normal whitespace-normal break-keep ${EDGE_R} ${SURFACE}`}
       style={Z_EDGE}
     >
       <span className="block font-medium text-foreground">{settlementName(row.month, today, false)}</span>
@@ -46,13 +52,14 @@ function MonthCell({ row, today }: { row: MonthlyLogRow; today: string }) {
           {row.recordLabel.split(" ").map((w, i) => <Fragment key={i}>{i > 0 && " "}<span className="whitespace-nowrap">{w}</span></Fragment>)}
         </span>
       )}
-      {row.kind !== "gap" && row.current && <span className={`${GROUP_BADGE} mt-0.5 whitespace-nowrap`}>진행 중</span>}
+      {/* 배지 기본 px-1.5 → px-1: 월 열이 56px 안에 들어가 375px 자산군 4개 무스크롤 유지 */}
+      {row.kind !== "gap" && row.current && <span className={cn(GROUP_BADGE, "mt-0.5 whitespace-nowrap px-1")}>진행 중</span>}
     </th>
   );
 }
 
 function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: MonthlyLogKey[]; today: string; last: boolean }) {
-  const cell = `px-1 py-2 align-top ${last ? "" : `border-b ${LINE}`}`;
+  const cell = `px-1 py-2 align-top ${last ? "" : ROW_B}`;
   if (row.kind === "gap") {
     return (
       <tr data-testid={`monthly-log-row-${row.month}`} data-kind="gap">
@@ -77,7 +84,7 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
       ))}
       <td
         data-testid={`monthly-log-cell-${row.month}-netAsset`}
-        className={`${cell} sticky right-0 text-right font-semibold text-foreground border-l ${LINE} ${SURFACE}`}
+        className={`${cell} sticky right-0 text-right font-semibold text-foreground ${EDGE_L} ${SURFACE}`}
         style={Z_EDGE}
       >
         <Amount value={row.netAsset} />
@@ -89,7 +96,7 @@ function LogRow({ row, columns, today, last }: { row: MonthlyLogRow; columns: Mo
 /** 표 본체(단일 스크롤 컨테이너 — sticky 머리줄·양끝 열). 시트 열린 채 갱신돼도 key 없이 같은 노드라 스크롤 유지 */
 export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string }) {
   const { rows, columns } = log;
-  const head = `sticky top-0 px-1 py-2 text-xs font-medium text-muted-foreground border-b ${LINE} ${SURFACE}`;
+  const head = `sticky top-0 px-1 py-2 text-xs font-medium text-muted-foreground ${EDGE_B} ${SURFACE}`;
   return rows.length === 0 ? (
     <p data-testid="monthly-log-empty" className="py-8 text-center text-sm text-muted-foreground">기록된 달이 없어요</p>
   ) : (
@@ -103,7 +110,7 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
         <caption className="sr-only">월별 자산군 금액</caption>
         <thead>
           <tr>
-            <th scope="col" data-testid="monthly-log-head-month" className={`${head} left-0 w-14 min-w-14 text-left border-r`} style={Z_CORNER}>월</th>
+            <th scope="col" data-testid="monthly-log-head-month" className={`${head} left-0 w-14 min-w-14 text-left ${EDGE_R}`} style={Z_CORNER}>월</th>
             {columns.map((k) => (
               <th
                 key={k}
@@ -115,7 +122,7 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
                 {k === "tenantDeposit" ? <>임차<wbr />보증금</> : MONTHLY_LOG_LABELS[k]}
               </th>
             ))}
-            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} right-0 text-right border-l`} style={Z_CORNER}>순자산</th>
+            <th scope="col" data-testid="monthly-log-head-netAsset" className={`${head} right-0 text-right ${EDGE_L}`} style={Z_CORNER}>순자산</th>
           </tr>
         </thead>
         <tbody>

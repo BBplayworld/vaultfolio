@@ -135,6 +135,14 @@ describe("표 MonthlyLogTable", () => {
     expect(html).toMatch(/monthly-log-cell-2026-10-cash"[^>]*><span class="sm:hidden">0원<\/span>/);
     expect(html).not.toMatch(/>-\d/);
   });
+  it("경계선: 고정 칸 border-border, 행 구분 dark /40, /10 단독 없음 · 진행 중 배지 px-1(px-1.5 아님)", () => {
+    expect(html).toMatch(/data-testid="monthly-log-head-netAsset" class="[^"]*border-l border-l-border/);
+    expect(html).toMatch(/monthly-log-cell-2026-10-stocks" class="[^"]*border-b border-b-border dark:border-b-border\/40/);
+    expect(html).not.toContain("border-border/10");
+    const badge = html.match(/<span class="([^"]*)">진행 중<\/span>/)![1].split(" ");
+    expect(badge).toContain("px-1");
+    expect(badge).not.toContain("px-1.5");
+  });
   it("증감·%·비중 열·손익 색 없음, 누를 요소 없음", () => {
     expect(html).not.toMatch(/%|전월|증감|비중/);
     expect(html).not.toMatch(/text-(red|blue|rose|sky|emerald)-/);
