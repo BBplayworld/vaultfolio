@@ -322,3 +322,8 @@
 - 권고 A(하단 5칸 홈·상세·업데이트·성과·더보기, 인증카드 → 더보기 › 도구 행) + spec 필수 S1~S6(S1: 더보기 행은 이벤트가 아니라 ShareScreenshotDialog 직접 오픈). 사후 기록: '인증카드 열기' page_location /v/more 사용자 수·'인증카드 저장' 전체 4주.
 - #125·#124 분리 릴리스. 도구 섹션 행 순서는 #125 ui.md에서 두 행 모두 포함해 한 번에 고정. #124 development는 #125 대표 승인 요청 발송 뒤 다음 버전으로.
 - (같은 날) **#124 대표 반려·종료**: 앱 → 외부 시트 복사는 유입 사용자를 다시 밖으로 내보내는 행위. 같은 방향(내보내기·외부 도구 연동) 재제안 금지(LEARNINGS). #125 도구 행 순서는 '세금 관리 → 인증카드'로 끝남.
+
+## 2026-11-09 대표 결정: 에이전트 모델 배정
+- business-pm·planner-designer·cto(COO) = **opus** 유지(정의 frontmatter 이미 opus) — 과제 발굴·검토 품질 강화 요구.
+- developer = **난이도별**: 오케스트레이터가 호출 시 지정. opus — 결산·원인 엔진(asset-report·change-hero 등), 저장·동기화·마이그레이션, 자산 간 돈 흐름(연결 계좌·환율), risk:medium 이상, qa FAIL 원인 규명. sonnet — 문구·스타일·단순 UI·포커스·문서 정정·main 병합·low 단순 수정.
+- qa·ui-designer = **sonnet**(정의 그대로).
