@@ -2,14 +2,10 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 17:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 10:20 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-| 릴리스 | 내용 | 위험 | 확인 방법 | 결정 |
-|---|---|---|---|---|
-| **4.53** [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) (#97) | `/api/sync` 남용 방어 — 헤더 위조로 호출 제한 우회 차단, 조회 분당 120회/IP 제한, 잘못된 형식 요청은 저장소 조회 전 거절 | medium (동기화 서버 수정) | 서버 전용 변경이라 화면 확인 불가(preview는 동기화 꺼짐). qa가 기존 동기화 ID 하위호환·다기기 시나리오 검증, 머지 후 운영 2기기 스모크 | 머지=반영 / 닫기=미반영 · 결산 창 제약 없음 |
-
-검증: qa PASS · COO PASS @6efe730 · Vercel success. 정상 사용자 끊김 위험 없음(ID 생성 4.5 이후 불변, 실제 ID 300개 통과), 제한에 걸려도 조용히 60초 뒤 재시도·덮어쓰기 없음. 한계: 서버 인스턴스별 한도라 다중 인스턴스 시 느슨. 롤백 revert 1회. 상세: [decision-brief](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.53-97-sync-guard/4.53-decision-brief.md)
+없음.
 
 ## 🟨 대표 승인 예정 (미리 알림)
 없음.
@@ -17,9 +13,9 @@
 ## 🔄 진행 중 (팀 자율 — #83·#58은 대표 위임 판단: cto 통과)
 | 릴리스 | 이슈 | 단계 | 일정 | 머지 방식 |
 |---|---|---|---|---|
-| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 + p2 6건 | [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) qa PASS·COO PASS @757c9b0 → **11/11 00:05 위임 머지 예약**(10월 결산 창 10/28~11/10 종료 후) ([preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력) | 11/11 머지 → 운영 스모크 | 위임 머지 (risk:low) |
+| 4.52 | [#93](https://github.com/BBplayworld/vaultfolio/issues/93) 현금·대출 잔액 한 번에 맞추기 | ⛔ **머지 보류** — 대표 지적(매수·매도↔현금·대출 흐름 등 전 자산 범위 검토 누락)으로 cto 주관 재검토 중 | 재검토 결론 후 결정 | — |
 | 4.55 | #58 실물 자산 ([draft PR #101](https://github.com/BBplayworld/vaultfolio/pull/101)) | UI 승인 · qa 1차 FAIL(구버전 기기 혼재 시 클라우드 사본 실물 탈락) → 수정 c7a3bda → **qa 증분 PASS**. 남은 것: 4.52·4.53 머지 후 main 병합·완료 기준 22·최종 qa·COO | 머지 12/11~12/14 (결산 창 밖, 컷 12/18) | 조건부 팀 머지 (risk:high) |
-| 4.54 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | [PR #102](https://github.com/BBplayworld/vaultfolio/pull/102) UI 승인·qa PASS·COO PASS @fd0e8b3 ([preview](https://secretasset-git-issue-454-99-bbplayworlds-projects.vercel.app/?demo=1)) | 11/11 4.52 머지 → main 병합·증분 qa → 위임 머지 (≤11/26) | 위임 머지 (risk:low) |
+| 4.54 | [#99](https://github.com/BBplayworld/vaultfolio/issues/99) 스크린샷 인식 실패 뒤 다음 행동 (+최신화 팁 보유 자산군만, 연 탭 자동 값 기록일) | ⛔ 머지 보류(4.52 위에 개발돼 함께 대기) — qa·COO PASS @fd0e8b3 | 4.52 재검토 결론 후 | 위임 머지 (risk:low) |
 
 ## ✅ 위임 머지 완료 (risk:low, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -32,13 +28,14 @@
 ## ✅ 대표 승인 머지 완료 (최근)
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
+| 4.53 [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) | 11/09 | /api/sync 남용 방어 · 운영 스모크(2기기 동기화) 진행 중 |
 | 4.50 [PR #92](https://github.com/BBplayworld/vaultfolio/pull/92) | 11/08 | 주식·코인 스크린샷 보유 현황 맞추기 · 운영 스모크 PASS |
 | 4.47 [PR #88](https://github.com/BBplayworld/vaultfolio/pull/88) | 11/07 | 동기화 충돌 시 로컬 편집 소실 알림·되돌리기 |
 | 문서 [PR #87](https://github.com/BBplayworld/vaultfolio/pull/87) | 11/07 | 머지 위임(저위험) 규칙 반영 |
 | 4.44 [PR #76](https://github.com/BBplayworld/vaultfolio/pull/76) | 11/06 | 상세 다크 BOX·구분선 정리 |
 
 ## 🔍 발굴 중 (병렬)
-- 참고: 4.53이 4.54보다 늦게 승인되면 머지 시 다음 번호로 재배정(표시 버전 역전 방지), #58도 그만큼 밀림.
+- 4.53이 먼저 머지됨 → 4.52는 머지 시 번호 재배정 검토.
 - D8 완료: #99 선정. 보류 — 이어서 맞추기(#58 머지 뒤 1순위), 첫 결산 공백(12/11 판독 뒤), 미사용 기능 판독(12/4 상시)
 
 ## 📅 주요 일정·제약
