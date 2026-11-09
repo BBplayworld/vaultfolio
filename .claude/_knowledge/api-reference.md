@@ -135,6 +135,7 @@ GET 시마다 TTL 30일 리셋 (Sliding TTL)
 
 ### POST /api/parse-screenshot
 스크린샷 Gemini AI 분석. **파일:** `src/app/api/parse-screenshot/route.ts`
+**작은 이미지 가드(#4.60):** 가로·세로 모두 200px 미만(긴 변 < 200px)이면 Gemini를 부르지 않고(`reserveGeminiCalls` 앞, 한도 차감 0) Gemini 빈 배열과 같은 응답(`{stocks|cryptos|cashes|loans|trades|cryptoTrades: []}`)을 돌려준다. 판독(`image-size.ts`)은 PNG·JPEG·WEBP(VP8·VP8L·VP8X), 실패·HEIC는 통과. 크기·바이트 로그 금지.
 
 ```
 Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock"|"crypto"|"cash"|"loan" }

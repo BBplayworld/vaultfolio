@@ -102,15 +102,15 @@ describe("연결 행 경고 문구 분리(F3)", () => {
 
 describe("F24: 삭제 진입점 — 잔액 불변·짝 기록 유지(되돌림은 거래 삭제 다이얼로그 2곳뿐)", () => {
   const src = read("contexts/asset-data-context.tsx");
-  const bodyOf = (name: string) => { const s = src.indexOf(`const ${name} = useCallback(`); return src.slice(s, src.indexOf("[assetData", s)); };
-  it.each(["deleteStock", "deleteCrypto", "deleteCash", "deleteLoan"])("%s는 revertLink·removeLink를 쓰지 않고 잔액을 가감하지 않는다", (name) => {
+  const bodyOf = (name: string) => { const s = src.indexOf(`const ${name} = useCallback(`); const ends = ["[assetData", "[deleteStocks", "[deleteCryptos"].map((k) => src.indexOf(k, s)).filter((i) => i > 0); return src.slice(s, Math.min(...ends)); };
+  it.each(["deleteStock", "deleteStocks", "deleteCrypto", "deleteCryptos", "deleteCash", "deleteLoan"])("%s는 revertLink·removeLink를 쓰지 않고 잔액을 가감하지 않는다", (name) => {
     const body = bodyOf(name);
     expect(body).not.toMatch(/removeLink|revertLink|balance:/);
   });
   it("revertLink는 반영 거래 삭제 2함수에서만 쓰인다", () => {
     expect([...src.matchAll(/revertLink/g)].length).toBeGreaterThan(0);
     for (const n of ["deleteTransactionWithPosition", "deleteCryptoTransactionWithPosition"]) expect(bodyOf(n)).toMatch(/revertLink/);
-    for (const n of ["deleteTransaction", "deleteCryptoTransaction", "deleteStock", "deleteCrypto", "deleteCash", "deleteLoan"]) expect(bodyOf(n)).not.toMatch(/removeLink/);
+    for (const n of ["deleteTransaction", "deleteCryptoTransaction", "deleteStock", "deleteStocks", "deleteCrypto", "deleteCryptos", "deleteCash", "deleteLoan"]) expect(bodyOf(n)).not.toMatch(/removeLink/);
   });
   it("종목 삭제 후(거래만 사라짐) 짝 기록은 고아로 유지, 잔액 불변, 되돌림 대상 아님", () => {
     const d = linkedSeed();
