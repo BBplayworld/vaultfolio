@@ -2,14 +2,10 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 11:25 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 11:55 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-| 릴리스 | 내용 | 위험 | 확인 | 결정 |
-|---|---|---|---|---|
-| **v4.54** [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) (#93) | 현금·대출 잔액 한 번에 맞추기 + 소규모 6건 + **대표 지적 '전 자산 흐름' 보강**(11가지 경우 전수 점검·결산 상쇄 테스트 고정, 맞춘 뒤 같은 돈 재기록 이중 반영 경고) | low | qa·UI·COO PASS(5401ec7 = 현 head 37c8b2e 내용 동일) · [preview](https://secretasset-git-issue-452-bbplayworlds-projects.vercel.app/?demo=1) › FAB › 보유 현황 업데이트 › 현금성/대출 › 직접 입력 | 머지=반영 / 닫기=미반영 · 승인 즉시 머지 → 이어서 #99 위임 머지 |
-
-계좌 연결(매수·매도 시 현금·대출 함께 증감)은 #103(v4.57)에서. 상세: [decision-brief](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.52-93-cash-loan-resync/4.52-decision-brief.md)
+없음.
 
 ## 🔴 운영 결함 (p0)
 - [#104] → 핫픽스 PR #105 **대표 승인·머지 028cffd(11/09) · 운영 스모크 PASS**
@@ -36,6 +32,8 @@
 ## ✅ 대표 승인 머지 완료 (최근)
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
+| v4.54 [PR #96](https://github.com/BBplayworld/vaultfolio/pull/96) | 11/09 | 현금·대출 잔액 한 번에 맞추기 + 전 자산 흐름 보강 · 운영 스모크 진행 중 |
+| v4.53 핫픽스 [PR #105](https://github.com/BBplayworld/vaultfolio/pull/105) | 11/09 | 시세 갱신 중 저장한 편집 되돌아감 결함(#104) · 운영 스모크 PASS |
 | 4.53 [PR #98](https://github.com/BBplayworld/vaultfolio/pull/98) | 11/09 | /api/sync 남용 방어 · 운영 스모크 PASS(2기기 생성·pull·폴링·409 수렴·401) |
 | 4.50 [PR #92](https://github.com/BBplayworld/vaultfolio/pull/92) | 11/08 | 주식·코인 스크린샷 보유 현황 맞추기 · 운영 스모크 PASS |
 | 4.47 [PR #88](https://github.com/BBplayworld/vaultfolio/pull/88) | 11/07 | 동기화 충돌 시 로컬 편집 소실 알림·되돌리기 |
