@@ -424,13 +424,13 @@ html[data-has-assets] [data-first-paint] {
 
   /* PC PWA 홈 줄: 상단 NAV(65px) 아래, 로고는 NAV 홈 칸과 중복이라 숨김 */
   html[data-device="pc"] header.pwa-home-header {
-    margin-top: calc(65px + 0.25rem) !important;
+    margin-top: calc(65px + 0.75rem) !important;
     padding-top: 0 !important;
-    height: 2.5rem !important;
+    height: 2.75rem !important;
   }
 
   html[data-device="pc"] header.pwa-home-header+[data-content-area] {
-    padding-top: 0.5rem !important;
+    padding-top: 0.25rem !important;
   }
 
   html[data-device="pc"] .pwa-home-logo {
