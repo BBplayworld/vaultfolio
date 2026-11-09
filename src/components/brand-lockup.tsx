@@ -1,18 +1,17 @@
-import { APP_CONFIG } from "@/config/app";
 import { BrandSymbol } from "@/components/brand-symbol";
+import { BrandWordmark } from "@/components/brand-wordmark";
 
 /**
- * 홈 상단 왼쪽 공식 서비스 락업(#4.66 r2): 배경 없는 브랜드 심볼 + 워드마크.
- * 워드마크는 기본 숨김(브라우저 모드는 심볼만), PWA standalone에서 `.pwa-home-wordmark`로 노출(globals.css).
- * 심볼 교체는 BrandSymbol 내부에서만. 비인터랙티브.
+ * 홈 상단 왼쪽 공식 서비스 락업(#4.66 R3): C 레이어 S 심볼 + SVG 워드마크.
+ * 브라우저 모드는 심볼만(32px 박스, 기존 사양). PWA standalone에서 `.pwa-home-symbol`·`.pwa-home-wordmark`(globals.css)로
+ * 심볼 26px(lg 30px)·워드마크 잉크 높이 16px(lg 18.5px) = 심볼 잉크 높이의 약 0.73, 간격은 심볼 박스 우측 여백만(잉크 간격 = 심볼 잉크 폭의 약 31%).
+ * 두 요소 모두 잉크 세로 중심 = 박스 중심이라 items-center로 광학 정렬된다. 비인터랙티브.
  */
 export function BrandLockup() {
   return (
-    <span className="flex items-center gap-2 min-w-0 text-foreground" data-testid="top-bar-brand">
-      <BrandSymbol size={32} />
-      <span className="pwa-home-wordmark hidden text-lg lg:text-xl font-bold tracking-tight whitespace-nowrap truncate">
-        {APP_CONFIG.name}
-      </span>
+    <span className="flex items-center min-w-0" data-testid="top-bar-brand">
+      <BrandSymbol size={32} className="pwa-home-symbol" />
+      <BrandWordmark className="pwa-home-wordmark hidden h-4 lg:h-[18.5px] text-[color:var(--brand-wordmark)]" />
     </span>
   );
 }
