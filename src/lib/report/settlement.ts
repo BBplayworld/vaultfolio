@@ -212,7 +212,7 @@ export function mapSettlementCauses(
     deltaNet: number;
     cashTracked: boolean;
     // 아래 3개는 월·연 탭 화면이 넘긴다(미지정 시 종전 동작, qa R1~R5)
-    matchedTransfer?: number;           // 기록된 출금 ↔ 기록된 매수·상환으로 짝지어진 금액(KRW, 양수)
+    matchedTransfer?: number;           // 출금 ↔ 매수·상환 짝(+) − 연결 입금 ↔ 매도 짝(−), KRW
     hasCashRecords?: boolean;           // 구간 안 현금 거래 존재 — 있으면 "입출금을 기록하면" 안내를 띄우지 않음
     estimatedPriceAsUnrecorded?: boolean; // 예측 구간의 통합 시세 잔차는 시세가 아니라 기록 안 된 변화(예측)
   },
@@ -221,7 +221,8 @@ export function mapSettlementCauses(
   const est = { price: false, valuation: false, fx: false, income: false, unrecorded: false };
   // 기록으로 짝이 확인된 출금 → 매수·상환은 앱 안 이동 — 출금(순유입 −)을 그 금액만큼 되돌려, 같은 금액의 매수·상환
   // (내부 이동 풀)과 함께 0이 되게 한다(C23). 짝 없는 출금은 순유입 −로 남는다(qa R4·R5, cto 판정 b).
-  if (ctx.matchedTransfer && ctx.matchedTransfer > 0) acc.income += ctx.matchedTransfer;
+  // 음수 = 연결 입금↔매도 id 짝(#103) — 입금(순유입 +)을 그 금액만큼 되돌려 매도와 함께 0이 되게 한다
+  if (ctx.matchedTransfer && ctx.matchedTransfer !== 0) acc.income += ctx.matchedTransfer;
   for (const e of effects) {
     const flag = !!e.estimated;
     if (ctx.estimatedPriceAsUnrecorded && e.key === "price" && flag) { est.unrecorded = true; continue; } // qa R3
