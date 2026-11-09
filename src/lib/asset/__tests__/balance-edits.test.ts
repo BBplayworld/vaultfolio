@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kstDateOfIso, shouldWarnTxAfterResync, applyBalanceEdits, orderBalanceRows, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
+import { BALANCE_RESYNC_INTRO, kstDateOfIso, resyncWarningText, shouldWarnTxAfterResync, applyBalanceEdits, orderBalanceRows, checkBalanceRow, formatBalanceText, maxDecimalsOf, parseBalanceText, sanitizeBalanceText } from "../balance-edits";
 import type { Cash, Loan } from "@/types/asset";
 
 const cash = (id: string, balance: number, extra: Partial<Cash> = {}): Cash => ({
@@ -110,5 +110,33 @@ describe("shouldWarnTxAfterResync (맞춘 뒤 입출금 기록 이중 반영 경
     expect(shouldWarnTxAfterResync({ txDate: "2026-11-27", reflected: false, refreshedAtIso: at })).toBe(false);
     expect(shouldWarnTxAfterResync({ txDate: "", reflected: true, refreshedAtIso: at })).toBe(false);
     expect(shouldWarnTxAfterResync({ txDate: "2026-11-27", reflected: true, refreshedAtIso: undefined })).toBe(false);
+  });
+});
+
+describe("경고 판정·문구 (spec 14-2, 완료 기준 19)", () => {
+  const at = "2026-11-28T03:00:00.000Z"; // 맞춘 날 KST 11/28
+  it("거래일 11/15·✓ 표시 / 11/28·✓ 표시 / 11/29·✓ 미표시 / 반영 해제 미표시 / 맞춘 기록 없음 미표시", () => {
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-15", reflected: true, refreshedAtIso: at })).toBe(true);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-28", reflected: true, refreshedAtIso: at })).toBe(true);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-29", reflected: true, refreshedAtIso: at })).toBe(false);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-15", reflected: false, refreshedAtIso: at })).toBe(false);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-15", reflected: true, refreshedAtIso: null })).toBe(false);
+  });
+  it("현금만 맞춘 상태에서 대출 기록 → 대출 기록 시각 없음이라 미표시", () => {
+    const meta: Record<string, string> = { cash: at };
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-15", reflected: true, refreshedAtIso: meta.loan })).toBe(false);
+  });
+  it("KST 경계: UTC 11/27 15:00은 KST 11/28 → 거래일 11/28에 표시", () => {
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-28", reflected: true, refreshedAtIso: "2026-11-27T15:00:00.000Z" })).toBe(true);
+    expect(shouldWarnTxAfterResync({ txDate: "2026-11-28", reflected: true, refreshedAtIso: "2026-11-27T14:59:00.000Z" })).toBe(false);
+  });
+  it("문구: 날짜형·오늘형, 현금·대출", () => {
+    expect(resyncWarningText("cash", at, "2026-11-29")).toBe("11월 28일에 맞춘 현금 잔액에 이미 들어간 금액이면 체크를 꺼 주세요");
+    expect(resyncWarningText("loan", at, "2026-11-28")).toBe("오늘 맞춘 대출 잔액에 이미 들어간 금액이면 체크를 꺼 주세요");
+  });
+  it("머리말 확정 문구(14-1)", () => {
+    expect(BALANCE_RESYNC_INTRO.cash).toBe("은행·증권 앱 잔액을 그대로 넣으면 돼요. 매수·매도·상환·배당·이자로 바뀐 돈도 함께 맞춰져서, 입출금 기록은 따로 안 남겨도 돼요.");
+    expect(BALANCE_RESYNC_INTRO.loan).toBe("은행 앱 대출 잔액을 그대로 넣으면 돼요. 상환·추가 대출로 바뀐 금액도 함께 맞춰져서, 상환 기록은 따로 안 남겨도 돼요.");
+    expect(BALANCE_RESYNC_INTRO.cash + BALANCE_RESYNC_INTRO.loan).not.toContain("입출금 기록은 생기지");
   });
 });

@@ -98,9 +98,6 @@ export function orderBalanceRows<T extends BalanceItem & { currency?: string }>(
 // 맞추기는 잔액 절대값이라 그 시점까지의 입출금·매수·상환이 이미 녹아 있다. 거래일 이후에 그 카테고리를 맞춘 기록이
 // 있는데 '즉시 반영'으로 기록하면 같은 돈이 두 번 빠질 수 있다. 기록은 기기 로컬 assetRefresh(스키마 변경 0)를 쓴다.
 
-/** 임시 문구 — planner가 4.52 spec에 확정본을 쓰면 교체 */
-export const TX_AFTER_RESYNC_WARNING = "이 날짜 이후에 잔액을 맞춘 기록이 있어요. 맞춘 잔액에 이미 들어 있다면 즉시 반영을 해제하세요.";
-
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /** ISO 시각 → KST 날짜(YYYY-MM-DD). 잘못된 값은 null */
@@ -120,3 +117,17 @@ export function shouldWarnTxAfterResync(opts: { txDate: string; reflected: boole
   const refreshed = kstDateOfIso(opts.refreshedAtIso);
   return refreshed !== null && refreshed >= opts.txDate;
 }
+
+/** 경고 문구(spec 14-2). 맞춘 날이 오늘(KST)이면 `오늘`, 아니면 `{M월 D일}에` */
+export function resyncWarningText(category: BalanceCategory, refreshedAtIso: string, todayKst: string): string {
+  const d = kstDateOfIso(refreshedAtIso) ?? "";
+  const [, m, day] = d.split("-");
+  const when = d === todayKst ? "오늘" : `${Number(m)}월 ${Number(day)}일에`;
+  return `${when} 맞춘 ${category === "cash" ? "현금" : "대출"} 잔액에 이미 들어간 금액이면 체크를 꺼 주세요`;
+}
+
+/** 잔액 맞추기 머리말(spec 14-1) */
+export const BALANCE_RESYNC_INTRO: Record<BalanceCategory, string> = {
+  cash: "은행·증권 앱 잔액을 그대로 넣으면 돼요. 매수·매도·상환·배당·이자로 바뀐 돈도 함께 맞춰져서, 입출금 기록은 따로 안 남겨도 돼요.",
+  loan: "은행 앱 대출 잔액을 그대로 넣으면 돼요. 상환·추가 대출로 바뀐 금액도 함께 맞춰져서, 상환 기록은 따로 안 남겨도 돼요.",
+};

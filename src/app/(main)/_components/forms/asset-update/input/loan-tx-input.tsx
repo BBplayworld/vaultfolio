@@ -3,7 +3,7 @@
 import { AlertCircle } from "lucide-react";
 import { ASSET_THEME } from "@/config/theme";
 import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
-import { shouldWarnTxAfterResync, TX_AFTER_RESYNC_WARNING } from "@/lib/asset/balance-edits";
+import { resyncWarningText, shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -247,7 +247,7 @@ export function LoanTxInput() {
               {shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("loan") }) && (
                 <p data-testid="tx-after-resync-warning" className="flex items-start gap-1.5 text-sm break-keep text-pretty" style={{ color: ASSET_THEME.importantHex }}>
                   <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <span>{TX_AFTER_RESYNC_WARNING}</span>
+                  <span>{resyncWarningText("loan", lastRefreshedAt("loan") ?? "", todayStr)}</span>
                 </p>
               )}
 
