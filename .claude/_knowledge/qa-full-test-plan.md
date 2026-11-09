@@ -405,6 +405,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **P3 동기화 기기 설치**: isSyncMode → PIN 입력란 없음, "설치하기" 후 `sync:<assetId>` 자동 복사. 새 기기 앱 첫 실행 → `PwaConnectPrompt`에 붙여넣기 → 금고 암호로 복원(F-CLOUD-SYNC S4)
 - 👤 **P4 비동기화 설치**: PIN 4자리 → `share:` 코드 자동 복사 → 새 기기에서 붙여넣기 → PIN 입력 복원
 - 👤 **P5 설치불가 고스트(PC)**: `beforeinstallprompt` 없음 → `chrome://apps` 자동 복사 + `guideStep`(InstallGuideContent PC 문제해결)
+- 👤 **PWA 홈 락업(#4.66 logo-spec·R6)** — standalone 홈 맨 위 줄 왼쪽 S + "시크릿에셋": 375 S 잉크 16.4±0.2·워드마크 13±0.1, S 잉크 좌측 = 카드 외곽 12, 잉크 간격 5.12±0.2(lg 5.91), 두 잉크 중심 차 0.25(lg 0.3), 심볼·워드마크 같은 색(`--brand-logo` 다크 #F2F3F6/라이트 #111111), 1x 화면은 `bs-lo` 표시, 320 가로 스크롤 0·인증카드와 겹침 0. 브라우저 모드는 심볼만 32px 박스
 
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
