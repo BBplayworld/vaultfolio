@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 22:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 23:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
 **v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)**
@@ -13,6 +13,16 @@
 - ⚠️ 비용: 인증카드가 엄지 쪽 하단 → 화면 위쪽(홈·상세·주식·성과·자산 변화 5개 화면 1탭, 그 밖 2탭) · 앱 홈 첫 카드 +20px(아이폰 +44, PC 앱 +40) · 앱 360·375 상세 부제 2줄 · 옛 칸 자리 오탭은 화면 이동만(데이터 변화 0) · 실기기 앱 미검증(에뮬레이션)
 - ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · 하단 유지형을 원하시면 `수정: 하단 유지`
+
+**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)**
+- ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
+- 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
+- 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
+- 🧪 qa PASS · UI 승인 · COO PASS(보류 2회 해소: 금액 정밀도·소수 오차) · Vercel success @ccd939c
+- ⚠️ 한계: 값은 '그 달 마지막으로 앱을 연 날' 기준(캡션으로 안내) · 375에서 자산군 5개 이상·10억 이상이면 가로 스크롤 · 7/23 이전 달은 순자산만
+- #32 관계: 결산 Hero로 옮긴 월별 증감은 다시 넣지 않았고, 사라졌던 '여러 달 한눈에'만 금액 표로 되살림
+- 📏 판독: 머지~1/10 사용자 3명 이상 유지 / 0~1명 제거 후보 · ↩️ 롤백: PR revert 1회
+- 👉 결정: PR #128 머지 = 반영 / 닫기 = 미반영 · 브리프: [4.67-decision-brief.md](issues/4.67-127-monthly-log/4.67-decision-brief.md)
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
@@ -25,7 +35,7 @@
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
 | **#129** (버그) | [#129](https://github.com/BBplayworld/vaultfolio/issues/129) 억 단위 축약 표기 오차 — 홈·순자산 차트에서 2.3억이 2.29억으로 보임 | #127 COO 점검 중 발견 → 개발 중 | 즉시 | COO 자체 승인 (버그) |
-| **#127** (신규 기능) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액을 앱 안에서 한눈에(엑셀 월별 시트 대체) | 개발 완료 [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) → UI·qa → COO 보류 2회(금액 표기 정밀도·소수 오차) 수정 중 → 🟥 승인 요청 | 11/26 전 목표 | 🟥 대표 승인 예정 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 개발·UI·qa·COO 완료(ccd939c) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 재기획 v2 → 개발·UI·qa·COO 완료(17a9a96) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
