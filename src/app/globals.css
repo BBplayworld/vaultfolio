@@ -393,6 +393,15 @@ html[data-has-assets] [data-first-paint] {
     padding-top: 0.25rem !important;
   }
 
+  /* 홈 헤더(#4.66 r1): 하단 네비 홈 탭 로고와 중복 → 로고 숨기고 화면 제목 표시 */
+  .pwa-home-logo {
+    display: none !important;
+  }
+
+  .pwa-home-title {
+    display: block !important;
+  }
+
   /* 상세·성과 허브 제목 줄의 PWA 전용 인증카드 발송 버튼 노출 */
   .pwa-only-action {
     display: inline-flex !important;
@@ -431,10 +440,6 @@ html[data-has-assets] [data-first-paint] {
 
   html[data-device="pc"] header.pwa-home-header+[data-content-area] {
     padding-top: 0.25rem !important;
-  }
-
-  html[data-device="pc"] .pwa-home-logo {
-    display: none !important;
   }
 
   html[data-device="pc"] nav.pwa-nav-container {

@@ -166,6 +166,7 @@ export function TopBar() {
             <span className="contents pwa-home-logo" data-testid="top-bar-logo">
               <Logo size={22} className="text-foreground shrink-0" />
             </span>
+            <h2 className="pwa-home-title hidden text-base sm:text-lg lg:text-2xl font-bold text-foreground truncate min-w-0" data-testid="top-bar-home-title">홈</h2>
             <div className="contents pwa-hide-actions">
               <InlineSelector
                 value={"" as HomeTop}
