@@ -189,11 +189,26 @@ describe("표기", () => {
   it("짧은 금액: 1만원 이상 '원' 생략, 1만원 미만·0은 '원', 음수·부채는 U+2212", () => {
     expect(formatMonthlyLogAmount(12_340_000, "short")).toBe("1,234만");
     expect(formatMonthlyLogAmount(1_230_000_000, "short")).toBe("12.3억");
+    expect(formatMonthlyLogAmount(1_234_567_890, "short")).toBe("12.34억");
     expect(formatMonthlyLogAmount(5_000, "short")).toBe("5,000원");
     expect(formatMonthlyLogAmount(0, "short")).toBe("0원");
     expect(formatMonthlyLogAmount(0, "full", true)).toBe("0원");
     expect(formatMonthlyLogAmount(120_000_000, "short", true)).toBe("−1.2억");
     expect(formatMonthlyLogAmount(-4_000_000, "short")).toBe("−400만");
+  });
+
+  it("1억 이상 짧은 표기는 소수 둘째 자리 버림·끝 0 제거(COO U1 — 0.1억 버림으로 월 변화가 사라지지 않게)", () => {
+    expect(formatMonthlyLogAmount(644_450_000, "short")).toBe("6.44억");
+    expect(formatMonthlyLogAmount(621_000_000, "short")).toBe("6.21억");
+    expect(formatMonthlyLogAmount(660_097_840, "short")).toBe("6.6억");
+    expect(formatMonthlyLogAmount(100_000_000, "short")).toBe("1억");
+    expect(formatMonthlyLogAmount(1_000_000_000, "short")).toBe("10억");
+    expect(formatMonthlyLogAmount(215_000_000, "short", true)).toBe("\u22122.15억");
+    expect(formatMonthlyLogAmount(-400_000_000, "short")).toBe("\u22124억");
+    // 1억 미만은 기존 만 단위 그대로
+    expect(formatMonthlyLogAmount(99_990_000, "short")).toBe("9,999만");
+    // 데모 8월(612,000,000)·9월(621,000,000)이 같은 글자로 보이지 않는다
+    expect(formatMonthlyLogAmount(612_000_000, "short")).not.toBe(formatMonthlyLogAmount(621_000_000, "short"));
   });
 
   it("원 단위(sm 이상): 콤마 원, 부채 −", () => {
