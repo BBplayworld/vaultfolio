@@ -1,14 +1,17 @@
 # 팀 현재 상태 (매 실행 끝에 전체 덮어쓰기)
 
-마지막 갱신: 2026-11-09 KST (cto: #103 대표 결정 ②+③ 재계획 — 짝 기록 id 연결·4.55와 분리 4.56, issues/4.56-103-cross-asset-flow/4.56-challenge.md 5절)
+마지막 갱신: 2026-11-09 KST (cto/COO: 4.52 최종 decision-brief, 결산 창 해제 반영 전체 일정 재압축 — 완료 즉시 머지)
 
 ## 대표 결정 대기
-- **v4.53 핫픽스 PR #105(#104 시세 갱신 중 편집 되돌림, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @a3565e7**(issues/4.52-93-cash-loan-resync/4.53hf-104-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review`. 머지 squash 제목 `[#4.53]`, 직후 qa 운영 스모크(104-repro-main.js). 4.52는 머지 시 squash `[#4.54]`로 재배정(이후 릴리스도 순차)
-- **v4.53 PR #98(#97 /api/sync 남용 방어, risk:medium) — cto/COO PASS·decision-brief 작성 완료 @6efe730**(issues/4.53-97-sync-guard/4.53-decision-brief.md). 오케스트레이터가 🟥 승인 요청 전송·`status:owner-review` 라벨 처리. 머지 시 qa 운영 2기기 스모크(qa-report 10절)
+- 4.52 PR #96 → 🟥 발송 대기(게이트: origin/main merge 후 diff 5401ec7 0줄·Vercel·qa 증분). #105(028cffd)·#98(0d4ddaa) 머지 완료
 - 없음 (2026-11-01 대표 답변: #63 승인, #58 범위 축소 승인). 이후 안건 없음 (새벽 실행분, 다음 09:53 실행이 전달 후 비움)
 - 없음
 
-## 진행 중 판정 (2026-11-09 cto 전 자산 흐름 재검토)
+## 진행 중 판정 (2026-11-09 cto 일정 재압축 — 결산 창 해제·완료 즉시, DECISIONS 같은 날)
+- 머지 순서: #105(머지됨 028cffd, v4.53) → 4.52 PR #96 `[#4.54]`(대표 승인) → #99 PR #102 `[#4.55]`(위임) → 4.55 PR #101 #58+#103A `[#4.56]`(#58 대표 위임 팀 머지) → 4.56 #103 ②+③ `[#4.57]`(대표 승인). squash 제목 = main 최대+0.01(C43), 브랜치·폴더명 불변.
+- 결산 창은 더 이상 제약 아님. 막는 것은 대표 승인(4.52·4.56)과 선행 머지 순서뿐. 목표 전부 11/14 이내(늦어도 11/26 전).
+
+## (이전) 진행 중 판정 (2026-11-09 cto 전 자산 흐름 재검토 — 위 재압축으로 대체)
 - 4.52·4.54 머지 보류 유지. 4.52는 (a) 보강(문구·이중 차감 경고·S1~S7 픽스처) → 증분 qa → COO → **대표 승인**(위임 아님), 컷 11/26. 4.54는 4.52 머지 후 5단계 위임. 새 과제 '거래↔현금·대출 연결 + 홈 헤더 내부 이동 상쇄' planning(머지 12/11~). 다음 착수: planner·ui(P1 문구), business-pm(P2 근거), developer, qa(홈 헤더 결함 의심 확정). 문서 issues/_discovery/2026-11-09-cross-asset-flow-review.md
 
 ## 다음 정기 실행 지시
@@ -36,10 +39,11 @@
 | #84 동기화 소실 방지(A안) | 4.47 | qa PASS(fdd376e)·UI 승인·COO PASS → decision-brief 완료(2026-11-07, 권고 반영). 문서 `issues/4.47-84-sync-overwrite/4.47-*.md` | 오케스트레이터 | PR #88 `status:owner-review`·risk:high 라벨, 대표 승인 요청 ① 발송. 이슈 #84 제목 [4.46]→[4.47] 정정 필요 |
 | #83 월 탭 자산 구성 변화 블록 | 4.51 (issue-4.48 커밋 재사용, 대표 위임 → 팀 머지) | cto 재점검 통과(2026-11-08, low). 코드 충돌 0(changelog만). 문서 `issues/4.51-83-month-composition/`(4.51로 git mv 예정) | developer → ui-designer·qa → cto | 11/9 issue-4.51 개설·cherry-pick 110056a·be7c9a9·059426b·0ac7a7e → 11/10~11 UI 재확인(C34 InfoHint 이웃)·qa 재검 → 11/12 COO → 팀 머지 ≤11/13(컷 11/26 23:59, 넘기면 12/11~12/18). 머지일 = #54 2차 판독 경계 | — PR #95 (HEAD 84c80cf)
 | #91 스크린샷으로 보유 현황 맞추기 | 4.50 (PR #92) | **done** — 2026-11-08 대표 승인, squash 머지 be509af. 운영 스모크 PASS | — | #51/#54/#48 판독 메모에 머지일 기록 |
-| #93 현금·대출 잔액 한 번에 맞추기 | 4.52 (risk:low, 위임 머지) | design-review 완료(2026-11-08). 문서 `issues/4.52-93-cash-loan-resync/` | developer | 지금 개발 착수(main be509af 분기) 11/9~11/14 → qa 11/15~17 → COO 11/18 → 위임 머지 ≤11/19(컷 11/26, 넘기면 12/11~12/18). 공지 ID 교체 제외 유지 |
-| /api/sync 남용 방어 | 4.53 (단독, risk:medium, 대표 승인) | #83 동승 번복(cto 2026-11-08) | developer·qa | 개발 11/15~17(getClientIp→api-guard, GET L1·assetId 검증, 다기기 pull 임계 테스트) → qa 11/18 → 대표 승인 요청 ~11/19 |
-| #58 실물 자산 등록(금 등) | 4.55 (risk:high, 대표 위임 → 팀 머지 조건부) | cto 재점검 통과(범위 유지, 정정 4). 문서 `issues/4.55-58-physical-assets/` | planner-designer·developer → ui-designer·qa → cto | 11/9~11/14 spec 정정(GA page_title·줄 번호 be509af 재grep·resync/#93 저장 경로 physicalAssets 보존 조건) → 개발 11/18~12/2 → qa 12/3~12/9 → COO 12/10 → 팀 머지 12/11~12/14(컷 12/18, 12/19~12/27 금지, 넘기면 1/12~1/26). 새 알려진 한계 생기면 대표 승인 전환 |
-| #103 자산 간 돈의 흐름(홈 원인 상쇄 A + 거래 연결 계좌 ②+③) | A = 4.55 포함(9a582ac) / 연결 계좌 = 4.55 다음 번호(예상 4.56, risk:high, 대표 승인) | 대표 결정 ②+③ → cto 재계획 통과(11-09, challenge 5절): 짝 기록 id 연결(스키마 0), 주식·코인 × 같은 통화 현금·원화 대출, 삭제 시 되돌림, 결산은 연결 쌍만 id 짝 | planner·ui·developer·business-pm 병렬 → qa 교차 | 개정 ~11/13(spec 3-L·ui 증분·tech-review·GA) → 개발 11/14~27(origin/issue-4.55 위 로컬, 4.52·#104 병합 후) → qa 11/30~12/4 → COO ~12/8 → 승인 요청 ~12/9 → 4.55 머지 후 12/15~12/18(컷 12/18, 놓치면 1/12~) |
+| #93 현금·대출 잔액 한 번에 맞추기(+전 자산 흐름 보강) | 4.52 (PR #96, squash `[#4.54]`, risk:low, **대표 승인**) | qa PASS @5401ec7·UI 증분 승인·COO PASS, decision-brief 최종(4.52-decision-brief.md). #105 머지로 import 1줄 충돌 | developer → qa → 오케스트레이터 | **11/09 지금**: origin/main merge(4.52 쪽 채택, merge-tree상 diff 5401ec7 0줄) → qa 증분(diff 0·Vercel·tsc/vitest) → PR 제목 `[#4.54] …` 변경 → 🟥 발송 → 승인 즉시 머지 → 운영 스모크 6항목. 막는 것: 대표 승인 |
+| #99 스크린샷 실패 다음 행동(+p2-1·p2-2) | 4.54 (PR #102, squash `[#4.55]`, risk:low, 위임) | qa·COO PASS @fd0e8b3 | developer → qa → 오케스트레이터 | 4.52 머지 직후 같은 날: origin/main merge(C41, `diff fd0e8b3 새head` = `diff 5401ec7 main`) → 증분 qa·Vercel → 위임 머지 → 스모크. 대표 승인 불필요. 막는 것: 4.52 머지 |
+| /api/sync 남용 방어 | 4.53 | done — 11/09 머지 0d4ddaa, 운영 스모크 PASS | — | — |
+| #58 실물 자산 등록(+#103 A 홈 원인 상쇄) | 4.55 (PR #101, squash `[#4.56]`, risk:high, #58 대표 위임 팀 머지) | UI 승인(#58·#103A)·qa 증분 PASS @c7a3bda(D1 수정)·#103A 포함 9a582ac. 남은 것: 완료 기준 22 | developer → qa → cto | 4.52 머지 직후(#99와 병렬, 머지는 #99 뒤): origin/main merge → 22 vitest 추가 → 최종 qa(CHECKLIST 전 항목·데이터 안전·결산 원인 실물 라벨)·Vercel → COO → 팀 머지 → 스모크(실물 추가·도넛·결산·홈 상쇄 캡션). 목표 4.52 머지 +1일(~11/10~11). 대표 승인 불필요(#58 위임, #103A는 UI 승인된 표시 변경·⑥ 폐지). 막는 것: 4.52 머지. 새 알려진 한계 생기면 대표 승인 전환 |
+| #103 ②+③ 연결 계좌(주식·코인 거래 ↔ 현금·대출, 삭제 시 되돌림) | 4.56 (squash `[#4.57]`, risk:high, **대표 승인**) | 개발 중(로컬 issue-4.56: 짝 id 정본·결산/홈 id 짝 커밋). spec·ui·tech-review·qa 교차 확인 완료 | developer → qa·ui-designer → cto | 개발 완료 즉시(~11/11) → 4.55 머지 후 origin/main merge·PR 생성 → qa(데이터 안전 1~5·구버전 실코드 하네스·⒟⒠ 자동·원자성) → ui-review·COO → 🟥 → 승인 즉시 머지. 목표 ≤11/14. 막는 것: 4.55 머지, 대표 승인. 데이터 안전 항목은 일정 때문에 줄이지 않음 |
 
 ## 열린 릴리스
 - **(2026-11-08 cto 재정리)** 개발 순서 4.51 #83(cherry-pick·재검증만) → 4.52 #93 → 4.53 /api/sync → 4.54 #58. 열린 개발 릴리스 1개·parked 규칙 유지, 번호는 머지 순서대로. 아래 옛 줄의 #83=4.50/4.51·#58=4.49/4.52 표기는 이 줄로 대체.
