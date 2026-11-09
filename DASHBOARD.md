@@ -5,7 +5,7 @@
 > **마지막 갱신: 2026-11-09 23:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-**v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)**
+**v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)** · 승인 시 표시 버전 v4.69(main 반영·증분 qa 후 머지)
 - ✅ 권고: 반영 — 대표 지시대로 인증카드는 핵심 기능으로 **상단 오른쪽**(설치 앱도 브라우저와 동일), 더보기는 설정 전용 그대로. 하단은 홈·상세·[업데이트]·성과·더보기 5칸(업데이트 가운데)
 - 🖼 전/후(설치 앱 홈 375): [ui2-compare-before-after-375-light.png](issues/4.66-125-nav-restructure/screenshots/ui2-compare-before-after-375-light.png)
 - 🔗 preview: https://secretasset-git-issue-466-bbplayworlds-projects.vercel.app — 하단 메뉴는 설치 앱에서만 보임(휴대폰 '홈 화면에 추가' → '데모 데이터로 보기'). 브라우저 화면은 변화 없음
@@ -14,7 +14,7 @@
 - ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · 하단 유지형을 원하시면 `수정: 하단 유지`
 
-**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)**
+**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
 - 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
 - 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
@@ -34,13 +34,13 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **#129** (버그) | [#129](https://github.com/BBplayworld/vaultfolio/issues/129) 억 단위 축약 표기 오차 — 홈·순자산 차트에서 2.3억이 2.29억으로 보임 | #127 COO 점검 중 발견 → 개발 중 | 즉시 | COO 자체 승인 (버그) |
 | **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 개발·UI·qa·COO 완료(ccd939c) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 재기획 v2 → 개발·UI·qa·COO 완료(17a9a96) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
+| v4.68 [PR #130](https://github.com/BBplayworld/vaultfolio/pull/130) | 11/09 | 억 단위 축약 표기 오차 수정(#129) — 홈·순자산 차트에서 2.3억이 2.29억으로 보이던 것을 바로잡음 · COO 자체 승인 | 스모크 진행 중 |
 | v4.65 [PR #123](https://github.com/BBplayworld/vaultfolio/pull/123) | 11/09 | 외화 환율 잔차 수정(#122) — 해외주식 매매·달러 현금 입출금의 환율 차이가 '대출 일부 예측'·'주식 매도'로 잘못 보이던 것을 '환율'로 · COO 자체 승인 | PASS |
 | v4.64 [PR #121](https://github.com/BBplayworld/vaultfolio/pull/121) | 11/09 | 12월 결산 대비 결함 수정(#117 리허설 33조합) — 판 주식·코인의 이익이 '기록 안 된 변화·매수' 대신 '시세'로 분류, 보유 현황 맞추기 미리보기 문구 정정 + 품질 정돈 묶음 3(#118: 연 수익률 0 회색·허브 320·맞추기 창 포커스) · COO 자체 승인 | PASS |
 | v4.63 [PR #120](https://github.com/BBplayworld/vaultfolio/pull/120) | 11/09 | 거래 연결 계좌 — 해외주식을 원화 계좌·대출로 연결(#119, 대표 지적 기획 누락 보완, COO 자체 승인) — 원화 예수금으로 산 미국·일본 주식도 현금·대출 함께 증감, 지난달 거래 안내 1줄 | PASS |

@@ -81,6 +81,7 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
 
 ## 후보 목록
+- [p2 후보, type:bug(UI), 기존 현상, #129 qa 관찰] 320폭 성과 달력 증감 `-8,800만원` 칸 잘림 / 홈 최근 순자산 막대 금액 2줄 표시
 - **[planner 2026-11-09, 이슈화 대기] 착수 후보 2건 (오케스트레이터가 GitHub 이슈 생성 → 폴더 `4.xx-<번호>-<slug>`로 git mv)**
   | 우선 | 후보 | type·risk 제안 | 상태 | 선행·병렬 | 문서 |
   |---|---|---|---|---|---|
