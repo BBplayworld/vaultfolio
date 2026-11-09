@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Home, PieChart, TrendingUp, PlusCircle, MoreHorizontal } from "lucide-react";
-import { Logo } from "@/components/logo";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -111,17 +110,11 @@ export function BottomNav() {
                   </div>
                 ) : (
                   <span className="flex h-7 w-12 items-center justify-center">
-                    {/* 홈 탭만 서비스 로고(Logo)로 — 텍스트 글자라 strokeWidth 대응 개념이 없어
-                        나머지 탭과 달리 색상만으로 활성 표시(폰트가 단일 weight라 굵기 차이는 생략). */}
-                    {id === "home" ? (
-                      <Logo size={20} style={isActive ? { color: MAIN_PALETTE[0] } : undefined} />
-                    ) : (
-                      <Icon
-                        className="size-5 transition-colors"
-                        style={isActive ? { color: MAIN_PALETTE[0] } : undefined}
-                        strokeWidth={isActive ? 2.5 : 2}
-                      />
-                    )}
+                    <Icon
+                      className="size-5 transition-colors"
+                      style={isActive ? { color: MAIN_PALETTE[0] } : undefined}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
                   </span>
                 )}
                 <span
