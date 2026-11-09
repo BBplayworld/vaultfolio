@@ -8,6 +8,11 @@ export function dispatchAddStock(mode: AssetMode) {
   window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode } }));
 }
 
+// 현금·대출 잔액 맞추기(#93) 화면 열기 — 보유자의 FAB `직접 입력`이 호출, BalanceResyncDialog가 수신
+export function dispatchResyncBalance(category: "cash" | "loan") {
+  window.dispatchEvent(new CustomEvent("trigger-resync-balance", { detail: { category } }));
+}
+
 export function dispatchAddTrade(stockId?: string) {
   window.dispatchEvent(new CustomEvent("trigger-add-trade", { detail: { stockId } }));
 }

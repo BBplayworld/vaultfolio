@@ -20,7 +20,8 @@
     ],
     "cash": [
       { "id": "demo_cash_bank", "type": "bank", "name": "생활비 통장", "balance": 3000000, "currency": "KRW", "institution": "데모은행" },
-      { "id": "demo_cash_savings", "type": "savings", "name": "비상금 적금", "balance": 10000000, "currency": "KRW", "institution": "데모은행" }
+      { "id": "demo_cash_savings", "type": "savings", "name": "비상금 적금", "balance": 10000000, "currency": "KRW", "institution": "데모은행" },
+      { "id": "demo_cash_usd", "type": "bank", "name": "달러 통장", "balance": 1000, "currency": "USD", "institution": "데모은행" }
     ],
     "loans": [
       { "id": "demo_loan_credit", "type": "credit", "name": "신용대출", "balance": 20500000, "interestRate": 5.2, "startDate": "@M-12D01", "institution": "데모은행" }

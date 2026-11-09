@@ -794,6 +794,12 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 - 매칭·증권사: `sameBroker`·`isUnassignedBroker`(`""`·`항목 N`=미지정)·`matchExisting`. 코인은 `crypto.ts`의 `cryptoToStock`/`stocksToCrypto`/`parsedCryptoToRaw`/`matchExchangeHint`로 같은 함수를 쓴다(범위=거래소).
 - 평단 규칙: `averagePriceEstimated=false` 화면 실값만 변경(상대 차 0.1% 초과), 역산은 기존 유지(1% 초과 시 `avgKept` 표시).
 
+### 잔액 맞추기·저장 실패 알림 (`src/lib/asset/balance-edits.ts`·`save-failure.ts`, #4.52 #93)
+- `balance-edits.ts`(순수): `applyBalanceEdits(list, edits)`→`{list, applied}`(balance만 교체, 없는 id 건너뜀, 같은 값 미계산)·`checkBalanceRow(category, current, next)`→`{changed, issue: "cash-zero"|"magnitude"|null}`·`sanitizeBalanceText`/`parseBalanceText`/`formatBalanceText`·`maxDecimalsOf`·`orderBalanceRows`(상세 탭 순서). 호출부는 `getAssetData()` 최신 목록에 적용해 `saveData` 1회(렌더 클로저의 `updateCash` 반복 금지)
+- 이중 반영 경고: `shouldWarnTxAfterResync({txDate, reflected, refreshedAtIso})`·`kstDateOfIso`·`TX_AFTER_RESYNC_WARNING`(balance-edits.ts), `lastRefreshedAt(category)`(asset-refresh-status.ts). `cash-tx-input`·`loan-tx-input`이 사용
+- 시세 응답 병합(#104): `lib/asset/price-patch.ts` `buildStockPricePatches`/`buildCryptoPricePatches`(응답->id별 시세 필드 패치)·`applyPricePatches(latest, patches, keyOf)`(최신 목록에 id로 적용, 삭제 부활 0·키 바뀐 항목 건너뜀). 자동 시세 동기화는 시작 시점 data를 되쓰지 말고 `getAssetData()` 최신본에 병합해 저장한다
+- `save-failure.ts`: `saveAssetDataNotify(data)` — `saveAssetData` 래퍼, 실패 시 세션당 1회 토스트 + GA `feature_use save_failed`. 자동 저장 경로(시세·스냅샷·마이그레이션·공유 반영·닉네임)는 `saveAssetData` 대신 이 함수를 쓴다(반환값 버리기 금지). 사용자 편집은 `saveData` 경로의 각자 실패 토스트
+
 ### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
 - 메모리 전용(저장 키·sync 상태 필드 0). `beginPush`/`commitPush`(push 성공 시 기준 갱신), `beginPull(data, auto)`/`commitPull(before, data)`(자동 pull 직전·직후 비교 → 덮인 내 항목 목록 합치기, 기준 갱신), `refreshEntries`(R1), `resetOverwriteGuard`(연결 끊기·다른 금고 연결). 순수: `captureSnapshot`·`detectOverwrites`·`planRevert`·`applyRevert`. 비교는 사용자 입력 필드만 — 앱이 자동으로 쓰는 필드는 제외: stocks(`currentPrice`·`baseDate`·`name` 자동 보정·`inactive*`), crypto(`currentPrice`·`baseDate`), realEstate(`marketEstimate*`, `currentValue`는 사용자 입력이라 비교), 올해 연도별 순자산(note "자동"). 새 자동 갱신 경로를 추가하면 `overwrite-guard.ts` 표에 함께 등록
 - 규약: 감지 함수에서 save·push·notify 호출 금지(C16). 되돌리기 저장은 호출측이 `saveData` 경로로만 한다(`applyImportedPayload`·`clearAssetData` 금지). 기준 없는 폴백 알림 금지(남의 변경을 내 변경으로 오탐)

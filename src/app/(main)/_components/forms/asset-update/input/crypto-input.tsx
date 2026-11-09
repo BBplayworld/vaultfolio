@@ -1,5 +1,6 @@
 "use client";
 
+import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
@@ -99,6 +100,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       if (editData) {
         const success = updateCrypto(editData.id, data);
         if (success) {
+          markCategoryRefreshed("crypto");
           trackAssetSave({ asset_type: "crypto", method: "manual", result: "update" }, countAssets(assetData));
           toast.success("암호화폐 정보가 수정되었습니다.");
           onClose();
@@ -112,6 +114,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
         };
         const success = addCrypto(newData);
         if (success) {
+          markCategoryRefreshed("crypto");
           trackAssetSave({ asset_type: "crypto", method: "manual", result: "create" }, countAssets(assetData));
           toast.success("암호화폐 정보가 추가되었습니다.");
           onClose();

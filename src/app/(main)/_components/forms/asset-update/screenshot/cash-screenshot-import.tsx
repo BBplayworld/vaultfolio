@@ -245,7 +245,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                 <>
                   <ImageUp className="size-10 text-muted-foreground/50" />
                   <div className="text-center">
-                    <p className="text-sm font-medium">클릭하거나 이미지를 드래그하세요</p>
+                    <p className="text-sm font-medium">눌러서 사진 고르기</p>
                     <p className="text-sm text-muted-foreground mt-1">JPG, PNG, WEBP, HEIC · 최대 10MB</p>
                   </div>
                 </>
@@ -276,7 +276,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
               </div>
             )}
 
-            <div className="rounded-md bg-amber-500/10px-3 py-2 space-y-1">
+            <div className="rounded-md bg-amber-500/10 px-3 py-2 space-y-1">
               <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> 등록 후 확인이 필요한 항목
               </p>
