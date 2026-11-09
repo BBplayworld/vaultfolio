@@ -275,6 +275,13 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 ```
 `crypto-screenshot-import.tsx`가 최초 구현한 패턴을 일반화 — stock은 `ticker:category`, cash는 `name:institution`(근사), loan은 `name:institution:type`으로 매칭. cash/loan은 스키마에 고유 식별자가 없어 근사 매칭(오매칭 가능, preview에서 사용자가 개별 체크/해제).
 
+### #4.55 신규 유틸
+- `lib/asset/screenshot-fail.ts`: `mapParseErrorTitle(status, error)`·`emptyFailTitle`·`makeScreenshotFail`·`SCREENSHOT_FAIL_NETWORK`.
+- `lib/asset/yearly-auto.ts`: `yearlyAutoCaption`·`yearlyAutoCaptionText`·`yearlyEditDefaults`(연 탭 자동 기록 안내·고치기 폼 기본값).
+- `lib/asset/asset-refresh-status.ts`: `heldRefreshCategories(assetData)`, `getStaleCategories(last, held?)`·`shouldShowRefreshNudge({held?})` 선택 인자(미지정 = 전체, 홈 팁만 지정).
+- `lib/onboarding-wizard-status.ts`: `createStepCompleter(base, onComplete)` 단계 완료 1회 가드.
+- `asset-dispatch.ts`: `ADD_TRIGGER_EVENTS`(추가 폼 이벤트 이름 단일 정의).
+
 ### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
 
 ```typescript

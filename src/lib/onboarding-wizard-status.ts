@@ -60,3 +60,25 @@ export function getResumeCategory(status: OnboardingWizardStatus): WizardCategor
   return WIZARD_CATEGORIES.find((c) => status.categories[c] === "pending") ?? null;
 }
 
+
+/**
+ * 마법사 단계 완료 1회 가드(#99) — 스크린샷 저장은 onSaved와 건수 증가 감지가 둘 다 발화할 수 있어
+ * 먼저 온 1번만 진행한다. base = 단계 진입 시점 그 자산군 건수(재개 시 이미 1건 이상이면 저장 전 자동 진행 0).
+ * 상태 표시만 하고 저장 호출은 하지 않는다.
+ */
+export function createStepCompleter(base: number, onComplete: () => void) {
+  let done = false;
+  const fire = () => {
+    if (done) return;
+    done = true;
+    onComplete();
+  };
+  return {
+    /** 스크린샷 저장 콜백 */
+    saved: fire,
+    /** 렌더마다 현재 건수를 알린다 — 진입 대비 증가했을 때만 */
+    observe: (count: number) => {
+      if (count > base) fire();
+    },
+  };
+}

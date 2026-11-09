@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toGaAssetType, track } from "@/lib/analytics/ga";
-import { dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset, dispatchResyncBalance } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { ADD_TRIGGER_EVENTS, dispatchAddCashTx, dispatchAddCryptoTx, dispatchAddLoanTx, dispatchAddRealEstate, dispatchAddStock, dispatchAddTrade, dispatchOpenYearlyNetAsset, dispatchResyncBalance } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import { Plus, Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ChevronLeft, ChevronRight, History, BadgeDollarSign, Pencil, ArrowLeftRight } from "lucide-react";
 import { Z_LAYER } from "@/config/theme";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -36,14 +36,7 @@ const ASSET_TYPES = [
   { type: "yearly-net-asset" as AssetType, label: "과거 순자산", icon: History, hasScreenshot: false, navigateTab: null },
 ];
 
-const EVENT_MAP: Record<AssetType, string> = {
-  "real-estate": "trigger-add-real-estate",
-  "stock": "trigger-add-stock",
-  "crypto": "trigger-add-crypto",
-  "cash": "trigger-add-cash",
-  "loan": "trigger-add-loan",
-  "yearly-net-asset": "trigger-add-yearly-net-asset",
-};
+const EVENT_MAP: Record<AssetType, string> = ADD_TRIGGER_EVENTS;
 
 export function FloatingAddButton() {
   const isMobile = useIsMobile();
