@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isRefreshedToday, markCategoryRefreshed, CATEGORY_REFRESHED_EVENT } from "../asset-refresh-status";
-import { consumeResyncSignal, resyncNoticeText, shouldTrackResyncContinue, sortHoldingsRows } from "../resync-return";
+import { consumeResyncSignal, nextDialogWatch, resyncNoticeText, shouldTrackResyncContinue, sortHoldingsRows } from "../resync-return";
 
 const store = new Map<string, string>();
 const events: Array<{ type: string; detail: unknown }> = [];
@@ -89,6 +89,15 @@ describe("shouldTrackResyncContinue", () => {
   });
 });
 
+describe("nextDialogWatch (D1 취소 후 대기 해제)", () => {
+  it("창이 열린 적 없으면 해제하지 않고, 열렸다 닫히면 해제한다", () => {
+    expect(nextDialogWatch(false, false)).toEqual({ seen: false, release: false });
+    const open = nextDialogWatch(false, true);
+    expect(open).toEqual({ seen: true, release: false });
+    expect(nextDialogWatch(open.seen, false).release).toBe(true);
+  });
+});
+
 describe("정적 검사", () => {
   const root = path.resolve(__dirname, "../../..");
   const read = (f: string) => readFileSync(path.join(root, f), "utf8");
@@ -98,6 +107,12 @@ describe("정적 검사", () => {
     const dlg = read("app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx");
     expect(dlg).toMatch(/markCategoryRefreshed\(kind, \{ notify: false \}\)/);
     expect(dlg).toMatch(/notifyCategoryRefreshed\(kind\)/);
+  });
+  it("FAB는 대기 후 창 닫힘 감시로 취소 시 해제하고 시트 자신은 감시에서 제외한다", () => {
+    const fab = read("app/(main)/_components/layout/floating/floating-add-button.tsx");
+    expect(fab).toMatch(/if \(armTarget\) watchDialogCancel\(\)/);
+    expect(fab).toMatch(/:not\(#fab-sheet\)/);
+    expect(fab).toMatch(/id="fab-sheet"/);
   });
   it("FAB는 이어서 맞추기 GA category 1개만 추가하고 새 저장 키를 쓰지 않는다", () => {
     const fab = read("app/(main)/_components/layout/floating/floating-add-button.tsx");

@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAssetNavigation, type DetailTab } from "../navigation/navigation-context";
 import { InfoHint } from "../ui/info-hint";
 import { CATEGORY_REFRESHED_EVENT, heldRefreshCategories, isRefreshedToday, REFRESH_CATEGORIES, type RefreshCategory } from "@/lib/asset/asset-refresh-status";
-import { consumeResyncSignal, isRefreshCategory, resyncNoticeText, shouldTrackResyncContinue, sortHoldingsRows } from "@/lib/asset/resync-return";
+import { consumeResyncSignal, isRefreshCategory, nextDialogWatch, resyncNoticeText, shouldTrackResyncContinue, sortHoldingsRows } from "@/lib/asset/resync-return";
 import { Button } from "@/components/ui/button";
 import { getAssetData } from "@/lib/asset/asset-storage";
 
@@ -56,6 +56,7 @@ export function FloatingAddButton() {
   // 이어서 맞추기(#110) — armed: 창이 열려 있는 최신화 자산군(메모리 1개), resumeNotice: 복귀 후 상단 줄에 쓸 자산군
   const armedRef = useRef<RefreshCategory | null>(null);
   const [resumeNotice, setResumeNotice] = useState<RefreshCategory | null>(null);
+  const watchRef = useRef<MutationObserver | null>(null);
   const viewKey = `${view.type}:${(view as { tab?: string }).tab ?? ""}`;
 
   // 최상단(scrollY ≤ 50)에서만 노출 — 스크롤 다운 시 즉시 숨김
@@ -96,6 +97,25 @@ export function FloatingAddButton() {
     window.addEventListener(CATEGORY_REFRESHED_EVENT, handler);
     return () => window.removeEventListener(CATEGORY_REFRESHED_EVENT, handler);
   }, []);
+
+  // 대기 중 연 창이 저장 신호 없이 닫히면(취소) 대기 해제 — 이후 상세 편집 저장이 시트를 열지 않게
+  const watchDialogCancel = () => {
+    watchRef.current?.disconnect();
+    let seen = false;
+    const check = () => {
+      const present = !!document.querySelector('[role="dialog"]:not([data-state="closed"]):not(#fab-sheet)');
+      const r = nextDialogWatch(seen, present);
+      seen = r.seen;
+      if (!r.release) return;
+      watchRef.current?.disconnect();
+      watchRef.current = null;
+      requestAnimationFrame(() => { armedRef.current = null; }); // 저장 신호는 같은 tick에 이미 소비됨
+    };
+    const ob = new MutationObserver(check);
+    ob.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-state"] });
+    watchRef.current = ob;
+  };
+  useEffect(() => () => watchRef.current?.disconnect(), []);
 
   // 화면 이동(상세 탭 편집·성과 등)이면 복귀 대기 해제
   useEffect(() => {
@@ -200,6 +220,7 @@ export function FloatingAddButton() {
     setIsOpen(false);
     resetState();
     armedRef.current = armTarget;
+    if (armTarget) watchDialogCancel();
   };
 
   const selectedAsset = ASSET_TYPES.find((a) => a.type === selectedType);
@@ -263,6 +284,7 @@ export function FloatingAddButton() {
 
       <Sheet open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) { armedRef.current = null; resetState(); } }}>
         <SheetContent
+          id="fab-sheet"
           side={isMobile ? "bottom" : "right"}
           hideClose={isMobile}
           className={isMobile

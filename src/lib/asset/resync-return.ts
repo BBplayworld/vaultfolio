@@ -34,3 +34,9 @@ export function consumeResyncSignal(armed: RefreshCategory | null, signal: Refre
 export function shouldTrackResyncContinue(notice: RefreshCategory | null, pickedType: string): boolean {
   return notice !== null && isRefreshCategory(pickedType) && pickedType !== notice;
 }
+
+/** 대기 중 창 감시 — 창이 한 번 열렸다가 닫혔는데 저장 신호로 대기가 소비되지 않았으면 취소로 보고 해제한다(D1) */
+export function nextDialogWatch(seen: boolean, present: boolean): { seen: boolean; release: boolean } {
+  if (present) return { seen: true, release: false };
+  return { seen, release: seen };
+}
