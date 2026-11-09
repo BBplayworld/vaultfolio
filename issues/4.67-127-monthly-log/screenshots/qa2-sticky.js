@@ -1,0 +1,25 @@
+const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const S=process.argv[2]; const HOST='https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app';
+(async()=>{ const b=await chromium.launch();
+for (const [W,TH] of [[375,'light'],[375,'dark'],[320,'dark'],[1280,'light']]) { const ctx=await b.newContext({viewport:{width:W,height:800}});
+await ctx.addCookies([{name:'theme_mode',value:TH,url:HOST}]);
+const p=await ctx.newPage(); const errs=[]; const net=[]; p.on('pageerror',e=>errs.push(e.message.slice(0,100))); p.on('console',m=>{if(m.type()==='error')errs.push('c:'+m.text().slice(0,100))}); p.on('request',r=>{if(/collect|gtag|analytics/.test(r.url()))net.push(r.url().slice(0,80))});
+await p.addInitScript(()=>{localStorage.setItem('secretasset_tutorial_status',JSON.stringify({1:"skipped",2:"skipped",3:"skipped",4:"skipped",5:"skipped"}));});
+await p.goto(HOST+'/?demo=1',{waitUntil:'domcontentloaded'});await p.waitForTimeout(6000);
+await p.goto(HOST+'/',{waitUntil:'domcontentloaded'});await p.waitForTimeout(5000);
+await p.locator('text=성과').first().click();await p.waitForTimeout(900);
+await p.locator('text=/결산$/').first().click();await p.waitForTimeout(1500);
+const snap=()=>p.evaluate(()=>JSON.stringify(Object.keys(localStorage).sort().map(k=>[k,localStorage.getItem(k)])));
+const before=await snap();
+await p.locator('[data-testid=monthly-log-button]').click();await p.waitForTimeout(900);
+const t='[data-testid=monthly-log-table]';
+const r=await p.evaluate((t)=>{const e=document.querySelector(t);const f=()=>{const er=e.getBoundingClientRect();const m=e.querySelector('thead th').getBoundingClientRect();const ths=e.querySelectorAll('thead th');const n=ths[ths.length-1].getBoundingClientRect();return{mL:Math.round(m.left-er.left),nR:Math.round(er.right-n.right)}};
+ const a=f(); e.scrollLeft=e.scrollWidth; e.scrollTop=50; const c=f(); const hd=e.querySelector('thead th').getBoundingClientRect().top-e.getBoundingClientRect().top;
+ return{sw:e.scrollWidth,cw:e.clientWidth,month:e.querySelector('thead th').getBoundingClientRect().width,before:a,afterScroll:c,headTop:Math.round(hd),clipped:[...e.querySelectorAll('td,th')].filter(c=>c.scrollWidth>c.clientWidth+1).length,pageOverflow:document.documentElement.scrollWidth>innerWidth}},t);
+await p.waitForTimeout(300);
+await p.screenshot({path:`${S}/qa2-w${W}-${TH}-scrolled.png`});
+await p.keyboard.press('Escape');await p.waitForTimeout(600);
+const after=await snap();
+console.log(W,TH,JSON.stringify(r),'storageSame=',before===after,'ga=',net.length,'errs=',JSON.stringify(errs));
+await ctx.close();}
+await b.close();})();
