@@ -40,7 +40,7 @@ export function evaluateLink(data: AssetData, trade: Omit<LinkTrade, "id">, valu
         : `${acct.name} 잔액보다 많이 갚을 수 없어요. 다른 계좌를 고르거나 연결 안 함으로 저장해 주세요.`,
     };
   }
-  if (r.reason === "zero") return { state: "error", choice, testId, message: `${acct.name}은 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요.` };
+  if (r.reason === "zero") return { state: "error", choice, testId, message: `${acct.name} 잔액을 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요.` };
   if (r.reason === "amount") return { state: "error", choice, testId: "cash-link-error", message: "연결할 금액이 0원 이하예요. 수수료를 확인하거나 연결 안 함으로 저장해 주세요." };
   return { state: "error", choice, testId, message: "이 계좌는 연결할 수 없어요. 다른 계좌를 고르거나 연결 안 함으로 저장해 주세요." };
 }

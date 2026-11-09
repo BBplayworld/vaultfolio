@@ -43,7 +43,10 @@ describe("evaluateLink", () => {
   it("잔액 = 대금(전액 사용): zero 문구, 초과는 부족 문구", () => {
     now();
     const d = data({ cash: [{ id: "a", type: "bank", name: "주거래", balance: 1_000_000, currency: "KRW" }] });
-    expect(evaluateLink(d, trade(), "cash:a", true)).toMatchObject({ state: "error", testId: "cash-link-error", message: "주거래은 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요." });
+    expect(evaluateLink(d, trade(), "cash:a", true)).toMatchObject({ state: "error", testId: "cash-link-error", message: "주거래 잔액을 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요." });
+    // 받침 없는 계좌명도 같은 구조(조사가 계좌명에 붙지 않음)
+    const d2 = data({ cash: [{ id: "b", type: "bank", name: "카카오뱅크", balance: 1_000_000, currency: "KRW" }] });
+    expect(evaluateLink(d2, trade(), "cash:b", true)).toMatchObject({ message: "카카오뱅크 잔액을 0원으로 둘 수 없어요. 연결 안 함으로 저장하거나 맞추기로 잔액을 고쳐 주세요." });
     expect(evaluateLink(d, trade({ quantity: 11 }), "cash:a", true)).toMatchObject({ message: expect.stringContaining("잔액이 부족해요") });
   });
   it("토스트 문구", () => {
