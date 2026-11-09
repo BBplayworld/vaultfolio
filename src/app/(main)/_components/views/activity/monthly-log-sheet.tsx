@@ -93,11 +93,14 @@ export function MonthlyLogTable({ log, today }: { log: MonthlyLog; today: string
   return rows.length === 0 ? (
     <p data-testid="monthly-log-empty" className="py-8 text-center text-sm text-muted-foreground">기록된 달이 없어요</p>
   ) : (
+    // isolate: 스크롤러를 쌓임 맥락으로 — 아니면 z-index 가진 sticky 칸이 스크롤러 밖 레이어로 합성돼(iOS WebKit)
+    //   네이티브 스크롤 인디케이터를 월 열 폭만큼 덮어 막대가 두 조각으로 보임(대표 지적 R2)
+    // pb-3: 인디케이터 띠(바닥 3~6pt)에 월 열 칸이 닿지 않게 / overscroll-x-none: 가로 바운스로 월 열 왼쪽이 비는 것 차단
     <div
       data-testid="monthly-log-table"
       tabIndex={0}
       aria-label="월별 기록 표"
-      className="max-h-[60dvh] overflow-auto rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:max-h-[65dvh]"
+      className="isolate max-h-[60dvh] overflow-auto overscroll-x-none rounded-sm pb-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:max-h-[65dvh]"
     >
       <table className="w-full border-separate border-spacing-0 text-sm tabular-nums whitespace-nowrap">
         <caption className="sr-only">월별 자산군 금액</caption>

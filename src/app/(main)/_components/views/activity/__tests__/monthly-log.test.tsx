@@ -119,6 +119,13 @@ describe("표 MonthlyLogTable", () => {
     expect(row.indexOf("monthly-log-cell-2026-11-netAsset")).toBeLessThan(row.indexOf("monthly-log-cell-2026-11-realEstate"));
     expect(html.match(/<th[^>]*monthly-log-head-netAsset[^>]*>/)![0]).not.toContain("sticky right");
   });
+  it("스크롤러: 쌓임 맥락(isolate)·바닥 여백(pb-3)·가로 바운스 없음 — iOS 인디케이터가 월 열에 가려 두 조각으로 보이지 않게(R2)", () => {
+    const box = html.match(/<div[^>]*data-testid="monthly-log-table"[^>]*>/)![0];
+    expect(box).toMatch(/\bisolate\b/);
+    expect(box).toMatch(/\bpb-3\b/);
+    expect(box).toMatch(/\boverscroll-x-none\b/);
+    expect(box).toMatch(/\boverflow-auto\b/);
+  });
   it("최신순, 이번 달 '진행 중'·'오늘', 레거시 '2026-07 기록'", () => {
     const order = ["2026-11", "2026-10", "2026-09", "2026-08", "2026-07"].map((m) => html.indexOf(`monthly-log-row-${m}"`));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
