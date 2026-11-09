@@ -68,9 +68,12 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
             <p data-testid="cash-link-preview" aria-live="polite" className="mt-2 break-keep text-sm tabular-nums">
               {preview && (
                 <>
-                  <span>{preview.main[0]} {preview.main[1]}</span>
-                  <span className="text-muted-foreground"> → </span>
-                  <span className="font-semibold">{preview.main[2]}</span>
+                  <span>{preview.main[0]} </span>
+                  <span className="whitespace-nowrap">
+                    {preview.main[1]}
+                    <span className="text-muted-foreground"> → </span>
+                    <span className="font-semibold">{preview.main[2]}</span>
+                  </span>
                 </>
               )}
             </p>
@@ -78,10 +81,11 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
           </div>
         </div>
       </div>
-      {chosenKind && (
+      {/* 접힘 상태에서는 렌더하지 않는다: 높이 0 래퍼도 부모 space-y 간격을 한 칸 더 만든다(ui-review) */}
+      {chosenKind && warnResync && (
         <ResyncTxWarning
           category={chosenKind}
-          show={warnResync}
+          show
           refreshedAtIso={lastRefreshedAt(chosenKind)}
           todayKst={todayKst()}
           id="link-resync-warning"

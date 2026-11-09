@@ -88,3 +88,25 @@ describe("context 저장·삭제 함수는 saveData를 정확히 1회 호출한�
     expect(body.match(/saveData\(/g)).toHaveLength(1);
   });
 });
+
+describe("코인 연결 저장 (#107 핫픽스 병합 후)", () => {
+  it("반영 식별자는 commit 직전 부여 -> validateReflection 통과, 연결 저장 합성·저장 성공", async () => {
+    const { validateReflection } = await import("@/lib/trade/validate-reflection");
+    const draft = { id: "crtx_9", cryptoId: "c1", symbol: "BTC", name: "비트코인", type: "sell" as const, quantity: 0.01, price: 50_000_000, date: "2026-11-10", reflected: true, reflectionId: undefined, createdAt: "x" };
+    const pos = { quantity: 1, avgPrice: 40_000_000 } as never;
+    expect(validateReflection(draft as never, pos).level).not.toBe("restrict");
+    const tx = { ...draft, reflectionId: "ref_1" }; // commit 시점 부여
+    const b = buildLink({ ...seed(), cryptoTransactions: [tx] }, cryptoLinkTrade(tx), { kind: "cash", cashId: "a" }, TODAY);
+    if (!b.ok) throw new Error(b.reason);
+    expect(saveAssetData(b.data)).toBe(true);
+    const saved = getAssetData();
+    expect(saved.cash[0].balance).toBe(5_500_000);
+    expect(saved.cashTransactions[0].id).toBe("ctx_link_crtx_9");
+  });
+  it("crypto-tx-input: buildTx는 reflectionId를 비우고 commit이 부여한다(정적)", () => {
+    const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx"), "utf8");
+    expect(src).toMatch(/reflectionId: undefined/);
+    expect(src).toMatch(/const tx = rawTx\.reflected \? \{ \.\.\.rawTx, reflectionId/);
+    expect(src).toMatch(/addCryptoTransactionWithPosition\(tx, coin\.id, buildReflectionPatch\(tx, coin\), link\)/);
+  });
+});

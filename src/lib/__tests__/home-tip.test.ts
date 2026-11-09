@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   taxDismissed: false,
   seen: [] as unknown[][],
   tracked: [] as unknown[][],
+  held: undefined as unknown,
 }));
 
 vi.mock("@/app/(main)/_components/layout/onboarding/notice", () => ({ NOTICE_ID: "n1" }));
@@ -31,7 +32,11 @@ vi.mock("../analytics/ga", async (orig) => ({
   ...(await orig<typeof import("../analytics/ga")>()),
   track: (...a: unknown[]) => void h.tracked.push(a),
 }));
-vi.mock("../asset/asset-refresh-status", () => ({ shouldShowRefreshNudge: () => h.refresh, getStaleCategories: () => ["stock"] }));
+vi.mock("../asset/asset-refresh-status", async (orig) => ({
+  ...(await orig<typeof import("../asset/asset-refresh-status")>()),
+  shouldShowRefreshNudge: (o: { held?: unknown }) => { h.held = o.held; return h.refresh; },
+  getStaleCategories: () => ["stock"],
+}));
 vi.mock("../feature-usage", () => ({ pickRecommendedFeature: () => h.feature }));
 vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
 
@@ -108,6 +113,16 @@ describe("우선순위: 공지 > 백업 > 세금 > 결산 > 최신화 > 기능",
     expect(pick("2026-11-15")?.kind).toBe("refresh");
     h.refresh = false;
     expect(pick("2026-11-15")?.kind).toBe("feature");
+  });
+});
+
+describe("최신화 팁 보유 자산군만(#99 p2-1)", () => {
+  it("7. 보유 자산군만 held로 넘기고, 오래된 게 미보유뿐이라 refresh가 꺼지면 기능 팁으로 이어진다", () => {
+    h.feature = { id: "f" };
+    const stocksOnly = { ...assetData, stocks: [{}], crypto: [], cash: [], loans: [] } as unknown as AssetData;
+    const tip = pickHomeTip({ assetData: stocksOnly, hasAssets: true, syncArmed: false, today: "2026-11-15" });
+    expect(h.held).toEqual(["stock"]);
+    expect(tip?.kind).toBe("feature");
   });
 });
 

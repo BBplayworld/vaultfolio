@@ -2,6 +2,7 @@
 // 30일 이상 방치된 카테고리가 있으면 홈에 넛지를 띄운다. backup-status.ts와 동일 패턴(S-4.30).
 
 import { STORAGE_KEYS } from "@/lib/local-storage";
+import type { AssetData } from "@/types/asset";
 
 export type RefreshCategory = "stock" | "crypto" | "cash" | "loan";
 export const REFRESH_CATEGORIES: RefreshCategory[] = ["stock", "crypto", "cash", "loan"];
@@ -57,7 +58,7 @@ export function daysSinceRefresh(category: RefreshCategory): number | null {
 }
 
 /** 30일 이상(또는 이력 없음) 경과한 카테고리를 오래된 순으로. assetLastUpdated는 이력 없을 때 유예 판정용 */
-export function getStaleCategories(assetLastUpdated?: string): RefreshCategory[] {
+export function getStaleCategories(assetLastUpdated?: string, held?: RefreshCategory[]): RefreshCategory[] {
   const meta = readMeta();
   const withDays = REFRESH_CATEGORIES.map((category) => {
     const raw = meta.categories?.[category];
@@ -70,9 +71,19 @@ export function getStaleCategories(assetLastUpdated?: string): RefreshCategory[]
     return { category, days, stale: days >= NUDGE_AFTER_DAYS };
   });
   return withDays
-    .filter((c) => c.stale)
+    .filter((c) => c.stale && (!held || held.includes(c.category)))
     .sort((a, b) => (b.days ?? Infinity) - (a.days ?? Infinity))
     .map((c) => c.category);
+}
+
+/** 보유 자산군(배열 길이 > 0) — settlement-view getStaleRows와 같은 정의 */
+export function heldRefreshCategories(d: Pick<AssetData, "stocks" | "crypto" | "cash" | "loans">): RefreshCategory[] {
+  const out: RefreshCategory[] = [];
+  if (d.stocks?.length) out.push("stock");
+  if (d.crypto?.length) out.push("crypto");
+  if (d.cash?.length) out.push("cash");
+  if (d.loans?.length) out.push("loan");
+  return out;
 }
 
 /**
@@ -85,11 +96,13 @@ export function getStaleCategories(assetLastUpdated?: string): RefreshCategory[]
 export function shouldShowRefreshNudge(opts: {
   hasAssets: boolean;
   assetLastUpdated?: string;
+  /** 지정하면 보유 자산군만 판정(미지정 = 전체) */
+  held?: RefreshCategory[];
 }): boolean {
   if (typeof window === "undefined") return false;
   if (!opts.hasAssets) return false;
   if (readMeta().nudgeShownOn === todayStr()) return false;
-  return getStaleCategories(opts.assetLastUpdated).length > 0;
+  return getStaleCategories(opts.assetLastUpdated, opts.held).length > 0;
 }
 
 /** 배너를 노출했을 때 — 오늘은 다시 띄우지 않는다 */

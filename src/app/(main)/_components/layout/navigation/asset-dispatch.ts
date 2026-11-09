@@ -57,3 +57,14 @@ export function consumeYearlyNetAssetOpenRequest(now: number = Date.now()): bool
   yearlyOpenRequestedAt = null;
   return at !== null && now - at <= YEARLY_NET_ASSET_OPEN_TTL_MS;
 }
+
+// 자산 추가 폼 열기 이벤트(FAB 방법 선택·스크린샷 실패 박스 [직접 입력]이 공용) — 단일 정의
+export const ADD_TRIGGER_EVENTS = {
+  "real-estate": "trigger-add-real-estate",
+  "stock": "trigger-add-stock",
+  "crypto": "trigger-add-crypto",
+  "cash": "trigger-add-cash",
+  "loan": "trigger-add-loan",
+  "physical": "trigger-add-physical", // 실물 자산(#58) — 빠지면 FAB 실물 행이 무반응
+  "yearly-net-asset": "trigger-add-yearly-net-asset",
+} as const;

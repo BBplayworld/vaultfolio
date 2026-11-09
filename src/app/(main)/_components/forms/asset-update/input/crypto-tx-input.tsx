@@ -153,7 +153,7 @@ export function CryptoTxInput() {
       memo: data.memo,
       reflected: data.reflected,
       reflectedAt: data.reflected ? new Date().toISOString() : undefined,
-      reflectionId: data.reflected ? `ref_${Date.now()}` : undefined,
+      reflectionId: undefined, // 반영 직전(commit)에 부여 — 미리 넣으면 validateReflection이 이미 반영으로 차단
       createdAt: new Date().toISOString(),
     };
   };
@@ -206,7 +206,9 @@ export function CryptoTxInput() {
     commit(tx, coin);
   };
 
-  const commit = (tx: CryptoTransaction, coin: Crypto) => {
+  const commit = (rawTx: CryptoTransaction, coin: Crypto) => {
+    // 반영 식별자는 실제 반영 직전에 부여(#107 핫픽스: buildTx 시 부여하면 정합성 가드가 오진)
+    const tx = rawTx.reflected ? { ...rawTx, reflectionId: `ref_${Date.now()}` } : rawTx;
     const link = tx.reflected && linkEval.state === "ok" ? linkEval.choice : undefined;
     const ok = tx.reflected
       ? addCryptoTransactionWithPosition(tx, coin.id, buildReflectionPatch(tx, coin), link)

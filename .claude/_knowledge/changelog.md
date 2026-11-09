@@ -4,9 +4,9 @@
 
 ---
 
-## 2026-11-09 (v4.56)
+## 2026-11-09 (v4.58)
 
-### 거래 연결 계좌 — 거래 저장 시 현금·대출을 함께 증감 (#4.56, 이슈 #103, risk high)
+### 거래 연결 계좌 — 거래 저장 시 현금·대출을 함께 증감 (#4.58, 이슈 #103, risk high)
 - **왜**: 매수·매도를 기록해도 현금·대출 잔액을 따로 고쳐야 했고 거래를 지워도 돈 쪽이 그대로였다. 결산에도 입금↔매도 짝이 없어 `순유입 +X / 기록 안 된 변화 −X`로 갈렸다.
 - **저장 방식**: 새 필드·스키마·저장 키·동기화 형식 변경 0. 짝 기록 id 규칙 `ctx_link_<거래id>`(현금)·`ltx_link_<거래id>`(대출). 정본 `lib/trade/linked-record.ts`(id·금액·가드·`buildLink`·`planRemoveLink`·`removeLink`, 접두어 직접 사용 금지). 구버전은 id 문자열을 그대로 보존(zod strip이 새 필드를 지우는 4.55 D1형 탈락을 구조적으로 차단).
 - **저장·삭제**: `addTransactionWithPosition`·`addTransactionsBatch`(신규 종목 단건)·`addCryptoTransactionWithPosition`에 `link` 옵션, `deleteTransactionWithPosition`·`deleteCryptoTransactionWithPosition`에 `{revertLink}` 옵션. 모두 `saveData` 1회(실패 시 전부 이전 값). 가드: 현금 출금 초과·대출 상환 초과·대금 0 이하·통화 불일치(외화 거래의 대출)·중복·**거래일이 이번 달(KST)이 아니면** 저장 함수가 `false`. 되돌림은 짝 기록의 현재 값 기준, 감소 방향 하한(현금은 cashSchema가 balance>0을 요구해 1원/0.01, 대출 0, cto 5-6 수용), 짝 없음·계좌 없는 고아는 건드리지 않음, `reflected:false` 짝은 기록만 삭제.
@@ -25,6 +25,18 @@
 - **합산·결산**: `computeNetAsset/Cost`·스냅샷(`breakdown.physical`·`cost.physical`, 0도 기록)·요약, `hasAnyAssets` 인라인 5종 체인 교체. 원인 키 `price/buy/sell:physical`(평가 갱신은 부동산과 합산, 매입은 내부 이동 풀, `matchRecordedTransfers` 후보에 실물 신규분), #84 COLLS·#83 구성 키(색 MAIN_PALETTE[8]).
 - **UI**: `physical-input.tsx`·`physical-tab.tsx`, 허브 카드(1건 이상), FAB 행, 홈 도넛 조각(색 고정, 클릭→실물 탭), 복원 코드 미포함 안내. GA는 page_title '자산 저장·실물 자산'만.
 - 알려진 한계 4개: 구버전 '모든 삭제' 후 잔존·노출 / 구버전 기기가 쓴 날 일별 그래프 하락 / 복원 코드 제외 / 구 백업 가져오기 시 실물 기존 값 유지.
+
+---
+## 2026-11-09 (v4.55)
+
+### 스크린샷 인식 실패 뒤 다음 행동 + 최신화 팁 보유 자산군만 + 연 탭 자동 기록 안내 (#4.55, 이슈 #99, risk low)
+- **왜**: 추가 스크린샷(주식·코인·현금·대출) 인식 실패 시 토스트만 남아 직접 입력으로 가려면 FAB부터 다시 들어가야 했고, 마법사엔 갈 곳이 없었다. 실패와 성공이 같은 GA title이라 누수 판정도 불가.
+- `ScreenshotFailNotice`(`forms/asset-update/screenshot/screenshot-fail-notice.tsx`) 신설: 업로드 칸 자리 박스(role=alert, [다른 캡처 고르기]/[직접 입력]). 서버 오류는 `lib/asset/screenshot-fail.ts` `mapParseErrorTitle` 목록 매핑(원문 미노출). [직접 입력]=`runDirectInput`(asset_add_start manual 1건 + FAB와 같은 도착지, 현금·대출 보유자는 잔액 맞추기, 마법사 `directInput="add"`는 항상 추가 폼). 남은 횟수 0이면 [다른 캡처] 숨김·한도 박스 미렌더. 같은 사건 토스트 제거, 티커 누락 토스트에 `체크를 풀면 나머지만 등록돼요` 추가.
+- 마법사: `page.tsx` 마법사 분기에 입력 폼 4종 숨김 마운트, `CategoryStep`은 `createStepCompleter`(onSaved와 건수 증가 중 먼저 온 1회만, `key={phase}`로 초기화).
+- GA: `screenshot_parse` result fail·empty → `스크린샷 등록 실패·<자산>`(ga.test 갱신).
+- p2-1: `heldRefreshCategories`·`getStaleCategories(…, held?)`·`shouldShowRefreshNudge({held?})` — `home-tip.ts`만 보유 필터 적용(결산 화면 diff 0).
+- p2-2: 연 탭 Hero `note` 슬롯에 `작년 말 값은 … 기록이에요 · 고치기`(`lib/asset/yearly-auto.ts`), 지난 연도 `자동` 항목은 수정 폼 메모를 빈 칸으로 시작(저장 = 확정).
+- 스키마·저장 키·동기화·overwrite-guard 코드 변경 0. `ADD_TRIGGER_EVENTS`를 `asset-dispatch.ts`로 이동(FAB `EVENT_MAP` 단일 정의).
 
 ---
 

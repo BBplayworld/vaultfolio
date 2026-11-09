@@ -36,3 +36,19 @@ export function reflectedBalanceDelta(transactions: CashTransaction[], cashId: s
 export function isCashWithdrawalValid(currentBalance: number, amount: number): boolean {
   return amount <= currentBalance;
 }
+
+/** 현금 잔액 하한 = 통화 최소 단위 — cashSchema balance > 0 때문에 0원은 저장 불가(KRW·JPY 1, USD 등 0.01). 하한 정본 1곳(#103 연결 계좌도 사용) */
+export function cashBalanceFloor(currency = "KRW"): number {
+  return currency === "KRW" || currency === "JPY" ? 1 : 0.01;
+}
+
+/** 반영 출금 후 잔액이 하한 미만(0원 포함)이 되는지 — 초과 출금(amount > balance)은 별도 가드가 담당 */
+export function isCashWithdrawalBelowFloor(balance: number, amount: number, currency = "KRW"): boolean {
+  return Math.round((balance - amount) * 1e6) / 1e6 < cashBalanceFloor(currency);
+}
+
+/** 반영 기록 삭제 시 되돌린 잔액 — 하한 미만이면 하한으로 고정(0원 저장 실패 방지) */
+export function reflectedDeleteBalance(balance: number, tx: Pick<CashTransaction, "type" | "amount">, currency = "KRW"): number {
+  const next = balance + (tx.type === "deposit" ? -tx.amount : tx.amount);
+  return Math.max(cashBalanceFloor(currency), Math.round(next * 1e6) / 1e6);
+}

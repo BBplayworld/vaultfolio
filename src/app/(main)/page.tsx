@@ -78,6 +78,13 @@ export default function Page() {
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
         </div>
+        {/* 스크린샷 실패 박스 [직접 입력]이 여는 추가 폼(#99) — 웰컴 분기와 같은 숨김 마운트 */}
+        <div className="hidden" aria-hidden="true">
+          <StockInput />
+          <CryptoInput />
+          <CashInput />
+          <LoanInput />
+        </div>
       </div>
     );
   }

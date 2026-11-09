@@ -430,6 +430,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚠ 알려진 한계(C9): iOS Safari·WKWebView·삼성 실기기 defineProperty 미검증(fail-closed), 인앱 체험 종료 후 `trial_start`·`inapp_move` 미집계, sessionStorage 미격리, 거부·실패된 1회 로드 GA 미집계, 상세·성과 예시 표기 없음
 
 ### F-ONBOARD-WIZARD. 스크린샷 일괄 온보딩 마법사 ([onboarding-wizard-flow.tsx](../../src/app/(main)/_components/layout/onboarding/onboarding-wizard/onboarding-wizard-flow.tsx) · [onboarding-wizard-status.ts](../../src/lib/onboarding-wizard-status.ts) · [onboarding-wizard-store.ts](../../src/stores/onboarding-wizard-store.ts)) — 명세 [S-4.29](../specs/4.29-onboarding-wizard.md)
+- 👤 **#4.55**: 추가 스크린샷 실패·빈 결과·네트워크 예외 시 업로드 칸 자리에 박스(토스트 0), [다른 캡처 고르기]·[직접 입력으로 등록/잔액 고치기]. 마법사는 입력 폼 숨김 마운트 + `directInput="add"`, 직접 저장 시 단계 완료 1회(`wizard_step done` 1건). GA 실패 title `스크린샷 등록 실패·<자산>`. 홈 최신화 팁은 보유 자산군만. 연 탭 자동 prev 캡션 `· 고치기`(지난 연도 메모 빈 칸 시작).
 - 👤 **자동 노출 없음**: 웰컴가이드가 항상 먼저 노출되어야 한다는 요구에 따라 `page.tsx`의 자동 오픈 effect(AC1)는 제거됨 — 자산 0건이어도 첫 진입은 항상 `WelcomeGuide`, 마법사는 CTA를 명시적으로 눌렀을 때만 열림
 - 👤 **재진입**: 웰컴가이드 하단 "스크린샷으로 자산 등록" CTA에서만 `useOnboardingWizardStore().open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨). `page.tsx`가 `isWelcomeGuide`보다 먼저 `isWizardOpen`을 체크해 마법사를 렌더
 - 👤 **재노출 억제**(AC2): X 닫기·"나중에 할게요"·완료·전체 건너뛰기 등 마법사가 닫히는 모든 경로가 `markWizardDismissed()`를 호출해 `dismissed:true`를 세움 — 한 번이라도 닫으면 이후 자동 노출 안 됨(재진입은 CTA로만 가능)
@@ -578,7 +579,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - p2: 연 탭 `작년 말 순자산 넣기` 링크(기존 입력 창)·연도별 저장 GA / 직접 추가·수정 후 최신화 기록 / `isNew` 0 / 업로드 문구 `눌러서 사진 고르기` / FAB `적용 환율` / 자동 저장 실패 토스트 세션당 1회
 - preview(`?demo=1` → FAB → 보유 현황 업데이트 → 현금성/대출 → 직접 입력): 현금 3개(USD 1개 포함), 대출 1개
 
-### F-LINKED-TRADE. 거래 연결 계좌 ([linked-record.ts](../../src/lib/trade/linked-record.ts)) — #4.56 #103
+### F-LINKED-TRADE. 거래 연결 계좌 ([linked-record.ts](../../src/lib/trade/linked-record.ts)) — #4.58 #103
 - ⚙ 짝 id 규칙·금액 반올림·가드(잔액 부족·초과 상환·대금 0 이하·통화·중복·이번 달 아님)·저장 합성 1회·저장 실패 시 전부 이전 값(`linked-record.test.ts`·`linked-save.test.ts`), 되돌림 픽스처 3종(하한, 대출 완납 복귀)·짝 기록 현재 값 기준·`reflected:false`·고아 불변
 - ⚙ 결산·홈: F5·F6·F13·F14·F23·경계(`linked-settlement.test.ts`) + 4.55 함수 골든 사본 대비 무작위 400건 신/구 detail 동일(과거 결산 diff 0), 기존 settlement/cross-asset/physical 테스트 파일 수정 0
 - ⚙ 문구·금지어(`link-text.test.ts`), GA `거래 저장·계좌 함께 반영`(`ga.test.ts`)

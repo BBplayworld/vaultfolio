@@ -215,7 +215,8 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
     case "first_asset_saved":
       return withAsset("자산 저장");
     case "screenshot_parse":
-      return withAsset("스크린샷 등록");
+      // 실패·빈 결과는 별도 title — 첫 등록 병목이 이 화면인지 판정(#99). success·limit은 현행
+      return withAsset(params.result === "fail" || params.result === "empty" ? "스크린샷 등록 실패" : "스크린샷 등록");
     case "transaction_save":
       return withAsset("거래 입력");
     case "share":

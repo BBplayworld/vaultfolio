@@ -1,7 +1,7 @@
 import type { AssetData, Cash, Loan } from "@/types/asset";
 import type { CashTransaction, CryptoTransaction, LoanTransaction, Transaction } from "@/types/transaction";
 import { todayKst } from "@/lib/tax-utils";
-import { isCashWithdrawalValid, pruneCashTransactions } from "./cash-tx-utils";
+import { cashBalanceFloor, isCashWithdrawalValid, pruneCashTransactions } from "./cash-tx-utils";
 import { isLoanRepaymentValid, pruneLoanTransactions } from "./loan-tx-utils";
 
 // 거래 ↔ 현금·대출 '연결 계좌'(#103, 4.56) — 짝 기록 id 규칙 정본.
@@ -64,13 +64,6 @@ export function roundMoney(value: number, currency: "KRW" | "USD" | "JPY"): numb
   return Math.round(value);
 }
 
-/**
- * 현금 계좌 잔액 하한(통화 최소 단위). cashSchema가 balance > 0을 요구해 0원 현금은 저장 전체가 실패한다(4.52도 현금 0 차단).
- * 그래서 현금 잔액을 줄이는 방향은 0이 아니라 이 값까지만 내려간다. 대출은 0 허용(완납)이라 해당 없음. cto 5-5 ①의 '하한 0'과
- * 다른 점이라 dev-notes·보고에 명시(결정 요청).
- */
-export const CASH_FLOOR: Record<"KRW" | "USD" | "JPY", number> = { KRW: 1, JPY: 1, USD: 0.01 };
-
 /** 연결 금액 = 수량×단가 (+수수료 매수 / −수수료 매도), 거래 통화 최소 단위 반올림 */
 export function linkAmount(t: Pick<LinkTrade, "type" | "quantity" | "price" | "fee" | "currency">): number {
   const gross = t.quantity * t.price;
@@ -132,7 +125,7 @@ export function buildLink(
     const isBuy = trade.type === "buy";
     if (isBuy && !isCashWithdrawalValid(cash.balance, amount)) return { ok: false, reason: "balance" };
     const after = roundMoney(cash.balance + (isBuy ? -amount : amount), trade.currency);
-    if (after < CASH_FLOOR[trade.currency]) return { ok: false, reason: "zero" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
+    if (after < cashBalanceFloor(trade.currency)) return { ok: false, reason: "zero" }; // 잔액 전액 사용은 0원 현금이라 저장 불가
     const rec: CashTransaction = {
       id: cashLinkId(trade.id), cashId: cash.id, type: isBuy ? "withdrawal" : "deposit",
       amount, currency: trade.currency, date: trade.date, memo, ...stamp,
@@ -195,7 +188,7 @@ export function planRemoveLink(
     const currency = r.currency || "KRW";
     if (!r.reflected) return { kind: "cash", accountId: cash.id, accountName: cash.name, delta: 0, clamped: false, currency };
     const raw = r.type === "deposit" ? -r.amount : r.amount; // 입금 되돌림 = 감소(하한 0)
-    const floor = raw < 0 ? CASH_FLOOR[currency] : 0;
+    const floor = raw < 0 ? cashBalanceFloor(currency) : 0;
     const next = roundMoney(Math.max(floor, cash.balance + raw), currency);
     return { kind: "cash", accountId: cash.id, accountName: cash.name, delta: roundMoney(next - cash.balance, currency), clamped: raw < 0 && cash.balance + raw < floor, currency };
   }

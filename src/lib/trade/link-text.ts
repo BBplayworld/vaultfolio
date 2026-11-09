@@ -1,5 +1,6 @@
 import type { AssetData } from "@/types/asset";
-import { buildLink, CASH_FLOOR, linkCandidates, type BuildLinkResult, type LinkChoice, type LinkTrade, type RemoveLinkPlan } from "./linked-record";
+import { cashBalanceFloor } from "./cash-tx-utils";
+import { buildLink, linkCandidates, type BuildLinkResult, type LinkChoice, type LinkTrade, type RemoveLinkPlan } from "./linked-record";
 
 // 연결 계좌 화면 문구·선택값 해석(#103). 금지어(연동·계좌 연결·자동 반영·자동 차감·자동·동기화)는 쓰지 않는다(ui.md 5절).
 
@@ -66,7 +67,7 @@ export function revertNoteText(plan: RemoveLinkPlan): string {
   const sign = plan.delta > 0 ? "+" : plan.delta < 0 ? "-" : "";
   const amount = `${plan.accountName} 잔액 ${sign}${fmtMoney(Math.abs(plan.delta), plan.currency)}`;
   if (!plan.clamped) return `${head} ${amount}`;
-  return `${head} ${amount}, ${plan.kind === "cash" ? `잔액이 부족해 ${fmtMoney(CASH_FLOOR[plan.currency], plan.currency)}만 남아요` : "남은 대출보다 커서 0원이 돼요"}`;
+  return `${head} ${amount}, ${plan.kind === "cash" ? `잔액이 부족해 ${fmtMoney(cashBalanceFloor(plan.currency), plan.currency)}만 남아요` : "남은 대출보다 커서 0원이 돼요"}`;
 }
 
 /** 삭제 완료 토스트 꼬리 */

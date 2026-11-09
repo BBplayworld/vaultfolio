@@ -4,6 +4,9 @@ import {
   findDuplicateCashTx,
   reflectedBalanceDelta,
   isCashWithdrawalValid,
+  isCashWithdrawalBelowFloor,
+  reflectedDeleteBalance,
+  cashBalanceFloor,
 } from "../trade/cash-tx-utils";
 import type { CashTransaction } from "@/types/transaction";
 
@@ -52,5 +55,25 @@ describe("cash-tx-utils (S-4.22)", () => {
   it("AC3: blocks withdrawal exceeding balance", () => {
     expect(isCashWithdrawalValid(1_000_000, 1_000_000)).toBe(true);
     expect(isCashWithdrawalValid(1_000_000, 1_000_001)).toBe(false);
+  });
+
+  // #107 ② 전액 출금 → 0원 저장 실패 차단
+  it("#107: 전액 출금은 하한 미만으로 차단, 1원 남기면 허용", () => {
+    expect(isCashWithdrawalBelowFloor(1_000_000, 1_000_000)).toBe(true);
+    expect(isCashWithdrawalBelowFloor(1_000_000, 999_999)).toBe(false);
+    expect(isCashWithdrawalBelowFloor(10, 10, "USD")).toBe(true);
+    expect(isCashWithdrawalBelowFloor(10, 9.99, "USD")).toBe(false);
+  });
+
+  // #107 ③ 반영 입금 삭제 → 하한 1원
+  it("#107: 반영 입금 삭제로 0원 이하가 되면 1원(USD 0.01)으로 고정", () => {
+    expect(cashBalanceFloor("KRW")).toBe(1);
+    expect(cashBalanceFloor("USD")).toBe(0.01);
+    expect(cashBalanceFloor("JPY")).toBe(1); // 통화 최소 단위 기준 통일(#103 병합)
+    expect(reflectedDeleteBalance(500, { type: "deposit", amount: 500 })).toBe(1);
+    expect(reflectedDeleteBalance(300, { type: "deposit", amount: 500 })).toBe(1);
+    expect(reflectedDeleteBalance(600, { type: "deposit", amount: 500 })).toBe(100);
+    expect(reflectedDeleteBalance(5, { type: "deposit", amount: 5 }, "USD")).toBe(0.01);
+    expect(reflectedDeleteBalance(100, { type: "withdrawal", amount: 50 })).toBe(150);
   });
 });

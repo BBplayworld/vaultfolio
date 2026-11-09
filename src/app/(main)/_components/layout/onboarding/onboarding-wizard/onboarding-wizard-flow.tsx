@@ -5,7 +5,7 @@
 // 각 단계는 기존 *-screenshot-import.tsx(스크린샷 인식 다이얼로그)를 그대로 재사용한다 —
 // 신규 인식 로직 없음, onSaved 콜백으로 단계 완료만 감지한다.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics/ga";
 import { Building2, TrendingUp, Bitcoin, Wallet, CreditCard, ImageUp, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   markCategoryStatus,
   markWizardDismissed,
   getResumeCategory,
+  createStepCompleter,
   type WizardCategory,
 } from "@/lib/onboarding-wizard-status";
 import { Dashboard } from "../../../views/home/dashboard";
@@ -68,11 +69,23 @@ function CategoryStep({ category, onDone, onSkip }: { category: WizardCategory; 
   const meta = CATEGORY_META[category];
   const Icon = meta.icon;
 
-  const handleSaved = () => {
+  const { assetData } = useAssetData();
+  const count = { stock: assetData.stocks, crypto: assetData.crypto, cash: assetData.cash, loan: assetData.loans }[category].length;
+
+  const complete = () => {
     markCategoryStatus(category, "done");
     track("wizard_step", { step: category, result: "done" });
     onDone();
   };
+  // 스크린샷 저장(onSaved)과 직접 입력 저장(건수 증가)을 한 단계 1회로 합친다. key={category}로 단계마다 초기화
+  const latest = useRef(complete);
+  latest.current = complete;
+  const completer = useRef<ReturnType<typeof createStepCompleter> | null>(null);
+  if (!completer.current) completer.current = createStepCompleter(count, () => latest.current());
+  const handleSaved = () => completer.current?.saved();
+  useEffect(() => {
+    completer.current?.observe(count);
+  }, [count]);
 
   const handleDialogChange = (open: boolean) => {
     setDialogOpen(open);
@@ -94,10 +107,10 @@ function CategoryStep({ category, onDone, onSkip }: { category: WizardCategory; 
         </Button>
       </div>
 
-      {category === "stock" && <StockScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} />}
-      {category === "crypto" && <CryptoScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} />}
-      {category === "cash" && <CashScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} />}
-      {category === "loan" && <LoanScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} />}
+      {category === "stock" && <StockScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} directInput="add" />}
+      {category === "crypto" && <CryptoScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} directInput="add" />}
+      {category === "cash" && <CashScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} directInput="add" />}
+      {category === "loan" && <LoanScreenshotImport open={dialogOpen} onOpenChange={handleDialogChange} onSaved={handleSaved} directInput="add" />}
     </div>
   );
 }
@@ -155,6 +168,7 @@ export function OnboardingWizardFlow() {
       )}
       {WIZARD_CATEGORIES.includes(phase as WizardCategory) && (
         <CategoryStep
+          key={phase}
           category={phase as WizardCategory}
           onDone={() => goToNextCategory(phase as WizardCategory)}
           onSkip={() => goToNextCategory(phase as WizardCategory)}

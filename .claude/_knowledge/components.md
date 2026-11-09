@@ -106,6 +106,9 @@ _components/
 1. `XxxForm` — React Hook Form + Zod Dialog 폼
 2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어 (`hideList` prop)
 
+### ScreenshotFailNotice (`forms/asset-update/screenshot/screenshot-fail-notice.tsx`, #4.54)
+- 추가 import 4종(주식·코인·현금·대출) 업로드 단계 공용 실패 박스. props `fail`(`makeScreenshotFail`)·`assetType`·`canRetry`·`onRetry`·`onClose`·`directInput?:"add"`(마법사). 테스트 id `screenshot-fail-notice/-retry/-manual`, `data-kind`. 제목 매핑은 `lib/asset/screenshot-fail.ts`. 거래 스크린샷·맞추기에는 쓰지 않는다.
+
 ### 스크린샷 다이얼로그 공통 패턴
 
 - `open/onOpenChange` props로 외부 제어
@@ -466,6 +469,6 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - `HoldingsResyncDialog`(`forms/asset-update/screenshot/holdings-resync-dialog.tsx`, #4.50 #91): 주식·코인 보유 ≥1건일 때 `stock-input`·`crypto-input` 진입 분기가 여는 `스크린샷으로 보유 현황 맞추기`. props `open`·`onOpenChange`·`kind="stock"|"crypto"`. 3단계(올리기·인식 최대 5장 순차 → 변경 미리보기 → 결과·되돌리기), 문구 증권사/거래소·주식/코인은 `COPY`+`KindCtx`. 계산은 `lib/asset/resync`, 저장은 적용·되돌리기 핸들러의 `saveData` 1회. 로컬 조각: `UploadStep`·`ShotThumb`·`PreviewStep`·`ItemRow`·`NeedsRow`·`CheckRow`(공용 승격 시 등록)
 - `SyncOverwriteDialog`(`functions/cloud-sync/sync-overwrite-dialog.tsx`): `CloudSyncProvider` 하위 항상 마운트(layout). `useCloudSync()`의 `showOverwriteList`·`overwriteEntries`·`refreshOverwrites`·`revertOverwrites`·`dismissOverwrites` 사용. 열 때·확정 때 목록 재계산(R1), 확정 시 건수가 줄면 "그사이 바뀐 M건은 목록에서 뺐어요." 후 재확정. 기기 동기화 다이얼로그(`cloud-sync-menu-entry.tsx`) armed 상태줄 아래 `sync-overwrite-card`가 같은 다이얼로그를 연다
 
-### LinkAccountRow (`forms/trade/link-account-row.tsx`, #4.56 #103) — 거래 입력 '연결 계좌' 행
+### LinkAccountRow (`forms/trade/link-account-row.tsx`, #4.58 #103) — 거래 입력 '연결 계좌' 행
 - 주식 `trade-input`·코인 `crypto-tx-input` 수동 폼 공용. 즉시 반영 박스 바로 아래 별도 박스(같은 마크업): 라벨 `연결 계좌` + `Select`(`연결 안 함`/그룹 `현금 계좌`·`대출`) 1행, 아래 `cash-link-preview`(항상 마운트, grid-rows 펼침) + 보조 1줄, 4.52 `ResyncTxWarning` 재사용, 오류 박스(`cash-link-error`·`loan-link-error`, `role="alert"`). 후보 0개·즉시 반영 해제면 행 없음, 선택이 후보에서 사라지면 `연결 안 함`으로 복귀(effect).
 - 값·문구·평가는 `lib/trade/link-text.ts`(`evaluateLink`가 표시와 제출 차단에 같은 결과). 삭제 다이얼로그 안내는 `DeleteRollbackDialog`의 `linkedNote` prop·코인 모달 `delete-linked-record-note`.
