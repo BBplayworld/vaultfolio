@@ -2,10 +2,17 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-09 20:10 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
+> **마지막 갱신: 2026-11-09 22:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-없음.
+**v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)**
+- ✅ 권고: 반영 — 대표 지시대로 인증카드는 핵심 기능으로 **상단 오른쪽**(설치 앱도 브라우저와 동일), 더보기는 설정 전용 그대로. 하단은 홈·상세·[업데이트]·성과·더보기 5칸(업데이트 가운데)
+- 🖼 전/후(설치 앱 홈 375): [ui2-compare-before-after-375-light.png](issues/4.66-125-nav-restructure/screenshots/ui2-compare-before-after-375-light.png)
+- 🔗 preview: https://secretasset-git-issue-466-bbplayworlds-projects.vercel.app — 하단 메뉴는 설치 앱에서만 보임(휴대폰 '홈 화면에 추가' → '데모 데이터로 보기'). 브라우저 화면은 변화 없음
+- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @17a9a96
+- ⚠️ 비용: 인증카드가 엄지 쪽 하단 → 화면 위쪽(홈·상세·주식·성과·자산 변화 5개 화면 1탭, 그 밖 2탭) · 앱 홈 첫 카드 +20px(아이폰 +44, PC 앱 +40) · 앱 360·375 상세 부제 2줄 · 옛 칸 자리 오탭은 화면 이동만(데이터 변화 0) · 실기기 앱 미검증(에뮬레이션)
+- ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
+- 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · 하단 유지형을 원하시면 `수정: 하단 유지`
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
@@ -19,7 +26,7 @@
 |---|---|---|---|---|
 | **#129** (버그) | [#129](https://github.com/BBplayworld/vaultfolio/issues/129) 억 단위 축약 표기 오차 — 홈·순자산 차트에서 2.3억이 2.29억으로 보임 | #127 COO 점검 중 발견 → 개발 중 | 즉시 | COO 자체 승인 (버그) |
 | **#127** (신규 기능) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액을 앱 안에서 한눈에(엑셀 월별 시트 대체) | 개발 완료 [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) → UI·qa → COO 보류 2회(금액 표기 정밀도·소수 오차) 수정 중 → 🟥 승인 요청 | 11/26 전 목표 | 🟥 대표 승인 예정 |
-| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트를 가운데로, 인증카드는 핵심 기능으로 보이는 자리에 | 대표 방향 수정(11/09): 더보기 이동안 철회 → 인증카드를 페이지 안/상단에 두는 안으로 재기획 중(PR draft) | 11/26 전 목표 | 🟥 대표 승인 예정 |
+| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 재기획 v2 → 개발·UI·qa·COO 완료(17a9a96) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
