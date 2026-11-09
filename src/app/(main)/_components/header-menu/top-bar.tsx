@@ -165,7 +165,7 @@ export function TopBar() {
                 onChange={onHomeTabChange}
                 options={HOME_TOP_OPTIONS}
                 size="xl"
-                className="ml-3"
+                className="ml-0 min-[360px]:ml-3"
                 ariaLabel="페이지 선택"
               />
             </div>
