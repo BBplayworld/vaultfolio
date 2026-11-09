@@ -12,6 +12,7 @@ import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
 import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { reflectedDeleteBalance, cashBalanceFloor } from "@/lib/trade/cash-tx-utils";
 import type { CashTransaction } from "@/types/asset";
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
@@ -80,12 +81,18 @@ export function CashTxView() {
     const tx = deleteTarget;
     if (!tx || !cash) return;
     // 반영 역가감: 입금 삭제=−amount / 출금 삭제=+amount
-    const newBalance = cash.balance + (tx.type === "deposit" ? -tx.amount : tx.amount);
-    if (deleteCashTransactionWithBalance(tx.id, cash.id, { balance: Math.max(0, newBalance) })) {
-      toast.success("삭제하고 잔액을 되돌렸습니다.");
+    const newBalance = reflectedDeleteBalance(cash.balance, tx, currency);
+    if (deleteCashTransactionWithBalance(tx.id, cash.id, { balance: newBalance })) {
+      const diff = newBalance - cash.balance;
+      toast.success(`삭제하고 잔액을 되돌렸습니다. (${diff >= 0 ? "+" : "−"}${formatCurrencyDisplay(Math.abs(diff), currency)})`);
+    } else {
+      toast.error("삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
     setDeleteTarget(null);
   };
+
+  const deleteNext = deleteTarget && cash ? reflectedDeleteBalance(cash.balance, deleteTarget, currency) : 0;
+  const deleteFloored = !!deleteTarget && !!cash && deleteNext === cashBalanceFloor(currency) && cash.balance + (deleteTarget.type === "deposit" ? -deleteTarget.amount : deleteTarget.amount) < deleteNext;
 
   if (!target || !cash) {
     return (
@@ -177,8 +184,12 @@ export function CashTxView() {
             <p className="text-sm tabular-nums rounded-lg bg-muted/40 p-3">
               {formatCurrencyDisplay(cash.balance, currency)}
               <span className="text-muted-foreground/60"> → </span>
-              <span className="font-semibold">{formatCurrencyDisplay(Math.max(0, cash.balance + (deleteTarget.type === "deposit" ? -deleteTarget.amount : deleteTarget.amount)), currency)}</span>
+              <span className="font-semibold">{formatCurrencyDisplay(deleteNext, currency)}</span>
+              <span className="text-muted-foreground"> ({deleteNext - cash.balance >= 0 ? "+" : "−"}{formatCurrencyDisplay(Math.abs(deleteNext - cash.balance), currency)})</span>
             </p>
+            {deleteFloored && (
+              <p className="text-sm text-muted-foreground">잔액이 부족해 {formatCurrencyDisplay(deleteNext, currency)}만 남아요.</p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>취소</Button>
               <Button variant="destructive" onClick={runReflectedDelete}>삭제</Button>
