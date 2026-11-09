@@ -48,6 +48,7 @@
 
 ## 열린 릴리스
 
+- **[developer 2026-11-09] 4.66 = #125 하단 네비 6칸 → 5칸(인증카드 더보기 도구로, 업데이트 가운데)** (브랜치 issue-4.66, origin/main dc4133d 분기, 커밋 82e5186, PR #126 draft, 폴더 `issues/4.66-125-nav-restructure`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui-review·qa).
 - **[developer 2026-11-09] 4.65 = #122 외화 환율 잔차를 환율 원인으로(#117 D3+P5b)** (브랜치 issue-4.65, origin/main eb204e4 분기, 커밋 c984e0c, PR #123 draft, 폴더 `issues/4.65-122-fx-residual`, risk:medium, COO 자체 승인 트랙). → **머지 완료 dc4133d(v4.65, 11-09), 운영 스모크 PASS.**
 - **[developer 2026-11-09] 4.63 = #119 거래 연결 계좌(해외주식 → 원화 계좌·대출)** (브랜치 issue-4.63, origin/main 9a28a9f 분기, 커밋 7bb10b1, 폴더 `issues/4.63-119-link-account-fx`, risk:medium, COO 자체 승인 트랙). → **머지 완료 f68adc3(v4.63), 운영 스모크 PASS.**
 - **[developer 2026-11-09] 4.62 = #115 품질 정돈 묶음 2** (브랜치 issue-4.62, origin/main 9709e2e 분기, 커밋 a7a71ad, 폴더 `issues/4.62-115-quality-batch-2`, 병행: 4.61 머지 후 origin/main merge). → **머지 완료 9a28a9f(v4.62), 운영 스모크 PASS.**
