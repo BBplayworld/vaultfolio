@@ -22,7 +22,7 @@ import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asse
 import { ASSET_THEME } from "@/config/theme";
 import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
-import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { markCategoryRefreshed, notifyCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
   buildUndoEntries,
@@ -205,8 +205,10 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
         action: { label: "되돌리기", onClick: () => void doUndo(u, true) },
       });
     }
+    const applied = step === "result";
     onOpenChange(false);
     resetAll();
+    if (applied) notifyCategoryRefreshed(kind); // 이어서 맞추기 복귀(#110) — 적용 후 닫을 때만
   };
 
   // ── 인식 ────────────────────────────────────────────────────────────
@@ -323,7 +325,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     }
     toast.dismiss(TOAST_ID);
     undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildUndoEntries(fresh.stocks, result.stocks), done: false };
-    markCategoryRefreshed(kind);
+    markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
     setApplying(false);
