@@ -49,10 +49,26 @@ export function notifyCategoryRefreshed(category: RefreshCategory): void {
  * 보유현황 저장 성공 시 호출 — 단건 카드 클릭이든 다건 시퀀스든 동일하게 호출한다.
  * 저장 후 창이 바로 닫히지 않거나(보유 현황 맞추기 결과 화면) 맞추기와 무관한 경로(거래 스크린샷)는 notify:false.
  */
-export function markCategoryRefreshed(category: RefreshCategory, opts?: { notify?: boolean }): void {
+export function markCategoryRefreshed(category: RefreshCategory, opts?: { notify?: boolean }): string {
   const meta = readMeta();
-  writeMeta({ categories: { ...meta.categories, [category]: new Date().toISOString() } });
+  const at = new Date().toISOString();
+  writeMeta({ categories: { ...meta.categories, [category]: at } });
   if (opts?.notify !== false) notifyCategoryRefreshed(category);
+  return at; // 되돌리기 비교용(appliedAt)
+}
+
+/**
+ * 맞추기를 되돌렸을 때 refresh 메타 원복(compare-and-restore) — 현재 값이 이번 적용 때 쓴 값(appliedAt)과 같을 때만.
+ * 그 사이 다른 경로로 다시 맞췄다면 지우지 않는다. prev가 null이면 그 자산군 키만 지운다. nudgeShownOn·다른 자산군은 보존, 신호 없음.
+ */
+export function restoreCategoryRefreshed(category: RefreshCategory, prev: string | null, appliedAt: string): boolean {
+  const meta = readMeta();
+  if (meta.categories?.[category] !== appliedAt) return false;
+  const next = { ...meta.categories };
+  if (prev) next[category] = prev;
+  else delete next[category];
+  writeMeta({ categories: next });
+  return true;
 }
 
 /** 오늘(KST) 이미 맞춘 자산군인가 — lastRefreshedAt(UTC ISO)의 KST 날짜 == 오늘 */
@@ -119,10 +135,12 @@ export function shouldShowRefreshNudge(opts: {
   assetLastUpdated?: string;
   /** 지정하면 보유 자산군만 판정(미지정 = 전체) */
   held?: RefreshCategory[];
+  /** 이번 홈 마운트에서 이미 보여 준 팁 유지용 — '오늘 노출' 검사만 건너뛴다(미지정 = 현행) */
+  keepShown?: boolean;
 }): boolean {
   if (typeof window === "undefined") return false;
   if (!opts.hasAssets) return false;
-  if (readMeta().nudgeShownOn === todayStr()) return false;
+  if (!opts.keepShown && readMeta().nudgeShownOn === todayStr()) return false;
   return getStaleCategories(opts.assetLastUpdated, opts.held).length > 0;
 }
 

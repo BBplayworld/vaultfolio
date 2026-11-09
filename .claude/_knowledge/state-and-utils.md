@@ -238,6 +238,7 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 
 ```typescript
 pickHomeTip({ assetData, hasAssets, syncArmed, today? }): HomeTip | null   // today 기본값 todayKst()(#4.36, 테스트 고정용)
+  // keepShown?: "backup"|"refresh" (#4.62) — 이번 홈 마운트 승자 종류의 '오늘 노출' 검사만 건너뛰어 effect 재실행에도 팁 유지. 미지정 = 현행. 결산·세금·공지 분기 불변
   // HomeTip = { kind: "notice" } | { kind: "backup", days } | { kind: "tax", matches }
   //         | { kind: "settlement", window, today } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
   // #4.36 순서: 공지(미열람) > 백업 > 임박 세금(isImminentTaxMatch) > 결산 > 그 외 세금 > 최신화 > 기능
@@ -292,8 +293,10 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 ### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
 
 ```typescript
-markCategoryRefreshed(category, {notify?})   // 보유현황 저장 성공 시 호출. 기본으로 window 이벤트 `asset-category-refreshed`(detail.category) 발행(#110). 거래 스크린샷·보유 현황 맞추기 적용은 notify:false
+markCategoryRefreshed(category, {notify?})   // 보유현황 저장 성공 시 호출(반환: 쓴 ISO 시각 = appliedAt, #4.62). 기본으로 window 이벤트 `asset-category-refreshed`(detail.category) 발행(#110). 거래 스크린샷·보유 현황 맞추기 적용은 notify:false
 notifyCategoryRefreshed(category)            // 신호만 발행(보유 현황 맞추기는 결과 화면을 닫을 때)
+restoreCategoryRefreshed(category, prev, appliedAt)  // 맞추기 되돌리기 시 refresh 메타 원복(#4.62). 현재 값 === appliedAt일 때만(compare-and-restore), prev null이면 그 자산군 키만 삭제, nudgeShownOn·다른 자산군 보존, 신호 없음
+shouldNotifyResyncClose(step, undo)                  // resync-return.ts — 결과 화면이고 되돌리지 않았을 때만 복귀 신호(#4.62)
 isRefreshedToday(category): boolean          // lastRefreshedAt의 KST 날짜 == 오늘
 daysSinceRefresh(category): number | null
 getStaleCategories(assetLastUpdated?): RefreshCategory[]   // 30일 이상(또는 이력 없음+유예 경과) 오래된 순
@@ -826,3 +829,9 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 - Context: `addTransactionWithPosition(tx, id, patch, link?)`·`addTransactionsBatch(…, newStocks, link?)`·`addCryptoTransactionWithPosition(…, link?)`·`delete{Transaction,CryptoTransaction}WithPosition(…, {revertLink?})` — 모두 `saveData` 1회.
 - 결산: `matchRecordedTransferDetail` → `{out, in, viaLoan}`, `matchRecordedTransfers` = out − in. 골든 테스트 `report/__tests__/linked-settlement.test.ts`.
 
+
+### restore-focus.ts (#4.62) — 창 닫힘 포커스 복귀 공용 함수
+`restoreFocusAfterDialog(opener, { skipIfOtherDialog? })` (`src/lib/restore-focus.ts`) — onCloseAutoFocus에서 `e.preventDefault()` 후 호출. 순서: 보이는 `[data-tutorial="tutorial-fab"]`(opacity-0 제외) → 열기 직전 요소(DOM에 있을 때) → `main`(tabindex -1, `preventScroll`). `skipIfOtherDialog`면 닫는 창(`#fab-sheet`) 외 열린 `[role=dialog]`가 있을 때 생략. 사용처: `balance-resync-dialog`(#4.60, goAddRef로 '새로 추가' 시 호출측이 생략), FAB 시트(`floating-add-button`, `handoffRef`로 다른 창이 이어서 열리면 생략). 다른 FAB 경유 창은 쓰지 않는다.
+
+### profitTone (#4.62) — 상세 화면 손익 0 표기 단일 출처
+`profitTone(value, rate = value, digits = 0)` → `{ isZero, sign, colorClass, amount, rate }` (`views/detail/detail-summary-header.tsx`). `Math.round(value*10^digits) === 0`이면 부호 없음·`text-muted-foreground`·amount/rate 0(-0 방지), 아니면 `getProfitLossColor` + `+`. `ProfitMetric`·상세 탭 카드 행/펼침(코인·주식·부동산·실물)·허브 행이 사용. digits=1은 부동산 실투자금 수익률처럼 수익률 값 자체로 판정할 때. 공용 `theme.ts`·결산·Hero·성적표는 사용하지 않는다(환차손익·등락 칩도 범위 밖).

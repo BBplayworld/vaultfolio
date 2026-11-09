@@ -12,9 +12,9 @@ import { useAssetNavigation } from "../../../layout/navigation/navigation-contex
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { formatCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
-import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
+import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
 
 function computeCryptoMetrics(coin: Crypto) {
@@ -28,6 +28,7 @@ function computeCryptoMetrics(coin: Crypto) {
 function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const { value, cost, profit, profitRate } = computeCryptoMetrics(coin);
+  const tone = profitTone(profit, profitRate);
   const label = coin.exchange || `항목 ${idx + 1}`;
   const { navigate } = useAssetNavigation();
   const setTxTarget = useCryptoTxViewStore((s) => s.setTarget);
@@ -46,8 +47,8 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
               <span className="text-sm text-foreground shrink-0 tabular-nums">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
                 <span className="text-sm font-medium text-foreground tabular-nums">{formatCurrency(Math.round(value))}</span>
-                <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(profit)}`}>
-                  {profit >= 0 ? "+" : ""}{formatCurrency(Math.round(profit))} ({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)
+                <span data-testid="profit-text" data-zero={tone.isZero} className={`text-sm font-bold tabular-nums ${tone.colorClass}`}>
+                  {tone.sign}{formatCurrency(Math.round(tone.amount))} ({tone.sign}{tone.rate.toFixed(1)}%)
                 </span>
               </div>
             </button>
@@ -102,6 +103,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
   subItems?: Crypto[];
 }) {
   const [open, setOpen] = useState(false);
+  const tone = profitTone(profit, profitRate);
   const hasSubItems = !!subItems && subItems.length > 0;
   const effectiveGroupItems = groupItems ?? [];
   const { navigate } = useAssetNavigation();
@@ -132,9 +134,9 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
-                <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(Math.round(profit))}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(Math.round(tone.amount))}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass}`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />

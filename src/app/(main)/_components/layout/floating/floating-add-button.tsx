@@ -18,6 +18,7 @@ import { CATEGORY_REFRESHED_EVENT, heldRefreshCategories, isRefreshedToday, REFR
 import { consumeResyncSignal, isRefreshCategory, nextDialogWatch, resyncNoticeText, shouldTrackResyncContinue, sortHoldingsRows } from "@/lib/asset/resync-return";
 import { Button } from "@/components/ui/button";
 import { getAssetData } from "@/lib/asset/asset-storage";
+import { restoreFocusAfterDialog } from "@/lib/restore-focus";
 
 type AssetType = "real-estate" | "stock" | "crypto" | "cash" | "loan" | "physical" | "yearly-net-asset";
 // hub: "보유 현황 업데이트" / "매수·매도 거래 기록" 상위 선택
@@ -57,6 +58,19 @@ export function FloatingAddButton() {
   const armedRef = useRef<RefreshCategory | null>(null);
   const [resumeNotice, setResumeNotice] = useState<RefreshCategory | null>(null);
   const watchRef = useRef<MutationObserver | null>(null);
+  // 시트 닫힘 포커스(#115) — openerRef: 열기 직전 포커스 요소, handoffRef: 방법 선택 등으로 다른 창이 이어서 열리면 true(복귀 생략, 잔액 맞추기 goAddRef와 같은 방식)
+  const openerRef = useRef<HTMLElement | null>(null);
+  const handoffRef = useRef(false);
+  const openSheet = () => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    handoffRef.current = false;
+    setIsOpen(true);
+  };
+  const restoreSheetFocus = (e: Event) => {
+    e.preventDefault();
+    if (handoffRef.current) { handoffRef.current = false; return; } // 다음 창이 포커스를 가진다
+    restoreFocusAfterDialog(openerRef.current, { skipIfOtherDialog: true });
+  };
   const viewKey = `${view.type}:${(view as { tab?: string }).tab ?? ""}`;
 
   // 최상단(scrollY ≤ 50)에서만 노출 — 스크롤 다운 시 즉시 숨김
@@ -74,7 +88,7 @@ export function FloatingAddButton() {
   useEffect(() => {
     const handler = (e: Event) => {
       const category = (e as CustomEvent<{ category?: RefreshCategory }>).detail?.category;
-      setIsOpen(true);
+      openSheet();
       if (category) handleHoldingsClick(category as AssetType);
     };
     window.addEventListener("open-add-asset-sheet", handler);
@@ -189,6 +203,7 @@ export function FloatingAddButton() {
         dispatchOpenYearlyNetAsset();
       }
       else window.dispatchEvent(new CustomEvent(EVENT_MAP[type]));
+      handoffRef.current = true;
       setIsOpen(false);
       resetState();
     } else {
@@ -217,6 +232,7 @@ export function FloatingAddButton() {
     else if (mode === "manual" && holderResync && (selectedType === "cash" || selectedType === "loan")) dispatchResyncBalance(selectedType);
     else window.dispatchEvent(new CustomEvent(EVENT_MAP[selectedType], { detail: { mode } }));
     const armTarget = isRefreshCategory(selectedType) ? selectedType : null; // 마법사(directInput="add")는 FAB를 거치지 않아 대기 없음
+    handoffRef.current = true;
     setIsOpen(false);
     resetState();
     armedRef.current = armTarget;
@@ -235,7 +251,7 @@ export function FloatingAddButton() {
 
   const buttonEl = (
     <button
-      onClick={() => setIsOpen(true)}
+      onClick={openSheet}
       className="w-full max-w-xs flex items-center justify-center gap-2 rounded-xl
       py-3 text-base font-bold active:scale-[0.98] transition-colors
       bg-brand/10 text-foreground/90 hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-ring"
@@ -261,7 +277,7 @@ export function FloatingAddButton() {
             px-4 py-2 pb-[max(0.8rem,env(safe-area-inset-bottom))]"
           >
             <button
-              onClick={() => setIsOpen(true)}
+              onClick={openSheet}
               className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
               py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
               bg-brand/10 text-foreground hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-ring"
@@ -285,6 +301,7 @@ export function FloatingAddButton() {
       <Sheet open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) { armedRef.current = null; resetState(); } }}>
         <SheetContent
           id="fab-sheet"
+          onCloseAutoFocus={restoreSheetFocus}
           side={isMobile ? "bottom" : "right"}
           hideClose={isMobile}
           className={isMobile
@@ -486,7 +503,7 @@ export function FloatingAddButton() {
                     type="button"
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl bg-card dark:bg-muted hover:bg-accent dark:hover:bg-accent transition-colors text-left ${ENTER}`}
                     style={{ animationDelay: `${i * 40}ms` }}
-                    onClick={() => { handler(); setIsOpen(false); resetState(); }}
+                    onClick={() => { handler(); handoffRef.current = true; setIsOpen(false); resetState(); }}
                   >
                     <Icon className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
                     <div className="flex-1 min-w-0">

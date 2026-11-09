@@ -21,7 +21,7 @@ import { DataSourceBadge } from "../../data-source-badge";
 import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
+import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
 import { StockInsightStrip } from "../xray/stock-insight-strip";
 import { TaxSeasonStrip } from "../tax-season-strip";
@@ -288,6 +288,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
 }) {
   const fmt = maskFn ?? ((v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate));
   const hideAmounts = !!maskFn && maskFn(123456).includes("•");
+  const tone = profitTone(profit, profitRate);
   const isForeign = stock.category === "foreign" && stock.currency !== "KRW";
   // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰 고정(R25). shotBig=저장 PNG(×SHOT_BIG_SCALE).
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
@@ -329,11 +330,11 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       </div>
       <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
-        <div className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
-          <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>
-            {!hideAmounts && (profit >= 0 ? "+" : "")}{fmt(Math.round(profit))}
+        <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
+          <span className={`${subCls} ${tone.colorClass}${screenshotMode ? "" : " whitespace-nowrap"}`}>
+            {!hideAmounts && tone.sign}{fmt(Math.round(tone.amount))}
           </span>
-          <span className={`${subCls} ${getProfitLossColor(profit)}${screenshotMode ? "" : " whitespace-nowrap"}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</span>
+          <span className={`${subCls} ${tone.colorClass}${screenshotMode ? "" : " whitespace-nowrap"}`}>({tone.sign}{tone.rate.toFixed(1)}%)</span>
         </div>
         {/* 모바일 전용 — 좌측 3줄 초과 방지로 오늘 등락 칩을 손익 줄 아래 우측 정렬(PC는 좌측 인라인) */}
         {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
@@ -702,6 +703,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
 }) {
   const [open, setOpen] = useState(false);
   const m = computeStockMetrics(stock, exchangeRates, totalValue, displayCurrency);
+  const tone = profitTone(m.profit, m.profitRate);
   const usdRate = exchangeRates.USD;
   const fmt = (v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate);
   const label = stock.broker || `항목 ${idx + 1}`;
@@ -726,8 +728,8 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
               </div>
               <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
                 <span className="text-sm font-medium text-foreground tabular-nums">{fmt(Math.round(m.currentVal))}</span>
-                <span className={`text-sm font-bold tabular-nums ${getProfitLossColor(m.profit)}`}>
-                  {m.profit >= 0 ? "+" : ""}{fmt(Math.round(m.profit))} ({m.profitRate >= 0 ? "+" : ""}{m.profitRate.toFixed(1)}%)
+                <span data-testid="profit-text" data-zero={tone.isZero} className={`text-sm font-bold tabular-nums ${tone.colorClass}`}>
+                  {tone.sign}{fmt(Math.round(tone.amount))} ({tone.sign}{tone.rate.toFixed(1)}%)
                 </span>
               </div>
             </button>
@@ -1015,6 +1017,7 @@ export function StockCategorySection({
         const restCurrentVal = restActive.reduce((sum, s) => sum + computeStockMetrics(s, exchangeRates!).currentVal, 0);
         const restProfit = restCurrentVal - restCost;
         const restProfitRate = restCost > 0 ? (restProfit / restCost) * 100 : 0;
+        const restTone = profitTone(restProfit, restProfitRate);
         const fmt = maskFn ?? formatShortCurrency;
         const hideAmounts = !!maskFn && maskFn(123456).includes("•");
         const restAmountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
@@ -1034,11 +1037,11 @@ export function StockCategorySection({
                     <div className={ASSET_THEME.cardInfoRight}>
                       <p className={`${restAmountCls} ${ASSET_THEME.text.default}`}>{fmt(restValue)}</p>
                       {exchangeRates && restCost > 0 && (
-                        <div className={ASSET_THEME.cardAmountProfitRow}>
-                          <span className={`${restSubCls} ${getProfitLossColor(restProfit)}`}>
-                            {!hideAmounts && (restProfit >= 0 ? "+" : "")}{fmt(Math.round(restProfit))}
+                        <div data-testid="profit-text" data-zero={restTone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
+                          <span className={`${restSubCls} ${restTone.colorClass}`}>
+                            {!hideAmounts && restTone.sign}{fmt(Math.round(restTone.amount))}
                           </span>
-                          <span className={`${restSubCls} ${getProfitLossColor(restProfit)}`}>({restProfitRate >= 0 ? "+" : ""}{restProfitRate.toFixed(1)}%)</span>
+                          <span className={`${restSubCls} ${restTone.colorClass}`}>({restTone.sign}{restTone.rate.toFixed(1)}%)</span>
                         </div>
                       )}
                     </div>

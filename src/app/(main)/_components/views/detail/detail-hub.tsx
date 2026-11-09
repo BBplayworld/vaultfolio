@@ -3,7 +3,8 @@
 import { TrendingUp, Building2, Bitcoin, Wallet, CreditCard, Gem } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME } from "@/config/theme";
+import { profitTone } from "./detail-summary-header";
 import { useAssetNavigation, type DetailTab } from "../../layout/navigation/navigation-context";
 import { KpiCard } from "../../layout/ui/kpi-card";
 
@@ -14,15 +15,18 @@ export function DetailHub() {
 
   const go = (tab: DetailTab) => navigate({ type: "detail", tab });
 
-  const profitLine = (profit: number, rate: number | null) => (
-    <span className={`font-semibold tabular-nums ${getProfitLossColor(profit)}`}>
-      {profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}
-      {rate !== null && (
-        <> ({profit >= 0 ? "+" : ""}{rate.toFixed(2)}%)</>
-      )}
-      <span className="text-muted-foreground font-medium ml-1.5">평가손익</span>
-    </span>
-  );
+  const profitLine = (profit: number, rate: number | null) => {
+    const tone = profitTone(profit, rate ?? 0);
+    return (
+      <span data-testid="hub-profit" data-zero={tone.isZero} className={`font-semibold tabular-nums ${tone.colorClass}`}>
+        {tone.sign}{formatPriceByMode(tone.amount)}
+        {rate !== null && (
+          <> ({tone.sign}{tone.rate.toFixed(2)}%)</>
+        )}
+        <span className="text-muted-foreground font-medium ml-1.5">평가손익</span>
+      </span>
+    );
+  };
 
   const countLine = (count: number, unit: string) => (
     <span className="text-muted-foreground font-medium tabular-nums">{count}{unit}</span>

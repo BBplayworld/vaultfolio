@@ -87,6 +87,22 @@ interface ProfitMetricProps {
   shotBig?: boolean;
 }
 
+/**
+ * 손익 0 표기 단일 출처(상세 화면 전용, #115) — 표시 기준(반올림)이 0이면 부호 없이 회색.
+ * digits=0: 금액(원 단위 반올림), digits=1: 수익률(소수 1자리, 실투자금 수익률처럼 수익률 값 자체로 판정).
+ * getProfitLossColor는 공용(theme.ts)이라 건드리지 않는다. amount/rate는 0이면 -0 방지로 0을 돌려준다.
+ */
+export function profitTone(value: number, rate: number = value, digits = 0) {
+  const isZero = Math.round(value * 10 ** digits) === 0;
+  return {
+    isZero,
+    sign: value >= 0 && !isZero ? "+" : "",
+    colorClass: isZero ? "text-muted-foreground" : getProfitLossColor(value),
+    amount: isZero ? 0 : value,
+    rate: isZero ? 0 : rate,
+  };
+}
+
 // 평가손익 인라인 — 히어로 금액 아래 한 줄로 노출 (라벨·금액·수익률).
 export function ProfitMetric({
   label,
@@ -103,9 +119,7 @@ export function ProfitMetric({
 }: ProfitMetricProps) {
   const effectiveRate = rate ?? (cost && cost > 0 ? (profit / cost) * 100 : 0);
   // 표시 기준(반올림 원 단위)이 0이면 부호 없이 회색 — 매입가 비운 실물 '+0원' 붉은색 방지(#109). getProfitLossColor는 공용이라 건드리지 않는다
-  const isZero = Math.round(profit) === 0;
-  const sign = profit >= 0 && !isZero ? "+" : "";
-  const color = isZero ? "text-muted-foreground" : getProfitLossColor(profit);
+  const { isZero, sign, colorClass: color } = profitTone(profit);
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
   const amountCls = screenshotMode ? shotTok.profitAmount : "text-base lg:text-lg font-bold tabular-nums whitespace-nowrap";
   const rateCls = screenshotMode ? shotTok.profitRate : "text-sm lg:text-base font-bold tabular-nums whitespace-nowrap";

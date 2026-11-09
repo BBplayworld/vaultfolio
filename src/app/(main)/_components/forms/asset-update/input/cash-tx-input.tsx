@@ -235,7 +235,7 @@ export function CashTxInput() {
                       </FormControl>
                       <div className="leading-none">
                         <FormLabel className="text-sm font-medium cursor-pointer">매월 정기 입금 (월급·목돈)</FormLabel>
-                        <p className="text-sm text-muted-foreground mt-0.5">해제 시 비정기(성과급 등)로 기록됩니다</p>
+                        <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 비정기(성과급 등)로 기록됩니다</p>
                       </div>
                     </FormItem>
                   )}
@@ -276,7 +276,7 @@ export function CashTxInput() {
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby={warnResync ? "cash-tx-resync-warning-text" : undefined} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">현재 잔액에 즉시 반영</FormLabel>
-                      <p className="text-sm text-muted-foreground mt-0.5">해제 시 기록만 남기고 잔액은 변경하지 않습니다 (과거 소급용)</p>
+                      <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 기록만 남기고 잔액은 변경하지 않습니다 (과거 소급용)</p>
                     </div>
                   </FormItem>
                 )}
@@ -314,7 +314,7 @@ export function CashTxInput() {
           <div className="space-y-4">
             <div className="rounded-lg bg-amber-500/10 dark:bg-amber-500/20 p-3 space-y-1 text-sm">
               <p className="font-medium text-amber-600 dark:text-amber-500">이미 동일한 입출금이 있습니다</p>
-              <p className="text-muted-foreground">계좌·날짜·금액·유형이 동일한 기록이 이미 있습니다.</p>
+              <p data-testid="tx-help" className="text-muted-foreground break-keep text-pretty">계좌·날짜·금액·유형이 동일한 기록이 이미 있습니다.</p>
               <p className="tabular-nums">{dupPending.tx.type === "deposit" ? "입금" : "출금"} · {dupPending.tx.date} · {formatCurrencyDisplay(dupPending.tx.amount, dupPending.tx.currency)}</p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

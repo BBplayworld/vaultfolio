@@ -87,11 +87,13 @@ export function shouldShowBackupNudge(opts: {
   hasAssets: boolean;
   syncArmed: boolean;
   assetLastUpdated?: string;
+  /** 이번 홈 마운트에서 이미 보여 준 팁 유지용 — '오늘 노출' 검사만 건너뛴다(미지정 = 현행) */
+  keepShown?: boolean;
 }): boolean {
   if (typeof window === "undefined") return false;
   if (!opts.hasAssets || opts.syncArmed) return false;
 
-  if (readBackupMeta().nudgeShownOn === todayStr()) return false;
+  if (!opts.keepShown && readBackupMeta().nudgeShownOn === todayStr()) return false;
 
   const days = daysSinceBackup();
   if (days === null) {

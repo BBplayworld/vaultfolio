@@ -9,12 +9,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, realEstateTradeDataset } from "@/config/asset-options";
 import { formatFullAddress } from "@/lib/realestate/real-estate-address";
 import { GradeBadge } from "../../../forms/asset-update/input/real-estate-input";
 import { assignColors } from "../asset-detail-tabs";
-import { DetailSummaryHeader, ProfitMetric } from "../detail-summary-header";
+import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
 import { RealEstate, Loan } from "@/types/asset";
 
@@ -43,6 +43,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
 }) {
   const [open, setOpen] = useState(false);
   const equity = computeEquityMetrics(item, linkedLoans, profit);
+  const tone = profitTone(profit, profitRate);
+  const equityTone = profitTone(equity.equityReturnRate, equity.equityReturnRate, 1); // 수익률 값 자체로 판정(표시 0.0%)
   // 종류별 면적 명칭(전용면적/연면적/건물면적) — 서로 다른 면적을 같은 이름으로 부르지 않는다
   const datasetInfo = realEstateTradeDataset[item.type];
   const areaLabel = datasetInfo?.areaLabel ?? "면적";
@@ -65,9 +67,9 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(item.currentValue)}</p>
-                <div className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${getProfitLossColor(profit)}`}>({profitRate >= 0 ? "+" : ""}{profitRate.toFixed(1)}%)</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass}`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
@@ -95,7 +97,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
               </div>
               <div>
                 <p className={ASSET_THEME.cardDetailLabel}>평가손익</p>
-                <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(profit)}`}>{profit >= 0 ? "+" : ""}{formatPriceByMode(profit)}</p>
+                <p data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
               </div>
               {/* 실거래 추정 시세 (S-4.21) — currentValue와 병기, 참고 톤(muted).
                   모바일은 라벨(뱃지+info 포함)이 다른 셀보다 길어 반폭(grid-cols-2)에서 잘리므로 전폭 사용 */}
@@ -177,8 +179,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 </div>
                 <div>
                   <p className={ASSET_THEME.cardDetailLabel}>실투자금 수익률</p>
-                  <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${getProfitLossColor(equity.equityReturnRate)}`}>
-                    {equity.equityReturnRate >= 0 ? "+" : ""}{equity.equityReturnRate.toFixed(1)}%
+                  <p data-testid="profit-text" data-zero={equityTone.isZero} className={`${ASSET_THEME.cardDetailValueBold} tabular-nums ${equityTone.colorClass}`}>
+                    {equityTone.sign}{equityTone.rate.toFixed(1)}%
                   </p>
                   <p className={ASSET_THEME.cardDetailMeta}>레버리지 반영</p>
                 </div>
