@@ -3,8 +3,8 @@
 // 바뀌는 4건은 main 값을 주석으로 남긴다. 합계·Hero는 모든 케이스에서 불변.
 import { describe, expect, it, vi } from "vitest";
 import { computeAssetCost, computeNetAsset } from "@/contexts/asset-data-context";
-import { computeAttributionBetween, buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
+import { computeAttributionBetween, buildLiveAttributionCurr, getAttributionItems } from "@/lib/report/asset-report";
+import { computeSettlementCauses, matchRecordedTransferDetail } from "@/app/(main)/_components/views/activity/change-hero";
 import { applyBalanceEdits } from "@/lib/asset/balance-edits";
 import { buildLink, stockLinkTrade, cryptoLinkTrade, type LinkTrade } from "@/lib/trade/linked-record";
 import { computeNewPosition } from "@/lib/trade/trade-utils";
@@ -278,21 +278,6 @@ describe("#122 C52 — 대출 × 외화 × 환율 변동: 남는 잔차 목적�
     expect(a.priceEffect + a.fxEffect + a.savingEffect + a.buyEffect + a.sellEffect + a.incomeEffect + a.debtEffect).toBeCloseTo(a.deltaNet, 6);
   });
 
-  it("매도 체결 1,410 → USD 현금 입금(끝 1,420): 남는 잔차는 시세 −2,400 / 순유입 +2,400(합 0)으로 가고 대출·기록 안 된 변화는 없음 (main: 시세 +2,400 · 순유입 +2,400 · 기록 안 된 변화 −4,800)", () => {
-    const s = mk("2026-10", "2026-10-31", P, { krw: 1e6, usdCash: 0, stock: 840_000, loans: 3e6, fxBase: 840_000 });
-    const e = mk("2026-11", "2026-11-30", C, { krw: 1e6, usdCash: 340_800, stock: 511_200, loans: 3e6, fxBase: 0 });
-    const base = blank({ stocks: [aapl(3)], cash: [{ id: "u", type: "bank", name: "usd", balance: 0, currency: "USD" }] });
-    const trade: LinkTrade = { id: "t1", type: "sell", quantity: 2, price: 120, fee: 0, currency: "USD", exchangeRate: 1410, date: "2026-11-10", name: "A" };
-    base.stocks[0] = { ...base.stocks[0], averagePrice: 120, currentPrice: 120 };
-    const b = buildLink(base, trade, { kind: "cash", cashId: "u" }, "2026-11-12", new Date("2026-11-12T03:00:00Z"));
-    if (!b.ok) throw new Error(b.reason);
-    const d: AssetData = { ...b.data, transactions: [{ id: "t1", stockId: "s", ticker: "AAPL", stockName: "A", type: "sell", quantity: 2, price: 120, currency: "USD", exchangeRate: 1410, date: "2026-11-10", reflected: true, createdAt: "2026-11-10T01:00:00Z" }] };
-    const r = settle(s, e, d);
-    expect(r.str).toBe("price:-2400 | fx:12000 | income:2400");
-    expect(r.str).not.toMatch(/loan|unrecorded/);
-    expect(r.sum).toBeCloseTo(12_000, 6);
-  });
-
   it("외화 현금 입금(구간 안)은 시작 보유분이 아니다: 달러 100 입금 + 환율 변동 → 입금분 환율 몫이 현금 잔차로 새지 않음", () => {
     // 시작: USD 현금 $1,000(1,400,000). 11/10 $100 입금(income = 100 × 끝 환율 142,000). 끝: $1,100 × 1,420.
     const s = mk("2026-10", "2026-10-31", P, { krw: 1e6, usdCash: 1_400_000, stock: 0, loans: 3e6, fxBase: 1_400_000 });
@@ -305,6 +290,45 @@ describe("#122 C52 — 대출 × 외화 × 환율 변동: 남는 잔차 목적�
     expect(r.str).toBe("fx:20000 | income:142000");
     expect(r.str).not.toMatch(/loan|unrecorded/);
     expect(r.sum).toBeCloseTo(162_000, 6);
+  });
+
+  // 외화 매도 대금이 같은 외화 현금 계좌로 연결 입금(4.63): 체결 환율 ≠ 끝 환율이어도 방향·대출 유무와 무관하게
+  // 대출 일부 예측·기록 안 된 변화·시세/순유입 짝 잔차 없이 환율 12,000 한 줄(월 결산)·홈도 환율만 남는다.
+  // main: T=1410 시세 +2,400·순유입 +2,400·(대출) −4,800 / T=1430 시세 −2,900대·(대출) 잔존 (QA FAIL 재현)
+  describe.each([
+    ["USD", 1410, 3e6], ["USD", 1430, 3e6], ["USD", 1410, 0], ["USD", 1430, 0],
+  ] as const)("외화 매도 → %s 현금 연결 입금, 체결 %i, 대출 %i", (_cur, T, loan) => {
+    it("월 결산 환율 한 줄·홈 시세/매수/매도/현금 잔차 없음·합 불변", () => {
+      const s = mk("2026-10", "2026-10-31", P, { krw: 1e6, usdCash: 0, stock: 840_000, loans: loan, fxBase: 840_000 });
+      const e = mk("2026-11", "2026-11-30", C, { krw: 1e6, usdCash: 340_800, stock: 511_200, loans: loan, fxBase: 0 });
+      const base = blank({ stocks: [{ ...aapl(3), averagePrice: 120, currentPrice: 120 }], cash: [{ id: "u", type: "bank", name: "usd", balance: 0, currency: "USD" }] });
+      const trade: LinkTrade = { id: "t1", type: "sell", quantity: 2, price: 120, fee: 0, currency: "USD", exchangeRate: T, date: "2026-11-10", name: "A" };
+      const b = buildLink(base, trade, { kind: "cash", cashId: "u" }, "2026-11-12", new Date("2026-11-12T03:00:00Z"));
+      if (!b.ok) throw new Error(b.reason);
+      const d: AssetData = { ...b.data, transactions: [{ id: "t1", stockId: "s", ticker: "AAPL", stockName: "A", type: "sell", quantity: 2, price: 120, currency: "USD", exchangeRate: T, date: "2026-11-10", reflected: true, createdAt: "2026-11-10T01:00:00Z" }] };
+      const r = settle(s, e, d);
+      expect(r.str).toBe("fx:12000");
+      expect(r.sum).toBeCloseTo(12_000, 6);
+      const a = computeAttributionBetween(s, e, {}, d, C, true)!;
+      expect(a.priceEffect).toBeCloseTo(0, 6);
+      const items = getAttributionItems(a, matchRecordedTransferDetail(d, "2026-10-31", "2026-11-30", C));
+      expect(items.map((x) => `${x.key}:${Math.round(x.amount)}`).join(" | ")).toBe("fx:12000");
+    });
+  });
+
+  it("JPY 주식 매도 → JPY 현금 연결 입금(체결 9.2원/엔 > 끝 9.0): 대출·기록 안 된 변화 0, 환율 한 줄", () => {
+    const PJ = { USD: 1400, JPY: 880 }, CJ = { USD: 1400, JPY: 900 };
+    // 시작: 주식 ¥30,000 3주(×¥10,000... ) 단순화 — 주식 ¥30,000 @880/100, 매도 ¥10,000 (체결 920/100), 입금 ¥10,000
+    const s = mk("2026-10", "2026-10-31", PJ, { krw: 1e6, usdCash: 0, stock: 264_000, loans: 3e6, fxBase: 0 });
+    const e = mk("2026-11", "2026-11-30", CJ, { krw: 1e6, usdCash: 90_000, stock: 180_000, loans: 3e6, fxBase: 0 });
+    const base = blank({ stocks: [{ id: "s", category: "foreign", name: "J", ticker: "7203", quantity: 2, averagePrice: 10_000, currentPrice: 10_000, currency: "JPY", purchaseDate: "2026-01-01" }], cash: [{ id: "j", type: "bank", name: "jpy", balance: 0, currency: "JPY" }] });
+    const trade: LinkTrade = { id: "t1", type: "sell", quantity: 1, price: 10_000, fee: 0, currency: "JPY", exchangeRate: 920, date: "2026-11-10", name: "J" };
+    const b = buildLink(base, trade, { kind: "cash", cashId: "j" }, "2026-11-12", new Date("2026-11-12T03:00:00Z"));
+    if (!b.ok) throw new Error(b.reason);
+    const d: AssetData = { ...b.data, transactions: [{ id: "t1", stockId: "s", ticker: "7203", stockName: "J", type: "sell", quantity: 1, price: 10_000, currency: "JPY", exchangeRate: 920, date: "2026-11-10", reflected: true, createdAt: "2026-11-10T01:00:00Z" }] };
+    const m = computeSettlementCauses({ start: s, end: e, live, deltaNet: e.netAsset - s.netAsset, startDate: s.date!, endDate: e.date!, liveCash: 0, exchangeHistory: {}, assetData: d, rates: CJ }).mapped;
+    expect(m.causes.some((c) => c.key === "loan" || c.key === "unrecorded")).toBe(false);
+    expect(m.causes.reduce((x, c) => x + c.amount, 0)).toBeCloseTo(e.netAsset - s.netAsset, 6);
   });
 
   it("예측 분기(시작 스냅샷 레거시)는 diff 0 — 환율 몫 이동 없음", () => {

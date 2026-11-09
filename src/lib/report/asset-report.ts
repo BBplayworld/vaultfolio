@@ -3,6 +3,7 @@
 // - 시계열 원인분해 델타: 인리치드 스냅샷 2건으로 Δ순자산을 시세/환율/입출금으로 분해
 // 투자 조언 아님 — 사용자 자신의 자산의 사실·구조·변화만 계산
 
+import { cashLinkId } from "@/lib/trade/linked-record";
 import { deriveBaseSnapshot, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 
@@ -1060,7 +1061,9 @@ function reflectedCashInflow(
 // 한계 ②(4.64·4.65 이후 상태): 매도의 원가 감소분은 당시 평균단가를 알 수 없어 체결액으로 잡으므로 실현손익만큼의 차이가
 //         남는데, **정밀(bothEnriched) 분기**에서는 realizedSellGains가 이 차이를 계산해 시세로 옮긴다(4.64 D1 — 합계 불변).
 //         **예측 분기**(레거시 시작점)는 여전히 이 차이를 saving 잔여가 흡수한다(diff 0 유지, 알려진 한계).
-//         남는 2차 오차: 외화 매도 체결 환율 ≠ 끝 환율이면 (끝−체결)×매도 외화 몫이 시세(−)·순유입(+) 한 쌍으로 남는다(합 0, 대출·기록 안 된 변화로는 안 감).
+//         외화 매도 대금이 같은 외화 현금 계좌에 연결 입금된 경우(4.63)는 realizedSellGains가 대금을 입금 기록과 같은 환산(끝 환율)으로 잡아
+//         체결≠끝 환율의 (끝−체결)×대금 몫이 양방향 모두 시세·순유입·대출 일부 예측으로 새지 않는다(매도 줄 = 입금 줄, 환율은 fxEffect가 담당).
+//         남는 2차 오차: 연결 없이 따로 기록한 외화 입금(짝 없음)은 현행 유지 — 입금을 체결 환율로 볼 근거가 없어 끝 환율 그대로 둔다.
 //         외화 매수·입출금의 (끝 환율 − 체결 환율) 몫은 costFxRevaluation(4.65 #122)이 환율 원인으로 옮긴다.
 // 시작일(fromDate) 당일 거래는 **항상 제외**한다 — 이유는 inFlowWindow ① 참조(자산군 축).
 // 제외해도 누락되지 않는다 — 스냅샷 저장 **후** 시작일자로 소급 반영한 거래는 원가가 올라가
@@ -1136,6 +1139,10 @@ function realizedSellGains(
     },
     (t) => {
       const raw = data.transactions!.find((x) => x.id === t.id)!;
+      // 같은 외화 현금 계좌에 연결 입금된 매도(4.65 #122): 대금은 외화로 보유되므로 입금 기록(income)과 같은 환산(rates)으로 잡는다.
+      // 체결 환율 ≠ 끝 환율의 (끝−체결)×대금 몫이 시세·순유입 한 쌍이나 대출 일부 예측으로 새지 않고, 매도 줄(manual 합산)과 입금 줄이 같은 금액으로 짝을 이룬다.
+      const dep = raw.currency !== "KRW" ? (data.cashTransactions || []).find((c) => c.id === cashLinkId(raw.id)) : undefined;
+      if (dep && dep.reflected && dep.type === "deposit" && dep.currency === raw.currency) return dep.amount * krwMul(dep.currency, rates);
       return raw.quantity * raw.price * tradeKrwRate(raw, rates);
     },
   );
