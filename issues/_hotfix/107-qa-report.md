@@ -1,0 +1,49 @@
+# #107 핫픽스 QA 리포트 (PR #108, hotfix-107 aff6cca, base main d9ef0d7)
+
+## 판정: PASS
+
+## 1. 자동 검증 (worktree, 수정 없음)
+- ls-remote hotfix-107 = aff6cca (PR head 일치), Vercel status success (PR 체크 preview: secretasset-git-hotfix-107-bbplayworlds-projects.vercel.app, HTTP 200)
+- tsc 0 오류 / lint 0 error(경고 36, 기존) / vitest 74파일 1079 PASS / build 성공
+- diff 범위: crypto-tx-input, cash-tx-input, cash-tx-view, cash-tx-utils + 테스트 2개. 스키마·저장 키·동기화·fetch·공유 토큰 변경 0 (diff grep 확인)
+
+## 2. 완료 기준 (Playwright, preview 데모, 375·1280)
+| 항목 | 결과 |
+|---|---|
+| ① 코인 직접입력 '즉시 반영' 저장 | PASS — 토스트 "매수 거래가 기록되었습니다", 거래 reflected=true, reflectionId=ref_<ts> 부여 |
+| ① 동일 거래 재입력 → 중복 확인 다이얼로그 | PASS — "새로 추가" 시 두 번째 반영 거래가 서로 다른 reflectionId로 추가(중복 반영 아님, 사용자 선택). "기존 유지" 시 추가 0건 |
+| ① 미반영 저장 | PASS — reflected=false, reflectionId 없음 |
+| ① 이전(main) 재현 대조 | 디스크 부족(0MB)으로 main 빌드 불가. 대체: 신규 vitest가 "reflectionId 사전 부여 → already_reflected restrict"를 재현(validateReflection 불변, main은 buildTx에서 사전 부여). 운영 main은 preview 환경(?demo)이 없어 직접 재현 불가 — 코드·테스트로 확정 |
+| ② 현금 잔액 전액 반영 출금 차단 | PASS — 저장 전 "생활비 통장 잔액을 0원으로 둘 수 없어요. 반영을 끄고 기록하거나 출금액을 줄여 주세요." (생활비 통장/비상금 적금/달러 통장; 문구는 계좌명 뒤 조사가 없어 받침 영향 없음), 잔액 불변. 초과 출금은 기존 문구 유지 |
+| ② 1원 남기기 허용 | PASS — 2,999,999 출금 → 잔액 1원, "출금이 기록되었습니다" |
+| ② USD 전액 차단 / 999.99 허용 | PASS (아래 관찰 참고) |
+| ③ 반영 입금 삭제로 0원 이하 | PASS — 다이얼로그 "300원 → 1원 (−299원)" + "잔액이 부족해 1원만 남아요.", 토스트 "삭제하고 잔액을 되돌렸습니다. (−299원)", 잔액 1원, 삭제 성공. 1원 상태에서도 "1원 → 1원 (+0원)" 정상 |
+| ④ 저장 실패 toast.error | 코드 확인만(cash-tx-input·cash-tx-view else 분기). 데모 UI로 저장 실패를 유도할 경로 없음 — vitest 유틸 단 검증, UI 분기는 단순 else |
+| ⑤ 회귀 | 주식 직접입력 반영 PASS(65→66주, tx +1). 4.54 잔액 맞추기·#104·결산 코드는 diff 밖, 전체 vitest 1079 PASS. 콘솔 오류 없음(프록시 차단 외부 리소스 제외) |
+
+스크린샷: `issues/_hotfix/107-screenshots/` (coin-*, cash-*, cashdel-*; 375·1280). 375/1280 모두 가로 넘침·겹침 없음, 다이얼로그 문구 어절 줄바꿈 정상.
+
+## 3. 결정·원칙·CHECKLIST
+- 네트워크에 자산 값 포함 0, 투자 조언 문구 0, 스키마 변경 0, 공유 이미지 영향 0, preview 동기화 쓰기 off(기존)
+- C16: 렌더·effect에서 save/notify 호출 추가 0. C37(단건 update 클로저): 변경 없음. C43: 제목 `[#4.56]` — 운영 main 최대 표시 버전 4.55보다 작지 않음. C45: cash-tx-utils의 cashBalanceFloor가 4.56(#103)의 CASH_FLOOR와 중복 — 코드 주석에 병합 시 통합 명시(후속 정리 대상). 그 외 해당 없음/무관
+
+## 4. 데이터 안전 점검
+| 항목 | 결과 |
+|---|---|
+| 저장 형식 | 변경 0. reflectionId 형식 `ref_<ts>` 동일, 부여 시점만 commit 직전으로 이동 |
+| 구버전이 신데이터 읽기 | 잔액 1원/0.01은 일반 양수(cashSchema balance>0 만족), reflectionId 형식 동일 → 구버전에서 정상 읽힘 |
+| 신버전이 구데이터 읽기 | 기존 거래·reflectionId 보유 데이터 불변 처리(데모 기존 거래로 삭제·반영 확인) |
+| 구·신 기기 혼재 동기화 | 저장·동기화 경로 diff 0 → 영향 없음. 신버전 기록(1원 잔액)이 구버전 pull로 덮여도 손실 형태 변화 없음 |
+| 롤백 | revert 시 이전 버전은 1원 잔액·ref 거래를 그대로 처리(이전에도 반영 거래 ref 보유 가능). 손실 없음 |
+| 소비처 집계 | 집계 로직 변경 0 |
+
+## 5. 관찰 (FAIL 아님, 후속 권장)
+- USD 999.99 출금 시 잔액이 부동소수 오차로 0.009999999999990905 저장(표시 $0.01, >0이라 유효). 기존 차감 방식 그대로이며 신규 회귀 아님. 정리 시 반올림 권장
+- USD 전액 차단 문구가 "0원"으로 표기(통화 미반영) — 사소한 문구, 데이터 영향 없음
+- 토스트가 하단 "자산 업데이트" 버튼을 가려 직후 재클릭이 막히는 현상(기존, 자동 소멸)
+- 저장 실패 toast UI는 실제 유도 불가로 코드 확인에 한정
+
+## 대표 요약
+1. 코인 '즉시 반영' 저장 차단 오류와 현금 0원 저장 실패(전액 출금·반영 입금 삭제)를 고쳤다.
+2. 자동 테스트 1079건, 빌드, preview 375·1280 실조작(코인·현금 출금·삭제·주식 회귀)으로 확인했다.
+3. 남은 한계: 저장 실패 토스트 UI 실유도 불가, main 직접 재현 대신 테스트로 확정.
