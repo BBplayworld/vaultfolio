@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { track } from "@/lib/analytics/ga";
-import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Download, Receipt, IdCard } from "lucide-react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Download, Receipt } from "lucide-react";
 import { useDataExport } from "@/hooks/use-data-export";
 import { formatLastBackup, isBackupStale } from "@/lib/asset/backup-status";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
@@ -36,8 +36,6 @@ import { useAssetImport } from "@/hooks/use-asset-import";
 import { computeStorageStats, formatBytes } from "@/lib/asset/storage-stats";
 import { MENU_COLUMN, MENU_ROW, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC } from "./menu-styles";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
-import { recordVisit } from "@/lib/feature-usage";
-import { ShareScreenshotDialog } from "./share/share-menu";
 
 export function ToolMenuPage() {
   const assetDataContext = useAssetData();
@@ -76,12 +74,6 @@ export function ToolMenuPage() {
   const hasAssets =
     hasAnyAssets(assetData);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  // 인증카드 대화상자 — 공유 이벤트 대신 행에서 직접 오픈(더보기에는 top-bar 리스너가 없음)
-  const [shareCardOpen, setShareCardOpen] = useState(false);
-  const changeShareCardOpen = (open: boolean) => {
-    setShareCardOpen(open);
-    window.dispatchEvent(new CustomEvent("screenshot-dialog-toggle", { detail: { open } }));
-  };
   const otpRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -266,21 +258,6 @@ export function ToolMenuPage() {
               <span className={MENU_LABEL}>세금 관리</span>
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
-            {hasAssets && (
-              <button
-                type="button"
-                data-testid="more-row-share-card"
-                className={MENU_ROW}
-                onClick={() => {
-                  recordVisit("share-card");
-                  track("feature_use", { category: "share_card", method: "open", source: "more" });
-                  changeShareCardOpen(true);
-                }}
-              >
-                <IdCard className={MENU_ICON} />
-                <span className={MENU_LABEL}>인증카드</span>
-              </button>
-            )}
           </div>
         </section>
 
@@ -309,8 +286,6 @@ export function ToolMenuPage() {
           </div>
         </section>
       </div>
-
-      <ShareScreenshotDialog open={shareCardOpen} onOpenChange={changeShareCardOpen} />
 
       <Dialog open={showShareSyncChooser} onOpenChange={setShowShareSyncChooser}>
         <DialogContent className="sm:max-w-md touch-pan-y">

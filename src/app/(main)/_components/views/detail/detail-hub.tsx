@@ -7,6 +7,7 @@ import { ASSET_THEME } from "@/config/theme";
 import { profitTone } from "./detail-summary-header";
 import { useAssetNavigation, type DetailTab } from "../../layout/navigation/navigation-context";
 import { KpiCard } from "../../layout/ui/kpi-card";
+import { HubShareButton } from "../../layout/ui/hub-share-button";
 
 export function DetailHub() {
   const { assetData, getAssetSummary } = useAssetData();
@@ -34,9 +35,12 @@ export function DetailHub() {
 
   return (
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
-      <div>
-        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">상세</h2>
-        <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">상세</h2>
+          <p className="text-sm text-muted-foreground mt-0.5 text-pretty">자산 카테고리별 보유 현황을 자세히 확인하세요</p>
+        </div>
+        <HubShareButton />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

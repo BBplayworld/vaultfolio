@@ -216,7 +216,7 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 ### header-menu (`header-menu/`, 구 header/top-nav)
 
 - `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `Logo`(`src/components/logo.tsx`, size=22, 추가 마진 없음) + `InlineSelector`(상세/성과, `className="ml-2"`)** — 2026-09 추가. 로고 정렬 기준은 대시보드 최상단 카드 텍스트가 아니라 **카드 색상 박스(`bg-primary/10`) 자체의 외곽 모서리** — 이 모서리가 페이지 콘텐츠 영역(`data-content-area`) 좌측 끝과 같은 지점이라 top-bar `px-3` 패딩만으로 이미 정렬됨(카드 "텍스트" 시작선에 맞추려 `ml-4`를 넣었다가 모바일에서 카드보다 오른쪽으로 처지는 회귀가 있었음 — 되돌림). `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 이 로고와는 무관. 로고~`InlineSelector` 사이 여유 공간은 `InlineSelector`의 `className="ml-2"`로 확보(박스만 우측 이동, 로고 위치 불변). `InlineSelector`의 `size="xl"` 변형(이 자리 전용, 다른 소비처 없음)은 버튼 좌우 패딩을 `px-4`→`px-3`로 축소. 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
-- `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성). 클릭 시 `recordVisit("share-card")`+GA `top_bar`(#4.66). 더보기 › 도구 `more-row-share-card` 행(`tool-menu.tsx`)도 같은 다이얼로그를 **직접 오픈**(GA `source:"more"`+`recordVisit`+`screenshot-dialog-toggle` 발송, 자산 0건 숨김)
+- `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성). **대화상자 렌더·`trigger-open-share-card` 리스너는 top-bar 1곳뿐**(#4.66). 클릭 시 `recordVisit("share-card")`+GA `top_bar`, 리스너는 `detail.source ?? "home_tip"`. PWA에서도 보임(`pwa-hide-actions` 밖, 홈은 `pwa-home-header` 한 줄 헤더). `HubShareButton`(`layout/ui/hub-share-button.tsx`) — 상세·성과 허브 제목 줄 PWA 전용(`pwa-only-action`) 발송 버튼, 대화상자 없음, `dispatchOpenShareCard(undefined,"top_bar")`, 자산 0건 숨김. 공용 아이콘 버튼 크기 `HEADER_ICON_BTN`(`header-menu/menu-styles.ts`)
 - `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
 - `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치). `AppGuideContent` 카드 3개는 `SECURITY_COPY.map`(웰컴 보안 상세와 같은 상수, id→아이콘 `ShieldCheck`·`CloudLightning`·`EyeOff`), 설명 마지막 문장 `APP_GUIDE_SECURITY_DESC`(#4.38). 기술 용어 강조 span 없음
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
@@ -371,7 +371,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 ### TrialBanner (`views/home/trial-banner.tsx`, #4.38 #59) — 체험 "예시" 표기 정본 1곳
 - `page.tsx` 정상 분기 `isTrialMode() && view.type === "home"`일 때 `AssetPageTabs` 앞 in-flow(고정 아님). 상세·성과에는 배지 추가 금지
 - 중립 카드 면 + 주황 아이콘 칩(`Compass`) + brand "내 자산으로 시작"(`trial-start-btn`) 1개, `data-screenshot-hide`. 탭 → sessionStorage `trial_exit=1` → `location.assign("/")`. 인앱은 `useExternalMove`(iOS는 `trial-inapp-guide` 펼침, 표식 없음)
-- 체험 중 숨김(1줄 가드): FAB(`page.tsx`), TopBar 더보기·설치(`PwaInstallButton` — 설치 흐름이 /api/share 사용), BottomNav `update`·`more`. 인증카드 유지(브라우저 상단 아이콘; PWA 체험은 진입 없음, #4.66)
+- 체험 중 숨김(1줄 가드): FAB(`page.tsx`), TopBar 더보기·설치(`PwaInstallButton` — 설치 흐름이 /api/share 사용), BottomNav `update`·`more`. 인증카드 유지(상단·허브 아이콘, PWA 포함)
 
 ### PreviewGate (`preview/preview-gate.tsx`, #4.34) — Vercel preview 전용
 - `(main)/layout.tsx`가 `isPreviewEnv()`일 때만 `next/dynamic`으로 렌더해 `AssetDataProvider` 바깥을 감싼다. 운영·로컬은 children 그대로(DOM 추가 0)

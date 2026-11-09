@@ -11,3 +11,6 @@ export const MENU_DESC = "mt-0.5 text-sm text-muted-foreground text-pretty break
 /** ON/OFF 배지(앱 잠금·다크 모드 공용) */
 export const menuBadge = (on: boolean) =>
   `text-sm font-semibold px-2 py-0.5 rounded shrink-0 ${on ? "bg-primary/15 text-primary dark:bg-brand/15 dark:text-indigo-300" : "bg-muted text-muted-foreground"}`;
+
+// 상단 아이콘 버튼 공용 크기(top-bar·PWA 허브 인증카드 발송 버튼, #4.66) — Logo(next/font) 의존을 피하려 순수 상수 파일에 둔다.
+export const HEADER_ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";

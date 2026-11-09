@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// #125 하단 네비 5칸·인증카드 더보기 도구 행 정적 단언
+// #125 하단 네비 5칸·인증카드 상단 통일(v2) 정적 단언
 const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
 describe("하단 네비 5칸 (#125)", () => {
@@ -19,25 +19,49 @@ describe("하단 네비 5칸 (#125)", () => {
   });
 });
 
-describe("더보기 도구 › 인증카드 행 (#125)", () => {
-  const tool = read("app/(main)/_components/header-menu/tool-menu.tsx");
-  it("이벤트가 아닌 직접 오픈 + 계측 + 자산 0건 숨김", () => {
-    expect(tool).toContain('data-testid="more-row-share-card"');
-    expect(tool).not.toContain("dispatchOpenShareCard");
-    expect(tool).toContain('source: "more"');
-    expect(tool).toContain('recordVisit("share-card")');
-    expect(tool).toContain("<ShareScreenshotDialog open={shareCardOpen}");
-    expect(tool).toContain('"screenshot-dialog-toggle"');
-    expect(tool).toMatch(/\{hasAssets && \(\s*<button[^>]*\n\s*type="button"\s*\n\s*data-testid="more-row-share-card"/);
+describe("인증카드 상단 통일 (#125 v2)", () => {
+  const top = read("app/(main)/_components/header-menu/top-bar.tsx");
+  const hub = read("app/(main)/_components/layout/ui/hub-share-button.tsx");
+  const css = read("app/globals.css");
+  const count = (src: string, needle: string) => src.split(needle).length - 1;
+
+  it("대화상자 렌더·리스너는 top-bar 1곳뿐", () => {
+    const files = [
+      "app/(main)/_components/header-menu/top-bar.tsx",
+      "app/(main)/_components/header-menu/tool-menu.tsx",
+      "app/(main)/_components/pwa/bottom-nav.tsx",
+      "app/(main)/_components/layout/ui/hub-share-button.tsx",
+      "app/(main)/_components/views/detail/detail-hub.tsx",
+      "app/(main)/_components/views/activity/performance-hub.tsx",
+    ];
+    expect(files.map((f) => count(read(f), "<ShareScreenshotDialog"))).toEqual([1, 0, 0, 0, 0, 0]);
+    expect(files.map((f) => count(read(f), 'addEventListener("trigger-open-share-card"'))).toEqual([1, 0, 0, 0, 0, 0]);
   });
-  it("행 순서: 세금 관리 → 인증카드", () => {
-    expect(tool.indexOf("more-row-tax")).toBeLessThan(tool.indexOf("more-row-share-card"));
+  it("허브 버튼은 발송 전용, data-tutorial 없음", () => {
+    expect(hub).toContain('dispatchOpenShareCard(undefined, "top_bar")');
+    expect(hub).not.toContain("ShareScreenshotDialog");
+    expect(hub).not.toContain("addEventListener");
+    expect(hub).not.toContain("data-tutorial");
+    expect(hub).toContain("pwa-only-action");
+    expect(hub).toContain("hasAnyAssets");
   });
-  it("상단 버튼도 방문 기록", () => {
-    const top = read("app/(main)/_components/header-menu/top-bar.tsx");
+  it("리스너 출처는 detail.source ?? home_tip, 버튼 클릭은 방문 기록", () => {
+    expect(top).toContain('source: detail?.source ?? "home_tip"');
     expect(top).toMatch(/recordVisit\("share-card"\);\s*track\("feature_use", \{ category: "share_card", method: "open", source: "top_bar" \}\)/);
   });
-  it("app-features 인증카드 설명에 위치 표현 없음", () => {
-    expect(read("config/app-features.ts")).not.toContain("상단의 인증카드");
+  it("인증카드 버튼은 pwa-hide-actions 밖, 설치·더보기·선택기는 안", () => {
+    expect(top).toMatch(/<div className="contents pwa-hide-actions">\s*\{showInstall && <PwaInstallButton \/>\}/);
+    expect(top).toMatch(/\{showShare && <ShareScreenshotButton \/>\}\s*<div className="contents pwa-hide-actions">\s*\{showMore/);
+    expect(top).toMatch(/pwa-hide-actions">\s*<InlineSelector/);
+  });
+  it("홈 전용 PWA 헤더 CSS, 브라우저용 클래스 무변경", () => {
+    expect(css).toContain("header.pwa-home-header");
+    expect(css).toContain("calc(2.5rem + env(safe-area-inset-top, 0px))");
+    expect(css).toContain("pwa-only-action");
+    expect(top).toContain('"flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear');
+  });
+  it("더보기·app-features는 main과 동일(인증카드 행 없음)", () => {
+    expect(read("app/(main)/_components/header-menu/tool-menu.tsx")).not.toContain("IdCard");
+    expect(read("config/app-features.ts")).toContain("상단의 인증카드 버튼");
   });
 });

@@ -342,6 +342,11 @@ nav.pwa-nav-container {
   display: none !important;
 }
 
+/* PWA 전용 발송 버튼(상세·성과 허브 인증카드, #4.66): 브라우저에서는 숨김 */
+.pwa-only-action {
+  display: none !important;
+}
+
 /* 루트 첫 화면 사전 조각(#113): 자산 키가 있는 기기(head 스크립트가 data-has-assets 설정)는 첫 페인트 전 숨김 */
 html[data-has-assets] [data-first-paint] {
   display: none;
@@ -351,7 +356,7 @@ html[data-has-assets] [data-first-paint] {
 @media (display-mode: standalone) {
 
   /* 3단계 서브페이지를 제외한 일반 헤더는 숨김 */
-  header[data-navbar-style="scroll"]:not(.pwa-show-header) {
+  header[data-navbar-style="scroll"]:not(.pwa-show-header):not(.pwa-home-header) {
     display: none !important;
   }
 
@@ -376,6 +381,23 @@ html[data-has-assets] [data-first-paint] {
     padding-top: 1rem !important;
   }
 
+  /* 홈 전용 한 줄 헤더(#4.66): 로고 + 인증카드. 높이 40px + safe-area, 본문과 4px 간격 */
+  header.pwa-home-header {
+    display: flex !important;
+    margin-top: 0 !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(2.5rem + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  header.pwa-home-header+[data-content-area] {
+    padding-top: 0.25rem !important;
+  }
+
+  /* 상세·성과 허브 제목 줄의 PWA 전용 인증카드 발송 버튼 노출 */
+  .pwa-only-action {
+    display: inline-flex !important;
+  }
+
   nav.pwa-nav-container {
     display: block !important;
     bottom: 0 !important;
@@ -398,6 +420,21 @@ html[data-has-assets] [data-first-paint] {
 
   html[data-device="pc"] header.pwa-show-header+[data-content-area] {
     padding-top: 1.5rem !important;
+  }
+
+  /* PC PWA 홈 줄: 상단 NAV(65px) 아래, 로고는 NAV 홈 칸과 중복이라 숨김 */
+  html[data-device="pc"] header.pwa-home-header {
+    margin-top: calc(65px + 0.25rem) !important;
+    padding-top: 0 !important;
+    height: 2.5rem !important;
+  }
+
+  html[data-device="pc"] header.pwa-home-header+[data-content-area] {
+    padding-top: 0.5rem !important;
+  }
+
+  html[data-device="pc"] .pwa-home-logo {
+    display: none !important;
   }
 
   html[data-device="pc"] nav.pwa-nav-container {
