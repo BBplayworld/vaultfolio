@@ -155,7 +155,7 @@ export function FloatingAddButton() {
       onClick={() => setIsOpen(true)}
       className="w-full max-w-xs flex items-center justify-center gap-2 rounded-xl
       py-3 text-base font-bold active:scale-[0.98] transition-colors
-      bg-brand/10 text-foreground/90 hover:bg-brand/20"
+      bg-brand/10 text-foreground/90 hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-ring"
       aria-label="자산 업데이트"
       data-tutorial="tutorial-fab"
     >
@@ -181,7 +181,7 @@ export function FloatingAddButton() {
               onClick={() => setIsOpen(true)}
               className="w-full max-w-[240px] flex items-center justify-center gap-1.5 rounded-xl
               py-2.5 text-sm font-bold active:scale-[0.98] transition-colors
-              bg-brand/10 text-foreground hover:bg-brand/20"
+              bg-brand/10 text-foreground hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="자산 업데이트"
               data-tutorial="tutorial-fab"
             >

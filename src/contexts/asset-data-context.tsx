@@ -10,7 +10,8 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/finance/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
-import { buildLink, cryptoLinkTrade, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
+import { todayKst } from "@/lib/tax-utils";
+import { buildLink, cryptoLinkTrade, findLinkedRecord, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
 import { pruneTransactions } from "@/lib/trade/trade-utils";
 import { pruneCashTransactions } from "@/lib/trade/cash-tx-utils";
 import { pruneLoanTransactions } from "@/lib/trade/loan-tx-utils";
@@ -250,9 +251,17 @@ export function computeNetAsset(
 // 항목(전량 매도·코인 부동소수 잔량·시세 0·상장폐지)은 거래를 남긴다: 삭제가 스냅샷 값을 바꾸지 않으므로
 // 거래까지 지우면 매도 입금↔시세 두 다리가 새로 생긴다(C24). 그 외 항목은 id 기준으로 거래를 전부 지운다 —
 // 안 지우면 반영 거래가 결산·홈 원인에 영원히 집계된다(deleteStock 2026-08 수정과 같은 원리, #109).
+// 예외 ②: 연결 짝 기록이 있고 거래일 또는 짝 기록일이 이번 달 1일 이전인 거래는 평가액과 무관하게 남긴다 —
+// 닫힌 달의 id 짝 상쇄가 깨져 순자산 변화 0인 달에 '출금 −X / 기록 안 된 변화 +X' 두 줄이 새로 생기는 것을 막는다(C24).
 // 연결 짝 기록(현금·대출)·계좌 잔액은 건드리지 않는다(4.58 F24: 고아 짝 기록 유지, 잔액 불변).
 const EMPTY_AFTER_DELETE: Partial<AssetData> = { realEstate: [], stocks: [], crypto: [], cash: [], loans: [], physicalAssets: [] };
-export function planDeleteCryptos(data: AssetData, ids: string[], rates: { USD: number; JPY: number }): AssetData {
+function keepClosedMonthLinked(data: AssetData, txId: string, txDate: string, today: string): boolean {
+  const link = findLinkedRecord(data, txId);
+  if (!link) return false;
+  const monthStart = `${today.slice(0, 7)}-01`;
+  return txDate < monthStart || link.record.date < monthStart;
+}
+export function planDeleteCryptos(data: AssetData, ids: string[], rates: { USD: number; JPY: number }, today: string = todayKst()): AssetData {
   const idSet = new Set(ids);
   const keepTx = new Set(
     data.crypto
@@ -262,10 +271,10 @@ export function planDeleteCryptos(data: AssetData, ids: string[], rates: { USD: 
   return {
     ...data,
     crypto: data.crypto.filter((c) => !idSet.has(c.id)),
-    cryptoTransactions: (data.cryptoTransactions || []).filter((t) => !idSet.has(t.cryptoId) || keepTx.has(t.cryptoId)),
+    cryptoTransactions: (data.cryptoTransactions || []).filter((t) => !idSet.has(t.cryptoId) || keepTx.has(t.cryptoId) || keepClosedMonthLinked(data, t.id, t.date, today)),
   };
 }
-export function planDeleteStocks(data: AssetData, ids: string[], rates: { USD: number; JPY: number }): AssetData {
+export function planDeleteStocks(data: AssetData, ids: string[], rates: { USD: number; JPY: number }, today: string = todayKst()): AssetData {
   const idSet = new Set(ids);
   const keepTx = new Set(
     data.stocks
@@ -275,7 +284,7 @@ export function planDeleteStocks(data: AssetData, ids: string[], rates: { USD: n
   return {
     ...data,
     stocks: data.stocks.filter((s) => !idSet.has(s.id)),
-    transactions: (data.transactions || []).filter((t) => !idSet.has(t.stockId) || keepTx.has(t.stockId)),
+    transactions: (data.transactions || []).filter((t) => !idSet.has(t.stockId) || keepTx.has(t.stockId) || keepClosedMonthLinked(data, t.id, t.date, today)),
   };
 }
 

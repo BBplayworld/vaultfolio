@@ -64,7 +64,8 @@ function build(c: Case) {
   return { before: d, sep, oct, nov, jan };
 }
 
-const planOf = (a: Asset, d: AssetData) => (a === "crypto" ? planDeleteCryptos(d, ["c1"], RATES) : planDeleteStocks(d, ["s1"], RATES));
+const TODAY = "2026-11-05"; // 오늘(KST) 고정 — '이번 달 1일 이전' 판정 기준
+const planOf = (a: Asset, d: AssetData) => (a === "crypto" ? planDeleteCryptos(d, ["c1"], RATES, TODAY) : planDeleteStocks(d, ["s1"], RATES, TODAY));
 /** main 동작: 자산만 지우고 거래는 남김(수정 전 deleteCrypto·묶음 삭제) */
 const mainOf = (a: Asset, d: AssetData): AssetData => (a === "crypto" ? { ...d, crypto: [] } : { ...d, stocks: [] });
 
@@ -93,14 +94,15 @@ const cases: Case[] = [
 ];
 
 // 기대값(수정 후). 키 표기는 자산 중립 — `A` = crypto|stock. nov=11월 결산 원인(effects: 엔진 원자료, causes: 결산 화면 원인), year=연 탭(1월→11월)
-// 10월 칸은 스냅샷에 원가(cost)가 있어 매수 줄이 원가 증감으로도 설명되므로 main과 같다(Hero·합계 불변). 원가가 없는 레거시 스냅샷일 때만 라벨이 시세 쪽으로 옮겨 간다.
+// 지난달 연결 거래(A4·A6)는 예외 ②로 보존돼 10·11월·연이 main과 같다. 모든 행의 10월 causes는 main과 같다(아래 단언).
+// 매수 라벨이 시세 쪽으로 옮겨 가는 것은 원가 없는 레거시 스냅샷만이다.
 const EXPECT: Record<string, { nov: [string[], string[]]; oct: [string[], string[]]; year: [string[], string[]] }> = {
   A1: { nov: [[], []], oct: [[], []], year: [[], []] },
   A2: { nov: [["sell:A:-1000000"], ["unrecorded:-1000000"]], oct: [["buy:A:1000000"], ["unrecorded:1000000"]], year: [[], []] },
   A3: { nov: [["income:-1000000"], ["income:-1000000"]], oct: [[], []], year: [["income:-1000000"], ["income:-1000000"]] },
-  A4: { nov: [["sell:A:-1000000"], ["unrecorded:-1000000"]], oct: [["buy:A:1000000", "income:-1000000"], ["income:-1000000", "unrecorded:1000000"]], year: [["income:-1000000"], ["income:-1000000"]] },
+  A4: { nov: [["sell:A:-1000000"], ["unrecorded:-1000000"]], oct: [["buy:A:1000000", "income:-1000000"], []], year: [["buy:A:1000000", "sell:A:-1000000", "income:-1000000"], ["unrecorded:-1000000"]] },
   A5: { nov: [["debt:-1000000"], ["loan:-1000000"]], oct: [[], []], year: [["debt:-1000000"], ["loan:-1000000"]] },
-  A6: { nov: [["sell:A:-1000000"], ["unrecorded:-1000000"]], oct: [["buy:A:1000000", "debt:-1000000"], []], year: [["debt:-1000000"], ["loan:-1000000"]] },
+  A6: { nov: [["sell:A:-1000000"], ["unrecorded:-1000000"]], oct: [["buy:A:1000000", "debt:-1000000"], []], year: [["buy:A:1000000", "sell:A:-1000000", "debt:-1000000"], ["unrecorded:-1000000"]] },
   A7: { nov: [["sell:A:-1000000", "income:1000000"], []], oct: [[], []], year: [["sell:A:-1000000", "income:1000000"], []] },
   A8: { nov: [[], []], oct: [["sell:A:-1000000", "income:1000000"], []], year: [["sell:A:-1000000", "income:1000000"], []] },
 };
@@ -117,15 +119,16 @@ describe("흐름 표 A1~A8 (코인·주식 공통): 삭제 후 홈·결산·연 
       expect(v.causes, `${c.id} ${name} causes`).toEqual(e[name][1]);
       // Hero·순자산 합계는 삭제 전후(main 대비) 항상 같다 — 라벨만 바뀐다
       expect(v.deltaNet).toBe(view(main, start, end, incl).deltaNet);
+      if (name === "oct") expect(v.causes, `${c.id} 10월 causes = main`).toEqual(view(main, start, end, incl).causes);
     }
   });
-  it("A7·A8(평가액 0 항목): 거래가 그대로 남는다 / 평가액이 남은 A1~A6은 해당 id 거래 0건", () => {
+  it("A7·A8(평가액 0)과 지난달 연결 거래 A4·A6은 거래 보존 / 나머지 A1~A3·A5는 해당 id 거래 0건", () => {
     for (const c of cases) for (const asset of ["crypto", "stock"] as const) {
       const b = build({ ...c, asset });
       const after = planOf(asset, b.before);
       const txs = asset === "crypto" ? after.cryptoTransactions : after.transactions;
       const orig = asset === "crypto" ? b.before.cryptoTransactions : b.before.transactions;
-      expect(txs).toHaveLength(c.side === "sell" ? orig!.length : 0);
+      expect(txs).toHaveLength(c.side === "sell" || (c.month === "last" && c.kind !== "none") ? orig!.length : 0);
     }
   });
   it("연결 짝 기록·계좌 잔액·대출 잔액은 삭제 전과 같다(4.58 F24)", () => {
@@ -184,6 +187,21 @@ describe("삭제 계획: 경로·평가액 기준", () => {
     expect(planDeleteStocks(d2, ["s1"], RATES).transactions).toHaveLength(0);
     const half = data({ crypto: [coin("c1", 1e-8, 40_000_000)], cryptoTransactions: [ctx("t1", "c1")] }); // 0.4원
     expect(planDeleteCryptos(half, ["c1"], RATES).cryptoTransactions).toHaveLength(1);
+  });
+  it("경계: 거래 10-31·짝 기록 11-01은 보존, 거래·짝 기록 모두 11-01은 삭제", () => {
+    const mk = (txDate: string, linkDate: string) => {
+      const t = { ...ctx("t1", "c1"), date: txDate };
+      const base = data({ crypto: [coin("c1", 1)], cryptoTransactions: [t], cash: [{ id: "a", type: "bank", name: "주거래", balance: 5 * M, currency: "KRW" } as AssetData["cash"][number]] });
+      const b = buildLink(base, { ...cryptoLinkTrade(t), date: linkDate }, { kind: "cash", cashId: "a" }, linkDate);
+      if (!b.ok) throw new Error(b.reason);
+      return b.data;
+    };
+    expect(planDeleteCryptos(mk("2026-10-31", "2026-11-01"), ["c1"], RATES, TODAY).cryptoTransactions).toHaveLength(1);
+    expect(planDeleteCryptos(mk("2026-11-01", "2026-11-01"), ["c1"], RATES, TODAY).cryptoTransactions).toHaveLength(0);
+  });
+  it("연결 없는 지난달 거래는 삭제(A2)", () => {
+    const d = data({ crypto: [coin("c1", 1)], cryptoTransactions: [{ ...ctx("t1", "c1"), date: "2026-10-10" }] });
+    expect(planDeleteCryptos(d, ["c1"], RATES, TODAY).cryptoTransactions).toHaveLength(0);
   });
   it("묶음은 항목별 판정: 평가액 0 항목만 거래 보존", () => {
     const d = data({ crypto: [coin("c1", 1e-12), coin("c2", 1)], cryptoTransactions: [ctx("t1", "c1"), ctx("t2", "c2")] });

@@ -218,7 +218,7 @@ export function CashTxInput() {
                     <FormControl>
                       <NumberInput value={field.value} onChange={field.onChange} allowDecimals={isForeign} maxDecimals={isForeign ? 2 : 0} quickButtons={[]} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="break-keep text-pretty" />
                   </FormItem>
                 )}
               />

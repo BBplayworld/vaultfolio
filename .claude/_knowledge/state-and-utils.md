@@ -35,7 +35,7 @@ saveData(data: AssetData): boolean
 
 // CRUD (모두 boolean 반환: 성공 true, 실패 false)
 add/update/deleteRealEstate, add/update/deleteStock, add/update/deleteCrypto
-deleteStocks(ids)/deleteCryptos(ids)  // 묶음 삭제 본체(#4.60 #109) — saveData 1회, 해당 id 거래도 삭제(삭제 시점 평가액 반올림 0원 이하 항목은 거래 보존). 단건 deleteStock/deleteCrypto는 래퍼. 순수 계획 planDeleteStocks/planDeleteCryptos(asset-data-context.tsx, computeNetAsset 재사용) — 탭에서 직접 saveData로 삭제 금지
+deleteStocks(ids)/deleteCryptos(ids)  // 묶음 삭제 본체(#4.60 #109) — saveData 1회, 해당 id 거래도 삭제(삭제 시점 평가액 반올림 0원 이하 항목은 거래 보존). 단건 deleteStock/deleteCrypto는 래퍼. 순수 계획 planDeleteStocks/planDeleteCryptos(…, rates, today=todayKst()) (asset-data-context.tsx, computeNetAsset 재사용; 지난달 이전 연결 거래도 보존) — 탭에서 직접 saveData로 삭제 금지
 add/update/deleteCash, add/update/deleteLoan, add/update/deleteYearlyNetAsset
 
 addStockRaw(data: Stock): boolean  // 스크린샷 전용: ticker 빈 값 허용 (superRefine 우회)

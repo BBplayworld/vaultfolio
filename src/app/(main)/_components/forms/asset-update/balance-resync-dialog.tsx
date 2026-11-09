@@ -135,11 +135,11 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
   const restoreFocus = (e: Event) => {
     e.preventDefault();
     if (goAddRef.current) { goAddRef.current = false; return; } // '새로 추가'로 다른 창이 이어서 열리면 그 창에 포커스를 맡긴다
-    const fab = Array.from(document.querySelectorAll<HTMLElement>('[data-tutorial="tutorial-fab"]')).find((el) => el.getClientRects().length > 0);
+    const fab = Array.from(document.querySelectorAll<HTMLElement>('[data-tutorial="tutorial-fab"]')).find((el) => el.getClientRects().length > 0 && !el.closest(".opacity-0")); // 스크롤로 숨은 FAB(opacity-0)는 제외
     const opener = openerRef.current?.isConnected ? openerRef.current : null;
     const main = document.querySelector<HTMLElement>("main");
-    if (main && !main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
-    (fab ?? opener ?? main)?.focus();
+    if (main && !main.hasAttribute("tabindex")) { main.setAttribute("tabindex", "-1"); main.classList.add("outline-none"); }
+    (fab ?? opener ?? main)?.focus({ preventScroll: true });
   };
 
   const goAdd = () => {
