@@ -26,7 +26,8 @@ import { isTrialMode } from "@/lib/trial/trial-mode";
  *  - 자산 없음: origin URL로 단순 이동. 자산 있음: PIN 입력 → 복원코드 URL로 이동.
  *  - 동기화 기기: PIN 없이 sync 링크로 이동(새 기기에서 금고 암호로 복원).
  *  - 자산 0건 + 공유·동기화 대기 없음: 게이트 미렌더 → 웰컴 인앱 슬롯이 외부 이동을 안내(#60).
- *  - 데이터 로드 전: 문구 없는 빈 덮개(같은 루트 노드) — 0건 방문자에게 경고가 깜빡이지 않게.
+ *  - 데이터 로드 전: 자산 키가 있거나 복원·동기화 진입이면 문구 없는 빈 덮개(같은 루트 노드) — 보유자에게 경고가 깜빡이지 않게.
+ *    키 없는 0건 방문자는 덮개 없이 루트 사전 조각 → 웰컴으로 이어진다(#113).
  */
 
 /** 복원 링크 해시(공유·동기화) 여부 — 처리 후 replaceState로 지워지므로 마운트 시 1회 캡처해 쓴다 */
@@ -49,10 +50,12 @@ export function resolveInAppGate(env: {
   isSharePending: boolean;
   syncAssetId: string | null;
   restoreHash: boolean;
+  /** html[data-has-assets] — 자산 키가 있는 기기(head 스크립트, #113). 로드 전 덮개 여부 판정용 */
+  hasAssetsAttr: boolean;
 }): InAppGateState {
   if (env.isTrial) return "none";
   if (!env.mounted || env.isStandalone || !env.isInApp) return "none";
-  if (!env.isDataLoaded) return "cover";
+  if (!env.isDataLoaded) return env.hasAssetsAttr || env.syncAssetId || env.restoreHash ? "cover" : "welcome";
   if (!env.hasAssets && !env.isSharePending && !env.syncAssetId && !env.restoreHash) return "welcome";
   return "gate";
 }
@@ -76,7 +79,8 @@ export function InAppBrowserGate() {
   const syncAssetId = mounted && isCloudSyncEnabled() ? getAssetId() : null;
   const isSyncMode = !!syncAssetId;
 
-  const gate = resolveInAppGate({ isTrial: isTrialMode(), mounted, isStandalone, isInApp, isDataLoaded, hasAssets, isSharePending, syncAssetId, restoreHash });
+  const hasAssetsAttr = mounted && document.documentElement.hasAttribute("data-has-assets");
+  const gate = resolveInAppGate({ isTrial: isTrialMode(), mounted, isStandalone, isInApp, isDataLoaded, hasAssets, isSharePending, syncAssetId, restoreHash, hasAssetsAttr });
   if (gate === "none" || gate === "welcome") return null;
 
   const handleMove = async () => {

@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-09 (v4.61)
+
+### 첫 화면 빈 화면 없애기 — 웰컴 첫 부분 먼저 보여 주기 (#4.61, 이슈 #113, risk medium)
+- **왜**: 루트 `/`가 `isDataLoaded` 전까지 `null`이라 0건 새 방문자(특히 인앱·느린 회선)는 빈 검은 화면(+인앱 빈 덮개)을 보았고, JS 없는 수집기는 본문을 읽지 못했다.
+- `welcome-intro.tsx`로 히어로·신뢰 줄 공용 조각 추출(`WelcomeHero`·`WelcomeTrustLine`), `page.tsx` 로드 전 분기가 `RootFirstPaint`를 SSR. `layout.tsx` 기존 `data-device` try 블록에 키 3개 존재 판정 → `html[data-has-assets]`, `globals.css` 1규칙으로 보유자는 조각 숨김. 조각→웰컴은 `skipHeroEnter`로 같은 자리 무애니메이션.
+- `resolveInAppGate`에 `hasAssetsAttr` 추가: 로드 전이라도 속성·복원 해시·동기화가 없으면 `cover` 대신 `welcome`.
+- CLAUDE.md 4장 머지 위임 ⑥을 11-09 대표 결정(결산 창 머지 제한 폐지, 판독 경계일 기록 유지)에 맞게 정정.
+- 새 문구 0, 저장 키·스키마·동기화·서버 전송 변경 0(키 존재만 읽음).
+
+---
+
 ## 2026-11-09 (v4.59)
 
 ### 이어서 맞추기 — 보유 현황 정렬·저장 후 목록 복귀 (#4.59, 이슈 #110, risk low)

@@ -342,6 +342,11 @@ nav.pwa-nav-container {
   display: none !important;
 }
 
+/* 루트 첫 화면 사전 조각(#113): 자산 키가 있는 기기(head 스크립트가 data-has-assets 설정)는 첫 페인트 전 숨김 */
+html[data-has-assets] [data-first-paint] {
+  display: none;
+}
+
 /* PWA 스탠드얼론 모드: 모바일은 하단 nav, PC/윈도우는 상단 nav */
 @media (display-mode: standalone) {
 

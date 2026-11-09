@@ -86,6 +86,6 @@ describe("웰컴 진입 링크·복귀", () => {
     expect(src).toMatch(/sessionStorage\.removeItem\(TRIAL_EXIT_KEY\);[\s\S]{0,200}track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart \}\);\s*setShowAssetCta\(true\);/);
     // 링크는 마운트 후 + 공유 대기 아님 + 복원 해시 없음일 때만
     expect(src).toContain("action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink /> : undefined}");
-    expect(read("app/(main)/page.tsx")).toContain("<WelcomeGuide allowTrial={!isSharePending} />");
+    expect(read("app/(main)/page.tsx")).toContain("<WelcomeGuide allowTrial={!isSharePending} skipHeroEnter={skipHeroEnterRef.current} />");
   });
 });

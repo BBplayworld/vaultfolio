@@ -26,12 +26,10 @@ import { TRIAL_ENTRY_URL, TRIAL_EXIT_KEY } from "@/lib/trial/trial-mode";
 import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { SECURITY_COPY, type SecurityCopyId } from "@/config/security-copy";
+import { ENTER, WELCOME_ROOT, WELCOME_TRUST_WRAP, WelcomeHero, WelcomeTrustLine } from "./welcome-intro";
 
 // 보안 카드 id → 아이콘(순서 ShieldCheck·CloudLightning·EyeOff 유지)
 const SECURITY_ICONS: Record<SecurityCopyId, React.ElementType> = { local: ShieldCheck, sync: CloudLightning, admin: EyeOff };
-
-// 진입 stagger 공용 클래스 (모션 비활성 환경에선 즉시 표시) — delay는 style로 분산
-const ENTER = "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500";
 
 // ── 예시 데이터 정적 계산 (컴포넌트 외부)
 const EXCHANGE_RATES = previewData.exchangeRates as { USD: number; JPY: number };
@@ -98,9 +96,11 @@ export function welcomeCtaState(env: { mounted: boolean; isMobile: boolean; isSt
   return "asset";
 }
 
-export function WelcomeGuide({ allowTrial = false }: { allowTrial?: boolean } = {}) {
+/** skipHeroEnter: 루트 사전 조각을 거친 첫 mount — 히어로·신뢰 줄은 조각과 같은 자리에 애니메이션 없이 이어진다(#113) */
+export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { allowTrial?: boolean; skipHeroEnter?: boolean } = {}) {
   const { isStandalone, isInApp, isIOS } = usePWAInstall();
   const isMobile = useIsMobile();
+  const [skipEnter] = useState(skipHeroEnter); // mount 시점 값 고정 — 이후 prop 변화로 ENTER가 재생되지 않게
   const [mounted, setMounted] = useState(false);
   const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '웹에서 바로 시작' 선택 시에만 자산 등록 노출
   const [securityOpen, setSecurityOpen] = useState(false); // 보안 상세 펼침 — 메모리 상태만(저장 안 함)
@@ -135,27 +135,18 @@ export function WelcomeGuide({ allowTrial = false }: { allowTrial?: boolean } = 
   };
 
   return (
-    <div className="w-full py-2 space-y-5">
+    <div className={WELCOME_ROOT}>
 
       {/* ① 히어로 */}
-      <section data-testid="welcome-hero" className={`text-center space-y-2 ${ENTER}`}>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
-          나만의 비밀 자산 금고
-        </h1>
-        <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed text-pretty break-keep">
-          흩어진 자산을 한 화면에서 정리해 보세요.
-        </p>
-      </section>
+      <WelcomeHero enter={!skipEnter} />
 
       {/* ② 신뢰 한 줄 + 자세히 보기 + 보안 상세(제자리 펼침) — 접힌 상세가 여백을 남기지 않게 gap 없음 */}
-      <div data-testid="welcome-trust" className={`w-full flex flex-col items-center ${ENTER}`} style={{ animationDelay: "60ms" }}>
-        <p className="max-w-xl text-sm text-muted-foreground leading-relaxed text-center">
-          <ShieldCheck aria-hidden className="inline size-4 -mt-0.5 mr-1.5 text-primary" />
-          {/* 구분자를 앞 항목과 한 덩어리로 묶어 줄바꿈은 구분자 뒤에서만 일어나게 */}
-          <span className="whitespace-nowrap">로그인 없음<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
-          <span className="whitespace-nowrap">자산은 내 기기에 저장<span aria-hidden className="mx-1.5 text-muted-foreground/50">·</span></span>
-          <span className="whitespace-nowrap">원하면 암호화 동기화</span>
-        </p>
+      <div
+        data-testid="welcome-trust"
+        className={skipEnter ? WELCOME_TRUST_WRAP : `${WELCOME_TRUST_WRAP} ${ENTER}`}
+        style={skipEnter ? undefined : { animationDelay: "60ms" }}
+      >
+        <WelcomeTrustLine />
         <button
           type="button"
           data-testid="welcome-security-toggle"
