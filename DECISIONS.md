@@ -251,3 +251,6 @@
 - 2026-11-09 4.55(PR #101, 4ca9d1c, #58+#103 A) COO PASS → **팀 머지 가**(#58 대표 위임 11-08 조건 ①~⑤ 충족·새 한계 0, #103 A는 저장 0 표시 계산이라 11-09 medium 자체 승인 범위, 결산 창 조건 ⑧은 11-09 폐지로 소멸 — qa의 '12/11~12/18만'은 무효). 단 머지 전 게이트: G1 #99 PR #102 `[#4.55]` 선머지 → G2 origin/main merge(시뮬레이션 충돌: floating-add-button import·EVENT_MAP, ga.test, changelog + **의미 충돌 `ADD_TRIGGER_EVENTS`에 physical 키 추가 필수**) → G3 새 head 증분 qa·Vercel success → G4 ui-designer 증분(R6 수정 모드 도움말 320·375, FAB 실물 행). 불충족 시 대표 승인 전환. squash `[#4.56]`, PR 본문 일정 줄 삭제·`Refs #103`(Closes 아님), 스모크 D0·D+1, 롤백 PR revert 1개. CHECKLIST C45·C46 추가 (4.55-decision-brief.md) | cto(COO) |
 - 2026-11-09: #99 PR #102 팀 위임 머지 d9ef0d7(표시 v4.55). #48 코호트 경계일 = 오늘.
 - 2026-11-09: #58·#103 A PR #101 팀 위임 머지 00e19e7(표시 v4.56). 실물 자산·홈 원인 상쇄 판독 경계일 = 오늘.
+
+## 2026-11-09 cto(COO): #107 핫픽스 PR #108 위임 머지 가
+- squash `[#4.57] 핫픽스 — 코인 즉시 반영 저장 차단·현금 0원 저장 실패(#107)`, main 충돌 0. 이에 따라 #103 ②③ 릴리스(issue-4.56)는 squash 제목 `[#4.58]`로 재배정, main 병합 시 crypto-tx-input 충돌 해소 + cashBalanceFloor→CASH_FLOOR 통합 (issues/_hotfix/107-decision-brief.md) | cto(COO)
