@@ -2,6 +2,8 @@
 // 리허설(P5b·P5d·P5big·코인 이익/손실·F1 대조) 픽스처를 커밋. 합계·Hero·매도 대금 쪽은 불변, 키 간 이동만 확인.
 import { describe, expect, it } from "vitest";
 import { computeAttributionBetween } from "@/lib/report/asset-report";
+import { computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
+import { buildLink, type LinkTrade } from "@/lib/trade/linked-record";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 import type { CashTransaction, CryptoTransaction, Transaction } from "@/types/transaction";
 
@@ -154,5 +156,43 @@ describe("D1 가드 — 매도 없는 구간·예측 분기 diff 0", () => {
     expect(a.estimated).toBe(true);
     expect(a.effects.some((x) => x.key === "price:stock")).toBe(false);
     expect(a.effects.reduce((s, x) => s + x.amount, 0)).toBeCloseTo(a.deltaNet, 6);
+  });
+});
+
+// #119(4.63) 조합 — 해외주식(USD) 매도를 원화 현금·대출에 연결: D1이 같은 환산(tradeKrwRate)을 쓰는지 확인
+describe("D1 × #119 원화 연결 외화 매도", () => {
+  const FX = { USD: 1390, JPY: 905 };
+  const snapL = (month: string, date: string, o: { cash: number; stock: number; stockCost: number; loans: number }): MonthlyAssetSnapshot => ({
+    month, date, netAsset: o.cash + o.stock - o.loans, financialAsset: o.cash + o.stock,
+    breakdown: { realEstate: 0, stocks: o.stock, crypto: 0, cash: o.cash, loans: o.loans, tenantDeposit: 0, physical: 0 },
+    fx: { ...FX }, fxBase: { USD: 0, JPY: 0 },
+    cost: { total: o.cash + o.stockCost, stock: o.stockCost, crypto: 0, realEstate: 0, physical: 0 },
+  });
+  const START_L = snapL("2026-10", "2026-10-31", { cash: 5_000_000, stock: 3_614_000, stockCost: 2_780_000, loans: 3_000_000 }); // 20주 @ $100, 시세 $130
+  const sellTrade: LinkTrade = { id: "tx_1", type: "sell", quantity: 10, price: 130, fee: 0, currency: "USD", exchangeRate: 1390, date: "2026-11-03", name: "Apple" };
+  const baseL = () => empty({
+    cash: [{ id: "a", type: "bank", name: "주거래", balance: 5_000_000, currency: "KRW" }],
+    loans: [{ id: "l", type: "credit", name: "신용", balance: 3_000_000, interestRate: 0, startDate: "2025-01-01" }],
+    stocks: [{ id: "s", category: "foreign", name: "Apple", ticker: "AAPL", quantity: 10, averagePrice: 100, currentPrice: 130, currency: "USD", purchaseDate: "2026-01-01" }],
+  });
+  const settle = (choice: Parameters<typeof buildLink>[2], end: { cash: number; stock: number; stockCost: number; loans: number }) => {
+    const b = buildLink(baseL(), sellTrade, choice, "2026-11-05", new Date("2026-11-05T03:00:00Z"));
+    if (!b.ok) throw new Error(b.reason);
+    const d: AssetData = { ...b.data, transactions: [{ id: "tx_1", stockId: "s", ticker: "AAPL", stockName: "Apple", type: "sell", quantity: 10, price: 130, currency: "USD", exchangeRate: 1390, date: "2026-11-03", reflected: true, createdAt: "x" }] };
+    const e = snapL("2026-11", "2026-11-05", end);
+    const live = { date: "2026-11-05", _date: "2026-11-05", _display: "2026-11-05", netAsset: 0, financialAsset: 0 } as unknown as Parameters<typeof computeSettlementCauses>[0]["live"];
+    const mapped = computeSettlementCauses({ start: START_L, end: e, live, deltaNet: e.netAsset - START_L.netAsset, startDate: "2026-10-31", endDate: "2026-11-05", liveCash: 0, exchangeHistory: {}, assetData: d, rates: FX }).mapped;
+    return { mapped, e, a: computeAttributionBetween(START_L, e, {}, d, FX, true)! };
+  };
+  it("원화 현금 입금 연결 매도: Hero 불변(Δ0), 결산 원인 0(수정 전 매수 +417,000·시세 −417,000 등 잔차)", () => {
+    const r = settle({ kind: "cash", cashId: "a" }, { cash: 6_807_000, stock: 1_807_000, stockCost: 1_390_000, loans: 3_000_000 });
+    expect(r.mapped.deltaNet).toBe(0);
+    expect(r.mapped.causes.map((c) => [c.key, c.amount])).toEqual([]);
+    expect(r.a.effects.reduce((s, x) => s + x.amount, 0)).toBeCloseTo(0, 6);
+  });
+  it("대출 상환 연결 매도: Hero 불변, 결산 원인 0", () => {
+    const r = settle({ kind: "loan", loanId: "l" }, { cash: 5_000_000, stock: 1_807_000, stockCost: 1_390_000, loans: 1_193_000 });
+    expect(r.mapped.deltaNet).toBe(0);
+    expect(r.mapped.causes.map((c) => [c.key, c.amount])).toEqual([]);
   });
 });
