@@ -22,6 +22,16 @@ describe("BrandSymbol", () => {
       expect(html).toContain(`url(#${id})`);
     });
   });
+  it("R4 상하 균형: 대각 틈(폭 1.1) 중심선이 척추 교차점(16,15.5)을 지난다", () => {
+    const html = renderToStaticMarkup(<BrandSymbol />);
+    expect(html).toContain("16 15.5C");
+    const [top, bottom] = [...html.matchAll(/<clipPath[^>]*><path d="([^"]+)"/g)].map((m) => m[1].match(/-?\d+(\.\d+)?/g)!.map(Number));
+    // 위 클립 M0 0H32V{yR}L0 {yL}Z, 아래 클립 M0 {yL}L32 {yR}V32H0Z → x=16에서 두 경계의 중점 = 교차점
+    const midTop = (top[3] + top[5]) / 2;
+    const midBottom = (bottom[1] + bottom[3]) / 2;
+    expect((midTop + midBottom) / 2).toBeCloseTo(15.5, 5);
+    expect(midBottom - midTop).toBeCloseTo(1.1, 5);
+  });
   it("stop 색은 CSS 변수(라이트/다크 globals.css 정의)", () => {
     const html = renderToStaticMarkup(<BrandSymbol />);
     ["t0", "t1", "b0", "b1"].forEach((k) => expect(html).toContain(`var(--brand-symbol-${k})`));
