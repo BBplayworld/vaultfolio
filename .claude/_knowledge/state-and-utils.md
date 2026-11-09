@@ -285,10 +285,15 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 - `lib/onboarding-wizard-status.ts`: `createStepCompleter(base, onComplete)` 단계 완료 1회 가드.
 - `asset-dispatch.ts`: `ADD_TRIGGER_EVENTS`(추가 폼 이벤트 이름 단일 정의).
 
+### resync-return.ts (#110) — 이어서 맞추기 순수 함수
+`sortHoldingsRows`(보유 우선 안정 정렬·과거 순자산 맨 아래), `resyncNoticeText`(상단 줄 문구), `consumeResyncSignal`(대기 자산군과 같은 신호만 복귀·소비), `shouldTrackResyncContinue`(GA 조건), `isRefreshCategory`, `RESYNC_LABELS`. 저장·스키마와 무관.
+
 ### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
 
 ```typescript
-markCategoryRefreshed(category)              // 보유현황 스크린샷 등록 성공 시 호출
+markCategoryRefreshed(category, {notify?})   // 보유현황 저장 성공 시 호출. 기본으로 window 이벤트 `asset-category-refreshed`(detail.category) 발행(#110). 거래 스크린샷·보유 현황 맞추기 적용은 notify:false
+notifyCategoryRefreshed(category)            // 신호만 발행(보유 현황 맞추기는 결과 화면을 닫을 때)
+isRefreshedToday(category): boolean          // lastRefreshedAt의 KST 날짜 == 오늘
 daysSinceRefresh(category): number | null
 getStaleCategories(assetLastUpdated?): RefreshCategory[]   // 30일 이상(또는 이력 없음+유예 경과) 오래된 순
 shouldShowRefreshNudge(opts): boolean

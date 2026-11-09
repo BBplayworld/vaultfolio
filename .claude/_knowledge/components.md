@@ -90,6 +90,7 @@ _components/
 - hub 상단 `InfoHint`로 "보유현황=재동기화(거래 이력 없음)" vs "거래기록=손익·세금 정확 반영" 역할 구분 안내
 - 홈 `HomeTipBox`의 최신화(refresh) 종류 클릭은 `open-add-asset-sheet` 이벤트에 `detail.category`(가장 오래된 카테고리 1개, 단수)를 실어 hub/holdings를 건너뛰고 해당 카테고리의 단건 흐름(`handleHoldingsClick`)으로 직행(다건 프리셋 아님, S-4.32 후속에서 `RefreshNudge`를 흡수)
 - 보유현황 스크린샷 저장 성공 시 각 `*-screenshot-import.tsx`가 `markCategoryRefreshed(category)` 호출(`lib/asset/asset-refresh-status.ts`)
+- **이어서 맞추기(#110)**: `holdings` 목록은 보유 자산군 우선 정렬(`sortHoldingsRows`, 과거 순자산 맨 아래)·미보유 `추가`·오늘(KST) 맞춘 자산군 `Check`+`오늘 맞춤`(`isRefreshedToday`). 창 선택 시 `armedRef`(메모리 1개)로 대기 → 저장 신호(`asset-category-refreshed`)가 같은 자산군이면 시트를 holdings로 다시 열고 상단 `role="status"` 줄(`{자산군} 맞췄어요` / 부동산·실물 미보유 시 전부 맞춤이면 `보유한 자산을 모두 맞췄어요`) + 하단 `Button variant="brand"` [완료]. 취소·상세 편집·마법사·화면 이동·시트 닫힘 시 대기 해제. 복귀 목록에서 방금 자산군이 아닌 최신화 행을 누르면 GA `feature_use`/`resync_continue`(`이어서 맞추기`) 1회. 홈 팁·결산 진입도 동일. testId `fab-holdings-row-{type}`·`fab-holdings-checked-{type}`·`fab-resync-notice`·`fab-resync-done`
 
 ### ScrollToTop (`layout/floating/scroll-to-top.tsx`)
 
