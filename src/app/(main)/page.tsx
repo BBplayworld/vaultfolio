@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
+import { RootFirstPaint, WELCOME_PAGE_WRAP, shouldSkipHeroEnter } from "./_components/layout/onboarding/welcome-intro";
 import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
 import { StockInput } from "./_components/forms/asset-update/input/stock-input";
 import { CryptoInput } from "./_components/forms/asset-update/input/crypto-input";
@@ -37,6 +38,21 @@ export default function Page() {
   const hasNoAssets = !hasAnyAssets(assetData);
   const isWelcomeGuide = isSharePending || hasNoAssets;
 
+  // 루트 사전 조각을 거친 첫 웰컴 mount만 히어로·신뢰 줄 진입 애니메이션 생략(#113) — 다른 화면이 한 번이라도 렌더되면 해제
+  const skipHeroEnterRef = useRef(false);
+  const mountedLoadedRef = useRef(isDataLoaded);
+  useEffect(() => {
+    // 마운트 시점 판정(SSR 안전) — 조각이 실제로 보인 기기(속성 없음)만 true
+    skipHeroEnterRef.current = shouldSkipHeroEnter({
+      isDataLoaded: mountedLoadedRef.current,
+      hasAssetsAttr: document.documentElement.hasAttribute("data-has-assets"),
+    });
+  }, []);
+  const isWelcomeView = isWelcomeGuide && !isWizardOpen;
+  useEffect(() => {
+    if (isDataLoaded && !isWelcomeView) skipHeroEnterRef.current = false;
+  }, [isDataLoaded, isWelcomeView]);
+
   // 튜토리얼 초기화
   useEffect(() => {
     if (!isDataLoaded) return;
@@ -67,7 +83,8 @@ export default function Page() {
     };
   }, [completeStep]);
 
-  if (!isDataLoaded) return null;
+  // 로드 전: 정적 사전 조각(서버·클라이언트 첫 렌더 동일). 보유자는 html[data-has-assets] CSS로 숨김(#113)
+  if (!isDataLoaded) return <RootFirstPaint />;
 
   if (isWizardOpen) {
     return (
@@ -91,9 +108,9 @@ export default function Page() {
 
   if (isWelcomeGuide) {
     return (
-      <div className="flex flex-col gap-4 md:gap-6">
+      <div className={WELCOME_PAGE_WRAP}>
         {/* 체험 진입 링크는 공유 대기 중에는 숨김(#59) */}
-        <WelcomeGuide allowTrial={!isSharePending} />
+        <WelcomeGuide allowTrial={!isSharePending} skipHeroEnter={skipHeroEnterRef.current} />
         <div className="hidden" aria-hidden="true">
           <RealEstateInput />
           <StockInput />

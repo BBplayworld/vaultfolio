@@ -332,6 +332,11 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 
 첫 진입 안내 페이지. `page.tsx`의 `isWelcomeGuide` 분기에서 `<AppGuide />` 위에 표시.
 
+### WelcomeHero · WelcomeTrustLine · RootFirstPaint (`layout/onboarding/welcome-intro.tsx`, #4.61)
+- 웰컴 첫 부분(① 히어로 h1·부제, ② 신뢰 한 줄)의 **공용 조각**(`"use client"`·훅·window 없음 → 서버/클라이언트 첫 렌더 동일). `WelcomeGuide`와 `RootFirstPaint`가 같은 코드를 렌더한다(복제 금지). `WelcomeHero({enter})`: `enter=false`면 `ENTER` 없음. 래퍼 클래스 상수 `WELCOME_PAGE_WRAP`·`WELCOME_ROOT`·`WELCOME_TRUST_WRAP`과 `ENTER`(진입 stagger 클래스)도 여기 정본.
+- `RootFirstPaint` = `page.tsx`의 `!isDataLoaded` 분기(`data-first-paint`, testid `first-paint-shell`). 히어로+신뢰 줄만, 버튼·CTA·미리보기 없음. `html[data-has-assets]`(layout.tsx head, 키 3개 존재만 판정)이면 `globals.css` 1규칙으로 `display:none`.
+- `WelcomeGuide({ skipHeroEnter })`: 사전 조각을 거친 첫 웰컴 mount만 히어로·신뢰 줄 ENTER 생략(mount 시점 값 고정). `page.tsx`가 `skipHeroEnterRef`로 전달, 다른 화면이 렌더되면 해제.
+
 - 순자산 카드: `DataSourceBadge kind="realtime"` 포함, `bgLight` 토대
 - 보안 상세 카드 3장 = `SECURITY_COPY`(#4.38, 앱가이드와 같은 상수). 신뢰 한 줄은 "로그인 없음 · 자산은 내 기기에 저장 · 원하면 암호화 동기화"(nowrap 묶음 3개, `text-balance` 없음)
 - 미리보기 데이터: `welcome-preview-data.json`
@@ -345,7 +350,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 - 설치 버튼(`InstallButton`, 파일 내부)은 홈 버튼과 동일한 공용 `PwaInstallFlow`(render-prop) 호출. 모바일은 슬롯, 데스크톱은 설치 박스에만 렌더(화면당 1개)
 
 ### InAppBrowserGate (`pwa/in-app-browser-gate.tsx`) · InAppExternalGuide (`pwa/in-app-external-guide.tsx`)
-- 게이트는 `resolveInAppGate(env)`(state-and-utils) 결과만 따른다: `none`·`welcome` 미렌더 / `cover` = 데이터 로드 전 문구 없는 `fixed inset-0 bg-background`(`Z_LAYER.gate`, `data-testid="inapp-gate-cover"`, `aria-hidden`) / `gate` = **같은 루트 노드**에 기존 경고·PIN 내용(노드 교체 없음). 외부 이동은 `useExternalMove`(#4.38)
+- 게이트는 `resolveInAppGate(env)`(state-and-utils) 결과만 따른다: `none`·`welcome` 미렌더 / `cover` = 데이터 로드 전(자산 키 속성·복원 해시·동기화일 때만, #4.61) 문구 없는 `fixed inset-0 bg-background`(`Z_LAYER.gate`, `data-testid="inapp-gate-cover"`, `aria-hidden`) / `gate` = **같은 루트 노드**에 기존 경고·PIN 내용(노드 교체 없음). 외부 이동은 `useExternalMove`(#4.38)
 - `InAppExternalGuide({ lastStep?, notice? })` — `notice`(#4.38)를 넘기면 앰버 블록 안쪽(제목+"앱 설치 기능…" 문장)만 대체, 아이콘·1~3단계·하단 안내 유지. 미전달 시 기존 문구(설치 흐름·1건 이상 게이트). 소비처: 게이트, `pwa-install-flow` inAppStep, 웰컴 inapp 슬롯
 
 ### 가이드 페이지 (`src/app/guide/*`, #4.45 #77) · InstallNudge · TaxSeasonStrip

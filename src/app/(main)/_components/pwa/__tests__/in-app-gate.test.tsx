@@ -41,7 +41,7 @@ describe("hasRestoreHash", () => {
 describe("resolveInAppGate (spec 5절 경계 표)", () => {
   const base = {
     isTrial: false, mounted: true, isStandalone: false, isInApp: true, isDataLoaded: true,
-    hasAssets: false, isSharePending: false, syncAssetId: null as string | null, restoreHash: false,
+    hasAssets: false, isSharePending: false, syncAssetId: null as string | null, restoreHash: false, hasAssetsAttr: false,
   };
   it("마운트 전·standalone·일반 브라우저 → none", () => {
     expect(resolveInAppGate({ ...base, mounted: false })).toBe("none");
@@ -49,9 +49,15 @@ describe("resolveInAppGate (spec 5절 경계 표)", () => {
     expect(resolveInAppGate({ ...base, isStandalone: true, isDataLoaded: false })).toBe("none");
     expect(resolveInAppGate({ ...base, isInApp: false, hasAssets: true })).toBe("none");
   });
-  it("데이터 로드 전 → cover(0건·1건 모두, 경고·웰컴 문구 없음)", () => {
-    expect(resolveInAppGate({ ...base, isDataLoaded: false })).toBe("cover");
-    expect(resolveInAppGate({ ...base, isDataLoaded: false, hasAssets: true })).toBe("cover");
+  it("데이터 로드 전 + 자산 키 속성(보유자) → cover(경고·웰컴 문구 없음)", () => {
+    expect(resolveInAppGate({ ...base, isDataLoaded: false, hasAssetsAttr: true })).toBe("cover");
+  });
+  it("데이터 로드 전 + 복원 해시 / 동기화 assetId → cover(현행 유지)", () => {
+    expect(resolveInAppGate({ ...base, isDataLoaded: false, restoreHash: true })).toBe("cover");
+    expect(resolveInAppGate({ ...base, isDataLoaded: false, syncAssetId: "aid" })).toBe("cover");
+  });
+  it("데이터 로드 전 + 속성·해시·동기화 없음(0건 방문자) → welcome(빈 덮개 없음, #113 K5)", () => {
+    expect(resolveInAppGate({ ...base, isDataLoaded: false })).toBe("welcome");
   });
   it("인앱 0건·동기화 없음·해시 없음 → welcome", () => {
     expect(resolveInAppGate(base)).toBe("welcome");

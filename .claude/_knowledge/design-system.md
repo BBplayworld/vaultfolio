@@ -173,6 +173,7 @@
 ## 6. 모션 · 인터랙션 폴리시 (UI 디테일 폴리시 체크리스트)
 
 > framer-motion 미사용 → **CSS 전환 + `tw-animate-css`**, **`motion-safe`로 reduced-motion 대응**.
+> 정적 사전 페인트 조각은 서버/클라 공용 조각을 재사용하고 ENTER는 생략한다(`welcome-intro.tsx`, #4.61) — 조각→본 화면 교체 시 같은 위치·불투명 1.0, 아래 새로 붙는 요소만 ENTER.
 
 - **`transition: all` 금지** → `transition-[color,box-shadow,transform]` 등 **변하는 속성만 명시**(레이아웃 thrash 방지).
 - **누름 피드백**: 버튼 `active:not-disabled:scale-[0.96]`, 카드류 `0.98~0.99`.

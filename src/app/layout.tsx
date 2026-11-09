@@ -102,6 +102,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 var ua = window.navigator.userAgent.toLowerCase();
                 var isMobile = /iphone|ipad|ipod|android|webos|blackberry|iemobile|opera mini/i.test(ua);
                 document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'pc');
+                var hk = ['secretasset_asset_data', 'secretasset.physical_assets', 'secretasset-asset-data'];
+                for (var i = 0; i < hk.length; i++) { if (localStorage.getItem(hk[i]) !== null) { document.documentElement.setAttribute('data-has-assets', ''); break; } }
               } catch (_) {}
             `
           }}

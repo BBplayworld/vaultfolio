@@ -411,7 +411,7 @@ UI(`pwa-lock-screen.tsx`)가 아니라 순수 모듈에 두는 이유: 잠금화
 ### pwa/in-app-browser-gate.tsx 순수 함수 (#4.38) — 인앱 게이트 판정
 ```typescript
 resolveInAppGate(env) → "none" | "cover" | "welcome" | "gate"
-  // !mounted ‖ standalone ‖ !isInApp → none / !isDataLoaded → cover(빈 덮개)
+  // !mounted ‖ standalone ‖ !isInApp → none / !isDataLoaded → (hasAssetsAttr ‖ syncAssetId ‖ restoreHash ? cover(빈 덮개) : welcome)  — hasAssetsAttr = html[data-has-assets](#4.61)
   // 자산 0건 && !isSharePending && !syncAssetId && !restoreHash → welcome(게이트 미렌더, 웰컴 inapp 슬롯이 안내) / 그 외 gate(현행)
 hasRestoreHash(hash): boolean   // share·sync·asset·vault 해시 — 처리 후 replaceState로 지워지므로 게이트는 첫 렌더에 1회 캡처(useState 초기화)
 ```
