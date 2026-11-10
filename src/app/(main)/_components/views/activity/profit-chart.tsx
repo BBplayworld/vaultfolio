@@ -711,11 +711,13 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                             </div>
                             {catRate !== null && (
                               <div className="min-w-0 text-right">
-                                <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
-                                  {catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)} ({formatRate(catRate)})
+                                <p className={`text-sm tabular-nums break-keep ${getProfitLossColor(catProfit)}`}>
+                                  <span className="whitespace-nowrap">{catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)}</span>{" "}
+                                  <span className="whitespace-nowrap">({formatRate(catRate)})</span>
                                 </p>
-                                <p className="text-sm text-muted-foreground tabular-nums">
-                                  {formatPriceByMode(catRef)} → {formatPriceByMode(catCurrent)}
+                                <p className="text-sm text-muted-foreground tabular-nums break-keep">
+                                  <span className="whitespace-nowrap">{formatPriceByMode(catRef)}</span>{" "}
+                                  <span className="whitespace-nowrap">→ {formatPriceByMode(catCurrent)}</span>
                                 </p>
                               </div>
                             )}

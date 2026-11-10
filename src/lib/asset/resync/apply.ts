@@ -103,9 +103,10 @@ export const resyncNewPurchaseDate = (today: string): string => `${today.slice(0
  * 직접 등록 신규 종목(id `stock_<ms>`, #142 4.75: 기본값 올해 1월 1일)도 같은 원칙. 그 밖(사용자가 매수일을 고친 항목·이어받은 기존 항목)은 purchaseDate 그대로. 상세 매수일·배당은 이 함수를 쓰지 않는다.
  */
 export function resyncInflowDate(s: { id: string; purchaseDate: string }): string {
-  const m = /^(?:stock_(?:import_)?|crypto_import_)(\d{10,})(?:_|$)/.exec(s.id);
+  // 직접 등록 id는 `stock_<ms>`로 끝이 고정 — 종목 나누기 새 행(`stock_<ms>_<N>`, 기준 종목 매수일 복사)은 제외(#142 qa D2)
+  const m = /^(?:(?:stock|crypto)_import_(\d{10,})(?:_|$)|stock_(\d{10,})$)/.exec(s.id);
   if (!m) return s.purchaseDate;
-  const created = new Date(Number(m[1]) + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const created = new Date(Number(m[1] ?? m[2]) + 9 * 3600 * 1000).toISOString().slice(0, 10);
   return s.purchaseDate === resyncNewPurchaseDate(created) && s.purchaseDate < created ? created : s.purchaseDate;
 }
 

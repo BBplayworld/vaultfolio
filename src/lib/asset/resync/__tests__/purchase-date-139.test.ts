@@ -237,3 +237,18 @@ describe("결산 예측 투입일 resyncInflowDate(#139 qa D1)", () => {
     expect(resyncInflowDate(result.stocks[0])).toBe("2025-03-02");
   });
 });
+
+describe("resyncInflowDate — 종목 나누기 새 행 제외(#142 qa D2)", () => {
+  it("stock_<ms>_<N>(나누기 새 행)은 매수일 1/1이어도 매수일 그대로", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_${ms}_1`, purchaseDate: "2026-01-01" })).toBe("2026-01-01");
+  });
+  it("직접 등록 stock_<ms>(1/1 기본)은 만든 날", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_${ms}`, purchaseDate: "2026-01-01" })).toBe("2026-11-10");
+  });
+  it("맞추기 stock_import_<ms>_<N>은 기존대로 만든 날", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_import_${ms}_0`, purchaseDate: "2026-01-01" })).toBe("2026-11-10");
+  });
+});
