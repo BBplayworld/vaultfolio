@@ -144,7 +144,7 @@ _components/
 
 - `StockBarChart`, `StockRowItem`, `StockRowHeader`, `StockSummaryHeader`, `StockCategorySection`, **`StockCard`**(screenshotMode 지원)
 - `StockSummaryHeader footer?`(#4.73) → `DetailSummaryHeader footer?`(박스 안 맨 아래 선택 슬롯, screenshotMode면 미렌더) — 상세·주식만 `MarketEntryLine` 전달. 인증카드 diff 0
-- 카테고리 줄(#4.73 U6, `stock-category-row`): 왼쪽 `min-w-0 flex-1 overflow-x-auto`(스크롤바 숨김) 안 `InlineSelector`(6칸 이상 `[&>button]:px-1.5`) + 오른쪽 로컬 `StockSortSelect`(`stock-sort`, 기존 `Select` 글자 버튼 — 면·테두리 없음, `h-8` 히트 40px `after:-inset-y-1`, `등락률 순` 선택 시 `font-semibold text-foreground`, 6칸 이상·360 미만은 `ArrowDownWideNarrow` 아이콘형·라벨 sr-only). 선택은 모듈 메모리 `stockSortMemory`(저장 키 0), 목록만 `sortByChipRate`, 비중 막대·인증카드는 평가금 순. 카테고리 변경 시 선택 칸 `scrollIntoView`
+- 카테고리 줄(#4.73 U6, `stock-category-row`): 왼쪽 `min-w-0 flex-1 overflow-x-auto`(스크롤바 숨김) 안 `InlineSelector`(6칸 이상 `[&>button]:px-1.5`) + 오른쪽 로컬 `StockSortSelect`(`stock-sort`, 기존 `Select` 글자 버튼 — 면·테두리 없음, `h-8` 히트 40px `after:-inset-y-1`, `등락률 순` 선택 시 `font-semibold text-foreground`, 아이콘형 `ArrowDownWideNarrow`·라벨 sr-only·히트 `after:-inset-1` 40×40은 **`평가금 순`일 때만** 360 미만 또는 7칸이면서 400 미만 — `SORT_ICON_MODE` 정적 클래스 3벌, `등락률 순` 선택 중엔 항상 라벨). 선택은 모듈 메모리 `stockSortMemory`(저장 키 0), 목록만 `sortByChipRate`, 비중 막대·인증카드는 평가금 순. 카테고리·정렬 변경 시 선택 칸 `scrollIntoView`
 - `useFilteredStockData(activeCategory)` — 필터된 주식 계산 훅
   - 정렬된 tickerList (`.sort()`) 보장 → 다른 컴포넌트와 캐시 키 일치
   - `inactiveStatus !== "delisted"` 필터 포함

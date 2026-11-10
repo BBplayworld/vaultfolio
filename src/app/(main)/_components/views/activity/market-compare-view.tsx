@@ -45,9 +45,10 @@ const LIST_PERIODS = COMPARE_PERIODS.map((p) => ({ value: p, label: COMPARE_PERI
 const TO_CHANGE_PERIOD: Record<ComparePeriod, ChangePeriod> = { daily: "day", weekly: "week", monthly: "month" };
 const BLOCK_HEAD: Record<CompareMarket, string> = { kr: "코스피와 비교한 국내 주식", us: "S&P 500과 비교한 미국 주식" };
 const GROUP_LABEL: Record<CompareMarket, string> = { kr: "국내", us: "미국 (달러)" };
+// `자산·채권·금리형` 가운뎃점 양옆 U+2060(WORD JOINER), `S&P 500`은 U+00A0 — 320에서 줄이 `·금리형`으로 시작하지 않게(ui.md r2)
 const NOT_COMPARED_REASON = {
-  krNonEquity: "해외 자산·채권·금리형 ETF는 코스피와 비교하지 않아요",
-  foreignNonUs: "미국 밖 해외 종목은 S&P 500과 비교하지 않아요",
+  krNonEquity: "해외 자산\u2060·\u2060채권\u2060·\u2060금리형 ETF는 코스피와 비교하지 않아요",
+  foreignNonUs: "미국 밖 해외 종목은 S&P\u00A0500과 비교하지 않아요",
 } as const;
 const BASIS_DETAILS = [
   "기간 중에 산 종목은 사기 전 등락도 들어가요.",
@@ -178,15 +179,17 @@ export function MarketCompareView() {
           <>
             <div className={`grid grid-cols-1 gap-y-4 ${blocks.length > 1 ? "sm:grid-cols-2 sm:gap-x-8" : "sm:max-w-md"}`}>
               {blocks.length === 0 ? (
-                <MarketBlock market={null} />
+                <MarketBlock market={null} loadingNote={false} />
               ) : (
                 blocks.map((b, i) => (
                   <div key={b.market} className={i > 0 ? `border-t ${HAIRLINE} pt-4 sm:border-t-0 sm:border-l sm:pl-8 sm:pt-0` : undefined}>
-                    <MarketBlock market={b.market} block={b} count={summary?.blockCounts[b.market]} />
+                    <MarketBlock market={b.market} block={b} count={summary?.blockCounts[b.market]} loadingNote={false} />
                   </div>
                 ))
               )}
             </div>
+            {/* 조회 중 안내는 카드에 1회(블록마다 그리지 않음, ui-review 권고) */}
+            {!summary && <p data-testid="market-loading" className="text-sm text-muted-foreground">기준가 조회 중…</p>}
             {summary && <CompareNotice summary={summary} />}
           </>
         )}
@@ -244,7 +247,8 @@ export function MarketCompareView() {
 
 // ── 시장 블록(3기간 장부형 표) ───────────────────────────────────
 
-export function MarketBlock({ market, block, count }: { market: CompareMarket | null; block?: MarketCompareBlock; count?: number }) {
+// loadingNote: `기준가 조회 중…`을 이 블록 아래에 그릴지(페이지는 카드에 1회만 그리므로 false로 넘긴다)
+export function MarketBlock({ market, block, count, loadingNote = true }: { market: CompareMarket | null; block?: MarketCompareBlock; count?: number; loadingNote?: boolean }) {
   const cells = block ? COMPARE_PERIODS.map((p) => block.periods[p]) : null;
   const loading = !cells || cells.some((c) => c.state === "loading") || count === undefined;
   const indexName = market ? MARKET_INDEX_NAME[market] : "시장";
@@ -313,7 +317,7 @@ export function MarketBlock({ market, block, count }: { market: CompareMarket | 
         </div>
       </div>
       {loading ? (
-        <p data-testid="market-loading" className="text-sm text-muted-foreground">기준가 조회 중…</p>
+        loadingNote && <p data-testid="market-loading" className="text-sm text-muted-foreground">기준가 조회 중…</p>
       ) : (anyFailed || anyMismatch) && (
         <div className="space-y-0.5">
           {anyFailed && <p className="text-sm text-muted-foreground text-pretty break-keep">시장 값을 불러오지 못했어요</p>}
@@ -352,7 +356,12 @@ export function CompareNotice({ summary }: { summary: CompareSummary }) {
       {notCompared.count > 0 && (
         <p className="text-sm text-muted-foreground text-pretty break-keep">
           <span className="whitespace-nowrap font-semibold text-foreground">비교하지 않은 종목 {notCompared.count}</span>
-          {notCompared.reasons.map((r) => <span key={r}> · {NOT_COMPARED_REASON[r]}</span>)}
+          {notCompared.reasons.length === 1 ? (
+            <span> · {NOT_COMPARED_REASON[notCompared.reasons[0]]}</span>
+          ) : (
+            // 이유가 2개면 구분점으로 잇지 않고 이유마다 줄을 나눈다(첫 줄은 개수만)
+            notCompared.reasons.map((r) => <span key={r} className="block">{NOT_COMPARED_REASON[r]}</span>)
+          )}
         </p>
       )}
       {excluded.count > 0 && (

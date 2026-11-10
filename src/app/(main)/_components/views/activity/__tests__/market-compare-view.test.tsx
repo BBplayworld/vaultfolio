@@ -33,7 +33,8 @@ const IDX: PeriodRefs<MarketIndexResponse> = {
   monthly: { KOSPI: { refPrice: 98, refDate: "2026-10-08" }, SPX: { refPrice: 99, refDate: "2026-10-09" } },
 };
 const classified = classifyHoldings(STOCKS, PEERS);
-const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+// 보이지 않는 문자(U+2060 단어 결합자)는 지우고 U+00A0은 공백으로 본 뒤 비교(cto 판정 2 ①-5)
+const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\u2060/g, "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
 // spec 5-5 금지어(금액 숫자는 원·$ 표기로 검사)
 const FORBIDDEN = ["수익", "성과", "이겼", "졌다", "앞섰", "뒤처", "나았", "못했다", "선방", "초과", "알파", "우수", "부진", "순위", "등급", "축하", "아쉬워", "사세요", "파세요", "줄이세요", "늘리세요", "추천", "올해", "1년", "모든 종목", "내 주식 전체", "원", "$"];
 
@@ -101,6 +102,19 @@ describe("CompareNotice·MarketList", () => {
     const t = text(renderToStaticMarkup(<CompareNotice summary={summary} />));
     expect(t).toContain("비교하지 않은 종목 1 · 해외 자산·채권·금리형 ETF는 코스피와 비교하지 않아요");
     expect(t).toContain("제외 1 · 비상장·티커 없음 1");
+  });
+
+  it("이유가 2개면 줄마다 나눈다(첫 줄은 개수만), 줄바꿈 방지 문자는 상수에", () => {
+    const c2 = classifyHoldings([...STOCKS, stock({ name: "토요타", ticker: "7203", category: "foreign", currency: "JPY" })], PEERS);
+    const s2 = summarizeCompare(c2, computeMarketCompare(c2, REFS, IDX))!;
+    const html = renderToStaticMarkup(<CompareNotice summary={s2} />);
+    expect(text(html)).toContain("비교하지 않은 종목 2 해외 자산·채권·금리형 ETF는 코스피와 비교하지 않아요 미국 밖 해외 종목은 S&amp;P 500과 비교하지 않아요");
+    expect(html.match(/<span class="block">/g)).toHaveLength(2);
+    expect(html).not.toMatch(/비교하지 않은 종목 2<\/span> · /);
+    expect(html).toContain("자산\u2060·\u2060채권\u2060·\u2060금리형");
+    expect(html).toContain("S&amp;P\u00A0500과");
+    // 이유 1개는 모양 그대로(` · ` 한 줄)
+    expect(renderToStaticMarkup(<CompareNotice summary={summary} />)).not.toContain('class="block"');
   });
 
   it("목록: 등락률 높은 순 안에 시장 줄, 묶음 머리 같은 표기, 비교하지 않은 종목 묶음엔 시장 줄 없음", () => {
