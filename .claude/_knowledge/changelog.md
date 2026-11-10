@@ -10,6 +10,7 @@
 - **왜**: 엑셀에 매달 자산군별로 한 줄씩 적던 사용자가 결산 뒤에도 시트를 연다. 자산군별 금액은 월 스냅샷 `breakdown`에 저장돼 있었지만 그리는 화면이 없었다(결산은 화살표로 한 달씩, 구성 블록은 2시점 %만).
 - **변경**: 월 탭 구성 블록 아래 `월별 기록` 행(기록된 달 ≥2) → bottom 시트에 달마다 한 줄(월·기록일·가진 자산군 금액·순자산, 최신순). 줄 조립 `report/monthly-log.ts` `buildMonthlyLog` 1개(결산과 같은 `listSettlementMonths` 범위·스냅샷 값·live breakdown 재사용, 줄 단위 합 검증 >1원이면 순자산만). GA 화면 키 `activity:change:monthly-log` 1개(열 때). AI 행 진입 지연 120→160ms(stagger).
 - **범위 밖**: 증감·%·비중 열(#32 정본 = 결산 Hero), 행 탭 이동·선택 달 강조, `dailyArchive`, 복사·내보내기, '월말' 표기. 저장 키·스키마·동기화·공유 토큰·서버 전송 diff 0.
+- **대표 피드백 R3(2026-11-10)**: "차이 금액 인지가 불편, 다이얼로그 말고 페이지에서 성과 UI로 변화 금액까지" → 진입 행·bottom 시트·표·가로 스크롤 전부 폐지, 월 탭 구성 블록 아래 SECTION 카드 `MonthlyLogBlock`(`monthly-log-block.tsx`) 인라인. 달마다 한 줄(월·기록일 / 순자산 원 단위 + 앞 기록 대비 변화 손익색 `+`/U+2212), 줄 탭 펼침으로 자산군 금액·순자산 기여 변화(이번 달 기본 펼침, 합 = 순자산 변화), 7줄째부터 `이전 N개월 더 보기`. 신규 순수 함수 `buildMonthlyLogChanges`·`formatMonthlyLogDelta`. 삭제: `monthly-log-sheet.tsx`, `MonthlyLogButton`, `monthlyLogRangeLabel`, GA 화면 키 `activity:change:monthly-log`(화면 아님). 짧은 표기(억·만)는 화면에서 폐지(`formatMonthlyLogAmount` short 경로는 남김). 구성 바 최소 폭(R1)·저장 diff 0 유지.
 
 ---
 

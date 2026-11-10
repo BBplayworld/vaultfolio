@@ -1,6 +1,7 @@
 // 월별 기록(#127, 4.67) — 저장된 월 스냅샷(13개월 보존분) + 이번 달 실시간 값을 달마다 한 줄로 조립하는 순수 함수.
 // 새 금액 계산·환산·보간 없음: 지난 달은 스냅샷 breakdown·netAsset, 이번 달은 결산과 같은 live breakdown·summary.netAsset.
-// 읽기 전용 — 저장·서버 전송 없음. 증감·%·비중은 만들지 않는다(정본은 결산 Hero·구성 블록).
+// 읽기 전용 — 저장·서버 전송 없음. %·비중은 만들지 않는다(정본은 결산 Hero·구성 블록).
+// 앞 기록 대비 변화(원)는 buildMonthlyLogChanges(R3 — 월 탭 인라인 카드).
 
 import type { MonthlyAssetSnapshot, SnapshotBreakdown } from "@/types/asset";
 import { formatCurrency, formatNumberWithCommas, formatShortCurrency } from "@/lib/number-utils";
@@ -92,13 +93,6 @@ export function buildMonthlyLog(
   };
 }
 
-/** 진입 행 기간 라벨 — "8월~11월", 해가 다르면 "25년 12월~26년 3월" */
-export function monthlyLogRangeLabel(first: string, last: string): string {
-  const sameYear = first.slice(0, 4) === last.slice(0, 4);
-  const name = (m: string) => `${sameYear ? "" : `${m.slice(2, 4)}년 `}${Number(m.slice(5, 7))}월`;
-  return `${name(first)}~${name(last)}`;
-}
-
 const MINUS = "−"; // U+2212
 
 /** 1억 이상 짧은 표기 — 0.01억(100만원) 단위 정수 내림 후 끝 0 제거. 예 230,000,000 → `2.3억원`, −401,000,000 → `-4.01억원` */
@@ -122,4 +116,69 @@ export function formatMonthlyLogAmount(value: number, mode: "short" | "full", de
   const short = Math.abs(v) >= 100_000_000 ? formatEokShort(v) : formatShortCurrency(v);
   const text = mode === "full" ? formatCurrency(v) : short.replace(/([만억])원$/, "$1");
   return text.replace(/^-/, MINUS);
+}
+
+/** 변화 금액 표기(원 단위, 반올림): 0 → `0원`, 양수 `+1,234원`, 음수 `−1,234원`(U+2212) */
+export function formatMonthlyLogDelta(v: number): string {
+  const r = Math.round(v);
+  if (r === 0) return "0원";
+  return `${r > 0 ? "+" : MINUS}${formatNumberWithCommas(Math.abs(r))}원`;
+}
+
+export interface MonthlyLogChange {
+  /** 비교한 앞 기록 달 YYYY-MM */
+  vsMonth: string;
+  /** 앞 기록과 사이에 기록 없는 달이 있나(문구 '· 9월 대비') */
+  skipped: boolean;
+  /** 순자산 변화(원, 반올림) */
+  net: number;
+  /** 자산군 순자산 기여 변화(원). 두 줄 모두 full일 때만, 아니면 null */
+  groups: Partial<Record<MonthlyLogKey, number>> | null;
+}
+
+const monthIndex = (m: string) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7)) - 1;
+/** 순자산 기여 — 부채(대출·임차보증금)는 −|v| */
+const contribution = (k: MonthlyLogKey, v: number) => (MONTHLY_LOG_DEBT_KEYS.has(k) ? -Math.abs(v) : v);
+
+/**
+ * 자산군 변화 반올림 — 합이 순자산 변화(반올림)와 같아지도록 최대 잉여법(내림 후 소수부 큰 순 +1).
+ * 소수부 있는 자산군만 보정 대상, 맞출 수 없으면(합 검증 허용 오차 1원 등) 각자 반올림.
+ */
+function roundGroups(raw: Record<MonthlyLogKey, number>, net: number): Record<MonthlyLogKey, number> {
+  const floors = Object.fromEntries(MONTHLY_LOG_KEYS.map((k) => [k, Math.floor(raw[k])])) as Record<MonthlyLogKey, number>;
+  const fracKeys = MONTHLY_LOG_KEYS.filter((k) => raw[k] - floors[k] > 1e-9)
+    .sort((a, b) => (raw[b] - floors[b]) - (raw[a] - floors[a]));
+  const need = net - MONTHLY_LOG_KEYS.reduce((s, k) => s + floors[k], 0);
+  if (need < 0 || need > fracKeys.length) {
+    return Object.fromEntries(MONTHLY_LOG_KEYS.map((k) => [k, Math.round(raw[k]) || 0])) as Record<MonthlyLogKey, number>;
+  }
+  for (const k of fracKeys.slice(0, need)) floors[k] += 1;
+  return floors;
+}
+
+/**
+ * 줄별 앞 기록 대비 변화. rows(최신순)와 같은 월 키 → 변화. 첫 기록 달·gap 줄은 키 없음.
+ * 비교 대상 = 바로 앞 기록 달(gap 건너뜀). 자산군 변화 = 순자산 기여(부채 −) 차 — 대출 증가는 음수, 합 = 순자산 변화.
+ */
+export function buildMonthlyLogChanges(rows: MonthlyLogRow[]): Map<string, MonthlyLogChange> {
+  const out = new Map<string, MonthlyLogChange>();
+  let prev: Exclude<MonthlyLogRow, { kind: "gap" }> | null = null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const row = rows[i];
+    if (row.kind === "gap") continue;
+    if (prev) {
+      const net = Math.round(row.netAsset - prev.netAsset) || 0;
+      let groups: MonthlyLogChange["groups"] = null;
+      if (row.kind === "full" && prev.kind === "full") {
+        const p = prev;
+        const raw = Object.fromEntries(
+          MONTHLY_LOG_KEYS.map((k) => [k, contribution(k, row.values[k]) - contribution(k, p.values[k])]),
+        ) as Record<MonthlyLogKey, number>;
+        groups = roundGroups(raw, net);
+      }
+      out.set(row.month, { vsMonth: prev.month, skipped: monthIndex(row.month) - monthIndex(prev.month) > 1, net, groups });
+    }
+    prev = row;
+  }
+  return out;
 }

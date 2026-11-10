@@ -4,7 +4,7 @@
 // 계산은 전부 기기 안(로컬 스냅샷 + 엔진 래퍼). 서버로 보내는 값 없음 — GA는 source·result 열거형만.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight, Sparkles, Table2 } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
@@ -16,13 +16,13 @@ import {
   type SettlementCauses, type SettlementWindow,
 } from "@/lib/report/settlement";
 import { daysSinceRefresh, getStaleCategories, type RefreshCategory } from "@/lib/asset/asset-refresh-status";
-import { track, trackScreen } from "@/lib/analytics/ga";
+import { track } from "@/lib/analytics/ga";
 import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-section";
 import { CATEGORY_LABEL } from "../home/home-tip-box";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
 import { CompositionBlock } from "./composition-block";
-import { MonthlyLogSheet } from "./monthly-log-sheet";
-import { buildMonthlyLog, monthlyLogRangeLabel } from "@/lib/report/monthly-log";
+import { MonthlyLogBlock } from "./monthly-log-block";
+import { buildMonthlyLog } from "@/lib/report/monthly-log";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { buildSettlementPrompt } from "@/lib/ai-prompts";
 import type { ChangeInit } from "../../layout/navigation/navigation-context";
@@ -52,7 +52,6 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
   const monthly = useMemo(() => (snapshotVersion >= 0 ? readMonthlySnapshots() : []), [snapshotVersion]);
   const [month, setMonth] = useState(() => initialMonth ?? pickSettlementMonth(readMonthlySnapshots(), kstToday()));
   const [aiOpen, setAiOpen] = useState(false);
-  const [logOpen, setLogOpen] = useState(false);
 
   const computed = useMemo((): { ok: true; value: SettlementResult } | { ok: false } => {
     try {
@@ -76,8 +75,6 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
     () => buildMonthlyLog(monthly, today, { breakdown: liveBreakdown, netAsset: summary.netAsset }),
     [monthly, today, liveBreakdown, summary.netAsset],
   );
-  // 시트는 진입 행 노출 조건과 별개로 유지 — 열린 채 동기화·복원으로 줄이 줄어도 닫지 않는다
-  const logSheet = <MonthlyLogSheet open={logOpen} onOpenChange={setLogOpen} log={log} today={today} />;
 
   // settlement_view — 월 탭 진입(마운트)당 1회. 월 화살표 이동으로는 다시 보내지 않는다.
   const sentRef = useRef(false);
@@ -106,7 +103,6 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
         <ChangeHero
           message={<span data-testid="settlement-empty">아직 기록된 달이 없어요. 앱을 계속 쓰면 다음 달부터 결산이 열려요</span>}
         />
-        {logSheet}
       </div>
     );
   }
@@ -121,7 +117,6 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
           message={<span data-testid="settlement-error">결산을 불러오지 못했어요. 다른 달을 선택해 보세요</span>}
           contentKey={month}
         />
-        {logSheet}
       </div>
     );
   }
@@ -162,13 +157,8 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
 
       {!firstMonth && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 
-      {/* 월별 기록(#127) — 기록된 달(저장된 달 ∪ 이번 달) 2개 이상일 때만. 열 때만 GA 화면 키 1회 */}
-      {!firstMonth && log.recordedCount >= 2 && (
-        <MonthlyLogButton
-          range={`${monthlyLogRangeLabel(log.firstMonth, log.currentMonth)} · ${log.recordedCount}개월 기록`}
-          onOpen={() => { setLogOpen(true); trackScreen("activity:change:monthly-log"); }}
-        />
-      )}
+      {/* 월별 기록(#127 R3) — 기록된 달(저장된 달 ∪ 이번 달) 2개 이상일 때만 인라인 카드. key 없음(월 이동에 리마운트하지 않음) */}
+      {!firstMonth && log.recordedCount >= 2 && <MonthlyLogBlock log={log} today={today} />}
 
       {!firstMonth && (() => {
         // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)
@@ -197,7 +187,6 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
       })()}
 
       <PrepBlock />
-      {logSheet}
     </div>
   );
 }
@@ -222,30 +211,6 @@ export function SettlementAiButton({ name, onOpen }: { name: string; onOpen: () 
       <span className="min-w-0 flex-1">
         <span className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep">AI에게 {name} 변화 물어보기</span>
         <span className="block text-sm text-muted-foreground break-keep">복사해서 외부 AI에 붙여넣기</span>
-      </span>
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-    </button>
-  );
-}
-
-// 월별 기록 행 버튼(#127) — AI 질문 행과 같은 외피·보조 칩(brand 아님). 월 화살표 이동에도 리마운트하지 않는다(key 없음)
-function MonthlyLogButton({ range, onOpen }: { range: string; onOpen: () => void }) {
-  return (
-    <button
-      type="button"
-      data-testid="monthly-log-button"
-      data-screenshot-hide
-      aria-haspopup="dialog"
-      onClick={onOpen}
-      className={`${AI_ROW_SURFACE} flex w-full min-h-14 items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 motion-safe:active:scale-[0.99] motion-safe:transition-[background-color,scale] motion-safe:duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${BODY_ENTER}`}
-      style={{ animationDelay: "120ms", animationFillMode: "backwards" }}
-    >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
-        <Table2 className="size-4" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm sm:text-base font-semibold text-foreground break-keep">월별 기록</span>
-        <span data-testid="monthly-log-range" className="block text-sm text-muted-foreground break-keep tabular-nums">{range}</span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
     </button>
