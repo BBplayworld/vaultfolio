@@ -295,25 +295,62 @@ describe("buildMonthlyLogChanges — 앞 기록 대비 변화(R3)", () => {
     expect(g.stocks).toBe(2_089_081);
   });
 
-  it("자산군 변화 합 = 순자산 변화(±1원) — S9 실사용 픽스처(소수 원화값 포함) 전 구간", () => {
-    const log = buildMonthlyLog(S9, TODAY, LIVE);
-    const ch = buildMonthlyLogChanges(log.rows);
+  // 화면 문자열 → 정수(원). 사용자가 화면 숫자로 직접 빼 보는 값
+  const shownOf = (text: string) => (text === "0원" ? 0 : Number(text.replace(/원$/, "").replace(/,/g, "").replace("\u2212", "-")));
+  const shownNet = (r: MonthlyLogRow) => shownOf(formatMonthlyLogAmount((r as Extract<MonthlyLogRow, { kind: "full" }>).netAsset, "full"));
+  const shownGroup = (r: Extract<MonthlyLogRow, { kind: "full" }>, k: (typeof MONTHLY_LOG_KEYS)[number]) =>
+    shownOf(formatMonthlyLogAmount(r.values[k], "full", k === "loans" || k === "tenantDeposit"));
+  /** 모든 변화가 '이번 표시값 − 앞 표시값'인지(순자산·자산군) — 화면 숫자끼리 모순 0 */
+  const expectShownDiffs = (rows: MonthlyLogRow[]) => {
+    const ch = buildMonthlyLogChanges(rows);
+    const m = byMonth(rows);
     let checked = 0;
-    for (const [, c] of ch) {
-      if (!c.groups) continue;
-      const sum = MONTHLY_LOG_KEYS.reduce((s, k) => s + (c.groups![k] ?? 0), 0);
-      expect(Math.abs(sum - c.net)).toBeLessThanOrEqual(1);
-      for (const k of MONTHLY_LOG_KEYS) expect(Number.isInteger(c.groups[k])).toBe(true);
-      checked++;
+    for (const [month, c] of ch) {
+      const cur = m[month], prev = m[c.vsMonth];
+      expect(c.net).toBe(shownNet(cur) - shownNet(prev));
+      expect(formatMonthlyLogDelta(c.net)).toBe(formatMonthlyLogDelta(shownNet(cur) - shownNet(prev)));
+      if (c.groups) {
+        for (const k of MONTHLY_LOG_KEYS) {
+          expect(c.groups[k]).toBe(shownGroup(cur as never, k) - shownGroup(prev as never, k));
+          expect(Number.isInteger(c.groups[k])).toBe(true);
+        }
+        checked++;
+      }
     }
+    return { ch, checked };
+  };
+
+  it("변화 = 화면 표시값끼리의 차(순자산·자산군) — S9 실사용 픽스처 전 구간", () => {
+    const { checked } = expectShownDiffs(buildMonthlyLog(S9, TODAY, LIVE).rows);
     expect(checked).toBeGreaterThan(0);
-    // 소수 원화값끼리도 반올림 합이 순자산 변화와 같다(최대 잉여법)
-    const frac = buildMonthlyLog(
-      [ok("2026-10", "2026-10-28", bd(100.4, 200.4, 300.4, 0))], T, liveOf(bd(101, 201, 301, 0)),
+  });
+
+  it("소수 원화값: 표시 7,000,001 − 6,000,000 → 변화 +1,000,001(qa R3 관찰 사례), 부채 소수도 표시값 차", () => {
+    const log = buildMonthlyLog(
+      [ok("2026-10", "2026-10-28", bd(300_000_000, 0, 10_000_000, 20_000_000.4, { crypto: 6_000_000 }))],
+      T, liveOf(bd(300_000_000, 0, 10_000_000, 20_500_000.6, { crypto: 7_000_000.6 })),
     );
-    const c = buildMonthlyLogChanges(frac.rows).get("2026-11")!;
-    expect(c.net).toBe(2);
-    expect(MONTHLY_LOG_KEYS.reduce((s, k) => s + (c.groups![k] ?? 0), 0)).toBe(2);
+    const c = buildMonthlyLogChanges(log.rows).get("2026-11")!;
+    expect(formatMonthlyLogAmount((log.rows[0] as Extract<MonthlyLogRow, { kind: "full" }>).values.crypto, "full")).toBe("7,000,001원");
+    expect(c.groups!.crypto).toBe(1_000_001);
+    // 대출 표시 −20,500,001원(−20,500,000.6 반올림) vs −20,000,000원 → −500,001
+    expect(formatMonthlyLogAmount(20_500_000.6, "full", true)).toBe("\u221220,500,001원");
+    expect(c.groups!.loans).toBe(-500_001);
+    expectShownDiffs(log.rows);
+  });
+
+  it("소수 원화값: 자산군 변화 합과 순자산 변화의 차 = 두 줄의 '자산군 표시값 합 − 순자산 표시값' 차(반올림 잔차, 수 원)", () => {
+    // 10월 100.4·200.4·300.4(표시 100·200·300, 합 600) 순자산 601.2(표시 601) → 11월 101·201·301(합 603) 순자산 603
+    const log = buildMonthlyLog([ok("2026-10", "2026-10-28", bd(100.4, 200.4, 300.4, 0))], T, liveOf(bd(101, 201, 301, 0)));
+    const c = buildMonthlyLogChanges(log.rows).get("2026-11")!;
+    expect(c.net).toBe(2); // 603 − 601
+    expect(c.groups).toMatchObject({ realEstate: 1, stocks: 1, cash: 1 }); // 각 줄 표시값 차
+    const gap = (r: MonthlyLogRow) =>
+      MONTHLY_LOG_KEYS.reduce((s, k) => s + shownGroup(r as never, k), 0) - shownNet(r);
+    const sum = MONTHLY_LOG_KEYS.reduce((s, k) => s + (c.groups![k] ?? 0), 0);
+    expect(sum - c.net).toBe(gap(log.rows[0]) - gap(log.rows[1])); // 0 − (−1) = 1
+    expect(sum - c.net).toBe(1);
+    expectShownDiffs(log.rows);
   });
 
   it("순자산 변화 = 결산 Hero 증감(settlementDelta) — 이번 달·지난 달", () => {
@@ -323,5 +360,15 @@ describe("buildMonthlyLogChanges — 앞 기록 대비 변화(R3)", () => {
       const w = resolveSettlementWindow(S9, m, TODAY);
       expect(ch.get(m)!.net).toBe(Math.round(settlementDelta(w, LIVE.netAsset).delta));
     }
+  });
+
+  it("소수 순자산 달: 순자산 변화(표시값 차)는 결산 Hero 증감(원값 차 반올림)과 최대 ±1원 다를 수 있다", () => {
+    // 10월 100.6(표시 101) → 11월 201.4(표시 201): 표시값 차 100, Hero round(100.8) = 101
+    const monthly = [ok("2026-10", "2026-10-28", bd(0, 0, 100.6, 0))];
+    const liveV = liveOf(bd(0, 0, 201.4, 0));
+    const c = buildMonthlyLogChanges(buildMonthlyLog(monthly, T, liveV).rows).get("2026-11")!;
+    const hero = Math.round(settlementDelta(resolveSettlementWindow(monthly, "2026-11", T), liveV.netAsset).delta);
+    expect(c.net).toBe(100);
+    expect(hero).toBe(101);
   });
 });

@@ -95,6 +95,12 @@ export function buildMonthlyLog(
 
 const MINUS = "−"; // U+2212
 
+/**
+ * 화면에 보이는 원 단위 정수 — formatMonthlyLogAmount(full)·formatCurrency와 같은 Math.round(−0 → 0).
+ * 변화는 이 표시값끼리의 차로 만든다: 사용자가 화면 숫자로 직접 빼 본 값 = 표시 변화(대표 요구 '변화 금액까지 정확히').
+ */
+const shownWon = (v: number) => Math.round(v) || 0;
+
 /** 1억 이상 짧은 표기 — 0.01억(100만원) 단위 정수 내림 후 끝 0 제거. 예 230,000,000 → `2.3억원`, −401,000,000 → `-4.01억원` */
 function formatEokShort(v: number): string {
   const hundredths = Math.floor(Math.abs(v) / 1_000_000); // 0.01억 단위 정수
@@ -111,8 +117,9 @@ function formatEokShort(v: number): string {
  * 부채 열은 −+절댓값, 0은 부호 없이 `0원`. 음수 부호는 전부 U+2212.
  */
 export function formatMonthlyLogAmount(value: number, mode: "short" | "full", debt = false): string {
-  if (Math.abs(value) < 0.5) return "0원";
   const v = debt ? -Math.abs(value) : value;
+  // 표시 0 판정은 변화 계산(shownWon)과 같은 반올림 — 부채 −0.5 같은 경계에서 '−0원'이 나오지 않게
+  if (shownWon(v) === 0) return "0원";
   const short = Math.abs(v) >= 100_000_000 ? formatEokShort(v) : formatShortCurrency(v);
   const text = mode === "full" ? formatCurrency(v) : short.replace(/([만억])원$/, "$1");
   return text.replace(/^-/, MINUS);
@@ -130,9 +137,9 @@ export interface MonthlyLogChange {
   vsMonth: string;
   /** 앞 기록과 사이에 기록 없는 달이 있나(문구 '· 9월 대비') */
   skipped: boolean;
-  /** 순자산 변화(원, 반올림) */
+  /** 순자산 변화(원) = 이번 표시값 − 앞 표시값 */
   net: number;
-  /** 자산군 순자산 기여 변화(원). 두 줄 모두 full일 때만, 아니면 null */
+  /** 자산군 순자산 기여 변화(원, 표시값 차). 두 줄 모두 full일 때만, 아니면 null */
   groups: Partial<Record<MonthlyLogKey, number>> | null;
 }
 
@@ -141,24 +148,11 @@ const monthIndex = (m: string) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5,
 const contribution = (k: MonthlyLogKey, v: number) => (MONTHLY_LOG_DEBT_KEYS.has(k) ? -Math.abs(v) : v);
 
 /**
- * 자산군 변화 반올림 — 합이 순자산 변화(반올림)와 같아지도록 최대 잉여법(내림 후 소수부 큰 순 +1).
- * 소수부 있는 자산군만 보정 대상, 맞출 수 없으면(합 검증 허용 오차 1원 등) 각자 반올림.
- */
-function roundGroups(raw: Record<MonthlyLogKey, number>, net: number): Record<MonthlyLogKey, number> {
-  const floors = Object.fromEntries(MONTHLY_LOG_KEYS.map((k) => [k, Math.floor(raw[k])])) as Record<MonthlyLogKey, number>;
-  const fracKeys = MONTHLY_LOG_KEYS.filter((k) => raw[k] - floors[k] > 1e-9)
-    .sort((a, b) => (raw[b] - floors[b]) - (raw[a] - floors[a]));
-  const need = net - MONTHLY_LOG_KEYS.reduce((s, k) => s + floors[k], 0);
-  if (need < 0 || need > fracKeys.length) {
-    return Object.fromEntries(MONTHLY_LOG_KEYS.map((k) => [k, Math.round(raw[k]) || 0])) as Record<MonthlyLogKey, number>;
-  }
-  for (const k of fracKeys.slice(0, need)) floors[k] += 1;
-  return floors;
-}
-
-/**
  * 줄별 앞 기록 대비 변화. rows(최신순)와 같은 월 키 → 변화. 첫 기록 달·gap 줄은 키 없음.
- * 비교 대상 = 바로 앞 기록 달(gap 건너뜀). 자산군 변화 = 순자산 기여(부채 −) 차 — 대출 증가는 음수, 합 = 순자산 변화.
+ * 비교 대상 = 바로 앞 기록 달(gap 건너뜀). 자산군 변화 = 순자산 기여(부채 −) 차 — 대출 증가는 음수.
+ * 순자산·자산군 모두 '표시값(원 반올림)끼리의 차' — 각 줄에서 이번 표시값 − 앞 표시값 = 표시 변화.
+ * 소수 원화값이 있으면 자산군 변화 합과 순자산 변화가 수 원 다를 수 있다(각 표시 금액 합 ≠ 순자산 표시값과 같은 반올림 차).
+ * 결산 Hero 증감은 원값 차를 반올림하므로 소수 달에서 ±1원 다를 수 있다.
  */
 export function buildMonthlyLogChanges(rows: MonthlyLogRow[]): Map<string, MonthlyLogChange> {
   const out = new Map<string, MonthlyLogChange>();
@@ -167,14 +161,13 @@ export function buildMonthlyLogChanges(rows: MonthlyLogRow[]): Map<string, Month
     const row = rows[i];
     if (row.kind === "gap") continue;
     if (prev) {
-      const net = Math.round(row.netAsset - prev.netAsset) || 0;
+      const net = shownWon(row.netAsset) - shownWon(prev.netAsset);
       let groups: MonthlyLogChange["groups"] = null;
       if (row.kind === "full" && prev.kind === "full") {
         const p = prev;
-        const raw = Object.fromEntries(
-          MONTHLY_LOG_KEYS.map((k) => [k, contribution(k, row.values[k]) - contribution(k, p.values[k])]),
+        groups = Object.fromEntries(
+          MONTHLY_LOG_KEYS.map((k) => [k, shownWon(contribution(k, row.values[k])) - shownWon(contribution(k, p.values[k]))]),
         ) as Record<MonthlyLogKey, number>;
-        groups = roundGroups(raw, net);
       }
       out.set(row.month, { vsMonth: prev.month, skipped: monthIndex(row.month) - monthIndex(prev.month) > 1, net, groups });
     }
