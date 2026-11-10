@@ -15,7 +15,7 @@
 - ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · '홈' 제목이 여전히 비어 보이면 `수정: 제목 크기`
 
-**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
+**⏸ (R3 재설계 중, 승인 보류) v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
 - 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
 - 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
@@ -39,8 +39,8 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R2 반영(iOS 스크롤 막대 가림 원인 확정·조치) 완료(0c05de1) → 🟥 대표 재승인 대기 | 11/26 전 | 🟥 대표 승인 |
-| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 로고 R7 최종 시안(8f566d8: 흑백 레이어 S 14.5px·워드마크·인증카드 foreground 반전) → 🟥 대표 시안 승인 대기(승인 시 UI검수·qa·COO 후 머지) | 11/26 전 | 🟥 대표 승인 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 R3: 다이얼로그→페이지 인라인, 월별 변화 금액 색 표시 → UI 재설계 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 대표 R8: Leckerli S 심볼·인증카드 인디고 → 반영 중 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
