@@ -793,7 +793,7 @@ getTodayChipSession(market: "domestic"|"foreign", now?): { phase: "live"|"afterC
   // closed: tradeDate=마지막 거래일, baseDate=그 전 거래일(kr/us-holidays). '기간 수익 종가 기준' 설정과 무관
 getStockChipQuote(stock, refData, now?, gapConfirmed?) → { live, closeDate, numerator, denominator } | null
   // live: currentPrice ÷ refPrice(baseDate ≤ refDate < tradeDate일 때만) / closed: refPrice ÷ prevPrice(refDate=tradeDate·prevDate=baseDate일 때만)
-  // 두 거래일 종가를 못 구하면 null(같은 종가끼리 0.0% 금지). gap은 AFTER_CLOSE_GAP_CONFIRMED[market]일 때만 현재가 사용
+  // 두 거래일 종가를 못 구하면 null(같은 종가끼리 0.0% 금지). gap은 AFTER_CLOSE_GAP_CONFIRMED[market]이면 종가 라벨, 미확인이면 AFTER_CLOSE_GAP_FALLBACK_LIVE(국내 true → live `오늘`, 미국 false → 숨김)
 computeTodayChip(stocks, refData, currentRates, now?) → { rate(%), anyLive, closeDates } | null
   // 현지 가격 등락을 원화 평가액(현재 환율)으로 가중 — 환율 효과 0. 같은 티커 묶음이면 곧 종목 등락률
 todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안 `오늘`/`M/D 종가`, 헤더 `종가 기준`)

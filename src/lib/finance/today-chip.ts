@@ -24,6 +24,10 @@ export interface ChipSession {
 // 마감 전 값일 수 있어 지금은 둘 다 false. 실측으로 확인되면 여기만 true로 바꾼다.
 export const AFTER_CLOSE_GAP_CONFIRMED: Readonly<Record<ChipMarket, boolean>> = { domestic: false, foreign: false };
 
+// 마감 ~ 컷오프 구간 미확인 시 live 견적(`오늘`, main useLivePrice와 같은 값)으로 대체할지.
+// 국내만 true(15:30~16:00 현재가 ≈ 종가). 미국은 KST 06~07시라 애프터마켓 값 혼입 가능 → 숨김 유지.
+export const AFTER_CLOSE_GAP_FALLBACK_LIVE: Readonly<Record<ChipMarket, boolean>> = { domestic: true, foreign: false };
+
 // 칩 라벨 — 한 곳에서만 정의(ui-designer 320 행 높이 실측 뒤 대안으로 바꿀 수 있게, cto Q4)
 // 본안: 종목 `오늘` / `M/D 종가`, 헤더 `오늘` / `종가 기준`
 // 대안: 종목 `종가`, 헤더는 종가일이 하나면 `M/D 종가`, 여럿이면 `종가 기준`
@@ -138,7 +142,12 @@ export function getStockChipQuote(
     return refIsBaseline ? { live: true, closeDate: null, numerator: stock.currentPrice, denominator: ref.refPrice } : null;
   }
   if (s.phase === "afterCloseGap") {
-    if (!gapConfirmed[market] || !refIsBaseline) return null;
+    if (!refIsBaseline) return null;
+    if (!gapConfirmed[market]) {
+      return AFTER_CLOSE_GAP_FALLBACK_LIVE[market]
+        ? { live: true, closeDate: null, numerator: stock.currentPrice, denominator: ref.refPrice }
+        : null;
+    }
     return { live: false, closeDate: s.tradeDate, numerator: stock.currentPrice, denominator: ref.refPrice };
   }
   // 장 종료 후: 종가 응답의 두 거래일 종가로만(현재가 미사용 — 프리·애프터마켓 값 배제)

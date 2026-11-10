@@ -128,13 +128,19 @@ describe("today-chip · 기준 시각표(T1) — 종가 기준 설정 2종 모�
 });
 
 describe("today-chip · 예외 구간(Q6, T2)", () => {
-  it("화 15:45 국내 — 미확인이면 숨김, 확인되면 11/10 종가 = 현재가 vs 11/9", () => {
+  it("화 15:45 국내 — 미확인이면 오늘(현재가 vs 11/9, main 값과 동일), 확인되면 11/10 종가", () => {
     const now = at("2026-11-10T15:45:00");
     const refData = serverDaily(["005930", "AAPL"]);
     expect(getTodayChipSession("domestic", now).phase).toBe("afterCloseGap");
-    check("005930", now, refData, null);
+    check("005930", now, refData, { label: "오늘", base: "2026-11-09" });
     const cur = close("005930", "2026-11-09") * 1.02;
-    const chip = computeTodayChip([kr({ currentPrice: cur })], refData, RATES, now, { domestic: true, foreign: false })!;
+    const st = [kr({ currentPrice: cur })];
+    const fallback = computeTodayChip(st, refData, RATES, now)!;
+    expect(todayChipLabel(fallback, "row")).toBe("오늘");
+    expect(todayChipLabel(fallback, "header")).toBe("오늘");
+    const main = computeDailyStockProfit(st, refData, RATES, { useLivePrice: true }).dailyProfitRate!;
+    expect(fallback.rate).toBeCloseTo(main, 9);
+    const chip = computeTodayChip(st, refData, RATES, now, { domestic: true, foreign: false })!;
     expect(todayChipLabel(chip, "row")).toBe("11/10 종가");
     expect(chip.rate).toBeCloseTo(2, 6);
     check("AAPL", now, refData, { label: "11/9 종가", last: "2026-11-09", prev: "2026-11-06" });
