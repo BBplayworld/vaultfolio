@@ -278,11 +278,11 @@ describe("S4·S5 데이터 계약", () => {
 });
 
 describe("추가 항목·K2·K3", () => {
-  it("K2 매수일 오늘, K3 해외 신규 매입 환율은 일괄 값(없으면 오늘 환율), 국내는 환율 없음", () => {
+  it("K2 매수일 올해 1월 1일(#139 대표 결정, 이전 오늘), K3 해외 신규 매입 환율은 일괄 값(없으면 오늘 환율), 국내는 환율 없음", () => {
     const sc = [screen(0, [row("005930", 3, 70000, { brokerHint: "토스증권" }), row("TSLA", 2, 200, { brokerHint: "토스증권" })])];
     const d = run([], sc);
     const tsla = d.result.stocks.find((s) => s.ticker === "TSLA")!;
-    expect(tsla).toMatchObject({ purchaseDate: TODAY, purchaseExchangeRate: USD, currency: "USD", positionSource: "manual", broker: "토스증권", category: "foreign" });
+    expect(tsla).toMatchObject({ purchaseDate: "2026-01-01", positionEffectiveDate: TODAY, purchaseExchangeRate: USD, currency: "USD", positionSource: "manual", broker: "토스증권", category: "foreign" });
     expect(d.result.stocks.find((s) => s.ticker === "005930")).not.toHaveProperty("purchaseExchangeRate");
     const d2 = run([], sc, { sel: () => ({ fx: 1350 }) });
     expect(d2.result.stocks.find((s) => s.ticker === "TSLA")!.purchaseExchangeRate).toBe(1350);

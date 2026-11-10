@@ -71,11 +71,11 @@ describe("C21 코인", () => {
     expect(res.sell).toBe(-1_000_000);
     expect(res.buy + res.sell).toBe(res.dCost);
   });
-  it("(d) 신규 추가: 이번 달 매수 = 원가, 매수일 오늘, 기존 코인 매수일 승계", () => {
+  it("(d) 신규 추가: 이번 달 매수 = 원가, 매수일 올해 1월 1일(#139), 기존 코인 매수일 승계", () => {
     const after = resync([A], [raw("BTC", 10, 100_000), raw("SOL", 5, 10_000)]);
     const res = causes(data([A]), data(after));
     expect(res.buy).toBe(50_000);
-    expect(after.find((c) => c.symbol === "SOL")!.purchaseDate).toBe(END);
+    expect(after.find((c) => c.symbol === "SOL")!.purchaseDate).toBe("2026-01-01");
     expect(after.find((c) => c.id === "a")).toBe(A);
   });
 });

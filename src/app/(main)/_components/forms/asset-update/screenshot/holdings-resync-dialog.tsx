@@ -768,6 +768,8 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
   const removeScopes = diff.scopes.filter((s) => diff.removes.some((r) => r.scopeKey === s.key));
+  // 새로 추가되는 종목의 매수일 기본값 안내(#139) — 추가 행이 있을 때만
+  const hasNewAdd = counts.add > 0;
   const hasNewForeign = diff.rows.some((r) => resolveRow(r, sel).type === "add" && r.item?.category === "foreign");
   const checkedRemoves = [...sel.remove];
   const foreignDeleteCandidate = diff.removes.some((r) => r.stock.category === "foreign") || diff.kept.some((s) => s.category === "foreign" && checkedRemoves.includes(s.id));
@@ -917,6 +919,12 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
           <span>바뀐 수량·평단은 이번 달 <NR>결산 증감</NR>에 함께 반영돼요</span>
         </p>
+        {hasNewAdd && (
+          <p data-testid="resync-notice-3" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
+            <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
+            <span>새 {T.item}의 매수일은 <NR>올해 1월 1일</NR>로 들어가요. 나중에 수정할 수 있어요</span>
+          </p>
+        )}
       </div>
     </div>
   );

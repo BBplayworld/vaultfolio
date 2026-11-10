@@ -102,10 +102,11 @@ describe("C21 거래 패턴", () => {
     expect(res.buy + res.sell).toBe(res.dCost);
   });
 
-  it("(d) 신규 추가: 매수일이 오늘, 이번 달 매수 = 원가, 기존 종목은 신규 투입으로 잡히지 않는다(예측 구간 포함)", () => {
+  it("(d) 신규 추가: 매수일이 올해 1월 1일(#139), 이번 달 매수 = 원가(정밀 구간), 기존 종목은 신규 투입으로 잡히지 않는다(예측 구간 포함)", () => {
     const after = resync([A], [row("005930", 10, 100_000, hint), row("TSLA", 5, 100, hint)]);
     const added = after.find((s) => s.ticker === "TSLA")!;
-    expect(added.purchaseDate).toBe(END);
+    expect(added.purchaseDate).toBe("2026-01-01");
+    expect(added.positionEffectiveDate).toBe(END);
     const b = data([A]);
     const aD = data(after);
     const res = causes(b, aD);
@@ -113,6 +114,26 @@ describe("C21 거래 패턴", () => {
     expect(res.sell).toBe(0);
     // 예측 구간의 신규 투입 추정은 purchaseDate를 본다: 기존 종목은 승계(불변), 신규만 오늘
     expect(after.find((s) => s.id === "a")!.purchaseDate).toBe(A.purchaseDate);
+  });
+
+  it("(d') #139 예측 구간(시작 스냅샷 원가 없음)에서 신규 추가의 원가는 매수일(1월 1일)이 든 구간에 '매수(추정)'로 잡힌다 — 정밀 구간은 영향 없음", () => {
+    const after = resync([A], [row("005930", 10, 100_000, hint), row("TSLA", 5, 100, hint)]);
+    const cost = 5 * 100 * RATES.USD;
+    const est = (from: string, to: string, fromMonth: string, toMonth: string) => {
+      const attr = computeAttributionBetween(snap(data([A]), fromMonth, from, false), snap(data(after), toMonth, to), {}, data(after), RATES, false)!;
+      return attr.effects.find((e) => e.key === "buy:stock")?.amount ?? 0;
+    };
+    // 이번 달 구간(9/30~11/8): 1월 1일이 구간 밖이라 매수(추정)에서 빠진다(이전: 오늘 매수일이라 포함)
+    expect(est(START, END, "2026-09", "2026-11")).toBe(0);
+    // 올해 구간(12/31~11/8): 1월 1일이 구간 안 → 포함(이전과 같음)
+    expect(est("2025-12-31", END, "2025-12", "2026-11")).toBe(cost);
+    // 1월 월 결산(12/31~1/31, 시작 스냅샷 원가 없음): 그때 없던 종목이 '매수(추정)'로 소급되고 시세에서 같은 금액이 빠진다(합계 불변)
+    const jan = computeAttributionBetween(snap(data([A]), "2025-12", "2025-12-31", false), snap(data([A]), "2026-01", "2026-01-31"), {}, data(after), RATES, false)!;
+    const amt = (k: string) => jan.effects.find((e) => e.key === k)?.amount ?? 0;
+    expect(amt("buy:stock")).toBe(cost);
+    expect(amt("buy:stock") + amt("price")).toBeCloseTo(0, 6);
+    // 정밀 구간(원가 기록 스냅샷)은 원가 차이로 재므로 매수일과 무관
+    expect(causes(data([A]), data(after)).buy).toBe(cost);
   });
 
   it("(e) 해외 평단 변경: 매입 환율 불변, 환차손익 기준 환율은 기존 값", () => {
