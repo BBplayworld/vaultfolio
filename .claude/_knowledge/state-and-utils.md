@@ -525,7 +525,7 @@ getInitials(str): string                // "홍길동" → "홍"
 
 ```typescript
 track(name: GaEvent, params?: GaParams): void     // 이벤트 22종 union. 전송 = { page_title, page_location }만(맞춤 매개변수 전송 없음)
-trackScreen(viewKey): void                        // page_view(/v/<viewKey>, page_title=SCREEN_TITLES), 같은 화면 연속 호출 무시
+trackScreen(viewKey): void                        // 직전 화면이 있으면 직전 title·경로의 screen_leave(비예약 커스텀 이벤트)를 먼저(#131: 직전 화면 참여 시간 _et 귀속), 이어 page_view(/v/<viewKey>, page_title=SCREEN_TITLES). 같은 화면 연속 호출 무시
 featureTitleOf(eventName, params, currentScreenKey): string | undefined  // 순수. 이벤트→사용 기능 이름. 매핑 없으면 현재 화면 title, 그것도 없으면 undefined(title 생략)
 trackThemeMode(mode): void                        // #4.42 theme_mode("다크/라이트 모드 사용") 세션당 모드별 1회, 체험 0. 앱 시작=navigation-context, 전환=settings-page
 trackAssetSave(params, prevAssetCount): void      // asset_save + 기기당 1회 first_asset_saved(gaFlags)
