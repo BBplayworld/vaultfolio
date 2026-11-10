@@ -29,12 +29,12 @@ export const AFTER_CLOSE_GAP_CONFIRMED: Readonly<Record<ChipMarket, boolean>> = 
 export const AFTER_CLOSE_GAP_FALLBACK_LIVE: Readonly<Record<ChipMarket, boolean>> = { domestic: true, foreign: false };
 
 // 칩 라벨 — 한 곳에서만 정의(ui-designer 320 행 높이 실측 뒤 대안으로 바꿀 수 있게, cto Q4)
-// 본안: 종목 `오늘` / `M/D 종가`, 헤더 `오늘` / `종가 기준`
+// 본안: 종목 `오늘` / `M/D 종가`, 헤더 `오늘` / `종가`(UI 검수: `종가 기준`은 375 헤더 줄바꿈 회귀, 설정명과 혼동)
 // 대안: 종목 `종가`, 헤더는 종가일이 하나면 `M/D 종가`, 여럿이면 `종가 기준`
 export const TODAY_CHIP_LABELS = {
   live: "오늘",
   rowClosed: (closeDate: string) => `${formatMonthDay(closeDate)} 종가`,
-  headerClosed: (_closeDates: string[]) => "종가 기준",
+  headerClosed: (_closeDates: string[]) => "종가",
 };
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);

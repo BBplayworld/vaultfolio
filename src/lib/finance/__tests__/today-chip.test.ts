@@ -267,7 +267,7 @@ describe("today-chip · 값 정의(T3·T5·T6·T7)", () => {
     expect(computeTodayChip([us("AAPL")], refData, { USD: 1000, JPY: 500 }, now)!.rate).toBeCloseTo(a1, 9);
   });
 
-  it("T6 헤더 = 종목 칩 등락률의 원화 평가액(현재 환율) 가중, 하나라도 장중이면 `오늘` 아니면 `종가 기준`", () => {
+  it("T6 헤더 = 종목 칩 등락률의 원화 평가액(현재 환율) 가중, 하나라도 장중이면 `오늘` 아니면 `종가`", () => {
     // 화 10:00 — 국내 장중 + 미국 장 종료 후 → 헤더 `오늘`
     let now = at("2026-11-10T10:00:00");
     let refData = serverDaily(["005930", "AAPL", "NVDA"]);
@@ -290,11 +290,11 @@ describe("today-chip · 값 정의(T3·T5·T6·T7)", () => {
     // 칩 없는 종목(기준가 없음)은 합산에서 빠진다
     const withMissing = computeTodayChip([k, a, n, us("AAPL", { ticker: "ZZZZ", id: "z" })], refData, RATES, now)!;
     expect(withMissing.rate).toBeCloseTo(expected, 9);
-    // 화 17:00 — 모두 장 종료 후(국내 11/10, 미국 11/9) → `종가 기준`
+    // 화 17:00 — 모두 장 종료 후(국내 11/10, 미국 11/9) → `종가`
     now = at("2026-11-10T17:00:00");
     refData = serverDaily(["005930", "AAPL"]);
     const h2 = computeTodayChip([kr(), a], refData, RATES, now)!;
-    expect(todayChipLabel(h2, "header")).toBe("종가 기준");
+    expect(todayChipLabel(h2, "header")).toBe("종가");
     expect(h2.closeDates).toEqual(["2026-11-09", "2026-11-10"]);
     // 같은 종목을 여러 증권사에 나눠 가져도 한 값(가중해도 같은 가격비)
     const split = computeTodayChip([a, { ...a, id: "a2", quantity: 7, broker: "다른 증권사" } as Stock], refData, RATES, now)!;
