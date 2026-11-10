@@ -209,3 +209,17 @@ describe("노출 GA 중복 방지 키(#4.36 qa R2)", () => {
     expect(src).toMatch(/if \(lastViewKey\.current !== key\) \{\s*lastViewKey\.current = key;\s*track\("feature_use", \{ category: "home_tip", method: "view" \}\);/);
   });
 });
+
+// #132 시장과 비교 신규 팁(isNew) — 다음 결산 창(11/27~12/10) 동안 결산 팁이 먼저(C38·A24)
+describe("시장과 비교 신규 팁 vs 결산 창", () => {
+  it("창 안(11/27·12/10)은 settlement, 창 밖(11/26·12/11)은 신규 기능 팁", async () => {
+    const { APP_FEATURES } = await import("@/config/app-features");
+    const f = APP_FEATURES.find((x) => x.id === "market-compare")!;
+    expect(f.isNew).toBe(true);
+    h.feature = f;
+    expect(pick("2026-11-27")?.kind).toBe("settlement");
+    expect(pick("2026-12-10")?.kind).toBe("settlement");
+    expect(pick("2026-11-26")?.kind).toBe("feature");
+    expect(pick("2026-12-11")?.kind).toBe("feature");
+  });
+});

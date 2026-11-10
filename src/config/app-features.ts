@@ -3,7 +3,7 @@
 // 신규 공용 기능을 추가하면 이 파일에도 등록한다(누락 시 팁 추천 대상에서 빠진다).
 
 import type { LucideIcon } from "lucide-react";
-import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard } from "lucide-react";
+import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard, ChartNoAxesColumn } from "lucide-react";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { useTaxViewStore } from "@/stores/tax-view-store";
 import { dispatchOpenShareCard } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
@@ -20,6 +20,9 @@ export interface AppFeature {
   action?: () => void; // target 없이 즉시 실행하는 커스텀 동작(인증카드 다이얼로그 오픈 등)
   visitKey?: string; // action형처럼 target이 없어 방문 집계 키를 별도 지정해야 하는 경우
 }
+
+// `코스피·S&P 500` 덩어리가 줄바꿈으로 갈라지지 않게 — `·` 양옆 U+2060(단어 결합자), `S&P`와 `500` 사이 U+00A0(#132, 상수 1곳)
+export const MARKET_PAIR_TEXT = "코스피\u2060·\u2060S&P\u00A0500";
 
 export const APP_FEATURES: AppFeature[] = [
   {
@@ -85,6 +88,14 @@ export const APP_FEATURES: AppFeature[] = [
     description: "성과 탭의 자산 변화에서 순자산 추이와 월말 결산을 확인하세요.",
     icon: LineChart,
     target: { type: "activity", tab: "change" },
+  },
+  {
+    id: "market-compare",
+    title: "시장과 비교",
+    description: `지금 보유한 종목의 등락을 ${MARKET_PAIR_TEXT} 옆에서 봐요`,
+    icon: ChartNoAxesColumn,
+    isNew: true,
+    target: { type: "activity", tab: "change-market" },
   },
   {
     id: "dividend",

@@ -32,18 +32,14 @@ describe("feature-usage", () => {
   });
 
   it("pickRecommendedFeature — isNew 항목이 방문 기록과 무관하게 최우선", () => {
-    // 4.52에서 카탈로그의 isNew를 모두 해제했으므로(#93 p2-3) 테스트 안에서만 한 항목을 신규로 표시해 우선 규칙을 검증한다.
-    const target = APP_FEATURES[APP_FEATURES.length - 1];
-    target.isNew = true;
-    try {
-      recordVisit("share-card");
-      recordVisit("share-card");
-      const picked = pickRecommendedFeature();
-      expect(picked?.isNew).toBe(true);
-      expect(picked?.id).toBe(target.id);
-    } finally {
-      delete target.isNew;
-    }
+    // 4.72(#132)부터 카탈로그의 '시장과 비교'가 isNew — 방문 기록이 있어도 그 항목이 최우선이다.
+    const target = APP_FEATURES.find((f) => f.isNew)!;
+    expect(target.id).toBe("market-compare");
+    recordVisit("activity:change-market");
+    recordVisit("activity:change-market");
+    const picked = pickRecommendedFeature();
+    expect(picked?.isNew).toBe(true);
+    expect(picked?.id).toBe(target.id);
   });
 
   it("pickRecommendedFeature — 신규 기능 dismiss 후엔 방문횟수 오름차순(0회 우선)으로 추천", () => {

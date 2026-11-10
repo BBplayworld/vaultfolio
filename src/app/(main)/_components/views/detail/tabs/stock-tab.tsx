@@ -35,6 +35,7 @@ import { STORAGE_KEYS } from "@/lib/local-storage";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
+import { MarketEntryLine } from "../../activity/market-entry-line";
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -356,7 +357,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip, footer }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
@@ -369,6 +370,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   usdRate?: number;
   disableUsd?: boolean;
   todayChip?: TodayChipView | null;
+  footer?: React.ReactNode; // 상세·주식 화면 전용(인증카드는 넘기지 않음)
 }) {
   const currency = displayCurrency ?? "KRW";
   const fmtFull = maskFn ?? ((v: number) => formatByDisplayCurrency(v, currency, usdRate, "full"));
@@ -383,6 +385,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       formatShort={fmt}
       screenshotMode={screenshotMode}
       shotBig={shotBig}
+      footer={screenshotMode ? undefined : footer}
       headerAction={!screenshotMode ? (
         <div className="min-h-7 flex items-center">
           {onDisplayCurrencyChange && (
@@ -1057,6 +1060,7 @@ export function StockCategorySection({
 
 export function StockTab() {
   const { assetData, deleteStock, deleteStocks, saveData } = useAssetData();
+  const { navigate } = useAssetNavigation();
   const [activeCategory, setActiveCategory] = useState("all");
   const [hasInteracted, setHasInteracted] = useState(() => {
     try { return !!localStorage.getItem(STORAGE_KEYS.collapsibleUsed); } catch { return true; }
@@ -1151,6 +1155,14 @@ export function StockTab() {
           usdRate={exchangeRates.USD}
           disableUsd={!hasForeignStock}
           todayChip={todayChip}
+          footer={
+            <MarketEntryLine
+              variant="stock"
+              testId="stock-market-entry-wrap"
+              period="weekly"
+              onOpen={() => navigate({ type: "activity", tab: "change-market" })}
+            />
+          }
         />
 
         {/* X-Ray 인사이트 스트립 (인증카드 제외) */}

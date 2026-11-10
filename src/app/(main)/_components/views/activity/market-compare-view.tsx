@@ -5,13 +5,11 @@
 // 지수는 /api/finance/market-index(기간·종가 기준만 보냄)를 react-query 메모리에만 둔다. 저장 호출·새 저장 키 0, 금액 표시 0.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useQueries } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import { fetchProfitRef, getDailyClosingRefDate, type ProfitBasis } from "@/lib/finance/profit-utils";
-import type { MarketIndexResponse } from "@/app/api/finance/market-index/route";
+import { fetchProfitRef, type ProfitBasis } from "@/lib/finance/profit-utils";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import {
   COMPARE_PERIODS,
@@ -23,7 +21,6 @@ import {
   computeNotComparedRows,
   formatCompareDiff,
   formatCompareRate,
-  loadKospiPeerCodes,
   rateTenths,
   summarizeCompare,
   type ClassifiedHoldings,
@@ -35,7 +32,7 @@ import {
   type PeriodCell,
   type PeriodRefs,
 } from "@/lib/finance/market-compare";
-import { useProfitBasisStore } from "@/stores/profit-basis-store";
+import { useCompareBasis, useDailyRefToken, useKospiPeerCodes, useMarketIndexRefs } from "@/hooks/use-market-compare";
 import { useAssetNavigation, type ChangePeriod } from "../../layout/navigation/navigation-context";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { InlineSelector } from "../../layout/ui/inline-selector";
@@ -44,7 +41,6 @@ import { getMultiplier } from "../detail/asset-detail-tabs";
 
 const HAIRLINE = "border-border dark:border-border/40";
 const SKELETON = "inline-block h-4 rounded bg-muted motion-safe:animate-pulse";
-const NULL_INDEX: MarketIndexResponse = { KOSPI: null, SPX: null };
 const LIST_PERIODS = COMPARE_PERIODS.map((p) => ({ value: p, label: COMPARE_PERIOD_LABEL[p], testId: `market-list-period-${p}` }));
 const TO_CHANGE_PERIOD: Record<ComparePeriod, ChangePeriod> = { daily: "day", weekly: "week", monthly: "month" };
 const BLOCK_HEAD: Record<CompareMarket, string> = { kr: "코스피와 비교한 국내 주식", us: "S&P 500과 비교한 미국 주식" };
@@ -69,10 +65,9 @@ const MAX_RETRY = 2;
 const rateTone = (rate: number) => (rateTenths(rate) === 0 ? "text-muted-foreground" : getProfitLossColor(rate));
 
 // 종목 기준가 — 기간을 순차로(하루→1주→1개월) 기존 fetchProfitRef로 받는다. 키 없음 = 조회 중
-function useStockRefs(tickerList: string, basis: ProfitBasis, enabled: boolean, resetVersion: number) {
+function useStockRefs(tickerList: string, basis: ProfitBasis, enabled: boolean, resetVersion: number, dailyToken: string) {
   const [state, setState] = useState<{ key: string; refs: PeriodRefs; kisUnavailable: boolean }>({ key: "", refs: {}, kisUnavailable: false });
   const [attempt, setAttempt] = useState(0);
-  const dailyToken = `${getDailyClosingRefDate("domestic")}_${getDailyClosingRefDate("foreign")}`;
   const key = `${basis}:${dailyToken}:${tickerList}:${resetVersion}`;
 
   useEffect(() => {
@@ -114,46 +109,15 @@ function useStockRefs(tickerList: string, basis: ProfitBasis, enabled: boolean, 
   }, [enabled, tickerList, basis, key, attempt]);
 
   const current = state.key === key ? state : { refs: {}, kisUnavailable: false };
-  return { refs: current.refs as PeriodRefs, kisUnavailable: current.kisUnavailable, dailyToken };
-}
-
-// 지수 기준가 — 실패·한도·점검은 null(= 시장 값 없음)로 받는다
-async function fetchMarketIndex(period: ComparePeriod, basis: ProfitBasis, signal: AbortSignal): Promise<MarketIndexResponse> {
-  try {
-    const res = await fetch(`/api/finance/market-index?period=${period}&basis=${basis}`, { signal });
-    if (!res.ok || res.headers.get("X-KIS-Unavailable") === "1") return NULL_INDEX;
-    const data = (await res.json()) as Partial<MarketIndexResponse>;
-    return { KOSPI: data.KOSPI ?? null, SPX: data.SPX ?? null };
-  } catch (e) {
-    if (signal.aborted) throw e;
-    return NULL_INDEX;
-  }
+  return { refs: current.refs as PeriodRefs, kisUnavailable: current.kisUnavailable };
 }
 
 export function MarketCompareView() {
   const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const { navigate } = useAssetNavigation();
-  const basis = useProfitBasisStore((s) => s.basis);
-  const basisHydrated = useProfitBasisStore((s) => s.hydrated);
-  const hydrateBasis = useProfitBasisStore((s) => s.hydrate);
-  useEffect(() => { hydrateBasis(); }, [hydrateBasis]);
-
-  // 컷오프 경계 자동 재조회 — 기준일 토큰은 렌더 때 다시 계산되므로 1분 tick으로 재렌더만 유도(profit-chart와 같은 방식)
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  // K1 생성 목록(동적 import). 불러오기에 실패하면 국내는 전부 '비교하지 않은 종목'(틀린 짝보다 빈 짝)
-  const [peerCodes, setPeerCodes] = useState<ReadonlySet<string> | null>(null);
-  useEffect(() => {
-    let alive = true;
-    loadKospiPeerCodes()
-      .then((s) => { if (alive) setPeerCodes(s); })
-      .catch(() => { if (alive) setPeerCodes(new Set()); });
-    return () => { alive = false; };
-  }, []);
+  const { basis, hydrated: basisHydrated } = useCompareBasis();
+  const dailyToken = useDailyRefToken();
+  const peerCodes = useKospiPeerCodes();
 
   // 자산 변화(profit-chart)와 같은 티커 목록 → 같은 캐시 키(상장폐지·비상장 제외)
   const tickerList = useMemo(
@@ -173,21 +137,8 @@ export function MarketCompareView() {
     return classifyHoldings([...assetData.stocks].sort((a, b) => value(b) - value(a)), peerCodes);
   }, [assetData, peerCodes, exchangeRates]);
 
-  const { refs: stockRefs, kisUnavailable, dailyToken } = useStockRefs(tickerList, basis, basisHydrated && !!classified, dataResetVersion);
-  const indexQueries = useQueries({
-    queries: COMPARE_PERIODS.map((period) => ({
-      queryKey: ["market-index", period, basis, dailyToken],
-      queryFn: ({ signal }: { signal: AbortSignal }) => fetchMarketIndex(period, basis, signal),
-      staleTime: 5 * 60 * 1000,
-      retry: false,
-      enabled: basisHydrated,
-    })),
-  });
-  const [idxDaily, idxWeekly, idxMonthly] = indexQueries.map((q) => q.data);
-  const indexRefs = useMemo<PeriodRefs<MarketIndexResponse>>(
-    () => ({ daily: idxDaily, weekly: idxWeekly, monthly: idxMonthly }),
-    [idxDaily, idxWeekly, idxMonthly],
-  );
+  const { refs: stockRefs, kisUnavailable } = useStockRefs(tickerList, basis, basisHydrated && !!classified, dataResetVersion, dailyToken);
+  const indexRefs = useMarketIndexRefs(basis, basisHydrated, dailyToken);
 
   const blocks = useMemo(
     () => (classified ? computeMarketCompare(classified, stockRefs, indexRefs) : []),
