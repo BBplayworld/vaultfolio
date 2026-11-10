@@ -180,6 +180,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   }, [diff, removeOv, include, pick, qty, tickers, fxText]);
   const counts = useMemo(() => summarize(diff, sel), [diff, sel]);
   const changes = changeCount(counts);
+  // 실제로 새로 만들어질 항목 수(이어받기 제외) — 매수일 1월 1일 안내 조건(#139 O1)
+  const freshAdds = useMemo(() => applyResync(existing, diff, sel, { today: todayKst(), usdRate, now: 0 }).addedIds.length, [existing, diff, sel, usdRate]);
 
   // ── 닫기·초기화 ─────────────────────────────────────────────────────
   const resetAll = () => {
@@ -423,6 +425,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               diff={diff}
               sel={sel}
               counts={counts}
+              freshAdds={freshAdds}
               include={include}
               setInclude={setInclude}
               setRemoveOv={setRemoveOv}
@@ -740,6 +743,8 @@ interface PreviewProps {
   diff: DiffResult;
   sel: ResyncSelection;
   counts: ResyncCounts;
+  /** 이어받기를 뺀 실제 신규 생성 건수 */
+  freshAdds: number;
   include: Set<string>;
   setInclude: React.Dispatch<React.SetStateAction<Set<string>>>;
   setRemoveOv: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
@@ -751,7 +756,7 @@ interface PreviewProps {
   usdRate: number;
 }
 
-function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
+function PreviewStep({ diff, sel, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
   const T = useT();
   const kind = useKind();
   const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
@@ -768,8 +773,8 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
   const removeScopes = diff.scopes.filter((s) => diff.removes.some((r) => r.scopeKey === s.key));
-  // 새로 추가되는 종목의 매수일 기본값 안내(#139) — 추가 행이 있을 때만
-  const hasNewAdd = counts.add > 0;
+  // 새로 추가되는 종목의 매수일 기본값 안내(#139) — 이어받기를 뺀 실제 신규 생성이 있을 때만(O1)
+  const hasNewAdd = freshAdds > 0;
   const hasNewForeign = diff.rows.some((r) => resolveRow(r, sel).type === "add" && r.item?.category === "foreign");
   const checkedRemoves = [...sel.remove];
   const foreignDeleteCandidate = diff.removes.some((r) => r.stock.category === "foreign") || diff.kept.some((s) => s.category === "foreign" && checkedRemoves.includes(s.id));

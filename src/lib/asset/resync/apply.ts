@@ -96,6 +96,19 @@ export interface ApplyResult {
 /** 맞추기로 새로 추가되는 종목의 매수일 기본값 = 그해 1월 1일(today는 KST YYYY-MM-DD). 올해 배당이 빠지지 않게 하고 상세에서 고칠 수 있다(#139) */
 export const resyncNewPurchaseDate = (today: string): string => `${today.slice(0, 4)}-01-01`;
 
+/**
+ * 결산 예측 구간(시작 스냅샷에 원가 없음)의 신규 투입 추정일(#139 qa D1).
+ * 맞추기로 새로 만든 항목(id `stock_import_<ms>_N`/`crypto_import_<ms>_N`)이 매수일 기본값(만든 해 1월 1일)을 그대로 갖고 있으면
+ * 실제로 자산에 들어온 날 = 만든 날(KST)로 본다 — 1월 1일을 쓰면 지난 1월 결산에 없던 매수가 소급되고 이번 달 매수가 시세로 읽힌다.
+ * 그 밖(사용자가 매수일을 고친 항목·이어받은 기존 항목·직접 등록)은 purchaseDate 그대로. 상세 매수일·배당은 이 함수를 쓰지 않는다.
+ */
+export function resyncInflowDate(s: { id: string; purchaseDate: string }): string {
+  const m = /^(?:stock|crypto)_import_(\d{10,})_/.exec(s.id);
+  if (!m) return s.purchaseDate;
+  const created = new Date(Number(m[1]) + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  return s.purchaseDate === resyncNewPurchaseDate(created) && s.purchaseDate < created ? created : s.purchaseDate;
+}
+
 const isForeignMarket = (c: Stock["category"]) => c === "foreign";
 
 /**

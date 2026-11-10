@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyResync, buildUndoEntries, computeDiff, cryptoToStock, defaultRemoveIds, matchExchangeHint, mergeScreens,
-  parsedCryptoToRaw, planUndo, resolveScreens, resyncNewPurchaseDate, stocksToCrypto,
+  parsedCryptoToRaw, planUndo, resolveScreens, resyncInflowDate, resyncNewPurchaseDate, stocksToCrypto,
 } from "..";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { assetDataSchema, stockSchema } from "@/types/asset";
@@ -195,5 +195,39 @@ describe("데이터 안전", () => {
     expect(entries.find((e) => e.key === "stocks:a")?.kind).toBe("modified");
     const u = planUndo(entries, data(result.stocks));
     expect(u.data.stocks).toEqual(ex);
+  });
+});
+
+describe("결산 예측 투입일 resyncInflowDate(#139 qa D1)", () => {
+  const at = (date: string) => Date.parse(`${date}T03:00:00Z`); // KST 정오
+  const base = (id: string, purchaseDate: string) => ({ id, purchaseDate });
+  it("맞추기로 새로 만든 항목(매수일 기본값 그대로) → 만든 날(KST)", () => {
+    const ex = [st("a", "005930", "domestic", "토스증권", 1, 1)];
+    const r = applyResync(ex, run(ex, [screen(0, [row("005930", 1, 1, { brokerHint: "토스증권" }), row("000660", 1, 1, { brokerHint: "토스증권" })])]).diff, { ...emptySel() }, { today: "2026-11-10", usdRate: USD, now: at("2026-11-10") });
+    const n = r.stocks.find((s) => s.ticker === "000660")!;
+    expect(n.purchaseDate).toBe("2026-01-01");
+    expect(resyncInflowDate(n)).toBe("2026-11-10");
+    // KST 자정 직후(UTC 전날)도 KST 날짜
+    expect(resyncInflowDate(base(`stock_import_${Date.parse("2026-11-09T15:30:00Z")}_0`, "2026-01-01"))).toBe("2026-11-10");
+  });
+  it("이어받은 기존 항목·직접 등록·첫 등록·매수일을 고친 항목에는 걸리지 않는다", () => {
+    // 이어받기: 원래 id·원래 매수일
+    expect(resyncInflowDate(base("a", "2025-03-02"))).toBe("2025-03-02");
+    // 이어받은 옛 첫 등록 항목(id 만든 날 3월, 매수일 = 만든 날)
+    expect(resyncInflowDate(base(`stock_import_${at("2026-03-05")}_0`, "2026-03-05"))).toBe("2026-03-05");
+    // 1월 1일에 만든 항목(매수일 = 만든 날)
+    expect(resyncInflowDate(base(`stock_import_${at("2026-01-01")}_0`, "2026-01-01"))).toBe("2026-01-01");
+    // 사용자가 매수일을 고친 새 항목
+    expect(resyncInflowDate(base(`stock_import_${at("2026-11-10")}_0`, "2025-06-01"))).toBe("2025-06-01");
+    // 수정 전 맞추기 항목(매수일 = 만든 날)
+    expect(resyncInflowDate(base(`stock_import_${at("2026-11-08")}_1`, "2026-11-08"))).toBe("2026-11-08");
+    // 코인 첫 등록 id
+    expect(resyncInflowDate(base(`crypto_import_${at("2026-11-10")}_0`, "2026-11-10"))).toBe("2026-11-10");
+    expect(resyncInflowDate(base("1730000000000", "2026-01-01"))).toBe("2026-01-01");
+  });
+  it("이어받기 결과 항목은 매수일 그대로(판별 미해당)", () => {
+    const a = st("a", "005930", "isa", "", 10, 70000);
+    const { result } = run([a], [screen(0, [row("005930", 12, 71000, { brokerHint: "토스증권" })])], { sel: () => ({ remove: new Set(["a"]) }) });
+    expect(resyncInflowDate(result.stocks[0])).toBe("2025-03-02");
   });
 });
