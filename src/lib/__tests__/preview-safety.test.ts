@@ -159,6 +159,11 @@ describe("6. 유형·개수·거래", () => {
       return sum !== s.netAsset;
     });
     expect(gap).toBe(true);
+    // 지난 달(@M-1) 기록은 합 일치 — 데모 기본 펼침 이번 달 월별 기록 패널에 자산군 변화가 보이게(COO R3 F2)
+    const sorted = [...p.snapshots.monthly].sort((x, y) => String(x.month).localeCompare(String(y.month)));
+    const prev = sorted[sorted.length - 2];
+    const pb = prev.breakdown as Record<string, number>;
+    expect(pb.realEstate + pb.stocks + pb.crypto + pb.cash - pb.loans - (pb.tenantDeposit ?? 0)).toBe(prev.netAsset);
   });
   it("최신화 메타: 현금·대출 30일 초과, 주식·코인 최근", () => {
     const now = Date.parse("2026-10-27T00:00:00Z");

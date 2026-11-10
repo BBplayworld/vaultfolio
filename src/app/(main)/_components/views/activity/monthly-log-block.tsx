@@ -79,8 +79,8 @@ function GroupPanel({ row, prev, change, columns }: {
             <span className={`break-keep ${MUTED}`}>{MONTHLY_LOG_LABELS[k]}</span>
             <span className="flex flex-col items-end text-sm tabular-nums whitespace-nowrap sm:flex-row sm:items-baseline sm:gap-4">
               <span className="text-foreground sm:text-right">{formatMonthlyLogAmount(row.values[k], "full", MONTHLY_LOG_DEBT_KEYS.has(k))}</span>
-              {/* sm↑ 한 줄 배치: 변화 열 폭 고정(최대 +999,999,999원 ≈110px) → 금액·변화 우측 끝이 모든 줄에서 일치. <sm 2줄 배치는 폭 고정 없음 */}
-              {d !== undefined && <span className={`sm:w-28 sm:shrink-0 sm:text-right ${deltaTone(d)}`}>{formatMonthlyLogDelta(d)}</span>}
+              {/* sm↑ 한 줄 배치: 변화 열 최소 폭(+999,999,999원 ≈110px) → 금액·변화 우측 끝이 모든 줄에서 일치, 10억 이상 변화는 열이 늘어나 넘치지 않음(COO R3 F3). <sm 2줄 배치는 폭 고정 없음 */}
+              {d !== undefined && <span className={`sm:min-w-28 sm:shrink-0 sm:text-right ${deltaTone(d)}`}>{formatMonthlyLogDelta(d)}</span>}
             </span>
           </div>
         );

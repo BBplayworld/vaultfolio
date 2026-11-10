@@ -6,8 +6,8 @@ import {
 } from "../monthly-log";
 import { resolveSettlementWindow, shiftMonth } from "../settlement";
 import { buildLiveAttributionCurr } from "../asset-report";
-import { computeNetAsset } from "@/contexts/asset-data-context";
-import { settlementDelta } from "@/app/(main)/_components/views/activity/change-hero";
+import { computeAssetCost, computeNetAsset } from "@/contexts/asset-data-context";
+import { computeSettlementCauses, settlementDelta } from "@/app/(main)/_components/views/activity/change-hero";
 import type { AssetData, MonthlyAssetSnapshot, SnapshotBreakdown } from "@/types/asset";
 
 const RATES = { USD: 1400, JPY: 900 };
@@ -362,13 +362,66 @@ describe("buildMonthlyLogChanges — 앞 기록 대비 변화(R3)", () => {
     }
   });
 
-  it("소수 순자산 달: 순자산 변화(표시값 차)는 결산 Hero 증감(원값 차 반올림)과 최대 ±1원 다를 수 있다", () => {
-    // 10월 100.6(표시 101) → 11월 201.4(표시 201): 표시값 차 100, Hero round(100.8) = 101
+  it("소수 순자산 달도 순자산 변화(표시값 차) = 결산 Hero 증감 = Hero 끝 − 시작 화면 금액(COO R3 F1)", () => {
+    // 10월 100.6(표시 101) → 11월 201.4(표시 201): 표시값 차 100, Hero도 round(201.4) − round(100.6) = 100
     const monthly = [ok("2026-10", "2026-10-28", bd(0, 0, 100.6, 0))];
     const liveV = liveOf(bd(0, 0, 201.4, 0));
     const c = buildMonthlyLogChanges(buildMonthlyLog(monthly, T, liveV).rows).get("2026-11")!;
-    const hero = Math.round(settlementDelta(resolveSettlementWindow(monthly, "2026-11", T), liveV.netAsset).delta);
+    const { prevValue, currValue, delta } = settlementDelta(resolveSettlementWindow(monthly, "2026-11", T), liveV.netAsset);
     expect(c.net).toBe(100);
-    expect(hero).toBe(101);
+    expect(delta).toBe(100);
+    expect(delta).toBe(Math.round(currValue) - Math.round(prevValue));
+  });
+});
+
+// C48(COO R3 F1) — Hero 증감을 화면 금액 차(round(끝) − round(시작))로 바꿔도 원인 목록은 이전(b6b90d8: 원값 차)과
+// '기록 안 된 변화' 최대 1원 외에는 같다. 소수 원화값 픽스처(해외주식×환율·코인 소수수량)로 causes 자체를 비교한다.
+describe("C48 — settlementDelta 화면 금액 차 전환 전후 원인 목록", () => {
+  const R_OCT = { USD: 1387.45, JPY: 900 };
+  const R_NOV = { USD: 1391.27, JPY: 900 };
+  const base = (): AssetData => ({
+    realEstate: [], loans: [], physicalAssets: [], yearlyNetAssets: [], transactions: [], cashTransactions: [], loanTransactions: [], cryptoTransactions: [],
+    stocks: [{ id: "s1", category: "foreign", name: "애플", ticker: "AAPL", quantity: 3, averagePrice: 170.11, currentPrice: 190.37, currency: "USD", purchaseDate: "2024-06-02", purchaseExchangeRate: 1300 }],
+    crypto: [{ id: "c1", name: "비트코인", symbol: "BTC", quantity: 0.0123457, averagePrice: 90_000_000, currentPrice: 101_234_567, purchaseDate: "2024-02-01" }],
+    cash: [{ id: "k1", type: "bank", name: "통장", balance: 1_000_000, currency: "KRW" }],
+    lastUpdated: "2026-10-28T09:00:00.000Z",
+  }) as unknown as AssetData;
+  const mkSnap = (d: AssetData, r: typeof R_OCT): MonthlyAssetSnapshot => {
+    const n = computeNetAsset(d, r);
+    const c = computeAssetCost(d, r);
+    const usd = d.stocks.reduce((s, x) => s + (x.currency === "USD" ? x.quantity * x.currentPrice * r.USD : 0), 0);
+    return {
+      month: "2026-10", date: "2026-10-28", netAsset: n.netAsset, financialAsset: n.financialAsset,
+      breakdown: { realEstate: n.realEstateValue, stocks: n.stockValue, crypto: n.cryptoValue, cash: n.cashValue, loans: n.loanBalance, tenantDeposit: n.tenantDepositTotal, physical: n.physicalValue },
+      fx: { USD: r.USD, JPY: r.JPY }, fxBase: { USD: usd, JPY: 0 },
+      cost: { total: c.realEstateCost + c.physicalCost + c.stockCost + c.cryptoCost + n.cashValue, stock: c.stockCost, crypto: c.cryptoCost, realEstate: c.realEstateCost, physical: c.physicalCost },
+    };
+  };
+
+  it("소수 달: 시세·환율 항목 동일, 기록 안 된 변화만 ≤1원 차, 합계 = 새 Hero 증감", () => {
+    const oct = base();
+    const nov = base();
+    nov.stocks = nov.stocks.map((s) => ({ ...s, currentPrice: 197.83 }));
+    nov.crypto = nov.crypto.map((c) => ({ ...c, currentPrice: 103_456_814 }));
+    nov.cash = nov.cash.map((c) => ({ ...c, balance: 1_500_000 })); // 기록 없는 현금 증가 → 기록 안 된 변화
+    const snaps = [mkSnap(oct, R_OCT)];
+    const n = computeNetAsset(nov, R_NOV);
+    const c = computeAssetCost(nov, R_NOV);
+    const summaryNov = { ...n, ...c } as unknown as Parameters<typeof buildLiveAttributionCurr>[2];
+    const live = buildLiveAttributionCurr(nov, R_NOV, summaryNov);
+    const w = resolveSettlementWindow(snaps, "2026-11", "2026-11-15");
+    const { prevValue, currValue, delta } = settlementDelta(w, n.netAsset);
+    // 픽스처가 실제로 '원값 차 반올림 ≠ 화면 금액 차'인 달인지(아니면 비교가 의미 없음)
+    expect(prevValue % 1).not.toBe(0);
+    expect(Math.round(currValue - prevValue)).not.toBe(delta);
+    const args = { start: w.start, end: w.end, live, startDate: w.startDate, endDate: w.endDate, liveCash: n.cashValue, exchangeHistory: {}, assetData: nov, rates: R_NOV };
+    const before = computeSettlementCauses({ ...args, deltaNet: currValue - prevValue }).mapped; // b6b90d8
+    const after = computeSettlementCauses({ ...args, deltaNet: delta }).mapped;
+    const amt = (m: typeof after, k: string) => m.causes.find((x) => x.key === k)?.amount ?? 0;
+    expect(after.causes.filter((x) => x.key !== "unrecorded")).toEqual(before.causes.filter((x) => x.key !== "unrecorded"));
+    expect(Math.abs(amt(after, "unrecorded") - amt(before, "unrecorded"))).toBeLessThanOrEqual(1);
+    expect(after.causes.map((x) => x.key)).toEqual(before.causes.map((x) => x.key));
+    expect(after.deltaNet).toBe(delta);
+    expect(after.causes.reduce((s, x) => s + x.amount, 0)).toBe(delta);
   });
 });

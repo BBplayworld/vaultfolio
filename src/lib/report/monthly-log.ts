@@ -152,7 +152,7 @@ const contribution = (k: MonthlyLogKey, v: number) => (MONTHLY_LOG_DEBT_KEYS.has
  * 비교 대상 = 바로 앞 기록 달(gap 건너뜀). 자산군 변화 = 순자산 기여(부채 −) 차 — 대출 증가는 음수.
  * 순자산·자산군 모두 '표시값(원 반올림)끼리의 차' — 각 줄에서 이번 표시값 − 앞 표시값 = 표시 변화.
  * 소수 원화값이 있으면 자산군 변화 합과 순자산 변화가 수 원 다를 수 있다(각 표시 금액 합 ≠ 순자산 표시값과 같은 반올림 차).
- * 결산 Hero 증감은 원값 차를 반올림하므로 소수 달에서 ±1원 다를 수 있다.
+ * 결산 Hero 증감(settlementDelta)도 같은 표시값 차라 순자산 변화 = Hero 증감(COO R3 F1).
  */
 export function buildMonthlyLogChanges(rows: MonthlyLogRow[]): Map<string, MonthlyLogChange> {
   const out = new Map<string, MonthlyLogChange>();
