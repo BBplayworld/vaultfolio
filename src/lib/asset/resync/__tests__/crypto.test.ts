@@ -38,9 +38,9 @@ describe("어댑터", () => {
     expect(coins[1]).toBe(b);
     expect(coins[0]).toEqual({ ...a, quantity: 1.5, positionSource: "manual", positionEffectiveDate: TODAY });
   });
-  it("신규 코인: 매수일 오늘, 거래소=장 거래소, 매입 환율 필드 없음", () => {
+  it("신규 코인: 매수일 올해 1월 1일(#139), 거래소=장 거래소, 매입 환율 필드 없음", () => {
     const { coins } = run([], [scr(0, [raw("XRP", 100, 800, "업비트")])]);
-    expect(coins[0]).toMatchObject({ symbol: "XRP", purchaseDate: TODAY, exchange: "업비트", quantity: 100, positionSource: "manual" });
+    expect(coins[0]).toMatchObject({ symbol: "XRP", purchaseDate: "2026-01-01", positionEffectiveDate: TODAY, exchange: "업비트", quantity: 100, positionSource: "manual" });
     expect(coins[0]).not.toHaveProperty("purchaseExchangeRate");
   });
   it("달러 화면은 기존 가져오기처럼 오늘 환율로 원화 환산", () => {

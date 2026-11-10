@@ -4,6 +4,7 @@
 // 투자 조언 아님 — 사용자 자신의 자산의 사실·구조·변화만 계산
 
 import { cashLinkId } from "@/lib/trade/linked-record";
+import { resyncInflowDate } from "@/lib/asset/resync/apply";
 import { deriveBaseSnapshot, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 
@@ -655,7 +656,8 @@ function estimatePeriodInflows(
   let stock = 0;
   for (const s of data.stocks) {
     if (tradedStockIds.has(s.id)) continue;
-    if (!inPeriod(s.purchaseDate)) continue;
+    // 맞추기로 새로 만든 항목은 매수일 기본값(1월 1일) 대신 만든 날을 투입일로 본다(#139)
+    if (!inPeriod(resyncInflowDate(s))) continue;
     // 매입 시점 환율 우선(purchaseExchangeRate), 없으면 현재 환율로 환산 (JPY는 100엔당)
     const pr = s.purchaseExchangeRate && s.purchaseExchangeRate > 0 ? s.purchaseExchangeRate : undefined;
     const mul = s.currency === "USD" ? (pr ?? rates.USD)
@@ -666,7 +668,7 @@ function estimatePeriodInflows(
   let crypto = 0;
   for (const c of data.crypto) {
     if (tradedCryptoIds.has(c.id)) continue;
-    if (inPeriod(c.purchaseDate)) crypto += c.averagePrice * c.quantity;
+    if (inPeriod(resyncInflowDate(c))) crypto += c.averagePrice * c.quantity;
   }
   let realEstate = 0;
   for (const r of data.realEstate) {

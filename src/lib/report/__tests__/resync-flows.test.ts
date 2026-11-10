@@ -39,7 +39,8 @@ function resync(existing: Stock[], items: ReturnType<typeof row>[], opts: { remo
   const sel = { ...emptySel(), remove: defaultRemoveIds(diff) };
   // 사용자가 유지 묶음·삭제 후보에서 직접 체크한 삭제
   for (const id of opts.remove ?? []) sel.remove.add(id);
-  return applyResync(existing, diff, sel, { today: END, usdRate: RATES.USD, now: 1 }).stocks;
+  // now = 맞춘 날(KST 정오) — 새 항목 id에 만든 시각이 들어간다(#139 예측 투입일)
+  return applyResync(existing, diff, sel, { today: END, usdRate: RATES.USD, now: Date.parse(`${END}T03:00:00Z`) }).stocks;
 }
 const causes = (before: AssetData, after: AssetData) => {
   const prev = snap(before, "2026-09", START);
@@ -102,10 +103,11 @@ describe("C21 거래 패턴", () => {
     expect(res.buy + res.sell).toBe(res.dCost);
   });
 
-  it("(d) 신규 추가: 매수일이 오늘, 이번 달 매수 = 원가, 기존 종목은 신규 투입으로 잡히지 않는다(예측 구간 포함)", () => {
+  it("(d) 신규 추가: 매수일이 올해 1월 1일(#139), 이번 달 매수 = 원가(정밀 구간), 기존 종목은 신규 투입으로 잡히지 않는다(예측 구간 포함)", () => {
     const after = resync([A], [row("005930", 10, 100_000, hint), row("TSLA", 5, 100, hint)]);
     const added = after.find((s) => s.ticker === "TSLA")!;
-    expect(added.purchaseDate).toBe(END);
+    expect(added.purchaseDate).toBe("2026-01-01");
+    expect(added.positionEffectiveDate).toBe(END);
     const b = data([A]);
     const aD = data(after);
     const res = causes(b, aD);
@@ -113,6 +115,40 @@ describe("C21 거래 패턴", () => {
     expect(res.sell).toBe(0);
     // 예측 구간의 신규 투입 추정은 purchaseDate를 본다: 기존 종목은 승계(불변), 신규만 오늘
     expect(after.find((s) => s.id === "a")!.purchaseDate).toBe(A.purchaseDate);
+  });
+
+  it("(d') #139 qa D1: 새 종목 매수일이 1월 1일이어도 예측 구간(시작 스냅샷 원가 없음) 원인은 main(매수일=맞춘 날)과 같다 — 이번 달·연·1월 결산·정밀 4구간", () => {
+    const after = resync([A], [row("005930", 10, 100_000, hint), row("TSLA", 5, 100, hint)]);
+    const added = after.find((s) => s.ticker === "TSLA")!;
+    expect(added.purchaseDate).toBe("2026-01-01"); // 상세·배당용 매수일은 1월 1일 그대로
+    // main 동작 재현: 같은 결과에서 새 종목 매수일만 맞춘 날
+    const mainLike = after.map((s) => (s.id === added.id ? { ...s, purchaseDate: END } : s));
+    const cost = 5 * 100 * RATES.USD;
+    const effectsOf = (stocks: Stock[], from: [string, string], to: [string, string], endHas: boolean) =>
+      computeAttributionBetween(snap(data([A]), from[0], from[1], false), snap(data(endHas ? stocks : [A]), to[0], to[1]), {}, data(stocks), RATES, false)!.effects;
+    const buy = (e: ReturnType<typeof effectsOf>) => e.find((x) => x.key === "buy:stock")?.amount ?? 0;
+    // 이번 달 예측(9/30~11/8): main과 같이 매수 +cost, 시세로 새지 않음
+    const month = effectsOf(after, ["2026-09", START], ["2026-11", END], true);
+    expect(month).toEqual(effectsOf(mainLike, ["2026-09", START], ["2026-11", END], true));
+    expect(buy(month)).toBe(cost);
+    // 연 예측(12/31~11/8): main과 같음
+    const year = effectsOf(after, ["2025-12", "2025-12-31"], ["2026-11", END], true);
+    expect(year).toEqual(effectsOf(mainLike, ["2025-12", "2025-12-31"], ["2026-11", END], true));
+    expect(buy(year)).toBe(cost);
+    // 1월 월 결산(12/31~1/31, 끝 스냅샷엔 그 종목 없음): 소급 매수·시세 유령 쌍 0, main과 같음
+    const jan = effectsOf(after, ["2025-12", "2025-12-31"], ["2026-01", "2026-01-31"], false);
+    expect(jan).toEqual(effectsOf(mainLike, ["2025-12", "2025-12-31"], ["2026-01", "2026-01-31"], false));
+    expect(buy(jan)).toBe(0);
+    // 정밀 구간(원가 기록 스냅샷)은 원가 차이로 재므로 매수일과 무관
+    expect(causes(data([A]), data(after))).toEqual(causes(data([A]), data(mainLike)));
+    expect(causes(data([A]), data(after)).buy).toBe(cost);
+  });
+
+  it("(d'') #139 사용자가 매수일을 직접 고친 새 종목·이어받은 기존 종목은 예측 투입일 = purchaseDate(기존 규칙)", () => {
+    const after = resync([A], [row("005930", 10, 100_000, hint), row("TSLA", 5, 100, hint)]);
+    const edited = after.map((s) => (s.ticker === "TSLA" ? { ...s, purchaseDate: "2026-03-02" } : s));
+    const jan = computeAttributionBetween(snap(data([A]), "2025-12", "2025-12-31", false), snap(data([A]), "2026-03", "2026-03-31"), {}, data(edited), RATES, false)!;
+    expect(jan.effects.find((x) => x.key === "buy:stock")?.amount ?? 0).toBe(5 * 100 * RATES.USD);
   });
 
   it("(e) 해외 평단 변경: 매입 환율 불변, 환차손익 기준 환율은 기존 값", () => {

@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { computeAttributionBetween } from "../asset-report";
 import { applyResync, computeDiff, cryptoToStock, defaultRemoveIds, matchExchangeHint, mergeScreens, parsedCryptoToRaw, resolveScreens, stocksToCrypto } from "@/lib/asset/resync";
+import { resyncInflowDate } from "@/lib/asset/resync/apply";
 import { emptySel } from "@/lib/asset/resync/__tests__/fixtures";
 import type { AssetData, Crypto, MonthlyAssetSnapshot } from "@/types/asset";
 
@@ -31,7 +32,7 @@ const resync = (existing: Crypto[], items: ReturnType<typeof parsedCryptoToRaw>[
   const diff = computeDiff(adapted, mergeScreens(res), res);
   const sel = { ...emptySel(), remove: defaultRemoveIds(diff) };
   remove.forEach((id) => sel.remove.add(id));
-  return stocksToCrypto(existing, adapted, applyResync(adapted, diff, sel, { today: END, usdRate: 1400, now: 3 }).stocks);
+  return stocksToCrypto(existing, adapted, applyResync(adapted, diff, sel, { today: END, usdRate: 1400, now: Date.parse(`${END}T03:00:00Z`) }).stocks);
 };
 const raw = (symbol: string, q: number, avg: number) => parsedCryptoToRaw({ name: symbol, symbol, quantity: q, averagePrice: avg, currentPrice: avg, exchange: "업비트", currency: "KRW" }, 1400);
 const causes = (before: AssetData, after: AssetData) => {
@@ -71,11 +72,14 @@ describe("C21 코인", () => {
     expect(res.sell).toBe(-1_000_000);
     expect(res.buy + res.sell).toBe(res.dCost);
   });
-  it("(d) 신규 추가: 이번 달 매수 = 원가, 매수일 오늘, 기존 코인 매수일 승계", () => {
+  it("(d) 신규 추가: 이번 달 매수 = 원가, 매수일 올해 1월 1일(#139), 기존 코인 매수일 승계", () => {
     const after = resync([A], [raw("BTC", 10, 100_000), raw("SOL", 5, 10_000)]);
     const res = causes(data([A]), data(after));
     expect(res.buy).toBe(50_000);
-    expect(after.find((c) => c.symbol === "SOL")!.purchaseDate).toBe(END);
+    expect(after.find((c) => c.symbol === "SOL")!.purchaseDate).toBe("2026-01-01");
+    // 예측 구간 투입일은 맞춘 날(#139 qa D1), 기존 코인은 매수일 그대로
+    expect(resyncInflowDate(after.find((c) => c.symbol === "SOL")!)).toBe(END);
+    expect(resyncInflowDate(A)).toBe(A.purchaseDate);
     expect(after.find((c) => c.id === "a")).toBe(A);
   });
 });

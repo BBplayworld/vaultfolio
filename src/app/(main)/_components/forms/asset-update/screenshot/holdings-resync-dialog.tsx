@@ -180,6 +180,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   }, [diff, removeOv, include, pick, qty, tickers, fxText]);
   const counts = useMemo(() => summarize(diff, sel), [diff, sel]);
   const changes = changeCount(counts);
+  // 실제로 새로 만들어질 항목 수(이어받기 제외) — 매수일 1월 1일 안내 조건(#139 O1)
+  const freshAdds = useMemo(() => applyResync(existing, diff, sel, { today: todayKst(), usdRate, now: 0 }).addedIds.length, [existing, diff, sel, usdRate]);
 
   // ── 닫기·초기화 ─────────────────────────────────────────────────────
   const resetAll = () => {
@@ -423,6 +425,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               diff={diff}
               sel={sel}
               counts={counts}
+              freshAdds={freshAdds}
               include={include}
               setInclude={setInclude}
               setRemoveOv={setRemoveOv}
@@ -740,6 +743,8 @@ interface PreviewProps {
   diff: DiffResult;
   sel: ResyncSelection;
   counts: ResyncCounts;
+  /** 이어받기를 뺀 실제 신규 생성 건수 */
+  freshAdds: number;
   include: Set<string>;
   setInclude: React.Dispatch<React.SetStateAction<Set<string>>>;
   setRemoveOv: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
@@ -751,7 +756,7 @@ interface PreviewProps {
   usdRate: number;
 }
 
-function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
+function PreviewStep({ diff, sel, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
   const T = useT();
   const kind = useKind();
   const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
@@ -768,6 +773,8 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
   const removeScopes = diff.scopes.filter((s) => diff.removes.some((r) => r.scopeKey === s.key));
+  // 새로 추가되는 종목의 매수일 기본값 안내(#139) — 이어받기를 뺀 실제 신규 생성이 있을 때만(O1)
+  const hasNewAdd = freshAdds > 0;
   const hasNewForeign = diff.rows.some((r) => resolveRow(r, sel).type === "add" && r.item?.category === "foreign");
   const checkedRemoves = [...sel.remove];
   const foreignDeleteCandidate = diff.removes.some((r) => r.stock.category === "foreign") || diff.kept.some((s) => s.category === "foreign" && checkedRemoves.includes(s.id));
@@ -917,6 +924,12 @@ function PreviewStep({ diff, sel, counts, include, setInclude, setRemoveOv, setP
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
           <span>바뀐 수량·평단은 이번 달 <NR>결산 증감</NR>에 함께 반영돼요</span>
         </p>
+        {hasNewAdd && (
+          <p data-testid="resync-notice-3" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
+            <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
+            <span>새 {T.item}의 매수일은 <NR>올해 1월 1일</NR>로 들어가요. 나중에 수정할 수 있어요</span>
+          </p>
+        )}
       </div>
     </div>
   );

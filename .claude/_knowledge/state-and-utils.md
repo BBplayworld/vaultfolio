@@ -878,6 +878,7 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 - 저장·push·notify·모듈 상태 호출 0(정적 테스트로 고정). `resolveScreens`(장 증권사 ①brokerHint ②기존 항목 과반 ③사용자 선택, 국내 계좌 추정)→`mergeScreens`(장 사이 같은 키 1건, 수량 다르면 `quantityCandidates`)→`computeDiff`(rows·removes·kept·scopes·incomplete)→`summarize`/`resolveRow`/`applyResync`(선택 `ResyncSelection`: include·remove·pick·qty·ticker·fx)→`buildUndoEntries(before, after, coll)`·`planUndo(entries, current)`(overwrite-guard `planRevert`/`applyRevert` 재사용, 현재 데이터를 새로 읽어 넘길 것).
 - 매칭·증권사: `sameBroker`·`isUnassignedBroker`(`""`·`항목 N`=미지정)·`matchExisting`. 코인은 `crypto.ts`의 `cryptoToStock`/`stocksToCrypto`/`parsedCryptoToRaw`/`matchExchangeHint`로 같은 함수를 쓴다(범위=거래소).
 - 평단 규칙: `averagePriceEstimated=false` 화면 실값만 변경(상대 차 0.1% 초과), 역산은 기존 유지(1% 초과 시 `avgKept` 표시).
+- 매수일(#139): `applyResync`의 추가 행은 이번에 지우는 같은 종목(티커·시장)을 이어받고(id·매수일 승계), 이어받을 게 없으면 매수일 `resyncNewPurchaseDate(today)`(= 그해 1월 1일), `positionEffectiveDate`=오늘. 결산 예측 추정(`estimatePeriodInflows`)은 매수일 대신 `resyncInflowDate(item)`(맞추기 신규 + 매수일 기본값 그대로면 id의 만든 날 KST)을 쓴다.
 
 ### 잔액 맞추기·저장 실패 알림 (`src/lib/asset/balance-edits.ts`·`save-failure.ts`, #4.52 #93)
 - `balance-edits.ts`(순수): `applyBalanceEdits(list, edits)`→`{list, applied}`(balance만 교체, 없는 id 건너뜀, 같은 값 미계산)·`checkBalanceRow(category, current, next)`→`{changed, issue: "cash-zero"|"magnitude"|null}`·`sanitizeBalanceText`/`parseBalanceText`/`formatBalanceText`·`maxDecimalsOf`·`orderBalanceRows`(상세 탭 순서). 호출부는 `getAssetData()` 최신 목록에 적용해 `saveData` 1회(렌더 클로저의 `updateCash` 반복 금지)
