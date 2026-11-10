@@ -826,6 +826,15 @@ useCompareBasis() · useDailyRefToken() · useKospiPeerCodes() · useMarketIndex
 ```
 - 종목 기준가는 기존 `fetchProfitRef`(profit-chart와 같은 티커 목록·사용자 종가 기준 → 자산 변화와 같은 캐시 키). 키 없음 = 조회 중(부분 합 금지), `null` = 기준가 없음. 키가 빠지면 60초 뒤 최대 2회 재조회.
 
+### profit-fetch-gate.ts (`src/lib/finance/profit-fetch-gate.ts`, #4.73 #137·#138)
+```typescript
+createFetchSlot() → { inFlightKey, latestKey, controller }   // 조회 1종당 useRef 1개
+beginLatestFetch(slot, key) → { controller, isCurrent(), done() } | null   // 같은 key 진행 중이면 null(보존), 다른 key면 이전 abort. 콜백 직전 isCurrent()로 늦은 응답 버림
+resetFetchSlot(slot)                                          // 데이터 삭제·불러오기 — abort + 늦은 응답 버림
+cancelThenRefetchProfit(queryClient)                          // ["profit"] 취소 뒤 활성 쿼리만 재조회(취소만 하면 pending으로 남음)
+```
+- 사용처: `profit-chart.tsx` ref·daily effect, `stock-tab.tsx` `useFilteredStockData` 리셋 effect.
+
 ### navigation-context 시장과 비교 이동 (#4.73 #132 K3)
 - `ActivityTab`에 `change-market`(`#activity/change-market`, 화면 키 `activity:change-market`, 뒤로 라벨 `뒤로`).
 - `rememberChangeInit({scope, period})` — 자산 변화 글줄이 비교로 가기 직전 모듈 메모리에 기억. `withRestoredChangeInit(next, from, remembered)` — popstate로 비교 화면(from)에서 자산 변화로 돌아오면 init 복원(새로고침하면 기억 없음). **history.state는 쓰지 않는다** — Next App Router가 `__NA` 없는 state의 popstate를 전체 새로고침으로 처리한다(preview 실측).
