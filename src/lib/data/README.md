@@ -29,6 +29,8 @@ $out=$rows | ForEach-Object { [ordered]@{ code=$_.단축코드.Trim(); name=$_.�
 
 > UTF-8(BOM 없음)으로 저장한다. 소비처: `src/lib/kr-master.ts`
 
+> 국내 마스터를 갱신하면 코스피 비교 대상 목록(`kr-kospi-peer-codes.ts`, #132)도 다시 만든다: `KR_PEER_WRITE=1 npx vitest run src/lib/finance/__tests__/market-compare-peer-codes.test.ts` (규칙 정본 `src/lib/finance/market-compare.ts` `deriveKospiPeerCodes`, 평소 테스트가 드리프트를 잡는다)
+
 ## 재생성 (미국 마스터 갱신 시)
 
 - 주식: https://www.nasdaq.com/market-activity/stocks/screener

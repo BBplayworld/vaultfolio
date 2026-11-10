@@ -58,7 +58,8 @@ export interface ChangeHeroProps {
 // 기간 선택은 틀 맨 아래에 고정돼 본문 전환에도 다시 마운트되지 않는다(썸이 칸 사이를 미끄러짐)
 const HeroSlotContext = createContext<HTMLDivElement | null | undefined>(undefined);
 
-export function ChangeHeroFrame({ period, children }: { period: ReactNode; children: ReactNode }) {
+// footer: 기간 선택 바로 아래 선택 슬롯(#132 — 주식 범위의 시장과 비교 글줄만 넘긴다. 없으면 렌더 diff 0)
+export function ChangeHeroFrame({ period, footer, children }: { period: ReactNode; footer?: ReactNode; children: ReactNode }) {
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   return (
     <HeroSlotContext.Provider value={slot}>
@@ -66,6 +67,7 @@ export function ChangeHeroFrame({ period, children }: { period: ReactNode; child
         <div>
           <div ref={setSlot} />
           <div className="mt-4">{period}</div>
+          {footer}
         </div>
       </section>
       {children}

@@ -287,8 +287,8 @@ describe("today-chip · 값 정의(T3·T5·T6·T7)", () => {
     const h = computeTodayChip([k, a, n], refData, RATES, now)!;
     expect(h.rate).toBeCloseTo(expected, 9);
     expect(todayChipLabel(h, "header")).toBe("오늘");
-    // 칩 없는 종목(기준가 없음)은 합산에서 빠진다
-    const withMissing = computeTodayChip([k, a, n, us("AAPL", { ticker: "ZZZZ", id: "z" })], refData, RATES, now)!;
+    // 칩 없는 종목(기준가 없음 = 응답 null)은 합산에서 빠진다. 응답 키가 아예 없으면(조회 중)은 U7 숨김 규칙 — today-chip-u7.test.ts
+    const withMissing = computeTodayChip([k, a, n, us("AAPL", { ticker: "ZZZZ", id: "z" })], { ...refData, ZZZZ: null }, RATES, now)!;
     expect(withMissing.rate).toBeCloseTo(expected, 9);
     // 화 17:00 — 모두 장 종료 후(국내 11/10, 미국 11/9) → `종가`
     now = at("2026-11-10T17:00:00");

@@ -838,3 +838,92 @@ export async function fetchOverseasHistoricalPrice(
   return null;
 }
 
+
+// ─────────────────────────────────────────────
+// Step 11. 시장 지수 일별 종가 시계열 (#132 시장과 비교)
+// 코스피(국내업종기간별시세 FHKUP03500100, 업종코드 0001)와 해외지수(FHKST03030100, 시장 N) 모두
+// 기간 전체를 1회 호출로 받는다. 날짜는 그 시장 현지 거래일. 실패·빈 응답이면 null.
+// ─────────────────────────────────────────────
+
+export interface IndexCloseRow {
+  date: string; // YYYY-MM-DD
+  price: number;
+}
+
+// output2 행 → 종가 시계열(유효 행만). 날짜 필드는 두 API 모두 stck_bsop_date
+export function parseIndexSeries(output: unknown, priceField: string): IndexCloseRow[] {
+  if (!Array.isArray(output)) return [];
+  const rows: IndexCloseRow[] = [];
+  for (const r of output as Record<string, string>[]) {
+    const ymd = r?.stck_bsop_date ?? "";
+    const price = parseFloat(r?.[priceField] ?? "0");
+    if (!/^\d{8}$/.test(ymd) || !(price > 0)) continue;
+    rows.push({ date: `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`, price });
+  }
+  return rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+async function fetchKisIndexSeries(
+  url: string,
+  trId: string,
+  priceField: string,
+  context: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: trId,
+        "content-type": "application/json; charset=utf-8",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(`[KIS 지수 HTTP실패 - ${context}] status=${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    if (!isKisResponseOk(data, `지수 일별종가 ${context}`)) return null;
+    const rows = parseIndexSeries(data.output2, priceField);
+    if (rows.length === 0) {
+      console.warn(`[KIS 지수 빈 데이터 - ${context}] output2.length=${Array.isArray(data.output2) ? data.output2.length : "undefined"}`);
+      return null;
+    }
+    return rows;
+  } catch (e) {
+    console.error(`[KIS 지수 일별종가 오류 - ${context}]:`, e);
+    return null;
+  }
+}
+
+const ymdCompact = (d: string) => d.replace(/-/g, "");
+
+// 코스피 종합(업종코드 0001) 일별 종가
+export async function fetchKospiDailySeries(
+  startDate: string,
+  endDate: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD=0001&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKUP03500100", "bstp_nmix_prpr", `KOSPI/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}
+
+// 해외지수 일별 종가 (indexCode 예: SPX = S&P 500)
+export async function fetchOverseasIndexDailySeries(
+  indexCode: string,
+  startDate: string,
+  endDate: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}

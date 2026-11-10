@@ -16,6 +16,7 @@ import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
 import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/finance/profit-utils";
+import { beginLatestFetch, createFetchSlot, resetFetchSlot, type FetchSlot } from "@/lib/finance/profit-fetch-gate";
 import { isKrHoliday } from "@/lib/finance/kr-holidays";
 import { isUsHoliday } from "@/lib/finance/us-holidays";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -265,12 +266,10 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   const [dailyData, setDailyData] = useState<ProfitRefResponse | undefined>(undefined);
   // KIS 외부 API 일시 오류(5회 이상 토큰 실패) — 정보없음 노출용
   const [kisUnavailable, setKisUnavailable] = useState(false);
-  // 진행 중인 fetch 키 추적: cleanup 후 즉시 동일 키로 재실행되는 경우 abort 방지
-  const refInFlightKeyRef = useRef<string | null>(null);
-  const dailyInFlightKeyRef = useRef<string | null>(null);
-  // 데이터 삭제/불러오기 시 직접 abort 가능하도록 진행 중인 controller 보관
-  const refAbortRef = useRef<AbortController | null>(null);
-  const dailyAbortRef = useRef<AbortController | null>(null);
+  // 조회 슬롯(#137): 같은 key 재실행은 진행 보존, 다른 key(기간 전환 등)면 이전 요청 abort + 늦은 응답 버림.
+  // 데이터 삭제/불러오기 시에도 이 슬롯으로 abort
+  const refSlotRef = useRef<FetchSlot>(createFetchSlot());
+  const dailySlotRef = useRef<FetchSlot>(createFetchSlot());
   // 완료 알림: ref/daily 둘 다 네트워크로 완료됐을 때 한 번만 toast
   // 캐시 hit(fromCache=true)이면 알림 생략 (사용자가 인지할 액션 없음)
   const refDoneRef = useRef(false);
@@ -295,12 +294,8 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   useEffect(() => {
     if (prevResetVersionRef.current === dataResetVersion) return;
     prevResetVersionRef.current = dataResetVersion;
-    refAbortRef.current?.abort();
-    dailyAbortRef.current?.abort();
-    refAbortRef.current = null;
-    dailyAbortRef.current = null;
-    refInFlightKeyRef.current = null;
-    dailyInFlightKeyRef.current = null;
+    resetFetchSlot(refSlotRef.current);
+    resetFetchSlot(dailySlotRef.current);
     setRefData(undefined);
     setDailyData(undefined);
     setKisUnavailable(false);
@@ -310,34 +305,27 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   useEffect(() => {
     if (!isActive || !profitBasisHydrated || mergedStocks.length === 0 || !tickerList) return;
     const key = `${profitBasis}:${period}:${periodRefToken}:${tickerList}`;
-    if (refInFlightKeyRef.current === key) return; // 이미 진행 중
-    refInFlightKeyRef.current = key;
+    const req = beginLatestFetch(refSlotRef.current, key); // 같은 key 진행 중이면 null(보존), 아니면 이전 기간 요청 abort
+    if (!req) return;
     // 새 조회 시작: 완료 플래그 리셋 (key가 바뀌면 다시 알림)
     refDoneRef.current = false;
     dailyDoneRef.current = false;
     notifiedKeyRef.current = null;
-    const controller = new AbortController();
-    refAbortRef.current = controller;
     setRefData(undefined);
     setKisUnavailable(false);
     fetchProfitRef(tickerList, period, {
-      signal: controller.signal,
+      signal: req.controller.signal,
       caller: `profit-chart:ref(${period})`,
       basis: profitBasis,
-      onProgress: (partial) => setRefData(partial),
-      onKisUnavailable: () => setKisUnavailable(true),
+      // 마지막으로 고른 기간의 응답만 반영(#137 — 연→주 빠른 전환 때 1년 값이 주 제목 아래 남던 문제)
+      onProgress: (partial) => { if (req.isCurrent()) setRefData(partial); },
+      onKisUnavailable: () => { if (req.isCurrent()) setKisUnavailable(true); },
       onComplete: () => {
+        if (!req.isCurrent()) return;
         refDoneRef.current = true;
         maybeNotifyComplete(key);
       },
-    }).finally(() => {
-      if (refInFlightKeyRef.current === key) refInFlightKeyRef.current = null;
-      if (refAbortRef.current === controller) refAbortRef.current = null;
-    });
-    return () => {
-      // 동일 키로 재실행 중이면 abort 안 함 — 의존성이 잠시 흔들려도 진행 보존
-      if (refInFlightKeyRef.current !== key) controller.abort();
-    };
+    }).finally(req.done);
   }, [isActive, profitBasisHydrated, mergedStocks.length, tickerList, period, profitBasis, periodRefToken, dataResetVersion]);
 
   // daily 기준 종가 (period가 daily가 아닐 때만 별도 조회)
@@ -345,29 +333,22 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
     if (!isActive || !profitBasisHydrated || mergedStocks.length === 0 || !tickerList || period === "daily") return;
     const key = `${profitBasis}:${period}:${periodRefToken}:${tickerList}`;
     const dailyKey = `${profitBasis}:daily:${dailyRefToken}:${tickerList}`;
-    if (dailyInFlightKeyRef.current === dailyKey) return;
-    dailyInFlightKeyRef.current = dailyKey;
-    const controller = new AbortController();
-    dailyAbortRef.current = controller;
+    const req = beginLatestFetch(dailySlotRef.current, dailyKey);
+    if (!req) return;
     setDailyData(undefined);
     setKisUnavailable(false);
     fetchProfitRef(tickerList, "daily", {
-      signal: controller.signal,
+      signal: req.controller.signal,
       caller: "profit-chart:daily(secondary)",
       basis: profitBasis,
-      onProgress: (partial) => setDailyData(partial),
-      onKisUnavailable: () => setKisUnavailable(true),
+      onProgress: (partial) => { if (req.isCurrent()) setDailyData(partial); },
+      onKisUnavailable: () => { if (req.isCurrent()) setKisUnavailable(true); },
       onComplete: () => {
+        if (!req.isCurrent()) return;
         dailyDoneRef.current = true;
         maybeNotifyComplete(key);
       },
-    }).finally(() => {
-      if (dailyInFlightKeyRef.current === dailyKey) dailyInFlightKeyRef.current = null;
-      if (dailyAbortRef.current === controller) dailyAbortRef.current = null;
-    });
-    return () => {
-      if (dailyInFlightKeyRef.current !== dailyKey) controller.abort();
-    };
+    }).finally(req.done);
   }, [isActive, profitBasisHydrated, mergedStocks.length, tickerList, period, profitBasis, periodRefToken, dailyRefToken, dataResetVersion]);
 
   const baseRefData = period === "daily" ? refData : dailyData;
