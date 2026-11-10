@@ -8,7 +8,7 @@
 
 ### GA 화면별 참여 시간 귀속 수정 (#4.71, 이슈 #131, risk low)
 - **왜**: `send_page_view:false` + 새 화면 title page_view만 보내, gtag가 직전 화면에서 쌓은 참여 시간(_et)을 새 화면 title에 실었다(화면 우열 판독 불가).
-- **변경**: `ga.ts trackScreen`이 화면 전환 시 직전 화면 title·경로의 `user_engagement`를 page_view 직전에 1회 보냄. page_view 호출·조회수·활성 사용자 불변. 저장·서버 전송 값 종류 불변(title·경로 모두 기존 사전). 판독 경계: 머지일 이후 참여 시간만 화면별로 사용.
+- **변경**: `ga.ts trackScreen`이 화면 전환 시 직전 화면 title·경로의 `screen_leave`(비예약 커스텀 이벤트, GA4 예약명 user_engagement 회피)를 page_view 직전에 1회 보냄. page_view 호출·조회수·활성 사용자 불변. 저장·서버 전송 값 종류 불변(title·경로 모두 기존 사전). 판독 경계: 머지일 이후 참여 시간만 화면별로 사용.
 
 ---
 

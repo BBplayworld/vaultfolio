@@ -414,10 +414,10 @@ describe("화면 전환 시 직전 화면 참여 시간 귀속(#131)", () => {
     expect(gtag.mock.calls.map((c) => c[1])).toEqual(["page_view"]);
   });
 
-  it("전환하면 직전 화면 title·경로의 user_engagement가 새 page_view보다 먼저 나간다", () => {
+  it("전환하면 직전 화면 title·경로의 screen_leave가 새 page_view보다 먼저 나간다", () => {
     trackScreen("home");
     trackScreen("detail:stocks");
-    expect(gtag.mock.calls.map((c) => c[1])).toEqual(["page_view", "user_engagement", "page_view"]);
+    expect(gtag.mock.calls.map((c) => c[1])).toEqual(["page_view", "screen_leave", "page_view"]);
     const flush = gtag.mock.calls[1][2];
     expect(flush.page_title).toBe("홈");
     expect(flush.page_path).toBe("/v/home");
@@ -432,7 +432,7 @@ describe("화면 전환 시 직전 화면 참여 시간 귀속(#131)", () => {
     trackScreen("detail:stocks");
     trackScreen("detail:stocks");
     expect(gtag.mock.calls.filter((c) => c[1] === "page_view")).toHaveLength(2);
-    expect(gtag.mock.calls.filter((c) => c[1] === "user_engagement")).toHaveLength(1);
+    expect(gtag.mock.calls.filter((c) => c[1] === "screen_leave")).toHaveLength(1);
   });
 
   it("해시·쿼리는 flush에도 실리지 않고 ga-debug면 debug_mode가 붙는다", () => {

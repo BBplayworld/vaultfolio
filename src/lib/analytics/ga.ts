@@ -335,7 +335,7 @@ export function trackScreen(viewKey: string): void {
     if (!gtag) return;
     // 직전 화면 참여 시간 귀속(#131) — gtag는 직전 전송 이후 쌓인 참여 시간(_et)을 "다음에 나가는 이벤트"에 싣는다.
     // 새 화면 page_view가 먼저 나가면 이전 화면에 머문 시간이 새 title로 붙으므로, 직전 화면의 title·경로로
-    // user_engagement를 먼저 보내 그 시간을 털어낸다. page_view(조회수·활성 사용자) 호출은 그대로다.
+    // 비예약 커스텀 이벤트 screen_leave를 먼저 보내 그 시간을 털어낸다(user_engagement는 GA4 예약명이라 수동 전송 시 버려질 수 있음). page_view(조회수·활성 사용자) 호출은 그대로다.
     if (prevKey) {
       const flush: Record<string, unknown> = {
         page_location: pageLocation(prevKey),
@@ -343,7 +343,7 @@ export function trackScreen(viewKey: string): void {
         page_title: SCREEN_TITLES[prevKey] ?? prevKey,
       };
       if (isDebug()) flush.debug_mode = true;
-      gtag("event", "user_engagement", flush);
+      gtag("event", "screen_leave", flush);
     }
     const payload: Record<string, unknown> = {
       page_location: pageLocation(),
