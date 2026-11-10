@@ -20,11 +20,12 @@ export const BODY_ENTER = "motion-safe:animate-in motion-safe:fade-in motion-saf
 
 const signed = (v: number) => `${v >= 0 ? "+" : ""}${formatPriceByMode(v)}`;
 
-// 월 증감 단일 계산 — 허브 자산 변화 카드와 결산 Hero가 같은 함수를 쓴다(지표 대조표 #5)
+// 월 증감 단일 계산 — 허브 자산 변화 카드와 결산 Hero가 같은 함수를 쓴다(지표 대조표 #5).
+// 증감 = 화면 금액(원 반올림)끼리의 차 — Hero 시작→끝 금액·월별 기록 변화와 원 단위까지 같다(COO R3 F1)
 export function settlementDelta(w: SettlementWindow, liveNet: number): { prevValue: number; currValue: number; delta: number; pct: number | null } {
   const prevValue = w.start?.netAsset ?? 0;
   const currValue = w.end ? w.end.netAsset : liveNet;
-  const delta = currValue - prevValue;
+  const delta = Math.round(currValue) - Math.round(prevValue);
   const pct = w.start && prevValue !== 0 ? (delta / Math.abs(prevValue)) * 100 : null;
   return { prevValue, currValue, delta, pct };
 }

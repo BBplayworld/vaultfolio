@@ -54,11 +54,11 @@
   "snapshots": {
     "monthly": [
       { "month": "@M-3", "netAsset": 612000000, "financialAsset": 40000000 },
-      { "month": "@M-2", "date": "@M-2D28", "netAsset": 621000000, "financialAsset": 42500000,
+      { "month": "@M-2", "date": "@M-2D28", "netAsset": 620850000, "financialAsset": 42500000,
         "breakdown": { "realEstate": 600000000, "stocks": 25000000, "crypto": 5500000, "cash": 12000000, "loans": 21500000, "tenantDeposit": 0 },
         "fx": { "USD": 1350, "JPY": 905 }, "fxBase": { "USD": 3800000, "JPY": 0 },
         "cost": { "total": 538000000, "stock": 21000000, "crypto": 5000000, "realEstate": 500000000 } },
-      { "month": "@M-1", "date": "@M-1D28", "netAsset": 644450000, "financialAsset": 45300000,
+      { "month": "@M-1", "date": "@M-1D28", "netAsset": 644300000, "financialAsset": 45300000,
         "breakdown": { "realEstate": 620000000, "stocks": 27000000, "crypto": 6800000, "cash": 11500000, "loans": 21000000, "tenantDeposit": 0 },
         "fx": { "USD": 1380, "JPY": 915 }, "fxBase": { "USD": 4900000, "JPY": 0 },
         "cost": { "total": 539500000, "stock": 21500000, "crypto": 6300000, "realEstate": 500000000 } },

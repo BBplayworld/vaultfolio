@@ -21,6 +21,8 @@ import { SECTION, GROUP_BADGE, SectionHeader } from "../../layout/ui/report-sect
 import { CATEGORY_LABEL } from "../home/home-tip-box";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeSettlementCauses, settlementDelta, settlementName } from "./change-hero";
 import { CompositionBlock } from "./composition-block";
+import { MonthlyLogBlock } from "./monthly-log-block";
+import { buildMonthlyLog } from "@/lib/report/monthly-log";
 import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { buildSettlementPrompt } from "@/lib/ai-prompts";
 import type { ChangeInit } from "../../layout/navigation/navigation-context";
@@ -66,6 +68,13 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
       return { ok: false };
     }
   }, [monthly, month, today, assetData, exchangeRates, summary]);
+
+  // 월별 기록(#127) — 선택 달과 무관(월 화살표로 바뀌지 않음). 이번 달 줄 = 결산과 같은 live breakdown·summary.netAsset
+  const liveBreakdown = computed.ok ? computed.value.live.breakdown : undefined;
+  const log = useMemo(
+    () => buildMonthlyLog(monthly, today, { breakdown: liveBreakdown, netAsset: summary.netAsset }),
+    [monthly, today, liveBreakdown, summary.netAsset],
+  );
 
   // settlement_view — 월 탭 진입(마운트)당 1회. 월 화살표 이동으로는 다시 보내지 않는다.
   const sentRef = useRef(false);
@@ -148,6 +157,9 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
 
       {!firstMonth && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 
+      {/* 월별 기록(#127 R3) — 기록된 달(저장된 달 ∪ 이번 달) 2개 이상일 때만 인라인 카드. key 없음(월 이동에 리마운트하지 않음) */}
+      {!firstMonth && log.recordedCount >= 2 && <MonthlyLogBlock log={log} today={today} />}
+
       {!firstMonth && (() => {
         // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)
         const name = settlementName(w.month, today, false);
@@ -191,7 +203,7 @@ export function SettlementAiButton({ name, onOpen }: { name: string; onOpen: () 
       data-screenshot-hide
       onClick={onOpen}
       className={`${AI_ROW_SURFACE} flex w-full min-h-14 items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 motion-safe:active:scale-[0.99] motion-safe:transition-[background-color,scale] motion-safe:duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${BODY_ENTER}`}
-      style={{ animationDelay: "120ms", animationFillMode: "backwards" }}
+      style={{ animationDelay: "160ms", animationFillMode: "backwards" }}
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
         <Sparkles className="size-4" aria-hidden />
