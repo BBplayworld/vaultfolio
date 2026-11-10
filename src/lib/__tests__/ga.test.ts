@@ -233,7 +233,7 @@ describe("화면 전환 page_view", () => {
     trackScreen("home");
     trackScreen("detail:hub");
     trackScreen("home");
-    expect(gtag.mock.calls.map((c) => c[2].page_path)).toEqual(["/v/home", "/v/detail/hub", "/v/home"]);
+    expect(gtag.mock.calls.filter((c) => c[1] === "page_view").map((c) => c[2].page_path)).toEqual(["/v/home", "/v/detail/hub", "/v/home"]);
   });
 });
 
@@ -405,5 +405,50 @@ describe("설치 안내 첫 저장 신호 (#78)", () => {
     trackAssetSave({ asset_type: "stock", method: "manual", result: "create" }, 0);
     expect(getFirstSave()).toBe(true);
     (window as unknown as { gtag?: unknown }).gtag = g;
+  });
+});
+
+describe("화면 전환 시 직전 화면 참여 시간 귀속(#131)", () => {
+  it("첫 화면은 page_view만 보낸다(직전 화면 없음)", () => {
+    trackScreen("home");
+    expect(gtag.mock.calls.map((c) => c[1])).toEqual(["page_view"]);
+  });
+
+  it("전환하면 직전 화면 title·경로의 user_engagement가 새 page_view보다 먼저 나간다", () => {
+    trackScreen("home");
+    trackScreen("detail:stocks");
+    expect(gtag.mock.calls.map((c) => c[1])).toEqual(["page_view", "user_engagement", "page_view"]);
+    const flush = gtag.mock.calls[1][2];
+    expect(flush.page_title).toBe("홈");
+    expect(flush.page_path).toBe("/v/home");
+    expect(flush.page_location).toBe("https://secretasset.xyz/v/home");
+    const pv = gtag.mock.calls[2][2];
+    expect(pv.page_title).toBe("상세·주식");
+    expect(pv.page_location).toBe("https://secretasset.xyz/v/detail/stocks");
+  });
+
+  it("같은 화면 연속 호출은 아무것도 보내지 않아 조회수가 늘지 않는다", () => {
+    trackScreen("home");
+    trackScreen("detail:stocks");
+    trackScreen("detail:stocks");
+    expect(gtag.mock.calls.filter((c) => c[1] === "page_view")).toHaveLength(2);
+    expect(gtag.mock.calls.filter((c) => c[1] === "user_engagement")).toHaveLength(1);
+  });
+
+  it("해시·쿼리는 flush에도 실리지 않고 ga-debug면 debug_mode가 붙는다", () => {
+    localStorage.setItem("ga-debug", "1");
+    trackScreen("home");
+    trackScreen("more");
+    const flush = gtag.mock.calls[1][2];
+    expect(JSON.stringify(flush)).not.toMatch(/[#?]|secretkey|share=/);
+    expect(flush.debug_mode).toBe(true);
+  });
+
+  it("체험 모드·gtag 부재에서는 보내지 않는다", () => {
+    trackScreen("home");
+    gtag.mockClear();
+    markTrialActive();
+    trackScreen("more");
+    expect(gtag).not.toHaveBeenCalled();
   });
 });
