@@ -318,4 +318,13 @@ describe("today-chip · 값 정의(T3·T5·T6·T7)", () => {
     expect(q1).toEqual(q2);
     expect(q1.live).toBe(false);
   });
+
+  it("데모 종목(demo_st_)은 장중 칩을 숨기고 장 종료 후 종가 쌍 칩은 유지(#142)", () => {
+    const live = at("2026-11-10T11:00:00");
+    const rl = serverDaily(["005930"]);
+    expect(getStockChipQuote(kr(), rl, live)).not.toBeNull();
+    expect(getStockChipQuote(kr({ id: "demo_st_1" }), rl, live)).toBeNull();
+    const after = at("2026-11-10T17:00:00");
+    expect(getStockChipQuote(kr({ id: "demo_st_1" }), serverDaily(["005930"]), after)?.live).toBe(false);
+  });
 });

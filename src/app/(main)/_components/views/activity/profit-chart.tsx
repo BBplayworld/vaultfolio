@@ -727,16 +727,16 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                               return (
                                 <div
                                   key={stock.id}
-                                  className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-1 px-4 py-2.5 min-[400px]:items-center hover:bg-muted/30 transition-colors"
                                 >
                                   <div className="min-w-0">
                                     <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                                    <p className="text-xs text-muted-foreground">{ticker}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{ticker}</p>
                                   </div>
-                                  <div className="text-right shrink-0">
+                                  <div className="text-left min-[400px]:text-right min-[400px]:shrink-0">
                                     {hasRef ? (
                                       <>
-                                        <div className="flex items-center justify-end gap-1">
+                                        <div className="flex items-center min-[400px]:justify-end gap-1">
                                           {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} fxApplied={period === "daily"} />}
                                           <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
                                             {profitAmount >= 0 ? "+" : ""}{formatPriceByMode(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
