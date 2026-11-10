@@ -37,8 +37,9 @@ export function dispatchAddCryptoTx(cryptoId?: string) {
 // 홈 기능 활용 팁 박스에서 페이지 이동 없이 바로 열기 위한 용도(S-4.32).
 // 방문 기록은 리스너(top-bar.tsx) 쪽에서 함께 남긴다(asset-dispatch.ts↔feature-usage.ts 순환 참조 방지).
 // variant 지정 시 해당 카드 타입으로 바로 진입(#4.24 — 홈 "새 공지" 팁이 포트폴리오로 직행할 때 사용).
-export function dispatchOpenShareCard(variant?: "stock" | "portfolio" | "type") {
-  window.dispatchEvent(new CustomEvent("trigger-open-share-card", { detail: { variant } }));
+// source: GA 출처(기본 home_tip). PWA 허브 발송 버튼은 "top_bar"(#4.66).
+export function dispatchOpenShareCard(variant?: "stock" | "portfolio" | "type", source?: "top_bar" | "home_tip") {
+  window.dispatchEvent(new CustomEvent("trigger-open-share-card", { detail: { variant, source } }));
 }
 
 // 과거 순자산 입력창 열기 요청(1회성) — FAB가 연 탭으로 이동한 뒤 YearlyNetAssetChart가 마운트되는 시점이
