@@ -667,8 +667,7 @@ getStockCacheSlot(type: "domestic"|"foreign"): string
 computeDailyStockProfit(stocks, refData, currentRates, options?: { useLivePrice?: boolean })
   // → { dailyProfit, dailyProfitRate } | null
   // 기본(useLivePrice 미지정=false): 종가 vs 종가(refPrice vs prevPrice) — profit-chart.tsx·performance-hub.tsx가 쓰는 기존 동작 그대로
-  // useLivePrice:true(2026-08-27, stock-tab.tsx 상세 > 주식 리스트 등락율 전용): 분자를 st.currentPrice(실시간)로 교체,
-  //   baseline은 refDate===오늘이면 prevPrice, 아니면 refPrice — 둘 다 "가장 최근 확정 종가"로 수렴해 시간대 무관하게 일관됨
+  // useLivePrice:true(2026-08-27): #4.73부터 호출처 없음(상세·주식 칩은 today-chip.ts로 대체). 테스트만 유지
 
 type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
 type ProfitBasis = "sameBusinessDay" | "kstAccessDay"   // 기본 sameBusinessDay
@@ -785,6 +784,21 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
   - `DIVIDEND_ARISTOCRAT_TICKERS`(KO/PG/JNJ/O 등 25년+ 연속 증액) → 배당성장주, `HIGH_YIELD_VALUE_TICKERS`(T/VZ/MO, KT&G/KT 등) → 배당주, `TRADITIONAL_VALUE_TICKERS`(BAC/WFC, 국내 금융지주 등) → 가치주, `INNOVATION_TICKERS`(RKLB/IONQ/JOBY/ACHR) → 혁신주.
   - `BOND_CASH_TICKERS`/`BOND_CASH_NAME_KEYWORDS`(SGOV/TLT/국채 등) → 채권/현금성(최우선순위 아님, 위 개별 오버라이드 뒤에 체크).
 - **`STOCK_TYPE_PROMPT_VERSION`**(classification-store.ts) — stockType 분류 규칙(프롬프트·오버라이드 목록)이 바뀔 때마다 올리는 버전 마커. 서버 캐시 유효성 체크(`xray-classify/route.ts`)와 클라이언트 게이트(`fetch-classifications.ts`) **양쪽 다** 이 값과 일치해야 "분류 완료"로 인정한다 — 하나라도 빠뜨리면 그쪽에서 재분류 요청 자체가 안 나가는 버그가 난다(2026-09-05 실제 발생·수정). 버전을 올리면 이미 (구버전 규칙으로) 캐시된 종목도 전부 강제 재분류된다.
+
+### '오늘' 등락 칩 (`src/lib/finance/today-chip.ts`, #4.73 #134)
+
+```typescript
+getTodayChipSession(market: "domestic"|"foreign", now?): { phase: "live"|"afterCloseGap"|"closed"; tradeDate; baseDate }
+  // 순수 함수. 국내 한국 영업일 09:00~15:30 live, 15:30~16:00 gap / 미국 ET 영업일 09:30~16:00 live, 16:00~17:00 gap(Intl로 서머타임 반영)
+  // closed: tradeDate=마지막 거래일, baseDate=그 전 거래일(kr/us-holidays). '기간 수익 종가 기준' 설정과 무관
+getStockChipQuote(stock, refData, now?, gapConfirmed?) → { live, closeDate, numerator, denominator } | null
+  // live: currentPrice ÷ refPrice(baseDate ≤ refDate < tradeDate일 때만) / closed: refPrice ÷ prevPrice(refDate=tradeDate·prevDate=baseDate일 때만)
+  // 두 거래일 종가를 못 구하면 null(같은 종가끼리 0.0% 금지). gap은 AFTER_CLOSE_GAP_CONFIRMED[market]이면 종가 라벨, 미확인이면 AFTER_CLOSE_GAP_FALLBACK_LIVE(국내 true → live `오늘`, 미국 false → 숨김)
+computeTodayChip(stocks, refData, currentRates, now?) → { rate(%), anyLive, closeDates } | null
+  // 현지 가격 등락을 원화 평가액(현재 환율)으로 가중 — 환율 효과 0. 같은 티커 묶음이면 곧 종목 등락률
+todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안 `오늘`/`M/D 종가`, 헤더 `종가`)
+```
+- 입력 refData는 `fetchProfitRef(tickers, "daily", { basis: "kstAccessDay" })`(stock-tab `useFilteredStockData`). 저장 호출 0.
 
 ### 기업 로고 src 해석 (`src/lib/finance/logo-source.ts`)
 

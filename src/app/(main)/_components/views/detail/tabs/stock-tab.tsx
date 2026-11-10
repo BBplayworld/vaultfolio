@@ -27,8 +27,8 @@ import { StockInsightStrip } from "../xray/stock-insight-strip";
 import { TaxSeasonStrip } from "../tax-season-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
-import { fetchProfitRef, computeDailyStockProfit } from "@/lib/finance/profit-utils";
-import { useProfitBasisStore } from "@/stores/profit-basis-store";
+import { fetchProfitRef } from "@/lib/finance/profit-utils";
+import { computeTodayChip, todayChipLabel } from "@/lib/finance/today-chip";
 import { captureLogoSize, getLogoInitial } from "@/lib/finance/logo-source";
 import { useLogoSrc } from "@/hooks/use-logo-src";
 import { STORAGE_KEYS } from "@/lib/local-storage";
@@ -164,16 +164,13 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
   // 중복 제거 + 알파벳 정렬 → 다른 컴포넌트(profit-chart 등)와 동일한 캐시 키 보장
   const tickerList = Array.from(new Set(stocksWithTicker.map((s) => normalizeTicker(s)).filter(Boolean))).sort().join(",");
 
-  const profitBasis = useProfitBasisStore((s) => s.basis);
-  const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
-  const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
-  useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
-
+  // '오늘' 칩 전용 — 설정 '기간 수익 종가 기준'과 무관하게 시장별 자기 날짜(kstAccessDay) 종가쌍을 쓴다(#134).
+  // 기존 캐시 프리픽스 안의 기존 변형(profit:kstAccessDay:daily:…)이라 새 저장 키 아님
   const { data: refData } = useQuery({
-    queryKey: ["profit", "daily", profitBasis, tickerList],
-    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "stock-tab:useQuery", basis: profitBasis }),
+    queryKey: ["profit", "daily", "kstAccessDay", tickerList],
+    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "stock-tab:useQuery", basis: "kstAccessDay" }),
     staleTime: 5 * 60 * 1000,
-    enabled: tickerList.length > 0 && profitBasisHydrated,
+    enabled: tickerList.length > 0,
   });
 
   // 데이터 삭제/불러오기 시 진행 중인 profit 쿼리 전부 강제 취소
@@ -256,35 +253,37 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
     color: barColors[idx],
   }));
 
-  // 일별 수익 계산 — 선택된 카테고리(filteredStocks)만 합산
-  // profit-chart는 항상 전체 기준이므로 카테고리별 값과 다를 수 있음
-  const { dailyProfit, dailyProfitRate } = useMemo(
-    () => computeDailyStockProfit(filteredStocks, refData, exchangeRates, { useLivePrice: true }),
-    [refData, filteredStocks, exchangeRates],
-  );
+  // 헤더 '오늘' 칩 — 선택된 카테고리(filteredStocks)의 종목 칩 등락률을 원화 평가액(현재 환율)으로 가중
+  const todayChip = useMemo(() => {
+    const chip = computeTodayChip(filteredStocks, refData, exchangeRates);
+    return chip ? { rate: chip.rate, label: todayChipLabel(chip, "header") } : null;
+  }, [refData, filteredStocks, exchangeRates]);
 
-  return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, dailyProfit, dailyProfitRate, refData, marketMap };
+  return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, todayChip, refData, marketMap };
 }
 
+// 칩 표시값 — 라벨은 장중 `오늘`, 장 종료 후 `M/D 종가`(헤더 `종가 기준`). today-chip.ts TODAY_CHIP_LABELS가 정본
+export type TodayChipView = { rate: number; label: string };
+
 // 오늘 등락 칩 — 누적 손익과 구분되게 뮤트 배경 칩에 담고, 방향(▲빨강/▼파랑)만 값에 색.
-function TodayChangeChip({ rate, className = "" }: { rate: number; className?: string }) {
+function TodayChangeChip({ rate, label, className = "" }: { rate: number; label: string; className?: string }) {
   return (
     <span className={`${ASSET_THEME.todayBox} ${className}`}>
-      <span className="text-muted-foreground">오늘</span>
+      <span className="text-muted-foreground">{label}</span>
       <span className={getProfitLossColor(rate)}>{rate >= 0 ? "▲" : "▼"}{Math.abs(rate).toFixed(1)}%</span>
     </span>
   );
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
-export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, shotBig = false, displayCurrency = "KRW", usdRate = 1, dailyRate }: StockRowData & {
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, shotBig = false, displayCurrency = "KRW", usdRate = 1, todayChip }: StockRowData & {
   categoryLabels?: string[];
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
   shotBig?: boolean;
   displayCurrency?: StockDisplayCurrency;
   usdRate?: number;
-  dailyRate?: number | null;
+  todayChip?: TodayChipView | null;
 }) {
   const fmt = maskFn ?? ((v: number) => formatByDisplayCurrency(v, displayCurrency, usdRate));
   const hideAmounts = !!maskFn && maskFn(123456).includes("•");
@@ -323,8 +322,8 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             </>
           )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
-          {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
-            <TodayChangeChip rate={dailyRate} className="text-[11px] max-sm:hidden" />
+          {!screenshotMode && todayChip && (
+            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-[11px] max-sm:hidden" />
           )}
         </div>
       </div>
@@ -337,9 +336,9 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           <span className={`${subCls} ${tone.colorClass}${screenshotMode ? "" : " whitespace-nowrap"}`}>({tone.sign}{tone.rate.toFixed(1)}%)</span>
         </div>
         {/* 모바일 전용 — 좌측 3줄 초과 방지로 오늘 등락 칩을 손익 줄 아래 우측 정렬(PC는 좌측 인라인) */}
-        {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
+        {!screenshotMode && todayChip && (
           <div className="mt-1 flex justify-end sm:hidden">
-            <TodayChangeChip rate={dailyRate} className="text-[11px]" />
+            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-[11px]" />
           </div>
         )}
       </div>
@@ -357,7 +356,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, dailyRate }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
@@ -369,7 +368,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   onDisplayCurrencyChange?: (v: StockDisplayCurrency) => void;
   usdRate?: number;
   disableUsd?: boolean;
-  dailyRate?: number | null;
+  todayChip?: TodayChipView | null;
 }) {
   const currency = displayCurrency ?? "KRW";
   const fmtFull = maskFn ?? ((v: number) => formatByDisplayCurrency(v, currency, usdRate, "full"));
@@ -413,8 +412,8 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
               ? <CurrencyGainHint value={Math.round(currencyGain)} formatter={fmt} />
               : undefined}
           />
-          {!screenshotMode && dailyRate !== null && dailyRate !== undefined && (
-            <TodayChangeChip rate={dailyRate} className="text-xs" />
+          {!screenshotMode && todayChip && (
+            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-xs" />
           )}
         </span>
       }
@@ -449,7 +448,7 @@ interface StockCardProps {
   shotBig?: boolean;
   maskFn?: (v: number) => string;
   displayCurrency?: StockDisplayCurrency;
-  dailyRate?: number | null;
+  todayChip?: TodayChipView | null;
 }
 
 interface SplitItem {
@@ -763,7 +762,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   );
 }
 
-export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, shotBig = false, maskFn, displayCurrency = "KRW", dailyRate }: StockCardProps) {
+export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, shotBig = false, maskFn, displayCurrency = "KRW", todayChip }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const usdRate = exchangeRates.USD;
   const [splitOpen, setSplitOpen] = useState(false);
@@ -822,7 +821,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>
               <button className={ASSET_THEME.cardTriggerButton}>
-                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} dailyRate={dailyRate} />
+                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} todayChip={todayChip} />
                 <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
@@ -1120,7 +1119,7 @@ export function StockTab() {
     }
   }, [visibleCategories, activeCategory]);
 
-  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, refData, dailyProfitRate, marketMap } =
+  const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, refData, todayChip, marketMap } =
     useFilteredStockData(activeCategory, effectiveDisplayCurrency);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
@@ -1151,7 +1150,7 @@ export function StockTab() {
           onDisplayCurrencyChange={activeCategory === "foreign" ? handleDisplayCurrencyChange : undefined}
           usdRate={exchangeRates.USD}
           disableUsd={!hasForeignStock}
-          dailyRate={dailyProfitRate}
+          todayChip={todayChip}
         />
 
         {/* X-Ray 인사이트 스트립 (인증카드 제외) */}
@@ -1183,8 +1182,9 @@ export function StockTab() {
             const m = computeStockMetrics(stock, exchangeRates, totalValue, effectiveDisplayCurrency);
             const linkedLoans = groupItems.flatMap((s) => assetData.loans.filter((l) => l.linkedStockId === s.id));
             const categoryLabels = Array.from(new Set(groupItems.map((s) => s.category))).map(getCategoryLabel);
-            // 종목별 오늘 등락 — 홈(전일 순자산)·성과(집계 일별수익)와 중복 없는 개별 종목 단위
-            const { dailyProfitRate: dailyRate } = computeDailyStockProfit(groupItems, refData, exchangeRates, { useLivePrice: true });
+            // 종목별 오늘 등락 — 현지 통화 가격 등락률(같은 티커 묶음 = 한 값). 두 종가를 못 구하면 칩 없음
+            const rowChip = computeTodayChip(groupItems, refData, exchangeRates);
+            const rowTodayChip = rowChip ? { rate: rowChip.rate, label: todayChipLabel(rowChip, "row") } : null;
             return (
               <StockCard
                 key={groupKey}
@@ -1194,7 +1194,7 @@ export function StockTab() {
                 currentVal={m.currentVal}
                 profit={m.profit}
                 profitRate={m.profitRate}
-                dailyRate={dailyRate}
+                todayChip={rowTodayChip}
                 isForeign={m.isForeign}
                 krwMul={m.krwMul}
                 currencyGain={m.currencyGain}
