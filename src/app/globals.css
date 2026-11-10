@@ -355,6 +355,22 @@ html[data-has-assets] [data-first-paint] {
   display: none;
 }
 
+/* 홈 헤더 심볼(#4.66 R8): 브라우저·PWA 공통 — 앱과 같은 S. 심볼 18.21px(Leckerli S 잉크 높이 15.25, lg 21.01px·잉크 17.6),
+   음수 좌측 여백 = 심볼 박스 좌측 여백(7.1311/32) + 광학 보정 0.4px(lg 0.46) → S 왼쪽 끝이 카드 외곽(px-3)에 맞음 */
+.pwa-home-symbol {
+  width: 18.21px;
+  height: 18.21px;
+  margin-left: -4.46px;
+}
+
+@media (min-width: 1024px) {
+  .pwa-home-symbol {
+    width: 21.01px;
+    height: 21.01px;
+    margin-left: -5.14px;
+  }
+}
+
 /* PWA 스탠드얼론 모드: 모바일은 하단 nav, PC/윈도우는 상단 nav */
 @media (display-mode: standalone) {
 
@@ -401,20 +417,6 @@ html[data-has-assets] [data-first-paint] {
      → 기울어진 S의 왼쪽 끝(아래 볼)이 카드 외곽(px-3) 0.4px 바깥, 위쪽 몸통이 안쪽으로 들어가 보이는 것 보정 */
   .pwa-home-wordmark {
     display: block !important;
-  }
-
-  .pwa-home-symbol {
-    width: 18.21px;
-    height: 18.21px;
-    margin-left: -4.46px;
-  }
-
-  @media (min-width: 1024px) {
-    .pwa-home-symbol {
-      width: 21.01px;
-      height: 21.01px;
-      margin-left: -5.14px;
-    }
   }
 
   /* 상세·성과 허브 제목 줄의 PWA 전용 인증카드 발송 버튼 노출 */

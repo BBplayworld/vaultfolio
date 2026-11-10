@@ -155,7 +155,7 @@ export function TopBar() {
           </button>
         ) : (
           <>
-            {/* 홈 전용 공식 락업(앱 아이콘 타일 + 워드마크). 브라우저는 타일만, PWA는 워드마크까지.
+            {/* 홈 전용 공식 락업(Leckerli S 심볼 + 워드마크). 브라우저는 심볼만, PWA는 워드마크까지.
                 좌측 x는 헤더 px-3 패딩만으로 대시보드 카드 외곽 모서리와 정렬(추가 마진 금지). */}
             <BrandLockup />
             <div className="contents pwa-hide-actions">
@@ -164,7 +164,7 @@ export function TopBar() {
                 onChange={onHomeTabChange}
                 options={HOME_TOP_OPTIONS}
                 size="xl"
-                className="ml-0 min-[360px]:ml-3"
+                className="ml-3"
                 ariaLabel="페이지 선택"
               />
             </div>
