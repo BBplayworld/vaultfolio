@@ -12,6 +12,7 @@ import { isKrBusinessDay } from "@/lib/finance/kr-holidays";
 import { isUsBusinessDay } from "@/lib/finance/us-holidays";
 import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
+import { getTodayChipSession, type ChipMarket } from "@/lib/finance/today-chip";
 import { badRequest, cdnCacheHeaders, guardRateLimit, guardRequest, isOneOf, parseTickerList, secondsUntilNextHour, withinUpstreamBudget } from "@/server/api-guard";
 
 export const maxDuration = 20;
@@ -27,6 +28,9 @@ export interface ProfitRefEntry {
   refDate: string;
   prevPrice?: number;
   prevDate?: string;
+  // '오늘' 칩 휴장 구간 보강(#132 U7, 선택 필드) — daily·kstAccessDay에서 서버 시각의 칩 세션이 장 종료 후이고
+  // 그 종가쌍이 (refDate, prevDate)와 다를 때만. 두 가격 모두 실제 종가일 = 요청일(롤백 값 금지). 실패하면 필드 생략
+  chipPair?: { closeDate: string; closePrice: number; baseDate: string; basePrice: number };
 }
 
 export type ProfitRefResponse = Record<string, ProfitRefEntry | null>;
@@ -141,12 +145,119 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
+  // ── '오늘' 칩 휴장 구간 보강(U7) ── 기존 필드·null 판정이 끝난 result에만 덧붙인다
+  type ChipNeed = { ticker: string; market: ChipMarket; closeDate: string; baseDate: string };
+  const collectChipNeeds = (): ChipNeed[] => {
+    if (period !== "daily" || basis !== "kstAccessDay") return [];
+    const sessions = { domestic: getTodayChipSession("domestic"), foreign: getTodayChipSession("foreign") };
+    const needs: ChipNeed[] = [];
+    const visit = (ticker: string, market: ChipMarket) => {
+      const e = result[ticker];
+      const s = sessions[market];
+      if (!e || s.phase !== "closed") return;
+      if (e.refDate === s.tradeDate && e.prevDate === s.baseDate) return; // 평일 정상 시각: 추가 호출 0
+      needs.push({ ticker, market, closeDate: s.tradeDate, baseDate: s.baseDate });
+    };
+    for (const t of allKr) visit(t, "domestic");
+    for (const t of allUs) visit(t, "foreign");
+    return needs;
+  };
+  // 캐시에서 먼저 찾고, 없는 날짜만 fetchMiss로 받는다(fetchMiss가 null이면 KIS 호출 불가 → 그 쌍 생략).
+  // 반환: "none"(보강 대상 0) / "ok" / "failed"(하나라도 생략)
+  const attachChipPairs = async (
+    needs: ChipNeed[],
+    fetchMiss: ((misses: { ticker: string; date: string; market: ChipMarket }[]) => Promise<Map<string, number | null>>) | null,
+  ): Promise<"none" | "ok" | "failed"> => {
+    if (needs.length === 0) return "none";
+    const prices = new Map<string, number | null>(); // `${ticker}|${date}` → 실제 종가일 = 요청일인 종가
+    const misses: { ticker: string; date: string; market: ChipMarket }[] = [];
+    for (const n of needs) {
+      for (const date of [n.closeDate, n.baseDate]) {
+        const k = `${n.ticker}|${date}`;
+        if (prices.has(k)) continue;
+        const hit = await lookupCached(n.ticker, date);
+        if (hit) prices.set(k, hit.actualDate === date ? hit.price : null);
+        else {
+          prices.set(k, null);
+          misses.push({ ticker: n.ticker, date, market: n.market });
+        }
+      }
+    }
+    if (misses.length > 0 && fetchMiss) {
+      for (const [k, v] of await fetchMiss(misses)) prices.set(k, v);
+    }
+    let failed = false;
+    for (const n of needs) {
+      const closePrice = prices.get(`${n.ticker}|${n.closeDate}`);
+      const basePrice = prices.get(`${n.ticker}|${n.baseDate}`);
+      const e = result[n.ticker];
+      if (e && closePrice && closePrice > 0 && basePrice && basePrice > 0) {
+        e.chipPair = { closeDate: n.closeDate, closePrice, baseDate: n.baseDate, basePrice };
+      } else failed = true;
+    }
+    return failed ? "failed" : "ok";
+  };
+  // 놓친 날짜를 KIS로 받는다 — 기존 큐와 같은 캐시 규칙(setRefPrice·요청일 색인)
+  const fetchChipMisses = async (
+    misses: { ticker: string; date: string; market: ChipMarket }[],
+    token: string,
+    excd: Map<string, string | undefined>,
+  ): Promise<Map<string, number | null>> => {
+    const out = new Map<string, number | null>();
+    const appKey = process.env.KIS_APP_KEY ?? "";
+    const appSecret = process.env.KIS_APP_SECRET ?? "";
+    await Promise.all(misses.map(async (m) => {
+      const isDomestic = m.market === "domestic";
+      const res = isDomestic
+        ? await fetchDomesticHistoricalPrice(m.ticker, m.date, token, appKey, appSecret)
+        : await fetchOverseasHistoricalPrice(m.ticker, m.date, token, appKey, appSecret, excd.get(m.ticker));
+      if (!res) { out.set(`${m.ticker}|${m.date}`, null); return; }
+      await cache.setRefPrice(m.ticker, res.date, res.price, period);
+      const reqIsBusinessDay = (isDomestic ? isKrBusinessDay : isUsBusinessDay)(new Date(`${m.date}T00:00:00.000Z`));
+      if (res.date === m.date || !reqIsBusinessDay) await cache.setRefDateForRequest(m.ticker, m.date, res.date, period);
+      out.set(`${m.ticker}|${m.date}`, res.date === m.date ? res.price : null);
+    }));
+    return out;
+  };
+  // 해외 종목별 EXCD를 STOCKS 캐시에서 사전 조회 (장중 슬롯과 effectiveDate 슬롯 모두 시도)
+  const loadExcd = async (tickers: string[]): Promise<Map<string, string | undefined>> => {
+    const foreignEffective = getEffectiveDateStr("foreign");
+    const foreignSlot = getStockCacheSlot("foreign");
+    const excdByTicker = new Map<string, string | undefined>();
+    await Promise.all(
+      tickers.map(async (ticker) => {
+        const tryKeys = foreignSlot !== foreignEffective
+          ? [`${ticker}-${foreignSlot}`, `${ticker}-${foreignEffective}`]
+          : [`${ticker}-${foreignEffective}`];
+        for (const key of tryKeys) {
+          const st = await cache.getStock(key);
+          if (st?.market) {
+            excdByTicker.set(ticker, marketToExcd(st.market));
+            return;
+          }
+        }
+        excdByTicker.set(ticker, undefined);
+      }),
+    );
+    return excdByTicker;
+  };
+
   // 캐시 hit으로 모두 충족 → 미설정 종목은 null 처리
   if (fetchQueue.length === 0) {
     for (const ticker of [...allKr, ...allUs]) {
       if (!result[ticker] || !result[ticker]!.refDate) result[ticker] = null;
     }
-    return NextResponse.json(result, { headers: cdnCacheHeaders(secondsUntilNextHour()) });
+    // 칩 보강에 KIS 호출이 필요할 때만 L2·예산·토큰을 확인한다. 막히면 필드만 생략(기존 응답 그대로)
+    const chip = await attachChipPairs(collectChipNeeds(), async (misses) => {
+      if (await guardRateLimit(req, "profit", 30, 60)) return new Map();
+      if (!(await withinUpstreamBudget("kis", misses.length))) return new Map();
+      const { token } = await getKisAccessToken(toDateStr(getKSTNow()));
+      if (!token) return new Map();
+      const usMiss = [...new Set(misses.filter((m) => m.market === "foreign").map((m) => m.ticker))];
+      return fetchChipMisses(misses, token, await loadExcd(usMiss));
+    });
+    // 보강 실패분이 있으면 CDN에 1시간 굳히지 않는다(다음 요청에서 다시 시도)
+    return NextResponse.json(result, chip === "failed" ? undefined : { headers: cdnCacheHeaders(secondsUntilNextHour()) });
   }
 
   // 캐시 미스만 L2 rate limit·전역 예산 적용 — 예산 초과 시 외부 호출 없이 일시 오류 신호
@@ -175,26 +286,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result, unavailable ? { headers: { "X-KIS-Unavailable": "1" } } : undefined);
   }
 
-  // 해외 종목별 EXCD를 STOCKS 캐시에서 사전 조회 (장중 슬롯과 effectiveDate 슬롯 모두 시도)
   // 클라이언트 배치(BATCH_SIZE=3, 1초 간격)가 KIS rate limit을 흡수하므로 서버는 단순 Promise.all
-  const foreignEffective = getEffectiveDateStr("foreign");
-  const foreignSlot = getStockCacheSlot("foreign");
-  const excdByTicker = new Map<string, string | undefined>();
-  await Promise.all(
-    allUs.map(async (ticker) => {
-      const tryKeys = foreignSlot !== foreignEffective
-        ? [`${ticker}-${foreignSlot}`, `${ticker}-${foreignEffective}`]
-        : [`${ticker}-${foreignEffective}`];
-      for (const key of tryKeys) {
-        const st = await cache.getStock(key);
-        if (st?.market) {
-          excdByTicker.set(ticker, marketToExcd(st.market));
-          return;
-        }
-      }
-      excdByTicker.set(ticker, undefined);
-    }),
-  );
+  const excdByTicker = await loadExcd(allUs);
 
   let successCount = 0;
   await Promise.all(
@@ -243,5 +336,10 @@ export async function GET(req: NextRequest) {
     await recordKisSuccess();
   }
 
-  return NextResponse.json(result, unavailableNow ? { headers: { "X-KIS-Unavailable": "1" } } : undefined);
+  if (unavailableNow) return NextResponse.json(result, { headers: { "X-KIS-Unavailable": "1" } });
+  // 칩 보강(U7) — 이미 받은 토큰으로, 예산 안에서만
+  const chipNeeds = collectChipNeeds();
+  await attachChipPairs(chipNeeds, async (misses) =>
+    (await withinUpstreamBudget("kis", misses.length)) ? fetchChipMisses(misses, accessToken, excdByTicker) : new Map());
+  return NextResponse.json(result);
 }
