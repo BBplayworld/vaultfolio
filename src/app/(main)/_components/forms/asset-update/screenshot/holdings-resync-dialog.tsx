@@ -42,6 +42,7 @@ import {
   resolveScreens,
   summarize,
   inheritedPreds,
+  removeRowLabel,
   evaluateLink,
   type DiffResult,
   type DiffRow,
@@ -791,6 +792,10 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
       return n;
     });
   const removeChecked = (id: string) => sel.remove.has(id);
+  // 체크된 행이 이어받기에 쓰이면 지워지지 않으므로 '변경'(위 행이 '변경'인 것과 일치, #144)
+  const inheritedIds = new Set([...inherits.values()].map((s) => s.id));
+  const rowLabel = (id: string) => removeRowLabel(removeChecked(id), inheritedIds.has(id));
+  const rowLabelClass = (id: string) => ({ 삭제: "text-destructive", 변경: "text-foreground", 유지: "text-muted-foreground" })[rowLabel(id)];
   const toggleRemove = (id: string, on: boolean) => setRemoveOv((p) => ({ ...p, [id]: on }));
 
   return (
@@ -842,7 +847,7 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
             {off && <p className="text-sm text-muted-foreground text-pretty break-keep">화면이 다 안 담겼을 수 있어요</p>}
             <ul className="divide-y divide-border/40">
               {rows.map((r) => (
-                <CheckRow key={r.rowId} id={r.stock.id} testId={`resync-delete-check-${r.stock.id}`} checked={removeChecked(r.stock.id)} onChange={(on) => toggleRemove(r.stock.id, on)} name={r.stock.name} label={removeChecked(r.stock.id) ? "삭제" : "유지"} labelClass={removeChecked(r.stock.id) ? "text-destructive" : "text-muted-foreground"} sub={`수량 ${fmt(r.stock.quantity)}`} note={r.stock.inactiveStatus ? "거래정지·상장폐지 종목은 기본으로 그대로 둬요" : undefined} noteId={`resync-inactive-note-${r.stock.id}`} />
+                <CheckRow key={r.rowId} id={r.stock.id} testId={`resync-delete-check-${r.stock.id}`} checked={removeChecked(r.stock.id)} onChange={(on) => toggleRemove(r.stock.id, on)} name={r.stock.name} label={rowLabel(r.stock.id)} labelClass={rowLabelClass(r.stock.id)} sub={`수량 ${fmt(r.stock.quantity)}`} note={r.stock.inactiveStatus ? "거래정지·상장폐지 종목은 기본으로 그대로 둬요" : undefined} noteId={`resync-inactive-note-${r.stock.id}`} />
               ))}
             </ul>
             {foreignDeleteCandidate && rows.some((r) => r.stock.category === "foreign") && (
@@ -871,8 +876,8 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
                   checked={removeChecked(s.id)}
                   onChange={(on) => toggleRemove(s.id, on)}
                   name={s.name}
-                  label={removeChecked(s.id) ? "삭제" : "유지"}
-                  labelClass={removeChecked(s.id) ? "text-destructive" : "text-muted-foreground"}
+                  label={rowLabel(s.id)}
+                  labelClass={rowLabelClass(s.id)}
                   sub={s.category === "unlisted" ? "비상장은 직접 입력한 값이라 기본으로 둬요" : `${isUnassignedBroker(s.broker) ? `${T.broker} 미지정` : s.broker}${kind === "crypto" ? "" : ` · ${categoryShort(s.category)}`} · 수량 ${fmt(s.quantity)}`}
                 />
               ))}

@@ -156,6 +156,11 @@ export function inheritedPreds(diff: DiffResult, sel: ResyncSelection, existing?
   return out;
 }
 
+/** 삭제 후보·유지 묶음 행의 상태 라벨. 체크됐지만 같은 종목 이어받기로 쓰이면 지워지지 않으므로 '변경'(#144) */
+export function removeRowLabel(checked: boolean, inherited: boolean): "삭제" | "변경" | "유지" {
+  return !checked ? "유지" : inherited ? "변경" : "삭제";
+}
+
 export function applyResync(
   existing: Stock[],
   diff: DiffResult,
