@@ -344,3 +344,83 @@ export function computeNotComparedRows(
 export function compareTickers(classified: ClassifiedHoldings): string[] {
   return [...classified.kr.map((h) => h.ticker), ...classified.us.map((h) => h.ticker), ...classified.notCompared.map((n) => n.ticker)];
 }
+
+// ── 화면 표기(U4) ────────────────────────────────────────────────
+
+export const COMPARE_PERIOD_LABEL: Readonly<Record<ComparePeriod, string>> = { daily: "하루", weekly: "1주", monthly: "1개월" };
+
+const monthDay = (ymd: string) => `${Number(ymd.slice(5, 7))}/${Number(ymd.slice(8, 10))}`;
+
+// 기준 종가 구간 `M/D→M/D` — 표 열 머리와 목록 묶음 머리가 같은 함수·같은 날짜쌍을 쓴다(cto 판정 2 ①-1).
+// [시작+화살표, 끝]으로 나눠 돌려준다(375 미만 열 머리는 두 줄 고정). 1개월 이하라 연도는 붙이지 않는다
+export function refRangeParts(startDate: string, endDate: string): [string, string] {
+  return [`${monthDay(startDate)}→`, monthDay(endDate)];
+}
+
+// 칸 하나의 구간 표기 — 휴장이면 '휴장', 합산 기준쌍이 있으면 그 쌍(지수만 날짜가 달라도 종목 기준쌍), 그 밖(조회 중·합산 0)은 없음
+export function cellRange(cell: PeriodCell): { kind: "holiday" } | { kind: "range"; parts: [string, string] } | null {
+  if (cell.state === "holiday") return { kind: "holiday" };
+  if (cell.state === "ok" && cell.startDate && cell.endDate) return { kind: "range", parts: refRangeParts(cell.startDate, cell.endDate) };
+  return null;
+}
+
+export interface CompareSummary {
+  // 블록 머리 N종목 = 세 기간 중 하나 이상 합산(휴장 칸 포함)된 종목 수
+  blockCounts: Partial<Record<CompareMarket, number>>;
+  notCompared: { count: number; reasons: NotComparedReason[] };
+  // 제외 N = 한 기간이라도 빠진 종목의 고유 수 + 비상장·티커 없음. 사유별 개수는 표시 순서대로
+  excluded: { count: number; reasons: { label: string; count: number }[] };
+}
+
+const EXCLUDED_LABEL = { noRef: "기준가 없음", dateMismatch: "기준일 다름", unlisted: "비상장·티커 없음" } as const;
+
+// 안내 줄·블록 머리 셈(cto 판정 2 ④). 상장폐지는 어디에도 세지 않는다. 조회 중 칸이 하나라도 있으면 null(부분 셈 금지, A8)
+export function summarizeCompare(classified: ClassifiedHoldings, blocks: readonly MarketCompareBlock[]): CompareSummary | null {
+  if (blocks.some((b) => COMPARE_PERIODS.some((p) => b.periods[p].state === "loading"))) return null;
+  const blockCounts: Partial<Record<CompareMarket, number>> = {};
+  const groups = new Map<string, { kind: number; count: number }>();
+  let excludedCount = 0;
+  for (const b of blocks) {
+    const included = new Set<string>();
+    const missing = new Map<string, { periods: ComparePeriod[]; noRef: boolean }>();
+    for (const p of COMPARE_PERIODS) {
+      const cell = b.periods[p];
+      for (const r of cell.rows) if (r.kind === "stock" && r.ticker) included.add(r.ticker);
+      for (const e of cell.excluded) {
+        const m = missing.get(e.ticker) ?? { periods: [], noRef: false };
+        m.periods.push(p);
+        if (e.reason === "noRef") m.noRef = true;
+        missing.set(e.ticker, m);
+      }
+    }
+    blockCounts[b.market] = included.size;
+    // 블록 종목 순서(평가금 순)대로 센다
+    for (const h of classified[b.market]) {
+      const m = missing.get(h.ticker);
+      if (!m) continue;
+      excludedCount++;
+      const reason = m.noRef ? "noRef" : "dateMismatch";
+      const prefix = m.periods.length === COMPARE_PERIODS.length ? "" : `${m.periods.map((p) => COMPARE_PERIOD_LABEL[p]).join("·")} `;
+      const label = `${prefix}${EXCLUDED_LABEL[reason]}`;
+      const g = groups.get(label) ?? { kind: reason === "noRef" ? 0 : 1, count: 0 };
+      g.count++;
+      groups.set(label, g);
+    }
+  }
+  // 비상장·티커 없음 — 같은 이름(여러 계좌)은 1개
+  const unlistedCount = new Set(classified.unlisted.map((u) => u.name)).size;
+  if (unlistedCount > 0) {
+    excludedCount += unlistedCount;
+    groups.set(EXCLUDED_LABEL.unlisted, { kind: 2, count: unlistedCount });
+  }
+  const reasons = [...groups.entries()]
+    .map(([label, g], i) => ({ label, count: g.count, kind: g.kind, i }))
+    .sort((a, b) => a.kind - b.kind || a.i - b.i)
+    .map(({ label, count }) => ({ label, count }));
+  const ncReasons = (["krNonEquity", "foreignNonUs"] as const).filter((r) => classified.notCompared.some((n) => n.reason === r));
+  return {
+    blockCounts,
+    notCompared: { count: classified.notCompared.length, reasons: ncReasons },
+    excluded: { count: excludedCount, reasons },
+  };
+}

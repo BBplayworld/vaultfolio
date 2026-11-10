@@ -8,6 +8,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots } from "@/lib/asset/snapshot-storage";
+import { track } from "@/lib/analytics/ga";
 import { buildWeekRows } from "@/lib/report/settlement";
 import type { ProfitPeriod } from "@/lib/finance/profit-utils";
 import type { ChangeInit, ChangePeriod, ChangeScope } from "../../layout/navigation/navigation-context";
@@ -53,6 +54,8 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
   };
   const changeScope = (v: ChangeScope) => {
     if (v === scope) return;
+    // 사용자가 주식 범위를 눌렀을 때만 1건(복원·첫 진입은 init으로 들어와 여기를 거치지 않는다, #132)
+    if (v === "stock") track("feature_use", { category: "change_scope_stock" });
     setScope(v);
     setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu" }));
   };

@@ -5,7 +5,8 @@ import { recordVisit, viewToKey } from "@/lib/feature-usage";
 import { trackScreen, trackThemeMode } from "@/lib/analytics/ga";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "physical" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
-export type ActivityTab = "hub" | "change" | "dividend" | "report";
+// change-market = 자산 변화 하위 화면 '시장과 비교'(#132)
+export type ActivityTab = "hub" | "change" | "change-market" | "dividend" | "report";
 
 // 자산 변화 화면 진입 상태(#32) — 해시에는 싣지 않는다(옛 해시 리다이렉트·결산 카드·FAB가 초기 탭을 지정)
 export type ChangeScope = "all" | "stock";
@@ -26,7 +27,38 @@ export type AssetView =
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
-const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "dividend", "report"];
+const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "change-market", "dividend", "report"];
+const CHANGE_PERIODS: readonly ChangePeriod[] = ["day", "week", "month", "year"];
+
+// 시장과 비교(#132 K3) — 자산 변화에서 들어갈 때 현재 history 항목에 범위·기간을 싣고, pop으로 돌아오면 그 값으로 다시 연다.
+// history.state는 기존 항목 상태(Next 내부 키)를 펼쳐 두고 덧붙인다. 저장소 0(브라우저 세션 history만)
+export function rememberChangeInit(init: Pick<ChangeInit, "scope" | "period">): void {
+  if (typeof window === "undefined") return;
+  const prev = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+  window.history.replaceState({ ...prev, changeInit: { scope: init.scope, period: init.period } }, "", window.location.href);
+}
+
+// history.state → 자산 변화 진입 상태(모양이 다르면 무시)
+export function changeInitFromHistoryState(state: unknown): ChangeInit | undefined {
+  const ci = state && typeof state === "object" ? (state as { changeInit?: unknown }).changeInit : undefined;
+  if (!ci || typeof ci !== "object") return undefined;
+  const { scope, period } = ci as { scope?: unknown; period?: unknown };
+  if ((scope !== "all" && scope !== "stock") || !CHANGE_PERIODS.includes(period as ChangePeriod)) return undefined;
+  return { scope, period: period as ChangePeriod };
+}
+
+// popstate 대상 view에 복원 상태를 입힌다 — 자산 변화이고 해시 리다이렉트 init이 없을 때만(첫 마운트·새로고침에는 쓰지 않음)
+export function withRestoredChangeInit(next: AssetView, state: unknown): AssetView {
+  if (next.type !== "activity" || next.tab !== "change" || next.init) return next;
+  const init = changeInitFromHistoryState(state);
+  return init ? { ...next, init } : next;
+}
+
+// 시장과 비교에 앱 안에서 들어왔는지(모듈 메모리, 새로고침하면 false) — 뒤로 = history.back() / 주소 진입 = 자산 변화(주식·주)
+let marketCompareEnteredInApp = false;
+export function marketCompareBackAction(enteredInApp: boolean, historyLength: number): "pop" | "change" {
+  return enteredInApp && historyLength > 1 ? "pop" : "change";
+}
 // 옛 해시(북마크·공유 링크 보호) → 자산 변화의 해당 범위·기간으로 리다이렉트(#32)
 const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {
   netasset: { scope: "all", period: "year" },
@@ -81,6 +113,8 @@ export function getBackLabel(view: AssetView): string {
   if (view.type === "settings") return "더보기";
   // 세금 일정은 홈 배너·더보기 두 경로에서 진입하므로 중립 라벨(실제 복귀는 history.back)
   if (view.type === "tax") return "뒤로";
+  // 시장과 비교는 상세·주식·자산 변화 두 곳에서 진입 → 중립 라벨(#132)
+  if (view.type === "activity" && view.tab === "change-market") return "뒤로";
   if (view.tab === "hub") return "홈";
   if (view.type === "detail" && (view.tab === "stocks-xray" || view.tab === "stocks-trades")) return "주식";
   if (view.type === "detail" && view.tab === "cash-transactions") return "현금";
@@ -182,7 +216,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
     trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
-      const next = parseHash(window.location.hash);
+      const next = withRestoredChangeInit(parseHash(window.location.hash), window.history.state);
       if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
         window.history.replaceState(null, "", toHash(next));
       }
@@ -198,6 +232,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const navigate = useCallback((v: AssetView) => {
     const hash = toHash(v);
+    if (v.type === "activity" && v.tab === "change-market") marketCompareEnteredInApp = true;
     const target = hash || window.location.pathname + window.location.search;
     if (window.location.hash !== hash) {
       window.history.pushState(null, "", target);
@@ -310,6 +345,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         return;
       }
       navigate({ type: "home" });
+      return;
+    }
+    // 시장과 비교: 앱 안 진입이면 들어온 화면으로 pop(상태 복원은 K3), 주소 진입·새로고침이면 자산 변화(주식·주)
+    if (view.type === "activity" && view.tab === "change-market") {
+      if (typeof window !== "undefined" && marketCompareBackAction(marketCompareEnteredInApp, window.history.length) === "pop") {
+        window.history.back();
+        return;
+      }
+      navigate({ type: "activity", tab: "change", init: { scope: "stock", period: "week" } });
       return;
     }
     if (view.type === "activity" && view.tab !== "hub") {

@@ -84,7 +84,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade"],
+  category: ["xray", "tax_sim", "home_tip", "notice", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -154,6 +154,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "detail:loan-transactions": "상세·대출 거래내역",
   "activity:hub": "성과",
   "activity:change": "성과·자산 변화",
+  "activity:change-market": "성과·자산 변화·시장 비교",
   "activity:change:composition": "성과·자산 변화·구성", // 현재 사용처 없음(#4.44에서 카드 제거) — 4.45 재사용 예정
   "activity:dividend": "성과·배당",
   "activity:report": "성과·자산 성적표",
@@ -193,6 +194,7 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   resync_continue: "이어서 맞추기",
   save_failed: "저장 실패",
   linked_trade: "거래 저장·계좌 함께 반영",
+  change_scope_stock: "성과·자산 변화·주식",
 };
 
 /**
