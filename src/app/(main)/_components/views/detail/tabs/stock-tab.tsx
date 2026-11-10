@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors, Globe, ArrowLeftRight, History } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors, Globe, ArrowLeftRight, History, ArrowDownWideNarrow } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +28,8 @@ import { TaxSeasonStrip } from "../tax-season-strip";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/finance/profit-utils";
-import { computeTodayChip, todayChipLabel } from "@/lib/finance/today-chip";
+import { computeTodayChip, sortByChipRate, todayChipLabel } from "@/lib/finance/today-chip";
+import { track } from "@/lib/analytics/ga";
 import { captureLogoSize, getLogoInitial } from "@/lib/finance/logo-source";
 import { useLogoSrc } from "@/hooks/use-logo-src";
 import { STORAGE_KEYS } from "@/lib/local-storage";
@@ -1058,6 +1059,34 @@ export function StockCategorySection({
   );
 }
 
+// 목록 정렬(#132 ③) — 평가금 순(기본) / 등락률 순. 선택은 모듈 메모리에만(세션 유지·새로고침하면 기본값·저장 키 0).
+// 비교 페이지에서 뒤로 돌아와 다시 마운트돼도 선택이 그대로다(K3). 비중 막대·인증카드 순서는 평가금 순 고정
+type StockSort = "value" | "rate";
+let stockSortMemory: StockSort = "value";
+
+// 정렬 컨트롤 — 카테고리 줄 오른쪽 글자 버튼(면·테두리 없음, ui.md 4절). 좁은 폭(<360)·카테고리 6칸 이상이면 아이콘만
+function StockSortSelect({ value, onChange, iconOnly }: { value: StockSort; onChange: (v: StockSort) => void; iconOnly: boolean }) {
+  const chosen = value === "rate" ? "font-semibold text-foreground" : "text-muted-foreground";
+  const narrow = iconOnly ? "justify-center [&>svg:last-child]:hidden" : "max-[359px]:justify-center max-[359px]:[&>svg:last-child]:hidden";
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as StockSort)}>
+      <SelectTrigger
+        size="sm"
+        data-testid="stock-sort"
+        aria-label="정렬"
+        className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-[13px] sm:text-sm lg:text-base bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${narrow}`}
+      >
+        <ArrowDownWideNarrow aria-hidden className={`size-4 text-current ${iconOnly ? "" : "hidden max-[359px]:block"}`} />
+        <SelectValue className={iconOnly ? "sr-only" : "max-[359px]:sr-only"} />
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectItem value="value" data-testid="stock-sort-value" className="min-h-10">평가금 순</SelectItem>
+        <SelectItem value="rate" data-testid="stock-sort-change" className="min-h-10">등락률 순</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function StockTab() {
   const { assetData, deleteStock, deleteStocks, saveData } = useAssetData();
   const { navigate } = useAssetNavigation();
@@ -1128,6 +1157,33 @@ export function StockTab() {
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
+  const [sort, setSort] = useState<StockSort>(() => stockSortMemory);
+  const changeSort = (v: StockSort) => {
+    if (v === sort) return;
+    stockSortMemory = v;
+    setSort(v);
+    if (v === "rate") track("feature_use", { category: "stock_sort_rate" }); // 고를 때 1건(되돌릴 때 제외)
+  };
+  // 등락률 순 = 종목 줄 칩 값. 기준가를 다 받기 전에는 평가금 순을 유지하고 다 받은 뒤 한 번만 다시 놓는다
+  const listStocks = useMemo(() => {
+    if (sort !== "rate" || !refData) return mergedStocks;
+    const pending = assetData.stocks.some((s) =>
+      s.ticker && s.category !== "unlisted" && s.currentPrice > 0 && s.inactiveStatus !== "delisted" && !(normalizeTicker(s) in refData));
+    if (pending) return mergedStocks;
+    return sortByChipRate(mergedStocks, (st) => computeTodayChip(groupedStocks.get(groupKeyOf(st)) ?? [st], refData, exchangeRates)?.rate ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, refData, mergedStocks, groupedStocks, exchangeRates, assetData.stocks]);
+
+  // 카테고리 줄 — 6칸 이상이면 조밀(칸 좌우 여백 축소) + 정렬 아이콘형. 카테고리를 바꾸면 선택 칸을 보이게 스크롤
+  const denseCategories = visibleCategories.length >= 6;
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const prevCategoryRef = useRef(activeCategory);
+  useEffect(() => {
+    if (prevCategoryRef.current === activeCategory) return;
+    prevCategoryRef.current = activeCategory;
+    categoryScrollRef.current?.querySelector('[aria-checked="true"]')?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [activeCategory]);
+
   const handleDelete = (id: string) => {
     toast.success("삭제되었습니다.");
     deleteStock(id);
@@ -1169,21 +1225,25 @@ export function StockTab() {
         <StockInsightStrip stocks={assetData.stocks} exchangeRates={exchangeRates} />
         <TaxSeasonStrip stocks={assetData.stocks} />
 
-        {/* 카테고리 selector */}
-        <div className="flex justify-start">
-          <InlineSelector
-            value={activeCategory}
-            onChange={setActiveCategory}
-            options={visibleCategories}
-            ariaLabel="주식 카테고리 선택"
-          />
+        {/* 카테고리 selector + 정렬(같은 줄, 줄 수 +0) */}
+        <div data-testid="stock-category-row" className="flex items-center gap-2">
+          <div ref={categoryScrollRef} className="min-w-0 flex-1 overflow-x-auto rounded-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <InlineSelector
+              value={activeCategory}
+              onChange={setActiveCategory}
+              options={visibleCategories}
+              ariaLabel="주식 카테고리 선택"
+              className={denseCategories ? "[&>button]:px-1.5" : undefined}
+            />
+          </div>
+          <StockSortSelect value={sort} onChange={changeSort} iconOnly={denseCategories} />
         </div>
 
         {/* 비중바 + 종목 목록 (인증카드과 공통) */}
         <StockCategorySection
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
-          filteredStocks={mergedStocks}
+          filteredStocks={listStocks}
           totalValue={totalValue}
           barItems={barItems}
           barColors={barColors}

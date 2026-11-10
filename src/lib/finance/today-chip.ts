@@ -223,3 +223,19 @@ export function todayChipLabel(chip: TodayChipResult, scope: "row" | "header"): 
   if (scope === "header") return TODAY_CHIP_LABELS.headerClosed(chip.closeDates);
   return chip.closeDates[0] ? TODAY_CHIP_LABELS.rowClosed(chip.closeDates[0]) : TODAY_CHIP_LABELS.live;
 }
+
+// 상세·주식 `등락률 순`(#132 ③, cto Q3): 칩에 보이는 등락률(소수 1자리) 높은 순, 부호 그대로(+3% → +1% → −2%).
+// 칩이 없는 종목(rateOf = null)은 맨 뒤, 동률·칩 없는 종목끼리는 입력 순서(= 평가금 순)를 유지한다. 오름차순 없음
+export function sortByChipRate<T>(items: readonly T[], rateOf: (item: T) => number | null): T[] {
+  const tenths = (r: number) => Math.round(Number(r.toFixed(1)) * 10);
+  return items
+    .map((item, i) => {
+      const r = rateOf(item);
+      return { item, i, t: r === null || !Number.isFinite(r) ? null : tenths(r) };
+    })
+    .sort((a, b) => {
+      if (a.t === null || b.t === null) return a.t === null ? (b.t === null ? a.i - b.i : 1) : -1;
+      return b.t - a.t || a.i - b.i;
+    })
+    .map((x) => x.item);
+}
