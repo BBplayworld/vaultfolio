@@ -285,7 +285,8 @@ interface FetchProfitRefOptions {
 }
 
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
-const inFlightFetches = new Map<string, Promise<ProfitRefResponse>>();
+// aborted: 선행 호출이 자기 signal abort로 끝났는지 — 부분 결과를 후행 호출자에게 "완료"로 넘기지 않기 위함(#141)
+const inFlightFetches = new Map<string, Promise<{ data: ProfitRefResponse; aborted: boolean }>>();
 
 export async function fetchProfitRef(
   tickers: string,
@@ -327,12 +328,14 @@ export async function fetchProfitRef(
   // dedup된 호출자는 점진 노출 없이 최종 결과만 1회 받음 (캐시 hit과 동일 취급)
   const existing = inFlightFetches.get(cacheKey);
   if (existing) {
-    const result = await existing;
-    if (!signal?.aborted) {
-      onProgress?.(result);
-      onComplete?.(true);
-    }
-    return result;
+    const { data, aborted } = await existing;
+    if (signal?.aborted) return data;
+    // 선행 호출이 abort로 끝났으면 부분 결과(첫 배치 중이면 {})를 완료로 주지 않고 처음부터 다시 조회 —
+    // 선행은 저장하지 않았으므로 캐시 miss, 그 사이 다른 호출이 시작했으면 그쪽에 dedup(#141)
+    if (aborted) return fetchProfitRef(tickers, period, options);
+    onProgress?.(data);
+    onComplete?.(true);
+    return data;
   }
 
   // abort 가능한 sleep — signal abort 시 즉시 깨어나 다음 배치 진입을 차단
@@ -347,7 +350,7 @@ export async function fetchProfitRef(
   };
   signal?.addEventListener("abort", cleanupInFlight, { once: true });
 
-  const runFetch = async (): Promise<ProfitRefResponse> => {
+  const runFetch = async (): Promise<{ data: ProfitRefResponse; aborted: boolean }> => {
     const tickerArr = tickers.split(",").filter(Boolean);
     const merged: ProfitRefResponse = {};
     // 점검(X-KIS-Unavailable)으로 배치 중 잘린 경우 — 불완전한 결과이므로 "완료"로 취급하지 않음
@@ -378,13 +381,13 @@ export async function fetchProfitRef(
       try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
       onComplete?.(false);
     }
-    return merged;
+    return { data: merged, aborted: !!signal?.aborted };
   };
 
   const promise = runFetch();
   inFlightFetches.set(cacheKey, promise);
   try {
-    return await promise;
+    return (await promise).data;
   } finally {
     cleanupInFlight();
   }
