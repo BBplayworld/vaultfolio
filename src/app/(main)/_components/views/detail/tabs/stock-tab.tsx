@@ -1077,7 +1077,8 @@ function StockSortSelect({ value, onChange, iconOnly }: { value: StockSort; onCh
         className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-[13px] sm:text-sm lg:text-base bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${narrow}`}
       >
         <ArrowDownWideNarrow aria-hidden className={`size-4 text-current ${iconOnly ? "" : "hidden max-[359px]:block"}`} />
-        <SelectValue className={iconOnly ? "sr-only" : "max-[359px]:sr-only"} />
+        {/* Radix SelectValue는 className을 버리므로 감싸서 숨긴다 */}
+        <span className={iconOnly ? "sr-only" : "max-[359px]:sr-only"}><SelectValue /></span>
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value="value" data-testid="stock-sort-value" className="min-h-10">평가금 순</SelectItem>
