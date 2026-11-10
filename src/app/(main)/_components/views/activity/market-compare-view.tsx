@@ -357,7 +357,11 @@ export function CompareNotice({ summary }: { summary: CompareSummary }) {
         <p className="text-sm text-muted-foreground text-pretty break-keep">
           <span className="whitespace-nowrap font-semibold text-foreground">비교하지 않은 종목 {notCompared.count}</span>
           {notCompared.reasons.length === 1 ? (
-            <span> · {NOT_COMPARED_REASON[notCompared.reasons[0]]}</span>
+            // 320(359px 이하)은 `비교하지 않은 종목 N` / 이유 줄로 나눈다(어절 `해외`/`자산` 갈림 방지, 4.72 D3). 360 이상은 한 문단 그대로
+            <>
+              <span className="max-[359px]:hidden"> · </span>
+              <span className="max-[359px]:block">{NOT_COMPARED_REASON[notCompared.reasons[0]]}</span>
+            </>
           ) : (
             // 이유가 2개면 구분점으로 잇지 않고 이유마다 줄을 나눈다(첫 줄은 개수만)
             notCompared.reasons.map((r) => <span key={r} className="block">{NOT_COMPARED_REASON[r]}</span>)

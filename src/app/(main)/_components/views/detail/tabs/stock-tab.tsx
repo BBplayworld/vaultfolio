@@ -29,6 +29,7 @@ import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/finance/profit-utils";
 import { computeTodayChip, sortByChipRate, todayChipLabel } from "@/lib/finance/today-chip";
+import { cancelThenRefetchProfit } from "@/lib/finance/profit-fetch-gate";
 import { track } from "@/lib/analytics/ga";
 import { captureLogoSize, getLogoInitial } from "@/lib/finance/logo-source";
 import { useLogoSrc } from "@/hooks/use-logo-src";
@@ -175,12 +176,13 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
     enabled: tickerList.length > 0,
   });
 
-  // 데이터 삭제/불러오기 시 진행 중인 profit 쿼리 전부 강제 취소
+  // 데이터 삭제/불러오기·시작 시세 동기화 시 진행 중인 profit 쿼리를 취소하고, 화면에 붙은 쿼리는 다시 부른다
+  // (#138 — 취소만 하면 pending으로 남아 '오늘' 칩·등락률 순이 화면을 다시 열 때까지 비었다)
   const prevResetVersionRef = useRef(dataResetVersion);
   useEffect(() => {
     if (prevResetVersionRef.current === dataResetVersion) return;
     prevResetVersionRef.current = dataResetVersion;
-    queryClient.cancelQueries({ queryKey: ["profit"] });
+    void cancelThenRefetchProfit(queryClient);
   }, [dataResetVersion, queryClient]);
 
   const marketMap = useMemo<Record<string, string>>(() => {
@@ -264,7 +266,7 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
   return { filteredStocks, groupedStocks, groupKeyOf, mergedStocks, totalValue, totalCost, totalProfit, totalProfitRate, barItems, barColors, summary, mul, exchangeRates, todayChip, refData, marketMap };
 }
 
-// 칩 표시값 — 라벨은 장중 `오늘`, 장 종료 후 `M/D 종가`(헤더 `종가 기준`). today-chip.ts TODAY_CHIP_LABELS가 정본
+// 칩 표시값 — 라벨은 장중 `오늘`, 장 종료 후 `M/D 종가`(헤더 `종가`). today-chip.ts TODAY_CHIP_LABELS가 정본
 export type TodayChipView = { rate: number; label: string };
 
 // 오늘 등락 칩 — 누적 손익과 구분되게 뮤트 배경 칩에 담고, 방향(▲빨강/▼파랑)만 값에 색.
