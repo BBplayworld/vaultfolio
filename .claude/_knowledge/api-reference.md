@@ -11,6 +11,7 @@
 > | finance | 120 | 60/분 | `tickers` ≤3(형식 위반 제외) · `type` stock\|exchange |
 > | finance/crypto | 120 | 60/분 | `symbols` ≤30(`SYMBOL_RE`) |
 > | finance/profit | 120 | 30/분 | `tickers` ≤10 · `period` 4종 화이트리스트 |
+> | finance/market-index | 60 | 10/분 | `period` 3종 · `basis` 2종 필수(그 밖·`yearly` 400), 종목코드·수량 없음 |
 > | finance/dividend | 120 | 30/분 | `type` 2종, `excd`는 무시(서버 NAS 고정) |
 > | ticker-search | 120 | — | `q` ≤50자 · `limit` ≤30 |
 > | logo | 240 | 120/분 | `size` 버킷 스냅(32~512) · 업스트림 ≤512KB · SVG 거부 |
@@ -64,8 +65,10 @@ GET /api/finance/crypto?symbols=BTC,ETH,SOL
 
 ```
 GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&basis=sameBusinessDay|kstAccessDay
-→ ProfitRefResponse: Record<ticker, { refPrice, refDate, prevPrice?, prevDate? }>
+→ ProfitRefResponse: Record<ticker, { refPrice, refDate, prevPrice?, prevDate?, chipPair? }>
 ```
+
+**`chipPair?`(#4.73 U7, 선택 필드)** — `period=daily&basis=kstAccessDay`에서만. 서버 시각 `getTodayChipSession(market)`이 closed이고 그 종가쌍이 (refDate, prevDate)와 다를 때만 `{ closeDate, closePrice, baseDate, basePrice }`. 두 가격 모두 실제 종가일 = 요청일(롤백 값 금지). 캐시 먼저, 없는 날짜만 KIS(캐시 hit 경로는 이때만 L2·예산·토큰 확인). 실패·예산 초과면 필드만 생략하고 그 응답은 CDN 캐시 헤더 없음. 평일 정상 시각 KIS 추가 호출 0. 날짜 산출은 `profit-dates.ts` `resolveRefDates`(지수 라우트와 공용).
 
 **basis 옵션 (기본 kstAccessDay):**
 - `sameBusinessDay`(동일 영업일): `krDates = usDates = getDates(period,"foreign")` — 국내·해외 같은 영업일
@@ -85,6 +88,18 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&b
 - 캐시 miss 시 BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 호출
 - 같은 cacheKey 동시 요청은 `inFlightFetches` Map으로 dedup
 - 모든 배치 완료 후에만 캐시 저장 (부분 결과 캐시 hit 회귀 방지)
+
+---
+
+### GET /api/finance/market-index (#4.73 #132)
+코스피·S&P 500 기준 종가 — 시장과 비교 페이지·진입 글줄.
+
+```
+GET /api/finance/market-index?period=daily|weekly|monthly&basis=sameBusinessDay|kstAccessDay   # 둘 다 필수
+→ { KOSPI: ProfitRefEntry | null, SPX: ProfitRefEntry | null }   # profit 응답과 같은 모양(지수 = 종목 1개짜리 바구니)
+```
+- 날짜는 종목과 같은 `resolveRefDates`(휴장 명목일 포함) + `pickCloseOnOrBefore`(요청일 이하 최근 종가, 국내 5일 롤백). KIS 코스피 `FHKUP03500100`(업종 0001)·S&P 500 `FHKST03030100`(시장 N, 코드 `SPX`) 기간 시계열 1회씩.
+- 두 값이 다 있을 때만 `cdnCacheHeaders(secondsUntilNextHour())`. Redis 키 0. 서킷 open·예산 초과는 `X-KIS-Unavailable`. 클라이언트는 react-query 메모리만(`hooks/use-market-compare.ts`, localStorage 0).
 
 ---
 

@@ -12,6 +12,7 @@ import { CashTab } from "../../views/detail/tabs/cash-tab";
 import { LoanTab } from "../../views/detail/tabs/loan-tab";
 import { DividendCard, AssetReportView, AssetChangeView } from "../../views/activity";
 import { PerformanceHub } from "../../views/activity/performance-hub";
+import { MarketCompareView } from "../../views/activity/market-compare-view";
 import { DetailHub } from "../../views/detail/detail-hub";
 import { ToolMenuPage } from "../../header-menu/tool-menu";
 import { SettingsPage } from "../../header-menu/settings-page";
@@ -64,6 +65,7 @@ function ActivityView({ tab, init }: { tab: ActivityTab; init?: ChangeInit }) {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       {tab === "change"   && <AssetChangeView init={init} />}
+      {tab === "change-market" && <MarketCompareView />}
       {tab === "dividend" && <DividendCard isActive />}
       {tab === "report"   && <AssetReportView />}
     </div>

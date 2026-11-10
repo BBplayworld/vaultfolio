@@ -151,8 +151,15 @@ export function getStockChipQuote(
     return { live: false, closeDate: s.tradeDate, numerator: stock.currentPrice, denominator: ref.refPrice };
   }
   // 장 종료 후: 종가 응답의 두 거래일 종가로만(현재가 미사용 — 프리·애프터마켓 값 배제)
-  if (ref.refDate !== s.tradeDate || ref.prevDate !== s.baseDate || !(ref.prevPrice !== undefined && ref.prevPrice > 0)) return null;
-  return { live: false, closeDate: s.tradeDate, numerator: ref.refPrice, denominator: ref.prevPrice };
+  if (ref.refDate === s.tradeDate && ref.prevDate === s.baseDate && ref.prevPrice !== undefined && ref.prevPrice > 0) {
+    return { live: false, closeDate: s.tradeDate, numerator: ref.refPrice, denominator: ref.prevPrice };
+  }
+  // 휴장 구간 보강(U7): 서버가 덧붙인 칩 종가쌍이 지금 세션의 쌍과 같을 때만(서버 시각·CDN·로컬 캐시가 세션 경계를 넘은 응답 차단)
+  const cp = ref.chipPair;
+  if (cp && cp.closeDate === s.tradeDate && cp.baseDate === s.baseDate && cp.closePrice > 0 && cp.basePrice > 0) {
+    return { live: false, closeDate: s.tradeDate, numerator: cp.closePrice, denominator: cp.basePrice };
+  }
+  return null;
 }
 
 export interface TodayChipResult {
@@ -161,8 +168,20 @@ export interface TodayChipResult {
   closeDates: string[]; // 장 종료 후 종목들의 종가일(중복 제거·오름차순)
 }
 
+// 칩 대상 종목 = 국내 6자리·미국 USD 티커이고 비상장·상장폐지·거래정지가 아니며 현재가가 있는 종목. 그 밖(일본 등)은 원래 칩이 없다
+function chipTargetMarket(st: Stock): ChipMarket | null {
+  if (!st.ticker || st.category === "unlisted" || st.inactiveStatus || !(st.quantity > 0) || !st.currentPrice) return null;
+  const t = normalizeTicker(st);
+  const { krTickers, usTickers } = classifyTickers([t]);
+  if (krTickers.length > 0) return "domestic";
+  if (usTickers.length > 0 && st.currency === "USD") return "foreign";
+  return null;
+}
+
 // 칩 값: 종목별 현지 가격 등락을 원화 평가액(현재 환율)으로 가중 — 분자·분모 같은 환율이라 환율 효과 0.
 // 종목 1개(같은 티커 묶음)면 곧 그 종목의 현지 가격 등락률. 칩이 없는 종목은 합산에서 뺀다.
+// 부분 합산 숨김(cto 판정 2 ③): 칩 대상 종목 중 ① 응답을 아직 못 받은 종목이 있거나 ② 응답이 null이 아닌 대상 종목을 가진
+// 시장(국내·미국) 중 칩이 하나도 없는 시장이 있으면 null. 원래 값이 없는 종목(거래정지·일본·기준가 null)은 숨김을 만들지 않는다.
 export function computeTodayChip(
   stocks: Stock[],
   refData: ProfitRefResponse | undefined,
@@ -174,9 +193,18 @@ export function computeTodayChip(
   let den = 0;
   let anyLive = false;
   const dates = new Set<string>();
+  const marketHasRef: Record<ChipMarket, boolean> = { domestic: false, foreign: false };
+  const marketHasChip: Record<ChipMarket, boolean> = { domestic: false, foreign: false };
   for (const st of stocks) {
+    const target = chipTargetMarket(st);
+    if (target) {
+      const key = normalizeTicker(st);
+      if (!refData || !(key in refData)) return null; // ① 조회 중·한도로 비어 있음
+      if (refData[key] !== null) marketHasRef[target] = true;
+    }
     const q = getStockChipQuote(st, refData, now, gapConfirmed);
     if (!q) continue;
+    if (target) marketHasChip[target] = true;
     const isForeign = !DOMESTIC_CATEGORIES.has(st.category);
     const fx = isForeign && st.currency === "USD" ? currentRates.USD : isForeign && st.currency === "JPY" ? currentRates.JPY / 100 : 1;
     num += q.numerator * st.quantity * fx;
@@ -185,6 +213,8 @@ export function computeTodayChip(
     else if (q.closeDate) dates.add(q.closeDate);
   }
   if (!(den > 0)) return null;
+  // ② 시장 단위로 비면(장 종료 직후·휴장 구간 등) 다른 시장만의 값을 내지 않는다
+  if ((["domestic", "foreign"] as const).some((m) => marketHasRef[m] && !marketHasChip[m])) return null;
   return { rate: (num / den - 1) * 100, anyLive, closeDates: [...dates].sort() };
 }
 
@@ -192,4 +222,20 @@ export function todayChipLabel(chip: TodayChipResult, scope: "row" | "header"): 
   if (chip.anyLive) return TODAY_CHIP_LABELS.live;
   if (scope === "header") return TODAY_CHIP_LABELS.headerClosed(chip.closeDates);
   return chip.closeDates[0] ? TODAY_CHIP_LABELS.rowClosed(chip.closeDates[0]) : TODAY_CHIP_LABELS.live;
+}
+
+// 상세·주식 `등락률 순`(#132 ③, cto Q3): 칩에 보이는 등락률(소수 1자리) 높은 순, 부호 그대로(+3% → +1% → −2%).
+// 칩이 없는 종목(rateOf = null)은 맨 뒤, 동률·칩 없는 종목끼리는 입력 순서(= 평가금 순)를 유지한다. 오름차순 없음
+export function sortByChipRate<T>(items: readonly T[], rateOf: (item: T) => number | null): T[] {
+  const tenths = (r: number) => Math.round(Number(r.toFixed(1)) * 10);
+  return items
+    .map((item, i) => {
+      const r = rateOf(item);
+      return { item, i, t: r === null || !Number.isFinite(r) ? null : tenths(r) };
+    })
+    .sort((a, b) => {
+      if (a.t === null || b.t === null) return a.t === null ? (b.t === null ? a.i - b.i : 1) : -1;
+      return b.t - a.t || a.i - b.i;
+    })
+    .map((x) => x.item);
 }

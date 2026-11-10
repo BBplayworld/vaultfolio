@@ -8,14 +8,16 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots } from "@/lib/asset/snapshot-storage";
+import { track } from "@/lib/analytics/ga";
 import { buildWeekRows } from "@/lib/report/settlement";
 import type { ProfitPeriod } from "@/lib/finance/profit-utils";
-import type { ChangeInit, ChangePeriod, ChangeScope } from "../../layout/navigation/navigation-context";
+import { rememberChangeInit, useAssetNavigation, type ChangeInit, type ChangePeriod, type ChangeScope } from "../../layout/navigation/navigation-context";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { SECTION } from "../../layout/ui/report-section";
 import { BODY_ENTER, ChangeHero, ChangeHeroFrame } from "./change-hero";
 import { YearlyNetAssetChart } from "./net-asset-chart";
 import { ProfitCard } from "./profit-chart";
+import { MarketEntryLine } from "./market-entry-line";
 import { SettlementView } from "./settlement-view";
 
 const SCOPES: { value: ChangeScope; label: string; testId: string }[] = [
@@ -29,9 +31,12 @@ const PERIODS: { value: ChangePeriod; label: string; testId: string }[] = [
   { value: "year", label: "연", testId: "change-period-year" },
 ];
 const PROFIT_PERIOD: Record<ChangePeriod, ProfitPeriod> = { day: "daily", week: "weekly", month: "monthly", year: "yearly" };
+// 시장과 비교 글줄 기간(연 탭은 접힘 — 값은 직전 기간 유지 대신 1주로 둔다)
+const COMPARE_PERIOD = { day: "daily", week: "weekly", month: "monthly", year: "weekly" } as const;
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
 export function AssetChangeView({ init }: { init?: ChangeInit }) {
+  const { navigate } = useAssetNavigation();
   const [scope, setScope] = useState<ChangeScope>(init?.scope ?? "all");
   const [period, setPeriod] = useState<ChangePeriod>(init?.period ?? "month");
   // 결산 진입 정보 — 화면이 열린 채로 다시 진입(FAB·카드)하면 key를 올려 월 탭을 새로 연다
@@ -53,6 +58,8 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
   };
   const changeScope = (v: ChangeScope) => {
     if (v === scope) return;
+    // 사용자가 주식 범위를 눌렀을 때만 1건(복원·첫 진입은 init으로 들어와 여기를 거치지 않는다, #132)
+    if (v === "stock") track("feature_use", { category: "change_scope_stock" });
     setScope(v);
     setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu" }));
   };
@@ -70,7 +77,22 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
         <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] shrink-0" />
       </div>
 
-      <ChangeHeroFrame period={periodSelector}>
+      <ChangeHeroFrame
+        period={periodSelector}
+        footer={scope === "stock" ? (
+          <MarketEntryLine
+            variant="hero"
+            testId="change-market-entry"
+            period={COMPARE_PERIOD[period]}
+            visible={period !== "year"}
+            onOpen={() => {
+              // 뒤로(pop) 때 범위 = 주식·지금 기간으로 다시 열리게 현재 history 항목에 싣는다(K3)
+              rememberChangeInit({ scope: "stock", period });
+              navigate({ type: "activity", tab: "change-market" });
+            }}
+          />
+        ) : undefined}
+      >
       {scope === "stock" ? (
         <ProfitCard isActive period={PROFIT_PERIOD[period]} />
       ) : period === "month" ? (
