@@ -66,16 +66,19 @@ export interface ResyncCounts {
 }
 
 /** 미리보기 요약 1줄 건수. 변경 0(add+change+remove=0)이면 적용 버튼 비활성 */
-export function summarize(diff: DiffResult, sel: ResyncSelection): ResyncCounts {
+export function summarize(diff: DiffResult, sel: ResyncSelection, existing?: Stock[]): ResyncCounts {
   const c: ResyncCounts = { add: 0, change: 0, remove: 0, same: 0, needs: 0 };
+  // 같은 종목 이어받기(#144): 적용 결과는 '변경 1'이므로 '추가+삭제'가 아니라 변경으로 센다
+  const inherits = inheritedPreds(diff, sel, existing);
   for (const row of diff.rows) {
     const a = resolveRow(row, sel);
-    if (a.type === "add") c.add += 1;
+    if (a.type === "add" && inherits.has(row.rowId)) c.change += 1;
+    else if (a.type === "add") c.add += 1;
     else if (a.type === "change") c.change += 1;
     else if (a.type === "same") c.same += 1;
     else if (row.status === "needs") c.needs += 1;
   }
-  c.remove = removableIds(diff, sel).size;
+  c.remove = removableIds(diff, sel).size - inherits.size;
   return c;
 }
 
@@ -128,6 +131,31 @@ function pickPredecessor(item: NonNullable<DiffRow["item"]>, ticker: string, poo
     .sort((a, b) => rank(a.e) - rank(b.e) || (a.e.purchaseDate || "9999").localeCompare(b.e.purchaseDate || "9999") || a.i - b.i)[0]?.e;
 }
 
+/**
+ * 추가 행 rowId → 이어받는 기존 항목. applyResync와 summarize·미리보기가 같은 판정을 쓴다.
+ * existing이 없으면 diff의 삭제 후보·유지 묶음 순서로 대신한다(동률 순서만 다를 수 있어 적용 쪽은 existing을 넘긴다)
+ */
+export function inheritedPreds(diff: DiffResult, sel: ResyncSelection, existing?: Stock[]): Map<string, Stock> {
+  const out = new Map<string, Stock>();
+  const ids = removableIds(diff, sel);
+  for (const row of diff.rows) {
+    const a = resolveRow(row, sel);
+    if (a.type === "change") ids.delete(a.stock.id);
+  }
+  const pool = existing ?? [...diff.removes.map((r) => r.stock), ...diff.kept];
+  const removing = pool.filter((e) => ids.has(e.id));
+  const taken = new Set<string>();
+  for (const row of diff.rows) {
+    const a = resolveRow(row, sel);
+    if (a.type !== "add") continue;
+    const pred = pickPredecessor(row.item!, a.ticker, removing, taken);
+    if (!pred) continue;
+    taken.add(pred.id);
+    out.set(row.rowId, pred);
+  }
+  return out;
+}
+
 export function applyResync(
   existing: Stock[],
   diff: DiffResult,
@@ -136,7 +164,7 @@ export function applyResync(
 ): ApplyResult {
   const updated = new Map<string, Stock>();
   const added: Stock[] = [];
-  const adds: { a: Extract<RowAction, { type: "add" }>; item: NonNullable<DiffRow["item"]> }[] = [];
+  const adds: { a: Extract<RowAction, { type: "add" }>; item: NonNullable<DiffRow["item"]>; rowId: string }[] = [];
 
   diff.rows.forEach((row) => {
     const a = resolveRow(row, sel);
@@ -152,20 +180,18 @@ export function applyResync(
       }
       updated.set(a.stock.id, next);
     } else if (a.type === "add") {
-      adds.push({ a, item });
+      adds.push({ a, item, rowId: row.rowId });
     }
   });
 
   const removeIds = removableIds(diff, sel);
   for (const id of updated.keys()) removeIds.delete(id);
-  const removing = existing.filter((e) => removeIds.has(e.id));
-  const taken = new Set<string>();
+  const inherits = inheritedPreds(diff, sel, existing);
 
-  adds.forEach(({ a, item }) => {
+  adds.forEach(({ a, item, rowId }) => {
     // 같은 종목을 지우고 다시 추가하는 경우 → 기존 기록 승계(id·매수일·매입 환율·메모·비활성 필드), 수량·평단·증권사·계좌만 화면 값
-    const pred = pickPredecessor(item, a.ticker, removing, taken);
+    const pred = inherits.get(rowId);
     if (pred) {
-      taken.add(pred.id);
       removeIds.delete(pred.id);
       const change = evaluateLink(item, pred, a.qty);
       const next: Stock = { ...pred, category: item.category, positionSource: "manual", positionEffectiveDate: opts.today };
@@ -196,5 +222,5 @@ export function applyResync(
   });
 
   const stocks = [...existing.filter((e) => !removeIds.has(e.id)).map((e) => updated.get(e.id) ?? e), ...added];
-  return { stocks, counts: summarize(diff, sel), addedIds: added.map((s) => s.id) };
+  return { stocks, counts: summarize(diff, sel, existing), addedIds: added.map((s) => s.id) };
 }

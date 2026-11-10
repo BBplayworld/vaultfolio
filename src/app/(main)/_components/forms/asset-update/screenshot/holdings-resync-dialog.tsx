@@ -41,6 +41,8 @@ import {
   resolveRow,
   resolveScreens,
   summarize,
+  inheritedPreds,
+  evaluateLink,
   type DiffResult,
   type DiffRow,
   type NeedsReason,
@@ -178,7 +180,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     const fx = Number(fxText);
     return { include, remove, pick, qty, ticker: tickers, fx: fx > 0 ? fx : undefined };
   }, [diff, removeOv, include, pick, qty, tickers, fxText]);
-  const counts = useMemo(() => summarize(diff, sel), [diff, sel]);
+  const counts = useMemo(() => summarize(diff, sel, existing), [diff, sel, existing]);
   const changes = changeCount(counts);
   // 실제로 새로 만들어질 항목 수(이어받기 제외) — 매수일 1월 1일 안내 조건(#139 O1)
   const freshAdds = useMemo(() => applyResync(existing, diff, sel, { today: todayKst(), usdRate, now: 0 }).addedIds.length, [existing, diff, sel, usdRate]);
@@ -424,6 +426,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
             <PreviewStep
               diff={diff}
               sel={sel}
+              existing={existing}
               counts={counts}
               freshAdds={freshAdds}
               include={include}
@@ -742,6 +745,7 @@ function ShotThumb({ shot, index, remaining, running, onRemove, onRetry }: { sho
 interface PreviewProps {
   diff: DiffResult;
   sel: ResyncSelection;
+  existing: Stock[];
   counts: ResyncCounts;
   /** 이어받기를 뺀 실제 신규 생성 건수 */
   freshAdds: number;
@@ -756,7 +760,7 @@ interface PreviewProps {
   usdRate: number;
 }
 
-function PreviewStep({ diff, sel, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
+function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
   const T = useT();
   const kind = useKind();
   const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
@@ -775,6 +779,7 @@ function PreviewStep({ diff, sel, counts, freshAdds, include, setInclude, setRem
   const removeScopes = diff.scopes.filter((s) => diff.removes.some((r) => r.scopeKey === s.key));
   // 새로 추가되는 종목의 매수일 기본값 안내(#139) — 이어받기를 뺀 실제 신규 생성이 있을 때만(O1)
   const hasNewAdd = freshAdds > 0;
+  const inherits = inheritedPreds(diff, sel, existing);
   const hasNewForeign = diff.rows.some((r) => resolveRow(r, sel).type === "add" && r.item?.category === "foreign");
   const checkedRemoves = [...sel.remove];
   const foreignDeleteCandidate = diff.removes.some((r) => r.stock.category === "foreign") || diff.kept.some((s) => s.category === "foreign" && checkedRemoves.includes(s.id));
@@ -802,7 +807,7 @@ function PreviewStep({ diff, sel, counts, freshAdds, include, setInclude, setRem
           <GroupHead title={title} count={rows.length} />
           <ul className="divide-y divide-border/40">
             {rows.map((r) => (
-              <ItemRow key={r.rowId} row={r} />
+              <ItemRow key={r.rowId} row={r} inherited={inherits.get(r.rowId)} qty={sel.qty[r.rowId]} />
             ))}
           </ul>
         </section>
@@ -962,27 +967,29 @@ const Arrow = ({ a, b }: { a: string; b: string }) => (
   </span>
 );
 
-function ItemRow({ row }: { row: DiffRow }) {
+function ItemRow({ row, inherited, qty }: { row: DiffRow; inherited?: Stock; qty?: number }) {
   const T = useT();
   const item = row.item!;
-  const isAdd = row.status === "add";
+  // 같은 종목 이어받기는 적용 결과가 '변경'이라 기존 변경 행과 같은 모양으로 보인다(#144)
+  const change = inherited ? evaluateLink(item, inherited, (qty ?? 0) > 0 ? qty : undefined) : row.change;
+  const isAdd = row.status === "add" && !inherited;
   const parts: React.ReactNode[] = [];
   if (isAdd) {
     parts.push(<span key="q" className="whitespace-nowrap">수량 {fmt(item.quantity)}</span>);
     parts.push(<span key="a" className="whitespace-nowrap">{item.averagePriceEstimated ? "평단(추정)" : "평단"} {fmt(item.averagePrice)}</span>);
-  } else if (row.change) {
-    if (row.change.qty) parts.push(<Arrow key="q" a={`수량 ${fmt(row.change.qty.before)}`} b={fmt(row.change.qty.after)} />);
-    if (row.change.avg) parts.push(<Arrow key="a" a={`평단 ${fmt(row.change.avg.before)}`} b={fmt(row.change.avg.after)} />);
-    if (row.change.brokerFill) parts.push(<Arrow key="b" a={`${T.broker} 미지정`} b={row.change.brokerFill.to} />);
+  } else if (change) {
+    if (change.qty) parts.push(<Arrow key="q" a={`수량 ${fmt(change.qty.before)}`} b={fmt(change.qty.after)} />);
+    if (change.avg) parts.push(<Arrow key="a" a={`평단 ${fmt(change.avg.before)}`} b={fmt(change.avg.after)} />);
+    if (change.brokerFill) parts.push(<Arrow key="b" a={`${T.broker} 미지정`} b={change.brokerFill.to} />);
   }
   return (
     <li data-testid={`resync-row-${row.rowId}`} className="min-h-10 py-2.5 last:pb-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-medium">{row.stock?.name ?? item.name}</span>
+        <span className="truncate text-sm font-medium">{inherited?.name ?? row.stock?.name ?? item.name}</span>
         <span className={`shrink-0 text-sm ${isAdd ? "text-brand" : "text-foreground"}`}>{isAdd ? "추가" : "변경"}</span>
       </div>
       <p className="flex flex-wrap gap-x-2 text-sm text-muted-foreground tabular-nums">{parts}</p>
-      {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
+      {row.linkedBy === "unassigned" && !change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
     </li>
   );
