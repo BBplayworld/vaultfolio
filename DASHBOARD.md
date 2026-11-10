@@ -31,7 +31,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.74** | [#139](https://github.com/BBplayworld/vaultfolio/issues/139) 보유 현황 업데이트 일괄 반영 시 매수일이 등록일로 바뀌어 매수 기록·배당 예상 누락(버그, 대표 지시) | [PR #140](https://github.com/BBplayworld/vaultfolio/pull/140) 수정 완료(같은 종목 이어받기·신규 1/1)·UI 승인 → qa 중 + [#141](https://github.com/BBplayworld/vaultfolio/issues/141) 시세 묶음 조회 부분 결과 버그 추가 | 즉시 | COO 판정 |
+| **4.74** | [#139](https://github.com/BBplayworld/vaultfolio/issues/139) 보유 현황 업데이트 일괄 반영 시 매수일이 등록일로 바뀌어 매수 기록·배당 예상 누락(버그, 대표 지시) | ✅ v4.74 위임 머지(37f0551, [PR #140](https://github.com/BBplayworld/vaultfolio/pull/140), #139·#141)·운영 스모크 중 | 즉시 | COO 판정 |
 | **4.73** | [#134](https://github.com/BBplayworld/vaultfolio/issues/134) 상세·주식 '오늘' 칩 — 개장 전·주말 0.0%, 미국 종목 낮 시간 환율분만 같은 값(버그, #132 선행) | ✅ v4.72 머지(962830d)·운영 스모크 PASS(국내 장중·마감 직후 실측은 11/11 예약) | 즉시 | COO 자체 승인 |
 | **4.71** | [#131](https://github.com/BBplayworld/vaultfolio/issues/131) GA 화면별 참여 시간이 다음 화면으로 밀려 집계(버그, 선순위) | 개발 착수 | 즉시 | COO 자체 승인 |
 | **4.72** | [#132](https://github.com/BBplayworld/vaultfolio/issues/132) 시장과 나란히 — 보유 종목 등락 vs 코스피·S&P 500 + 오늘 등락 순 + '오늘' 표시 점검 | [PR #136](https://github.com/BBplayworld/vaultfolio/pull/136) ✅ v4.73 위임 머지(af8c207)·운영 스모크 PASS(장중 지수 재대조 11/11 예약) | 11/26 전 | 🟥 대표 승인(반영 1회) |
