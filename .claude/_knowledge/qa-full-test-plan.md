@@ -46,8 +46,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx))
 - 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시 — 종합 카드 거래입력 노출 규칙은 F-ASSET 참조(암호화폐와 동일)
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
-- 👤 요약 헤더 평가손익·전일 대비, 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
-- ⚙ **전일 대비(등락율) 실시간화(2026-08-27)**: `computeDailyStockProfit(..., { useLivePrice: true })` — 종가 vs 종가가 아니라 실시간 `currentPrice` vs "가장 최근 확정 종가"(`refDate===오늘`이면 `prevPrice`, 아니면 `refPrice`, 시간대와 무관하게 항상 어제 종가로 수렴). 장중에도 등락율이 살아 움직임(과거엔 국내 16:00 컷오프 전엔 하루 종일 갱신 안 됨). `profit-chart.tsx`·`performance-hub.tsx`는 옵션 미전달로 기존 종가 기준 그대로(회귀 없음)
+- 👤 요약 헤더 평가손익·'오늘' 칩(장중 `오늘`/장 종료 후 `종가`), 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
+- ⚙ **'오늘' 등락 칩 장중/종가 기준(#4.73, #134 — 2026-08-27 실시간화 대체)**: `today-chip.ts` `getTodayChipSession`(시장·시각·휴장 → `live`/`afterCloseGap`/`closed` + 종가일 쌍, 순수 함수)·`computeTodayChip`. 장중(국내 한국 영업일 09:00~15:30 / 미국 현지 영업일 정규장 KST 23:30~06:00, 서머타임 22:30~05:00) 라벨 `오늘` = 현재가 ÷ 전 거래일 종가, 그 밖 `M/D 종가` = 마지막 거래일 종가 ÷ 그 전 거래일 종가(미국은 현지 거래일, **현재가 미사용**). 마감~컷오프(국내 15:30~16:00, 미국 마감+1h)는 `AFTER_CLOSE_GAP_CONFIRMED` 미확인이라 국내 `오늘`(현재가 ÷ 전 거래일 종가), 미국 숨김(`AFTER_CLOSE_GAP_FALLBACK_LIVE`). 두 거래일 종가를 못 구하면(응답 종가일 ≠ 기대 거래일, 휴장 명목일) **칩 숨김 — 0.0% 금지**. 종목 칩 = 현지 통화 가격 등락률(환율·기기 환율 이력 무관), 헤더 칩 = 원화 평가액(현재 환율) 가중, 라벨은 하나라도 장중이면 `오늘` 아니면 `종가 기준`(라벨 정본 `TODAY_CHIP_LABELS`). 칩 쿼리는 설정 '기간 수익 종가 기준'과 무관하게 `kstAccessDay`(기존 캐시 변형). 기본 분기 `computeDailyStockProfit`(자산 변화 Hero·일 탭·스냅샷·성적표·홈) 무변경. 시각표 vitest `today-chip.test.ts`. 알려진 숨김 구간: 국내 휴장일 16:00~다음 개장, 미국 휴장 다음 날 KST 07:00~23:30, 미국 종목 일·월 KST 00~07시
 - ⚙ `computeStockMetrics`·`mergeStockGroup`·`groupStocksByTicker` 동일 ticker 병합(1회 집계)
 - 엣지: 해외주식 원화/달러 평단 입력 분기, 환차익 계산
 - ⚙ **320 주식 행(#4.49)** — 억 단위 손익에서 `stock-row-left`/`stock-row-right` 겹침 0·가로 스크롤 0, 375 일반 행 높이 불변, screenshotMode(웰컴·인증카드) 클래스 불변
