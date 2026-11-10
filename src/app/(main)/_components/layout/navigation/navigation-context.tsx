@@ -28,30 +28,19 @@ export type AssetView =
 
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "change-market", "dividend", "report"];
-const CHANGE_PERIODS: readonly ChangePeriod[] = ["day", "week", "month", "year"];
 
-// 시장과 비교(#132 K3) — 자산 변화에서 들어갈 때 현재 history 항목에 범위·기간을 싣고, pop으로 돌아오면 그 값으로 다시 연다.
-// history.state는 기존 항목 상태(Next 내부 키)를 펼쳐 두고 덧붙인다. 저장소 0(브라우저 세션 history만)
+// 시장과 비교(#132 K3) — 자산 변화에서 들어갈 때 범위·기간을 모듈 메모리에 기억하고, 비교 화면에서 pop으로 자산 변화에 돌아오면 그 값으로 다시 연다.
+// history.state는 쓰지 않는다(Next App Router가 __NA 없는 state의 popstate를 전체 새로고침으로 처리). 저장소 0, 새로고침하면 사라짐
+let changeInitForReturn: ChangeInit | null = null;
 export function rememberChangeInit(init: Pick<ChangeInit, "scope" | "period">): void {
-  if (typeof window === "undefined") return;
-  const prev = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
-  window.history.replaceState({ ...prev, changeInit: { scope: init.scope, period: init.period } }, "", window.location.href);
+  changeInitForReturn = { scope: init.scope, period: init.period };
 }
 
-// history.state → 자산 변화 진입 상태(모양이 다르면 무시)
-export function changeInitFromHistoryState(state: unknown): ChangeInit | undefined {
-  const ci = state && typeof state === "object" ? (state as { changeInit?: unknown }).changeInit : undefined;
-  if (!ci || typeof ci !== "object") return undefined;
-  const { scope, period } = ci as { scope?: unknown; period?: unknown };
-  if ((scope !== "all" && scope !== "stock") || !CHANGE_PERIODS.includes(period as ChangePeriod)) return undefined;
-  return { scope, period: period as ChangePeriod };
-}
-
-// popstate 대상 view에 복원 상태를 입힌다 — 자산 변화이고 해시 리다이렉트 init이 없을 때만(첫 마운트·새로고침에는 쓰지 않음)
-export function withRestoredChangeInit(next: AssetView, state: unknown): AssetView {
+// popstate 대상 view에 복원 상태를 입힌다 — 비교 화면에서 자산 변화로 돌아올 때만(해시 리다이렉트 init이 있으면 그대로)
+export function withRestoredChangeInit(next: AssetView, from: AssetView, remembered: ChangeInit | null): AssetView {
   if (next.type !== "activity" || next.tab !== "change" || next.init) return next;
-  const init = changeInitFromHistoryState(state);
-  return init ? { ...next, init } : next;
+  if (from.type !== "activity" || from.tab !== "change-market" || !remembered) return next;
+  return { ...next, init: { ...remembered } };
 }
 
 // 시장과 비교에 앱 안에서 들어왔는지(모듈 메모리, 새로고침하면 false) — 뒤로 = history.back() / 주소 진입 = 자산 변화(주식·주)
@@ -216,7 +205,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
     trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
-      const next = withRestoredChangeInit(parseHash(window.location.hash), window.history.state);
+      const next = withRestoredChangeInit(parseHash(window.location.hash), viewRef.current, changeInitForReturn);
       if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
         window.history.replaceState(null, "", toHash(next));
       }

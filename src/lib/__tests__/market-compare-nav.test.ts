@@ -1,7 +1,6 @@
 // #132 U4 시장과 비교 이동·뒤로(K3)·GA title
 import { describe, expect, it } from "vitest";
 import {
-  changeInitFromHistoryState,
   getBackLabel,
   marketCompareBackAction,
   parseHash,
@@ -32,19 +31,18 @@ describe("K3 뒤로 복원", () => {
     expect(marketCompareBackAction(true, 1)).toBe("change");
   });
 
-  it("pop으로 자산 변화에 돌아오면 history.state의 범위·기간을 init으로 입힌다", () => {
-    const state = { __NA: true, changeInit: { scope: "stock", period: "day" } };
-    expect(withRestoredChangeInit(parseHash("#activity/change"), state)).toEqual({ type: "activity", tab: "change", init: { scope: "stock", period: "day" } });
+  const market = parseHash("#activity/change-market");
+  const remembered = { scope: "stock" as const, period: "day" as const };
+
+  it("비교 화면에서 pop으로 자산 변화에 돌아오면 기억한 범위·기간을 init으로 입힌다", () => {
+    expect(withRestoredChangeInit(parseHash("#activity/change"), market, remembered)).toEqual({ type: "activity", tab: "change", init: { scope: "stock", period: "day" } });
   });
 
-  it("상태가 없거나 모양이 틀리면 그대로(기본값), 다른 화면·리다이렉트 init은 건드리지 않는다", () => {
-    expect(withRestoredChangeInit(parseHash("#activity/change"), null)).toEqual({ type: "activity", tab: "change" });
-    expect(changeInitFromHistoryState({ changeInit: { scope: "stock", period: "decade" } })).toBeUndefined();
-    expect(changeInitFromHistoryState({ changeInit: { scope: "x", period: "day" } })).toBeUndefined();
-    expect(changeInitFromHistoryState("str")).toBeUndefined();
-    const st = { changeInit: { scope: "stock", period: "month" } };
-    expect(withRestoredChangeInit(parseHash("#detail/stocks"), st)).toEqual({ type: "detail", tab: "stocks" });
-    expect(withRestoredChangeInit(parseHash("#activity/profit"), st)).toEqual({ type: "activity", tab: "change", init: { scope: "stock", period: "day" } });
+  it("기억이 없거나(새로고침) 비교 화면에서 온 게 아니면 그대로, 해시 리다이렉트 init·다른 화면은 건드리지 않는다", () => {
+    expect(withRestoredChangeInit(parseHash("#activity/change"), market, null)).toEqual({ type: "activity", tab: "change" });
+    expect(withRestoredChangeInit(parseHash("#activity/change"), { type: "activity", tab: "hub" }, remembered)).toEqual({ type: "activity", tab: "change" });
+    expect(withRestoredChangeInit(parseHash("#detail/stocks"), market, remembered)).toEqual({ type: "detail", tab: "stocks" });
+    expect(withRestoredChangeInit(parseHash("#activity/profit"), market, remembered)).toEqual({ type: "activity", tab: "change", init: { scope: "stock", period: "day" } });
   });
 });
 
