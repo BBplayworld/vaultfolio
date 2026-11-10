@@ -797,7 +797,39 @@ getStockChipQuote(stock, refData, now?, gapConfirmed?) → { live, closeDate, nu
 computeTodayChip(stocks, refData, currentRates, now?) → { rate(%), anyLive, closeDates } | null
   // 현지 가격 등락을 원화 평가액(현재 환율)으로 가중 — 환율 효과 0. 같은 티커 묶음이면 곧 종목 등락률
 todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안 `오늘`/`M/D 종가`, 헤더 `종가`)
+// #4.73 U7: closed 분기는 응답 쌍이 맞지 않으면 ref.chipPair(서버 보강)가 지금 세션 쌍과 같을 때만 사용(live·gap 분기 불변)
+// #4.73 U7 숨김 규칙(computeTodayChip 한 곳): 칩 대상(국내 6자리·미국 USD 티커, 비상장·상장폐지·거래정지 아님, 수량·현재가 있음) 중
+//   응답 키가 없는 종목이 있거나, 응답 non-null 대상이 있는 시장(국내·미국)에 칩이 0이면 null. 거래정지·일본·기준가 null은 숨김을 만들지 않는다
+sortByChipRate(items, rateOf) → T[]   // #4.73 상세·주식 `등락률 순` — 표시 소수 1자리 높은 순(부호 그대로), null 맨 뒤, 동률·null끼리 입력(평가금) 순
 ```
+
+### 시장과 비교 (`src/lib/finance/market-compare.ts` · `profit-dates.ts` · `hooks/use-market-compare.ts`, #4.73 #132)
+
+```typescript
+// profit-dates.ts — profit·market-index 라우트 공용 날짜(구 profit/route getDates 이동, 출력 무변경 대조 vitest)
+resolveRefDates(period, basis, now?) → { kr: { refDate, prevDate?, refHoliday }, us: {…} }
+pickCloseOnOrBefore(series, date, lookback) · buildRefEntryFromSeries · getSeriesRange
+
+// market-compare.ts — 순수 함수, 저장 0·금액 0
+classifyHoldings(stocks, peerCodes) → { kr, us, notCompared, unlisted, delisted }   // K1: 국내 카테고리 + 생성 목록(개별주·국내 주식형 ETF)만 kr, USD 미국 티커만 us. 같은 티커 병합. delisted는 화면에서 쓰지 않음(요청·셈 0)
+loadKospiPeerCodes()          // src/lib/data/kr-kospi-peer-codes.ts 동적 import(첫 화면 번들 제외). 마스터 갱신 시 재생성(README)
+computeMarketCompare(classified, stockRefs, indexRefs) → MarketCompareBlock[]   // 시장×기간 PeriodCell(loading|holiday|empty|ok, 최빈 (시작,끝) 쌍, indexState ok|failed|dateMismatch, rows = 등락 높은 순 + 시장 줄)
+computeIndexSpan(market, period, indexRefs)   // 지수 등락 — 페이지 표·진입 글줄 공용(A11)
+computeNotComparedRows · compareTickers
+summarizeCompare(classified, blocks) → { blockCounts, notCompared, excluded } | null   // 블록 N = 세 기간 중 하나 이상 합산, 제외 = 한 기간이라도 빠진 고유 종목 + 비상장(이름 1), 일부 기간만이면 `1개월 기준가 없음`, 조회 중이면 null
+refRangeParts(start, end) → ["M/D→", "M/D"] · cellRange(cell)   // 열 머리·묶음 머리 같은 표기, 휴장 `휴장`
+rateTenths · formatCompareRate(+1.2%, 0.0은 부호 없음) · formatCompareDiff(+0.8%p, 차이 = 보이는 두 값의 차)
+COMPARE_PERIOD_LABEL · MARKET_INDEX_NAME(`코스피`/`S&P 500`)
+
+// hooks/use-market-compare.ts — 페이지·글줄 공용(같은 queryKey ["market-index", period, basis, dailyToken])
+useCompareBasis() · useDailyRefToken() · useKospiPeerCodes() · useMarketIndexRefs(basis, enabled, token, periods?) · fetchMarketIndex
+```
+- 종목 기준가는 기존 `fetchProfitRef`(profit-chart와 같은 티커 목록·사용자 종가 기준 → 자산 변화와 같은 캐시 키). 키 없음 = 조회 중(부분 합 금지), `null` = 기준가 없음. 키가 빠지면 60초 뒤 최대 2회 재조회.
+
+### navigation-context 시장과 비교 이동 (#4.73 #132 K3)
+- `ActivityTab`에 `change-market`(`#activity/change-market`, 화면 키 `activity:change-market`, 뒤로 라벨 `뒤로`).
+- `rememberChangeInit({scope, period})` — 자산 변화 글줄이 비교로 가기 직전 모듈 메모리에 기억. `withRestoredChangeInit(next, from, remembered)` — popstate로 비교 화면(from)에서 자산 변화로 돌아오면 init 복원(새로고침하면 기억 없음). **history.state는 쓰지 않는다** — Next App Router가 `__NA` 없는 state의 popstate를 전체 새로고침으로 처리한다(preview 실측).
+- `marketCompareBackAction(enteredInApp, history.length)` — `navigate()`로 들어왔으면(모듈 메모리) `history.back()`, 주소 진입·새로고침이면 자산 변화(주식·주).
 - 입력 refData는 `fetchProfitRef(tickers, "daily", { basis: "kstAccessDay" })`(stock-tab `useFilteredStockData`). 저장 호출 0.
 
 ### 기업 로고 src 해석 (`src/lib/finance/logo-source.ts`)
