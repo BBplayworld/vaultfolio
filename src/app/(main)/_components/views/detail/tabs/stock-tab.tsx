@@ -1064,21 +1064,37 @@ export function StockCategorySection({
 type StockSort = "value" | "rate";
 let stockSortMemory: StockSort = "value";
 
-// 정렬 컨트롤 — 카테고리 줄 오른쪽 글자 버튼(면·테두리 없음, ui.md 4절). 좁은 폭(<360)·카테고리 6칸 이상이면 아이콘만
-function StockSortSelect({ value, onChange, iconOnly }: { value: StockSort; onChange: (v: StockSort) => void; iconOnly: boolean }) {
+// 정렬 컨트롤 — 카테고리 줄 오른쪽 글자 버튼(면·테두리 없음, ui.md 4절 r2).
+// 아이콘형은 기본 정렬(`평가금 순`)일 때만: 360 미만, 또는 카테고리 7칸이면서 400 미만. `등락률 순` 선택 중에는 폭·칸 수와 무관하게 라벨.
+// Tailwind가 읽을 수 있게 클래스는 정적 문자열 3벌(없음 / max-[359px] / max-[399px]). 아이콘형 히트는 after:-inset-1로 40×40
+const SORT_ICON_MODE = {
+  none: { trigger: "", icon: "hidden", label: "" },
+  lt360: {
+    trigger: "max-[359px]:justify-center max-[359px]:[&>svg:last-child]:hidden max-[359px]:after:-inset-1",
+    icon: "hidden max-[359px]:block",
+    label: "max-[359px]:sr-only",
+  },
+  lt400: {
+    trigger: "max-[399px]:justify-center max-[399px]:[&>svg:last-child]:hidden max-[399px]:after:-inset-1",
+    icon: "hidden max-[399px]:block",
+    label: "max-[399px]:sr-only",
+  },
+} as const;
+
+function StockSortSelect({ value, onChange, categoryCount }: { value: StockSort; onChange: (v: StockSort) => void; categoryCount: number }) {
   const chosen = value === "rate" ? "font-semibold text-foreground" : "text-muted-foreground";
-  const narrow = iconOnly ? "justify-center [&>svg:last-child]:hidden" : "max-[359px]:justify-center max-[359px]:[&>svg:last-child]:hidden";
+  const mode = SORT_ICON_MODE[value === "rate" ? "none" : categoryCount >= 7 ? "lt400" : "lt360"];
   return (
     <Select value={value} onValueChange={(v) => onChange(v as StockSort)}>
       <SelectTrigger
         size="sm"
         data-testid="stock-sort"
         aria-label="정렬"
-        className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-[13px] sm:text-sm lg:text-base bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${narrow}`}
+        className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-[13px] sm:text-sm lg:text-base bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${mode.trigger}`}
       >
-        <ArrowDownWideNarrow aria-hidden className={`size-4 text-current ${iconOnly ? "" : "hidden max-[359px]:block"}`} />
+        <ArrowDownWideNarrow aria-hidden className={`size-4 text-current ${mode.icon}`} />
         {/* Radix SelectValue는 className을 버리므로 감싸서 숨긴다 */}
-        <span className={iconOnly ? "sr-only" : "max-[359px]:sr-only"}><SelectValue /></span>
+        <span className={mode.label}><SelectValue /></span>
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value="value" data-testid="stock-sort-value" className="min-h-10">평가금 순</SelectItem>
@@ -1175,15 +1191,17 @@ export function StockTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, refData, mergedStocks, groupedStocks, exchangeRates, assetData.stocks]);
 
-  // 카테고리 줄 — 6칸 이상이면 조밀(칸 좌우 여백 축소) + 정렬 아이콘형. 카테고리를 바꾸면 선택 칸을 보이게 스크롤
+  // 카테고리 줄 — 6칸 이상이면 조밀(칸 좌우 여백 축소). 카테고리·정렬을 바꾸면 선택 칸을 보이게 스크롤
   const denseCategories = visibleCategories.length >= 6;
   const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const prevCategoryRef = useRef(activeCategory);
+  // 정렬을 바꿔 트리거 폭이 달라져도(아이콘 ↔ 라벨) 선택 칸이 보이게 같이 맞춘다(ui.md r2)
+  const prevCategoryRef = useRef({ activeCategory, sort });
   useEffect(() => {
-    if (prevCategoryRef.current === activeCategory) return;
-    prevCategoryRef.current = activeCategory;
+    const prev = prevCategoryRef.current;
+    if (prev.activeCategory === activeCategory && prev.sort === sort) return;
+    prevCategoryRef.current = { activeCategory, sort };
     categoryScrollRef.current?.querySelector('[aria-checked="true"]')?.scrollIntoView({ inline: "nearest", block: "nearest" });
-  }, [activeCategory]);
+  }, [activeCategory, sort]);
 
   const handleDelete = (id: string) => {
     toast.success("삭제되었습니다.");
@@ -1237,7 +1255,7 @@ export function StockTab() {
               className={denseCategories ? "[&>button]:px-1.5" : undefined}
             />
           </div>
-          <StockSortSelect value={sort} onChange={changeSort} iconOnly={denseCategories} />
+          <StockSortSelect value={sort} onChange={changeSort} categoryCount={visibleCategories.length} />
         </div>
 
         {/* 비중바 + 종목 목록 (인증카드과 공통) */}

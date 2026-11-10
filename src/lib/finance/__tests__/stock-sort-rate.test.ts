@@ -40,6 +40,19 @@ describe("정렬 컨트롤·저장", () => {
     expect(src).not.toMatch(/localStorage\.setItem\([^)]*[Ss]ort/);
     expect(src).not.toMatch(/오름차순/);
   });
+  it("아이콘형은 평가금 순일 때만(360 미만 / 7칸이면서 400 미만), 등락률 순은 항상 라벨, 아이콘형 히트 40×40 — 정적 클래스 3벌(ui.md r2·qa D1)", () => {
+    const block = src.slice(src.indexOf("const SORT_ICON_MODE"), src.indexOf("export function StockTab"));
+    expect(block).toMatch(/value === "rate" \? "none" : categoryCount >= 7 \? "lt400" : "lt360"/);
+    expect(block).toContain('none: { trigger: "", icon: "hidden", label: "" }');
+    expect(block).toContain("max-[359px]:after:-inset-1");
+    expect(block).toContain("max-[399px]:after:-inset-1");
+    expect(block).toContain('label: "max-[359px]:sr-only"');
+    expect(block).toContain('label: "max-[399px]:sr-only"');
+    expect(src).toMatch(/categoryCount=\{visibleCategories\.length\}/);
+    // 정렬을 바꿔도 선택 카테고리를 scrollIntoView
+    expect(src).toMatch(/\}, \[activeCategory, sort\]\);/);
+  });
+
   it("정렬 결과는 상세·주식 목록에만 — 비중 막대·인증카드는 평가금 순 그대로", () => {
     expect(src.match(/filteredStocks=\{listStocks\}/g)).toHaveLength(1);
     expect(src).toMatch(/barItems=\{barItems\}/);
