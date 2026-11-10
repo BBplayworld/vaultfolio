@@ -9,7 +9,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import { estimatePurchaseDateFromReturn } from "@/lib/number-utils";
+import { resyncNewPurchaseDate } from "@/lib/asset/resync/apply";
+import { todayKst } from "@/lib/tax-utils";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 
 import { Button } from "@/components/ui/button";
@@ -56,9 +57,6 @@ function StockForm({ editData, onClose }: StockFormProps) {
     editData ? "success" : "idle"
   );
   const [avgPriceInKrw, setAvgPriceInKrw] = useState(false);
-  // 매수일이 수익률 기반 자동 추정값인지 — 안내 문구 표기용. 사용자가 직접 수정하면 추정 중단
-  const [isEstimatedDate, setIsEstimatedDate] = useState(false);
-  const purchaseDateTouchedRef = useRef(false);
 
   const form = useForm<Stock>({
     resolver: zodResolver(stockSchema),
@@ -71,7 +69,8 @@ function StockForm({ editData, onClose }: StockFormProps) {
       averagePrice: 0,
       currentPrice: 0,
       currency: "KRW",
-      purchaseDate: new Date().toISOString().split("T")[0],
+      // 신규 기본값 = 올해 1월 1일(KST, #139와 동일). 수정 경로는 저장된 매수일 유지(editData)
+      purchaseDate: resyncNewPurchaseDate(todayKst()),
       description: "",
     },
   });
@@ -79,29 +78,6 @@ function StockForm({ editData, onClose }: StockFormProps) {
   const isForeignStock = selectedCategory === "foreign";
   const isUnlisted = selectedCategory === "unlisted";
   const isEtfCategory = selectedCategory === "irp" || selectedCategory === "isa" || selectedCategory === "pension";
-
-  // 신규 등록 시, 매수일을 안 만졌는데 이미 수익률이 잡히면(오늘 매수 모순) 수익률 비례한 과거 매수일 자동 추정.
-  // 사용자가 매수일을 직접 수정하면(purchaseDateTouchedRef) 자동 추정을 멈춘다.
-  const watchedAvg = form.watch("averagePrice");
-  const watchedCurrent = form.watch("currentPrice");
-  useEffect(() => {
-    if (editData || purchaseDateTouchedRef.current) return;
-    // 원화입력 해외주식은 평단가가 KRW라 현재가(USD)와 통화가 달라 → 달러 환산 후 비교
-    const effAvg = isForeignStock && avgPriceInKrw && exchangeRates.USD
-      ? watchedAvg / exchangeRates.USD
-      : watchedAvg;
-    const est = estimatePurchaseDateFromReturn(effAvg, watchedCurrent);
-    if (est) {
-      form.setValue("purchaseDate", est);
-      setIsEstimatedDate(true);
-    } else if (isEstimatedDate) {
-      // 이익이 사라지면(추정 불가) 오늘로 되돌리고 안내 해제
-      form.setValue("purchaseDate", new Date().toISOString().split("T")[0]);
-      setIsEstimatedDate(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedAvg, watchedCurrent, avgPriceInKrw, isForeignStock, exchangeRates.USD, editData]);
-
 
   const getTickerPlaceholder = () => {
     if (selectedCategory === "domestic") return "예: 삼성전자 또는 005930";
@@ -600,15 +576,12 @@ function StockForm({ editData, onClose }: StockFormProps) {
                   onBlur={field.onBlur}
                   value={field.value ?? ""}
                   onChange={(e) => {
-                    // 사용자가 직접 만지면 자동 추정 중단·안내 해제
-                    purchaseDateTouchedRef.current = true;
-                    setIsEstimatedDate(false);
                     field.onChange(e);
                   }}
                 />
               </FormControl>
-              {isEstimatedDate && !editData && (
-                <FormDescription>수익률(약 연 8% 가정) 기준으로 추정한 매수일입니다. 실제 매수일을 알면 직접 수정하세요.</FormDescription>
+              {!editData && (
+                <FormDescription className="break-keep text-pretty">기본값은 올해 1월 1일이에요. 실제 매수일을 알면 수정해 주세요.</FormDescription>
               )}
               <FormMessage />
             </FormItem>

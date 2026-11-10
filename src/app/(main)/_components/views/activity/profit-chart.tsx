@@ -705,17 +705,19 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                       {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }, i) => (
                         <div key={key} className={`rounded-lg overflow-hidden${i > 0 ? ` ${ASSET_THEME.dividerAccent} pt-3` : ""}`}>
                           <div className="flex items-center justify-between px-4 py-1.5 bg-muted/20">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-sm font-semibold text-muted-foreground">{label}</span>
+                              <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
                             </div>
                             {catRate !== null && (
-                              <div className="text-right">
-                                <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
-                                  {catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)} ({formatRate(catRate)})
+                              <div className="min-w-0 text-right">
+                                <p className={`text-sm tabular-nums break-keep ${getProfitLossColor(catProfit)}`}>
+                                  <span className="whitespace-nowrap">{catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)}</span>{" "}
+                                  <span className="whitespace-nowrap">({formatRate(catRate)})</span>
                                 </p>
-                                <p className="text-sm text-muted-foreground tabular-nums">
-                                  {formatPriceByMode(catRef)} → {formatPriceByMode(catCurrent)}
+                                <p className="text-sm text-muted-foreground tabular-nums break-keep">
+                                  <span className="whitespace-nowrap">{formatPriceByMode(catRef)}</span>{" "}
+                                  <span className="whitespace-nowrap">→ {formatPriceByMode(catCurrent)}</span>
                                 </p>
                               </div>
                             )}
@@ -727,16 +729,16 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                               return (
                                 <div
                                   key={stock.id}
-                                  className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-1 px-4 py-2.5 min-[400px]:items-center hover:bg-muted/30 transition-colors"
                                 >
                                   <div className="min-w-0">
                                     <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                                    <p className="text-xs text-muted-foreground">{ticker}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{ticker}</p>
                                   </div>
-                                  <div className="text-right shrink-0">
+                                  <div className="text-left min-[400px]:text-right min-[400px]:shrink-0">
                                     {hasRef ? (
                                       <>
-                                        <div className="flex items-center justify-end gap-1">
+                                        <div className="flex items-center min-[400px]:justify-end gap-1">
                                           {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} fxApplied={period === "daily"} />}
                                           <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
                                             {profitAmount >= 0 ? "+" : ""}{formatPriceByMode(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})

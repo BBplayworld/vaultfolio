@@ -225,9 +225,30 @@ describe("결산 예측 투입일 resyncInflowDate(#139 qa D1)", () => {
     expect(resyncInflowDate(base(`crypto_import_${at("2026-11-10")}_0`, "2026-11-10"))).toBe("2026-11-10");
     expect(resyncInflowDate(base("1730000000000", "2026-01-01"))).toBe("2026-01-01");
   });
+  it("직접 등록 신규 종목(stock_<ms>, 기본값 1월 1일)도 만든 날 투입(#142)", () => {
+    expect(resyncInflowDate(base(`stock_${at("2026-11-10")}`, "2026-01-01"))).toBe("2026-11-10");
+    // 매수일을 고쳤거나 1월 1일 당일 등록이면 그대로
+    expect(resyncInflowDate(base(`stock_${at("2026-11-10")}`, "2025-06-01"))).toBe("2025-06-01");
+    expect(resyncInflowDate(base(`stock_${at("2026-01-01")}`, "2026-01-01"))).toBe("2026-01-01");
+  });
   it("이어받기 결과 항목은 매수일 그대로(판별 미해당)", () => {
     const a = st("a", "005930", "isa", "", 10, 70000);
     const { result } = run([a], [screen(0, [row("005930", 12, 71000, { brokerHint: "토스증권" })])], { sel: () => ({ remove: new Set(["a"]) }) });
     expect(resyncInflowDate(result.stocks[0])).toBe("2025-03-02");
+  });
+});
+
+describe("resyncInflowDate — 종목 나누기 새 행 제외(#142 qa D2)", () => {
+  it("stock_<ms>_<N>(나누기 새 행)은 매수일 1/1이어도 매수일 그대로", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_${ms}_1`, purchaseDate: "2026-01-01" })).toBe("2026-01-01");
+  });
+  it("직접 등록 stock_<ms>(1/1 기본)은 만든 날", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_${ms}`, purchaseDate: "2026-01-01" })).toBe("2026-11-10");
+  });
+  it("맞추기 stock_import_<ms>_<N>은 기존대로 만든 날", () => {
+    const ms = Date.UTC(2026, 10, 10, 3, 0, 0);
+    expect(resyncInflowDate({ id: `stock_import_${ms}_0`, purchaseDate: "2026-01-01" })).toBe("2026-11-10");
   });
 });

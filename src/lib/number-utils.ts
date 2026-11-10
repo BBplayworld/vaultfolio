@@ -106,27 +106,6 @@ export function annualizeReturnRate(totalRatePct: number, sinceDate: string): nu
   return (Math.pow(1 + totalRatePct / 100, 1 / years) - 1) * 100;
 }
 
-// 매입가·현재가·가정 연수익률로 "대략적인 과거 매수일" 역산 (CAGR 가정).
-// 연수 = ln(현재가/평단가) / ln(1+r). 이익일 때만 유효(손실·동가는 오늘 유지가 맞아 null).
-// 지수 ETF 등 장기 우상향 자산에 근사가 잘 맞고, 개별주식은 어디까지나 근사치.
-const ASSUMED_ANNUAL_RETURN_PCT = 8; // 장기 명목 주식 기대수익 근사
-export function estimatePurchaseDateFromReturn(
-  averagePrice: number,
-  currentPrice: number,
-  annualReturnPct: number = ASSUMED_ANNUAL_RETURN_PCT,
-  asOf: Date = new Date(),
-): string | null {
-  if (!(averagePrice > 0) || !(currentPrice > averagePrice)) return null; // 이익일 때만 추정
-  const r = annualReturnPct / 100;
-  if (r <= 0) return null;
-  const years = Math.log(currentPrice / averagePrice) / Math.log(1 + r);
-  if (!isFinite(years) || years <= 0) return null;
-  const capped = Math.min(years, 30); // 비현실적 과거 방지
-  const d = new Date(asOf);
-  d.setDate(d.getDate() - Math.round(capped * 365));
-  return d.toISOString().split("T")[0];
-}
-
 // 만기까지 남은 일수 (지났으면 음수). 만기 D-day 표기용
 export function daysUntil(dateStr: string): number {
   const target = new Date(`${dateStr}T00:00:00`);

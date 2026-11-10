@@ -4,6 +4,7 @@
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import type { Stock } from "@/types/asset";
 import { classifyTickers, normalizeTicker } from "@/lib/finance/finance-service";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isKrBusinessDay, rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
 import { isUsBusinessDay, rollbackToUsBusinessDay } from "@/lib/finance/us-holidays";
 
@@ -138,6 +139,8 @@ export function getStockChipQuote(
   // 장중·마감 직후: 기준 종가 = 전 거래일 종가. 휴장 명목일(refDate가 휴장일, refPrice=직전 종가)도
   // baseDate ≤ refDate < 오늘이면 그 사이 거래가 없으므로 refPrice가 곧 전 거래일 종가다.
   const refIsBaseline = ref.refDate >= s.baseDate && ref.refDate < s.tradeDate;
+  // 체험·데모 종목은 현재가가 고정값이라 실제 전일 종가와 비교하면 비현실 등락이 나온다 → 현재가를 쓰는 장중·마감직후 칩은 숨김(종가 쌍 경로는 유지)
+  if ((s.phase === "live" || s.phase === "afterCloseGap") && (isTrialMode() || stock.id.startsWith("demo_st_"))) return null;
   if (s.phase === "live") {
     return refIsBaseline ? { live: true, closeDate: null, numerator: stock.currentPrice, denominator: ref.refPrice } : null;
   }
