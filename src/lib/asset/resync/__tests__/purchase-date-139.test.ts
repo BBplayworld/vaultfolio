@@ -3,7 +3,7 @@
 // 거래 기록(stockId)이 끊기고 매수일 이전 배당이 빠졌다. 정말 새 종목의 매수일은 올해 1월 1일(대표 결정 11-10).
 import { describe, expect, it } from "vitest";
 import {
-  applyResync, buildUndoEntries, computeDiff, cryptoToStock, defaultRemoveIds, matchExchangeHint, mergeScreens,
+  applyResync, inheritedPreds, removeRowLabel, summarize, buildUndoEntries, computeDiff, cryptoToStock, defaultRemoveIds, matchExchangeHint, mergeScreens,
   parsedCryptoToRaw, planUndo, resolveScreens, resyncInflowDate, resyncNewPurchaseDate, stocksToCrypto,
 } from "..";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
@@ -56,7 +56,16 @@ describe("기존 종목 — 매칭 실패로 추가+삭제(원인 경로)", () =
       [screen(0, [row("", 12, 151, { name: "애플", section: "해외", category: "foreign", brokerHint: "토스증권" }), row("MSFT", 1, 300, { brokerHint: "토스증권" }), row("NVDA", 1, 100, { brokerHint: "토스증권" })])],
       { sel: (d) => ({ include: new Set([d.rows[0].rowId]), ticker: { [d.rows[0].rowId]: "AAPL" } }) },
     );
-    // 미리보기는 '추가 1 · 삭제 1'(기본 삭제 체크) — 대표가 겪은 일괄 맞추기 경로
+    // 미리보기·결과 건수는 이어받기를 '변경 1'로 센다(#144) — 삭제 1·추가 1이 아님
+    expect(summarize(diff, sel)).toMatchObject({ add: 0, change: 1, remove: 0 });
+    expect(result.counts).toMatchObject({ add: 0, change: 1, remove: 0 });
+    expect([...inheritedPreds(diff, sel).keys()]).toEqual([diff.rows[0].rowId]);
+    // 삭제 후보 행 라벨: 이어받는 기존 항목은 '변경', 요약 삭제 N과 빨간 '삭제' 수가 같다
+    const inh = new Set([...inheritedPreds(diff, sel).values()].map((x) => x.id));
+    const labels = diff.removes.map((r) => removeRowLabel(sel.remove.has(r.stock.id), inh.has(r.stock.id)));
+    expect(labels.filter((l) => l === "삭제")).toHaveLength(summarize(diff, sel).remove);
+    expect(removeRowLabel(false, true)).toBe("유지");
+    expect(removeRowLabel(true, false)).toBe("삭제");
     expect(diff.rows[0].reasons).toContain("tickerMissing");
     expect(sel.remove.has("a")).toBe(true);
     const n = result.stocks.find((s) => s.ticker === "AAPL")!;
