@@ -507,7 +507,9 @@ findClosestNames(normalizedInput, keys)     // 허용 거리 이내 최소 거�
 formatNumberWithCommas(value): string   // "1,234,567"
 parseNumberFromCommas(value): number
 formatCurrency(value): string           // "₩1,234,567"
-formatShortCurrency(value): string      // "12억 3,456만"
+formatShortCurrency(value): string      // "2.3억원" · "9,999만원" (0.1억·만원 단위 버림)
+formatShortCurrencyDecimal(value): string // "2.01억원" · "1.13백만원" · "2.9만원" (소수 둘째 자리 버림·끝 0 제거)
+// 두 함수 모두 원 단위 정수를 표시 최소 단위로 정수 나눗셈해 버린다(#129). 축약 버림 표기를 새로 만들 때 곱셈 뒤 Math.floor 금지 — 이 함수 재사용
 calculateHoldingDays(purchaseDate): number
 formatHoldingPeriod(purchaseDate): string  // "1년 3개월" 형식
 ```
