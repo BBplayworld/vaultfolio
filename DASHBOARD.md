@@ -5,15 +5,13 @@
 > **마지막 갱신: 2026-11-09 23:30 KST** · 정기 실행(깨우기·안전망): 01:53(알림 없음) / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행
 
 ## 🟥 대표 승인 필요 (지금)
-**⏸ (R2 수정 중, 승인 보류) v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 v2, risk:low)** · 승인 시 표시 버전 v4.69(main 반영·증분 qa 후 머지)
-- ✅ 권고: 반영 — 대표 지시대로 인증카드는 핵심 기능으로 **상단 오른쪽**(설치 앱도 브라우저와 동일), 더보기는 설정 전용 그대로. 하단은 홈·상세·[업데이트]·성과·더보기 5칸(업데이트 가운데)
-- 🖼 전/후(설치 앱 홈 375): [ui2-compare-before-after-375-light.png](issues/4.66-125-nav-restructure/screenshots/ui2-compare-before-after-375-light.png)
-- 🔗 preview: https://secretasset-git-issue-466-bbplayworlds-projects.vercel.app — 하단 메뉴는 설치 앱에서만 보임(휴대폰 '홈 화면에 추가' → '데모 데이터로 보기'). 브라우저 화면은 변화 없음
-- 🔁 대표 지적 R1 반영: 앱 홈 상단 'S' → 화면 제목 "홈"(상세·성과와 같은 제목 줄), 'S'는 하단 홈 탭에만 · 전/후: [before 375](issues/4.66-125-nav-restructure/screenshots/ui-r1-before-375-light.png) → [after 375](issues/4.66-125-nav-restructure/screenshots/qa-r1-pwa375-home-light.png)
-- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @94e54ec (R1 7276c84 + main v4.68 병합)
-- ⚠️ 비용: 인증카드가 엄지 쪽 하단 → 화면 위쪽(홈·상세·주식·성과·자산 변화 5개 화면 1탭, 그 밖 2탭) · 앱 홈 첫 카드 +20px(아이폰 +44, PC 앱 +40) · 앱 360·375 상세 부제 2줄 · 옛 칸 자리 오탭은 화면 이동만(데이터 변화 0) · 실기기 앱 미검증(에뮬레이션)
-- ↩️ 롤백: PR revert 1회 · 브리프: [4.66-decision-brief-v2.md](issues/4.66-125-nav-restructure/4.66-decision-brief-v2.md)
-- 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영 · '홈' 제목이 여전히 비어 보이면 `수정: 제목 크기`
+**v4.66 반영 결정 — [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) (#125 하단 네비 개편 + 상단 브랜드 로고, risk:low)** · 머지 시 [#4.69](4.67보다 먼저일 때)
+- ℹ️ 실기기 설치 앱 미검증(에뮬레이션 측정만)
+- 반영: 상단 Leckerli S + 시크릿에셋 단색 락업, 인증카드 버튼 메인 인디고(앱 설치·하단 업데이트와 같은 색), 하단 홈 탭 집 아이콘, 브라우저 S도 앱과 같은 크기(15.25px)
+- 🔗 preview: https://secretasset-git-issue-466-bbplayworlds-projects.vercel.app/?trial=1 — 맨 위 줄(설치 앱은 S+시크릿에셋, 브라우저는 S)과 오른쪽 인디고 인증카드, 하단 '상세' → 허브 인증카드
+- 🖼 최종: [375 다크](issues/4.66-125-nav-restructure/screenshots/final-r8-375-dark.png) · [375 라이트](issues/4.66-125-nav-restructure/screenshots/final-r8-375-light.png) · [로고 3배](issues/4.66-125-nav-restructure/screenshots/final-r8-lockup-zoom-dark.png) · [브라우저 375](issues/4.66-125-nav-restructure/screenshots/final-r8b-brw375-light.png)
+- 🧪 qa PASS · UI 승인 · COO PASS @565b047 · Vercel success · 위험 low, PR revert로 원복
+- 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영
 
 **⏸ (R3 재설계 중, 승인 보류) v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
 - ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
@@ -40,7 +38,7 @@
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
 | **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 R3: 다이얼로그→페이지 인라인, 월별 변화 금액 색 표시 → UI 재설계 중 | 11/26 전 | 🟥 대표 승인 |
-| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | 대표 R8: Leckerli S 심볼·인증카드 인디고 → 반영 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | R8 최종(565b047) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
