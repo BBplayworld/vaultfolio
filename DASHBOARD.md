@@ -13,19 +13,13 @@
 - 🧪 qa PASS · UI 승인 · COO PASS @565b047 · Vercel success · 위험 low, PR revert로 원복
 - 👉 결정: PR #126 머지 = 반영 / 닫기 = 미반영
 
-**⏸ (R3 재설계 중, 승인 보류) v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, 신규 기능, risk:low)** · 승인 시 다음 표시 버전(v4.69 또는 v4.70)
-- ✅ 권고: 반영 — 엑셀 '월별 자산 현황' 시트를 앱 안에서 대체: 성과 › 월 탭에 '월별 기록' 행 → 지난 여러 달의 자산군별 금액·순자산 표(최신순, 최대 13개월). 앱 밖으로 내보내기 없음
-- 🖼 화면: [375 라이트](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-light.png) · [375 다크](issues/4.67-127-monthly-log/screenshots/qa4-fix-w375-dark.png) · [1280](issues/4.67-127-monthly-log/screenshots/qa4-fix-w1280-light.png)
-- 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app — 성과 › 월 탭 › 월별 기록 (데모 10월 줄 '—'는 데모 데이터 오타, 실사용 무관)
-- 🔁 대표 지적 R1 반영: ① 구성 변화 막대 자산군별 최소 폭 7%(실제 %는 아래 목록 그대로) [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-composition.png) ② 월별 기록 표 가로 스크롤 1개로 통일 — 열 순서 `월 | 순자산 | 부동산…`, 월 열만 고정 [375](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet.png) · [밀었을 때](issues/4.67-127-monthly-log/screenshots/ui-u3-w375-light-sheet-scrolled.png)
-- ℹ️ iOS 실기기 재현은 못 했습니다(팀 환경에 iOS Safari 없음). 대표님 캡처를 픽셀 단위로 대조해 원인을 확정하고 조치했습니다.
-- 🔁 R2 원인: 가로 스크롤은 처음부터 1개, iOS가 고정된 '월' 칸을 스크롤 막대 위에 그려 막대가 두 조각으로 보임 → 고정 칸을 막대 아래로·표 아래 여백 12px·끝에서 튕김 차단(저장·데이터 변경 0)
-- 📱 iPhone 확인: preview `?trial=1` › 성과 › 월 탭 › 월별 기록에서 표를 좌우 끝까지 밀었을 때 아래 막대가 한 줄로 이어지면 반영된 상태
-- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @0c05de1
-- ⚠️ 한계: 값은 '그 달 마지막으로 앱을 연 날' 기준(캡션으로 안내) · 375에서 자산군 5개 이상·10억 이상이면 가로 스크롤 · 7/23 이전 달은 순자산만
-- #32 관계: 결산 Hero로 옮긴 월별 증감은 다시 넣지 않았고, 사라졌던 '여러 달 한눈에'만 금액 표로 되살림
-- 📏 판독: 머지~1/10 사용자 3명 이상 유지 / 0~1명 제거 후보 · ↩️ 롤백: PR revert 1회
-- 👉 결정: PR #128 머지 = 반영 / 닫기 = 미반영 · 폰에서 스크롤이 여전히 2개로 보이면 캡처와 함께 `수정:` · 브리프: [4.67-decision-brief.md](issues/4.67-127-monthly-log/4.67-decision-brief.md)
+**v4.67 반영 결정 — [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) (#127 월별 기록, risk:low)** · 머지 시 [#4.69](4.66보다 먼저일 때, 나중이면 [#4.70])
+- ✅ 권고: 반영 — 지적하신 대로 다이얼로그 없이 결산 월 탭 안 카드로, 달마다 순자산 아래 앞 기록 대비 변화를 빨강(증가)·파랑(감소) 원 단위로 표시
+- 📦 줄을 누르면 자산군별 금액·변화 펼침(이번 달 기본 펼침). 변화는 화면 금액끼리 뺀 값이고, 위 결산 증감도 같은 방식으로 맞춰 원 단위까지 같은 숫자
+- 🔗 preview: https://secretasset-git-issue-467-bbplayworlds-projects.vercel.app/?demo=1 — 성과 › 자산 변화 › 월 탭 › 자산 구성 변화 아래 '월별 기록'
+- 🖼 최종: [모바일 기본](issues/4.67-127-monthly-log/screenshots/qa-r3c-w375-dark-demo.png) · [허브와 숫자 일치](issues/4.67-127-monthly-log/screenshots/qa-r3c-w375-dark-demo-base-hub.png) · [데스크톱](issues/4.67-127-monthly-log/screenshots/dev-r3c-w1280-dark.png)
+- 🧪 qa PASS · UI 승인 · COO PASS · Vercel success @4745c64 · 위험 low(저장·동기화·서버 전송 변경 0), PR revert 1회
+- 👉 결정: PR #128 머지 = 반영 / 닫기 = 미반영
 
 ## 🔴 운영 결함 (p0)
 - [#107] → 핫픽스 PR #108 위임 머지 41fbc03(v4.57) · **운영 스모크 PASS**
@@ -37,7 +31,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | 대표 R3: 다이얼로그→페이지 인라인, 월별 변화 금액 색 표시 → UI 재설계 중 | 11/26 전 | 🟥 대표 승인 |
+| **4.67** [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | [#127](https://github.com/BBplayworld/vaultfolio/issues/127) 월별 기록 — 지난 여러 달의 자산군별 금액 한눈에(엑셀 월별 시트 대체) | R3 최종(4745c64) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 | **4.66** [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | [#125](https://github.com/BBplayworld/vaultfolio/issues/125) 하단 네비 정리 — 업데이트 가운데, 인증카드 상단 오른쪽(설치 앱 포함) | R8 최종(565b047) → 🟥 대표 승인 대기 | 11/26 전 | 🟥 대표 승인 |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
