@@ -2,10 +2,11 @@
 
 import { IdCard, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/logo";
+import { BrandLockup } from "@/components/brand-lockup";
 import { MAIN_PALETTE } from "@/config/theme";
 import { cn } from "@/lib/utils";
 import { useAssetData } from "@/contexts/asset-data-context";
+import { HEADER_ENTRY_BTN_BRAND, HEADER_ICON_BTN } from "./menu-styles";
 import { ShareScreenshotDialog } from "./share/share-menu";
 import { recordVisit } from "@/lib/feature-usage";
 import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
@@ -22,8 +23,8 @@ const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }
   { value: "activity", label: "성과", dataTutorial: "tutorial-activity-tab" },
 ];
 
-// 상단 아이콘 버튼 공용 크기 (한 단계 ↑)
-const ICON_BTN = "inline-flex items-center justify-center h-10 sm:h-11 w-10 sm:w-11 rounded-lg shrink-0 transition-opacity hover:opacity-85";
+// 상단 아이콘 버튼 공용 크기 (한 단계 ↑) — menu-styles.ts의 HEADER_ICON_BTN
+const ICON_BTN = HEADER_ICON_BTN;
 
 function ShareScreenshotButton() {
   const [open, setOpenState] = useState(false);
@@ -41,8 +42,8 @@ function ShareScreenshotButton() {
   useEffect(() => {
     const handler = (e: Event) => {
       recordVisit("share-card");
-      track("feature_use", { category: "share_card", method: "open", source: "home_tip" });
-      const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" | "type" }>).detail;
+      const detail = (e as CustomEvent<{ variant?: "stock" | "portfolio" | "type"; source?: "top_bar" | "home_tip" }>).detail;
+      track("feature_use", { category: "share_card", method: "open", source: detail?.source ?? "home_tip" });
       setInitialVariant(detail?.variant);
       setOpen(true);
     };
@@ -59,14 +60,15 @@ function ShareScreenshotButton() {
     <>
       <button
         onClick={() => {
+          recordVisit("share-card");
           track("feature_use", { category: "share_card", method: "open", source: "top_bar" });
           setOpen(true);
         }}
-        className={`${ICON_BTN} border-none text-white`}
-        style={{ backgroundColor: MAIN_PALETTE[5] }}
+        className={`${ICON_BTN} ${HEADER_ENTRY_BTN_BRAND}`}
         aria-label="인증카드"
         title="인증카드"
         data-tutorial="tutorial-screenshot-btn"
+        data-testid="top-bar-share-card"
       >
         <IdCard className="size-5 sm:size-6" />
       </button>
@@ -131,11 +133,13 @@ export function TopBar() {
   return (
     <header
       data-navbar-style="scroll"
+      data-testid="top-bar"
       className={cn(
         "flex h-12 sm:h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 relative",
         "bg-background rounded-t-[inherit] overflow-x-clip",
         "mt-1",
-        isNestedView && "pwa-show-header"
+        isNestedView && "pwa-show-header",
+        view.type === "home" && "pwa-home-header"
       )}
     >
     <div className="flex w-full items-center justify-between px-3 lg:px-12">
@@ -151,30 +155,32 @@ export function TopBar() {
           </button>
         ) : (
           <>
-            {/* 홈 화면 전용 서비스 로고 — "상세/성과" 세그먼트 왼쪽. 하위 화면(isSubView)에서는
-                이 분기 자체가 안 렌더돼 뒤로가기 버튼만 보인다(기존과 동일).
-                좌측 정렬 기준은 대시보드 최상단 카드의 텍스트 시작선이 아니라 **카드 색상 박스(bg-primary/10)
-                자체의 외곽 모서리**(사용자 확인) — 이 모서리는 페이지 콘텐츠 영역(data-content-area)
-                좌측 끝과 같은 지점이라, top-bar 컨테이너의 px-3 패딩만으로 이미 정렬된다. 추가
-                마진 불필요(직전엔 카드 "텍스트" 시작선(px-4만큼 더 안쪽)에 맞추려 ml-4를 넣었다가
-                모바일에서 카드보다 오른쪽으로 처지는 회귀 — 되돌림). */}
-            <Logo size={22} className="text-foreground shrink-0" />
-            <InlineSelector
-              value={"" as HomeTop}
-              onChange={onHomeTabChange}
-              options={HOME_TOP_OPTIONS}
-              size="xl"
-              className="ml-3"
-              ariaLabel="페이지 선택"
-            />
+            {/* 홈 전용 공식 락업(Leckerli S 심볼 + 워드마크). 브라우저는 심볼만, PWA는 워드마크까지.
+                좌측 x는 헤더 px-3 패딩만으로 대시보드 카드 외곽 모서리와 정렬(추가 마진 금지). */}
+            <BrandLockup />
+            <div className="contents pwa-hide-actions">
+              <InlineSelector
+                value={"" as HomeTop}
+                onChange={onHomeTabChange}
+                options={HOME_TOP_OPTIONS}
+                size="xl"
+                className="ml-3"
+                ariaLabel="페이지 선택"
+              />
+            </div>
           </>
         )}
       </div>
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pwa-hide-actions">
-        {showInstall && <PwaInstallButton />}
-        {showInstall && <InstallNudge />}
+      {/* PWA에서는 설치·더보기만 숨기고 인증카드는 유지(#4.66). contents 래퍼라 브라우저 레이아웃은 그대로 */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="contents pwa-hide-actions">
+          {showInstall && <PwaInstallButton />}
+          {showInstall && <InstallNudge />}
+        </div>
         {showShare && <ShareScreenshotButton />}
-        {showMore && <MoreButton />}
+        <div className="contents pwa-hide-actions">
+          {showMore && <MoreButton />}
+        </div>
       </div>
     </div>
     </header>

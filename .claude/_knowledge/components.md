@@ -216,8 +216,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 
 ### header-menu (`header-menu/`, 구 header/top-nav)
 
-- `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `Logo`(`src/components/logo.tsx`, size=22, 추가 마진 없음) + `InlineSelector`(상세/성과, `className="ml-2"`)** — 2026-09 추가. 로고 정렬 기준은 대시보드 최상단 카드 텍스트가 아니라 **카드 색상 박스(`bg-primary/10`) 자체의 외곽 모서리** — 이 모서리가 페이지 콘텐츠 영역(`data-content-area`) 좌측 끝과 같은 지점이라 top-bar `px-3` 패딩만으로 이미 정렬됨(카드 "텍스트" 시작선에 맞추려 `ml-4`를 넣었다가 모바일에서 카드보다 오른쪽으로 처지는 회귀가 있었음 — 되돌림). `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 이 로고와는 무관. 로고~`InlineSelector` 사이 여유 공간은 `InlineSelector`의 `className="ml-2"`로 확보(박스만 우측 이동, 로고 위치 불변). `InlineSelector`의 `size="xl"` 변형(이 자리 전용, 다른 소비처 없음)은 버튼 좌우 패딩을 `px-4`→`px-3`로 축소. 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
-- `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성)
+- `TopBar` — 좌측: `view !== "home"`(=`isSubView`)일 때 ChevronLeft + getViewTitle("상세"/"성과"), **홈 화면이면 `BrandLockup`(`src/components/brand-lockup.tsx`, #4.66 r2) + `InlineSelector`(상세/성과, `className="ml-2"`)** — 2026-09 추가. 로고 정렬 기준은 대시보드 최상단 카드 텍스트가 아니라 **카드 색상 박스(`bg-primary/10`) 자체의 외곽 모서리** — 이 모서리가 페이지 콘텐츠 영역(`data-content-area`) 좌측 끝과 같은 지점이라 top-bar `px-3` 패딩만으로 이미 정렬됨(카드 "텍스트" 시작선에 맞추려 `ml-4`를 넣었다가 모바일에서 카드보다 오른쪽으로 처지는 회귀가 있었음 — 되돌림). `ChevronLeft`의 `-ml-1 sm:-ml-2`는 아이콘 SVG 내부 여백 보정용으로 이 로고와는 무관. 로고~`InlineSelector` 사이 여유 공간은 `InlineSelector`의 `className="ml-2"`로 확보(박스만 우측 이동, 로고 위치 불변). `InlineSelector`의 `size="xl"` 변형(이 자리 전용, 다른 소비처 없음)은 버튼 좌우 패딩을 `px-4`→`px-3`로 축소. 우측: 인증카드·도구 아이콘 2개 (h-10 sm:h-11, MAIN_PALETTE[5]/foreground 토큰)
+- `ShareScreenshotButton` (`IdCard` 아이콘) → `ShareScreenshotDialog` → `ShareCard` (인증카드 생성). **대화상자 렌더·`trigger-open-share-card` 리스너는 top-bar 1곳뿐**(#4.66). 클릭 시 `recordVisit("share-card")`+GA `top_bar`, 리스너는 `detail.source ?? "home_tip"`. PWA에서도 보임(`pwa-hide-actions` 밖, 홈은 `pwa-home-header` 한 줄 헤더). `HubShareButton`(`layout/ui/hub-share-button.tsx`) — 상세·성과 허브 제목 줄 PWA 전용(`pwa-only-action`) 발송 버튼, 대화상자 없음, `dispatchOpenShareCard(undefined,"top_bar")`, 자산 0건 숨김. 공용 아이콘 버튼 크기 `HEADER_ICON_BTN` + 채움 `HEADER_ENTRY_BTN_BRAND`(brand 인디고 `bg-brand text-white`·누름 0.96, #4.66 R8 — 두 버튼 공통, `header-menu/menu-styles.ts`)
 - `ToolMenu` (Settings 아이콘만) — Dropdown: 데이터 관리(내보내기/가져오기/공유/캐시초기화/삭제) + 기능(AI 평가 / **다크모드 토글** / **앱 가이드 · 공지사항** 통합 선택기). 공지 뷰어는 자동 팝업과 동일 `NoticeContent`·`NOTICE_TITLE` 재사용. `ThemeSwitcher` 컴포넌트는 삭제됨 — 도구 메뉴에 통합
 - `AppGuide` — 평소 hidden, `trigger-restore-guide` 수신 시 표시 (도구 메뉴 "앱 가이드 · 공지사항"에서 앱 가이드 선택 시 디스패치). `AppGuideContent` 카드 3개는 `SECURITY_COPY.map`(웰컴 보안 상세와 같은 상수, id→아이콘 `ShieldCheck`·`CloudLightning`·`EyeOff`), 설명 마지막 문장 `APP_GUIDE_SECURITY_DESC`(#4.38). 기술 용어 강조 span 없음
 - `MajorUiUpdateNoticeDialog` — 업데이트 공지 (일주일간 숨기기)
@@ -225,8 +225,8 @@ useQuery 제거 → `useEffect` + `useState` 직접 관리로 전환:
 ### BottomNav (`pwa/bottom-nav.tsx`)
 
 PWA standalone 전용 하단 탭바(`nav.pwa-nav-container`, `globals.css`의 `display-mode: standalone`
-미디어쿼리로만 노출 — 일반 브라우저는 항상 `display:none`). `NAV_ITEMS`(홈/상세/성과/업데이트/
-인증카드/더보기) 공통 렌더 루프가 `icon: Icon`(lucide)을 그리되, **"홈" 탭만 예외적으로 `Logo`
+미디어쿼리로만 노출 — 일반 브라우저는 항상 `display:none`). `NAV_ITEMS`(홈/상세/**업데이트(가운데)**/성과/더보기, #4.66에 인증카드 칸 제거 —
+`grid-cols-5` 균등, 체험 `grid-cols-3`, testId `bottom-nav-{id}`, 활성 `aria-current="page"`) 공통 렌더 루프가 `icon: Icon`(lucide)을 그리되, **(#4.66 r2 이전 설명, 현재는 홈도 lucide `Home` 동일 렌더) "홈" 탭만 예외적으로 `Logo`
 (`src/components/logo.tsx`, size=20)로 교체**(2026-09) — 활성 시 `MAIN_PALETTE[0]` 색상은 다른 탭과
 동일하게 적용하지만, 텍스트 글리프라 `strokeWidth`(2/2.5) 굵기 차이는 재현하지 않는다(폰트가 단일
 weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입·`aria-label` 용도로 그대로 유지.
@@ -372,7 +372,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 ### TrialBanner (`views/home/trial-banner.tsx`, #4.38 #59) — 체험 "예시" 표기 정본 1곳
 - `page.tsx` 정상 분기 `isTrialMode() && view.type === "home"`일 때 `AssetPageTabs` 앞 in-flow(고정 아님). 상세·성과에는 배지 추가 금지
 - 중립 카드 면 + 주황 아이콘 칩(`Compass`) + brand "내 자산으로 시작"(`trial-start-btn`) 1개, `data-screenshot-hide`. 탭 → sessionStorage `trial_exit=1` → `location.assign("/")`. 인앱은 `useExternalMove`(iOS는 `trial-inapp-guide` 펼침, 표식 없음)
-- 체험 중 숨김(1줄 가드): FAB(`page.tsx`), TopBar 더보기·설치(`PwaInstallButton` — 설치 흐름이 /api/share 사용), BottomNav `update`·`more`. 인증카드 유지
+- 체험 중 숨김(1줄 가드): FAB(`page.tsx`), TopBar 더보기·설치(`PwaInstallButton` — 설치 흐름이 /api/share 사용), BottomNav `update`·`more`. 인증카드 유지(상단·허브 아이콘, PWA 포함)
 
 ### PreviewGate (`preview/preview-gate.tsx`, #4.34) — Vercel preview 전용
 - `(main)/layout.tsx`가 `isPreviewEnv()`일 때만 `next/dynamic`으로 렌더해 `AssetDataProvider` 바깥을 감싼다. 운영·로컬은 children 그대로(DOM 추가 0)
@@ -479,3 +479,7 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 ### LinkAccountRow (`forms/trade/link-account-row.tsx`, #4.58 #103) — 거래 입력 '연결 계좌' 행
 - 주식 `trade-input`·코인 `crypto-tx-input` 수동 폼 공용. 즉시 반영 박스 바로 아래 별도 박스(같은 마크업): 라벨 `연결 계좌` + `Select`(`연결 안 함`/그룹: 원화 거래 `현금 계좌`·`대출`, 외화 거래 `달러 현금`|`엔화 현금` → `원화 현금` → `대출`, #4.63 #119) 1행, 아래 `cash-link-preview`(항상 마운트, grid-rows 펼침) + 보조 1줄, 4.52 `ResyncTxWarning` 재사용, 오류 박스(`cash-link-error`·`loan-link-error`, `role="alert"`). 후보 0개·즉시 반영 해제면 행 없음(후보는 있는데 거래일이 이번 달이 아니면 muted 안내 1줄 `account-link-note` `지난달 거래는 계좌 잔액을 바꾸지 않아요`), 외화→원화 계좌 선택 시 보조 줄이 환산식(`$1,235.73 × 1,390원만큼 현금이 줄어요`, 식 부분 `whitespace-nowrap`)이고 금액 표시 통화는 선택 계좌 통화, 선택이 후보에서 사라지면 `연결 안 함`으로 복귀(effect).
 - 값·문구·평가는 `lib/trade/link-text.ts`(`evaluateLink`가 표시와 제출 차단에 같은 결과). 삭제 다이얼로그 안내는 `DeleteRollbackDialog`의 `linkedNote` prop·코인 모달 `delete-linked-record-note`.
+
+- `BrandLockup`(`src/components/brand-lockup.tsx`, #4.66 logo-spec·R6·R8) — 홈 상단 왼쪽 공식 락업: `BrandSymbol` + `BrandWordmark`(기본 hidden, PWA standalone에서만 `.pwa-home-wordmark`로 노출), 색은 둘 다 `--brand-logo`. 브라우저 모드는 심볼만(32px 박스). PWA는 `.pwa-home-symbol` 18.21px(lg 21.01px, S 잉크 높이 15.25/17.6px, R8)·음수 좌측 여백 -4.46px(lg -5.14px, 박스 여백 7.1311/32 상쇄 + 기울기 광학 보정 0.4/0.46px), 워드마크 잉크 높이 13px(lg 15px), 잉크 간격 = S 잉크 높이 × 0.3124(4.76px, lg 5.49px; 워드마크 `ml-[0.7px] lg:ml-[0.81px]`), 세로 = 잉크 중심 일치 + 워드마크 `translate-y-[0.25px] lg:translate-y-[0.3px]`(무게중심 보정). 비인터랙티브, `data-testid="top-bar-brand"`. 규약은 design-system.md §14.
+- `BrandSymbol`(`src/components/brand-symbol.tsx`, #4.66 R8) — Leckerli One "S" 글리프 아웃라인 인라인 SVG(파비콘·`Logo`와 같은 서체, 폰트 파일 미포함·SIL OFL 출처 주석). viewBox 32, path 1개, 잉크 높이 26.8(y 2.6~29.4 = 세로 중심 16)·폭 17.74(x 7.13~24.87, 가로 중앙), `fill: var(--brand-logo)`. 해상도 분기 없음. `size`는 SVG 속성이라 CSS width/height로 덮어쓸 수 있음.
+- `BrandWordmark`(`src/components/brand-wordmark.tsx`, #4.66 logo-spec·R6) — "시크릿에셋" 글자 아웃라인 SVG(Pretendard Variable wght 750, OFL, 폰트 파일 미포함), 자간 +110/2048em(R6) + 커닝 시크 -15·크릿 -80·릿에 +40·에셋 +60, viewBox `25 -1641 9224 1833`(잉크 경계라 높이 클래스+`w-auto`로 크기 지정), `fill=currentColor`(락업에서 `text-[color:var(--brand-logo)]`), `aria-label`=서비스명.

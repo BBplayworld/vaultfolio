@@ -67,6 +67,8 @@ These serve as the fallback; there is no separate default.css file. */
   /* 브랜드 액션 색 — 확인/제출 버튼·체크박스 공용. MAIN_PALETTE[0](config/theme.ts)과 동일 hex 유지 */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
+  /* 브랜드 심볼(C 레이어 S)·워드마크 색(#4.66 R3, R5 흑백화) — 심볼은 파비콘과 같은 순흑/순백, 워드마크는 한 단계 부드러운 톤 */
+  --brand-logo: #111111;
   --secondary: oklch(0.895 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.88 0 0);
@@ -130,6 +132,7 @@ These serve as the fallback; there is no separate default.css file. */
   /* 브랜드 액션 색 — 라이트/다크 동일 (MAIN_PALETTE[0]) */
   --brand: #5b6fbf;
   --brand-foreground: #ffffff;
+  --brand-logo: #F2F3F6;
   --secondary: oklch(0.31 0.014 265);
   --secondary-foreground: oklch(0.965 0.004 265);
   --muted: oklch(0.31 0.014 265);
@@ -342,16 +345,37 @@ nav.pwa-nav-container {
   display: none !important;
 }
 
+/* PWA 전용 발송 버튼(상세·성과 허브 인증카드, #4.66): 브라우저에서는 숨김 */
+.pwa-only-action {
+  display: none !important;
+}
+
 /* 루트 첫 화면 사전 조각(#113): 자산 키가 있는 기기(head 스크립트가 data-has-assets 설정)는 첫 페인트 전 숨김 */
 html[data-has-assets] [data-first-paint] {
   display: none;
+}
+
+/* 홈 헤더 심볼(#4.66 R8): 브라우저·PWA 공통 — 앱과 같은 S. 심볼 18.21px(Leckerli S 잉크 높이 15.25, lg 21.01px·잉크 17.6),
+   음수 좌측 여백 = 심볼 박스 좌측 여백(7.1311/32) + 광학 보정 0.4px(lg 0.46) → S 왼쪽 끝이 카드 외곽(px-3)에 맞음 */
+.pwa-home-symbol {
+  width: 18.21px;
+  height: 18.21px;
+  margin-left: -4.46px;
+}
+
+@media (min-width: 1024px) {
+  .pwa-home-symbol {
+    width: 21.01px;
+    height: 21.01px;
+    margin-left: -5.14px;
+  }
 }
 
 /* PWA 스탠드얼론 모드: 모바일은 하단 nav, PC/윈도우는 상단 nav */
 @media (display-mode: standalone) {
 
   /* 3단계 서브페이지를 제외한 일반 헤더는 숨김 */
-  header[data-navbar-style="scroll"]:not(.pwa-show-header) {
+  header[data-navbar-style="scroll"]:not(.pwa-show-header):not(.pwa-home-header) {
     display: none !important;
   }
 
@@ -376,6 +400,30 @@ html[data-has-assets] [data-first-paint] {
     padding-top: 1rem !important;
   }
 
+  /* 홈 전용 한 줄 헤더(#4.66): 로고 + 인증카드. 높이 40px + safe-area, 본문과 4px 간격 */
+  header.pwa-home-header {
+    display: flex !important;
+    margin-top: 0 !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(2.5rem + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  header.pwa-home-header+[data-content-area] {
+    padding-top: 0.25rem !important;
+  }
+
+  /* 홈 헤더(#4.66 logo-spec·R8): 심볼 + SVG 워드마크 락업, 워드마크는 PWA에서만 노출.
+     심볼 18.21px(Leckerli S 잉크 높이 15.25, lg 21.01px·잉크 17.6), 음수 좌측 여백 = 심볼 박스 좌측 여백(7.1311/32) + 광학 보정 0.4px(lg 0.46)
+     → 기울어진 S의 왼쪽 끝(아래 볼)이 카드 외곽(px-3) 0.4px 바깥, 위쪽 몸통이 안쪽으로 들어가 보이는 것 보정 */
+  .pwa-home-wordmark {
+    display: block !important;
+  }
+
+  /* 상세·성과 허브 제목 줄의 PWA 전용 인증카드 발송 버튼 노출 */
+  .pwa-only-action {
+    display: inline-flex !important;
+  }
+
   nav.pwa-nav-container {
     display: block !important;
     bottom: 0 !important;
@@ -398,6 +446,17 @@ html[data-has-assets] [data-first-paint] {
 
   html[data-device="pc"] header.pwa-show-header+[data-content-area] {
     padding-top: 1.5rem !important;
+  }
+
+  /* PC PWA 홈 줄: 상단 NAV(65px) 아래, 로고는 NAV 홈 칸과 중복이라 숨김 */
+  html[data-device="pc"] header.pwa-home-header {
+    margin-top: calc(65px + 0.75rem) !important;
+    padding-top: 0 !important;
+    height: 2.75rem !important;
+  }
+
+  html[data-device="pc"] header.pwa-home-header+[data-content-area] {
+    padding-top: 0.25rem !important;
   }
 
   html[data-device="pc"] nav.pwa-nav-container {

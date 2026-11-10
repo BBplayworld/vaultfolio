@@ -4,13 +4,37 @@
 
 ---
 
-## 2026-11-09 (v4.69)
+## 2026-11-10 (v4.70)
 
-### 월별 기록 — 지난 여러 달의 자산군별 금액을 결산 안에서 한눈에 (#4.69, 이슈 #127, risk low, 대표 승인 대상)
+### 월별 기록 — 지난 여러 달의 자산군별 금액을 결산 안에서 한눈에 (#4.70, 이슈 #127, risk low, 대표 승인 대상)
 - **왜**: 엑셀에 매달 자산군별로 한 줄씩 적던 사용자가 결산 뒤에도 시트를 연다. 자산군별 금액은 월 스냅샷 `breakdown`에 저장돼 있었지만 그리는 화면이 없었다(결산은 화살표로 한 달씩, 구성 블록은 2시점 %만).
 - **변경**: 월 탭 구성 블록 아래 `월별 기록` 행(기록된 달 ≥2) → bottom 시트에 달마다 한 줄(월·기록일·가진 자산군 금액·순자산, 최신순). 줄 조립 `report/monthly-log.ts` `buildMonthlyLog` 1개(결산과 같은 `listSettlementMonths` 범위·스냅샷 값·live breakdown 재사용, 줄 단위 합 검증 >1원이면 순자산만). GA 화면 키 `activity:change:monthly-log` 1개(열 때). AI 행 진입 지연 120→160ms(stagger).
 - **범위 밖**: 증감·%·비중 열(#32 정본 = 결산 Hero), 행 탭 이동·선택 달 강조, `dailyArchive`, 복사·내보내기, '월말' 표기. 저장 키·스키마·동기화·공유 토큰·서버 전송 diff 0.
 - **대표 피드백 R3(2026-11-10)**: "차이 금액 인지가 불편, 다이얼로그 말고 페이지에서 성과 UI로 변화 금액까지" → 진입 행·bottom 시트·표·가로 스크롤 전부 폐지, 월 탭 구성 블록 아래 SECTION 카드 `MonthlyLogBlock`(`monthly-log-block.tsx`) 인라인. 달마다 한 줄(월·기록일 / 순자산 원 단위 + 앞 기록 대비 변화 손익색 `+`/U+2212), 줄 탭 펼침으로 자산군 금액·순자산 기여 변화(이번 달 기본 펼침, 합 = 순자산 변화), 7줄째부터 `이전 N개월 더 보기`. 신규 순수 함수 `buildMonthlyLogChanges`·`formatMonthlyLogDelta`. R3 보정: 변화는 순자산·자산군 모두 표시값(원 반올림)끼리의 차(소수 달 ±1원 어긋남 해소, 최대 잉여법 제거), 1280 패널 변화 열 최소 폭(`sm:min-w-28`, 10억 이상 변화도 넘침 없음)으로 우측 끝 정렬. COO R3: 결산 Hero 증감 `settlementDelta` = `round(끝) − round(시작)`(화면 금액 차 — Hero·허브 자산 변화 카드·원인 합계·AI 질문·월별 기록 변화가 소수 달에도 원 단위 일치, 정수 데이터 불변), 데모 스냅샷 미기록 차이 픽스처를 @M-1→@M-2로 이동(데모·체험 기본 펼친 이번 달 패널에 자산군 변화가 보이게). 삭제: `monthly-log-sheet.tsx`, `MonthlyLogButton`, `monthlyLogRangeLabel`, GA 화면 키 `activity:change:monthly-log`(화면 아님). 짧은 표기(억·만)는 화면에서 폐지(`formatMonthlyLogAmount` short 경로는 남김). 구성 바 최소 폭(R1)·저장 diff 0 유지.
+
+---
+
+## 2026-11-09 (v4.69)
+
+### 하단 네비 6칸 → 5칸 — 업데이트를 가운데로, 인증카드는 상단 오른쪽(설치 앱 포함) (#4.69, 이슈 #125, risk low, 대표 승인 대상)
+- **왜**: 강조 버튼 '업데이트'가 4번째 칸이라 가운데가 아니고 탭 순서가 스와이프 순서와 어긋남. 인증카드는 핵심 기능이라 브라우저와 같은 '맨 위 오른쪽'으로 통일(더보기는 설정 전용, 더보기 이동안은 대표 반려로 철회 — v2).
+- **변경**: `bottom-nav.tsx` 홈·상세·업데이트·성과·더보기 `grid-cols-5`(체험 3), 인증카드 칸·다이얼로그 제거, `aria-current`·testId. `top-bar.tsx` 홈에 `pwa-home-header`(PWA 한 줄 헤더: 로고+인증카드, 높이 40px+safe-area), 설치·더보기·선택기만 `contents pwa-hide-actions`로 숨기고 인증카드는 standalone에서 노출, 클릭 시 `recordVisit("share-card")`, 리스너 출처 `detail.source ?? "home_tip"`. 상세·성과 허브 제목 줄에 PWA 전용 발송 버튼 `HubShareButton`(`dispatchOpenShareCard(undefined,"top_bar")`). `globals.css` `pwa-home-header`·`pwa-home-logo`(PC PWA 숨김)·`pwa-only-action`. `tool-menu.tsx`·`app-features.ts` main과 동일.
+- **범위**: 저장 키·스키마·동기화·서버 전송 diff 0, 브라우저 화면·FAB·홈 결산 팁·`PAGE_ORDER` 무변경. 인증카드 대화상자·리스너는 top-bar 1곳. 테스트 `bottom-nav-5col.test.ts`.
+
+### 인증카드 버튼 메인 인디고 + 락업 S를 Leckerli One 글리프로 (#4.66 이슈 #125 R8)
+- **왜**: 대표 "인증카드 다크/화이트 색상은 좀 튀긴 하네, 메인 인디고 적용" · "S 아이콘은 Leckerli One 폰트 모양(오른쪽 대각선으로 누운 자연스러운 s자)이 제일 예뻐".
+- **변경**: `menu-styles.ts` `HEADER_ENTRY_BTN_INVERT` → `HEADER_ENTRY_BTN_BRAND`(`bg-brand text-white`·누름 0.96), 두 버튼 적용. `brand-symbol.tsx` 기하형 C 레이어 S path 2개 → Leckerli One "S" 아웃라인 path 1개(fonttools 변환, 폰트 파일 미포함), `globals.css` `.bs-hi/.bs-lo` 제거·`.pwa-home-symbol` 18.21px(S 잉크 높이 15.25, lg 21.01px·17.6)·여백 -4.46/-5.14px, 워드마크 `ml-[0.7px] lg:ml-[0.81px]`. design-system §5·§14.
+- **범위**: 저장·스키마·동기화·서버 전송 diff 0. 워드마크·하단 홈 탭·앱 아이콘·파비콘 불변. 테스트 `brand-lockup.test.tsx`·`bottom-nav-5col.test.ts`.
+
+### 인증카드 버튼 foreground 반전 + 락업 S 추가 축소 (#4.66 이슈 #125 R7)
+- **왜**: 청록(`MAIN_PALETTE[5]`) 버튼은 차트 데이터색 재사용이고 흑백 로고와 이질, 인디고는 하단 업데이트 버튼과 겹침(대표 의견) → 로고와 같은 흑백 체계. 대표 "S 사이즈 확실히 줄여줘".
+- **변경**: `menu-styles.ts` `HEADER_ENTRY_BTN_INVERT`(`bg-foreground text-background`·누름 0.96) 신설, `top-bar.tsx`·`hub-share-button.tsx` 인라인 청록 제거 후 적용. `.pwa-home-symbol` 19.58→17.31px(S 잉크 16.4→14.5, lg 22.6→19.98px·16.73), 음수 여백 -3.3/-3.81px, 워드마크 `ml-[1.22px] lg:ml-[1.41px]`(간격 규칙 42.3% 유지). design-system §5 진입 버튼 규약 1줄.
+- **범위**: 저장·스키마·동기화·서버 전송 diff 0. 크기·히트영역·aria 불변, 더보기 회색 버튼 불변. 테스트 `brand-lockup.test.tsx`·`bottom-nav-5col.test.ts`.
+
+### 홈 상단 공식 로고 락업 — S 심볼 + 워드마크, 단일색 `--brand-logo` (#4.66 이슈 #125 R2~R6, logo-spec)
+- **왜**: PWA 홈 맨 위 줄이 "홈" 글자·필기체 S라 공식 서비스 느낌이 없다는 대표 지적. 대표 R3~R6 피드백(C 레이어 S, 크기 축소, 흑백, 글자 간격·S 크기)을 ui-designer 확정 사양(logo-spec)으로 고정.
+- **변경**: `brand-symbol.tsx` 외곽선 면 path 2개(`bs-hi` 틈 1.3 / `bs-lo` 틈 1.7, 1x 화면 교체), `brand-wordmark.tsx` Pretendard Variable 750 아웃라인(자간 +110/2048em + 커닝 시크 -15·크릿 -80·릿에 +40·에셋 +60, R6에서 +50→+110), `brand-lockup.tsx` 워드마크 여백·무게중심 하향, `globals.css` `--brand-symbol`·`--brand-wordmark` → `--brand-logo`(라이트 #111111/다크 #F2F3F6), `.pwa-home-symbol` 19.58px(S 잉크 16.4, R6에서 17.6→16.4, lg 22.6px). design-system.md §14 신설.
+- **범위**: 저장·스키마·동기화·서버 전송 diff 0. 브라우저 모드는 심볼만(32px 박스), 앱 아이콘·파비콘·인증카드 청록 버튼 불변. 테스트 `brand-lockup.test.tsx`.
 
 ---
 
