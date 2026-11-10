@@ -350,21 +350,6 @@ nav.pwa-nav-container {
   display: none !important;
 }
 
-/* 브랜드 심볼(#4.66 logo-spec): 고해상도 bs-hi(틈 1.3) 기본, 1x 화면만 저해상도 bs-lo(틈 1.7)로 교체 */
-.bs-lo {
-  display: none;
-}
-
-@media (max-resolution: 1.49dppx) {
-  .bs-hi {
-    display: none;
-  }
-
-  .bs-lo {
-    display: inline;
-  }
-}
-
 /* 루트 첫 화면 사전 조각(#113): 자산 키가 있는 기기(head 스크립트가 data-has-assets 설정)는 첫 페인트 전 숨김 */
 html[data-has-assets] [data-first-paint] {
   display: none;
@@ -411,23 +396,24 @@ html[data-has-assets] [data-first-paint] {
     padding-top: 0.25rem !important;
   }
 
-  /* 홈 헤더(#4.66 logo-spec·R7): 심볼 + SVG 워드마크 락업, 워드마크는 PWA에서만 노출.
-     심볼 17.31px(S 잉크 14.5, lg 19.98px·S 잉크 16.73), 음수 좌측 여백 = 심볼 박스 좌측 여백(6.1058/32) → S 잉크 좌측이 카드 외곽(px-3)과 정렬 */
+  /* 홈 헤더(#4.66 logo-spec·R8): 심볼 + SVG 워드마크 락업, 워드마크는 PWA에서만 노출.
+     심볼 18.21px(Leckerli S 잉크 높이 15.25, lg 21.01px·잉크 17.6), 음수 좌측 여백 = 심볼 박스 좌측 여백(7.1311/32) + 광학 보정 0.4px(lg 0.46)
+     → 기울어진 S의 왼쪽 끝(아래 볼)이 카드 외곽(px-3) 0.4px 바깥, 위쪽 몸통이 안쪽으로 들어가 보이는 것 보정 */
   .pwa-home-wordmark {
     display: block !important;
   }
 
   .pwa-home-symbol {
-    width: 17.31px;
-    height: 17.31px;
-    margin-left: -3.3px;
+    width: 18.21px;
+    height: 18.21px;
+    margin-left: -4.46px;
   }
 
   @media (min-width: 1024px) {
     .pwa-home-symbol {
-      width: 19.98px;
-      height: 19.98px;
-      margin-left: -3.81px;
+      width: 21.01px;
+      height: 21.01px;
+      margin-left: -5.14px;
     }
   }
 
