@@ -19,10 +19,11 @@ const SPX_INDEX_CODE = "SPX";
 // 국내 지수 기준 종가는 국내 종목(fetchDomesticHistoricalPrice)과 같은 5일 롤백 범위
 const KR_LOOKBACK_DAYS = 5;
 
-export interface MarketIndexResponse {
+// type 별칭(인터페이스 아님) — ProfitRefResponse(Record)와 같은 계산 함수에 그대로 넘길 수 있게
+export type MarketIndexResponse = {
   KOSPI: ProfitRefEntry | null;
   SPX: ProfitRefEntry | null;
-}
+};
 
 export async function GET(req: NextRequest) {
   const blocked = guardRequest(req, { route: "market-index", l1PerMinute: 60 });
