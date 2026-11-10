@@ -28,7 +28,7 @@ const deltaTone = (v: number) => (Math.round(v) === 0 ? "font-normal text-muted-
 
 function RowDelta({ row, change, today }: { row: RecordedRow; change?: MonthlyLogChange; today: string }) {
   if (!change) {
-    return <span data-testid={`monthly-log-delta-${row.month}`} data-first="" className="text-sm text-muted-foreground">첫 기록</span>;
+    return <span data-testid={`monthly-log-delta-${row.month}`} data-first="" className="whitespace-nowrap text-sm text-muted-foreground">첫 기록</span>;
   }
   return (
     <span data-testid={`monthly-log-delta-${row.month}`} data-value={change.net} className="text-sm">
@@ -100,7 +100,7 @@ function MonthRow({ row, prev, change, columns, today, open, onToggle }: {
     return (
       <li data-testid={`monthly-log-row-${row.month}`} data-kind="gap" className={`flex min-h-10 items-center gap-2 py-2 ${hairline}`}>
         <span className="flex-1 whitespace-nowrap font-semibold text-foreground">{settlementName(row.month, today, false)}</span>
-        <span className={MUTED}>기록 없음</span>
+        <span className={`whitespace-nowrap ${MUTED}`}>기록 없음</span>
         <span aria-hidden className="size-4 shrink-0" />
       </li>
     );
