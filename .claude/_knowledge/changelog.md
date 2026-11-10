@@ -7,7 +7,7 @@
 ## 2026-11-10 (v4.75)
 
 ### 품질 묶음 4 (#4.75, 이슈 #142)
-- **직접 추가 매수일**: 수익률 역산 자동 과거 추정(`estimatePurchaseDateFromReturn`, 연 8% 가정 최대 30년 전) 제거 — 호출처가 stock-input 하나뿐이라 기능 제거에 따라 함수와 안내 문구도 정리(테스트는 원래 없음). 신규 기본값 = 올해 1월 1일(KST, `resyncNewPurchaseDate(todayKst())`), 안내 "기본값은 올해 1월 1일입니다". 수정 경로·기존 저장 데이터 변경 0. 결산 예측 투입일 `resyncInflowDate`가 직접 등록 id `stock_<ms>`도 판별(기본값 1/1 그대로면 만든 날 투입, C74).
+- **직접 추가 매수일**: 수익률 역산 자동 과거 추정(`estimatePurchaseDateFromReturn`, 연 8% 가정 최대 30년 전) 제거 — 호출처가 stock-input 하나뿐이라 기능 제거에 따라 함수와 안내 문구도 정리(테스트는 원래 없음). 신규 기본값 = 올해 1월 1일(KST, `resyncNewPurchaseDate(todayKst())`), 안내 "기본값은 올해 1월 1일이에요. 실제 매수일을 알면 수정해 주세요.". 수정 경로·기존 저장 데이터 변경 0. 결산 예측 투입일 `resyncInflowDate`가 직접 등록 id `stock_<ms>`도 판별(기본값 1/1 그대로면 만든 날 투입, C74).
 - **체험·데모 칩**: `getStockChipQuote` 장중·마감직후는 체험(`isTrialMode`)·데모 종목(`demo_st_`)이면 null(칩 숨김), 종가 쌍 경로 유지.
 - **자산 변화 › 주식 목록 320px**: 행을 400px 미만에서 세로 쌓기, 티커 truncate.
 - **범위**: 저장 키·스키마·동기화·공유 토큰·서버 전송 diff 0.

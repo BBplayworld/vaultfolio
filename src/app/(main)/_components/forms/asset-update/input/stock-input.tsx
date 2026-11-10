@@ -581,7 +581,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                 />
               </FormControl>
               {!editData && (
-                <FormDescription>기본값은 올해 1월 1일입니다. 실제 매수일을 알면 수정하세요.</FormDescription>
+                <FormDescription className="break-keep text-pretty">기본값은 올해 1월 1일이에요. 실제 매수일을 알면 수정해 주세요.</FormDescription>
               )}
               <FormMessage />
             </FormItem>

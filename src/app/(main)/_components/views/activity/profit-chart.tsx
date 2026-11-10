@@ -705,12 +705,12 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                       {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }, i) => (
                         <div key={key} className={`rounded-lg overflow-hidden${i > 0 ? ` ${ASSET_THEME.dividerAccent} pt-3` : ""}`}>
                           <div className="flex items-center justify-between px-4 py-1.5 bg-muted/20">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-sm font-semibold text-muted-foreground">{label}</span>
+                              <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
                             </div>
                             {catRate !== null && (
-                              <div className="text-right">
+                              <div className="min-w-0 text-right">
                                 <p className={`text-sm tabular-nums ${getProfitLossColor(catProfit)}`}>
                                   {catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)} ({formatRate(catRate)})
                                 </p>
