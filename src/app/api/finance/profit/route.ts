@@ -6,8 +6,8 @@ import {
   classifyTickers,
 } from "@/lib/finance/finance-service";
 import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/finance/kis-token";
-import { getDailyClosingRefDates } from "@/lib/finance/profit-utils";
-import { getStockCacheSlot, getEffectiveDateStr, isUsEasternDST } from "@/lib/finance/stock-cache-slot";
+import { resolveRefDates } from "@/lib/finance/profit-dates";
+import { getStockCacheSlot, getEffectiveDateStr } from "@/lib/finance/stock-cache-slot";
 import { isKrBusinessDay } from "@/lib/finance/kr-holidays";
 import { isUsBusinessDay } from "@/lib/finance/us-holidays";
 import { KR_CODES } from "@/lib/finance/kr-master";
@@ -47,59 +47,6 @@ function marketToExcd(market: string | undefined): string | undefined {
   return undefined;
 }
 
-// 토/일만 건너뛰는 단순 rollback (N 영업일 전)
-function subtractWeekdays(from: Date, n: number): Date {
-  const d = new Date(from);
-  let count = 0;
-  while (count < n) {
-    d.setUTCDate(d.getUTCDate() - 1);
-    const day = d.getUTCDay();
-    if (day !== 0 && day !== 6) count++;
-  }
-  return d;
-}
-
-// 달력 기준 N개월 전, 토/일이면 금요일로 rollback
-function subtractCalendarMonths(from: Date, months: number): Date {
-  const d = new Date(from);
-  d.setUTCMonth(d.getUTCMonth() - months);
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
-  return d;
-}
-
-// 달력 기준 N년 전, 토/일이면 금요일로 rollback
-function subtractCalendarYears(from: Date, years: number): Date {
-  const d = new Date(from);
-  d.setUTCFullYear(d.getUTCFullYear() - years);
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
-  return d;
-}
-
-// daily만 두 날짜(prev, ref) 반환, 나머지는 단일 ref만
-function getDates(period: ProfitPeriod, market: "domestic" | "foreign"): { refDate: string; prevDate?: string } {
-  const now = getKSTNow();
-  if (period === "daily") return getDailyClosingRefDates(market);
-  // 해외 weekly/monthly/yearly도 일별과 동일한 컷오프(DST 06:00 / STD 07:00 KST) 적용
-  // 새벽 ET 장중 시점의 stale 응답 방지 — daily보다 TTL이 길어 영향이 더 큼
-  const shiftForeign = (d: Date): Date => {
-    if (market !== "foreign") return d;
-    const hhmm = now.getUTCHours() * 100 + now.getUTCMinutes();
-    const cutoff = isUsEasternDST(new Date()) ? 600 : 700;
-    if (hhmm >= cutoff) return d;
-    const r = new Date(d);
-    r.setUTCDate(r.getUTCDate() - 1);
-    while (r.getUTCDay() === 0 || r.getUTCDay() === 6) r.setUTCDate(r.getUTCDate() - 1);
-    return r;
-  };
-  if (period === "weekly") return { refDate: toDateStr(shiftForeign(subtractWeekdays(now, 5))) };
-  if (period === "monthly") return { refDate: toDateStr(shiftForeign(subtractCalendarMonths(now, 1))) };
-  return { refDate: toDateStr(shiftForeign(subtractCalendarYears(now, 1))) };
-}
-
 export async function GET(req: NextRequest) {
   const blocked = guardRequest(req, { route: "profit", l1PerMinute: 120 });
   if (blocked) return blocked;
@@ -120,12 +67,12 @@ export async function GET(req: NextRequest) {
 
   // sameBusinessDay: 국내·해외 모두 해외 영업일 계산을 사용해 같은 영업일로 정렬
   // kstAccessDay: 국내=domestic, 해외=foreign 독립 산출 (현행)
-  const usDates = getDates(period, "foreign");
-  const krDates = basis === "sameBusinessDay" ? usDates : getDates(period, "domestic");
   // 일별 종료일이 그 시장 휴장일이면 refDate를 명목 종료일로 유지(직전 영업일로 덮어쓰지 않음)
   // → refPrice는 폴백 close라 prevPrice와 같아 주가변동 0, refRate만 종료일 환율로 잡혀 환차만 반영
-  const krRefHoliday = period === "daily" && !isKrBusinessDay(new Date(`${krDates.refDate}T00:00:00.000Z`));
-  const usRefHoliday = period === "daily" && !isUsBusinessDay(new Date(`${usDates.refDate}T00:00:00.000Z`));
+  // (날짜 산출은 market-index 라우트와 공용 — profit-dates.ts)
+  const { us: usDates, kr: krDates } = resolveRefDates(period, basis);
+  const krRefHoliday = krDates.refHoliday;
+  const usRefHoliday = usDates.refHoliday;
   const cache = getCacheStorage();
   const result: ProfitRefResponse = {};
 
