@@ -33,7 +33,7 @@
 |---|---|---|---|---|
 | **4.73** | [#134](https://github.com/BBplayworld/vaultfolio/issues/134) 상세·주식 '오늘' 칩 — 개장 전·주말 0.0%, 미국 종목 낮 시간 환율분만 같은 값(버그, #132 선행) | ✅ v4.72 머지(962830d)·운영 스모크 PASS(국내 장중·마감 직후 실측은 11/11 예약) | 즉시 | COO 자체 승인 |
 | **4.71** | [#131](https://github.com/BBplayworld/vaultfolio/issues/131) GA 화면별 참여 시간이 다음 화면으로 밀려 집계(버그, 선순위) | 개발 착수 | 즉시 | COO 자체 승인 |
-| **4.72** | [#132](https://github.com/BBplayworld/vaultfolio/issues/132) 시장과 나란히 — 보유 종목 등락 vs 코스피·S&P 500 + 오늘 등락 순 + '오늘' 표시 점검 | 명세·기술 검토·UI 사양(Fable) 완료 → 개발 U1~U3 중(머지 시 v4.73) | 11/26 전 | 🟥 대표 승인(반영 1회) |
+| **4.72** | [#132](https://github.com/BBplayworld/vaultfolio/issues/132) 시장과 나란히 — 보유 종목 등락 vs 코스피·S&P 500 + 오늘 등락 순 + '오늘' 표시 점검 | [PR #136](https://github.com/BBplayworld/vaultfolio/pull/136) 개발 U1~U3 완료(지수 조회 게이트 통과) → 미결 규칙 COO 확정 → U4~U7 | 11/26 전 | 🟥 대표 승인(반영 1회) |
 
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
