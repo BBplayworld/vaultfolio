@@ -169,3 +169,4 @@
 - (11-10 developer tech-review 관찰) fetchProfitRef가 429 응답 시 배치를 조용히 건너뜀(profit-utils.ts:368) — 한도 순간 Hero 부분 합 가능. 주간 점검 후보.
 - (11-10 developer 관찰, 기존 main 결함 의심) 앱 시작 직후 바로 상세·주식 진입 시 '오늘' 칩이 재진입 전까지 안 보임 — 시작 시세 동기화의 cancelQueries(["profit"])가 첫 칩 쿼리를 취소. 우선 후보(대표가 '오늘' 칩에 민감).
 - (11-10 ui-designer 관찰, 기존 main 결함 의심) 자산 변화 › 주식에서 '연' 누르고 0.3초 안에 '주'를 누르면 제목 '1주 주식 수익' 아래 1년 구간·금액이 남음(경합). 4.72 글줄과 어긋나 보임 — 후보.
+- (11-10 COO 결함 의심) fetchProfitRef dedup에서 먼저 시작한 호출이 abort되면 다른 호출자(saveSnapshots daily 등)가 부분 결과를 정상 완료로 받아 현재가 폴백 가능 — qa 확정 대기.
