@@ -38,6 +38,10 @@ export async function GET(req: NextRequest) {
   const raw = await fetchEtfComponents(code, accessToken, process.env.KIS_APP_KEY ?? "", process.env.KIS_APP_SECRET ?? "");
   const result = raw ? normalizeEtfComponents(code, raw.output1, raw.output2) : null;
   if (!result) {
+    // 실호출 게이트용 — 실패 사유 판독(KIS 오류인지 빈 구성인지). 게이트 뒤 제거
+    if (req.nextUrl.searchParams.get("probe") === "1") {
+      return NextResponse.json({ error: "no-data", probe: raw ? { output1: raw.output1, output2Len: raw.output2.length, trConts: raw.trConts, o2: raw.output2.slice(0, 2) } : { kisFail: true } }, { status: 502, headers: { "Cache-Control": "private, no-store" } });
+    }
     const unavailableNow = await recordKisFailure();
     return NextResponse.json(
       { error: "no-data" },
