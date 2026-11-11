@@ -67,6 +67,15 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 엣지: 수동 보유분+반영거래 삭제 시 보유분 보존(P1 회귀), 전량매도 평단 0, 보유초과 매도 차단, 미래·보존기간(3년) 밖 날짜 차단
 - 회귀: `addTransactionWithPosition`/`deleteTransactionWithPosition` 단일 저장(stale-closure 방지)
 
+### F-STOCK-PAGE. 종목 한 장 (`#detail/stocks-item`, #4.81 #157, [stock-page-view.tsx](../../src/app/(main)/_components/views/detail/stock-page/stock-page-view.tsx))
+- 👤 진입 2곳: 상세·주식 펼침 `종목 보기 ›`(`stock-page-entry`, 분할·비분할 같은 자리·히트 40×40, 펼침 다른 DOM 불변) → 누른 행 그룹으로 열림(뒤로 라벨 `주식`) / 성과 › 시장 비교 종목 줄 탭 → 전체 그룹(뒤로 라벨 `뒤로`, 지수 줄은 눌리지 않음). GA `page_title=상세·주식·종목` 1회, 해시·page_title·page_location에 종목명·티커 0
+- 👤 머리: 평가·내 수익 금액(%)·총 N주가 누른 행·펼침 값과 문자열까지 같음(전체 탭·계좌 필터 탭·KRW/USD 토글), 라벨 `내 수익`(머리에 `등락` 없음) / 차트 머리 `1년|5년 주가 등락`(`수익` 없음)
+- 👤 가격 흐름: 1년 일봉 기본·5년은 탭 시 조회(탭 전 요청 0), 요청 URL 키 `ticker`·`range`뿐. 평단선 `내 평단 {가격}` = 펼침 평단(합산), 범위 밖이면 `data-clamped=up|down`·`↑/↓`, 평단 0이면 선 없음. 매수 점은 거래 기록 buy만(purchaseDate 점 없음), 점 탭 → `{날짜} 매수 N주 · 거래 단가`, 같은 점·빈 곳·기간 전환 시 해제
+- ⚙ **C76 6구간**(`stock-page-view.test.tsx`): ① 거래 0 → 점 0·`stock-page-no-trades` ② 증권사 2곳 → 합산 평단선·두 계좌 점 ③ 1년 밖 → `stock-page-outside` N건·`5년에서 보기`(5년은 텍스트) ④ 분할 전 매수 → 점 y=봉 종가·탭 시 원단가 ⑤ 상장 1년 미만 → 정의 줄 `상장 이후 기간만 있어요` ⑥ 비상장·티커 없음·상장폐지 → `stock-page-no-price`·요청 0
+- 👤 뒤로 체인: 종목 한 장 → 거래내역(`거래내역 N건`) → 뒤로 → 종목 한 장 → 뒤로 → 상세·주식 / 시장 비교 → 종목 한 장 → 뒤로 → 시장 비교. 새로고침·직접 URL·그룹 종목 삭제 → 상세·주식(오류 0, 단 새로고침 시 해시 진입 page_view는 가드로 상세·주식만 기록)
+- 엣지: 상태 4종(로딩·정상·오류 `다시 시도`·가격 없음) 차트 박스 높이 동일, 320·375·1280 가로 넘침 0, 라이트·다크. 인증카드 3종·시장 비교 표 계산·저장 키 diff 0
+- ⚙ API: `price-history` 라우트 `range=2y`/없음/티커 없음 400, 허용 밖 쿼리 무시, 성공 CDN 헤더·실패 no-store·예산 초과 503·외부 호출 0, 페이징 250행 3회(`price-history*.test.ts`)
+
 ### F-CASH-TX. 현금 입출금 거래내역 ([cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx) · [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)) — 명세 [S-4.22](../specs/4.22-cash-transactions.md)
 - 👤 현금 카드 "입출금 기록/내역" 진입 → 입금/출금(입금 시 정기·비정기 토글)·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총입금·총출금·순유입 통계, 기간·유형 필터
 - 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 미반영 즉시 삭제
@@ -373,6 +382,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **콜드스타트 뒤로가기 폴백은 항상 홈(R31)** — `settings`/`tax`가 `history.length<=1`(딥링크·새 세션 진입 등)일 때 `navigate({type:"home"})` 직행. `settings`를 과거처럼 `"more"`로 보내면, `more`의 back()이 다시 `history.length` 의존적(`history.back()`)이라 **설정↔더보기를 오가며 홈에 도달 못하는 루프**가 발생(더보기 화면 라벨은 "홈"인데 실제로는 되감아 설정으로 돌아감)
 - ⚙ **옛 성과 해시 리다이렉트(#4.34)** — `#activity/netasset` → 자산 변화(전체·연), `#activity/profit` → 자산 변화(주식·일). `parseHash`가 `init`을 붙이고 첫 진입 시 주소창을 `#activity/change`로 `replaceState`. FAB 연도별 순자산 입력·성적표 growth 축 링크(→ 전체·연)·허브 자산 변화 카드도 `init`으로 탭 지정
 - ⚙ **시장과 비교 뒤로(#4.73 K3)** — `navigate()`로 들어왔으면 뒤로(버튼·브라우저) = `history.back()`(상세·주식은 정렬 선택 유지, 자산 변화는 `rememberChangeInit`(모듈 메모리)로 기억한 주식·기간 복원 — `withRestoredChangeInit`, history.state 미사용: Next가 `__NA` 없는 state pop을 새로고침함), 주소 진입·새로고침 뒤 뒤로 = 자산 변화(주식·주). 뒤로 라벨 `뒤로`. 앱 안 좌우 스와이프는 기존대로 1차 메뉴 이동. 자동 `market-compare-nav.test.ts`
+- ⚙ **종목 한 장 뒤로(#4.81)** — `tradesBackAction`·`stockPageBackAction`·`guardStockPageView`(store 비면 상세·주식으로 `replaceState`, 첫 진입·popstate 모두) — `src/lib/__tests__/stock-page-nav.test.ts`
 - 엣지: 잘못된 hash 폴백, `back()` 항상 홈 복귀, 웰컴가이드 시 헤더 미노출
 
 ### F-PWA. PWA 설치 및 오프라인 접근성 ([pwa](../../src/app/(main)/_components/pwa))

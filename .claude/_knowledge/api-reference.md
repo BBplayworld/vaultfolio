@@ -12,6 +12,7 @@
 > | finance/crypto | 120 | 60/분 | `symbols` ≤30(`SYMBOL_RE`) |
 > | finance/profit | 120 | 30/분 | `tickers` ≤10 · `period` 4종 화이트리스트 |
 > | finance/market-index | 60 | 10/분 | `period` 3종 · `basis` 2종 필수(그 밖·`yearly` 400), 종목코드·수량 없음 |
+> | finance/price-history | 60 | 10/분 | `ticker` 1개(형식 위반·없음 400) · `range` `1y\|5y`만(그 밖 400), 수량·평단·날짜 없음 |
 > | finance/dividend | 120 | 30/분 | `type` 2종, `excd`는 무시(서버 NAS 고정) |
 > | ticker-search | 120 | — | `q` ≤50자 · `limit` ≤30 |
 > | logo | 240 | 120/분 | `size` 버킷 스냅(32~512) · 업스트림 ≤512KB · SVG 거부 |
@@ -100,6 +101,19 @@ GET /api/finance/market-index?period=daily|weekly|monthly&basis=sameBusinessDay|
 ```
 - 날짜는 종목과 같은 `resolveRefDates`(휴장 명목일 포함) + `pickCloseOnOrBefore`(요청일 이하 최근 종가, 국내 5일 롤백). KIS 코스피 `FHKUP03500100`(업종 0001)·S&P 500 `FHKST03030100`(시장 N, 코드 `SPX`) 기간 시계열 1회씩.
 - 두 값이 다 있을 때만 `cdnCacheHeaders(secondsUntilNextHour())`. Redis 키 0. 서킷 open·예산 초과는 `X-KIS-Unavailable`. 클라이언트는 react-query 메모리만(`hooks/use-market-compare.ts`, localStorage 0).
+
+---
+
+### GET /api/finance/price-history (#4.81 #157)
+종목 한 장 가격 흐름 — 수정주가 종가 시계열.
+
+```
+GET /api/finance/price-history?ticker=005930&range=1y|5y     # 둘 다 필수, 그 밖 쿼리 키는 읽지 않음
+→ { ticker, range, currency: "KRW"|"USD", interval: "D"|"W", from: "YYYY-MM-DD", points: [{ d, c }], listedFrom? }   # 오름차순·날짜 중복 제거·c>0
+```
+- 국내 `FHKST03010100`(`FID_PERIOD_DIV_CODE` 1년 D·5년 W, `FID_ORG_ADJ_PRC=0`=수정주가), 해외 `HHDFS76240000`(`GUBN` 0/1, `MODP=1`, **`NCNT` 없음** → 회차 100행). 회차마다 종료일 = 직전 회차 가장 오래된 날짜 − 1일, 시작일 도달·100행 미만이면 중단, 회차 상한 4(`MAX_PAGES`). 해외 EXCD는 `getUsExchange`(마스터), 없으면 첫 회차 NAS→NYS→AMS 후 고정. `fetchPriceHistory`·`collectPages`·`buildPricePoints`(`src/lib/finance/price-history.ts`).
+- `from` = 창 시작일(서버 기준) — 클라이언트 창 밖 매수 판정이 CDN 캐시 응답과 같은 기준을 쓰게. `listedFrom` = 첫 점이 시작일보다 10일 넘게 늦고 100행 미만으로 끝났을 때(상장 이후 기간만).
+- 성공: `cdnCacheHeaders(6h, swr 1h)`, Redis 키 0. 실패·빈 points·시장 판별 불가 = `no-store`. 예산(`withinUpstreamBudget("kis", 4)`)·토큰·호출 실패 = 503(+`X-KIS-Unavailable`), 클라이언트는 `hooks/use-price-history.ts` react-query 메모리만(저장 0).
 
 ---
 
