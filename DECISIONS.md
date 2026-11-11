@@ -404,3 +404,4 @@
 - 2026-11-11 대표 지시: 대표 보고용 미리보기·캡처는 다크 기준(C85). 4.84 = #163 — 상세-주식 미니 차트 y축 가격 눈금(주가 수준에 맞춘 둥근 단위)+오늘 주가, 후속 정돈(평단 칩 폴백·매도 점·새 소식 X 40px·Esc 포커스, 규모 판단 후 us-stock-master NAS 편중) 포함.
 - 2026-11-11 대표 요청: 4.84에 공통 로딩 UI 추가(시장 비교 등 외부 데이터 대기 시 빈 블랭크 대신 '불러오는 중'이 분명한 공통 패턴) — ui-designer 의견 먼저.
 - 2026-11-11 4.84 tech-review: us-stock-master NAS 편중(7,013건 전부 NAS, BRK.B 누락, ticker-search 오표기 가능)은 4.84 제외 → 별도 low 후보(외부 CSV 재생성 필요).
+- 2026-11-11 4.84 challenge(축소 통과, risk:medium, COO 위임): 4.84 = #163, #164(공통 로딩 UI). 행 미니 차트 → 이름 줄 아래 전폭 밴드 80px(펼친 행 +88px, 대표에 목업 정보 공유·이견 시 대표 승인 트랙), 실측 픽셀 SVG + 공용 PriceAxisLayer, 현재가 라벨 '현재가'(오늘 아님, C69)·formatCurrencyDisplay(C65), 매도 점 1y·5y 파랑 마름모, 칩 폴백 3단, X 40px·Esc 포커스 main. 로딩: Skeleton 색 강화·LoadingNote·useLoadingPhase(shimmer 제외). 커밋 A~E 분리. 제외: NAS 편중, formatPrice 중복.

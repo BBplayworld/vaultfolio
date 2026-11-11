@@ -23,7 +23,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.84 | [#163](https://github.com/BBplayworld/vaultfolio/issues/163) 주가 차트 가격 눈금·오늘 주가 + 종목 한 장·새 소식 후속 정돈 — 대표 요청 | 기획·설계 | COO 자체 승인(medium) 예정 |
+| v4.84 | [#163](https://github.com/BBplayworld/vaultfolio/issues/163)·[#164](https://github.com/BBplayworld/vaultfolio/issues/164) 주가 차트 가격 눈금·현재가(펼친 행 차트를 이름 줄 아래 전폭 80px로, 행 +88px — 정보 알림, 이견 시 말씀) + 매도 점·평단 칩·새 소식 X/Esc + 공통 로딩 UI | 개발 | COO 자체 승인(medium) 예정 |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
