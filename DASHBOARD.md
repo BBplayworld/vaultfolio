@@ -16,7 +16,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.81 | [#157](https://github.com/BBplayworld/vaultfolio/issues/157) 종목 한 장(합친 평단선·1년/5년 가격 흐름) — 방향 확정 알림 발송, 이견 시 알려 주세요 | spec 작성 | COO 위임(medium) |
+| v4.81 | [#157](https://github.com/BBplayworld/vaultfolio/issues/157) 종목 한 장(합친 평단선·1년/5년 가격 흐름) — 방향 확정 알림 발송, 이견 시 알려 주세요 | 개발 착수(spec·tech-review·ui 완료) | COO 위임(medium) |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
