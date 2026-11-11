@@ -10,7 +10,7 @@ interface KpiCardProps {
   icon: LucideIcon;
   title: ReactNode;
   description: string;
-  primary?: string; // 없으면 금액 줄 생략(안내만 보여줄 때)
+  primary?: ReactNode; // 없으면 금액 줄 생략(안내만 보여줄 때)
   secondary?: ReactNode;
   onClick: () => void;
   dataTutorial?: string;

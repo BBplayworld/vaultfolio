@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useMemo } from "react";
 import { Wallet, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
@@ -168,9 +170,11 @@ export function PerformanceHub() {
           icon={BadgeDollarSign}
           title="배당"
           description="올해 배당 (지급 + 예상)"
-          primary={divLoading && annualTotal === 0 ? "조회 중…" : formatPriceByMode(annualTotal)}
+          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : formatPriceByMode(annualTotal)}
           primaryClassName={ASSET_THEME.text.default}
-          secondary={!divLoading && annualTotal > 0 ? (
+          secondary={divLoading && annualTotal === 0 ? (
+            <LoadingNote active label={LOADING_LABEL.dividend} className="min-h-5" />
+          ) : !divLoading && annualTotal > 0 ? (
             <span className="text-muted-foreground">
               지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
               <span className="mx-1.5 text-muted-foreground">·</span>

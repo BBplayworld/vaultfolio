@@ -2,6 +2,7 @@
 
 // 성과 허브 `자산 변화` 카드 안 행 3개(4.83 H-A) — 최근 7일 / 월별 기록 / 시장과 비교. KpiCard rows 슬롯에 들어가 카드 머리(월 결산) 클릭과 형제다.
 // 값은 도착 화면과 같은 함수: 행 1 = 주 탭 Hero(useWeekHero), 행 2 = buildMonthlyLog recordedCount, 행 3 = 시장 타일/비교 페이지 1주 지수(useMarketEntryValue).
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { ChevronRight } from "lucide-react";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -77,7 +78,7 @@ export function HubChangeRows({ monthlyCount }: { monthlyCount: number | null })
           </span>
           <span data-testid="hub-row-market-value" className={VALUE}>
             {!market.ready
-              ? <span aria-hidden className="inline-block h-4 w-16 rounded bg-muted align-middle motion-safe:animate-pulse" />
+              ? <span aria-hidden className={`inline-block h-4 w-16 rounded align-middle ${SKELETON_FILL}`} />
               : market.values.length === 0
                 ? "지수와 나란히 보기"
                 : <>1주 <MarketIndexValues values={market.values} restBelowSm /></>}

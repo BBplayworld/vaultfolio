@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { stockCategories } from "@/config/asset-options";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -194,7 +196,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
           <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 min-h-10">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-semibold">{rangeLabel} 주가 등락</span>
-              {state === "loading" && <span className="inline-block h-4 w-12 rounded bg-muted motion-safe:animate-pulse" />}
+              {state === "loading" && <span aria-hidden className={`inline-block h-4 w-12 rounded ${SKELETON_FILL}`} />}
               {state === "ready" && change !== null && (
                 <span data-testid="stock-page-change" className={`text-sm font-semibold tabular-nums ${changeColor}`}>{signedRate(change)}</span>
               )}
@@ -227,11 +229,17 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
             />
           )}
           {state === "loading" && (
-            <div className="flex h-full flex-col justify-evenly px-4 motion-safe:animate-pulse" aria-hidden>
-              <span className="h-px bg-muted-foreground/20" />
-              <span className="h-px bg-muted-foreground/20" />
-              <span className="h-px bg-muted-foreground/20" />
-            </div>
+            <>
+              <div className="flex h-full flex-col justify-evenly px-4" aria-hidden>
+                <span className={`h-px ${SKELETON_FILL}`} />
+                <span className={`h-px ${SKELETON_FILL}`} />
+                <span className={`h-px ${SKELETON_FILL}`} />
+              </div>
+              <svg aria-hidden viewBox="0 0 100 40" preserveAspectRatio="none" className="absolute inset-x-4 top-1/4 h-1/2 w-[calc(100%-2rem)] stroke-foreground/[0.13] motion-safe:animate-pulse">
+                <path d="M0,28 C12,26 16,12 28,16 S44,30 56,22 S78,6 100,10" fill="none" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+              <LoadingNote active label={LOADING_LABEL.flow} className="absolute inset-0 flex min-h-0 items-center justify-center" />
+            </>
           )}
           {state === "error" && (
             <div data-testid="stock-page-error" className="flex h-full flex-col items-center justify-center gap-2">

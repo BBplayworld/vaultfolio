@@ -530,7 +530,7 @@ export function AssetReportView() {
                           ["남긴 돈", signed(debtNet), signed(netLeverage), true],
                         ];
                         const ready = annualOn && interestCompareReady && !kisUnavailable;
-                        const pendingLabel = kisUnavailable ? "점검 중" : "조회 중…";
+                        const pendingLabel = kisUnavailable ? "점검 중" : "불러오는 중…";
                         return (
                           // 항목마다 '라벨 줄 + 값 줄' 고정 2줄 — wrap에 맡기면 값 길이에 따라 행 구조가 달라진다.
                           // 값은 2열 그리드라 뱃지 폭이 열마다 같아 금액이 세로로 정렬된다.

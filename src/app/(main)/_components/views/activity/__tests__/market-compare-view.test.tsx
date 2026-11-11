@@ -71,7 +71,7 @@ describe("MarketBlock — 4기간 표(행=기간)", () => {
     expect(t).toContain("S&amp;P 500과 비교한 미국 주식 1종목 (달러)");
   });
 
-  it("불러오는 중: 머리·숫자 없이 스켈레톤 + 기준가 조회 중…", () => {
+  it("불러오는 중: 머리·숫자 없이 스켈레톤 + 머리 줄 자리(market-loading-slot, 완료 후 머리 줄과 같은 높이)", () => {
     const loading = computeMarketCompare(classified, { daily: REFS.daily }, IDX);
     const html = renderToStaticMarkup(<MarketBlock market="kr" block={loading[0]} count={undefined} />);
     expect(html).toContain("market-loading");

@@ -5,6 +5,7 @@
 // 1년 데이터는 펼쳤을 때만 요청한다(open && 가격 흐름 있는 종목 && 인증카드 캡처 아님). 쿼리 키 = 종목 한 장과 같은 ["price-history", ticker, "1y"].
 // 행 쿼리는 retryOnMount:false — 실패한 티커는 접었다 펴도 다시 요청하지 않는다(시세 서킷 보호, C2). 종목 한 장은 `다시 시도` 버튼으로 명시 재시도.
 // 1년 %는 원본 points로, 평단은 종목 한 장과 같은 buildStockGroupHead로 계산(C65). 로딩·실패에서 높이 불변(밴드 80px 슬롯 예약).
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useId } from "react";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +140,7 @@ export function StockPageEntry({ stock, groupItems, displayCurrency, exchangeRat
               {rowFlow.kind === "ready" ? (
                 <span data-testid="stock-page-entry-change" className={`font-semibold ${getProfitLossColor(rowFlow.change)}`}>{signedRate(rowFlow.change)}</span>
               ) : (
-                <span aria-hidden className="inline-block h-4 w-12 rounded bg-muted align-middle motion-safe:animate-pulse" />
+                <span aria-hidden className={`inline-block h-4 w-12 rounded align-middle ${SKELETON_FILL}`} />
               )}
             </>
           )}
@@ -149,7 +150,7 @@ export function StockPageEntry({ stock, groupItems, displayCurrency, exchangeRat
       {rowFlow.kind === "ready" ? (
         <RowBand points={rowFlow.points} avg={avg} currentPrice={currentPrice} currency={currency} colorClass={getProfitLossColor(rowFlow.change)} />
       ) : rowFlow.kind === "loading" ? (
-        <span data-testid="stock-row-band" data-state="loading" aria-hidden className={`${BAND_H} basis-full rounded bg-muted/60 motion-safe:animate-pulse`} />
+        <span data-testid="stock-row-band" data-state="loading" aria-hidden className={`${BAND_H} basis-full rounded ${SKELETON_FILL}`} />
       ) : rowFlow.kind === "fallback" ? (
         <span data-testid="stock-page-entry-spark-slot" aria-hidden className={`${BAND_H} basis-full`} />
       ) : null}
