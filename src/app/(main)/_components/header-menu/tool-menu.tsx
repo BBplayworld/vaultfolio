@@ -175,7 +175,6 @@ export function ToolMenuPage() {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
       toast.success("공유 URL이 복사되었습니다.");
       track("share", { method: "link", content_type: "link" });
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");

@@ -1,9 +1,9 @@
-import { Activity, List, IdCard, Settings, TrendingUp } from "lucide-react";
+import { Activity, List, IdCard, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
+import type { ActiveTutorialStep } from "@/stores/tutorial/tutorial-store";
 
 export interface TutorialStepConfig {
-  step: TutorialStep;
+  step: ActiveTutorialStep;
   /** data-tutorial 셀렉터. null이면 하이라이트 없이 중앙 카드 형태 */
   targetAttr: string | null;
   title: string;
@@ -16,7 +16,7 @@ export interface TutorialStepConfig {
   description2?: string;
 }
 
-export const TUTORIAL_STEP_CONFIGS: Record<TutorialStep, TutorialStepConfig> = {
+export const TUTORIAL_STEP_CONFIGS: Record<ActiveTutorialStep, TutorialStepConfig> = {
   1: {
     step: 1,
     targetAttr: "tutorial-fab",
@@ -24,14 +24,6 @@ export const TUTORIAL_STEP_CONFIGS: Record<TutorialStep, TutorialStepConfig> = {
     description: "아래 버튼을 눌러 주식, 부동산, 현금 등 자산을 추가하거나 수정할 수 있습니다.",
     icon: Activity,
     preferPosition: "top",
-  },
-  2: {
-    step: 2,
-    targetAttr: "tutorial-tool-menu",
-    title: "더보기를 활용해보세요",
-    description: "데이터 내보내기·가져오기, 공유 URL 생성, AI 분석 프롬프트 등을 지원합니다.",
-    icon: Settings,
-    preferPosition: "bottom",
   },
   3: {
     step: 3,

@@ -63,20 +63,17 @@ export default function Page() {
   useEffect(() => {
     const makeHandler = (step: TutorialStep) => () => completeStep(step);
     const h1 = makeHandler(1); // 자산 업데이트(FAB)
-    const h2 = makeHandler(2); // 자산 도구(더보기)
     const h3 = makeHandler(3); // 인증카드
     const h4 = makeHandler(4); // 상세 탭
     const h5 = makeHandler(5); // 성과 탭
 
     window.addEventListener("tutorial-complete-step1", h1);
-    window.addEventListener("tutorial-complete-step2", h2);
     window.addEventListener("tutorial-complete-step3", h3);
     window.addEventListener("tutorial-complete-step4", h4);
     window.addEventListener("tutorial-complete-step5", h5);
 
     return () => {
       window.removeEventListener("tutorial-complete-step1", h1);
-      window.removeEventListener("tutorial-complete-step2", h2);
       window.removeEventListener("tutorial-complete-step3", h3);
       window.removeEventListener("tutorial-complete-step4", h4);
       window.removeEventListener("tutorial-complete-step5", h5);
