@@ -31,7 +31,7 @@
 ## 🔄 진행 중 (완료 즉시 머지 — 결산 창 제약 해제, 대표 11/09)
 | 릴리스(운영 표시) | 이슈 | 단계 | 일정(목표) | 머지 방식 |
 |---|---|---|---|---|
-| **4.76** | [#144](https://github.com/BBplayworld/vaultfolio/issues/144) 품질 묶음 5 — 보유 현황 업데이트 이어받기 건수 표기, 자산 변화 주식 좁은 폭 정렬 통일 | ✅ v4.76 위임 머지(89e7213, [PR #145](https://github.com/BBplayworld/vaultfolio/pull/145))·운영 스모크 중 | 즉시 | COO 자체 승인 |
+| **4.76** | [#144](https://github.com/BBplayworld/vaultfolio/issues/144) 품질 묶음 5 — 보유 현황 업데이트 이어받기 건수 표기, 자산 변화 주식 좁은 폭 정렬 통일 | ✅ v4.76 위임 머지(89e7213, [PR #145](https://github.com/BBplayworld/vaultfolio/pull/145))·운영 스모크 PASS | 즉시 | COO 자체 승인 |
 | **4.75** | [#142](https://github.com/BBplayworld/vaultfolio/issues/142) 품질 묶음 4 — 직접 추가 매수일 자동 과거 추정 제거(1/1 기본), 체험 '오늘' 칩 비현실 값, 320 주식 목록 겹침 | ✅ v4.75 위임 머지(2b2123b, [PR #143](https://github.com/BBplayworld/vaultfolio/pull/143)) — 직접 추가 매수일 자동 과거 추정(4.18~) 제거·1/1 기본, 체험 장중 칩 숨김, 좁은 폭 목록 겹침 해소·운영 스모크 PASS | 즉시 | COO 자체 승인 |
 | **4.74** | [#139](https://github.com/BBplayworld/vaultfolio/issues/139) 보유 현황 업데이트 일괄 반영 시 매수일이 등록일로 바뀌어 매수 기록·배당 예상 누락(버그, 대표 지시) | ✅ v4.74 위임 머지(37f0551, [PR #140](https://github.com/BBplayworld/vaultfolio/pull/140), #139·#141)·운영 스모크 PASS | 즉시 | COO 판정 |
 | **4.73** | [#134](https://github.com/BBplayworld/vaultfolio/issues/134) 상세·주식 '오늘' 칩 — 개장 전·주말 0.0%, 미국 종목 낮 시간 환율분만 같은 값(버그, #132 선행) | ✅ v4.72 머지(962830d)·운영 스모크 PASS(국내 장중·마감 직후 실측은 11/11 예약) | 즉시 | COO 자체 승인 |
