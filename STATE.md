@@ -48,7 +48,6 @@
 
 ## 열린 릴리스
 - 없음 (v4.85 #166 → PR #168 머지 2026-11-12 03:14 KST, 운영 스모크 PASS). 다음: #167 웰컴에서 바로 첫 자산 등록 — 방향 확정, 기준선 11/12 03:14~11/19 수집 후 4.86으로 design-review·개발(대표 승인 대상). 후속 후보: 320 배당 표 '분기' 배지 겹침, '앱 가이드 보기' 제목-설명 불일치, 시세 전부 실패 시 수익 칸 스켈레톤 잔존, 홈 TIP 보유 필터(보류), 루트 SSR 소개(보류)
-- 없음 (v4.83 #161 → PR #162 머지 2026-11-11 22:08 KST, 운영 스모크 PASS)
 
 - **[developer 2026-11-09] 4.68 = #129 억 단위 축약 표기 부동소수 오차 수정(버그, COO 자체 승인 트랙)** (브랜치 issue-4.68, origin/main dc4133d 분기, HEAD b332ad6, PR #130 draft, 폴더 `issues/4.68-129-short-currency-fix`, risk:low, Vercel success, 공용 `number-utils.ts` 정수 나눗셈 버림·1억~50억 루프 테스트, 다음 qa → COO. 표시 버전은 머지 순서로 재부여 가능).
 - **[developer 2026-11-09] 4.67 = #127 월별 기록(지난 여러 달 자산군별 금액 시트)** (브랜치 issue-4.67, origin/main dc4133d 분기, HEAD ccd939c(ui-review 2건·COO U1·U2·ui 재측정 반영), PR #128 draft, 폴더 `issues/4.67-127-monthly-log`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui 확인 → qa → COO).
