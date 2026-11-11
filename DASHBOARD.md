@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-11 10:27 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.76**
+> **마지막 갱신: 2026-11-11 11:28 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.76**
 
 ## 🟥 대표 결정 필요 (지금)
 - 없음 (11/11 답변 반영: 매수일 일괄 입력 #146, 끊긴 거래 다시 잇기 #147 진행)
@@ -16,9 +16,10 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.77 [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149) | [#146](https://github.com/BBplayworld/vaultfolio/issues/146) 새 종목 매수일 일괄 입력(기본 1/1)·배당 영향 안내 | 구현 완료 → qa·UI 검수 중 | COO 판정 |
-| v4.77 | [#147](https://github.com/BBplayworld/vaultfolio/issues/147) 맞추기로 끊긴 거래 다시 잇기 | 구현 완료 → qa·UI 검수 중 | **대표 승인**(risk:high) |
-| v4.77 | [#148](https://github.com/BBplayworld/vaultfolio/issues/148) 도넛·비중 바 최소 노출 비중(5개 이하) | 구현 완료 → qa·UI 검수 중 | 릴리스 함께 대표 승인 |
+| v4.77 [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149) | [#146](https://github.com/BBplayworld/vaultfolio/issues/146) 새 종목 매수일 일괄 입력(기본 1/1)·배당 영향 안내 | qa PASS·COO PASS → 증분 qa·UI 재승인 대기 | COO 판정 |
+| v4.77 | [#147](https://github.com/BBplayworld/vaultfolio/issues/147) 맞추기로 끊긴 거래 다시 잇기 | qa PASS·COO PASS → 증분 qa·UI 재승인 대기 | **대표 승인**(risk:high) |
+| v4.77 | [#148](https://github.com/BBplayworld/vaultfolio/issues/148) 도넛·비중 바 최소 노출 비중(5개 이하) | qa PASS·COO PASS → 증분 qa·UI 재승인 대기 | 릴리스 함께 대표 승인 |
+| v4.78 | [#150](https://github.com/BBplayworld/vaultfolio/issues/150) 시장과 나란히 '올해' 비교 추가 | 기획 착수(11/11) | COO 판정 |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
