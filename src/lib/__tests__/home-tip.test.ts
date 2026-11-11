@@ -18,7 +18,7 @@ const h = vi.hoisted(() => ({
 vi.mock("../local-storage", async (orig) => ({
   ...(await orig<typeof import("../local-storage")>()),
   readNoticeSeen: () => h.record,
-  markNoticeSeen: (...a: unknown[]) => void h.seen.push(a),
+  markNoticeSeen: (id: string) => { h.record = { id, seenAt: Date.now() }; }, // 실제 쓰기 경로(markWhatsNewSeen)가 만든 기록을 판정에 그대로 사용
 }));
 vi.mock("../asset/backup-status", () => ({ shouldShowBackupNudge: () => h.backup, daysSinceBackup: () => 30 }));
 // isImminentTaxMatch·todayKst는 실제 구현 사용(경계 검증), 노출 대상 목록만 스텁
@@ -40,6 +40,7 @@ vi.mock("../feature-usage", () => ({ pickRecommendedFeature: () => h.feature }))
 vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
 
 import { pickHomeTip } from "../home-tip";
+import { markWhatsNewSeen, newBadgeIds } from "../whats-new";
 import { PARAM_VALUES } from "../analytics/ga";
 
 const assetData = { lastUpdated: "2026-11-01T00:00:00.000Z" } as AssetData;
@@ -195,7 +196,8 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
   it("relink·비임박 세금·최신화·기능보다 새 소식이 먼저, 읽은 뒤엔 relink", () => {
     h.tax = [tax(12, "12/31")]; h.refresh = true; h.feature = { id: "f" };
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("whats_new");
-    h.record = { id: "20261111-08", seenAt: Date.now() };
+    markWhatsNewSeen(); // 실제 쓰기 경로
+    expect(h.record?.id).toBe("20261111-08"); // 같은 날 NN 최대값이 최신(D1)
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("relink");
   });
   it("7일 경계: 6일 23시간 59분 전 읽음은 없음, 7일 정각이면 새 항목 1개만 안 본 것", () => {
@@ -207,9 +209,14 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY };
     expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: 1, title: "작은 비중 표시·억 단위 반올림 등을 고쳤어요" });
   });
-  it("최신 id까지 읽었으면 7일이 지나도 없음", () => {
-    h.record = { id: "20261111-08", seenAt: Date.now() - 30 * DAY };
-    expect(pickWn("2026-11-15")).toBeNull();
+  it("읽음 처리(실제 쓰기) 뒤 시트 재열기 '새' 0, 8일 후에도 팁 없음(D1)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-12T00:00:00Z"));
+    expect(newBadgeIds(undefined, null, "2026-11-12").size).toBe(5);
+    markWhatsNewSeen();
+    expect(newBadgeIds(undefined, h.record, "2026-11-12").size).toBe(0);
+    vi.setSystemTime(new Date("2026-11-20T00:00:00Z"));
+    expect(pickWn("2026-11-20")).toBeNull();
   });
   it("홈 팁 X·클릭 배선(grep): X = 읽음 + home_tip close, 클릭 = 시트 열기 이벤트, 강제 노출 분기·notice 잔존 0", async () => {
     const { readFileSync } = await import("node:fs");

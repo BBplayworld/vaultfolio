@@ -76,8 +76,9 @@ export function whatsNewTip(
   return { count: unseen.length, title: unseen[0].title };
 }
 
+/** 목록에서 compareIds 최대 id — 같은 날은 NN 오름차순 정렬이라 entries[0]이 최신이 아니다(4.82 qa D1) */
 export function latestEntryId(entries: WhatsNewEntry[] = WHATS_NEW): string | null {
-  return entries.length > 0 ? entries[0].id : null;
+  return entries.reduce<string | null>((max, e) => (max === null || compareIds(e.id, max) > 0 ? e.id : max), null);
 }
 
 /** 읽음 처리 — 기록을 목록 최신 id로, seenAt을 지금으로. 목록이 비면 쓰지 않는다 */
@@ -101,6 +102,13 @@ export function shouldSilentFirstRun({
   hasEntries: boolean;
 }): boolean {
   return isDataLoaded && !hasAssets && !hasRecord && eligible && hasEntries;
+}
+
+/** 첫 실행 조용한 기록 실행 — 조건이 맞으면 최신 id를 기록하고 true. 항상 마운트되는 WhatsNewHost가 호출한다(4.82 qa D2) */
+export function runSilentFirstRun(p: { isDataLoaded: boolean; hasAssets: boolean; eligible: boolean }, entries: WhatsNewEntry[] = WHATS_NEW): boolean {
+  if (!shouldSilentFirstRun({ ...p, hasRecord: readSeen() !== null, hasEntries: entries.length > 0 })) return false;
+  markWhatsNewSeen(entries);
+  return true;
 }
 
 /** 열기 직전 안 본 항목 id 집합(위에서 5개까지 '새' 표시) — 읽음 기록 전에 호출 */

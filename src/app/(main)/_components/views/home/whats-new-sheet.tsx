@@ -12,7 +12,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { APP_VERSION } from "@/config/app-version";
 import { APP_FEATURES } from "@/config/app-features";
 import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
-import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId } from "@/lib/whats-new";
+import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId, runSilentFirstRun } from "@/lib/whats-new";
+import { useAssetData } from "@/contexts/asset-data-context";
+import { isTrialMode } from "@/lib/trial/trial-mode";
+import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { runFeatureEntry } from "@/lib/feature-usage";
 import { track } from "@/lib/analytics/ga";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
@@ -25,6 +28,8 @@ function dateLabel(id: string): string {
 export function WhatsNewHost() {
   const isMobile = useIsMobile();
   const { navigate } = useAssetNavigation();
+  const { assetData, getAssetSummary, isDataLoaded } = useAssetData();
+  const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
   const [open, setOpen] = useState(false);
   const [list, setList] = useState<WhatsNewEntry[]>([]);
   const [badgeIds, setBadgeIds] = useState<Set<string>>(new Set());
@@ -32,6 +37,12 @@ export function WhatsNewHost() {
   const closingRef = useRef(false); // 바로 가기 연타 시 이동 1회
   const sourceRef = useRef<"home_tip" | "more">("home_tip");
   const goneRef = useRef(false); // 바로 가기로 닫힘 — 닫힘 포커스 복귀 생략
+
+  // 첫 실행 조용한 기록(GA 없음) — 웰컴 화면(자산 0)에서도 돌도록 항상 마운트되는 이 호스트가 맡는다.
+  // 불러오기 완료 + 자산 0 + 기록 없음 + 체험·잠금 아님일 때만. 이후 등록한 자산에 지금까지의 소식은 '새'가 아니다
+  useEffect(() => {
+    runSilentFirstRun({ isDataLoaded, hasAssets, eligible: !isTrialMode() && !isPwaLocked() });
+  }, [isDataLoaded, hasAssets]);
 
   useEffect(() => {
     const onOpen = (e: Event) => {

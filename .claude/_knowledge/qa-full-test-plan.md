@@ -498,7 +498,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ `notice.tsx`·공지 다이얼로그·`NOTICE_ID`·`markCurrentNoticeSeen`·`isNoticeUnseen`·`NOTICE_SHOWN_SESSION_KEY` 삭제. 읽음 기록은 기존 단일 키 `secretasset_notice_seen`(`{id, seenAt, expiresAt}`)의 의미만 바뀜(id = 마지막으로 읽은 새 소식 id, seenAt = 7일 시계, 만료 = 쓰는 시점+90일). 동기화 payload 제외·가져오기 보존. `cleanExpiredNoticeKeys()`는 init에서 만료 정리만.
 - ⚙ **목록 `WHATS_NEW`**: id `YYYYMMDD-NN`·날짜 내림차순·같은 날 NN 오름차순·미래 날짜 없음·`featureId`는 `APP_FEATURES` id·title 2~32자·body ≤48자·금액/투자 판단/과장/보장 어휘 없음(`config/__tests__/whats-new.test.ts`). 릴리스 PR 본문에 `새 소식: <id> | 해당 없음(사유)` 한 줄(C82).
 - ⚙ **판정(`lib/whats-new.ts`)**: id는 숫자 비교(`-10` > `-09`, `20260924` < `20261112-01`). 안 본 항목 = id > 기록 id && 30일 이내(KST 일수). 팁 = 안 본 항목 ≥1 && (기록 없음 || seenAt+7일 이상). 시트 목록 = 60일 이내 위 20개, `새` = 열기 직전 기준 안 본 위 5개.
-- ⚙ **홈 팁**: 배지 `소식`·제목 `새 소식 N개`·설명 = 맨 위 안 본 항목 title. 자산 있음·체험/잠금 아님·`isDataLoaded` 이후만. 첫 실행(불러오기 후 자산 0·기록 없음)은 조용히 최신 id 기록(GA 없음). X = 읽음 + 세션 박스 숨김, 클릭 = 시트 열기.
+- ⚙ **홈 팁**: 배지 `소식`·제목 `새 소식 N개`·설명 = 맨 위 안 본 항목 title. 자산 있음·체험/잠금 아님·`isDataLoaded` 이후만. 첫 실행(불러오기 후 자산 0·기록 없음)은 항상 마운트되는 `WhatsNewHost`가 조용히 최신 id(같은 날 NN 최대) 기록(GA 없음, 웰컴 화면에서도). X = 읽음 + 세션 박스 숨김, 클릭 = 시트 열기.
 - 👤 **시트**(`whats-new-sheet`): 머리 `새 소식`·`지금 버전 v{APP_VERSION}`(`whats-new-version`), 항목(`whats-new-item`)=제목+본문+`M/D`+`바로 가기 ›`(`whats-new-go`, featureId 있을 때. 누르면 시트 닫고 기존 기능 이동, 기능 팁 dismiss 없음), `새`(`whats-new-item-new`) 열린 동안 유지, 빈 상태 `whats-new-empty` `최근 60일 동안 새 소식이 없어요`. 모바일 bottom(핸들 스와이프>80px 닫기)/PC right.
 - 👤 **더보기** `앱 가이드 · 새 소식` > `새 소식 보기`(`more-whats-new`): 7일 조건과 무관하게 같은 시트를 열고 읽음 처리.
 - ⚙ **GA**: `whats_new`(page_title `새 소식`) 시트 열기 view 1회(source home_tip|more), 바로 가기 click + 대상 `entryCategory`(source `whats_new`). 홈 팁 view/click/close는 `home_tip`.

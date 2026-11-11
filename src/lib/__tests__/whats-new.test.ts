@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   compareIds, parseEntryId, unseenEntries, sheetEntries, whatsNewTip, shouldSilentFirstRun, readSeen, markWhatsNewSeen, newBadgeIds,
-  WHATS_NEW_GAP_MS,
+  WHATS_NEW_GAP_MS, latestEntryId, runSilentFirstRun,
 } from "../whats-new";
 import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
 
@@ -112,9 +112,42 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(store.get(KEY)).toBeUndefined();
     markWhatsNewSeen(WHATS_NEW);
     const v = JSON.parse(store.get(KEY)!);
-    expect(v.id).toBe(WHATS_NEW[0].id);
+    expect(v.id).toBe(latestEntryId(WHATS_NEW));
     expect(v.seenAt).toBe(Date.now());
     expect(v.expiresAt).toBe(Date.now() + 90 * DAY);
     vi.useRealTimers();
+  });
+
+  it("latestEntryId는 같은 날 NN 최대값(D1) — 정렬 순서와 무관", () => {
+    expect(latestEntryId(WHATS_NEW)).toBe("20261111-08");
+    expect(latestEntryId([e("20261111-01"), e("20261111-10"), e("20261111-09"), e("20261110-99")])).toBe("20261111-10");
+    expect(latestEntryId([])).toBeNull();
+  });
+
+  it("D2 웰컴 화면(자산 0): 불러오기 후 기록, 이후 첫 자산 등록해도 새 소식 팁 없음", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-12T00:00:00Z"));
+    expect(runSilentFirstRun({ isDataLoaded: false, hasAssets: false, eligible: true })).toBe(false); // 로드 전
+    expect(store.get(KEY)).toBeUndefined();
+    expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: true })).toBe(true);
+    expect(JSON.parse(store.get(KEY)!).id).toBe("20261111-08");
+    expect(whatsNewTip(readSeen(), { today: "2026-11-12" })).toBeNull(); // 자산 등록 뒤 Dashboard 첫 마운트 시점
+    vi.setSystemTime(new Date("2026-11-30T00:00:00Z"));
+    expect(whatsNewTip(readSeen(), { today: "2026-11-30" })).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("D2 기존 사용자(자산 있음)·체험·잠금은 쓰지 않는다", () => {
+    expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: true, eligible: true })).toBe(false);
+    expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: false })).toBe(false);
+    expect(store.get(KEY)).toBeUndefined();
+  });
+
+  it("D2 배선(grep): 조용한 기록은 항상 마운트되는 WhatsNewHost에 있고 HomeTipBox엔 없다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const dir = path.resolve(__dirname, "../../app/(main)/_components/views/home");
+    expect(readFileSync(path.join(dir, "whats-new-sheet.tsx"), "utf8")).toContain("runSilentFirstRun(");
+    expect(readFileSync(path.join(dir, "home-tip-box.tsx"), "utf8")).not.toContain("shouldSilentFirstRun");
   });
 });

@@ -22,8 +22,7 @@ import { detectRelink, RELINK_OFFER_ID } from "@/lib/asset/resync";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { pickHomeTip, type HomeTip } from "@/lib/home-tip";
-import { readSeen, markWhatsNewSeen, shouldSilentFirstRun } from "@/lib/whats-new";
-import { WHATS_NEW } from "@/config/whats-new";
+import { markWhatsNewSeen } from "@/lib/whats-new";
 import { dispatchOpenRelink, dispatchOpenWhatsNew } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
@@ -62,8 +61,7 @@ export function HomeTipBox() {
     // 자산 불러오기가 끝나기 전엔 판정·기록을 하지 않는다(#159 S7) — 로드 전 빈 상태를 '첫 실행'으로 오인해 기존 사용자를 전원 읽음 처리하는 것 방지
     if (!isDataLoaded) return;
     const eligible = !isTrialMode() && !isPwaLocked();
-    // 첫 실행(자산 0·기록 없음) — 조용히 최신 id로 기록(GA 없음). 이후 등록한 자산에 지금까지의 소식은 '새'가 아니다
-    if (shouldSilentFirstRun({ isDataLoaded, hasAssets, hasRecord: readSeen() !== null, eligible, hasEntries: WHATS_NEW.length > 0 })) markWhatsNewSeen();
+    // 첫 실행 조용한 기록은 항상 마운트되는 WhatsNewHost가 맡는다(HomeTipBox는 자산이 있을 때만 마운트 — 4.82 qa D2)
     try {
       if (sessionStorage.getItem(SESSION_DISMISS_KEY) === "true") { setTip(null); return; }
     } catch { /* 무시 */ }
