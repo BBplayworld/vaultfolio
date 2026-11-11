@@ -212,7 +212,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
   it("읽음 처리(실제 쓰기) 뒤 시트 재열기 '새' 0, 8일 후에도 팁 없음(D1)", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-12T00:00:00Z"));
-    expect(newBadgeIds(undefined, null, "2026-11-12").size).toBe(5);
+    expect(newBadgeIds(undefined, null, "2026-11-12").size).toBe(8); // 팁 N과 같은 개수
     markWhatsNewSeen();
     expect(newBadgeIds(undefined, h.record, "2026-11-12").size).toBe(0);
     vi.setSystemTime(new Date("2026-11-20T00:00:00Z"));

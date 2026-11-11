@@ -2,7 +2,7 @@
 
 // 새 소식 시트 호스트(#159, 4.82) — (main) layout에 1개 상시 마운트(RelinkHost 옆). `open-whats-new` 이벤트(dispatchOpenWhatsNew)로 연다.
 // 홈 팁은 클릭 시 언마운트되고 더보기는 Dialog 위에서 열리므로, 시트를 각자 안에 두지 않고 이 호스트로 통일(재마운트 없이 닫힘 애니메이션 보장).
-// 열 때: ① 열기 직전 기록으로 '새'(위 5개) 집합을 스냅샷 ② 읽음 기록(최신 id·seenAt=지금) ③ GA view 1회. 스냅샷은 시트가 열려 있는 동안 유지된다.
+// 열 때: ① 열기 직전 기록으로 '새'(안 본 항목 전부 = 팁 N) 집합을 스냅샷 ② 읽음 기록(최신 id·seenAt=지금) ③ GA view 1회. 스냅샷은 시트가 열려 있는 동안 유지된다.
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";

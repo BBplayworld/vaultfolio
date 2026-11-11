@@ -9,7 +9,6 @@ export const WHATS_NEW_GAP_MS = 7 * 24 * 60 * 60 * 1000; // 팁 노출 간격(7�
 export const WHATS_NEW_UNSEEN_DAYS = 30; // 안 본 항목 대상 기간
 export const WHATS_NEW_LIST_DAYS = 60; // 시트 목록 기간
 export const WHATS_NEW_LIST_MAX = 20;
-export const WHATS_NEW_NEW_MAX = 5; // 시트에서 '새' 표시를 다는 상한
 const SEEN_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 기록 만료(구버전 호환, 쓰는 시점 + 90일)
 
 export interface ParsedEntryId {
@@ -111,7 +110,7 @@ export function runSilentFirstRun(p: { isDataLoaded: boolean; hasAssets: boolean
   return true;
 }
 
-/** 열기 직전 안 본 항목 id 집합(위에서 5개까지 '새' 표시) — 읽음 기록 전에 호출 */
+/** 열기 직전 안 본 항목 id 집합(홈 팁 N과 같은 개수 — 상한 없음, 안 본 항목은 30일 이내로 이미 한정) — 읽음 기록 전에 호출 */
 export function newBadgeIds(entries: WhatsNewEntry[] = WHATS_NEW, record: NoticeSeenRecord | null = readSeen(), today: string = todayKst()): Set<string> {
-  return new Set(unseenEntries(entries, record, today).slice(0, WHATS_NEW_NEW_MAX).map((e) => e.id));
+  return new Set(unseenEntries(entries, record, today).map((e) => e.id));
 }

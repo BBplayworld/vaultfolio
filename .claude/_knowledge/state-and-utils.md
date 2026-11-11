@@ -256,7 +256,7 @@ sheetEntries(entries, today?)          // 60일 이내 위에서 20개
 whatsNewTip(record, {now?, today?, entries?}) → {count, title} | null   // 안 본 항목 있고 기록 없음 또는 seenAt+7일 이상
 markWhatsNewSeen(entries?)             // compareIds 최대 id(latestEntryId, 같은 날 NN 최대)·seenAt=지금·만료 90일로 기록(목록 비면 무동작) — 팁 X·시트 열기·첫 실행 조용한 기록
 shouldSilentFirstRun({isDataLoaded, hasAssets, hasRecord, eligible, hasEntries}) / runSilentFirstRun({isDataLoaded, hasAssets, eligible}) // 호출 = WhatsNewHost(항상 마운트, 웰컴 화면 포함)
-newBadgeIds(entries?, record?, today?) // 시트 '새'(안 본 위 5개) — 읽음 기록 전에 호출
+newBadgeIds(entries?, record?, today?) // 시트 '새'(안 본 항목 전부(= 팁 N)) — 읽음 기록 전에 호출
 ```
 저장 키는 기존 `STORAGE_KEYS.noticeSeen`(모양 `{id, seenAt, expiresAt}` 그대로, 동기화 payload 제외·가져오기 보존). 체험 모드는 판정·기록 안 함. 목록 등록 규칙·PR 본문 한 줄은 changelog 4.82 참고.
 

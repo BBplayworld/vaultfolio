@@ -59,8 +59,10 @@ describe("whatsNewTip — 7일 간격", () => {
     expect(whatsNewTip({ id: "20261111-08", seenAt: now - 40 * DAY }, opts)).toBeNull();
     expect(whatsNewTip(null, { ...opts, entries: [] })).toBeNull();
   });
-  it("4.82 시드: 위 5개에만 '새' 표시", () => {
-    expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(WHATS_NEW.slice(0, 5).map((x) => x.id));
+  it("4.82 시드: 팁 N(8)과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
+    expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(WHATS_NEW.map((x) => x.id));
+    expect(newBadgeIds(WHATS_NEW, null, today).size).toBe(whatsNewTip(null, { now, today })!.count);
+    expect(newBadgeIds(WHATS_NEW, { id: "20261111-08", seenAt: now }, today).size).toBe(0);
   });
 });
 
