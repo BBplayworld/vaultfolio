@@ -233,8 +233,10 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
     case "asset_add_start":
       return withAsset("자산 추가 시작");
     case "asset_save":
-    case "first_asset_saved":
       return withAsset("자산 저장");
+    case "first_asset_saved":
+      // 기기당 1회 첫 저장은 일반 저장과 분리 — 첫 등록 도달 수를 title만으로 판독(맞춤 정의 0)
+      return withAsset("첫 자산 저장");
     case "screenshot_parse":
       // 실패·빈 결과는 별도 title — 첫 등록 병목이 이 화면인지 판정(#99). success·limit은 현행
       return withAsset(params.result === "fail" || params.result === "empty" ? "스크린샷 등록 실패" : "스크린샷 등록");
