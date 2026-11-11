@@ -77,7 +77,13 @@ describe("gtag 부재·예외", () => {
 describe("featureTitleOf 매핑", () => {
   it.each([
     ["welcome_view", {}, "웰컴"],
-    ["onboarding_action", { method: "wizard" }, "웰컴"],
+    ["onboarding_action", { method: "wizard" }, "웰컴·스크린샷 등록"],
+    ["onboarding_action", { method: "manual" }, "웰컴·직접 입력"],
+    ["onboarding_action", { method: "import" }, "웰컴·백업 불러오기"],
+    ["onboarding_action", { method: "sync_connect" }, "웰컴·기기 연결"],
+    ["onboarding_action", { method: "skip_install" }, "웰컴·웹에서 시작"],
+    ["onboarding_action", { method: "trial_start" }, "웰컴·체험"],
+    ["onboarding_action", {}, "웰컴"],
     ["tutorial_begin", {}, "온보딩"],
     ["tutorial_step", { step: "2" }, "온보딩"],
     ["tutorial_complete", {}, "온보딩"],

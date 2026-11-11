@@ -203,6 +203,16 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   relink: "끊긴 거래 다시 잇기",
 };
 
+// 웰컴 CTA 버튼별 page_title(onboarding_action method → 이름)
+const WELCOME_ACTION_TITLES: Partial<Record<NonNullable<GaParams["method"]>, string>> = {
+  wizard: "웰컴·스크린샷 등록",
+  manual: "웰컴·직접 입력",
+  import: "웰컴·백업 불러오기",
+  sync_connect: "웰컴·기기 연결",
+  skip_install: "웰컴·웹에서 시작",
+  trial_start: "웰컴·체험",
+};
+
 /**
  * 이벤트 → GA page_title(사용 기능 이름). 순수 함수.
  * 매핑이 없는 이벤트(삭제·앱 잠금 등)는 현재 화면 title, 화면 title도 없으면 undefined(title 생략).
@@ -211,8 +221,10 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
   const withAsset = (base: string) => (params.asset_type ? `${base}·${ASSET_TYPE_TITLES[params.asset_type]}` : base);
   switch (eventName) {
     case "welcome_view":
-    case "onboarding_action":
       return "웰컴";
+    case "onboarding_action":
+      // 웰컴 버튼별 분리 — 기기 단위로 어느 버튼이 눌렸는지 판독(맞춤 정의 0). 모르는 method는 "웰컴"
+      return (params.method && WELCOME_ACTION_TITLES[params.method]) || "웰컴";
     case "tutorial_begin":
     case "tutorial_step":
     case "tutorial_complete":

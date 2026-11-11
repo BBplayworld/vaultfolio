@@ -92,7 +92,7 @@ describe("체험 GA 값(진입·시작 2값)", () => {
     track("onboarding_action", { method: "trial_start" });
     expect(gtag.mock.calls.map((c) => [c[1], c[2].page_title])).toEqual([
       ["feature_use", "체험 모드"],
-      ["onboarding_action", "웰컴"],
+      ["onboarding_action", "웰컴·체험"],
     ]);
   });
 });
