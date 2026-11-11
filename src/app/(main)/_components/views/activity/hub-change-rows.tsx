@@ -12,7 +12,8 @@ import type { NewSpot } from "@/config/new-spots";
 import { MarketIndexValues, useMarketEntryValue } from "./market-entry-line";
 import { formatWeekDelta, useWeekHero } from "./use-week-hero";
 
-const ROW = "-mx-1 flex min-h-11 w-full items-center gap-2 px-1 py-2 text-left outline-none hover:bg-accent/50 active:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring/50 transition-[background-color] duration-150 ease-out";
+// 행 폭 = 구분선·카드 머리 쉐브론과 같은 폭(4px 어긋남 해소, 4.85) — 좌우 히트영역은 after로만 넓힌다
+const ROW = "relative flex min-h-11 w-full items-center gap-2 py-2 after:absolute after:inset-y-0 after:-inset-x-1 after:content-[''] text-left outline-none hover:bg-accent/50 active:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring/50 transition-[background-color] duration-150 ease-out";
 const VALUE = "ml-auto min-w-0 text-right text-sm text-muted-foreground tabular-nums whitespace-nowrap";
 
 export function HubChangeRows({ monthlyCount }: { monthlyCount: number | null }) {
