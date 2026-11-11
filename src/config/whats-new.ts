@@ -58,4 +58,16 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     id: "20261111-08",
     title: "작은 비중 표시·억 단위 반올림 등을 고쳤어요",
   },
+  {
+    id: "20261111-09",
+    title: "종목 차트에 가격 눈금·현재가·매도 점이 생겼어요",
+    body: "펼친 행과 종목 한 장에서 봐요. 매도 점은 종목 한 장에만",
+    featureId: "stocks",
+  },
+  {
+    id: "20261111-10",
+    title: "불러오는 중이면 안내 문구로 알려 드려요",
+    body: "시장 비교·종목 차트·배당에서, 조금 걸리면 알려 줘요",
+    featureId: "market-compare",
+  },
 ];

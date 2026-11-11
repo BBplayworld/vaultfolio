@@ -34,7 +34,7 @@ describe("안 본 항목·시트 목록", () => {
     expect(unseenEntries(list, { id: "20261115-01", seenAt: 0 }, today).map((x) => x.id)).toEqual(["20261115-02"]);
   });
   it("9월 공지 id 기록(20260924)은 새 소식 전부를 안 본 것으로", () => {
-    expect(unseenEntries(WHATS_NEW, { id: "20260924", seenAt: 1 }, "2026-11-12")).toHaveLength(8);
+    expect(unseenEntries(WHATS_NEW, { id: "20260924", seenAt: 1 }, "2026-11-12")).toHaveLength(WHATS_NEW.length);
   });
   it("시트 목록: 60일 이내·위에서 20개", () => {
     const many = Array.from({ length: 25 }, (_, i) => e(`20261115-${String(99 - i).padStart(2, "0")}`));
@@ -48,21 +48,21 @@ describe("whatsNewTip — 7일 간격", () => {
   const today = "2026-11-12";
   const now = Date.parse("2026-11-12T00:00:00Z");
   const opts = { now, today };
-  it("기록 없음 + 시드 8개 → 새 소식 8개, 설명은 맨 위 항목", () => {
-    expect(whatsNewTip(null, opts)).toEqual({ count: 8, title: "합친 평단을 가격 흐름 위에서 봐요" });
+  it("기록 없음 + 시드 전부 → 새 소식 전부, 설명은 맨 위 항목", () => {
+    expect(whatsNewTip(null, opts)).toEqual({ count: WHATS_NEW.length, title: "합친 평단을 가격 흐름 위에서 봐요" });
   });
   it("seenAt 6일 23:59 전이면 없음, 7일 정각이면 새 항목만 센다", () => {
     expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS + 60_000 }, opts)).toBeNull();
-    expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS }, opts)).toEqual({ count: 1, title: WHATS_NEW[7].title });
+    expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS }, opts)).toEqual({ count: 3, title: WHATS_NEW[7].title });
   });
   it("최신까지 읽었거나 목록이 비면 없음", () => {
-    expect(whatsNewTip({ id: "20261111-08", seenAt: now - 40 * DAY }, opts)).toBeNull();
+    expect(whatsNewTip({ id: "20261111-10", seenAt: now - 40 * DAY }, opts)).toBeNull();
     expect(whatsNewTip(null, { ...opts, entries: [] })).toBeNull();
   });
-  it("4.82 시드: 팁 N(8)과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
+  it("4.82 시드: 팁 N과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
     expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(WHATS_NEW.map((x) => x.id));
     expect(newBadgeIds(WHATS_NEW, null, today).size).toBe(whatsNewTip(null, { now, today })!.count);
-    expect(newBadgeIds(WHATS_NEW, { id: "20261111-08", seenAt: now }, today).size).toBe(0);
+    expect(newBadgeIds(WHATS_NEW, { id: "20261111-10", seenAt: now }, today).size).toBe(0);
   });
 });
 
@@ -121,7 +121,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
   });
 
   it("latestEntryId는 같은 날 NN 최대값(D1) — 정렬 순서와 무관", () => {
-    expect(latestEntryId(WHATS_NEW)).toBe("20261111-08");
+    expect(latestEntryId(WHATS_NEW)).toBe("20261111-10");
     expect(latestEntryId([e("20261111-01"), e("20261111-10"), e("20261111-09"), e("20261110-99")])).toBe("20261111-10");
     expect(latestEntryId([])).toBeNull();
   });
@@ -132,7 +132,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(runSilentFirstRun({ isDataLoaded: false, hasAssets: false, eligible: true })).toBe(false); // 로드 전
     expect(store.get(KEY)).toBeUndefined();
     expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: true })).toBe(true);
-    expect(JSON.parse(store.get(KEY)!).id).toBe("20261111-08");
+    expect(JSON.parse(store.get(KEY)!).id).toBe("20261111-10");
     expect(whatsNewTip(readSeen(), { today: "2026-11-12" })).toBeNull(); // 자산 등록 뒤 Dashboard 첫 마운트 시점
     vi.setSystemTime(new Date("2026-11-30T00:00:00Z"));
     expect(whatsNewTip(readSeen(), { today: "2026-11-30" })).toBeNull();
