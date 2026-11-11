@@ -106,11 +106,17 @@ export type WeekHero =
   | { kind: "insufficient"; title: string }               // D > 14(월 스냅샷 폴백 등)
   | { kind: "empty"; title: string };                     // 기록 없음
 
+/** 비교 시작일(YYYY-MM-DD) — 시작일이 월 표기(YYYY-MM)면 실제 기록일(windowFrom). 마감 기록 목록의 시작 행 기준 */
+export function weekStartDate(view: Pick<AttributionView, "attr">): string {
+  const { attr } = view;
+  return attr.fromDate.length >= 10 ? attr.fromDate : (attr.windowFrom ?? attr.fromDate);
+}
+
 /** 표기 판정(spec 5-2). D = today − 비교 시작일. 시작일이 월 표기(YYYY-MM)면 실제 기록일(windowFrom)을 쓴다 */
 export function resolveWeekHero(view: AttributionView | null, today: string): WeekHero {
   if (!view) return { kind: "empty", title: "최근 7일" };
   const { attr } = view;
-  const start = attr.fromDate.length >= 10 ? attr.fromDate : (attr.windowFrom ?? attr.fromDate);
+  const start = weekStartDate(view);
   const d = daysBetween(start, today);
   if (!Number.isFinite(d) || d > 14) return { kind: "insufficient", title: "최근 7일" };
   const md = formatAttributionDate(start);

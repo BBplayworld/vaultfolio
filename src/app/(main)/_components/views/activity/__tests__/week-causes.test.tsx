@@ -10,7 +10,7 @@ import { APP_FEATURES } from "@/config/app-features";
 import { viewToKey } from "@/lib/feature-usage";
 import { computeAttributionView, mapWeekCauses, resolveWeekHero, weekLineOf, weekSinceDate, weekToday, type AttributionView } from "../week-attribution";
 import {
-  RICH_STEPS, NOW_ISO, TODAY, buildScenario, cashEdit, rateAt, stateOn, summaryOf, deposit, loanBorrow, loanRepay, realEstateValue, stockBuy, stockTrade, withdraw,
+  RICH_STEPS, NOW_ISO, TODAY, buildScenario, cashEdit, rateAt, snapOf, stateOn, summaryOf, deposit, loanBorrow, loanRepay, realEstateValue, stockBuy, stockTrade, withdraw,
   type Scenario, type Step,
 } from "./week-fixtures";
 
@@ -130,6 +130,18 @@ describe("T6 빈 날", () => {
     const v = computeAttributionView({ ...sc, sinceDate: weekSinceDate(TODAY) })!;
     expect(v.attr.fromDate).toBe("2026-11-02");
     expect(resolveWeekHero(v, TODAY)).toEqual({ kind: "since", title: "11/2 이후" });
+  });
+});
+
+describe("buildWeekRows extendFrom(4.79)", () => {
+  const daily = ["2026-11-04", "2026-11-05", "2026-11-09", "2026-11-12"].map((date, i) => ({ date, netAsset: 100 + i * 10, financialAsset: 0 }));
+  it("생략하면 main과 같다, 지정하면 그 날짜 행부터(weekDiff 불변)", () => {
+    const base = buildWeekRows(daily, "2026-11-12");
+    expect(buildWeekRows(daily, "2026-11-12", "2026-11-07")).toEqual(base); // 창 안이면 무시
+    const ext = buildWeekRows(daily, "2026-11-12", "2026-11-05");
+    expect(ext.rows.map((r) => r.date)).toEqual(["2026-11-12", "2026-11-09", "2026-11-05"]);
+    expect(ext.rows[2].diff).toBe(10); // 전일 대비는 원본 정렬 기준
+    expect(ext.weekDiff).toBe(base.weekDiff);
   });
 });
 
@@ -325,6 +337,27 @@ describe("T10 팁·GA·화면 렌더", () => {
     const html = renderToStaticMarkup(<WeekList />);
     expect(Number(html.match(/data-testid="change-hero-end" data-value="(-?\d+)"/)![1])).toBe(Math.round(h.sc.summary.netAsset));
     expect(Number(html.match(/data-testid="change-hero-start" data-value="(-?\d+)"/)![1])).toBe(Math.round(h.sc.daily[0].netAsset));
+  });
+  // qa D1(C65, 수용 기준 4): 시작일(D=7~9)이 7일 창 밖이어도 마감 기록 목록에 시작 행이 있어 Hero 시작과 같다
+  it.each([["2026-11-05", 7], ["2026-11-04", 8], ["2026-11-03", 9]])("시작 행 포함 — 시작 %s(D=%i): change-hero-start = 마감 기록 시작 행", (start) => {
+    h.sc = buildScenario(RICH_STEPS, { days: [start, "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11"] });
+    const html = renderToStaticMarkup(<WeekList />);
+    const heroStart = Number(html.match(/data-testid="change-hero-start" data-value="(-?\d+)"/)![1]);
+    const startNet = Math.round(h.sc.daily[0].netAsset);
+    expect(heroStart).toBe(startNet);
+    const md = `${Number(start.slice(5, 7))}/${Number(start.slice(8, 10))}`;
+    const rowHtml = html.split('data-testid="week-row"').slice(1).find((r) => r.includes(`>${md} (`));
+    expect(rowHtml).toBeTruthy(); // 시작일 행이 목록에 있다
+    expect(rowHtml).toContain(Math.round(startNet).toLocaleString("ko-KR"));
+  });
+  it("월 스냅샷 시작점(일별 행 없음): 시작 행은 없고 나머지 행은 그대로 — Hero 시작은 월 기록 값", () => {
+    const sc = buildScenario(RICH_STEPS, { days: ["2026-11-09", "2026-11-10", "2026-11-11"] });
+    const m = { ...snapOf(stateOn(RICH_STEPS, "2026-11-01"), rateAt(-4), "2026-11-01"), month: "2026-11" };
+    h.sc = { ...sc, monthly: [m] };
+    const html = renderToStaticMarkup(<WeekList />);
+    expect(html).toMatch(/data-testid="week-title"[^>]*>11\/1 이후</);
+    expect(html.split('data-testid="week-row"').length - 1).toBe(3); // 일별 기록 3행만
+    expect(html).not.toContain(">11/1 (");
   });
   it("주식 미보유면 종목 등락 링크 없음", () => {
     const sc = buildScenario(RICH_STEPS);

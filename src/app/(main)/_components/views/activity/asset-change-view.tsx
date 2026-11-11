@@ -17,7 +17,7 @@ import { rememberChangeInit, useAssetNavigation, type ChangeInit, type ChangePer
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { SECTION } from "../../layout/ui/report-section";
 import { BODY_ENTER, CauseBlock, ChangeHero, ChangeHeroFrame } from "./change-hero";
-import { computeAttributionView, mapWeekCauses, resolveWeekHero, weekSinceDate, weekToday } from "./week-attribution";
+import { computeAttributionView, mapWeekCauses, resolveWeekHero, weekSinceDate, weekStartDate, weekToday } from "./week-attribution";
 import { AttributionRecordList } from "../attribution-records";
 import { YearlyNetAssetChart } from "./net-asset-chart";
 import { ProfitCard } from "./profit-chart";
@@ -132,9 +132,11 @@ export function WeekList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [assetData, exchangeRates, snapshotVersion, today],
   );
+  // 시작 행(Hero 시작 순자산의 마감 기록)까지 포함 — 월 스냅샷 시작점은 일별 행이 없을 수 있다(그땐 시작 행 없음)
+  const startDate = view ? weekStartDate(view) : undefined;
   const { rows } = useMemo(
-    () => buildWeekRows(snapshotVersion >= 0 ? readDailySnapshots() : [], today),
-    [snapshotVersion, today],
+    () => buildWeekRows(snapshotVersion >= 0 ? readDailySnapshots() : [], today, startDate),
+    [snapshotVersion, today, startDate],
   );
   const hero = resolveWeekHero(view, today);
   const decomposed = view && (hero.kind === "recent" || hero.kind === "since") ? view : null;
@@ -229,7 +231,7 @@ function WeekClosingCard({ rows }: { rows: WeekRow[] }) {
               <div className="flex flex-col divide-y divide-border dark:divide-border/40">
                 {rows.map((r) => (
                   <div key={r.date} data-testid="week-row" className="flex items-baseline justify-between gap-3 py-2">
-                    <span className="min-w-0 text-sm text-muted-foreground tabular-nums">
+                    <span className="min-w-0 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
                       {Number(r.date.slice(5, 7))}/{Number(r.date.slice(8, 10))} ({WEEKDAY[new Date(`${r.date}T00:00:00Z`).getUTCDay()]})
                     </span>
                     <span className="ml-auto whitespace-nowrap text-sm font-semibold text-foreground tabular-nums">{formatPriceByMode(r.netAsset)}</span>
