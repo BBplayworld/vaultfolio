@@ -47,6 +47,7 @@
 | #103 ②+③ 연결 계좌(주식·코인 거래 ↔ 현금·대출, 삭제 시 되돌림) | 4.56 (squash `[#4.57]`, risk:high, **대표 승인**) | 개발 중(로컬 issue-4.56: 짝 id 정본·결산/홈 id 짝 커밋). spec·ui·tech-review·qa 교차 확인 완료 | developer → qa·ui-designer → cto | 개발 완료 즉시(~11/11) → 4.55 머지 후 origin/main merge·PR 생성 → qa(데이터 안전 1~5·구버전 실코드 하네스·⒟⒠ 자동·원자성) → ui-review·COO → 🟥 → 승인 즉시 머지. 목표 ≤11/14. 막는 것: 4.55 머지, 대표 승인. 데이터 안전 항목은 일정 때문에 줄이지 않음 |
 
 ## 열린 릴리스
+- v4.84 = #163 (issues/4.84-163-chart-axis/) planning·design-review 진행
 - 없음 (v4.83 #161 → PR #162 머지 2026-11-11 22:08 KST, 운영 스모크 PASS)
 
 - **[developer 2026-11-09] 4.68 = #129 억 단위 축약 표기 부동소수 오차 수정(버그, COO 자체 승인 트랙)** (브랜치 issue-4.68, origin/main dc4133d 분기, HEAD b332ad6, PR #130 draft, 폴더 `issues/4.68-129-short-currency-fix`, risk:low, Vercel success, 공용 `number-utils.ts` 정수 나눗셈 버림·1억~50억 루프 테스트, 다음 qa → COO. 표시 버전은 머지 순서로 재부여 가능).
