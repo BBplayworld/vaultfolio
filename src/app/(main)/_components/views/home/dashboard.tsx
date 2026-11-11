@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
-import { attachCauseDates, buildLiveAttributionCurr, computeAttributionSince, formatAttributionDate, formatAttributionSentence, getAttributionItems, getAttributionRecords, getAttributionOffset, sortCausesByDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionTransfer, type AttributionRecord } from "@/lib/report/asset-report";
+import { formatAttributionDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor, pickDonutLabelColor } from "@/config/theme";
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
@@ -21,7 +21,7 @@ import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { ChevronRight, ChevronDown, Trophy } from "lucide-react";
 import { tierLabel } from "@/lib/report/asset-grade";
 import { TIER_STYLE } from "../activity/asset-report-view";
-import { matchRecordedTransferDetail } from "../activity/change-hero";
+import { computeAttributionView } from "../activity/week-attribution";
 import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 
@@ -484,20 +484,17 @@ function useHeaderNetChange(): HeaderChange | null {
     // 지난 접속일이 유효(오늘 이전)면 그걸, 아니면(당일 재접속·미기록) 직전 기록일 기준으로 어제까지 소급
     const sinceDate = previousVisitDate && previousVisitDate < todayStr ? previousVisitDate : yesterdayStr;
     const summary = getAssetSummary();
-    const liveCurr = buildLiveAttributionCurr(assetData, exchangeRates, summary);
-    const attr = computeAttributionSince(
-      readDailySnapshots(),
-      readMonthlySnapshots(),
-      readExchangeHistory(),
-      sinceDate,
+    const view = computeAttributionView({
       assetData,
-      exchangeRates,
-      liveCurr,
-    );
-    if (!attr) return null;
-    const records = getAttributionRecords(attr, assetData, exchangeRates);
-    // 내부 이동 상쇄(#103): 결산과 같은 짝 함수의 내역을 넘긴다. 기록 짝이 없어도 잔차 짝(매수↔현금 정리 등)은 상쇄된다
-    const transfer: AttributionTransfer = matchRecordedTransferDetail(assetData, attr.windowFrom ?? attr.fromDate, attr.windowTo ?? attr.toDate, exchangeRates);
+      rates: exchangeRates,
+      summary,
+      daily: readDailySnapshots(),
+      monthly: readMonthlySnapshots(),
+      exchangeHistory: readExchangeHistory(),
+      sinceDate,
+    });
+    if (!view) return null;
+    const { attr } = view;
     const prevNet = summary.netAsset - attr.deltaNet;
     const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
     const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`;
@@ -508,11 +505,11 @@ function useHeaderNetChange(): HeaderChange | null {
       negligible: Math.abs(attr.deltaNet) < CAUSE_DISPLAY_MIN,
       label,
       estimated: attr.estimated,
-      sentence: formatAttributionSentence(attr, transfer),
-      causes: sortCausesByDate(attachCauseDates(getAttributionItems(attr, transfer), records)),
-      offsetTotal: getAttributionOffset(attr, transfer),
-      rangeLabel: `${formatAttributionDate(attr.fromDate)} → ${formatAttributionDate(attr.toDate)}`,
-      records,
+      sentence: view.sentence,
+      causes: view.causes,
+      offsetTotal: view.offsetTotal,
+      rangeLabel: view.rangeLabel,
+      records: view.records,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previousVisitDate, todayStr, assetData, exchangeRates, snapshotVersion]);
