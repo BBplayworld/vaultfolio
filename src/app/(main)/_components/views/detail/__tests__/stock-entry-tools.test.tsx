@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   idx: {} as unknown,
   navigate: vi.fn(),
   xrayCalls: [] as unknown[][],
+  progress: null as unknown,
   priceCalls: [] as unknown[][],
   priceResult: { data: undefined, isError: false, refetch: () => {} } as unknown,
 }));
@@ -30,7 +31,7 @@ vi.mock("@/hooks/use-market-compare", () => ({
   useMarketIndexRefs: () => h.idx,
 }));
 vi.mock("@/lib/xray/use-xray-classifications", () => ({
-  useXrayClassifications: (...a: unknown[]) => { h.xrayCalls.push(a); return { tick: 0, progress: null }; },
+  useXrayClassifications: (...a: unknown[]) => { h.xrayCalls.push(a); return { tick: 0, progress: h.progress }; },
 }));
 vi.mock("@/hooks/use-price-history", async (orig) => ({
   ...(await orig<typeof import("@/hooks/use-price-history")>()),
@@ -66,6 +67,7 @@ const tiles = () => renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Sto
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(kst("2026-11-11")); // 기본 경로: 11/11~12/31(세금 시즌 안)
+  h.progress = null;
   h.stocks = [KR(), US()];
   h.peer = new Set(["005930"]);
   h.idx = IDX;
@@ -159,6 +161,12 @@ describe("X-Ray 타일 — 소수 1자리·100% 단일 축 제외·도착 화면
     expect(valueOf(html, "stock-tool-xray-value")).toBe("분야·지역 비중 보기");
     expect(html).not.toContain("100%");
   });
+  it("분류 수집 중(progress)에는 값 대신 폴백 문구, 끝나면 값", () => {
+    h.progress = { done: 0, total: 1 };
+    expect(valueOf(tiles(), "stock-tool-xray-value")).toBe("분야·지역 비중 보기");
+    h.progress = null;
+    expect(valueOf(tiles(), "stock-tool-xray-value")).toMatch(/75\.3%$/);
+  });
   it("100% 축이 앞서도 다음 축을 쓴다(pickHighlights 정렬은 ratio 내림차순이라 100%가 1위일 때)", () => {
     // 같은 증권사 분할 종목 2건 = 티커 병합 1건 → 지역 100%(제외), 통화 100%(제외)
     h.stocks = [KR(), { ...KR(), id: "dup" } as Stock];
@@ -246,6 +254,20 @@ describe("종목 이름 줄 입구", () => {
       expect(text(html)).not.toContain("주가 흐름과");
       expect(h.priceCalls[0][2]).toBe(false);
     }
+  });
+  it("실패·429 폴백도 로딩과 같은 크기의 빈 aria-hidden 스파크 칸을 둔다(이름 줄 높이 불변)", () => {
+    const spark = (html: string) => html.match(/<span[^>]*[^>]*h-8 w-12[^>]*>/)?.[0] ?? "";
+    const loading = entry([stock({})]);
+    h.priceResult = { data: undefined, isError: true, refetch: () => {} };
+    const failed = entry([stock({})]);
+    expect(failed).toContain('data-testid="stock-page-entry-spark-slot"');
+    const size = (x: string) => x.match(/h-8 w-12.*?shrink-0/)?.[0];
+    // 320에서 `1년 주가 등락 +x%`가 한 줄: 둘째 줄 nowrap, 스파크 폭 w-12(<360)·360 이상은 기존 w-24 유지
+    expect(loading).toContain("whitespace-nowrap");
+    expect(loading).toContain("min-[360px]:w-24");
+    expect(size(spark(failed))).toBeDefined();
+    expect(size(spark(failed))).toBe(size(spark(loading)));
+    expect(spark(failed)).toContain("aria-hidden");
   });
   it("요청 조건: open && 가격 흐름 있음 && 캡처 아님일 때만, 행 쿼리는 retryOnMount:false", () => {
     entry([stock({})]);

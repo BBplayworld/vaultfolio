@@ -121,6 +121,12 @@ describe("행 2·3", () => {
     expect(loading).toContain("animate-pulse");
     expect(upToSvg(loading, "hub-row-market-value")).not.toMatch(/%/);
   });
+  it("행 구분선 직선(rounded 없음) · 값 한 줄 유지(whitespace-nowrap, 320에서 `1주`만 떨어지지 않음)", () => {
+    const html = renderToStaticMarkup(<HubChangeRows monthlyCount={4} />);
+    expect(html).not.toMatch(/class="[^"]*\brounded/);
+    const val = html.match(/data-testid="hub-row-market-value"[^>]*class="([^"]*)"|class="([^"]*)"[^>]*data-testid="hub-row-market-value"/);
+    expect(val?.[1] ?? val?.[2]).toContain("whitespace-nowrap");
+  });
   it("행 높이 ≥ 44px(min-h-11) · 인증카드 캡처 제외 마커 · `새` 0(마운트 전 판정)", () => {
     const html = renderToStaticMarkup(<HubChangeRows monthlyCount={4} />);
     expect(html.match(/min-h-11/g)?.length).toBe(3);

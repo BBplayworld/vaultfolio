@@ -13,7 +13,7 @@ import { buildRowFlow, buildStockGroupHead, hasPriceFlow, ROW_SPARK_H, ROW_SPARK
 import type { Stock } from "@/types/asset";
 import type { StockDisplayCurrency } from "./asset-detail-tabs";
 
-const SPARK_SIZE = "h-8 w-[72px] min-[360px]:w-24 sm:w-[120px] lg:w-40";
+const SPARK_SIZE = "h-8 w-12 min-[360px]:w-24 sm:w-[120px] lg:w-40";
 
 function Sparkline({ geom, colorClass }: { geom: NonNullable<Extract<ReturnType<typeof buildRowFlow>, { kind: "ready" }>["geom"]>; colorClass: string }) {
   return (
@@ -71,7 +71,7 @@ export function StockPageEntry({ stock, groupItems, displayCurrency, exchangeRat
             <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} py-0 text-[9px] leading-tight sm:text-[10px]`}>{label}</Badge>
           ))}
         </span>
-        <span className="min-h-5 text-sm text-muted-foreground tabular-nums">
+        <span className="min-h-5 text-sm text-muted-foreground tabular-nums whitespace-nowrap">
           {rowFlow.kind === "none" ? (
             <span data-testid="stock-page-entry-fallback">내 평단 보기</span>
           ) : rowFlow.kind === "fallback" ? (
@@ -92,6 +92,8 @@ export function StockPageEntry({ stock, groupItems, displayCurrency, exchangeRat
         <Sparkline geom={rowFlow.geom} colorClass={getProfitLossColor(rowFlow.change)} />
       ) : rowFlow.kind === "loading" ? (
         <span aria-hidden className={`${SPARK_SIZE} shrink-0 rounded bg-muted/60 motion-safe:animate-pulse`} />
+      ) : rowFlow.kind === "fallback" ? (
+        <span data-testid="stock-page-entry-spark-slot" aria-hidden className={`${SPARK_SIZE} shrink-0`} />
       ) : null}
       <ChevronRight aria-hidden className="size-5 shrink-0 text-muted-foreground" />
     </button>

@@ -49,16 +49,17 @@ function ToolTile({ icon: Icon, name, testId, onClick, className = "", chip, chi
 export function StockToolTiles({ stocks, exchangeRates }: { stocks: Stock[]; exchangeRates?: ExchangeRates }) {
   const { navigate } = useAssetNavigation();
   // 주식 목록이 바뀌면 분류 미수집 ticker만 모아 백그라운드 fetch(공용 훅, 완료 토스트 포함) — 주식 0건이면 [] 전달(no-op)
-  const { tick } = useXrayClassifications(stocks);
+  const { tick, progress } = useXrayClassifications(stocks);
   const market = useMarketEntryValue("weekly");
 
   // 증권사별 분리 항목을 ticker 단위로 병합 — X-Ray 페이지와 같은 병합이라 같은 비중 값
   const xray = useMemo(() => {
     const merged = Array.from(groupStocksByTicker(stocks).values()).map((g) => mergeStockGroup(g));
-    return pickXrayTile(merged, exchangeRates);
+    // 분류 수집 중에는 비분류 축의 중간 값이 보이지 않게 폴백 문구(spec 8절)
+    return progress ? null : pickXrayTile(merged, exchangeRates);
     // tick 의존성으로 localStorage 분류 갱신 반영
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stocks, exchangeRates, tick]);
+  }, [stocks, exchangeRates, tick, progress]);
 
   const showMarket = market.hasTickerStock && market.open;
   const showTax = isForeignTaxSeason() && stocks.some(isTaxSimCandidate);
