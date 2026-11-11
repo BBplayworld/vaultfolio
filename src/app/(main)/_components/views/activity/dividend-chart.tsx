@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { niceAxisTicks, formatAxisWon, pickVisibleLabels } from "@/lib/finance/dividend-axis";
 import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
@@ -52,6 +53,23 @@ const commonAxisProps = {
   tickLine: false,
   axisLine: false,
 };
+
+/** 막대 위 합계 라벨 — 이웃과 겹치면 큰 값만 남긴다(#4.85). 막대 폭 = 칸 폭 × 0.8(기본 카테고리 간격) */
+function makeTotalLabel(values: number[]) {
+  const labels = values.map((v) => (v > 0 ? formatShortCurrency(v) : ""));
+  return function TotalLabel(props: { x?: number | string; y?: number | string; width?: number | string; index?: number }) {
+    const { x = 0, y = 0, width = 0, index = 0 } = props;
+    const w = Number(width);
+    if (!labels[index]) return null;
+    const visible = pickVisibleLabels(values, labels, w / 0.8);
+    if (!visible.has(index)) return null;
+    return (
+      <text x={Number(x) + w / 2} y={Number(y) - 8} textAnchor="middle" fontSize={12} fontWeight={600} fill="var(--foreground)">
+        {labels[index]}
+      </text>
+    );
+  };
+}
 
 async function fetchDividend(ticker: string, type: string, excd: string): Promise<DividendPayoutResult[]> {
   const params = new URLSearchParams({ ticker, type, excd });
@@ -200,6 +218,10 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   }));
 
   const monthlyTotals = buildMonthlyTotals(dividendItems, usdRate);
+  // 막대 높이 최댓값 기준 둥근 Y축 눈금 + 겹치지 않는 값 라벨
+  const maxBar = Math.max(0, ...monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
+  const yTicks = niceAxisTicks(maxBar);
+  const TotalLabel = makeTotalLabel(monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
   const annualActual = monthlyTotals.reduce((sum, m) => sum + m.totalActual, 0);
   const annualEstimated = monthlyTotals.reduce((sum, m) => sum + m.totalEstimated, 0);
   const annualTotal = annualActual + annualEstimated;
@@ -379,7 +401,9 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     <XAxis dataKey="month" {...commonAxisProps} />
                     <YAxis
                       {...commonAxisProps}
-                      tickFormatter={(v) => formatShortCurrency(v)}
+                      ticks={yTicks}
+                      domain={[0, yTicks[yTicks.length - 1]]}
+                      tickFormatter={(v) => formatAxisWon(v)}
                       width={55}
                     />
                     <ChartTooltip
@@ -453,13 +477,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                             />
                           ))}
                           {isLast && actualOnly && (
-                            <LabelList
-                              dataKey="totalActual"
-                              position="top"
-                              offset={8}
-                              formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
-                            />
+                            <LabelList dataKey="totalActual" content={TotalLabel} />
                           )}
                         </Bar>
                       );
@@ -484,13 +502,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                             />
                           ))}
                           {isLast && (
-                            <LabelList
-                              dataKey="total"
-                              position="top"
-                              offset={8}
-                              formatter={(v: number) => (v > 0 ? formatShortCurrency(v) : "")}
-                              style={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 600 }}
-                            />
+                            <LabelList dataKey="total" content={TotalLabel} />
                           )}
                         </Bar>
                       );
