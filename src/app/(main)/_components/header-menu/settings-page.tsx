@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { clearAssetData, clearPhysicalAssets, clearUserCaches } from "@/lib/asset/asset-storage";
+import { clearAssetData, clearPhysicalAssets, clearUserCaches, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { clearBackupStatus } from "@/lib/asset/backup-status";
 import { clearAssetRefreshStatus } from "@/lib/asset/asset-refresh-status";
 import { APP_VERSION } from "@/config/app-version";
@@ -127,6 +127,8 @@ export function SettingsPage() {
     clearBackupStatus();
     // 자산 최신화 이력도 동일 이유로 함께 제거 — 남은 자산이 없으니 "최신화함" 상태도 무의미
     clearAssetRefreshStatus();
+    // 기능 팁 해제 기록은 clearAssetData가 보존하므로(#147 A3) 전체 삭제에서만 함께 지운다
+    try { localStorage.removeItem(STORAGE_KEYS.featureUsage); } catch { /* 무시 */ }
     if (success) {
       refreshData();
       toast.success("모든 자산 데이터가 삭제되었습니다.");

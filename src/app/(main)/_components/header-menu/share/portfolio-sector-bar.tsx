@@ -1,5 +1,7 @@
 "use client";
 
+import { displayShareWidths } from "@/lib/report/min-share";
+
 // 인증카드 "포트폴리오" 타입 하단 — 범용 비중 분포 막대바. 금액 없이 항목명 + 비중%만.
 // "분야 구성"(computeBreakdown("theme", ...))과 "보유 유형 구성"(stock.category) 두 곳에서
 // 같은 컴포넌트를 재사용한다(캡션은 title prop). 데이터는 ShareCard가 만들어 주입.
@@ -27,8 +29,8 @@ export function PortfolioSectorBar({ title, items, big = false }: { title: strin
     <div className="space-y-2.5">
       <p className={`${titleTxt} font-bold text-foreground`}>{title}</p>
       <div className={`flex ${barH} w-full rounded-full overflow-hidden gap-px`}>
-        {items.map((it) => (
-          <div key={it.key} style={{ width: `${it.pct}%`, backgroundColor: it.color }} />
+        {items.map((it, idx) => (
+          <div key={it.key} style={{ width: `${displayShareWidths(items.map((b) => b.pct))[idx]}%`, backgroundColor: it.color }} />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">

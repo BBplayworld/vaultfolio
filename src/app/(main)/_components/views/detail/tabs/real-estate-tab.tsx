@@ -17,6 +17,7 @@ import { assignColors } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
 import { RealEstate, Loan } from "@/types/asset";
+import { displayShareWidths } from "@/lib/report/min-share";
 
 const RE_CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -325,10 +326,10 @@ export function RealEstateTab() {
           {barItems.length > 0 && totalValue > 0 && (
             <div className="space-y-2">
               <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                {barItems.map(({ item, value: v, color }) => {
+                {barItems.map(({ item, value: v, color }, idx) => {
                   const pct = (v / totalValue) * 100;
                   return (
-                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
+                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(barItems.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>

@@ -17,6 +17,7 @@ import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { Loan, RealEstate, Stock, Cash } from "@/types/asset";
+import { displayShareWidths } from "@/lib/report/min-share";
 
 export const LOAN_TYPE_COLORS: Record<string, string> = {
   "credit": MAIN_PALETTE[1],
@@ -315,10 +316,10 @@ export function LoanTab() {
           {loanBarItems.length > 0 && filteredTotal > 0 && (
             <div className="space-y-2">
               <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                {loanBarItems.map(({ loan, value: v, color }) => {
+                {loanBarItems.map(({ loan, value: v, color }, idx) => {
                   const pct = (v / filteredTotal) * 100;
                   return (
-                    <div key={loan.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`} />
+                    <div key={loan.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(loanBarItems.map((b) => b.value), { total: filteredTotal })[idx]}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>

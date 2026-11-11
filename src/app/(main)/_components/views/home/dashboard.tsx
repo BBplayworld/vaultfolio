@@ -23,6 +23,7 @@ import { tierLabel } from "@/lib/report/asset-grade";
 import { TIER_STYLE } from "../activity/asset-report-view";
 import { matchRecordedTransferDetail } from "../activity/change-hero";
 import type { ReactNode } from "react";
+import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -39,10 +40,10 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
   return (
     <div className="space-y-1.5">
       <div className="flex h-5 w-full rounded-full overflow-hidden gap-px">
-        {items.map(({ key, label, value, color }) => {
+        {items.map(({ key, label, value, color }, idx) => {
           const pct = (value / total) * 100;
           return (
-            <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
+            <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total })[idx]}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
               {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
@@ -114,27 +115,30 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   if (items.length === 0) return null;
   // 홈은 투명 카드 위라 조각 경계를 배경색으로, 웰컴 미리보기(screenshotMode)는 기존 card 색 유지
   const sliceStroke = screenshotMode ? "var(--card)" : "var(--background)";
+  // 각도만 최소 비중 보장(항목 5개 이하, #148) — 라벨·중앙·범례 숫자와 라벨 표시 기준(DONUT_LABEL_MIN_PCT)은 실제 값 그대로
+  const widths = displayShareWidths(items.map((it) => it.value), { minPct: MIN_DONUT_PCT });
+  const shownItems = items.map((it, i) => ({ ...it, shown: widths[i] })).filter((it) => it.shown > 0);
   return (
     <div className="space-y-3" data-testid={screenshotMode ? undefined : "home-donut"}>
       <ResponsiveContainer width="100%" height={screenshotMode ? 220 : 260} className={`[&_*]:outline-none [&_path]:outline-none ${screenshotMode ? "" : "sm:!h-[360px]"}`} style={screenshotMode ? { pointerEvents: "none" } : undefined}>
         <PieChart style={{ outline: "none" }}>
           <Pie
-            data={items}
-            dataKey="value"
+            data={shownItems}
+            dataKey="shown"
             nameKey="name"
             innerRadius={screenshotMode ? 45 : 55}
             outerRadius={screenshotMode ? 110 : 130}
             strokeWidth={2}
             stroke={sliceStroke}
             labelLine={false}
-            label={({ key, ...props }) => <DonutLabel key={key} itemKey={key} activeTab={activeTab} maskFn={maskFn} legacy={screenshotMode} color={items.find((it) => it.key === key)?.color} {...props} />}
+            label={({ key, ...props }) => <DonutLabel key={key} itemKey={key} activeTab={activeTab} maskFn={maskFn} legacy={screenshotMode} color={items.find((it) => it.key === key)?.color} {...props} value={items.find((it) => it.key === key)?.value ?? props.value} />}
             onClick={(data) => { if (!screenshotMode && data?.key && onSegmentClick) onSegmentClick(data.key as string); }}
             style={{ cursor: screenshotMode ? "default" : "pointer", outline: "none" }}
             rootTabIndex={-1}
             isAnimationActive={false}
             activeShape={(props: React.ComponentProps<typeof Sector>) => <Sector {...props} outerRadius={screenshotMode ? 110 : 130} strokeWidth={0} stroke="none" />}
           >
-            {items.map((item, i) => {
+            {shownItems.map((item, i) => {
               const isAll = !activeTab || activeTab === "all";
               const isActive = item.key === activeTab;
               return (

@@ -502,6 +502,9 @@ export function clearAssetData(): boolean {
       // GA 1회성 플래그(S-4.28)도 기기 로컬 메타 — 보존하지 않으면 백업 복원·동기화 pull·재입력 때마다
       // first_asset_saved가 중복 발생해 활성화 전환 지표가 부풀려진다
       STORAGE_KEYS.gaFlags,
+      // 기능 팁 해제·방문 기록(`secretasset_feature_usage`)도 기기 로컬 메타(#147 A3) — 보존하지 않으면 동기화 pull·백업 복원마다
+      // '그대로 두기'(relink-offer)·기능 추천 팁 해제가 풀려 되살아난다. "모든 데이터 삭제"는 settings-page에서 명시 삭제한다
+      STORAGE_KEYS.featureUsage,
     ];
 
     const keysToRemove = Object.keys(localStorage).filter((k) => {

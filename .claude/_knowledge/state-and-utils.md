@@ -288,6 +288,9 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 - `asset-dispatch.ts`: `ADD_TRIGGER_EVENTS`(추가 폼 이벤트 이름 단일 정의).
 
 ### resync-return.ts (#110) — 이어서 맞추기 순수 함수
+
+### min-share.ts (#148, 4.77) — 도넛·비중 바 표시 최소 비중
+`src/lib/report/min-share.ts`: `displayShareWidths(values, {minPct?, maxItems=5, total?})`(양수 항목 5개 이하면 최소 폭 보장·합 100, 6개 이상 순수 비례, 0 이하는 0, `total` 주면 합/total만 채움), `displayBarWidths`(4.70, composition.ts가 재노출), 상수 `MIN_BAR_PCT=7`·`MIN_DONUT_PCT=5`·`MIN_SHARE_MAX_ITEMS=5`. 폭·각도만 바꾸고 숫자·라벨 표시 기준(`DONUT_LABEL_MIN_PCT`)은 실제 값. 사용처: `AssetDonutChart`(Pie `dataKey="shown"`)·`SectionBar`·상세 5탭 비중 바·`PortfolioSectorBar`·`/ratio` 국내/해외 바·구성 막대. `portfolio-ring-card.tsx`의 `MIN_ARC_DEG` 링은 라벨·상한 로직이 달라 별도 유지.
 `sortHoldingsRows`(보유 우선 안정 정렬·과거 순자산 맨 아래), `resyncNoticeText`(상단 줄 문구), `consumeResyncSignal`(대기 자산군과 같은 신호만 복귀·소비), `shouldTrackResyncContinue`(GA 조건), `isRefreshCategory`, `RESYNC_LABELS`. 저장·스키마와 무관.
 
 ### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
@@ -875,6 +878,8 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 - 조각색 위에서 흰/검정 중 WCAG 대비가 큰 쪽(알파 없음). `pickOnColor`(휘도 0.45 컷)와 별개 — MAIN_PALETTE 12색 모두 4.5:1 이상이 테스트로 고정
 
 ### 보유 현황 맞추기 순수 함수 (`src/lib/asset/resync/`, #4.50 #91)
+- 새 종목 매수일(#146, 4.77): `ResyncSelection.purchaseDate?`(메모리 상태, 없으면 `resyncNewPurchaseDate`). 첫 등록용 `lib/asset/import-inherit.ts`: `pairStockImport`/`pairCryptoImport`(같은 키 기존 항목 1:1 짝, 증권사 같음→매수일 이른 것→기존 순서), `planStockImport`/`planCryptoImport`(merge·reset 저장 목록, 짝은 이어받기 `inheritStock`/`inheritCrypto`, 신규만 입력 매수일), `freshImportCount`, `defaultNewPurchaseDate`·`isValidNewPurchaseDate`·`kstTodayString`. 충돌 단계 `교체` 배지는 `keyOfStock`/`keyOfCrypto`(holdings-conflict, 불변) 기준이고 입력 줄 N은 같은 키 기준 짝짓기에서 나온다.
+- 끊긴 거래 다시 잇기(#147, 4.77): `resync/relink.ts` `detectRelink(data): RelinkRow[]`(대상 S = `(stock|crypto)_import_<ms>_N` + 매수일 = 만든 날/만든 해 1/1, 고아 묶음 합산·전량 매도 회차 구분·`reverseTransaction` 역산 일관 구간·새 매수일), `applyRelink(data, picks)`(적용 직전 재감지, 바뀌는 값 = 거래 stockId/cryptoId·S.purchaseDate), `relinkTotalCount`, `RELINK_OFFER_ID`(`feature-usage` dismissedTipIds). 되돌리기는 `buildUndoEntries`(coll `transactions`·`cryptoTransactions` 추가) + `planUndo`. `pickHomeTip`은 입력 `hasRelink`(호출부가 체험·잠금·해제 판정)로 `{kind:"relink"}` 반환(결산 창 아래). `clearAssetData` keepKeys에 `featureUsage`.
 - 저장·push·notify·모듈 상태 호출 0(정적 테스트로 고정). `resolveScreens`(장 증권사 ①brokerHint ②기존 항목 과반 ③사용자 선택, 국내 계좌 추정)→`mergeScreens`(장 사이 같은 키 1건, 수량 다르면 `quantityCandidates`)→`computeDiff`(rows·removes·kept·scopes·incomplete)→`summarize`/`resolveRow`/`applyResync`(선택 `ResyncSelection`: include·remove·pick·qty·ticker·fx)→`buildUndoEntries(before, after, coll)`·`planUndo(entries, current)`(overwrite-guard `planRevert`/`applyRevert` 재사용, 현재 데이터를 새로 읽어 넘길 것).
 - 매칭·증권사: `sameBroker`·`isUnassignedBroker`(`""`·`항목 N`=미지정)·`matchExisting`. 코인은 `crypto.ts`의 `cryptoToStock`/`stocksToCrypto`/`parsedCryptoToRaw`/`matchExchangeHint`로 같은 함수를 쓴다(범위=거래소).
 - 평단 규칙: `averagePriceEstimated=false` 화면 실값만 변경(상대 차 0.1% 초과), 역산은 기존 유지(1% 초과 시 `avgKept` 표시).
