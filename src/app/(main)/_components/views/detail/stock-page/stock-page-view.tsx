@@ -14,6 +14,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { PriceRange } from "@/lib/finance/price-history";
 import {
   buildStockGroupHead,
+  buildTradeMarkers,
   computePriceChange,
   signedRate,
   hasPriceFlow,
@@ -82,7 +83,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
 
   const [range, setRange] = useState<PriceRange>("1y");
   const [visited5y, setVisited5y] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const q1 = usePriceHistory(ticker, "1y", flow);
   const q5 = usePriceHistory(ticker, "5y", flow && visited5y);
   const q = range === "1y" ? q1 : q5;
@@ -105,11 +106,20 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
           ? "empty"
           : "ready";
 
+  // 점 = 거래 기록(매수 빨강 원·매도 파랑 마름모). 평단·성적표 계산은 건드리지 않는다(점 표시 전용)
   const buys = useMemo(() => pickBuyTransactions(assetData.transactions ?? [], target.groupStockIds), [assetData.transactions, target.groupStockIds]);
-  const { dots, outsideCount } = useMemo(
-    () => (data ? placeBuyDots(points, buys, data.from ?? "0000-01-01", data.interval) : { dots: [], outsideCount: 0 }),
-    [data, points, buys],
-  );
+  const sells = useMemo(() => pickBuyTransactions(assetData.transactions ?? [], target.groupStockIds, "sell"), [assetData.transactions, target.groupStockIds]);
+  const { markers, outsideCount } = useMemo(() => {
+    if (!data) return { markers: [], outsideCount: 0 };
+    const from = data.from ?? "0000-01-01";
+    const b = placeBuyDots(points, buys, from, data.interval);
+    const sl = placeBuyDots(points, sells, from, data.interval);
+    return { markers: buildTradeMarkers(b.dots, sl.dots), outsideCount: b.outsideCount + sl.outsideCount };
+  }, [data, points, buys, sells]);
+  const hasSell = sells.length > 0;
+  const hasBuyDot = markers.some((m) => m.kind === "buy");
+  const hasSellDot = markers.some((m) => m.kind === "sell");
+  const tradeNoun = hasSell ? "거래" : "매수"; // 매수만 기록한 종목은 기존 문구 그대로
   const change = useMemo(() => computePriceChange(points), [points]);
   const changeColor = change === null ? "" : getProfitLossColor(change);
   const avg = head.averagePrice > 0 ? head.averagePrice : null;
@@ -143,12 +153,12 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
     navigate({ type: "detail", tab: "stocks-trades" });
   };
 
-  const selectedDot = selected === null ? null : dots.find((d) => d.index === selected) ?? null;
+  const selectedDot = selected === null ? null : markers.find((m) => m.key === selected) ?? null;
   const rangeLabel = RANGE_LABEL[range];
   const longName = head.merged.name.length > 40 ? head.merged.name : undefined;
   const basis = [
     `${range === "1y" ? "일별" : "주별"} 종가 기준이에요.`,
-    "액면분할 등을 반영한 가격이에요. 점은 기록한 매수 날짜에 찍혀요.",
+    `액면분할 등을 반영한 가격이에요. 점은 기록한 ${hasSellDot ? "매수·매도" : "매수"} 날짜에 찍혀요.`,
     currency === "USD" ? "달러 가격 기준이에요." : "",
     data?.listedFrom ? "상장 이후 기간만 있어요." : "",
   ].filter(Boolean).join(" ");
@@ -204,14 +214,14 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
           {state === "ready" && data && (
             <PriceChart
               points={points}
-              dots={dots}
+              markers={markers}
               avg={avg}
               currentPrice={head.merged.currentPrice}
               currentText={formatCurrencyDisplay(head.merged.currentPrice, head.merged.currency || "KRW")}
               currency={data.currency}
               interval={data.interval}
               colorClass={changeColor}
-              selectedIndex={selected}
+              selectedKey={selected}
               onSelect={setSelected}
               ariaLabel={chartAria}
             />
@@ -241,12 +251,15 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
           <div aria-live="polite" className="min-h-10 text-[13px] flex flex-col justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150" key={selectedDot ? selectedDot.index : "idle"}>
             {state !== "ready" ? null : selectedDot ? (
               <div data-testid="stock-page-buy-detail" className="flex flex-col gap-0.5 tabular-nums">
-                {selectedDot.buys.slice(0, 3).map((b) => (
-                  <p key={b.id}>{fmtDot(b.date)} 매수 {b.quantity.toLocaleString()}주 · {formatPrice(b.price, b.currency)}</p>
+                {selectedDot.txs.slice(0, 3).map((b) => (
+                  <p key={b.id} className="flex items-center gap-1.5">
+                    <span aria-hidden className={`inline-block size-2 shrink-0 ${selectedDot.kind === "sell" ? "rotate-45 bg-blue-500" : "rounded-full bg-rose-500"}`} />
+                    <span>{fmtDot(b.date)} {selectedDot.kind === "sell" ? "매도" : "매수"} {b.quantity.toLocaleString()}주 · {formatPrice(b.price, b.currency)}</span>
+                  </p>
                 ))}
-                {selectedDot.buys.length > 3 && <p className="text-muted-foreground">외 {selectedDot.buys.length - 3}건</p>}
+                {selectedDot.txs.length > 3 && <p className="text-muted-foreground">외 {selectedDot.txs.length - 3}건</p>}
               </div>
-            ) : buys.length === 0 ? (
+            ) : buys.length + sells.length === 0 ? (
               <p data-testid="stock-page-no-trades" className="text-xs text-muted-foreground">매수를 기록하면 산 날이 점으로 표시돼요</p>
             ) : outsideCount > 0 ? (
               range === "1y" ? (
@@ -257,13 +270,23 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
                   onClick={() => changeRange("5y")}
                   className="min-h-10 w-full text-left text-sm"
                 >
-                  1년보다 전 매수 {outsideCount}건 · <span className="font-medium text-brand dark:text-indigo-300">5년에서 보기</span>
+                  1년보다 전 {tradeNoun} {outsideCount}건 · <span className="font-medium text-brand dark:text-indigo-300">5년에서 보기</span>
                 </button>
               ) : (
-                <p data-testid="stock-page-outside" data-clickable="false" className="text-sm text-muted-foreground">5년보다 전 매수 {outsideCount}건</p>
+                <p data-testid="stock-page-outside" data-clickable="false" className="text-sm text-muted-foreground">5년보다 전 {tradeNoun} {outsideCount}건</p>
               )
-            ) : dots.length > 0 ? (
-              <p data-testid="stock-page-dot-hint" className="text-xs text-muted-foreground">점을 누르면 매수 기록을 볼 수 있어요</p>
+            ) : markers.length > 0 ? (
+              <>
+                {hasBuyDot && hasSellDot && (
+                  <p data-testid="chart-legend" className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><span aria-hidden className="inline-block size-2 rounded-full bg-rose-500" />매수</span>
+                    <span className="flex items-center gap-1"><span aria-hidden className="inline-block size-2 rotate-45 bg-blue-500" />매도</span>
+                  </p>
+                )}
+                <p data-testid="stock-page-dot-hint" className="text-xs text-muted-foreground">
+                  점을 누르면 {hasBuyDot && hasSellDot ? "매수·매도" : hasSellDot ? "매도" : "매수"} 기록을 볼 수 있어요
+                </p>
+              </>
             ) : null}
           </div>
         )}

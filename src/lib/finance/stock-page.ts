@@ -66,11 +66,11 @@ export interface BuyTx {
   currency: string;
 }
 
-// 그룹 거래 중 매수만(점 대상). 날짜 오름차순
-export function pickBuyTransactions(transactions: Transaction[], groupStockIds: string[]): BuyTx[] {
+// 그룹 거래 중 한 종류(기본 매수, 4.84 매도 점은 "sell")만. 날짜 오름차순. 점 표시 전용 — 평단·성적표 계산에 쓰지 않는다
+export function pickBuyTransactions(transactions: Transaction[], groupStockIds: string[], type: "buy" | "sell" = "buy"): BuyTx[] {
   const ids = new Set(groupStockIds);
   return transactions
-    .filter((t) => t.type === "buy" && ids.has(t.stockId))
+    .filter((t) => t.type === type && ids.has(t.stockId))
     .map((t) => ({ id: t.id, date: t.date, quantity: t.quantity, price: t.price, currency: t.currency }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
@@ -110,6 +110,55 @@ export function placeBuyDots(points: PricePoint[], buys: BuyTx[], windowStart: s
     else byIndex.set(idx, { index: idx, d: points[idx].d, c: points[idx].c, buys: [b] });
   }
   return { dots: [...byIndex.values()].sort((a, b) => a.index - b.index), outsideCount };
+}
+
+// 매수·매도 점을 한 배열로 — 날짜(봉) 순, 같은 봉이면 매수→매도(Tab 순서). 선택 키는 `${kind}:${index}`
+export interface TradeMarker {
+  key: string;
+  kind: "buy" | "sell";
+  index: number;
+  d: string;
+  c: number;
+  txs: BuyTx[];
+}
+
+export function buildTradeMarkers(buyDots: BuyDot[], sellDots: BuyDot[]): TradeMarker[] {
+  const mk = (kind: TradeMarker["kind"]) => (d: BuyDot): TradeMarker => ({ key: `${kind}:${d.index}`, kind, index: d.index, d: d.d, c: d.c, txs: d.buys });
+  return [...buyDots.map(mk("buy")), ...sellDots.map(mk("sell"))].sort((a, b) => a.index - b.index || (a.kind === b.kind ? 0 : a.kind === "buy" ? -1 : 1));
+}
+
+export interface MarkerPos {
+  marker: TradeMarker;
+  x: number;
+  y: number;
+  spread: boolean; // 매수·매도가 가로 12px 미만이라 ±6px 벌렸는가
+}
+
+// 점 위치 — 서로 다른 종류가 가로 12px 미만이면 매수 −6px·매도 +6px로 벌린다(y는 봉 종가 그대로). 같은 종류끼리는 그대로
+export function layoutMarkers(markers: TradeMarker[], xOf: (d: string) => number, yOf: (c: number) => number): MarkerPos[] {
+  const pos: MarkerPos[] = markers.map((m) => ({ marker: m, x: xOf(m.d), y: yOf(m.c), spread: false }));
+  for (const a of pos) {
+    if (a.marker.kind !== "buy") continue;
+    for (const b of pos) {
+      if (b.marker.kind !== "sell" || a.spread || b.spread || Math.abs(a.x - b.x) >= 12) continue;
+      const mid = (a.x + b.x) / 2;
+      a.x = mid - 6;
+      b.x = mid + 6;
+      a.spread = true;
+      b.spread = true;
+    }
+  }
+  return pos;
+}
+
+// 점 히트 반경 — 이웃(매수+매도 모두) 거리의 절반, 최소 10·최대 20. 벌린 쌍은 6(좌우 반분)
+export function markerHitRadius(pos: MarkerPos[], i: number): number {
+  if (pos[i].spread) return 6;
+  let nearest = Infinity;
+  pos.forEach((o, j) => {
+    if (j !== i) nearest = Math.min(nearest, Math.hypot(o.x - pos[i].x, o.y - pos[i].y));
+  });
+  return Math.max(10, Math.min(20, nearest / 2));
 }
 
 export interface YDomain {

@@ -1,11 +1,11 @@
 "use client";
 
-// 종목 한 장(#157) 가격 흐름 차트 — 면적선 + 합산 평단선(라벨 칩) + 매수 점. 외부 차트 라이브러리 없이 SVG 한 장.
+// 종목 한 장(#157) 가격 흐름 차트 — 면적선 + 합산 평단선(라벨 칩) + 매수 점(빨강 원)·매도 점(파랑 마름모). 외부 차트 라이브러리 없이 SVG 한 장.
 // y는 항상 종가(수정주가). 매수 점의 y도 그날 봉 종가이고 거래 단가는 쓰지 않는다.
 import { useId, useState } from "react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { useBoxSize } from "@/hooks/use-box-size";
-import { axisGutter, buildPriceAxis, formatAxisPrice, placeAvgChip, type BuyDot } from "@/lib/finance/stock-page";
+import { axisGutter, buildPriceAxis, formatAxisPrice, layoutMarkers, markerHitRadius, placeAvgChip, type TradeMarker } from "@/lib/finance/stock-page";
 import type { PricePoint } from "@/lib/finance/price-history";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { PriceAxisLayer } from "../price-axis-layer";
@@ -19,19 +19,19 @@ export const fmtDot = (d: string) => d.replaceAll("-", ".");
 
 export interface PriceChartProps {
   points: PricePoint[];
-  dots: BuyDot[];
+  markers: TradeMarker[]; // 매수 점(빨강 원)·매도 점(파랑 마름모), 날짜순·같은 봉은 매수→매도
   avg: number | null; // 종목 통화 평단, 0·null이면 선 없음
   currentPrice: number | null; // 현재가(= 머리·행 `현재가` 칸과 같은 값) — 0·null이면 점·태그 생략
   currentText?: string; // 현재가 문자열 — 행 `현재가` 칸과 같은 formatter 결과(C65)
   currency: string;
   interval: "D" | "W";
   colorClass: string; // 선 색(구간 등락 부호) — 래퍼 currentColor
-  selectedIndex: number | null; // 선택한 점의 points 인덱스
-  onSelect: (index: number | null) => void;
+  selectedKey: string | null; // 선택한 점의 key(`buy:12`)
+  onSelect: (key: string | null) => void;
   ariaLabel: string;
 }
 
-export function PriceChart({ points, dots, avg, currentPrice, currentText, currency, interval, colorClass, selectedIndex, onSelect, ariaLabel }: PriceChartProps) {
+export function PriceChart({ points, markers, avg, currentPrice, currentText, currency, interval, colorClass, selectedKey, onSelect, ariaLabel }: PriceChartProps) {
   const { ref, size } = useBoxSize(FALLBACK);
   const gid = useId().replace(/:/g, "");
   const [hover, setHover] = useState<number | null>(null);
@@ -51,14 +51,14 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
   const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.d).toFixed(1)},${yOf(p.c).toFixed(1)}`).join("");
   const area = `${line}L${xOf(points[points.length - 1].d).toFixed(1)},${M.top + plotH}L${xOf(points[0].d).toFixed(1)},${M.top + plotH}Z`;
 
-  const dotXY = dots.map((d) => ({ x: xOf(d.d), y: yOf(d.c) }));
+  const pos = layoutMarkers(markers, xOf, yOf);
   // 평단 칩 — 겹침 0인 곳만(기본 4곳 → 스캔 → 짧은 글자 → 가격 칸 라벨). 칩 면은 칠하지 않고 글자 외곽선만 쓴다
   const arrow = clamped === "up" ? " ↑" : clamped === "down" ? " ↓" : "";
   const chip =
     avgY !== null && avg
       ? placeAvgChip({
           pts: points.map((p) => ({ x: xOf(p.d), y: yOf(p.c) })),
-          dots: dotXY,
+          dots: pos,
           avgY,
           left: M.left,
           plotW,
@@ -67,15 +67,6 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
           short: `평단 ${formatAxisPrice(avg, currency, axis.step || 1)}${arrow}`,
         })
       : null;
-
-  // 점 히트 반경 — 가까운 점 우선: 이웃과 가까우면 이웃 거리의 절반(최소 10, 최대 20)
-  const hitR = (i: number) => {
-    let nearest = Infinity;
-    dotXY.forEach((o, j) => {
-      if (j !== i) nearest = Math.min(nearest, Math.hypot(o.x - dotXY[i].x, o.y - dotXY[i].y));
-    });
-    return Math.max(10, Math.min(20, nearest / 2));
-  };
 
   const nearestIndex = (clientX: number, rect: DOMRect) => {
     const x = clientX - rect.left;
@@ -176,16 +167,19 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
           </g>
         )}
 
-        {dots.map((d, i) => {
-          const { x, y } = dotXY[i];
-          const selected = selectedIndex === d.index;
-          const first = d.buys[0];
-          const label = `${fmtDot(first.date)} 매수 ${first.quantity.toLocaleString()}주 · ${formatPrice(first.price, first.currency)}${d.buys.length > 1 ? ` 외 ${d.buys.length - 1}건` : ""}`;
+        {pos.map((p, i) => {
+          const m = p.marker;
+          const { x, y } = p;
+          const selected = selectedKey === m.key;
+          const sell = m.kind === "sell";
+          const first = m.txs[0];
+          const label = `${fmtDot(first.date)} ${sell ? "매도" : "매수"} ${first.quantity.toLocaleString()}주 · ${formatPrice(first.price, first.currency)}${m.txs.length > 1 ? ` 외 ${m.txs.length - 1}건` : ""}`;
+          const r = selected ? 8.5 : 6.5; // 마름모 반대각 반경(면적 = 원 r5와 동급)
           return (
             <g
-              key={d.index}
-              data-testid="stock-page-buy-dot"
-              data-date={d.d}
+              key={m.key}
+              data-testid={sell ? "stock-page-sell-dot" : "stock-page-buy-dot"}
+              data-date={m.d}
               data-selected={selected}
               role="button"
               tabIndex={0}
@@ -194,18 +188,22 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
               className="cursor-pointer outline-none [&:focus-visible>circle:nth-child(2)]:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect(selected ? null : d.index);
+                onSelect(selected ? null : m.key);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  onSelect(selected ? null : d.index);
+                  onSelect(selected ? null : m.key);
                 }
               }}
             >
-              <circle cx={x} cy={y} r={hitR(i)} fill="transparent" />
-              <circle cx={x} cy={y} r={10} fill="none" stroke={MAIN_PALETTE[0]} strokeWidth={2} opacity={selected ? 1 : 0} className="motion-safe:transition-opacity motion-safe:duration-150" />
-              <circle cx={x} cy={y} r={selected ? 7 : 5} className="fill-rose-500" style={{ stroke: "var(--card)", strokeWidth: 2.5 }} />
+              <circle cx={x} cy={y} r={markerHitRadius(pos, i)} fill="transparent" />
+              <circle cx={x} cy={y} r={11} fill="none" stroke={MAIN_PALETTE[0]} strokeWidth={2} opacity={selected ? 1 : 0} className="motion-safe:transition-opacity motion-safe:duration-150" />
+              {sell ? (
+                <path d={`M${x},${y - r}L${x + r},${y}L${x},${y + r}L${x - r},${y}Z`} className="fill-blue-500" strokeLinejoin="round" style={{ stroke: "var(--card)", strokeWidth: 2.5 }} />
+              ) : (
+                <circle cx={x} cy={y} r={selected ? 7 : 5} className="fill-rose-500" style={{ stroke: "var(--card)", strokeWidth: 2.5 }} />
+              )}
             </g>
           );
         })}

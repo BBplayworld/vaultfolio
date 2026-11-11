@@ -200,3 +200,45 @@ describe("요청·상태", () => {
     for (const w of ["싸다", "비싸다", "물타기", "지금 사도", "목표가"]) expect(t).not.toContain(w);
   });
 });
+
+describe("4.84 C 매도 점 — 마름모·문구 (C80 매도만 기록 종목 모순 0)", () => {
+  const s = () => stock({ id: "a" });
+  it("매도 점 = 별도 testid·aria-label `매도`, 매수 점은 그대로(Tab 순서 매수→매도)", () => {
+    const html = render([s()], [tx({ stockId: "a", date: "2026-03-04" }), tx({ stockId: "a", date: "2026-03-04", type: "sell", quantity: 3, price: 99000 })]);
+    expect(html.match(/data-testid="stock-page-sell-dot"/g)).toHaveLength(1);
+    expect(html.match(/data-testid="stock-page-buy-dot"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="2026.03.04 매도 3주 · 99,000원"');
+    expect(html.indexOf("stock-page-buy-dot")).toBeLessThan(html.indexOf("stock-page-sell-dot"));
+    expect(html).toMatch(/data-testid="stock-page-sell-dot"[\s\S]*?<path[^>]*fill-blue-500/); // 마름모
+  });
+  it("혼합 종목: 범례 `매수 매도` + `점을 누르면 매수·매도 기록을…` + 정의 줄 `매수·매도 날짜`", () => {
+    const html = render([s()], [tx({ stockId: "a", date: "2026-03-04" }), tx({ stockId: "a", date: "2026-03-05", type: "sell" })]);
+    expect(tid(html, "chart-legend")).toBe(true);
+    expect(text(html)).toContain("점을 누르면 매수·매도 기록을 볼 수 있어요");
+    expect(text(html)).toContain("점은 기록한 매수·매도 날짜에 찍혀요");
+  });
+  it("매수만 종목: 문구·범례 기존과 동일(범례 없음, `매수 기록`, `매수 날짜`)", () => {
+    const html = render([s()], [tx({ stockId: "a", date: "2026-03-04" })]);
+    expect(tid(html, "chart-legend")).toBe(false);
+    expect(text(html)).toContain("점을 누르면 매수 기록을 볼 수 있어요");
+    expect(text(html)).toContain("점은 기록한 매수 날짜에 찍혀요");
+    expect(tid(html, "stock-page-sell-dot")).toBe(false);
+  });
+  it("매도만 기록한 종목: 점 1개(매도)·힌트 `매도 기록`·`매수를 기록하면` 문구 0·거래내역 N건과 모순 없음", () => {
+    const html = render([s()], [tx({ stockId: "a", date: "2026-03-04", type: "sell" })]);
+    expect(html.match(/data-testid="stock-page-sell-dot"/g)).toHaveLength(1);
+    expect(tid(html, "stock-page-buy-dot")).toBe(false);
+    expect(text(html)).toContain("점을 누르면 매도 기록을 볼 수 있어요");
+    expect(text(html)).not.toContain("매수를 기록하면");
+    expect(tid(html, "chart-legend")).toBe(false);
+    expect(text(html)).toContain("거래내역 1건");
+  });
+  it("창 밖 매도: 매도 포함이면 `1년보다 전 거래 N건`(매수·매도 합산), 점 없는 날 안내가 대신하지 않는다", () => {
+    const html = render([s()], [tx({ stockId: "a", date: "2024-05-01" }), tx({ stockId: "a", date: "2024-06-01", type: "sell" })]);
+    expect(text(html)).toContain("1년보다 전 거래 2건 · 5년에서 보기");
+    expect(tid(html, "stock-page-no-trades")).toBe(false);
+    const sellOnly = render([s()], [tx({ stockId: "a", date: "2024-06-01", type: "sell" })]);
+    expect(text(sellOnly)).toContain("1년보다 전 거래 1건");
+    expect(text(sellOnly)).not.toContain("매수를 기록하면");
+  });
+});
