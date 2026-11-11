@@ -316,14 +316,17 @@ export interface WeekRow { date: string; netAsset: number; diff: number | null }
 /**
  * 일별 스냅샷(30일 롤링)에서 최근 7일(오늘 포함) 행과 7일 전 대비 증감.
  * 7일 전 기준점이 없으면 목록의 첫 행 대비. 기록이 없으면 rows=[]·weekDiff=null.
+ * extendFrom(선택, 4.79): 이 날짜가 7일 창보다 앞이면 그 날짜 행부터 포함(주 탭 Hero 시작 행). 생략 시 동작 불변(weekDiff도 창 기준 그대로).
  */
-export function buildWeekRows(daily: DailyAssetSnapshot[], today: string): { rows: WeekRow[]; weekDiff: number | null } {
+export function buildWeekRows(daily: DailyAssetSnapshot[], today: string, extendFrom?: string): { rows: WeekRow[]; weekDiff: number | null } {
   const sorted = [...daily].filter((s) => s?.date).sort((a, b) => a.date.localeCompare(b.date));
   const from = new Date(`${today}T00:00:00Z`);
   from.setUTCDate(from.getUTCDate() - 6);
   const fromStr = from.toISOString().slice(0, 10);
   const inWeek = sorted.filter((s) => s.date >= fromStr && s.date <= today);
-  const rows = inWeek.map((s) => {
+  const listFrom = extendFrom && extendFrom.length >= 10 && extendFrom < fromStr ? extendFrom : fromStr;
+  const listed = listFrom === fromStr ? inWeek : sorted.filter((s) => s.date >= listFrom && s.date <= today);
+  const rows = listed.map((s) => {
     const idx = sorted.indexOf(s);
     const prev = idx > 0 ? sorted[idx - 1] : null;
     return { date: s.date, netAsset: s.netAsset, diff: prev ? s.netAsset - prev.netAsset : null };

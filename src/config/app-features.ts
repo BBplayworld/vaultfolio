@@ -3,10 +3,13 @@
 // 신규 공용 기능을 추가하면 이 파일에도 등록한다(누락 시 팁 추천 대상에서 빠진다).
 
 import type { LucideIcon } from "lucide-react";
-import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard, ChartNoAxesColumn } from "lucide-react";
+import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard, ChartNoAxesColumn, ListChecks } from "lucide-react";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { useTaxViewStore } from "@/stores/tax-view-store";
+import type { GaParams } from "@/lib/analytics/ga";
 import { dispatchOpenShareCard } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+
+type GaCategory = NonNullable<GaParams["category"]>;
 
 export interface AppFeature {
   id: string; // 방문 무관, 팁 개별 dismiss 키
@@ -18,6 +21,7 @@ export interface AppFeature {
   target?: AssetView;
   beforeNavigate?: () => void; // target 이동 직전 실행(세금 관리 내부 로컬 서브탭 지정 등)
   action?: () => void; // target 없이 즉시 실행하는 커스텀 동작(인증카드 다이얼로그 오픈 등)
+  entryCategory?: GaCategory; // 팁으로 진입할 때 함께 보내는 기능 사용 이벤트 category(예: change_week_all, 4.79)
   visitKey?: string; // action형처럼 target이 없어 방문 집계 키를 별도 지정해야 하는 경우
 }
 
@@ -88,6 +92,16 @@ export const APP_FEATURES: AppFeature[] = [
     description: "성과 탭의 자산 변화에서 순자산 추이와 월말 결산을 확인하세요.",
     icon: LineChart,
     target: { type: "activity", tab: "change" },
+  },
+  {
+    id: "week-causes",
+    title: "주간 변화 원인",
+    description: "자산 변화의 주 탭에서 최근 7일 순자산이 무엇으로 변했는지 나눠 봐요",
+    icon: ListChecks,
+    isNew: true,
+    target: { type: "activity", tab: "change", init: { scope: "all", period: "week" } },
+    entryCategory: "change_week_all",
+    visitKey: "change-week", // 자산 변화 방문 집계(activity:change)와 섞이지 않게 분리
   },
   {
     id: "market-compare",

@@ -1,0 +1,271 @@
+{
+ "rich_week": {
+  "deltaNet": 6666240,
+  "pct": 1.2008646779074794,
+  "isBig": false,
+  "negligible": false,
+  "label": "지난 접속(11/5) 이후",
+  "estimated": false,
+  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 부동산 시세 상승 +400만원 · 환율 상승 +16만원 · 기록 안 된 변화 +97만원",
+  "causes": [
+   {
+    "key": "price:stock",
+    "label": "주식 시세 상승",
+    "sentence": "주식 시세 상승으로 +104만원 늘었어요.",
+    "amount": 1043839.9999999999,
+    "text": "+104만원"
+   },
+   {
+    "key": "price:crypto",
+    "label": "코인 시세 상승",
+    "sentence": "코인 시세 상승으로 +49만원 늘었어요.",
+    "amount": 490000,
+    "text": "+49만원"
+   },
+   {
+    "key": "price:realEstate",
+    "label": "부동산 시세 상승",
+    "sentence": "부동산 시세 상승으로 +400만원 늘었어요.",
+    "amount": 4000000,
+    "text": "+400만원"
+   },
+   {
+    "key": "fx",
+    "label": "환율 상승",
+    "sentence": "환율 상승이 +16만원 보탰어요.",
+    "amount": 162400.00000000015,
+    "text": "+16만원"
+   },
+   {
+    "key": "unrecorded",
+    "label": "기록 안 된 변화",
+    "sentence": "기록 안 된 변화로 +97만원 늘었어요.",
+    "amount": 970000,
+    "text": "+97만원"
+   }
+  ],
+  "offsetTotal": 4000000,
+  "rangeLabel": "11/5 → 11/12",
+  "records": [
+   {
+    "id": "ctx_1700000000017",
+    "date": "2026-11-07",
+    "createdAt": "2026-11-07T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": 3000000,
+    "label": "현금 입금"
+   },
+   {
+    "id": "ctx_1700000000018",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": -5000000,
+    "label": "현금 출금"
+   },
+   {
+    "id": "tx_1700000000019",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "buy:stock",
+    "title": "삼성전자 70주",
+    "amount": 4970000,
+    "label": "주식 매수"
+   },
+   {
+    "id": "ltx_1700000000020",
+    "date": "2026-11-09",
+    "createdAt": "2026-11-09T10:00:00.000Z",
+    "causeKey": "debt",
+    "title": "신용대출",
+    "amount": -2000000,
+    "label": "추가 대출"
+   }
+  ]
+ },
+ "rich_yesterday": {
+  "deltaNet": 253280,
+  "pct": 0.04510509944064548,
+  "isBig": false,
+  "negligible": false,
+  "label": "전일 대비",
+  "estimated": false,
+  "sentence": "주식 시세 상승 +16만원 · 코인 시세 상승 +7만원 · 환율 상승 +2만원",
+  "causes": [
+   {
+    "key": "price:stock",
+    "label": "주식 시세 상승",
+    "sentence": "주식 시세 상승으로 +16만원 늘었어요.",
+    "amount": 159119.99999999948,
+    "text": "+16만원"
+   },
+   {
+    "key": "price:crypto",
+    "label": "코인 시세 상승",
+    "sentence": "코인 시세 상승으로 +7만원 늘었어요.",
+    "amount": 70000,
+    "text": "+7만원"
+   },
+   {
+    "key": "fx",
+    "label": "환율 상승",
+    "sentence": "환율 상승이 +2만원 보탰어요.",
+    "amount": 24160.000000000535,
+    "text": "+2만원"
+   }
+  ],
+  "offsetTotal": 0,
+  "rangeLabel": "11/11 → 11/12",
+  "records": []
+ },
+ "legacy_start": {
+  "deltaNet": 6666240,
+  "pct": 1.2008646779074794,
+  "isBig": false,
+  "negligible": false,
+  "label": "지난 접속(11/5) 이후",
+  "estimated": true,
+  "sentence": "보유자산 시세 상승 +552만원 · 환율 상승 +17만원 · 기록 안 된 변화 +97만원",
+  "causes": [
+   {
+    "key": "price",
+    "label": "보유자산 시세 상승",
+    "sentence": "보유자산 시세 상승으로 +552만원 늘었어요.",
+    "amount": 5522595.2,
+    "text": "+552만원",
+    "estimated": true
+   },
+   {
+    "key": "fx",
+    "label": "환율 상승",
+    "sentence": "환율 상승이 +17만원 보탰어요.",
+    "amount": 173644.80000000016,
+    "text": "+17만원",
+    "estimated": true
+   },
+   {
+    "key": "unrecorded",
+    "label": "기록 안 된 변화",
+    "sentence": "기록 안 된 변화로 +97만원 늘었어요.",
+    "amount": 970000,
+    "text": "+97만원",
+    "estimated": true
+   }
+  ],
+  "offsetTotal": 4000000,
+  "rangeLabel": "11/5 → 11/12",
+  "records": [
+   {
+    "id": "ctx_1700000000017",
+    "date": "2026-11-07",
+    "createdAt": "2026-11-07T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": 3000000,
+    "label": "현금 입금"
+   },
+   {
+    "id": "ctx_1700000000018",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": -5000000,
+    "label": "현금 출금"
+   },
+   {
+    "id": "tx_1700000000019",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "buy:stock",
+    "title": "삼성전자 70주",
+    "amount": 4970000,
+    "label": "주식 매수"
+   },
+   {
+    "id": "ltx_1700000000020",
+    "date": "2026-11-09",
+    "createdAt": "2026-11-09T10:00:00.000Z",
+    "causeKey": "debt",
+    "title": "신용대출",
+    "amount": -2000000,
+    "label": "추가 대출"
+   }
+  ]
+ },
+ "paired": {
+  "deltaNet": 2666240,
+  "pct": 0.4802997550079262,
+  "isBig": false,
+  "negligible": false,
+  "label": "지난 접속(11/5) 이후",
+  "estimated": false,
+  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 주식 매수 +97만원",
+  "causes": [
+   {
+    "key": "price:stock",
+    "label": "주식 시세 상승",
+    "sentence": "주식 시세 상승으로 +104만원 늘었어요.",
+    "amount": 1043839.9999999999,
+    "text": "+104만원"
+   },
+   {
+    "key": "price:crypto",
+    "label": "코인 시세 상승",
+    "sentence": "코인 시세 상승으로 +49만원 늘었어요.",
+    "amount": 490000,
+    "text": "+49만원"
+   },
+   {
+    "key": "fx",
+    "label": "환율 상승",
+    "sentence": "환율 상승이 +16만원 보탰어요.",
+    "amount": 162400.00000000015,
+    "text": "+16만원"
+   },
+   {
+    "key": "buy:stock",
+    "label": "주식 매수",
+    "sentence": "주식 매수로 +97만원 늘었어요.",
+    "amount": 970000,
+    "text": "+97만원",
+    "dateLabel": "11/8",
+    "firstDate": "2026-11-08"
+   }
+  ],
+  "offsetTotal": 4000000,
+  "rangeLabel": "11/5 → 11/12",
+  "records": [
+   {
+    "id": "ctx_1700000000012",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": -5000000,
+    "label": "현금 출금"
+   },
+   {
+    "id": "tx_1700000000013",
+    "date": "2026-11-08",
+    "createdAt": "2026-11-08T10:00:00.000Z",
+    "causeKey": "buy:stock",
+    "title": "삼성전자 70주",
+    "amount": 4970000,
+    "label": "주식 매수"
+   },
+   {
+    "id": "ctx_1700000000014",
+    "date": "2026-11-09",
+    "createdAt": "2026-11-09T10:00:00.000Z",
+    "causeKey": "income",
+    "title": "주거래 통장",
+    "amount": 1000000,
+    "label": "현금 입금"
+   }
+  ]
+ },
+ "none": null
+}

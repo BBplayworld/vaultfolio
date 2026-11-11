@@ -32,14 +32,17 @@ describe("feature-usage", () => {
   });
 
   it("pickRecommendedFeature — isNew 항목이 방문 기록과 무관하게 최우선", () => {
-    // 4.72(#132)부터 카탈로그의 '시장과 비교'가 isNew — 방문 기록이 있어도 그 항목이 최우선이다.
+    // 4.79(#153)부터 '주간 변화 원인'이 카탈로그 앞쪽 isNew — 방문 기록이 있어도 그 항목이 최우선이고,
+    // 닫으면(dismiss) 4.72(#132)부터 isNew인 '시장과 비교'가 이어서 뜬다.
     const target = APP_FEATURES.find((f) => f.isNew)!;
-    expect(target.id).toBe("market-compare");
+    expect(target.id).toBe("week-causes");
     recordVisit("activity:change-market");
     recordVisit("activity:change-market");
     const picked = pickRecommendedFeature();
     expect(picked?.isNew).toBe(true);
     expect(picked?.id).toBe(target.id);
+    dismissTip("week-causes");
+    expect(pickRecommendedFeature()?.id).toBe("market-compare");
   });
 
   it("pickRecommendedFeature — 신규 기능 dismiss 후엔 방문횟수 오름차순(0회 우선)으로 추천", () => {
