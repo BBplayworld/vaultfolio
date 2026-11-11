@@ -242,7 +242,8 @@ export function niceTicks(
       const first = Math.ceil(lo / step - 1e-9);
       const last = Math.floor(hi / step + 1e-9);
       for (let i = first; i <= last && out.length <= 12; i += 1) {
-        const v = e >= 0 ? i * m * pow(e) : (i * m) / pow(e);
+        const v = (e >= 0 ? i * m * pow(e) : (i * m) / pow(e)) + 0; // -0 → 0
+        if (v < 0) continue; // 가격은 음수 눈금 없음
         const y = yOf(v);
         if (y >= top + inset && y <= bottom - inset) out.push({ v, y });
       }
@@ -257,7 +258,8 @@ export function niceTicks(
 const trimDecimal = (n: number) => String(+n.toFixed(2));
 
 // 눈금 라벨 표기 — KRW 1.5억·5만·7.5만·5,000(원 생략), USD $160·$12.5·$0.25, JPY ¥1,500. 정밀값(태그·칩·호버)은 formatPrice를 쓴다
-export function formatAxisPrice(value: number, currency: string, step: number): string {
+export function formatAxisPrice(raw: number, currency: string, step: number): string {
+  const value = raw > 0 ? raw : 0; // -0·음수 방지
   if (currency === "USD") {
     const dec = step >= 1 || !(step > 0) ? 0 : Math.min(3, Math.ceil(-Math.log10(step) - 1e-9));
     return `$${value.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
@@ -268,8 +270,12 @@ export function formatAxisPrice(value: number, currency: string, step: number): 
   return Math.round(value).toLocaleString("ko-KR");
 }
 
-// 가격 칸(우측 gutter) 폭 — 현재가 문자열 길이 기준 46~76px
-export const axisGutter = (tagText: string): number => Math.min(76, Math.max(46, tagText.length * 6.4 + 10));
+// 가격 칸(우측 gutter) 폭 — 11px 굵은 글꼴 글자별 폭 추정(숫자 6.8·쉼표/마침표 3.5·한글 12.5·그 외 7) + 텍스트 시작 오프셋 6 + 우측 여유 4, 46~82px
+export const axisGutter = (tagText: string): number => {
+  let w = 0;
+  for (const ch of tagText) w += /[0-9]/.test(ch) ? 6.8 : /[,.]/.test(ch) ? 3.5 : /[\u3131-\uD79D]/.test(ch) ? 12.5 : 7;
+  return Math.min(82, Math.max(46, w + 10));
+};
 
 export interface PriceAxis {
   domain: [number, number];

@@ -111,8 +111,31 @@ describe("현재가 문자열 = `현재가` 칸 (A4, C65)", () => {
   it("KRW·USD 모두 같은 formatter(formatCurrencyDisplay) — 행 `현재가` 칸이 쓰는 함수", () => {
     expect(formatCurrencyDisplay(70000, "KRW")).toBe("70,000원");
     expect(formatCurrencyDisplay(214.3, "USD")).toBe("$214.3");
-    expect(axisGutter("70,000원")).toBeCloseTo(54.8, 1);
     expect(axisGutter("$214.3")).toBeGreaterThanOrEqual(46);
-    expect(axisGutter("1,000,000,000원")).toBe(76);
+    expect(axisGutter("1,000,000,000원")).toBe(82);
+  });
+  it("D1: 6자리 원화·소수 3자리 USD도 텍스트(굵은 11px 실측 상한: 숫자 6.9·쉼표 3.6·원 12.6)가 gutter−6 안", () => {
+    const real = (t: string) => [...t].reduce((a, c) => a + (/[0-9]/.test(c) ? 6.9 : /[,.]/.test(c) ? 3.6 : /[\u3131-\uD79D]/.test(c) ? 12.6 : 7), 0);
+    for (const t of ["70,000원", "100,000원", "208,000원", "999,999원", "1,291,000원", "$352.235", "$1,234.5"]) {
+      expect(real(t) + 6).toBeLessThanOrEqual(axisGutter(t));
+    }
+  });
+});
+
+describe("눈금 -0·음수 (UI D1)", () => {
+  it("최저가가 0 부근인 5년 픽스처 — 눈금 0은 -0이 아니고 음수 눈금 없음", () => {
+    const pts: PricePoint[] = [{ d: "a", c: 0 }, { d: "b", c: 0.4 }, { d: "c", c: 3 }];
+    const a = buildPriceAxis({ points: pts, avg: 0, price: 3, currency: "USD", top: 8, plotH: 100 });
+    for (const t of a.ticks) {
+      expect(Object.is(t.v, -0)).toBe(false);
+      expect(t.v).toBeGreaterThanOrEqual(0);
+      expect(t.label).not.toContain("-");
+    }
+    const nt = niceTicks(-0.3, 3, (v) => 100 - v * 30, 8, 108);
+    for (const t of nt.ticks) expect(t.v).toBeGreaterThanOrEqual(0);
+  });
+  it("formatAxisPrice(-0) → $0", () => {
+    expect(formatAxisPrice(-0, "USD", 1)).toBe("$0");
+    expect(formatAxisPrice(-0, "KRW", 1000)).toBe("0");
   });
 });

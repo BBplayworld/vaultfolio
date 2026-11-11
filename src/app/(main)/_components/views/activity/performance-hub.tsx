@@ -117,7 +117,7 @@ export function PerformanceHub() {
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
-    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
+    <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>

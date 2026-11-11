@@ -30,7 +30,7 @@ describe("LoadingNote", () => {
   });
   it("문구 상수: 시세·가격 흐름·배당·지연", () => {
     expect(LOADING_LABEL).toEqual({ price: "시세를 불러오는 중…", flow: "가격 흐름을 불러오는 중…", dividend: "배당 정보를 불러오는 중…" });
-    expect(SLOW_LABEL).toBe("평소보다 오래 걸려요. 잠시만 기다려 주세요");
+    expect(SLOW_LABEL).toBe("평소보다 오래 걸려요");
   });
 });
 

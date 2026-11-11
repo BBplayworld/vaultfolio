@@ -7,7 +7,7 @@ import { Loader2Icon } from "lucide-react";
 import { useLoadingPhase } from "@/hooks/use-loading-phase";
 import { cn } from "@/lib/utils";
 
-export const SLOW_LABEL = "평소보다 오래 걸려요. 잠시만 기다려 주세요";
+export const SLOW_LABEL = "평소보다 오래 걸려요";
 export const LOADING_LABEL = { price: "시세를 불러오는 중…", flow: "가격 흐름을 불러오는 중…", dividend: "배당 정보를 불러오는 중…" } as const;
 
 export function LoadingNote({ active, label, slowLabel = SLOW_LABEL, className }: { active: boolean; label: string; slowLabel?: string; className?: string }) {
@@ -19,7 +19,7 @@ export function LoadingNote({ active, label, slowLabel = SLOW_LABEL, className }
       {phase !== "quiet" && (
         <p aria-hidden data-testid="loading-note" data-phase={phase} className="flex items-center gap-2 text-[13px] text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
           <Loader2Icon className="size-3.5 shrink-0 motion-safe:animate-spin" />
-          <span>{phase === "slow" ? slowLabel : label}</span>
+          <span className="break-keep whitespace-nowrap">{phase === "slow" ? slowLabel : label}</span>
         </p>
       )}
     </div>
