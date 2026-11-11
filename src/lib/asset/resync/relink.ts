@@ -73,6 +73,12 @@ const kstDateOf = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().s
 const cmpTx = (a: Pick<NTx, "date" | "createdAt" | "id">, b: Pick<NTx, "date" | "createdAt" | "id">) =>
   a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 
+/** '대상 종목 생성 이전' 거래인가 — 날짜는 사용자가 임의 지정하므로 기록 시각 우선 */
+const recordedBefore = (t: Pick<NTx, "date" | "createdAt">, importMs: number, created: string) => {
+  const ms = Date.parse(t.createdAt);
+  return Number.isNaN(ms) ? t.date <= created : ms <= importMs;
+};
+
 const stockItem = (s: Stock): NItem => ({
   id: s.id, name: s.name, broker: s.broker, key: tickerKey(s.ticker), market: s.category === "foreign" ? "foreign" : "domestic",
   purchaseDate: s.purchaseDate, quantity: s.quantity, avgPrice: s.averagePrice, avgExchangeRate: s.purchaseExchangeRate ?? 0,
@@ -93,11 +99,11 @@ const cryptoTx = (t: CryptoTransaction): NTx => ({
 });
 
 /** 대상 종목 S 1개의 후보(규칙 2~5·7). 없으면 null */
-function detectForItem(s: NItem, created: string, orphans: NTx[], own: NTx[]): RelinkTarget | null {
-  // 2. 고아 묶음 G(옛 id별): 키·시장 같고 모든 거래 날짜 ≤ 만든 날
+function detectForItem(s: NItem, created: string, importMs: number, orphans: NTx[], own: NTx[]): RelinkTarget | null {
+  // 2. 고아 묶음 G(옛 id별): 키·시장 같고 모든 거래의 기록 시각(createdAt, 사용자 수정 불가) ≤ 대상 종목 생성 시각. 파싱 불가면 거래 날짜 ≤ 만든 날로 대체
   const byOld = new Map<string, NTx[]>();
   for (const t of orphans) if (t.key === s.key && t.market === s.market) byOld.set(t.oldId, [...(byOld.get(t.oldId) ?? []), t]);
-  const merged = [...byOld.values()].filter((g) => g.every((t) => t.date <= created)).flat().sort(cmpTx); // 3. 여러 세대는 합쳐 한 줄(A1)
+  const merged = [...byOld.values()].filter((g) => g.every((t) => recordedBefore(t, importMs, created))).flat().sort(cmpTx); // 3. 여러 세대는 합쳐 한 줄(A1)
   if (merged.length === 0) return null;
 
   // 4. 전량 매도 구분: 합친 줄에서 매도 뒤 누적 ≤ 0이면 그 회차는 끝 — 마지막으로 끝난 지점 이후만 후보
@@ -159,7 +165,7 @@ function detectKind(kind: RelinkKind, items: NItem[], txs: NTx[]): RelinkRow[] {
     if (!m || !s.key) continue;
     const created = kstDateOf(Number(m[1]));
     if (s.purchaseDate !== created && s.purchaseDate !== `${created.slice(0, 4)}-01-01`) continue;
-    const target = detectForItem(s, created, orphans, txs.filter((t) => t.oldId === s.id));
+    const target = detectForItem(s, created, Number(m[1]), orphans, txs.filter((t) => t.oldId === s.id));
     if (target) found.push({ s, target });
   }
   // 6. 같은 키 S가 1개면 그 S, 2개 이상이면 이을 종목 선택

@@ -63,6 +63,26 @@ describe("감지 ⓐ~ⓛ", () => {
     const d2 = data({ stocks: [S(sid(), "005930", 5)], transactions: [T("d1", "old", "005930", "buy", 5, CREATED)] });
     expect(first(detectRelink(d2))).toMatchObject({ count: 1 });
   });
+  it("ⓓ-1 미래 날짜로 기록했어도 기록 시각이 맞추기 이전이면 이어짐(날짜는 사용자 지정값)", () => {
+    const d = data({
+      stocks: [S(sid(), "005930", 6)],
+      transactions: [T("d1", "old", "005930", "buy", 5, "2024-03-04"), T("d2", "old", "005930", "buy", 1, "2030-01-01", { createdAt: "2026-10-01T00:00:00Z" })],
+    });
+    expect(first(detectRelink(d))).toMatchObject({ count: 2, lastDate: "2030-01-01" });
+  });
+  it("ⓓ-2 날짜는 과거여도 기록 시각이 맞추기 이후인 고아 묶음은 안 이어짐", () => {
+    const d = data({
+      stocks: [S(sid(), "005930", 5)],
+      transactions: [T("d1", "old", "005930", "buy", 5, "2024-03-04", { createdAt: "2026-10-25T00:00:00Z" })],
+    });
+    expect(detectRelink(d)).toEqual([]);
+  });
+  it("ⓓ-3 기록 시각이 파싱 불가면 거래 날짜 비교로 대체", () => {
+    const ok = data({ stocks: [S(sid(), "005930", 5)], transactions: [T("d1", "old", "005930", "buy", 5, "2024-03-04", { createdAt: "broken" })] });
+    expect(first(detectRelink(ok))).toMatchObject({ count: 1 });
+    const late = data({ stocks: [S(sid(), "005930", 5)], transactions: [T("d1", "old", "005930", "buy", 5, "2026-10-21", { createdAt: "" })] });
+    expect(detectRelink(late)).toEqual([]);
+  });
   it("ⓔ 같은 키 S 2개(증권사 다름) → 행 1개·대상 2개, 선택 필수(rowId = multi)", () => {
     const d = data({
       stocks: [S(sid(0), "005930", 5, { broker: "토스증권" }), S(sid(1), "005930", 5, { broker: "키움증권" })],
