@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   // 실호출 게이트용 — 필드 의미 대조에 쓰는 원문 키 목록(공개 정보). 게이트 뒤 제거
   const probe = req.nextUrl.searchParams.get("probe") === "1";
   const body = probe
-    ? { ...result, probe: { output1: raw!.output1, output2Head: (raw!.output2 as unknown[]).slice(0, 3) } }
+    ? { ...result, probe: { output1: raw!.output1, output2Head: raw!.output2.slice(0, 1), trConts: raw!.trConts } }
     : result;
 
   // 구성 수와 행 수가 일치(전량)할 때만 CDN 캐시
