@@ -74,13 +74,23 @@ describe("gtag 부재·예외", () => {
   });
 });
 
+describe("웰컴 버튼 값→제목 1:1", () => {
+  it("WELCOME_CTA_METHODS 모든 값이 서로 다른 '웰컴·…' 제목으로 분리된다", () => {
+    const methods = ["wizard", "manual", "import", "sync_connect", "skip_install", "trial_start"] as const;
+    const titles = methods.map((m) => featureTitleOf("onboarding_action", { method: m }, "home"));
+    expect(titles).toEqual(["웰컴·스크린샷 등록", "웰컴·직접 입력", "웰컴·가져오기", "웰컴·동기화 연결", "웰컴·웹에서 시작", "웰컴·체험"]);
+    expect(new Set(titles).size).toBe(methods.length);
+    expect(featureTitleOf("welcome_view", {}, "home")).toBe("웰컴");
+  });
+});
+
 describe("featureTitleOf 매핑", () => {
   it.each([
     ["welcome_view", {}, "웰컴"],
     ["onboarding_action", { method: "wizard" }, "웰컴·스크린샷 등록"],
     ["onboarding_action", { method: "manual" }, "웰컴·직접 입력"],
-    ["onboarding_action", { method: "import" }, "웰컴·백업 불러오기"],
-    ["onboarding_action", { method: "sync_connect" }, "웰컴·기기 연결"],
+    ["onboarding_action", { method: "import" }, "웰컴·가져오기"],
+    ["onboarding_action", { method: "sync_connect" }, "웰컴·동기화 연결"],
     ["onboarding_action", { method: "skip_install" }, "웰컴·웹에서 시작"],
     ["onboarding_action", { method: "trial_start" }, "웰컴·체험"],
     ["onboarding_action", {}, "웰컴"],

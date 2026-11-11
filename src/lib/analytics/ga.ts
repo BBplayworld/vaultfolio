@@ -207,8 +207,8 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
 const WELCOME_ACTION_TITLES: Partial<Record<NonNullable<GaParams["method"]>, string>> = {
   wizard: "웰컴·스크린샷 등록",
   manual: "웰컴·직접 입력",
-  import: "웰컴·백업 불러오기",
-  sync_connect: "웰컴·기기 연결",
+  import: "웰컴·가져오기",
+  sync_connect: "웰컴·동기화 연결",
   skip_install: "웰컴·웹에서 시작",
   trial_start: "웰컴·체험",
 };
