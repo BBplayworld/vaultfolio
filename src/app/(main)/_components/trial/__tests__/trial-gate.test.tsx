@@ -79,11 +79,11 @@ describe("웰컴 진입 링크·복귀", () => {
     expect(html).toContain("whitespace-nowrap");
     expect(html).not.toContain('disabled=""');
   });
-  it("진입은 trackThenNavigate로 /?trial=1, 복귀는 별도 effect에서 trial_start 1회 + asset 상태", () => {
+  it("진입은 trackThenNavigate로 /?trial=1, 복귀는 별도 effect에서 trial_start 1회 + 포커스 표식", () => {
     const src = read("app/(main)/_components/layout/onboarding/welcome-guide.tsx");
     expect(src).toContain('trackThenNavigate("feature_use", { category: "demo" }, TRIAL_ENTRY_URL);');
     expect(src.match(/WELCOME_CTA_METHODS\.trialStart/g)?.length).toBe(1);
-    expect(src).toMatch(/sessionStorage\.removeItem\(TRIAL_EXIT_KEY\);[\s\S]{0,200}track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart \}\);\s*setShowAssetCta\(true\);/);
+    expect(src).toMatch(/sessionStorage\.removeItem\(TRIAL_EXIT_KEY\);[\s\S]{0,200}track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart \}\);\s*setFocusCta\(true\);/);
     // 링크는 마운트 후 + 공유 대기 아님 + 복원 해시 없음일 때만
     expect(src).toContain("action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink /> : undefined}");
     expect(read("app/(main)/page.tsx")).toContain("<WelcomeGuide allowTrial={!isSharePending} skipHeroEnter={skipHeroEnterRef.current} />");
