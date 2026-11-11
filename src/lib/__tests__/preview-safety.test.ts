@@ -274,14 +274,14 @@ describe("10. 데모 주입 상태에서는 튜토리얼 미노출(#4.36)", () =
     expect(ls.getItem(DEMO_TUTORIAL_MARKER)).toBe("1");
     expect(tutorialStore.getState().activeStep).toBeNull();
     expect(tutorialStore.getState().isTutorialFinished).toBe(true);
-    // 20. 현재 공지도 읽음(기존 열람 키) — 새 브라우저 데모에서 결산 등 하위 팁이 바로 보이게
-    const { NOTICE_ID } = await import("@/app/(main)/_components/layout/onboarding/notice");
-    expect(JSON.parse(ls.getItem("secretasset_notice_seen")!).id).toBe(NOTICE_ID);
+    // 20. 새 소식 읽음은 기록하지 않는다(4.82) — 새 브라우저 데모는 새 소식 팁이 첫 팁
+    expect(ls.getItem("secretasset_notice_seen")).toBeNull();
   });
 
-  it("20. ?demo=empty: 데모가 남긴 공지 열람 기록도 지운다(clearAssetData는 공지 키를 보존하므로 직접 삭제)", async () => {
+  it("20. ?demo=empty: 데모 이력이 있으면 새 소식 읽음 기록도 지운다(clearAssetData는 그 키를 보존하므로 직접 삭제)", async () => {
     const { applyDemoTutorialSkip, resetDemoTutorialSkip } = await import("@/app/(main)/_components/preview/preview-gate");
     applyDemoTutorialSkip();
+    ls.setItem("secretasset_notice_seen", JSON.stringify({ id: "20261111-08", seenAt: 1, expiresAt: 9e15 })); // 이전 버전 데모가 남긴 기록 모사
     expect(ls.getItem("secretasset_notice_seen")).not.toBeNull();
     resetDemoTutorialSkip();
     expect(ls.getItem("secretasset_notice_seen")).toBeNull();

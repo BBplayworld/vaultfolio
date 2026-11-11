@@ -19,6 +19,7 @@ import { PwaConnectPrompt } from "./_components/pwa/pwa-connect-prompt";
 import { InAppBrowserGate } from "./_components/pwa/in-app-browser-gate";
 import { AppGuide } from "./_components/header-menu/app-guide";
 import { RatioHandoffHost } from "./_components/ratio/ratio-handoff-host";
+import { WhatsNewHost } from "./_components/views/home/whats-new-sheet";
 import { RelinkHost } from "./_components/forms/asset-update/relink/relink-dialog";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { TrialGate } from "./_components/trial/trial-gate";
@@ -57,6 +58,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                 <AppGuide />
                 <RatioHandoffHost />
                 <RelinkHost />
+                <WhatsNewHost />
               </SidebarInset>
             </SidebarProvider>
           </TutorialStoreProvider>

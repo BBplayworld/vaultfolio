@@ -131,21 +131,24 @@ export function migrateStorageKeys(): void {
   runOneTimeMigrations();
 }
 
-// 공지 열람 상태 읽기 — 만료됐으면 null(미열람 취급). 값 { id, seenAt, expiresAt }.
-export function readNoticeSeenId(): string | null {
+// 새 소식 읽음 기록 읽기(#159) — 키 `secretasset_notice_seen` 값 { id, seenAt, expiresAt }.
+// 만료·id 비문자열·해석 불가 id·깨진 값은 "기록 없음"(null). seenAt이 숫자가 아니면 0(7일 간격 충족으로 취급).
+export interface NoticeSeenRecord { id: string; seenAt: number }
+export function readNoticeSeen(): NoticeSeenRecord | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.noticeSeen);
     if (!raw) return null;
     const val = JSON.parse(raw);
     if (val?.expiresAt && val.expiresAt <= Date.now()) return null;
-    return typeof val?.id === "string" ? val.id : null;
+    if (typeof val?.id !== "string" || !/^\d{8}(-\d{2})?$/.test(val.id)) return null;
+    return { id: val.id, seenAt: typeof val.seenAt === "number" ? val.seenAt : 0 };
   } catch {
     return null;
   }
 }
 
-// 공지 열람 기록 — 단일 키를 덮어써 항상 1개만 유지.
+// 새 소식 읽음 기록 — 단일 키를 덮어써 항상 1개만 유지(id = 마지막으로 읽은 새 소식 id).
 export function markNoticeSeen(id: string, expiresAt: number): void {
   if (typeof window === "undefined") return;
   try {
@@ -153,11 +156,8 @@ export function markNoticeSeen(id: string, expiresAt: number): void {
   } catch { /* ignore */ }
 }
 
-// 공지 키 정리 — 단일 키(secretasset_notice_seen)만 남긴다.
-//  - currentId 있으면(다이얼로그): 현재 공지의 레거시 per-id 키를 단일 키로 이관(열람 상태 보존) 후 레거시 전부 제거.
-//  - currentId 없으면(init): 레거시 중 만료된 것만 제거(현재 공지 레거시 키는 다이얼로그가 이관하도록 남김).
-//  - 단일 키가 만료면 제거.
-export function cleanExpiredNoticeKeys(currentId?: string): void {
+// 공지 키 정리(init) — 단일 키(secretasset_notice_seen)만 남긴다. 단일 키가 만료면 제거, 레거시 per-id 키는 만료된 것만 제거.
+export function cleanExpiredNoticeKeys(): void {
   if (typeof window === "undefined") return;
   const legacyPrefix = STORAGE_KEY_PREFIXES.notice; // "secretasset_notice_seen_" (접미 _ → 단일 키는 안 걸림)
   const now = Date.now();
@@ -173,19 +173,9 @@ export function cleanExpiredNoticeKeys(currentId?: string): void {
 
   for (const key of Object.keys(localStorage)) {
     if (!key.startsWith(legacyPrefix)) continue;
-    const id = key.slice(legacyPrefix.length);
-    if (currentId) {
-      // 현재 공지 레거시 키는 단일 키가 비어 있으면 이관(열람 상태 보존)
-      if (id === currentId && !localStorage.getItem(STORAGE_KEYS.noticeSeen)) {
-        localStorage.setItem(STORAGE_KEYS.noticeSeen, localStorage.getItem(key) ?? "{}");
-      }
-      localStorage.removeItem(key); // 이관 여부와 무관하게 레거시 per-id 키는 모두 제거
-    } else {
-      // init 경로: 만료된 레거시만 제거
-      try {
-        const val = JSON.parse(localStorage.getItem(key) ?? "{}");
-        if (val?.expiresAt && val.expiresAt <= now) localStorage.removeItem(key);
-      } catch { localStorage.removeItem(key); }
-    }
+    try {
+      const val = JSON.parse(localStorage.getItem(key) ?? "{}");
+      if (val?.expiresAt && val.expiresAt <= now) localStorage.removeItem(key);
+    } catch { localStorage.removeItem(key); }
   }
 }

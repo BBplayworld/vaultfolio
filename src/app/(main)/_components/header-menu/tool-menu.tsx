@@ -24,8 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
-import { NOTICE_TITLE, NoticeContent } from "../layout/onboarding/notice";
-import { markCurrentNoticeSeen } from "@/lib/home-tip";
+import { dispatchOpenWhatsNew } from "../layout/navigation/asset-dispatch";
 import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset/asset-storage";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/finance/profit-utils";
@@ -89,7 +88,6 @@ export function ToolMenuPage() {
   const [shortUrlLoading, setShortUrlLoading] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showHelpChooser, setShowHelpChooser] = useState(false);
-  const [showNotice, setShowNotice] = useState(false);
 
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackContact, setFeedbackContact] = useState("");
@@ -270,7 +268,7 @@ export function ToolMenuPage() {
             </button>
             <button type="button" className={MENU_ROW} onClick={() => setShowHelpChooser(true)}>
               <Info className={MENU_ICON} />
-              <span className={MENU_LABEL}>앱 가이드 · 공지사항</span>
+              <span className={MENU_LABEL}>앱 가이드 · 새 소식</span>
               <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
             </button>
           </div>
@@ -460,16 +458,16 @@ export function ToolMenuPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 도움말 선택기: 앱 가이드 · 공지사항 (정보 진입점 통합) */}
+      {/* 도움말 선택기: 앱 가이드 · 새 소식 (정보 진입점 통합) */}
       <Dialog open={showHelpChooser} onOpenChange={setShowHelpChooser}>
         <DialogContent className="sm:max-w-md touch-pan-y">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Info className="size-5 text-primary" />
-              앱 가이드 · 공지사항
+              앱 가이드 · 새 소식
             </DialogTitle>
             <DialogDescription className="text-left">
-              앱 사용법 가이드와 최신 업데이트 공지를 확인합니다.
+              앱 사용법 가이드와 최근 새 소식을 확인합니다.
             </DialogDescription>
           </DialogHeader>
 
@@ -491,17 +489,17 @@ export function ToolMenuPage() {
 
             <button
               type="button"
+              data-testid="more-whats-new"
               className="flex items-center gap-3 text-left p-4 rounded-xl bg-card shadow-xs hover:bg-accent transition-[background-color,box-shadow] duration-200 active:not-disabled:scale-[0.99]"
               onClick={() => {
                 setShowHelpChooser(false);
-                setShowNotice(true);
-                markCurrentNoticeSeen();
+                dispatchOpenWhatsNew("more");
               }}
             >
               <BellRing className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="font-semibold text-foreground">공지사항 보기</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">최신 업데이트·핵심 기능 안내를 확인합니다.</p>
+                <p className="font-semibold text-foreground">새 소식 보기</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">최근 업데이트와 새 기능을 확인합니다.</p>
               </div>
             </button>
           </div>
@@ -509,31 +507,6 @@ export function ToolMenuPage() {
           <DialogFooter className="flex justify-end">
             <Button variant="secondary" onClick={() => setShowHelpChooser(false)}>
               닫기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 공지사항 뷰어 — 자동 팝업(UpdateNoticeDialog)과 동일 본문 재사용 */}
-      <Dialog open={showNotice} onOpenChange={setShowNotice}>
-        <DialogContent
-          showCloseButton={false}
-          className="max-h-[90dvh] overflow-y-auto w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl p-4 sm:p-6"
-        >
-          <DialogHeader className="gap-3 text-left">
-            <div className="inline-flex items-center gap-2 text-primary">
-              <BellRing className="size-5" />
-              <span className="text-sm font-semibold">업데이트 공지</span>
-            </div>
-            <DialogTitle>{NOTICE_TITLE}</DialogTitle>
-            <DialogDescription className="sr-only">앱 업데이트 내용</DialogDescription>
-          </DialogHeader>
-
-          <NoticeContent />
-
-          <DialogFooter>
-            <Button variant="brand" onClick={() => setShowNotice(false)} className="w-full sm:w-auto">
-              확인
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -5,6 +5,7 @@
 import { STORAGE_KEYS } from "./local-storage";
 import { APP_FEATURES, type AppFeature } from "@/config/app-features";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
+import { track } from "@/lib/analytics/ga";
 
 interface FeatureUsageState {
   visits: Record<string, { count: number; lastVisitedAt: string }>;
@@ -67,15 +68,12 @@ function visitCountOf(feature: AppFeature, visits: FeatureUsageState["visits"]):
   return visits[key]?.count ?? 0;
 }
 
-// 1순위: dismiss 안 된 isNew 항목(카탈로그 순서) — 2순위: dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선),
+// dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선),
 // 동률은 카탈로그 순서. 전부 dismiss면 null(박스가 조용히 사라짐).
 export function pickRecommendedFeature(): AppFeature | null {
   const state = readState();
   const candidates = APP_FEATURES.filter((f) => !state.dismissedTipIds.includes(f.id));
   if (candidates.length === 0) return null;
-
-  const fresh = candidates.find((f) => f.isNew);
-  if (fresh) return fresh;
 
   let best: AppFeature | null = null;
   let bestCount = Infinity;
@@ -87,4 +85,18 @@ export function pickRecommendedFeature(): AppFeature | null {
     }
   }
   return best;
+}
+
+/**
+ * 기능 항목의 기존 이동 실행 — 홈 기능 팁(source=home_tip)과 새 소식 바로 가기(source=whats_new)가 공유.
+ * dismiss는 하지 않는다(호출부 몫). action형은 action만, 그 외는 beforeNavigate → entryCategory GA(4.79) → target 이동.
+ */
+export function runFeatureEntry(feature: AppFeature, navigate: (view: AssetView) => void, source: "home_tip" | "whats_new"): void {
+  if (feature.action) {
+    feature.action();
+    return;
+  }
+  feature.beforeNavigate?.();
+  if (feature.entryCategory) track("feature_use", { category: feature.entryCategory, source });
+  if (feature.target) navigate(feature.target);
 }

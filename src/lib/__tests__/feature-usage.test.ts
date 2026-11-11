@@ -31,18 +31,11 @@ describe("feature-usage", () => {
     expect(isTipDismissed("tax-simulator")).toBe(true);
   });
 
-  it("pickRecommendedFeature — isNew 항목이 방문 기록과 무관하게 최우선", () => {
-    // 4.79(#153)부터 '주간 변화 원인'이 카탈로그 앞쪽 isNew — 방문 기록이 있어도 그 항목이 최우선이고,
-    // 닫으면(dismiss) 4.72(#132)부터 isNew인 '시장과 비교'가 이어서 뜬다.
-    const target = APP_FEATURES.find((f) => f.isNew)!;
-    expect(target.id).toBe("week-causes");
-    recordVisit("activity:change-market");
-    recordVisit("activity:change-market");
-    const picked = pickRecommendedFeature();
-    expect(picked?.isNew).toBe(true);
-    expect(picked?.id).toBe(target.id);
-    dismissTip("week-causes");
-    expect(pickRecommendedFeature()?.id).toBe("market-compare");
+  it("pickRecommendedFeature — isNew 없이 방문횟수가 가장 적은 항목(동률은 카탈로그 순서)을 추천", () => {
+    expect(pickRecommendedFeature()?.id).toBe(APP_FEATURES[0].id);
+    recordVisit("tax"); // tax-simulator 방문 → 다음 카탈로그 항목으로
+    expect(pickRecommendedFeature()?.id).not.toBe("tax-simulator");
+    expect(APP_FEATURES.some((f) => "isNew" in f)).toBe(false);
   });
 
   it("pickRecommendedFeature — 신규 기능 dismiss 후엔 방문횟수 오름차순(0회 우선)으로 추천", () => {

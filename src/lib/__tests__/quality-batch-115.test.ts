@@ -12,11 +12,6 @@ const h = vi.hoisted(() => ({
   refreshOpts: [] as unknown[],
 }));
 
-vi.mock("@/app/(main)/_components/layout/onboarding/notice", () => ({ NOTICE_ID: "n1" }));
-vi.mock("../local-storage", async (orig) => ({
-  ...(await orig<typeof import("../local-storage")>()),
-  readNoticeSeenId: () => "n1",
-}));
 // 실제 구현처럼 keepShown이면 '오늘 노출' 검사를 건너뛴다: shownToday=true 상황을 모사
 vi.mock("../asset/backup-status", () => ({
   shouldShowBackupNudge: (o: { keepShown?: boolean }) => { h.backupOpts.push(o); return h.backup && (o.keepShown === true); },

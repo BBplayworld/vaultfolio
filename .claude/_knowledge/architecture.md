@@ -50,7 +50,7 @@ src/
 │   │       ├── layout/               # 라우팅·공용 UI
 │   │       │   ├── navigation/       # navigation-context, asset-page-tabs, asset-dispatch
 │   │       │   ├── floating/         # floating-add-button, scroll-to-top
-│   │       │   ├── onboarding/       # welcome-guide, notice, notice-dialog
+│   │       │   ├── onboarding/       # welcome-guide
 │   │       │   └── ui/               # inline-selector, kpi-card, info-hint, prompt-preview-dialog
 │   │       ├── header-menu/          # (구 top-nav/header) top-bar, tool-menu, settings-page, app-guide
 │   │       │   └── share/            # share-card, share-menu
