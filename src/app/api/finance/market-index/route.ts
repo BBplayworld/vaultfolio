@@ -11,7 +11,7 @@ import { badRequest, cdnCacheHeaders, guardRateLimit, guardRequest, isOneOf, sec
 
 export const maxDuration = 20;
 
-const PERIODS = ["daily", "weekly", "monthly"] as const;
+const PERIODS = ["daily", "weekly", "monthly", "ytd"] as const;
 const BASES = ["sameBusinessDay", "kstAccessDay"] as const;
 
 // KIS 해외지수 마스터 코드(S&P 500)
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const period = searchParams.get("period");
   const basis = searchParams.get("basis");
-  // 1년·임의 값은 400 — 기간 3종 × 종가 기준 2종만 허용
+  // 1년·임의 값은 400 — 기간 4종(하루·1주·1개월·올해) × 종가 기준 2종만 허용
   if (!isOneOf(period, PERIODS) || !isOneOf(basis, BASES)) return badRequest();
 
   const { kr, us } = resolveRefDates(period, basis);

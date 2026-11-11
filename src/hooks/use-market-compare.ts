@@ -57,7 +57,7 @@ export async function fetchMarketIndex(period: ComparePeriod, basis: ProfitBasis
   }
 }
 
-// 기간별 지수 기준가. 1주·1개월은 끝 종가가 일별 ref라 하루도 함께 받는다. 필요 없는 기간은 조회하지 않는다
+// 기간별 지수 기준가. 1주·1개월·올해는 끝 종가가 일별 ref라 하루도 함께 받는다. 필요 없는 기간은 조회하지 않는다
 export function useMarketIndexRefs(
   basis: ProfitBasis,
   enabled: boolean,
@@ -73,6 +73,6 @@ export function useMarketIndexRefs(
       enabled: enabled && (period === "daily" || periods.includes(period)),
     })),
   });
-  const [daily, weekly, monthly] = queries.map((q) => q.data);
-  return useMemo(() => ({ daily, weekly, monthly }), [daily, weekly, monthly]);
+  const [daily, weekly, monthly, ytd] = queries.map((q) => q.data);
+  return useMemo(() => ({ daily, weekly, monthly, ytd }), [daily, weekly, monthly, ytd]);
 }

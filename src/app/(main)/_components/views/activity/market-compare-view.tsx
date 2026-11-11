@@ -1,6 +1,6 @@
 "use client";
 
-// 성과 › 자산 변화 › 시장과 비교(#132) — 지금 보유한 종목의 하루·1주·1개월 가격 등락을 코스피·S&P 500 옆에 둔다.
+// 성과 › 자산 변화 › 시장과 비교(#132) — 지금 보유한 종목의 하루·1주·1개월·올해 가격 등락을 코스피·S&P 500 옆에 둔다.
 // 계산은 market-compare.ts(순수 함수), 종목 기준가는 기존 fetchProfitRef 캐시(같은 티커 목록·같은 종가 기준 → 자산 변화와 같은 키),
 // 지수는 /api/finance/market-index(기간·종가 기준만 보냄)를 react-query 메모리에만 둔다. 저장 호출·새 저장 키 0, 금액 표시 0.
 
@@ -42,7 +42,9 @@ import { getMultiplier } from "../detail/asset-detail-tabs";
 const HAIRLINE = "border-border dark:border-border/40";
 const SKELETON = "inline-block h-4 rounded bg-muted motion-safe:animate-pulse";
 const LIST_PERIODS = COMPARE_PERIODS.map((p) => ({ value: p, label: COMPARE_PERIOD_LABEL[p], testId: `market-list-period-${p}` }));
-const TO_CHANGE_PERIOD: Record<ComparePeriod, ChangePeriod> = { daily: "day", weekly: "week", monthly: "month" };
+// 올해는 자산 변화 연(최근 1년)과 기간이 달라 금액 링크를 두지 않는다
+const TO_CHANGE_PERIOD: Record<Exclude<ComparePeriod, "ytd">, ChangePeriod> = { daily: "day", weekly: "week", monthly: "month" };
+const YTD_PENDING = "— 올해 첫 종가가 나오면 보여드려요";
 const BLOCK_HEAD: Record<CompareMarket, string> = { kr: "코스피와 비교한 국내 주식", us: "S&P 500과 비교한 미국 주식" };
 const GROUP_LABEL: Record<CompareMarket, string> = { kr: "국내", us: "미국 (달러)" };
 // `자산·채권·금리형` 가운뎃점 양옆 U+2060(WORD JOINER), `S&P 500`은 U+00A0 — 320에서 줄이 `·금리형`으로 시작하지 않게(ui.md r2)
@@ -56,6 +58,8 @@ const BASIS_DETAILS = [
   "국내는 주식과 국내 주식형 ETF만 코스피와 비교해요.",
   "코스닥 종목도 코스피와 비교해요.",
   "자산 변화의 국내에는 해외형 ETF가 들어 있어 값이 달라요.",
+  "올해는 작년 마지막 거래일 종가부터예요. 올해 산 종목도 1월부터 들고 있던 것으로 계산해요.",
+  "자산 변화의 연은 최근 1년 기준이라 올해 값과 달라요.",
 ];
 const KIS_UNAVAILABLE = "점검 중 · 외부 증권 API 점검으로 정보를 불러올 수 없어요";
 // 기준가 키가 빠졌으면(요청 한도 등) 60초 뒤 최대 2회 다시 부른다 — 그동안은 조회 중(제외로 세지 않음, A8)
@@ -65,7 +69,7 @@ const MAX_RETRY = 2;
 // 등락 색: 표시 반올림 0이면 부호 없이 muted, 그 밖은 손익색
 const rateTone = (rate: number) => (rateTenths(rate) === 0 ? "text-muted-foreground" : getProfitLossColor(rate));
 
-// 종목 기준가 — 기간을 순차로(하루→1주→1개월) 기존 fetchProfitRef로 받는다. 키 없음 = 조회 중
+// 종목 기준가 — 기간을 순차로(하루→1주→1개월→올해) 기존 fetchProfitRef로 받는다. 키 없음 = 조회 중
 function useStockRefs(tickerList: string, basis: ProfitBasis, enabled: boolean, resetVersion: number, dailyToken: string) {
   const [state, setState] = useState<{ key: string; refs: PeriodRefs; kisUnavailable: boolean }>({ key: "", refs: {}, kisUnavailable: false });
   const [attempt, setAttempt] = useState(0);
@@ -199,20 +203,22 @@ export function MarketCompareView() {
         <section data-testid="market-list" className={SECTION}>
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm sm:text-base font-bold text-foreground">종목별</h3>
-            <InlineSelector fullWidth value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[168px] shrink-0" />
+            <InlineSelector fullWidth value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
           </div>
           <div key={listPeriod} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
             <MarketList blocks={blocks} classified={classified} period={listPeriod} stockRefs={stockRefs} />
           </div>
-          <button
-            type="button"
-            data-testid="market-to-change"
-            onClick={() => navigate({ type: "activity", tab: "change", init: { scope: "stock", period: TO_CHANGE_PERIOD[listPeriod] } })}
-            className={`-mb-2 flex w-full min-h-10 items-center justify-between border-t ${HAIRLINE} pt-1 text-left text-sm text-muted-foreground rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
-          >
-            <span className="break-keep">금액은 <span className="font-medium text-foreground">자산 변화 › 주식</span>에서</span>
-            <ChevronRight aria-hidden className="size-4 shrink-0" />
-          </button>
+          {listPeriod !== "ytd" && (
+            <button
+              type="button"
+              data-testid="market-to-change"
+              onClick={() => navigate({ type: "activity", tab: "change", init: { scope: "stock", period: TO_CHANGE_PERIOD[listPeriod] } })}
+              className={`-mb-2 flex w-full min-h-10 items-center justify-between border-t ${HAIRLINE} pt-1 text-left text-sm text-muted-foreground rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
+            >
+              <span className="break-keep">금액은 <span className="font-medium text-foreground">자산 변화 › 주식</span>에서</span>
+              <ChevronRight aria-hidden className="size-4 shrink-0" />
+            </button>
+          )}
         </section>
       )}
 
@@ -255,6 +261,7 @@ export function MarketBlock({ market, block, count, loadingNote = true }: { mark
   const head = !market ? "시장과 비교" : loading ? BLOCK_HEAD[market] : `${BLOCK_HEAD[market]} ${count}종목${market === "us" ? " (달러)" : ""}`;
   const anyFailed = !loading && cells!.some((c) => c.state === "ok" && c.indexState === "failed");
   const anyMismatch = !loading && cells!.some((c) => c.state === "ok" && c.indexState === "dateMismatch");
+  const ytdPending = !loading && block?.periods.ytd.state === "pending";
 
   return (
     <div data-testid="market-block" data-market={market ?? undefined} className="space-y-3">
@@ -267,74 +274,60 @@ export function MarketBlock({ market, block, count, loadingNote = true }: { mark
       <div
         role="table"
         aria-label={head}
-        className="grid grid-cols-[minmax(3.75rem,1fr)_repeat(3,minmax(0,5rem))] sm:max-w-md sm:grid-cols-[minmax(5rem,1fr)_repeat(3,5.5rem)] items-baseline gap-x-1.5 gap-y-2"
+        className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-baseline gap-x-1 gap-y-3 min-[375px]:gap-x-1.5 sm:max-w-md"
       >
         <div role="row" className="contents">
           <span role="columnheader" aria-label="구분" />
-          {COMPARE_PERIODS.map((p, i) => (
-            <span key={p} role="columnheader" className="text-right text-sm text-muted-foreground">
-              {COMPARE_PERIOD_LABEL[p]}
-              <ColumnRange cell={loading ? null : cells![i]} />
-            </span>
-          ))}
-        </div>
-        <div role="row" className="contents">
-          <span role="rowheader" className="text-sm font-semibold text-foreground">보유 종목</span>
-          {COMPARE_PERIODS.map((p, i) => (
-            <ValueCell key={p} loading={loading} width="w-12">
-              {(() => {
-                const c = cells?.[i];
-                if (!c || c.state !== "ok" || c.holdingsRate === null) return <Dash />;
-                return <span className={`text-base font-bold tabular-nums ${rateTone(c.holdingsRate)}`}>{formatCompareRate(c.holdingsRate)}</span>;
-              })()}
-            </ValueCell>
-          ))}
-        </div>
-        <div role="row" className="contents">
-          <span role="rowheader" className="text-sm text-muted-foreground">{indexName}</span>
-          {COMPARE_PERIODS.map((p, i) => (
-            <ValueCell key={p} loading={loading} width="w-10">
-              {(() => {
-                const c = cells?.[i];
-                if (!c || c.state !== "ok" || c.indexState !== "ok" || c.indexRate === null) return <Dash />;
-                return <span className={`text-sm font-medium tabular-nums ${rateTone(c.indexRate)}`}>{formatCompareRate(c.indexRate)}</span>;
-              })()}
-            </ValueCell>
-          ))}
+          <span role="columnheader" className="text-right text-sm text-muted-foreground">보유 종목</span>
+          <span role="columnheader" className="text-right text-sm text-muted-foreground">{indexName}</span>
+          <span role="columnheader" className="text-right text-sm text-muted-foreground">차이</span>
         </div>
         <div role="none" className="col-span-4 h-px bg-border dark:bg-border/40" />
-        <div role="row" className="contents">
-          <span role="rowheader" className="text-sm text-muted-foreground">차이</span>
-          {COMPARE_PERIODS.map((p, i) => (
-            <ValueCell key={p} loading={loading} width="w-12">
-              {(() => {
-                const c = cells?.[i];
-                if (!c || c.diffTenths === null) return <Dash />;
-                return <span className="text-sm font-semibold text-foreground tabular-nums">{formatCompareDiff(c.diffTenths)}</span>;
-              })()}
-            </ValueCell>
-          ))}
-        </div>
+        {COMPARE_PERIODS.map((p, i) => {
+          const c = loading ? null : cells![i];
+          const holdingsOk = c && c.state === "ok" && c.holdingsRate !== null;
+          const indexOk = c && c.state === "ok" && c.indexState === "ok" && c.indexRate !== null;
+          return (
+            <div key={p} role="row" data-period={p} className="contents">
+              <div role="rowheader">
+                <span className="text-sm font-semibold text-foreground">{COMPARE_PERIOD_LABEL[p]}</span>
+                <RowRange cell={c} period={p} />
+              </div>
+              <ValueCell loading={loading} width="w-12">
+                {holdingsOk ? <span className={`text-base font-bold tabular-nums max-[359px]:text-sm ${rateTone(c.holdingsRate!)}`}>{formatCompareRate(c.holdingsRate!)}</span> : <Dash />}
+              </ValueCell>
+              <ValueCell loading={loading} width="w-10">
+                {indexOk ? <span className={`text-sm font-medium tabular-nums ${rateTone(c.indexRate!)}`}>{formatCompareRate(c.indexRate!)}</span> : <Dash />}
+              </ValueCell>
+              <ValueCell loading={loading} width="w-12">
+                {c && c.diffTenths !== null ? <span className="text-sm font-semibold text-foreground tabular-nums">{formatCompareDiff(c.diffTenths)}</span> : <Dash />}
+              </ValueCell>
+            </div>
+          );
+        })}
       </div>
       {loading ? (
         loadingNote && <p data-testid="market-loading" className="text-sm text-muted-foreground">기준가 조회 중…</p>
-      ) : (anyFailed || anyMismatch) && (
+      ) : (anyFailed || anyMismatch || ytdPending) && (
         <div className="space-y-0.5">
           {anyFailed && <p className="text-sm text-muted-foreground text-pretty break-keep">시장 값을 불러오지 못했어요</p>}
           {anyMismatch && <p className="text-sm text-muted-foreground text-pretty break-keep">— 기준일이 달라 비교하지 않았어요</p>}
+          {ytdPending && <p data-testid="market-ytd-pending" className="text-sm text-muted-foreground text-pretty break-keep">{YTD_PENDING}</p>}
         </div>
       )}
     </div>
   );
 }
 
-// 열 머리 아래 기준 종가 구간 — 375 미만은 `11/3→` / `11/10` 두 줄 고정, 375 이상 한 줄. 자리는 상태와 무관하게 같은 높이로 잡는다
-function ColumnRange({ cell }: { cell: PeriodCell | null }) {
-  const r = cell ? cellRange(cell) : null;
-  const cls = "block whitespace-nowrap text-[11px] leading-4 tabular-nums";
+// 행 머리 아래 기준 종가 구간 — 375 미만은 `11/3→` / `11/10` 두 줄 고정, 375 이상 한 줄. 자리는 상태와 무관하게 같은 높이로 잡는다.
+// 올해는 `25.12.30→26.11.10`(연도 포함), 연초 휴장이면 `집계 전`
+function RowRange({ cell, period }: { cell: PeriodCell | null; period: ComparePeriod }) {
+  const r = cell ? cellRange(cell, period) : null;
+  const cls = "block whitespace-nowrap text-[11px] leading-4 text-muted-foreground tabular-nums";
   if (r?.kind === "holiday") return <span className={cls}>휴장<span className="max-[374px]:block">&nbsp;</span></span>;
+  if (r?.kind === "pending") return <span className={cls}>집계 전<span className="max-[374px]:block">&nbsp;</span></span>;
   if (r?.kind === "range") return <span className={cls}>{r.parts[0]}<span className="max-[374px]:block">{r.parts[1]}</span></span>;
-  return <span aria-hidden className={`${cls} invisible`}>0/0→<span className="max-[374px]:block">0/0</span></span>;
+  return <span aria-hidden className={`${cls} invisible`}>00.0.0→<span className="max-[374px]:block">00.0.0</span></span>;
 }
 
 function ValueCell({ loading, width, children }: { loading: boolean; width: string; children: ReactNode }) {
@@ -407,11 +400,11 @@ export function MarketList({ blocks, classified, period, stockRefs }: {
   for (const b of blocks) {
     const cell = b.periods[period];
     if (cell.rows.length === 0) continue;
-    const r = cellRange(cell);
+    const r = cellRange(cell, period);
     groups.push({
       key: b.market,
       label: GROUP_LABEL[b.market],
-      range: r?.kind === "holiday" ? "휴장" : r?.kind === "range" ? r.parts.join("") : null,
+      range: r?.kind === "holiday" ? "휴장" : r?.kind === "pending" ? "집계 전" : r?.kind === "range" ? r.parts.join("") : null,
       rows: cell.rows,
     });
   }

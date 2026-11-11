@@ -9,8 +9,8 @@ import { isKrBusinessDay } from "@/lib/finance/kr-holidays";
 import { isUsBusinessDay } from "@/lib/finance/us-holidays";
 
 export type CompareMarket = "kr" | "us";
-export type ComparePeriod = "daily" | "weekly" | "monthly";
-export const COMPARE_PERIODS: readonly ComparePeriod[] = ["daily", "weekly", "monthly"];
+export type ComparePeriod = "daily" | "weekly" | "monthly" | "ytd";
+export const COMPARE_PERIODS: readonly ComparePeriod[] = ["daily", "weekly", "monthly", "ytd"];
 
 export const MARKET_INDEX_NAME: Readonly<Record<CompareMarket, string>> = { kr: "코스피", us: "S&P 500" };
 export const MARKET_INDEX_KEY: Readonly<Record<CompareMarket, keyof MarketIndexResponse>> = { kr: "KOSPI", us: "SPX" };
@@ -129,6 +129,7 @@ export interface PeriodRefs<T extends RefMap = RefMap> {
   daily?: T;
   weekly?: T;
   monthly?: T;
+  ytd?: T;
 }
 
 type Span =
@@ -136,7 +137,7 @@ type Span =
   | { kind: "noRef" }
   | { kind: "ok"; start: number; end: number; startDate: string; endDate: string };
 
-// 하루 = 일별 prev → ref, 1주·1개월 = 그 기간 ref → 일별 ref(기존 Hero와 같은 끝 종가)
+// 하루 = 일별 prev → ref, 1주·1개월·올해 = 그 기간 ref → 일별 ref(기존 Hero와 같은 끝 종가)
 function spanOf(key: string, period: ComparePeriod, refs: PeriodRefs): Span {
   const daily = refs.daily;
   if (!daily || !(key in daily)) return { kind: "loading" };
@@ -183,8 +184,9 @@ export interface CompareRow {
 }
 
 export interface PeriodCell {
-  // loading: 종목 또는 지수 응답 대기(부분 합 숫자 금지, A8) / holiday: 하루 구간이 그 시장 휴장 / empty: 합산할 종목 0 / ok
-  state: "loading" | "holiday" | "empty" | "ok";
+  // loading: 종목 또는 지수 응답 대기(부분 합 숫자 금지, A8) / holiday: 하루 구간이 그 시장 휴장
+  // / pending: 올해 연초 휴장(끝 종가일이 새 해 첫 종가 전, #150) / empty: 합산할 종목 0 / ok
+  state: "loading" | "holiday" | "pending" | "empty" | "ok";
   startDate: string | null;
   endDate: string | null;
   holdingsRate: number | null;
@@ -257,6 +259,14 @@ export function computePeriodCell(
   // 하루 구간이 그 시장 휴장(끝 종가일이 비영업일 = 휴장 명목일, 또는 시작·끝이 같은 날) → 0.0% 대신 휴장
   if (period === "daily" && (!isBusinessDay(market, endDate) || startDate === endDate)) {
     cell.state = "holiday";
+    cell.indexState = idx.state === "ok" ? "ok" : "failed";
+    cell.rows = included.map(({ h }) => ({ kind: "stock", ticker: h.ticker, name: h.name, rate: null }));
+    return cell;
+  }
+
+  // 올해 연초 휴장 — 시작일은 항상 작년 12월이라, 끝 종가일이 같은 해(작년)면 올해 첫 종가 전. 0.0% 대신 집계 전(#150)
+  if (period === "ytd" && startDate.slice(0, 4) === endDate.slice(0, 4)) {
+    cell.state = "pending";
     cell.indexState = idx.state === "ok" ? "ok" : "failed";
     cell.rows = included.map(({ h }) => ({ kind: "stock", ticker: h.ticker, name: h.name, rate: null }));
     return cell;
@@ -347,20 +357,24 @@ export function compareTickers(classified: ClassifiedHoldings): string[] {
 
 // ── 화면 표기(U4) ────────────────────────────────────────────────
 
-export const COMPARE_PERIOD_LABEL: Readonly<Record<ComparePeriod, string>> = { daily: "하루", weekly: "1주", monthly: "1개월" };
+export const COMPARE_PERIOD_LABEL: Readonly<Record<ComparePeriod, string>> = { daily: "하루", weekly: "1주", monthly: "1개월", ytd: "올해" };
 
 const monthDay = (ymd: string) => `${Number(ymd.slice(5, 7))}/${Number(ymd.slice(8, 10))}`;
 
 // 기준 종가 구간 `M/D→M/D` — 표 열 머리와 목록 묶음 머리가 같은 함수·같은 날짜쌍을 쓴다(cto 판정 2 ①-1).
-// [시작+화살표, 끝]으로 나눠 돌려준다(375 미만 열 머리는 두 줄 고정). 1개월 이하라 연도는 붙이지 않는다
-export function refRangeParts(startDate: string, endDate: string): [string, string] {
-  return [`${monthDay(startDate)}→`, monthDay(endDate)];
+// [시작+화살표, 끝]으로 나눠 돌려준다(375 미만 열 머리는 두 줄 고정). 하루~1개월은 연도를 붙이지 않는다
+// 올해(withYear)는 해가 달라 `25.12.30→26.11.10`(formatRefRange 규칙, 공백 없는 화살표)
+const yearMonthDay = (ymd: string) => `${ymd.slice(2, 4)}.${monthDay(ymd).replace("/", ".")}`;
+export function refRangeParts(startDate: string, endDate: string, withYear = false): [string, string] {
+  return withYear ? [`${yearMonthDay(startDate)}→`, yearMonthDay(endDate)] : [`${monthDay(startDate)}→`, monthDay(endDate)];
 }
 
 // 칸 하나의 구간 표기 — 휴장이면 '휴장', 합산 기준쌍이 있으면 그 쌍(지수만 날짜가 달라도 종목 기준쌍), 그 밖(조회 중·합산 0)은 없음
-export function cellRange(cell: PeriodCell): { kind: "holiday" } | { kind: "range"; parts: [string, string] } | null {
+// 올해 연초 휴장(pending)이면 '집계 전'
+export function cellRange(cell: PeriodCell, period?: ComparePeriod): { kind: "holiday" | "pending" } | { kind: "range"; parts: [string, string] } | null {
   if (cell.state === "holiday") return { kind: "holiday" };
-  if (cell.state === "ok" && cell.startDate && cell.endDate) return { kind: "range", parts: refRangeParts(cell.startDate, cell.endDate) };
+  if (cell.state === "pending") return { kind: "pending" };
+  if (cell.state === "ok" && cell.startDate && cell.endDate) return { kind: "range", parts: refRangeParts(cell.startDate, cell.endDate, period === "ytd") };
   return null;
 }
 

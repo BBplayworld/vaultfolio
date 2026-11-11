@@ -17,11 +17,11 @@ import { badRequest, cdnCacheHeaders, guardRateLimit, guardRequest, isOneOf, par
 
 export const maxDuration = 20;
 
-const PERIODS = ["daily", "weekly", "monthly", "yearly"] as const;
+const PERIODS = ["daily", "weekly", "monthly", "yearly", "ytd"] as const;
 // 클라이언트 배치는 3개(profit-utils PROFIT_BATCH_SIZE) — 여유를 두되 fan-out 상한
 const MAX_TICKERS = 10;
 
-export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
+export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly" | "ytd";
 
 export interface ProfitRefEntry {
   refPrice: number;
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = req.nextUrl;
   const periodRaw = searchParams.get("period") ?? "daily";
-  // 임의 period가 yearly 경로로 흘러 1년 TTL 쓰레기 키를 만들던 문제 차단 — 4종만 허용
+  // 임의 period가 yearly 경로로 흘러 1년 TTL 쓰레기 키를 만들던 문제 차단 — 5종만 허용
   if (!isOneOf(periodRaw, PERIODS)) return badRequest();
   const period: ProfitPeriod = periodRaw;
   // 종가 기준 옵션 (기본 kstAccessDay = 현행 동작)
@@ -91,20 +91,23 @@ export async function GET(req: NextRequest) {
   };
 
   // 요청일 → 응답일 색인 lookup → 응답일로 가격 조회 (둘 중 하나라도 miss면 KIS 호출)
+  // 미국 ytd만 수정주가(MODP=1)라 기준가 캐시 키를 분리한다(#150). 국내는 원래 수정주가라 그대로
+  const isAdj = (market: "domestic" | "foreign") => period === "ytd" && market === "foreign";
   const lookupCached = async (
     ticker: string,
     requestDate: string,
+    market: "domestic" | "foreign",
   ): Promise<{ price: number; actualDate: string } | null> => {
     const actualDate = await cache.getRefDateForRequest(ticker, requestDate, period);
     if (!actualDate) return null;
-    const price = await cache.getRefPrice(ticker, actualDate);
+    const price = await cache.getRefPrice(ticker, actualDate, isAdj(market));
     if (price === null) return null;
     return { price, actualDate };
   };
 
   await Promise.all([
     ...allKr.map(async (ticker) => {
-      const refHit = await lookupCached(ticker, krDates.refDate);
+      const refHit = await lookupCached(ticker, krDates.refDate, "domestic");
       if (refHit) {
         const e = ensureEntry(ticker);
         e.refPrice = refHit.price;
@@ -113,7 +116,7 @@ export async function GET(req: NextRequest) {
         fetchQueue.push({ ticker, date: krDates.refDate, kind: "ref", market: "domestic" });
       }
       if (krDates.prevDate) {
-        const prevHit = await lookupCached(ticker, krDates.prevDate);
+        const prevHit = await lookupCached(ticker, krDates.prevDate, "domestic");
         if (prevHit) {
           const e = ensureEntry(ticker);
           e.prevPrice = prevHit.price;
@@ -124,7 +127,7 @@ export async function GET(req: NextRequest) {
       }
     }),
     ...allUs.map(async (ticker) => {
-      const refHit = await lookupCached(ticker, usDates.refDate);
+      const refHit = await lookupCached(ticker, usDates.refDate, "foreign");
       if (refHit) {
         const e = ensureEntry(ticker);
         e.refPrice = refHit.price;
@@ -133,7 +136,7 @@ export async function GET(req: NextRequest) {
         fetchQueue.push({ ticker, date: usDates.refDate, kind: "ref", market: "foreign" });
       }
       if (usDates.prevDate) {
-        const prevHit = await lookupCached(ticker, usDates.prevDate);
+        const prevHit = await lookupCached(ticker, usDates.prevDate, "foreign");
         if (prevHit) {
           const e = ensureEntry(ticker);
           e.prevPrice = prevHit.price;
@@ -175,7 +178,7 @@ export async function GET(req: NextRequest) {
       for (const date of [n.closeDate, n.baseDate]) {
         const k = `${n.ticker}|${date}`;
         if (prices.has(k)) continue;
-        const hit = await lookupCached(n.ticker, date);
+        const hit = await lookupCached(n.ticker, date, n.market);
         if (hit) prices.set(k, hit.actualDate === date ? hit.price : null);
         else {
           prices.set(k, null);
@@ -210,9 +213,9 @@ export async function GET(req: NextRequest) {
       const isDomestic = m.market === "domestic";
       const res = isDomestic
         ? await fetchDomesticHistoricalPrice(m.ticker, m.date, token, appKey, appSecret)
-        : await fetchOverseasHistoricalPrice(m.ticker, m.date, token, appKey, appSecret, excd.get(m.ticker));
+        : await fetchOverseasHistoricalPrice(m.ticker, m.date, token, appKey, appSecret, excd.get(m.ticker), isAdj("foreign"));
       if (!res) { out.set(`${m.ticker}|${m.date}`, null); return; }
-      await cache.setRefPrice(m.ticker, res.date, res.price, period);
+      await cache.setRefPrice(m.ticker, res.date, res.price, period, isAdj(m.market));
       const reqIsBusinessDay = (isDomestic ? isKrBusinessDay : isUsBusinessDay)(new Date(`${m.date}T00:00:00.000Z`));
       if (res.date === m.date || !reqIsBusinessDay) await cache.setRefDateForRequest(m.ticker, m.date, res.date, period);
       out.set(`${m.ticker}|${m.date}`, res.date === m.date ? res.price : null);
@@ -295,10 +298,10 @@ export async function GET(req: NextRequest) {
       const isDomestic = task.market === "domestic";
       const res = isDomestic
         ? await fetchDomesticHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret)
-        : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker));
+        : await fetchOverseasHistoricalPrice(task.ticker, task.date, accessToken!, appKey, appSecret, excdByTicker.get(task.ticker), isAdj("foreign"));
       if (res !== null) {
         successCount++;
-        await cache.setRefPrice(task.ticker, res.date, res.price, period);
+        await cache.setRefPrice(task.ticker, res.date, res.price, period, isAdj(task.market));
         // 응답일==요청일이거나, 요청일이 비영업일(휴장/주말)이라 직전 영업일로 폴백된 경우 매핑 저장
         // - 비영업일 폴백은 영구 확정값이라 안전 (휴장일 동안 매번 KIS 재호출되던 churn 제거)
         // - 영업일인데 응답일이 더 이른 경우(장중 미확정)는 stale 매핑 영구 hit 방지를 위해 저장 안 함

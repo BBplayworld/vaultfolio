@@ -96,6 +96,22 @@ describe("market-index 매개변수(A22)", () => {
   });
 });
 
+describe("market-index 올해(ytd, #150)", () => {
+  it("period=ytd 허용 — 지수에는 날짜 구간만 넘기고(작년 12/21~12/31) 코드·금액 없음", async () => {
+    const res = await GET(req("?period=ytd&basis=sameBusinessDay"));
+    expect(res.status).toBe(200);
+    expect(fetchKospi.mock.calls[0].slice(0, 2)).toEqual(["2025-12-21", "2025-12-31"]);
+    expect(fetchOverseas.mock.calls[0].slice(0, 3)).toEqual(["SPX", "2025-12-21", "2025-12-31"]);
+  });
+  it("시작 종가는 (Y-1)-12-31 이하 최근 종가(국내 12/30 휴장 롤백 5일 범위)", async () => {
+    fetchKospi.mockResolvedValue([{ date: "2025-12-29", price: 4000 }, { date: "2025-12-30", price: 4100 }]);
+    fetchOverseas.mockResolvedValue([{ date: "2025-12-30", price: 7000 }, { date: "2025-12-31", price: 7100 }]);
+    const body = await (await GET(req("?period=ytd&basis=sameBusinessDay"))).json();
+    expect(body.KOSPI).toEqual({ refPrice: 4100, refDate: "2025-12-30" });
+    expect(body.SPX).toEqual({ refPrice: 7100, refDate: "2025-12-31" });
+  });
+});
+
 describe("market-index 응답", () => {
   it("화 20:00 sameBusinessDay 주간: 두 지수 모두 같은 날짜 규칙(미국 영업일 5일 전)", async () => {
     const res = await GET(req("?period=weekly&basis=sameBusinessDay"));

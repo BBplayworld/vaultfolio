@@ -15,7 +15,9 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod } from "@/lib/finance/profit-utils";
+import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod as AnyProfitPeriod } from "@/lib/finance/profit-utils";
+// ytd는 시장과 비교 전용 기간이라 자산 변화 기간 선택·라벨에는 없다(#150)
+type ProfitPeriod = Exclude<AnyProfitPeriod, "ytd">;
 import { beginLatestFetch, createFetchSlot, resetFetchSlot, type FetchSlot } from "@/lib/finance/profit-fetch-gate";
 import { isKrHoliday } from "@/lib/finance/kr-holidays";
 import { isUsHoliday } from "@/lib/finance/us-holidays";

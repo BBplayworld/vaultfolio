@@ -28,7 +28,7 @@ const IDX: PeriodRefs<MarketIndexResponse> = {
   weekly: { KOSPI: { refPrice: 99.8, refDate: "2026-11-03" }, SPX: { refPrice: 7569, refDate: "2026-11-03" } },
 };
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
-const render = (variant: "stock" | "hero", period: "daily" | "weekly" = "weekly", visible = true) =>
+const render = (variant: "stock" | "hero", period: "daily" | "weekly" | "ytd" = "weekly", visible = true) =>
   renderToStaticMarkup(<MarketEntryLine variant={variant} period={period} visible={visible} testId="w" onOpen={() => {}} />);
 
 beforeEach(() => {
@@ -53,6 +53,15 @@ describe("MarketEntryLine", () => {
     const year = render("hero", "weekly", false);
     expect(year).toContain("grid-rows-[0fr]");
     expect(year).toContain("inert");
+  });
+
+  it("연 탭(ytd): 값 없이 `올해 시장과 비교` 링크만, data-period=ytd, 지수 값·% 0(#150)", () => {
+    const html = render("hero", "ytd");
+    expect(text(html)).toBe("올해 시장과 비교");
+    expect(html).toContain('data-period="ytd"');
+    expect(html).toContain("grid-rows-[1fr]");
+    expect(html).not.toContain("opacity-0");
+    expect(html).not.toContain("inert");
   });
 
   it("비교할 시장의 값만: 미국 종목만이면 S&P 500만", () => {

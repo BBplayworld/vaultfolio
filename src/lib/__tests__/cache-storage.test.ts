@@ -117,3 +117,17 @@ describe("FileCacheStorage 카운터·락", () => {
     expect(await s.acquireLock(k, 10)).toBeTruthy();
   });
 });
+
+// #150 ytd 기준가 서버 TTL = 다음 자정(분할 뒤 stale 방지), yearly는 내년 1/1 그대로
+import { secondsUntilNextRefBoundary } from "../cache-storage";
+import { vi } from "vitest";
+describe("secondsUntilNextRefBoundary ytd", () => {
+  afterEach(() => { vi.useRealTimers(); });
+  it("ytd = daily = 다음 KST 자정, yearly는 훨씬 김", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-11T12:00:00+09:00"));
+    expect(secondsUntilNextRefBoundary("ytd")).toBe(12 * 3600);
+    expect(secondsUntilNextRefBoundary("ytd")).toBe(secondsUntilNextRefBoundary("daily"));
+    expect(secondsUntilNextRefBoundary("yearly")).toBeGreaterThan(30 * 24 * 3600);
+  });
+});

@@ -169,3 +169,44 @@ describe("resolveRefDates — 대표 시각 고정값(F8)", () => {
     expect(us.refHoliday).toBe(false);
   });
 });
+
+// #150 올해(ytd) 기준일 — 작년 마지막 거래일 종가의 명목일 (Y-1)-12-31(컷오프 shift 없음)
+describe("ytd 기준일", () => {
+  afterEach(() => { vi.useRealTimers(); });
+  const at = (iso: string) => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(`${iso}+09:00`)); };
+
+  it.each([
+    ["2026-11-11T12:00:00", "2025-12-31"],
+    ["2027-01-01T00:30:00", "2026-12-31"],
+    ["2027-01-04T15:00:00", "2026-12-31"],
+    ["2027-01-04T16:30:00", "2026-12-31"],
+    ["2027-12-31T23:59:00", "2026-12-31"],
+    ["2029-01-02T12:00:00", "2028-12-31"],
+  ])("%s → 명목 시작일 %s(국내·미국 같음, 휴장 아님)", (iso, expected) => {
+    at(iso);
+    for (const basis of ["sameBusinessDay", "kstAccessDay"] as const) {
+      const { kr, us } = resolveRefDates("ytd", basis);
+      expect(kr.refDate).toBe(expected);
+      expect(us.refDate).toBe(expected);
+      expect(kr.prevDate).toBeUndefined();
+      expect(kr.refHoliday).toBe(false);
+      expect(us.refHoliday).toBe(false);
+    }
+  });
+
+  it("2029-01-02 기준 실제 종가일: 국내 2028-12-28(12/29 연말 휴장·12/30~31 주말), 미국 2028-12-29", () => {
+    // 명목일 2028-12-31(일)에서 영업일 이하 최근 종가로 롤백한 날 — 규칙(이하 최근 종가)의 고정값
+    const rollback = (isBiz: (d: Date) => boolean) => {
+      const d = new Date("2028-12-31T00:00:00.000Z");
+      while (!isBiz(d)) d.setUTCDate(d.getUTCDate() - 1);
+      return d.toISOString().slice(0, 10);
+    };
+    expect(rollback(isKrBusinessDay)).toBe("2028-12-28");
+    expect(rollback(isUsBusinessDay)).toBe("2028-12-29");
+  });
+
+  it("기존 기간 출력 불변(yearly=1년 전)", () => {
+    at("2026-11-11T12:00:00");
+    expect(resolveRefDates("yearly", "sameBusinessDay").us.refDate).toBe("2025-11-11");
+  });
+});

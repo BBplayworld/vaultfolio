@@ -783,6 +783,8 @@ export async function fetchOverseasHistoricalPrice(
   appKey: string,
   appSecret: string,
   preferredExcd?: string,
+  // true면 수정주가(MODP=1) — 올해(ytd) 시작 종가가 연중 액면분할에 틀어지지 않게(#150). 기본은 미반영
+  adjusted = false,
 ): Promise<HistoricalPriceResult | null> {
   const targetDate = dateStr.replace(/-/g, ""); // YYYYMMDD
   // 캐시된 EXCD가 있으면 그것만 시도, 없으면 NAS/NYS/AMS 순차 fallback
@@ -791,7 +793,7 @@ export async function fetchOverseasHistoricalPrice(
     try {
       // NCNT=5로 최대 5개 row 조회 → xymd 날짜 일치하는 row 탐색 (휴장일 처리)
       const res = await fetchWithTimeout(
-        `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(ticker)}&GUBN=0&MODP=0&BYMD=${targetDate}&NCNT=5`,
+        `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(ticker)}&GUBN=0&MODP=${adjusted ? 1 : 0}&BYMD=${targetDate}&NCNT=5`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

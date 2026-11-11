@@ -17,6 +17,7 @@ const IDX: PeriodRefs<MarketIndexResponse> = {
   daily: { KOSPI: d(100, 101), SPX: d(100, 101) },
   weekly: { KOSPI: { refPrice: 99, refDate: "2026-11-03" }, SPX: { refPrice: 99, refDate: "2026-11-03" } },
   monthly: { KOSPI: { refPrice: 98, refDate: "2026-10-08" }, SPX: { refPrice: 98, refDate: "2026-10-09" } },
+  ytd: { KOSPI: { refPrice: 90, refDate: "2025-12-30" }, SPX: { refPrice: 90, refDate: "2025-12-31" } },
 };
 
 describe("summarizeCompare — 블록 N·제외 셈", () => {
@@ -39,8 +40,10 @@ describe("summarizeCompare — 블록 N·제외 셈", () => {
     "005930": { refPrice: 90, refDate: "2026-10-08" }, "000660": { refPrice: 90, refDate: "2026-10-08" },
     "035720": null, "069500": null, "7203": { refPrice: 99, refDate: "2026-10-08" },
   };
+  const ytdRef = (v: number) => ({ refPrice: v, refDate: "2025-12-30" });
+  const ytd: ProfitRefResponse = { "005930": ytdRef(80), "000660": ytdRef(90), "035720": ytdRef(95), "069500": null, "7203": ytdRef(99) };
   const classified = classifyHoldings(stocks, PEERS);
-  const blocks = computeMarketCompare(classified, { daily, weekly, monthly }, IDX);
+  const blocks = computeMarketCompare(classified, { daily, weekly, monthly, ytd }, IDX);
   const s = summarizeCompare(classified, blocks)!;
 
   it("N종목 = 세 기간 중 하나 이상 합산된 종목(공모주 포함, 전 기간 기준가 없음 제외)", () => {
@@ -68,6 +71,7 @@ describe("summarizeCompare — 블록 N·제외 셈", () => {
       daily: { "005930": d(100, 101), "000660": d(100, 101), "035720": d(100, 101, "2026-11-05", "2026-11-06") },
       weekly: { "005930": { refPrice: 99, refDate: "2026-11-03" }, "000660": { refPrice: 99, refDate: "2026-11-03" }, "035720": null },
       monthly: { "005930": { refPrice: 99, refDate: "2026-10-08" }, "000660": { refPrice: 99, refDate: "2026-10-08" }, "035720": { refPrice: 99, refDate: "2026-10-08" } },
+      ytd: { "005930": { refPrice: 99, refDate: "2025-12-30" }, "000660": { refPrice: 99, refDate: "2025-12-30" }, "035720": null },
     }, IDX);
     // 035720: 하루 = 기준일 다름(끝 11/6), 1주 = 기준가 없음, 1개월 = 끝이 일별 ref(11/6)라 기준일 다름 → 세 기간 모두 빠짐, 기준가 없음 우선
     expect(summarizeCompare(c2, b2)!.excluded.reasons).toEqual([{ label: "기준가 없음", count: 1 }]);
@@ -84,6 +88,8 @@ describe("기준 종가 구간 표기 M/D→M/D", () => {
   it("공백·연도 없음, 열 머리용으로 [시작→, 끝] 분리", () => {
     expect(refRangeParts("2026-11-03", "2026-11-10")).toEqual(["11/3→", "11/10"]);
     expect(refRangeParts("2026-12-10", "2027-01-09").join("")).toBe("12/10→1/9");
+    // 올해는 연도 포함 `YY.M.D→YY.M.D`(공백 없음)
+    expect(refRangeParts("2025-12-30", "2026-11-10", true)).toEqual(["25.12.30→", "26.11.10"]);
   });
 
   it("휴장 칸은 '휴장', 조회 중은 표기 없음, 지수만 날짜가 달라도 종목 기준쌍", () => {
@@ -97,6 +103,7 @@ describe("기준 종가 구간 표기 M/D→M/D", () => {
     expect(sat.periods.weekly.indexState).toBe("dateMismatch");
     expect(cellRange(sat.periods.weekly)).toEqual({ kind: "range", parts: ["11/3→", "11/6"] });
     const loading = computeMarketCompare(c, {}, IDX)[0];
+    expect(cellRange(loading.periods.ytd, "ytd")).toBeNull();
     expect(cellRange(loading.periods.daily)).toBeNull();
   });
 });
