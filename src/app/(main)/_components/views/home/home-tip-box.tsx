@@ -91,6 +91,13 @@ export function HomeTipBox() {
     }
   }, [assetData, hasAssets, cs.status]);
 
+  // '그대로 두기' 직후 — 같은 세션 홈에서 relink 팁을 즉시 내린다(#147)
+  useEffect(() => {
+    const onKept = () => setTip((t) => (t?.kind === "relink" ? null : t));
+    window.addEventListener("relink-kept", onKept);
+    return () => window.removeEventListener("relink-kept", onKept);
+  }, []);
+
   if (!tip) return null;
 
   const close = (e: React.MouseEvent | React.KeyboardEvent) => {

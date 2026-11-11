@@ -103,6 +103,7 @@ function RelinkDialog({ onClose }: { onClose: () => void }) {
     if (step === "result" && u && !u.done) {
       toast("끊긴 거래를 다시 이었어요", {
         id: TOAST_ID,
+        testId: "relink-toast",
         duration: 8000,
         actionButtonStyle: { minHeight: 40 },
         action: { label: "되돌리기", onClick: () => void doUndo(u, true) },
@@ -147,6 +148,7 @@ function RelinkDialog({ onClose }: { onClose: () => void }) {
   // '그대로 두기' — 이 기기에서 홈 팁만 끈다(거래내역 안내 줄은 유지). X(닫기)는 아무것도 기록하지 않는다
   const handleKeep = () => {
     dismissTip(RELINK_OFFER_ID);
+    window.dispatchEvent(new CustomEvent("relink-kept")); // 같은 세션 홈 팁 즉시 숨김(HomeTipBox가 수신)
     track("feature_use", { category: "relink", method: "keep" });
     onClose();
   };
@@ -289,7 +291,11 @@ function RelinkRowView({ row, checked, target, picked, onCheck, onPick }: {
           {target && (
             <>
               <span className="block text-sm text-muted-foreground tabular-nums text-pretty break-keep">
-                {target.broker ? `${target.broker} · ` : ""}거래 {target.count}건 다시 잇기 <NR>· {target.firstDate} ~ {target.lastDate}</NR>
+                {target.broker ? `${target.broker} · ` : ""}거래 {target.count}건 다시 잇기
+                <span className="block sm:inline">
+                  <span className="hidden sm:inline"> · </span>
+                  <NR>{target.firstDate} ~ {target.lastDate}</NR>
+                </span>
               </span>
               {target.newPurchaseDate && (
                 <span data-testid={`relink-row-date-${target.id}`} className="block text-sm text-muted-foreground tabular-nums text-pretty break-keep">
