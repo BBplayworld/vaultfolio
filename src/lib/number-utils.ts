@@ -17,6 +17,13 @@ export function formatCurrency(value: number): string {
 }
 
 // 짧은 화폐 단위 포맷 (억, 만)
+/** 종목 통화별 가격 표기(USD $·JPY ¥·그 외 원) — 거래·종목 화면 공용(#4.85, 3벌 중복 통합) */
+export function formatPriceByCurrency(value: number, currency: string): string {
+  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return formatCurrency(value);
+}
+
 export function formatShortCurrency(value: number): string {
   if (value === 0) return "0원";
 

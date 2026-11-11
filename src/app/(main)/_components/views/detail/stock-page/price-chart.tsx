@@ -9,7 +9,7 @@ import { axisGutter, buildPriceAxis, formatAxisPrice, layoutMarkers, markerHitRa
 import type { PricePoint } from "@/lib/finance/price-history";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { PriceAxisLayer } from "../price-axis-layer";
-import { formatPrice } from "../trades/stock-trades-view";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 
 const M = { top: 20, bottom: 22, left: 12 }; // 오른쪽은 가격 칸(axisGutter)
 const FALLBACK = { w: 320, h: 200 };
@@ -64,7 +64,7 @@ export function PriceChart({ points, markers, avg, currentPrice, currentText, cu
           plotW,
           maxY: h - M.bottom + 4,
           grid: axis.ticks.map((tk) => tk.y),
-          full: `내 평단 ${formatPrice(avg, currency)}${arrow}`,
+          full: `내 평단 ${formatPriceByCurrency(avg, currency)}${arrow}`,
           short: `평단 ${formatAxisPrice(avg, currency, axis.step || 1)}${arrow}`,
         })
       : null;
@@ -135,7 +135,7 @@ export function PriceChart({ points, markers, avg, currentPrice, currentText, cu
               fontSize={11}
               fontWeight={500}
             >
-              {fmtDot(hp.d)} · {formatPrice(hp.c, currency)}
+              {fmtDot(hp.d)} · {formatPriceByCurrency(hp.c, currency)}
             </text>
           </g>
         )}
@@ -174,7 +174,7 @@ export function PriceChart({ points, markers, avg, currentPrice, currentText, cu
           const selected = selectedKey === m.key;
           const sell = m.kind === "sell";
           const first = m.txs[0];
-          const label = `${fmtDot(first.date)} ${sell ? "매도" : "매수"} ${first.quantity.toLocaleString()}주 · ${formatPrice(first.price, first.currency)}${m.txs.length > 1 ? ` 외 ${m.txs.length - 1}건` : ""}`;
+          const label = `${fmtDot(first.date)} ${sell ? "매도" : "매수"} ${first.quantity.toLocaleString()}주 · ${formatPriceByCurrency(first.price, first.currency)}${m.txs.length > 1 ? ` 외 ${m.txs.length - 1}건` : ""}`;
           const r = selected ? 8.5 : 6.5; // 마름모 반대각 반경(면적 = 원 r5와 동급)
           return (
             <g

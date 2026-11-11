@@ -31,7 +31,7 @@ import { SECTION } from "../../../layout/ui/report-section";
 import { toHash, useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { BODY_ENTER } from "../../activity/change-hero";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
-import { formatPrice } from "../trades/stock-trades-view";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 import { fmtDot, PriceChart } from "./price-chart";
 
 const RANGE_OPTIONS: { value: PriceRange; label: string; testId: string }[] = [
@@ -164,7 +164,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
     currency === "USD" ? "달러 가격 기준이에요." : "",
     data?.listedFrom ? "상장 이후 기간만 있어요." : "",
   ].filter(Boolean).join(" ");
-  const chartAria = `${rangeLabel} 주가 흐름${change !== null ? `, 등락 ${signedRate(change)}` : ""}${avg ? `, 내 평단 ${formatPrice(avg, currency)}` : ""}`;
+  const chartAria = `${rangeLabel} 주가 흐름${change !== null ? `, 등락 ${signedRate(change)}` : ""}${avg ? `, 내 평단 ${formatPriceByCurrency(avg, currency)}` : ""}`;
 
   return (
     <div data-testid="stock-page" className="flex flex-col gap-5 min-w-0 break-keep">
@@ -262,7 +262,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
                 {selectedDot.txs.slice(0, 3).map((b) => (
                   <p key={b.id} className="flex items-center gap-1.5">
                     <span aria-hidden className={`inline-block size-2 shrink-0 ${selectedDot.kind === "sell" ? "rotate-45 bg-blue-500" : "rounded-full bg-rose-500"}`} />
-                    <span>{fmtDot(b.date)} {selectedDot.kind === "sell" ? "매도" : "매수"} {b.quantity.toLocaleString()}주 · {formatPrice(b.price, b.currency)}</span>
+                    <span>{fmtDot(b.date)} {selectedDot.kind === "sell" ? "매도" : "매수"} {b.quantity.toLocaleString()}주 · {formatPriceByCurrency(b.price, b.currency)}</span>
                   </p>
                 ))}
                 {selectedDot.txs.length > 3 && <p className="text-muted-foreground">외 {selectedDot.txs.length - 3}건</p>}

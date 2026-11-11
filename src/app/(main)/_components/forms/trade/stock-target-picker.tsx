@@ -3,7 +3,7 @@
 import { Check, Plus } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/number-utils";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 import { securitiesFirms, stockCategories } from "@/config/asset-options";
 import type { Stock } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
@@ -13,12 +13,6 @@ import { CATEGORY_TABS } from "../../views/detail/tabs/stock-tab";
 export type TradeTarget =
   | { kind: "existing"; stockId: string }
   | { kind: "new"; broker: string; category: Stock["category"] };
-
-export const formatPrice = (value: number, currency: string) => {
-  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  return formatCurrency(value);
-};
 
 export function getPositionSnapshot(stock: Stock, lockedByManual = false): PositionSnapshot {
   return {
@@ -70,7 +64,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
                 <span className="text-muted-foreground"> · {s.name}</span>
               </span>
               <span className="block truncate text-xs tabular-nums text-muted-foreground">
-                {s.quantity.toLocaleString()}주 · 평단 {formatPrice(s.averagePrice, s.currency || "KRW")}
+                {s.quantity.toLocaleString()}주 · 평단 {formatPriceByCurrency(s.averagePrice, s.currency || "KRW")}
               </span>
             </span>
             {selected && <Check className="size-4 shrink-0 text-brand" />}
@@ -140,9 +134,9 @@ export function PositionChangePreview({ before, after, currency, title = "반영
         <div>
           <p className="text-sm text-muted-foreground">평단가</p>
           <p className="tabular-nums">
-            <span className="text-muted-foreground">{formatPrice(before.avgPrice, currency)}</span>
+            <span className="text-muted-foreground">{formatPriceByCurrency(before.avgPrice, currency)}</span>
             <span className="text-muted-foreground/60"> → </span>
-            <span className="font-semibold">{formatPrice(after.avgPrice, currency)}</span>
+            <span className="font-semibold">{formatPriceByCurrency(after.avgPrice, currency)}</span>
           </p>
         </div>
       </div>
