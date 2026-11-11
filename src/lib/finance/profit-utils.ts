@@ -287,7 +287,18 @@ interface FetchProfitRefOptions {
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
 // aborted: 선행 호출이 자기 signal abort로 끝났는지, unavailable: 점검(X-KIS-Unavailable)으로 잘렸는지
 // — 부분 결과를 후행 호출자에게 "완료"로 넘기지 않기 위함(#141)
-type InFlightResult = { data: ProfitRefResponse; aborted: boolean; unavailable: boolean };
+// incomplete: 429·5xx로 배치가 끝내 실패 — 일부 종목이 빠진 결과라 저장·완료 처리하지 않는다(#4.85)
+type InFlightResult = { data: ProfitRefResponse; aborted: boolean; unavailable: boolean; incomplete: boolean };
+
+/** 재시도 대상 응답(429·5xx). X-KIS-Unavailable(점검)은 별도 경로 */
+const isRetryableStatus = (status: number) => status === 429 || status >= 500;
+/** Retry-After(초) → 대기 ms. 1~5초로 제한, 10초 초과 요청은 재시도하지 않는다(null) */
+export function profitRetryDelayMs(retryAfter: string | null): number | null {
+  const sec = retryAfter === null ? NaN : Number(retryAfter);
+  if (!Number.isFinite(sec) || sec < 0) return 1000;
+  if (sec > 10) return null;
+  return Math.min(5000, Math.max(1000, sec * 1000));
+}
 const inFlightFetches = new Map<string, Promise<InFlightResult>>();
 
 export async function fetchProfitRef(
@@ -330,7 +341,7 @@ export async function fetchProfitRef(
   // dedup된 호출자는 점진 노출 없이 최종 결과만 1회 받음 (캐시 hit과 동일 취급)
   const existing = inFlightFetches.get(cacheKey);
   if (existing) {
-    const { data, aborted, unavailable } = await existing;
+    const { data, aborted, unavailable, incomplete } = await existing;
     if (signal?.aborted) return data;
     // 선행 호출이 abort로 끝났으면 부분 결과(첫 배치 중이면 {})를 완료로 주지 않고 처음부터 다시 조회 —
     // 선행은 저장하지 않았으므로 캐시 miss, 그 사이 다른 호출이 시작했으면 그쪽에 dedup(#141)
@@ -339,6 +350,11 @@ export async function fetchProfitRef(
     if (unavailable) {
       if (Object.keys(data).length > 0) onProgress?.(data);
       onKisUnavailable?.();
+      return data;
+    }
+    // 선행이 429·5xx로 일부 실패했으면 부분만 진행으로 넘기고 완료 처리하지 않음(#4.85)
+    if (incomplete) {
+      if (Object.keys(data).length > 0) onProgress?.(data);
       return data;
     }
     onProgress?.(data);
@@ -363,33 +379,55 @@ export async function fetchProfitRef(
     const merged: ProfitRefResponse = {};
     // 점검(X-KIS-Unavailable)으로 배치 중 잘린 경우 — 불완전한 결과이므로 "완료"로 취급하지 않음
     let hitUnavailable = false;
+    // 429·5xx로 배치가 끝내 실패 — 불완전 결과(저장·완료 생략). 재시도는 실행 전체에서 1회만(요청량 상한: 배치 수 + 1)
+    let incomplete = false;
+    let retriesLeft = 1;
     for (let i = 0; i < tickerArr.length; i += PROFIT_BATCH_SIZE) {
       if (signal?.aborted) break;
       if (i > 0) await sleepAbortable(PROFIT_BATCH_DELAY_MS);
       if (signal?.aborted) break;
       const batchTickers = tickerArr.slice(i, i + PROFIT_BATCH_SIZE).join(",");
       try {
-        const res = await fetch(`/api/finance/profit?tickers=${batchTickers}&period=${period}&basis=${basis}`, { signal });
+        const url = `/api/finance/profit?tickers=${batchTickers}&period=${period}&basis=${basis}`;
+        let res = await fetch(url, { signal });
         // 토큰 발급 실패 누적 또는 전량 조회 실패로 외부 API 일시 오류 → 콜백 후 추가 배치 중단
         if (res.headers.get("X-KIS-Unavailable") === "1") {
           hitUnavailable = true;
           onKisUnavailable?.();
           break;
         }
+        if (!res.ok && isRetryableStatus(res.status) && retriesLeft > 0) {
+          const delay = profitRetryDelayMs(res.headers.get("Retry-After"));
+          if (delay !== null) {
+            retriesLeft--;
+            await sleepAbortable(delay);
+            if (signal?.aborted) break;
+            res = await fetch(url, { signal });
+            if (res.headers.get("X-KIS-Unavailable") === "1") {
+              hitUnavailable = true;
+              onKisUnavailable?.();
+              break;
+            }
+          }
+        }
         if (res.ok) {
           const data: ProfitRefResponse = await res.json();
           Object.assign(merged, data);
           onProgress?.({ ...merged });
+        } else if (isRetryableStatus(res.status)) {
+          // 끝내 실패 — 429가 이어질 가능성이 커 남은 배치는 보내지 않는다
+          incomplete = true;
+          break;
         }
       } catch { /* abort 등 정상 흐름 */ }
     }
     // 모든 배치가 정상 완료된 경우에만 저장 — 점검으로 잘린 불완전한 결과는 캐시에 남기지 않아
     // 다음 호출이 "정상 완료"로 오인하지 않고 반드시 재시도하도록 함
-    if (!signal?.aborted && !hitUnavailable) {
+    if (!signal?.aborted && !hitUnavailable && !incomplete) {
       try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
       onComplete?.(false);
     }
-    return { data: merged, aborted: !!signal?.aborted, unavailable: hitUnavailable };
+    return { data: merged, aborted: !!signal?.aborted, unavailable: hitUnavailable, incomplete };
   };
 
   const promise = runFetch();
