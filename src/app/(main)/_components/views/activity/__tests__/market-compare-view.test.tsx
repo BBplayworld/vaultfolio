@@ -61,7 +61,7 @@ describe("MarketBlock — 4기간 표(행=기간)", () => {
     // 399px 이하: 보유 값 14px·차이 12px — 최악값 `+123.4%`·`-123.4%p`가 열(≈64px) 안에 들어가게(ui-review)
     expect(html).toContain("max-[399px]:text-sm");
     expect(html).toContain("max-[399px]:text-xs");
-    expect(html).toMatch(/text-sm font-semibold text-foreground tabular-nums">\+0\.5%p/);
+    expect(html).toMatch(/text-sm font-semibold text-foreground tabular-nums max-\[399px\]:text-xs">\+0\.5%p/);
     expect(html).toContain('role="table"');
     expect(html).toContain('aria-label="코스피와 비교한 국내 주식 2종목"');
   });
