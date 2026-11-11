@@ -29,7 +29,7 @@
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
-| v4.82 [PR #160](https://github.com/BBplayworld/vaultfolio/pull/160) | 11/11 | 새 소식(#159) — 9월에 멈춘 공지를 '새 소식'으로 교체, 놓친 업데이트를 홈 팁 1개(결산 기간엔 결산 우선, 7일 1회)로 묶어 안내, 더보기 '새 소식 보기'. CLAUDE.md 버전 규칙 반영 · COO 자체 승인(medium) | 진행 중 |
+| v4.82 [PR #160](https://github.com/BBplayworld/vaultfolio/pull/160) | 11/11 | 새 소식(#159) — 9월에 멈춘 공지를 '새 소식'으로 교체, 놓친 업데이트를 홈 팁 1개(결산 기간엔 결산 우선, 7일 1회)로 묶어 안내, 더보기 '새 소식 보기'. CLAUDE.md 버전 규칙 반영 · COO 자체 승인(medium) | PASS |
 | v4.81 [PR #158](https://github.com/BBplayworld/vaultfolio/pull/158) | 11/11 | 종목 한 장(#157) — 여러 증권사 합친 평단선·1년/5년 가격 흐름·매수 점. 인증카드 변경 0, 서버로는 종목코드·기간만. 방향 알림 '뺀 것'에 매도 점 미표시 정정 추가 · COO 위임(medium) | PASS |
 | v4.80 [PR #156](https://github.com/BBplayworld/vaultfolio/pull/156) | 11/11 | 인증카드에서 금액을 숨기면 종목 보유 수량도 함께 가림(#155, 평가금액 역산 차단) · COO 위임(low) | PASS |
 | v4.79 [PR #154](https://github.com/BBplayworld/vaultfolio/pull/154) | 11/11 | 자산 변화 주 탭 '최근 7일' 변화 원인(홈과 같은 숫자)·종목 등락 연결·마감 기록 접힘(#153). 뺀 것: 움직인 종목 상·하위 3·매주 팁·대출 이자 추정(규모는 대표 기준 하한 아래). 홈 원인 줄 일부 이름 정정(숫자 불변). #152 ETF 속까지는 KIS 구성 데이터 게이트 실패로 보류 · COO 위임(medium) | PASS(체험 데이터, 원인 1줄·시작 행 일치) |
