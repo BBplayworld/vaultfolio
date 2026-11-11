@@ -4,6 +4,7 @@
 // 옛 요약 안 시장 글줄·X-Ray 상자·세금 문장 상자를 대체한다. 타일마다 그 기능의 숫자 1개를 미리 보인다(금액·투자 판단 없음).
 // useXrayClassifications(분류 수집·완료 토스트)는 이 묶음이 계속 호출한다 — 타일이 안 보여도 호출은 유지(StockInsightStrip에서 이전).
 // 인증카드 캡처에는 나오지 않는다(data-screenshot-hide, StockTab은 screenshotMode 렌더 안 함). 저장 호출 0.
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useMemo } from "react";
 import { ChartNoAxesColumn, ChevronRight, Microscope, Receipt, type LucideIcon } from "lucide-react";
 import type { Stock } from "@/types/asset";
@@ -87,7 +88,7 @@ export function StockToolTiles({ stocks, exchangeRates }: { stocks: Stock[]; exc
         >
           <span data-testid="stock-tool-market-value">
             {!market.ready
-              ? <span aria-hidden className="inline-block h-4 w-20 rounded bg-muted align-middle motion-safe:animate-pulse" />
+              ? <span aria-hidden className={`inline-block h-4 w-20 rounded align-middle ${SKELETON_FILL}`} />
               : market.values.length === 0
                 ? "지수와 나란히 보기"
                 : <>1주 <MarketIndexValues values={market.values} restBelowSm /></>}

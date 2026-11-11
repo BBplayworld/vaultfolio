@@ -12,7 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { APP_VERSION } from "@/config/app-version";
 import { APP_FEATURES } from "@/config/app-features";
 import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
-import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId, runSilentFirstRun } from "@/lib/whats-new";
+import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId, restoreFocusAfterSheetClose, runSilentFirstRun } from "@/lib/whats-new";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
@@ -35,7 +35,6 @@ export function WhatsNewHost() {
   const [badgeIds, setBadgeIds] = useState<Set<string>>(new Set());
   const openRef = useRef(false); // 이벤트 open 멱등(연타·중복 디스패치 방지)
   const closingRef = useRef(false); // 바로 가기 연타 시 이동 1회
-  const sourceRef = useRef<"home_tip" | "more">("home_tip");
   const goneRef = useRef(false); // 바로 가기로 닫힘 — 닫힘 포커스 복귀 생략
 
   // 첫 실행 조용한 기록(GA 없음) — 웰컴 화면(자산 0)에서도 돌도록 항상 마운트되는 이 호스트가 맡는다.
@@ -51,7 +50,6 @@ export function WhatsNewHost() {
       closingRef.current = false;
       goneRef.current = false;
       const source = (e as CustomEvent<{ source?: "home_tip" | "more" }>).detail?.source === "more" ? "more" : "home_tip";
-      sourceRef.current = source;
       setBadgeIds(newBadgeIds()); // 읽음 기록 전에 계산
       setList(sheetEntries(WHATS_NEW));
       markWhatsNewSeen();
@@ -90,14 +88,7 @@ export function WhatsNewHost() {
           e.preventDefault();
           (e.currentTarget as HTMLElement | null)?.focus({ preventScroll: true }); // 스크린리더가 제목부터 읽게 시트 자체에 포커스
         }}
-        onCloseAutoFocus={(e) => {
-          if (goneRef.current) { e.preventDefault(); return; } // 이동한 화면의 포커스를 뺏지 않는다
-          if (sourceRef.current === "home_tip") {
-            e.preventDefault(); // 홈 팁은 이미 사라져 복귀 대상이 없다
-            const main = document.querySelector("main") as HTMLElement | null;
-            if (main) { if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1"); main.focus({ preventScroll: true }); }
-          }
-        }}
+        onCloseAutoFocus={(e) => restoreFocusAfterSheetClose(e, goneRef.current)}
         className={mobile ? "gap-0 rounded-t-2xl max-h-[80dvh] touch-pan-y" : "gap-0"}
       >
         {mobile && (

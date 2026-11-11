@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-11 (v4.84)
+
+### 주가 차트 가격 눈금·현재가·매도 점 + 공통 로딩 UI (#4.84, 이슈 #163·#164)
+- **A 가격 눈금**: 상세·주식 펼침 행 스파크(32px)를 이름 줄 아래 **전폭 밴드 80px**(`RowBandChart`)로 교체 — 픽셀 SVG(`useBoxSize`, `preserveAspectRatio="none"` 폐기), 눈금 2~3줄·현재가 태그(라벨 `현재가`, 값 = 같은 카드 `현재가` 칸과 같은 `formatCurrencyDisplay`)·평단 점선. 종목 한 장 `PriceChart`도 같은 가격 칸(우측 gutter)·같은 `PriceAxisLayer`. 눈금 = `niceTicks`({1,2,5}×10^k·정수 곱, 평단선 10px·태그 겹침 제외), 표기 `formatAxisPrice`, 도메인 = **원본 points + 현재가**(`buildPriceAxis`, 다운샘플은 선만). 로딩=성공=실패 높이 80px 동일.
+- **B 평단 칩 폴백**: `placeAvgChip`(기본 4곳 → 평단선 가까운 오프셋 스캔 → 짧은 글자 `평단 6.1만` → 가격 칸 `평단`) — 칩이 가격선·점을 가리지 않음(`data-mode` plot|short|gutter).
+- **C 매도 점**: `pickBuyTransactions(…, "sell")`·`buildTradeMarkers`·`layoutMarkers`(같은 봉 매수 −6/매도 +6px)·`markerHitRadius`. 매수=빨강 원, 매도=파랑 마름모. 매도 포함 종목만 `매수·매도`·`1년보다 전 거래 N건`·범례(`chart-legend`), 매수만 종목 문구 불변, 매도만 종목 모순 0(C80). 평단·성적표 계산 불변.
+- **D**: 홈 팁 X 박스 40×40(`-m-3 p-3`), 공용 `Sheet` X `::after` 확장 40px, 새 소식 시트 닫힘 후 포커스는 이동(바로 가기) 외 모두 `main`(`restoreFocusAfterSheetClose`).
+- **E 공통 로딩 UI**: `SKELETON_FILL`(`bg-foreground/[0.13] motion-safe:animate-pulse`)·`LoadingNote`(0.5초 뒤 문구·5초 뒤 지연 문구·sr-only `role=status`)·`useLoadingPhase`. 적용: 시장 비교(머리 줄 자리)·종목 한 장 차트·배당 4곳·자산 변화 히어로·profit-chart. 구 문구(`기준가 조회 중…`·`조회 중…`·`조회 중...`) 삭제 → `시세를 불러오는 중…`·`배당 정보를 불러오는 중…`. `점검 중`·오류 토스트 불변.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0. 새 소식: `20261111-09`, `20261111-10`.
+- 테스트: `stock-page-axis.test.ts`·`stock-page-chip.test.ts`·`stock-page-sell.test.ts`·`stock-page-view.test.tsx`·`stock-entry-tools.test.tsx`·`use-loading-phase.test.ts`·`loading-note.test.tsx`·`whats-new.test.ts`.
+
+---
+
 ## 2026-11-11 (v4.83)
 
 ### 신기능 진입 경로 개선 (#4.83, 이슈 #161)

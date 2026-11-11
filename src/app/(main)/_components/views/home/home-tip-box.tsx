@@ -187,7 +187,7 @@ export function HomeTipBox() {
           onClick={close}
           aria-label="닫기"
           data-testid="home-tip-close"
-          className="relative shrink-0 -m-2 p-2 text-muted-foreground hover:text-foreground transition-colors after:absolute after:-inset-1"
+          className="shrink-0 -m-3 p-3 text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="size-4" />
         </button>

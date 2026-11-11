@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
 import { useQueries } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -183,7 +184,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
     .filter((r): r is StockDividendRow => r !== null);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground text-center py-3">배당 정보 조회 중...</p>;
+    return <LoadingNote active label={LOADING_LABEL.dividend} className="flex justify-center py-3" />;
   }
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {

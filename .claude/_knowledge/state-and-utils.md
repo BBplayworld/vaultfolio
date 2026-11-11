@@ -283,6 +283,18 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 
 `downsample(points, max)`(그리기 직전에만, 첫·마지막 점 포함)·`buildSparkGeometry(points, avg, w, h)`(`computeYDomain` 재사용, 평단 범위 밖이면 `avgY` null)·`buildRowFlow(flow, q, avg)`(none|loading|fallback|ready — 1년 %는 원본 points `computePriceChange`)·`signedRate`(종목 한 장·이름 줄 공용). `hooks/use-price-history.ts`: `priceHistoryQueryOptions(ticker, range, enabled, {retryOnMount?})`·`usePriceHistory` 4번째 인자(행 쿼리 `retryOnMount:false` — 실패 티커 재요청 차단, 시세 서킷 보호 C79).
 
+### finance/stock-page.ts 추가(#4.84) — 가격 눈금·평단 칩·매도 점
+
+- 눈금: `niceTicks(lo, hi, yOf, top, bottom, keep?, inset=6) → {step, ticks:[{v,y}]}`(간격 {1,2,5}×10^k, 값은 정수 곱 `i·m·10^e`·음수 지수는 10의 거듭제곱으로 나눔 C59, 픽셀 간격 12 미만·플롯 위아래 6px 밖 제외, keep 통과 2~3개 → 1개 → 0개)·`formatAxisPrice(value, currency, step)`(KRW `1.5억`·`7.5만`·`5,000` 원 생략, USD `$12.5`·`$0.25`, JPY `¥1,500`)·`axisGutter(tagText)`(46~76px)·`buildPriceAxis({points(원본), avg, price, currency, top, plotH}) → {domain, clamped, yOf, avgY, todayY, step, ticks(label 포함)}`(도메인 = 원본 points + 현재가 + 평단, 눈금은 평단선 10px·태그와 위 12/아래 20px 겹침 제외). 행 밴드·종목 한 장이 같은 함수.
+- 행 상태: `buildRowFlow(flow, q)`는 `ready.points`(원본)를 돌려준다(`buildSparkGeometry`·`ROW_SPARK_W/H` 삭제, 선만 `downsample`).
+- 칩: `placeAvgChip({pts, dots, avgY, left, plotW, maxY, full, short}) → {mode: plot|short|gutter, text, x, y}`(`CHIP_H`).
+- 점: `pickBuyTransactions(tx, ids, type="buy"|"sell")`(이름 유지, 점 표시 전용·평단·성적표 계산 불변)·`buildTradeMarkers(buyDots, sellDots)`(날짜순, 같은 봉 매수→매도, 키 `kind:index`)·`layoutMarkers(markers, xOf, yOf)`(같은 봉·12px 미만 매수 −6/매도 +6)·`markerHitRadius`(벌린 쌍 6, 그 외 10~20).
+- 현재가 문자열은 `formatCurrencyDisplay(currentPrice, currency)`(상세·주식 `현재가` 칸과 같은 함수, C65).
+
+### hooks — use-box-size.ts · use-loading-phase.ts (#4.84)
+
+`useBoxSize(fallback:{w,h}) → {ref, size}`(ResizeObserver 실측, 측정 전 fallback — 종목 한 장 320×200·행 밴드 0×0). `useLoadingPhase(active) → "quiet"|"note"|"slow"|null`(0.5초·5초 경계 `NOTE_DELAY_MS`·`SLOW_DELAY_MS`, 순수 `loadingPhaseAt`·`startLoadingPhase(onPhase) → cancel`로 fake timer 테스트). `lib/whats-new.ts`에 `restoreFocusAfterSheetClose(event, gone, doc?)`(이동 외 모두 `main` tabindex -1 포커스).
+
 ### seeded-pick.ts (`src/lib/xray/seeded-pick.ts`, #4.26) — 결정적 seed 선택 단일 출처
 
 ```typescript
@@ -945,7 +957,7 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 // stock-page.ts — 순수 함수, 저장 0·서버 전송 0
 buildStockGroupHead(items, rates, displayCurrency) → { merged, currentVal, profit, profitRate, quantity, averagePrice, valueText, profitText, rateText, colorClass }   // 상세·주식 행과 같은 mergeStockGroup+computeStockMetrics+formatByDisplayCurrency+profitTone (C65)
 hasPriceFlow(stock) · groupStocksByRowTicker(stocks, ticker)   // 비상장·티커 없음·상장폐지 = 서버 요청 0 / 시장 비교 줄 → 전체 그룹
-pickBuyTransactions(transactions, groupStockIds) → BuyTx[]     // type==="buy"만(purchaseDate로 점 금지, C74)
+pickBuyTransactions(transactions, groupStockIds, type="buy") → BuyTx[]     // type 한 종류만(4.84 "sell"=매도 점)(purchaseDate로 점 금지, C74)
 placeBuyDots(points, buys, windowStart) → { dots: BuyDot[], outsideCount }   // 매수일 이상 첫 봉(마지막 봉 뒤는 마지막 봉), y=봉 종가, 창 시작 전은 건수만
 computeYDomain(min, max, avg) → { domain, clamped: none|up|down }   // 8% 여백, 평단이 범위 ±40% 안이면 도메인 확장, 밖이면 가장자리 고정
 computePriceChange(points) → % | null

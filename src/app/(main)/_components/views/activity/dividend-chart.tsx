@@ -1,5 +1,6 @@
 "use client";
 
+import { LOADING_LABEL } from "@/components/ui/loading-note";
 import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
@@ -320,7 +321,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           {isLoading && (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
-                <span>배당 정보 조회 중...</span>
+                <span>{LOADING_LABEL.dividend}</span>
                 <span className="tabular-nums">{loadedCount} / {totalCount}</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -337,7 +338,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     <div key={stock.id} className="flex items-center justify-between px-1 py-0.5">
                       <span className="text-sm text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
                       <span className={`text-xs ${done ? "text-primary" : "text-muted-foreground"}`}>
-                        {done ? "완료" : "조회 중..."}
+                        {done ? "완료" : "불러오는 중…"}
                       </span>
                     </div>
                   );

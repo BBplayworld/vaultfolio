@@ -3,6 +3,7 @@
 // 자산 변화 Hero(#32 r2) — 일·주·월·연·주식 5개 본문이 같은 4단 구조(이름 → 증감 → 시작→끝 → 기간 선택)로 그린다.
 // 타이포는 홈 Hero(dashboard.tsx 순자산 헤더)와 같다. views/activity 로컬 전용(카탈로그 미등록).
 
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ListChecks } from "lucide-react";
@@ -92,7 +93,7 @@ export function ChangeHero({ title, titleTestId, range, rangeTestId, badge, acti
         <div key={contentKey} aria-live="polite" className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
           {loading ? (
             <div data-testid="change-hero-loading" className="mt-1">
-              <div className="h-8 w-44 rounded-md bg-muted motion-safe:animate-pulse" />
+              <div aria-hidden className={`h-8 w-44 rounded-md ${SKELETON_FILL}`} />
               <p className="mt-1 text-sm text-muted-foreground">{loading}</p>
             </div>
           ) : delta === null ? (

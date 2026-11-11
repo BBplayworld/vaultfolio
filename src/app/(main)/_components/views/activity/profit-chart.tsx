@@ -1,5 +1,7 @@
 "use client";
 
+import { LOADING_LABEL } from "@/components/ui/loading-note";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Minus, Globe, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -544,7 +546,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
         <ChangeHero
           title={`${marketView === "all" ? "" : `${MARKET_LABELS[marketView]} · `}${HERO_LABELS[period]}`}
           range={heroFrom && heroTo ? formatRefRange(heroFrom, heroTo) : undefined}
-          loading={isLoading ? "기준가 조회 중…" : undefined}
+          loading={isLoading ? LOADING_LABEL.price : undefined}
           delta={isRefMissing(isLoading, filteredProfits) ? null : totalProfit}
           message="기준가를 불러오지 못했어요. 잠시 후 다시 확인해 주세요"
           pct={totalRate}
@@ -587,34 +589,34 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
                 {isLoading ? (
                   <div className="space-y-3">
                     {/* 제어 모드는 Hero가 합계 스켈레톤·안내를 맡는다 */}
-                    {!controlled && <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 animate-pulse">
-                      <div className="h-4 w-24 rounded bg-muted" />
-                      <div className="h-6 w-36 rounded bg-muted" />
+                    {!controlled && <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2 motion-safe:animate-pulse">
+                      <div className="h-4 w-24 rounded bg-foreground/[0.13]" />
+                      <div className="h-6 w-36 rounded bg-foreground/[0.13]" />
                     </div>}
                     {mergedStocks.slice(0, 5).map((stock) => (
                       <div key={stock.id} className={`rounded-lg overflow-hidden ${controlled ? "bg-muted/20" : "border"}`}>
                         <div className="flex items-center justify-between px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <span className="inline-block w-2 h-2 rounded-full bg-muted" />
-                            <div className="h-3 w-16 rounded bg-muted animate-pulse" />
+                            <div className={`h-3 w-16 rounded ${SKELETON_FILL}`} />
                           </div>
-                          <div className="h-3 w-20 rounded bg-muted animate-pulse" />
+                          <div className={`h-3 w-20 rounded ${SKELETON_FILL}`} />
                         </div>
                         <div className="divide-y">
                           {[stock].map((s) => (
                             <div key={s.id} className="grid grid-cols-[1fr_6rem] gap-x-2 px-4 py-2.5 items-center">
                               <div className="space-y-1">
-                                <div className="h-3 w-24 rounded bg-muted animate-pulse" />
-                                <div className="h-2.5 w-12 rounded bg-muted animate-pulse" />
+                                <div className={`h-3 w-24 rounded ${SKELETON_FILL}`} />
+                                <div className={`h-2.5 w-12 rounded ${SKELETON_FILL}`} />
                               </div>
-                              <div className="h-3 w-16 rounded bg-muted animate-pulse ml-auto" />
+                              <div className={`h-3 w-16 rounded ${SKELETON_FILL} ml-auto`} />
                             </div>
                           ))}
                         </div>
                       </div>
                     ))}
                     {!controlled && <p className="text-sm text-muted-foreground text-center py-1">
-                      {PERIOD_LABELS[p]} 기준가 조회 중 ({mergedStocks.length}개 종목)...
+                      {LOADING_LABEL.price}
                     </p>}
                   </div>
                 ) : (

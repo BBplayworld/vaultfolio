@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useMemo } from "react";
 import { Wallet, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
@@ -115,7 +117,7 @@ export function PerformanceHub() {
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
-    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
+    <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>
@@ -168,9 +170,11 @@ export function PerformanceHub() {
           icon={BadgeDollarSign}
           title="배당"
           description="올해 배당 (지급 + 예상)"
-          primary={divLoading && annualTotal === 0 ? "조회 중…" : formatPriceByMode(annualTotal)}
+          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : formatPriceByMode(annualTotal)}
           primaryClassName={ASSET_THEME.text.default}
-          secondary={!divLoading && annualTotal > 0 ? (
+          secondary={divLoading && annualTotal === 0 ? (
+            <LoadingNote active label={LOADING_LABEL.dividend} className="min-h-5" />
+          ) : !divLoading && annualTotal > 0 ? (
             <span className="text-muted-foreground">
               지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
               <span className="mx-1.5 text-muted-foreground">·</span>

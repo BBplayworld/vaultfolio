@@ -7,7 +7,7 @@ import { HUB_NEW_SPOT_ORDER, NEW_SPOTS, type NewSpot } from "@/config/new-spots"
 import { dismissTip, getLastVisitedAt, pickRecommendedFeature, recordVisit, runFeatureEntry } from "../feature-usage";
 import { isSpotNew, pickNewSpot } from "../new-spot";
 import { CHANGE_WEEK_VISIT_KEY, isChangeWeekAll, recordViewVisits, type AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
-import { buildRowFlow, buildSparkGeometry, downsample, ROW_SPARK_POINTS, ROW_SPARK_W, signedRate, computePriceChange } from "../finance/stock-page";
+import { buildRowFlow, downsample, ROW_SPARK_POINTS, signedRate, computePriceChange } from "../finance/stock-page";
 import { useXrayViewStore } from "@/stores/xray-view-store";
 import type { PriceHistory, PricePoint } from "../finance/price-history";
 
@@ -130,7 +130,7 @@ describe("새 소식 바로 가기 정정 + tip:false", () => {
 
 // ── 미니 차트 ──
 const mk = (n: number, f: (i: number) => number = (i) => 100 + i): PricePoint[] => Array.from({ length: n }, (_, i) => ({ d: `2026-01-${String(i + 1).padStart(2, "0")}`, c: f(i) }));
-describe("downsample·스파크 좌표", () => {
+describe("downsample·행 흐름 상태", () => {
   it("250점 → 40점, 첫·마지막 점 포함, 순서(단조) 유지. 40점 이하는 그대로", () => {
     const pts = mk(250);
     const d = downsample(pts, ROW_SPARK_POINTS);
@@ -141,26 +141,19 @@ describe("downsample·스파크 좌표", () => {
     expect(idx).toEqual([...idx].sort((a, b) => a - b));
     expect(downsample(mk(10), 40)).toHaveLength(10);
   });
-  it("좌표: x는 0..폭, 점선 y는 평단이 범위 안일 때만(범위 밖·없음 → null)", () => {
-    const pts = mk(60, (i) => 100 + i);
-    const g = buildSparkGeometry(pts, 130, ROW_SPARK_W, 32)!;
-    expect(g.line.split(" ")[0].startsWith("0.0,")).toBe(true);
-    expect(g.line.split(" ").at(-1)!.startsWith(`${ROW_SPARK_W.toFixed(1)},`)).toBe(true);
-    expect(g.avgY).not.toBeNull();
-    expect(buildSparkGeometry(pts, 5000, ROW_SPARK_W, 32)!.avgY).toBeNull(); // 범위 밖
-    expect(buildSparkGeometry(pts, null, ROW_SPARK_W, 32)!.avgY).toBeNull();
-    expect(buildSparkGeometry(mk(1), 100, ROW_SPARK_W, 32)).toBeNull();
-  });
   it("buildRowFlow: 1년 %는 원본 points 값(다운샘플과 무관), 상태 4종", () => {
     const pts = mk(250, (i) => 100 + i * 0.5);
     const data = { points: pts } as PriceHistory;
-    const r = buildRowFlow(true, { isError: false, data }, 120);
+    const r = buildRowFlow(true, { isError: false, data });
     expect(r.kind).toBe("ready");
-    if (r.kind === "ready") expect(signedRate(r.change)).toBe(signedRate(computePriceChange(pts)!));
-    expect(buildRowFlow(false, { isError: false }, null).kind).toBe("none");
-    expect(buildRowFlow(true, { isError: false }, null).kind).toBe("loading");
-    expect(buildRowFlow(true, { isError: true }, null).kind).toBe("fallback");
-    expect(buildRowFlow(true, { isError: false, data: { points: [] } as unknown as PriceHistory }, null).kind).toBe("fallback");
+    if (r.kind === "ready") {
+      expect(signedRate(r.change)).toBe(signedRate(computePriceChange(pts)!));
+      expect(r.points).toBe(pts); // 눈금 도메인용 원본(다운샘플 전)
+    }
+    expect(buildRowFlow(false, { isError: false }).kind).toBe("none");
+    expect(buildRowFlow(true, { isError: false }).kind).toBe("loading");
+    expect(buildRowFlow(true, { isError: true }).kind).toBe("fallback");
+    expect(buildRowFlow(true, { isError: false, data: { points: [] } as unknown as PriceHistory }).kind).toBe("fallback");
   });
 });
 

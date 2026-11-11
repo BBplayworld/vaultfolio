@@ -176,13 +176,22 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-STOCK-ENTRY. 신기능 진입 경로 (#4.83 #161 — 상세·주식 도구 타일·펼침 이름 줄·성과 허브 행·`새`) ([stock-tools.tsx](../../src/app/(main)/_components/views/detail/stock-tools.tsx) · [stock-row-flow.tsx](../../src/app/(main)/_components/views/detail/stock-row-flow.tsx) · [hub-change-rows.tsx](../../src/app/(main)/_components/views/activity/hub-change-rows.tsx))
 - 👤 **도구 타일**: 요약 박스와 카테고리 줄 사이 입구는 `stock-tools` 1묶음뿐(요약 안 글줄·`X-RAY 인사이트` 상자·세금 문장 상자 0). 시장 → `change-market`, X-Ray → 타일 값의 축으로 열림(첫 줄 `{항목} … {pct}%` = 타일 값, 소수 1자리), 세금 → 세금 관리 시뮬레이터. 100% 단일 축은 제외하고 다음 축 값을 보임(국내만 보유 시 `한국`·`원화` 100% 대신 `핵심 분야` 등 다음 축, 후보가 없거나 모두 100%이거나 분류 수집 중일 때만 폴백 `분야·지역 비중 보기`). 새 종목 추가 후 진입 시 분류 요청·`주식 X-Ray 분류가 완료되었습니다` 토스트가 지금과 같이 뜸(훅이 타일로 이전)
-- 👤 **펼침 이름 줄**: 줄 전체 버튼 1개(≥56px)·`총 N주`·`종목 보기` 텍스트 0, 둘째 줄 `1년 주가 등락 +x%` = 이어서 연 종목 한 장 `stock-page-change`(1년), 스파크라인(1년 종가 + 평단 점선, 평단 범위 밖이면 점선 생략). 로딩·429·티커 없음에서 펼침 높이 변화 ±1px, 문구 `주가 흐름과 내 평단 보기`/`내 평단 보기`. 분할 종목: 접힌 행 수량 = 증권사별 항목 수량 합
+- 👤 **펼침 이름 줄**: 줄 전체 버튼 1개(≥56px)·`총 N주`·`종목 보기` 텍스트 0, 둘째 줄 `1년 주가 등락 +x%` = 이어서 연 종목 한 장 `stock-page-change`(1년), **(4.84) 아래 전폭 밴드 80px**(1년 종가 + 평단 점선(범위 밖이면 생략) + 가격 눈금 2~3줄 + 현재가 태그 `현재가`·값 = 같은 카드 `현재가` 칸 문자열, 접힌 행·`none` 행 밴드 없음). 로딩·429·티커 없음에서 펼침 높이 변화 ±1px(밴드 80px 동일), 문구 `주가 흐름과 내 평단 보기`/`내 평단 보기`. 분할 종목: 접힌 행 수량 = 증권사별 항목 수량 합
 - ⚙ **요청 조건(C2·C79)**: 1년 조회는 펼칠 때만(접힌 행·인증카드 캡처 0), 같은 티커는 쿼리 키 `["price-history", ticker, "1y"]` 1개, 실패 티커는 접었다 펴도 재요청 0(`retryOnMount:false` — 503 3회 재펼침 fetch 1회 테스트), 서버로 나가는 값 `ticker`·`range=1y`뿐
 - 👤 **성과 허브 `자산 변화` 행**: 머리(월 결산)와 행 3개(`최근 7일`·`월별 기록 N개월`·`시장과 비교`)가 따로 눌림(중첩 버튼 0, 행 ≥44px). 행 1 `data-value` = 주 탭 `change-hero-delta`·이름 = `week-title`(C76 D 구간: 7·8·9 / 10·14 / 15 기록 부족 / 없음 기록 쌓는 중), 행 2 N = 월별 기록 `모두 보기` 후 gap 아닌 행 수(C84)이고 N<2·첫 달이면 숨김, 행 2 → 월 탭 렌더 후 월별 기록 카드로 1회 스크롤(reduced-motion 즉시)
 - 👤 **`새`**: `new-chip` 상세·주식·허브 각 ≤1(상세·주식 = 시장 타일, 허브 = 최근 7일 > 월별 기록 > 시장과 비교), 방문하면 꺼지고 다음 자리로 넘어감, 게시일+30일 후 꺼짐. 홈·헤더·하단 네비·더보기·X-Ray·세금 타일·체험·인증카드 0
 - ⚙ 방문 기록: `change-week`는 주 탭이 보일 때(init 진입·탭 전환) 실제 `recordVisit`으로 기록 → 홈 팁 `주간 변화 원인` 추천 순위 하락, `monthly-log`는 카드 50% 이상 보일 때 진입당 1회
 - 👤 **새 소식 바로 가기 정정**: 05 바로 가기 없음, 07 → 인증카드 `주식 현황` 탭, 04 → 월 탭 월별 기록 보임. `monthly-log`·`share-card-stock`은 `tip:false`라 홈 기능 팁 후보 0
 - 테스트: `stock-entry-tools.test.tsx`·`hub-change-rows.test.tsx`·`entry-paths-483.test.ts`·`market-entry-line.test.tsx`
+
+### F-CHART-AXIS. 주가 차트 눈금·현재가·매도 점·칩 폴백·공통 로딩 (#4.84 #163 #164 — [stock-row-flow.tsx](../../src/app/(main)/_components/views/detail/stock-row-flow.tsx) · [price-chart.tsx](../../src/app/(main)/_components/views/detail/stock-page/price-chart.tsx) · [price-axis-layer.tsx](../../src/app/(main)/_components/views/detail/price-axis-layer.tsx) · [loading-note.tsx](../../src/components/ui/loading-note.tsx))
+- 👤 **눈금·현재가(A1~A5)**: 펼친 행 밴드 80px(로딩=성공=실패 동일 높이, 320 플롯 ≥190px, 가로 스크롤 0), 눈금 값 = 간격 {1,2,5}×10^k의 배수(`4만`·`$160`)·2~3줄·평단선·태그와 글자 겹침 0, 선이 최고 눈금 위로 나가지 않음(원본 points 기준), 태그 문자열 = 같은 카드 `현재가` 칸(KRW·USD), 라벨 `현재가`(`오늘` 0), 종목 한 장 1년·5년 같은 가격 칸·x축 라벨 정상
+- 👤 **칩 폴백(B1)**: 삼성 5년형에서 칩이 선을 가리지 않음(`stock-page-avg-chip[data-mode]` plot|short|gutter)
+- 👤 **매도 점(C1·C2)**: 파랑 마름모/빨강 원(흑백 구분), 같은 봉 둘 다 탭 가능, Tab 날짜순·매수→매도, 매수만 종목 문구 기존과 동일, 매도만·혼합 종목 문구 모순 0(`점을 누르면 매도 기록을…`·`1년보다 전 거래 N건`), 슬롯 높이 점프 0
+- 👤 **X·포커스(D1·D2)**: 홈 팁 X 박스 40×40, PC 시트 X `elementFromPoint` 40×40(아이콘 불변), 더보기 경로 Esc 후 `document.activeElement === main`
+- 👤 **로딩(E1~E4)**: `/api/finance` 5초+ 지연 375 다크에서 시장 비교·종목 차트·배당에 문구가 스크롤 없이 보임, 300ms 이내 응답은 `loading-note` 미노출, 스켈레톤이 카드와 구분(다크·라이트)·reduced-motion 정지·완료 전후 y 차 0, 구 문구 0(`점검 중`·오류 토스트 불변), `sidebar`·`ratio-preview` 스켈레톤 캡처 이상 없음
+- ⚙ 서버 전송 0·저장 스키마 변경 0, 새 소식 `20261111-09`·`-10`(대상 정확 C80)
+- 테스트: `stock-page-axis.test.ts`·`stock-page-chip.test.ts`·`stock-page-sell.test.ts`·`stock-page-view.test.tsx`·`stock-entry-tools.test.tsx`·`use-loading-phase.test.ts`·`loading-note.test.tsx`·`whats-new.test.ts`
 
 ### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
 - 👤 6축(핵심분야·**종목 유형**·시가총액·지수·지역·통화) 전환, 분포바·집중도 등급, AI 분류 진행률, 프롬프트 확인·복사
