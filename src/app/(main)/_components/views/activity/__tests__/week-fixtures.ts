@@ -2,7 +2,9 @@
 // 오늘 = 2026-11-12(KST). 시작점 = 11/05. 스냅샷은 saveSnapshots와 같은 수식(computeNetAsset·computeAssetCost)으로 박제한다.
 import { computeAssetCost, computeNetAsset } from "@/contexts/asset-data-context";
 import type { buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import { buildLink, stockLinkTrade, type LinkTrade } from "@/lib/trade/linked-record";
+import { computeNewPosition } from "@/lib/trade/trade-utils";
+import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock, Transaction } from "@/types/asset";
 
 export const M = 1_000_000;
 export const NOW_ISO = "2026-11-12T03:00:00Z"; // KST 2026-11-12 12:00
@@ -80,15 +82,6 @@ export const withdraw = (date: string, amount: number, cashId = "c_krw"): Step =
     cash: d.cash.map((c) => (c.id === cashId ? { ...c, balance: c.balance - amount } : c)),
   }),
 });
-/** 거래 기록 + 수량 갱신(연결 없음 — 출금 기록과는 ±3일 짝) */
-export const stockBuy = (date: string, stockId: string, qty: number, price: number): Step => ({
-  date,
-  apply: (d) => {
-    const s = d.stocks.find((x) => x.id === stockId)!;
-    const tx = { id: nid("tx"), stockId, ticker: s.ticker ?? "", stockName: s.name, type: "buy", quantity: qty, price, currency: s.currency, ...(s.currency === "USD" ? { exchangeRate: 1400 } : {}), date, ...stamp(date) };
-    return { ...d, transactions: [...d.transactions, tx as never], stocks: d.stocks.map((x) => (x.id === stockId ? { ...x, quantity: x.quantity + qty } : x)) };
-  },
-});
 export const loanBorrow = (date: string, amount: number, loanId = "l_cred"): Step => ({
   date,
   apply: (d) => ({
@@ -122,11 +115,12 @@ export function withPrices(d: AssetData, i: number): AssetData {
   };
 }
 
-/** 날짜 index(0..7, 7 = 오늘 11/12)까지의 상태 */
-export function stateAt(steps: Step[], i: number): AssetData {
-  const day = i >= DAYS.length ? TODAY : DAYS[i];
-  let d = withPrices(baseData(), i);
-  for (const s of steps) if (s.date <= day) d = s.apply(d);
+const dayIndex = (date: string) => Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${DAYS[0]}T00:00:00Z`)) / 86_400_000);
+
+/** 그 날짜(포함)까지의 상태 — 11/05 = 0, 오늘 11/12 = 7 */
+export function stateOn(steps: Step[], date: string): AssetData {
+  let d = withPrices(baseData(), dayIndex(date));
+  for (const s of steps) if (s.date <= date) d = s.apply(d);
   return d;
 }
 
@@ -144,18 +138,46 @@ export function buildScenario(steps: Step[], opts: { legacyStart?: boolean; days
   seq = 0; // 거래 id를 호출 순서로 고정(골든 안정)
   const days = opts.days ?? DAYS;
   const daily = days.map((date) => {
-    const i = DAYS.indexOf(date) >= 0 ? DAYS.indexOf(date) : 0;
-    const s = snapOf(stateAt(steps, i), rateAt(i), date);
+    const s = snapOf(stateOn(steps, date), rateAt(dayIndex(date)), date);
     if (opts.legacyStart && date === days[0]) return { date, netAsset: s.netAsset, financialAsset: s.financialAsset } as DailyAssetSnapshot;
     return s;
   });
-  const rates = rateAt(DAYS.length);
-  const assetData = stateAt(steps, DAYS.length);
+  const rates = rateAt(dayIndex(TODAY));
+  const assetData = stateOn(steps, TODAY);
   const exchangeHistory: Scenario["exchangeHistory"] = {};
-  DAYS.forEach((date, i) => { exchangeHistory[date] = rateAt(i); });
+  for (const date of [...DAYS, ...days]) exchangeHistory[date] = rateAt(dayIndex(date));
   exchangeHistory[TODAY] = rates;
   return { assetData, rates, summary: summaryOf(assetData, rates), daily, monthly: [], exchangeHistory };
 }
+
+// ── 연결 거래(C42·C49) ──
+
+/** 주식 거래 기록 + 포지션 갱신. link 있으면 계좌·대출과 같은 날짜로 연결(buildLink) */
+export const stockTrade = (o: { date: string; stockId: string; type: "buy" | "sell"; qty: number; price: number; link?: { kind: "cash"; cashId: string } | { kind: "loan"; loanId: string } }): Step => ({
+  date: o.date,
+  apply: (d) => {
+    const s = d.stocks.find((x) => x.id === o.stockId)!;
+    const tx = {
+      id: nid("tx"), stockId: s.id, ticker: s.ticker ?? "", stockName: s.name, type: o.type, quantity: o.qty, price: o.price, currency: s.currency,
+      ...(s.currency === "USD" ? { exchangeRate: 1400 } : {}), date: o.date, ...stamp(o.date),
+    } as Transaction;
+    const pos = computeNewPosition({ quantity: s.quantity, avgPrice: s.averagePrice, avgExchangeRate: s.purchaseExchangeRate ?? 0, source: "manual", effectiveDate: o.date, lockedByManual: false }, tx);
+    let next: AssetData = {
+      ...d,
+      transactions: [...d.transactions, tx],
+      stocks: d.stocks.map((x) => (x.id === s.id ? { ...x, quantity: pos.quantity, averagePrice: pos.avgPrice || x.averagePrice } : x)),
+    };
+    if (o.link) {
+      const b = buildLink(next, stockLinkTrade(tx) as LinkTrade, o.link, o.date);
+      if (!b.ok) throw new Error(`link fail ${b.reason}`);
+      next = b.data;
+    }
+    return next;
+  },
+});
+
+/** 연결 없는 주식 매수(출금 기록과는 ±3일 짝) */
+export const stockBuy = (date: string, stockId: string, qty: number, price: number): Step => stockTrade({ date, stockId, type: "buy", qty, price });
 
 /** 모든 종류 원인이 한 번씩 들어간 7일 — 시세·환율·입금·출금↔매수 짝·추가 대출·부동산 평가 갱신 */
 export const RICH_STEPS: Step[] = [

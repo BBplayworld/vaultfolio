@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
+import type { AssetData } from "@/types/asset";
 import {
   MARKET_INDEX_NAME,
   classifyHoldings,
@@ -19,6 +20,10 @@ import {
 import { useCompareBasis, useDailyRefToken, useKospiPeerCodes, useMarketIndexRefs } from "@/hooks/use-market-compare";
 
 const HAIRLINE = "border-border dark:border-border/40";
+
+// 시장과 비교로 넘길 종목이 있는가(티커 있는 보유 주식) — 자산 변화 › 주 `종목 등락 보기` 노출 조건과 공용
+export const hasComparableStock = (assetData: AssetData): boolean =>
+  assetData.stocks.some((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted" && s.quantity > 0);
 
 export function MarketEntryLine({ variant, period, visible = true, onOpen, testId }: {
   // stock = 상세·주식(1주 고정, `최근 1주` 접두·`내 종목과 비교`) / hero = 자산 변화(선택 기간, 접두 없음·`시장과 비교`)
@@ -33,7 +38,7 @@ export function MarketEntryLine({ variant, period, visible = true, onOpen, testI
   const dailyToken = useDailyRefToken();
   const peerCodes = useKospiPeerCodes();
 
-  const hasTickerStock = assetData.stocks.some((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted" && s.quantity > 0);
+  const hasTickerStock = hasComparableStock(assetData);
   // 비교할 종목이 있는 시장(국내 → 미국). 판별 전 null
   const markets = useMemo<CompareMarket[] | null>(() => {
     if (!peerCodes) return null;

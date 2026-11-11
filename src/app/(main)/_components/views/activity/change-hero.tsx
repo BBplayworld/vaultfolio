@@ -40,6 +40,7 @@ export interface ChangeHeroProps {
   title?: ReactNode;         // 없으면 이름 줄 생략(빈 상태)
   titleTestId?: string;
   range?: ReactNode;         // 이름 옆 구간 "9/28 → 10/28"
+  rangeTestId?: string;      // 구간 요소 testId(주 탭 week-range)
   badge?: ReactNode;         // 이름 줄 배지(진행 중)
   actions?: ReactNode;       // 이름 줄 오른쪽 끝(월 화살표)
   delta?: number | null;     // null이면 증감 줄 대신 message
@@ -75,14 +76,14 @@ export function ChangeHeroFrame({ period, footer, children }: { period: ReactNod
   );
 }
 
-export function ChangeHero({ title, titleTestId, range, badge, actions, delta = null, pct = null, start, end, loading, message, aside, note, contentKey, period }: ChangeHeroProps) {
+export function ChangeHero({ title, titleTestId, range, rangeTestId, badge, actions, delta = null, pct = null, start, end, loading, message, aside, note, contentKey, period }: ChangeHeroProps) {
   const slot = useContext(HeroSlotContext);
   const content = (
     <>
         {(title || actions) && <div className="flex min-h-10 items-center gap-2">
           <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span data-testid={titleTestId ?? "change-hero-title"} className="text-sm font-semibold text-foreground">{title}</span>
-            {range && <span className="text-sm text-muted-foreground tabular-nums">{range}</span>}
+            {range && <span data-testid={rangeTestId} className="text-sm text-muted-foreground tabular-nums">{range}</span>}
           </p>
           {badge}
           {actions && <div className="ml-auto sm:ml-2 flex shrink-0 items-center gap-1">{actions}</div>}
@@ -343,21 +344,38 @@ const CAUSE_TESTID: Record<string, string> = {
   price: "cause-row-price", valuation: "cause-row-valuation", fx: "cause-row-fx", income: "cause-row-income", loan: "cause-row-loan", unrecorded: "cause-row-unrecorded",
 };
 // 항목 설명(InfoHint) — 대출에는 "상환"·"매수" 문구를 쓰지 않는다(앱 안 이동은 원인이 아님)
-const CAUSE_HINT: Partial<Record<string, string>> = {
-  income: "입금에서 출금을 뺀 금액이에요",
-  loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
-  unrecorded: "새로 등록한 자산이나 직접 고친 잔액처럼, 시세·환율·입출금·대출로 설명되지 않는 금액이에요",
+const UNRECORDED_HINT = "새로 등록한 자산이나 직접 고친 잔액처럼, 시세·환율·입출금·대출로 설명되지 않는 금액이에요";
+const CAUSE_HINT: Record<"month" | "year" | "week", Partial<Record<string, string>>> = {
+  month: {
+    income: "입금에서 출금을 뺀 금액이에요",
+    loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
+    unrecorded: UNRECORDED_HINT,
+  },
+  year: {
+    income: "입금에서 출금을 뺀 금액이에요",
+    loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
+    unrecorded: UNRECORDED_HINT,
+  },
+  // 주 탭(4.79) — 홈 Hero와 같은 정의(짝 없는 매매 포함 순유입, 대출 잔액 변화 양·음 모두). 이자 추정 없음
+  week: {
+    income: "넣고 뺀 돈이에요. 입출금 기록 없이 사고판 금액도 여기에 들어가요",
+    loan: "이 기간 대출 잔액 변화예요. 갚아서 줄면 +, 늘면 −로 보여요",
+    unrecorded: UNRECORDED_HINT,
+  },
 };
 const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
 
 // 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 다른 점은 입출금 안내의 기간 표현("이번 달"/"올해")뿐
-export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
-  scope: "month" | "year";
+// footer: 원인 줄 아래 슬롯(주 탭 — 기록 내역·종목 등락 보기, 4.79). 없으면 렌더 diff 0
+export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
+  scope: "month" | "year" | "week";
   mapped?: SettlementCauses;
   estimatedLabel?: string;
   status?: "insufficient" | "error";
+  footer?: ReactNode;
 }) {
+  const hints = CAUSE_HINT[scope];
   // 예측 행이 2개 이상이면 행마다 같은 배지를 반복하지 않고 제목 옆에 1개만 둔다(연 탭 B안은 첫 구간이 늘 예측, ui-review)
   const groupEstimated = !status && (mapped?.causes.filter((c) => c.estimated).length ?? 0) >= 2;
   return (
@@ -387,8 +405,8 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
               label={
                 <span className="inline-flex flex-wrap items-center gap-1.5">
                   {SETTLEMENT_CAUSE_LABEL[c.key]}
-                  {CAUSE_HINT[c.key] && (
-                    <span data-screenshot-hide><InfoHint summary={CAUSE_HINT[c.key]!} /></span>
+                  {hints[c.key] && (
+                    <span data-screenshot-hide><InfoHint summary={hints[c.key]!} /></span>
                   )}
                   {c.estimated && !groupEstimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
                 </span>
@@ -402,6 +420,7 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status }: {
       {!status && mapped?.showUnrecordedHint && (
         <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해" : "이번 달"} 입출금을 기록하면 더 정확해져요</p>
       )}
+      {footer}
     </section>
   );
 }

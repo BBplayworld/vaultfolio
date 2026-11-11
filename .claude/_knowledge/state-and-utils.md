@@ -367,6 +367,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `pruneMonthlySnapshots(all, currentMonth)` — `month >= 현재월−12`만(최대 13개, 연 경계 무관). `saveSnapshots` 월 업서트가 사용. `shiftMonth(month, delta)`
 - `resolveSettlementWindow(monthly, month, today)` → `SettlementWindow {kind: settled|range|in_progress|first_month, start, end(null=진행 중·실시간), startDate, endDate, gapDays, longGap}`. `pickSettlementMonth`(1~10일+전월 기록일 ≥21일 → 전월), `isSettlementCardPeriod`(말일−3~10일), `pickSettlementCard`, `listSettlementMonths`(13개월·활성 여부), 문구 `settlementTitle`/`settlementCardTitle`/`settlementRangeLabel`/`formatSettlementPoint`, GA `settlementGaResult`(range→settled)
 - `mapSettlementCauses(effects, {deltaNet, cashTracked})` → 5항목(`price|valuation|fx|income|unrecorded`, 원 단위 정수, 10원 미만 숨김) + `showUnrecordedHint`(≥50%). 기록 안 된 변화 = Δ순자산 − 표시 4항목(항등식). `SETTLEMENT_CAUSE_LABEL`
+- `views/activity/week-attribution.ts`(#4.79, 순수·`matchRecordedTransferDetail` 때문에 lib이 아닌 뷰 폴더): `computeAttributionView({assetData, rates, summary, daily, monthly, exchangeHistory, sinceDate})` → `{attr, transfer, causes, records, offsetTotal, sentence, rangeLabel}|null` — 홈 Hero `useHeaderNetChange`와 주 탭이 **같이** 부르는 원인 분해 단일 계산(저장소 읽기는 호출부). `mapWeekCauses(view)` → `SettlementCauses`(Hero 항목을 시세/평가 갱신/환율/순유입/대출/기록 안 된 변화 6줄로 합산만, 기록 안 된 변화 = round(Δ)−나머지 줄 합, |Δ|<1만이면 줄 0개), `weekLineOf(key)`, `resolveWeekHero(view, today)`(D=today−시작일: 7~9 `최근 7일`+구간 / 그 외 ≤14 `M/D 이후` / >14 부족 / null 빈), `weekToday()`(홈 Hero와 같은 KST 식)·`weekSinceDate(today)`(−7일). 테스트 픽스처 `__tests__/week-fixtures.ts`, 홈 출력 골든 `header-change.golden.json`(main 훅 본문 verbatim 캡처)
 - `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
 - 엔진 쪽 유일한 추가: `asset-report.ts`의 `computeAttributionBetween(prevMonthly, currMonthly|liveCurr, …)` — `resolveAttribution(…, isFirstSegment=true)` 단일 구간, 하이브리드 없음(레거시 시작=전체 예측), 끝점에 fx·fxBase 없으면 null
 
@@ -540,6 +541,7 @@ countAssets(data) / toGaAssetType(kebab) / screenPath(viewKey)
 - **폐기(4.41)**: `PARAM_LABELS`·한국어 라벨 치환·`labelOf`·`sanitizeParams`·`setUserProps`/`GaUserProps`/사용자 속성·`assetCountBucket`·`nav_source` 전송. GA 맞춤 정의(이벤트 8·사용자 5)는 대표가 보관처리, 신규 판독은 "페이지 및 화면" 보고서 한 장.
 - gtag 부재(로컬·preview·옵트아웃)·예외 시 no-op — 앱 흐름 영향 0. `window.gtag` 직접 호출 금지, 금액·종목·티커·닉네임·ID 전송 금지.
 - `trackThenNavigate(name, params, url, navigate?)`(#4.38 #59) — 이벤트 후 이동. `event_callback` 또는 `NAVIGATE_TRACK_TIMEOUT_MS`(300) 중 먼저 오는 쪽에서 1회 `location.assign`. 체험 중·gtag 없음·예외는 즉시 이동. 체험 페이지에서는 `track`·`trackScreen` no-op
+- 4.79 신규 추적: `feature_use{category:"change_week_all"}`(성과·자산 변화·최근 7일) — 전체 범위에서 `주`를 누를 때 `changePeriod`, 홈 팁 `week-causes` 진입 시 `AppFeature.entryCategory`(+`source:"home_tip"`, **source는 GA로 나가지 않아 page_title만 같다**). 복원·첫 진입 0건
 - 4.41 신규 추적: `feature_use{category:"share_card"}`(인증카드 열기: 상단 버튼·홈 팁 dispatch), `{category:"app_guide"}`(앱 가이드 열기)
 - 동기화 이벤트(`sync_action`)는 수동 동작 결과 확정 후 UI 쪽에서만 1줄 — 자동 push/pull·sync 로직에는 걸지 않는다.
 

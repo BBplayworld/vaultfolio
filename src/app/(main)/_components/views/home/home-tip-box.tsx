@@ -168,6 +168,8 @@ export function HomeTipBox() {
       return;
     }
     tip.feature.beforeNavigate?.();
+    // 주 탭 팁(4.79) — 팁으로 진입해도 기능 사용 1건. 복원·첫 진입 해시는 이 경로를 거치지 않는다
+    if (tip.feature.entryCategory) track("feature_use", { category: tip.feature.entryCategory, source: "home_tip" });
     if (tip.feature.target) navigate(tip.feature.target);
   };
 

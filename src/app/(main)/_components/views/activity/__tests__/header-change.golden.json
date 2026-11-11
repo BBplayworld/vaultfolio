@@ -6,14 +6,14 @@
   "negligible": false,
   "label": "지난 접속(11/5) 이후",
   "estimated": false,
-  "sentence": "주식 시세 상승 +167만원 · 코인 시세 상승 +49만원 · 부동산 시세 상승 +400만원 · 환율 상승 +16만원 · 기록 안 된 변화 +34만원",
+  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 부동산 시세 상승 +400만원 · 환율 상승 +16만원 · 기록 안 된 변화 +97만원",
   "causes": [
    {
     "key": "price:stock",
     "label": "주식 시세 상승",
-    "sentence": "주식 시세 상승으로 +167만원 늘었어요.",
-    "amount": 1673839.9999999998,
-    "text": "+167만원"
+    "sentence": "주식 시세 상승으로 +104만원 늘었어요.",
+    "amount": 1043839.9999999999,
+    "text": "+104만원"
    },
    {
     "key": "price:crypto",
@@ -39,12 +39,12 @@
    {
     "key": "unrecorded",
     "label": "기록 안 된 변화",
-    "sentence": "기록 안 된 변화로 +34만원 늘었어요.",
-    "amount": 340000,
-    "text": "+34만원"
+    "sentence": "기록 안 된 변화로 +97만원 늘었어요.",
+    "amount": 970000,
+    "text": "+97만원"
    }
   ],
-  "offsetTotal": 4630000,
+  "offsetTotal": 4000000,
   "rangeLabel": "11/5 → 11/12",
   "records": [
    {
@@ -202,14 +202,14 @@
   "negligible": false,
   "label": "지난 접속(11/5) 이후",
   "estimated": false,
-  "sentence": "주식 시세 상승 +167만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 기록 안 된 변화 +34만원",
+  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 기록 안 된 변화 +97만원",
   "causes": [
    {
     "key": "price:stock",
     "label": "주식 시세 상승",
-    "sentence": "주식 시세 상승으로 +167만원 늘었어요.",
-    "amount": 1673839.9999999998,
-    "text": "+167만원"
+    "sentence": "주식 시세 상승으로 +104만원 늘었어요.",
+    "amount": 1043839.9999999999,
+    "text": "+104만원"
    },
    {
     "key": "price:crypto",
@@ -228,12 +228,12 @@
    {
     "key": "unrecorded",
     "label": "기록 안 된 변화",
-    "sentence": "기록 안 된 변화로 +34만원 늘었어요.",
-    "amount": 340000.00000000023,
-    "text": "+34만원"
+    "sentence": "기록 안 된 변화로 +97만원 늘었어요.",
+    "amount": 969999.9999999999,
+    "text": "+97만원"
    }
   ],
-  "offsetTotal": 4630000,
+  "offsetTotal": 4000000,
   "rangeLabel": "11/5 → 11/12",
   "records": [
    {
