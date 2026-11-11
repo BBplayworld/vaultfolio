@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-11 19:14 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.82**
+> **마지막 갱신: 2026-11-11 20:25 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.82**
 
 ## 🟥 대표 확인·결정 필요 (지금)
 1. **ETF 구성종목 API 탐색 (대표님 직접 확인 중, 11/11)** — '[보류] ETF 속까지 합친 내 주식'([#152](https://github.com/BBplayworld/vaultfolio/issues/152)) 재개 여부가 여기에 걸려 있음
@@ -13,6 +13,10 @@
    - 11/18 전후: v4.82 새 소식 첫 주(기준 '새 소식' 활성 6명↑)
    - 11/25 전후: v4.79 '최근 7일'·v4.81 '종목 한 장' 2주차, 새 소식 2주차
    - 12/9 전후: 같은 항목 4주차(결산 창 중 월 결산·홈 활성 불감소 확인 포함)
+
+3. **신기능 진입 경로 개선 — 방향 선택 (11/11, 디자이너 Opus 시안)** · 제안서 [4.xx-ui-proposal.md](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/4.xx-ui-proposal.md)
+   - 시안(375 라이트, 같은 폴더 screenshots/에 320·1280·다크 전부): [종목 카드 버튼](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock-m1-stock-card-375-light.png) · [성과 허브 칩 줄](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock-m3-perf-hub-375-light.png) · [주 탭 '새'](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock-m4a-period-week-375-light.png) · [월별 기록](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock-m4b-monthly-log-375-light.png) · [홈 원인 보강](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock-m5-home-cause-375-light.png)
+   - 답: `권고안대로` / 항목별 조정(예: '종목 카드 버튼만', '홈 보강 제외', '첫 카드 자동 펼침 포함')
 
 ## 🔴 운영 결함 (p0)
 - 없음 (최근 핫픽스: #107 v4.57, #104 v4.53 핫픽스 — 운영 스모크 PASS)
