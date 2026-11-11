@@ -172,7 +172,7 @@ export function WeekList() {
           estimatedLabel="예측"
           footer={(records.length > 0 || hasStock) ? (
             <div className="flex flex-wrap items-start justify-between gap-x-3 border-t border-border dark:border-border/40 pt-1">
-              {records.length > 0 && <div data-testid="week-records" className="min-w-0 flex-1"><AttributionRecordList records={records} /></div>}
+              {records.length > 0 && <div data-testid="week-records" className="min-w-0 flex-1 has-[[aria-expanded=true]]:basis-full"><AttributionRecordList records={records} /></div>}
               {hasStock && (
                 <button
                   type="button"
@@ -203,7 +203,7 @@ export function WeekList() {
 function WeekClosingCard({ rows }: { rows: WeekRow[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <section className={`${SECTION} ${BODY_ENTER}`} style={{ animationDelay: "120ms", animationFillMode: "backwards" }}>
+    <section {...(open ? {} : { "data-screenshot-hide": true })} className={`${SECTION} ${BODY_ENTER}`} style={{ animationDelay: "120ms", animationFillMode: "backwards" }}>
       <div>
         <button
           type="button"
@@ -225,15 +225,15 @@ function WeekClosingCard({ rows }: { rows: WeekRow[] }) {
         >
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-2 pt-3">
-              <p className="text-sm text-muted-foreground text-pretty">날짜별 마감 기준이라 위 금액과 조금 다를 수 있어요</p>
+              <p className="text-sm text-muted-foreground text-pretty break-keep">날짜별 마감 기준이라 위 금액과 조금 다를 수 있어요</p>
               <div className="flex flex-col divide-y divide-border dark:divide-border/40">
                 {rows.map((r) => (
                   <div key={r.date} data-testid="week-row" className="flex items-baseline justify-between gap-3 py-2">
-                    <span className="text-sm text-muted-foreground tabular-nums">
+                    <span className="min-w-0 text-sm text-muted-foreground tabular-nums">
                       {Number(r.date.slice(5, 7))}/{Number(r.date.slice(8, 10))} ({WEEKDAY[new Date(`${r.date}T00:00:00Z`).getUTCDay()]})
                     </span>
-                    <span className="ml-auto text-sm font-semibold text-foreground tabular-nums">{formatPriceByMode(r.netAsset)}</span>
-                    <span className={`w-24 text-right text-sm tabular-nums ${r.diff === null ? "text-muted-foreground" : getProfitLossColor(r.diff)}`}>
+                    <span className="ml-auto whitespace-nowrap text-sm font-semibold text-foreground tabular-nums">{formatPriceByMode(r.netAsset)}</span>
+                    <span className={`min-w-24 shrink-0 whitespace-nowrap text-right text-sm tabular-nums ${r.diff === null ? "text-muted-foreground" : getProfitLossColor(r.diff)}`}>
                       {r.diff === null ? "-" : `${r.diff >= 0 ? "+" : ""}${formatPriceByMode(r.diff)}`}
                     </span>
                   </div>
