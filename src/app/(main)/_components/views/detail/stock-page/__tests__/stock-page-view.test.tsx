@@ -79,6 +79,19 @@ describe("C76 ① 거래 0·분할 0 — 가장 흔한 경로", () => {
   });
 });
 
+describe("점 안내·정의 줄 문구", () => {
+  it("점이 있고 선택 전이면 '점을 누르면 거래를 볼 수 있어요', 창 밖 안내가 있으면 그쪽이 우선", () => {
+    const s = stock({ id: "a" });
+    expect(text(render([s], [tx({ stockId: "a", date: "2026-03-04" })]))).toContain("점을 누르면 거래를 볼 수 있어요");
+    const out = text(render([s], [tx({ stockId: "a", date: "2026-03-04" }), tx({ stockId: "a", date: "2024-01-01" })]));
+    expect(out).not.toContain("점을 누르면");
+    expect(out).toContain("1년보다 전 매수 1건");
+  });
+  it("정의 줄에 일별/주별 종가 기준", () => {
+    expect(text(render([stock({})], []))).toContain("일별 종가 기준이에요.");
+  });
+});
+
 describe("C76 ② 증권사 2곳 — 합산 평단선·두 계좌 점", () => {
   it("평단선 값 = 합산 평단, 점은 두 계좌 거래 모두(같은 봉은 1개)", () => {
     const a = stock({ id: "a", broker: "A", quantity: 10, averagePrice: 70000 });
@@ -159,7 +172,13 @@ describe("요청·상태", () => {
     expect(text(err)).toContain("다시 시도");
     expect(tid(err, "stock-page-change")).toBe(false);
     hook.mockImplementation(() => ({ data: undefined, isError: false, refetch: () => {} }));
-    expect(render([stock({})], [])).toContain('data-state="loading"');
+    const loading = render([stock({})], []);
+    expect(loading).toContain('data-state="loading"');
+    // 카드 높이 점프 방지 — 로딩·오류에서도 상태 줄 슬롯·정의 줄이 자리를 잡는다
+    for (const html of [loading, err]) {
+      expect(html).toContain('aria-live="polite"');
+      expect(tid(html, "stock-page-basis")).toBe(true);
+    }
   });
   it("거래내역 N건 링크 = 그룹 전체 거래 수(매수·매도)", () => {
     const s = stock({ id: "a" });

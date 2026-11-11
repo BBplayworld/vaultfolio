@@ -876,7 +876,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                     type="button"
                     data-testid="stock-page-entry"
                     onClick={openStockPage}
-                    className="-mr-2 -mb-2 inline-flex min-h-10 min-w-10 items-center gap-0.5 px-2 text-sm font-medium text-brand dark:text-indigo-300 active:not-disabled:scale-[0.96] transition-[scale,color] motion-safe:duration-150"
+                    className="-mr-[11px] -mb-2 inline-flex min-h-10 min-w-10 items-center gap-0.5 px-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 active:not-disabled:scale-[0.96] transition-[scale,color] motion-safe:duration-150"
                   >
                     종목 보기
                     <ChevronRight className="size-3.5" />

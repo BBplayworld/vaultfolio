@@ -68,11 +68,28 @@ export function PriceChart({ points, dots, avg, currency, interval, colorClass, 
   const area = `${line}L${xOf(points[points.length - 1].d).toFixed(1)},${M.top + plotH}L${xOf(points[0].d).toFixed(1)},${M.top + plotH}Z`;
 
   // 평단선 y — 범위 밖이면 가장자리에 고정
-  const avgY = avg && avg > 0 ? (clamped === "up" ? M.top : clamped === "down" ? M.top + plotH : yOf(avg)) : null;
+  const avgY = avg && avg > 0 ? (clamped === "up" ? M.top + 7 : clamped === "down" ? M.top + plotH - 7 : yOf(avg)) : null;
   const avgText = avg && avg > 0 ? `내 평단 ${formatPrice(avg, currency)}${clamped === "up" ? " ↑" : clamped === "down" ? " ↓" : ""}` : "";
   const chipW = avgText.length * 6.4 + 14;
-  const flip = avgY !== null && avgY < M.top + 28;
-  const chipY = avgY === null ? 0 : flip ? avgY + 4 : avgY - CHIP_H - 4;
+  // 칩 후보 4곳(왼쪽·오른쪽 끝 × 선 위·아래) 중 가격선과 가장 덜 겹치는 곳(동률이면 앞 후보). 칩 면은 칠하지 않고 글자 외곽선만 쓴다
+  const xy = points.map((p) => ({ x: xOf(p.d), y: yOf(p.c) }));
+  const chip = (() => {
+    if (avgY === null) return { x: M.left, y: 0 };
+    const ys = [avgY - CHIP_H - 4, avgY + 4].filter((y) => y >= 0 && y + CHIP_H <= h - M.bottom + 4);
+    const xs = [M.left, w - M.right - chipW];
+    let best = { x: xs[0], y: ys[0] ?? avgY + 4 };
+    let bestHits = Infinity;
+    for (const y of ys.length ? ys : [avgY + 4]) {
+      for (const x of xs) {
+        const hits = xy.filter((q) => q.x >= x - 2 && q.x <= x + chipW + 2 && q.y >= y - 2 && q.y <= y + CHIP_H + 2).length;
+        if (hits < bestHits) {
+          bestHits = hits;
+          best = { x, y };
+        }
+      }
+    }
+    return best;
+  })();
 
   // 점 히트 반경 — 가까운 점 우선: 이웃과 가까우면 이웃 거리의 절반(최소 10, 최대 20)
   const dotXY = dots.map((d) => ({ x: xOf(d.d), y: yOf(d.c) }));
@@ -163,8 +180,16 @@ export function PriceChart({ points, dots, avg, currency, interval, colorClass, 
             className={clamped === "none" ? "text-foreground/70" : "text-foreground/40"}
           >
             <line x1={M.left} x2={w - M.right} y1={avgY} y2={avgY} stroke="currentColor" strokeWidth={1.25} strokeDasharray="4 3" />
-            <rect x={M.left} y={chipY} width={chipW} height={CHIP_H} rx={6} style={{ fill: "var(--card)", fillOpacity: 0.85 }} />
-            <text x={M.left + 7} y={chipY + 14} fontSize={11} fontWeight={500} className="fill-foreground tabular-nums">{avgText}</text>
+            <text
+              x={chip.x + 7}
+              y={chip.y + 14}
+              fontSize={11}
+              fontWeight={500}
+              className="fill-foreground tabular-nums"
+              style={{ paintOrder: "stroke", stroke: "var(--card)", strokeWidth: 3, strokeLinejoin: "round" }}
+            >
+              {avgText}
+            </text>
           </g>
         )}
 
@@ -196,8 +221,8 @@ export function PriceChart({ points, dots, avg, currency, interval, colorClass, 
               }}
             >
               <circle cx={x} cy={y} r={hitR(i)} fill="transparent" />
-              <circle cx={x} cy={y} r={9} fill="none" stroke={MAIN_PALETTE[0]} strokeWidth={2} opacity={selected ? 1 : 0} className="motion-safe:transition-opacity motion-safe:duration-150" />
-              <circle cx={x} cy={y} r={selected ? 6 : 4} className="fill-rose-500" style={{ stroke: "var(--card)", strokeWidth: 2 }} />
+              <circle cx={x} cy={y} r={10} fill="none" stroke={MAIN_PALETTE[0]} strokeWidth={2} opacity={selected ? 1 : 0} className="motion-safe:transition-opacity motion-safe:duration-150" />
+              <circle cx={x} cy={y} r={selected ? 7 : 5} className="fill-rose-500" style={{ stroke: "var(--card)", strokeWidth: 2.5 }} />
             </g>
           );
         })}

@@ -34,7 +34,7 @@ const RANGE_OPTIONS: { value: PriceRange; label: string; testId: string }[] = [
   { value: "5y", label: "5년", testId: "stock-page-range-5y" },
 ];
 const RANGE_LABEL: Record<PriceRange, string> = { "1y": "1년", "5y": "5년" };
-const BOX_H = "h-48 min-[375px]:h-52 lg:h-64";
+const BOX_H = "h-48 min-[375px]:h-52 lg:h-72";
 const STOCKS_VIEW = { type: "detail", tab: "stocks" } as const;
 
 const signedRate = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
@@ -147,6 +147,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
   const rangeLabel = RANGE_LABEL[range];
   const longName = head.merged.name.length > 40 ? head.merged.name : undefined;
   const basis = [
+    `${range === "1y" ? "일별" : "주별"} 종가 기준이에요.`,
     "액면분할 등을 반영한 가격이에요. 점은 기록한 거래 날짜에 찍혀요.",
     currency === "USD" ? "달러 가격 기준이에요." : "",
     data?.listedFrom ? "상장 이후 기간만 있어요." : "",
@@ -234,9 +235,9 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
         </div>
 
         {/* 상태 줄 — 선택한 점 > 거래 0건 > 창 밖. 차트 아래에 두어 차트가 움직이지 않게 */}
-        {state === "ready" && (
+        {state !== "empty" && (
           <div aria-live="polite" className="min-h-10 text-[13px] flex flex-col justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150" key={selectedDot ? selectedDot.index : "idle"}>
-            {selectedDot ? (
+            {state !== "ready" ? null : selectedDot ? (
               <div data-testid="stock-page-buy-detail" className="flex flex-col gap-0.5 tabular-nums">
                 {selectedDot.buys.slice(0, 3).map((b) => (
                   <p key={b.id}>{fmtDot(b.date)} 매수 {b.quantity.toLocaleString()}주 · {formatPrice(b.price, b.currency)}</p>
@@ -259,11 +260,13 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
               ) : (
                 <p data-testid="stock-page-outside" data-clickable="false" className="text-sm text-muted-foreground">5년보다 전 매수 {outsideCount}건</p>
               )
+            ) : dots.length > 0 ? (
+              <p data-testid="stock-page-dot-hint" className="text-xs text-muted-foreground">점을 누르면 거래를 볼 수 있어요</p>
             ) : null}
           </div>
         )}
 
-        {state === "ready" && (
+        {state !== "empty" && (
           <p data-testid="stock-page-basis" className="text-[11px] text-muted-foreground text-pretty">{basis}</p>
         )}
 
