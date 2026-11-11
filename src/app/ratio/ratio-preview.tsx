@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { MAIN_PALETTE, SHARE_ETC_COLOR } from "@/config/theme";
 import { RATIO_PREVIEW_UPLOAD_NOTICE } from "@/config/security-copy";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
+import { displayShareWidths } from "@/lib/report/min-share";
 import { useExternalMove } from "@/hooks/use-external-move";
 import { allowedUtmQuery } from "@/lib/analytics/utm-allow";
 import { track, trackScreen } from "@/lib/analytics/ga";
@@ -360,8 +361,8 @@ export function RatioPreview() {
                 aria-label={result.split.map((g) => `${SPLIT_LABEL[g.kind]} ${pctText(g.pct)}`).join(", ")}
                 className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-muted"
               >
-                {result.split.map((g) => (
-                  <div key={g.kind} data-testid={`ratio-split-${g.kind}`} className="h-full" style={{ width: `${g.pct}%`, backgroundColor: colors[g.kind] }} />
+                {result.split.map((g, idx) => (
+                  <div key={g.kind} data-testid={`ratio-split-${g.kind}`} className="h-full" style={{ width: `${displayShareWidths(result.split.map((x) => x.pct))[idx]}%`, backgroundColor: colors[g.kind] }} />
                 ))}
               </div>
               <ul role="list" className="flex flex-wrap gap-x-4 gap-y-1">

@@ -16,6 +16,7 @@ import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
+import { displayShareWidths } from "@/lib/report/min-share";
 
 function computeCryptoMetrics(coin: Crypto) {
   const value = coin.quantity * coin.currentPrice;
@@ -273,10 +274,10 @@ export function CryptoTab() {
         {barItems.length > 0 && totalValue > 0 && (
           <div className="space-y-2">
             <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-              {barItems.map(({ coin, value: v, color }) => {
+              {barItems.map(({ coin, value: v, color }, idx) => {
                 const pct = (v / totalValue) * 100;
                 return (
-                  <div key={coin.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`} />
+                  <div key={coin.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(barItems.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`} />
                 );
               })}
             </div>
