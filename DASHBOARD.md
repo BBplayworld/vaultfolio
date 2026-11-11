@@ -54,7 +54,7 @@
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
 | v4.78 [PR #151](https://github.com/BBplayworld/vaultfolio/pull/151) | 11/11 | 시장과 나란히 '올해' 비교(#150) — 하루·1주·1개월·올해 표, 목록 올해, 연 탭 링크 · 54a759c · 운영 스모크 진행 중 |
-| v4.77 [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149) | 11/11 | 새 종목 매수일 일괄 입력(#146)·맞추기로 끊긴 거래 다시 잇기(#147, 기록 시각 기준)·5개 이하 도넛·비중 바 최소 비중(#148) · 61a15e1 · 운영 스모크 진행 중 |
+| v4.77 [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149) | 11/11 | 새 종목 매수일 일괄 입력(#146)·맞추기로 끊긴 거래 다시 잇기(#147, 기록 시각 기준)·5개 이하 도넛·비중 바 최소 비중(#148) · 61a15e1 · 운영 스모크 PASS(첫 등록 교체 실 UI는 AI 인식 필요로 미확인) |
 | v4.73 [PR #136](https://github.com/BBplayworld/vaultfolio/pull/136) | 11/10 | 시장과 나란히(#132) — 보유 종목 등락 vs 코스피·S&P 500 비교 페이지·진입 글줄·등락률 순 정렬 + 기간 전환 경합(#137)·시작 직후 칩(#138) 수정 · 대표 위임(COO 확인 후 팀 머지) · 운영 스모크 PASS(장중 지수 재대조 11/11) |
 | v4.70 [PR #128](https://github.com/BBplayworld/vaultfolio/pull/128) | 11/10 | 월별 기록(#127) — 결산 월 탭 카드, 달마다 변화 금액 색 표시 · 운영 스모크 PASS |
 | v4.69 [PR #126](https://github.com/BBplayworld/vaultfolio/pull/126) | 11/10 | 하단 네비 5칸·상단 브랜드 로고(Leckerli S+시크릿에셋)·인증카드 인디고(#125) · 운영 스모크 PASS |
