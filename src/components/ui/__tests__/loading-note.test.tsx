@@ -28,6 +28,12 @@ describe("LoadingNote", () => {
   it("비활성이면 아무것도 그리지 않는다(완료 후 aria-busy·status 잔류 0)", () => {
     expect(renderToStaticMarkup(<LoadingNote active={false} label="x" />)).toBe("");
   });
+  it("chip: 종목 한 장 로딩 박스는 문구를 배경 칩으로 받치도록 stock-page-view가 chip을 켠다(4.85)", () => {
+    const src = readFileSync(join(__dirname, "../../../app/(main)/_components/views/detail/stock-page/stock-page-view.tsx"), "utf8");
+    expect(src).toMatch(/<LoadingNote active chip label=\{LOADING_LABEL\.flow\}/);
+    const loader = readFileSync(join(__dirname, "../loading-note.tsx"), "utf8");
+    expect(loader).toContain('chip && "rounded-full bg-card/90');
+  });
   it("문구 상수: 시세·가격 흐름·배당·지연", () => {
     expect(LOADING_LABEL).toEqual({ price: "시세를 불러오는 중…", flow: "가격 흐름을 불러오는 중…", dividend: "배당 정보를 불러오는 중…" });
     expect(SLOW_LABEL).toBe("평소보다 오래 걸려요");

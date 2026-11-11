@@ -10,14 +10,15 @@ import { cn } from "@/lib/utils";
 export const SLOW_LABEL = "평소보다 오래 걸려요";
 export const LOADING_LABEL = { price: "시세를 불러오는 중…", flow: "가격 흐름을 불러오는 중…", dividend: "배당 정보를 불러오는 중…" } as const;
 
-export function LoadingNote({ active, label, slowLabel = SLOW_LABEL, className }: { active: boolean; label: string; slowLabel?: string; className?: string }) {
+/** chip: 스켈레톤 곡선·격자 위에 올릴 때 문구를 배경 칩으로 받쳐 취소선처럼 보이지 않게 한다(#4.85) */
+export function LoadingNote({ active, label, slowLabel = SLOW_LABEL, className, chip = false }: { active: boolean; label: string; slowLabel?: string; className?: string; chip?: boolean }) {
   const phase = useLoadingPhase(active);
   if (!phase) return null;
   return (
     <div className={cn("min-h-6", className)}>
       <span role="status" className="sr-only">{label}</span>
       {phase !== "quiet" && (
-        <p aria-hidden data-testid="loading-note" data-phase={phase} className="flex items-center gap-2 text-[13px] text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
+        <p aria-hidden data-testid="loading-note" data-phase={phase} className={cn("flex items-center gap-2 text-[13px] text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150", chip && "rounded-full bg-card/90 px-3 py-1 shadow-sm")}>
           <Loader2Icon className="size-3.5 shrink-0 motion-safe:animate-spin" />
           <span className="break-keep whitespace-nowrap">{phase === "slow" ? slowLabel : label}</span>
         </p>

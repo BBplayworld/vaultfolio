@@ -238,7 +238,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
               <svg aria-hidden viewBox="0 0 100 40" preserveAspectRatio="none" className="absolute inset-x-4 top-1/4 h-1/2 w-[calc(100%-2rem)] stroke-foreground/[0.13] motion-safe:animate-pulse">
                 <path d="M0,28 C12,26 16,12 28,16 S44,30 56,22 S78,6 100,10" fill="none" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
               </svg>
-              <LoadingNote active label={LOADING_LABEL.flow} className="absolute inset-0 flex min-h-0 items-center justify-center" />
+              <LoadingNote active chip label={LOADING_LABEL.flow} className="absolute inset-0 flex min-h-0 items-center justify-center" />
             </>
           )}
           {state === "error" && (
