@@ -9,6 +9,8 @@ import { useAssetNavigation, type DetailTab } from "../../layout/navigation/navi
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 
+type AddCategory = "stock" | "real-estate" | "crypto" | "cash" | "loan";
+
 export function DetailHub() {
   const { assetData, getAssetSummary } = useAssetData();
   const s = getAssetSummary();
@@ -29,9 +31,11 @@ export function DetailHub() {
     );
   };
 
-  const countLine = (count: number, unit: string) => (
-    <span className="text-muted-foreground font-medium tabular-nums">{count}{unit}</span>
-  );
+  // 0건 카드는 눌러도 반응이 없던 문제(#4.85) — 보조 줄을 '추가하기'로 바꾸고 누르면 그 자산군 추가 시트(open-add-asset-sheet 재사용)
+  const addLine = () => <span data-testid="hub-add-line" className="text-brand dark:text-indigo-300 font-medium">추가하기</span>;
+  const openAdd = (category: AddCategory) => window.dispatchEvent(new CustomEvent("open-add-asset-sheet", { detail: { category } }));
+  const countLine = (count: number, unit: string) =>
+    count === 0 ? addLine() : <span className="text-muted-foreground font-medium tabular-nums">{count}{unit}</span>;
 
   return (
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
@@ -53,7 +57,7 @@ export function DetailHub() {
           secondary={s.stockCount > 0
             ? profitLine(s.stockProfit, s.stockCost > 0 ? (s.stockProfit / s.stockCost) * 100 : null)
             : countLine(0, "개")}
-          onClick={() => s.stockCount > 0 ? go("stocks") : ''}
+          onClick={() => s.stockCount > 0 ? go("stocks") : openAdd("stock")}
         />
 
         <KpiCard
@@ -65,7 +69,7 @@ export function DetailHub() {
           secondary={s.realEstateCount > 0
             ? profitLine(s.realEstateProfit, s.realEstateCost > 0 ? (s.realEstateProfit / s.realEstateCost) * 100 : null)
             : countLine(0, "건")}
-          onClick={() => s.realEstateCount > 0 ? go("real-estate") : ''}
+          onClick={() => s.realEstateCount > 0 ? go("real-estate") : openAdd("real-estate")}
         />
 
         <KpiCard
@@ -77,7 +81,7 @@ export function DetailHub() {
           secondary={s.cryptoCount > 0
             ? profitLine(s.cryptoProfit, s.cryptoCost > 0 ? (s.cryptoProfit / s.cryptoCost) * 100 : null)
             : countLine(0, "개")}
-          onClick={() => s.cryptoCount ? go("crypto") : ''}
+          onClick={() => s.cryptoCount ? go("crypto") : openAdd("crypto")}
         />
 
         <KpiCard
@@ -87,7 +91,7 @@ export function DetailHub() {
           primary={formatPriceByMode(s.cashValue)}
           primaryClassName={ASSET_THEME.text.default}
           secondary={countLine(s.cashCount, "건")}
-          onClick={() => s.cashCount > 0 ? go("cash") : ''}
+          onClick={() => s.cashCount > 0 ? go("cash") : openAdd("cash")}
         />
 
         {/* 실물 자산(#58) — 0건이면 숨김(진입은 FAB 시트). 손익 비율은 매입가 0이면 생략 */}
@@ -112,7 +116,7 @@ export function DetailHub() {
           primary={formatPriceByMode(s.loanBalance)}
           primaryClassName={ASSET_THEME.text.default}
           secondary={countLine(s.loanCount, "건")}
-          onClick={() => assetData.loans.length > 0 ? go("loans") : ''}
+          onClick={() => assetData.loans.length > 0 ? go("loans") : openAdd("loan")}
         />
       </div>
     </div>
