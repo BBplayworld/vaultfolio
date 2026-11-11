@@ -84,7 +84,8 @@ export interface BuyDot {
 
 // 매수일 이상인 첫 봉에 붙인다(일봉: 휴일 매수 → 다음 영업일 봉, 주봉: 그 주 마지막 영업일 봉). 마지막 봉보다 뒤면 마지막 봉.
 // 창 시작(windowStart)보다 앞선 매수는 점 없이 건수만(outsideCount). y는 봉 종가이고 거래 단가는 쓰지 않는다.
-export function placeBuyDots(points: PricePoint[], buys: BuyTx[], windowStart: string): { dots: BuyDot[]; outsideCount: number } {
+// 주봉(interval W)은 봉 날짜가 그 주 첫 거래일이라 "매수일 이하인 마지막 봉"(그 주 봉)에 붙인다
+export function placeBuyDots(points: PricePoint[], buys: BuyTx[], windowStart: string, interval: "D" | "W" = "D"): { dots: BuyDot[]; outsideCount: number } {
   let outsideCount = 0;
   const byIndex = new Map<number, BuyDot>();
   for (const b of buys) {
@@ -93,8 +94,17 @@ export function placeBuyDots(points: PricePoint[], buys: BuyTx[], windowStart: s
       continue;
     }
     if (points.length === 0) continue;
-    let idx = points.findIndex((p) => p.d >= b.date);
-    if (idx < 0) idx = points.length - 1;
+    let idx: number;
+    if (interval === "W") {
+      idx = -1;
+      points.forEach((p, i) => {
+        if (p.d <= b.date) idx = i;
+      });
+      if (idx < 0) idx = 0;
+    } else {
+      idx = points.findIndex((p) => p.d >= b.date);
+      if (idx < 0) idx = points.length - 1;
+    }
     const hit = byIndex.get(idx);
     if (hit) hit.buys.push(b);
     else byIndex.set(idx, { index: idx, d: points[idx].d, c: points[idx].c, buys: [b] });

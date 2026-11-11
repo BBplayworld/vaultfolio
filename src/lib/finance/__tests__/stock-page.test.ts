@@ -136,11 +136,14 @@ describe("placeBuyDots (C76 ① 거래 0 · ② 두 계좌 · ③ 창 밖 · ④
     expect(dots.map((d) => d.d)).toEqual(["2026-03-02", "2026-03-06"]);
   });
 
-  it("주봉은 그 주 봉(주 마지막 영업일 날짜)에 정확히 들어간다", () => {
-    const weekly: PricePoint[] = [{ d: "2026-03-06", c: 1 }, { d: "2026-03-13", c: 2 }];
-    const { dots } = placeBuyDots(weekly, [buy("2026-03-09"), buy("2026-03-13")], "2021-11-11");
-    expect(dots.map((d) => d.d)).toEqual(["2026-03-13"]);
-    expect(dots[0].buys).toHaveLength(2);
+  it("D2 주봉: 봉 날짜가 그 주 첫 거래일 — 수요일·금요일 매수도 그 주 봉, 다음 주 봉이 아니다", () => {
+    const weekly: PricePoint[] = [{ d: "2026-03-02", c: 1 }, { d: "2026-03-09", c: 2 }, { d: "2026-03-16", c: 3 }];
+    const { dots } = placeBuyDots(weekly, [buy("2026-03-04"), buy("2026-03-13"), buy("2026-03-09"), buy("2026-03-20")], "2021-11-11", "W");
+    expect(dots.map((d) => [d.d, d.buys.length])).toEqual([["2026-03-02", 1], ["2026-03-09", 2], ["2026-03-16", 1]]);
+  });
+
+  it("일봉은 불변(매수일 이상 첫 봉)", () => {
+    expect(placeBuyDots(DAILY, [buy("2026-03-04")], "2025-11-11", "D").dots[0].d).toBe("2026-03-04");
   });
 
   it("③ 창 시작 전 매수는 점 없이 건수만, 5년(더 이른 창)에서는 점으로", () => {

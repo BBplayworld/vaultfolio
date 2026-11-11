@@ -107,7 +107,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
 
   const buys = useMemo(() => pickBuyTransactions(assetData.transactions ?? [], target.groupStockIds), [assetData.transactions, target.groupStockIds]);
   const { dots, outsideCount } = useMemo(
-    () => (data ? placeBuyDots(points, buys, data.from ?? "0000-01-01") : { dots: [], outsideCount: 0 }),
+    () => (data ? placeBuyDots(points, buys, data.from ?? "0000-01-01", data.interval) : { dots: [], outsideCount: 0 }),
     [data, points, buys],
   );
   const change = useMemo(() => computePriceChange(points), [points]);

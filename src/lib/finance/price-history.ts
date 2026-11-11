@@ -154,8 +154,9 @@ function domesticPager(ticker: string, startStr: string, range: PriceRange, auth
 function overseasPager(ticker: string, range: PriceRange, auth: KisAuth): PageFetcher {
   const gubn = range === "1y" ? "0" : "1";
   // 거래소는 마스터에서, 없으면(ETF 등) 첫 성공 회차의 EXCD로 고정
+  // 마스터 거래소는 힌트일 뿐(마스터가 전부 NAS) — [힌트, NAS, NYS, AMS] 순 폴백, 성공하면 고정
   const known = getUsExchange(ticker);
-  let excdList = known ? [known] : ["NAS", "NYS", "AMS"];
+  let excdList = [...new Set([...(known ? [known] : []), "NAS", "NYS", "AMS"])];
   let succeeded = false;
   return async (endStr) => {
     let emptyOk = false;

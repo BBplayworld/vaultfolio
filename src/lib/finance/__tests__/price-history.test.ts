@@ -136,6 +136,24 @@ describe("fetchPriceHistory KIS 호출", () => {
     expect(r?.points).toEqual([{ d: "2026-11-06", c: 200.5 }]);
   });
 
+  it("D1 마스터 NAS·실제 NYS: NAS 실패 시 NYS로 폴백하고 이후 회차는 NYS 고정", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        if (url.includes("EXCD=NAS")) return { ok: true, json: async () => ({ rt_cd: "1", msg1: "no data" }) };
+        const n = url.includes("BYMD=20261111") ? 100 : 5;
+        const out = Array.from({ length: n }, (_, i) => ({ xymd: addDays(url.includes("BYMD=20261111") ? "2026-11-10" : "2026-08-01", -i).replace(/-/g, ""), clos: "60" }));
+        return { ok: true, json: async () => ({ rt_cd: "0", output2: out }) };
+      }),
+    );
+    const r = await fetchPriceHistory({ ...base, ticker: "KO", market: "us", range: "1y" });
+    expect(r?.points.length).toBeGreaterThan(100);
+    expect(urls.filter((u) => u.includes("EXCD=NAS"))).toHaveLength(1);
+    expect(urls.slice(1).every((u) => u.includes("EXCD=NYS"))).toBe(true);
+  });
+
   it("호출 실패(HTTP 500) → null", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({}) })));
     expect(await fetchPriceHistory({ ...base, ticker: "005930", market: "kr", range: "1y" })).toBeNull();
