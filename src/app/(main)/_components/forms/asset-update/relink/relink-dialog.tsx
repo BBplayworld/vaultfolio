@@ -208,7 +208,7 @@ function RelinkDialog({ onClose }: { onClose: () => void }) {
             <div data-screenshot-hide data-testid="relink-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
               {result.rows > 0 ? (
                 <>
-                  <p className="text-sm text-foreground tabular-nums">{result.rows}개 종목의 거래 {result.txs}건을 다시 이었어요</p>
+                  <p className="text-sm text-foreground tabular-nums text-pretty break-keep">{result.rows}개 종목의 거래 {result.txs}건을 다시 이었어요</p>
                   <p className="text-sm text-muted-foreground text-pretty break-keep">
                     {undone ? (undone.skipped > 0 ? `되돌렸어요. 직접 고친 항목 ${undone.skipped}건은 그대로 뒀어요` : "되돌렸어요") : "이 창을 닫기 전에는 되돌릴 수 있어요"}
                   </p>
@@ -289,7 +289,7 @@ function RelinkRowView({ row, checked, target, picked, onCheck, onPick }: {
           {target && (
             <>
               <span className="block text-sm text-muted-foreground tabular-nums text-pretty break-keep">
-                {target.broker ? `${target.broker} · ` : ""}거래 {target.count}건 다시 잇기 · <NR>{target.firstDate}</NR> ~ <NR>{target.lastDate}</NR>
+                {target.broker ? `${target.broker} · ` : ""}거래 {target.count}건 다시 잇기 <NR>· {target.firstDate} ~ {target.lastDate}</NR>
               </span>
               {target.newPurchaseDate && (
                 <span data-testid={`relink-row-date-${target.id}`} className="block text-sm text-muted-foreground tabular-nums text-pretty break-keep">
@@ -306,8 +306,7 @@ function RelinkRowView({ row, checked, target, picked, onCheck, onPick }: {
         </span>
       </label>
       {multi && (
-        <div className="mt-2 space-y-1">
-          <p className="text-sm text-muted-foreground">이을 종목 고르기</p>
+        <div className="mt-2">
           <Select value={picked ?? ""} onValueChange={onPick}>
             <SelectTrigger data-testid={`relink-row-target-${row.rowId}`} aria-label="이을 종목 고르기" className="h-10 w-full text-sm">
               <SelectValue placeholder="이을 종목 고르기" />
