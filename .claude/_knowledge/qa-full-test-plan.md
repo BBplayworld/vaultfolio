@@ -259,6 +259,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
+- 👤 **인증카드 금액 숨김(#4.80)** — `금액 표시` OFF에서 주식 현황 종목 행 수량이 `••••주`(숫자 수량 0), 평가금액·손익 금액도 `••••`. ON이면 `N주` 기존과 동일. 상세>주식 탭 수량 표시 불변. 자동 `stock-row-qty-mask.test.tsx`
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
 - ⚙ `/api/share`: GET key `^[0-9a-f]{10}$` 외 400(내부 `rl:` 키 접근 차단), POST `v72Z`만 저장(그 외 400 → 클라이언트는 start_url 없이 폴백), 토큰 ≤900k자, `owner_id` UUID만
 
