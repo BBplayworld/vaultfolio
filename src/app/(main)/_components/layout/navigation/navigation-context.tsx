@@ -17,6 +17,7 @@ export interface ChangeInit {
   period?: ChangePeriod;
   month?: string;           // 월 탭에서 선택할 달(YYYY-MM)
   source?: "card" | "menu" | "home_tip"; // settlement_view 진입 경로(home_tip = 홈 결산 팁, #4.36)
+  focus?: "monthly-log";    // 월 탭 렌더 후 월별 기록 카드로 1회 스크롤(4.83, 해시·저장에 남기지 않음)
 }
 
 export type AssetView =
@@ -29,6 +30,18 @@ export type AssetView =
 
 const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "stocks-item", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "change-market", "dividend", "report"];
+
+// 자산 변화 › 전체·주 방문 집계 키(홈 팁 `주간 변화 원인`·`새` 표시가 읽는다). 탭 전환·init 진입 두 경로가 같은 키로 기록(4.83)
+export const CHANGE_WEEK_VISIT_KEY = "change-week";
+export function isChangeWeekAll(v: AssetView): boolean {
+  return v.type === "activity" && v.tab === "change" && v.init?.period === "week" && (v.init.scope ?? "all") === "all";
+}
+
+// 이동 한 번의 방문 기록 — 화면 키 + (자산 변화 전체·주로 곧바로 여는 진입이면) 주 탭 방문. 새 소식·팁·허브 행 진입은 탭 전환을 거치지 않아 여기서 기록(4.83)
+export function recordViewVisits(v: AssetView): void {
+  recordVisit(viewToKey(v));
+  if (isChangeWeekAll(v)) recordVisit(CHANGE_WEEK_VISIT_KEY);
+}
 
 // 시장과 비교(#132 K3) — 자산 변화에서 들어갈 때 범위·기간을 모듈 메모리에 기억하고, 비교 화면에서 pop으로 자산 변화에 돌아오면 그 값으로 다시 연다.
 // history.state는 쓰지 않는다(Next App Router가 __NA 없는 state의 popstate를 전체 새로고침으로 처리). 저장소 0, 새로고침하면 사라짐
@@ -261,7 +274,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 페이지 이동 시 항상 최상단
     window.scrollTo({ top: 0, behavior: "auto" });
     // 기능 방문 기록 — 모든 이동이 이 함수를 통과하므로 훅 지점은 여기 한 곳으로 충분(기기 로컬 전용)
-    recordVisit(viewToKey(v));
+    recordViewVisits(v);
     trackScreen(viewToKey(v));
   }, []);
 

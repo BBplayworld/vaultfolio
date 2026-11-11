@@ -137,14 +137,11 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     try { diff = execSync("git diff origin/main -- 'src/app/(main)/_components/views/activity/settlement-view.tsx'", { encoding: "utf8" }); } catch { return; }
     if (!diff) return;
     // 4.67(#127)이 월별 기록 진입 행·시트를 의도적으로 추가하므로 추가 줄 수 상한은 해제.
-    // 기존 줄 삭제는 import 확장·AI 행 stagger 지연(120→160ms, ui.md)만 허용 — Hero·원인·구성 블록 줄은 그대로
+    // 기존 줄 삭제는 import 확장·AI 행 stagger 지연(120→160ms, ui.md)·SettlementView 시그니처의 `focus` prop 추가(4.83, 월별 기록 바로 가기)만 허용 — Hero·원인·구성 블록 줄은 그대로
     const removed = diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"))
-      .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"'));
+      .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"') && !l.startsWith("-export function SettlementView("));
     expect(removed).toEqual([]);
-    // 4.54(#58)가 결산 엔진 매핑(settlement.ts)·짝짓기(change-hero.tsx)·AI 프롬프트(ai-prompts.ts)를 의도적으로 바꾸므로 4.51 범위 가드에서 제외
-    for (const f of ["src/app/(main)/_components/views/activity/asset-change-view.tsx"]) {
-      expect(execSync(`git diff origin/main -- '${f}'`, { encoding: "utf8" })).toBe("");
-    }
+    // asset-change-view.tsx는 4.79(주 탭)·4.83(주 방문 기록·focus)이 의도적으로 바꾸므로 4.51 범위 가드에서 제외
   });
 });
 

@@ -43,7 +43,7 @@ interface SettlementResult {
   estimatedLabel: "예측" | "일부 예측";
 }
 
-export function SettlementView({ initialMonth, source }: { initialMonth?: string; source: NonNullable<ChangeInit["source"]> }) {
+export function SettlementView({ initialMonth, source, focus }: { initialMonth?: string; source: NonNullable<ChangeInit["source"]>; focus?: ChangeInit["focus"] }) {
   const { assetData, exchangeRates, getAssetSummary, snapshotVersion } = useAssetData();
   // getAssetSummary는 자산·환율이 바뀔 때만 새로 만들어지므로 요약도 그때만 다시 계산한다(매 렌더 재계산 방지)
   const summary = useMemo(() => getAssetSummary(), [getAssetSummary]);
@@ -83,6 +83,16 @@ export function SettlementView({ initialMonth, source }: { initialMonth?: string
     sentRef.current = true;
     track("settlement_view", { source, result: settlementGaResult(computed.value.window) });
   }, [computed, source]);
+
+  // 월별 기록 바로 가기(4.83) — 월 탭 렌더 후 카드로 1회 스크롤(reduced-motion이면 즉시). 해시·저장에는 남기지 않는다
+  const focusedRef = useRef(false);
+  const logShown = !!computed.ok && computed.value.window.kind !== "first_month" && log.recordedCount >= 2;
+  useEffect(() => {
+    if (focus !== "monthly-log" || focusedRef.current || !logShown) return;
+    focusedRef.current = true;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("monthly-log-block")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [focus, logShown]);
 
   // 월 화살표 — 기록 없는 달은 건너뛰고, 끝(13개월 보존 범위·이번 달)에서는 비활성
   const enabledMonths = listSettlementMonths(monthly, today).filter((i) => i.enabled).map((i) => i.month);

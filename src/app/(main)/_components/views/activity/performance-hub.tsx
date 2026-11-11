@@ -14,9 +14,11 @@ import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/na
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
 import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
 import { pickSettlementCard, resolveSettlementWindow, settlementRangeLabel } from "@/lib/report/settlement";
 import { settlementDelta, settlementName } from "./change-hero";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
+import { HubChangeRows } from "./hub-change-rows";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -103,6 +105,11 @@ export function PerformanceHub() {
     return w.kind === "first_month" ? null : { window: w, inWindow: false };
   }, [hasAssets, snapshotVersion, today]);
   const change = changeCard ? settlementDelta(changeCard.window, summary.netAsset) : null;
+  // 허브 행 2 `N개월` — 월 탭 월별 기록 카드와 같은 노출 조건(4.83). 자산 0이면 행 목록 전체가 없다
+  const monthlyCount = useMemo(
+    () => (hasAssets && snapshotVersion >= 0 ? monthlyLogEntryCount(readMonthlySnapshots(), today, summary.netAsset) : null),
+    [hasAssets, snapshotVersion, today, summary.netAsset],
+  );
 
   // 배당 — 올해 연간 합계 (실제 + 예상)
   const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
@@ -120,7 +127,7 @@ export function PerformanceHub() {
       {/* 지난 접속 등락은 홈 Hero(순자산 헤더)로 통합 — 앱을 켜자마자 보는 정보라 중복 노출하지 않는다 */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <div data-testid="hub-card-change">
+        <div data-testid="hub-card-change" className="lg:row-span-2">
         <KpiCard
           icon={Wallet}
           title={
@@ -152,6 +159,7 @@ export function PerformanceHub() {
               ? { scope: "all", period: "month", month: changeCard.window.month, source: "card" }
               : { scope: "all", period: "month", source: "menu" },
           })}
+          rows={hasAssets ? <HubChangeRows monthlyCount={monthlyCount} /> : undefined}
         />
         </div>
 

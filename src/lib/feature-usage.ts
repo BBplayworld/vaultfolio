@@ -51,6 +51,11 @@ export function recordVisit(key: string): void {
   writeState(state);
 }
 
+// 한 방문 키의 마지막 방문 시각(ISO) — `새` 표시 꺼짐 판정용. 기록 없으면 undefined
+export function getLastVisitedAt(key: string): string | undefined {
+  return readState().visits[key]?.lastVisitedAt;
+}
+
 export function isTipDismissed(id: string): boolean {
   return readState().dismissedTipIds.includes(id);
 }
@@ -72,7 +77,8 @@ function visitCountOf(feature: AppFeature, visits: FeatureUsageState["visits"]):
 // 동률은 카탈로그 순서. 전부 dismiss면 null(박스가 조용히 사라짐).
 export function pickRecommendedFeature(): AppFeature | null {
   const state = readState();
-  const candidates = APP_FEATURES.filter((f) => !state.dismissedTipIds.includes(f.id));
+  // tip:false 항목(새 소식 바로 가기 전용, 4.83)은 추천 후보에서 뺀다
+  const candidates = APP_FEATURES.filter((f) => f.tip !== false && !state.dismissedTipIds.includes(f.id));
   if (candidates.length === 0) return null;
 
   let best: AppFeature | null = null;

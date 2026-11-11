@@ -3,7 +3,7 @@
 // 신규 공용 기능을 추가하면 이 파일에도 등록한다(누락 시 팁 추천 대상에서 빠진다).
 
 import type { LucideIcon } from "lucide-react";
-import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard, ChartNoAxesColumn, ListChecks } from "lucide-react";
+import { Calculator, Calendar, TrendingUp, ScanSearch, Building2, Coins, Wallet, Landmark, LineChart, Gift, FileBarChart, IdCard, ChartNoAxesColumn, ListChecks, Table2 } from "lucide-react";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { useTaxViewStore } from "@/stores/tax-view-store";
 import type { GaParams } from "@/lib/analytics/ga";
@@ -22,6 +22,7 @@ export interface AppFeature {
   action?: () => void; // target 없이 즉시 실행하는 커스텀 동작(인증카드 다이얼로그 오픈 등)
   entryCategory?: GaCategory; // 팁으로 진입할 때 함께 보내는 기능 사용 이벤트 category(예: change_week_all, 4.79)
   visitKey?: string; // action형처럼 target이 없어 방문 집계 키를 별도 지정해야 하는 경우
+  tip?: boolean; // false면 홈 기능 팁 추천 후보에서 뺀다(새 소식 바로 가기 전용 항목, 4.83). 기본 true
 }
 
 // `코스피·S&P 500` 덩어리가 줄바꿈으로 갈라지지 않게 — `·` 양옆 U+2060(단어 결합자), `S&P`와 `500` 사이 U+00A0(#132, 상수 1곳)
@@ -102,6 +103,16 @@ export const APP_FEATURES: AppFeature[] = [
     visitKey: "change-week", // 자산 변화 방문 집계(activity:change)와 섞이지 않게 분리
   },
   {
+    id: "monthly-log",
+    title: "월별 기록",
+    description: "월 결산의 월별 기록에서 달마다 앞 달보다 얼마나 변했는지 봐요",
+    icon: Table2,
+    // 월 탭을 열고 월별 기록 카드로 1회 스크롤(focus는 해시·저장에 남지 않는다)
+    target: { type: "activity", tab: "change", init: { scope: "all", period: "month", source: "menu", focus: "monthly-log" } },
+    visitKey: "monthly-log",
+    tip: false,
+  },
+  {
     id: "market-compare",
     title: "시장과 비교",
     description: `지금 보유한 종목의 등락을 ${MARKET_PAIR_TEXT} 옆에서 봐요`,
@@ -129,6 +140,15 @@ export const APP_FEATURES: AppFeature[] = [
     icon: IdCard,
     action: dispatchOpenShareCard,
     visitKey: "share-card",
+  },
+  {
+    id: "share-card-stock",
+    title: "주식 현황 인증카드",
+    description: "인증카드 > 주식 현황에서 금액 표시를 끄면 수량도 가려져요",
+    icon: IdCard,
+    action: () => dispatchOpenShareCard("stock"),
+    visitKey: "share-card",
+    tip: false,
   },
   {
     id: "share-card-portfolio",

@@ -534,6 +534,7 @@ export function computeBreakdown(
 // 인사이트 스트립용 한 줄 요약 후보 추출
 export interface InsightHighlight {
   axis: XrayAxis;
+  itemLabel: string; // 1위 항목 이름(비중 표기 없음)
   label: string;
   ratio: number;
   concentration: ConcentrationLevel;
@@ -552,6 +553,7 @@ export function pickHighlights(
     if (!top || top.key === UNCLASSIFIED_KEY) continue;
     results.push({
       axis,
+      itemLabel: top.label,
       label: `${top.label} ${Math.round(top.ratio * 100)}%`,
       ratio: top.ratio,
       concentration: br.concentration,
@@ -559,4 +561,22 @@ export function pickHighlights(
   }
   results.sort((a, b) => b.ratio - a.ratio);
   return results.slice(0, limit);
+}
+
+// 비중(%) 표기 단일 함수 — X-Ray 페이지 항목 줄·상세·주식 X-Ray 타일이 같은 값을 쓴다(C65). 소수 첫째 자리 반올림
+export function formatBreakdownPct(ratio: number): number {
+  return Math.round(ratio * 1000) / 10;
+}
+
+export interface XrayTilePick {
+  axis: XrayAxis;
+  itemLabel: string;
+  pct: number;
+}
+
+// 상세·주식 X-Ray 타일 값(4.83) — 축 선택은 pickHighlights 재사용. 항목이 1개뿐이라 100%인 축은 의미가 없어 건너뛴다.
+// 후보가 없으면(분류 전·전부 미분류·모두 100%) null → 타일은 폴백 문구
+export function pickXrayTile(stocks: Stock[], exchangeRates: ExchangeRates | undefined): XrayTilePick | null {
+  const hit = pickHighlights(stocks, exchangeRates, undefined, 5).find((h) => formatBreakdownPct(h.ratio) < 100);
+  return hit ? { axis: hit.axis, itemLabel: hit.itemLabel, pct: formatBreakdownPct(hit.ratio) } : null;
 }

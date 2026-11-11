@@ -45,7 +45,7 @@ src/
 │   │       │   ├── detail/           # asset-detail-tabs, detail-hub, detail-summary-header
 │   │       │   │   ├── tabs/         # stock/real-estate/crypto/cash/loan-tab 5종
 │   │       │   │   ├── trades/       # stock-trades-view
-│   │       │   │   └── xray/         # stock-xray-view, stock-insight-strip
+│   │       │   │   └── xray/         # stock-xray-view
 │   │       │   └── activity/         # net-asset/profit/dividend chart + performance-hub
 │   │       ├── layout/               # 라우팅·공용 UI
 │   │       │   ├── navigation/       # navigation-context, asset-page-tabs, asset-dispatch

@@ -4,9 +4,10 @@
 // 줄을 누르면 자산군별 금액·순자산 기여 변화 펼침. 줄 조립 buildMonthlyLog, 변화 buildMonthlyLogChanges(lib/report/monthly-log.ts).
 // 읽기 전용 — 저장·서버 전송 없음. 선택 달과 무관(월 화살표로 리마운트하지 않게 key 없이 마운트).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Table2 } from "lucide-react";
 import { getProfitLossColor } from "@/config/theme";
+import { recordVisit } from "@/lib/feature-usage";
 import {
   buildMonthlyLogChanges, formatMonthlyLogAmount, formatMonthlyLogDelta, MONTHLY_LOG_DEBT_KEYS, MONTHLY_LOG_LABELS,
   type MonthlyLog, type MonthlyLogChange, type MonthlyLogRow,
@@ -157,6 +158,21 @@ export function MonthlyLogBlock({ log, today }: { log: MonthlyLog; today: string
   // 기본: 최신(이번 달) 줄만 펼침. 다중 펼침 허용
   const [openSet, setOpenSet] = useState<Set<string>>(() => new Set(rows[0]?.kind === "full" ? [rows[0].month] : []));
   const [showAll, setShowAll] = useState(false);
+  // 월별 기록 방문(4.83) — 카드가 50% 이상 처음 보일 때 화면 진입당 1회(홈 팁·`새` 표시가 읽는 visitKey `monthly-log`)
+  const sectionRef = useRef<HTMLElement>(null);
+  const hasRows = rows.length > 0;
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!hasRows || !el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.5)) {
+        recordVisit("monthly-log");
+        io.disconnect();
+      }
+    }, { threshold: [0.5] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasRows]);
   if (rows.length === 0) return null;
   const byMonth = new Map(rows.map((r) => [r.month, r]));
   const toggle = (m: string) => setOpenSet((s) => {
@@ -168,7 +184,9 @@ export function MonthlyLogBlock({ log, today }: { log: MonthlyLog; today: string
   const hidden = rows.length - visible.length;
   return (
     <section
+      id="monthly-log-block"
       data-testid="monthly-log-block"
+      ref={sectionRef}
       aria-labelledby="monthly-log-title"
       className={`${SECTION} ${BODY_ENTER}`}
       style={{ animationDelay: "120ms", animationFillMode: "backwards" }}

@@ -1,9 +1,10 @@
 "use client";
 
-// 시장과 비교 진입 글줄(#132 U5, ui.md 4·5절 E1) — 상세·주식 요약 헤더 안 / 자산 변화 › 주식 기간 선택 아래 공용.
+// 시장과 비교 진입 글줄(#132 U5, ui.md 4·5절 E1) — 자산 변화 › 주식 기간 선택 아래(hero). 상세·주식 요약 안 글줄은 4.83에서 시장 타일로 대체됐다.
+// 값 계산은 훅 useMarketEntryValue로 분리해 글줄·상세·주식 시장 타일·성과 허브 행이 공유한다(4.83).
 // 값 = 비교할 종목이 있는 시장의 지수 등락(페이지와 같은 computeIndexSpan·같은 반올림, A11). 차이는 싣지 않는다.
 // 티커 있는 종목이 있으면 첫 렌더부터 자리를 잡고 내용만 opacity로 나타난다. 비교할 종목 0이면 grid-rows로 접는다.
-// 인증카드·공유 캡처에는 나오지 않는다(data-screenshot-hide, 상세·주식은 screenshotMode에서 렌더 안 함). 저장 호출 0.
+// 인증카드·공유 캡처에는 나오지 않는다(data-screenshot-hide). 저장 호출 0.
 
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
@@ -25,14 +26,18 @@ const HAIRLINE = "border-border dark:border-border/40";
 export const hasComparableStock = (assetData: AssetData): boolean =>
   assetData.stocks.some((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted" && s.quantity > 0);
 
-export function MarketEntryLine({ variant, period, visible = true, onOpen, testId }: {
-  // stock = 상세·주식(1주 고정, `최근 1주` 접두·`내 종목과 비교`) / hero = 자산 변화(선택 기간, 접두 없음·`시장과 비교`)
-  variant: "stock" | "hero";
-  period: ComparePeriod;
-  visible?: boolean;
-  onOpen: () => void;
-  testId: string;
-}) {
+export interface MarketEntryValue {
+  hasTickerStock: boolean;
+  markets: CompareMarket[] | null; // 판별 전 null
+  ready: boolean; // 판별·기준 설정·지수 조회가 끝남
+  values: { m: CompareMarket; rate: number }[]; // 값이 있는 시장만(국내 → 미국)
+  linkOnly: boolean;
+  ytdLinkReady: boolean;
+  open: boolean; // 비교할 종목이 있거나 판별 전
+}
+
+// 시장 지수 등락 값 단일 계산 — 같은 computeIndexSpan·같은 시장 순서라 글줄·타일·허브 행·페이지가 같은 값(A11, C65)
+export function useMarketEntryValue(period: ComparePeriod, visible = true): MarketEntryValue {
   const { assetData } = useAssetData();
   const { basis, hydrated } = useCompareBasis();
   const dailyToken = useDailyRefToken();
@@ -49,14 +54,45 @@ export function MarketEntryLine({ variant, period, visible = true, onOpen, testI
   const linkOnly = period === "ytd";
   const indexRefs = useMarketIndexRefs(basis, hydrated && !!markets && markets.length > 0 && !linkOnly, dailyToken, [period]);
 
-  if (!hasTickerStock) return null;
-
   const spans = linkOnly ? [] : (markets ?? []).map((m) => ({ m, s: computeIndexSpan(m, period, indexRefs) }));
   const ready = markets !== null && hydrated && spans.every((x) => x.s.state !== "loading");
-  const values = spans.filter((x) => x.s.state === "ok");
-  const open = visible && (markets === null || markets.length > 0);
-  const periodLabel = period === "daily" ? "하루" : period === "weekly" ? "1주" : "1개월";
-  const ytdLinkReady = linkOnly && markets !== null && hydrated;
+  return {
+    hasTickerStock,
+    markets,
+    ready,
+    values: spans.filter((x) => x.s.state === "ok").map((x) => ({ m: x.m, rate: x.s.rate! })),
+    linkOnly,
+    ytdLinkReady: linkOnly && markets !== null && hydrated,
+    open: visible && (markets === null || markets.length > 0),
+  };
+}
+
+// 지수 이름 + 등락(`코스피 −7.8%`) 나열 — 시장 사이 `·`. restBelowSm = 첫 시장 외는 sm 미만에서 숨김(타일·허브 행의 좁은 폭)
+export function MarketIndexValues({ values, restBelowSm = false }: { values: MarketEntryValue["values"]; restBelowSm?: boolean }) {
+  return (
+    <>
+      {values.map(({ m, rate }, i) => (
+        <span key={m} className={restBelowSm && i > 0 ? "max-sm:hidden" : undefined}>
+          {i > 0 && <span aria-hidden className="mx-1.5 text-muted-foreground/60">·</span>}
+          <span className="whitespace-nowrap">
+            {MARKET_INDEX_NAME[m]} <span className="font-medium text-foreground tabular-nums">{formatCompareRate(rate)}</span>
+          </span>
+        </span>
+      ))}
+    </>
+  );
+}
+
+// 자산 변화 › 주식 기간 선택 아래 글줄(선택 기간 값, 접두 없음·`시장과 비교`)
+export function MarketEntryLine({ period, visible = true, onOpen, testId }: {
+  period: ComparePeriod;
+  visible?: boolean;
+  onOpen: () => void;
+  testId: string;
+}) {
+  const { hasTickerStock, ready, values, linkOnly, ytdLinkReady, open } = useMarketEntryValue(period, visible);
+
+  if (!hasTickerStock) return null;
 
   return (
     <div
@@ -67,33 +103,21 @@ export function MarketEntryLine({ variant, period, visible = true, onOpen, testI
       className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${open ? "grid-rows-[1fr] -mb-2" : "grid-rows-[0fr]"}`}
     >
       <div className="min-h-0 overflow-hidden">
-        <div className={`mt-3 border-t ${HAIRLINE} pt-1.5 ${variant === "hero" ? "sm:max-w-md" : ""}`}>
+        <div className={`mt-3 border-t ${HAIRLINE} pt-1.5 sm:max-w-md`}>
           <button
             type="button"
-            data-testid={variant === "stock" ? "stock-market-entry" : "change-market-entry-button"}
+            data-testid="change-market-entry-button"
             onClick={onOpen}
             disabled={!(ready || ytdLinkReady)}
             className={`flex w-full min-h-10 flex-col items-start justify-center rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:inline-flex sm:w-auto sm:flex-row sm:items-center sm:gap-3 motion-safe:transition-opacity motion-safe:duration-200 ${ready || ytdLinkReady ? "opacity-100" : "opacity-0"}`}
           >
             {!linkOnly && (!ready || values.length > 0) && (
               <span className="text-sm text-muted-foreground break-keep">
-                {!ready ? " " : (
-                  <>
-                    {variant === "stock" && <><span className="max-[359px]:hidden">최근 </span>{periodLabel} </>}
-                    {values.map(({ m, s }, i) => (
-                      <span key={m}>
-                        {i > 0 && <span aria-hidden className="mx-1.5 text-muted-foreground/60">·</span>}
-                        <span className="whitespace-nowrap">
-                          {MARKET_INDEX_NAME[m]} <span className="font-medium text-foreground tabular-nums">{formatCompareRate(s.rate!)}</span>
-                        </span>
-                      </span>
-                    ))}
-                  </>
-                )}
+                {!ready ? " " : <MarketIndexValues values={values} />}
               </span>
             )}
             <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-sm font-medium text-foreground">
-              {variant === "stock" ? "내 종목과 비교" : linkOnly ? "올해 시장과 비교" : "시장과 비교"}
+              {linkOnly ? "올해 시장과 비교" : "시장과 비교"}
               <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
             </span>
           </button>
