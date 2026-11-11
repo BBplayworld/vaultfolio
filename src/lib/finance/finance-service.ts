@@ -930,47 +930,32 @@ export async function fetchOverseasIndexDailySeries(
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
 
-// ETF 구성종목시세 [국내주식-073] — 응답 헤더 tr_cont가 F/M이면 연속조회(tr_cont: N)로 이어 받는다(최대 MAX_PAGES).
-// 실패·빈 응답은 null. trConts는 페이지별 응답 tr_cont 값(실호출 게이트 판독용)
-const ETF_COMPONENT_MAX_PAGES = 10;
+// ETF 구성종목시세 [국내주식-073] — 1회 호출(연속조회 미사용). 실패·빈 응답은 null
 export async function fetchEtfComponents(
   etfCode: string,
   accessToken: string,
   appKey: string,
   appSecret: string,
-): Promise<{ output1: unknown; output2: unknown[]; trConts: string[] } | null> {
+): Promise<{ output1: unknown; output2: unknown } | null> {
   const url = `https://openapi.koreainvestment.com:9443/uapi/etfetn/v1/quotations/inquire-component-stock-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(etfCode)}&FID_COND_SCR_DIV_CODE=11216`;
   try {
-    let output1: unknown;
-    const output2: unknown[] = [];
-    const trConts: string[] = [];
-    let next = "";
-    for (let page = 0; page < ETF_COMPONENT_MAX_PAGES; page++) {
-      const res = await fetchWithTimeout(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          appkey: appKey,
-          appsecret: appSecret,
-          tr_id: "FHKST121600C0",
-          tr_cont: next,
-          "content-type": "application/json; charset=utf-8",
-        },
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        console.warn(`[KIS ETF구성 HTTP실패 - ${etfCode}] status=${res.status} page=${page}`);
-        return null;
-      }
-      const data = await res.json();
-      if (!isKisResponseOk(data, `ETF구성종목 ${etfCode}`)) return null;
-      if (page === 0) output1 = data.output1;
-      if (Array.isArray(data.output2)) output2.push(...data.output2);
-      const tr = res.headers.get("tr_cont") ?? "";
-      trConts.push(tr);
-      if (tr !== "F" && tr !== "M") break;
-      next = "N";
+    const res = await fetchWithTimeout(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: "FHKST121600C0",
+        "content-type": "application/json; charset=utf-8",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(`[KIS ETF구성 HTTP실패 - ${etfCode}] status=${res.status}`);
+      return null;
     }
-    return { output1, output2, trConts };
+    const data = await res.json();
+    if (!isKisResponseOk(data, `ETF구성종목 ${etfCode}`)) return null;
+    return { output1: data.output1, output2: data.output2 };
   } catch (e) {
     console.error(`[KIS ETF구성종목 오류 - ${etfCode}]:`, e);
     return null;
