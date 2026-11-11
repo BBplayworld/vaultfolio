@@ -6,6 +6,7 @@
 let firstSave = false;
 let dismissed = false;
 let shown = false;
+let nudgeVisible = false;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -26,6 +27,13 @@ export function dismissInstallNudge(): void {
   emit();
 }
 
+/** 안내 카드가 실제로 보이는 동안 true — TutorialOverlay가 말풍선을 양보하는 신호(동시 노출 방지) */
+export function setNudgeVisible(v: boolean): void {
+  if (nudgeVisible === v) return;
+  nudgeVisible = v;
+  emit();
+}
+
 /** 노출 GA 세션당 1회 가드: 처음 호출이면 true */
 export function markNudgeShown(): boolean {
   if (shown) return false;
@@ -36,6 +44,7 @@ export function markNudgeShown(): boolean {
 export const getFirstSave = () => firstSave;
 export const getDismissed = () => dismissed;
 export const getNudgeShown = () => shown;
+export const getNudgeVisible = () => nudgeVisible;
 
 export function subscribeFirstSave(l: () => void): () => void {
   listeners.add(l);
@@ -49,5 +58,6 @@ export function __resetFirstSaveSignalForTest(): void {
   firstSave = false;
   dismissed = false;
   shown = false;
+  nudgeVisible = false;
   listeners.clear();
 }
