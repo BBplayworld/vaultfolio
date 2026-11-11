@@ -270,3 +270,47 @@ export function buildRowFlow(flow: boolean, q: { isError: boolean; data?: PriceH
   if (change === null) return { kind: "fallback" };
   return { kind: "ready", change, points: q.data.points };
 }
+
+// ---- 평단 칩 폴백(4.84 B) — 종목 한 장 차트. 칩이 가격선·점을 가리지 않는 곳만 쓴다 ----
+export interface ChipPt {
+  x: number;
+  y: number;
+}
+export interface ChipPlacement {
+  mode: "plot" | "short" | "gutter"; // plot = 전체 글자, short = 짧은 글자(`평단 6.15만`), gutter = 가격 칸 라벨
+  text: string;
+  x: number; // 칩 왼쪽(글자는 x+7)
+  y: number; // 칩 위쪽(글자 baseline은 y+14)
+}
+
+export const CHIP_H = 20;
+const chipWidth = (text: string) => text.length * 6.4 + 14;
+const SCAN_DY = [4, 12, 20, -24, -32, -40]; // 평단선 기준 세로 오프셋 — 선에서 가까운 순(|dy| 작은 순)
+const SCAN_DX = 8;
+
+// 1순위 기존 4곳(좌·우 끝 × 선 위·아래, 앞 후보) → 2순위 평단선 가까운 세로 오프셋 스캔 → 짧은 글자로 1·2 반복 → 가격 칸(gutter).
+// 겹침 = 가격선 점이 칩 박스 ±2px 안, 매수·매도 점이 ±8px 안
+export function placeAvgChip(a: { pts: ChipPt[]; dots: ChipPt[]; avgY: number; left: number; plotW: number; maxY: number; full: string; short: string }): ChipPlacement {
+  const hits = (x: number, y: number, cw: number) =>
+    a.pts.some((q) => q.x >= x - 2 && q.x <= x + cw + 2 && q.y >= y - 2 && q.y <= y + CHIP_H + 2) ||
+    a.dots.some((q) => q.x >= x - 8 && q.x <= x + cw + 8 && q.y >= y - 8 && q.y <= y + CHIP_H + 8);
+  const inBounds = (y: number) => y >= 0 && y + CHIP_H <= a.maxY;
+  const find = (text: string): { x: number; y: number } | null => {
+    const cw = chipWidth(text);
+    if (cw > a.plotW) return null;
+    for (const y of [a.avgY - CHIP_H - 4, a.avgY + 4]) {
+      for (const x of [a.left, a.left + a.plotW - cw]) if (inBounds(y) && !hits(x, y, cw)) return { x, y };
+    }
+    for (const dy of SCAN_DY) {
+      const y = a.avgY + dy;
+      if (!inBounds(y)) continue;
+      for (let x = a.left; x <= a.left + a.plotW - cw; x += SCAN_DX) if (!hits(x, y, cw)) return { x, y };
+    }
+    return null;
+  };
+  const f = find(a.full);
+  if (f) return { mode: "plot", text: a.full, ...f };
+  const s = find(a.short);
+  if (s) return { mode: "short", text: a.short, ...s };
+  return { mode: "gutter", text: "", x: a.left, y: a.avgY };
+}

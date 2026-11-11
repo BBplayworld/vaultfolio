@@ -5,7 +5,7 @@
 import { useId, useState } from "react";
 import { MAIN_PALETTE } from "@/config/theme";
 import { useBoxSize } from "@/hooks/use-box-size";
-import { axisGutter, buildPriceAxis, type BuyDot } from "@/lib/finance/stock-page";
+import { axisGutter, buildPriceAxis, formatAxisPrice, placeAvgChip, type BuyDot } from "@/lib/finance/stock-page";
 import type { PricePoint } from "@/lib/finance/price-history";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { PriceAxisLayer } from "../price-axis-layer";
@@ -13,7 +13,6 @@ import { formatPrice } from "../trades/stock-trades-view";
 
 const M = { top: 20, bottom: 22, left: 12 }; // 오른쪽은 가격 칸(axisGutter)
 const FALLBACK = { w: 320, h: 200 };
-const CHIP_H = 20;
 
 const t = (d: string) => new Date(`${d}T00:00:00Z`).getTime();
 export const fmtDot = (d: string) => d.replaceAll("-", ".");
@@ -52,30 +51,24 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
   const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.d).toFixed(1)},${yOf(p.c).toFixed(1)}`).join("");
   const area = `${line}L${xOf(points[points.length - 1].d).toFixed(1)},${M.top + plotH}L${xOf(points[0].d).toFixed(1)},${M.top + plotH}Z`;
 
-  const avgText = avg && avg > 0 ? `내 평단 ${formatPrice(avg, currency)}${clamped === "up" ? " ↑" : clamped === "down" ? " ↓" : ""}` : "";
-  const chipW = avgText.length * 6.4 + 14;
-  // 칩 후보 4곳(왼쪽·오른쪽 끝 × 선 위·아래) 중 가격선과 가장 덜 겹치는 곳(동률이면 앞 후보). 칩 면은 칠하지 않고 글자 외곽선만 쓴다
-  const xy = points.map((p) => ({ x: xOf(p.d), y: yOf(p.c) }));
-  const chip = (() => {
-    if (avgY === null) return { x: M.left, y: 0 };
-    const ys = [avgY - CHIP_H - 4, avgY + 4].filter((y) => y >= 0 && y + CHIP_H <= h - M.bottom + 4);
-    const xs = [M.left, M.left + plotW - chipW];
-    let best = { x: xs[0], y: ys[0] ?? avgY + 4 };
-    let bestHits = Infinity;
-    for (const y of ys.length ? ys : [avgY + 4]) {
-      for (const x of xs) {
-        const hits = xy.filter((q) => q.x >= x - 2 && q.x <= x + chipW + 2 && q.y >= y - 2 && q.y <= y + CHIP_H + 2).length;
-        if (hits < bestHits) {
-          bestHits = hits;
-          best = { x, y };
-        }
-      }
-    }
-    return best;
-  })();
+  const dotXY = dots.map((d) => ({ x: xOf(d.d), y: yOf(d.c) }));
+  // 평단 칩 — 겹침 0인 곳만(기본 4곳 → 스캔 → 짧은 글자 → 가격 칸 라벨). 칩 면은 칠하지 않고 글자 외곽선만 쓴다
+  const arrow = clamped === "up" ? " ↑" : clamped === "down" ? " ↓" : "";
+  const chip =
+    avgY !== null && avg
+      ? placeAvgChip({
+          pts: points.map((p) => ({ x: xOf(p.d), y: yOf(p.c) })),
+          dots: dotXY,
+          avgY,
+          left: M.left,
+          plotW,
+          maxY: h - M.bottom + 4,
+          full: `내 평단 ${formatPrice(avg, currency)}${arrow}`,
+          short: `평단 ${formatAxisPrice(avg, currency, axis.step || 1)}${arrow}`,
+        })
+      : null;
 
   // 점 히트 반경 — 가까운 점 우선: 이웃과 가까우면 이웃 거리의 절반(최소 10, 최대 20)
-  const dotXY = dots.map((d) => ({ x: xOf(d.d), y: yOf(d.c) }));
   const hitR = (i: number) => {
     let nearest = Infinity;
     dotXY.forEach((o, j) => {
@@ -164,16 +157,22 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
             className={clamped === "none" ? "text-foreground/70" : "text-foreground/40"}
           >
             <line x1={M.left} x2={M.left + plotW} y1={avgY} y2={avgY} stroke="currentColor" strokeWidth={1.25} strokeDasharray="4 3" />
-            <text
-              x={chip.x + 7}
-              y={chip.y + 14}
-              fontSize={11}
-              fontWeight={500}
-              className="fill-foreground tabular-nums"
-              style={{ paintOrder: "stroke", stroke: "var(--card)", strokeWidth: 3, strokeLinejoin: "round" }}
-            >
-              {avgText}
-            </text>
+            {chip && chip.mode !== "gutter" ? (
+              <text
+                data-testid="stock-page-avg-chip"
+                data-mode={chip.mode}
+                x={chip.x + 7}
+                y={chip.y + 14}
+                fontSize={11}
+                fontWeight={500}
+                className="fill-foreground tabular-nums"
+                style={{ paintOrder: "stroke", stroke: "var(--card)", strokeWidth: 3, strokeLinejoin: "round" }}
+              >
+                {chip.text}
+              </text>
+            ) : (
+              <g data-testid="stock-page-avg-chip" data-mode="gutter" />
+            )}
           </g>
         )}
 
@@ -211,7 +210,18 @@ export function PriceChart({ points, dots, avg, currentPrice, currentText, curre
           );
         })}
         <g className={colorClass}>
-          <PriceAxisLayer layer="labels" axis={axis} x0={M.left} plotW={plotW} h={h} tagText={tagText} tagValue={currentPrice ?? undefined} colorClass={colorClass} />
+          <PriceAxisLayer
+            layer="labels"
+            axis={axis}
+            x0={M.left}
+            plotW={plotW}
+            h={h}
+            tagText={tagText}
+            tagValue={currentPrice ?? undefined}
+            colorClass={colorClass}
+            avgGutterLabel={chip?.mode === "gutter"}
+            avgSubText={avg ? `${formatAxisPrice(avg, currency, axis.step || 1)}${arrow}` : undefined}
+          />
         </g>
       </svg>
     </div>

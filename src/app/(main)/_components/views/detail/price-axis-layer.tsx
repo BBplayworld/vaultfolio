@@ -30,7 +30,23 @@ export function PriceAxisLayer({ layer, axis, x0, plotW, h, tagText, tagValue, c
   const tagY = axis.todayY === null ? null : Math.max(10, Math.min(axis.todayY + 1, h - 14));
   const gutter = tagText ? axisGutter(tagText) : 0;
   const showLabel = gutter <= plotW * 0.4; // 가격 칸이 플롯의 40%를 넘으면 `현재가` 줄 생략
-  const avgLabelOk = avgGutterLabel && axis.avgY !== null && (axis.todayY === null || Math.abs(axis.avgY - axis.todayY) >= 26);
+  // 평단 가격 칸 라벨 — 행 밴드: 현재가 태그와 26px 이상일 때만. 칩 폴백(avgSubText): 태그 반대 방향으로 최대 10px 옮기고, 그래도 겹치면 `평단`만
+  let avgLabelY: number | null = null;
+  let avgFull = false;
+  if (avgGutterLabel && axis.avgY !== null) {
+    const gap = axis.todayY === null ? Infinity : Math.abs(axis.avgY - axis.todayY);
+    if (!avgSubText) {
+      if (gap >= 26) avgLabelY = axis.avgY;
+    } else if (gap >= 26) {
+      avgLabelY = axis.avgY;
+      avgFull = true;
+    } else {
+      const dir = axis.todayY !== null && axis.avgY < axis.todayY ? -1 : 1;
+      const shift = Math.min(10, 26 - gap);
+      avgLabelY = Math.max(12, Math.min(axis.avgY + dir * shift, h - 14));
+      avgFull = Math.abs(avgLabelY - (axis.todayY ?? Infinity)) >= 26;
+    }
+  }
   return (
     <g pointerEvents="none">
       {axis.ticks.map((t) => (
@@ -38,10 +54,10 @@ export function PriceAxisLayer({ layer, axis, x0, plotW, h, tagText, tagValue, c
           {t.label}
         </text>
       ))}
-      {avgLabelOk && axis.avgY !== null && (
+      {avgLabelY !== null && (
         <g data-testid="chart-avg-gutter">
-          <text x={gx} y={avgSubText ? axis.avgY + 1 : axis.avgY + 3.5} fontSize={10} className={avgSubText ? "fill-foreground" : "fill-muted-foreground"}>평단</text>
-          {avgSubText && <text x={gx} y={axis.avgY + 12} fontSize={10} className="fill-muted-foreground tabular-nums">{avgSubText}</text>}
+          <text x={gx} y={avgFull ? avgLabelY + 1 : avgLabelY + 3.5} fontSize={10} className={avgFull ? "fill-foreground" : "fill-muted-foreground"}>평단</text>
+          {avgFull && avgSubText && <text x={gx} y={avgLabelY + 12} fontSize={10} className="fill-muted-foreground tabular-nums">{avgSubText}</text>}
         </g>
       )}
       {tagText && axis.todayY !== null && tagY !== null && (
