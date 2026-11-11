@@ -202,7 +202,7 @@
   "negligible": false,
   "label": "지난 접속(11/5) 이후",
   "estimated": false,
-  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 기록 안 된 변화 +97만원",
+  "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 주식 매수 +97만원",
   "causes": [
    {
     "key": "price:stock",
@@ -226,11 +226,13 @@
     "text": "+16만원"
    },
    {
-    "key": "unrecorded",
-    "label": "기록 안 된 변화",
-    "sentence": "기록 안 된 변화로 +97만원 늘었어요.",
-    "amount": 969999.9999999999,
-    "text": "+97만원"
+    "key": "buy:stock",
+    "label": "주식 매수",
+    "sentence": "주식 매수로 +97만원 늘었어요.",
+    "amount": 970000,
+    "text": "+97만원",
+    "dateLabel": "11/8",
+    "firstDate": "2026-11-08"
    }
   ],
   "offsetTotal": 4000000,

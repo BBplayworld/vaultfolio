@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AttributionDisplayItem } from "@/lib/report/asset-report";
-import { CAUSE_DISPLAY_MIN } from "@/lib/report/asset-report";
+import { CAUSE_DISPLAY_MIN, offsetAttributionEffects } from "@/lib/report/asset-report";
 import { buildWeekRows } from "@/lib/report/settlement";
 import { featureTitleOf } from "@/lib/analytics/ga";
 import { APP_FEATURES } from "@/config/app-features";
@@ -223,14 +223,31 @@ describe("T12 C42·C49 교차", () => {
     expect(l.loan).toBeUndefined();
     expect(l.unrecorded).toBeUndefined();
   });
-  it("현금 등록 + 짝 없는 매수: Hero가 풀 상쇄 없이 남긴 몫을 그대로 합산(Hero 정의) — 순유입이 아니라 기록 안 된 변화", () => {
+  it("현금 등록 + 짝 없는 매수: 순유입 양수(spec) — 부동소수 잡음이 상쇄 경로로 끌어들이던 결함 수정 후", () => {
     const { v, mapped } = view([stockBuy("2026-11-09", "s_sam", 20, 72000)]);
-    expect(v.causes.find((c) => c.key === "unrecorded")?.amount).toBeCloseTo(1_440_000, 0); // Hero 항목이 이미 기록 안 된 변화
-    expect(Object.fromEntries(mapped.causes.map((c) => [c.key, c.amount]))).toMatchObject({ unrecorded: 1_440_000 });
-    expect(mapped.causes.find((c) => c.key === "income")).toBeUndefined();
+    expect(v.offsetTotal).toBe(0);
+    expect(v.causes.find((c) => c.key === "buy:stock")?.amount).toBeCloseTo(1_440_000, 0);
+    expect(v.causes.find((c) => c.key === "unrecorded")).toBeUndefined();
+    expect(Object.fromEntries(mapped.causes.map((c) => [c.key, c.amount]))).toEqual({ price: 1_353_840, fx: BASE.fx, income: 1_440_000 });
   });
   it("현금 잔액만 고침: 기록 안 된 변화 1줄·순유입 0", () => {
     expect(lines([cashEdit("2026-11-09", "c_krw", 31_500_000)])).toEqual({ ...BASE, unrecorded: 1_500_000 });
+  });
+});
+
+describe("상쇄 판정 부동소수 잡음(C73 — 4.79에서 수정)", () => {
+  const attr = (effects: { key: string; amount: number }[]) => ({ effects, deltaNet: 0 }) as unknown as Parameters<typeof offsetAttributionEffects>[0];
+  const zero = { out: { stock: 0, crypto: 0, physical: 0, loan: 0 }, in: { stock: 0, crypto: 0 } };
+  it("1e-10 크기 반대 부호 다리는 상쇄 대상이 아니다(수정 전: offset ≈ 1e-10, 매수가 기록 안 된 변화로 합쳐짐)", () => {
+    const r = offsetAttributionEffects(attr([{ key: "buy:stock", amount: 1_440_000 }, { key: "cash", amount: -1.1641532182693481e-10 }]), zero);
+    expect(r.offset).toBe(0);
+    expect(r.effects.find((e) => e.key === "buy:stock")?.amount).toBe(1_440_000);
+    expect(r.effects.find((e) => (e.key as string) === "unrecorded")).toBeUndefined();
+  });
+  it("진짜 반대 부호 다리(1원 이상)는 그대로 상쇄", () => {
+    const r = offsetAttributionEffects(attr([{ key: "buy:stock", amount: 1_000_000 }, { key: "cash", amount: -400_000 }]), zero);
+    expect(r.offset).toBe(400_000);
+    expect(r.effects.find((e) => (e.key as string) === "unrecorded")?.amount).toBe(600_000);
   });
 });
 

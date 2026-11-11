@@ -35,6 +35,8 @@ describe("T4 홈 Hero 출력 골든(main 동일)", () => {
   it("레거시 시작점(통합 시세 예측)", () => {
     expect(roundTrip(headerOf(buildScenario(RICH_STEPS, { legacyStart: true }), "2026-11-05", "2026-11-11"))).toEqual(golden.legacy_start);
   });
+  // 골든 갱신(4.79, 결함 수정으로 의도된 차이): 이 케이스만 기대값이 바뀌었다 — 짝 없는 매수 97만 원(출금 500만−입금 100만 = 400만만 짝, 매수 497만)이
+  // 현금 효과의 부동소수 잡음(−1.16e-10) 때문에 상쇄 경로에서 `기록 안 된 변화`로 합쳐지던 것이 `주식 매수`로 남는다. 나머지 4건은 변화 없음.
   it("출금↔매수 짝 상쇄", () => {
     const sc = buildScenario([withdraw("2026-11-08", 5_000_000), stockBuy("2026-11-08", "s_sam", 70, 71000), deposit("2026-11-09", 1_000_000)]);
     expect(roundTrip(headerOf(sc, "2026-11-05", "2026-11-11"))).toEqual(golden.paired);

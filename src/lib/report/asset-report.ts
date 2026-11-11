@@ -313,6 +313,9 @@ const POOL_KEYS = new Set<AttributionCauseKey>([
   "debt", "deposit", "cash",
 ]);
 
+// 원 단위 금액의 부동소수 잡음 한계(실제 금액은 1원 이상) — relink.ts EPS(1e-9)보다 크게 잡는다(1e8 규모 합산 오차 ~1e-8 포함)
+const OFFSET_EPS = 1e-6;
+
 export function offsetAttributionEffects(attr: PeriodAttribution, transfer: AttributionTransfer): { effects: Eff[]; offset: number } {
   const eff: Eff[] = attr.effects.map((e) => ({ ...e }));
   const get = (k: AttributionCauseKey) => eff.find((e) => e.key === k);
@@ -340,7 +343,8 @@ export function offsetAttributionEffects(attr: PeriodAttribution, transfer: Attr
   pairIn("sell:stock", transfer.in.stock);
   pairIn("sell:crypto", transfer.in.crypto);
   // 2단계: 잔차 짝
-  const pool = eff.filter((e) => POOL_KEYS.has(e.key) && e.amount !== 0);
+  // 부동소수 합산 잡음(1e-10 등)이 반대 부호 다리로 잡혀 짝 없는 매수가 상쇄 경로로 들어가던 결함(4.79) — 0 비교를 EPS로
+  const pool = eff.filter((e) => POOL_KEYS.has(e.key) && Math.abs(e.amount) > OFFSET_EPS);
   const pos = pool.filter((e) => e.amount > 0);
   const neg = pool.filter((e) => e.amount < 0);
   if (pos.length > 0 && neg.length > 0) {
