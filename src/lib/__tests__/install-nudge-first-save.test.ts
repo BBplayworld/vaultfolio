@@ -73,3 +73,20 @@ describe("첫 저장 세션 설치 안내 1회 노출(튜토리얼 미종료)", 
     expect(getNudgeVisible()).toBe(false);
   });
 });
+
+// QA·UI 수정 클래스 계약(#4.85): 말풍선 아이콘 대비·닫기 히트영역·320 어절 줄바꿈
+describe("4.85 QA·UI 수정 클래스 계약", () => {
+  const read = (p: string) => readFileSync(path.resolve(__dirname, "../../app/(main)/_components", p), "utf8");
+  it("튜토리얼 말풍선: 아이콘 흰색, X 버튼 aria-label·히트영역, 다음 버튼 min-h-10", () => {
+    const src = read("tutorial/tutorial-overlay.tsx");
+    expect(src).toContain('<Icon className="size-3.5 text-white" />');
+    expect(src).toContain('aria-label="튜토리얼 닫기"');
+    expect(src).toContain("after:-inset-3");
+    expect(src).toContain("min-h-10");
+  });
+  it("도움말 선택기 설명은 break-keep text-pretty", () => {
+    const src = read("header-menu/tool-menu.tsx");
+    expect(src).toContain('className="text-left break-keep text-pretty"');
+    expect(src.match(/leading-relaxed break-keep text-pretty/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+});

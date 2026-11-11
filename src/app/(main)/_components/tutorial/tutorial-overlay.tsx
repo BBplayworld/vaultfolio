@@ -177,7 +177,7 @@ function StepOverlay({
               className="size-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
               style={{ backgroundColor: MAIN_PALETTE[0] }}
             >
-              <Icon className="size-3.5" style={{ color: MAIN_PALETTE[0] }} />
+              <Icon className="size-3.5 text-white" />
             </div>
             <div>
               <p className="text-sm font-bold leading-snug" style={{ color: MAIN_PALETTE[0] }}>{displayTitle}</p>
@@ -186,7 +186,7 @@ function StepOverlay({
               )}
             </div>
           </div>
-          <button onClick={onComplete} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+          <button onClick={onComplete} aria-label="튜토리얼 닫기" className="relative shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5 after:absolute after:-inset-3 after:content-['']">
             <X className="size-3.5" />
           </button>
         </div>
@@ -195,7 +195,7 @@ function StepOverlay({
           <div className="flex items-center gap-2">
             <button
               onClick={onComplete}
-              className="flex items-center gap-1 text-sm font-semibold text-white px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
+              className="flex items-center gap-1 min-h-10 text-sm font-semibold text-white px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
               style={{ backgroundColor: MAIN_PALETTE[0] }}
             >
               다음
