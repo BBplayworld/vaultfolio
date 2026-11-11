@@ -278,13 +278,11 @@ describe("T13 오늘 = 홈 Hero와 같은 KST 날짜", () => {
 });
 
 describe("T10 팁·GA·화면 렌더", () => {
-  it("week-causes는 market-compare 앞, market-compare isNew 유지", () => {
+  it("week-causes는 market-compare 앞(isNew는 4.82에서 새 소식으로 흡수)", () => {
     const ids = APP_FEATURES.map((f) => f.id);
     expect(ids.indexOf("week-causes")).toBeGreaterThanOrEqual(0);
     expect(ids.indexOf("week-causes")).toBeLessThan(ids.indexOf("market-compare"));
-    expect(APP_FEATURES.find((f) => f.id === "market-compare")!.isNew).toBe(true);
     const f = APP_FEATURES.find((x) => x.id === "week-causes")!;
-    expect(f.isNew).toBe(true);
     expect(f.target).toEqual({ type: "activity", tab: "change", init: { scope: "all", period: "week" } });
     expect(f.entryCategory).toBe("change_week_all");
     expect(f.title).toBe("주간 변화 원인");
@@ -292,7 +290,6 @@ describe("T10 팁·GA·화면 렌더", () => {
     // viewToKey는 init을 무시해 target만으로는 `change` 방문 집계와 같은 키 — visitKey로 분리했다
     expect(viewToKey(f.target!)).toBe("activity:change");
     expect(f.visitKey).not.toBe(viewToKey(f.target!));
-    expect(APP_FEATURES.filter((x) => x.isNew).map((x) => x.id)[0]).toBe("week-causes"); // 첫 isNew가 먼저 추천된다
   });
   it("GA 제목 `성과·자산 변화·최근 7일`", () => {
     expect(featureTitleOf("feature_use", { category: "change_week_all" }, "activity:change")).toBe("성과·자산 변화·최근 7일");

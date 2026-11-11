@@ -228,8 +228,8 @@ viewToKey(view: AssetView): string          // "type" 또는 "type:tab" — navi
 recordVisit(key: string): void              // 문자열 키 직접 기록(action형 항목도 자체 키로 기록 가능)
 isTipDismissed(id): boolean / dismissTip(id): void   // 영구 dismiss(재노출 없음)
 pickRecommendedFeature(): AppFeature | null
-  // 1순위: dismiss 안 된 isNew(카탈로그 순) — 2순위: dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순)
-  // 전부 dismiss면 null
+  // dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순) — isNew 폐지(#4.82, 신규 안내는 whats-new). 전부 dismiss면 null
+runFeatureEntry(feature, navigate, source: "home_tip"|"whats_new"): void  // 기능 항목의 기존 이동(action | beforeNavigate → entryCategory GA(source) → target) 단일 출처. dismiss는 호출부 몫
 ```
 onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STORAGE_KEYS.featureUsage`). 기기 로컬 전용 — 동의 UI 없음(`lastVisitDate`·`assetRefresh`·`tutorialStatus` 등 기존 로컬 전용 키들과 동일 원칙), sync payload 미포함(R14), `clearAssetData` keepKeys에도 넣지 않음(전체 초기화 시 함께 리셋되어도 무방).
 카탈로그는 `src/config/app-features.ts`의 `APP_FEATURES`(`AppFeature[]`) — `id`/`title`/`description`/`icon` + 이동 방식(`target`(navigate) 또는 `action`(이동 없이 그 자리에서 실행, 예: 인증카드 다이얼로그 오픈) 중 하나, `beforeNavigate`로 target 진입 직전 로컬 서브탭 지정). `navigation-context.tsx`의 `navigate()` 본문에 `recordVisit(viewToKey(v))` 훅 1곳으로 모든 이동을 커버하고, action형(`share-card`)은 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 `recordVisit("share-card")`를 직접 호출(asset-dispatch.ts↔feature-usage.ts 순환 참조 방지 목적으로 dispatch 함수 자체엔 기록 로직을 넣지 않음).
@@ -237,23 +237,28 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 ### home-tip.ts (S-4.32 후속) — 홈 알림/팁 통합 판정
 
 ```typescript
-pickHomeTip({ assetData, hasAssets, syncArmed, today? }): HomeTip | null   // today 기본값 todayKst()(#4.36, 테스트 고정용)
-  // keepShown?: "backup"|"refresh" (#4.62) — 이번 홈 마운트 승자 종류의 '오늘 노출' 검사만 건너뛰어 effect 재실행에도 팁 유지. 미지정 = 현행. 결산·세금·공지 분기 불변
-  // HomeTip = { kind: "notice" } | { kind: "backup", days } | { kind: "tax", matches }
-  //         | { kind: "settlement", window, today } | { kind: "refresh", staleCategories } | { kind: "feature", feature }
-  // #4.36 순서: 공지(미열람) > 백업 > 임박 세금(isImminentTaxMatch) > 결산 > 그 외 세금 > 최신화 > 기능
-  // 결산: hasAssets && pickSettlementCard(readMonthlySnapshots(), today)≠null(말일−3일~다음 달 10일, 첫 달 제외) — 허브 카드와 같은 판정
-markCurrentNoticeSeen({ track? = true })  // 공지 열람 기록 단일 출처. track:false = 홈 팁 X·preview 데모(GA notice view 미전송)
-  // 새 공지는 **필수 노출**(readNoticeSeenId()!==NOTICE_ID) — 다른 무엇보다 최우선, 안전 안내(백업·세금)보다도 먼저 반환.
-  // 그다음 위험도 순: 백업(shouldShowBackupNudge) > 세금(isTaxNoticeDismissed===false && getAssetDrivenHighlights) > 결산 >
-  //                 자산최신화(shouldShowRefreshNudge) > 기능(pickRecommendedFeature) — 첫 매치 1개만 반환
+pickHomeTip({ assetData, hasAssets, syncArmed, today?, keepShown?, hasRelink?, whatsNewOk? }): HomeTip | null   // today 기본값 todayKst()(테스트 고정용)
+  // HomeTip = backup | tax | settlement | relink | refresh | { kind: "whats_new", count, title } | feature
+  // 순서(#4.82): 백업 > 임박 세금 > 결산(창 안) > 새 소식 > relink > 그 외 세금 > 최신화 > 기능(저방문)
+  // whatsNewOk = 체험·앱 잠금 아님(호출부 판정, isDataLoaded는 HomeTipBox effect 가드). hasAssets && whatsNewTip(readSeen(), {today}) 일 때만 반환
 ```
-`backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`의 기존 순수 함수를 그대로 조합만 한다(신규 판정 로직 없음). 4종을 독립 컴포넌트(`BackupNudge`/`RefreshNudge`/`TaxNoticeBox`/`FeatureTipBox`)로 각자 띄우던 것을 `home-tip-box.tsx` 1개로 통합하며 도입 — 종류별 "오늘/이번달/영구" 재노출 정책은 각 원본 유틸에 그대로 남아있고, 승자가 아닌 종류는 "오늘 떴다" flag를 찍지 않는다(호출부 책임, [components.md](components.md) `HomeTipBox` 참조).
+`backup-status.ts`/`asset-refresh-status.ts`/`tax-utils.ts`/`feature-usage.ts`/`whats-new.ts`의 기존 순수 함수를 조합만 한다. 홈 팁 박스(`home-tip-box.tsx`)는 `isDataLoaded` 이후에만 판정하고, X = 읽음 + 그 세션 박스 숨김, 클릭 = `dispatchOpenWhatsNew("home_tip")` + 박스 숨김. 강제 노출(`NOTICE_SHOWN_SESSION_KEY`)·`notice` 종류·`markCurrentNoticeSeen`·`isNoticeUnseen`은 4.82에서 삭제.
 
-**`notice` 종류(#4.24 재도입, 필수 노출)** — 과거 홈 진입 시 자동 팝업하던 `UpdateNoticeDialog`는 S-4.32에서 "기능 추천" 프레임으로 대체하며 의도적으로 제거됐었다. 이번엔 그 방식(강제 팝업) 대신 **다른 팁과 동일한 카드 1장**으로 재도입하되, **우선순위를 맨 위로**(백업·세금보다도 먼저) 둬 신규 버전 안내가 사용자가 보거나 닫기 전까지 반드시 뜨게 한다 — `isNoticeUnseen()`(`readNoticeSeenId() !== NOTICE_ID`, `home-tip.ts` export)이 true면 노출.
-- **최초 1회 노출 보장**: `home-tip-box.tsx`의 `useEffect`는 `isNoticeUnseen() && !NOTICE_SHOWN_SESSION_KEY`인 동안(= 미열람 공지가 이번 세션에 아직 한 번도 안 뜸)만 `SESSION_DISMISS_KEY`(공용 세션 숨김 플래그) 체크를 **건너뛰고** `pickHomeTip`을 호출한다 — 다른 팁의 X 닫기가 공지의 "최초 1회 노출"을 못 막게. 공지 tip이 실제 렌더되면 `NOTICE_SHOWN_SESSION_KEY`를 세워 바이패스를 끈다. 그 뒤부터는 X 닫기(→`SESSION_DISMISS_KEY`)가 정상 작동해 **같은 세션 내 재진입 시 재노출 안 됨**. 새 세션(sessionStorage 초기화)에선 다시 바이패스 활성 → 미열람 공지 재노출(#4.24 후속, QA에서 "X 닫고 홈 재진입 시 재노출" 버그 수정).
-- **열람 처리는 클릭에서만, 공지 본문이 아니라 해당 기능으로 직행**(#4.24 후속): 클릭 시 `markCurrentNoticeSeen()`(`home-tip.ts` export, TTL 90일)으로 영구 열람 처리하면서 `dispatchOpenNotice()`(공지 다이얼로그) 대신 **이번 릴리스가 홍보하는 실제 기능**을 바로 연다 — `dispatchOpenShareCard("type")`(`asset-dispatch.ts`, `variant` 인자 지원 — "type"|"stock"|"portfolio")로 인증카드를 투자 유형 타입으로 즉시 오픈(#4.26, 이전엔 portfolio). 공지 문구만 보여주고 끝나지 않고 결과물을 바로 체험시키는 의도. **다음 릴리스에서 홍보 대상이 바뀌면 `home-tip-box.tsx`의 이 액션도 `notice.tsx` 콘텐츠와 함께 갱신해야 한다** — 자동 연동 아님. 이제 아무도 안 쓰는 `dispatchOpenNotice`/`trigger-open-notice`는 삭제(더보기 메뉴의 수동 열람은 `tool-menu.tsx`의 `showNotice` 로컬 상태로 그대로 유지).
-- **X 닫기는 세션 숨김만**(#4.24 후속, 영구 dismiss 아님) — `markCurrentNoticeSeen()`을 호출하지 않고 `SESSION_DISMISS_KEY`만 세워 이번 세션에서만 숨긴다. 다음 세션엔 `isNoticeUnseen()`이 여전히 true라 다시 최우선으로 떠서, 사용자가 실제로 공지를 최소 1번 열어보게(또는 더보기 메뉴에서 수동으로 열람) 강제한다.
+### whats-new.ts (`src/lib/whats-new.ts` + `src/config/whats-new.ts`, #4.82) — 새 소식 판정·기록
+
+```typescript
+WHATS_NEW: WhatsNewEntry[]            // config — { id "YYYYMMDD-NN", title(2~32), body?(≤48), featureId? } 날짜 내림차순·같은 날 NN 오름차순
+parseEntryId(id) → {date, seq} | null  // 순번 없는 옛 id(YYYYMMDD)는 seq 0
+compareIds(a, b): number               // 날짜 → 순번 숫자 비교(문자열 비교 금지)
+readSeen(): {id, seenAt} | null        // 키 secretasset_notice_seen(만료·해석 불가·깨짐 = null). local-storage.readNoticeSeen 위 검증 래퍼
+unseenEntries(entries, record, today?) // id > 기록 id && 게시 30일 이내(KST 일수 차이)
+sheetEntries(entries, today?)          // 60일 이내 위에서 20개
+whatsNewTip(record, {now?, today?, entries?}) → {count, title} | null   // 안 본 항목 있고 기록 없음 또는 seenAt+7일 이상
+markWhatsNewSeen(entries?)             // compareIds 최대 id(latestEntryId, 같은 날 NN 최대)·seenAt=지금·만료 90일로 기록(목록 비면 무동작) — 팁 X·시트 열기·첫 실행 조용한 기록
+shouldSilentFirstRun({isDataLoaded, hasAssets, hasRecord, eligible, hasEntries}) / runSilentFirstRun({isDataLoaded, hasAssets, eligible}) // 호출 = WhatsNewHost(항상 마운트, 웰컴 화면 포함)
+newBadgeIds(entries?, record?, today?) // 시트 '새'(안 본 항목 전부(= 팁 N)) — 읽음 기록 전에 호출
+```
+저장 키는 기존 `STORAGE_KEYS.noticeSeen`(모양 `{id, seenAt, expiresAt}` 그대로, 동기화 payload 제외·가져오기 보존). 체험 모드는 판정·기록 안 함. 목록 등록 규칙·PR 본문 한 줄은 changelog 4.82 참고.
 
 ### seeded-pick.ts (`src/lib/xray/seeded-pick.ts`, #4.26) — 결정적 seed 선택 단일 출처
 

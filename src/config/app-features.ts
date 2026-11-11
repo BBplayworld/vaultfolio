@@ -1,5 +1,5 @@
 // 시크릿에셋 핵심 기능 카탈로그 — 홈 "기능 활용 팁" 추천 박스(feature-tip-box.tsx)의 단일 출처.
-// 신규 기능(isNew)을 최우선 추천하고, 이후엔 방문 기록(feature-usage.ts) 기반 저방문 기능을 추천한다.
+// 방문 기록(feature-usage.ts) 기반 저방문 기능을 추천한다. 신규 기능 안내는 새 소식(config/whats-new.ts)이 맡는다.
 // 신규 공용 기능을 추가하면 이 파일에도 등록한다(누락 시 팁 추천 대상에서 빠진다).
 
 import type { LucideIcon } from "lucide-react";
@@ -16,7 +16,6 @@ export interface AppFeature {
   title: string;
   description: string; // 한 줄 팁 문구
   icon: LucideIcon;
-  isNew?: boolean; // 이번 릴리스 신규 기능 — 최우선 추천
   // 이동 방식 — target(대부분) 또는 action(이동 없이 그 자리에서 실행) 중 하나만 채운다
   target?: AssetView;
   beforeNavigate?: () => void; // target 이동 직전 실행(세금 관리 내부 로컬 서브탭 지정 등)
@@ -98,7 +97,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "주간 변화 원인",
     description: "자산 변화의 주 탭에서 최근 7일 순자산이 무엇으로 변했는지 나눠 봐요",
     icon: ListChecks,
-    isNew: true,
     target: { type: "activity", tab: "change", init: { scope: "all", period: "week" } },
     entryCategory: "change_week_all",
     visitKey: "change-week", // 자산 변화 방문 집계(activity:change)와 섞이지 않게 분리
@@ -108,7 +106,6 @@ export const APP_FEATURES: AppFeature[] = [
     title: "시장과 비교",
     description: `지금 보유한 종목의 등락을 ${MARKET_PAIR_TEXT} 옆에서 봐요`,
     icon: ChartNoAxesColumn,
-    isNew: true,
     target: { type: "activity", tab: "change-market" },
   },
   {

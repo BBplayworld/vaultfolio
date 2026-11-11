@@ -9,7 +9,6 @@ import { applyImportedPayload, clearPhysicalAssets, STORAGE_KEYS } from "@/lib/a
 import { buildDemoRefreshMeta, kstToday, materializeDemo } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
-import { markCurrentNoticeSeen } from "@/lib/home-tip";
 
 /**
  * 데모 payload 주입 — 검증 실패 시 applyImportedPayload가 기존 데이터를 지우기 전에 throw한다.
@@ -35,12 +34,11 @@ function withNickname(payload: unknown, nickname: string): unknown {
 }
 
 /**
- * 데모 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps) + 현재 공지 읽음(GA 없음).
+ * 데모 주입 직후: 튜토리얼 전체 건너뛰기(가져오기와 같은 skipAllTutorialSteps). 새 소식 읽음은 기록하지 않는다(#159 — 새 브라우저 데모는 새 소식 팁이 첫 팁).
  * marker가 있으면 그 키에 "1"을 기록한다(preview 전용 표식 — 체험은 쓰지 않음).
  */
 export function skipDemoTutorial({ marker }: { marker?: string } = {}): void {
   skipAllTutorialSteps();
-  markCurrentNoticeSeen({ track: false });
   if (marker) localStorage.setItem(marker, "1");
   tutorialStore.getState().initTutorial();
 }

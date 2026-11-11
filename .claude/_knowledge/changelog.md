@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-11 (v4.82)
+
+### 새 소식 (#4.82, 이슈 #159)
+- **새 소식 목록 `config/whats-new.ts`(`WHATS_NEW`)** — 사용자 체감 변화의 단일 출처. id `YYYYMMDD-NN`(날짜 내림차순·같은 날 NN 오름차순), 시드 8개(4.69~4.81). 등록은 체감 변화가 있는 릴리스 PR에서(PR 본문 `새 소식: <id> | 해당 없음(사유)`, C82). 형식·금지어는 `config/__tests__/whats-new.test.ts`가 검사.
+- **판정 `lib/whats-new.ts`(순수)** — `parseEntryId`·`compareIds`(숫자 비교)·`unseenEntries`(최근 30일)·`sheetEntries`(60일·20개)·`whatsNewTip`(7일 간격)·`shouldSilentFirstRun`·`markWhatsNewSeen`. 기록 키는 기존 `secretasset_notice_seen`(모양 그대로, 의미 = 마지막으로 읽은 새 소식 id + seenAt 7일 시계). 새 키·스키마·동기화·서버 전송 0.
+- **홈 팁 `whats_new`**(배지 `소식`, 제목 `새 소식 N개`, 설명 = 맨 위 안 본 항목): 우선순위 백업 > 임박 세금 > 결산 > **새 소식** > relink > 세금 > 최신화 > 기능. 자산 있음·체험/잠금 아님·`isDataLoaded` 이후만. X = 읽음 + 세션 숨김, 클릭 = 시트 열기(박스 숨김). 자산 0 첫 실행은 불러오기 후 조용히 최신 id 기록.
+- **`WhatsNewHost`(`views/home/whats-new-sheet.tsx`)** — (main) layout 상시 마운트, `dispatchOpenWhatsNew(source)`로 열림. 모바일 bottom/PC right 시트, `새` 표시 = 열기 직전 기준 안 본 항목 전부(= 팁 N), 바로 가기 = `runFeatureEntry`(기능 팁 dismiss 없음). 더보기 `앱 가이드 · 새 소식` > `새 소식 보기`(`more-whats-new`).
+- **삭제**: `notice.tsx`(NOTICE_ID·NoticeContent)·`markCurrentNoticeSeen`·`isNoticeUnseen`·`NOTICE_SHOWN_SESSION_KEY` 강제 노출·더보기 공지 다이얼로그·`AppFeature.isNew`(기능 팁 `신규` 배지, `pickRecommendedFeature` isNew 우선). DECISIONS 11-11 `market-compare isNew 유지`는 이 흡수로 대체. preview `skipDemoTutorial`은 더 이상 읽음을 기록하지 않음(새 브라우저 데모는 새 소식 팁이 첫 팁).
+- **GA**: `whats_new`(page_title `새 소식`) — 시트 열기 `view`(source home_tip|more), 바로 가기 `click` + 대상 `entryCategory`(source `whats_new`). `notice` category 삭제. 홈 팁 view/click/close는 `home_tip` 그대로. 판독 경계: 머지 시각을 4.72·4.73·4.79·4.81 지표 경계로 기록.
+- **롤백**: 구버전은 `id !== "20260924"`로 9월 공지를 1회 재노출(결산 창이면 그 세션 결산 1회 가림), 데이터 손실 0.
+
+---
+
 ## 2026-11-11 (v4.81)
 
 ### 종목 한 장 (#4.81, 이슈 #157)

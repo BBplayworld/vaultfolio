@@ -58,7 +58,7 @@ const MIGRATIONS: Migration[] = [
   },
   {
     // 공지 열람 키 통합: 죽은 "일주일 숨기기" 잔재 키 제거
-    // (per-id secretasset_notice_seen_* 키의 이관·정리는 notice-dialog의 cleanExpiredNoticeKeys(NOTICE_ID)가 담당)
+    // (per-id secretasset_notice_seen_* 키의 이관·정리는 init의 cleanExpiredNoticeKeys()가 만료 정리만 담당(4.82))
     id: "consolidate-notice-keys",
     run: () => {
       localStorage.removeItem("secretasset_notice_hide_until");

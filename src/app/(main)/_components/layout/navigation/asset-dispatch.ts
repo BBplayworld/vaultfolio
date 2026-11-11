@@ -5,6 +5,11 @@ export function dispatchOpenRelink() {
   window.dispatchEvent(new CustomEvent("open-relink-dialog"));
 }
 
+// 새 소식 시트 열기(#159, 4.82) — 홈 팁·더보기가 호출, (main) layout의 WhatsNewHost가 수신. source = GA 출처
+export function dispatchOpenWhatsNew(source: "home_tip" | "more") {
+  window.dispatchEvent(new CustomEvent("open-whats-new", { detail: { source } }));
+}
+
 export function dispatchAddRealEstate() {
   window.dispatchEvent(new CustomEvent("trigger-add-real-estate"));
 }
