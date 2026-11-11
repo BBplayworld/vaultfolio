@@ -24,13 +24,24 @@ export async function requestPriceHistory(ticker: string, range: PriceRange, sig
   };
 }
 
-// enabled=false면 요청 0(비상장·티커 없음·상장폐지, 5년 탭을 열기 전)
-export function usePriceHistory(ticker: string, range: PriceRange, enabled: boolean) {
-  return useQuery({
-    queryKey: ["price-history", ticker, range],
-    queryFn: ({ signal }) => requestPriceHistory(ticker, range, signal),
+// 행(상세·주식 펼침)에서는 실패한 티커가 접었다 펼 때마다 다시 요청되면 시세 서킷에 실패가 쌓이므로 retryOnMount:false(4.83 C2).
+// 종목 한 장은 `다시 시도` 버튼의 명시적 refetch가 있어 기본값(true)을 그대로 쓴다
+export interface PriceHistoryOptions {
+  retryOnMount?: boolean;
+}
+
+export function priceHistoryQueryOptions(ticker: string, range: PriceRange, enabled: boolean, opts: PriceHistoryOptions = {}) {
+  return {
+    queryKey: ["price-history", ticker, range] as const,
+    queryFn: ({ signal }: { signal: AbortSignal }) => requestPriceHistory(ticker, range, signal),
     enabled: enabled && !!ticker,
     staleTime: 30 * 60 * 1000,
     retry: false,
-  });
+    ...(opts.retryOnMount === undefined ? {} : { retryOnMount: opts.retryOnMount }),
+  };
+}
+
+// enabled=false면 요청 0(비상장·티커 없음·상장폐지, 5년 탭을 열기 전)
+export function usePriceHistory(ticker: string, range: PriceRange, enabled: boolean, opts?: PriceHistoryOptions) {
+  return useQuery(priceHistoryQueryOptions(ticker, range, enabled, opts));
 }

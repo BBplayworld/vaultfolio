@@ -35,13 +35,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     id: "20261111-04",
     title: "달마다 앞 달보다 얼마나 변했는지 봐요",
     body: "월 결산의 월별 기록에서 이어 볼 수 있어요",
-    featureId: "change",
+    featureId: "monthly-log",
   },
   {
     id: "20261111-05",
     title: "맞추기 뒤에도 매수일·거래 기록이 이어져요",
     body: "새 종목 매수일은 한 번에 입력해요(기본 올해 1월 1일)",
-    featureId: "stocks",
   },
   {
     id: "20261111-06",
@@ -53,7 +52,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     id: "20261111-07",
     title: "금액 표시를 끄면 주식 수량도 가려져요",
     body: "인증카드 주식 현황의 수량이 •\u2060•\u2060•\u2060•\u2060주로 보여요",
-    featureId: "share-card",
+    featureId: "share-card-stock",
   },
   {
     id: "20261111-08",

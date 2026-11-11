@@ -28,8 +28,8 @@ const IDX: PeriodRefs<MarketIndexResponse> = {
   weekly: { KOSPI: { refPrice: 99.8, refDate: "2026-11-03" }, SPX: { refPrice: 7569, refDate: "2026-11-03" } },
 };
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
-const render = (variant: "stock" | "hero", period: "daily" | "weekly" | "ytd" = "weekly", visible = true) =>
-  renderToStaticMarkup(<MarketEntryLine variant={variant} period={period} visible={visible} testId="w" onOpen={() => {}} />);
+const render = (period: "daily" | "weekly" | "ytd" = "weekly", visible = true) =>
+  renderToStaticMarkup(<MarketEntryLine period={period} visible={visible} testId="w" onOpen={() => {}} />);
 
 beforeEach(() => {
   h.stocks = [st({}), st({ ticker: "AAPL", name: "애플", category: "foreign", currency: "USD" })];
@@ -39,24 +39,24 @@ beforeEach(() => {
 });
 
 describe("MarketEntryLine", () => {
-  it("상세·주식: `최근 1주 코스피 … · S&P 500 …  내 종목과 비교`, 값은 페이지와 같은 함수(A11)", () => {
-    const t = text(render("stock"));
+  it("자산 변화 주식 1주: `코스피 … · S&P 500 …  시장과 비교`, 값은 페이지와 같은 함수(A11). 옛 `최근`·`내 종목과 비교` 접두는 4.83에서 상세·주식 타일로 대체돼 없다", () => {
+    const t = text(render("weekly"));
     const kr = formatCompareRate(computeIndexSpan("kr", "weekly", IDX).rate!);
     const us = formatCompareRate(computeIndexSpan("us", "weekly", IDX).rate!);
-    expect(t).toBe(`최근 1주 코스피 ${kr} · S&P 500 ${us} 내 종목과 비교`);
-    expect(render("stock")).toContain('max-[359px]:hidden">최근 </span>');
+    expect(t).toBe(`코스피 ${kr} · S&P 500 ${us} 시장과 비교`);
+    expect(render("weekly")).not.toContain("max-[359px]:hidden");
   });
 
   it("자산 변화: 선택 기간 값, 접두 없음, `시장과 비교`. 연 탭은 접힘(inert)", () => {
-    const t = text(render("hero", "daily"));
+    const t = text(render("daily"));
     expect(t).toBe(`코스피 ${formatCompareRate(1)} · S&P 500 ${formatCompareRate((7550 / 7377 - 1) * 100)} 시장과 비교`);
-    const year = render("hero", "weekly", false);
+    const year = render("weekly", false);
     expect(year).toContain("grid-rows-[0fr]");
     expect(year).toContain("inert");
   });
 
   it("연 탭(ytd): 값 없이 `올해 시장과 비교` 링크만, data-period=ytd, 지수 값·% 0(#150)", () => {
-    const html = render("hero", "ytd");
+    const html = render("ytd");
     expect(text(html)).toBe("올해 시장과 비교");
     expect(html).toContain('data-period="ytd"');
     expect(html).toContain("grid-rows-[1fr]");
@@ -66,26 +66,26 @@ describe("MarketEntryLine", () => {
 
   it("비교할 시장의 값만: 미국 종목만이면 S&P 500만", () => {
     h.stocks = [st({ ticker: "AAPL", category: "foreign", currency: "USD" }), st({ ticker: "360750", category: "isa" })];
-    expect(text(render("stock"))).toMatch(/^최근 1주 S&P 500 [+-]\d+\.\d% 내 종목과 비교$/);
+    expect(text(render("weekly"))).toMatch(/^S&P 500 [+-]\d+\.\d% 시장과 비교$/);
   });
 
   it("비교할 종목 0(해외형 ETF만, F3) → 접힘 / 티커 있는 종목 0 → 렌더 없음", () => {
     h.stocks = [st({ ticker: "360750", category: "pension" })];
-    const html = render("stock");
+    const html = render("weekly");
     expect(html).toContain("grid-rows-[0fr]");
     h.stocks = [st({ ticker: undefined, category: "unlisted" })];
-    expect(render("stock")).toBe("");
+    expect(render("weekly")).toBe("");
   });
 
   it("판별 전·지수 조회 중: 자리는 잡고 내용은 투명(값 0% 없음), 지수 실패: 링크 문구만", () => {
     h.peer = null;
-    const loading = render("stock");
+    const loading = render("weekly");
     expect(loading).toContain("grid-rows-[1fr]");
     expect(loading).toContain("opacity-0");
     expect(text(loading)).not.toMatch(/%/);
     h.peer = new Set(["005930"]);
     h.idx = { daily: { KOSPI: null, SPX: null }, weekly: { KOSPI: null, SPX: null } };
-    expect(text(render("stock"))).toBe("내 종목과 비교");
+    expect(text(render("weekly"))).toBe("시장과 비교");
   });
 });
 

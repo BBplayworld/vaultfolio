@@ -132,6 +132,10 @@ actions: {
 
 세금 관리(`#tax`) 페이지 진입 시 초기 탭(`"schedule"|"simulator"`) 지정. `initialTab: TaxInitialTab | null` · `setInitialTab`/`clear`. `#tax` 내부 탭은 URL이 아닌 로컬 state라 외부(홈 팁 박스 등)에서 직접 지정할 수단이 `loan-tx-view-store` 류의 "진입 대상 미리 지정 후 navigate" 패턴뿐이라 재사용. `tax-calendar-view.tsx`가 `useState` 초기값 함수에서 1회 소비 후 즉시 `clear()`.
 
+## XrayViewStore (`src/stores/xray-view-store.ts`, #4.83)
+
+X-Ray 페이지 초기 축 지정. `initialAxis: XrayAxis | null` · `setInitialAxis`/`clear`. 상세·주식 X-Ray 타일이 타일 값의 축으로 열 때 `TaxViewStore`와 같은 방식(진입 대상 미리 지정 후 navigate, `stock-xray-view.tsx`가 `useState` 초기값에서 1회 소비 후 `clear()`). 저장소·해시 0.
+
 ## OnboardingWizardStore (`src/stores/onboarding-wizard-store.ts`)
 
 온보딩 마법사 열림 상태(S-4.29). `isOpen: boolean` · `open`/`close`. `trade-view-store`와 동일한 최소 zustand 패턴(persist 없음). `WelcomeGuide`의 "스크린샷으로 자산 등록" CTA에서만 `open()` 호출(더보기 메뉴의 동일 버튼은 중복이라 제거됨), `page.tsx`가 `isOpen`을 최우선 분기(`isWelcomeGuide`보다 먼저 체크)로 `OnboardingWizardFlow`를 렌더.
@@ -228,9 +232,11 @@ viewToKey(view: AssetView): string          // "type" 또는 "type:tab" — navi
 recordVisit(key: string): void              // 문자열 키 직접 기록(action형 항목도 자체 키로 기록 가능)
 isTipDismissed(id): boolean / dismissTip(id): void   // 영구 dismiss(재노출 없음)
 pickRecommendedFeature(): AppFeature | null
-  // dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순) — isNew 폐지(#4.82, 신규 안내는 whats-new). 전부 dismiss면 null
+  // dismiss 안 된 항목 중 `tip:false`(새 소식 바로 가기 전용 `monthly-log`·`share-card-stock`, #4.83) 제외, 방문횟수 오름차순(0회 우선, 동률은 카탈로그 순) — isNew 폐지(#4.82, 신규 안내는 whats-new). 전부 dismiss면 null
+getLastVisitedAt(key): string | undefined   // 방문 키의 마지막 방문 시각(ISO) — `새` 꺼짐 판정(#4.83)
 runFeatureEntry(feature, navigate, source: "home_tip"|"whats_new"): void  // 기능 항목의 기존 이동(action | beforeNavigate → entryCategory GA(source) → target) 단일 출처. dismiss는 호출부 몫
 ```
+방문 기록 헬퍼(#4.83): `navigation-context.tsx`의 `recordViewVisits(view)`(navigate가 호출 — 화면 키 + 자산 변화 전체·주 init이면 `change-week` 추가, `isChangeWeekAll`·`CHANGE_WEEK_VISIT_KEY`), 주 탭 전환은 `AssetChangeView.changePeriod`가 같은 키로 기록, `monthly-log`는 월별 기록 카드가 50% 이상 처음 보일 때(IntersectionObserver) 진입당 1회. `ChangeInit.focus?: "monthly-log"` = 월 탭 렌더 후 카드로 1회 스크롤(해시·저장 없음).
 onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STORAGE_KEYS.featureUsage`). 기기 로컬 전용 — 동의 UI 없음(`lastVisitDate`·`assetRefresh`·`tutorialStatus` 등 기존 로컬 전용 키들과 동일 원칙), sync payload 미포함(R14), `clearAssetData` keepKeys에도 넣지 않음(전체 초기화 시 함께 리셋되어도 무방).
 카탈로그는 `src/config/app-features.ts`의 `APP_FEATURES`(`AppFeature[]`) — `id`/`title`/`description`/`icon` + 이동 방식(`target`(navigate) 또는 `action`(이동 없이 그 자리에서 실행, 예: 인증카드 다이얼로그 오픈) 중 하나, `beforeNavigate`로 target 진입 직전 로컬 서브탭 지정). `navigation-context.tsx`의 `navigate()` 본문에 `recordVisit(viewToKey(v))` 훅 1곳으로 모든 이동을 커버하고, action형(`share-card`)은 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 `recordVisit("share-card")`를 직접 호출(asset-dispatch.ts↔feature-usage.ts 순환 참조 방지 목적으로 dispatch 함수 자체엔 기록 로직을 넣지 않음).
 
@@ -259,6 +265,23 @@ shouldSilentFirstRun({isDataLoaded, hasAssets, hasRecord, eligible, hasEntries})
 newBadgeIds(entries?, record?, today?) // 시트 '새'(안 본 항목 전부(= 팁 N)) — 읽음 기록 전에 호출
 ```
 저장 키는 기존 `STORAGE_KEYS.noticeSeen`(모양 `{id, seenAt, expiresAt}` 그대로, 동기화 payload 제외·가져오기 보존). 체험 모드는 판정·기록 안 함. 목록 등록 규칙·PR 본문 한 줄은 changelog 4.82 참고.
+
+### new-spot.ts (`src/lib/new-spot.ts` + `src/config/new-spots.ts`, #4.83) — `새` 표시 판정
+
+```typescript
+NEW_SPOTS: Record<NewSpot, {entryId, visitKey}>   // config — spot(stock-market|hub-week|hub-monthly|hub-market) → 새 소식 항목 id·방문 키 대응표 1곳(저장 키 0). HUB_NEW_SPOT_ORDER = 허브 우선순위
+isSpotNew(spot, today, lastVisitedAt?): boolean   // 켜짐 = 게시일(KST)~30일(WHATS_NEW_UNSEEN_DAYS), 꺼짐 = lastVisitedAt(KST)이 게시일 이후. 시트 읽음 기록 무관
+pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 보이는 자리 우선순위 순 첫 켜짐
+```
+화면은 `useNewSpot`·`NewChip`(`layout/ui/new-chip.tsx`). 방문은 `recordVisit`/`recordViewVisits` 실제 기록으로만 꺼진다(테스트도 실제 쓰기 함수로 판정, C83).
+
+### xray: `formatBreakdownPct`·`pickXrayTile` (`src/lib/xray/stock-xray.ts`, #4.83)
+
+`formatBreakdownPct(ratio) = Math.round(ratio*1000)/10` — X-Ray 페이지 항목 줄·타일이 공용(C65). `pickXrayTile(mergedStocks, rates) → {axis, itemLabel, pct} | null`: `pickHighlights`(`itemLabel` 필드 추가)로 축을 고르되 pct 100인 축(항목 1개뿐)은 건너뜀, 후보 없으면 null → 타일 폴백. 
+
+### finance/stock-page.ts 추가(#4.83) — 행 미니 차트
+
+`downsample(points, max)`(그리기 직전에만, 첫·마지막 점 포함)·`buildSparkGeometry(points, avg, w, h)`(`computeYDomain` 재사용, 평단 범위 밖이면 `avgY` null)·`buildRowFlow(flow, q, avg)`(none|loading|fallback|ready — 1년 %는 원본 points `computePriceChange`)·`signedRate`(종목 한 장·이름 줄 공용). `hooks/use-price-history.ts`: `priceHistoryQueryOptions(ticker, range, enabled, {retryOnMount?})`·`usePriceHistory` 4번째 인자(행 쿼리 `retryOnMount:false` — 실패 티커 재요청 차단, 시세 서킷 보호 C79).
 
 ### seeded-pick.ts (`src/lib/xray/seeded-pick.ts`, #4.26) — 결정적 seed 선택 단일 출처
 
@@ -783,7 +806,7 @@ notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-us
 - `useXrayClassifications(stocks) → { tick, progress }` — 마운트/`stocks` 변경 시 `fetchAndStoreClassifications(stocks, onProgress)` 실행(캐시 완비면 즉시 no-op, 모듈 `inflight` dedup), 완료 시 `tick++`.
 - **사용법**: `tick`을 `computeBreakdown`/`pickHighlights`를 감싸는 `useMemo` deps에 넣어 localStorage 분류 갱신을 재계산에 반영(`classification-store`엔 구독 메커니즘이 없음).
 - **트리거 끄기**: 빈 배열(`[]`, 안정 참조)을 넘기면 no-op — 조건부 실행에 사용(예: 인증카드 다이얼로그는 `open && variant==="portfolio"`일 때만 `assetData.stocks` 전달).
-- 소비처 3곳: `stock-xray-view.tsx`(진행률 % 표시), `stock-insight-strip.tsx`(백그라운드), `ShareScreenshotDialog`(포트폴리오 분야 막대바). 이전엔 앞 2곳이 동일 useEffect+tick 패턴을 복붙했으나 이 훅으로 통합.
+- 소비처 3곳: `stock-xray-view.tsx`(진행률 % 표시), `stock-tools.tsx`(백그라운드, 4.83에서 `stock-insight-strip.tsx`에서 이전), `ShareScreenshotDialog`(포트폴리오 분야 막대바). 이전엔 앞 2곳이 동일 useEffect+tick 패턴을 복붙했으나 이 훅으로 통합.
 
 ### 종목 유형 분류 (`STOCK_TYPE_ENUM`, `src/lib/xray/classification-store.ts`)
 

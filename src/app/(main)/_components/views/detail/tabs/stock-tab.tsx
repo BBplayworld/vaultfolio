@@ -23,8 +23,8 @@ import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
-import { StockInsightStrip } from "../xray/stock-insight-strip";
-import { TaxSeasonStrip } from "../tax-season-strip";
+import { StockToolTiles } from "../stock-tools";
+import { StockPageEntry } from "../stock-row-flow";
 import { Stock, Loan } from "@/types/asset";
 import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/finance/profit-utils";
@@ -38,7 +38,6 @@ import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
 import { useStockPageStore } from "@/stores/stock-page-store";
-import { MarketEntryLine } from "../../activity/market-entry-line";
 import { displayShareWidths } from "@/lib/report/min-share";
 
 export const CATEGORY_TABS = [
@@ -363,7 +362,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip, footer }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
@@ -376,7 +375,6 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   usdRate?: number;
   disableUsd?: boolean;
   todayChip?: TodayChipView | null;
-  footer?: React.ReactNode; // 상세·주식 화면 전용(인증카드는 넘기지 않음)
 }) {
   const currency = displayCurrency ?? "KRW";
   const fmtFull = maskFn ?? ((v: number) => formatByDisplayCurrency(v, currency, usdRate, "full"));
@@ -391,7 +389,6 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
       formatShort={fmt}
       screenshotMode={screenshotMode}
       shotBig={shotBig}
-      footer={screenshotMode ? undefined : footer}
       headerAction={!screenshotMode ? (
         <div className="min-h-7 flex items-center">
           {onDisplayCurrencyChange && (
@@ -858,31 +855,18 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           )}
           <CollapsibleContent>
             <div className={ASSET_THEME.cardExpandBox}>
-              <div className={`flex items-start gap-2 px-4 py-2.5 ${ASSET_THEME.cardSection}`}>
-                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 flex-1">
-                  <span className="text-sm font-semibold text-foreground break-all">{stock.name}</span>
-                  {stock.ticker && (
-                    <span className="text-sm font-mono font-medium text-muted-foreground">
-                      ({stock.ticker}{marketMap?.[normalizeTicker(stock)] ? ` · ${marketMap[normalizeTicker(stock)]}` : ""})
-                    </span>
-                  )}
-                  {categoryLabels?.map((label) => (
-                    <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{label}</Badge>
-                  ))}
-                </div>
-                <div className="flex shrink-0 flex-col items-end">
-                  <span className="text-sm text-foreground font-semibold whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
-                  <button
-                    type="button"
-                    data-testid="stock-page-entry"
-                    onClick={openStockPage}
-                    className="-mr-[11px] -mb-2 inline-flex break-keep min-h-10 min-w-10 items-center gap-0.5 px-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 active:not-disabled:scale-[0.96] transition-[scale,color] motion-safe:duration-150"
-                  >
-                    종목 보기
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                </div>
-              </div>
+              {/* 이름 줄 전체 = 종목 한 장 입구(4.83). 1년 요청은 펼쳤을 때만 — 총 N주는 접힌 행·증권사별 항목이 정본이라 뺐다 */}
+              <StockPageEntry
+                stock={stock}
+                groupItems={effectiveGroupItems}
+                displayCurrency={displayCurrency}
+                exchangeRates={exchangeRates}
+                open={open}
+                screenshotMode={screenshotMode}
+                categoryLabels={categoryLabels}
+                marketLabel={marketMap?.[normalizeTicker(stock)]}
+                onOpen={openStockPage}
+              />
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} />
               </div>
@@ -1263,19 +1247,10 @@ export function StockTab() {
           usdRate={exchangeRates.USD}
           disableUsd={!hasForeignStock}
           todayChip={todayChip}
-          footer={
-            <MarketEntryLine
-              variant="stock"
-              testId="stock-market-entry-wrap"
-              period="weekly"
-              onOpen={() => navigate({ type: "activity", tab: "change-market" })}
-            />
-          }
         />
 
-        {/* X-Ray 인사이트 스트립 (인증카드 제외) */}
-        <StockInsightStrip stocks={assetData.stocks} exchangeRates={exchangeRates} />
-        <TaxSeasonStrip stocks={assetData.stocks} />
+        {/* 내 주식 도구 타일(시장과 비교·X-Ray·세금, 4.83 — 인증카드 제외) */}
+        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
         {/* 카테고리 selector + 정렬(같은 줄, 줄 수 +0) */}
         <div data-testid="stock-category-row" className="flex items-center gap-2">

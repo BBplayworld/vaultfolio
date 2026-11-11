@@ -43,7 +43,7 @@ function todayIndex(today: string): number {
   return dayIndex(Number(today.replaceAll("-", "")));
 }
 
-function ageDays(entry: WhatsNewEntry, today: string): number {
+export function ageDays(entry: WhatsNewEntry, today: string): number {
   const p = parseEntryId(entry.id);
   return p ? todayIndex(today) - dayIndex(p.date) : Infinity;
 }

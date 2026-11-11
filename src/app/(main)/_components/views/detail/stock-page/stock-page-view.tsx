@@ -15,6 +15,7 @@ import type { PriceRange } from "@/lib/finance/price-history";
 import {
   buildStockGroupHead,
   computePriceChange,
+  signedRate,
   hasPriceFlow,
   pickBuyTransactions,
   placeBuyDots,
@@ -36,8 +37,6 @@ const RANGE_OPTIONS: { value: PriceRange; label: string; testId: string }[] = [
 const RANGE_LABEL: Record<PriceRange, string> = { "1y": "1년", "5y": "5년" };
 const BOX_H = "h-48 min-[375px]:h-52 lg:h-72";
 const STOCKS_VIEW = { type: "detail", tab: "stocks" } as const;
-
-const signedRate = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
 
 export function StockPageView() {
   const { assetData } = useAssetData();

@@ -10,7 +10,8 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { InfoHint } from "../../../layout/ui/info-hint";
 import { PromptPreviewDialog } from "../../../layout/ui/prompt-preview-dialog";
-import { computeBreakdown, type XrayAxis, type BreakdownResult } from "@/lib/xray/stock-xray";
+import { computeBreakdown, formatBreakdownPct, type XrayAxis, type BreakdownResult } from "@/lib/xray/stock-xray";
+import { useXrayViewStore } from "@/stores/xray-view-store";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { buildStockXrayPrompt } from "@/lib/xray/stock-xray-prompt";
@@ -54,7 +55,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
   return (
     <div className="space-y-3">
       {result.items.map((item, idx) => {
-        const pct = Math.round(item.ratio * 1000) / 10;
+        const pct = formatBreakdownPct(item.ratio);
         const barPct = Math.min(100, Math.max(pct, 1));
         const color = colors[idx];
         return (
@@ -105,7 +106,12 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
 
 export function StockXrayView() {
   const { assetData, exchangeRates } = useAssetData();
-  const [axis, setAxis] = useState<XrayAxis>("theme");
+  // 상세·주식 X-Ray 타일이 지정한 축을 1회 소비(진입 후 즉시 clear). 직접 진입은 기본 축
+  const [axis, setAxis] = useState<XrayAxis>(() => {
+    const a = useXrayViewStore.getState().initialAxis;
+    useXrayViewStore.getState().clear();
+    return a ?? "theme";
+  });
   const [promptOpen, setPromptOpen] = useState(false);
 
   // X-Ray 페이지 진입 시 분류 fetch (캐시 hit이면 no-op). 스트리밍 진행률로 % 표시 (공용 훅)
@@ -128,7 +134,7 @@ export function StockXrayView() {
   );
 
   const incomplete = (axis === "theme" || axis === "marketCap" || axis === "index" || axis === "stockType") && result.unclassifiedRatio > 0;
-  const unclassPct = Math.round(result.unclassifiedRatio * 1000) / 10;
+  const unclassPct = formatBreakdownPct(result.unclassifiedRatio);
   const showWarning = unclassPct > 0;
   const conc = CONCENTRATION_LABEL[result.concentration];
 

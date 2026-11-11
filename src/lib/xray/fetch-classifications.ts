@@ -73,6 +73,8 @@ export async function fetchAndStoreClassifications(
   const totalItems = items.length;
 
   inflight = (async () => {
+    // 요청 시작 즉시 '분류 중'(0/total) 알림 — 첫 응답 chunk 전에도 타일이 폴백 문구를 보이게(4.83 D5)
+    emitProgress({ done: 0, total: totalItems });
     // 스트리밍 중에는 store에 즉시 반영하지 않고 버퍼에 모아 완료 시 1회 반영 → 결과 점진 노출 방지
     const buffered: Record<string, Parameters<typeof upsertClassifications>[0][string]> = {};
     try {

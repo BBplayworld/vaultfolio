@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-11 (v4.83)
+
+### 신기능 진입 경로 개선 (#4.83, 이슈 #161)
+- **상세·주식**: 요약 안 시장 글줄(`MarketEntryLine variant="stock"`)·`StockInsightStrip`·`TaxSeasonStrip`을 지우고 요약 아래 '내 주식 도구' 타일 묶음 `StockToolTiles`(`stock-tools.tsx`)로 통합(시장과 비교·X-Ray 분석·해외주식 세금, 타일마다 숫자 1개). X-Ray 타일 값 = `pickXrayTile`(pct 소수 1자리 `formatBreakdownPct` 공용, 100% 단일 축 제외, 탭하면 그 축으로 열림 — `useXrayViewStore`). 세금 타일은 D-day·금액 없음. `useXrayClassifications`는 타일이 호출(분류 수집·완료 토스트 유지). `StockSummaryHeader`·`DetailSummaryHeader`의 `footer` 슬롯 삭제.
+- **펼침 이름 줄 = 종목 한 장 입구**(`StockPageEntry`): `총 N주`·`종목 보기` 삭제, 줄 전체 버튼 + 둘째 줄 `1년 주가 등락` + SVG 스파크라인(평단 점선). 1년 조회는 펼칠 때만(`open && hasPriceFlow && !screenshotMode`), 행 쿼리 `retryOnMount:false`(실패 티커 재요청 차단 — 시세 서킷 보호 C79). 1년 %는 원본 points(`computePriceChange`), 평단은 `buildStockGroupHead`(종목 한 장과 같은 함수, C65).
+- **성과 허브**: `KpiCard rows` 슬롯 + `HubChangeRows`(최근 7일·월별 기록 N개월·시장과 비교, 머리와 행은 형제). `lg:row-span-2`. 값은 도착 화면과 같은 함수(`useWeekHero`·`monthlyLogEntryCount`·`useMarketEntryValue`).
+- **`새` 표시 4곳**(`NewChip`·`config/new-spots.ts`·`lib/new-spot.ts`): 시장 타일 / 허브 3행, 한 화면 1개, 방문하면 꺼짐(게시일~30일).
+- **방문 기록 수정**: `change-week`가 어디서도 기록되지 않던 결함(홈 팁 `주간 변화 원인`이 계속 0회) — `recordViewVisits`(init 진입)·`changePeriod`(탭 전환) 2경로 기록. `monthly-log` 방문(카드 50% 이상 보일 때). `ChangeInit.focus` 월별 기록 바로 가기 스크롤.
+- **새 소식 바로 가기 정정**: 04 → `monthly-log`, 05 → 바로 가기 제거, 07 → `share-card-stock`. 새 항목 2개는 `AppFeature.tip:false`(홈 팁 후보 제외).
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0(새 요청 = 기존 price-history 1y, 펼칠 때). 새 소식: 해당 없음(입구 정리).
+- 테스트: `stock-entry-tools.test.tsx`·`hub-change-rows.test.tsx`·`entry-paths-483.test.ts`. `composition-month.test.ts`의 settlement-view diff 가드는 `SettlementView(focus)` 시그니처 변경과 asset-change-view 제외를 반영.
+
+---
+
 ## 2026-11-11 (v4.82)
 
 ### 새 소식 (#4.82, 이슈 #159)

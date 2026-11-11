@@ -6,7 +6,7 @@
 import type { MonthlyAssetSnapshot, SnapshotBreakdown } from "@/types/asset";
 import { formatCurrency, formatNumberWithCommas, formatShortCurrency } from "@/lib/number-utils";
 import { COMPOSITION_KEYS, COMPOSITION_LABELS, type CompositionKey } from "./composition";
-import { formatSettlementPoint, listSettlementMonths, SETTLEMENT_KEEP_MONTHS } from "./settlement";
+import { formatSettlementPoint, listSettlementMonths, pickSettlementMonth, resolveSettlementWindow, SETTLEMENT_KEEP_MONTHS } from "./settlement";
 
 export type MonthlyLogKey = CompositionKey | "loans" | "tenantDeposit";
 /** 열 순서: 자산 5종(구성 블록과 같은 순서) → 부채 2종 */
@@ -91,6 +91,16 @@ export function buildMonthlyLog(
     hasNetOnly: asc.some((r) => r.kind === "net-only"),
     atLimit: span.length >= SETTLEMENT_KEEP_MONTHS,
   };
+}
+
+/**
+ * 성과 허브 `월별 기록` 행의 N(4.83) — 월 탭이 월별 기록 카드를 그리는 조건과 같은 판정(첫 달이 아니고 기록된 달 ≥ 2)일 때만 N, 아니면 null(행 숨김).
+ * N = buildMonthlyLog().recordedCount = 카드에서 `모두 보기` 후 gap 아닌 행 수(C84)
+ */
+export function monthlyLogEntryCount(monthly: MonthlyAssetSnapshot[], today: string, netAsset: number): number | null {
+  const firstMonth = resolveSettlementWindow(monthly, pickSettlementMonth(monthly, today), today).kind === "first_month";
+  const { recordedCount } = buildMonthlyLog(monthly, today, { netAsset });
+  return !firstMonth && recordedCount >= 2 ? recordedCount : null;
 }
 
 const MINUS = "−"; // U+2212

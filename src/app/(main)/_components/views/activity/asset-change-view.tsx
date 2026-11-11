@@ -8,16 +8,17 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { ChevronDown, ChevronRight, Table2 } from "lucide-react";
-import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
-import { readExchangeHistory } from "@/lib/finance/profit-utils";
+import { readDailySnapshots } from "@/lib/asset/snapshot-storage";
 import { track } from "@/lib/analytics/ga";
+import { recordVisit } from "@/lib/feature-usage";
 import { buildWeekRows, type WeekRow } from "@/lib/report/settlement";
 import type { ProfitPeriod } from "@/lib/finance/profit-utils";
-import { rememberChangeInit, useAssetNavigation, type ChangeInit, type ChangePeriod, type ChangeScope } from "../../layout/navigation/navigation-context";
+import { CHANGE_WEEK_VISIT_KEY, rememberChangeInit, useAssetNavigation, type ChangeInit, type ChangePeriod, type ChangeScope } from "../../layout/navigation/navigation-context";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { SECTION } from "../../layout/ui/report-section";
 import { BODY_ENTER, CauseBlock, ChangeHero, ChangeHeroFrame } from "./change-hero";
-import { computeAttributionView, mapWeekCauses, resolveWeekHero, weekSinceDate, weekStartDate, weekToday } from "./week-attribution";
+import { mapWeekCauses, weekStartDate } from "./week-attribution";
+import { useWeekHero } from "./use-week-hero";
 import { AttributionRecordList } from "../attribution-records";
 import { YearlyNetAssetChart } from "./net-asset-chart";
 import { ProfitCard } from "./profit-chart";
@@ -44,13 +45,13 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
   const [scope, setScope] = useState<ChangeScope>(init?.scope ?? "all");
   const [period, setPeriod] = useState<ChangePeriod>(init?.period ?? "month");
   // 결산 진입 정보 — 화면이 열린 채로 다시 진입(FAB·카드)하면 key를 올려 월 탭을 새로 연다
-  const [entry, setEntry] = useState({ key: 0, month: init?.month, source: init?.source ?? "menu" });
+  const [entry, setEntry] = useState({ key: 0, month: init?.month, source: init?.source ?? "menu", focus: init?.focus });
   const firstInit = useRef(init);
   useEffect(() => {
     if (!init || init === firstInit.current) return;
     setScope(init.scope ?? "all");
     setPeriod(init.period ?? "month");
-    setEntry((e) => ({ key: e.key + 1, month: init.month, source: init.source ?? "menu" }));
+    setEntry((e) => ({ key: e.key + 1, month: init.month, source: init.source ?? "menu", focus: init.focus }));
   }, [init]);
 
   // 탭으로 진입·전환하는 경우의 월 탭은 메뉴 진입으로 본다
@@ -58,16 +59,19 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
   const changePeriod = (v: ChangePeriod) => {
     if (v === period) return;
     // 전체 범위에서 사용자가 주를 눌렀을 때만 1건(복원·첫 진입은 init으로 들어와 여기를 거치지 않는다, 4.79)
-    if (v === "week" && scope === "all") track("feature_use", { category: "change_week_all" });
+    if (v === "week" && scope === "all") {
+      track("feature_use", { category: "change_week_all" });
+      recordVisit(CHANGE_WEEK_VISIT_KEY); // 주 탭 방문 집계(4.83 — init 진입은 navigate가 기록)
+    }
     setPeriod(v);
-    setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu" }));
+    setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu", focus: undefined }));
   };
   const changeScope = (v: ChangeScope) => {
     if (v === scope) return;
     // 사용자가 주식 범위를 눌렀을 때만 1건(복원·첫 진입은 init으로 들어와 여기를 거치지 않는다, #132)
     if (v === "stock") track("feature_use", { category: "change_scope_stock" });
     setScope(v);
-    setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu" }));
+    setEntry((e) => ({ key: e.key + 1, month: undefined, source: "menu", focus: undefined }));
   };
 
   // 기간 선택 — Hero 틀(ChangeHeroFrame) 맨 아래에 1회만 렌더해 본문이 바뀌어도 같은 노드로 유지(썸 슬라이드).
@@ -87,7 +91,6 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
         period={periodSelector}
         footer={scope === "stock" ? (
           <MarketEntryLine
-            variant="hero"
             testId="change-market-entry"
             period={COMPARE_PERIOD[period]}
             onOpen={() => {
@@ -101,7 +104,7 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
       {scope === "stock" ? (
         <ProfitCard isActive period={PROFIT_PERIOD[period]} />
       ) : period === "month" ? (
-        <SettlementView key={entry.key} initialMonth={entry.month} source={entry.source} />
+        <SettlementView key={entry.key} initialMonth={entry.month} source={entry.source} focus={entry.focus} />
       ) : period === "week" ? (
         <WeekList />
       ) : (
@@ -115,36 +118,19 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
 // 전체·주 — 최근 7일(today−7 이후) 원인 분해(4.79 #153). 계산은 홈 Hero와 같은 computeAttributionView, 6줄은 합산만.
 // 일별 마감 목록(30일 롤링)은 '날짜별 마감 기록' 접힘 카드로 내렸다(행·값 그대로).
 export function WeekList() {
-  const { assetData, exchangeRates, snapshotVersion, getAssetSummary } = useAssetData();
+  const { assetData, snapshotVersion } = useAssetData();
   const { navigate } = useAssetNavigation();
-  const today = weekToday();
-  const summary = getAssetSummary();
-  const view = useMemo(
-    () => computeAttributionView({
-      assetData,
-      rates: exchangeRates,
-      summary,
-      daily: readDailySnapshots(),
-      monthly: readMonthlySnapshots(),
-      exchangeHistory: readExchangeHistory(),
-      sinceDate: weekSinceDate(today),
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [assetData, exchangeRates, snapshotVersion, today],
-  );
+  // Hero 값은 성과 허브 `최근 7일` 행과 같은 훅(useWeekHero) — 같은 함수·같은 입력(C65)
+  const { today, view, hero, decomposed, delta, end } = useWeekHero();
   // 시작 행(Hero 시작 순자산의 마감 기록)까지 포함 — 월 스냅샷 시작점은 일별 행이 없을 수 있다(그땐 시작 행 없음)
   const startDate = view ? weekStartDate(view) : undefined;
   const { rows } = useMemo(
     () => buildWeekRows(snapshotVersion >= 0 ? readDailySnapshots() : [], today, startDate),
     [snapshotVersion, today, startDate],
   );
-  const hero = resolveWeekHero(view, today);
-  const decomposed = view && (hero.kind === "recent" || hero.kind === "since") ? view : null;
   const mapped = useMemo(() => (decomposed ? mapWeekCauses(decomposed) : null), [decomposed]);
 
   // 홈 Hero와 같은 끝(실시간 순자산)·같은 % 식(deltaNet ÷ (끝 − deltaNet))
-  const end = summary.netAsset;
-  const delta = decomposed ? decomposed.attr.deltaNet : null;
   const start = delta !== null ? end - delta : undefined;
   const pct = delta !== null && start !== undefined && start > 0 ? (delta / start) * 100 : null;
   const records = decomposed?.records ?? [];

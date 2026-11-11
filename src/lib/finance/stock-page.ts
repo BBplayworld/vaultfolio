@@ -8,7 +8,7 @@ import {
 } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { profitTone } from "@/app/(main)/_components/views/detail/detail-summary-header";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import type { PricePoint } from "@/lib/finance/price-history";
+import type { PriceHistory, PricePoint } from "@/lib/finance/price-history";
 import type { Stock } from "@/types/asset";
 import type { Transaction } from "@/types/transaction";
 
@@ -137,10 +137,65 @@ export function computeYDomain(min: number, max: number, avg: number): YDomain {
   return { domain: [lo - pad, hi + pad], clamped };
 }
 
+// 등락률 표기 — 종목 한 장 머리 `stock-page-change`와 상세·주식 이름 줄 둘째 줄이 같은 함수(C65). 부호는 U+2212
+export const signedRate = (v: number): string => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+
 // 차트 구간 등락률(%) — 첫 점 대비 마지막 점. 점이 2개 미만이면 null
 export function computePriceChange(points: PricePoint[]): number | null {
   if (points.length < 2) return null;
   const first = points[0].c;
   if (!(first > 0)) return null;
   return ((points[points.length - 1].c - first) / first) * 100;
+}
+
+// 행 미니 차트용 다운샘플(4.83) — 그리기 직전에만 쓴다(1년 %는 원본 points로 계산, C65). 첫·마지막 점 포함, x 순서 유지.
+// 점이 max 이하면 그대로 돌려준다
+export function downsample(points: PricePoint[], max: number): PricePoint[] {
+  if (max < 2 || points.length <= max) return points;
+  const out: PricePoint[] = [];
+  const last = points.length - 1;
+  for (let i = 0; i < max; i += 1) out.push(points[Math.round((i * last) / (max - 1))]);
+  return out;
+}
+
+export interface SparkGeometry {
+  line: string; // polyline points 속성값
+  avgY: number | null; // 평단 점선 y(범위 밖이면 null — 점선 생략)
+}
+
+// 스파크라인 좌표 — 종목 한 장 차트와 같은 y 도메인 규칙(computeYDomain). 평단이 범위 밖(clamped)이면 점선 생략
+export function buildSparkGeometry(points: PricePoint[], avg: number | null, width: number, height: number, pad = 2): SparkGeometry | null {
+  if (points.length < 2) return null;
+  const closes = points.map((p) => p.c);
+  const min = Math.min(...closes);
+  const max = Math.max(...closes);
+  const { domain, clamped } = computeYDomain(min, max, avg ?? 0);
+  const span = domain[1] - domain[0] || 1;
+  const innerH = height - pad * 2;
+  const y = (v: number) => pad + (1 - (v - domain[0]) / span) * innerH;
+  const step = width / (points.length - 1);
+  const line = points.map((p, i) => `${(i * step).toFixed(1)},${y(p.c).toFixed(1)}`).join(" ");
+  const showAvg = avg !== null && avg > 0 && clamped === "none" && avg >= domain[0] && avg <= domain[1];
+  return { line, avgY: showAvg ? Number(y(avg).toFixed(1)) : null };
+}
+
+// 상세·주식 펼침 이름 줄(4.83) 상태 — none = 가격 흐름 없는 종목(`내 평단 보기`), loading, fallback = 실패·429·빈 응답(`주가 흐름과 내 평단 보기`).
+// ready의 change는 원본 points로 계산(다운샘플 전, 종목 한 장 `stock-page-change`와 같은 값 — C65), geom만 40점으로 줄여 그린다
+export type RowFlow =
+  | { kind: "none" }
+  | { kind: "loading" }
+  | { kind: "fallback" }
+  | { kind: "ready"; change: number; geom: SparkGeometry | null };
+
+export const ROW_SPARK_POINTS = 40;
+export const ROW_SPARK_W = 160;
+export const ROW_SPARK_H = 32;
+
+export function buildRowFlow(flow: boolean, q: { isError: boolean; data?: PriceHistory }, avg: number | null): RowFlow {
+  if (!flow) return { kind: "none" };
+  if (q.isError) return { kind: "fallback" };
+  if (!q.data) return { kind: "loading" };
+  const change = computePriceChange(q.data.points);
+  if (change === null) return { kind: "fallback" };
+  return { kind: "ready", change, geom: buildSparkGeometry(downsample(q.data.points, ROW_SPARK_POINTS), avg, ROW_SPARK_W, ROW_SPARK_H) };
 }

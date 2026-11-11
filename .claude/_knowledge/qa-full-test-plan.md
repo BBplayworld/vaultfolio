@@ -49,7 +49,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 요약 헤더 평가손익·'오늘' 칩(장중 `오늘`/장 종료 후 `종가`), 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
 - ⚙ **'오늘' 등락 칩 장중/종가 기준(#4.73, #134 — 2026-08-27 실시간화 대체)**: `today-chip.ts` `getTodayChipSession`(시장·시각·휴장 → `live`/`afterCloseGap`/`closed` + 종가일 쌍, 순수 함수)·`computeTodayChip`. 장중(국내 한국 영업일 09:00~15:30 / 미국 현지 영업일 정규장 KST 23:30~06:00, 서머타임 22:30~05:00) 라벨 `오늘` = 현재가 ÷ 전 거래일 종가, 그 밖 `M/D 종가` = 마지막 거래일 종가 ÷ 그 전 거래일 종가(미국은 현지 거래일, **현재가 미사용**). 마감~컷오프(국내 15:30~16:00, 미국 마감+1h)는 `AFTER_CLOSE_GAP_CONFIRMED` 미확인이라 국내 `오늘`(현재가 ÷ 전 거래일 종가), 미국 숨김(`AFTER_CLOSE_GAP_FALLBACK_LIVE`). 두 거래일 종가를 못 구하면(응답 종가일 ≠ 기대 거래일, 휴장 명목일) **칩 숨김 — 0.0% 금지**. 종목 칩 = 현지 통화 가격 등락률(환율·기기 환율 이력 무관), 헤더 칩 = 원화 평가액(현재 환율) 가중, 라벨은 하나라도 장중이면 `오늘` 아니면 `종가 기준`(라벨 정본 `TODAY_CHIP_LABELS`). 칩 쿼리는 설정 '기간 수익 종가 기준'과 무관하게 `kstAccessDay`(기존 캐시 변형). 기본 분기 `computeDailyStockProfit`(자산 변화 Hero·일 탭·스냅샷·성적표·홈) 무변경. 시각표 vitest `today-chip.test.ts`. 알려진 숨김 구간: 국내 휴장일 16:00~다음 개장, 미국 휴장 다음 날 KST 07:00~23:30, 미국 종목 일·월 KST 00~07시
 - ⚙ **휴장 구간 칩 보강·헤더 부분 합산 숨김(#4.73 U7)** — profit `daily&kstAccessDay` 응답 선택 필드 `chipPair`(서버 시각 칩 세션 closed·쌍이 다를 때만, 실제 종가일 = 요청일만, 실패면 생략·CDN 헤더 없음, 평일 정상 시각 KIS 추가 0). 클라이언트는 `chipPair` 쌍 = 지금 세션 쌍일 때만 사용(live·gap 분기 불변). 헤더 칩: 칩 대상 종목 응답 미수신 또는 응답 non-null 대상 시장에 칩 0이면 숨김(미국 마감 직후 1h 혼합 보유·429 부분 응답 → 숨김), 거래정지·일본·기준가 null은 숨김 안 만듦. 데이터 안전: 구 캐시(필드 없음) → 숨김, 새 캐시 → main 코드 무시·오류 0, 요청 URL 불변. 자동: `today-chip-u7.test.ts`·`profit/__tests__/route-chip-pair.test.ts`
-- 👤 **시장과 비교 진입 글줄(#4.73 U5, `stock-market-entry`)** — 요약 헤더 박스 안 맨 아래 `최근 1주 코스피 +x% · S&P 500 +y%` + `내 종목과 비교 ›`(비교할 종목 있는 시장만, 값 = 비교 페이지 1주 시장 값). 320에서 `최근 ` 생략, 모바일 2줄. 비교할 종목 0(해외형 ETF만)이면 접힘, 지수 실패면 링크만, 인증카드에 없음. 헤더 높이 증가 고정·늦게 떠도 X-Ray 스트립 y 불변
+- 👤 **시장과 비교 진입 = 상세·주식 도구 타일(#4.83, 옛 #4.73 U5 요약 안 글줄 대체)** — 요약 박스 바로 아래 `stock-tools` 묶음의 `stock-market-entry` 타일: `1주 코스피 −x% · S&P 500 −y%`(320·375는 첫 시장만, sm↑ 전부) = 시장과 비교 페이지 1주 지수 문자열(국내만·미국만·둘 다), 비교할 종목 0(해외형 ETF만)이면 타일 없음, 지수 실패 `지수와 나란히 보기`, 인증카드에 없음. 요약 박스 안 글줄(`stock-market-entry-wrap`) DOM 0. 자세한 사양은 F-STOCK-ENTRY
 - ⚙ **시작 직후·리셋 때 칩 재조회(#4.73 D2, #138)** — `dataResetVersion` 변화(시작 시세 동기화·데이터 삭제·불러오기) 때 `cancelThenRefetchProfit`: `cancelQueries(["profit"])` 뒤 `invalidateQueries({refetchType:"active"})`. 앱 로드 후 0·0.5·1·2초에 상세·주식에 들어가도 동기화가 끝나고 몇 초 안에 칩 수 = 20초 대기 진입과 같음, `등락률 순`이면 칩 도착 후 재배열, 화면에 없는 이전 키는 재조회 0
 - 👤 **`등락률 순` 정렬(#4.73 U6, `stock-sort`)** — 카테고리 줄 오른쪽(줄 수 +0) `평가금 순`(기본)/`등락률 순` 2개, 토글 없음. 등락률 순 = 종목 칩 값(소수 1자리) 높은 순·부호 그대로, 칩 없는 종목 맨 뒤(평가금 순), 동률 평가금 순, 기준가 다 받기 전엔 평가금 순. 비중 막대·인증카드 순서 불변. 선택은 모듈 메모리(새로고침 기본값, 저장 키 0), 카테고리 바꿔도·비교 페이지 왕복해도 유지. 아이콘형(히트 40×40)은 `평가금 순`일 때만 360 미만 또는 7칸·400 미만, `등락률 순` 선택 중엔 폭 무관 라벨 `등락률 순 ⌄`(qa D1·ui r2), 320·375 × 7칸 가로 넘침 0, 히트 40px. 자동 `stock-sort-rate.test.ts`
 - ⚙ `computeStockMetrics`·`mergeStockGroup`·`groupStocksByTicker` 동일 ticker 병합(1회 집계)
@@ -68,8 +68,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: `addTransactionWithPosition`/`deleteTransactionWithPosition` 단일 저장(stale-closure 방지)
 
 ### F-STOCK-PAGE. 종목 한 장 (`#detail/stocks-item`, #4.81 #157, [stock-page-view.tsx](../../src/app/(main)/_components/views/detail/stock-page/stock-page-view.tsx))
-- 👤 진입 2곳: 상세·주식 펼침 `종목 보기 ›`(`stock-page-entry`, 분할·비분할 같은 자리·히트 40×40, 펼침 다른 DOM 불변) → 누른 행 그룹으로 열림(뒤로 라벨 `주식`) / 성과 › 시장 비교 종목 줄 탭 → 전체 그룹(뒤로 라벨 `뒤로`, 지수 줄은 눌리지 않음). GA `page_title=상세·주식·종목` 1회, 해시·page_title·page_location에 종목명·티커 0
-- 👤 머리: 평가·내 수익 금액(%)·총 N주가 누른 행·펼침 값과 문자열까지 같음(전체 탭·계좌 필터 탭·KRW/USD 토글), 라벨 `내 수익`(머리에 `등락` 없음) / 차트 머리 `1년|5년 주가 등락`(`수익` 없음)
+- 👤 진입 2곳: 상세·주식 펼침 이름 줄 전체(`stock-page-entry`, #4.83에서 `종목 보기 ›` 링크 대체 — F-STOCK-ENTRY) → 누른 행 그룹으로 열림(뒤로 라벨 `주식`) / 성과 › 시장 비교 종목 줄 탭 → 전체 그룹(뒤로 라벨 `뒤로`, 지수 줄은 눌리지 않음). GA `page_title=상세·주식·종목` 1회, 해시·page_title·page_location에 종목명·티커 0
+- 👤 머리: 평가·내 수익 금액(%)이 누른 행·펼침 값과 문자열까지 같음(총 N주는 종목 한 장 머리만 — 상세·주식 펼침 `총 N주`는 #4.83에서 삭제, 수량 정본 = 접힌 행·증권사별 항목)(전체 탭·계좌 필터 탭·KRW/USD 토글), 라벨 `내 수익`(머리에 `등락` 없음) / 차트 머리 `1년|5년 주가 등락`(`수익` 없음)
 - 👤 가격 흐름: 1년 일봉 기본·5년은 탭 시 조회(탭 전 요청 0), 요청 URL 키 `ticker`·`range`뿐. 평단선 `내 평단 {가격}` = 펼침 평단(합산), 범위 밖이면 `data-clamped=up|down`·`↑/↓`, 평단 0이면 선 없음. 매수 점은 거래 기록 buy만(purchaseDate 점 없음), 점 탭 → `{날짜} 매수 N주 · 거래 단가`, 같은 점·빈 곳·기간 전환 시 해제
 - ⚙ **C76 6구간**(`stock-page-view.test.tsx`): ① 거래 0 → 점 0·`stock-page-no-trades` ② 증권사 2곳 → 합산 평단선·두 계좌 점 ③ 1년 밖 → `stock-page-outside` N건·`5년에서 보기`(5년은 텍스트) ④ 분할 전 매수 → 점 y=봉 종가·탭 시 원단가 ⑤ 상장 1년 미만 → 정의 줄 `상장 이후 기간만 있어요` ⑥ 비상장·티커 없음·상장폐지 → `stock-page-no-price`·요청 0
 - 👤 뒤로 체인: 종목 한 장 → 거래내역(`거래내역 N건`) → 뒤로 → 종목 한 장 → 뒤로 → 상세·주식 / 시장 비교 → 종목 한 장 → 뒤로 → 시장 비교. 새로고침·직접 URL·그룹 종목 삭제 → 상세·주식(오류 0, 단 새로고침 시 해시 진입 page_view는 가드로 상세·주식만 기록)
@@ -173,6 +173,16 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 토지: 실거래가 조회 기능 없음(지목별 형평 비교·지분 문제로 신뢰 가능한 추정이 어려워 제외) — 시세는 수동 입력만
 - 회귀: 실거래 추정 자동 갱신(`marketEstimate*`)이 push를 유발하지 않는지(R14 — `saveAssetData` 직접 호출이라 사용자 편집 신호 없음), 공유 토큰 pack/unpack 포맷 미변경(R3)
 - 자동: `src/lib/__tests__/realestate-match.test.ts`
+
+### F-STOCK-ENTRY. 신기능 진입 경로 (#4.83 #161 — 상세·주식 도구 타일·펼침 이름 줄·성과 허브 행·`새`) ([stock-tools.tsx](../../src/app/(main)/_components/views/detail/stock-tools.tsx) · [stock-row-flow.tsx](../../src/app/(main)/_components/views/detail/stock-row-flow.tsx) · [hub-change-rows.tsx](../../src/app/(main)/_components/views/activity/hub-change-rows.tsx))
+- 👤 **도구 타일**: 요약 박스와 카테고리 줄 사이 입구는 `stock-tools` 1묶음뿐(요약 안 글줄·`X-RAY 인사이트` 상자·세금 문장 상자 0). 시장 → `change-market`, X-Ray → 타일 값의 축으로 열림(첫 줄 `{항목} … {pct}%` = 타일 값, 소수 1자리), 세금 → 세금 관리 시뮬레이터. 100% 단일 축은 제외하고 다음 축 값을 보임(국내만 보유 시 `한국`·`원화` 100% 대신 `핵심 분야` 등 다음 축, 후보가 없거나 모두 100%이거나 분류 수집 중일 때만 폴백 `분야·지역 비중 보기`). 새 종목 추가 후 진입 시 분류 요청·`주식 X-Ray 분류가 완료되었습니다` 토스트가 지금과 같이 뜸(훅이 타일로 이전)
+- 👤 **펼침 이름 줄**: 줄 전체 버튼 1개(≥56px)·`총 N주`·`종목 보기` 텍스트 0, 둘째 줄 `1년 주가 등락 +x%` = 이어서 연 종목 한 장 `stock-page-change`(1년), 스파크라인(1년 종가 + 평단 점선, 평단 범위 밖이면 점선 생략). 로딩·429·티커 없음에서 펼침 높이 변화 ±1px, 문구 `주가 흐름과 내 평단 보기`/`내 평단 보기`. 분할 종목: 접힌 행 수량 = 증권사별 항목 수량 합
+- ⚙ **요청 조건(C2·C79)**: 1년 조회는 펼칠 때만(접힌 행·인증카드 캡처 0), 같은 티커는 쿼리 키 `["price-history", ticker, "1y"]` 1개, 실패 티커는 접었다 펴도 재요청 0(`retryOnMount:false` — 503 3회 재펼침 fetch 1회 테스트), 서버로 나가는 값 `ticker`·`range=1y`뿐
+- 👤 **성과 허브 `자산 변화` 행**: 머리(월 결산)와 행 3개(`최근 7일`·`월별 기록 N개월`·`시장과 비교`)가 따로 눌림(중첩 버튼 0, 행 ≥44px). 행 1 `data-value` = 주 탭 `change-hero-delta`·이름 = `week-title`(C76 D 구간: 7·8·9 / 10·14 / 15 기록 부족 / 없음 기록 쌓는 중), 행 2 N = 월별 기록 `모두 보기` 후 gap 아닌 행 수(C84)이고 N<2·첫 달이면 숨김, 행 2 → 월 탭 렌더 후 월별 기록 카드로 1회 스크롤(reduced-motion 즉시)
+- 👤 **`새`**: `new-chip` 상세·주식·허브 각 ≤1(상세·주식 = 시장 타일, 허브 = 최근 7일 > 월별 기록 > 시장과 비교), 방문하면 꺼지고 다음 자리로 넘어감, 게시일+30일 후 꺼짐. 홈·헤더·하단 네비·더보기·X-Ray·세금 타일·체험·인증카드 0
+- ⚙ 방문 기록: `change-week`는 주 탭이 보일 때(init 진입·탭 전환) 실제 `recordVisit`으로 기록 → 홈 팁 `주간 변화 원인` 추천 순위 하락, `monthly-log`는 카드 50% 이상 보일 때 진입당 1회
+- 👤 **새 소식 바로 가기 정정**: 05 바로 가기 없음, 07 → 인증카드 `주식 현황` 탭, 04 → 월 탭 월별 기록 보임. `monthly-log`·`share-card-stock`은 `tip:false`라 홈 기능 팁 후보 0
+- 테스트: `stock-entry-tools.test.tsx`·`hub-change-rows.test.tsx`·`entry-paths-483.test.ts`·`market-entry-line.test.tsx`
 
 ### F-XRAY. 주식 X-Ray ([stock-xray-view.tsx](../../src/app/(main)/_components/views/detail/xray/stock-xray-view.tsx) · [lib/xray](../../src/lib/xray))
 - 👤 6축(핵심분야·**종목 유형**·시가총액·지수·지역·통화) 전환, 분포바·집중도 등급, AI 분류 진행률, 프롬프트 확인·복사
@@ -519,7 +529,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **재노출 정책은 종류별로 원래 정책 그대로 보존**(하나로 뒤섞지 않음): 백업·최신화=노출되는 순간 오늘 flag(`markNudgeShown`/`markRefreshNudgeShown`, daily), 세금=명시적으로 닫아야만 이번 달 flag(`markTaxNoticeDismissed`, monthly — 클릭 이동만으로는 안 닫힘), 새 소식=X·클릭 모두 읽음(7일 시계), 기능=닫기·클릭 이동 둘 다 영구 dismiss(`dismissTip`, 재노출 없음).
 - ⚙ **승자만 "오늘 떴다" flag를 찍는다** — 마운트 effect에서 `pickHomeTip`이 반환한 `kind`가 backup/refresh일 때만 해당 mark 함수를 호출. 하위 순위라 안 보인 항목까지 flag를 찍으면 실제로 못 본 채로 그날 소비된다(과거 `RefreshNudge`가 `suppressed`일 때 mark를 건너뛰던 것과 동일 원리).
 - ⚙ **인터랙션은 5종 모두 통일** — 카드 전체 클릭(`role="button"`) = 그 종류의 유일한 동작(백업: `exportAssetData`+토스트 / 세금: `navigate({type:"tax"})` / 최신화: `open-add-asset-sheet` 이벤트 dispatch(가장 오래된 카테고리 1개) / 새 소식: `dispatchOpenWhatsNew("home_tip")` / 기능: `action` 또는 `beforeNavigate`+`navigate`), X 닫기 = 해당 종류의 dismiss만(이동 없음). 과거 백업·최신화가 갖던 별도 "지금 백업하기"/"지금 최신화하기" **버튼은 제거**되고 카드 클릭 하나로 단순화됨.
-- ⚙ 기능(feature) 카탈로그는 `APP_FEATURES`(15개 — #4.73에 `market-compare`("시장과 비교") 추가, #4.34에 `netasset`·`profit`을 `change`("자산 변화") 1개로 통합, 저장된 옛 id 방문 기록은 무시. #4.24에 `share-card-portfolio`, #4.26에 `share-card-type`("투자 유형 인증카드", `dispatchOpenShareCard("type")`) 추가. `recordVisit`은 리스너가 `"share-card"`만 기록하므로 세부 타입 팁은 클릭 시 `dismissTip`으로만 소진. 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 등록 필수. **`isNew`는 이번 릴리스 신규만** — 지난 릴리스 항목의 `isNew`는 해제해야 다음 신규가 `pickRecommendedFeature`의 `.find(isNew)`에 걸린다(#4.24에 `tax-simulator` isNew 해제·`stocks-xray`/`share-card-portfolio` isNew 설정). 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점 `recordVisit(viewToKey(v))` + `share-card`(action형)는 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도 기록.
+- ⚙ 기능(feature) 카탈로그는 `APP_FEATURES`(#4.83에 `monthly-log`·`share-card-stock` `tip:false` 추가 — 이전 15개: #4.73에 `market-compare`("시장과 비교") 추가, #4.34에 `netasset`·`profit`을 `change`("자산 변화") 1개로 통합, 저장된 옛 id 방문 기록은 무시. #4.24에 `share-card-portfolio`, #4.26에 `share-card-type`("투자 유형 인증카드", `dispatchOpenShareCard("type")`) 추가. `recordVisit`은 리스너가 `"share-card"`만 기록하므로 세부 타입 팁은 클릭 시 `dismissTip`으로만 소진. 백업·피드백·설정·기기 동기화는 카탈로그 제외 대상)에 신규 공용 기능 추가 시 등록 필수. **`isNew`는 이번 릴리스 신규만** — 지난 릴리스 항목의 `isNew`는 해제해야 다음 신규가 `pickRecommendedFeature`의 `.find(isNew)`에 걸린다(#4.24에 `tax-simulator` isNew 해제·`stocks-xray`/`share-card-portfolio` isNew 설정). 방문 기록은 `navigation-context.tsx`의 `navigate()` 단일 지점 `recordVisit(viewToKey(v))` + `share-card`(action형)는 `top-bar.tsx`의 `trigger-open-share-card` 리스너가 별도 기록.
 - 👤 (새 소식 안 본 상태, 자산 있음) 홈 진입 → 결산 창 밖이면 `새 소식 N개` 팁이 백업·임박 세금 다음에 노출·클릭 시 새 소식 시트 오픈(#4.82) / 읽은 뒤 → 백업 30일 이상 미실행 시 백업 카드·클릭 시 파일 다운로드 / 세금 신고 대상 자산 보유 시 세금 카드·클릭 시 `#tax` / 자산 30일 이상 미갱신 시 최신화 카드 / 그 외 저방문 기능 팁(isNew 없음)
 - 엣지: 여러 조건 동시 충족 시 우선순위 1개만 노출 · 공지를 X로 닫은 뒤 같은 세션 내 홈 재진입 시 다시 뜨지 않아야 함(세션내 미노출) · 다른 팁을 X로 닫아도 미열람 공지는 최초 1회는 반드시 노출 · 전체 기능 dismiss + 공지 열람 + 백업/세금/최신화 미충족 시 박스 미노출 · 공지·인증카드 항목 클릭 시 페이지 이동 없이 다이얼로그만 열리는지
 
@@ -652,9 +662,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 [92/5/3]·[80/12/8]·[50/50]·[100]·[60/39.9/0.1] 라벨이 조각 안, 조각 바깥 링 없음, 범례 금액·% 끝 x 정렬, 행 40px, 카드 높이 증가 16px 이하, 필터 이동 유지
 - 테스트: `src/app/(main)/_components/views/home/__tests__/`
 
-### F-TAX-SEASON. 연말 세금 줄 ([tax-season-strip.tsx](../../src/app/(main)/_components/views/detail/tax-season-strip.tsx)) — #4.45 #79
+### F-TAX-SEASON. 연말 세금 진입 (상세·주식 도구 타일 `stock-tool-tax`, [stock-tools.tsx](../../src/app/(main)/_components/views/detail/stock-tools.tsx)) — #4.45 #79, #4.83에서 문장 상자 → 타일
 - ⚙ `isForeignTaxSeason` 10/31 false·11/1 true·12/31 true·1/1 false(KST 변환 포함), `isTaxSimCandidate`(국내·상폐·정지·수량0 제외)와 시뮬 `candidates` 판정 일치
-- 👤 11/1~12/31 + 해외주식 보유 시 상세>주식 X-Ray 줄 아래에 줄 1개, 누르면 세금 관리 시뮬레이터 탭, 뒤로가기로 주식 탭 복귀, 국내만 보유·시즌 밖·체험/데모(해외 없음)는 미노출
+- 👤 11/1~12/31 + 해외주식 보유 시 상세>주식 도구 타일 묶음에 `해외주식 세금` 타일 1개(값 고정 `1년 합산 · 기본공제 적용`, 숫자·D-day·금액 0), 누르면 세금 관리 시뮬레이터 탭, 뒤로가기로 주식 탭 복귀, 국내만 보유·시즌 밖·체험/데모(해외 없음)는 미노출
 - 테스트: `src/lib/__tests__/tax-utils.test.ts`
 
 ---
