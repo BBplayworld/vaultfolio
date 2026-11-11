@@ -59,9 +59,11 @@ describe("profit 라우트 ytd", () => {
     expect(body.AAPL).toEqual({ refPrice: 190, refDate: "2025-12-31" });
     expect(body["005930"]).toEqual({ refPrice: 53000, refDate: "2025-12-30" });
     expect(ovsHist.mock.calls[0][1]).toBe("2025-12-31");
-    expect(ovsHist.mock.calls[0][6]).toBe(true);
+    // 미국 ytd는 같은 날짜를 raw(false)·adj(true) 둘 다 조회
+    expect(ovsHist.mock.calls.map((c) => c[6]).sort()).toEqual([false, true]);
     expect(domHist.mock.calls[0]).toHaveLength(5);
     expect(setCalls).toContainEqual({ t: "AAPL", d: "2025-12-31", period: "ytd", adj: true });
+    expect(setCalls).toContainEqual({ t: "AAPL", d: "2025-12-31", period: "ytd", adj: false });
     expect(setCalls).toContainEqual({ t: "005930", d: "2025-12-30", period: "ytd", adj: false });
   });
 
@@ -69,7 +71,7 @@ describe("profit 라우트 ytd", () => {
     prices.set("AAPL|2025-12-31", 999); // 미수정 값(다른 기간 저장분)
     reqMap.set("AAPL|ytd|2025-12-31", "2025-12-31");
     await GET(req("?tickers=AAPL&period=ytd&basis=sameBusinessDay"));
-    expect(ovsHist).toHaveBeenCalledTimes(1); // adj 키가 비어 KIS 재조회
+    expect(ovsHist).toHaveBeenCalledTimes(2); // adj 키가 비어 raw·adj 재조회
     ovsHist.mockClear();
     const body = await (await GET(req("?tickers=AAPL&period=ytd&basis=sameBusinessDay"))).json();
     expect(ovsHist).not.toHaveBeenCalled();
@@ -78,7 +80,28 @@ describe("profit 라우트 ytd", () => {
 
   it("다른 기간(weekly)은 미수정(adjusted=false)·원 키 그대로", async () => {
     await GET(req("?tickers=AAPL&period=weekly&basis=sameBusinessDay"));
-    expect(ovsHist.mock.calls[0][6]).toBe(false);
+    expect(ovsHist).toHaveBeenCalledTimes(1);
+    expect(ovsHist.mock.calls[0][6]).toBeUndefined();
     expect(setCalls[0].adj).toBe(false);
+  });
+
+  const withModp = (raw: number | null, adj: number | null) =>
+    ovsHist.mockImplementation(async (...a: unknown[]) => {
+      const v = a[6] ? adj : raw;
+      return v === null ? null : { date: "2025-12-31", price: v };
+    });
+
+  it("배당 조정(adj 0.98배)이면 raw, 10:1 분할(adj 0.1배)이면 adj, 한쪽 실패는 raw 우선", async () => {
+    withModp(200, 196);
+    expect((await (await GET(req("?tickers=KO&period=ytd"))).json()).KO.refPrice).toBe(200);
+    prices.clear(); reqMap.clear();
+    withModp(1000, 100);
+    expect((await (await GET(req("?tickers=NVDA&period=ytd"))).json()).NVDA.refPrice).toBe(100);
+    prices.clear(); reqMap.clear();
+    withModp(200, null);
+    expect((await (await GET(req("?tickers=AAPL&period=ytd"))).json()).AAPL.refPrice).toBe(200);
+    prices.clear(); reqMap.clear();
+    withModp(null, null);
+    expect((await (await GET(req("?tickers=MSFT&period=ytd"))).json()).MSFT).toBeNull();
   });
 });
