@@ -18,6 +18,7 @@
 |---|---|---|---|
 | v4.77 | [#146](https://github.com/BBplayworld/vaultfolio/issues/146) 새 종목 매수일 일괄 입력(기본 1/1)·배당 영향 안내 | 기획 착수(11/11) | COO 판정 |
 | v4.77 | [#147](https://github.com/BBplayworld/vaultfolio/issues/147) 맞추기로 끊긴 거래 다시 잇기 | 기획 착수(11/11) | **대표 승인**(risk:high) |
+| v4.77 | [#148](https://github.com/BBplayworld/vaultfolio/issues/148) 도넛·비중 바 최소 노출 비중(5개 이하) | 개발(11/11) | 릴리스 함께 대표 승인 |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
