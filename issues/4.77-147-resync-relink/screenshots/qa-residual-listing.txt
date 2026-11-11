@@ -1,0 +1,15 @@
+2024-03| deltaNet 0 0 | sum 0->0 | SAME
+2024-09| deltaNet 0 0 | sum 0->0 | SAME
+2025-01| deltaNet 0 0 | sum 0->0 | DIFF
+   before 
+   after  ["price",-4000], ["unrecorded",4000]
+2025-02| deltaNet 0 0 | sum 0->0 | DIFF
+   before 
+   after  ["fx",150000], ["unrecorded",-150000]
+2025-08| deltaNet 0 0 | sum 0->0 | DIFF
+   before 
+   after  ["price",-135000], ["unrecorded",135000]
+2025-04| deltaNet 0 0 | sum 0->0 | SAME
+2026-10| deltaNet 0 0 | sum 0->0 | SAME
+연(2025말→현재)| deltaNet 0 0 | sum 0->0 | SAME
+이번달 예측| deltaNet 0 0 | sum 0->0 | SAME
