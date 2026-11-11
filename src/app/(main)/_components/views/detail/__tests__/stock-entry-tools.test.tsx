@@ -185,6 +185,15 @@ describe("X-Ray 타일 — 소수 1자리·100% 단일 축 제외·도착 화면
   });
 });
 
+describe("D4 320 타일 제목 줄 — chevron이 타일 안에 머문다", () => {
+  it("이름 span min-w-0·nowrap(어절 유지), 320 미만(359px 이하)에서 아이콘 숨김, chevron shrink-0", () => {
+    const html = tiles();
+    expect(html).toMatch(/<span class="min-w-0 whitespace-nowrap text-sm font-semibold/);
+    expect(html).toContain("max-[359px]:hidden");
+    expect(html).toMatch(/lucide-chevron-right[^>]*ml-auto size-4 shrink-0|ml-auto size-4 shrink-0[^>]*lucide-chevron-right/);
+  });
+});
+
 describe("세금 타일 — KST 날짜 경계(C76 날짜 구간)", () => {
   it.each([["2026-10-31", 0], ["2026-11-01", 1], ["2026-11-11", 1], ["2026-12-31", 1], ["2027-01-01", 0]])("%s → 타일 %i개", (d, n) => {
     vi.setSystemTime(kst(d));

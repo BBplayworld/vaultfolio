@@ -37,8 +37,8 @@ function ToolTile({ icon: Icon, name, testId, onClick, className = "", chip, chi
       className={`flex min-h-16 min-w-0 flex-col items-start gap-1.5 rounded-lg bg-muted/50 px-3 py-3 text-left outline-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98] motion-safe:transition-[background-color,transform] motion-safe:duration-150 dark:rounded-xl dark:bg-card dark:shadow-sm dark:hover:bg-muted/30 ${className}`}
     >
       <span className="flex w-full items-center gap-1.5">
-        <Icon aria-hidden className="size-4 shrink-0 text-primary" />
-        <span className="whitespace-nowrap text-sm font-semibold text-foreground">{name}{chip}</span>
+        <Icon aria-hidden className="size-4 shrink-0 text-primary max-[359px]:hidden" />
+        <span className="min-w-0 whitespace-nowrap text-sm font-semibold text-foreground">{name}{chip}</span>
         <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" />
       </span>
       <span className="w-full min-w-0 text-sm leading-snug text-muted-foreground break-keep">{children}</span>
