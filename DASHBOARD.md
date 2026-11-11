@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-11 20:46 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.82**
+> **마지막 갱신: 2026-11-11 20:52 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.82**
 
 ## 🟥 대표 확인·결정 필요 (지금)
 1. **ETF 구성종목 API 탐색 (대표님 직접 확인 중, 11/11)** — '[보류] ETF 속까지 합친 내 주식'([#152](https://github.com/BBplayworld/vaultfolio/issues/152)) 재개 여부가 여기에 걸려 있음
@@ -14,11 +14,6 @@
    - 11/25 전후: v4.79 '최근 7일'·v4.81 '종목 한 장' 2주차, 새 소식 2주차
    - 12/9 전후: 같은 항목 4주차(결산 창 중 월 결산·홈 활성 불감소 확인 포함)
 
-3. **신기능 진입 경로 개선 v2 — 방향 선택 (11/11, 대표 피드백 '버튼만 덩그러니'·'X-Ray·양도소득 묶어 기능화' 반영)** · 제안서 [4.xx-ui-proposal-v2.md](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/4.xx-ui-proposal-v2.md)
-   - 권고: ① 상세·주식 요약 아래 '내 주식 도구' 2×2 타일(시장과 비교·X-Ray·해외주식 세금, 각 숫자 1개) — 기존 글줄·X-Ray 상자·양도소득 상자 제거 ② 종목 펼침 맨 위 이름 줄 전체를 입구로(1년 가격 흐름 %·미니 차트 ›) ③ 성과 허브 '자산 변화' 카드 안 행 3개(최근 7일·월별 기록·시장과 비교)
-   - 비교(현재 | v1 | v2 권고 | v2 대안): [상세·주식 상단](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock2-compare-stocks-top-375-light.png) · [종목 카드](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock2-compare-stock-card-375-light.png) · [성과 허브](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.xx-feature-entry/screenshots/mock2-compare-hub-375-light.png) (다크·320·1280은 같은 폴더)
-   - 답: `권고안대로` / 항목별 조정
-
 ## 🔴 운영 결함 (p0)
 - 없음 (최근 핫픽스: #107 v4.57, #104 v4.53 핫픽스 — 운영 스모크 PASS)
 
@@ -28,7 +23,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| — | 열린 릴리스 없음 | 다음 후보 발굴 | — |
+| v4.83 | [#161](https://github.com/BBplayworld/vaultfolio/issues/161) 신기능 진입 경로 개선(내 주식 도구 타일·종목 이름 줄 입구·성과 허브 행) — 대표 승인 방향 | spec·개발 | COO 자체 승인(medium) |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
