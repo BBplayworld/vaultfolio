@@ -172,7 +172,7 @@ export function WhatsNewHost() {
         </div>
 
         <div className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <Button variant="brand" className="w-full" onClick={close}>
+          <Button variant="brand" className="w-full h-10" onClick={close}>
             닫기
           </Button>
         </div>
