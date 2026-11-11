@@ -12,7 +12,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTradeViewStore } from "@/stores/trade-view-store";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
-import { formatCurrency } from "@/lib/number-utils";
+import { formatCurrency, formatPriceByCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
 import { rollbackTransaction } from "@/lib/trade/trade-utils";
 import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
@@ -23,12 +23,6 @@ import { stockCategories } from "@/config/asset-options";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import type { Stock, Transaction } from "@/types/asset";
 import type { PositionSnapshot, PositionPreview } from "@/types/transaction";
-
-export const formatPrice = (value: number, currency: string) => {
-  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  return formatCurrency(value);
-};
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
 type TypeFilter = "all" | "buy" | "sell";
@@ -233,7 +227,7 @@ export function StockTradesView() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">평단가</p>
-                <p className="font-semibold tabular-nums">{formatPrice(summaryStock.averagePrice, currency)}</p>
+                <p className="font-semibold tabular-nums">{formatPriceByCurrency(summaryStock.averagePrice, currency)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">평가금액</p>
@@ -329,7 +323,7 @@ export function StockTradesView() {
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="tabular-nums">
-                            {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPrice(tx.price, tx.currency)}</span>
+                            {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
                           </p>
                           {brokerScope === "all" && (
                             <p className="text-[11px] text-muted-foreground truncate">

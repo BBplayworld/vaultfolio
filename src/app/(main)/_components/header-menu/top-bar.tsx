@@ -88,7 +88,6 @@ function MoreButton() {
       style={{ backgroundColor: MAIN_PALETTE[11] }}
       aria-label="더보기"
       title="더보기"
-      data-tutorial="tutorial-tool-menu"
       id="tool-menu-trigger"
     >
       <MoreHorizontal className="size-5 sm:size-6" />

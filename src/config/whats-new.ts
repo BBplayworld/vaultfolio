@@ -70,4 +70,13 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     body: "시장 비교·종목 차트·배당에서, 조금 걸리면 알려 줘요",
     featureId: "market-compare",
   },
+  {
+    id: "20261111-11",
+    title: "상세에서 빈 자산군 카드를 눌러 바로 추가해요",
+    body: "0건이던 카드가 '추가하기'로 바뀌어 눌러서 시작해요",
+  },
+  {
+    id: "20261111-12",
+    title: "배당 차트·표 숫자 겹침 등을 고쳤어요",
+  },
 ];

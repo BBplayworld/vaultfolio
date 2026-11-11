@@ -42,10 +42,10 @@ import { linkAccountCurrency, needsKrwConversion } from "@/lib/trade/linked-reco
 import { TradeScreenshotImport } from "./trade-screenshot-import";
 import { groupStocksByTicker } from "../../views/detail/asset-detail-tabs";
 import { stockCategories } from "@/config/asset-options";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 import {
   StockTargetPicker,
   PositionChangePreview,
-  formatPrice,
   getPositionSnapshot as getBasePositionSnapshot,
   categoryLabel,
   type TradeTarget,
@@ -746,7 +746,7 @@ export function TradeInput() {
                   <span className={dupPending.tx.type === "buy" ? "text-red-500 font-semibold" : "text-blue-500 font-semibold"}>
                     {dupPending.tx.type === "buy" ? "매수" : "매도"}
                   </span>{" "}
-                  {dupPending.tx.date} · {dupPending.tx.quantity}주 · {formatPrice(dupPending.tx.price, dupPending.tx.currency)}
+                  {dupPending.tx.date} · {dupPending.tx.quantity}주 · {formatPriceByCurrency(dupPending.tx.price, dupPending.tx.currency)}
                 </p>
               </div>
               <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

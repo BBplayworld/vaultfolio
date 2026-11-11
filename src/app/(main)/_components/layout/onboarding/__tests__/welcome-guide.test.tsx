@@ -51,7 +51,7 @@ describe("GA 매핑(위치 이동 후에도 값 동일)", () => {
 
   it("웰컴 이벤트 page_title은 웰컴", () => {
     expect(featureTitleOf("welcome_view", { source: "web" }, "home")).toBe("웰컴");
-    expect(featureTitleOf("onboarding_action", { method: WELCOME_CTA_METHODS.wizard }, "home")).toBe("웰컴");
+    expect(featureTitleOf("onboarding_action", { method: WELCOME_CTA_METHODS.wizard }, "home")).toBe("웰컴·스크린샷 등록");
   });
 });
 

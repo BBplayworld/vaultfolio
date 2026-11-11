@@ -5,7 +5,6 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { countAssets, track } from "@/lib/analytics/ga";
@@ -15,6 +14,7 @@ import {
   getFirstSave,
   getNudgeShown,
   markNudgeShown,
+  setNudgeVisible,
   subscribeFirstSave,
 } from "@/lib/pwa/first-save-signal";
 import { shouldShowInstallNudge } from "@/lib/pwa/install-nudge-policy";
@@ -25,7 +25,6 @@ function NudgeCard({ trigger }: { trigger: PwaInstallTrigger }) {
   const { view } = useAssetNavigation();
   const { assetData } = useAssetData();
   const dismissed = useSyncExternalStore(subscribeFirstSave, getDismissed, () => false);
-  const tutorialFinished = useTutorialStore((s) => s.isTutorialFinished);
   const wizardOpen = useOnboardingWizardStore((s) => s.isOpen);
   const isMobile = useIsMobile();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,7 +34,7 @@ function NudgeCard({ trigger }: { trigger: PwaInstallTrigger }) {
   // 열린 다이얼로그는 조건이 바뀔 때만 DOM에서 읽는다
   useEffect(() => {
     setDialogOpen(!!document.querySelector('[role="dialog"][data-state="open"]'));
-  }, [isHome, assetCount, tutorialFinished, wizardOpen, dismissed]);
+  }, [isHome, assetCount, wizardOpen, dismissed]);
 
   const show = shouldShowInstallNudge({
     firstSave: true,
@@ -47,10 +46,15 @@ function NudgeCard({ trigger }: { trigger: PwaInstallTrigger }) {
     isInstallable: trigger.isInstallable,
     isHome,
     assetCount,
-    tutorialFinished,
     wizardOpen,
     dialogOpen,
   });
+
+  // 카드가 보이는 동안 튜토리얼 말풍선은 양보한다(동시 노출 방지, 닫으면 이어서 진행)
+  useEffect(() => {
+    setNudgeVisible(show);
+    return () => setNudgeVisible(false);
+  }, [show]);
 
   // 노출 GA는 세션당 1회
   useEffect(() => {

@@ -175,7 +175,6 @@ export function ToolMenuPage() {
       await navigator.clipboard.writeText(preGeneratedShortUrl);
       toast.success("공유 URL이 복사되었습니다.");
       track("share", { method: "link", content_type: "link" });
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       setShowShareDialog(false);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
@@ -466,8 +465,8 @@ export function ToolMenuPage() {
               <Info className="size-5 text-primary" />
               앱 가이드 · 새 소식
             </DialogTitle>
-            <DialogDescription className="text-left">
-              앱 사용법 가이드와 최근 새 소식을 확인합니다.
+            <DialogDescription className="text-left break-keep text-pretty">
+              보안 가이드와 최근 새 소식을 확인합니다.
             </DialogDescription>
           </DialogHeader>
 
@@ -483,7 +482,7 @@ export function ToolMenuPage() {
               <Info className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">앱 가이드 보기</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">주요 기능 사용법을 단계별로 둘러봅니다.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed break-keep text-pretty">시크릿에셋의 보안 가이드를 살펴봅니다.</p>
               </div>
             </button>
 
@@ -499,7 +498,7 @@ export function ToolMenuPage() {
               <BellRing className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">새 소식 보기</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">최근 업데이트와 새 기능을 확인합니다.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed break-keep text-pretty">최근 업데이트와 새 기능을 확인합니다.</p>
               </div>
             </button>
           </div>

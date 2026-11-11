@@ -1,11 +1,11 @@
 // 4.84 B — 평단 칩 폴백 placeAvgChip: plot(기본 4곳·스캔) / short(짧은 글자) / gutter(가격 칸) 3분기, 칩이 가격선·점을 가리지 않음
 import { describe, expect, it } from "vitest";
-import { CHIP_H, placeAvgChip, type ChipPt } from "../stock-page";
+import { CHIP_H, chipWidth, placeAvgChip, type ChipPt } from "../stock-page";
 
-const FULL = "내 평단 61,000원"; // 폭 ≈ 90.8
-const SHORT = "평단 6.1만"; // 폭 ≈ 58.8
+const FULL = "내 평단 61,000원"; // 폭 ≈ 105
+const SHORT = "평단 6.1만"; // 폭 ≈ 65
 const base = { avgY: 40, left: 12, plotW: 200, maxY: 200, full: FULL, short: SHORT };
-const cw = (t: string) => t.length * 6.4 + 14;
+const cw = chipWidth;
 
 // 평단선 주변 세로 띠를 x 구간에서 촘촘히 막는 가격선 점
 const wall = (x0: number, x1: number, avgY = 40): ChipPt[] => {
@@ -34,7 +34,7 @@ describe("placeAvgChip 3분기", () => {
     expect(covers(r, pts)).toBe(false);
   });
   it("short: 전체 글자가 들어갈 틈이 없고 짧은 글자는 들어가면 `평단 6.1만`", () => {
-    const pts = [...wall(12, 80), ...wall(160, 212)]; // 80~160 사이 틈 ≈ 80px: 전체(91+4) 불가, 짧은 글자(59+4) 가능
+    const pts = [...wall(12, 80), ...wall(160, 212)]; // 80~160 사이 틈 ≈ 80px: 전체(105+4) 불가, 짧은 글자(65+4) 가능
     const r = placeAvgChip({ ...base, pts, dots: [] });
     expect(r.mode).toBe("short");
     expect(r.text).toBe(SHORT);
@@ -66,5 +66,29 @@ describe("placeAvgChip 3분기", () => {
     const r = placeAvgChip({ ...base, avgY: 10, pts: [], dots: [] });
     expect(r.y).toBeGreaterThanOrEqual(0);
     expect(r.y + CHIP_H).toBeLessThanOrEqual(200);
+  });
+});
+
+describe("평단 칩 — 폭 추정·가격 칸 간격·격자 회피(4.85)", () => {
+  it("칩 오른쪽 끝은 가격 칸 라벨(플롯 오른쪽 +6px)과 6px 이상 떨어진다", () => {
+    const left = 12, plotW = 275;
+    const r = placeAvgChip({ ...base, left, plotW, pts: [], dots: [], avgY: 100 });
+    // 오른쪽 후보까지 전부 막아 우측 끝 배치를 강제
+    const rr = placeAvgChip({ ...base, left, plotW, pts: [{ x: left + 5, y: 100 - CHIP_H - 4 + 5 }, { x: left + 5, y: 100 + 5 }], dots: [], avgY: 100 });
+    for (const c of [r, rr]) {
+      const textEnd = c.x + chipWidth(c.text) - 7;
+      expect(left + plotW + 6 - textEnd).toBeGreaterThanOrEqual(6);
+    }
+  });
+  it("격자선이 글자 띠를 지나는 자리는 피한다(대안이 있을 때)", () => {
+    // 기본 4곳 중 선 위 띠(y 16~36)에 격자 y=26이 지남 → 선 아래 띠(y 44~64)로
+    const r = placeAvgChip({ ...base, pts: [], dots: [], grid: [26] });
+    expect(r.mode).toBe("plot");
+    expect(r.y).toBe(40 + 4);
+  });
+  it("격자를 피할 자리가 없으면 격자를 무시하고 배치한다(gutter로 떨어지지 않음)", () => {
+    const grid = Array.from({ length: 40 }, (_, i) => i * 5);
+    const r = placeAvgChip({ ...base, pts: [], dots: [], grid });
+    expect(r.mode).toBe("plot");
   });
 });

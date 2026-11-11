@@ -188,4 +188,11 @@ describe("KpiCard rows 슬롯 — 머리와 행은 형제(중첩 버튼 0), 기�
     expect(src).toContain('data-testid="hub-card-change" className="lg:row-span-2"');
     expect(src).toContain("rows={hasAssets ? <HubChangeRows monthlyCount={monthlyCount} /> : undefined}");
   });
+  it("행 버튼은 -mx 없이 컨테이너와 같은 폭이고 히트영역만 after로 넓힌다(4.85 — 구분선·쉐브론 4px 어긋남)", () => {
+    const src = readFileSync("src/app/(main)/_components/views/activity/hub-change-rows.tsx", "utf8");
+    const row = src.match(/const ROW = "([^"]*)"/)![1];
+    expect(row).not.toMatch(/(^|\s)-mx-/);
+    expect(row).not.toMatch(/(^|\s)px-1(\s|$)/);
+    expect(row).toContain("after:-inset-x-1");
+  });
 });

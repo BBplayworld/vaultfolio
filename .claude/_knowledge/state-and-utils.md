@@ -98,19 +98,15 @@ standalone zustand `create` (provider 없음). 성과-수익 탭(profit-chart) �
 ## TutorialStore (`src/stores/tutorial/tutorial-store.ts`)
 
 ```typescript
-TutorialStep = 0 | 1 | 2 | 3 | 4 | 5
+TutorialStep = 1 | 2 | 3 | 4 | 5            // 저장 키 형식(1~5)
+ActiveTutorialStep = 1 | 3 | 4 | 5          // 진행 단계(#4.85: 2단계 '더보기'는 사실과 달라 삭제 — 저장값 2는 pending으로 남아도 진행에서 건너뜀)
 StepStatus   = "pending" | "done" | "skipped"
 
-state: {
-  activeStep, step5Sub, statuses, isTutorialFinished, isWaiting,
-  isStandaloneStep0  // 메뉴-앱가이드 단독 보기 모드 (확인 버튼, 다음 단계 미진행)
-}
-actions: {
-  initTutorial, completeStep, skipStep, advanceStep5, startWaiting,
-  showStep0(standalone?: boolean)   // standalone=true → 단독 보기
-  closeStandaloneStep0()
-}
+state: { activeStep: ActiveTutorialStep|null, step5Sub, statuses, isTutorialFinished, isWaiting }
+actions: { initTutorial, completeStep, skipStep, advanceStep5, startWaiting }
+export: ACTIVE_TUTORIAL_STEPS, nextPendingStep(statuses)
 ```
+`TutorialOverlay`: PWA(`isStandaloneDisplay()`)는 하단 `자산 업데이트` 버튼이 없어 1단계를 `skipStep(1)`로 건너뜀, 설치 안내 카드가 보이는 동안(`first-save-signal.getNudgeVisible`) 말풍선 숨김(#4.85).
 
 저장: `secretasset_tutorial_status` 단일 키 (Record<step, status>). 레거시 12 키는 `merge-tutorial-status` 마이그레이션으로 통합.
 
@@ -290,6 +286,15 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 - 칩: `placeAvgChip({pts, dots, avgY, left, plotW, maxY, full, short}) → {mode: plot|short|gutter, text, x, y}`(`CHIP_H`).
 - 점: `pickBuyTransactions(tx, ids, type="buy"|"sell")`(이름 유지, 점 표시 전용·평단·성적표 계산 불변)·`buildTradeMarkers(buyDots, sellDots)`(날짜순, 같은 봉 매수→매도, 키 `kind:index`)·`layoutMarkers(markers, xOf, yOf)`(같은 봉·12px 미만 매수 −6/매도 +6)·`markerHitRadius`(벌린 쌍 6, 그 외 10~20).
 - 현재가 문자열은 `formatCurrencyDisplay(currentPrice, currency)`(상세·주식 `현재가` 칸과 같은 함수, C65).
+
+### 4.85 추가 유틸
+
+- `lib/finance/dividend-axis.ts` — `niceAxisTicks(max, targetCount=4)`(1·2·5×10^n 등간격, 마지막 눈금 ≥ max)·`formatAxisWon(v)`(만원 이상 소수 1자리 `1.5만원`, 반올림 오차 0)·`pickVisibleLabels(values, labels, slotWidth)`(막대 값 라벨 가로 겹침이면 큰 값 우선). 배당 차트(`dividend-chart.tsx`)가 사용.
+- `lib/number-utils.ts` `formatPriceByCurrency(value, currency)` — USD `$`·JPY `¥`·그 외 원. 기존 `formatPrice` 3벌(`stock-trades-view`·`stock-target-picker`·`delete-rollback-dialog`) 삭제·통합.
+- `lib/finance/profit-utils.ts` `fetchProfitRef` — 배치가 429·5xx면 불완전(캐시 저장·`onComplete` 생략, 남은 배치 중단), `Retry-After`(1~5초, 10초 초과면 재시도 안 함)로 **실행당 1회**만 재시도(요청 상한 = 배치 수 + 1). `profitRetryDelayMs`. 점검(`X-KIS-Unavailable`)은 기존 경로.
+- `lib/pwa/first-save-signal.ts` `setNudgeVisible`·`getNudgeVisible` — 설치 안내 카드 표시 중 신호(튜토리얼 양보용). `install-nudge-policy`는 튜토리얼 조건 없음.
+- `lib/analytics/ga.ts` `featureTitleOf`: `onboarding_action` method별 `웰컴·스크린샷 등록|직접 입력|가져오기|동기화 연결|웹에서 시작|체험`, `first_asset_saved`는 `첫 자산 저장·*`(`asset_save`는 `자산 저장·*`).
+- `lib/finance/stock-page.ts` `chipWidth`(한글 10.5·숫자 6.2 폭 추정)·`placeAvgChip({..., grid?})` 격자선 회피(없으면 무시).
 
 ### hooks — use-box-size.ts · use-loading-phase.ts (#4.84)
 

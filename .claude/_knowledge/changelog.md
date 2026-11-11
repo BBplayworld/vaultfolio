@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-12 (v4.85)
+
+### 첫 등록 준비·정돈 묶음 (#4.85, 이슈 #166)
+- **GA(4.86 선행 기준선)**: `onboarding_action` page_title을 method별 `웰컴·<버튼>`으로 1:1 분리, `first_asset_saved`를 `첫 자산 저장·*`로 분리(맞춤 정의 0).
+- **설치 안내(#78) 막힘 해제**: `shouldShowInstallNudge`에서 `tutorialFinished` 제거 — 튜토리얼이 남은 첫 저장 세션에도 1회 노출. 카드가 보이는 동안 `TutorialOverlay`가 말풍선을 숨김(`first-save-signal.nudgeVisible`).
+- **튜토리얼 정리**: 사실과 다른 2단계(더보기) 삭제(`ActiveTutorialStep` 1·3·4·5), PWA는 대상 없는 1단계 건너뜀. 저장 키 형식 불변.
+- **주가 대조 배치(`fetchProfitRef`)**: 429·5xx 실패를 불완전로 처리(캐시·완료 생략), Retry-After에 따라 실행당 1회 재시도.
+- **배당 화면**: 값 라벨 겹침 생략·둥근 Y축 눈금·금액 `nowrap`·모바일 열 폭 조정(`dividend-axis.ts`).
+- **상세 허브 0건 카드**: `추가하기` + 누르면 `open-add-asset-sheet`.
+- **컷 가능 5건 모두 포함**: 평단 칩 한글 폭 보정·격자 회피, 라이트 로딩 문구 `LoadingNote chip`, 성과 허브 행 4px 정렬, 더보기 앱 가이드 선택창 문구(보안 가이드), `formatPriceByCurrency` 통합.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0. 새 소식: `20261111-11`, `20261111-12`.
+- 테스트: `ga.test.ts`·`install-nudge-first-save.test.ts`·`tutorial-cleanup.test.ts`·`profit-partial-failure.test.ts`·`dividend-axis.test.ts`·`detail-hub-empty-cards.test.tsx`·`stock-page-chip.test.ts`·`hub-change-rows.test.tsx`·`number-utils-price-currency.test.ts`.
+
+---
+
 ## 2026-11-11 (v4.84)
 
 ### 주가 차트 가격 눈금·현재가·매도 점 + 공통 로딩 UI (#4.84, 이슈 #163·#164)

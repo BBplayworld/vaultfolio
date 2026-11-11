@@ -27,7 +27,6 @@ export function useDataExport() {
       toast.success("자산 데이터가 다운로드되었습니다.");
       track("data_action", { method: "export", source: "more", result: "success" });
       setExportTick((t) => t + 1);
-      window.dispatchEvent(new CustomEvent("tutorial-complete-step2"));
       return true;
     } catch {
       toast.error("데이터 내보내기에 실패했습니다.");

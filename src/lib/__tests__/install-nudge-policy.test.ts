@@ -4,7 +4,7 @@ import { shouldShowInstallNudge, type InstallNudgeInput } from "@/lib/pwa/instal
 const ok: InstallNudgeInput = {
   firstSave: true, dismissed: false, trial: false, inApp: false, isMobile: true,
   isIOS: true, isInstallable: false, isHome: true, assetCount: 1,
-  tutorialFinished: true, wizardOpen: false, dialogOpen: false,
+  wizardOpen: false, dialogOpen: false,
 };
 
 describe("shouldShowInstallNudge (#78)", () => {
@@ -22,7 +22,6 @@ describe("shouldShowInstallNudge (#78)", () => {
     ["iOS도 설치 가능도 아님", { isIOS: false, isInstallable: false }],
     ["홈 아님", { isHome: false }],
     ["자산 0건", { assetCount: 0 }],
-    ["튜토리얼 미종료", { tutorialFinished: false }],
     ["마법사 열림", { wizardOpen: true }],
     ["다이얼로그 열림", { dialogOpen: true }],
   ])("%s이면 미노출", (_n, patch) => {

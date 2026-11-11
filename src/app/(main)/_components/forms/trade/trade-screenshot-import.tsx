@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { matchBrokerHint } from "@/config/asset-options";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 import { normalizeStockName, findClosestNames } from "@/lib/name-match";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
@@ -24,7 +25,6 @@ import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade/trade-
 import {
   StockTargetPicker,
   PositionChangePreview,
-  formatPrice,
   getPositionSnapshot,
   type TradeTarget,
 } from "./stock-target-picker";
@@ -463,7 +463,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                         </div>
                         <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
                           <span>{t.quantity}주</span>
-                          <span>{formatPrice(t.price, t.currency)}</span>
+                          <span>{formatPriceByCurrency(t.price, t.currency)}</span>
                           <span>{t.date}</span>
                         </div>
                       </div>

@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCurrency } from "@/lib/number-utils";
+import { formatPriceByCurrency } from "@/lib/number-utils";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionPreview } from "@/types/transaction";
 
@@ -22,12 +22,6 @@ interface DeleteRollbackDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
 }
-
-const formatPrice = (value: number, currency: string) => {
-  if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  return formatCurrency(value);
-};
 
 export function DeleteRollbackDialog({
   open,
@@ -60,7 +54,7 @@ export function DeleteRollbackDialog({
               <span>{tx.quantity}주</span>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              {tx.date} · {formatPrice(tx.price, currency)} · ✓반영됨
+              {tx.date} · {formatPriceByCurrency(tx.price, currency)} · ✓반영됨
             </p>
           </div>
 
@@ -74,7 +68,7 @@ export function DeleteRollbackDialog({
               <span className="text-muted-foreground">평단가</span>
               <span className="text-muted-foreground">→</span>
               <span className="font-medium">
-                {formatPrice(stock.averagePrice, currency)} → {formatPrice(rollbackPreview.avgPrice, currency)}
+                {formatPriceByCurrency(stock.averagePrice, currency)} → {formatPriceByCurrency(rollbackPreview.avgPrice, currency)}
               </span>
             </div>
           </div>

@@ -3,10 +3,13 @@ import { readTutorialStatus, writeTutorialStatus } from "@/lib/local-storage";
 import { track } from "@/lib/analytics/ga";
 
 export type TutorialStep = 1 | 2 | 3 | 4 | 5;
+/** 안내에서 빠진 단계(2: 더보기 — 사실과 달라 삭제). 저장 키 형식은 1~5 그대로 두고 진행에서만 건너뛴다(#4.85) */
+export type ActiveTutorialStep = Exclude<TutorialStep, 2>;
+export const ACTIVE_TUTORIAL_STEPS: ActiveTutorialStep[] = [1, 3, 4, 5];
 export type StepStatus = "pending" | "done" | "skipped";
 
 export interface TutorialState {
-  activeStep: TutorialStep | null;
+  activeStep: ActiveTutorialStep | null;
   step5Sub: "activity" | "profit"; // Step 5 내부 sub-step
   statuses: Record<TutorialStep, StepStatus>;
   isTutorialFinished: boolean;
@@ -19,10 +22,9 @@ export interface TutorialState {
   startWaiting: (step: TutorialStep) => void; // 타겟 클릭 → 5초 후 completeStep
 }
 
-const ALL_STEPS: TutorialStep[] = [1, 2, 3, 4, 5];
-
-function nextPendingStep(statuses: Record<TutorialStep, StepStatus>): TutorialStep | null {
-  for (const step of ALL_STEPS) {
+/** 다음 진행할 단계(삭제된 2단계는 건너뜀) */
+export function nextPendingStep(statuses: Record<TutorialStep, StepStatus>): ActiveTutorialStep | null {
+  for (const step of ACTIVE_TUTORIAL_STEPS) {
     if (statuses[step] === "pending") return step;
   }
   return null;

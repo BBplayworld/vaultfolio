@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronRight } from "lucide-react";
 import { useTutorialStore } from "@/stores/tutorial/tutorial-provider";
 import { TUTORIAL_STEP_CONFIGS } from "./tutorial-step-config";
-import type { TutorialStep } from "@/stores/tutorial/tutorial-store";
+import { ACTIVE_TUTORIAL_STEPS, type ActiveTutorialStep } from "@/stores/tutorial/tutorial-store";
+import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { MAIN_PALETTE } from "@/config/theme";
+import { getNudgeVisible, subscribeFirstSave } from "@/lib/pwa/first-save-signal";
 
-const TOTAL_STEPS = Object.keys(TUTORIAL_STEP_CONFIGS).length; // 말풍선 "x / N" 표기용
+const TOTAL_STEPS = ACTIVE_TUTORIAL_STEPS.length; // 말풍선 "x / N" 표기용(삭제된 단계 제외 순번)
 
 interface TargetRect {
   top: number;
@@ -43,7 +45,7 @@ function useIsModalOpen() {
 }
 
 /** data-tutorial 속성을 가진 요소의 viewport 기준 rect를 반환 */
-function useTargetRect(targetAttr: string | null, activeStep: TutorialStep | null, isModalOpen: boolean) {
+function useTargetRect(targetAttr: string | null, activeStep: ActiveTutorialStep | null, isModalOpen: boolean) {
   const [rect, setRect] = useState<TargetRect | null>(null);
 
   const measure = useCallback(() => {
@@ -119,7 +121,7 @@ function StepOverlay({
   targetAttr,
   isWaiting,
 }: {
-  step: TutorialStep;
+  step: ActiveTutorialStep;
   onComplete: () => void;
   targetAttr: string;
   isWaiting: boolean;
@@ -175,7 +177,7 @@ function StepOverlay({
               className="size-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
               style={{ backgroundColor: MAIN_PALETTE[0] }}
             >
-              <Icon className="size-3.5" style={{ color: MAIN_PALETTE[0] }} />
+              <Icon className="size-3.5 text-white" />
             </div>
             <div>
               <p className="text-sm font-bold leading-snug" style={{ color: MAIN_PALETTE[0] }}>{displayTitle}</p>
@@ -184,16 +186,16 @@ function StepOverlay({
               )}
             </div>
           </div>
-          <button onClick={onComplete} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+          <button onClick={onComplete} aria-label="튜토리얼 닫기" className="relative shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5 after:absolute after:-inset-[13px] after:content-['']">
             <X className="size-3.5" />
           </button>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{step} / {TOTAL_STEPS}</span>
+          <span className="text-sm text-muted-foreground">{ACTIVE_TUTORIAL_STEPS.indexOf(step) + 1} / {TOTAL_STEPS}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={onComplete}
-              className="flex items-center gap-1 text-sm font-semibold text-white px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
+              className="flex items-center gap-1 min-h-10 text-sm font-semibold text-white px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
               style={{ backgroundColor: MAIN_PALETTE[0] }}
             >
               다음
@@ -220,9 +222,17 @@ export function TutorialOverlay({
   const activeStep = useTutorialStore((s) => s.activeStep);
   const isTutorialFinished = useTutorialStore((s) => s.isTutorialFinished);
   const isWaiting = useTutorialStore((s) => s.isWaiting);
+  const skipStep = useTutorialStore((s) => s.skipStep);
+  // 첫 저장 뒤 설치 안내 카드가 보이는 동안은 말풍선을 숨긴다(#4.85)
+  const nudgeVisible = useSyncExternalStore(subscribeFirstSave, getNudgeVisible, () => false);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // PWA(설치 후 실행)는 하단 '자산 업데이트' 버튼이 없어 1단계 대상이 없다 — 건너뛴다(#4.85)
+  useEffect(() => {
+    if (activeStep === 1 && isStandaloneDisplay()) skipStep(1);
+  }, [activeStep, skipStep]);
 
   const targetAttr =
     activeStep !== null
@@ -245,6 +255,7 @@ export function TutorialOverlay({
 
   if (!mounted) return null;
   if (isSharePending) return null;
+  if (nudgeVisible) return null;
   if (isTutorialFinished) return null;
   if (activeStep === null) return null;
   // 빈 자산(웰컴가이드)에서는 자산 페이지 타겟이 없으므로 표시하지 않음

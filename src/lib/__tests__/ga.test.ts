@@ -74,10 +74,26 @@ describe("gtag 부재·예외", () => {
   });
 });
 
+describe("웰컴 버튼 값→제목 1:1", () => {
+  it("WELCOME_CTA_METHODS 모든 값이 서로 다른 '웰컴·…' 제목으로 분리된다", () => {
+    const methods = ["wizard", "manual", "import", "sync_connect", "skip_install", "trial_start"] as const;
+    const titles = methods.map((m) => featureTitleOf("onboarding_action", { method: m }, "home"));
+    expect(titles).toEqual(["웰컴·스크린샷 등록", "웰컴·직접 입력", "웰컴·가져오기", "웰컴·동기화 연결", "웰컴·웹에서 시작", "웰컴·체험"]);
+    expect(new Set(titles).size).toBe(methods.length);
+    expect(featureTitleOf("welcome_view", {}, "home")).toBe("웰컴");
+  });
+});
+
 describe("featureTitleOf 매핑", () => {
   it.each([
     ["welcome_view", {}, "웰컴"],
-    ["onboarding_action", { method: "wizard" }, "웰컴"],
+    ["onboarding_action", { method: "wizard" }, "웰컴·스크린샷 등록"],
+    ["onboarding_action", { method: "manual" }, "웰컴·직접 입력"],
+    ["onboarding_action", { method: "import" }, "웰컴·가져오기"],
+    ["onboarding_action", { method: "sync_connect" }, "웰컴·동기화 연결"],
+    ["onboarding_action", { method: "skip_install" }, "웰컴·웹에서 시작"],
+    ["onboarding_action", { method: "trial_start" }, "웰컴·체험"],
+    ["onboarding_action", {}, "웰컴"],
     ["tutorial_begin", {}, "온보딩"],
     ["tutorial_step", { step: "2" }, "온보딩"],
     ["tutorial_complete", {}, "온보딩"],
@@ -86,10 +102,10 @@ describe("featureTitleOf 매핑", () => {
     ["asset_add_start", { asset_type: "stock", method: "manual" }, "자산 추가 시작·주식"],
     ["asset_save", { asset_type: "crypto" }, "자산 저장·암호화폐"],
     ["asset_save", { asset_type: "real_estate" }, "자산 저장·부동산"],
-    ["first_asset_saved", { asset_type: "cash" }, "자산 저장·현금"],
+    ["first_asset_saved", { asset_type: "cash" }, "첫 자산 저장·현금"],
     ["asset_save", { asset_type: "physical" }, "자산 저장·실물 자산"],
     ["asset_add_start", { asset_type: "physical", method: "manual" }, "자산 추가 시작·실물 자산"],
-    ["first_asset_saved", { asset_type: "physical" }, "자산 저장·실물 자산"],
+    ["first_asset_saved", { asset_type: "physical" }, "첫 자산 저장·실물 자산"],
     ["screenshot_parse", { asset_type: "loan", result: "fail" }, "스크린샷 등록 실패·대출"],
     ["screenshot_parse", { asset_type: "stock", result: "empty" }, "스크린샷 등록 실패·주식"],
     ["screenshot_parse", { asset_type: "cash", result: "success" }, "스크린샷 등록·현금"],
@@ -266,6 +282,8 @@ describe("AC8 first_asset_saved 기기당 1회", () => {
   it("저장 전 0건 + 생성이면 asset_save와 함께 first_asset_saved를 1회 보낸다", () => {
     trackAssetSave({ asset_type: "stock", method: "screenshot", result: "create" }, 0);
     expect(names()).toEqual(["asset_save", "first_asset_saved"]);
+    // 같은 저장이라도 title이 달라야 첫 저장 도달 수를 title만으로 판독
+    expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["자산 저장·주식", "첫 자산 저장·주식"]);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.gaFlags)!)).toEqual({ firstAssetSent: true });
   });
 
@@ -283,12 +301,12 @@ describe("AC8 first_asset_saved 기기당 1회", () => {
 });
 
 describe("#58 실물 자산 GA — page_title·page_location만, 이름·유형 세부·금액 없음", () => {
-  it("실물 저장(첫 자산)은 asset_save·first_asset_saved 모두 page_title '자산 저장·실물 자산'", () => {
+  it("실물 저장(첫 자산)은 asset_save '자산 저장·실물 자산', first_asset_saved '첫 자산 저장·실물 자산'", () => {
     trackAssetSave({ asset_type: "physical", method: "manual", result: "create", ...({ name: "골드바", type: "gold", currentValue: 123456789 } as object) }, 0);
     expect(gtag.mock.calls.map((c) => c[1])).toEqual(["asset_save", "first_asset_saved"]);
+    expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["자산 저장·실물 자산", "첫 자산 저장·실물 자산"]);
     for (const [, , payload] of gtag.mock.calls) {
       expect(Object.keys(payload).sort()).toEqual(["page_location", "page_title"]);
-      expect(payload.page_title).toBe("자산 저장·실물 자산");
       expect(JSON.stringify(payload)).not.toMatch(/골드바|gold|123456789/);
     }
   });
