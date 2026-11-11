@@ -153,3 +153,53 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(readFileSync(path.join(dir, "home-tip-box.tsx"), "utf8")).not.toContain("shouldSilentFirstRun");
   });
 });
+
+describe("시트 닫힘 후 포커스 (4.84 D2) — 더보기 Esc 후 body로 떨어지지 않는다", () => {
+  const fakeMain = () => {
+    const attrs = new Map<string, string>();
+    const doc = { activeElement: null as unknown };
+    const main = {
+      hasAttribute: (k: string) => attrs.has(k),
+      setAttribute: (k: string, v: string) => attrs.set(k, v),
+      focus: () => { doc.activeElement = main; },
+    };
+    return { doc: Object.assign(doc, { querySelector: (sel: string) => (sel === "main" ? main : null) }), main, attrs };
+  };
+  it("더보기 경로(이동 아님): Esc 닫기 후 activeElement === main, tabindex=-1, 기본 복귀는 막는다", async () => {
+    const { restoreFocusAfterSheetClose } = await import("../whats-new");
+    const { doc, main, attrs } = fakeMain();
+    let prevented = false;
+    restoreFocusAfterSheetClose({ preventDefault: () => { prevented = true; } }, false, doc as unknown as Document);
+    expect(prevented).toBe(true);
+    expect(doc.activeElement).toBe(main);
+    expect(attrs.get("tabindex")).toBe("-1");
+  });
+  it("홈 팁 경로도 같은 결과, 바로 가기로 이동한 경우(gone)는 포커스를 건드리지 않는다", async () => {
+    const { restoreFocusAfterSheetClose } = await import("../whats-new");
+    const a = fakeMain();
+    restoreFocusAfterSheetClose({ preventDefault: () => {} }, false, a.doc as unknown as Document);
+    expect(a.doc.activeElement).toBe(a.main);
+    const b = fakeMain();
+    let prevented = false;
+    restoreFocusAfterSheetClose({ preventDefault: () => { prevented = true; } }, true, b.doc as unknown as Document);
+    expect(prevented).toBe(true);
+    expect(b.doc.activeElement).toBeNull();
+  });
+  it("호스트가 source 구분 없이 이 함수를 쓴다(홈 팁만 main으로 보내던 분기 제거)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/app/(main)/_components/views/home/whats-new-sheet.tsx", "utf8");
+    expect(src).toContain("restoreFocusAfterSheetClose(e, goneRef.current)");
+    expect(src).not.toContain('sourceRef.current === "home_tip"');
+  });
+});
+
+describe("X 버튼 히트 영역 40px (4.84 D1) — 클래스 계약(실측은 qa elementFromPoint)", () => {
+  it("홈 팁 X 박스 = 16 + p-3×2 = 40, 시트 X는 ::after 확장(아이콘 20 + 10×2, sm 24 + 8×2)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const tip = readFileSync("src/app/(main)/_components/views/home/home-tip-box.tsx", "utf8");
+    expect(tip).toMatch(/data-testid="home-tip-close"\s+className="shrink-0 -m-3 p-3 /);
+    const sheet = readFileSync("src/components/ui/sheet.tsx", "utf8");
+    expect(sheet).toContain("after:absolute after:-inset-2.5");
+    expect(sheet).toContain("sm:after:-inset-2");
+  });
+});

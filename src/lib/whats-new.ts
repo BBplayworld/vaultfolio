@@ -114,3 +114,14 @@ export function runSilentFirstRun(p: { isDataLoaded: boolean; hasAssets: boolean
 export function newBadgeIds(entries: WhatsNewEntry[] = WHATS_NEW, record: NoticeSeenRecord | null = readSeen(), today: string = todayKst()): Set<string> {
   return new Set(unseenEntries(entries, record, today).map((e) => e.id));
 }
+
+/** 시트 닫힘 후 포커스(4.84 D2) — 바로 가기로 이동(gone)한 경우만 건드리지 않고, 홈 팁·더보기·Esc 모두 main(tabindex -1)으로 보낸다.
+ *  호출한 곳이 사라졌거나(홈 팁) 포털 안이라(더보기) 복귀 대상이 불안정하므로 body로 떨어지지 않게 한다 */
+export function restoreFocusAfterSheetClose(e: { preventDefault: () => void }, gone: boolean, doc: Pick<Document, "querySelector"> = document): void {
+  e.preventDefault();
+  if (gone) return; // 이동한 화면의 포커스를 뺏지 않는다
+  const main = doc.querySelector("main") as HTMLElement | null;
+  if (!main) return;
+  if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+  main.focus({ preventScroll: true });
+}
