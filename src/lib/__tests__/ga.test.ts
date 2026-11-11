@@ -187,6 +187,17 @@ describe("page_location에 해시·쿼리 미포함", () => {
     expect(JSON.stringify(payload)).not.toMatch(/[#?]|secretkey|share=/);
   });
 
+  it("종목 한 장(#157)은 상세·주식·종목 page_view 1회, 가상 경로에 종목명·티커가 없다", () => {
+    trackScreen("detail:stocks-item");
+    trackScreen("detail:stocks-item");
+    expect(gtag).toHaveBeenCalledTimes(1);
+    const [, name, payload] = gtag.mock.calls[0];
+    expect(name).toBe("page_view");
+    expect(payload.page_title).toBe("상세·주식·종목");
+    expect(payload.page_location).toBe("https://secretasset.xyz/v/detail/stocks-item");
+    expect(JSON.stringify(payload)).not.toMatch(/005930|AAPL|삼성/);
+  });
+
   it("화면 title 전수 불변", () => {
     const expected: Record<string, string> = {
       home: "홈", ratio: "비중 미리보기", more: "더보기", settings: "설정", tax: "세금 관리",

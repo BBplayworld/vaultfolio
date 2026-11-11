@@ -3,8 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 import { recordVisit, viewToKey } from "@/lib/feature-usage";
 import { trackScreen, trackThemeMode } from "@/lib/analytics/ga";
+import { useStockPageStore } from "@/stores/stock-page-store";
 
-export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "real-estate" | "physical" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
+export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "stocks-item" | "real-estate" | "physical" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 // change-market = 자산 변화 하위 화면 '시장과 비교'(#132)
 export type ActivityTab = "hub" | "change" | "change-market" | "dividend" | "report";
 
@@ -26,7 +27,7 @@ export type AssetView =
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
-const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
+const DETAIL_TABS: readonly DetailTab[] = ["hub", "stocks", "stocks-xray", "stocks-trades", "stocks-item", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"];
 const ACTIVITY_TABS: readonly ActivityTab[] = ["hub", "change", "change-market", "dividend", "report"];
 
 // 시장과 비교(#132 K3) — 자산 변화에서 들어갈 때 범위·기간을 모듈 메모리에 기억하고, 비교 화면에서 pop으로 자산 변화에 돌아오면 그 값으로 다시 연다.
@@ -47,6 +48,19 @@ export function withRestoredChangeInit(next: AssetView, from: AssetView, remembe
 let marketCompareEnteredInApp = false;
 export function marketCompareBackAction(enteredInApp: boolean, historyLength: number): "pop" | "change" {
   return enteredInApp && historyLength > 1 ? "pop" : "change";
+}
+// 종목 한 장(#157) — 대상은 메모리 store에만 있다. 새로고침·직접 URL로 store가 비어 있으면 상세·주식으로 보낸다
+export function guardStockPageView(view: AssetView, hasTarget: boolean): AssetView {
+  if (view.type === "detail" && view.tab === "stocks-item" && !hasTarget) return { type: "detail", tab: "stocks" };
+  return view;
+}
+// 거래내역 뒤로 — 종목 한 장에서 연 거래내역이고 대상이 살아 있으면 종목 한 장(history pop으로 스택 대칭 유지), 아니면 상세·주식
+export function tradesBackAction(fromStockPage: boolean, hasStockPageTarget: boolean): "stock-page" | "stocks" {
+  return fromStockPage && hasStockPageTarget ? "stock-page" : "stocks";
+}
+// 종목 한 장 뒤로 — 시장 비교에서 들어왔으면 들어온 화면으로 pop, 상세·주식에서 들어왔으면 상세·주식
+export function stockPageBackAction(origin: "stocks" | "market-compare" | undefined, historyLength: number): "pop" | "stocks" {
+  return origin === "market-compare" && historyLength > 1 ? "pop" : "stocks";
 }
 // 옛 해시(북마크·공유 링크 보호) → 자산 변화의 해당 범위·기간으로 리다이렉트(#32)
 const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {
@@ -96,7 +110,7 @@ export function toHash(view: AssetView): string {
 // 뒤로가기 버튼에 표시할 라벨 — 현재 view가 아니라 "돌아갈 view"를 표시
 // - 허브(detail/activity)에서 뒤로 → 홈
 // - 하위 페이지(stocks/change 등)에서 뒤로 → 해당 허브("상세"/"성과")
-export function getBackLabel(view: AssetView): string {
+export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "market-compare"): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
   if (view.type === "settings") return "더보기";
@@ -105,6 +119,8 @@ export function getBackLabel(view: AssetView): string {
   // 시장과 비교는 상세·주식·자산 변화 두 곳에서 진입 → 중립 라벨(#132)
   if (view.type === "activity" && view.tab === "change-market") return "뒤로";
   if (view.tab === "hub") return "홈";
+  // 종목 한 장(#157) — 시장 비교에서 들어왔으면 중립 라벨
+  if (view.type === "detail" && view.tab === "stocks-item") return stockPageOrigin === "market-compare" ? "뒤로" : "주식";
   if (view.type === "detail" && (view.tab === "stocks-xray" || view.tab === "stocks-trades")) return "주식";
   if (view.type === "detail" && view.tab === "cash-transactions") return "현금";
   if (view.type === "detail" && view.tab === "loan-transactions") return "대출";
@@ -193,7 +209,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   // 초기 hash 1회 동기화 (SSR 안전)
   useEffect(() => {
-    const initial = parseHash(window.location.hash);
+    // 종목 한 장은 대상 store가 비면(새로고침·직접 URL) 상세·주식으로 — 주소도 바꿔 둔다(히스토리 추가 없음)
+    const parsed = parseHash(window.location.hash);
+    const initial = guardStockPageView(parsed, !!useStockPageStore.getState().target);
+    if (initial !== parsed) window.history.replaceState(null, "", toHash(initial));
     // 옛 해시(#activity/netasset 등)로 들어오면 주소창도 새 해시로 바꿔 둔다(히스토리 추가 없음)
     if (initial.type === "activity" && initial.init && window.location.hash !== toHash(initial)) {
       window.history.replaceState(null, "", toHash(initial));
@@ -205,7 +224,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
     trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
-      const next = withRestoredChangeInit(parseHash(window.location.hash), viewRef.current, changeInitForReturn);
+      const next = guardStockPageView(
+        withRestoredChangeInit(parseHash(window.location.hash), viewRef.current, changeInitForReturn),
+        !!useStockPageStore.getState().target,
+      );
+      if (next.type === "detail" && next.tab === "stocks" && window.location.hash !== toHash(next)) {
+        window.history.replaceState(null, "", toHash(next));
+      }
       if (next.type === "activity" && next.init && window.location.hash !== toHash(next)) {
         window.history.replaceState(null, "", toHash(next));
       }
@@ -350,8 +375,23 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (view.type === "detail" && view.tab !== "hub") {
-      // 거래내역 → 주식 상세로 1단 복귀
+      // 종목 한 장 → 시장 비교에서 들어왔으면 pop, 상세·주식에서 들어왔으면 상세·주식
+      if (view.tab === "stocks-item") {
+        const origin = useStockPageStore.getState().target?.origin;
+        if (typeof window !== "undefined" && stockPageBackAction(origin, window.history.length) === "pop") {
+          window.history.back();
+          return;
+        }
+        navigate({ type: "detail", tab: "stocks" });
+        return;
+      }
+      // 거래내역 → 종목 한 장에서 연 거래내역이면 pop으로 종목 한 장, 아니면 주식 상세로 1단 복귀
       if (view.tab === "stocks-trades") {
+        const sp = useStockPageStore.getState();
+        if (typeof window !== "undefined" && window.history.length > 1 && tradesBackAction(sp.tradesFromStockPage, !!sp.target) === "stock-page") {
+          window.history.back();
+          return;
+        }
         navigate({ type: "detail", tab: "stocks" });
         return;
       }

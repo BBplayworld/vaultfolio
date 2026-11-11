@@ -17,6 +17,8 @@ export interface PriceHistory {
   range: PriceRange;
   currency: "KRW" | "USD";
   interval: "D" | "W";
+  // 조회 창 시작일(서버 기준) — 창 밖 매수 판정용. CDN 캐시된 응답과 같은 날짜 기준을 쓰려고 응답에 싣는다
+  from?: string;
   points: PricePoint[];
   // 상장 이후 기간만 있을 때(시작일보다 한참 늦게 첫 점) 첫 점 날짜
   listedFrom?: string;
@@ -211,6 +213,7 @@ export async function fetchPriceHistory(input: FetchPriceHistoryInput): Promise<
     range,
     currency: market === "kr" ? "KRW" : "USD",
     interval: range === "1y" ? "D" : "W",
+    from: startStr,
     points,
     ...(listedFrom ? { listedFrom } : {}),
   };

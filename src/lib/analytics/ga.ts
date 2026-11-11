@@ -147,6 +147,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "detail:stocks": "상세·주식",
   "detail:stocks-xray": "상세·주식 X-Ray",
   "detail:stocks-trades": "상세·주식 거래내역",
+  "detail:stocks-item": "상세·주식·종목",
   "detail:real-estate": "상세·부동산",
   "detail:crypto": "상세·암호화폐",
   "detail:crypto-transactions": "상세·암호화폐 거래내역",

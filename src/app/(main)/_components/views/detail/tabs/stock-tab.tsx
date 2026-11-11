@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, Scissors, Globe, ArrowLeftRight, History, ArrowDownWideNarrow } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, CreditCard, ChevronDown, ChevronRight, Scissors, Globe, ArrowLeftRight, History, ArrowDownWideNarrow } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ import { STORAGE_KEYS } from "@/lib/local-storage";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
+import { useStockPageStore } from "@/stores/stock-page-store";
 import { MarketEntryLine } from "../../activity/market-entry-line";
 import { displayShareWidths } from "@/lib/report/min-share";
 
@@ -779,7 +780,22 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
 
   const { navigate } = useAssetNavigation();
   const setTradeTarget = useTradeViewStore((s) => s.setTarget);
+  const setStockPageTarget = useStockPageStore((s) => s.setTarget);
+  const setTradesFromStockPage = useStockPageStore((s) => s.setTradesFromStockPage);
+  // 종목 한 장(#157) — 누른 행의 그룹(groupKeyOf 기준 groupItems)·누른 시점 원/달러 토글을 그대로 넘긴다
+  const openStockPage = () => {
+    setStockPageTarget({
+      groupStockIds: effectiveGroupItems.map((s) => s.id),
+      name: stock.name,
+      ticker: stock.ticker || "",
+      category: stock.category,
+      displayCurrency,
+      origin: "stocks",
+    });
+    navigate({ type: "detail", tab: "stocks-item" });
+  };
   const openTrades = (initialStockId: string | null) => {
+    setTradesFromStockPage(false); // 거래내역 뒤로 = 상세·주식(종목 한 장에서 연 경우만 종목 한 장)
     setTradeTarget({
       groupStockIds: effectiveGroupItems.map((s) => s.id),
       name: stock.name,
@@ -854,7 +870,18 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                     <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{label}</Badge>
                   ))}
                 </div>
-                <span className="text-sm text-foreground font-semibold shrink-0 whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
+                <div className="flex shrink-0 flex-col items-end">
+                  <span className="text-sm text-foreground font-semibold whitespace-nowrap tabular-nums">총 {stock.quantity.toLocaleString()}주</span>
+                  <button
+                    type="button"
+                    data-testid="stock-page-entry"
+                    onClick={openStockPage}
+                    className="-mr-2 -mb-2 inline-flex min-h-10 min-w-10 items-center gap-0.5 px-2 text-sm font-medium text-brand dark:text-indigo-300 active:not-disabled:scale-[0.96] transition-[scale,color] motion-safe:duration-150"
+                  >
+                    종목 보기
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </div>
               </div>
               <div>
                 <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} />

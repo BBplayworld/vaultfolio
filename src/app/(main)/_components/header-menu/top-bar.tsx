@@ -16,6 +16,7 @@ import { InstallNudge } from "../pwa/install-nudge";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { track } from "@/lib/analytics/ga";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
+import { useStockPageStore } from "@/stores/stock-page-store";
 
 type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
@@ -98,7 +99,8 @@ function MoreButton() {
 export function TopBar() {
   const { view, navigate, back } = useAssetNavigation();
   const { assetData, isSharePending } = useAssetData();
-  const title = getBackLabel(view);
+  const stockPageOrigin = useStockPageStore((s) => s.target?.origin);
+  const title = getBackLabel(view, stockPageOrigin);
   const isSubView = view.type !== "home";
 
   // 웰컴가이드(자산 없음·공유 대기) 시 상단 상세/성과·더보기 영역 숨김

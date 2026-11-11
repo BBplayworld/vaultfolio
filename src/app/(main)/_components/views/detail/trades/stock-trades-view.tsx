@@ -24,7 +24,7 @@ import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
 import type { Stock, Transaction } from "@/types/asset";
 import type { PositionSnapshot, PositionPreview } from "@/types/transaction";
 
-const formatPrice = (value: number, currency: string) => {
+export const formatPrice = (value: number, currency: string) => {
   if (currency === "USD") return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (currency === "JPY") return `¥${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   return formatCurrency(value);
