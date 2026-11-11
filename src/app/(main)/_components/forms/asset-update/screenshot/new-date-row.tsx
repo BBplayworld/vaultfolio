@@ -4,7 +4,7 @@
 // 셸은 `새 해외 종목 매입 환율` 줄과 같다(bg-muted/40 rounded-lg px-3 py-2.5, 테두리 없음). 신규 0개면 호출부가 렌더하지 않는다.
 import { InfoHint } from "@/app/(main)/_components/layout/ui/info-hint";
 import { Input } from "@/components/ui/input";
-import { isValidNewPurchaseDate } from "@/lib/asset/resync/import-inherit";
+import { isValidNewPurchaseDate } from "@/lib/asset/import-inherit";
 
 interface NewDateRowProps {
   /** testId 접두: 맞추기 `resync`, 첫 등록 `import` */

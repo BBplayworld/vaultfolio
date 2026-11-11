@@ -4,12 +4,12 @@
 // 자산 최신화 안내(refresh-nudge.tsx)·기능 활용 팁(feature-tip-box.tsx) 4종을 이 박스 1개로 흡수(S-4.32 후속).
 // 새 공지(notice)는 #4.24에서 5번째 종류로 추가 — 필수 노출: 최초 1회는 세션 숨김 플래그를 무시하고
 // 반드시 뜨며, X로 닫으면 이번 세션만 숨겨지고(영구 dismiss 아님) 실제로 열어봐야만(activate) 영구 열람 처리된다.
-// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>결산(#4.36)>최신화>기능 순으로 1개만 고른다.
+// 판정은 home-tip.ts의 pickHomeTip이 새 공지(필수)>백업>세금>결산(#4.36)>끊긴 거래 잇기(#147)>최신화>기능 순으로 1개만 고른다.
 // 인터랙션은 6종 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -18,10 +18,13 @@ import { EXPORT_STALE_MSG } from "@/hooks/use-data-export";
 import { markNudgeShown } from "@/lib/asset/backup-status";
 import { markRefreshNudgeShown } from "@/lib/asset/asset-refresh-status";
 import { markTaxNoticeDismissed } from "@/lib/tax-utils";
-import { dismissTip } from "@/lib/feature-usage";
+import { dismissTip, isTipDismissed } from "@/lib/feature-usage";
+import { detectRelink, RELINK_OFFER_ID } from "@/lib/asset/resync";
+import { isTrialMode } from "@/lib/trial/trial-mode";
+import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { pickHomeTip, markCurrentNoticeSeen, isNoticeUnseen, type HomeTip } from "@/lib/home-tip";
 import { NOTICE_TITLE, NOTICE_SUMMARY } from "../../layout/onboarding/notice";
-import { dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
+import { dispatchOpenRelink, dispatchOpenShareCard } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { settlementName } from "../activity/change-hero";
@@ -68,7 +71,9 @@ export function HomeTipBox() {
         if (sessionStorage.getItem(SESSION_DISMISS_KEY) === "true") { setTip(null); return; }
       } catch { /* 무시 */ }
     }
-    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current });
+    // 끊긴 거래 후보(#147) — 체험·앱잠금 중이거나 '그대로 두기'를 눌렀으면 감지하지 않는다
+    const hasRelink = !isTrialMode() && !isPwaLocked() && !isTipDismissed(RELINK_OFFER_ID) && detectRelink(assetData).length > 0;
+    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink });
     keepShownRef.current = picked?.kind === "backup" || picked?.kind === "refresh" ? picked.kind : undefined;
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
@@ -130,6 +135,10 @@ export function HomeTipBox() {
     if (tip.kind === "settlement") {
       // 허브 결산 카드와 같은 진입 형태 — source만 home_tip
       navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: tip.window.month, source: "home_tip" } });
+      return;
+    }
+    if (tip.kind === "relink") {
+      dispatchOpenRelink(); // 확인 화면은 RelinkHost가 연다 — 팁은 그대로 둬 적용 후 후보가 사라지면 다음 판정에서 내려간다
       return;
     }
     if (tip.kind === "refresh") {
@@ -225,6 +234,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "결산",
       title: `${settlementName(tip.window.month, tip.today, true)}이 열렸어요`,
       description: "한 달 동안 순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
+    };
+  }
+  if (tip.kind === "relink") {
+    return {
+      Icon: Link2,
+      badgeLabel: "거래",
+      title: "맞추기 때 끊긴 거래 기록이 있어요",
+      description: "확인하고 다시 이어 보세요",
     };
   }
   if (tip.kind === "refresh") {

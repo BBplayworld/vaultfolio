@@ -25,7 +25,7 @@ import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfStock, countConflicts, type ConflictMode } from "@/lib/asset/holdings-conflict";
-import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairStockImport, planStockImport } from "@/lib/asset/resync/import-inherit";
+import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairStockImport, planStockImport } from "@/lib/asset/import-inherit";
 import { NewDateRow } from "./new-date-row";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { ScreenshotFailNotice } from "./screenshot-fail-notice";

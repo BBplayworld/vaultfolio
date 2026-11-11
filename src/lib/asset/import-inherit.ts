@@ -2,9 +2,9 @@
 // 맞추기(apply.ts)와 같은 원칙: 같은 키 기존 항목이 있으면 새 id·오늘 매수일로 다시 만들지 않고 id·매수일·매입 환율·메모를 이어받아
 // 거래 기록(stockId·cryptoId)이 끊기지 않게 한다. `holdings-conflict.ts`의 resolveKept는 현금·대출과 공용이라 건드리지 않는다(C1).
 import type { Crypto, Stock } from "@/types/asset";
-import { keyOfCrypto, keyOfStock, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
-import { sameBroker } from "./match";
-import { resyncNewPurchaseDate } from "./apply";
+import { keyOfCrypto, keyOfStock, resolveKept, type ConflictMode } from "./holdings-conflict";
+import { sameBroker } from "./resync/match";
+import { resyncNewPurchaseDate } from "./resync/apply";
 
 /** KST 오늘(YYYY-MM-DD) */
 export const kstTodayString = (now: number = Date.now()): string => new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10);

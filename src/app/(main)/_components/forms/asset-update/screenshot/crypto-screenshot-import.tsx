@@ -22,7 +22,7 @@ import { cryptoExchanges } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfCrypto, countConflicts, type ConflictMode } from "@/lib/asset/holdings-conflict";
-import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, planCryptoImport } from "@/lib/asset/resync/import-inherit";
+import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, planCryptoImport } from "@/lib/asset/import-inherit";
 import { NewDateRow } from "./new-date-row";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { ScreenshotFailNotice } from "./screenshot-fail-notice";

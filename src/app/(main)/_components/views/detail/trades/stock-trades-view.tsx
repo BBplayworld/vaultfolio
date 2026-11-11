@@ -15,6 +15,7 @@ import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
 import { rollbackTransaction } from "@/lib/trade/trade-utils";
+import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
@@ -302,6 +303,9 @@ export function StockTradesView() {
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
           </div>
         </div>
+
+        {/* 끊긴 거래 다시 잇기 안내(#147) — 후보 있을 때만 */}
+        <RelinkEntry />
 
         {/* 거래 리스트 */}
         {filtered.length === 0 ? (

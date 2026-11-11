@@ -12,7 +12,7 @@ import {
 type Rec = Record<string, unknown>;
 
 /** 적용 전(before)·후(after) 항목으로 되돌릴 목록을 만든다. 변경=modified, 추가=resurrected(되돌리면 제거), 삭제=remoteDeleted(되돌리면 복원). 코인은 coll="crypto" */
-export function buildUndoEntries<T extends { id: string }>(before: T[], after: T[], coll: "stocks" | "crypto" = "stocks"): OverwriteEntry[] {
+export function buildUndoEntries<T extends { id: string }>(before: T[], after: T[], coll: "stocks" | "crypto" | "transactions" | "cryptoTransactions" = "stocks"): OverwriteEntry[] {
   const out: OverwriteEntry[] = [];
   const beforeMap = new Map(before.map((s) => [s.id, s]));
   const afterMap = new Map(after.map((s) => [s.id, s]));

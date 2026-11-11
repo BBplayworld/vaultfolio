@@ -223,3 +223,21 @@ describe("시장과 비교 신규 팁 vs 결산 창", () => {
     expect(pick("2026-12-11")?.kind).toBe("feature");
   });
 });
+
+describe("끊긴 거래 다시 잇기 팁(#147) — 결산 창 아래, 세금·최신화·기능 위", () => {
+  const withRelink = (today?: string) => pickHomeTip({ assetData, hasAssets: true, syncArmed: false, today, hasRelink: true });
+  it("결산 창이 아니면 relink가 세금(비임박)·최신화·기능보다 먼저", () => {
+    h.tax = [tax(12, "12/31")]; h.refresh = true; h.feature = { id: "f" };
+    expect(withRelink("2026-11-12")?.kind).toBe("relink");
+    expect(pick("2026-11-12")?.kind).not.toBe("relink"); // hasRelink 없으면 기존 순서 그대로
+  });
+  it("결산 창 날짜(11/27)에는 결산 팁이 먼저 — relink가 가리지 않는다", () => {
+    expect(withRelink("2026-11-27")?.kind).toBe("settlement");
+  });
+  it("새 공지·백업·임박 세금은 relink보다 위", () => {
+    h.noticeUnseen = true;
+    expect(withRelink("2026-11-12")?.kind).toBe("notice");
+    h.noticeUnseen = false; h.backup = true;
+    expect(withRelink("2026-11-12")?.kind).toBe("backup");
+  });
+});

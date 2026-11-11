@@ -1,10 +1,10 @@
 // #146(4.77) 스크린샷 첫 등록 — 새 종목 매수일 일괄 입력 + `교체`·`초기화 후 등록` 이어받기, 맞추기 새 종목 매수일.
 import { describe, expect, it } from "vitest";
 import {
-  applyResync, defaultNewPurchaseDate, freshImportCount, inheritedPreds, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, pairStockImport,
-  planCryptoImport, planStockImport, resyncInflowDate, stocksToCrypto, cryptoToStock,
+  applyResync, inheritedPreds, resyncInflowDate, stocksToCrypto, cryptoToStock,
   parsedCryptoToRaw, matchExchangeHint, resolveScreens, computeDiff, mergeScreens,
 } from "..";
+import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, pairStockImport, planCryptoImport, planStockImport } from "@/lib/asset/import-inherit";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { resolveKept, keyOfStock } from "@/lib/asset/holdings-conflict";
 import { assetDataSchema, cryptoSchema, stockSchema } from "@/types/asset";

@@ -16,6 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NewDateRow } from "./new-date-row";
+import { defaultNewPurchaseDate, isValidNewPurchaseDate } from "@/lib/asset/import-inherit";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
@@ -28,8 +29,6 @@ import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
-  defaultNewPurchaseDate,
-  isValidNewPurchaseDate,
   buildUndoEntries,
   cryptoToStock,
   matchExchangeHint,

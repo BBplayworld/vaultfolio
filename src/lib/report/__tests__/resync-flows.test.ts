@@ -6,7 +6,8 @@ import { computeAttributionBetween } from "../asset-report";
 import { computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
 import { computeForeignRealizedGain } from "@/lib/tax-utils";
 import { rollbackTransaction } from "@/lib/trade/trade-utils";
-import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, planStockImport, resolveScreens } from "@/lib/asset/resync";
+import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, resolveScreens } from "@/lib/asset/resync";
+import { planStockImport } from "@/lib/asset/import-inherit";
 import { emptySel, row, screen, st } from "@/lib/asset/resync/__tests__/fixtures";
 import type { AssetData, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 

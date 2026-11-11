@@ -12,6 +12,7 @@ import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { rollbackTransaction, type PositionLike } from "@/lib/trade/trade-utils";
+import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { ASSET_THEME } from "@/config/theme";
@@ -156,6 +157,9 @@ export function CryptoTxView() {
         <Button variant="brand" className="w-full gap-1" onClick={() => dispatchAddCryptoTx(coin.id)}>
           <Plus className="size-4" /> 매수/매도 기록
         </Button>
+
+        {/* 끊긴 거래 다시 잇기 안내(#147) — 후보 있을 때만 */}
+        <RelinkEntry />
 
         {/* 목록 */}
         {list.length > 0 ? (

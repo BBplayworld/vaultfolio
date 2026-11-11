@@ -1,5 +1,10 @@
 export type AssetMode = "screenshot" | "manual";
 
+// 끊긴 거래 다시 잇기(#147) 확인 화면 열기 — 홈 팁·거래내역 안내 줄이 호출, RelinkHost가 수신
+export function dispatchOpenRelink() {
+  window.dispatchEvent(new CustomEvent("open-relink-dialog"));
+}
+
 export function dispatchAddRealEstate() {
   window.dispatchEvent(new CustomEvent("trigger-add-real-estate"));
 }
