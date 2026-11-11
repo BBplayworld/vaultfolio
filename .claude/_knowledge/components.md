@@ -108,6 +108,12 @@ _components/
 2. `XxxInput` (export) — 목록 렌더링 + CRUD 제어 (`hideList` prop)
 
 ### ScreenshotFailNotice (`forms/asset-update/screenshot/screenshot-fail-notice.tsx`, #4.54)
+
+### NewDateRow (`forms/asset-update/screenshot/new-date-row.tsx`, #4.77 #146)
+맞추기·첫 등록(주식·코인) 미리보기의 `새 종목/코인 매수일` 줄. props `prefix`(`resync`|`import`, testId 접두)·`kind`·`count`(실제 신규 건수)·`value`·`onChange`·`today`. 셸 `bg-muted/40 rounded-lg px-3 py-2.5`, 320 세로·sm 가로, 주식만 `InfoHint inModal`, 오류(빈 값·오늘 이후) `role="alert"`. 호출부가 신규 0개면 마운트하지 않고, 오류면 확인 버튼을 `disabled`로 둔다.
+
+### RelinkHost · RelinkDialog · RelinkEntry (`forms/asset-update/relink/`, #4.77 #147)
+`RelinkHost`((main) layout 1회)가 `open-relink-dialog`(`dispatchOpenRelink`)를 받아 `RelinkDialog`(확인 화면·결과·되돌리기·그대로 두기)를 연다. `RelinkEntry`(`relink-entry`)는 주식 거래내역·코인 거래 화면 목록 위 안내 줄(후보 0·체험·잠금·공유 대기 중 미렌더). 계산은 `lib/asset/resync/relink.ts`.
 - 추가 import 4종(주식·코인·현금·대출) 업로드 단계 공용 실패 박스. props `fail`(`makeScreenshotFail`)·`assetType`·`canRetry`·`onRetry`·`onClose`·`directInput?:"add"`(마법사). 테스트 id `screenshot-fail-notice/-retry/-manual`, `data-kind`. 제목 매핑은 `lib/asset/screenshot-fail.ts`. 거래 스크린샷·맞추기에는 쓰지 않는다.
 
 ### 스크린샷 다이얼로그 공통 패턴

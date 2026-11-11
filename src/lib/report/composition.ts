@@ -124,22 +124,5 @@ export function computeMonthComposition(w: SettlementWindow, liveBreakdown?: Com
   };
 }
 
-/** 구성 막대 표시용 폭(%) — 0보다 큰 항목은 최소 minPct를 보장하고 나머지를 비례 축소(합 100). 0 이하는 0. 숫자(%) 표기는 실제 값 그대로 쓴다 */
-export function displayBarWidths(ratios: number[], minPct = 7): number[] {
-  const pos = ratios.map((r) => (r > 0 ? r : 0));
-  const idx = pos.map((r, i) => (r > 0 ? i : -1)).filter((i) => i >= 0);
-  const out = pos.map(() => 0);
-  if (idx.length === 0) return out;
-  if (idx.length * minPct >= 100) { idx.forEach((i) => { out[i] = 100 / idx.length; }); return out; }
-  const pinned = new Set<number>();
-  for (let guard = 0; guard <= idx.length; guard++) {
-    const free = idx.filter((i) => !pinned.has(i));
-    const room = 100 - pinned.size * minPct;
-    const sum = free.reduce((s, i) => s + pos[i], 0);
-    const next = free.filter((i) => (pos[i] / sum) * room < minPct);
-    if (next.length === 0) { free.forEach((i) => { out[i] = (pos[i] / sum) * room; }); break; }
-    next.forEach((i) => pinned.add(i));
-  }
-  pinned.forEach((i) => { out[i] = minPct; });
-  return out;
-}
+// 표시 폭 최소 비중 보장은 공용 유틸(min-share.ts)로 이동 — 기존 import 경로 호환용 재노출
+export { displayBarWidths } from "./min-share";

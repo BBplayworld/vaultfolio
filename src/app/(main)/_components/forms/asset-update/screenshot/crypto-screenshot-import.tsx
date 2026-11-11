@@ -21,7 +21,9 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { cryptoExchanges } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
-import { keyOfCrypto, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { keyOfCrypto, countConflicts, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, planCryptoImport } from "@/lib/asset/import-inherit";
+import { NewDateRow } from "./new-date-row";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { ScreenshotFailNotice } from "./screenshot-fail-notice";
 import { emptyFailTitle, mapParseErrorTitle, makeScreenshotFail, SCREENSHOT_FAIL_NETWORK, type ScreenshotFail } from "@/lib/asset/screenshot-fail";
@@ -69,6 +71,8 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
   const [isRegistering, setIsRegistering] = useState(false);
   const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
   const [conflictCount, setConflictCount] = useState(0);
+  // 새 코인 매수일 일괄 입력(#146) — 기본 올해 1월 1일
+  const [newDate, setNewDate] = useState(() => defaultNewPurchaseDate());
   const [applyMode, setApplyMode] = useState<"common" | "individual">("common");
   const [commonExchange, setCommonExchange] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +85,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
     setIsParsing(false);
     setConflictMode("merge");
     setConflictCount(0);
+    setNewDate(defaultNewPurchaseDate());
     setApplyMode("common");
     setCommonExchange("");
   };
@@ -194,18 +199,18 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
       return;
     }
 
+    const today = kstTodayString();
+    if (freshCount > 0 && !isValidNewPurchaseDate(newDate, today)) return;
+
     setIsRegistering(true);
 
-    const importedKeys = new Set(selected.map(keyOfCrypto));
-    const kept: Crypto[] = resolveKept(assetData.crypto, importedKeys, conflictMode, keyOfCrypto);
-
-    const newCryptos: Crypto[] = [
-      ...kept,
-      ...selected.map(({ selected: _, averagePriceMissing: __, currency: ___, ...c }, idx) => ({
-        ...c,
-        id: `crypto_import_${Date.now()}_${idx}`,
-      })),
-    ];
+    const now = Date.now();
+    const incoming: Crypto[] = selected.map(({ selected: _, averagePriceMissing: __, currency: ___, ...c }, idx) => ({
+      ...c,
+      id: `crypto_import_${now}_${idx}`,
+    }));
+    // 짝지어진 기존 코인은 id·매수일·메모를 이어받고(거래 연결 유지), 정말 새 코인만 입력한 매수일(#146)
+    const newCryptos = planCryptoImport(assetData.crypto, incoming, conflictMode, newDate, today).items;
 
     const newData: AssetData = { ...assetData, crypto: newCryptos };
     const success = saveData(newData);
@@ -224,6 +229,11 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
   };
 
   const selectedCount = cryptos.filter((c) => c.selected).length;
+  // 실제 신규 건수 = 선택 행 − 기존 코인을 이어받는 행(충돌 단계 `교체`·저장과 같은 짝짓기)
+  const selectedRows = cryptos.filter((c) => c.selected) as unknown as Crypto[];
+  const freshCount = freshImportCount(selectedRows, pairCryptoImport(assetData.crypto, selectedRows));
+  const newDateToday = kstTodayString();
+  const newDateInvalid = freshCount > 0 && !isValidNewPurchaseDate(newDate, newDateToday);
   const allSelected = cryptos.length > 0 && cryptos.every((c) => c.selected);
   const remaining = geminiUsage.remaining();
 
@@ -425,6 +435,8 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
               )}
             </div>
 
+            {freshCount > 0 && <NewDateRow prefix="import" kind="crypto" count={freshCount} value={newDate} onChange={setNewDate} today={newDateToday} />}
+
             <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
               {cryptos.map((item) => (
                 <div
@@ -485,7 +497,7 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           {step === "conflict" && <Button onClick={() => setStep("preview")}>다음</Button>}
           {step === "preview" && (
-            <Button variant="brand" onClick={handleRegister} disabled={isRegistering || selectedCount === 0}>
+            <Button variant="brand" onClick={handleRegister} disabled={isRegistering || selectedCount === 0 || newDateInvalid}>
               {isRegistering ? <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</> : `${selectedCount}개 코인 등록`}
             </Button>
           )}

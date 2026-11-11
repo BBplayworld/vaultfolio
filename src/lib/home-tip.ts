@@ -19,6 +19,7 @@ export type HomeTip =
   | { kind: "backup"; days: number | null }
   | { kind: "tax"; matches: TaxEventMatch[] }
   | { kind: "settlement"; window: SettlementWindow; today: string } // today = 판정에 쓴 KST 날짜(문구 N월 계산도 같은 값)
+  | { kind: "relink" } // 끊긴 거래 다시 잇기(#147)
   | { kind: "refresh"; staleCategories: RefreshCategory[] }
   | { kind: "notice" }
   | { kind: "feature"; feature: AppFeature };
@@ -52,12 +53,14 @@ export interface HomeTipInputs {
   today?: string; // KST YYYY-MM-DD — 테스트 고정용, 기본값 todayKst()
   /** 이번 홈 마운트에서 이미 승자였던 backup·refresh 팁 — 그 종류의 '오늘 노출' 검사만 건너뛰어 effect 재실행에도 유지(#115) */
   keepShown?: "backup" | "refresh";
+  /** 끊긴 거래 다시 잇기 후보가 있고 '그대로 두기'를 안 눌렀으며 체험·잠금이 아님(#147) — 호출부가 판정해 넘긴다 */
+  hasRelink?: boolean;
 }
 
 // 새 공지(신규 버전 업데이트 안내)는 필수 노출 — 다른 어떤 안내보다 먼저 반드시 한 번은 뜬다.
-// 그 다음(#4.36 cto 판정): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 그 외 세금 > 자산 최신화 > 신규 기능 > 저방문 기능
+// 그 다음(#4.36 cto 판정): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 신규 기능 > 저방문 기능
 // 세금을 무조건 위에 두면 이번 달·다음 달 일정이 결산 창 내내 결산을 가린다 — 급한 마감만 결산보다 위
-export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown }: HomeTipInputs): HomeTip | null {
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink }: HomeTipInputs): HomeTip | null {
   if (isNoticeUnseen()) {
     return { kind: "notice" };
   }
@@ -74,6 +77,9 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
     const win = pickSettlementCard(readMonthlySnapshots(), today);
     if (win) return { kind: "settlement", window: win, today };
   }
+
+  // 끊긴 거래 다시 잇기(#147 cto 판정): 결산 창 아래 — 결산 팁을 가리지 않는다
+  if (hasRelink) return { kind: "relink" };
 
   if (taxMatches.length > 0) return { kind: "tax", matches: taxMatches };
 

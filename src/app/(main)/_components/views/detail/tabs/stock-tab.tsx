@@ -38,6 +38,7 @@ import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { useTradeViewStore } from "@/stores/trade-view-store";
 import { MarketEntryLine } from "../../activity/market-entry-line";
+import { displayShareWidths } from "@/lib/report/min-share";
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -96,10 +97,10 @@ export function StockBarChart({ items, total }: {
   return (
     <div className="space-y-2">
       <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-        {items.map(({ stock, value: v, color }) => {
+        {items.map(({ stock, value: v, color }, idx) => {
           const pct = (v / total) * 100;
           return (
-            <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
+            <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total: total })[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
               {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
@@ -970,17 +971,19 @@ export function StockCategorySection({
         const restValue = barRest.reduce((s, b) => s + b.value, 0);
         const restPct = (restValue / totalValue) * 100;
         const ETC_COLOR = "#9ca3af";
+        // 표시 폭만 최소 비중 보장(그 외 구간 포함 5개 이하일 때, 숫자는 실제 값 — #148)
+        const barWidths = displayShareWidths([...barShown.map((b) => b.value), ...(barRest.length > 0 && restPct > 0 ? [restValue] : [])], { total: totalValue });
         return (
           <div className="space-y-2">
             <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-              {barShown.map(({ stock, value: v, color }) => {
+              {barShown.map(({ stock, value: v, color }, idx) => {
                 const pct = (v / totalValue) * 100;
                 return (
-                  <div key={stock.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`} />
+                  <div key={stock.id} className="overflow-hidden transition-all" style={{ width: `${barWidths[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`} />
                 );
               })}
               {barRest.length > 0 && restPct > 0 && (
-                <div className="overflow-hidden transition-all" style={{ width: `${restPct}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
+                <div className="overflow-hidden transition-all" style={{ width: `${barWidths[barShown.length]}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
               )}
             </div>
             <div className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2"}>

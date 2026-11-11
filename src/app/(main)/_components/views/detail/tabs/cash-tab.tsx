@@ -18,6 +18,7 @@ import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { computeFxExposure } from "@/lib/report/asset-report";
 import { Cash, Loan } from "@/types/asset";
+import { displayShareWidths } from "@/lib/report/min-share";
 
 const CASH_CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -248,7 +249,7 @@ export function CashTab() {
                   const pct = (v / totalValue) * 100;
                   const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
                   return (
-                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${pct}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
+                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(allSorted.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
                   );
                 })}
               </div>
