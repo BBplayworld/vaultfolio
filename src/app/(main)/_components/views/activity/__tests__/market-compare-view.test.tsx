@@ -162,6 +162,18 @@ describe("CompareNotice·MarketList", () => {
     expect(t).toMatch(/비교하지 않은 종목 TIGER 미국S&amp;P500 \+1\.0%/);
   });
 
+  it("종목 줄 탭 진입(#157): stockLink가 있으면 매칭 종목 줄만 버튼(≥44px), 지수 줄·비매칭 줄은 그대로, 표시 값은 같다", () => {
+    const plain = renderToStaticMarkup(<MarketList blocks={blocks} classified={classified} period="weekly" stockRefs={REFS} />);
+    const linked = renderToStaticMarkup(
+      <MarketList blocks={blocks} classified={classified} period="weekly" stockRefs={REFS} stockLink={{ has: (t) => t === "005930", open: () => {} }} />,
+    );
+    expect((linked.match(/<button/g) ?? []).length).toBe(1);
+    expect(linked).toContain("min-h-11");
+    expect(text(linked)).toBe(text(plain));
+    expect(linked.match(/data-testid="market-list-index"/g)).toHaveLength(2);
+    expect(plain).not.toContain("<button");
+  });
+
   it("올해 목록: 묶음 머리 구간 `25.12.30→26.11.9`(공백 없음), 올해 시장 줄 포함", () => {
     const t = text(renderToStaticMarkup(<MarketList blocks={blocks} classified={classified} period="ytd" stockRefs={REFS} />));
     expect(t).toContain("국내 25.12.30→26.11.9");

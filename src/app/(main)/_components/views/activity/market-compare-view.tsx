@@ -9,6 +9,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
+import { groupStocksByRowTicker } from "@/lib/finance/stock-page";
+import { useStockPageStore } from "@/stores/stock-page-store";
 import { fetchProfitRef, type ProfitBasis } from "@/lib/finance/profit-utils";
 import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import {
@@ -152,6 +154,27 @@ export function MarketCompareView() {
   const summary = useMemo(() => (classified ? summarizeCompare(classified, blocks) : null), [classified, blocks]);
 
   const [listPeriod, setListPeriod] = useState<ComparePeriod>("weekly");
+  // 종목 줄 탭 → 종목 한 장(전체 탭 그룹 `t:ticker`과 같은 구성, 원화). 뒤로 = 이 화면
+  const setStockPageTarget = useStockPageStore((s) => s.setTarget);
+  const stockLink = useMemo(
+    () => ({
+      has: (ticker: string) => groupStocksByRowTicker(assetData.stocks, ticker).length > 0,
+      open: (ticker: string) => {
+        const group = groupStocksByRowTicker(assetData.stocks, ticker);
+        if (group.length === 0) return;
+        setStockPageTarget({
+          groupStockIds: group.map((s) => s.id),
+          name: group[0].name,
+          ticker: group[0].ticker || "",
+          category: group[0].category,
+          displayCurrency: "KRW",
+          origin: "market-compare",
+        });
+        navigate({ type: "detail", tab: "stocks-item" });
+      },
+    }),
+    [assetData.stocks, navigate, setStockPageTarget],
+  );
   const [basisOpen, setBasisOpen] = useState(false);
 
   const nothingToCompare = !!classified && blocks.length === 0;
@@ -206,7 +229,7 @@ export function MarketCompareView() {
             <InlineSelector fullWidth tight value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
           </div>
           <div key={listPeriod} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
-            <MarketList blocks={blocks} classified={classified} period={listPeriod} stockRefs={stockRefs} />
+            <MarketList blocks={blocks} classified={classified} period={listPeriod} stockRefs={stockRefs} stockLink={stockLink} />
           </div>
           {listPeriod !== "ytd" && (
             <button
@@ -376,11 +399,13 @@ export function CompareNotice({ summary }: { summary: CompareSummary }) {
 
 // ── 종목별 목록(시장 줄이 등락률 순서 안에) ──────────────────────
 
-export function MarketList({ blocks, classified, period, stockRefs }: {
+export function MarketList({ blocks, classified, period, stockRefs, stockLink }: {
   blocks: readonly MarketCompareBlock[];
   classified: ClassifiedHoldings;
   period: ComparePeriod;
   stockRefs: PeriodRefs;
+  // 종목 줄 탭 → 종목 한 장(#157). 없으면(테스트 등) 줄은 눌리지 않는다. has=보유 종목과 매칭되는 줄만 버튼
+  stockLink?: { has: (ticker: string) => boolean; open: (ticker: string) => void };
 }) {
   const ncRows = computeNotComparedRows(classified.notCompared, period, stockRefs);
   const loading = blocks.some((b) => b.periods[period].state === "loading") || (classified.notCompared.length > 0 && ncRows === null);
@@ -429,13 +454,31 @@ export function MarketList({ blocks, classified, period, stockRefs }: {
                 );
               }
               const prevIsStock = i > 0 && g.rows[i - 1].kind === "stock";
+              const rateEl = row.rate === null ? (
+                <span className="shrink-0 text-sm text-muted-foreground">—</span>
+              ) : (
+                <span className={`shrink-0 text-sm font-medium tabular-nums ${rateTone(row.rate)}`}>{formatCompareRate(row.rate)}</span>
+              );
+              const linkTicker = row.ticker && stockLink?.has(row.ticker) ? row.ticker : null;
               return (
-                <li key={row.ticker ?? row.name} data-testid="market-list-row" className={`flex items-center justify-between gap-3 py-2.5 ${prevIsStock ? `border-t ${HAIRLINE}` : ""}`}>
-                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">{row.name}</span>
-                  {row.rate === null ? (
-                    <span className="shrink-0 text-sm text-muted-foreground">—</span>
+                <li key={row.ticker ?? row.name} data-testid="market-list-row" className={`${linkTicker ? "" : "flex items-center justify-between gap-3 py-2.5"} ${prevIsStock ? `border-t ${HAIRLINE}` : ""}`}>
+                  {linkTicker ? (
+                    <button
+                      type="button"
+                      onClick={() => stockLink!.open(linkTicker)}
+                      className="flex min-h-11 w-full items-center justify-between gap-3 py-2.5 text-left active:bg-muted/40 transition-[background-color]"
+                    >
+                      <span className="min-w-0 truncate text-sm font-semibold text-foreground">{row.name}</span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        {rateEl}
+                        <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+                      </span>
+                    </button>
                   ) : (
-                    <span className={`shrink-0 text-sm font-medium tabular-nums ${rateTone(row.rate)}`}>{formatCompareRate(row.rate)}</span>
+                    <>
+                      <span className="min-w-0 truncate text-sm font-semibold text-foreground">{row.name}</span>
+                      {rateEl}
+                    </>
                   )}
                 </li>
               );

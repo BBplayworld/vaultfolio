@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-11 (v4.81)
+
+### 종목 한 장 (#4.81, 이슈 #157)
+- **새 화면 `#detail/stocks-item`(GA `상세·주식·종목`)**: 한 종목의 가격 흐름(1년 일봉·5년 주봉, 수정주가) + 합산 평단선 + 매수 점(거래 기록 `type==="buy"`만, y=그날 봉 종가). 진입 2곳: 상세·주식 펼침 `종목 보기 ›`(`stock-page-entry`, 누른 행 그룹·원/달러 토글 그대로), 성과 › 시장 비교 종목 줄 탭(전체 그룹, 원화). 거래내역 뒤로 = 종목 한 장, 종목 한 장 뒤로 = 진입 화면.
+- **새 서버 조회 `GET /api/finance/price-history?ticker&range=1y|5y`**: 요청값 `ticker`·`range`뿐, 응답은 공개 시세. KIS 100행 순차 페이징(회차 상한 4), CDN 6시간 캐시만(Redis 0). 저장 스키마·키·동기화·공유·인증카드 변경 0.
+- **머리 값 = 행 값**(`buildStockGroupHead`: `mergeStockGroup`+`computeStockMetrics`, 같은 formatter). 차트 머리 라벨은 `N년 주가 등락`(내 수익과 구분).
+- 테스트: `price-history.test.ts`·`price-history/__tests__/route.test.ts`·`stock-page.test.ts`·`stock-page-nav.test.ts`·`stock-page-view.test.tsx`(C76 6구간)·`use-price-history.test.ts`.
+
+---
+
 ## 2026-11-11 (v4.80)
 
 ### 인증카드 금액 숨김 시 수량도 가림 (#4.80, 이슈 #155)

@@ -180,7 +180,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 // KIS 응답 정상 여부 판정 (rt_cd "0", msg1 "SUCC"/"정상처리…")
 // 비정상이면 console.error 출력하고 false 반환
-function isKisResponseOk(
+export function isKisResponseOk(
   data: { rt_cd?: string; msg_cd?: string; msg1?: string } | null | undefined,
   context: string,
   type: string = "-"

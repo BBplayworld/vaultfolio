@@ -5,6 +5,7 @@ import { Dashboard } from "../../views/home/dashboard";
 import { StockTab } from "../../views/detail/tabs/stock-tab";
 import { StockXrayView } from "../../views/detail/xray/stock-xray-view";
 import { StockTradesView } from "../../views/detail/trades/stock-trades-view";
+import { StockPageView } from "../../views/detail/stock-page/stock-page-view";
 import { RealEstateTab } from "../../views/detail/tabs/real-estate-tab";
 import { PhysicalTab } from "../../views/detail/tabs/physical-tab";
 import { CryptoTab } from "../../views/detail/tabs/crypto-tab";
@@ -48,6 +49,7 @@ function DetailView({ tab }: { tab: DetailTab }) {
       {tab === "stocks"      && <StockTab />}
       {tab === "stocks-xray" && <StockXrayView />}
       {tab === "stocks-trades" && <StockTradesView />}
+      {tab === "stocks-item" && <StockPageView />}
       {tab === "real-estate" && <RealEstateTab />}
       {tab === "physical"    && <PhysicalTab />}
       {tab === "crypto"      && <CryptoTab />}

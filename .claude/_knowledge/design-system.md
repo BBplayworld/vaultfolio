@@ -316,7 +316,7 @@ function Hint({ children }: { children: ReactNode }) {
 - 더보기·설정 메뉴: 섹션 제목 `text-muted-foreground`(라이트·다크 같은 위계, 인디고 금지), 행 아이콘 단색 muted(삭제 행만 rose), 최대 폭 `max-w-2xl` 좌정렬, 상태는 ON/OFF 배지(`menuBadge`) — 다크 ON 배지 전용 `dark:bg-brand/15 dark:text-indigo-300`(대비 8.44:1(실측), 팔레트 직접 사용이라 다른 곳에 재사용하려면 토큰화). 한 줄 안내가 길면 단위 구간을 `whitespace-nowrap`으로 묶는다.
 - 차트 조각 라벨 글자색은 조각색 대비 4.5:1 이상인 흰/검정(`pickDonutLabelColor`), 투명 카드 위 조각 경계는 `--card`가 아니라 `--background`. 조각 안에 들어가지 않는 라벨은 숨기고 범례로 대체한다(`DONUT_LABEL_MIN_PCT`).
 - 구성 비교 막대(#4.51): 자산군 고정 색(부동산 `MAIN_PALETTE[0]`·주식 `[4]`·암호화폐 `[3]`·현금성 `[5]`, 실물 `[8]`은 4.49), 선형 폭·막대 안 11%↑만 %, 구분선은 `shadow-[-2px_0_0_0_var(--card)]`로 폭 소비 없음. 증감은 손익색 대신 전경색+부호(+, U+2212). 신규 토큰 0.
-
+- **차트 기준선 라벨 칩 · 차트 매수 점(#4.81 종목 한 장)**: 평단 같은 '내 기준값' 선은 중립 점선(`text-foreground/70`, `4 3`, 1.25px — 범위 밖 고정이면 `/40`)에 card 면 칩(`fill var(--card)` 85%·rx 6·높이 20·11px `tabular-nums`)로 `내 평단 {가격}`(`↑`/`↓`)을 적는다. 주황(순자산 전용)·brand(액션)·손익색 금지. 매수 점 = 빨강(`fill-rose-500`) r4 + card 고리 2px, 선택 = brand 고리(r9)·점 r6, 히트 반경 10~20(이웃 거리 반분). 진입 텍스트 링크 색 = 흰 카드 위 라이트 `text-brand`·다크 `dark:text-indigo-300`(링크 한정). **톤차 회색 펼침 면(#e6e7e8) 위 라이트는 `text-indigo-600`**(brand는 3.79:1로 4.5 미달, 실측). 차트 평단 칩은 면 없이 글자 외곽선(`paint-order: stroke`, card색 3px)만 쓰고 가격선과 덜 겹치는 4후보 위치를 고른다. 선 색 = 구간 등락 부호(`getProfitLossColor`), '내 수익'(매입 대비)과 독립이라 라벨은 `N년 주가 등락`.
 
 ## 14. 브랜드 로고 (#4.66 logo-spec·대표 R6·R8)
 - **구성**: 심볼 `BrandSymbol`(Leckerli One "S" 글리프 아웃라인 — 파비콘·앱 아이콘과 같은 서체, R8) + 워드마크 `BrandWordmark`(Pretendard Variable wght 750 아웃라인, 자간 +110/2048em + 쌍별 커닝) = 가로 락업 `BrandLockup`. 앱 안 홈 상단 왼쪽 전용(PWA = 락업, 브라우저 = 심볼만 32px 박스).

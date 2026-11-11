@@ -911,3 +911,17 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 
 ### profitTone (#4.62) — 상세 화면 손익 0 표기 단일 출처
 `profitTone(value, rate = value, digits = 0)` → `{ isZero, sign, colorClass, amount, rate }` (`views/detail/detail-summary-header.tsx`). `Math.round(value*10^digits) === 0`이면 부호 없음·`text-muted-foreground`·amount/rate 0(-0 방지), 아니면 `getProfitLossColor` + `+`. `ProfitMetric`·상세 탭 카드 행/펼침(코인·주식·부동산·실물)·허브 행이 사용. digits=1은 부동산 실투자금 수익률처럼 수익률 값 자체로 판정할 때. 공용 `theme.ts`·결산·Hero·성적표는 사용하지 않는다(환차손익·등락 칩도 범위 밖).
+
+### 종목 한 장 (`src/lib/finance/stock-page.ts` · `price-history.ts` · `stores/stock-page-store.ts` · `hooks/use-price-history.ts`, #4.81 #157)
+```typescript
+// stock-page.ts — 순수 함수, 저장 0·서버 전송 0
+buildStockGroupHead(items, rates, displayCurrency) → { merged, currentVal, profit, profitRate, quantity, averagePrice, valueText, profitText, rateText, colorClass }   // 상세·주식 행과 같은 mergeStockGroup+computeStockMetrics+formatByDisplayCurrency+profitTone (C65)
+hasPriceFlow(stock) · groupStocksByRowTicker(stocks, ticker)   // 비상장·티커 없음·상장폐지 = 서버 요청 0 / 시장 비교 줄 → 전체 그룹
+pickBuyTransactions(transactions, groupStockIds) → BuyTx[]     // type==="buy"만(purchaseDate로 점 금지, C74)
+placeBuyDots(points, buys, windowStart) → { dots: BuyDot[], outsideCount }   // 매수일 이상 첫 봉(마지막 봉 뒤는 마지막 봉), y=봉 종가, 창 시작 전은 건수만
+computeYDomain(min, max, avg) → { domain, clamped: none|up|down }   // 8% 여백, 평단이 범위 ±40% 안이면 도메인 확장, 밖이면 가장자리 고정
+computePriceChange(points) → % | null
+// price-history.ts(서버) — fetchPriceHistory·collectPages·buildPricePoints·rangeStart·computeListedFrom, PAGE_SIZE 100·MAX_PAGES 4
+// stores/stock-page-store.ts — useStockPageStore { target: {groupStockIds,name,ticker,category,displayCurrency,origin:"stocks"|"market-compare"}, tradesFromStockPage }  (메모리만)
+// hooks/use-price-history.ts — usePriceHistory(ticker, range, enabled) · requestPriceHistory · buildPriceHistoryUrl  (queryKey ["price-history", ticker, range], 요청 키 {ticker, range})
+```

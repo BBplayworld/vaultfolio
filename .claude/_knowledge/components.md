@@ -72,7 +72,11 @@ _components/
   - 손익 색상은 전역 규칙(`getProfitLossColor`, 이익=빨강/손실=파랑) 그대로 재사용. 순수 조회 UI(`assetData` 변경 없음)
   - **"한도까지"는 종목별로 매 렌더 재계산**(2026-08-28): `lib/tax-utils.ts`의 `computeRebuyQuantity(gainPerShareKrw, quantity, baseGainKrw)` 재사용 — 각 행마다 "자기 자신을 제외한 현재 선택 전체 손익 + baseline"을 `baseGainKrw`로 넘긴다. 손실 종목을 먼저 선택한 뒤 이익 종목의 한도가 그만큼 늘어야 하는데(손익통산) 정적 `candidates[].rebuyQuantity`(선택 0개 기준 초기값)만 쓰던 버그를 수정.
 
+### StockPageView · PriceChart (`views/detail/stock-page/stock-page-view.tsx`·`price-chart.tsx`, #4.81 #157)
+종목 한 장(`#detail/stocks-item`). 머리 카드 `stock-page-head`(이름·(티커·시장)·분류 배지·평가 text-2xl·`내 수익` 금액(%)·총 N주, `buildStockGroupHead`) + 가격 흐름 카드 `stock-page-chart-card`(`N년 주가 등락`+`stock-page-change`, `InlineSelector` 1년|5년 `stock-page-range`, 차트 박스 `stock-page-chart[data-state=loading|ready|error|empty]` 고정 높이 h-48/52/64, 상태 줄 슬롯: 선택 점 `stock-page-buy-detail` > `stock-page-no-trades` > `stock-page-outside`, 정의 줄 `stock-page-basis`, 링크 `stock-page-trades-link`). `StockPageBody`는 테스트용 export. 대상은 `useStockPageStore`(메모리, 해시에 종목명 없음), 비면 상세·주식으로 `replaceState` 이동. `PriceChart`는 recharts 없이 SVG 1장(면적선·평단선 라벨 칩 `stock-page-avg-line[data-clamped]`·매수 점 `stock-page-buy-dot` 히트 반경 10~20 이웃 거리 반분·빈 곳 탭 해제·드래그 읽기). 진입 링크: `stock-tab.tsx` 펼침 머리 `stock-page-entry`(`종목 보기 ›`, 분할·비분할 같은 자리), `MarketList`의 `stockLink` prop(종목 줄만 버튼·`ChevronRight`). `stock-trades-view.tsx`의 `formatPrice`를 export해 재사용.
+
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)
+- (#4.81) `DetailTab`에 `stocks-item`. 순수 함수 `guardStockPageView`(store 비면 stocks)·`tradesBackAction`·`stockPageBackAction`, `getBackLabel(view, stockPageOrigin?)`(시장 비교 진입 `뒤로`).
 
 - `AssetView = home | detail/{tab} | activity/{tab, init?}` 상태 + hash 동기화 + popstate 리스너. `ActivityTab = hub|change|dividend|report`, `ChangeInit {scope?, period?, month?, source?}`는 해시에 싣지 않는 자산 변화 초기 탭 지정(옛 `#activity/netasset`·`profit` 리다이렉트·결산 카드·FAB·성적표 링크, #4.34)
 - `navigate(view)`: pushState + scrollTo(0,0)
