@@ -16,6 +16,7 @@ export function InlineSelector<T extends string>({
   disabledValues,
   disabledTitle,
   fullWidth = false,
+  tight = false,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -27,8 +28,10 @@ export function InlineSelector<T extends string>({
   disabledTitle?: string;
   // 같은 폭 칸 + 미끄러지는 썸 + 화살표 키 이동(#32 r2). 기본 경로(false)는 변경 없음
   fullWidth?: boolean;
+  // fullWidth 칸 좌우 padding 8→4px — 4칸 좁은 폭에서 `1개월`이 잘리지 않게(#4.78). 기본 false = 기존 그대로
+  tight?: boolean;
 }) {
-  if (fullWidth) return <FullWidthSelector value={value} onChange={onChange} options={options} className={className} ariaLabel={ariaLabel} disabledValues={disabledValues} disabledTitle={disabledTitle} />;
+  if (fullWidth) return <FullWidthSelector value={value} onChange={onChange} options={options} className={className} ariaLabel={ariaLabel} disabledValues={disabledValues} disabledTitle={disabledTitle} tight={tight} />;
   const base =
     size === "sm" ? "text-[12px] sm:text-[13px] lg:text-sm px-1.5 py-1"
       // xl은 현재 top-bar.tsx 홈 화면 좌측(로고 옆 상세/성과)에서만 쓴다 — 로고와 박스 사이
@@ -87,7 +90,7 @@ export function thumbStyle(index: number, count: number): { width: string; trans
   return { width: `calc((100% - 0.25rem) / ${count})`, transform: `translateX(${index * 100}%)` };
 }
 
-function FullWidthSelector<T extends string>({ value, onChange, options, className, ariaLabel, disabledValues, disabledTitle }: {
+function FullWidthSelector<T extends string>({ value, onChange, options, className, ariaLabel, disabledValues, disabledTitle, tight }: {
   value: T;
   onChange: (v: T) => void;
   options: readonly Option<T>[];
@@ -95,6 +98,7 @@ function FullWidthSelector<T extends string>({ value, onChange, options, classNa
   ariaLabel?: string;
   disabledValues?: readonly T[];
   disabledTitle?: string;
+  tight?: boolean;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const disabled = options.map((o) => disabledValues?.includes(o.value) ?? false);
@@ -140,7 +144,7 @@ function FullWidthSelector<T extends string>({ value, onChange, options, classNa
             data-tutorial={o.dataTutorial}
             data-testid={o.testId}
             onClick={() => onChange(o.value)}
-            className={`relative min-h-10 min-w-0 truncate rounded-md px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[color,transform] motion-safe:duration-150 motion-safe:active:scale-[0.96] ${disabled[i]
+            className={`relative min-h-10 min-w-0 truncate rounded-md ${tight ? "px-1" : "px-2"} text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[color,transform] motion-safe:duration-150 motion-safe:active:scale-[0.96] ${disabled[i]
               ? "text-muted-foreground/40 cursor-not-allowed"
               : active
                 ? "text-foreground font-semibold"

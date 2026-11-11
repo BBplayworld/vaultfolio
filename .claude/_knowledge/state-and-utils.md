@@ -672,7 +672,7 @@ computeDailyStockProfit(stocks, refData, currentRates, options?: { useLivePrice?
   // 기본(useLivePrice 미지정=false): 종가 vs 종가(refPrice vs prevPrice) — profit-chart.tsx·performance-hub.tsx가 쓰는 기존 동작 그대로
   // useLivePrice:true(2026-08-27): #4.73부터 호출처 없음(상세·주식 칩은 today-chip.ts로 대체). 테스트만 유지
 
-type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly"
+type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly" | "ytd"   // ytd(#4.78) = 시장과 비교 전용. profit-chart는 Exclude<…,"ytd">로 좁혀 기간 선택에 안 나옴
 type ProfitBasis = "sameBusinessDay" | "kstAccessDay"   // 기본 sameBusinessDay
 
 getProfitBasis() / setProfitBasis(b)   // localStorage(STORAGE_KEYS.profitBasis) 읽기/쓰기
@@ -820,13 +820,14 @@ computeMarketCompare(classified, stockRefs, indexRefs) → MarketCompareBlock[] 
 computeIndexSpan(market, period, indexRefs)   // 지수 등락 — 페이지 표·진입 글줄 공용(A11)
 computeNotComparedRows · compareTickers
 summarizeCompare(classified, blocks) → { blockCounts, notCompared, excluded } | null   // 블록 N = 세 기간 중 하나 이상 합산, 제외 = 한 기간이라도 빠진 고유 종목 + 비상장(이름 1), 일부 기간만이면 `1개월 기준가 없음`, 조회 중이면 null
-refRangeParts(start, end) → ["M/D→", "M/D"] · cellRange(cell)   // 열 머리·묶음 머리 같은 표기, 휴장 `휴장`
+refRangeParts(start, end, withYear?) → ["M/D→", "M/D"] (올해 ["YY.M.D→","YY.M.D"]) · cellRange(cell, period?)   // 행 머리·묶음 머리 같은 표기, 휴장 `휴장`, 올해 연초 휴장 `pending`(끝 종가일이 시작과 같은 해) → `집계 전`
 rateTenths · formatCompareRate(+1.2%, 0.0은 부호 없음) · formatCompareDiff(+0.8%p, 차이 = 보이는 두 값의 차)
 COMPARE_PERIOD_LABEL · MARKET_INDEX_NAME(`코스피`/`S&P 500`)
 
 // hooks/use-market-compare.ts — 페이지·글줄 공용(같은 queryKey ["market-index", period, basis, dailyToken])
 useCompareBasis() · useDailyRefToken() · useKospiPeerCodes() · useMarketIndexRefs(basis, enabled, token, periods?) · fetchMarketIndex
 ```
+- **올해(ytd, #4.78)**: `ComparePeriod`·`COMPARE_PERIODS`에 `ytd` 4번째. 시작 종가 = 명목일 (Y−1)-12-31 이하 최근 종가(`getPeriodRefDates("ytd")`, 컷오프 shift 없음), 끝 = 일별 ref. 클라이언트 캐시 토큰 = 날짜(기본값, ytd 분기 없음), `prunePeriodProfitCache` PERIODS에 포함. 서버 기준가 TTL = 다음 자정(`secondsUntilNextRefBoundary("ytd")` 공개), 미국 ytd만 `fetchOverseasHistoricalPrice(…, adjusted=true)`(MODP=1) + `getRefPrice/setRefPrice(…, adj)` 키 `finance:refprice:adj:*`. PeriodCell state `pending` 추가.
 - 종목 기준가는 기존 `fetchProfitRef`(profit-chart와 같은 티커 목록·사용자 종가 기준 → 자산 변화와 같은 캐시 키). 키 없음 = 조회 중(부분 합 금지), `null` = 기준가 없음. 키가 빠지면 60초 뒤 최대 2회 재조회.
 
 ### profit-fetch-gate.ts (`src/lib/finance/profit-fetch-gate.ts`, #4.73 #137·#138)

@@ -59,8 +59,9 @@ export interface ICacheStorage {
   setDividend(cacheKey: string, data: DividendPayoutResult[], ttlSec?: number): Promise<void>;
   // 과거 기준일 종가 캐시 (수익률 계산용, period별 차등 TTL)
   // dateStr은 KIS 응답의 실거래일(res.date) 기준
-  getRefPrice(ticker: string, dateStr: string): Promise<number | null>;
-  setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void>;
+  // adj = 수정주가(미국 ytd, MODP=1) — 미수정 종가와 키를 분리한다(#150)
+  getRefPrice(ticker: string, dateStr: string, adj?: boolean): Promise<number | null>;
+  setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod, adj?: boolean): Promise<void>;
   // 요청일 → 응답일(실거래일) 매핑. 휴장/공휴일로 요청일과 응답일이 다른 경우 영구 hit 보장
   getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null>;
   setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void>;
@@ -199,8 +200,8 @@ function secondsUntilMidnightKST(): number {
 }
 
 // period별 다음 기준일 경계까지의 초 (KST 기준)
-// daily: 다음 자정, weekly: 다음 월요일 자정, monthly: 다음 달 1일 자정, yearly: 내년 1/1 자정
-function secondsUntilNextRefBoundary(period: ProfitPeriod): number {
+// daily·ytd: 다음 자정(ytd는 분할·무상증자 뒤 stale 방지, #150), weekly: 다음 월요일 자정, monthly: 다음 달 1일 자정, yearly: 내년 1/1 자정
+export function secondsUntilNextRefBoundary(period: ProfitPeriod): number {
   const KST_OFFSET_MS = 9 * 3600 * 1000;
   const nowMs = Date.now();
   const kst = new Date(nowMs + KST_OFFSET_MS);
@@ -209,7 +210,7 @@ function secondsUntilNextRefBoundary(period: ProfitPeriod): number {
   const d = kst.getUTCDate();
 
   let boundaryUTC: number;
-  if (period === "daily") {
+  if (period === "daily" || period === "ytd") {
     boundaryUTC = Date.UTC(y, m, d + 1) - KST_OFFSET_MS;
   } else if (period === "weekly") {
     // 다음 월요일 KST 자정
@@ -555,17 +556,17 @@ export class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
-  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
-    const key = `${ticker}:${dateStr}`;
+  async getRefPrice(ticker: string, dateStr: string, adj?: boolean): Promise<number | null> {
+    const key = `${adj ? "adj:" : ""}${ticker}:${dateStr}`;
     return this.readFinanceCache().REF_PRICES?.[key] ?? null;
   }
 
-  async setRefPrice(ticker: string, dateStr: string, price: number, _period: ProfitPeriod): Promise<void> {
+  async setRefPrice(ticker: string, dateStr: string, price: number, _period: ProfitPeriod, adj?: boolean): Promise<void> {
     const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const todayStr = nowKST.toISOString().split("T")[0];
     const cache = this.readFinanceCache();
     if (!cache.REF_PRICES) cache.REF_PRICES = {};
-    cache.REF_PRICES[`${ticker}:${dateStr}`] = price;
+    cache.REF_PRICES[`${adj ? "adj:" : ""}${ticker}:${dateStr}`] = price;
     this.writeFinanceCache(cache, todayStr);
   }
 
@@ -939,12 +940,12 @@ class UpstashCacheStorage implements ICacheStorage {
     await this.redis.set(`finance:dividend:${cacheKey}`, data, { ex: ttlSec ?? DIVIDEND_TTL_SEC });
   }
 
-  async getRefPrice(ticker: string, dateStr: string): Promise<number | null> {
-    return this.redis.get<number>(`finance:refprice:${ticker}:${dateStr}`);
+  async getRefPrice(ticker: string, dateStr: string, adj?: boolean): Promise<number | null> {
+    return this.redis.get<number>(`finance:refprice:${adj ? "adj:" : ""}${ticker}:${dateStr}`);
   }
 
-  async setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod): Promise<void> {
-    await this.redis.set(`finance:refprice:${ticker}:${dateStr}`, price, {
+  async setRefPrice(ticker: string, dateStr: string, price: number, period: ProfitPeriod, adj?: boolean): Promise<void> {
+    await this.redis.set(`finance:refprice:${adj ? "adj:" : ""}${ticker}:${dateStr}`, price, {
       ex: secondsUntilNextRefBoundary(period),
     });
   }

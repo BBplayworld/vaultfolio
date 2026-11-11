@@ -30,9 +30,9 @@ const PERIODS: { value: ChangePeriod; label: string; testId: string }[] = [
   { value: "month", label: "월", testId: "change-period-month" },
   { value: "year", label: "연", testId: "change-period-year" },
 ];
-const PROFIT_PERIOD: Record<ChangePeriod, ProfitPeriod> = { day: "daily", week: "weekly", month: "monthly", year: "yearly" };
-// 시장과 비교 글줄 기간(연 탭은 접힘 — 값은 직전 기간 유지 대신 1주로 둔다)
-const COMPARE_PERIOD = { day: "daily", week: "weekly", month: "monthly", year: "weekly" } as const;
+const PROFIT_PERIOD: Record<ChangePeriod, Exclude<ProfitPeriod, "ytd">> = { day: "daily", week: "weekly", month: "monthly", year: "yearly" };
+// 시장과 비교 글줄 기간(연 탭은 값 없이 `올해 시장과 비교` 링크만 — Hero 1년 값과 기간이 달라 오독을 막는다, #150)
+const COMPARE_PERIOD = { day: "daily", week: "weekly", month: "monthly", year: "ytd" } as const;
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
 export function AssetChangeView({ init }: { init?: ChangeInit }) {
@@ -84,7 +84,6 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
             variant="hero"
             testId="change-market-entry"
             period={COMPARE_PERIOD[period]}
-            visible={period !== "year"}
             onOpen={() => {
               // 뒤로(pop) 때 범위 = 주식·지금 기간으로 다시 열리게 현재 history 항목에 싣는다(K3)
               rememberChangeInit({ scope: "stock", period });

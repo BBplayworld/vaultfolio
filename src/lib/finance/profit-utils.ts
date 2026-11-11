@@ -99,7 +99,7 @@ export function computePeriodStockProfitTotal(
   return hasAny ? profitSum : null;
 }
 
-export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly";
+export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly" | "ytd";
 
 // 기간별 수익 종가 기준 옵션
 // - sameBusinessDay(동일 영업일, 기본): 국내·해외 모두 해외(foreign) 영업일로 정렬
@@ -189,7 +189,7 @@ export function getProfitCacheToken(
     const usRef = getDailyClosingRefDates("foreign").refDate;
     return `${krRef}_${usRef}`;
   }
-  return todayStr; // weekly 등
+  return todayStr; // weekly·ytd 등(ytd는 연 토큰이 아니라 날짜 — 분할 반영이 연말까지 지연되지 않게, #150)
 }
 
 export function getProfitCacheKey(

@@ -4,8 +4,8 @@
  *
  * 캐시 키 형식: `secretasset_profit:{basis}:{period}:{token}:{tickers}`
  * - basis:  sameBusinessDay | kstAccessDay
- * - period: daily | weekly | monthly | yearly
- * - token:  기간 경계 식별자 (getProfitCacheToken). daily=`{krRef}_{usRef}`, weekly=YYYY-MM-DD, monthly=YYYY-MM, yearly=YYYY
+ * - period: daily | weekly | monthly | yearly | ytd
+ * - token:  기간 경계 식별자 (getProfitCacheToken). daily=`{krRef}_{usRef}`, weekly·ytd=YYYY-MM-DD(ytd는 분할 반영을 위해 하루 단위), monthly=YYYY-MM, yearly=YYYY
  *
  * 날짜·주·월·년이 바뀌면 token이 달라져 옛 키가 고아로 남으므로,
  * 진입 시 각 (basis, period)의 현재 유효 token만 남기고 나머지를 제거한다.
@@ -15,7 +15,7 @@ import { STORAGE_KEY_PREFIXES } from "@/lib/local-storage";
 import { getProfitCacheToken, type ProfitBasis, type ProfitPeriod } from "@/lib/finance/profit-utils";
 
 const BASES: ProfitBasis[] = ["sameBusinessDay", "kstAccessDay"];
-const PERIODS: ProfitPeriod[] = ["daily", "weekly", "monthly", "yearly"];
+const PERIODS: ProfitPeriod[] = ["daily", "weekly", "monthly", "yearly", "ytd"];
 
 // 현재 유효 토큰을 벗어난 옛 profit 캐시 키 제거. 제거한 키 개수 반환.
 export function prunePeriodProfitCache(): number {

@@ -76,7 +76,7 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&b
 
 **서버 캐시 2단:**
 1. `getRefDateForRequest(ticker, requestDate, period)` — 요청일→실거래일(KIS 응답일) 매핑
-2. `getRefPrice(ticker, actualDate)` — 실거래일 기준 가격 (period별 차등 TTL)
+2. `getRefPrice(ticker, actualDate, adj?)` — 실거래일 기준 가격 (period별 차등 TTL, ytd는 다음 자정). `adj`=미국 ytd 수정주가(MODP=1) 키 `finance:refprice:adj:*`로 분리(#4.78). `period=ytd`는 profit·market-index 모두 허용
 
 → 휴장/공휴일로 요청일과 응답일이 달라도 다음 호출부터 영구 hit.
 매핑 저장 가드: `res.date === task.date || !reqIsBusinessDay`(요청일이 비영업일=휴장/주말이면 폴백 확정값이라 저장). 요청일이 **영업일인데 응답일이 더 이른**(장중 미확정) 경우만 미저장 → stale 매핑 영구 hit 방지.
@@ -305,7 +305,7 @@ interface ICacheStorage {
   reserveGeminiDaily(todayStr, n, limit): number|null     // Lua 원자 예약(null=한도 초과)
 
   getDividend(cacheKey) / setDividend(cacheKey, data, ttlSec?)   // 키 v12(type 포함), 빈 결과 TTL 600
-  getRefPrice(ticker, actualDate) / setRefPrice(ticker, actualDate, price, period)
+  getRefPrice(ticker, actualDate, adj?) / setRefPrice(ticker, actualDate, price, period, adj?)
     // dateStr은 KIS 실거래일 (res.date) — 응답일 기준 저장
   getRefDateForRequest(ticker, requestDate, period) / setRefDateForRequest(...)
     // 요청일 → 응답일 매핑. 휴장으로 요청일≠응답일이어도 다음 호출 영구 hit

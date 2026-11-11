@@ -76,6 +76,8 @@ export function getPeriodRefDates(period: ProfitPeriod, market: RefMarket): Peri
     while (r.getUTCDay() === 0 || r.getUTCDay() === 6) r.setUTCDate(r.getUTCDate() - 1);
     return r;
   };
+  // ytd = 작년 마지막 거래일 종가 — 명목일 (Y-1)-12-31(KST 올해 Y), 컷오프 shift 없음. 휴장은 이하 최근 종가 롤백이 처리(#150)
+  if (period === "ytd") return { refDate: `${now.getUTCFullYear() - 1}-12-31` };
   if (period === "weekly") return { refDate: toDateStr(shiftForeign(subtractWeekdays(now, 5))) };
   if (period === "monthly") return { refDate: toDateStr(shiftForeign(subtractCalendarMonths(now, 1))) };
   return { refDate: toDateStr(shiftForeign(subtractCalendarYears(now, 1))) };
