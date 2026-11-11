@@ -929,3 +929,35 @@ export async function fetchOverseasIndexDailySeries(
   const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
+
+// ETF 구성종목시세 [국내주식-073] — 1회 호출(연속조회 미사용). 실패·빈 응답은 null
+export async function fetchEtfComponents(
+  etfCode: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<{ output1: unknown; output2: unknown } | null> {
+  const url = `https://openapi.koreainvestment.com:9443/uapi/etfetn/v1/quotations/inquire-component-stock-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(etfCode)}&FID_COND_SCR_DIV_CODE=11216`;
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: "FHKST121600C0",
+        "content-type": "application/json; charset=utf-8",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(`[KIS ETF구성 HTTP실패 - ${etfCode}] status=${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    if (!isKisResponseOk(data, `ETF구성종목 ${etfCode}`)) return null;
+    return { output1: data.output1, output2: data.output2 };
+  } catch (e) {
+    console.error(`[KIS ETF구성종목 오류 - ${etfCode}]:`, e);
+    return null;
+  }
+}
