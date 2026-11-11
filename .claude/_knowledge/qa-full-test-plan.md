@@ -446,6 +446,15 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **P5 설치불가 고스트(PC)**: `beforeinstallprompt` 없음 → `chrome://apps` 자동 복사 + `guideStep`(InstallGuideContent PC 문제해결)
 - 👤 **PWA 홈 락업(#4.66 logo-spec·R6·R8)** — standalone 홈 맨 위 줄 왼쪽 Leckerli One S(파비콘과 같은 모양) + "시크릿에셋": 375 S 잉크 높이 15.25±0.2·워드마크 13±0.1, S 잉크 좌측 = 카드 외곽 12 − 0.4(lg 48 − 0.46), 잉크 간격 4.76±0.2(lg S 17.6·간격 5.49), 두 잉크 중심 차 0.25(lg 0.3), 심볼·워드마크 같은 색(`--brand-logo` 다크 #F2F3F6/라이트 #111111), 320 가로 스크롤 0·인증카드와 겹침 0. 브라우저 모드는 심볼만 32px 박스
 
+### F-4.85. 첫 등록 준비·정돈 묶음 (#4.85, #166)
+- ⚙ **GA**: `onboarding_action` method별 page_title `웰컴·스크린샷 등록|직접 입력|가져오기|동기화 연결|웹에서 시작|체험`(1:1), `first_asset_saved` = `첫 자산 저장·*`(`ga.test.ts`). 전송은 page_title·page_location만(맞춤 정의 0).
+- ⚙ **튜토리얼**: 단계 1·3·4·5(2단계 '더보기' 삭제, 말풍선 `n / 4`), 저장 키 `secretasset_tutorial_status` 형식 불변(이전 값의 2단계 pending도 정상 이어짐·완료), PWA는 1단계 자동 건너뜀(`tutorial-cleanup.test.ts`).
+- ⚙ **시세 대조 부분 실패**: 429·5xx면 캐시 저장·완료 콜백 없음, 재시도 실행당 1회·Retry-After 10초 초과 시 없음, 실패 뒤 재호출은 재조회(`profit-partial-failure.test.ts`).
+- 👤 **배당 화면**(성과→배당) 320·375·1280: 막대 값 라벨이 겹치지 않고(겹치면 큰 값만), Y축 눈금이 등간격 둥근 값(`2만원·4만원`), 표 금액 `72,800원`이 한 줄(`dividend-axis.test.ts`).
+- 👤 **상세 허브**: 0건 카드 보조 줄 `추가하기`, 누르면 해당 자산군 추가 시트(주식·부동산·암호화폐·현금·대출), 보유 카드는 기존대로 탭 이동, 실물 0건 숨김(`detail-hub-empty-cards.test.tsx`).
+- 👤 **종목 한 장**: 평단 칩이 가격 칸 라벨과 6px 이상·격자선과 겹치지 않음, 라이트 로딩 문구가 배경 칩 위. 성과 허브 `자산 변화` 행이 구분선·쉐브론과 정렬. 더보기 `앱 가이드 · 새 소식` 선택창 문구가 보안 가이드 기준.
+- 동승 확인(qa 1회): 튜토리얼 말풍선 아이콘 색 대비, PC 새 소식 시트 X 히트영역 40px.
+
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
 - ⚙ **루트 첫 화면 사전 조각(#4.61)**: 로컬 운영 빌드 `curl /` 원본 HTML에 h1 1개·`나만의 비밀 자산 금고`·부제·신뢰 3항목·`first-paint-shell`, `/?trial=1`에는 부재. 키 3개(`secretasset_asset_data`·`secretasset.physical_assets`·`secretasset-asset-data`) 중 하나라도 있으면 `html[data-has-assets]` → 조각 `display:none`(보유자 노출 0프레임). 0건 기기는 조각→웰컴 전환 시 h1·신뢰 줄 위치 이동 0·`getAnimations()` 0·h1 동시 ≤1·hydration 경고 0. 인앱 0건(해시 없음)은 `inapp-gate-cover` 0. 회귀 테스트 `onboarding/__tests__/welcome-intro.test.tsx`
@@ -608,8 +617,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-INSTALL-NUDGE. 첫 저장 설치 안내 ([install-nudge.tsx](../../src/app/(main)/_components/pwa/install-nudge.tsx)) — #4.45 #78
 - ⚙ `trackAssetSave` 첫 저장 판정(create·직전 0건·플래그 없음)에서만 신호 on(gtag 없어도), 기존 보유·update·플래그 있음은 off. 새 저장 키 0
-- ⚙ `shouldShowInstallNudge` 조건 1개씩 false면 미노출(체험·인앱·데스크톱·홈 아님·튜토리얼 미종료·마법사/다이얼로그). `manifest.ts` 아이콘 3항목·lang ko·categories finance·id/start_url/scope/share_target 불변
-- 👤 375 iOS UA 새 세션에서 첫 저장→튜토리얼 종료 후 카드 1개, 추가하기→기존 PIN 다이얼로그(카드 숨김·다이얼로그 유지), 나중에→카드만 사라짐, 새로고침·재저장 시 재노출 0, 상단바 가로 클리핑·레이아웃 회귀 없음
+- ⚙ `shouldShowInstallNudge` 조건 1개씩 false면 미노출(체험·인앱·데스크톱·홈 아님·마법사/다이얼로그). **튜토리얼 종료 조건 없음**(4.85) — 튜토리얼이 남은 첫 저장 세션에도 1회 노출, 카드가 보이는 동안 튜토리얼 말풍선은 숨고 닫으면 이어짐(`install-nudge-first-save.test.ts`). `manifest.ts` 아이콘 3항목·lang ko·categories finance·id/start_url/scope/share_target 불변
+- 👤 375 iOS UA 새 세션에서 첫 저장→홈에서 카드 1개(튜토리얼 말풍선과 겹치지 않음), 추가하기→기존 PIN 다이얼로그(카드 숨김·다이얼로그 유지), 나중에→카드만 사라짐, 새로고침·재저장 시 재노출 0, 상단바 가로 클리핑·레이아웃 회귀 없음
 - 테스트: `src/lib/__tests__/install-nudge-policy.test.ts`, `manifest.test.ts`, `ga.test.ts`
 
 ### F-HOLDINGS-RESYNC. 스크린샷으로 보유 현황 맞추기 ([holdings-resync-dialog.tsx](../../src/app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx)) — #4.50 #91
