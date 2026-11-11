@@ -203,7 +203,7 @@ export function MarketCompareView() {
         <section data-testid="market-list" className={SECTION}>
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm sm:text-base font-bold text-foreground">종목별</h3>
-            <InlineSelector fullWidth value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
+            <InlineSelector fullWidth tight value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
           </div>
           <div key={listPeriod} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
             <MarketList blocks={blocks} classified={classified} period={listPeriod} stockRefs={stockRefs} />
@@ -294,13 +294,13 @@ export function MarketBlock({ market, block, count, loadingNote = true }: { mark
                 <RowRange cell={c} period={p} />
               </div>
               <ValueCell loading={loading} width="w-12">
-                {holdingsOk ? <span className={`text-base font-bold tabular-nums max-[359px]:text-sm ${rateTone(c.holdingsRate!)}`}>{formatCompareRate(c.holdingsRate!)}</span> : <Dash />}
+                {holdingsOk ? <span className={`text-base font-bold tabular-nums max-[399px]:text-sm ${rateTone(c.holdingsRate!)}`}>{formatCompareRate(c.holdingsRate!)}</span> : <Dash />}
               </ValueCell>
               <ValueCell loading={loading} width="w-10">
                 {indexOk ? <span className={`text-sm font-medium tabular-nums ${rateTone(c.indexRate!)}`}>{formatCompareRate(c.indexRate!)}</span> : <Dash />}
               </ValueCell>
               <ValueCell loading={loading} width="w-12">
-                {c && c.diffTenths !== null ? <span className="text-sm font-semibold text-foreground tabular-nums">{formatCompareDiff(c.diffTenths)}</span> : <Dash />}
+                {c && c.diffTenths !== null ? <span className="text-sm font-semibold text-foreground tabular-nums max-[399px]:text-xs">{formatCompareDiff(c.diffTenths)}</span> : <Dash />}
               </ValueCell>
             </div>
           );
