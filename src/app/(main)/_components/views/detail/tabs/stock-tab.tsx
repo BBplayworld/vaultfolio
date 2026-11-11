@@ -318,7 +318,8 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
         <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
-          <span className={`${qtyCls} text-foreground tabular-nums`}>{stock.quantity.toLocaleString()}주</span>
+          {/* 인증카드 금액 숨김(maskFn이 ••• 반환) 시 수량도 가림 — 수량×현재가로 평가금액 역산 차단(#155) */}
+          <span className={`${qtyCls} text-foreground tabular-nums`}>{screenshotMode && hideAmounts ? maskFn!(stock.quantity) : stock.quantity.toLocaleString()}주</span>
           {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
           {!screenshotMode && (
             <>
