@@ -466,7 +466,7 @@ export function ToolMenuPage() {
               앱 가이드 · 새 소식
             </DialogTitle>
             <DialogDescription className="text-left">
-              앱 사용법 가이드와 최근 새 소식을 확인합니다.
+              보안 가이드와 최근 새 소식을 확인합니다.
             </DialogDescription>
           </DialogHeader>
 
@@ -482,7 +482,7 @@ export function ToolMenuPage() {
               <Info className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">앱 가이드 보기</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">주요 기능 사용법을 단계별로 둘러봅니다.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">시크릿에셋의 보안 가이드를 살펴봅니다.</p>
               </div>
             </button>
 
