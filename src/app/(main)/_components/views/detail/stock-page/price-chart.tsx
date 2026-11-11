@@ -63,6 +63,7 @@ export function PriceChart({ points, markers, avg, currentPrice, currentText, cu
           left: M.left,
           plotW,
           maxY: h - M.bottom + 4,
+          grid: axis.ticks.map((tk) => tk.y),
           full: `내 평단 ${formatPrice(avg, currency)}${arrow}`,
           short: `평단 ${formatAxisPrice(avg, currency, axis.step || 1)}${arrow}`,
         })

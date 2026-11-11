@@ -339,33 +339,40 @@ export interface ChipPlacement {
 }
 
 export const CHIP_H = 20;
-const chipWidth = (text: string) => text.length * 6.4 + 14;
+/** 칩 폭 = 글자 폭 추정(fontSize 11: 한글 10.5·숫자 6.2·구두점 3.1·공백 3·화살표 8) + 좌우 여백 7씩. 글자 수×상수로 재면 한글이 많은 문구가 칩 밖으로 넘친다(#4.85) */
+export const chipWidth = (text: string) => {
+  let w = 0;
+  for (const ch of text) w += /[가-힣]/.test(ch) ? 10.5 : /[0-9]/.test(ch) ? 6.2 : /[,.]/.test(ch) ? 3.1 : ch === " " ? 3 : /[↑↓]/.test(ch) ? 8 : 6.5;
+  return w + 14;
+};
 const SCAN_DY = [4, 12, 20, -24, -32, -40]; // 평단선 기준 세로 오프셋 — 선에서 가까운 순(|dy| 작은 순)
 const SCAN_DX = 8;
 
 // 1순위 기존 4곳(좌·우 끝 × 선 위·아래, 앞 후보) → 2순위 평단선 가까운 세로 오프셋 스캔 → 짧은 글자로 1·2 반복 → 가격 칸(gutter).
 // 겹침 = 가격선 점이 칩 박스 ±2px 안, 매수·매도 점이 ±8px 안
-export function placeAvgChip(a: { pts: ChipPt[]; dots: ChipPt[]; avgY: number; left: number; plotW: number; maxY: number; full: string; short: string }): ChipPlacement {
+export function placeAvgChip(a: { pts: ChipPt[]; dots: ChipPt[]; avgY: number; left: number; plotW: number; maxY: number; full: string; short: string; grid?: number[] }): ChipPlacement {
   const hits = (x: number, y: number, cw: number) =>
     a.pts.some((q) => q.x >= x - 2 && q.x <= x + cw + 2 && q.y >= y - 2 && q.y <= y + CHIP_H + 2) ||
     a.dots.some((q) => q.x >= x - 8 && q.x <= x + cw + 8 && q.y >= y - 8 && q.y <= y + CHIP_H + 8);
   const inBounds = (y: number) => y >= 0 && y + CHIP_H <= a.maxY;
-  const find = (text: string): { x: number; y: number } | null => {
+  // 격자선이 칩 글자 띠를 지나면 글자가 취소선처럼 보인다 — 먼저 격자를 피하는 자리를 찾고, 없으면 격자 무시(#4.85)
+  const onGrid = (y: number) => (a.grid ?? []).some((g) => g >= y - 1 && g <= y + CHIP_H + 1);
+  const find = (text: string, avoidGrid = true): { x: number; y: number } | null => {
     const cw = chipWidth(text);
     if (cw > a.plotW) return null;
     for (const y of [a.avgY - CHIP_H - 4, a.avgY + 4]) {
-      for (const x of [a.left, a.left + a.plotW - cw]) if (inBounds(y) && !hits(x, y, cw)) return { x, y };
+      for (const x of [a.left, a.left + a.plotW - cw]) if (inBounds(y) && !(avoidGrid && onGrid(y)) && !hits(x, y, cw)) return { x, y };
     }
     for (const dy of SCAN_DY) {
       const y = a.avgY + dy;
-      if (!inBounds(y)) continue;
+      if (!inBounds(y) || (avoidGrid && onGrid(y))) continue;
       for (let x = a.left; x <= a.left + a.plotW - cw; x += SCAN_DX) if (!hits(x, y, cw)) return { x, y };
     }
     return null;
   };
-  const f = find(a.full);
+  const f = find(a.full) ?? find(a.full, false);
   if (f) return { mode: "plot", text: a.full, ...f };
-  const s = find(a.short);
+  const s = find(a.short) ?? find(a.short, false);
   if (s) return { mode: "short", text: a.short, ...s };
   return { mode: "gutter", text: "", x: a.left, y: a.avgY };
 }
