@@ -7,7 +7,7 @@
 ## 🟥 대표 결정 필요 (지금)
 1. **v4.77 반영 결정 — [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149)** (권고: 반영, risk:high)
    - #146 새 종목 매수일 일괄 입력(기본 올해 1/1·수정 가능·주식 info) · #147 맞추기로 끊긴 거래를 확인 후 다시 잇기(되돌리기) · #148 항목 5개 이하 도넛·비중 바 최소 조각
-   - qa PASS · UI 승인 · COO PASS @0c90279. 기존 거래의 종목 연결·매수일만 다시 씀(기록 수·수량·평단 불변). 롤백: 앱 되돌리기 또는 PR revert. iOS 실기기는 팀 환경에서 재현 못 함
+   - qa PASS · UI 승인 · COO PASS @69cf1b5(판별 기준: 거래 날짜 → 기록 시각, 대표 지적 반영). 기존 거래의 종목 연결·매수일만 다시 씀(기록 수·수량·평단 불변). 롤백: 앱 되돌리기 또는 PR revert. iOS 실기기는 팀 환경에서 재현 못 함
    - 확인: https://secretasset-git-issue-477-bbplayworlds-projects.vercel.app?demo=1 (홈 도넛) · 브리프 `issues/4.77-147-resync-relink/4.77-decision-brief.md`
    - 👉 PR 머지 = 반영, 닫기 = 미반영
 
