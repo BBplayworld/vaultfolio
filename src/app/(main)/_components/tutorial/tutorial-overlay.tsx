@@ -186,7 +186,7 @@ function StepOverlay({
               )}
             </div>
           </div>
-          <button onClick={onComplete} aria-label="튜토리얼 닫기" className="relative shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5 after:absolute after:-inset-3 after:content-['']">
+          <button onClick={onComplete} aria-label="튜토리얼 닫기" className="relative shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5 after:absolute after:-inset-[13px] after:content-['']">
             <X className="size-3.5" />
           </button>
         </div>

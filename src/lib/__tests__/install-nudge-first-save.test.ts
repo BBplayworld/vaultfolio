@@ -81,7 +81,7 @@ describe("4.85 QA·UI 수정 클래스 계약", () => {
     const src = read("tutorial/tutorial-overlay.tsx");
     expect(src).toContain('<Icon className="size-3.5 text-white" />');
     expect(src).toContain('aria-label="튜토리얼 닫기"');
-    expect(src).toContain("after:-inset-3");
+    expect(src).toContain("after:-inset-[13px]");
     expect(src).toContain("min-h-10");
   });
   it("도움말 선택기 설명은 break-keep text-pretty", () => {

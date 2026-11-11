@@ -74,7 +74,6 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     id: "20261111-11",
     title: "상세에서 빈 자산군 카드를 눌러 바로 추가해요",
     body: "0건이던 카드가 '추가하기'로 바뀌어 눌러서 시작해요",
-    featureId: "stocks",
   },
   {
     id: "20261111-12",
