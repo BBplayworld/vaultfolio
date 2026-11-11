@@ -20,6 +20,8 @@ export interface ResyncSelection {
   ticker: Record<string, string>;
   /** 신규 해외 종목 매입 환율(없으면 오늘 환율) */
   fx?: number;
+  /** 새 종목 매수일 일괄 입력(#146, 메모리 상태). 없으면 올해 1월 1일 */
+  purchaseDate?: string;
 }
 
 export type RowAction =
@@ -216,7 +218,7 @@ export function applyResync(
       averagePrice: item.averagePrice,
       currentPrice: item.currentPrice > 0 ? item.currentPrice : item.averagePrice,
       currency: item.currency,
-      purchaseDate: resyncNewPurchaseDate(opts.today),
+      purchaseDate: sel.purchaseDate || resyncNewPurchaseDate(opts.today),
       description: "",
       ...(item.broker ? { broker: item.broker } : {}),
       ...(foreign ? { purchaseExchangeRate: sel.fx && sel.fx > 0 ? sel.fx : opts.usdRate } : {}),

@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NewDateRow } from "./new-date-row";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
@@ -27,6 +28,8 @@ import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
+  defaultNewPurchaseDate,
+  isValidNewPurchaseDate,
   buildUndoEntries,
   cryptoToStock,
   matchExchangeHint,
@@ -125,6 +128,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const [qty, setQty] = useState<Record<string, number>>({});
   const [tickers, setTickers] = useState<Record<string, string>>({});
   const [fxText, setFxText] = useState("");
+  const [newDate, setNewDate] = useState(() => defaultNewPurchaseDate());
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
@@ -179,12 +183,14 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     for (const id of defaultRemoveIds(diff)) if (removeOv[id] !== false) remove.add(id);
     for (const [id, v] of Object.entries(removeOv)) if (v) remove.add(id);
     const fx = Number(fxText);
-    return { include, remove, pick, qty, ticker: tickers, fx: fx > 0 ? fx : undefined };
-  }, [diff, removeOv, include, pick, qty, tickers, fxText]);
+    return { include, remove, pick, qty, ticker: tickers, fx: fx > 0 ? fx : undefined, purchaseDate: newDate };
+  }, [diff, removeOv, include, pick, qty, tickers, fxText, newDate]);
   const counts = useMemo(() => summarize(diff, sel, existing), [diff, sel, existing]);
   const changes = changeCount(counts);
   // 실제로 새로 만들어질 항목 수(이어받기 제외) — 매수일 1월 1일 안내 조건(#139 O1)
   const freshAdds = useMemo(() => applyResync(existing, diff, sel, { today: todayKst(), usdRate, now: 0 }).addedIds.length, [existing, diff, sel, usdRate]);
+  // 새 종목 매수일 입력이 보일 때만 값 검증(#146) — 줄이 없으면 오류로 버튼이 잠기지 않는다
+  const newDateInvalid = freshAdds > 0 && !isValidNewPurchaseDate(newDate, todayKst());
 
   // ── 닫기·초기화 ─────────────────────────────────────────────────────
   const resetAll = () => {
@@ -203,6 +209,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     setQty({});
     setTickers({});
     setFxText("");
+    setNewDate(defaultNewPurchaseDate());
     setApplying(false);
     setApplied(null);
     setUndoInfo(null);
@@ -323,7 +330,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
 
   // ── 적용(클릭 핸들러에서 저장 1회) ───────────────────────────────────
   const handleApply = () => {
-    if (applying || changes === 0) return;
+    if (applying || changes === 0 || newDateInvalid) return;
     setApplying(true);
     setUndoInfo(null);
     setUndoing(false);
@@ -439,6 +446,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               fxText={fxText}
               setFxText={setFxText}
               usdRate={usdRate}
+              newDate={newDate}
+              setNewDate={setNewDate}
             />
           )}
           {step === "result" && applied && (
@@ -491,7 +500,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               {changes === 0 && (
                 <p className="text-sm text-muted-foreground text-pretty break-keep sm:mr-auto sm:self-center">바뀌는 내용이 없어요</p>
               )}
-              <Button variant="brand" data-testid="resync-apply" disabled={applying || changes === 0} onClick={handleApply}>
+              <Button variant="brand" data-testid="resync-apply" disabled={applying || changes === 0 || newDateInvalid} onClick={handleApply}>
                 {applying ? (
                   <>
                     <Loader2 className="size-4 motion-safe:animate-spin" />
@@ -759,9 +768,11 @@ interface PreviewProps {
   fxText: string;
   setFxText: (v: string) => void;
   usdRate: number;
+  newDate: string;
+  setNewDate: (v: string) => void;
 }
 
-function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate }: PreviewProps) {
+function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate, newDate, setNewDate }: PreviewProps) {
   const T = useT();
   const kind = useKind();
   const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
@@ -908,6 +919,8 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
         </Collapsible>
       )}
 
+      {hasNewAdd && <NewDateRow prefix="resync" kind={kind} count={freshAdds} value={newDate} onChange={setNewDate} today={todayKst()} />}
+
       {hasNewForeign && (
         <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
           <div className="min-w-0">
@@ -934,12 +947,6 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
           <span>바뀐 수량·평단은 이번 달 <NR>결산 증감</NR>에 함께 반영돼요</span>
         </p>
-        {hasNewAdd && (
-          <p data-testid="resync-notice-3" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
-            <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-            <span>새 {T.item}의 매수일은 <NR>올해 1월 1일</NR>로 들어가요. 나중에 수정할 수 있어요</span>
-          </p>
-        )}
       </div>
     </div>
   );

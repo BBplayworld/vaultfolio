@@ -6,3 +6,4 @@ export * from "./diff";
 export * from "./apply";
 export * from "./undo";
 export * from "./crypto";
+export * from "./import-inherit";

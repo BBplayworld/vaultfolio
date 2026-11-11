@@ -24,7 +24,9 @@ import { stockCategories, securitiesFirms, matchBrokerHint } from "@/config/asse
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME } from "@/config/theme";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
-import { keyOfStock, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { keyOfStock, countConflicts, type ConflictMode } from "@/lib/asset/holdings-conflict";
+import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairStockImport, planStockImport } from "@/lib/asset/resync/import-inherit";
+import { NewDateRow } from "./new-date-row";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { ScreenshotFailNotice } from "./screenshot-fail-notice";
 import { emptyFailTitle, mapParseErrorTitle, makeScreenshotFail, SCREENSHOT_FAIL_NETWORK, type ScreenshotFail } from "@/lib/asset/screenshot-fail";
@@ -79,6 +81,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   const [commonBroker, setCommonBroker] = useState<string>(BROKER_NONE);
   const [conflictMode, setConflictMode] = useState<ConflictMode>("merge");
   const [conflictCount, setConflictCount] = useState(0);
+  // 새 종목 매수일 일괄 입력(#146) — 기본 올해 1월 1일
+  const [newDate, setNewDate] = useState(() => defaultNewPurchaseDate());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fail, setFail] = useState<ScreenshotFail | null>(null);
 
@@ -113,6 +117,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
     setCommonBroker(BROKER_NONE);
     setConflictMode("merge");
     setConflictCount(0);
+    setNewDate(defaultNewPurchaseDate());
   };
 
   const handleClose = () => {
@@ -234,6 +239,9 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       return;
     }
 
+    const today = kstTodayString();
+    if (freshCount > 0 && !isValidNewPurchaseDate(newDate, today)) return;
+
     const missingTicker = selected.filter((s) => !(s.tickerInput?.trim() || s.ticker || ""));
     if (missingTicker.length > 0) {
       toast.error(`티커(종목코드)를 입력해주세요: ${missingTicker.map((s) => s.name).join(", ")} · 체크를 풀면 나머지만 등록돼요`, { duration: 6000, className: "break-keep" });
@@ -276,10 +284,10 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
       newStocks.push(data);
     }
 
-    // 병합형: 동일 ticker+category 기존 항목은 conflictMode(merge=교체/reset=전체 대체)에 따라 처리
-    const importedKeys = new Set(newStocks.map(keyOfStock));
-    const kept = resolveKept(assetData.stocks, importedKeys, conflictMode, keyOfStock);
-    const newData: AssetData = { ...assetData, stocks: [...kept, ...newStocks] };
+    // 병합형: 동일 ticker+category 기존 항목은 conflictMode(merge=교체/reset=전체 대체)에 따라 처리.
+    // 짝지어진 기존 항목은 id·매수일·매입 환율·메모를 이어받고(거래 연결 유지), 정말 새 항목만 입력한 매수일(#146)
+    const plan = planStockImport(assetData.stocks, newStocks, conflictMode, newDate, today);
+    const newData: AssetData = { ...assetData, stocks: plan.items };
     let success: boolean;
     if (hasTickerless) {
       success = saveAssetDataRaw(newData);
@@ -305,6 +313,11 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
   };
 
   const selectedCount = stocks.filter((s) => s.selected).length;
+  // 실제 신규 건수 = 선택 행 − 기존 항목을 이어받는 행(충돌 단계 `교체`·저장과 같은 짝짓기, 최종 티커 기준)
+  const selectedRows = stocks.filter((s) => s.selected).map((s) => ({ ...s, ticker: s.tickerInput?.trim() || s.ticker || "" }) as Stock);
+  const freshCount = freshImportCount(selectedRows, pairStockImport(assetData.stocks, selectedRows));
+  const newDateToday = kstTodayString();
+  const newDateInvalid = freshCount > 0 && !isValidNewPurchaseDate(newDate, newDateToday);
   const allSelected = stocks.length > 0 && stocks.every((s) => s.selected);
 
   return (
@@ -525,6 +538,8 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
               )}
             </div>
 
+            {freshCount > 0 && <NewDateRow prefix="import" kind="stock" count={freshCount} value={newDate} onChange={setNewDate} today={newDateToday} />}
+
             <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -691,7 +706,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
             <Button
               variant="brand"
               onClick={handleRegister}
-              disabled={isRegistering || selectedCount === 0}
+              disabled={isRegistering || selectedCount === 0 || newDateInvalid}
             >
               {isRegistering ? (
                 <><Loader2 className="size-4 animate-spin mr-2" />등록 중...</>

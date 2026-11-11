@@ -6,7 +6,7 @@ import { computeAttributionBetween } from "../asset-report";
 import { computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
 import { computeForeignRealizedGain } from "@/lib/tax-utils";
 import { rollbackTransaction } from "@/lib/trade/trade-utils";
-import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, resolveScreens } from "@/lib/asset/resync";
+import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, planStockImport, resolveScreens } from "@/lib/asset/resync";
 import { emptySel, row, screen, st } from "@/lib/asset/resync/__tests__/fixtures";
 import type { AssetData, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 
@@ -187,5 +187,33 @@ describe("C21 거래 패턴", () => {
     // 수량을 늘린 경우(100→150)는 정상
     const up = resync([s], [row("005930", 150, 100, hint)])[0];
     expect(rollbackTransaction(pos(up), [buy], "t1").quantity).toBe(50);
+  });
+});
+
+describe("#146 첫 등록 경로 (d') — 새 종목 기본 매수일(만든 해 1월 1일)도 예측 구간 원인이 main(매수일=만든 날)과 같다", () => {
+  const MS = Date.parse(`${END}T03:00:00Z`);
+  const imported = (): Stock => ({ ...st(`stock_import_${MS}_0`, "TSLA", "foreign", "토스증권", 5, 100, { description: "" }), purchaseDate: END });
+  const effectsOf = (stocks: Stock[], from: [string, string], to: [string, string], endHas: boolean) =>
+    computeAttributionBetween(snap(data([A]), from[0], from[1], false), snap(data(endHas ? stocks : [A]), to[0], to[1]), {}, data(stocks), RATES, false)!.effects;
+  const buy = (e: ReturnType<typeof effectsOf>) => e.find((x) => x.key === "buy:stock")?.amount ?? 0;
+
+  it("기본 1/1 저장 → 이번 달·연·1월 구간 effects가 main과 같다", () => {
+    const stocks = planStockImport([A], [imported()], "merge", "2026-01-01", END).items;
+    const mainLike = stocks.map((s) => (s.ticker === "TSLA" ? { ...s, purchaseDate: END } : s));
+    expect(stocks.find((s) => s.ticker === "TSLA")!.purchaseDate).toBe("2026-01-01");
+    for (const [from, to, endHas] of [
+      [["2026-09", START], ["2026-11", END], true],
+      [["2025-12", "2025-12-31"], ["2026-11", END], true],
+      [["2025-12", "2025-12-31"], ["2026-01", "2026-01-31"], false],
+    ] as [[string, string], [string, string], boolean][]) {
+      expect(effectsOf(stocks, from, to, endHas)).toEqual(effectsOf(mainLike, from, to, endHas));
+    }
+    expect(buy(effectsOf(stocks, ["2026-09", START], ["2026-11", END], true))).toBe(5 * 100 * 1300);
+    expect(buy(effectsOf(stocks, ["2025-12", "2025-12-31"], ["2026-01", "2026-01-31"], false))).toBe(0);
+  });
+  it("사용자가 고른 날짜는 그 날 투입(의도된 차이) — 합계 ≠ main이 아니라 투입 구간만 이동", () => {
+    const stocks = planStockImport([A], [imported()], "merge", "2026-03-02", END).items;
+    const mar = computeAttributionBetween(snap(data([A]), "2025-12", "2025-12-31", false), snap(data([A]), "2026-03", "2026-03-31"), {}, data(stocks), RATES, false)!;
+    expect(mar.effects.find((x) => x.key === "buy:stock")?.amount ?? 0).toBe(5 * 100 * 1300);
   });
 });
