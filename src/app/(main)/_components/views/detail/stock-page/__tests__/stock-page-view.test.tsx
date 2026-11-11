@@ -62,7 +62,7 @@ describe("C76 ① 거래 0·분할 0 — 가장 흔한 경로", () => {
     expect(html).toContain('data-state="ready"');
     expect(tid(html, "stock-page-avg-line")).toBe(true);
     expect(html).not.toContain('data-testid="stock-page-buy-dot"');
-    expect(text(html)).toContain("거래를 기록하면 산 날이 점으로 표시돼요");
+    expect(text(html)).toContain("매수를 기록하면 산 날이 점으로 표시돼요");
     expect(tid(html, "stock-page-no-trades")).toBe(true);
     expect(tid(html, "stock-page-outside")).toBe(false);
   });
@@ -79,10 +79,16 @@ describe("C76 ① 거래 0·분할 0 — 가장 흔한 경로", () => {
   });
 });
 
+describe("break-keep(R1)", () => {
+  it("화면 루트가 break-keep — 어절 중간 줄바꿈 0", () => {
+    expect(render([stock({})], [])).toMatch(/data-testid="stock-page" class="[^"]*break-keep/);
+  });
+});
+
 describe("점 안내·정의 줄 문구", () => {
-  it("점이 있고 선택 전이면 '점을 누르면 거래를 볼 수 있어요', 창 밖 안내가 있으면 그쪽이 우선", () => {
+  it("점이 있고 선택 전이면 '점을 누르면 매수 기록을 볼 수 있어요', 창 밖 안내가 있으면 그쪽이 우선", () => {
     const s = stock({ id: "a" });
-    expect(text(render([s], [tx({ stockId: "a", date: "2026-03-04" })]))).toContain("점을 누르면 거래를 볼 수 있어요");
+    expect(text(render([s], [tx({ stockId: "a", date: "2026-03-04" })]))).toContain("점을 누르면 매수 기록을 볼 수 있어요");
     const out = text(render([s], [tx({ stockId: "a", date: "2026-03-04" }), tx({ stockId: "a", date: "2024-01-01" })]));
     expect(out).not.toContain("점을 누르면");
     expect(out).toContain("1년보다 전 매수 1건");
@@ -132,7 +138,7 @@ describe("C76 ⑤ 상장 1년 미만", () => {
     hook.mockImplementation(() => ok(history({ listedFrom: "2026-03-02" })));
     const short = render([stock({})], []);
     expect(tid(short, "stock-page-basis")).toBe(true);
-    expect(text(short)).toContain("액면분할 등을 반영한 가격이에요. 점은 기록한 거래 날짜에 찍혀요. 상장 이후 기간만 있어요.");
+    expect(text(short)).toContain("액면분할 등을 반영한 가격이에요. 점은 기록한 매수 날짜에 찍혀요. 상장 이후 기간만 있어요.");
   });
   it("해외는 달러 기준 문구", () => {
     const f = stock({ category: "foreign", ticker: "AAPL", currency: "USD" });

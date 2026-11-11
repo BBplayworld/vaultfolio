@@ -154,6 +154,15 @@ describe("fetchPriceHistory KIS 호출", () => {
     expect(urls.slice(1).every((u) => u.includes("EXCD=NYS"))).toBe(true);
   });
 
+  it("R3 해외 모든 거래소가 오류 없이 빈 응답이면 빈 시세(null 아님), 하나라도 오류면 null", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ rt_cd: "0", output2: [] }) })));
+    const empty = await fetchPriceHistory({ ...base, ticker: "ZZZZQ", market: "us", range: "1y" });
+    expect(empty?.points).toEqual([]);
+    let n = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => (++n === 2 ? { ok: false, json: async () => ({}) } : { ok: true, json: async () => ({ rt_cd: "0", output2: [] }) })));
+    expect(await fetchPriceHistory({ ...base, ticker: "ZZZZQ", market: "us", range: "1y" })).toBeNull();
+  });
+
   it("호출 실패(HTTP 500) → null", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({}) })));
     expect(await fetchPriceHistory({ ...base, ticker: "005930", market: "kr", range: "1y" })).toBeNull();

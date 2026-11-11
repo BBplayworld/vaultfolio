@@ -96,6 +96,24 @@ describe("price-history 응답", () => {
     expect(recordFailure).toHaveBeenCalled();
   });
 
+  it("R3 마스터에 없는 티커의 조회 실패는 서킷에 반영하지 않는다(마스터 티커는 반영)", async () => {
+    fetchHistory.mockResolvedValue(null);
+    const bad = await GET(req("?ticker=ZZZZQ&range=1y"));
+    expect(bad.status).toBe(503);
+    expect(recordFailure).not.toHaveBeenCalled();
+    await GET(req("?ticker=005930&range=1y"));
+    expect(recordFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3 빈 시세(해외 모든 거래소 정상 빈 응답) → 200·points []·no-store, 서킷은 성공 기록", async () => {
+    fetchHistory.mockResolvedValue({ ...OK, ticker: "AAPL", currency: "USD", points: [] });
+    const res = await GET(req("?ticker=AAPL&range=1y"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).points).toEqual([]);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(recordFailure).not.toHaveBeenCalled();
+  });
+
   it("예산 초과 → 503, 토큰·KIS 호출 0", async () => {
     budget.mockResolvedValue(false);
     const res = await GET(req("?ticker=005930&range=1y"));

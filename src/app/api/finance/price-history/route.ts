@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { KR_CODES } from "@/lib/finance/kr-master";
+import { US_TICKERS } from "@/lib/finance/us-master";
 import { classifyTickers } from "@/lib/finance/finance-service";
 import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/finance/kis-token";
 import { fetchPriceHistory, PRICE_RANGES, MAX_PAGES } from "@/lib/finance/price-history";
@@ -55,7 +57,8 @@ export async function GET(req: NextRequest) {
   });
 
   if (!result) {
-    const unavailableNow = await recordKisFailure();
+    // 마스터에 없는 티커의 실패는 서킷에 반영하지 않는다(무효 티커 반복 요청으로 전 사용자 차단 방지, profit 라우트와 같은 규칙)
+    const unavailableNow = KR_CODES.has(ticker) || US_TICKERS.has(ticker) ? await recordKisFailure() : false;
     return NextResponse.json(
       { error: "일시 오류" },
       { status: 503, headers: unavailableNow ? { ...NO_STORE, "X-KIS-Unavailable": "1" } : NO_STORE },

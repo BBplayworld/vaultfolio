@@ -148,17 +148,17 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
   const longName = head.merged.name.length > 40 ? head.merged.name : undefined;
   const basis = [
     `${range === "1y" ? "일별" : "주별"} 종가 기준이에요.`,
-    "액면분할 등을 반영한 가격이에요. 점은 기록한 거래 날짜에 찍혀요.",
+    "액면분할 등을 반영한 가격이에요. 점은 기록한 매수 날짜에 찍혀요.",
     currency === "USD" ? "달러 가격 기준이에요." : "",
     data?.listedFrom ? "상장 이후 기간만 있어요." : "",
   ].filter(Boolean).join(" ");
   const chartAria = `${rangeLabel} 주가 흐름${change !== null ? `, 등락 ${signedRate(change)}` : ""}${avg ? `, 내 평단 ${formatPrice(avg, currency)}` : ""}`;
 
   return (
-    <div data-testid="stock-page" className="flex flex-col gap-5 min-w-0">
+    <div data-testid="stock-page" className="flex flex-col gap-5 min-w-0 break-keep">
       {/* 머리 — 제목 역할. 평가·내 수익은 상세·주식 행과 같은 계산 */}
       <section data-testid="stock-page-head" className={`${SECTION} ${BODY_ENTER} flex flex-col !gap-1`} style={{ animationFillMode: "backwards" }}>
-        <h2 className="text-base font-semibold break-words line-clamp-2" title={longName}>{head.merged.name}</h2>
+        <h2 className="text-base font-semibold break-keep [overflow-wrap:anywhere] line-clamp-2" title={longName}>{head.merged.name}</h2>
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
           {ticker && <span className="font-mono">({head.merged.ticker}{marketLabel ? ` · ${marketLabel}` : ""})</span>}
           {categoryLabels.map((l) => (
@@ -245,7 +245,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
                 {selectedDot.buys.length > 3 && <p className="text-muted-foreground">외 {selectedDot.buys.length - 3}건</p>}
               </div>
             ) : buys.length === 0 ? (
-              <p data-testid="stock-page-no-trades" className="text-xs text-muted-foreground">거래를 기록하면 산 날이 점으로 표시돼요</p>
+              <p data-testid="stock-page-no-trades" className="text-xs text-muted-foreground">매수를 기록하면 산 날이 점으로 표시돼요</p>
             ) : outsideCount > 0 ? (
               range === "1y" ? (
                 <button
@@ -261,7 +261,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
                 <p data-testid="stock-page-outside" data-clickable="false" className="text-sm text-muted-foreground">5년보다 전 매수 {outsideCount}건</p>
               )
             ) : dots.length > 0 ? (
-              <p data-testid="stock-page-dot-hint" className="text-xs text-muted-foreground">점을 누르면 거래를 볼 수 있어요</p>
+              <p data-testid="stock-page-dot-hint" className="text-xs text-muted-foreground">점을 누르면 매수 기록을 볼 수 있어요</p>
             ) : null}
           </div>
         )}

@@ -157,9 +157,8 @@ function overseasPager(ticker: string, range: PriceRange, auth: KisAuth): PageFe
   // 마스터 거래소는 힌트일 뿐(마스터가 전부 NAS) — [힌트, NAS, NYS, AMS] 순 폴백, 성공하면 고정
   const known = getUsExchange(ticker);
   let excdList = [...new Set([...(known ? [known] : []), "NAS", "NYS", "AMS"])];
-  let succeeded = false;
   return async (endStr) => {
-    let emptyOk = false;
+    let emptyCount = 0; // 오류 없이 정상으로 비어 온 거래소 수
     for (const excd of excdList) {
       try {
         // NCNT는 넣지 않는다(회차 100행). 수정주가 MODP=1
@@ -172,11 +171,10 @@ function overseasPager(ticker: string, range: PriceRange, auth: KisAuth): PageFe
         if (!isKisResponseOk(data, `해외 가격이력 ${ticker}/${excd}/${endStr}`)) continue;
         const out = data.output2 as Record<string, string>[] | undefined;
         if (!Array.isArray(out) || out.length === 0) {
-          emptyOk = true;
+          emptyCount += 1;
           continue;
         }
         excdList = [excd];
-        succeeded = true;
         return out
           .filter((r) => r?.xymd)
           .map((r) => ({ d: fromCompact(r.xymd), c: parseFloat(r.clos ?? "0") }));
@@ -184,8 +182,8 @@ function overseasPager(ticker: string, range: PriceRange, auth: KisAuth): PageFe
         console.error(`[KIS 해외 가격이력 오류 - ${ticker}/${excd}/${endStr}]:`, e);
       }
     }
-    // 이미 데이터를 받은 뒤의 정상 빈 응답 = 상장 이전 끝, 그 밖(첫 회차 전원 실패·HTTP 오류)은 실패
-    return succeeded && emptyOk ? [] : null;
+    // 빈 응답 vs 오류: 시도한 모든 거래소가 오류 없이(rt_cd 0) 빈 output2를 주면 '시세 없음'(빈 목록), 하나라도 HTTP·rt_cd·예외 오류가 있으면 실패(null)
+    return emptyCount === excdList.length ? [] : null;
   };
 }
 
