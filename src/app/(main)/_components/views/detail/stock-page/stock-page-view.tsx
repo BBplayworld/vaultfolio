@@ -27,6 +27,7 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { SECTION } from "../../../layout/ui/report-section";
 import { toHash, useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { BODY_ENTER } from "../../activity/change-hero";
+import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { formatPrice } from "../trades/stock-trades-view";
 import { fmtDot, PriceChart } from "./price-chart";
 
@@ -205,6 +206,8 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
               points={points}
               dots={dots}
               avg={avg}
+              currentPrice={head.merged.currentPrice}
+              currentText={formatCurrencyDisplay(head.merged.currentPrice, head.merged.currency || "KRW")}
               currency={data.currency}
               interval={data.interval}
               colorClass={changeColor}

@@ -1,6 +1,8 @@
 // 4.83 상세·주식 입구 — 도구 타일(시장·X-Ray·세금)·펼침 이름 줄(종목 한 장 입구). C76 기본 경로(국내+미국·분류 완료·11/11~12/31·1년 성공)와 경계·폴백을 구간마다 단언.
 // C83: 방문 기록은 실제 쓰기 함수 결과로, 요청 횟수는 실제 react-query 옵션으로 판정한다.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import type { Stock } from "@/types/asset";
@@ -9,7 +11,7 @@ import type { PriceHistory } from "@/lib/finance/price-history";
 import { computeIndexSpan, formatCompareRate, type PeriodRefs } from "@/lib/finance/market-compare";
 import { computeBreakdown, formatBreakdownPct, pickXrayTile } from "@/lib/xray/stock-xray";
 import { computePriceChange, signedRate } from "@/lib/finance/stock-page";
-import { groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
+import { formatCurrencyDisplay, groupStocksByTicker, mergeStockGroup } from "../asset-detail-tabs";
 
 const h = vi.hoisted(() => ({
   stocks: [] as unknown[],
@@ -43,7 +45,7 @@ vi.mock("../../../layout/navigation/navigation-context", async (orig) => ({
 }));
 
 import { StockToolTiles } from "../stock-tools";
-import { StockPageEntry } from "../stock-row-flow";
+import { RowBandChart, StockPageEntry } from "../stock-row-flow";
 import { StockPageBody } from "../stock-page/stock-page-view";
 import { priceHistoryQueryOptions } from "@/hooks/use-price-history";
 
@@ -224,11 +226,13 @@ describe("종목 이름 줄 입구", () => {
     const html = entry([s]);
     expect(html.match(/data-testid="stock-page-entry"/g)).toHaveLength(1);
     expect(html).toContain("min-h-14");
-    expect(html).toContain(`aria-label="${s.name} 주가 흐름과 평단 보기"`);
+    // 값은 버튼 aria-label에(밴드는 aria-hidden): 1년 등락 + 현재가
+    expect(html).toContain(`aria-label="${s.name} 주가 흐름과 평단 보기, 1년 등락 ${signedRate(computePriceChange(POINTS)!)}, 현재가 ${formatCurrencyDisplay(s.currentPrice, "KRW")}"`);
     expect(text(html)).not.toContain("총 ");
     expect(text(html)).not.toContain("종목 보기");
     expect(text(html)).toContain("1년 주가 등락");
-    expect(html).toContain('data-testid="stock-page-entry-spark"');
+    expect(html).toContain('data-testid="stock-row-band"'); // 측정 전(SSR)에는 같은 80px 슬롯만
+    expect(html).toContain("h-20");
     const rowChange = html.match(/data-testid="stock-page-entry-change"[^>]*>([^<]*)</)![1];
     // 종목 한 장
     const page = renderToStaticMarkup(
@@ -238,10 +242,34 @@ describe("종목 이름 줄 입구", () => {
     // 원본 points로 계산(다운샘플 전)
     expect(rowChange).toBe(signedRate(computePriceChange(POINTS)!));
   });
-  it("종목 한 장 머리와 같은 평단 점선: 평단이 가격 범위 안이면 점선, 범위 밖이면 생략", () => {
-    h.priceResult = { data: history(), isError: false, refetch: () => {} };
-    expect(entry([stock({ averagePrice: 150 })])).toContain("stroke-dasharray");
-    expect(entry([stock({ averagePrice: 5 })])).not.toContain("stroke-dasharray");
+  it("행 밴드 평단 점선: 평단이 가격 범위 안이면 점선+`평단` 라벨, 범위 밖이면 생략(RowBandChart 실제 렌더)", () => {
+    const render = (avg: number | null) =>
+      renderToStaticMarkup(<RowBandChart points={POINTS} avg={avg} currentPrice={190} currency="KRW" colorClass="text-red-500" w={343} h={80} />);
+    expect(render(150)).toContain("stroke-dasharray");
+    expect(render(5)).not.toContain("stroke-dasharray");
+    expect(render(null)).not.toContain("stroke-dasharray");
+  });
+  it("현재가 태그 문자열 = `현재가` 칸 문자열(KRW·USD, data-value 대조) + 라벨 `현재가`, `오늘` 0 (A4, C65)", () => {
+    const tag = (html: string) => html.match(/data-testid="chart-today-tag" data-value="([^"]*)"[^>]*>(.*?)<\/g>/)!;
+    for (const [price, cur] of [[70000, "KRW"], [214.3, "USD"]] as const) {
+      const html = renderToStaticMarkup(<RowBandChart points={POINTS} avg={150} currentPrice={price} currency={cur} colorClass="" w={343} h={80} />);
+      const m = tag(html);
+      expect(m[1]).toBe(String(price));
+      expect(text(m[2])).toBe(`${formatCurrencyDisplay(price, cur)} 현재가`);
+      expect(text(html)).not.toContain("오늘");
+    }
+    // 같은 카드 `현재가` 칸이 같은 함수·같은 필드를 쓴다
+    const src = readFileSync(join(__dirname, "../tabs/stock-tab.tsx"), "utf8");
+    expect(src).toContain("formatCurrencyDisplay(stock.currentPrice, stock.currency)");
+  });
+  it("눈금: 가격 칸에 2~3줄 라벨(chart-tick), 값은 정확히 {1,2,5}×10^k, 현재가 없으면 태그·점 생략(눈금 유지)", () => {
+    const html = renderToStaticMarkup(<RowBandChart points={POINTS} avg={null} currentPrice={190} currency="KRW" colorClass="" w={343} h={80} />);
+    const ticks = [...html.matchAll(/data-testid="chart-tick" data-value="([^"]*)"/g)].map((m) => Number(m[1]));
+    expect(ticks.length).toBeGreaterThanOrEqual(1);
+    expect(ticks.length).toBeLessThanOrEqual(3);
+    const none = renderToStaticMarkup(<RowBandChart points={POINTS} avg={null} currentPrice={0} currency="KRW" colorClass="" w={343} h={80} />);
+    expect(none).not.toContain("chart-today-tag");
+    expect(none).toContain("chart-tick");
   });
   it("로딩: `1년 주가 등락` + 값 자리 예약(%·스파크 없음, 스파크 칸 예약), 높이 클래스는 성공과 같다", () => {
     const html = entry([stock({})]);
@@ -264,19 +292,20 @@ describe("종목 이름 줄 입구", () => {
       expect(h.priceCalls[0][2]).toBe(false);
     }
   });
-  it("실패·429 폴백도 로딩과 같은 크기의 빈 aria-hidden 스파크 칸을 둔다(이름 줄 높이 불변)", () => {
-    const spark = (html: string) => html.match(/<span[^>]*[^>]*h-8 w-12[^>]*>/)?.[0] ?? "";
+  it("실패·429 폴백도 로딩과 같은 80px 전폭 빈 슬롯을 둔다(밴드 높이 불변 — 로딩=성공=실패)", () => {
+    const slot = (html: string) => html.match(/<span[^>]*h-20[^>]*>/)?.[0] ?? "";
     const loading = entry([stock({})]);
     h.priceResult = { data: undefined, isError: true, refetch: () => {} };
     const failed = entry([stock({})]);
+    h.priceResult = { data: history(), isError: false, refetch: () => {} };
+    const ready = entry([stock({})]);
     expect(failed).toContain('data-testid="stock-page-entry-spark-slot"');
-    const size = (x: string) => x.match(/h-8 w-12.*?shrink-0/)?.[0];
-    // 320에서 `1년 주가 등락 +x%`가 한 줄: 둘째 줄 nowrap, 스파크 폭 w-12(<360)·360 이상은 기존 w-24 유지
+    expect(slot(failed)).toContain("basis-full");
+    expect(slot(failed)).toContain("aria-hidden");
+    expect(slot(loading)).toContain("basis-full");
+    expect(ready).toMatch(/<div[^>]*stock-row-band[^>]*h-20 basis-full/);
+    // 둘째 줄 한 줄 유지(320)
     expect(loading).toContain("whitespace-nowrap");
-    expect(loading).toContain("min-[360px]:w-24");
-    expect(size(spark(failed))).toBeDefined();
-    expect(size(spark(failed))).toBe(size(spark(loading)));
-    expect(spark(failed)).toContain("aria-hidden");
   });
   it("요청 조건: open && 가격 흐름 있음 && 캡처 아님일 때만, 행 쿼리는 retryOnMount:false", () => {
     entry([stock({})]);

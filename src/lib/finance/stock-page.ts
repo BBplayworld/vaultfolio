@@ -158,44 +158,115 @@ export function downsample(points: PricePoint[], max: number): PricePoint[] {
   return out;
 }
 
-export interface SparkGeometry {
-  line: string; // polyline points 속성값
-  avgY: number | null; // 평단 점선 y(범위 밖이면 null — 점선 생략)
+// ---- 가격 눈금(4.84) — 행 밴드와 종목 한 장이 같은 함수를 쓴다 ----
+export interface AxisTick {
+  v: number; // 눈금 가격 — 정확히 {1,2,5}×10^k
+  y: number; // 픽셀 y
+}
+export interface NiceTicks {
+  step: number;
+  ticks: AxisTick[];
 }
 
-// 스파크라인 좌표 — 종목 한 장 차트와 같은 y 도메인 규칙(computeYDomain). 평단이 범위 밖(clamped)이면 점선 생략
-export function buildSparkGeometry(points: PricePoint[], avg: number | null, width: number, height: number, pad = 2): SparkGeometry | null {
-  if (points.length < 2) return null;
-  const closes = points.map((p) => p.c);
+// {1,2,5}×10^k 눈금 2~3개를 고른다. 값은 정수 곱으로 만든다(i·m·10^e, 음수 지수는 정확한 10의 거듭제곱으로 나눔 — C59).
+// keep(눈금 제거 조건)을 통과한 개수가 2~3인 가장 작은 간격, 없으면 1개, 그것도 없으면 0개. 픽셀 간격 12px 미만 후보·플롯 위아래 inset 밖 눈금은 제외
+export function niceTicks(
+  lo: number,
+  hi: number,
+  yOf: (v: number) => number,
+  top: number,
+  bottom: number,
+  keep: (t: AxisTick) => boolean = () => true,
+  inset = 6,
+): NiceTicks {
+  const span = hi - lo;
+  if (!(span > 0) || !Number.isFinite(span)) return { step: 0, ticks: [] };
+  const e0 = Math.floor(Math.log10(span / 3)) - 1;
+  const pow = (n: number) => Math.pow(10, Math.abs(n));
+  let fallback: NiceTicks | null = null;
+  for (let k = 0; k < 5; k += 1) {
+    for (const m of [1, 2, 5]) {
+      const e = e0 + k;
+      const step = e >= 0 ? m * pow(e) : m / pow(e);
+      if (Math.abs(yOf(0) - yOf(step)) < 12) continue;
+      const out: AxisTick[] = [];
+      const first = Math.ceil(lo / step - 1e-9);
+      const last = Math.floor(hi / step + 1e-9);
+      for (let i = first; i <= last && out.length <= 12; i += 1) {
+        const v = e >= 0 ? i * m * pow(e) : (i * m) / pow(e);
+        const y = yOf(v);
+        if (y >= top + inset && y <= bottom - inset) out.push({ v, y });
+      }
+      const kept = out.filter(keep);
+      if (kept.length >= 2 && kept.length <= 3) return { step, ticks: kept };
+      if (kept.length === 1 && !fallback) fallback = { step, ticks: kept };
+    }
+  }
+  return fallback ?? { step: 0, ticks: [] };
+}
+
+const trimDecimal = (n: number) => String(+n.toFixed(2));
+
+// 눈금 라벨 표기 — KRW 1.5억·5만·7.5만·5,000(원 생략), USD $160·$12.5·$0.25, JPY ¥1,500. 정밀값(태그·칩·호버)은 formatPrice를 쓴다
+export function formatAxisPrice(value: number, currency: string, step: number): string {
+  if (currency === "USD") {
+    const dec = step >= 1 || !(step > 0) ? 0 : Math.min(3, Math.ceil(-Math.log10(step) - 1e-9));
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+  }
+  if (currency === "JPY") return `¥${Math.round(value).toLocaleString("en-US")}`;
+  if (value >= 1e8) return `${trimDecimal(value / 1e8)}억`;
+  if (value >= 1e4) return `${trimDecimal(value / 1e4)}만`;
+  return Math.round(value).toLocaleString("ko-KR");
+}
+
+// 가격 칸(우측 gutter) 폭 — 현재가 문자열 길이 기준 46~76px
+export const axisGutter = (tagText: string): number => Math.min(76, Math.max(46, tagText.length * 6.4 + 10));
+
+export interface PriceAxis {
+  domain: [number, number];
+  clamped: YDomain["clamped"];
+  yOf: (v: number) => number;
+  avgY: number | null; // 평단선 y — 범위 밖이면 가장자리(위 +7·아래 −7)에 고정. 평단 없음이면 null
+  todayY: number | null; // 현재가 y — 없음/0이면 null
+  step: number;
+  ticks: (AxisTick & { label: string })[];
+}
+
+// 눈금·도메인은 **원본 points** 기준(다운샘플 40점 아님) + 현재가를 포함해 계산한다 — 선이 최고 눈금 위로 삐져나가지 않게.
+// top·plotH는 플롯 영역(픽셀). 눈금은 평단선과 10px 미만, 현재가 태그와 겹치면(위 12px·아래 20px) 제외
+export function buildPriceAxis(a: { points: PricePoint[]; avg: number | null; price: number | null; currency: string; top: number; plotH: number }): PriceAxis {
+  const price = a.price && a.price > 0 ? a.price : null;
+  const closes = a.points.map((p) => p.c);
+  if (price !== null) closes.push(price);
   const min = Math.min(...closes);
   const max = Math.max(...closes);
-  const { domain, clamped } = computeYDomain(min, max, avg ?? 0);
-  const span = domain[1] - domain[0] || 1;
-  const innerH = height - pad * 2;
-  const y = (v: number) => pad + (1 - (v - domain[0]) / span) * innerH;
-  const step = width / (points.length - 1);
-  const line = points.map((p, i) => `${(i * step).toFixed(1)},${y(p.c).toFixed(1)}`).join(" ");
-  const showAvg = avg !== null && avg > 0 && clamped === "none" && avg >= domain[0] && avg <= domain[1];
-  return { line, avgY: showAvg ? Number(y(avg).toFixed(1)) : null };
+  const { domain, clamped } = computeYDomain(min, max, a.avg ?? 0);
+  const yOf = (v: number) => a.top + (1 - (v - domain[0]) / (domain[1] - domain[0])) * a.plotH;
+  const avgY = a.avg && a.avg > 0 ? (clamped === "up" ? a.top + 7 : clamped === "down" ? a.top + a.plotH - 7 : yOf(a.avg)) : null;
+  const todayY = price !== null ? yOf(price) : null;
+  const nt = niceTicks(domain[0], domain[1], yOf, a.top, a.top + a.plotH, (t) => {
+    if (avgY !== null && Math.abs(t.y - avgY) < 10) return false;
+    if (todayY !== null) return t.y < todayY ? todayY - t.y >= 12 : t.y - todayY >= 20;
+    return true;
+  });
+  return { domain, clamped, yOf, avgY, todayY, step: nt.step, ticks: nt.ticks.map((t) => ({ ...t, label: formatAxisPrice(t.v, a.currency, nt.step) })) };
 }
 
 // 상세·주식 펼침 이름 줄(4.83) 상태 — none = 가격 흐름 없는 종목(`내 평단 보기`), loading, fallback = 실패·429·빈 응답(`주가 흐름과 내 평단 보기`).
-// ready의 change는 원본 points로 계산(다운샘플 전, 종목 한 장 `stock-page-change`와 같은 값 — C65), geom만 40점으로 줄여 그린다
+// ready의 change·눈금 도메인은 원본 points로 계산(종목 한 장 `stock-page-change`와 같은 값 — C65). 선만 40점으로 줄여 그린다(밴드 컴포넌트)
 export type RowFlow =
   | { kind: "none" }
   | { kind: "loading" }
   | { kind: "fallback" }
-  | { kind: "ready"; change: number; geom: SparkGeometry | null };
+  | { kind: "ready"; change: number; points: PricePoint[] };
 
 export const ROW_SPARK_POINTS = 40;
-export const ROW_SPARK_W = 160;
-export const ROW_SPARK_H = 32;
 
-export function buildRowFlow(flow: boolean, q: { isError: boolean; data?: PriceHistory }, avg: number | null): RowFlow {
+export function buildRowFlow(flow: boolean, q: { isError: boolean; data?: PriceHistory }): RowFlow {
   if (!flow) return { kind: "none" };
   if (q.isError) return { kind: "fallback" };
   if (!q.data) return { kind: "loading" };
   const change = computePriceChange(q.data.points);
   if (change === null) return { kind: "fallback" };
-  return { kind: "ready", change, geom: buildSparkGeometry(downsample(q.data.points, ROW_SPARK_POINTS), avg, ROW_SPARK_W, ROW_SPARK_H) };
+  return { kind: "ready", change, points: q.data.points };
 }
