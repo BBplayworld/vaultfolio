@@ -33,7 +33,7 @@
 평단선은 사고팔 시점을 알려 주는 선이 아니다. 내가 어디쯤에 있는지 확인하는 선이다. 한 달에 한 번 보는 것으로 충분했다.
 
 등록 전에 캡처 한 장으로 비중부터 보고 싶다면 아래에서 가입 없이 해 볼 수 있다.
-https://www.secretasset.xyz/ratio?utm_source=blog&utm_medium=blog&utm_campaign=ratio_v1
+https://www.secretasset.xyz/ratio
 
 (선택) 참고로 이 서비스는 내가 직접 만들었다.
 
