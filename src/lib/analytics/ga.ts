@@ -53,7 +53,7 @@ export const PARAM_VALUES = {
     // 입력 방식
     "manual", "screenshot",
     // 웰컴 CTA
-    "wizard", "import", "sync_connect", "skip_install",
+    "wizard", "import", "sync_connect",
     // 공유
     "save", "share", "copy", "link",
     // 동기화
@@ -209,7 +209,6 @@ const WELCOME_ACTION_TITLES: Partial<Record<NonNullable<GaParams["method"]>, str
   manual: "웰컴·직접 입력",
   import: "웰컴·가져오기",
   sync_connect: "웰컴·동기화 연결",
-  skip_install: "웰컴·웹에서 시작",
   trial_start: "웰컴·체험",
 };
 

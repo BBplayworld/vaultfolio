@@ -15,6 +15,15 @@
 - 테스트: `home-tip-holdings.test.ts`(신규)·`feature-usage.test.ts`·`entry-paths-483.test.ts`·`ga.test.ts`·`profit-partial-failure.test.ts`.
 
 ---
+## 2026-11-12 (v4.86)
+
+### 웰컴에서 바로 첫 자산 등록 (#4.86, 이슈 #167)
+- 모바일 웹 미설치 웰컴이 `install` 상태 없이 처음부터 `asset`. `WelcomeInstallCta`·`handleSkipInstall`·`웹에서 바로 시작`·GA `skip_install`(`WELCOME_CTA_METHODS`·`PARAM_VALUES.method`·`WELCOME_ACTION_TITLES`) 삭제, `welcomeCtaState({ mounted, isStandalone, isInApp })`.
+- 팝오버 `주식 직접 입력` 1행 → 직접 입력 5행(`WELCOME_MANUAL_ROWS`, `handleManualAdd`) + 구분선 + 가져오기 2행. 슬롯 pending 셸 모바일 `min-h-[216px]`.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0, #78 설치 안내 diff 0. 새 소식: `20261111-13`.
+- 테스트: `welcome-guide.test.tsx`(구간·5행 상수·FAB 라벨 grep·리스너 1:1·전송), `ga.test.ts`, `whats-new` 최신 id 갱신.
+
+---
 
 ## 2026-11-12 (v4.85)
 

@@ -461,10 +461,10 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **첫 화면 순서(#4.35)**: 히어로 < 신뢰 한 줄(+자세히 보기) < 보안 상세 < 예시 순자산 < CTA 슬롯 < 주식 미리보기 (< 설치 박스: 데스크톱만). 375×812 스크롤 0(진입 모션 후)에 제목·신뢰 줄·순자산 금액·설치/바로 시작 버튼이 보인다. 접힘 상태 가시 텍스트에 PBKDF2·Ed25519·blob 없음, "로그인 없" 1회
 - 👤 **보안 안내 문구(#4.38)**: 웰컴 보안 상세·앱가이드 카드 3쌍이 문자 단위로 같다(`SECURITY_COPY`). 구 문구 0건("절대 벗어나지"·"원천 불가"·"문제없습니다"·"(blob)"·"(pubKey)"·"E2EE 암호학적" — 정정 7파일+`security-copy.ts` 한정), 업로드 박스 4종 문구·클래스 동일·테두리 0, 동기화 메뉴 설명 마지막 문장 상수(preview에선 `cs.enabled=false`라 미렌더 → 정적 테스트). 320·375에서 "저장·/전송" 분리 0, 신뢰 한 줄 "… 저장 · / 원하면 암호화 동기화". 금고 암호 문장(cloud-sync-menu-entry·connect-dialog)·home-tip 백업 팁·config/app.ts 무변경. 자동: `src/config/__tests__/security-copy.test.tsx`
 - 👤 **보안 상세 펼침**: 토글 1회 탭 → 3카드(`SECURITY_COPY`) 노출, 재탭 접힘, 새로고침 시 접힘(저장 없음). 같은 노드 유지(grid-rows 전환), 닫힘 `inert`·`invisible`. 토글은 gtag 호출 0
-- 👤 **모바일 웹 미설치**: CTA 슬롯 `data-state=install` — "웹앱 설치하기"(brand, `PwaInstallFlow` 공용 흐름, iOS는 브라우저 칩+SVG 가이드) + "웹에서 바로 시작"(secondary) + 캡션. 설치 박스 없음, 설치 버튼 화면에 1개. "웹에서 바로 시작" 탭 → `onboarding_action{skip_install}` 1회 + 같은 슬롯이 `asset`으로 바뀌고 포커스가 "스크린샷으로 자산 등록"으로 이동
-- 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출, "웹에서 바로 시작" 없음). 데스크톱 미설치는 주식 미리보기 아래 설치 박스(설치 버튼 1개)
+- 👤 **모바일 웹 미설치(#4.86)**: CTA 슬롯 `data-state=asset` — 설치 버튼·"웹에서 바로 시작"·캡션 없음(화면에 `웹앱 설치하기` 0개). "스크린샷으로 자산 등록"(brand) + "직접 입력 · 가져오기" 팝오버(직접 입력 라벨 + 부동산·주식·암호화폐·현금성 자산·대출 5행 → 구분선 → 가져오기 2행). 행 탭 → 팝오버 닫힘 + 해당 자산군 추가 창 1개, `onboarding_action{manual}` 1회(`asset_add_start` 없음). pending 셸 높이 모바일 216px = asset 높이(점프 0). 첫 저장 뒤 홈 #78 안내로 설치
+- 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출). 데스크톱 미설치는 주식 미리보기 아래 설치 박스(설치 버튼 1개)
 - 👤 **링크 미리보기(#4.35)**: `og:image` = `${siteUrl}/og-image.png`(1200×630, 텍스트 "안전한 자산 관리,"·"시크릿에셋"만), `twitter:card=summary_large_image`. 이미지 교체 시 파일명 변경(크롤러 캐시)
-- ⚙ 분기 키: `welcomeCtaState({ mounted, isMobile, isStandalone, skipInstall, isInApp })` → pending/inapp/install/asset(#4.38 inapp은 mounted 다음 최우선, standalone이면 제외). 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
+- ⚙ 분기 키: `welcomeCtaState({ mounted, isStandalone, isInApp })` → pending/inapp/asset(#4.38 inapp은 mounted 다음 최우선, standalone이면 제외). 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)
 - ⚙ `secretasset_tutorial_status` 단일 키, 마이그레이션(merge-tutorial-status)
 
