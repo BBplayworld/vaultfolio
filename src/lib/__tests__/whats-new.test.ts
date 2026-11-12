@@ -56,13 +56,13 @@ describe("whatsNewTip — 7일 간격", () => {
     expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS }, opts)).toEqual({ count: WHATS_NEW.length - 7, title: WHATS_NEW[0].title });
   });
   it("최신까지 읽었거나 목록이 비면 없음", () => {
-    expect(whatsNewTip({ id: "20261112-02", seenAt: now - 40 * DAY }, opts)).toBeNull();
+    expect(whatsNewTip({ id: "20261112-03", seenAt: now - 40 * DAY }, opts)).toBeNull();
     expect(whatsNewTip(null, { ...opts, entries: [] })).toBeNull();
   });
   it("4.82 시드: 팁 N과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
     expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(WHATS_NEW.map((x) => x.id));
     expect(newBadgeIds(WHATS_NEW, null, today).size).toBe(whatsNewTip(null, { now, today })!.count);
-    expect(newBadgeIds(WHATS_NEW, { id: "20261112-02", seenAt: now }, today).size).toBe(0);
+    expect(newBadgeIds(WHATS_NEW, { id: "20261112-03", seenAt: now }, today).size).toBe(0);
   });
 });
 
@@ -121,7 +121,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
   });
 
   it("latestEntryId는 같은 날 NN 최대값(D1) — 정렬 순서와 무관", () => {
-    expect(latestEntryId(WHATS_NEW)).toBe("20261112-02");
+    expect(latestEntryId(WHATS_NEW)).toBe("20261112-03");
     expect(latestEntryId([e("20261111-01"), e("20261111-10"), e("20261111-09"), e("20261110-99")])).toBe("20261111-10");
     expect(latestEntryId([])).toBeNull();
   });
@@ -132,7 +132,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(runSilentFirstRun({ isDataLoaded: false, hasAssets: false, eligible: true })).toBe(false); // 로드 전
     expect(store.get(KEY)).toBeUndefined();
     expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: true })).toBe(true);
-    expect(JSON.parse(store.get(KEY)!).id).toBe("20261112-02");
+    expect(JSON.parse(store.get(KEY)!).id).toBe("20261112-03");
     expect(whatsNewTip(readSeen(), { today: "2026-11-12" })).toBeNull(); // 자산 등록 뒤 Dashboard 첫 마운트 시점
     vi.setSystemTime(new Date("2026-11-30T00:00:00Z"));
     expect(whatsNewTip(readSeen(), { today: "2026-11-30" })).toBeNull();
