@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-12 16:57 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.88**
+> **마지막 갱신: 2026-11-12 17:18 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.89**
 
 ## 🟥 대표 확인·결정 필요 (지금)
 1. **ETF 구성종목 API 탐색 (대표님 직접 확인 중 — 이번 주말 예정, 11/12 갱신)** — '[보류] ETF 속까지 합친 내 주식'([#152](https://github.com/BBplayworld/vaultfolio/issues/152)) 재개 여부가 여기에 걸려 있음
@@ -29,8 +29,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.89 | [#176](https://github.com/BBplayworld/vaultfolio/issues/176) 세금 관리를 더보기 밖(상세 허브 하단)으로 + 홈 원인 펼침 측정 ([PR #177](https://github.com/BBplayworld/vaultfolio/pull/177)) | UI 검수·QA | COO 자체 승인(low), ≤11/20 |
-| v4.90 | [#175](https://github.com/BBplayworld/vaultfolio/issues/175) 홈 '오늘' — 시장 종가 1줄·가장 큰 원인 1줄·7일 막대 연결 | 명세(4.89 머지 뒤 개발) | COO 자체 승인(medium), 목표 11/26 |
+| v4.90 | [#175](https://github.com/BBplayworld/vaultfolio/issues/175) 홈 '오늘' — 시장 종가 1줄·가장 큰 원인 1줄·7일 막대 연결 | 개발 | COO 자체 승인(medium), 목표 11/26 |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
@@ -43,6 +42,7 @@
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
+| v4.89 [PR #177](https://github.com/BBplayworld/vaultfolio/pull/177) | 11/12 | 세금 관리를 더보기 밖(상세 허브 하단 행)으로, 세금 화면에서 '상세' 탭 켜짐, 홈 원인 펼침 측정(#176) · COO 자체 승인(low) | PASS |
 | v4.88 [PR #173](https://github.com/BBplayworld/vaultfolio/pull/173) | 11/12 | 자산 변화·주식 '시장과 비교' 도구 타일(#172, 대표 요청) + 홍보 도착 퍼널 측정(#174) + AI 프롬프트 대출 라벨 · COO 자체 승인(low) | PASS |
 | v4.87 [PR #171](https://github.com/BBplayworld/vaultfolio/pull/171) | 11/12 | 홈 팁 보유 필터(#170) — 가진 자산에 맞는 기능만 권함, 시세 전부 실패 시 안내 문구, 320 배당 배지 · COO 자체 승인(low) | PASS |
 | v4.86 [PR #169](https://github.com/BBplayworld/vaultfolio/pull/169) | 11/12 | 웰컴에서 바로 첫 자산 등록(#167) — 휴대폰 웹 설치 단계 삭제, 직접 입력 5종 · 대표 승인 | PASS |
