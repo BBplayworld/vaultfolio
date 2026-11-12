@@ -935,24 +935,48 @@ export async function fetchOverseasIndexDailySeries(
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
 
-// 해외 종목 전일 대비율(%) — price-detail의 현재가(last)·전일종가(base)로 계산(시장 알림, #179).
-// 필드가 없거나 0이면 null(알림에서 해당 항목만 생략).
-export async function fetchOverseasChangeRate(
+// 종목 일별 종가 행(최신순) — 날짜·종가로 전일 대비를 계산해 stale(임시 휴장일 등)을 판정하는 데 쓴다(시장 알림, #179).
+// 국내: inquire-daily-price(FHKST01010400) stck_bsop_date·stck_clpr / 해외: dailyprice(HHDFS76240000) xymd·clos(정규장 종가).
+// 실패·필드 누락은 null → 호출부가 해당 항목만 생략한다.
+export async function fetchKrStockDailyCloses(
+  code: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(code)}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}`, appkey: appKey, appsecret: appSecret, tr_id: "FHKST01010400" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!isKisResponseOk(data, `국내 일별 종가 ${code}`)) return null;
+    return parseDailyCloseRows(data.output, "stck_bsop_date", "stck_clpr");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchOverseasDailyCloses(
   excd: string,
   symb: string,
   accessToken: string,
   appKey: string,
   appSecret: string,
-): Promise<number | null> {
+): Promise<IndexCloseRow[] | null> {
   try {
     const res = await fetchWithTimeout(
-      `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(symb)}`,
+      `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(symb)}&GUBN=0&BYMD=&MODP=1`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           appkey: appKey,
           appsecret: appSecret,
-          tr_id: "HHDFS76200200",
+          tr_id: "HHDFS76240000",
           "content-type": "application/json; charset=utf-8",
         },
         cache: "no-store",
@@ -960,12 +984,21 @@ export async function fetchOverseasChangeRate(
     );
     if (!res.ok) return null;
     const data = await res.json();
-    if (!isKisResponseOk(data, `전일대비 ${excd}/${symb}`)) return null;
-    const last = parseFloat(data.output?.last ?? "0");
-    const base = parseFloat(data.output?.base ?? "0");
-    if (!(last > 0) || !(base > 0)) return null;
-    return ((last - base) / base) * 100;
+    if (!isKisResponseOk(data, `해외 일별 종가 ${excd}/${symb}`)) return null;
+    return parseDailyCloseRows(data.output2, "xymd", "clos");
   } catch {
     return null;
   }
+}
+
+/** KIS 일별 응답(최신순 배열) → 날짜 오름차순 IndexCloseRow. 날짜(YYYYMMDD)·종가가 유효한 행만 */
+export function parseDailyCloseRows(output: unknown, dateField: string, closeField: string): IndexCloseRow[] {
+  if (!Array.isArray(output)) return [];
+  const rows: IndexCloseRow[] = [];
+  for (const r of output as Record<string, string>[]) {
+    const d = String(r?.[dateField] ?? "");
+    const price = parseFloat(r?.[closeField] ?? "");
+    if (/^\d{8}$/.test(d) && price > 0) rows.push({ date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`, price });
+  }
+  return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
 }

@@ -1,9 +1,9 @@
 import "server-only";
 import {
   fetchKospiDailySeries,
-  fetchOverseasChangeRate,
+  fetchKrStockDailyCloses,
+  fetchOverseasDailyCloses,
   fetchOverseasIndexDailySeries,
-  fetchStocksFromKorea,
   type IndexCloseRow,
 } from "@/lib/finance/finance-service";
 import type { PushTopic } from "./catalog";
@@ -30,7 +30,7 @@ export function changeFromSeries(rows: IndexCloseRow[] | null, marketDate: strin
   return ((last.price - prev.price) / prev.price) * 100;
 }
 
-/** KIS 호출 수 추정 — 예산 차감용 */
+/** KIS 호출 수 추정 — 예산 차감용(항목당 1호출) */
 export function estimateKisCalls(topics: readonly PushTopic[]): number {
   return topics.length;
 }
@@ -49,32 +49,25 @@ export async function fetchPushRates(topics: readonly PushTopic[], ctx: FetchCtx
   const { accessToken: tk, appKey: ak, appSecret: as_, marketDate } = ctx;
   const start = shiftDate(marketDate, -SERIES_LOOKBACK_DAYS);
 
-  // 국내 종목·ETF는 한 번에(내부 350ms 간격)
-  const krStocks = topics.filter((t) => t.source.kind === "kr-stock");
-  if (krStocks.length > 0) {
-    const codes = krStocks.map((t) => (t.source as { code: string }).code);
-    const { prices } = await fetchStocksFromKorea(codes, ctx.todayStr, tk, ak, as_);
-    for (const t of krStocks) {
-      const r = prices[(t.source as { code: string }).code]?.changeRate;
-      if (typeof r === "number" && Number.isFinite(r)) out[t.id] = r;
-    }
-  }
-
   let first = true;
   for (const t of topics) {
     const s = t.source;
-    if (s.kind === "kr-stock") continue;
     if (!first) await sleep(350); // 레이트리밋 방어 — 기존 조회와 같은 간격
     first = false;
     try {
-      if (s.kind === "kr-index") {
+      if (s.kind === "kr-stock") {
+        // 일별 종가 행의 날짜로 stale 판정 — 지수와 같은 기준(마지막 행 = 이번 회차 기대 거래일)
+        const rate = changeFromSeries(await fetchKrStockDailyCloses(s.code, tk, ak, as_), marketDate);
+        if (rate !== null) out[t.id] = rate;
+      } else if (s.kind === "kr-index") {
         const rate = changeFromSeries(await fetchKospiDailySeries(start, marketDate, tk, ak, as_, s.code), marketDate);
         if (rate !== null) out[t.id] = rate;
       } else if (s.kind === "us-index") {
         const rate = changeFromSeries(await fetchOverseasIndexDailySeries(s.code, start, marketDate, tk, ak, as_), marketDate);
         if (rate !== null) out[t.id] = rate;
       } else if (s.kind === "us-stock") {
-        const rate = await fetchOverseasChangeRate(s.excd, s.symbol, tk, ak, as_);
+        // 정규장 종가(dailyprice clos) 기준 — 시간외 반영 가능성이 있는 price-detail last는 쓰지 않는다
+        const rate = changeFromSeries(await fetchOverseasDailyCloses(s.excd, s.symbol, tk, ak, as_), marketDate);
         if (rate !== null) out[t.id] = rate;
       }
     } catch {
