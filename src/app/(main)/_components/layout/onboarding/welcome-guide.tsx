@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2, ExternalLink, Loader2 } from "lucide-react";
+import { ShieldCheck, CloudLightning, EyeOff, ArrowRight, FolderInput, Pencil, ImageUp, Download, Smartphone, ChevronDown, Link2, ExternalLink, Loader2, Building2, TrendingUp, Bitcoin, Wallet, CreditCard } from "lucide-react";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { InAppExternalGuide } from "../../pwa/in-app-external-guide";
 import { hasRestoreHash } from "../../pwa/in-app-browser-gate";
 import { useExternalMove } from "@/hooks/use-external-move";
-import { dispatchAddStock } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
+import { ADD_TRIGGER_EVENTS } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 import { track, trackThenNavigate, type GaParams } from "@/lib/analytics/ga";
 import { TRIAL_ENTRY_URL, TRIAL_EXIT_KEY } from "@/lib/trial/trial-mode";
@@ -83,17 +83,30 @@ export const WELCOME_CTA_METHODS = {
   manual: "manual",
   import: "import",
   syncConnect: "sync_connect",
-  skipInstall: "skip_install",
   trialStart: "trial_start",
 } as const satisfies Record<string, NonNullable<GaParams["method"]>>;
 
-/** CTA 슬롯 상태 — pending: 마운트 전(SSR 동일) / inapp: 인앱 브라우저(외부 이동 안내, #60) / install: 모바일 웹 미설치 / asset: 자산 등록 */
-export type WelcomeCtaState = "pending" | "inapp" | "install" | "asset";
-export function welcomeCtaState(env: { mounted: boolean; isMobile: boolean; isStandalone: boolean; skipInstall: boolean; isInApp: boolean }): WelcomeCtaState {
+/** CTA 슬롯 상태 — pending: 마운트 전(SSR 동일) / inapp: 인앱 브라우저(외부 이동 안내, #60) / asset: 자산 등록(모바일 웹 미설치 포함, #167) */
+export type WelcomeCtaState = "pending" | "inapp" | "asset";
+export function welcomeCtaState(env: { mounted: boolean; isStandalone: boolean; isInApp: boolean }): WelcomeCtaState {
   if (!env.mounted) return "pending";
   if (env.isInApp && !env.isStandalone) return "inapp";
-  if (env.isMobile && !env.isStandalone && !env.skipInstall) return "install";
   return "asset";
+}
+
+/** 팝오버 직접 입력 5행(#167) — 라벨·아이콘은 FAB ASSET_TYPES와 같은 값(테스트가 grep으로 고정). 순서는 웰컴 문구 순서 */
+export const WELCOME_MANUAL_ROWS = [
+  { type: "real-estate", label: "부동산", icon: Building2 },
+  { type: "stock", label: "주식", icon: TrendingUp },
+  { type: "crypto", label: "암호화폐", icon: Bitcoin },
+  { type: "cash", label: "현금성 자산", icon: Wallet },
+  { type: "loan", label: "대출", icon: CreditCard },
+] as const satisfies readonly { type: keyof typeof ADD_TRIGGER_EVENTS; label: string; icon: React.ElementType }[];
+
+/** 직접 입력 행 전송 — onboarding_action(manual) 1회 + 해당 자산군 추가 폼 열기 이벤트(숨김 마운트된 입력 창이 수신). 자산 추가 시작 이벤트는 보내지 않는다 */
+export function handleManualAdd(type: (typeof WELCOME_MANUAL_ROWS)[number]["type"]) {
+  track("onboarding_action", { method: WELCOME_CTA_METHODS.manual });
+  window.dispatchEvent(new CustomEvent(ADD_TRIGGER_EVENTS[type], { detail: { mode: "manual" } }));
 }
 
 /** skipHeroEnter: 루트 사전 조각을 거친 첫 mount — 히어로·신뢰 줄은 조각과 같은 자리에 애니메이션 없이 이어진다(#113) */
@@ -102,7 +115,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
   const isMobile = useIsMobile();
   const [skipEnter] = useState(skipHeroEnter); // mount 시점 값 고정 — 이후 prop 변화로 ENTER가 재생되지 않게
   const [mounted, setMounted] = useState(false);
-  const [showAssetCta, setShowAssetCta] = useState(false); // 모바일 웹: '웹에서 바로 시작' 선택 시에만 자산 등록 노출
+  const [focusCta, setFocusCta] = useState(false); // 체험 종료 복귀 시에만 등록 버튼으로 포커스·진입 모션
   const [securityOpen, setSecurityOpen] = useState(false); // 보안 상세 펼침 — 메모리 상태만(저장 안 함)
   const [restoreHash, setRestoreHash] = useState(false); // #share·#sync 링크 진입이면 체험 링크 숨김(#59)
 
@@ -112,7 +125,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
     track("welcome_view", { source: welcomeSource(isStandaloneDisplay(), detectBrowserEnv().isInApp) });
   }, []);
 
-  // 체험 종료(#59) 복귀: 표식 1회 소비 → trial_start 전송 → CTA 슬롯을 asset 상태로(기존 '웹에서 바로 시작' 경로 재사용)
+  // 체험 종료(#59) 복귀: 표식 1회 소비 → trial_start 전송 → 등록 버튼으로 포커스 이동
   useEffect(() => {
     setRestoreHash(hasRestoreHash(window.location.hash));
     try {
@@ -122,17 +135,12 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
       return;
     }
     track("onboarding_action", { method: WELCOME_CTA_METHODS.trialStart });
-    setShowAssetCta(true);
+    setFocusCta(true);
   }, []);
 
-  const ctaState = welcomeCtaState({ mounted, isMobile: !!isMobile, isStandalone, skipInstall: showAssetCta, isInApp });
-  // 설치 박스는 데스크톱·태블릿 미설치만 — 모바일 웹은 CTA 슬롯이 설치를 대신한다. 인앱은 외부 이동만 안내(설치 버튼 미렌더, #60)
+  const ctaState = welcomeCtaState({ mounted, isStandalone, isInApp });
+  // 설치 박스는 데스크톱·태블릿 미설치만 — 모바일 웹은 첫 저장 뒤 홈 #78 안내가 설치를 맡는다. 인앱은 외부 이동만 안내(설치 버튼 미렌더, #60)
   const showInstallBox = mounted && !isStandalone && !isMobile && ctaState !== "inapp";
-
-  const handleSkipInstall = () => {
-    track("onboarding_action", { method: WELCOME_CTA_METHODS.skipInstall });
-    setShowAssetCta(true);
-  };
 
   return (
     <div className={WELCOME_ROOT}>
@@ -197,12 +205,11 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
       <div
         data-testid="welcome-cta-slot"
         data-state={ctaState}
-        className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[152px] sm:min-h-[160px] ${ENTER}`}
+        className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[216px] sm:min-h-[160px] ${ENTER}`}
         style={{ animationDelay: "180ms" }}
       >
         {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
-        {ctaState === "install" && <WelcomeInstallCta onSkipInstall={handleSkipInstall} />}
-        {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={showAssetCta} />}
+        {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} />}
       </div>
 
       {/* ⑤ 주식 미리보기 — 실제 stock-tab 과 동일하게 카드 박스 없이 노출 */}
@@ -315,7 +322,7 @@ export function WelcomeTrialLink() {
   );
 }
 
-/** 설치 버튼 — 데스크톱 설치 박스·모바일 CTA 슬롯 공용(같은 화면에 1개만 렌더) */
+/** 설치 버튼 — 데스크톱 설치 박스 전용 */
 function InstallButton({ className = "" }: { className?: string }) {
   return (
     <PwaInstallFlow>
@@ -404,19 +411,9 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
   );
 }
 
-/** CTA 슬롯 install 상태(모바일 웹 미설치): 설치(주) + 웹에서 바로 시작(보조) + 캡션 1줄 */
-export function WelcomeInstallCta({ onSkipInstall }: { onSkipInstall: () => void }) {
-  return (
-    <div className="flex flex-col gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
-      <InstallButton className="w-full" />
-      <Button variant="secondary" size="lg" data-testid="welcome-skip-install-btn" className="w-full gap-1.5" onClick={onSkipInstall}>
-        웹에서 바로 시작
-        <ArrowRight className="size-4" />
-      </Button>
-      <p className="mt-1 text-sm text-muted-foreground text-center text-pretty">설치하면 홈 화면에서 바로 열립니다.</p>
-    </div>
-  );
-}
+// 팝오버 행 공통 — 히트영역 44px, 동심 radius(rounded-md), scale 전환만(transition-all 금지)
+const ROW_CLASS =
+  "flex min-h-11 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm text-popover-foreground hover:bg-accent focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset transition-[background-color,scale] motion-safe:active:scale-[0.98]";
 
 /** CTA 슬롯 asset 상태: 기존 자산 등록 CTA(스크린샷 등록 + 직접 입력·가져오기 팝오버) */
 export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalone: boolean; focusOnMount?: boolean }) {
@@ -426,7 +423,7 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
   const openWizard = useOnboardingWizardStore((s) => s.open);
   const wizardRef = useRef<HTMLButtonElement>(null);
 
-  // '웹에서 바로 시작' 후 사라진 버튼 대신 자산 등록 버튼으로 포커스 이동(키보드·스크린리더 흐름 유지)
+  // 체험 종료 복귀 시 자산 등록 버튼으로 포커스 이동(키보드·스크린리더 흐름 유지)
   useEffect(() => {
     if (focusOnMount) wizardRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -437,10 +434,9 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
     openWizard();
   };
 
-  const handleStockManual = () => {
-    track("onboarding_action", { method: WELCOME_CTA_METHODS.manual });
+  const handleManualRow = (type: (typeof WELCOME_MANUAL_ROWS)[number]["type"]) => {
     setIsStockMenuOpen(false);
-    dispatchAddStock("manual");
+    handleManualAdd(type);
   };
 
   return (
@@ -467,21 +463,32 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
               직접 입력 · 가져오기
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="center" className="w-56 p-1.5 space-y-0.5">
+          <PopoverContent
+            align="center"
+            collisionPadding={8}
+            className="w-60 p-1.5 max-h-[min(var(--radix-popover-content-available-height),26rem)] overflow-y-auto overscroll-contain"
+          >
+            <div role="group" aria-labelledby="welcome-manual-label">
+              <p id="welcome-manual-label" data-testid="welcome-manual-label" className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">직접 입력</p>
+              {WELCOME_MANUAL_ROWS.map(({ type, label, icon: Icon }) => (
+                <button
+                  key={type}
+                  type="button"
+                  data-testid={`welcome-manual-${type}`}
+                  className={ROW_CLASS}
+                  onClick={() => handleManualRow(type)}
+                >
+                  <Icon aria-hidden className="size-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+            <div role="separator" className="mx-3 my-1.5 h-px bg-border/40" />
+            <div role="group" aria-label="가져오기">
             <button
               type="button"
-              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-              onClick={handleStockManual}
-            >
-              <Pencil className="size-4 text-muted-foreground shrink-0" />
-              <div className="text-left">
-                <p className="font-medium">주식 직접 입력</p>
-                <p className="text-xs text-muted-foreground">수동으로 종목 추가</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="welcome-import"
+              className={`${ROW_CLASS} py-2 disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => { track("onboarding_action", { method: WELCOME_CTA_METHODS.import }); setIsStockMenuOpen(false); openFilePicker(); }}
               disabled={isImporting}
             >
@@ -493,7 +500,8 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
             </button>
             <button
               type="button"
-              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+              data-testid="welcome-sync-connect"
+              className={`${ROW_CLASS} py-2`}
               onClick={() => { track("onboarding_action", { method: WELCOME_CTA_METHODS.syncConnect }); setIsStockMenuOpen(false); cs.setShowConnectDialog(true); }}
             >
               <Link2 className="size-4 text-muted-foreground shrink-0" />
@@ -502,6 +510,7 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
                 <p className="text-xs text-muted-foreground">다른 기기의 자산 불러오기</p>
               </div>
             </button>
+            </div>
           </PopoverContent>
         </Popover>
       </div>

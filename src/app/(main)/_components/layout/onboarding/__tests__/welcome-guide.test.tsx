@@ -1,6 +1,6 @@
 // #48 첫 화면 "가치 먼저" 재배열 — node 환경(jsdom 없음): 정적 마크업·순수 매핑·grep만 검사.
 // 런타임 호출 횟수(welcome_view 1회, 토글 0회 등)는 qa Playwright(gtag 스텁 계수)가 판정한다.
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -18,7 +18,8 @@ vi.mock("@/hooks/use-share-artifacts", () => ({
 import {
   WelcomeGuide,
   WelcomeAssetCta,
-  WelcomeInstallCta,
+  WELCOME_MANUAL_ROWS,
+  handleManualAdd,
   WelcomeInAppCta,
   welcomeSource,
   welcomeCtaState,
@@ -41,7 +42,6 @@ describe("GA 매핑(위치 이동 후에도 값 동일)", () => {
 
   it("CTA 버튼별 method 값 고정", () => {
     expect(WELCOME_CTA_METHODS).toMatchObject({
-      skipInstall: "skip_install",
       wizard: "wizard",
       manual: "manual",
       import: "import",
@@ -56,24 +56,20 @@ describe("GA 매핑(위치 이동 후에도 값 동일)", () => {
 });
 
 describe("CTA 슬롯 상태", () => {
-  const base = { mounted: true, isMobile: false, isStandalone: false, skipInstall: false, isInApp: false };
-  it("마운트 전은 환경과 무관하게 pending(SSR·첫 렌더 동일)", () => {
-    expect(welcomeCtaState({ ...base, mounted: false, isMobile: true })).toBe("pending");
+  const base = { mounted: true, isStandalone: false, isInApp: false };
+  it("마운트 전은 환경과 무관하게 pending(SSR·첫 렌더 동일, S3)", () => {
+    expect(welcomeCtaState({ ...base, mounted: false })).toBe("pending");
+    expect(welcomeCtaState({ ...base, mounted: false, isInApp: true })).toBe("pending");
   });
-  it("모바일 웹 미설치 → install, 바로 시작 후 → asset", () => {
-    expect(welcomeCtaState({ ...base, isMobile: true })).toBe("install");
-    expect(welcomeCtaState({ ...base, isMobile: true, skipInstall: true })).toBe("asset");
-  });
-  it("데스크톱·PWA standalone → asset (바로 시작 버튼 없음)", () => {
+  it("기본 경로(S1·S4): 모바일·데스크톱 구분 없이 미설치 웹도 asset — install 상태 없음(#167)", () => {
     expect(welcomeCtaState(base)).toBe("asset");
-    expect(welcomeCtaState({ ...base, isMobile: true, isStandalone: true })).toBe("asset");
   });
-  it("인앱(#60): install·asset보다 우선, 바로 시작 후에도 inapp, standalone이면 아님, 마운트 전은 pending", () => {
+  it("PWA standalone(S5) → asset", () => {
+    expect(welcomeCtaState({ ...base, isStandalone: true })).toBe("asset");
+  });
+  it("인앱(S6, #60): asset보다 우선, standalone이면 아님", () => {
     expect(welcomeCtaState({ ...base, isInApp: true })).toBe("inapp");
-    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true })).toBe("inapp");
-    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, skipInstall: true })).toBe("inapp");
-    expect(welcomeCtaState({ ...base, isInApp: true, isMobile: true, isStandalone: true })).toBe("asset");
-    expect(welcomeCtaState({ ...base, isInApp: true, mounted: false })).toBe("pending");
+    expect(welcomeCtaState({ ...base, isInApp: true, isStandalone: true })).toBe("asset");
   });
 });
 
@@ -87,8 +83,9 @@ describe("WelcomeGuide 초기 마크업", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it("마운트 전 CTA 슬롯은 빈 pending 셸, 설치 박스 없음", () => {
+  it("마운트 전 CTA 슬롯은 빈 pending 셸(모바일 216px·sm 160px 고정, 점프 0), 설치 박스 없음", () => {
     expect(html).toContain('data-state="pending"');
+    expect(html).toContain("min-h-[216px] sm:min-h-[160px]");
     expect(html).not.toContain("welcome-install-box");
     expect(html).not.toContain("웹앱 설치하기");
   });
@@ -131,18 +128,73 @@ describe("CTA 슬롯 콘텐츠", () => {
   it("asset standalone 문구", () => {
     expect(renderToStaticMarkup(<WelcomeAssetCta standalone />)).toContain("자산을 등록해보세요");
   });
-  it("install(모바일 웹): 웹에서 바로 시작 보조 버튼 + 캡션", () => {
-    const html = renderToStaticMarkup(<WelcomeInstallCta onSkipInstall={() => {}} />);
-    expect(html).toContain('data-testid="welcome-skip-install-btn"');
-    expect(html).toContain("웹에서 바로 시작");
-    expect(html).toContain("설치하면 홈 화면에서 바로 열립니다.");
+  it("기본 경로(모바일 웹 미설치): 설치 버튼·웹에서 바로 시작·캡션 없음, 등록 2버튼 + 팝오버 마크업", () => {
+    const html = renderToStaticMarkup(<WelcomeAssetCta standalone={false} />);
+    for (const w of ["웹앱 설치하기", "웹에서 바로 시작", "설치하면 홈 화면에서 바로 열립니다.", "welcome-install-btn", "welcome-skip-install-btn"]) {
+      expect(html).not.toContain(w);
+    }
+    expect(html).toContain('data-testid="welcome-cta-wizard"');
+  });
+});
+
+describe("직접 입력 5행(#167)", () => {
+  it("5행 type·라벨 순서 고정(부동산·주식·암호화폐·현금성 자산·대출)", () => {
+    expect(WELCOME_MANUAL_ROWS.map((r) => r.type)).toEqual(["real-estate", "stock", "crypto", "cash", "loan"]);
+    expect(WELCOME_MANUAL_ROWS.map((r) => r.label)).toEqual(["부동산", "주식", "암호화폐", "현금성 자산", "대출"]);
+  });
+  it("라벨·아이콘이 FAB ASSET_TYPES와 같은 값(비공개 상수 → 소스 grep)", () => {
+    const fab = readFileSync(path.resolve(__dirname, "../../floating/floating-add-button.tsx"), "utf8");
+    const icons: Record<string, string> = { "real-estate": "Building2", stock: "TrendingUp", crypto: "Bitcoin", cash: "Wallet", loan: "CreditCard" };
+    for (const { type, label } of WELCOME_MANUAL_ROWS) {
+      expect(fab).toContain(`type: "${type}" as AssetType, label: "${label}", icon: ${icons[type]},`);
+      expect(SRC).toContain(`{ type: "${type}", label: "${label}", icon: ${icons[type]} }`);
+    }
+  });
+  it("행 이벤트명이 숨김 마운트 입력 창의 수신 대상과 1:1(무반응 방지)", () => {
+    const main = path.resolve(__dirname, "../../../..");
+    const page = readFileSync(path.resolve(main, "page.tsx"), "utf8");
+    const inputs: Record<string, [string, string]> = {
+      "real-estate": ["RealEstateInput", "real-estate-input"],
+      stock: ["StockInput", "stock-input"],
+      crypto: ["CryptoInput", "crypto-input"],
+      cash: ["CashInput", "cash-input"],
+      loan: ["LoanInput", "loan-input"],
+    };
+    for (const { type } of WELCOME_MANUAL_ROWS) {
+      const [comp, file] = inputs[type];
+      expect(page, comp).toContain(`<${comp}`);
+      const src = readFileSync(path.resolve(main, `_components/forms/asset-update/input/${file}.tsx`), "utf8");
+      expect(src, file).toContain(`trigger-add-${type}`);
+    }
+  });
+  it("행 클릭 전송: onboarding_action(manual) 1회 + 이벤트명 ADD_TRIGGER_EVENTS·detail.mode=manual, asset_add_start 없음", () => {
+    expect(SRC.match(/asset_add_start/g)).toBeNull();
+    expect(SRC).not.toContain("runDirectInput");
+    expect(SRC).not.toContain("skip_install");
+  });
+  it("renderToStaticMarkup: 팝오버는 닫힘이라 행 testid는 마크업에 없음(qa Playwright가 열어서 확인)", () => {
+    expect(renderToStaticMarkup(<WelcomeAssetCta standalone={false} />)).not.toContain("welcome-manual-");
+  });
+});
+
+describe("handleManualAdd 전송", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it.each(WELCOME_MANUAL_ROWS.map((r) => r.type))("%s → 자산군 추가 이벤트 1회(detail.mode=manual)", async (type) => {
+    const { ADD_TRIGGER_EVENTS } = await import("@/app/(main)/_components/layout/navigation/asset-dispatch");
+    const events: CustomEvent[] = [];
+    vi.stubGlobal("window", { dispatchEvent: (e: CustomEvent) => (events.push(e), true) });
+    vi.stubGlobal("CustomEvent", class { type: string; detail: unknown; constructor(t: string, i?: { detail?: unknown }) { this.type = t; this.detail = i?.detail; } });
+    handleManualAdd(type);
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe(ADD_TRIGGER_EVENTS[type]);
+    expect(events[0].detail).toEqual({ mode: "manual" });
   });
 });
 
 describe("CTA 슬롯 inapp(#60)", () => {
   const html = renderToStaticMarkup(<WelcomeInAppCta isIOS />);
   it("등록·설치 진입점 없음, 외부 이동 버튼 1개", () => {
-    for (const id of ["welcome-cta-wizard", "welcome-cta-more", "welcome-install-btn", "welcome-skip-install-btn"]) {
+    for (const id of ["welcome-cta-wizard", "welcome-cta-more", "welcome-install-btn"]) {
       expect(html).not.toContain(`data-testid="${id}"`);
     }
     expect(html).not.toContain('type="file"');
