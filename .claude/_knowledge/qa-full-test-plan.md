@@ -828,5 +828,10 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - (#142, v4.75) 주식 직접 추가: 매수일 기본값 = 올해 1월 1일(안내 문구 "기본값은 올해 1월 1일이에요. 실제 매수일을 알면 수정해 주세요."), 평단·현재가 입력으로 매수일이 자동 변경되지 않음, 수정 시 저장된 매수일 유지. 체험(`?trial=1`)·데모 종목은 장중·마감직후 '오늘' 칩 숨김(종가 후 칩 유지). 성과 › 자산 변화 › 주식 목록은 320px에서 세로 쌓기(겹침 없음), 400px 이상 2열. vitest `today-chip.test.ts`, `purchase-date-139.test.ts`.
 - (#144, v4.76) 성과 › 자산 변화 › 주식 카테고리 헤더: 400px 미만 세로 쌓기·금액 좌측 정렬(320·360·375 `원` 분리 0), 400px 이상 우측 정렬.
 
-### F-HOME-CAUSE-OPEN. 홈 원인 펼침 계측 — #4.89
-- ⚙ Hero 쉐브론을 열 때(false→true)만 `feature_use` category `home_cause_open`(`홈 변동 원인 열기`) 1건, 닫을 때·체험 0건, 화면 변화 0. 테스트 `tax-entry-489.test.ts`
+### F-HOME-CAUSE-OPEN. 홈 원인 펼침 계측 — #4.89, 4.90에서 입구 변경
+- ⚙ B 줄(원인 1개 이상) 탭·원인 0개 쉐브론을 **열 때(false→true)만** `feature_use` category `home_cause_open`(`홈 변동 원인 열기`) 1건(핸들러 `toggleCause` 1개, 송출처 grep 1곳), `접기`·닫을 때·체험 0건. 4.90부터 의미 = '원인 1줄을 보고 더 보기'. 테스트 `tax-entry-489.test.ts`
+
+### F-HOME-TODAY. 홈 '오늘' — 지수 종가 줄·가장 큰 원인 1줄·7일 막대 — #4.90 #175 ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx) · [market-entry-line.tsx](../../src/app/(main)/_components/views/activity/market-entry-line.tsx) · [market-compare.ts](../../src/lib/finance/market-compare.ts) · [home-today.ts](../../src/lib/report/home-today.ts))
+- ⚙ A 문구 확정표(같은 날짜 1번·날짜 다름 시장별 `종가`·한 시장·휴장 `휴장`/전부 휴장 `종가` 생략·`오늘`/`실시간` 0), `marketLineState` 진리표, C69 시각 경계 4종(`market-line-490.test.ts`: kstAccessDay 15:59/16:00·STD 06:59/07:00·DST 05:59/06:00·토/월 06:30/10:00·11/27 추수감사절 다음 날), C65(홈 값 = 도착 '하루' 행 지수 열·휴장 = 도착 `휴장`), `pickTopCause`·`weekTrendTitle`, 팁 억제(dismiss 기록 0), GA title 표·송출처 전수, `listPeriodFromInit`, 시장 타일 하루 휴장 `휴장`. 테스트 `home-today-490.test.tsx`·`home-today-490.test.ts`·`home-today.test.ts`·`market-line-490.test.ts`
+- 👤 주식 보유+과거 기록 있음: Hero 바로 아래·분포 필터 위에 20px 1줄(375·360 두 시장, 320 코스피만, 가로 넘침·2줄 0), 탭 → 시장과 비교 목록 '하루' 선택·표 '하루' 행 지수 열 = 줄 값, 뒤로 → 홈. B 줄 `보유자산 시세 상승 +734만원 외 1개` 탭 → 줄 사라지고 목록·`접기`, 포커스 패널 → `접기` 후 B 줄, 노드 재마운트 0. 7일 카드(기록 2개↑) 탭 → 자산 변화 전체·주. 첫 저장 당일·주식 없음·캡처: A·B·C 신규 표시 0. 홈 팁에 '시장과 비교' 기능 팁 안 나옴
+
