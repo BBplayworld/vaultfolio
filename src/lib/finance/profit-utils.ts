@@ -282,6 +282,8 @@ interface FetchProfitRefOptions {
   basis?: ProfitBasis;
   // KIS 외부 API 일시 오류(5회 이상 토큰 실패) 응답 헤더 감지 시 호출
   onKisUnavailable?: () => void;
+  // 429·5xx로 끝내 실패하고 받은 종목이 0일 때 호출(abort·점검·일부 성공 제외) — 스켈레톤 잔존 방지(#170)
+  onFailed?: () => void;
 }
 
 // 동일 cacheKey로 진행 중인 호출을 추적 — 두 호출자가 동시에 캐시 miss 시 한쪽만 fetch하고 결과 공유
@@ -306,7 +308,7 @@ export async function fetchProfitRef(
   period: ProfitPeriod,
   options: FetchProfitRefOptions = {},
 ): Promise<ProfitRefResponse> {
-  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay", onKisUnavailable } = options;
+  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay", onKisUnavailable, onFailed } = options;
   const cacheKey = getProfitCacheKey(tickers, period, basis);
   if (!signal) {
     console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
@@ -355,6 +357,7 @@ export async function fetchProfitRef(
     // 선행이 429·5xx로 일부 실패했으면 부분만 진행으로 넘기고 완료 처리하지 않음(#4.85)
     if (incomplete) {
       if (Object.keys(data).length > 0) onProgress?.(data);
+      else onFailed?.();
       return data;
     }
     onProgress?.(data);
@@ -427,6 +430,7 @@ export async function fetchProfitRef(
       try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch { /* ignore */ }
       onComplete?.(false);
     }
+    if (!signal?.aborted && !hitUnavailable && incomplete && Object.keys(merged).length === 0) onFailed?.();
     return { data: merged, aborted: !!signal?.aborted, unavailable: hitUnavailable, incomplete };
   };
 

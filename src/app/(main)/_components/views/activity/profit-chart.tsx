@@ -30,6 +30,8 @@ import { DataSourceBadge } from "../data-source-badge";
 import { SECTION } from "../../layout/ui/report-section";
 import { BODY_ENTER, ChangeHero } from "./change-hero";
 
+// 시세 전부 실패(429·5xx) 안내 — 원인 단정 없음(#170). 점검 문구와 별개
+const FETCH_FAILED_MESSAGE = "지금은 불러오지 못했어요, 다음에 열면 다시 불러올게요";
 const PROFIT_SYNC_COMPLETE_MSG = "보유 주식의 기간별 수익 동기화 완료";
 
 // 세션 단위 toast 중복 방지: 같은 (period, tickerList) 조합으로 한 번 알린 뒤엔 재진입해도 안 띄움
@@ -270,6 +272,8 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
   const [dailyData, setDailyData] = useState<ProfitRefResponse | undefined>(undefined);
   // KIS 외부 API 일시 오류(5회 이상 토큰 실패) — 정보없음 노출용
   const [kisUnavailable, setKisUnavailable] = useState(false);
+  // 429·5xx로 받은 종목 0(전부 실패, #170) — 점검과 달리 원인 단정 없는 문구. 점검이 항상 우선
+  const [fetchFailed, setFetchFailed] = useState(false);
   // 조회 슬롯(#137): 같은 key 재실행은 진행 보존, 다른 key(기간 전환 등)면 이전 요청 abort + 늦은 응답 버림.
   // 데이터 삭제/불러오기 시에도 이 슬롯으로 abort
   const refSlotRef = useRef<FetchSlot>(createFetchSlot());
@@ -303,6 +307,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
     setRefData(undefined);
     setDailyData(undefined);
     setKisUnavailable(false);
+    setFetchFailed(false);
   }, [dataResetVersion]);
 
   // 현재 period 결과 점진 로드
@@ -317,6 +322,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
     notifiedKeyRef.current = null;
     setRefData(undefined);
     setKisUnavailable(false);
+    setFetchFailed(false);
     fetchProfitRef(tickerList, period, {
       signal: req.controller.signal,
       caller: `profit-chart:ref(${period})`,
@@ -324,6 +330,7 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
       // 마지막으로 고른 기간의 응답만 반영(#137 — 연→주 빠른 전환 때 1년 값이 주 제목 아래 남던 문제)
       onProgress: (partial) => { if (req.isCurrent()) setRefData(partial); },
       onKisUnavailable: () => { if (req.isCurrent()) setKisUnavailable(true); },
+      onFailed: () => { if (req.isCurrent()) setFetchFailed(true); },
       onComplete: () => {
         if (!req.isCurrent()) return;
         refDoneRef.current = true;
@@ -341,12 +348,14 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
     if (!req) return;
     setDailyData(undefined);
     setKisUnavailable(false);
+    setFetchFailed(false);
     fetchProfitRef(tickerList, "daily", {
       signal: req.controller.signal,
       caller: "profit-chart:daily(secondary)",
       basis: profitBasis,
       onProgress: (partial) => { if (req.isCurrent()) setDailyData(partial); },
       onKisUnavailable: () => { if (req.isCurrent()) setKisUnavailable(true); },
+      onFailed: () => { if (req.isCurrent()) setFetchFailed(true); },
       onComplete: () => {
         if (!req.isCurrent()) return;
         dailyDoneRef.current = true;
@@ -383,12 +392,19 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
 
   // KIS 외부 API 일시 오류 → 항상 통일된 배너 노출 (캐시 히트로 isLoading이 꺼져도
   // 종목별 "기준가 없음"으로 새지 않도록 우선순위를 최상단에 둠)
-  if (kisUnavailable) {
+  if (kisUnavailable || fetchFailed) {
+    const failedOnly = !kisUnavailable;
     if (controlledPeriod) {
       return (
         <ChangeHero
           title={HERO_LABELS[period]}
-          message={<>점검 중 · 외부 증권 API 점검으로 정보를 불러올 수 없어요</>}
+          message={
+            failedOnly ? (
+              <span className="break-keep text-balance">{FETCH_FAILED_MESSAGE}</span>
+            ) : (
+              <>점검 중 · 외부 증권 API 점검으로 정보를 불러올 수 없어요</>
+            )
+          }
           contentKey={period}
         />
       );
@@ -404,7 +420,13 @@ export function ProfitCard({ isActive = true, period: controlledPeriod }: { isAc
         </CardHeader>
         <CardContent className={ASSET_THEME.contentPad}>
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
-            <p className="text-muted-foreground text-sm">외부 증권 API 점검으로 정보를 불러올 수 없습니다.</p>
+            {failedOnly ? (
+              <p data-testid="profit-fetch-failed" className="text-muted-foreground px-4 text-center text-sm text-balance break-keep">
+                {FETCH_FAILED_MESSAGE}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm">외부 증권 API 점검으로 정보를 불러올 수 없습니다.</p>
+            )}
           </div>
         </CardContent>
       </Card>
