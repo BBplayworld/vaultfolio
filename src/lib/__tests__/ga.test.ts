@@ -131,6 +131,10 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "whats_new" }, "새 소식"],
     ["feature_use", { category: "whats_new", method: "click" }, "새 소식"],
     ["feature_use", { category: "change_week_all", source: "whats_new" }, "성과·자산 변화·최근 7일"], // 바로 가기 진입 이벤트는 기존 title 유지
+    ["feature_use", { category: "change_week_all", source: "home_tip" }, "성과·자산 변화·최근 7일"], // 4.90 — 홈 팁 출처도 기존 title 유지
+    ["feature_use", { category: "change_week_all" }, "성과·자산 변화·최근 7일"], // source 없음(자산 변화 탭·허브 행) 불변
+    ["feature_use", { category: "change_week_all", source: "home_week" }, "홈·7일"], // 4.90 홈 7일 카드
+    ["feature_use", { category: "home_market" }, "홈·오늘 시장"], // 4.90 홈 지수 종가 줄(내부 판독명)
     ["feature_use", { category: "feedback" }, "의견 보내기"],
     ["feature_use", { category: "theme" }, "테마 변경"],
     ["feature_use", { category: "ai_prompt" }, "AI 프롬프트 복사"],

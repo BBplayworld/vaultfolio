@@ -32,15 +32,17 @@ export function useDailyRefToken(): string {
 }
 
 // K1 생성 목록(동적 import). 불러오기에 실패하면 빈 목록 → 국내는 전부 '비교하지 않은 종목'(틀린 짝보다 빈 짝)
-export function useKospiPeerCodes(): ReadonlySet<string> | null {
+// enabled=false면 불러오지 않는다(홈: 주식 없는 사용자·첫 저장 당일은 종목 마스터 청크를 건너뜀, 4.90)
+export function useKospiPeerCodes(enabled = true): ReadonlySet<string> | null {
   const [peerCodes, setPeerCodes] = useState<ReadonlySet<string> | null>(null);
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     loadKospiPeerCodes()
       .then((s) => { if (alive) setPeerCodes(s); })
       .catch(() => { if (alive) setPeerCodes(new Set()); });
     return () => { alive = false; };
-  }, []);
+  }, [enabled]);
   return peerCodes;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -19,12 +19,15 @@ import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
 import { track } from "@/lib/analytics/ga";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
-import { ChevronRight, ChevronDown, Trophy } from "lucide-react";
+import { ChevronRight, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import { tierLabel } from "@/lib/report/asset-grade";
 import { TIER_STYLE } from "../activity/asset-report-view";
 import { computeAttributionView } from "../activity/week-attribution";
 import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
+import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
+import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
+import { MarketLine, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -238,6 +241,9 @@ export function NetAssetSummaryBox({
   showRealtimeBadge = false,
   grade,
   onGradeClick,
+  market,
+  marketLine = "off",
+  onMarketOpen,
 }: {
   netAsset: number;
   totalAsset?: number;
@@ -253,11 +259,33 @@ export function NetAssetSummaryBox({
   /** 자산 성적표 최신 등급(성적표 화면 방문 시 기록됨) — 있으면 우상단에 미니 트로피 배지 노출 */
   grade?: SnapshotGrade | null;
   onGradeClick?: () => void;
+  /** 지수 종가 줄(4.90) — 홈 Dashboard가 판정(marketLineState)해 넘긴다. 캡처·웰컴 미리보기는 넘기지 않는다 */
+  market?: MarketEntryValue;
+  marketLine?: MarketLineState;
+  onMarketOpen?: () => void;
 }) {
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
   const [causeOpen, setCauseOpen] = useState(false);
   const hasCause = !!change && !change.negligible && (!!change.sentence || change.estimated);
+  // 가장 큰 원인 1줄(4.90 B) — 원인이 있으면 쉐브론 대신 이 줄이 펼침 입구. 원인 0개(예측만)는 현행 쉐브론 유지
+  const top = hasCause && change ? pickTopCause(change.causes) : null;
+  const showLine = !!top && !screenshotMode;
+  const open = causeOpen || screenshotMode;
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLButtonElement>(null);
+  const focusTo = useRef<"panel" | "line" | null>(null);
+  // 열 때만 home_cause_open 1건(닫을 때 제외) — B 줄·쉐브론 두 입구가 이 핸들러 1개를 공유
+  const toggleCause = () => {
+    if (!causeOpen) track("feature_use", { category: "home_cause_open" });
+    setCauseOpen((v) => !v);
+  };
+  // 펼침 직후 포커스 = 패널, 접힘 직후(포커스가 패널 안이었을 때만) = B 줄(preventScroll)
+  useEffect(() => {
+    if (focusTo.current === "panel") panelRef.current?.focus({ preventScroll: true });
+    else if (focusTo.current === "line") lineRef.current?.focus({ preventScroll: true });
+    focusTo.current = null;
+  }, [causeOpen]);
 
   return (
     <div className="space-y-4">
@@ -284,7 +312,7 @@ export function NetAssetSummaryBox({
             {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
           </div>
 
-          <div className="mt-1 space-y-1">
+          <div className="mt-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
                 {formatPriceByMode(netAsset)}
@@ -302,13 +330,10 @@ export function NetAssetSummaryBox({
                   <span className="inline-flex items-center ml-1.5">
                   <span className="text-sm font-medium text-muted-foreground break-keep">{change.label}</span>
                   {/* 원인 문구는 기본 접힘 — 헤더에 상시 노출하면 숫자보다 문장이 시선을 끈다 */}
-                  {hasCause && !screenshotMode && (
+                  {hasCause && !screenshotMode && !showLine && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!causeOpen) track("feature_use", { category: "home_cause_open" }); // 열 때만 1건(닫을 때 제외)
-                        setCauseOpen((v) => !v);
-                      }}
+                      onClick={toggleCause}
                       aria-expanded={causeOpen}
                       aria-label="변동 원인 보기"
                       className="ml-1 -my-2 p-2 text-muted-foreground hover:text-foreground"
@@ -320,37 +345,99 @@ export function NetAssetSummaryBox({
                 </span>
               )}
             </div>
-            {change && hasCause && (causeOpen || screenshotMode) && (
-              <div className="space-y-1">
-                {change.estimated && (
-                  <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
+            {change && hasCause && (
+              <>
+                {showLine && top && (
+                  // B 가장 큰 원인 1줄 — 항상 마운트, 열리면 줄이 접히고 같은 자리에 목록이 열린다(같은 값 두 번 노출 0).
+                  // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환
+                  <div
+                    inert={open}
+                    className={`grid motion-safe:transition-[grid-template-rows,opacity,visibility,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0 invisible" : "-mt-1.5 -mb-2.5 grid-rows-[1fr] opacity-100 visible"}`}
+                  >
+                    <div className="min-h-0 overflow-hidden">
+                      <button
+                        ref={lineRef}
+                        type="button"
+                        data-testid="home-cause-line"
+                        data-cause-key={top.key}
+                        aria-expanded={open}
+                        aria-controls="home-cause-panel"
+                        aria-label={`변동 원인 펼치기, ${top.label} ${top.text}${change.causes.length > 1 ? ` 외 ${change.causes.length - 1}개` : ""}`}
+                        onClick={() => { focusTo.current = "panel"; toggleCause(); }}
+                        className="flex w-full items-center gap-1.5 py-2.5 text-left"
+                      >
+                        {change.estimated && (
+                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
+                        )}
+                        <span className="min-w-0 truncate text-sm text-foreground">{top.label}</span>
+                        <span className={`shrink-0 text-sm font-semibold tabular-nums ${getProfitLossColor(top.amount)}`}>{top.text}</span>
+                        {change.causes.length > 1 && (
+                          <span data-testid="home-cause-more" className="shrink-0 text-sm text-muted-foreground max-[359px]:hidden">외 {change.causes.length - 1}개</span>
+                        )}
+                        <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </div>
                 )}
-                {/* 비교 구간 — 오랜만의 접속에서도 어느 기간의 변화인지 바로 읽히게(S-4.33) */}
-                {change.rangeLabel && (
-                  <p className="text-xs tabular-nums text-muted-foreground">{change.rangeLabel}</p>
-                )}
-                {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·기록 날짜(muted)·금액(손익색) 분리.
-                    시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(sortCausesByDate) */}
-                <ul className="w-full max-w-xs space-y-0.5">
-                  {change.causes.map((c) => (
-                    <li key={c.key} className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm text-foreground break-keep">
-                        {c.label}
-                        {c.dateLabel && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{c.dateLabel}</span>}
-                      </span>
-                      <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
-                    </li>
-                  ))}
-                </ul>
-                {(change.offsetTotal ?? 0) >= CAUSE_DISPLAY_MIN && (
-                  <p data-testid="home-cause-offset-caption" className="mt-1.5 text-xs text-muted-foreground break-keep text-pretty leading-relaxed max-w-xs">
-                    자산 사이에 옮긴 돈은 원인에서 뺐어요
-                  </p>
-                )}
-                {!screenshotMode && change.records && (
-                  <AttributionRecordList records={change.records} className="w-full max-w-xs" />
-                )}
-              </div>
+                <div
+                  ref={panelRef}
+                  id="home-cause-panel"
+                  data-testid="home-cause-panel"
+                  role="region"
+                  aria-label="변동 원인"
+                  tabIndex={-1}
+                  inert={!open}
+                  className={`grid outline-none motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-200 ease-out ${open ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="space-y-1 pt-1">
+                  {change.estimated && (
+                    <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
+                  )}
+                  {/* 비교 구간 — 오랜만의 접속에서도 어느 기간의 변화인지 바로 읽히게(S-4.33) */}
+                  {change.rangeLabel && (
+                    <p className="text-xs tabular-nums text-muted-foreground">{change.rangeLabel}</p>
+                  )}
+                  {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·기록 날짜(muted)·금액(손익색) 분리.
+                      시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(sortCausesByDate) */}
+                  <ul className="w-full max-w-xs space-y-0.5">
+                    {change.causes.map((c) => (
+                      <li key={c.key} className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm text-foreground break-keep">
+                          {c.label}
+                          {c.dateLabel && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{c.dateLabel}</span>}
+                        </span>
+                        <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(change.offsetTotal ?? 0) >= CAUSE_DISPLAY_MIN && (
+                    <p data-testid="home-cause-offset-caption" className="mt-1.5 text-xs text-muted-foreground break-keep text-pretty leading-relaxed max-w-xs">
+                      자산 사이에 옮긴 돈은 원인에서 뺐어요
+                    </p>
+                  )}
+                  {!screenshotMode && change.records && (
+                    <AttributionRecordList records={change.records} className="w-full max-w-xs" />
+                  )}
+                      {showLine && (
+                        <button
+                          type="button"
+                          data-testid="home-cause-collapse"
+                          aria-label="변동 원인 접기"
+                          onClick={() => {
+                            focusTo.current = panelRef.current?.contains(document.activeElement) ? "line" : null;
+                            toggleCause();
+                          }}
+                          className="flex min-h-10 w-full items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          접기
+                          <ChevronUp aria-hidden className="size-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -368,6 +455,8 @@ export function NetAssetSummaryBox({
           </div>
         )}
       </div>
+
+      {!screenshotMode && market && marketLine !== "off" && onMarketOpen && <MarketLine market={market} onOpen={onMarketOpen} />}
 
       {visibleTabs.length > 1 && onSegmentClick && (
         <div className="flex justify-center">
@@ -520,7 +609,12 @@ function useHeaderNetChange(): HeaderChange | null {
 }
 
 function DailyNetAssetTrend() {
-  const snapshots = useLast7DailySnapshots();
+  return <WeekTrendCard snapshots={useLast7DailySnapshots()} />;
+}
+
+// 7일 순자산 막대 카드 — 기록 2개 이상이면 버튼(4.90). 표시만 하는 함수라 테스트가 기록을 직접 넣는다
+export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }) {
+  const { navigate } = useAssetNavigation();
 
   // 자산 등록 직후엔 기록이 없어 이 영역이 통째로 비어버린다 → 언제부터 쌓이는지 알려준다
   if (snapshots.length === 0) {
@@ -541,48 +635,56 @@ function DailyNetAssetTrend() {
   const MIN_BAR = 8;
   const MAX_BAR = 72;
 
+  // 기록 2개 이상이면 카드 전체가 자산 변화 › 전체·주로 가는 버튼(4.90 C). 0·1개는 안내만(비버튼)
+  const clickable = snapshots.length >= 2;
+  const Root = clickable ? "button" : "div";
+  const rootProps = clickable
+    ? {
+        type: "button" as const,
+        "data-testid": "home-week-card",
+        "aria-label": "순자산 추이, 자산 변화 주 보기",
+        onClick: () => {
+          track("feature_use", { category: "change_week_all", source: "home_week" });
+          navigate({ type: "activity", tab: "change", init: { scope: "all", period: "week" } });
+        },
+      }
+    : {};
+
   return (
-    <div className="rounded-lg px-4 py-3 space-y-2.5" style={{ backgroundColor: MAIN_PALETTE[0] + "08" }}>
-      <div className="flex items-center gap-1.5">
-        <p className="text-sm font-semibold text-muted-foreground">순자산 추이 (최근 {snapshots.length}일)</p>
+    <Root
+      {...rootProps}
+      className={`block w-full rounded-lg bg-brand/[0.03] px-4 py-3 text-left space-y-2.5 ${clickable ? "transition-[background-color,scale] hover:bg-brand/[0.06] active:scale-[0.98]" : ""}`}
+    >
+      <div className="flex w-full items-center gap-1.5">
+        <p data-testid="home-week-title" className="text-sm font-semibold text-muted-foreground">{weekTrendTitle(snapshots)}</p>
         <DataSourceBadge kind="closing" />
+        {clickable && <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" />}
       </div>
       {snapshots.length === 1 && (
         <p className="text-sm text-muted-foreground text-pretty">하루 더 쌓이면 날짜별 변화를 비교할 수 있어요.</p>
       )}
       <div className="flex gap-1">
         {snapshots.map((snap, i) => {
-          const prev = i > 0 ? snapshots[i - 1].netAsset : null;
-          const diff = prev !== null ? snap.netAsset - prev : 0;
-          const pct = prev !== null && prev > 0 ? (diff / prev) * 100 : 0;
-          const isBig = prev !== null && pct >= 5;
           const isLast = i === snapshots.length - 1;
           // 값에 정확히 비례한 높이 (반올림 없이) — 어제보다 작으면 막대도 무조건 더 낮음
           const heightPx = MIN_BAR + ((snap.netAsset - baseVal) / range) * (MAX_BAR - MIN_BAR);
-          const barColor = isBig ? MAIN_PALETTE[4] : isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
+          const barColor = isLast ? MAIN_PALETTE[0] : MAIN_PALETTE[0] + "88";
           const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(snap.date).getDay()];
           const label = `${snap.date.slice(5)} (${dow})`;
 
           return (
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
-              {isBig && (
-                <span className="text-[10px] sm:text-[11px] font-bold animate-pulse leading-none mb-0.5" style={{ color: MAIN_PALETTE[4] }}>▲{pct.toFixed(0)}%</span>
-              )}
-              {!isBig && <span className="text-[10px] sm:text-[11px] leading-none mb-0.5 invisible">x</span>}
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
                 <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrencyDecimal(snap.netAsset)}</span>
-                <div
-                  className="w-full rounded-t-sm transition-all"
-                  style={{ height: heightPx, backgroundColor: barColor, boxShadow: isBig ? `0 0 6px ${MAIN_PALETTE[4]}88` : undefined }}
-                />
+                <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
               <span className="text-sm text-muted-foreground">{label}</span>
             </div>
           );
         })}
       </div>
-    </div>
+    </Root>
   );
 }
 
@@ -631,6 +733,9 @@ export function Dashboard() {
   const headerChange = useHeaderNetChange();
   // 자산 성적표 미니 배지 — 저장된 최신 등급만 읽음(재계산 없음)
   const latestGrade = useLatestAssetGrade();
+  // 지수 종가 줄(4.90 A) — 지수 조회·종목 마스터는 첫 저장 당일(headerChange null)·주식 없음이면 건너뛴다. 줄과 팁 억제가 같은 판정 1곳
+  const market = useMarketEntryValue("daily", true, headerChange !== null);
+  const marketLine = marketLineState({ hasHeaderChange: headerChange !== null, hasTickerStock: market.hasTickerStock, markets: market.markets });
 
   const totalAsset = summary.realEstateValue + summary.physicalValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -698,6 +803,12 @@ export function Dashboard() {
                   showRealtimeBadge
                   grade={latestGrade}
                   onGradeClick={() => navigate({ type: "activity", tab: "report" })}
+                  market={market}
+                  marketLine={marketLine}
+                  onMarketOpen={() => {
+                    track("feature_use", { category: "home_market" });
+                    navigate({ type: "activity", tab: "change-market", init: { period: "day" } });
+                  }}
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}
@@ -784,7 +895,7 @@ export function Dashboard() {
       {/* ── 홈 알림/팁 통합 박스 (S-4.32 후속) — 백업·세금·자산 최신화·기능 팁 4종을 위험도 순으로
           1개만 노출. 전부 조건 미충족이면 스스로 null을 반환한다. ── */}
       <div className="lg:col-span-2 empty:hidden">
-        <HomeTipBox />
+        <HomeTipBox marketLine={marketLine} />
       </div>
     </div>
   );

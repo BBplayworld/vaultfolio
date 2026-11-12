@@ -67,7 +67,7 @@ function ActivityView({ tab, init }: { tab: ActivityTab; init?: ChangeInit }) {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       {tab === "change"   && <AssetChangeView init={init} />}
-      {tab === "change-market" && <MarketCompareView />}
+      {tab === "change-market" && <MarketCompareView init={init} />}
       {tab === "dividend" && <DividendCard isActive />}
       {tab === "report"   && <AssetReportView />}
     </div>

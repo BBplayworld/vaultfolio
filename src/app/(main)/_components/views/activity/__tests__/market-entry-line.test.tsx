@@ -54,6 +54,21 @@ describe("MarketTile", () => {
     expect(d).not.toContain("<hr");
   });
 
+  it("휴장일 '하루' 타일(4.90 동승): 미국 추수감사절은 0.0% 대신 `휴장`, 도착 표와 같은 isDailyIndexHoliday", () => {
+    h.idx = {
+      ...IDX,
+      daily: {
+        KOSPI: { refPrice: 101, refDate: "2026-11-26", prevPrice: 100, prevDate: "2026-11-25" },
+        SPX: { refPrice: 7550, refDate: "2026-11-26", prevPrice: 7550, prevDate: "2026-11-25" },
+      },
+    };
+    const t = text(render("daily"));
+    expect(t).toBe("시장과 비교 하루 코스피 +1.0% · S&P 500 휴장");
+    expect(t).not.toContain("0.0%");
+    // 1주 타일은 휴장 표기 없음
+    expect(text(render("weekly"))).not.toContain("휴장");
+  });
+
   it("sm 미만은 첫 시장 1개만(둘째는 max-sm:hidden)", () => {
     expect(render("weekly")).toContain("max-sm:hidden");
   });
