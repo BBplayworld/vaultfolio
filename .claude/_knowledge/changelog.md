@@ -15,6 +15,7 @@
 - 테스트: `home-tip-holdings.test.ts`(신규)·`feature-usage.test.ts`·`entry-paths-483.test.ts`·`ga.test.ts`·`profit-partial-failure.test.ts`.
 
 ---
+
 ## 2026-11-12 (v4.86)
 
 ### 웰컴에서 바로 첫 자산 등록 (#4.86, 이슈 #167)
