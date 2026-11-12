@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week"],
-  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market"],
+  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "push_on", "push_off", "push_denied", "push_click"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -204,6 +204,11 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   settlement_ics: "결산 캘린더 추가",
   home_cause_open: "홈 변동 원인 열기",
   home_market: "홈·오늘 시장", // 내부 판독명(4.90) — 사용자 문구의 '오늘' 금지와 무관
+  // 시장 알림(#179) — 켜기·끄기·권한 거부·알림 누름(기기 단위 판독, 맞춤 정의 0)
+  push_on: "알림 켜기",
+  push_off: "알림 끄기",
+  push_denied: "알림 권한 거부",
+  push_click: "알림·누름",
 };
 
 // /ratio 홍보 도착 퍼널 단계별 page_title(4.88) — 화면 도착('비중 미리보기')은 화면 title 그대로. 맞춤 정의 0

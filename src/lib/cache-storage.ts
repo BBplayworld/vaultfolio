@@ -21,6 +21,26 @@ import type { AssetEnvelope } from "./cloud-sync/config";
 // 인터페이스
 // ─────────────────────────────────────────────────────────
 
+import { pushKeyPrefix } from "@/lib/push/prefix";
+import type { PushMarket, PushStoredSub, PushSubRecord } from "@/lib/push/types";
+import { openSecret, sealSecret } from "@/lib/push/crypto";
+
+// 저장 직전 암호화·읽을 때 복호화(Redis·파일 공용) — 평문 endpoint·keys는 저장소에 남지 않는다
+function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStoredSub {
+  return {
+    blob: sealSecret({ endpoint: rec.endpoint, p256dh: rec.p256dh, auth: rec.auth }),
+    topics: rec.topics,
+    cond: rec.cond,
+    createdAt: prev?.createdAt ?? rec.updatedAt,
+    updatedAt: rec.updatedAt,
+  };
+}
+function openPushSub(st: PushStoredSub | null | undefined): PushSubRecord | null {
+  if (!st) return null;
+  const sec = openSecret(st.blob);
+  return sec ? { ...sec, topics: st.topics, cond: st.cond, updatedAt: st.updatedAt } : null;
+}
+
 export interface ICacheStorage {
   // Cloud Sync (E2EE Asset)
   getAssetEnvelope(assetId: string): Promise<AssetEnvelope | null>;
@@ -101,6 +121,16 @@ export interface ICacheStorage {
   // 마지막 외부 호출 시각(ms) — 최소 호출 간격 강제용
   getUpbitLastCallAt(): Promise<number | null>;
   setUpbitLastCallAt(ms: number): Promise<void>;
+
+  // ── 시장 알림 구독(#179) — 키 접두어(push:{prod|preview|dev}:)는 구현 안에서 처리해 호출부 실수를 막는다.
+  // 저장값은 endpoint·keys·카탈로그 ID·조건뿐. TTL 90일(갱신 시 연장)
+  putPushSub(id: string, rec: PushSubRecord): Promise<void>;
+  getPushSub(id: string): Promise<PushSubRecord | null>;
+  deletePushSub(id: string): Promise<void>;
+  // 대상 토픽 합집합의 구독 id(중복 제거)
+  listPushSubIdsByTopics(topics: string[]): Promise<string[]>;
+  // 회차 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
+  markPushSent(market: PushMarket, marketDate: string): Promise<boolean>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -271,6 +301,15 @@ interface FileCacheData {
   COINS?: Record<string, { value: CoinPriceResult; slot: string; updated_at: number }>;
   UPBIT_MARKETS?: { markets: string[]; updated_at: number };
   UPBIT_LAST_CALL?: number;
+}
+
+const PUSH_SUB_TTL_SEC = 90 * 24 * 3600; // 90일
+const PUSH_SUB_TTL_MS = PUSH_SUB_TTL_SEC * 1000;
+const PUSH_SENT_TTL_SEC = 3 * 24 * 3600; // 3일
+
+interface PushFileData {
+  subs: Record<string, { rec: PushStoredSub; expires_at: number }>;
+  sent: Record<string, number>;
 }
 
 interface ShareTokenEntry {
@@ -732,6 +771,71 @@ export class FileCacheStorage implements ICacheStorage {
     cache.UPBIT_LAST_CALL = ms;
     this.writeCoinCache(cache);
   }
+
+  // ── 시장 알림 구독(#179) — 로컬 개발용 JSON 파일(PUSH_SUBS_FILE로 경로 변경 가능, 테스트용) ──
+  private pushFile(): string {
+    return process.env.PUSH_SUBS_FILE || path.join(process.cwd(), "data", "push-subs.json");
+  }
+
+  private readPush(): PushFileData {
+    try {
+      const f = this.pushFile();
+      if (!fs.existsSync(f)) return { subs: {}, sent: {} };
+      const raw = JSON.parse(fs.readFileSync(f, "utf8")) as Partial<PushFileData>;
+      return { subs: raw.subs ?? {}, sent: raw.sent ?? {} };
+    } catch {
+      return { subs: {}, sent: {} };
+    }
+  }
+
+  private writePush(data: PushFileData): void {
+    try {
+      const f = this.pushFile();
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(f, JSON.stringify(data, null, 2), "utf8");
+    } catch (e) {
+      console.error("[FileCacheStorage push 저장 오류]:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  async putPushSub(id: string, rec: PushSubRecord): Promise<void> {
+    const data = this.readPush();
+    const k = `${pushKeyPrefix()}sub:${id}`;
+    data.subs[k] = { rec: sealPushSub(rec, data.subs[k]?.rec ?? null), expires_at: Date.now() + PUSH_SUB_TTL_MS };
+    this.writePush(data);
+  }
+
+  async getPushSub(id: string): Promise<PushSubRecord | null> {
+    const e = this.readPush().subs[`${pushKeyPrefix()}sub:${id}`];
+    return e && e.expires_at > Date.now() ? openPushSub(e.rec) : null;
+  }
+
+  async deletePushSub(id: string): Promise<void> {
+    const data = this.readPush();
+    delete data.subs[`${pushKeyPrefix()}sub:${id}`];
+    this.writePush(data);
+  }
+
+  async listPushSubIdsByTopics(topics: string[]): Promise<string[]> {
+    const prefix = `${pushKeyPrefix()}sub:`;
+    const now = Date.now();
+    const ids: string[] = [];
+    for (const [key, e] of Object.entries(this.readPush().subs)) {
+      if (!key.startsWith(prefix) || e.expires_at <= now) continue;
+      if (e.rec.topics.some((t) => topics.includes(t))) ids.push(key.slice(prefix.length));
+    }
+    return ids;
+  }
+
+  async markPushSent(market: PushMarket, marketDate: string): Promise<boolean> {
+    const data = this.readPush();
+    const key = `${pushKeyPrefix()}sent:${market}:${marketDate}`;
+    const now = Date.now();
+    if ((data.sent[key] ?? 0) > now) return false;
+    data.sent[key] = now + PUSH_SENT_TTL_SEC * 1000;
+    this.writePush(data);
+    return true;
+  }
 }
 
 // 서버 캐시용 분류 머지 — indices만 배열 합집합, 나머지는 spread (후행 우선)
@@ -1069,5 +1173,42 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setUpbitLastCallAt(ms: number): Promise<void> {
     await this.redis.set("finance:upbit:last", ms, { ex: 60 });
+  }
+
+  // ── 시장 알림 구독(#179) ──
+  async putPushSub(id: string, rec: PushSubRecord): Promise<void> {
+    const P = pushKeyPrefix();
+    const prev = await this.redis.get<PushStoredSub>(`${P}sub:${id}`);
+    await this.redis.set(`${P}sub:${id}`, sealPushSub(rec, prev), { ex: PUSH_SUB_TTL_SEC });
+    for (const t of prev?.topics ?? []) {
+      if (!rec.topics.includes(t)) await this.redis.srem(`${P}topic:${t}`, id);
+    }
+    for (const t of rec.topics) {
+      await this.redis.sadd(`${P}topic:${t}`, id);
+      await this.redis.expire(`${P}topic:${t}`, PUSH_SUB_TTL_SEC);
+    }
+  }
+
+  async getPushSub(id: string): Promise<PushSubRecord | null> {
+    return openPushSub(await this.redis.get<PushStoredSub>(`${pushKeyPrefix()}sub:${id}`));
+  }
+
+  async deletePushSub(id: string): Promise<void> {
+    const P = pushKeyPrefix();
+    const prev = await this.redis.get<PushStoredSub>(`${P}sub:${id}`);
+    await this.redis.del(`${P}sub:${id}`);
+    for (const t of prev?.topics ?? []) await this.redis.srem(`${P}topic:${t}`, id);
+  }
+
+  async listPushSubIdsByTopics(topics: string[]): Promise<string[]> {
+    if (topics.length === 0) return [];
+    const P = pushKeyPrefix();
+    const [first, ...rest] = topics.map((t) => `${P}topic:${t}`);
+    return (await this.redis.sunion(first, ...rest)) as string[];
+  }
+
+  async markPushSent(market: PushMarket, marketDate: string): Promise<boolean> {
+    const res = await this.redis.set(`${pushKeyPrefix()}sent:${market}:${marketDate}`, "1", { nx: true, ex: PUSH_SENT_TTL_SEC });
+    return res === "OK";
   }
 }

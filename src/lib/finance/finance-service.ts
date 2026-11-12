@@ -49,6 +49,8 @@ export interface StockPriceResult {
   inactiveStatus?: InactiveStatus;
   inactiveReason?: string;
   classification?: StockClassificationPatch;
+  // 국내 현재가 응답의 전일 대비율(%, prdy_ctrt) — 시장 알림(#179)이 쓴다. 없으면 undefined
+  changeRate?: number;
 }
 
 export interface ExchangeRates {
@@ -346,11 +348,13 @@ export async function fetchStocksFromKorea(
       const output = result.data.output;
       const price = parseFloat(output?.stck_prpr ?? "0");
       if (price > 0) {
+        const changeRate = parseFloat(output?.prdy_ctrt ?? "");
         results[ticker] = {
           price,
           name: KR_CODE_TO_NAME[ticker] ?? "",
           updated_at: todayStr,
           market: krMarketLabel(ticker),
+          ...(Number.isFinite(changeRate) ? { changeRate } : {}),
         };
       }
     } catch (e) {
@@ -905,16 +909,17 @@ async function fetchKisIndexSeries(
 
 const ymdCompact = (d: string) => d.replace(/-/g, "");
 
-// 코스피 종합(업종코드 0001) 일별 종가
+// 국내 지수 일별 종가 — 기본 코스피 종합(업종코드 0001). 코스닥 종합은 indexCode "1001"(시장 알림, #179)
 export async function fetchKospiDailySeries(
   startDate: string,
   endDate: string,
   accessToken: string,
   appKey: string,
   appSecret: string,
+  indexCode = "0001",
 ): Promise<IndexCloseRow[] | null> {
-  const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD=0001&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
-  return fetchKisIndexSeries(url, "FHKUP03500100", "bstp_nmix_prpr", `KOSPI/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+  const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKUP03500100", "bstp_nmix_prpr", `${indexCode === "0001" ? "KOSPI" : indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
 
 // 해외지수 일별 종가 (indexCode 예: SPX = S&P 500)
@@ -928,4 +933,39 @@ export async function fetchOverseasIndexDailySeries(
 ): Promise<IndexCloseRow[] | null> {
   const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}
+
+// 해외 종목 전일 대비율(%) — price-detail의 현재가(last)·전일종가(base)로 계산(시장 알림, #179).
+// 필드가 없거나 0이면 null(알림에서 해당 항목만 생략).
+export async function fetchOverseasChangeRate(
+  excd: string,
+  symb: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<number | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(symb)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          appkey: appKey,
+          appsecret: appSecret,
+          tr_id: "HHDFS76200200",
+          "content-type": "application/json; charset=utf-8",
+        },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!isKisResponseOk(data, `전일대비 ${excd}/${symb}`)) return null;
+    const last = parseFloat(data.output?.last ?? "0");
+    const base = parseFloat(data.output?.base ?? "0");
+    if (!(last > 0) || !(base > 0)) return null;
+    return ((last - base) / base) * 100;
+  } catch {
+    return null;
+  }
 }

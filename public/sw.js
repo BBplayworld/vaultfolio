@@ -1,4 +1,4 @@
-const CACHE_NAME = "secretasset-cache-v4";
+const CACHE_NAME = "secretasset-cache-v5";
 const PRECACHE_URLS = ["/", "/favicon.ico", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
 // 서비스 워커 설치 및 프리캐시
@@ -70,5 +70,49 @@ self.addEventListener("fetch", (event) => {
         // 네트워크 실패(오프라인) 시에만 캐시 폴백, 없으면 홈(/)
         caches.match(event.request).then((cached) => cached || caches.match("/")),
       ),
+  );
+});
+
+// 시장 알림(#179) — 페이로드 {m,t,b} 3필드만. 파싱 실패·형식 이상이면 숫자 없는 폴백 문구.
+// 같은 시장은 같은 tag로 교체(쌓이지 않음). 알림 안에 보유 정보는 없다(서버가 모름).
+const PUSH_FALLBACK = { t: "시장 종가", b: "오늘 시장 종가가 업데이트됐어요" };
+const PUSH_TAGS = { kr: "market-kr", us: "market-us", test: "market-test" };
+
+function parsePushPayload(event) {
+  try {
+    const d = event.data ? event.data.json() : null;
+    if (d && typeof d.t === "string" && typeof d.b === "string" && d.t && d.b) {
+      return { m: PUSH_TAGS[d.m] ? d.m : "kr", t: d.t, b: d.b };
+    }
+  } catch (e) {
+    // 형식 이상 — 폴백
+  }
+  return { m: "kr", t: PUSH_FALLBACK.t, b: PUSH_FALLBACK.b };
+}
+
+self.addEventListener("push", (event) => {
+  const p = parsePushPayload(event);
+  event.waitUntil(
+    self.registration.showNotification(p.t, {
+      body: p.b,
+      tag: PUSH_TAGS[p.m],
+      renotify: false,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      data: { url: "/?from=push" },
+    }),
+  );
+});
+
+// 알림 누름 — 같은 origin 창이 열려 있으면 화면 유지한 채 focus만, 없으면 홈으로 연다
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/?from=push";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      const same = wins.find((w) => w.url && w.url.indexOf(self.location.origin) === 0);
+      if (same && "focus" in same) return same.focus();
+      return self.clients.openWindow(url);
+    }),
   );
 });

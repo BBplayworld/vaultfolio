@@ -198,7 +198,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.tax = [tax(12, "12/31")]; h.refresh = true; h.feature = { id: "f" };
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("whats_new");
     markWhatsNewSeen(); // 실제 쓰기 경로
-    expect(h.record?.id).toBe("20261112-03"); // 같은 날 NN 최대값이 최신(D1)
+    expect(h.record?.id).toBe("20261112-04"); // 같은 날 NN 최대값이 최신(D1)
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("relink");
   });
   it("7일 경계: 6일 23시간 59분 전 읽음은 없음, 7일 정각이면 새 항목 1개만 안 본 것", () => {
