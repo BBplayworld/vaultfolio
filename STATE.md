@@ -47,7 +47,7 @@
 | #103 ②+③ 연결 계좌(주식·코인 거래 ↔ 현금·대출, 삭제 시 되돌림) | 4.56 (squash `[#4.57]`, risk:high, **대표 승인**) | 개발 중(로컬 issue-4.56: 짝 id 정본·결산/홈 id 짝 커밋). spec·ui·tech-review·qa 교차 확인 완료 | developer → qa·ui-designer → cto | 개발 완료 즉시(~11/11) → 4.55 머지 후 origin/main merge·PR 생성 → qa(데이터 안전 1~5·구버전 실코드 하네스·⒟⒠ 자동·원자성) → ui-review·COO → 🟥 → 승인 즉시 머지. 목표 ≤11/14. 막는 것: 4.55 머지, 대표 승인. 데이터 안전 항목은 일정 때문에 줄이지 않음 |
 
 ## 열린 릴리스
-- 없음 (v4.86 #167 PR #169 머지 11-12 15:20, v4.87 #170 PR #171 머지 11-12 15:29, 둘 다 운영 스모크 PASS). 판독: #167 머지 후 2·4주 절대 기기 수(기준선 생략), '홈 팁·누름' 결산 창 밖. 후속 후보: ProfitCard 비제어 카드 분기 정리, 320 배당 '12월 예정' 칩-매수일 겹침, 앱 가이드 이름, Popover reduced-motion, 320×568 가져오기 스크롤, 새 소식 과밀(4.82 판독 ~12/9 뒤), 루트 SSR(4.86+4주)
+- 없음 (11-12 하루 머지: v4.84~v4.90, 전부 운영 스모크 PASS). 후속 후보: 기록 2~6일 사용자 7일 카드 도착 '기록이 부족해요', 체험 '지난 접속' 문구, 320 7일 막대 값 2줄, 세금 화면 지난 마감 아래로(12/16 전), /ratio 도착 개선(11/26~27 재판정), 세입자 보증금(risk:high, 대표 승인 트랙), 조건 Push 알림(대표 판단), ProfitCard 비제어 분기 정리, Popover reduced-motion, 320 배당 '12월 예정' 칩
 
 - **[developer 2026-11-09] 4.68 = #129 억 단위 축약 표기 부동소수 오차 수정(버그, COO 자체 승인 트랙)** (브랜치 issue-4.68, origin/main dc4133d 분기, HEAD b332ad6, PR #130 draft, 폴더 `issues/4.68-129-short-currency-fix`, risk:low, Vercel success, 공용 `number-utils.ts` 정수 나눗셈 버림·1억~50억 루프 테스트, 다음 qa → COO. 표시 버전은 머지 순서로 재부여 가능).
 - **[developer 2026-11-09] 4.67 = #127 월별 기록(지난 여러 달 자산군별 금액 시트)** (브랜치 issue-4.67, origin/main dc4133d 분기, HEAD ccd939c(ui-review 2건·COO U1·U2·ui 재측정 반영), PR #128 draft, 폴더 `issues/4.67-127-monthly-log`, risk:low, **대표 승인 대상**, Vercel success, 다음 ui 확인 → qa → COO).
