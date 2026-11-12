@@ -36,10 +36,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function run() {
+async function run(ac = new AbortController(), failed: string[] = []) {
   const { fetchProfitRef } = await import("../profit-utils");
   const completes: boolean[] = [];
-  const p = fetchProfitRef(TICKERS, "monthly", { signal: new AbortController().signal, caller: "t", onComplete: (c) => completes.push(c) });
+  const p = fetchProfitRef(TICKERS, "monthly", { signal: ac.signal, caller: "t", onComplete: (c) => completes.push(c), onFailed: () => failed.push("f") });
   await vi.advanceTimersByTimeAsync(30000);
   return { data: await p, completes };
 }
@@ -103,5 +103,61 @@ describe("fetchProfitRef 부분 실패(429·5xx)", () => {
     expect(profitRetryDelayMs("8")).toBe(5000);
     expect(profitRetryDelayMs("11")).toBeNull();
     expect(profitRetryDelayMs("abc")).toBe(1000);
+  });
+});
+
+describe("fetchProfitRef onFailed(#170, C89 — 전부 실패 콜백)", () => {
+  it("첫 배치가 재시도까지 실패하면 onFailed 1회·onComplete 없음", async () => {
+    script = [{ status: 429 }, { status: 503 }];
+    const failed: string[] = [];
+    const { completes } = await run(new AbortController(), failed);
+    expect(failed).toHaveLength(1);
+    expect(completes).toEqual([]);
+  });
+  it("일부 성공 뒤 실패는 onFailed 없음(부분 표시 유지)", async () => {
+    script = [{ status: 200 }, { status: 500 }, { status: 500 }];
+    const failed: string[] = [];
+    await run(new AbortController(), failed);
+    expect(failed).toHaveLength(0);
+  });
+  it("정상 완료는 onFailed 없음", async () => {
+    const failed: string[] = [];
+    await run(new AbortController(), failed);
+    expect(failed).toHaveLength(0);
+  });
+  it("abort된 조회는 onFailed 없음", async () => {
+    script = [{ status: 429, retryAfter: "3" }, { status: 429 }];
+    const ac = new AbortController();
+    const failed: string[] = [];
+    const { fetchProfitRef } = await import("../profit-utils");
+    const p = fetchProfitRef(TICKERS, "monthly", { signal: ac.signal, caller: "t", onFailed: () => failed.push("f") });
+    await vi.advanceTimersByTimeAsync(100);
+    ac.abort();
+    await vi.advanceTimersByTimeAsync(30000);
+    await p;
+    expect(failed).toHaveLength(0);
+  });
+  it("점검 헤더는 onKisUnavailable만, onFailed 없음", async () => {
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 503, headers: { "X-KIS-Unavailable": "1" } }));
+    const { fetchProfitRef } = await import("../profit-utils");
+    const failed: string[] = [];
+    let unavailable = 0;
+    const p = fetchProfitRef(TICKERS, "monthly", { signal: new AbortController().signal, caller: "t", onKisUnavailable: () => unavailable++, onFailed: () => failed.push("f") });
+    await vi.advanceTimersByTimeAsync(30000);
+    await p;
+    expect(unavailable).toBe(1);
+    expect(failed).toHaveLength(0);
+  });
+  it("동시 후행 호출자(dedup)도 전부 실패면 onFailed", async () => {
+    script = [{ status: 429 }, { status: 429 }];
+    const { fetchProfitRef } = await import("../profit-utils");
+    const a: string[] = [];
+    const b: string[] = [];
+    const p1 = fetchProfitRef(TICKERS, "monthly", { signal: new AbortController().signal, caller: "a", onFailed: () => a.push("f") });
+    const p2 = fetchProfitRef(TICKERS, "monthly", { signal: new AbortController().signal, caller: "b", onFailed: () => b.push("f") });
+    await vi.advanceTimersByTimeAsync(30000);
+    await Promise.all([p1, p2]);
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
   });
 });

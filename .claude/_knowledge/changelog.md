@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-12 (v4.87)
+
+### 홈 팁이 내 자산에 맞는 기능을 권한다 (#4.87, 이슈 #170)
+- **보유 필터**: `pickRecommendedFeature(assetData)`(필수 인자) — tip 후보 중 보유 조건(`HOLDING_CONDITIONS` 상수) 통과분만 방문 최소·카탈로그 순으로 고른다. 절세 시뮬 = `stocks.some(isTaxSimCandidate)`, 주식 계열 7종 = 수량>0 주식, 부동산·코인·현금·대출 = 건수>0, 나머지 항상 통과. 걸러진 항목은 dismiss 기록 없음. 우선순위·문구·카탈로그·저장 키 diff 0.
+- **GA**: `feature_use`+`home_tip`+`click` → page_title `홈 팁·누름`(view·close는 `홈 팁`). 새 파라미터 값 0.
+- **수익 칸 전부 실패**: `fetchProfitRef` `onFailed`(429·5xx로 받은 종목 0, abort·점검 제외) → `profit-chart` 점검 박스 재사용, 문구 `지금은 불러오지 못했어요, 다음에 열면 다시 불러올게요`(카드 testId `profit-fetch-failed`). 스켈레톤 영구 잔존 해소.
+- **배당 320 배지**: 모바일 티커 줄 `flex-wrap`.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0. 새 소식: 해당 없음.
+- 테스트: `home-tip-holdings.test.ts`(신규)·`feature-usage.test.ts`·`entry-paths-483.test.ts`·`ga.test.ts`·`profit-partial-failure.test.ts`.
+
+---
+
 ## 2026-11-12 (v4.86)
 
 ### 웰컴에서 바로 첫 자산 등록 (#4.86, 이슈 #167)
@@ -11,6 +23,8 @@
 - 팝오버 `주식 직접 입력` 1행 → 직접 입력 5행(`WELCOME_MANUAL_ROWS`, `handleManualAdd`) + 구분선 + 가져오기 2행. 슬롯 pending 셸 모바일 `min-h-[216px]`.
 - 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0, #78 설치 안내 diff 0. 새 소식: `20261111-13`.
 - 테스트: `welcome-guide.test.tsx`(구간·5행 상수·FAB 라벨 grep·리스너 1:1·전송), `ga.test.ts`, `whats-new` 최신 id 갱신.
+
+---
 
 ## 2026-11-12 (v4.85)
 
