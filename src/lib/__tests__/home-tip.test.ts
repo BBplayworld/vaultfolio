@@ -170,7 +170,7 @@ describe("세금 임박 경계(결산 창 11/5 = 10월 결산)", () => {
 describe("새 소식 팁(#159) 우선순위·조건", () => {
   it("기록 없음 + 자산 있음 → whats_new(시드 전부, 맨 위 항목 제목)", () => {
     const t = pickWn("2026-11-15");
-    expect(t).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length, title: "합친 평단을 가격 흐름 위에서 봐요" });
+    expect(t).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length, title: "자산 변화 주식에서 시장과 비교를 타일로 열어요" });
   });
   it("whatsNewOk가 없으면(체험·잠금·로드 전) 뜨지 않는다", () => {
     expect(pick("2026-11-15")).toBeNull();
@@ -198,7 +198,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.tax = [tax(12, "12/31")]; h.refresh = true; h.feature = { id: "f" };
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("whats_new");
     markWhatsNewSeen(); // 실제 쓰기 경로
-    expect(h.record?.id).toBe("20261111-13"); // 같은 날 NN 최대값이 최신(D1)
+    expect(h.record?.id).toBe("20261112-01"); // 같은 날 NN 최대값이 최신(D1)
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("relink");
   });
   it("7일 경계: 6일 23시간 59분 전 읽음은 없음, 7일 정각이면 새 항목 1개만 안 본 것", () => {
@@ -208,7 +208,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY + 60_000 };
     expect(pickWn("2026-11-15")).toBeNull();
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY };
-    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length - 7, title: "작은 비중 표시·억 단위 반올림 등을 고쳤어요" });
+    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length - 7, title: "자산 변화 주식에서 시장과 비교를 타일로 열어요" });
   });
   it("읽음 처리(실제 쓰기) 뒤 시트 재열기 '새' 0, 8일 후에도 팁 없음(D1)", () => {
     vi.useFakeTimers();

@@ -288,7 +288,7 @@ function PrepBlock() {
       )}
       {/* blob·download 속성 대신 같은 출처 정적 .ics URL로 이동 — iOS 웨일·크롬 등 WKWebView에서도 캘린더로 넘어간다(C19) */}
       <Button asChild variant="brand" className="w-full min-h-10">
-        <a data-testid="prep-ics-button" href={SETTLEMENT_ICS_PATH}>캘린더에 매월 결산일 추가</a>
+        <a data-testid="prep-ics-button" href={SETTLEMENT_ICS_PATH} onClick={() => track("feature_use", { category: "settlement_ics" })}>캘린더에 매월 결산일 추가</a>
       </Button>
       <p data-testid="prep-ics-note" className={CAPTION}>캘린더 앱에서 매월 말일 저녁에 반복 일정을 추가해 주세요</p>
     </section>

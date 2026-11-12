@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink"],
+  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -174,7 +174,7 @@ const ASSET_TYPE_TITLES: Record<GaAssetType, string> = {
   yearly_net_asset: "연도별 순자산",
 };
 
-// feature_use는 category로 기능 이름을 정한다. ratio_preview는 /ratio 화면 title로 귀결(매핑 없음)
+// feature_use는 category로 기능 이름을 정한다. ratio_preview는 method·result로 단계별 title(ratioPreviewTitle), 그 밖은 /ratio 화면 title로 귀결
 const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>> = {
   xray: "X-Ray",
   tax_sim: "절세 시뮬레이션",
@@ -201,7 +201,21 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   change_week_all: "성과·자산 변화·최근 7일",
   stock_sort_rate: "상세·주식·등락률 순",
   relink: "끊긴 거래 다시 잇기",
+  settlement_ics: "결산 캘린더 추가",
 };
+
+// /ratio 홍보 도착 퍼널 단계별 page_title(4.88) — 화면 도착('비중 미리보기')은 화면 title 그대로. 맞춤 정의 0
+function ratioPreviewTitle(params: GaParams): string | undefined {
+  if (params.method === "open") return "비중 미리보기·브라우저로 열기";
+  if (params.method === "sample") return "비중 미리보기·예시";
+  if (params.method === "click") return "비중 미리보기·저장 누름";
+  if (params.method === "submit") {
+    if (params.result === "success") return "비중 미리보기·인식 성공";
+    if (params.result === "fail" || params.result === "empty" || params.result === "limit") return "비중 미리보기·인식 실패";
+    if (params.result === "create") return "비중 미리보기·저장 완료"; // 인계 후 앱 화면에서 나가도 홈으로 섞이지 않게
+  }
+  return undefined;
+}
 
 // 웰컴 CTA 버튼별 page_title(onboarding_action method → 이름)
 const WELCOME_ACTION_TITLES: Partial<Record<NonNullable<GaParams["method"]>, string>> = {
@@ -258,6 +272,13 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
     case "feature_use": {
       // 홈 팁 누름은 보임·닫기와 분리 — 도착 전환 판독(새 파라미터 값 0)
       if (params.category === "home_tip" && params.method === "click") return "홈 팁·누름";
+      if (params.category === "ratio_preview") {
+        const r = ratioPreviewTitle(params);
+        if (r) return r;
+        break;
+      }
+      // 가이드에서 시작한 체험은 웰컴 '체험 모드'와 분리(4.88)
+      if (params.category === "demo" && currentScreenKey.startsWith("guide:")) return "가이드·체험";
       const t = params.category ? CATEGORY_TITLES[params.category] : undefined;
       if (t) return t;
       break;

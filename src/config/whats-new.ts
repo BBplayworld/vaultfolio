@@ -14,6 +14,11 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "20261112-01",
+    title: "자산 변화 주식에서 시장과 비교를 타일로 열어요",
+    body: "하루⁠·⁠1주⁠·⁠1개월 탭에서 그 기간 지수 등락을 타일로 미리 봐요",
+  },
+  {
     id: "20261111-01",
     title: "합친 평단을 가격 흐름 위에서 봐요",
     body: "여러 증권사에서 산 같은 종목도 한 장에, 1년\u2060·\u20605년과 매수일 표시",

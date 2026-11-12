@@ -1,4 +1,5 @@
 import { AssetData, AssetSummary } from "@/types/asset";
+import { loanTypes } from "@/config/asset-options";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { SETTLEMENT_CAUSE_LABEL, type SettlementCause, type SettlementKind } from "@/lib/report/settlement";
 
@@ -41,13 +42,14 @@ const STOCK_CATEGORY: Record<string, string> = {
   domestic: "국내", foreign: "해외", irp: "IRP", isa: "ISA", pension: "연금", unlisted: "비상장",
 };
 
-const LOAN_TYPE: Record<string, string> = {
-  credit: "신용대출", minus: "마이너스통장",
-  home_mortgage: "담보대출", "mortgage-home": "담보대출",
-  stock_mortgage: "주식담보대출", "mortgage-stock": "주식담보대출",
-  insurance_loan: "보험약관대출", "mortgage-insurance": "보험약관대출",
-  deposit_loan: "전세자금대출", "mortgage-deposit": "전세자금대출",
-  other: "기타", "mortgage-other": "기타",
+// 대출 종류 라벨 — 화면 라벨(asset-options loanTypes)과 같은 출처. 레거시 키는 현행 키와 같은 라벨로 연결
+const LEGACY_LOAN_KEY: Record<string, string> = {
+  home_mortgage: "mortgage-home", stock_mortgage: "mortgage-stock", insurance_loan: "mortgage-insurance",
+  deposit_loan: "mortgage-deposit", other: "mortgage-other",
+};
+export const LOAN_TYPE: Record<string, string> = {
+  ...Object.fromEntries(loanTypes.map((t) => [t.value, t.label])),
+  ...Object.fromEntries(Object.entries(LEGACY_LOAN_KEY).map(([k, v]) => [k, loanTypes.find((t) => t.value === v)!.label])),
 };
 
 function buildRealEstateList(data: AssetData): string {

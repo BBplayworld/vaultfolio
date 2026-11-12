@@ -125,13 +125,13 @@ describe("GA·UTM", () => {
     expect(payload.page_title).toBe("가이드·주식 비중");
     expect(payload.page_location).toBe(`${WWW}/v/guide/stock-ratio?utm_source=threads&utm_campaign=guide_v1`);
   });
-  it("체험 이동: feature_use demo, 가상 경로 /v/guide/<slug>", () => {
+  it("체험 이동: feature_use demo(4.88 title 가이드·체험), 가상 경로 /v/guide/<slug>", () => {
     trackScreen("guide:net-worth");
     const nav = vi.fn();
     trackThenNavigate("feature_use", { category: "demo" }, "/?trial=1", nav);
     const [, name, payload] = gtag.mock.calls.at(-1)!;
     expect(name).toBe("feature_use");
-    expect(payload.page_title).toBe("체험 모드");
+    expect(payload.page_title).toBe("가이드·체험");
     expect(payload.page_location).toContain("/v/guide/net-worth");
   });
   it("UTM 허용 경로", () => {

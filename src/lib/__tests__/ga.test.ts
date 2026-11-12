@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   track,
@@ -382,10 +384,10 @@ describe("#63 /ratio UTM 귀속", () => {
     trackScreen("home");
     expect(gtag.mock.calls.at(-1)?.[2].page_location).toBe("https://secretasset.xyz/v/home");
   });
-  it("/ratio의 ratio_preview 이벤트 title은 화면 title(비중 미리보기)", () => {
+  it("/ratio의 ratio_preview 이벤트 title은 단계별(4.88) — 예시", () => {
     trackScreen("ratio");
     track("feature_use", { category: "ratio_preview", method: "sample" });
-    expect(gtag.mock.calls.at(-1)?.[2].page_title).toBe("비중 미리보기");
+    expect(gtag.mock.calls.at(-1)?.[2].page_title).toBe("비중 미리보기·예시");
   });
 });
 
@@ -483,5 +485,56 @@ describe("화면 전환 시 직전 화면 참여 시간 귀속(#131)", () => {
     markTrialActive();
     trackScreen("more");
     expect(gtag).not.toHaveBeenCalled();
+  });
+});
+
+describe("4.88 홍보 도착 퍼널 page_title·체험·결산 캘린더 (C90)", () => {
+  it.each([
+    [{ method: "open" }, "ratio", "비중 미리보기·브라우저로 열기"],
+    [{ method: "submit", result: "success" }, "ratio", "비중 미리보기·인식 성공"],
+    [{ method: "submit", result: "fail" }, "ratio", "비중 미리보기·인식 실패"],
+    [{ method: "submit", result: "empty" }, "ratio", "비중 미리보기·인식 실패"],
+    [{ method: "submit", result: "limit" }, "ratio", "비중 미리보기·인식 실패"],
+    [{ method: "sample" }, "ratio", "비중 미리보기·예시"],
+    [{ method: "click" }, "ratio", "비중 미리보기·저장 누름"],
+    // 인계 후 앱 화면(홈 등)에서 나가도 홈으로 섞이지 않는다
+    [{ method: "submit", result: "create" }, "home", "비중 미리보기·저장 완료"],
+    [{ method: "submit", result: "create" }, "detail:stocks", "비중 미리보기·저장 완료"],
+  ] as const)("ratio_preview %j @%s → %s", (extra, screen, title) => {
+    expect(featureTitleOf("feature_use", { category: "ratio_preview", ...extra }, screen)).toBe(title);
+  });
+
+  it("method 없는 ratio_preview는 화면 title 그대로(화면 도착 '비중 미리보기' 유지)", () => {
+    expect(featureTitleOf("feature_use", { category: "ratio_preview" }, "ratio")).toBe("비중 미리보기");
+  });
+
+  it("체험: 가이드에서 시작하면 '가이드·체험', 웰컴·홈 등은 '체험 모드' 불변", () => {
+    expect(featureTitleOf("feature_use", { category: "demo" }, "guide:stock-ratio")).toBe("가이드·체험");
+    expect(featureTitleOf("feature_use", { category: "demo" }, "guide:net-worth")).toBe("가이드·체험");
+    expect(featureTitleOf("feature_use", { category: "demo" }, "home")).toBe("체험 모드");
+    expect(featureTitleOf("onboarding_action", { method: "trial_start" }, "home")).toBe("웰컴·체험");
+  });
+
+  it("결산 캘린더 추가", () => {
+    expect(featureTitleOf("feature_use", { category: "settlement_ics" }, "activity:change")).toBe("결산 캘린더 추가");
+  });
+
+  it("송출처 전수: ratio_preview는 /ratio 화면·인계 저장 호스트에서만, demo는 웰컴·가이드에서만, settlement_ics는 결산 화면에서만", () => {
+    const root = join(process.cwd(), "src");
+    const hits = (cat: string): string[] => {
+      const out: string[] = [];
+      const walk = (d: string) => {
+        for (const n of readdirSync(d)) {
+          const f = join(d, n);
+          if (statSync(f).isDirectory()) { if (n !== "__tests__") walk(f); continue; }
+          if (/\.(ts|tsx)$/.test(n) && readFileSync(f, "utf8").includes(`category: "${cat}"`)) out.push(f.slice(root.length + 1).replace(/\\/g, "/"));
+        }
+      };
+      walk(root);
+      return out.sort();
+    };
+    expect(hits("ratio_preview")).toEqual(["app/(main)/_components/ratio/ratio-handoff-host.tsx", "app/ratio/ratio-preview.tsx"]);
+    expect(hits("demo")).toEqual(["app/(main)/_components/layout/onboarding/welcome-guide.tsx", "app/guide/guide-actions.tsx"]);
+    expect(hits("settlement_ics")).toEqual(["app/(main)/_components/views/activity/settlement-view.tsx"]);
   });
 });

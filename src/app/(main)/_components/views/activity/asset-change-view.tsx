@@ -22,7 +22,7 @@ import { useWeekHero } from "./use-week-hero";
 import { AttributionRecordList } from "../attribution-records";
 import { YearlyNetAssetChart } from "./net-asset-chart";
 import { ProfitCard } from "./profit-chart";
-import { MarketEntryLine, hasComparableStock } from "./market-entry-line";
+import { MarketTile, hasComparableStock } from "./market-entry-line";
 import { SettlementView } from "./settlement-view";
 
 const SCOPES: { value: ChangeScope; label: string; testId: string }[] = [
@@ -36,7 +36,7 @@ const PERIODS: { value: ChangePeriod; label: string; testId: string }[] = [
   { value: "year", label: "연", testId: "change-period-year" },
 ];
 const PROFIT_PERIOD: Record<ChangePeriod, Exclude<ProfitPeriod, "ytd">> = { day: "daily", week: "weekly", month: "monthly", year: "yearly" };
-// 시장과 비교 글줄 기간(연 탭은 값 없이 `올해 시장과 비교` 링크만 — Hero 1년 값과 기간이 달라 오독을 막는다, #150)
+// 시장과 비교 타일 기간(연 탭은 값 없이 `올해 지수와 나란히 보기`만 — Hero 1년 값과 기간이 달라 오독을 막는다, #150)
 const COMPARE_PERIOD = { day: "daily", week: "weekly", month: "monthly", year: "ytd" } as const;
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -87,10 +87,10 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
         <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] shrink-0" />
       </div>
 
-      <ChangeHeroFrame
-        period={periodSelector}
-        footer={scope === "stock" ? (
-          <MarketEntryLine
+      <ChangeHeroFrame period={periodSelector}>
+      {scope === "stock" ? (
+        <>
+          <MarketTile
             testId="change-market-entry"
             period={COMPARE_PERIOD[period]}
             onOpen={() => {
@@ -99,10 +99,8 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
               navigate({ type: "activity", tab: "change-market" });
             }}
           />
-        ) : undefined}
-      >
-      {scope === "stock" ? (
-        <ProfitCard isActive period={PROFIT_PERIOD[period]} />
+          <ProfitCard isActive period={PROFIT_PERIOD[period]} />
+        </>
       ) : period === "month" ? (
         <SettlementView key={entry.key} initialMonth={entry.month} source={entry.source} focus={entry.focus} />
       ) : period === "week" ? (

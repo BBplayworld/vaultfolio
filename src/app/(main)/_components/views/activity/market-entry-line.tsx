@@ -1,16 +1,16 @@
 "use client";
 
-// 시장과 비교 진입 글줄(#132 U5, ui.md 4·5절 E1) — 자산 변화 › 주식 기간 선택 아래(hero). 상세·주식 요약 안 글줄은 4.83에서 시장 타일로 대체됐다.
-// 값 계산은 훅 useMarketEntryValue로 분리해 글줄·상세·주식 시장 타일·성과 허브 행이 공유한다(4.83).
-// 값 = 비교할 종목이 있는 시장의 지수 등락(페이지와 같은 computeIndexSpan·같은 반올림, A11). 차이는 싣지 않는다.
-// 티커 있는 종목이 있으면 첫 렌더부터 자리를 잡고 내용만 opacity로 나타난다. 비교할 종목 0이면 grid-rows로 접는다.
-// 인증카드·공유 캡처에는 나오지 않는다(data-screenshot-hide). 저장 호출 0.
+// 시장과 비교 진입 값·타일(#132 U5 → 4.83 상세·주식 타일 → 4.88 자산 변화 타일).
+// 값 계산은 훅 useMarketEntryValue로 분리해 자산 변화 타일·상세·주식 시장 타일·성과 허브 행이 공유한다.
+// 값 = 비교할 종목이 있는 시장의 지수 등락(페이지와 같은 computeIndexSpan·같은 반올림, A11). 차이는 싣지 않는다. 저장 호출 0.
 
 import { useMemo } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChartNoAxesColumn } from "lucide-react";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useAssetData } from "@/contexts/asset-data-context";
 import type { AssetData } from "@/types/asset";
 import {
+  COMPARE_PERIOD_LABEL,
   MARKET_INDEX_NAME,
   classifyHoldings,
   computeIndexSpan,
@@ -18,9 +18,8 @@ import {
   type CompareMarket,
   type ComparePeriod,
 } from "@/lib/finance/market-compare";
+import { ToolTile } from "../../layout/ui/tool-tile";
 import { useCompareBasis, useDailyRefToken, useKospiPeerCodes, useMarketIndexRefs } from "@/hooks/use-market-compare";
-
-const HAIRLINE = "border-border dark:border-border/40";
 
 // 시장과 비교로 넘길 종목이 있는가(티커 있는 보유 주식) — 자산 변화 › 주 `종목 등락 보기` 노출 조건과 공용
 export const hasComparableStock = (assetData: AssetData): boolean =>
@@ -83,46 +82,53 @@ export function MarketIndexValues({ values, restBelowSm = false }: { values: Mar
   );
 }
 
-// 자산 변화 › 주식 기간 선택 아래 글줄(선택 기간 값, 접두 없음·`시장과 비교`)
-export function MarketEntryLine({ period, visible = true, onOpen, testId }: {
+// 시장 타일 값 줄 — 로딩(스켈레톤)·빈(지수 0건)·값 3분기. 연 탭(linkOnly)은 값 없이 링크 문구.
+// 상세·주식 타일(1주 고정)과 자산 변화 타일(기간 연동)이 공유한다(C65).
+export function MarketTileValue({ market, label, testId, className }: {
+  market: MarketEntryValue;
+  label: string;
+  testId: string;
+  className?: string;
+}) {
+  return (
+    <span data-testid={testId} className={className}>
+      {!market.ready && !market.ytdLinkReady
+        ? <span aria-hidden className={`inline-block h-4 w-20 rounded align-middle ${SKELETON_FILL}`} />
+        : market.linkOnly
+          ? "올해 지수와 나란히 보기"
+          : market.values.length === 0
+            ? "지수와 나란히 보기"
+            : <>{label} <MarketIndexValues values={market.values} restBelowSm /></>}
+    </span>
+  );
+}
+
+// 자산 변화 › 주식 — 기간 선택 Hero 카드 바로 아래 단일 도구 타일(4.88). 값 = 선택 기간(연은 값 없음).
+// 비교할 종목 0(판별 후 포함)이면 렌더하지 않는다. 인증카드·공유 캡처에는 나오지 않는다(data-screenshot-hide).
+export function MarketTile({ period, onOpen, testId }: {
   period: ComparePeriod;
-  visible?: boolean;
   onOpen: () => void;
   testId: string;
 }) {
-  const { hasTickerStock, ready, values, linkOnly, ytdLinkReady, open } = useMarketEntryValue(period, visible);
-
-  if (!hasTickerStock) return null;
-
+  const market = useMarketEntryValue(period);
+  if (!market.hasTickerStock || !market.open) return null;
   return (
-    <div
-      data-testid={testId}
-      data-period={period}
-      data-screenshot-hide
-      {...(open ? {} : { inert: true, "aria-hidden": true })}
-      className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${open ? "grid-rows-[1fr] -mb-2" : "grid-rows-[0fr]"}`}
-    >
-      <div className="min-h-0 overflow-hidden">
-        <div className={`mt-3 border-t ${HAIRLINE} pt-1.5 sm:max-w-md`}>
-          <button
-            type="button"
-            data-testid="change-market-entry-button"
-            onClick={onOpen}
-            disabled={!(ready || ytdLinkReady)}
-            className={`flex w-full min-h-10 flex-col items-start justify-center rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:inline-flex sm:w-auto sm:flex-row sm:items-center sm:gap-3 motion-safe:transition-opacity motion-safe:duration-200 ${ready || ytdLinkReady ? "opacity-100" : "opacity-0"}`}
-          >
-            {!linkOnly && (!ready || values.length > 0) && (
-              <span className="text-sm text-muted-foreground break-keep">
-                {!ready ? " " : <MarketIndexValues values={values} />}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-sm font-medium text-foreground">
-              {linkOnly ? "올해 시장과 비교" : "시장과 비교"}
-              <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
-            </span>
-          </button>
-        </div>
-      </div>
+    <div data-testid={testId} data-period={period} data-screenshot-hide className="sm:max-w-md">
+      <ToolTile
+        icon={ChartNoAxesColumn}
+        name="시장과 비교"
+        testId={`${testId}-button`}
+        onClick={onOpen}
+        className="w-full"
+      >
+        <MarketTileValue
+          key={period}
+          market={market}
+          label={COMPARE_PERIOD_LABEL[period]}
+          testId={`${testId}-value`}
+          className="inline-block whitespace-nowrap motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"
+        />
+      </ToolTile>
     </div>
   );
 }
