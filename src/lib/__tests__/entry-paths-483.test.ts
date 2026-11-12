@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { APP_FEATURES } from "@/config/app-features";
 import { WHATS_NEW } from "@/config/whats-new";
 import { HUB_NEW_SPOT_ORDER, NEW_SPOTS, type NewSpot } from "@/config/new-spots";
+import type { AssetData } from "@/types/asset";
 import { dismissTip, getLastVisitedAt, pickRecommendedFeature, recordVisit, runFeatureEntry } from "../feature-usage";
 import { isSpotNew, pickNewSpot } from "../new-spot";
 import { CHANGE_WEEK_VISIT_KEY, isChangeWeekAll, recordViewVisits, type AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
@@ -23,6 +24,13 @@ beforeEach(() => {
   useXrayViewStore.getState().clear();
 });
 
+const ALL = {
+  stocks: [{ category: "foreign", currency: "USD", quantity: 1 }],
+  realEstate: [{}],
+  crypto: [{}],
+  cash: [{}],
+  loans: [{}],
+} as unknown as AssetData;
 const WEEK_ALL: AssetView = { type: "activity", tab: "change", init: { scope: "all", period: "week" } };
 const lastVisited = (k: string) => getLastVisitedAt(k);
 
@@ -88,9 +96,9 @@ describe("change-week 방문 기록 2경로 (실제 recordVisit 호출)", () => 
     expect(week.visitKey).toBe(CHANGE_WEEK_VISIT_KEY);
     // 다른 후보를 전부 방문시켜 week-causes만 0회로 남기면 추천된다 → 방문 후엔 추천 1순위가 아니다
     for (const f of APP_FEATURES) if (f.id !== "week-causes" && f.tip !== false) recordVisit(f.visitKey ?? (f.target ? (f.target.type === "detail" || f.target.type === "activity" ? `${f.target.type}:${f.target.tab}` : f.target.type) : f.id));
-    expect(pickRecommendedFeature()?.id).toBe("week-causes");
+    expect(pickRecommendedFeature(ALL)?.id).toBe("week-causes");
     recordViewVisits(WEEK_ALL);
-    expect(pickRecommendedFeature()?.id).not.toBe("week-causes");
+    expect(pickRecommendedFeature(ALL)?.id).not.toBe("week-causes");
   });
   it("주 탭 전환 경로: AssetChangeView.changePeriod가 같은 키로 recordVisit(정적 확인 — jsdom 없음, 상호작용은 qa Playwright)", async () => {
     const { readFileSync } = await import("node:fs");
@@ -119,7 +127,7 @@ describe("새 소식 바로 가기 정정 + tip:false", () => {
     const hidden = APP_FEATURES.filter((f) => f.tip === false).map((f) => f.id);
     expect(hidden.sort()).toEqual(["monthly-log", "share-card-stock"]);
     for (const f of APP_FEATURES) if (f.tip !== false) dismissTip(f.id);
-    expect(pickRecommendedFeature()).toBeNull();
+    expect(pickRecommendedFeature(ALL)).toBeNull();
   });
   it("monthly-log 바로 가기는 월 탭 init(focus)으로 이동 — runFeatureEntry 실제 호출", () => {
     const seen: AssetView[] = [];

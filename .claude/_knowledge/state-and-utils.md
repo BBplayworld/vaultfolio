@@ -222,6 +222,7 @@ getResumeCategory(status): WizardCategory | null   // pending인 첫 카테고�
 `STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼, 별개 기능)와 **코드 패턴만** 동일(단일 키+step map)하게 재사용하고 값은 절대 공유하지 않는다 — `STORAGE_KEYS.onboardingWizardStatus` 별도 키, 기기 로컬 전용.
 
 ### feature-usage.ts (S-4.32) — 기능 방문 기록 + 홈 팁 박스 추천
+- **보유 필터(#170, 4.87)**: `pickRecommendedFeature(assetData)` 필수 인자. `HOLDING_CONDITIONS`(featureId → 조건)에 없는 항목은 통과. 절세 시뮬=`isTaxSimCandidate` 재사용, 주식 계열=수량>0, 자산군=건수>0. 걸러진 항목은 dismiss 안 함.
 
 ```typescript
 viewToKey(view: AssetView): string          // "type" 또는 "type:tab" — navigate 훅·카탈로그 공유 방문 버킷 키
@@ -729,6 +730,7 @@ getProfitCacheKey(tickers, period, basis = "kstAccessDay"): string
   // daily date: sameBusinessDay=foreign refDate / kstAccessDay=domestic refDate
 
 fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
+// options.onFailed(#170): 429·5xx로 받은 종목 0일 때만(abort·점검·부분 성공 제외)
   // options: { onProgress?, onComplete?, signal?, basis? }
   // basis 미전달 시 kstAccessDay(legacy) — 스냅샷·기존 호출 동작 보존
   // 1) localStorage 캐시 hit → onProgress + onComplete(fromCache=true) 즉시 호출

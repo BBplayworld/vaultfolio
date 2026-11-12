@@ -124,6 +124,9 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "xray" }, "X-Ray"],
     ["feature_use", { category: "tax_sim" }, "절세 시뮬레이션"],
     ["feature_use", { category: "home_tip" }, "홈 팁"],
+    ["feature_use", { category: "home_tip", method: "click" }, "홈 팁·누름"],
+    ["feature_use", { category: "home_tip", method: "view" }, "홈 팁"],
+    ["feature_use", { category: "home_tip", method: "close" }, "홈 팁"],
     ["feature_use", { category: "whats_new" }, "새 소식"],
     ["feature_use", { category: "whats_new", method: "click" }, "새 소식"],
     ["feature_use", { category: "change_week_all", source: "whats_new" }, "성과·자산 변화·최근 7일"], // 바로 가기 진입 이벤트는 기존 title 유지
