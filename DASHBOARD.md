@@ -34,6 +34,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
+| v4.92 | [#181](https://github.com/BBplayworld/vaultfolio/issues/181) 돌아온·처음 온 사용자 숫자·문구 맞추기(7일 휴면 복귀·체험 '지난 접속'·세금 지난 마감 정렬) | 개발 | COO 자체 승인(low) |
 | v4.91 | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 시장 알림(공통 대상 14개, 설치 앱 전용) | **대표 결정 대기**(데모) | 대표 승인(risk:high) |
 
 ### ⏱ 예약된 운영 확인
