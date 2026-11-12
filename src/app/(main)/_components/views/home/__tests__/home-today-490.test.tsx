@@ -33,14 +33,14 @@ describe("A MarketLine", () => {
   it("날짜 다름: 시장마다 날짜·종가, 둘째 시장은 컨테이너 쿼리로만 숨김(JS 측정 0), 접근성 이름은 전체", () => {
     const html = renderLine(market({ values: [mv("kr", 0.8, "2026-11-12"), mv("us", -0.3, "2026-11-11")] }));
     expect(text(html)).toBe("11/12 종가 코스피 +0.8% · 11/11 종가 S&P 500 -0.3%");
-    expect(html).toContain("@max-[368px]:hidden");
+    expect(html).toContain("@max-[380px]:hidden");
     expect(html).toContain('aria-label="시장과 비교 하루 보기, 11/12 종가 코스피 +0.8% · 11/11 종가 S&amp;P 500 -0.3%"');
     expect(html).toContain("whitespace-nowrap");
   });
   it("같은 날짜 형태의 숨김 임계값은 날짜 다름보다 작다", () => {
     const html = renderLine(market({ values: [mv("kr", 0.8, "2026-11-11"), mv("us", -0.3, "2026-11-11")] }));
-    expect(html).toContain("@max-[296px]:hidden");
-    expect(html).not.toContain("@max-[368px]:hidden");
+    expect(html).toContain("@max-[300px]:hidden");
+    expect(html).not.toContain("@max-[380px]:hidden");
   });
   it("휴장: 값 대신 휴장(data-holiday), 같은 묶음 전부 휴장이면 종가 생략", () => {
     const a = renderLine(market({ values: [mv("kr", 0.4, "2026-11-26"), mv("us", 0, "2026-11-26", true)] }));

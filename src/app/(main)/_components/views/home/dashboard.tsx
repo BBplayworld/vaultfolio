@@ -349,10 +349,11 @@ export function NetAssetSummaryBox({
               <>
                 {showLine && top && (
                   // B 가장 큰 원인 1줄 — 항상 마운트, 열리면 줄이 접히고 같은 자리에 목록이 열린다(같은 값 두 번 노출 0).
+                  // 접힌 쪽은 inert(포커스·읽기 제외)로 숨긴다 — visibility 전환을 쓰면 열린 직후 프레임에 포커스가 안 들어간다
                   // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환
                   <div
                     inert={open}
-                    className={`grid motion-safe:transition-[grid-template-rows,opacity,visibility,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0 invisible" : "-mt-1.5 -mb-2.5 grid-rows-[1fr] opacity-100 visible"}`}
+                    className={`grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0" : "-mt-1.5 -mb-2.5 grid-rows-[1fr] opacity-100"}`}
                   >
                     <div className="min-h-0 overflow-hidden">
                       <button
@@ -387,7 +388,7 @@ export function NetAssetSummaryBox({
                   aria-label="변동 원인"
                   tabIndex={-1}
                   inert={!open}
-                  className={`grid outline-none motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-200 ease-out ${open ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
+                  className={`grid outline-none motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-200 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-1 pt-1">

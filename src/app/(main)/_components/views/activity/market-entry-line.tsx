@@ -144,8 +144,8 @@ export function MarketTile({ period, onOpen, testId }: {
 // 홈 Hero 아래 지수 종가 1줄(4.90 #175) — `M/D 종가 코스피 +0.8% · S&P 500 -0.3%`. 값·휴장 = 시장과 비교 '하루' 행 지수 열과 같은 경로(C65).
 // 폭이 모자라면 둘째 시장을 컨테이너 쿼리로 숨긴다(JS 측정 금지, 줄바꿈 금지). 같은 날짜 형태와 날짜 다름 형태는 전체 폭이 달라 임계값이 다르다.
 // 로딩 = 스켈레톤, 조회 실패 = 입구 문구 유지. 인증카드·공유 캡처에는 나오지 않는다(data-screenshot-hide)
-const HIDE_REST_SAME_DATE = "@max-[296px]:hidden";
-const HIDE_REST_DIFF_DATE = "@max-[368px]:hidden";
+const HIDE_REST_SAME_DATE = "@max-[300px]:hidden";
+const HIDE_REST_DIFF_DATE = "@max-[380px]:hidden";
 
 export function MarketLine({ market, onOpen }: { market: MarketEntryValue; onOpen: () => void }) {
   const state = !market.ready ? "loading" : market.values.length === 0 ? "empty" : "ok";
