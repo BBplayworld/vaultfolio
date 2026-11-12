@@ -29,6 +29,8 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
+| v4.89 | [#176](https://github.com/BBplayworld/vaultfolio/issues/176) 세금 관리를 더보기 밖(상세 허브 하단)으로 + 홈 원인 펼침 측정 ([PR #177](https://github.com/BBplayworld/vaultfolio/pull/177)) | UI 검수·QA | COO 자체 승인(low), ≤11/20 |
+| v4.90 | [#175](https://github.com/BBplayworld/vaultfolio/issues/175) 홈 '오늘' — 시장 종가 1줄·가장 큰 원인 1줄·7일 막대 연결 | 명세(4.89 머지 뒤 개발) | COO 자체 승인(medium), 목표 11/26 |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
