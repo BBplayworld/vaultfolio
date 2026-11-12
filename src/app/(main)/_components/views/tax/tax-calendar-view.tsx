@@ -16,6 +16,7 @@ import {
   computeForeignRealizedGain,
   getEventsForMonth,
   resolveTaxTags,
+  sortPastDueLast,
   todayKst,
   type TaxTagReasons,
 } from "@/lib/tax-utils";
@@ -128,7 +129,7 @@ export function TaxCalendarView() {
       <div className="flex flex-col gap-4">
         {MONTHS.map((month) => {
           const all = getEventsForMonth(month);
-          const events = filter === "mine" ? all.filter((e) => e.tags.some((t) => tags.has(t))) : all;
+          const events = sortPastDueLast(filter === "mine" ? all.filter((e) => e.tags.some((t) => tags.has(t))) : all, month, today);
           if (events.length === 0) return null;
           const isCurrent = month === currentMonth;
 

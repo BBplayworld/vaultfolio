@@ -184,6 +184,7 @@ computeForeignRealizedGain(assetData, year, rates)  // 해외주식 당해 실�
 getEventsForMonth(month): readonly TaxEvent[]
 getMyEvents(events, tags): TaxEvent[]            // 교집합(common 포함) — 캘린더 "내 세금" 필터
 taxEntryLine(assetData, today?): {dueLabel,title,imminent}|null  // 4.89 상세 허브 세금 행 보조줄(파생 일정 1건, 홈 팁 닫기 무관)
+sortPastDueLast(events, month, today?): TaxEvent[]  // 4.92 세금 화면 이번 달 — 마감 지난 항목을 아래로(안정 정렬, dueEndDate 재사용)
 getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 배너 전용 — common 전용 항목 제외.
   // 정렬 = 이번 달 우선 → 같은 달 내 high 우선(#4.29). 이번 달 항목 중 마감 지난 것 제외 — 내부 dueEndDate(event, year)가
   // dueLabel 마지막 "M/D"를 마감일로 해석("~10/25"→10-25, "12/1~12/15"→12-15), 날짜 없는 라벨("2월 급여")은 null=월말까지 유지
@@ -414,7 +415,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `pruneMonthlySnapshots(all, currentMonth)` — `month >= 현재월−12`만(최대 13개, 연 경계 무관). `saveSnapshots` 월 업서트가 사용. `shiftMonth(month, delta)`
 - `resolveSettlementWindow(monthly, month, today)` → `SettlementWindow {kind: settled|range|in_progress|first_month, start, end(null=진행 중·실시간), startDate, endDate, gapDays, longGap}`. `pickSettlementMonth`(1~10일+전월 기록일 ≥21일 → 전월), `isSettlementCardPeriod`(말일−3~10일), `pickSettlementCard`, `listSettlementMonths`(13개월·활성 여부), 문구 `settlementTitle`/`settlementCardTitle`/`settlementRangeLabel`/`formatSettlementPoint`, GA `settlementGaResult`(range→settled)
 - `mapSettlementCauses(effects, {deltaNet, cashTracked})` → 5항목(`price|valuation|fx|income|unrecorded`, 원 단위 정수, 10원 미만 숨김) + `showUnrecordedHint`(≥50%). 기록 안 된 변화 = Δ순자산 − 표시 4항목(항등식). `SETTLEMENT_CAUSE_LABEL`
-- `views/activity/week-attribution.ts`(#4.79, 순수·`matchRecordedTransferDetail` 때문에 lib이 아닌 뷰 폴더): `computeAttributionView({assetData, rates, summary, daily, monthly, exchangeHistory, sinceDate})` → `{attr, transfer, causes, records, offsetTotal, sentence, rangeLabel}|null` — 홈 Hero `useHeaderNetChange`와 주 탭이 **같이** 부르는 원인 분해 단일 계산(저장소 읽기는 호출부). `mapWeekCauses(view)` → `SettlementCauses`(Hero 항목을 시세/평가 갱신/환율/순유입/대출/기록 안 된 변화 6줄로 합산만, 기록 안 된 변화 = round(Δ)−나머지 줄 합, |Δ|<1만이면 줄 0개), `weekLineOf(key)`, `resolveWeekHero(view, today)`(D=today−시작일: 7~9 `최근 7일`+구간 / 그 외 ≤14 `M/D 이후` / >14 부족 / null 빈), `weekToday()`(홈 Hero와 같은 KST 식)·`weekSinceDate(today)`(−7일). 테스트 픽스처 `__tests__/week-fixtures.ts`, 홈 출력 골든 `header-change.golden.json`(main 훅 본문 verbatim 캡처)
+- `views/activity/week-attribution.ts`(#4.79, 순수·`matchRecordedTransferDetail` 때문에 lib이 아닌 뷰 폴더): `computeAttributionView({assetData, rates, summary, daily, monthly, exchangeHistory, sinceDate})` → `{attr, transfer, causes, records, offsetTotal, sentence, rangeLabel}|null` — 홈 Hero `useHeaderNetChange`와 주 탭이 **같이** 부르는 원인 분해 단일 계산(저장소 읽기는 호출부). `mapWeekCauses(view)` → `SettlementCauses`(Hero 항목을 시세/평가 갱신/환율/순유입/대출/기록 안 된 변화 6줄로 합산만, 기록 안 된 변화 = round(Δ)−나머지 줄 합, |Δ|<1만이면 줄 0개), `weekLineOf(key)`, `resolveWeekHero(view, today)`(D=today−시작일: 7~9 `최근 7일`+구간 / 그 외 ≤14 `M/D 이후` / >14 부족 / null 빈), `weekFallbackSince(daily, today)`(4.92, 휴면 복귀 폴백 시작일 — 일별 기록 ≥2면 가장 이른 날, `useWeekHero`가 insufficient일 때만 재계산), `weekToday()`(홈 Hero와 같은 KST 식)·`weekSinceDate(today)`(−7일). 테스트 픽스처 `__tests__/week-fixtures.ts`, 홈 출력 골든 `header-change.golden.json`(main 훅 본문 verbatim 캡처)
 - `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
 - 엔진 쪽 유일한 추가: `asset-report.ts`의 `computeAttributionBetween(prevMonthly, currMonthly|liveCurr, …)` — `resolveAttribution(…, isFirstSegment=true)` 단일 구간, 하이브리드 없음(레거시 시작=전체 예측), 끝점에 fx·fxBase 없으면 null
 
@@ -982,7 +983,7 @@ computePriceChange(points) → % | null
 ```
 
 ```
-// lib/push/ (#4.91 시장 알림) — 서버에는 endpoint·keys(암호화)·카탈로그 ID·조건만
+// lib/push/ (#4.93 시장 알림) — 서버에는 endpoint·keys(암호화)·카탈로그 ID·조건만
 // catalog.ts — PUSH_CATALOG(15, as const)·PUSH_GROUPS·normalizePushTopics·topicsOfMarket·PUSH_DEFAULT_TOPICS(코스피·S&P 500). 시총 6개는 분기 1회 수동 갱신
 // message.ts — buildPushMessage(market, marketDate, items, cond) → {m,t,b}|null (formatCompareRate·4개/56자 초과 외 N개·pm2 ±2.0%)
 // prefs.ts — secretasset_push_prefs {v:1,on,topics,cond}(읽기/쓰기/삭제·parsePushPrefs 기본 off)·summarizePushPrefs·consumePushFlag

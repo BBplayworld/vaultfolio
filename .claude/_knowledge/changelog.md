@@ -4,14 +4,26 @@
 
 ---
 
-## 2026-11-12 (v4.91)
+## 2026-11-12 (v4.93)
 
-### PWA 시장 알림 (#4.91, 이슈 #179, risk:high·대표 승인 트랙)
+### PWA 시장 알림 (#4.93, 이슈 #179, risk:high·대표 승인 트랙)
 - **무엇**: 설치한 앱(standalone)에서만 설정 '알림' 섹션으로 장 마감 후 시장 종가 등락을 푸시로 받는다. 서버는 보유 정보를 모른다 — 서버에 남는 값은 endpoint·keys(AES-256-GCM 블롭)·카탈로그 ID·조건·날짜(일)뿐. 카탈로그 15개(`lib/push/catalog.ts`), 조건 `매 거래일`/`±2% 이상만`.
 - **서버**: `/api/push/subscribe`(POST·DELETE)·`/api/push/test`(preview·로컬 전용)·`/api/push/cron/{kr,us}`(CRON_SECRET·운영 전용, 휴장·중복(sent NX)·시각·서킷·예산 방어). Redis 접두어 `push:{prod|preview|dev}:`, 구독 id = HMAC-SHA256(PUSH_STORE_KEY, endpoint). `vercel.json` crons `0 7 * * 1-5`(국내)·`0 0 * * 2-6`(미국).
 - **클라이언트**: `notify-section.tsx`(켜기 안내·대상·조건 Dialog·테스트 행), `push-host.tsx`(`?from=push` GA·구독 보정·TTL 갱신), `sw.js` push·notificationclick(CACHE v5). 모든 데이터 삭제 → 서버 구독 삭제·기기 구독 해제·로컬 키 삭제(`시장 알림도 꺼집니다.`, 켜져 있을 때만).
 - **재사용 변경**: `fetchKospiDailySeries(…, indexCode="0001")`, `StockPriceResult.changeRate`(국내 prdy_ctrt), `fetchOverseasChangeRate`(price-detail last/base), `ICacheStorage` push 5메서드, GA category `push_on|push_off|push_denied|push_click`.
 - **새 소식**: `20261112-04`. 로컬 신규 키 `secretasset_push_prefs` 1개(자산 스키마·동기화·백업·공유 토큰 변경 0). 의존성 `web-push`(서버 전용).
+
+---
+
+## 2026-11-13 (v4.92)
+
+### 돌아온·처음 온 사용자가 보는 숫자·문구 맞추기 (#4.92, 이슈 #181)
+- **휴면 복귀 7일**: `useWeekHero`가 `insufficient`(비교 시작 >14일 전)일 때 `weekFallbackSince(daily, today)`(오늘−7일 초과~오늘 일별 기록 ≥2면 가장 이른 날)로 한 번 더 계산 → `M/D 이후`. 홈 7일 카드·도착 Hero·성과 허브 행 같은 값(C65). 기록 1개뿐이면 `기록이 부족해요` 그대로. `resolveWeekHero` 판정 표 불변.
+- **체험 전일 대비**: `demo-data.json` 일별에 `@D-1` 1건 추가 → 체험 Hero `전일 대비`(라벨 코드 diff 0, C27·C93).
+- **세금 이번 달 정렬**: `sortPastDueLast(events, month, today)`(tax-utils) — 이번 달 섹션에서 마감 지난 항목을 아래로(`dueEndDate` 재사용, 다른 달 불변).
+- 보류: 320 7일 막대 값 한 줄·배당 12월 칩(F4·F5, 폭×금액 시각 검증 필요 — 후속).
+- 새 소식·GA·저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0.
+- 테스트: `week-return-492.test.tsx`·`demo-yesterday-492.test.ts`(신규), `tax-utils.test.ts` 갱신.
 
 ---
 

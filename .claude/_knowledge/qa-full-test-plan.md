@@ -116,6 +116,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **태그 매칭**(AC1): 상가(`realEstate.type==="commercial"`)→business, 부동산 보유→realestate, `category==="foreign" || currency!=="KRW"`→foreign, irp/isa/pension→pension, `mortgage-home`→loan, 현금 보유→cash
 - ⚙ **해외주식 실현차익**(AC6·AC7): `computeForeignRealizedGain`이 거래 로그를 날짜순 replay(`computeNewPosition` 재사용)해 당해 매도분 손익을 KRW 통산. 250만원 초과 시 이듬해 5월 신고 대상 표기. 매수 로그·체결 환율 누락 시 현재 평단·환율 폴백 + "추정" 표기. 거래 로그 없거나 당해 매도 0건이면 `null`(미표시). 국내주식(KRW)은 집계 제외
 - 👤 **캘린더 뷰**: `내 세금`/`전체` 필터, 현재 월 강조·자동 스크롤, 카드 `Collapsible` 상세, 하단 면책 문구 항상 노출
+- ⚙ **이번 달 정렬(#4.92)**: 세금 화면 이번 달 섹션은 마감 지난 항목(`dueEndDate` < 오늘)을 아래로(`sortPastDueLast`, 12/16 첫 카드 ≠ 종부세, 12/31 당일은 지남 아님). 새 칩·문구 없음
 - ⚙ **홈 배너 정렬·마감 필터(#4.29)** — `getAssetDrivenHighlights`는 **이번 달 우선 → 같은 달 내 high 우선**(종전 severity 우선이라 다음 달 high가 이번 달 일정을 밀어내던 문제). 이번 달 항목 중 `dueLabel` 마지막 `M/D`(`dueEndDate`)가 오늘보다 이전이면 제외, 날짜 없는 라벨("2월 급여"·"시행 예정")은 월말까지 유지
 - 엣지: 12월 → 다음 달 1월 롤오버, 같은 달 내 `high` severity 우선 정렬, `전체` 모드에서 비해당 항목 `opacity-60`
 - 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
@@ -832,9 +833,10 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - ⚙ B 줄(원인 1개 이상) 탭·원인 0개 쉐브론을 **열 때(false→true)만** `feature_use` category `home_cause_open`(`홈 변동 원인 열기`) 1건(핸들러 `toggleCause` 1개, 송출처 grep 1곳), `접기`·닫을 때·체험 0건. 4.90부터 의미 = '원인 1줄을 보고 더 보기'. 테스트 `tax-entry-489.test.ts`
 
 ### F-HOME-TODAY. 홈 '오늘' — 지수 종가 줄·가장 큰 원인 1줄·7일 막대 — #4.90 #175 ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx) · [market-entry-line.tsx](../../src/app/(main)/_components/views/activity/market-entry-line.tsx) · [market-compare.ts](../../src/lib/finance/market-compare.ts) · [home-today.ts](../../src/lib/report/home-today.ts))
+- ⚙ **휴면 복귀(#4.92)**: 마지막 기록 20일 전 + 이번 주 일별 기록 ≥2 → 도착 Hero·허브 행 `M/D 이후`(가장 이른 이번 주 기록), 값 동일(C65). 이번 주 1개뿐 → `기록이 부족해요`. 매일 7일 `최근 7일`·신규 3일 `M/D 이후` 불변. 체험(`?demo=1`·`?trial=1`) Hero `전일 대비`(데모 `@D-1`)
 - ⚙ A 문구 확정표(같은 날짜 1번·날짜 다름 시장별 `종가`·한 시장·휴장 `휴장`/전부 휴장 `종가` 생략·`오늘`/`실시간` 0), `marketLineState` 진리표, C69 시각 경계 4종(`market-line-490.test.ts`: kstAccessDay 15:59/16:00·STD 06:59/07:00·DST 05:59/06:00·토/월 06:30/10:00·11/27 추수감사절 다음 날), C65(홈 값 = 도착 '하루' 행 지수 열·휴장 = 도착 `휴장`), `pickTopCause`·`weekTrendTitle`, 팁 억제(dismiss 기록 0), GA title 표·송출처 전수, `listPeriodFromInit`, 시장 타일 하루 휴장 `휴장`. 테스트 `home-today-490.test.tsx`·`home-today-490.test.ts`·`home-today.test.ts`·`market-line-490.test.ts`
 - 👤 주식 보유+과거 기록 있음: Hero 바로 아래·분포 필터 위에 20px 1줄(375·360 두 시장, 320 코스피만, 가로 넘침·2줄 0), 탭 → 시장과 비교 목록 '하루' 선택·표 '하루' 행 지수 열 = 줄 값, 뒤로 → 홈. B 줄 `보유자산 시세 상승 +734만원 외 1개` 탭 → 줄 사라지고 목록·`접기`, 포커스 패널 → `접기` 후 B 줄, 노드 재마운트 0. 7일 카드(기록 2개↑) 탭 → 자산 변화 전체·주. 첫 저장 당일·주식 없음·캡처: A·B·C 신규 표시 0. 홈 팁에 '시장과 비교' 기능 팁 안 나옴
 
-### F-PUSH. PWA 시장 알림 — #4.91 #179 ([notify-section.tsx](../../src/app/(main)/_components/header-menu/notify-section.tsx) · [push/](../../src/lib/push/) · [sw.js](../../public/sw.js))
+### F-PUSH. PWA 시장 알림 — #4.93 #179 ([notify-section.tsx](../../src/app/(main)/_components/header-menu/notify-section.tsx) · [push/](../../src/lib/push/) · [sw.js](../../public/sw.js))
 - ⚙ 카탈로그·문구(금지어·금액 0·외 N개·pm2)·prefs 기본값(키 없음·손상)·subscribe 검증(standalone·허용 호스트·카탈로그 ID·길이)·저장소(평문 endpoint 0·HMAC id·접두어 분리·역색인)·cron(401·운영 외 204·휴장·시각·중복·서킷·예산·410 삭제)·test 라우트(운영 404·미저장 404·쿨다운)·sw(push 폴백·notificationclick). 테스트 `src/lib/push/__tests__/*`
 - 👤 설치한 앱(preview 주소 홈 화면에 추가) → 설정 → 시장 알림 켜기 → 권한 → 테스트 알림 보내기 수신 → 알림 누름(열린 창 포커스/새 창 홈) → 대상·조건 저장 → 끄기 → 모든 데이터 삭제 후 서버 구독 부재(테스트 404). 브라우저 탭은 `홈 화면에 추가한 앱에서 쓸 수 있어요`, 체험 모드는 섹션 없음, 키 미설정 preview는 `준비 중이에요`.

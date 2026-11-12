@@ -375,6 +375,19 @@ function dueEndDate(event: TaxEvent, year: string): string | null {
 }
 
 /**
+ * 세금 화면 '이번 달' 정렬(4.92) — 마감일이 지난 항목을 아래로(안정 정렬, 다른 달은 그대로).
+ * 판정은 getAssetDrivenHighlights와 같은 dueEndDate(마감일 없는 월 전체 일정은 지남 아님)
+ */
+export function sortPastDueLast<T extends TaxEvent>(events: readonly T[], month: number, today: string = todayKst()): T[] {
+  if (month !== Number(today.slice(5, 7))) return [...events];
+  const isPast = (e: T) => {
+    const due = dueEndDate(e, today.slice(0, 4));
+    return !!due && today > due;
+  };
+  return [...events.filter((e) => !isPast(e)), ...events.filter(isPast)];
+}
+
+/**
  * 홈 팁 "임박 세금"(#4.36) — 이번 달 일정이고 마감일이 오늘~오늘+6일(KST, 오늘 포함 7일 안)인지.
  * 마감일 없는 월 전체 일정·다음 달 일정·마감 지난 일정은 false
  */

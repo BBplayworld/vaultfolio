@@ -344,7 +344,7 @@ getCacheStorage(): ICacheStorage
 
 **클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회
 
-### 시장 알림 API (#4.91)
+### 시장 알림 API (#4.93)
 - `POST|DELETE /api/push/subscribe` — body `{endpoint,p256dh,auth,topics,cond,standalone:true}`(DELETE는 `{endpoint}`). 검증 실패 400·키 미설정 503·IP 30/시간. Redis에는 endpoint 해시(HMAC) 키 + 암호화 블롭 + 카탈로그 ID·조건·날짜만.
 - `POST /api/push/test` — preview·로컬 전용(운영 404). 본인 구독 1건에 고정 샘플, 구독당 1분 1회·IP 10/시간.
 - `GET /api/push/cron/{kr,us}` — `Authorization: Bearer CRON_SECRET`, 운영 전용(그 외 204). 응답은 건수만.
