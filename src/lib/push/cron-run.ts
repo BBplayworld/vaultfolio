@@ -9,7 +9,7 @@ import { withinUpstreamBudget } from "@/server/api-guard";
 import { PUSH_CATALOG, topicsOfMarket } from "./catalog";
 import { buildPushMessage, type PushItem } from "./message";
 import { estimateKisCalls, fetchPushRates } from "./quotes";
-import { sendPush } from "./send";
+import { isPushConfigured, sendPush } from "./send";
 import type { PushMarket, PushSubRecord } from "./types";
 
 // 거래일 종가 요약 발송(#179, 운영 Cron 전용). 중복 알림 금지 우선 — 회차 플래그를 먼저 잡고 실패해도 풀지 않는다.
@@ -55,6 +55,9 @@ export async function runPushCron(req: Request, market: PushMarket): Promise<Nex
   if (!isCronAuthorized(req.headers.get("authorization"))) return json({ error: "unauthorized" }, 401);
   if (process.env.VERCEL_ENV !== "production") return new NextResponse(null, { status: 204 });
 
+  // 키 미설정이면 복호화가 전부 실패해 고아 정리가 구독을 지우므로 회차 플래그 전에 중단
+  if (!isPushConfigured()) return json({ skipped: "not-configured" });
+
   const win = resolveCronWindow(market, Date.now());
   if (!win.ok) return json({ skipped: win.reason });
 
@@ -69,7 +72,12 @@ export async function runPushCron(req: Request, market: PushMarket): Promise<Nex
   for (let i = 0; i < ids.length; i += CHUNK) {
     const chunk = ids.slice(i, i + CHUNK);
     const recs = await Promise.all(chunk.map((id) => storage.getPushSub(id)));
-    recs.forEach((rec, j) => rec && subs.push({ id: chunk[j], rec }));
+    // 레코드가 없는 id(TTL 만료·복호화 불가)는 집합에 남은 고아 — 정리
+    for (let j = 0; j < recs.length; j++) {
+      const rec = recs[j];
+      if (rec) subs.push({ id: chunk[j], rec });
+      else await storage.deletePushSub(chunk[j]);
+    }
   }
   if (subs.length === 0) return json({ skipped: "no-subscribers" });
 

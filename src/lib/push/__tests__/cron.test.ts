@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { store, kis, budget, quotes, send } = vi.hoisted(() => ({
+const { store, kis, budget, quotes, send, configured } = vi.hoisted(() => ({
+  configured: vi.fn(),
   store: { markPushSent: vi.fn(), listPushSubIdsByTopics: vi.fn(), getPushSub: vi.fn(), deletePushSub: vi.fn() },
   kis: { getKisAccessToken: vi.fn(), recordKisFailure: vi.fn(), recordKisSuccess: vi.fn() },
   budget: vi.fn(),
@@ -11,7 +12,7 @@ vi.mock("@/lib/cache-storage", () => ({ getCacheStorage: () => store }));
 vi.mock("@/lib/finance/kis-token", () => kis);
 vi.mock("@/server/api-guard", () => ({ withinUpstreamBudget: budget }));
 vi.mock("../quotes", () => ({ fetchPushRates: quotes, estimateKisCalls: () => 1 }));
-vi.mock("../send", () => ({ sendPush: send }));
+vi.mock("../send", () => ({ sendPush: send, isPushConfigured: () => configured() }));
 
 import { isCronAuthorized, resolveCronWindow, runPushCron } from "../cron-run";
 
@@ -34,6 +35,7 @@ beforeEach(() => {
   budget.mockResolvedValue(true);
   quotes.mockResolvedValue({ kospi: 0.8 });
   send.mockResolvedValue("ok");
+  configured.mockReturnValue(true);
 });
 
 describe("cron 인증·환경", () => {
@@ -48,6 +50,25 @@ describe("cron 인증·환경", () => {
     process.env.VERCEL_ENV = "preview";
     expect((await runPushCron(req("Bearer s3cret-value-for-test"), "kr")).status).toBe(204);
     expect(store.markPushSent).not.toHaveBeenCalled();
+  });
+});
+
+describe("키 미설정·고아 정리", () => {
+  it("키 미설정이면 회차 플래그 전에 중단(복호화 실패로 구독이 지워지는 것 방지)", async () => {
+    configured.mockReturnValue(false);
+    const res = await runPushCron(req("Bearer s3cret-value-for-test"), "kr");
+    expect(await res.json()).toEqual({ skipped: "not-configured" });
+    expect(store.markPushSent).not.toHaveBeenCalled();
+    expect(store.deletePushSub).not.toHaveBeenCalled();
+  });
+  it("레코드가 없는 고아 id는 삭제한다", async () => {
+    store.listPushSubIdsByTopics.mockResolvedValue(["orphan", "id1"]);
+    store.getPushSub.mockImplementation(async (id: string) =>
+      id === "orphan" ? null : { endpoint: "https://fcm.googleapis.com/x", p256dh: "p", auth: "a", topics: ["kospi"], cond: "daily", updatedAt: "2026-11-12" },
+    );
+    await runPushCron(req("Bearer s3cret-value-for-test"), "kr");
+    expect(store.deletePushSub).toHaveBeenCalledWith("orphan");
+    expect(store.deletePushSub).not.toHaveBeenCalledWith("id1");
   });
 });
 

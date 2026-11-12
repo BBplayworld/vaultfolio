@@ -1,13 +1,11 @@
 import "server-only";
 import {
-  fetchExchangeRateFromKis,
   fetchKospiDailySeries,
   fetchOverseasChangeRate,
   fetchOverseasIndexDailySeries,
   fetchStocksFromKorea,
   type IndexCloseRow,
 } from "@/lib/finance/finance-service";
-import { getCacheStorage } from "@/lib/cache-storage";
 import type { PushTopic } from "./catalog";
 import type { PushMarket } from "./types";
 
@@ -34,7 +32,7 @@ export function changeFromSeries(rows: IndexCloseRow[] | null, marketDate: strin
 
 /** KIS 호출 수 추정 — 예산 차감용 */
 export function estimateKisCalls(topics: readonly PushTopic[]): number {
-  return topics.reduce((n, t) => n + (t.source.kind === "fx" ? 2 : 1), 0);
+  return topics.length;
 }
 
 export interface FetchCtx {
@@ -78,13 +76,6 @@ export async function fetchPushRates(topics: readonly PushTopic[], ctx: FetchCtx
       } else if (s.kind === "us-stock") {
         const rate = await fetchOverseasChangeRate(s.excd, s.symbol, tk, ak, as_);
         if (rate !== null) out[t.id] = rate;
-      } else if (s.kind === "fx") {
-        // 현재값은 KIS, 전일 값은 기존 환율 이력(일자별 USD) — 이력이 없으면 항목 생략
-        const cur = await fetchExchangeRateFromKis(tk, ak, as_, ctx.todayStr);
-        const history = await getCacheStorage().getExchangeHistory();
-        const prevDate = Object.keys(history).filter((d) => d < ctx.todayStr).sort().pop();
-        const prev = prevDate ? history[prevDate]?.USD : 0;
-        if (cur && cur.USD > 0 && prev > 0) out[t.id] = ((cur.USD - prev) / prev) * 100;
       }
     } catch {
       // 항목 단위 실패는 생략

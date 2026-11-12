@@ -3,7 +3,10 @@
 import { PUSH_DEFAULT_TOPICS, normalizePushTopics } from "./catalog";
 import type { PushCond } from "./types";
 
-export const PUSH_PREFS_KEY = "secretasset_push_prefs";
+// 점 접두 — clearAssetData(secretasset_* 삭제)·가져오기·복원·동기화 pull에 지워지지 않고, 구버전 롤백에도 보존된다(physicalAssets 선례).
+export const PUSH_PREFS_KEY = "secretasset.push_prefs";
+// 4.91 초기 키 — 있으면 1회 새 키로 옮기고 삭제한다.
+export const LEGACY_PUSH_PREFS_KEY = "secretasset_push_prefs";
 
 export interface PushPrefs {
   v: 1;
@@ -31,8 +34,21 @@ export function parsePushPrefs(raw: string | null): PushPrefs {
   }
 }
 
+/** 구버전 키 → 새 키 1회 이전(새 키가 이미 있으면 새 키 우선, 구 키는 삭제) */
+export function migrateLegacyPushPrefs(): void {
+  try {
+    const legacy = localStorage.getItem(LEGACY_PUSH_PREFS_KEY);
+    if (legacy === null) return;
+    if (localStorage.getItem(PUSH_PREFS_KEY) === null) localStorage.setItem(PUSH_PREFS_KEY, legacy);
+    localStorage.removeItem(LEGACY_PUSH_PREFS_KEY);
+  } catch {
+    /* 무시 — 다음 읽기에서 재시도 */
+  }
+}
+
 export function readPushPrefs(): PushPrefs {
   try {
+    migrateLegacyPushPrefs();
     return parsePushPrefs(localStorage.getItem(PUSH_PREFS_KEY));
   } catch {
     return defaultPushPrefs();
@@ -50,6 +66,7 @@ export function writePushPrefs(prefs: PushPrefs): void {
 export function clearPushPrefs(): void {
   try {
     localStorage.removeItem(PUSH_PREFS_KEY);
+    localStorage.removeItem(LEGACY_PUSH_PREFS_KEY);
   } catch {
     /* 무시 */
   }

@@ -28,7 +28,7 @@ export function sealSecret(secret: SubSecret): string {
   const key = getStoreKey();
   if (!key) throw new Error("PUSH_STORE_KEY 미설정");
   const iv = randomBytes(12);
-  const c = createCipheriv("aes-256-gcm", key, iv);
+  const c = createCipheriv("aes-256-gcm", key, iv, { authTagLength: 16 });
   const ct = Buffer.concat([c.update(JSON.stringify(secret), "utf8"), c.final()]);
   return Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64");
 }
@@ -39,7 +39,8 @@ export function openSecret(blob: string): SubSecret | null {
   if (!key) return null;
   try {
     const buf = Buffer.from(blob, "base64");
-    const d = createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12));
+    if (buf.length < 12 + 16 + 1) return null; // iv(12) + tag(16) + 암호문 최소 1바이트 — 짧은 블롭 거부
+    const d = createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12), { authTagLength: 16 });
     d.setAuthTag(buf.subarray(12, 28));
     const pt = Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString("utf8");
     const p = JSON.parse(pt) as SubSecret;

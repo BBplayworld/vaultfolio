@@ -78,4 +78,17 @@ describe("push 저장소", () => {
     expect(await st.markPushSent("kr", "2026-11-12")).toBe(false);
     expect(await st.markPushSent("us", "2026-11-12")).toBe(true);
   });
+  it("전체 구독 수 — 저장·삭제·환경 접두 분리", async () => {
+    const st = new FileCacheStorage();
+    expect(await st.countPushSubs()).toBe(0);
+    await st.putPushSub("a", rec());
+    await st.putPushSub("b", rec());
+    await st.putPushSub("a", rec({ topics: ["spx"] }));
+    expect(await st.countPushSubs()).toBe(2);
+    await st.deletePushSub("a");
+    await st.deletePushSub("없는-id"); // 고아 삭제도 오류 없음
+    expect(await st.countPushSubs()).toBe(1);
+    process.env.VERCEL_ENV = "preview";
+    expect(await st.countPushSubs()).toBe(0);
+  });
 });

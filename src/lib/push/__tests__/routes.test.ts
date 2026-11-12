@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { store, send } = vi.hoisted(() => ({ store: { putPushSub: vi.fn(), deletePushSub: vi.fn(), getPushSub: vi.fn(), acquireLock: vi.fn(), incrementCounter: vi.fn() }, send: vi.fn() }));
+const { store, send, configured } = vi.hoisted(() => ({ configured: vi.fn(() => true), store: { countPushSubs: vi.fn(), putPushSub: vi.fn(), deletePushSub: vi.fn(), getPushSub: vi.fn(), acquireLock: vi.fn(), incrementCounter: vi.fn() }, send: vi.fn() }));
 vi.mock("@/lib/cache-storage", () => ({ getCacheStorage: () => store }));
-vi.mock("../send", () => ({ isPushConfigured: () => true, sendPush: send }));
+vi.mock("../send", () => ({ isPushConfigured: () => configured(), sendPush: send }));
 
 import { POST, DELETE } from "@/app/api/push/subscribe/route";
 import { POST as TEST } from "@/app/api/push/test/route";
@@ -21,6 +21,9 @@ beforeEach(() => {
   process.env.PUSH_STORE_KEY = Buffer.alloc(32, 3).toString("base64");
   delete process.env.VERCEL_ENV;
   store.incrementCounter.mockResolvedValue(1);
+  configured.mockReturnValue(true);
+  store.getPushSub.mockResolvedValue(null);
+  store.countPushSubs.mockResolvedValue(0);
 });
 
 describe("/api/push/subscribe", () => {
@@ -46,6 +49,20 @@ describe("/api/push/subscribe", () => {
   it("rate limit 초과 429", async () => {
     store.incrementCounter.mockResolvedValue(999);
     expect((await POST(mk("POST", body))).status).toBe(429);
+  });
+  it("전체 구독 수 상한 — 신규는 503, 기존 구독 갱신은 허용", async () => {
+    store.countPushSubs.mockResolvedValue(5000);
+    expect((await POST(mk("POST", body))).status).toBe(503);
+    expect(store.putPushSub).not.toHaveBeenCalled();
+    store.getPushSub.mockResolvedValue({ ...body, updatedAt: "2026-11-12" });
+    expect((await POST(mk("POST", body))).status).toBe(200);
+  });
+  it("키 미설정 — POST 503, DELETE는 500이 아니라 안전 응답(200)", async () => {
+    configured.mockReturnValue(false);
+    expect((await POST(mk("POST", body))).status).toBe(503);
+    const res = await DELETE(mk("DELETE", { endpoint: ENDPOINT }));
+    expect(res.status).toBe(200);
+    expect(store.deletePushSub).not.toHaveBeenCalled();
   });
   it("DELETE — endpoint 원문으로 HMAC id 삭제", async () => {
     expect((await DELETE(mk("DELETE", { endpoint: ENDPOINT }))).status).toBe(200);

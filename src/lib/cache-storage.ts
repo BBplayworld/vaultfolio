@@ -21,6 +21,7 @@ import type { AssetEnvelope } from "./cloud-sync/config";
 // 인터페이스
 // ─────────────────────────────────────────────────────────
 
+import { PUSH_TOPIC_IDS } from "@/lib/push/catalog";
 import { pushKeyPrefix } from "@/lib/push/prefix";
 import type { PushMarket, PushStoredSub, PushSubRecord } from "@/lib/push/types";
 import { openSecret, sealSecret } from "@/lib/push/crypto";
@@ -126,7 +127,9 @@ export interface ICacheStorage {
   // 저장값은 endpoint·keys·카탈로그 ID·조건뿐. TTL 90일(갱신 시 연장)
   putPushSub(id: string, rec: PushSubRecord): Promise<void>;
   getPushSub(id: string): Promise<PushSubRecord | null>;
-  deletePushSub(id: string): Promise<void>;
+  deletePushSub(id: string): Promise<void>; // 레코드가 이미 없어도(고아) 토픽 집합·전체 집합에서 id를 제거한다
+  // 전체 구독 수(상한 판정용)
+  countPushSubs(): Promise<number>;
   // 대상 토픽 합집합의 구독 id(중복 제거)
   listPushSubIdsByTopics(topics: string[]): Promise<string[]>;
   // 회차 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
@@ -816,6 +819,12 @@ export class FileCacheStorage implements ICacheStorage {
     this.writePush(data);
   }
 
+  async countPushSubs(): Promise<number> {
+    const prefix = `${pushKeyPrefix()}sub:`;
+    const now = Date.now();
+    return Object.entries(this.readPush().subs).filter(([key, e]) => key.startsWith(prefix) && e.expires_at > now).length;
+  }
+
   async listPushSubIdsByTopics(topics: string[]): Promise<string[]> {
     const prefix = `${pushKeyPrefix()}sub:`;
     const now = Date.now();
@@ -1180,6 +1189,8 @@ class UpstashCacheStorage implements ICacheStorage {
     const P = pushKeyPrefix();
     const prev = await this.redis.get<PushStoredSub>(`${P}sub:${id}`);
     await this.redis.set(`${P}sub:${id}`, sealPushSub(rec, prev), { ex: PUSH_SUB_TTL_SEC });
+    await this.redis.sadd(`${P}all`, id);
+    await this.redis.expire(`${P}all`, PUSH_SUB_TTL_SEC);
     for (const t of prev?.topics ?? []) {
       if (!rec.topics.includes(t)) await this.redis.srem(`${P}topic:${t}`, id);
     }
@@ -1197,7 +1208,13 @@ class UpstashCacheStorage implements ICacheStorage {
     const P = pushKeyPrefix();
     const prev = await this.redis.get<PushStoredSub>(`${P}sub:${id}`);
     await this.redis.del(`${P}sub:${id}`);
-    for (const t of prev?.topics ?? []) await this.redis.srem(`${P}topic:${t}`, id);
+    await this.redis.srem(`${P}all`, id);
+    // 레코드가 없으면(만료·고아) 어느 토픽에 있었는지 모르므로 카탈로그 전체에서 제거한다
+    for (const t of prev?.topics ?? PUSH_TOPIC_IDS) await this.redis.srem(`${P}topic:${t}`, id);
+  }
+
+  async countPushSubs(): Promise<number> {
+    return Number(await this.redis.scard(`${pushKeyPrefix()}all`)) || 0;
   }
 
   async listPushSubIdsByTopics(topics: string[]): Promise<string[]> {

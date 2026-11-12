@@ -1,5 +1,5 @@
 import "server-only";
-import * as webpush from "web-push";
+import webpush from "web-push";
 import { getStoreKey } from "./crypto";
 import type { PushPayload, PushSubRecord } from "./types";
 

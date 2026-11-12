@@ -31,6 +31,7 @@ function urlBase64ToUint8Array(b64: string): Uint8Array<ArrayBuffer> {
 }
 
 async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
   try {
     return await Promise.race([
       navigator.serviceWorker.ready,
@@ -133,17 +134,24 @@ export async function sendTestPush(): Promise<TestResult> {
   return res?.status === 429 ? "cooldown" : "error";
 }
 
-/** 앱 로드 시 구독 만료·교체(pushsubscriptionchange) 보정 — 로컬 on인데 구독이 없으면 재구독·서버 갱신 시도 */
+/**
+ * 앱 로드 시 구독 보정 — 실제 기기 구독 유무로 판단한다(로컬 prefs는 보조).
+ * 로컬 on + 구독 없음 → 재구독·서버 갱신(만료·교체 보정), 로컬 on + 구독 있음 → 서버 갱신,
+ * 로컬 off인데 구독이 남은 고아 → 서버 삭제·기기 구독 해제.
+ */
 export async function reconcilePush(): Promise<void> {
   if (detectPushEnv() !== "ready" || !VAPID_PUBLIC_KEY || Notification.permission !== "granted") return;
   const prefs = readPushPrefs();
-  if (!prefs.on) return;
   const reg = await getRegistration();
   if (!reg) return;
   try {
+    const existing = await reg.pushManager.getSubscription();
+    if (!prefs.on) {
+      if (existing) await unsubscribePush(true);
+      return;
+    }
     const sub =
-      (await reg.pushManager.getSubscription()) ??
-      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) }));
+      existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) }));
     await postJson("POST", "/api/push/subscribe", toBody(sub, prefs.topics, prefs.cond));
   } catch {
     /* 다음 로드에서 재시도 */

@@ -35,8 +35,7 @@ import { MENU_DESC, MENU_ICON, MENU_LABEL, MENU_ROW, MENU_SECTION_LABEL, menuBad
 type RowState = "loading" | "off" | "on" | "denied";
 
 const ANIM_FADE = "motion-safe:animate-in motion-safe:fade-in duration-150";
-// 소형 높이(320×568급): 목록 중첩 스크롤을 풀고 푸터를 sticky로 고정
-const SHORT = "[@media(max-height:700px)]";
+// 소형 높이(320×568급): 목록 중첩 스크롤을 풀고 푸터를 sticky로 고정 — Tailwind가 클래스를 생성하도록 아래 className은 리터럴로 쓴다(템플릿 결합 금지)
 const COND_DESC: Record<PushCond, string> = {
   daily: "거래일마다 장 마감 후 종가 등락을 알려드려요.",
   pm2: "종가가 ±2% 이상 움직인 대상만 알려드려요. 그런 대상이 없는 날은 알림이 없어요.",
@@ -332,7 +331,7 @@ export function NotifySection() {
               </span>
             )}
           </div>
-          <div className={`-mx-2 max-h-[320px] overflow-y-auto overscroll-contain px-1 ${SHORT}:max-h-none ${SHORT}:overflow-visible`}>
+          <div className="-mx-2 max-h-[320px] overflow-y-auto overscroll-contain px-1 [@media(max-height:700px)]:max-h-none [@media(max-height:700px)]:overflow-visible">
             {PUSH_GROUPS.map((g) => (
               <div key={g.id} role="group" aria-labelledby={`notify-group-${g.id}`}>
                 <p id={`notify-group-${g.id}`} className="flex h-8 items-center px-1 text-sm font-semibold text-muted-foreground">
@@ -375,7 +374,7 @@ export function NotifySection() {
             국내 장은 오후 4~5시, 미국 장은 다음 날 아침 9~10시에 도착해요. 이 설정은 이 기기에서만 적용돼요.
           </p>
           <DialogFooter
-            className={`flex-col gap-2 ${SHORT}:sticky ${SHORT}:bottom-0 ${SHORT}:-mx-6 ${SHORT}:-mb-6 ${SHORT}:bg-background ${SHORT}:px-6 ${SHORT}:pb-6 ${SHORT}:pt-2 dark:${SHORT}:bg-popover`}
+            className="flex-col gap-2 [@media(max-height:700px)]:sticky [@media(max-height:700px)]:bottom-0 [@media(max-height:700px)]:-mx-6 [@media(max-height:700px)]:-mb-6 [@media(max-height:700px)]:bg-popover [@media(max-height:700px)]:px-6 [@media(max-height:700px)]:pb-6 [@media(max-height:700px)]:pt-2"
           >
             <Button variant="brand" data-testid="notify-targets-save" onClick={handleSave} disabled={sel.length === 0 || saving}>
               {saving ? "저장 중…" : "저장"}

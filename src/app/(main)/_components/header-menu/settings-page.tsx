@@ -122,7 +122,8 @@ export function SettingsPage() {
 
   const handleClear = async () => {
     // 시장 알림(#179): 서버 구독 삭제 → 기기 구독 해제 → 로컬 설정 키 삭제. 체험 모드는 서버 구독이 없으므로 로컬만
-    if (!isTrialMode() && readPushPrefs().on) await unsubscribePush(false);
+    // prefs.on이 아니라 실제 기기 구독 유무로 판단 — 체험이 아니면 항상 서버 DELETE + 기기 구독 해제(구독 없으면 로컬 키만 삭제)
+    if (!isTrialMode()) await unsubscribePush(false);
     else clearPushPrefs();
     // 동기화 연결을 먼저 해제(forget) → 빈 자산이 클라우드로 자동 push되어 백업이
     // 덮어써지는 것을 차단한다. 클라우드 금고 자체는 보존(다른 기기·재연결로 복구 가능).

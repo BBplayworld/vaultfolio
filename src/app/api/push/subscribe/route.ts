@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
 import { pushSubId } from "@/lib/push/crypto";
+import { PUSH_MAX_SUBS } from "@/lib/push/prefix";
 import { isPushConfigured } from "@/lib/push/send";
 import { parseEndpointBody, parseSubscribeBody } from "@/lib/push/validate";
 import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
@@ -26,13 +27,21 @@ export async function POST(req: NextRequest) {
   const body = parseSubscribeBody(await req.json().catch(() => null));
   if (!body) return badRequest();
 
-  await getCacheStorage().putPushSub(pushSubId(body.endpoint), { ...body, updatedAt: new Date().toISOString().slice(0, 10) });
+  const storage = getCacheStorage();
+  const id = pushSubId(body.endpoint);
+  // 전체 상한 — 신규 구독만 막는다(기존 구독의 대상·조건 갱신은 허용)
+  if (!(await storage.getPushSub(id)) && (await storage.countPushSubs()) >= PUSH_MAX_SUBS) {
+    return NextResponse.json({ error: "capacity" }, { status: 503, headers: NO_STORE });
+  }
+  await storage.putPushSub(id, { ...body, updatedAt: new Date().toISOString().slice(0, 10) });
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }
 
 export async function DELETE(req: NextRequest) {
   const blocked = await guard(req);
   if (blocked) return blocked;
+  // 키 미설정이면 저장된 구독이 있을 수 없다 — 500 대신 안전하게 성공 응답
+  if (!isPushConfigured()) return NextResponse.json({ ok: true }, { headers: NO_STORE });
   const endpoint = parseEndpointBody(await req.json().catch(() => null));
   if (!endpoint) return badRequest();
 
