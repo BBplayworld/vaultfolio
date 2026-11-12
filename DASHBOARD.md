@@ -18,11 +18,6 @@
    - 답: 게시함/안 함 + (게시했다면) 채널. 주 7건이 부담이면 Threads 주 3건으로 줄이는 안도 있습니다
    - W47 초안은 팀이 작성해 두겠습니다(게시는 대표님)
 
-4. **🔔 v4.86 반영 결정 — [PR #169](https://github.com/BBplayworld/vaultfolio/pull/169)** (#167 휴대폰 첫 화면 '설치 먼저' → 바로 등록, 10/29 결정 번복)
-   - 권고: 반영. qa PASS·UI 승인·COO PASS @d67e60f. 데이터·저장 변경 0, 되돌리기는 PR revert 1개
-   - 머지 시점: 11/20 이후~11/26 이전 권장(기준선 7일). PR에 승인 코멘트만 주시면 팀이 시각 맞춰 머지
-   - preview: https://secretasset-git-issue-486-bbplayworlds-projects.vercel.app/?demo=empty · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.86-167-welcome-register-first/4.86-decision-brief.md)
-
 ## 🔴 운영 결함 (p0)
 - 없음 (최근 핫픽스: #107 v4.57, #104 v4.53 핫픽스 — 운영 스모크 PASS)
 
@@ -32,7 +27,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.86 | [#167](https://github.com/BBplayworld/vaultfolio/issues/167) 웰컴에서 바로 첫 자산 등록(모바일 웹 '설치 먼저'→'등록 먼저', 직접 입력 5개 자산군) — 방향 확정 11/12 | **대표 결정 대기**(owner-review, PR #169) | **대표 승인 대상** |
+| v4.86 | [#167](https://github.com/BBplayworld/vaultfolio/issues/167) 웰컴에서 바로 첫 자산 등록(모바일 웹 '설치 먼저'→'등록 먼저', 직접 입력 5개 자산군) — 방향 확정 11/12 | 대표 승인 완료 — 11/20~11/26 팀 머지 예정 | **대표 승인 대상** |
 
 ### ⏱ 예약된 운영 확인 (11/11)
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
