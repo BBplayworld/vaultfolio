@@ -313,7 +313,7 @@ export function NotifySection() {
       <Dialog open={dialog === "targets"} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent
           data-testid="notify-targets-dialog"
-          className="sm:max-w-md touch-pan-y max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain"
+          className="sm:max-w-md touch-pan-y max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain [@media(max-height:700px)]:pb-0"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -374,7 +374,7 @@ export function NotifySection() {
             국내 장은 오후 4~5시, 미국 장은 다음 날 아침 9~10시에 도착해요. 이 설정은 이 기기에서만 적용돼요.
           </p>
           <DialogFooter
-            className="flex-col gap-2 [@media(max-height:700px)]:sticky [@media(max-height:700px)]:bottom-0 [@media(max-height:700px)]:-mx-6 [@media(max-height:700px)]:-mb-6 [@media(max-height:700px)]:bg-popover [@media(max-height:700px)]:px-6 [@media(max-height:700px)]:pb-6 [@media(max-height:700px)]:pt-2"
+            className="flex-col gap-2 [@media(max-height:700px)]:sticky [@media(max-height:700px)]:bottom-0 [@media(max-height:700px)]:-mx-6 [@media(max-height:700px)]:bg-background [@media(max-height:700px)]:dark:bg-popover [@media(max-height:700px)]:px-6 [@media(max-height:700px)]:pb-6 [@media(max-height:700px)]:pt-2"
           >
             <Button variant="brand" data-testid="notify-targets-save" onClick={handleSave} disabled={sel.length === 0 || saving}>
               {saving ? "저장 중…" : "저장"}
