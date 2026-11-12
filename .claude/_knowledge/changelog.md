@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-12 (v4.88)
+
+### 자산 변화 '시장과 비교'를 도구 타일로 (#4.88, 이슈 #172)
+- **타일**: 자산 변화 › 주식의 Hero 카드 안 헤어라인·지수 글줄(`MarketEntryLine`·`HAIRLINE`·`ChangeHeroFrame footer`)을 지우고 카드 바로 아래 단일 `MarketTile`(상세·주식과 같은 모양). 값 접두 하루/1주/1개월, 연 탭 `올해 지수와 나란히 보기`. testId `change-market-entry`·`-button` 유지, `-value` 신규.
+- **공용 추출**: `ToolTile` → `layout/ui/tool-tile.tsx`, `MarketTileValue` 공용(상세·주식 타일도 사용).
+- **새 소식**: `20261112-01`(바로 가기 없음 — 도착 화면에 타일이 없음, C87).
+- **버그 수정(별도 커밋)**: AI 프롬프트 대출 종류가 `asset-options loanTypes`를 따르게(예금담보대출이 전세자금대출로 적히던 문제).
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0.
+- 테스트: `market-entry-line.test.tsx`(교체)·`stock-entry-tools.test.tsx`·`whats-new`·`home-tip`·`loan-type-label.test.ts`(신규).
+
+---
+
 ## 2026-11-12 (v4.87)
 
 ### 홈 팁이 내 자산에 맞는 기능을 권한다 (#4.87, 이슈 #170)

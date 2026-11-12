@@ -4,9 +4,8 @@
 // 옛 요약 안 시장 글줄·X-Ray 상자·세금 문장 상자를 대체한다. 타일마다 그 기능의 숫자 1개를 미리 보인다(금액·투자 판단 없음).
 // useXrayClassifications(분류 수집·완료 토스트)는 이 묶음이 계속 호출한다 — 타일이 안 보여도 호출은 유지(StockInsightStrip에서 이전).
 // 인증카드 캡처에는 나오지 않는다(data-screenshot-hide, StockTab은 screenshotMode 렌더 안 함). 저장 호출 0.
-import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useMemo } from "react";
-import { ChartNoAxesColumn, ChevronRight, Microscope, Receipt, type LucideIcon } from "lucide-react";
+import { ChartNoAxesColumn, Microscope, Receipt } from "lucide-react";
 import type { Stock } from "@/types/asset";
 import type { ExchangeRates } from "@/lib/finance/finance-service";
 import { pickXrayTile } from "@/lib/xray/stock-xray";
@@ -17,35 +16,10 @@ import { useXrayViewStore } from "@/stores/xray-view-store";
 import { groupStocksByTicker, mergeStockGroup } from "./asset-detail-tabs";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { NewChip, useNewSpot } from "../../layout/ui/new-chip";
-import { MarketIndexValues, useMarketEntryValue } from "../activity/market-entry-line";
+import { ToolTile } from "../../layout/ui/tool-tile";
+import { MarketTileValue, useMarketEntryValue } from "../activity/market-entry-line";
 
 const LG_COLS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3" };
-
-function ToolTile({ icon: Icon, name, testId, onClick, className = "", chip, children }: {
-  icon: LucideIcon;
-  name: string;
-  testId: string;
-  onClick: () => void;
-  className?: string;
-  chip?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      data-testid={testId}
-      onClick={onClick}
-      className={`flex min-h-16 min-w-0 flex-col items-start gap-1.5 rounded-lg bg-muted/50 px-3 py-3 text-left outline-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98] motion-safe:transition-[background-color,transform] motion-safe:duration-150 dark:rounded-xl dark:bg-card dark:shadow-sm dark:hover:bg-muted/30 ${className}`}
-    >
-      <span className="flex w-full items-center gap-1.5">
-        <Icon aria-hidden className="size-4 shrink-0 text-primary max-[359px]:hidden" />
-        <span className="min-w-0 whitespace-nowrap text-sm font-semibold text-foreground">{name}{chip}</span>
-        <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" />
-      </span>
-      <span className="w-full min-w-0 text-sm leading-snug text-muted-foreground break-keep">{children}</span>
-    </button>
-  );
-}
 
 export function StockToolTiles({ stocks, exchangeRates }: { stocks: Stock[]; exchangeRates?: ExchangeRates }) {
   const { navigate } = useAssetNavigation();
@@ -86,13 +60,7 @@ export function StockToolTiles({ stocks, exchangeRates }: { stocks: Stock[]; exc
           className={count === 1 ? "col-span-2 lg:col-span-1" : undefined}
           chip={newSpot === "stock-market" ? <NewChip spot="stock-market" /> : undefined}
         >
-          <span data-testid="stock-tool-market-value">
-            {!market.ready
-              ? <span aria-hidden className={`inline-block h-4 w-20 rounded align-middle ${SKELETON_FILL}`} />
-              : market.values.length === 0
-                ? "지수와 나란히 보기"
-                : <>1주 <MarketIndexValues values={market.values} restBelowSm /></>}
-          </span>
+          <MarketTileValue market={market} label="1주" testId="stock-tool-market-value" />
         </ToolTile>
       )}
       <ToolTile

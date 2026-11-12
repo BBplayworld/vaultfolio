@@ -1,4 +1,4 @@
-// #132 U5 진입 글줄·홈 팁 문구 — 값 = 페이지와 같은 computeIndexSpan, 비교할 종목 0이면 접힘, 값 못 받으면 링크만
+// 4.88 자산 변화 시장 타일·홈 팁 문구 — 값 = 페이지와 같은 computeIndexSpan(도착 화면 1주/기간 값과 같은 함수), 비교할 종목 0이면 미렌더
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Stock } from "@/types/asset";
@@ -19,17 +19,19 @@ vi.mock("@/hooks/use-market-compare", () => ({
   useMarketIndexRefs: () => h.idx,
 }));
 
-import { MarketEntryLine } from "../market-entry-line";
+import { MarketTile } from "../market-entry-line";
 import { APP_FEATURES, MARKET_PAIR_TEXT } from "@/config/app-features";
 
 const st = (o: Partial<Stock>): Stock => ({ id: Math.random().toString(), category: "domestic", name: "삼성전자", ticker: "005930", quantity: 1, averagePrice: 1, currentPrice: 1, currency: "KRW", purchaseDate: "2026-01-01", ...o } as Stock);
 const IDX: PeriodRefs<MarketIndexResponse> = {
   daily: { KOSPI: { refPrice: 101, refDate: "2026-11-09", prevPrice: 100, prevDate: "2026-11-06" }, SPX: { refPrice: 7550, refDate: "2026-11-09", prevPrice: 7377, prevDate: "2026-11-06" } },
   weekly: { KOSPI: { refPrice: 99.8, refDate: "2026-11-03" }, SPX: { refPrice: 7569, refDate: "2026-11-03" } },
+  monthly: { KOSPI: { refPrice: 120, refDate: "2026-10-09" }, SPX: { refPrice: 7000, refDate: "2026-10-09" } },
 };
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
-const render = (period: "daily" | "weekly" | "ytd" = "weekly", visible = true) =>
-  renderToStaticMarkup(<MarketEntryLine period={period} visible={visible} testId="w" onOpen={() => {}} />);
+const render = (period: "daily" | "weekly" | "monthly" | "ytd" = "weekly") =>
+  renderToStaticMarkup(<MarketTile period={period} testId="w" onOpen={() => {}} />);
+const rate = (m: "kr" | "us", p: "daily" | "weekly" | "monthly") => formatCompareRate(computeIndexSpan(m, p, IDX as never).rate!);
 
 beforeEach(() => {
   h.stocks = [st({}), st({ ticker: "AAPL", name: "애플", category: "foreign", currency: "USD" })];
@@ -38,54 +40,52 @@ beforeEach(() => {
   h.hydrated = true;
 });
 
-describe("MarketEntryLine", () => {
-  it("자산 변화 주식 1주: `코스피 … · S&P 500 …  시장과 비교`, 값은 페이지와 같은 함수(A11). 옛 `최근`·`내 종목과 비교` 접두는 4.83에서 상세·주식 타일로 대체돼 없다", () => {
-    const t = text(render("weekly"));
-    const kr = formatCompareRate(computeIndexSpan("kr", "weekly", IDX).rate!);
-    const us = formatCompareRate(computeIndexSpan("us", "weekly", IDX).rate!);
-    expect(t).toBe(`코스피 ${kr} · S&P 500 ${us} 시장과 비교`);
-    expect(render("weekly")).not.toContain("max-[359px]:hidden");
+describe("MarketTile", () => {
+  it("기간별 접두: 일 `하루`·주 `1주`·월 `1개월` + 값은 도착 화면과 같은 computeIndexSpan(C65·C84). 데스크톱은 두 지수, 이름·값 testid", () => {
+    const d = render("daily");
+    expect(text(d)).toBe(`시장과 비교 하루 코스피 ${rate("kr", "daily")} · S&P 500 ${rate("us", "daily")}`);
+    expect(text(render("weekly"))).toBe(`시장과 비교 1주 코스피 ${rate("kr", "weekly")} · S&P 500 ${rate("us", "weekly")}`);
+    expect(text(render("monthly"))).toBe(`시장과 비교 1개월 코스피 ${rate("kr", "monthly")} · S&P 500 ${rate("us", "monthly")}`);
+    expect(d).toContain('data-testid="w"');
+    expect(d).toContain('data-testid="w-button"');
+    expect(d).toContain('data-testid="w-value"');
+    expect(d).toContain("data-screenshot-hide");
+    expect(d).toContain("sm:max-w-md");
+    expect(d).not.toContain("<hr");
   });
 
-  it("자산 변화: 선택 기간 값, 접두 없음, `시장과 비교`. 연 탭은 접힘(inert)", () => {
-    const t = text(render("daily"));
-    expect(t).toBe(`코스피 ${formatCompareRate(1)} · S&P 500 ${formatCompareRate((7550 / 7377 - 1) * 100)} 시장과 비교`);
-    const year = render("weekly", false);
-    expect(year).toContain("grid-rows-[0fr]");
-    expect(year).toContain("inert");
+  it("sm 미만은 첫 시장 1개만(둘째는 max-sm:hidden)", () => {
+    expect(render("weekly")).toContain("max-sm:hidden");
   });
 
-  it("연 탭(ytd): 값 없이 `올해 시장과 비교` 링크만, data-period=ytd, 지수 값·% 0(#150)", () => {
+  it("연 탭(ytd): 값 없이 `올해 지수와 나란히 보기`, % 0(#150)", () => {
     const html = render("ytd");
-    expect(text(html)).toBe("올해 시장과 비교");
+    expect(text(html)).toBe("시장과 비교 올해 지수와 나란히 보기");
     expect(html).toContain('data-period="ytd"');
-    expect(html).toContain("grid-rows-[1fr]");
-    expect(html).not.toContain("opacity-0");
-    expect(html).not.toContain("inert");
+    expect(html).not.toMatch(/%/);
   });
 
   it("비교할 시장의 값만: 미국 종목만이면 S&P 500만", () => {
     h.stocks = [st({ ticker: "AAPL", category: "foreign", currency: "USD" }), st({ ticker: "360750", category: "isa" })];
-    expect(text(render("weekly"))).toMatch(/^S&P 500 [+-]\d+\.\d% 시장과 비교$/);
+    expect(text(render("weekly"))).toMatch(/^시장과 비교 1주 S&P 500 [+-−]\d+\.\d%$/);
   });
 
-  it("비교할 종목 0(해외형 ETF만, F3) → 접힘 / 티커 있는 종목 0 → 렌더 없음", () => {
+  it("비교할 종목 0(해외형 ETF만, F3)·티커 있는 종목 0 → 렌더 없음", () => {
     h.stocks = [st({ ticker: "360750", category: "pension" })];
-    const html = render("weekly");
-    expect(html).toContain("grid-rows-[0fr]");
+    expect(render("weekly")).toBe("");
     h.stocks = [st({ ticker: undefined, category: "unlisted" })];
     expect(render("weekly")).toBe("");
   });
 
-  it("판별 전·지수 조회 중: 자리는 잡고 내용은 투명(값 0% 없음), 지수 실패: 링크 문구만", () => {
+  it("판별 전·지수 조회 중: 타일은 자리 잡고 값 자리는 스켈레톤(값 0% 없음), 지수 0건: `지수와 나란히 보기`", () => {
     h.peer = null;
     const loading = render("weekly");
-    expect(loading).toContain("grid-rows-[1fr]");
-    expect(loading).toContain("opacity-0");
+    expect(loading).toContain("시장과 비교");
+    expect(loading).toContain("animate-pulse");
     expect(text(loading)).not.toMatch(/%/);
     h.peer = new Set(["005930"]);
     h.idx = { daily: { KOSPI: null, SPX: null }, weekly: { KOSPI: null, SPX: null } };
-    expect(text(render("weekly"))).toBe("시장과 비교");
+    expect(text(render("weekly"))).toBe("시장과 비교 지수와 나란히 보기");
   });
 });
 
