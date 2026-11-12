@@ -11,6 +11,7 @@
 - **공용 추출**: `ToolTile` → `layout/ui/tool-tile.tsx`, `MarketTileValue` 공용(상세·주식 타일도 사용).
 - **새 소식**: `20261112-01`(바로 가기 없음 — 도착 화면에 타일이 없음, C87).
 - **버그 수정(별도 커밋)**: AI 프롬프트 대출 종류가 `asset-options loanTypes`를 따르게(예금담보대출이 전세자금대출로 적히던 문제).
+- **계측(이슈 #174, 별도 커밋)**: `featureTitleOf` — `ratio_preview`를 method·result별 page_title 6종(`비중 미리보기·브라우저로 열기/인식 성공/인식 실패/예시/저장 누름/저장 완료`, 인계 저장 완료는 홈으로 섞이지 않음), 가이드에서 시작한 체험 `가이드·체험`, 결산 .ics 버튼 `settlement_ics` → `결산 캘린더 추가`(href 이동 불변). 새 파라미터 이름 0, `ga.test.ts`에 송출처 전수 테스트(C90). 판독 경계 = 머지일.
 - 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0.
 - 테스트: `market-entry-line.test.tsx`(교체)·`stock-entry-tools.test.tsx`·`whats-new`·`home-tip`·`loan-type-label.test.ts`(신규).
 
