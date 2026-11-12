@@ -11,6 +11,8 @@ import {
   computeRebuyQuantity,
   isTaxSimCandidate,
   isForeignTaxSeason,
+  sortPastDueLast,
+  getEventsForMonth,
 } from "../tax-utils";
 import { STORAGE_KEYS } from "../local-storage";
 import type { AssetData, RealEstate, Stock, Loan, Cash } from "@/types/asset";
@@ -479,5 +481,29 @@ describe("tax-utils · 연말 세금 진입 판정 (4.45 #79)", () => {
       const r = getYearEndTaxSimulation(data, 2026, RATES);
       expect(stocks.some(isTaxSimCandidate)).toBe(r.candidates.length > 0);
     }
+  });
+});
+
+// 4.92 #181 F3 — 세금 '이번 달' 마감 지난 항목을 아래로(시각 고정 12/10·12/16·12/31)
+describe("sortPastDueLast", () => {
+  const dec = getEventsForMonth(12);
+  const first = (today: string) => sortPastDueLast(dec, 12, today)[0].dueLabel;
+  it("12/10: 달력 순서 그대로(종부세 12/15 아직 안 지남)", () => {
+    expect(sortPastDueLast(dec, 12, "2026-12-10").map((e) => e.id)).toEqual(dec.map((e) => e.id));
+    expect(first("2026-12-10")).toBe("12/1~12/15");
+  });
+  it("12/16: 종부세가 맨 아래, 12/31 항목이 위로", () => {
+    const out = sortPastDueLast(dec, 12, "2026-12-16");
+    expect(out.at(-1)!.id).toBe("comprehensive-property-tax");
+    expect(out[0].dueLabel).not.toBe("12/1~12/15");
+    expect(out.map((e) => e.id).sort()).toEqual(dec.map((e) => e.id).sort());
+  });
+  it("12/31: 마감일 당일은 지남 아님", () => {
+    expect(sortPastDueLast(dec, 12, "2026-12-31").at(-1)!.dueLabel).toBe("12/1~12/15");
+    expect(sortPastDueLast(dec, 12, "2026-12-31").some((e) => e.dueLabel === "12/31")).toBe(true);
+  });
+  it("다른 달 섹션은 순서 그대로", () => {
+    const nov = getEventsForMonth(11);
+    expect(sortPastDueLast(nov, 11, "2026-12-16")).toEqual(nov);
   });
 });

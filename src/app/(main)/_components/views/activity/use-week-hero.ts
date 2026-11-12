@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { signed } from "./change-hero";
-import { computeAttributionView, resolveWeekHero, weekSinceDate, weekToday, type AttributionView, type WeekHero } from "./week-attribution";
+import { computeAttributionView, resolveWeekHero, weekFallbackSince, weekSinceDate, weekToday, type AttributionView, type WeekHero } from "./week-attribution";
 
 export interface WeekHeroValue {
   today: string;
@@ -26,15 +26,15 @@ export function useWeekHero(): WeekHeroValue {
   const today = weekToday();
   const summary = getAssetSummary();
   const view = useMemo(
-    () => computeAttributionView({
-      assetData,
-      rates: exchangeRates,
-      summary,
-      daily: readDailySnapshots(),
-      monthly: readMonthlySnapshots(),
-      exchangeHistory: readExchangeHistory(),
-      sinceDate: weekSinceDate(today),
-    }),
+    () => {
+      const daily = readDailySnapshots();
+      const args = { assetData, rates: exchangeRates, summary, daily, monthly: readMonthlySnapshots(), exchangeHistory: readExchangeHistory() };
+      const first = computeAttributionView({ ...args, sinceDate: weekSinceDate(today) });
+      // 휴면 복귀(비교 시작이 14일 초과 전) — 이번 주 기록이 2개 이상이면 가장 이른 기록부터 'M/D 이후'(4.92). 판정 표는 그대로
+      if (resolveWeekHero(first, today).kind !== "insufficient") return first;
+      const fallback = weekFallbackSince(daily, today);
+      return fallback ? computeAttributionView({ ...args, sinceDate: fallback }) : first;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [assetData, exchangeRates, snapshotVersion, today],
   );

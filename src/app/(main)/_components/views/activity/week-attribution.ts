@@ -65,6 +65,16 @@ export function weekSinceDate(today: string): string {
   return new Date(Date.parse(`${today}T00:00:00Z`) - 7 * DAY_MS).toISOString().slice(0, 10);
 }
 
+/**
+ * 휴면 복귀 폴백 시작일(4.92) — (sinceDate, 오늘] 구간 일별 기록이 2개 이상이면 가장 이른 기록일, 아니면 null.
+ * 기록일은 스냅샷 저장일(시스템 값). 홈 7일 카드 막대와 같은 일별 기록을 쓴다(C65·C84)
+ */
+export function weekFallbackSince(daily: readonly { date: string }[], today: string): string | null {
+  const since = weekSinceDate(today);
+  const dates = daily.map((s) => s.date).filter((d) => d > since && d <= today).sort();
+  return dates.length >= 2 ? dates[0] : null;
+}
+
 /** Hero 항목 키 → 주 탭 줄. 모르는 키는 기록 안 된 변화로 보내 합계 항등식을 지킨다 */
 export function weekLineOf(key: AttributionDisplayItem["key"]): SettlementCauseKey {
   if (key === "price:stock" || key === "price:crypto") return "price";
