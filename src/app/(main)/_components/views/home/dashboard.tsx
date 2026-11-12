@@ -17,6 +17,7 @@ import { AttributionRecordList } from "../attribution-records";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
+import { track } from "@/lib/analytics/ga";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { ChevronRight, ChevronDown, Trophy } from "lucide-react";
 import { tierLabel } from "@/lib/report/asset-grade";
@@ -304,7 +305,10 @@ export function NetAssetSummaryBox({
                   {hasCause && !screenshotMode && (
                     <button
                       type="button"
-                      onClick={() => setCauseOpen((v) => !v)}
+                      onClick={() => {
+                        if (!causeOpen) track("feature_use", { category: "home_cause_open" }); // 열 때만 1건(닫을 때 제외)
+                        setCauseOpen((v) => !v);
+                      }}
                       aria-expanded={causeOpen}
                       aria-label="변동 원인 보기"
                       className="ml-1 -my-2 p-2 text-muted-foreground hover:text-foreground"

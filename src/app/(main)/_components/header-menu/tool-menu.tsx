@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { track } from "@/lib/analytics/ga";
-import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Download, Receipt } from "lucide-react";
+import { Copy, Share2, Info, User, MessageSquarePlus, Loader2, Settings, ChevronRight, Cloud, RefreshCw, BellRing, Upload, Download } from "lucide-react";
 import { useDataExport } from "@/hooks/use-data-export";
 import { formatLastBackup, isBackupStale } from "@/lib/asset/backup-status";
 import { useNickname, NICKNAME_MAX, sanitizeNickname } from "@/hooks/use-nickname";
@@ -244,17 +244,6 @@ export function ToolMenuPage() {
                 {" · "}<span className="whitespace-nowrap">약 {formatBytes(stats.approxBytes)}</span>
               </p>
             )}
-          </div>
-        </section>
-
-        <section data-testid="more-section-tools">
-          <p className={MENU_SECTION_LABEL}>도구</p>
-          <div className="flex flex-col gap-2">
-            <button type="button" data-testid="more-row-tax" className={MENU_ROW} onClick={() => navigate({ type: "tax" })}>
-              <Receipt className={MENU_ICON} />
-              <span className={MENU_LABEL}>세금 관리</span>
-              <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
-            </button>
           </div>
         </section>
 

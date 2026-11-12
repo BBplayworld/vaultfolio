@@ -25,7 +25,7 @@ const NAV_ITEMS: NavItem[] = [
 
 function getActiveId(viewType: string): string | null {
   if (viewType === "home") return "home";
-  if (viewType === "detail") return "detail";
+  if (viewType === "detail" || viewType === "tax") return "detail"; // 세금 관리는 상세 소속(4.89)
   if (viewType === "activity") return "activity";
   if (viewType === "more" || viewType === "settings") return "more";
   return null;

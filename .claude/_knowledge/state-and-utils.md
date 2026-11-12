@@ -183,6 +183,7 @@ resolveTaxTags(assetData): Map<TaxTag, string>   // 보유 자산 → 세금 태
 computeForeignRealizedGain(assetData, year, rates)  // 해외주식 당해 실현손익 KRW 통산 → { gainKrw, sellCount, estimated, overDeduction } | null
 getEventsForMonth(month): readonly TaxEvent[]
 getMyEvents(events, tags): TaxEvent[]            // 교집합(common 포함) — 캘린더 "내 세금" 필터
+taxEntryLine(assetData, today?): {dueLabel,title,imminent}|null  // 4.89 상세 허브 세금 행 보조줄(파생 일정 1건, 홈 팁 닫기 무관)
 getAssetDrivenHighlights(assetData, today?, limit=3): TaxEventMatch[]  // 홈 배너 전용 — common 전용 항목 제외.
   // 정렬 = 이번 달 우선 → 같은 달 내 high 우선(#4.29). 이번 달 항목 중 마감 지난 것 제외 — 내부 dueEndDate(event, year)가
   // dueLabel 마지막 "M/D"를 마감일로 해석("~10/25"→10-25, "12/1~12/15"→12-15), 날짜 없는 라벨("2월 급여")은 null=월말까지 유지

@@ -121,7 +121,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: `#tax` 직접 진입 복원 · 뒤로가기는 `history.back()`으로 진입 경로(홈/더보기) 복귀 · 백업 복원·동기화 pull 후에도 dismiss 유지(`asset-storage.ts` keepKeys) · sync payload 미포함(R14 핑퐁 없음)
 
 ### F-TAX-SIM. 연말 절세 시뮬레이션 ([tax-year-end-simulator.tsx](../../src/app/(main)/_components/views/tax/tax-year-end-simulator.tsx)) — 명세 [S-4.31](../specs/4.31-tax-sell-simulation.md)
-- 👤 **진입 경로 1곳으로 통합**: 더보기 > 지원 "세금 관리"(`#tax`) → 최상단 `InlineSelector`로 "세금 일정관리"/"**절세 시뮬레이션**" 전환. 개별 주식 카드의 진입 버튼은 없음(전량 제거, 이 화면 하나로 통일). **탭 영역은 `sticky top-0`로 고정**(2026-08-27) — 마운트 시 이번 달로 자동 스크롤돼도 탭 전환이 항상 화면에 보임
+- 👤 **진입 경로 1곳으로 통합**: 상세 허브 하단 `detail-hub-tax-row`(4.89, 더보기에서 이동; 보조줄 `detail-hub-tax-sub`=내 자산 파생 일정 1건·임박 0~6일만 날짜 주황·없으면 기본 문구·인증카드 숨김, 체험 진입 가능, `#tax` 활성 탭=상세) → 최상단 `InlineSelector`로 "세금 일정관리"/"**절세 시뮬레이션**" 전환. 개별 주식 카드의 진입 버튼은 없음(전량 제거, 이 화면 하나로 통일). **탭 영역은 `sticky top-0`로 고정**(2026-08-27) — 마운트 시 이번 달로 자동 스크롤돼도 탭 전환이 항상 화면에 보임
 - ⚙ **null 게이팅 제거**(회귀 방지 핵심): `getYearEndTaxSimulation`은 당해 매도 거래가 없어도(`computeForeignRealizedGain`이 `null`이어도) `baselineGainKrw=0`으로 계산해 **항상** 후보 목록을 반환한다. 보유 해외주식이 1건도 없을 때만 "보유 중인 해외주식이 없습니다" 빈 상태 — 모든 훅(`useMemo`/`useState`)이 이 조기 return **이전에** 호출되므로 Rules of Hooks 위반 없음. 빈 상태 스타일은 2026-08-28에 앱 공통 empty-state 패턴(`border border-dashed`+`h-36`+`items-center justify-center`, `stock-tab.tsx`/`crypto-tab.tsx`/`cash-tab.tsx` 등과 동일)으로 통일 — 기존엔 `bg-muted/30 p-6 rounded-xl`로 이질적이었음
 - ⚙ **후보는 증권사가 아니라 티커 기준으로 종합**(2026-08-27 수정, dev-rules.md "주식 계산·집계는 항상 종목 기준" 참조): 동일 종목을 여러 증권사에 나눠 보유해도 `groupForeignStocksByTicker`(내부, `asset-detail-tabs.tsx`의 `groupStocksByTicker`/`mergeStockGroup`과 동형 로직 — 수량 합산, 평단·매입환율 수량 가중평균)로 병합한 뒤 후보 1건만 노출. 증권사별로 나눠 세액을 따로 계산하던 이전 버그 수정
 - 👤 **체크박스 + 버튼 전용 입력**(텍스트 입력 없음): 종목 `Checkbox` 선택 → 기본 "전량" 프리셋, 이익 종목이면 "한도까지 (N주 · 비과세)"(잔여 공제 한도를 정확히 채우는 수량) 프리셋 칩, `±1` 스테퍼 + **`±5`/`±10` 버튼**(2026-08-27 추가, 보유수량이 각 임계값을 넘는 종목에만 노출)로 수량 조정
@@ -673,7 +673,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 테스트: `src/lib/__tests__/dividend-yield.test.ts`
 
 ### F-MORE-SETTINGS. 더보기·설정 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) — #4.46 #81
-- 👤 더보기 섹션 순서 프로필 · 공유 · 백업 · 도구 · 지원 + 설정 행, 공유·백업 안 순서 공유·동기화 → 백업 → 가져오기 → 저장 현황, 자산 0에서도 가져오기 동작(숨은 input 항상 렌더), 설정에 가져오기·저장 현황 없음·순서 보안→화면→표시→데이터→버전·삭제 행 맨 아래, 다크 모드 ON/OFF 배지(`aria-pressed`), 백업·가져오기·캐시·삭제 문구 변경 0
+- 👤 더보기 섹션 순서 프로필 · 공유 · 백업 · 지원 + 설정 행(4.89에서 '도구' 섹션·세금 관리 행 제거), 공유·백업 안 순서 공유·동기화 → 백업 → 가져오기 → 저장 현황, 자산 0에서도 가져오기 동작(숨은 input 항상 렌더), 설정에 가져오기·저장 현황 없음·순서 보안→화면→표시→데이터→버전·삭제 행 맨 아래, 다크 모드 ON/OFF 배지(`aria-pressed`), 백업·가져오기·캐시·삭제 문구 변경 0
 - 1280 행 폭 672px 이하 좌정렬, 320 어절 줄바꿈 0
 
 ### F-HOME-DONUT. 홈 도넛 ([dashboard.tsx](../../src/app/(main)/_components/views/home/dashboard.tsx)) — #4.46 #82
@@ -827,3 +827,6 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 
 - (#142, v4.75) 주식 직접 추가: 매수일 기본값 = 올해 1월 1일(안내 문구 "기본값은 올해 1월 1일이에요. 실제 매수일을 알면 수정해 주세요."), 평단·현재가 입력으로 매수일이 자동 변경되지 않음, 수정 시 저장된 매수일 유지. 체험(`?trial=1`)·데모 종목은 장중·마감직후 '오늘' 칩 숨김(종가 후 칩 유지). 성과 › 자산 변화 › 주식 목록은 320px에서 세로 쌓기(겹침 없음), 400px 이상 2열. vitest `today-chip.test.ts`, `purchase-date-139.test.ts`.
 - (#144, v4.76) 성과 › 자산 변화 › 주식 카테고리 헤더: 400px 미만 세로 쌓기·금액 좌측 정렬(320·360·375 `원` 분리 0), 400px 이상 우측 정렬.
+
+### F-HOME-CAUSE-OPEN. 홈 원인 펼침 계측 — #4.89
+- ⚙ Hero 쉐브론을 열 때(false→true)만 `feature_use` category `home_cause_open`(`홈 변동 원인 열기`) 1건, 닫을 때·체험 0건, 화면 변화 0. 테스트 `tax-entry-489.test.ts`
