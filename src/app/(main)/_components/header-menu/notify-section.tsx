@@ -195,7 +195,7 @@ export function NotifySection() {
     <section data-testid="settings-section-notify">
       <p className={MENU_SECTION_LABEL}>알림</p>
       <div className="flex flex-col">
-        {env === "needs-install" ? (
+        {env === "needs-install" && !unready ? (
           <PwaInstallFlow>
             {({ onClick }) => (
               <button type="button" data-testid="settings-row-notify" data-state="ios" className={MENU_ROW} onClick={onClick}>
