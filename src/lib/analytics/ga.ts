@@ -257,6 +257,8 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
     case "theme_mode":
       return params.theme === "dark" ? "다크 모드 사용" : "라이트 모드 사용";
     case "feature_use": {
+      // 홈 팁 누름은 보임·닫기와 분리 — 도착 전환 판독(새 파라미터 값 0)
+      if (params.category === "home_tip" && params.method === "click") return "홈 팁·누름";
       const t = params.category ? CATEGORY_TITLES[params.category] : undefined;
       if (t) return t;
       break;

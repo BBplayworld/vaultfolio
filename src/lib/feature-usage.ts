@@ -6,6 +6,8 @@ import { STORAGE_KEYS } from "./local-storage";
 import { APP_FEATURES, type AppFeature } from "@/config/app-features";
 import type { AssetView } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { track } from "@/lib/analytics/ga";
+import { isTaxSimCandidate } from "@/lib/tax-utils";
+import type { AssetData } from "@/types/asset";
 
 interface FeatureUsageState {
   visits: Record<string, { count: number; lastVisitedAt: string }>;
@@ -73,12 +75,34 @@ function visitCountOf(feature: AppFeature, visits: FeatureUsageState["visits"]):
   return visits[key]?.count ?? 0;
 }
 
-// dismiss 안 된 항목 중 방문횟수 오름차순(0회 우선),
-// 동률은 카탈로그 순서. 전부 dismiss면 null(박스가 조용히 사라짐).
-export function pickRecommendedFeature(): AppFeature | null {
+type TipHoldings = Pick<AssetData, "stocks" | "realEstate" | "crypto" | "cash" | "loans">;
+
+const hasStock = (a: TipHoldings) => a.stocks.some((s) => s.quantity > 0);
+
+// 보유 조건(#170): featureId → 조건. 표에 없는 항목은 항상 통과. 수량·건수만 쓴다(날짜·이름 금지).
+const HOLDING_CONDITIONS: Record<string, (a: TipHoldings) => boolean> = {
+  "tax-simulator": (a) => a.stocks.some(isTaxSimCandidate),
+  stocks: hasStock,
+  "stocks-xray": hasStock,
+  dividend: hasStock,
+  "market-compare": hasStock,
+  "share-card": hasStock,
+  "share-card-portfolio": hasStock,
+  "share-card-type": hasStock,
+  "real-estate": (a) => a.realEstate.length > 0,
+  crypto: (a) => a.crypto.length > 0,
+  cash: (a) => a.cash.length > 0,
+  loans: (a) => a.loans.length > 0,
+};
+
+// dismiss 안 된 항목 중 보유 조건을 통과한 것의 방문횟수 오름차순(0회 우선),
+// 동률은 카탈로그 순서. 후보 0이면 null(박스가 조용히 사라짐). 걸러진 항목은 dismiss 기록 없음.
+export function pickRecommendedFeature(assetData: TipHoldings): AppFeature | null {
   const state = readState();
   // tip:false 항목(새 소식 바로 가기 전용, 4.83)은 추천 후보에서 뺀다
-  const candidates = APP_FEATURES.filter((f) => f.tip !== false && !state.dismissedTipIds.includes(f.id));
+  const candidates = APP_FEATURES.filter(
+    (f) => f.tip !== false && !state.dismissedTipIds.includes(f.id) && (HOLDING_CONDITIONS[f.id]?.(assetData) ?? true),
+  );
   if (candidates.length === 0) return null;
 
   let best: AppFeature | null = null;

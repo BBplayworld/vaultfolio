@@ -65,7 +65,7 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
     return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated, held) };
   }
 
-  const feature = pickRecommendedFeature();
+  const feature = pickRecommendedFeature(assetData);
   if (feature) return { kind: "feature", feature };
 
   return null;
