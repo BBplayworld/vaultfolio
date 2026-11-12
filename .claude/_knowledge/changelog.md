@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-12 (v4.89)
+
+### 세금 관리를 더보기 밖으로 + 홈 원인 펼침 계측 (#4.89, 이슈 #176)
+- **이동**: 더보기 '도구' 섹션(세금 관리 행) 삭제 → 상세 허브 하단 전폭 행 `detail-hub-tax-row`(ToolTile 가로형 변형, `lg:col-span-2`, 인증카드 숨김). 보조줄 `taxEntryLine(assetData)`(tax-utils, `getAssetDrivenHighlights(...,1)`) — 임박(0~6일)만 날짜 주황, 없으면 `세금 일정과 연말 절세 시뮬레이션`. 홈 팁 닫기와 무관.
+- **내비**: `bottom-nav getActiveId`·`navigation-context mainTypeOf`에서 tax → detail(그동안 탭 강조 없음). 기존 입구(주식 도구 타일·홈 팁·기능 팁) 불변.
+- **계측**: 홈 Hero 쉐브론 열 때만 `feature_use` category `home_cause_open`(`ga.ts` 사전·`CATEGORY_TITLES`).
+- **새 소식**: `20261112-02`(바로 가기 없음 — 도착이 세금 화면, C87).
+- 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0.
+- 테스트: `tax-entry-489.test.ts`·`detail-hub-tax-row.test.tsx`(신규), `whats-new`·`home-tip`·`detail-hub-empty-cards` 갱신.
+
+---
+
 ## 2026-11-12 (v4.88)
 
 ### 자산 변화 '시장과 비교'를 도구 타일로 (#4.88, 이슈 #172)

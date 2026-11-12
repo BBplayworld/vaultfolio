@@ -86,8 +86,8 @@ const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
 type MainViewType = typeof PAGE_ORDER[number];
 // 슬라이드 전환 방향: "right"=오른쪽에서 진입(다음 메뉴), "left"=왼쪽에서 진입(이전 메뉴)
 export type SlideDir = "left" | "right" | null;
-// settings·tax는 더보기 하위 페이지 — 스와이프 위치상 more로 취급(PAGE_ORDER는 불변)
-const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" || t === "tax" ? "more" : t);
+// settings는 더보기, tax는 상세 하위 페이지(4.89) — 스와이프 위치상 각각 more·detail로 취급(PAGE_ORDER는 불변)
+const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" ? "more" : t === "tax" ? "detail" : t);
 
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");

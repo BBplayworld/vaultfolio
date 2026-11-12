@@ -1,8 +1,9 @@
 "use client";
 
-import { TrendingUp, Building2, Bitcoin, Wallet, CreditCard, Gem } from "lucide-react";
+import { TrendingUp, Building2, Bitcoin, Wallet, CreditCard, Gem, Receipt, ChevronRight } from "lucide-react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
+import { taxEntryLine } from "@/lib/tax-utils";
 import { ASSET_THEME } from "@/config/theme";
 import { profitTone } from "./detail-summary-header";
 import { useAssetNavigation, type DetailTab } from "../../layout/navigation/navigation-context";
@@ -15,6 +16,8 @@ export function DetailHub() {
   const { assetData, getAssetSummary } = useAssetData();
   const s = getAssetSummary();
   const { navigate } = useAssetNavigation();
+
+  const taxLine = taxEntryLine(assetData);
 
   const go = (tab: DetailTab) => navigate({ type: "detail", tab });
 
@@ -118,6 +121,28 @@ export function DetailHub() {
           secondary={countLine(s.loanCount, "건")}
           onClick={() => assetData.loans.length > 0 ? go("loans") : openAdd("loan")}
         />
+        {/* 세금 관리 진입 행(4.89) — 더보기 '도구'에서 이동. ToolTile 가로형 변형, 보조줄은 내 자산 파생 일정 1건(홈 팁 닫기와 무관), 임박(0~6일)만 날짜 주황 */}
+        <button
+          type="button"
+          data-testid="detail-hub-tax-row"
+          data-screenshot-hide
+          onClick={() => navigate({ type: "tax" })}
+          className="flex min-h-16 min-w-0 items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-left outline-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98] motion-safe:transition-[background-color,transform] motion-safe:duration-150 dark:bg-card dark:shadow-sm dark:hover:bg-muted/30 lg:col-span-2"
+        >
+          <Receipt aria-hidden className="size-5 shrink-0 text-primary" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-semibold text-foreground">세금 관리</span>
+            <span data-testid="detail-hub-tax-sub" className="truncate text-sm text-muted-foreground">
+              {taxLine ? (
+                <>
+                  <span className={taxLine.imminent ? "font-medium tabular-nums text-orange-600 dark:text-orange-400" : "tabular-nums"}>{taxLine.dueLabel}</span>
+                  {" "}{taxLine.title}
+                </>
+              ) : "세금 일정과 연말 절세 시뮬레이션"}
+            </span>
+          </span>
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        </button>
       </div>
     </div>
   );

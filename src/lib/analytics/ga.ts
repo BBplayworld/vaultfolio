@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report"],
-  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics"],
+  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -202,6 +202,7 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   stock_sort_rate: "상세·주식·등락률 순",
   relink: "끊긴 거래 다시 잇기",
   settlement_ics: "결산 캘린더 추가",
+  home_cause_open: "홈 변동 원인 열기",
 };
 
 // /ratio 홍보 도착 퍼널 단계별 page_title(4.88) — 화면 도착('비중 미리보기')은 화면 title 그대로. 맞춤 정의 0

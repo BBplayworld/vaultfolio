@@ -466,5 +466,11 @@ export function shouldShowTaxNotice(assetData: AssetData): boolean {
   return getAssetDrivenHighlights(assetData).length > 0;
 }
 
+/** 상세 허브 세금 행 보조줄(#4.89) — 내 자산 파생 일정 1건. 없으면 null(기본 문구). 홈 팁 닫기와 무관 */
+export function taxEntryLine(assetData: AssetData, today: string = todayKst()): { dueLabel: string; title: string; imminent: boolean } | null {
+  const m = getAssetDrivenHighlights(assetData, today, 1)[0];
+  return m ? { dueLabel: m.event.dueLabel, title: m.event.title, imminent: isImminentTaxMatch(m, today) } : null;
+}
+
 // 테스트·뷰에서 공용으로 쓰는 날짜 헬퍼
 export { todayKst, currentMonthKst };

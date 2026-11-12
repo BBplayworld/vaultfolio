@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
   loans: [] as unknown[],
 }));
 vi.mock("@/contexts/asset-data-context", () => ({
-  useAssetData: () => ({ assetData: { loans: h.loans }, getAssetSummary: () => h.summary }),
+  useAssetData: () => ({ assetData: { loans: h.loans, realEstate: [], stocks: [], cash: [] }, getAssetSummary: () => h.summary }),
 }));
 vi.mock("../../../layout/navigation/navigation-context", () => ({
   useAssetNavigation: () => ({ navigate: h.navigate }),
