@@ -27,6 +27,7 @@ import { dispatchOpenRelink, dispatchOpenWhatsNew } from "../../layout/navigatio
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { settlementName } from "../activity/change-hero";
+import type { MarketLineState } from "@/lib/finance/market-compare";
 
 export const CATEGORY_LABEL: Record<string, string> = {
   stock: "주식",
@@ -47,7 +48,8 @@ export function homeTipViewKey(tip: HomeTip): string {
   return tip.kind;
 }
 
-export function HomeTipBox() {
+// marketLine = 홈 지수 종가 줄 상태(marketLineState 단일 판정) — on·pending이면 기능 팁 '시장과 비교'를 후보에서 뺀다(4.90, 분류 전에도 억제해 떴다 사라짐 방지)
+export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineState }) {
   const { assetData, getAssetSummary, isDataLoaded } = useAssetData();
   const cs = useCloudSync();
   const { navigate } = useAssetNavigation();
@@ -67,7 +69,7 @@ export function HomeTipBox() {
     } catch { /* 무시 */ }
     // 끊긴 거래 후보(#147) — 체험·앱잠금 중이거나 '그대로 두기'를 눌렀으면 감지하지 않는다
     const hasRelink = eligible && !isTipDismissed(RELINK_OFFER_ID) && detectRelink(assetData).length > 0;
-    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible });
+    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible, suppressFeatureIds: marketLine !== "off" ? ["market-compare"] : undefined });
     keepShownRef.current = picked?.kind === "backup" || picked?.kind === "refresh" ? picked.kind : undefined;
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
@@ -80,7 +82,7 @@ export function HomeTipBox() {
         track("feature_use", { category: "home_tip", method: "view" });
       }
     }
-  }, [assetData, hasAssets, cs.status, isDataLoaded]);
+  }, [assetData, hasAssets, cs.status, isDataLoaded, marketLine]);
 
   // '그대로 두기' 직후 — 같은 세션 홈에서 relink 팁을 즉시 내린다(#147)
   useEffect(() => {

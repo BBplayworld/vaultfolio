@@ -196,6 +196,8 @@
 - **퇴장(exit)은 절제** — subtle하게.
 - **순환 단계 애니메이션**: 공용 `StepAnimationPlayer`(설치/동기화 가이드). 활성 컷 1개만 `key={active}` remount 렌더(구형 Safari opacity repaint 회피), 진입 페이드 `motion-safe`, 멈춤/시작·단계 점 컨트롤은 `pointer-events-auto`.
 - **높이 펼침(재마운트 없음, #4.35)**: 조건부 렌더(`{open && …}`) 대신 **항상 마운트**하고 바깥 `grid motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-300 ease-out` + 닫힘 `grid-rows-[0fr] opacity-0 invisible` + `inert` / 열림 `grid-rows-[1fr] opacity-100 visible`, 안쪽 `min-h-0 overflow-hidden`. 전환 중 재탭은 CSS가 현재 값에서 역전(인터럽터블), reduced-motion은 즉시. 토글은 `aria-expanded`·`aria-controls`. 접힌 상세가 부모 `space-y-*` 여백을 남기지 않게 토글과 같은 블록 안에 둔다. 예: `welcome-guide.tsx` 보안 상세
+  - **변형(#4.90 홈 B 줄·패널)**: 포커스를 옮겨야 하는 펼침은 `visibility` 전환을 빼고 `inert`+`opacity`+`grid-rows`만 쓴다(열린 직후 프레임에 `visibility:hidden`이 남아 `focus()`가 안 들어감). 줄 쪽 히트 40px는 `py-2.5`+음수 마진(`-mt-1.5 -mb-2.5`)으로 레이아웃 높이 20px 유지, 접힘 시 마진도 같이 전환.
+- **폭 부족 시 항목 숨김은 컨테이너 쿼리(#4.90 `MarketLine`)**: 버튼에 `@container`, 둘째 항목에 `@max-[Npx]:hidden`(임계값 = 전체 문구+쉐브론 실측 폭 + 여유, 줄 `whitespace-nowrap overflow-hidden`, 2줄·JS 측정 금지). 컨테이너 폭 = 버튼 content box(패딩 제외).
 - **`will-change` 절제**, 불필요한 합성 레이어 금지.
 - **광학 정렬**: 아이콘·텍스트는 수치가 아니라 눈으로 맞춘다(시각 중심).
 - **이미지 outline**: 이미지에 `outline`(1px, 토큰색)으로 경계 또렷하게.

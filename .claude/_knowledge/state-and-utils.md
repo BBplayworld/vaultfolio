@@ -868,6 +868,9 @@ classifyHoldings(stocks, peerCodes) → { kr, us, notCompared, unlisted, deliste
 loadKospiPeerCodes()          // src/lib/data/kr-kospi-peer-codes.ts 동적 import(첫 화면 번들 제외). 마스터 갱신 시 재생성(README)
 computeMarketCompare(classified, stockRefs, indexRefs) → MarketCompareBlock[]   // 시장×기간 PeriodCell(loading|holiday|empty|ok, 최빈 (시작,끝) 쌍, indexState ok|failed|dateMismatch, rows = 등락 높은 순 + 시장 줄)
 computeIndexSpan(market, period, indexRefs)   // 지수 등락 — 페이지 표·진입 글줄 공용(A11)
+isDailyIndexHoliday(market, period, start, end)   // #4.90 하루 구간 휴장 판정 — computePeriodCell·홈 종가 줄·시장 타일 공용
+marketLineState({screenshotMode?, hasHeaderChange, hasTickerStock, markets}) → "on"|"pending"|"off"   // #4.90 홈 종가 줄 노출·기능 팁 '시장과 비교' 억제 단일 판정
+marketLineGroups(values) · marketLineLabel(values, hideRest?) · marketLineItemText · monthDay   // `11/11 종가 코스피 +0.8% · S&P 500 -0.3%`, 값 = formatCompareRate(C65)
 computeNotComparedRows · compareTickers
 summarizeCompare(classified, blocks) → { blockCounts, notCompared, excluded } | null   // 블록 N = 세 기간 중 하나 이상 합산, 제외 = 한 기간이라도 빠진 고유 종목 + 비상장(이름 1), 일부 기간만이면 `1개월 기준가 없음`, 조회 중이면 null
 refRangeParts(start, end, withYear?) → ["M/D→", "M/D"] (올해 ["YY.M.D→","YY.M.D"]) · cellRange(cell, period?)   // 행 머리·묶음 머리 같은 표기, 휴장 `휴장`, 올해 연초 휴장 `pending`(끝 종가일이 시작과 같은 해) → `집계 전`
@@ -876,6 +879,10 @@ COMPARE_PERIOD_LABEL · MARKET_INDEX_NAME(`코스피`/`S&P 500`)
 
 // hooks/use-market-compare.ts — 페이지·글줄 공용(같은 queryKey ["market-index", period, basis, dailyToken])
 useCompareBasis() · useDailyRefToken() · useKospiPeerCodes() · useMarketIndexRefs(basis, enabled, token, periods?) · fetchMarketIndex
+// #4.90: useKospiPeerCodes(enabled = true) — false면 종목 마스터 청크를 불러오지 않음. useMarketEntryValue(period, visible, enabled) · values[]에 endDate·holiday 추가
+// lib/report/home-today.ts — pickTopCause(causes)(|amount| 최대, 동률 앞 항목) · weekTrendTitle(snapshots)(연속이면 최근 N일, 아니면 최근 기록 N일)
+// feature-usage pickRecommendedFeature(assetData, excludeIds?) · home-tip pickHomeTip({suppressFeatureIds}) — dismiss 기록 없이 이번 판정에서만 제외
+// market-compare-view listPeriodFromInit(init) — init.period "day" → 하루, 그 밖 1주
 ```
 - **올해(ytd, #4.78)**: `ComparePeriod`·`COMPARE_PERIODS`에 `ytd` 4번째. 시작 종가 = 명목일 (Y−1)-12-31 이하 최근 종가(`getPeriodRefDates("ytd")`, 컷오프 shift 없음), 끝 = 일별 ref. 클라이언트 캐시 토큰 = 날짜(기본값, ytd 분기 없음), `prunePeriodProfitCache` PERIODS에 포함. 서버 기준가 TTL = 다음 자정(`secondsUntilNextRefBoundary("ytd")` 공개), 미국 ytd만 `fetchOverseasHistoricalPrice(…, adjusted=true)`(MODP=1) + `getRefPrice/setRefPrice(…, adj)` 키 `finance:refprice:adj:*`. PeriodCell state `pending` 추가.
 - 종목 기준가는 기존 `fetchProfitRef`(profit-chart와 같은 티커 목록·사용자 종가 기준 → 자산 변화와 같은 캐시 키). 키 없음 = 조회 중(부분 합 금지), `null` = 기준가 없음. 키가 빠지면 60초 뒤 최대 2회 재조회.

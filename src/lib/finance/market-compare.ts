@@ -202,6 +202,11 @@ export interface PeriodCell {
 const isBusinessDay = (market: CompareMarket, ymd: string) =>
   (market === "kr" ? isKrBusinessDay : isUsBusinessDay)(new Date(`${ymd}T00:00:00.000Z`));
 
+// 하루 구간이 그 시장 휴장인가 — 끝 종가일이 비영업일(휴장 명목일)이거나 시작·끝이 같은 날. 표 칸(computePeriodCell)과 홈 종가 줄·시장 타일이 같은 함수(C65)
+export function isDailyIndexHoliday(market: CompareMarket, period: ComparePeriod, startDate: string, endDate: string): boolean {
+  return period === "daily" && (!isBusinessDay(market, endDate) || startDate === endDate);
+}
+
 // 지수 등락률 — 페이지 표와 진입 글줄이 같이 쓴다(같은 값·같은 반올림, A11)
 export function computeIndexSpan(
   market: CompareMarket,
@@ -257,7 +262,7 @@ export function computePeriodCell(
   cell.endDate = endDate;
 
   // 하루 구간이 그 시장 휴장(끝 종가일이 비영업일 = 휴장 명목일, 또는 시작·끝이 같은 날) → 0.0% 대신 휴장
-  if (period === "daily" && (!isBusinessDay(market, endDate) || startDate === endDate)) {
+  if (isDailyIndexHoliday(market, period, startDate, endDate)) {
     cell.state = "holiday";
     cell.indexState = idx.state === "ok" ? "ok" : "failed";
     cell.rows = included.map(({ h }) => ({ kind: "stock", ticker: h.ticker, name: h.name, rate: null }));
@@ -359,7 +364,7 @@ export function compareTickers(classified: ClassifiedHoldings): string[] {
 
 export const COMPARE_PERIOD_LABEL: Readonly<Record<ComparePeriod, string>> = { daily: "하루", weekly: "1주", monthly: "1개월", ytd: "올해" };
 
-const monthDay = (ymd: string) => `${Number(ymd.slice(5, 7))}/${Number(ymd.slice(8, 10))}`;
+export const monthDay = (ymd: string) => `${Number(ymd.slice(5, 7))}/${Number(ymd.slice(8, 10))}`;
 
 // 기준 종가 구간 `M/D→M/D` — 표 열 머리와 목록 묶음 머리가 같은 함수·같은 날짜쌍을 쓴다(cto 판정 2 ①-1).
 // [시작+화살표, 끝]으로 나눠 돌려준다(375 미만 열 머리는 두 줄 고정). 하루~1개월은 연도를 붙이지 않는다
@@ -437,4 +442,57 @@ export function summarizeCompare(classified: ClassifiedHoldings, blocks: readonl
     notCompared: { count: classified.notCompared.length, reasons: ncReasons },
     excluded: { count: excludedCount, reasons },
   };
+}
+
+// ── 홈 지수 종가 줄(4.90 #175) ───────────────────────────────────
+
+export type MarketLineState = "on" | "pending" | "off";
+
+// 홈 종가 줄 노출 판정 단일 함수 — 줄 컴포넌트와 기능 팁 '시장과 비교' 억제가 같이 쓴다.
+// 분류 전(markets null)은 pending(스켈레톤 줄·팁 억제), 분류 후 시장 0개면 off(줄 제거·팁 후보 유지)
+export function marketLineState(i: {
+  screenshotMode?: boolean;
+  hasHeaderChange: boolean; // 첫 저장 당일(오늘 이전 기록 없음)이면 false
+  hasTickerStock: boolean;
+  markets: CompareMarket[] | null;
+}): MarketLineState {
+  if (i.screenshotMode || !i.hasHeaderChange || !i.hasTickerStock) return "off";
+  if (i.markets === null) return "pending";
+  return i.markets.length > 0 ? "on" : "off";
+}
+
+export interface MarketLineValue {
+  m: CompareMarket;
+  rate: number;
+  endDate: string; // 그 지수 구간의 실제 끝 날짜(API refDate)
+  holiday: boolean; // 하루 구간 휴장 — 값 대신 `휴장`
+}
+
+export interface MarketLineGroup {
+  endDate: string;
+  closing: boolean; // 묶음 안 모든 시장이 휴장이면 `종가` 생략
+  items: MarketLineValue[];
+}
+
+// 같은 끝 날짜의 시장끼리 묶는다(국내 → 미국 순서 유지) — 날짜는 묶음 앞에 1번
+export function marketLineGroups(values: readonly MarketLineValue[]): MarketLineGroup[] {
+  const groups: MarketLineGroup[] = [];
+  for (const v of values) {
+    const g = groups.find((x) => x.endDate === v.endDate);
+    if (g) g.items.push(v);
+    else groups.push({ endDate: v.endDate, closing: true, items: [v] });
+  }
+  for (const g of groups) g.closing = g.items.some((it) => !it.holiday);
+  return groups;
+}
+
+export const marketLineItemText = (v: MarketLineValue): string =>
+  `${MARKET_INDEX_NAME[v.m]} ${v.holiday ? "휴장" : formatCompareRate(v.rate)}`;
+
+// 줄 전체 문구(접근성 이름·테스트). 값은 시장과 비교 '하루' 행 지수 열과 같은 formatCompareRate(C65). hideRest = 둘째 시장 숨김(좁은 폭 표기)
+export function marketLineLabel(values: readonly MarketLineValue[], hideRest = false): string {
+  const visible = hideRest ? values.slice(0, 1) : values;
+  return marketLineGroups(visible)
+    .map((g) => `${monthDay(g.endDate)} ${g.closing ? "종가 " : ""}${g.items.map(marketLineItemText).join(" · ")}`)
+    .join(" · ");
 }

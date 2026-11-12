@@ -50,7 +50,7 @@ describe("홈 원인 펼침 계측 home_cause_open", () => {
   it("제목 매핑", () => {
     expect(featureTitleOf("feature_use", { category: "home_cause_open" }, "home")).toBe("홈 변동 원인 열기");
   });
-  it("송출처는 홈 대시보드 1곳, 열 때(!causeOpen)만", () => {
+  it("송출처는 홈 대시보드 1곳(핸들러 1개), 열 때(!causeOpen)만 — B 줄 탭과 원인 0개 쉐브론 두 입구가 같은 핸들러를 쓴다(4.90)", () => {
     const root = join(process.cwd(), "src");
     const out: string[] = [];
     const walk = (d: string) => {
@@ -61,7 +61,13 @@ describe("홈 원인 펼침 계측 home_cause_open", () => {
       }
     };
     walk(root);
-    expect(out.filter((f) => !f.endsWith("analytics/ga.ts"))).toEqual(["app/(main)/_components/views/home/dashboard.tsx"]);
-    expect(read("app/(main)/_components/views/home/dashboard.tsx")).toMatch(/if \(!causeOpen\) track\("feature_use", \{ category: "home_cause_open" \}\)/);
+    const dash = "app/(main)/_components/views/home/dashboard.tsx";
+    expect(out.filter((f) => !f.endsWith("analytics/ga.ts"))).toEqual([dash]);
+    const src = read(dash);
+    expect(src.match(/category: "home_cause_open"/g)).toHaveLength(1);
+    expect(src).toMatch(/if \(!causeOpen\) track\("feature_use", \{ category: "home_cause_open" \}\)/);
+    // 두 입구: B 줄(펼칠 때만 클릭 가능 — 접힘 줄은 inert)과 쉐브론이 toggleCause를 부르고, 접기 줄은 포커스만 옮긴 뒤 같은 핸들러(열림 상태라 송출 0)
+    expect(src).toContain("onClick={toggleCause}"); // 쉐브론
+    expect(src).toMatch(/data-testid="home-cause-line"[\s\S]{0,400}focusTo\.current = "panel"; toggleCause\(\)/); // B 줄
   });
 });

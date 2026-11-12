@@ -37,7 +37,7 @@ import {
   type PeriodRefs,
 } from "@/lib/finance/market-compare";
 import { useCompareBasis, useDailyRefToken, useKospiPeerCodes, useMarketIndexRefs } from "@/hooks/use-market-compare";
-import { useAssetNavigation, type ChangePeriod } from "../../layout/navigation/navigation-context";
+import { useAssetNavigation, type ChangeInit, type ChangePeriod } from "../../layout/navigation/navigation-context";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
@@ -121,7 +121,10 @@ function useStockRefs(tickerList: string, basis: ProfitBasis, enabled: boolean, 
   return { refs: current.refs as PeriodRefs, kisUnavailable: current.kisUnavailable };
 }
 
-export function MarketCompareView() {
+// init.period === "day" = 홈 종가 줄에서 들어옴 → 목록 기간 '하루'로 시작(메모리뿐, 저장·해시 0). 그 밖은 '1주'
+export const listPeriodFromInit = (init?: ChangeInit): ComparePeriod => (init?.period === "day" ? "daily" : "weekly");
+
+export function MarketCompareView({ init }: { init?: ChangeInit } = {}) {
   const { assetData, exchangeRates, dataResetVersion } = useAssetData();
   const { navigate } = useAssetNavigation();
   const { basis, hydrated: basisHydrated } = useCompareBasis();
@@ -155,7 +158,7 @@ export function MarketCompareView() {
   );
   const summary = useMemo(() => (classified ? summarizeCompare(classified, blocks) : null), [classified, blocks]);
 
-  const [listPeriod, setListPeriod] = useState<ComparePeriod>("weekly");
+  const [listPeriod, setListPeriod] = useState<ComparePeriod>(listPeriodFromInit(init));
   // 종목 줄 탭 → 종목 한 장(전체 탭 그룹 `t:ticker`과 같은 구성, 원화). 뒤로 = 이 화면
   const setStockPageTarget = useStockPageStore((s) => s.setTarget);
   const stockLink = useMemo(

@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-12 (v4.90)
+
+### 홈에서 '오늘'을 보여 준다 (#4.90, 이슈 #175)
+- **A 지수 종가 줄**: Hero 바로 아래 `M/D 종가 코스피 +0.8% · S&P 500 -0.3%`(`MarketLine`, testId `home-market-today`). 날짜 = 각 지수 구간 `endDate`(`monthDay`), 날짜 다르면 시장별 날짜·종가, 휴장 `휴장`(전부 휴장이면 `종가` 생략), 좁은 폭은 둘째 시장을 컨테이너 쿼리로 숨김, 조회 실패 `지수와 나란히 보기`. 탭 → 시장과 비교 '하루'(`init.period="day"` → `listPeriodFromInit`, 메모리뿐). 노출 판정 `marketLineState` 단일 함수(줄·기능 팁 '시장과 비교' 억제 공용, 분류 전 pending도 억제).
+- **휴장 공용**: `isDailyIndexHoliday`를 `computePeriodCell`과 홈 줄·시장 타일(4.83·4.88)이 함께 사용 → 타일도 휴장일 `하루` 0.0% 대신 `휴장`.
+- **B 가장 큰 원인 1줄**: Hero 쉐브론 대신 `pickTopCause`(|금액| 최대) 1줄 + `외 N개`, 항상 마운트 grid-rows 펼침(+`접기`, 포커스 패널→B 줄). 원인 0개는 쉐브론 유지. `home_cause_open`은 B 줄·쉐브론 모두 열 때만(핸들러 1개).
+- **C 7일 카드**: 기록 2개 이상이면 버튼(자산 변화 전체·주), `+5%` 표시·pulse·글로우·주황 막대·`transition-all` 제거, 제목 `weekTrendTitle`(비연속 `최근 기록 N일`). `WeekTrendCard` export.
+- **요청 절감**: `useMarketEntryValue(period, visible, enabled)`·`useKospiPeerCodes(enabled)` — 첫 저장 당일·주식 없음이면 지수·종목 마스터 청크 요청 0.
+- **GA**: category `home_market`(`홈·오늘 시장`), source `home_week`(`change_week_all`+`home_week` → `홈·7일`). 값 추가만.
+- **새 소식**: `20261112-03`. 저장 스키마·키·동기화·공유 토큰·서버 전송 변경 0.
+- 테스트: `market-line-490.test.ts`(C69 시각 4종·C65·진리표)·`home-today.test.ts`·`home-today-490.test.ts`·`home-today-490.test.tsx`(신규), `tax-entry-489`·`home-tip-holdings`·`ga`·`market-entry-line`·`whats-new`·`home-tip` 갱신.
+
+---
+
 ## 2026-11-12 (v4.89)
 
 ### 세금 관리를 더보기 밖으로 + 홈 원인 펼침 계측 (#4.89, 이슈 #176)

@@ -31,11 +31,13 @@ export interface HomeTipInputs {
   hasRelink?: boolean;
   /** 새 소식 판정 허용 — 자산 불러오기 완료 + 체험·앱 잠금 아님(#159, 호출부가 판정) */
   whatsNewOk?: boolean;
+  /** 이번 판정에서 기능 팁 후보에서만 뺄 id — 홈 지수 종가 줄이 '시장과 비교' 입구일 때(4.90). 다른 팁·dismiss 불변 */
+  suppressFeatureIds?: readonly string[];
 }
 
 // 우선순위(#4.36 cto 판정, #159): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 새 소식 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 저방문 기능
 // 세금을 무조건 위에 두면 이번 달·다음 달 일정이 결산 창 내내 결산을 가린다 — 급한 마감만 결산보다 위
-export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk }: HomeTipInputs): HomeTip | null {
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk, suppressFeatureIds }: HomeTipInputs): HomeTip | null {
   if (shouldShowBackupNudge({ hasAssets, syncArmed, assetLastUpdated: assetData.lastUpdated, keepShown: keepShown === "backup" })) {
     return { kind: "backup", days: daysSinceBackup() };
   }
@@ -65,7 +67,7 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
     return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated, held) };
   }
 
-  const feature = pickRecommendedFeature(assetData);
+  const feature = pickRecommendedFeature(assetData, suppressFeatureIds);
   if (feature) return { kind: "feature", feature };
 
   return null;

@@ -97,11 +97,12 @@ const HOLDING_CONDITIONS: Record<string, (a: TipHoldings) => boolean> = {
 
 // dismiss 안 된 항목 중 보유 조건을 통과한 것의 방문횟수 오름차순(0회 우선),
 // 동률은 카탈로그 순서. 후보 0이면 null(박스가 조용히 사라짐). 걸러진 항목은 dismiss 기록 없음.
-export function pickRecommendedFeature(assetData: TipHoldings): AppFeature | null {
+// excludeIds = 이번 판정에서만 후보에서 빼는 id(홈 지수 종가 줄이 이미 입구일 때 '시장과 비교', 4.90) — dismiss 기록은 쓰지 않아 억제가 풀리면 되살아난다
+export function pickRecommendedFeature(assetData: TipHoldings, excludeIds: readonly string[] = []): AppFeature | null {
   const state = readState();
   // tip:false 항목(새 소식 바로 가기 전용, 4.83)은 추천 후보에서 뺀다
   const candidates = APP_FEATURES.filter(
-    (f) => f.tip !== false && !state.dismissedTipIds.includes(f.id) && (HOLDING_CONDITIONS[f.id]?.(assetData) ?? true),
+    (f) => f.tip !== false && !excludeIds.includes(f.id) && !state.dismissedTipIds.includes(f.id) && (HOLDING_CONDITIONS[f.id]?.(assetData) ?? true),
   );
   if (candidates.length === 0) return null;
 

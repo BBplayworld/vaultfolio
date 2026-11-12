@@ -4,6 +4,7 @@ import type { AssetData } from "@/types/asset";
 import { dismissTip, isTipDismissed, pickRecommendedFeature, recordVisit } from "../feature-usage";
 import { pickHomeTip } from "../home-tip";
 import { APP_FEATURES } from "@/config/app-features";
+import { markTaxNoticeDismissed } from "../tax-utils";
 
 const store = new Map<string, string>();
 beforeEach(() => {
@@ -100,5 +101,40 @@ describe("pickHomeTip 통합(모킹 없음) — 우선순위 불변", () => {
   it("후보 0이면 null", () => {
     sequence(F1);
     expect(pickHomeTip({ ...base, assetData: F1, today: "2026-11-12" })).toBeNull();
+  });
+});
+
+describe("suppressFeatureIds — 홈 지수 종가 줄이 입구일 때 '시장과 비교' 팁 억제(4.90)", () => {
+  const base = { hasAssets: true, syncArmed: false, hasRelink: false, whatsNewOk: false };
+  const SUPPRESS = ["market-compare"];
+  it("후보에서만 빠지고 나머지 순서는 같다(보유 필터와 중첩)", () => {
+    const run = (ex?: string[]) => {
+      store.clear();
+      const out: string[] = [];
+      for (let i = 0; i < 40; i++) { const f = pickRecommendedFeature(F6, ex); if (!f) break; out.push(f.id); dismissTip(f.id); }
+      return out;
+    };
+    const all = run();
+    const seq = run(SUPPRESS);
+    expect(all).toContain("market-compare");
+    expect(seq).not.toContain("market-compare");
+    expect(seq).toEqual(all.filter((id) => id !== "market-compare"));
+  });
+  it("dismiss 기록을 쓰지 않는다 — 억제를 풀면 되살아난다", () => {
+    const F = F2;
+    const ids = (ex?: string[]) => { const out: string[] = []; for (let i = 0; i < 40; i++) { const f = pickRecommendedFeature(F, ex); if (!f) break; out.push(f.id); dismissTip(f.id); } return out; };
+    ids(SUPPRESS);
+    expect(isTipDismissed("market-compare")).toBe(false);
+  });
+  it("pickHomeTip: 억제 유무로 같은 입력의 기능 팁이 달라지고 다른 종류 팁은 불변", () => {
+    // 시장과 비교만 남도록 나머지 후보를 모두 누름 처리
+    for (const f of APP_FEATURES) if (f.id !== "market-compare") dismissTip(f.id);
+    // 다른 종류(세금) 팁은 억제와 무관하게 그대로 이긴다
+    expect(pickHomeTip({ ...base, assetData: F2, today: "2026-11-12", suppressFeatureIds: SUPPRESS })?.kind).toBe("tax");
+    markTaxNoticeDismissed();
+    const on = pickHomeTip({ ...base, assetData: F2, today: "2026-11-12" });
+    expect(on?.kind === "feature" && on.feature.id).toBe("market-compare");
+    expect(pickHomeTip({ ...base, assetData: F2, today: "2026-11-12", suppressFeatureIds: SUPPRESS })).toBeNull();
+    expect(pickHomeTip({ ...base, assetData: F2, today: "2026-11-12", suppressFeatureIds: [] })?.kind).toBe("feature");
   });
 });
