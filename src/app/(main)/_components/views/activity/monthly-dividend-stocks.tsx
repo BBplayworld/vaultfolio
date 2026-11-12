@@ -241,7 +241,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 sm:hidden mt-0.5">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 sm:hidden mt-0.5">
                       <span className="text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
                         <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>
