@@ -72,7 +72,8 @@
       { "date": "@D-21", "netAsset": 645200000, "financialAsset": 45600000 },
       { "date": "@D-14", "netAsset": 650100000, "financialAsset": 46400000 },
       { "date": "@D-7", "netAsset": 654300000, "financialAsset": 47300000 },
-      { "date": "@D-2", "netAsset": 656800000, "financialAsset": 47800000 }
+      { "date": "@D-2", "netAsset": 656800000, "financialAsset": 47800000 },
+      { "date": "@D-1", "netAsset": 657300000, "financialAsset": 47900000 }
     ]
   }
 }
