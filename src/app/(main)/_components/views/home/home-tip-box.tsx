@@ -6,7 +6,7 @@
 // 판정은 home-tip.ts의 pickHomeTip이 백업>임박 세금>결산(#4.36)>새 소식>끊긴 거래 잇기(#147)>세금>최신화>기능 순으로 1개만 고른다.
 // 인터랙션은 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { track } from "@/lib/analytics/ga";
 import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ import { markWhatsNewSeen } from "@/lib/whats-new";
 import { dispatchOpenRelink, dispatchOpenWhatsNew } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
-import { settlementName } from "../activity/change-hero";
+import { formatSettlementPoint, settlementWindowName, type SettlementWindow } from "@/lib/report/settlement";
 import type { MarketLineState } from "@/lib/finance/market-compare";
 
 export const CATEGORY_LABEL: Record<string, string> = {
@@ -198,6 +198,15 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
   );
 }
 
+// 결산 팁 제목 — 이름은 settlementWindowName 1곳. settled만 "…이 열렸어요", 그 밖은 날짜 쌍을 줄바꿈에서 보호(C25)
+function settlementTipTitle(w: SettlementWindow, today: string): ReactNode {
+  const { name } = settlementWindowName(w, today);
+  const nowrap = (t: string) => <span className="whitespace-nowrap tabular-nums">{t}</span>;
+  if (w.kind === "settled") return `${name}이 열렸어요`;
+  if (w.kind === "range") return <>{nowrap(name.replace(/ 변화$/, ""))} 변화를 볼 수 있어요</>;
+  return <>{nowrap(formatSettlementPoint(w.startDate, w.startLegacy ? w.start!.month : undefined))} 이후 변화를 볼 수 있어요</>;
+}
+
 function contentOf(tip: HomeTip) {
   if (tip.kind === "backup") {
     return {
@@ -221,8 +230,8 @@ function contentOf(tip: HomeTip) {
     return {
       Icon: CalendarCheck,
       badgeLabel: "결산",
-      title: `${settlementName(tip.window.month, tip.today, true)}이 열렸어요`,
-      description: "한 달 동안 순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
+      title: settlementTipTitle(tip.window, tip.today),
+      description: "순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
     };
   }
   if (tip.kind === "relink") {

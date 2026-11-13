@@ -136,10 +136,16 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     let diff = "";
     try { diff = execSync("git diff origin/main -- 'src/app/(main)/_components/views/activity/settlement-view.tsx'", { encoding: "utf8" }); } catch { return; }
     if (!diff) return;
+    // 4.94(#183) 처음 맞는 결산: 시작점 인자·이름 함수·firstRecord 구간에서 구성·월별 기록·AI 숨김(`limited`) 줄만 허용
+    const FIRST_RECORD_EDITS = [
+      "resolveSettlementWindow, settlementGaResult", "resolveSettlementWindow(monthly, month, today", "}, [monthly, month, today,",
+      "const logShown", "title={settlementName(w.month", "range={firstMonth", 'badge={w.kind === "in_progress"',
+      "{!firstMonth && <CompositionBlock", "{!firstMonth && log.recordedCount", "{!firstMonth && (() => {",
+    ];
     // 4.67(#127)이 월별 기록 진입 행·시트를 의도적으로 추가하므로 추가 줄 수 상한은 해제.
     // 기존 줄 삭제는 import 확장·AI 행 stagger 지연(120→160ms, ui.md)·SettlementView 시그니처의 `focus` prop 추가(4.83, 월별 기록 바로 가기)·.ics 버튼 onClick 계측 1줄(4.88)만 허용 — Hero·원인·구성 블록 줄은 그대로
     const removed = diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"))
-      .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"') && !l.startsWith("-export function SettlementView(") && !l.includes('data-testid="prep-ics-button"'));
+      .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"') && !l.startsWith("-export function SettlementView(") && !l.includes('data-testid="prep-ics-button"') && !FIRST_RECORD_EDITS.some((t) => l.includes(t)));
     expect(removed).toEqual([]);
     // asset-change-view.tsx는 4.79(주 탭)·4.83(주 방문 기록·focus)이 의도적으로 바꾸므로 4.51 범위 가드에서 제외
   });

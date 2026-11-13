@@ -9,7 +9,7 @@ import { ASSET_THEME } from "@/config/theme";
 interface KpiCardProps {
   icon: LucideIcon;
   title: ReactNode;
-  description: string;
+  description: ReactNode;
   primary?: ReactNode; // 없으면 금액 줄 생략(안내만 보여줄 때)
   secondary?: ReactNode;
   onClick: () => void;

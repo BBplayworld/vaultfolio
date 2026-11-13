@@ -7,12 +7,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import {
   listSettlementMonths, SETTLEMENT_ICS_PATH, pickSettlementMonth,
-  resolveSettlementWindow, settlementGaResult, settlementRangeLabel,
+  pickFirstRecordStart, resolveSettlementWindow, settlementGaResult, settlementRangeLabel, settlementWindowName,
   type SettlementCauses, type SettlementWindow,
 } from "@/lib/report/settlement";
 import { daysSinceRefresh, getStaleCategories, type RefreshCategory } from "@/lib/asset/asset-refresh-status";
@@ -50,12 +50,14 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
   const today = kstToday();
   // snapshotVersion이 바뀌면(저장·복원) 다시 읽는다
   const monthly = useMemo(() => (snapshotVersion >= 0 ? readMonthlySnapshots() : []), [snapshotVersion]);
+  // 처음 맞는 결산(4.94) 시작점 — 팁·허브와 같은 입력(일별 기록·자산 id)이라 같은 구간이 나온다
+  const firstRecord = useMemo(() => (snapshotVersion >= 0 ? pickFirstRecordStart(readDailySnapshots(), assetData, today) : null), [snapshotVersion, assetData, today]);
   const [month, setMonth] = useState(() => initialMonth ?? pickSettlementMonth(readMonthlySnapshots(), kstToday()));
   const [aiOpen, setAiOpen] = useState(false);
 
   const computed = useMemo((): { ok: true; value: SettlementResult } | { ok: false } => {
     try {
-      const w = resolveSettlementWindow(monthly, month, today);
+      const w = resolveSettlementWindow(monthly, month, today, firstRecord);
       const start = w.start;
       const live = buildLiveAttributionCurr(assetData, exchangeRates, summary);
       const { prevValue, currValue, delta, pct } = settlementDelta(w, summary.netAsset);
@@ -67,7 +69,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
     } catch {
       return { ok: false };
     }
-  }, [monthly, month, today, assetData, exchangeRates, summary]);
+  }, [monthly, month, today, firstRecord, assetData, exchangeRates, summary]);
 
   // 월별 기록(#127) — 선택 달과 무관(월 화살표로 바뀌지 않음). 이번 달 줄 = 결산과 같은 live breakdown·summary.netAsset
   const liveBreakdown = computed.ok ? computed.value.live.breakdown : undefined;
@@ -86,7 +88,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
 
   // 월별 기록 바로 가기(4.83) — 월 탭 렌더 후 카드로 1회 스크롤(reduced-motion이면 즉시). 해시·저장에는 남기지 않는다
   const focusedRef = useRef(false);
-  const logShown = !!computed.ok && computed.value.window.kind !== "first_month" && log.recordedCount >= 2;
+  const logShown = !!computed.ok && computed.value.window.kind !== "first_month" && !computed.value.window.firstRecord && log.recordedCount >= 2;
   useEffect(() => {
     if (focus !== "monthly-log" || focusedRef.current || !logShown) return;
     focusedRef.current = true;
@@ -134,14 +136,18 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
   const { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } = computed.value;
   const stale = getStaleRows(assetData).length > 0;
   const firstMonth = w.kind === "first_month";
+  // 처음 맞는 결산(4.94)은 Hero·원인까지만 — 구성·월별 기록·AI는 숨김
+  const limited = firstMonth || !!w.firstRecord;
+  const { name: windowName, inProgress } = settlementWindowName(w, today);
 
   return (
     <div data-testid="settlement-root" className="flex flex-col gap-3 sm:gap-4">
       <ChangeHero
-        title={settlementName(w.month, today, w.kind === "settled" || w.kind === "range")}
+        title={windowName}
         titleTestId="settlement-title"
-        range={firstMonth ? undefined : settlementRangeLabel(w)}
-        badge={w.kind === "in_progress" ? <span data-testid="settlement-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span> : undefined}
+        rangeTestId="settlement-range"
+        range={firstMonth || w.kind === "range" ? undefined : settlementRangeLabel(w)}
+        badge={inProgress ? <span data-testid="settlement-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span> : undefined}
         actions={arrows}
         delta={firstMonth ? null : delta}
         pct={pct}
@@ -165,12 +171,12 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
 
       {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
 
-      {!firstMonth && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
+      {!limited && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 
       {/* 월별 기록(#127 R3) — 기록된 달(저장된 달 ∪ 이번 달) 2개 이상일 때만 인라인 카드. key 없음(월 이동에 리마운트하지 않음) */}
-      {!firstMonth && log.recordedCount >= 2 && <MonthlyLogBlock log={log} today={today} />}
+      {!limited && log.recordedCount >= 2 && <MonthlyLogBlock log={log} today={today} />}
 
-      {!firstMonth && (() => {
+      {!limited && (() => {
         // AI 질문(#54) — 화면에 보이는 결산 값만 담아 복사. 서버 전송 없음(클립보드만)
         const name = settlementName(w.month, today, false);
         return (

@@ -28,7 +28,7 @@ vi.mock("../asset/asset-refresh-status", async (orig) => ({
   getStaleCategories: () => ["stock"],
 }));
 vi.mock("../feature-usage", () => ({ pickRecommendedFeature: () => null }));
-vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
+vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly, readDailySnapshots: () => [] }));
 
 import { pickHomeTip } from "../home-tip";
 import { profitTone } from "@/app/(main)/_components/views/detail/detail-summary-header";
