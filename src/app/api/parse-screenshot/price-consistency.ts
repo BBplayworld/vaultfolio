@@ -69,12 +69,12 @@ export function reconcilePrices(
   // 수익률이 퍼센트가 아닌 비율(0.0839 = 8.39%)로 읽힌 경우: ×100하면 현재 읽기와 맞으면 평단을 지우지 않고 유지
   if (asIs > TOLERANCE_PP && swapped > TOLERANCE_PP && Math.abs(profitRate) < 1) {
     const asIsScaled = Math.abs(((currentPrice - averagePrice) / averagePrice) * 100 - profitRate * 100);
-    // 평가손익 또는 평가금액 근거가 최소 1개 있고 현재 읽기를 지지할 때만 keep, 근거가 없거나 반대면 기존 흐름(estimate)
+    // 지지 근거는 평가손익(존재 + 부호가 현재가-평단과 일치)만 인정. 평가금액은 swap 쪽일 때 차단용으로만 사용
+    // (평가금액이 매입금액으로 오독돼도 단독 근거가 되지 않게). 평가손익이 없으면 기존 흐름(estimate)
     const pa = evidence?.profitAmount ?? 0;
     const unit = unitVerdict(currentPrice, averagePrice, evidence, UNIT_MATCH);
-    const signOk = pa === 0 || Math.sign(pa) === Math.sign(currentPrice - averagePrice);
-    const supported = pa !== 0 || unit === "asIs";
-    if (asIsScaled <= TOLERANCE_PP && signOk && unit !== "swap" && supported) return keep;
+    const supported = pa !== 0 && Math.sign(pa) === Math.sign(currentPrice - averagePrice);
+    if (asIsScaled <= TOLERANCE_PP && supported && unit !== "swap") return keep;
   }
   if (asIs <= TOLERANCE_PP) {
     // 소수익률: 두 해석이 모두 수익률상 가능할 때만(swapped도 허용폭 안) 평가금액÷수량이
