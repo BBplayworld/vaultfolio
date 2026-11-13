@@ -126,4 +126,14 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
       expect(reconcilePrices(90, 100, 10, { quantity: 10, currentValue: 1000, profitAmount: -100 }).action).toBe("keep");
     });
   });
+
+  describe("수익률 비율 표기 (미래에셋형 합성 표)", () => {
+    it("수익률이 0.0839(=8.39%)처럼 비율로 읽혀도 화면 평단을 유지", () => {
+      expect(reconcilePrices(10880, 10038, 0.0839)).toEqual({ currentPrice: 10880, averagePrice: 10038, action: "keep" });
+      expect(reconcilePrices(10880, 10038, -0.0839).action).not.toBe("keep"); // 부호 반대는 맞지 않음
+    });
+    it("비율로도 안 맞으면 기존대로 추정 경로", () => {
+      expect(reconcilePrices(120, 100, 0.5).action).toBe("estimate");
+    });
+  });
 });

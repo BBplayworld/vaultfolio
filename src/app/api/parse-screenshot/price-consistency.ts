@@ -66,6 +66,11 @@ export function reconcilePrices(
 
   const asIs = Math.abs(((currentPrice - averagePrice) / averagePrice) * 100 - profitRate);
   const swapped = Math.abs(((averagePrice - currentPrice) / currentPrice) * 100 - profitRate);
+  // 수익률이 퍼센트가 아닌 비율(0.0839 = 8.39%)로 읽힌 경우: ×100하면 현재 읽기와 맞으면 평단을 지우지 않고 유지
+  if (asIs > TOLERANCE_PP && swapped > TOLERANCE_PP && Math.abs(profitRate) < 1) {
+    const asIsScaled = Math.abs(((currentPrice - averagePrice) / averagePrice) * 100 - profitRate * 100);
+    if (asIsScaled <= TOLERANCE_PP) return keep;
+  }
   if (asIs <= TOLERANCE_PP) {
     // 소수익률: 두 해석이 모두 수익률상 가능할 때만(swapped도 허용폭 안) 평가금액÷수량이
     // swap 쪽에만 엄격히 맞고 평가손익과도 모순 없을 때 교정
