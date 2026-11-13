@@ -218,6 +218,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **결산 구간(`resolveSettlementWindow`)** — 시작 = 대상 달 직전 최근 스냅샷, 지난 달 끝 = 그 달 스냅샷, 이번 달 끝 = 실시간. 이번 달은 간격 25일 이상이면 날짜 구간 제목(`range`), 미만이면 "진행 중". 1~10일엔 전월 기록일이 21일 이후일 때만 전월 결산(`pickSettlementMonth`). 임계 21·25·35일·50%는 추정값
 - 👤 순자산 차트(현재+전년 대비), 수익 차트(기간별 일/주/월/연, basis 토글), 배당 차트(연간+월평균, 예상/실제)·월별 배당 종목
 - ⚙ **배당 조회 실패 처리(#4.97)** — `fetchDividend`가 `!res.ok`·`X-KIS-Unavailable`이면 throw(빈 배당 캐시 금지), 실패 종목이 있으면 배당 탭·성과 허브 배당 카드에 `배당을 불러오지 못한 종목이 있어요. 앱을 다시 열면 다시 불러올게요` 1줄. 새 대출·코인·실물·부동산 입력 기본 날짜는 `todayKst()`(`dividend-client.test.ts`·`today-kst-inputs.test.ts`).
+- ⚙ **성적표 배당 실패(#4.98)** — 배당 로딩 중이거나 1종목이라도 실패하면 '수익의 질'·'레버리지' 잠정, 스냅샷 기록·▲▼ 대비 없음, 계산 근거 금융자산·연간 '—', 5축 아래 실패 안내 1줄. 정상 시 기존과 동일(`report-dividend-fail.test.ts`).
 - ⚙ **배당 월 배지(#4.49)** — 월 선택·해제 시 차트 top 불변(`dividend-sub-slot` 공유 칸), 배지는 `button`(Tab 포커스·Enter 해제, 히트 40px), 320에서 "배당" 제목 1줄. InfoHint 9곳 coarse 포인터 ≥40×40·이웃 `elementFromPoint` 검사, 다크 설정 ON 배지 대비 ≥4.5
 - 👤 수익 차트 "기준 종가 비교": 시작 종가가 휴장으로 직전 영업일에 폴백되면 "휴장제외" 최소 표시 — 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKr/UsHoliday`)
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리

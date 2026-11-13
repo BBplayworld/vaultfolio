@@ -25,6 +25,7 @@ import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { track } from "@/lib/analytics/ga";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
+import { DIVIDEND_FETCH_FAILED_MESSAGE, isDividendReady } from "@/lib/finance/dividend-client";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
@@ -96,6 +97,19 @@ const AXIS_ICONS: Record<AxisKey, typeof TrendingUp> = {
   habit: Repeat,
 };
 
+/** 상단 측정 문구 — 잠정 축이 있으면 '측정 완료'라 말하지 않는다 */
+export function gradeCountCaption(grade: { measuredCount: number; axes: { pending?: boolean }[] }): string {
+  const pending = grade.axes.filter((a) => a.pending).length;
+  if (pending > 0) return `5축 중 ${pending}축 잠정`;
+  return grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`;
+}
+
+/** 5축 카드 헤더 칩 — 잠정 축은 확정 측정에서 뺀다(상단 문구와 같은 판정) */
+export function gradeChipLabel(grade: { measuredCount: number; axes: { pending?: boolean }[] }): string {
+  const pending = grade.axes.filter((a) => a.pending).length;
+  return `${Math.max(0, grade.measuredCount - pending)}/5 측정`;
+}
+
 export function AssetReportView() {
   const { assetData, getAssetSummary, exchangeRates, snapshotVersion, recordGradeSnapshot } = useAssetData();
   const { navigate } = useAssetNavigation();
@@ -109,8 +123,9 @@ export function AssetReportView() {
   // 배당 (성과 허브·배당 차트와 동일 쿼리 키 → 캐시 공유)
   // 이자(연 환산)·주식(최근 1년)과 기간 길이를 맞추기 위해 배당도 올해 12개월(실적+예상)을 쓴다.
   // annualActual(올해 실지급분)만 쓰면 연중에는 약 N/12만 잡혀 레버리지 수익이 구조적으로 과소계상된다.
-  const { isLoading: divLoading, annualTotal: annualDividend } = useDividendAnnualTotals();
-  const divReady = !(divLoading && annualDividend === 0);
+  // 조회 실패(failedCount>0)도 확정 아님 — 실패를 배당 0으로 계산해 등급·스냅샷에 기록하지 않는다
+  const { isLoading: divLoading, failedCount: divFailed, annualTotal: annualDividend } = useDividendAnnualTotals();
+  const divReady = isDividendReady(divLoading, divFailed);
 
   // 올해 주식 시세차익 (연초 대비, KIS 기준가 — performance-hub "수익" 카드와 동일 패턴, period만 yearly)
   const tickerList = useMemo(
@@ -408,7 +423,7 @@ export function AssetReportView() {
                     {gradeDelta.tierChange === "up" ? `${tierLabel(grade.tier)} 승급!` : "등급이 내려갔어요"}
                   </p>
                 )}
-                <p className={`${CAPTION} mt-1 tabular-nums`}>{grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`}</p>
+                <p className={`${CAPTION} mt-1 tabular-nums`}>{gradeCountCaption(grade)}</p>
               </div>
               <p className={`${CAPTION} text-pretty break-keep`}>{TIER_SUMMARY[grade.tier]}</p>
             </div>
@@ -530,7 +545,7 @@ export function AssetReportView() {
                           ["남긴 돈", signed(debtNet), signed(netLeverage), true],
                         ];
                         const ready = annualOn && interestCompareReady && !kisUnavailable;
-                        const pendingLabel = kisUnavailable ? "점검 중" : "불러오는 중…";
+                        const pendingLabel = kisUnavailable ? "점검 중" : divFailed > 0 ? "—" : "불러오는 중…";
                         return (
                           // 항목마다 '라벨 줄 + 값 줄' 고정 2줄 — wrap에 맡기면 값 길이에 따라 행 구조가 달라진다.
                           // 값은 2열 그리드라 뱃지 폭이 열마다 같아 금액이 세로로 정렬된다.
@@ -615,7 +630,7 @@ export function AssetReportView() {
                 icon={Star}
                 title="5축 측정"
                 tone="gold"
-                badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{grade.measuredCount}/5 측정</span>}
+                badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{gradeChipLabel(grade)}</span>}
               />
               <div className="space-y-2">
                 {grade.axes.map((axis, idx) => {
@@ -642,15 +657,26 @@ export function AssetReportView() {
                             </span>
                           ) : null;
                         })()}
-                        <StarRating score={axis.score} />
-                        {axis.score !== null ? (
-                          <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
-                        ) : (
-                          <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
-                        )}
+                        {(() => {
+                          // 배당 실패로 잠정인 축(수익의 질·레버리지)은 배당 0 기준 점수라 숫자를 보이지 않는다
+                          const divUnknown = divFailed > 0 && !!axis.pending && (axis.key === "earningQuality" || axis.key === "leverage");
+                          return (
+                            <>
+                              <StarRating score={divUnknown ? null : axis.score} />
+                              {divUnknown ? (
+                                <span className="text-sm font-semibold text-muted-foreground w-7 text-right">—</span>
+                              ) : axis.score !== null ? (
+                                <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
+                              ) : (
+                                <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </span>
                     </div>
-                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.reason}</p>
+                    {/* 배당 조회 실패 시 수익의 질은 배당 0 기준 설명·조언 대신 실패 안내만(안내 한 곳) */}
+                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.key === "earningQuality" && divFailed > 0 ? DIVIDEND_FETCH_FAILED_MESSAGE : axis.reason}</p>
                     {axis.key === "diversification" && fxLines && (
                       <div data-testid="fx-exposure-lines" className="space-y-0.5">
                         <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.ratioLine}</p>
@@ -658,7 +684,7 @@ export function AssetReportView() {
                         <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
                       </div>
                     )}
-                    {linked ? (
+                    {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
                       <button
                         type="button"
                         onClick={() => axisNavigate(axis.key)}

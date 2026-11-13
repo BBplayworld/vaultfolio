@@ -20,6 +20,11 @@ export function isDividendUnknown(failedCount: number, annualTotal: number): boo
 }
 
 // 실패한 쿼리 수 (data undefined 안전)
+/** 배당 값이 확정됐는지 — 로딩 중이거나 1종목이라도 실패했으면 false (성적표 '잠정'·기록 생략 판정) */
+export function isDividendReady(loading: boolean, failedCount: number): boolean {
+  return !loading && failedCount === 0;
+}
+
 export function countFailedDividends(queries: ReadonlyArray<{ isError: boolean }>): number {
   return queries.filter((q) => q.isError).length;
 }
