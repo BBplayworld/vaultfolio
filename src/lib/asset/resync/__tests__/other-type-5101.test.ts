@@ -1,6 +1,6 @@
 // 5.101 사진별 선택 유형 신뢰 — 고른 유형 안 1개면 자동 확정, 0개+다른 유형 있으면 후보로 묻기(IRP 노출), 2개 이상이면 그 범위 안에서 묻기
 import { describe, expect, it } from "vitest";
-import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, resolveScreens, type ResyncSelection } from "..";
+import { PICK_NEW, applyResync, computeDiff, defaultRemoveIds, mergeScreens, resolveScreens, type ResyncSelection } from "..";
 import { emptySel, row, screen, st, TODAY, USD } from "./fixtures";
 
 const K = { brokerHint: "미래에셋" };
@@ -57,5 +57,15 @@ describe("5.101 사진별 유형 + 같은 티커 다른 유형 보유", () => {
     const r = diff.rows[0];
     const out = run({ include: new Set([r.rowId]), pick: { [r.rowId]: "irp1" }, remove: new Set() });
     expect(out.stocks.map((s) => s.id).sort()).toEqual(["irp1", "pen9"]);
+  });
+  it("U2: '새 항목으로 추가' 선택 시 고른 유형으로 새 항목 추가, 기존 IRP 항목·삭제 판정 불변", () => {
+    const { diff, run } = runWith([irp], "pension");
+    const r = diff.rows[0];
+    const out = run({ include: new Set([r.rowId]), pick: { [r.rowId]: PICK_NEW } });
+    expect(out.counts).toMatchObject({ add: 1, change: 0, remove: 0 });
+    expect(out.stocks.find((s) => s.id === "irp1")).toEqual(irp);
+    const added = out.stocks.filter((s) => s.id !== "irp1");
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatchObject({ ticker: "005930", category: "pension", quantity: 10 });
   });
 });

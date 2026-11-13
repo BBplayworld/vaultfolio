@@ -24,6 +24,9 @@ export interface ResyncSelection {
   purchaseDate?: string;
 }
 
+/** otherType 행의 후보 선택에서 '새 항목으로 추가'를 고른 값(고른 유형으로 새로 추가, 기존 다른 유형 항목은 그대로) */
+export const PICK_NEW = "__new__";
+
 export type RowAction =
   | { type: "skip" }
   | { type: "same"; stock: Stock }
@@ -44,6 +47,11 @@ export function resolveRow(row: DiffRow, sel: ResyncSelection): RowAction {
 
   let stock = row.stock;
   if (row.reasons.includes("ambiguous")) {
+    if (row.reasons.includes("otherType") && sel.pick[row.rowId] === PICK_NEW) {
+      const t = item.ticker.trim();
+      if (!t) return { type: "skip" };
+      return { type: "add", qty: (sel.qty[row.rowId] > 0 ? sel.qty[row.rowId] : undefined) ?? item.quantity, ticker: t };
+    }
     stock = row.candidates?.find((c) => c.id === sel.pick[row.rowId]);
     if (!stock) return { type: "skip" };
   }
