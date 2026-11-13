@@ -593,8 +593,12 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                 const [yearStr, monthStr] = currentMonthStr.split("-");
                 return (
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-sm font-semibold text-muted-foreground">{yearStr}년 {parseInt(monthStr)}월</p>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        {yearStr}년 {parseInt(monthStr)}월
+                        {/* 달력은 마감 기록, 위 Hero는 실시간 — 기준 차이 캡션(4.95, 기존 헤더 칩 문구 재사용) */}
+                        <span data-testid="day-calendar-basis" className="ml-1.5 whitespace-nowrap text-[11px] font-normal">종가 기준</span>
+                      </p>
                       {recordStats && recordStats.streakDays > 0 && (
                         <p className="text-sm text-muted-foreground tabular-nums">
                           연속 <span className="font-semibold text-foreground">{recordStats.streakDays}일</span> 기록
