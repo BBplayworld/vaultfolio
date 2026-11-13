@@ -10,9 +10,21 @@
 - **자산 변화 › 일 Hero·원인 = 홈**: `activity/use-day-hero.ts`(`useDayHero`·순수 `resolveDayHero`)가 `computeAttributionView(sinceDate=어제)`로 계산(홈 `useHeaderNetChange`와 같은 식). 일 탭 전용 diff(이번 달 마지막 2건) 삭제. 제목 `전일 대비`/`M/D 기록 대비`, 원인 `CauseBlock scope="week"`(`mapWeekCauses`) 재사용, 비교 기록 없음이면 홈 7일 카드 문구(`day-empty`), 연 탭 문구는 일 탭에서 제거.
 - **달력 칸 증감**: `prevDailyRecord`로 30일 롤링 전체에서 직전 기록 탐색(월초 1일 칸도 전달 마지막 기록 대비). 달력 머리에 `종가 기준` 11px 캡션(`day-calendar-basis`, 분리 커밋).
 - **F4**: `WeekTrendCard` 막대 값 라벨 360 미만은 `formatCompactKRW`(원 생략·`6.4억`·`752만`) 11px 한 줄. 360 이상 diff 0.
-- **F5**: 배당 `N월 예정` 칩 `max-[359px]:px-1`.
+- **F5**: 배당 `N월 예정` 칩 `max-[359px]:px-1 max-[359px]:text-[11px]`.
 - **ProfitCard**: `period` 필수, 비제어 분기(`innerPeriod`·자체 선택기·요약 박스) 삭제.
 - 저장·GA·서버·동기화 변경 0. 테스트: `use-day-hero.test.ts`·`quality-batch-184.test.tsx`(신규).
+
+---
+
+## 2026-11-13 (v4.94)
+
+### 처음 맞는 결산 열기 · 결산 이름 하나로 · 체험 숫자 맞추기 (#4.94, 이슈 #183)
+- **A 처음 맞는 결산**: 직전 달 월 기록이 없어도 `pickFirstRecordStart(daily, assetData, today)`가 시작점을 정해 팁·허브·결산이 같은 구간을 본다. R = 자산·부채·실물 id의 13자리 ms(`assetIdRegisteredDate`, `(^|_)\d{13}(_|$)` 첫 매치, 2024-01-01 이전·오늘+1일 이후면 없음, 하나라도 없으면 A 미적용) 최댓값(KST), 시작점 = R보다 엄격히 뒤인 enrich 완료 일별 기록 중 가장 이른 것. `resolveSettlementWindow(monthly, month, today, firstRecord?)`는 start가 없고 시작→끝 ≥7일일 때만 채택(`SettlementWindow.firstRecord`). 끝이 지난 달 월 기록이면 kind `range`(이름 `M/D → M/D 변화`). 월 기록이 있는 사용자는 인자 무시(diff 0). GA `settlementGaResult`는 A도 `first_month`. A 경로는 Hero·원인까지만(구성·월별 기록·AI 숨김).
+- **C 이름 하나로**: `settlementWindowName(w, today)` → `{name, inProgress}` 1개로 팁·허브·결산 제목을 만든다(`settlementTitle`·`settlementCardTitle` 삭제). settled `N월 결산`·range `M/D → M/D 변화`·in_progress `N월`(결산 화면은 `진행 중` 배지, 허브는 `N월 · 진행 중`). 허브 배지는 settled만. 팁 제목은 settled만 `…이 열렸어요`, 그 밖 `M/D → M/D 변화를 볼 수 있어요`·`M/D 이후 변화를 볼 수 있어요`(날짜 쌍 nowrap), 설명에서 `한 달 동안` 삭제. 원인 힌트 month 문구 `입출금을 기록하면 더 정확해져요`(year 불변). 신규 testId `hub-change-desc`·`settlement-range`. `KpiCard.description`은 ReactNode.
+- **S3 체험 숫자**: `demo-data.json` — `demo_re_1.currentValue` 6.3억 → 5.3584억(순자산 = 웰컴 551,159,778 ±1%), 월·일 스냅샷·`yearlyNetAssets`를 같은 수준으로 재기록, 일별 `@D-7`·`@D-2`·`@D-1`에 breakdown·fx·fxBase·cost 추가(전일 대비 |Δ| ≤ 0.5%, 7일·허브 기록 안 된 변화 < 50%). 그 밖 assetData diff 0, 웰컴 미리보기·라벨 코드 diff 0.
+- **S3 실시간 재기준(ui-review R1)**: 체험은 실시간 시세가 JSON 가격을 덮어써 스냅샷 대비 가짜 급등이 생기므로, `DemoSnapshotRebase`(page.tsx, 체험 또는 preview + 주식·코인 id 전부 `demo_`일 때만)가 baseline 스냅샷의 주식·코인 평가를 `rebaseDemoRows`(배율 = 실시간 평가/기준 D-1 평가)로 옮겨 데모 스냅샷만 다시 쓴다(`bumpSnapshotVersion`). 부동산·현금·대출·원가 불변. 순자산 웰컴 ±1%는 JSON 가격 기준 시점 값. 순수 함수 `preview/demo-live-rebase.ts`, 테스트 0.4x~2.5x.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송·`ga.ts`·`whats-new.ts` 변경 0(읽기 전용).
+- 테스트: `settlement-first-record.test.ts`·`demo-rebase.test.ts`·`first-record-fixture.ts`(신규), `settlement.test.ts`·`home-tip.test.ts`·`composition-month.test.ts` 갱신, snapshot-storage mock 4건에 `readDailySnapshots` 추가.
 
 ---
 
