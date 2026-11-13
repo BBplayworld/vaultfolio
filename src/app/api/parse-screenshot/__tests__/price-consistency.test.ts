@@ -88,4 +88,27 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
       expect(reconcilePrices(342.06, 345, 0.86, { quantity: 10, currentValue: 3470 }).action).toBe("keep");
     });
   });
+
+  describe("평가금액 오독 방어 (qa D1)", () => {
+    it("반례: 평가금액 칸에 매입금액이 들어와도 바른 읽기를 뒤집지 않음", () => {
+      expect(reconcilePrices(130, 100, 30, { quantity: 10, currentValue: 1000 }).action).toBe("keep");
+      expect(reconcilePrices(80, 100, -20, { quantity: 10, currentValue: 1000 }).action).toBe("keep");
+    });
+    it("퍼징: 바른 읽기 + 매입금액으로 오독된 평가금액 → 잘못된 swap 없음", () => {
+      let seed = 12345;
+      const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < 2000; i++) {
+        const avg = 10 + rnd() * 990;
+        const rate = (rnd() * 2 - 1) * 60; // -60~+60%
+        const cur = avg * (1 + rate / 100);
+        const q = 1 + Math.floor(rnd() * 100);
+        const ev = { quantity: q, currentValue: avg * q, profitAmount: (cur - avg) * q };
+        const r = reconcilePrices(cur, avg, rate, ev);
+        expect(r.action === "swap").toBe(false);
+      }
+    });
+    it("부호 누락 + 매입금액 오독 평가금액 + 손익 있음 → keep", () => {
+      expect(reconcilePrices(90, 100, 10, { quantity: 10, currentValue: 1000, profitAmount: -100 }).action).toBe("keep");
+    });
+  });
 });

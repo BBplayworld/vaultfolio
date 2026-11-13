@@ -40,6 +40,18 @@ function unitVerdict(cur: number, avg: number, ev: PriceEvidence | undefined, to
   return "none";
 }
 
+// swap 시 평가손익이 평가금액·수량과 맞는지(평가금액 칸에 매입금액 등을 잘못 읽은 경우 걸러냄).
+// 평가손익이 없으면 확인할 수 없으므로 통과
+function swapMatchesProfitAmount(cur: number, avg: number, ev: PriceEvidence | undefined): boolean {
+  const q = ev?.quantity ?? 0;
+  const v = ev?.currentValue ?? 0;
+  const pa = ev?.profitAmount ?? 0;
+  if (!(q > 0) || !(v > 0) || pa === 0) return true;
+  // swap 후 현재가=avg, 평단=cur → 기대 평가손익 = 평가금액 - cur × 수량
+  const expected = v - cur * q;
+  return Math.sign(expected) === Math.sign(pa) && Math.abs(expected - pa) <= v * 0.03;
+}
+
 export function reconcilePrices(
   currentPrice: number,
   averagePrice: number,
@@ -53,17 +65,22 @@ export function reconcilePrices(
   const swap = { currentPrice: averagePrice, averagePrice: currentPrice, action: "swap" as const };
 
   const asIs = Math.abs(((currentPrice - averagePrice) / averagePrice) * 100 - profitRate);
+  const swapped = Math.abs(((averagePrice - currentPrice) / currentPrice) * 100 - profitRate);
   if (asIs <= TOLERANCE_PP) {
-    // 소수익률(허용폭 안)은 수익률로 못 가리므로 평가금액÷수량이 swap 쪽에만 엄격히 맞을 때만 교정
-    return unitVerdict(currentPrice, averagePrice, evidence, UNIT_MATCH_STRICT) === "swap" ? swap : keep;
+    // 소수익률: 두 해석이 모두 수익률상 가능할 때만(swapped도 허용폭 안) 평가금액÷수량이
+    // swap 쪽에만 엄격히 맞고 평가손익과도 모순 없을 때 교정
+    const ok =
+      swapped <= TOLERANCE_PP &&
+      unitVerdict(currentPrice, averagePrice, evidence, UNIT_MATCH_STRICT) === "swap" &&
+      swapMatchesProfitAmount(currentPrice, averagePrice, evidence);
+    return ok ? swap : keep;
   }
 
-  const swapped = Math.abs(((averagePrice - currentPrice) / currentPrice) * 100 - profitRate);
   if (swapped <= TOLERANCE_PP) {
     // swap 전 2차 근거 확인: 근거가 반대면 swap하지 않는다 (수익률 부호 누락 대비, C102)
     const e1 = unitVerdict(currentPrice, averagePrice, evidence, UNIT_MATCH);
     if (e1 === "asIs") return keep;
-    if (e1 === "swap") return swap;
+    if (e1 === "swap") return swapMatchesProfitAmount(currentPrice, averagePrice, evidence) ? swap : keep;
     // E2: 평가손익 부호와 수익률 부호가 다르면 수익률을 믿지 않는다
     const pa = evidence?.profitAmount ?? 0;
     if (pa !== 0 && Math.sign(pa) !== Math.sign(profitRate)) return keep;
