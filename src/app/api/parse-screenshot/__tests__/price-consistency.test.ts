@@ -70,12 +70,15 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
   describe("소수익률 뒤바뀜 교정 (C)", () => {
     // AVGO: 현재가 345.00, 평단 342.06, +0.86%
     it("바뀐 읽기(현재가↔평단) + 평가금액÷수량이 swap 쪽에 맞음 → swap", () => {
-      const r = reconcilePrices(342.06, 345, 0.86, { quantity: 10, currentValue: 3450 });
+      const r = reconcilePrices(342.06, 345, 0.86, { quantity: 10, currentValue: 3450, profitAmount: 29.4 });
       expect(r).toEqual({ currentPrice: 345, averagePrice: 342.06, action: "swap" });
     });
     it("바른 읽기 → keep", () => {
       const r = reconcilePrices(345, 342.06, 0.86, { quantity: 10, currentValue: 3450 });
       expect(r.action).toBe("keep");
+    });
+    it("평가손익 없으면 평가금액이 맞아도 소수익률은 건드리지 않음(4.99 동작)", () => {
+      expect(reconcilePrices(342.06, 345, 0.86, { quantity: 10, currentValue: 3450 }).action).toBe("keep");
     });
     it("평가금액 없으면 소수익률은 건드리지 않음", () => {
       expect(reconcilePrices(342.06, 345, 0.86).action).toBe("keep");
@@ -105,6 +108,18 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
         const ev = { quantity: q, currentValue: avg * q, profitAmount: (cur - avg) * q };
         const r = reconcilePrices(cur, avg, rate, ev);
         expect(r.action === "swap").toBe(false);
+      }
+    });
+    it("퍼징: 평가손익 없음 + 매입금액으로 오독된 평가금액 → swap 0건", () => {
+      let seed = 777;
+      const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < 2000; i++) {
+        const avg = 10 + rnd() * 990;
+        const rate = (rnd() * 2 - 1) * 60;
+        const cur = avg * (1 + rate / 100);
+        const q = 1 + Math.floor(rnd() * 100);
+        const r = reconcilePrices(cur, avg, rate, { quantity: q, currentValue: avg * q });
+        expect(r.action).not.toBe("swap");
       }
     });
     it("부호 누락 + 매입금액 오독 평가금액 + 손익 있음 → keep", () => {

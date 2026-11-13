@@ -71,6 +71,7 @@ export function reconcilePrices(
     // swap 쪽에만 엄격히 맞고 평가손익과도 모순 없을 때 교정
     const ok =
       swapped <= TOLERANCE_PP &&
+      (evidence?.profitAmount ?? 0) !== 0 && // 평가손익이 없으면 오독 평가금액을 못 걸러 4.99 동작(keep)
       unitVerdict(currentPrice, averagePrice, evidence, UNIT_MATCH_STRICT) === "swap" &&
       swapMatchesProfitAmount(currentPrice, averagePrice, evidence);
     return ok ? swap : keep;
