@@ -42,3 +42,18 @@ describe("입력 폼 기본 날짜·상한이 todayKst를 쓴다", () => {
     expect(src).not.toMatch(/todayStr = new Date\(/);
   });
 });
+
+describe("새 자산 입력 4곳(대출·코인·실물·부동산) 기본 날짜가 todayKst (#189)", () => {
+  const INPUT = path.resolve(__dirname, "../../app/(main)/_components/forms/asset-update/input");
+  it.each([
+    "loan-input.tsx",
+    "crypto-input.tsx",
+    "physical-input.tsx",
+    "real-estate-input.tsx",
+  ])("%s", (rel) => {
+    const src = readFileSync(path.join(INPUT, rel), "utf8");
+    expect(src).toMatch(/(startDate|purchaseDate): todayKst\(\)/);
+    expect(src).toMatch(/import \{ todayKst \} from "@\/lib\/tax-utils"/);
+    expect(src).not.toMatch(/toISOString\(\)\.split\("T"\)/);
+  });
+});

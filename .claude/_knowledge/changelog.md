@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-13 (v4.97)
+
+### 배당 조회 실패를 빈 배당으로 굳히지 않기 · 새 자산 입력 기본 날짜 KST로 (#4.97, 이슈 #189)
+- **A**: 배당 fetch 3곳 중복을 `lib/finance/dividend-client.ts`(`fetchDividend`·`countFailedDividends`·`DIVIDEND_FETCH_FAILED_MESSAGE`) 1개로. `!res.ok`·`X-KIS-Unavailable`은 throw(캐시 안 됨, 다음 진입 재조회), 헤더 없는 200 빈 배열은 정상 `[]`. `[API Logs]` console.log 제거. 배당 탭·성과 허브 배당 카드에 실패 시 안내 1줄(`앱을 다시 열면 다시 불러올게요`, 재조회는 새로고침·재진입 시). queryKey `v11` 유지.
+- **B**: 대출·코인·실물·부동산 새 입력 기본 날짜 `todayKst()`(수정 화면 기존 값 불변).
+- 저장·동기화·서버 route diff 0. 컷: 홈 '어제' 계산, `max-[N]` 경계 정리(후속).
+
 ## 2026-11-13 (v4.96)
 
 ### 달력·7일 막대 숫자 한 줄로 · 칸 증감 정확하게 (#4.96, 이슈 #187)

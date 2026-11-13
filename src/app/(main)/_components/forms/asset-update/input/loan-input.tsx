@@ -35,6 +35,7 @@ import { financialInstitutions, securitiesFirms, loanTypes, quickButtonPresets }
 import { LoanScreenshotImport } from "../screenshot/loan-screenshot-import";
 import { MAIN_PALETTE } from "@/config/theme";
 import { BalanceResyncDialog } from "../balance-resync-dialog";
+import { todayKst } from "@/lib/tax-utils";
 
 // 대출 종류별 빠른 입력 버튼
 const getQuickButtonsByType = (type: string) => {
@@ -85,7 +86,7 @@ function LoanForm({ editData, onClose }: LoanFormProps) {
       name: "",
       balance: 0,
       interestRate: 0,
-      startDate: new Date().toISOString().split("T")[0],
+      startDate: todayKst(),
       endDate: "",
       institution: "",
       description: "",
