@@ -36,12 +36,18 @@ describe("5.101 사진별 유형 + 같은 티커 다른 유형 보유", () => {
     const { diff } = runWith([irp, pen], "pension");
     expect(diff.rows[0]).toMatchObject({ status: expect.stringMatching(/change|same/), linkedBy: "exact", stock: { id: "pen1" } });
   });
-  it("고른 유형에 2개 이상이면 그 범위 안에서만 묻는다(multiAccount, 다른 유형 제외)", () => {
-    const { diff } = runWith([irp, st("p1", "005930", "pension", "미래에셋증권", 3, 1), st("p2", "005930", "pension", "미래에셋증권", 4, 1)], "pension");
+  it("고른 유형에 2개 이상이면 묻되 같은 증권사·티커의 다른 유형(IRP)도 후보에 노출(고른 유형 먼저), IRP 선택 시 IRP만 갱신", () => {
+    const p1 = st("p1", "005930", "pension", "미래에셋증권", 3, 1);
+    const p2 = st("p2", "005930", "pension", "미래에셋증권", 4, 1);
+    const { diff, run } = runWith([irp, p1, p2], "pension");
     const r = diff.rows[0];
     expect(r.reasons).toEqual(expect.arrayContaining(["ambiguous", "multiAccount"]));
     expect(r.reasons).not.toContain("otherType");
-    expect(r.candidates?.map((c) => c.id).sort()).toEqual(["p1", "p2"]);
+    expect(r.candidates?.map((c) => c.id)).toEqual(["p1", "p2", "irp1"]);
+    const out = run({ include: new Set([r.rowId]), pick: { [r.rowId]: "irp1" } });
+    expect(out.stocks.find((s) => s.id === "irp1")?.quantity).toBe(10);
+    expect(out.stocks.find((s) => s.id === "p1")).toEqual(p1);
+    expect(out.stocks.find((s) => s.id === "p2")).toEqual(p2);
   });
   it("삭제 범위 회귀: 연금저축 묶음의 삭제 후보는 IRP 선택과 무관, IRP 항목은 삭제되지 않는다", () => {
     const other = st("pen9", "000660", "pension", "미래에셋증권", 1, 1);

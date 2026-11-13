@@ -122,7 +122,14 @@ export function matchExisting(
     const byTicker = pool.filter((e) => tickerKey(e.ticker) === tk);
     // ① 티커·category·broker
     const r1 = finish(byTicker.filter((e) => e.category === t.category && sameBroker(e.broker, t.broker)), "exact");
-    if (r1) return r1;
+    if (r1) {
+      // 고른 유형 안에서 묻게 되는 경우: 같은 증권사·같은 티커의 다른 유형(IRP 등) 항목도 후보에 넣는다(고른 유형 먼저, 5.101)
+      if (r1.kind === "ambiguous") {
+        const rest = byTicker.filter((e) => e.category !== t.category && sameBroker(e.broker, t.broker));
+        return { kind: "ambiguous", candidates: [...r1.candidates, ...rest] };
+      }
+      return r1;
+    }
     // ①' 티커+broker, category만 다름 — 사용자가 고른 유형에 없으면 다른 유형 항목을 조용히 연결하지 않고 묻는다(5.101)
     const other = byTicker.filter((e) => sameBroker(e.broker, t.broker));
     if (other.length > 0) return { kind: "ambiguous", candidates: other, crossType: true };
