@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reconcilePrices } from "../price-consistency";
+import { reconcileImagePrices, reconcilePrices, type PriceRowInput } from "../price-consistency";
 
 describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
   it("수익률과 맞으면 유지", () => {
@@ -187,5 +187,72 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
     it("비율로도 안 맞으면 기존대로 추정 경로", () => {
       expect(reconcilePrices(120, 100, 0.5).action).toBe("estimate");
     });
+  });
+});
+
+// 가공 숫자. 키움형: 현재가 위/평균단가 아래. AI가 한 이미지를 통째로 바꿔 읽은 경우
+const trueRows = [
+  { cur: 400, avg: 330, rate: 21.2, pa: 3000 },
+  { cur: 160, avg: 150, rate: 6.67, pa: 400 },
+  { cur: 130, avg: 135, rate: -3.7, pa: -90 }, // 수익률 -3.7: asIs 오차 0 / swapped 약 3.85 -> asIs 명확
+  { cur: 360.98, avg: 357.88, rate: 0.86, pa: 21 }, // 소수익률: 방향 애매
+];
+const asRows = (swap: boolean): PriceRowInput[] =>
+  trueRows.map((t) => ({
+    currentPrice: swap ? t.avg : t.cur,
+    averagePrice: swap ? t.cur : t.avg,
+    profitRate: t.rate,
+    evidence: { profitAmount: t.pa },
+  }));
+
+describe("reconcileImagePrices (이미지 단위 위치 일관)", () => {
+  it("통째로 바꿔 읽힌 이미지: 소수익률 행도 같은 방향으로 교정", () => {
+    const out = reconcileImagePrices(asRows(true));
+    expect(out.map((o) => [o.currentPrice, o.averagePrice])).toEqual(trueRows.map((t) => [t.cur, t.avg]));
+  });
+  it("개별 판정만으로는 소수익률 행이 그대로(근거 확인)", () => {
+    const r = asRows(true)[3];
+    expect(reconcilePrices(r.currentPrice, r.averagePrice, r.profitRate, r.evidence).action).toBe("keep");
+  });
+  it("바르게 읽힌 이미지는 아무 행도 바뀌지 않음", () => {
+    const out = reconcileImagePrices(asRows(false));
+    expect(out.every((o) => o.action === "keep")).toBe(true);
+  });
+  it("표 부족(swap 행 1개)·동률이면 현행 유지", () => {
+    const rows = asRows(true);
+    const out1 = reconcileImagePrices([rows[0], rows[3]]);
+    expect(out1[1].action).toBe("keep");
+    const mixed = [...asRows(true).slice(0, 2), ...asRows(false).slice(2, 3), asRows(true)[3]];
+    const out2 = reconcileImagePrices(mixed);
+    expect(out2[3].action).toBe("keep");
+  });
+  it("평가손익 부호가 swap과 모순이면 그 행은 유지", () => {
+    const rows = asRows(true);
+    rows[3] = { ...rows[3], evidence: { profitAmount: -21 } }; // 읽은 그대로(cur<avg)와 부호 같음 -> swap 모순
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
+  });
+  it("C102 퍼징: 바르게 읽힌 이미지(평가손익 포함)는 새로 뒤집지 않는다", () => {
+    let seed = 12345;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+    for (let n = 0; n < 3000; n++) {
+      const count = 2 + Math.floor(rnd() * 7);
+      const rows: PriceRowInput[] = [];
+      for (let k = 0; k < count; k++) {
+        const avg = 10 + rnd() * 500;
+        const rate = rnd() < 0.4 ? (rnd() - 0.5) * 4 : (rnd() - 0.5) * 80;
+        const cur = avg * (1 + rate / 100);
+        const qty = 1 + Math.floor(rnd() * 100);
+        const pa = (cur - avg) * qty;
+        // 일부 행은 수익률 부호 누락(C102)
+        const signed = rnd() < 0.3 ? Math.abs(rate) : rate;
+        rows.push({ currentPrice: cur, averagePrice: avg, profitRate: signed, evidence: { quantity: qty, profitAmount: pa } });
+      }
+      const out = reconcileImagePrices(rows);
+      out.forEach((o, i) => {
+        const single = reconcilePrices(rows[i].currentPrice, rows[i].averagePrice, rows[i].profitRate, rows[i].evidence);
+        // 이미지 단위 처리가 행별 결과에서 새로 swap을 만들지 않는다
+        if (single.action !== "swap") expect(o.action).not.toBe("swap");
+      });
+    }
   });
 });

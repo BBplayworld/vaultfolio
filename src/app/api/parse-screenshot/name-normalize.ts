@@ -2,13 +2,48 @@
 // - 잘린 이름 끝의 `(`·`…`·`...` 제거 (예: `KODEX 미국빅테크10(` → `KODEX 미국빅테크10`, 이후 마스터 접두 일치로 코드 확정)
 // - 끝 `(N)`이 인식 수량과 같으면 제거(쉼표·공백 허용). 수량과 달라도 N을 뗀 이름만 마스터에 있고 원본은 없으면 제거
 //   (주문가능·보유수량이 2줄로 쌓인 화면에서 다른 줄 숫자가 붙은 경우). 그 외 `(H)` 등 문자 괄호는 종목명의 일부로 보존.
-import { lookupTicker } from "./ticker-map";
+// - 키움식 2줄 행의 2행 꼬리 `구분 | 티커`(예: `엔비디아 현금 | NVDA`) 제거, 말줄임·열린 괄호는 반복 제거 (5.101)
+// - 줄바꿈 자리에 공백이 끼어도(`미국 빅테크`) 마스터 종목명과 공백·괄호 무시로 같으면 마스터 표기로 통일
+import { FOREIGN_STOCK_MAP, lookupTicker } from "./ticker-map";
+import { KR_NAME_TO_CODE } from "@/lib/finance/kr-master";
+import { normalizeStockName } from "@/lib/name-match";
+
+let masterByNorm: Map<string, string> | null = null;
+function canonicalMasterName(name: string): string {
+  if (!masterByNorm) {
+    masterByNorm = new Map();
+    for (const k of [...Object.keys(KR_NAME_TO_CODE), ...Object.keys(FOREIGN_STOCK_MAP)]) {
+      const n = normalizeStockName(k);
+      if (n && !masterByNorm.has(n)) masterByNorm.set(n, k);
+    }
+  }
+  const n = normalizeStockName(name);
+  return (n.length >= 4 && masterByNorm.get(n)) || name;
+}
 
 export function stripTrailingQuantity(name: string, quantity: number): string {
   if (!name) return name;
-  // 잘린 이름: 끝의 열린 괄호·말줄임
-  const truncated = name.replace(/\s*(?:\(|…|\.{2,})\s*$/, "");
+  return canonicalMasterName(stripCore(name, quantity));
+}
+
+function stripCore(name: string, quantity: number): string {
+  // 2행 꼬리 `현금 | TSLA` (구분 1~4자 한글 + | + 티커)
+  const noTail = name.replace(/\s*[가-힣]{0,4}\s*\|\s*[A-Za-z0-9.-]{1,12}\s*$/, "");
+  if (noTail !== name && noTail.trim()) name = noTail.trim();
+  // 잘린 이름: 끝의 열린 괄호·말줄임(겹쳐 있어도 모두)
+  const truncated = name.replace(/(?:\s|\(|…|\.{2,})+$/, "");
   if (truncated !== name && truncated.trim()) return truncated.trim();
+
+  // 닫는 괄호 없는 `(숫자` 꼬리(예: `KODEX 미국빅테크10(104`): 수량과 같거나, 떼야 마스터에 매칭될 때만 제거
+  const u = name.match(/^(.*\S)\s*\(\s*([\d,]+(?:\.\d+)?)\s*$/);
+  if (u) {
+    const n = Number(u[2].replace(/,/g, ""));
+    if (Number.isFinite(n)) {
+      if (quantity > 0 && Math.abs(n - quantity) <= 1e-9 * Math.max(1, quantity)) return u[1];
+      if (!lookupTicker(name) && lookupTicker(u[1])) return u[1];
+    }
+    return name;
+  }
 
   const m = name.match(/^(.*\S)\s*\(\s*([\d,]+(?:\.\d+)?)\s*\)\s*$/);
   if (!m) return name;
