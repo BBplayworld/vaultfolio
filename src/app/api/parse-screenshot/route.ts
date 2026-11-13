@@ -5,6 +5,7 @@ import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { isTinyImage } from "./image-size";
+import { reconcilePrices } from "./price-consistency";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
@@ -48,6 +49,8 @@ name=종목명(그대로·정확히), ticker=티커(국내 종목은 종목명�
 
 무시: 계좌번호·총평가금액·광고배너
 
+2줄 헤더 표 규칙: 한 칸 머리에 라벨 2개가 위·아래로 쌓여 있으면(예: 위"현재가"/아래"평균단가", 위"매입가"/아래"현재가", 위"평가손익"/아래"수익률") 각 행의 해당 칸도 숫자 2개가 위·아래로 쌓여 있다. 머리 라벨의 위·아래 순서를 행의 위·아래 숫자에 그대로 대응시킬 것(증권사마다 순서가 다름·순서를 가정하지 말고 머리를 보고 판단). "매입가"·"평균단가"·"평단가"·"매수평균가"는 averagePrice, "현재가"는 currentPrice. 검산: (현재가-평균단가)/평균단가×100이 수익률과 일치해야 한다.
+
 예시 레이아웃 (토스증권/도미노):
 - 왼쪽: 브랜드(TIGER 등), 종목명, 수량이 2~3줄
 - 오른쪽: 평가금액(큰 숫자), 평가손익+수익률(작은 숫자)
@@ -88,7 +91,10 @@ function processStockResults(raw: GeminiStock[], today: string) {
 
   let prevCategory: "domestic" | "foreign" = "domestic";
 
-  return filtered.map((s, idx) => {
+  return filtered.map((raw0, idx) => {
+    // 2줄 헤더 표에서 현재가·평단이 바뀌어 읽힌 경우 수익률로 교정 (평단 불일치 시 0 → 역산 경로)
+    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0);
+    const s: GeminiStock = { ...raw0, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";
     // ticker-map에 종목명이 등록된 경우 AI 반환값보다 map을 우선 (AI 오인식 교정)

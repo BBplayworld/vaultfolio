@@ -257,6 +257,28 @@ describe("S4 평단 규칙 (averagePriceEstimated)", () => {
   });
 });
 
+describe("#193 2줄 헤더 재업로드 회귀 — 기존 평단이 현재가로 덮어써지지 않는다", () => {
+  // 가공 숫자: 기존 평단은 소수 다자리 저장, 화면(서버 반올림 2자리)에는 같은 값이 읽힌다
+  const e = () => [
+    st("a", "AAA", "foreign", "키움증권", 100, 200.12345678),
+    st("b", "BBB", "foreign", "키움증권", 50, 80.5),
+  ];
+  it("올바른 평단(기존과 같음)으로 다시 올리면 전부 그대로", () => {
+    const ex = e();
+    const { diff, result } = run(ex, [screen(0, [
+      row("AAA", 100, 200.12, { brokerHint: "키움증권", currentPrice: 240 }),
+      row("BBB", 50, 80.5, { brokerHint: "키움증권", currentPrice: 70 }),
+    ])]);
+    expect(diff.rows.map((r) => r.status)).toEqual(["same", "same"]);
+    expect(result.stocks[0]).toBe(ex[0]);
+    expect(result.stocks[1]).toBe(ex[1]);
+  });
+  it("현재가가 평단 칸에 들어온 행(수정 전 오인식 형태)은 평단 변경으로 잡힌다 — 서버 교정이 이를 막는 근거", () => {
+    const { diff } = run(e(), [screen(0, [row("AAA", 100, 240, { brokerHint: "키움증권" })])]);
+    expect(diff.rows[0].change?.avg).toEqual({ before: 200.12345678, after: 240 });
+  });
+});
+
 describe("S4·S5 데이터 계약", () => {
   it("연결 항목의 id·매수일·매입 환율·메모·currency·inactive를 승계한다", () => {
     const a = st("a", "AAPL", "foreign", "토스증권", 10, 150, { purchaseExchangeRate: 1311, inactiveStatus: "halted", inactiveReason: "r", purchaseDate: "2024-05-05" });
