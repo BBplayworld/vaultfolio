@@ -1,7 +1,7 @@
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 
 // 배당 조회 실패 안내 — 배당 탭·성과 허브 공용 1줄
-export const DIVIDEND_FETCH_FAILED_MESSAGE = "일부 종목 배당을 불러오지 못했어요. 앱을 다시 열면 다시 불러올게요";
+export const DIVIDEND_FETCH_FAILED_MESSAGE = "배당을 불러오지 못한 종목이 있어요. 앱을 다시 열면 다시 불러올게요";
 
 // 배당 공용 fetch — 429·500(!res.ok)·KIS 불가(X-KIS-Unavailable)는 throw해 react-query가 캐시하지 않게 한다.
 // 헤더 없는 200 빈 배열은 '정말 배당 없음'이라 정상 [] 반환.
@@ -12,6 +12,11 @@ export async function fetchDividend(ticker: string, type: string, excd = "NAS"):
   if (res.headers.get("X-KIS-Unavailable")) throw new Error("dividend kis-unavailable");
   const json = await res.json();
   return Array.isArray(json?.data) ? json.data : [];
+}
+
+// 합계 0 + 실패 있음 = '배당 없음'이 아니라 '알 수 없음' — 0원·빈 카드 대신 값을 비우고 안내만 보인다(C101)
+export function isDividendUnknown(failedCount: number, annualTotal: number): boolean {
+  return failedCount > 0 && annualTotal === 0;
 }
 
 // 실패한 쿼리 수 (data undefined 안전)

@@ -12,7 +12,7 @@ import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { dividendQueryOptions, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
@@ -168,7 +168,7 @@ export function PerformanceHub() {
           icon={BadgeDollarSign}
           title="배당"
           description="올해 배당 (지급 + 예상)"
-          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : formatPriceByMode(annualTotal)}
+          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : isDividendUnknown(divFailed, annualTotal) ? <span className="text-muted-foreground">—</span> : formatPriceByMode(annualTotal)}
           primaryClassName={ASSET_THEME.text.default}
           secondary={divLoading && annualTotal === 0 ? (
             <LoadingNote active label={LOADING_LABEL.dividend} className="min-h-5" />

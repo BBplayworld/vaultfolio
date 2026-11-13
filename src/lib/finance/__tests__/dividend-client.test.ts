@@ -76,3 +76,20 @@ describe("실패 쿼리 재조회 차단 (#189 qa FAIL 회귀)", () => {
     qc.clear();
   });
 });
+
+describe("실패를 0·없음으로 말하지 않기 (C101)", () => {
+  it("전부 실패(합계 0, 실패>0)·1종목 보유 1개 실패 → unknown", async () => {
+    const { isDividendUnknown } = await import("../dividend-client");
+    expect(isDividendUnknown(3, 0)).toBe(true);
+    expect(isDividendUnknown(1, 0)).toBe(true);
+  });
+  it("부분 실패(합계>0)·실패 없음(진짜 0) → unknown 아님", async () => {
+    const { isDividendUnknown } = await import("../dividend-client");
+    expect(isDividendUnknown(1, 12000)).toBe(false);
+    expect(isDividendUnknown(0, 0)).toBe(false);
+  });
+  it("안내 문구는 '일부'가 아니라 1종목 보유·전부 실패에도 맞는 표현", async () => {
+    const { DIVIDEND_FETCH_FAILED_MESSAGE } = await import("../dividend-client");
+    expect(DIVIDEND_FETCH_FAILED_MESSAGE).toBe("배당을 불러오지 못한 종목이 있어요. 앱을 다시 열면 다시 불러올게요");
+  });
+});

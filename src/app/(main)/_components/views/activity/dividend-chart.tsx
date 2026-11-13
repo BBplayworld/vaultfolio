@@ -15,7 +15,7 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { dividendQueryOptions, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
@@ -365,6 +365,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           )}
 
           {!isLoading && annualTotal === 0 ? (
+            isDividendUnknown(failedCount, annualTotal) ? null : (
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
                 <p className="text-muted-foreground text-sm">올해 배당 데이터가 없습니다.</p>
@@ -373,6 +374,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 </p>
               </div>
             </div>
+            )
           ) : (
             !isLoading && (
               <ChartContainer config={chartConfig} className="h-[200px] w-[calc(100%+1rem)] -ml-4 sm:ml-0 sm:w-full">
