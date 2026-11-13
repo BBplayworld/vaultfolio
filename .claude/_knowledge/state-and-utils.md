@@ -292,7 +292,7 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 
 ### 4.85 추가 유틸
 
-- `lib/finance/dividend-client.ts` — `fetchDividend(ticker,type,excd="NAS")`(배당 공용 fetch: `!res.ok`·`X-KIS-Unavailable` → throw라 react-query가 캐시 안 함, 헤더 없는 200 빈 배열은 `[]`)·`countFailedDividends(queries)`(isError 수)·`DIVIDEND_FETCH_FAILED_MESSAGE`. 배당 탭 2곳·성과 허브(`useDividendAnnualTotals().failedCount`)가 사용. queryKey `["dividend","v11",ticker,type]` 공유.
+- `lib/finance/dividend-client.ts` — `fetchDividend(ticker,type,excd="NAS")`(배당 공용 fetch: `!res.ok`·`X-KIS-Unavailable` → throw라 react-query가 캐시 안 함, 헤더 없는 200 빈 배열은 `[]`)·`countFailedDividends(queries)`(isError 수)·`isDividendReady(loading,failedCount)`(로딩·실패면 false, 성적표 잠정·기록 생략 판정)·`DIVIDEND_FETCH_FAILED_MESSAGE`. 배당 탭 2곳·성과 허브·자산 성적표(`useDividendAnnualTotals().failedCount`)가 사용. queryKey `["dividend","v11",ticker,type]` 공유.
 - `lib/finance/dividend-axis.ts` — `niceAxisTicks(max, targetCount=4)`(1·2·5×10^n 등간격, 마지막 눈금 ≥ max)·`formatAxisWon(v)`(만원 이상 소수 1자리 `1.5만원`, 반올림 오차 0)·`pickVisibleLabels(values, labels, slotWidth)`(막대 값 라벨 가로 겹침이면 큰 값 우선). 배당 차트(`dividend-chart.tsx`)가 사용.
 - `lib/number-utils.ts` `formatPriceByCurrency(value, currency)` — USD `$`·JPY `¥`·그 외 원. 기존 `formatPrice` 3벌(`stock-trades-view`·`stock-target-picker`·`delete-rollback-dialog`) 삭제·통합.
 - `lib/finance/profit-utils.ts` `fetchProfitRef` — 배치가 429·5xx면 불완전(캐시 저장·`onComplete` 생략, 남은 배치 중단), `Retry-After`(1~5초, 10초 초과면 재시도 안 함)로 **실행당 1회**만 재시도(요청 상한 = 배치 수 + 1). `profitRetryDelayMs`. 점검(`X-KIS-Unavailable`)은 기존 경로.

@@ -4,6 +4,11 @@
 
 ---
 
+## 2026-11-13 (v4.98)
+
+### 배당을 못 불러온 날 자산 성적표를 확정·기록하지 않기 (#4.98, 이슈 #191)
+- 성적표 `divReady = isDividendReady(loading, failedCount)`(`dividend-client.ts`). 실패 시 '수익의 질'·'레버리지' 축 기존 '잠정' 배지 → `gradeSettled` false라 `recordGradeSnapshot`·▲▼ 대비 생략(배당 0 기준 등급이 daily·monthly·홈 배지에 저장되던 문제). 계산 근거 금융자산·연간 값 '—', 5축 섹션 아래 `DIVIDEND_FETCH_FAILED_MESSAGE` 1줄. 저장 스키마·키·서버 diff 0. 한계: 이미 기록된 과거 값 보정 없음(다음 성공 방문이 덮어씀).
+
 ## 2026-11-13 (v4.97)
 
 ### 배당 조회 실패를 빈 배당으로 굳히지 않기 · 새 자산 입력 기본 날짜 KST로 (#4.97, 이슈 #189)

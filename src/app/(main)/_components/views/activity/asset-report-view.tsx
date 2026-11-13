@@ -25,6 +25,7 @@ import { PromptPreviewDialog } from "../../layout/ui/prompt-preview-dialog";
 import { track } from "@/lib/analytics/ga";
 import { AI_PROMPT_TEMPLATES, type AssetPromptContext } from "@/lib/ai-prompts";
 import { useDividendAnnualTotals } from "./performance-hub";
+import { DIVIDEND_FETCH_FAILED_MESSAGE, isDividendReady } from "@/lib/finance/dividend-client";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 
@@ -109,8 +110,9 @@ export function AssetReportView() {
   // 배당 (성과 허브·배당 차트와 동일 쿼리 키 → 캐시 공유)
   // 이자(연 환산)·주식(최근 1년)과 기간 길이를 맞추기 위해 배당도 올해 12개월(실적+예상)을 쓴다.
   // annualActual(올해 실지급분)만 쓰면 연중에는 약 N/12만 잡혀 레버리지 수익이 구조적으로 과소계상된다.
-  const { isLoading: divLoading, annualTotal: annualDividend } = useDividendAnnualTotals();
-  const divReady = !(divLoading && annualDividend === 0);
+  // 조회 실패(failedCount>0)도 확정 아님 — 실패를 배당 0으로 계산해 등급·스냅샷에 기록하지 않는다
+  const { isLoading: divLoading, failedCount: divFailed, annualTotal: annualDividend } = useDividendAnnualTotals();
+  const divReady = isDividendReady(divLoading, divFailed);
 
   // 올해 주식 시세차익 (연초 대비, KIS 기준가 — performance-hub "수익" 카드와 동일 패턴, period만 yearly)
   const tickerList = useMemo(
@@ -530,7 +532,7 @@ export function AssetReportView() {
                           ["남긴 돈", signed(debtNet), signed(netLeverage), true],
                         ];
                         const ready = annualOn && interestCompareReady && !kisUnavailable;
-                        const pendingLabel = kisUnavailable ? "점검 중" : "불러오는 중…";
+                        const pendingLabel = kisUnavailable ? "점검 중" : divFailed > 0 ? "—" : "불러오는 중…";
                         return (
                           // 항목마다 '라벨 줄 + 값 줄' 고정 2줄 — wrap에 맡기면 값 길이에 따라 행 구조가 달라진다.
                           // 값은 2열 그리드라 뱃지 폭이 열마다 같아 금액이 세로로 정렬된다.
@@ -674,6 +676,7 @@ export function AssetReportView() {
                   );
                 })}
               </div>
+              {divFailed > 0 && <p className={`${CAPTION} text-pretty break-keep`}>{DIVIDEND_FETCH_FAILED_MESSAGE}</p>}
             </div>
 
             {/* ── AI 평가 프롬프트 ── */}
