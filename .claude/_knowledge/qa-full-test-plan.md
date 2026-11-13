@@ -264,6 +264,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ (제거된 4.43 카드) 구성 카드 데이터 규칙: 총자산 분모(부채 제외), 이번 달=실시간 `getAssetSummary` 값, 음수 0 처리, 색은 이번 달 기준 1회(13칸 공통)
 
 ### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)
+- 축 제목(#5.103): 값 없는 축(측정불가·배당 실패 '—')은 320에서 빈 별이 숨고 제목이 최대 2줄·어절 꺾임 0, 360 이상은 별 그대로.
 > 레버리지 박스(이자 vs 투자 수익)는 F-ACTIVITY에 있음 — 여기선 **5축 채점·티어·재정규화·이력화·delta**만 다룬다(중복 금지).
 - ⚙ 5축 가중(growth .3 / earning .2 / leverage .2 / diversification .2 / habit .1). 측정 불가 축은 `null` → **측정 가능한 축만 가중 재정규화**해 종합 산출(신규 사용자도 등급, AC2)
 - ⚙ 레버리지 축: 무부채(loanBalance≤0)=**5.0**(건전성 만점, AC3) / 자본잠식(equity≤0 & 부채>0)=**0.5**(AC4). 부채비율 40/60%·평균금리 6%·이자 커버리지 감가점
@@ -628,6 +629,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 테스트: `src/lib/__tests__/install-nudge-policy.test.ts`, `manifest.test.ts`, `ga.test.ts`
 
 ### F-HOLDINGS-RESYNC. 스크린샷으로 보유 현황 맞추기 ([holdings-resync-dialog.tsx](../../src/app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx)) — #4.50 #91
+- 항목 선택 칸(#5.103): 고른 뒤 트리거 두 줄 모두 좌측 정렬·말줄임, 높이 40px, 320·360·375에서 수량 줄이 보임. 목록 안 2줄 표시는 그대로.
 - ⚙ vitest: `lib/asset/resync/__tests__`(매칭 표·C20 ①~⑧·S1~S5·K1~K3·코인 대응), `report/__tests__/resync-flows.test.ts`·`resync-crypto-flows.test.ts`(C21 (a)~(g), rollback 음수 기준 0 절단 현상 고정), `lib/__tests__/resync-sync.test.ts`(S8 2기기 하네스: A 맞추기→B 동일, B 미push→알림, A 되돌리기→B 복원, 4.49 스키마 키, 정적 규칙: saveData 2곳·asset_save 0·금지 문구 0), `ga.test.ts`(category 3개)
 - 진입: 주식(코인) 보유 ≥1건이면 제목 `스크린샷으로 보유 현황 맞추기`, `덮어쓰기`·`초기화 후 등록` 0건. 0건이면 기존 첫 등록(`StockScreenshotImport`/`CryptoScreenshotImport`)
 - 올리기: 최대 5장, 6장 선택 시 5장만+토스트, 남은 횟수 0이면 올리기 비활성, 장별 상태(인식 중·완료·인식하지 못했어요·일부만 인식됐어요·오늘 인식 횟수를 다 썼어요), 실패 장만 `다시 시도`
