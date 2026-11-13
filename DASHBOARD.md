@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-13 10:50 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.94**
+> **마지막 갱신: 2026-11-13 11:50 KST** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v4.95**
 
 ## 🟥 대표 확인·결정 필요 (지금)
 1. **ETF 구성종목 API 탐색 (대표님 직접 확인 중 — 이번 주말 예정, 11/12 갱신)** — '[보류] ETF 속까지 합친 내 주식'([#152](https://github.com/BBplayworld/vaultfolio/issues/152)) 재개 여부가 여기에 걸려 있음
@@ -34,7 +34,6 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v4.95 | [#184](https://github.com/BBplayworld/vaultfolio/issues/184) 버그·품질 묶음 — 자산 변화 '일' 탭 숫자 = 홈·320 표기 정돈·죽은 코드 정리 ([PR #186](https://github.com/BBplayworld/vaultfolio/pull/186)) | UI 검수·qa 중 | COO 자체 승인(low) |
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 시장 알림(공통 대상 14개, 설치 앱 전용) | **대표 결정 대기**(데모) · origin/main 재병합 필요 | 대표 승인(risk:high) |
 
 ### ⏱ 예약된 운영 확인
@@ -48,6 +47,7 @@
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고)
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
+| v4.95 [PR #186](https://github.com/BBplayworld/vaultfolio/pull/186) | 11/13 | 버그·품질 묶음(#184) — 자산 변화 '일' 탭 숫자 = 홈(원인 포함), 달력 칸 증감 축약, 320 막대 값 한 줄·배당 칩 간격, 죽은 코드 정리 · COO 자체 승인(low) | 진행 중 |
 | v4.94 [PR #185](https://github.com/BBplayworld/vaultfolio/pull/185) | 11/13 | 처음 맞는 결산 열기(#183) — 11월 신규도 첫 결산 창에 결산·팁, 결산 이름 하나로, 체험 순자산 웰컴과 맞춤·가짜 급등 제거 · COO 자체 승인(medium) | PASS |
 | v4.92 [PR #182](https://github.com/BBplayworld/vaultfolio/pull/182) | 11/13 | 돌아온·처음 온 사용자 숫자·문구 맞추기(#181) — 2주 넘게 쉬고 온 사용자의 7일 값 'M/D 이후'로 통일·체험 '전일 대비' 표시·세금 '이번 달' 지난 마감 아래로 · COO 자체 승인(low) | PASS |
 | v4.90 [PR #178](https://github.com/BBplayworld/vaultfolio/pull/178) | 11/12 | 홈 '오늘'(#175) — 보유 시장 종가 1줄·가장 큰 원인 1줄(7월 접힘 결정 중 1줄만 노출, 원치 않으시면 이 부분만 되돌림)·7일 카드→최근 7일, 시장 타일 휴장 표기 · COO 자체 승인(medium) | PASS |
