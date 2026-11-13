@@ -8,7 +8,7 @@ import { sameBroker, tickerKey } from "./match";
 import type { ResyncOptions } from "./types";
 
 export interface ResyncSelection {
-  /** 확인 필요 행 중 `맞추기에 포함`을 체크한 rowId */
+  /** 확인 필요 행 중 `이 항목도 맞추기`를 체크한 rowId */
   include: Set<string>;
   /** 삭제할 기존 항목 id (기본값은 defaultRemoveIds, 유지 묶음에서 체크하면 추가) */
   remove: Set<string>;

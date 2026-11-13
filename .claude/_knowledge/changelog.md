@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-13 (v5.0)
+
+### 스크린샷 등록 평단가를 맞게 읽고, 맞게 말하기 (#5.0, 이슈 #196)
+- 등록 화면 라벨·안내를 `averagePriceEstimated`일 때만 '평단가(추정)'·역산 안내로(`stock-screenshot-import.tsx`, 맞추기 미리보기와 같은 규칙). `ImportStock.averagePriceEstimated?` 타입 필드 1개 추가(저장 키 변화 없음, 기존부터 spread로 저장되던 값).
+- `price-consistency.ts reconcilePrices(cur, avg, rate, evidence?)`: swap 전 2차 근거 E1(평가금액÷수량이 한쪽에만 2% 이내) → 반대면 keep, E2(평가손익 부호≠수익률 부호) → keep, 근거 없음은 4.99 동작. 소수익률(3%p 이내)은 평가손익이 있고 E1이 swap 쪽에만 0.2% 이내로 맞으며 평가손익과 모순 없을 때만 swap.
+- #198: 기기별 하루 AI 인식 한도 15→30(`use-gemini-usage.ts`, 서버 IP 30 유지·전역 300→1500(`cache-storage.ts` GEMINI_SERVER_DAILY_LIMIT)). `parse-screenshot/name-normalize.ts stripTrailingQuantity`: 종목명 끝 `(수량)`이 인식 수량과 같으면 제거(미래에셋 `KODEX 미국빅테크10(104)`), 다르면 보존. 프롬프트에 수량·괄호 숫자 금지 한 줄.
+- #198 확장: 인식 개선 — `name-normalize.ts`가 잘린 이름 끝 `(`·`…` 제거·수량 괄호 제거(마스터 접두 일치 재사용), 프롬프트에 두 줄 이름 합치기·주문가능/보유수량·평가금액/매입금액 구분. 맞추기 `diff.ts` 사유 코드 `multiAccount`(ambiguous 중 같은 증권사·같은 유형 후보). 확인 필요 사유 문구·후보 드롭다운(증권사·유형·메모 / 수량·매수일) ui 확정안 적용. 전역 하루 한도 300→1500.
+- `asset-report-view.tsx` 5축 제목에 `break-keep`(320 꺾임).
+
 ## 2026-11-13 (v4.99)
 
 ### 보유 현황 스크린샷 2줄 헤더에서 평단가·현재가 바로 읽기 (#4.99, 이슈 #193)

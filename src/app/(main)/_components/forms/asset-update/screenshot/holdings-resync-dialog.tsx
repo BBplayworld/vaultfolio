@@ -1007,9 +1007,9 @@ function ItemRow({ row, inherited, qty }: { row: DiffRow; inherited?: Stock; qty
 }
 
 const REASON_TEXT: Partial<Record<NeedsReason, string>> = {
-  qtyDecrease: "수량이 줄었어요",
-  quantityMissing: "수량을 읽지 못했어요",
-  tickerMissing: "티커를 읽지 못했어요",
+  qtyDecrease: "기존보다 수량이 줄었어요",
+  quantityMissing: "화면에서 수량이 안 보였어요",
+  tickerMissing: "종목 코드(티커)가 안 보였어요",
 };
 
 interface NeedsRowProps {
@@ -1044,16 +1044,23 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
       {row.linkedBy === "unassigned" && !row.change?.brokerFill && <p className="text-sm text-muted-foreground">{T.broker} 미지정 줄과 연결</p>}
       {row.linkedBy === "name" && <p className="text-sm text-muted-foreground">종목명으로 연결</p>}
       {row.reasons.map((r) => REASON_TEXT[r] && <p key={r} className="text-sm text-muted-foreground">{REASON_TEXT[r]}</p>)}
-      {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 {cand.map((q) => `${fmt(q)}${T.qty}`).join("·")}로 읽혔어요</p>}
+      {cand && <p className="text-sm text-muted-foreground tabular-nums text-pretty break-keep">두 장에서 수량이 달라요: {cand.map((q) => `${fmt(q)}${T.qty}`).join("·")}</p>}
       {row.reasons.includes("ambiguous") && row.candidates && (
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">어느 줄인가요</p>
+          <p className="text-sm text-muted-foreground text-pretty break-keep">같은 종목이 여러 곳에 있어요. 어느 항목을 맞출까요?</p>
+          {row.reasons.includes("multiAccount") && <p className="text-sm text-muted-foreground text-pretty break-keep">계좌가 달라 하나로 정할 수 없었어요</p>}
           <Select onValueChange={(id) => { onPick(id); onInclude(true); }}>
-            <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10"><SelectValue placeholder="줄 선택" /></SelectTrigger>
+            <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10"><SelectValue placeholder="항목 선택" /></SelectTrigger>
             <SelectContent>
               {row.candidates.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="text-sm">
-                  {c.name} · {isUnassignedBroker(c.broker) ? `${T.broker} 미지정` : c.broker} · 수량 {fmt(c.quantity)}
+                <SelectItem key={c.id} value={c.id} className="min-h-10 text-sm">
+                  <span className="flex flex-col">
+                    <span>
+                      {isUnassignedBroker(c.broker) ? `${T.broker} 미지정` : c.broker} · {categoryShort(c.category)}
+                      {c.description ? ` · ${c.description}` : ""}
+                    </span>
+                    <span className="text-muted-foreground tabular-nums">수량 {fmt(c.quantity)}{T.qty}{c.purchaseDate ? ` · 매수일 ${c.purchaseDate}` : ""}</span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1061,24 +1068,35 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         </div>
       )}
       {(row.reasons.includes("quantityMissing") || cand) && (
+        <label className="block space-y-1">
+          <span className="block text-sm text-muted-foreground">{row.reasons.includes("quantityMissing") ? "수량을 직접 알려 주세요" : "맞는 수량을 입력해 주세요"}</span>
         <Input
           inputMode="decimal"
+          aria-label={row.reasons.includes("quantityMissing") ? "수량을 직접 알려 주세요" : "맞는 수량을 입력해 주세요"}
           className="h-10 w-28 tabular-nums"
-          placeholder={row.reasons.includes("quantityMissing") ? "수량 입력" : String(item.quantity)}
+          placeholder={row.reasons.includes("quantityMissing") ? "수량" : String(item.quantity)}
           onChange={(e) => { const n = Number(e.target.value.replace(/[^0-9.]/g, "")) || 0; onQty(n); if (n > 0) onInclude(true); }}
         />
+        </label>
       )}
       {row.reasons.includes("tickerMissing") && (
+        <label className="block space-y-1">
+          <span className="block text-sm text-muted-foreground">티커를 직접 알려 주세요</span>
         <Input
+          aria-label="티커를 직접 알려 주세요"
           className="h-10 w-32 font-mono"
-          placeholder="티커 입력"
+          placeholder="예: AAPL"
           onChange={(e) => { const t = e.target.value.toUpperCase().replace(/[^A-Z0-9./]/g, "").slice(0, 8); onTicker(t); if (t) onInclude(true); }}
         />
+        </label>
       )}
       {!blocked && (
-        <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
-          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="relative after:absolute after:-inset-3" />
-          맞추기에 포함
+        <label className="flex min-h-10 cursor-pointer items-start gap-2 text-sm">
+          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="relative mt-0.5 after:absolute after:-inset-3" />
+          <span className="flex flex-col">
+            <span>이 항목도 맞추기</span>
+            <span className="text-sm text-muted-foreground text-pretty break-keep">체크하지 않으면 그대로 둬요</span>
+          </span>
         </label>
       )}
     </li>

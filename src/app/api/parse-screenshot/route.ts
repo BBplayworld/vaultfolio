@@ -6,6 +6,7 @@ import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { isTinyImage } from "./image-size";
 import { reconcilePrices } from "./price-consistency";
+import { stripTrailingQuantity } from "./name-normalize";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
@@ -45,11 +46,13 @@ const STOCK_SCHEMA = {
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로·정확히), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
+name=종목명(그대로·정확히·수량·괄호 숫자·다음 줄 숫자를 붙이지 말 것. 이름이 두 줄로 줄바꿈되면 한 이름으로 합침(단어 중간에서 끊겼으면 공백 없이, 단어 사이면 공백 한 칸). 이름이 잘려 끝이 "("·"…"면 그 기호는 빼고 보이는 글자까지만), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함·퍼센트 숫자 그대로: 8.39%면 8.39이며 0.0839로 바꾸지 말 것·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
 
 무시: 계좌번호·총평가금액·광고배너
 
 2줄 헤더 표 규칙: 한 칸 머리에 라벨 2개가 위·아래로 쌓여 있으면(예: 위"현재가"/아래"평균단가", 위"매입가"/아래"현재가", 위"평가손익"/아래"수익률") 각 행의 해당 칸도 숫자 2개가 위·아래로 쌓여 있다. 머리 라벨의 위·아래 순서를 행의 위·아래 숫자에 그대로 대응시킬 것(증권사마다 순서가 다름·순서를 가정하지 말고 머리를 보고 판단). "매입가"·"평균단가"·"평단가"·"매수평균가"는 averagePrice, "현재가"는 currentPrice. 검산: (현재가-평균단가)/평균단가×100이 수익률과 일치해야 한다.
+
+2줄 행 규칙: 종목명 아래 줄에 숫자 2개가 나란히 있고 머리가 "주문가능"/"보유수량"이면 quantity는 반드시 "보유수량"(주문가능 아님·두 값이 다를 수 있음). 머리가 "평가금액"/"매입금액"이면 currentValue는 평가금액(위)이고 매입금액(아래)은 currentValue가 아니다. 이 숫자들을 종목명 뒤에 붙이지 말 것.
 
 예시 레이아웃 (토스증권/도미노):
 - 왼쪽: 브랜드(TIGER 등), 종목명, 수량이 2~3줄
@@ -93,8 +96,14 @@ function processStockResults(raw: GeminiStock[], today: string) {
 
   return filtered.map((raw0, idx) => {
     // 2줄 헤더 표에서 현재가·평단이 바뀌어 읽힌 경우 수익률로 교정 (평단 불일치 시 0 → 역산 경로)
-    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0);
-    const s: GeminiStock = { ...raw0, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
+    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0, {
+      quantity: !raw0.quantityMissing && raw0.quantity > 0 ? raw0.quantity : undefined,
+      currentValue: raw0.currentValue,
+      profitAmount: raw0.profitAmount,
+    });
+    // 종목명 끝에 붙은 수량 괄호(예: 미래에셋 "KODEX 미국빅테크10(104)") 제거
+    const cleanName = stripTrailingQuantity(raw0.name, raw0.quantityMissing ? 0 : raw0.quantity);
+    const s: GeminiStock = { ...raw0, name: cleanName, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";
     // ticker-map에 종목명이 등록된 경우 AI 반환값보다 map을 우선 (AI 오인식 교정)

@@ -496,7 +496,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **완료 신호는 `onSaved` 콜백**(4개 컴포넌트에 옵셔널 prop 추가, F-STOCK 섹션 참고): 저장 성공 시에만 호출되므로 사용자가 다이얼로그를 취소한 경우와 구분됨. `onSaved` 호출 시 `markCategoryStatus(category, "done")` → 다음 카테고리로 자동 전환
 - ⚙ **재개(AC6)**: 자동 재노출 시(위 AC1) `OnboardingWizardFlow` 마운트 시점에 `getResumeCategory`가 `pending`인 첫 카테고리를 반환해 그 단계부터 시작 — 처음부터 다시 시키지 않음. 인트로 화면에서 "시작하기"를 사용자가 직접 누르면 진행 여부와 무관하게 첫 카테고리부터 훑되, 재업로드는 각 컴포넌트의 기존 append 동작을 그대로 따라 기존 자산을 덮어쓰지 않음(AC9)
 - ⚙ **부동산 인식 불가**: `api/parse-screenshot/route.ts`의 `ParseAssetType`에 `realEstate` 없음 — v1 스코프에서 의도적으로 제외(명세 §2 확정)
-- ⚙ **카테고리당 이미지 1장**: 4개 스크린샷 컴포넌트 모두 `input`에 `multiple` 없음(단일 파일) — v1은 이 제약을 그대로 받아들임(Gemini 일일 15회 한도 대비 마법사 1회 최대 4호출로 여유 확보)
+- ⚙ **카테고리당 이미지 1장**: 4개 스크린샷 컴포넌트 모두 `input`에 `multiple` 없음(단일 파일) — v1은 이 제약을 그대로 받아들임(Gemini 일일 30회 한도 대비 마법사 1회 최대 4호출로 여유 확보)
 - ⚙ **진행 상태**: `STORAGE_KEYS.onboardingWizardStatus` 단일 키 — `STORAGE_KEYS.tutorialStatus`(스팟라이트 튜토리얼)와 코드 패턴만 동일, 값 공유 없음. `tutorial-overlay.tsx`/`tutorial-store.ts` 무변경
 - 엣지: 카테고리 스킵 후 다음 카테고리로 정상 진행, 모든 다이얼로그는 마법사가 직접 마운트(전역 hidden `*Input` 재사용 아님) — 부동산만 예외적으로 `RealEstateInput` hidden 마운트 필요
 - 회귀: 마법사 열림 중에도 `AssetDataContext`·시세 동기화 등 기존 훅 정상 동작(별도 Provider 분기 없음), 마법사 닫으면 `assetData` 최신 상태 그대로 홈에 반영
@@ -507,7 +507,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 저장 버튼 → `/` 이동 후 확인 창(충돌/미리보기, 개별 모드)이 다시 업로드 없이 열리고 등록 결과·종목 수가 미리보기와 같다. 새로고침·취소·10분 경과 후 미재오픈. 앱 잠금·공유 대기·마법사 중 대기 후 해제 시 오픈, 0건·튜토리얼 미완료 기기에서도 오픈(웰컴 위 겹침 없음)
 - 👤 인앱 UA(카카오톡·barcelona)는 "브라우저에서 열어 저장하기" + 재업로드 안내(GA `open`만, `pwa_install` 미전송)
 - 👤 예시 모드(#4.40 #66): 첫 화면 고지 아래 "예시로 먼저 보기" → 로딩 없이 예시 결과(맨 위 "예시 데이터예요…", 6행 28/22/16/14/12/8, 국내 58·해외 42, 금액·티커 0). 저장·인앱·다시보기·노트 DOM 없음, brand "내 캡처로 해보기" → dropzone 복귀(파일창 미오픈, 포커스), 이어서 업로드는 현행. limit·device 오류는 복귀 시 복원, empty·fail은 idle. 예시 중 `/api/*`·저장소·`peekHandoff` 변화 0, GA `method: sample` 1건만(`ratio-sample.test.ts`)
-- ⚙ 입구 한도: 입구 전역 60·IP 5/일(entry 또는 Referer `/ratio`), 초과 시 마감 문구 429, 실패 시 앞 단계 카운터 롤백, 일반 요청 영향 없음(`api-guard.test.ts`). 기기 15회 초과는 업로드 안 함
+- ⚙ 입구 한도: 입구 전역 60·IP 5/일(entry 또는 Referer `/ratio`), 초과 시 마감 문구 429, 실패 시 앞 단계 카운터 롤백, 일반 요청 영향 없음(`api-guard.test.ts`). 기기 30회 초과는 업로드 안 함
 - ⚙ GA: `/v/ratio` page_view, `feature_use{ratio_preview, submit success|fail|empty|limit / click / open / create}`, UTM은 `/ratio`에서만 page_location에 부착, 종목명·금액·비중 파라미터 없음. `screenshot_parse` 미전송
 - ⚙ 회귀(#64): 국내·해외 혼합 인식은 앱 내 업로드도 개별 모드로 시작해 카테고리·가격 유지, 단일 section은 현행 동일(`screenshot-stock-map.test.ts`). 웰컴·결산·홈 팁·`page.tsx` diff 0
 - 자동: `ratio-preview.test.ts`·`screenshot-stock-map.test.ts`·`utm-allow.test.ts`·`api-guard.test.ts`·`ga.test.ts`·`app/ratio/__tests__/ratio-page.test.ts`
@@ -631,7 +631,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ vitest: `lib/asset/resync/__tests__`(매칭 표·C20 ①~⑧·S1~S5·K1~K3·코인 대응), `report/__tests__/resync-flows.test.ts`·`resync-crypto-flows.test.ts`(C21 (a)~(g), rollback 음수 기준 0 절단 현상 고정), `lib/__tests__/resync-sync.test.ts`(S8 2기기 하네스: A 맞추기→B 동일, B 미push→알림, A 되돌리기→B 복원, 4.49 스키마 키, 정적 규칙: saveData 2곳·asset_save 0·금지 문구 0), `ga.test.ts`(category 3개)
 - 진입: 주식(코인) 보유 ≥1건이면 제목 `스크린샷으로 보유 현황 맞추기`, `덮어쓰기`·`초기화 후 등록` 0건. 0건이면 기존 첫 등록(`StockScreenshotImport`/`CryptoScreenshotImport`)
 - 올리기: 최대 5장, 6장 선택 시 5장만+토스트, 남은 횟수 0이면 올리기 비활성, 장별 상태(인식 중·완료·인식하지 못했어요·일부만 인식됐어요·오늘 인식 횟수를 다 썼어요), 실패 장만 `다시 시도`
-- 미리보기: 요약 1줄, 변경 행은 바뀌는 칸만 전→후, 삭제 후보 기본 체크는 S1·S2, 확인 필요 `맞추기에 포함`, 평가금액·손익·비중·총액 0건, 고지 2줄(+해외 삭제 후보일 때 양도세 1줄)이 320·375에서 어절 중간 줄바꿈 0
+- 미리보기: 요약 1줄, 변경 행은 바뀌는 칸만 전→후, 삭제 후보 기본 체크는 S1·S2, 확인 필요 `이 항목도 맞추기`(+캡션 `체크하지 않으면 그대로 둬요`), 평가금액·손익·비중·총액 0건, 고지 2줄(+해외 삭제 후보일 때 양도세 1줄)이 320·375에서 어절 중간 줄바꿈 0
 - 적용: 저장 1회, 변경 0이면 버튼 비활성, 거래 기록 배열 불변, 결과 화면·닫은 직후 토스트 외 되돌리기 입구 0, `앱을 닫기 전까지` 0건
 - 매수일(#139, v4.74): 연결(변경) 항목은 id·매수일·매입 환율·메모 승계. 매칭 실패로 `추가`가 된 행이 이번에 지우는 같은 종목(티커·시장 같음, 증권사 같음→계좌 같음→매수일 이른 순)을 **이어받는다**(id·매수일·매입 환율·메모 유지, 수량·평단·증권사·계좌만 화면 값, 되돌리기 `modified`) — 거래 기록 연결·올해 배당 유지. 정말 새 종목(코인 포함)의 매수일 = **올해 1월 1일**(`resyncNewPurchaseDate`, 대표 결정 11-10), `positionEffectiveDate`=오늘, 해외 매입 환율=입력값/오늘 환율. 결산 예측 구간 투입일은 `resyncInflowDate`(맞추기 신규 + 매수일 기본값 그대로 → 만든 날, 그 밖 purchaseDate). 이어받기를 뺀 실제 신규 생성이 있으면 `새 종목(코인) 매수일` 입력 줄(#146 4.77, `resync-new-date`, 기본 올해 1/1·오늘 이전만·주식만 InfoHint; `resync-notice-3` 삭제). vitest `resync/__tests__/purchase-date-139.test.ts`, `resync-flows.test.ts` (d')(이번 달·연·1월·정밀 4구간 main과 원인 동일)·(d'')
 - 이어받기 건수(#144, v4.76): 미리보기 요약·결과 건수·행 라벨은 이어받은 행을 `추가 1·삭제 1`이 아니라 `변경 1`로 센다(`inheritedPreds`, 행은 기존 변경 행 모양 전→후). 적용 결과·되돌리기 불변

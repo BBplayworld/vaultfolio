@@ -10,6 +10,8 @@ export type ImportStock = Omit<Stock, "id"> & {
   tickerInput?: string;
   originalCurrency?: "KRW" | "USD" | "JPY";
   broker?: string;
+  /** 평단을 화면에서 읽지 못해 손익률로 역산한 값인지 (서버 응답 그대로 전달, 라벨 표시용) */
+  averagePriceEstimated?: boolean;
 };
 
 /** 파싱 응답의 종목 1건 (서버 원본) */

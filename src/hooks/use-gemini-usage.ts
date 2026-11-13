@@ -1,7 +1,7 @@
 "use client";
 
 // 기기(브라우저)별 하루 Gemini AI 인식 사용 한도
-const CLIENT_DAILY_LIMIT = 15;
+const CLIENT_DAILY_LIMIT = 30;
 
 type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "classify" | "trade" | "crypto-trade";
 

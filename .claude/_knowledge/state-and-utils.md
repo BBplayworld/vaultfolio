@@ -984,3 +984,4 @@ computePriceChange(points) → % | null
 // stores/stock-page-store.ts — useStockPageStore { target: {groupStockIds,name,ticker,category,displayCurrency,origin:"stocks"|"market-compare"}, tradesFromStockPage }  (메모리만)
 // hooks/use-price-history.ts — usePriceHistory(ticker, range, enabled) · requestPriceHistory · buildPriceHistoryUrl  (queryKey ["price-history", ticker, range], 요청 키 {ticker, range})
 ```
+- 스크린샷 평단·현재가 정합(#196, 5.0): `parse-screenshot/price-consistency.ts reconcilePrices(cur, avg, rate, {quantity?, currentValue?, profitAmount?})` → `{currentPrice, averagePrice, action: keep|swap|estimate}`. swap 전 E1(평가금액÷수량)·E2(손익/수익률 부호) 교차 확인, 근거 없으면 4.99 동작.
