@@ -234,7 +234,7 @@ describe("reconcileImagePrices (이미지 단위 위치 일관)", () => {
   it("C102 퍼징: 바르게 읽힌 이미지(평가손익 포함)는 새로 뒤집지 않는다", () => {
     let seed = 12345;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
-    for (let n = 0; n < 3000; n++) {
+    for (let n = 0; n < 20000; n++) {
       const count = 2 + Math.floor(rnd() * 7);
       const rows: PriceRowInput[] = [];
       for (let k = 0; k < count; k++) {
@@ -245,7 +245,9 @@ describe("reconcileImagePrices (이미지 단위 위치 일관)", () => {
         const pa = (cur - avg) * qty;
         // 일부 행은 수익률 부호 누락(C102)
         const signed = rnd() < 0.3 ? Math.abs(rate) : rate;
-        rows.push({ currentPrice: cur, averagePrice: avg, profitRate: signed, evidence: { quantity: qty, profitAmount: pa } });
+        // 근거(평가손익·수량·평가금액)가 일부 행에서 빠지는 경우도 섞는다(5.101 qa D-1)
+        const ev = rnd() < 0.5 ? { quantity: qty, profitAmount: pa } : rnd() < 0.5 ? {} : { quantity: qty, currentValue: cur * qty };
+        rows.push({ currentPrice: cur, averagePrice: avg, profitRate: signed, evidence: ev });
       }
       const out = reconcileImagePrices(rows);
       out.forEach((o, i) => {
@@ -254,5 +256,16 @@ describe("reconcileImagePrices (이미지 단위 위치 일관)", () => {
         if (single.action !== "swap") expect(o.action).not.toBe("swap");
       });
     }
+  });
+  it("D-1: 평가손익이 없는 소수익률 행은 다수결을 적용하지 않는다", () => {
+    const rows = asRows(true);
+    rows[3] = { ...rows[3], evidence: {} };
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
+  });
+  it("D-2: 평가금액÷수량이 읽은 그대로와 맞으면 다수결로 덮지 않는다", () => {
+    const rows = asRows(true);
+    // 읽은 그대로: cur=357.88 → 평가금액 = 357.88*7
+    rows[3] = { ...rows[3], evidence: { profitAmount: 21, quantity: 7, currentValue: 357.88 * 7 } };
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
   });
 });

@@ -99,7 +99,7 @@ const MAJORITY_RATIO = 3;
 /**
  * 한 이미지(한 응답)의 종목들을 함께 교정한다. 행마다 reconcilePrices를 적용하되, 수익률로 swap이 명확히 갈리는 행들의
  * 다수결이 swap으로 명확하면(표 2 이상, 반대 표의 3배 이상) 소수익률이라 방향을 못 정한 행에도 같은 방향(swap)을 적용한다.
- * 한 이미지는 현재가/평균단가 위치가 모두 같기 때문이다. 단 평가손익 부호가 swap 결과와 모순이면 그 행은 그대로 둔다.
+ * 한 이미지는 현재가/평균단가 위치가 모두 같기 때문이다. 단 평가손익이 없거나 부호가 swap 결과와 모순이거나, 평가금액÷수량이 읽은 그대로와 맞으면 그 행은 그대로 둔다.
  * 동률·근거 부족이면 행별 결과 그대로(기존 동작). asIs가 다수면 애매한 행은 어차피 그대로라 변화 없음.
  */
 export function reconcileImagePrices(rows: PriceRowInput[]): PriceConsistencyResult[] {
@@ -111,8 +111,12 @@ export function reconcileImagePrices(rows: PriceRowInput[]): PriceConsistencyRes
     if (!swapMajority || !c.ambiguous || c.result.action !== "keep") return c.result;
     const { currentPrice: cur, averagePrice: avg, evidence } = rows[i];
     const pa = evidence?.profitAmount ?? 0;
-    // 평가손익 부호가 읽은 그대로(cur-avg)와 같고 swap 결과(avg-cur)와 다르면 swap은 평가손익과 모순
-    if (pa !== 0 && Math.sign(pa) !== Math.sign(avg - cur)) return c.result;
+    // 평가손익이 없으면 다수결을 적용하지 않는다(근거 없이 새로 뒤집지 않음, C102)
+    if (pa === 0) return c.result;
+    // 평가손익 부호가 swap 결과(avg-cur)와 다르면 swap은 평가손익과 모순
+    if (Math.sign(pa) !== Math.sign(avg - cur)) return c.result;
+    // 평가금액÷수량이 읽은 그대로에 엄격히 맞으면 읽은 그대로가 맞다는 근거라 다수결로 덮지 않는다
+    if (unitVerdict(cur, avg, evidence, UNIT_MATCH_STRICT) === "asIs") return c.result;
     if (cur === avg) return c.result;
     return { currentPrice: avg, averagePrice: cur, action: "swap" };
   });

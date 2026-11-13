@@ -1048,14 +1048,18 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
       {row.reasons.includes("ambiguous") && row.candidates && (
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground text-pretty break-keep">같은 종목이 여러 곳에 있어요. 어느 항목을 맞출까요?</p>
-          {row.reasons.includes("multiAccount") && <p className="text-sm text-muted-foreground text-pretty break-keep">계좌가 달라 하나로 정할 수 없었어요</p>}
+          {row.reasons.includes("otherType") ? (
+            <p className="text-sm text-muted-foreground text-pretty break-keep">고른 유형에는 없고 다른 계좌에 있어요</p>
+          ) : (
+            row.reasons.includes("multiAccount") && <p className="text-sm text-muted-foreground text-pretty break-keep">계좌가 달라 하나로 정할 수 없었어요</p>
+          )}
           <Select onValueChange={(id) => { onPick(id); onInclude(true); }}>
             <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10"><SelectValue placeholder="항목 선택" /></SelectTrigger>
             <SelectContent>
               {row.candidates.map((c) => (
                 <SelectItem key={c.id} value={c.id} className="min-h-10 text-sm">
                   <span className="flex flex-col">
-                    <span>
+                    <span className="text-pretty break-keep">
                       {isUnassignedBroker(c.broker) ? `${T.broker} 미지정` : c.broker} · {categoryShort(c.category)}
                       {c.description ? ` · ${c.description}` : ""}
                     </span>

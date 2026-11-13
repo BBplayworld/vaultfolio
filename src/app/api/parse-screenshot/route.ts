@@ -112,7 +112,7 @@ function processStockResults(raw: GeminiStock[], today: string) {
   return filtered.map((raw0, idx) => {
     const fixed = fixedAll[idx];
     // 종목명 끝에 붙은 수량 괄호(예: 미래에셋 "KODEX 미국빅테크10(104)") 제거
-    const cleanName = stripTrailingQuantity(raw0.name, raw0.quantityMissing ? 0 : raw0.quantity);
+    const cleanName = stripTrailingQuantity(raw0.name, raw0.quantityMissing ? 0 : raw0.quantity, raw0.ticker);
     const s: GeminiStock = { ...raw0, name: cleanName, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";

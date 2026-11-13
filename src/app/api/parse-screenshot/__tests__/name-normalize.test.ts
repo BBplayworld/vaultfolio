@@ -64,4 +64,11 @@ describe("stripTrailingQuantity (종목명 끝 수량 괄호)", () => {
     expect(stripTrailingQuantity("KODEX 미국 빅테크10(H)", 174)).toBe("KODEX 미국빅테크10(H)");
     expect(stripTrailingQuantity("없는 종목 XYZ", 3)).toBe("없는 종목 XYZ");
   });
+  it("N-1: 영문 이름의 | 는 티커가 아니면 보존, 한글 구분 라벨·티커 일치면 제거", () => {
+    expect(stripTrailingQuantity("Procter | Gamble", 3, "PG")).toBe("Procter | Gamble");
+    expect(stripTrailingQuantity("Procter | Gamble", 3)).toBe("Procter | Gamble");
+    expect(stripTrailingQuantity("엔비디아 현금 | NVDA", 3, "NVDA")).toBe("엔비디아");
+    expect(stripTrailingQuantity("엔비디아 | NVDA", 3, "NVDA")).toBe("엔비디아");
+    expect(stripTrailingQuantity("엔비디아 | NVDA", 3, "AAPL")).toBe("엔비디아 | NVDA");
+  });
 });

@@ -21,15 +21,21 @@ function canonicalMasterName(name: string): string {
   return (n.length >= 4 && masterByNorm.get(n)) || name;
 }
 
-export function stripTrailingQuantity(name: string, quantity: number): string {
+export function stripTrailingQuantity(name: string, quantity: number, ticker?: string | null): string {
   if (!name) return name;
-  return canonicalMasterName(stripCore(name, quantity));
+  return canonicalMasterName(stripCore(name, quantity, ticker));
 }
 
-function stripCore(name: string, quantity: number): string {
+function stripCore(name: string, quantity: number, ticker?: string | null): string {
   // 2행 꼬리 `현금 | TSLA` (구분 1~4자 한글 + | + 티커)
-  const noTail = name.replace(/\s*[가-힣]{0,4}\s*\|\s*[A-Za-z0-9.-]{1,12}\s*$/, "");
-  if (noTail !== name && noTail.trim()) name = noTail.trim();
+  // `구분 | 티커`(구분은 알려진 계좌 구분 라벨)이거나 `|` 뒤가 이 종목의 티커와 같을 때만 제거(영문 이름 `Procter | Gamble` 보존)
+  const tm = name.match(/^(.*?)\s*\|\s*([A-Za-z0-9.-]{1,12})\s*$/);
+  if (tm && tm[1].trim()) {
+    const head = tm[1].trim();
+    const lm = head.match(/^(.*\S)\s+(?:현금|신용|융자|대출|담보|대주|일반|위탁|예탁)$/);
+    if (lm) name = lm[1];
+    else if (ticker && tm[2].toUpperCase() === ticker.trim().toUpperCase()) name = head;
+  }
   // 잘린 이름: 끝의 열린 괄호·말줄임(겹쳐 있어도 모두)
   const truncated = name.replace(/(?:\s|\(|…|\.{2,})+$/, "");
   if (truncated !== name && truncated.trim()) return truncated.trim();
