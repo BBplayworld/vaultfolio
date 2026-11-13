@@ -456,3 +456,4 @@
 - 2026-11-13 11:46 v4.95 위임 머지: PR #186 @319144c → squash 1a5e017. 판독 경계. 한계 수용: 달력 칸 증감 버림 축약(1천만~1,999만 = +0.1억), 칸 순자산 '5.5억/원' 개행은 기존 동작(후속 후보). 회고: COO 2회 반려(달력 칸 잘림 → max-sm 범위 과다) → CHECKLIST C97·C98.
 - 2026-11-13 JPY 배당 환율 1 의심 qa 기각(현재 영향 0: 일본 배당 조회 미지원으로 payout 비어 있음, 일본 종목 배당은 합계에서 누락). 일본 배당 조회 추가 시 4곳(dividend-chart·performance-hub·monthly-dividend-stocks·dividend-yield)에 JPY 환율 분기 필수 — 후보 메모(2026-11-13-jpy-dividend-qa.md).
 - 2026-11-13 12:35 v4.96 위임 머지: PR #188 @15da435 → squash 4314839. 판독 경계. 한계: <375 1천만~2천만 증감 최대 50% 오차, 320 +877만 두 줄. C99(Tailwind v4 max-[N]은 폭<N, 경계는 같은 N으로 max/min 짝) 추가.
+- 2026-11-13 13:30 v4.97 = #189 선정(cto): A 배당 공용 fetch(실패 throw·안내 1줄)·B 새 입력 기본 날짜 todayKst(loan·crypto·physical·real-estate), 컷 순서 p3 경계 → 홈 '어제' → 리포트 안내 줄. 콘솔 로그 후보는 운영 출력 0(IS_DEV 전용)이라 단독 탈락.
