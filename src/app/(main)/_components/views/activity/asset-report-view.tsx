@@ -97,6 +97,13 @@ const AXIS_ICONS: Record<AxisKey, typeof TrendingUp> = {
   habit: Repeat,
 };
 
+/** 상단 측정 문구 — 잠정 축이 있으면 '측정 완료'라 말하지 않는다 */
+export function gradeCountCaption(grade: { measuredCount: number; axes: { pending?: boolean }[] }): string {
+  const pending = grade.axes.filter((a) => a.pending).length;
+  if (pending > 0) return `5축 중 ${pending}축 잠정`;
+  return grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`;
+}
+
 export function AssetReportView() {
   const { assetData, getAssetSummary, exchangeRates, snapshotVersion, recordGradeSnapshot } = useAssetData();
   const { navigate } = useAssetNavigation();
@@ -410,7 +417,7 @@ export function AssetReportView() {
                     {gradeDelta.tierChange === "up" ? `${tierLabel(grade.tier)} 승급!` : "등급이 내려갔어요"}
                   </p>
                 )}
-                <p className={`${CAPTION} mt-1 tabular-nums`}>{grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`}</p>
+                <p className={`${CAPTION} mt-1 tabular-nums`}>{gradeCountCaption(grade)}</p>
               </div>
               <p className={`${CAPTION} text-pretty break-keep`}>{TIER_SUMMARY[grade.tier]}</p>
             </div>
@@ -652,7 +659,8 @@ export function AssetReportView() {
                         )}
                       </span>
                     </div>
-                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.reason}</p>
+                    {/* 배당 조회 실패 시 수익의 질은 배당 0 기준 설명·조언 대신 실패 안내만(안내 한 곳) */}
+                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.key === "earningQuality" && divFailed > 0 ? DIVIDEND_FETCH_FAILED_MESSAGE : axis.reason}</p>
                     {axis.key === "diversification" && fxLines && (
                       <div data-testid="fx-exposure-lines" className="space-y-0.5">
                         <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.ratioLine}</p>
@@ -660,7 +668,7 @@ export function AssetReportView() {
                         <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
                       </div>
                     )}
-                    {linked ? (
+                    {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
                       <button
                         type="button"
                         onClick={() => axisNavigate(axis.key)}
@@ -676,7 +684,6 @@ export function AssetReportView() {
                   );
                 })}
               </div>
-              {divFailed > 0 && <p className={`${CAPTION} text-pretty break-keep`}>{DIVIDEND_FETCH_FAILED_MESSAGE}</p>}
             </div>
 
             {/* ── AI 평가 프롬프트 ── */}
