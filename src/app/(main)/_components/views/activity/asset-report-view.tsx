@@ -664,7 +664,7 @@ export function AssetReportView() {
                             <>
                               {/* 값이 없는 축의 빈 별은 320에서 제목 폭을 빼앗아 3줄로 쌓이게 해 숨긴다(숫자·'측정불가'가 그 자리를 설명) */}
                               {divUnknown || axis.score === null ? (
-                                <span className="contents max-[359px]:hidden"><StarRating score={null} /></span>
+                                <span className="contents max-[360px]:hidden"><StarRating score={null} /></span>
                               ) : (
                                 <StarRating score={axis.score} />
                               )}

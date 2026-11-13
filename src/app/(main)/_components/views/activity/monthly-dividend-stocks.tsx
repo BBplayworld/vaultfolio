@@ -218,7 +218,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                   key={stock.id}
                   className="grid grid-cols-[minmax(0,1fr)_3.25rem_3rem_3.5rem_3.5rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1.5 sm:gap-x-3 px-2 sm:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
                 >
-                  <div className={`min-w-0 ${estimatedMonths.length > 0 ? "min-[360px]:max-sm:pr-4" : ""}`}>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
                       <span className="hidden sm:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
