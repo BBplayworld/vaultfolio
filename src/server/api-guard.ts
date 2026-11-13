@@ -251,7 +251,7 @@ function secondsUntilKstMidnight(now = Date.now()): number {
   return Math.max(60, 86400 - Math.floor((kstMs % 86_400_000) / 1000));
 }
 
-/** 비중 미리보기(/ratio) 입구 전용 풀 한도 — 앱 사용자 몫(전역 300 중 240)을 보호 */
+/** 비중 미리보기(/ratio) 입구 전용 풀 한도 — 앱 사용자 몫(전역 1500 중 1440)을 보호 */
 export const RATIO_POOL = { name: "ratio", dailyLimit: 60, perIpDailyLimit: 5 } as const;
 
 export interface GeminiPool {

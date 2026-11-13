@@ -177,7 +177,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
+**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`

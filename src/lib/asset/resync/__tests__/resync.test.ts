@@ -220,6 +220,16 @@ describe("S3 연결 사실·수량 감소 확인 필요", () => {
     expect(diff.rows[0]).toMatchObject({ status: "needs", reasons: ["ambiguous"] });
     expect(result.stocks).toEqual(e);
   });
+  it("④ 같은 증권사·같은 유형 후보 2건은 multiAccount 사유 코드가 함께 붙는다 (#198)", () => {
+    const e = [st("a", "005930", "irp", "키움증권", 10, 1), st("b", "005930", "irp", "키움증권", 4, 1)];
+    const { diff } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "키움증권", section: "기타", category: "irp" })])]);
+    expect(diff.rows[0].reasons).toEqual(expect.arrayContaining(["ambiguous", "multiAccount"]));
+  });
+  it("④ 후보 증권사가 다르면 multiAccount 아님 (#198)", () => {
+    const e = [st("a", "005930", "domestic", "", 10, 1), st("b", "005930", "domestic", "항목 2", 4, 1)];
+    const { diff } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "토스증권" })])]);
+    expect(diff.rows[0].reasons).not.toContain("multiAccount");
+  });
   it("④ 줄을 고르고 포함하면 그 줄만 갱신", () => {
     const e = [st("a", "005930", "domestic", "", 10, 1), st("b", "005930", "domestic", "항목 2", 4, 1)];
     const { result } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "토스증권" })])], {
