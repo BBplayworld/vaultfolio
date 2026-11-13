@@ -7,7 +7,7 @@
 ## 2026-11-13 (v4.98)
 
 ### 배당을 못 불러온 날 자산 성적표를 확정·기록하지 않기 (#4.98, 이슈 #191)
-- 성적표 `divReady = isDividendReady(loading, failedCount)`(`dividend-client.ts`). 실패 시 '수익의 질'·'레버리지' 축 기존 '잠정' 배지 → `gradeSettled` false라 `recordGradeSnapshot`·▲▼ 대비 생략(배당 0 기준 등급이 daily·monthly·홈 배지에 저장되던 문제). 계산 근거 금융자산·연간 값 '—', 5축 섹션 아래 `DIVIDEND_FETCH_FAILED_MESSAGE` 1줄. 저장 스키마·키·서버 diff 0. 상단은 잠정 축이 있으면 `5축 중 N축 잠정`(`gradeCountCaption`), 수익의 질 카드는 실패 시 설명·조언 대신 안내 1줄만(하단 안내 줄 삭제). 한계: 이미 기록된 과거 값 보정 없음(다음 성공 방문이 덮어씀).
+- 성적표 `divReady = isDividendReady(loading, failedCount)`(`dividend-client.ts`). 실패 시 '수익의 질'·'레버리지' 축 기존 '잠정' 배지 → `gradeSettled` false라 `recordGradeSnapshot`·▲▼ 대비 생략(배당 0 기준 등급이 daily·monthly·홈 배지에 저장되던 문제). 계산 근거 금융자산·연간 값 '—', 5축 섹션 아래 `DIVIDEND_FETCH_FAILED_MESSAGE` 1줄. 저장 스키마·키·서버 diff 0. 칩은 잠정 축을 뺀 `N/5 측정`, 배당 실패 잠정 축 점수는 '—'. 상단은 잠정 축이 있으면 `5축 중 N축 잠정`(`gradeCountCaption`), 수익의 질 카드는 실패 시 설명·조언 대신 안내 1줄만(하단 안내 줄 삭제). 한계: 이미 기록된 과거 값 보정 없음(다음 성공 방문이 덮어씀).
 
 ## 2026-11-13 (v4.97)
 

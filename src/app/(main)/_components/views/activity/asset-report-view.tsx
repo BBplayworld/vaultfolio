@@ -104,6 +104,12 @@ export function gradeCountCaption(grade: { measuredCount: number; axes: { pendin
   return grade.measuredCount >= 5 ? "5축 모두 측정 완료" : `5축 중 ${grade.measuredCount}축 측정`;
 }
 
+/** 5축 카드 헤더 칩 — 잠정 축은 확정 측정에서 뺀다(상단 문구와 같은 판정) */
+export function gradeChipLabel(grade: { measuredCount: number; axes: { pending?: boolean }[] }): string {
+  const pending = grade.axes.filter((a) => a.pending).length;
+  return `${Math.max(0, grade.measuredCount - pending)}/5 측정`;
+}
+
 export function AssetReportView() {
   const { assetData, getAssetSummary, exchangeRates, snapshotVersion, recordGradeSnapshot } = useAssetData();
   const { navigate } = useAssetNavigation();
@@ -624,7 +630,7 @@ export function AssetReportView() {
                 icon={Star}
                 title="5축 측정"
                 tone="gold"
-                badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{grade.measuredCount}/5 측정</span>}
+                badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{gradeChipLabel(grade)}</span>}
               />
               <div className="space-y-2">
                 {grade.axes.map((axis, idx) => {
@@ -651,12 +657,22 @@ export function AssetReportView() {
                             </span>
                           ) : null;
                         })()}
-                        <StarRating score={axis.score} />
-                        {axis.score !== null ? (
-                          <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
-                        ) : (
-                          <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
-                        )}
+                        {(() => {
+                          // 배당 실패로 잠정인 축(수익의 질·레버리지)은 배당 0 기준 점수라 숫자를 보이지 않는다
+                          const divUnknown = divFailed > 0 && !!axis.pending && (axis.key === "earningQuality" || axis.key === "leverage");
+                          return (
+                            <>
+                              <StarRating score={divUnknown ? null : axis.score} />
+                              {divUnknown ? (
+                                <span className="text-sm font-semibold text-muted-foreground w-7 text-right">—</span>
+                              ) : axis.score !== null ? (
+                                <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
+                              ) : (
+                                <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </span>
                     </div>
                     {/* 배당 조회 실패 시 수익의 질은 배당 0 기준 설명·조언 대신 실패 안내만(안내 한 곳) */}
