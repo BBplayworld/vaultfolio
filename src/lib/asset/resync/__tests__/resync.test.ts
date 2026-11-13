@@ -44,9 +44,9 @@ describe("매칭 표 ①①'②③④", () => {
     const ex = [st("a", "005930", "domestic", "토스증권", 1, 1), st("b", "005930", "domestic", "키움증권", 1, 1)];
     expect(matchExisting(t({}), ex)).toMatchObject({ kind: "linked", linkedBy: "exact", stock: { id: "a" } });
   });
-  it("①' category만 다름(ISA↔일반) → 기존 항목", () => {
+  it("①' category만 다름(ISA↔일반) → 조용히 연결하지 않고 후보로 묻는다(5.101)", () => {
     const ex = [st("a", "005930", "isa", "토스증권", 1, 1)];
-    expect(matchExisting(t({}), ex)).toMatchObject({ kind: "linked", linkedBy: "category", stock: { id: "a" } });
+    expect(matchExisting(t({}), ex)).toMatchObject({ kind: "ambiguous", crossType: true, candidates: [{ id: "a" }] });
   });
   it.each([[""], [undefined], ["항목 2"]])("② broker %j 단일 줄 연결", (b) => {
     const ex = [st("a", "005930", "domestic", b, 1, 1)];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reconcilePrices } from "../price-consistency";
+import { reconcileImagePrices, reconcilePrices, type PriceRowInput } from "../price-consistency";
 
 describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
   it("수익률과 맞으면 유지", () => {
@@ -187,5 +187,107 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
     it("비율로도 안 맞으면 기존대로 추정 경로", () => {
       expect(reconcilePrices(120, 100, 0.5).action).toBe("estimate");
     });
+  });
+});
+
+// 가공 숫자. 키움형: 현재가 위/평균단가 아래. AI가 한 이미지를 통째로 바꿔 읽은 경우
+const trueRows = [
+  { cur: 400, avg: 330, rate: 21.2, pa: 3000 },
+  { cur: 160, avg: 150, rate: 6.67, pa: 400 },
+  { cur: 130, avg: 135, rate: -3.7, pa: -90 }, // 수익률 -3.7: asIs 오차 0 / swapped 약 3.85 -> asIs 명확
+  { cur: 360.98, avg: 357.88, rate: 0.86, pa: 21 }, // 소수익률: 방향 애매
+];
+const asRows = (swap: boolean): PriceRowInput[] =>
+  trueRows.map((t) => ({
+    currentPrice: swap ? t.avg : t.cur,
+    averagePrice: swap ? t.cur : t.avg,
+    profitRate: t.rate,
+    evidence: { profitAmount: t.pa },
+  }));
+
+describe("reconcileImagePrices (이미지 단위 위치 일관)", () => {
+  it("통째로 바꿔 읽힌 이미지: 소수익률 행도 같은 방향으로 교정", () => {
+    const out = reconcileImagePrices(asRows(true));
+    expect(out.map((o) => [o.currentPrice, o.averagePrice])).toEqual(trueRows.map((t) => [t.cur, t.avg]));
+  });
+  it("개별 판정만으로는 소수익률 행이 그대로(근거 확인)", () => {
+    const r = asRows(true)[3];
+    expect(reconcilePrices(r.currentPrice, r.averagePrice, r.profitRate, r.evidence).action).toBe("keep");
+  });
+  it("바르게 읽힌 이미지는 아무 행도 바뀌지 않음", () => {
+    const out = reconcileImagePrices(asRows(false));
+    expect(out.every((o) => o.action === "keep")).toBe(true);
+  });
+  it("표 부족(swap 행 1개)·동률이면 현행 유지", () => {
+    const rows = asRows(true);
+    const out1 = reconcileImagePrices([rows[0], rows[3]]);
+    expect(out1[1].action).toBe("keep");
+    const mixed = [...asRows(true).slice(0, 2), ...asRows(false).slice(2, 3), asRows(true)[3]];
+    const out2 = reconcileImagePrices(mixed);
+    expect(out2[3].action).toBe("keep");
+  });
+  it("평가손익 부호가 swap과 모순이면 그 행은 유지", () => {
+    const rows = asRows(true);
+    rows[3] = { ...rows[3], evidence: { profitAmount: -21 } }; // 읽은 그대로(cur<avg)와 부호 같음 -> swap 모순
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
+  });
+  // 이미지 단위 일관 오류 모델: 한 장의 모든 행이 같은 방향으로 읽힌다(바르게 읽힌 장 = 수익률 부호 정상).
+  // 근거는 행마다 평가손익/자기계산 평가금액(읽은 현재가×수량)/없음이 섞인다
+  function makeImage(rnd: () => number, signedRates: boolean) {
+    const count = 2 + Math.floor(rnd() * 7);
+    const rows: PriceRowInput[] = [];
+    for (let k = 0; k < count; k++) {
+      const avg = 10 + rnd() * 500;
+      const rate = rnd() < 0.4 ? (rnd() - 0.5) * 4 : (rnd() - 0.5) * 80;
+      const cur = avg * (1 + rate / 100);
+      const qty = 1 + Math.floor(rnd() * 100);
+      const pa = (cur - avg) * qty;
+      const shown = signedRates || rnd() >= 0.3 ? rate : Math.abs(rate);
+      const ev = rnd() < 0.4 ? { quantity: qty, profitAmount: pa } : rnd() < 0.5 ? {} : { quantity: qty, currentValue: cur * qty };
+      rows.push({ currentPrice: cur, averagePrice: avg, profitRate: shown, evidence: ev });
+    }
+    return rows;
+  }
+  const lcg = (seed: number) => () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+
+  it("C102 퍼징(일관 오류 모델): 바르게 읽힌 이미지는 20000장 모두 새 swap 0", () => {
+    const rnd = lcg(12345);
+    for (let n = 0; n < 20000; n++) {
+      const rows = makeImage(rnd, true);
+      reconcileImagePrices(rows).forEach((o) => expect(o.action).not.toBe("swap"));
+    }
+  });
+  it("행별 독립 오류 모델(수익률 부호 누락 30% 혼재) 잔여: 행별 결과에 없던 새 swap은 행의 1% 미만", () => {
+    const rnd = lcg(777);
+    let rowsN = 0;
+    let added = 0;
+    for (let n = 0; n < 20000; n++) {
+      const rows = makeImage(rnd, false);
+      reconcileImagePrices(rows).forEach((o, i) => {
+        rowsN++;
+        const single = reconcilePrices(rows[i].currentPrice, rows[i].averagePrice, rows[i].profitRate, rows[i].evidence);
+        if (single.action !== "swap" && o.action === "swap") added++;
+      });
+    }
+    expect(added / rowsN).toBeLessThan(0.01);
+  });
+  it("브로드컴형(평가금액 열 없음): 평가손익이 있든 0이든 같은 장의 뒤바뀐 읽기가 교정된다", () => {
+    for (const pa of [21, 0]) {
+      // 다른 행은 평가손익만, 소수익률 행은 AI가 읽은(뒤바뀐) 현재가×수량으로 평가금액을 자기 계산
+      const rows = asRows(true).map((r, i) =>
+        i === 3 ? { ...r, evidence: { quantity: 7, currentValue: r.currentPrice * 7, profitAmount: pa } } : r,
+      );
+      expect(reconcileImagePrices(rows)[3]).toMatchObject({ currentPrice: 360.98, averagePrice: 357.88, action: "swap" });
+    }
+  });
+  it("평가손익이 있고 swap과 부호가 모순이면 유지", () => {
+    const rows = asRows(true);
+    rows[3] = { ...rows[3], evidence: { profitAmount: -21 } };
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
+  });
+  it("D-2: 평가금액÷수량이 읽은 현재가와 독립적으로(0.05% 초과·0.2% 이내) 맞으면 다수결로 덮지 않는다", () => {
+    const rows = asRows(true);
+    rows[3] = { ...rows[3], evidence: { profitAmount: 21, quantity: 7, currentValue: 357.88 * 7 * 1.001 } };
+    expect(reconcileImagePrices(rows)[3].action).toBe("keep");
   });
 });

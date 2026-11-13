@@ -9,6 +9,7 @@ export type RowStatus = "add" | "change" | "remove" | "same" | "needs";
 export type NeedsReason =
   | "qtyDecrease" // ②③ 연결인데 수량이 줄었다(S3)
   | "ambiguous" // 후보 2건 이상(④)
+  | "otherType" // 고른 유형엔 없고 같은 증권사의 다른 유형(IRP 등)에만 같은 티커가 있다 — 후보 선택 + 새로 추가(5.101)
   | "multiAccount" // ambiguous 중 후보가 같은 증권사·같은 유형(DC·IRP 등 계좌만 다름) — 문구 구분용
   | "qtyConflict" // 두 장 수량이 다르다(K1)
   | "brokerUnconfirmed" // 증권사 미확정 장
@@ -129,9 +130,9 @@ export function computeDiff(existing: Stock[], items: MergedItem[], screens: Res
       m.candidates.forEach((c) => protectedIds.add(c.id));
       touchedScopes.set(scopeKeyOf(item.broker, item.category), { broker: item.broker, category: item.category });
       // 후보 전부 같은 증권사·같은 계좌 유형이면 계좌만 다른 경우(저장 데이터로는 구분 불가)
-      const [c0, ...cRest] = m.candidates;
-      const multiAccount = cRest.every((c) => c.category === c0.category && sameBroker(c.broker, c0.broker));
-      rows.push({ rowId, status: "needs", reasons: ["ambiguous", ...(multiAccount ? ["multiAccount" as const] : []), ...reasons], item, candidates: m.candidates });
+      const inType = m.candidates.filter((c) => c.category === item.category);
+      const multiAccount = !m.crossType && inType.length > 1 && inType.every((c) => sameBroker(c.broker, inType[0].broker));
+      rows.push({ rowId, status: "needs", reasons: ["ambiguous", ...(m.crossType ? ["otherType" as const] : []), ...(multiAccount ? ["multiAccount" as const] : []), ...reasons], item, candidates: m.candidates });
       continue;
     }
     if (m.kind === "linked") {

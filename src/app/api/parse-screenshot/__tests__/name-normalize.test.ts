@@ -45,4 +45,30 @@ describe("stripTrailingQuantity (종목명 끝 수량 괄호)", () => {
   it("마스터에 없는 이름의 다른 괄호 숫자는 보존", () => {
     expect(stripTrailingQuantity("없는종목XYZ(98)", 104)).toBe("없는종목XYZ(98)");
   });
+  it("닫는 괄호 없는 (숫자 꼬리: 수량과 같으면 제거", () => {
+    expect(stripTrailingQuantity("KODEX 미국빅테크10(104", 104)).toBe("KODEX 미국빅테크10");
+    expect(stripTrailingQuantity("ACE 미국S&P500 (1,314", 1314)).toBe("ACE 미국S&P500");
+  });
+  it("닫는 괄호 없는 (숫자 꼬리: 수량과 달라도 마스터가 접두 일치하면 그대로 두고, 못 찾으면 보존", () => {
+    expect(stripTrailingQuantity("없는종목XYZ(77", 5)).toBe("없는종목XYZ(77");
+  });
+  it("키움 2행 꼬리 `구분 | 티커`·말줄임 제거 (5.101)", () => {
+    expect(stripTrailingQuantity("엔비디아 현금 | NVDA", 126)).toBe("엔비디아");
+    expect(stripTrailingQuantity("테슬라 현금|TSLA", 460)).toBe("테슬라");
+    expect(stripTrailingQuantity("비트마인 이머전… 현금 | BMNR", 45)).toBe("비트마인 이머전");
+    expect(stripTrailingQuantity("디렉시온 테슬라(… 현금 | TSLL", 80)).toBe("디렉시온 테슬라");
+  });
+  it("줄바꿈 공백은 마스터 표기로 통일, 마스터에 없으면 그대로", () => {
+    const code = lookupTicker("KODEX 미국빅테크10(H)");
+    expect(code).toBeTruthy();
+    expect(stripTrailingQuantity("KODEX 미국 빅테크10(H)", 174)).toBe("KODEX 미국빅테크10(H)");
+    expect(stripTrailingQuantity("없는 종목 XYZ", 3)).toBe("없는 종목 XYZ");
+  });
+  it("N-1: 영문 이름의 | 는 티커가 아니면 보존, 한글 구분 라벨·티커 일치면 제거", () => {
+    expect(stripTrailingQuantity("Procter | Gamble", 3, "PG")).toBe("Procter | Gamble");
+    expect(stripTrailingQuantity("Procter | Gamble", 3)).toBe("Procter | Gamble");
+    expect(stripTrailingQuantity("엔비디아 현금 | NVDA", 3, "NVDA")).toBe("엔비디아");
+    expect(stripTrailingQuantity("엔비디아 | NVDA", 3, "NVDA")).toBe("엔비디아");
+    expect(stripTrailingQuantity("엔비디아 | NVDA", 3, "AAPL")).toBe("엔비디아 | NVDA");
+  });
 });

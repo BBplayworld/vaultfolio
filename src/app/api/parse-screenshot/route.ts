@@ -5,7 +5,7 @@ import { KR_CODES } from "@/lib/finance/kr-master";
 import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { isTinyImage } from "./image-size";
-import { reconcilePrices } from "./price-consistency";
+import { reconcileImagePrices } from "./price-consistency";
 import { stripTrailingQuantity } from "./name-normalize";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
@@ -94,15 +94,25 @@ function processStockResults(raw: GeminiStock[], today: string) {
 
   let prevCategory: "domestic" | "foreign" = "domestic";
 
+  // 2줄 헤더 표에서 현재가·평단이 바뀌어 읽힌 경우 수익률로 교정 (평단 불일치 시 0 → 역산 경로).
+  // 한 이미지는 위치가 모두 같으므로 이미지 단위 다수결로 소수익률 행에도 같은 방향 적용
+  const fixedAll = reconcileImagePrices(
+    filtered.map((r) => ({
+      currentPrice: r.currentPrice ?? 0,
+      averagePrice: r.averagePrice ?? 0,
+      profitRate: r.profitRate ?? 0,
+      evidence: {
+        quantity: !r.quantityMissing && r.quantity > 0 ? r.quantity : undefined,
+        currentValue: r.currentValue,
+        profitAmount: r.profitAmount,
+      },
+    })),
+  );
+
   return filtered.map((raw0, idx) => {
-    // 2줄 헤더 표에서 현재가·평단이 바뀌어 읽힌 경우 수익률로 교정 (평단 불일치 시 0 → 역산 경로)
-    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0, {
-      quantity: !raw0.quantityMissing && raw0.quantity > 0 ? raw0.quantity : undefined,
-      currentValue: raw0.currentValue,
-      profitAmount: raw0.profitAmount,
-    });
+    const fixed = fixedAll[idx];
     // 종목명 끝에 붙은 수량 괄호(예: 미래에셋 "KODEX 미국빅테크10(104)") 제거
-    const cleanName = stripTrailingQuantity(raw0.name, raw0.quantityMissing ? 0 : raw0.quantity);
+    const cleanName = stripTrailingQuantity(raw0.name, raw0.quantityMissing ? 0 : raw0.quantity, raw0.ticker);
     const s: GeminiStock = { ...raw0, name: cleanName, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";

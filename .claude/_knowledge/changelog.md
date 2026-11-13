@@ -7,6 +7,8 @@
 ## 2026-11-13 (v5.0)
 
 ### 스크린샷 등록 평단가를 맞게 읽고, 맞게 말하기 (#5.0, 이슈 #196)
+- 5.101(추가): 맞추기 후보 — `match.ts matchExisting`: 고른 유형에 같은 티커 0개·같은 증권사 다른 유형에 있으면 조용히 연결하지 않고 `ambiguous`(+`crossType`) → `diff.ts` 사유 `otherType`(후보 = 다른 유형 항목, '항목 선택', 캡션 '고른 유형에는 없고 다른 계좌에 있어요'; 체크하지 않으면 그대로). 고른 유형 1개 자동 확정은 현행, 2개 이상(multiAccount)도 같은 증권사·티커의 다른 유형 항목을 후보에 함께 노출(고른 유형 먼저). 다수결은 평가손익 없음·평가금액 엄격 일치(asIs) 행 제외, `|` 꼬리는 알려진 구분 라벨 또는 티커 일치일 때만 제거.
+- 5.101: 스크린샷 인식 정확도 — `price-consistency.ts reconcileImagePrices`(이미지 단위 swap 다수결: 명확한 swap 표 2 이상·반대 3배 이상이면 소수익률 행도 같은 방향, 평가손익 부호 모순 행 제외), `route.ts processStockResults`가 이 함수 사용. `name-normalize.ts`: 닫는 괄호 없는 `(숫자` 꼬리·키움 `구분 | 티커` 꼬리·겹친 말줄임 제거, 마스터와 공백·괄호 무시로 같으면 마스터 표기로 통일. 저장 스키마·키·동기화·GA·서버 전송 변경 0.
 - 등록 화면 라벨·안내를 `averagePriceEstimated`일 때만 '평단가(추정)'·역산 안내로(`stock-screenshot-import.tsx`, 맞추기 미리보기와 같은 규칙). `ImportStock.averagePriceEstimated?` 타입 필드 1개 추가(저장 키 변화 없음, 기존부터 spread로 저장되던 값).
 - `price-consistency.ts reconcilePrices(cur, avg, rate, evidence?)`: swap 전 2차 근거 E1(평가금액÷수량이 한쪽에만 2% 이내) → 반대면 keep, E2(평가손익 부호≠수익률 부호) → keep, 근거 없음은 4.99 동작. 소수익률(3%p 이내)은 평가손익이 있고 E1이 swap 쪽에만 0.2% 이내로 맞으며 평가손익과 모순 없을 때만 swap.
 - #198: 기기별 하루 AI 인식 한도 15→30(`use-gemini-usage.ts`, 서버 IP 30 유지·전역 300→1500(`cache-storage.ts` GEMINI_SERVER_DAILY_LIMIT)). `parse-screenshot/name-normalize.ts stripTrailingQuantity`: 종목명 끝 `(수량)`이 인식 수량과 같으면 제거(미래에셋 `KODEX 미국빅테크10(104)`), 다르면 보존. 프롬프트에 수량·괄호 숫자 금지 한 줄.
