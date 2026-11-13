@@ -132,6 +132,26 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
       expect(reconcilePrices(10880, 10038, 0.0839)).toEqual({ currentPrice: 10880, averagePrice: 10038, action: "keep" });
       expect(reconcilePrices(10880, 10038, -0.0839).action).not.toBe("keep"); // 부호 반대는 맞지 않음
     });
+    it("비율 표기 + 부호 누락 + 가격 뒤바뀜(근거 반대)은 keep하지 않고 estimate", () => {
+      const r = reconcilePrices(10000, 9000, 0.1, { quantity: 10, currentValue: 90000, profitAmount: -10000 });
+      expect(r.action).toBe("estimate");
+    });
+    it("비율 표기 + 평가금액÷수량이 현재가 쪽(정상 읽기, 부호 있음) → keep", () => {
+      expect(reconcilePrices(10880, 10038, 0.0839, { quantity: 10, currentValue: 108800, profitAmount: 8420 }).action).toBe("keep");
+    });
+    it("퍼징: 비율 표기 + 가격 뒤바뀜 + 올바른 평가금액·평가손익 → keep 아님", () => {
+      let seed = 4242;
+      const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < 1000; i++) {
+        const avg = 10 + rnd() * 990;
+        const rate = (rnd() * 0.5 + 0.05) * (rnd() < 0.5 ? -1 : 1); // 5~55% 손익
+        const cur = avg * (1 + rate);
+        const q = 1 + Math.floor(rnd() * 100);
+        // AI가 가격을 뒤바꿔 읽고 비율 표기(부호 누락)한 경우
+        const r = reconcilePrices(avg, cur, Math.abs(rate), { quantity: q, currentValue: cur * q, profitAmount: (cur - avg) * q });
+        expect(r.action).not.toBe("keep");
+      }
+    });
     it("비율로도 안 맞으면 기존대로 추정 경로", () => {
       expect(reconcilePrices(120, 100, 0.5).action).toBe("estimate");
     });
