@@ -74,6 +74,17 @@ export function formatShortCurrencyDecimal(value: number): string {
   return formatCurrency(value);
 }
 
+// 좁은 화면(320) 막대 값 라벨용 축약 — 원 생략, 억/만 단위, 10 미만 소수 1자리(버림)·이상 정수, 음수는 U+2212. 정밀값은 formatShortCurrencyDecimal
+export function formatCompactKRW(value: number): string {
+  const won = Math.round(Math.abs(value));
+  if (won === 0) return "0";
+  const sign = value < 0 ? "\u2212" : "";
+  const units = (v: number) => (v < 10 ? `${Math.floor(v * 10) / 10}` : `${Math.floor(v)}`);
+  if (won >= 1e8) return `${sign}${units(won / 1e8)}억`;
+  if (won >= 1e4) return `${sign}${units(won / 1e4)}만`;
+  return `${sign}${won.toLocaleString("ko-KR")}`;
+}
+
 // 보유일수 계산
 export function calculateHoldingDays(purchaseDate: string): number {
   const purchase = new Date(purchaseDate);
