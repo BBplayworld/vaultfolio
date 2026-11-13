@@ -12,6 +12,7 @@ import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
+import { fetchDividend, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
@@ -24,14 +25,6 @@ import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { HubChangeRows } from "./hub-change-rows";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
-
-async function fetchDividend(ticker: string, type: string): Promise<DividendPayoutResult[]> {
-  const params = new URLSearchParams({ ticker, type, excd: "NAS" });
-  const res = await fetch(`/api/finance/dividend?${params}`);
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json.data || [];
-}
 
 // dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유 (자산 성적표에서도 재사용)
 export function useDividendAnnualTotals() {
@@ -50,7 +43,7 @@ export function useDividendAnnualTotals() {
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       return {
         queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type),
+        queryFn: () => fetchDividend(ticker, type, "NAS"),
         staleTime: 30 * 24 * 60 * 60 * 1000,
         retry: false,
       };
@@ -58,6 +51,7 @@ export function useDividendAnnualTotals() {
   });
 
   const isLoading = queries.some((q) => q.isLoading);
+  const failedCount = countFailedDividends(queries);
 
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -77,6 +71,7 @@ export function useDividendAnnualTotals() {
 
   return {
     isLoading,
+    failedCount,
     annualActual: Math.round(annualActual),
     annualEstimated: Math.round(annualEstimated),
     annualTotal: Math.round(annualActual + annualEstimated),
@@ -124,7 +119,7 @@ export function PerformanceHub() {
   );
 
   // 배당 — 올해 연간 합계 (실제 + 예상)
-  const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
+  const { isLoading: divLoading, failedCount: divFailed, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
     <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
@@ -180,12 +175,17 @@ export function PerformanceHub() {
           primaryClassName={ASSET_THEME.text.default}
           secondary={divLoading && annualTotal === 0 ? (
             <LoadingNote active label={LOADING_LABEL.dividend} className="min-h-5" />
-          ) : !divLoading && annualTotal > 0 ? (
-            <span className="text-muted-foreground">
-              지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
-              <span className="mx-1.5 text-muted-foreground">·</span>
-              예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
-            </span>
+          ) : !divLoading && (annualTotal > 0 || divFailed > 0) ? (
+            <>
+              {annualTotal > 0 && (
+                <span className="text-muted-foreground">
+                  지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
+                </span>
+              )}
+              {divFailed > 0 && <p className="text-sm font-normal text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>}
+            </>
           ) : null}
           onClick={() => go("dividend")}
         />

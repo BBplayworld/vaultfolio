@@ -21,6 +21,7 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { PhysicalAsset, physicalAssetInputSchema, type PhysicalAssetType } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { physicalAssetTypes, quickButtonPresets } from "@/config/asset-options";
+import { todayKst } from "@/lib/tax-utils";
 
 const quickButtons = [...quickButtonPresets.physical];
 // 매입가 도움말은 모드별 1줄 — 수정 모드는 일부 매도 안내(평가액·매입가를 판 금액만큼 함께 줄이면 결산에 평가 갱신으로 새지 않는다, R6)
@@ -38,7 +39,7 @@ function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose
   const form = useForm<PhysicalAsset>({
     resolver: zodResolver(physicalAssetInputSchema) as never,
     defaultValues: editData ?? {
-      id: "", type: "gold", name: "", currentValue: 0, purchasePrice: 0, purchaseDate: new Date().toISOString().split("T")[0], description: "",
+      id: "", type: "gold", name: "", currentValue: 0, purchasePrice: 0, purchaseDate: todayKst(), description: "",
     },
   });
 

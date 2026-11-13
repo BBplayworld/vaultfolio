@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
+import { fetchDividend } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 
@@ -27,17 +28,6 @@ const CATEGORY_GROUPS = [
   { key: "isa", label: "ISA", color: MAIN_PALETTE[4] },
   { key: "pension", label: "연금저축", color: MAIN_PALETTE[7] },
 ] as const;
-
-async function fetchDividend(ticker: string, type: string, excd: string): Promise<DividendPayoutResult[]> {
-  const params = new URLSearchParams({ ticker, type, excd });
-  const res = await fetch(`/api/finance/dividend?${params}`);
-  const json = await res.json();
-  if (json.messages) {
-    console.log(`[API Logs - ${ticker}]`, json.messages);
-  }
-  if (!res.ok) return [];
-  return json.data || [];
-}
 
 interface StockDividendRow {
   stock: Stock;

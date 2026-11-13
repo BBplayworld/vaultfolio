@@ -15,6 +15,7 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
+import { fetchDividend, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
@@ -69,17 +70,6 @@ function makeTotalLabel(values: number[]) {
       </text>
     );
   };
-}
-
-async function fetchDividend(ticker: string, type: string, excd: string): Promise<DividendPayoutResult[]> {
-  const params = new URLSearchParams({ ticker, type, excd });
-  const res = await fetch(`/api/finance/dividend?${params}`);
-  const json = await res.json();
-  if (json.messages) {
-    console.log(`[API Logs - ${ticker}]`, json.messages);
-  }
-  if (!res.ok) return [];
-  return json.data || [];
 }
 
 interface StockDividendInfo {
@@ -210,6 +200,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
 
   const isLoading = queries.some((q) => q.isLoading);
   const loadedCount = queries.filter((q) => !q.isLoading).length;
+  const failedCount = countFailedDividends(queries);
   const totalCount = queries.length;
 
   const dividendItems: StockDividendInfo[] = stocksWithTicker.map((stock, i) => ({
@@ -370,6 +361,10 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 )}
               </div>
             </div>
+          )}
+
+          {!isLoading && failedCount > 0 && (
+            <p className="text-sm text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>
           )}
 
           {!isLoading && annualTotal === 0 ? (
