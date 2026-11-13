@@ -93,7 +93,11 @@ function processStockResults(raw: GeminiStock[], today: string) {
 
   return filtered.map((raw0, idx) => {
     // 2줄 헤더 표에서 현재가·평단이 바뀌어 읽힌 경우 수익률로 교정 (평단 불일치 시 0 → 역산 경로)
-    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0);
+    const fixed = reconcilePrices(raw0.currentPrice ?? 0, raw0.averagePrice ?? 0, raw0.profitRate ?? 0, {
+      quantity: !raw0.quantityMissing && raw0.quantity > 0 ? raw0.quantity : undefined,
+      currentValue: raw0.currentValue,
+      profitAmount: raw0.profitAmount,
+    });
     const s: GeminiStock = { ...raw0, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";

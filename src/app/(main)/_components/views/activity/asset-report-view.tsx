@@ -645,7 +645,7 @@ export function AssetReportView() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2 min-w-0">
                         <Icon className="size-4 text-primary shrink-0" />
-                        <span className={SECTION_TITLE}>{axis.label}</span>
+                        <span className={`${SECTION_TITLE} break-keep`}>{axis.label}</span>
                         {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
                       </span>
                       <span className="flex items-center gap-1.5 shrink-0">

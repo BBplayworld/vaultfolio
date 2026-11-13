@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-13 (v5.0)
+
+### 스크린샷 등록 평단가를 맞게 읽고, 맞게 말하기 (#5.0, 이슈 #196)
+- 등록 화면 라벨·안내를 `averagePriceEstimated`일 때만 '평단가(추정)'·역산 안내로(`stock-screenshot-import.tsx`, 맞추기 미리보기와 같은 규칙). `ImportStock.averagePriceEstimated?` 타입 필드 1개 추가(저장 키 변화 없음, 기존부터 spread로 저장되던 값).
+- `price-consistency.ts reconcilePrices(cur, avg, rate, evidence?)`: swap 전 2차 근거 E1(평가금액÷수량이 한쪽에만 2% 이내) → 반대면 keep, E2(평가손익 부호≠수익률 부호) → keep, 근거 없음은 4.99 동작. 소수익률(3%p 이내)은 E1이 swap 쪽에만 0.2% 이내로 맞을 때만 swap.
+- `asset-report-view.tsx` 5축 제목에 `break-keep`(320 꺾임).
+
 ## 2026-11-13 (v4.99)
 
 ### 보유 현황 스크린샷 2줄 헤더에서 평단가·현재가 바로 읽기 (#4.99, 이슈 #193)
