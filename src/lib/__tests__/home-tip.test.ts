@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   refresh: false,
   feature: null as null | { id: string },
   monthly: [] as unknown[],
+  daily: [] as unknown[],
   taxDismissed: false,
   seen: [] as unknown[][],
   tracked: [] as unknown[][],
@@ -38,11 +39,14 @@ vi.mock("../asset/asset-refresh-status", async (orig) => ({
   getStaleCategories: () => ["stock"],
 }));
 vi.mock("../feature-usage", () => ({ pickRecommendedFeature: () => h.feature }));
-vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
+vi.mock("../asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly, readDailySnapshots: () => h.daily }));
 
 import { pickHomeTip } from "../home-tip";
 import { markWhatsNewSeen, newBadgeIds } from "../whats-new";
 import { PARAM_VALUES } from "../analytics/ga";
+import { pickFirstRecordStart, pickSettlementCard, resolveSettlementWindow, pickSettlementMonth, settlementWindowName } from "../report/settlement";
+import { assetDataOn, dailyOn, dailyRange, monthlyOf } from "../report/__tests__/first-record-fixture";
+import { settlementDelta } from "@/app/(main)/_components/views/activity/change-hero";
 
 const assetData = { lastUpdated: "2026-11-01T00:00:00.000Z" } as AssetData;
 const snap = (month: string, date: string): MonthlyAssetSnapshot => ({ month, date, netAsset: 1, financialAsset: 1 });
@@ -53,7 +57,7 @@ const pickWn = (today?: string, hasAssets = true, hasRelink = false) => pickHome
 const DAY = 24 * 60 * 60 * 1000;
 
 beforeEach(() => {
-  Object.assign(h, { record: null, backup: false, tax: [], refresh: false, feature: null, monthly: TWO, taxDismissed: false, seen: [], tracked: [] });
+  Object.assign(h, { record: null, backup: false, tax: [], refresh: false, feature: null, monthly: TWO, daily: [], taxDismissed: false, seen: [], tracked: [] });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -264,5 +268,57 @@ describe("끊긴 거래 다시 잇기 팁(#147) — 결산 창 아래, 세금·�
   it("백업·임박 세금은 relink보다 위", () => {
     h.backup = true;
     expect(withRelink("2026-11-12")?.kind).toBe("backup");
+  });
+});
+
+// 4.94 #183 처음 맞는 결산(A) — 월 기록이 없는 사용자도 팁이 뜨고, 팁·허브·결산 화면이 같은 구간·같은 증감을 본다
+describe("처음 맞는 결산(A) 팁", () => {
+  const setup = (today: string, monthly: ReturnType<typeof monthlyOf>[]) => {
+    h.daily = dailyRange("2026-11-03", today);
+    h.monthly = monthly;
+    return assetDataOn(today);
+  };
+  const tipAt = (today: string, data: AssetData) => pickHomeTip({ assetData: data, hasAssets: true, syncArmed: false, today });
+
+  it("11/27: 팁 뜸(in_progress, 11/7~11/27), 구간이 결산 화면·허브와 같고 증감도 원 단위로 같다", () => {
+    const today = "2026-11-27";
+    const data = setup(today, [monthlyOf(dailyOn(today))]);
+    const t = tipAt(today, data);
+    expect(t?.kind).toBe("settlement");
+    if (t?.kind !== "settlement") return;
+    expect(t.window.firstRecord).toBe(true);
+    expect(settlementWindowName(t.window, today)).toEqual({ name: "11월", inProgress: true });
+    const fr = pickFirstRecordStart(h.daily as never, data, today);
+    const monthly = h.monthly as never;
+    const v = resolveSettlementWindow(monthly, pickSettlementMonth(monthly, today), today, fr);
+    const hubW = pickSettlementCard(monthly, today, fr)!;
+    const net = 600_000_000;
+    for (const w of [v, hubW]) {
+      expect([w.startDate, w.endDate]).toEqual([t.window.startDate, t.window.endDate]);
+      expect(settlementDelta(w, net).delta).toBe(settlementDelta(t.window, net).delta);
+    }
+  });
+
+  it("12/2: 팁 window = range '11/7 → 11/28 변화'", () => {
+    const today = "2026-12-02";
+    const data = setup(today, [monthlyOf(dailyOn("2026-11-28")), monthlyOf(dailyOn(today))]);
+    const t = tipAt(today, data);
+    expect(t?.kind).toBe("settlement");
+    if (t?.kind === "settlement") expect(settlementWindowName(t.window, today).name).toBe("11/7 → 11/28 변화");
+  });
+
+  it("창 중 새 자산 등록(11/25) → 시작점 11/26 → 7일 미만이라 팁 없음", () => {
+    const today = "2026-11-27";
+    const opts = { extra: [{ id: `stock_${Date.parse("2026-11-25T01:00:00Z")}`, date: "2026-11-25" }] };
+    h.daily = dailyRange("2026-11-03", today, opts);
+    h.monthly = [monthlyOf(dailyOn(today, opts))];
+    expect(tipAt(today, assetDataOn(today, opts))?.kind).not.toBe("settlement");
+  });
+
+  it("id에 ms가 없는 자산이 섞이면 팁 없음", () => {
+    const today = "2026-11-27";
+    const data = setup(today, [monthlyOf(dailyOn(today))]);
+    const legacy = { ...data, stocks: [...data.stocks, { ...data.stocks[0], id: "legacy-1" }] } as AssetData;
+    expect(tipAt(today, legacy)?.kind).not.toBe("settlement");
   });
 });

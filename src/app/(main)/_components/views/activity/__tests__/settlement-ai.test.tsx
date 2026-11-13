@@ -17,7 +17,7 @@ vi.mock("@/contexts/asset-data-context", () => ({
     snapshotVersion: 0,
   }),
 }));
-vi.mock("@/lib/asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly }));
+vi.mock("@/lib/asset/snapshot-storage", () => ({ readMonthlySnapshots: () => h.monthly, readDailySnapshots: () => [] }));
 vi.mock("@/lib/finance/profit-utils", () => ({ readExchangeHistory: () => ({}) }));
 vi.mock("@/lib/asset/asset-refresh-status", () => ({ getStaleCategories: () => [], daysSinceRefresh: () => null }));
 vi.mock("@/lib/report/asset-report", async (orig) => ({

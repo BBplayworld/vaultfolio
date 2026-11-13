@@ -2,7 +2,7 @@
 // 엔진(asset-report.ts)·홈 헤더는 건드리지 않고, 엔진 결과(effects)를 입력으로만 쓴다.
 // 투자 조언 아님 — 사용자 자신의 기록 사이 변화만 계산한다. 서버로 보내는 값 없음(전부 기기 안 계산).
 
-import type { DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
+import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import type { AttributionCauseKey } from "./asset-report";
 
 // ── 13개월 롤링 보존 ─────────────────────────────────────────────
@@ -71,6 +71,61 @@ export interface SettlementWindow {
   endLegacy: boolean;
   gapDays: number | null;
   longGap: boolean;
+  firstRecord?: true;                  // 4.94: 직전 달 월 기록이 없어 '마지막 등록일 이후 첫 일별 기록'을 시작점으로 연 구간
+}
+
+/** 처음 맞는 결산(4.94) 시작점→끝이 이 일수 미만이면 열지 않는다 */
+export const FIRST_RECORD_MIN_DAYS = 7;
+const ID_MS_RE = /(^|_)(\d{13})(_|$)/;
+const ID_MS_MIN = Date.UTC(2024, 0, 1);
+
+const addDaysStr = (date: string, n: number): string => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * 자산·부채 id의 13자리 ms → KST 날짜(등록일). 첫 매치만 쓰고 뒤쪽 `_idx`는 무시한다.
+ * 2024-01-01 이전이거나 오늘+1일 이후면 null(데모·미리보기·복원 id 등). 읽기 전용 — 저장 값은 건드리지 않는다.
+ */
+export function assetIdRegisteredDate(id: unknown, today: string): string | null {
+  if (typeof id !== "string") return null;
+  const m = ID_MS_RE.exec(id);
+  if (!m) return null;
+  const ms = Number(m[2]);
+  if (!Number.isFinite(ms) || ms < ID_MS_MIN) return null;
+  const date = new Date(ms + 9 * 3_600_000).toISOString().slice(0, 10);
+  return date > addDaysStr(today, 1) ? null : date;
+}
+
+const isEnrichedDaily = (s: DailyAssetSnapshot): boolean => !!(s?.date && s.breakdown && s.fx && s.fxBase && s.cost);
+
+/**
+ * 처음 맞는 결산 시작점(4.94). R = 모든 자산·부채 id 등록일의 최댓값. 하나라도 등록일을 못 읽으면 null.
+ * 시작점 = 날짜가 R보다 엄격히 뒤(등록 당일 제외)이고 오늘 이하인, breakdown·fx·fxBase·cost가 모두 있는 가장 이른 일별 기록.
+ * 월 스냅샷 모양(month=date 앞 7자리, date 포함)으로 돌려 기존 원인 엔진이 그대로 받는다.
+ */
+export function pickFirstRecordStart(daily: DailyAssetSnapshot[] | undefined, assetData: AssetData, today: string): MonthlyAssetSnapshot | null {
+  const items = [
+    ...(assetData?.stocks ?? []), ...(assetData?.crypto ?? []), ...(assetData?.cash ?? []),
+    ...(assetData?.realEstate ?? []), ...(assetData?.loans ?? []), ...(assetData?.physicalAssets ?? []),
+  ];
+  if (items.length === 0 || !Array.isArray(daily)) return null;
+  let r = "";
+  for (const it of items) {
+    const d = assetIdRegisteredDate((it as { id?: unknown }).id, today);
+    if (!d) return null;
+    if (d > r) r = d;
+  }
+  const start = daily
+    .filter((s) => isEnrichedDaily(s) && s.date > r && s.date <= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (!start) return null;
+  return {
+    month: start.date.slice(0, 7), date: start.date, netAsset: start.netAsset, financialAsset: start.financialAsset,
+    breakdown: start.breakdown, fx: start.fx, fxBase: start.fxBase, cost: start.cost,
+  };
 }
 
 const sortByMonth = (monthly: MonthlyAssetSnapshot[]) =>
@@ -80,18 +135,27 @@ const sortByMonth = (monthly: MonthlyAssetSnapshot[]) =>
  * 대상 달의 결산 구간. 시작 = 대상 달 직전의 가장 최근 스냅샷(달이 건너뛰어도 허용).
  * 대상 달이 이번 달이면 끝 = 오늘(실시간), 지난 달이면 끝 = 그 달 스냅샷.
  */
-export function resolveSettlementWindow(monthly: MonthlyAssetSnapshot[], month: string, today: string): SettlementWindow {
+export function resolveSettlementWindow(
+  monthly: MonthlyAssetSnapshot[], month: string, today: string,
+  /** 4.94 선택 인자 — 직전 달 월 기록이 없을 때만 쓴다(있으면 무시). 끝까지 7일 이상일 때만 시작점으로 채택 */
+  firstRecord?: MonthlyAssetSnapshot | null,
+): SettlementWindow {
   const sorted = sortByMonth(monthly);
   const currentMonth = today.slice(0, 7);
-  const start = [...sorted].reverse().find((s) => s.month < month) ?? null;
+  let start = [...sorted].reverse().find((s) => s.month < month) ?? null;
   const isCurrent = month >= currentMonth;
   const end = isCurrent ? null : sorted.find((s) => s.month === month) ?? null;
   const endDate = end ? snapshotDate(end) : today;
+  let usedFirstRecord = false;
+  if (!start && firstRecord?.date && (isCurrent || end?.date) && daysBetween(firstRecord.date, endDate) >= FIRST_RECORD_MIN_DAYS) {
+    start = firstRecord;
+    usedFirstRecord = true;
+  }
   const startDate = start ? snapshotDate(start) : null;
   const gapDays = startDate ? daysBetween(startDate, endDate) : null;
   let kind: SettlementKind;
   if (!start) kind = "first_month";
-  else if (!isCurrent) kind = "settled";
+  else if (!isCurrent) kind = usedFirstRecord ? "range" : "settled"; // 처음 맞는 결산이 지난 달이면 "N월 결산"이 아닌 날짜 구간 이름(COO ②)
   else kind = (gapDays ?? 0) >= RANGE_MIN_DAYS ? "range" : "in_progress";
   return {
     month, kind, start, end, startDate, endDate,
@@ -99,6 +163,7 @@ export function resolveSettlementWindow(monthly: MonthlyAssetSnapshot[], month: 
     endLegacy: !!end && !end.date,
     gapDays,
     longGap: gapDays !== null && gapDays > LONG_GAP_DAYS,
+    ...(usedFirstRecord ? { firstRecord: true as const } : {}),
   };
 }
 
@@ -124,9 +189,9 @@ export function isSettlementCardPeriod(today: string): boolean {
 }
 
 /** 허브 카드에 띄울 구간. 기간 밖·첫 달(비교할 직전 기록 없음)이면 null */
-export function pickSettlementCard(monthly: MonthlyAssetSnapshot[], today: string): SettlementWindow | null {
+export function pickSettlementCard(monthly: MonthlyAssetSnapshot[], today: string, firstRecord?: MonthlyAssetSnapshot | null): SettlementWindow | null {
   if (!isSettlementCardPeriod(today)) return null;
-  const w = resolveSettlementWindow(monthly, pickSettlementMonth(monthly, today), today);
+  const w = resolveSettlementWindow(monthly, pickSettlementMonth(monthly, today), today, firstRecord);
   return w.kind === "first_month" ? null : w;
 }
 
@@ -155,23 +220,22 @@ export function settlementRangeLabel(w: SettlementWindow): string {
 
 const monthNum = (month: string) => Number(month.slice(5, 7));
 
-/** 월 탭 헤더 제목 */
-export function settlementTitle(w: SettlementWindow): string {
-  if (w.kind === "range") return `${settlementRangeLabel(w)} 변화`;
-  if (w.kind === "in_progress") return `${monthNum(w.month)}월 변화`;
-  return `${monthNum(w.month)}월 결산`;
+/**
+ * 결산 이름 — 팁·허브·결산 화면 공용 1곳(4.94). settled "N월 결산", range "M/D → M/D 변화",
+ * in_progress·첫 달 "N월"(진행 중 여부는 inProgress로 — 결산 화면은 배지, 허브는 " · 진행 중" 텍스트).
+ * 월 이름만 해가 다르면 "25년 " 접두, range 날짜는 M/D.
+ */
+export function settlementWindowName(w: SettlementWindow, today: string): { name: string; inProgress: boolean } {
+  if (w.kind === "range") return { name: `${settlementRangeLabel(w)} 변화`, inProgress: false };
+  const prefix = w.month.slice(0, 4) === today.slice(0, 4) ? "" : `${w.month.slice(2, 4)}년 `;
+  const base = `${prefix}${monthNum(w.month)}월`;
+  if (w.kind === "settled") return { name: `${base} 결산`, inProgress: false };
+  return { name: base, inProgress: w.kind === "in_progress" };
 }
 
-/** 허브 카드 제목 */
-export function settlementCardTitle(w: SettlementWindow): string {
-  if (w.kind === "range") return `${settlementRangeLabel(w)} 변화`;
-  if (w.kind === "in_progress") return `${monthNum(w.month)}월 변화 · 진행 중`;
-  return `${monthNum(w.month)}월 결산이 준비됐어요`;
-}
-
-/** GA settlement_view의 result — 월 1회 방문자의 날짜 구간 표기(range)는 settled로 분류 */
+/** GA settlement_view의 result — 월 1회 방문자의 날짜 구간 표기(range)는 settled로 분류. 처음 맞는 결산(4.94)은 first_month 유지 */
 export function settlementGaResult(w: SettlementWindow): "settled" | "in_progress" | "first_month" {
-  if (w.kind === "first_month") return "first_month";
+  if (w.kind === "first_month" || w.firstRecord) return "first_month";
   return w.kind === "in_progress" ? "in_progress" : "settled";
 }
 

@@ -417,7 +417,7 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
         ))
       )}
       {!status && mapped?.showUnrecordedHint && (
-        <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해" : "이번 달"} 입출금을 기록하면 더 정확해져요</p>
+        <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해 입출금을 기록하면 더 정확해져요" : "입출금을 기록하면 더 정확해져요"}</p>
       )}
       {footer}
     </section>
