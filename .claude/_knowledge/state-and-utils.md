@@ -562,7 +562,7 @@ parseNumberFromCommas(value): number
 formatCurrency(value): string           // "₩1,234,567"
 formatShortCurrency(value): string      // "2.3억원" · "9,999만원" (0.1억·만원 단위 버림)
 formatShortCurrencyDecimal(value): string // "2.01억원" · "1.13백만원" · "2.9만원" (소수 둘째 자리 버림·끝 0 제거)
-formatCompactKRW(value): string // 320 막대 라벨용 "6.4억"·"752만"·"−6.4억" (원 생략, 10 미만 소수 1자리 버림, 4.95)
+formatNarrowKRW(value, { signed?, tiny? }): string // 640 미만 칸·막대 한 줄 "5.67억"·"+0.88억"·"+877만"·"−6.6만" (원 생략·floor·끝 0 제거·U+2212. 억 소수는 글자 예산 tiny(<375) 3·그 외 4 안에서 최대 2, 만은 정수부 1자리일 때만 소수 1. 1천만 미만 증감은 4.95와 같은 문자열, 4.96. formatCalendarDiff·formatCompactKRW 대체)
 // 두 함수 모두 원 단위 정수를 표시 최소 단위로 정수 나눗셈해 버린다(#129). 축약 버림 표기를 새로 만들 때 곱셈 뒤 Math.floor 금지 — 이 함수 재사용
 calculateHoldingDays(purchaseDate): number
 formatHoldingPeriod(purchaseDate): string  // "1년 3개월" 형식

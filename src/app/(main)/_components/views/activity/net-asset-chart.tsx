@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatCalendarDiff, formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
+import { formatNarrowKRW, formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { computeRecordStats, type RecordStats } from "@/lib/report/record-streak";
@@ -633,19 +633,22 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                             return (
                               <div
                                 key={cell.date}
-                                className={`rounded-md border p-1 max-[359px]:px-0 min-[360px]:max-sm:px-[3px] flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
+                                className={`rounded-md border p-1 max-sm:px-0 flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
                                 <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
                                 </p>
                                 {hasData ? (
                                   <div className="flex flex-col items-center justify-center gap-[5px] pt-[17px] sm:pt-[25px] w-full">
-                                    <p className={`text-xs sm:text-sm font-bold leading-none text-center tabular-nums w-full ${ASSET_THEME.important}`}>
-                                      {formatShortCurrencyDecimal(cell.netAsset)}
+                                    <p className={`text-[11px] tracking-tighter sm:text-sm sm:tracking-normal font-bold leading-none text-center tabular-nums w-full ${ASSET_THEME.important}`}>
+                                      <span className="hidden max-[375px]:inline">{formatNarrowKRW(cell.netAsset, { tiny: true })}</span>
+                                      <span className="hidden min-[375px]:max-sm:inline">{formatNarrowKRW(cell.netAsset)}</span>
+                                      <span className="hidden sm:inline">{formatShortCurrencyDecimal(cell.netAsset)}</span>
                                     </p>
                                     {diff !== null ? (
                                       <p data-testid="day-cell-diff" className={`text-[11px] sm:text-sm tracking-tighter sm:tracking-normal font-semibold leading-none text-center tabular-nums sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
-                                        <span className="sm:hidden">{formatCalendarDiff(diff)}</span>
+                                        <span className="hidden max-[375px]:inline">{formatNarrowKRW(diff, { signed: true, tiny: true })}</span>
+                                        <span className="hidden min-[375px]:max-sm:inline">{formatNarrowKRW(diff, { signed: true })}</span>
                                         <span className="hidden sm:inline">{diff > 0 ? "+" : ""}{formatShortCurrency(diff)}</span>
                                       </p>
                                     ) : null}
