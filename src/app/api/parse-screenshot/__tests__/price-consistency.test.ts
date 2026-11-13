@@ -129,8 +129,10 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
 
   describe("수익률 비율 표기 (미래에셋형 합성 표)", () => {
     it("수익률이 0.0839(=8.39%)처럼 비율로 읽혀도 화면 평단을 유지", () => {
-      expect(reconcilePrices(10880, 10038, 0.0839)).toEqual({ currentPrice: 10880, averagePrice: 10038, action: "keep" });
-      expect(reconcilePrices(10880, 10038, -0.0839).action).not.toBe("keep"); // 부호 반대는 맞지 않음
+      const ev = { quantity: 10, currentValue: 108800, profitAmount: 8420 };
+      expect(reconcilePrices(10880, 10038, 0.0839, ev)).toEqual({ currentPrice: 10880, averagePrice: 10038, action: "keep" });
+      expect(reconcilePrices(10880, 10038, 0.0839, { profitAmount: 8420 }).action).toBe("keep"); // 평가손익만 있어도 지지
+      expect(reconcilePrices(10880, 10038, -0.0839, ev).action).not.toBe("keep"); // 부호 반대는 맞지 않음
     });
     it("비율 표기 + 부호 누락 + 가격 뒤바뀜(근거 반대)은 keep하지 않고 estimate", () => {
       const r = reconcilePrices(10000, 9000, 0.1, { quantity: 10, currentValue: 90000, profitAmount: -10000 });
@@ -150,6 +152,20 @@ describe("reconcilePrices (2줄 헤더 평단·현재가 정합)", () => {
         // AI가 가격을 뒤바꿔 읽고 비율 표기(부호 누락)한 경우
         const r = reconcilePrices(avg, cur, Math.abs(rate), { quantity: q, currentValue: cur * q, profitAmount: (cur - avg) * q });
         expect(r.action).not.toBe("keep");
+      }
+    });
+    it("근거 전무(평가손익·평가금액 없음)면 비율 표기라도 keep하지 않고 estimate (60e72d6 동작)", () => {
+      expect(reconcilePrices(10000, 9000, 0.1, undefined).action).toBe("estimate");
+      expect(reconcilePrices(10000, 9000, 0.1, { quantity: 10 }).action).toBe("estimate");
+    });
+    it("퍼징: 근거 전무 + 가격 뒤바뀜·비율 표기 → 라벨 없는 keep 0건", () => {
+      let seed = 99;
+      const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < 2000; i++) {
+        const avg = 10 + rnd() * 990;
+        const rate = (rnd() * 0.5 + 0.05);
+        const cur = avg * (1 + rate);
+        expect(reconcilePrices(avg, cur, rate).action).not.toBe("keep");
       }
     });
     it("비율로도 안 맞으면 기존대로 추정 경로", () => {
