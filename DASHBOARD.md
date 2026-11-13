@@ -37,7 +37,7 @@
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 시장 알림(공통 대상 14개, 설치 앱 전용) | **대표 결정 대기**(데모) · origin/main 재병합 필요 | 대표 승인(risk:high) |
-| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 기획(방향 합의 완료)·반대 검토 중 · 원문 표 대기 | COO 자체 승인 예정(low) |
+| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 기획(반대 검토 축소 통과)·spec 진행 · 원문 표 대기 | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
