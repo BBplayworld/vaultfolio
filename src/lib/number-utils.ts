@@ -74,26 +74,22 @@ export function formatShortCurrencyDecimal(value: number): string {
   return formatCurrency(value);
 }
 
-// 좁은 화면(320) 막대 값 라벨용 축약 — 원 생략, 억/만 단위, 10 미만 소수 1자리(버림)·이상 정수, 음수는 U+2212. 정밀값은 formatShortCurrencyDecimal
-export function formatCompactKRW(value: number): string {
-  const won = Math.round(Math.abs(value));
+// 640 미만 칸·막대 숫자 한 줄 표기(4.96) — 원 생략, 억/만 단위, 버림(C59), 끝 0 제거, 음수 U+2212, signed면 양수 +.
+// 글자 예산(부호+정수부+소수 숫자 수): tiny(<375) 3 · 그 외 4. 억은 소수 최대 2자리를 예산 안에서, 만은 정수부 1자리일 때만 소수 1자리(4.95와 같은 문자열)
+export function formatNarrowKRW(value: number, opts: { signed?: boolean; tiny?: boolean } = {}): string {
+  const won = Math.floor(Math.abs(value));
   if (won === 0) return "0";
-  const sign = value < 0 ? "\u2212" : "";
-  const units = (v: number) => (v < 10 ? `${Math.floor(v * 10) / 10}` : `${Math.floor(v)}`);
-  if (won >= 1e8) return `${sign}${units(won / 1e8)}억`;
-  if (won >= 1e4) return `${sign}${units(won / 1e4)}만`;
-  return `${sign}${won.toLocaleString("ko-KR")}`;
-}
-
-// 일 탭 달력 칸 증감(좁은 칸) 축약 — formatCompactKRW 위 래퍼. 부호 항상(+/U+2212), 원 생략, 소수 버림:
-// ≥1억 억 · 1천만~1억 0.X억 · 1천~1천만 만 · 1천 미만 원 숫자. 0은 호출부가 줄을 그리지 않는다(4.95)
-export function formatCalendarDiff(value: number): string {
-  const won = Math.round(Math.abs(value));
-  const sign = value < 0 ? "\u2212" : "+";
-  if (won >= 1e8 || (won >= 1e4 && won < 1e7)) return `${sign}${formatCompactKRW(won)}`;
-  if (won >= 1e7) return `${sign}${Math.floor(won / 1e7) / 10}억`;
-  if (won >= 1e3) return `${sign}${Math.floor(won / 1e3) / 10}만`;
-  return `${sign}${won}`;
+  const sign = value < 0 ? "\u2212" : opts.signed ? "+" : "";
+  if (won < 1e3) return `${sign}${won}`;
+  const budget = opts.tiny ? 3 : 4;
+  const eok = won >= 1e7;
+  const unit = eok ? 1e8 : 1e4;
+  const int = Math.floor(won / unit);
+  const intDigits = String(int).length;
+  const dec = eok ? Math.max(0, Math.min(2, budget - sign.length - intDigits)) : int < 10 ? 1 : 0;
+  const scaled = Math.floor(won / (unit / 10 ** dec));
+  const frac = dec > 0 ? String(scaled % 10 ** dec).padStart(dec, "0").replace(/0+$/, "") : "";
+  return `${sign}${int}${frac ? `.${frac}` : ""}${eok ? "억" : "만"}`;
 }
 
 // 보유일수 계산
