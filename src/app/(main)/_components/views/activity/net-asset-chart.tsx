@@ -633,7 +633,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                             return (
                               <div
                                 key={cell.date}
-                                className={`rounded-md border p-1 max-sm:px-0 flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
+                                className={`rounded-md border p-1 max-[359px]:px-0 min-[360px]:max-sm:px-[3px] flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
                                 <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
