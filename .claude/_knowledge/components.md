@@ -124,7 +124,7 @@ _components/
 ### 스크린샷 다이얼로그 공통 패턴
 
 - `open/onOpenChange` props로 외부 제어
-- `useGeminiUsage()` hook으로 클라이언트 하루 한도(15회) 체크
+- `useGeminiUsage()` hook으로 클라이언트 하루 한도(30회) 체크
 - **중복 처리:** stock/crypto → merge/reset 선택, cash/loan → 항상 append
 - **업로드 전 고지 박스(#4.38)**: stock·crypto·cash·loan 4종 동일 — `rounded-md bg-muted/50 px-3 py-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep`(테두리 없음) + `SCREENSHOT_UPLOAD_NOTICE`(`src/config/security-copy.ts`). 문구를 파일에 직접 쓰지 않는다
 

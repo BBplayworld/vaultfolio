@@ -1076,9 +1076,12 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
         />
       )}
       {!blocked && (
-        <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
-          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="relative after:absolute after:-inset-3" />
-          맞추기에 포함
+        <label className="flex min-h-10 cursor-pointer items-start gap-2 text-sm">
+          <Checkbox checked={included} onCheckedChange={(v) => onInclude(v === true)} className="relative mt-0.5 after:absolute after:-inset-3" />
+          <span className="flex flex-col">
+            <span>이 항목도 맞추기</span>
+            <span className="text-sm text-muted-foreground text-pretty break-keep">체크하지 않으면 그대로 둬요</span>
+          </span>
         </label>
       )}
     </li>

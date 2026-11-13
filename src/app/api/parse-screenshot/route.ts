@@ -6,6 +6,7 @@ import { US_TICKERS } from "@/lib/finance/us-master";
 import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { isTinyImage } from "./image-size";
 import { reconcilePrices } from "./price-consistency";
+import { stripTrailingQuantity } from "./name-normalize";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
@@ -45,7 +46,7 @@ const STOCK_SCHEMA = {
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
 
 필드:
-name=종목명(그대로·정확히), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
+name=종목명(그대로·정확히·수량이나 괄호 숫자를 붙이지 말 것), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함 숫자·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
 
 무시: 계좌번호·총평가금액·광고배너
 
@@ -98,7 +99,9 @@ function processStockResults(raw: GeminiStock[], today: string) {
       currentValue: raw0.currentValue,
       profitAmount: raw0.profitAmount,
     });
-    const s: GeminiStock = { ...raw0, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
+    // 종목명 끝에 붙은 수량 괄호(예: 미래에셋 "KODEX 미국빅테크10(104)") 제거
+    const cleanName = raw0.quantityMissing ? raw0.name : stripTrailingQuantity(raw0.name, raw0.quantity);
+    const s: GeminiStock = { ...raw0, name: cleanName, currentPrice: fixed.currentPrice, averagePrice: fixed.averagePrice };
     const rawTicker = s.ticker && s.ticker !== "null" ? s.ticker : null;
     let ticker = rawTicker || "";
     // ticker-map에 종목명이 등록된 경우 AI 반환값보다 map을 우선 (AI 오인식 교정)

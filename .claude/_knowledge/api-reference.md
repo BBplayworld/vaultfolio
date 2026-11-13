@@ -342,4 +342,4 @@ getCacheStorage(): ICacheStorage
 // REF_DATE_MAP 키: "{ticker}:{period}:{requestDate}" → actualDate
 ```
 
-**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 30회
