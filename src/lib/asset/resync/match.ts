@@ -34,6 +34,16 @@ export function confirmScreenBroker(
   existing: Stock[],
   matchHint: (hint: string) => string | undefined = matchBrokerHint,
 ): { broker: string; source: BrokerSource } | null {
+  const brokerKey = (b: string) => matchBrokerHint(b) ?? squash(b);
+  const brokersOfTicker = (t: string) => {
+    const ks = new Set<string>();
+    for (const e of existing) {
+      if (tickerKey(e.ticker) === t && !isUnassignedBroker(e.broker)) ks.add(brokerKey(e.broker!));
+    }
+    return ks;
+  };
+  const screenTickers = items.map((i) => tickerKey(i.ticker)).filter(Boolean);
+
   // ① 화면 글자 brokerHint → 목록명 (가장 많이 나온 것)
   const tally = new Map<string, number>();
   for (const it of items) {
@@ -41,7 +51,11 @@ export function confirmScreenBroker(
     if (m) tally.set(m, (tally.get(m) ?? 0) + 1);
   }
   const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+  // 화면에 증권사 글자가 있으면 그대로 신뢰한다(증권사를 옮겨 다시 올리는 #139 흐름 보존)
   if (top) return { broker: top[0], source: "hint" };
+
+  // 화면 티커가 기존 데이터에서 2개 이상 증권사에 걸쳐 있으면 자동 확정하지 않고 사용자가 고른다(#195)
+  if (screenTickers.some((t) => brokersOfTicker(t).size >= 2)) return null;
 
   // ② 티커의 과반이 같은 broker 값을 가진 기존 항목과 일치
   const withTicker = items.filter((i) => tickerKey(i.ticker));

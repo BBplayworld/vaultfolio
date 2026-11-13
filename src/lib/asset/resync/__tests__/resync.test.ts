@@ -257,6 +257,46 @@ describe("S4 평단 규칙 (averagePriceEstimated)", () => {
   });
 });
 
+describe("#195 증권사 오매칭 방지", () => {
+  const tk = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"];
+  const multi = () => [
+    ...tk.map((t, i) => st(`m${i}`, t, "foreign", "메리츠증권", 10, 100)),
+    st("k1", "T1", "foreign", "키움증권", 20, 50),
+    st("k2", "T2", "foreign", "키움증권", 30, 60),
+  ];
+  const kiwoomScreen = (hint = "") => screen(0, [row("T1", 20, 50, { brokerHint: hint }), row("T2", 30, 60, { brokerHint: hint })]);
+
+  it("증권사 글자 없음 + 티커가 두 증권사에 걸치면 확정하지 않는다", () => {
+    expect(confirmScreenBroker(kiwoomScreen().items, multi())).toBeNull();
+    const { diff } = run(multi(), [kiwoomScreen()]);
+    expect(diff.incomplete).toBe(true);
+    expect(diff.rows.every((r) => r.status === "needs")).toBe(true);
+  });
+  it("사용자가 키움을 고르면 키움 항목만 갱신된다", () => {
+    const ex = multi();
+    const { result } = run(ex, [screen(0, [row("T1", 25, 50), row("T2", 30, 60)])], {
+      brokers: { 0: "키움증권" },
+      sel: (d) => ({ include: new Set(d.rows.map((r) => r.rowId)) }),
+    });
+    expect(result.stocks.find((s) => s.id === "k1")).toMatchObject({ quantity: 25, broker: "키움증권" });
+    ex.filter((s) => s.broker === "메리츠증권").forEach((m) => expect(result.stocks.find((s) => s.id === m.id)).toBe(m));
+  });
+  it("단일 증권사에만 있으면 현행대로 확정", () => {
+    const ex = [st("a", "T1", "foreign", "키움증권", 1, 1), st("b", "T2", "foreign", "키움증권", 1, 1)];
+    expect(confirmScreenBroker(kiwoomScreen().items, ex)).toEqual({ broker: "키움증권", source: "existing" });
+  });
+  it("brokerHint: 그 증권사에도 티커가 있으면 유지", () => {
+    expect(confirmScreenBroker(kiwoomScreen("키움증권").items, multi())).toEqual({ broker: "키움증권", source: "hint" });
+  });
+  it("brokerHint: 화면 글자가 있으면 다른 증권사에만 있는 티커여도 확정(증권사 이동 흐름 보존)", () => {
+    const ex = [st("a", "T1", "foreign", "키움증권", 1, 1), st("b", "T2", "foreign", "키움증권", 1, 1)];
+    expect(confirmScreenBroker(kiwoomScreen("메리츠증권").items, ex)).toEqual({ broker: "메리츠증권", source: "hint" });
+  });
+  it("brokerHint: 기존에 없는 새 티커뿐이면 힌트 유지", () => {
+    expect(confirmScreenBroker(kiwoomScreen("메리츠증권").items, [])).toEqual({ broker: "메리츠증권", source: "hint" });
+  });
+});
+
 describe("#193 2줄 헤더 재업로드 회귀 — 기존 평단이 현재가로 덮어써지지 않는다", () => {
   // 가공 숫자: 기존 평단은 소수 다자리 저장, 화면(서버 반올림 2자리)에는 같은 값이 읽힌다
   const e = () => [
