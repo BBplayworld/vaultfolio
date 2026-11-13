@@ -38,3 +38,23 @@ describe("WeekTrendCard 값 라벨 320 분기", () => {
     expect(html).toContain(">6.4억<");
   });
 });
+
+import { formatCalendarDiff } from "@/lib/number-utils";
+describe("formatCalendarDiff (일 탭 달력 칸 증감)", () => {
+  it("ui 표 5건", () => {
+    expect(formatCalendarDiff(10_770_000)).toBe("+0.1억");
+    expect(formatCalendarDiff(-99_990_000)).toBe("−0.9억");
+    expect(formatCalendarDiff(120_000_000)).toBe("+1.2억");
+    expect(formatCalendarDiff(66_200)).toBe("+6.6만");
+    expect(formatCalendarDiff(999)).toBe("+999");
+  });
+  it("경계", () => {
+    expect(formatCalendarDiff(1_000)).toBe("+0.1만");
+    expect(formatCalendarDiff(9_999_999)).toBe("+999만");
+    expect(formatCalendarDiff(10_000_000)).toBe("+0.1억");
+    expect(formatCalendarDiff(99_999_999)).toBe("+0.9억");
+    expect(formatCalendarDiff(100_000_000)).toBe("+1억");
+    expect(formatCalendarDiff(-999)).toBe("−999");
+    expect(formatCalendarDiff(-1_200)).toBe("−0.1만");
+  });
+});

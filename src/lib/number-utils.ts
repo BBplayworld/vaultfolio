@@ -85,6 +85,17 @@ export function formatCompactKRW(value: number): string {
   return `${sign}${won.toLocaleString("ko-KR")}`;
 }
 
+// 일 탭 달력 칸 증감(좁은 칸) 축약 — formatCompactKRW 위 래퍼. 부호 항상(+/U+2212), 원 생략, 소수 버림:
+// ≥1억 억 · 1천만~1억 0.X억 · 1천~1천만 만 · 1천 미만 원 숫자. 0은 호출부가 줄을 그리지 않는다(4.95)
+export function formatCalendarDiff(value: number): string {
+  const won = Math.round(Math.abs(value));
+  const sign = value < 0 ? "\u2212" : "+";
+  if (won >= 1e8 || (won >= 1e4 && won < 1e7)) return `${sign}${formatCompactKRW(won)}`;
+  if (won >= 1e7) return `${sign}${Math.floor(won / 1e7) / 10}억`;
+  if (won >= 1e3) return `${sign}${Math.floor(won / 1e3) / 10}만`;
+  return `${sign}${won}`;
+}
+
 // 보유일수 계산
 export function calculateHoldingDays(purchaseDate: string): number {
   const purchase = new Date(purchaseDate);
