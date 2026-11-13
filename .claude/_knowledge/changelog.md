@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-13 (v4.95)
+
+### 일 탭 숫자 = 홈 · 320 표기 정돈 · 죽은 코드 정리 (#4.95, 이슈 #184)
+- **자산 변화 › 일 Hero·원인 = 홈**: `activity/use-day-hero.ts`(`useDayHero`·순수 `resolveDayHero`)가 `computeAttributionView(sinceDate=어제)`로 계산(홈 `useHeaderNetChange`와 같은 식). 일 탭 전용 diff(이번 달 마지막 2건) 삭제. 제목 `전일 대비`/`M/D 기록 대비`, 원인 `CauseBlock scope="week"`(`mapWeekCauses`) 재사용, 비교 기록 없음이면 홈 7일 카드 문구(`day-empty`), 연 탭 문구는 일 탭에서 제거.
+- **달력 칸 증감**: `prevDailyRecord`로 30일 롤링 전체에서 직전 기록 탐색(월초 1일 칸도 전달 마지막 기록 대비). 달력 머리에 `종가 기준` 11px 캡션(`day-calendar-basis`, 분리 커밋).
+- **F4**: `WeekTrendCard` 막대 값 라벨 360 미만은 `formatCompactKRW`(원 생략·`6.4억`·`752만`) 11px 한 줄. 360 이상 diff 0.
+- **F5**: 배당 `N월 예정` 칩 `max-[359px]:px-1 max-[359px]:text-[11px]`.
+- **ProfitCard**: `period` 필수, 비제어 분기(`innerPeriod`·자체 선택기·요약 박스) 삭제.
+- 저장·GA·서버·동기화 변경 0. 테스트: `use-day-hero.test.ts`·`quality-batch-184.test.tsx`(신규).
+
+---
+
 ## 2026-11-13 (v4.94)
 
 ### 처음 맞는 결산 열기 · 결산 이름 하나로 · 체험 숫자 맞추기 (#4.94, 이슈 #183)

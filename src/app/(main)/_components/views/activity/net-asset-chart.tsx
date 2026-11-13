@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
+import { formatCalendarDiff, formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode, getPriceLayout } from "@/lib/number-utils";
 import { YearlyNetAsset, yearlyNetAssetSchema, DailyAssetSnapshot } from "@/types/asset";
 import { STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { computeRecordStats, type RecordStats } from "@/lib/report/record-streak";
@@ -46,6 +46,7 @@ import { resolveYearChain } from "@/lib/report/settlement";
 import { consumeYearlyNetAssetOpenRequest, dispatchOpenYearlyNetAsset } from "../../layout/navigation/asset-dispatch";
 import { trackAssetSave } from "@/lib/analytics/ga";
 import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
+import { DAY_EMPTY_MESSAGE, prevDailyRecord, useDayHero } from "./use-day-hero";
 
 const NET_COLOR = "#ffffffff";
 
@@ -201,8 +202,9 @@ function YearlyNetAssetForm({ editData, onClose }: YearlyNetAssetFormProps) {
   );
 }
 
-function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
-  const [snapshots, setSnapshots] = useState<DailyAssetSnapshot[]>([]);
+// month = 이번 달 기록(달력 칸), all = 30일 롤링 전체(달력 칸 증감의 직전 기록 탐색용, 4.95)
+function useDailySnapshots(snapshotVersion: number): { month: DailyAssetSnapshot[]; all: DailyAssetSnapshot[] } {
+  const [snapshots, setSnapshots] = useState<{ month: DailyAssetSnapshot[]; all: DailyAssetSnapshot[] }>({ month: [], all: [] });
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
@@ -213,9 +215,8 @@ function useDailySnapshots(snapshotVersion: number): DailyAssetSnapshot[] {
       if (sundayRemoved.length !== all.length) {
         localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(sundayRemoved));
       }
-      setSnapshots(
-        sundayRemoved.filter(s => s.date.startsWith(currentMonth)).sort((a, b) => a.date.localeCompare(b.date))
-      );
+      const sorted = [...sundayRemoved].sort((a, b) => a.date.localeCompare(b.date));
+      setSnapshots({ month: sorted.filter(s => s.date.startsWith(currentMonth)), all: sorted });
     } catch { /* 무시 */ }
   }, [snapshotVersion]);
   return snapshots;
@@ -264,7 +265,8 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     return () => window.removeEventListener("trigger-add-yearly-net-asset", onTrigger);
   }, [openAddDialog]);
 
-  const dailySnapshots = useDailySnapshots(snapshotVersion);
+  const { month: dailySnapshots, all: allDailySnapshots } = useDailySnapshots(snapshotVersion);
+  const dayHero = useDayHero(activeView === "daily");
   const recordStats = useRecordStats(snapshotVersion);
 
   const handleDelete = (year: number) => {
@@ -303,7 +305,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     axisLine: false,
   };
 
-  // 선택된 뷰의 대비 금액 — 연: 연도별 마지막 2건, 일: 이번 달 일별 스냅샷 마지막 2건
+  // 선택된 뷰의 대비 금액 — 연: 연도별 마지막 2건, 일: 홈 Hero와 같은 계산(useDayHero)
   let diff: number | null = null;
   let diffPct: number | null = null;
   let comparisonLabel = "대비";
@@ -328,17 +330,15 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     heroStart = prev?.netAsset;
     heroEnd = latest?.netAsset;
   } else if (activeView === "daily") {
-    const lastIdx = dailySnapshots.length - 1;
-    const latest = lastIdx >= 0 ? dailySnapshots[lastIdx] : null;
-    const prev = lastIdx >= 1 ? dailySnapshots[lastIdx - 1] : null;
-    diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
-    diffPct = diff !== null && prev && prev.netAsset !== 0
-      ? (diff / Math.abs(prev.netAsset)) * 100
-      : null;
+    // 홈 Hero와 같은 계산(useDayHero, 4.95) — 비교 시작 = 어제, 끝 = 실시간 순자산
     comparisonLabel = "전일 대비";
-    heroTitle = prev ? `${Number(prev.date.slice(5, 7))}/${Number(prev.date.slice(8, 10))} 기록 대비` : "전일 대비";
-    heroStart = prev?.netAsset;
-    heroEnd = latest?.netAsset;
+    heroTitle = dayHero.kind === "ok" ? dayHero.title : "전일 대비";
+    if (dayHero.kind === "ok") {
+      diff = dayHero.delta;
+      diffPct = dayHero.pct;
+      heroStart = dayHero.start;
+      heroEnd = dayHero.end;
+    }
   }
 
   // 연 탭 변화 원인(#32 보완 B안) — 작년 수동 순자산(또는 전년 12월 스냅샷) → 올해 enrich 월 → 오늘 체인, 합계 = Hero 증감.
@@ -366,11 +366,14 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
       {view && (
         <ChangeHero
           title={heroTitle}
+          titleTestId={activeView === "daily" ? "day-title" : undefined}
           delta={diff}
           pct={diffPct}
           start={heroStart}
           end={heroEnd}
-          message={<>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
+          message={activeView === "daily"
+            ? <span data-testid="day-empty" className="text-pretty break-keep">{DAY_EMPTY_MESSAGE}</span>
+            : <>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
@@ -399,6 +402,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           ? <CauseBlock key="year" scope="year" status={yearCauses.status} />
           : <CauseBlock key="year" scope="year" mapped={yearCauses.mapped} estimatedLabel={yearCauses.estimatedLabel} />
       )}
+      {activeView === "daily" && dayHero.kind === "ok" && <CauseBlock key="day" scope="week" mapped={dayHero.mapped} estimatedLabel="예측" />}
       <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
         {!view && <CardHeader className={ASSET_THEME.contentPad}>
           <div className="flex items-start justify-between gap-2">
@@ -589,8 +593,12 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                 const [yearStr, monthStr] = currentMonthStr.split("-");
                 return (
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-sm font-semibold text-muted-foreground">{yearStr}년 {parseInt(monthStr)}월</p>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        {yearStr}년 {parseInt(monthStr)}월
+                        {/* 달력은 마감 기록, 위 Hero는 실시간 — 기준 차이 캡션(4.95, 기존 헤더 칩 문구 재사용) */}
+                        <span data-testid="day-calendar-basis" className="ml-1.5 whitespace-nowrap text-[11px] font-normal">종가 기준</span>
+                      </p>
                       {recordStats && recordStats.streakDays > 0 && (
                         <p className="text-sm text-muted-foreground tabular-nums">
                           연속 <span className="font-semibold text-foreground">{recordStats.streakDays}일</span> 기록
@@ -615,8 +623,8 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                             }
                             const hasData = cell.netAsset !== null;
                             const isToday = cell.date === todayStr;
-                            const dataIdx = dailyChartData.findIndex(d => d.date === cell.date);
-                            const prev = hasData && dataIdx > 0 ? dailyChartData[dataIdx - 1] : null;
+                            // 직전 기록 = 30일 롤링 전체에서 찾는다(월초 1일 칸도 전달 마지막 기록 대비, 4.95)
+                            const prev = hasData ? prevDailyRecord(allDailySnapshots, `${currentMonthStr}-${cell.date.slice(3)}`) : null;
                             const diff = hasData && prev ? cell.netAsset - prev.netAsset : null;
                             // 모바일 셀 텍스트 가용폭은 약 42.6px = (390 − layout px-3 24 − gap 12) / 7 − p-1 8.
                             // 금액은 text-xs로 그 안에 들어가지만, overflow-hidden으로 예상 못 한 자릿수가
@@ -625,7 +633,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                             return (
                               <div
                                 key={cell.date}
-                                className={`rounded-md border p-1 flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
+                                className={`rounded-md border p-1 max-[359px]:px-0 min-[360px]:max-sm:px-[3px] flex flex-col transition-colors relative overflow-hidden ${hasData ? "h-24 sm:h-28" : "h-12 sm:h-14"} ${isToday ? "border-primary bg-primary/5" : hasData ? "border-border hover:bg-muted/30" : "border-transparent bg-muted/5"}`}
                               >
                                 <p className={`absolute top-1 left-1 text-[12px] sm:text-[13px] font-medium tabular-nums leading-none ${isToday ? "text-foreground font-semibold" : hasData ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
                                   {parseInt(cell.date.split("/")[1])}
@@ -636,8 +644,9 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                                       {formatShortCurrencyDecimal(cell.netAsset)}
                                     </p>
                                     {diff !== null ? (
-                                      <p className={`text-xs sm:text-sm font-semibold leading-none text-center tabular-nums sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
-                                        {diff > 0 ? "+" : ""}{formatShortCurrency(diff)}
+                                      <p data-testid="day-cell-diff" className={`text-[11px] sm:text-sm tracking-tighter sm:tracking-normal font-semibold leading-none text-center tabular-nums sm:pt-1 w-full ${getProfitLossColor(diff)}`}>
+                                        <span className="sm:hidden">{formatCalendarDiff(diff)}</span>
+                                        <span className="hidden sm:inline">{diff > 0 ? "+" : ""}{formatShortCurrency(diff)}</span>
                                       </p>
                                     ) : null}
                                   </div>

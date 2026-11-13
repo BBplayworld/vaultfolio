@@ -431,6 +431,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `buildMonthlyLogChanges(rows)` (R3) → `Map<월, { vsMonth, skipped, net, groups }>` — 바로 앞 기록 달(gap 건너뜀, `skipped` = 월 차 >1) 대비 순자산 변화. `groups` = 두 줄 모두 full일 때만 자산군 **순자산 기여** 변화(부채 −|v|, 대출 증가 = 음수); 아니면 null. 순자산·자산군 모두 **표시값(원 반올림)끼리의 차**(R3 보정 — 화면 숫자로 빼 본 값 = 표시 변화). 소수 원화값 달은 자산군 변화 합 ≠ `net`(반올림 잔차 수 원). `net` = 결산 Hero 증감(`settlementDelta`도 `round(끝) − round(시작)`, COO R3 F1). 첫 기록 달·gap 줄은 키 없음.
 - `formatMonthlyLogDelta(v)` (R3) — 원 단위 반올림, 0 → `0원`, `+1,234원` / `−1,234원`(U+2212).
 - `formatMonthlyLogAmount(v, "short"|"full", debt?)` — short = 1억 미만 `formatShortCurrency`·1억 이상 억 단위 소수 둘째 자리 버림·끝 0 제거(`6.44억`, COO U1 — 정수 연산 `floor(|v|/100만)/100`, 공용 `formatShortCurrencyDecimal`은 부동소수 오차로 2.3억→2.29억이라 미사용, COO U2)에서 `만원`/`억원` 끝 `원` 생략(1만원 미만·0은 `원` 유지), full = `formatCurrency`. 부채는 −절댓값, 음수 부호 U+2212, |v|<0.5는 `0원`.
+- `useDayHero(enabled)`·`resolveDayHero(view, yesterday, endNet)`·`dayYesterday`·`prevDailyRecord`·`DAY_EMPTY_MESSAGE` (`activity/use-day-hero.ts`, 4.95) — 자산 변화 일 탭 Hero·원인(=홈 Hero 계산, sinceDate 어제)과 달력 직전 기록 탐색. 저장 호출 0.
 - 자동: `report/__tests__/monthly-log.test.ts`(S9 실사용 픽스처·Hero 끝값 일치·13개월·연 경계), `views/activity/__tests__/monthly-log.test.tsx`(인라인 카드 조건·줄·패널·더 보기). `formatMonthlyLogAmount` short 경로는 R3 이후 화면 미사용(테스트만).
 
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
@@ -561,6 +562,7 @@ parseNumberFromCommas(value): number
 formatCurrency(value): string           // "₩1,234,567"
 formatShortCurrency(value): string      // "2.3억원" · "9,999만원" (0.1억·만원 단위 버림)
 formatShortCurrencyDecimal(value): string // "2.01억원" · "1.13백만원" · "2.9만원" (소수 둘째 자리 버림·끝 0 제거)
+formatCompactKRW(value): string // 320 막대 라벨용 "6.4억"·"752만"·"−6.4억" (원 생략, 10 미만 소수 1자리 버림, 4.95)
 // 두 함수 모두 원 단위 정수를 표시 최소 단위로 정수 나눗셈해 버린다(#129). 축약 버림 표기를 새로 만들 때 곱셈 뒤 Math.floor 금지 — 이 함수 재사용
 calculateHoldingDays(purchaseDate): number
 formatHoldingPeriod(purchaseDate): string  // "1년 3개월" 형식

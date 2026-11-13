@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatCompactKRW, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { formatAttributionDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
@@ -677,7 +677,9 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
-                <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                {/* 320(<360)은 7칸 폭이 좁아 원 생략·11px 축약 표기(4.95 F4). 360 이상은 기존 표기 그대로 */}
+                <span className="text-sm font-bold text-foreground leading-none mb-1 max-[359px]:hidden">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                <span className="hidden text-[11px] font-bold tabular-nums whitespace-nowrap text-foreground leading-none mb-1 max-[359px]:inline">{formatCompactKRW(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
               <span className="text-sm text-muted-foreground">{label}</span>
