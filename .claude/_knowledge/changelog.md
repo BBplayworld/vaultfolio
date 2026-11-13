@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-13 (v5.102)
+
+### 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기 (#5.102, 이슈 #201)
+- 성적표 '5축 측정'과 'AI 평가 프롬프트' 사이에 `NetworthBenchmarkBlock`(`views/activity/networth-benchmark-block.tsx`) 1개. 통계 구간 분포(구간 1개 = 1행 가로 막대) 위에 내 구간을 중립 색으로 강조하고 문장 `가구 100곳 중 약 N곳이 이 구간, 약 M곳이 이보다 높은 구간이에요.` + 라벨·출처 줄. 누르는 것·화면 상태·내 금액 표기 없음. 부동산 0건이면 구간을 숨기고 안내 1줄.
+- 통계는 앱 안 정적 상수 `src/config/household-networth-stats.ts`(`meta`·`brackets`), 계산은 순수 함수 `src/lib/report/networth-benchmark.ts`. 순자산은 `getAssetSummary().netAsset` 그대로(새 환산 없음). **원문 표 확보 전이라 상수는 비어 있고(`meta: null, brackets: []`) `validateStats` 실패 → 블록 null로 화면에 나오지 않는다.** 값은 원문 확보 뒤 별도 커밋 1개로 채운다.
+- 등급 계산·`recordGradeSnapshot`·AI 프롬프트·공유 카드·저장 스키마·키·동기화·GA·서버 전송 변경 0. 성적표 diff는 import 1줄 + JSX 1줄.
+
 ## 2026-11-13 (v5.0)
 
 ### 스크린샷 등록 평단가를 맞게 읽고, 맞게 말하기 (#5.0, 이슈 #196)

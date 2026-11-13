@@ -511,3 +511,5 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - `BrandWordmark`(`src/components/brand-wordmark.tsx`, #4.66 logo-spec·R6) — "시크릿에셋" 글자 아웃라인 SVG(Pretendard Variable wght 750, OFL, 폰트 파일 미포함), 자간 +110/2048em(R6) + 커닝 시크 -15·크릿 -80·릿에 +40·에셋 +60, viewBox `25 -1641 9224 1833`(잉크 경계라 높이 클래스+`w-auto`로 크기 지정), `fill=currentColor`(락업에서 `text-[color:var(--brand-logo)]`), `aria-label`=서비스명.
 
 - **자산 변화 일 탭(4.95)**: `net-asset-chart.tsx` daily = `ChangeHero(titleTestId=day-title)` + `CauseBlock scope="week"` + 달력(`종가 기준` 캡션). `ProfitCard`는 `period` 필수(비제어 분기 없음). `WeekTrendCard` 값 라벨은 360 미만에서 축약 span.
+
+- **NetworthBenchmarkBlock (#5.102, 로컬)**: `views/activity/networth-benchmark-block.tsx` — 성적표 "가계 통계와 나란히". props `{ netAsset, realEstateCount, stats? }`(stats 기본 = `HOUSEHOLD_NETWORTH_STATS`, 테스트만 주입), 훅·상태·버튼 0. `SECTION`+`SectionHeader(tone=brand)` + 문장/안내 + 라벨 줄 + 가로 막대 행 목록(`grid-cols-[4.5rem_1fr_3rem]`, 일반 막대 `bg-foreground/25`, 내 구간 행 `bg-muted/40`·막대 `bg-foreground`·칩 `내 구간`·`aria-current`) + 출처 줄. 색은 foreground/muted 명도만(손익색·주황·brand 미사용). 상수가 비었거나 검증 실패면 null. testId `benchmark-*`. views/activity 전용.

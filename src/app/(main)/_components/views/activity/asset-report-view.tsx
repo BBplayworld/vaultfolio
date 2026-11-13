@@ -28,6 +28,7 @@ import { useDividendAnnualTotals } from "./performance-hub";
 import { DIVIDEND_FETCH_FAILED_MESSAGE, isDividendReady } from "@/lib/finance/dividend-client";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
+import { NetworthBenchmarkBlock } from "./networth-benchmark-block";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -701,6 +702,7 @@ export function AssetReportView() {
                 })}
               </div>
             </div>
+            <NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} />
 
             {/* ── AI 평가 프롬프트 ── */}
             <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
