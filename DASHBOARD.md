@@ -35,7 +35,7 @@
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 시장 알림(공통 대상 14개, 설치 앱 전용) | **대표 결정 대기**(데모) · origin/main 재병합 필요 | 대표 승인(risk:high) |
-| v4.99 | [#193](https://github.com/BBplayworld/vaultfolio/issues/193) 보유 현황 스크린샷: 메리츠·키움 2줄 헤더에서 현재가를 평단가로 읽는 결함(대표 지적, 빠른 경로) | 개발 | COO 자체 승인 예정 |
+| v4.99 | [#193](https://github.com/BBplayworld/vaultfolio/issues/193) 보유 현황 스크린샷: 메리츠·키움 2줄 헤더에서 현재가를 평단가로 읽는 결함(대표 지적, 빠른 경로) + [#195](https://github.com/BBplayworld/vaultfolio/issues/195) 같은 종목을 여러 증권사에 가진 경우 다른 증권사로 덮어쓰는 결함 | 개발(평단 qa PASS, #195 수정 중) | COO 자체 승인 예정 |
 
 ### ⏱ 예약된 운영 확인
 - ✅ 10:06 국내 장중 S1 PASS: '오늘' 칩 기준값(삼성전자 +1.01%·SK하이닉스 +2.00%, 전일 종가 분모)·체험 장중 숨김 규칙대로·미국 'M/D 종가' 정상
