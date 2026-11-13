@@ -15,7 +15,7 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { fetchDividend, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { dividendQueryOptions, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
@@ -189,10 +189,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       const excd = "NAS";
       return {
-        queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type, excd),
-        staleTime: 30 * 24 * 60 * 60 * 1000,
-        retry: false,
+        ...dividendQueryOptions(ticker, type, excd),
         enabled: isActive,
       };
     }),

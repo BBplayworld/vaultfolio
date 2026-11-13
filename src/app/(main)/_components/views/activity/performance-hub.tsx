@@ -12,7 +12,7 @@ import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { fetchDividend, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { dividendQueryOptions, countFailedDividends, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
@@ -42,10 +42,7 @@ export function useDividendAnnualTotals() {
       const ticker = normalizeTicker(stock);
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       return {
-        queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type, "NAS"),
-        staleTime: 30 * 24 * 60 * 60 * 1000,
-        retry: false,
+        ...dividendQueryOptions(ticker, type),
       };
     }),
   });

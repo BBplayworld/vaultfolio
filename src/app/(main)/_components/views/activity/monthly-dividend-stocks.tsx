@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
-import { fetchDividend } from "@/lib/finance/dividend-client";
+import { dividendQueryOptions } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 
@@ -69,10 +69,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
       const ticker = normalizeTicker(stock);
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       return {
-        queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type, "NAS"),
-        staleTime: 30 * 24 * 60 * 60 * 1000,
-        retry: false,
+        ...dividendQueryOptions(ticker, type),
       };
     }),
   });
