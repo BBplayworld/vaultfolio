@@ -34,7 +34,7 @@ const NUM = "text-right whitespace-nowrap tabular-nums";
 function BriefLine({ id, head, text }: { id: string; head: string; text: string[] }) {
   return (
     <p data-testid={`benchmark-comp-brief-${id}`} className="flex min-h-8 items-baseline gap-x-3">
-      <span className="w-16 shrink-0 text-xs text-muted-foreground">{head}</span>
+      <span className="w-16 md:w-[4.5rem] xl:w-20 shrink-0 text-xs text-muted-foreground">{head}</span>
       <span className="flex flex-wrap gap-x-1.5 text-sm tabular-nums text-foreground">
         {text.map((t, i) => <span key={t} className={NOWRAP}>{i > 0 ? "· " : ""}{t}</span>)}
       </span>

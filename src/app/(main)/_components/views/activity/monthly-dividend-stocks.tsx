@@ -198,7 +198,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1.5 sm:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
+          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
@@ -216,7 +216,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1.5 sm:gap-x-3 px-2 sm:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-3 px-2 sm:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
@@ -277,7 +277,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     ) : (
                       <p className="text-xs tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
-                    <p className="text-xs tabular-nums whitespace-nowrap text-muted-foreground">보유 {stock.quantity}주</p>
+                    <p className="text-xs tabular-nums break-keep text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
                   <div className="text-right whitespace-nowrap">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (

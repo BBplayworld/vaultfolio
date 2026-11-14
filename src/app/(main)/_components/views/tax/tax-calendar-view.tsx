@@ -190,10 +190,10 @@ function TaxEventCard({ event, tags }: { event: TaxEvent; tags: TaxTagReasons })
             >
               {event.dueLabel}
             </span>
-            <p className="text-sm font-semibold text-foreground text-pretty">{event.title}</p>
+            <p className="text-sm font-semibold text-foreground text-pretty break-keep">{event.title}</p>
           </div>
-          <p className="text-sm text-muted-foreground">{event.who}</p>
-          <p className="text-sm text-muted-foreground text-pretty">{event.summary}</p>
+          <p className="text-sm text-muted-foreground break-keep">{event.who}</p>
+          <p className="text-sm text-muted-foreground text-pretty break-keep">{event.summary}</p>
           <div className="flex flex-wrap gap-1 pt-0.5">
             {event.tags.map((t) => (
               <span

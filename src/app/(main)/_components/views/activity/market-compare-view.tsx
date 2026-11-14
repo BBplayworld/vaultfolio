@@ -302,7 +302,7 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
       <div
         role="table"
         aria-label={head}
-        className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-baseline gap-x-1 gap-y-3 min-[375px]:gap-x-1.5 sm:max-w-md"
+        className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-baseline gap-x-1 gap-y-3 min-[375px]:gap-x-1.5 sm:max-w-md sm:grid-cols-[minmax(0,1fr)_repeat(3,auto)] sm:gap-x-2 lg:grid-cols-[auto_repeat(3,minmax(0,1fr))] lg:gap-x-1.5"
       >
         <div role="row" className="contents">
           <span role="columnheader" aria-label="구분" />

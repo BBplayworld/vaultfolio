@@ -107,6 +107,7 @@
 - **타입 경계는 `md`(48rem = 768)와 `xl`(80rem = 1280) 두 개뿐.** 토큰 값은 `globals.css` `@layer base`의 `@media (min-width: 48rem)`·`(min-width: 80rem)`에서만 바꾼다(`@theme inline`에 `--text-*`를 넣지 않는다 — 값이 클래스에 박혀 덮어쓰기가 듣지 않음). 줄높이 변수는 단위 없는 비율이라 덮어쓰지 않는다.
 - **크기 클래스에 `sm:`·`lg:` 접두 금지, 임의 px(`text-[Npx]`) 금지.** 한 단계 올려야 할 때만 `md:text-*`를 쓴다. 예외: 인증카드(`ASSET_THEME_SHOT`·`SHOT_BIG`, `header-menu/share/*`), PWA 안내 삽화, 아이콘 원 안 이니셜 2곳(`text-[10px]`, 그림 요소). `type-scale-guard.test.ts`가 재유입을 막는다.
 - **화면 글자는 어느 환경에서도 11px 미만 금지**(이니셜 제외). 9·10px 대신 `text-2xs`.
+- **크기 없는 글자 금지**: 행 제목·시트 제목처럼 `body` 16px을 상속하던 글자는 `text-base`를 명시한다(상속 글자는 토큰을 따라가지 않아 PC에서 본문과 같아진다). `SheetTitle` 기본값이 `text-base`.
 - **뷰포트와 무관하게 모바일 값으로 고정해야 하면 `type-fixed`**(인증카드 프리뷰·캡처 래퍼 2곳, R32). 그 요소 아래에만 듣고 Radix Portal 안쪽은 고정되지 않는다. 다이얼로그가 좁아 깨지면 `type-fixed`가 아니라 폭(`max-w`)을 늘린다.
 - `html` 글자 크기(16px)는 건드리지 않는다 — 간격·아이콘·히트영역은 환경과 무관하게 같다.
 - **`tailwind-merge` 순서**: `cn()` 안에서 크기 클래스는 줄높이 클래스(`leading-*`)보다 앞에 둔다(뒤에 오는 크기가 앞의 줄높이를 지운다). `text-2xs`는 크기로 인식돼 색 클래스와 서로 지우지 않는다(`type-scale-cn.test.ts`).

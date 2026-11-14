@@ -685,13 +685,14 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
                 {/* 640 미만은 원 없는 11px 한 줄(4.96): <375 tiny / 375~639 기본 / 640 이상 기존 표기.
-                    값·날짜는 차트 옆 라벨 — 768~1279(2열이 시작되는 1024 포함)에서 한 줄에 들어가도록 text-xs(#215 R4) */}
+                    값·날짜는 차트 옆 라벨 — 768~1279(2열이 시작되는 1024 포함)에서 한 줄에 들어가도록 text-xs(#215 R4).
+                    날짜는 767 이하에서 지금처럼 2줄(`10-18`/`(일)`)로 접힌다 — nowrap은 md부터 */}
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
                 <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
-              <span className="text-sm md:text-xs whitespace-nowrap text-muted-foreground">{label}</span>
+              <span className="text-sm md:text-xs md:whitespace-nowrap text-muted-foreground">{label}</span>
             </div>
           );
         })}

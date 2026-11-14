@@ -302,7 +302,7 @@ export function ToolMenuPage() {
               <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center gap-2">
                   <Share2 className="size-5 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-foreground">간편 공유</span>
+                  <span className="text-base font-semibold text-foreground">간편 공유</span>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
@@ -323,7 +323,7 @@ export function ToolMenuPage() {
               <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center gap-2">
                   <Cloud className="size-5 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-foreground">기기 동기화</span>
+                  <span className="text-base font-semibold text-foreground">기기 동기화</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary">
@@ -475,7 +475,7 @@ export function ToolMenuPage() {
             >
               <Info className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="font-semibold text-foreground">앱 가이드 보기</p>
+                <p className="text-base font-semibold text-foreground">앱 가이드 보기</p>
                 <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed break-keep text-pretty">시크릿에셋의 보안 가이드를 살펴봅니다.</p>
               </div>
             </button>
@@ -491,7 +491,7 @@ export function ToolMenuPage() {
             >
               <BellRing className="size-5 text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="font-semibold text-foreground">새 소식 보기</p>
+                <p className="text-base font-semibold text-foreground">새 소식 보기</p>
                 <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed break-keep text-pretty">최근 업데이트와 새 기능을 확인합니다.</p>
               </div>
             </button>

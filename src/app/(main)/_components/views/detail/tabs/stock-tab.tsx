@@ -113,7 +113,7 @@ export function StockBarChart({ items, total }: {
             <div key={stock.id} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <span className="text-sm text-foreground truncate">{stock.name}</span>
-              <span className="text-sm md:text-base font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
+              <span className="text-sm font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
             </div>
           );
         })}
@@ -970,7 +970,7 @@ export function StockCategorySection({
     return idx >= 0 ? barColors[idx] : MAIN_PALETTE[0];
   };
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
-  const legendTextCls = screenshotMode ? shotTok.legendText : "text-sm md:text-base";
+  const legendTextCls = screenshotMode ? shotTok.legendText : "text-sm";
 
   return (
     <div className={`${screenshotMode ? "px-0" : "px-1 sm:px-2"} space-y-3`}>
