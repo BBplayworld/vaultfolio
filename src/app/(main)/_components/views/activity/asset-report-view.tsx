@@ -4,10 +4,9 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Trophy, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
 import { buildFxExposureLines } from "@/lib/report/composition";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
@@ -29,6 +28,7 @@ import { DIVIDEND_FETCH_FAILED_MESSAGE, isDividendReady } from "@/lib/finance/di
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 import { NetworthBenchmarkBlock } from "./networth-benchmark-block";
+import { SettlementAiButton } from "./settlement-view";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -120,6 +120,7 @@ export function AssetReportView() {
   const [promptOpen, setPromptOpen] = useState(false);
   // 레버리지 근거·대출 상세는 기본 접힘 — 결론(이자 내고 남는 돈)까지 시선이 빨리 닿게
   const [leverageDetailOpen, setLeverageDetailOpen] = useState(false);
+  const [openAxes, setOpenAxes] = useState<Set<AxisKey>>(() => new Set()); // 5축 줄 펼침(5.108 C5) — 기본 전부 접힘, 다중 펼침
 
   // 배당 (성과 허브·배당 차트와 동일 쿼리 키 → 캐시 공유)
   // 이자(연 환산)·주식(최근 1년)과 기간 길이를 맞추기 위해 배당도 올해 12개월(실적+예상)을 쓴다.
@@ -652,77 +653,92 @@ export function AssetReportView() {
                 icon={Star}
                 title="5축 측정"
                 tone="gold"
-                badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">{gradeChipLabel(grade)}</span>}
               />
               <div className="space-y-2">
                 {grade.axes.map((axis, idx) => {
                   const Icon = AXIS_ICONS[axis.key];
                   const linked = axisHasLink(axis.key);
+                  const open = openAxes.has(axis.key);
+                  const panelId = `axis-panel-${axis.key}`;
+                  // 배당 실패로 잠정인 축(수익의 질·레버리지)은 배당 0 기준 점수라 숫자를 보이지 않는다
+                  const divUnknown = divFailed > 0 && !!axis.pending && (axis.key === "earningQuality" || axis.key === "leverage");
+                  const d = gradeDelta?.axisDiffs[axis.key];
                   return (
                     <div
                       key={axis.key}
-                      className={`rounded-lg bg-muted/30 p-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300`}
+                      className="rounded-lg bg-muted/30 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
                       style={{ animationDelay: `${idx * 60}ms` }}
                     >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <Icon className="size-4 text-primary shrink-0" />
-                        <span className={`${SECTION_TITLE} break-keep`}>{axis.label}</span>
-                        {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
-                      </span>
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        {(() => {
-                          const d = gradeDelta?.axisDiffs[axis.key];
-                          return d ? (
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={panelId}
+                        onClick={() => setOpenAxes((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(axis.key)) next.delete(axis.key); else next.add(axis.key);
+                          return next;
+                        })}
+                        className="flex min-h-12 w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <Icon className="size-4 text-primary shrink-0" />
+                          <span className={`${SECTION_TITLE} break-keep`}>{axis.label}</span>
+                          {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
+                        </span>
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {d ? (
                             <span className={`text-xs font-semibold tabular-nums ${getProfitLossColor(d)}`}>
                               {d > 0 ? "▲" : "▼"}{Math.abs(d).toFixed(1)}
                             </span>
-                          ) : null;
-                        })()}
-                        {(() => {
-                          // 배당 실패로 잠정인 축(수익의 질·레버리지)은 배당 0 기준 점수라 숫자를 보이지 않는다
-                          const divUnknown = divFailed > 0 && !!axis.pending && (axis.key === "earningQuality" || axis.key === "leverage");
-                          return (
-                            <>
-                              {/* 값이 없는 축의 빈 별은 320에서 제목 폭을 빼앗아 3줄로 쌓이게 해 숨긴다(숫자·'측정불가'가 그 자리를 설명) */}
-                              {divUnknown || axis.score === null ? (
-                                <span className="contents max-[360px]:hidden"><StarRating score={null} /></span>
-                              ) : (
-                                <StarRating score={axis.score} />
-                              )}
-                              {divUnknown ? (
-                                <span className="text-sm font-semibold text-muted-foreground w-7 text-right">—</span>
-                              ) : axis.score !== null ? (
-                                <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
-                              ) : (
-                                <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </span>
-                    </div>
-                    {/* 배당 조회 실패 시 수익의 질은 배당 0 기준 설명·조언 대신 실패 안내만(안내 한 곳) */}
-                    <p className={`${CAPTION} text-pretty break-keep`}>{axis.key === "earningQuality" && divFailed > 0 ? DIVIDEND_FETCH_FAILED_MESSAGE : axis.reason}</p>
-                    {axis.key === "diversification" && fxLines && (
-                      <div data-testid="fx-exposure-lines" className="space-y-0.5">
-                        <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.ratioLine}</p>
-                        {fxLines.impactLine && <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.impactLine}</p>}
-                        <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
-                      </div>
-                    )}
-                    {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
-                      <button
-                        type="button"
-                        onClick={() => axisNavigate(axis.key)}
-                        className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
-                      >
-                        <span className="text-pretty break-keep">{axis.action}</span>
-                        <ChevronRight className="size-4 shrink-0" />
+                          ) : null}
+                          {/* 값이 없는 축의 빈 별은 320에서 제목 폭을 빼앗아 3줄로 쌓이게 해 숨긴다(숫자·'측정불가'가 그 자리를 설명) */}
+                          {divUnknown || axis.score === null ? (
+                            <span className="contents max-[360px]:hidden"><StarRating score={null} /></span>
+                          ) : (
+                            <StarRating score={axis.score} />
+                          )}
+                          {divUnknown ? (
+                            <span className="text-sm font-semibold text-muted-foreground w-7 text-right">—</span>
+                          ) : axis.score !== null ? (
+                            <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
+                          )}
+                          <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
+                        </span>
                       </button>
-                    ) : (
-                      <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
-                    )}
+                      {/* 항상 마운트 + grid-rows 0fr↔1fr(연타·중간 방향 전환 OK), 접힘은 inert·aria-hidden */}
+                      <div
+                        id={panelId}
+                        {...(open ? {} : { inert: true, "aria-hidden": true })}
+                        className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                      >
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="space-y-2 px-3 pb-3">
+                            {/* 배당 조회 실패 시 수익의 질은 배당 0 기준 설명·조언 대신 실패 안내만(안내 한 곳) */}
+                            <p className={`${CAPTION} text-pretty break-keep`}>{axis.key === "earningQuality" && divFailed > 0 ? DIVIDEND_FETCH_FAILED_MESSAGE : axis.reason}</p>
+                            {axis.key === "diversification" && fxLines && (
+                              <div data-testid="fx-exposure-lines" className="space-y-0.5">
+                                <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.ratioLine}</p>
+                                {fxLines.impactLine && <p className="text-sm font-medium text-foreground text-pretty break-keep tabular-nums">{fxLines.impactLine}</p>}
+                                <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
+                              </div>
+                            )}
+                            {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
+                              <button
+                                type="button"
+                                onClick={() => axisNavigate(axis.key)}
+                                className="flex w-full min-h-10 items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
+                              >
+                                <span className="text-pretty break-keep">{axis.action}</span>
+                                <ChevronRight className="size-4 shrink-0" />
+                              </button>
+                            ) : (
+                              <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -730,22 +746,8 @@ export function AssetReportView() {
             </div>
             <NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} mine={summary} />
 
-            {/* ── AI 평가 프롬프트 ── */}
-            <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
-              <div>
-                <SectionHeader icon={Sparkles} title="전체 자산 AI 평가 프롬프트" tone="info" />
-                <p className={`${CAPTION} mt-1 text-pretty`}>
-                  자산 현황을 외부 AI(Grok·Gemini·GPT)에 붙여넣어 구조·리스크 진단을 받아보세요.
-                </p>
-              </div>
-              <Button
-                onClick={() => setPromptOpen(true)}
-                style={{ backgroundColor: MAIN_PALETTE[0] }}
-                className="text-white hover:opacity-90 border-none w-full"
-              >
-                전체 자산 프롬프트 확인 · 복사
-              </Button>
-            </div>
+            {/* ── AI 평가 프롬프트(5.108 C7) — 결산 AI 버튼과 같은 1행 버튼, 설명은 대화상자 안 ── */}
+            <SettlementAiButton name="" title="AI에게 전체 자산 진단 물어보기" testId={null} onOpen={() => setPromptOpen(true)} />
           </>
         )}
       </CardContent>
