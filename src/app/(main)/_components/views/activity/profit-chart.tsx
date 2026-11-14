@@ -683,7 +683,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                         </p>
                                       </>
                                     ) : (
-                                      <Badge variant="outline" className="text-xs px-1 py-0 h-4">기준가 없음</Badge>
+                                      <Badge variant="outline" className="text-xs px-1 py-0 h-4 md:h-5">기준가 없음</Badge>
                                     )}
                                   </div>
                                 </div>

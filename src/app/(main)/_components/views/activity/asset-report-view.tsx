@@ -682,7 +682,7 @@ export function AssetReportView() {
                       >
                         <span className="flex items-center gap-2 min-w-0">
                           <Icon className="size-4 text-primary shrink-0 max-[390px]:hidden" />
-                          <span className={`${SECTION_TITLE} whitespace-nowrap`}>{axis.label}</span>
+                          <span className="text-sm md:text-base font-bold text-foreground whitespace-nowrap">{axis.label}</span>
                           {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
