@@ -8,7 +8,7 @@ import { sameBroker, tickerKey } from "./match";
 import type { ResyncOptions } from "./types";
 
 export interface ResyncSelection {
-  /** 확인 필요 행 중 `맞추기에 포함`을 체크한 rowId */
+  /** 확인 필요 행 중 `이 항목도 맞추기`를 체크한 rowId */
   include: Set<string>;
   /** 삭제할 기존 항목 id (기본값은 defaultRemoveIds, 유지 묶음에서 체크하면 추가) */
   remove: Set<string>;
@@ -23,6 +23,9 @@ export interface ResyncSelection {
   /** 새 종목 매수일 일괄 입력(#146, 메모리 상태). 없으면 올해 1월 1일 */
   purchaseDate?: string;
 }
+
+/** otherType 행의 후보 선택에서 '새 항목으로 추가'를 고른 값(고른 유형으로 새로 추가, 기존 다른 유형 항목은 그대로) */
+export const PICK_NEW = "__new__";
 
 export type RowAction =
   | { type: "skip" }
@@ -44,6 +47,11 @@ export function resolveRow(row: DiffRow, sel: ResyncSelection): RowAction {
 
   let stock = row.stock;
   if (row.reasons.includes("ambiguous")) {
+    if (row.reasons.includes("otherType") && sel.pick[row.rowId] === PICK_NEW) {
+      const t = item.ticker.trim();
+      if (!t) return { type: "skip" };
+      return { type: "add", qty: (sel.qty[row.rowId] > 0 ? sel.qty[row.rowId] : undefined) ?? item.quantity, ticker: t };
+    }
     stock = row.candidates?.find((c) => c.id === sel.pick[row.rowId]);
     if (!stock) return { type: "skip" };
   }

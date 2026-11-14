@@ -7,8 +7,8 @@ import { shouldShowRefreshNudge, getStaleCategories, heldRefreshCategories, type
 import { isTaxNoticeDismissed, getAssetDrivenHighlights, isImminentTaxMatch, todayKst, type TaxEventMatch } from "./tax-utils";
 import { pickRecommendedFeature } from "./feature-usage";
 import { readSeen, whatsNewTip } from "./whats-new";
-import { readMonthlySnapshots } from "./asset/snapshot-storage";
-import { pickSettlementCard, type SettlementWindow } from "./report/settlement";
+import { readDailySnapshots, readMonthlySnapshots } from "./asset/snapshot-storage";
+import { pickFirstRecordStart, pickSettlementCard, type SettlementWindow } from "./report/settlement";
 import type { AppFeature } from "@/config/app-features";
 
 export type HomeTip =
@@ -47,7 +47,7 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
 
   // 결산 창(말일−3일~다음 달 10일, 첫 달 제외) — 판정은 허브 카드와 같은 pickSettlementCard 그대로
   if (hasAssets) {
-    const win = pickSettlementCard(readMonthlySnapshots(), today);
+    const win = pickSettlementCard(readMonthlySnapshots(), today, pickFirstRecordStart(readDailySnapshots(), assetData, today));
     if (win) return { kind: "settlement", window: win, today };
   }
 

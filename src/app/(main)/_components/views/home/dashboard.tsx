@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatShortCurrency, formatShortCurrencyDecimal, formatPriceByMode } from "@/lib/number-utils";
+import { formatShortCurrency, formatShortCurrencyDecimal, formatNarrowKRW, formatPriceByMode } from "@/lib/number-utils";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { formatAttributionDate, CAUSE_DISPLAY_MIN, type AttributionDisplayItem, type AttributionRecord } from "@/lib/report/asset-report";
@@ -677,7 +677,10 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
-                <span className="text-sm font-bold text-foreground leading-none mb-1">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                {/* 640 미만은 원 없는 11px 한 줄(4.96): <375 tiny / 375~639 기본 / 640 이상 기존 표기 */}
+                <span className="hidden text-[11px] font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
+                <span className="hidden text-[11px] font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
+                <span className="hidden text-sm font-bold text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
               <span className="text-sm text-muted-foreground">{label}</span>

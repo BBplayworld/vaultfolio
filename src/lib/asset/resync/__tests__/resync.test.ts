@@ -44,9 +44,9 @@ describe("매칭 표 ①①'②③④", () => {
     const ex = [st("a", "005930", "domestic", "토스증권", 1, 1), st("b", "005930", "domestic", "키움증권", 1, 1)];
     expect(matchExisting(t({}), ex)).toMatchObject({ kind: "linked", linkedBy: "exact", stock: { id: "a" } });
   });
-  it("①' category만 다름(ISA↔일반) → 기존 항목", () => {
+  it("①' category만 다름(ISA↔일반) → 조용히 연결하지 않고 후보로 묻는다(5.101)", () => {
     const ex = [st("a", "005930", "isa", "토스증권", 1, 1)];
-    expect(matchExisting(t({}), ex)).toMatchObject({ kind: "linked", linkedBy: "category", stock: { id: "a" } });
+    expect(matchExisting(t({}), ex)).toMatchObject({ kind: "ambiguous", crossType: true, candidates: [{ id: "a" }] });
   });
   it.each([[""], [undefined], ["항목 2"]])("② broker %j 단일 줄 연결", (b) => {
     const ex = [st("a", "005930", "domestic", b, 1, 1)];
@@ -220,6 +220,16 @@ describe("S3 연결 사실·수량 감소 확인 필요", () => {
     expect(diff.rows[0]).toMatchObject({ status: "needs", reasons: ["ambiguous"] });
     expect(result.stocks).toEqual(e);
   });
+  it("④ 같은 증권사·같은 유형 후보 2건은 multiAccount 사유 코드가 함께 붙는다 (#198)", () => {
+    const e = [st("a", "005930", "irp", "키움증권", 10, 1), st("b", "005930", "irp", "키움증권", 4, 1)];
+    const { diff } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "키움증권", section: "기타", category: "irp" })])]);
+    expect(diff.rows[0].reasons).toEqual(expect.arrayContaining(["ambiguous", "multiAccount"]));
+  });
+  it("④ 후보 증권사가 다르면 multiAccount 아님 (#198)", () => {
+    const e = [st("a", "005930", "domestic", "", 10, 1), st("b", "005930", "domestic", "항목 2", 4, 1)];
+    const { diff } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "토스증권" })])]);
+    expect(diff.rows[0].reasons).not.toContain("multiAccount");
+  });
   it("④ 줄을 고르고 포함하면 그 줄만 갱신", () => {
     const e = [st("a", "005930", "domestic", "", 10, 1), st("b", "005930", "domestic", "항목 2", 4, 1)];
     const { result } = run(e, [screen(0, [row("005930", 12, 1, { brokerHint: "토스증권" })])], {
@@ -254,6 +264,28 @@ describe("S4 평단 규칙 (averagePriceEstimated)", () => {
     const ex = e();
     const { result } = run(ex, [screen(0, [row("005930", 10, 70000, { brokerHint: "토스증권" })])]);
     expect(result.stocks[0]).toBe(ex[0]);
+  });
+});
+
+describe("#193 2줄 헤더 재업로드 회귀 — 기존 평단이 현재가로 덮어써지지 않는다", () => {
+  // 가공 숫자: 기존 평단은 소수 다자리 저장, 화면(서버 반올림 2자리)에는 같은 값이 읽힌다
+  const e = () => [
+    st("a", "AAA", "foreign", "키움증권", 100, 200.12345678),
+    st("b", "BBB", "foreign", "키움증권", 50, 80.5),
+  ];
+  it("올바른 평단(기존과 같음)으로 다시 올리면 전부 그대로", () => {
+    const ex = e();
+    const { diff, result } = run(ex, [screen(0, [
+      row("AAA", 100, 200.12, { brokerHint: "키움증권", currentPrice: 240 }),
+      row("BBB", 50, 80.5, { brokerHint: "키움증권", currentPrice: 70 }),
+    ])]);
+    expect(diff.rows.map((r) => r.status)).toEqual(["same", "same"]);
+    expect(result.stocks[0]).toBe(ex[0]);
+    expect(result.stocks[1]).toBe(ex[1]);
+  });
+  it("현재가가 평단 칸에 들어온 행(수정 전 오인식 형태)은 평단 변경으로 잡힌다 — 서버 교정이 이를 막는 근거", () => {
+    const { diff } = run(e(), [screen(0, [row("AAA", 100, 240, { brokerHint: "키움증권" })])]);
+    expect(diff.rows[0].change?.avg).toEqual({ before: 200.12345678, after: 240 });
   });
 });
 

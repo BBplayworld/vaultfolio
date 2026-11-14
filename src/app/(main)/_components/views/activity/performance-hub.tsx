@@ -12,25 +12,19 @@ import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
+import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { buildAssetReport } from "@/lib/report/asset-report";
-import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
-import { pickSettlementCard, resolveSettlementWindow, settlementRangeLabel } from "@/lib/report/settlement";
-import { settlementDelta, settlementName } from "./change-hero";
+import type { SettlementWindow } from "@/lib/report/settlement";
+import { pickFirstRecordStart, pickSettlementCard, resolveSettlementWindow, settlementRangeLabel, settlementWindowName } from "@/lib/report/settlement";
+import { settlementDelta } from "./change-hero";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { HubChangeRows } from "./hub-change-rows";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
-
-async function fetchDividend(ticker: string, type: string): Promise<DividendPayoutResult[]> {
-  const params = new URLSearchParams({ ticker, type, excd: "NAS" });
-  const res = await fetch(`/api/finance/dividend?${params}`);
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json.data || [];
-}
 
 // dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유 (자산 성적표에서도 재사용)
 export function useDividendAnnualTotals() {
@@ -48,15 +42,13 @@ export function useDividendAnnualTotals() {
       const ticker = normalizeTicker(stock);
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       return {
-        queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type),
-        staleTime: 30 * 24 * 60 * 60 * 1000,
-        retry: false,
+        ...dividendQueryOptions(ticker, type),
       };
     }),
   });
 
   const isLoading = queries.some((q) => q.isLoading);
+  const failedCount = countFailedDividends(queries);
 
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -76,10 +68,19 @@ export function useDividendAnnualTotals() {
 
   return {
     isLoading,
+    failedCount,
     annualActual: Math.round(annualActual),
     annualEstimated: Math.round(annualEstimated),
     annualTotal: Math.round(annualActual + annualEstimated),
   };
+}
+
+// 허브 자산 변화 카드 설명 줄 — 이름은 settlementWindowName 1곳(4.94). settled는 배지가 이름이라 구간만, range는 이름=구간
+function hubDescription(w: SettlementWindow | undefined, today: string): string {
+  if (!w) return "다음 달부터 결산이 열려요";
+  if (w.kind === "settled") return settlementRangeLabel(w);
+  const { name, inProgress } = settlementWindowName(w, today);
+  return inProgress ? `${name} · 진행 중` : name;
 }
 
 export function PerformanceHub() {
@@ -101,11 +102,12 @@ export function PerformanceHub() {
   const changeCard = useMemo(() => {
     if (!hasAssets || snapshotVersion < 0) return null;
     const monthly = readMonthlySnapshots();
-    const settled = pickSettlementCard(monthly, today);
+    const firstRecord = pickFirstRecordStart(readDailySnapshots(), assetData, today);
+    const settled = pickSettlementCard(monthly, today, firstRecord);
     if (settled) return { window: settled, inWindow: true };
-    const w = resolveSettlementWindow(monthly, today.slice(0, 7), today);
+    const w = resolveSettlementWindow(monthly, today.slice(0, 7), today, firstRecord);
     return w.kind === "first_month" ? null : { window: w, inWindow: false };
-  }, [hasAssets, snapshotVersion, today]);
+  }, [hasAssets, snapshotVersion, today, assetData]);
   const change = changeCard ? settlementDelta(changeCard.window, summary.netAsset) : null;
   // 허브 행 2 `N개월` — 월 탭 월별 기록 카드와 같은 노출 조건(4.83). 자산 0이면 행 목록 전체가 없다
   const monthlyCount = useMemo(
@@ -114,7 +116,7 @@ export function PerformanceHub() {
   );
 
   // 배당 — 올해 연간 합계 (실제 + 예상)
-  const { isLoading: divLoading, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
+  const { isLoading: divLoading, failedCount: divFailed, annualActual, annualEstimated, annualTotal } = useDividendAnnualTotals();
 
   return (
     <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
@@ -135,18 +137,14 @@ export function PerformanceHub() {
           title={
             <span className="inline-flex flex-wrap items-center gap-1.5">
               자산 변화
-              {changeCard?.inWindow && (
+              {changeCard?.window.kind === "settled" && (
                 <span data-testid="hub-change-settlement-badge" className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
-                  {settlementName(changeCard.window.month, today, true)}
+                  {settlementWindowName(changeCard.window, today).name}
                 </span>
               )}
             </span>
           }
-          description={
-            !changeCard ? "다음 달부터 결산이 열려요"
-              : changeCard.inWindow ? settlementRangeLabel(changeCard.window)
-                : `${settlementName(changeCard.window.month, today, false)} · 진행 중`
-          }
+          description={<span data-testid="hub-change-desc" className="tabular-nums">{hubDescription(changeCard?.window, today)}</span>}
           primary={change ? `${change.delta >= 0 ? "+" : ""}${formatPriceByMode(change.delta)}` : undefined}
           primaryClassName={change ? getProfitLossColor(change.delta) : undefined}
           secondary={change && change.pct !== null ? (
@@ -170,16 +168,21 @@ export function PerformanceHub() {
           icon={BadgeDollarSign}
           title="배당"
           description="올해 배당 (지급 + 예상)"
-          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : formatPriceByMode(annualTotal)}
+          primary={divLoading && annualTotal === 0 ? <span aria-hidden className={`inline-block h-7 w-28 rounded-md align-middle ${SKELETON_FILL}`} /> : isDividendUnknown(divFailed, annualTotal) ? <span className="text-muted-foreground">—</span> : formatPriceByMode(annualTotal)}
           primaryClassName={ASSET_THEME.text.default}
           secondary={divLoading && annualTotal === 0 ? (
             <LoadingNote active label={LOADING_LABEL.dividend} className="min-h-5" />
-          ) : !divLoading && annualTotal > 0 ? (
-            <span className="text-muted-foreground">
-              지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
-              <span className="mx-1.5 text-muted-foreground">·</span>
-              예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
-            </span>
+          ) : !divLoading && (annualTotal > 0 || divFailed > 0) ? (
+            <>
+              {annualTotal > 0 && (
+                <span className="text-muted-foreground">
+                  지급 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualActual)}</span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  예상 <span className="font-semibold text-foreground tabular-nums">{formatPriceByMode(annualEstimated)}</span>
+                </span>
+              )}
+              {divFailed > 0 && <p className="text-sm font-normal text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>}
+            </>
           ) : null}
           onClick={() => go("dividend")}
         />

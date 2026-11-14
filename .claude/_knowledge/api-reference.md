@@ -177,7 +177,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 300회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
+**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
@@ -349,3 +349,4 @@ getCacheStorage(): ICacheStorage
 - `POST /api/push/test` — preview·로컬 전용(운영 404). 본인 구독 1건에 고정 샘플, 구독당 1분 1회·IP 10/시간.
 - `GET /api/push/cron/{kr,us}` — `Authorization: Bearer CRON_SECRET`, 운영 전용(그 외 204). 응답은 건수만.
 - 환경 변수: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`·`PUSH_STORE_KEY`(base64 32바이트)·`CRON_SECRET`(운영).
+**클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 30회

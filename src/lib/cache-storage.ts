@@ -162,7 +162,7 @@ const CSYNC_TTL_SECONDS = 90 * 24 * 3600; // 90일
 const CSYNC_TTL_MS = CSYNC_TTL_SECONDS * 1000;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 10;
-export const GEMINI_SERVER_DAILY_LIMIT = 300; // 서버 전역 하루 최대 호출 수
+export const GEMINI_SERVER_DAILY_LIMIT = 1500; // 서버 전역 하루 최대 호출 수
 const STOCK_CLASSIFICATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90일
 const STOCK_CLASSIFICATION_TTL_SEC = 90 * 24 * 60 * 60;
 // 코인: 슬롯 1시간 캐시 + 3시간 stale 폴백 (갱신 실패해도 최근 값 제공)

@@ -292,6 +292,7 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 
 ### 4.85 추가 유틸
 
+- `lib/finance/dividend-client.ts` — `fetchDividend(ticker,type,excd="NAS")`(배당 공용 fetch: `!res.ok`·`X-KIS-Unavailable` → throw라 react-query가 캐시 안 함, 헤더 없는 200 빈 배열은 `[]`)·`countFailedDividends(queries)`(isError 수)·`isDividendReady(loading,failedCount)`(로딩·실패면 false, 성적표 잠정·기록 생략 판정)·`DIVIDEND_FETCH_FAILED_MESSAGE`. 배당 탭 2곳·성과 허브·자산 성적표(`useDividendAnnualTotals().failedCount`)가 사용. queryKey `["dividend","v11",ticker,type]` 공유.
 - `lib/finance/dividend-axis.ts` — `niceAxisTicks(max, targetCount=4)`(1·2·5×10^n 등간격, 마지막 눈금 ≥ max)·`formatAxisWon(v)`(만원 이상 소수 1자리 `1.5만원`, 반올림 오차 0)·`pickVisibleLabels(values, labels, slotWidth)`(막대 값 라벨 가로 겹침이면 큰 값 우선). 배당 차트(`dividend-chart.tsx`)가 사용.
 - `lib/number-utils.ts` `formatPriceByCurrency(value, currency)` — USD `$`·JPY `¥`·그 외 원. 기존 `formatPrice` 3벌(`stock-trades-view`·`stock-target-picker`·`delete-rollback-dialog`) 삭제·통합.
 - `lib/finance/profit-utils.ts` `fetchProfitRef` — 배치가 429·5xx면 불완전(캐시 저장·`onComplete` 생략, 남은 배치 중단), `Retry-After`(1~5초, 10초 초과면 재시도 안 함)로 **실행당 1회**만 재시도(요청 상한 = 배치 수 + 1). `profitRetryDelayMs`. 점검(`X-KIS-Unavailable`)은 기존 경로.
@@ -413,7 +414,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 ### report/settlement.ts (#4.34, 이슈 #32) — 월말 결산 순수 함수
 
 - `pruneMonthlySnapshots(all, currentMonth)` — `month >= 현재월−12`만(최대 13개, 연 경계 무관). `saveSnapshots` 월 업서트가 사용. `shiftMonth(month, delta)`
-- `resolveSettlementWindow(monthly, month, today)` → `SettlementWindow {kind: settled|range|in_progress|first_month, start, end(null=진행 중·실시간), startDate, endDate, gapDays, longGap}`. `pickSettlementMonth`(1~10일+전월 기록일 ≥21일 → 전월), `isSettlementCardPeriod`(말일−3~10일), `pickSettlementCard`, `listSettlementMonths`(13개월·활성 여부), 문구 `settlementTitle`/`settlementCardTitle`/`settlementRangeLabel`/`formatSettlementPoint`, GA `settlementGaResult`(range→settled)
+- `resolveSettlementWindow(monthly, month, today)` → `SettlementWindow {kind: settled|range|in_progress|first_month, start, end(null=진행 중·실시간), startDate, endDate, gapDays, longGap}`. `pickSettlementMonth`(1~10일+전월 기록일 ≥21일 → 전월), `isSettlementCardPeriod`(말일−3~10일), `pickSettlementCard`, `listSettlementMonths`(13개월·활성 여부), 문구 `settlementWindowName(w, today)`→`{name, inProgress}`(팁·허브·결산 공용 1곳, 4.94)/`settlementRangeLabel`/`formatSettlementPoint`, GA `settlementGaResult`(range→settled, A는 first_month). **4.94 처음 맞는 결산**: `pickFirstRecordStart(daily, assetData, today)`(자산 id 13자리 ms `assetIdRegisteredDate` 최댓값 R 이후 첫 enrich 일별 기록, 없으면 null)를 `resolveSettlementWindow`·`pickSettlementCard`의 선택 인자 `firstRecord`로 넘기면 start 없음·≥7일일 때만 채택(`SettlementWindow.firstRecord`). 호출부 3곳(home-tip.ts·performance-hub·settlement-view)이 같은 입력을 넘긴다
 - `mapSettlementCauses(effects, {deltaNet, cashTracked})` → 5항목(`price|valuation|fx|income|unrecorded`, 원 단위 정수, 10원 미만 숨김) + `showUnrecordedHint`(≥50%). 기록 안 된 변화 = Δ순자산 − 표시 4항목(항등식). `SETTLEMENT_CAUSE_LABEL`
 - `views/activity/week-attribution.ts`(#4.79, 순수·`matchRecordedTransferDetail` 때문에 lib이 아닌 뷰 폴더): `computeAttributionView({assetData, rates, summary, daily, monthly, exchangeHistory, sinceDate})` → `{attr, transfer, causes, records, offsetTotal, sentence, rangeLabel}|null` — 홈 Hero `useHeaderNetChange`와 주 탭이 **같이** 부르는 원인 분해 단일 계산(저장소 읽기는 호출부). `mapWeekCauses(view)` → `SettlementCauses`(Hero 항목을 시세/평가 갱신/환율/순유입/대출/기록 안 된 변화 6줄로 합산만, 기록 안 된 변화 = round(Δ)−나머지 줄 합, |Δ|<1만이면 줄 0개), `weekLineOf(key)`, `resolveWeekHero(view, today)`(D=today−시작일: 7~9 `최근 7일`+구간 / 그 외 ≤14 `M/D 이후` / >14 부족 / null 빈), `weekFallbackSince(daily, today)`(4.92, 휴면 복귀 폴백 시작일 — 일별 기록 ≥2면 가장 이른 날, `useWeekHero`가 insufficient일 때만 재계산), `weekToday()`(홈 Hero와 같은 KST 식)·`weekSinceDate(today)`(−7일). 테스트 픽스처 `__tests__/week-fixtures.ts`, 홈 출력 골든 `header-change.golden.json`(main 훅 본문 verbatim 캡처)
 - `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
@@ -431,6 +432,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `buildMonthlyLogChanges(rows)` (R3) → `Map<월, { vsMonth, skipped, net, groups }>` — 바로 앞 기록 달(gap 건너뜀, `skipped` = 월 차 >1) 대비 순자산 변화. `groups` = 두 줄 모두 full일 때만 자산군 **순자산 기여** 변화(부채 −|v|, 대출 증가 = 음수); 아니면 null. 순자산·자산군 모두 **표시값(원 반올림)끼리의 차**(R3 보정 — 화면 숫자로 빼 본 값 = 표시 변화). 소수 원화값 달은 자산군 변화 합 ≠ `net`(반올림 잔차 수 원). `net` = 결산 Hero 증감(`settlementDelta`도 `round(끝) − round(시작)`, COO R3 F1). 첫 기록 달·gap 줄은 키 없음.
 - `formatMonthlyLogDelta(v)` (R3) — 원 단위 반올림, 0 → `0원`, `+1,234원` / `−1,234원`(U+2212).
 - `formatMonthlyLogAmount(v, "short"|"full", debt?)` — short = 1억 미만 `formatShortCurrency`·1억 이상 억 단위 소수 둘째 자리 버림·끝 0 제거(`6.44억`, COO U1 — 정수 연산 `floor(|v|/100만)/100`, 공용 `formatShortCurrencyDecimal`은 부동소수 오차로 2.3억→2.29억이라 미사용, COO U2)에서 `만원`/`억원` 끝 `원` 생략(1만원 미만·0은 `원` 유지), full = `formatCurrency`. 부채는 −절댓값, 음수 부호 U+2212, |v|<0.5는 `0원`.
+- `useDayHero(enabled)`·`resolveDayHero(view, yesterday, endNet)`·`dayYesterday`·`prevDailyRecord`·`DAY_EMPTY_MESSAGE` (`activity/use-day-hero.ts`, 4.95) — 자산 변화 일 탭 Hero·원인(=홈 Hero 계산, sinceDate 어제)과 달력 직전 기록 탐색. 저장 호출 0.
 - 자동: `report/__tests__/monthly-log.test.ts`(S9 실사용 픽스처·Hero 끝값 일치·13개월·연 경계), `views/activity/__tests__/monthly-log.test.tsx`(인라인 카드 조건·줄·패널·더 보기). `formatMonthlyLogAmount` short 경로는 R3 이후 화면 미사용(테스트만).
 
 ### computePeriodAttribution — 하이브리드 실측/예측 합성 (2026-08, 1주·1개월·3개월·올해 공통 알고리즘)
@@ -561,6 +563,7 @@ parseNumberFromCommas(value): number
 formatCurrency(value): string           // "₩1,234,567"
 formatShortCurrency(value): string      // "2.3억원" · "9,999만원" (0.1억·만원 단위 버림)
 formatShortCurrencyDecimal(value): string // "2.01억원" · "1.13백만원" · "2.9만원" (소수 둘째 자리 버림·끝 0 제거)
+formatNarrowKRW(value, { signed?, tiny? }): string // 640 미만 칸·막대 한 줄 "5.67억"·"+0.88억"·"+877만"·"−6.6만" (원 생략·floor·끝 0 제거·U+2212. 억 소수는 글자 예산 tiny(<375) 3·그 외 4 안에서 최대 2, 만은 정수부 1자리일 때만 소수 1. 1천만 미만 증감은 4.95와 같은 문자열, 4.96. formatCalendarDiff·formatCompactKRW 대체)
 // 두 함수 모두 원 단위 정수를 표시 최소 단위로 정수 나눗셈해 버린다(#129). 축약 버림 표기를 새로 만들 때 곱셈 뒤 Math.floor 금지 — 이 함수 재사용
 calculateHoldingDays(purchaseDate): number
 formatHoldingPeriod(purchaseDate): string  // "1년 3개월" 형식
@@ -996,3 +999,5 @@ computePriceChange(points) → % | null
 // cron-run.ts(server-only) — runPushCron(req, market)·resolveCronWindow·isCronAuthorized
 // cache-storage.ts — putPushSub/getPushSub/deletePushSub/listPushSubIdsByTopics/markPushSent (접두어·암호화는 저장소 내부 처리)
 ```
+- 스크린샷 평단·현재가 정합(#196, 5.0): `parse-screenshot/price-consistency.ts reconcilePrices(cur, avg, rate, {quantity?, currentValue?, profitAmount?})` → `{currentPrice, averagePrice, action: keep|swap|estimate}`. swap 전 E1(평가금액÷수량)·E2(손익/수익률 부호) 교차 확인, 근거 없으면 4.99 동작.
+- 이미지 단위 정합(5.101): `reconcileImagePrices(rows: {currentPrice, averagePrice, profitRate, evidence?}[])` → 행별 결과 배열. 한 이미지의 위치 방향을 swap 다수결로 소수익률 행에 적용(동률·근거 부족이면 행별 `reconcilePrices` 그대로). `name-normalize.ts stripTrailingQuantity`는 `(숫자` 꼬리·`구분 | 티커`·말줄임 제거 + 마스터 표기 통일.

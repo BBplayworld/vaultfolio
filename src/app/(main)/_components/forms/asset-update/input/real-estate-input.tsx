@@ -38,6 +38,7 @@ import { useDaumPostcode, extractJibun } from "@/hooks/use-daum-postcode";
 import { MAIN_PALETTE } from "@/config/theme";
 import { realEstateTypes, quickButtonPresets, realEstateTradeDataset } from "@/config/asset-options";
 import { getAddressDetail } from "@/lib/realestate/real-estate-address";
+import { todayKst } from "@/lib/tax-utils";
 
 const realEstateQuickButtons = [...quickButtonPresets.realEstate];
 
@@ -163,7 +164,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
       address: "",
       purchasePrice: 0,
       currentValue: 0,
-      purchaseDate: new Date().toISOString().split("T")[0],
+      purchaseDate: todayKst(),
       tenantDeposit: 0,
       description: "",
     },

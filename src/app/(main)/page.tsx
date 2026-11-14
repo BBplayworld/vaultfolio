@@ -13,6 +13,8 @@ import { CopyrightFooter } from "./_components/layout/copyright-footer";
 import { FloatingAddButton } from "./_components/layout/floating/floating-add-button";
 import { AssetPageTabs } from "./_components/layout/navigation/asset-page-tabs";
 import { TrialBanner } from "./_components/views/home/trial-banner";
+import { DemoSnapshotRebase } from "./_components/preview/demo-snapshot-rebase";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
@@ -134,6 +136,8 @@ export default function Page() {
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
       {/* 체험 모드(#59) 예시 표기 정본 1곳 — 홈에서만, in-flow */}
       {isTrialMode() && view.type === "home" && <TrialBanner />}
+      {/* 체험·미리보기 데모 스냅샷을 실시간 시세 수준으로(4.94) — 데모 id가 아니면 무동작 */}
+      {(isTrialMode() || isPreviewEnv()) && <DemoSnapshotRebase />}
       <AssetPageTabs />
       {/* 체험 모드(#59): FAB(스크린샷 AI 인식·등록) 숨김 */}
       {!isTrialMode() && <FloatingAddButton />}

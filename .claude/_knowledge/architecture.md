@@ -252,5 +252,5 @@ Gemini `gemini-2.5-flash-lite`로 증권·거래소·은행 앱 스크린샷 분
 - ticker 미인식 시 `ticker-map.ts` `lookupTicker()` fallback (정확→prefix→suffix 3단계)
 - 해외주식: `originalCurrency` 필드로 KRW/USD 분기 → KRW면 `/ usdRate` 환산
 - 수량 미표시 → `quantity=1`, `currentPrice=currentValue` 보정
-- 한도: 서버 300회/일 + 기기별 15회/일 (`useGeminiUsage` hook)
+- 한도: 서버 1500회/일 + 기기별 30회/일 (`useGeminiUsage` hook)
 - 다이얼로그: ESC·바깥 클릭으로 닫히지 않음

@@ -74,6 +74,24 @@ export function formatShortCurrencyDecimal(value: number): string {
   return formatCurrency(value);
 }
 
+// 640 미만 칸·막대 숫자 한 줄 표기(4.96) — 원 생략, 억/만 단위, 버림(C59), 끝 0 제거, 음수 U+2212, signed면 양수 +.
+// 글자 예산(부호+정수부+소수 숫자 수): tiny(<375) 3 · 그 외 4. 억은 소수 최대 2자리를 예산 안에서, 만은 정수부 1자리일 때만 소수 1자리(4.95와 같은 문자열)
+export function formatNarrowKRW(value: number, opts: { signed?: boolean; tiny?: boolean } = {}): string {
+  const won = Math.floor(Math.abs(value));
+  if (won === 0) return "0";
+  const sign = value < 0 ? "\u2212" : opts.signed ? "+" : "";
+  if (won < 1e3) return `${sign}${won}`;
+  const budget = opts.tiny ? 3 : 4;
+  const eok = won >= 1e7;
+  const unit = eok ? 1e8 : 1e4;
+  const int = Math.floor(won / unit);
+  const intDigits = String(int).length;
+  const dec = eok ? Math.max(0, Math.min(2, budget - sign.length - intDigits)) : int < 10 ? 1 : 0;
+  const scaled = Math.floor(won / (unit / 10 ** dec));
+  const frac = dec > 0 ? String(scaled % 10 ** dec).padStart(dec, "0").replace(/0+$/, "") : "";
+  return `${sign}${int}${frac ? `.${frac}` : ""}${eok ? "억" : "만"}`;
+}
+
 // 보유일수 계산
 export function calculateHoldingDays(purchaseDate: string): number {
   const purchase = new Date(purchaseDate);

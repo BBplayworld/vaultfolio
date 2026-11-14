@@ -15,6 +15,7 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
+import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import type { Stock } from "@/types/asset";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
@@ -69,17 +70,6 @@ function makeTotalLabel(values: number[]) {
       </text>
     );
   };
-}
-
-async function fetchDividend(ticker: string, type: string, excd: string): Promise<DividendPayoutResult[]> {
-  const params = new URLSearchParams({ ticker, type, excd });
-  const res = await fetch(`/api/finance/dividend?${params}`);
-  const json = await res.json();
-  if (json.messages) {
-    console.log(`[API Logs - ${ticker}]`, json.messages);
-  }
-  if (!res.ok) return [];
-  return json.data || [];
 }
 
 interface StockDividendInfo {
@@ -199,10 +189,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
       const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
       const excd = "NAS";
       return {
-        queryKey: ["dividend", "v11", ticker, type],
-        queryFn: () => fetchDividend(ticker, type, excd),
-        staleTime: 30 * 24 * 60 * 60 * 1000,
-        retry: false,
+        ...dividendQueryOptions(ticker, type, excd),
         enabled: isActive,
       };
     }),
@@ -210,6 +197,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
 
   const isLoading = queries.some((q) => q.isLoading);
   const loadedCount = queries.filter((q) => !q.isLoading).length;
+  const failedCount = countFailedDividends(queries);
   const totalCount = queries.length;
 
   const dividendItems: StockDividendInfo[] = stocksWithTicker.map((stock, i) => ({
@@ -372,7 +360,12 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             </div>
           )}
 
+          {!isLoading && failedCount > 0 && (
+            <p className="text-sm text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>
+          )}
+
           {!isLoading && annualTotal === 0 ? (
+            isDividendUnknown(failedCount, annualTotal) ? null : (
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
                 <p className="text-muted-foreground text-sm">올해 배당 데이터가 없습니다.</p>
@@ -381,6 +374,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 </p>
               </div>
             </div>
+            )
           ) : (
             !isLoading && (
               <ChartContainer config={chartConfig} className="h-[200px] w-[calc(100%+1rem)] -ml-4 sm:ml-0 sm:w-full">

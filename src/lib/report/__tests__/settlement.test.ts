@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   pruneMonthlySnapshots, shiftMonth, resolveSettlementWindow, pickSettlementMonth, pickSettlementCard,
-  isSettlementCardPeriod, listSettlementMonths, settlementTitle, settlementCardTitle, settlementRangeLabel,
+  isSettlementCardPeriod, listSettlementMonths, settlementWindowName, settlementRangeLabel,
   settlementGaResult, mapSettlementCauses, buildWeekRows, buildSettlementIcs,
 } from "../settlement";
 import { computeAttributionBetween, type AttributionCauseKey } from "../asset-report";
@@ -65,14 +65,14 @@ describe("resolveSettlementWindow — 결산 기준일(§5-2)", () => {
     expect(pickSettlementMonth(monthly, today)).toBe("2025-11");
     const w = resolveSettlementWindow(monthly, "2025-11", today);
     expect(w.kind).toBe("settled");
-    expect(settlementTitle(w)).toBe("11월 결산");
+    expect(settlementWindowName(w, today)).toEqual({ name: "11월 결산", inProgress: false });
     expect(settlementRangeLabel(w)).toBe("10/31 → 11/30");
-    expect(settlementCardTitle(w)).toBe("11월 결산이 준비됐어요");
     const dec = resolveSettlementWindow(monthly, "2025-12", today);
     expect(dec.kind).toBe("in_progress");
     expect(dec.end).toBeNull();
     expect(settlementRangeLabel(dec)).toBe("11/30 → 12/5");
-    expect(settlementCardTitle(dec)).toBe("12월 변화 · 진행 중");
+    expect(settlementWindowName(dec, today)).toEqual({ name: "12월", inProgress: true });
+    expect(settlementWindowName(dec, "2026-01-03").name).toBe("25년 12월");
     expect(settlementGaResult(dec)).toBe("in_progress");
   });
 
@@ -83,8 +83,7 @@ describe("resolveSettlementWindow — 결산 기준일(§5-2)", () => {
     const card = pickSettlementCard(monthly, today)!;
     expect(card.kind).toBe("range");
     expect(card.gapDays).toBe(30);
-    expect(settlementCardTitle(card)).toBe("11/5 → 12/5 변화");
-    expect(settlementTitle(card)).toBe("11/5 → 12/5 변화");
+    expect(settlementWindowName(card, today)).toEqual({ name: "11/5 → 12/5 변화", inProgress: false });
     expect(settlementGaResult(card)).toBe("settled");
     const nov = resolveSettlementWindow(monthly, "2025-11", today);
     expect(settlementRangeLabel(nov)).toBe("10/5 → 11/5");

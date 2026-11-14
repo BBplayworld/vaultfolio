@@ -12,6 +12,68 @@
 - **클라이언트**: `notify-section.tsx`(켜기 안내·대상·조건 Dialog·테스트 행), `push-host.tsx`(`?from=push` GA·구독 보정·TTL 갱신), `sw.js` push·notificationclick(CACHE v5). 모든 데이터 삭제 → 서버 구독 삭제·기기 구독 해제·로컬 키 삭제(`시장 알림도 꺼집니다.`, 켜져 있을 때만).
 - **재사용 변경**: `fetchKospiDailySeries(…, indexCode="0001")`, `StockPriceResult.changeRate`(국내 prdy_ctrt), `fetchOverseasChangeRate`(price-detail last/base), `ICacheStorage` push 5메서드, GA category `push_on|push_off|push_denied|push_click`.
 - **새 소식**: `20261112-04`. 로컬 신규 키 `secretasset_push_prefs` 1개(자산 스키마·동기화·백업·공유 토큰 변경 0). 의존성 `web-push`(서버 전용).
+## 2026-11-14 (v5.103)
+
+### 320 화면 정돈 (#5.103, 이슈 #203)
+- className·배치만 변경(문구·로직·저장·GA 0). 맞추기 '항목 선택' 트리거(`holdings-resync-dialog.tsx`): 선택 후 값 좌측 정렬·두 줄 모두 말줄임·줄 높이 16px로 40px 안에 수납(목록 SelectItem·공용 `select.tsx` diff 0).
+- 성적표 축 제목(`asset-report-view.tsx`): 값 없는 축(측정불가·배당 실패 '—')의 빈 별을 폭 360 미만에서만 숨겨 제목이 최대 2줄(`contents max-[360px]:hidden`).
+- 배당 예정 칩은 이번에 변경 없음(qa FAIL로 되돌림). 360~375에서 칩이 열을 넘쳐 날짜와 겹치는 문제는 후속 후보.
+
+## 2026-11-13 (v5.0)
+
+### 스크린샷 등록 평단가를 맞게 읽고, 맞게 말하기 (#5.0, 이슈 #196)
+- 5.101(추가): 맞추기 후보 — `match.ts matchExisting`: 고른 유형에 같은 티커 0개·같은 증권사 다른 유형에 있으면 조용히 연결하지 않고 `ambiguous`(+`crossType`) → `diff.ts` 사유 `otherType`(후보 = 다른 유형 항목, '항목 선택', 캡션 '고른 유형에는 없고 다른 계좌에 있어요'; 체크하지 않으면 그대로). 고른 유형 1개 자동 확정은 현행, 2개 이상(multiAccount)도 같은 증권사·티커의 다른 유형 항목을 후보에 함께 노출(고른 유형 먼저). 다수결은 평가손익 없음·평가금액 엄격 일치(asIs) 행 제외, `|` 꼬리는 알려진 구분 라벨 또는 티커 일치일 때만 제거.
+- 5.101: 스크린샷 인식 정확도 — `price-consistency.ts reconcileImagePrices`(이미지 단위 swap 다수결: 명확한 swap 표 2 이상·반대 3배 이상이면 소수익률 행도 같은 방향, 평가손익 부호 모순 행 제외), `route.ts processStockResults`가 이 함수 사용. `name-normalize.ts`: 닫는 괄호 없는 `(숫자` 꼬리·키움 `구분 | 티커` 꼬리·겹친 말줄임 제거, 마스터와 공백·괄호 무시로 같으면 마스터 표기로 통일. 저장 스키마·키·동기화·GA·서버 전송 변경 0.
+- 등록 화면 라벨·안내를 `averagePriceEstimated`일 때만 '평단가(추정)'·역산 안내로(`stock-screenshot-import.tsx`, 맞추기 미리보기와 같은 규칙). `ImportStock.averagePriceEstimated?` 타입 필드 1개 추가(저장 키 변화 없음, 기존부터 spread로 저장되던 값).
+- `price-consistency.ts reconcilePrices(cur, avg, rate, evidence?)`: swap 전 2차 근거 E1(평가금액÷수량이 한쪽에만 2% 이내) → 반대면 keep, E2(평가손익 부호≠수익률 부호) → keep, 근거 없음은 4.99 동작. 소수익률(3%p 이내)은 평가손익이 있고 E1이 swap 쪽에만 0.2% 이내로 맞으며 평가손익과 모순 없을 때만 swap.
+- #198: 기기별 하루 AI 인식 한도 15→30(`use-gemini-usage.ts`, 서버 IP 30 유지·전역 300→1500(`cache-storage.ts` GEMINI_SERVER_DAILY_LIMIT)). `parse-screenshot/name-normalize.ts stripTrailingQuantity`: 종목명 끝 `(수량)`이 인식 수량과 같으면 제거(미래에셋 `KODEX 미국빅테크10(104)`), 다르면 보존. 프롬프트에 수량·괄호 숫자 금지 한 줄.
+- #198 확장: 인식 개선 — `name-normalize.ts`가 잘린 이름 끝 `(`·`…` 제거·수량 괄호 제거(마스터 접두 일치 재사용), 프롬프트에 두 줄 이름 합치기·주문가능/보유수량·평가금액/매입금액 구분. 맞추기 `diff.ts` 사유 코드 `multiAccount`(ambiguous 중 같은 증권사·같은 유형 후보). 확인 필요 사유 문구·후보 드롭다운(증권사·유형·메모 / 수량·매수일) ui 확정안 적용. 전역 하루 한도 300→1500.
+- `asset-report-view.tsx` 5축 제목에 `break-keep`(320 꺾임).
+
+## 2026-11-13 (v4.99)
+
+### 보유 현황 스크린샷 2줄 헤더에서 평단가·현재가 바로 읽기 (#4.99, 이슈 #193)
+- 메리츠·키움 해외 잔고처럼 한 칸에 두 값이 위·아래로 쌓인 표에서 AI가 평단·현재가를 바꿔 읽던 문제. `parse-screenshot/route.ts` 프롬프트에 2줄 헤더 규칙 추가, 후처리 `processStockResults` 앞단에서 순수 함수 `reconcilePrices`(`parse-screenshot/price-consistency.ts`)로 수익률 정합 검사(허용 3%p): 일치 유지·바뀌어야 맞으면 교정·둘 다 안 맞으면 평단 0 → 기존 `averagePriceEstimated` 역산 경로. 저장 스키마·키·동기화·GA·서버 전송 변경 0.
+
+## 2026-11-13 (v4.98)
+
+### 배당을 못 불러온 날 자산 성적표를 확정·기록하지 않기 (#4.98, 이슈 #191)
+- 성적표 `divReady = isDividendReady(loading, failedCount)`(`dividend-client.ts`). 실패 시 '수익의 질'·'레버리지' 축 기존 '잠정' 배지 → `gradeSettled` false라 `recordGradeSnapshot`·▲▼ 대비 생략(배당 0 기준 등급이 daily·monthly·홈 배지에 저장되던 문제). 계산 근거 금융자산·연간 값 '—', 5축 섹션 아래 `DIVIDEND_FETCH_FAILED_MESSAGE` 1줄. 저장 스키마·키·서버 diff 0. 칩은 잠정 축을 뺀 `N/5 측정`, 배당 실패 잠정 축 점수는 '—'. 상단은 잠정 축이 있으면 `5축 중 N축 잠정`(`gradeCountCaption`), 수익의 질 카드는 실패 시 설명·조언 대신 안내 1줄만(하단 안내 줄 삭제). 한계: 이미 기록된 과거 값 보정 없음(다음 성공 방문이 덮어씀).
+
+## 2026-11-13 (v4.97)
+
+### 배당 조회 실패를 빈 배당으로 굳히지 않기 · 새 자산 입력 기본 날짜 KST로 (#4.97, 이슈 #189)
+- **A**: 배당 fetch 3곳 중복을 `lib/finance/dividend-client.ts`(`fetchDividend`·`countFailedDividends`·`DIVIDEND_FETCH_FAILED_MESSAGE`) 1개로. `!res.ok`·`X-KIS-Unavailable`은 throw(캐시 안 됨, 다음 진입 재조회), 헤더 없는 200 빈 배열은 정상 `[]`. `[API Logs]` console.log 제거. 배당 탭·성과 허브 배당 카드에 실패 시 안내 1줄(`앱을 다시 열면 다시 불러올게요`, 재조회는 새로고침·재진입 시). queryKey `v11` 유지.
+- **B**: 대출·코인·실물·부동산 새 입력 기본 날짜 `todayKst()`(수정 화면 기존 값 불변).
+- 저장·동기화·서버 route diff 0. 컷: 홈 '어제' 계산, `max-[N]` 경계 정리(후속).
+
+## 2026-11-13 (v4.96)
+
+### 달력·7일 막대 숫자 한 줄로 · 칸 증감 정확하게 (#4.96, 이슈 #187)
+- `formatNarrowKRW` 1개로 `formatCalendarDiff`·`formatCompactKRW` 대체. 640 미만 칸 순자산·증감·홈 7일 막대 값을 `원` 없는 11px 한 줄(span 3개: <375 / 375~639 / ≥640 기존). 칸 패딩 `max-sm:px-0` 통합(360~639 순자산 `5.67/억원` 줄바꿈·`+877만` 잘림 해소). 375~639 1천만~1억 증감 억 2자리(최대 10%), <375는 4.95와 같은 1자리(1천만~2천만 최대 50% 오차 한계). 데스크톱·저장·동기화·GA diff 0.
+- 주의: Tailwind v4 `max-[Npx]`는 폭 < N(`not all and (min-width:N)`)이라 ≤374는 `max-[375px]`.
+
+## 2026-11-13 (v4.95)
+
+### 일 탭 숫자 = 홈 · 320 표기 정돈 · 죽은 코드 정리 (#4.95, 이슈 #184)
+- **자산 변화 › 일 Hero·원인 = 홈**: `activity/use-day-hero.ts`(`useDayHero`·순수 `resolveDayHero`)가 `computeAttributionView(sinceDate=어제)`로 계산(홈 `useHeaderNetChange`와 같은 식). 일 탭 전용 diff(이번 달 마지막 2건) 삭제. 제목 `전일 대비`/`M/D 기록 대비`, 원인 `CauseBlock scope="week"`(`mapWeekCauses`) 재사용, 비교 기록 없음이면 홈 7일 카드 문구(`day-empty`), 연 탭 문구는 일 탭에서 제거.
+- **달력 칸 증감**: `prevDailyRecord`로 30일 롤링 전체에서 직전 기록 탐색(월초 1일 칸도 전달 마지막 기록 대비). 달력 머리에 `종가 기준` 11px 캡션(`day-calendar-basis`, 분리 커밋).
+- **F4**: `WeekTrendCard` 막대 값 라벨 360 미만은 `formatCompactKRW`(원 생략·`6.4억`·`752만`) 11px 한 줄. 360 이상 diff 0.
+- **F5**: 배당 `N월 예정` 칩 `max-[359px]:px-1 max-[359px]:text-[11px]`.
+- **ProfitCard**: `period` 필수, 비제어 분기(`innerPeriod`·자체 선택기·요약 박스) 삭제.
+- 저장·GA·서버·동기화 변경 0. 테스트: `use-day-hero.test.ts`·`quality-batch-184.test.tsx`(신규).
+
+---
+
+## 2026-11-13 (v4.94)
+
+### 처음 맞는 결산 열기 · 결산 이름 하나로 · 체험 숫자 맞추기 (#4.94, 이슈 #183)
+- **A 처음 맞는 결산**: 직전 달 월 기록이 없어도 `pickFirstRecordStart(daily, assetData, today)`가 시작점을 정해 팁·허브·결산이 같은 구간을 본다. R = 자산·부채·실물 id의 13자리 ms(`assetIdRegisteredDate`, `(^|_)\d{13}(_|$)` 첫 매치, 2024-01-01 이전·오늘+1일 이후면 없음, 하나라도 없으면 A 미적용) 최댓값(KST), 시작점 = R보다 엄격히 뒤인 enrich 완료 일별 기록 중 가장 이른 것. `resolveSettlementWindow(monthly, month, today, firstRecord?)`는 start가 없고 시작→끝 ≥7일일 때만 채택(`SettlementWindow.firstRecord`). 끝이 지난 달 월 기록이면 kind `range`(이름 `M/D → M/D 변화`). 월 기록이 있는 사용자는 인자 무시(diff 0). GA `settlementGaResult`는 A도 `first_month`. A 경로는 Hero·원인까지만(구성·월별 기록·AI 숨김).
+- **C 이름 하나로**: `settlementWindowName(w, today)` → `{name, inProgress}` 1개로 팁·허브·결산 제목을 만든다(`settlementTitle`·`settlementCardTitle` 삭제). settled `N월 결산`·range `M/D → M/D 변화`·in_progress `N월`(결산 화면은 `진행 중` 배지, 허브는 `N월 · 진행 중`). 허브 배지는 settled만. 팁 제목은 settled만 `…이 열렸어요`, 그 밖 `M/D → M/D 변화를 볼 수 있어요`·`M/D 이후 변화를 볼 수 있어요`(날짜 쌍 nowrap), 설명에서 `한 달 동안` 삭제. 원인 힌트 month 문구 `입출금을 기록하면 더 정확해져요`(year 불변). 신규 testId `hub-change-desc`·`settlement-range`. `KpiCard.description`은 ReactNode.
+- **S3 체험 숫자**: `demo-data.json` — `demo_re_1.currentValue` 6.3억 → 5.3584억(순자산 = 웰컴 551,159,778 ±1%), 월·일 스냅샷·`yearlyNetAssets`를 같은 수준으로 재기록, 일별 `@D-7`·`@D-2`·`@D-1`에 breakdown·fx·fxBase·cost 추가(전일 대비 |Δ| ≤ 0.5%, 7일·허브 기록 안 된 변화 < 50%). 그 밖 assetData diff 0, 웰컴 미리보기·라벨 코드 diff 0.
+- **S3 실시간 재기준(ui-review R1)**: 체험은 실시간 시세가 JSON 가격을 덮어써 스냅샷 대비 가짜 급등이 생기므로, `DemoSnapshotRebase`(page.tsx, 체험 또는 preview + 주식·코인 id 전부 `demo_`일 때만)가 baseline 스냅샷의 주식·코인 평가를 `rebaseDemoRows`(배율 = 실시간 평가/기준 D-1 평가)로 옮겨 데모 스냅샷만 다시 쓴다(`bumpSnapshotVersion`). 부동산·현금·대출·원가 불변. 순자산 웰컴 ±1%는 JSON 가격 기준 시점 값. 순수 함수 `preview/demo-live-rebase.ts`, 테스트 0.4x~2.5x.
+- 저장 스키마·키·동기화·공유 토큰·서버 전송·`ga.ts`·`whats-new.ts` 변경 0(읽기 전용).
+- 테스트: `settlement-first-record.test.ts`·`demo-rebase.test.ts`·`first-record-fixture.ts`(신규), `settlement.test.ts`·`home-tip.test.ts`·`composition-month.test.ts` 갱신, snapshot-storage mock 4건에 `readDailySnapshots` 추가.
 
 ---
 

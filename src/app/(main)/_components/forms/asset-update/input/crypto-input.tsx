@@ -36,6 +36,7 @@ import { cryptoExchanges as exchanges, popularCryptos } from "@/config/asset-opt
 import { CryptoScreenshotImport } from "../screenshot/crypto-screenshot-import";
 import { HoldingsResyncDialog } from "../screenshot/holdings-resync-dialog";
 import { MAIN_PALETTE } from "@/config/theme";
+import { todayKst } from "@/lib/tax-utils";
 
 interface CryptoFormProps {
   editData?: Crypto;
@@ -56,7 +57,7 @@ function CryptoForm({ editData, onClose }: CryptoFormProps) {
       quantity: 0,
       averagePrice: 0,
       currentPrice: 0,
-      purchaseDate: new Date().toISOString().split("T")[0],
+      purchaseDate: todayKst(),
       exchange: "",
       description: "",
     },
