@@ -45,3 +45,11 @@ describe("isNotifyTipEligible", () => {
     expect(src).not.toMatch(/requestPermission|enablePush/);
   });
 });
+
+describe("설정 알림 구역 스크롤 가드(R-1)", () => {
+  it("mounted 이후에만 찾고, 찾은 뒤에만 1회 소비한다", () => {
+    const src = readFileSync(path.resolve(__dirname, "../../../app/(main)/_components/header-menu/settings-page.tsx"), "utf8");
+    expect(src).toMatch(/!mounted\) return;\s*const el = document\.getElementById\("settings-section-notify"\);\s*if \(!el\) return;\s*focusedRef\.current = true;/);
+    expect(src).toContain("}, [focus, mounted]);");
+  });
+});
