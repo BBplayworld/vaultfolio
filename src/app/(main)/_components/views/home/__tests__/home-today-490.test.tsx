@@ -112,9 +112,13 @@ describe("B 가장 큰 원인 1줄", () => {
     expect(html).toContain('data-cause-key="cash"');
     expect(html).not.toContain("home-cause-more");
   });
-  it("예측이면 줄 앞에 칩", () => {
+  it("예측 칩은 변동 라벨 옆 1개, 원인 줄·패널에는 없음(5.105)", () => {
     const html = box({ change: change({ estimated: true }) });
-    expect(text(lineOf(html)).startsWith("예측 ")).toBe(true);
+    expect(html.match(/home-cause-estimated/g)).toHaveLength(1);
+    expect(text(lineOf(html))).not.toContain("예측");
+    expect(html.indexOf("home-cause-estimated")).toBeLessThan(html.indexOf('data-testid="home-cause-line"'));
+    expect(html.slice(html.indexOf('id="home-cause-panel"'))).not.toContain("예측");
+    expect(html.indexOf("전일 대비")).toBeLessThan(html.indexOf("home-cause-estimated"));
   });
   it("원인 0개+예측: B 줄·접기 없음, 현행 쉐브론 유지", () => {
     const html = box({ change: change({ causes: [], sentence: null, estimated: true }) });
@@ -143,19 +147,64 @@ describe("B 가장 큰 원인 1줄", () => {
   });
 });
 
-describe("A 노출 연결(NetAssetSummaryBox)", () => {
-  const props = { change: change(), market: market({ values: [mv("kr", 0.8, "2026-11-11")] }), onMarketOpen: () => {} };
-  it("on·pending이면 Hero 박스 바로 뒤·분포 필터 앞에 렌더, off면 없음", () => {
-    const tabs = [{ value: "all", label: "전체" }, { value: "financial", label: "금융자산" }];
+describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)", () => {
+  const props = { change: change(), market: market({ values: [mv("kr", 0.8, "2026-11-11"), mv("us", -0.3, "2026-11-11")] }), onMarketOpen: () => {} };
+  const tabs = [{ value: "all", label: "전체" }, { value: "financial", label: "금융자산" }];
+  it("원인 있음+on: 카드 밖 줄 없음, 지수는 보조 줄 첫 시장 1개(종가)와 패널 지수 줄에만", () => {
     const on = box({ ...props, marketLine: "on", visibleTabs: tabs, onSegmentClick: () => {} });
-    expect(on).toContain("home-market-today");
-    expect(on.indexOf("home-market-today")).toBeLessThan(on.indexOf('aria-label="자산 분포 필터"'));
+    expect(on.match(/data-testid="home-market-today"/g)).toHaveLength(1);
+    expect(on).toContain('data-placement="panel"');
+    expect(on).not.toContain('data-placement="slot"');
     expect(on.indexOf("home-cause-panel")).toBeLessThan(on.indexOf("home-market-today"));
-    expect(box({ ...props, marketLine: "pending", market: market({ ready: false }) })).toContain('data-state="loading"');
-    expect(box({ ...props, marketLine: "off" })).not.toContain("home-market-today");
+    expect(on.indexOf("home-market-today")).toBeLessThan(on.indexOf("home-cause-collapse"));
+    expect(text(lineOf(on))).toBe("주식 시세 하락 -1096만원 외 2개 · 코스피 종가 +0.8%");
+    expect(on).toContain("@max-[300px]:hidden");
+    expect(on).toContain("@max-[260px]:hidden");
+    expect(on).not.toContain("max-[359px]");
+    expect(on).toContain("home-cause-market");
+    expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개, 코스피 종가 +0.8%"');
+    expect(text(on)).not.toContain("지난 접속");
+  });
+  it("휴장: 보조 줄 `코스피 휴장`, 0.0% 없음", () => {
+    const h = box({ ...props, market: market({ values: [mv("kr", 0, "2026-11-27", true)] }), marketLine: "on" });
+    expect(text(lineOf(h))).toBe("주식 시세 하락 -1096만원 외 2개 · 코스피 휴장");
+    expect(lineOf(h)).not.toContain("0.0%");
+  });
+  it("로딩: 지수 구간 자리만 스켈레톤·원인 구간은 즉시, 조회 실패: 구간 생략", () => {
+    const l = box({ ...props, market: market({ ready: false }), marketLine: "pending" });
+    expect(lineOf(l)).toContain('data-state="loading"');
+    expect(text(lineOf(l))).toBe("주식 시세 하락 -1096만원 외 2개 ·");
+    const f = box({ ...props, market: market({ values: [] }), marketLine: "on" });
+    expect(lineOf(f)).not.toContain("home-cause-market");
+  });
+  it("라벨 `M/D 이후`: 보조 줄에 지수 구간 0, 패널 지수 줄만", () => {
+    const o = box({ ...props, change: change({ label: "11/10 이후" }), marketLine: "on" });
+    expect(lineOf(o)).not.toContain("home-cause-market");
+    expect(o).toContain('data-placement="panel"');
+    expect(text(o)).toContain("11/10 이후");
+  });
+  it("off면 어디에도 없음", () => {
+    const off = box({ ...props, marketLine: "off" });
+    expect(off).not.toContain("home-market-today");
+    expect(off).not.toContain("home-cause-market");
+  });
+  it("원인 없음(예측만): 현행 카드 밖 줄(slot)이 분포 필터 앞에 1개", () => {
+    const e = box({ ...props, change: change({ causes: [], sentence: null, estimated: true }), marketLine: "on", visibleTabs: tabs, onSegmentClick: () => {} });
+    expect(e.match(/data-testid="home-market-today"/g)).toHaveLength(1);
+    expect(e).toContain('data-placement="slot"');
+    expect(e.indexOf("home-market-today")).toBeLessThan(e.indexOf('aria-label="자산 분포 필터"'));
+  });
+  it("패널 변형: 카드 밖 전용 클래스 없음·히트 40px·헤어라인", () => {
+    const html = renderToStaticMarkup(<MarketLine market={market({ values: [mv("kr", 0.8, "2026-11-11")] })} onOpen={() => {}} variant="panel" />);
+    expect(html).toContain("min-h-10");
+    expect(html).toContain("dark:border-border/40");
+    expect(html).not.toContain("-mt-2");
+    expect(html).toContain("data-screenshot-hide");
   });
   it("캡처 모드에서는 on이어도 없음", () => {
-    expect(box({ ...props, marketLine: "on", screenshotMode: true })).not.toContain("home-market-today");
+    const html = box({ ...props, marketLine: "on", screenshotMode: true });
+    expect(html).not.toContain("home-market-today");
+    expect(html).not.toContain("home-cause-market");
   });
 });
 

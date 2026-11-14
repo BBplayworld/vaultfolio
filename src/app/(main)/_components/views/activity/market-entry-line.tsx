@@ -147,7 +147,35 @@ export function MarketTile({ period, onOpen, testId }: {
 const HIDE_REST_SAME_DATE = "@max-[300px]:hidden";
 const HIDE_REST_DIFF_DATE = "@max-[380px]:hidden";
 
-export function MarketLine({ market, onOpen }: { market: MarketEntryValue; onOpen: () => void }) {
+// 보조 줄(홈 원인 1줄) 지수 구간 — 첫 시장 1개만, 항상 `종가`(또는 `휴장`). 값은 패널 지수 줄·'하루' 행과 같은 market.values(C65)
+export const causeMarketText = (v: MarketLineValue) => `${MARKET_INDEX_NAME[v.m]} ${v.holiday ? "휴장" : `종가 ${formatCompareRate(v.rate)}`}`;
+// 폭 W<300이면 컨테이너 쿼리로 숨김(JS 측정 금지). 로딩 = 자리만 스켈레톤, 조회 실패 = 생략
+export function CauseMarketSegment({ market }: { market: MarketEntryValue }) {
+  const first = market.values[0];
+  if (market.ready && !first) return null;
+  return (
+    <span
+      data-testid="home-cause-market"
+      data-state={market.ready ? "ok" : "loading"}
+      data-market={first?.m}
+      data-holiday={first ? (first.holiday ? "true" : "false") : undefined}
+      data-screenshot-hide
+      className="inline-flex shrink-0 items-center @max-[300px]:hidden"
+    >
+      <span aria-hidden className="mx-1 text-muted-foreground/60">·</span>
+      {first ? (
+        <span className="text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
+          {MARKET_INDEX_NAME[first.m]} <span className="font-medium text-foreground tabular-nums">{first.holiday ? "휴장" : <>종가 {formatCompareRate(first.rate)}</>}</span>
+        </span>
+      ) : (
+        <span aria-hidden className={`inline-block h-4 w-28 rounded ${SKELETON_FILL}`} />
+      )}
+    </span>
+  );
+}
+
+// variant="panel" = 펼침 패널 맨 아래 줄(카드 밖 전용 -mt-2·px-4 제거, 헤어라인·min-h-10). 기본 "slot" = 카드 밖 보조 줄 자리
+export function MarketLine({ market, onOpen, variant = "slot" }: { market: MarketEntryValue; onOpen: () => void; variant?: "slot" | "panel" }) {
   const state = !market.ready ? "loading" : market.values.length === 0 ? "empty" : "ok";
   const groups = marketLineGroups(market.values);
   const hideRest = groups.length > 1 ? HIDE_REST_DIFF_DATE : HIDE_REST_SAME_DATE;
@@ -156,11 +184,12 @@ export function MarketLine({ market, onOpen }: { market: MarketEntryValue; onOpe
     <button
       type="button"
       data-testid="home-market-today"
+      data-placement={variant}
       data-state={state}
       data-screenshot-hide
       aria-label={`시장과 비교 하루 보기${full ? `, ${full}` : ""}`}
       onClick={onOpen}
-      className="@container relative -mt-2 flex min-h-5 w-full items-center px-4 text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"
+      className={`@container relative flex w-full items-center text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground ${variant === "panel" ? "mt-2 min-h-10 max-w-xs border-t border-border dark:border-border/40" : "-mt-2 min-h-5 px-4 after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"}`}
     >
       <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap">
         {state === "loading" && <span aria-hidden className={`inline-block h-4 w-44 rounded ${SKELETON_FILL}`} />}

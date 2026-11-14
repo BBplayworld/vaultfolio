@@ -68,6 +68,6 @@ describe("홈 원인 펼침 계측 home_cause_open", () => {
     expect(src).toMatch(/if \(!causeOpen\) track\("feature_use", \{ category: "home_cause_open" \}\)/);
     // 두 입구: B 줄(펼칠 때만 클릭 가능 — 접힘 줄은 inert)과 쉐브론이 toggleCause를 부르고, 접기 줄은 포커스만 옮긴 뒤 같은 핸들러(열림 상태라 송출 0)
     expect(src).toContain("onClick={toggleCause}"); // 쉐브론
-    expect(src).toMatch(/data-testid="home-cause-line"[\s\S]{0,400}focusTo\.current = "panel"; toggleCause\(\)/); // B 줄
+    expect(src).toMatch(/data-testid="home-cause-line"[\s\S]{0,700}focusTo\.current = "panel"; toggleCause\(\)/); // B 줄
   });
 });
