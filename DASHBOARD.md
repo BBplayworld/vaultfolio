@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.104**
+> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.105**
 
 ## 🟥 대표님 결정 필요 — 1건
 1. **🔔 PWA 알림 [PR #180](https://github.com/BBplayworld/vaultfolio/pull/180) 데모 확인 후 머지(=반영)** — 아침 시장 요약(월~금 09시)·국내 장 마감(16시)·월 결산·세금, '큰 움직임 있는 날만'(지수 ±2%·환율 ±1%), 미리 체크 0·하루 최대 2건 · 대표 데모 확인 ✅ · 피드백(시장 알림 받는 날 매일/큰 날만 라디오) 반영 · qa PASS @3a0b873 — 머지만 남음 · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.91-179-market-push/4.91-decision-brief.md)
@@ -38,7 +38,6 @@
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 알림 **A 교체**(결산 열림+세금 마감, 대표 결정 11/14) | 재개발 중(origin/main 병합 포함) → qa·COO | 대표 승인(risk:high) |
-| v5.105 | [#207](https://github.com/BBplayworld/vaultfolio/issues/207) 홈 전일대비 영역 정보 정리(대표 지적 11/14) | 명세·UI 사양 완료 → 개발 중 | 첫 화면 방향 변경 → 대표 데모 승인 |
 | v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 대표 피드백(11/14): 구간만으론 단순 → 금융·부동산 자산별 비교·참고 자료 추가 기획 중 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
@@ -55,6 +54,7 @@
 
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
+| v5.105 [PR #208](https://github.com/BBplayworld/vaultfolio/pull/208) | 11/14 | 홈 전일대비 영역 정보 정리(#207, 대표 지적) — 기본 2줄(변동·원인), 모바일은 지수를 펼침 패널로·PC는 한 줄, 예측 칩 1곳·`M/D 이후`, 정보 삭제 0 · COO 위임(medium) | 진행 중 |
 | v5.104 [PR #206](https://github.com/BBplayworld/vaultfolio/pull/206) | 11/14 | 배당 '12월 예정' 칩 360·375 겹침 정리(#205) — 640 미만 칩 축소 규칙 확대, 칸 내 다른 요소 diff 0 · COO 자체 승인(low) | PASS |
 | v5.103 [PR #204](https://github.com/BBplayworld/vaultfolio/pull/204) | 11/14 | 320 화면 정돈(#203) — 맞추기 '항목 선택' 칸 좌측 정렬·말줄임, 성적표 측정불가 축 제목 한 줄(배당 칩은 부작용으로 제외·후속) · COO 자체 승인(low) | PASS |
 | v5.101 [PR #200](https://github.com/BBplayworld/vaultfolio/pull/200) | 11/13 | 스크린샷 맞추기 정확도(#199, 대표 지적) — 한 장 안 칸 배치 일관(브로드컴 평단), 잘린 이름·'현금 \| 티커' 정리, IRP 등 다른 유형 보유분 후보·'새 항목으로 추가', 대표 5장 정답 38/42→42/42 · COO 자체 승인(medium) | PASS(운영 대표 5장 21/21) |
