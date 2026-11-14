@@ -72,6 +72,9 @@ export interface ICacheStorage {
   getShareToken(key: string): Promise<string | null>;
   setShareToken(key: string, token: string): Promise<void>;
   deleteShareToken(key: string): Promise<void>;
+  // 웹→PWA 1회용 전달 토큰 — 별도 키 공간(share:once:), TTL 1시간, 조회 즉시 삭제(원자적), sliding 없음
+  setOnceShareToken(key: string, token: string): Promise<void>;
+  takeOnceShareToken(key: string): Promise<string | null>;
   getOwnerKey(ownerHash: string): Promise<string | null>;
   setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
   // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
@@ -158,6 +161,7 @@ export function getCacheStorage(): ICacheStorage {
 
 const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
 const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
+const SHARE_ONCE_TTL_SECONDS = 3600; // 1회용 전달 링크 1시간
 const CSYNC_TTL_SECONDS = 90 * 24 * 3600; // 90일
 const CSYNC_TTL_MS = CSYNC_TTL_SECONDS * 1000;
 export const GEMINI_SERVER_DAILY_LIMIT = 1500; // 서버 전역 하루 최대 호출 수
@@ -325,6 +329,7 @@ interface OwnerEntry {
 
 interface ShareTokensData {
   tokens: Record<string, ShareTokenEntry>;
+  once?: Record<string, ShareTokenEntry>;
   owners: Record<string, OwnerEntry>;
 }
 
@@ -382,6 +387,7 @@ export class FileCacheStorage implements ICacheStorage {
       return {
         tokens: Object.assign(Object.create(null), raw.tokens ?? {}),
         owners: Object.assign(Object.create(null), raw.owners ?? {}),
+        once: Object.assign(Object.create(null), raw.once ?? {}),
       };
     } catch {
       return { tokens: {}, owners: {} };
@@ -571,6 +577,25 @@ export class FileCacheStorage implements ICacheStorage {
     const data = this.readShareTokens();
     delete data.tokens[key];
     this.writeShareTokens(data);
+  }
+
+  async setOnceShareToken(key: string, token: string): Promise<void> {
+    const data = this.readShareTokens();
+    const now = Date.now();
+    const once = data.once ?? (data.once = {});
+    for (const k of Object.keys(once)) if (once[k].expires_at < now) delete once[k];
+    once[key] = { token, expires_at: now + SHARE_ONCE_TTL_SECONDS * 1000 };
+    this.writeShareTokens(data);
+  }
+
+  // 동기 읽기-삭제-쓰기 한 구간(await 없음) → 단일 프로세스에서 원자적
+  async takeOnceShareToken(key: string): Promise<string | null> {
+    const data = this.readShareTokens();
+    const entry = data.once?.[key];
+    if (!entry) return null;
+    delete data.once![key];
+    this.writeShareTokens(data);
+    return entry.expires_at < Date.now() ? null : entry.token;
   }
 
   async getOwnerKey(ownerHash: string): Promise<string | null> {
@@ -1006,6 +1031,14 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async deleteShareToken(key: string): Promise<void> {
     await this.redis.del(`share:${key}`);
+  }
+
+  async setOnceShareToken(key: string, token: string): Promise<void> {
+    await this.redis.set(`share:once:${key}`, token, { ex: SHARE_ONCE_TTL_SECONDS });
+  }
+
+  async takeOnceShareToken(key: string): Promise<string | null> {
+    return this.redis.getdel<string>(`share:once:${key}`);
   }
 
   async getOwnerKey(ownerHash: string): Promise<string | null> {

@@ -92,7 +92,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
       } else {
         // WebKit(iOS): await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은
         // ClipboardItem을 동기 시점에 전달해 자동 복사 보존
-        const artifactsPromise = generateShareArtifacts(pin || undefined);
+        const artifactsPromise = generateShareArtifacts(pin || undefined, true);
         let copied = false;
         if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
           try {
@@ -153,7 +153,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
     }
     try {
       // WebKit: await fetch 뒤 writeText는 제스처 만료로 실패 → write에 Promise 담은 ClipboardItem 전달
-      const artifactsPromise = hasAssets ? generateShareArtifacts(pin || undefined) : Promise.resolve(null);
+      const artifactsPromise = hasAssets ? generateShareArtifacts(pin || undefined, true) : Promise.resolve(null);
       const toUrl = (a: { url: string; code: string } | null) => window.location.origin + (a?.url ?? "/");
       let copied = false;
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
@@ -316,8 +316,8 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                     </InputOTPGroup>
                   </InputOTP>
                   <p className="text-sm text-muted-foreground text-center break-keep text-pretty">
-                    이 PIN 번호는 설치한 앱에서 웹 데이터를 열 때 쓰는 비밀번호이며,<br />
-                    앱 최초 실행 시에만 복원을 위해 한 번 사용됩니다.
+                    이 PIN 번호는 웹 데이터를 설치할 앱에서 열기 위한 1회성 비밀번호이며,<br />
+                    앱 최초 실행 시에만 복원을 위해 한 번 사용됩니다. 전달 링크는 한 번 열면 서버에서 지워지는 1회용 코드입니다.
                   </p>
                 </div>
               </div>

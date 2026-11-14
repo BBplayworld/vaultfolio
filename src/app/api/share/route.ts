@@ -12,6 +12,8 @@
  *   owner_id: 브라우저 localStorage에 저장된 UUID.
  *   재공유 시 이전 키를 즉시 삭제해 Redis 누적을 방지.
  *
+ *   once:true → 웹→PWA 1회용(1시간 TTL, 조회 즉시 삭제, owner_id 미사용)
+ *
  * GET /api/share?key=a3f8b2c1ab
  *   → { token: "v73A..." }  (key는 hex 10자리만 허용, 구 v72Z도 읽기 허용)
  *   v73A는 접근 시 TTL 30일 연장 (Sliding Window), v72Z는 연장하지 않음(자연 소멸)
@@ -51,7 +53,8 @@ export async function GET(request: Request) {
   if (limited) return limited;
 
   const storage = getCacheStorage();
-  const token = await storage.getShareToken(key);
+  // 간편 공유(30일 sliding) 우선, 없으면 1회용 전달 토큰을 조회와 동시에 삭제
+  const token = (await storage.getShareToken(key)) ?? (await storage.takeOnceShareToken(key));
 
   if (!token) {
     return NextResponse.json({ error: "링크가 만료되었거나 존재하지 않습니다." }, { status: 404, headers: NO_STORE });
@@ -69,7 +72,7 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json() as { token?: unknown; owner_id?: unknown };
+    const body = await request.json() as { token?: unknown; owner_id?: unknown; once?: unknown };
     const token = typeof body.token === "string" ? body.token.trim() : "";
 
     if (!token) {
@@ -91,6 +94,13 @@ export async function POST(request: Request) {
     if (limited) return limited;
     if (await exceedsDailyGlobal("share-post", SHARE_POST_DAILY_LIMIT)) {
       return NextResponse.json({ error: "오늘 공유 한도에 도달했습니다. 내일 다시 시도해 주세요." }, { status: 429, headers: { "Cache-Control": "private, no-store" } });
+    }
+
+    // 웹→PWA 1회용 전달: owner 추적·30일 저장 없이 1시간 TTL 별도 키 공간, GET 시 즉시 삭제
+    if (body.once === true) {
+      const onceKey = createHash("sha256").update(token).digest("hex").substring(0, 10);
+      await storage.setOnceShareToken(onceKey, token);
+      return NextResponse.json({ key: onceKey }, { headers: NO_STORE });
     }
 
     // 콘텐츠 기반 키: sha256(token)[:10] — IP 무관

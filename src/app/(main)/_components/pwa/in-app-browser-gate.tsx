@@ -97,7 +97,7 @@ export function InAppBrowserGate() {
     setLoading(true);
     try {
       // 복원코드 URL 생성. 실패 시 origin으로라도 이동(앱은 열리고 자산은 수동 재연동).
-      const urlPromise = generateShareArtifacts(pin).then(a =>
+      const urlPromise = generateShareArtifacts(pin, true).then(a =>
         a ? window.location.origin + a.url : window.location.origin + "/",
       );
       await go(urlPromise);
@@ -141,9 +141,10 @@ export function InAppBrowserGate() {
                   <InputOTPSlot index={3} />
                 </InputOTPGroup>
               </InputOTP>
-              <p className="text-sm text-muted-foreground text-center leading-relaxed">
-                현재 자산 데이터를 외부 브라우저에서 열 때 쓰는 비밀번호입니다.
+              <p className="text-sm text-muted-foreground text-center leading-relaxed break-keep text-pretty">
+                현재 자산 데이터를 외부 브라우저로 옮기기 위한 1회성 비밀번호입니다.
                 외부 브라우저에서 앱을 열 때 동일한 PIN을 입력하면 복원됩니다.
+                전달 링크는 한 번 열면 서버에서 지워지는 1회용 코드입니다.
               </p>
               <Button
                 variant="brand"

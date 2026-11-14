@@ -377,6 +377,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const [pendingToken, setPendingToken] = useState<{ token: string; localKey?: string } | null>(null);
   const [inputPin, setInputPin] = useState("");
   const otpRef = useRef<HTMLInputElement>(null);
+  const pinAttemptsRef = useRef(0);
 
   useEffect(() => {
     if (showPinPrompt) {
@@ -1001,6 +1002,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const result = await parseShareToken(shareTokenRes.token, undefined, shareTokenRes.localKey);
 
     if (result && "pinRequired" in result) {
+      pinAttemptsRef.current = 0;
       setPendingToken(shareTokenRes);
       setShowPinPrompt(true);
       // 해시 제거는 PIN 확정/취소(handlePinConfirm·handlePinCancel) 시 수행.
@@ -1052,12 +1054,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       setInputPin("");
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       track("share_restore", { result: "success" });
-    } else if ((pendingToken.token.startsWith("v72Z") || pendingToken.token.startsWith("v73A"))) {
-      // v72Z·v73A: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
-      track("share_restore", { result: "pin_mismatch" });
-      window.location.replace("/invalid-access");
     } else {
+      // 1회용 링크는 첫 조회로 서버에서 삭제되므로 이미 받은 암호문으로 PIN만 재시도(재요청 없음). 5회 초과 시 중단
+      pinAttemptsRef.current += 1;
       track("share_restore", { result: "pin_mismatch" });
+      if (pinAttemptsRef.current >= 5) {
+        window.location.replace("/invalid-access");
+        return;
+      }
       notify.error(MSG.PIN_MISMATCH);
       setInputPin("");
       setTimeout(() => otpRef.current?.focus(), 100);

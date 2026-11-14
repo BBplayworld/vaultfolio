@@ -23,6 +23,7 @@ export function useShareArtifacts() {
   /** 자산 없거나 서버 실패 시 null. pin이 있으면 v73A(Zero-Knowledge), 없으면 서버 저장 거부됨. */
   const generateShareArtifacts = async (
     pin?: string,
+    once = false,
   ): Promise<{ url: string; code: string } | null> => {
     if (!hasAssets) return null;
 
@@ -37,10 +38,10 @@ export function useShareArtifacts() {
       const res = await fetch("/api/share", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, owner_id: ownerId }),
+        body: JSON.stringify(once ? { token, once: true } : { token, owner_id: ownerId }),
       });
       const json = await res.json() as { key?: string; owner_id?: string };
-      if (json.owner_id) {
+      if (!once && json.owner_id) {
         localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
       }
       if (json.key) {
