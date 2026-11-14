@@ -1,7 +1,6 @@
-// 가계 통계와 나란히(#201, 5.102) — 통계 상수 검증·내 구간 판정·문장 수치·막대 폭·라벨. 순수 함수만(화면·저장·전송 없음).
+// 가계 통계와 나란히(#201, 5.102) — 통계 상수 검증·내 구간 판정·문장 수치·구간 라벨. 순수 함수만(화면·저장·전송 없음).
 // 순자산은 호출부가 넘긴 값(getAssetSummary().netAsset)을 그대로 쓴다 — 새 환산·합계를 만들지 않는다.
 import type { HouseholdNetworthBracket, HouseholdNetworthMeta, HouseholdNetworthStats } from "@/config/household-networth-stats";
-import { formatShortCurrency } from "@/lib/number-utils";
 
 export const MIN_BRACKETS = 5; // 구간이 이보다 적으면 표시하지 않는다(재판정 대상)
 
@@ -26,8 +25,8 @@ export function validateStats(stats: HouseholdNetworthStats): ValidNetworthStats
   const { meta, brackets } = stats;
   if (!meta || !Array.isArray(brackets) || brackets.length < MIN_BRACKETS) return null;
   if (!filled(meta.surveyName) || !Array.isArray(meta.agencies) || meta.agencies.length === 0 || !meta.agencies.every(filled)) return null;
-  if (!Number.isInteger(meta.surveyYear) || !DATE_RE.test(meta.referenceDate) || !DATE_RE.test(meta.transcribedAt)) return null;
-  if (!meta.tableSource || !filled(meta.tableSource.name) || !filled(meta.tableSource.id) || !filled(meta.tableSource.url) || !filled(meta.sourceUnit)) return null;
+  if (!Number.isInteger(meta.surveyYear) || (meta.referenceDate !== null && !DATE_RE.test(meta.referenceDate)) || !DATE_RE.test(meta.transcribedAt)) return null;
+  if (!meta.tableSource || !filled(meta.tableSource.name) || !filled(meta.tableSource.id) || (meta.tableSource.url !== undefined && !filled(meta.tableSource.url)) || !filled(meta.sourceUnit)) return null;
   if (!Number.isInteger(meta.shareDecimals) || meta.shareDecimals < 0 || meta.shareDecimals > 4) return null;
   if (meta.boundary !== "lower-inclusive" && meta.boundary !== "upper-inclusive") return null;
 
@@ -106,8 +105,14 @@ export function benchmarkSentence(c: BenchmarkCounts): string {
     : `가구 100곳 중 ${c.nText}이 이 구간, ${c.mText}이 이보다 높은 구간이에요.`;
 }
 
-// 경계 금액 표기 — 기존 짧은 금액 표기에서 '원'만 뗀다(3억·5,000만). 0은 그대로 '0원'
-const boundaryText = (won: number): string => (won === 0 ? "0원" : formatShortCurrency(won).replace(/원$/, ""));
+// 경계 금액 표기 — 공표값(만원 단위) 그대로 '억 만' 표기. 반올림·버림 없음(1억 296만, 11억 20만). 0은 '0원'
+const boundaryText = (won: number): string => {
+  if (won === 0) return "0원";
+  const man = Math.floor(won / 10_000);
+  const eok = Math.floor(man / 10_000);
+  const rest = man % 10_000;
+  return [eok > 0 ? `${eok.toLocaleString("ko-KR")}억` : "", rest > 0 ? `${rest.toLocaleString("ko-KR")}만` : ""].filter(Boolean).join(" ");
+};
 
 /** 구간 라벨 — 원문 표기(label)가 있으면 그대로, 없으면 경계 금액에서 파생 */
 export function bracketLabel(b: HouseholdNetworthBracket, boundary: HouseholdNetworthMeta["boundary"]): string {
@@ -120,19 +125,18 @@ export function bracketLabel(b: HouseholdNetworthBracket, boundary: HouseholdNet
 
 export interface BenchmarkRow {
   label: string;
-  valueText: string; // 공표값 그대로(원문 소수 자리 유지) + %
-  widthPct: number;  // 막대 폭 = 비중 ÷ 최대 구간 비중 × 100(선형)
   mine: boolean;
 }
 
 export interface NetworthBenchmarkView {
   rows: BenchmarkRow[];
+  columnLabel: string;              // 열 머리 — 구간 비중이 모두 같으면 '(가구 10%씩)'을 붙인다
   mineIndex: number | null;
   hidden: boolean;                  // 부동산 0건 — 내 구간을 표시하지 않고 안내만
   counts: BenchmarkCounts | null;   // 내 구간이 있을 때만
   sentence: string | null;
   labelParts: [string, string, string]; // 가구 기준 · 등록한 자산 기준 · {연도}년 조사
-  sourceParts: [string, string, string]; // 자료: {기관} / 「{조사명}」 / {연도}년({기준일} 기준)
+  sourceParts: string[]; // 자료: {기관} / 「{조사명}」 / {연도}년[({기준일} 기준)] / ({통계표})
 }
 
 /**
@@ -146,19 +150,18 @@ export function buildNetworthBenchmark(input: { netAsset: number; realEstateCoun
   const hidden = !(input.realEstateCount > 0);
   const mineIndex = hidden ? null : findBracketIndex(input.netAsset, stats);
   const counts = mineIndex === null ? null : computeCounts(mineIndex, stats);
-  const maxShare = Math.max(...brackets.map((b) => b.sharePct));
+  const equal = brackets.every((b) => b.sharePct === brackets[0].sharePct);
   return {
     rows: brackets.map((b, i) => ({
       label: bracketLabel(b, meta.boundary),
-      valueText: `${b.sharePct.toFixed(meta.shareDecimals)}%`,
-      widthPct: maxShare > 0 ? (b.sharePct / maxShare) * 100 : 0,
       mine: i === mineIndex,
     })),
+    columnLabel: equal ? `순자산 구간(가구 ${brackets[0].sharePct}%씩)` : "순자산 구간",
     mineIndex,
     hidden,
     counts,
     sentence: counts ? benchmarkSentence(counts) : null,
     labelParts: ["가구 기준", "· 등록한 자산 기준", `· ${meta.surveyYear}년 조사`],
-    sourceParts: [`자료: ${meta.agencies.join("·")}`, `「${meta.surveyName}」`, `${meta.surveyYear}년(${meta.referenceDate} 기준)`],
+    sourceParts: [`자료: ${meta.agencies.join("·")}`, `「${meta.surveyName}」`, `${meta.surveyYear}년${meta.referenceDate ? `(${meta.referenceDate} 기준)` : ""}`, ...(meta.tableSource.id ? [`(${meta.tableSource.id})`] : [])],
   };
 }

@@ -10,8 +10,8 @@ export interface HouseholdNetworthMeta {
   surveyName: string;            // 조사명
   agencies: readonly string[];   // 작성기관(원문 표기 순서)
   surveyYear: number;            // 조사 연도 — 라벨 '{연도}년 조사'
-  referenceDate: string;         // 자산 기준일 "YYYY-MM-DD"
-  tableSource: { name: string; id: string; url: string }; // 표 이름·번호·주소
+  referenceDate: string | null;  // 자산 기준일 "YYYY-MM-DD" — 원문에서 확인하지 못하면 null(짐작 금지, 화면에서 생략)
+  tableSource: { name: string; id: string; url?: string }; // 표 이름·번호(화면 출처 줄에 id 표시)·주소(확인된 경우만)
   transcribedAt: string;         // 원문에서 옮긴 날짜 "YYYY-MM-DD"
   sourceUnit: string;            // 원문 금액 단위(예: 만원) — 상수는 원 단위로 환산해 적는다
   shareDecimals: number;         // 원문 비중의 소수 자리 — 표시는 toFixed(shareDecimals)로 끝 0을 지킨다
@@ -30,9 +30,21 @@ export interface HouseholdNetworthStats {
   brackets: readonly HouseholdNetworthBracket[];
 }
 
-// 원문 표 확보 전 — 비워 둔다. 비어 있으면 성적표 블록은 그려지지 않는다(validateStats 실패 → null).
-// 값은 원문 확보 뒤 별도 커밋 1개로만 채운다(2차 보도 값 사용 금지).
+// 통계표 12 '순자산, 가구소득 분위별 평균, 점유율 및 경계값' 중 순자산 분위 경계값 2025년 열(P10~P90, 만원).
+// 평균·점유율·2024년 열은 쓰지 않는다. 구간 = 분위 10개, 각 가구 10%. 원문에 이상·미만 표기가 없어
+// 팀 규약으로 하한 포함(경계값은 위 구간)으로 둔다. 금액은 만원 × MAN(원 단위).
+const P = [1210, 5108, 10296, 16472, 23860, 33050, 46180, 69380, 110020].map((m) => m * MAN); // P10~P90
 export const HOUSEHOLD_NETWORTH_STATS: HouseholdNetworthStats = {
-  meta: null,
-  brackets: [],
+  meta: {
+    surveyName: "가계금융복지조사",
+    agencies: ["국가데이터처", "한국은행", "금융감독원"],
+    surveyYear: 2025,
+    referenceDate: null, // xlsx에 기준일 표기 없음 — KOSIS 통계설명자료로 확인되면 채운다
+    tableSource: { name: "순자산 분위 경계값(2025년 열)", id: "통계표 12" },
+    transcribedAt: "2026-11-14",
+    sourceUnit: "만원",
+    shareDecimals: 0,
+    boundary: "lower-inclusive",
+  },
+  brackets: [null, ...P].map((min, i, a) => ({ min, max: i === a.length - 1 ? null : P[i], sharePct: 10 })),
 };

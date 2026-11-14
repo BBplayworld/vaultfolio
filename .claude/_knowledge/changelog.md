@@ -14,8 +14,8 @@
 ## 2026-11-13 (v5.102)
 
 ### 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기 (#5.102, 이슈 #201)
-- 성적표 '5축 측정'과 'AI 평가 프롬프트' 사이에 `NetworthBenchmarkBlock`(`views/activity/networth-benchmark-block.tsx`) 1개. 통계 구간 분포(구간 1개 = 1행 가로 막대) 위에 내 구간을 중립 색으로 강조하고 문장 `가구 100곳 중 약 N곳이 이 구간, 약 M곳이 이보다 높은 구간이에요.` + 라벨·출처 줄. 누르는 것·화면 상태·내 금액 표기 없음. 부동산 0건이면 구간을 숨기고 안내 1줄.
-- 통계는 앱 안 정적 상수 `src/config/household-networth-stats.ts`(`meta`·`brackets`), 계산은 순수 함수 `src/lib/report/networth-benchmark.ts`. 순자산은 `getAssetSummary().netAsset` 그대로(새 환산 없음). **원문 표 확보 전이라 상수는 비어 있고(`meta: null, brackets: []`) `validateStats` 실패 → 블록 null로 화면에 나오지 않는다.** 값은 원문 확보 뒤 별도 커밋 1개로 채운다.
+- 성적표 '5축 측정'과 'AI 평가 프롬프트' 사이에 `NetworthBenchmarkBlock`(`views/activity/networth-benchmark-block.tsx`) 1개. 통계표 12 순자산 분위 경계 금액 목록 10행(막대·비중 열 없음, 열 머리 `순자산 구간(가구 10%씩)`) 중 내 구간만 중립 색으로 강조하고 문장 `가구 100곳 중 약 10곳이 이 구간, 약 M곳(100 − 10×k)이 이보다 높은 구간이에요.`(최상위는 뒷절 없음, 0 이하는 1구간) + 라벨·출처 줄. 누르는 것·화면 상태·내 금액 표기 없음. 부동산 0건이면 구간을 숨기고 안내 1줄.
+- 통계는 앱 안 정적 상수 `src/config/household-networth-stats.ts`(`meta`·`brackets`), 계산은 순수 함수 `src/lib/report/networth-benchmark.ts`. 순자산은 `getAssetSummary().netAsset` 그대로(새 환산 없음). **상수는 2025년 가계금융복지조사 통계표 12의 P10~P90(원 단위, 하한 포함, 구간 10개·각 10%)이며 평균·점유율은 쓰지 않는다.** 출처 줄 `자료: 국가데이터처·한국은행·금융감독원 「가계금융복지조사」 2025년(통계표 12)` — 기준일은 원문에서 확인 불가라 `referenceDate: null`로 생략.
 - 등급 계산·`recordGradeSnapshot`·AI 프롬프트·공유 카드·저장 스키마·키·동기화·GA·서버 전송 변경 0. 성적표 diff는 import 1줄 + JSX 1줄.
 
 

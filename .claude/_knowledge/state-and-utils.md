@@ -988,8 +988,8 @@ computePriceChange(points) → % | null
 - 이미지 단위 정합(5.101): `reconcileImagePrices(rows: {currentPrice, averagePrice, profitRate, evidence?}[])` → 행별 결과 배열. 한 이미지의 위치 방향을 swap 다수결로 소수익률 행에 적용(동률·근거 부족이면 행별 `reconcilePrices` 그대로). `name-normalize.ts stripTrailingQuantity`는 `(숫자` 꼬리·`구분 | 티커`·말줄임 제거 + 마스터 표기 통일.
 
 ### report/networth-benchmark.ts (#5.102 #201) — 가계 통계 순자산 구간 판정 순수 함수
-- 상수 `src/config/household-networth-stats.ts`: `HOUSEHOLD_NETWORTH_STATS { meta | null, brackets[] }`(`min`/`max` 원 단위·`null`은 열린 끝, `sharePct` 공표값 그대로, `label?`은 원문 표기 고정용), `EOK`·`MAN`. **원문 확보 전에는 빈 상수.** 통계 교체는 이 파일만.
+- 상수 `src/config/household-networth-stats.ts`: `HOUSEHOLD_NETWORTH_STATS { meta | null, brackets[] }`(`min`/`max` 원 단위·`null`은 열린 끝, `sharePct` 공표값 그대로, `label?`은 원문 표기 고정용), `EOK`·`MAN`. 현재 값 = 통계표 12 2025년 순자산 분위 경계값(10구간·각 10%, `referenceDate`는 확인 불가 시 null, `tableSource.url` 선택). 통계 교체는 이 파일만.
 - `validateStats(stats)` → 통과 시 `{meta, brackets}`, 실패 시 null(빈 배열·meta 누락·구간 5개 미만·열린 끝 위치·경계 빈틈/겹침·소수 자리 초과·합 오차 > 구간 수 × 0.5 × 10^-shareDecimals).
 - `findBracketIndex(netAsset, valid)`: `Math.round(netAsset)`으로 비교(홈 헤더 표시와 같은 정수), `boundary`(lower/upper-inclusive)대로 귀속, 비유한값 null.
 - `computeCounts(index, valid)` → `{n, m, isTop, nText, mText}`: 누적을 `sharePct × 10^shareDecimals` 정수로 더해 반올림, `N = U − L`·`M = 100 − U`, 최상위(`max === null`)는 U=100·`mText` null, `N === 0 || sharePct < 0.5`·비최상위 `M === 0`은 `약 1곳 미만`. `benchmarkSentence(counts)`.
-- `bracketLabel(b, boundary)`(`formatShortCurrency`에서 '원'만 뗀 경계 금액, `label` 우선), `buildNetworthBenchmark({netAsset, realEstateCount, stats})` → 행(라벨·`toFixed(shareDecimals)%`·선형 폭·mine)·`hidden`(부동산 0건이 음수 판정보다 먼저)·문장·라벨/출처 조각, 검증 실패면 null.
+- `bracketLabel(b, boundary)`(경계를 만원 단위 그대로 `1억 296만`으로 표기·반올림 없음, `label` 우선), `buildNetworthBenchmark({netAsset, realEstateCount, stats})` → 행(라벨·mine)·`columnLabel`(비중이 모두 같으면 `순자산 구간(가구 10%씩)`)·`hidden`(부동산 0건이 음수 판정보다 먼저)·문장·라벨/출처 조각, 검증 실패면 null.

@@ -16,20 +16,49 @@ const build = (netAsset: number, realEstateCount = 1, stats: HouseholdNetworthSt
 const withBrackets = (f: (b: HouseholdNetworthStats["brackets"][number], i: number) => Partial<HouseholdNetworthStats["brackets"][number]>): HouseholdNetworthStats =>
   ({ meta: META, brackets: T.brackets.map((b, i) => ({ ...b, ...f(b, i) })) });
 
-describe("앱 상수(원문 확보 전)", () => {
-  it("비어 있거나 검증을 통과한다 — 그 사이 상태는 없다", () => {
-    // 원문 상수 커밋에서 `brackets.length >= 5` 단언으로 바꾼다
-    expect(HOUSEHOLD_NETWORTH_STATS.brackets.length === 0 || validateStats(HOUSEHOLD_NETWORTH_STATS) !== null).toBe(true);
+describe("앱 상수(통계표 12 · 2025년 순자산 분위 경계값)", () => {
+  const H = HOUSEHOLD_NETWORTH_STATS;
+  it("검증을 통과하고 구간 10개·비중 모두 10·합 정확히 100", () => {
+    expect(validateStats(H)).not.toBeNull();
+    expect(H.brackets).toHaveLength(10);
+    expect(H.brackets.every((b) => b.sharePct === 10)).toBe(true);
+    expect(H.brackets.reduce((a, b) => a + b.sharePct, 0)).toBe(100);
+    expect(H.meta).toMatchObject({ surveyYear: 2025, boundary: "lower-inclusive", referenceDate: null });
   });
-  it("빈 상수면 블록 값이 null이다", () => {
-    expect(validateStats({ meta: null, brackets: [] })).toBeNull();
-    expect(buildNetworthBenchmark({ netAsset: 3 * EOK, realEstateCount: 1, stats: { meta: null, brackets: [] } })).toBeNull();
-    expect(buildNetworthBenchmark({ netAsset: 3 * EOK, realEstateCount: 1, stats: HOUSEHOLD_NETWORTH_STATS }) === null).toBe(HOUSEHOLD_NETWORTH_STATS.brackets.length === 0);
+  it("경계는 P10~P90 원 단위(만원 × 10,000), 양 끝은 열림", () => {
+    const man = [1210, 5108, 10296, 16472, 23860, 33050, 46180, 69380, 110020];
+    expect(H.brackets.map((b) => b.min)).toEqual([null, ...man.map((m) => m * MAN)]);
+    expect(H.brackets.map((b) => b.max)).toEqual([...man.map((m) => m * MAN), null]);
   });
-  it("원문 전에는 상수 파일에 통계 값이 없다", () => {
-    if (HOUSEHOLD_NETWORTH_STATS.brackets.length > 0) return;
-    expect(HOUSEHOLD_NETWORTH_STATS.meta).toBeNull();
-    expect(readFileSync("src/config/household-networth-stats.ts", "utf8")).not.toMatch(/sharePct:\s*\d|surveyYear:\s*\d/);
+  it("10행 라벨이 공표 경계와 문자 단위로 같다(반올림 없음)", () => {
+    expect(build(1, 1, H)!.rows.map((r) => r.label)).toEqual([
+      "1,210만 미만", "1,210만~5,108만", "5,108만~1억 296만", "1억 296만~1억 6,472만", "1억 6,472만~2억 3,860만",
+      "2억 3,860만~3억 3,050만", "3억 3,050만~4억 6,180만", "4억 6,180만~6억 9,380만", "6억 9,380만~11억 20만", "11억 20만 이상",
+    ]);
+    expect(build(1, 1, H)!.columnLabel).toBe("순자산 구간(가구 10%씩)");
+  });
+  it("경계 귀속(하한 포함) · 0 이하는 1구간 · P90은 최상위", () => {
+    const at = (w: number) => build(w, 1, H)!.mineIndex;
+    expect(at(110020 * MAN)).toBe(9);
+    expect(at(110020 * MAN - 1)).toBe(8);
+    expect(at(23860 * MAN - 1)).toBe(4);
+    expect(at(23860 * MAN)).toBe(5);
+    expect(at(0)).toBe(0);
+    expect(at(-3 * EOK)).toBe(0);
+  });
+  it("문장 — 약 10곳 고정, M = 100 − 10×k, 최상위는 뒷절 없음", () => {
+    const v = validateStats(H)!;
+    H.brackets.forEach((_, i) => {
+      const c = computeCounts(i, v);
+      expect(c.nText).toBe("약 10곳");
+      expect(c.m).toBe(100 - 10 * (i + 1));
+    });
+    expect(build(3 * EOK, 1, H)!.sentence).toBe("가구 100곳 중 약 10곳이 이 구간, 약 40곳이 이보다 높은 구간이에요."); // 2억 3,860만~3억 3,050만 = 6번째(k=6)
+    expect(build(12 * EOK, 1, H)!.sentence).toBe("가구 100곳 중 약 10곳이 이 구간이에요.");
+    expect(build(-1, 1, H)!.sentence).toBe("가구 100곳 중 약 10곳이 이 구간, 약 90곳이 이보다 높은 구간이에요.");
+  });
+  it("평균·점유율 값은 상수에 없다", () => {
+    expect(readFileSync("src/config/household-networth-stats.ts", "utf8")).not.toMatch(/47143|47,143|152085|104592|1334|5125/);
   });
 });
 
@@ -156,19 +185,11 @@ describe("라벨·값 표기", () => {
     expect(bracketLabel({ min: null, max: EOK, sharePct: 1 }, "upper-inclusive")).toBe("1억 이하");
     expect(bracketLabel({ min: 10 * EOK, max: null, sharePct: 1 }, "upper-inclusive")).toBe("10억 초과");
   });
-  it("비중은 공표값 그대로 — 원문 소수 자리(끝 0)를 지킨다", () => {
-    expect(build(0)!.rows.map((r) => r.valueText)).toEqual(["3.4%", "26.5%", "30.4%", "19.3%", "0.3%", "20.0%"]);
-  });
-  it("막대 폭은 최대 구간 대비 선형", () => {
-    const w = build(0)!.rows.map((r) => r.widthPct);
-    expect(w[2]).toBe(100);
-    expect(w[5]).toBeCloseTo((20 / 30.4) * 100, 10);
-    expect(w[4]).toBeCloseTo((0.3 / 30.4) * 100, 10);
-  });
   it("라벨 연도·출처는 meta에서 파생한다", () => {
     const v = buildNetworthBenchmark({ netAsset: 0, realEstateCount: 1, stats: { meta: { ...META, surveyYear: 2101 }, brackets: T.brackets } })!;
     expect(v.labelParts).toEqual(["가구 기준", "· 등록한 자산 기준", "· 2101년 조사"]);
-    expect(v.sourceParts).toEqual(["자료: 가공기관A·가공기관B", "「가공 조사」", "2101년(2099-03-31 기준)"]);
+    expect(buildNetworthBenchmark({ netAsset: 0, realEstateCount: 1, stats: { meta: { ...META, referenceDate: null }, brackets: T.brackets } })!.sourceParts[2]).toBe("2099년"); // 기준일 미확인이면 생략
+    expect(v.sourceParts).toEqual(["자료: 가공기관A·가공기관B", "「가공 조사」", "2101년(2099-03-31 기준)", "(T-000)"]);
   });
 });
 

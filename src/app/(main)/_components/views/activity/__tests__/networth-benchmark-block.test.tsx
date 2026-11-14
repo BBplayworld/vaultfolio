@@ -19,13 +19,20 @@ const textOf = (s: string, id: string): string | null => {
 };
 const mineRow = (s: string): string | null => s.match(/data-testid="benchmark-row-(\d+)"[^>]*data-mine="true"/)?.[1] ?? null;
 
-describe("빈 상수(원문 확보 전)", () => {
-  it("앱 상수 기본값으로는 아무것도 그리지 않는다", () => {
-    if (HOUSEHOLD_NETWORTH_STATS.brackets.length > 0) return;
-    expect(renderToStaticMarkup(<NetworthBenchmarkBlock netAsset={3.9 * EOK} realEstateCount={1} />)).toBe("");
-    expect(renderToStaticMarkup(<NetworthBenchmarkBlock netAsset={0} realEstateCount={0} />)).toBe("");
+describe("앱 상수 렌더", () => {
+  it("실제 상수로 10행·내 구간 1행·출처 줄(기준일 없음)", () => {
+    const s = renderToStaticMarkup(<NetworthBenchmarkBlock netAsset={3 * EOK} realEstateCount={1} />);
+    expect(count(s, /data-testid="benchmark-row-\d+"/g)).toBe(10);
+    expect(mineRow(s)).toBe("5");
+    expect(textOf(s, "benchmark-column")).toBe("순자산 구간(가구 10%씩)");
+    expect(textOf(s, "benchmark-source")).toBe("자료: 국가데이터처·한국은행·금융감독원「가계금융복지조사」2025년(통계표 12)");
+    expect(textOf(s, "benchmark-label")).toContain("2025년 조사");
+    expect(s).not.toMatch(/benchmark-bar-|benchmark-value-/);
+    expect(HOUSEHOLD_NETWORTH_STATS.brackets).toHaveLength(10);
   });
-  it("검증에 실패한 표도 그리지 않는다", () => {
+});
+describe("검증 실패", () => {
+  it("검증에 실패한 표는 그리지 않는다", () => {
     expect(html({ netAsset: EOK, realEstateCount: 1 }, { meta: null, brackets: T.brackets })).toBe("");
     expect(html({ netAsset: EOK, realEstateCount: 1 }, { meta: T.meta, brackets: T.brackets.slice(0, 3) })).toBe("");
   });
@@ -42,11 +49,11 @@ describe("상태별 표시", () => {
     expect(textOf(s, "benchmark-title")).toBe("가계 통계와 나란히");
     expect(textOf(s, "benchmark-grade-note")).toBe("등급 점수에는 반영되지 않아요.");
     expect(textOf(s, "benchmark-label")).toBe("가구 기준· 등록한 자산 기준· 2099년 조사");
-    expect(textOf(s, "benchmark-source")).toBe("자료: 가공기관A·가공기관B「가공 조사」2099년(2099-03-31 기준)");
+    expect(textOf(s, "benchmark-source")).toBe("자료: 가공기관A·가공기관B「가공 조사」2099년(2099-03-31 기준)(T-000)");
     expect(s).not.toContain("benchmark-hidden-note");
     expect(s).not.toContain("benchmark-top-note");
     expect(count(s, /data-testid="benchmark-row-\d+"/g)).toBe(6);
-    expect(textOf(s, "benchmark-value-5")).toBe("20.0%");
+    expect(s).not.toMatch(/benchmark-bar-|benchmark-value-/);
   });
   it("F4 — 보증금을 뺀 구간에 강조", () => {
     expect(mineRow(html(inputOf(F4)))).toBe("2");
@@ -76,11 +83,6 @@ describe("상태별 표시", () => {
   it("약 1곳 미만 — 앞절(T)·뒷절(T3)", () => {
     expect(textOf(html({ netAsset: 7 * EOK, realEstateCount: 1 }), "benchmark-sentence")).toBe("가구 100곳 중 약 1곳 미만이 이 구간, 약 20곳이 이보다 높은 구간이에요.");
     expect(textOf(html({ netAsset: 7 * EOK, realEstateCount: 1 }, T3), "benchmark-sentence")).toBe("가구 100곳 중 약 20곳이 이 구간, 약 1곳 미만이 이보다 높은 구간이에요.");
-  });
-  it("막대 폭은 선형(최대 구간 100%), 0 초과는 최소 4px", () => {
-    const s = html(inputOf(F3));
-    expect(s).toMatch(/data-testid="benchmark-bar-2"[^>]*style="width:100%;min-width:4px"/);
-    expect(s).toMatch(new RegExp(`data-testid="benchmark-bar-4"[^>]*style="width:${(0.3 / 30.4) * 100}%;min-width:4px"`));
   });
 });
 

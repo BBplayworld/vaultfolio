@@ -1,4 +1,4 @@
-// 성적표 "가계 통계와 나란히" 블록(#201, 5.102) — 공개 가계 통계의 순자산 구간 분포 위에 내 구간을 중립 색으로 강조.
+// 성적표 "가계 통계와 나란히" 블록(#201, 5.102) — 공개 가계 통계의 순자산 분위 경계 금액 목록에서 내 구간만 중립 색으로 강조.
 // 계산은 buildNetworthBenchmark(순수). 누르는 것·화면 상태·저장·전송·계측 없음. 내 순자산 금액은 적지 않는다.
 // 통계 상수가 비어 있거나 검증에 실패하면 null(원문 확보 전에는 화면에 나오지 않는다).
 
@@ -47,36 +47,20 @@ export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUS
       </div>
 
       <div className="sm:max-w-xl">
-        <div aria-hidden className="mb-1 flex justify-between text-xs text-muted-foreground">
-          <span>순자산 구간</span>
-          <span>가구 비중</span>
-        </div>
-        <ul data-testid="benchmark-bars" aria-label="순자산 구간별 가구 비중">
+        <p aria-hidden data-testid="benchmark-column" className="mb-1 text-xs text-muted-foreground">{v.columnLabel}</p>
+        <ul data-testid="benchmark-bars" aria-label={v.columnLabel}>
           {v.rows.map((row, i) => (
             <li
               key={i}
               data-testid={`benchmark-row-${i}`}
               data-mine={row.mine ? "true" : undefined}
               aria-current={row.mine ? "true" : undefined}
-              className={`-mx-2 px-2 grid grid-cols-[4.5rem_1fr_3rem] items-center gap-x-2 rounded-md ${row.mine ? "py-1.5 bg-muted/40" : "py-1"}`}
+              className={`-mx-2 px-2 flex flex-wrap items-center gap-x-2 rounded-md ${row.mine ? "py-1.5 bg-muted/40" : "py-1"}`}
             >
-              <div className="min-w-0">
-                <span className={`block text-sm tabular-nums ${NOWRAP} ${row.mine ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{row.label}</span>
-                {row.mine && <span data-testid="benchmark-mine-chip" className={`${SCOPE_MAIN} mt-0.5 inline-block`}>내 구간</span>}
-              </div>
-              <div aria-hidden className="min-w-0">
-                <div
-                  data-testid={`benchmark-bar-${i}`}
-                  className={`h-2.5 rounded-full ${row.mine ? "bg-foreground" : "bg-foreground/25"}`}
-                  style={{ width: `${row.widthPct}%`, minWidth: row.widthPct > 0 ? 4 : 0 }}
-                />
-              </div>
-              <span
-                data-testid={`benchmark-value-${i}`}
-                className={`text-sm text-right tabular-nums ${NOWRAP} ${row.mine ? "font-bold text-foreground" : "text-muted-foreground"}`}
-              >
-                {row.valueText}
+              <span className={`text-sm tabular-nums ${row.mine ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                {row.label.split("~").map((part, j) => <span key={j} className={NOWRAP}>{j > 0 ? `~${part}` : part}</span>)}
               </span>
+              {row.mine && <span data-testid="benchmark-mine-chip" className={SCOPE_MAIN}>내 구간</span>}
             </li>
           ))}
         </ul>
