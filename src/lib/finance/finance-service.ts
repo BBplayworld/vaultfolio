@@ -49,6 +49,8 @@ export interface StockPriceResult {
   inactiveStatus?: InactiveStatus;
   inactiveReason?: string;
   classification?: StockClassificationPatch;
+  // 국내 현재가 응답의 전일 대비율(%, prdy_ctrt) — 시장 알림(#179)이 쓴다. 없으면 undefined
+  changeRate?: number;
 }
 
 export interface ExchangeRates {
@@ -346,11 +348,13 @@ export async function fetchStocksFromKorea(
       const output = result.data.output;
       const price = parseFloat(output?.stck_prpr ?? "0");
       if (price > 0) {
+        const changeRate = parseFloat(output?.prdy_ctrt ?? "");
         results[ticker] = {
           price,
           name: KR_CODE_TO_NAME[ticker] ?? "",
           updated_at: todayStr,
           market: krMarketLabel(ticker),
+          ...(Number.isFinite(changeRate) ? { changeRate } : {}),
         };
       }
     } catch (e) {
@@ -905,16 +909,17 @@ async function fetchKisIndexSeries(
 
 const ymdCompact = (d: string) => d.replace(/-/g, "");
 
-// 코스피 종합(업종코드 0001) 일별 종가
+// 국내 지수 일별 종가 — 기본 코스피 종합(업종코드 0001). 코스닥 종합은 indexCode "1001"(시장 알림, #179)
 export async function fetchKospiDailySeries(
   startDate: string,
   endDate: string,
   accessToken: string,
   appKey: string,
   appSecret: string,
+  indexCode = "0001",
 ): Promise<IndexCloseRow[] | null> {
-  const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD=0001&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
-  return fetchKisIndexSeries(url, "FHKUP03500100", "bstp_nmix_prpr", `KOSPI/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+  const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKUP03500100", "bstp_nmix_prpr", `${indexCode === "0001" ? "KOSPI" : indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
 
 // 해외지수 일별 종가 (indexCode 예: SPX = S&P 500)
@@ -928,4 +933,85 @@ export async function fetchOverseasIndexDailySeries(
 ): Promise<IndexCloseRow[] | null> {
   const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=${encodeURIComponent(indexCode)}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}
+
+// 원/달러 일별 종가(시장 알림 국내 회차, #179) — 해외지수와 같은 TR(FHKST03030100)에 시장구분 X·코드 FX@KRW.
+// 실호출 PASS + 마지막 행 날짜 검증을 통과할 때만 호출부가 쓴다. 실패·빈 응답이면 null.
+export async function fetchFxKrwDailySeries(
+  startDate: string,
+  endDate: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=X&FID_INPUT_ISCD=${encodeURIComponent("FX@KRW")}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `FX@KRW/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}
+
+// 종목 일별 종가 행(최신순) — 날짜·종가로 전일 대비를 계산해 stale(임시 휴장일 등)을 판정하는 데 쓴다(시장 알림, #179).
+// 국내: inquire-daily-price(FHKST01010400) stck_bsop_date·stck_clpr / 해외: dailyprice(HHDFS76240000) xymd·clos(정규장 종가).
+// 실패·필드 누락은 null → 호출부가 해당 항목만 생략한다.
+export async function fetchKrStockDailyCloses(
+  code: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${encodeURIComponent(code)}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=0`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}`, appkey: appKey, appsecret: appSecret, tr_id: "FHKST01010400" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!isKisResponseOk(data, `국내 일별 종가 ${code}`)) return null;
+    return parseDailyCloseRows(data.output, "stck_bsop_date", "stck_clpr");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchOverseasDailyCloses(
+  excd: string,
+  symb: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${encodeURIComponent(symb)}&GUBN=0&BYMD=&MODP=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          appkey: appKey,
+          appsecret: appSecret,
+          tr_id: "HHDFS76240000",
+          "content-type": "application/json; charset=utf-8",
+        },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!isKisResponseOk(data, `해외 일별 종가 ${excd}/${symb}`)) return null;
+    return parseDailyCloseRows(data.output2, "xymd", "clos");
+  } catch {
+    return null;
+  }
+}
+
+/** KIS 일별 응답(최신순 배열) → 날짜 오름차순 IndexCloseRow. 날짜(YYYYMMDD)·종가가 유효한 행만 */
+export function parseDailyCloseRows(output: unknown, dateField: string, closeField: string): IndexCloseRow[] {
+  if (!Array.isArray(output)) return [];
+  const rows: IndexCloseRow[] = [];
+  for (const r of output as Record<string, string>[]) {
+    const d = String(r?.[dateField] ?? "");
+    const price = parseFloat(r?.[closeField] ?? "");
+    if (/^\d{8}$/.test(d) && price > 0) rows.push({ date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`, price });
+  }
+  return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
 }
