@@ -7,8 +7,8 @@ import { generateShareUrlKey, encryptShare, decryptShare } from "@/lib/asset/sha
 import { cashItem, emptyData } from "@/lib/__tests__/physical-fixtures";
 
 const data = () => ({ ...emptyData(), cash: [cashItem("a", 5_000_000)] });
-const KEY = "0123456789abcdef0123456789abcdef";
-const OTHER_KEY = "fedcba9876543210fedcba9876543210";
+const KEY = "0123456789ABCDEFabcdef";
+const OTHER_KEY = "zyxwvutsrqponmlkjihgfE";
 // 4.x(v72Z 생성기)가 만든 고정 벡터: PIN 1234, localKey abcdef123456
 const V72Z_FIXTURE = 'v72Z$6MDvA$HkxKz0WU+-czI$srzD2QAK7QB1Cz';
 const V71N_FIXTURE = "v71NPIaQPgelAMaBBjgIOrAVgLJQgRgPYHcMERA";
@@ -89,14 +89,20 @@ describe("크기·CSPRNG", () => {
     expect(t73.length).toBeLessThan(900_000);
     expect(t73.length / t71.length).toBeLessThan(1.4); // base64 바이트 인코딩 오버헤드 포함
   });
-  it("URL 키는 hex 32자이며 crypto.getRandomValues 16바이트로 만든다", () => {
+  it("URL 키는 base62 22자(`_` 없음)이며 crypto.getRandomValues로 만든다", () => {
     const spy = vi.spyOn(crypto, "getRandomValues");
     const k = generateShareUrlKey();
-    expect(k).toMatch(/^[0-9a-f]{32}$/);
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect((spy.mock.calls[0][0] as Uint8Array).length).toBe(16);
+    expect(k).toMatch(/^[0-9A-Za-z]{22}$/);
+    expect(spy).toHaveBeenCalled();
     spy.mockRestore();
     expect(generateShareUrlKey()).not.toBe(k);
+  });
+  it("rejection sampling: 248 이상 바이트는 버린다(편향 없음)", () => {
+    const seq = [255, 248, 249, ...Array(29).fill(0)];
+    const spy = vi.spyOn(crypto, "getRandomValues").mockImplementationOnce((a) => { (a as Uint8Array).set(seq); return a; });
+    const k = generateShareUrlKey(); // 255·248·249는 버리고 0만 22자 채택
+    expect(k).toBe("0".repeat(22));
+    spy.mockRestore();
   });
   afterEach(() => vi.restoreAllMocks());
   it("공유 호출부에 Math.random 기반 localKey가 없다", () => {

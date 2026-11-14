@@ -637,7 +637,7 @@ writeTutorialStatus(map): void
 - `merge-tutorial-status` — step별 12 키 → 단일 객체 통합
 
 ### share-crypto.ts (#5.112)
-`generateShareUrlKey()`(CSPRNG hex32, localKey 생성은 이것만 사용 — Math.random 금지)·`encryptShare/decryptShare`(v73A). `generateShareToken/parseShareToken`은 async. PBKDF2 반복수는 `cloud-sync/crypto.ts` `PBKDF2_ITERATIONS` 재사용.
+`generateShareUrlKey()`(CSPRNG base62 22자(rejection sampling), localKey 생성은 이것만 사용 — Math.random 금지)·`encryptShare/decryptShare`(v73A). `generateShareToken/parseShareToken`은 async. PBKDF2 반복수는 `cloud-sync/crypto.ts` `PBKDF2_ITERATIONS` 재사용.
 
 ### asset-storage.ts
 

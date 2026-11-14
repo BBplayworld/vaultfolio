@@ -4,7 +4,7 @@
  *
  * 토큰: "v73A" + base64url(salt16 ‖ nonce12 ‖ ciphertext+tag16), AAD = "v73A"
  * 순서: LZString 압축(바이트) → 암호화 (압축 후 암호화해야 크기가 유지됨)
- * URL 키: CSPRNG 128비트 hex 32자 — 링크 `#share=share:{서버키}_{URL키}`의 localKey 자리. 서버에는 가지 않는다.
+ * URL 키: CSPRNG base62(0-9A-Za-z) 22자(약 131비트, '_' 없음) — 링크 `#share=share:{서버키}_{URL키}`의 localKey 자리. 서버에는 가지 않는다.
  * 한계: 링크가 통째로 유출되면 PIN 4자리만 남는다(PBKDF2는 비용만 올림). PIN은 링크와 다른 경로로 전하는 2요소.
  */
 import LZString from "lz-string";
@@ -13,23 +13,30 @@ import { PBKDF2_ITERATIONS, fromBase64, toBase64Url } from "@/lib/cloud-sync/cry
 export const SHARE_V73_PREFIX = "v73A";
 const SALT_LEN = 16;
 const NONCE_LEN = 12;
-const URL_KEY_RE = /^[0-9a-f]{32}$/;
+const URL_KEY_RE = /^[0-9A-Za-z]{22}$/;
+const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const B62_LIMIT = 248; // 62*4 — 이 값 이상 바이트는 버려(rejection sampling) mod 편향을 없앤다
 const encU = new TextEncoder();
 const AAD = encU.encode(SHARE_V73_PREFIX);
 
-const toHex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
-const fromHex = (h: string) => Uint8Array.from(h.match(/../g) ?? [], (x) => parseInt(x, 16));
 const fromBase64Url = (s: string) => fromBase64(s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (s.length % 4)) % 4));
 
-/** URL 키(localKey) 생성 — CSPRNG 128비트, hex 32자 */
+/** URL 키(localKey) 생성 — CSPRNG base62 22자(62^22 ≈ 2^131), rejection sampling */
 export function generateShareUrlKey(): string {
-  return toHex(crypto.getRandomValues(new Uint8Array(16)));
+  let out = "";
+  while (out.length < 22) {
+    for (const b of crypto.getRandomValues(new Uint8Array(32))) {
+      if (b < B62_LIMIT && out.length < 22) out += B62[b % 62];
+    }
+  }
+  return out;
 }
 
 async function deriveShareKey(pin: string, urlKey: string, salt: Uint8Array): Promise<CryptoKey> {
-  const kSalt = new Uint8Array(16 + SALT_LEN);
-  kSalt.set(fromHex(urlKey), 0);
-  kSalt.set(salt, 16);
+  const kb = encU.encode(urlKey); // 22바이트(ASCII)
+  const kSalt = new Uint8Array(kb.length + SALT_LEN);
+  kSalt.set(kb, 0);
+  kSalt.set(salt, kb.length);
   const base = await crypto.subtle.importKey("raw", encU.encode(pin), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: kSalt as BufferSource, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },

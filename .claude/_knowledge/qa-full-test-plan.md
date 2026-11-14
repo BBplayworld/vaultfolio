@@ -293,7 +293,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **`#share=` 해시 삭제 시점(보안)** — 복호화 키(localKey) 포함 베어러 토큰이라 소비 **완료 시** `history.replaceState`로 제거: 데이터 적용(712)·PIN 확정(`handlePinConfirm` 746)·취소(`handlePinCancel` 761)·무효(invalid-access). **PIN 다이얼로그가 열리는 틱에는 제거 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(아래 R20). `processShareToken(rawTokenStr)`은 인자만 사용(해시 재읽기 없음)·PIN 확정은 `pendingToken` state라 제거 후에도 복원 정상
 - 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
 - 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
-- ⚙ **v73A(#5.112)** AES-GCM 왕복·오답 PIN·변조(salt·nonce·ct·tag)·v72Z 고정 벡터 하위호환·URL키 hex32 CSPRNG(`share-crypto.test.ts`), PWA 일회성 코드(49자) 붙여넣기·직접 입력
+- ⚙ **v73A(#5.112)** AES-GCM 왕복·오답 PIN·변조(salt·nonce·ct·tag)·v72Z 고정 벡터 하위호환·URL키 base62 22자 CSPRNG(`share-crypto.test.ts`), PWA 일회성 코드(39자) 붙여넣기·직접 입력
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 👤 **인증카드 금액 숨김(#4.80)** — `금액 표시` OFF에서 주식 현황 종목 행 수량이 `••••주`(숫자 수량 0), 평가금액·손익 금액도 `••••`. ON이면 `N주` 기존과 동일. 상세>주식 탭 수량 표시 불변. 자동 `stock-row-qty-mask.test.tsx`
