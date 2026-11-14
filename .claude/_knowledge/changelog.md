@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-14 (v5.112)
+
+- **공유 v73A**: 간편 공유 암호를 문자 시프트(v72Z)에서 AES-256-GCM + PBKDF2(PIN, URL키‖salt, 200k)로 교체([share-crypto.ts](../../src/lib/asset/share-crypto.ts)). URL 키 = CSPRNG base62 22자(약 131비트, localKey 자리), 압축 후 암호화. `generateShareToken`·`parseShareToken` async. `/api/share` POST는 v73A만, GET은 v72Z 허용(B안, 대표 11-14)·TTL 연장 중지로 30일 자연 소멸(`BLOCK_LEGACY_V72Z_GET` 플래그 기본 false). 링크 형식 불변. IP 미저장·푸시는 5.113.
+
+---
+
 ## 2026-11-14 (v5.111)
 
 ### 성과 주식 종목 목록 — 상위 3 + `외 N개` (#5.111, 이슈 #209 2차)

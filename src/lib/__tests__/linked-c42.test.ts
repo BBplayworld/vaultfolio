@@ -146,9 +146,9 @@ describe("F24: 삭제 진입점 — 잔액 불변·짝 기록 유지(되돌림�
 describe("F27: 공유 토큰 수신 후 연결 풀림 -> 거래 삭제 = 되돌림 없음", () => {
   beforeEach(() => { g.window = Object.assign(globalThis, { dispatchEvent: () => true }) as never; g.localStorage = memoryStorage(); });
   afterEach(() => { delete g.window; delete g.localStorage; });
-  it("토큰 왕복: 기록·잔액 합계 같고 짝 id 소멸, 수신 쪽 삭제는 거래만", () => {
+  it("토큰 왕복: 기록·잔액 합계 같고 짝 id 소멸, 수신 쪽 삭제는 거래만", async () => {
     const d = linkedSeed();
-    const parsed = parseShareToken(generateShareToken(d));
+    const parsed = await parseShareToken(await generateShareToken(d));
     if (!parsed || "pinRequired" in parsed) throw new Error("parse");
     const r = parsed.data;
     expect(r.cashTransactions).toHaveLength(1);

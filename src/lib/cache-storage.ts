@@ -549,9 +549,11 @@ export class FileCacheStorage implements ICacheStorage {
     const data = this.readShareTokens();
     const entry = data.tokens[key];
     if (!entry || entry.expires_at < Date.now()) return null;
-    // Sliding Window: 접근 시 만료 시간 갱신
-    entry.expires_at = Date.now() + SHARE_TTL_MS;
-    this.writeShareTokens(data);
+    // Sliding Window: v73A만 접근 시 만료 갱신 (구 v72Z는 연장 중지 → 최대 30일 내 자연 소멸)
+    if (entry.token.startsWith("v73A")) {
+      entry.expires_at = Date.now() + SHARE_TTL_MS;
+      this.writeShareTokens(data);
+    }
     return entry.token;
   }
 
@@ -985,8 +987,8 @@ class UpstashCacheStorage implements ICacheStorage {
   async getShareToken(key: string): Promise<string | null> {
     const token = await this.redis.get<string>(`share:${key}`);
     if (!token) return null;
-    // Sliding Window: 접근 시 TTL 30일 리셋
-    await this.redis.expire(`share:${key}`, SHARE_TTL_SECONDS);
+    // Sliding Window: v73A만 접근 시 TTL 30일 리셋 (구 v72Z는 연장 중지)
+    if (token.startsWith("v73A")) await this.redis.expire(`share:${key}`, SHARE_TTL_SECONDS);
     return token;
   }
 

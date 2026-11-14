@@ -998,7 +998,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const result = parseShareToken(shareTokenRes.token, undefined, shareTokenRes.localKey);
+    const result = await parseShareToken(shareTokenRes.token, undefined, shareTokenRes.localKey);
 
     if (result && "pinRequired" in result) {
       setPendingToken(shareTokenRes);
@@ -1036,14 +1036,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // PIN Dialog 확인
-  const handlePinConfirm = useCallback(() => {
+  const handlePinConfirm = useCallback(async () => {
     if (!pendingToken) return;
     if (inputPin.length !== 4) {
       notify.error(MSG.PIN_INVALID_LENGTH);
       return;
     }
 
-    const result = parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
+    const result = await parseShareToken(pendingToken.token, inputPin, pendingToken.localKey);
     if (result && "data" in result) {
       applySharedData(result.data, result.snapshots, result.profitBasis, result.nickname);
       setIsSharePending(false);
@@ -1052,8 +1052,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       setInputPin("");
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       track("share_restore", { result: "success" });
-    } else if (pendingToken.token.startsWith("v72Z")) {
-      // v72Z: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
+    } else if ((pendingToken.token.startsWith("v72Z") || pendingToken.token.startsWith("v73A"))) {
+      // v72Z·v73A: PIN + localKey 조합 복호화 — localKey 손상 시 올바른 PIN을 입력해도 항상 실패하므로 재시도 없이 invalid-access로 이동
       track("share_restore", { result: "pin_mismatch" });
       window.location.replace("/invalid-access");
     } else {

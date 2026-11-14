@@ -293,11 +293,12 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **`#share=` 해시 삭제 시점(보안)** — 복호화 키(localKey) 포함 베어러 토큰이라 소비 **완료 시** `history.replaceState`로 제거: 데이터 적용(712)·PIN 확정(`handlePinConfirm` 746)·취소(`handlePinCancel` 761)·무효(invalid-access). **PIN 다이얼로그가 열리는 틱에는 제거 금지** — Next 패치 replaceState가 Radix `Dialog`를 즉시 닫는 버그(아래 R20). `processShareToken(rawTokenStr)`은 인자만 사용(해시 재읽기 없음)·PIN 확정은 `pendingToken` state라 제거 후에도 복원 정상
 - 👤 공유 시 발신 기기의 테마가 라이트 모드이면 URL 뒤에 `&theme=light` 파라미터가 포함되며, 수신 기기에서 이 링크로 진입 시 즉시 라이트 모드로 전환 및 쿠키 동기화되는지 확인
 - 👤 공유 테마 링크 진입 시, 자바스크립트(Hydration) 로드 이전 HTML 극초기 렌더링 단계에서 테마 깜빡임(Flash) 현상 없이 즉시 송신 측 배경색(bg)으로 표시되는지 확인
+- ⚙ **v73A(#5.112)** AES-GCM 왕복·오답 PIN·변조(salt·nonce·ct·tag)·v72Z 고정 벡터 하위호환·URL키 base62 22자 CSPRNG(`share-crypto.test.ts`), PWA 일회성 코드(39자) 붙여넣기·직접 입력
 - ⚙ packV7/v7.2/v72Z 직렬화·복호화, 스냅샷·profitBasis·nickname 포함
 - 엣지: PIN 불일치 재시도, v72Z localKey 손상 시 즉시 invalid, URLSearchParams `+`→공백 복구
 - 👤 **인증카드 금액 숨김(#4.80)** — `금액 표시` OFF에서 주식 현황 종목 행 수량이 `••••주`(숫자 수량 0), 평가금액·손익 금액도 `••••`. ON이면 `N주` 기존과 동일. 상세>주식 탭 수량 표시 불변. 자동 `stock-row-qty-mask.test.tsx`
 - 회귀: **공유 토큰 버전 호환**(신규 필드 추가가 기존 URL 파싱 안 깨뜨리는지), 스냅샷 구분자 충돌
-- ⚙ `/api/share`: GET key `^[0-9a-f]{10}$` 외 400(내부 `rl:` 키 접근 차단), POST `v72Z`만 저장(그 외 400 → 클라이언트는 start_url 없이 폴백), 토큰 ≤900k자, `owner_id` UUID만
+- ⚙ `/api/share`: GET key `^[0-9a-f]{10}$` 외 400(내부 `rl:` 키 접근 차단), POST `v73A`만 저장(v72Z 포함 그 외 400, GET v72Z 허용·TTL 미연장 → 클라이언트는 start_url 없이 폴백), 토큰 ≤900k자, `owner_id` UUID만
 
 ### F-SCREENSHOT. 인증카드 (share-card) ([share-card.tsx](../../src/app/(main)/_components/header-menu/share/share-card.tsx), [share-menu.tsx](../../src/app/(main)/_components/header-menu/share/share-menu.tsx))
 - 👤 상단 오른쪽 "인증카드" 아이콘(`IdCard`; 브라우저·PWA 공통 — PWA 홈은 `pwa-home-header` 줄, 상세·성과 허브는 제목 줄 `hub-share-card` 발송 버튼, 하단네비 칸 없음 #4.66; 버튼 채움 = brand 인디고 `#5b6fbf`+흰 아이콘(라이트·다크 동일, 하단 업데이트 버튼과 같은 색), 두 버튼 같은 색 R8)으로 다이얼로그 오픈, 브랜드 버튼으로 이미지 공유·저장 — **모바일(Web Share 지원)**: "공유"(`navigator.share({files})`, `title` 없음) + 저장 아이콘 / **PC(미지원)**: "저장" + 클립보드 이미지 복사 아이콘(`canCopyImage` 지원 시). 다이얼로그 상단 설명은 3타입 공통 "내 {대상}을 …하고 친구에게 공유해보세요."(PC만 노출)

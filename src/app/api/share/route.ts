@@ -3,19 +3,18 @@
  * Short URL 생성 및 조회 엔드포인트.
  *
  * POST /api/share
- *   body: { token: "v72Z...", owner_id?: "uuid" }  (v72Z만 저장, 최대 900k자)
+ *   body: { token: "v73A...", owner_id?: "uuid" }  (v73A만 저장, 최대 900k자)
  *   → { key: "a3f8b2c1ab", owner_id: "uuid" }
  *
  *   key = sha256(token)[:10] — 콘텐츠 기반, IP 무관
- *   같은 자산 상태 → 항상 동일 key (부부가 동일 데이터 공유 시 1개 키)
- *   자산 변경 → token 변경 → 새 key
+ *   v73A는 salt·nonce가 무작위라 같은 자산이어도 매번 새 key
  *
  *   owner_id: 브라우저 localStorage에 저장된 UUID.
  *   재공유 시 이전 키를 즉시 삭제해 Redis 누적을 방지.
  *
  * GET /api/share?key=a3f8b2c1ab
- *   → { token: "v72Z..." }  (key는 hex 10자리만 허용)
- *   접근 시 TTL 30일 자동 연장 (Sliding Window)
+ *   → { token: "v73A..." }  (key는 hex 10자리만 허용, 구 v72Z도 읽기 허용)
+ *   v73A는 접근 시 TTL 30일 연장 (Sliding Window), v72Z는 연장하지 않음(자연 소멸)
  *
  * 스토리지: 로컬=data/share-tokens.json, Vercel=Upstash Redis (30일 Sliding TTL)
  */
@@ -33,6 +32,8 @@ const OWNER_ID_RE = /^[0-9a-f-]{36}$/i;
 // 토큰 상한(문자 수) — 임의 대용량 문자열을 30일 저장소로 남용하지 못하게
 const MAX_TOKEN_LEN = 900_000;
 const MAX_BODY_BYTES = 1_000_000;
+// 구 v72Z(문자 시프트) 조회 차단 스위치 — B안 확정(대표 11-14): GET 허용·TTL 연장 중지로 30일 자연 소멸. true로 바꾸면 410 반환(기본 허용, 즉시 삭제 안 함)
+const BLOCK_LEGACY_V72Z_GET = false;
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
 export async function GET(request: Request) {
@@ -56,6 +57,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "링크가 만료되었거나 존재하지 않습니다." }, { status: 404, headers: NO_STORE });
   }
 
+  if (BLOCK_LEGACY_V72Z_GET && token.startsWith("v72Z")) {
+    return NextResponse.json({ error: "구형 공유 링크는 더 이상 열 수 없습니다. 다시 공유해 주세요." }, { status: 410, headers: NO_STORE });
+  }
+
   return NextResponse.json({ token }, { headers: NO_STORE });
 }
 
@@ -71,8 +76,8 @@ export async function POST(request: Request) {
       return badRequest("token 필드 필요");
     }
 
-    // 서버에는 Zero-Knowledge 토큰(v72Z: PIN+로컬 키 암호화)만 저장 — 무암호(v71N·구버전)·PIN 단독(v71P) 거부
-    if (!token.startsWith("v72Z")) {
+    // 서버에는 Zero-Knowledge 토큰(v73A: AES-GCM, PIN+URL 키)만 저장 — v72Z 신규 저장·무암호(v71N)·PIN 단독(v71P) 거부
+    if (!token.startsWith("v73A")) {
       return badRequest("짧은 URL은 PIN 설정이 필요합니다.");
     }
     if (token.length > MAX_TOKEN_LEN) {
@@ -85,7 +90,7 @@ export async function POST(request: Request) {
     const limited = await guardRateLimit(request, "share-post", 10, 60);
     if (limited) return limited;
 
-    // 콘텐츠 기반 키: sha256(token)[:10] — IP 무관, 같은 자산 = 같은 키
+    // 콘텐츠 기반 키: sha256(token)[:10] — IP 무관
     const key = createHash("sha256").update(token).digest("hex").substring(0, 10);
 
     // Owner ID로 이전 키 추적 및 즉시 삭제
