@@ -11,7 +11,7 @@ export interface PushTopic {
 
 export const PUSH_CATALOG: readonly PushTopic[] = [
   { id: "settle", label: "월 결산 열림", desc: "매월 결산이 열리는 날 1번" },
-  { id: "tax", label: "세금 마감", desc: "5월 신고 기간·12월 연금저축·IRP 납입 마감, 연 2번" },
+  { id: "tax", label: "세금 마감", desc: "5월 신고·12월 연금 납입 마감, 연 2번" },
 ];
 
 export const PUSH_TOPIC_IDS: readonly string[] = PUSH_CATALOG.map((t) => t.id);

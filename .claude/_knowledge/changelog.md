@@ -12,12 +12,6 @@
 - **클라이언트**: 알림 누름 → `/?from=push&t=settle|tax` → `PushHost`가 월 결산(source `push`)/세금 관리로 바로 이동(C80). GA category `push_click_settle|push_click_tax`(`알림·누름·결산|세금`).
 - **저장 키**: `secretasset.push_prefs` v2 `{on,topics}`. v1(지수 ID·조건)은 무시(off·미선택)하고 reconcilePush가 구독 정리.
 
-### PWA 시장 알림 (#4.93, 이슈 #179, risk:high·대표 승인 트랙)
-- **무엇**: 설치한 앱(standalone)에서만 설정 '알림' 섹션으로 장 마감 후 시장 종가 등락을 푸시로 받는다. 서버는 보유 정보를 모른다 — 서버에 남는 값은 endpoint·keys(AES-256-GCM 블롭)·카탈로그 ID·조건·날짜(일)뿐. 카탈로그 15개(`lib/push/catalog.ts`), 조건 `매 거래일`/`±2% 이상만`.
-- **서버**: `/api/push/subscribe`(POST·DELETE)·`/api/push/test`(preview·로컬 전용)·`/api/push/cron/{kr,us}`(CRON_SECRET·운영 전용, 휴장·중복(sent NX)·시각·서킷·예산 방어). Redis 접두어 `push:{prod|preview|dev}:`, 구독 id = HMAC-SHA256(PUSH_STORE_KEY, endpoint). `vercel.json` crons `0 7 * * 1-5`(국내)·`0 0 * * 2-6`(미국).
-- **클라이언트**: `notify-section.tsx`(켜기 안내·대상·조건 Dialog·테스트 행), `push-host.tsx`(`?from=push` GA·구독 보정·TTL 갱신), `sw.js` push·notificationclick(CACHE v5). 모든 데이터 삭제 → 서버 구독 삭제·기기 구독 해제·로컬 키 삭제(`시장 알림도 꺼집니다.`, 켜져 있을 때만).
-- **재사용 변경**: `fetchKospiDailySeries(…, indexCode="0001")`, `StockPriceResult.changeRate`(국내 prdy_ctrt), `fetchOverseasChangeRate`(price-detail last/base), `ICacheStorage` push 5메서드, GA category `push_on|push_off|push_denied|push_click`.
-- **새 소식**: `20261112-04`. 로컬 신규 키 `secretasset_push_prefs` 1개(자산 스키마·동기화·백업·공유 토큰 변경 0). 의존성 `web-push`(서버 전용).
 ## 2026-11-14 (v5.103)
 
 ### 320 화면 정돈 (#5.103, 이슈 #203)
