@@ -4,7 +4,7 @@
 
 import { ChartNoAxesColumn } from "lucide-react";
 import { HOUSEHOLD_NETWORTH_STATS, type HouseholdNetworthStats } from "@/config/household-networth-stats";
-import { buildNetworthBenchmark } from "@/lib/report/networth-benchmark";
+import { buildNetworthBenchmark, type MyAssetBasis } from "@/lib/report/networth-benchmark";
 import { SECTION, SectionHeader } from "../../layout/ui/report-section";
 
 // asset-report-view.tsx의 로컬 상수 CAPTION·SCOPE_MAIN과 같은 값(성적표에서 가져오면 순환 import — 값만 맞춘다)
@@ -19,12 +19,19 @@ export const BENCHMARK_GRADE_NOTE = "등급 점수에는 반영되지 않아요.
 export const BENCHMARK_TOP_NOTE = "통계 표에서 가장 높은 구간이라 이 위로는 더 나뉘지 않아요.";
 export const BENCHMARK_HIDDEN_NOTE = "부동산을 등록하지 않아 내 구간은 표시하지 않았어요. 통계의 순자산은 가구의 자산에서 부채를 뺀 값이에요.";
 
-export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUSEHOLD_NETWORTH_STATS }: {
-  netAsset: number; realEstateCount: number; stats?: HouseholdNetworthStats;
+export const COMP_NOTES = [
+  "비중은 자산 합계 대비예요. 자동차·귀금속 같은 기타 실물자산 줄은 뺐어요.",
+  "전·월세보증금(세입자가 낸 돈)은 따로 등록하는 항목이 없어요. 현금으로 등록했다면 예금·주식 등에 들어가 있어요.",
+] as const;
+const NUM = "text-right whitespace-nowrap tabular-nums";
+
+export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUSEHOLD_NETWORTH_STATS, mine }: {
+  netAsset: number; realEstateCount: number; stats?: HouseholdNetworthStats; mine?: MyAssetBasis;
 }) {
-  const v = buildNetworthBenchmark({ netAsset, realEstateCount, stats });
+  const v = buildNetworthBenchmark({ netAsset, realEstateCount, stats, mine });
   if (!v) return null;
   const c = v.counts;
+  const comp = v.composition;
   return (
     <section data-testid="benchmark-block" aria-label={BENCHMARK_TITLE} className={`${SECTION} ${ENTER}`}>
       <div>
@@ -64,6 +71,42 @@ export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUS
             </li>
           ))}
         </ul>
+        {comp && (
+          <div data-testid="benchmark-comp" className="mt-3 pt-3 border-t border-border/50">
+            <p data-testid="benchmark-comp-title" className="text-sm font-semibold text-foreground text-pretty break-keep">{comp.title}</p>
+            <p data-testid="benchmark-comp-basis" className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+              {comp.basis.split(" ").map((part, j) => <span key={j} className={NOWRAP}>{j > 0 ? " " : ""}{part}</span>)}
+            </p>
+            <table data-testid="benchmark-comp-table" className="mt-2 w-full text-sm tabular-nums">
+              <caption className="sr-only">{comp.title}</caption>
+              <thead>
+                <tr className="border-b border-border/50 text-xs text-muted-foreground">
+                  <th scope="col" className="sr-only">항목</th>
+                  <th scope="col" className={`w-[5.5rem] font-normal ${NUM}`}>가구 평균</th>
+                  <th scope="col" className={`w-11 font-normal ${NUM}`}>가구 비중</th>
+                  {comp.showMine && <th scope="col" className={`w-11 font-normal ${NUM}`}>내 비중</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {comp.rows.map((r, i) => (
+                  <tr key={r.label} data-testid={`benchmark-comp-row-${i}`} className={`h-9 ${i === 3 ? "border-t border-border/50" : ""}`}>
+                    <th scope="row" className="text-left font-normal text-foreground break-keep">{r.label}</th>
+                    <td className={`text-foreground ${NUM}`}>{r.avgText}</td>
+                    <td data-testid={`benchmark-comp-share-${i}`} className={`text-foreground ${NUM}`}>{r.sharePct}%</td>
+                    {comp.showMine && (
+                      r.minePct === null
+                        ? <td data-testid={`benchmark-comp-mine-${i}`} aria-label="앱에 없는 항목" className={`text-muted-foreground ${NUM}`}>—</td>
+                        : <td data-testid={`benchmark-comp-mine-${i}`} className={`font-semibold text-foreground ${NUM}`}>{r.minePct}%</td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-2 space-y-1">
+              {COMP_NOTES.map((n, i) => <p key={i} data-testid={`benchmark-comp-note-${i}`} className="text-xs text-muted-foreground text-pretty break-keep">{n}</p>)}
+            </div>
+          </div>
+        )}
       </div>
 
       <p data-testid="benchmark-source" className="flex flex-wrap gap-x-1 text-xs text-muted-foreground/70">

@@ -25,7 +25,7 @@ describe("앱 상수 렌더", () => {
     expect(count(s, /data-testid="benchmark-row-\d+"/g)).toBe(10);
     expect(mineRow(s)).toBe("5");
     expect(textOf(s, "benchmark-column")).toBe("순자산 구간(가구 10%씩)");
-    expect(textOf(s, "benchmark-source")).toBe("자료: 국가데이터처·한국은행·금융감독원「가계금융복지조사」2025년(통계표 12)");
+    expect(textOf(s, "benchmark-source")).toBe("자료: 국가데이터처·한국은행·금융감독원「가계금융복지조사」2025년(통계표 1~10, 12)");
     expect(textOf(s, "benchmark-label")).toContain("2025년 조사");
     expect(s).not.toMatch(/benchmark-bar-|benchmark-value-/);
     expect(HOUSEHOLD_NETWORTH_STATS.brackets).toHaveLength(10);
@@ -119,7 +119,7 @@ describe("데이터 안전 — 정적 검사", () => {
   it("성적표는 import 1줄 + JSX 1줄로만 블록을 쓰고, 순자산은 요약값 그대로 넘긴다", () => {
     const src = readFileSync(`${DIR}/asset-report-view.tsx`, "utf8");
     expect(count(src, /NetworthBenchmarkBlock/g)).toBe(2);
-    expect(src).toContain("<NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} />");
+    expect(src).toContain("<NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} mine={summary} />");
     // 위치: 5축 측정 뒤, AI 평가 프롬프트 앞
     expect(src.indexOf('title="5축 측정"')).toBeLessThan(src.indexOf("<NetworthBenchmarkBlock"));
     expect(src.indexOf("<NetworthBenchmarkBlock")).toBeLessThan(src.indexOf("{/* ── AI 평가 프롬프트 ── */}"));

@@ -57,8 +57,8 @@ describe("앱 상수(통계표 12 · 2025년 순자산 분위 경계값)", () =>
     expect(build(12 * EOK, 1, H)!.sentence).toBe("가구 100곳 중 약 10곳이 이 구간이에요.");
     expect(build(-1, 1, H)!.sentence).toBe("가구 100곳 중 약 10곳이 이 구간, 약 90곳이 이보다 높은 구간이에요.");
   });
-  it("평균·점유율 값은 상수에 없다", () => {
-    expect(readFileSync("src/config/household-networth-stats.ts", "utf8")).not.toMatch(/47143|47,143|152085|104592|1334|5125/);
+  it("점유율 값은 상수에 없다(v2: 항목별 평균 구성값은 허용)", () => {
+    expect(readFileSync("src/config/household-networth-stats.ts", "utf8")).not.toMatch(/104592|5125/);
   });
 });
 

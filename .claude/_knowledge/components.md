@@ -513,3 +513,4 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - **자산 변화 일 탭(4.95)**: `net-asset-chart.tsx` daily = `ChangeHero(titleTestId=day-title)` + `CauseBlock scope="week"` + 달력(`종가 기준` 캡션). `ProfitCard`는 `period` 필수(비제어 분기 없음). `WeekTrendCard` 값 라벨은 360 미만에서 축약 span.
 
 - **NetworthBenchmarkBlock (#5.102, 로컬)**: `views/activity/networth-benchmark-block.tsx` — 성적표 "가계 통계와 나란히". props `{ netAsset, realEstateCount, stats? }`(stats 기본 = `HOUSEHOLD_NETWORTH_STATS`, 테스트만 주입), 훅·상태·버튼 0. `SECTION`+`SectionHeader(tone=brand)` + 문장/안내 + 라벨 줄 + 경계 금액 목록 10행(라벨 단일 열, `~` 앞에서만 줄바꿈, 내 구간 행 `bg-muted/40`·굵은 글씨·칩 `내 구간`·`aria-current`, 막대·값 칸 없음) + 출처 줄. 색은 foreground/muted 명도만(손익색·주황·brand 미사용). 상수가 비었거나 검증 실패면 null. testId `benchmark-*`. views/activity 전용.
+  - v2: props에 `mine?`(= `getAssetSummary()` 결과) 추가. 10행 목록 아래·출처 줄 위에 자산 구성 표(`benchmark-comp-*`, 4행 × 가구 평균·가구 비중·내 비중, 부동산 0건이면 전체 가구 2열) + 주석 2줄. 신규 공용 컴포넌트 0.

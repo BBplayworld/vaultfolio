@@ -1,12 +1,13 @@
 // 가계 통계와 나란히(#201, 5.102) — 통계 상수 검증·내 구간 판정·문장 수치·구간 라벨. 순수 함수만(화면·저장·전송 없음).
 // 순자산은 호출부가 넘긴 값(getAssetSummary().netAsset)을 그대로 쓴다 — 새 환산·합계를 만들지 않는다.
-import type { HouseholdNetworthBracket, HouseholdNetworthMeta, HouseholdNetworthStats } from "@/config/household-networth-stats";
+import type { HouseholdComposition, HouseholdNetworthBracket, HouseholdNetworthMeta, HouseholdNetworthStats } from "@/config/household-networth-stats";
 
 export const MIN_BRACKETS = 5; // 구간이 이보다 적으면 표시하지 않는다(재판정 대상)
 
 export interface ValidNetworthStats {
   meta: HouseholdNetworthMeta;
   brackets: readonly HouseholdNetworthBracket[];
+  composition?: HouseholdNetworthStats["composition"];
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -47,7 +48,7 @@ export function validateStats(stats: HouseholdNetworthStats): ValidNetworthStats
     sum += shareUnits(b.sharePct, meta.shareDecimals);
   }
   if (Math.abs(sum - 100 * scale) > brackets.length * 0.5) return null;
-  return { meta, brackets };
+  return { meta, brackets, composition: stats.composition };
 }
 
 /**
@@ -106,7 +107,7 @@ export function benchmarkSentence(c: BenchmarkCounts): string {
 }
 
 // 경계 금액 표기 — 공표값(만원 단위) 그대로 '억 만' 표기. 반올림·버림 없음(1억 296만, 11억 20만). 0은 '0원'
-const boundaryText = (won: number): string => {
+export const boundaryText = (won: number): string => {
   if (won === 0) return "0원";
   const man = Math.floor(won / 10_000);
   const eok = Math.floor(man / 10_000);
@@ -136,6 +137,7 @@ export interface NetworthBenchmarkView {
   counts: BenchmarkCounts | null;   // 내 구간이 있을 때만
   sentence: string | null;
   labelParts: [string, string, string]; // 가구 기준 · 등록한 자산 기준 · {연도}년 조사
+  composition: CompositionView | null;
   sourceParts: string[]; // 자료: {기관} / 「{조사명}」 / {연도}년[({기준일} 기준)] / ({통계표})
 }
 
@@ -143,7 +145,7 @@ export interface NetworthBenchmarkView {
  * 블록에 필요한 값 전부. 상수 검증 실패(빈 상수 포함)면 null.
  * 부동산 0건 판정이 음수 판정보다 먼저다 — 부동산이 없으면 순자산 부호와 무관하게 내 구간을 표시하지 않는다.
  */
-export function buildNetworthBenchmark(input: { netAsset: number; realEstateCount: number; stats: HouseholdNetworthStats }): NetworthBenchmarkView | null {
+export function buildNetworthBenchmark(input: { netAsset: number; realEstateCount: number; stats: HouseholdNetworthStats; mine?: MyAssetBasis }): NetworthBenchmarkView | null {
   const stats = validateStats(input.stats);
   if (!stats) return null;
   const { meta, brackets } = stats;
@@ -161,7 +163,59 @@ export function buildNetworthBenchmark(input: { netAsset: number; realEstateCoun
     hidden,
     counts,
     sentence: counts ? benchmarkSentence(counts) : null,
+    composition: buildCompositionView({ stats, mineIndex, mine: input.mine }),
     labelParts: ["가구 기준", "· 등록한 자산 기준", `· ${meta.surveyYear}년 조사`],
     sourceParts: [`자료: ${meta.agencies.join("·")}`, `「${meta.surveyName}」`, `${meta.surveyYear}년${meta.referenceDate ? `(${meta.referenceDate} 기준)` : ""}`, ...(meta.tableSource.id ? [`(${meta.tableSource.id})`] : [])],
+  };
+}
+
+// ── 자산 구성 비교 표(5.102 v2) ──
+
+export interface MyAssetBasis {
+  stockValue: number; cryptoValue: number; cashValue: number; realEstateValue: number;
+  loanBalance: number; tenantDepositTotal: number; totalValue: number;
+}
+
+export const COMP_ROW_LABELS = ["예금·주식 등", "전·월세보증금", "부동산", "부채"] as const;
+
+/** 앱 자산 → 통계 분류(spec v2 6절). getAssetSummary() 필드 합만 쓴다. 보증금 행은 앱에 없어 null */
+export function mapMyComposition(s: MyAssetBasis): { amounts: [number, null, number, number]; total: number } {
+  return { amounts: [s.stockValue + s.cryptoValue + s.cashValue, null, s.realEstateValue, s.loanBalance + s.tenantDepositTotal], total: s.totalValue };
+}
+
+/** 비중(%) — 정수 반올림. 분모 0 이하면 null */
+export const sharePctOf = (part: number, whole: number): number | null => (whole > 0 ? Math.round((part / whole) * 100) : null);
+
+/** 10분위 순번(0~9) → 5분위 순번(0~4) = ⌈(순번+1)/2⌉ − 1 */
+export const quintileOf = (decileIndex: number): number => Math.ceil((decileIndex + 1) / 2) - 1;
+
+const compAmounts = (c: HouseholdComposition): [number, number, number, number] => [c.savings, c.deposit, c.estate, c.debt];
+// 표의 금액은 만원 정수로 반올림해 기존 억·만 표기를 쓴다
+const manText = (won: number): string => boundaryText(Math.round(won / 10_000) * 10_000);
+
+export interface CompositionRow { label: string; avgText: string; sharePct: number; minePct: number | null | undefined } // minePct: undefined = 열 없음, null = '—'
+export interface CompositionView { title: string; basis: string; showMine: boolean; rows: CompositionRow[] }
+
+/** 구성 비교 표. 구성 상수가 없거나 구간이 10개가 아니면 null. 부동산 0건이면 전체 가구 2열 */
+export function buildCompositionView(input: { stats: ValidNetworthStats; mineIndex: number | null; mine?: MyAssetBasis }): CompositionView | null {
+  const { stats, mineIndex, mine } = input;
+  const cs = stats.composition;
+  if (!cs || stats.brackets.length !== 10) return null;
+  let group = cs.all, title = "전체 가구의 자산 구성", basis = "전체 가구 평균";
+  if (mineIndex !== null) {
+    const q = quintileOf(mineIndex);
+    group = cs.quintiles[q];
+    const range = bracketLabel({ min: stats.brackets[q * 2].min, max: stats.brackets[q * 2 + 1].max, sharePct: 20 }, stats.meta.boundary);
+    title = "순자산이 비슷한 가구의 자산 구성";
+    basis = `순자산 ${range} 가구(20%) 평균`;
+  }
+  const my = mineIndex !== null && mine ? mapMyComposition(mine) : null;
+  const amounts = compAmounts(group);
+  return {
+    title, basis, showMine: my !== null,
+    rows: COMP_ROW_LABELS.map((label, i) => ({
+      label, avgText: manText(amounts[i]), sharePct: sharePctOf(amounts[i], group.asset) ?? 0,
+      minePct: my === null ? undefined : my.amounts[i] === null ? null : sharePctOf(my.amounts[i] as number, my.total),
+    })),
   };
 }

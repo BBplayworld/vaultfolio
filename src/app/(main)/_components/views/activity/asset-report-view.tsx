@@ -707,7 +707,7 @@ export function AssetReportView() {
                 })}
               </div>
             </div>
-            <NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} />
+            <NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} mine={summary} />
 
             {/* ── AI 평가 프롬프트 ── */}
             <div className="rounded-lg bg-muted/50 dark:bg-muted/20 p-4 space-y-3">
