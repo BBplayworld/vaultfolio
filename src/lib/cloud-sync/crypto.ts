@@ -15,7 +15,7 @@ import * as ed from "@noble/ed25519";
 
 // @noble/ed25519 v3: async 함수는 WebCrypto SHA-512 내장 사용(클라/서버 공용) — 별도 주입 불필요.
 
-const PBKDF2_ITERATIONS = 200_000;
+export const PBKDF2_ITERATIONS = 200_000;
 const encU = new TextEncoder();
 const decU = new TextDecoder();
 
