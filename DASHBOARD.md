@@ -4,7 +4,9 @@
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
 > **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.111**
 
-## 🟥 대표님 결정 필요 — 없음
+## 🟥 대표님 결정 필요 — 1건
+1. **🔐 [PR #216](https://github.com/BBplayworld/vaultfolio/pull/216) v5.112 간편 공유 암호 교체 — 데모 확인 후 머지(=반영)** — AES-256-GCM·CSPRNG(v73A), 사용 흐름·링크 형식 동일, 기존 링크 30일 자연 소멸(B안), 기기 동기화 영향 0 · qa·COO PASS @c2b466b · risk:high · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/5.112-security-hardening/5.112-decision-brief.md)
+   - 데모: https://secretasset-git-issue-5112-bbplayworlds-projects.vercel.app/?demo=1 → 더보기 → 자산 공유 · 동기화 → 간편 공유 → PIN·링크 복사 → 시크릿 창에서 열기(맞는 PIN 표시·틀린 PIN 거부)
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -35,7 +37,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.112 | 간편 공유 암호 교체(AES-GCM, 기존 링크 30일 자연 소멸) | 개발 중 | 대표 승인(high) |
+| v5.112 | 간편 공유 암호 교체(AES-GCM, 기존 링크 30일 자연 소멸) [PR #216](https://github.com/BBplayworld/vaultfolio/pull/216) | qa·COO PASS → 대표 승인 대기 | 대표 승인(high) |
 | v5.113 | IP 미저장·푸시 보관 30일·키 분리 | 설계 완료, 5.112 다음 | 대표 승인 |
 | v5.114 | [#215](https://github.com/BBplayworld/vaultfolio/issues/215) 전체 페이지 텍스트 크기 체계(PC·태블릿·모바일, 대표 지시) | 전수 조사 착수(디자이너 fable) · 개발은 5.113 이후 | 판정 후 |
 
