@@ -65,23 +65,58 @@
 
 ---
 
-## 2. 타이포 위계 — 한 화면 4단계
+## 2. 타이포 스케일 — 환경별 토큰 값 (#5.114 #215, 타이포 정본)
 
-| 단계 | 크기 | 용도 |
-|---|---|---|
-| 캡션 | `text-[11px]` | 캡션 역할 콘텐츠 한정 — 티커·배지 상태·스텝 원형 숫자·차트 축 라벨·타임스탬프·마감 기준 메타·접기 트리거 |
-| 보조 | `text-xs` (12px) | **신규 사용 지양** — 좁은 칩/배지·3단 카테고리 탭(`categoryBox`/`todayBox`/`tabTrigger3`류)·**일별 달력 셀 금액**(net-asset-chart.tsx 일별 탭, 모바일 셀 텍스트 가용폭 42.6px가 앱 최협 — `text-xs sm:text-sm`) 한정. 전부 폭 제약으로 예외 존속 |
-| 본문·금액 | `text-sm` (14px, `sm:text-[15px]`) | 라벨·부가 수치·이름·종목명·손익 금액·표 데이터 — **모바일·PC 공통** |
-| Hero | `text-base`+ (16px↑) | 페이지 핵심 지표 |
+**크기 이름(`text-2xs`~`text-4xl`)은 그대로 쓰고, 값은 환경에 따라 `globals.css` 토큰이 바꾼다.** 모바일 값은 Tailwind 기본, 태블릿 +1px, PC +2px. 화면마다 `sm:`·`lg:` 크기 쌍이나 임의 px를 붙이지 않는다.
 
-- **웨이트는 3종만**: `font-medium`(보조 라벨) · `font-semibold`(강조·라벨) · `font-bold`(Hero·금액). **`font-extrabold` 미사용**(Hero는 크기+색+`font-bold`로 충분 — 웨이트 난립 방지, UI팁 #13). shadcn 프리미티브의 `font-medium`은 그대로 둔다.
-- **줄높이**: 여러 줄 산문(설명·안내·캡션)은 **line-height ≥1.5**(`leading-relaxed`/`leading-normal`/`leading-7`) — UI팁 #16. 단일 줄 숫자·Hero 금액은 자릿수 정렬 위해 `leading-tight` 허용.
+| 토큰 | 모바일 ~767 | 태블릿 768~1279 | PC 1280~ | 역할 |
+|---|---|---|---|---|
+| `text-2xs` | 11 | 12 | 12 | 메타 캡션(기준·시각·티커), 상태 배지(`미반영`·`완납`·종목 유형·`새`) |
+| `text-xs` | 12 | 13 | 14 | 라벨 칩(`GROUP_BADGE` 류), 조밀한 표·달력 셀, 차트 옆 라벨, 조밀 세그먼트(`size="sm"`) |
+| `text-sm` | 14 | 15 | 16 | 본문·라벨·금액·목록·버튼·설명 문장·세그먼트 기본 |
+| `text-base` | 16 | 17 | 18 | 섹션(카드) 제목, Hero 보조 금액, 메뉴 행 제목, 뒤로 라벨 |
+| `text-lg` | 18 | 19 | 20 | 페이지 제목(모바일), 다이얼로그 제목(shadcn 기본) |
+| `text-xl` | 20 | 22 | 24 | 카드 Hero(모바일), 페이지 제목(태블릿·PC) |
+| `text-2xl` | 24 | 27 | 30 | 페이지 Hero, 홈 Display(모바일), 카드 Hero(태블릿·PC) |
+| `text-3xl` | 30 | 33 | 36 | 홈 Display(태블릿·PC) |
+| `text-4xl` | 36 | 40 | 44 | 웰컴 제목 |
 
-- **모바일·PC 인지성 통일**: 캡션 역할(위 표)·구조적 제약(칩/배지/3단 탭) 예외가 아니면 `text-xs`를 쓰지 않고 `text-sm`으로 통일한다(반응형 `text-xs sm:text-sm` 분기도 `text-sm` 고정으로 단순화 — PC뿐 아니라 모바일도 14px).
+역할 → 클래스(일괄 적용 규칙):
+
+| 역할 | 클래스 |
+|---|---|
+| 홈 Display(순자산) | `text-2xl md:text-3xl font-bold` |
+| 페이지 Hero | `text-2xl font-bold` |
+| 카드 Hero(허브 카드·성적표 합계) | `text-xl md:text-2xl font-bold` |
+| Hero 보조 | 금액 `text-base font-bold` + 수익률 `text-sm font-bold` |
+| 페이지 제목 | `PAGE_TITLE`(`@/config/theme` = `text-lg md:text-xl font-bold text-foreground text-balance`) |
+| 1차 네비(홈 상단 상세·성과) | `InlineSelector size="xl"`(`text-lg md:text-xl font-bold`) |
+| TopBar 뒤로 라벨 | `text-base font-semibold` |
+| 섹션(카드) 제목 | `text-base font-bold` |
+| 섹션 라벨(홈 카드 `순자산`, 도구 타일 이름) | `text-sm font-semibold` |
+| 메뉴 행 제목 | `MENU_LABEL`(`text-base font-medium`) — 크기를 상속에 맡기지 않는다 |
+| 본문·금액·목록·버튼 / 설명 문장 | `text-sm` / `text-sm text-muted-foreground` |
+| 메타 캡션 / 상태 배지 | `text-2xs text-muted-foreground` / `text-2xs font-semibold` |
+| 라벨 칩 | `text-xs font-semibold` |
+| 세그먼트 | `InlineSelector` 기본·fullWidth `text-sm`, `size="sm"` `text-xs`, `size="lg"` `text-sm md:text-base` |
+| 표 숫자 | 일반 `text-sm tabular-nums`, 조밀(배당 표·가계 통계·달력 셀) `text-xs tabular-nums`(달력 셀 금액 `text-2xs md:text-xs`) |
+| 다이얼로그 제목 | `DialogTitle` 기본(`text-lg font-semibold`) — 크기 덮어쓰기 금지 |
+| 입력 | `Input`/`Textarea`의 `text-base md:text-sm` 유지(모바일 16px = iOS 확대 방지) |
+
+규칙:
+- **타입 경계는 `md`(48rem = 768)와 `xl`(80rem = 1280) 두 개뿐.** 토큰 값은 `globals.css` `@layer base`의 `@media (min-width: 48rem)`·`(min-width: 80rem)`에서만 바꾼다(`@theme inline`에 `--text-*`를 넣지 않는다 — 값이 클래스에 박혀 덮어쓰기가 듣지 않음). 줄높이 변수는 단위 없는 비율이라 덮어쓰지 않는다.
+- **크기 클래스에 `sm:`·`lg:` 접두 금지, 임의 px(`text-[Npx]`) 금지.** 한 단계 올려야 할 때만 `md:text-*`를 쓴다. 예외: 인증카드(`ASSET_THEME_SHOT`·`SHOT_BIG`, `header-menu/share/*`), PWA 안내 삽화, 아이콘 원 안 이니셜 2곳(`text-[10px]`, 그림 요소). `type-scale-guard.test.ts`가 재유입을 막는다.
+- **화면 글자는 어느 환경에서도 11px 미만 금지**(이니셜 제외). 9·10px 대신 `text-2xs`.
+- **뷰포트와 무관하게 모바일 값으로 고정해야 하면 `type-fixed`**(인증카드 프리뷰·캡처 래퍼 2곳, R32). 그 요소 아래에만 듣고 Radix Portal 안쪽은 고정되지 않는다. 다이얼로그가 좁아 깨지면 `type-fixed`가 아니라 폭(`max-w`)을 늘린다.
+- `html` 글자 크기(16px)는 건드리지 않는다 — 간격·아이콘·히트영역은 환경과 무관하게 같다.
+- **`tailwind-merge` 순서**: `cn()` 안에서 크기 클래스는 줄높이 클래스(`leading-*`)보다 앞에 둔다(뒤에 오는 크기가 앞의 줄높이를 지운다). `text-2xs`는 크기로 인식돼 색 클래스와 서로 지우지 않는다(`type-scale-cn.test.ts`).
+- 한글은 획이 많아 같은 px에서 라틴보다 작게 읽힌다 — 설명 문장은 캡션·`text-xs`가 아니라 `text-sm`. `text-xs`는 위 표의 칩·조밀 표·차트 옆 라벨로 한정한다.
+- **웨이트는 3종만**: `font-medium`(보조 라벨) · `font-semibold`(강조·라벨) · `font-bold`(Hero·금액·제목). **`font-extrabold` 미사용**(인증카드 1곳 제외). shadcn 프리미티브의 `font-medium`은 그대로 둔다.
+- **줄높이**: 여러 줄 산문(설명·안내·캡션)은 **line-height ≥1.5**(`leading-relaxed`/`leading-normal`/`leading-7`). 단일 줄 숫자·Hero 금액은 `leading-tight` 허용.
 - Hero 내부도 1순위(금액) > 2순위(수익률) **반 단계** 차등.
-- 새 px 추가 전 위 4단계로 흡수 가능한지 먼저 검토(9·10·13·14 난립 금지).
-- 숫자·수량·환율·건수·금액 등 **자릿수 흔들리는 표기는 전부 `tabular-nums`**.
-- 제목 `text-balance`, 본문/설명 `text-pretty`.
+- 숫자·수량·환율·건수·금액 등 **자릿수 흔들리는 표기는 전부 `tabular-nums`**. 제목 `text-balance`, 본문/설명 `text-pretty`, 한글 문장은 `break-keep`(어절 중간 줄바꿈 금지, C25).
+- SVG 차트 글자(`fontSize` 속성)는 토큰이 닿지 않는다 — 환경별 확대 대상이 아니다(별도 과제).
+- 검수 폭: 360·390·430·768·1024·1280·1440과 경계 쌍 767↔768·1279↔1280.
 
 ---
 
@@ -148,7 +183,7 @@
 - **다이얼로그**: 설명형(공유·동기화·가이드)은 `<DialogHeader className="text-left">`(모바일 중앙 정렬 방지). 짧은 확인 모달만 중앙 허용.
 - **팝업 취소/닫기 버튼(통일 규약)**: ① 색 = `variant="secondary"`(테두리 없는 플랫, `outline` 금지). `AlertDialogCancel`도 secondary 기본. ② 순서 = DOM은 `[주요 버튼, 취소/닫기]` 순 → 모바일 취소 하단·PC 취소 우측(`DialogFooter`/`AlertDialogFooter` 기본 `flex-col ... sm:flex-row sm:justify-end`, 개별 오버라이드·`flex-col-reverse` 금지). ③ 텍스트 = 맥락별: 폼·설정·실행형(입력/제출/삭제/연결/앱잠금 등)은 **"취소"**, 읽기전용 정보(공지·미리보기·가이드 등)는 **"닫기"**.
 - **드롭다운/Select**: 한국어 짤림 방지 — `min-w-[180px]`/`sm:max-w-[220px]` 여유. 항목 多 = 적응형 그리드 `grid-cols-2 sm:grid-cols-4`.
-  - **목록 정렬 트리거(#4.73 상세·주식)** — 카테고리 줄 오른쪽 글자 버튼형 `SelectTrigger size="sm"`: 면·테두리 없음(`bg-transparent dark:bg-transparent dark:border-0`), `h-8 px-1.5 text-[13px] sm:text-sm lg:text-base`, 히트 40px `after:absolute after:-inset-y-1`, 화살표 `size-3.5`(기본 `text-primary`), 기본값이 아닌 선택이면 `font-semibold text-foreground`. **아이콘형(`ArrowDownWideNarrow size-4`, 라벨 sr-only, 화살표 숨김, 히트 `after:-inset-1` 40×40)은 기본 정렬일 때만, 360px 미만 또는 7칸이면서 400px 미만**(r2 — 아이콘 색만으로는 선택 상태가 안 읽힘). 기본이 아닌 정렬을 고른 동안은 폭과 무관하게 라벨(좁으면 카테고리 쪽이 가로 스크롤, 정렬 변경 뒤 선택 칸 `scrollIntoView`). 반응형 조건 클래스는 정적 문자열로 둔다. 6칸 이상이면 `InlineSelector [&>button]:px-1.5` 조밀. 항목 `min-h-10`, 내용 `align="end"`.
+  - **목록 정렬 트리거(#4.73 상세·주식)** — 카테고리 줄 오른쪽 글자 버튼형 `SelectTrigger size="sm"`: 면·테두리 없음(`bg-transparent dark:bg-transparent dark:border-0`), `h-8 px-1.5 text-sm`, 히트 40px `after:absolute after:-inset-y-1`, 화살표 `size-3.5`(기본 `text-primary`), 기본값이 아닌 선택이면 `font-semibold text-foreground`. **아이콘형(`ArrowDownWideNarrow size-4`, 라벨 sr-only, 화살표 숨김, 히트 `after:-inset-1` 40×40)은 기본 정렬일 때만, 360px 미만 또는 7칸이면서 400px 미만**(r2 — 아이콘 색만으로는 선택 상태가 안 읽힘). 기본이 아닌 정렬을 고른 동안은 폭과 무관하게 라벨(좁으면 카테고리 쪽이 가로 스크롤, 정렬 변경 뒤 선택 칸 `scrollIntoView`). 반응형 조건 클래스는 정적 문자열로 둔다. 6칸 이상이면 `InlineSelector [&>button]:px-1.5` 조밀. 항목 `min-h-10`, 내용 `align="end"`.
 - **부수 설명(InfoHint) [필수]**: 본문에 펼치지 말고 **아이콘+Popover**(hover+터치 동시지원, radix Tooltip ✗). 구현체는 [info-hint.tsx](../../src/app/(main)/_components/layout/ui/info-hint.tsx) **하나뿐이며 로컬 재정의 금지**(과거 profit-chart가 중복 정의해 규격이 갈렸음).
   - **`summary` 필수**: 팝오버 최상단에 **한 줄 요약**이 항상 먼저 온다. 상세는 `children`(선택)으로 그 아래. 요약 없이 장문만 넣지 않는다 — 열어봐도 결론을 모르는 힌트를 막기 위함.
   - 본문 폰트는 `text-sm`(§2 — `text-xs` 이하 지양). 레이어는 §3.4, 모달 내부에서는 `inModal`.
@@ -158,7 +193,7 @@
 
 > 긴 데이터 화면(성적표·허브·상세 등)에서 위계·구분·정렬을 통일하는 레시피. 소비처 2곳 이상 되면 shared 컴포넌트로 추출.
 
-- **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card p-4 space-y-3 dark:shadow-sm`(라이트 톤차 §3.3) + 헤더 = **칩 없는 단색 아이콘 `size-5`** + 굵은 제목(`text-sm sm:text-base font-bold`, 톤과 무관하게 `text-foreground` 고정) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
+- **대주제 섹션 구분** — 긴 뷰의 큰 항목 경계를 명확히: 외피 `rounded-xl bg-card p-4 space-y-3 dark:shadow-sm`(라이트 톤차 §3.3) + 헤더 = **칩 없는 단색 아이콘 `size-5`** + 굵은 제목(`text-base font-bold`, 톤과 무관하게 `text-foreground` 고정) + 선택 뱃지/InfoHint. 섹션 내부 서브박스는 `bg-muted/30`으로 한 단계 낮춰 중첩을 표현.
   - **아이콘 색 톤 구분(2026-08, #4.42에 칩 제거)** — 한 화면에 여러 대주제 섹션이 나란히 있을 때(`asset-report-view.tsx` `SectionHeader`의 `tone` prop) 제목 텍스트는 그대로 두고 아이콘 글자색만 섹션별로 달리해 은은하게 구분한다. 임의의 새 색을 만들지 않고 이미 의미가 정해진 토큰만 재사용: `brand`(`text-primary`, 기본) · `important`(`text-orange-600 dark:text-orange-400`, §1.2 순자산 강조 토큰) · `gold`(`text-amber-600 dark:text-amber-400`, 별점·등급 톤과 통일) · `info`(`text-sky-600 dark:text-sky-400`, 정보/보조 도구 성격). 섹션이 3~4개를 넘거나 새 의미가 필요하면 이 팔레트 안에서 먼저 고르고, 부족할 때만 새 토큰을 design-system.md에 추가한다.
 - **소그룹 뱃지 라벨** — 섹션 안에서 산식 체인·목록 카테고리 등 하위 묶음의 시작을 표시: `inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary`. muted 텍스트 라벨 대신 brand 톤 뱃지를 쓴다(§1.2 info 아이콘 sky와 구분 — 이건 라벨).
 - **비교 표(그리드)** — 여러 기준을 컬럼 정렬로 대조: `overflow-x-auto` 래퍼(모바일 가로 넘침 보호) + `grid grid-cols-[1fr_auto_…] items-baseline gap-x-… gap-y-…` + 헤더행 + `col-span-N h-px bg-border/40` 구분선. 라벨 좌측, 값 우측(`text-right tabular-nums`), 폭 압축은 `formatShortCurrency`, `min-w-[…]`로 하한. 강조 컬럼만 `font-bold` + 부호색(`getProfitLossColor`).
@@ -175,7 +210,7 @@
 - **카드 안 행 목록(#4.83 `KpiCard rows`/`HubChangeRows`)** — 허브 카드 머리(제목·금액) 아래 `border-t` 헤어라인 목록: 행 `min-h-11` = 이름 `text-sm font-medium`(왼쪽) + 값 `ml-auto text-sm muted tabular-nums`(손익 값만 손익색 semibold) + `ChevronRight size-4`. 머리 버튼과 행은 형제(중첩 금지), 행은 hover/active 배경만(scale 없음), 값 로딩 `h-4 w-16 rounded` + `SKELETON_FILL`. 1280은 `자산 변화`를 `lg:row-span-2`로 둔다. 행 버튼은 `-mx`로 넓히지 않고(구분선·쉐브론 4px 어긋남) 히트영역만 `after:-inset-x-1`로 넓힌다(4.85).
 - **0건 카드(#4.85 `DetailHub`)** — 눌러도 반응 없는 카드 금지: 0건 보조 줄은 `추가하기`(`text-brand dark:text-indigo-300`)로, 누르면 `open-add-asset-sheet {category}`(실물은 0건 숨김 유지).
 - **차트 위 문구는 칩(#4.85)** — 곡선·격자 위에 놓는 로딩 문구는 `LoadingNote chip`(배경 칩), 평단 칩은 가격 칸 라벨과 6px 이상·격자선 회피, 막대 값 라벨은 겹치면 생략·Y축은 둥근 눈금(`dividend-axis.ts`).
-- **`새` 표시(#4.83 `NewChip`)** — 새 소식 시트 `whats-new-item-new`와 같은 모양(`rounded bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-bold text-orange-700 dark:text-orange-400`)을 이름 뒤 `ml-1.5`에. 점·숫자·펄스·모션·닫기 없음, 한 화면 1개, 게시일~30일·방문 시 꺼짐, 체험·캡처 0.
+- **`새` 표시(#4.83 `NewChip`)** — 새 소식 시트 `whats-new-item-new`와 같은 모양(`rounded bg-orange-500/10 px-1.5 py-0.5 text-2xs font-bold text-orange-700 dark:text-orange-400`)을 이름 뒤 `ml-1.5`에. 점·숫자·펄스·모션·닫기 없음, 한 화면 1개, 게시일~30일·방문 시 꺼짐, 체험·캡처 0.
 - **명세 행(SpecRow)** — 값 + 짧은 설명을 한 캡션에 욱여넣지 말고 라벨/값 분리: 라벨(좌, `text-sm text-muted-foreground text-pretty break-keep`, 선택 `· hint`는 `text-muted-foreground/70`) + 값(우, `text-sm text-foreground font-semibold tabular-nums shrink-0 ml-auto`). 컨테이너는 `flex flex-wrap`으로 두어, 한 줄에 안 들어가면 라벨을 부수는 대신 값을 다음 줄 우측으로 내린다. 위계·집중도 판단은 §11 참조.
 - **한글 줄바꿈** — 한글은 기본 `word-break`에서 **음절 단위로 쪼개진다**. 좁은 컬럼·카드에 들어가는 한글 라벨·캡션은 `text-pretty`와 함께 **`break-keep`**(word-break: keep-all)을 붙인다. 전역 상수(`CAPTION` 등)에는 넣지 말고 폭이 좁은 지점에만 적용.
   - **가운뎃점(`·`, U+00B7)은 keep-all에서도 줄바꿈 기회**다(#4.38). 문장 속 "저장·전송"처럼 묶여야 하는 어구는 상수 문자열에 `\u2060`(WORD JOINER)을 앞뒤로 넣고(`security-copy.ts`), JSX 제목의 "Chrome·Safari"처럼 짧은 묶음은 `whitespace-nowrap` span으로 감싼다. nowrap 묶음 여러 개를 나열한 줄(웰컴 신뢰 한 줄)에는 `text-balance`를 쓰지 않는다 — 묶음을 1/2로 나눠 첫 줄에 구분자만 남긴다.
@@ -264,7 +299,7 @@
 - 정보성 텍스트는 파랑 금지(손익 전용) → 중립 회색. **info 아이콘만 sky** 허용(`text-sky-600/70 dark:text-sky-400/70`, hover sky-700/300) — 형태로 손익 숫자와 구분.
 
 **정보 처리**
-- 캡션이 muted면 굵기를 과하게 주지 않는다(muted+semibold는 모순) → `text-[11px] text-muted-foreground` 수준.
+- 캡션이 muted면 굵기를 과하게 주지 않는다(muted+semibold는 모순) → `text-2xs text-muted-foreground` 수준.
 - **`text-muted-foreground` 위 추가 투명도(`/NN`) 사용 제한**: 라이트는 배경이 밝아 대비 헤드룸이 적어 투명도 중첩 시 AA 미만으로 쉽게 떨어진다(다크는 배경이 어두워 헤드룸이 넉넉해 문제없음). 캡션 장식·placeholder·empty-state·구분자에만 허용하고, 실제 안내 문장(고지·프라이버시 설명 등 사용자가 읽어야 하는 문장)에는 라이트에서 투명도 금지 — `text-muted-foreground dark:text-muted-foreground/NN`로 다크만 pin(예: `copyright-footer.tsx`, `tool-menu.tsx` 공유 다이얼로그 안내문).
 - **중복 정보 금지**: 같은 값이 두 셀에 반복되면(예: 비교표 시작=종료 환율 동일) 1회만.
 - 시점·시장별 **고정 메타(마감 시각 등)는 행마다 반복하지 말고 표 하단 공통 1줄**로 일원화.
