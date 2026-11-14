@@ -5,7 +5,7 @@
 > **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.104**
 
 ## 🟥 대표님 결정 필요 — 1건
-1. **🔔 PWA 알림 [PR #180](https://github.com/BBplayworld/vaultfolio/pull/180) 데모 확인 후 머지(=반영)** — 아침 시장 요약(월~금 09시)·국내 장 마감(16시)·월 결산·세금, '큰 움직임 있는 날만'(지수 ±2%·환율 ±1%), 미리 체크 0·하루 최대 2건 · qa·COO PASS @2ecc75b · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.91-179-market-push/4.91-decision-brief.md)
+1. **🔔 PWA 알림 [PR #180](https://github.com/BBplayworld/vaultfolio/pull/180) 데모 확인 후 머지(=반영)** — 아침 시장 요약(월~금 09시)·국내 장 마감(16시)·월 결산·세금, '큰 움직임 있는 날만'(지수 ±2%·환율 ±1%), 미리 체크 0·하루 최대 2건 · 대표 데모 확인 ✅ · 피드백(시장 알림 받는 날 매일/큰 날만 라디오) 반영 · qa PASS @3a0b873 — 머지만 남음 · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.91-179-market-push/4.91-decision-brief.md)
    - 데모(휴대폰 설치 앱, preview): ① 켜기 안내 체크 0·버튼 비활성·스크롤로 [취소] ② 아침 요약+큰 날만 골라 켜기 ③ 테스트 알림 잠금화면 길이·누르면 홈 ④ `/?from=push&t=settle`·`t=tax` 도착 ⑤ 해제·끄기
    - 11/25까지 결정 시 11/27(금) 아침 첫 결산 알림. 넘기면 12/28
 
