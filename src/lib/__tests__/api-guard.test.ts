@@ -15,6 +15,7 @@ import {
   exceedsDailyGlobal,
   RATIO_POOL,
   isRatioEntry,
+  l1SizeForTest,
 } from "@/server/api-guard";
 import { getCacheStorage } from "@/lib/cache-storage";
 
@@ -258,11 +259,27 @@ describe("reserveGeminiCalls — /ratio 입구 풀", () => {
   });
 });
 
-describe("라우트 L1 한도 — Gemini 라우트 분당 5회", () => {
-  it("parse-screenshot·xray-classify 라우트 정책이 l1PerMinute: 5", async () => {
+describe("라우트 L1 한도 — Gemini 라우트 분당 10회", () => {
+  it("parse-screenshot·xray-classify 라우트 정책이 l1PerMinute: 10", async () => {
     const { readFileSync } = await import("fs");
     for (const f of ["src/app/api/parse-screenshot/route.ts", "src/app/api/xray-classify/route.ts"]) {
-      expect(readFileSync(f, "utf8")).toMatch(/l1PerMinute: 5 \}/);
+      expect(readFileSync(f, "utf8")).toMatch(/l1PerMinute: 10 \}/);
+    }
+  });
+});
+
+describe("L1 버킷 수명 ≤ 1분", () => {
+  it("10분 뒤 만료 IP 항목이 남지 않는다", () => {
+    vi.useFakeTimers();
+    try {
+      for (let i = 0; i < 50; i++) guardRequest(req("http://a.test/api", { "x-real-ip": `172.16.0.${i}` }), { route: "t-sweep" });
+      expect(l1SizeForTest()).toBeGreaterThanOrEqual(50);
+      vi.advanceTimersByTime(10 * 60_000);
+      // 다음 접근 한 번으로 만료분이 모두 쓸려 나가고 새 항목 1개만 남는다
+      guardRequest(req("http://a.test/api", { "x-real-ip": "172.16.1.1" }), { route: "t-sweep" });
+      expect(l1SizeForTest()).toBe(1);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

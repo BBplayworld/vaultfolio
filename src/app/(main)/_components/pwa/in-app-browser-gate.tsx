@@ -142,7 +142,7 @@ export function InAppBrowserGate() {
                 </InputOTPGroup>
               </InputOTP>
               <p className="text-sm text-muted-foreground text-center leading-relaxed">
-                현재 자산 데이터를 외부 브라우저로 안전하게 옮기기 위한 1회성 비밀번호입니다.
+                현재 자산 데이터를 외부 브라우저에서 열 때 쓰는 비밀번호입니다.
                 외부 브라우저에서 앱을 열 때 동일한 PIN을 입력하면 복원됩니다.
               </p>
               <Button

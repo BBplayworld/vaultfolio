@@ -116,18 +116,35 @@ export interface GuardPolicy {
 const L1_MAX_ENTRIES = 5000;
 const l1Buckets = new Map<string, { count: number; resetAt: number }>();
 
+const L1_SWEEP_INTERVAL_MS = 10_000;
+let l1LastSweep = 0;
+
+/** 만료된 L1 버킷 제거 — 버킷 수명 ≤ 창(1분) 보장. 호출 시점에 10초 간격으로 쓸어 낸다 */
+function sweepL1(now: number): void {
+  if (now - l1LastSweep < L1_SWEEP_INTERVAL_MS) return;
+  l1LastSweep = now;
+  for (const [k, v] of l1Buckets) if (v.resetAt <= now) l1Buckets.delete(k);
+}
+
+/** 테스트 전용 — 현재 L1 항목 수 */
+export function l1SizeForTest(): number {
+  return l1Buckets.size;
+}
+
 function hitL1(key: string, limit: number, windowMs = 60_000): boolean {
   const now = Date.now();
+  sweepL1(now);
   let b = l1Buckets.get(key);
-  if (!b || b.resetAt <= now) {
-    if (l1Buckets.size >= L1_MAX_ENTRIES) {
-      // 만료 항목 정리 후에도 꽉 차면 가장 오래된 항목부터 제거(Map 삽입 순서)
-      for (const [k, v] of l1Buckets) if (v.resetAt <= now) l1Buckets.delete(k);
-      while (l1Buckets.size >= L1_MAX_ENTRIES) {
-        const first = l1Buckets.keys().next().value;
-        if (first === undefined) break;
-        l1Buckets.delete(first);
-      }
+  if (b && b.resetAt <= now) {
+    l1Buckets.delete(key);
+    b = undefined;
+  }
+  if (!b) {
+    // 만료 항목은 위에서 쓸어 냈으므로 꽉 차면 가장 오래된 항목부터 제거(Map 삽입 순서)
+    while (l1Buckets.size >= L1_MAX_ENTRIES) {
+      const first = l1Buckets.keys().next().value;
+      if (first === undefined) break;
+      l1Buckets.delete(first);
     }
     b = { count: 0, resetAt: now + windowMs };
     l1Buckets.set(key, b);

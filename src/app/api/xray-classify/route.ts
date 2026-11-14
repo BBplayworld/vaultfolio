@@ -247,7 +247,7 @@ async function classifyWithSplit(
 }
 
 export async function POST(request: Request) {
-  const blocked = guardRequest(request, { route: "xray", maxBodyBytes: MAX_BODY_BYTES, l1PerMinute: 5 });
+  const blocked = guardRequest(request, { route: "xray", maxBodyBytes: MAX_BODY_BYTES, l1PerMinute: 10 });
   if (blocked) return blocked;
 
   const apiKey = process.env.GEMINI_API_KEY;
