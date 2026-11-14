@@ -1,4 +1,4 @@
-// 4.92 #181 F2 — 체험 데모에 어제 일별 기록이 있어 홈 Hero가 '지난 접속(M/D) 이후'가 아니라 '전일 대비'가 된다(C27).
+// 4.92 #181 F2 — 체험 데모에 어제 일별 기록이 있어 홈 Hero가 'M/D 이후'가 아니라 '전일 대비'가 된다(C27).
 // 홈 라벨 규칙: attr.fromDate === 어제 → 전일 대비 (dashboard.tsx, 코드 diff 0). 어제 기록이 시작점 후보가 되는지만 본다.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";

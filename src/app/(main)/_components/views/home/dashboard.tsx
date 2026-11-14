@@ -27,7 +27,7 @@ import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
-import { MarketLine, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
+import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -271,6 +271,9 @@ export function NetAssetSummaryBox({
   // 가장 큰 원인 1줄(4.90 B) — 원인이 있으면 쉐브론 대신 이 줄이 펼침 입구. 원인 0개(예측만)는 현행 쉐브론 유지
   const top = hasCause && change ? pickTopCause(change.causes) : null;
   const showLine = !!top && !screenshotMode;
+  // 보조 줄 지수 구간(5.105) — 라벨 `전일 대비`+지수 on일 때만. 기간이 다른 1일 지수를 나란히 두지 않는다
+  const marketOn = !!market && marketLine !== "off";
+  const inlineMarket = showLine && marketOn && change?.label === "전일 대비" && market ? market : null;
   const open = causeOpen || screenshotMode;
   const panelRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLButtonElement>(null);
@@ -289,7 +292,7 @@ export function NetAssetSummaryBox({
 
   return (
     <div className="space-y-4">
-      <div className={`relative rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4 ${hasRightSide ? "flex items-center justify-between" : ""}`}>
+      <div className={`relative flex flex-col rounded-lg ${ASSET_THEME.primary.bgLight} px-4 py-4`}>
         {/* 자산 성적표 미니 배지 — 성적표 화면이 기록해둔 최신 등급(재계산 없음)을 트로피+점수로
             압축 노출. hasRightSide(총자산/총부채 컬럼)와 자리가 겹치므로 그때는 생략(방어). */}
         {grade && !hasRightSide && onGradeClick && (
@@ -303,6 +306,7 @@ export function NetAssetSummaryBox({
             <span className={`text-sm sm:text-base lg:text-lg font-bold tabular-nums ${TIER_STYLE[grade.tier].color}`}>{grade.overall}</span>
           </button>
         )}
+        <div className={hasRightSide ? "flex items-center justify-between" : ""}>
         <div>
           <div className="flex items-center gap-1.5">
             {nickname && (
@@ -329,6 +333,9 @@ export function NetAssetSummaryBox({
                   {/* 라벨·쉐브론은 한 덩어리 — 쉐브론만 다음 줄에 떨어지지 않게(#4.36 ui-review R1) */}
                   <span className="inline-flex items-center ml-1.5">
                   <span className="text-sm font-medium text-muted-foreground break-keep">{change.label}</span>
+                  {change.estimated && (
+                    <span data-testid="home-cause-estimated" className="ml-1.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
+                  )}
                   {/* 원인 문구는 기본 접힘 — 헤더에 상시 노출하면 숫자보다 문장이 시선을 끈다 */}
                   {hasCause && !screenshotMode && !showLine && (
                     <button
@@ -345,17 +352,33 @@ export function NetAssetSummaryBox({
                 </span>
               )}
             </div>
-            {change && hasCause && (
+          </div>
+        </div>
+        {hasRightSide && (
+          <div className="text-right space-y-1.5 shrink-0">
+            <div className="text-sm">
+              <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
+              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
+            </div>
+            <div className="text-sm">
+              <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
+              <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span>
+            </div>
+          </div>
+        )}
+        </div>
+        {change && hasCause && (
+          <div className="mt-1 w-full">
               <>
                 {showLine && top && (
                   // B 가장 큰 원인 1줄 — 항상 마운트, 열리면 줄이 접히고 같은 자리에 목록이 열린다(같은 값 두 번 노출 0).
                   // 접힌 쪽은 inert(포커스·읽기 제외)로 숨긴다 — visibility 전환을 쓰면 열린 직후 프레임에 포커스가 안 들어간다
-                  // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환
+                  // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환(변동 줄과 간격 8px). 좌우 히트 확장(after:-inset-x-4)을 위해 x축은 클리핑하지 않는다
                   <div
                     inert={open}
-                    className={`grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0" : "-mt-1.5 -mb-2.5 grid-rows-[1fr] opacity-100"}`}
+                    className={`grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0" : "-mt-2.5 -mb-2.5 grid-rows-[1fr] opacity-100"}`}
                   >
-                    <div className="min-h-0 overflow-hidden">
+                    <div className="min-h-0 overflow-y-clip">
                       <button
                         ref={lineRef}
                         type="button"
@@ -363,18 +386,16 @@ export function NetAssetSummaryBox({
                         data-cause-key={top.key}
                         aria-expanded={open}
                         aria-controls="home-cause-panel"
-                        aria-label={`변동 원인 펼치기, ${top.label} ${top.text}${change.causes.length > 1 ? ` 외 ${change.causes.length - 1}개` : ""}`}
+                        aria-label={`변동 원인 펼치기, ${top.label} ${top.text}${change.causes.length > 1 ? ` 외 ${change.causes.length - 1}개` : ""}${inlineMarket?.ready && inlineMarket.values[0] ? `, ${causeMarketText(inlineMarket.values[0])}` : ""}`}
                         onClick={() => { focusTo.current = "panel"; toggleCause(); }}
-                        className="flex w-full items-center gap-1.5 py-2.5 text-left"
+                        className="@container relative flex min-h-5 w-full items-center gap-1.5 whitespace-nowrap py-2.5 text-left text-sm after:absolute after:-inset-x-4 after:inset-y-0 after:content-[''] active:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                       >
-                        {change.estimated && (
-                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
-                        )}
                         <span className="min-w-0 truncate text-sm text-foreground">{top.label}</span>
                         <span className={`shrink-0 text-sm font-semibold tabular-nums ${getProfitLossColor(top.amount)}`}>{top.text}</span>
                         {change.causes.length > 1 && (
-                          <span data-testid="home-cause-more" className="shrink-0 text-sm text-muted-foreground max-[359px]:hidden">외 {change.causes.length - 1}개</span>
+                          <span data-testid="home-cause-more" className="shrink-0 text-sm text-muted-foreground @max-[260px]:hidden">외 {change.causes.length - 1}개</span>
                         )}
+                        {inlineMarket && <CauseMarketSegment market={inlineMarket} />}
                         <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                       </button>
                     </div>
@@ -392,9 +413,6 @@ export function NetAssetSummaryBox({
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-1 pt-1">
-                  {change.estimated && (
-                    <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">예측</span>
-                  )}
                   {/* 비교 구간 — 오랜만의 접속에서도 어느 기간의 변화인지 바로 읽히게(S-4.33) */}
                   {change.rangeLabel && (
                     <p className="text-xs tabular-nums text-muted-foreground">{change.rangeLabel}</p>
@@ -420,6 +438,9 @@ export function NetAssetSummaryBox({
                   {!screenshotMode && change.records && (
                     <AttributionRecordList records={change.records} className="w-full max-w-xs" />
                   )}
+                      {showLine && marketOn && market && onMarketOpen && (
+                        <MarketLine market={market} onOpen={onMarketOpen} variant="panel" />
+                      )}
                       {showLine && (
                         <button
                           type="button"
@@ -439,25 +460,11 @@ export function NetAssetSummaryBox({
                   </div>
                 </div>
               </>
-            )}
-          </div>
-        </div>
-
-        {hasRightSide && (
-          <div className="text-right space-y-1.5 shrink-0">
-            <div className="text-sm">
-              <span className={ASSET_THEME.distributionCard.muted}>총 자산 </span>
-              <span className={`font-bold ${ASSET_THEME.text.default}`}>{formatShortCurrency(totalAsset)}</span>
-            </div>
-            <div className="text-sm">
-              <span className={ASSET_THEME.distributionCard.muted}>총 부채 </span>
-              <span className={`font-bold ${ASSET_THEME.liability}`}>{formatShortCurrency(totalLiability)}</span>
-            </div>
           </div>
         )}
       </div>
 
-      {!screenshotMode && market && marketLine !== "off" && onMarketOpen && <MarketLine market={market} onOpen={onMarketOpen} />}
+      {!screenshotMode && !showLine && market && marketLine !== "off" && onMarketOpen && <MarketLine market={market} onOpen={onMarketOpen} />}
 
       {visibleTabs.length > 1 && onSegmentClick && (
         <div className="flex justify-center">
@@ -591,7 +598,7 @@ function useHeaderNetChange(): HeaderChange | null {
     const { attr } = view;
     const prevNet = summary.netAsset - attr.deltaNet;
     const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
-    const label = attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`;
+    const label = attr.fromDate === yesterdayStr ? "전일 대비" : `${formatAttributionDate(attr.fromDate)} 이후`;
     return {
       deltaNet: attr.deltaNet,
       pct,
