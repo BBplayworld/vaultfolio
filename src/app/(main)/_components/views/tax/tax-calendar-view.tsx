@@ -109,7 +109,7 @@ export function TaxCalendarView() {
                 <>
                   기본공제 {formatCurrency(FOREIGN_CAPITAL_GAIN_DEDUCTION)}을 넘었습니다.{" "}
                   <strong className="text-foreground">{currentYear + 1}년 5월 양도소득세 확정신고 대상</strong>입니다.
-                  연내에 손실 종목을 함께 실현하면 통산되어 과세 대상 금액이 줄어듭니다.
+                  같은 해에 실현한 손실은 이익과 통산되어 계산됩니다.
                 </>
               ) : (
                 <>

@@ -13,7 +13,7 @@ export const PUSH_CATALOG: readonly PushTopic[] = [
   { id: "morning", label: "아침 시장 요약", desc: "월~금 아침 9시, 미국·국내 전날 종가" },
   { id: "kr", label: "국내 장 마감", desc: "월~금 오후 4시, 코스피·코스닥·환율" },
   { id: "settle", label: "월 결산 열림", desc: "매월 결산이 열리는 날 1번" },
-  { id: "tax", label: "세금 일정", desc: "달마다 그 달 세금 일정, 연 7번" },
+  { id: "tax", label: "세금 일정", desc: "신고·납부 있는 달에만, 연 7번" },
 ];
 
 export const PUSH_TOPIC_IDS: readonly string[] = PUSH_CATALOG.map((t) => t.id);
