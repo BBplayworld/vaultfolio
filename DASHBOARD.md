@@ -4,7 +4,10 @@
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
 > **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.106**
 
-## 🟥 대표님 결정 필요 — 없음 (#202는 대표 피드백으로 UI 재설계 중)
+## 🟥 대표님 결정 필요 — 1건
+1. **📊 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) 순자산 공개 통계 비교 v3(#201) 데모 확인 후 머지** — 대표 피드백 반영: 전폭·768 이상 2단(결론 문장+10칸 막대 | 자산 구성 2줄), 상세(10행 목록·금액 표·주석·출처)는 '자세히' 펼침, 기본 노출 45→12개 · qa·UI·COO PASS @912f802 · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/5.102-201-networth-benchmark/5.102-decision-brief.md)
+   - 데모: https://secretasset-git-issue-5102-bbplayworlds-projects.vercel.app/?demo=1 → 성과 → 자산 성적표 → 태블릿·PC 2단 / 모바일 1열 → '자세히'
+
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
 |---|---|---|
@@ -34,7 +37,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 대표 피드백(11/14): 태블릿 절반 폭·한눈에 안 들어옴 → 핵심만 추린 UI 재설계 중 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | **대표 승인**(원칙 3 인접, COO 판정) |
+| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | v3 qa·COO PASS → 대표 데모 확인 대기 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
 - 11/16(월) 09시·16시(±59분): PWA 알림 첫 실발송 [push-cron] 로그(us SPX·COMP, kr 1001, kr.fx) — 이상 시 Vercel Cron Disable
