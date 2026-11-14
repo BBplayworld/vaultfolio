@@ -11,7 +11,7 @@ export interface PushTopic {
 
 export const PUSH_CATALOG: readonly PushTopic[] = [
   { id: "morning", label: "아침 시장 요약", desc: "월~금 아침 9시, 미국·국내 전날 종가" },
-  { id: "kr", label: "국내 장 마감", desc: "월~금 오후 4시, 코스피·코스닥" },
+  { id: "kr", label: "국내 장 마감", desc: "월~금 오후 4시, 코스피·코스닥·환율" },
   { id: "settle", label: "월 결산 열림", desc: "매월 결산이 열리는 날 1번" },
   { id: "tax", label: "세금 마감", desc: "5월 신고·12월 연금 납입 마감, 연 2번" },
 ];

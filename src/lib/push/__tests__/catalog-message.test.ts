@@ -68,7 +68,7 @@ describe("문구", () => {
 });
 
 // ── 시장 알림 문구 ──
-import { PUSH_MERGE_ORDER, buildKrCloseMessage, buildMorningMessage, holidayMarketsOn, mergePushPayloads } from "../message";
+import { PUSH_MERGE_ORDER, buildKrCloseMessage, buildMorningMessage, holidayMarketsOn, isRepeatedClose, mergePushPayloads } from "../message";
 import type { PushQuote } from "../quotes";
 
 const idx = (label: string, rate: number): PushQuote => ({ label, kind: "index", rate, price: 100 });
@@ -142,5 +142,35 @@ describe("09시 합치기 — 결산 > 세금 > 아침 요약, 1건", () => {
   it("1건이면 그대로, 0건이면 null", () => {
     expect(mergePushPayloads([morning])).toEqual(morning);
     expect(mergePushPayloads([])).toBeNull();
+  });
+});
+
+describe("휴장표 — 2027 설날", () => {
+  it("2/8(월)·2/9(화 대체) 휴장, 2/10(수)은 영업일", () => {
+    expect(holidayMarketsOn("2027-02-08")).toContain("국내");
+    expect(holidayMarketsOn("2027-02-09")).toContain("국내");
+    expect(holidayMarketsOn("2027-02-10")).not.toContain("국내");
+  });
+});
+
+describe("휴장 다음 날 같은 종가 반복 방지", () => {
+  const q: PushQuote[] = [{ label: "코스피", kind: "index", rate: 0.5, price: 2500 }];
+  it("추수감사절 다음 날(금 11/27) 미국은 반복, 국내는 새 종가", () => {
+    expect(isRepeatedClose("2026-11-27", "us")).toBe(true);
+    expect(isRepeatedClose("2026-11-27", "kr")).toBe(false);
+  });
+  it("평범한 화요일·월요일은 반복 아님", () => {
+    expect(isRepeatedClose("2026-11-17", "us")).toBe(false);
+    expect(isRepeatedClose("2026-11-16", "kr")).toBe(false);
+  });
+  it("설날 연휴 다음 영업일(2027-02-10) 국내는 반복", () => {
+    expect(isRepeatedClose("2027-02-10", "kr")).toBe(true);
+  });
+  it("반복 구간은 수치 없이 '미국 직전 휴장'으로 표시, 나머지는 그대로", () => {
+    const m = buildMorningMessage("2026-11-27", [], q, "daily");
+    expect(m?.b).toBe("국내 코스피 +0.5% | 미국 직전 휴장");
+  });
+  it("보낼 새 수치가 없으면 미발송", () => {
+    expect(buildMorningMessage("2026-11-27", [], [], "daily")).toBeNull();
   });
 });

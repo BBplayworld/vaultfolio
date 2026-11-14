@@ -1,8 +1,8 @@
 // 알림 문구·발송일 판정(#179, 4.91) — 순수 함수. 날짜표·공개 시세만 쓰고 사용자 정보는 보지 않는다. 평가어·조언·뉴스·AI 문장 0.
 // 문구는 상태 안내('열렸어요')만 — 요청형·조언·금액·'내'·'보유' 0. 결산 창 첫날은 앱의 결산 창 로직(isSettlementWindowOpenDay)을 재사용한다.
 import { formatCompareRate, rateTenths } from "@/lib/finance/market-compare";
-import { isKrHoliday } from "@/lib/finance/kr-holidays";
-import { isUsHoliday } from "@/lib/finance/us-holidays";
+import { isKrHoliday, rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
+import { isUsHoliday, rollbackToUsBusinessDay } from "@/lib/finance/us-holidays";
 import { CARD_UNTIL_DAY, isSettlementWindowOpenDay } from "@/lib/report/settlement";
 import type { PushCond, PushKind, PushPayload } from "./types";
 import type { PushQuote } from "./quotes";
@@ -66,6 +66,23 @@ export function holidayMarketsOn(today: string): string[] {
   return out;
 }
 
+const shiftDay = (date: string, days: number): string => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+/** 아침 회차(월~금)의 기대 거래일 — 전날 기준 직전 영업일 */
+const expectedCloseDate = (today: string, market: "us" | "kr"): string => {
+  const y = new Date(`${shiftDay(today, -1)}T00:00:00Z`);
+  return (market === "us" ? rollbackToUsBusinessDay(y) : rollbackToBusinessDay(y)).toISOString().slice(0, 10);
+};
+/** 직전 발송일(월~금 직전 평일)의 아침 요약이 이미 쓴 거래일과 오늘 기대 거래일이 같으면 true — 같은 종가 반복 방지. 날짜 계산만 사용 */
+export function isRepeatedClose(today: string, market: "us" | "kr"): boolean {
+  let prev = shiftDay(today, -1);
+  while ([0, 6].includes(new Date(`${prev}T00:00:00Z`).getUTCDay())) prev = shiftDay(prev, -1);
+  return expectedCloseDate(today, market) === expectedCloseDate(prev, market);
+}
+
 /** 아침 시장 요약 — `미국 … | 국내 … | 오늘 미국 휴장`. 날짜 검증에 실패한 구간은 호출부가 빈 배열로 넘기고, 둘 다 비면 null */
 export function buildMorningMessage(today: string, us: readonly PushQuote[], kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
   if (us.length === 0 && kr.length === 0) return null;
@@ -74,6 +91,9 @@ export function buildMorningMessage(today: string, us: readonly PushQuote[], kr:
   if (us.length > 0) segs.push({ text: `미국 ${bigFirst(us).map(formatQuote).join(" · ")}`, big: us.some(isBig) });
   if (kr.length > 0) segs.push({ text: `국내 ${bigFirst(kr).map(formatQuote).join(" · ")}`, big: kr.some(isBig) });
   const ordered = [...segs.filter((x) => x.big), ...segs.filter((x) => !x.big)].map((x) => x.text);
+  // 직전 아침 요약과 같은 거래일이라 시세를 비운 구간은 같은 수치를 반복하지 않고 표시만
+  if (us.length === 0 && isRepeatedClose(today, "us")) ordered.push("미국 직전 휴장");
+  if (kr.length === 0 && isRepeatedClose(today, "kr")) ordered.push("국내 직전 휴장");
   const holidays = holidayMarketsOn(today);
   if (holidays.length > 0) ordered.push(`오늘 ${holidays.join("·")} 휴장`);
   return { m: "morning", t: `${formatMonthDay(today)} 아침 시장`, b: ordered.join(" | ") };

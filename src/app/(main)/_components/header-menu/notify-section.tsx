@@ -287,7 +287,7 @@ export function NotifySection() {
 
       {/* 켜기 안내 / 권한 거부 */}
       <Dialog open={dialog === "enable" || dialog === "denied"} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent className="sm:max-w-md touch-pan-y" data-testid={dialog === "denied" ? "notify-denied-dialog" : "notify-enable-dialog"}>
+        <DialogContent className="sm:max-w-md touch-pan-y max-h-[calc(100dvh-2rem)] overflow-y-auto" data-testid={dialog === "denied" ? "notify-denied-dialog" : "notify-enable-dialog"}>
           {dialog === "denied" ? (
             <div className={`grid gap-4 ${ANIM_FADE}`}>
               <DialogHeader>
@@ -315,7 +315,7 @@ export function NotifySection() {
               <div>
                 <p className="px-1 pb-1 text-[11px] text-muted-foreground">예시 알림</p>
                 <div className="flex flex-col gap-1.5 rounded-xl bg-background p-2">
-                  <NotifyPreview title="11/24 아침 시장" body="미국 S&P 500 +0.8% · 나스닥 +1.1% | 국내 코스피 +0.5% · 코스닥 -0.3%" />
+                  <NotifyPreview title="11/24 아침 시장" body="미국 S&P 500 +0.8% · 나스닥 +1.1% | 국내 코스피 +0.5% · 코스닥 -0.3% · 환율 1,385원(+0.4%) | 오늘 미국 휴장" />
                   <NotifyPreview title="11월 결산이 열렸어요" body="12월 10일까지 이번 달 자산 변화를 볼 수 있어요" />
                 </div>
               </div>
@@ -325,9 +325,7 @@ export function NotifySection() {
                 <CondCheck cond={cond} sel={sel} onChange={setCond} />
               </div>
               <p className="text-sm font-medium text-pretty break-keep">알림에는 공개 시장 정보와 날짜 안내만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
-              <p className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
-                결산 알림은 &lsquo;캘린더에 추가&rsquo;의 월말 결산 일정과 같은 내용이에요. 알림은 결산이 열리는 날 아침에 도착해요.
-              </p>
+              <p className="text-sm text-muted-foreground text-pretty break-keep">결산 알림은 결산 창이 열리는 날 오전 9시에 도착해요.</p>
               <DialogFooter className="flex-col gap-2">
                 <Button variant="brand" data-testid="notify-enable-confirm" onClick={handleEnable} disabled={busy || sel.length === 0}>
                   {busy ? (
@@ -349,7 +347,7 @@ export function NotifySection() {
 
       {/* 알림 종류 */}
       <Dialog open={dialog === "targets"} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent data-testid="notify-targets-dialog" className="sm:max-w-md touch-pan-y">
+        <DialogContent data-testid="notify-targets-dialog" className="sm:max-w-md touch-pan-y max-h-[calc(100dvh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <SlidersHorizontal className="size-5 text-primary" />

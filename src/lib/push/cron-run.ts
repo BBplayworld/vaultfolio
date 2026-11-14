@@ -6,7 +6,7 @@ import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/fin
 import { isKrBusinessDay, rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
 import { rollbackToUsBusinessDay } from "@/lib/finance/us-holidays";
 import { withinUpstreamBudget } from "@/server/api-guard";
-import { buildKrCloseMessage, buildMorningMessage, mergePushPayloads, pushDueOn } from "./message";
+import { buildKrCloseMessage, buildMorningMessage, isRepeatedClose, mergePushPayloads, pushDueOn } from "./message";
 import { estimateKisCalls, fetchKrQuotes, fetchUsQuotes, shiftDate, type PushQuote } from "./quotes";
 import { isPushConfigured, sendPush } from "./send";
 import type { PushKind, PushPayload, PushSubRecord } from "./types";
@@ -73,8 +73,9 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
   let us: PushQuote[] = [];
   let kr: PushQuote[] = [];
   const status: Record<string, string> = {};
-  const needUs = needed.has("morning");
-  const needKr = needed.has("morning") || needed.has("kr");
+  // 직전 아침 요약과 같은 거래일이면 조회하지 않는다(같은 종가 반복 방지, 날짜 계산만)
+  const needUs = needed.has("morning") && !isRepeatedClose(today, "us");
+  const needKr = (needed.has("morning") && !isRepeatedClose(today, "kr")) || needed.has("kr");
   if (needUs || needKr) {
     const { token } = await getKisAccessToken(today);
     if (!token || !(await withinUpstreamBudget("kis", estimateKisCalls(needUs, needKr)))) {
