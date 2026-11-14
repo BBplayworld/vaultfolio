@@ -26,7 +26,7 @@ import type { PushCond } from "@/lib/push/types";
 import { PwaInstallFlow } from "../pwa/pwa-install-flow";
 import { MENU_DESC, MENU_ICON, MENU_LABEL, MENU_ROW, MENU_SECTION_LABEL, menuBadge } from "./menu-styles";
 
-// 설정 '알림' 섹션(#179, 4.91) — 아침 시장 요약·국내 장 마감·월 결산 열림·세금 마감 알림 + 큰 움직임 조건. 서버에는 endpoint·keys·알림 종류 ID만 저장(보유 정보 0).
+// 설정 '알림' 섹션(#179, 4.91) — 아침 시장 요약·국내 장 마감·월 결산 열림·세금 마감 알림 + 시장 알림 받는 날(매일·큰 움직임 있는 날만). 서버에는 endpoint·keys·알림 종류 ID만 저장(보유 정보 0).
 // 켜기 안내(종류를 직접 고름, 미리 체크 없음) → 권한 → 구독 → 종류 Dialog. 체험 모드·Push 미지원 기기에서는 섹션 전체를 그리지 않는다.
 
 type RowState = "loading" | "off" | "on" | "denied";
@@ -72,22 +72,32 @@ function TopicChecks({ sel, onToggle }: { sel: string[]; onToggle: (id: string, 
   );
 }
 
-function CondCheck({ cond, sel, onChange }: { cond: PushCond; sel: string[]; onChange: (c: PushCond) => void }) {
-  const enabled = sel.some((id) => PUSH_COND_TOPICS.includes(id));
+// 시장 알림(아침 요약·국내 장 마감)을 받는 빈도 — 시장 알림이 하나 이상 선택됐을 때만 표시. 결산·세금과 무관(#4.91 대표 피드백)
+const COND_OPTIONS: { value: PushCond; label: string }[] = [
+  { value: "daily", label: "매일" },
+  { value: "pm2", label: "큰 움직임 있는 날만 (지수 ±2%·환율 ±1%)" },
+];
+
+export function CondRadios({ cond, sel, onChange }: { cond: PushCond; sel: string[]; onChange: (c: PushCond) => void }) {
+  if (!sel.some((id) => PUSH_COND_TOPICS.includes(id))) return null;
   return (
-    <label htmlFor="notify-cond" className={`flex min-h-10 items-center gap-3 px-1 py-1 ${enabled ? "cursor-pointer" : "opacity-50"}`}>
-      <Checkbox
-        id="notify-cond"
-        data-testid="notify-cond"
-        checked={cond === "pm2"}
-        disabled={!enabled}
-        onCheckedChange={(c) => onChange(c === true ? "pm2" : "daily")}
-      />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm break-keep">큰 움직임 있는 날만</span>
-        <span className="block text-[11px] text-muted-foreground break-keep">아침 시장 요약·국내 장 마감에 적용, 지수 ±2% 또는 환율 ±1% 이상인 날</span>
-      </span>
-    </label>
+    <div role="radiogroup" aria-label="시장 알림 받는 날" data-testid="notify-cond" className="mt-2">
+      <p className="px-1 pb-1 text-sm font-semibold text-muted-foreground">시장 알림 받는 날</p>
+      {COND_OPTIONS.map((o) => (
+        <label key={o.value} className="flex min-h-10 cursor-pointer items-center gap-3 px-1 py-1">
+          <input
+            type="radio"
+            name="notify-cond"
+            data-testid={`notify-cond-${o.value}`}
+            value={o.value}
+            checked={cond === o.value}
+            onChange={() => onChange(o.value)}
+            className="size-4 shrink-0 accent-[var(--brand)]"
+          />
+          <span className="min-w-0 flex-1 text-sm break-keep">{o.label}</span>
+        </label>
+      ))}
+    </div>
   );
 }
 
@@ -323,7 +333,7 @@ export function NotifySection() {
               <div>
                 <p className="px-1 pb-1 text-sm font-semibold text-muted-foreground">받을 알림을 골라 주세요</p>
                 <TopicChecks sel={sel} onToggle={toggleTopic} />
-                <CondCheck cond={cond} sel={sel} onChange={setCond} />
+                <CondRadios cond={cond} sel={sel} onChange={setCond} />
               </div>
               <p className="text-sm font-medium text-pretty break-keep">알림에는 공개 시장 정보와 날짜 안내만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
               <p className="text-sm text-muted-foreground text-pretty break-keep">결산 알림은 결산 창이 열리는 날 오전 9시에 도착해요.</p>
@@ -366,7 +376,7 @@ export function NotifySection() {
             )}
           </div>
           <TopicChecks sel={sel} onToggle={toggleTopic} />
-          <CondCheck cond={cond} sel={sel} onChange={setCond} />
+          <CondRadios cond={cond} sel={sel} onChange={setCond} />
           <p className="text-sm text-muted-foreground text-pretty break-keep">이 설정은 이 기기에서만 적용돼요.</p>
           <DialogFooter className="flex-col gap-2">
             <Button variant="brand" data-testid="notify-targets-save" onClick={handleSave} disabled={sel.length === 0 || saving}>
