@@ -361,7 +361,7 @@ export function ToolMenuPage() {
               <div className="space-y-1 text-sm text-muted-foreground text-left">
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
                 <p className="text-xs text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
-                <p className="text-xs pt-1 text-muted-foreground dark:text-muted-foreground/80">
+                <p className="text-xs pt-1 text-muted-foreground dark:text-muted-foreground/80 break-keep text-pretty">
                   암호화된 데이터만 서버를 경유하고 URL 키는 서버로 전송되지 않아, 서버만으로는 내용을 열 수 없습니다. 링크가 노출되면 PIN만 남으니 링크와 PIN은 서로 다른 경로로 전달해 주세요.
                 </p>
               </div>
