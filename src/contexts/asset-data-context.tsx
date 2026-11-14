@@ -5,7 +5,7 @@ import { AssetData, RealEstate, PhysicalAsset, Stock, Crypto, Cash, Loan, Yearly
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
 import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
-import { shouldRetryPin } from "@/lib/share-pin-retry";
+import { pinMismatchGoesInvalid } from "@/lib/share-pin-retry";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName, type StockClassificationPatch } from "@/lib/finance/finance-service";
 import { upsertClassifications } from "@/lib/xray/classification-store";
@@ -1056,10 +1056,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       track("share_restore", { result: "success" });
     } else {
-      // 1회용 링크만 재시도(첫 조회로 서버에서 삭제되어 받아 둔 암호문으로 PIN 재입력, 총 5회). 간편 공유는 오답 즉시 invalid-access
+      // 1회용 링크: 받아 둔 암호문으로 PIN 재입력(총 5회). 간편 공유(v72Z·v73A): 오답 즉시 invalid-access(5.112 동작). 구 v71P 등: 기존처럼 토스트 후 재입력
       pinAttemptsRef.current += 1;
       track("share_restore", { result: "pin_mismatch" });
-      if (!shouldRetryPin(pendingToken.once, pinAttemptsRef.current)) {
+      if (pinMismatchGoesInvalid(pendingToken.token, pendingToken.once, pinAttemptsRef.current)) {
         window.location.replace("/invalid-access");
         return;
       }
