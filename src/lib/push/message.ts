@@ -40,13 +40,14 @@ export function pushDueOn(today: string): { kind: PushKind; payload: PushPayload
 // ── 시장 알림(① 아침 시장 요약·② 국내 장 마감) ────────────────────────────
 
 export const PUSH_BIG_INDEX_TENTHS = 20; // 지수 ±2.0% 이상 = 큰 움직임(조건 pm2의 발송 기준)
-export const PUSH_BIG_FX_TENTHS = 10; // 환율 ±1.0% 이상은 본문 맨 앞으로(발송 기준은 아님)
+export const PUSH_BIG_FX_TENTHS = 10; // 환율 ±1.0% 이상 — 본문 맨 앞으로, 조건 pm2의 발송 기준에도 포함
 
 /** 합치기 우선순위(09시 회차) — 앞이 제목·도착 화면을 정한다. 국내 장 마감은 16시 단독 회차 */
 export const PUSH_MERGE_ORDER: readonly PushKind[] = ["settle", "tax", "morning", "kr"];
 
 const isBig = (q: PushQuote) => Math.abs(rateTenths(q.rate)) >= (q.kind === "fx" ? PUSH_BIG_FX_TENTHS : PUSH_BIG_INDEX_TENTHS);
-const hasBigIndex = (qs: readonly PushQuote[]) => qs.some((q) => q.kind === "index" && Math.abs(rateTenths(q.rate)) >= PUSH_BIG_INDEX_TENTHS);
+// 조건 pm2 판정 — 지수 ±2% 또는 환율 ±1%(환율은 날짜 검증을 통과해 quotes에 들어온 경우만)
+const hasBig = (qs: readonly PushQuote[]) => qs.some(isBig);
 
 function formatQuote(q: PushQuote): string {
   return q.kind === "fx" ? `환율 ${Math.round(q.price).toLocaleString("en-US")}원(${formatCompareRate(q.rate)})` : `${q.label} ${formatCompareRate(q.rate)}`;
@@ -68,7 +69,7 @@ export function holidayMarketsOn(today: string): string[] {
 /** 아침 시장 요약 — `미국 … | 국내 … | 오늘 미국 휴장`. 날짜 검증에 실패한 구간은 호출부가 빈 배열로 넘기고, 둘 다 비면 null */
 export function buildMorningMessage(today: string, us: readonly PushQuote[], kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
   if (us.length === 0 && kr.length === 0) return null;
-  if (cond === "pm2" && !hasBigIndex(us) && !hasBigIndex(kr)) return null;
+  if (cond === "pm2" && !hasBig(us) && !hasBig(kr)) return null;
   const segs: { text: string; big: boolean }[] = [];
   if (us.length > 0) segs.push({ text: `미국 ${bigFirst(us).map(formatQuote).join(" · ")}`, big: us.some(isBig) });
   if (kr.length > 0) segs.push({ text: `국내 ${bigFirst(kr).map(formatQuote).join(" · ")}`, big: kr.some(isBig) });
@@ -81,7 +82,7 @@ export function buildMorningMessage(today: string, us: readonly PushQuote[], kr:
 /** 국내 장 마감(16시) — `코스피 +0.5% · 코스닥 -0.3% · 환율 1,385원(+0.4%)` */
 export function buildKrCloseMessage(today: string, kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
   if (kr.length === 0) return null;
-  if (cond === "pm2" && !hasBigIndex(kr)) return null;
+  if (cond === "pm2" && !hasBig(kr)) return null;
   return { m: "kr", t: `${formatMonthDay(today)} 국내 종가`, b: bigFirst(kr).map(formatQuote).join(" · ") };
 }
 

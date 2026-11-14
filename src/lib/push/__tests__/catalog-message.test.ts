@@ -98,9 +98,11 @@ describe("아침 시장 요약", () => {
     const m = buildMorningMessage("2026-11-24", us, [idx("코스피", 0.5), idx("코스닥", -2.4), fx(1.2)], "daily");
     expect(m?.b).toBe("국내 코스닥 -2.4% · 환율 1,385원(+1.2%) · 코스피 +0.5% | 미국 S&P 500 +0.8% · 나스닥 +1.1%");
   });
-  it("조건 pm2 — 지수 ±2% 이상이 없으면 null(환율만 커도 발송 안 함), 있으면 발송", () => {
+  it("조건 pm2 — 지수 ±2% 또는 환율 ±1%가 없으면 null, 있으면 발송(환율은 quotes에 있을 때=날짜 검증 통과 때만)", () => {
     expect(buildMorningMessage("2026-11-24", us, kr, "pm2")).toBeNull();
-    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1), fx(1.5)], "pm2")).toBeNull();
+    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1), fx(0.9)], "pm2")).toBeNull();
+    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1), fx(-1.0)], "pm2")?.b).toBe("국내 환율 1,385원(-1.0%) · 코스피 +0.1% | 미국 S&P 500 +0.8% · 나스닥 +1.1%");
+    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1)], "pm2")).toBeNull(); // 환율이 검증 탈락으로 빠지면 판정에 안 들어감
     expect(buildMorningMessage("2026-11-24", [idx("S&P 500", -2.0)], [], "pm2")?.b).toBe("미국 S&P 500 -2.0%");
   });
   it("금지어·평가어·조언 0", () => {
@@ -120,7 +122,8 @@ describe("국내 장 마감", () => {
     expect(buildKrCloseMessage("2026-11-24", [idx("코스피", 0.5), idx("코스닥", -0.3)], "daily")?.b).toBe("코스피 +0.5% · 코스닥 -0.3%");
     expect(buildKrCloseMessage("2026-11-24", [], "daily")).toBeNull();
   });
-  it("pm2는 지수 ±2% 이상인 날만", () => {
+  it("pm2는 지수 ±2% 또는 환율 ±1% 이상인 날만", () => {
+    expect(buildKrCloseMessage("2026-11-24", [idx("코스피", 0.3), fx(1.1)], "pm2")?.b).toBe("환율 1,385원(+1.1%) · 코스피 +0.3%");
     expect(buildKrCloseMessage("2026-11-24", [idx("코스피", 1.9)], "pm2")).toBeNull();
     expect(buildKrCloseMessage("2026-11-24", [idx("코스피", -2.1), fx(0.2)], "pm2")?.b).toBe("코스피 -2.1% · 환율 1,385원(+0.2%)");
   });

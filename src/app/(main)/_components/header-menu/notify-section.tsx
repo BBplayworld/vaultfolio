@@ -85,7 +85,7 @@ function CondCheck({ cond, sel, onChange }: { cond: PushCond; sel: string[]; onC
       />
       <span className="flex-1 min-w-0">
         <span className="block text-sm break-keep">큰 움직임 있는 날만</span>
-        <span className="block text-[11px] text-muted-foreground break-keep">아침 시장 요약·국내 장 마감에 적용, 지수 ±2% 이상인 날</span>
+        <span className="block text-[11px] text-muted-foreground break-keep">아침 시장 요약·국내 장 마감에 적용, 지수 ±2% 또는 환율 ±1% 이상인 날</span>
       </span>
     </label>
   );
