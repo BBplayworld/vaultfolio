@@ -180,7 +180,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
             <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
               {badgeLabel}
             </span>
-            <p data-testid="home-tip-title" className="text-sm sm:text-[15px] font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>
+            <p data-testid="home-tip-title" className="text-sm font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>
           </div>
           <p className="text-sm text-muted-foreground mt-1 text-pretty break-keep wrap-break-word">{description}</p>
         </div>
