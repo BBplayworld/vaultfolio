@@ -4,7 +4,9 @@
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
 > **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.106**
 
-## 🟥 대표님 결정 필요 — 없음
+## 🟥 대표님 결정 필요 — 1건
+1. **📊 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) 순자산 공개 통계 비교 v2(#201) 데모 확인 후 머지** — 10분위 내 구간 + **자산 구성 표**(같은 순자산 5분위 가구의 예금·주식 등/전·월세보증금/부동산/부채: 가구 평균·가구 비중·내 비중) · qa·UI·COO PASS @d925a35 · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/5.102-201-networth-benchmark/5.102-decision-brief.md)
+   - 데모: https://secretasset-git-issue-5102-bbplayworlds-projects.vercel.app/?demo=1 → 성과 → 자산 성적표 → 5축 아래 블록
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -35,7 +37,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 대표 피드백(11/14): 구간만으론 단순 → 금융·부동산 자산별 비교·참고 자료 추가 기획 중 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | **대표 승인**(원칙 3 인접, COO 판정) |
+| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | v2(자산 구성 표) qa·COO PASS [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) → 대표 데모 확인 대기 | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
 - 11/16(월) 09시·16시(±59분): PWA 알림 첫 실발송 [push-cron] 로그(us SPX·COMP, kr 1001, kr.fx) — 이상 시 Vercel Cron Disable
