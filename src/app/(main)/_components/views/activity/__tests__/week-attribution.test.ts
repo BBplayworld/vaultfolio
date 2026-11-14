@@ -18,7 +18,7 @@ function headerOf(sc: Scenario, sinceDate: string, yesterdayStr: string) {
   const pct = prevNet > 0 ? (attr.deltaNet / prevNet) * 100 : 0;
   return {
     deltaNet: attr.deltaNet, pct, isBig: Math.abs(pct) >= 5, negligible: Math.abs(attr.deltaNet) < CAUSE_DISPLAY_MIN,
-    label: attr.fromDate === yesterdayStr ? "전일 대비" : `지난 접속(${formatAttributionDate(attr.fromDate)}) 이후`,
+    label: attr.fromDate === yesterdayStr ? "전일 대비" : `${formatAttributionDate(attr.fromDate)} 이후`,
     estimated: attr.estimated, sentence: view.sentence, causes: view.causes, offsetTotal: view.offsetTotal, rangeLabel: view.rangeLabel, records: view.records,
   };
 }

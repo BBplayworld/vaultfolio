@@ -4,7 +4,7 @@
   "pct": 1.2008646779074794,
   "isBig": false,
   "negligible": false,
-  "label": "지난 접속(11/5) 이후",
+  "label": "11/5 이후",
   "estimated": false,
   "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 부동산 시세 상승 +400만원 · 환율 상승 +16만원 · 기록 안 된 변화 +97만원",
   "causes": [
@@ -125,7 +125,7 @@
   "pct": 1.2008646779074794,
   "isBig": false,
   "negligible": false,
-  "label": "지난 접속(11/5) 이후",
+  "label": "11/5 이후",
   "estimated": true,
   "sentence": "보유자산 시세 상승 +552만원 · 환율 상승 +17만원 · 기록 안 된 변화 +97만원",
   "causes": [
@@ -200,7 +200,7 @@
   "pct": 0.4802997550079262,
   "isBig": false,
   "negligible": false,
-  "label": "지난 접속(11/5) 이후",
+  "label": "11/5 이후",
   "estimated": false,
   "sentence": "주식 시세 상승 +104만원 · 코인 시세 상승 +49만원 · 환율 상승 +16만원 · 주식 매수 +97만원",
   "causes": [
