@@ -137,10 +137,10 @@ function recordKeys() {
   const keys: string[] = [];
   const proto = Object.getPrototypeOf(getCacheStorage());
   const orig = proto.incrementCounter;
-  const spy = vi.spyOn(proto, "incrementCounter").mockImplementation(function (this: unknown, key: string, by: number, ttl: number) {
-    keys.push(key);
-    return orig.call(this, key, by, ttl);
-  });
+  const spy = vi.spyOn(proto, "incrementCounter").mockImplementation(function (this: unknown, ...a: unknown[]) {
+    keys.push(a[0] as string);
+    return orig.apply(this, a);
+  } as never);
   return { keys, spy };
 }
 const hourKeyNow = () => `rl:gemini:global:${new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 13).replace(/\D/g, "")}`;

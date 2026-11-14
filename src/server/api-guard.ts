@@ -200,7 +200,7 @@ export async function guardRateLimit(
 ): Promise<NextResponse | null> {
   const perMinute = windowSec <= 60 ? limit : Math.max(3, Math.ceil((limit * 60) / windowSec));
   const ip = getClientIp(request);
-  if (!hitL1(`rl:${route}:${ip}`, ip === "unknown" ? Math.ceil(perMinute / 4) : perMinute)) return tooMany(Math.min(windowSec, 60));
+  if (!hitL1(`rl-mem:${route}:${ip}`, ip === "unknown" ? Math.ceil(perMinute / 4) : perMinute)) return tooMany(Math.min(windowSec, 60));
   return null;
 }
 
