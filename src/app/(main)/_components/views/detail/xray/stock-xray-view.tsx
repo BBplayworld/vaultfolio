@@ -13,7 +13,7 @@ import { PromptPreviewDialog } from "../../../layout/ui/prompt-preview-dialog";
 import { computeBreakdown, formatBreakdownPct, type XrayAxis, type BreakdownResult } from "@/lib/xray/stock-xray";
 import { useXrayViewStore } from "@/stores/xray-view-store";
 import { formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { buildStockXrayPrompt } from "@/lib/xray/stock-xray-prompt";
 import { groupStocksByTicker, mergeStockGroup, assignColors } from "../asset-detail-tabs";
 import { truncateName } from "@/lib/utils";
@@ -151,7 +151,7 @@ export function StockXrayView() {
     // min-w-0 chain: 부모 flex item(Card·CardContent)이 자식 max-content에 끌려 grow하지 않도록 차단 → wrapper가 부모 폭에 고정되어 가로 스크롤 정상 작동
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <Microscope className="size-5 text-primary" />
           주식 X-Ray
         </CardTitle>

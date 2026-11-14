@@ -12,7 +12,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { niceAxisTicks, formatAxisWon, pickVisibleLabels } from "@/lib/finance/dividend-axis";
 import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
@@ -241,7 +241,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
-                <CardTitle className="shrink-0 whitespace-nowrap">배당</CardTitle>
+                <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
                 <InfoHint summary="아직 안 받은 달은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
                   <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
                   <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>

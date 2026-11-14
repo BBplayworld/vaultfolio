@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
 import { buildFxExposureLines } from "@/lib/report/composition";
 import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
@@ -387,7 +387,7 @@ export function AssetReportView() {
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <Trophy className="size-5 text-primary" />
           자산 성적표
           <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>

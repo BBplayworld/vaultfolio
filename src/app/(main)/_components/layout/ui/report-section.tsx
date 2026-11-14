@@ -28,7 +28,7 @@ export function SectionHeader({ icon: Icon, title, badge, children, tone = "bran
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Icon aria-hidden className={`size-5 shrink-0 ${SECTION_TONE[tone]}`} />
-      <span data-testid={titleTestId} className="text-sm sm:text-base font-bold text-foreground">{title}</span>
+      <span data-testid={titleTestId} className="text-base font-bold text-foreground">{title}</span>
       {badge}
       {children}
     </div>

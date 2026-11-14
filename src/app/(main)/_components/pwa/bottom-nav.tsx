@@ -118,7 +118,7 @@ export function BottomNav() {
                   </span>
                 )}
                 <span
-                  className={`text-[11px] leading-tight ${
+                  className={`text-2xs leading-tight ${
                     isActive && !isAction
                       ? "font-semibold"
                       : "font-medium text-muted-foreground"

@@ -13,7 +13,7 @@ import { dispatchAddLoanTx } from "../../../layout/navigation/asset-dispatch";
 import { useLoanTxViewStore } from "@/stores/loan-tx-view-store";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, calculateHoldingDays, daysUntil, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { Loan, RealEstate, Stock, Cash } from "@/types/asset";
@@ -283,7 +283,7 @@ export function LoanTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>대출</CardTitle>
+        <CardTitle className={PAGE_TITLE}>대출</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 — 잔액과 함께 매달 나가는 이자 부담 노출 */}

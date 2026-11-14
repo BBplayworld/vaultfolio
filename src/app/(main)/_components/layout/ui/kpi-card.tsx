@@ -26,16 +26,16 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
       <Icon aria-hidden className="size-6 shrink-0 text-primary mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm lg:text-base font-semibold text-foreground">{title}</h3>
+          <h3 className="text-base font-bold text-foreground">{title}</h3>
           <ChevronRight className="size-4 text-muted-foreground shrink-0" />
         </div>
         <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
         {primary !== undefined && (
-          <p className={`text-xl sm:text-2xl lg:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
+          <p className={`text-xl md:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
             {primary}
           </p>
         )}
-        {secondary && <div className="text-sm lg:text-base font-medium mt-1">{secondary}</div>}
+        {secondary && <div className="text-sm font-medium mt-1">{secondary}</div>}
       </div>
     </div>
   );

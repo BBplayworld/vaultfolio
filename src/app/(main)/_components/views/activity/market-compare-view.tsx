@@ -9,7 +9,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
 import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { groupStocksByRowTicker } from "@/lib/finance/stock-page";
 import { useStockPageStore } from "@/stores/stock-page-store";
@@ -189,7 +189,7 @@ export function MarketCompareView({ init }: { init?: ChangeInit } = {}) {
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div>
         <div className="flex h-11 items-center gap-1.5">
-          <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">시장과 비교</h2>
+          <h2 className={PAGE_TITLE}>시장과 비교</h2>
           <InfoHint summary="지금 수량을 기간 내내 들고 있었다고 보고 계산해요.">
             <p className="text-pretty break-keep">종목마다 시작 종가 기준 평가액 비중으로 합쳤어요.</p>
             <p className="text-pretty break-keep">배당은 보유 종목과 시장 모두 넣지 않았어요.</p>

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { ChevronDown, ChevronRight, Table2 } from "lucide-react";
 import { readDailySnapshots } from "@/lib/asset/snapshot-storage";
@@ -83,7 +83,7 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
   return (
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div className="flex h-11 items-center justify-between gap-3">
-        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">자산 변화</h2>
+        <h2 className={PAGE_TITLE}>자산 변화</h2>
         <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] shrink-0" />
       </div>
 

@@ -20,7 +20,7 @@ import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
 import { stockCategories } from "@/config/asset-options";
-import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import type { Stock, Transaction } from "@/types/asset";
 import type { PositionSnapshot, PositionPreview } from "@/types/transaction";
 
@@ -206,7 +206,7 @@ export function StockTradesView() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-4" style={{ color: MAIN_PALETTE[0] }} />
           거래내역
         </CardTitle>

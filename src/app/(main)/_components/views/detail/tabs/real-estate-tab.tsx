@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { realEstateTypes, realEstateTradeDataset } from "@/config/asset-options";
 import { formatFullAddress } from "@/lib/realestate/real-estate-address";
 import { GradeBadge } from "../../../forms/asset-update/input/real-estate-input";
@@ -303,7 +303,7 @@ export function RealEstateTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>부동산</CardTitle>
+        <CardTitle className={PAGE_TITLE}>부동산</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader

@@ -12,7 +12,7 @@ import { useAssetNavigation } from "../../../layout/navigation/navigation-contex
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { formatCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
@@ -251,7 +251,7 @@ export function CryptoTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>암호화폐</CardTitle>
+        <CardTitle className={PAGE_TITLE}>암호화폐</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader

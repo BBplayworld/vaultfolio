@@ -5,6 +5,9 @@
  * 색상을 변경하려면 이 파일의 값만 수정하면 됩니다.
  */
 
+/** 페이지 제목 공용(#215) — 상세·성과 하위 화면과 세금 관리가 같은 크기를 쓴다(모바일 18 / 태블릿 22 / PC 24) */
+export const PAGE_TITLE = "text-lg md:text-xl font-bold text-foreground text-balance";
+
 export const ASSET_THEME = {
   // ===== 기본 색상 =====
   text: {
@@ -60,9 +63,9 @@ export const ASSET_THEME = {
   cardInfoLeft: "flex-1",
   cardInfoTitle: "flex items-baseline gap-1 flex-wrap",
   cardInfoMeta: "flex items-center gap-1 mt-0.5",
-  cardInfoName: "font-semibold text-sm sm:text-[15px] leading-tight",
+  cardInfoName: "font-semibold text-sm leading-tight",
   cardInfoRight: "text-right flex-shrink-0",
-  cardAmountMain: "text-sm sm:text-[15px] font-bold tabular-nums leading-tight",
+  cardAmountMain: "text-sm font-bold tabular-nums leading-tight",
   cardAmountProfitRow: "flex flex-row items-center gap-1 mt-0.5",
   cardAmountSub: "text-sm font-bold tabular-nums",
   cardAmountRate: "text-sm font-bold tabular-nums",
@@ -88,10 +91,10 @@ export const ASSET_THEME = {
   // ===== 탭 공통 스타일 =====
   // 1단계: 페이지 메인 탭
   tabList1: "flex items-center gap-2 p-1.5 sm:p-2 rounded-xl bg-muted/50 border border-border w-full sm:w-fit overflow-hidden",
-  tabTrigger1: "rounded-md px-3 py-2 sm:py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger1: "rounded-md px-3 py-2 sm:py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-muted-foreground bg-transparent shadow-none hover:bg-muted hover:text-foreground transition-all data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold",
   // 3단계 래핑(두 줄) 변형 — 카테고리 항목 많을 때 (부동산/현금/대출). 라운드 + border-2
   tabList3Wrap: "flex flex-wrap gap-0.5 p-1 rounded-lg border border-border bg-muted/30 w-full mb-2 h-fit",
-  tabTrigger3Wrap: "rounded-md px-2 py-1 text-xs sm:text-[13px] font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
+  tabTrigger3Wrap: "rounded-md px-2 py-1 text-xs font-medium text-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold",
 
   // ===== 자산 분포 카드 테마 토큰 =====
   distributionCard: {

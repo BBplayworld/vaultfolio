@@ -9,7 +9,7 @@ import { ChevronDown, Info, Receipt, TrendingUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, PAGE_TITLE } from "@/config/theme";
 import { formatCurrency } from "@/lib/number-utils";
 import { FOREIGN_CAPITAL_GAIN_DEDUCTION, TAX_TAG_LABEL, type TaxEvent } from "@/config/tax-calendar";
 import {
@@ -61,7 +61,7 @@ export function TaxCalendarView() {
         <div className="flex items-center gap-2 min-w-0 pt-1">
           <Receipt className={`size-5 shrink-0 ${ASSET_THEME.important}`} />
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-foreground">세금 관리</h2>
+            <h2 className={PAGE_TITLE}>세금 관리</h2>
             <p className="text-sm text-muted-foreground">세금 일정 안내와 연말 절세 시뮬레이션</p>
           </div>
         </div>

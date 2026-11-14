@@ -7,7 +7,7 @@ import { Wallet, BadgeDollarSign, Trophy } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
 import { normalizeTicker } from "@/lib/finance/finance-service";
@@ -122,7 +122,7 @@ export function PerformanceHub() {
     <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">성과</h2>
+          <h2 className={PAGE_TITLE}>성과</h2>
           <p className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">자산 변화·배당·성적표를 확인하세요</p>
         </div>
         <HubShareButton />

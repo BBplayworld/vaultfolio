@@ -11,7 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useLoanTxViewStore } from "@/stores/loan-tx-view-store";
 import { dispatchAddLoanTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import type { LoanTransaction } from "@/types/asset";
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
@@ -99,7 +99,7 @@ export function LoanTxView() {
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-5 text-primary" />
           {target.name} · 상환/대출 내역
           {loan.balance === 0 && <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-tight">완납</Badge>}

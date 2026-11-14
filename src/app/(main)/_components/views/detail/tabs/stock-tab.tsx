@@ -18,7 +18,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
-import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
@@ -1233,7 +1233,7 @@ export function StockTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>주식</CardTitle>
+        <CardTitle className={PAGE_TITLE}>주식</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 */}
