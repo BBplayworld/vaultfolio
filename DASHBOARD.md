@@ -21,7 +21,7 @@
    - 구글 서치콘솔은 등록 여부만 알려 주세요
 4. ✅ **GA '홈' × 날짜 기준선 수령(11/14, 11/06~10 일평균 4.4명)** — 12/11 전후 같은 방식(탐색 또는 보조 측정기준 '날짜')으로 결산 창 구간 1장 재요청. 이전 안내: — 만드는 법: '페이지 및 화면' 보고서에서 검색창에 `홈` 입력 → 표 위 ＋(보조 측정기준) → '날짜' 선택 → 기간 11/06~ 지정 후 내보내기(같은 보고서에 날짜 열만 추가한 것) — v4.90 홈 '오늘'(11/12 18:13 머지)의 기준선. 효과는 결산 창 11/27~12/10과 지난 결산 창 11/06~10을 비교합니다. 12/11 전후에 결산 창 구간 CSV를 한 번 더 요청드립니다
 
-5. **🔔 PWA 시장 알림 — ✅ 데모 정상 확인(11/14). 알림 내용 재검토 중(팀) 후 반영 결정 ([PR #180](https://github.com/BBplayworld/vaultfolio/pull/180))** — 권고: 반영. qa·UI·보안 검토·COO PASS @5f2d8aa → v4.92·v4.94가 먼저 반영되어 데모 확인 후 origin/main 병합·증분 qa로 새 head를 정해 머지
+5. **🔔 PWA 알림 — ✅ 데모 정상(11/14). 재검토 완료: 지수 알림 → 결산 열림+세금 마감 2건 교체 권고(A) — 대표 선택 대기(A 교체·B 보류·C 지수 축소) ([PR #180](https://github.com/BBplayworld/vaultfolio/pull/180))** — 권고: 반영. qa·UI·보안 검토·COO PASS @5f2d8aa → v4.92·v4.94가 먼저 반영되어 데모 확인 후 origin/main 병합·증분 qa로 새 head를 정해 머지
    - 순서: ① 키 생성(VAPID 2벌·PUSH_STORE_KEY 2개·CRON_SECRET) ② Vercel 환경 변수(Preview·Production 다른 값, CRON_SECRET은 Production만) ③ preview 재배포 ④ 휴대폰 데모 ⑤ PR 머지 = 반영 — 상세 단계는 PR 코멘트
    - 서버에 남는 것: 암호화된 기기 주소·고른 대상 ID(14개 중)·조건·날짜뿐. 보유 정보·IP 없음
    - [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/4.91-179-market-push/4.91-decision-brief.md)
