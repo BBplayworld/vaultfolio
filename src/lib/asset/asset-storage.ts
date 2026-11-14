@@ -1,5 +1,6 @@
 "use client";
 
+import { encryptShare, decryptShare } from "@/lib/asset/share-crypto";
 import { z } from "zod";
 import { AssetData, assetDataSchema, physicalAssetSchema, type PhysicalAsset, AssetSnapshots, DailyArchive, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { readDailyArchive, writeDailyArchive, mergeDailyArchives } from "@/lib/asset/snapshot-archive";
@@ -1048,21 +1049,19 @@ function unpackV7(raw: string): { data: any, rates?: { USD: number, JPY: number 
   return { data, rates, snapshots, profitBasis, nickname };
 }
 
-export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string): string {
+export async function generateShareToken(data: AssetData, rates?: { USD: number; JPY: number }, pin?: string, localKey?: string, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string): Promise<string> {
   try {
-    const dsv = "OK|" + packV7(data, rates, snapshots, profitBasis, nickname); // PIN 검증 및 무결성 확인용 접두사
-    const compressed = LZString.compressToEncodedURIComponent(dsv);
+    const packed = packV7(data, rates, snapshots, profitBasis, nickname);
 
     if (pin && pin.length === 4) {
       if (localKey) {
-        // V7.2 Zero-Knowledge: PIN + localKey 조합으로 초강력 암호화
-        const fullKey = pin + localKey;
-        return "v72Z" + cryptWithKey(compressed, fullKey);
+        // v73A: AES-256-GCM + PBKDF2(PIN, URL키‖salt) — 압축 후 암호화 (share-crypto)
+        return await encryptShare(packed, pin, localKey);
       }
       // V7.1: 압축된 결과물에 PIN 기반 시프팅 적용
-      return "v71P" + cryptWithPin(compressed, pin);
+      return "v71P" + cryptWithPin(LZString.compressToEncodedURIComponent("OK|" + packed), pin);
     }
-    return "v71N" + compressed;
+    return "v71N" + LZString.compressToEncodedURIComponent("OK|" + packed);
   } catch (error) {
     return "";
   }
@@ -1070,10 +1069,29 @@ export function generateShareToken(data: AssetData, rates?: { USD: number; JPY: 
 
 export type ParseResult = { data: AssetData, rates?: { USD: number, JPY: number }, snapshots?: AssetSnapshots, profitBasis?: ProfitBasis, nickname?: string } | { pinRequired: true } | null;
 
-export function parseShareToken(token: string, pin?: string, localKey?: string): ParseResult {
+export async function parseShareToken(token: string, pin?: string, localKey?: string): Promise<ParseResult> {
   if (!token) return null;
   try {
-    // 최신 Zero-Knowledge 버전 (v72Z)
+    // 최신 Zero-Knowledge 버전 (v73A: AES-GCM)
+    if (token.startsWith("v73A")) {
+      if (!localKey) return null;
+      if (!pin) return { pinRequired: true };
+      const packed = await decryptShare(token, pin, localKey);
+      if (!packed) return null; // PIN/Key 틀림·변조 (GCM 인증 실패)
+      const result = unpackV7(packed);
+      if (result.nickname !== undefined && result.data) {
+        result.data.nickname = result.nickname;
+      }
+      return {
+        data: assetDataSchema.parse(result.data),
+        rates: result.rates,
+        snapshots: result.snapshots,
+        profitBasis: result.profitBasis,
+        nickname: result.nickname,
+      };
+    }
+
+    // 구 Zero-Knowledge 버전 (v72Z, 읽기 전용 하위호환 — 문자 시프트 방식)
     if (token.startsWith("v72Z")) {
       if (!localKey) return null; // localKey가 없으면 인증키가 누락된 잘못된 접근이므로 즉시 실패
       if (!pin) return { pinRequired: true };

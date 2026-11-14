@@ -146,19 +146,19 @@ GET /api/logo?domain=www.samsung.com  # 도메인 기반 (ETF, 국내 주식)
 
 ### POST /api/share — 자산 데이터 Short URL 저장
 ```
-Body: { token: "v71P...|v72Z...", owner_id?: string }
+Body: { token: "v73A...", owner_id?: string }
 → { key: "a3f8b2c1ab", owner_id: "uuid" }
 ```
-- **`v72Z`(PIN+localKey)만 저장**, 그 외(v71N·v71P·구버전) 400. 토큰 ≤900k자, 본문 ≤1MB
-- 키: `sha256(token)[:10]`
-- `owner_id`(UUID 형식만, 아니면 신규 발급)로 이전 키 자동 삭제, L1 분당 10회 + 하루 전역 5000(`rl:share-post:global:{날짜}`)
+- **`v73A`(AES-GCM, PIN+URL키)만 저장**, 그 외(v72Z·v71N·v71P) 400. 토큰 ≤900k자, 본문 ≤1MB
+- 키: `sha256(token)[:10]` (salt·nonce 무작위라 같은 자산도 매번 새 키)
+- `owner_id`(UUID 형식만, 아니면 신규 발급)로 이전 키 자동 삭제, L1 분당 10회 + 하루 전역 5000(`rl:share-post:global:{날짜}`) — IP 미저장(5.113)
 
 ### GET /api/share?key=a3f8b2c1ab
 ```
-→ { token: "v72Z..." }
+→ { token: "v73A..." }  (구 v72Z도 읽기 허용, `BLOCK_LEGACY_V72Z_GET=true`면 410)
 ```
 - `key`는 `^[0-9a-f]{10}$`만 허용(그 외 400 — `rl:` 등 내부 키 접근 차단), L2 분당 30회
-GET 시마다 TTL 30일 리셋 (Sliding TTL)
+v73A만 GET 시 TTL 30일 리셋(Sliding), v72Z는 연장 안 함(30일 내 자연 소멸)
 
 ---
 

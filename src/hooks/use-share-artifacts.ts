@@ -1,6 +1,7 @@
 "use client";
 
 import { useAssetData } from "@/contexts/asset-data-context";
+import { generateShareUrlKey } from "@/lib/asset/share-crypto";
 import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage, hasAnyAssets } from "@/lib/asset/asset-storage";
 import { getProfitBasis } from "@/lib/finance/profit-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -19,14 +20,14 @@ export function useShareArtifacts() {
 
   const hasAssets = hasAnyAssets(assetData);
 
-  /** 자산 없거나 서버 실패 시 null. pin이 있으면 v72Z(Zero-Knowledge), 없으면 서버 저장 거부됨. */
+  /** 자산 없거나 서버 실패 시 null. pin이 있으면 v73A(Zero-Knowledge), 없으면 서버 저장 거부됨. */
   const generateShareArtifacts = async (
     pin?: string,
   ): Promise<{ url: string; code: string } | null> => {
     if (!hasAssets) return null;
 
-    const localKey = Math.random().toString(36).substring(2, 14);
-    const token = generateShareToken(
+    const localKey = generateShareUrlKey();
+    const token = await generateShareToken(
       assetData, exchangeRates, pin || undefined, localKey,
       collectSnapshotsFromStorage(), getProfitBasis(), nickname || undefined,
     );

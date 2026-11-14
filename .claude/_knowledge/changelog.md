@@ -11,6 +11,14 @@
 - 푸시: 보관 TTL 90→30일, 마스터 키에서 HKDF로 subId·AES 키 분리(`2:` 접두, 구 형식 이중 읽기, 구독 갱신 시 재기록·구 id 삭제, cron은 구 형식 만료를 30일로 1회 축소). reconcilePush가 앱 로드마다 재등록하므로 활성 사용자는 자동 이행.
 - C26: '안전하게 전송/전달' 문구를 사실 서술로 정정. 로컬 스키마·STORAGE_KEYS 변경 0.
 
+---
+
+## 2026-11-14 (v5.112)
+
+- **공유 v73A**: 간편 공유 암호를 문자 시프트(v72Z)에서 AES-256-GCM + PBKDF2(PIN, URL키‖salt, 200k)로 교체([share-crypto.ts](../../src/lib/asset/share-crypto.ts)). URL 키 = CSPRNG base62 22자(약 131비트, localKey 자리), 압축 후 암호화. `generateShareToken`·`parseShareToken` async. `/api/share` POST는 v73A만, GET은 v72Z 허용(B안, 대표 11-14)·TTL 연장 중지로 30일 자연 소멸(`BLOCK_LEGACY_V72Z_GET` 플래그 기본 false). 링크 형식 불변. IP 미저장·푸시는 5.113.
+
+---
+
 ## 2026-11-14 (v5.111)
 
 ### 성과 주식 종목 목록 — 상위 3 + `외 N개` (#5.111, 이슈 #209 2차)
