@@ -26,7 +26,8 @@ export function BenchmarkMore({ children }: { children: ReactNode }) {
         {...(open ? {} : { inert: true, "aria-hidden": true })}
         className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity,visibility] motion-safe:duration-[120ms] ${open ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
       >
-        <div className="min-h-0 overflow-hidden">{children}</div>
+        {/* relative: 접힌 패널 안 sr-only(absolute) 표 제목·머리글이 overflow-hidden 밖 문서 높이를 늘리지 않도록 containing block 고정 */}
+        <div className="relative min-h-0 overflow-hidden">{children}</div>
       </div>
     </div>
   );
