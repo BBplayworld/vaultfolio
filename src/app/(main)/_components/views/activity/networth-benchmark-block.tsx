@@ -24,7 +24,9 @@ export const COMP_NOTES = [
   "전·월세보증금(세입자가 낸 돈)은 따로 등록하는 항목이 없어요. 현금으로 등록했다면 예금·주식 등에 들어가 있어요.",
 ] as const;
 // 비중 열: 좁은 폭에선 머리가 어절에서 2줄로 꺾여 평균 열과 8px 이상 떨어지고, sm 이상에선 1줄 + 왼쪽 여백
-const COMP_PCT_COL = "w-10 sm:w-16 sm:pl-2";
+const COMP_PCT_COL = "w-12 pl-2 sm:w-16";
+// 열 머리 — 좁은 폭에서 어절 단위 2줄(nowrap 금지: 5.102 qa D1 '가구 평균가구 비중' 붙음), 열 사이 pl-2 간격
+const HEAD_NUM = "text-right align-bottom leading-tight break-keep tabular-nums";
 const NUM = "text-right whitespace-nowrap tabular-nums";
 
 export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUSEHOLD_NETWORTH_STATS, mine }: {
@@ -82,9 +84,9 @@ export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUS
               <thead>
                 <tr className="border-b border-border/50 text-xs text-muted-foreground">
                   <th scope="col" className="sr-only">항목</th>
-                  <th scope="col" className={`w-[5.25rem] font-normal ${NUM}`}>가구 평균</th>
-                  <th scope="col" className={`${COMP_PCT_COL} font-normal ${NUM}`}>가구 비중</th>
-                  {comp.showMine && <th scope="col" className={`${COMP_PCT_COL} font-normal ${NUM}`}>내 비중</th>}
+                  <th scope="col" className={`w-[5.25rem] font-normal ${HEAD_NUM}`}>가구 평균</th>
+                  <th scope="col" className={`${COMP_PCT_COL} font-normal ${HEAD_NUM}`}>가구 비중</th>
+                  {comp.showMine && <th scope="col" className={`${COMP_PCT_COL} font-normal ${HEAD_NUM}`}>내 비중</th>}
                 </tr>
               </thead>
               <tbody>
