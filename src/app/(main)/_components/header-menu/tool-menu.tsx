@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CloudSyncMenuEntry } from "../functions/cloud-sync/cloud-sync-menu-entry";
 import { dispatchOpenWhatsNew } from "../layout/navigation/asset-dispatch";
+import { generateShareUrlKey } from "@/lib/asset/share-crypto";
 import { generateShareToken, STORAGE_KEYS, collectSnapshotsFromStorage } from "@/lib/asset/asset-storage";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { getProfitBasis } from "@/lib/finance/profit-utils";
@@ -140,9 +141,11 @@ export function ToolMenuPage() {
     setPreGeneratedShortUrl(null);
     setShortUrlLoading(true);
 
-    const localKey = Math.random().toString(36).substring(2, 14);
+    const localKey = generateShareUrlKey();
 
-    const token = generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshotsFromStorage(), getProfitBasis(), nickname || undefined);
+    let cancelled = false; // PIN 변경 시 이전 요청 결과 무시(PBKDF2로 응답 순서가 뒤바뀔 수 있음)
+    void (async () => {
+    const token = await generateShareToken(assetData, assetDataContext.exchangeRates, sharePin || undefined, localKey, collectSnapshotsFromStorage(), getProfitBasis(), nickname || undefined);
     const ownerId = localStorage.getItem(STORAGE_KEYS.shareOwnerId) ?? undefined;
     fetch("/api/share", {
       method: "POST",
@@ -154,14 +157,16 @@ export function ToolMenuPage() {
         if (json.owner_id) {
           localStorage.setItem(STORAGE_KEYS.shareOwnerId, json.owner_id);
         }
-        if (json.key) {
+        if (json.key && !cancelled) {
           setPreGeneratedShortUrl(
             `${window.location.origin}${window.location.pathname}#share=share:${json.key}_${localKey}&theme=${themeMode}`
           );
         }
       })
       .catch(() => { /* 미리 생성 실패 */ })
-      .finally(() => setShortUrlLoading(false));
+      .finally(() => { if (!cancelled) setShortUrlLoading(false); });
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showShareDialog, sharePin, themeMode]);
 
@@ -357,7 +362,7 @@ export function ToolMenuPage() {
                 <p>자산 데이터를 PIN으로 암호화하여 다른 기기로 공유(1회 전달)합니다.</p>
                 <p className="text-xs text-primary">이후 지속적인 기기 동기화가 필요하다면 &apos;기기 동기화&apos; 메뉴를 이용해 주세요.</p>
                 <p className="text-xs pt-1 text-muted-foreground dark:text-muted-foreground/80">
-                  암호화된 데이터만 서버를 안전하게 경유하며, URL 키와 PIN이 분리되어 서버 관리자도 내용을 복호화할 수 없습니다.
+                  암호화된 데이터만 서버를 경유하고 URL 키는 서버로 전송되지 않아, 서버만으로는 내용을 열 수 없습니다. 링크가 노출되면 PIN만 남으니 링크와 PIN은 서로 다른 경로로 전달해 주세요.
                 </p>
               </div>
             </DialogDescription>
