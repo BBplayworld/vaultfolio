@@ -318,7 +318,7 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
           return (
             <div key={p} role="row" data-period={p} className="contents">
               <div role="rowheader">
-                <span className="text-sm font-semibold text-foreground">{COMPARE_PERIOD_LABEL[p]}</span>
+                <span className="text-sm font-semibold text-foreground whitespace-nowrap">{COMPARE_PERIOD_LABEL[p]}</span>
                 <RowRange cell={c} period={p} />
               </div>
               <ValueCell loading={loading} width="w-12">
