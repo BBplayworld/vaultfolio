@@ -54,7 +54,7 @@
 
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
 |---|---|---|---|
-| v5.105 [PR #208](https://github.com/BBplayworld/vaultfolio/pull/208) | 11/14 | 홈 전일대비 영역 정보 정리(#207, 대표 지적) — 기본 2줄(변동·원인), 모바일은 지수를 펼침 패널로·PC는 한 줄, 예측 칩 1곳·`M/D 이후`, 정보 삭제 0 · COO 위임(medium) | 진행 중 |
+| v5.105 [PR #208](https://github.com/BBplayworld/vaultfolio/pull/208) | 11/14 | 홈 전일대비 영역 정보 정리(#207, 대표 지적) — 기본 2줄(변동·원인), 모바일은 지수를 펼침 패널로·PC는 한 줄, 예측 칩 1곳·`M/D 이후`, 정보 삭제 0 · COO 위임(medium) | PASS |
 | v5.104 [PR #206](https://github.com/BBplayworld/vaultfolio/pull/206) | 11/14 | 배당 '12월 예정' 칩 360·375 겹침 정리(#205) — 640 미만 칩 축소 규칙 확대, 칸 내 다른 요소 diff 0 · COO 자체 승인(low) | PASS |
 | v5.103 [PR #204](https://github.com/BBplayworld/vaultfolio/pull/204) | 11/14 | 320 화면 정돈(#203) — 맞추기 '항목 선택' 칸 좌측 정렬·말줄임, 성적표 측정불가 축 제목 한 줄(배당 칩은 부작용으로 제외·후속) · COO 자체 승인(low) | PASS |
 | v5.101 [PR #200](https://github.com/BBplayworld/vaultfolio/pull/200) | 11/13 | 스크린샷 맞추기 정확도(#199, 대표 지적) — 한 장 안 칸 배치 일관(브로드컴 평단), 잘린 이름·'현금 \| 티커' 정리, IRP 등 다른 유형 보유분 후보·'새 항목으로 추가', 대표 5장 정답 38/42→42/42 · COO 자체 승인(medium) | PASS(운영 대표 5장 21/21) |
