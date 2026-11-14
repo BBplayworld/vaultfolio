@@ -1,7 +1,11 @@
-// 알림 문구·발송일 판정(#179, 4.91 'A 교체') — 순수 함수. 날짜표만 쓰고 시세·사용자 정보는 보지 않는다.
+// 알림 문구·발송일 판정(#179, 4.91) — 순수 함수. 날짜표·공개 시세만 쓰고 사용자 정보는 보지 않는다. 평가어·조언·뉴스·AI 문장 0.
 // 문구는 상태 안내('열렸어요')만 — 요청형·조언·금액·'내'·'보유' 0. 결산 창 첫날은 앱의 결산 창 로직(isSettlementWindowOpenDay)을 재사용한다.
+import { formatCompareRate, rateTenths } from "@/lib/finance/market-compare";
+import { isKrHoliday } from "@/lib/finance/kr-holidays";
+import { isUsHoliday } from "@/lib/finance/us-holidays";
 import { CARD_UNTIL_DAY, isSettlementWindowOpenDay } from "@/lib/report/settlement";
-import type { PushKind, PushPayload } from "./types";
+import type { PushCond, PushKind, PushPayload } from "./types";
+import type { PushQuote } from "./quotes";
 
 export const PUSH_FALLBACK_TITLE = "시크릿에셋";
 export const PUSH_FALLBACK_BODY = "새 알림이 도착했어요";
@@ -31,4 +35,60 @@ export function pushDueOn(today: string): { kind: PushKind; payload: PushPayload
   const tax = (TAX_PUSH_DATES as Record<string, { t: string; b: string }>)[today.slice(5)];
   if (tax) due.push({ kind: "tax", payload: { m: "tax", ...tax } });
   return due;
+}
+
+// ── 시장 알림(① 아침 시장 요약·② 국내 장 마감) ────────────────────────────
+
+export const PUSH_BIG_INDEX_TENTHS = 20; // 지수 ±2.0% 이상 = 큰 움직임(조건 pm2의 발송 기준)
+export const PUSH_BIG_FX_TENTHS = 10; // 환율 ±1.0% 이상은 본문 맨 앞으로(발송 기준은 아님)
+
+/** 합치기 우선순위(09시 회차) — 앞이 제목·도착 화면을 정한다. 국내 장 마감은 16시 단독 회차 */
+export const PUSH_MERGE_ORDER: readonly PushKind[] = ["settle", "tax", "morning", "kr"];
+
+const isBig = (q: PushQuote) => Math.abs(rateTenths(q.rate)) >= (q.kind === "fx" ? PUSH_BIG_FX_TENTHS : PUSH_BIG_INDEX_TENTHS);
+const hasBigIndex = (qs: readonly PushQuote[]) => qs.some((q) => q.kind === "index" && Math.abs(rateTenths(q.rate)) >= PUSH_BIG_INDEX_TENTHS);
+
+function formatQuote(q: PushQuote): string {
+  return q.kind === "fx" ? `환율 ${Math.round(q.price).toLocaleString("en-US")}원(${formatCompareRate(q.rate)})` : `${q.label} ${formatCompareRate(q.rate)}`;
+}
+
+/** 큰 움직임 항목을 앞으로(나머지는 원래 순서 유지) */
+function bigFirst(qs: readonly PushQuote[]): PushQuote[] {
+  return [...qs.filter(isBig), ...qs.filter((q) => !isBig(q))];
+}
+
+/** 오늘(KST 날짜) 휴장하는 시장 이름 — kr/us-holidays 상수. 없으면 빈 배열 */
+export function holidayMarketsOn(today: string): string[] {
+  const out: string[] = [];
+  if (isUsHoliday(today)) out.push("미국");
+  if (isKrHoliday(today)) out.push("국내");
+  return out;
+}
+
+/** 아침 시장 요약 — `미국 … | 국내 … | 오늘 미국 휴장`. 날짜 검증에 실패한 구간은 호출부가 빈 배열로 넘기고, 둘 다 비면 null */
+export function buildMorningMessage(today: string, us: readonly PushQuote[], kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
+  if (us.length === 0 && kr.length === 0) return null;
+  if (cond === "pm2" && !hasBigIndex(us) && !hasBigIndex(kr)) return null;
+  const segs: { text: string; big: boolean }[] = [];
+  if (us.length > 0) segs.push({ text: `미국 ${bigFirst(us).map(formatQuote).join(" · ")}`, big: us.some(isBig) });
+  if (kr.length > 0) segs.push({ text: `국내 ${bigFirst(kr).map(formatQuote).join(" · ")}`, big: kr.some(isBig) });
+  const ordered = [...segs.filter((x) => x.big), ...segs.filter((x) => !x.big)].map((x) => x.text);
+  const holidays = holidayMarketsOn(today);
+  if (holidays.length > 0) ordered.push(`오늘 ${holidays.join("·")} 휴장`);
+  return { m: "morning", t: `${formatMonthDay(today)} 아침 시장`, b: ordered.join(" | ") };
+}
+
+/** 국내 장 마감(16시) — `코스피 +0.5% · 코스닥 -0.3% · 환율 1,385원(+0.4%)` */
+export function buildKrCloseMessage(today: string, kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
+  if (kr.length === 0) return null;
+  if (cond === "pm2" && !hasBigIndex(kr)) return null;
+  return { m: "kr", t: `${formatMonthDay(today)} 국내 종가`, b: bigFirst(kr).map(formatQuote).join(" · ") };
+}
+
+/** 09시 회차 합치기 — 우선순위 높은 종류가 제목·도착 화면, 나머지는 본문 둘째 줄에 제목만. 하루 1건 */
+export function mergePushPayloads(list: readonly PushPayload[]): PushPayload | null {
+  const sorted = [...list].sort((a, b) => PUSH_MERGE_ORDER.indexOf(a.m as PushKind) - PUSH_MERGE_ORDER.indexOf(b.m as PushKind));
+  if (sorted.length === 0) return null;
+  const [head, ...rest] = sorted;
+  return rest.length === 0 ? head : { ...head, b: `${head.b}\n${rest.map((r) => r.t).join(" · ")}` };
 }

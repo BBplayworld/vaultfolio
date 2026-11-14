@@ -21,11 +21,12 @@ import {
   unsubscribePush,
   updatePushTargets,
 } from "@/lib/push/client";
-import { readPushPrefs, summarizePushPrefs, type PushPrefs } from "@/lib/push/prefs";
+import { PUSH_COND_TOPICS, readPushPrefs, summarizePushPrefs, type PushPrefs } from "@/lib/push/prefs";
+import type { PushCond } from "@/lib/push/types";
 import { PwaInstallFlow } from "../pwa/pwa-install-flow";
 import { MENU_DESC, MENU_ICON, MENU_LABEL, MENU_ROW, MENU_SECTION_LABEL, menuBadge } from "./menu-styles";
 
-// 설정 '알림' 섹션(#179, 4.91 'A 교체') — 월 결산 열림·세금 마감 알림. 서버에는 endpoint·keys·알림 종류 ID만 저장(보유 정보 0).
+// 설정 '알림' 섹션(#179, 4.91) — 아침 시장 요약·국내 장 마감·월 결산 열림·세금 마감 알림 + 큰 움직임 조건. 서버에는 endpoint·keys·알림 종류 ID만 저장(보유 정보 0).
 // 켜기 안내(종류를 직접 고름, 미리 체크 없음) → 권한 → 구독 → 종류 Dialog. 체험 모드·Push 미지원 기기에서는 섹션 전체를 그리지 않는다.
 
 type RowState = "loading" | "off" | "on" | "denied";
@@ -71,6 +72,25 @@ function TopicChecks({ sel, onToggle }: { sel: string[]; onToggle: (id: string, 
   );
 }
 
+function CondCheck({ cond, sel, onChange }: { cond: PushCond; sel: string[]; onChange: (c: PushCond) => void }) {
+  const enabled = sel.some((id) => PUSH_COND_TOPICS.includes(id));
+  return (
+    <label htmlFor="notify-cond" className={`flex min-h-10 items-center gap-3 px-1 py-1 ${enabled ? "cursor-pointer" : "opacity-50"}`}>
+      <Checkbox
+        id="notify-cond"
+        data-testid="notify-cond"
+        checked={cond === "pm2"}
+        disabled={!enabled}
+        onCheckedChange={(c) => onChange(c === true ? "pm2" : "daily")}
+      />
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm break-keep">큰 움직임 있는 날만</span>
+        <span className="block text-[11px] text-muted-foreground break-keep">아침 시장 요약·국내 장 마감에 적용, 지수 ±2% 이상인 날</span>
+      </span>
+    </label>
+  );
+}
+
 export function NotifySection() {
   const [env] = useState(detectPushEnv);
   const trial = isTrialMode();
@@ -79,6 +99,7 @@ export function NotifySection() {
   const [prefs, setPrefs] = useState<PushPrefs>(() => readPushPrefs());
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<null | "enable" | "denied" | "targets">(null);
+  const [cond, setCond] = useState<PushCond>("daily");
   const [sel, setSel] = useState<string[]>([]); // 켜기 안내·종류 Dialog 공용 — 켜기 안내를 열 때 빈 선택으로 시작
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -108,6 +129,7 @@ export function NotifySection() {
     if (state === "denied") return setDialog("denied");
     if (state === "off") {
       setSel([]);
+      setCond("daily");
       return setDialog("enable");
     }
     busyRef.current = true;
@@ -124,7 +146,7 @@ export function NotifySection() {
     if (busyRef.current || sel.length === 0) return;
     busyRef.current = true;
     setBusy(true);
-    const r = await enablePush(sel); // 첫 await = 권한 요청(제스처 유지)
+    const r = await enablePush(sel, cond); // 첫 await = 권한 요청(제스처 유지)
     busyRef.current = false;
     setBusy(false);
     if (r === "ok") {
@@ -145,13 +167,14 @@ export function NotifySection() {
   const openTargets = () => {
     const p = readPushPrefs();
     setSel(normalizePushTopics(p.topics));
+    setCond(p.cond);
     setDialog("targets");
   };
 
   const handleSave = async () => {
     if (saving || sel.length === 0) return;
     setSaving(true);
-    const ok = await updatePushTargets(sel);
+    const ok = await updatePushTargets(sel, cond);
     setSaving(false);
     if (!ok) return toast.error("잠시 후 다시 시도해 주세요");
     setPrefs(readPushPrefs());
@@ -178,7 +201,7 @@ export function NotifySection() {
     <>
       <RowIcon className={MENU_ICON} aria-hidden />
       <div className="flex-1 min-w-0">
-        <span className={MENU_LABEL}>결산·세금 알림</span>
+        <span className={MENU_LABEL}>알림</span>
         {state === "loading" && env === "ready" && !unready ? (
           <div className="mt-1.5 space-y-1.5" aria-hidden>
             <div className={`h-3.5 w-4/5 rounded ${SKELETON_FILL}`} />
@@ -194,7 +217,7 @@ export function NotifySection() {
                   ? summary
                   : state === "denied"
                     ? "알림이 차단돼 있어요. 기기 설정에서 허용해 주세요"
-                    : "월 결산이 열릴 때와 세금 마감일을 알려드려요"}
+                    : "아침 시장·국내 장 마감·월 결산·세금 마감을 골라 받아요"}
           </p>
         )}
       </div>
@@ -287,20 +310,21 @@ export function NotifySection() {
                   <Bell className="size-5 text-primary" />
                   알림 켜기
                 </DialogTitle>
-                <DialogDescription className="sr-only">월 결산이 열릴 때와 세금 마감일을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
+                <DialogDescription className="sr-only">아침 시장 요약, 국내 장 마감, 월 결산 열림, 세금 마감을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
               </DialogHeader>
               <div>
                 <p className="px-1 pb-1 text-[11px] text-muted-foreground">예시 알림</p>
                 <div className="flex flex-col gap-1.5 rounded-xl bg-background p-2">
+                  <NotifyPreview title="11/24 아침 시장" body="미국 S&P 500 +0.8% · 나스닥 +1.1% | 국내 코스피 +0.5% · 코스닥 -0.3%" />
                   <NotifyPreview title="11월 결산이 열렸어요" body="12월 10일까지 이번 달 자산 변화를 볼 수 있어요" />
-                  <NotifyPreview title="연금저축·IRP 세액공제" body="12/31 납입분까지예요" />
                 </div>
               </div>
               <div>
                 <p className="px-1 pb-1 text-sm font-semibold text-muted-foreground">받을 알림을 골라 주세요</p>
                 <TopicChecks sel={sel} onToggle={toggleTopic} />
+                <CondCheck cond={cond} sel={sel} onChange={setCond} />
               </div>
-              <p className="text-sm font-medium text-pretty break-keep">알림에는 날짜 안내만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
+              <p className="text-sm font-medium text-pretty break-keep">알림에는 공개 시장 정보와 날짜 안내만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
               <p className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
                 결산 알림은 &lsquo;캘린더에 추가&rsquo;의 월말 결산 일정과 같은 내용이에요. 알림은 결산이 열리는 날 아침에 도착해요.
               </p>
@@ -343,6 +367,7 @@ export function NotifySection() {
             )}
           </div>
           <TopicChecks sel={sel} onToggle={toggleTopic} />
+          <CondCheck cond={cond} sel={sel} onChange={setCond} />
           <p className="text-sm text-muted-foreground text-pretty break-keep">이 설정은 이 기기에서만 적용돼요.</p>
           <DialogFooter className="flex-col gap-2">
             <Button variant="brand" data-testid="notify-targets-save" onClick={handleSave} disabled={sel.length === 0 || saving}>

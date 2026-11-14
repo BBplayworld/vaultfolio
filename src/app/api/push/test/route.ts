@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const lock = await storage.acquireLock(`${pushKeyPrefix()}testlock:${id}`, 60);
   if (!lock) return NextResponse.json({ error: "cooldown" }, { status: 429, headers: { ...NO_STORE, "Retry-After": "60" } });
 
-  const result = await sendPush(sub, { m: "test", t: "샘플 · 월 결산 열림", b: "11월 결산이 열렸어요 (테스트 알림)" });
+  const result = await sendPush(sub, { m: "test", t: "샘플 · 알림", b: "테스트 알림이에요" });
   if (result === "gone") {
     await storage.deletePushSub(id);
     return NextResponse.json({ error: "not-subscribed" }, { status: 404, headers: NO_STORE });

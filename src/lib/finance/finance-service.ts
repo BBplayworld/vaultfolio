@@ -935,6 +935,19 @@ export async function fetchOverseasIndexDailySeries(
   return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `${indexCode}/${startDate}~${endDate}`, accessToken, appKey, appSecret);
 }
 
+// 원/달러 일별 종가(시장 알림 국내 회차, #179) — 해외지수와 같은 TR(FHKST03030100)에 시장구분 X·코드 FX@KRW.
+// 실호출 PASS + 마지막 행 날짜 검증을 통과할 때만 호출부가 쓴다. 실패·빈 응답이면 null.
+export async function fetchFxKrwDailySeries(
+  startDate: string,
+  endDate: string,
+  accessToken: string,
+  appKey: string,
+  appSecret: string,
+): Promise<IndexCloseRow[] | null> {
+  const url = `https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=X&FID_INPUT_ISCD=${encodeURIComponent("FX@KRW")}&FID_INPUT_DATE_1=${ymdCompact(startDate)}&FID_INPUT_DATE_2=${ymdCompact(endDate)}&FID_PERIOD_DIV_CODE=D`;
+  return fetchKisIndexSeries(url, "FHKST03030100", "ovrs_nmix_prpr", `FX@KRW/${startDate}~${endDate}`, accessToken, appKey, appSecret);
+}
+
 // 종목 일별 종가 행(최신순) — 날짜·종가로 전일 대비를 계산해 stale(임시 휴장일 등)을 판정하는 데 쓴다(시장 알림, #179).
 // 국내: inquire-daily-price(FHKST01010400) stck_bsop_date·stck_clpr / 해외: dailyprice(HHDFS76240000) xymd·clos(정규장 종가).
 // 실패·필드 누락은 null → 호출부가 해당 항목만 생략한다.

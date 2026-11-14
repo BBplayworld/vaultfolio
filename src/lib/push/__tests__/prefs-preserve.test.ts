@@ -4,7 +4,7 @@ import { applyImportedPayload, clearAssetData } from "@/lib/asset/asset-storage"
 import { emptyData, g, memoryStorage } from "@/lib/__tests__/physical-fixtures";
 import { LEGACY_PUSH_PREFS_KEY, PUSH_PREFS_KEY, clearPushPrefs, readPushPrefs, writePushPrefs } from "../prefs";
 
-const ON = { v: 2 as const, on: true, topics: ["settle", "tax"] };
+const ON = { v: 3 as const, on: true, topics: ["morning", "settle", "tax"], cond: "pm2" as const };
 
 beforeEach(() => {
   g.window = globalThis;
@@ -54,14 +54,18 @@ describe("이전 버전 데이터 → 새 버전 (구 키 secretasset_push_prefs
     expect(readPushPrefs().topics).toEqual(["tax"]);
     expect(localStorage.getItem(LEGACY_PUSH_PREFS_KEY)).toBeNull();
   });
-  it("v1 값(지수 ID·조건)이 저장돼 있으면 무시하고 off·미선택으로 읽는다 — 새 값을 쓰면 v2로 교체", () => {
+  it("v1 값(지수 ID·조건)이 저장돼 있으면 무시하고 off·미선택으로 읽는다 — 새 값을 쓰면 v3로 교체", () => {
     localStorage.setItem(PUSH_PREFS_KEY, JSON.stringify({ v: 1, on: true, topics: ["kospi", "spx"], cond: "pm2" }));
-    expect(readPushPrefs()).toEqual({ v: 2, on: false, topics: [] });
+    expect(readPushPrefs()).toEqual({ v: 3, on: false, topics: [], cond: "daily" });
     localStorage.setItem(LEGACY_PUSH_PREFS_KEY, JSON.stringify({ v: 1, on: true, topics: ["kospi"], cond: "daily" }));
     localStorage.removeItem(PUSH_PREFS_KEY);
-    expect(readPushPrefs()).toEqual({ v: 2, on: false, topics: [] });
+    expect(readPushPrefs()).toEqual({ v: 3, on: false, topics: [], cond: "daily" });
     writePushPrefs(ON);
     expect(readPushPrefs()).toEqual(ON);
+  });
+  it("v2 값(종류만, cond 없음)도 읽지 못하면 기본값 — 켜져 있던 구독은 reconcilePush가 정리", () => {
+    localStorage.setItem(PUSH_PREFS_KEY, JSON.stringify({ v: 2, on: true, topics: ["settle", "tax"] }));
+    expect(readPushPrefs()).toEqual({ v: 3, on: false, topics: [], cond: "daily" });
   });
   it("구 키가 깨져 있어도 오류 없이 기본값(off)", () => {
     localStorage.setItem(LEGACY_PUSH_PREFS_KEY, "{bad");

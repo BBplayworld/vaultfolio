@@ -1,5 +1,6 @@
-// 시장 알림 클라이언트(#179) — 권한·구독·서버 저장·해제. 서버로 보내는 값은 endpoint·keys·알림 종류 ID뿐.
+// 시장 알림 클라이언트(#179) — 권한·구독·서버 저장·해제. 서버로 보내는 값은 endpoint·keys·알림 종류 ID·cond뿐.
 // web-push 라이브러리는 import하지 않는다(서버 전용, 번들 증가 0).
+import type { PushCond } from "./types";
 import { clearPushPrefs, readPushPrefs, writePushPrefs } from "./prefs";
 
 export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
@@ -62,15 +63,15 @@ async function postJson(method: "POST" | "DELETE", url: string, body: unknown): 
   }
 }
 
-function toBody(sub: PushSubscription, topics: string[]) {
+function toBody(sub: PushSubscription, topics: string[], cond: PushCond) {
   const j = sub.toJSON();
-  return { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? "", auth: j.keys?.auth ?? "", topics, standalone: isStandaloneApp() };
+  return { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? "", auth: j.keys?.auth ?? "", topics, cond, standalone: isStandaloneApp() };
 }
 
 export type EnableResult = "ok" | "denied" | "error";
 
 /** [알림 켜기] — 첫 await가 권한 요청(제스처 유지). 실패 시 새로 만든 구독은 되돌린다 */
-export async function enablePush(topics: string[]): Promise<EnableResult> {
+export async function enablePush(topics: string[], cond: PushCond): Promise<EnableResult> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return permission === "denied" ? "denied" : "error";
   const reg = await getRegistration();
@@ -82,12 +83,12 @@ export async function enablePush(topics: string[]): Promise<EnableResult> {
       sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
       created = true;
     }
-    const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics));
+    const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics, cond));
     if (!res?.ok) {
       if (created) await sub.unsubscribe().catch(() => false);
       return "error";
     }
-    writePushPrefs({ v: 2, on: true, topics });
+    writePushPrefs({ v: 3, on: true, topics, cond });
     return "ok";
   } catch {
     return "error";
@@ -95,12 +96,12 @@ export async function enablePush(topics: string[]): Promise<EnableResult> {
 }
 
 /** 알림 종류 저장 — 서버 1회. 구독이 없으면 실패 */
-export async function updatePushTargets(topics: string[]): Promise<boolean> {
+export async function updatePushTargets(topics: string[], cond: PushCond): Promise<boolean> {
   const sub = await getPushSubscription();
   if (!sub) return false;
-  const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics));
+  const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics, cond));
   if (!res?.ok) return false;
-  writePushPrefs({ v: 2, on: true, topics });
+  writePushPrefs({ v: 3, on: true, topics, cond });
   return true;
 }
 
@@ -151,7 +152,7 @@ export async function reconcilePush(): Promise<void> {
     }
     const sub =
       existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) }));
-    await postJson("POST", "/api/push/subscribe", toBody(sub, prefs.topics));
+    await postJson("POST", "/api/push/subscribe", toBody(sub, prefs.topics, prefs.cond));
   } catch {
     /* 다음 로드에서 재시도 */
   }

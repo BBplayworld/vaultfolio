@@ -31,6 +31,7 @@ function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStored
   return {
     blob: sealSecret({ endpoint: rec.endpoint, p256dh: rec.p256dh, auth: rec.auth }),
     topics: rec.topics,
+    cond: rec.cond,
     createdAt: prev?.createdAt ?? rec.updatedAt,
     updatedAt: rec.updatedAt,
   };
@@ -38,7 +39,7 @@ function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStored
 function openPushSub(st: PushStoredSub | null | undefined): PushSubRecord | null {
   if (!st) return null;
   const sec = openSecret(st.blob);
-  return sec ? { ...sec, topics: st.topics, updatedAt: st.updatedAt } : null;
+  return sec ? { ...sec, topics: st.topics, cond: st.cond === "pm2" ? "pm2" : "daily", updatedAt: st.updatedAt } : null;
 }
 
 export interface ICacheStorage {

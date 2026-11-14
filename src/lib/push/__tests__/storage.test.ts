@@ -9,7 +9,7 @@ import type { PushSubRecord } from "../types";
 const KEY = Buffer.alloc(32, 7).toString("base64");
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/SECRET-ENDPOINT-TOKEN";
 const rec = (over: Partial<PushSubRecord> = {}): PushSubRecord => ({
-  endpoint: ENDPOINT, p256dh: "P".repeat(87), auth: "AUTHSECRET12345678901", topics: ["settle", "tax"], updatedAt: "2026-11-12", ...over,
+  endpoint: ENDPOINT, p256dh: "P".repeat(87), auth: "AUTHSECRET12345678901", topics: ["settle", "tax"], cond: "daily", updatedAt: "2026-11-12", ...over,
 });
 
 let dir = "";
@@ -37,7 +37,7 @@ describe("push 저장소", () => {
     expect(raw).not.toContain("fcm.googleapis.com");
     expect(raw).not.toContain("AUTHSECRET");
     expect(raw).not.toContain("P".repeat(20));
-    expect(Object.keys(JSON.parse(raw).subs[`push:dev:sub:${id}`].rec).sort()).toEqual(["blob", "createdAt", "topics", "updatedAt"]);
+    expect(Object.keys(JSON.parse(raw).subs[`push:dev:sub:${id}`].rec).sort()).toEqual(["blob", "cond", "createdAt", "topics", "updatedAt"]);
     expect(await st.getPushSub(id)).toEqual(rec());
   });
   it("id는 HMAC — sha256 단순 해시와 다르고 키가 다르면 달라진다", () => {

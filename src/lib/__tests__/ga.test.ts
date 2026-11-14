@@ -155,6 +155,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "push_on" }, "알림 켜기"],
     ["feature_use", { category: "push_off" }, "알림 끄기"],
     ["feature_use", { category: "push_denied" }, "알림 권한 거부"],
+    ["feature_use", { category: "push_click_morning" }, "알림·누름·아침"],
+    ["feature_use", { category: "push_click_kr" }, "알림·누름·국내"],
     ["feature_use", { category: "push_click_settle" }, "알림·누름·결산"],
     ["feature_use", { category: "push_click_tax" }, "알림·누름·세금"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
