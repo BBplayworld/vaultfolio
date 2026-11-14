@@ -233,7 +233,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
       {children({ onClick: handleButtonClick, loading, isIOS, isInApp, isInstallable })}
 
       <Dialog open={showDialog} onOpenChange={handleDialogChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
+        <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y break-keep">
           <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border dark:border-border/50">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : guideStep ? <Smartphone className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
