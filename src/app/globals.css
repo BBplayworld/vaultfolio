@@ -7,6 +7,9 @@
 
 @theme {
   --breakpoint-3xl: 1680px;
+  /* #215 타이포 스케일 — 메타 캡션·상태 배지(최소 크기 11px). inline 블록에 넣지 않는다(환경별 덮어쓰기가 듣지 않음) */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: calc(1 / 0.6875);
 }
 
 @theme inline {
