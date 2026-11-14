@@ -4,10 +4,8 @@
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
 > **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.104**
 
-## 🟥 이번 주말 대표님이 하실 일 — 1건
-1. **📊 [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 원문 통계표 1개 (11/16까지)** — 2025년 가계금융복지조사 '순자산 구간별 가구 분포' 표
-   - 방법 택1: ⓐ 표 파일·보도자료 PDF 전달 ⓑ 이 환경에 kosis.kr·mods.go.kr 접속 허용
-   - 11/17까지 없으면 보류(2차 보도 값으로 대신하지 않음)
+## 🟥 이번 주말 대표님이 하실 일 — 없음
+- ✅ #201 원문 통계표 수령(11/14, 부록 통계표 xlsx). 금액 구간 표 대신 **순자산 10분위 경계값(통계표 12)**으로 진행 — PDF 불필요(COO 판정)
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -42,7 +40,7 @@
 |---|---|---|---|
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 알림 **A 교체**(결산 열림+세금 마감, 대표 결정 11/14) | 재개발 중(origin/main 병합 포함) → qa·COO | 대표 승인(risk:high) |
 | v5.105 | [#207](https://github.com/BBplayworld/vaultfolio/issues/207) 홈 전일대비 영역 정보 정리(대표 지적 11/14) | 명세·UI 사양 완료 → 개발 중 | 첫 화면 방향 변경 → 대표 데모 승인 |
-| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 개발 1차 완료 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202)(draft, 통계 값 비어 화면 미표시) · 원문 표 대기(11/16) | **대표 승인**(원칙 3 인접, COO 판정) |
+| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 개발 1차 완료 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202)(draft, 통계 값 비어 화면 미표시) · 원문 수령 → 10분위 경계값으로 상수·화면 개발 중 | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
 - 2026-12-01~ #201: 2026년 가계금융복지조사(12월 첫 주 발표 예정) 공표 확인 → 통계 상수 교체(경량 트랙 + qa 원문 전수 대조)
