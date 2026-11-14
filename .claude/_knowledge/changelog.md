@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-14 (v5.115)
+
+### 첫 결산에 돌아오게 — 알림 입구·저장 보호 (#5.115, 이슈 #219)
+- **왜**: 설치하지 않으면 알림을 켤 수 없는데 설치 안내가 그 이유를 말하지 않았고, 켜는 곳도 더보기>설정>알림 하나뿐이었다. 설치하지 않은 Safari는 7일 미사용 시 기록이 지워질 수 있다.
+- 설치 안내 설명을 `아이콘으로 바로 열고, 월 결산·세금 일정 알림도 받을 수 있어요.`로 교체(iOS 16.4 미만은 기존 문장 유지, `isIosBelow164`).
+- 홈 팁 `notify`('알림 받기'): 자산 최신화 아래·기능 팁 위. 노출 = `isNotifyTipEligible()`(설치 앱·ready·권한 default·로컬 off) + `notify-offer` 미닫힘(featureUsage 재사용, 새 키 0). 누름 = `navigate({type:"settings",focus:"notify"})` → 알림 구역 1회 스크롤, 권한 창 0. GA는 `home_tip_notify`('홈 팁·알림'/'·누름')로 분리.
+- `PersistHost` + `ensureStoragePersist`: `isDataLoaded && hasAssets`이면 페이지 로드당 1회 `persist()`(Firefox·체험 제외, `persisted()` 참이면 호출 0). GA `persist_ok`/`persist_denied`.
+- 동승: 배당 표 휴대폰 배치 전환점 `sm:`→`md:`, 새 소식 2건(성적표 가계 통계·결론 상자), 성적표 기능 팁 설명, `/invalid-access` 1회용 안내 1줄, 상세·성과 허브 설명 줄 삭제(헤더 `items-center`).
+- 저장 스키마·STORAGE_KEYS·동기화·서버 전송 변경 0.
+
+---
+
 ## 2026-11-14 (v5.114)
 
 ### 전체 텍스트 크기 체계 (#5.114, 이슈 #215)

@@ -17,6 +17,9 @@ export default function InvalidAccessPage() {
           공유 링크가 만료되었거나, URL의 형태가 손상되어 데이터를 안전하게 불러올 수 없습니다. 
           전송받은 전체 URL이 올바른지 다시 확인해 주세요.
         </p>
+        <p data-testid="invalid-access-onetime" className="text-muted-foreground text-xs md:text-sm max-w-md mx-auto break-keep text-pretty">
+          1회용 링크는 한 번 열리면 다시 열 수 없어요. 보낸 쪽에서 새로 전달받아 주세요.
+        </p>
       </div>
 
       <div className="pt-4">

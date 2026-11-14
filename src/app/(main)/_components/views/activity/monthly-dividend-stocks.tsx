@@ -198,7 +198,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
+          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] md:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 md:gap-x-2 lg:gap-x-3 px-2 md:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
@@ -216,19 +216,19 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] md:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 md:gap-x-2 lg:gap-x-3 px-2 md:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                      <span className="hidden sm:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
+                      <span className="hidden md:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
-                        <Badge className={`hidden sm:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
+                        <Badge className={`hidden md:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 sm:hidden mt-0.5">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 md:hidden mt-0.5">
                       <span className="text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
                         <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>

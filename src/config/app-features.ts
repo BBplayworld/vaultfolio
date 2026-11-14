@@ -129,7 +129,7 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: "report",
     title: "자산 성적표",
-    description: "성과 탭의 자산 성적표에서 내 자산을 한눈에 요약해서 확인하세요.",
+    description: "성과 탭의 자산 성적표에서 내 자산을 가계 통계와 나란히 확인하세요.",
     icon: FileBarChart,
     target: { type: "activity", tab: "report" },
   },

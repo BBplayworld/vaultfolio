@@ -14,6 +14,18 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "20261114-01",
+    title: "성적표에서 가계 통계와 나란히 봐요",
+    body: "부동산까지 등록하면 내 순자산이 속한 구간도 보여요",
+    featureId: "report",
+  },
+  {
+    id: "20261114-02",
+    title: "성적표가 결론부터 보여 줘요",
+    body: "투입 대비 성과를 결론 상자로 먼저, 계산 근거는 펼쳐서 봐요",
+    featureId: "report",
+  },
+  {
     id: "20261112-01",
     title: "자산 변화 주식에서 시장과 비교를 타일로 열어요",
     body: "하루⁠·⁠1주⁠·⁠1개월 탭에서 그 기간 지수 등락을 타일로 미리 봐요",

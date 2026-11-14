@@ -1,6 +1,7 @@
 // #60 인앱 감지 보강 — 양성(Threads·다음·밴드)과 음성(일반 브라우저) UA 고정.
 // 오탐은 isInAppGateActive → isBackgroundWorkBlocked(시세·환율·스냅샷 갱신 중단)로 이어지므로 음성 샘플을 실제 UA 원문 형태로 고정한다.
 // 실기기 UA 미수집(C9): 양성 샘플은 알려진 UA 형태 기준 추정.
+import { isIosBelow164 } from "../pwa/detect-browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { detectBrowserEnv, isInAppGateActive } from "@/lib/pwa/detect-browser";
 
@@ -60,5 +61,26 @@ describe("isInAppGateActive — PWA standalone이면 인앱 UA여도 false", () 
   it("Safari + 브라우저 탭 → false", () => {
     stub(NEGATIVE[2][1], false);
     expect(isInAppGateActive()).toBe(false);
+  });
+});
+
+describe("isIosBelow164(5.115)", () => {
+  const iphone = (v: string) => `Mozilla/5.0 (iPhone; CPU iPhone OS ${v} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1`;
+  it("16_3 이하는 true", () => {
+    expect(isIosBelow164(iphone("16_3"))).toBe(true);
+    expect(isIosBelow164(iphone("15_8"))).toBe(true);
+  });
+  it("16_4 이상은 false", () => {
+    expect(isIosBelow164(iphone("16_4"))).toBe(false);
+    expect(isIosBelow164(iphone("17_0"))).toBe(false);
+  });
+  it("iPadOS 데스크톱 UA는 Version 폴백", () => {
+    const ipad = (v: string) => `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/${v} Safari/605.1.15`;
+    expect(isIosBelow164(ipad("16.3"))).toBe(true);
+    expect(isIosBelow164(ipad("17.2"))).toBe(false);
+  });
+  it("파싱 불가·비 iOS는 false", () => {
+    expect(isIosBelow164("")).toBe(false);
+    expect(isIosBelow164("Mozilla/5.0 (Linux; Android 13) Chrome/120")).toBe(false);
   });
 });

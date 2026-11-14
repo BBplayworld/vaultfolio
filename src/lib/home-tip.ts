@@ -18,6 +18,7 @@ export type HomeTip =
   | { kind: "relink" } // 끊긴 거래 다시 잇기(#147)
   | { kind: "refresh"; staleCategories: RefreshCategory[] }
   | { kind: "whats_new"; count: number; title: string } // 새 소식(#159) — count = 안 본 항목 수, title = 맨 위 안 본 항목 제목
+  | { kind: "notify" } // 알림 받기(5.115) — 설정 > 알림 입구, 호출부가 notifyOk 판정
   | { kind: "feature"; feature: AppFeature };
 
 export interface HomeTipInputs {
@@ -33,11 +34,13 @@ export interface HomeTipInputs {
   whatsNewOk?: boolean;
   /** 이번 판정에서 기능 팁 후보에서만 뺄 id — 홈 지수 종가 줄이 '시장과 비교' 입구일 때(4.90). 다른 팁·dismiss 불변 */
   suppressFeatureIds?: readonly string[];
+  /** 알림 팁 노출 허용 — 설치 앱·ready·권한 default·로컬 off·닫은 적 없음·체험/잠금 아님(5.115, 호출부가 판정) */
+  notifyOk?: boolean;
 }
 
-// 우선순위(#4.36 cto 판정, #159): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 새 소식 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 저방문 기능
+// 우선순위(#4.36 cto 판정, #159): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 새 소식 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 알림 받기(5.115) > 저방문 기능
 // 세금을 무조건 위에 두면 이번 달·다음 달 일정이 결산 창 내내 결산을 가린다 — 급한 마감만 결산보다 위
-export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk, suppressFeatureIds }: HomeTipInputs): HomeTip | null {
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk, suppressFeatureIds, notifyOk }: HomeTipInputs): HomeTip | null {
   if (shouldShowBackupNudge({ hasAssets, syncArmed, assetLastUpdated: assetData.lastUpdated, keepShown: keepShown === "backup" })) {
     return { kind: "backup", days: daysSinceBackup() };
   }
@@ -66,6 +69,9 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
   if (shouldShowRefreshNudge({ hasAssets, assetLastUpdated: assetData.lastUpdated, held, keepShown: keepShown === "refresh" })) {
     return { kind: "refresh", staleCategories: getStaleCategories(assetData.lastUpdated, held) };
   }
+
+  // 알림 받기(5.115): 자산 최신화 아래·기능 팁 위
+  if (notifyOk && hasAssets) return { kind: "notify" };
 
   const feature = pickRecommendedFeature(assetData, suppressFeatureIds);
   if (feature) return { kind: "feature", feature };

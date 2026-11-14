@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push"],
-  category: ["xray", "tax_sim", "home_tip", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -179,6 +179,9 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   xray: "X-Ray",
   tax_sim: "절세 시뮬레이션",
   home_tip: "홈 팁",
+  home_tip_notify: "홈 팁·알림",
+  persist_ok: "저장 보호·허용",
+  persist_denied: "저장 보호·거부",
   whats_new: "새 소식",
   feedback: "의견 보내기",
   theme: "테마 변경",
@@ -281,6 +284,7 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
       return params.theme === "dark" ? "다크 모드 사용" : "라이트 모드 사용";
     case "feature_use": {
       // 홈 팁 누름은 보임·닫기와 분리 — 도착 전환 판독(새 파라미터 값 0)
+      if (params.category === "home_tip_notify" && params.method === "click") return "홈 팁·알림·누름";
       if (params.category === "home_tip" && params.method === "click") return "홈 팁·누름";
       // 홈 7일 카드 누름(4.90)은 자산 변화 화면 진입 이벤트(source 없음·home_tip·whats_new)와 분리 — home_tip·whats_new 출처는 기존 title 유지
       if (params.category === "change_week_all" && params.source === "home_week") return "홈·7일";

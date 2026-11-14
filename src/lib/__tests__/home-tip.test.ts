@@ -174,7 +174,7 @@ describe("세금 임박 경계(결산 창 11/5 = 10월 결산)", () => {
 describe("새 소식 팁(#159) 우선순위·조건", () => {
   it("기록 없음 + 자산 있음 → whats_new(시드 전부, 맨 위 항목 제목)", () => {
     const t = pickWn("2026-11-15");
-    expect(t).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length, title: "자산 변화 주식에서 시장과 비교를 타일로 열어요" });
+    expect(t).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length, title: WHATS_NEW[0].title });
   });
   it("whatsNewOk가 없으면(체험·잠금·로드 전) 뜨지 않는다", () => {
     expect(pick("2026-11-15")).toBeNull();
@@ -202,7 +202,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.tax = [tax(12, "12/31")]; h.refresh = true; h.feature = { id: "f" };
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("whats_new");
     markWhatsNewSeen(); // 실제 쓰기 경로
-    expect(h.record?.id).toBe("20261112-04"); // 같은 날 NN 최대값이 최신(D1)
+    expect(h.record?.id).toBe("20261114-02"); // 같은 날 NN 최대값이 최신(D1)
     expect(pickWn("2026-11-15", true, true)?.kind).toBe("relink");
   });
   it("7일 경계: 6일 23시간 59분 전 읽음은 없음, 7일 정각이면 새 항목 1개만 안 본 것", () => {
@@ -212,7 +212,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY + 60_000 };
     expect(pickWn("2026-11-15")).toBeNull();
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY };
-    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length - 7, title: "자산 변화 주식에서 시장과 비교를 타일로 열어요" });
+    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length - 7, title: WHATS_NEW[0].title });
   });
   it("읽음 처리(실제 쓰기) 뒤 시트 재열기 '새' 0, 8일 후에도 팁 없음(D1)", () => {
     vi.useFakeTimers();
@@ -229,7 +229,7 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/views/home/home-tip-box.tsx"), "utf8");
     const close = src.slice(src.indexOf("const close ="), src.indexOf("const activate ="));
     expect(close).toContain('if (tip.kind === "whats_new") markWhatsNewSeen();');
-    expect(close).toContain('track("feature_use", { category: "home_tip", method: "close" })');
+    expect(close).toContain('category: tip.kind === "notify" ? "home_tip_notify" : "home_tip", method: "close"');
     expect(src).toContain('dispatchOpenWhatsNew("home_tip")');
     expect(src).toContain("if (!isDataLoaded) return;");
     expect(src).not.toMatch(/NOTICE_SHOWN_SESSION_KEY|isNoticeUnseen|markCurrentNoticeSeen|"notice"/);
@@ -251,7 +251,7 @@ describe("노출 GA 중복 방지 키(#4.36 qa R2)", () => {
     const path = await import("node:path");
     const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/views/home/home-tip-box.tsx"), "utf8");
     expect(src.match(/method: "view"/g)?.length).toBe(1);
-    expect(src).toMatch(/if \(lastViewKey\.current !== key\) \{\s*lastViewKey\.current = key;\s*track\("feature_use", \{ category: "home_tip", method: "view" \}\);/);
+    expect(src).toMatch(/if \(lastViewKey\.current !== key\) \{\s*lastViewKey\.current = key;\s*track\("feature_use", \{ category: picked\.kind === "notify" \? "home_tip_notify" : "home_tip", method: "view" \}\);/);
   });
 });
 
@@ -320,5 +320,31 @@ describe("처음 맞는 결산(A) 팁", () => {
     const data = setup(today, [monthlyOf(dailyOn(today))]);
     const legacy = { ...data, stocks: [...data.stocks, { ...data.stocks[0], id: "legacy-1" }] } as AssetData;
     expect(tipAt(today, legacy)?.kind).not.toBe("settlement");
+  });
+});
+
+describe("알림 받기 팁(5.115)", () => {
+  const pickN = (notifyOk?: boolean, today = "2026-11-15", hasAssets = true) => pickHomeTip({ assetData, hasAssets, syncArmed: false, today, notifyOk });
+  it("notifyOk 미지정·false는 기존 결과와 같다(기능 팁 그대로)", () => {
+    h.feature = { id: "f" };
+    expect(pickN()?.kind).toBe("feature");
+    expect(pickN(false)?.kind).toBe("feature");
+    h.feature = null;
+    expect(pickN()).toBeNull();
+  });
+  it("notifyOk면 기능 팁 위에 notify", () => {
+    h.feature = { id: "f" };
+    expect(pickN(true)?.kind).toBe("notify");
+  });
+  it("자산 최신화·결산·백업 아래", () => {
+    h.refresh = true;
+    expect(pickN(true)?.kind).toBe("refresh");
+    h.refresh = false;
+    expect(pickN(true, "2026-11-27")?.kind).toBe("settlement");
+    h.backup = true;
+    expect(pickN(true)?.kind).toBe("backup");
+  });
+  it("자산 0이면 notify 없음", () => {
+    expect(pickN(true, "2026-11-15", false)).toBeNull();
   });
 });

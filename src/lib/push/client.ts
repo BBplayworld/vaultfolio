@@ -22,6 +22,13 @@ export function detectPushEnv(): PushEnvState {
   return "ready";
 }
 
+/** 홈 '알림 받기' 팁 노출 환경 — 설치 앱 + 사용 가능 + 권한 미결정 + 로컬 알림 꺼짐(5.115). 닫은 기록·체험·잠금은 호출부가 본다 */
+export function isNotifyTipEligible(): boolean {
+  if (detectPushEnv() !== "ready") return false;
+  if (Notification.permission !== "default") return false;
+  return !readPushPrefs().on;
+}
+
 function urlBase64ToUint8Array(b64: string): Uint8Array<ArrayBuffer> {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);
   const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));

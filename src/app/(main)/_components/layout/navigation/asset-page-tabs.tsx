@@ -111,7 +111,7 @@ export function AssetPageTabs() {
       >
         {view.type === "home" && <HomeView />}
         {view.type === "more" && <ToolMenuPage />}
-        {view.type === "settings" && <SettingsPage />}
+        {view.type === "settings" && <SettingsPage focus={view.focus} />}
         {view.type === "tax" && <TaxCalendarView />}
         {view.type === "detail" && <DetailView tab={view.tab} />}
         {view.type === "activity" && <ActivityView tab={view.tab} init={view.init} />}

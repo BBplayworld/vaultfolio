@@ -236,7 +236,7 @@ export function NotifySection() {
   );
 
   return (
-    <section data-testid="settings-section-notify">
+    <section id="settings-section-notify" data-testid="settings-section-notify" className="scroll-mt-16">
       <p className={MENU_SECTION_LABEL}>알림</p>
       <div className="flex flex-col">
         {env === "needs-install" && !unready ? (
