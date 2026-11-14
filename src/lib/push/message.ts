@@ -83,6 +83,16 @@ export function isRepeatedClose(today: string, market: "us" | "kr"): boolean {
   return expectedCloseDate(today, market) === expectedCloseDate(prev, market);
 }
 
+/** 오늘 직전에 쉰 평일(주말 제외) 중 가장 최근 날짜 — 최대 10일 전까지 */
+function lastRestDate(today: string, market: "us" | "kr"): string | null {
+  const isHoliday = market === "us" ? isUsHoliday : isKrHoliday;
+  for (let i = 1; i <= 10; i++) {
+    const d = shiftDay(today, -i);
+    if (![0, 6].includes(new Date(`${d}T00:00:00Z`).getUTCDay()) && isHoliday(d)) return d;
+  }
+  return null;
+}
+
 /** 아침 시장 요약 — `미국 … | 국내 … | 오늘 미국 휴장`. 날짜 검증에 실패한 구간은 호출부가 빈 배열로 넘기고, 둘 다 비면 null */
 export function buildMorningMessage(today: string, us: readonly PushQuote[], kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
   if (us.length === 0 && kr.length === 0) return null;
@@ -92,9 +102,13 @@ export function buildMorningMessage(today: string, us: readonly PushQuote[], kr:
   if (kr.length > 0) segs.push({ text: `국내 ${bigFirst(kr).map(formatQuote).join(" · ")}`, big: kr.some(isBig) });
   const ordered = [...segs.filter((x) => x.big), ...segs.filter((x) => !x.big)].map((x) => x.text);
   // 직전 아침 요약과 같은 거래일이라 시세를 비운 구간은 같은 수치를 반복하지 않고 표시만
-  if (us.length === 0 && isRepeatedClose(today, "us")) ordered.push("미국 직전 휴장");
-  if (kr.length === 0 && isRepeatedClose(today, "kr")) ordered.push("국내 직전 휴장");
+  // 쉰 날짜를 적는다(예: '미국 11/26 휴장'). 같은 시장이 오늘도 휴장이면 '오늘 ○ 휴장'만 남겨 중복을 피한다
   const holidays = holidayMarketsOn(today);
+  for (const [market, name, list] of [["us", "미국", us], ["kr", "국내", kr]] as const) {
+    if (list.length > 0 || holidays.includes(name) || !isRepeatedClose(today, market)) continue;
+    const rest = lastRestDate(today, market);
+    if (rest) ordered.push(`${name} ${formatMonthDay(rest)} 휴장`);
+  }
   if (holidays.length > 0) ordered.push(`오늘 ${holidays.join("·")} 휴장`);
   return { m: "morning", t: `${formatMonthDay(today)} 아침 시장`, b: ordered.join(" | ") };
 }

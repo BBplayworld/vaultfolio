@@ -166,9 +166,15 @@ describe("휴장 다음 날 같은 종가 반복 방지", () => {
   it("설날 연휴 다음 영업일(2027-02-10) 국내는 반복", () => {
     expect(isRepeatedClose("2027-02-10", "kr")).toBe(true);
   });
-  it("반복 구간은 수치 없이 '미국 직전 휴장'으로 표시, 나머지는 그대로", () => {
-    const m = buildMorningMessage("2026-11-27", [], q, "daily");
-    expect(m?.b).toBe("국내 코스피 +0.5% | 미국 직전 휴장");
+  it("반복 구간은 수치 없이 쉰 날짜로 표시, 나머지는 그대로", () => {
+    expect(buildMorningMessage("2026-11-27", [], q, "daily")?.b).toBe("국내 코스피 +0.5% | 미국 11/26 휴장");
+    expect(buildMorningMessage("2027-02-10", [{ label: "S&P500", kind: "index", rate: 0.2, price: 1 }], [], "daily")?.b).toBe("미국 S&P500 +0.2% | 국내 2/9 휴장");
+  });
+  it("같은 시장이 오늘도 휴장이면 '오늘 ○ 휴장'만 남긴다", () => {
+    expect(buildMorningMessage("2027-02-09", [{ label: "S&P500", kind: "index", rate: 0.2, price: 1 }], [], "daily")?.b).toBe("미국 S&P500 +0.2% | 오늘 국내 휴장");
+  });
+  it("월요일 아침, 직전 금요일(성금요일) 휴장 날짜 표시", () => {
+    expect(buildMorningMessage("2027-03-29", [], q, "daily")?.b).toBe("국내 코스피 +0.5% | 미국 3/26 휴장");
   });
   it("보낼 새 수치가 없으면 미발송", () => {
     expect(buildMorningMessage("2026-11-27", [], [], "daily")).toBeNull();

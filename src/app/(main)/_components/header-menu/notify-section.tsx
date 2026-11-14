@@ -45,7 +45,7 @@ function NotifyPreview({ title, body }: { title: string; body: string }) {
           <span>지금</span>
         </div>
         <p className="text-sm font-semibold tabular-nums">{title}</p>
-        <p className="text-sm text-muted-foreground tabular-nums">{body}</p>
+        <p className="text-sm break-keep text-muted-foreground tabular-nums">{body}</p>
       </div>
     </div>
   );
