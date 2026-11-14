@@ -459,7 +459,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                             {t.type === "buy" ? "매수" : "매도"}
                           </span>
                           <span className="text-sm font-medium truncate">{t.name}</span>
-                          {t.ticker && <span className="text-[11px] text-muted-foreground">({t.ticker})</span>}
+                          {t.ticker && <span className="text-2xs text-muted-foreground">({t.ticker})</span>}
                         </div>
                         <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
                           <span>{t.quantity}주</span>
@@ -471,11 +471,11 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
 
                     {/* 본문: 자산 선택·미리보기는 체크박스 들여쓰기 없이 카드 전체 폭 사용 */}
                     {excluded ? (
-                        <p className="text-[11px] text-muted-foreground">보유 종목 없음 — 가져오기 제외</p>
+                        <p className="text-2xs text-muted-foreground">보유 종목 없음 — 가져오기 제외</p>
                       ) : active && (
                         <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
                           {fuzzyCandidates && candidates.length > 0 && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">인식된 종목명과 유사한 보유 항목입니다 — 확인 후 선택하세요</p>
+                            <p className="text-2xs text-amber-600 dark:text-amber-400">인식된 종목명과 유사한 보유 항목입니다 — 확인 후 선택하세요</p>
                           )}
                           {/* 반영할 자산 항목 직접 선택 — 보유 후보 + 신규 자산 등록(매수만) */}
                           <StockTargetPicker
@@ -487,16 +487,16 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                             defaultBroker={matchBrokerHint(t.brokerHint ?? "") ?? ""}
                           />
                           {!target && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">반영할 자산 항목을 선택하세요</p>
+                            <p className="text-2xs text-amber-600 dark:text-amber-400">반영할 자산 항목을 선택하세요</p>
                           )}
                           {target?.kind === "new" && !target.broker && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요</p>
+                            <p className="text-2xs text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요</p>
                           )}
 
                           {isDup && (
                             <div className="space-y-1">
-                              <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
-                              <div className="inline-flex rounded-md border overflow-hidden text-[11px]">
+                              <p className="text-2xs text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
+                              <div className="inline-flex rounded-md border overflow-hidden text-2xs">
                                 {(["overwrite", "add"] as const).map((act) => (
                                   <button
                                     key={act}
@@ -516,7 +516,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                             <PositionChangePreview before={sim.before} after={sim.after} currency={previewCurrency} />
                           )}
                           {sim?.kind === "record" && (
-                            <p className="text-[11px] text-muted-foreground">보유 수량·평단 변경 없이 거래내역에만 기록됩니다</p>
+                            <p className="text-2xs text-muted-foreground">보유 수량·평단 변경 없이 거래내역에만 기록됩니다</p>
                           )}
                           {sim?.kind === "oversell" && (
                             <div className="rounded-lg bg-destructive/10 dark:bg-destructive/20 p-2 text-xs text-destructive font-medium">

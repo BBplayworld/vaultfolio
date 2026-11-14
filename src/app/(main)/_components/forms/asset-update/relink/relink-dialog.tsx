@@ -161,7 +161,7 @@ function RelinkDialog({ onClose }: { onClose: () => void }) {
         onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
       >
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
-          <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">
+          <DialogTitle ref={titleRef} tabIndex={-1} className="font-bold text-balance break-keep outline-none">
             {step === "confirm" ? "끊긴 거래 다시 잇기" : result && result.rows > 0 ? "끊긴 거래를 다시 이었어요" : "끊긴 거래 다시 잇기"}
           </DialogTitle>
           {step === "confirm" && (

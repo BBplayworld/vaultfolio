@@ -381,7 +381,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
                           {t.type === "buy" ? "매수" : "매도"}
                         </span>
                         <span className="text-sm font-medium truncate">{t.name}</span>
-                        <span className="text-[11px] text-muted-foreground">({t.symbol})</span>
+                        <span className="text-2xs text-muted-foreground">({t.symbol})</span>
                       </div>
                       <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                         <span>{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
@@ -391,8 +391,8 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
                       {matched ? (
                         dupMap.get(t.id) ? (
                           <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
-                            <div className="inline-flex rounded-md border overflow-hidden text-[11px]">
+                            <p className="text-2xs text-amber-600 dark:text-amber-400">⚠ 이미 동일 거래가 있습니다</p>
+                            <div className="inline-flex rounded-md border overflow-hidden text-2xs">
                               {(["overwrite", "add"] as const).map((act) => (
                                 <button
                                   key={act}
@@ -406,16 +406,16 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
                             </div>
                           </div>
                         ) : isNew ? (
-                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                          <p className="text-2xs text-emerald-600 dark:text-emerald-400">
                             ✓ 신규 코인으로 추가됩니다{selectedExchange ? ` (${selectedExchange})` : ""}
                           </p>
                         ) : (
-                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                          <p className="text-2xs text-emerald-600 dark:text-emerald-400">
                             ✓ {matchedCoin?.name} 보유{reflectToHoldings ? "에 반영" : " 거래내역에 기록"}
                           </p>
                         )
                       ) : (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-2xs text-muted-foreground">
                           보유 코인 없음 — 가져오기 제외
                         </p>
                       )}

@@ -330,7 +330,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
           sm: 이상은 기존 중앙 배치(760px, 94dvh)로 복귀. 여기는 캡처 대상이 아니라 셸이라 sm: 허용(R32 무관). */}
       <DialogContent className="p-0 gap-0 overflow-x-hidden overflow-y-auto sm:overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 flex flex-col border shadow-lg top-[max(0.75rem,env(safe-area-inset-top))] left-3 right-3 translate-x-0 translate-y-0 w-auto max-w-none h-auto max-h-[calc(100dvh_-_max(0.75rem,env(safe-area-inset-top))_-_max(0.75rem,env(safe-area-inset-bottom)))] rounded-2xl sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg [&_[data-slot=dialog-close]]:top-3 sm:[&_[data-slot=dialog-close]]:top-4">
         <DialogHeader className="px-3 pt-3 pb-2 sm:px-5 sm:py-4 text-left">
-          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <DialogTitle className="flex items-center gap-2">
             <IdCard className="size-4 text-primary" />
             인증카드
           </DialogTitle>

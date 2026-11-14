@@ -377,12 +377,12 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{item.name}</span>
-                        <Badge variant="outline" className="text-[10px]">{getTypeLabel(item.type)}</Badge>
+                        <Badge variant="outline" className="text-2xs">{getTypeLabel(item.type)}</Badge>
                         {item.institution && (
                           <span className="text-sm text-muted-foreground">{item.institution}</span>
                         )}
                         {conflictMode === "merge" && assetData.cash.some((c) => keyOfCash(c) === keyOfCash(item)) && (
-                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
+                          <Badge variant="outline" className="text-2xs text-primary border-primary/30">교체</Badge>
                         )}
                       </div>
 
@@ -425,7 +425,7 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                             </SelectContent>
                           </Select>
                           {!item.institution.trim() && (
-                            <span className="text-[10px] text-destructive whitespace-nowrap">필수</span>
+                            <span className="text-2xs text-destructive whitespace-nowrap">필수</span>
                           )}
                         </div>
                       </div>

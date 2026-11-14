@@ -451,14 +451,14 @@ export function CryptoScreenshotImport({ open: externalOpen, onOpenChange, onSav
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{item.name}</span>
-                        <Badge variant="outline" className="text-[10px] font-mono">{item.symbol}</Badge>
+                        <Badge variant="outline" className="text-2xs font-mono">{item.symbol}</Badge>
                         {item.averagePriceMissing && (
-                          <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
+                          <Badge variant="outline" className="text-2xs text-amber-500 border-amber-500/30">
                             평균단가 미확인
                           </Badge>
                         )}
                         {conflictMode === "merge" && assetData.crypto.some((c) => keyOfCrypto(c) === keyOfCrypto(item)) && (
-                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
+                          <Badge variant="outline" className="text-2xs text-primary border-primary/30">교체</Badge>
                         )}
                       </div>
 

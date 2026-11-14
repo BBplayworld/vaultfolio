@@ -19,9 +19,9 @@ export function AppGuideContent() {
           <div key={id} className="flex flex-col gap-2.5 p-5 rounded-xl bg-muted/40 backdrop-blur-sm shadow-sm transition-colors hover:bg-muted/60">
             <div className="flex items-center gap-2">
               <Icon className="size-5 text-primary shrink-0" />
-              <h4 className="font-semibold text-foreground text-[15px] text-balance break-keep">{title}</h4>
+              <h4 className="font-semibold text-foreground text-sm text-balance break-keep">{title}</h4>
             </div>
-            <p className="text-muted-foreground text-[13px] leading-7 tracking-[0.01em] break-keep text-pretty">{desc}</p>
+            <p className="text-muted-foreground text-sm leading-7 tracking-[0.01em] break-keep text-pretty">{desc}</p>
           </div>
         );
       })}
@@ -51,11 +51,11 @@ export function AppGuide() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto touch-pan-y">
         <DialogHeader className="text-left">
-          <DialogTitle className="flex items-center gap-2 text-[17px] font-bold text-primary tracking-tight pr-8 text-balance">
+          <DialogTitle className="flex items-center gap-2 font-bold text-primary tracking-tight pr-8 text-balance">
             <Info className="size-5 shrink-0" />
             {APP_CONFIG.name} 보안 가이드 - 내 자산은 오직 나만 볼 수 있게
           </DialogTitle>
-          <DialogDescription className="text-[13px] leading-relaxed text-left text-pretty break-keep">
+          <DialogDescription className="text-sm leading-relaxed text-left text-pretty break-keep">
             시크릿에셋은 데이터 프라이버시를 최우선으로 생각합니다. {APP_GUIDE_SECURITY_DESC}
           </DialogDescription>
         </DialogHeader>

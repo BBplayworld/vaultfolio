@@ -445,7 +445,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
               {addressSearchOpen && (
                 <div className="rounded-lg border border-border dark:border-border/60 overflow-hidden">
                   <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-muted/40">
-                    <span className="text-xs font-medium text-muted-foreground">주소를 검색해 선택하세요</span>
+                    <span className="text-sm font-medium text-muted-foreground">주소를 검색해 선택하세요</span>
                     <Button
                       type="button"
                       size="icon"
@@ -512,11 +512,11 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                 placeholder={areaUnit === "pyeong" ? "예: 25.7" : "예: 84.95"}
                 className="h-9"
               />
-              {areaAutoNote && <p className="text-xs text-muted-foreground">{areaAutoNote}</p>}
+              {areaAutoNote && <p className="text-sm text-muted-foreground">{areaAutoNote}</p>}
             </div>
             {areaOptions.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">실거래에 잡힌 면적에서 고를 수도 있어요</p>
+                <p className="text-sm text-muted-foreground">실거래에 잡힌 면적에서 고를 수도 있어요</p>
                 <Select onValueChange={(v) => { applyArea(areaUnit === "pyeong" ? Math.round(sqmToPyeong(parseFloat(v)) * 100) / 100 : parseFloat(v), areaUnit); lookupPrice(parseFloat(v)); }}>
                   <SelectTrigger className="h-8"><SelectValue placeholder={`${datasetInfo.areaLabel} 선택`} /></SelectTrigger>
                   <SelectContent>
@@ -550,7 +550,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                   </span>
                 </div>
                 {matchInfo && (
-                  <p className="text-xs text-muted-foreground text-pretty">
+                  <p className="text-sm text-muted-foreground text-pretty">
                     근거: {[
                       matchInfo.complexName,
                       matchInfo.legalDong,
@@ -561,7 +561,7 @@ function RealEstateForm({ editData, onClose }: RealEstateFormProps) {
                 )}
               </div>
             ) : (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground text-pretty">
+              <p className="flex items-center gap-1 text-sm text-muted-foreground text-pretty">
                 {datasetInfo.matchBy === "area"
                   ? `${datasetInfo.areaLabel}을 입력하면 조회할 수 있습니다.`
                   : "주소를 입력하고 조회하면 추정치를 병기합니다."}

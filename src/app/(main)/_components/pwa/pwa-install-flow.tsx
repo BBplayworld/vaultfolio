@@ -246,7 +246,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             )}
             {!iosStep && !inAppStep && !guideStep && (
               <DialogDescription asChild>
-                <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed mt-1">
+                <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed break-keep mt-1">
                   <p className="text-foreground font-semibold">안전한 자산 연동과 브라우저 세션 끊김으로 인한 데이터 유실을 막기 위해 앱으로 설치해야 합니다.</p>
                   {isSyncMode ? (
                     <p className="text-sm">
