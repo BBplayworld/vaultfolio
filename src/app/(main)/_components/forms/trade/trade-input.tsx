@@ -410,7 +410,7 @@ export function TradeInput() {
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
                 <div className="flex-1">
-                  <p className="font-medium">스크린샷 가져오기</p>
+                  <p className="text-base font-medium">스크린샷 가져오기</p>
                   <p className="text-sm text-muted-foreground">체결 내역 화면 자동 인식</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
@@ -422,7 +422,7 @@ export function TradeInput() {
               >
                 <Plus className="size-5 text-primary shrink-0" />
                 <div className="flex-1">
-                  <p className="font-medium">직접 입력</p>
+                  <p className="text-base font-medium">직접 입력</p>
                   <p className="text-sm text-muted-foreground">매수/매도 거래 수동 입력</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
