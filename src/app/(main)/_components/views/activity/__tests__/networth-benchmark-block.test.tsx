@@ -17,6 +17,8 @@ const textOf = (s: string, id: string): string | null => {
   const m = s.match(new RegExp(`<(\\w+)[^>]*data-testid="${id}"[^>]*>(.*?)</\\1>`));
   return m ? m[2].replace(/<[^>]+>/g, "") : null;
 };
+/** 펼침 토글(버튼·패널)의 여는 태그 — 상호작용·전환 클래스 검사에서 제외 */
+const stripMore = (s: string) => s.replace(/<button.*?<\/button>/, "").replace(/<div[^>]*data-testid="benchmark-more-panel"[^>]*>/, "");
 const mineRow = (s: string): string | null => s.match(/data-testid="benchmark-row-(\d+)"[^>]*data-mine="true"/)?.[1] ?? null;
 
 describe("앱 상수 렌더", () => {
@@ -42,7 +44,7 @@ describe("상태별 표시", () => {
   it("F3 기본 — 강조 1행·칩·문장·라벨·출처", () => {
     const s = html(inputOf(F3));
     expect(mineRow(s)).toBe("3");
-    expect(count(s, /data-mine="true"/g)).toBe(1);
+    expect(count(s, /data-mine="true"/g)).toBe(2); // 막대 칸 1 + 펼침 목록 행 1
     expect(count(s, /aria-current="true"/g)).toBe(1);
     expect(count(s, /data-testid="benchmark-mine-chip"/g)).toBe(1);
     expect(textOf(s, "benchmark-sentence")).toBe("가구 100곳 중 약 20곳이 이 구간, 약 20곳이 이보다 높은 구간이에요.");
@@ -88,11 +90,33 @@ describe("상태별 표시", () => {
 
 describe("규약 — 조작 0·중립 색·금지어·내 금액 없음", () => {
   const states = [html(inputOf(F1)), html(inputOf(F2)), html(inputOf(F3)), html(inputOf(F4)), html({ netAsset: 12 * EOK, realEstateCount: 1 }), html({ netAsset: -1, realEstateCount: 1 })];
-  it("버튼·링크·탭 정지 0", () => {
-    for (const s of states) expect(s).not.toMatch(/<button|<a[\s>]|role="button"|tabindex/i);
+  it("버튼은 자세히 토글 1개뿐, 링크·탭 정지 0", () => {
+    for (const s of states) {
+      expect(count(s, /<button/g)).toBe(1);
+      expect(s).toContain('data-testid="benchmark-more-toggle"');
+      expect(s).not.toMatch(/<a[\s>]|role="button"|tabindex/i);
+    }
+  });
+  it("자세히 패널은 항상 마운트되고 접힘 상태에서 inert·aria-hidden", () => {
+    const s = html(inputOf(F3));
+    expect(s).toMatch(/data-testid="benchmark-more-panel"[^>]*data-open="false"/);
+    expect(s).toMatch(/aria-expanded="false"/);
+    expect(s).toMatch(/inert/);
+    expect(s).toMatch(/aria-hidden="true"[^>]*id="benchmark-more-panel"|id="benchmark-more-panel"[^>]*aria-hidden="true"/);
+  });
+  it("막대 — 10칸·내 칸 1개(부동산 없으면 0), aria는 화면 문장과 같은 문형, 최대폭 제한 없음", () => {
+    const s = html(inputOf(F3));
+    expect(count(s, /data-testid="benchmark-meter-cell-\d"/g)).toBe(6);
+    expect(count(s, /data-testid="benchmark-meter-cell-\d"[^>]*data-mine="true"/g)).toBe(1);
+    expect(s).toContain('aria-label="가구 100곳 중 약 20곳이 이 구간, 약 20곳이 이보다 높은 구간이에요."');
+    expect(s).not.toMatch(/번째|sm:max-w-xl/);
+    const h = html(inputOf(F1));
+    expect(h).not.toContain("benchmark-meter");
+    expect(h).not.toContain("benchmark-comp-brief-mine");
   });
   it("손익색·주황·brand 0, 전환·hover 효과 0", () => {
-    for (const s of states) {
+    for (const raw of states) {
+      const s = stripMore(raw);
       // 제목 아이콘(SectionHeader tone=brand의 text-primary 1건)은 공용 헤더 규약 — 그 밖의 계산 색은 0
       expect(s.replace(/<svg[^>]*>.*?<\/svg>/, "")).not.toMatch(/rose|red-|blue-|orange|amber|primary|brand|sky-/);
       expect(s).not.toMatch(/transition|hover:|active:|cursor-/);
