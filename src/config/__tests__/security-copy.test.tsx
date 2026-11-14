@@ -116,7 +116,7 @@ describe("동기화 메뉴 설명(cs.enabled=true mock)", () => {
   it("마지막 문장이 상수이고 break-keep", () => {
     const html = renderToStaticMarkup(<CloudSyncMenuEntry open onOpenChange={() => {}} />);
     expect(html).toContain(SYNC_MENU_SECURITY_DESC);
-    expect(html).toMatch(/class="[^"]*break-keep[^"]*">새 기기로 자산을 안전하게 전달하고/);
+    expect(html).toMatch(/class="[^"]*break-keep[^"]*">새 기기로 자산을 암호화해 옮기고/);
     // 금고 암호 문장(177행)은 무변경
     expect(html).toContain("저장·전송되지 않습니다.");
   });

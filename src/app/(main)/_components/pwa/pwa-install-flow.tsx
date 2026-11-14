@@ -316,7 +316,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
                     </InputOTPGroup>
                   </InputOTP>
                   <p className="text-sm text-muted-foreground text-center">
-                    이 PIN 번호는 웹 데이터를 설치할 앱으로 안전하게 전송하기 위한 1회성 비밀번호이며,<br />
+                    이 PIN 번호는 웹 데이터를 설치할 앱에서 열기 위한 1회성 비밀번호이며,<br />
                     앱 최초 실행 시에만 복원을 위해 한 번 사용됩니다.
                   </p>
                 </div>
