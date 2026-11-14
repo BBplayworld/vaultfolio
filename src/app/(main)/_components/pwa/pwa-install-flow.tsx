@@ -233,7 +233,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
       {children({ onClick: handleButtonClick, loading, isIOS, isInApp, isInstallable })}
 
       <Dialog open={showDialog} onOpenChange={handleDialogChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y">
+        <DialogContent className="sm:max-w-[600px] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl touch-pan-y break-keep">
           <DialogHeader className="px-6 pt-6 pb-3 text-left border-b border-border dark:border-border/50">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {inAppStep ? <ExternalLink className="size-5 text-primary" /> : iosStep ? <Share className="size-5 text-primary" /> : guideStep ? <Smartphone className="size-5 text-primary" /> : <Download className="size-5 text-primary" />}
@@ -246,7 +246,7 @@ export function PwaInstallFlow({ children }: PwaInstallFlowProps) {
             )}
             {!iosStep && !inAppStep && !guideStep && (
               <DialogDescription asChild>
-                <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed mt-1">
+                <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed break-keep mt-1">
                   <p className="text-foreground font-semibold">안전한 자산 연동과 브라우저 세션 끊김으로 인한 데이터 유실을 막기 위해 앱으로 설치해야 합니다.</p>
                   {isSyncMode ? (
                     <p className="text-sm">

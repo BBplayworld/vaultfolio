@@ -187,7 +187,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
         </PieChart>
       </ResponsiveContainer>
       {/* 범례 */}
-      <div className={`grid gap-x-2 ${screenshotMode ? "hidden gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-0 grid-cols-1 sm:grid-cols-2"}`}>
+      <div className={`grid gap-x-2 ${screenshotMode ? "hidden gap-y-0.5 grid-cols-1 pointer-events-none" : "gap-y-0 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"}`}>
         {items.map(({ key, name, value, color, pct }) => {
           const isAll = !activeTab || activeTab === "all";
           const isActive = key === activeTab;
@@ -303,7 +303,7 @@ export function NetAssetSummaryBox({
             className="absolute top-2 right-2 p-2 inline-flex items-center gap-1 sm:gap-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
           >
             <Trophy className={`size-4 sm:size-5 lg:size-6 ${TIER_STYLE[grade.tier].color} ${TIER_STYLE[grade.tier].shadow}`} strokeWidth={2} />
-            <span className={`text-sm sm:text-base lg:text-lg font-bold tabular-nums ${TIER_STYLE[grade.tier].color}`}>{grade.overall}</span>
+            <span className={`text-sm md:text-base font-bold tabular-nums ${TIER_STYLE[grade.tier].color}`}>{grade.overall}</span>
           </button>
         )}
         <div className={hasRightSide ? "flex items-center justify-between" : ""}>
@@ -318,7 +318,7 @@ export function NetAssetSummaryBox({
 
           <div className="mt-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
+              <p className={`text-2xl md:text-3xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.important}`}>
                 {formatPriceByMode(netAsset)}
               </p>
               {change && change.negligible && (
@@ -327,9 +327,9 @@ export function NetAssetSummaryBox({
               )}
               {change && !change.negligible && (
                 // 금액·%는 각각 한 덩어리(금액·단위 분리 방지), 좁은 폭에선 flex-wrap으로 %·라벨이 다음 행(#4.36)
-                <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base lg:text-lg font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
+                <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
                   <span className="whitespace-nowrap">{change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}</span>
-                  <span className="text-sm lg:text-base font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
+                  <span className="text-sm font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
                   {/* 라벨·쉐브론은 한 덩어리 — 쉐브론만 다음 줄에 떨어지지 않게(#4.36 ui-review R1) */}
                   <span className="inline-flex items-center ml-1.5">
                   <span className="text-sm font-medium text-muted-foreground break-keep">{change.label}</span>
@@ -431,7 +431,7 @@ export function NetAssetSummaryBox({
                     ))}
                   </ul>
                   {(change.offsetTotal ?? 0) >= CAUSE_DISPLAY_MIN && (
-                    <p data-testid="home-cause-offset-caption" className="mt-1.5 text-xs text-muted-foreground break-keep text-pretty leading-relaxed max-w-xs">
+                    <p data-testid="home-cause-offset-caption" className="mt-1.5 text-sm text-muted-foreground break-keep text-pretty leading-relaxed max-w-xs">
                       자산 사이에 옮긴 돈은 원인에서 뺐어요
                     </p>
                   )}
@@ -684,13 +684,15 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
             <div key={snap.date} className="flex-1 flex flex-col items-center gap-0.5 relative">
               <div className="w-full flex flex-col items-center" style={{ height: MAX_BAR + 24 }}>
                 <div style={{ flex: 1 }} />
-                {/* 640 미만은 원 없는 11px 한 줄(4.96): <375 tiny / 375~639 기본 / 640 이상 기존 표기 */}
-                <span className="hidden text-[11px] font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
-                <span className="hidden text-[11px] font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
-                <span className="hidden text-sm font-bold text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                {/* 640 미만은 원 없는 11px 한 줄(4.96): <375 tiny / 375~639 기본 / 640 이상 기존 표기.
+                    값·날짜는 차트 옆 라벨 — 768~1279(2열이 시작되는 1024 포함)에서 한 줄에 들어가도록 text-xs(#215 R4).
+                    날짜는 767 이하에서 지금처럼 2줄(`10-18`/`(일)`)로 접힌다 — nowrap은 md부터 */}
+                <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
+                <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
+                <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
-              <span className="text-sm text-muted-foreground">{label}</span>
+              <span className="text-sm md:text-xs md:whitespace-nowrap text-muted-foreground">{label}</span>
             </div>
           );
         })}

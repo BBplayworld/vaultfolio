@@ -12,7 +12,7 @@ import { useAssetNavigation } from "../../../layout/navigation/navigation-contex
 import { dispatchAddCryptoTx } from "../../../layout/navigation/asset-dispatch";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { formatCurrency, formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
@@ -120,12 +120,12 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
           <CollapsibleTrigger asChild>
             <button className={ASSET_THEME.cardTriggerButton}>
               <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
-                <span className="text-[9px] sm:text-[10px] font-bold text-white">{(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}</span>
+                <span className="text-[10px] font-bold text-white">{(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}</span>
               </div>
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
                   <span className={ASSET_THEME.cardInfoName}>{coin.name}</span>
-                  {coin.symbol && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
+                  {coin.symbol && <span className="text-2xs text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
                   <span className="text-sm text-foreground dark:whitespace-nowrap">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
@@ -251,7 +251,7 @@ export function CryptoTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>암호화폐</CardTitle>
+        <CardTitle className={PAGE_TITLE}>암호화폐</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader

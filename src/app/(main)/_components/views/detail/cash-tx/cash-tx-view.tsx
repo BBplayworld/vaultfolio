@@ -11,7 +11,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
 import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { reflectedDeleteBalance, cashBalanceFloor } from "@/lib/trade/cash-tx-utils";
 import type { CashTransaction } from "@/types/asset";
 
@@ -107,7 +107,7 @@ export function CashTxView() {
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-5 text-primary" />
           {target.name} · 입출금 내역
         </CardTitle>
@@ -153,8 +153,8 @@ export function CashTxView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold">{isDep ? "입금" : "출금"}</span>
-                      {isDep && t.recurring && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
-                      {!t.reflected && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
+                      {isDep && t.recurring && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
+                      {!t.reflected && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>

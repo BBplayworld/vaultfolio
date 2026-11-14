@@ -13,7 +13,7 @@ import { PromptPreviewDialog } from "../../../layout/ui/prompt-preview-dialog";
 import { computeBreakdown, formatBreakdownPct, type XrayAxis, type BreakdownResult } from "@/lib/xray/stock-xray";
 import { useXrayViewStore } from "@/stores/xray-view-store";
 import { formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { buildStockXrayPrompt } from "@/lib/xray/stock-xray-prompt";
 import { groupStocksByTicker, mergeStockGroup, assignColors } from "../asset-detail-tabs";
 import { truncateName } from "@/lib/utils";
@@ -61,7 +61,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
         return (
           <div key={item.key} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm sm:text-base font-semibold truncate">{item.label}</span>
+              <span className="text-sm md:text-base font-semibold truncate">{item.label}</span>
               <span className="text-sm font-semibold tabular-nums text-foreground/80 shrink-0">
                 {formatShortCurrency(Math.round(item.value))} · {pct}%
               </span>
@@ -77,7 +77,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
                 {item.topThemes.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-primary/10 text-primary font-medium"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs bg-primary/10 text-primary font-medium"
                   >
                     #{t}
                   </span>
@@ -89,7 +89,7 @@ function BreakdownVisual({ result }: { result: BreakdownResult }) {
                 {item.contributions.map((c, ci) => (
                   <span
                     key={`${c.ticker}-${ci}`}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-muted/40 text-muted-foreground tabular-nums"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs bg-muted/40 text-muted-foreground tabular-nums"
                     title={`${c.name} · ${formatShortCurrency(Math.round(c.value))}`}
                   >
                     {truncateName(c.displayLabel, 15)}
@@ -151,7 +151,7 @@ export function StockXrayView() {
     // min-w-0 chain: 부모 flex item(Card·CardContent)이 자식 max-content에 끌려 grow하지 않도록 차단 → wrapper가 부모 폭에 고정되어 가로 스크롤 정상 작동
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <Microscope className="size-5 text-primary" />
           주식 X-Ray
         </CardTitle>
@@ -206,7 +206,7 @@ export function StockXrayView() {
             <BreakdownVisual result={result} />
           )}
           {incomplete && showWarning && result.items.length > 1 && (
-            <p className="mt-3 text-[11px] sm:text-xs text-muted-foreground">
+            <p className="mt-3 text-2xs text-muted-foreground">
               ⓘ 미분류 종목 {unclassPct}%는 외부 분류 데이터 수집 후 갱신됩니다.
             </p>
           )}
@@ -215,7 +215,7 @@ export function StockXrayView() {
         {/* AI 진단 프롬프트 복사 — 주식 한정 */}
         <div className="rounded-lg bg-muted/50 dark:bg-card dark:rounded-xl dark:shadow-sm p-4 space-y-3">
           <div>
-            <p className="text-sm sm:text-base font-bold">📋 주식 X-Ray AI 프롬프트</p>
+            <p className="text-base font-bold">📋 주식 X-Ray AI 프롬프트</p>
             <p className="text-sm text-muted-foreground mt-1">
               주식 분포를 바탕으로 현재 상태를 진단하는 프롬프트입니다.
             </p>

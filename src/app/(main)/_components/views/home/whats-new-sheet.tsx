@@ -142,7 +142,7 @@ export function WhatsNewHost() {
                     {badgeIds.has(entry.id) && (
                       <span
                         data-testid="whats-new-item-new"
-                        className="inline-flex mr-1.5 rounded bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-bold text-orange-700 dark:text-orange-400 align-middle"
+                        className="inline-flex mr-1.5 rounded bg-orange-500/10 px-1.5 py-0.5 text-2xs font-bold text-orange-700 dark:text-orange-400 align-middle"
                       >
                         새
                       </span>
@@ -153,7 +153,7 @@ export function WhatsNewHost() {
                     <p className="text-sm text-muted-foreground leading-relaxed mt-1 break-keep wrap-break-word text-pretty">{entry.body}</p>
                   )}
                   <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground tabular-nums">{dateLabel(entry.id)}</span>
+                    <span className="text-2xs text-muted-foreground tabular-nums">{dateLabel(entry.id)}</span>
                     {entry.featureId && (
                       <button
                         type="button"

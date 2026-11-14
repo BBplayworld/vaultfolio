@@ -18,7 +18,7 @@ export function LoadingNote({ active, label, slowLabel = SLOW_LABEL, className, 
     <div className={cn("min-h-6", className)}>
       <span role="status" className="sr-only">{label}</span>
       {phase !== "quiet" && (
-        <p aria-hidden data-testid="loading-note" data-phase={phase} className={cn("flex items-center gap-2 text-[13px] text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150", chip && "rounded-full bg-card/90 px-3 py-1 shadow-sm")}>
+        <p aria-hidden data-testid="loading-note" data-phase={phase} className={cn("flex items-center gap-2 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150", chip && "rounded-full bg-card/90 px-3 py-1 shadow-sm")}>
           <Loader2Icon className="size-3.5 shrink-0 motion-safe:animate-spin" />
           <span className="break-keep whitespace-nowrap">{phase === "slow" ? slowLabel : label}</span>
         </p>

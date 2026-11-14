@@ -330,7 +330,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
           sm: 이상은 기존 중앙 배치(760px, 94dvh)로 복귀. 여기는 캡처 대상이 아니라 셸이라 sm: 허용(R32 무관). */}
       <DialogContent className="p-0 gap-0 overflow-x-hidden overflow-y-auto sm:overflow-hidden transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 flex flex-col border shadow-lg top-[max(0.75rem,env(safe-area-inset-top))] left-3 right-3 translate-x-0 translate-y-0 w-auto max-w-none h-auto max-h-[calc(100dvh_-_max(0.75rem,env(safe-area-inset-top))_-_max(0.75rem,env(safe-area-inset-bottom)))] rounded-2xl sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-[760px] sm:h-[94dvh] sm:max-h-[96dvh] sm:rounded-lg [&_[data-slot=dialog-close]]:top-3 sm:[&_[data-slot=dialog-close]]:top-4">
         <DialogHeader className="px-3 pt-3 pb-2 sm:px-5 sm:py-4 text-left">
-          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <DialogTitle className="flex items-center gap-2">
             <IdCard className="size-4 text-primary" />
             인증카드
           </DialogTitle>
@@ -426,7 +426,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
             2026-09부터 상세>주식탭보다 ~2px 작게 조정).
             모바일: flex-none + 자연 높이라 이 영역엔 자체 스크롤바가 없다(팝업 셸이 통째로 늘어남).
             sm: 이상은 고정 높이 다이얼로그의 스크롤 본문(flex-1 + overflow-y-auto). */}
-        <div className="flex-none overflow-visible sm:flex-1 sm:overflow-y-auto px-0 py-1 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
+        <div className="type-fixed flex-none overflow-visible sm:flex-1 sm:overflow-y-auto px-0 py-1 sm:p-4 outline-none focus:outline-none focus-visible:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus-visible:outline-none [&_*]:ring-0 [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0 [&_path]:outline-none">
           <ShareCard
             variant={variant}
             hideAmounts={!showAmounts}
@@ -439,7 +439,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
             기기·뷰포트 무관 100% 동일(R32). 항상 마운트돼 있어야 handleSave 시점에 레이아웃됨. */}
         <div
           aria-hidden
-          className="fixed left-[-9999px] top-0 pointer-events-none"
+          className="type-fixed fixed left-[-9999px] top-0 pointer-events-none"
           style={{ width: CARD_WIDTH }}
         >
           <ShareCard

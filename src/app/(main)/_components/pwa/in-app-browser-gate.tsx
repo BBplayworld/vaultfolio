@@ -119,7 +119,7 @@ export function InAppBrowserGate() {
           <header className="flex flex-col items-center gap-3 text-center">
             <ShieldAlert aria-hidden className="size-8 text-amber-600 dark:text-amber-400" />
             <h1 className="text-lg font-bold text-balance">외부 브라우저에서 열어주세요</h1>
-            <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
+            <p className="text-sm text-muted-foreground leading-relaxed text-pretty break-keep">
               카카오톡·네이버 등 인앱 브라우저에서는 브라우저 세션이 끊겨 데이터가 유실될 수 있어 안전하게 이용할 수 없습니다.
               Chrome·Safari 등 외부 브라우저에서 열어주세요.
             </p>

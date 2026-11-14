@@ -152,7 +152,7 @@ export function TopBar() {
             className="inline-flex items-center gap-1.5 sm:gap-2 -ml-1 sm:-ml-2 px-1.5 sm:px-2 py-1 rounded-md hover:bg-muted transition-colors min-w-0"
           >
             <ChevronLeft className="size-6 sm:size-7 shrink-0" />
-            <span className="text-lg sm:text-2xl lg:text-2xl font-bold truncate">{title}</span>
+            <span className="text-base font-semibold truncate">{title}</span>
           </button>
         ) : (
           <>

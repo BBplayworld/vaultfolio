@@ -408,7 +408,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
         }}
       >
         <DialogHeader className={`px-5 pt-5 pb-3 text-left ${scrolled ? "border-b border-border/40 dark:border-white/10" : ""}`}>
-          <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">
+          <DialogTitle ref={titleRef} tabIndex={-1} className="font-bold text-balance break-keep outline-none">
             {titleText}
           </DialogTitle>
         </DialogHeader>

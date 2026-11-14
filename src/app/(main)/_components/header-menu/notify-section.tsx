@@ -40,7 +40,7 @@ function NotifyPreview({ title, body }: { title: string; body: string }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icons/icon-192x192.png" alt="" className="size-9 shrink-0 rounded-[9px]" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 text-2xs text-muted-foreground">
           <span>시크릿에셋</span>
           <span>지금</span>
         </div>
@@ -64,7 +64,7 @@ function TopicChecks({ sel, onToggle }: { sel: string[]; onToggle: (id: string, 
           />
           <span className="flex-1 min-w-0">
             <span className="block text-sm break-keep">{t.label}</span>
-            <span className="block text-[11px] text-muted-foreground break-keep">{t.desc}</span>
+            <span className="block text-2xs text-muted-foreground break-keep">{t.desc}</span>
           </span>
         </label>
       ))}
@@ -324,7 +324,7 @@ export function NotifySection() {
                 <DialogDescription className="sr-only">아침 시장 요약, 국내 장 마감, 월 결산 열림, 세금 일정을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
               </DialogHeader>
               <div>
-                <p className="px-1 pb-1 text-[11px] text-muted-foreground">예시 알림</p>
+                <p className="px-1 pb-1 text-2xs text-muted-foreground">예시 알림</p>
                 <div className="flex flex-col gap-1.5 rounded-xl bg-background p-2">
                   <NotifyPreview title="11/24 아침 시장" body="미국 S&P 500 +0.8% · 나스닥 +1.1% | 국내 코스피 +0.5% · 코스닥 -0.3% · 환율 1,385원⁠(+0.4%) | 오늘 미국 휴장" />
                   <NotifyPreview title="11월 결산이 열렸어요" body="12월 10일까지 이번 달 자산 변화를 볼 수 있어요" />

@@ -29,7 +29,7 @@ export const PURCHASE_PRICE_HELP = {
   create: "비우면 현재 평가액과 같게 기록돼요(손익 0).",
   edit: "일부 팔았다면 평가액과 매입가를 판 금액만큼 함께 줄여 주세요.",
 } as const;
-const HELP = "text-xs text-muted-foreground break-keep text-pretty";
+const HELP = "text-sm text-muted-foreground break-keep text-pretty";
 
 function PhysicalForm({ editData, onClose }: { editData?: PhysicalAsset; onClose: () => void }) {
   const { addPhysicalAsset, updatePhysicalAsset, assetData } = useAssetData();

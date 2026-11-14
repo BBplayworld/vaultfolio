@@ -458,6 +458,14 @@ InputOTP, InputOTPGroup, InputOTPSlot
 
 ---
 
+## 타이포 공용 자산 (#5.114 #215)
+
+- **`PAGE_TITLE`** (`@/config/theme`) — 페이지 제목 공용 클래스(`text-lg md:text-xl font-bold text-foreground text-balance`, 18 / 22 / 24). 상세 탭 6종·거래 내역 3종·X-Ray·상세/성과 허브·자산 변화·시장과 비교·배당·순자산 변화·자산 성적표·세금 관리 19곳이 쓴다. `CardTitle`에는 `className={PAGE_TITLE}`로 넘긴다(새 페이지 제목은 크기를 따로 정하지 않는다).
+- **`text-2xs`** (`globals.css` `@theme`) — 11 / 12 / 12px 메타 캡션·상태 배지 토큰. `text-[11px]`·`text-[10px]`·`text-[9px]` 대신 쓴다.
+- **`type-fixed`** (`globals.css`) — 그 요소 아래 타이포 토큰을 모바일 값으로 고정. 인증카드 프리뷰 래퍼와 캡처 인스턴스(`share-menu.tsx`) 2곳 전용.
+- **`MENU_LABEL`** (`header-menu/menu-styles.ts`) — 메뉴 행 제목 `text-base font-medium break-keep`. 더보기·설정 행 제목은 이 상수를 쓰고 크기를 상속에 맡기지 않는다.
+- 규칙 정본은 `design-system.md` §2. 가드: `src/lib/__tests__/type-scale-{cn,tokens,guard}.test.ts`.
+
 ## 카드 레이아웃 패턴
 
 ```tsx

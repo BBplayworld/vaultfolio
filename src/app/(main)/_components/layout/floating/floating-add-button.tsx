@@ -360,7 +360,7 @@ export function FloatingAddButton() {
               >
                 <Plus className="size-5 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold">보유 현황 업데이트</p>
+                  <p className="text-base font-semibold">보유 현황 업데이트</p>
                   <p className="text-sm text-muted-foreground">잔고 재동기화 · 이력 없음</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
@@ -373,7 +373,7 @@ export function FloatingAddButton() {
               >
                 <ArrowLeftRight className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold">매수/매도 거래 기록</p>
+                  <p className="text-base font-semibold">매수/매도 거래 기록</p>
                   <p className="text-sm text-muted-foreground">신규 종목 등록 가능 · 손익·세금 반영</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
@@ -507,7 +507,7 @@ export function FloatingAddButton() {
                   >
                     <Icon className="size-5 shrink-0" style={{ color: "#FF6B6B" }} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{label}</p>
+                      <p className="text-base font-medium truncate">{label}</p>
                       <p className="text-sm text-muted-foreground">{tradeLabel}</p>
                     </div>
                     <ChevronRight className="size-4 text-muted-foreground shrink-0" />
@@ -535,7 +535,7 @@ export function FloatingAddButton() {
               >
                 <ImageUp className="size-5 text-primary shrink-0" />
                 <div>
-                  <p className="font-medium">스크린샷 가져오기</p>
+                  <p className="text-base font-medium">스크린샷 가져오기</p>
                   <p className="text-sm text-muted-foreground">화면 자동 인식</p>
                 </div>
                 <ChevronRight className="size-4 text-muted-foreground ml-auto shrink-0" />
@@ -547,7 +547,7 @@ export function FloatingAddButton() {
               >
                 <Plus className="size-5 text-primary shrink-0" />
                 <div>
-                  <p className="font-medium">직접 입력</p>
+                  <p className="text-base font-medium">직접 입력</p>
                   <p className="text-sm text-muted-foreground">
                     {holderResync ? (selectedType === "loan" ? "대출별 잔액 고치기" : "계좌별 잔액 고치기") : "숫자로 직접 입력"}
                   </p>

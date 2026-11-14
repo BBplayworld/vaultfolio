@@ -189,7 +189,7 @@ export function MarketLine({ market, onOpen, variant = "slot" }: { market: Marke
       data-screenshot-hide
       aria-label={`시장과 비교 하루 보기${full ? `, ${full}` : ""}`}
       onClick={onOpen}
-      className={`@container relative flex w-full items-center text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground ${variant === "panel" ? "mt-2 min-h-10 max-w-xs border-t border-border dark:border-border/40" : "-mt-2 min-h-5 px-4 after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"}`}
+      className={`@container relative flex w-full items-center text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground ${variant === "panel" ? "mt-2 min-h-10 max-w-xs md:max-w-[22.5rem] border-t border-border dark:border-border/40" : "-mt-2 min-h-5 px-4 after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"}`}
     >
       <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap">
         {state === "loading" && <span aria-hidden className={`inline-block h-4 w-44 rounded ${SKELETON_FILL}`} />}

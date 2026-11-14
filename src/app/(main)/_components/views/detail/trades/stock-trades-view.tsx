@@ -20,7 +20,7 @@ import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
 import { DeleteRollbackDialog } from "../../../forms/trade/guards/delete-rollback-dialog";
 import { stockCategories } from "@/config/asset-options";
-import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import type { Stock, Transaction } from "@/types/asset";
 import type { PositionSnapshot, PositionPreview } from "@/types/transaction";
 
@@ -206,7 +206,7 @@ export function StockTradesView() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-4" style={{ color: MAIN_PALETTE[0] }} />
           거래내역
         </CardTitle>
@@ -217,7 +217,7 @@ export function StockTradesView() {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-bold">{target.name}</span>
             {target.ticker && <span className="text-sm font-mono text-muted-foreground">({target.ticker})</span>}
-            <Badge variant="outline" className="text-[10px] py-0">{categoryLabel}</Badge>
+            <Badge variant="outline" className="text-2xs py-0">{categoryLabel}</Badge>
           </div>
           {summaryStock && (
             <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
@@ -270,7 +270,7 @@ export function StockTradesView() {
             <button
               type="button"
               onClick={() => setCustomOpen((v) => !v)}
-              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] sm:text-[13px] transition-colors ${customOpen ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${customOpen ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`}
             >
               <CalendarSearch className="size-3.5" /> 직접 설정
             </button>
@@ -308,7 +308,7 @@ export function StockTradesView() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-[11px] text-muted-foreground tabular-nums">총 {filtered.length.toLocaleString()}건</p>
+            <p className="text-2xs text-muted-foreground tabular-nums">총 {filtered.length.toLocaleString()}건</p>
             <div data-testid="trades-list-box" className="space-y-3 dark:space-y-0 dark:divide-y dark:divide-border/40 dark:rounded-xl dark:bg-card dark:shadow-sm dark:overflow-hidden">
             {Object.entries(grouped).map(([date, txs]) => (
               <div key={date} className="dark:px-4 dark:py-3">
@@ -326,7 +326,7 @@ export function StockTradesView() {
                             {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
                           </p>
                           {brokerScope === "all" && (
-                            <p className="text-[11px] text-muted-foreground truncate">
+                            <p className="text-2xs text-muted-foreground truncate">
                               {groupStocks.find((s) => s.id === tx.stockId)?.broker || "미지정"}
                             </p>
                           )}
@@ -336,7 +336,7 @@ export function StockTradesView() {
                             {tx.type === "buy" ? "+" : "-"}{formatCurrency(Math.round(amt))}
                           </p>
                           {tx.reflected && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">반영</span>
+                            <span className="text-2xs px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">반영</span>
                           )}
                         </div>
                         <Button
@@ -365,7 +365,7 @@ export function StockTradesView() {
                 </Button>
               ) : (
                 <div ref={sentinelRef} className="h-8 flex items-center justify-center">
-                  <span className="text-[11px] text-muted-foreground">불러오는 중…</span>
+                  <span className="text-2xs text-muted-foreground">불러오는 중…</span>
                 </div>
               )
             )}

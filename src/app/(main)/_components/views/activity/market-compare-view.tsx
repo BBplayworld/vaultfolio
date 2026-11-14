@@ -9,7 +9,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
 import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { groupStocksByRowTicker } from "@/lib/finance/stock-page";
 import { useStockPageStore } from "@/stores/stock-page-store";
@@ -189,7 +189,7 @@ export function MarketCompareView({ init }: { init?: ChangeInit } = {}) {
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div>
         <div className="flex h-11 items-center gap-1.5">
-          <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-foreground text-balance">시장과 비교</h2>
+          <h2 className={PAGE_TITLE}>시장과 비교</h2>
           <InfoHint summary="지금 수량을 기간 내내 들고 있었다고 보고 계산해요.">
             <p className="text-pretty break-keep">종목마다 시작 종가 기준 평가액 비중으로 합쳤어요.</p>
             <p className="text-pretty break-keep">배당은 보유 종목과 시장 모두 넣지 않았어요.</p>
@@ -229,7 +229,7 @@ export function MarketCompareView({ init }: { init?: ChangeInit } = {}) {
       {!kisUnavailable && classified && (blocks.length > 0 || classified.notCompared.length > 0) && (
         <section data-testid="market-list" className={SECTION}>
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm sm:text-base font-bold text-foreground">종목별</h3>
+            <h3 className="text-base font-bold text-foreground">종목별</h3>
             <InlineSelector fullWidth tight value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
           </div>
           <div key={listPeriod} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
@@ -302,13 +302,13 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
       <div
         role="table"
         aria-label={head}
-        className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-baseline gap-x-1 gap-y-3 min-[375px]:gap-x-1.5 sm:max-w-md"
+        className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-baseline gap-x-1 gap-y-3 min-[375px]:gap-x-1.5 sm:max-w-md sm:grid-cols-[minmax(0,1fr)_repeat(3,auto)] sm:gap-x-2 md:gap-x-4 lg:grid-cols-[auto_repeat(3,minmax(0,1fr))] lg:gap-x-1.5"
       >
         <div role="row" className="contents">
           <span role="columnheader" aria-label="구분" />
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">보유 종목</span>
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">{indexName}</span>
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">차이</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">보유 종목</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">{indexName}</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">차이</span>
         </div>
         <div role="none" className="col-span-4 h-px bg-border dark:bg-border/40" />
         {COMPARE_PERIODS.map((p, i) => {
@@ -318,7 +318,7 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
           return (
             <div key={p} role="row" data-period={p} className="contents">
               <div role="rowheader">
-                <span className="text-sm font-semibold text-foreground">{COMPARE_PERIOD_LABEL[p]}</span>
+                <span className="text-sm font-semibold text-foreground whitespace-nowrap">{COMPARE_PERIOD_LABEL[p]}</span>
                 <RowRange cell={c} period={p} />
               </div>
               <ValueCell loading={loading} width="w-12">
@@ -349,7 +349,7 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
 // 올해는 `25.12.30→26.11.10`(연도 포함), 연초 휴장이면 `집계 전`
 function RowRange({ cell, period }: { cell: PeriodCell | null; period: ComparePeriod }) {
   const r = cell ? cellRange(cell, period) : null;
-  const cls = "block whitespace-nowrap text-[11px] leading-4 text-muted-foreground tabular-nums";
+  const cls = "block whitespace-nowrap text-2xs leading-4 text-muted-foreground tabular-nums";
   if (r?.kind === "holiday") return <span className={cls}>휴장<span className="max-[374px]:block">&nbsp;</span></span>;
   if (r?.kind === "pending") return <span className={cls}>집계 전<span className="max-[374px]:block">&nbsp;</span></span>;
   if (r?.kind === "range") return <span className={cls}>{r.parts[0]}<span className="max-[374px]:block">{r.parts[1]}</span></span>;

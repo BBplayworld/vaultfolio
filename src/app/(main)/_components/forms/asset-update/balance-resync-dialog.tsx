@@ -158,7 +158,7 @@ export function BalanceResyncDialog({ category }: { category: BalanceCategory })
         onCloseAutoFocus={restoreFocus}
       >
         <DialogHeader className="px-5 pt-5 pb-3 text-left">
-          <DialogTitle ref={titleRef} tabIndex={-1} className="text-base font-bold text-balance break-keep outline-none">{copy.title}</DialogTitle>
+          <DialogTitle ref={titleRef} tabIndex={-1} className="font-bold text-balance break-keep outline-none">{copy.title}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-pretty break-keep leading-relaxed">
             {BALANCE_RESYNC_INTRO[category]}
           </DialogDescription>

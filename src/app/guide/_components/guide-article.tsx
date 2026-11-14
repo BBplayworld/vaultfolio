@@ -24,7 +24,7 @@ function withNowrap(text: string): ReactNode {
   return out;
 }
 
-const BODY = "text-sm sm:text-[15px] leading-7 text-foreground/90 text-pretty break-keep";
+const BODY = "text-sm leading-7 text-foreground/90 text-pretty break-keep";
 const H2 = "text-base font-semibold leading-snug text-balance break-keep";
 const INLINE_LINK = "block min-h-10 py-2 text-sm font-medium text-foreground underline underline-offset-4 dark:text-primary break-keep";
 
@@ -33,12 +33,12 @@ export function GuideArticle({ doc }: { doc: GuideDoc }) {
   return (
     <>
       <div>
-        <h1 data-testid="guide-title" className="text-xl font-bold leading-snug text-balance break-keep sm:text-2xl">
+        <h1 data-testid="guide-title" className="text-xl md:text-2xl font-bold leading-snug text-balance break-keep">
           {doc.h1}
         </h1>
         <p
           data-testid="guide-summary"
-          className="mt-2 text-sm sm:text-[15px] leading-relaxed text-muted-foreground text-pretty break-keep"
+          className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep"
         >
           {withNowrap(doc.summary)}
         </p>
@@ -50,7 +50,7 @@ export function GuideArticle({ doc }: { doc: GuideDoc }) {
             data-testid={`guide-step-${i + 1}`}
             className={i === 0 ? "" : "border-t border-border pt-5 dark:border-border/40"}
           >
-            <span aria-hidden className="text-[11px] font-semibold tabular-nums text-primary">
+            <span aria-hidden className="text-2xs font-semibold tabular-nums text-primary">
               {String(i + 1).padStart(2, "0")}
             </span>
             <h2 className={`${H2} mt-1`}>{withNowrap(step.title)}</h2>

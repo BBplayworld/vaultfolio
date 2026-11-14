@@ -29,7 +29,7 @@ export function NewChip({ spot }: { spot: NewSpot }) {
         data-testid="new-chip"
         data-spot={spot}
         aria-hidden
-        className="ml-1.5 inline-flex rounded bg-orange-500/10 px-1.5 py-0.5 align-middle text-[11px] font-bold leading-none text-orange-700 dark:text-orange-400"
+        className="ml-1.5 inline-flex rounded bg-orange-500/10 px-1.5 py-0.5 align-middle text-2xs font-bold leading-none text-orange-700 dark:text-orange-400"
       >
         새
       </span>

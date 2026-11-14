@@ -18,7 +18,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
 import { DataSourceBadge } from "../../data-source-badge";
-import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
+import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
@@ -64,7 +64,7 @@ export function StockIcon({ ticker, name, isForeign, color, screenshotMode = fal
 
   // 인증카드(캡처 DOM)는 뷰포트 반응형 금지 — SHOT 토큰 고정(R25). shotBig=저장 PNG(×SHOT_BIG_SCALE).
   const sizeCls = screenshotMode ? shotTok.icon : "size-6 sm:size-7";
-  const initialCls = screenshotMode ? shotTok.iconInitial : "text-[9px] sm:text-[10px]";
+  const initialCls = screenshotMode ? shotTok.iconInitial : "text-[10px]";
 
   return (
     <div className={`${sizeCls} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden`} style={{ backgroundColor: color }}>
@@ -113,7 +113,7 @@ export function StockBarChart({ items, total }: {
             <div key={stock.id} className="flex items-center gap-1">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <span className="text-sm text-foreground truncate">{stock.name}</span>
-              <span className="text-sm sm:text-base font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
+              <span className="text-sm font-bold text-muted-foreground shrink-0">{pct.toFixed(1)}%</span>
             </div>
           );
         })}
@@ -298,7 +298,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
   const nameCls = screenshotMode ? shotTok.cardInfoName : ASSET_THEME.cardInfoName;
   const amountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
-  const badgeCls = screenshotMode ? shotTok.badge : "text-[10px] sm:text-[11px] px-1 py-0 sm:ml-1 leading-tight";
+  const badgeCls = screenshotMode ? shotTok.badge : "text-2xs px-1 py-0 sm:ml-1 leading-tight";
   const subCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
   const qtyCls = screenshotMode ? shotTok.bodyText : "text-sm";
   return (
@@ -329,7 +329,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
           {!screenshotMode && todayChip && (
-            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-[11px] max-sm:hidden" />
+            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-2xs max-sm:hidden" />
           )}
         </div>
       </div>
@@ -344,7 +344,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
         {/* 모바일 전용 — 좌측 3줄 초과 방지로 오늘 등락 칩을 손익 줄 아래 우측 정렬(PC는 좌측 인라인) */}
         {!screenshotMode && todayChip && (
           <div className="mt-1 flex justify-end sm:hidden">
-            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-[11px]" />
+            <TodayChangeChip rate={todayChip.rate} label={todayChip.label} className="text-2xs" />
           </div>
         )}
       </div>
@@ -726,7 +726,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
                 <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
                   <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>
                   <span className="text-sm text-muted-foreground">·</span>
-                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight shrink-0`}>
+                  <Badge variant="outline" className={`${ASSET_THEME.categoryBox} text-2xs py-0 leading-tight shrink-0`}>
                     {stockCategories.find((c) => c.value === stock.category)?.shortLabel ?? stock.category}
                   </Badge>
                 </div>
@@ -970,7 +970,7 @@ export function StockCategorySection({
     return idx >= 0 ? barColors[idx] : MAIN_PALETTE[0];
   };
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
-  const legendTextCls = screenshotMode ? shotTok.legendText : "text-sm sm:text-base";
+  const legendTextCls = screenshotMode ? shotTok.legendText : "text-sm";
 
   return (
     <div className={`${screenshotMode ? "px-0" : "px-1 sm:px-2"} space-y-3`}>
@@ -1107,7 +1107,7 @@ function StockSortSelect({ value, onChange, categoryCount }: { value: StockSort;
         size="sm"
         data-testid="stock-sort"
         aria-label="정렬"
-        className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-[13px] sm:text-sm lg:text-base bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${mode.trigger}`}
+        className={`relative h-8 min-w-8 shrink-0 gap-0.5 rounded-md px-1.5 text-sm bg-transparent dark:bg-transparent dark:hover:bg-transparent dark:border-0 [&>svg:last-child]:size-3.5 after:absolute after:-inset-y-1 after:inset-x-0 ${chosen} ${mode.trigger}`}
       >
         <ArrowDownWideNarrow aria-hidden className={`size-4 text-current ${mode.icon}`} />
         {/* Radix SelectValue는 className을 버리므로 감싸서 숨긴다 */}
@@ -1233,7 +1233,7 @@ export function StockTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>주식</CardTitle>
+        <CardTitle className={PAGE_TITLE}>주식</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 */}

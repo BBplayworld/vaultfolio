@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { physicalAssetTypes } from "@/config/asset-options";
 import { dispatchAddPhysical } from "../../../layout/navigation/asset-dispatch";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
@@ -124,7 +124,7 @@ export function PhysicalTab() {
   return (
     <Card className={ASSET_THEME.contentCard} data-testid="physical-tab">
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>실물 자산</CardTitle>
+        <CardTitle className={PAGE_TITLE}>실물 자산</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <div data-testid="physical-total" data-screenshot-hide>

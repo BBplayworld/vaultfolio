@@ -13,7 +13,7 @@ import { dispatchAddLoanTx } from "../../../layout/navigation/asset-dispatch";
 import { useLoanTxViewStore } from "@/stores/loan-tx-view-store";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, calculateHoldingDays, daysUntil, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { Loan, RealEstate, Stock, Cash } from "@/types/asset";
@@ -283,7 +283,7 @@ export function LoanTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>대출</CardTitle>
+        <CardTitle className={PAGE_TITLE}>대출</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         {/* 요약 헤더 — 잔액과 함께 매달 나가는 이자 부담 노출 */}
@@ -292,7 +292,7 @@ export function LoanTab() {
           value={filteredTotal}
           valueClass={ASSET_THEME.text.default}
           inline={filteredAnnualInterest > 0 ? (
-            <span className="text-sm sm:text-base">
+            <span className="text-sm md:text-base">
               <span className="text-muted-foreground">월 이자 </span>
               <span className={`font-bold tabular-nums ${ASSET_THEME.liability}`}>−{formatPriceByMode(Math.round(filteredAnnualInterest / 12))}</span>
               <span className="text-muted-foreground"> · 연 </span>
@@ -369,7 +369,7 @@ export function LoanTab() {
             {paidOffLoans.map((loan) => (
               <div key={loan.id} className="flex items-center gap-3 px-3 dark:px-4 py-2.5 dark:py-3 rounded-lg dark:rounded-none bg-muted/20 dark:bg-transparent">
                 <span className="text-sm font-medium truncate flex-1">{loan.name}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-tight shrink-0">완납</Badge>
+                <Badge variant="outline" className="text-2xs px-1.5 py-0 leading-tight shrink-0">완납</Badge>
                 <Button variant="secondary" size="sm" className="h-8 text-sm gap-1 shrink-0" onClick={() => openPaidOffTxView(loan)}>
                   <History className="size-3.5" /> 내역
                 </Button>

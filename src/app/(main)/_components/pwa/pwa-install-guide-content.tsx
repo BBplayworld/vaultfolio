@@ -104,7 +104,7 @@ export function InstallGuideContent({
               <span className="shrink-0 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
               <p className="text-sm font-bold text-foreground">{codeLabel} 복사</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-2xs font-medium text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5 shrink-0" />
               {codeLabel}가 클립보드에 복사되었습니다.
             </div>

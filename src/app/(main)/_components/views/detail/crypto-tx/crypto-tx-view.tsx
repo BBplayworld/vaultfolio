@@ -15,7 +15,7 @@ import { rollbackTransaction, type PositionLike } from "@/lib/trade/trade-utils"
 import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, PAGE_TITLE } from "@/config/theme";
 import type { Crypto, CryptoTransaction } from "@/types/asset";
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
@@ -127,7 +127,7 @@ export function CryptoTxView() {
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-5 text-primary" />
           {target.name} · 매수/매도 내역
         </CardTitle>
@@ -174,7 +174,7 @@ export function CryptoTxView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm tabular-nums">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개 · {formatCurrency(t.price)}</span>
-                      {!t.reflected && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
+                      {!t.reflected && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>

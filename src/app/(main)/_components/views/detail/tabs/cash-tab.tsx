@@ -12,7 +12,7 @@ import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
 import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
-import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
+import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
 import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
 import { DetailSummaryHeader } from "../detail-summary-header";
@@ -208,7 +208,7 @@ export function CashTab() {
   return (
     <Card className={ASSET_THEME.contentCard}>
       <CardHeader className={ASSET_THEME.contentPad}>
-        <CardTitle>현금</CardTitle>
+        <CardTitle className={PAGE_TITLE}>현금</CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 ${ASSET_THEME.contentPad}`}>
         <DetailSummaryHeader label="총 현금성 자산" value={displayValue} valueClass={ASSET_THEME.text.default} />

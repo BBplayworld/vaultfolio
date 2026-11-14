@@ -365,17 +365,17 @@ export function LoanScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{item.name}</span>
-                        <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-600/30">
+                        <Badge variant="outline" className="text-2xs text-amber-600 border-amber-600/30">
                           {getTypeLabel(item.type)}
                         </Badge>
                         {item.institution && (
                           <span className="text-sm text-muted-foreground">{item.institution}</span>
                         )}
                         {conflictMode === "merge" && assetData.loans.some((l) => keyOfLoan(l) === keyOfLoan(item)) && (
-                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">교체</Badge>
+                          <Badge variant="outline" className="text-2xs text-primary border-primary/30">교체</Badge>
                         )}
                         {item.startDateMissing && (
-                          <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
+                          <Badge variant="outline" className="text-2xs text-amber-500 border-amber-500/30">
                             대출일 확인 필요
                           </Badge>
                         )}

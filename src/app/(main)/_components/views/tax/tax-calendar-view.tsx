@@ -9,7 +9,7 @@ import { ChevronDown, Info, Receipt, TrendingUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { ASSET_THEME } from "@/config/theme";
+import { ASSET_THEME, PAGE_TITLE } from "@/config/theme";
 import { formatCurrency } from "@/lib/number-utils";
 import { FOREIGN_CAPITAL_GAIN_DEDUCTION, TAX_TAG_LABEL, type TaxEvent } from "@/config/tax-calendar";
 import {
@@ -61,7 +61,7 @@ export function TaxCalendarView() {
         <div className="flex items-center gap-2 min-w-0 pt-1">
           <Receipt className={`size-5 shrink-0 ${ASSET_THEME.important}`} />
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-foreground">세금 관리</h2>
+            <h2 className={PAGE_TITLE}>세금 관리</h2>
             <p className="text-sm text-muted-foreground">세금 일정 안내와 연말 절세 시뮬레이션</p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export function TaxCalendarView() {
                 </>
               )}
             </p>
-            <p className="text-xs text-muted-foreground/80">
+            <p className="text-sm text-muted-foreground/80">
               반영된 매도 {realizedGain.sellCount}건 기준
               {realizedGain.estimated && " · 매수 기록·체결 환율이 없는 건은 현재 평단·환율로 추정"}
             </p>
@@ -190,10 +190,10 @@ function TaxEventCard({ event, tags }: { event: TaxEvent; tags: TaxTagReasons })
             >
               {event.dueLabel}
             </span>
-            <p className="text-sm font-semibold text-foreground text-pretty">{event.title}</p>
+            <p className="text-sm font-semibold text-foreground text-pretty break-keep">{event.title}</p>
           </div>
-          <p className="text-xs text-muted-foreground">{event.who}</p>
-          <p className="text-sm text-muted-foreground text-pretty">{event.summary}</p>
+          <p className="text-xs text-muted-foreground break-keep">{event.who}</p>
+          <p className="text-sm text-muted-foreground text-pretty break-keep">{event.summary}</p>
           <div className="flex flex-wrap gap-1 pt-0.5">
             {event.tags.map((t) => (
               <span

@@ -52,7 +52,7 @@ export default function RatioPage() {
           <span className="text-sm font-semibold text-foreground">{APP_CONFIG.name}</span>
         </header>
         <div>
-          <h1 className="text-xl font-bold leading-snug text-balance break-keep sm:text-2xl">{RATIO_TITLE}</h1>
+          <h1 className="text-xl md:text-2xl font-bold leading-snug text-balance break-keep">{RATIO_TITLE}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">{RATIO_DESC_NODE}</p>
         </div>
         <RatioPreview />

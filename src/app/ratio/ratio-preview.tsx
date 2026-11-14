@@ -279,7 +279,7 @@ export function RatioPreview() {
               <>
                 <Spinner className="size-5 text-brand motion-safe:animate-spin" />
                 <span className="text-sm font-semibold">종목을 읽고 있어요</span>
-                <span className="text-[11px] text-muted-foreground">잠시만 기다려 주세요</span>
+                <span className="text-2xs text-muted-foreground">잠시만 기다려 주세요</span>
               </>
             ) : (
               <>
@@ -287,7 +287,7 @@ export function RatioPreview() {
                   <ImageUp className="size-5" />
                 </span>
                 <span className="text-sm font-semibold">보유 종목 캡처 올리기</span>
-                <span className="text-[11px] text-muted-foreground break-keep">
+                <span className="text-2xs text-muted-foreground break-keep">
                   <span className="whitespace-nowrap">{`JPG${WJ}·${WJ}PNG${WJ}·${WJ}WEBP${WJ}·${WJ}HEIC`}</span>, 10MB 이하
                 </span>
               </>
@@ -391,7 +391,7 @@ export function RatioPreview() {
                       <span className="min-w-0 flex-1 truncate text-sm font-medium" title={r.name}>
                         {r.name}
                       </span>
-                      {r.ticker && <span className="hidden shrink-0 text-[11px] text-muted-foreground min-[360px]:inline">{r.ticker}</span>}
+                      {r.ticker && <span className="hidden shrink-0 text-2xs text-muted-foreground min-[360px]:inline">{r.ticker}</span>}
                       <span className="w-14 shrink-0 text-right text-sm font-semibold tabular-nums">{pctText(r.pct)}</span>
                     </div>
                     <div aria-hidden className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">

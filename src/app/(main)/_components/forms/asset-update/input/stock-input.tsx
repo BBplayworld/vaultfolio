@@ -373,7 +373,7 @@ function StockForm({ editData, onClose }: StockFormProps) {
                                 <span className="truncate text-foreground">{r.name}</span>
                                 <span className="flex items-center gap-1.5 shrink-0">
                                   <span className="font-mono text-xs tabular-nums text-muted-foreground">{r.ticker}</span>
-                                  {r.market && <span className="text-[10px] text-muted-foreground">{r.market}</span>}
+                                  {r.market && <span className="text-2xs text-muted-foreground">{r.market}</span>}
                                 </span>
                               </button>
                             </li>

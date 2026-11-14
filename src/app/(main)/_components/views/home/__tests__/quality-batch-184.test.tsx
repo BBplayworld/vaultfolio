@@ -16,8 +16,8 @@ describe("WeekTrendCard 값 라벨 640 미만 분기(4.96)", () => {
   const html = renderToStaticMarkup(<WeekTrendCard snapshots={dates.map((d, i) => snap(d, 643_000_000 + i * 1_000_000))} />);
   it("640 이상은 기존 표기, 640 미만은 원 없는 11px span 2종", () => {
     expect(html).toContain(formatShortCurrencyDecimal(643_000_000));
-    expect(html).toContain("text-sm font-bold text-foreground leading-none mb-1 sm:inline");
-    expect(html.match(/text-\[11px\] font-bold tabular-nums whitespace-nowrap/g)).toHaveLength(14);
+    expect(html).toContain("text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline");
+    expect(html.match(/text-2xs font-bold tabular-nums whitespace-nowrap/g)).toHaveLength(14);
     expect(html).toContain(">6.43억<");
   });
 });

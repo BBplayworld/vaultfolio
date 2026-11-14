@@ -146,7 +146,7 @@ export function CloudSyncConnectDialog() {
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="size-5 text-primary" /> 이 기기 연결
           </DialogTitle>
-          <DialogDescription className="text-left">
+          <DialogDescription className="text-left break-keep">
             금고 암호{isManual ? "와 동기화 코드" : ""}를 입력하면 클라우드의 자산을 이 기기로 불러오고 자동 동기화를 시작합니다.
           </DialogDescription>
         </DialogHeader>
@@ -165,7 +165,7 @@ export function CloudSyncConnectDialog() {
                 onKeyDown={(e) => { if (e.key === "Enter") doConnect(); }}
                 autoFocus
               />
-              <p className="text-[11px] text-muted-foreground">다른 기기 설정에서 복사한 동기화 코드를 입력하세요.</p>
+              <p className="text-2xs text-muted-foreground">다른 기기 설정에서 복사한 동기화 코드를 입력하세요.</p>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -192,7 +192,7 @@ export function CloudSyncConnectDialog() {
               onKeyDown={(e) => { if (e.key === "Enter") doConnect(); }}
               autoFocus={!isManual}
             />
-            <p className="text-[11px] text-muted-foreground">암호는 저장·전송되지 않습니다. 틀리면 불러올 수 없습니다.</p>
+            <p className="text-2xs text-muted-foreground">암호는 저장·전송되지 않습니다. 틀리면 불러올 수 없습니다.</p>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">

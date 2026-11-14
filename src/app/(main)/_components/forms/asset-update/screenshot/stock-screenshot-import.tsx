@@ -521,7 +521,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         <SelectItem value={BROKER_NONE} className="text-sm text-muted-foreground">증권사 선택 안 함</SelectItem>
                         {securitiesFirms.map((group) => (
                           <div key={group.group}>
-                            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
+                            <div className="px-2 py-1 text-2xs font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
                             {group.items.map((firm) => (
                               <SelectItem key={firm} value={firm} className="text-sm">{firm}</SelectItem>
                             ))}
@@ -597,16 +597,16 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                         {/* 1행: 이름 + 티커 입력 + 환산 뱃지 */}
                         <div className="flex items-center gap-2 flex-wrap justify-between">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <span className="font-bold text-sm sm:text-base text-foreground truncate max-w-[200px]">
+                            <span className="font-bold text-sm md:text-base text-foreground truncate max-w-[200px]">
                               {stock.name}
                             </span>
                             {!stock.ticker && (
-                              <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30 font-medium shrink-0">
+                              <Badge variant="outline" className="text-2xs text-amber-500 border-amber-500/30 font-medium shrink-0">
                                 티커 미확인
                               </Badge>
                             )}
                             {conflictMode === "merge" && assetData.stocks.some((s) => keyOfStock(s) === keyOfStock(stock)) && (
-                              <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0">교체</Badge>
+                              <Badge variant="outline" className="text-2xs text-primary border-primary/30 shrink-0">교체</Badge>
                             )}
                             <Input
                               placeholder={stock.ticker ? stock.ticker : "티커 입력 (필수)"}
@@ -627,7 +627,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                           </div>
 
                           {isForeign && (
-                            <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0 font-medium bg-primary/5">
+                            <Badge variant="outline" className="text-2xs text-primary border-primary/30 shrink-0 font-medium bg-primary/5">
                               {(stock.originalCurrency !== "USD" && stock.originalCurrency !== "JPY")
                                 ? `KRW→USD 환산 (오늘 환율 ${(exchangeRates.USD || 1380).toLocaleString()}원)`
                                 : "USD 그대로 저장"}
@@ -680,7 +680,7 @@ export function StockScreenshotImport({ open: externalOpen, onOpenChange, active
                                 <SelectItem value={BROKER_NONE} className="text-sm text-muted-foreground">증권사 선택 안 함</SelectItem>
                                 {securitiesFirms.map((group) => (
                                   <div key={group.group}>
-                                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
+                                    <div className="px-2 py-1 text-2xs font-semibold text-muted-foreground bg-muted/5">{group.group}</div>
                                     {group.items.map((firm) => (
                                       <SelectItem key={firm} value={firm} className="text-sm">{firm}</SelectItem>
                                     ))}

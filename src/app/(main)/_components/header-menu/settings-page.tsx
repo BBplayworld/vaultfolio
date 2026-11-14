@@ -256,7 +256,7 @@ export function SettingsPage() {
             </button>
             <button type="button" data-testid="settings-row-delete-all" className={MENU_ROW_DESTRUCTIVE} onClick={() => setShowClearDialog(true)} disabled={!hasAssets}>
               <Trash2 className="size-5 shrink-0" />
-              <span className="font-medium">모든 데이터 삭제</span>
+              <span className="text-base font-medium">모든 데이터 삭제</span>
             </button>
           </div>
         </section>
