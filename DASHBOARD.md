@@ -35,7 +35,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.108 | [#209](https://github.com/BBplayworld/vaultfolio/issues/209) 성과 — 자산 변화·자산 성적표 핵심 요약 노출과 상세 펼침(대표 지시) | 기획(전수 점검) 중 | 판정 후 결정 |
+| v5.108 | [#209](https://github.com/BBplayworld/vaultfolio/issues/209) 성과 — 자산 변화·자산 성적표 핵심 요약 노출과 상세 펼침(대표 지시) | 기획·사업·COO 통과(축소) → 명세 중 · 11/25 머지 목표 | COO 위임(medium) |
 
 ### ⏱ 예약된 운영 확인
 - 11/16(월) 09시·16시(±59분): PWA 알림 첫 실발송 [push-cron] 로그(us SPX·COMP, kr 1001, kr.fx) — 이상 시 Vercel Cron Disable
