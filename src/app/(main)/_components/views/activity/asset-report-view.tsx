@@ -465,66 +465,85 @@ export function AssetReportView() {
                 </p>
               </div>
 
-              {/* 3기준 × (넣은 돈·이자·남긴 돈) — 모바일은 기준별 세로 스택(4열 그리드는 금액 폭에 밀려 라벨이 붕괴) */}
-              <div className="space-y-2 sm:hidden">
-                {perfRows.map((r) => (
-                  <div key={r.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-1.5">
-                    <div>
-                      <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
-                      <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+              {/* 실투자금·레버리지 남긴 돈 2줄(5.108 C3) — 모든 자산 남긴 돈은 위 결론 상자가 정본 */}
+              {debt > 0 && (
+                <div className="space-y-2">
+                  {([
+                    { key: "equity", label: "실투자금 · 내 돈", net: equityNet, rate: equityNetRate },
+                    { key: "leverage", label: "레버리지 · 빌린 돈", net: debtNet, rate: debtNetRate },
+                  ] as const).map((r) => (
+                    <div key={r.key} className="flex items-baseline justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
+                      <span className="text-sm font-medium text-foreground break-keep">{r.label}</span>
+                      <span className="flex flex-wrap items-baseline justify-end gap-x-1.5 text-right">
+                        <Signed value={Math.round(r.net)} className="text-sm font-bold" />
+                        {r.rate !== null && (
+                          <span className={`text-sm font-semibold tabular-nums ${getProfitLossColor(r.rate)}`}>
+                            ({r.rate >= 0 ? "+" : ""}{r.rate.toFixed(1)}%)
+                          </span>
+                        )}
+                      </span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm text-muted-foreground shrink-0">넣은 돈</span>
-                        <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm text-muted-foreground shrink-0">이자·연</span>
-                        {renderInterest(r.interest)}
-                      </div>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-semibold text-foreground shrink-0">남긴 돈</span>
-                        {r.value}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* sm+ — 컬럼 대조 표(번 돈 열은 빼고 남긴 돈만 강조). min-w는 자연 폭 이상으로 둬야 가로 스크롤이 실제로 동작 */}
-              <div className="hidden sm:block overflow-x-auto -mx-1 px-1">
-                <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-5 gap-y-2.5 min-w-[440px]">
-                  <span className="text-sm text-muted-foreground">기준</span>
-                  <span className="text-sm text-muted-foreground text-right">넣은 돈</span>
-                  <span className="text-sm text-muted-foreground text-right">이자·연</span>
-                  <span className="text-sm font-semibold text-foreground text-right">남긴 돈</span>
-                  <div className="col-span-4 h-px bg-border/40" />
-
-                  {perfRows.map((r) => (
-                    <Fragment key={r.key}>
-                      <div>
-                        <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
-                        <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
-                      </div>
-                      <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
-                      {renderInterest(r.interest)}
-                      {r.value}
-                    </Fragment>
                   ))}
                 </div>
-              </div>
+              )}
 
               {/* 합계 검산 — 수식만 남긴다(산문 설명 없이도 두 행을 더하면 맞는다는 게 읽힌다) */}
               {debt > 0 && <p className={CAPTION}>실투자금 + 레버리지 = 모든 자산</p>}
 
-              {/* 계산 근거 · 대출 상세 (압축 접기) — 부채가 있을 때만 노출 */}
-              {debt > 0 && (
+              {/* 넣은 돈·이자 · 계산 근거 · 대출 상세 (입구 1개, 5.108 C4) — 부채 0이어도 표시 */}
+              {(
                 <Collapsible open={leverageDetailOpen} onOpenChange={setLeverageDetailOpen} className="rounded-lg bg-muted/30 dark:bg-muted/10">
                   <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-3 text-sm font-semibold text-foreground">
-                    <span>레버리지 계산 근거 · 대출 상세</span>
+                    <span>{debt > 0 ? "넣은 돈·이자 · 계산 근거" : "넣은 돈·이자"}</span>
                     <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${leverageDetailOpen ? "rotate-180" : ""}`} />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-3 pt-4 space-y-5 border-t border-border dark:border-border/40">
+                    <div className="space-y-3">
+                    {/* 3기준 × (넣은 돈·이자) — 남긴 돈은 위 결론·2줄이 정본(5.108 C3) — 모바일은 기준별 세로 스택(4열 그리드는 금액 폭에 밀려 라벨이 붕괴) */}
+                    <div className="space-y-2 sm:hidden">
+                      {perfRows.map((r) => (
+                        <div key={r.key} className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-1.5">
+                          <div>
+                            <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
+                            <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="text-sm text-muted-foreground shrink-0">넣은 돈</span>
+                              <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
+                            </div>
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="text-sm text-muted-foreground shrink-0">이자·연</span>
+                              {renderInterest(r.interest)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* sm+ — 컬럼 대조 표min-w는 자연 폭 이상으로 둬야 가로 스크롤이 실제로 동작 */}
+                    <div className="hidden sm:block overflow-x-auto -mx-1 px-1">
+                      <div className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-5 gap-y-2.5 min-w-[360px]">
+                        <span className="text-sm text-muted-foreground">기준</span>
+                        <span className="text-sm text-muted-foreground text-right">넣은 돈</span>
+                        <span className="text-sm text-muted-foreground text-right">이자·연</span>
+                        <div className="col-span-3 h-px bg-border/40" />
+
+                        {perfRows.map((r) => (
+                          <Fragment key={r.key}>
+                            <div>
+                              <p className="text-sm font-medium text-foreground break-keep">{r.title}</p>
+                              <p className="text-sm text-muted-foreground/70 text-pretty break-keep">{r.desc}</p>
+                            </div>
+                            <span className="text-sm tabular-nums text-foreground text-right">{r.cost}</span>
+                            {renderInterest(r.interest)}
+                          </Fragment>
+                        ))}
+                      </div>
+                    </div>
+                    </div>
+                    {debt > 0 && (
+                    <div className={`space-y-5 ${ASSET_THEME.dividerAccent} pt-4`}>
                     {/* 그룹 1 — 두 관점을 같은 항목명으로 2열 대조.
                         동일한 7단계 계산(빌린돈÷투입원가=비율, 수익×비율=몫수익, 몫수익−이자=남긴돈)을
                         범위만 달리 적용한 것이라, 나란히 두면 금융자산·연간이 전 자산의 부분집합임이 드러난다. */}
@@ -619,6 +638,8 @@ export function AssetReportView() {
                           </button>
                         ))}
                       </div>
+                    )}
+                    </div>
                     )}
                   </CollapsibleContent>
                 </Collapsible>
