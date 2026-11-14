@@ -155,8 +155,8 @@ function MonthRow({ row, prev, change, columns, today, open, onToggle }: {
 export function MonthlyLogBlock({ log, today }: { log: MonthlyLog; today: string }) {
   const { rows, columns } = log;
   const changes = useMemo(() => buildMonthlyLogChanges(rows), [rows]);
-  // 기본: 최신(이번 달) 줄만 펼침. 다중 펼침 허용
-  const [openSet, setOpenSet] = useState<Set<string>>(() => new Set(rows[0]?.kind === "full" ? [rows[0].month] : []));
+  // 기본: 모든 줄 접힘(5.108 A4). 다중 펼침 허용
+  const [openSet, setOpenSet] = useState<Set<string>>(() => new Set());
   const [showAll, setShowAll] = useState(false);
   // 월별 기록 방문(4.83) — 카드가 50% 이상 처음 보일 때 화면 진입당 1회(홈 팁·`새` 표시가 읽는 visitKey `monthly-log`)
   const sectionRef = useRef<HTMLElement>(null);
