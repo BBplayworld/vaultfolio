@@ -228,7 +228,7 @@ export function NotifySection() {
                   ? summary
                   : state === "denied"
                     ? "알림이 차단돼 있어요. 기기 설정에서 허용해 주세요"
-                    : "아침 시장·국내 장 마감·월 결산·세금 마감을 골라 받아요"}
+                    : "아침 시장·국내 장 마감·월 결산·세금 일정을 골라 받아요"}
           </p>
         )}
       </div>
@@ -321,7 +321,7 @@ export function NotifySection() {
                   <Bell className="size-5 text-primary" />
                   알림 켜기
                 </DialogTitle>
-                <DialogDescription className="sr-only">아침 시장 요약, 국내 장 마감, 월 결산 열림, 세금 마감을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
+                <DialogDescription className="sr-only">아침 시장 요약, 국내 장 마감, 월 결산 열림, 세금 일정을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
               </DialogHeader>
               <div>
                 <p className="px-1 pb-1 text-[11px] text-muted-foreground">예시 알림</p>

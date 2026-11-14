@@ -36,8 +36,8 @@ describe("buildTestPayloads", () => {
     expect((await buildTestPayloads(["kr"], "pm2", NOW))[0].t.startsWith("[")).toBe(false);
   });
   it("nearestTaxMessage — 가까운 다음 일정, 연말 이후는 다음 해 첫 일정", () => {
-    expect(nearestTaxMessage("2026-11-14").t).toContain("연금저축");
-    expect(nearestTaxMessage("2026-12-30").t).toContain("5월");
+    expect(nearestTaxMessage("2026-11-14").t).toBe("11월 세금 일정");
+    expect(nearestTaxMessage("2026-12-30").t).toBe("1월 세금 일정");
   });
   it("국내 장 마감 제목은 직전 영업일 종가 날짜(토요일 호출 → 금요일)", async () => {
     const r = await buildTestPayloads(["kr"], "daily", NOW);
