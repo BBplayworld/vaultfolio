@@ -6,7 +6,8 @@
 
 ## 2026-11-12 (v4.93)
 
-### PWA 알림 'A 교체' (#4.91 11-14 대표 결정, 이슈 #179, risk:high)
+### PWA 알림 4종 — 아침 시장 요약·국내 장 마감·월 결산·세금 (#4.91 11-14 대표 결정 2회, 이슈 #179, risk:high)
+- **v4 추가(최종)**: 종류 `morning`(월~금 09시, 미국 | 국내(+환율) | 오늘 휴장, 큰 움직임(지수 ±2%·환율 ±1%) 항목 맨 앞) · `kr`(월~금 16시, 국내 영업일, 코스피·코스닥+환율). 조건 `cond`(daily|pm2)는 두 종류에 공통. 09시 합치기 결산>세금>아침 1건. Cron 2개. 환율 = KIS `X`/`FX@KRW` 일봉, 날짜 검증 통과 때만. 저장 키 `secretasset.push_prefs` v3 `{on,topics,cond}`(v1·v2는 기본값). GA `알림·누름·아침|국내|결산|세금`. 주간 요약·미국 단독 알림은 만들지 않음. 아래는 기반이 된 A 교체 기록.
 - **무엇**: 지수·종목 시세 알림을 없애고 날짜표 알림 2종(`settle` 월 결산 열림=결산 창 첫날 `isSettlementWindowOpenDay`, `tax` 세금 마감=5/1·12/24)으로 교체. 설정은 종류 체크 2개(미리 체크 없음), 조건(매 거래일/±2%) 삭제. 문구는 상태 안내만(요청형·조언·금액 0).
 - **서버**: Cron 1개 `/api/push/cron`(`0 0 * * *`), KIS·시세 호출 0. 저장값 = endpoint·keys 블롭·종류 ID·날짜(`cond` 제거). `markPushSent(topic, date)`.
 - **클라이언트**: 알림 누름 → `/?from=push&t=settle|tax` → `PushHost`가 월 결산(source `push`)/세금 관리로 바로 이동(C80). GA category `push_click_settle|push_click_tax`(`알림·누름·결산|세금`).

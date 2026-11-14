@@ -91,4 +91,13 @@ describe("push 저장소", () => {
     process.env.VERCEL_ENV = "preview";
     expect(await st.countPushSubs()).toBe(0);
   });
+  it("cond 없는 이전 레코드는 daily로 읽는다(구버전 혼재)", async () => {
+    const st = new FileCacheStorage();
+    const id = pushSubId(ENDPOINT);
+    await st.putPushSub(id, rec());
+    const data = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete data.subs[`push:dev:sub:${id}`].rec.cond;
+    fs.writeFileSync(file, JSON.stringify(data));
+    expect((await new FileCacheStorage().getPushSub(id))?.cond).toBe("daily");
+  });
 });

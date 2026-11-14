@@ -344,10 +344,9 @@ getCacheStorage(): ICacheStorage
 
 **클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 15회
 
-### 알림 API (#4.91 'A 교체')
-- `POST|DELETE /api/push/subscribe` — body `{endpoint,p256dh,auth,topics,standalone:true}`(DELETE는 `{endpoint}`). topics는 `settle|tax`만 허용, 그 외 ID·추가 필드(`cond` 등)는 400/폐기. 검증 실패 400·키 미설정 503·IP 30/시간. Redis에는 endpoint 해시(HMAC) 키 + 암호화 블롭 + 종류 ID·날짜만.
-- `GET /api/push/cron` — Cron 1개(`0 0 * * *`, CRON_SECRET·운영 전용). 날짜표(`pushDueOn`)로 결산 열림·세금 마감만 발송, 시세·KIS 호출 0, 응답은 건수만.
+### 알림 API (#4.91)
+- `POST|DELETE /api/push/subscribe` — body `{endpoint,p256dh,auth,topics,standalone:true}`(DELETE는 `{endpoint}`). body에 `cond:"daily"|"pm2"` 필수. topics는 `morning|kr|settle|tax`만 허용, 그 외 ID는 400·추가 필드 폐기. 검증 실패 400·키 미설정 503·IP 30/시간. Redis에는 endpoint 해시(HMAC) 키 + 암호화 블롭 + 종류 ID·cond·날짜만.
+- `GET /api/push/cron` — 09시 KST Cron(`0 0 * * *`): 아침 시장 요약(월~금, 한국 휴장일 포함)·결산·세금, 09시 회차는 구독자별 1건으로 합침(결산>세금>아침). `GET /api/push/cron/kr` — 16시 KST Cron(`0 7 * * *`): 국내 장 마감(평일·국내 영업일). 둘 다 CRON_SECRET·운영 전용, KIS 일봉(지수 4개+환율 `X`/`FX@KRW`) 날짜 검증 통과 항목만, 응답·로그는 건수·항목 상태만(C96). 중단 스위치 = Vercel 대시보드 Cron Jobs Disable.
 - `POST /api/push/test` — preview·로컬 전용(운영 404). 본인 구독 1건에 고정 샘플, 구독당 1분 1회·IP 10/시간.
-- `GET /api/push/cron/{kr,us}` — `Authorization: Bearer CRON_SECRET`, 운영 전용(그 외 204). 응답은 건수만.
 - 환경 변수: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`·`PUSH_STORE_KEY`(base64 32바이트)·`CRON_SECRET`(운영).
 **클라이언트 한도:** `src/hooks/use-gemini-usage.ts` — localStorage `secretasset_gemini_usage`, 하루 30회

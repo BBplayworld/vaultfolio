@@ -986,10 +986,12 @@ computePriceChange(points) → % | null
 ```
 
 ```
-// lib/push/ (#4.93 알림, 4.91 'A 교체') — 서버에는 endpoint·keys(암호화)·알림 종류 ID(settle·tax)만
-// catalog.ts — PUSH_CATALOG(2: settle·tax, as const)·normalizePushTopics·getPushTopic
-// message.ts — pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
-// prefs.ts — secretasset.push_prefs {v:2,on,topics}(v1 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target settle|tax)
+// lib/push/ (#4.93 알림, 4.91) — 서버에는 endpoint·keys(암호화)·알림 종류 ID(morning·kr·settle·tax)·cond만
+// quotes.ts(server) — fetchUsQuotes·fetchKrQuotes(지수+환율 `X`/FX@KRW)·changeFromSeries(마지막 행 날짜=기대 거래일 검증)·항목별 status ok|stale|fail
+// cron-run.ts(server) — runPushCron(req,"morning"|"kr"): 종류별 플래그(시세 없으면 미설정)·구독자별 합치기·`[push-cron]` 로그
+// catalog.ts — PUSH_CATALOG(4: morning·kr·settle·tax)·normalizePushTopics·getPushTopic
+// message.ts — buildMorningMessage·buildKrCloseMessage·mergePushPayloads(PUSH_MERGE_ORDER)·holidayMarketsOn, pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
+// prefs.ts — secretasset.push_prefs {v:3,on,topics,cond}(v1·v2 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target morning|kr|settle|tax)
 // client.ts — detectPushEnv(standalone 아니면 needs-install)·enablePush·updatePushTargets·unsubscribePush(keepPrefs)·sendTestPush·reconcilePush
 // validate.ts — parseSubscribeBody(standalone 필수·허용 호스트·카탈로그 ID)·parseEndpointBody
 // crypto.ts(server) — pushSubId=HMAC-SHA256(PUSH_STORE_KEY, endpoint)·sealSecret/openSecret(AES-256-GCM)
