@@ -126,7 +126,7 @@ export function StockPageEntry({ stock, groupItems, displayCurrency, exchangeRat
             </span>
           )}
           {categoryLabels?.map((label) => (
-            <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} py-0 text-[9px] leading-tight sm:text-[10px]`}>{label}</Badge>
+            <Badge key={label} variant="outline" className={`${ASSET_THEME.categoryBox} py-0 text-2xs leading-tight`}>{label}</Badge>
           ))}
         </span>
         <span className="min-h-5 text-sm text-muted-foreground tabular-nums whitespace-nowrap">

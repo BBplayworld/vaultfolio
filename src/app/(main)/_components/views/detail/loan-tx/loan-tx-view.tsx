@@ -102,7 +102,7 @@ export function LoanTxView() {
         <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <ArrowLeftRight className="size-5 text-primary" />
           {target.name} · 상환/대출 내역
-          {loan.balance === 0 && <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-tight">완납</Badge>}
+          {loan.balance === 0 && <Badge variant="outline" className="text-2xs px-1.5 py-0 leading-tight">완납</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
@@ -146,7 +146,7 @@ export function LoanTxView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold">{isRepay ? "상환" : "추가 대출"}</span>
-                      {!t.reflected && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
+                      {!t.reflected && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>

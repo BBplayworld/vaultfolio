@@ -37,7 +37,7 @@ export function DetailSummaryHeader({
 }: DetailSummaryHeaderProps) {
   const { primary, secondary } = getPriceLayout(value, formatFull, formatShort);
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
-  const valueSizeCls = screenshotMode ? shotTok.summaryValue : "text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums break-all leading-tight";
+  const valueSizeCls = screenshotMode ? shotTok.summaryValue : "text-2xl font-bold tabular-nums break-all leading-tight";
   const labelCls = screenshotMode ? shotTok.bodyText : "text-sm";
   // 인증카드는 배경 박스 없이 아래 비중 바·리스트 박스(래퍼 py-3.5 px-2 + 내부 px-0 = 8px)와
   // 좌우 여백을 정확히 맞춘다(R25: screenshotMode 전용 분기). 하단 패딩은 0으로 두고
@@ -121,8 +121,8 @@ export function ProfitMetric({
   // 표시 기준(반올림 원 단위)이 0이면 부호 없이 회색 — 매입가 비운 실물 '+0원' 붉은색 방지(#109). getProfitLossColor는 공용이라 건드리지 않는다
   const { isZero, sign, colorClass: color } = profitTone(profit);
   const shotTok = shotBig ? ASSET_THEME_SHOT_BIG : ASSET_THEME_SHOT;
-  const amountCls = screenshotMode ? shotTok.profitAmount : "text-base lg:text-lg font-bold tabular-nums whitespace-nowrap";
-  const rateCls = screenshotMode ? shotTok.profitRate : "text-sm lg:text-base font-bold tabular-nums whitespace-nowrap";
+  const amountCls = screenshotMode ? shotTok.profitAmount : "text-base font-bold tabular-nums whitespace-nowrap";
+  const rateCls = screenshotMode ? shotTok.profitRate : "text-sm font-bold tabular-nums whitespace-nowrap";
   const row = (
     <span className="inline-flex items-baseline gap-1">
       {prefix}

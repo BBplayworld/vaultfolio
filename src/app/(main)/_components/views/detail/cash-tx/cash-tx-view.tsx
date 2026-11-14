@@ -153,8 +153,8 @@ export function CashTxView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold">{isDep ? "입금" : "출금"}</span>
-                      {isDep && t.recurring && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
-                      {!t.reflected && <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
+                      {isDep && t.recurring && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
+                      {!t.reflected && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">미반영</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>

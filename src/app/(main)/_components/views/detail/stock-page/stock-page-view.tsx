@@ -171,10 +171,10 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
       {/* 머리 — 제목 역할. 평가·내 수익은 상세·주식 행과 같은 계산 */}
       <section data-testid="stock-page-head" className={`${SECTION} ${BODY_ENTER} flex flex-col !gap-1`} style={{ animationFillMode: "backwards" }}>
         <h2 className="text-base font-semibold break-keep [overflow-wrap:anywhere] line-clamp-2" title={longName}>{head.merged.name}</h2>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-muted-foreground">
           {ticker && <span className="font-mono">({head.merged.ticker}{marketLabel ? ` · ${marketLabel}` : ""})</span>}
           {categoryLabels.map((l) => (
-            <Badge key={l} variant="outline" className={`${ASSET_THEME.categoryBox} text-[9px] sm:text-[10px] py-0 leading-tight`}>{l}</Badge>
+            <Badge key={l} variant="outline" className={`${ASSET_THEME.categoryBox} text-2xs py-0 leading-tight`}>{l}</Badge>
           ))}
         </div>
         <p data-testid="stock-page-value" className="mt-1 text-2xl font-bold tabular-nums leading-tight text-foreground">{head.valueText}</p>
@@ -256,7 +256,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
 
         {/* 상태 줄 — 선택한 점 > 거래 0건 > 창 밖. 차트 아래에 두어 차트가 움직이지 않게 */}
         {state !== "empty" && (
-          <div aria-live="polite" className="min-h-10 text-[13px] flex flex-col justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150" key={selectedDot ? selectedDot.index : "idle"}>
+          <div aria-live="polite" className="min-h-10 text-sm flex flex-col justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150" key={selectedDot ? selectedDot.index : "idle"}>
             {state !== "ready" ? null : selectedDot ? (
               <div data-testid="stock-page-buy-detail" className="flex flex-col gap-0.5 tabular-nums">
                 {selectedDot.txs.slice(0, 3).map((b) => (
@@ -300,7 +300,7 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
         )}
 
         {state !== "empty" && (
-          <p data-testid="stock-page-basis" className="text-[11px] text-muted-foreground text-pretty">{basis}</p>
+          <p data-testid="stock-page-basis" className="text-2xs text-muted-foreground text-pretty">{basis}</p>
         )}
 
         <div className="border-t border-border/40 -mx-4 px-4">
