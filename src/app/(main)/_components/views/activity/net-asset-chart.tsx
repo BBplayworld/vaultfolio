@@ -82,6 +82,11 @@ interface YearlyNetAssetFormProps {
 }
 
 // 연도별 순자산 입력 창 열기 인라인 링크(빈 상태·1점 Hero 공용, 새 버튼 아님)
+// 연 Hero(5.108) — 마지막 연도 항목이 올해보다 앞이면(올해 항목 없음) 비교·원인·진행 중 배지 없이 안내만
+export const kstYear = () => Number(new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 4));
+export const yearlyHeroNoCurrentYear = (latestYear: number | undefined, currentYear: number) => latestYear !== undefined && latestYear < currentYear;
+export const yearlyNoCurrentMessage = (latestYear: number) => `올해 순자산이 기록되면 ${latestYear}년 말과 비교해 드려요`;
+
 function YearlyAddLink() {
   return (
     <button
@@ -315,10 +320,14 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
   let heroPrevYear: number | null = null; // 연: Hero 직전 해(원인 시작 = 그해 12월 스냅샷)
   let heroPrev: YearlyNetAsset | null = null; // 연: Hero 비교 기준 항목(자동 기록 캡션 판정)
 
+  // 올해 항목이 아직 없으면(마지막 항목이 올해보다 앞) 마지막 항목을 '진행 중'으로 오인하지 않는다(5.108 연 Hero)
+  const yearlyNoCurrent = activeView === "yearly" && yearlyHeroNoCurrentYear(allYearlyData.at(-1)?.year, kstYear());
+  const yearlyLatestYear = allYearlyData.at(-1)?.year ?? null;
+
   if (activeView === "yearly") {
     const lastIdx = allYearlyData.length - 1;
     const latest = lastIdx >= 0 ? allYearlyData[lastIdx] : null;
-    const prev = lastIdx >= 1 ? allYearlyData[lastIdx - 1] : null;
+    const prev = lastIdx >= 1 && !yearlyNoCurrent ? allYearlyData[lastIdx - 1] : null;
     diff = (latest && prev) ? latest.netAsset - prev.netAsset : null;
     diffPct = diff !== null && prev && prev.netAsset !== 0
       ? (diff / Math.abs(prev.netAsset)) * 100
@@ -373,7 +382,9 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
           end={heroEnd}
           message={activeView === "daily"
             ? <span data-testid="day-empty" className="text-pretty break-keep">{DAY_EMPTY_MESSAGE}</span>
-            : <>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
+            : yearlyNoCurrent && yearlyLatestYear !== null
+              ? <>{yearlyNoCurrentMessage(yearlyLatestYear)}</>
+              : <>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}

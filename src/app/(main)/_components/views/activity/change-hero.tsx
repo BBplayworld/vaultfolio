@@ -4,14 +4,14 @@
 // 타이포는 홈 Hero(dashboard.tsx 순자산 헤더)와 같다. views/activity 로컬 전용(카탈로그 미등록).
 
 import { SKELETON_FILL } from "@/components/ui/skeleton";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ListChecks } from "lucide-react";
+import { ChevronDown, ListChecks } from "lucide-react";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 import { computeAttributionBetween, type buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { estimateLoanInterest, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
+import { estimateLoanInterest, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
 import { linkedTradeIdOf } from "@/lib/trade/linked-record";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { SECTION, SectionHeader, SpecRow } from "../../layout/ui/report-section";
@@ -365,6 +365,89 @@ const CAUSE_HINT: Record<"month" | "year" | "week", Partial<Record<string, strin
 const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
 const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
 
+// 원인 행 1개 — 연·주·월 공용(행 등장 stagger는 i x 40ms)
+function CauseRow({ c, i, hints, groupEstimated, estimatedLabel, animate = true }: {
+  c: SettlementCause; i: number; hints: Partial<Record<string, string>>; groupEstimated: boolean; estimatedLabel?: string; animate?: boolean;
+}) {
+  return (
+    // 원인 행 40ms 간격 등장(motion-safe) — 지연 동안은 첫 프레임 상태로 둔다
+    <div
+      data-testid={CAUSE_TESTID[c.key]}
+      data-value={c.amount}
+      className={animate ? "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300" : undefined}
+      style={animate ? { animationDelay: `${i * 40}ms`, animationFillMode: "backwards" } : undefined}
+    >
+      <SpecRow
+        label={
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            {SETTLEMENT_CAUSE_LABEL[c.key]}
+            {hints[c.key] && (
+              <span data-screenshot-hide><InfoHint summary={hints[c.key]!} /></span>
+            )}
+            {c.estimated && !groupEstimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
+          </span>
+        }
+      >
+        <span className={getProfitLossColor(c.amount)}>{signed(c.amount)}</span>
+      </SpecRow>
+    </div>
+  );
+}
+
+// 월 탭 표시 순서(5.108 A2) — |amount| 내림차순, 같으면 mapped 기존 순서(안정 정렬). mapped 자체는 바꾸지 않는다
+export const MONTH_CAUSE_VISIBLE = 2;
+export function orderMonthCauses(causes: readonly SettlementCause[]): SettlementCause[] {
+  return causes.map((c, i) => ({ c, i })).sort((a, b) => Math.abs(b.c.amount) - Math.abs(a.c.amount) || a.i - b.i).map((x) => x.c);
+}
+
+// 월 탭 4행 이상 — 상위 2행 + `외 N개`(나머지 합 = deltaNet − 상위 2행 합, 보이는 줄 합 = Hero 증감) 접기
+function MonthCauseRows({ mapped, estimatedLabel, groupEstimated, hints }: {
+  mapped: SettlementCauses; estimatedLabel?: string; groupEstimated: boolean; hints: Partial<Record<string, string>>;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const ordered = orderMonthCauses(mapped.causes);
+  const top = ordered.slice(0, MONTH_CAUSE_VISIBLE);
+  const rest = ordered.slice(MONTH_CAUSE_VISIBLE);
+  const restSum = mapped.deltaNet - top.reduce((s, c) => s + c.amount, 0);
+  // 그룹 배지가 없고 예측 행이 접힌 쪽에만 있을 때 `외 N개` 줄에 같은 문구 배지
+  const restOnlyEstimated = !groupEstimated && rest.some((c) => c.estimated) && !top.some((c) => c.estimated);
+  return (
+    <>
+      {top.map((c, i) => <CauseRow key={c.key} c={c} i={i} hints={hints} groupEstimated={groupEstimated} estimatedLabel={estimatedLabel} />)}
+      <div>
+      <div
+        id={panelId}
+        {...(open ? {} : { inert: true, "aria-hidden": true })}
+        className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-3 py-3">
+            {rest.map((c) => <CauseRow key={c.key} c={c} i={0} hints={hints} groupEstimated={groupEstimated} estimatedLabel={estimatedLabel} animate={false} />)}
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className="-mx-2 flex min-h-10 w-[calc(100%+1rem)] items-center gap-2 rounded-lg px-2 text-left text-sm outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150"
+      >
+        <span className="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-muted-foreground">
+          {open ? "접기" : `외 ${rest.length}개`}
+          {!open && restOnlyEstimated && <span className={CAUSE_BADGE}>{estimatedLabel}</span>}
+        </span>
+        {!open && <span className={`shrink-0 font-semibold tabular-nums ${restSum === 0 ? "text-muted-foreground" : getProfitLossColor(restSum)}`} data-value={restSum}>{restSum === 0 ? formatPriceByMode(0) : signed(restSum)}</span>}
+        <span data-screenshot-hide aria-hidden className="flex size-4 shrink-0">
+          <ChevronDown className={`size-4 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
+        </span>
+      </button>
+      </div>
+    </>
+  );
+}
+
 // 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 다른 점은 입출금 안내의 기간 표현("이번 달"/"올해")뿐
 // footer: 원인 줄 아래 슬롯(주 탭 — 기록 내역·종목 등락 보기, 4.79). 없으면 렌더 diff 0
 export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
@@ -391,30 +474,13 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
       ) : mapped.causes.length === 0 ? (
         <p className={CAUSE_CAPTION}>뚜렷한 변화 원인이 없어요</p>
       ) : (
-        mapped.causes.map((c, i) => (
-          // 원인 행 40ms 간격 등장(motion-safe) — 지연 동안은 첫 프레임 상태로 둔다
-          <div
-            key={c.key}
-            data-testid={CAUSE_TESTID[c.key]}
-            data-value={c.amount}
-            className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
-            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "backwards" }}
-          >
-            <SpecRow
-              label={
-                <span className="inline-flex flex-wrap items-center gap-1.5">
-                  {SETTLEMENT_CAUSE_LABEL[c.key]}
-                  {hints[c.key] && (
-                    <span data-screenshot-hide><InfoHint summary={hints[c.key]!} /></span>
-                  )}
-                  {c.estimated && !groupEstimated && <span data-testid="cause-estimated-badge" className={CAUSE_BADGE}>{estimatedLabel}</span>}
-                </span>
-              }
-            >
-              <span className={getProfitLossColor(c.amount)}>{signed(c.amount)}</span>
-            </SpecRow>
-          </div>
-        ))
+        scope === "month" && mapped.causes.length > MONTH_CAUSE_VISIBLE + 1 ? (
+          <MonthCauseRows mapped={mapped} estimatedLabel={estimatedLabel} groupEstimated={groupEstimated} hints={hints} />
+        ) : (
+          (scope === "month" ? orderMonthCauses(mapped.causes) : mapped.causes).map((c, i) => (
+            <CauseRow key={c.key} c={c} i={i} hints={hints} groupEstimated={groupEstimated} estimatedLabel={estimatedLabel} />
+          ))
+        )
       )}
       {!status && mapped?.showUnrecordedHint && (
         <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해 입출금을 기록하면 더 정확해져요" : "입출금을 기록하면 더 정확해져요"}</p>

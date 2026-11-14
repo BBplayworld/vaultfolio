@@ -154,16 +154,17 @@ describe("줄·패널 MonthlyLogBlock", () => {
     expect(html).not.toContain("monthly-log-toggle-2026-07");
     expect(html.slice(html.indexOf('monthly-log-row-2026-07"'))).toContain("종류별 기록 없음");
   });
-  it("이번 달만 기본 펼침: aria-expanded·aria-controls, 접힌 패널은 inert·aria-hidden·0fr(항상 마운트)", () => {
+  it("모든 줄 기본 접힘(5.108 A4): aria-expanded·aria-controls, 접힌 패널은 inert·aria-hidden·0fr(항상 마운트)", () => {
     const t11 = tagOf(html, "monthly-log-toggle-2026-11");
-    expect(t11).toContain('aria-expanded="true"');
+    expect(t11).toContain('aria-expanded="false"');
     expect(t11).toContain('aria-controls="monthly-log-panel-2026-11"');
     expect(t11).toMatch(/min-h-14/);
     expect(tagOf(html, "monthly-log-toggle-2026-10")).toContain('aria-expanded="false"');
     expect(tagOf(html, "monthly-log-toggle-2026-08")).toContain('aria-expanded="false"');
     const p11 = tagOf(html, "monthly-log-panel-2026-11");
-    expect(p11).toContain("grid-rows-[1fr]");
-    expect(p11).not.toMatch(/inert|aria-hidden/);
+    expect(p11).toContain("grid-rows-[0fr]");
+    expect(p11).toMatch(/inert=""/);
+    expect(p11).toContain('aria-hidden="true"');
     const p10 = tagOf(html, "monthly-log-panel-2026-10");
     expect(p10).toContain("grid-rows-[0fr]");
     expect(p10).toMatch(/inert=""/);

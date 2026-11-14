@@ -211,11 +211,12 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
 const AI_ROW_SURFACE = SECTION.replace(" p-4 space-y-3", "");
 
 // AI 질문 행 버튼(#54) — 보조 카드형(brand 아님: 아래 "캘린더 추가"가 주 버튼). 외피는 SECTION과 같은 면·그림자
-export function SettlementAiButton({ name, onOpen }: { name: string; onOpen: () => void }) {
+// title·testId는 성적표(5.108 C7)가 재사용할 때만 넘긴다 — testId={null}이면 data-testid 없음. 결산 사용처는 기본값 그대로
+export function SettlementAiButton({ name, onOpen, title, testId = "settlement-ai-button" }: { name: string; onOpen: () => void; title?: string; testId?: string | null }) {
   return (
     <button
       type="button"
-      data-testid="settlement-ai-button"
+      data-testid={testId ?? undefined}
       data-screenshot-hide
       onClick={onOpen}
       className={`${AI_ROW_SURFACE} flex w-full min-h-14 items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 motion-safe:active:scale-[0.99] motion-safe:transition-[background-color,scale] motion-safe:duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${BODY_ENTER}`}
@@ -225,7 +226,7 @@ export function SettlementAiButton({ name, onOpen }: { name: string; onOpen: () 
         <Sparkles className="size-4" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep">AI에게 {name} 변화 물어보기</span>
+        <span className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep">{title ?? `AI에게 ${name} 변화 물어보기`}</span>
         <span className="block text-sm text-muted-foreground break-keep">복사해서 외부 AI에 붙여넣기</span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />

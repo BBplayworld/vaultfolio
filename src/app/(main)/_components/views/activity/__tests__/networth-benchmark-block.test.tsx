@@ -146,7 +146,7 @@ describe("데이터 안전 — 정적 검사", () => {
     expect(src).toContain("<NetworthBenchmarkBlock netAsset={summary.netAsset} realEstateCount={assetData.realEstate.length} mine={summary} />");
     // 위치: 5축 측정 뒤, AI 평가 프롬프트 앞
     expect(src.indexOf('title="5축 측정"')).toBeLessThan(src.indexOf("<NetworthBenchmarkBlock"));
-    expect(src.indexOf("<NetworthBenchmarkBlock")).toBeLessThan(src.indexOf("{/* ── AI 평가 프롬프트 ── */}"));
+    expect(src.indexOf("<NetworthBenchmarkBlock")).toBeLessThan(src.indexOf("{/* ── AI 평가 프롬프트(5.108 C7)"));
   });
   it("등급 계산·AI 프롬프트·공유 카드는 구간을 읽지 않는다", () => {
     for (const f of ["src/lib/report/asset-grade.ts", "src/lib/ai-prompts.ts", "src/contexts/asset-data-context.tsx"]) {
