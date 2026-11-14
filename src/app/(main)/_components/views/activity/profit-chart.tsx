@@ -28,6 +28,7 @@ import type { ProfitRefResponse } from "@/app/api/finance/profit/route";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { SECTION } from "../../layout/ui/report-section";
 import { BODY_ENTER, ChangeHero } from "./change-hero";
+import { StockGroupRows } from "./stock-group-rows";
 
 // 시세 전부 실패(429·5xx) 안내 — 원인 단정 없음(#170). 점검 문구와 별개
 const FETCH_FAILED_MESSAGE = "지금은 불러오지 못했어요, 다음에 열면 다시 불러올게요";
@@ -639,7 +640,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                               <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
                             </div>
-                            {catRate !== null && (
+                            {catRate !== null && !(items.length === 1 && items[0].hasRef) && (
                               <div className="min-w-0 text-left min-[400px]:text-right">
                                 <p className={`text-sm tabular-nums break-keep ${getProfitLossColor(catProfit)}`}>
                                   <span className="whitespace-nowrap">{catProfit >= 0 ? "+" : ""}{formatPriceByMode(catProfit)}</span>{" "}
@@ -652,8 +653,11 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                               </div>
                             )}
                           </div>
-                          <div className="divide-y">
-                            {items.map(({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef, fxGain, isForeign }) => {
+                          <StockGroupRows
+                            key={`${marketView}-${key}`}
+                            active={p === period}
+                            items={items}
+                            renderRow={({ stock, ticker, profitAmount, profitRate, currentValue, refValue, hasRef, fxGain, isForeign }) => {
                               const priceGain = profitAmount - fxGain;
                               const showFx = hasRef && isForeign;
                               return (
@@ -684,8 +688,8 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                   </div>
                                 </div>
                               );
-                            })}
-                          </div>
+                            }}
+                          />
                         </div>
                       ))}
                     </div>
