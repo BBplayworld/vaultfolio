@@ -3,5 +3,15 @@
     "deploymentEnabled": {
       "memory": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/push/cron",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/push/cron/kr",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }

@@ -322,6 +322,8 @@ function Hint({ children }: { children: ReactNode }) {
 
 ## 13. 메뉴 행 화면 · 차트 라벨 규약 (#4.46)
 
+- **긴 체크 목록 Dialog 소형 높이 규칙(#4.93)**: `DialogContent max-h-[calc(100dvh-2rem)] overflow-y-auto`, 높이 ≥700이면 목록만 내부 스크롤, 미만(`[@media(max-height:700px)]`)이면 목록 `max-h-none`(중첩 스크롤 금지)+푸터 sticky. 예: 설정 알림 대상 Dialog.
+
 - **최소 노출 비중(#148, 4.77)**: 도넛·비중 바는 항목(양수) 5개 이하일 때 `displayShareWidths`로 표시 폭(각도)만 최소 보장하고 %·금액·라벨은 실제 값을 쓴다. 6개 이상·0% 항목은 현행(0%는 그리지 않음). 라벨 표시 기준은 실제 % 기준.
 - 더보기·설정 메뉴: 섹션 제목 `text-muted-foreground`(라이트·다크 같은 위계, 인디고 금지), 행 아이콘 단색 muted(삭제 행만 rose), 최대 폭 `max-w-2xl` 좌정렬, 상태는 ON/OFF 배지(`menuBadge`) — 다크 ON 배지 전용 `dark:bg-brand/15 dark:text-indigo-300`(대비 8.44:1(실측), 팔레트 직접 사용이라 다른 곳에 재사용하려면 토큰화). 한 줄 안내가 길면 단위 구간을 `whitespace-nowrap`으로 묶는다.
 - 차트 조각 라벨 글자색은 조각색 대비 4.5:1 이상인 흰/검정(`pickDonutLabelColor`), 투명 카드 위 조각 경계는 `--card`가 아니라 `--background`. 조각 안에 들어가지 않는 라벨은 숨기고 범례로 대체한다(`DONUT_LABEL_MIN_PCT`).

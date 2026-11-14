@@ -42,6 +42,10 @@ import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { MENU_COLUMN, MENU_ROW, MENU_ROW_DESTRUCTIVE, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC, menuBadge } from "./menu-styles";
 import { isPwaAuthEnabled, setPwaAuthPin, disablePwaAuth, verifyPwaAuthPin } from "@/lib/pwa/app-lock";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
+import { NotifySection } from "./notify-section";
+import { unsubscribePush } from "@/lib/push/client";
+import { clearPushPrefs, readPushPrefs } from "@/lib/push/prefs";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 export function SettingsPage() {
   const { refreshData, assetData } = useAssetData();
@@ -116,7 +120,11 @@ export function SettingsPage() {
   const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
   useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
 
-  const handleClear = () => {
+  const handleClear = async () => {
+    // 알림(#179): 서버 구독 삭제 → 기기 구독 해제 → 로컬 설정 키 삭제. 체험 모드는 서버 구독이 없으므로 로컬만
+    // prefs.on이 아니라 실제 기기 구독 유무로 판단 — 체험이 아니면 항상 서버 DELETE + 기기 구독 해제(구독 없으면 로컬 키만 삭제)
+    if (!isTrialMode()) await unsubscribePush(false);
+    else clearPushPrefs();
     // 동기화 연결을 먼저 해제(forget) → 빈 자산이 클라우드로 자동 push되어 백업이
     // 덮어써지는 것을 차단한다. 클라우드 금고 자체는 보존(다른 기기·재연결로 복구 가능).
     cs.forget();
@@ -234,6 +242,8 @@ export function SettingsPage() {
           </div>
         </section>
 
+        <NotifySection />
+
         <section data-testid="settings-section-data">
           <p className={MENU_SECTION_LABEL}>데이터</p>
           <div className="flex flex-col gap-2">
@@ -266,6 +276,7 @@ export function SettingsPage() {
             <AlertDialogDescription>
               이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
               {cs.status !== "none" && " 기기 동기화 연결도 끊어집니다. 동기화 데이터는 보존되어 재연결 시 복구할 수 있습니다."}
+              {showClearDialog && !isTrialMode() && readPushPrefs().on && " 알림도 꺼집니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

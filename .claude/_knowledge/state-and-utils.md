@@ -984,5 +984,21 @@ computePriceChange(points) → % | null
 // stores/stock-page-store.ts — useStockPageStore { target: {groupStockIds,name,ticker,category,displayCurrency,origin:"stocks"|"market-compare"}, tradesFromStockPage }  (메모리만)
 // hooks/use-price-history.ts — usePriceHistory(ticker, range, enabled) · requestPriceHistory · buildPriceHistoryUrl  (queryKey ["price-history", ticker, range], 요청 키 {ticker, range})
 ```
+
+```
+// lib/push/ (#4.93 알림, 4.91) — 서버에는 endpoint·keys(암호화)·알림 종류 ID(morning·kr·settle·tax)·cond만
+// quotes.ts(server) — fetchUsQuotes·fetchKrQuotes(지수+환율 `X`/FX@KRW)·changeFromSeries(마지막 행 날짜=기대 거래일 검증)·항목별 status ok|stale|fail
+// cron-run.ts(server) — runPushCron(req,"morning"|"kr"): 종류별 플래그(시세 없으면 미설정)·구독자별 합치기·`[push-cron]` 로그
+// catalog.ts — PUSH_CATALOG(4: morning·kr·settle·tax)·normalizePushTopics·getPushTopic
+// message.ts — buildMorningMessage·buildKrCloseMessage·mergePushPayloads(PUSH_MERGE_ORDER)·holidayMarketsOn, pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
+// prefs.ts — secretasset.push_prefs {v:3,on,topics,cond}(v1·v2 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target morning|kr|settle|tax)
+// client.ts — detectPushEnv(standalone 아니면 needs-install)·enablePush·updatePushTargets·unsubscribePush(keepPrefs)·sendTestPush·reconcilePush
+// validate.ts — parseSubscribeBody(standalone 필수·허용 호스트·카탈로그 ID)·parseEndpointBody
+// crypto.ts(server) — pushSubId=HMAC-SHA256(PUSH_STORE_KEY, endpoint)·sealSecret/openSecret(AES-256-GCM)
+// prefix.ts — pushKeyPrefix() = push:{prod|preview|dev}: (VERCEL_ENV)
+// send.ts(server-only) — isPushConfigured·sendPush(web-push, ok|gone|fail)
+// cron-run.ts(server-only) — runPushCron(req)·kstToday·isCronAuthorized (Cron 1개 /api/push/cron, 시세 호출 0)
+// cache-storage.ts — putPushSub/getPushSub/deletePushSub/listPushSubIdsByTopics/markPushSent (접두어·암호화는 저장소 내부 처리)
+```
 - 스크린샷 평단·현재가 정합(#196, 5.0): `parse-screenshot/price-consistency.ts reconcilePrices(cur, avg, rate, {quantity?, currentValue?, profitAmount?})` → `{currentPrice, averagePrice, action: keep|swap|estimate}`. swap 전 E1(평가금액÷수량)·E2(손익/수익률 부호) 교차 확인, 근거 없으면 4.99 동작.
 - 이미지 단위 정합(5.101): `reconcileImagePrices(rows: {currentPrice, averagePrice, profitRate, evidence?}[])` → 행별 결과 배열. 한 이미지의 위치 방향을 swap 다수결로 소수익률 행에 적용(동률·근거 부족이면 행별 `reconcilePrices` 그대로). `name-normalize.ts stripTrailingQuantity`는 `(숫자` 꼬리·`구분 | 티커`·말줄임 제거 + 마스터 표기 통일.

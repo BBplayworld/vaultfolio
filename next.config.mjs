@@ -67,6 +67,8 @@ const SECURITY_HEADERS = [
 const nextConfig = {
   // 응답 헤더로 프레임워크 노출 안 함
   poweredByHeader: false,
+  // web-push(#179)는 서버 전용 CJS — 번들에 넣지 않고 Node 모듈로 로드(클라이언트 유입 방지)
+  serverExternalPackages: ["web-push"],
   // next/image 미사용 — 이미지 최적화 엔드포인트(/_next/image) 비활성화로 공개 표면·관련 CVE 노출 제거
   images: { unoptimized: true },
   async headers() {

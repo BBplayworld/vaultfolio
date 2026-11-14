@@ -152,6 +152,13 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "resync_continue" }, "이어서 맞추기"],
     ["feature_use", { category: "save_failed" }, "저장 실패"],
     ["feature_use", { category: "linked_trade" }, "거래 저장·계좌 함께 반영"],
+    ["feature_use", { category: "push_on" }, "알림 켜기"],
+    ["feature_use", { category: "push_off" }, "알림 끄기"],
+    ["feature_use", { category: "push_denied" }, "알림 권한 거부"],
+    ["feature_use", { category: "push_click_morning" }, "알림·누름·아침"],
+    ["feature_use", { category: "push_click_kr" }, "알림·누름·국내"],
+    ["feature_use", { category: "push_click_settle" }, "알림·누름·결산"],
+    ["feature_use", { category: "push_click_tax" }, "알림·누름·세금"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
     ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {

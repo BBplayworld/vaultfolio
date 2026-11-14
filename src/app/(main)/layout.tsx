@@ -22,6 +22,7 @@ import { RatioHandoffHost } from "./_components/ratio/ratio-handoff-host";
 import { WhatsNewHost } from "./_components/views/home/whats-new-sheet";
 import { RelinkHost } from "./_components/forms/asset-update/relink/relink-dialog";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import { PushHost } from "./_components/pwa/push-host";
 import { TrialGate } from "./_components/trial/trial-gate";
 
 // preview 전용(#31) — 운영 빌드에서는 렌더 분기 자체가 없어 로드되지 않는다
@@ -59,6 +60,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                 <RatioHandoffHost />
                 <RelinkHost />
                 <WhatsNewHost />
+                <PushHost />
               </SidebarInset>
             </SidebarProvider>
           </TutorialStoreProvider>
