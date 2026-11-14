@@ -28,6 +28,12 @@ export function sumStockProfit(rows: readonly OrderableRow[]): number {
   return rows.reduce((s, r) => s + (r.hasRef ? r.profitAmount : 0), 0);
 }
 
+// 외 줄 표시값 — 원 단위 반올림 차이(소수 원화·해외주식)로 머리와 1원 어긋나지 않게 round(전체) − Σround(보이는 행)
+export function restDisplaySum(all: readonly OrderableRow[], top: readonly OrderableRow[]): number {
+  const topRounded = top.reduce((s, r) => s + (r.hasRef ? Math.round(r.profitAmount) : 0), 0);
+  return Math.round(sumStockProfit(all)) - topRounded;
+}
+
 // active: 기간 탭이 forceMount로 동시에 렌더되므로 비활성이 되면 접어 기간 전환 시 접힘으로 돌아가게 한다
 export function StockGroupRows<T extends OrderableRow>({ items, renderRow, active = true }: {
   items: readonly T[];
@@ -42,7 +48,7 @@ export function StockGroupRows<T extends OrderableRow>({ items, renderRow, activ
   const top = ordered.slice(0, STOCK_ROW_VISIBLE);
   const rest = ordered.slice(STOCK_ROW_VISIBLE);
   const restHasRef = rest.some((r) => r.hasRef);
-  const restSum = sumStockProfit(rest);
+  const restSum = restDisplaySum(ordered, top);
   return (
     <div className="divide-y">
       {top.map(renderRow)}

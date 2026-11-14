@@ -1,7 +1,7 @@
 // 5.111 성과 주식 종목 목록 — 손익 큰 3종목 + `외 N개`
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StockGroupRows, orderStockRows, sumStockProfit } from "../stock-group-rows";
+import { StockGroupRows, orderStockRows, restDisplaySum, sumStockProfit } from "../stock-group-rows";
 
 type Row = { id: string; hasRef: boolean; profitAmount: number; currentValue: number };
 const row = (id: string, profitAmount: number, currentValue: number, hasRef = true): Row => ({ id, hasRef, profitAmount, currentValue });
@@ -74,5 +74,16 @@ describe("StockGroupRows 렌더", () => {
     const ids = [...html.matchAll(/aria-controls="([^"]+)"/g)].map((m) => m[1]);
     expect(ids).toHaveLength(4);
     expect(new Set(ids).size).toBe(4);
+  });
+});
+
+describe("외 줄 원 단위 합 일치(소수 원화)", () => {
+  it("보이는 3행 반올림 합 + 외 표시값 = 그룹 손익 반올림", () => {
+    const mk = (p: number, v: number) => ({ hasRef: true, profitAmount: p, currentValue: v });
+    const rows = [mk(200000.4, 9), mk(120000.4, 8), mk(74504.4, 7), mk(-100000.4, 6), mk(-80000.4, 5), mk(-39316.4, 4)];
+    const top = rows.slice(0, 3);
+    const rest = restDisplaySum(rows, top);
+    const visible = top.reduce((s, r) => s + Math.round(r.profitAmount), 0);
+    expect(visible + rest).toBe(Math.round(sumStockProfit(rows)));
   });
 });
