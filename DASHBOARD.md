@@ -41,7 +41,7 @@
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
 | (PWA) | [#179](https://github.com/BBplayworld/vaultfolio/issues/179) PWA 알림 **A 교체**(결산 열림+세금 마감, 대표 결정 11/14) | 재개발 중(origin/main 병합 포함) → qa·COO | 대표 승인(risk:high) |
-| (신규) | 홈 전일대비 영역 정보 정리(대표 지적 11/14) | 개선안 완료: A안 권고(기본 2줄·정보 11→6·펼침 입구 1개) [문서](https://github.com/BBplayworld/vaultfolio/blob/memory/_discovery/2026-11-14-home-daydiff-declutter.md) → 명세·UI 사양 | 첫 화면 방향 변경 → 대표 데모 승인 |
+| v5.105 | [#207](https://github.com/BBplayworld/vaultfolio/issues/207) 홈 전일대비 영역 정보 정리(대표 지적 11/14) | 명세·UI 사양 완료 → 개발 중 | 첫 화면 방향 변경 → 대표 데모 승인 |
 | v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | 개발 1차 완료 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202)(draft, 통계 값 비어 화면 미표시) · 원문 표 대기(11/16) | **대표 승인**(원칙 3 인접, COO 판정) |
 
 ### ⏱ 예약된 운영 확인
