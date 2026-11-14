@@ -226,7 +226,7 @@ export function SettlementAiButton({ name, onOpen, title, testId = "settlement-a
         <Sparkles className="size-4" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep">{title ?? `AI에게 ${name} 변화 물어보기`}</span>
+        <span className="block text-base font-bold text-foreground text-pretty break-keep">{title ?? `AI에게 ${name} 변화 물어보기`}</span>
         <span className="block text-sm text-muted-foreground break-keep">복사해서 외부 AI에 붙여넣기</span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />

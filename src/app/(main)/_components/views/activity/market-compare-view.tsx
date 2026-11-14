@@ -229,7 +229,7 @@ export function MarketCompareView({ init }: { init?: ChangeInit } = {}) {
       {!kisUnavailable && classified && (blocks.length > 0 || classified.notCompared.length > 0) && (
         <section data-testid="market-list" className={SECTION}>
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm sm:text-base font-bold text-foreground">종목별</h3>
+            <h3 className="text-base font-bold text-foreground">종목별</h3>
             <InlineSelector fullWidth tight value={listPeriod} onChange={setListPeriod} options={LIST_PERIODS} ariaLabel="종목별 기간 선택" className="w-[200px] shrink-0" />
           </div>
           <div key={listPeriod} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
@@ -306,9 +306,9 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
       >
         <div role="row" className="contents">
           <span role="columnheader" aria-label="구분" />
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">보유 종목</span>
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">{indexName}</span>
-          <span role="columnheader" className="text-right text-sm text-muted-foreground">차이</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">보유 종목</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">{indexName}</span>
+          <span role="columnheader" className="text-right text-sm whitespace-nowrap text-muted-foreground">차이</span>
         </div>
         <div role="none" className="col-span-4 h-px bg-border dark:bg-border/40" />
         {COMPARE_PERIODS.map((p, i) => {
@@ -349,7 +349,7 @@ export function MarketBlock({ market, block, count, note }: { market: CompareMar
 // 올해는 `25.12.30→26.11.10`(연도 포함), 연초 휴장이면 `집계 전`
 function RowRange({ cell, period }: { cell: PeriodCell | null; period: ComparePeriod }) {
   const r = cell ? cellRange(cell, period) : null;
-  const cls = "block whitespace-nowrap text-[11px] leading-4 text-muted-foreground tabular-nums";
+  const cls = "block whitespace-nowrap text-2xs leading-4 text-muted-foreground tabular-nums";
   if (r?.kind === "holiday") return <span className={cls}>휴장<span className="max-[374px]:block">&nbsp;</span></span>;
   if (r?.kind === "pending") return <span className={cls}>집계 전<span className="max-[374px]:block">&nbsp;</span></span>;
   if (r?.kind === "range") return <span className={cls}>{r.parts[0]}<span className="max-[374px]:block">{r.parts[1]}</span></span>;

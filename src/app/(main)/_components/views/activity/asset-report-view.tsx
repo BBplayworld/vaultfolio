@@ -39,7 +39,7 @@ function Signed({ value, className = "" }: { value: number; className?: string }
   );
 }
 
-const SECTION_TITLE = "text-sm sm:text-base font-bold text-foreground";
+const SECTION_TITLE = "text-base font-bold text-foreground";
 // 계산 근거의 값 앞 범위 뱃지 — 헤더 행 없이 각 금액이 어느 기준인지 그 자리에서 읽히게.
 // brand 톤은 그룹 제목(GROUP_BADGE) 전용으로 예약하고, 범위 뱃지는 중성 2단으로 낮춰 구분한다.
 const SCOPE_BADGE = "shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -407,7 +407,7 @@ export function AssetReportView() {
             <div className="rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
               <div>
-                <p className={`text-2xl sm:text-3xl font-bold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
+                <p className={`text-2xl font-bold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
                 <div className="mt-1.5 flex items-center justify-center gap-2">
                   <StarRating score={grade.overall} size="lg" />
                   <span className="text-lg font-bold tabular-nums text-foreground">{grade.overall.toFixed(1)}</span>
@@ -448,7 +448,7 @@ export function AssetReportView() {
               <div className="rounded-lg bg-muted/30 px-3 py-3 space-y-0.5">
                 <p className={CAPTION}>이자 내고 남긴 돈 · 모든 자산 기준</p>
                 <p className="flex items-baseline gap-2 flex-wrap">
-                  <Signed value={Math.round(allNet)} className="text-xl sm:text-2xl font-bold" />
+                  <Signed value={Math.round(allNet)} className="text-xl md:text-2xl font-bold" />
                   {allNetRate !== null && (
                     <span className={`text-base font-bold tabular-nums ${getProfitLossColor(allNetRate)}`}>
                       ({allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%)
@@ -607,7 +607,7 @@ export function AssetReportView() {
                         {/* 종합 — 전 자산 기준이 주(主)이므로 부동산 담보 포함 전체 이자. 아래 목록 합계와 일치한다 */}
                         <div className="flex items-baseline justify-between gap-2 rounded-md bg-muted/40 px-2 py-2">
                           <span className="text-sm font-semibold text-foreground">연간 이자 총합</span>
-                          <span className={`text-sm sm:text-base font-bold tabular-nums ${ASSET_THEME.liability}`}>
+                          <span className={`text-sm md:text-base font-bold tabular-nums ${ASSET_THEME.liability}`}>
                             −{formatPriceByMode(Math.round(report.annualInterest))}<span className="text-muted-foreground font-medium">/년</span>
                           </span>
                         </div>
@@ -702,7 +702,7 @@ export function AssetReportView() {
                           ) : axis.score !== null ? (
                             <span className="text-sm font-bold tabular-nums text-foreground w-7 text-right">{axis.score.toFixed(1)}</span>
                           ) : (
-                            <span className="text-sm font-semibold text-muted-foreground w-14 text-right">측정불가</span>
+                            <span className="text-sm font-semibold text-muted-foreground min-w-14 whitespace-nowrap text-right">측정불가</span>
                           )}
                           <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
                         </span>

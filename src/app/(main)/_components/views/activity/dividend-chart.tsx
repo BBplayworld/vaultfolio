@@ -296,7 +296,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   </span>
                 )}
               </div>
-              <p className={`text-2xl sm:text-3xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+              <p className={`text-2xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                 {formatPriceByMode(heroValue)}
               </p>
               {dividendYield && (
@@ -313,7 +313,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                       {dividendYield.text}
                     </span>
                   </p>
-                  <p data-testid="dividend-yield-caption" className="mt-1 text-[11px] leading-relaxed text-muted-foreground text-pretty break-keep">
+                  <p data-testid="dividend-yield-caption" className="mt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
                     <span className="whitespace-nowrap">보유 주식 매입금액 기준 ·</span>{" "}
                     <span className="whitespace-nowrap">해외는 현재 환율</span>
                     {dividendYield.excluded > 0 && (

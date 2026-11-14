@@ -84,7 +84,7 @@ export function AssetChangeView({ init }: { init?: ChangeInit }) {
     <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
       <div className="flex h-11 items-center justify-between gap-3">
         <h2 className={PAGE_TITLE}>자산 변화</h2>
-        <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] shrink-0" />
+        <InlineSelector fullWidth value={scope} onChange={changeScope} options={SCOPES} ariaLabel="범위 선택" className="w-[164px] md:w-[176px] xl:w-[188px] shrink-0" />
       </div>
 
       <ChangeHeroFrame period={periodSelector}>
@@ -200,7 +200,7 @@ function WeekClosingCard({ rows }: { rows: WeekRow[] }) {
           className="flex min-h-10 w-full items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]"
         >
           <Table2 aria-hidden className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
-          <span className="text-sm sm:text-base font-bold text-foreground">날짜별 마감 기록</span>
+          <span className="text-base font-bold text-foreground">날짜별 마감 기록</span>
           <ChevronDown aria-hidden className={`ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
         <div

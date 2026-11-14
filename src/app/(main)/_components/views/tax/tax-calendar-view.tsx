@@ -118,7 +118,7 @@ export function TaxCalendarView() {
                 </>
               )}
             </p>
-            <p className="text-xs text-muted-foreground/80">
+            <p className="text-sm text-muted-foreground/80">
               반영된 매도 {realizedGain.sellCount}건 기준
               {realizedGain.estimated && " · 매수 기록·체결 환율이 없는 건은 현재 평단·환율로 추정"}
             </p>
@@ -192,7 +192,7 @@ function TaxEventCard({ event, tags }: { event: TaxEvent; tags: TaxTagReasons })
             </span>
             <p className="text-sm font-semibold text-foreground text-pretty">{event.title}</p>
           </div>
-          <p className="text-xs text-muted-foreground">{event.who}</p>
+          <p className="text-sm text-muted-foreground">{event.who}</p>
           <p className="text-sm text-muted-foreground text-pretty">{event.summary}</p>
           <div className="flex flex-wrap gap-1 pt-0.5">
             {event.tags.map((t) => (

@@ -102,7 +102,7 @@ export function ChangeHero({ title, titleTestId, range, rangeTestId, badge, acti
                 <p
                   data-testid="change-hero-delta"
                   data-value={Math.round(delta)}
-                  className={`text-2xl sm:text-3xl font-bold tabular-nums leading-tight ${getProfitLossColor(delta)}`}
+                  className={`text-2xl font-bold tabular-nums leading-tight ${getProfitLossColor(delta)}`}
                 >
                   {signed(delta)}
                 </p>
