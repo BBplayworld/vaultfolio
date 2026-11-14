@@ -55,7 +55,10 @@ const rewrite = () => {
     let out = null;
     const has = (x) => found.includes(x);
     if (key.includes("max-")) continue;
-    if (base === "base" && has("sm:lg") && has("lg:2xl")) out = "text-lg md:text-xl";            // 페이지 제목
+    if (base === "sm" && found.length === 1 && el.closest('[data-testid^="home-week"]') && !/font-semibold/.test(c)) out = "text-xs";
+    else if (base === "sm" && has("sm:sm") === false && /hidden/.test(c) && /sm:inline/.test(c) && el.closest('[data-testid^="home-week"]')) out = "text-xs";
+    else if (found.some((f) => /^\[(8|9|10)px\]$/.test(f))) out = "text-2xs";
+    else if (base === "base" && has("sm:lg") && has("lg:2xl")) out = "text-lg md:text-xl";            // 페이지 제목
     else if (base === "lg" && has("sm:2xl")) out = /truncate/.test(c) ? "text-base" : "text-lg md:text-xl"; // TopBar·xl 셀렉터
     else if (base === "2xl" && has("lg:4xl")) out = "text-2xl md:text-3xl";                    // 홈 Display
     else if (base === "2xl" && has("sm:3xl")) out = "text-2xl";                                // 페이지 Hero
@@ -73,8 +76,8 @@ const rewrite = () => {
     else if (base === "[15px]") out = "text-sm";
     else if (base === "[17px]") out = "text-lg";
     else if (base === "[11px]" && has("sm:sm")) out = "text-2xs md:text-xs";                   // 달력 셀
-    else if (base === "sm" && el.closest('[data-testid="home-week-card"]') && !/font-semibold/.test(c)) out = "text-xs"; // 홈 추이 막대 라벨
-    else if (/^\\[(8|9|10|11)px\\]$/.test(base || "")) out = "text-2xs";
+    else if (base === "sm" && el.closest('[data-testid^="home-week"]') && !/font-semibold/.test(c)) out = "text-xs"; // 홈 추이 막대 라벨
+    else if (/^\[(8|9|10|11)px\]$/.test(base || "")) out = "text-2xs";
     else if (base) out = "text-" + base;
     if (!out) continue;
     const nc = (c.replace(re, " ") + " " + out).replace(/\\s+/g, " ").trim();
