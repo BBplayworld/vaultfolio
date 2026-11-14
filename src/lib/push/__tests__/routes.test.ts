@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { store, send, configured } = vi.hoisted(() => ({ configured: vi.fn(() => true), store: { countPushSubs: vi.fn(), putPushSub: vi.fn(), deletePushSub: vi.fn(), getPushSub: vi.fn(), acquireLock: vi.fn(), incrementCounter: vi.fn() }, send: vi.fn() }));
+const { store, send, configured, build } = vi.hoisted(() => ({ build: vi.fn(), configured: vi.fn(() => true), store: { countPushSubs: vi.fn(), putPushSub: vi.fn(), deletePushSub: vi.fn(), getPushSub: vi.fn(), acquireLock: vi.fn(), incrementCounter: vi.fn() }, send: vi.fn() }));
 vi.mock("@/lib/cache-storage", () => ({ getCacheStorage: () => store }));
+vi.mock("../test-payloads", () => ({ buildTestPayloads: (...a: unknown[]) => build(...a) }));
 vi.mock("../send", () => ({ isPushConfigured: () => configured(), sendPush: send }));
 
 import { POST, DELETE } from "@/app/api/push/subscribe/route";
@@ -81,14 +82,16 @@ describe("/api/push/test", () => {
     expect((await TEST(mk("POST", { endpoint: ENDPOINT }))).status).toBe(404);
     expect(send).not.toHaveBeenCalled();
   });
-  it("쿨다운 429, 정상 시 본인 구독 1건에 고정 샘플", async () => {
+  it("쿨다운 429, 정상 시 본인 구독에 종류별 생성 알림을 1건씩", async () => {
+    build.mockResolvedValue([{ m: "settle", t: "11월 결산이 열렸어요", b: "x" }, { m: "tax", t: "세금", b: "y" }]);
     store.getPushSub.mockResolvedValue({ endpoint: ENDPOINT, p256dh: "p", auth: "a", topics: ["settle"], cond: "daily", updatedAt: "2026-11-12" });
     store.acquireLock.mockResolvedValueOnce(null);
     expect((await TEST(mk("POST", { endpoint: ENDPOINT }))).status).toBe(429);
     store.acquireLock.mockResolvedValueOnce("tok");
     send.mockResolvedValue("ok");
     expect((await TEST(mk("POST", { endpoint: ENDPOINT }))).status).toBe(200);
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][1].t).toContain("샘플");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[0][1].m).toBe("settle");
+    expect(build.mock.calls[0][0]).toEqual(["settle"]);
   });
 });

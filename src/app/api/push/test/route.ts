@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
 import { pushKeyPrefix } from "@/lib/push/prefix";
+import { buildTestPayloads } from "@/lib/push/test-payloads";
 import { isPushConfigured, sendPush } from "@/lib/push/send";
 import { pushSubId } from "@/lib/push/crypto";
 import { parseEndpointBody } from "@/lib/push/validate";
 import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
 
-// 테스트 알림(#179) — preview·로컬 전용(운영 404). 호출자 endpoint로 서버에 저장된 그 구독 1건에만 고정 샘플을 보낸다.
+// 테스트 알림(#179) — preview·로컬 전용(운영 404). 호출자 endpoint로 서버에 저장된 그 구독 1건에만,
+// 고른 종류별로 운영 Cron과 같은 생성 함수·실제 시세로 만든 알림을 1건씩(최대 4건) 보낸다.
 // 구독당 1분 1회·IP당 10회/시간. 타인 구독에는 보낼 수 없다(endpoint 소지자만).
 
 export const runtime = "nodejs";
@@ -32,11 +34,16 @@ export async function POST(req: NextRequest) {
   const lock = await storage.acquireLock(`${pushKeyPrefix()}testlock:${id}`, 60);
   if (!lock) return NextResponse.json({ error: "cooldown" }, { status: 429, headers: { ...NO_STORE, "Retry-After": "60" } });
 
-  const result = await sendPush(sub, { m: "test", t: "샘플 · 알림", b: "테스트 알림이에요" });
-  if (result === "gone") {
-    await storage.deletePushSub(id);
-    return NextResponse.json({ error: "not-subscribed" }, { status: 404, headers: NO_STORE });
+  const payloads = await buildTestPayloads(sub.topics, sub.cond);
+  let sent = 0;
+  for (const payload of payloads) {
+    const result = await sendPush(sub, payload);
+    if (result === "gone") {
+      await storage.deletePushSub(id);
+      return NextResponse.json({ error: "not-subscribed" }, { status: 404, headers: NO_STORE });
+    }
+    if (result === "fail") return NextResponse.json({ error: "send-failed" }, { status: 502, headers: NO_STORE });
+    sent++;
   }
-  if (result === "fail") return NextResponse.json({ error: "send-failed" }, { status: 502, headers: NO_STORE });
-  return NextResponse.json({ ok: true }, { headers: NO_STORE });
+  return NextResponse.json({ ok: true, sent }, { headers: NO_STORE });
 }

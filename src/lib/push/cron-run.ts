@@ -38,6 +38,36 @@ export function kstToday(nowMs: number): string {
   return new Date(nowMs + KST_MS).toISOString().slice(0, 10);
 }
 
+/** 시세 조회(운영 Cron·preview 테스트 공용) — 직전 거래일 종가(미국·국내), kr 회차는 오늘 국내 종가. 토큰·예산 실패면 빈 배열 + status */
+export async function loadPushQuotes(today: string, needUs: boolean, needKr: boolean, round: CronRound): Promise<{ us: PushQuote[]; kr: PushQuote[]; status: Record<string, string> }> {
+  let us: PushQuote[] = [];
+  let kr: PushQuote[] = [];
+  const status: Record<string, string> = {};
+  if (!needUs && !needKr) return { us, kr, status };
+  const { token } = await getKisAccessToken(today);
+  if (!token || !(await withinUpstreamBudget("kis", estimateKisCalls(needUs, needKr)))) {
+    status.kis = token ? "budget" : "no-token";
+    return { us, kr, status };
+  }
+  const ctx = { accessToken: token, appKey: process.env.KIS_APP_KEY ?? "", appSecret: process.env.KIS_APP_SECRET ?? "" };
+  const first = { first: true };
+  const yesterday = new Date(`${shiftDate(today, -1)}T00:00:00Z`);
+  if (needUs) {
+    const seg = await fetchUsQuotes(rollbackToUsBusinessDay(yesterday).toISOString().slice(0, 10), ctx, first);
+    us = seg.quotes;
+    for (const [k, v] of Object.entries(seg.status)) status[`us.${k}`] = v;
+  }
+  if (needKr) {
+    const krDate = round === "kr" ? today : rollbackToBusinessDay(yesterday).toISOString().slice(0, 10);
+    const seg = await fetchKrQuotes(krDate, ctx, first);
+    kr = seg.quotes;
+    for (const [k, v] of Object.entries(seg.status)) status[`kr.${k}`] = v;
+  }
+  if (us.length + kr.length === 0) await recordKisFailure();
+  else await recordKisSuccess();
+  return { us, kr, status };
+}
+
 export async function runPushCron(req: Request, round: CronRound = "morning"): Promise<NextResponse> {
   if (!isCronAuthorized(req.headers.get("authorization"))) return json({ error: "unauthorized" }, 401);
   if (process.env.VERCEL_ENV !== "production") return new NextResponse(null, { status: 204 });
@@ -70,35 +100,10 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
   const needed = new Set(dueKinds.filter((k) => subs.some((s) => s.rec.topics.includes(k))));
 
   // 시세 — 아침(미국·국내 직전 거래일 종가)·국내(오늘 종가). 실패해도 결산·세금은 그대로 보낸다
-  let us: PushQuote[] = [];
-  let kr: PushQuote[] = [];
-  const status: Record<string, string> = {};
   // 직전 아침 요약과 같은 거래일이면 조회하지 않는다(같은 종가 반복 방지, 날짜 계산만)
   const needUs = needed.has("morning") && !isRepeatedClose(today, "us");
   const needKr = (needed.has("morning") && !isRepeatedClose(today, "kr")) || needed.has("kr");
-  if (needUs || needKr) {
-    const { token } = await getKisAccessToken(today);
-    if (!token || !(await withinUpstreamBudget("kis", estimateKisCalls(needUs, needKr)))) {
-      status.kis = token ? "budget" : "no-token";
-    } else {
-      const ctx = { accessToken: token, appKey: process.env.KIS_APP_KEY ?? "", appSecret: process.env.KIS_APP_SECRET ?? "" };
-      const first = { first: true };
-      const yesterday = new Date(`${shiftDate(today, -1)}T00:00:00Z`);
-      if (needUs) {
-        const seg = await fetchUsQuotes(rollbackToUsBusinessDay(yesterday).toISOString().slice(0, 10), ctx, first);
-        us = seg.quotes;
-        for (const [k, v] of Object.entries(seg.status)) status[`us.${k}`] = v;
-      }
-      if (needKr) {
-        const krDate = round === "kr" ? today : rollbackToBusinessDay(yesterday).toISOString().slice(0, 10);
-        const seg = await fetchKrQuotes(krDate, ctx, first);
-        kr = seg.quotes;
-        for (const [k, v] of Object.entries(seg.status)) status[`kr.${k}`] = v;
-      }
-      if (us.length + kr.length === 0) await recordKisFailure();
-      else await recordKisSuccess();
-    }
-  }
+  const { us, kr, status } = await loadPushQuotes(today, needUs, needKr, round);
 
   // 종류·날짜 중복 방지 플래그 — 보낼 내용이 있는 종류만 잡는다(시세가 전부 없으면 시장 종류는 잡지 않음)
   const alive = new Set<PushKind>();

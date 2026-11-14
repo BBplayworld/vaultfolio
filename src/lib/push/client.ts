@@ -123,14 +123,17 @@ export async function unsubscribePush(keepPrefs: boolean): Promise<void> {
   else clearPushPrefs();
 }
 
-export type TestResult = "ok" | "cooldown" | "error";
+export type TestResult = "ok" | "empty" | "cooldown" | "error";
 
-/** 테스트 알림(preview 전용) — 서버에 저장된 내 구독 1건에만 고정 샘플 발송 */
+/** 테스트 알림(preview 전용) — 서버에 저장된 내 구독 1건에만 고른 종류별 실제 내용 알림 발송(최대 4건) */
 export async function sendTestPush(): Promise<TestResult> {
   const sub = await getPushSubscription();
   if (!sub) return "error";
   const res = await postJson("POST", "/api/push/test", { endpoint: sub.endpoint });
-  if (res?.ok) return "ok";
+  if (res?.ok) {
+    const j = (await res.json().catch(() => null)) as { sent?: number } | null;
+    return j?.sent === 0 ? "empty" : "ok";
+  }
   return res?.status === 429 ? "cooldown" : "error";
 }
 

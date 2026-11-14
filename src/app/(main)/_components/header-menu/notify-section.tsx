@@ -188,6 +188,7 @@ export function NotifySection() {
     const r = await sendTestPush();
     setTesting(false);
     if (r === "ok") toast.success("테스트 알림을 보냈어요");
+    else if (r === "empty") toast.message("지금 보낼 내용이 없어요(시세 조회 실패 등)");
     else toast.error("잠시 후 다시 시도해 주세요");
   };
 
@@ -274,7 +275,7 @@ export function NotifySection() {
                 <button type="button" data-testid="settings-row-notify-test" className={MENU_ROW} onClick={handleTest} disabled={testing}>
                   <Send className={MENU_ICON} aria-hidden />
                   <div className="flex-1 min-w-0">
-                    <span className={MENU_LABEL}>{testing ? "보내는 중…" : "테스트 알림 보내기"}</span>
+                    <span className={MENU_LABEL}>{testing ? "보내는 중…" : "테스트 알림 받기 (고른 종류 실제 내용)"}</span>
                     <p className={MENU_DESC}>미리보기 환경에서만 보여요</p>
                   </div>
                   {testing && <Spinner className="shrink-0" />}

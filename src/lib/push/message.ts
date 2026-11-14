@@ -28,6 +28,13 @@ export function buildSettleMessage(today: string): PushPayload {
   return { m: "settle", t: `${month}월 결산이 열렸어요`, b: `${next}월 ${CARD_UNTIL_DAY}일까지 이번 달 자산 변화를 볼 수 있어요` };
 }
 
+/** 가장 가까운(오늘 포함, 없으면 다음 해) 세금 알림 문구 — preview 테스트용 */
+export function nearestTaxMessage(today: string): PushPayload {
+  const keys = Object.keys(TAX_PUSH_DATES).sort();
+  const key = keys.find((k) => k >= today.slice(5)) ?? keys[0];
+  return { m: "tax", ...(TAX_PUSH_DATES as Record<string, { t: string; b: string }>)[key] };
+}
+
 /** 오늘(KST YYYY-MM-DD) 보낼 알림 목록 — 없으면 빈 배열 */
 export function pushDueOn(today: string): { kind: PushKind; payload: PushPayload }[] {
   const due: { kind: PushKind; payload: PushPayload }[] = [];
