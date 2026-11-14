@@ -36,7 +36,7 @@
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
 | v5.113 | IP 미저장·푸시 보관 30일·키 분리·단정 보안 문구 2건 | 개발 중 | 대표 승인 |
-| v5.114 | [#215](https://github.com/BBplayworld/vaultfolio/issues/215) 전체 페이지 텍스트 크기 체계(PC·태블릿·모바일, 대표 지시) | 전수 조사 착수(디자이너 fable) · 개발은 5.113 이후 | 판정 후 |
+| v5.114 | [#215](https://github.com/BBplayworld/vaultfolio/issues/215) 전체 페이지 텍스트 크기 체계(PC·태블릿·모바일, 대표 지시) | 조사·스케일·기술·COO 통과 → 5.113 머지 후 개발(fable) | 대표 데모 승인 |
 
 ### ⏱ 예약된 운영 확인
 - 11/16(월) 09시·16시(±59분): PWA 알림 첫 실발송 [push-cron] 로그(us SPX·COMP, kr 1001, kr.fx) — 이상 시 Vercel Cron Disable
