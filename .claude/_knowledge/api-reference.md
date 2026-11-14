@@ -4,7 +4,7 @@
 
 ## 내부 API 라우트
 
-> **공통 가드(S-4.28, `src/server/api-guard.ts`)** — 모든 공개 라우트는 `guardRequest`(cross-site 403·Content-Length 411/413·L1 429)로 시작하고, **캐시 미스일 때만** `guardRateLimit`(L2 `rl:{route}:{ip}`)·`withinUpstreamBudget`을 거친다. 429에는 `Retry-After`. 공개 시세류 성공 응답은 `cdnCacheHeaders()`(`Vercel-CDN-Cache-Control`). 상세는 [architecture.md](./architecture.md) "공개 API 보안".
+> **공통 가드(S-4.28, `src/server/api-guard.ts`)** — 모든 공개 라우트는 `guardRequest`(cross-site 403·Content-Length 411/413·L1 429)로 시작하고, **캐시 미스일 때만** `guardRateLimit`(5.113부터 IP를 Redis에 쓰지 않는 L1 메모리 버킷, 창 ≤ 1분)·`withinUpstreamBudget`을 거친다. 429에는 `Retry-After`. 공개 시세류 성공 응답은 `cdnCacheHeaders()`(`Vercel-CDN-Cache-Control`). 상세는 [architecture.md](./architecture.md) "공개 API 보안".
 >
 > | 라우트 | L1/분 | L2(캐시 미스) | 입력 상한 |
 > | --- | --- | --- | --- |
@@ -151,7 +151,7 @@ Body: { token: "v71P...|v72Z...", owner_id?: string }
 ```
 - **`v72Z`(PIN+localKey)만 저장**, 그 외(v71N·v71P·구버전) 400. 토큰 ≤900k자, 본문 ≤1MB
 - 키: `sha256(token)[:10]`
-- `owner_id`(UUID 형식만, 아니면 신규 발급)로 이전 키 자동 삭제, L2 분당 10회(`rl:share-post`)
+- `owner_id`(UUID 형식만, 아니면 신규 발급)로 이전 키 자동 삭제, L1 분당 10회 + 하루 전역 5000(`rl:share-post:global:{날짜}`)
 
 ### GET /api/share?key=a3f8b2c1ab
 ```
@@ -177,7 +177,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP당 30회 — `reserveGeminiCalls` 원자 예약(과사용 IP는 전역 70%까지), 초과 시 429
+**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP 없는 시간당 전역 150(`rl:gemini:global:{KST 시}`) + L1 분당 5 + 기기당 30(클라이언트 `use-gemini-usage`) — `reserveGeminiCalls` 원자 예약, 초과 시 429. /ratio 입구 풀 일 60(IP 한도 없음)
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
 **Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
@@ -203,7 +203,7 @@ Body: { iv: string, ciphertext: string, baseVersion: number, pubKey: string }
 → 200: { version: number }
 → 409: { asset: { version: number } }  // conflict — 원격이 더 새로움
 → 401: 서명 검증 실패 / 토큰 형식 불량
-→ 429: PUT IP당 분당 10회 초과
+→ 429: PUT 인증 전 L1 IP당 분당 60(메모리) · 서명 통과 후 금고 id별 분당 20(`rl:sync-put:{assetId}:{분}`) · 신규 금고 하루 전역 1000(`rl:sync-new:global:{날짜}`)
 ```
 - 토큰 형식(4.53): assetId `[A-Za-z0-9_-]{8,128}`·nonce `[A-Za-z0-9_-]{1,64}`·sig ≤200자·ts 유한 숫자 — 저장소 조회·서명 검증 **전에** 401. IP는 `api-guard.getClientIp`(x-vercel-forwarded-for 우선, XFF 우측)
 - 서버 저장: `csync:asset:{assetId}` (Upstash Redis or 파일). 구조: `AssetEnvelope { pubKey, iv, ciphertext, version, updatedAt }`
@@ -312,7 +312,6 @@ interface ICacheStorage {
   getKisToken() / setKisToken(token, expiresIn)
   getShareToken(key) / setShareToken(key, token) / deleteShareToken(key)
   getOwnerKey(ownerId) / setOwnerKey(ownerId, key)
-  checkRateLimit(ip): boolean                          // 레거시(rl:legacy:{ip}, sync 라우트 전용) — 신규 라우트는 api-guard 사용
   incrementCounter(key, by, ttlSec): number            // Lua INCR+EXPIRE 원자(TTL 없는 키 방지) — L2·업스트림 예산
   acquireLock(key, ttlSec): token|null / releaseLock(key, token)   // 소유자 토큰 확인 후 해제
   acquireUpbitLock(ttlSec): string|null / releaseUpbitLock(token)

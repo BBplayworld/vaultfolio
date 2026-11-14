@@ -601,7 +601,8 @@ countAssets(data) / toGaAssetType(kebab) / screenPath(viewKey)
 
 ```typescript
 guardRequest(req, { route, maxBodyBytes?, l1PerMinute? }): Response|null  // cross-site 403 · 411/413 · L1 429
-guardRateLimit(req, route, limit, windowSec): Promise<Response|null>       // L2 rl:{route}:{ip} — 캐시 미스에서만 호출
+guardRateLimit(req, route, limit, windowSec): Promise<Response|null>       // 5.113: L1 메모리 버킷(IP는 Redis 미저장, 창>1분 라우트는 분당 환산 최소 3회)
+exceedsDailyGlobal(name, limit): Promise<boolean>   // IP 없는 일 전역 상한 rl:{name}:global:{KST 날짜}. 상수 SYNC_PUT_PER_VAULT_PER_MINUTE·SYNC_NEW_VAULT_DAILY_LIMIT·SHARE_POST_DAILY_LIMIT·GEMINI_GLOBAL_HOURLY_LIMIT
 withinUpstreamBudget(upstream: "kis"|"molit"|"kakao"|"logo", weight?): Promise<boolean>
 reserveGeminiCalls(req, n, msg): Promise<Response|null>                     // IP 일 30회 + 전역 원자 예약
 getClientIp(req)        // x-vercel-forwarded-for → x-real-ip → XFF 우측
@@ -994,7 +995,7 @@ computePriceChange(points) → % | null
 // prefs.ts — secretasset.push_prefs {v:3,on,topics,cond}(v1·v2 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target morning|kr|settle|tax)
 // client.ts — detectPushEnv(standalone 아니면 needs-install)·enablePush·updatePushTargets·unsubscribePush(keepPrefs)·sendTestPush·reconcilePush
 // validate.ts — parseSubscribeBody(standalone 필수·허용 호스트·카탈로그 ID)·parseEndpointBody
-// crypto.ts(server) — pushSubId=HMAC-SHA256(PUSH_STORE_KEY, endpoint)·sealSecret/openSecret(AES-256-GCM)
+// crypto.ts(server) — 5.113 HKDF 분리 — pushSubId=HMAC(HKDF(master,"…/subid/v2"), endpoint)·sealSecret="2:"+AES-256-GCM(HKDF "…/aes/v2" 키)·openSecret 구 형식(접두 없음·마스터 직접) 이중 읽기·pushSubIdLegacy(이행 기간 삭제·폴백 전용, 다음 릴리스에서 제거)·보관 30일(PUSH_SUB_TTL_SEC)·storage.capLegacyPushTtl(cron이 구 형식 만료를 30일로 1회 축소)
 // prefix.ts — pushKeyPrefix() = push:{prod|preview|dev}: (VERCEL_ENV)
 // send.ts(server-only) — isPushConfigured·sendPush(web-push, ok|gone|fail)
 // cron-run.ts(server-only) — runPushCron(req)·kstToday·isCronAuthorized (Cron 1개 /api/push/cron, 시세 호출 0)

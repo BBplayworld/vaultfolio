@@ -595,7 +595,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-API-SECURITY. 공개 API 방어 ([api-guard.ts](../../src/server/api-guard.ts) · [next.config.mjs](../../next.config.mjs)) — S-4.28 보안 범위
 - ⚙ 공개 라우트 목록 = 클라이언트 호출처가 있는 것만(`npm run build` 라우트 목록에 `debug-overseas` 없음, `"use server"` 파일 0개, `/_next/image` 404)
-- ⚙ 거부 순서: cross-site(`Sec-Fetch-Site` cross/same-site·Origin 불일치·`null`) 403 → Content-Length 없음 411·초과 413 → L1 429 → 캐시 히트 즉시 응답 → (미스만) L2 `rl:{route}:{ip}` 429 + `Retry-After` → 업스트림 예산 초과 시 stale/`X-KIS-Unavailable`
+- ⚙ 거부 순서: cross-site(`Sec-Fetch-Site` cross/same-site·Origin 불일치·`null`) 403 → Content-Length 없음 411·초과 413 → L1 429 → 캐시 히트 즉시 응답 → (미스만) 라우트 빈도 한도(5.113 L1 메모리, Redis IP 키 0) 429 + `Retry-After` → 업스트림 예산 초과 시 stale/`X-KIS-Unavailable`
 - ⚙ 입력: 티커 형식 위반·쿼리 구분자(`&`,`?`,`#`,`*`) 제외, 개수 상한 절단, enum 화이트리스트(profit `period`, realestate `op`, dividend `type`), logo size 버킷 스냅·SVG 거부
 - ⚙ Gemini: `reserveGeminiCalls` 원자 예약(IP 30/일, 과사용 IP 전역 70%), parse-screenshot 매직바이트 검사·rawText 미반환, xray 프롬프트는 서버 마스터 이름만
 - ⚙ `cache-storage`: production·preview + KV 미설정 → throw(fail-closed), `setStock` SCAN 없음, upbit 락 소유자 토큰 해제
@@ -857,3 +857,9 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - ⚙ 시장 알림: 아침 문구 틀(미국|국내|휴장·큰 움직임 앞)·pm2 발송 기준·09시 합치기·날짜 검증(`changeFromSeries`)·환율 stale 제외·시세 실패 시 플래그 미설정·국내 회차 영업일(`quotes.test.ts`·`cron.test.ts`·`catalog-message.test.ts`). 운영 첫 실행(C96): 머지 다음 평일 09시·16시 로그 `[push-cron]`의 항목 상태 확인, 이상 시 Cron Disable.
 - ⚙ 카탈로그(morning·kr·settle·tax)·`pushDueOn` 날짜표(결산 말일−3일·세금 5/1·12/24)·문구(금지어·금액·% 0)·prefs v3 단일 형식(v1·v2는 기본값)·subscribe 검증(standalone·허용 호스트·종류 ID·추가 필드 폐기)·저장소(평문 endpoint 0·HMAC id)·cron(401·운영 외 204·중복·410 삭제·건수만 응답)·test 라우트·sw·GA `push_click_settle|tax`. 테스트 `src/lib/push/__tests__/*`
 - 👤 설치한 앱 → 설정 → 알림 켜기 → 종류 체크 4개+`큰 움직임 있는 날만`(미리 체크 없음, 0개면 비활성) → 권한 → 테스트 알림 수신(preview) → 알림 누름 시 월 결산/세금 관리 화면 → 종류 변경 → 끄기 → 모든 데이터 삭제 후 서버 구독 부재. 브라우저 탭은 `홈 화면에 추가한 앱에서 쓸 수 있어요`, 체험 모드는 섹션 없음. 요청 본문에 자산 값 0.
+
+## F-5.113 IP 미저장·푸시 30일
+- ⚙ Redis 키에 IP 없음(`src/lib/__tests__/no-ip-keys.test.ts`·api-guard·sync-route-guard 키 패턴 단언). sync PUT: 금고별 분당 20·신규 금고 일 1000 초과 429, 기존 금고는 신규 한도 영향 없음.
+- ⚙ Gemini: 시간당 전역 150 초과 429(롤백), L1 분당 5, 일 1500 유지, 기기당 30은 클라이언트.
+- ⚙ 푸시: `2:` 블롭 왕복·구 형식 읽기, 구독 POST 시 구 id 삭제, TTL 30일, cron `capLegacyPushTtl`. 👤 preview에서 알림 켜기→테스트 발송 정상.
+- ⚙ C26: '안전하게 전송/전달' 문구 없음(`c26-copy.test.ts`).
