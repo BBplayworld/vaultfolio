@@ -2,11 +2,9 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.111**
+> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.112**
 
-## 🟥 대표님 결정 필요 — 1건
-1. **🔐 [PR #216](https://github.com/BBplayworld/vaultfolio/pull/216) v5.112 간편 공유 암호 교체 — 데모 확인 후 머지(=반영)** — AES-256-GCM·CSPRNG(v73A), 사용 흐름·링크 형식 동일, 기존 링크 30일 자연 소멸(B안), 기기 동기화 영향 0 · qa·COO PASS @c2b466b · risk:high · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/5.112-security-hardening/5.112-decision-brief.md)
-   - 데모: https://secretasset-git-issue-5112-bbplayworlds-projects.vercel.app/?demo=1 → 더보기 → 자산 공유 · 동기화 → 간편 공유 → PIN·링크 복사 → 시크릿 창에서 열기(맞는 PIN 표시·틀린 PIN 거부)
+## 🟥 대표님 결정 필요 — 없음
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -37,8 +35,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.112 | 간편 공유 암호 교체(AES-GCM, 기존 링크 30일 자연 소멸) [PR #216](https://github.com/BBplayworld/vaultfolio/pull/216) | qa·COO PASS → 대표 승인 대기 | 대표 승인(high) |
-| v5.113 | IP 미저장·푸시 보관 30일·키 분리 | 설계 완료, 5.112 다음 | 대표 승인 |
+| v5.113 | IP 미저장·푸시 보관 30일·키 분리·단정 보안 문구 2건 | 개발 중 | 대표 승인 |
 | v5.114 | [#215](https://github.com/BBplayworld/vaultfolio/issues/215) 전체 페이지 텍스트 크기 체계(PC·태블릿·모바일, 대표 지시) | 전수 조사 착수(디자이너 fable) · 개발은 5.113 이후 | 판정 후 |
 
 ### ⏱ 예약된 운영 확인
@@ -141,6 +138,7 @@
 ## ✅ 대표 승인 머지 완료 (최근)
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
+| v5.112 [PR #216](https://github.com/BBplayworld/vaultfolio/pull/216) | 11/14 | 간편 공유 암호 교체(#보안) — AES-256-GCM·CSPRNG, 사용 흐름 동일, 기존 링크 30일 자연 소멸 · 79ecfa0 · 운영 스모크 진행 중 |
 | v5.107 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | 11/14 | 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히(#201) — 10분위 결론 문장+막대, 같은 순자산 5분위 가구 자산 구성, 자세히 펼침(10행·금액 표), 768↑ 2단 · 12fa11c · 운영 스모크 PASS |
 | v5.106 [PR #180](https://github.com/BBplayworld/vaultfolio/pull/180) | 11/14 | PWA 알림 4종(#179) — 아침 시장 요약(월~금 09시)·국내 장 마감(16시)·월 결산·세금, 시장 알림 받는 날(매일/큰 움직임 있는 날만), 미리 체크 0·하루 최대 2건 · f88c9e0 · 운영 스모크 PASS · 첫 실발송 11/16(월) 09·16시 확인(팀은 Vercel 런타임 로그 접근 불가 → 대표님 운영 앱 수신 여부로 확인) |
 | v4.78 [PR #151](https://github.com/BBplayworld/vaultfolio/pull/151) | 11/11 | 시장과 나란히 '올해' 비교(#150) — 하루·1주·1개월·올해 표, 목록 올해, 연 탭 링크 · 54a759c · 운영 스모크 PASS(코스피·S&P 500 연말 종가 일치) |
