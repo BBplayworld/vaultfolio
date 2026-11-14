@@ -24,7 +24,7 @@ import type { AssetEnvelope } from "./cloud-sync/config";
 import { PUSH_TOPIC_IDS } from "@/lib/push/catalog";
 import { pushKeyPrefix } from "@/lib/push/prefix";
 import type { PushStoredSub, PushSubRecord } from "@/lib/push/types";
-import { openSecret, sealSecret } from "@/lib/push/crypto";
+import { isLegacyBlob, openSecret, sealSecret } from "@/lib/push/crypto";
 
 // 저장 직전 암호화·읽을 때 복호화(Redis·파일 공용) — 평문 endpoint·keys는 저장소에 남지 않는다
 function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStoredSub {
@@ -132,6 +132,8 @@ export interface ICacheStorage {
   listPushSubIdsByTopics(topics: string[]): Promise<string[]>;
   // 알림 종류·날짜별 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
   markPushSent(topic: string, date: string): Promise<boolean>;
+  // 5.113: 구 형식(접두 없는 블롭) 레코드의 만료를 min(남은 시간, 30일)로 1회 줄인다. 신 형식·이미 짧은 레코드는 무변경
+  capLegacyPushTtl(id: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -302,7 +304,7 @@ interface FileCacheData {
   UPBIT_LAST_CALL?: number;
 }
 
-const PUSH_SUB_TTL_SEC = 90 * 24 * 3600; // 90일
+const PUSH_SUB_TTL_SEC = 30 * 24 * 3600; // 30일(5.113 — 앱 로드마다 reconcilePush가 갱신)
 const PUSH_SUB_TTL_MS = PUSH_SUB_TTL_SEC * 1000;
 const PUSH_SENT_TTL_SEC = 3 * 24 * 3600; // 3일
 
@@ -827,6 +829,15 @@ export class FileCacheStorage implements ICacheStorage {
     return ids;
   }
 
+  async capLegacyPushTtl(id: string): Promise<void> {
+    const data = this.readPush();
+    const e = data.subs[`${pushKeyPrefix()}sub:${id}`];
+    const cap = Date.now() + PUSH_SUB_TTL_MS;
+    if (!e || !isLegacyBlob(e.rec.blob) || e.expires_at <= cap) return;
+    e.expires_at = cap;
+    this.writePush(data);
+  }
+
   async markPushSent(topic: string, date: string): Promise<boolean> {
     const data = this.readPush();
     const key = `${pushKeyPrefix()}sent:${topic}:${date}`;
@@ -1207,6 +1218,14 @@ class UpstashCacheStorage implements ICacheStorage {
     const P = pushKeyPrefix();
     const [first, ...rest] = topics.map((t) => `${P}topic:${t}`);
     return (await this.redis.sunion(first, ...rest)) as string[];
+  }
+
+  async capLegacyPushTtl(id: string): Promise<void> {
+    const key = `${pushKeyPrefix()}sub:${id}`;
+    const st = await this.redis.get<PushStoredSub>(key);
+    if (!st || !isLegacyBlob(st.blob)) return;
+    const ttl = Number(await this.redis.ttl(key));
+    if (ttl > PUSH_SUB_TTL_SEC) await this.redis.expire(key, PUSH_SUB_TTL_SEC);
   }
 
   async markPushSent(topic: string, date: string): Promise<boolean> {

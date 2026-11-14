@@ -92,8 +92,10 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
     // 레코드가 없는 id(TTL 만료·복호화 불가)는 집합에 남은 고아 — 정리
     for (let j = 0; j < recs.length; j++) {
       const rec = recs[j];
-      if (rec) subs.push({ id: chunk[j], rec });
-      else await storage.deletePushSub(chunk[j]);
+      if (rec) {
+        subs.push({ id: chunk[j], rec });
+        await storage.capLegacyPushTtl(chunk[j]); // 구 형식이면 만료를 30일로 1회 축소
+      } else await storage.deletePushSub(chunk[j]);
     }
   }
   if (subs.length === 0) return json({ skipped: "no-subscribers" });

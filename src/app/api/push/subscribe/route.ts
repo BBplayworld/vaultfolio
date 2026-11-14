@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { pushSubId } from "@/lib/push/crypto";
+import { pushSubId, pushSubIdLegacy } from "@/lib/push/crypto";
 import { PUSH_MAX_SUBS } from "@/lib/push/prefix";
 import { isPushConfigured } from "@/lib/push/send";
 import { parseEndpointBody, parseSubscribeBody } from "@/lib/push/validate";
@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "capacity" }, { status: 503, headers: NO_STORE });
   }
   await storage.putPushSub(id, { ...body, updatedAt: new Date().toISOString().slice(0, 10) });
+  // 5.113 이행: 같은 endpoint의 구 id 레코드·집합 멤버 제거(신 id로 재기록 완료)
+  await storage.deletePushSub(pushSubIdLegacy(body.endpoint));
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }
 
@@ -45,6 +47,8 @@ export async function DELETE(req: NextRequest) {
   const endpoint = parseEndpointBody(await req.json().catch(() => null));
   if (!endpoint) return badRequest();
 
-  await getCacheStorage().deletePushSub(pushSubId(endpoint));
+  const storage = getCacheStorage();
+  await storage.deletePushSub(pushSubId(endpoint));
+  await storage.deletePushSub(pushSubIdLegacy(endpoint)); // 이행 기간 — 구 id도 함께
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }

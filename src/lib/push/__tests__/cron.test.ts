@@ -6,7 +6,7 @@ const { store, send, configured, usQ, krQ, token, budget } = vi.hoisted(() => ({
   token: vi.fn(),
   budget: vi.fn(),
   configured: vi.fn(),
-  store: { markPushSent: vi.fn(), listPushSubIdsByTopics: vi.fn(), getPushSub: vi.fn(), deletePushSub: vi.fn() },
+  store: { markPushSent: vi.fn(), listPushSubIdsByTopics: vi.fn(), getPushSub: vi.fn(), deletePushSub: vi.fn(), capLegacyPushTtl: vi.fn() },
   send: vi.fn(),
 }));
 vi.mock("@/lib/cache-storage", () => ({ getCacheStorage: () => store }));
@@ -125,6 +125,16 @@ describe("runPushCron 흐름", () => {
   it("서버로 가는 페이로드는 {m,t,b} 3필드뿐", async () => {
     await runPushCron(req(AUTH));
     expect(Object.keys(send.mock.calls[0][1]).sort()).toEqual(["b", "m", "t"]);
+  });
+});
+
+describe("5.113 구 형식 레코드 만료 축소", () => {
+  it("읽은 구독마다 capLegacyPushTtl을 호출하고, 레코드가 없는 고아에는 호출하지 않는다", async () => {
+    store.listPushSubIdsByTopics.mockResolvedValue(["id1", "orphan"]);
+    store.getPushSub.mockImplementation(async (id: string) => (id === "orphan" ? null : sub(["settle"])));
+    await runPushCron(req(AUTH));
+    expect(store.capLegacyPushTtl).toHaveBeenCalledTimes(1);
+    expect(store.capLegacyPushTtl).toHaveBeenCalledWith("id1");
   });
 });
 
