@@ -50,12 +50,12 @@ const CAPTION = "text-sm text-muted-foreground leading-relaxed";
 
 
 // ── 별점 (0~5, 0.5 단위 · 반개 지원) ──────────────────────────────────
-function StarRating({ score, size = "sm", muted = false }: { score: number | null; size?: "sm" | "lg"; muted?: boolean }) {
-  const px = size === "lg" ? "size-6 sm:size-7" : "size-4";
+function StarRating({ score, size = "sm", muted = false, tight = false }: { score: number | null; size?: "sm" | "lg"; muted?: boolean; tight?: boolean }) {
+  const px = size === "lg" ? "size-6 sm:size-7" : tight ? "size-4 max-[360px]:size-3.5" : "size-4";
   const stars = [0, 1, 2, 3, 4];
   const val = score ?? 0;
   return (
-    <span className="inline-flex items-center gap-0.5" role="img" aria-label={score === null ? "측정불가" : `5점 만점에 ${val}점`}>
+    <span className={`inline-flex items-center ${tight ? "gap-0.5 max-[360px]:gap-px" : "gap-0.5"}`} role="img" aria-label={score === null ? "측정불가" : `5점 만점에 ${val}점`}>
       {stars.map((i) => {
         const fill = Math.min(1, Math.max(0, val - i)); // 0 / 0.5 / 1
         return (
@@ -474,8 +474,8 @@ export function AssetReportView() {
                     { key: "leverage", label: "레버리지 · 빌린 돈", net: debtNet, rate: debtNetRate },
                   ] as const).map((r) => (
                     <div key={r.key} className="flex items-baseline justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
-                      <span className="text-sm font-medium text-foreground break-keep">{r.label}</span>
-                      <span className="flex flex-wrap items-baseline justify-end gap-x-1.5 text-right">
+                      <span className="shrink-0 whitespace-nowrap text-sm font-medium text-foreground">{r.label}</span>
+                      <span className="flex flex-wrap items-baseline justify-end gap-x-1.5 text-right whitespace-nowrap">
                         <Signed value={Math.round(r.net)} className="text-sm font-bold" />
                         {r.rate !== null && (
                           <span className={`text-sm font-semibold tabular-nums ${getProfitLossColor(r.rate)}`}>
@@ -682,7 +682,7 @@ export function AssetReportView() {
                       >
                         <span className="flex items-center gap-2 min-w-0">
                           <Icon className="size-4 text-primary shrink-0" />
-                          <span className={`${SECTION_TITLE} break-keep`}>{axis.label}</span>
+                          <span className={`${SECTION_TITLE} whitespace-nowrap`}>{axis.label}</span>
                           {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
@@ -693,9 +693,9 @@ export function AssetReportView() {
                           ) : null}
                           {/* 값이 없는 축의 빈 별은 320에서 제목 폭을 빼앗아 3줄로 쌓이게 해 숨긴다(숫자·'측정불가'가 그 자리를 설명) */}
                           {divUnknown || axis.score === null ? (
-                            <span className="contents max-[360px]:hidden"><StarRating score={null} /></span>
+                            <span className="contents max-[360px]:hidden"><StarRating score={null} tight /></span>
                           ) : (
-                            <StarRating score={axis.score} />
+                            <StarRating score={axis.score} tight />
                           )}
                           {divUnknown ? (
                             <span className="text-sm font-semibold text-muted-foreground w-7 text-right">—</span>
