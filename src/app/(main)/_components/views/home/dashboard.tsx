@@ -373,12 +373,12 @@ export function NetAssetSummaryBox({
                 {showLine && top && (
                   // B 가장 큰 원인 1줄 — 항상 마운트, 열리면 줄이 접히고 같은 자리에 목록이 열린다(같은 값 두 번 노출 0).
                   // 접힌 쪽은 inert(포커스·읽기 제외)로 숨긴다 — visibility 전환을 쓰면 열린 직후 프레임에 포커스가 안 들어간다
-                  // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환
+                  // 히트 40px(py-2.5)는 음수 마진으로 레이아웃 높이 20px 유지, 접힘 상태에서는 마진도 함께 전환(변동 줄과 간격 8px). 좌우 히트 확장(after:-inset-x-4)을 위해 x축은 클리핑하지 않는다
                   <div
                     inert={open}
-                    className={`grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0" : "-mt-1.5 -mb-2.5 grid-rows-[1fr] opacity-100"}`}
+                    className={`grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${open ? "grid-rows-[0fr] opacity-0" : "-mt-2.5 -mb-2.5 grid-rows-[1fr] opacity-100"}`}
                   >
-                    <div className="min-h-0 overflow-hidden">
+                    <div className="min-h-0 overflow-y-clip">
                       <button
                         ref={lineRef}
                         type="button"
