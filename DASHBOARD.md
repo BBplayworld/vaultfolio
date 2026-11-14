@@ -2,11 +2,9 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.106**
+> **마지막 갱신: 2026-11-14 (주말 정리)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.107**
 
-## 🟥 대표님 결정 필요 — 1건
-1. **📊 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) 순자산 공개 통계 비교 v3(#201) 데모 확인 후 머지** — 대표 피드백 반영: 전폭·768 이상 2단(결론 문장+10칸 막대 | 자산 구성 2줄), 상세(10행 목록·금액 표·주석·출처)는 '자세히' 펼침, 기본 노출 45→12개 · qa·UI·COO PASS @912f802 · [판정 보고서](https://github.com/BBplayworld/vaultfolio/blob/memory/issues/5.102-201-networth-benchmark/5.102-decision-brief.md)
-   - 데모: https://secretasset-git-issue-5102-bbplayworlds-projects.vercel.app/?demo=1 → 성과 → 자산 성적표 → 태블릿·PC 2단 / 모바일 1열 → '자세히'
+## 🟥 대표님 결정 필요 — 없음
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -37,7 +35,7 @@
 ## 🔄 진행 중
 | 릴리스 | 이슈 | 단계 | 머지 방식 |
 |---|---|---|---|
-| v5.102 | [#201](https://github.com/BBplayworld/vaultfolio/issues/201) 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기(신규) | v3 qa·COO PASS → 대표 데모 확인 대기 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | **대표 승인**(원칙 3 인접, COO 판정) |
+| v5.108 | [#209](https://github.com/BBplayworld/vaultfolio/issues/209) 성과 — 자산 변화·자산 성적표 핵심 요약 노출과 상세 펼침(대표 지시) | 기획(전수 점검) 중 | 판정 후 결정 |
 
 ### ⏱ 예약된 운영 확인
 - 11/16(월) 09시·16시(±59분): PWA 알림 첫 실발송 [push-cron] 로그(us SPX·COMP, kr 1001, kr.fx) — 이상 시 Vercel Cron Disable
@@ -135,6 +133,7 @@
 ## ✅ 대표 승인 머지 완료 (최근)
 | 릴리스 | 머지일 | 내용 |
 |---|---|---|
+| v5.107 [PR #202](https://github.com/BBplayworld/vaultfolio/pull/202) | 11/14 | 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히(#201) — 10분위 결론 문장+막대, 같은 순자산 5분위 가구 자산 구성, 자세히 펼침(10행·금액 표), 768↑ 2단 · 12fa11c · 운영 스모크 진행 중 |
 | v5.106 [PR #180](https://github.com/BBplayworld/vaultfolio/pull/180) | 11/14 | PWA 알림 4종(#179) — 아침 시장 요약(월~금 09시)·국내 장 마감(16시)·월 결산·세금, 시장 알림 받는 날(매일/큰 움직임 있는 날만), 미리 체크 0·하루 최대 2건 · f88c9e0 · 운영 스모크 PASS · 첫 실발송 11/16(월) 09·16시 확인(팀은 Vercel 런타임 로그 접근 불가 → 대표님 운영 앱 수신 여부로 확인) |
 | v4.78 [PR #151](https://github.com/BBplayworld/vaultfolio/pull/151) | 11/11 | 시장과 나란히 '올해' 비교(#150) — 하루·1주·1개월·올해 표, 목록 올해, 연 탭 링크 · 54a759c · 운영 스모크 PASS(코스피·S&P 500 연말 종가 일치) |
 | v4.77 [PR #149](https://github.com/BBplayworld/vaultfolio/pull/149) | 11/11 | 새 종목 매수일 일괄 입력(#146)·맞추기로 끊긴 거래 다시 잇기(#147, 기록 시각 기준)·5개 이하 도넛·비중 바 최소 비중(#148) · 61a15e1 · 운영 스모크 PASS(첫 등록 교체 실 UI는 AI 인식 필요로 미확인) |
