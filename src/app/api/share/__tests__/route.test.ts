@@ -104,8 +104,15 @@ describe("/api/share 정책", () => {
 
     it("간편 공유(once 없음)는 반복 GET 가능", async () => {
       const { key } = await (await post("v73Ashared1", "10.1.0.7")).json() as { key: string };
+      const r1 = await get(key, "10.1.0.8");
+      expect(r1.status).toBe(200);
+      expect(await r1.json()).toEqual({ token: "v73Ashared1" });
       expect((await get(key, "10.1.0.8")).status).toBe(200);
-      expect((await get(key, "10.1.0.8")).status).toBe(200);
+    });
+
+    it("GET 응답: 1회용만 once:true, 간편 공유는 once 없음", async () => {
+      const { key } = await (await postOnce("v73Aonce9", "10.1.0.9")).json() as { key: string };
+      expect(await (await get(key, "10.1.0.10")).json()).toEqual({ token: "v73Aonce9", once: true });
     });
   });
 });

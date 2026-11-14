@@ -5,6 +5,7 @@ import { AssetData, RealEstate, PhysicalAsset, Stock, Crypto, Cash, Loan, Yearly
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
 import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { shouldRetryPin } from "@/lib/share-pin-retry";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 import { normalizeTicker, resolveStockName, type StockClassificationPatch } from "@/lib/finance/finance-service";
 import { upsertClassifications } from "@/lib/xray/classification-store";
@@ -329,7 +330,7 @@ export function computeAssetCost(
 
 // Short URL(share:KEY_LOCALKEY, 구 s:)을 전체 토큰으로 변환하는 순수 유틸
 // state·hook 의존성 없음 → 모듈 스코프에 정의
-const resolveShareToken = async (raw: string): Promise<{ token: string; localKey?: string } | null> => {
+const resolveShareToken = async (raw: string): Promise<{ token: string; localKey?: string; once?: boolean } | null> => {
   // raw 토큰(v72Z/v71P/v71N)은 ":" 미포함 → 단축키만 분기
   if (!raw.startsWith("share:") && !raw.startsWith("s:")) return { token: raw };
 
@@ -340,9 +341,9 @@ const resolveShareToken = async (raw: string): Promise<{ token: string; localKey
 
   try {
     const res = await fetch(`/api/share?key=${serverKey}`);
-    const json = await res.json() as { token?: string };
+    const json = await res.json() as { token?: string; once?: boolean };
     if (!json.token) return null;
-    return { token: json.token, localKey };
+    return { token: json.token, localKey, ...(json.once === true ? { once: true } : {}) };
   } catch {
     return null;
   }
@@ -374,7 +375,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // PIN 인증 상태
   const [isSharePending, setIsSharePending] = useState(false);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
-  const [pendingToken, setPendingToken] = useState<{ token: string; localKey?: string } | null>(null);
+  const [pendingToken, setPendingToken] = useState<{ token: string; localKey?: string; once?: boolean } | null>(null);
   const [inputPin, setInputPin] = useState("");
   const otpRef = useRef<HTMLInputElement>(null);
   const pinAttemptsRef = useRef(0);
@@ -1055,10 +1056,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       track("share_restore", { result: "success" });
     } else {
-      // 1회용 링크는 첫 조회로 서버에서 삭제되므로 이미 받은 암호문으로 PIN만 재시도(재요청 없음). 5회 초과 시 중단
+      // 1회용 링크만 재시도(첫 조회로 서버에서 삭제되어 받아 둔 암호문으로 PIN 재입력, 총 5회). 간편 공유는 오답 즉시 invalid-access
       pinAttemptsRef.current += 1;
       track("share_restore", { result: "pin_mismatch" });
-      if (pinAttemptsRef.current >= 5) {
+      if (!shouldRetryPin(pendingToken.once, pinAttemptsRef.current)) {
         window.location.replace("/invalid-access");
         return;
       }

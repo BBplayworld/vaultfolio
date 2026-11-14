@@ -54,7 +54,12 @@ export async function GET(request: Request) {
 
   const storage = getCacheStorage();
   // 간편 공유(30일 sliding) 우선, 없으면 1회용 전달 토큰을 조회와 동시에 삭제
-  const token = (await storage.getShareToken(key)) ?? (await storage.takeOnceShareToken(key));
+  let token = await storage.getShareToken(key);
+  let once = false;
+  if (!token) {
+    token = await storage.takeOnceShareToken(key);
+    once = !!token;
+  }
 
   if (!token) {
     return NextResponse.json({ error: "링크가 만료되었거나 존재하지 않습니다." }, { status: 404, headers: NO_STORE });
@@ -64,7 +69,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "구형 공유 링크는 더 이상 열 수 없습니다. 다시 공유해 주세요." }, { status: 410, headers: NO_STORE });
   }
 
-  return NextResponse.json({ token }, { headers: NO_STORE });
+  return NextResponse.json(once ? { token, once: true } : { token }, { headers: NO_STORE });
 }
 
 export async function POST(request: Request) {
