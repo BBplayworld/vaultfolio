@@ -51,11 +51,11 @@ const CAPTION = "text-sm text-muted-foreground leading-relaxed";
 
 // ── 별점 (0~5, 0.5 단위 · 반개 지원) ──────────────────────────────────
 function StarRating({ score, size = "sm", muted = false, tight = false }: { score: number | null; size?: "sm" | "lg"; muted?: boolean; tight?: boolean }) {
-  const px = size === "lg" ? "size-6 sm:size-7" : tight ? "size-4 max-[360px]:size-3.5" : "size-4";
+  const px = size === "lg" ? "size-6 sm:size-7" : tight ? "size-4 max-[390px]:size-3.5" : "size-4";
   const stars = [0, 1, 2, 3, 4];
   const val = score ?? 0;
   return (
-    <span className={`inline-flex items-center ${tight ? "gap-0.5 max-[360px]:gap-px" : "gap-0.5"}`} role="img" aria-label={score === null ? "측정불가" : `5점 만점에 ${val}점`}>
+    <span className={`inline-flex items-center ${tight ? "gap-0.5 max-[390px]:gap-px" : "gap-0.5"}`} role="img" aria-label={score === null ? "측정불가" : `5점 만점에 ${val}점`}>
       {stars.map((i) => {
         const fill = Math.min(1, Math.max(0, val - i)); // 0 / 0.5 / 1
         return (
@@ -475,7 +475,7 @@ export function AssetReportView() {
                   ] as const).map((r) => (
                     <div key={r.key} className="flex items-baseline justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                       <span className="shrink-0 whitespace-nowrap text-sm font-medium text-foreground">{r.label}</span>
-                      <span className="flex flex-wrap items-baseline justify-end gap-x-1.5 text-right whitespace-nowrap">
+                      <span className="flex flex-col items-end whitespace-nowrap text-right sm:flex-row sm:items-baseline sm:gap-x-1.5">
                         <Signed value={Math.round(r.net)} className="text-sm font-bold" />
                         {r.rate !== null && (
                           <span className={`text-sm font-semibold tabular-nums ${getProfitLossColor(r.rate)}`}>
@@ -681,7 +681,7 @@ export function AssetReportView() {
                         className="flex min-h-12 w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150"
                       >
                         <span className="flex items-center gap-2 min-w-0">
-                          <Icon className="size-4 text-primary shrink-0" />
+                          <Icon className="size-4 text-primary shrink-0 max-[390px]:hidden" />
                           <span className={`${SECTION_TITLE} whitespace-nowrap`}>{axis.label}</span>
                           {axis.pending && <span className="text-xs text-muted-foreground shrink-0">잠정</span>}
                         </span>
