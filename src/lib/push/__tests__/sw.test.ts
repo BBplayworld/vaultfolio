@@ -28,20 +28,27 @@ describe("sw push", () => {
   it("캐시 버전 v5", () => expect(SRC).toContain('"secretasset-cache-v5"'));
   it("정상 페이로드는 시장별 tag로 표시", async () => {
     const { handlers, shown } = load();
-    const e = evt(() => ({ m: "us", t: "11/12 미국 종가", b: "S&P 500 -0.3%" }));
+    const e = evt(() => ({ m: "tax", t: "연금저축·IRP 세액공제", b: "12/31 납입분까지예요" }));
     handlers.push(e);
     await Promise.all(e.waits);
-    expect(shown[0].title).toBe("11/12 미국 종가");
-    expect(shown[0].opts).toMatchObject({ tag: "market-us", renotify: false, data: { url: "/?from=push" } });
+    expect(shown[0].title).toBe("연금저축·IRP 세액공제");
+    expect(shown[0].opts).toMatchObject({ tag: "push-tax", renotify: false, data: { url: "/?from=push&t=tax" } });
   });
-  it("파싱 실패·형식 이상은 숫자 없는 폴백", async () => {
+  it("결산 알림은 결산 도착 주소", async () => {
+    const { handlers, shown } = load();
+    const e = evt(() => ({ m: "settle", t: "11월 결산이 열렸어요", b: "12월 10일까지 이번 달 자산 변화를 볼 수 있어요" }));
+    handlers.push(e);
+    await Promise.all(e.waits);
+    expect(shown[0].opts).toMatchObject({ tag: "push-settle", data: { url: "/?from=push&t=settle" } });
+  });
+  it("파싱 실패·형식 이상은 중립 폴백", async () => {
     for (const j of [() => { throw new Error("x"); }, () => ({ t: 1 }), undefined]) {
       const { handlers, shown } = load();
       const e = evt(j as never);
       handlers.push(e);
       await Promise.all(e.waits);
-      expect(shown[0].title).toBe("시장 종가");
-      expect(shown[0].opts.body).toBe("오늘 시장 종가가 업데이트됐어요");
+      expect(shown[0].title).toBe("시크릿에셋");
+      expect(shown[0].opts.body).toBe("새 알림이 도착했어요");
     }
   });
 });
@@ -53,17 +60,19 @@ describe("sw notificationclick", () => {
     c.handlers.notificationclick(e);
     return { e, close };
   };
-  it("열린 창이 있으면 focus만", async () => {
+  it("열린 창이 있으면 focus 후 도착 화면 주소로 이동", async () => {
     const c = load();
-    const focus = vi.fn().mockResolvedValue("f");
+    const navigate = vi.fn().mockResolvedValue(null);
+    const focus = vi.fn().mockResolvedValue({ navigate });
     c.clients.matchAll.mockResolvedValue([{ url: "https://app.test/#x", focus }]);
     const { e, close } = click(c);
     await Promise.all(e.waits);
     expect(close).toHaveBeenCalled();
     expect(focus).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/?from=push");
     expect(c.clients.openWindow).not.toHaveBeenCalled();
   });
-  it("창이 없으면 홈을 연다", async () => {
+  it("창이 없으면 주소를 연다", async () => {
     const c = load();
     c.clients.matchAll.mockResolvedValue([]);
     const { e } = click(c);

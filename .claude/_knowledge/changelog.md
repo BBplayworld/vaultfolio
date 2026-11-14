@@ -6,6 +6,12 @@
 
 ## 2026-11-12 (v4.93)
 
+### PWA 알림 'A 교체' (#4.91 11-14 대표 결정, 이슈 #179, risk:high)
+- **무엇**: 지수·종목 시세 알림을 없애고 날짜표 알림 2종(`settle` 월 결산 열림=결산 창 첫날 `isSettlementWindowOpenDay`, `tax` 세금 마감=5/1·12/24)으로 교체. 설정은 종류 체크 2개(미리 체크 없음), 조건(매 거래일/±2%) 삭제. 문구는 상태 안내만(요청형·조언·금액 0).
+- **서버**: Cron 1개 `/api/push/cron`(`0 0 * * *`), KIS·시세 호출 0. 저장값 = endpoint·keys 블롭·종류 ID·날짜(`cond` 제거). `markPushSent(topic, date)`.
+- **클라이언트**: 알림 누름 → `/?from=push&t=settle|tax` → `PushHost`가 월 결산(source `push`)/세금 관리로 바로 이동(C80). GA category `push_click_settle|push_click_tax`(`알림·누름·결산|세금`).
+- **저장 키**: `secretasset.push_prefs` v2 `{on,topics}`. v1(지수 ID·조건)은 무시(off·미선택)하고 reconcilePush가 구독 정리.
+
 ### PWA 시장 알림 (#4.93, 이슈 #179, risk:high·대표 승인 트랙)
 - **무엇**: 설치한 앱(standalone)에서만 설정 '알림' 섹션으로 장 마감 후 시장 종가 등락을 푸시로 받는다. 서버는 보유 정보를 모른다 — 서버에 남는 값은 endpoint·keys(AES-256-GCM 블롭)·카탈로그 ID·조건·날짜(일)뿐. 카탈로그 15개(`lib/push/catalog.ts`), 조건 `매 거래일`/`±2% 이상만`.
 - **서버**: `/api/push/subscribe`(POST·DELETE)·`/api/push/test`(preview·로컬 전용)·`/api/push/cron/{kr,us}`(CRON_SECRET·운영 전용, 휴장·중복(sent NX)·시각·서킷·예산 방어). Redis 접두어 `push:{prod|preview|dev}:`, 구독 id = HMAC-SHA256(PUSH_STORE_KEY, endpoint). `vercel.json` crons `0 7 * * 1-5`(국내)·`0 0 * * 2-6`(미국).

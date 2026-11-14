@@ -16,7 +16,7 @@ export interface ChangeInit {
   scope?: ChangeScope;
   period?: ChangePeriod;
   month?: string;           // 월 탭에서 선택할 달(YYYY-MM)
-  source?: "card" | "menu" | "home_tip"; // settlement_view 진입 경로(home_tip = 홈 결산 팁, #4.36)
+  source?: "card" | "menu" | "home_tip" | "push"; // settlement_view 진입 경로(home_tip = 홈 결산 팁, #4.36)
   focus?: "monthly-log";    // 월 탭 렌더 후 월별 기록 카드로 1회 스크롤(4.83, 해시·저장에 남기지 않음)
 }
 

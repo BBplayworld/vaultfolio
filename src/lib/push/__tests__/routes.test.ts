@@ -9,7 +9,7 @@ import { POST as TEST } from "@/app/api/push/test/route";
 import { NextRequest } from "next/server";
 
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/abc";
-const body = { endpoint: ENDPOINT, p256dh: "B".repeat(87), auth: "a".repeat(22), topics: ["kospi"], cond: "daily", standalone: true };
+const body = { endpoint: ENDPOINT, p256dh: "B".repeat(87), auth: "a".repeat(22), topics: ["settle"], standalone: true };
 let n = 0;
 const mk = (method: string, b: unknown) => {
   const s = JSON.stringify(b);
@@ -32,7 +32,7 @@ describe("/api/push/subscribe", () => {
     expect(res.status).toBe(200);
     const [id, rec] = store.putPushSub.mock.calls[0];
     expect(id).toMatch(/^[0-9a-f]{64}$/);
-    expect(Object.keys(rec).sort()).toEqual(["auth", "cond", "endpoint", "p256dh", "topics", "updatedAt"]);
+    expect(Object.keys(rec).sort()).toEqual(["auth", "endpoint", "p256dh", "topics", "updatedAt"]);
     expect(rec.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
   it("standalone 없음·카탈로그 외 ID·허용 외 호스트는 400", async () => {
@@ -82,7 +82,7 @@ describe("/api/push/test", () => {
     expect(send).not.toHaveBeenCalled();
   });
   it("쿨다운 429, 정상 시 본인 구독 1건에 고정 샘플", async () => {
-    store.getPushSub.mockResolvedValue({ endpoint: ENDPOINT, p256dh: "p", auth: "a", topics: ["kospi"], cond: "daily", updatedAt: "2026-11-12" });
+    store.getPushSub.mockResolvedValue({ endpoint: ENDPOINT, p256dh: "p", auth: "a", topics: ["settle"], updatedAt: "2026-11-12" });
     store.acquireLock.mockResolvedValueOnce(null);
     expect((await TEST(mk("POST", { endpoint: ENDPOINT }))).status).toBe(429);
     store.acquireLock.mockResolvedValueOnce("tok");

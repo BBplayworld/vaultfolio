@@ -121,7 +121,7 @@ export function SettingsPage() {
   useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
 
   const handleClear = async () => {
-    // 시장 알림(#179): 서버 구독 삭제 → 기기 구독 해제 → 로컬 설정 키 삭제. 체험 모드는 서버 구독이 없으므로 로컬만
+    // 알림(#179): 서버 구독 삭제 → 기기 구독 해제 → 로컬 설정 키 삭제. 체험 모드는 서버 구독이 없으므로 로컬만
     // prefs.on이 아니라 실제 기기 구독 유무로 판단 — 체험이 아니면 항상 서버 DELETE + 기기 구독 해제(구독 없으면 로컬 키만 삭제)
     if (!isTrialMode()) await unsubscribePush(false);
     else clearPushPrefs();
@@ -276,7 +276,7 @@ export function SettingsPage() {
             <AlertDialogDescription>
               이 작업은 되돌릴 수 없습니다. 모든 자산 데이터가 영구적으로 삭제됩니다.
               {cs.status !== "none" && " 기기 동기화 연결도 끊어집니다. 동기화 데이터는 보존되어 재연결 시 복구할 수 있습니다."}
-              {showClearDialog && !isTrialMode() && readPushPrefs().on && " 시장 알림도 꺼집니다."}
+              {showClearDialog && !isTrialMode() && readPushPrefs().on && " 알림도 꺼집니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

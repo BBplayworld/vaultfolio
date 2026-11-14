@@ -11,8 +11,7 @@ import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { isTrialMode } from "@/lib/trial/trial-mode";
-import { todayKst } from "@/lib/tax-utils";
-import { PUSH_CATALOG, PUSH_GROUPS, getPushTopic, normalizePushTopics } from "@/lib/push/catalog";
+import { PUSH_CATALOG, getPushTopic, normalizePushTopics } from "@/lib/push/catalog";
 import {
   VAPID_PUBLIC_KEY,
   detectPushEnv,
@@ -22,24 +21,16 @@ import {
   unsubscribePush,
   updatePushTargets,
 } from "@/lib/push/client";
-import { formatMonthDay } from "@/lib/push/message";
 import { readPushPrefs, summarizePushPrefs, type PushPrefs } from "@/lib/push/prefs";
-import type { PushCond } from "@/lib/push/types";
-import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallFlow } from "../pwa/pwa-install-flow";
 import { MENU_DESC, MENU_ICON, MENU_LABEL, MENU_ROW, MENU_SECTION_LABEL, menuBadge } from "./menu-styles";
 
-// 설정 '알림' 섹션(#179) — 시장 종가 알림. 서버에는 endpoint·keys·카탈로그 ID·조건만 저장(보유 정보 0).
-// 켜기 안내 → 권한 → 구독 → 대상·조건 Dialog. 체험 모드·Push 미지원 기기에서는 섹션 전체를 그리지 않는다.
+// 설정 '알림' 섹션(#179, 4.91 'A 교체') — 월 결산 열림·세금 마감 알림. 서버에는 endpoint·keys·알림 종류 ID만 저장(보유 정보 0).
+// 켜기 안내(종류를 직접 고름, 미리 체크 없음) → 권한 → 구독 → 종류 Dialog. 체험 모드·Push 미지원 기기에서는 섹션 전체를 그리지 않는다.
 
 type RowState = "loading" | "off" | "on" | "denied";
 
 const ANIM_FADE = "motion-safe:animate-in motion-safe:fade-in duration-150";
-// 소형 높이(320×568급): 목록 중첩 스크롤을 풀고 푸터를 sticky로 고정 — Tailwind가 클래스를 생성하도록 아래 className은 리터럴로 쓴다(템플릿 결합 금지)
-const COND_DESC: Record<PushCond, string> = {
-  daily: "거래일마다 장 마감 후 종가 등락을 알려드려요.",
-  pm2: "종가가 ±2% 이상 움직인 대상만 알려드려요. 그런 대상이 없는 날은 알림이 없어요.",
-};
 const labelOf = (id: string) => getPushTopic(id)?.label ?? id;
 
 function NotifyPreview({ title, body }: { title: string; body: string }) {
@@ -59,6 +50,27 @@ function NotifyPreview({ title, body }: { title: string; body: string }) {
   );
 }
 
+function TopicChecks({ sel, onToggle }: { sel: string[]; onToggle: (id: string, checked: boolean) => void }) {
+  return (
+    <div>
+      {PUSH_CATALOG.map((t) => (
+        <label key={t.id} htmlFor={`notify-target-${t.id}`} className="flex min-h-10 cursor-pointer items-center gap-3 px-1 py-1">
+          <Checkbox
+            id={`notify-target-${t.id}`}
+            data-testid={`notify-target-${t.id}`}
+            checked={sel.includes(t.id)}
+            onCheckedChange={(c) => onToggle(t.id, c === true)}
+          />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm break-keep">{t.label}</span>
+            <span className="block text-[11px] text-muted-foreground break-keep">{t.desc}</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function NotifySection() {
   const [env] = useState(detectPushEnv);
   const trial = isTrialMode();
@@ -67,8 +79,7 @@ export function NotifySection() {
   const [prefs, setPrefs] = useState<PushPrefs>(() => readPushPrefs());
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<null | "enable" | "denied" | "targets">(null);
-  const [sel, setSel] = useState<string[]>([]);
-  const [cond, setCond] = useState<PushCond>("daily");
+  const [sel, setSel] = useState<string[]>([]); // 켜기 안내·종류 Dialog 공용 — 켜기 안내를 열 때 빈 선택으로 시작
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const busyRef = useRef(false);
@@ -95,30 +106,32 @@ export function NotifySection() {
   const handleRow = async () => {
     if (busyRef.current || state === "loading") return;
     if (state === "denied") return setDialog("denied");
-    if (state === "off") return setDialog("enable");
+    if (state === "off") {
+      setSel([]);
+      return setDialog("enable");
+    }
     busyRef.current = true;
     setBusy(true);
     await unsubscribePush(true);
     setState("off");
-    toast.success("시장 알림을 껐어요");
+    toast.success("알림을 껐어요");
     track("feature_use", { category: "push_off" });
     busyRef.current = false;
     setBusy(false);
   };
 
   const handleEnable = async () => {
-    if (busyRef.current) return;
+    if (busyRef.current || sel.length === 0) return;
     busyRef.current = true;
     setBusy(true);
-    const p = readPushPrefs();
-    const r = await enablePush(p.topics, p.cond); // 첫 await = 권한 요청(제스처 유지)
+    const r = await enablePush(sel); // 첫 await = 권한 요청(제스처 유지)
     busyRef.current = false;
     setBusy(false);
     if (r === "ok") {
       setPrefs(readPushPrefs());
       setState("on");
       setDialog(null);
-      toast.success("시장 알림을 켰어요");
+      toast.success("알림을 켰어요");
       track("feature_use", { category: "push_on" });
     } else if (r === "denied") {
       setState("denied");
@@ -132,19 +145,18 @@ export function NotifySection() {
   const openTargets = () => {
     const p = readPushPrefs();
     setSel(normalizePushTopics(p.topics));
-    setCond(p.cond);
     setDialog("targets");
   };
 
   const handleSave = async () => {
     if (saving || sel.length === 0) return;
     setSaving(true);
-    const ok = await updatePushTargets(sel, cond);
+    const ok = await updatePushTargets(sel);
     setSaving(false);
     if (!ok) return toast.error("잠시 후 다시 시도해 주세요");
     setPrefs(readPushPrefs());
     setDialog(null);
-    toast.success("알림 대상을 저장했어요");
+    toast.success("알림 종류를 저장했어요");
   };
 
   const handleTest = async () => {
@@ -161,13 +173,12 @@ export function NotifySection() {
 
   const rowIcon = state === "denied" ? BellOff : Bell;
   const RowIcon = rowIcon;
-  const today = formatMonthDay(todayKst());
 
   const rowBody = (
     <>
       <RowIcon className={MENU_ICON} aria-hidden />
       <div className="flex-1 min-w-0">
-        <span className={MENU_LABEL}>시장 알림</span>
+        <span className={MENU_LABEL}>결산·세금 알림</span>
         {state === "loading" && env === "ready" && !unready ? (
           <div className="mt-1.5 space-y-1.5" aria-hidden>
             <div className={`h-3.5 w-4/5 rounded ${SKELETON_FILL}`} />
@@ -183,7 +194,7 @@ export function NotifySection() {
                   ? summary
                   : state === "denied"
                     ? "알림이 차단돼 있어요. 기기 설정에서 허용해 주세요"
-                    : "거래일 장 마감 후 시장 종가 등락을 알려드려요"}
+                    : "월 결산이 열릴 때와 세금 마감일을 알려드려요"}
           </p>
         )}
       </div>
@@ -233,7 +244,7 @@ export function NotifySection() {
             <div className="flex flex-col gap-2 pt-2">
               <button type="button" data-testid="settings-row-notify-targets" className={MENU_ROW} aria-haspopup="dialog" onClick={openTargets}>
                 <SlidersHorizontal className={MENU_ICON} aria-hidden />
-                <span className={`${MENU_LABEL} flex-1`}>알림 받을 대상·조건</span>
+                <span className={`${MENU_LABEL} flex-1`}>알림 받을 종류</span>
                 <ChevronRight className={MENU_ICON} aria-hidden />
               </button>
               {isPreviewEnv() && (
@@ -274,24 +285,27 @@ export function NotifySection() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Bell className="size-5 text-primary" />
-                  시장 알림 켜기
+                  알림 켜기
                 </DialogTitle>
-                <DialogDescription className="sr-only">장 마감 후 시장 종가 등락을 알림으로 받아요.</DialogDescription>
+                <DialogDescription className="sr-only">월 결산이 열릴 때와 세금 마감일을 알림으로 받아요. 받을 종류를 직접 골라요.</DialogDescription>
               </DialogHeader>
               <div>
                 <p className="px-1 pb-1 text-[11px] text-muted-foreground">예시 알림</p>
                 <div className="flex flex-col gap-1.5 rounded-xl bg-background p-2">
-                  <NotifyPreview title={`${today} 국내 종가`} body="코스피 +0.8%" />
-                  <NotifyPreview title={`${today} 미국 종가`} body="S&P 500 -0.3%" />
+                  <NotifyPreview title="11월 결산이 열렸어요" body="12월 10일까지 이번 달 자산 변화를 볼 수 있어요" />
+                  <NotifyPreview title="연금저축·IRP 세액공제" body="12/31 납입분까지예요" />
                 </div>
               </div>
-              <p className="text-sm font-medium text-pretty break-keep">알림에는 시장 등락률만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
-              <div className="space-y-1 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
-                <p>국내 장은 오후 4~5시, 미국 장은 다음 날 아침 9~10시에 도착해요.</p>
-                <p>처음엔 코스피, S&amp;P 500만 받아요. 나중에 바꿀 수 있어요.</p>
+              <div>
+                <p className="px-1 pb-1 text-sm font-semibold text-muted-foreground">받을 알림을 골라 주세요</p>
+                <TopicChecks sel={sel} onToggle={toggleTopic} />
               </div>
+              <p className="text-sm font-medium text-pretty break-keep">알림에는 날짜 안내만 담겨요. 자산 정보는 서버로 보내지 않아요.</p>
+              <p className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
+                결산 알림은 &lsquo;캘린더에 추가&rsquo;의 월말 결산 일정과 같은 내용이에요. 알림은 결산이 열리는 날 아침에 도착해요.
+              </p>
               <DialogFooter className="flex-col gap-2">
-                <Button variant="brand" data-testid="notify-enable-confirm" onClick={handleEnable} disabled={busy}>
+                <Button variant="brand" data-testid="notify-enable-confirm" onClick={handleEnable} disabled={busy || sel.length === 0}>
                   {busy ? (
                     <>
                       <Spinner /> 켜는 중…
@@ -309,73 +323,28 @@ export function NotifySection() {
         </DialogContent>
       </Dialog>
 
-      {/* 대상·조건 */}
+      {/* 알림 종류 */}
       <Dialog open={dialog === "targets"} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent
-          data-testid="notify-targets-dialog"
-          className="sm:max-w-md touch-pan-y max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain [@media(max-height:700px)]:pb-0"
-        >
+        <DialogContent data-testid="notify-targets-dialog" className="sm:max-w-md touch-pan-y">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <SlidersHorizontal className="size-5 text-primary" />
-              알림 받을 대상·조건
+              알림 받을 종류
             </DialogTitle>
-            <DialogDescription className="sr-only">알림으로 받을 시장 항목과 발송 조건을 고릅니다.</DialogDescription>
+            <DialogDescription className="sr-only">알림으로 받을 종류를 고릅니다.</DialogDescription>
           </DialogHeader>
           <div role="status" className="h-5 text-sm">
             {sel.length === 0 ? (
-              <span className="text-orange-600 dark:text-orange-400">대상을 1개 이상 골라 주세요</span>
+              <span className="text-orange-600 dark:text-orange-400">1개 이상 골라 주세요</span>
             ) : (
               <span data-testid="notify-target-count" className="text-muted-foreground tabular-nums">
                 {sel.length}개 선택
               </span>
             )}
           </div>
-          <div className="-mx-2 max-h-[320px] overflow-y-auto overscroll-contain px-1 [@media(max-height:700px)]:max-h-none [@media(max-height:700px)]:overflow-visible">
-            {PUSH_GROUPS.map((g) => (
-              <div key={g.id} role="group" aria-labelledby={`notify-group-${g.id}`}>
-                <p id={`notify-group-${g.id}`} className="flex h-8 items-center px-1 text-sm font-semibold text-muted-foreground">
-                  {g.label}
-                </p>
-                {PUSH_CATALOG.filter((t) => t.group === g.id).map((t) => (
-                  <label key={t.id} htmlFor={`notify-target-${t.id}`} className="flex min-h-10 cursor-pointer items-center gap-3 px-1">
-                    <Checkbox
-                      id={`notify-target-${t.id}`}
-                      data-testid={`notify-target-${t.id}`}
-                      checked={sel.includes(t.id)}
-                      onCheckedChange={(c) => toggleTopic(t.id, c === true)}
-                    />
-                    <span className="flex-1 text-sm break-keep">{t.label}</span>
-                    {g.id !== "kr-index" && g.id !== "us-index" && (
-                      <span className="text-[11px] text-muted-foreground">{t.market === "kr" ? "국내" : "미국"}</span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-muted-foreground">알림 조건</p>
-            <div data-testid="notify-condition">
-              <InlineSelector
-                value={cond}
-                onChange={(v) => setCond(v as PushCond)}
-                options={[
-                  { value: "daily", label: "매 거래일" },
-                  { value: "pm2", label: "±2% 이상만" },
-                ]}
-                fullWidth
-                ariaLabel="알림 조건"
-              />
-            </div>
-            <p className="min-h-11 text-sm text-muted-foreground text-pretty break-keep">{COND_DESC[cond]}</p>
-          </div>
-          <p className="text-sm text-muted-foreground text-pretty break-keep">
-            국내 장은 오후 4~5시, 미국 장은 다음 날 아침 9~10시에 도착해요. 이 설정은 이 기기에서만 적용돼요.
-          </p>
-          <DialogFooter
-            className="flex-col gap-2 [@media(max-height:700px)]:sticky [@media(max-height:700px)]:bottom-0 [@media(max-height:700px)]:-mx-6 [@media(max-height:700px)]:bg-background [@media(max-height:700px)]:dark:bg-popover [@media(max-height:700px)]:px-6 [@media(max-height:700px)]:pb-6 [@media(max-height:700px)]:pt-2"
-          >
+          <TopicChecks sel={sel} onToggle={toggleTopic} />
+          <p className="text-sm text-muted-foreground text-pretty break-keep">이 설정은 이 기기에서만 적용돼요.</p>
+          <DialogFooter className="flex-col gap-2">
             <Button variant="brand" data-testid="notify-targets-save" onClick={handleSave} disabled={sel.length === 0 || saving}>
               {saving ? "저장 중…" : "저장"}
             </Button>

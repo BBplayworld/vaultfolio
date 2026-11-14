@@ -6,12 +6,8 @@
   },
   "crons": [
     {
-      "path": "/api/push/cron/kr",
-      "schedule": "0 7 * * 1-5"
-    },
-    {
-      "path": "/api/push/cron/us",
-      "schedule": "0 0 * * 2-6"
+      "path": "/api/push/cron",
+      "schedule": "0 0 * * *"
     }
   ]
 }

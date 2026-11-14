@@ -1,18 +1,16 @@
-// 시장 알림 문구 생성(#179) — 순수 함수. 금액·'내'·'보유'·평가어·조언·끝 안내 문구 0.
-// 부호·소수 1자리는 홈 '오늘 시장'과 같은 formatCompareRate를 쓴다(C80/C84).
-import { formatCompareRate, rateTenths } from "@/lib/finance/market-compare";
-import type { PushCond, PushMarket, PushPayload } from "./types";
+// 알림 문구·발송일 판정(#179, 4.91 'A 교체') — 순수 함수. 날짜표만 쓰고 시세·사용자 정보는 보지 않는다.
+// 문구는 상태 안내('열렸어요')만 — 요청형·조언·금액·'내'·'보유' 0. 결산 창 첫날은 앱의 결산 창 로직(isSettlementWindowOpenDay)을 재사용한다.
+import { CARD_UNTIL_DAY, isSettlementWindowOpenDay } from "@/lib/report/settlement";
+import type { PushKind, PushPayload } from "./types";
 
-export const PUSH_FALLBACK_TITLE = "시장 종가";
-export const PUSH_FALLBACK_BODY = "오늘 시장 종가가 업데이트됐어요";
-export const PUSH_PM2_TENTHS = 20; // ±2.0% 이상
-const MAX_ITEMS = 4;
-const MAX_BODY_CHARS = 56; // 잠금화면 2줄 기준 — 실기기 보정 대상
+export const PUSH_FALLBACK_TITLE = "시크릿에셋";
+export const PUSH_FALLBACK_BODY = "새 알림이 도착했어요";
 
-export interface PushItem {
-  label: string;
-  rate: number; // 전일 대비 %
-}
+/** 세금 마감 알림 날짜표(KST MM-DD). 근거 일정: tax-calendar.ts capital-gains-final·income-tax-final(~5/31), pension-contribution-deadline(~12/31) */
+export const TAX_PUSH_DATES = {
+  "05-01": { t: "5월은 세금 신고 기간이에요", b: "해외주식 양도소득세·종합소득세 신고는 5월 31일까지예요" },
+  "12-24": { t: "연금저축·IRP 세액공제", b: "12/31 납입분까지예요" },
+} as const satisfies Record<string, { t: string; b: string }>;
 
 /** '2026-11-12' → '11/12' */
 export function formatMonthDay(date: string): string {
@@ -20,25 +18,17 @@ export function formatMonthDay(date: string): string {
   return `${Number(m)}/${Number(d)}`;
 }
 
-export function buildPushMessage(
-  market: PushMarket,
-  marketDate: string,
-  items: readonly PushItem[],
-  cond: PushCond,
-): PushPayload | null {
-  const picked = cond === "pm2" ? items.filter((i) => Math.abs(rateTenths(i.rate)) >= PUSH_PM2_TENTHS) : [...items];
-  if (picked.length === 0) return null;
+export function buildSettleMessage(today: string): PushPayload {
+  const month = Number(today.slice(5, 7));
+  const next = month === 12 ? 1 : month + 1;
+  return { m: "settle", t: `${month}월 결산이 열렸어요`, b: `${next}월 ${CARD_UNTIL_DAY}일까지 이번 달 자산 변화를 볼 수 있어요` };
+}
 
-  const parts: string[] = [];
-  let length = 0;
-  for (const it of picked) {
-    const part = `${it.label} ${formatCompareRate(it.rate)}`;
-    const next = length + (parts.length > 0 ? 3 : 0) + part.length; // " · " 3자
-    if (parts.length >= 1 && (parts.length >= MAX_ITEMS || next > MAX_BODY_CHARS)) break;
-    parts.push(part);
-    length = next;
-  }
-  const rest = picked.length - parts.length;
-  const body = parts.join(" · ") + (rest > 0 ? ` 외 ${rest}개` : "");
-  return { m: market, t: `${formatMonthDay(marketDate)} ${market === "kr" ? "국내" : "미국"} 종가`, b: body };
+/** 오늘(KST YYYY-MM-DD) 보낼 알림 목록 — 없으면 빈 배열 */
+export function pushDueOn(today: string): { kind: PushKind; payload: PushPayload }[] {
+  const due: { kind: PushKind; payload: PushPayload }[] = [];
+  if (isSettlementWindowOpenDay(today)) due.push({ kind: "settle", payload: buildSettleMessage(today) });
+  const tax = (TAX_PUSH_DATES as Record<string, { t: string; b: string }>)[today.slice(5)];
+  if (tax) due.push({ kind: "tax", payload: { m: "tax", ...tax } });
+  return due;
 }

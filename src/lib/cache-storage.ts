@@ -23,7 +23,7 @@ import type { AssetEnvelope } from "./cloud-sync/config";
 
 import { PUSH_TOPIC_IDS } from "@/lib/push/catalog";
 import { pushKeyPrefix } from "@/lib/push/prefix";
-import type { PushMarket, PushStoredSub, PushSubRecord } from "@/lib/push/types";
+import type { PushStoredSub, PushSubRecord } from "@/lib/push/types";
 import { openSecret, sealSecret } from "@/lib/push/crypto";
 
 // 저장 직전 암호화·읽을 때 복호화(Redis·파일 공용) — 평문 endpoint·keys는 저장소에 남지 않는다
@@ -31,7 +31,6 @@ function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStored
   return {
     blob: sealSecret({ endpoint: rec.endpoint, p256dh: rec.p256dh, auth: rec.auth }),
     topics: rec.topics,
-    cond: rec.cond,
     createdAt: prev?.createdAt ?? rec.updatedAt,
     updatedAt: rec.updatedAt,
   };
@@ -39,7 +38,7 @@ function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStored
 function openPushSub(st: PushStoredSub | null | undefined): PushSubRecord | null {
   if (!st) return null;
   const sec = openSecret(st.blob);
-  return sec ? { ...sec, topics: st.topics, cond: st.cond, updatedAt: st.updatedAt } : null;
+  return sec ? { ...sec, topics: st.topics, updatedAt: st.updatedAt } : null;
 }
 
 export interface ICacheStorage {
@@ -132,8 +131,8 @@ export interface ICacheStorage {
   countPushSubs(): Promise<number>;
   // 대상 토픽 합집합의 구독 id(중복 제거)
   listPushSubIdsByTopics(topics: string[]): Promise<string[]>;
-  // 회차 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
-  markPushSent(market: PushMarket, marketDate: string): Promise<boolean>;
+  // 알림 종류·날짜별 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
+  markPushSent(topic: string, date: string): Promise<boolean>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -836,9 +835,9 @@ export class FileCacheStorage implements ICacheStorage {
     return ids;
   }
 
-  async markPushSent(market: PushMarket, marketDate: string): Promise<boolean> {
+  async markPushSent(topic: string, date: string): Promise<boolean> {
     const data = this.readPush();
-    const key = `${pushKeyPrefix()}sent:${market}:${marketDate}`;
+    const key = `${pushKeyPrefix()}sent:${topic}:${date}`;
     const now = Date.now();
     if ((data.sent[key] ?? 0) > now) return false;
     data.sent[key] = now + PUSH_SENT_TTL_SEC * 1000;
@@ -1224,8 +1223,8 @@ class UpstashCacheStorage implements ICacheStorage {
     return (await this.redis.sunion(first, ...rest)) as string[];
   }
 
-  async markPushSent(market: PushMarket, marketDate: string): Promise<boolean> {
-    const res = await this.redis.set(`${pushKeyPrefix()}sent:${market}:${marketDate}`, "1", { nx: true, ex: PUSH_SENT_TTL_SEC });
+  async markPushSent(topic: string, date: string): Promise<boolean> {
+    const res = await this.redis.set(`${pushKeyPrefix()}sent:${topic}:${date}`, "1", { nx: true, ex: PUSH_SENT_TTL_SEC });
     return res === "OK";
   }
 }

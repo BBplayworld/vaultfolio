@@ -73,21 +73,23 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// 시장 알림(#179) — 페이로드 {m,t,b} 3필드만. 파싱 실패·형식 이상이면 숫자 없는 폴백 문구.
-// 같은 시장은 같은 tag로 교체(쌓이지 않음). 알림 안에 보유 정보는 없다(서버가 모름).
-const PUSH_FALLBACK = { t: "시장 종가", b: "오늘 시장 종가가 업데이트됐어요" };
-const PUSH_TAGS = { kr: "market-kr", us: "market-us", test: "market-test" };
+// 알림(#179, 4.91) — 페이로드 {m,t,b} 3필드만. 파싱 실패·형식 이상이면 중립 폴백 문구.
+// 종류별 같은 tag로 교체(쌓이지 않음). 누르면 종류에 맞는 화면으로 바로 연다(결산→월 결산, 세금→세금 관리, C80).
+// 알림 안에 보유 정보는 없다(서버가 모름).
+const PUSH_FALLBACK = { t: "시크릿에셋", b: "새 알림이 도착했어요" };
+const PUSH_TAGS = { settle: "push-settle", tax: "push-tax", test: "push-test", misc: "push-misc" };
+const PUSH_URLS = { settle: "/?from=push&t=settle", tax: "/?from=push&t=tax" };
 
 function parsePushPayload(event) {
   try {
     const d = event.data ? event.data.json() : null;
     if (d && typeof d.t === "string" && typeof d.b === "string" && d.t && d.b) {
-      return { m: PUSH_TAGS[d.m] ? d.m : "kr", t: d.t, b: d.b };
+      return { m: PUSH_TAGS[d.m] ? d.m : "misc", t: d.t, b: d.b };
     }
   } catch (e) {
     // 형식 이상 — 폴백
   }
-  return { m: "kr", t: PUSH_FALLBACK.t, b: PUSH_FALLBACK.b };
+  return { m: "misc", t: PUSH_FALLBACK.t, b: PUSH_FALLBACK.b };
 }
 
 self.addEventListener("push", (event) => {
@@ -99,19 +101,21 @@ self.addEventListener("push", (event) => {
       renotify: false,
       icon: "/icons/icon-192x192.png",
       badge: "/icons/icon-192x192.png",
-      data: { url: "/?from=push" },
+      data: { url: PUSH_URLS[p.m] || "/?from=push" },
     }),
   );
 });
 
-// 알림 누름 — 같은 origin 창이 열려 있으면 화면 유지한 채 focus만, 없으면 홈으로 연다
+// 알림 누름 — 같은 origin 창이 열려 있으면 focus 후 도착 화면 주소로 이동, 없으면 그 주소로 연다
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/?from=push";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
       const same = wins.find((w) => w.url && w.url.indexOf(self.location.origin) === 0);
-      if (same && "focus" in same) return same.focus();
+      if (same && "focus" in same) {
+        return Promise.resolve(same.focus()).then((c) => (c && "navigate" in c ? c.navigate(url) : c));
+      }
       return self.clients.openWindow(url);
     }),
   );

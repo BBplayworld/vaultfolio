@@ -986,17 +986,16 @@ computePriceChange(points) → % | null
 ```
 
 ```
-// lib/push/ (#4.93 시장 알림) — 서버에는 endpoint·keys(암호화)·카탈로그 ID·조건만
-// catalog.ts — PUSH_CATALOG(15, as const)·PUSH_GROUPS·normalizePushTopics·topicsOfMarket·PUSH_DEFAULT_TOPICS(코스피·S&P 500). 시총 6개는 분기 1회 수동 갱신
-// message.ts — buildPushMessage(market, marketDate, items, cond) → {m,t,b}|null (formatCompareRate·4개/56자 초과 외 N개·pm2 ±2.0%)
-// prefs.ts — secretasset_push_prefs {v:1,on,topics,cond}(읽기/쓰기/삭제·parsePushPrefs 기본 off)·summarizePushPrefs·consumePushFlag
+// lib/push/ (#4.93 알림, 4.91 'A 교체') — 서버에는 endpoint·keys(암호화)·알림 종류 ID(settle·tax)만
+// catalog.ts — PUSH_CATALOG(2: settle·tax, as const)·normalizePushTopics·getPushTopic
+// message.ts — pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
+// prefs.ts — secretasset.push_prefs {v:2,on,topics}(v1 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target settle|tax)
 // client.ts — detectPushEnv(standalone 아니면 needs-install)·enablePush·updatePushTargets·unsubscribePush(keepPrefs)·sendTestPush·reconcilePush
 // validate.ts — parseSubscribeBody(standalone 필수·허용 호스트·카탈로그 ID)·parseEndpointBody
 // crypto.ts(server) — pushSubId=HMAC-SHA256(PUSH_STORE_KEY, endpoint)·sealSecret/openSecret(AES-256-GCM)
 // prefix.ts — pushKeyPrefix() = push:{prod|preview|dev}: (VERCEL_ENV)
 // send.ts(server-only) — isPushConfigured·sendPush(web-push, ok|gone|fail)
-// quotes.ts(server-only) — fetchPushRates·changeFromSeries(마지막 행 = 직전 거래일 아니면 stale)
-// cron-run.ts(server-only) — runPushCron(req, market)·resolveCronWindow·isCronAuthorized
+// cron-run.ts(server-only) — runPushCron(req)·kstToday·isCronAuthorized (Cron 1개 /api/push/cron, 시세 호출 0)
 // cache-storage.ts — putPushSub/getPushSub/deletePushSub/listPushSubIdsByTopics/markPushSent (접두어·암호화는 저장소 내부 처리)
 ```
 - 스크린샷 평단·현재가 정합(#196, 5.0): `parse-screenshot/price-consistency.ts reconcilePrices(cur, avg, rate, {quantity?, currentValue?, profitAmount?})` → `{currentPrice, averagePrice, action: keep|swap|estimate}`. swap 전 E1(평가금액÷수량)·E2(손익/수익률 부호) 교차 확인, 근거 없으면 4.99 동작.

@@ -188,6 +188,11 @@ export function isSettlementCardPeriod(today: string): boolean {
   return day <= CARD_UNTIL_DAY || day >= lastDayOf(today.slice(0, 7)) - CARD_FROM_BEFORE_END;
 }
 
+/** 결산 창(카드 노출 기간)이 열리는 첫날 — 말일−3일. 푸시 '월 결산 열림' 판정이 같은 기준을 재사용한다(4.91) */
+export function isSettlementWindowOpenDay(today: string): boolean {
+  return Number(today.slice(8, 10)) === lastDayOf(today.slice(0, 7)) - CARD_FROM_BEFORE_END;
+}
+
 /** 허브 카드에 띄울 구간. 기간 밖·첫 달(비교할 직전 기록 없음)이면 null */
 export function pickSettlementCard(monthly: MonthlyAssetSnapshot[], today: string, firstRecord?: MonthlyAssetSnapshot | null): SettlementWindow | null {
   if (!isSettlementCardPeriod(today)) return null;

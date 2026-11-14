@@ -6,7 +6,7 @@ import { isPushConfigured } from "@/lib/push/send";
 import { parseEndpointBody, parseSubscribeBody } from "@/lib/push/validate";
 import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
 
-// 시장 알림 구독 저장·해제(#179). 서버에 남는 값 = endpoint·keys·카탈로그 ID·조건뿐(보유 정보 0).
+// 시장 알림 구독 저장·해제(#179). 서버에 남는 값 = endpoint·keys·알림 종류 ID뿐(보유 정보 0).
 // 키 접두어(preview/prod 분리)는 저장소가 서버 환경 변수로만 계산한다 — 클라이언트 입력 없음.
 // endpoint·키는 로그에 쓰지 않는다. DELETE는 endpoint 소지가 인증.
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   const storage = getCacheStorage();
   const id = pushSubId(body.endpoint);
-  // 전체 상한 — 신규 구독만 막는다(기존 구독의 대상·조건 갱신은 허용)
+  // 전체 상한 — 신규 구독만 막는다(기존 구독의 종류 갱신은 허용)
   if (!(await storage.getPushSub(id)) && (await storage.countPushSubs()) >= PUSH_MAX_SUBS) {
     return NextResponse.json({ error: "capacity" }, { status: 503, headers: NO_STORE });
   }

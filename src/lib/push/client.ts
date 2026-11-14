@@ -1,7 +1,6 @@
-// 시장 알림 클라이언트(#179) — 권한·구독·서버 저장·해제. 서버로 보내는 값은 endpoint·keys·카탈로그 ID·조건뿐.
+// 시장 알림 클라이언트(#179) — 권한·구독·서버 저장·해제. 서버로 보내는 값은 endpoint·keys·알림 종류 ID뿐.
 // web-push 라이브러리는 import하지 않는다(서버 전용, 번들 증가 0).
 import { clearPushPrefs, readPushPrefs, writePushPrefs } from "./prefs";
-import type { PushCond } from "./types";
 
 export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
@@ -63,15 +62,15 @@ async function postJson(method: "POST" | "DELETE", url: string, body: unknown): 
   }
 }
 
-function toBody(sub: PushSubscription, topics: string[], cond: PushCond) {
+function toBody(sub: PushSubscription, topics: string[]) {
   const j = sub.toJSON();
-  return { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? "", auth: j.keys?.auth ?? "", topics, cond, standalone: isStandaloneApp() };
+  return { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? "", auth: j.keys?.auth ?? "", topics, standalone: isStandaloneApp() };
 }
 
 export type EnableResult = "ok" | "denied" | "error";
 
 /** [알림 켜기] — 첫 await가 권한 요청(제스처 유지). 실패 시 새로 만든 구독은 되돌린다 */
-export async function enablePush(topics: string[], cond: PushCond): Promise<EnableResult> {
+export async function enablePush(topics: string[]): Promise<EnableResult> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return permission === "denied" ? "denied" : "error";
   const reg = await getRegistration();
@@ -83,31 +82,31 @@ export async function enablePush(topics: string[], cond: PushCond): Promise<Enab
       sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
       created = true;
     }
-    const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics, cond));
+    const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics));
     if (!res?.ok) {
       if (created) await sub.unsubscribe().catch(() => false);
       return "error";
     }
-    writePushPrefs({ v: 1, on: true, topics, cond });
+    writePushPrefs({ v: 2, on: true, topics });
     return "ok";
   } catch {
     return "error";
   }
 }
 
-/** 대상·조건 저장 — 서버 1회. 구독이 없으면 실패 */
-export async function updatePushTargets(topics: string[], cond: PushCond): Promise<boolean> {
+/** 알림 종류 저장 — 서버 1회. 구독이 없으면 실패 */
+export async function updatePushTargets(topics: string[]): Promise<boolean> {
   const sub = await getPushSubscription();
   if (!sub) return false;
-  const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics, cond));
+  const res = await postJson("POST", "/api/push/subscribe", toBody(sub, topics));
   if (!res?.ok) return false;
-  writePushPrefs({ v: 1, on: true, topics, cond });
+  writePushPrefs({ v: 2, on: true, topics });
   return true;
 }
 
 /**
  * 구독 해제 — 서버 삭제 후 기기 구독 해제(서버 실패해도 기기·로컬은 해제, 서버 고아는 발송 시 410·TTL 90일로 정리).
- * keepPrefs=true면 대상·조건은 보존(끄기), false면 로컬 설정 키 삭제(모든 데이터 삭제).
+ * keepPrefs=true면 선택한 종류는 보존(끄기), false면 로컬 설정 키 삭제(모든 데이터 삭제).
  */
 export async function unsubscribePush(keepPrefs: boolean): Promise<void> {
   try {
@@ -152,7 +151,7 @@ export async function reconcilePush(): Promise<void> {
     }
     const sub =
       existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) }));
-    await postJson("POST", "/api/push/subscribe", toBody(sub, prefs.topics, prefs.cond));
+    await postJson("POST", "/api/push/subscribe", toBody(sub, prefs.topics));
   } catch {
     /* 다음 로드에서 재시도 */
   }
