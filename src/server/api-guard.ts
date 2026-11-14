@@ -10,12 +10,13 @@ import { getCacheStorage, GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage"
  * 처리 순서 — 비용이 싼 단계에서 먼저 끊어 함수 시간·Redis·외부 API 소비를 최소화한다.
  *   1) 출처 검사(cross-site 브라우저 요청 차단 — 악성 페이지가 방문자 브라우저를 동원하는 분산 호출 방지)
  *   2) 본문 크기 상한(파싱 전 Content-Length)
- *   3) L1 인스턴스 메모리 버킷(Redis 호출 전 폭주 IP 차단)
+ *   3) L1 인스턴스 메모리 버킷(폭주 IP 차단)
  *   — 이후 라우트가 입력 검증·캐시 히트 반환을 수행 —
- *   4) L2 Redis rate limit(캐시 미스로 외부 호출이 필요한 경우만)
+ *   4) 라우트별 빈도 한도(guardRateLimit) — 5.113부터 L1과 같은 메모리 버킷
  *   5) 업스트림 전역 예산(초과 시 외부 호출 생략 → 기존 "일시 오류" 응답 경로로 우아한 저하)
  *
- * sync 라우트는 동기화 로직 무변경 원칙에 따라 getClientIp·guardL1Only(L1 한도)만 사용한다.
+ * IP 미저장(5.113): IP는 휘발성 메모리 버킷 키로만 쓰고(수명 ≤ 1분·최대 L1_MAX_ENTRIES개, 로그·Redis·직렬화 0),
+ * Redis에는 IP가 들어간 키(rl:*:ip 등)를 만들지 않는다. IP 없는 전역·금고별 한도는 Redis 카운터로 둔다.
  */
 
 // ─────────────────────────────────────────────────────────
@@ -115,7 +116,7 @@ export interface GuardPolicy {
 const L1_MAX_ENTRIES = 5000;
 const l1Buckets = new Map<string, { count: number; resetAt: number }>();
 
-function hitL1(key: string, limit: number): boolean {
+function hitL1(key: string, limit: number, windowMs = 60_000): boolean {
   const now = Date.now();
   let b = l1Buckets.get(key);
   if (!b || b.resetAt <= now) {
@@ -128,7 +129,7 @@ function hitL1(key: string, limit: number): boolean {
         l1Buckets.delete(first);
       }
     }
-    b = { count: 0, resetAt: now + 60_000 };
+    b = { count: 0, resetAt: now + windowMs };
     l1Buckets.set(key, b);
   }
   b.count += 1;
@@ -186,21 +187,39 @@ export function guardL1Only(request: Request, route: string, l1PerMinute: number
 // 4단계: L2 Redis rate limit
 // ─────────────────────────────────────────────────────────
 
-/** IP 단위 L2 rate limit(rl:{route}:{ip}). Redis 장애 시 통과(fail-open) — L1·플랫폼 방화벽이 1차 방어 */
+/**
+ * 라우트별 빈도 한도 — IP를 Redis에 쓰지 않고 L1 메모리 버킷(창 ≤ 1분)으로 판정한다.
+ * 창이 1분보다 긴 라우트(feedback·push)는 분당 환산 한도(최소 3회)로 낮춰 적용한다. 인스턴스별 한도라 전역 보장은 아니다.
+ * 비용이 큰 라우트의 전역 방어는 업스트림 예산·Gemini 전역 한도·share 일 전역 상한이 맡는다.
+ */
 export async function guardRateLimit(
   request: Request,
   route: string,
   limit: number,
   windowSec: number,
 ): Promise<NextResponse | null> {
+  const perMinute = windowSec <= 60 ? limit : Math.max(3, Math.ceil((limit * 60) / windowSec));
   const ip = getClientIp(request);
-  try {
-    const count = await getCacheStorage().incrementCounter(`rl:${route}:${ip}`, 1, windowSec);
-    if (count > (ip === "unknown" ? Math.ceil(limit / 4) : limit)) return tooMany(windowSec);
-  } catch (e) {
-    console.warn("[api-guard] rate limit 저장소 오류:", e instanceof Error ? e.message : e);
-  }
+  if (!hitL1(`rl:${route}:${ip}`, ip === "unknown" ? Math.ceil(perMinute / 4) : perMinute)) return tooMany(Math.min(windowSec, 60));
   return null;
+}
+
+/** sync: 금고 id(가명 식별자)별 분당 쓰기 한도 — 정상 기기는 디바운스 push라 분당 1~2회 */
+export const SYNC_PUT_PER_VAULT_PER_MINUTE = 20;
+/** sync: 하루 전역 신규 금고 등록 상한(KST) */
+export const SYNC_NEW_VAULT_DAILY_LIMIT = 1000;
+/** share: 하루 전역 공유 저장 상한(KST) */
+export const SHARE_POST_DAILY_LIMIT = 5000;
+
+/** IP 없는 전역 일 상한 — 키 `rl:{name}:global:{KST 날짜}`. 초과하면 true. Redis 장애 시 통과(false) */
+export async function exceedsDailyGlobal(name: string, limit: number): Promise<boolean> {
+  try {
+    const used = await getCacheStorage().incrementCounter(`rl:${name}:global:${kstDateStr()}`, 1, secondsUntilKstMidnight());
+    return used > limit;
+  } catch (e) {
+    console.warn("[api-guard] 전역 한도 저장소 오류:", e instanceof Error ? e.message : e);
+    return false;
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -236,11 +255,8 @@ export async function withinUpstreamBudget(upstream: Upstream, weight = 1): Prom
 // Gemini 호출 예약 (parse-screenshot·xray-classify 공용)
 // ─────────────────────────────────────────────────────────
 
-/** IP당 하루 Gemini 호출 상한 */
-export const GEMINI_PER_IP_DAILY_LIMIT = 30;
-/** 이미 하루 LIGHT_USER_CALLS회 넘게 쓴 IP는 전역 한도의 HEAVY_POOL_RATIO까지만 사용 — 나머지는 다른 사용자 몫으로 예약 */
-const LIGHT_USER_CALLS = 5;
-const HEAVY_POOL_RATIO = 0.7;
+/** IP 없는 시간당 전역 Gemini 상한 — 한 공격자가 일 전역 한도를 다 써도 정지가 그 시간대로 한정되게 한다 */
+export const GEMINI_GLOBAL_HOURLY_LIMIT = 150;
 
 function kstDateStr(now = Date.now()): string {
   return new Date(now + 9 * 3600 * 1000).toISOString().split("T")[0];
@@ -252,12 +268,11 @@ function secondsUntilKstMidnight(now = Date.now()): number {
 }
 
 /** 비중 미리보기(/ratio) 입구 전용 풀 한도 — 앱 사용자 몫(전역 1500 중 1440)을 보호 */
-export const RATIO_POOL = { name: "ratio", dailyLimit: 60, perIpDailyLimit: 5 } as const;
+export const RATIO_POOL = { name: "ratio", dailyLimit: 60 } as const;
 
 export interface GeminiPool {
   name: "ratio";
   dailyLimit: number;
-  perIpDailyLimit: number;
 }
 
 /** 입구 판정: entry 표시가 "ratio"이거나 Referer 경로가 /ratio(말미 슬래시 허용). 파싱 실패는 false */
@@ -275,7 +290,8 @@ export function isRatioEntry(request: Request, entry?: unknown): boolean {
 /**
  * 외부 호출 전 n회분 원자 예약. 통과 시 null, 차단 시 429 응답.
  * 실패한 호출도 차감된다(비용은 이미 발생) — 실패 반복으로 한도를 우회하지 못하게 한다.
- * pool 지정 시 순서: IP 일반 → 입구 IP → 입구 전역 → 전역. 실패하면 앞 단계를 전부 -n으로 되돌린다.
+ * 1인당 30회는 기기(localStorage, use-gemini-usage) 기준이다. 서버는 IP 없는 한도만 쓴다.
+ * 순서: 시간당 전역 → (pool) 입구 전역 → 일 전역. 실패하면 앞 단계를 전부 -n으로 되돌린다.
  */
 export async function reserveGeminiCalls(
   request: Request,
@@ -283,43 +299,34 @@ export async function reserveGeminiCalls(
   limitMessage: string,
   pool?: GeminiPool,
 ): Promise<NextResponse | null> {
+  void request; // IP를 읽지 않는다(5.113)
   const storage = getCacheStorage();
-  const today = kstDateStr();
-  const ip = getClientIp(request);
-  const ttl = secondsUntilKstMidnight();
+  const now = Date.now();
+  const today = kstDateStr(now);
+  const ttl = secondsUntilKstMidnight(now);
 
-  const ipKey = `rl:gemini:${ip}:${today}`;
-  const poolIpKey = pool ? `rl:gemini-${pool.name}:${ip}:${today}` : "";
+  const hourKey = `rl:gemini:global:${new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 13).replace(/\D/g, "")}`;
   const poolKey = pool ? `rl:gemini-${pool.name}:${today}` : "";
-  // 지금까지 증가시킨 카운터를 되돌리는 롤백 목록
-  const done: string[] = [];
+  const done: { key: string; ttl: number }[] = [];
   const rollback = async () => {
-    for (const k of done) await storage.incrementCounter(k, -n, ttl);
+    for (const d of done) await storage.incrementCounter(d.key, -n, d.ttl);
   };
 
-  const ipUsed = await storage.incrementCounter(ipKey, n, ttl);
-  done.push(ipKey);
-  if (ipUsed > GEMINI_PER_IP_DAILY_LIMIT) {
+  const hourUsed = await storage.incrementCounter(hourKey, n, 3600 + 60);
+  done.push({ key: hourKey, ttl: 3660 });
+  if (hourUsed > GEMINI_GLOBAL_HOURLY_LIMIT) {
     await rollback();
-    return tooMany(ttl, limitMessage);
+    return tooMany(secondsUntilNextHour(now), limitMessage);
   }
   if (pool) {
-    const poolIpUsed = await storage.incrementCounter(poolIpKey, n, ttl);
-    done.push(poolIpKey);
-    if (poolIpUsed > pool.perIpDailyLimit) {
-      await rollback();
-      return tooMany(ttl, limitMessage);
-    }
     const poolUsed = await storage.incrementCounter(poolKey, n, ttl);
-    done.push(poolKey);
+    done.push({ key: poolKey, ttl });
     if (poolUsed > pool.dailyLimit) {
       await rollback();
       return tooMany(ttl, limitMessage);
     }
   }
-  const heavy = ipUsed - n >= LIGHT_USER_CALLS;
-  const effectiveLimit = heavy ? Math.floor(GEMINI_SERVER_DAILY_LIMIT * HEAVY_POOL_RATIO) : GEMINI_SERVER_DAILY_LIMIT;
-  const reserved = await storage.reserveGeminiDaily(today, n, effectiveLimit);
+  const reserved = await storage.reserveGeminiDaily(today, n, GEMINI_SERVER_DAILY_LIMIT);
   if (reserved === null) {
     await rollback();
     return tooMany(ttl, limitMessage);

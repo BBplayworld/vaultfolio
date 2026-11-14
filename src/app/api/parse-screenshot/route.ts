@@ -689,7 +689,7 @@ function respondParsed(assetType: ParseAssetType, geminiRaw: any[], todayStr: st
 
 export async function POST(request: Request) {
   // 본문 파싱 전 출처·크기(이미지 10MB + multipart 여유) 검사 — 대용량 본문을 메모리에 올리기 전에 차단
-  const blocked = guardRequest(request, { route: "parse-screenshot", maxBodyBytes: MAX_IMAGE_BYTES + 512 * 1024, l1PerMinute: 20 });
+  const blocked = guardRequest(request, { route: "parse-screenshot", maxBodyBytes: MAX_IMAGE_BYTES + 512 * 1024, l1PerMinute: 5 });
   if (blocked) return blocked;
 
   const apiKey = process.env.GEMINI_API_KEY;

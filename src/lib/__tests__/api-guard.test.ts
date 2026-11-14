@@ -11,7 +11,8 @@ import {
   secondsUntilNextHour,
   cdnCacheHeaders,
   reserveGeminiCalls,
-  GEMINI_PER_IP_DAILY_LIMIT,
+  GEMINI_GLOBAL_HOURLY_LIMIT,
+  exceedsDailyGlobal,
   RATIO_POOL,
   isRatioEntry,
 } from "@/server/api-guard";
@@ -77,12 +78,21 @@ describe("guardRequest", () => {
   });
 });
 
-describe("guardRateLimit (L2)", () => {
-  it("rl:{route}:{ip} 버킷으로 한도 초과 시 429", async () => {
+describe("guardRateLimit (메모리 버킷, Redis 미사용)", () => {
+  it("한도 초과 시 429 — Redis 카운터를 건드리지 않는다", async () => {
+    const spy = vi.spyOn(Object.getPrototypeOf(getCacheStorage()), "incrementCounter");
+    const calls = spy.mock.calls.length;
     const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
     expect(await guardRateLimit(r, "t-l2", 2, 60)).toBeNull();
     expect(await guardRateLimit(r, "t-l2", 2, 60)).toBeNull();
     expect((await guardRateLimit(r, "t-l2", 2, 60))?.status).toBe(429);
+    expect(spy.mock.calls.length).toBe(calls);
+    spy.mockRestore();
+  });
+  it("창이 1분보다 긴 라우트는 분당 환산(최소 3회)으로 적용", async () => {
+    const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
+    for (let i = 0; i < 3; i++) expect(await guardRateLimit(r, "t-long", 5, 600)).toBeNull();
+    expect((await guardRateLimit(r, "t-long", 5, 600))?.status).toBe(429);
   });
   it("라우트 버킷이 서로 독립(피드백 스팸이 다른 라우트를 막지 않음)", async () => {
     const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
@@ -122,50 +132,99 @@ describe("CDN 캐시 헤더", () => {
   });
 });
 
-describe("reserveGeminiCalls", () => {
-  afterEach(() => vi.restoreAllMocks());
+// Redis에 쓰는 모든 키를 수집 — IP가 들어간 키가 0인지 단언한다
+function recordKeys() {
+  const keys: string[] = [];
+  const proto = Object.getPrototypeOf(getCacheStorage());
+  const orig = proto.incrementCounter;
+  const spy = vi.spyOn(proto, "incrementCounter").mockImplementation(function (this: unknown, key: string, by: number, ttl: number) {
+    keys.push(key);
+    return orig.call(this, key, by, ttl);
+  });
+  return { keys, spy };
+}
+const hourKeyNow = () => `rl:gemini:global:${new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 13).replace(/\D/g, "")}`;
+const todayKst = () => new Date(Date.now() + 9 * 3600_000).toISOString().split("T")[0];
+async function resetCounter(key: string) {
+  const storage = getCacheStorage();
+  const used = await storage.incrementCounter(key, 0, 3600);
+  if (used !== 0) await storage.incrementCounter(key, -used, 3600);
+}
 
-  it("IP 일 한도를 넘으면 429이고 IP 카운터는 롤백된다", async () => {
+describe("reserveGeminiCalls (IP 없는 한도)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  beforeEach(async () => { await resetCounter(hourKeyNow()); });
+
+  it("시간당 전역 상한 초과 시 429이고 카운터는 롤백된다", async () => {
     const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
     const storage = getCacheStorage();
     vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
-    expect(await reserveGeminiCalls(r, GEMINI_PER_IP_DAILY_LIMIT, "limit")).toBeNull();
+    expect(await reserveGeminiCalls(r, GEMINI_GLOBAL_HOURLY_LIMIT, "limit")).toBeNull();
     const denied = await reserveGeminiCalls(r, 1, "limit");
     expect(denied?.status).toBe(429);
     expect(await denied?.json()).toEqual({ error: "limit" });
+    // 롤백 확인: 직전 실패분이 남지 않아 상한 그대로(150) 기록
+    expect(await storage.incrementCounter(hourKeyNow(), 0, 3600)).toBe(GEMINI_GLOBAL_HOURLY_LIMIT);
   });
 
-  it("전역 예약 실패(null) 시 429", async () => {
-    const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
+  it("다른 IP도 같은 전역 카운터를 공유한다(IP로 구분하지 않음)", async () => {
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
+    await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": uniqueIp() }), 100, "limit");
+    await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": uniqueIp() }), 50, "limit");
+    expect((await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": uniqueIp() }), 1, "limit"))?.status).toBe(429);
+  });
+
+  it("일 전역 예약 실패(null) 시 429이고 시간당 카운터가 되돌려진다", async () => {
     const storage = getCacheStorage();
     vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(null);
-    expect((await reserveGeminiCalls(r, 1, "limit"))?.status).toBe(429);
+    expect((await reserveGeminiCalls(req("http://a.test/api"), 1, "limit"))?.status).toBe(429);
+    expect(await storage.incrementCounter(hourKeyNow(), 0, 3600)).toBe(0);
   });
 
-  it("하루 5회 넘게 쓴 IP는 전역 한도의 70%까지만 예약을 시도한다", async () => {
-    const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
+  it("일 전역 한도는 1500 그대로 전달(HEAVY 차등 없음)", async () => {
     const storage = getCacheStorage();
     const spy = vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
-    for (let i = 0; i < 5; i++) await reserveGeminiCalls(r, 1, "limit");
-    const lightLimit = spy.mock.calls[0][2];
+    for (let i = 0; i < 7; i++) await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": "9.9.9.9" }), 1, "limit");
+    expect(new Set(spy.mock.calls.map((c) => c[2]))).toEqual(new Set([1500]));
+  });
+
+  it("Redis 키 패턴: IP가 들어간 키 0 — rl:gemini:global:{시} 와 일 전역만", async () => {
+    const ip = "203.0.113.77";
+    const { keys } = recordKeys();
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
+    const r = req("http://a.test/api", { "x-real-ip": ip, "x-forwarded-for": ip });
+    await guardRateLimit(r, "t-keys", 5, 60);
     await reserveGeminiCalls(r, 1, "limit");
-    const heavyLimit = spy.mock.calls[5][2];
-    expect(heavyLimit).toBeLessThan(lightLimit as number);
+    await exceedsDailyGlobal("t-keys", 10);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const k of keys) {
+      expect(k).not.toContain(ip);
+      expect(k).toMatch(/^rl:(gemini:global:\d{10}|gemini-ratio:\d{4}-\d{2}-\d{2}|t-keys:global:\d{4}-\d{2}-\d{2})$/);
+    }
+  });
+});
+
+describe("exceedsDailyGlobal", () => {
+  it("한도 초과 시 true, 키는 rl:{name}:global:{날짜}", async () => {
+    const { keys } = recordKeys();
+    const name = `t-glob-${Date.now()}`;
+    expect(await exceedsDailyGlobal(name, 2)).toBe(false);
+    expect(await exceedsDailyGlobal(name, 2)).toBe(false);
+    expect(await exceedsDailyGlobal(name, 2)).toBe(true);
+    expect(keys[0]).toBe(`rl:${name}:global:${todayKst()}`);
+    vi.restoreAllMocks();
   });
 });
 
 describe("reserveGeminiCalls — /ratio 입구 풀", () => {
   afterEach(() => vi.restoreAllMocks());
   const MSG = "마감";
-  const todayKst = () => new Date(Date.now() + 9 * 3600_000).toISOString().split("T")[0];
-  // 테스트 간 격리: 입구 전역 카운터를 0으로 되돌린다
-  const resetPoolCounter = async () => {
-    const storage = getCacheStorage();
-    const key = `rl:gemini-ratio:${todayKst()}`;
-    const used = await storage.incrementCounter(key, 0, 3600);
-    if (used > 0) await storage.incrementCounter(key, -used, 3600);
-  };
-  beforeEach(resetPoolCounter);
+  beforeEach(async () => {
+    await resetCounter(`rl:gemini-ratio:${todayKst()}`);
+    await resetCounter(hourKeyNow());
+  });
 
   it("isRatioEntry: entry 표시 또는 Referer 경로 /ratio(슬래시·쿼리 허용), /ratio-x·파싱 실패는 false", () => {
     expect(isRatioEntry(req("http://a.test/api"), "ratio")).toBe(true);
@@ -176,43 +235,34 @@ describe("reserveGeminiCalls — /ratio 입구 풀", () => {
     expect(isRatioEntry(req("http://a.test/api"), "other")).toBe(false);
   });
 
-  it("같은 IP의 입구 6번째 요청은 429이고, 직후 일반 요청은 통과한다", async () => {
-    const r = req("http://a.test/api", { "x-real-ip": uniqueIp() });
-    const storage = getCacheStorage();
-    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
-    for (let i = 0; i < RATIO_POOL.perIpDailyLimit; i++) {
-      expect(await reserveGeminiCalls(r, 1, MSG, RATIO_POOL)).toBeNull();
-    }
-    const denied = await reserveGeminiCalls(r, 1, MSG, RATIO_POOL);
-    expect(denied?.status).toBe(429);
-    expect(await denied?.json()).toEqual({ error: MSG });
-    expect(await reserveGeminiCalls(r, 1, "limit")).toBeNull();
-  });
-
-  it("입구 전역 60회 초과(서로 다른 IP)의 61번째는 429이고 일반 풀 카운터가 되돌려진다", async () => {
+  it("입구 전역 60회 초과의 61번째는 429이고 시간당 카운터가 되돌려진다", async () => {
     const storage = getCacheStorage();
     vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
     for (let i = 0; i < RATIO_POOL.dailyLimit; i++) {
-      expect(await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": uniqueIp() }), 1, MSG, RATIO_POOL)).toBeNull();
+      expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL)).toBeNull();
     }
-    const ip = uniqueIp();
-    const denied = await reserveGeminiCalls(req("http://a.test/api", { "x-real-ip": ip }), 1, MSG, RATIO_POOL);
+    const denied = await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL);
     expect(denied?.status).toBe(429);
-    // 실패한 IP는 일반·입구 IP 카운터가 되돌려져 일반 요청 30회를 온전히 쓸 수 있다
-    const r = req("http://a.test/api", { "x-real-ip": ip });
-    expect(await reserveGeminiCalls(r, GEMINI_PER_IP_DAILY_LIMIT, "limit")).toBeNull();
+    expect(await denied?.json()).toEqual({ error: MSG });
+    expect(await storage.incrementCounter(hourKeyNow(), 0, 3600)).toBe(RATIO_POOL.dailyLimit);
   });
 
-  it("전역 예약 실패 시 입구 카운터까지 되돌려진다", async () => {
-    const ip = uniqueIp();
-    const r = req("http://a.test/api", { "x-real-ip": ip });
+  it("일 전역 예약 실패 시 입구 카운터까지 되돌려진다", async () => {
     const storage = getCacheStorage();
     const spy = vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(null);
-    for (let i = 0; i < RATIO_POOL.perIpDailyLimit + 2; i++) {
-      expect((await reserveGeminiCalls(r, 1, MSG, RATIO_POOL))?.status).toBe(429);
+    for (let i = 0; i < RATIO_POOL.dailyLimit + 2; i++) {
+      expect((await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL))?.status).toBe(429);
     }
     spy.mockResolvedValue(1);
-    // 롤백이 없었다면 입구 IP 5회를 이미 소진해 첫 호출부터 막힌다
-    expect(await reserveGeminiCalls(r, 1, MSG, RATIO_POOL)).toBeNull();
+    expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL)).toBeNull();
+  });
+});
+
+describe("라우트 L1 한도 — Gemini 라우트 분당 5회", () => {
+  it("parse-screenshot·xray-classify 라우트 정책이 l1PerMinute: 5", async () => {
+    const { readFileSync } = await import("fs");
+    for (const f of ["src/app/api/parse-screenshot/route.ts", "src/app/api/xray-classify/route.ts"]) {
+      expect(readFileSync(f, "utf8")).toMatch(/l1PerMinute: 5 \}/);
+    }
   });
 });

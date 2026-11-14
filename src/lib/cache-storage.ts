@@ -86,8 +86,6 @@ export interface ICacheStorage {
   // 요청일 → 응답일(실거래일) 매핑. 휴장/공휴일로 요청일과 응답일이 다른 경우 영구 hit 보장
   getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null>;
   setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void>;
-  // Rate Limit (로컬 개발에서는 항상 통과) — 레거시 단일 버킷(sync 라우트 전용). 신규 라우트는 incrementCounter 사용
-  checkRateLimit(ip: string): Promise<boolean>;
   // 원자 카운터 — INCRBY 후 TTL이 없으면 ttlSec 설정(TTL 없는 키 잔존 방지). 증가 후 값을 반환.
   // rate limit(rl:*)·업스트림 예산(budget:*) 공용. 키 접두는 호출자가 네임스페이스로 분리한다.
   incrementCounter(key: string, by: number, ttlSec: number): Promise<number>;
@@ -160,8 +158,6 @@ const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
 const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
 const CSYNC_TTL_SECONDS = 90 * 24 * 3600; // 90일
 const CSYNC_TTL_MS = CSYNC_TTL_SECONDS * 1000;
-const RATE_LIMIT_WINDOW_SECONDS = 60;
-const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 1500; // 서버 전역 하루 최대 호출 수
 const STOCK_CLASSIFICATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90일
 const STOCK_CLASSIFICATION_TTL_SEC = 90 * 24 * 60 * 60;
@@ -626,11 +622,6 @@ export class FileCacheStorage implements ICacheStorage {
     this.writeFinanceCache(cache, todayStr);
   }
 
-  // 로컬 개발에서는 Rate Limit 적용 없음
-  async checkRateLimit(_ip: string): Promise<boolean> {
-    return true;
-  }
-
   // 로컬 단일 프로세스 — 메모리 카운터·락으로 동작 동형 유지(재시작 시 초기화)
   async incrementCounter(key: string, by: number, ttlSec: number): Promise<number> {
     const now = Date.now();
@@ -1010,12 +1001,6 @@ class UpstashCacheStorage implements ICacheStorage {
 
   async setOwnerKey(ownerHash: string, shareKey: string): Promise<void> {
     await this.redis.set(`share:owner:${ownerHash}`, shareKey, { ex: SHARE_TTL_SECONDS });
-  }
-
-  async checkRateLimit(ip: string): Promise<boolean> {
-    // rl: 네임스페이스로 분리 — share:{key} 조회(GET /api/share)로 카운터 키에 접근·TTL 연장 불가
-    const count = await this.incrementCounter(`rl:legacy:${ip}`, 1, RATE_LIMIT_WINDOW_SECONDS);
-    return count <= RATE_LIMIT_MAX;
   }
 
   // INCRBY + (TTL 없으면) EXPIRE를 Lua로 원자 실행 — 중간 실패로 TTL 없는 키가 남아 영구 차단되는 문제 방지

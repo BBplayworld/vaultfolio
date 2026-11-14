@@ -8,8 +8,8 @@ import { SYNC_AUTH_HEADER } from "@/lib/cloud-sync/config";
 
 interface Env { pubKey: string; iv: string; ciphertext: string; version: number; updatedAt: string }
 const store = new Map<string, Env>();
-const spies = { getEnvelope: vi.fn(), checkRateLimit: vi.fn() };
-const putCounters = new Map<string, number>();
+const spies = { getEnvelope: vi.fn() };
+const counters = new Map<string, number>();
 
 vi.mock("@/lib/cache-storage", () => ({
   getCacheStorage: () => ({
@@ -17,12 +17,11 @@ vi.mock("@/lib/cache-storage", () => ({
       spies.getEnvelope(id);
       return store.get(id) ?? null;
     },
-    // 운영 저장소와 같은 규칙: IP당 분당 10회
-    checkRateLimit: async (ip: string) => {
-      spies.checkRateLimit(ip);
-      const n = (putCounters.get(ip) ?? 0) + 1;
-      putCounters.set(ip, n);
-      return n <= 10;
+    // Redis 카운터 목 — 호출된 키를 모두 남겨 IP 키가 없음을 단언한다
+    incrementCounter: async (key: string, by: number) => {
+      const n = (counters.get(key) ?? 0) + by;
+      counters.set(key, n);
+      return n;
     },
     compareAndSetAssetEnvelope: async (id: string, base: number, v: { pubKey: string; iv: string; ciphertext: string }) => {
       const cur = store.get(id);
@@ -35,6 +34,7 @@ vi.mock("@/lib/cache-storage", () => ({
 }));
 
 import { GET, PUT } from "@/app/api/sync/route";
+import { SYNC_NEW_VAULT_DAILY_LIMIT, SYNC_PUT_PER_VAULT_PER_MINUTE } from "@/server/api-guard";
 
 let ipSeq = 0;
 const uniqueIp = () => `10.9.${Math.floor(++ipSeq / 250)}.${ipSeq % 250}`;
@@ -74,9 +74,8 @@ describe("/api/sync 방어", () => {
 
   beforeEach(async () => {
     store.clear();
-    putCounters.clear();
+    counters.clear();
     spies.getEnvelope.mockClear();
-    spies.checkRateLimit.mockClear();
     assetId = generateAssetId();
     keys = await deriveKeys("test-passphrase-1", assetId);
   });
@@ -135,10 +134,11 @@ describe("/api/sync 방어", () => {
     expect(blocked).toBe(true);
   });
 
-  it("PUT rate limit도 위조 XFF 좌측 값에 영향받지 않는다(IP는 신뢰 헤더 기준)", async () => {
+  it("PUT 인증 전 폭주는 L1(60/분)에서 429 — 위조 XFF 좌측 값은 무시, Redis 카운터 0", async () => {
     const real = uniqueIp();
-    for (let i = 0; i < 12; i++) {
-      await PUT(new Request("http://a.test/api/sync", {
+    let limitedAt = -1;
+    for (let i = 1; i <= 70; i++) {
+      const r = await PUT(new Request("http://a.test/api/sync", {
         method: "PUT",
         headers: {
           [SYNC_AUTH_HEADER]: rawToken({ assetId, ts: Math.floor(Date.now() / 1000), nonce: "n", sig: "s" }),
@@ -147,14 +147,45 @@ describe("/api/sync 방어", () => {
         },
         body: "{}",
       }));
+      if (r.status === 429) { limitedAt = i; break; }
     }
-    expect(new Set(spies.checkRateLimit.mock.calls.map((c) => c[0]))).toEqual(new Set([real]));
-    const r = await PUT(new Request("http://a.test/api/sync", {
-      method: "PUT",
-      headers: { [SYNC_AUTH_HEADER]: rawToken({ assetId, ts: Math.floor(Date.now() / 1000), nonce: "n", sig: "s" }), "x-real-ip": real },
-      body: "{}",
-    }));
-    expect(r.status).toBe(429);
+    expect(limitedAt).toBe(61);
+    expect(counters.size).toBe(0);
+  });
+
+  it("금고 id별 쓰기 한도: 분당 20회 초과 시 429, 다른 금고는 영향 없음", async () => {
+    const ip = uniqueIp();
+    expect((await doPut(assetId, keys, 0, ip, true)).status).toBe(200);
+    let version = 1;
+    for (let i = 1; i < SYNC_PUT_PER_VAULT_PER_MINUTE; i++) {
+      expect((await doPut(assetId, keys, version++, ip)).status).toBe(200);
+    }
+    expect((await doPut(assetId, keys, version, ip)).status).toBe(429);
+    const otherId = generateAssetId();
+    const otherKeys = await deriveKeys("test-passphrase-2", otherId);
+    expect((await doPut(otherId, otherKeys, 0, uniqueIp(), true)).status).toBe(200);
+  });
+
+  it("하루 전역 신규 금고 한도: 초과 시 신규 등록만 429, 기존 금고 쓰기는 통과", async () => {
+    const ip = uniqueIp();
+    expect((await doPut(assetId, keys, 0, ip, true)).status).toBe(200);
+    const day = new Date(Date.now() + 9 * 3600_000).toISOString().split("T")[0];
+    counters.set(`rl:sync-new:global:${day}`, SYNC_NEW_VAULT_DAILY_LIMIT);
+    const newId = generateAssetId();
+    const newKeys = await deriveKeys("test-passphrase-3", newId);
+    expect((await doPut(newId, newKeys, 0, uniqueIp(), true)).status).toBe(429);
+    expect(store.has(newId)).toBe(false);
+    expect((await doPut(assetId, keys, 1, ip)).status).toBe(200);
+  });
+
+  it("Redis 키 패턴: IP 키 0 — rl:sync-put:{금고id}:{분} · rl:sync-new:global:{날짜}만", async () => {
+    const ip = "198.51.100.23";
+    expect((await doPut(assetId, keys, 0, ip, true)).status).toBe(200);
+    expect(counters.size).toBeGreaterThan(0);
+    for (const k of counters.keys()) {
+      expect(k).not.toContain(ip);
+      expect(k).toMatch(/^rl:(sync-put:[A-Za-z0-9_-]{8,128}:\d+|sync-new:global:\d{4}-\d{2}-\d{2})$/);
+    }
   });
 
   it.each([
@@ -177,7 +208,7 @@ describe("/api/sync 방어", () => {
     }));
     expect(p.status).toBe(401);
     expect(spies.getEnvelope).not.toHaveBeenCalled();
-    expect(spies.checkRateLimit).not.toHaveBeenCalled();
+    expect(counters.size).toBe(0);
   });
 
   it("과대 nonce·sig, 비정상 ts 거부", async () => {

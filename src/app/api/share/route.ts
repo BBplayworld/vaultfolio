@@ -23,7 +23,7 @@
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
+import { badRequest, exceedsDailyGlobal, guardRateLimit, guardRequest, SHARE_POST_DAILY_LIMIT } from "@/server/api-guard";
 
 export const maxDuration = 10;
 
@@ -81,9 +81,12 @@ export async function POST(request: Request) {
 
     const storage = getCacheStorage();
 
-    // IP 기반 Rate Limit (분당 10회, 라우트 전용 버킷)
+    // 인스턴스 메모리 빈도 한도(분당 10회) + IP 없는 하루 전역 상한(5.113, rl:share-post:global:{날짜})
     const limited = await guardRateLimit(request, "share-post", 10, 60);
     if (limited) return limited;
+    if (await exceedsDailyGlobal("share-post", SHARE_POST_DAILY_LIMIT)) {
+      return NextResponse.json({ error: "오늘 공유 한도에 도달했습니다. 내일 다시 시도해 주세요." }, { status: 429, headers: { "Cache-Control": "private, no-store" } });
+    }
 
     // 콘텐츠 기반 키: sha256(token)[:10] — IP 무관, 같은 자산 = 같은 키
     const key = createHash("sha256").update(token).digest("hex").substring(0, 10);
