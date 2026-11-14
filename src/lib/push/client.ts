@@ -106,7 +106,7 @@ export async function updatePushTargets(topics: string[], cond: PushCond): Promi
 }
 
 /**
- * 구독 해제 — 서버 삭제 후 기기 구독 해제(서버 실패해도 기기·로컬은 해제, 서버 고아는 발송 시 410·TTL 90일로 정리).
+ * 구독 해제 — 서버 삭제 후 기기 구독 해제(서버 실패해도 기기·로컬은 해제, 서버 고아는 발송 시 410·TTL 30일로 정리).
  * keepPrefs=true면 선택한 종류는 보존(끄기), false면 로컬 설정 키 삭제(모든 데이터 삭제).
  */
 export async function unsubscribePush(keepPrefs: boolean): Promise<void> {

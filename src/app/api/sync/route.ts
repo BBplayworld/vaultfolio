@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 import { SYNC_AUTH_HEADER, SIG_FRESHNESS_SEC } from "@/lib/cloud-sync/config";
 import { fromBase64, sha256Hex, verifySignature } from "@/lib/cloud-sync/crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { getClientIp, guardL1Only } from "@/server/api-guard";
+import { exceedsDailyGlobal, guardL1Only, SYNC_NEW_VAULT_DAILY_LIMIT, SYNC_PUT_PER_VAULT_PER_MINUTE } from "@/server/api-guard";
 
 interface AuthToken { assetId: string; ts: number; nonce: string; sig: string }
 
@@ -25,6 +25,8 @@ const NONCE_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_SIG_LEN = 200; // Ed25519 서명(64B) base64 ≈ 88자
 // GET(pull·폴링) L1 한도: 기기 1대 ≈ 분당 1회 + 포커스/가시성 전환. 다기기·공용 IP 여유를 두고 폭주만 차단
 const GET_L1_PER_MINUTE = 120;
+// PUT(쓰기) 남용 방어 — IP를 저장하지 않는 대체 한도(5.113). 인증 전 폭주는 L1, 인증 후에는 금고 id별·전역 신규 금고 한도
+const PUT_L1_PER_MINUTE = 60;
 
 function parseAuth(request: Request): AuthToken | null {
   const raw = request.headers.get(SYNC_AUTH_HEADER);
@@ -74,10 +76,9 @@ export async function PUT(request: Request) {
   const auth = parseAuth(request);
   if (!auth || !freshTs(auth.ts)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // 쓰기 남용 방지(IP 기반, 로컬은 항상 통과)
-  if (!(await getCacheStorage().checkRateLimit(getClientIp(request)))) {
-    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
-  }
+  // 인증 전 폭주 차단 — 인스턴스 메모리 L1(Redis 호출 0)
+  const limited = guardL1Only(request, "sync-put", PUT_L1_PER_MINUTE);
+  if (limited) return limited;
 
   let body: { iv?: string; ciphertext?: string; baseVersion?: number; pubKey?: string };
   try {
@@ -103,6 +104,13 @@ export async function PUT(request: Request) {
   if (!verifyPubKey) return NextResponse.json({ error: "pubKey 필요(최초 등록)" }, { status: 400 });
   const ok = await verifySignature(canonical, auth.sig, fromBase64(verifyPubKey));
   if (!ok) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // 서명 검증 통과 후 한도 — 남의 금고 id로 한도를 소진시키는 공격을 막는다(검증 실패 요청은 차감 없음)
+  const tooManyResp = () => NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  const minute = Math.floor(Date.now() / 60_000);
+  const used = await getCacheStorage().incrementCounter(`rl:sync-put:${auth.assetId}:${minute}`, 1, 120);
+  if (used > SYNC_PUT_PER_VAULT_PER_MINUTE) return tooManyResp();
+  if (!current && (await exceedsDailyGlobal("sync-new", SYNC_NEW_VAULT_DAILY_LIMIT))) return tooManyResp();
 
   // 기존 금고: pubKey 교체 불가(현 키 서명으로만). pubKey는 변경 빈도가 극히 낮고 최악의 경우도
   // 데이터 손실이 아닌 거부(403)라 원자성이 필요 없어 사전 체크로 유지.

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { FileCacheStorage } from "@/lib/cache-storage";
-import { pushSubId } from "../crypto";
+import { createCipheriv, randomBytes } from "crypto";
+import { getStoreKey, pushSubId } from "../crypto";
 import type { PushSubRecord } from "../types";
 
 const KEY = Buffer.alloc(32, 7).toString("base64");
@@ -99,5 +100,97 @@ describe("push 저장소", () => {
     delete data.subs[`push:dev:sub:${id}`].rec.cond;
     fs.writeFileSync(file, JSON.stringify(data));
     expect((await new FileCacheStorage().getPushSub(id))?.cond).toBe("daily");
+  });
+});
+
+const DAY = 24 * 3600 * 1000;
+const subsOf = () => JSON.parse(fs.readFileSync(file, "utf8")).subs as Record<string, { rec: { blob: string }; expires_at: number }>;
+const legacyBlob = () => {
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", getStoreKey()!, iv, { authTagLength: 16 });
+  const ct = Buffer.concat([c.update(JSON.stringify({ endpoint: ENDPOINT, p256dh: "p", auth: "a" }), "utf8"), c.final()]);
+  return Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64");
+};
+
+describe("5.113 보관 30일", () => {
+  it("저장 시 만료는 30일(90일 아님), 블롭은 2: 접두", async () => {
+    const st = new FileCacheStorage();
+    await st.putPushSub("a", rec());
+    const e = subsOf()["push:dev:sub:a"];
+    const left = e.expires_at - Date.now();
+    expect(left).toBeLessThanOrEqual(30 * DAY);
+    expect(left).toBeGreaterThan(30 * DAY - 60_000);
+    expect(e.rec.blob.startsWith("2:")).toBe(true);
+  });
+  it("구독 갱신(재저장) 시 만료가 다시 30일로 연장된다", async () => {
+    const st = new FileCacheStorage();
+    await st.putPushSub("a", rec());
+    const data = JSON.parse(fs.readFileSync(file, "utf8"));
+    data.subs["push:dev:sub:a"].expires_at = Date.now() + 2 * DAY;
+    fs.writeFileSync(file, JSON.stringify(data));
+    await st.putPushSub("a", rec());
+    expect(subsOf()["push:dev:sub:a"].expires_at - Date.now()).toBeGreaterThan(29 * DAY);
+  });
+  it("capLegacyPushTtl: 구 형식 + 만료 90일 → 30일로 축소, 이미 짧으면 유지, 신 형식은 무변경", async () => {
+    const st = new FileCacheStorage();
+    await st.putPushSub("n", rec());
+    const data = JSON.parse(fs.readFileSync(file, "utf8"));
+    data.subs["push:dev:sub:old90"] = { rec: { blob: legacyBlob(), topics: ["settle"], createdAt: "x", updatedAt: "x" }, expires_at: Date.now() + 90 * DAY };
+    data.subs["push:dev:sub:old5"] = { rec: { blob: legacyBlob(), topics: ["settle"], createdAt: "x", updatedAt: "x" }, expires_at: Date.now() + 5 * DAY };
+    data.subs["push:dev:sub:n"].expires_at = Date.now() + 90 * DAY; // 신 형식은 건드리지 않음을 확인
+    fs.writeFileSync(file, JSON.stringify(data));
+    const before5 = subsOf()["push:dev:sub:old5"].expires_at;
+    for (const id of ["old90", "old5", "n"]) await st.capLegacyPushTtl(id);
+    await st.capLegacyPushTtl("없는-id");
+    const after = subsOf();
+    expect(after["push:dev:sub:old90"].expires_at - Date.now()).toBeLessThanOrEqual(30 * DAY);
+    expect(after["push:dev:sub:old5"].expires_at).toBe(before5);
+    expect(after["push:dev:sub:n"].expires_at - Date.now()).toBeGreaterThan(89 * DAY);
+  });
+  it("구 형식 레코드(구 id·구 블롭)도 이중 읽기로 조회된다", async () => {
+    const st = new FileCacheStorage();
+    const data = { subs: { "push:dev:sub:oldid": { rec: { blob: legacyBlob(), topics: ["tax"], createdAt: "x", updatedAt: "2026-11-01" }, expires_at: Date.now() + DAY } }, sent: {} };
+    fs.writeFileSync(file, JSON.stringify(data));
+    expect(await st.getPushSub("oldid")).toMatchObject({ endpoint: ENDPOINT, topics: ["tax"] });
+  });
+});
+
+describe("5.113 Upstash 저장소 TTL", () => {
+  it("putPushSub·capLegacyPushTtl이 30일 EXPIRE를 쓴다", async () => {
+    vi.resetModules();
+    const calls: { fn: string; args: unknown[] }[] = [];
+    const store = new Map<string, unknown>();
+    const ttlOf = new Map<string, number>();
+    vi.doMock("@upstash/redis", () => ({
+      Redis: class {
+        async get(k: string) { return store.get(k) ?? null; }
+        async set(k: string, v: unknown, o?: { ex?: number }) { store.set(k, v); if (o?.ex) ttlOf.set(k, o.ex); calls.push({ fn: "set", args: [k, o] }); return "OK"; }
+        async sadd() { return 1; }
+        async srem() { return 1; }
+        async expire(k: string, sec: number) { ttlOf.set(k, sec); calls.push({ fn: "expire", args: [k, sec] }); return 1; }
+        async ttl(k: string) { return ttlOf.get(k) ?? -2; }
+      },
+    }));
+    process.env.KV_REST_API_URL = "https://kv.test";
+    process.env.KV_REST_API_TOKEN = "t";
+    const { getCacheStorage } = await import("@/lib/cache-storage");
+    const st = getCacheStorage();
+    await st.putPushSub("u1", rec());
+    expect(ttlOf.get("push:dev:sub:u1")).toBe(30 * 24 * 3600);
+    // 구 형식 90일 레코드 → 30일로 축소(1회), 이후 재호출은 변화 없음
+    store.set("push:dev:sub:u2", { blob: legacyBlob(), topics: ["tax"], createdAt: "x", updatedAt: "x" });
+    ttlOf.set("push:dev:sub:u2", 90 * 24 * 3600);
+    await st.capLegacyPushTtl("u2");
+    expect(ttlOf.get("push:dev:sub:u2")).toBe(30 * 24 * 3600);
+    const n = calls.filter((c) => c.fn === "expire" && c.args[0] === "push:dev:sub:u2").length;
+    await st.capLegacyPushTtl("u2");
+    expect(calls.filter((c) => c.fn === "expire" && c.args[0] === "push:dev:sub:u2").length).toBe(n);
+    // 신 형식은 건드리지 않는다
+    ttlOf.set("push:dev:sub:u1", 90 * 24 * 3600);
+    await st.capLegacyPushTtl("u1");
+    expect(ttlOf.get("push:dev:sub:u1")).toBe(90 * 24 * 3600);
+    vi.doUnmock("@upstash/redis");
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
   });
 });

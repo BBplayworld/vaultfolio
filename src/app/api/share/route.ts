@@ -12,6 +12,8 @@
  *   owner_id: 브라우저 localStorage에 저장된 UUID.
  *   재공유 시 이전 키를 즉시 삭제해 Redis 누적을 방지.
  *
+ *   once:true → 웹→PWA 1회용(1시간 TTL, 조회 즉시 삭제, owner_id 미사용)
+ *
  * GET /api/share?key=a3f8b2c1ab
  *   → { token: "v73A..." }  (key는 hex 10자리만 허용, 구 v72Z도 읽기 허용)
  *   v73A는 접근 시 TTL 30일 연장 (Sliding Window), v72Z는 연장하지 않음(자연 소멸)
@@ -22,7 +24,7 @@
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "crypto";
 import { getCacheStorage } from "@/lib/cache-storage";
-import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
+import { badRequest, exceedsDailyGlobal, guardRateLimit, guardRequest, SHARE_POST_DAILY_LIMIT } from "@/server/api-guard";
 
 export const maxDuration = 10;
 
@@ -51,7 +53,13 @@ export async function GET(request: Request) {
   if (limited) return limited;
 
   const storage = getCacheStorage();
-  const token = await storage.getShareToken(key);
+  // 간편 공유(30일 sliding) 우선, 없으면 1회용 전달 토큰을 조회와 동시에 삭제
+  let token = await storage.getShareToken(key);
+  let once = false;
+  if (!token) {
+    token = await storage.takeOnceShareToken(key);
+    once = !!token;
+  }
 
   if (!token) {
     return NextResponse.json({ error: "링크가 만료되었거나 존재하지 않습니다." }, { status: 404, headers: NO_STORE });
@@ -61,7 +69,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "구형 공유 링크는 더 이상 열 수 없습니다. 다시 공유해 주세요." }, { status: 410, headers: NO_STORE });
   }
 
-  return NextResponse.json({ token }, { headers: NO_STORE });
+  return NextResponse.json(once ? { token, once: true } : { token }, { headers: NO_STORE });
 }
 
 export async function POST(request: Request) {
@@ -69,7 +77,7 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json() as { token?: unknown; owner_id?: unknown };
+    const body = await request.json() as { token?: unknown; owner_id?: unknown; once?: unknown };
     const token = typeof body.token === "string" ? body.token.trim() : "";
 
     if (!token) {
@@ -86,9 +94,19 @@ export async function POST(request: Request) {
 
     const storage = getCacheStorage();
 
-    // IP 기반 Rate Limit (분당 10회, 라우트 전용 버킷)
+    // 인스턴스 메모리 빈도 한도(분당 10회) + IP 없는 하루 전역 상한(5.113, rl:share-post:global:{날짜})
     const limited = await guardRateLimit(request, "share-post", 10, 60);
     if (limited) return limited;
+    if (await exceedsDailyGlobal("share-post", SHARE_POST_DAILY_LIMIT)) {
+      return NextResponse.json({ error: "오늘 공유 한도에 도달했습니다. 내일 다시 시도해 주세요." }, { status: 429, headers: { "Cache-Control": "private, no-store" } });
+    }
+
+    // 웹→PWA 1회용 전달: owner 추적·30일 저장 없이 1시간 TTL 별도 키 공간, GET 시 즉시 삭제
+    if (body.once === true) {
+      const onceKey = createHash("sha256").update(token).digest("hex").substring(0, 10);
+      await storage.setOnceShareToken(onceKey, token);
+      return NextResponse.json({ key: onceKey }, { headers: NO_STORE });
+    }
 
     // 콘텐츠 기반 키: sha256(token)[:10] — IP 무관
     const key = createHash("sha256").update(token).digest("hex").substring(0, 10);

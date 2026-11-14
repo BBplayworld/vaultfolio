@@ -144,7 +144,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
             <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-sm font-bold text-primary">Plus</span>
           </DialogTitle>
           <DialogDescription className="text-left text-pretty break-keep">
-            새 기기로 자산을 안전하게 전달하고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). {SYNC_MENU_SECURITY_DESC}
+            새 기기로 자산을 암호화해 옮기고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). {SYNC_MENU_SECURITY_DESC}
           </DialogDescription>
         </DialogHeader>
 

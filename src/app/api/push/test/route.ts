@@ -3,7 +3,7 @@ import { getCacheStorage } from "@/lib/cache-storage";
 import { pushKeyPrefix } from "@/lib/push/prefix";
 import { buildTestPayloads } from "@/lib/push/test-payloads";
 import { isPushConfigured, sendPush } from "@/lib/push/send";
-import { pushSubId } from "@/lib/push/crypto";
+import { pushSubId, pushSubIdLegacy } from "@/lib/push/crypto";
 import { parseEndpointBody } from "@/lib/push/validate";
 import { badRequest, guardRateLimit, guardRequest } from "@/server/api-guard";
 
@@ -27,8 +27,13 @@ export async function POST(req: NextRequest) {
   if (!endpoint) return badRequest();
 
   const storage = getCacheStorage();
-  const id = pushSubId(endpoint);
-  const sub = await storage.getPushSub(id);
+  let id = pushSubId(endpoint);
+  let sub = await storage.getPushSub(id);
+  if (!sub) {
+    // 5.113 이행 기간 — 구 id 레코드 폴백
+    id = pushSubIdLegacy(endpoint);
+    sub = await storage.getPushSub(id);
+  }
   if (!sub) return NextResponse.json({ error: "not-subscribed" }, { status: 404, headers: NO_STORE });
 
   const lock = await storage.acquireLock(`${pushKeyPrefix()}testlock:${id}`, 60);

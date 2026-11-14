@@ -24,7 +24,7 @@ import type { AssetEnvelope } from "./cloud-sync/config";
 import { PUSH_TOPIC_IDS } from "@/lib/push/catalog";
 import { pushKeyPrefix } from "@/lib/push/prefix";
 import type { PushStoredSub, PushSubRecord } from "@/lib/push/types";
-import { openSecret, sealSecret } from "@/lib/push/crypto";
+import { isLegacyBlob, openSecret, sealSecret } from "@/lib/push/crypto";
 
 // 저장 직전 암호화·읽을 때 복호화(Redis·파일 공용) — 평문 endpoint·keys는 저장소에 남지 않는다
 function sealPushSub(rec: PushSubRecord, prev: PushStoredSub | null): PushStoredSub {
@@ -72,6 +72,9 @@ export interface ICacheStorage {
   getShareToken(key: string): Promise<string | null>;
   setShareToken(key: string, token: string): Promise<void>;
   deleteShareToken(key: string): Promise<void>;
+  // 웹→PWA 1회용 전달 토큰 — 별도 키 공간(share:once:), TTL 1시간, 조회 즉시 삭제(원자적), sliding 없음
+  setOnceShareToken(key: string, token: string): Promise<void>;
+  takeOnceShareToken(key: string): Promise<string | null>;
   getOwnerKey(ownerHash: string): Promise<string | null>;
   setOwnerKey(ownerHash: string, shareKey: string): Promise<void>;
   // 배당 캐시 (캐시키: "TICKER-YYYY-MM")
@@ -86,8 +89,6 @@ export interface ICacheStorage {
   // 요청일 → 응답일(실거래일) 매핑. 휴장/공휴일로 요청일과 응답일이 다른 경우 영구 hit 보장
   getRefDateForRequest(ticker: string, requestDate: string, period: ProfitPeriod): Promise<string | null>;
   setRefDateForRequest(ticker: string, requestDate: string, actualDate: string, period: ProfitPeriod): Promise<void>;
-  // Rate Limit (로컬 개발에서는 항상 통과) — 레거시 단일 버킷(sync 라우트 전용). 신규 라우트는 incrementCounter 사용
-  checkRateLimit(ip: string): Promise<boolean>;
   // 원자 카운터 — INCRBY 후 TTL이 없으면 ttlSec 설정(TTL 없는 키 잔존 방지). 증가 후 값을 반환.
   // rate limit(rl:*)·업스트림 예산(budget:*) 공용. 키 접두는 호출자가 네임스페이스로 분리한다.
   incrementCounter(key: string, by: number, ttlSec: number): Promise<number>;
@@ -134,6 +135,8 @@ export interface ICacheStorage {
   listPushSubIdsByTopics(topics: string[]): Promise<string[]>;
   // 알림 종류·날짜별 중복 방지 플래그(SET NX, TTL 3일) — 처음 잡으면 true
   markPushSent(topic: string, date: string): Promise<boolean>;
+  // 5.113: 구 형식(접두 없는 블롭) 레코드의 만료를 min(남은 시간, 30일)로 1회 줄인다. 신 형식·이미 짧은 레코드는 무변경
+  capLegacyPushTtl(id: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -158,10 +161,9 @@ export function getCacheStorage(): ICacheStorage {
 
 const SHARE_TTL_SECONDS = 30 * 24 * 3600; // 30일
 const SHARE_TTL_MS = SHARE_TTL_SECONDS * 1000;
+const SHARE_ONCE_TTL_SECONDS = 3600; // 1회용 전달 링크 1시간
 const CSYNC_TTL_SECONDS = 90 * 24 * 3600; // 90일
 const CSYNC_TTL_MS = CSYNC_TTL_SECONDS * 1000;
-const RATE_LIMIT_WINDOW_SECONDS = 60;
-const RATE_LIMIT_MAX = 10;
 export const GEMINI_SERVER_DAILY_LIMIT = 1500; // 서버 전역 하루 최대 호출 수
 const STOCK_CLASSIFICATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90일
 const STOCK_CLASSIFICATION_TTL_SEC = 90 * 24 * 60 * 60;
@@ -306,7 +308,7 @@ interface FileCacheData {
   UPBIT_LAST_CALL?: number;
 }
 
-const PUSH_SUB_TTL_SEC = 90 * 24 * 3600; // 90일
+const PUSH_SUB_TTL_SEC = 30 * 24 * 3600; // 30일(5.113 — 앱 로드마다 reconcilePush가 갱신)
 const PUSH_SUB_TTL_MS = PUSH_SUB_TTL_SEC * 1000;
 const PUSH_SENT_TTL_SEC = 3 * 24 * 3600; // 3일
 
@@ -327,6 +329,7 @@ interface OwnerEntry {
 
 interface ShareTokensData {
   tokens: Record<string, ShareTokenEntry>;
+  once?: Record<string, ShareTokenEntry>;
   owners: Record<string, OwnerEntry>;
 }
 
@@ -384,6 +387,7 @@ export class FileCacheStorage implements ICacheStorage {
       return {
         tokens: Object.assign(Object.create(null), raw.tokens ?? {}),
         owners: Object.assign(Object.create(null), raw.owners ?? {}),
+        once: Object.assign(Object.create(null), raw.once ?? {}),
       };
     } catch {
       return { tokens: {}, owners: {} };
@@ -575,6 +579,25 @@ export class FileCacheStorage implements ICacheStorage {
     this.writeShareTokens(data);
   }
 
+  async setOnceShareToken(key: string, token: string): Promise<void> {
+    const data = this.readShareTokens();
+    const now = Date.now();
+    const once = data.once ?? (data.once = {});
+    for (const k of Object.keys(once)) if (once[k].expires_at < now) delete once[k];
+    once[key] = { token, expires_at: now + SHARE_ONCE_TTL_SECONDS * 1000 };
+    this.writeShareTokens(data);
+  }
+
+  // 동기 읽기-삭제-쓰기 한 구간(await 없음) → 단일 프로세스에서 원자적
+  async takeOnceShareToken(key: string): Promise<string | null> {
+    const data = this.readShareTokens();
+    const entry = data.once?.[key];
+    if (!entry) return null;
+    delete data.once![key];
+    this.writeShareTokens(data);
+    return entry.expires_at < Date.now() ? null : entry.token;
+  }
+
   async getOwnerKey(ownerHash: string): Promise<string | null> {
     const entry = this.readShareTokens().owners[ownerHash];
     if (!entry || entry.expires_at < Date.now()) return null;
@@ -626,11 +649,6 @@ export class FileCacheStorage implements ICacheStorage {
     if (!cache.REF_DATE_MAP) cache.REF_DATE_MAP = {};
     cache.REF_DATE_MAP[`${ticker}:${period}:${requestDate}`] = actualDate;
     this.writeFinanceCache(cache, todayStr);
-  }
-
-  // 로컬 개발에서는 Rate Limit 적용 없음
-  async checkRateLimit(_ip: string): Promise<boolean> {
-    return true;
   }
 
   // 로컬 단일 프로세스 — 메모리 카운터·락으로 동작 동형 유지(재시작 시 초기화)
@@ -838,6 +856,15 @@ export class FileCacheStorage implements ICacheStorage {
     return ids;
   }
 
+  async capLegacyPushTtl(id: string): Promise<void> {
+    const data = this.readPush();
+    const e = data.subs[`${pushKeyPrefix()}sub:${id}`];
+    const cap = Date.now() + PUSH_SUB_TTL_MS;
+    if (!e || !isLegacyBlob(e.rec.blob) || e.expires_at <= cap) return;
+    e.expires_at = cap;
+    this.writePush(data);
+  }
+
   async markPushSent(topic: string, date: string): Promise<boolean> {
     const data = this.readPush();
     const key = `${pushKeyPrefix()}sent:${topic}:${date}`;
@@ -1006,18 +1033,20 @@ class UpstashCacheStorage implements ICacheStorage {
     await this.redis.del(`share:${key}`);
   }
 
+  async setOnceShareToken(key: string, token: string): Promise<void> {
+    await this.redis.set(`share:once:${key}`, token, { ex: SHARE_ONCE_TTL_SECONDS });
+  }
+
+  async takeOnceShareToken(key: string): Promise<string | null> {
+    return this.redis.getdel<string>(`share:once:${key}`);
+  }
+
   async getOwnerKey(ownerHash: string): Promise<string | null> {
     return this.redis.get<string>(`share:owner:${ownerHash}`);
   }
 
   async setOwnerKey(ownerHash: string, shareKey: string): Promise<void> {
     await this.redis.set(`share:owner:${ownerHash}`, shareKey, { ex: SHARE_TTL_SECONDS });
-  }
-
-  async checkRateLimit(ip: string): Promise<boolean> {
-    // rl: 네임스페이스로 분리 — share:{key} 조회(GET /api/share)로 카운터 키에 접근·TTL 연장 불가
-    const count = await this.incrementCounter(`rl:legacy:${ip}`, 1, RATE_LIMIT_WINDOW_SECONDS);
-    return count <= RATE_LIMIT_MAX;
   }
 
   // INCRBY + (TTL 없으면) EXPIRE를 Lua로 원자 실행 — 중간 실패로 TTL 없는 키가 남아 영구 차단되는 문제 방지
@@ -1224,6 +1253,14 @@ class UpstashCacheStorage implements ICacheStorage {
     const P = pushKeyPrefix();
     const [first, ...rest] = topics.map((t) => `${P}topic:${t}`);
     return (await this.redis.sunion(first, ...rest)) as string[];
+  }
+
+  async capLegacyPushTtl(id: string): Promise<void> {
+    const key = `${pushKeyPrefix()}sub:${id}`;
+    const st = await this.redis.get<PushStoredSub>(key);
+    if (!st || !isLegacyBlob(st.blob)) return;
+    const ttl = Number(await this.redis.ttl(key));
+    if (ttl > PUSH_SUB_TTL_SEC) await this.redis.expire(key, PUSH_SUB_TTL_SEC);
   }
 
   async markPushSent(topic: string, date: string): Promise<boolean> {

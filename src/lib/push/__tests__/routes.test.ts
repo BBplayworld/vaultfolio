@@ -47,9 +47,18 @@ describe("/api/push/subscribe", () => {
     expect((await POST(new NextRequest("http://localhost/x", { method: "POST", body: "{}", headers: { "content-length": "99999" } }))).status).toBe(413);
     expect((await POST(new NextRequest("http://localhost/x", { method: "POST", body: "{}", headers: { "content-length": "2", "sec-fetch-site": "cross-site" } }))).status).toBe(403);
   });
-  it("rate limit 초과 429", async () => {
-    store.incrementCounter.mockResolvedValue(999);
-    expect((await POST(mk("POST", body))).status).toBe(429);
+  it("빈도 한도 초과 429(메모리 버킷, 시간당 30회 → 분당 환산 3회) — Redis 카운터 미사용", async () => {
+    const same = () => new NextRequest("http://localhost/api/push/x", { method: "POST", body: JSON.stringify(body), headers: { "content-length": String(JSON.stringify(body).length), "content-type": "application/json", "x-real-ip": "10.77.0.1" } });
+    for (let i = 0; i < 3; i++) expect((await POST(same())).status).toBe(200);
+    expect((await POST(same())).status).toBe(429);
+    expect(store.incrementCounter).not.toHaveBeenCalled();
+  });
+  it("5.113 이행 — 저장 후 같은 endpoint의 구 id 레코드를 지운다(신 id ≠ 구 id)", async () => {
+    expect((await POST(mk("POST", body))).status).toBe(200);
+    const newId = store.putPushSub.mock.calls[0][0];
+    const legacyId = store.deletePushSub.mock.calls[0][0];
+    expect(legacyId).toMatch(/^[0-9a-f]{64}$/);
+    expect(legacyId).not.toBe(newId);
   });
   it("전체 구독 수 상한 — 신규는 503, 기존 구독 갱신은 허용", async () => {
     store.countPushSubs.mockResolvedValue(5000);
@@ -65,10 +74,13 @@ describe("/api/push/subscribe", () => {
     expect(res.status).toBe(200);
     expect(store.deletePushSub).not.toHaveBeenCalled();
   });
-  it("DELETE — endpoint 원문으로 HMAC id 삭제", async () => {
+  it("DELETE — endpoint 원문으로 신·구 HMAC id 모두 삭제", async () => {
     expect((await DELETE(mk("DELETE", { endpoint: ENDPOINT }))).status).toBe(200);
-    expect(store.deletePushSub).toHaveBeenCalledTimes(1);
-    expect(store.deletePushSub.mock.calls[0][0]).toMatch(/^[0-9a-f]{64}$/);
+    expect(store.deletePushSub).toHaveBeenCalledTimes(2);
+    const [a, b] = store.deletePushSub.mock.calls.map((c) => c[0]);
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+    expect(b).toMatch(/^[0-9a-f]{64}$/);
+    expect(a).not.toBe(b);
   });
 });
 
@@ -81,6 +93,14 @@ describe("/api/push/test", () => {
     store.getPushSub.mockResolvedValue(null);
     expect((await TEST(mk("POST", { endpoint: ENDPOINT }))).status).toBe(404);
     expect(send).not.toHaveBeenCalled();
+  });
+  it("신 id에 없으면 구 id 레코드로 폴백(이행 기간)", async () => {
+    build.mockResolvedValue([]);
+    store.getPushSub.mockResolvedValueOnce(null).mockResolvedValueOnce({ endpoint: ENDPOINT, p256dh: "p", auth: "a", topics: ["settle"], cond: "daily", updatedAt: "2026-11-12" });
+    store.acquireLock.mockResolvedValue("tok");
+    await TEST(mk("POST", { endpoint: ENDPOINT }));
+    expect(store.getPushSub).toHaveBeenCalledTimes(2);
+    expect(store.getPushSub.mock.calls[0][0]).not.toBe(store.getPushSub.mock.calls[1][0]);
   });
   it("쿨다운 429, 정상 시 본인 구독에 종류별 생성 알림을 1건씩", async () => {
     build.mockResolvedValue([{ m: "settle", t: "11월 결산이 열렸어요", b: "x" }, { m: "tax", t: "세금", b: "y" }]);
