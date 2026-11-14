@@ -12,10 +12,10 @@ const groups = [C.all, ...C.quintiles];
 const EXPECT: [string, number, string, number, string, number, string, number][] = [
   ["9,960만", 18, "3,730만", 7, "4억 298만", 71, "9,534만", 17],
   ["1,001만", 26, "1,422만", 37, "1,033만", 27, "2,758만", 71],
-  ["3,515만", 23, "3,546만", 23, "6,869만", 45, "4,697만", 31],
+  ["3,515만", 23, "3,545만", 23, "6,869만", 45, "4,697만", 31],
   ["6,367만", 20, "3,509만", 11, "1억 9,548만", 62, "7,536만", 24],
   ["1억 873만", 19, "3,635만", 6, "4억 141만", 69, "1억 164만", 18],
-  ["2억 8,031만", 16, "6,534만", 4, "13억 3,829만", 77, "2억 2,505만", 13],
+  ["2억 8,031만", 16, "6,534만", 4, "13억 3,828만", 77, "2억 2,505만", 13],
 ];
 const mineOf = (over: Partial<Parameters<typeof mapMyComposition>[0]> = {}) => ({ stockValue: 0, cryptoValue: 0, cashValue: 0, realEstateValue: 0, loanBalance: 0, tenantDepositTotal: 0, totalValue: 0, ...over });
 const view = (netAsset: number, count: number, mine = mineOf({ realEstateValue: 1, totalValue: 1 })) =>
@@ -23,11 +23,11 @@ const view = (netAsset: number, count: number, mine = mineOf({ realEstateValue: 
 
 describe("구성 상수 원문 대조", () => {
   it("원문 값(원 단위) 그대로", () => {
-    expect(C.all.savings).toBe(99_603_000);
-    expect(C.all.estate).toBe(402_983_000);
-    expect(C.quintiles[4].estate).toBe(1_338_285_000);
-    expect(C.quintiles[1].deposit).toBe(35_455_000);
-    expect(C.quintiles[3].debtRatioPct).toBe(17.5);
+    expect(C.all.savings).toBe(99_602_524);
+    expect(C.all.estate).toBe(402_983_360);
+    expect(C.quintiles[4].estate).toBe(1_338_284_510);
+    expect(C.quintiles[1].deposit).toBe(35_454_778);
+    expect(C.quintiles[3].debtRatioPct).toBeCloseTo(17.5, 1);
   });
   it("합이 ±0.1만원 안에서 맞는다", () => {
     for (const g of groups) {

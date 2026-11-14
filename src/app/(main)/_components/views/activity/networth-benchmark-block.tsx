@@ -23,6 +23,8 @@ export const COMP_NOTES = [
   "비중은 자산 합계 대비예요. 자동차·귀금속 같은 기타 실물자산 줄은 뺐어요.",
   "전·월세보증금(세입자가 낸 돈)은 따로 등록하는 항목이 없어요. 현금으로 등록했다면 예금·주식 등에 들어가 있어요.",
 ] as const;
+// 비중 열: 좁은 폭에선 머리가 어절에서 2줄로 꺾여 평균 열과 8px 이상 떨어지고, sm 이상에선 1줄 + 왼쪽 여백
+const COMP_PCT_COL = "w-10 sm:w-16 sm:pl-2";
 const NUM = "text-right whitespace-nowrap tabular-nums";
 
 export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUSEHOLD_NETWORTH_STATS, mine }: {
@@ -74,23 +76,21 @@ export function NetworthBenchmarkBlock({ netAsset, realEstateCount, stats = HOUS
         {comp && (
           <div data-testid="benchmark-comp" className="mt-3 pt-3 border-t border-border/50">
             <p data-testid="benchmark-comp-title" className="text-sm font-semibold text-foreground text-pretty break-keep">{comp.title}</p>
-            <p data-testid="benchmark-comp-basis" className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-              {comp.basis.split(" ").map((part, j) => <span key={j} className={NOWRAP}>{j > 0 ? " " : ""}{part}</span>)}
-            </p>
+            <p data-testid="benchmark-comp-basis" className="mt-0.5 text-xs text-muted-foreground tabular-nums text-pretty break-keep">{comp.basis}</p>
             <table data-testid="benchmark-comp-table" className="mt-2 w-full text-sm tabular-nums">
               <caption className="sr-only">{comp.title}</caption>
               <thead>
                 <tr className="border-b border-border/50 text-xs text-muted-foreground">
                   <th scope="col" className="sr-only">항목</th>
-                  <th scope="col" className={`w-[5.5rem] font-normal ${NUM}`}>가구 평균</th>
-                  <th scope="col" className={`w-11 font-normal ${NUM}`}>가구 비중</th>
-                  {comp.showMine && <th scope="col" className={`w-11 font-normal ${NUM}`}>내 비중</th>}
+                  <th scope="col" className={`w-[5.25rem] font-normal ${NUM}`}>가구 평균</th>
+                  <th scope="col" className={`${COMP_PCT_COL} font-normal ${NUM}`}>가구 비중</th>
+                  {comp.showMine && <th scope="col" className={`${COMP_PCT_COL} font-normal ${NUM}`}>내 비중</th>}
                 </tr>
               </thead>
               <tbody>
                 {comp.rows.map((r, i) => (
                   <tr key={r.label} data-testid={`benchmark-comp-row-${i}`} className={`h-9 ${i === 3 ? "border-t border-border/50" : ""}`}>
-                    <th scope="row" className="text-left font-normal text-foreground break-keep">{r.label}</th>
+                    <th scope="row" className="text-left font-normal text-foreground">{r.label.split(" ").map((w, j) => <span key={j} className={NOWRAP}>{j > 0 ? " " : ""}{w}</span>)}</th>
                     <td className={`text-foreground ${NUM}`}>{r.avgText}</td>
                     <td data-testid={`benchmark-comp-share-${i}`} className={`text-foreground ${NUM}`}>{r.sharePct}%</td>
                     {comp.showMine && (
