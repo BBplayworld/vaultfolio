@@ -1061,7 +1061,7 @@ function NeedsRow({ row, sel, included, onInclude, onPick, onQty, onTicker }: Ne
             </>
           )}
           <Select onValueChange={(id) => { onPick(id); onInclude(true); }}>
-            <SelectTrigger className="h-10 w-full text-sm data-[size=default]:h-10"><SelectValue placeholder="항목 선택" /></SelectTrigger>
+            <SelectTrigger className="h-10 w-full text-sm text-left data-[size=default]:h-10 [&_[data-slot=select-value]_span]:min-w-0 [&_[data-slot=select-value]_span]:truncate [&_[data-slot=select-value]_span]:leading-4"><SelectValue placeholder="항목 선택" /></SelectTrigger>
             <SelectContent>
               {row.candidates.map((c) => (
                 <SelectItem key={c.id} value={c.id} className="min-h-10 text-sm">

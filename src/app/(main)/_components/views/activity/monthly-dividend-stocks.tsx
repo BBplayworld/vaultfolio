@@ -262,7 +262,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                       <Badge
                         key={`est-${m}`}
                         variant={m === selectedMonth ? "default" : "outline"}
-                        className={`text-xs px-2 py-0.5 h-6 max-[359px]:px-[3px] max-[359px]:text-[11px] max-[359px]:tracking-tighter ${m !== selectedMonth ? "border-dashed text-muted-foreground" : ""}`}
+                        className={`text-xs px-2 py-0.5 h-6 max-sm:px-[3px] max-sm:text-[11px] max-sm:tracking-tighter ${m !== selectedMonth ? "border-dashed text-muted-foreground" : ""}`}
                       >
                         {m}월 예정
                       </Badge>

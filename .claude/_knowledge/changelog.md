@@ -4,12 +4,20 @@
 
 ---
 
+## 2026-11-14 (v5.103)
+
+### 320 화면 정돈 (#5.103, 이슈 #203)
+- className·배치만 변경(문구·로직·저장·GA 0). 맞추기 '항목 선택' 트리거(`holdings-resync-dialog.tsx`): 선택 후 값 좌측 정렬·두 줄 모두 말줄임·줄 높이 16px로 40px 안에 수납(목록 SelectItem·공용 `select.tsx` diff 0).
+- 성적표 축 제목(`asset-report-view.tsx`): 값 없는 축(측정불가·배당 실패 '—')의 빈 별을 폭 360 미만에서만 숨겨 제목이 최대 2줄(`contents max-[360px]:hidden`).
+- 배당 예정 칩은 이번에 변경 없음(qa FAIL로 되돌림). 360~375에서 칩이 열을 넘쳐 날짜와 겹치는 문제는 후속 후보.
+
 ## 2026-11-13 (v5.102)
 
 ### 내 순자산이 어디쯤인지 — 공개 가계 통계와 나란히 보기 (#5.102, 이슈 #201)
 - 성적표 '5축 측정'과 'AI 평가 프롬프트' 사이에 `NetworthBenchmarkBlock`(`views/activity/networth-benchmark-block.tsx`) 1개. 통계 구간 분포(구간 1개 = 1행 가로 막대) 위에 내 구간을 중립 색으로 강조하고 문장 `가구 100곳 중 약 N곳이 이 구간, 약 M곳이 이보다 높은 구간이에요.` + 라벨·출처 줄. 누르는 것·화면 상태·내 금액 표기 없음. 부동산 0건이면 구간을 숨기고 안내 1줄.
 - 통계는 앱 안 정적 상수 `src/config/household-networth-stats.ts`(`meta`·`brackets`), 계산은 순수 함수 `src/lib/report/networth-benchmark.ts`. 순자산은 `getAssetSummary().netAsset` 그대로(새 환산 없음). **원문 표 확보 전이라 상수는 비어 있고(`meta: null, brackets: []`) `validateStats` 실패 → 블록 null로 화면에 나오지 않는다.** 값은 원문 확보 뒤 별도 커밋 1개로 채운다.
 - 등급 계산·`recordGradeSnapshot`·AI 프롬프트·공유 카드·저장 스키마·키·동기화·GA·서버 전송 변경 0. 성적표 diff는 import 1줄 + JSX 1줄.
+
 
 ## 2026-11-13 (v5.0)
 
