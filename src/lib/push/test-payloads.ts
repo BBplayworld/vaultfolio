@@ -1,5 +1,7 @@
 import "server-only";
 import { loadPushQuotes, kstToday } from "./cron-run";
+import { rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
+import { shiftDate } from "./quotes";
 import { buildKrCloseMessage, buildMorningMessage, buildSettleMessage, nearestTaxMessage } from "./message";
 import type { PushCond, PushPayload } from "./types";
 
@@ -12,6 +14,8 @@ export async function buildTestPayloads(topics: readonly string[], cond: PushCon
   const today = kstToday(nowMs);
   const needMorning = topics.includes("morning");
   const needKr = topics.includes("kr");
+  // 테스트는 morning 회차로 조회하므로 국내 값은 직전 영업일 종가 — 국내 장 마감 제목도 그 날짜로(운영 16시 회차의 today와 같은 의미)
+  const krCloseDate = rollbackToBusinessDay(new Date(`${shiftDate(today, -1)}T00:00:00Z`)).toISOString().slice(0, 10);
   const out: PushPayload[] = [];
   const quotes = needMorning || needKr ? await loadPushQuotes(today, needMorning, needMorning || needKr, "morning") : { us: [], kr: [] };
   const withCond = (build: (c: PushCond) => PushPayload | null) => {
@@ -24,7 +28,7 @@ export async function buildTestPayloads(topics: readonly string[], cond: PushCon
     if (!topics.includes(kind)) continue;
     const p =
       kind === "morning" ? withCond((c) => buildMorningMessage(today, quotes.us, quotes.kr, c))
-      : kind === "kr" ? withCond((c) => buildKrCloseMessage(today, quotes.kr, c))
+      : kind === "kr" ? withCond((c) => buildKrCloseMessage(krCloseDate, quotes.kr, c))
       : kind === "settle" ? buildSettleMessage(today)
       : nearestTaxMessage(today);
     if (p) out.push(p);

@@ -39,4 +39,8 @@ describe("buildTestPayloads", () => {
     expect(nearestTaxMessage("2026-11-14").t).toContain("연금저축");
     expect(nearestTaxMessage("2026-12-30").t).toContain("5월");
   });
+  it("국내 장 마감 제목은 직전 영업일 종가 날짜(토요일 호출 → 금요일)", async () => {
+    const r = await buildTestPayloads(["kr"], "daily", NOW);
+    expect(r[0].t).toBe("11/13 국내 종가");
+  });
 });
