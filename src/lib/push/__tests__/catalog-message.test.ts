@@ -33,18 +33,42 @@ describe("pushDueOn — 날짜표", () => {
       expect(isSettlementCardPeriod(before)).toBe(false);
     }
   });
-  it("세금 마감은 연 2건(5/1·12/24)만", () => {
-    expect(pushDueOn("2026-05-01").map((d) => d.kind)).toEqual(["tax"]);
-    expect(pushDueOn("2026-12-24").map((d) => d.kind)).toEqual(["tax"]);
-    expect(Object.keys(TAX_PUSH_DATES)).toHaveLength(2);
+  it("세금 일정은 연 7건(1/15·5/1·7/16·9/16·11/16·12/1·12/24)만, 달마다 1건·12월만 2건", () => {
+    const dates = ["01-15", "05-01", "07-16", "09-16", "11-16", "12-01", "12-24"];
+    expect(Object.keys(TAX_PUSH_DATES)).toEqual(dates);
+    for (const y of [2026, 2027]) for (const d of dates) expect(pushDueOn(`${y}-${d}`).map((x) => x.kind)).toContain("tax");
     expect(pushDueOn("2026-05-02")).toEqual([]);
     expect(pushDueOn("2026-03-15")).toEqual([]);
+    const perMonth = dates.map((d) => d.slice(0, 2));
+    expect(perMonth.filter((m) => m === "12")).toHaveLength(2);
+    expect(new Set(perMonth).size).toBe(6);
+  });
+  it("2026~2027 모든 날짜 — 세금·결산이 같은 날 겹치는 경우는 없고 하루 2건 이내, 11/27 결산 첫 발송은 결산 단독", () => {
+    for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2028, 0, 1); t += 86400000) {
+      const day = new Date(t).toISOString().slice(0, 10);
+      const kinds = pushDueOn(day).map((d) => d.kind);
+      expect(kinds.length).toBeLessThanOrEqual(2);
+      expect(kinds.includes("tax") && kinds.includes("settle")).toBe(false);
+    }
+    expect(pushDueOn("2026-11-27").map((d) => d.kind)).toEqual(["settle"]);
+    expect(pushDueOn("2026-11-16")[0].payload).toMatchObject({ m: "tax", t: "11월 세금 일정" });
+  });
+  it("세금 문구는 세목과 (대상) 괄호를 담는다", () => {
+    for (const v of Object.values(TAX_PUSH_DATES)) expect(v.b.length).toBeGreaterThan(0);
+    expect(TAX_PUSH_DATES["01-15"].b).toContain("(근로자)");
+    expect(TAX_PUSH_DATES["11-16"].b).toContain("(작년 종소세를 낸 사업·임대소득자)");
   });
   it("세금 알림 근거 일정이 tax-calendar에 있다(5월 양도세·종소세, 12월 연금 납입 마감)", () => {
     const find = (id: string) => TAX_EVENTS.find((e) => e.id === id);
     expect(find("capital-gains-final")).toMatchObject({ month: 5, dueLabel: "~5/31" });
     expect(find("income-tax-final")).toMatchObject({ month: 5 });
     expect(find("pension-contribution-deadline")).toMatchObject({ month: 12, dueLabel: "~12/31" });
+    expect(find("year-end-simplified-data")).toMatchObject({ month: 1 });
+    expect(find("income-tax-interim")?.tags).not.toContain("common");
+  });
+  it("앱 세금 일정 상세에 권유 문구 없음", () => {
+    const text = JSON.stringify(TAX_EVENTS);
+    for (const w of ["채우세요", "점검하세요", "실현하면"]) expect(text).not.toContain(w);
   });
 });
 
