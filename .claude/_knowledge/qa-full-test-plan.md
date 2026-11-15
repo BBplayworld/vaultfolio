@@ -221,6 +221,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **성적표 배당 실패(#4.98)** — 배당 로딩 중이거나 1종목이라도 실패하면 '수익의 질'·'레버리지' 잠정, 스냅샷 기록·▲▼ 대비 없음, 계산 근거 금융자산·연간 '—', 5축 아래 실패 안내 1줄. 정상 시 기존과 동일(`report-dividend-fail.test.ts`).
 - ⚙ **배당 월 배지(#4.49)** — 월 선택·해제 시 차트 top 불변(`dividend-sub-slot` 공유 칸), 배지는 `button`(Tab 포커스·Enter 해제, 히트 40px), 320에서 "배당" 제목 1줄. InfoHint 9곳 coarse 포인터 ≥40×40·이웃 `elementFromPoint` 검사, 다크 설정 ON 배지 대비 ≥4.5
 - 👤 **성과 › 자산 변화 › 주식 읽기(#5.117)** — 종목 행에 종목 코드 줄 없음(이름 없으면 티커), 손익 600·행 hover 없음·행 선 중립, 그룹 사이 20px·골드 선 0, 펼침 영역 글자 14px 이상(12px 0), `(KST)` 머리 없음·`마감 기준` 문구 `(KST)` 앞 끊김 없음, 트리거 높이 40px, 선택기 위 `국내·해외 날짜 맞춤` 이름 줄(399 이하 선택기 전폭, 400 이상 208px 우측). testId `profit-close-trigger`·`profit-basis-label`·`profit-close-table`·`profit-stock-group|row|name|pnl`
+- 👤 **성과 › 배당 › 종목 표(#5.118)** — 행에 종목 코드 없음(이름 없으면 티커 1회), 767 이하 보조 줄은 주기 배지만(주기 없으면 줄 없음), 행 hover 없음, 지급·예상 금액 1280 이상 14px·미만 12px(768~1023 9자리 겹침 0), 행 높이 운영 대비 증가 0. testId `dividend-stock-row|name|meta|paid-amount|est-amount`
 - 👤 수익 차트 "기준 종가 비교": 시작 종가가 휴장으로 직전 영업일에 폴백되면 "휴장제외" 최소 표시 — 일별=시작~종료 사이 휴장(`hasHolidayBetween`), 주/월/연=명목 기준 시작일 자체가 휴장(`isKr/UsHoliday`)
 - ⚙ `fetchProfitRef` + `getProfitCacheKey`: **tickerList `.sort()` 필수**(캐시 중복 회귀 다발), basis별 캐시 분리
 - ⚙ `computeDailyStockProfit` 전일 종가 대비, `ProfitBasis`(sameBusinessDay/kstAccessDay), `getDailyClosingRefDates` 시장별 컷오프(국내16:00·해외06:00/07:00 KST)
