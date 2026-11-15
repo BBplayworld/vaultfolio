@@ -101,12 +101,28 @@ export function computePeriodStockProfitTotal(
 
 export type ProfitPeriod = "daily" | "weekly" | "monthly" | "yearly" | "ytd";
 
-// 기간별 수익 종가 기준 옵션
-// - sameBusinessDay(동일 영업일, 기본): 국내·해외 모두 해외(foreign) 영업일로 정렬
-// - kstAccessDay(KST 접속일): 국내=domestic, 해외=foreign 독립 산출 (현행)
+// 국내·해외 날짜 맞춤(종가 기준) 옵션
+// - sameBusinessDay(같은 거래일, 기본): 국내·해외 모두 해외(foreign) 영업일로 정렬
+// - kstAccessDay(시장별 최신): 국내=domestic, 해외=foreign 독립 산출 (현행)
 export type ProfitBasis = "sameBusinessDay" | "kstAccessDay";
 
 export const DEFAULT_PROFIT_BASIS: ProfitBasis = "sameBusinessDay";
+
+// 더보기·성과 두 화면이 공유하는 화면 문구(#222). 옵션 배열은 두 곳이 동일 참조로 InlineSelector에 전달
+const PROFIT_BASIS_OPTIONS = [
+  { value: "sameBusinessDay", label: "같은 거래일" },
+  { value: "kstAccessDay", label: "시장별 최신" },
+] as const;
+export const PROFIT_BASIS_COPY = {
+  name: "국내·해외 날짜 맞춤",
+  summary: "국내·해외 종가를 어느 날짜로 묶어 더할지 정해요.",
+  options: PROFIT_BASIS_OPTIONS,
+  notes: [
+    { label: PROFIT_BASIS_OPTIONS[0].label, text: "국내·해외 모두 같은 날짜의 종가로 더해요. 해외 종가는 다음 날 새벽에 정해져요." },
+    { label: PROFIT_BASIS_OPTIONS[1].label, text: "지금(한국 시간) 기준으로 각 시장의 마지막 종가를 더해요. 두 시장 날짜가 다를 수 있어요." },
+    { label: undefined, text: "기간 수익·성적표·시장 비교(홈·상세 포함)에 함께 적용돼요." },
+  ],
+} as const;
 
 export function getProfitBasis(): ProfitBasis {
   if (typeof window === "undefined") return DEFAULT_PROFIT_BASIS;

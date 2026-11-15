@@ -10,14 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { InfoHint } from "../../layout/ui/info-hint";
-import { Switch } from "@/components/ui/switch";
+import { track } from "@/lib/analytics/ga";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor } from "@/config/theme";
-import { fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod as AnyProfitPeriod } from "@/lib/finance/profit-utils";
+import { PROFIT_BASIS_COPY, fetchProfitRef, getDailyClosingRefDate, getRatesForDate, computeDailyStockProfit, type ProfitPeriod as AnyProfitPeriod } from "@/lib/finance/profit-utils";
 // ytd는 시장과 비교 전용 기간이라 자산 변화 기간 선택·라벨에는 없다(#150)
 type ProfitPeriod = Exclude<AnyProfitPeriod, "ytd">;
 import { beginLatestFetch, createFetchSlot, resetFetchSlot, type FetchSlot } from "@/lib/finance/profit-fetch-gate";
@@ -589,20 +589,32 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                 </button>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
-                                {/* 옵션 토글 */}
-                                <div className="flex items-center gap-1.5 text-sm rounded-md bg-muted/40 py-1.5 px-2 w-fit ml-auto">
-                                  <InfoHint summary="국내·해외 종가를 어느 날짜로 묶어 합산할지 정하는 기준이에요.">
-                                    <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
-                                    <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
+                                {/* 국내·해외 날짜 맞춤: 더보기와 같은 상수·같은 모양(#222) */}
+                                <div data-testid="profit-basis-selector-chart" className="flex items-center gap-1.5 w-fit ml-auto">
+                                  <InfoHint summary={PROFIT_BASIS_COPY.summary}>
+                                    {PROFIT_BASIS_COPY.notes.map((n) => (
+                                      <p key={n.text} className={n.label ? undefined : "text-muted-foreground"}>
+                                        {n.label && <span className="font-semibold text-foreground">{n.label} — </span>}
+                                        {n.text}
+                                      </p>
+                                    ))}
                                     {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "sameBusinessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>동일 영업일</span>
-                                  <Switch
-                                    checked={profitBasis === "kstAccessDay"}
-                                    onCheckedChange={(c) => setProfitBasis(c ? "kstAccessDay" : "sameBusinessDay")}
-                                    aria-label="종가 기준 옵션"
-                                  />
-                                  <span className={`rounded px-1.5 py-0.5 ${profitBasis === "kstAccessDay" ? "font-semibold text-foreground bg-gray-200 dark:bg-muted" : "text-muted-foreground"}`}>KST 접속일</span>
+                                  {profitBasisHydrated && (
+                                    <InlineSelector
+                                      value={profitBasis}
+                                      onChange={(v) => {
+                                        if (v === profitBasis) return;
+                                        setProfitBasis(v);
+                                        track("feature_use", { category: "profit_basis_chart" });
+                                      }}
+                                      options={PROFIT_BASIS_COPY.options}
+                                      fullWidth
+                                      tight
+                                      className="w-[208px]"
+                                      ariaLabel={PROFIT_BASIS_COPY.name}
+                                    />
+                                  )}
                                 </div>
                                 {/* 헤더 */}
                                 <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border dark:border-border/50 text-muted-foreground`}>

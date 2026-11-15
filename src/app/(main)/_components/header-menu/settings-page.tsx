@@ -36,7 +36,7 @@ import { APP_VERSION } from "@/config/app-version";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { InfoHint } from "../layout/ui/info-hint";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
-import type { ProfitBasis } from "@/lib/finance/profit-utils";
+import { PROFIT_BASIS_COPY, type ProfitBasis } from "@/lib/finance/profit-utils";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { MENU_COLUMN, MENU_ROW, MENU_ROW_DESTRUCTIVE, MENU_SECTION_LABEL, MENU_ICON, MENU_LABEL, MENU_DESC, menuBadge } from "./menu-styles";
@@ -231,26 +231,34 @@ export function SettingsPage({ focus }: { focus?: "notify" }) {
           <p className={MENU_SECTION_LABEL}>표시</p>
           <div className="px-4 py-3 rounded-xl bg-card shadow-xs space-y-2">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium">기간 수익 종가 기준</span>
-              <InfoHint summary="국내·해외 종가를 어느 날짜로 묶어 합산할지 정하는 기준이에요.">
-                <p><span className="font-semibold text-foreground">동일 영업일</span> — 국내·해외를 같은 영업일의 종가로 합산합니다. (해외는 익일 새벽 마감)</p>
-                <p><span className="font-semibold text-foreground">KST 접속일</span> — KST 접속일 기준으로 국내·해외 각 시장의 종가를 합산합니다.</p>
+              <span className="text-sm font-medium">{PROFIT_BASIS_COPY.name}</span>
+              <InfoHint summary={PROFIT_BASIS_COPY.summary}>
+                {PROFIT_BASIS_COPY.notes.map((n) => (
+                  <p key={n.text} className={n.label ? undefined : "text-muted-foreground"}>
+                    {n.label && <span className="font-semibold text-foreground">{n.label} — </span>}
+                    {n.text}
+                  </p>
+                ))}
               </InfoHint>
             </div>
             {/* hydrate 전에는 기본값이 렌더돼 실제 설정과 어긋나므로 확정 후 노출 */}
-            {profitBasisHydrated && (
-              <InlineSelector
-                value={profitBasis}
-                onChange={(v) => setProfitBasis(v as ProfitBasis)}
-                options={[
-                  { value: "sameBusinessDay", label: "동일 영업일" },
-                  { value: "kstAccessDay", label: "KST 접속일" },
-                ]}
-                size="sm"
-                className="relative z-10"
-                ariaLabel="기간 수익 종가 기준"
-              />
-            )}
+            <div data-testid="settings-profit-basis-selector">
+              {profitBasisHydrated && (
+                <InlineSelector
+                  value={profitBasis}
+                  onChange={(v) => {
+                    if (v === profitBasis) return;
+                    setProfitBasis(v as ProfitBasis);
+                    track("feature_use", { category: "profit_basis_settings" });
+                  }}
+                  options={PROFIT_BASIS_COPY.options}
+                  fullWidth
+                  tight
+                  className="relative z-10 w-full"
+                  ariaLabel={PROFIT_BASIS_COPY.name}
+                />
+              )}
+            </div>
           </div>
         </section>
 
