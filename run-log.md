@@ -2,6 +2,7 @@
 
 | 일시 (KST) | 실행 종류 | 처리 이슈 | 단계 변화 | 특이사항 |
 |---|---|---|---|---|
+| 2026-11-16 07:53 | 정기 | - | D 선정 0건(직접 기여 레버 대기, 11/18 GA 후 재수행) | 보류 알림 1건 전달 |
 | 2026-11-12 14:44 | 정기 실행(A)+대표 지시 | #167·#170 | #167 대표 승인(11/20 머지 예약), #170 선정→direction 합의→spec·tech-review·ui→v4.87 PR #171→UI·qa·COO PASS | 4.85 부작용(전부 실패 스켈레톤) 발견·C89, 홍보 utm→page_title·레퍼럴(C88), LEARNINGS medium 승인 과잉 |
 | 2026-11-12 08:31 | 정기 실행(A) | #167 | planning③(spec·business)→design-review(tech-review·ui)→development v4.86(PR #169)→UI 승인·qa PASS·COO PASS → owner-review | 🔔 반영 결정 요청(PR 코멘트·DASHBOARD). DECISIONS 첫 저장 합산 정정 |
 | 2026-11-12 03:20 | 정기 실행(A→D) | #166·#167 생성, #166 → v4.85 머지 | D 선정: 4.85 위임 머지·#167 방향 확정(대표 승인 대상) | v4.84·v4.73④ 스모크 PASS, W47 초안 작성 |
