@@ -593,12 +593,12 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                 <div data-testid="profit-basis-selector-chart" className="flex items-center gap-1.5 w-fit ml-auto">
                                   <InfoHint summary={PROFIT_BASIS_COPY.summary}>
                                     {PROFIT_BASIS_COPY.notes.map((n) => (
-                                      <p key={n.text} className={n.label ? undefined : "text-muted-foreground"}>
+                                      <p key={n.text} className={n.label ? "break-keep" : "text-muted-foreground break-keep"}>
                                         {n.label && <span className="font-semibold text-foreground">{n.label} — </span>}
                                         {n.text}
                                       </p>
                                     ))}
-                                    {period === "daily" && <p className="text-muted-foreground">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
+                                    {period === "daily" && <p className="text-muted-foreground break-keep">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
                                   {profitBasisHydrated && (
                                     <InlineSelector

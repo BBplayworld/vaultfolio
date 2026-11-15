@@ -234,7 +234,7 @@ export function SettingsPage({ focus }: { focus?: "notify" }) {
               <span className="text-sm font-medium">{PROFIT_BASIS_COPY.name}</span>
               <InfoHint summary={PROFIT_BASIS_COPY.summary}>
                 {PROFIT_BASIS_COPY.notes.map((n) => (
-                  <p key={n.text} className={n.label ? undefined : "text-muted-foreground"}>
+                  <p key={n.text} className={n.label ? "break-keep" : "text-muted-foreground break-keep"}>
                     {n.label && <span className="font-semibold text-foreground">{n.label} — </span>}
                     {n.text}
                   </p>
