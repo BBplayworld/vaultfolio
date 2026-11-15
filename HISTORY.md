@@ -50,3 +50,4 @@ preview 안전장치·데모 데이터(#31)와 성과 메뉴 정리·자산 변�
 - 2026-11-15 v5.114(#215) 텍스트 크기 체계: 개발 → qa FAIL(D1 원인 패널 `›` 잘림) → 디자이너 R1~R7 → qa 재점검 PASS → COO → 디자이너 최종 승인 → 팀 머지 72bc9ec → 운영 스모크 PASS. CHECKLIST C108~C111 추가.
 - 2026-11-15 07:53 KST 정기 실행: 큐 비어 D 수행(4관점 근거 → cto 선정) → #219 생성·방향 합의(🆕 알림) → challenge·spec·business·tech-review·ui → v5.115 개발 → ui-review R-1·R-2 → UI 승인 → qa PASS → COO → 위임 머지 ff1e512 → 운영 스모크 PASS.
 - 2026-11-15 13:53 KST 정기 실행: D(오전 근거 재사용) → #222 생성·방향 합의(🆕) → challenge·spec·business·tech-review·ui → v5.116 개발 → UI 승인 → qa FAIL(D-1 팝오버 어절 끊김) → 수정 2회 → qa PASS → COO → 위임 머지 1ed37d6 → 운영 스모크 PASS. CHECKLIST C113·C114 추가.
+- 2026-11-15 대표 지시 #224: ui 감사 → COO 축소 통과 → v5.117 개발 → ui R1(이름 꺾임)·R2(비교 이미지) → UI 승인 → qa FAIL(D-1 400+ 행 +4px) → 수정 → qa PASS → COO → 위임 머지 7571e80 → 운영 스모크 PASS. CHECKLIST C115.
