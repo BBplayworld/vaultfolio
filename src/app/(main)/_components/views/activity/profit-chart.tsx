@@ -587,9 +587,9 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
                                 {/* 국내·해외 날짜 맞춤: 더보기와 같은 상수·같은 모양(#222) */}
-                                <div className="flex flex-col gap-1.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+                                <div className="flex flex-col gap-1.5 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
                                 <div className="flex items-center gap-1.5">
-                                  <span data-testid="profit-basis-label" className="text-sm font-medium">{PROFIT_BASIS_COPY.name}</span>
+                                  <span data-testid="profit-basis-label" className="text-sm font-medium whitespace-nowrap">{PROFIT_BASIS_COPY.name}</span>
                                   <InfoHint summary={PROFIT_BASIS_COPY.summary}>
                                     {PROFIT_BASIS_COPY.notes.map((n) => (
                                       <p key={n.text} className={n.label ? "break-keep" : "text-muted-foreground break-keep"}>
@@ -600,7 +600,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                     {period === "daily" && <p className="text-muted-foreground break-keep">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
                                 </div>
-                                {profitBasisHydrated && (<div data-testid="profit-basis-selector-chart" className="w-full min-[400px]:w-[208px]">
+                                {profitBasisHydrated && (<div data-testid="profit-basis-selector-chart" className="w-full min-[440px]:w-[208px] min-[440px]:shrink-0">
                                     <InlineSelector
                                       value={profitBasis}
                                       onChange={(v) => {
