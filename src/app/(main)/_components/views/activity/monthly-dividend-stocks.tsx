@@ -282,7 +282,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (
                       <p className="text-xs tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
                     )}
-                    <p data-testid="dividend-paid-amount" className="text-xs md:text-sm font-bold tabular-nums text-foreground">
+                    <p data-testid="dividend-paid-amount" className="text-xs xl:text-sm font-bold tabular-nums text-foreground">
                       {displayActual > 0 ? formatCurrency(displayActual) : <span className="text-muted-foreground">-</span>}
                     </p>
                   </div>
@@ -290,7 +290,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     {!isDomestic && currency === "USD" && (
                       <p className="text-xs tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
                     )}
-                    <p data-testid="dividend-est-amount" className={`text-xs md:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+                    <p data-testid="dividend-est-amount" className={`text-xs xl:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                       {formatCurrency(displayTotal)}
                     </p>
                   </div>

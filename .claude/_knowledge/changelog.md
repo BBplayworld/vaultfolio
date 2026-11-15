@@ -8,7 +8,7 @@
 
 ### 성과 › 배당 › 종목 표 읽기 쉽게 (#5.118, 이슈 #226)
 - **왜**: 종목 코드·행 hover가 읽기를 방해, 금액 글자가 작음. 표시만 변경, 계산·저장·문구 0.
-- `monthly-dividend-stocks.tsx`: 종목 코드 2곳 삭제(이름 없으면 티커), 보조 줄은 주기 있을 때만 렌더, 행 hover·transition 삭제, 지급·예상 금액 md 이상 `text-sm`(모바일 12px 유지, 열 폭 불변). testId `dividend-stock-row|name|meta|paid-amount|est-amount`.
+- `monthly-dividend-stocks.tsx`: 종목 코드 2곳 삭제(이름 없으면 티커), 보조 줄은 주기 있을 때만 렌더, 행 hover·transition 삭제, 지급·예상 금액 xl(1280) 이상 `text-sm`(1279 이하 12px 유지 — 768~1023 열 88px에서 8자리 이상 겹침(qa D-1), 열 폭 불변, `lg:` 금지 가드). testId `dividend-stock-row|name|meta|paid-amount|est-amount`.
 
 ---
 
