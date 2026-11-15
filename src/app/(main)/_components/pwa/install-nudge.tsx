@@ -17,6 +17,7 @@ import {
   setNudgeVisible,
   subscribeFirstSave,
 } from "@/lib/pwa/first-save-signal";
+import { isIosBelow164 } from "@/lib/pwa/detect-browser";
 import { shouldShowInstallNudge } from "@/lib/pwa/install-nudge-policy";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { PwaInstallFlow, type PwaInstallTrigger } from "./pwa-install-flow";
@@ -78,7 +79,9 @@ function NudgeCard({ trigger }: { trigger: PwaInstallTrigger }) {
         <Download className="mt-0.5 size-5 shrink-0 text-primary" />
         <div className="min-w-0 break-keep text-pretty">
           <p className="text-sm font-semibold">홈 화면에 추가해 둘까요?</p>
-          <p className="mt-1 text-xs text-muted-foreground">다음부터 아이콘 한 번으로 바로 열 수 있어요.</p>
+          <p data-testid="install-nudge-desc" className="mt-1 text-xs text-muted-foreground">
+            {isIosBelow164() ? "다음부터 아이콘 한 번으로 바로 열 수 있어요." : "아이콘으로 바로 열고, 월 결산·세금 일정 알림도 받을 수 있어요."}
+          </p>
         </div>
       </div>
       <div className="mt-3 flex justify-end gap-2">

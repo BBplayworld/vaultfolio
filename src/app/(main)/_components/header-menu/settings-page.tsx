@@ -47,7 +47,7 @@ import { unsubscribePush } from "@/lib/push/client";
 import { clearPushPrefs, readPushPrefs } from "@/lib/push/prefs";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 
-export function SettingsPage() {
+export function SettingsPage({ focus }: { focus?: "notify" }) {
   const { refreshData, assetData } = useAssetData();
   const cs = useCloudSync();
   const themeMode = usePreferencesStore((s) => s.themeMode);
@@ -64,6 +64,18 @@ export function SettingsPage() {
 
   const [mounted, setMounted] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
+
+  // 홈 알림 팁에서 온 경우(5.115) — 알림 구역으로 1회 스크롤(reduced-motion이면 즉시). 구역이 없으면(unsupported·체험) 생략
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    // mounted 전에는 본문이 null이라 요소가 없다 — 찾아서 스크롤한 뒤에만 1회 소비로 처리
+    if (focus !== "notify" || focusedRef.current || !mounted) return;
+    const el = document.getElementById("settings-section-notify");
+    if (!el) return;
+    focusedRef.current = true;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [focus, mounted]);
 
   // GA 수집 제외 숨김 트리거: '화면' 라벨 7회 연속 탭 → ga-optout 토글 (본인 전용)
   const gaTapRef = useRef({ count: 0, timer: 0 });

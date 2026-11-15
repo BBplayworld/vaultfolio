@@ -23,7 +23,7 @@ export interface ChangeInit {
 export type AssetView =
   | { type: "home" }
   | { type: "more" }
-  | { type: "settings" }
+  | { type: "settings"; focus?: "notify" } // focus: 렌더 후 알림 구역 1회 스크롤(5.115, 해시·저장에 남기지 않음)
   | { type: "tax" }
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };

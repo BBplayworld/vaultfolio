@@ -128,6 +128,11 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "home_tip", method: "click" }, "홈 팁·누름"],
     ["feature_use", { category: "home_tip", method: "view" }, "홈 팁"],
     ["feature_use", { category: "home_tip", method: "close" }, "홈 팁"],
+    ["feature_use", { category: "home_tip_notify" }, "홈 팁·알림"],
+    ["feature_use", { category: "home_tip_notify", method: "view" }, "홈 팁·알림"],
+    ["feature_use", { category: "home_tip_notify", method: "click" }, "홈 팁·알림·누름"],
+    ["feature_use", { category: "persist_ok" }, "저장 보호·허용"],
+    ["feature_use", { category: "persist_denied" }, "저장 보호·거부"],
     ["feature_use", { category: "whats_new" }, "새 소식"],
     ["feature_use", { category: "whats_new", method: "click" }, "새 소식"],
     ["feature_use", { category: "change_week_all", source: "whats_new" }, "성과·자산 변화·최근 7일"], // 바로 가기 진입 이벤트는 기존 title 유지

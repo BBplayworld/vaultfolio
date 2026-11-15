@@ -120,10 +120,9 @@ export function PerformanceHub() {
 
   return (
     <div aria-busy={divLoading && annualTotal === 0 ? true : undefined} className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className={PAGE_TITLE}>성과</h2>
-          <p className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">자산 변화·배당·성적표를 확인하세요</p>
         </div>
         <HubShareButton />
       </div>

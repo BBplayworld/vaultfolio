@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, Bell, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -19,6 +19,7 @@ import { markRefreshNudgeShown } from "@/lib/asset/asset-refresh-status";
 import { markTaxNoticeDismissed } from "@/lib/tax-utils";
 import { dismissTip, isTipDismissed, runFeatureEntry } from "@/lib/feature-usage";
 import { detectRelink, RELINK_OFFER_ID } from "@/lib/asset/resync";
+import { isNotifyTipEligible } from "@/lib/push/client";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { pickHomeTip, type HomeTip } from "@/lib/home-tip";
@@ -28,6 +29,8 @@ import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { formatSettlementPoint, settlementWindowName, type SettlementWindow } from "@/lib/report/settlement";
 import type { MarketLineState } from "@/lib/finance/market-compare";
+
+export const NOTIFY_OFFER_ID = "notify-offer";
 
 export const CATEGORY_LABEL: Record<string, string> = {
   stock: "주식",
@@ -69,7 +72,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
     } catch { /* 무시 */ }
     // 끊긴 거래 후보(#147) — 체험·앱잠금 중이거나 '그대로 두기'를 눌렀으면 감지하지 않는다
     const hasRelink = eligible && !isTipDismissed(RELINK_OFFER_ID) && detectRelink(assetData).length > 0;
-    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible, suppressFeatureIds: marketLine !== "off" ? ["market-compare"] : undefined });
+    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible, notifyOk: eligible && !isTipDismissed(NOTIFY_OFFER_ID) && isNotifyTipEligible(), suppressFeatureIds: marketLine !== "off" ? ["market-compare"] : undefined });
     keepShownRef.current = picked?.kind === "backup" || picked?.kind === "refresh" ? picked.kind : undefined;
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
@@ -79,7 +82,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
       const key = homeTipViewKey(picked);
       if (lastViewKey.current !== key) {
         lastViewKey.current = key;
-        track("feature_use", { category: "home_tip", method: "view" });
+        track("feature_use", { category: picked.kind === "notify" ? "home_tip_notify" : "home_tip", method: "view" });
       }
     }
   }, [assetData, hasAssets, cs.status, isDataLoaded, marketLine]);
@@ -100,15 +103,16 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
     // "whats_new" X = 읽음 처리(시트는 열지 않는다) — 같은 소식이 세션·다음 방문마다 되살아나지 않게
     if (tip.kind === "whats_new") markWhatsNewSeen();
     if (tip.kind === "feature") dismissTip(tip.feature.id);
+    if (tip.kind === "notify") dismissTip(NOTIFY_OFFER_ID);
     // 이번 세션 동안 팁 박스 전체를 숨김 (다음 순위 팁도 안 뜨게). 재접속 시 초기화.
     try { sessionStorage.setItem(SESSION_DISMISS_KEY, "true"); } catch { /* 무시 */ }
-    track("feature_use", { category: "home_tip", method: "close" });
+    track("feature_use", { category: tip.kind === "notify" ? "home_tip_notify" : "home_tip", method: "close" });
     setTip(null);
   };
 
   const activate = () => {
     keepShownRef.current = undefined;
-    track("feature_use", { category: "home_tip", method: "click" });
+    track("feature_use", { category: tip.kind === "notify" ? "home_tip_notify" : "home_tip", method: "click" });
     if (tip.kind === "backup") {
       try {
         if (!exportAssetData(assetData)) {
@@ -142,6 +146,12 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
     if (tip.kind === "refresh") {
       window.dispatchEvent(new CustomEvent("open-add-asset-sheet", { detail: { category: tip.staleCategories[0] } }));
       setTip(null);
+      return;
+    }
+    if (tip.kind === "notify") {
+      // 권한 창은 띄우지 않는다 — 설정 > 알림 구역으로 이동해 사용자가 직접 켠다. 1회 소비(5.115)
+      dismissTip(NOTIFY_OFFER_ID);
+      navigate({ type: "settings", focus: "notify" });
       return;
     }
     if (tip.kind === "whats_new") {
@@ -249,6 +259,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "최신화",
       title: `${CATEGORY_LABEL[tip.staleCategories[0]]} 최신화가 오래됐어요`,
       description: `보유 현황이 오래되면 순자산 원인분해·성적표가 실제와 달라질 수 있어요.${rest > 0 ? ` 그 외 ${rest}곳도 최신화가 필요해요.` : ""}`,
+    };
+  }
+  if (tip.kind === "notify") {
+    return {
+      Icon: Bell,
+      badgeLabel: "알림",
+      title: "결산이 열리는 날 알려 드릴까요?",
+      description: "받을 알림은 설정에서 직접 골라요.",
     };
   }
   if (tip.kind === "whats_new") {

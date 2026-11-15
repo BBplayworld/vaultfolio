@@ -221,14 +221,14 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                      <span className="hidden sm:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
+                      <span className="hidden md:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
-                        <Badge className={`hidden sm:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
+                        <Badge className={`hidden md:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 sm:hidden mt-0.5">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 md:hidden mt-0.5">
                       <span className="text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
                       {frequency && (
                         <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>

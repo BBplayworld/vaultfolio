@@ -242,7 +242,7 @@ onboarding-wizard-status.ts와 동일한 "단일 키 + JSON 객체" 패턴(`STOR
 ### home-tip.ts (S-4.32 후속) — 홈 알림/팁 통합 판정
 
 ```typescript
-pickHomeTip({ assetData, hasAssets, syncArmed, today?, keepShown?, hasRelink?, whatsNewOk? }): HomeTip | null   // today 기본값 todayKst()(테스트 고정용)
+pickHomeTip({ assetData, hasAssets, syncArmed, today?, keepShown?, hasRelink?, whatsNewOk?, notifyOk? }): HomeTip | null   // today 기본값 todayKst()(테스트 고정용)
   // HomeTip = backup | tax | settlement | relink | refresh | { kind: "whats_new", count, title } | feature
   // 순서(#4.82): 백업 > 임박 세금 > 결산(창 안) > 새 소식 > relink > 그 외 세금 > 최신화 > 기능(저방문)
   // whatsNewOk = 체험·앱 잠금 아님(호출부 판정, isDataLoaded는 HomeTipBox effect 가드). hasAssets && whatsNewTip(readSeen(), {today}) 일 때만 반환
@@ -926,6 +926,12 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 - 내부: `resolveLogoSrc`(단일 출처 재사용)로 `base` URL → `onError` 시 지수 백오프(400·800·1600ms)로 `attempt++`, 3회 초과 시 `failed`. `onLoad` 시 대기 타이머 취소. `base`(종목·옵션) 변경 시 상태 리셋. 언마운트 시 `clearTimeout`.
 - 재시도 URL엔 캐시버스터 `&r=N`만 붙는다 — `/api/logo` route가 이 파라미터를 파싱하지 않아 **서버 캐시 키 불변(HIT 유지)**, 무력화 대상은 브라우저 HTTP 캐시뿐. 목적은 "모바일 WebView 1회성 디코드 실패" 복구.
 - **왜 필요**: 과거 `BrandMark`/`StockIcon`은 `imgError` state가 한 번 `true`면 영구히 폴백으로 굳어, 캡처(`toPng`) 실행 전에 이미 로고가 사라진 상태였다(인증카드 저장 시 로고 누락, 2026-09). `imgError` 영구 폴백 패턴을 이 훅으로 교체.
+
+### 5.115 알림 팁·저장 보호·iOS 판별
+- `lib/push/client.ts` `isNotifyTipEligible()` — `detectPushEnv()==="ready" && Notification.permission==="default" && !readPushPrefs().on`. 호출부(`home-tip-box.tsx`)가 `!isTrialMode() && !isPwaLocked() && !isTipDismissed(NOTIFY_OFFER_ID)`를 더해 `pickHomeTip`의 `notifyOk`로 넘긴다. `HomeTip` kind `notify`(우선순위: 최신화 아래·기능 위).
+- `lib/pwa/persist-storage.ts` `ensureStoragePersist()` — 모듈 플래그로 로드당 1회, `navigator.storage.persist` 미지원·`Firefox/` UA 제외, `persisted()` 참이면 GA 0, 아니면 `persist()` 결과로 `feature_use{category:persist_ok|persist_denied}` 1건, 예외 삼킴.
+- `lib/pwa/detect-browser.ts` `isIosBelow164(ua?)` — UA `OS 16_3`/`Version/16.3`, 파싱 실패 false. 설치 안내 문장 분기용.
+- `AssetView` `{type:"settings"; focus?:"notify"}` — 메모리 상태만, `SettingsPage`가 `#settings-section-notify`로 1회 스크롤(`scroll-mt-16`).
 
 ### 첫 저장 설치 안내 신호·판정 (`src/lib/pwa/first-save-signal.ts` · `install-nudge-policy.ts`, #4.45 #78)
 - `markFirstSave()`는 `ga.ts trackAssetSave`의 첫 저장 판정 분기(`writeFlags` 직후)에서만 호출 — 모듈 메모리뿐(새 저장 키·gaFlags 쓰기 추가 0, 새로고침 시 소멸). `dismissInstallNudge`·`markNudgeShown`(노출 GA 세션당 1회)·`subscribeFirstSave`(`useSyncExternalStore`용)

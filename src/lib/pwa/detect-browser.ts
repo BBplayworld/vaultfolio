@@ -32,6 +32,16 @@ function parseIosMajor(s: string): number {
   return m ? parseInt(m[1], 10) : 0;
 }
 
+/** iOS 16.4 미만(웹 푸시 미지원) 여부 — UA 'OS 16_3'·'Version/16.3' 기준, 파싱 실패는 false */
+export function isIosBelow164(ua: string = typeof navigator !== "undefined" ? navigator.userAgent : ""): boolean {
+  const s = ua.toLowerCase();
+  if (!/iphone|ipad|ipod|macintosh/.test(s)) return false;
+  const m = s.match(/(?:iphone |ipad )?os (\d+)[_.](\d+)/) ?? s.match(/version\/(\d+)\.(\d+)/);
+  if (!m) return false;
+  const [maj, min] = [parseInt(m[1], 10), parseInt(m[2], 10)];
+  return maj < 16 || (maj === 16 && min < 4);
+}
+
 /**
  * UA로 플랫폼·브라우저·인앱 여부 판별. 비주류·불명은 safari(iOS)/chrome(Android)로 폴백.
  * @param maxTouchPoints iPadOS 13+ 는 데스크톱 Safari UA(Macintosh)로 위장 → 터치포인트로 iPad 판별.
