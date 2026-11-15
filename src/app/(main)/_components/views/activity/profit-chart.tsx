@@ -674,7 +674,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                               return (
                                 <div
                                   key={stock.id}
-                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 px-4 py-3 min-[400px]:items-center"
+                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 px-4 py-3 min-[400px]:py-2.5 min-[400px]:items-center"
                                   data-testid="profit-stock-row"
                                 >
                                   <div className="min-w-0">
