@@ -216,26 +216,25 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
+                  data-testid="dividend-stock-row"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                      <span className="hidden md:inline text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
+                      <p data-testid="dividend-stock-name" className="text-sm font-semibold truncate">{stock.name || ticker}</p>
                       {frequency && (
                         <Badge className={`hidden md:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 md:hidden mt-0.5">
-                      <span className="text-xs text-muted-foreground font-mono shrink-0">{ticker}</span>
-                      {frequency && (
+                    {frequency && (
+                      <div data-testid="dividend-stock-meta" className="flex items-center gap-x-1 md:hidden mt-0.5">
                         <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     {stock.purchaseDate && <p className="text-xs text-muted-foreground mt-1">매수 {stock.purchaseDate}</p>}
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end">
@@ -283,7 +282,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (
                       <p className="text-xs tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
                     )}
-                    <p className="text-xs font-bold tabular-nums text-foreground">
+                    <p data-testid="dividend-paid-amount" className="text-xs md:text-sm font-bold tabular-nums text-foreground">
                       {displayActual > 0 ? formatCurrency(displayActual) : <span className="text-muted-foreground">-</span>}
                     </p>
                   </div>
@@ -291,7 +290,7 @@ export function MonthlyDividendStocks({ selectedMonth }: Props) {
                     {!isDomestic && currency === "USD" && (
                       <p className="text-xs tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
                     )}
-                    <p className={`text-xs font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+                    <p data-testid="dividend-est-amount" className={`text-xs md:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                       {formatCurrency(displayTotal)}
                     </p>
                   </div>
