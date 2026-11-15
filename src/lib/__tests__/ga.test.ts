@@ -164,6 +164,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "push_click_kr" }, "알림·누름·국내"],
     ["feature_use", { category: "push_click_settle" }, "알림·누름·결산"],
     ["feature_use", { category: "push_click_tax" }, "알림·누름·세금"],
+    ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
+    ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
     ["theme_mode", { theme: "light" }, "라이트 모드 사용"],
   ] as const)("%s %j → %s", (name, params, title) => {

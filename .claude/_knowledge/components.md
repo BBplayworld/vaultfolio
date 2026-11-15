@@ -34,7 +34,7 @@ _components/
 │       ├── net-asset-chart.tsx      # Hero(현재 순자산+전년 대비) + 년도별/일별 InlineSelector(CardHeader). view prop(제어) 시 제목·Hero 숨기고 ChangeHero로 대비값
 │       ├── asset-change-view.tsx    # 자산 변화 셸(범위×기간) + 전체·주 목록 (#4.34)
 │       ├── settlement-view.tsx      # 전체·월 = 월말 결산 블록 1·2·3·7 (#4.34)
-│       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표. period prop(제어) 시 제목·요약 박스 숨기고 ChangeHero(로딩 스켈레톤·점검 중 포함)
+│       ├── profit-chart.tsx         # 카드 헤더 InlineSelector + 시장 selector(size sm) + collapse 안 기준종가표(국내·해외 날짜 맞춤 = InlineSelector fullWidth·tight, 더보기와 `PROFIT_BASIS_COPY` 공유). period prop(제어) 시 제목·요약 박스 숨기고 ChangeHero(로딩 스켈레톤·점검 중 포함)
 │       ├── dividend-chart.tsx       # Hero(연간/월 배당) + InfoHint + 카테고리 범례 + 예상/실제 토글
 │       └── performance-hub.tsx, monthly-dividend-stocks.tsx
 ├── layout/                # 라우팅·공용 UI

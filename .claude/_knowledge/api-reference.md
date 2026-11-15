@@ -72,8 +72,8 @@ GET /api/finance/profit?tickers=005930,TSLA&period=daily|weekly|monthly|yearly&b
 **`chipPair?`(#4.73 U7, 선택 필드)** — `period=daily&basis=kstAccessDay`에서만. 서버 시각 `getTodayChipSession(market)`이 closed이고 그 종가쌍이 (refDate, prevDate)와 다를 때만 `{ closeDate, closePrice, baseDate, basePrice }`. 두 가격 모두 실제 종가일 = 요청일(롤백 값 금지). 캐시 먼저, 없는 날짜만 KIS(캐시 hit 경로는 이때만 L2·예산·토큰 확인). 실패·예산 초과면 필드만 생략하고 그 응답은 CDN 캐시 헤더 없음. 평일 정상 시각 KIS 추가 호출 0. 날짜 산출은 `profit-dates.ts` `resolveRefDates`(지수 라우트와 공용).
 
 **basis 옵션 (기본 kstAccessDay):**
-- `sameBusinessDay`(동일 영업일): `krDates = usDates = getDates(period,"foreign")` — 국내·해외 같은 영업일
-- `kstAccessDay`(KST 접속일): 국내=domestic, 해외=foreign 독립 (기존 동작)
+- `sameBusinessDay`(같은 거래일): `krDates = usDates = getDates(period,"foreign")` — 국내·해외 같은 영업일
+- `kstAccessDay`(시장별 최신): 국내=domestic, 해외=foreign 독립 (기존 동작)
 
 **서버 캐시 2단:**
 1. `getRefDateForRequest(ticker, requestDate, period)` — 요청일→실거래일(KIS 응답일) 매핑

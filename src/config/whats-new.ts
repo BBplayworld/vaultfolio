@@ -14,6 +14,11 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "20261115-01",
+    title: "날짜 맞춤 설정 이름이 쉬워졌어요",
+    body: "국내·해외 날짜 맞춤 설정을 성과에서도 같은 모양으로 골라요",
+  },
+  {
     id: "20261114-01",
     title: "성적표에서 가계 통계와 나란히 봐요",
     body: "부동산까지 등록하면 내 순자산이 속한 구간도 보여요",

@@ -89,6 +89,7 @@ const setThemeMode = usePreferencesStore(s => s.setThemeMode);
 const basis = useProfitBasisStore(s => s.basis);       // ProfitBasis
 const setBasis = useProfitBasisStore(s => s.setBasis); // localStorage + store 동시 갱신
 const hydrate = useProfitBasisStore(s => s.hydrate);   // 마운트 후 localStorage 동기화 (SSR mismatch 방지)
+// 화면 문구 단일 출처: `PROFIT_BASIS_COPY`(profit-utils.ts) { name, summary, options, notes } — 더보기·성과 두 곳이 공유(#5.116)
 ```
 
 standalone zustand `create` (provider 없음). 성과-수익 탭(profit-chart) 토글 + 상세-주식 전일대비(stock-tab)가 함께 구독. 공유 로드 시 `applySharedData`에서, 내보내기 import 시 `getState().hydrate()`로 갱신.
