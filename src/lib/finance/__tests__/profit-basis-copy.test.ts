@@ -19,7 +19,7 @@ describe("PROFIT_BASIS_COPY (#222)", () => {
     expect(PROFIT_BASIS_COPY.notes).toHaveLength(3);
     expect(PROFIT_BASIS_COPY.notes[0].label).toBe("같은 거래일");
     expect(PROFIT_BASIS_COPY.notes[1].label).toBe("시장별 최신");
-    expect(PROFIT_BASIS_COPY.notes[2].text).toBe("기간 수익·성적표·시장 비교(홈·상세 포함)에 함께 적용돼요.");
+    expect(PROFIT_BASIS_COPY.notes[2].text).toBe("기간 수익·성적표·시장 비교(홈·상세 포함)\u2060에 함께 적용돼요.");
   });
   it("옛 단어 미포함", () => {
     const all = JSON.stringify(PROFIT_BASIS_COPY);

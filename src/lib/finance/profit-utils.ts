@@ -120,7 +120,8 @@ export const PROFIT_BASIS_COPY = {
   notes: [
     { label: PROFIT_BASIS_OPTIONS[0].label, text: "국내·해외 모두 같은 날짜의 종가로 더해요. 해외 종가는 다음 날 새벽에 정해져요." },
     { label: PROFIT_BASIS_OPTIONS[1].label, text: "지금(한국 시간) 기준으로 각 시장의 마지막 종가를 더해요. 두 시장 날짜가 다를 수 있어요." },
-    { label: undefined, text: "기간 수익·성적표·시장 비교(홈·상세 포함)에 함께 적용돼요." },
+    // ")" 뒤 줄바꿈 방지: keep-all이어도 괄호 뒤에서 끊겨 U+2060으로 묶음(qa D-1 재점검)
+    { label: undefined, text: "기간 수익·성적표·시장 비교(홈·상세 포함)\u2060에 함께 적용돼요." },
   ],
 } as const;
 
