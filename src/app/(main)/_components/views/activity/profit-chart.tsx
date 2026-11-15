@@ -114,11 +114,11 @@ function MarketDateRow({
       <div className={`tabular-nums leading-tight ${align ?? ""}`}>
         <p className="text-sm">{date}</p>
         {note && (
-          <p className="text-xs leading-none mt-0.5 text-amber-600/80 dark:text-amber-500/80" title="휴장일이 있어 직전 영업일 종가로 비교됩니다">
+          <p className="text-sm leading-none mt-0.5 text-amber-700 dark:text-amber-400" title="휴장일이 있어 직전 영업일 종가로 비교됩니다">
             {note}
           </p>
         )}
-        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+        {sub && <p className="text-sm text-muted-foreground mt-1">{sub}</p>}
       </div>
     ) : <span className="text-muted-foreground/40">-</span>;
   return (
@@ -549,13 +549,10 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                           </div>
                           <div className={`h-3 w-20 rounded ${SKELETON_FILL}`} />
                         </div>
-                        <div className="divide-y">
+                        <div className="divide-y divide-border dark:divide-border/40">
                           {[stock].map((s) => (
                             <div key={s.id} className="grid grid-cols-[1fr_6rem] gap-x-2 px-4 py-2.5 items-center">
-                              <div className="space-y-1">
-                                <div className={`h-3 w-24 rounded ${SKELETON_FILL}`} />
-                                <div className={`h-2.5 w-12 rounded ${SKELETON_FILL}`} />
-                              </div>
+                              <div className={`h-3 w-24 rounded ${SKELETON_FILL}`} />
                               <div className={`h-3 w-16 rounded ${SKELETON_FILL} ml-auto`} />
                             </div>
                           ))}
@@ -583,14 +580,16 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                             {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
                             <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
                               <CollapsibleTrigger asChild>
-                                <button type="button" className="flex items-center gap-1 mt-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                <button type="button" data-testid="profit-close-trigger" className="flex items-center gap-1 -ml-1 px-1 min-h-10 text-sm font-medium text-foreground transition-colors">
                                   <ChevronDown className={`size-4 transition-transform ${closeTableOpen ? "rotate-180" : ""}`} />
                                   기준 종가 비교
                                 </button>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
                                 {/* 국내·해외 날짜 맞춤: 더보기와 같은 상수·같은 모양(#222) */}
-                                <div data-testid="profit-basis-selector-chart" className="flex items-center gap-1.5 w-fit ml-auto">
+                                <div className="flex flex-col gap-1.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span data-testid="profit-basis-label" className="text-sm font-medium">{PROFIT_BASIS_COPY.name}</span>
                                   <InfoHint summary={PROFIT_BASIS_COPY.summary}>
                                     {PROFIT_BASIS_COPY.notes.map((n) => (
                                       <p key={n.text} className={n.label ? "break-keep" : "text-muted-foreground break-keep"}>
@@ -600,7 +599,8 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                     ))}
                                     {period === "daily" && <p className="text-muted-foreground break-keep">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
                                   </InfoHint>
-                                  {profitBasisHydrated && (
+                                </div>
+                                {profitBasisHydrated && (<div data-testid="profit-basis-selector-chart" className="w-full min-[400px]:w-[208px]">
                                     <InlineSelector
                                       value={profitBasis}
                                       onChange={(v) => {
@@ -611,16 +611,15 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                       options={PROFIT_BASIS_COPY.options}
                                       fullWidth
                                       tight
-                                      className="w-[208px]"
                                       ariaLabel={PROFIT_BASIS_COPY.name}
                                     />
-                                  )}
+                                  </div>)}
                                 </div>
                                 {/* 헤더 */}
                                 <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border dark:border-border/50 text-muted-foreground`}>
-                                  <span className="text-xs font-medium self-end">(KST)</span>
-                                  <span>시작 종가</span>
-                                  <span className="text-right">종료 종가</span>
+                                  <span />
+                                  <span className="font-medium">시작 종가</span>
+                                  <span className="text-right font-medium">종료 종가</span>
                                 </div>
                                 {/* 시장별 날짜 */}
                                 {showKrDate && (
@@ -630,12 +629,12 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                   <MarketDateRow label="해외" startDate={usRefDate} endDate={usCompareDate} startSub={usStartRateText} endSub={usEndRateText} startNote={usHolidayExcluded ? "휴장제외" : undefined} />
                                 )}
                                 {/* 합계 */}
-                                <div className={`${CLOSE_TABLE_COLS} pt-1.5 font-medium tabular-nums`}>
+                                <div data-testid="profit-close-table" className={`${CLOSE_TABLE_COLS} pt-1.5 tabular-nums`}>
                                   <span className="text-muted-foreground font-normal">합계</span>
-                                  <span>{formatPriceByMode(leftSum)}</span>
-                                  <span className="text-right">{formatPriceByMode(rightSum)}</span>
+                                  <span className="font-semibold text-foreground">{formatPriceByMode(leftSum)}</span>
+                                  <span className="text-right font-semibold text-foreground">{formatPriceByMode(rightSum)}</span>
                                 </div>
-                                <p className="pt-1.5 text-xs text-muted-foreground">마감 기준: 국내 16:00 · 해외 익일 새벽 (KST)</p>
+                                <p className="pt-1.5 text-sm text-muted-foreground text-pretty break-keep">마감 기준: <span className="whitespace-nowrap">국내 16:00</span> · <span className="whitespace-nowrap">해외 익일 새벽 (KST)</span></p>
                               </CollapsibleContent>
                             </Collapsible>
                           </div>
@@ -644,13 +643,13 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                     </div>
 
                     {/* 종목별 목록 */}
-                    <div className="space-y-3">
-                      {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }, i) => (
-                        <div key={key} className={`rounded-lg overflow-hidden${i > 0 ? ` ${ASSET_THEME.dividerAccent} pt-3` : ""}`}>
+                    <div className="space-y-5">
+                      {grouped.map(({ key, label, color, items, catProfit, catRef, catCurrent, catRate }) => (
+                        <div key={key} data-testid="profit-stock-group" data-group={key} className="rounded-lg overflow-hidden">
                           <div className="flex flex-col items-start gap-0.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between px-4 py-1.5 bg-muted/20">
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
+                              <span className="text-sm font-semibold text-foreground whitespace-nowrap">{label}</span>
                             </div>
                             {catRate !== null && !(items.length === 1 && items[0].hasRef) && (
                               <div className="min-w-0 text-left min-[400px]:text-right">
@@ -675,18 +674,18 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                               return (
                                 <div
                                   key={stock.id}
-                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-1 px-4 py-2.5 min-[400px]:items-center hover:bg-muted/30 transition-colors"
+                                  className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 px-4 py-3 min-[400px]:items-center"
+                                  data-testid="profit-stock-row"
                                 >
                                   <div className="min-w-0">
-                                    <p className="text-sm font-semibold truncate">{stock.name || ticker}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticker}</p>
+                                    <p data-testid="profit-stock-name" className="text-sm font-semibold truncate">{stock.name || ticker}</p>
                                   </div>
                                   <div className="text-left min-[400px]:text-right min-[400px]:shrink-0">
                                     {hasRef ? (
                                       <>
                                         <div className="flex items-center min-[400px]:justify-end gap-1">
                                           {showFx && <FxBreakdown priceGain={priceGain} fxGain={fxGain} fxApplied={period === "daily"} />}
-                                          <p className={`text-sm tabular-nums font-medium ${getProfitLossColor(profitAmount)}`}>
+                                          <p data-testid="profit-stock-pnl" className={`text-sm tabular-nums font-semibold ${getProfitLossColor(profitAmount)}`}>
                                             {profitAmount >= 0 ? "+" : ""}{formatPriceByMode(profitAmount)} ({profitRate !== null ? formatRate(profitRate) : "--"})
                                           </p>
                                         </div>

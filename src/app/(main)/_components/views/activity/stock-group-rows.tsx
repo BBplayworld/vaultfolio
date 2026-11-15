@@ -44,13 +44,13 @@ export function StockGroupRows<T extends OrderableRow>({ items, renderRow, activ
   const panelId = useId();
   useEffect(() => { if (!active) setOpen(false); }, [active]);
   const ordered = orderStockRows(items);
-  if (ordered.length <= STOCK_ROW_VISIBLE + 1) return <div className="divide-y">{ordered.map(renderRow)}</div>;
+  if (ordered.length <= STOCK_ROW_VISIBLE + 1) return <div className="divide-y divide-border dark:divide-border/40">{ordered.map(renderRow)}</div>;
   const top = ordered.slice(0, STOCK_ROW_VISIBLE);
   const rest = ordered.slice(STOCK_ROW_VISIBLE);
   const restHasRef = rest.some((r) => r.hasRef);
   const restSum = restDisplaySum(ordered, top);
   return (
-    <div className="divide-y">
+    <div className="divide-y divide-border dark:divide-border/40">
       {top.map(renderRow)}
       <div>
         <div
@@ -59,7 +59,7 @@ export function StockGroupRows<T extends OrderableRow>({ items, renderRow, activ
           className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="divide-y">{rest.map(renderRow)}</div>
+            <div className="divide-y divide-border dark:divide-border/40">{rest.map(renderRow)}</div>
           </div>
         </div>
         <button

@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-15 (v5.117)
+
+### 성과 › 자산 변화 › 주식 읽기 쉽게 (#5.117, 이슈 #224)
+- **왜**: 종목 코드 줄·12px 부가 글자·곡선 골드 선이 읽기를 방해(대표 지적). 표시만 변경, 계산·데이터·저장 0.
+- 종목 행: 코드 줄 삭제(이름 없으면 티커 폴백), 손익 600, 행 hover 제거, 행 선 `divide-border dark:divide-border/40`(`stock-group-rows.tsx`), 그룹 라벨 foreground, 그룹 사이 `space-y-5`·골드 선(`dividerAccent`) 이 화면에서만 제거(토큰·asset-report-view 불변).
+- 기준 종가 비교: `(KST)` 머리 삭제, 부가 글자 12px→`text-sm`, `휴장제외` amber-700/400, 합계 값 semibold, 트리거 `min-h-10`, `마감 기준` 문구 `(KST)` 앞 끊김 방지, `국내·해외 날짜 맞춤` 이름 줄(`PROFIT_BASIS_COPY.name`; 400 미만 선택기 w-full, 이상 208px 우측).
+- testId: `profit-close-trigger`·`profit-basis-label`·`profit-close-table`·`profit-stock-group`·`profit-stock-row`·`profit-stock-name`·`profit-stock-pnl`.
+
+---
+
 ## 2026-11-15 (v5.116)
 
 ### 종가 기준 설정 쉬운 말로·한 모양으로 (#5.116, 이슈 #222)
