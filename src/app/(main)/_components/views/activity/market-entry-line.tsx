@@ -174,8 +174,8 @@ export function CauseMarketSegment({ market }: { market: MarketEntryValue }) {
   );
 }
 
-// variant="panel" = 펼침 패널 맨 아래 줄(카드 밖 전용 -mt-2·px-4 제거, 헤어라인·min-h-10). 기본 "slot" = 카드 밖 보조 줄 자리
-export function MarketLine({ market, onOpen, variant = "slot" }: { market: MarketEntryValue; onOpen: () => void; variant?: "slot" | "panel" }) {
+// variant="card" = 원인 없는 날 순자산 카드 안 보조 줄(5.120, slot에서 -mt-2·px-4 제거, 히트 40px). variant="panel" = 펼침 패널 맨 아래 줄(카드 밖 전용 -mt-2·px-4 제거, 헤어라인·min-h-10). 기본 "slot" = 카드 밖 보조 줄 자리
+export function MarketLine({ market, onOpen, variant = "slot" }: { market: MarketEntryValue; onOpen: () => void; variant?: "slot" | "panel" | "card" }) {
   const state = !market.ready ? "loading" : market.values.length === 0 ? "empty" : "ok";
   const groups = marketLineGroups(market.values);
   const hideRest = groups.length > 1 ? HIDE_REST_DIFF_DATE : HIDE_REST_SAME_DATE;
@@ -189,7 +189,7 @@ export function MarketLine({ market, onOpen, variant = "slot" }: { market: Marke
       data-screenshot-hide
       aria-label={`시장과 비교 하루 보기${full ? `, ${full}` : ""}`}
       onClick={onOpen}
-      className={`@container relative flex w-full items-center text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground ${variant === "panel" ? "mt-2 min-h-10 max-w-xs md:max-w-[22.5rem] border-t border-border dark:border-border/40" : "-mt-2 min-h-5 px-4 after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"}`}
+      className={`@container relative flex w-full items-center text-left text-sm text-muted-foreground transition-colors hover:text-foreground active:text-foreground ${variant === "panel" ? "mt-2 min-h-10 max-w-xs md:max-w-[22.5rem] border-t border-border dark:border-border/40" : variant === "card" ? "min-h-5 after:absolute after:-inset-x-4 after:-inset-y-2.5 after:content-['']" : "-mt-2 min-h-5 px-4 after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']"}`}
     >
       <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap">
         {state === "loading" && <span aria-hidden className={`inline-block h-4 w-44 rounded ${SKELETON_FILL}`} />}

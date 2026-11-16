@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-16 (v5.120)
+
+### 홈 › 원인 없는 날 시장 줄을 순자산 카드 안으로 (#5.120, 이슈 #230)
+- **왜**: 변동 없음·예측만인 날(일요일 등) 시장 줄이 `showLine=!!top` 폴백으로 카드 밖 아래에 따로 노출됨(5.105 통합 누락).
+- `home/dashboard.tsx`: 카드 밖 `MarketLine` 폴백 삭제, 카드 안 변동/원인 블록 뒤 `mt-1`에 `variant="card"` 렌더. 원인 있는 날(showLine) 경로 변경 0.
+- `activity/market-entry-line.tsx` `MarketLine`: `variant="card"` 추가(`-mt-2`·`px-4` 제거, 히트 40px). 테스트 `home-today-490.test.tsx` 갱신.
+
 ## 2026-11-16 (v5.119)
 
 ### 시장 알림 › 09시 합치기 본문 누락 수정 (#5.119, 이슈 #228)
