@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-17 02:10 KST (🟥 #237 v5.124 반영 결정 요청)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.123**
+> **마지막 갱신: 2026-11-17 07:55 KST (정기 실행 — 🟥 v5.124 승인 요청 발송, 후속 과제 기획 착수)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.123**
 
 ## 🟥 대표님 결정 필요
 - **v5.124 올해 결산 [PR #238](https://github.com/BBplayworld/vaultfolio/pull/238)** — 연 탭 첫 블록을 넣은 돈·불어난 돈·빠져나간 돈 한 장으로. 권고 **반영**. preview: https://secretasset-git-issue-5124-bbplayworlds-projects.vercel.app/?demo=1 (성과 › 자산 변화 › 연, 첫 시세 동기화 후 7~11초 뒤 블록 표시) · 비교 이미지 memory `issues/5.124-237-yearly-settlement/screenshots/ui-review/compare-yearly-{390,1280}-dark.png` · 결정: PR 머지 = 반영 / 닫기 = 미반영 · 컷 12/20
