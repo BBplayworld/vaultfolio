@@ -695,6 +695,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 [92/5/3]·[80/12/8]·[50/50]·[100]·[60/39.9/0.1] 라벨이 조각 안, 조각 바깥 링 없음, 범례 금액·% 끝 x 정렬, 행 40px, 카드 높이 증가 16px 이하, 필터 이동 유지
 - 테스트: `src/app/(main)/_components/views/home/__tests__/`
 
+- ⚙ **탭 칸 이동 줄(#5.121)** — 금융·부동산·부채 탭 총액 박스 없음(`○○ 총액` 텍스트 부재, 총액은 도넛 가운데·범례에만). 금융 이동 줄은 종류별 버튼(`home-alloc-link-stocks|crypto|cash`): 1종=`N개 보유 중 >` 그 종류 탭, 2종 이상=`주식 N개 › 암호화폐 M개 ›`, 0개 종류 생략(`주식 0개` 없음). 부채: 대출→loans, 임차보증금→real-estate(둘 다면 분할), 부동산→real-estate. 버튼 히트 40px.
+
 ### F-TAX-SEASON. 연말 세금 진입 (상세·주식 도구 타일 `stock-tool-tax`, [stock-tools.tsx](../../src/app/(main)/_components/views/detail/stock-tools.tsx)) — #4.45 #79, #4.83에서 문장 상자 → 타일
 - ⚙ `isForeignTaxSeason` 10/31 false·11/1 true·12/31 true·1/1 false(KST 변환 포함), `isTaxSimCandidate`(국내·상폐·정지·수량0 제외)와 시뮬 `candidates` 판정 일치
 - 👤 11/1~12/31 + 해외주식 보유 시 상세>주식 도구 타일 묶음에 `해외주식 세금` 타일 1개(값 고정 `1년 합산 · 기본공제 적용`, 숫자·D-day·금액 0), 누르면 세금 관리 시뮬레이터 탭, 뒤로가기로 주식 탭 복귀, 국내만 보유·시즌 밖·체험/데모(해외 없음)는 미노출

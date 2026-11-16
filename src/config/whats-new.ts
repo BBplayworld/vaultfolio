@@ -14,6 +14,11 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "20261116-01",
+    title: "홈 자산 분포가 간결해졌어요",
+    body: "같은 금액 반복을 줄이고, 누른 종류의 화면으로 바로 가요",
+  },
+  {
     id: "20261115-01",
     title: "날짜 맞춤 설정 이름이 쉬워졌어요",
     body: "국내·해외 날짜 맞춤 설정을 성과에서도 같은 모양으로 골라요",
