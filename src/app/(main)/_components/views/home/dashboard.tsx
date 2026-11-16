@@ -462,9 +462,13 @@ export function NetAssetSummaryBox({
               </>
           </div>
         )}
+        {/* 원인 없는 날(변동 없음·예측만) 시장 줄은 카드 안에 둔다 — 카드 밖 0(5.120 #230). 원인 있는 날은 showLine 경로 */}
+        {!screenshotMode && !showLine && market && marketLine !== "off" && onMarketOpen && (
+          <div className="mt-1 w-full">
+            <MarketLine market={market} onOpen={onMarketOpen} variant="card" />
+          </div>
+        )}
       </div>
-
-      {!screenshotMode && !showLine && market && marketLine !== "off" && onMarketOpen && <MarketLine market={market} onOpen={onMarketOpen} />}
 
       {visibleTabs.length > 1 && onSegmentClick && (
         <div className="flex justify-center">

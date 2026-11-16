@@ -188,11 +188,17 @@ describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)",
     expect(off).not.toContain("home-market-today");
     expect(off).not.toContain("home-cause-market");
   });
-  it("원인 없음(예측만): 현행 카드 밖 줄(slot)이 분포 필터 앞에 1개", () => {
+  it("원인 없음(예측만): 시장 줄은 카드 안(card) 1개, 카드 밖(slot) 0 (5.120)", () => {
     const e = box({ ...props, change: change({ causes: [], sentence: null, estimated: true }), marketLine: "on", visibleTabs: tabs, onSegmentClick: () => {} });
     expect(e.match(/data-testid="home-market-today"/g)).toHaveLength(1);
-    expect(e).toContain('data-placement="slot"');
+    expect(e).toContain('data-placement="card"');
+    expect(e).not.toContain('data-placement="slot"');
     expect(e.indexOf("home-market-today")).toBeLessThan(e.indexOf('aria-label="자산 분포 필터"'));
+    // 카드 안: 카드 밖 분포 필터 앞이자 카드 닫힘 전 — 정적 가드(변동 없음도 동일)
+    const n = box({ ...props, change: change({ negligible: true, causes: [], sentence: null }), marketLine: "on", visibleTabs: tabs, onSegmentClick: () => {} });
+    expect(n).toContain('data-placement="card"');
+    expect(n).not.toContain('data-placement="slot"');
+    expect(n).not.toContain("-mt-2");
   });
   it("패널 변형: 카드 밖 전용 클래스 없음·히트 40px·헤어라인", () => {
     const html = renderToStaticMarkup(<MarketLine market={market({ values: [mv("kr", 0.8, "2026-11-11")] })} onOpen={() => {}} variant="panel" />);
