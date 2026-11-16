@@ -132,10 +132,16 @@ export function buildKrCloseMessage(today: string, kr: readonly PushQuote[], con
   return { m: "kr", t: `${formatMonthDay(today)} 국내 종가`, b: bigFirst(kr).map(formatQuote).join(" · ") };
 }
 
-/** 09시 회차 합치기 — 우선순위 높은 종류가 제목·도착 화면, 나머지는 본문 둘째 줄에 제목만. 하루 1건 */
+/** 09시 회차 합치기 — 우선순위 높은 종류가 제목·도착 화면, 나머지는 본문 둘째 줄에(시장 요약은 내용, 정적 안내는 제목만). 하루 1건 */
 export function mergePushPayloads(list: readonly PushPayload[]): PushPayload | null {
   const sorted = [...list].sort((a, b) => PUSH_MERGE_ORDER.indexOf(a.m as PushKind) - PUSH_MERGE_ORDER.indexOf(b.m as PushKind));
   if (sorted.length === 0) return null;
   const [head, ...rest] = sorted;
-  return rest.length === 0 ? head : { ...head, b: `${head.b}\n${rest.map((r) => r.t).join(" · ")}` };
+  if (rest.length === 0) return head;
+  // 시장 요약(morning·kr)은 제목만 붙이면 시세가 빠지므로 `아침 시장 · <본문>`으로 내용을 싣는다(날짜 접두는 head 쪽에 있어 생략).
+  // settle·tax 같은 정적 안내는 기존처럼 제목만
+  const line = rest
+    .map((r) => (r.m === "morning" || r.m === "kr" ? `${r.t.replace(/^\d{1,2}\/\d{1,2} /, "")}${r.b ? ` · ${r.b}` : ""}` : r.t))
+    .join(" · ");
+  return { ...head, b: `${head.b}\n${line}` };
 }

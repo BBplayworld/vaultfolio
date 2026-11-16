@@ -857,7 +857,7 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - v2 구성 표: 부동산 1건+ → 소제목 `순자산이 비슷한 가구의 자산 구성`·기준 줄 금액 범위(P20·P40·P60·P80)·3열(가구 평균·가구 비중·내 비중), 보증금 행 내 비중 `—`, 주석 2줄. 부동산 0건 → `전체 가구의 자산 구성`, 2열. 내 금액·±·화살표·손익색·`분위` 글자 0. 320에서 가로 넘침 0.
 
 ### F-PUSH. PWA 알림(아침 시장 요약·국내 장 마감·월 결산 열림·세금 마감) — #4.91 #179 ([notify-section.tsx](../../src/app/(main)/_components/header-menu/notify-section.tsx) · [push/](../../src/lib/push/) · [sw.js](../../public/sw.js))
-- ⚙ 시장 알림: 아침 문구 틀(미국|국내|휴장·큰 움직임 앞)·pm2 발송 기준·09시 합치기·날짜 검증(`changeFromSeries`)·환율 stale 제외·시세 실패 시 플래그 미설정·국내 회차 영업일(`quotes.test.ts`·`cron.test.ts`·`catalog-message.test.ts`). 운영 첫 실행(C96): 머지 다음 평일 09시·16시 로그 `[push-cron]`의 항목 상태 확인, 이상 시 Cron Disable.
+- ⚙ 시장 알림: 아침 문구 틀(미국|국내|휴장·큰 움직임 앞)·pm2 발송 기준·09시 합치기(둘째 줄은 시장 요약=`아침 시장 · 본문` 내용, 결산·세금=제목만, 5.119)·날짜 검증(`changeFromSeries`)·환율 stale 제외·시세 실패 시 플래그 미설정·국내 회차 영업일(`quotes.test.ts`·`cron.test.ts`·`catalog-message.test.ts`). 운영 첫 실행(C96): 머지 다음 평일 09시·16시 로그 `[push-cron]`의 항목 상태 확인, 이상 시 Cron Disable.
 - ⚙ 카탈로그(morning·kr·settle·tax)·`pushDueOn` 날짜표(결산 말일−3일·세금 5/1·12/24)·문구(금지어·금액·% 0)·prefs v3 단일 형식(v1·v2는 기본값)·subscribe 검증(standalone·허용 호스트·종류 ID·추가 필드 폐기)·저장소(평문 endpoint 0·HMAC id)·cron(401·운영 외 204·중복·410 삭제·건수만 응답)·test 라우트·sw·GA `push_click_settle|tax`. 테스트 `src/lib/push/__tests__/*`
 - 👤 설치한 앱 → 설정 → 알림 켜기 → 종류 체크 4개+`큰 움직임 있는 날만`(미리 체크 없음, 0개면 비활성) → 권한 → 테스트 알림 수신(preview) → 알림 누름 시 월 결산/세금 관리 화면 → 종류 변경 → 끄기 → 모든 데이터 삭제 후 서버 구독 부재. 브라우저 탭은 `홈 화면에 추가한 앱에서 쓸 수 있어요`, 체험 모드는 섹션 없음. 요청 본문에 자산 값 0.
 
