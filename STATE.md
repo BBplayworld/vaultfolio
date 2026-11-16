@@ -90,7 +90,7 @@
 - **정정(2026-10-31, 이벤트 CSV 확인)**: GA 계측(가상 화면 page_view·커스텀 이벤트)은 v4.28(10/18)부터라 10/3~10/30 창의 앞 15일은 자동 page_view만 있음 → "첫 진입 33명 vs 홈 17명"은 계측 시점 차이이며 이탈 비율이 아님. 홈(화면키 home)은 웰컴 화면에서도 발생(navigation-context 마운트 시 trackScreen("home"))이므로 "홈=자산 보유자"가 아님. 검증: 기본 제목 page_view 202 + 가상 화면 page_view 292 = page_view 이벤트 494
 - **이벤트 기준선(28일)**: 총 사용자 35, first_visit 17명(신규), session_start 200(기기당 약 5.7), welcome_view 7명·7건, onboarding_action 1명, first_asset_saved 0, asset_save 4건/3명(기존 보유자), transaction_save 25건/3명, settlement_view 1건/1명(v4.34 10/28~), feature_use 345건/11명(홈 팁 노출 중복 전송 버그 포함 — v4.36 수정 전), tutorial·wizard·screenshot_parse·pwa_install·share·sync_action 0건
 - **#48 판독 규칙 재검토 필요**: 웰컴 조회가 계측 이후 13일에 7기기(월 약 15기기) → 28일 창 30기기 미만 보류 규칙이면 판정이 계속 보류됨. 12/25 판독 시 "머지 후 누적 8주 대 계측 이후 기준선" 또는 표본 부족 명시로 정성 판정. 병목은 신규 유입 수(월 약 17명)
-- GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소
+- GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소 — ⚠️ 2026-11-16 cto D6: v4.41 이후 page_title·page_location만 전송, 이 맞춤 정의 값은 미전송(title로만 판독)
 
 ## 후보 목록
 - **[D4 2026-11-16 cto] 선정 0건 — 직접 기여 레버 대기**(재방문 5.115 효과 대기·신규 유입 4.86 판독 ~12/9·홈 도넛 4.90 창). **11/18 GA CSV 수령 당일 D 재수행**(설치→알림→누름 깔때기·저장 보호·첫 저장 절대 기기 수, 판독 창 밖 단절 단계만 선정). 근거 issues/_discovery/2026-11-16-d4-selection.md
