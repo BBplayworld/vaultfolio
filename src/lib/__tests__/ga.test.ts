@@ -577,7 +577,8 @@ describe("5.122(#234) 앱 안 브라우저 웰컴 — method·source별 page_tit
     ["pwa_install", { method: "dismissed" }, "home", "앱 설치·설치창"],
     // 체험 진입
     ["feature_use", { category: "demo", source: "inapp" }, "home", "체험 모드·인앱"],
-    ["feature_use", { category: "demo", source: "inapp", method: "click" }, "home", "체험 모드·인앱 버튼"],
+    // 5.123: 버튼 자리 진입 삭제 — method와 무관하게 인앱 체험은 한 title
+    ["feature_use", { category: "demo", source: "inapp", method: "click" }, "home", "체험 모드·인앱"],
     ["feature_use", { category: "demo" }, "home", "체험 모드"],
     ["feature_use", { category: "demo", source: "web" }, "home", "체험 모드"],
     ["feature_use", { category: "demo" }, "guide:stock-ratio", "가이드·체험"],
@@ -590,13 +591,12 @@ describe("5.122(#234) 앱 안 브라우저 웰컴 — method·source별 page_tit
     expect(featureTitleOf(name, params, screen)).toBe(title);
   });
 
-  it("신규 title은 5개뿐 — ga.ts 소스에 각 1회만 등장", () => {
+  it("신규 title은 4개뿐(5.123: '체험 모드·인앱 버튼' 삭제) — ga.ts 소스에 각 1회만 등장", () => {
     const src = readFileSync(join(process.cwd(), "src/lib/analytics/ga.ts"), "utf8");
-    for (const t of ["웰컴·인앱", "인앱·외부 이동", "앱 설치·설치창", "체험 모드·인앱 버튼"]) {
+    for (const t of ["웰컴·인앱", "인앱·외부 이동", "앱 설치·설치창", "체험 모드·인앱"]) {
       expect(src.split(`"${t}"`).length - 1).toBe(1);
     }
-    // '체험 모드·인앱'은 '체험 모드·인앱 버튼'과 같은 줄 삼항에 1회
-    expect(src.split('"체험 모드·인앱"').length - 1).toBe(1);
+    expect(src).not.toContain("체험 모드·인앱 버튼");
     // 5.122 주석이 붙은 분기는 3곳(welcome_view·pwa_install·demo)뿐
     expect(src.match(/5\.122 #234/g)?.length).toBe(3);
   });
@@ -612,7 +612,7 @@ describe("5.122(#234) 앱 안 브라우저 웰컴 — method·source별 page_tit
   it("체험 진입 2종: 이동 직전 1회, title만 다르고 매개변수 추가 0", () => {
     for (const [params, title] of [
       [{ category: "demo", source: "inapp" }, "체험 모드·인앱"],
-      [{ category: "demo", source: "inapp", method: "click" }, "체험 모드·인앱 버튼"],
+      [{ category: "demo" }, "체험 모드"],
     ] as const) {
       gtag.mockClear();
       const nav = vi.fn();
