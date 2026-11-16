@@ -229,19 +229,18 @@ describe("5.122(#234) 인앱 보조 버튼 — 인앱 버튼 자리에만", () =
   const on = renderToStaticMarkup(<WelcomeInAppCta isIOS showTrial />);
   const off = renderToStaticMarkup(<WelcomeInAppCta isIOS />);
 
-  it("인앱 + 체험 허용: 주 버튼 아래 보조 버튼 1개(secondary·lg·문구), brand 버튼은 주 버튼 1개", () => {
+  it("인앱 + 체험 허용: 주 버튼 아래 둘러보기 1개 — 칩과 같은 문구·같은 모양(5.123 대표 지시), brand 버튼은 주 버튼 1개", () => {
     expect(on.match(new RegExp(TRIAL_BTN, "g"))?.length).toBe(1);
     expect(on.match(/<button/g)?.length).toBe(2);
     expect(on.indexOf('data-testid="welcome-cta-inapp"')).toBeLessThan(on.indexOf(TRIAL_BTN));
     expect(on.indexOf(TRIAL_BTN)).toBeLessThan(on.indexOf('data-testid="welcome-inapp-guide"'));
     const btn = on.match(/<button[^>]*data-testid="welcome-inapp-trial"[^>]*>/)?.[0] ?? "";
-    expect(btn).toContain("bg-secondary");
-    expect(btn).toContain("h-10");
-    expect(btn).toContain("w-full");
-    expect(btn).toContain("break-keep");
-    expect(btn).not.toContain("bg-brand");
+    const chip = renderToStaticMarkup(<WelcomeTrialLink inApp />).match(/<button[^>]*>/)?.[0] ?? "";
+    const cls = (h: string) => (h.match(/class="([^"]*)"/)?.[1] ?? "").replace(/\s*(self-center|-my-1\.5)\s*/, " ").trim();
+    expect(cls(btn)).toBe(cls(chip));
     expect(btn).not.toContain('disabled=""');
-    expect(on).toContain("예시로 먼저 둘러보기");
+    expect(on).toContain("직접 둘러보기");
+    expect(on).not.toContain("예시로 먼저 둘러보기");
     expect(on.match(/bg-brand /g)?.length).toBe(1);
     // 버튼 묶음: 세로 8px, sm 이상은 넓은 쪽에 맞춘 같은 폭
     expect(on).toContain('class="mx-auto flex w-full flex-col gap-2 sm:w-fit"');
@@ -275,8 +274,8 @@ describe("5.122(#234) 인앱 보조 버튼 — 인앱 버튼 자리에만", () =
 
   it("분기 조건: 보조 버튼은 inapp 상태 + 칩과 같은 조건(allowTrial && !restoreHash)에서만 내려간다", () => {
     expect(SRC).toContain('{ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} showTrial={allowTrial && !restoreHash} />}');
-    expect(SRC).toContain("{showTrial && <WelcomeInAppTrialButton />}");
-    expect(SRC.match(/<WelcomeInAppTrialButton \/>/g)?.length).toBe(1);
+    expect(SRC).toContain('{showTrial && <WelcomeTrialLink slot="cta" />}');
+    expect(SRC.match(/<WelcomeTrialLink slot="cta" \/>/g)?.length).toBe(1);
     expect(SRC).toContain('{ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} />}');
   });
 
@@ -289,8 +288,7 @@ describe("5.122(#234) 인앱 보조 버튼 — 인앱 버튼 자리에만", () =
     expect(featureTitleOf("feature_use", WELCOME_TRIAL_PARAMS.chip, "home")).toBe("체험 모드");
     expect(featureTitleOf("feature_use", WELCOME_TRIAL_PARAMS.inAppChip, "home")).toBe("체험 모드·인앱");
     expect(featureTitleOf("feature_use", WELCOME_TRIAL_PARAMS.inAppButton, "home")).toBe("체험 모드·인앱 버튼");
-    expect(SRC).toContain("useTrialEntry(inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip)");
-    expect(SRC).toContain("useTrialEntry(WELCOME_TRIAL_PARAMS.inAppButton)");
+    expect(SRC).toContain("useTrialEntry(inCta ? WELCOME_TRIAL_PARAMS.inAppButton : inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip)");
     // 이동 직전 전송은 공통 훅 1곳(연타 1회 가드 포함)
     expect(SRC.match(/trackThenNavigate\(/g)?.length).toBe(1);
     expect(SRC).toMatch(/if \(firedRef\.current\) return;\s*firedRef\.current = true;\s*setBusy\(true\);\s*trackThenNavigate\("feature_use", params, TRIAL_ENTRY_URL\);/);

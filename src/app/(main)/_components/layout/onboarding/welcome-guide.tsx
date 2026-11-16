@@ -317,17 +317,19 @@ function useTrialEntry(params: GaParams) {
   return { busy, handleClick };
 }
 
-/** 웰컴 ③ "직접 둘러보기" 칩(#59) — inApp이면 GA title만 '체험 모드·인앱'으로 분리(화면 동일) */
-export function WelcomeTrialLink({ inApp = false }: { inApp?: boolean } = {}) {
-  const { busy, handleClick } = useTrialEntry(inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip);
+/** 웰컴 ③ "직접 둘러보기" 칩(#59) — inApp이면 GA title만 '체험 모드·인앱'으로 분리(화면 동일).
+ *  slot="cta"(5.123): 인앱 버튼 자리에 같은 문구·같은 모양으로 한 번 더(대표 지시 — 같은 기능은 같은 모양). GA title만 '체험 모드·인앱 버튼' */
+export function WelcomeTrialLink({ inApp = false, slot }: { inApp?: boolean; slot?: "cta" } = {}) {
+  const inCta = slot === "cta";
+  const { busy, handleClick } = useTrialEntry(inCta ? WELCOME_TRIAL_PARAMS.inAppButton : inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip);
   return (
     <button
       type="button"
-      data-testid="welcome-trial-link"
+      data-testid={inCta ? "welcome-inapp-trial" : "welcome-trial-link"}
       onClick={handleClick}
       disabled={busy}
       aria-busy={busy || undefined}
-      className="relative -my-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 text-sm font-semibold text-foreground break-keep whitespace-nowrap hover:bg-brand/25 dark:bg-brand/20 dark:hover:bg-brand/30 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:not-disabled:scale-[0.96] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 after:absolute after:-inset-1 after:content-['']"
+      className={`relative ${inCta ? "self-center" : "-my-1.5"} inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 text-sm font-semibold text-foreground break-keep whitespace-nowrap hover:bg-brand/25 dark:bg-brand/20 dark:hover:bg-brand/30 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:not-disabled:scale-[0.96] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 after:absolute after:-inset-1 after:content-['']`}
     >
       직접 둘러보기
       {busy ? <Loader2 aria-hidden className="size-3.5 motion-safe:animate-spin" /> : <ArrowRight aria-hidden className="size-3.5 text-brand" />}
@@ -353,25 +355,6 @@ function InstallButton({ className = "" }: { className?: string }) {
         </Button>
       )}
     </PwaInstallFlow>
-  );
-}
-
-/** 인앱 버튼 자리 보조 버튼(5.122 #234) — 등록이 막힌 자리에서 예시 화면으로. 칩과 같은 체험 진입, GA title만 다름 */
-function WelcomeInAppTrialButton() {
-  const { busy, handleClick } = useTrialEntry(WELCOME_TRIAL_PARAMS.inAppButton);
-  return (
-    <Button
-      variant="secondary"
-      size="lg"
-      data-testid="welcome-inapp-trial"
-      className="w-full gap-2 break-keep"
-      onClick={handleClick}
-      disabled={busy}
-      aria-busy={busy || undefined}
-    >
-      예시로 먼저 둘러보기
-      {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ArrowRight aria-hidden className="size-4 text-brand" />}
-    </Button>
   );
 }
 
@@ -414,7 +397,7 @@ export function WelcomeInAppCta({ isIOS, showTrial = false }: { isIOS: boolean; 
             {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
             외부 브라우저에서 시작하기
           </Button>
-          {showTrial && <WelcomeInAppTrialButton />}
+          {showTrial && <WelcomeTrialLink slot="cta" />}
         </div>
       </div>
       {/* iOS 수동 가이드 — 항상 마운트 + grid-rows 0fr↔1fr 높이 전환(재마운트 없음). 닫힘은 inert */}
