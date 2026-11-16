@@ -6,9 +6,10 @@
 
 ## 2026-11-16 (v5.123)
 
-### 인앱 웰컴 둘러보기 문구·모양 통일 (#5.123, 대표 지시)
-- **왜**: 5.122 보조 버튼 '예시로 먼저 둘러보기'와 칩 '직접 둘러보기'가 같은 기능(체험 진입)인데 문구·모양이 달라 다른 기능처럼 보임.
-- `onboarding/welcome-guide.tsx`: `WelcomeInAppTrialButton` 삭제 → `WelcomeTrialLink slot="cta"`로 같은 문구·같은 칩 모양(버튼 자리에서는 `self-center`, 칩 자리 `-my-1.5`만 다름). testId `welcome-inapp-trial`·GA title '체험 모드·인앱 버튼' 유지. 일반 브라우저·설치 앱 화면 변경 0.
+### 데모 둘러보기 진입점 1개로 통일 (#5.123, 대표 지시)
+- **왜**: 5.122 인앱 보조 버튼 '예시로 먼저 둘러보기'와 칩 '직접 둘러보기'가 같은 기능(데모 데이터로 즉시 둘러보기)인데 한 화면에 두 진입점. 대표: "기능적으로 중복인 건 통일 — 하나의 진입점으로". Threads 등 인앱 GA 측정은 유지.
+- `onboarding/welcome-guide.tsx`: 보조 버튼 삭제 — `WelcomeInAppCta`는 v5.121 마크업(주 버튼 1개, `showTrial` 제거)으로 복귀, 둘러보기는 칩 `WelcomeTrialLink` 1개(인앱이면 GA title만 `체험 모드·인앱`). `WELCOME_TRIAL_PARAMS.inAppButton` 삭제.
+- `lib/analytics/ga.ts`: `체험 모드·인앱 버튼` title 삭제(인앱 체험 진입은 method 무관 `체험 모드·인앱`). 인앱 측정 title은 `웰컴·인앱`·`인앱·외부 이동`·`앱 설치·설치창`·`체험 모드·인앱` 4개.
 
 ---
 

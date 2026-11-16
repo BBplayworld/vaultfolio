@@ -208,7 +208,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
         className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[216px] sm:min-h-[160px] ${ENTER}`}
         style={{ animationDelay: "180ms" }}
       >
-        {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} showTrial={allowTrial && !restoreHash} />}
+        {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
         {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} />}
       </div>
 
@@ -297,11 +297,10 @@ function PreviewLabel({ title, action }: { title: string; action?: React.ReactNo
   );
 }
 
-/** 웰컴 체험 진입 GA 인자(5.122 #234) — 일반·설치 앱 칩은 기존 값 그대로, 인앱은 칩·보조 버튼을 title로 구분. GA로는 page_title만 나간다 */
+/** 웰컴 체험 진입 GA 인자(5.122 #234) — 일반·설치 앱 칩은 기존 값 그대로, 인앱 칩은 title '체험 모드·인앱'으로 구분. GA로는 page_title만 나간다 */
 export const WELCOME_TRIAL_PARAMS = {
   chip: { category: "demo" },
   inAppChip: { category: "demo", source: "inapp" },
-  inAppButton: { category: "demo", source: "inapp", method: "click" },
 } as const satisfies Record<string, GaParams>;
 
 /** 체험 진입 공통 — 진입 이벤트를 실제 페이지에서 보낸 뒤 /?trial=1로 이동(연타 1회) */
@@ -317,19 +316,17 @@ function useTrialEntry(params: GaParams) {
   return { busy, handleClick };
 }
 
-/** 웰컴 ③ "직접 둘러보기" 칩(#59) — inApp이면 GA title만 '체험 모드·인앱'으로 분리(화면 동일).
- *  slot="cta"(5.123): 인앱 버튼 자리에 같은 문구·같은 모양으로 한 번 더(대표 지시 — 같은 기능은 같은 모양). GA title만 '체험 모드·인앱 버튼' */
-export function WelcomeTrialLink({ inApp = false, slot }: { inApp?: boolean; slot?: "cta" } = {}) {
-  const inCta = slot === "cta";
-  const { busy, handleClick } = useTrialEntry(inCta ? WELCOME_TRIAL_PARAMS.inAppButton : inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip);
+/** 웰컴 ③ "직접 둘러보기" 칩(#59) — 데모로 즉시 둘러보는 유일한 진입점(5.123 대표 지시: 같은 기능은 진입점 1개). inApp이면 GA title만 '체험 모드·인앱'으로 분리(화면 동일) */
+export function WelcomeTrialLink({ inApp = false }: { inApp?: boolean } = {}) {
+  const { busy, handleClick } = useTrialEntry(inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip);
   return (
     <button
       type="button"
-      data-testid={inCta ? "welcome-inapp-trial" : "welcome-trial-link"}
+      data-testid="welcome-trial-link"
       onClick={handleClick}
       disabled={busy}
       aria-busy={busy || undefined}
-      className={`relative ${inCta ? "self-center" : "-my-1.5"} inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 text-sm font-semibold text-foreground break-keep whitespace-nowrap hover:bg-brand/25 dark:bg-brand/20 dark:hover:bg-brand/30 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:not-disabled:scale-[0.96] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 after:absolute after:-inset-1 after:content-['']`}
+      className="relative -my-1.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 text-sm font-semibold text-foreground break-keep whitespace-nowrap hover:bg-brand/25 dark:bg-brand/20 dark:hover:bg-brand/30 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:not-disabled:scale-[0.96] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 after:absolute after:-inset-1 after:content-['']"
     >
       직접 둘러보기
       {busy ? <Loader2 aria-hidden className="size-3.5 motion-safe:animate-spin" /> : <ArrowRight aria-hidden className="size-3.5 text-brand" />}
@@ -358,8 +355,8 @@ function InstallButton({ className = "" }: { className?: string }) {
   );
 }
 
-/** CTA 슬롯 inapp 상태(#60): 등록 진입점 없이 외부 브라우저 이동만. iOS는 주소 복사 + 수동 가이드 펼침. showTrial이면 주 버튼 아래 보조 버튼(#234) */
-export function WelcomeInAppCta({ isIOS, showTrial = false }: { isIOS: boolean; showTrial?: boolean }) {
+/** CTA 슬롯 inapp 상태(#60): 등록 진입점 없이 외부 브라우저 이동만. iOS는 주소 복사 + 수동 가이드 펼침 */
+export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
   const { go, iosFallback } = useExternalMove(isIOS);
   const [busy, setBusy] = useState(false);
 
@@ -383,7 +380,7 @@ export function WelcomeInAppCta({ isIOS, showTrial = false }: { isIOS: boolean; 
           </h2>
           <p className="text-sm text-muted-foreground text-pretty break-keep">이 화면에서는 입력한 내용이 사라질 수 있어요.</p>
         </div>
-        <div className="mx-auto flex w-full flex-col gap-2 sm:w-fit">
+        <div className="flex justify-center">
           <Button
             variant="brand"
             size="lg"
@@ -397,7 +394,6 @@ export function WelcomeInAppCta({ isIOS, showTrial = false }: { isIOS: boolean; 
             {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
             외부 브라우저에서 시작하기
           </Button>
-          {showTrial && <WelcomeTrialLink slot="cta" />}
         </div>
       </div>
       {/* iOS 수동 가이드 — 항상 마운트 + grid-rows 0fr↔1fr 높이 전환(재마운트 없음). 닫힘은 inert */}

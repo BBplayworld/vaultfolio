@@ -301,8 +301,8 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
       }
       // 가이드에서 시작한 체험은 웰컴 '체험 모드'와 분리(4.88)
       if (params.category === "demo" && currentScreenKey.startsWith("guide:")) return "가이드·체험";
-      // 인앱 웰컴에서 시작한 체험(5.122 #234) — 칩은 '체험 모드·인앱', 버튼 자리 보조 버튼(method=click)은 '체험 모드·인앱 버튼'
-      if (params.category === "demo" && params.source === "inapp") return params.method === "click" ? "체험 모드·인앱 버튼" : "체험 모드·인앱";
+      // 인앱 웰컴에서 시작한 체험(5.122 #234) — 진입점은 칩 1개(5.123), title '체험 모드·인앱'
+      if (params.category === "demo" && params.source === "inapp") return "체험 모드·인앱";
       const t = params.category ? CATEGORY_TITLES[params.category] : undefined;
       if (t) return t;
       break;
