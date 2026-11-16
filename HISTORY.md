@@ -55,3 +55,4 @@ preview 안전장치·데모 데이터(#31)와 성과 메뉴 정리·자산 변�
 - 2026-11-16 대표 제보(09시 아침 요약 빈 문구) → 원인 확인(합치기 제목만) → #228 p0 → v5.119 → qa PASS → COO → 위임 머지 68e5e52 → 운영 스모크 PASS. CHECKLIST C117·C118.
 - 2026-11-16 대표 제보(자산 변화 없는 날 시장 요약 카드 밖) → #230 p0 → ui (A) → v5.120 → qa PASS → COO → 위임 머지 67d311f → 운영 스모크 PASS. CHECKLIST C119·C120.
 - 2026-11-16 대표 '다음 과제' → D5 #232 → 방향 합의(🆕) → ui C119 표 → v5.121 → UI 승인 → qa FAIL(D-1 새 소식 누락) → 등록 → qa PASS → COO → 위임 머지 a1043d3 → 운영 스모크 PASS. CHECKLIST C121.
+- 2026-11-16 대표 'GA 기반 다음 과제·Fable' → business-pm GA 분석 → cto D6(축소) → #234 → 방향 합의(🆕) → ui 쟁점(첫 화면 밖) → cto 7절 (a) → v5.122 → UI 승인 → qa PASS → COO → 위임 머지 503e701 → 운영 스모크 PASS. CHECKLIST C122·C123.
