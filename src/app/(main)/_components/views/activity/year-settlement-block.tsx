@@ -4,9 +4,10 @@
 // 합계의 정본은 Hero다(블록에 합계·%·시작→끝을 다시 쓰지 않는다. 1월 초 머리 줄만 예외 — Hero는 새해 기준).
 // 계산은 기존 연 체인·원인 함수를 그대로 부르고(`year-settlement.ts`가 구간만 나눈다) 저장·전송은 하지 않는다. views/activity 로컬 전용.
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { getProfitLossColor } from "@/config/theme";
+import { track } from "@/lib/analytics/ga";
 import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { resolveYearChain, snapshotDate, type SettlementCause } from "@/lib/report/settlement";
 import {
@@ -180,6 +181,13 @@ export function YearSettlementBlock({ model, status }: { model?: YearSettlementM
   const { navigate } = useAssetNavigation();
   const [open, setOpen] = useState(false);
   const hasRows = !!model && hasYearRows(model.groups, model.period);
+  // 값과 함께 그려졌을 때(묶음·기록 안 된 변화·기간 행 1개 이상) 연 탭 진입당 1회. 금액·비율·상태 값은 보내지 않는다
+  const sent = useRef(false);
+  useEffect(() => {
+    if (!hasRows || sent.current) return;
+    sent.current = true;
+    track("feature_use", { category: "year_settlement" });
+  }, [hasRows]);
 
   if (status === "error" || !model) {
     return (

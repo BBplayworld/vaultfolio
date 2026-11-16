@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push"],
-  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -202,6 +202,7 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   linked_trade: "거래 저장·계좌 함께 반영",
   change_scope_stock: "성과·자산 변화·주식",
   change_week_all: "성과·자산 변화·최근 7일",
+  year_settlement: "성과·자산 변화·올해 결산", // 연 탭 올해 결산 블록이 값과 함께 그려졌을 때 1회(5.124). 금액·비율·상태 미전송
   stock_sort_rate: "상세·주식·등락률 순",
   relink: "끊긴 거래 다시 잇기",
   settlement_ics: "결산 캘린더 추가",

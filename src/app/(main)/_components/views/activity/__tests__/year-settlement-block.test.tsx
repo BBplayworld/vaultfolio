@@ -16,6 +16,7 @@ vi.mock("@/app/(main)/_components/layout/navigation/navigation-context", async (
 import { buildYearSettlementModel, YearSettlementBlock } from "../year-settlement-block";
 import { yearFirstHeroTitle } from "../net-asset-chart";
 import { readFileSync } from "node:fs";
+import { featureTitleOf } from "@/lib/analytics/ga";
 
 const build = (o: { data?: AssetData; monthly?: MonthlyAssetSnapshot[]; today?: string } = {}) => {
   const data = o.data ?? now;
@@ -171,5 +172,20 @@ describe("1월 초(S6·S7) — Hero 상태와 무관하게 직전 해 블록", (
     const jan1 = build({ data: decEnd, monthly: [sOct, sNov, sDec], today: "2027-01-01" })!;
     expect(keys(jan1)).toEqual(keys(dec31));
     expect(jan1.total).toBe(dec31.total);
+  });
+});
+
+describe("GA(AC-14) — 값과 함께 그려졌을 때 1회, category만", () => {
+  const src = readFileSync("src/app/(main)/_components/views/activity/year-settlement-block.tsx", "utf8");
+  it("page_title = `성과·자산 변화·올해 결산`(화면 title `성과·자산 변화`와 분리)", () => {
+    expect(featureTitleOf("feature_use", { category: "year_settlement" }, "activity:change")).toBe("성과·자산 변화·올해 결산");
+  });
+  it("전송은 행이 있을 때만(전부 예측·오류 상태는 0), ref로 1회, 파라미터는 category 하나", () => {
+    expect(src).toMatch(/if \(!hasRows \|\| sent\.current\) return;\s*sent\.current = true;\s*track\("feature_use", \{ category: "year_settlement" \}\);/);
+    expect(src.match(/track\(/g)).toHaveLength(1);
+  });
+  it("저장·네트워크 호출이 없다(AC-13)", () => {
+    const lib = readFileSync("src/lib/report/year-settlement.ts", "utf8");
+    for (const w of ["localStorage", "fetch(", "saveAssetData", "setItem"]) { expect(src).not.toContain(w); expect(lib).not.toContain(w); }
   });
 });
