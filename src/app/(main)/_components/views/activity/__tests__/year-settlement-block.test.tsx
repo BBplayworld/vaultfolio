@@ -189,3 +189,24 @@ describe("GA(AC-14) — 값과 함께 그려졌을 때 1회, category만", () =>
     for (const w of ["localStorage", "fetch(", "saveAssetData", "setItem"]) { expect(src).not.toContain(w); expect(lib).not.toContain(w); }
   });
 });
+
+describe("ui-review R-1~R-3", () => {
+  const NB = " ";
+  it("R-1 1월 초 머리 줄 금액은 text-xl만(Hero 증감 text-2xl과 같은 크기가 되지 않게)", () => {
+    const out = html({ data: decEnd, monthly: [sOct, sNov, sDec], today: "2027-01-05" });
+    const cls = /data-testid="year-settle-head-delta"[^>]*class="([^"]*)"/.exec(out)![1];
+    expect(cls).toContain("text-xl");
+    expect(cls).not.toContain("text-2xl");
+  });
+  it("R-3 도움말 2개의 묶음 이름 안 공백은 U+00A0", async () => {
+    const { YEAR_SETTLE_COPY } = await import("@/lib/report/year-settlement");
+    expect(YEAR_SETTLE_COPY.help).toBe(`받은 배당은 계좌 잔액에 들어 있어 넣은${NB}돈 또는 기록 안 된 변화에 포함돼요`);
+    expect(YEAR_SETTLE_COPY.periodHint).toBe(`달마다 남긴 기록이 없어 넣은${NB}돈과 불어난${NB}돈을 나누지 못해요`);
+  });
+  it("R-2 새 소식: 경로는 제목, 본문은 월 기록이 쌓인 기간 + 묶음 이름 3개(U+00A0)", async () => {
+    const { WHATS_NEW } = await import("@/config/whats-new");
+    const e = WHATS_NEW.find((x) => x.id === "20261116-02")!;
+    expect(e.title).toBe("성과 › 자산 변화 › 연에 올해 결산이 생겼어요");
+    expect(e.body).toBe(`월 기록이 쌓인 기간을 넣은${NB}돈, 불어난${NB}돈, 빠져나간${NB}돈으로 나눠 보여드려요`);
+  });
+});

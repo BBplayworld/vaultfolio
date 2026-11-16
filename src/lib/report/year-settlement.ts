@@ -191,15 +191,15 @@ export function yearPeriodLabel(period: YearPeriodRow, skipped: boolean): string
   return period.month === 1 ? "1월" : `1~${period.month}월`;
 }
 
-// 문구 단일 출처 — 금지어 테스트(AC-6) 대상
+// 문구 단일 출처 — 금지어 테스트(AC-6) 대상. 도움말 2개의 묶음 이름 안 공백은 U+00A0(팝오버 288px에서 이름이 줄 사이로 갈리지 않게, C114)
 export const YEAR_SETTLE_COPY = {
-  help: "받은 배당은 계좌 잔액에 들어 있어 넣은 돈 또는 기록 안 된 변화에 포함돼요",
+  help: "받은 배당은 계좌 잔액에 들어 있어 넣은 돈 또는 기록 안 된 변화에 포함돼요",
   income: "넣은 돈",
   growth: "불어난 돈",
   loan: "빠져나간 돈",
   loanHint: "추정한 대출 이자와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
   periodSub: "월 기록 전 기간",
-  periodHint: "달마다 남긴 기록이 없어 넣은 돈과 불어난 돈을 나누지 못해요",
+  periodHint: "달마다 남긴 기록이 없어 넣은 돈과 불어난 돈을 나누지 못해요",
   periodCashNote: "이 기간에 적은 입출금도 이 금액에 들어 있어요",
   cashLink: "입출금을 기록할 현금 계좌 고르기",
   empty: "월 기록이 쌓이면 원인을 나눠 보여드려요",

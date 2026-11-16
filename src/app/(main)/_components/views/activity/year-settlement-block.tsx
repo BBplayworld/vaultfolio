@@ -210,7 +210,7 @@ export function YearSettlementBlock({ model, status }: { model?: YearSettlementM
       {model.head && (
         <div data-testid="year-settle-head">
           <p className="text-sm text-muted-foreground tabular-nums">{model.head.text}</p>
-          <p data-testid="year-settle-head-delta" data-value={model.head.delta} className={`mt-0.5 text-xl md:text-2xl font-bold tabular-nums leading-tight ${getProfitLossColor(model.head.delta)}`}>
+          <p data-testid="year-settle-head-delta" data-value={model.head.delta} className={`mt-0.5 text-xl font-bold tabular-nums leading-tight ${getProfitLossColor(model.head.delta)}`}>
             {signed(model.head.delta)}
           </p>
         </div>
