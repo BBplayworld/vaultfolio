@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-16 (v5.121)
+
+### 홈 › 자산 분포 총액 3중 표시 정리·이동 줄 도착 탭 수정 (#5.121, 이슈 #232)
+- **왜**: 필터(금융·부동산·부채) 선택 시 같은 총액이 도넛 가운데·범례·총액 박스에 3번 나오고, 이동 줄이 누른 것과 다른 탭(코인만인데 stocks, 임차보증금만인데 loans)으로 가며 `주식 0개`가 찍힘.
+- `home/dashboard.tsx`: 총액 박스 3개 삭제(패널 `pt-4`, testId `home-alloc-financial|realestate|liability`). 신규 파일 로컬 `DrillDownLinks`·`financialDrillLinks`·`liabilityDrillLinks`: 1종=현행 모양+그 종류 탭, 2종 이상=종류별 버튼(`암호화폐 1개 ›`), 0개 종류 생략, 부채 임차보증금→real-estate(둘 다면 대출·임차보증금 분할). 테스트 `home-alloc-dedupe-232.test.tsx`.
+
 ## 2026-11-16 (v5.120)
 
 ### 홈 › 원인 없는 날 시장 줄을 순자산 카드 안으로 (#5.120, 이슈 #230)

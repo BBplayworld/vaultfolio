@@ -719,6 +719,55 @@ function DrillDownRow({ children, onClick }: { children: ReactNode; onClick: () 
   );
 }
 
+export type DrillLink = { tab: "stocks" | "crypto" | "cash" | "real-estate" | "loans"; label: string; count: number; unit: "개" | "건" };
+
+// 금융 이동 줄: 0개 종류는 생략, 누른 종류의 탭으로 이동
+export function financialDrillLinks(s: { stockCount: number; cryptoCount: number; cashCount: number }): DrillLink[] {
+  return [
+    { tab: "stocks", label: "주식", count: s.stockCount, unit: "개" },
+    { tab: "crypto", label: "암호화폐", count: s.cryptoCount, unit: "개" },
+    { tab: "cash", label: "현금성", count: s.cashCount, unit: "개" },
+  ].filter((l) => l.count > 0) as DrillLink[];
+}
+
+// 부채 이동 줄: 대출 → loans, 임차보증금(부동산 상세 카드) → real-estate
+export function liabilityDrillLinks(loanCount: number, tenantCount: number): DrillLink[] {
+  return [
+    { tab: "loans", label: "대출", count: loanCount, unit: "건" },
+    { tab: "real-estate", label: "임차보증금", count: tenantCount, unit: "건" },
+  ].filter((l) => l.count > 0) as DrillLink[];
+}
+
+// 1종: 현행 DrillDownRow 모양("N개 보유 중 >"), 2종 이상: 종류별 버튼(쉐브론이 구분자). 히트영역 40px(py-2.5)
+export function DrillDownLinks({ links, onNavigate }: { links: DrillLink[]; onNavigate: (tab: DrillLink["tab"]) => void }) {
+  if (links.length === 0) return null;
+  const single = links.length === 1;
+  return (
+    <div data-testid="home-alloc-links" className={single ? undefined : "flex flex-wrap"}>
+      {links.map((l) => (
+        <button
+          key={l.tab}
+          type="button"
+          data-testid={`home-alloc-link-${l.tab}`}
+          aria-label={`${l.label} ${l.count}${l.unit} 상세 보기`}
+          onClick={() => onNavigate(l.tab)}
+          className={
+            single
+              ? "w-full flex items-center justify-between gap-2 text-left text-muted-foreground text-sm py-2.5 rounded-md hover:text-foreground transition-[color,scale] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
+              : "inline-flex items-center gap-0.5 py-2.5 pr-2 last:pr-0 text-sm text-muted-foreground rounded-md hover:text-foreground transition-[color,scale] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
+          }
+        >
+          <span className="min-w-0 text-pretty">
+            {l.label} <span className="font-bold text-foreground tabular-nums">{l.count}{l.unit}</span>
+            {single && l.unit === "개" && " 보유 중"}
+          </span>
+          <ChevronRight className="size-4 shrink-0" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export type DashboardTab = { value: string; label: string };
 
 export function useDashboardTabs(activeDetailTab: string): { visibleTabs: DashboardTab[]; resolvedTab: string } {
@@ -835,36 +884,19 @@ export function Dashboard() {
                   </TabsContent>
 
                   {financialTotal > 0 && (
-                    <TabsContent value="financial" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div className="w-full">
-                          <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>금융자산 총액</p>
-                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(financialTotal)}</p>
-                        </div>
-                      </div>
+                    <TabsContent value="financial" data-testid="home-alloc-financial" className="mt-0 space-y-5 pt-4">
 
                       <div className="space-y-2">
                         <p className={`text-sm font-semibold ${ASSET_THEME.text.default}`}>금융자산 구성</p>
                         <SectionBar items={financialBarItems} total={financialTotal} />
                       </div>
 
-                      <DrillDownRow onClick={() => navigate({ type: "detail", tab: "stocks" })}>
-                        주식 <span className="font-bold text-foreground">{summary.stockCount}개</span>
-                        {summary.cryptoCount > 0 && <> · 암호화폐 <span className="font-bold text-foreground">{summary.cryptoCount}개</span></>}
-                        {summary.cashCount > 0 && <> · 현금성 <span className="font-bold text-foreground">{summary.cashCount}개</span></>}
-                        {" "}보유 중
-                      </DrillDownRow>
+                      <DrillDownLinks links={financialDrillLinks(summary)} onNavigate={(tab) => navigate({ type: "detail", tab })} />
                     </TabsContent>
                   )}
 
                   {summary.realEstateValue > 0 && (
-                    <TabsContent value="realEstate" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className="rounded-lg bg-primary/5 px-4 py-3 flex items-center justify-between">
-                        <div className="w-full">
-                          <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>부동산 총액</p>
-                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.text.default}`}>{formatPriceByMode(summary.realEstateValue)}</p>
-                        </div>
-                      </div>
+                    <TabsContent value="realEstate" data-testid="home-alloc-realestate" className="mt-0 space-y-5 pt-4">
 
                       {realEstateCatBarItems.length > 0 && (
                         <div className="space-y-2">
@@ -880,13 +912,7 @@ export function Dashboard() {
                   )}
 
                   {totalLiability > 0 && (
-                    <TabsContent value="liability" className="mt-0 space-y-5 lg:pt-0 pt-2">
-                      <div className={ASSET_THEME.summaryHeader}>
-                        <div className="w-full">
-                          <p className="text-sm font-semibold text-muted-foreground">부채 총액</p>
-                          <p className={`text-2xl font-bold tabular-nums break-all leading-tight ${ASSET_THEME.liability}`}>{formatPriceByMode(totalLiability)}</p>
-                        </div>
-                      </div>
+                    <TabsContent value="liability" data-testid="home-alloc-liability" className="mt-0 space-y-5 pt-4">
 
                       {liabTopItems.length > 0 && (
                         <div className="space-y-2">
@@ -895,11 +921,7 @@ export function Dashboard() {
                         </div>
                       )}
 
-                      <DrillDownRow onClick={() => navigate({ type: "detail", tab: "loans" })}>
-                        {summary.loanCount > 0 && <>대출 <span className="font-bold text-foreground">{summary.loanCount}건</span></>}
-                        {summary.loanCount > 0 && tenantCount > 0 && " · "}
-                        {tenantCount > 0 && <>임차보증금 <span className="font-bold text-foreground">{tenantCount}건</span></>}
-                      </DrillDownRow>
+                      <DrillDownLinks links={liabilityDrillLinks(summary.loanCount, tenantCount)} onNavigate={(tab) => navigate({ type: "detail", tab })} />
                     </TabsContent>
                   )}
                 </div>
