@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-16 (v5.122)
+
+### 앱 안 브라우저 웰컴 › GA 분리 + 둘러보기 보조 버튼 (#5.122, 이슈 #234)
+- **왜**: 홍보 링크(Threads·카카오톡)로 앱 안 브라우저에 온 사람이 몇 기기인지 GA로 알 수 없고(`웰컴`·`앱 설치` 한 행에 섞임), 등록이 막힌 버튼 자리에는 외부 이동 안내만 있음.
+- `lib/analytics/ga.ts` `featureTitleOf`: 신규 title 5개 — `웰컴·인앱`, `인앱·외부 이동`, `앱 설치·설치창`, `체험 모드·인앱`(칩), `체험 모드·인앱 버튼`(보조 버튼). `앱 설치`는 설치 완료(installed)만. 전송 값은 그대로 `page_title`·`page_location`뿐, `PARAM_VALUES` 추가 0.
+- `onboarding/welcome-guide.tsx`: `WelcomeInAppCta`에 `showTrial`(= `allowTrial && !restoreHash`) — 주 버튼 아래 `gap-2`에 `welcome-inapp-trial`(`Button variant="secondary" size="lg"`, "예시로 먼저 둘러보기"). 칩·보조 버튼 공통 진입 `useTrialEntry` + `WELCOME_TRIAL_PARAMS`. 칩 화면·조건, 주 버튼, 일반 브라우저·설치 앱 화면 변경 0. 저장·서버 전송 변경 0.
+- **판독 경계**: 머지 시각부터 `웰컴`에서 인앱이 빠지고(연속 비교는 `웰컴 + 웰컴·인앱`), `앱 설치`는 완료만 센다(`알림 켜기 ÷ 앱 설치`는 머지 이후 구간만). 새 소식 등록 안 함.
+
 ## 2026-11-16 (v5.121)
 
 ### 홈 › 자산 분포 총액 3중 표시 정리·이동 줄 도착 탭 수정 (#5.121, 이슈 #232)
