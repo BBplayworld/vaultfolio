@@ -9,6 +9,7 @@ import {
   trackParse,
   featureTitleOf,
   trackThemeMode,
+  trackThenNavigate,
   countAssets,
   toGaAssetType,
   screenPath,
@@ -120,7 +121,7 @@ describe("featureTitleOf 매핑", () => {
     ["data_action", { method: "export" }, "백업"],
     ["data_action", { method: "import" }, "백업"],
     ["data_action", { method: "clear_all" }, "데이터 관리"],
-    ["pwa_install", { method: "accepted" }, "앱 설치"],
+    ["pwa_install", { method: "installed" }, "앱 설치"], // 5.122: '앱 설치'는 설치 완료만(설치창·인앱 이동은 아래 5.122 묶음)
     ["settlement_view", { source: "card" }, "월 결산"],
     ["feature_use", { category: "xray" }, "X-Ray"],
     ["feature_use", { category: "tax_sim" }, "절세 시뮬레이션"],
@@ -554,5 +555,87 @@ describe("4.88 홍보 도착 퍼널 page_title·체험·결산 캘린더 (C90)",
     expect(hits("ratio_preview")).toEqual(["app/(main)/_components/ratio/ratio-handoff-host.tsx", "app/ratio/ratio-preview.tsx"]);
     expect(hits("demo")).toEqual(["app/(main)/_components/layout/onboarding/welcome-guide.tsx", "app/guide/guide-actions.tsx"]);
     expect(hits("settlement_ics")).toEqual(["app/(main)/_components/views/activity/settlement-view.tsx"]);
+  });
+});
+
+describe("5.122(#234) 앱 안 브라우저 웰컴 — method·source별 page_title 고정(AC-6)", () => {
+  beforeEach(() => __resetTrialModeForTest()); // 앞선 묶음이 남긴 체험 상태와 무관하게 실제 페이지 기준으로 검사
+  afterEach(() => __resetTrialModeForTest());
+
+  it.each([
+    // 도착
+    ["welcome_view", { source: "inapp" }, "home", "웰컴·인앱"],
+    ["welcome_view", { source: "web" }, "home", "웰컴"],
+    ["welcome_view", { source: "pwa" }, "home", "웰컴"],
+    ["welcome_view", {}, "home", "웰컴"],
+    // '앱 설치'는 설치 완료만
+    ["pwa_install", { method: "installed" }, "home", "앱 설치"],
+    ["pwa_install", {}, "home", "앱 설치"],
+    ["pwa_install", { method: "inapp_move", source: "inapp" }, "home", "인앱·외부 이동"],
+    ["pwa_install", { method: "prompt_view" }, "home", "앱 설치·설치창"],
+    ["pwa_install", { method: "accepted" }, "home", "앱 설치·설치창"],
+    ["pwa_install", { method: "dismissed" }, "home", "앱 설치·설치창"],
+    // 체험 진입
+    ["feature_use", { category: "demo", source: "inapp" }, "home", "체험 모드·인앱"],
+    ["feature_use", { category: "demo", source: "inapp", method: "click" }, "home", "체험 모드·인앱 버튼"],
+    ["feature_use", { category: "demo" }, "home", "체험 모드"],
+    ["feature_use", { category: "demo", source: "web" }, "home", "체험 모드"],
+    ["feature_use", { category: "demo" }, "guide:stock-ratio", "가이드·체험"],
+    ["feature_use", { category: "demo" }, "guide:net-worth", "가이드·체험"],
+    // 불변
+    ["onboarding_action", { method: "trial_start" }, "home", "웰컴·체험"],
+    ["onboarding_action", { method: "wizard" }, "home", "웰컴·스크린샷 등록"],
+    ["feature_use", { category: "install_nudge", source: "inapp" }, "home", "설치 안내"],
+  ] as const)("%s %j @%s → %s", (name, params, screen, title) => {
+    expect(featureTitleOf(name, params, screen)).toBe(title);
+  });
+
+  it("신규 title은 5개뿐 — ga.ts 소스에 각 1회만 등장", () => {
+    const src = readFileSync(join(process.cwd(), "src/lib/analytics/ga.ts"), "utf8");
+    for (const t of ["웰컴·인앱", "인앱·외부 이동", "앱 설치·설치창", "체험 모드·인앱 버튼"]) {
+      expect(src.split(`"${t}"`).length - 1).toBe(1);
+    }
+    // '체험 모드·인앱'은 '체험 모드·인앱 버튼'과 같은 줄 삼항에 1회
+    expect(src.split('"체험 모드·인앱"').length - 1).toBe(1);
+    // 5.122 주석이 붙은 분기는 3곳(welcome_view·pwa_install·demo)뿐
+    expect(src.match(/5\.122 #234/g)?.length).toBe(3);
+  });
+
+  it("전송 payload는 page_title·page_location뿐(source·method 미전송, AC-7)", () => {
+    track("welcome_view", { source: "inapp" });
+    track("pwa_install", { method: "inapp_move", source: "inapp" });
+    track("pwa_install", { method: "prompt_view" });
+    expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["웰컴·인앱", "인앱·외부 이동", "앱 설치·설치창"]);
+    for (const c of gtag.mock.calls) expect(Object.keys(c[2]).sort()).toEqual(["page_location", "page_title"]);
+  });
+
+  it("체험 진입 2종: 이동 직전 1회, title만 다르고 매개변수 추가 0", () => {
+    for (const [params, title] of [
+      [{ category: "demo", source: "inapp" }, "체험 모드·인앱"],
+      [{ category: "demo", source: "inapp", method: "click" }, "체험 모드·인앱 버튼"],
+    ] as const) {
+      gtag.mockClear();
+      const nav = vi.fn();
+      trackThenNavigate("feature_use", params, "/?trial=1", nav);
+      expect(gtag).toHaveBeenCalledTimes(1);
+      const payload = gtag.mock.calls[0][2];
+      expect(payload.page_title).toBe(title);
+      expect(Object.keys(payload).sort()).toEqual(["event_callback", "event_timeout", "page_location", "page_title"]);
+      payload.event_callback();
+      payload.event_callback();
+      expect(nav).toHaveBeenCalledTimes(1);
+      expect(nav).toHaveBeenCalledWith("/?trial=1");
+    }
+  });
+
+  it("체험 페이지에서는 인앱 이벤트도 전송 0", () => {
+    markTrialActive();
+    track("welcome_view", { source: "inapp" });
+    track("pwa_install", { method: "inapp_move", source: "inapp" });
+    const nav = vi.fn();
+    trackThenNavigate("feature_use", { category: "demo", source: "inapp", method: "click" }, "/?trial=1", nav);
+    expect(gtag).not.toHaveBeenCalled();
+    expect(nav).toHaveBeenCalledTimes(1);
+    __resetTrialModeForTest();
   });
 });

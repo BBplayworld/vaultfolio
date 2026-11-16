@@ -190,7 +190,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
       <div data-testid="welcome-preview-net" className={`space-y-3 ${ENTER}`} style={{ animationDelay: "120ms" }}>
         <PreviewLabel
           title="포트폴리오 미리보기"
-          action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink /> : undefined}
+          action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink inApp={ctaState === "inapp"} /> : undefined}
         />
         <NetAssetSummaryBox
           netAsset={netAsset}
@@ -208,7 +208,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
         className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[216px] sm:min-h-[160px] ${ENTER}`}
         style={{ animationDelay: "180ms" }}
       >
-        {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
+        {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} showTrial={allowTrial && !restoreHash} />}
         {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} />}
       </div>
 
@@ -297,16 +297,29 @@ function PreviewLabel({ title, action }: { title: string; action?: React.ReactNo
   );
 }
 
-/** 웰컴 ③ "직접 둘러보기" 칩(#59) — 진입 이벤트를 실제 페이지에서 보낸 뒤 /?trial=1로 이동(연타 1회) */
-export function WelcomeTrialLink() {
+/** 웰컴 체험 진입 GA 인자(5.122 #234) — 일반·설치 앱 칩은 기존 값 그대로, 인앱은 칩·보조 버튼을 title로 구분. GA로는 page_title만 나간다 */
+export const WELCOME_TRIAL_PARAMS = {
+  chip: { category: "demo" },
+  inAppChip: { category: "demo", source: "inapp" },
+  inAppButton: { category: "demo", source: "inapp", method: "click" },
+} as const satisfies Record<string, GaParams>;
+
+/** 체험 진입 공통 — 진입 이벤트를 실제 페이지에서 보낸 뒤 /?trial=1로 이동(연타 1회) */
+function useTrialEntry(params: GaParams) {
   const [busy, setBusy] = useState(false);
   const firedRef = useRef(false); // 한 태스크 안 동기 다중 click도 1회만(state 반영 전)
   const handleClick = () => {
     if (firedRef.current) return;
     firedRef.current = true;
     setBusy(true);
-    trackThenNavigate("feature_use", { category: "demo" }, TRIAL_ENTRY_URL);
+    trackThenNavigate("feature_use", params, TRIAL_ENTRY_URL);
   };
+  return { busy, handleClick };
+}
+
+/** 웰컴 ③ "직접 둘러보기" 칩(#59) — inApp이면 GA title만 '체험 모드·인앱'으로 분리(화면 동일) */
+export function WelcomeTrialLink({ inApp = false }: { inApp?: boolean } = {}) {
+  const { busy, handleClick } = useTrialEntry(inApp ? WELCOME_TRIAL_PARAMS.inAppChip : WELCOME_TRIAL_PARAMS.chip);
   return (
     <button
       type="button"
@@ -343,8 +356,27 @@ function InstallButton({ className = "" }: { className?: string }) {
   );
 }
 
-/** CTA 슬롯 inapp 상태(#60): 등록 진입점 없이 외부 브라우저 이동만. iOS는 주소 복사 + 수동 가이드 펼침 */
-export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
+/** 인앱 버튼 자리 보조 버튼(5.122 #234) — 등록이 막힌 자리에서 예시 화면으로. 칩과 같은 체험 진입, GA title만 다름 */
+function WelcomeInAppTrialButton() {
+  const { busy, handleClick } = useTrialEntry(WELCOME_TRIAL_PARAMS.inAppButton);
+  return (
+    <Button
+      variant="secondary"
+      size="lg"
+      data-testid="welcome-inapp-trial"
+      className="w-full gap-2 break-keep"
+      onClick={handleClick}
+      disabled={busy}
+      aria-busy={busy || undefined}
+    >
+      예시로 먼저 둘러보기
+      {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ArrowRight aria-hidden className="size-4 text-brand" />}
+    </Button>
+  );
+}
+
+/** CTA 슬롯 inapp 상태(#60): 등록 진입점 없이 외부 브라우저 이동만. iOS는 주소 복사 + 수동 가이드 펼침. showTrial이면 주 버튼 아래 보조 버튼(#234) */
+export function WelcomeInAppCta({ isIOS, showTrial = false }: { isIOS: boolean; showTrial?: boolean }) {
   const { go, iosFallback } = useExternalMove(isIOS);
   const [busy, setBusy] = useState(false);
 
@@ -368,7 +400,7 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
           </h2>
           <p className="text-sm text-muted-foreground text-pretty break-keep">이 화면에서는 입력한 내용이 사라질 수 있어요.</p>
         </div>
-        <div className="flex justify-center">
+        <div className="mx-auto flex w-full flex-col gap-2 sm:w-fit">
           <Button
             variant="brand"
             size="lg"
@@ -382,6 +414,7 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
             {busy ? <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" /> : <ExternalLink aria-hidden className="size-4" />}
             외부 브라우저에서 시작하기
           </Button>
+          {showTrial && <WelcomeInAppTrialButton />}
         </div>
       </div>
       {/* iOS 수동 가이드 — 항상 마운트 + grid-rows 0fr↔1fr 높이 전환(재마운트 없음). 닫힘은 inert */}
