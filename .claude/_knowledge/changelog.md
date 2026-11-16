@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-16 (v5.124)
+
+### 연 탭 첫 블록 → 올해 결산 (#5.124, 이슈 #237)
+- **왜**: 한 해를 기록한 사용자가 "올해 얼마 늘었고 그중 넣은 돈·불어난 돈이 얼마인지" 보려면 평면 6행을 직접 더해야 했고, 실사용자(작년 수동값 + 10월부터 월 기록)는 1~10월분이 통째로 `기록 안 된 변화(예측)`에 섞여 답이 흐렸다. 1/1~1/10에는 연 탭이 새해 기준으로 바뀌어 결산이 사라졌다.
+- `lib/report/year-settlement.ts` **신규**(순수): `resolveYearTarget`(1/1~1/10 직전 해 유지)·`splitYearChain`(앵커가 enrich가 아니면 첫 구간을 기간 행으로 떼고 나머지 체인을 기존 함수로 재호출)·`groupYearSettlement`(넣은 돈/불어난 돈/빠져나간 돈)·`buildYearConclusion`(둘 다 양수·1~99%일 때만 비율)·`resolveFirstYearChain`(첫 해 시작점)·문구 `YEAR_SETTLE_COPY`.
+- `views/activity/year-settlement-block.tsx` **신규**: `buildYearSettlementModel` + `YearSettlementBlock`(묶음 행·불어난 돈 펼침·기간 행·현금 링크·1월 초 머리 줄·전부 예측 안내 1줄).
+- `views/activity/net-asset-chart.tsx`: 연 분기의 `CauseBlock scope="year"` → `YearSettlementBlock`. 첫 해는 Hero 제목 `M/D 이후`·증감·시작값을 블록 모델로 채움(`year-first-note`에 `작년 말 순자산 넣기` 유지). 1/1~1/10은 Hero와 무관하게 직전 해 블록.
+- `views/activity/change-hero.tsx`: `CauseRow`·`CAUSE_HINT`·`CAUSE_CAPTION` export, 연 전용 문구 `올해 입출금을 기록하면 더 정확해져요` 삭제(월·주·일 렌더 불변). `lib/report/settlement.ts`: `isEnriched` export 1단어.
+- **불변**: `asset-report.ts`·`mapSettlementCauses`·`splitLoanCause`·`resolveYearChain`·`computeChainCauses` 본문 diff 0, 저장 키·스키마·동기화·서버 전송 0, 기록 생성 0.
+- **값이 달라지는 곳**: N월 기록 전에 적은 입출금은 `넣은 돈`이 아니라 기간 행 금액에 들어간다(표시 구간 변경, 합은 같음). 예측 구간 때문에 흡수되던 대출 몫이 `빠져나간 돈`으로 보일 수 있다.
+- GA: `feature_use{category: year_settlement}` → `성과·자산 변화·올해 결산`(행이 1개 이상 그려진 연 탭 진입당 1회, 전부 예측·오류는 0). 새 소식 `20261116-02`.
+
+---
+
 ## 2026-11-16 (v5.123)
 
 ### 데모 둘러보기 진입점 1개로 통일 (#5.123, 대표 지시)
