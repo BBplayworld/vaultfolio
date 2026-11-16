@@ -246,7 +246,7 @@ export function YearSettlementBlock({ model, status }: { model?: YearSettlementM
                   type="button"
                   data-testid="year-settle-cash-link"
                   onClick={() => navigate({ type: "detail", tab: "cash" })}
-                  className="inline-flex min-h-10 items-center text-left text-sm font-medium text-brand underline underline-offset-2 dark:text-indigo-300"
+                  className="relative z-10 inline-flex min-h-10 items-center text-left text-sm font-medium text-brand underline underline-offset-2 dark:text-indigo-300"
                 >
                   {YEAR_SETTLE_COPY.cashLink}
                 </button>
