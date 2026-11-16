@@ -159,9 +159,24 @@ describe("09시 합치기 — 결산 > 세금 > 아침 요약, 1건", () => {
   const tax = { m: "tax" as const, t: "연금저축·IRP 세액공제", b: "12/31 납입분까지예요" };
   it("우선순위 순서 상수", () => expect(PUSH_MERGE_ORDER.slice(0, 3)).toEqual(["settle", "tax", "morning"]));
   it("제목·도착 종류는 높은 우선순위, 나머지는 둘째 줄에 제목만", () => {
-    expect(mergePushPayloads([morning, settle])).toEqual({ ...settle, b: `${settle.b}\n11/27 아침 시장` });
+    expect(mergePushPayloads([morning, settle])).toEqual({ ...settle, b: `${settle.b}\n아침 시장 · 미국 S&P 500 +0.8%` });
     expect(mergePushPayloads([morning, tax, settle])?.m).toBe("settle");
     expect(mergePushPayloads([morning, tax])?.m).toBe("tax");
+  });
+  it("세금+아침: 둘째 줄에 아침 시세 내용", () => {
+    expect(mergePushPayloads([morning, tax])).toEqual({ ...tax, b: "12/31 납입분까지예요\n아침 시장 · 미국 S&P 500 +0.8%" });
+  });
+  it("결산+세금+아침: 세금은 제목만, 아침은 내용", () => {
+    expect(mergePushPayloads([morning, tax, settle])?.b).toBe(`${settle.b}\n연금저축·IRP 세액공제 · 아침 시장 · 미국 S&P 500 +0.8%`);
+  });
+  it("국내 종가는 '국내 종가 · 본문'", () => {
+    const kr = { m: "kr" as const, t: "11/27 국내 종가", b: "코스피 +0.5%" };
+    expect(mergePushPayloads([kr, tax])?.b).toBe("12/31 납입분까지예요\n국내 종가 · 코스피 +0.5%");
+  });
+  it("pm2로 아침이 null이면 합쳐도 빈 줄 없음", () => {
+    const none = buildMorningMessage("2026-11-27", [], [], "pm2");
+    expect(none).toBeNull();
+    expect(mergePushPayloads([none, tax].filter((x): x is NonNullable<typeof x> => x !== null))).toEqual(tax);
   });
   it("1건이면 그대로, 0건이면 null", () => {
     expect(mergePushPayloads([morning])).toEqual(morning);

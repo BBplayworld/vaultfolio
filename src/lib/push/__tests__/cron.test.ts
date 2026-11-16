@@ -167,12 +167,12 @@ describe("시장 알림 회차", () => {
     await runPushCron(req(AUTH));
     expect(send.mock.calls[0][1].b).toContain("오늘 미국·국내 휴장");
   });
-  it("결산 + 아침 → 1건으로 합침(결산 제목, 둘째 줄 아침 제목)", async () => {
+  it("결산 + 아침 → 1건으로 합침(결산 제목, 둘째 줄 아침 내용)", async () => {
     store.getPushSub.mockResolvedValue(sub(["morning", "settle"])); // SETTLE_DAY 11/27 금
     await runPushCron(req(AUTH));
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][1]).toMatchObject({ m: "settle", t: "11월 결산이 열렸어요" });
-    expect(send.mock.calls[0][1].b).toContain("\n11/27 아침 시장");
+    expect(send.mock.calls[0][1].b).toContain("\n아침 시장 · 국내 코스피 +0.5%");
   });
   it("시세 전부 실패 — 아침 플래그를 잡지 않고 미발송, 결산은 그대로 발송", async () => {
     usQ.mockResolvedValue({ quotes: [], status: { spx: "fail", comp: "fail" } });
