@@ -52,3 +52,4 @@ preview 안전장치·데모 데이터(#31)와 성과 메뉴 정리·자산 변�
 - 2026-11-15 13:53 KST 정기 실행: D(오전 근거 재사용) → #222 생성·방향 합의(🆕) → challenge·spec·business·tech-review·ui → v5.116 개발 → UI 승인 → qa FAIL(D-1 팝오버 어절 끊김) → 수정 2회 → qa PASS → COO → 위임 머지 1ed37d6 → 운영 스모크 PASS. CHECKLIST C113·C114 추가.
 - 2026-11-15 대표 지시 #224: ui 감사 → COO 축소 통과 → v5.117 개발 → ui R1(이름 꺾임)·R2(비교 이미지) → UI 승인 → qa FAIL(D-1 400+ 행 +4px) → 수정 → qa PASS → COO → 위임 머지 7571e80 → 운영 스모크 PASS. CHECKLIST C115.
 - 2026-11-16 01:53 KST 정기 실행(새벽): D3 → #226 생성·방향 합의 → ui 실측 → v5.118 개발 → UI 승인 → qa FAIL(D-1 768 금액 겹침) → xl로 축소 → qa PASS → COO → 위임 머지 487d6b3 → 운영 스모크 PASS. CHECKLIST C116.
+- 2026-11-16 대표 제보(09시 아침 요약 빈 문구) → 원인 확인(합치기 제목만) → #228 p0 → v5.119 → qa PASS → COO → 위임 머지 68e5e52 → 운영 스모크 PASS. CHECKLIST C117·C118.
