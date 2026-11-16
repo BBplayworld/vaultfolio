@@ -380,8 +380,9 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     diff = heroEnd - heroStart;
     diffPct = heroStart !== 0 ? (diff / Math.abs(heroStart)) * 100 : null;
   }
-  // 블록은 Hero와 같은 비교일 때만 그린다(1월 초는 뒤 커밋)
-  const yearModel = firstYear ?? (openModel && heroPrevYear !== null && openModel.target.start?.year === heroPrevYear ? openModel : null);
+  // 블록은 Hero와 같은 비교일 때만 그린다. 1/1~1/10은 직전 해 결산을 유지한다 — Hero(새해 기준·문구 상태)와 무관하게 뜨고 새해 원인 블록은 1/11부터
+  const closedModel = yearSettle?.model?.target.closed ? yearSettle.model : null;
+  const yearModel = closedModel ?? firstYear ?? (openModel && heroPrevYear !== null && openModel.target.start?.year === heroPrevYear ? openModel : null);
 
   // 렌더마다 prev.note를 재판정(동기화로 값이 바뀌어도 저장 0)
   const autoCaption = view && activeView === "yearly" ? yearlyAutoCaption(heroPrev, snapshotVersion >= 0 ? readMonthlySnapshots() : []) : null;

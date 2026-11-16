@@ -153,3 +153,23 @@ describe("첫 해(S4) — Hero와 블록이 같은 시작점(AC-8)", () => {
     expect(src).toMatch(/data-testid="year-first-note"[\s\S]{0,120}<YearlyAddLink \/>/);
   });
 });
+
+describe("1월 초(S6·S7) — Hero 상태와 무관하게 직전 해 블록", () => {
+  it("닫힌 결산 모델이 있으면 새해 블록·첫 해 블록보다 먼저 쓴다(새해 원인 블록은 1/11부터)", () => {
+    const src = readFileSync("src/app/(main)/_components/views/activity/net-asset-chart.tsx", "utf8");
+    expect(src).toContain("const yearModel = closedModel ?? firstYear ??");
+    expect(src).not.toContain('scope="year"');
+  });
+  it("1/10까지 2026년 값, 1/11부터는 닫힌 결산이 아니다", () => {
+    const monthly = [sOct, sNov, sDec];
+    expect(build({ data: decEnd, monthly, today: "2027-01-10" })!.title).toBe("2026년 결산");
+    expect(build({ data: decEnd, monthly, today: "2027-01-11" })).toBeNull(); // 2027 항목 없음 → 현행 문구, 블록 없음
+  });
+  it("12/31 화면과 행 구성이 같다(금액은 12월 기록 확정분만큼만 다름)", () => {
+    const keys = (m: NonNullable<ReturnType<typeof build>>) => [m.groups?.income !== null, !!m.groups?.growth, m.groups?.loan !== null, !!m.groups?.unrecorded, !!m.period, m.period?.amount];
+    const dec31 = build({ data: decEnd, monthly: [sOct, sNov, sDec], today: "2026-12-31" })!;
+    const jan1 = build({ data: decEnd, monthly: [sOct, sNov, sDec], today: "2027-01-01" })!;
+    expect(keys(jan1)).toEqual(keys(dec31));
+    expect(jan1.total).toBe(dec31.total);
+  });
+});
