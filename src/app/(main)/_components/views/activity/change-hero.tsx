@@ -344,7 +344,7 @@ const CAUSE_TESTID: Record<string, string> = {
 };
 // 항목 설명(InfoHint) — 대출에는 "상환"·"매수" 문구를 쓰지 않는다(앱 안 이동은 원인이 아님)
 const UNRECORDED_HINT = "새로 등록한 자산이나 직접 고친 잔액처럼, 시세·환율·입출금·대출로 설명되지 않는 금액이에요";
-const CAUSE_HINT: Record<"month" | "year" | "week", Partial<Record<string, string>>> = {
+export const CAUSE_HINT: Record<"month" | "year" | "week", Partial<Record<string, string>>> = {
   month: {
     income: "입금에서 출금을 뺀 금액이에요",
     loan: "대출 이자(추정)와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
@@ -363,10 +363,10 @@ const CAUSE_HINT: Record<"month" | "year" | "week", Partial<Record<string, strin
   },
 };
 const CAUSE_BADGE = "shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground";
-const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
+export const CAUSE_CAPTION = "text-sm text-muted-foreground text-pretty";
 
 // 원인 행 1개 — 연·주·월 공용(행 등장 stagger는 i x 40ms)
-function CauseRow({ c, i, hints, groupEstimated, estimatedLabel, animate = true }: {
+export function CauseRow({ c, i, hints, groupEstimated, estimatedLabel, animate = true }: {
   c: SettlementCause; i: number; hints: Partial<Record<string, string>>; groupEstimated: boolean; estimatedLabel?: string; animate?: boolean;
 }) {
   return (
@@ -448,7 +448,7 @@ function MonthCauseRows({ mapped, estimatedLabel, groupEstimated, hints }: {
   );
 }
 
-// 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 다른 점은 입출금 안내의 기간 표현("이번 달"/"올해")뿐
+// 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 연 탭은 5.124부터 올해 결산 블록(year-settlement-block.tsx)을 쓴다
 // footer: 원인 줄 아래 슬롯(주 탭 — 기록 내역·종목 등락 보기, 4.79). 없으면 렌더 diff 0
 export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
   scope: "month" | "year" | "week";
@@ -483,7 +483,7 @@ export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
         )
       )}
       {!status && mapped?.showUnrecordedHint && (
-        <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>{scope === "year" ? "올해 입출금을 기록하면 더 정확해져요" : "입출금을 기록하면 더 정확해져요"}</p>
+        <p data-testid="cause-unrecorded-hint" className={CAUSE_CAPTION}>입출금을 기록하면 더 정확해져요</p>
       )}
       {footer}
     </section>
