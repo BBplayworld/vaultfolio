@@ -44,6 +44,7 @@ import { readExchangeHistory } from "@/lib/finance/profit-utils";
 import { consumeYearlyNetAssetOpenRequest, dispatchOpenYearlyNetAsset } from "../../layout/navigation/asset-dispatch";
 import { trackAssetSave } from "@/lib/analytics/ga";
 import { BODY_ENTER, CauseBlock, ChangeHero } from "./change-hero";
+import { mdOf } from "@/lib/report/year-settlement";
 import { buildYearSettlementModel, YearSettlementBlock } from "./year-settlement-block";
 import { DAY_EMPTY_MESSAGE, prevDailyRecord, useDayHero } from "./use-day-hero";
 
@@ -85,6 +86,10 @@ interface YearlyNetAssetFormProps {
 export const kstYear = () => Number(new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 4));
 export const yearlyHeroNoCurrentYear = (latestYear: number | undefined, currentYear: number) => latestYear !== undefined && latestYear < currentYear;
 export const yearlyNoCurrentMessage = (latestYear: number) => `올해 순자산이 기록되면 ${latestYear}년 말과 비교해 드려요`;
+
+const YEARLY_ADD_MESSAGE = "작년 말 순자산을 넣으면 올해와 비교할 수 있어요";
+// 첫 해 Hero 제목(5.124) — 블록 제목 `M/D 이후 결산`과 같은 시작일
+export const yearFirstHeroTitle = (firstStart: string) => `${mdOf(firstStart)} 이후`;
 
 function YearlyAddLink() {
   return (
@@ -365,9 +370,18 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
       return { model: null, error: true };
     }
   }, [view, activeView, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
-  // 블록은 Hero와 같은 비교일 때만 그린다(첫 해·1월 초는 뒤 커밋)
-  const yearModel = yearSettle?.model && !yearSettle.model.target.closed && heroPrevYear !== null && yearSettle.model.target.start?.year === heroPrevYear
-    ? yearSettle.model : null;
+  // 첫 해(직전 해 값 없음) — 시작점 기록이 있으면 Hero 제목·증감·시작값을 블록과 같은 점으로 채운다(같은 객체 → AC-8)
+  const openModel = yearSettle?.model && !yearSettle.model.target.closed && allYearlyData.at(-1)?.year === yearSettle.model.target.year ? yearSettle.model : null;
+  const firstYear = openModel?.firstStart && heroPrevYear === null ? openModel : null;
+  if (firstYear) {
+    heroTitle = yearFirstHeroTitle(firstYear.firstStart!);
+    heroStart = firstYear.heroStart;
+    heroEnd = firstYear.target.end.netAsset;
+    diff = heroEnd - heroStart;
+    diffPct = heroStart !== 0 ? (diff / Math.abs(heroStart)) * 100 : null;
+  }
+  // 블록은 Hero와 같은 비교일 때만 그린다(1월 초는 뒤 커밋)
+  const yearModel = firstYear ?? (openModel && heroPrevYear !== null && openModel.target.start?.year === heroPrevYear ? openModel : null);
 
   // 렌더마다 prev.note를 재판정(동기화로 값이 바뀌어도 저장 0)
   const autoCaption = view && activeView === "yearly" ? yearlyAutoCaption(heroPrev, snapshotVersion >= 0 ? readMonthlySnapshots() : []) : null;
@@ -386,7 +400,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
             ? <span data-testid="day-empty" className="text-pretty break-keep">{DAY_EMPTY_MESSAGE}</span>
             : yearlyNoCurrent && yearlyLatestYear !== null
               ? <>{yearlyNoCurrentMessage(yearlyLatestYear)}</>
-              : <>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
+              : <>{YEARLY_ADD_MESSAGE}<br /><YearlyAddLink /></>}
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
@@ -405,6 +419,11 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                   고치기
                 </button>
               </span>
+            </span>
+          ) : firstYear ? (
+            <span data-testid="year-first-note" data-screenshot-hide className="break-keep">
+              {YEARLY_ADD_MESSAGE}{" "}
+              <YearlyAddLink />
             </span>
           ) : undefined}
           contentKey={activeView}

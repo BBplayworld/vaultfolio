@@ -14,6 +14,8 @@ vi.mock("@/app/(main)/_components/layout/navigation/navigation-context", async (
 }));
 
 import { buildYearSettlementModel, YearSettlementBlock } from "../year-settlement-block";
+import { yearFirstHeroTitle } from "../net-asset-chart";
+import { readFileSync } from "node:fs";
 
 const build = (o: { data?: AssetData; monthly?: MonthlyAssetSnapshot[]; today?: string } = {}) => {
   const data = o.data ?? now;
@@ -127,5 +129,27 @@ describe("상태별 DOM", () => {
   it("오류: 현행 문구 유지", () => {
     const out = renderToStaticMarkup(<YearSettlementBlock status="error" />);
     expect(out).toMatch(/data-testid="cause-error"[^>]*>변화 원인을 불러오지 못했어요</);
+  });
+});
+
+describe("첫 해(S4) — Hero와 블록이 같은 시작점(AC-8)", () => {
+  const firstYear = { ...now, yearlyNetAssets: [{ year: 2026, netAsset: 118 * M, note: "자동" }] };
+  const model = build({ data: firstYear })!;
+  it("Hero 제목 `10/31 이후`, 블록 제목 `10/31 이후 결산`, 합계 = 끝값 − 시작점 기록", () => {
+    expect(yearFirstHeroTitle(model.firstStart!)).toBe("10/31 이후");
+    expect(model.title).toBe(`${yearFirstHeroTitle(model.firstStart!)} 결산`);
+    expect(model.total).toBe(model.target.end.netAsset - model.heroStart);
+  });
+  it("블록: 기간 행 없이 묶음, 결론 기간 `10/31부터`", () => {
+    const out = renderToStaticMarkup(<YearSettlementBlock model={model} />);
+    expect(out).toContain('data-state="first-year"');
+    expect(out).toContain("10/31부터 순자산을 늘린 금액은");
+    expect(out).not.toContain("year-settle-period-row");
+  });
+  it("Hero는 블록 모델의 시작값·끝값을 그대로 쓰고 `작년 말 순자산 넣기` 링크를 note로 유지한다", () => {
+    const src = readFileSync("src/app/(main)/_components/views/activity/net-asset-chart.tsx", "utf8");
+    expect(src).toContain("heroStart = firstYear.heroStart;");
+    expect(src).toContain("heroEnd = firstYear.target.end.netAsset;");
+    expect(src).toMatch(/data-testid="year-first-note"[\s\S]{0,120}<YearlyAddLink \/>/);
   });
 });
