@@ -39,13 +39,13 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { DataSourceBadge } from "../data-source-badge";
 import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
-import { readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
+import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
-import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { resolveYearChain } from "@/lib/report/settlement";
 import { consumeYearlyNetAssetOpenRequest, dispatchOpenYearlyNetAsset } from "../../layout/navigation/asset-dispatch";
 import { trackAssetSave } from "@/lib/analytics/ga";
-import { BODY_ENTER, CauseBlock, ChangeHero, computeChainCauses } from "./change-hero";
+import { BODY_ENTER, CauseBlock, ChangeHero } from "./change-hero";
+import { mdOf } from "@/lib/report/year-settlement";
+import { buildYearSettlementModel, YearSettlementBlock } from "./year-settlement-block";
 import { DAY_EMPTY_MESSAGE, prevDailyRecord, useDayHero } from "./use-day-hero";
 
 const NET_COLOR = "#ffffffff";
@@ -86,6 +86,10 @@ interface YearlyNetAssetFormProps {
 export const kstYear = () => Number(new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 4));
 export const yearlyHeroNoCurrentYear = (latestYear: number | undefined, currentYear: number) => latestYear !== undefined && latestYear < currentYear;
 export const yearlyNoCurrentMessage = (latestYear: number) => `올해 순자산이 기록되면 ${latestYear}년 말과 비교해 드려요`;
+
+const YEARLY_ADD_MESSAGE = "작년 말 순자산을 넣으면 올해와 비교할 수 있어요";
+// 첫 해 Hero 제목(5.124) — 블록 제목 `M/D 이후 결산`과 같은 시작일
+export const yearFirstHeroTitle = (firstStart: string) => `${mdOf(firstStart)} 이후`;
 
 function YearlyAddLink() {
   return (
@@ -350,22 +354,35 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
     }
   }
 
-  // 연 탭 변화 원인(#32 보완 B안) — 작년 수동 순자산(또는 전년 12월 스냅샷) → 올해 enrich 월 → 오늘 체인, 합계 = Hero 증감.
-  // 첫 해(직전 해 없음)는 미표시
+  // 연 탭 올해 결산(5.124) — 작년 값(또는 전년 12월 기록) → 올해 enrich 월 → 오늘 체인을 3묶음 + 월 기록 전 기간 행으로. 합계 = Hero 증감.
+  // 읽기 전용 계산(저장 0). 올해 항목이 없으면 블록 없음
   const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const yearCauses = useMemo(() => {
-    if (!view || activeView !== "yearly" || heroPrevYear === null || diff === null) return null;
+  const yearSettle = useMemo(() => {
+    if (!view || activeView !== "yearly") return null;
     try {
-      const points = resolveYearChain(snapshotVersion >= 0 ? readMonthlySnapshots() : [], heroPrevYear, heroStart ?? null, todayKst);
-      if (!points) return { status: "insufficient" as const };
-      return computeChainCauses({
-        points, live: buildLiveAttributionCurr(assetData, exchangeRates, summary), deltaNet: diff, endDate: todayKst,
-        liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
+      const ver = snapshotVersion >= 0;
+      const model = buildYearSettlementModel({
+        assetData, monthly: ver ? readMonthlySnapshots() : [], daily: ver ? readDailySnapshots() : [],
+        rates: exchangeRates, exchangeHistory: readExchangeHistory(), summary, today: todayKst,
       });
+      return { model, error: false };
     } catch {
-      return { status: "error" as const };
+      return { model: null, error: true };
     }
-  }, [view, activeView, heroPrevYear, heroStart, diff, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
+  }, [view, activeView, snapshotVersion, todayKst, assetData, exchangeRates, summary]);
+  // 첫 해(직전 해 값 없음) — 시작점 기록이 있으면 Hero 제목·증감·시작값을 블록과 같은 점으로 채운다(같은 객체 → AC-8)
+  const openModel = yearSettle?.model && !yearSettle.model.target.closed && allYearlyData.at(-1)?.year === yearSettle.model.target.year ? yearSettle.model : null;
+  const firstYear = openModel?.firstStart && heroPrevYear === null ? openModel : null;
+  if (firstYear) {
+    heroTitle = yearFirstHeroTitle(firstYear.firstStart!);
+    heroStart = firstYear.heroStart;
+    heroEnd = firstYear.target.end.netAsset;
+    diff = heroEnd - heroStart;
+    diffPct = heroStart !== 0 ? (diff / Math.abs(heroStart)) * 100 : null;
+  }
+  // 블록은 Hero와 같은 비교일 때만 그린다. 1/1~1/10은 직전 해 결산을 유지한다 — Hero(새해 기준·문구 상태)와 무관하게 뜨고 새해 원인 블록은 1/11부터
+  const closedModel = yearSettle?.model?.target.closed ? yearSettle.model : null;
+  const yearModel = closedModel ?? firstYear ?? (openModel && heroPrevYear !== null && openModel.target.start?.year === heroPrevYear ? openModel : null);
 
   // 렌더마다 prev.note를 재판정(동기화로 값이 바뀌어도 저장 0)
   const autoCaption = view && activeView === "yearly" ? yearlyAutoCaption(heroPrev, snapshotVersion >= 0 ? readMonthlySnapshots() : []) : null;
@@ -384,7 +401,7 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
             ? <span data-testid="day-empty" className="text-pretty break-keep">{DAY_EMPTY_MESSAGE}</span>
             : yearlyNoCurrent && yearlyLatestYear !== null
               ? <>{yearlyNoCurrentMessage(yearlyLatestYear)}</>
-              : <>작년 말 순자산을 넣으면 올해와 비교할 수 있어요<br /><YearlyAddLink /></>}
+              : <>{YEARLY_ADD_MESSAGE}<br /><YearlyAddLink /></>}
           badge={activeView === "yearly" && heroPrevYear !== null
             ? <span data-testid="year-inprogress" className={`${GROUP_BADGE} shrink-0`}>진행 중</span>
             : undefined}
@@ -404,15 +421,18 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
                 </button>
               </span>
             </span>
+          ) : firstYear ? (
+            <span data-testid="year-first-note" data-screenshot-hide className="break-keep">
+              {YEARLY_ADD_MESSAGE}{" "}
+              <YearlyAddLink />
+            </span>
           ) : undefined}
           contentKey={activeView}
         />
       )}
-      {yearCauses && (
-        "status" in yearCauses
-          ? <CauseBlock key="year" scope="year" status={yearCauses.status} />
-          : <CauseBlock key="year" scope="year" mapped={yearCauses.mapped} estimatedLabel={yearCauses.estimatedLabel} />
-      )}
+      {yearSettle?.error
+        ? <YearSettlementBlock key="year" status="error" />
+        : yearModel && <YearSettlementBlock key="year" model={yearModel} />}
       {activeView === "daily" && dayHero.kind === "ok" && <CauseBlock key="day" scope="week" mapped={dayHero.mapped} estimatedLabel="예측" />}
       <Card className={view ? `${SECTION} ${BODY_ENTER} py-4 gap-0` : ASSET_THEME.contentCard}>
         {!view && <CardHeader className={ASSET_THEME.contentPad}>

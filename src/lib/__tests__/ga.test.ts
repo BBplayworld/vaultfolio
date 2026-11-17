@@ -124,6 +124,7 @@ describe("featureTitleOf 매핑", () => {
     ["pwa_install", { method: "installed" }, "앱 설치"], // 5.122: '앱 설치'는 설치 완료만(설치창·인앱 이동은 아래 5.122 묶음)
     ["settlement_view", { source: "card" }, "월 결산"],
     ["feature_use", { category: "xray" }, "X-Ray"],
+    ["feature_use", { category: "year_settlement" }, "성과·자산 변화·올해 결산"], // 5.124 — 매핑이 빠지면 화면 title `성과·자산 변화`에 섞인다
     ["feature_use", { category: "tax_sim" }, "절세 시뮬레이션"],
     ["feature_use", { category: "home_tip" }, "홈 팁"],
     ["feature_use", { category: "home_tip", method: "click" }, "홈 팁·누름"],

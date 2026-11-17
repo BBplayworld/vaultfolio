@@ -467,7 +467,7 @@ export function buildSettlementIcs(now: Date = new Date()): string {
 
 // ── 전체·연: 올해 변화 원인 체인(#32 보완, B안) ──────────────────
 
-const isEnriched = (s: MonthlyAssetSnapshot): boolean => !!(s.breakdown && s.fx && s.fxBase && s.cost);
+export const isEnriched = (s: MonthlyAssetSnapshot): boolean => !!(s.breakdown && s.fx && s.fxBase && s.cost);
 
 /**
  * 연 탭 원인 체인 점 — [앵커, 올해 enrich 월 스냅샷(이번 달 제외)…]. 끝(실시간)은 호출부가 붙인다.

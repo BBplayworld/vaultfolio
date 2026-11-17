@@ -421,6 +421,17 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `buildWeekRows(daily, today)` — 최근 7일 행(최신순)·7일 전 대비. `buildSettlementIcs(now)` — RFC 5545 VEVENT 1개(말일 21:00 KST, `RRULE:FREQ=MONTHLY;BYMONTHDAY=-1`, CRLF·75옥텟 접기, 금액 없음)
 - 엔진 쪽 유일한 추가: `asset-report.ts`의 `computeAttributionBetween(prevMonthly, currMonthly|liveCurr, …)` — `resolveAttribution(…, isFirstSegment=true)` 단일 구간, 하이브리드 없음(레거시 시작=전체 예측), 끝점에 fx·fxBase 없으면 null
 
+### report/year-settlement.ts (#5.124, 이슈 #237) — 올해 결산 순수 함수(읽기 전용, 저장·전송 0)
+
+- `resolveYearTarget(yearly, today)` → `{year, closed, start, end} | null`. 1/1~1/10(`CARD_UNTIL_DAY`)이고 직전 해 항목이 있으면 `closed`(직전 해 유지), 그 밖은 올해 항목이 있을 때만 올해. 끝값의 단일 출처 = 년도별 그 해 항목
+- `pickYearEndSnapshot(monthly, year)` — 닫힌 결산 끝점(그 해 마지막 enrich 월 기록). `resolveYearChain(…, today = 끝 기록일)`로 그 해 체인을 얻는다(함수 무수정)
+- `splitYearChain(points, heroStart, heroDelta, run)` → `measured | mixed{period{amount, month, from, until}} | estimated-only`. 기간 행 = 첫 enrich 월 기록 − **Hero 시작값**, 나머지 = `run(points.slice(1), total − 기간 행)` → 합 = Hero 증감
+- `resolveFirstYearChain(monthly, daily|null, assetData, year, endDate)` — 첫 해 시작점: 그 해 가장 이른 enrich 월 기록(끝 달 제외) → `pickFirstRecordStart`(daily가 있을 때만) → 7일 미만이면 null
+- `groupYearSettlement(mapped)` → `{income, growth{amount, rows}, loan, unrecorded}`(10원 미만 숨김), `hasYearRows`, `buildYearConclusion(groups)` → `{n, m} | null`(둘 다 양수·기록 안 된 변화가 합보다 작음·1~99%)
+- 문구: `YEAR_SETTLE_COPY`, `yearPeriodPhrase`(`올해`·`11월부터`·`11/3부터`·`2026년에`·`2026년 11월부터`), `yearSettlementTitle`, `yearPeriodLabel`(`1~10월`·`1월`·`10월 기록 전`), `yearIncomeHint`, `mdOf`
+- `settlement.ts`: `isEnriched(monthly)` export(5.124)
+- 테스트: `report/__tests__/year-settlement.test.ts`(픽스처 `year-settlement-fixture.ts`), `views/activity/__tests__/year-settlement-block.test.tsx`
+
 ### report/composition.ts (#4.43 #72 · #4.51 #83) — 월 탭 자산 구성 변화·외화 노출 순수 함수
 
 - `COMPOSITION_KEYS/LABELS`, `COMPOSITION_FORBIDDEN_WORDS`(문구 금지어 테스트, 4.45 재사용). 연 탭 `CompositionCard`·보정 스케일은 #4.44에서 제거됨.
