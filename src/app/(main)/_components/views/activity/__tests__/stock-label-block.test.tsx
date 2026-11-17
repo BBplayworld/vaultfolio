@@ -173,23 +173,27 @@ describe("수량 비교 조각(AC-25~27) — 정한 날의 내 기록과 지금�
     FFF: item("keep", 99, 0),       // 정한 날 당일
   });
   const html = render(SIX, labels);
-  const qty = [...html.matchAll(/<span data-testid="grow-row-qty" data-state="(\w+)" class="([^"]*)">([^<]*)<\/span>/g)].map((m) => ({ state: m[1], cls: m[2], text: m[3] }));
-  const liOf = (ticker: string) => { const from = html.indexOf(`data-ticker="${ticker}"`); return html.slice(from, html.indexOf("</li>", from)); };
+  // 수량 조각은 '→' 앞에서만 줄을 바꾸려고 안쪽을 nowrap 조각으로 나눈다(ui-review R-I1) — 글자는 태그를 걷어 비교한다
+  const strip = (h: string) => h.replace(/<[^>]+>/g, "");
+  const qty = [...html.matchAll(/<span data-testid="grow-row-qty" data-state="(\w+)" class="([^"]*)">((?:<span class="whitespace-nowrap">[^<]*<\/span>)+)<\/span>/g)].map((m) => ({ state: m[1], cls: m[2], text: strip(m[3]) }));
+  const liOf = (ticker: string) => { const from = html.indexOf(`data-ticker="${ticker}"`); return strip(html.slice(from, html.indexOf("</li>", from))); };
   it("같으면 `정한 뒤 수량 그대로`, 다르면 `정한 날 N주 → 지금 M주` — 두 형식뿐", () => {
-    expect(liOf("AAA")).toContain(">정한 뒤 수량 그대로<");
-    expect(liOf("BBB")).toContain(">정한 날 20주 → 지금 50주<");
-    expect(liOf("CCC")).toContain(">정한 날 100주 → 지금 40주<");
-    expect(liOf("DDD")).toContain(">정한 뒤 수량 그대로<");
+    expect(liOf("AAA")).toContain("정한 뒤 수량 그대로");
+    expect(liOf("BBB")).toContain("정한 날 20주 → 지금 50주");
+    expect(liOf("CCC")).toContain("정한 날 100주 → 지금 40주");
+    expect(liOf("DDD")).toContain("정한 뒤 수량 그대로");
     expect(qty).toHaveLength(4);
+    expect(qty.map((q) => q.text).sort()).toEqual(["정한 날 100주 → 지금 40주", "정한 날 20주 → 지금 50주", "정한 뒤 수량 그대로", "정한 뒤 수량 그대로"]);
   });
   it("'오래 둘'·'점검할', 늘어난 행·줄어든 행의 클래스가 같고 안에 굵은 글자·아이콘·색이 없다", () => {
     expect(new Set(qty.map((q) => q.cls)).size).toBe(1);
-    expect(qty[0].cls).toBe("whitespace-nowrap");
+    expect(qty[0].cls).toBe("@min-[33rem]:whitespace-nowrap");
     expect(qty.map((q) => q.state).sort()).toEqual(["changed", "changed", "same", "same"]);
   });
   it("base 없는 항목·정한 날 당일은 조각 자체가 없고 가운뎃점만 남지 않는다. 나머지 줄은 정상", () => {
     for (const t of ["EEE", "FFF"]) {
-      const fact = liOf(t).match(/<span data-testid="grow-row-label-fact"[^>]*>(.*?)<\/span><\/span><\/span>/)![1];
+      const raw = html.slice(html.indexOf(`data-ticker="${t}"`), html.indexOf("</li>", html.indexOf(`data-ticker="${t}"`)));
+      const fact = raw.match(/<span data-testid="grow-row-label-fact"[^>]*>(.*?)<\/span><\/span><\/span>/)![1];
       expect(fact).not.toContain("grow-row-qty");
       expect(fact.replace(/<[^>]+>/g, "")).not.toMatch(/·|—/);
     }
@@ -200,11 +204,12 @@ describe("수량 비교 조각(AC-25~27) — 정한 날의 내 기록과 지금�
     const od = render(SIX, mk({ BBB: { label: "check", labeledAt: day(300), checkedAt: day(200), base: { qty: 20 }, at: day(200) } }, 3));
     const from = od.indexOf('data-ticker="BBB"');
     const fact = od.slice(od.indexOf('data-testid="grow-row-label-fact"', from), od.indexOf('data-testid="grow-label"', from));
-    const order = ["마지막 점검", "정한 날 20주 → 지금 50주", "내가 정한 주기 3개월이 지났어요"].map((t) => fact.indexOf(t));
+    const text = fact.replace(/<[^>]+>/g, "");
+    const order = ["마지막 점검", "정한 날 20주 → 지금 50주", "내가 정한 주기 3개월이 지났어요"].map((t) => text.indexOf(t));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // 경과 조각은 `① · ②` 묶음 밖의 형제 — 어느 폭에서도 자기 줄이고 앞에 가운뎃점이 없다
-    expect(fact).toMatch(/지금 50주<\/span><\/span><span data-testid="grow-row-overdue" class="whitespace-nowrap">내가 정한 주기 3개월이 지났어요<\/span>/);
+    expect(fact).toMatch(/지금 50주<\/span><\/span><\/span><span data-testid="grow-row-overdue" class="whitespace-nowrap">내가 정한 주기 3개월이 지났어요<\/span>/);
   });
   it("수량 조각이 있어도 행 순서는 비중 순 그대로(이 값으로 정렬하지 않는다)", () => {
     expect(rowsOf(html).map((r) => attr(r, "data-ticker"))).toEqual(rowsOf(render(SIX, mk({}))).map((r) => attr(r, "data-ticker")));
@@ -217,7 +222,7 @@ describe("시세 없는 종목·주기 안내(AC-24·29)", () => {
     const html = render(stocks, mk({ AAA: { label: "keep", labeledAt: day(40), at: day(40), base: { qty: 10 } }, ZZZ: { label: "check", labeledAt: day(40), at: day(40), base: { qty: 5 } } }));
     expect(html).not.toContain("grow-weight-bar");
     expect(legendOf(html).map((l) => l.text)).toEqual(["오래 둘 1종목 · 내 주식의 —", "점검할 1종목 · —", "정하지 않음 1종목 · —"]);
-    expect(html).toContain(">정한 날 10주 → 지금 60주<");
+    expect(html.replace(/<[^>]+>/g, "")).toContain("정한 날 10주 → 지금 60주");
     expect(html).toContain(">정한 뒤 수량 그대로<");
   });
   it("주기 안내 문장은 주기를 고르기 전에만 열려 있다(항상 마운트, 고른 뒤 접힘)", () => {

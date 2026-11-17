@@ -86,7 +86,12 @@ function StockLabelRow({ row, onOpen, onLabel, onCheck }: {
                 {row.qtyFact && (
                   <>
                     <span aria-hidden className="hidden @min-[33rem]:inline">·</span>
-                    <span data-testid="grow-row-qty" data-state={row.qtyFact.state} className="whitespace-nowrap">{row.qtyFact.text}</span>
+                    <span data-testid="grow-row-qty" data-state={row.qtyFact.state} className="@min-[33rem]:whitespace-nowrap">
+                      {/* 33rem 미만에서는 '→' 앞에서만 줄을 바꾼다 — 긴 소수 수량이 320에서 잘리던 문제(ui-review R-I1). 숫자 조각은 끊지 않는다 */}
+                      {row.qtyFact.text.split(" → ").map((part, i) => (
+                        <span key={i} className="whitespace-nowrap">{i > 0 ? <>{" "}→ {part}</> : part}</span>
+                      ))}
+                    </span>
                   </>
                 )}
               </span>
