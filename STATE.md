@@ -206,3 +206,6 @@
 
 ## 보류 알림
 - 없음 (11/17 07:53 🟥 v5.124 승인 요청 발송 — Push + #237 @BBplayworld 코멘트)
+
+## 개선 제안 (다음 설정 PR)
+- 2026-11-17 C131: `.claude/agents/cto.md`·`planner-designer.md`에 '대표 지시 항목은 축소 판정 대상 아님 — 위험은 표현으로 해소, 불가 시 대표 확인', cto decision-brief 템플릿에 '대표 약속 대조표' 필수 추가. ORCHESTRATOR.md에 '대표 지시 위임 시 고정 범위 먼저, 선정·미룸 여지 금지'.
