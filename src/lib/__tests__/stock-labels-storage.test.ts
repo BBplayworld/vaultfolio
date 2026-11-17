@@ -279,7 +279,7 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     const by = new Map(rows.map((r) => [r.key, r]));
     const top3 = sortGrowRowKeys(rows).slice(0, 3).map((k) => by.get(k)!.qtyFact?.text);
     expect(top3).toContain("정한 날 10주 → 지금 12주");
-    expect(top3).toContain("정한 뒤 수량 그대로");
+    expect(top3.some((t) => /^정한 뒤 수량 그대로 \d+(일|개월)$/.test(t ?? ""))).toBe(true);
     expect(rows.filter((r) => r.labelState === "keep" || r.labelState === "check").every((r) => r.qtyFact !== null)).toBe(true);
   });
   it("시드에 고정 날짜가 없다(전부 날짜 토큰)", () => {
@@ -290,9 +290,9 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
   it("데모를 다시 주입하면 조작한 이름표가 시드로 돌아간다(필드 있으면 교체)", () => {
     const payload = materializeDemo(demoRaw, "2026-11-17");
     applyImportedPayload(payload);
-    writeStockLabels(setStockLabel(readStockLabels(), "000660", "check", T("2026-11-17")));
+    writeStockLabels(setStockLabel(readStockLabels(), "069500", "check", T("2026-11-17")));
     applyImportedPayload(payload);
-    expect(readStockLabels().items["000660"]).toBeUndefined();
+    expect(readStockLabels().items["069500"]).toBeUndefined();
   });
 });
 

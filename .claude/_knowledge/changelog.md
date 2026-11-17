@@ -21,7 +21,13 @@
   - **저장 형태 추가**: 항목 `base?: { qty, price?, priceAt?, weight? }`(정한 날 기준값, `labeledAt`이 새로 쓰일 때만 함께 씀, `v: 1` 유지·마이그레이션 없음). 화면에는 `qty`만 쓰고 시세·비중은 저장만. **이 키는 수량을 담으므로 사용자 자산 데이터다**(백업·E2EE 동기화로만 나감).
   - **모르는 필드 보존**: 최상위·`cycle`·항목·`base` 4곳(`STOCK_LABEL_EXTRA_LIMIT` 항목 2,048자·cycle/최상위 8,192자, 넘으면 그 객체 것만 전부 버림, `__proto__` 등 제외). 이름표 종류·주기 값을 새로 정하는 편집만 그 객체의 모르는 필드를 버린다. 병합 같음 판정·동률 규칙(직렬화 긴 쪽)에 `base`·모르는 필드 포함.
   - GA `grow_revisit` → `내 자산 불리기·다시 봄`(유효 이름표의 가장 이른 붙인 날이 오늘보다 앞일 때 불리기 블록 마운트당 1회, `isPreviewEnv()` 가드, 저장 키 0). 새 소식 `20261117-01` 본문을 `이름표를 붙이면 내 주식이 어떻게 나뉘는지, 정한 날과 지금 수량을 나란히 보여요`로. 데모 시드에 `base`(AAPL 10 → 12주, 나머지 그대로), 오래 둘 = 360750·005930.
-- 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`·`asset-grade-copy`·`ga`(추가). `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.
+- **인사이트 4종(11/17, 대표 지시 확정)**: 이름표 있는 행이 4줄(지금 → 이름표 → 정한 뒤 → 매매, 모두 `text-sm`, 1·2줄 사이만 6px), 요약 영역 2에 연결 문장. 저장 diff 0(`base` 외 새 필드·새 키 0).
+  - 행 '정한 뒤 줄'(`grow-row-since`, 정한 다음 날 KST부터): `정한 날 가격 대비 +12.0%`(= (지금 시세 − `base.price`) ÷ `base.price`, 종목 통화 그대로, 부호와 무관하게 전경색, `base.price` 없음 = 조각 생략, 지금 시세 없음 = `—`) · 수량 `정한 뒤 수량 그대로 N개월`/`정한 날 N주 → 지금 M주`(이름표 줄 끝에서 옮김). 2줄 `① · ③`은 30rem, 3줄 `가격 · 수량`은 33rem부터 한 줄.
+  - 행 '매매 줄'(`grow-row-trades`, 붙인 즉시): `이 앱에 기록한 매매 최근 3개월 N건` — 보유 건 `id`에 `stockId`가 드는 거래(매수·매도 합, 반영 여부 무관 = 종목 페이지 목록과 같은 수), 달력 3개월 전 날 초과 ~ 오늘(KST, 없는 날은 말일).
+  - 연결 문장(`grow-link`, '오래 둘' 1개 이상): 배당 `올해 예상 배당 중 오래 둘 자산 몫은 N%예요`(`useDividendAnnualTotals` 반환에 `byLabelKey` 추가 — 배당 카드와 같은 조회·같은 매수일 조건, 새 요청 0) · 결산 3갈래 `올해 내 주식에서 불어난 돈 중 …`/`… 줄어든 돈 중 …`/`올해는 불어난 쪽과 줄어든 쪽이 섞여 있어 몫을 비율로 나타내지 않아요` + 기준가 없는 종목 꼬리 `(기준 가격이 없는 N종목 제외)`. 결산 = 보유 건마다 수량 × (지금 시세 − 기준) × 지금 환율, 기준 = 올해 편입(매수일 1월 2일 이후 ~ 오늘)이면 평단, 아니면 기존 `profit?period=ytd`(작년 마지막 거래일 종가, '시장과 비교'와 같은 캐시 키, yearly·daily 조회가 끝난 뒤 시작). 비상장·상장폐지 제외. 숨김은 계산 불가(조회 실패·지금 시세 없음·분모 0·'오래 둘' 전부 기준가 없음)일 때만, 조회 중 스켈레톤 1줄. 금액·링크 없음.
+  - 도움말: 화면 제목 InfoHint는 1문단으로 되돌림(a2fb703과 같음), 블록 제목 옆 `grow-block-hint` 요약 `정한 날의 내 기록과 지금의 내 기록을 나란히 보여 줘요.` + 3문단.
+  - 신규 `lib/asset/grow-links.ts`(`keepLabelKeys`·`buildDividendLink`·`isBoughtThisYear`·`buildSettleLink`). `grow-rows.ts`: `priceFact`·`tradeCount`, `tradeCountsByLabelKey`·`threeMonthsBefore`·`kstDayText`, `buildGrowRows(…, transactions?)`(허브 카드는 넘기지 않음). 데모 시드 점검할 NVDA → 000660(SK하이닉스, 매매 0건 행). 새 소식 `20261117-01` 본문 `이름표를 붙이면 정한 날과 지금의 가격·수량, 매매 건수, 배당 몫을 나란히 보여요`. 금지어 추가 `자주·많이·적게·겨우·에서 나와요·에서 나왔어요`.
+- 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`·`asset-grade-copy`·`ga`(추가)·`grow-links`(신규). `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.
 
 ---
 

@@ -7,6 +7,7 @@
  */
 
 import type { Stock } from "@/types/asset";
+import type { Transaction } from "@/types/transaction";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { computeStockMetrics, getMultiplier, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { profitTone } from "@/app/(main)/_components/views/detail/detail-summary-header";
@@ -82,6 +83,10 @@ export interface GrowRow {
   overdueFact: string | null;
   /** 수량 비교 — 정한 날의 내 기록과 지금의 내 기록. 당일·base 없는 항목·이름표 없는 행은 null */
   qtyFact: { state: "same" | "changed"; text: string } | null;
+  /** 정한 날 가격 대비 — 종목 통화 그대로(환율 효과 없음). 당일·base.price 없는 항목은 null, 지금 시세가 없으면 `—` */
+  priceFact: { state: "value" | "dash"; text: string } | null;
+  /** 이 앱에 기록한 매매 최근 3개월 건수(매수·매도 합). 이름표 있는 행만, 거래 배열을 넘기지 않으면 null */
+  tradeCount: number | null;
   /** 오늘 이미 점검을 눌렀는지 */
   checkedToday: boolean;
 }
@@ -165,7 +170,61 @@ function qtyFactOf(item: StockLabelItem | undefined, nowQty: number | undefined,
   if (!e || e.days === 0) return null;
   const then = formatQty(item.base.qty);
   const now = formatQty(nowQty);
-  return then === now ? { state: "same", text: "정한 뒤 수량 그대로" } : { state: "changed", text: `정한 날 ${then} → 지금 ${now}` };
+  return then === now ? { state: "same", text: `정한 뒤 수량 그대로 ${formatSince(e)}` } : { state: "changed", text: `정한 날 ${then} → 지금 ${now}` };
+}
+
+/**
+ * 정한 날 가격 대비 % = (지금 시세 − base.price) ÷ base.price. 둘 다 종목 통화라 환율이 바뀌어도 달라지지 않는다.
+ * 부호 표기는 `내 매입가 대비`와 같은 함수(profitTone). 정한 날 다음 날(KST)부터 — 수량 조각과 같은 규칙.
+ */
+function priceFactOf(item: StockLabelItem | undefined, nowPrice: number | undefined, nowMs: number): GrowRow["priceFact"] {
+  const basePrice = item?.base?.price;
+  if (!item || item.label === null || !basePrice) return null;
+  const e = elapsedSince(item.labeledAt, nowMs);
+  if (!e || e.days === 0) return null;
+  if (!(nowPrice !== undefined && nowPrice > 0)) return { state: "dash", text: "—" };
+  const pct = ((nowPrice - basePrice) / basePrice) * 100;
+  const tone = profitTone(pct, pct, 1);
+  return { state: "value", text: `${tone.sign}${tone.rate.toFixed(1)}%` };
+}
+
+const DAY_TEXT = /^\d{4}-\d{2}-\d{2}$/;
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** KST 오늘(YYYY-MM-DD) */
+export function kstDayText(nowMs: number): string {
+  const d = kstDate(nowMs);
+  return `${d.y}-${pad2(d.m)}-${pad2(d.d)}`;
+}
+
+/** 오늘에서 달력 3개월 전 날짜 — 그 날짜가 없는 달은 말일로 당긴다(5/31 → 2/28) */
+export function threeMonthsBefore(today: string): string {
+  const [y, m, d] = today.split("-").map(Number);
+  const idx = y * 12 + (m - 1) - 3;
+  const ty = Math.floor(idx / 12);
+  const tm = (idx % 12) + 1;
+  const last = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+  return `${ty}-${pad2(tm)}-${pad2(Math.min(d, last))}`;
+}
+
+/**
+ * 이름표 키별 '이 앱에 기록한 매매 최근 3개월' 건수 — 매수·매도를 나누지 않고 합친다.
+ * 종목 페이지 거래 기록과 같은 조건: 거래의 stockId가 그 키를 쓰는 보유 건이고(반영 여부 무관),
+ * 거래일이 3개월 전 날짜 초과 ~ 오늘 이하. 형식이 틀린 날짜·미래 날짜는 세지 않는다.
+ * 보유 건 id → 키 맵을 한 번 만들고 거래 배열을 한 번만 돈다.
+ */
+export function tradeCountsByLabelKey(stocks: Stock[], transactions: Transaction[], nowMs: number): Map<string, number> {
+  const keyOf = new Map<string, string>();
+  for (const s of stocks) if (s.ticker) keyOf.set(s.id, normalizeTicker(s));
+  const today = kstDayText(nowMs);
+  const from = threeMonthsBefore(today);
+  const counts = new Map<string, number>();
+  for (const t of transactions) {
+    const key = keyOf.get(t.stockId);
+    if (!key || !DAY_TEXT.test(t.date) || t.date <= from || t.date > today) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**
@@ -177,10 +236,20 @@ export function buildGrowRows(
   exchangeRates: { USD: number; JPY: number },
   labels: StockLabels,
   nowMs: number,
+  /** 주식 거래 기록 — 넘기면 이름표 있는 행에 매매 건수를 센다(허브 카드는 넘기지 않는다) */
+  transactions?: Transaction[],
 ): GrowRow[] {
   // 전체 탭과 같은 분모: 상장폐지 제외 전 종목의 원화 평가액 합
   const { totalValue } = growTotals(stocks, exchangeRates);
   const qtyNow = qtyByLabelKey(stocks);
+  const trades = transactions ? tradeCountsByLabelKey(stocks, transactions, nowMs) : null;
+  // 이름표 키별 지금 시세(종목 통화) — 기준값을 만들 때와 같은 규칙: 현재가가 있는 첫 보유 건
+  const priceNow = new Map<string, number>();
+  for (const s of stocks) {
+    if (!s.ticker || !(s.currentPrice > 0)) continue;
+    const k = normalizeTicker(s);
+    if (!priceNow.has(k)) priceNow.set(k, s.currentPrice);
+  }
 
   const rows: GrowRow[] = [];
   for (const [key, items] of groupStocksByTicker(stocks)) {
@@ -213,6 +282,8 @@ export function buildGrowRows(
       labelFact: fact,
       overdueFact,
       qtyFact: qtyFactOf(item, qtyNow.get(ticker), nowMs),
+      priceFact: priceFactOf(item, priceNow.get(ticker), nowMs),
+      tradeCount: trades && item && item.label !== null ? (trades.get(ticker) ?? 0) : null,
       checkedToday,
     });
   }

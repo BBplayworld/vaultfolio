@@ -56,12 +56,16 @@ export function useDividendAnnualTotals() {
 
   let annualActual = 0;
   let annualEstimated = 0;
+  // 이름표 키(normalizeTicker)별 올해 배당(지급 + 예상, 반올림 전) — 불리기 화면의 '오래 둘 자산 몫' 문장이 같은 조회·같은 조건에서 분자를 얻는다(#239)
+  const byLabelKey = new Map<string, number>();
   stocksWithTicker.forEach((stock, i) => {
     const payouts = (queries[i]?.data as DividendPayoutResult[] | undefined) ?? [];
     const rate = stock.currency === "USD" ? usdRate : 1;
     for (const p of payouts) {
       if (stock.purchaseDate && p.payoutDate < stock.purchaseDate) continue;
       const amt = p.amountPerShare * stock.quantity * rate;
+      const key = normalizeTicker(stock);
+      byLabelKey.set(key, (byLabelKey.get(key) ?? 0) + amt);
       if (p.payoutDate.slice(0, 7) <= currentYM) annualActual += amt;
       else annualEstimated += amt;
     }
@@ -73,6 +77,7 @@ export function useDividendAnnualTotals() {
     annualActual: Math.round(annualActual),
     annualEstimated: Math.round(annualEstimated),
     annualTotal: Math.round(annualActual + annualEstimated),
+    byLabelKey,
   };
 }
 

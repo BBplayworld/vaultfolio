@@ -152,6 +152,8 @@ function filesMatching(name: RegExp, pattern: RegExp): string[] {
 const INSIGHT_FORBIDDEN = [
   "지켰어요", "어겼어요", "원칙 위반", "흔들렸어요", "잘했어요", "성공", "실패", "맞았어요", "틀렸어요", "성과", "결과", "수익", "수익률", "덕분에", "때문에",
   "평균", "순위", "1위", "보다 높아요", "보다 낮아요", "쏠림", "시장 대비", "늘었어요", "줄었어요", "샀어요", "팔았어요",
+  // 인사이트 4종(AC-44) — 인과로 읽히는 동사·평가어 추가
+  "자주", "많이", "적게", "겨우", "에서 나와요", "에서 나왔어요",
 ];
 
 describe("인사이트 금지어·금지 형식(AC-26)", () => {
@@ -161,25 +163,56 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
   const hubCard = visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')));
   const view = read("asset-report-view.tsx");
   const hint = view.slice(view.indexOf('data-testid="grow-hint"'), view.indexOf("</CardTitle>"));
-  it("이름표 블록·표시 값·허브 셋째 카드·화면 제목 도움말에 금지어가 없다", () => {
-    for (const [name, text] of [["블록", block], ["표시 값", rowsLib], ["허브 카드", hubCard], ["도움말", hint]] as const) {
+  const linksLib = visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-links.ts"), "utf8"));
+  it("이름표 블록·표시 값·연결 문장·허브 셋째 카드·화면 제목 도움말에 금지어가 없다", () => {
+    for (const [name, text] of [["블록", block], ["표시 값", rowsLib], ["연결 문장", linksLib], ["허브 카드", hubCard], ["도움말", hint]] as const) {
       for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(text, `${name}: ${w}`).not.toContain(w);
     }
   });
   it("새 소식 본문에 금지어가 없다(제목의 '성과'는 메뉴 이름이라 본문만 본다)", () => {
     const body = WHATS_NEW.find((e) => e.id === "20261117-01")!.body!;
     for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(body, w).not.toContain(w);
-    expect(body).toBe("이름표를 붙이면 내 주식이 어떻게 나뉘는지, 정한 날과 지금 수량을 나란히 보여요");
+    expect(body).toBe("이름표를 붙이면 정한 날과 지금의 가격·수량, 매매 건수, 배당 몫을 나란히 보여요");
+    expect([...body].length).toBeLessThanOrEqual(48);
   });
-  it("도움말에 수량 문장 1줄이 있고 줄바꿈 클래스가 붙어 있다(C128)", () => {
-    expect(hint).toContain('<p className="text-pretty break-keep">수량은 정한 날의 내 기록과 지금의 내 기록을 나란히 놓은 거예요. 액면분할이 있었거나 계좌를 더 등록해도 달라져요.</p>');
-    expect(hint.match(/<p /g)).toHaveLength(2);
-    expect(hint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(2);
+  it("화면 제목 도움말은 a2fb703과 같은 1문단으로 돌아갔다 — 수량 문장은 블록 도움말로(AC-43)", () => {
+    expect(hint).toContain('<InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">');
+    expect(hint).toContain('<p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>');
+    expect(hint.match(/<p /g)).toHaveLength(1);
   });
-  it("수량 비교는 형식 2개뿐이고 방향을 말하지 않는다", () => {
-    expect(rowsLib).toContain('"정한 뒤 수량 그대로"');
+  it("블록 도움말: 요약 1줄 + 3문단, 세 문단 모두 줄바꿈 클래스, 괄호 없음(AC-43·C114·C128)", () => {
+    const raw = read("stock-label-block.tsx");
+    const blockHint = raw.slice(raw.indexOf('data-testid="grow-block-hint"'), raw.indexOf("</InfoHint>", raw.indexOf('data-testid="grow-block-hint"')));
+    expect(blockHint).toContain('<InfoHint summary="정한 날의 내 기록과 지금의 내 기록을 나란히 보여 줘요.">');
+    expect(blockHint.match(/<p /g)).toHaveLength(3);
+    expect(blockHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(3);
+    expect(blockHint).toContain("작년 마지막 가격");
+    expect(blockHint).toContain("올해 산 종목은 내 매입가부터 계산해요.");
+    expect(blockHint).toContain("매매 건수는 이 앱의 거래 기록에 남긴 것만 세요.");
+    expect(blockHint).not.toMatch(/[()]/);
+  });
+  it("수량 비교는 형식 2개뿐이고 방향을 말하지 않는다(AC-36)", () => {
+    expect(rowsLib).toContain("`정한 뒤 수량 그대로 ${formatSince(e)}`");
     expect(rowsLib).toContain("`정한 날 ${then} → 지금 ${now}`");
     expect(rowsLib.match(/정한 (날|뒤)/g)).toHaveLength(2);
+  });
+  it("허용어는 정해진 자리에서만(AC-44): 매매는 '이 앱에 기록한' 뒤, 예상 배당·불어난 돈은 연결 문장·도움말, 줄어든 돈·쪽은 결산 문장", () => {
+    const raw = visibleText(read("stock-label-block.tsx"));
+    const all = [raw, rowsLib, linksLib, hubCard, hint].join("\n");
+    // 매매: 행 매매 줄 1곳 + 블록 도움말 2문단의 '매매 건수' 1곳
+    expect(all.match(/매매/g)).toHaveLength(2);
+    expect(raw).toContain("이 앱에 기록한 매매 최근 3개월 ");
+    expect(raw).toContain("매매 건수는 이 앱의 거래 기록에 남긴 것만 세요.");
+    // 예상 배당: 배당 문장 1곳 + 도움말 1곳('예상 배당을 합친') — 표시 값·허브 카드·화면 제목 도움말에 없다
+    for (const t of [rowsLib, linksLib, hubCard, hint]) expect(t).not.toMatch(/예상 배당|불어난 돈|줄어든 돈|불어난 쪽|줄어든 쪽/);
+    expect(raw.match(/올해 예상 배당 중/g)).toHaveLength(1);
+    expect(raw.match(/불어난 돈/g)).toHaveLength(2); // 결산 문장 앞 조각 + 도움말 3문단
+    expect(raw.match(/줄어든 돈/g)).toHaveLength(1); // 결산 문장 앞 조각(줄어든 해)
+    expect(raw.match(/줄어든 쪽/g)).toHaveLength(1); // 섞임 문장
+    expect(raw).toContain("올해는 불어난 쪽과 줄어든 쪽이 섞여 있어 몫을 비율로 나타내지 않아요");
+    expect(raw).toContain("(기준 가격이 없는 {settle.excluded}종목 제외)");
+    // 연결 문장은 '몫은 N%예요' 꼴 — 인과 동사 없음
+    expect(raw.match(/오래 둘 자산 몫은 /g)).toHaveLength(2);
   });
   it("무게 줄 막대는 전경색 투명도 3단뿐이다 — 손익색·주황·brand·차트 팔레트 없음", () => {
     expect(block).toContain('"bg-foreground/80"');
@@ -188,7 +221,10 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
     expect(block).not.toMatch(/MAIN_PALETTE|bg-primary|bg-brand|assignColors/);
   });
   it("정한 날 가격·비중(base.price·weight)은 어느 화면에도 그리지 않는다. 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
-    expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "")).not.toMatch(/base\.price|base\.weight|priceAt/);
+    // 정한 날 가격(base.price)은 '정한 날 가격 대비 %'(AC-37)를 만드는 priceFactOf 한 곳에서만 읽는다. 값 자체·비중·기준일은 그리지 않는다
+    const rowsNoBuilders = rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "").replace(/function priceFactOf[\s\S]*?\n}\n/, "");
+    expect(block + rowsNoBuilders + linksLib).not.toMatch(/base\.price|base\.weight|priceAt/);
+    expect(rowsLib.match(/base\?\.price/g)).toHaveLength(1);
     const using = filesMatching(/\.(ts|tsx)$/, /stock-labels|grow-rows/).sort();
     expect(using).toEqual([
       "app/(main)/_components/header-menu/settings-page.tsx",
@@ -197,6 +233,7 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
       "app/(main)/_components/views/activity/stock-label-block.tsx",
       "hooks/use-stock-labels.ts",
       "lib/asset/asset-storage.ts",
+      "lib/asset/grow-links.ts",
       "lib/asset/grow-rows.ts",
       "lib/asset/stock-labels.ts",
       "lib/local-storage.ts",
