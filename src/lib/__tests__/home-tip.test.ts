@@ -174,7 +174,8 @@ describe("세금 임박 경계(결산 창 11/5 = 10월 결산)", () => {
 describe("새 소식 팁(#159) 우선순위·조건", () => {
   it("기록 없음 + 자산 있음 → whats_new(시드 전부, 맨 위 항목 제목)", () => {
     const t = pickWn("2026-11-15");
-    expect(t).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length, title: WHATS_NEW[0].title });
+    // 개수 = 시트에 보이는 안 본 항목(시트 '새'와 같은 수, 5.125 qa D-1)
+    expect(t).toMatchObject({ kind: "whats_new", count: newBadgeIds(undefined, null).size, title: WHATS_NEW[0].title });
   });
   it("whatsNewOk가 없으면(체험·잠금·로드 전) 뜨지 않는다", () => {
     expect(pick("2026-11-15")).toBeNull();
@@ -212,12 +213,12 @@ describe("새 소식 팁(#159) 우선순위·조건", () => {
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY + 60_000 };
     expect(pickWn("2026-11-15")).toBeNull();
     h.record = { id: "20261111-07", seenAt: now - 7 * DAY };
-    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: WHATS_NEW.length - 7, title: WHATS_NEW[0].title });
+    expect(pickWn("2026-11-15")).toMatchObject({ kind: "whats_new", count: newBadgeIds(undefined, h.record).size, title: WHATS_NEW[0].title });
   });
   it("읽음 처리(실제 쓰기) 뒤 시트 재열기 '새' 0, 8일 후에도 팁 없음(D1)", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-12T00:00:00Z"));
-    expect(newBadgeIds(undefined, null, "2026-11-12").size).toBe(WHATS_NEW.length); // 팁 N과 같은 개수
+    expect(newBadgeIds(undefined, null, "2026-11-12").size).toBe(Math.min(WHATS_NEW.length, 20)); // 팁 N과 같은 개수(시트 20개 상한)
     markWhatsNewSeen();
     expect(newBadgeIds(undefined, h.record, "2026-11-12").size).toBe(0);
     vi.setSystemTime(new Date("2026-11-20T00:00:00Z"));
