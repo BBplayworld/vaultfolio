@@ -205,7 +205,7 @@
 - 후속(C25): #sync= 연결 모달 '이 기/기로' 어절 중간 줄바꿈 — #215 타이포 과제에서 일괄 처리
 
 ## 보류 알림
-- 없음 (11/17 07:53 🟥 v5.124 승인 요청 발송 — Push + #237 @BBplayworld 코멘트)
+- 🟥 [대표 승인 요청] v5.125 — 내 자산 불리기(이름표·점검 + 인사이트 4종, Plus 폐지) · preview https://secretasset-git-issue-5125-bbplayworlds-projects.vercel.app/?demo=1 — 11/18 02:3x 새벽 확정, 07:53 실행에서 Push + PR #240 @BBplayworld 코멘트 발송
 
 ## 개선 제안 (다음 설정 PR)
 - 2026-11-17 C131: `.claude/agents/cto.md`·`planner-designer.md`에 '대표 지시 항목은 축소 판정 대상 아님 — 위험은 표현으로 해소, 불가 시 대표 확인', cto decision-brief 템플릿에 '대표 약속 대조표' 필수 추가. ORCHESTRATOR.md에 '대표 지시 위임 시 고정 범위 먼저, 선정·미룸 여지 금지'.
