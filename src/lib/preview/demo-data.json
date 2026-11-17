@@ -9,7 +9,7 @@
       "360750": {"label": "keep", "labeledAt": "@M-14D1", "base": {"qty": 105, "price": 17500, "priceAt": "@M-14D1", "weight": 14.2}, "at": "@M-14D1"},
       "005930": {"label": "keep", "labeledAt": "@M-5D1", "base": {"qty": 65, "price": 64000, "priceAt": "@M-5D1", "weight": 30.5}, "at": "@M-5D1"},
       "AAPL": {"label": "check", "labeledAt": "@M-8D1", "checkedAt": "@D-125", "base": {"qty": 10, "price": 190, "priceAt": "@M-8D1", "weight": 21.8}, "at": "@D-125"},
-      "000660": {"label": "check", "labeledAt": "@D-20", "base": {"qty": 5, "price": 950000, "priceAt": "@D-20", "weight": 16.4}, "at": "@D-20"}
+      "000660": {"label": "check", "labeledAt": "@D-20", "base": {"qty": 5, "price": 175000, "priceAt": "@D-20", "weight": 16.4}, "at": "@D-20"}
     }
   },
   "assetData": {
