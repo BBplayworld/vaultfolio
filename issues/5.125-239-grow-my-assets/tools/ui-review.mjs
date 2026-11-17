@@ -53,7 +53,7 @@ if (MODE === "all" || MODE === "widths") {
     if (W === 390) log("VERSION", await p.locator("text=/PREVIEW · v/").first().textContent().catch(() => "없음"));
     await go(p, "#activity"); log(`HUB demo ${W}`, await hubInfo(p)); await shot(p, `s9-demo-hub-${W}-dark`);
     await go(p, "#activity/report", 4500); log(`BLOCK demo ${W}`, await blockInfo(p)); await shot(p, `s9-demo-report-${W}-dark`);
-    if ([320, 390, 1024].includes(W)) for (const s of ['[data-testid="grow-label"] [role=radio]', '[data-testid="grow-cycle"] [role=radio]', '[data-testid="grow-check"]', '[data-testid="grow-more"]', '[data-testid="grow-row-open"]', '[data-testid="grow-plus-hint"] button', '[data-testid="axis-link-diversification"]']) log(`HIT ${W} ${s}`, await hit(p, s));
+    if ([320, 390, 1024].includes(W)) for (const s of ['[data-testid="grow-label"] [role=radio]', '[data-testid="grow-cycle"] [role=radio]', '[data-testid="grow-check"]', '[data-testid="grow-more"]', '[data-testid="grow-row-open"]', '[data-testid="grow-hint"] button', '[data-testid="axis-link-diversification"]']) log(`HIT ${W} ${s}`, await hit(p, s));
     // 최장 값 시드: 긴 종목명 + 11년 11개월 전 점검 + 주기 12개월 + 매입가 대비 큰 값
     await reseed(p, ({ LK, AK, LONG, old }) => { const a = JSON.parse(localStorage.getItem(AK)); const l = JSON.parse(localStorage.getItem(LK)); const s = a.stocks.find((x) => x.ticker === "AAPL") ?? a.stocks[0]; a.stocks.filter((x) => x.ticker === s.ticker).forEach((x) => { x.name = LONG; x.averagePrice = x.averagePrice / 14; }); l.cycle = { months: 12, at: new Date().toISOString() }; l.items[s.ticker] = { label: "check", labeledAt: old, checkedAt: old, at: old }; localStorage.setItem(AK, JSON.stringify(a)); localStorage.setItem(LK, JSON.stringify(l)); }, { LK, AK, LONG, old: iso(4352) });
     await go(p, "#activity/report", 4500); const bi = await blockInfo(p); log(`BLOCK long ${W}`, { rows: bi.rows?.map((r) => ({ t: r.t, h: r.h, fact: r.fact, factLines: r.factLines, lf: r.lf, lfLines: r.lfLines, nameClip: r.nameClip, trunc: r.trunc, cellW: r.cellW, cellFont: r.cellFont, openW: r.openW, cols: r.cols, folded: r.folded })), docW: bi.docW, vw: bi.vw });
@@ -116,7 +116,7 @@ if (MODE === "all" || MODE === "trial") {
     await go(p, "#activity"); log(`TRIAL hub ${W} ${scheme}`, await hubInfo(p)); await shot(p, `s8-trial-hub-${W}-${scheme}`);
     await go(p, "#activity/report", 4500); const bi = await blockInfo(p); log(`TRIAL report ${W} ${scheme}`, { ...bi, rows: bi.rows?.map((r) => ({ t: r.t, l: r.l, o: r.o, folded: r.folded, fact: r.fact, lf: r.lf, factLines: r.factLines, trunc: r.trunc })) }); await shot(p, `s8-trial-report-${W}-${scheme}`);
     // InfoHint 2개 열기(C113)
-    for (const [nm, sel] of [["plus", '[data-testid="grow-plus-hint"] button'], ["section", 'button[aria-label="설명 보기"] >> nth=1']]) {
+    for (const [nm, sel] of [["plus", '[data-testid="grow-hint"] button'], ["section", 'button[aria-label="설명 보기"] >> nth=1']]) {
       const btn = nm === "plus" ? p.locator(sel) : p.locator('[data-testid="report-section-title"]').locator("xpath=ancestor::div[1]").locator('button[aria-label="설명 보기"]');
       await btn.first().scrollIntoViewIfNeeded().catch(() => {}); await btn.first().click({ timeout: 5000 }).catch((e) => log("hint click", e.message)); await p.waitForTimeout(700);
       const pop = p.locator('[data-slot="popover-content"], [role="dialog"]').last();

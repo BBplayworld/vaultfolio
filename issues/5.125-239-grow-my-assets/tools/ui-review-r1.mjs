@@ -8,7 +8,7 @@ for (const [W, scheme] of [[320, "dark"], [390, "dark"], [390, "light"]]) {
   const p = await ctx.newPage(); const errs = []; p.on("pageerror", (e) => errs.push(e.message));
   await p.goto(`${PV}/?trial=1`, { waitUntil: "networkidle", timeout: 90000 }).catch(() => {}); await p.waitForTimeout(7000);
   await p.evaluate(() => { location.hash = "#activity/report"; }); await p.waitForTimeout(4500);
-  const btns = [["plus", p.locator('[data-testid="grow-plus-hint"] button')], ["section", p.locator('[data-testid="report-section-title"]').locator("xpath=ancestor::div[1]").locator('button[aria-label="설명 보기"]')]];
+  const btns = [["plus", p.locator('[data-testid="grow-hint"] button')], ["section", p.locator('[data-testid="report-section-title"]').locator("xpath=ancestor::div[1]").locator('button[aria-label="설명 보기"]')]];
   for (const [nm, btn] of btns) {
     await btn.first().scrollIntoViewIfNeeded().catch(() => {}); await btn.first().click({ timeout: 5000 }).catch((e) => console.log("click", e.message)); await p.waitForTimeout(800);
     const r = await p.evaluate(() => { const pop = [...document.querySelectorAll('[data-slot="popover-content"]')].pop(); if (!pop) return null;
