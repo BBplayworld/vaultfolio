@@ -175,7 +175,7 @@ describe("수량 비교 조각(AC-25~27) — 정한 날의 내 기록과 지금�
   const html = render(SIX, labels);
   // 수량 조각은 '→' 앞에서만 줄을 바꾸려고 안쪽을 nowrap 조각으로 나눈다(ui-review R-I1) — 글자는 태그를 걷어 비교한다
   const strip = (h: string) => h.replace(/<[^>]+>/g, "");
-  const qty = [...html.matchAll(/<span data-testid="grow-row-qty" data-state="(\w+)" class="([^"]*)">((?:<span class="whitespace-nowrap">[^<]*<\/span>)+)<\/span>/g)].map((m) => ({ state: m[1], cls: m[2], text: strip(m[3]) }));
+  const qty = [...html.matchAll(/<span data-testid="grow-row-qty" data-state="(\w+)" class="([^"]*)">((?:\s?<span class="whitespace-nowrap">[^<]*<\/span>)+)<\/span>/g)].map((m) => ({ state: m[1], cls: m[2], text: strip(m[3]) }));
   const liOf = (ticker: string) => { const from = html.indexOf(`data-ticker="${ticker}"`); return strip(html.slice(from, html.indexOf("</li>", from))); };
   it("같으면 `정한 뒤 수량 그대로`, 다르면 `정한 날 N주 → 지금 M주` — 두 형식뿐", () => {
     expect(liOf("AAA")).toContain("정한 뒤 수량 그대로");

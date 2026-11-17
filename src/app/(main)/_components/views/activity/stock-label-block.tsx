@@ -6,7 +6,7 @@
 //  - 순서는 화면에 들어올 때와 주기를 바꿀 때만 다시 정한다(누른 행이 손가락 아래에서 사라지지 않게)
 //  - 주기가 지난 행은 접지 않는다. 펼침 여부는 세션 메모리에만 둔다(새 저장 키 없음)
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronRight, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -89,7 +89,8 @@ function StockLabelRow({ row, onOpen, onLabel, onCheck }: {
                     <span data-testid="grow-row-qty" data-state={row.qtyFact.state} className="@min-[33rem]:whitespace-nowrap">
                       {/* 33rem 미만에서는 '→' 앞에서만 줄을 바꾼다 — 긴 소수 수량이 320에서 잘리던 문제(ui-review R-I1). 숫자 조각은 끊지 않는다 */}
                       {row.qtyFact.text.split(" → ").map((part, i) => (
-                        <span key={i} className="whitespace-nowrap">{i > 0 ? <>{" "}→ {part}</> : part}</span>
+                        // 공백은 조각 밖에 둬야 그 자리가 줄바꿈 기회가 된다(R-I1 재검수)
+                        <Fragment key={i}>{i > 0 && " "}<span className="whitespace-nowrap">{i > 0 ? `→ ${part}` : part}</span></Fragment>
                       ))}
                     </span>
                   </>
