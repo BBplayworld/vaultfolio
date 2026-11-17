@@ -403,7 +403,7 @@ export function AssetReportView() {
           <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
           <span data-testid="grow-plus-hint" data-screenshot-hide className="inline-flex">
             <InfoHint summary="Plus는 내 기준을 기록하고 내가 점검하는 화면이에요.">
-              <p>이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+              <p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
             </InfoHint>
           </span>
         </CardTitle>
