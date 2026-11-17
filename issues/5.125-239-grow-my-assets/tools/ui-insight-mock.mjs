@@ -2,7 +2,7 @@
 import { chromium, proxy, ctxOpt } from "/home/user/vaultfolio/.memory/issues/5.114-typography-scale/tools/lib.mjs";
 const PV = "https://secretasset-git-issue-5125-bbplayworlds-projects.vercel.app"; const OUT = process.argv[2];
 const b = await chromium.launch({ proxy });
-const jobs = [[320, "dark"], [360, "dark"], [390, "dark"], [430, "dark"], [768, "dark"], [1023, "dark"], [1024, "dark"], [1280, "dark"], [390, "light"]];
+const jobs = JSON.parse(process.argv[3] ?? "[[320,\"dark\"],[360,\"dark\"],[390,\"dark\"],[430,\"dark\"],[768,\"dark\"],[1023,\"dark\"],[1024,\"dark\"],[1280,\"dark\"],[390,\"light\"]]");
 for (const [W, scheme] of jobs) {
   const ctx = await b.newContext(ctxOpt(W, scheme));
   if (scheme === "light") await ctx.addCookies([{ name: "theme_mode", value: "light", domain: new URL(PV).hostname, path: "/" }]);
@@ -29,7 +29,7 @@ for (const [W, scheme] of jobs) {
     const bar = `<div data-m="bar" style="display:flex;gap:2px;height:8px;border-radius:9999px;overflow:hidden">${seg.map((s) => `<span style="width:${s[3]}%;background:color-mix(in oklab, var(--foreground) ${s[4] * 100}%, transparent)"></span>`).join("")}</div>`;
     const cw = q(sum.parentElement).w - 32;
     const box = document.createElement("div"); box.dataset.m = "weight"; box.className = "text-sm text-muted-foreground tabular-nums";
-    box.innerHTML = `${bar}<div data-m="legend" style="margin-top:8px;display:flex;flex-direction:column;row-gap:2px;column-gap:16px">${seg.map((s, i) => item(s, i, false)).join("")}</div>`;
+    box.innerHTML = `${bar}<div data-m="legend" style="margin-top:8px;display:flex;flex-direction:column;align-items:flex-start;row-gap:2px;column-gap:16px">${seg.map((s, i) => item(s, i, false)).join("")}</div>`;
     sum.replaceWith(box); const legend = box.querySelector('[data-m="legend"]');
     const wMax = [0, 1, 2].map((i) => q(box.querySelector(`[data-m="w${i}"]`)).w); const stackH = q(box).h;
     legend.style.flexDirection = "row"; const inlineNeed = wMax.reduce((a, c) => a + c, 0) + 32; const inlineH = q(box).h;
@@ -48,8 +48,8 @@ for (const [W, scheme] of jobs) {
       lf.innerHTML = `<span data-m="A" style="display:flex;column-gap:6px">${piece(P1[label], "p1")}${sep}${piece(QTY, "qty")}</span>${over ? `${sep.replace("sep", "sep2")}${piece(OVER, "ov")}` : ""}`;
       const w = { p1: q(lf.querySelector('[data-m="p1"]')).w, qty: q(lf.querySelector('[data-m="qty"]')).w, ov: over ? q(lf.querySelector('[data-m="ov"]')).w : 0, qf, sepW: q(lf.querySelector('[data-m="sep"]')).w };
       const needA = w.p1 + w.qty + w.sepW + 12, needAll = needA + (over ? w.ov + w.sepW + 12 : 0), needAf = w.p1 + w.qf + w.sepW + 12, needAllF = needAf + (over ? w.ov + w.sepW + 12 : 0);
-      // 폭 기준 3단: 46rem 이상 한 줄 / 29rem 이상 [사실 · 수량] + [경과] / 미만 조각마다 한 줄 (rem = 16px 고정)
-      const mode = cont >= 46 * 16 ? "inline" : cont >= 29 * 16 ? "two" : "stack"; const A = lf.querySelector('[data-m="A"]'); const s2 = lf.querySelector('[data-m="sep2"]');
+      // 폭 기준 2단: 33rem 이상 [사실 · 수량] + [경과] / 미만 조각마다 한 줄 (rem = 16px 고정)
+      const mode = cont >= 33 * 16 ? "two" : "stack"; const A = lf.querySelector('[data-m="A"]'); const s2 = lf.querySelector('[data-m="sep2"]');
       if (mode !== "inline") { lf.style.flexDirection = "column"; if (s2) s2.style.display = "none"; }
       if (mode === "stack") { A.style.flexDirection = "column"; A.querySelector('[data-m="sep"]').style.display = "none"; }
       return { t: row.dataset.ticker, label, over, cont, fs, mode, w, needA: Math.round(needA), needAll: Math.round(needAll), needAf: Math.round(needAf), needAllF: Math.round(needAllF), h0: rows0[row.dataset.ticker], h: q(row).h, lfH: q(lf).h, overflow: lf.scrollWidth > Math.ceil(cont) + 1 };
