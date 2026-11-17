@@ -96,6 +96,7 @@
 - GA 맞춤 정의: 이벤트 8(asset_type·category·content_type·method·result·source·step·nav_source) + 사용자 4(app_mode·onboarding_state·sync_enabled·theme) 모두 등록 확인(코드 PARAM_VALUES와 1:1). 이전 "등록 필요" 안내는 해소 — ⚠️ 2026-11-16 cto D6: v4.41 이후 page_title·page_location만 전송, 이 맞춤 정의 값은 미전송(title로만 판독)
 
 ## 후보 목록
+- [p2 후보, 데모 품질, v5.125 ui-review R2] 데모(?demo=1) 실시세 적용 시 '내 매입가 대비'가 과대(+633% 등) — 데모 평단(averagePrice)도 실시세 배율로 재기준(demo-live-rebase 재사용). 데모 전 화면 숫자 변경이라 단독 판단
 - **[D4 2026-11-16 cto] 선정 0건 — 직접 기여 레버 대기**(재방문 5.115 효과 대기·신규 유입 4.86 판독 ~12/9·홈 도넛 4.90 창). **11/18 GA CSV 수령 당일 D 재수행**(설치→알림→누름 깔때기·저장 보호·첫 저장 절대 기기 수, 판독 창 밖 단절 단계만 선정). 근거 issues/_discovery/2026-11-16-d4-selection.md
 - [12/11 같은 결 묶음 1건] 결산 리포트 금색 선(asset-report-view 547·582·605) · 달력 '종가 기준' 11px(net-asset-chart 611) · 성과 펼침 버튼 '기준 종가 비교' 이름 — 12/11 이후 1릴리스
 - [12/1 planning·12/11+ 머지] 홈 도넛 금액 3중 표시 정리 / [주간 기획] 수익 숫자 정의 통일 / [p3] 세금 마감 주말 이월(≤2027-06)·VAPID 재구독·차트 SVG 글자
