@@ -10,7 +10,7 @@ import type { Stock } from "@/types/asset";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { computeStockMetrics, getMultiplier, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { profitTone } from "@/app/(main)/_components/views/detail/detail-summary-header";
-import { isStockLabelKey, stockLabelTime, type StockLabelItem, type StockLabels } from "@/lib/asset/stock-labels";
+import { isStockLabelKey, stockLabelTime, type StockLabelBase, type StockLabelItem, type StockLabels } from "@/lib/asset/stock-labels";
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -69,6 +69,8 @@ export interface GrowRow {
   category: string;
   /** 원화 평가액 — 비중 순 정렬용(화면에 그리지 않는다) */
   value: number;
+  /** 무게 줄 분자 — 상장폐지 보유분은 분모에서 빠지므로 여기서도 뺀 평가액 */
+  weightValue: number;
   /** `34.0%` — 전체 탭 행과 같은 문자열. 시세 미조회면 `—` */
   weightText: string;
   /** `+52.0%`·`-18.0%` — 전체 탭 행과 같은 문자열. 시세 미조회면 `—` */
@@ -78,6 +80,8 @@ export interface GrowRow {
   labelFact: string | null;
   /** 주기 경과 문구. 지나지 않았으면 null */
   overdueFact: string | null;
+  /** 수량 비교 — 정한 날의 내 기록과 지금의 내 기록. 당일·base 없는 항목·이름표 없는 행은 null */
+  qtyFact: { state: "same" | "changed"; text: string } | null;
   /** 오늘 이미 점검을 눌렀는지 */
   checkedToday: boolean;
 }
@@ -105,6 +109,63 @@ function labelFactOf(item: StockLabelItem, nowMs: number): { fact: string | null
   return { fact: null, checkedToday: false };
 }
 
+const valueOf = (s: Stock, rates: { USD: number; JPY: number }) => s.quantity * s.currentPrice * getMultiplier(s.currency, rates);
+const counted = (s: Stock) => s.inactiveStatus !== "delisted";
+
+/** 비중 분모(전체 탭과 같은 값: 상장폐지 제외 전 종목의 원화 평가액 합)와 시세 없는 종목 유무 */
+export function growTotals(stocks: Stock[], exchangeRates: { USD: number; JPY: number }): { totalValue: number; hasUnpriced: boolean } {
+  const active = stocks.filter(counted);
+  return {
+    totalValue: active.reduce((sum, s) => sum + valueOf(s, exchangeRates), 0),
+    hasUnpriced: active.some((s) => !(s.currentPrice > 0)),
+  };
+}
+
+/** 수량 표기 — 종목 페이지 `총 N주`와 같은 방식 */
+export const formatQty = (qty: number): string => `${qty.toLocaleString()}주`;
+
+/** 이름표 키(normalizeTicker)별 보유 수량 합 — 계좌·분류·증권사 무관, 원문 티커가 달라 나뉜 행도 합친다 */
+export function qtyByLabelKey(stocks: Stock[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const s of stocks) {
+    if (!s.ticker) continue;
+    const key = normalizeTicker(s);
+    map.set(key, (map.get(key) ?? 0) + s.quantity);
+  }
+  return map;
+}
+
+/**
+ * 이름표를 붙이는 순간의 기준값. 수량은 지금 수량과 같은 함수(qtyByLabelKey).
+ * 시세는 종목 통화 그대로, 그 종목 시세가 없으면 비운다. 비중은 시세 없는 종목이 하나라도 있으면(분모가 틀린다) 비운다.
+ */
+export function buildLabelBase(stocks: Stock[], exchangeRates: { USD: number; JPY: number }, ticker: string): StockLabelBase | undefined {
+  const mine = stocks.filter((s) => s.ticker && normalizeTicker(s) === ticker);
+  const qty = mine.reduce((sum, s) => sum + s.quantity, 0);
+  if (!(Number.isFinite(qty) && qty > 0)) return undefined;
+  const priced = mine.find((s) => s.currentPrice > 0);
+  const { totalValue, hasUnpriced } = growTotals(stocks, exchangeRates);
+  const weight = !hasUnpriced && totalValue > 0
+    ? Math.round((mine.filter(counted).reduce((sum, s) => sum + valueOf(s, exchangeRates), 0) / totalValue) * 10000) / 100
+    : null;
+  return {
+    qty,
+    ...(priced ? { price: priced.currentPrice } : {}),
+    ...(priced?.baseDate ? { priceAt: priced.baseDate } : {}),
+    ...(weight !== null && weight >= 0 && weight <= 100 ? { weight } : {}),
+  };
+}
+
+/** 수량 비교 문장 — 표시 문자열이 같으면 '그대로'(소수 수량의 부동소수 오차로 다르게 뜨지 않게). 늘고 준 방향은 말하지 않는다 */
+function qtyFactOf(item: StockLabelItem | undefined, nowQty: number | undefined, nowMs: number): GrowRow["qtyFact"] {
+  if (!item || item.label === null || !item.base || nowQty === undefined) return null;
+  const e = elapsedSince(item.labeledAt, nowMs);
+  if (!e || e.days === 0) return null;
+  const then = formatQty(item.base.qty);
+  const now = formatQty(nowQty);
+  return then === now ? { state: "same", text: "정한 뒤 수량 그대로" } : { state: "changed", text: `정한 날 ${then} → 지금 ${now}` };
+}
+
 /**
  * 종목 행 목록 — 비중 큰 순. 티커 없는 수동 종목은 행을 만들지 않는다(비중 분모에는 포함 — 전체 탭과 같은 값).
  * 정렬(주기 지난 행 위로)과 접힘은 화면이 진입·주기 변경 시점에만 정한다(sortGrowRowKeys).
@@ -116,9 +177,8 @@ export function buildGrowRows(
   nowMs: number,
 ): GrowRow[] {
   // 전체 탭과 같은 분모: 상장폐지 제외 전 종목의 원화 평가액 합
-  const totalValue = stocks
-    .filter((s) => s.inactiveStatus !== "delisted")
-    .reduce((sum, s) => sum + s.quantity * s.currentPrice * getMultiplier(s.currency, exchangeRates), 0);
+  const { totalValue } = growTotals(stocks, exchangeRates);
+  const qtyNow = qtyByLabelKey(stocks);
 
   const rows: GrowRow[] = [];
   for (const [key, items] of groupStocksByTicker(stocks)) {
@@ -144,11 +204,13 @@ export function buildGrowRows(
       rawTicker: merged.ticker || "",
       category: merged.category,
       value: m.currentVal,
+      weightValue: items.filter(counted).reduce((sum, s) => sum + valueOf(s, exchangeRates), 0),
       weightText: priced ? `${m.pct.toFixed(1)}%` : "—",
       rateText: priced ? `${tone.sign}${tone.rate.toFixed(1)}%` : "—",
       labelState: !item ? "unset" : item.label === null ? "none" : item.label,
       labelFact: fact,
       overdueFact,
+      qtyFact: qtyFactOf(item, qtyNow.get(ticker), nowMs),
       checkedToday,
     });
   }
@@ -165,28 +227,63 @@ export function collapsedGrowRowKeys(orderedRows: GrowRow[], visibleCount = 3): 
   return orderedRows.filter((r, i) => i >= visibleCount && !r.overdueFact).map((r) => r.key);
 }
 
+export interface GrowWeight {
+  /** 종목(행) 수 */
+  count: number;
+  /** `58.4%` 또는 `—`(시세 없는 종목이 있을 때) */
+  pctText: string;
+  /** 막대 조각 폭(표시값과 같은 수). 비중을 낼 수 없으면 null */
+  pct: number | null;
+}
+
 export interface GrowSummary {
   keep: number;
   check: number;
   none: number;
   /** 보유 중인 '점검할 자산'의 가장 최근 점검 — `마지막 점검 N개월 전`. 기록이 없으면 null */
   lastCheckText: string | null;
+  /** 무게 줄 — 이름표별 내 주식 비중. 세 표시값의 합은 100.0 */
+  weights: { keep: GrowWeight; check: GrowWeight; none: GrowWeight };
 }
 
-/** 요약 — 사용자가 붙인 개수만 센다. 세 수의 합 = 행 수. 같은 이름표를 함께 쓰는 행도 행마다 센다 */
-export function summarizeGrowRows(rows: GrowRow[], labels: StockLabels, nowMs: number): GrowSummary {
+/**
+ * 요약 — 사용자가 붙인 개수와 그 묶음의 내 주식 비중. 세 수의 합 = 행 수, 세 비중의 합 = 100.0.
+ * 비중은 행 평가액 합 ÷ 행 비중과 같은 분모로 내고(행에 표시된 %를 더하지 않는다), '정하지 않음'은 100 − 나머지 둘의 표시값
+ * (티커 없는 종목의 몫 포함). 시세 없는 종목이 하나라도 있으면 분모가 틀리므로 비중은 `—`.
+ * 이 값으로 정렬하거나 이름표끼리 견주지 않는다.
+ */
+export function summarizeGrowRows(
+  rows: GrowRow[],
+  labels: StockLabels,
+  nowMs: number,
+  totals: { totalValue: number; hasUnpriced: boolean },
+): GrowSummary {
   let keep = 0;
   let check = 0;
+  let keepValue = 0;
+  let checkValue = 0;
   let latest: string | null = null;
   for (const r of rows) {
-    if (r.labelState === "keep") keep++;
+    if (r.labelState === "keep") { keep++; keepValue += r.weightValue; }
     else if (r.labelState === "check") {
       check++;
+      checkValue += r.weightValue;
       const at = labels.items[r.ticker]?.checkedAt;
       const ms = stockLabelTime(at);
       if (ms !== null && (latest === null || ms > stockLabelTime(latest)!)) latest = at!;
     }
   }
+  const none = rows.length - keep - check;
   const e = latest ? elapsedSince(latest, nowMs) : null;
-  return { keep, check, none: rows.length - keep - check, lastCheckText: e ? `마지막 점검 ${formatAgo(e)}` : null };
+  const usable = !totals.hasUnpriced && totals.totalValue > 0;
+  const shown = (value: number) => Number(((value / totals.totalValue) * 100).toFixed(1));
+  const weight = (count: number, pct: number | null): GrowWeight => ({ count, pct, pctText: pct === null ? "—" : `${pct.toFixed(1)}%` });
+  const keepPct = usable ? shown(keepValue) : null;
+  const checkPct = usable ? shown(checkValue) : null;
+  const nonePct = keepPct !== null && checkPct !== null ? Math.max(0, Number((100 - keepPct - checkPct).toFixed(1))) : null;
+  return {
+    keep, check, none,
+    lastCheckText: e ? `마지막 점검 ${formatAgo(e)}` : null,
+    weights: { keep: weight(keep, keepPct), check: weight(check, checkPct), none: weight(none, nonePct) },
+  };
 }

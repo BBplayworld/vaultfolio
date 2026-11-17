@@ -16,7 +16,7 @@ import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useStockLabels } from "@/hooks/use-stock-labels";
-import { buildGrowRows, summarizeGrowRows } from "@/lib/asset/grow-rows";
+import { buildGrowRows, growTotals, summarizeGrowRows } from "@/lib/asset/grow-rows";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
 import type { SettlementWindow } from "@/lib/report/settlement";
@@ -96,7 +96,7 @@ export function PerformanceHub() {
   const [growNow] = useState(() => Date.now());
   const grow = useMemo(() => {
     const rows = buildGrowRows(assetData.stocks, exchangeRates, labels, growNow);
-    return { hasRows: rows.length > 0, ...summarizeGrowRows(rows, labels, growNow) };
+    return { hasRows: rows.length > 0, ...summarizeGrowRows(rows, labels, growNow, growTotals(assetData.stocks, exchangeRates)) };
   }, [assetData.stocks, exchangeRates, labels, growNow]);
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
@@ -204,9 +204,14 @@ export function PerformanceHub() {
           )}
           primaryClassName={ASSET_THEME.text.default}
           secondary={!hasAssets ? (
-            <span data-testid="hub-report-secondary" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
-          ) : labelsReady && grow.hasRows && grow.keep + grow.check > 0 && grow.lastCheckText ? (
-            <span data-testid="hub-report-secondary" className="text-muted-foreground tabular-nums">{grow.lastCheckText}</span>
+            <span data-testid="hub-report-secondary" data-kind="empty" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
+          ) : !labelsReady || !grow.hasRows || grow.keep + grow.check === 0 ? null : grow.keep > 0 ? (
+            // '오래 둘'이 있으면 그 무게 — 불리기 화면 무게 줄 첫 묶음과 같은 함수의 같은 문자열 값. 색·경과 표시 없음
+            <span data-testid="hub-report-secondary" data-kind="weight" data-pct={grow.weights.keep.pctText} className="whitespace-nowrap text-muted-foreground tabular-nums">
+              오래 둘 자산이 내 주식의 <span className="font-semibold text-foreground">{grow.weights.keep.pctText}</span>
+            </span>
+          ) : grow.lastCheckText ? (
+            <span data-testid="hub-report-secondary" data-kind="check" className="text-muted-foreground tabular-nums">{grow.lastCheckText}</span>
           ) : null}
           onClick={() => go("report")}
         />

@@ -35,6 +35,20 @@ describe("stockLabelActions", () => {
     expect(notify).toHaveBeenCalledTimes(3);
     expect(localStorage.getItem(STORAGE_KEYS.stockLabels)).toBe(raw);
   });
+  it("이름표를 붙일 때 넘긴 기준값이 함께 저장되고, 점검·주기로는 바뀌지 않는다(AC-28)", () => {
+    const a = actions();
+    const base = { qty: 12, price: 185.5, priceAt: "2026-11-14", weight: 20.5 };
+    expect(a.setLabel("AAPL", "check", base)?.items.AAPL.base).toEqual(base);
+    a.markChecked("AAPL"); a.setCycle(6);
+    expect(readStockLabels().items.AAPL.base).toEqual(base);
+    const first = readStockLabels().items.AAPL.labeledAt;
+    // 다른 이름표로 바꾸면 labeledAt·base가 함께 새 값
+    const next = a.setLabel("AAPL", "keep", { qty: 15 })!;
+    expect(next.items.AAPL.base).toEqual({ qty: 15 });
+    expect(next.items.AAPL.labeledAt).not.toBe(first);
+    // '정하지 않음' 표식에는 base가 없다
+    expect("base" in a.setLabel("AAPL", null, { qty: 99 })!.items.AAPL).toBe(false);
+  });
   it("grow_label: 유효 이름표 0→1일 때만 1회. 둘째 이름표·'정하지 않음' 표식·주기는 보내지 않는다", () => {
     const a = actions();
     a.setCycle(6);

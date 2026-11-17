@@ -169,6 +169,7 @@ describe("featureTitleOf 매핑", () => {
     // 5.125 #239 — 주 지표·보조 지표 title 고정. 매핑이 빠지면 화면 title `성과·자산 성적표`에 섞인다
     ["feature_use", { category: "grow_label" }, "내 자산 불리기·이름표"],
     ["feature_use", { category: "grow_check" }, "내 자산 불리기·체크"],
+    ["feature_use", { category: "grow_revisit" }, "내 자산 불리기·다시 봄"], // 인사이트 보조 지표 — 붙인 날과 다른 날 다시 열 때
     ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
     ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
@@ -307,6 +308,7 @@ describe("내 자산 불리기 GA (5.125 #239)", () => {
   it.each([
     ["grow_label", "내 자산 불리기·이름표"],
     ["grow_check", "내 자산 불리기·체크"],
+    ["grow_revisit", "내 자산 불리기·다시 봄"],
   ] as const)("%s는 성적표 화면에서도 자기 title로 가고 page_title·page_location 외 값을 싣지 않는다", (category, title) => {
     trackScreen("activity:report");
     gtag.mockClear();
@@ -321,11 +323,12 @@ describe("내 자산 불리기 GA (5.125 #239)", () => {
     expect(featureTitleOf("feature_use", {}, "activity:report")).toBe("성과·자산 성적표");
   });
 
-  it("체험 중에는 두 category 모두 전송 0", () => {
+  it("체험 중에는 세 category 모두 전송 0", () => {
     markTrialActive();
     try {
       track("feature_use", { category: "grow_label" });
       track("feature_use", { category: "grow_check" });
+      track("feature_use", { category: "grow_revisit" });
       expect(gtag).not.toHaveBeenCalled();
     } finally {
       __resetTrialModeForTest();

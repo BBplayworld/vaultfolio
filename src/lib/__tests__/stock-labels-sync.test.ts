@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAssetData, saveAssetData } from "../asset/asset-storage";
 import {
-  emptyStockLabels, markStockChecked, readStockLabels, setStockLabel, setStockLabelCycle, writeStockLabels,
+  applyIncomingStockLabels, emptyStockLabels, markStockChecked, readStockLabels, setStockLabel, setStockLabelCycle, writeStockLabels,
   type StockLabelCycleMonths, type StockLabelKind,
 } from "../asset/stock-labels";
 import { decryptPayload, deriveKeys, encryptPayload, type AssetKeys } from "../cloud-sync/crypto";
@@ -25,7 +25,17 @@ const labelsOf = (n: Name) => { on(n); return readStockLabels(); };
 const rawOf = (n: Name) => { on(n); return localStorage.getItem(STORAGE_KEYS.stockLabels); };
 
 // 훅(use-stock-labels)의 저장 경로와 같은 순서: 저장소의 지금 값을 읽어 편집을 얹어 쓴다
-const label = (n: Name, ticker: string, kind: StockLabelKind | null) => { on(n); writeStockLabels(setStockLabel(readStockLabels(), ticker, kind, now())); };
+// rich = 'base + 미래 필드' 픽스처로 같은 순환을 다시 돌린다(AC-31). 미래 필드는 그 항목과 최상위에 얹는다
+let rich = false;
+const RICH_BASE = { qty: 7.5, price: 123.4, priceAt: "2026-11-14", weight: 12.34, futureBase: { lots: [1] } };
+const label = (n: Name, ticker: string, kind: StockLabelKind | null) => {
+  on(n);
+  let next = setStockLabel(readStockLabels(), ticker, kind, now(), rich ? RICH_BASE : undefined);
+  if (rich && next.items[ticker]) {
+    next = { ...next, futureTop: { from: "다음 버전" }, items: { ...next.items, [ticker]: { ...next.items[ticker], futureItem: ["x", 1] } } };
+  }
+  writeStockLabels(next);
+};
 const checked = (n: Name, ticker: string) => { on(n); writeStockLabels(markStockChecked(readStockLabels(), ticker, now())); };
 const cycle = (n: Name, m: StockLabelCycleMonths) => { on(n); writeStockLabels(setStockLabelCycle(readStockLabels(), m, now())); };
 
@@ -81,6 +91,13 @@ afterEach(() => {
   delete g.window; delete g.localStorage; delete g.fetch;
 });
 
+describe.each([
+  ["기존 형태", false],
+  ["base + 미래 필드 포함", true],
+])("동기화 순환 ③⑤·AC-18 — %s", (_name, useRich) => {
+beforeEach(() => { rich = useRich; });
+afterEach(() => { rich = false; });
+
 describe("AC-18 — 저장 뒤 push하면 다른 기기 pull에서 같은 값", () => {
   it("이름표·점검·주기가 그대로 건너가고, 변화가 없으면 재-push가 없다", async () => {
     label("A", "005930", "keep");
@@ -102,7 +119,7 @@ describe("AC-18 — 저장 뒤 push하면 다른 기기 pull에서 같은 값", 
     await push("A");
     expect(putBodies).toHaveLength(1);
     expect(Object.keys(JSON.parse(putBodies[0])).sort()).toEqual(["baseVersion", "ciphertext", "iv", "pubKey"]); // main과 같은 필드(추가 0)
-    for (const word of ["AAPL", "stockLabels", "check", "labeledAt"]) expect(putBodies[0]).not.toContain(word);
+    for (const word of ["AAPL", "stockLabels", "check", "labeledAt", "qty", "weight", "price", "\"base\"", "futureTop"]) expect(putBodies[0]).not.toContain(word);
     expect((await serverPayload()).stockLabels).toEqual(labelsOf("A")); // 복호화하면 최상위 필드
   });
   it("이름표가 없는 기기의 push에는 필드가 없고, 받는 기기의 이름표를 지우지 않는다", async () => {
@@ -222,5 +239,97 @@ describe("⑤ 두 기기 동시 수정 — 티커별 병합·삭제 표식", () 
     expect(fresh.status === "ok" && fresh.mergedAdditions).toBe(false);
     expect(labelsOf("B")).toEqual(labelsOf("A"));
     expect(labelsOf("B")).not.toEqual(emptyStockLabels());
+  });
+});
+}); // describe.each 끝
+
+describe("⑨ 모르는 필드 보존 — push·pull 순환(AC-31)", () => {
+  // 다음 버전 기기가 4곳에 필드를 더해 둔 값
+  const futurePayload = () => ({
+    futureTop: { goals: [1, 2] },
+    v: 1,
+    cycle: { months: 3, at: "2026-11-10T03:00:00.000Z", futureCycle: "주기에 딸린 값" },
+    items: {
+      AAPL: { label: "check", labeledAt: "2026-11-10T03:00:00.000Z", base: { qty: 12, price: 185.5, priceAt: "2026-11-10", weight: 20.5, futureBase: [9] }, futureItem: { a: 1 }, at: "2026-11-10T03:00:00.000Z" },
+    },
+  });
+  const seedA = () => { on("A"); writeStockLabels(futurePayload() as never); };
+  it("읽기 → 다른 종목 이름표 저장 → 같은 항목 점검 → push → 다른 기기 pull 결과에 값 그대로", async () => {
+    seedA();
+    at("2026-11-18T03:00:00Z");
+    label("A", "NVDA", "keep");
+    checked("A", "AAPL");
+    expect((await push("A")).status).toBe("ok");
+    const sent = (await serverPayload()).stockLabels as ReturnType<typeof futurePayload>;
+    expect(sent.futureTop).toEqual({ goals: [1, 2] });
+    expect(sent.cycle).toEqual(futurePayload().cycle);
+    expect(sent.items.AAPL).toEqual({ ...futurePayload().items.AAPL, checkedAt: "2026-11-18T03:00:00.000Z", at: "2026-11-18T03:00:00.000Z" });
+    expect((await pullLikeProvider("C")).repushed).toBe(false);
+    expect(labelsOf("C")).toEqual(labelsOf("A"));
+    expect(labelsOf("C").items.AAPL.futureItem).toEqual({ a: 1 });
+    expect(labelsOf("C").items.AAPL.base).toEqual(futurePayload().items.AAPL.base);
+    expect((await pullLikeProvider("A")).repushed).toBe(false); // 같은 값이면 재-push 연쇄 없음
+  });
+  it("이름표를 바꾼 항목만 미래 필드와 옛 base가 사라지고, 최상위·cycle은 남는다", async () => {
+    seedA();
+    at("2026-11-18T03:00:00Z");
+    label("A", "AAPL", "keep");
+    await push("A");
+    await pull("C");
+    const c = labelsOf("C");
+    expect(c.items.AAPL).toEqual({ label: "keep", labeledAt: "2026-11-18T03:00:00.000Z", at: "2026-11-18T03:00:00.000Z" });
+    expect([c.futureTop, c.cycle.futureCycle]).toEqual([{ goals: [1, 2] }, "주기에 딸린 값"]);
+  });
+  it("구버전(4.53) 기기가 덮어도 미래 필드째 복구된다", async () => {
+    seedA();
+    await push("A");
+    await oldPull();
+    on("B"); legacy.save({ ...legacy.read(), nickname: "B 편집" });
+    expect(await oldPush()).toBe("ok");
+    expect((await pullLikeProvider("A")).repushed).toBe(true);
+    expect((await serverPayload()).stockLabels).toEqual(futurePayload());
+  });
+});
+
+describe("⑩ base 왕복 — 두 기기 push → pull(AC-31)", () => {
+  const BASE = { qty: 12, price: 185.5, priceAt: "2026-11-14", weight: 20.5 };
+  const labelWith = (n: Name, ticker: string, kind: StockLabelKind, base: { qty: number; price?: number; priceAt?: string; weight?: number }) => {
+    on(n); writeStockLabels(setStockLabel(readStockLabels(), ticker, kind, now(), base));
+  };
+  it("A가 붙인 base 4필드가 C에서 같고, 점검·주기 변경 뒤에도 그대로 건너간다", async () => {
+    labelWith("A", "AAPL", "check", BASE);
+    await push("A");
+    await pull("C");
+    expect(labelsOf("C").items.AAPL.base).toEqual(BASE);
+    at("2026-11-18T03:00:00Z");
+    checked("C", "AAPL"); cycle("C", 6);
+    await push("C");
+    expect((await pullLikeProvider("A")).repushed).toBe(false);
+    expect(labelsOf("A").items.AAPL).toMatchObject({ base: BASE, checkedAt: "2026-11-18T03:00:00.000Z", labeledAt: "2026-11-17T03:00:00.000Z" });
+  });
+  it("같은 티커를 두 기기가 다른 base로 저장 → 늦은 쪽 값만 남고 진 쪽 필드가 섞이지 않는다", async () => {
+    labelWith("A", "AAPL", "keep", BASE);
+    await push("A");
+    await pull("C");
+    at("2026-11-18T01:00:00Z"); labelWith("A", "AAPL", "check", { qty: 30, price: 1, priceAt: "2026-11-18", weight: 1 });
+    at("2026-11-18T02:00:00Z"); labelWith("C", "AAPL", "check", { qty: 5 });
+    await push("A");
+    await pullLikeProvider("C");
+    await pullLikeProvider("A");
+    expect(labelsOf("A").items.AAPL.base).toEqual({ qty: 5 });
+    expect(labelsOf("C").items.AAPL.base).toEqual({ qty: 5 });
+  });
+  it("base만 다른 같은 시각 값: base 있는 쪽이 남고, base 없는 값이 와도 잃지 않고 다시 올린다", async () => {
+    label("A", "AAPL", "keep"); // base 없는 항목(보강 이전 내부 빌드 형태)
+    await push("A");
+    await pull("C");
+    on("C"); const cur = readStockLabels();
+    writeStockLabels({ ...cur, items: { ...cur.items, AAPL: { ...cur.items.AAPL, base: BASE } } });
+    await push("C");
+    await pullLikeProvider("A");
+    expect(labelsOf("A").items.AAPL.base).toEqual(BASE);
+    on("A");
+    expect(applyIncomingStockLabels(cur, { merge: true })).toEqual({ repush: true }); // base를 버린 값이 되돌아온 경우
+    expect(labelsOf("A").items.AAPL.base).toEqual(BASE);
   });
 });

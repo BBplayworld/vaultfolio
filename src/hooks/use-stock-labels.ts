@@ -13,7 +13,7 @@ import { notifyAssetUserEdit, useAssetData } from "@/contexts/asset-data-context
 import { track } from "@/lib/analytics/ga";
 import {
   countValidLabels, emptyStockLabels, markStockChecked, readStockLabels, setStockLabel, setStockLabelCycle, writeStockLabels,
-  type StockLabelCycleMonths, type StockLabelKind, type StockLabels,
+  type StockLabelBase, type StockLabelCycleMonths, type StockLabelKind, type StockLabels,
 } from "@/lib/asset/stock-labels";
 
 export interface StockLabelActionDeps {
@@ -42,8 +42,9 @@ export function stockLabelActions({ notify, track: send, now }: StockLabelAction
     return { before, after };
   };
   return {
-    setLabel(ticker: string, label: StockLabelKind | null): StockLabels | null {
-      const r = commit((cur) => setStockLabel(cur, ticker, label, now()));
+    /** base = 붙이는 순간의 기준값(화면이 grow-rows.buildLabelBase로 만들어 넘긴다 — 저장 모듈은 자산을 읽지 않는다) */
+    setLabel(ticker: string, label: StockLabelKind | null, base?: StockLabelBase): StockLabels | null {
+      const r = commit((cur) => setStockLabel(cur, ticker, label, now(), base));
       // 주 지표 — 저장소의 유효 이름표가 0개 → 1개가 된 저장 직후 1회(별도 플래그 키 없음)
       if (r && countValidLabels(r.before) === 0 && countValidLabels(r.after) > 0) send("grow_label");
       return r?.after ?? null;
@@ -77,7 +78,7 @@ export function useStockLabels() {
     });
     const show = (next: StockLabels | null) => { if (next) setLabels(next); };
     return {
-      setLabel: (ticker: string, label: StockLabelKind | null) => show(a.setLabel(ticker, label)),
+      setLabel: (ticker: string, label: StockLabelKind | null, base?: StockLabelBase) => show(a.setLabel(ticker, label, base)),
       markChecked: (ticker: string) => show(a.markChecked(ticker)),
       setCycle: (months: StockLabelCycleMonths) => show(a.setCycle(months)),
     };

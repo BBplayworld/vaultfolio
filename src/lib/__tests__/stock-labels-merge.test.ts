@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Stock } from "@/types/asset";
 import {
   countValidLabels, emptyStockLabels, hasStockLabelRecords, markStockChecked, mergeStockLabels, parseStockLabels, sameStockLabels,
-  setStockLabel, setStockLabelCycle, type StockLabels,
+  isStockLabelRevisit, setStockLabel, setStockLabelCycle, STOCK_LABEL_EXTRA_LIMIT, type StockLabels,
 } from "../asset/stock-labels";
 import {
-  buildGrowRows, collapsedGrowRowKeys, elapsedSince, formatAgo, formatSince, sortGrowRowKeys, summarizeGrowRows,
+  buildGrowRows, buildLabelBase, collapsedGrowRowKeys, elapsedSince, formatAgo, formatQty, formatSince, growTotals, qtyByLabelKey, sortGrowRowKeys,
+  summarizeGrowRows,
 } from "../asset/grow-rows";
 import { computeStockMetrics, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 
@@ -39,7 +40,7 @@ describe("parseStockLabels — 완화 파싱", () => {
       },
     })!;
     expect(Object.keys(r.items).sort()).toEqual(["005930", "BRK/B"]);
-    expect(r.items["BRK/B"]).toEqual(none(T("2026-01-02"))); // 모르는 필드(메모·금액)는 버린다
+    expect(r.items["BRK/B"]).toEqual({ ...none(T("2026-01-02")), memo: "저장하지 않는 필드", amount: 1 }); // 모르는 필드는 버리지 않고 싣는다(5.125 인사이트 — 다음 버전 필드 보존)
     expect(r.cycle).toEqual({ months: null, at: "" }); // 3·6·12 밖 주기는 미설정
   });
 });
@@ -281,13 +282,289 @@ describe("정렬·접힘(AC-6·6a)·요약(AC-5·8)", () => {
       SOLD: keep(T("2026-01-01")), SOLD2: check(T("2026-01-01"), "2026-11-16"),
     });
     const rows = buildGrowRows(many, RATES, labels, NOW);
-    const s = summarizeGrowRows(rows, labels, NOW);
-    expect(s).toEqual({ keep: 1, check: 2, none: 4, lastCheckText: "마지막 점검 29일 전" }); // 보유 중인 것 중 가장 최근
+    const s = summarizeGrowRows(rows, labels, NOW, growTotals(many, RATES));
+    expect(s).toMatchObject({ keep: 1, check: 2, none: 4, lastCheckText: "마지막 점검 29일 전" }); // 보유 중인 것 중 가장 최근
     expect(s.keep + s.check + s.none).toBe(rows.length);
   });
   it("이름표 0개: 개수 0·점검 문구 없음(화면은 숫자를 그리지 않는다)", () => {
     const rows = buildGrowRows(many, RATES, emptyStockLabels(), NOW);
-    expect(summarizeGrowRows(rows, emptyStockLabels(), NOW)).toEqual({ keep: 0, check: 0, none: 7, lastCheckText: null });
+    expect(summarizeGrowRows(rows, emptyStockLabels(), NOW, growTotals(many, RATES))).toMatchObject({ keep: 0, check: 0, none: 7, lastCheckText: null });
     expect(rows.every((r) => r.labelState === "unset" && r.labelFact === null)).toBe(true);
+  });
+});
+
+// ─── 5.125 인사이트 증분: 기준값 base · 모르는 필드 보존 · 수량 비교 · 무게 줄 · 다시 봄 ───────────────
+
+const BASE = { qty: 12, price: 185.5, priceAt: "2026-03-01", weight: 21.84 };
+// 다음 버전이 더했다고 가정한 필드 — 4곳(최상위·cycle·항목·base)
+const FUTURE = (): StockLabels => ({
+  futureTop: { goals: [1, 2], note: "최상위" },
+  v: 1,
+  cycle: { months: 3, at: T("2026-01-01"), futureCycle: "주기에 딸린 값" },
+  items: {
+    AAPL: { label: "check", labeledAt: T("2026-03-01"), base: { ...BASE, futureBase: { lots: [3, 9] } }, futureItem: ["x", { y: 1 }], at: T("2026-03-01") },
+    "005930": { label: "keep", labeledAt: T("2026-02-01"), base: { qty: 65 }, at: T("2026-02-01") },
+  },
+} as StockLabels);
+
+describe("base 읽기(AC-27) — qty가 손상이면 base 전체가 없는 것, 나머지는 틀린 필드만 뺀다", () => {
+  const parseBase = (base: unknown) => parseStockLabels({ v: 1, cycle: {}, items: { AAPL: { ...keep(T("2026-01-01")), base } } })!.items.AAPL;
+  it("정상 4필드는 그대로", () => expect(parseBase(BASE).base).toEqual(BASE));
+  it.each([["0", 0], ["음수", -3], ["문자열", "12"], ["NaN", Number.NaN], ["없음", undefined]])("qty %s → base 없음(항목은 정상)", (_n, qty) => {
+    const item = parseBase({ ...BASE, qty });
+    expect(item.base).toBeUndefined();
+    expect(item.label).toBe("keep");
+  });
+  it("base가 객체가 아니면 없음", () => {
+    for (const bad of [null, 5, "x", [1]]) expect(parseBase(bad).base).toBeUndefined();
+  });
+  it("price·priceAt·weight는 틀린 것만 빠진다", () => {
+    expect(parseBase({ qty: 1.5, price: 0, priceAt: "언젠가", weight: 120 }).base).toEqual({ qty: 1.5 });
+    expect(parseBase({ qty: 1.5, price: -1, priceAt: "2026-03-01", weight: 0 }).base).toEqual({ qty: 1.5, priceAt: "2026-03-01", weight: 0 });
+  });
+});
+
+describe("⑨ 모르는 필드 보존(AC-31) — 읽기·편집·병합 순수 함수", () => {
+  it("4곳의 미래 필드가 읽기 뒤에 값 그대로 있다", () => {
+    const r = parseStockLabels(JSON.parse(JSON.stringify(FUTURE())))!;
+    expect(r).toEqual(FUTURE());
+    expect(r.futureTop).toEqual({ goals: [1, 2], note: "최상위" });
+    expect(r.cycle.futureCycle).toBe("주기에 딸린 값");
+    expect(r.items.AAPL.futureItem).toEqual(["x", { y: 1 }]);
+    expect(r.items.AAPL.base!.futureBase).toEqual({ lots: [3, 9] });
+  });
+  it("다른 종목 이름표 저장·같은 항목 점검 뒤에도 남는다", () => {
+    let s = parseStockLabels(FUTURE())!;
+    s = setStockLabel(s, "NVDA", "keep", T("2026-04-01"), { qty: 8 });
+    s = markStockChecked(s, "AAPL", T("2026-04-02"));
+    expect(s.futureTop).toEqual(FUTURE().futureTop);
+    expect(s.cycle).toEqual(FUTURE().cycle);
+    expect(s.items.AAPL).toEqual({ ...FUTURE().items.AAPL, checkedAt: T("2026-04-02"), at: T("2026-04-02") });
+    expect(s.items.NVDA).toEqual({ label: "keep", labeledAt: T("2026-04-01"), base: { qty: 8 }, at: T("2026-04-01") });
+  });
+  it("값을 새로 정하는 편집만 그 객체의 모르는 필드를 버린다: 이름표 변경 → 그 항목, 주기 변경 → cycle. 최상위는 항상 남는다", () => {
+    let s = parseStockLabels(FUTURE())!;
+    s = setStockLabel(s, "AAPL", "keep", T("2026-04-01"), { qty: 15 });
+    expect(s.items.AAPL).toEqual({ label: "keep", labeledAt: T("2026-04-01"), base: { qty: 15 }, at: T("2026-04-01") });
+    expect(s.cycle.futureCycle).toBe("주기에 딸린 값"); // 다른 객체는 그대로
+    s = setStockLabelCycle(s, 6, T("2026-04-02"));
+    expect(s.cycle).toEqual({ months: 6, at: T("2026-04-02") });
+    s = setStockLabel(s, "005930", null, T("2026-04-03"));
+    expect(s.futureTop).toEqual(FUTURE().futureTop);
+  });
+  it("병합: 이긴 항목이 모르는 필드를 통째로 가져오고, cycle은 이긴 쪽, 최상위는 키별 합집합", () => {
+    const local = parseStockLabels(FUTURE())!;
+    const remote = mk({ AAPL: keep(T("2026-01-01")), TSLA: keep(T("2026-05-01")) }, { months: 12, at: T("2025-01-01") });
+    (remote as StockLabels).otherTop = 7;
+    const m = mergeStockLabels(local, remote);
+    expect(m.items.AAPL).toEqual(FUTURE().items.AAPL);
+    expect(m.cycle).toEqual(FUTURE().cycle);
+    expect([m.futureTop, m.otherTop]).toEqual([FUTURE().futureTop, 7]);
+    expect(sameStockLabels(m, mergeStockLabels(remote, local))).toBe(true);
+    // 진 쪽이 되면 통째로 사라진다(필드 단위로 섞이지 않는다)
+    const newerRemote = mk({ AAPL: keep(T("2026-06-01")) }, { months: 12, at: T("2026-06-01") });
+    const m2 = mergeStockLabels(local, newerRemote);
+    expect(m2.items.AAPL).toEqual(keep(T("2026-06-01")));
+    expect(m2.cycle).toEqual({ months: 12, at: T("2026-06-01") });
+    expect(m2.futureTop).toEqual(FUTURE().futureTop);
+  });
+  it("최상위 같은 키가 다르면 어느 쪽에서 합쳐도 같은 값", () => {
+    const a = { ...mk({}), shared: "짧음" } as StockLabels;
+    const b = { ...mk({}), shared: "더 긴 값" } as StockLabels;
+    expect(mergeStockLabels(a, b).shared).toBe("더 긴 값");
+    expect(mergeStockLabels(b, a).shared).toBe("더 긴 값");
+  });
+  it("크기 상한: 넘은 객체의 모르는 필드만 전부 버린다(아는 필드와 다른 객체는 그대로)", () => {
+    const big = "가".repeat(STOCK_LABEL_EXTRA_LIMIT.item);
+    const v = FUTURE();
+    v.items.AAPL.futureItem = big;                       // 항목 상한 초과(base 안 포함)
+    v.items["005930"].small = "남는다";
+    const r = parseStockLabels(v)!;
+    expect(r.items.AAPL).toEqual({ label: "check", labeledAt: T("2026-03-01"), base: BASE, at: T("2026-03-01") });
+    expect(r.items["005930"].small).toBe("남는다");
+    expect(r.cycle.futureCycle).toBe("주기에 딸린 값");
+    const top = parseStockLabels({ ...FUTURE(), huge: "나".repeat(STOCK_LABEL_EXTRA_LIMIT.top) })!;
+    expect(top.futureTop).toBeUndefined();
+    expect(top.huge).toBeUndefined();
+    expect(top.items.AAPL.futureItem).toEqual(["x", { y: 1 }]);
+    const cyc = parseStockLabels({ ...FUTURE(), cycle: { months: 3, at: T("2026-01-01"), huge: "다".repeat(STOCK_LABEL_EXTRA_LIMIT.cycle) } })!;
+    expect(cyc.cycle).toEqual({ months: 3, at: T("2026-01-01") });
+    expect([STOCK_LABEL_EXTRA_LIMIT.item, STOCK_LABEL_EXTRA_LIMIT.cycle, STOCK_LABEL_EXTRA_LIMIT.top]).toEqual([2048, 8192, 8192]);
+  });
+  it("위험 키(__proto__·constructor·prototype)는 싣지 않는다", () => {
+    const raw = JSON.parse('{"v":1,"__proto__":{"polluted":1},"constructor":{"a":1},"cycle":{"months":3,"at":"2026-01-01","prototype":1},"items":{"AAPL":{"label":"keep","labeledAt":"2026-01-01","at":"2026-01-01","__proto__":{"x":1},"constructor":2,"base":{"qty":1,"__proto__":{"z":1}}}}}');
+    const r = parseStockLabels(raw)!;
+    expect(Object.keys(r).sort()).toEqual(["cycle", "items", "v"]);
+    expect(Object.keys(r.cycle).sort()).toEqual(["at", "months"]);
+    expect(Object.keys(r.items.AAPL).sort()).toEqual(["at", "base", "label", "labeledAt"]);
+    expect(Object.keys(r.items.AAPL.base!)).toEqual(["qty"]);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+  it("원문 키 순서가 달라도 같은 값으로 본다(재-push가 반복되지 않는다)", () => {
+    const a = parseStockLabels(FUTURE())!;
+    const b = parseStockLabels(JSON.parse('{"items":{"005930":{"at":"2026-02-01T03:00:00.000Z","base":{"qty":65},"labeledAt":"2026-02-01T03:00:00.000Z","label":"keep"},"AAPL":{"futureItem":["x",{"y":1}],"at":"2026-03-01T03:00:00.000Z","base":{"futureBase":{"lots":[3,9]},"weight":21.84,"priceAt":"2026-03-01","price":185.5,"qty":12},"labeledAt":"2026-03-01T03:00:00.000Z","label":"check"}},"cycle":{"futureCycle":"주기에 딸린 값","at":"2026-01-01T03:00:00.000Z","months":3},"futureTop":{"note":"최상위","goals":[1,2]},"v":1}'))!;
+    expect(sameStockLabels(a, b)).toBe(true);
+    expect(sameStockLabels(mergeStockLabels(a, b), a)).toBe(true);
+  });
+});
+
+describe("⑩ base와 병합·편집(AC-28·31)", () => {
+  it("base는 labeledAt이 새로 쓰일 때만 쓰인다: 붙임·바꿈에는 새 값, '정하지 않음' 표식에는 없음", () => {
+    let s = setStockLabel(emptyStockLabels(), "AAPL", "keep", T("2026-01-01"), BASE);
+    expect(s.items.AAPL).toEqual({ label: "keep", labeledAt: T("2026-01-01"), base: BASE, at: T("2026-01-01") });
+    s = setStockLabel(s, "AAPL", "check", T("2026-02-01"), { qty: 15, price: 200 });
+    expect(s.items.AAPL).toEqual({ label: "check", labeledAt: T("2026-02-01"), base: { qty: 15, price: 200 }, at: T("2026-02-01") });
+    s = setStockLabel(s, "AAPL", null, T("2026-03-01"), { qty: 99 });
+    expect(s.items.AAPL).toEqual(none(T("2026-03-01")));
+    expect("base" in s.items.AAPL).toBe(false);
+  });
+  it("점검·주기 변경·같은 이름표 다시 누름으로는 base가 바뀌지 않는다", () => {
+    let s = setStockLabel(emptyStockLabels(), "AAPL", "check", T("2026-01-01"), BASE);
+    s = markStockChecked(s, "AAPL", T("2026-02-01"));
+    s = setStockLabelCycle(s, 6, T("2026-02-02"));
+    expect(setStockLabel(s, "AAPL", "check", T("2026-03-01"), { qty: 99 })).toBe(s);
+    expect(s.items.AAPL.base).toEqual(BASE);
+    expect(s.items.AAPL.labeledAt).toBe(T("2026-01-01"));
+  });
+  it("기준값이 없거나 qty가 틀리면 base 없이 저장한다", () => {
+    expect("base" in setStockLabel(emptyStockLabels(), "AAPL", "keep", T("2026-01-01")).items.AAPL).toBe(false);
+    expect("base" in setStockLabel(emptyStockLabels(), "AAPL", "keep", T("2026-01-01"), { qty: 0 }).items.AAPL).toBe(false);
+  });
+  it("같은 티커를 두 기기가 다른 base로 저장 → 늦은 쪽 4필드만 남는다(필드 단위로 섞이지 않는다)", () => {
+    const a = mk({ AAPL: { ...keep(T("2026-01-01")), base: { qty: 10, price: 100, priceAt: "2026-01-01", weight: 5 } } });
+    const b = mk({ AAPL: { ...keep(T("2026-02-01")), base: { qty: 20 } } });
+    for (const m of [mergeStockLabels(a, b), mergeStockLabels(b, a)]) expect(m.items.AAPL.base).toEqual({ qty: 20 });
+  });
+  it("at이 같으면 base 있는 쪽이 이긴다(base를 버리는 내부 빌드가 되돌려 보낸 값에 지지 않는다)", () => {
+    const withBase = mk({ AAPL: { ...keep(T("2026-01-01")), base: BASE } });
+    const without = mk({ AAPL: keep(T("2026-01-01")) });
+    expect(mergeStockLabels(withBase, without).items.AAPL.base).toEqual(BASE);
+    expect(mergeStockLabels(without, withBase).items.AAPL.base).toEqual(BASE);
+  });
+  it("base만 다른 값은 다른 값이다(같음 판정에 base가 들어간다)", () => {
+    const a = mk({ AAPL: { ...keep(T("2026-01-01")), base: { qty: 10 } } });
+    const b = mk({ AAPL: { ...keep(T("2026-01-01")), base: { qty: 11 } } });
+    expect(sameStockLabels(a, b)).toBe(false);
+    expect(sameStockLabels(a, JSON.parse(JSON.stringify(a)))).toBe(true);
+  });
+});
+
+describe("수량 비교(AC-25·27) — 정한 날의 내 기록과 지금의 내 기록", () => {
+  const withBase = (ticker: string, qty: number, labeledAt = T("2026-11-01"), kind: "keep" | "check" = "keep") =>
+    mk({ [ticker]: { label: kind, labeledAt, base: { qty }, at: labeledAt } });
+  const row = (stocks: Stock[], labels: StockLabels, ticker: string) => buildGrowRows(stocks, RATES, labels, NOW).find((r) => r.ticker === ticker)!;
+  it("수량이 같으면 `정한 뒤 수량 그대로`, 다르면 `정한 날 N주 → 지금 M주`(늘어남·줄어듦 같은 형식)", () => {
+    expect(row(STOCKS, withBase("AAPL", 5), "AAPL").qtyFact).toEqual({ state: "same", text: "정한 뒤 수량 그대로" });
+    expect(row(STOCKS, withBase("AAPL", 3), "AAPL").qtyFact).toEqual({ state: "changed", text: "정한 날 3주 → 지금 5주" });
+    expect(row(STOCKS, withBase("AAPL", 12), "AAPL").qtyFact).toEqual({ state: "changed", text: "정한 날 12주 → 지금 5주" });
+  });
+  it("'오래 둘'·'점검할' 같은 문장", () => {
+    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-01"), "check"), "AAPL").qtyFact).toEqual(row(STOCKS, withBase("AAPL", 3), "AAPL").qtyFact);
+  });
+  it("지금 수량 = 같은 이름표 키를 쓰는 모든 보유 건의 합(계좌·분류 무관) = 종목 페이지 `총 N주` 표기", () => {
+    expect(qtyByLabelKey(STOCKS).get("005930")).toBe(20); // 일반 10 + ISA 10
+    expect(row(STOCKS, withBase("005930", 12), "005930").qtyFact!.text).toBe(`정한 날 12주 → 지금 ${(20).toLocaleString()}주`);
+    expect(formatQty(1234567)).toBe(`${(1234567).toLocaleString()}주`);
+  });
+  it("소수 수량: 표시 문자열이 같으면 그대로(부동소수 오차로 다르게 뜨지 않는다)", () => {
+    const frac = [st({ id: "f1", ticker: "VOO", quantity: 0.1 }), st({ id: "f2", ticker: "VOO", quantity: 0.2, category: "isa" })];
+    expect(qtyByLabelKey(frac).get("VOO")).not.toBe(0.3); // 0.30000000000000004
+    expect(row(frac, withBase("VOO", 0.3), "VOO").qtyFact).toEqual({ state: "same", text: "정한 뒤 수량 그대로" });
+    expect(row(frac, withBase("VOO", 1.25), "VOO").qtyFact!.text).toBe("정한 날 1.25주 → 지금 0.3주");
+  });
+  it("원문 티커가 달라 두 행으로 나뉜 종목은 두 행에 같은 문장(두 행의 합)", () => {
+    const two = [st({ id: "x1", ticker: "005930", quantity: 7 }), st({ id: "x2", ticker: "005930KS", quantity: 5 })];
+    const rows = buildGrowRows(two, RATES, withBase("005930", 10), NOW);
+    expect(rows.map((r) => r.qtyFact!.text)).toEqual(["정한 날 10주 → 지금 12주", "정한 날 10주 → 지금 12주"]);
+  });
+  it("정한 날 당일은 없음, 다음 날부터 나온다", () => {
+    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-17")), "AAPL").qtyFact).toBeNull();
+    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-16")), "AAPL").qtyFact).not.toBeNull();
+  });
+  it("base 없는 항목·'정하지 않음'·이름표 없는 행은 없음(나머지 줄은 정상)", () => {
+    const noBase = row(STOCKS, mk({ AAPL: keep(T("2026-11-01")) }), "AAPL");
+    expect(noBase.qtyFact).toBeNull();
+    expect(noBase.labelFact).toBe("오래 두기로 한 지 16일");
+    const damaged = parseStockLabels({ v: 1, cycle: {}, items: { AAPL: { ...keep(T("2026-11-01")), base: { qty: -1 } } } })!;
+    expect(row(STOCKS, damaged, "AAPL").qtyFact).toBeNull();
+    expect(row(STOCKS, mk({ AAPL: { ...none(T("2026-11-01")), base: { qty: 3 } } as never }), "AAPL").qtyFact).toBeNull();
+    expect(row(STOCKS, emptyStockLabels(), "AAPL").qtyFact).toBeNull();
+  });
+  it("시세가 없어도 수량 비교는 나온다", () => {
+    const unpriced = [st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];
+    expect(row(unpriced, withBase("ZZZ", 9), "ZZZ").qtyFact!.text).toBe("정한 날 9주 → 지금 4주");
+  });
+});
+
+describe("기준값 만들기 buildLabelBase", () => {
+  it("수량은 이름표 키 합, 시세는 종목 통화 그대로, 비중은 행 비중과 같은 분모", () => {
+    const total = growTotals(STOCKS, RATES).totalValue;
+    expect(buildLabelBase(STOCKS, RATES, "AAPL")).toEqual({ qty: 5, price: 200, weight: Math.round(((5 * 200 * 1400) / total) * 10000) / 100 });
+    expect(buildLabelBase(STOCKS, RATES, "005930")).toMatchObject({ qty: 20, price: 60_000 });
+    const dated = [st({ id: "d", ticker: "AAA", quantity: 2, currentPrice: 50, baseDate: "2026-11-14" } as never)];
+    expect(buildLabelBase(dated, RATES, "AAA")).toEqual({ qty: 2, price: 50, priceAt: "2026-11-14", weight: 100 });
+  });
+  it("시세 없는 종목이 하나라도 있으면 비중만 비운다. 그 종목 자체가 시세 없음이면 시세도 비운다", () => {
+    const mixed = [...STOCKS, st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];
+    expect(buildLabelBase(mixed, RATES, "AAPL")).toEqual({ qty: 5, price: 200 });
+    expect(buildLabelBase(mixed, RATES, "ZZZ")).toEqual({ qty: 4 });
+  });
+  it("보유하지 않는 티커는 기준값이 없다", () => expect(buildLabelBase(STOCKS, RATES, "NOPE")).toBeUndefined());
+});
+
+describe("무게 줄(AC-22~24) — 이름표별 내 주식 비중", () => {
+  const sum = (stocks: Stock[], labels: StockLabels) => summarizeGrowRows(buildGrowRows(stocks, RATES, labels, NOW), labels, NOW, growTotals(stocks, RATES));
+  const labels = mk({ AAPL: keep(T("2026-11-01")), "005930": keep(T("2026-11-01")), NVDA: check(T("2026-11-01")) });
+  it("세 표시값의 합이 100.0이고 종목 수 합 = 행 수. '정하지 않음'은 티커 없는 종목 몫 포함", () => {
+    const w = sum(STOCKS, labels).weights;
+    const total = growTotals(STOCKS, RATES).totalValue;
+    expect(w.keep).toEqual({ count: 2, pct: Number((((1_400_000 + 1_200_000) / total) * 100).toFixed(1)), pctText: `${(((1_400_000 + 1_200_000) / total) * 100).toFixed(1)}%` });
+    expect(w.check.pctText).toBe(`${((210_000 / total) * 100).toFixed(1)}%`);
+    expect((w.keep.pct! * 10 + w.check.pct! * 10 + w.none.pct! * 10) / 10).toBeCloseTo(100, 6);
+    expect(Number(w.keep.pctText.slice(0, -1)) + Number(w.check.pctText.slice(0, -1)) + Number(w.none.pctText.slice(0, -1))).toBeCloseTo(100, 6);
+    expect(w.keep.count + w.check.count + w.none.count).toBe(4);
+    // '오래 둘' 비중이 해당 행들의 `내 주식의 N%` 합과 ±0.1 안
+    const rows = buildGrowRows(STOCKS, RATES, labels, NOW).filter((r) => r.labelState === "keep");
+    expect(Math.abs(w.keep.pct! - rows.reduce((s, r) => s + parseFloat(r.weightText), 0))).toBeLessThanOrEqual(0.1 + 1e-9);
+  });
+  it("전부 '오래 둘'이면 100.0 / 0.0 / 0.0, 이름표 0개면 0.0 / 0.0 / 100.0", () => {
+    const only = STOCKS.slice(2, 3);
+    expect(Object.values(sum(only, mk({ AAPL: keep(T("2026-11-01")) })).weights).map((x) => x.pctText)).toEqual(["100.0%", "0.0%", "0.0%"]);
+    expect(Object.values(sum(only, emptyStockLabels()).weights).map((x) => x.pctText)).toEqual(["0.0%", "0.0%", "100.0%"]);
+  });
+  it("시세 없는 종목이 하나라도 있으면 비중은 —, 종목 수는 그대로", () => {
+    const mixed = [...STOCKS, st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];
+    const w = sum(mixed, labels).weights;
+    expect(Object.values(w).map((x) => [x.count, x.pctText, x.pct])).toEqual([[2, "—", null], [1, "—", null], [2, "—", null]]);
+  });
+  it("상장폐지 보유분은 분모에서 빠지므로 분자에서도 빠지고 종목 수에만 센다", () => {
+    const withDelisted = [...STOCKS.slice(2, 4), st({ id: "x", ticker: "DEAD", quantity: 100, currentPrice: 500, inactiveStatus: "delisted" } as never)];
+    const w = sum(withDelisted, mk({ DEAD: keep(T("2026-11-01")), AAPL: keep(T("2026-11-01")) })).weights;
+    expect(w.keep.count).toBe(2);
+    expect(w.keep.pctText).toBe(`${((1_400_000 / 1_610_000) * 100).toFixed(1)}%`);
+    expect(w.keep.pct! + w.check.pct! + w.none.pct!).toBeCloseTo(100, 6);
+  });
+  it("정렬은 무게·수량과 무관하다(비중 순 그대로)", () => {
+    const a = sortGrowRowKeys(buildGrowRows(STOCKS, RATES, labels, NOW));
+    const b = sortGrowRowKeys(buildGrowRows(STOCKS, RATES, mk({ NVDA: { ...keep(T("2026-11-01")), base: { qty: 999 } } }), NOW));
+    expect(a).toEqual(b);
+  });
+});
+
+describe("'다시 봄' 판정(AC-30)", () => {
+  const now = Date.parse("2026-11-17T03:00:00Z");
+  it("유효 이름표가 있고 가장 이른 붙인 날이 어제 이전이면 true", () => {
+    expect(isStockLabelRevisit(mk({ AAPL: keep(T("2026-11-16")) }), now)).toBe(true);
+    expect(isStockLabelRevisit(mk({ AAPL: keep(T("2026-11-17")), NVDA: check("2026-07-15") }), now)).toBe(true);
+  });
+  it("이름표 0개·오늘만 붙인 기기·표식만 있는 기기는 false", () => {
+    expect(isStockLabelRevisit(emptyStockLabels(), now)).toBe(false);
+    expect(isStockLabelRevisit(mk({ AAPL: keep(T("2026-11-17")), NVDA: check("2026-11-17T00:10:00Z") }), now)).toBe(false);
+    expect(isStockLabelRevisit(mk({ AAPL: none(T("2026-01-01")) }), now)).toBe(false);
+  });
+  it("KST 날짜 기준: UTC로는 같은 날이어도 KST 전날이면 true", () => {
+    const n = Date.parse("2026-11-17T16:00:00Z"); // KST 11/18 01:00
+    expect(isStockLabelRevisit(mk({ AAPL: keep("2026-11-17T14:30:00Z") }), n)).toBe(true);  // KST 11/17 23:30
+    expect(isStockLabelRevisit(mk({ AAPL: keep("2026-11-17T15:30:00Z") }), n)).toBe(false); // KST 11/18 00:30
   });
 });

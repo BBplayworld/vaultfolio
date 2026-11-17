@@ -403,6 +403,7 @@ export function AssetReportView() {
           <span data-testid="grow-hint" data-screenshot-hide className="inline-flex">
             <InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">
               <p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+              <p className="text-pretty break-keep">수량은 정한 날의 내 기록과 지금의 내 기록을 나란히 놓은 거예요. 액면분할이 있었거나 계좌를 더 등록해도 달라져요.</p>
             </InfoHint>
           </span>
         </CardTitle>

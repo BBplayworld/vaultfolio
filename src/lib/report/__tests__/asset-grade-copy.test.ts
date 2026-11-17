@@ -116,7 +116,9 @@ describe("금지 단어 0(AC-13)", () => {
     const card = hub.slice(hub.indexOf('data-testid="hub-card-report"'));
     for (const w of FORBIDDEN) expect(visibleText(card), w).not.toContain(w);
     expect(card).toContain("내 기준으로 지키고, 내가 점검해요");
-    expect(card).not.toMatch(/formatPriceByMode|getProfitLossColor|toFixed|모든 자산|투입 대비/); // 금액·%·손익색 없음(AC-1)
+    expect(card).not.toMatch(/formatPriceByMode|getProfitLossColor|toFixed|모든 자산|투입 대비|원\b/); // 금액·손익색 없음(AC-1). %는 '오래 둘' 무게 1개뿐(AC-23)
+    expect(card).toContain("오래 둘 자산이 내 주식의 ");
+    expect(card.match(/pctText/g)).toHaveLength(2); // data-pct와 표시값 — 무게 줄 첫 묶음과 같은 문자열 값
     expect(card).toContain("primaryClassName={ASSET_THEME.text.default}");
   });
   it("새 소식 1줄·기능 목록 이름", () => {
@@ -145,6 +147,72 @@ function filesMatching(name: RegExp, pattern: RegExp): string[] {
   walk(root);
   return hits;
 }
+
+// 인사이트 보강(AC-26) — 차이가 좋은지 나쁜지 말하지 않는다. 무게 줄·수량 비교·허브 둘째 줄·도움말·새 소식 본문
+const INSIGHT_FORBIDDEN = [
+  "지켰어요", "어겼어요", "원칙 위반", "흔들렸어요", "잘했어요", "성공", "실패", "맞았어요", "틀렸어요", "성과", "결과", "수익", "수익률", "덕분에", "때문에",
+  "평균", "순위", "1위", "보다 높아요", "보다 낮아요", "쏠림", "시장 대비", "늘었어요", "줄었어요", "샀어요", "팔았어요",
+];
+
+describe("인사이트 금지어·금지 형식(AC-26)", () => {
+  const block = visibleText(read("stock-label-block.tsx"));
+  const rowsLib = visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-rows.ts"), "utf8"));
+  const hub = read("performance-hub.tsx");
+  const hubCard = visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')));
+  const view = read("asset-report-view.tsx");
+  const hint = view.slice(view.indexOf('data-testid="grow-hint"'), view.indexOf("</CardTitle>"));
+  it("이름표 블록·표시 값·허브 셋째 카드·화면 제목 도움말에 금지어가 없다", () => {
+    for (const [name, text] of [["블록", block], ["표시 값", rowsLib], ["허브 카드", hubCard], ["도움말", hint]] as const) {
+      for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(text, `${name}: ${w}`).not.toContain(w);
+    }
+  });
+  it("새 소식 본문에 금지어가 없다(제목의 '성과'는 메뉴 이름이라 본문만 본다)", () => {
+    const body = WHATS_NEW.find((e) => e.id === "20261117-01")!.body!;
+    for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(body, w).not.toContain(w);
+    expect(body).toBe("이름표를 붙이면 내 주식이 어떻게 나뉘는지, 정한 날과 지금 수량을 나란히 보여요");
+  });
+  it("도움말에 수량 문장 1줄이 있고 줄바꿈 클래스가 붙어 있다(C128)", () => {
+    expect(hint).toContain('<p className="text-pretty break-keep">수량은 정한 날의 내 기록과 지금의 내 기록을 나란히 놓은 거예요. 액면분할이 있었거나 계좌를 더 등록해도 달라져요.</p>');
+    expect(hint.match(/<p /g)).toHaveLength(2);
+    expect(hint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(2);
+  });
+  it("수량 비교는 형식 2개뿐이고 방향을 말하지 않는다", () => {
+    expect(rowsLib).toContain('"정한 뒤 수량 그대로"');
+    expect(rowsLib).toContain("`정한 날 ${then} → 지금 ${now}`");
+    expect(rowsLib.match(/정한 (날|뒤)/g)).toHaveLength(2);
+  });
+  it("무게 줄 막대는 전경색 투명도 3단뿐이다 — 손익색·주황·brand·차트 팔레트 없음", () => {
+    expect(block).toContain('"bg-foreground/80"');
+    expect(block).toContain('"bg-foreground/45"');
+    expect(block).toContain('"bg-foreground/15"');
+    expect(block).not.toMatch(/MAIN_PALETTE|bg-primary|bg-brand|assignColors/);
+  });
+  it("정한 날 가격·비중(base.price·weight)은 어느 화면에도 그리지 않는다. 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
+    expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "")).not.toMatch(/base\.price|base\.weight|priceAt/);
+    const using = filesMatching(/\.(ts|tsx)$/, /stock-labels|grow-rows/).sort();
+    expect(using).toEqual([
+      "app/(main)/_components/header-menu/settings-page.tsx",
+      "app/(main)/_components/preview/preview-gate.tsx",
+      "app/(main)/_components/views/activity/performance-hub.tsx",
+      "app/(main)/_components/views/activity/stock-label-block.tsx",
+      "hooks/use-stock-labels.ts",
+      "lib/asset/asset-storage.ts",
+      "lib/asset/grow-rows.ts",
+      "lib/asset/stock-labels.ts",
+      "lib/local-storage.ts",
+    ]);
+  });
+  it("'다시 봄' 전송은 불리기 블록 한 곳이고 preview 가드가 앞에 있다(AC-30 데모 0회)", () => {
+    expect(filesMatching(/\.(ts|tsx)$/, /category: "grow_revisit"/)).toEqual(["app/(main)/_components/views/activity/stock-label-block.tsx"]);
+    const src = read("stock-label-block.tsx");
+    const guard = src.indexOf("if (isPreviewEnv()) return;");
+    const send = src.indexOf('track("feature_use", { category: "grow_revisit" })');
+    expect(guard).toBeGreaterThan(0);
+    expect(send).toBeGreaterThan(guard);
+    expect(src.slice(send - 200, send)).toContain("isStockLabelRevisit(labels, Date.now())");
+    expect(src).not.toMatch(/localStorage|sessionStorage/); // 새 저장 키·플래그 없음
+  });
+});
 
 describe("추천 아님 조건 — 이름표 블록(AC-9·AC-10·AC-12)", () => {
   const block = visibleText(read("stock-label-block.tsx"));

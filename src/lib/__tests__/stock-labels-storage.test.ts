@@ -9,7 +9,7 @@ import {
   applyIncomingStockLabels, clearStockLabels, markStockChecked, readStockLabels, readStockLabelsForExport, readStockLabelsState,
   setStockLabel, setStockLabelCycle, writeStockLabels, emptyStockLabels, type StockLabels,
 } from "../asset/stock-labels";
-import { buildGrowRows, sortGrowRowKeys, summarizeGrowRows } from "../asset/grow-rows";
+import { buildGrowRows, growTotals, sortGrowRowKeys, summarizeGrowRows } from "../asset/grow-rows";
 import { materializeDemo } from "../preview/demo-payload";
 import { migrateStorageKeys, STORAGE_KEYS } from "../local-storage";
 import { assetDataSchema } from "@/types/asset";
@@ -21,12 +21,27 @@ const demoRaw = JSON.parse(readFileSync(path.resolve(__dirname, "../preview/demo
 const KEY = STORAGE_KEYS.stockLabels;
 const T = (d: string) => `${d}T03:00:00.000Z`;
 const raw = () => localStorage.getItem(KEY);
-const seed = (): StockLabels => {
+// 공용 픽스처 두 벌 — ①~⑧을 둘 다로 돌린다(AC-31): 기존 형태 / base + 미래 필드(4곳) 포함
+const plainSeed = (): StockLabels => {
   let s = setStockLabel(emptyStockLabels(), "005930", "keep", T("2026-09-01"));
   s = setStockLabel(s, "AAPL", "check", T("2026-09-02"));
   s = markStockChecked(s, "AAPL", T("2026-10-02"));
   s = setStockLabel(s, "NVDA", null, T("2026-10-03"));
   return setStockLabelCycle(s, 3, T("2026-09-01"));
+};
+const BASE = { qty: 12.5, price: 185.5, priceAt: "2026-09-02", weight: 21.84 };
+const richSeed = (): StockLabels => {
+  let s = setStockLabel(emptyStockLabels(), "005930", "keep", T("2026-09-01"), { qty: 65, price: 61000 });
+  s = setStockLabel(s, "AAPL", "check", T("2026-09-02"), { ...BASE, futureBase: { lots: [3, 9.5] } });
+  s = markStockChecked(s, "AAPL", T("2026-10-02"));
+  s = setStockLabel(s, "NVDA", null, T("2026-10-03"));
+  s = setStockLabelCycle(s, 3, T("2026-09-01"));
+  return {
+    ...s,
+    futureTop: { goals: ["a"], n: 1 },
+    cycle: { ...s.cycle, futureCycle: "주기에 딸린 값" },
+    items: { ...s.items, AAPL: { ...s.items.AAPL, futureItem: [1, { two: 2 }] } },
+  };
 };
 const withAssets = () => saveAssetData({ ...emptyData(), cash: [cashItem("c1", 1_000_000)], nickname: "홍" });
 
@@ -40,6 +55,11 @@ afterEach(() => {
   vi.useRealTimers();
   delete g.window; delete g.localStorage;
 });
+
+describe.each([
+  ["기존 형태", plainSeed],
+  ["base + 미래 필드 포함", richSeed],
+])("복원 ①②④⑥⑧ — %s", (_name, seed) => {
 
 describe("키 이름(AC-17·AC-19 ⑧)", () => {
   it("secretasset_ 접두가 아니고 정리 접두에도 걸리지 않는다", () => {
@@ -189,6 +209,53 @@ describe("⑥ 손상 값 → 빈 상태, 자동 경로는 원문을 덮지 않�
   });
 });
 
+}); // describe.each 끝
+
+describe("⑩ base 왕복(AC-31) — 백업 → 모든 데이터 삭제 → 복원", () => {
+  it("base 4필드와 4곳의 미래 필드가 깊은 비교로 같다", () => {
+    withAssets();
+    writeStockLabels(richSeed());
+    const file = JSON.parse(JSON.stringify(buildExportPayload()));
+    expect(file.stockLabels.items.AAPL.base).toEqual({ ...BASE, futureBase: { lots: [3, 9.5] } });
+    clearAssetData();
+    clearStockLabels();
+    applyImportedPayload(file);
+    const back = readStockLabels();
+    expect(back).toEqual(richSeed());
+    expect(back.items.AAPL.base).toMatchObject(BASE);
+    expect(back.items["005930"].base).toEqual({ qty: 65, price: 61000 });
+    expect("base" in back.items.NVDA).toBe(false); // '정하지 않음' 표식에는 base가 없다
+    expect([back.futureTop, back.cycle.futureCycle, back.items.AAPL.futureItem]).toEqual([{ goals: ["a"], n: 1 }, "주기에 딸린 값", [1, { two: 2 }]]);
+  });
+  it("⑨ 미래 필드가 든 저장소를 읽기만 해서는 원문이 바뀌지 않고, 내보내기에 값 그대로 실린다", () => {
+    withAssets();
+    const text = JSON.stringify(richSeed());
+    localStorage.setItem(KEY, text);
+    readStockLabels(); readStockLabelsForExport();
+    expect(raw()).toBe(text);
+    expect(buildExportPayload().stockLabels).toEqual(richSeed());
+  });
+  it("⑨ pull 병합에서 수신 쪽 미래 필드를 받아 저장한다(이긴 항목 통째로)", () => {
+    writeStockLabels(plainSeed());
+    const incoming = richSeed();
+    incoming.items.AAPL = { ...incoming.items.AAPL, at: T("2026-11-01") }; // 수신 쪽이 더 새 값
+    expect(applyIncomingStockLabels(JSON.parse(JSON.stringify(incoming)), { merge: true }).repush).toBe(false); // 병합 결과 = 수신값
+    const merged = readStockLabels();
+    expect(merged.items.AAPL).toEqual(incoming.items.AAPL);
+    expect(merged.futureTop).toEqual({ goals: ["a"], n: 1 });
+    expect(merged.cycle.futureCycle).toBe("주기에 딸린 값"); // at 같음 → 직렬화가 긴 쪽
+    expect(merged.items["005930"].base).toEqual({ qty: 65, price: 61000 }); // at 같음 → base 있는 쪽
+  });
+  it("base가 든 payload도 assetData 밖 최상위에만 있고 자산·공유 토큰 입력은 같다(AC-32)", () => {
+    withAssets();
+    const a = JSON.stringify({ ...getAssetData(), lastUpdated: "" });
+    writeStockLabels(richSeed());
+    const payload = buildExportPayload();
+    expect(JSON.stringify(payload.assetData)).not.toMatch(/stockLabels|"base"|futureTop/);
+    expect(JSON.stringify({ ...getAssetData(), lastUpdated: "" })).toBe(a);
+  });
+});
+
 describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다", () => {
   it.each(["2026-11-17", "2026-03-01", "2027-01-31", "2028-02-29"])("기준일 %s: 오래 둘 2·점검할 2, 주기 3개월, 경과 1건이 1행째·4개월 전", (today) => {
     const payload = materializeDemo(demoRaw, today);
@@ -198,13 +265,22 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     expect(labels.cycle.months).toBe(3);
     const data = getAssetData();
     const rows = buildGrowRows(data.stocks, { USD: 1400, JPY: 9 }, labels, now);
-    const s = summarizeGrowRows(rows, labels, now);
+    const s = summarizeGrowRows(rows, labels, now, growTotals(data.stocks, { USD: 1400, JPY: 9 }));
     expect([s.keep, s.check, s.none]).toEqual([2, 2, rows.length - 4]);
     expect(s.lastCheckText).toBe("마지막 점검 4개월 전");
     const overdue = rows.filter((r) => r.overdueFact);
     expect(overdue.map((r) => [r.ticker, r.labelFact, r.overdueFact])).toEqual([["AAPL", "마지막 점검 4개월 전", "내가 정한 주기 3개월이 지났어요"]]);
     expect(sortGrowRowKeys(rows)[0]).toBe(overdue[0].key);
     expect(rows.find((r) => r.ticker === "360750")!.labelFact).toBe("오래 두기로 한 지 1년 2개월");
+    // AC-33: 조작 없이 무게 줄(합 100.0)과 수량 비교 두 문장이 처음 보이는 3행 안에 있다
+    const w = s.weights;
+    expect(w.keep.pct! + w.check.pct! + w.none.pct!).toBeCloseTo(100, 6);
+    expect(w.keep.pctText).toMatch(/^\d+\.\d%$/);
+    const by = new Map(rows.map((r) => [r.key, r]));
+    const top3 = sortGrowRowKeys(rows).slice(0, 3).map((k) => by.get(k)!.qtyFact?.text);
+    expect(top3).toContain("정한 날 10주 → 지금 12주");
+    expect(top3).toContain("정한 뒤 수량 그대로");
+    expect(rows.filter((r) => r.labelState === "keep" || r.labelState === "check").every((r) => r.qtyFact !== null)).toBe(true);
   });
   it("시드에 고정 날짜가 없다(전부 날짜 토큰)", () => {
     const seedText = JSON.stringify(demoRaw.stockLabels);
@@ -214,9 +290,9 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
   it("데모를 다시 주입하면 조작한 이름표가 시드로 돌아간다(필드 있으면 교체)", () => {
     const payload = materializeDemo(demoRaw, "2026-11-17");
     applyImportedPayload(payload);
-    writeStockLabels(setStockLabel(readStockLabels(), "005930", "check", T("2026-11-17")));
+    writeStockLabels(setStockLabel(readStockLabels(), "000660", "check", T("2026-11-17")));
     applyImportedPayload(payload);
-    expect(readStockLabels().items["005930"]).toBeUndefined();
+    expect(readStockLabels().items["000660"]).toBeUndefined();
   });
 });
 
@@ -227,10 +303,14 @@ describe("추천 아님 조건 4·5 — 이름표가 닿지 않는 곳(AC-11·AC
       expect(src(f), f).not.toMatch(/stock-labels|stockLabels|stock_labels/);
     }
   });
-  it("저장 값에 메모·금액·수량·비중 필드가 없다", () => {
-    expect(Object.keys(seed()).sort()).toEqual(["cycle", "items", "v"]);
-    for (const item of Object.values(seed().items)) {
-      for (const k of Object.keys(item)) expect(["label", "labeledAt", "checkedAt", "at"]).toContain(k);
+  it("이 버전이 쓰는 필드는 허용 목록뿐이다 — 메모·평가금액·매입단가 없음. 수량·시세·비중은 base 안에만", () => {
+    const written = setStockLabel(plainSeed(), "TSLA", "keep", T("2026-11-01"), BASE);
+    expect(Object.keys(written).sort()).toEqual(["cycle", "items", "v"]);
+    expect(Object.keys(written.cycle).sort()).toEqual(["at", "months"]);
+    for (const item of Object.values(written.items)) {
+      for (const k of Object.keys(item)) expect(["label", "labeledAt", "checkedAt", "base", "at"]).toContain(k);
+      for (const k of Object.keys(item.base ?? {})) expect(["qty", "price", "priceAt", "weight"]).toContain(k);
     }
+    expect(JSON.stringify(written)).not.toMatch(/memo|amount|value|averagePrice|cost/);
   });
 });
