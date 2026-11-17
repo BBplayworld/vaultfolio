@@ -273,8 +273,8 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 > **#5.108 갱신**: 월 탭 원인 = |금액| 정렬 + 4행 이상 상위 2행·`외 N개`(합 = Hero 증감, 연·주 불변), 월별 기록 모든 줄 기본 접힘, 연 탭 Hero 올해 항목 없음 → `올해 순자산이 기록되면 {Y}년 말과 비교해 드려요`. 성적표 = 남긴 돈 2줄·`넣은 돈·이자` 입구 1개·5축 1줄 펼침(칩 없음)·AI 1행 버튼.
 
 ### F-GROW. 내 자산 불리기 — 이름표·점검 (#5.125 #239, risk:high) ([stock-label-block.tsx](../../src/app/(main)/_components/views/activity/stock-label-block.tsx) · [stock-labels.ts](../../src/lib/asset/stock-labels.ts) · [grow-rows.ts](../../src/lib/asset/grow-rows.ts))
-- 👤 **허브 셋째 카드**(`hub-card-report`): 제목 `내 자산 불리기` + Plus, 설명 `내 기준으로 지키고, 내가 점검해요`. 큰 값(`hub-report-primary`, 본문색)은 자산 0 = 없음·둘째 줄 `자산 등록 후 볼 수 있어요` / 주식(티커 있는 종목) 0 = `성적표 보기` / 이름표 0개 = `이름표 붙이기` / 그 밖 = `오래 둘 N · 점검할 N`. 둘째 줄(`hub-report-secondary`)은 점검 기록이 있을 때만 `마지막 점검 N개월 전`. 카드에 금액·%·경과 표시 없음. 도착 `#activity/report`
-- 👤 **불리기 화면 순서**: 제목(`grow-title`) + Plus + InfoHint(`grow-plus-hint`) → 이름표 블록(`grow-block`) → 구획 제목 `자산 성적표`(`report-section-title`, 기존 InfoHint 3문단) → 등급 Hero ~ AI 버튼. 자산 0이면 `자산을 등록하면 성적표가 계산됩니다.` 1줄만, 주식 0이면 블록 DOM 없음
+- 👤 **허브 셋째 카드**(`hub-card-report`): 제목 `내 자산 불리기`(Plus 배지 없음), 설명 `내 기준으로 지키고, 내가 점검해요`. 큰 값(`hub-report-primary`, 본문색)은 자산 0 = 없음·둘째 줄 `자산 등록 후 볼 수 있어요` / 주식(티커 있는 종목) 0 = `성적표 보기` / 이름표 0개 = `이름표 붙이기` / 그 밖 = `오래 둘 N · 점검할 N`. 둘째 줄(`hub-report-secondary`)은 점검 기록이 있을 때만 `마지막 점검 N개월 전`. 카드에 금액·%·경과 표시 없음. 도착 `#activity/report`
+- 👤 **불리기 화면 순서**: 제목(`grow-title`) + InfoHint(`grow-hint`, 요약 `내 기준을 기록하고 내가 점검하는 화면이에요.`) → 이름표 블록(`grow-block`) → 구획 제목 `자산 성적표`(`report-section-title`, 기존 InfoHint 3문단) → 등급 Hero ~ AI 버튼. 자산 0이면 `자산을 등록하면 성적표가 계산됩니다.` 1줄만, 주식 0이면 블록 DOM 없음
 - 👤 **블록**: 요약(`grow-summary[data-state=empty|labeled]`) — 이름표 0개면 `종목마다 내가 이름표를 붙여요.`(숫자·분류 없음), 1개 이상이면 `오래 둘 N · 점검할 N · 정하지 않음 N`(합 = 행 수). 점검 주기(`grow-cycle`, 3·6·12개월, 처음엔 선택 없음, 해제 칸 없음). 행(`grow-row[data-ticker][data-label=keep|check|none|unset][data-overdue]`): 이름 줄 버튼(`grow-row-open`, 종목 페이지) + 사실 줄(`grow-row-fact`: `내 주식의 34.0% · 내 매입가 대비 -18.0%`, 전체 탭과 같은 문자열) + 이름표 사실(`grow-row-label-fact`) + 3택(`grow-label-keep|check|none`) + 점검 버튼(`grow-check[data-state=todo|done]`, '점검할 자산' 행만)
 - 👤 한 번도 고르지 않은 행은 선택 칸 0, '정하지 않음'을 누른 행은 그 칸 선택(새로고침 뒤에도). `오늘 점검했어요` → 같은 요소가 `오늘 점검함`(취소 없음), 이름표·행 순서 그대로
 - 👤 정렬: 주기 지난 '점검할 자산'이 위, 그 밖 비중 순. **재정렬은 화면 진입·주기 변경 때만**. 상위 3행 + `전체 보기`(`grow-more`, 숫자 없음) — 접히는 행(`grow-rows-rest`, `inert`)은 4번째 이후이면서 주기가 지나지 않은 행. 지난 행은 접지 않는다. 펼침은 종목 페이지에 다녀와도 유지, 새로고침하면 접힘
@@ -284,7 +284,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **저장**: 키 `secretasset.stock_labels`, payload 최상위 `stockLabels`. 필드 없음 = 로컬 유지. 가져오기·데모·체험 = 교체, pull = 티커별 `at` 최신 우선 병합(null 표식 포함) + 필요 시 재-push. 손상 값 = 빈 상태·자동 경로는 원문 보존. 지우는 경로 = 모든 데이터 삭제·`?demo=empty`. 공유 토큰·서버 평문 전송 0. 구버전 기기 혼재·롤백에도 키가 남는다
 - ⚙ 체험·데모: 같은 시드(오래 둘 2·점검할 2, 주기 3개월, AAPL 점검 `@D-125` = `4개월 전`)가 조작 없이 1행째에 보인다. 체험 조작은 메모리 저장소에만, GA 0
 - ⚙ GA: `grow_label` → `내 자산 불리기·이름표`(저장소 유효 이름표 0→1 저장 직후 1회) · `grow_check` → `내 자산 불리기·체크`(점검마다). 화면 title `성과·자산 성적표` 유지. category 외 값 미전송
-- ⚙ Plus 배지는 허브 셋째 카드·불리기 화면 제목 2곳뿐(동기화 대화상자·더보기 동기화 카드는 배지만 제거)
+- ⚙ Plus 배지는 앱 전체 0곳(5.125 대표 결정 — 결제 없는 단계에서 유료 오해 방지. 동기화 대화상자·더보기 동기화 카드·허브 카드·불리기 제목 모두 제거)
 - 테스트: `__tests__/stock-labels-merge.test.ts` · `stock-labels-storage.test.ts` · `stock-labels-sync.test.ts` · `trial-boot.test.ts`(#239 묶음) · `hooks/__tests__/use-stock-labels.test.ts` · `views/activity/__tests__/stock-label-block.test.tsx` · `report/__tests__/asset-grade-copy.test.ts`
 
 ### F-REPORT. 자산 성적표 (5축 별점·트로피 티어) ([asset-report-view.tsx](../../src/app/(main)/_components/views/activity/asset-report-view.tsx) · [asset-grade.ts](../../src/lib/report/asset-grade.ts)) — 명세 [S-4.18](../specs/4.18-asset-report-card.md)

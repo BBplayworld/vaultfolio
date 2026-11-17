@@ -159,8 +159,8 @@ describe("추천 아님 조건 — 이름표 블록(AC-9·AC-10·AC-12)", () => 
     const hits = filesMatching(/\.(ts|tsx)$/, /주기[^"`\n]*지났어요/);
     expect(hits).toEqual(["lib/asset/grow-rows.ts"]);
   });
-  it("Plus 배지는 허브 셋째 카드·불리기 화면 제목 2곳뿐(AC-2)", () => {
+  it("Plus 배지는 0곳 — 결제 없는 단계에서 유료로 오해되는 표시 폐지(대표 결정 11/17, AC-2 개정)", () => {
     const hits = filesMatching(/\.tsx$/, />\s*Plus\s*</).map((p) => path.basename(p));
-    expect(hits.sort()).toEqual(["asset-report-view.tsx", "performance-hub.tsx"]);
+    expect(hits).toEqual([]);
   });
 });

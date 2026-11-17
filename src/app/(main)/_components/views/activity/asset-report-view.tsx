@@ -400,9 +400,8 @@ export function AssetReportView() {
         <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
           <Sprout className="size-5 text-primary" />
           <span data-testid="grow-title">내 자산 불리기</span>
-          <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
-          <span data-testid="grow-plus-hint" data-screenshot-hide className="inline-flex">
-            <InfoHint summary="Plus는 내 기준을 기록하고 내가 점검하는 화면이에요.">
+          <span data-testid="grow-hint" data-screenshot-hide className="inline-flex">
+            <InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">
               <p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
             </InfoHint>
           </span>

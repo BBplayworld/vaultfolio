@@ -194,12 +194,7 @@ export function PerformanceHub() {
         <div data-testid="hub-card-report">
         <KpiCard
           icon={Sprout}
-          title={
-            <span className="inline-flex items-center gap-1.5">
-              내 자산 불리기
-              <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
-            </span>
-          }
+          title="내 자산 불리기"
           description="내 기준으로 지키고, 내가 점검해요"
           // 큰 값은 본문색 고정(주황·손익색 금지). 이름표 0개면 앱이 센 숫자·분류 없이 행동 문구만
           primary={!hasAssets || !labelsReady ? undefined : (
