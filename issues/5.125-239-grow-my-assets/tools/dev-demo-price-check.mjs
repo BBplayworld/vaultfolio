@@ -11,14 +11,16 @@ for (const q of ["demo", "trial"]) {
   await p.evaluate(() => { location.hash = "#activity/report"; });
   await p.waitForTimeout(6000);
   const rows = await p.locator('[data-testid="grow-row"]').evaluateAll((els) => els.map((e) => {
-    const pr = e.querySelector('[data-testid="grow-row-price"]');
-    return `${e.dataset.ticker}(${e.dataset.label}) ${pr ? pr.innerText.replace(/\s+/g, " ") : "-"}`;
+    const g = (id) => e.querySelector(`[data-testid="${id}"]`)?.innerText.replace(/\s+/g, " ") ?? "-";
+    return `${e.dataset.ticker}(${e.dataset.label}) ${g("grow-row-label-fact")} / ${g("grow-row-since")} / ${g("grow-row-trades")}`;
   }));
   // 접힌 행까지 보려고 전체 보기
   const more = p.locator('[data-testid="grow-more"]');
   if (await more.count()) { await more.click().catch(() => {}); await p.waitForTimeout(800); }
   const all = await p.locator('[data-testid="grow-row-price"]').evaluateAll((els) => els.map((e) => `${e.closest('[data-testid="grow-row"]').dataset.ticker} ${e.innerText.replace(/\s+/g, " ")}`));
-  console.log(`== ${TAG} ${q} 390 dark | 위 3행: ${rows.slice(0, 3).join(" | ")}`);
+  const links = await p.locator('[data-testid="grow-link"] li').evaluateAll((els) => els.map((e) => `${e.innerText.replace(/\s+/g, " ")} [h${Math.round(e.getBoundingClientRect().height)}]`));
+  console.log(`== ${TAG} ${q} 390 dark | 연결: ${links.join(" | ")}`);
+  for (const r of rows.slice(0, 3)) console.log(`   ${r}`);
   console.log(`   가격 % 전체: ${all.join(" | ")} | pageerrors ${errs.length}`);
   await p.locator('[data-testid="grow-block"]').screenshot({ path: `${OUT}/insight4-price-${TAG}-${q}-390-dark.png` });
   await ctx.close();
