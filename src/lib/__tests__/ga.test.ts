@@ -166,6 +166,9 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "push_click_kr" }, "알림·누름·국내"],
     ["feature_use", { category: "push_click_settle" }, "알림·누름·결산"],
     ["feature_use", { category: "push_click_tax" }, "알림·누름·세금"],
+    // 5.125 #239 — 주 지표·보조 지표 title 고정. 매핑이 빠지면 화면 title `성과·자산 성적표`에 섞인다
+    ["feature_use", { category: "grow_label" }, "내 자산 불리기·이름표"],
+    ["feature_use", { category: "grow_check" }, "내 자산 불리기·체크"],
     ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
     ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
@@ -297,6 +300,36 @@ describe("체험 모드", () => {
     trackScreen("home");
     expect(gtag).not.toHaveBeenCalled();
     __resetTrialModeForTest();
+  });
+});
+
+describe("내 자산 불리기 GA (5.125 #239)", () => {
+  it.each([
+    ["grow_label", "내 자산 불리기·이름표"],
+    ["grow_check", "내 자산 불리기·체크"],
+  ] as const)("%s는 성적표 화면에서도 자기 title로 가고 page_title·page_location 외 값을 싣지 않는다", (category, title) => {
+    trackScreen("activity:report");
+    gtag.mockClear();
+    track("feature_use", { category });
+    expect(gtag).toHaveBeenCalledTimes(1);
+    const payload = gtag.mock.calls[0][2] as Record<string, unknown>;
+    expect(payload.page_title).toBe(title);
+    expect(Object.keys(payload).filter((k) => k !== "debug_mode").sort()).toEqual(["page_location", "page_title"]);
+  });
+
+  it("화면 title은 그대로 `성과·자산 성적표`", () => {
+    expect(featureTitleOf("feature_use", {}, "activity:report")).toBe("성과·자산 성적표");
+  });
+
+  it("체험 중에는 두 category 모두 전송 0", () => {
+    markTrialActive();
+    try {
+      track("feature_use", { category: "grow_label" });
+      track("feature_use", { category: "grow_check" });
+      expect(gtag).not.toHaveBeenCalled();
+    } finally {
+      __resetTrialModeForTest();
+    }
   });
 });
 

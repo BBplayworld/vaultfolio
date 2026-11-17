@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Trophy, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
+import { Trophy, Sprout, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -9,7 +9,7 @@ import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
 import { buildFxExposureLines } from "@/lib/report/composition";
-import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
+import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, GRADE_THRESHOLDS, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
 import { fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/finance/profit-utils";
@@ -29,6 +29,7 @@ import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-s
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 import { NetworthBenchmarkBlock } from "./networth-benchmark-block";
 import { SettlementAiButton } from "./settlement-view";
+import { StockLabelBlock } from "./stock-label-block";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -83,11 +84,20 @@ export const TIER_STYLE: Record<GradeTier, { color: string; shadow: string }> = 
   platinum: { color: "text-indigo-500", shadow: "drop-shadow-[0_0_18px_rgba(99,102,241,0.8)]" },
 };
 
-const TIER_SUMMARY: Record<GradeTier, string> = {
-  bronze: "기초 체력을 다질 단계입니다. 아래 축별 액션부터 하나씩 실행해보세요.",
-  silver: "기본기는 갖췄습니다. 가장 낮은 축을 끌어올리면 등급이 오릅니다.",
-  gold: "탄탄한 자산 관리입니다. 약한 축 한두 개만 보완하면 최상위권입니다.",
-  platinum: "최상위 수준의 자산 관리입니다. 지금의 원칙을 꾸준히 유지하세요.",
+// 등급 한 줄 — 채점 기준을 알리는 사실형(#239). 숫자는 GRADE_THRESHOLDS.tier를 그대로 써서 기준이 바뀌면 문장도 따라간다
+const TIER_CUT = GRADE_THRESHOLDS.tier;
+export const TIER_SUMMARY: Record<GradeTier, string> = {
+  bronze: `종합 점수가 ${TIER_CUT.silver}점 미만이에요. 축을 펼치면 점수 기준이 보여요.`,
+  silver: `종합 점수가 ${TIER_CUT.silver}점 이상이에요. ${TIER_CUT.gold}점부터 골드예요.`,
+  gold: `종합 점수가 ${TIER_CUT.gold}점 이상이에요. ${TIER_CUT.platinum}점부터 플래티넘이에요.`,
+  platinum: `종합 점수가 ${TIER_CUT.platinum}점 이상이에요.`,
+};
+
+// 축 링크 글자 — 축 문장은 채점 기준이라 링크로 쓰지 않고, 링크가 있는 3축만 도착지 이름을 따로 둔다(#239)
+const AXIS_LINK_LABELS: Partial<Record<AxisKey, string>> = {
+  diversification: "주식 X-Ray 보기",
+  growth: "연도별 자산 변화 보기",
+  habit: "현금 보기",
 };
 
 const AXIS_ICONS: Record<AxisKey, typeof TrendingUp> = {
@@ -388,14 +398,14 @@ export function AssetReportView() {
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
-          <Trophy className="size-5 text-primary" />
-          자산 성적표
+          <Sprout className="size-5 text-primary" />
+          <span data-testid="grow-title">내 자산 불리기</span>
           <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
-          <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
-            <p>5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
-            <p>데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
-            <p>투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
-          </InfoHint>
+          <span data-testid="grow-plus-hint" data-screenshot-hide className="inline-flex">
+            <InfoHint summary="Plus는 내 기준을 기록하고 내가 점검하는 화면이에요.">
+              <p>이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+            </InfoHint>
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500`}>
@@ -403,6 +413,20 @@ export function AssetReportView() {
           <p className={`${CAPTION} py-10 text-center`}>자산을 등록하면 성적표가 계산됩니다.</p>
         ) : (
           <>
+            {/* ── 이름표·점검 블록(#239) — 주식(티커 있는 종목)이 없으면 DOM 없음. 아래 성적표 구획과 20px 간격 ── */}
+            <StockLabelBlock />
+
+            {/* ── 자산 성적표 구획 제목 — 화면 제목에 있던 InfoHint가 여기로 내려왔다(문구 그대로) ── */}
+            <div className="pt-1">
+              <SectionHeader icon={Trophy} title="자산 성적표" titleTestId="report-section-title">
+                <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
+                  <p>5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
+                  <p>데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
+                  <p>투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
+                </InfoHint>
+              </SectionHeader>
+            </div>
+
             {/* ── 등급 Hero: 트로피 티어 + 종합 별점 ── */}
             <div className="rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
@@ -724,17 +748,22 @@ export function AssetReportView() {
                                 <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
                               </div>
                             )}
-                            {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
-                              <button
-                                type="button"
-                                onClick={() => axisNavigate(axis.key)}
-                                className="flex w-full min-h-10 items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
-                              >
-                                <span className="text-pretty break-keep">{axis.action}</span>
-                                <ChevronRight className="size-4 shrink-0" />
-                              </button>
-                            ) : (
-                              <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
+                            {/* 축 문장(채점 기준)은 일반 문단, 링크가 있는 3축만 그 아래 도착지 이름 링크(#239) — 도착지·노출 조건은 그대로 */}
+                            {axis.key === "earningQuality" && divFailed > 0 ? null : (
+                              <>
+                                <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
+                                {linked && (
+                                  <button
+                                    type="button"
+                                    data-testid={`axis-link-${axis.key}`}
+                                    onClick={() => axisNavigate(axis.key)}
+                                    className="flex w-full min-h-10 items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
+                                  >
+                                    <span className="text-pretty break-keep">{AXIS_LINK_LABELS[axis.key]}</span>
+                                    <ChevronRight className="size-4 shrink-0" />
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

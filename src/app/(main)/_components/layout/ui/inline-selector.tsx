@@ -18,7 +18,8 @@ export function InlineSelector<T extends string>({
   fullWidth = false,
   tight = false,
 }: {
-  value: T;
+  // null = 아직 고른 칸 없음(#239 이름표·점검 주기) — 썸 없이 그리고 첫 활성 칸이 Tab 순서에 들어간다
+  value: T | null;
   onChange: (v: T) => void;
   options: readonly Option<T>[];
   size?: "sm" | "md" | "lg" | "xl";
@@ -91,7 +92,7 @@ export function thumbStyle(index: number, count: number): { width: string; trans
 }
 
 function FullWidthSelector<T extends string>({ value, onChange, options, className, ariaLabel, disabledValues, disabledTitle, tight }: {
-  value: T;
+  value: T | null;
   onChange: (v: T) => void;
   options: readonly Option<T>[];
   className?: string;

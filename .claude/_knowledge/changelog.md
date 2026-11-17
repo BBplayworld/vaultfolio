@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-11-17 (v5.125)
+
+### 성과 셋째 카드 '자산 성적표' → '내 자산 불리기' — 이름표·점검 (#5.125, 이슈 #239, risk:high)
+- **왜**: 성적표는 점수만 주고 "무엇을 그대로 두고 무엇을 다시 볼지"는 엑셀에서 했다. Plus 배지 4곳은 뜻이 없었고, 성적표 '다음 행동' 줄 일부가 권유형이었다. 앱은 사실만 보여 주고 이름표·주기·점검은 사용자가 정한다(앱이 종목을 나누거나 고르지 않는다).
+- **새 저장 키** `secretasset.stock_labels`(`STORAGE_KEYS.stockLabels`, 점 구분 — `clearAssetData` 접두 삭제에 걸리지 않음, 실물 #58 선례). 형태 `{ v: 1, cycle: { months: 3|6|12|null, at }, items: { [티커]: { label: "keep"|"check"|null, labeledAt, checkedAt?, at } } }`. `label: null`은 '정하지 않음' 삭제 표식. 마이그레이션 없음(키 없음 = 빈 상태).
+- `lib/asset/stock-labels.ts` **신규**: 완화 파싱·읽기(none/ok/corrupt 구분)·쓰기·삭제·`mergeStockLabels`(티커별 `at` 최신 우선, 동률은 직렬화 비교)·편집 순수 함수·`applyIncomingStockLabels`(가져오기·데모 = 필드 있으면 교체, pull = 병합, 손상 원문은 자동 경로가 덮지 않음).
+- `lib/asset/asset-storage.ts`: `buildExportPayload` 최상위 `stockLabels`(키가 있고 읽힐 때만), `applyImportedPayload`에 `mergeStockLabels` 옵션·반환 `stockLabelsRepush`. `cloud-sync/sync-client.ts` `pullAsset`만 병합을 켜고 `mergedAdditions`에 OR → 기존 재-push. `assetDataSchema`·공유 토큰·`overwrite-guard`·`trial-boot`·`demo-inject` diff 0.
+- `hooks/use-stock-labels.ts` **신규**: 저장 직후 `notifyAssetUserEdit()`(이름표는 `saveData`를 거치지 않는다) + GA. `lib/asset/grow-rows.ts` **신규**: 종목 행(전체 탭과 같은 `groupStocksByTicker`·`computeStockMetrics`)·기간 표기·정렬·접힘·요약.
+- `views/activity/stock-label-block.tsx` **신규**(`StockLabelBlock`), `asset-report-view.tsx`: 제목 `내 자산 불리기`(`Sprout`) + Plus + 새 InfoHint, 이름표 블록, 구획 제목 `자산 성적표`(기존 InfoHint 이동), 축 문장은 문단·링크는 3축만 별도 글자. `performance-hub.tsx` 셋째 카드: 금액·%·`모든 자산` 칩 제거 → 이름표 개수·마지막 점검.
+- 성적표 문장 22행을 채점 기준 사실형으로(`asset-grade.ts` 16행 + `reason` 2건, `TIER_SUMMARY` 4행). 숫자는 `GRADE_THRESHOLDS`(export)로 조립. 점수·등급 계산 diff 0.
+- Plus 배지 4 → 2곳(동기화 대화상자·더보기 동기화 카드의 배지 글자만 제거). `InlineSelector` `value`에 null(선택 없음) 허용.
+- 지우는 경로: 설정 › 모든 데이터 삭제, `?demo=empty`. 공유 반영은 이름표를 손대지 않는다.
+- GA: `feature_use{grow_label}` → `내 자산 불리기·이름표`(저장소 유효 이름표 0→1), `{grow_check}` → `내 자산 불리기·체크`(점검마다). 화면 title `성과·자산 성적표` 유지. 새 소식 `20261117-01`. 데모 시드 `demo-data.json` 최상위 `stockLabels`(`@D-125`).
+- 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`·`asset-grade-copy`·`ga`(추가). `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.
+
+---
+
 ## 2026-11-16 (v5.124)
 
 ### 연 탭 첫 블록 → 올해 결산 (#5.124, 이슈 #237)

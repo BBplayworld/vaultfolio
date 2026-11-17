@@ -432,6 +432,16 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `settlement.ts`: `isEnriched(monthly)` export(5.124)
 - 테스트: `report/__tests__/year-settlement.test.ts`(픽스처 `year-settlement-fixture.ts`), `views/activity/__tests__/year-settlement-block.test.tsx`
 
+### asset/stock-labels.ts · asset/grow-rows.ts · hooks/use-stock-labels.ts (#5.125, 이슈 #239) — 주식 이름표·점검 기록
+
+- **저장 키** `STORAGE_KEYS.stockLabels` = `secretasset.stock_labels`(점 구분, `secretasset_` 접두 금지). 전역 `localStorage`만 사용 — 모듈 캐시·IndexedDB 금지(체험 격리). `AssetData`·Context·`assetDataSchema`에 넣지 않는다
+- `stock-labels.ts`: `parseStockLabels`(완화, 항목 단위) · `readStockLabelsState()` → `none | ok | corrupt` · `readStockLabels()`(빈 상태 폴백) · `writeStockLabels` · `clearStockLabels`(모든 데이터 삭제·`?demo=empty` 전용) · `mergeStockLabels(a, b)`(티커별·cycle `at` 최신 우선, 교환법칙) · `sameStockLabels` · `countValidLabels` · 편집 `setStockLabel`/`markStockChecked`/`setStockLabelCycle`(순수, 바뀐 게 없으면 같은 객체) · `applyIncomingStockLabels(field, {merge})` → `{repush}` · `readStockLabelsForExport` · `isStockLabelKey`
+- **규칙**: payload 최상위 `stockLabels`. 필드 없음 = 쓰기 호출 없음(로컬 유지). 파일 가져오기·데모·체험 = 교체, 동기화 pull만 병합(`applyImportedPayload(…, { mergeStockLabels: true })` → `stockLabelsRepush` → `pullAsset`이 `mergedAdditions`에 OR). 손상 원문은 읽기·병합·내보내기가 덮지 않고 사용자 저장만 교체한다. '정하지 않음' = `label: null` 표식(항목을 지우지 않는다)
+- `grow-rows.ts`: `buildGrowRows(stocks, rates, labels, nowMs)`(전체 탭과 같은 그룹·분모·문자열, 티커 없는 종목 제외, 저장 키 = `normalizeTicker`) · `sortGrowRowKeys`(주기 지난 행 위, 그 밖 비중 순) · `collapsedGrowRowKeys`(4번째 이후이면서 지나지 않은 행) · `summarizeGrowRows` → `{keep, check, none, lastCheckText}` · `elapsedSince`/`formatAgo`/`formatSince`(KST 날짜·지난 달력 월 수). 주기 기준일 = 점검일과 이름표를 붙인 날 중 늦은 쪽
+- `use-stock-labels.ts`: `useStockLabels()` → `{labels, ready, setLabel, markChecked, setCycle}`(마운트·`assetData` 변경 때 다시 읽음). 저장 조립 `stockLabelActions({notify, track, now})`는 훅 밖 순수 함수 — 저장소의 지금 값에 편집을 얹어 쓰고, 저장 직후 `notifyAssetUserEdit()`, GA `grow_label`(유효 이름표 0→1)·`grow_check`
+- `report/asset-grade.ts`: `GRADE_THRESHOLDS` export(축 문장·`TIER_SUMMARY`가 숫자를 여기서 조립)
+- 테스트: `__tests__/stock-labels-merge.test.ts` · `stock-labels-storage.test.ts` · `stock-labels-sync.test.ts` · `trial-boot.test.ts` · `hooks/__tests__/use-stock-labels.test.ts` · `report/__tests__/asset-grade-copy.test.ts`
+
 ### report/composition.ts (#4.43 #72 · #4.51 #83) — 월 탭 자산 구성 변화·외화 노출 순수 함수
 
 - `COMPOSITION_KEYS/LABELS`, `COMPOSITION_FORBIDDEN_WORDS`(문구 금지어 테스트, 4.45 재사용). 연 탭 `CompositionCard`·보정 스케일은 #4.44에서 제거됨.

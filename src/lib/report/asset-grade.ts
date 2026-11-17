@@ -14,7 +14,7 @@ export interface AxisScore {
   score: number | null;   // null = 측정불가(회색 별)
   pending?: boolean;      // 배당·KIS 비동기 대기 중 → 잠정 점수 (별 스켈레톤/잠정 표기)
   reason: string;         // 왜 이 점수인가 1줄
-  action: string;         // 무엇을 하면 오르는가 1줄
+  action: string;         // 점수 기준 1줄
 }
 
 // 스냅샷 이력(SnapshotGrade)과 단일 소스 — 구조 동일, 기존 export 이름 유지
@@ -55,7 +55,7 @@ const AXIS_WEIGHTS: Record<AxisKey, number> = {
 };
 
 // ── 채점 임계값(컷) — 튜닝·유지보수를 위해 한곳에 모음. 근거는 각 score 함수 주석 참조. ──
-const GRADE_THRESHOLDS = {
+export const GRADE_THRESHOLDS = {
   growth: { cagrExcellent: 15, cagrGood: 10, cagrReal: 5, streakYears: 3, streakBonus: 0.5 },
   earning: { rateHigh: 20, rateMid: 10, divYield: 1.5 },
   leverage: { debtRatioHigh: 60, debtRatioElevated: 40, avgRateHigh: 6, noDebtScore: 5 },
@@ -99,7 +99,7 @@ function scoreGrowth(yearly: YearlyNetAsset[]): AxisScore {
     return {
       key: "growth", label, score: 1,
       reason: "순자산이 마이너스이거나 기간 정보를 계산할 수 없습니다.",
-      action: "부채를 줄여 순자산을 플러스로 만드는 것이 최우선입니다.",
+      action: "순자산이 플러스가 되면 성장률이 계산돼요.",
     };
   }
   const cagr = (Math.pow(last.netAsset / first.netAsset, 1 / years) - 1) * 100;
@@ -129,8 +129,8 @@ function scoreGrowth(yearly: YearlyNetAsset[]): AxisScore {
         ? `연평균 ${cagrStr} 성장 — 늘고는 있지만 물가 수준(약 5%)에 못 미칩니다.`
         : `연평균 ${cagrStr} — 순자산이 줄고 있습니다.`,
     action: cagr >= G.cagrExcellent
-      ? "지금 흐름을 유지하세요. 급격한 전략 변경이 오히려 리스크입니다."
-      : "매년 순자산 증가율 5% 이상을 목표로 저축·투자 원금을 늘려보세요.",
+      ? `연평균 성장률 ${G.cagrExcellent}% 이상이 이 축의 가장 높은 구간이에요.`
+      : `연평균 성장률 ${G.cagrReal}%·${G.cagrGood}%·${G.cagrExcellent}%를 넘을 때마다 점수 구간이 바뀌어요.`,
   };
 }
 
@@ -175,8 +175,8 @@ function scoreEarningQuality(
         ? `수익이 ${sourceStr} 하나에 의존하고 있습니다 (수익률 ${rate >= 0 ? "+" : ""}${rate.toFixed(1)}%).`
         : `아직 플러스 수익 원천이 없습니다 (수익률 ${rate >= 0 ? "+" : ""}${rate.toFixed(1)}%).`,
     action: dividend.annual > 0
-      ? "배당 등 현금흐름 원천을 더 키우면 시세 하락기에도 수익이 방어됩니다."
-      : "배당주·해외자산 등으로 시세차익 외 수익 원천을 하나 더 만들어보세요.",
+      ? "수익률, 수익 원천 수, 배당수익률로 계산한 점수예요."
+      : "수익률과 시세차익·환차익·배당 중 기록된 원천 수로 계산한 점수예요.",
   };
 }
 
@@ -193,7 +193,7 @@ function scoreLeverage(
     return {
       key: "leverage", label, score: 0.5,
       reason: "부채가 투입 원금을 초과한 자본잠식 상태입니다.",
-      action: "고금리 대출부터 상환해 자기자본을 플러스로 회복하세요.",
+      action: "투입 원금이 부채보다 커지면 다시 계산돼요.",
     };
   }
 
@@ -201,18 +201,18 @@ function scoreLeverage(
 
   if (summary.loanBalance <= 0) {
     // 무부채 = 건전성 만점(5.0): 이 축은 레버리지 "활용도"가 아니라 "건전성(리스크)"을 재므로
-    // 부채 0 = 리스크 0 = 만점이 직관과 일치. 레버리지 활용은 별개 관점이라 액션으로 안내.
+    // 부채 0 = 리스크 0 = 만점이 직관과 일치. 레버리지 활용은 별개 관점이라 이 축에서 다루지 않는다.
     return {
       key: "leverage", label, score: L.noDebtScore,
       reason: "부채가 없어 이자 부담 리스크가 0입니다 — 건전성 만점입니다.",
-      action: "감당 가능한 저금리 레버리지는 자산 증식 속도를 높일 수 있습니다.",
+      action: "부채가 기록되면 부채비율과 평균 금리로 계산해요.",
     };
   }
 
   let score = 5;
   const notes: string[] = [];
 
-  if (report.debtRatio > L.debtRatioHigh) { score -= 3; notes.push(`부채비율 ${report.debtRatio.toFixed(0)}%로 과도`); }
+  if (report.debtRatio > L.debtRatioHigh) { score -= 3; notes.push(`부채비율 ${report.debtRatio.toFixed(0)}%로 높음`); }
   else if (report.debtRatio > L.debtRatioElevated) { score -= 1.5; notes.push(`부채비율 ${report.debtRatio.toFixed(0)}%로 다소 높음`); }
   else notes.push(`부채비율 ${report.debtRatio.toFixed(0)}%로 건전`);
 
@@ -235,8 +235,8 @@ function scoreLeverage(
     pending,
     reason: `${notes.join(", ")}.`,
     action: report.debtRatio > L.debtRatioElevated || avgRate > L.avgRateHigh
-      ? "부채비율 40% 이하, 금리 6% 이하로 재조정하면 점수가 오릅니다."
-      : "현재 수준을 유지하면서 이자보다 높은 수익률을 지키는 게 핵심입니다.",
+      ? `부채비율 ${L.debtRatioElevated}%, 평균 금리 ${L.avgRateHigh}%를 넘으면 감점되는 축이에요.`
+      : "부채비율, 평균 금리, 이자 대비 투자 수익으로 계산한 점수예요.",
   };
 }
 
@@ -269,7 +269,7 @@ function scoreDiversification(
   }
 
   // 환노출 편중
-  if (fxRatioSum >= D.fxRatioHigh) { score -= 1; notes.push(`외화 비중 ${fxRatioSum.toFixed(0)}%로 환리스크 큼`); }
+  if (fxRatioSum >= D.fxRatioHigh) { score -= 1; notes.push(`외화 비중 ${fxRatioSum.toFixed(0)}%로 높음`); }
   else if (fxRatioSum >= D.fxRatioElevated) { score -= 0.5; notes.push(`외화 비중 ${fxRatioSum.toFixed(0)}%`); }
 
   // 자산 1종뿐이면 바닥점 보정
@@ -280,8 +280,8 @@ function scoreDiversification(
     score: toHalf(clamp5(score)),
     reason: notes.length > 0 ? `${notes.join(", ")}.` : "자산군·분야·통화가 고루 분산돼 있습니다.",
     action: notes.length > 0
-      ? "가장 큰 쏠림부터 줄이세요. 단일 자산·분야 60% 이상은 위기 시 방어가 어렵습니다."
-      : "리밸런싱 주기(예: 연 1회)를 정해 현재의 분산을 유지하세요.",
+      ? "자산군·분야·통화 비중이 한쪽에 몰릴수록 감점되는 축이에요."
+      : "자산군·분야·통화 비중으로 계산한 점수예요.",
   };
 }
 
@@ -367,10 +367,10 @@ export function scoreHabit(
     score: toHalf(clamp5(score)),
     reason: `① 돈이 일하는 비율(현금 뺀 투자자산 ÷ 총자산): ${investRatio.toFixed(0)}%${noCash ? " · 비상 현금 0원" : ""} — ${steadyNote}${recordNote}.`,
     action: investRatio < 50
-      ? "노는 현금의 일부를 투자자산으로 옮겨 돈이 일하게 하세요 (비상금은 남기고)."
+      ? `현금을 뺀 자산 비중 ${H.investRatioLow}%·${H.investRatioMid}%·${H.investRatioHigh}%에서 점수 구간이 바뀌어요.`
       : noCash
-        ? "생활비 3~6개월치 비상 현금은 남겨두는 것이 안전합니다."
-        : "매달 일정액을 자동으로 투자하는 습관이 복리를 만듭니다.",
+        ? "현금이 0원이면 이 축에서 감점돼요."
+        : "현금을 뺀 자산 비중, 꾸준한 기록, 이번 달 기록률로 계산한 점수예요.",
   };
 }
 

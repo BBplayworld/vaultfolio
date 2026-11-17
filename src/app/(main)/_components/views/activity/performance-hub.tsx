@@ -2,8 +2,8 @@
 
 import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
 import { SKELETON_FILL } from "@/components/ui/skeleton";
-import { useMemo } from "react";
-import { Wallet, BadgeDollarSign, Trophy } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Wallet, BadgeDollarSign, Sprout } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode } from "@/lib/number-utils";
@@ -15,7 +15,8 @@ import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
-import { buildAssetReport } from "@/lib/report/asset-report";
+import { useStockLabels } from "@/hooks/use-stock-labels";
+import { buildGrowRows, summarizeGrowRows } from "@/lib/asset/grow-rows";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
 import type { SettlementWindow } from "@/lib/report/settlement";
@@ -84,16 +85,19 @@ function hubDescription(w: SettlementWindow | undefined, today: string): string 
 }
 
 export function PerformanceHub() {
-  const { assetData, getAssetSummary, snapshotVersion } = useAssetData();
+  const { assetData, getAssetSummary, snapshotVersion, exchangeRates } = useAssetData();
   const summary = getAssetSummary();
   const { navigate } = useAssetNavigation();
 
   const go = (tab: ActivityTab) => navigate({ type: "activity", tab });
 
-  // 자산 성적표 카드 — 상세 "투입 대비 성과"와 동일하게 이자 차감 후 '남긴 돈'을 노출(같은 소스로 값 일치)
-  const report = useMemo(() => buildAssetReport(assetData, summary), [assetData, summary]);
-  const allNet = summary.totalProfit - report.annualInterest;
-  const allNetRate = summary.totalCost > 0 ? (allNet / summary.totalCost) * 100 : 0;
+  // 내 자산 불리기 카드(#239) — 금액·% 없이 사용자가 붙인 이름표 개수와 마지막 점검만. 불리기 화면 요약 줄과 같은 값(같은 함수)
+  const { labels, ready: labelsReady } = useStockLabels();
+  const [growNow] = useState(() => Date.now());
+  const grow = useMemo(() => {
+    const rows = buildGrowRows(assetData.stocks, exchangeRates, labels, growNow);
+    return { hasRows: rows.length > 0, ...summarizeGrowRows(rows, labels, growNow) };
+  }, [assetData.stocks, exchangeRates, labels, growNow]);
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
   // 창 밖이면 이번 달 진행 중 증감, 첫 달·자산 0건이면 금액 없이 안내. 증감은 결산 Hero와 같은 settlementDelta.
@@ -189,24 +193,26 @@ export function PerformanceHub() {
 
         <div data-testid="hub-card-report">
         <KpiCard
-          icon={Trophy}
+          icon={Sprout}
           title={
             <span className="inline-flex items-center gap-1.5">
-              자산 성적표
+              내 자산 불리기
               <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
             </span>
           }
-          description="이자 뺀 실수익 · AI 진단"
-          primary={`${allNet >= 0 ? "+" : ""}${formatPriceByMode(Math.round(allNet))}`}
-          primaryClassName={getProfitLossColor(allNet)}
-          secondary={summary.totalCost > 0 ? (
-            <span className={`font-semibold tabular-nums ${getProfitLossColor(allNet)}`}>
-              {allNet >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
-              <span className="text-muted-foreground font-medium ml-1.5">투입 대비</span>
-              {/* 주식만이 아니라 부동산·코인·현금까지 포함한 값이라 기준을 못박는다 */}
-              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground align-middle">모든 자산</span>
+          description="내 기준으로 지키고, 내가 점검해요"
+          // 큰 값은 본문색 고정(주황·손익색 금지). 이름표 0개면 앱이 센 숫자·분류 없이 행동 문구만
+          primary={!hasAssets || !labelsReady ? undefined : (
+            <span data-testid="hub-report-primary" className="whitespace-nowrap">
+              {!grow.hasRows ? "성적표 보기" : grow.keep + grow.check === 0 ? "이름표 붙이기" : `오래 둘 ${grow.keep} · 점검할 ${grow.check}`}
             </span>
-          ) : <span className="text-muted-foreground">자산 등록 후 계산</span>}
+          )}
+          primaryClassName={ASSET_THEME.text.default}
+          secondary={!hasAssets ? (
+            <span data-testid="hub-report-secondary" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
+          ) : labelsReady && grow.hasRows && grow.keep + grow.check > 0 && grow.lastCheckText ? (
+            <span data-testid="hub-report-secondary" className="text-muted-foreground tabular-nums">{grow.lastCheckText}</span>
+          ) : null}
           onClick={() => go("report")}
         />
         </div>

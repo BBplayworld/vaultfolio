@@ -14,6 +14,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "20261117-01",
+    title: "성과에 '내 자산 불리기'가 생겼어요",
+    body: "보유 주식에 '오래 둘 자산'·'점검할 자산' 이름표를 직접 붙이고 점검한 날을 남겨요",
+    featureId: "report",
+  },
+  {
     id: "20261116-01",
     title: "홈 자산 분포가 간결해졌어요",
     body: "같은 금액 반복을 줄이고, 누른 종류의 화면으로 바로 가요",

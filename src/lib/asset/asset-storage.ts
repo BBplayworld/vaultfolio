@@ -12,6 +12,7 @@ import { getProfitBasis, setProfitBasis, type ProfitBasis } from "@/lib/finance/
 import { persistNickname } from "@/hooks/use-nickname";
 import { cryptoExchanges } from "@/config/asset-options";
 import { pruneMonthlySnapshots } from "@/lib/report/settlement";
+import { applyIncomingStockLabels, readStockLabelsForExport } from "@/lib/asset/stock-labels";
 
 // 구버전 스크린샷 임포트가 저장한 영문 거래소 값("upbit") → 한글 라벨("업비트") 매핑
 // (수동 입력·신규 임포트는 한글 라벨을 저장하므로, 옛 영문 값만 정규화하여 통일)
@@ -209,7 +210,9 @@ export function buildExportPayload(): Record<string, unknown> {
   const hasSnapshots = snapshots.daily.length > 0 || snapshots.monthly.length > 0;
   const profitBasis = getProfitBasis();
   const nickname = assetData.nickname || undefined;
-  return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}) };
+  // 주식 이름표(#239)는 assetData 밖 최상위 필드 — 로컬 키가 없거나 읽지 못하면 필드를 넣지 않는다(받는 쪽은 필드 없음 = 로컬 유지)
+  const stockLabels = readStockLabelsForExport();
+  return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}), ...(stockLabels ? { stockLabels } : {}) };
 }
 
 // 화면(React state)과 저장소(localStorage)가 갈라진 순간의 항목 건수 지문.
@@ -342,6 +345,8 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
  *  사용자가 막 추가한 자산이 사라지는 창을 최소화한다. 넘기지 않으면(null/undefined) 종전대로
  *  원격이 로컬을 통째로 대체한다 — 파일 가져오기(남의 백업에 내 항목을 섞으면 안 됨)와
  *  connect(다른 금고를 새로 채택)가 이 경로다.
+ * @param mergeStockLabels 클라우드 pull 한정 — 주식 이름표(#239)를 교체하지 않고 티커별 `at` 최신 우선으로 병합한다.
+ *  반환 `stockLabelsRepush`가 true면 이 기기 쪽이 더 새 값이라 호출측이 다시 push해야 한다.
  * @returns remoteIds 병합 **전** 원격 payload의 항목 키 — 호출측이 기준점 갱신에 쓴다. 병합으로
  *  살려둔 로컬 신규분은 아직 서버에 없으므로 기준점에 넣으면 안 된다(넣으면 다음 pull이 그걸
  *  "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다).
@@ -371,8 +376,8 @@ export function mergeMonthlySnapshots(local: unknown[], incoming: unknown[], cur
 
 export function applyImportedPayload(
   parsed: unknown,
-  { keepLocalSnapshots = false, syncedIds }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null } = {},
-): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[]; physicalKept: boolean } {
+  { keepLocalSnapshots = false, syncedIds, mergeStockLabels = false }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null; mergeStockLabels?: boolean } = {},
+): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[]; physicalKept: boolean; stockLabelsRepush: boolean } {
   const p = (parsed ?? {}) as Record<string, unknown>;
   // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
   const rawAsset = (p.assetData ?? p) as unknown;
@@ -448,7 +453,15 @@ export function applyImportedPayload(
     const kept = readPhysicalAssets();
     if (kept) validated = { ...validated, physicalAssets: kept };
   }
-  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds, physicalKept };
+  // 주식 이름표(#239) — payload 최상위 `stockLabels`. 필드가 없으면 쓰기 호출을 하지 않아 로컬 값을 손대지 않는다.
+  // 파일 가져오기·데모 주입은 교체, 동기화 pull(mergeStockLabels)만 티커별 병합. 실패해도 자산 복원은 막지 않는다.
+  let stockLabelsRepush = false;
+  try {
+    stockLabelsRepush = applyIncomingStockLabels(p.stockLabels, { merge: mergeStockLabels }).repush;
+  } catch {
+    // 이름표 반영 실패는 무시(자산은 이미 복원됨)
+  }
+  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds, physicalKept, stockLabelsRepush };
 }
 
 export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean; physicalKept: boolean }> {

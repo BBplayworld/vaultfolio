@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { clearAssetData, clearPhysicalAssets, clearUserCaches, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { clearStockLabels } from "@/lib/asset/stock-labels";
 import { clearBackupStatus } from "@/lib/asset/backup-status";
 import { clearAssetRefreshStatus } from "@/lib/asset/asset-refresh-status";
 import { APP_VERSION } from "@/config/app-version";
@@ -142,6 +143,7 @@ export function SettingsPage({ focus }: { focus?: "notify" }) {
     cs.forget();
     const success = clearAssetData();
     clearPhysicalAssets(); // 분리 키(secretasset. 접두)는 clearAssetData에 걸리지 않으므로 명시 삭제
+    clearStockLabels(); // 주식 이름표(#239)도 분리 키 — 전체 삭제에서만 함께 지운다
     // clearAssetData는 백업 시각을 보존하지만(가져오기 경로 보호), 전체 삭제는 사용자의
     // 명시적 의도이므로 여기서만 함께 지운다 — 남은 데이터가 없으니 "백업함" 상태도 무의미.
     clearBackupStatus();

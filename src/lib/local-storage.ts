@@ -46,6 +46,9 @@ export const STORAGE_KEYS = {
   // 실물 자산 배열(#58) — 의도적으로 `secretasset_` 접두를 쓰지 않는다(점 구분).
   // 구버전 clearAssetData(동기화 pull·가져오기마다 secretasset_* 삭제)와 접두 순회 정리에 걸리지 않아 롤백해도 보존된다.
   physicalAssets: "secretasset.physical_assets",
+  // 주식 이름표·점검 기록(#239) — 실물과 같은 이유로 `secretasset_` 접두를 쓰지 않는다(점 구분).
+  // 가져오기·동기화 pull의 clearAssetData에 걸리지 않고, 구버전으로 롤백해도 남는다. 읽기·쓰기는 lib/asset/stock-labels.ts
+  stockLabels: "secretasset.stock_labels",
 } as const;
 
 export const LEGACY_KEYS = {

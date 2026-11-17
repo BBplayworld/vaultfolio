@@ -141,7 +141,6 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="size-5 text-primary" /> 기기 동기화
-            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-sm font-bold text-primary">Plus</span>
           </DialogTitle>
           <DialogDescription className="text-left text-pretty break-keep">
             새 기기로 자산을 암호화해 옮기고(공유), 실시간으로 데이터를 일치시킵니다(지속 자동 동기화). {SYNC_MENU_SECURITY_DESC}
@@ -152,7 +151,7 @@ export function CloudSyncMenuEntry({ open, onOpenChange }: Props) {
         {/* none: 동기화 시작 */}
         {cs.status === "none" && (
           <div className="space-y-3 py-1">
-            {/* Plus 프로모션 넛지 — 가치 인지 안내 */}
+            {/* 가치 인지 안내 */}
             <div className="rounded-lg bg-primary/5 px-3 py-2.5 space-y-1">
               <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-primary" /> 언제 어디서나 안전하게 기록을 이어가세요
