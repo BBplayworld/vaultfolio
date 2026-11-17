@@ -228,6 +228,7 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
     const using = filesMatching(/\.(ts|tsx)$/, /stock-labels|grow-rows/).sort();
     expect(using).toEqual([
       "app/(main)/_components/header-menu/settings-page.tsx",
+      "app/(main)/_components/preview/demo-snapshot-rebase.tsx", // 데모·체험 이름표 정한 날 가격 재기준(5.125)
       "app/(main)/_components/preview/preview-gate.tsx",
       "app/(main)/_components/views/activity/performance-hub.tsx",
       "app/(main)/_components/views/activity/stock-label-block.tsx",
@@ -237,6 +238,7 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
       "lib/asset/grow-rows.ts",
       "lib/asset/stock-labels.ts",
       "lib/local-storage.ts",
+      "lib/preview/demo-live-rebase.ts", // 데모·체험 이름표 정한 날 가격 재기준(순수 함수, 5.125)
     ]);
   });
   it("'다시 봄' 전송은 불리기 블록 한 곳이고 preview 가드가 앞에 있다(AC-30 데모 0회)", () => {

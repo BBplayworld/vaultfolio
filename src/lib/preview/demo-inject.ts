@@ -26,6 +26,12 @@ export async function injectDemoPayload({ nickname }: { nickname?: string } = {}
   localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
 }
 
+/** 오늘 기준으로 materialize한 데모 payload(주입본과 같은 날짜) — 주입하지 않고 읽기만 한다. 데모 이름표 가격 재기준(#239 5.125)이 시드 값을 얻는 데 쓴다 */
+export async function loadDemoPayload(): Promise<Record<string, unknown>> {
+  const mod = await import("@/lib/preview/demo-data.json");
+  return materializeDemo(mod.default, kstToday());
+}
+
 // materializeDemo 결과(새 객체)의 최상위·assetData 닉네임만 교체한 사본
 function withNickname(payload: unknown, nickname: string): unknown {
   const p = payload as Record<string, unknown>;
