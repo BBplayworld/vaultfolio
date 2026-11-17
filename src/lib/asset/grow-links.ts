@@ -32,7 +32,7 @@ export interface DividendLinkInput {
 }
 
 /**
- * `올해 예상 배당 중 오래 둘 자산 몫은 N%예요`.
+ * `올해 배당 중 오래 둘 자산 몫은 N%예요` — 분모는 지급 + 예상 합(배당 카드 `올해 배당 (지급 + 예상)`과 같은 말·같은 값).
  * 조회 중 → loading, 조회 실패가 1건이라도 있으면 none(비율이 틀려진다), 분모 0 → none, 분자 0 → `0%`.
  */
 export function buildDividendLink(input: DividendLinkInput | undefined, keepKeys: ReadonlySet<string>): GrowLink<{ pct: number; text: string }> {

@@ -196,16 +196,19 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
     expect(rowsLib).toContain("`정한 날 ${then} → 지금 ${now}`");
     expect(rowsLib.match(/정한 (날|뒤)/g)).toHaveLength(2);
   });
-  it("허용어는 정해진 자리에서만(AC-44): 매매는 '이 앱에 기록한' 뒤, 예상 배당·불어난 돈은 연결 문장·도움말, 줄어든 돈·쪽은 결산 문장", () => {
+  it("허용어는 정해진 자리에서만(AC-44): 매매는 '이 앱에 기록한' 뒤, 예상 배당은 도움말만·불어난 돈은 연결 문장·도움말, 줄어든 돈·쪽은 결산 문장", () => {
     const raw = visibleText(read("stock-label-block.tsx"));
     const all = [raw, rowsLib, linksLib, hubCard, hint].join("\n");
     // 매매: 행 매매 줄 1곳 + 블록 도움말 2문단의 '매매 건수' 1곳
     expect(all.match(/매매/g)).toHaveLength(2);
     expect(raw).toContain("이 앱에 기록한 매매 최근 3개월 ");
     expect(raw).toContain("매매 건수는 이 앱의 거래 기록에 남긴 것만 세요.");
-    // 예상 배당: 배당 문장 1곳 + 도움말 1곳('예상 배당을 합친') — 표시 값·허브 카드·화면 제목 도움말에 없다
+    // 예상 배당: 도움말 1곳('예상 배당을 합친')뿐 — 배당 문장은 `올해 배당 중`(배당 카드 '예상' = 아직 안 받은 몫과 겹치지 않게, R-C1)
     for (const t of [rowsLib, linksLib, hubCard, hint]) expect(t).not.toMatch(/예상 배당|불어난 돈|줄어든 돈|불어난 쪽|줄어든 쪽/);
-    expect(raw.match(/올해 예상 배당 중/g)).toHaveLength(1);
+    expect(raw.match(/예상 배당/g)).toHaveLength(1);
+    expect(raw).toContain("배당은 올해 지급된 배당과 예상 배당을 합친 값이에요.");
+    expect(raw.match(/올해 배당 중/g)).toHaveLength(1);
+    expect(raw).not.toContain("올해 예상 배당 중");
     expect(raw.match(/불어난 돈/g)).toHaveLength(2); // 결산 문장 앞 조각 + 도움말 3문단
     expect(raw.match(/줄어든 돈/g)).toHaveLength(1); // 결산 문장 앞 조각(줄어든 해)
     expect(raw.match(/줄어든 쪽/g)).toHaveLength(1); // 섞임 문장

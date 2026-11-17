@@ -318,10 +318,11 @@ describe("요약 영역 2 — 연결 문장(AC-39~41)", () => {
   const ref = (o: Record<string, number | null>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v === null ? null : { refPrice: v, refDate: "2025-12-30" }]));
   const ALL = { AAA: 40, BBB: 100, CCC: 100, DDD: 100, EEE: 100, FFF: 100 };
   const settleOf = (html: string) => html.match(/<li data-testid="grow-link-settle" data-state="(\w+)" data-pct="([^"]*)" data-excluded="(\d+)"[^>]*>(.*?)<\/li>/);
-  it("배당: `올해 예상 배당 중 오래 둘 자산 몫은 N%예요` — 범례 아래, 링크·금액 없음", () => {
+  it("배당: `올해 배당 중 오래 둘 자산 몫은 N%예요` — 범례 아래, 링크·금액 없음, 블록 문장에 `예상 배당` 없음(R-C1)", () => {
     const html = render(SIX, keepA, true, { dividend: div() });
     const link = html.match(/<ul data-testid="grow-link"[^>]*>(.*?)<\/ul>/)![1];
-    expect(link.replace(/<[^>]+>/g, "")).toBe("올해 예상 배당 중 오래 둘 자산 몫은 25%예요");
+    expect(link.replace(/<[^>]+>/g, "")).toBe("올해 배당 중 오래 둘 자산 몫은 25%예요");
+    expect(link).not.toContain("예상");
     expect(link).toContain('data-testid="grow-link-dividend" data-pct="25%"');
     expect(link).toContain('<span class="font-semibold text-foreground">25%</span>');
     expect(link).not.toMatch(/<a |<button|[\d,]+원|1000|250/);

@@ -31,7 +31,7 @@ describe("keepLabelKeys", () => {
   });
 });
 
-describe("배당 몫(AC-39) — 올해 예상 배당 중 오래 둘 자산 몫", () => {
+describe("배당 몫(AC-39) — 올해 배당(지급 + 예상) 중 오래 둘 자산 몫", () => {
   const input = (over: Record<string, unknown> = {}) => ({ annualTotal: 1000, byLabelKey: new Map([["AAA", 333.4], ["BBB", 666.6]]), isLoading: false, failedCount: 0, ...over });
   const keep = new Set(["AAA"]);
   it("분모 = 키별 금액의 합 = 배당 카드 금액(반올림 전 합을 반올림한 값)", () => {
@@ -180,10 +180,26 @@ describe("데모 시드(AC-45) — 조작 없이 처음 3행 안에 4종이 보�
     const top3 = sortGrowRowKeys(rows).slice(0, 3).map((k) => by.get(k)!);
     expect(top3.map((r) => r.ticker).sort()).toEqual(["000660", "005930", "AAPL"]);
     expect(top3.every((r) => r.priceFact?.state === "value")).toBe(true);                 // 정한 날 가격 대비
-    expect(top3.map((r) => r.qtyFact!.state).sort()).toEqual(["changed", "same", "same"]); // → 1행, 그대로 2행
+    expect(top3.map((r) => r.qtyFact!.state).sort()).toEqual(["changed", "changed", "same"]); // → 2행(AAPL·삼성전자), 그대로 1행(SK하이닉스)
     const counts = Object.fromEntries(top3.map((r) => [r.ticker, r.tradeCount]));
     expect(counts["000660"]).toBe(0);                                                      // 0건 행
     expect(counts.AAPL).toBeGreaterThanOrEqual(1);                                         // 1건 이상 행
     expect([...keepLabelKeys(labels)].sort()).toEqual(["005930", "360750"]);
+  });
+  // 시드 정합(COO R-C2, C132): 정한 날 ≥ 매수일, 정한 날 수량 = 지금 수량 − 정한 날 뒤 거래 순증감 — 수량·매매 줄이 서로 모순되지 않는다
+  it.each(["2026-11-17", "2026-03-10", "2027-01-31"])("시드 정합 %s", (today) => {
+    const payload = materializeDemo(raw, today) as { assetData: unknown; stockLabels: unknown };
+    const data = assetDataSchema.parse(payload.assetData);
+    const labels = parseStockLabels(payload.stockLabels)!;
+    for (const [key, item] of Object.entries(labels.items)) {
+      const held = data.stocks.filter((s) => s.ticker === key);
+      expect(held.length, key).toBeGreaterThan(0);
+      const day = item.labeledAt.slice(0, 10);
+      for (const s of held) expect(day >= s.purchaseDate!, `${key} 정한 날 ${day} ≥ 매수일 ${s.purchaseDate}`).toBe(true);
+      const ids = new Set(held.map((s) => s.id));
+      const net = data.transactions.filter((t) => ids.has(t.stockId) && t.date > day && t.date <= today).reduce((a, t) => a + (t.type === "buy" ? t.quantity : -t.quantity), 0);
+      const now = held.reduce((a, s) => a + s.quantity, 0);
+      expect(item.base!.qty, key).toBe(now - net);
+    }
   });
 });

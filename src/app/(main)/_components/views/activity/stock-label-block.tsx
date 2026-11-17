@@ -222,7 +222,7 @@ function LinkSentences({ dividend, settle }: { dividend: ReturnType<typeof build
       {dividend.state === "loading" && skeleton("dividend")}
       {dividend.state === "shown" && (
         <li data-testid="grow-link-dividend" data-pct={dividend.text}>
-          <span className={LINK_PIECE}>올해 예상 배당 중</span>{" "}
+          <span className={LINK_PIECE}>올해 배당 중</span>{" "}
           <span className={LINK_PIECE}>오래 둘 자산 몫은 <span className={FACT_VALUE}>{dividend.text}</span>예요</span>
         </li>
       )}
