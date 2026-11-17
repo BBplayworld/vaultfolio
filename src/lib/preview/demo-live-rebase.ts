@@ -5,25 +5,22 @@
  * 순수 함수만 둔다(저장 접근은 demo-snapshot-rebase.tsx). 부동산·현금·대출·투입원가는 시세 무관이라 건드리지 않는다.
  */
 
-import type { DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import { buildLiveAttributionCurr, computeAttributionBetween } from "@/lib/report/asset-report";
+
+type AttributionPoint = ReturnType<typeof buildLiveAttributionCurr>;
 import type { StockLabels } from "@/lib/asset/stock-labels";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import { getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 
 type Row = DailyAssetSnapshot | MonthlyAssetSnapshot;
 
 /** 기준 평가액 — 오늘 이전 가장 늦은 enrich 일별 기록의 주식·코인(스케일 배율의 분모) */
 export function pickRebaseRef(daily: DailyAssetSnapshot[], today: string): RebaseRef | null {
   const row = [...daily].filter((d) => d?.date && d.date < today && d.breakdown).sort((a, b) => b.date.localeCompare(a.date))[0];
-  if (!row?.breakdown) return null;
-  return {
-    stocks: row.breakdown.stocks, crypto: row.breakdown.crypto,
-    // 주식 투입원가 재기준(5.125)의 기준 — 그 기록의 주식 원가와 환율
-    ...(row.cost && row.fx ? { costStock: row.cost.stock, fx: { USD: row.fx.USD, JPY: row.fx.JPY } } : {}),
-  };
+  return row?.breakdown ? { stocks: row.breakdown.stocks, crypto: row.breakdown.crypto } : null;
 }
 
-export interface RebaseRef { stocks: number; crypto: number; costStock?: number; fx?: { USD: number; JPY: number } }
+export interface RebaseRef { stocks: number; crypto: number }
 
 /** 배율 = 현재(실시간) 평가액 / 기준 평가액. 기준이 0이면 1 */
 export const rebaseRatio = (live: number, ref: number): number => (ref > 0 && live >= 0 ? live / ref : 1);
@@ -32,7 +29,7 @@ export const rebaseRatio = (live: number, ref: number): number => (ref > 0 && li
  * rows의 주식·코인 평가를 ks·kc배로 옮긴다. enrich 기록은 breakdown·netAsset·financialAsset·fxBase.USD(외화 주식 노출, 근사)를 함께,
  * net-only 기록은 기준 평가액 몫만큼 netAsset·financialAsset을 옮긴다. cost·fx·부동산·현금·대출은 그대로. 입력은 바꾸지 않는다.
  */
-export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: number, kc: number, kcost = 1): T[] {
+export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: number, kc: number, costShift?: ReadonlyMap<string, number>): T[] {
   return rows.map((r) => {
     const b = r.breakdown;
     const dS = b ? b.stocks * (ks - 1) : ref.stocks * (ks - 1);
@@ -42,11 +39,9 @@ export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: num
       next.breakdown = { ...b, stocks: Math.round(b.stocks * ks), crypto: Math.round(b.crypto * kc) };
       if (r.fxBase) next.fxBase = { ...r.fxBase, USD: Math.round(r.fxBase.USD * ks) };
     }
-    // 주식 투입원가 — 데모 평단을 실시간 배율로 옮긴 만큼(kcost = 옮긴 평단 원가 ÷ 시드 평단 원가). 넣은 돈 원인분해가 가짜 유입을 만들지 않게
-    if (r.cost && kcost !== 1) {
-      const dCost = r.cost.stock * (kcost - 1);
-      next.cost = { ...r.cost, stock: Math.round(r.cost.stock + dCost), total: Math.round(r.cost.total + dCost) };
-    }
+    // 주식 투입원가 — 데모 평단을 옮긴 만큼 기록마다 더한다(demoCostShifts). 원인 분해가 평단 재기준 전과 같아진다
+    const shift = r.cost && r.date ? costShift?.get(r.date) : undefined;
+    if (r.cost && shift) next.cost = { ...r.cost, stock: r.cost.stock + shift, total: r.cost.total + shift };
     return next as T;
   });
 }
@@ -115,21 +110,38 @@ export function rebaseDemoAveragePrices<S extends Stock>(stocks: S[], seed: Read
   return changed ? next : stocks;
 }
 
-/** 주식 원가(수량 × 평단 × 지금 환율, 상장폐지 제외) — computeAssetCost의 stockCost와 같은 식 */
-function stockCostOf(stocks: Stock[], rates: { USD: number; JPY: number }): number {
-  return stocks.reduce((sum, s) => (s.inactiveStatus === "delisted" ? sum : sum + s.quantity * s.averagePrice * getMultiplier(s.currency, rates)), 0);
+/**
+ * 기록(스냅샷)마다 주식 투입원가에 더할 값 — 평단 재기준 전후로 그 기록 → 지금 구간의 원인 분해가 같아지게 한다(ui-review R2 재판정·qa D-2).
+ * 평단은 지금 원가뿐 아니라 외화 원가 환율 재평가·실현손익에도 들어가므로 배율로 옮기면 넣은 돈·시세·매도가 어긋난다.
+ * 그래서 실제 원인 분해 함수로 두 번 계산해(이전 평단 / 지금 평단, 같은 기록·같은 시세) 넣은 돈 효과의 차이를 그 기록 원가에 더한다.
+ * 이 차이는 평단 차이에 선형이고 구간에 더해지는 꼴이라, 기록 → 기록 구간(월 결산)도 같이 맞는다.
+ *  - prevData = 그 기록들과 맞는 평단(처음 주입 = 시드 평단, 새로고침 뒤 = 그때 저장된 평단). 기록은 prevData 기준 원가를 담고 있어야 한다
+ *  - fx·fxBase·breakdown·cost가 모두 있는 기록만(그 밖은 0). 키 = 기록의 date
+ */
+export function demoCostShifts(
+  rows: Row[],
+  prevData: AssetData,
+  nextData: AssetData,
+  livePrev: AttributionPoint,
+  liveNext: AttributionPoint,
+  rates: { USD: number; JPY: number },
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.date || !r.cost || !r.fx || !r.fxBase || !r.breakdown || out.has(r.date)) continue;
+    const asMonthly = { ...r, month: r.date.slice(0, 7) } as MonthlyAssetSnapshot;
+    const a = computeAttributionBetween(asMonthly, livePrev, {}, prevData, rates);
+    const b = computeAttributionBetween(asMonthly, liveNext, {}, nextData, rates);
+    if (!a || !b) continue;
+    const shift = b.savingEffect - a.savingEffect;
+    if (shift !== 0) out.set(r.date, shift);
+  }
+  return out;
 }
 
-/**
- * 스냅샷 주식 투입원가에 곱할 배율 — 데모 평단을 옮긴 만큼만(환율 변화는 빼고).
- * 목표 = 지금 평단 원가 ÷ 시드 평단 원가(같은 수량·같은 지금 환율). 기준 기록이 이미 옮겨져 있으면(새로고침 뒤) 그만큼 나눈다
- * — 기준 기록 원가 ÷ 그 기록 환율에서의 시드 평단 원가. 시드에 없는 보유·수량이 바뀐 보유는 지금 평단 그대로 양쪽에 든다.
- */
-export function demoCostRatio(stocks: Stock[], seed: ReadonlyMap<string, DemoSeedStock>, rates: { USD: number; JPY: number }, ref: RebaseRef): number {
-  const seedAvg = stocks.map((s) => { const sd = seed.get(s.id); return sd && s.quantity === sd.quantity ? { ...s, averagePrice: sd.averagePrice } : s; });
-  const target = rebaseRatio(stockCostOf(stocks, rates), stockCostOf(seedAvg, rates));
-  const applied = ref.costStock !== undefined && ref.fx ? rebaseRatio(ref.costStock, stockCostOf(seedAvg, ref.fx)) : 1;
-  return applied > 0 ? target / applied : target;
+/** 지금 데이터의 평단만 바꾼 사본 — 시드·기준에 있는 id이고 수량이 같은 보유 건만 */
+export function withAveragePrices(data: AssetData, avg: ReadonlyMap<string, DemoSeedStock>): AssetData {
+  return { ...data, stocks: data.stocks.map((s) => { const a = avg.get(s.id); return a && s.quantity === a.quantity ? { ...s, averagePrice: a.averagePrice } : s; }) };
 }
 
 /** 시드 주식 목록 → id별 기준값 */

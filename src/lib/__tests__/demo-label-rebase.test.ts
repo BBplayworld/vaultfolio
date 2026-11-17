@@ -4,10 +4,14 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { materializeDemo } from "../preview/demo-payload";
-import { demoCostRatio, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows } from "../preview/demo-live-rebase";
+import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices } from "../preview/demo-live-rebase";
+import { buildLiveAttributionCurr, computeAttributionSince, computePeriodAttribution } from "../report/asset-report";
+import { resolveSettlementWindow } from "../report/settlement";
+import { computeSettlementCauses, settlementDelta } from "@/app/(main)/_components/views/activity/change-hero";
+import { buildYearSettlementModel } from "@/app/(main)/_components/views/activity/year-settlement-block";
 import { computeStockMetrics } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
-import { computeAssetCost } from "@/contexts/asset-data-context";
-import type { AssetData, DailyAssetSnapshot } from "@/types/asset";
+import { computeAssetCost, computeNetAsset } from "@/contexts/asset-data-context";
+import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { parseStockLabels, setStockLabel, type StockLabels } from "../asset/stock-labels";
 import { buildGrowRows } from "../asset/grow-rows";
 import { assetDataSchema } from "@/types/asset";
@@ -132,35 +136,98 @@ describe("데모 평단 재기준 — 내 매입가 대비 %가 현실 범위·�
     expect(rebaseDemoAveragePrices(once, seed)).toBe(once); // 멱등
     expect(rebaseDemoAveragePrices(stocks, seed)).toBe(stocks); // 시세가 시드와 같으면 그대로
   });
-  it("스냅샷 주식 원가도 같은 만큼 — 어제 기록 원가 ≈ 지금 원가(가짜 넣은 돈 없음), 새로고침 뒤 다시 계산해도 배율 1", () => {
-    const today = "2026-11-17";
-    const p = materializeDemo(raw, today) as unknown as { assetData: AssetData; snapshots: { daily: DailyAssetSnapshot[] } };
-    const stocks = assetDataSchema.parse(p.assetData).stocks;
-    const seed = demoSeedStockMap(stocks);
-    const ref = pickRebaseRef(p.snapshots.daily, today)!;
-    expect(ref.costStock).toBeGreaterThan(0);
-    const now = rebaseDemoAveragePrices(live(stocks, SCENES.실측), seed);
-    const kcost = demoCostRatio(now, seed, LIVE_RATES, ref);
-    expect(kcost).toBeGreaterThan(1.5);
-    const rows = rebaseDemoRows(p.snapshots.daily, ref, 1, 1, kcost);
-    const nowCost = computeAssetCost({ ...p.assetData, stocks: now }, LIVE_RATES).stockCost;
-    const seedCostLive = computeAssetCost({ ...p.assetData, stocks }, LIVE_RATES).stockCost;
-    const ref2 = pickRebaseRef(rows, today)!;
-    // 어제 기록 원가 : 지금 원가 = 시드 원가(어제 환율) : 시드 원가(지금 환율) — 남는 차이는 환율 효과뿐
-    expect(ref2.costStock! / nowCost).toBeCloseTo(ref.costStock! / seedCostLive, 3);
-    // 새로고침: 옮긴 기록을 기준으로 다시 계산하면 더 옮기지 않는다(누적 없음)
-    expect(demoCostRatio(now, seed, LIVE_RATES, ref2)).toBeCloseTo(1, 6);
-    // 투입원가 total도 같은 차이만큼, 주식 외 원가는 그대로
-    const before = p.snapshots.daily.find((d) => d.cost)!;
-    const after = rows.find((d) => d.date === before.date)!;
-    expect(after.cost!.total - before.cost!.total).toBe(after.cost!.stock - before.cost!.stock);
-    expect(after.cost!.crypto).toBe(before.cost!.crypto);
-  });
   it("가드: 평단 저장은 eligible(체험·preview + 모든 보유 id가 demo_)이고 시드를 읽은 뒤에만", () => {
     const comp = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/demo-snapshot-rebase.tsx"), "utf8");
     const at = comp.indexOf("rebaseDemoAveragePrices(assetData.stocks");
     expect(comp.slice(at - 120, at)).toContain("if (!eligible || !seed) return;");
     expect(comp).toContain("if (!isTrialMode() && !isPreviewEnv()) return false;");
     expect(comp.match(/saveData\(/g)).toHaveLength(1);
+  });
+});
+
+// ui-review R2 재판정·qa D-2 — 평단을 옮겨도 홈·자산 변화·결산의 원인 분해가 평단 재기준 전(eb7316a)과 같다
+describe("평단 재기준 전후 원인 분해 일치(기록 원가를 같은 만큼 옮긴다)", () => {
+  type P = { assetData: AssetData; snapshots: { daily: DailyAssetSnapshot[]; monthly: MonthlyAssetSnapshot[] } };
+  const RATES_LIVE = { USD: 1470, JPY: 925 };
+  const summaryOf = (d: AssetData, rates: typeof RATES) => ({ ...computeNetAsset(d, rates), ...computeAssetCost(d, rates) }) as unknown as AssetSummary;
+  const liveOf = (d: AssetData, rates: typeof RATES) => buildLiveAttributionCurr(d, rates, summaryOf(d, rates));
+  /** 한 세션의 재기준 — 기준 기록(rows)·기준 평단(avg)에서 지금 데이터로. withAvg=false면 평단 재기준 전(eb7316a) 동작 */
+  const session = (daily: DailyAssetSnapshot[], monthly: MonthlyAssetSnapshot[], baseStocks: Stock[], data: AssetData, rates: typeof RATES, today: string, seed: ReturnType<typeof demoSeedStockMap>, withAvg: boolean) => {
+    const ref = pickRebaseRef(daily, today)!;
+    const next = withAvg ? { ...data, stocks: rebaseDemoAveragePrices(data.stocks, seed) } : data;
+    const n = computeNetAsset(next, rates);
+    const ks = rebaseRatio(n.stockValue, ref.stocks);
+    const kc = rebaseRatio(n.cryptoValue, ref.crypto);
+    const prev = withAveragePrices(next, demoSeedStockMap(baseStocks));
+    const shifts = withAvg ? demoCostShifts([...daily, ...monthly], prev, next, liveOf(prev, rates), liveOf(next, rates), rates) : undefined;
+    return { data: next, daily: rebaseDemoRows(daily, ref, ks, kc, shifts), monthly: rebaseDemoRows(monthly, ref, ks, kc, shifts) };
+  };
+  /** 화면이 쓰는 원인 분해 전부 — 홈(지난 접속 이후)·자산 변화 기간 4개·이번 달 결산·연 결산 */
+  type Eff = Record<string, number> | null;
+  type Causes = { home: Eff; "1w": Eff; "1m": Eff; "3m": Eff; ytd: Eff; month: [string, number][]; year: string };
+  const causes = (w: { data: AssetData; daily: DailyAssetSnapshot[]; monthly: MonthlyAssetSnapshot[] }, rates: typeof RATES, today: string): Causes => {
+    const live = liveOf(w.data, rates);
+    const n = computeNetAsset(w.data, rates);
+    const eff = (a: { effects: readonly { key: string; amount: number }[] } | null) => a ? Object.fromEntries(a.effects.map((e) => [e.key, Math.round(e.amount)])) : null;
+    const yesterday = w.daily.filter((d) => d.date < today).sort((a, b) => b.date.localeCompare(a.date))[0].date;
+    const win = resolveSettlementWindow(w.monthly, today.slice(0, 7), today);
+    const month = computeSettlementCauses({ start: win.start, end: null, live, deltaNet: settlementDelta(win as never, n.netAsset).delta, startDate: win.startDate, endDate: today, liveCash: n.cashValue, exchangeHistory: {}, assetData: w.data, rates });
+    // 올해 항목은 앱이 스냅샷 저장 때 넣는다(saveSnapshots) — 같은 값으로 채운다
+    const y = Number(today.slice(0, 4));
+    const withYear = { ...w.data, yearlyNetAssets: [...(w.data.yearlyNetAssets ?? []).filter((x) => x.year !== y), { year: y, netAsset: n.netAsset, note: "자동" }] } as AssetData;
+    const year = buildYearSettlementModel({ assetData: withYear, monthly: w.monthly, daily: w.daily, rates, exchangeHistory: {}, summary: summaryOf(w.data, rates), today });
+    return {
+      ...({} as Pick<Causes, "1w" | "1m" | "3m" | "ytd">),
+      home: eff(computeAttributionSince(w.daily, w.monthly, {}, yesterday, w.data, rates, live)),
+      ...Object.fromEntries((["1w", "1m", "3m", "ytd"] as const).map((k) => [k, eff(computePeriodAttribution(w.daily, w.monthly, {}, k, w.data, rates, live))])),
+      month: month.mapped.causes.map((c) => [c.key, Math.round(c.amount)] as [string, number]),
+      year: JSON.stringify(year?.groups ?? null, (_k, v) => (typeof v === "number" ? Math.round(v) : v)),
+    };
+  };
+  for (const today of ["2026-11-17", "2027-01-31"]) {
+    it(`${today}: 홈·기간 4개·월 결산·연 결산이 평단 재기준 전과 같다(실측 배율, USD 1470)`, () => {
+      const p = materializeDemo(raw, today) as unknown as P;
+      const stocks = assetDataSchema.parse(p.assetData).stocks;
+      const data = { ...p.assetData, stocks: live(stocks, SCENES.실측) } as AssetData;
+      const seed = demoSeedStockMap(stocks);
+      const before = session(p.snapshots.daily, p.snapshots.monthly, stocks, data, RATES_LIVE, today, seed, false);
+      const after = session(p.snapshots.daily, p.snapshots.monthly, stocks, data, RATES_LIVE, today, seed, true);
+      expect(after.data.stocks.find((s) => s.ticker === "000660")!.averagePrice).not.toBe(stocks.find((s) => s.ticker === "000660")!.averagePrice);
+      const a = causes(after, RATES_LIVE, today);
+      const b = causes(before, RATES_LIVE, today);
+      expect(b.year).not.toBe("null");
+      // 실측 구간만 쓰는 화면(홈·1주·1개월·이번 달 결산·연 결산)은 원 단위까지 같다
+      for (const k of ["home", "1w", "1m", "month", "year"] as const) expect(a[k], k).toEqual(b[k]);
+      // 3개월·올해는 시작점이 원가 없는 예측 기록이라 그 구간의 매수 추정(매수일 × 평단 × 수량)이 평단을 따른다 — 합계는 같고 매수·시세 사이에서만 옮겨 간다
+      for (const k of ["3m", "ytd"] as const) {
+        const x = a[k]!; const y = b[k]!;
+        const sum = (o: Record<string, number>) => Object.values(o).reduce((m, v) => m + v, 0);
+        expect(Math.abs(sum(x) - sum(y)), k).toBeLessThanOrEqual(3);
+        const diff = Object.keys({ ...x, ...y }).filter((c) => Math.abs((x[c] ?? 0) - (y[c] ?? 0)) > 2);
+        for (const c of diff) expect(["buy:stock", "price", "price:stock", "price:crypto", "price:realEstate"], `${k}.${c}`).toContain(c);
+      }
+    });
+  }
+  it("새로고침을 반복해도 누적되지 않는다 — 옮긴 기록·평단을 기준으로 다시 옮겨도 처음부터 옮긴 것과 같다", () => {
+    const today = "2026-11-17";
+    const p = materializeDemo(raw, today) as unknown as P;
+    const stocks = assetDataSchema.parse(p.assetData).stocks;
+    const seed = demoSeedStockMap(stocks);
+    const s1 = session(p.snapshots.daily, p.snapshots.monthly, stocks, { ...p.assetData, stocks: live(stocks, SCENES.실측) } as AssetData, RATES_LIVE, today, seed, true);
+    // 2·3번째 새로고침: 저장된 기록·평단이 기준, 시세가 또 움직임
+    let cur = s1;
+    for (const k of [1.1, 0.95]) {
+      const moved = { ...cur.data, stocks: cur.data.stocks.map((s) => ({ ...s, currentPrice: s.currentPrice * k })) } as AssetData;
+      cur = session(cur.daily, cur.monthly, cur.data.stocks, moved, RATES_LIVE, today, seed, true);
+      const fresh = session(p.snapshots.daily, p.snapshots.monthly, stocks, { ...p.assetData, stocks: moved.stocks.map((s, i) => ({ ...s, averagePrice: stocks[i].averagePrice })) } as AssetData, RATES_LIVE, today, seed, false);
+      const a = causes(cur, RATES_LIVE, today);
+      const b = causes(fresh, RATES_LIVE, today);
+      // 비교 기준(fresh)은 평단 재기준 전 동작 — 실측 구간 화면만 비교한다(3개월·올해의 예측 구간은 위 테스트 참고)
+      for (const key of ["home", "1w", "1m"] as const) {
+        const ak = a[key] as Record<string, number>;
+        for (const [ck, v] of Object.entries(b[key] ?? {})) expect(Math.abs(ak[ck] - v), `${key}.${ck}`).toBeLessThanOrEqual(2);
+      }
+      for (const [i, [ck, v]] of (b.month as [string, number][]).entries()) { expect(a.month[i][0]).toBe(ck); expect(Math.abs((a.month[i][1] as number) - v)).toBeLessThanOrEqual(2); }
+    }
   });
 });

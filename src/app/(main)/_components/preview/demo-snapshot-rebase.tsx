@@ -11,22 +11,23 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAssetData, computeNetAsset } from "@/contexts/asset-data-context";
+import { useAssetData, computeNetAsset, computeAssetCost } from "@/contexts/asset-data-context";
+import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { isTrialMode } from "@/lib/trial/trial-mode";
-import { demoCostRatio, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, type DemoSeedStock, type RebaseRef } from "@/lib/preview/demo-live-rebase";
+import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices, type DemoSeedStock, type RebaseRef } from "@/lib/preview/demo-live-rebase";
 import { loadDemoPayload } from "@/lib/preview/demo-inject";
 import { parseStockLabels, readStockLabelsState, writeStockLabels, type StockLabels } from "@/lib/asset/stock-labels";
-import type { DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 export function DemoSnapshotRebase() {
   const { assetData, exchangeRates, bumpSnapshotVersion, saveData } = useAssetData();
-  const base = useRef<{ daily: DailyAssetSnapshot[]; monthly: MonthlyAssetSnapshot[]; ref: RebaseRef } | null>(null);
-  const applied = useRef({ ks: 1, kc: 1, kcost: 1 });
+  const base = useRef<{ daily: DailyAssetSnapshot[]; monthly: MonthlyAssetSnapshot[]; ref: RebaseRef; avg: Map<string, DemoSeedStock> } | null>(null);
+  const applied = useRef({ ks: 1, kc: 1, avgSig: "" });
 
   const eligible = useMemo(() => {
     if (!isTrialMode() && !isPreviewEnv()) return false;
@@ -62,28 +63,32 @@ export function DemoSnapshotRebase() {
       const daily = readDailySnapshots();
       const ref = pickRebaseRef(daily, today);
       if (!ref) return;
-      base.current = { daily, monthly: readMonthlySnapshots(), ref };
+      // 기록들과 맞는 평단 = 이 시점에 저장된 평단(처음 주입 = 시드, 새로고침 뒤 = 지난번에 옮긴 값)
+      base.current = { daily, monthly: readMonthlySnapshots(), ref, avg: demoSeedStockMap(assetData.stocks) };
     }
-    const { daily, monthly, ref } = base.current;
+    const { daily, monthly, ref, avg } = base.current;
     const ks = rebaseRatio(live.stockValue, ref.stocks);
     const kc = rebaseRatio(live.cryptoValue, ref.crypto);
-    // 주식 투입원가 — 평단을 옮긴 만큼(시드를 읽기 전에는 1)
-    const kcost = seed ? demoCostRatio(assetData.stocks, seed.stocks, exchangeRates, ref) : 1;
-    if (Math.abs(ks - applied.current.ks) < 0.002 && Math.abs(kc - applied.current.kc) < 0.002 && Math.abs(kcost - applied.current.kcost) < 0.002) return;
-    applied.current = { ks, kc, kcost };
+    const avgSig = assetData.stocks.map((s) => `${s.id}:${s.averagePrice}`).join("|");
+    if (Math.abs(ks - applied.current.ks) < 0.002 && Math.abs(kc - applied.current.kc) < 0.002 && avgSig === applied.current.avgSig) return;
+    applied.current = { ks, kc, avgSig };
     try {
       // 앱이 오늘자로 새로 쓴 기록(날짜·월 기록일이 baseline과 다름)은 건드리지 않는다
       const merge = <T extends { date?: string }>(cur: T[], orig: T[], scaled: T[], key: (r: T) => string) => {
         const map = new Map(orig.map((r, i) => [key(r), { r, s: scaled[i] }]));
         return cur.map((r) => { const hit = map.get(key(r)); return hit && hit.r.date === r.date ? hit.s : r; });
       };
+      // 주식 투입원가 — 기준 평단 → 지금 평단으로 옮긴 만큼 기록마다(원인 분해가 평단 재기준 전과 같게)
+      const prevData = withAveragePrices(assetData, avg);
+      const liveOf = (d: AssetData) => buildLiveAttributionCurr(d, exchangeRates, { ...computeNetAsset(d, exchangeRates), ...computeAssetCost(d, exchangeRates) } as unknown as AssetSummary);
+      const shifts = demoCostShifts([...daily, ...monthly], prevData, assetData, liveOf(prevData), liveOf(assetData), exchangeRates);
       const curDaily = readDailySnapshots();
       const curMonthly = readMonthlySnapshots();
-      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(merge(curDaily, daily, rebaseDemoRows(daily, ref, ks, kc, kcost), (r) => r.date!)));
-      localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(merge(curMonthly, monthly, rebaseDemoRows(monthly, ref, ks, kc, kcost), (r) => r.month)));
+      localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(merge(curDaily, daily, rebaseDemoRows(daily, ref, ks, kc, shifts), (r) => r.date!)));
+      localStorage.setItem(STORAGE_KEYS.monthlySnapshots, JSON.stringify(merge(curMonthly, monthly, rebaseDemoRows(monthly, ref, ks, kc, shifts), (r) => r.month)));
       bumpSnapshotVersion();
     } catch { /* 저장 실패 시 JSON 수준 유지 — 데모 표시만 영향 */ }
-  }, [eligible, live.stockValue, live.cryptoValue, seed, assetData.stocks, exchangeRates, bumpSnapshotVersion]);
+  }, [eligible, live.stockValue, live.cryptoValue, assetData, exchangeRates, bumpSnapshotVersion]);
 
   // 데모 이름표 정한 날 가격
   useEffect(() => {
