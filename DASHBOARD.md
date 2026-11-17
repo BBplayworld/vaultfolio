@@ -2,12 +2,9 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-17 (🟥 v5.125 #239 대표 승인 재요청 — Plus 폐지 반영, qa·UI·COO PASS @a2fb703)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.124**(스모크 PASS)
+> **마지막 갱신: 2026-11-17 (v5.125 대표 지시 '인사이트가 더 중요' → 승인 요청 철회, 기획·사업·COO 인사이트 방향 검토 중)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.124**(스모크 PASS)
 
-## 🟥 대표님 결정 필요 — 1건
-| 무엇 | 권고 | 확인 | 대표 할 일 |
-|---|---|---|---|
-| v5.125 [PR #240](https://github.com/BBplayworld/vaultfolio/pull/240) 내 자산 불리기(#239) — 성과 '자산 성적표' 자리 재구성: 주식 이름표(오래 둘·점검할)·점검 주기·점검 기록은 사용자가 정함, 앱은 종목을 고르지 않음. 성적표 문장 사실형, **Plus 표시 전부 폐지**. 제품 원칙 5장 메뉴 이름 1줄 포함 | 반영 | qa PASS·UI 승인·COO PASS·Vercel success @a2fb703 · risk:high(새 저장 키, 롤백 시 데이터 손상 0) · [preview](https://secretasset-git-issue-5125-bbplayworlds-projects.vercel.app/?demo=1) 성과 › 내 자산 불리기 | PR 머지 = 반영 / 닫기 = 미반영 |
+## 🟥 대표님 결정 필요 — 없음 (v5.125 승인 요청 철회 — 인사이트 방향 추가 기획 중)
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -38,7 +35,7 @@
 - 없음 (최근: #230 자산 변화 없는 날 홈 시장 요약 카드 밖 노출 → v5.120 핫픽스 운영 스모크 PASS · #228 알림 합침 → v5.119)
 
 ## 🔄 진행 중
-- #239 내 자산 불리기 — Plus 기능 종합 정리(대표 지시 11/17, Fable): 방향 합의·cto 축소 통과(원칙 변경 불필요, risk:high·대표 승인 머지, 5.125 단독) → spec·business·tech-review·ui 교차 검토 완료 → v5.125 [PR #240](https://github.com/BBplayworld/vaultfolio/pull/240) 구현 완료 @cb88209·Vercel success → UI 승인 @0caff17 → qa FAIL(D-1 새 소식 팁 23 vs 시트 20) → 수정 080cccf → qa·COO PASS @080cccf → 대표 결정 'Plus 빼자'(배지 0곳) a2fb703 → UI·qa·COO PASS @a2fb703 → **🟥 대표 승인 대기** → 🟥 대표 승인(risk:high)
+- #239 내 자산 불리기 — Plus 기능 종합 정리(대표 지시 11/17, Fable): 방향 합의·cto 축소 통과(원칙 변경 불필요, risk:high·대표 승인 머지, 5.125 단독) → spec·business·tech-review·ui 교차 검토 완료 → v5.125 [PR #240](https://github.com/BBplayworld/vaultfolio/pull/240) 구현 완료 @cb88209·Vercel success → UI 승인 @0caff17 → qa FAIL(D-1 새 소식 팁 23 vs 시트 20) → 수정 080cccf → qa·COO PASS @080cccf → 대표 결정 'Plus 빼자'(배지 0곳) a2fb703 → UI·qa·COO PASS @a2fb703(이름표·Plus 폐지) → 대표 지시: 이름표 이후 연결·인사이트 핵심 방향을 함께 반영 → **승인 요청 철회, business-pm·planner-designer·cto 인사이트 방향 검토 중** → spec 보강 → 개발·검수 → 🟥 → 🟥 대표 승인(risk:high)
 - (최근: v5.124 #237 올해 결산 운영 스모크 PASS 11/17 · 판독 12/27~1/10: 3대 이상=성공·2대=보류·1대 이하=축소)
 - 다음 후보: 현금 잔액 맞추기 때 차액을 '넣은 돈/쓴 돈'으로 기록(B) — 대표가 승인한 맞추기 안내('입출금 기록은 따로 안 남겨도 돼요')와 방향이 반대라 v5.124 결정 후 대표 방향 확인과 함께 기획 · 11/18 GA 자료 받은 날 D 재수행 (13:53 D8 0건 — `issues/_discovery/2026-11-17-d8-selection.md`)
 
