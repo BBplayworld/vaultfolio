@@ -503,6 +503,11 @@ describe("기준값 만들기 buildLabelBase", () => {
     expect(buildLabelBase(STOCKS, RATES, "005930")).toMatchObject({ qty: 20, price: 60_000 });
     const dated = [st({ id: "d", ticker: "AAA", quantity: 2, currentPrice: 50, baseDate: "2026-11-14" } as never)];
     expect(buildLabelBase(dated, RATES, "AAA")).toEqual({ qty: 2, price: 50, priceAt: "2026-11-14", weight: 100 });
+    // 시세 슬롯 도장(`-H19`)이 붙은 기준일도 날짜로 남겨 다시 읽을 때 사라지지 않는다
+    const slotted = buildLabelBase([st({ id: "d", ticker: "AAA", quantity: 2, currentPrice: 50, baseDate: "2026-11-17-H19" } as never)], RATES, "AAA")!;
+    expect(slotted.priceAt).toBe("2026-11-17");
+    const reread = parseStockLabels(JSON.parse(JSON.stringify(setStockLabel(emptyStockLabels(), "AAA", "keep", T("2026-11-17"), slotted))))!;
+    expect(reread.items.AAA.base).toEqual(slotted);
   });
   it("시세 없는 종목이 하나라도 있으면 비중만 비운다. 그 종목 자체가 시세 없음이면 시세도 비운다", () => {
     const mixed = [...STOCKS, st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];

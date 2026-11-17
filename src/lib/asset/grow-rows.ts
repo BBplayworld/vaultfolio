@@ -144,6 +144,8 @@ export function buildLabelBase(stocks: Stock[], exchangeRates: { USD: number; JP
   const qty = mine.reduce((sum, s) => sum + s.quantity, 0);
   if (!(Number.isFinite(qty) && qty > 0)) return undefined;
   const priced = mine.find((s) => s.currentPrice > 0);
+  // 시세 기준일은 날짜만 남긴다 — baseDate는 `2026-11-17-H19`처럼 시간 슬롯이 붙기도 해 그대로 두면 시각으로 읽히지 않는다
+  const priceDay = priced?.baseDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
   const { totalValue, hasUnpriced } = growTotals(stocks, exchangeRates);
   const weight = !hasUnpriced && totalValue > 0
     ? Math.round((mine.filter(counted).reduce((sum, s) => sum + valueOf(s, exchangeRates), 0) / totalValue) * 10000) / 100
@@ -151,7 +153,7 @@ export function buildLabelBase(stocks: Stock[], exchangeRates: { USD: number; JP
   return {
     qty,
     ...(priced ? { price: priced.currentPrice } : {}),
-    ...(priced?.baseDate ? { priceAt: priced.baseDate } : {}),
+    ...(priceDay ? { priceAt: priceDay } : {}),
     ...(weight !== null && weight >= 0 && weight <= 100 ? { weight } : {}),
   };
 }
