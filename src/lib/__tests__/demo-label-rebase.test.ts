@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { materializeDemo } from "../preview/demo-payload";
-import { priceByLabelKey, rebaseDemoLabelPrices } from "../preview/demo-live-rebase";
+import { demoCostRatio, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows } from "../preview/demo-live-rebase";
+import { computeStockMetrics } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
+import { computeAssetCost } from "@/contexts/asset-data-context";
+import type { AssetData, DailyAssetSnapshot } from "@/types/asset";
 import { parseStockLabels, setStockLabel, type StockLabels } from "../asset/stock-labels";
 import { buildGrowRows } from "../asset/grow-rows";
 import { assetDataSchema } from "@/types/asset";
@@ -77,15 +80,87 @@ describe("데모 이름표 정한 날 가격 — 실시간 시세 배율만큼 �
 
 describe("데모·체험 전용 — 사용자 저장 경로 영향 0", () => {
   const comp = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/demo-snapshot-rebase.tsx"), "utf8");
-  it("쓰기는 eligible(체험·preview + 모든 보유 id가 demo_) 안에서만, 동기화 신호 없음", () => {
+  it("쓰기는 eligible(체험·preview + 모든 보유 id가 demo_) 안에서만. 이름표는 직접 쓰기(동기화 신호 없음), 평단은 saveData 1곳 — 동기화는 preview·체험에서 꺼져 있다", () => {
     const eff = comp.slice(comp.indexOf("rebaseDemoLabelPrices(cur.value") - 300, comp.indexOf("rebaseDemoLabelPrices(cur.value"));
-    expect(eff).toContain("if (!eligible || !labelSeed) return;");
+    expect(eff).toContain("if (!eligible || !seed?.labels) return;");
     expect(comp).toContain('held.every((a) => a.id.startsWith("demo_"))');
     expect(comp).not.toMatch(/notifyAssetUserEdit|setStockLabel\(|track\(/);
+    const cfg = readFileSync(path.resolve(__dirname, "../cloud-sync/config.ts"), "utf8");
+    expect(cfg).toContain("!isPreviewEnv()");
+    expect(cfg).toContain("!isTrialMode()");
   });
   it("이름표 모듈·훅·불리기 화면은 데모 코드를 읽지 않는다", () => {
     for (const f of ["../asset/stock-labels.ts", "../asset/grow-rows.ts", "../asset/grow-links.ts", "../../hooks/use-stock-labels.ts"]) {
       expect(readFileSync(path.resolve(__dirname, f), "utf8"), f).not.toMatch(/preview\/demo|isPreviewEnv|isTrialMode/);
     }
+  });
+});
+
+// ui-review R2(C132 ①) — 같은 행 첫 줄 `내 매입가 대비`도 실시간 시세 배율만큼 평단을 옮겨 체험과 같은 %로
+describe("데모 평단 재기준 — 내 매입가 대비 %가 현실 범위·체험과 같다", () => {
+  const LIVE_RATES = { USD: 1470, JPY: 925 };
+  const rate = (s: Stock, rates: typeof RATES) => Math.round(computeStockMetrics(s, rates).profitRate * 10) / 10;
+  for (const today of ["2026-11-17", "2027-01-31"]) {
+    const { stocks } = load(today);
+    const seed = demoSeedStockMap(stocks);
+    it.each(Object.keys(SCENES))(`${today} %s: 데모 주식 전부 −20%~+40%, 체험(JSON 시세)과 같은 값`, (scene) => {
+      const nowStocks = live(stocks, SCENES[scene]);
+      const next = rebaseDemoAveragePrices(nowStocks, seed);
+      for (const [i, s] of next.entries()) {
+        const r = rate(s, LIVE_RATES);
+        expect(r, s.ticker).toBeGreaterThanOrEqual(-20);
+        expect(r, s.ticker).toBeLessThanOrEqual(40);
+        expect(r, s.ticker).toBe(rate(stocks[i], LIVE_RATES)); // 같은 환율이면 체험 값과 같다
+        expect(s.purchaseExchangeRate).toBe(stocks[i].purchaseExchangeRate); // 매입 환율은 그대로
+        expect(s.currentPrice).toBe(nowStocks[i].currentPrice);
+      }
+    });
+  }
+  it("옮기지 않으면(수정 전) 실측 배율에서 SK하이닉스가 범위를 벗어난다", () => {
+    const { stocks } = load("2026-11-17");
+    const hynix = live(stocks, SCENES.실측).find((s) => s.ticker === "000660")!;
+    expect(rate(hynix, RATES)).toBeGreaterThan(40);
+  });
+  it("실사용자 데이터에서 작동 0회 — 시드에 없는 id는 그대로(같은 배열), 수량이 바뀐 데모 보유 건도 그대로", () => {
+    const { stocks } = load("2026-11-17");
+    const seed = demoSeedStockMap(stocks);
+    const user = live(stocks, SCENES.실측).map((s) => ({ ...s, id: s.id.replace("demo_", "u_") }));
+    expect(rebaseDemoAveragePrices(user, seed)).toBe(user);
+    const traded = live(stocks, SCENES.실측).map((s) => ({ ...s, quantity: s.quantity + 1 }));
+    expect(rebaseDemoAveragePrices(traded, seed)).toBe(traded);
+    const once = rebaseDemoAveragePrices(live(stocks, SCENES.실측), seed);
+    expect(rebaseDemoAveragePrices(once, seed)).toBe(once); // 멱등
+    expect(rebaseDemoAveragePrices(stocks, seed)).toBe(stocks); // 시세가 시드와 같으면 그대로
+  });
+  it("스냅샷 주식 원가도 같은 만큼 — 어제 기록 원가 ≈ 지금 원가(가짜 넣은 돈 없음), 새로고침 뒤 다시 계산해도 배율 1", () => {
+    const today = "2026-11-17";
+    const p = materializeDemo(raw, today) as unknown as { assetData: AssetData; snapshots: { daily: DailyAssetSnapshot[] } };
+    const stocks = assetDataSchema.parse(p.assetData).stocks;
+    const seed = demoSeedStockMap(stocks);
+    const ref = pickRebaseRef(p.snapshots.daily, today)!;
+    expect(ref.costStock).toBeGreaterThan(0);
+    const now = rebaseDemoAveragePrices(live(stocks, SCENES.실측), seed);
+    const kcost = demoCostRatio(now, seed, LIVE_RATES, ref);
+    expect(kcost).toBeGreaterThan(1.5);
+    const rows = rebaseDemoRows(p.snapshots.daily, ref, 1, 1, kcost);
+    const nowCost = computeAssetCost({ ...p.assetData, stocks: now }, LIVE_RATES).stockCost;
+    const seedCostLive = computeAssetCost({ ...p.assetData, stocks }, LIVE_RATES).stockCost;
+    const ref2 = pickRebaseRef(rows, today)!;
+    // 어제 기록 원가 : 지금 원가 = 시드 원가(어제 환율) : 시드 원가(지금 환율) — 남는 차이는 환율 효과뿐
+    expect(ref2.costStock! / nowCost).toBeCloseTo(ref.costStock! / seedCostLive, 3);
+    // 새로고침: 옮긴 기록을 기준으로 다시 계산하면 더 옮기지 않는다(누적 없음)
+    expect(demoCostRatio(now, seed, LIVE_RATES, ref2)).toBeCloseTo(1, 6);
+    // 투입원가 total도 같은 차이만큼, 주식 외 원가는 그대로
+    const before = p.snapshots.daily.find((d) => d.cost)!;
+    const after = rows.find((d) => d.date === before.date)!;
+    expect(after.cost!.total - before.cost!.total).toBe(after.cost!.stock - before.cost!.stock);
+    expect(after.cost!.crypto).toBe(before.cost!.crypto);
+  });
+  it("가드: 평단 저장은 eligible(체험·preview + 모든 보유 id가 demo_)이고 시드를 읽은 뒤에만", () => {
+    const comp = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/demo-snapshot-rebase.tsx"), "utf8");
+    const at = comp.indexOf("rebaseDemoAveragePrices(assetData.stocks");
+    expect(comp.slice(at - 120, at)).toContain("if (!eligible || !seed) return;");
+    expect(comp).toContain("if (!isTrialMode() && !isPreviewEnv()) return false;");
+    expect(comp.match(/saveData\(/g)).toHaveLength(1);
   });
 });
