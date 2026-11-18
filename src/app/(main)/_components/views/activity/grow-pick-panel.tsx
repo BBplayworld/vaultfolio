@@ -269,17 +269,18 @@ export function OwnValueBox({ row, onEdit }: { row: BoardRow; onEdit: (row: Boar
   const word = row.kind === "physical" ? "평가액" : "시세";
   return (
     <div data-testid="grow-value" className="flex flex-col gap-1.5 rounded-lg bg-background px-3 py-2.5 shadow-[inset_0_0_0_1px] shadow-foreground/14">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0">
+      {/* 금액은 한 줄(nowrap) — 좁은 폭(320)에서 금액과 버튼이 한 줄에 안 들어가면 버튼이 아래 줄로 내려간다(숫자와 `원`이 갈리지 않게, C130) */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+        <span>
           <span className="block text-xs text-muted-foreground">내가 넣은 {word}</span>
-          <span data-testid="grow-value-mine" className="block text-base font-bold tabular-nums">{formatPriceByMode(row.own.value)}</span>
+          <span data-testid="grow-value-mine" className="block whitespace-nowrap text-base font-bold tabular-nums">{formatPriceByMode(row.own.value)}</span>
         </span>
         <button
           type="button"
           data-testid="grow-value-edit"
           aria-label={`${row.name} ${word} 고치기`}
           onClick={() => onEdit(row)}
-          className="inline-flex min-h-10 shrink-0 items-center gap-0.5 whitespace-nowrap rounded-lg bg-muted pr-2.5 pl-3 text-sm font-semibold outline-none hover:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150"
+          className="ml-auto inline-flex min-h-10 shrink-0 items-center gap-0.5 whitespace-nowrap rounded-lg bg-muted pr-2.5 pl-3 text-sm font-semibold outline-none hover:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150"
         >
           {word} 고치기 <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" />
         </button>

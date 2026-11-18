@@ -349,7 +349,7 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
     <div data-testid="grow-sheet" className="flex flex-col gap-3 pt-1">
       {row.labelKey && (
         <>
-          {reason && <p data-testid="grow-sheet-reason" className={`text-xs ${reason.cls}`}>{reason.text}</p>}
+          {reason && <p data-testid="grow-sheet-reason" className={`text-xs text-pretty break-keep ${reason.cls}`}>{reason.text}</p>}
           {own && onEditValue && <OwnValueBox row={row} onEdit={onEditValue} />}
           <div>
           <div className={`grid gap-1.5 ${choices.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
