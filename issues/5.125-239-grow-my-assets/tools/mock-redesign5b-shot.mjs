@@ -7,8 +7,9 @@ const html = readFileSync(new URL("./mock-redesign5b.html", import.meta.url), "u
 const css = html.match(/<style id="mk-style">([\s\S]*?)<\/style>/)[1]; const js = html.match(/<script id="mk-script">([\s\S]*?)<\/script>/)[1].replace(/\nif \(document\.body[\s\S]*$/, "");
 const b = await chromium.launch({ proxy });
 const jobs = [ // [이름, 폭, 높이, 옵션, fullPage, 요소 선택자]
-  ["390-first", 390, 844, {}, false, null], ["390-chip-open", 390, 844, { panel: true }, false, null], ["390-sheet", 390, 844, { open: "Apple" }, false, '[data-mk="list"]'],
-  ["390-keep-loss-inject", 390, 844, { loss: true }, false, null], ["390-first-user", 390, 844, { first: true }, false, null], ["320-first", 320, 844, {}, false, null], ["1280", 1280, 900, { open: "Apple" }, false, null],
+  ["390-first", 390, 844, {}, false, null], ["390-first-user", 390, 844, { first: true }, false, null], ["390-sheet", 390, 844, { open: "Apple" }, false, '[data-mk="list"]'],
+  ["390-sheet-plan-open", 390, 844, { open: "Apple", planOpen: true }, false, '[data-mk="sheet"]'], ["390-chip-open", 390, 844, { panel: true }, false, null],
+  ["390-keep-loss-inject", 390, 844, { loss: true }, false, null], ["320-first", 320, 844, {}, false, null], ["1280", 1280, 900, { open: "Apple" }, false, null],
 ];
 for (const [name, W, H, opts, full, sel] of jobs) {
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, colorScheme: "dark", isMobile: W < 700, hasTouch: W < 1100 });
