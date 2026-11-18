@@ -1,8 +1,15 @@
 {
   "_comment": "preview 전용 데모 데이터(#31). 실제 공개 티커 + 가상 수량·금액. 날짜는 월 오프셋 토큰(@M<오프셋>D<일>, @M<오프셋>, @D<일 오프셋>, @NOW)으로 두고 materializeDemo가 오늘 기준으로 변환한다. 정적 import 금지(동적 import 전용).",
   "nickname": "데모",
+  "xrayClassifications": {
+    "_comment": "내 자산 불리기(#239 5.125) 기준별 점검 '시가총액' 축용 — 데모·체험 주입 때 X-Ray 분류 캐시에 이 기기 값이 없는 필드만 채운다(시가총액 구간만, stockType 없음 → X-Ray를 열면 평소처럼 분류를 다시 받아 덮어쓴다). 분야·ETF는 코드 고정 판정이라 넣지 않는다",
+    "005930": {"marketCapTier": "large"},
+    "000660": {"marketCapTier": "large"},
+    "AAPL": {"marketCapTier": "large"},
+    "NVDA": {"marketCapTier": "large"}
+  },
   "stockLabels": {
-    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660), 주기 3개월. AAPL 점검일은 오늘 기준 125일 전(@D-125 = 언제나 '4개월 전', 주기 경과 1건). 고정 날짜 금지. 시드 정합(COO R-C2): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감(거래·주식 데이터는 그대로) → 삼성전자 50→65주(정한 뒤 +10·+10·−5), TIGER 100→105주(+5), AAPL 10→12주(+2), SK하이닉스 5주 그대로. 비중 큰 세 종목(AAPL·삼성전자·SK하이닉스)에 이름표를 둬 처음 3행 안에 인사이트 4종이 모두 나온다(매매 줄: 삼성전자 2건·AAPL 1건·SK하이닉스 0건). base.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐",
+    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660), 주기 3개월. AAPL 점검일은 오늘 기준 125일 전(@D-125 = 언제나 '4개월 전', 주기 경과 1건). 고정 날짜 금지. 시드 정합(COO R-C2): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감(거래·주식 데이터는 그대로) → 삼성전자 50→65주(정한 뒤 +10·+10·−5), TIGER 100→105주(+5), AAPL 10→12주(+2), SK하이닉스 5주 그대로. 재설계 3차(11/18): 삼성전자·TIGER 매수일을 1년 이상 전(@M-20·@M-26)으로 옮겨 보유 기간 축에 '1년 이상' 묶음이 보인다(이름표 붙인 날은 그 뒤라 정합 유지). 칩 펼침 캡션의 매매 건수: 삼성전자 2건·AAPL 1건·SK하이닉스 0건. base.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐",
     "v": 1,
     "cycle": {"months": 3, "at": "@M-8D1"},
     "items": {
@@ -19,11 +26,11 @@
       { "id": "demo_re_1", "type": "apartment", "name": "데모 아파트", "purchasePrice": 500000000, "currentValue": 535840000, "purchaseDate": "@M-36D15", "tenantDeposit": 0 }
     ],
     "stocks": [
-      { "id": "demo_st_samsung", "category": "domestic", "name": "삼성전자", "ticker": "005930", "quantity": 65, "averagePrice": 61000, "currentPrice": 70000, "currency": "KRW", "purchaseDate": "@M-8D12", "broker": "데모증권" },
+      { "id": "demo_st_samsung", "category": "domestic", "name": "삼성전자", "ticker": "005930", "quantity": 65, "averagePrice": 61000, "currentPrice": 70000, "currency": "KRW", "purchaseDate": "@M-20D12", "broker": "데모증권" },
       { "id": "demo_st_hynix", "category": "domestic", "name": "SK하이닉스", "ticker": "000660", "quantity": 5, "averagePrice": 150000, "currentPrice": 190000, "currency": "KRW", "purchaseDate": "@M-7D20", "broker": "데모증권" },
       { "id": "demo_st_aapl", "category": "foreign", "name": "Apple", "ticker": "AAPL", "quantity": 12, "averagePrice": 185, "currentPrice": 225, "currency": "USD", "purchaseDate": "@M-6D05", "purchaseExchangeRate": 1335, "broker": "데모증권" },
       { "id": "demo_st_nvda", "category": "foreign", "name": "NVIDIA", "ticker": "NVDA", "quantity": 8, "averagePrice": 110, "currentPrice": 130, "currency": "USD", "purchaseDate": "@M-5D18", "purchaseExchangeRate": 1340, "broker": "데모증권" },
-      { "id": "demo_st_pension", "category": "pension", "name": "TIGER 미국S&P500", "ticker": "360750", "quantity": 105, "averagePrice": 18000, "currentPrice": 21000, "currency": "KRW", "purchaseDate": "@M-10D03", "broker": "연금저축" },
+      { "id": "demo_st_pension", "category": "pension", "name": "TIGER 미국S&P500", "ticker": "360750", "quantity": 105, "averagePrice": 18000, "currentPrice": 21000, "currency": "KRW", "purchaseDate": "@M-26D03", "broker": "연금저축" },
       { "id": "demo_st_isa", "category": "isa", "name": "KODEX 200", "ticker": "069500", "quantity": 40, "averagePrice": 34000, "currentPrice": 37000, "currency": "KRW", "purchaseDate": "@M-9D08", "broker": "ISA" }
     ],
     "crypto": [

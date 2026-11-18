@@ -25,9 +25,13 @@ const load = (today: string) => {
 };
 /** 종목별 배율로 시세를 옮긴 보유 목록(실시간 시세 흉내) */
 const live = (stocks: Stock[], k: Record<string, number>) => stocks.map((s) => ({ ...s, currentPrice: s.currentPrice * (k[s.ticker!] ?? 1) }));
-const pcts = (stocks: Stock[], labels: StockLabels, now: number) =>
-  buildGrowRows(stocks, RATES, labels, now).filter((r) => r.priceFact).map((r) => ({ t: r.ticker, pct: Number(r.priceFact!.text.replace(/[+%]/g, "").replace("−", "-")), state: r.priceFact!.state }))
-    .sort((a, b) => a.t.localeCompare(b.t)); // 행 순서는 비중을 따르므로 종목 순으로 비교
+/** 이름표별 정한 날 가격 대비 %(지금 시세 ÷ base.price − 1, 소수 1자리) — 화면에는 그리지 않지만 저장값(base)이 현실 범위인지 본다 */
+const pcts = (stocks: Stock[], labels: StockLabels, _now: number) => {
+  const price = priceByLabelKey(stocks);
+  return Object.entries(labels.items).filter(([t, i]) => i.base?.price && price.has(t))
+    .map(([t, i]) => ({ t, pct: Math.round((price.get(t)! / i.base!.price! - 1) * 1000) / 10, state: "value" as const }))
+    .sort((a, b) => a.t.localeCompare(b.t));
+};
 
 // 2026-11-17 preview 실측 배율(삼성전자 ×2.7, SK하이닉스 ×5.8, AAPL ×1.56)과 하락·혼합 장면
 const SCENES: Record<string, Record<string, number>> = {
@@ -94,7 +98,7 @@ describe("데모·체험 전용 — 사용자 저장 경로 영향 0", () => {
     expect(cfg).toContain("!isTrialMode()");
   });
   it("이름표 모듈·훅·불리기 화면은 데모 코드를 읽지 않는다", () => {
-    for (const f of ["../asset/stock-labels.ts", "../asset/grow-rows.ts", "../asset/grow-links.ts", "../../hooks/use-stock-labels.ts"]) {
+    for (const f of ["../asset/stock-labels.ts", "../asset/grow-rows.ts", "../asset/grow-board.ts", "../../hooks/use-stock-labels.ts"]) {
       expect(readFileSync(path.resolve(__dirname, f), "utf8"), f).not.toMatch(/preview\/demo|isPreviewEnv|isTrialMode/);
     }
   });

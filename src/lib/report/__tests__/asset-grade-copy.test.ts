@@ -108,7 +108,7 @@ const visibleText = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replac
 
 describe("금지 단어 0(AC-13)", () => {
   it("이름표 블록·표시 값·축 문장", () => {
-    const texts = [read("stock-label-block.tsx"), readFileSync(path.resolve(__dirname, "../../asset/grow-rows.ts"), "utf8"), readFileSync(path.resolve(__dirname, "../asset-grade.ts"), "utf8")];
+    const texts = [read("stock-label-block.tsx"), readFileSync(path.resolve(__dirname, "../../asset/grow-rows.ts"), "utf8"), readFileSync(path.resolve(__dirname, "../../asset/grow-board.ts"), "utf8"), readFileSync(path.resolve(__dirname, "../asset-grade.ts"), "utf8")];
     for (const t of texts) for (const w of FORBIDDEN) expect(visibleText(t), w).not.toContain(w);
   });
   it("허브 셋째 카드", () => {
@@ -148,86 +148,50 @@ function filesMatching(name: RegExp, pattern: RegExp): string[] {
   return hits;
 }
 
-// 인사이트 보강(AC-26) — 차이가 좋은지 나쁜지 말하지 않는다. 무게 줄·수량 비교·허브 둘째 줄·도움말·새 소식 본문
-const INSIGHT_FORBIDDEN = [
-  "지켰어요", "어겼어요", "원칙 위반", "흔들렸어요", "잘했어요", "성공", "실패", "맞았어요", "틀렸어요", "성과", "결과", "수익", "수익률", "덕분에", "때문에",
-  "평균", "순위", "1위", "보다 높아요", "보다 낮아요", "쏠림", "시장 대비", "늘었어요", "줄었어요", "샀어요", "팔았어요",
-  // 인사이트 4종(AC-44) — 인과로 읽히는 동사·평가어 추가
-  "자주", "많이", "적게", "겨우", "에서 나와요", "에서 나왔어요",
+// 재설계 3차(11/18) — 판단은 막대·기준선이 맡고 말로 평가·권유하지 않는다(redesign.md 4절 grep 목록 + 오케스트레이터 금지어)
+const REDESIGN_FORBIDDEN = [
+  "더 좋", "나빠", "늘리", "줄이", "유지하세요", "이대로면", "전망", "목표", "가장", "쏠림", "추천", "좋아요", "유망", "성과 우수",
+  "잘했어요", "흔들렸어요", "원칙 위반", "순위", "1위", "보다 높아요", "보다 낮아요", "덕분에", "때문에", "시장 대비",
 ];
 
-describe("인사이트 금지어·금지 형식(AC-26)", () => {
+describe("재설계 3차 금지어·금지 형식", () => {
   const block = visibleText(read("stock-label-block.tsx"));
   const rowsLib = visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-rows.ts"), "utf8"));
+  const boardLib = visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-board.ts"), "utf8"));
   const hub = read("performance-hub.tsx");
   const hubCard = visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')));
   const view = read("asset-report-view.tsx");
   const hint = view.slice(view.indexOf('data-testid="grow-hint"'), view.indexOf("</CardTitle>"));
-  const linksLib = visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-links.ts"), "utf8"));
-  it("이름표 블록·표시 값·연결 문장·허브 셋째 카드·화면 제목 도움말에 금지어가 없다", () => {
-    for (const [name, text] of [["블록", block], ["표시 값", rowsLib], ["연결 문장", linksLib], ["허브 카드", hubCard], ["도움말", hint]] as const) {
-      for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(text, `${name}: ${w}`).not.toContain(w);
+  it("불리기 블록·표시 값·허브 셋째 카드·화면 제목 도움말에 금지어가 없다", () => {
+    for (const [name, text] of [["블록", block], ["표시 값", rowsLib], ["판 값", boardLib], ["허브 카드", hubCard], ["도움말", hint]] as const) {
+      for (const w of [...FORBIDDEN, ...REDESIGN_FORBIDDEN]) expect(text, `${name}: ${w}`).not.toContain(w);
     }
   });
-  it("새 소식 본문에 금지어가 없다(제목의 '성과'는 메뉴 이름이라 본문만 본다)", () => {
+  it("새 소식 본문에 금지어가 없고, 지금 화면이 보여 주는 것을 말한다(48자 이하)", () => {
     const body = WHATS_NEW.find((e) => e.id === "20261117-01")!.body!;
-    for (const w of [...FORBIDDEN, ...INSIGHT_FORBIDDEN]) expect(body, w).not.toContain(w);
-    expect(body).toBe("이름표를 붙이면 정한 날과 지금의 가격·수량, 매매 건수, 배당 몫을 나란히 보여요");
+    for (const w of [...FORBIDDEN, ...REDESIGN_FORBIDDEN]) expect(body, w).not.toContain(w);
+    expect(body).toBe("산 날부터 손익과 보유 기간 대비 점수를 기준별로 보고, 이름표로 점검해요");
     expect([...body].length).toBeLessThanOrEqual(48);
   });
-  it("화면 제목 도움말은 a2fb703과 같은 1문단으로 돌아갔다 — 수량 문장은 블록 도움말로(AC-43)", () => {
+  it("화면 제목 도움말은 1문단(a2fb703)", () => {
     expect(hint).toContain('<InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">');
-    expect(hint).toContain('<p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>');
     expect(hint.match(/<p /g)).toHaveLength(1);
   });
-  it("블록 도움말: 요약 1줄 + 3문단, 세 문단 모두 줄바꿈 클래스, 괄호 없음(AC-43·C114·C128)", () => {
+  it("점수 기준표 ⓘ: 5개 구간을 HOLD_SCORE_BANDS에서 그리고, 측정 중 경계·같은 잣대 근거를 적는다", () => {
     const raw = read("stock-label-block.tsx");
-    const blockHint = raw.slice(raw.indexOf('data-testid="grow-block-hint"'), raw.indexOf("</InfoHint>", raw.indexOf('data-testid="grow-block-hint"')));
-    expect(blockHint).toContain('<InfoHint summary="정한 날의 내 기록과 지금의 내 기록을 나란히 보여 줘요.">');
-    expect(blockHint.match(/<p /g)).toHaveLength(3);
-    expect(blockHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(3);
-    expect(blockHint).toContain("작년 마지막 가격");
-    expect(blockHint).toContain("올해 산 종목은 내 매입가부터 계산해요.");
-    expect(blockHint).toContain("매매 건수는 이 앱의 거래 기록에 남긴 것만 세요.");
-    expect(blockHint).not.toMatch(/[()]/);
+    const scoreHint = raw.slice(raw.indexOf('data-testid="grow-score-hint"'), raw.indexOf("</InfoHint>", raw.indexOf('data-testid="grow-score-hint"')));
+    expect(scoreHint).toContain("HOLD_SCORE_BANDS.map");
+    expect(scoreHint).toContain("측정 중");
+    expect(scoreHint).toContain("연 환산");
+    expect(scoreHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(2);
   });
-  it("수량 비교는 형식 2개뿐이고 방향을 말하지 않는다(AC-36)", () => {
-    expect(rowsLib).toContain("`정한 뒤 수량 그대로 ${formatSince(e)}`");
-    expect(rowsLib).toContain("`정한 날 ${then} → 지금 ${now}`");
-    expect(rowsLib.match(/정한 (날|뒤)/g)).toHaveLength(2);
+  it("점수·수익률로 정렬하지 않는다 — 표는 오래 가진 순 고정, 정렬 선택 UI 없음", () => {
+    expect(block).not.toMatch(/sort\(\(a, b\) => [^)]*(score|rate)/);
+    expect(block).not.toMatch(/정렬|수익률 순|점수 순/);
+    expect(block).toContain("오래 가진 순");
   });
-  it("허용어는 정해진 자리에서만(AC-44): 매매는 '이 앱에 기록한' 뒤, 예상 배당은 도움말만·불어난 돈은 연결 문장·도움말, 줄어든 돈·쪽은 결산 문장", () => {
-    const raw = visibleText(read("stock-label-block.tsx"));
-    const all = [raw, rowsLib, linksLib, hubCard, hint].join("\n");
-    // 매매: 행 매매 줄 1곳 + 블록 도움말 2문단의 '매매 건수' 1곳
-    expect(all.match(/매매/g)).toHaveLength(2);
-    expect(raw).toContain("이 앱에 기록한 매매 최근 3개월 ");
-    expect(raw).toContain("매매 건수는 이 앱의 거래 기록에 남긴 것만 세요.");
-    // 예상 배당: 도움말 1곳('예상 배당을 합친')뿐 — 배당 문장은 `올해 배당 중`(배당 카드 '예상' = 아직 안 받은 몫과 겹치지 않게, R-C1)
-    for (const t of [rowsLib, linksLib, hubCard, hint]) expect(t).not.toMatch(/예상 배당|불어난 돈|줄어든 돈|불어난 쪽|줄어든 쪽/);
-    expect(raw.match(/예상 배당/g)).toHaveLength(1);
-    expect(raw).toContain("배당은 올해 지급된 배당과 예상 배당을 합친 값이에요.");
-    expect(raw.match(/올해 배당 중/g)).toHaveLength(1);
-    expect(raw).not.toContain("올해 예상 배당 중");
-    expect(raw.match(/불어난 돈/g)).toHaveLength(2); // 결산 문장 앞 조각 + 도움말 3문단
-    expect(raw.match(/줄어든 돈/g)).toHaveLength(1); // 결산 문장 앞 조각(줄어든 해)
-    expect(raw.match(/줄어든 쪽/g)).toHaveLength(1); // 섞임 문장
-    expect(raw).toContain("올해는 불어난 쪽과 줄어든 쪽이 섞여 있어 몫을 비율로 나타내지 않아요");
-    expect(raw).toContain("(기준 가격이 없는 {settle.excluded}종목 제외)");
-    // 연결 문장은 '몫은 N%예요' 꼴 — 인과 동사 없음
-    expect(raw.match(/오래 둘 자산 몫은 /g)).toHaveLength(2);
-  });
-  it("무게 줄 막대는 전경색 투명도 3단뿐이다 — 손익색·주황·brand·차트 팔레트 없음", () => {
-    expect(block).toContain('"bg-foreground/80"');
-    expect(block).toContain('"bg-foreground/45"');
-    expect(block).toContain('"bg-foreground/15"');
-    expect(block).not.toMatch(/MAIN_PALETTE|bg-primary|bg-brand|assignColors/);
-  });
-  it("정한 날 가격·비중(base.price·weight)은 어느 화면에도 그리지 않는다. 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
-    // 정한 날 가격(base.price)은 '정한 날 가격 대비 %'(AC-37)를 만드는 priceFactOf 한 곳에서만 읽는다. 값 자체·비중·기준일은 그리지 않는다
-    const rowsNoBuilders = rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "").replace(/function priceFactOf[\s\S]*?\n}\n/, "");
-    expect(block + rowsNoBuilders + linksLib).not.toMatch(/base\.price|base\.weight|priceAt/);
-    expect(rowsLib.match(/base\?\.price/g)).toHaveLength(1);
+  it("정한 날 지표(base.price·weight·qty)는 어느 화면에도 그리지 않는다. 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
+    expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "") + boardLib).not.toMatch(/base\.(price|weight|qty)|priceAt/);
     const using = filesMatching(/\.(ts|tsx)$/, /stock-labels|grow-rows/).sort();
     expect(using).toEqual([
       "app/(main)/_components/header-menu/settings-page.tsx",
@@ -237,14 +201,14 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
       "app/(main)/_components/views/activity/stock-label-block.tsx",
       "hooks/use-stock-labels.ts",
       "lib/asset/asset-storage.ts",
-      "lib/asset/grow-links.ts",
+      "lib/asset/grow-board.ts",
       "lib/asset/grow-rows.ts",
       "lib/asset/stock-labels.ts",
       "lib/local-storage.ts",
       "lib/preview/demo-live-rebase.ts", // 데모·체험 이름표 정한 날 가격 재기준(순수 함수, 5.125)
     ]);
   });
-  it("'다시 봄' 전송은 불리기 블록 한 곳이고 preview 가드가 앞에 있다(AC-30 데모 0회)", () => {
+  it("'다시 봄' 전송은 불리기 블록 한 곳이고 preview 가드가 앞에 있다(AC-30 데모 0회). 기준 탭 전환은 GA를 보내지 않는다", () => {
     expect(filesMatching(/\.(ts|tsx)$/, /category: "grow_revisit"/)).toEqual(["app/(main)/_components/views/activity/stock-label-block.tsx"]);
     const src = read("stock-label-block.tsx");
     const guard = src.indexOf("if (isPreviewEnv()) return;");
@@ -252,14 +216,22 @@ describe("인사이트 금지어·금지 형식(AC-26)", () => {
     expect(guard).toBeGreaterThan(0);
     expect(send).toBeGreaterThan(guard);
     expect(src.slice(send - 200, send)).toContain("isStockLabelRevisit(labels, Date.now())");
+    expect(src.match(/track\(/g)).toHaveLength(1);
     expect(src).not.toMatch(/localStorage|sessionStorage/); // 새 저장 키·플래그 없음
+  });
+  it("이 화면은 분류를 새로 요청하지 않는다(X-Ray 캐시 읽기만)", () => {
+    for (const t of [read("stock-label-block.tsx"), readFileSync(path.resolve(__dirname, "../../asset/grow-board.ts"), "utf8")]) {
+      expect(t).not.toMatch(/fetchAndStoreClassifications|useXrayClassifications|fetch\(|xray-classify/);
+    }
   });
 });
 
 describe("추천 아님 조건 — 이름표 블록(AC-9·AC-10·AC-12)", () => {
   const block = visibleText(read("stock-label-block.tsx"));
-  it("손익색·주황·경고색 클래스와 정렬 선택 UI가 없다", () => {
-    expect(block).not.toMatch(/getProfitLossColor|profitTone|rose-|blue-|red-|orange-|amber-|destructive|important|text-profit|text-loss/);
+  it("주황·경고색이 없고, 손익색은 %·막대·큰 합계 금액에만(pctTone·fillTone 두 곳)", () => {
+    expect(block).not.toMatch(/red-|orange-|amber-|destructive|important|text-profit|text-loss/);
+    expect(block.match(/getProfitLossColor\(/g)).toHaveLength(1);
+    expect(block.match(/rose-|blue-/g)).toHaveLength(4); // fillTone의 bg-rose-500·dark:bg-rose-400·bg-blue-500·dark:bg-blue-400
     expect(block).not.toMatch(/정렬|손실 순|수익률 순/);
   });
   it("성적표 축 영역은 이름표를 가리키지 않고, `지났어요` 문구는 표시 값 한 곳에서만 만든다", () => {

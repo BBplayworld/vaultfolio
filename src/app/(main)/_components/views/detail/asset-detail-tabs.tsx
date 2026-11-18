@@ -142,6 +142,27 @@ export function mergeCryptoGroup(items: Crypto[]): Crypto {
   };
 }
 
+/**
+ * 주식 합계(평가·매입원가) — 상세 › 주식 헤더와 내 자산 불리기 결론 카드의 공용 계산(#239 5.125).
+ * 상장폐지 종목은 빼고(getAssetSummary와 같은 정책), 원가는 computeStockMetrics와 같은 식(해외는 매입환율, USD 모드는 지금 환율).
+ */
+export function computeStockTotals(
+  stocks: Stock[],
+  exchangeRates: { USD: number; JPY: number },
+  displayCurrency: StockDisplayCurrency = "KRW",
+): { totalValue: number; totalCost: number; totalProfit: number; totalProfitRate: number } {
+  let totalValue = 0;
+  let totalCost = 0;
+  for (const st of stocks) {
+    if (st.inactiveStatus === "delisted") continue;
+    const m = computeStockMetrics(st, exchangeRates, 0, displayCurrency);
+    totalValue += m.currentVal;
+    totalCost += m.cost;
+  }
+  const totalProfit = totalValue - totalCost;
+  return { totalValue, totalCost, totalProfit, totalProfitRate: totalCost > 0 ? (totalProfit / totalCost) * 100 : 0 };
+}
+
 export function computeStockMetrics(
   stock: Stock,
   exchangeRates: { USD: number; JPY: number },

@@ -8,6 +8,7 @@
 import { applyImportedPayload, clearPhysicalAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { buildDemoRefreshMeta, kstToday, materializeDemo } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
+import { getClassification, upsertClassifications, type StockClassification } from "@/lib/xray/classification-store";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
 
 /**
@@ -24,6 +25,24 @@ export async function injectDemoPayload({ nickname }: { nickname?: string } = {}
   if (!Array.isArray(ad?.physicalAssets)) clearPhysicalAssets();
   // assetRefresh는 clearAssetData의 보존 키라 import로 덮이지 않음 → 기존 키·형식으로 직접 기록(멱등)
   localStorage.setItem(STORAGE_KEYS.assetRefresh, JSON.stringify(buildDemoRefreshMeta()));
+  // X-Ray 분류 캐시(기기 캐시, 백업·동기화 대상 아님) — 비어 있는 필드만 채운다. 이미 받은 분류는 덮지 않는다(#239 5.125)
+  upsertClassifications(demoClassificationPatches((next as { xrayClassifications?: unknown }).xrayClassifications, getClassification));
+}
+
+/** 데모 시드 분류 → 캐시에 없는 필드만 담은 패치(순수). `_comment` 같은 밑줄 키·객체가 아닌 값은 건너뛴다 */
+export function demoClassificationPatches(
+  seed: unknown,
+  current: (ticker: string) => StockClassification | undefined,
+): Record<string, StockClassification> {
+  const out: Record<string, StockClassification> = {};
+  if (!seed || typeof seed !== "object") return out;
+  for (const [ticker, v] of Object.entries(seed as Record<string, unknown>)) {
+    if (ticker.startsWith("_") || !v || typeof v !== "object") continue;
+    const cur = current(ticker) ?? {};
+    const patch = Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => cur[k] === undefined));
+    if (Object.keys(patch).length > 0) out[ticker] = patch as StockClassification;
+  }
+  return out;
 }
 
 /** 오늘 기준으로 materialize한 데모 payload(주입본과 같은 날짜) — 주입하지 않고 읽기만 한다. 데모 이름표 가격 재기준(#239 5.125)이 시드 값을 얻는 데 쓴다 */

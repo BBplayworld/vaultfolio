@@ -1,6 +1,8 @@
 // #239 [5.125] 내 자산 불리기 — 이름표 저장 형태·병합·편집(순수 함수)과 화면 표시 값(기간 표기·행·정렬·접힘).
 import { describe, expect, it } from "vitest";
 import type { Stock } from "@/types/asset";
+import type { Transaction } from "@/types/transaction";
+import { buildBoardRows } from "../asset/grow-board";
 import {
   countValidLabels, emptyStockLabels, hasStockLabelRecords, markStockChecked, mergeStockLabels, parseStockLabels, sameStockLabels,
   isStockLabelRevisit, setStockLabel, setStockLabelCycle, STOCK_LABEL_EXTRA_LIMIT, type StockLabels,
@@ -449,52 +451,6 @@ describe("⑩ base와 병합·편집(AC-28·31)", () => {
   });
 });
 
-describe("수량 비교(AC-25·27) — 정한 날의 내 기록과 지금의 내 기록", () => {
-  const withBase = (ticker: string, qty: number, labeledAt = T("2026-11-01"), kind: "keep" | "check" = "keep") =>
-    mk({ [ticker]: { label: kind, labeledAt, base: { qty }, at: labeledAt } });
-  const row = (stocks: Stock[], labels: StockLabels, ticker: string) => buildGrowRows(stocks, RATES, labels, NOW).find((r) => r.ticker === ticker)!;
-  it("수량이 같으면 `정한 뒤 수량 그대로`, 다르면 `정한 날 N주 → 지금 M주`(늘어남·줄어듦 같은 형식)", () => {
-    expect(row(STOCKS, withBase("AAPL", 5), "AAPL").qtyFact).toEqual({ state: "same", text: "정한 뒤 수량 그대로 16일" });
-    expect(row(STOCKS, withBase("AAPL", 3), "AAPL").qtyFact).toEqual({ state: "changed", text: "정한 날 3주 → 지금 5주" });
-    expect(row(STOCKS, withBase("AAPL", 12), "AAPL").qtyFact).toEqual({ state: "changed", text: "정한 날 12주 → 지금 5주" });
-  });
-  it("'오래 둘'·'점검할' 같은 문장", () => {
-    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-01"), "check"), "AAPL").qtyFact).toEqual(row(STOCKS, withBase("AAPL", 3), "AAPL").qtyFact);
-  });
-  it("지금 수량 = 같은 이름표 키를 쓰는 모든 보유 건의 합(계좌·분류 무관) = 종목 페이지 `총 N주` 표기", () => {
-    expect(qtyByLabelKey(STOCKS).get("005930")).toBe(20); // 일반 10 + ISA 10
-    expect(row(STOCKS, withBase("005930", 12), "005930").qtyFact!.text).toBe(`정한 날 12주 → 지금 ${(20).toLocaleString()}주`);
-    expect(formatQty(1234567)).toBe(`${(1234567).toLocaleString()}주`);
-  });
-  it("소수 수량: 표시 문자열이 같으면 그대로(부동소수 오차로 다르게 뜨지 않는다)", () => {
-    const frac = [st({ id: "f1", ticker: "VOO", quantity: 0.1 }), st({ id: "f2", ticker: "VOO", quantity: 0.2, category: "isa" })];
-    expect(qtyByLabelKey(frac).get("VOO")).not.toBe(0.3); // 0.30000000000000004
-    expect(row(frac, withBase("VOO", 0.3), "VOO").qtyFact).toEqual({ state: "same", text: "정한 뒤 수량 그대로 16일" });
-    expect(row(frac, withBase("VOO", 1.25), "VOO").qtyFact!.text).toBe("정한 날 1.25주 → 지금 0.3주");
-  });
-  it("원문 티커가 달라 두 행으로 나뉜 종목은 두 행에 같은 문장(두 행의 합)", () => {
-    const two = [st({ id: "x1", ticker: "005930", quantity: 7 }), st({ id: "x2", ticker: "005930KS", quantity: 5 })];
-    const rows = buildGrowRows(two, RATES, withBase("005930", 10), NOW);
-    expect(rows.map((r) => r.qtyFact!.text)).toEqual(["정한 날 10주 → 지금 12주", "정한 날 10주 → 지금 12주"]);
-  });
-  it("정한 날 당일은 없음, 다음 날부터 나온다", () => {
-    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-17")), "AAPL").qtyFact).toBeNull();
-    expect(row(STOCKS, withBase("AAPL", 3, T("2026-11-16")), "AAPL").qtyFact).not.toBeNull();
-  });
-  it("base 없는 항목·'정하지 않음'·이름표 없는 행은 없음(나머지 줄은 정상)", () => {
-    const noBase = row(STOCKS, mk({ AAPL: keep(T("2026-11-01")) }), "AAPL");
-    expect(noBase.qtyFact).toBeNull();
-    expect(noBase.labelFact).toBe("오래 두기로 한 지 16일");
-    const damaged = parseStockLabels({ v: 1, cycle: {}, items: { AAPL: { ...keep(T("2026-11-01")), base: { qty: -1 } } } })!;
-    expect(row(STOCKS, damaged, "AAPL").qtyFact).toBeNull();
-    expect(row(STOCKS, mk({ AAPL: { ...none(T("2026-11-01")), base: { qty: 3 } } as never }), "AAPL").qtyFact).toBeNull();
-    expect(row(STOCKS, emptyStockLabels(), "AAPL").qtyFact).toBeNull();
-  });
-  it("시세가 없어도 수량 비교는 나온다", () => {
-    const unpriced = [st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];
-    expect(row(unpriced, withBase("ZZZ", 9), "ZZZ").qtyFact!.text).toBe("정한 날 9주 → 지금 4주");
-  });
-});
 
 describe("기준값 만들기 buildLabelBase", () => {
   it("수량은 이름표 키 합, 시세는 종목 통화 그대로, 비중은 행 비중과 같은 분모", () => {
@@ -576,51 +532,7 @@ describe("'다시 봄' 판정(AC-30)", () => {
 
 // ─── 5.125 인사이트 4종: 정한 뒤 줄(가격 %·수량 기간)·매매 줄 ────────────────────────────
 
-describe("수량 같음 문구의 기간(AC-36) — labeledAt부터, `…한 지` 규칙", () => {
-  const sameFor = (labeledAt: string) => buildGrowRows(STOCKS, RATES, mk({ AAPL: { label: "keep", labeledAt, base: { qty: 5 }, at: labeledAt } }), NOW).find((r) => r.ticker === "AAPL")!.qtyFact;
-  it("1일 뒤 `1일`, 125일 뒤 `4개월`, 14개월 뒤 `1년 2개월`", () => {
-    expect(sameFor("2026-11-16")!.text).toBe("정한 뒤 수량 그대로 1일");
-    expect(sameFor("2026-07-15")!.text).toBe("정한 뒤 수량 그대로 4개월");
-    expect(sameFor("2025-09-17")!.text).toBe("정한 뒤 수량 그대로 1년 2개월");
-    expect(sameFor("2026-11-17")).toBeNull(); // 당일
-  });
-});
 
-describe("정한 날 가격 대비(AC-37) — (지금 시세 − base.price) ÷ base.price, 종목 통화 그대로", () => {
-  const price = (ticker: string, basePrice: number | undefined, opt: { rates?: typeof RATES; labeledAt?: string; stocks?: Stock[]; kind?: "keep" | "check" } = {}) => {
-    const labeledAt = opt.labeledAt ?? T("2026-11-01");
-    const labels = mk({ [ticker]: { label: opt.kind ?? "keep", labeledAt, base: { qty: 1, ...(basePrice ? { price: basePrice } : {}) }, at: labeledAt } });
-    return buildGrowRows(opt.stocks ?? STOCKS, opt.rates ?? RATES, labels, NOW).find((r) => r.ticker === ticker)!.priceFact;
-  };
-  it("원화·외화 종목, 양수·음수·0", () => {
-    expect(price("005930", 50_000)).toEqual({ state: "value", text: "+20.0%" }); // 지금 60,000
-    expect(price("005930", 75_000)).toEqual({ state: "value", text: "-20.0%" });
-    expect(price("AAPL", 160)).toEqual({ state: "value", text: "+25.0%" });      // 지금 200달러
-    expect(price("AAPL", 250)).toEqual({ state: "value", text: "-20.0%" });
-    expect(price("AAPL", 200)).toEqual({ state: "value", text: "0.0%" });
-    expect(price("AAPL", 200.05)).toEqual({ state: "value", text: "0.0%" });     // 반올림해 0이면 부호 없음
-  });
-  it("환율이 바뀌어도 달라지지 않는다", () => {
-    expect(price("AAPL", 160, { rates: { USD: 900, JPY: 5 } })).toEqual(price("AAPL", 160, { rates: { USD: 2000, JPY: 20 } }));
-  });
-  it("이름표 종류와 무관하게 같은 값", () => {
-    expect(price("AAPL", 160, { kind: "check" })).toEqual(price("AAPL", 160, { kind: "keep" }));
-  });
-  it("당일은 없음, 다음 날부터 보인다", () => {
-    expect(price("AAPL", 160, { labeledAt: T("2026-11-17") })).toBeNull();
-    expect(price("AAPL", 160, { labeledAt: T("2026-11-16") })).not.toBeNull();
-  });
-  it("base.price 없음 → 가격 조각 없음(수량은 나온다). 지금 시세 없음 → `—`", () => {
-    const row = buildGrowRows(STOCKS, RATES, mk({ AAPL: { label: "keep", labeledAt: T("2026-11-01"), base: { qty: 3 }, at: T("2026-11-01") } }), NOW).find((r) => r.ticker === "AAPL")!;
-    expect([row.priceFact, row.qtyFact?.text]).toEqual([null, "정한 날 3주 → 지금 5주"]);
-    const unpriced = [st({ id: "z", ticker: "ZZZ", currentPrice: 0, quantity: 4 })];
-    expect(price("ZZZ", 100, { stocks: unpriced })).toEqual({ state: "dash", text: "—" });
-  });
-  it("base 없는 항목·'정하지 않음'·이름표 없는 행은 없음", () => {
-    const rows = buildGrowRows(STOCKS, RATES, mk({ AAPL: keep(T("2026-11-01")), NVDA: none(T("2026-11-01")) }), NOW);
-    expect(rows.every((r) => r.priceFact === null)).toBe(true);
-  });
-});
 
 describe("매매 건수(AC-35) — 이 앱에 기록한 매매 최근 3개월, stockId로 센다", () => {
   const tx = (id: string, stockId: string, date: string, over: Record<string, unknown> = {}) => ({
@@ -647,7 +559,7 @@ describe("매매 건수(AC-35) — 이 앱에 기록한 매매 최근 3개월, s
     const txs = [tx("1", "s1", "2026-10-01"), tx("2", "s2", "2026-10-02"), tx("3", "s2", "2026-09-01")];
     expect(count(txs, "005930")).toBe(3);
     // 종목 페이지가 고르는 방식(그룹 stockId)으로 같은 기간을 세면 같은 수
-    const row = buildGrowRows(STOCKS, RATES, mk({ "005930": keep(T("2026-11-01")) }), NOW, txs).find((r) => r.ticker === "005930")!;
+    const row = buildBoardRows(STOCKS, RATES, mk({ "005930": keep(T("2026-11-01")) }), NOW, txs).find((r) => r.labelKey === "005930")!;
     const ids = new Set(row.groupStockIds);
     const listed = (txs as { stockId: string; date: string }[]).filter((t) => ids.has(t.stockId) && t.date > "2026-08-17" && t.date <= "2026-11-17").length;
     expect(row.tradeCount).toBe(listed);
@@ -656,15 +568,15 @@ describe("매매 건수(AC-35) — 이 앱에 기록한 매매 최근 3개월, s
     const txs = [tx("1", "지워진 보유 건", "2026-10-01", { ticker: "AAPL" }), tx("2", "a1", "2026-10-01", { ticker: "다른 글자" })];
     expect(count(txs, "AAPL")).toBe(1);
   });
-  it("행: 이름표 있는 행만(당일 포함) 건수가 있고 0건은 0. 거래 배열을 넘기지 않으면(허브 카드) null", () => {
-    const labels = mk({ AAPL: keep(T("2026-11-17")), NVDA: check(T("2026-11-01")), "005930": none(T("2026-11-01")) });
-    const rows = Object.fromEntries(buildGrowRows(STOCKS, RATES, labels, NOW, [tx("1", "a1", "2026-10-01")]).map((r) => [r.ticker, r.tradeCount]));
-    expect(rows).toEqual({ AAPL: 1, NVDA: 0, "005930": null, "069500": null });
-    expect(buildGrowRows(STOCKS, RATES, labels, NOW).every((r) => r.tradeCount === null)).toBe(true);
+  it("표 행(buildBoardRows): 티커 있는 행마다 건수, 0건은 0, 티커 없는 행은 0(칩 없음)", () => {
+    const labels = mk({ AAPL: keep(T("2026-11-17")), NVDA: check(T("2026-11-01")) });
+    const rows = Object.fromEntries(buildBoardRows(STOCKS, RATES, labels, NOW, [tx("1", "a1", "2026-10-01")]).map((r) => [r.labelKey ?? r.key, r.tradeCount]));
+    expect(rows.AAPL).toBe(1);
+    expect(rows.NVDA).toBe(0);
   });
-  it("행 순서는 건수·가격 %와 무관하다", () => {
-    const labels = mk({ NVDA: { ...keep(T("2026-11-01")), base: { qty: 1, price: 1 } } });
+  it("표 행 순서는 건수와 무관하다(오래 가진 순 고정)", () => {
     const many = Array.from({ length: 30 }, (_, i) => tx(`m${i}`, "n1", "2026-10-01"));
-    expect(sortGrowRowKeys(buildGrowRows(STOCKS, RATES, labels, NOW, many))).toEqual(sortGrowRowKeys(buildGrowRows(STOCKS, RATES, emptyStockLabels(), NOW)));
+    const keys = (txs: Transaction[]) => buildBoardRows(STOCKS, RATES, emptyStockLabels(), NOW, txs).map((r) => r.key);
+    expect(keys(many)).toEqual(keys([]));
   });
 });

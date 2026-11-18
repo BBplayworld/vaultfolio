@@ -136,7 +136,7 @@ export function AssetReportView() {
   // 이자(연 환산)·주식(최근 1년)과 기간 길이를 맞추기 위해 배당도 올해 12개월(실적+예상)을 쓴다.
   // annualActual(올해 실지급분)만 쓰면 연중에는 약 N/12만 잡혀 레버리지 수익이 구조적으로 과소계상된다.
   // 조회 실패(failedCount>0)도 확정 아님 — 실패를 배당 0으로 계산해 등급·스냅샷에 기록하지 않는다
-  const { isLoading: divLoading, failedCount: divFailed, annualTotal: annualDividend, byLabelKey: dividendByLabelKey } = useDividendAnnualTotals();
+  const { isLoading: divLoading, failedCount: divFailed, annualTotal: annualDividend } = useDividendAnnualTotals();
   const divReady = isDividendReady(divLoading, divFailed);
 
   // 올해 주식 시세차익 (연초 대비, KIS 기준가 — performance-hub "수익" 카드와 동일 패턴, period만 yearly)
@@ -184,35 +184,6 @@ export function AssetReportView() {
       onProgress: (data) => setDailyRefData({ ...data }),
       onKisUnavailable: () => setKisUnavailable(true),
     }).catch(() => { /* abort 등 무시 */ });
-    return () => controller.abort();
-  }, [profitBasisHydrated, tickerList, profitBasis]);
-
-  // 올해 기준가(작년 마지막 거래일 종가, 기존 profit?period=ytd — '시장과 비교'와 같은 캐시 키) — 이름표 블록의 결산 문장용(#239).
-  // 서버로 가는 값은 종목코드·기간·종가 기준뿐이다. 위 두 조회와 겹쳐 분당 한도에 닿지 않게 둘이 끝난 뒤 시작한다
-  // (같은 키로 진행 중인 조회는 fetchProfitRef가 결과를 공유하므로 요청이 늘지 않는다).
-  const [ytdRefs, setYtdRefs] = useState<{ key: string; refs?: ProfitRefResponse; status: "loading" | "ready" | "failed" }>({ key: "", status: "loading" });
-  useEffect(() => {
-    if (!profitBasisHydrated || !tickerList) return;
-    const controller = new AbortController();
-    const key = `${tickerList}|${profitBasis}`;
-    setYtdRefs({ key, status: "loading" });
-    const run = async () => {
-      const wait = { signal: controller.signal, basis: profitBasis };
-      await fetchProfitRef(tickerList, "yearly", { ...wait, caller: "asset-report:ytd-wait-yearly" }).catch(() => undefined);
-      await fetchProfitRef(tickerList, "daily", { ...wait, caller: "asset-report:ytd-wait-daily" }).catch(() => undefined);
-      if (controller.signal.aborted) return;
-      let failed = false;
-      const data = await fetchProfitRef(tickerList, "ytd", {
-        ...wait,
-        caller: "asset-report:grow-ytd",
-        onKisUnavailable: () => { failed = true; },
-        onFailed: () => { failed = true; },
-      });
-      if (controller.signal.aborted) return;
-      const complete = tickerList.split(",").every((t) => t in data);
-      setYtdRefs({ key, refs: data, status: failed || !complete ? "failed" : "ready" });
-    };
-    run().catch(() => { if (!controller.signal.aborted) setYtdRefs({ key, status: "failed" }); });
     return () => controller.abort();
   }, [profitBasisHydrated, tickerList, profitBasis]);
 
@@ -442,10 +413,7 @@ export function AssetReportView() {
         ) : (
           <>
             {/* ── 이름표·점검 블록(#239) — 주식(티커 있는 종목)이 없으면 DOM 없음. 아래 성적표 구획과 20px 간격 ── */}
-            <StockLabelBlock
-              dividend={{ annualTotal: annualDividend, byLabelKey: dividendByLabelKey, isLoading: divLoading, failedCount: divFailed }}
-              settle={{ refs: ytdRefs.refs, status: tickerList === "" ? "failed" : ytdRefs.status }}
-            />
+            <StockLabelBlock />
 
             {/* ── 자산 성적표 구획 제목 — 화면 제목에 있던 InfoHint가 여기로 내려왔다(문구 그대로) ── */}
             <div className="pt-1">

@@ -1,6 +1,6 @@
 /**
  * asset/grow-rows.ts
- * 내 자산 불리기(#239) 화면·허브 카드의 표시 값(순수 함수).
+ * 내 자산 불리기(#239) 허브 카드·이름표 공용 표시 값(순수 함수). 불리기 화면의 결론·기준별·종목 표는 grow-board.ts
  *  - 종목 행: 상세 › 주식 전체 탭과 같은 그룹(groupStocksByTicker)·같은 계산(computeStockMetrics)·같은 문자열
  *  - 기간 표기: 지난 달력 월 수(KST 날짜 기준)
  *  - 앱이 종목을 나누거나 고르지 않는다 — 여기서 만드는 값은 사용자가 붙인 이름표와 기록에서 나온 사실뿐이다
@@ -81,12 +81,6 @@ export interface GrowRow {
   labelFact: string | null;
   /** 주기 경과 문구. 지나지 않았으면 null */
   overdueFact: string | null;
-  /** 수량 비교 — 정한 날의 내 기록과 지금의 내 기록. 당일·base 없는 항목·이름표 없는 행은 null */
-  qtyFact: { state: "same" | "changed"; text: string } | null;
-  /** 정한 날 가격 대비 — 종목 통화 그대로(환율 효과 없음). 당일·base.price 없는 항목은 null, 지금 시세가 없으면 `—` */
-  priceFact: { state: "value" | "dash"; text: string } | null;
-  /** 이 앱에 기록한 매매 최근 3개월 건수(매수·매도 합). 이름표 있는 행만, 거래 배열을 넘기지 않으면 null */
-  tradeCount: number | null;
   /** 오늘 이미 점검을 눌렀는지 */
   checkedToday: boolean;
 }
@@ -163,31 +157,6 @@ export function buildLabelBase(stocks: Stock[], exchangeRates: { USD: number; JP
   };
 }
 
-/** 수량 비교 문장 — 표시 문자열이 같으면 '그대로'(소수 수량의 부동소수 오차로 다르게 뜨지 않게). 늘고 준 방향은 말하지 않는다 */
-function qtyFactOf(item: StockLabelItem | undefined, nowQty: number | undefined, nowMs: number): GrowRow["qtyFact"] {
-  if (!item || item.label === null || !item.base || nowQty === undefined) return null;
-  const e = elapsedSince(item.labeledAt, nowMs);
-  if (!e || e.days === 0) return null;
-  const then = formatQty(item.base.qty);
-  const now = formatQty(nowQty);
-  return then === now ? { state: "same", text: `정한 뒤 수량 그대로 ${formatSince(e)}` } : { state: "changed", text: `정한 날 ${then} → 지금 ${now}` };
-}
-
-/**
- * 정한 날 가격 대비 % = (지금 시세 − base.price) ÷ base.price. 둘 다 종목 통화라 환율이 바뀌어도 달라지지 않는다.
- * 부호 표기는 `내 매입가 대비`와 같은 함수(profitTone). 정한 날 다음 날(KST)부터 — 수량 조각과 같은 규칙.
- */
-function priceFactOf(item: StockLabelItem | undefined, nowPrice: number | undefined, nowMs: number): GrowRow["priceFact"] {
-  const basePrice = item?.base?.price;
-  if (!item || item.label === null || !basePrice) return null;
-  const e = elapsedSince(item.labeledAt, nowMs);
-  if (!e || e.days === 0) return null;
-  if (!(nowPrice !== undefined && nowPrice > 0)) return { state: "dash", text: "—" };
-  const pct = ((nowPrice - basePrice) / basePrice) * 100;
-  const tone = profitTone(pct, pct, 1);
-  return { state: "value", text: `${tone.sign}${tone.rate.toFixed(1)}%` };
-}
-
 const DAY_TEXT = /^\d{4}-\d{2}-\d{2}$/;
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -236,20 +205,9 @@ export function buildGrowRows(
   exchangeRates: { USD: number; JPY: number },
   labels: StockLabels,
   nowMs: number,
-  /** 주식 거래 기록 — 넘기면 이름표 있는 행에 매매 건수를 센다(허브 카드는 넘기지 않는다) */
-  transactions?: Transaction[],
 ): GrowRow[] {
   // 전체 탭과 같은 분모: 상장폐지 제외 전 종목의 원화 평가액 합
   const { totalValue } = growTotals(stocks, exchangeRates);
-  const qtyNow = qtyByLabelKey(stocks);
-  const trades = transactions ? tradeCountsByLabelKey(stocks, transactions, nowMs) : null;
-  // 이름표 키별 지금 시세(종목 통화) — 기준값을 만들 때와 같은 규칙: 현재가가 있는 첫 보유 건
-  const priceNow = new Map<string, number>();
-  for (const s of stocks) {
-    if (!s.ticker || !(s.currentPrice > 0)) continue;
-    const k = normalizeTicker(s);
-    if (!priceNow.has(k)) priceNow.set(k, s.currentPrice);
-  }
 
   const rows: GrowRow[] = [];
   for (const [key, items] of groupStocksByTicker(stocks)) {
@@ -281,9 +239,6 @@ export function buildGrowRows(
       labelState: !item ? "unset" : item.label === null ? "none" : item.label,
       labelFact: fact,
       overdueFact,
-      qtyFact: qtyFactOf(item, qtyNow.get(ticker), nowMs),
-      priceFact: priceFactOf(item, priceNow.get(ticker), nowMs),
-      tradeCount: trades && item && item.label !== null ? (trades.get(ticker) ?? 0) : null,
       checkedToday,
     });
   }

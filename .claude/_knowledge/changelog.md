@@ -27,7 +27,15 @@
   - 연결 문장(`grow-link`, '오래 둘' 1개 이상): 배당 `올해 배당 중 오래 둘 자산 몫은 N%예요`(분모 = 지급 + 예상, 배당 카드 `올해 배당`과 같은 말)(`useDividendAnnualTotals` 반환에 `byLabelKey` 추가 — 배당 카드와 같은 조회·같은 매수일 조건, 새 요청 0) · 결산 3갈래 `올해 내 주식에서 불어난 돈 중 …`/`… 줄어든 돈 중 …`/`올해는 불어난 쪽과 줄어든 쪽이 섞여 있어 몫을 비율로 나타내지 않아요` + 기준가 없는 종목 꼬리 `(기준 가격이 없는 N종목 제외)`. 결산 = 보유 건마다 수량 × (지금 시세 − 기준) × 지금 환율, 기준 = 올해 편입(매수일 1월 2일 이후 ~ 오늘)이면 평단, 아니면 기존 `profit?period=ytd`(작년 마지막 거래일 종가, '시장과 비교'와 같은 캐시 키, yearly·daily 조회가 끝난 뒤 시작). 비상장·상장폐지 제외. 숨김은 계산 불가(조회 실패·지금 시세 없음·분모 0·'오래 둘' 전부 기준가 없음)일 때만, 조회 중 스켈레톤 1줄. 금액·링크 없음.
   - 도움말: 화면 제목 InfoHint는 1문단으로 되돌림(a2fb703과 같음), 블록 제목 옆 `grow-block-hint` 요약 `정한 날의 내 기록과 지금의 내 기록을 나란히 보여 줘요.` + 3문단.
   - 신규 `lib/asset/grow-links.ts`(`keepLabelKeys`·`buildDividendLink`·`isBoughtThisYear`·`buildSettleLink`). `grow-rows.ts`: `priceFact`·`tradeCount`, `tradeCountsByLabelKey`·`threeMonthsBefore`·`kstDayText`, `buildGrowRows(…, transactions?)`(허브 카드는 넘기지 않음). 데모 시드 점검할 NVDA → 000660(SK하이닉스, 매매 0건 행). 새 소식 `20261117-01` 본문 `이름표를 붙이면 정한 날과 지금의 가격·수량, 매매 건수, 배당 몫을 나란히 보여요`. 금지어 추가 `자주·많이·적게·겨우·에서 나와요·에서 나왔어요`.
-- 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`·`asset-grade-copy`·`ga`(추가)·`grow-links`(신규). `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.
+- **재설계 3차(11/18, 대표 확정 시각 목업 redesign3)** — 인사이트 4종의 행 4줄·무게 막대·범례·몫 문장·정한 날 지표·블록 위 주기 선택기를 지우고(저장 구조 diff 0) 3블록으로:
+  - ① 결론 카드 `산 날부터 지금까지 · 내 주식 N종목` + 큰 금액·%(상세 › 주식 '전체' 헤더와 같은 공용 `computeStockTotals`) + '앞으로' 2행(배당 `1년 약 N원 · 지금 수량 기준 가정` = `useDividendAnnualTotals().annualAtHeldQty`, 점검 = 점검할 자산의 다음 점검일·지났으면 `지금`).
+  - ② 기준별 점검 4탭(보유 기간 1년 이상/미만·ETF·개별·핵심 분야·시가총액) — 0 기준 가로 막대(화면 전체 공통 눈금, 10% 올림), `전체 ±x.x%` 점선 기준선, 묶음 순서 고정, 묶음을 누르면 표를 거르고 ✕로 해제(화면 메모리). 분류는 X-Ray `classifyStock`(신규 export) + 기기 캐시 읽기만, 요청 0. 없으면 미분류 + `X-Ray를 열면 분류가 채워져요.`
+  - ③ 종목별 표(오래 가진 순 고정, 상위 5 + 전체 보기, 점검 차례 행은 접지 않음): 종목·보유 기간·점수 / 수익률 + 미니 막대 / 손익 / 이름표 칩(누르면 3택·`오늘 점검했어요`·`최근 3개월 매매 N건 · 이 앱 기록 · …`). 1024부터 2열(5fr:7fr)·보유 기간 열 분리, 360 미만은 손익을 수익률 아래로.
+  - **보유 기간 대비 점수**(대표 선택): 연 환산 수익률 (1+r)^(365/일수)−1 을 자산 성적표 '장기 순자산 성장' 구간(15·10·5·0%)으로 5점 만점. 183일 미만은 `측정 중`(지수가 2를 넘으면 한두 달 시세가 점수를 좌우). 기준표 ⓘ, 점수 순 정렬 없음, 결론 카드 평균 점수는 넣지 않음.
+  - ④ `점검 주기 3개월 ›` 설정 줄 1개(누르면 그 자리에서 선택).
+  - 신규 `lib/asset/grow-board.ts`, `grow-links.ts` 삭제, `grow-rows.ts`에서 수량 비교·정한 날 가격·매매 건수 필드 제거(허브 카드용은 유지), `asset-report-view.tsx` ytd 조회 제거, `useDividendAnnualTotals` `byLabelKey` → `annualAtHeldQty`. 새 소식 본문 `산 날부터 손익과 보유 기간 대비 점수를 기준별로 보고, 이름표로 점검해요`.
+  - 데모 시드: 삼성전자 매수일 `@M-20D12`·TIGER `@M-26D03`(1년 이상 묶음), 최상위 `xrayClassifications`(시가총액 구간 4종목) — `injectDemoPayload`가 캐시에 없는 필드만 채운다(`demoClassificationPatches`).
+- 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`(재작성)·`asset-grade-copy`·`ga`(추가)·`grow-board`(신규)·`demo-label-rebase`. `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.
 
 ---
 

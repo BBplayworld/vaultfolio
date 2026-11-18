@@ -271,19 +271,11 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     const overdue = rows.filter((r) => r.overdueFact);
     expect(overdue.map((r) => [r.ticker, r.labelFact, r.overdueFact])).toEqual([["AAPL", "마지막 점검 4개월 전", "내가 정한 주기 3개월이 지났어요"]]);
     expect(sortGrowRowKeys(rows)[0]).toBe(overdue[0].key);
-    expect(rows.find((r) => r.ticker === "360750")!.labelFact).toBe("오래 두기로 한 지 9개월"); // 시드 정합(R-C2): 정한 날 @M-9D1 ≥ 매수일 @M-10D03
-    // AC-33: 조작 없이 무게 줄(합 100.0)과 수량 비교 두 문장이 처음 보이는 3행 안에 있다
+    expect(rows.find((r) => r.ticker === "360750")!.labelFact).toBe("오래 두기로 한 지 9개월"); // 시드 정합(R-C2): 정한 날 @M-9D1 ≥ 매수일 @M-26D03
+    // 무게(허브 카드 둘째 줄) — 합 100.0
     const w = s.weights;
     expect(w.keep.pct! + w.check.pct! + w.none.pct!).toBeCloseTo(100, 6);
     expect(w.keep.pctText).toMatch(/^\d+\.\d%$/);
-    const by = new Map(rows.map((r) => [r.key, r]));
-    const top3 = sortGrowRowKeys(rows).slice(0, 3).map((k) => by.get(k)!.qtyFact?.text);
-    expect(top3).toContain("정한 날 10주 → 지금 12주");
-    expect(top3).toContain("정한 날 50주 → 지금 65주"); // 시드 정합(R-C2): 삼성전자 정한 뒤 +10·+10·−5
-    // '그대로' 형식은 SK하이닉스(정한 뒤 거래 0). JSON 시세에서는 비중 4번째라 처음 3행 밖 — 실시간 시세 데모에서는 3행 안(grow-links 데모 시드 테스트)
-    const labeled = rows.filter((r) => r.labelState === "keep" || r.labelState === "check");
-    expect(labeled.find((r) => r.ticker === "000660")!.qtyFact!.text).toMatch(/^정한 뒤 수량 그대로 \d+(일|개월)$/);
-    expect(rows.filter((r) => r.labelState === "keep" || r.labelState === "check").every((r) => r.qtyFact !== null)).toBe(true);
   });
   it("시드에 고정 날짜가 없다(전부 날짜 토큰)", () => {
     const seedText = JSON.stringify(demoRaw.stockLabels);
