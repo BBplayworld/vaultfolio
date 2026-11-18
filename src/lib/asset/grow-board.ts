@@ -204,7 +204,8 @@ const holdTextOf = (h: { days: number; months: number } | null): string => {
  * 행 금액은 보유 건마다 computeStockMetrics를 더해 상세 › 주식 '전체' 헤더 합과 원 단위로 같다.
  */
 export function buildBoardRows(stocks: Stock[], rates: Rates, labels: StockLabels, nowMs: number, transactions: Transaction[] = []): BoardRow[] {
-  const active = stocks.filter((s) => s.inactiveStatus !== "delisted");
+  // 전량 매도로 수량 0만 남은 보유 건은 뺀다 — 판 뒤에도 행·차례·카드 수에 남던 문제(#243, v5.125 qa 확정)
+  const active = stocks.filter((s) => s.inactiveStatus !== "delisted" && s.quantity > 0);
   const trades = tradeCountsByLabelKey(active, transactions, nowMs);
   const rows: BoardRow[] = [];
   for (const [key, items] of groupStocksByTicker(active)) {

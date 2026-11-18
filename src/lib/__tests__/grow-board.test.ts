@@ -86,6 +86,13 @@ describe("종목 행 buildBoardRows", () => {
     expect(total.rate).toBeCloseTo(t.totalProfitRate, 10);
     expect(total.count).toBe(rows.length);
   });
+  it("전량 매도로 수량 0만 남은 보유 건은 행·합계·종목 수에서 빠진다(#243)", () => {
+    const sold = st({ id: "s0", ticker: "SOLD", quantity: 0, averagePrice: 0, currentPrice: 280, purchaseDate: "2025-01-02" });
+    const r = buildBoardRows([...STOCKS, sold], RATES, mk(), NOW);
+    expect(r.map((x) => x.key)).toEqual(rows.map((x) => x.key));
+    expect(r.some((x) => x.key === "t:SOLD")).toBe(false);
+    expect(boardTotal([...STOCKS, sold], RATES, r).count).toBe(rows.length);
+  });
   it("시세 없는 종목이 있으면 합계 priced=false, 그 행 rate null", () => {
     const r = buildBoardRows([...STOCKS, st({ id: "z", currentPrice: 0 })], RATES, mk(), NOW);
     expect(boardTotal(STOCKS, RATES, r).priced).toBe(false);
