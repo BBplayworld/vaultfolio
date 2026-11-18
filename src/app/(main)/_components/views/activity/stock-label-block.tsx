@@ -447,7 +447,7 @@ export function StockLabelBlock() {
                       <li key={b.score} className="whitespace-nowrap">{b.score}점 {b.min === null ? "0% 미만" : `${b.min}% 이상`}</li>
                     ))}
                   </ul>
-                  <p className="text-pretty break-keep">{Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 측정 중이에요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
+                  <p className="text-pretty break-keep">{Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 측정 중이에요. 짧게 가진 종목일수록 몇 달의 변동이 점수에 크게 반영돼요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
                 </InfoHint>
               </span>
             </span>
