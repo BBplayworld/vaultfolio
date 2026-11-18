@@ -135,3 +135,66 @@ describe("stockLabelActions", () => {
     expect(send).not.toHaveBeenCalled();
   });
 });
+
+// #242(5.127) — 기존 4개 지표(정함·점검·조건·다시 봄)는 주식 키만 본다. 주식 외는 `·주식 외 정함` 하나로만 잰다
+describe("주식 외 자산(코인·부동산·실물) — GA 분리와 hit 저장", () => {
+  it("코인·부동산·실물만 정하고 점검하고 조건을 넣어도 주식 지표(정함·점검·조건)는 0회, `·주식 외 정함`은 0→1에서 1회", () => {
+    const a = actions();
+    a.record("c:BTC", "check", { price: 140_000_000, rate: 16.7 }, { qty: 0.05, price: 140_000_000 });
+    a.setLabel("r:re_1", "keep");
+    a.setLabel("p:ph_1", "check");
+    a.setPlan("c:BTC", { down: 20, months: 6, memo: "반감기 뒤 다시 보기" });
+    a.setPlan("p:ph_1", { months: 12 });
+    a.record("c:BTC", "same", { price: 150_000_000, rate: 25 });
+    a.record("r:re_1", "same", { price: 620_000_000, rate: 24 });
+    a.record("p:ph_1", "keep", { price: 9_000_000, rate: 0 });
+    expect(send.mock.calls).toEqual([["grow_other_label"]]);
+    for (const call of send.mock.calls) expect(call).toHaveLength(1); // 종류·건수·종목 미전송
+    // 저장은 주식과 같은 동작 — 새로 읽어도 남는다
+    const v = readStockLabels();
+    expect(v.items["c:BTC"]).toMatchObject({ label: "check", base: { qty: 0.05, price: 140_000_000 }, plan: { down: 20, months: 6, memo: "반감기 뒤 다시 보기" } });
+    expect(v.reviews!.map((r) => [r.t, r.choice]).sort()).toEqual([["c:BTC", "same"], ["p:ph_1", "keep"], ["r:re_1", "same"]]);
+  });
+  it("코인을 먼저 정한 뒤 주식을 처음 정하면 `·정함`이 1회 나간다(주식 외 항목이 0→1 판정을 가리지 않는다)", () => {
+    const a = actions();
+    a.setLabel("c:BTC", "keep");
+    send.mockClear();
+    a.setLabel("AAPL", "keep");
+    a.setLabel("c:ETH", "check"); // 둘째 주식 외 — 보내지 않는다
+    expect(send.mock.calls).toEqual([["grow_label"]]);
+    // 주식의 점검·조건은 그대로 나간다(시점 diff 0)
+    send.mockClear();
+    a.record("AAPL", "check", SNAP);
+    a.setPlan("AAPL", { down: 10 });
+    a.record("AAPL", "same", SNAP);
+    expect(send.mock.calls).toEqual([["grow_check"], ["grow_plan"], ["grow_check"]]);
+  });
+  it("`·주식 외 정함`은 이 기기에서 누른 저장에만 — 동기화로 받은 항목(저장소에 이미 있는 값)으로는 나가지 않는다", () => {
+    // 다른 기기에서 정한 코인이 pull로 들어온 상태
+    localStorage.setItem(STORAGE_KEYS.stockLabels, JSON.stringify({ v: 1, cycle: { months: null, at: "" }, items: { "c:BTC": { label: "check", labeledAt: "2026-11-01T00:00:00.000Z", at: "2026-11-01T00:00:00.000Z" } } }));
+    const a = actions();
+    a.setLabel("r:re_1", "keep"); // 이미 1개 → 0→1이 아니다
+    a.record("c:BTC", "same", { price: 1, rate: 1 });
+    expect(send).not.toHaveBeenCalled();
+    // 전부 되돌린 뒤 다시 정하면 다시 0→1(플래그 키 없음)
+    a.setLabel("r:re_1", null); a.setLabel("c:BTC", null);
+    a.setLabel("p:ph_1", "keep");
+    expect(send.mock.calls).toEqual([["grow_other_label"]]);
+  });
+  it("예약 접두(s: 등)는 어느 지표에도 세지 않는다", () => {
+    const a = actions();
+    a.setLabel("s:fund_1", "keep");
+    expect(send).not.toHaveBeenCalled();
+  });
+  it("차례인 상태에서 누르면 그 이유가 기록의 hit으로 남는다. 차례가 아니면 키가 없다(5.125 기록과 같은 꼴)", () => {
+    const a = actions();
+    a.setLabel("AAPL", "check");
+    const hit = a.record("AAPL", "same", SNAP, undefined, "down")!;
+    expect(hit.reviews![0]).toMatchObject({ t: "AAPL", choice: "same", hit: "down" });
+    const plain = a.record("AAPL", "keep", SNAP)!;
+    expect(Object.keys(plain.reviews![0]).sort()).toEqual(["at", "choice", "from", "price", "rate", "t"]);
+    // 5종 밖 값은 쓰지 않는다
+    const bad = a.record("AAPL", "check", SNAP, undefined, "moon" as never)!;
+    expect("hit" in bad.reviews![0]).toBe(false);
+  });
+});
