@@ -1,0 +1,319 @@
+<!doctype html>
+<!-- #239 v5.125 재설계 6차 시각 목업 — 메뉴 통합·일상어·기준 패널 정리·수익률 정의(대표 지시 11/18 4건, 대리 검토 C137)(ui-designer, 2026-11-18). 코드 수정 0, 데모 값(redesign.md 5-1·5-6)만 사용.
+     3·4차 목업 스타일을 이어 쓴다. preview 주입은 mock-redesign6-shot.mjs 가 mk-style 스타일과 mk-script 스크립트를 꺼내 renderMock(root, opts)를 부른다. -->
+<html lang="ko" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>내 자산 불리기 — 재설계 5차 개선판</title>
+<style id="mk-style">
+/* 단독 열람용 토큰(앱 다크 토큰 값 그대로). 주입 시에는 앱의 :root/.dark 변수가 이긴다 */
+.mk-standalone { --background: oklch(0.16 0.010 265); --foreground: oklch(0.965 0.004 265); --card: oklch(0.225 0.012 265); --muted: oklch(0.31 0.014 265); --muted-foreground: oklch(0.74 0.016 265); --border: oklch(1 0 0 / 10%); --brand: #5b6fbf;
+  background: var(--background); color: var(--foreground); font-family: Pretendard, "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; margin: 0; padding: 16px; }
+.mk { --up: oklch(71.2% 0.194 13.428); /* rose-400 = 이익 */ --down: oklch(70.7% 0.165 254.624); /* blue-400 = 손실 */
+  display: flex; flex-direction: column; gap: 20px; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.mk * { box-sizing: border-box; }
+.mk-sec { background: var(--card); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+.mk-muted { color: var(--muted-foreground); }
+.mk-up { color: var(--up); } .mk-down { color: var(--down); }
+.mk-h { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; line-height: 24px; }
+.mk-h svg { width: 20px; height: 20px; color: var(--muted-foreground); flex-shrink: 0; }
+.mk-i { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid oklch(74.6% 0.16 232.661 / 0.7); color: oklch(74.6% 0.16 232.661 / 0.7); font-size: 10px; font-weight: 700; line-height: 1; }
+
+/* ① 결론 카드 — 큰 숫자 1개 + 보조 최소 */
+.mk-hero-label { font-size: 14px; line-height: 20px; display: flex; align-items: center; gap: 6px; }
+.mk-hero-num { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+.mk-hero-num b { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.02em; }
+.mk-hero-num span { font-size: 17px; font-weight: 700; }
+.mk-next { border-top: 1px solid var(--border); padding-top: 12px; display: grid; grid-template-columns: 40px 1fr; row-gap: 6px; column-gap: 8px; font-size: 14px; line-height: 20px; align-items: baseline; }
+.mk-next dt { color: var(--muted-foreground); font-size: 13px; }
+.mk-next dd { margin: 0; min-width: 0; word-break: keep-all; text-wrap: pretty; }
+.mk-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: color-mix(in oklab, var(--muted) 70%, transparent); color: var(--muted-foreground); font-size: 11px; line-height: 18px; vertical-align: 1px; }
+
+/* ② 기준별 점검 */
+.mk-tabs { display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 50%, transparent); }
+.mk-tabs button { all: unset; min-height: 40px; border-radius: 6px; text-align: center; font-size: 14px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-tabs button[aria-selected="true"] { background: color-mix(in oklab, var(--foreground) 15%, transparent); color: var(--foreground); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); }
+.mk-groups { position: relative; display: flex; flex-direction: column; }
+.mk-scale { display: grid; grid-template-columns: 100px 1fr 68px; column-gap: 8px; font-size: 11px; line-height: 16px; height: 16px; }
+.mk-scale > div { position: relative; }
+.mk-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.mk-g { all: unset; display: grid; grid-template-columns: 100px 1fr 68px; column-gap: 8px; align-items: center; min-height: 52px; border-radius: 8px; margin: 0 -8px; padding: 0 8px; cursor: pointer; }
+.mk-g + .mk-g { border-top: 1px solid var(--border); border-radius: 0; }
+.mk-g[aria-pressed="true"] { background: color-mix(in oklab, var(--foreground) 8%, transparent); border-radius: 8px; border-top-color: transparent; }
+.mk-g[aria-pressed="true"] + .mk-g { border-top-color: transparent; }
+.mk-g-name { display: block; font-size: 14px; font-weight: 600; line-height: 20px; word-break: keep-all; }
+.mk-g-sub { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mk-track { position: relative; height: 10px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.mk-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.mk-ref { position: absolute; top: -10px; bottom: -10px; width: 0; border-left: 1.5px dashed color-mix(in oklab, var(--foreground) 55%, transparent); }
+.mk-g-val { text-align: right; }
+.mk-g-val b { display: block; font-size: 15px; line-height: 20px; font-weight: 700; }
+.mk-g-val span { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+/* ③ 종목별 표 */
+.mk-list-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mk-sort { font-size: 13px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-filter { all: unset; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 10px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 12%, transparent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mk-table { display: grid; grid-template-columns: minmax(0, 1fr) 58px 62px 76px; column-gap: 0; }
+.mk-rate-pl { display: none; }
+.mk-th { font-size: 12px; line-height: 16px; color: var(--muted-foreground); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.mk-th.r { text-align: right; }
+.mk-table .mk-th.c-hold, .mk-table .mk-c.mk-hold-col { display: none; }
+.mk-row { display: contents; }
+.mk-row > .mk-c { min-height: 56px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border); }
+.mk-row:last-of-type > .mk-c { border-bottom: 0; }
+.mk-c.r { align-items: flex-end; text-align: right; padding-left: 4px; }
+.mk-th.r { padding-left: 4px; }
+.mk-due { color: oklch(0.87 0.065 274); font-weight: 600; }
+.mk-name { font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-hold { font-size: 12px; line-height: 16px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-rate b { font-size: 14px; line-height: 20px; font-weight: 700; }
+.mk-mini { margin-top: 4px; width: 50px; height: 4px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 7%, transparent); position: relative; overflow: hidden; }
+.mk-mini i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+.mk-pl { font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.mk-chip { all: unset; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 2px; height: 28px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: color-mix(in oklab, var(--muted) 75%, transparent); }
+.mk-chip::after { content: ""; position: absolute; inset: -6px -2px; }
+.mk-chip.none { background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--muted-foreground); font-weight: 500; }
+.mk-chip.due { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--brand) 90%, white 10%); }
+.mk-chip svg { width: 12px; height: 12px; opacity: 0.8; }
+.mk-open { grid-column: 1 / -1; margin: 0 0 12px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 8px; }
+.mk-seg { display: grid; grid-template-columns: repeat(3, 1fr); padding: 2px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 70%, transparent); }
+.mk-seg span { min-height: 40px; display: grid; place-items: center; font-size: 13px; color: var(--muted-foreground); border-radius: 6px; }
+.mk-seg span.on { background: color-mix(in oklab, var(--foreground) 15%, transparent); color: var(--foreground); font-weight: 600; }
+.mk-btn { min-height: 40px; display: grid; place-items: center; border-radius: 8px; background: var(--muted); font-size: 14px; font-weight: 500; }
+.mk-cap { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mk-cycle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-size: 14px; border-top: 1px solid var(--border); margin-top: 4px; }
+
+/* 1024부터 2열: 왼쪽 결론+기준별, 오른쪽 종목 표(보유 기간을 열로 분리) */
+@media (min-width: 1024px) {
+  .mk { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: 20px; }
+  .mk-left { display: flex; flex-direction: column; gap: 20px; }
+  .mk-table { grid-template-columns: minmax(0, 1fr) 120px 96px 104px 108px; column-gap: 0; }
+  .mk-table .mk-th.c-hold { display: block; }
+  .mk-hold { display: none; }
+  .mk-table .mk-c.mk-hold-col { display: flex; font-size: 14px; color: var(--foreground); }
+  .mk-mini { width: 72px; }
+  .mk-name, .mk-rate b { font-size: 15px; }
+}
+@media (max-width: 1023px) { .mk-left { display: contents; } }
+/* 360 미만: 손익 열을 수익률 칸 둘째 줄로 접는다(이름 칸 확보) */
+@media (max-width: 359px) {
+  .mk-table { grid-template-columns: minmax(0, 1fr) 64px 76px; }
+  .mk-table .pl-col { display: none; }
+  .mk-rate-pl { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); font-weight: 400; }
+  .mk-mini { display: none; }
+  .mk-name { white-space: normal; word-break: keep-all; }
+  .mk-g, .mk-scale { grid-template-columns: 88px 1fr 64px; }
+  .mk-tabs button { font-size: 13px; letter-spacing: -0.02em; }
+}
+/* ── 4차 추가 ── */
+.mk-comment { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 20px; margin-top: 2px; }
+.mk-comment b { font-weight: 700; color: var(--foreground); }
+.mk-comment .mk-muted b { color: var(--foreground); }
+.mk-jump { color: oklch(0.82 0.08 274); font-weight: 600; white-space: nowrap; margin-left: 6px; }
+.mk-sub .mk-due, .mk-hold .mk-due { color: oklch(0.87 0.065 274); font-weight: 600; }
+/* 돌아보기 */
+.mk-rv-group { display: flex; flex-direction: column; }
+.mk-rv-group + .mk-rv-group { border-top: 1px solid var(--border); padding-top: 8px; }
+.mk-rv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-height: 28px; }
+.mk-rv-head b { font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.mk-rv-head b i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+.mk-rv-head span { font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-rv-row { all: unset; display: grid; grid-template-columns: minmax(0, 1fr) 88px 64px; column-gap: 8px; align-items: center; min-height: 52px; margin: 0 -8px; padding: 0 8px; border-radius: 8px; cursor: pointer; }
+.mk-rv-row:hover { background: color-mix(in oklab, var(--foreground) 5%, transparent); }
+.mk-rv-name { display: block; font-size: 14px; font-weight: 600; line-height: 20px; word-break: keep-all; }
+.mk-sub { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-rv-pct { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+.mk-rv-pct b { font-size: 15px; line-height: 20px; font-weight: 700; }
+.mk-rv-pct .mk-due { font-size: 12px; line-height: 16px; white-space: nowrap; color: oklch(0.87 0.065 274); font-weight: 600; }
+.mk-due-dot { width: 6px; height: 6px; border-radius: 999px; background: color-mix(in oklab, var(--brand) 90%, white 10%); margin-right: 2px; }
+.mk-rv-scale { display: grid; grid-template-columns: minmax(0, 1fr) 88px 64px; column-gap: 8px; font-size: 11px; line-height: 16px; height: 16px; }
+.mk-rv-scale > div { position: relative; }
+/* 점검 한 장 */
+.mk-card1 { grid-column: 1 / -1; margin: 4px 0 12px; padding: 12px; border-radius: 10px; background: color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 12px; }
+.mk-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border-radius: 8px; overflow: hidden; background: var(--border); }
+.mk-fact { background: var(--card); padding: 8px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mk-fact span { font-size: 11px; line-height: 14px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-fact b { font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; }
+.mk-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.mk-choices span { min-height: 44px; display: grid; place-items: center; border-radius: 8px; background: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mk-hist { display: flex; flex-direction: column; }
+.mk-hist-h { font-size: 12px; color: var(--muted-foreground); line-height: 16px; margin-bottom: 4px; }
+.mk-hist-row { display: grid; grid-template-columns: 14px 64px minmax(0, 1fr) auto; column-gap: 6px; align-items: center; min-height: 28px; font-size: 13px; }
+.mk-hist-row i { width: 7px; height: 7px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 45%, transparent); justify-self: center; }
+.mk-hist-row .d { color: var(--muted-foreground); white-space: nowrap; }
+.mk-hist-row .r { text-align: right; white-space: nowrap; font-size: 12px; color: var(--muted-foreground); }
+.mk-hist-row .r b { font-size: 13px; }
+.mk-card1-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted-foreground); min-height: 32px; border-top: 1px solid var(--border); padding-top: 8px; }
+.mk-card1-foot a { color: var(--foreground); font-size: 13px; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+@media (max-width: 1023px) { .mk-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mk-more { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 14px; color: var(--muted-foreground); border-top: 1px solid var(--border); }
+/* ── 5차 ── */
+.mk-judge { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 20px; color: var(--foreground); word-break: keep-all; text-wrap: pretty; }
+.mk-judge b { font-weight: 700; }
+/* 5b: 판단·배당을 한 정의 목록으로(라벨 열 정렬), 칩 → 4칸 균등 버튼, 묶음 머리 가볍게, 행 구분선 제거 */
+.mk-sum { display: grid; grid-template-columns: 60px minmax(0, 1fr); row-gap: 6px; column-gap: 8px; margin: 0; font-size: 14px; line-height: 20px; align-items: baseline; }
+.mk-sum dt { color: var(--muted-foreground); font-size: 13px; white-space: nowrap; }
+.mk-sum dd { margin: 0; min-width: 0; word-break: keep-all; }
+.mk-sum dd b { font-weight: 700; }
+.mk-axes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 2px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 50%, transparent); }
+.mk-axes button { all: unset; min-height: 36px; position: relative; text-align: center; border-radius: 6px; font-size: 13px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-axes button::after { content: ""; position: absolute; inset: -2px 0; }
+.mk-axes button[aria-expanded="true"] { background: color-mix(in oklab, var(--foreground) 15%, transparent); color: var(--foreground); font-weight: 600; }
+.mk-axes-h { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mk-g-all { cursor: default; } .mk-g-all .mk-g-name { color: var(--muted-foreground); }
+.mk-zero { position: absolute; top: -3px; bottom: -3px; width: 1px; background: color-mix(in oklab, var(--foreground) 50%, transparent); }
+/* 6차: 상단 세그먼트(종목 점검 | 자산 성적표) */
+.mk-seg6 { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 10px; background: color-mix(in oklab, var(--muted) 55%, transparent); }
+.mk-seg6 button { all: unset; min-height: 48px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; }
+.mk-seg6 button b { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--muted-foreground); }
+.mk-seg6 button span { font-size: 12px; line-height: 16px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-seg6 button[aria-selected="true"] { background: color-mix(in oklab, var(--foreground) 15%, transparent); box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
+.mk-seg6 button[aria-selected="true"] b { color: var(--foreground); font-weight: 700; }
+.mk-tier { color: oklch(0.82 0.15 85); font-weight: 700; }
+.mk-grade { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; }
+.mk-grade .t { font-size: 28px; font-weight: 800; color: oklch(0.82 0.15 85); }
+.mk-grade .s { font-size: 22px; letter-spacing: 2px; color: oklch(0.82 0.15 85); }
+.mk-grade .s i { color: color-mix(in oklab, var(--foreground) 30%, transparent); font-style: normal; }
+.mk-axrow { display: grid; grid-template-columns: minmax(0,1fr) auto; min-height: 44px; align-items: center; border-top: 1px solid var(--border); font-size: 14px; }
+.mk-axrow b { font-weight: 700; }
+.mk-guide { font-size: 14px; line-height: 20px; color: var(--foreground); word-break: keep-all; }
+.mk-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.mk-chips::-webkit-scrollbar { display: none; }
+.mk-axchip { all: unset; position: relative; flex-shrink: 0; display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 0 10px 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--border); color: var(--foreground); }
+.mk-axchip::after { content: ""; position: absolute; inset: -4px 0; }
+.mk-axchip svg { width: 14px; height: 14px; opacity: 0.7; }
+.mk-axchip[aria-expanded="true"] { background: color-mix(in oklab, var(--foreground) 15%, transparent); box-shadow: none; font-weight: 700; }
+.mk-axchip[aria-expanded="true"] svg { transform: rotate(180deg); }
+.mk-axchip.on { background: var(--foreground); color: var(--card); box-shadow: none; font-weight: 700; }
+.mk-panel { border-top: 1px solid var(--border); padding-top: 10px; }
+/* 내 종목 */
+.mk-grp + .mk-grp { margin-top: 8px; }
+.mk-grp-h { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); }
+.mk-grp-h i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+.mk-grp-h span { font-weight: 500; }
+.mk-grp + .mk-grp { margin-top: 12px; }
+.mk-item { all: unset; box-sizing: border-box; width: calc(100% + 16px); display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 14px; grid-template-rows: auto auto; column-gap: 8px; row-gap: 2px; align-items: center; padding: 8px 8px; margin: 0 -8px; border-radius: 8px; cursor: pointer; }
+.mk-item:last-child { border-bottom: 0; }
+.mk-item[aria-expanded="true"] { background: color-mix(in oklab, var(--foreground) 6%, transparent); border-bottom-color: transparent; border-radius: 8px 8px 0 0; }
+.mk-item .n { font-size: 14px; font-weight: 600; line-height: 20px; word-break: keep-all; min-width: 0; }
+.mk-item .p { text-align: right; font-size: 15px; line-height: 20px; font-weight: 700; }
+.mk-item .m { grid-column: 1 / 3; font-size: 12px; line-height: 16px; color: var(--muted-foreground); word-break: keep-all; }
+.mk-item .m b { color: var(--foreground); font-weight: 600; }
+.mk-item .cv { grid-row: 1 / 3; grid-column: 4; color: var(--muted-foreground); display: grid; place-items: center; }
+.mk-item[aria-expanded="true"] .cv svg { transform: rotate(90deg); }
+.mk-item .d { grid-column: 3; text-align: right; font-size: 12px; line-height: 16px; font-weight: 600; color: oklch(0.87 0.065 274); white-space: nowrap; justify-self: end; }
+.mk-item .d.wide { grid-column: 2 / 4; }
+/* 점검 한 장 */
+.mk-sheet { margin: 0 -8px 8px; padding: 12px; border-radius: 0 0 10px 10px; background: color-mix(in oklab, var(--foreground) 6%, transparent); display: flex; flex-direction: column; gap: 12px; }
+.mk-why { font-size: 12px; line-height: 16px; color: oklch(0.87 0.065 274); font-weight: 600; }
+.mk-sec2 { display: flex; flex-direction: column; gap: 8px; }
+.mk-sec2-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; }
+.mk-sec2-h span { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.mk-cond { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); gap: 6px; align-items: center; font-size: 13px; }
+.mk-cond .l { color: var(--muted-foreground); font-size: 12px; }
+.mk-in { display: flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px; border-radius: 8px; background: var(--background); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 20%, transparent); font-size: 14px; white-space: nowrap; }
+.mk-in .v { font-weight: 600; min-width: 22px; }
+.mk-in .ph { color: color-mix(in oklab, var(--muted-foreground) 55%, transparent); min-width: 22px; }
+.mk-in .u { color: var(--muted-foreground); font-size: 12px; margin-left: auto; }
+.mk-memo { grid-column: 2 / 4; }
+.mk-hidetag { position: relative; outline: 1.5px dashed oklch(0.8 0.12 85 / 0.9); outline-offset: 2px; }
+.mk-hidetag::before { content: "목업 표시 · 캡처 숨김(data-screenshot-hide)"; position: absolute; right: 0; top: -18px; font-size: 10px; line-height: 14px; padding: 0 4px; border-radius: 4px; background: oklch(0.8 0.12 85); color: #111; white-space: nowrap; }
+.mk-plansum { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) 14px; column-gap: 8px; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; background: var(--background); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 14%, transparent); font-size: 13px; cursor: pointer; }
+.mk-plansum .k { font-weight: 700; white-space: nowrap; }
+.mk-plansum .v { color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.mk-choices span.two { display: flex; flex-direction: column; gap: 0; line-height: 18px; }
+.mk-choices span.two small { font-size: 11px; line-height: 14px; font-weight: 500; color: var(--muted-foreground); }
+.mk-note { font-size: 12px; line-height: 16px; color: var(--muted-foreground); word-break: keep-all; }
+</style>
+</head>
+<body class="mk-standalone">
+<div id="mk-root"></div>
+<script id="mk-script">
+// 데모 값: redesign.md 5-1·5-6(데모 JSON 시세, USD 1,400원, 11/18). opts: panel(축 패널 열기), open(점검 한 장), loss(오래 둘 마이너스 주입)
+function renderMock(root, opts = {}) {
+  const S = [ // 산 날부터 손익·원가, 정한 뒤/점검 뒤 %, 상태
+    { name: "TIGER 미국S&P500", g: "keep", hold: "2년 2개월", score: "3점", pl: 315000, cost: 1890000, since: ["정한 날 대비", 10.5], due: "점검 차례", age: 26 },
+    { name: "삼성전자", g: "keep", hold: "1년 8개월", score: "3점", pl: 585000, cost: 3965000, since: ["정한 날 대비", 9.4], age: 20 },
+    { name: "Apple", g: "check", hold: "6개월", score: "5점", pl: 816300, cost: 2963700, since: ["점검일 대비", 9.8], due: "점검 차례", age: 6.4 },
+    { name: "SK하이닉스", g: "check", hold: "6개월", score: "5점", pl: 200000, cost: 750000, since: ["정한 날 대비", 8.6], due: "점검 차례", age: 6.9 },
+    { name: "KODEX 200", g: "none", hold: "9개월", score: "4점", pl: 120000, cost: 1360000, age: 9 },
+    { name: "NVIDIA", g: "none", hold: "5개월", score: "측정 중", pl: 276800, cost: 1179200, note: "9월 19일 점검 대상에서 뺌", age: 5 },
+  ];
+  if (opts.first) S.forEach((s) => { s.g = "none"; delete s.due; delete s.since; delete s.note; });
+  if (opts.today) { S.forEach((x) => { x.g = "none"; delete x.due; delete x.since; delete x.note; }); S[1].g = "keep"; S[1].today = true; }
+  if (opts.loss) { const t = S[0]; t.pl = -310000; t.since = ["정한 날 대비", -12.4]; }
+  const sum = (a, k) => a.reduce((x, s) => x + s[k], 0); const pct = (p, c) => (p / c) * 100;
+  const fp = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}%`; const man = (w) => `${w > 0 ? "+" : w < 0 ? "−" : ""}${Math.trunc(Math.abs(w) / 10000).toLocaleString("ko-KR")}만원`;
+  const tone = (v) => (v > 0 ? "mk-up" : v < 0 ? "mk-down" : "mk-muted");
+  const tPl = sum(S, "pl"), tPct = pct(tPl, sum(S, "cost"));
+  const all = S.map((s) => pct(s.pl, s.cost)); const lo = Math.min(0, Math.floor(Math.min(...all) / 10) * 10), hi = Math.max(10, Math.ceil(Math.max(...all) / 10) * 10);
+  const X = (v) => ((v - lo) / (hi - lo)) * 100; const bar = (v) => `left:${X(Math.min(0, v))}%;width:${Math.max(X(Math.max(0, v)) - X(Math.min(0, v)), 0.8)}%;background:var(${v >= 0 ? "--up" : "--down"})`;
+  // 판단 3문장(고정 축, 종목명 없음)
+  const keep = S.filter((s) => s.g === "keep"), chk = S.filter((s) => s.g === "check");
+  const kPl = sum(keep, "pl"), kLow = keep.filter((s) => s.pl < 0).length;
+  const share = kPl * tPl > 0 ? `전체 ${tPl < 0 ? "손실" : "손익"}의 <b class="${tone(kPl)}">${Math.round((kPl / tPl) * 100)}%</b>` : `산 날부터 <b class="${tone(kPl)}">${fp(pct(kPl, sum(keep, "cost")))}</b>`;
+  const low = kLow === 0 ? "산 날보다 낮은 종목은 없어요" : kLow === keep.length ? "모두 산 날보다 낮아요" : `그중 <b>${kLow}종목</b>이 산 날보다 낮아요`;
+  const share2 = kPl * tPl > 0 ? `${tPl < 0 ? "손실" : "손익"}의 <b class="${tone(kPl)}">${Math.round((kPl / tPl) * 100)}%</b>` : `산 날부터 <b class="${tone(kPl)}">${fp(pct(kPl, sum(keep, "cost")))}</b>`;
+  const low2 = kLow === 0 ? "평단보다 낮은 종목 없음" : kLow === keep.length ? "<b>모두</b> 평단보다 낮음" : `<b>${kLow}종목</b> 평단보다 낮음`;
+  const cDue = chk.filter((s) => s.due).length; const c3 = cDue === chk.length ? `점검할 ${chk.length}종목 <b>모두</b> 내가 정한 다시 볼 때예요.` : cDue ? `점검할 ${chk.length}종목 중 <b>${cDue}종목</b>이 내가 정한 다시 볼 때예요.` : `점검할 ${chk.length}종목 모두 다시 볼 조건 전이에요.`;
+  // 묶음 순서: 차례인 행 → 오래 가진 순. 오래 둘 재확인 차례 행 안에서는 산 날보다 낮은 행 먼저(이분, 값 순위 아님)
+  const c32 = cDue === chk.length ? `${chk.length}종목 <b>모두</b> 점검 차례` : cDue ? `${chk.length}종목 중 <b>${cDue}종목</b> 점검 차례` : `${chk.length}종목 · 점검 차례 없음`;
+  const order = (arr) => [...arr].sort((a, b) => (!!b.due - !!a.due) || (a.due && b.due ? (a.pl < 0 ? 0 : 1) - (b.pl < 0 ? 0 : 1) : 0) || b.age - a.age);
+  const GROUPS = [["keep", "장기 보유", "color-mix(in oklab, var(--foreground) 80%, transparent)"], ["check", "점검 대상", "color-mix(in oklab, var(--foreground) 45%, transparent)"], ["none", "정하지 않음", "transparent; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--foreground) 45%, transparent)"]];
+  const HOLD = [["1년 이상", ["TIGER 미국S&P500", "삼성전자"]], ["1년 미만", ["Apple", "SK하이닉스", "KODEX 200", "NVIDIA"]]].map(([g, n]) => { const ss = S.filter((s) => n.includes(s.name)); return { g, n: ss.length, pl: sum(ss, "pl"), p: pct(sum(ss, "pl"), sum(ss, "cost")) }; });
+  const I = { down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>', chev: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>', list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' };
+  const panel = (opts.panel || opts.first) ? `<div class="mk-panel" data-mk="panel"><div class="mk-groups">
+      <div class="mk-g mk-g-all" data-mk="all"><span><span class="mk-g-name">내 주식 전체</span><span class="mk-g-sub">${S.length}종목</span></span><span class="mk-track"><span class="mk-fill" style="${bar(tPct)};background:color-mix(in oklab, var(--foreground) 40%, transparent)"></span>${lo < 0 ? `<span class="mk-zero" style="left:${X(0)}%"></span>` : ""}</span><span class="mk-g-val"><b class="${tone(tPct)}">${fp(tPct)}</b><span>${man(tPl)}</span></span></div>
+      ${HOLD.map((x) => `<button class="mk-g"><span><span class="mk-g-name">${x.g}</span><span class="mk-g-sub">${x.n}종목</span></span><span class="mk-track"><span class="mk-fill" style="${bar(x.p)}"></span>${lo < 0 ? `<span class="mk-zero" style="left:${X(0)}%"></span>` : ""}</span><span class="mk-g-val"><b class="${tone(x.p)}">${fp(x.p)}</b><span>${man(x.pl)}</span></span></button>`).join("")}
+    </div></div>` : "";
+  const sheet = (s) => `<div class="mk-sheet" data-mk="sheet">
+      <div class="mk-why">점검 차례 · 정한 기간 3개월이 지났어요</div>
+      <div class="mk-choices"><span class="two">그대로 두기<small>다음 점검 2월 18일</small></span><span>장기 보유로</span><span>정하지 않음</span></div>
+      <div class="mk-sec2" data-mk="plan">
+        ${opts.planOpen ? `<div class="mk-sec2-h">다시 볼 조건<span>내가 정해요</span></div>
+        <div class="mk-cond"><span class="l">산 날부터</span><span class="mk-in">−<span class="v">10</span><span class="u">% 이하</span></span><span class="mk-in">+<span class="ph"></span><span class="u">% 이상</span></span></div>
+        <div class="mk-cond"><span class="l">기간</span><span class="mk-in" style="grid-column:2/4"><span class="ph" style="color:var(--muted-foreground)">기본 3개월</span><span class="u" style="display:inline-flex">${I.down.replace('<svg', '<svg width="14" height="14"')}</span></span></div>
+        <div class="mk-cond"><span class="l">메모</span><span class="mk-in mk-memo mk-hidetag" data-screenshot-hide><span style="overflow:hidden;text-overflow:ellipsis">실적 발표 뒤 다시 보기</span><span class="u">12/40</span></span></div>
+        <div class="mk-note">내가 정한 조건이에요. 앱이 권하는 값이 아니에요</div>` : `<button class="mk-plansum" data-mk="plan-sum"><span class="k">다시 볼 조건</span><span class="v">−10% 이하 · 3개월 · 메모</span>${I.chev.replace('width="16" height="16"', 'width="14" height="14"')}</button>`}
+      </div>
+      <div class="mk-note" data-mk="plan-warn">점검 대상에서 빼면 다시 볼 조건과 메모도 지워져요</div>
+      <div class="mk-hist"><div class="mk-hist-h">최근 기록 · 점검 2번 · 그대로 2번</div>
+        <div class="mk-hist-row"><i></i><span class="d">7월 16일</span><span>그대로 두기</span><span class="r">그때 수익률 <b class="mk-up">+10.8%</b></span></div>
+        <div class="mk-hist-row"><i></i><span class="d">6월 11일</span><span>그대로 두기</span><span class="r">그때 수익률 <b class="mk-up">+5.4%</b></span></div>
+      </div>
+      <div class="mk-card1-foot"><span>최근 3개월 거래 1건 · 이 앱 기록</span><a>종목 페이지 ${I.chev}</a></div>
+    </div>`;
+  const row = (s) => { const p = pct(s.pl, s.cost); const meta = [s.hold, s.score, s.since ? `${s.since[0]} <b>${fp(s.since[1])}</b>` : s.today ? "오늘 정함" : null, s.note].filter(Boolean).join(" · ");
+    return `<button class="mk-item" data-mk="item" aria-expanded="${opts.open === s.name}"><span class="n">${s.name}</span><span class="mk-track" style="height:8px"><span class="mk-fill" style="${bar(p)}"></span></span><span class="p ${tone(p)}">${fp(p)}</span><span class="cv">${I.chev.replace('width="16" height="16"', 'width="14" height="14"')}</span><span class="m">${meta}</span>${s.due ? `<span class="d">${s.due}</span>` : ""}</button>${opts.open === s.name ? sheet(s) : ""}`; };
+  const dueN = S.filter((x) => x.due).length;
+  const seg = `<div class="mk-seg6" role="tablist" data-mk="seg"><button role="tab" aria-selected="${opts.tab !== "grade"}"><b>종목 점검</b><span>${dueN ? `점검 차례 ${dueN}종목` : `${S.length}종목`}</span></button><button role="tab" aria-selected="${opts.tab === "grade"}"><b>자산 성적표</b><span><span class="mk-tier">골드</span> 3.5점</span></button></div>`;
+  if (opts.tab === "grade") { root.innerHTML = `<div class="mk" data-mock="redesign6"><div class="mk-left">${seg}<section class="mk-sec" data-mk="grade"><div class="mk-grade"><span class="t">골드</span><span class="s">★★★<i>★★</i> <b style="font-size:18px;color:var(--foreground)">3.5</b></span><span class="mk-muted" style="font-size:13px">5축 모두 측정 완료</span></div>
+    ${[["장기 순자산 성장", "4.0"], ["수익의 질", "3.5"], ["레버리지 건전성", "3.0"], ["분산", "3.0"], ["투자 습관", "4.0"]].map(([a, v]) => `<div class="mk-axrow"><span>${a}</span><b>${v}</b></div>`).join("")}</section></div></div>`; return {}; }
+  root.innerHTML = `<div class="mk" data-mock="redesign6">${seg.replace('class="mk-seg6"', 'class="mk-seg6" style="grid-column:1 / -1"')}
+  <div class="mk-left">
+  <section class="mk-sec" data-mk="hero">
+    <div class="mk-hero-label mk-muted">평단 대비 수익 · 내 주식 ${S.length}종목 <span class="mk-i">i</span></div>
+    <div class="mk-hero-num ${tone(tPl)}"><b>${man(tPl)}</b><span>${fp(tPct)}</span></div>
+    ${opts.first ? `<p class="mk-guide" data-mk="judge">종목을 누르면 장기 보유·점검 대상을 정할 수 있어요</p><dl class="mk-sum"><dt>배당</dt><dd>1년 약 17만원<span class="mk-tag">지금 수량 기준 가정</span></dd></dl>` : `<dl class="mk-sum" data-mk="judge">
+      <dt>장기 보유</dt><dd>${keep.length}종목 수익률 <b class="${tone(kPl)}">${fp(pct(kPl, sum(keep, "cost")))}</b> · ${low2}</dd>
+      <dt>점검 대상</dt><dd>${c32}</dd>
+      <dt>배당</dt><dd>1년 약 17만원<span class="mk-tag">지금 수량 기준 가정</span></dd>
+    </dl>`}
+    <div class="mk-axes" role="group" aria-label="기준별로 보기" data-mk="chips">${["보유 기간", "ETF·개별", "핵심 분야", "시가총액"].map((c, i) => `<button class="mk-axchip5b" aria-expanded="${(!!opts.panel || !!opts.first) && i === 0}">${c}</button>`).join("")}</div>
+    ${panel}
+  </section>
+  </div>
+  <section class="mk-sec" data-mk="list">
+    <div class="mk-list-h"><div class="mk-h">${I.list}내 종목</div><span class="mk-sort" data-mk="col-cap">평단 대비 수익률</span></div>
+    ${GROUPS.map(([k, label, dot]) => { const rows = order(S.filter((s) => s.g === k)); if (!rows.length) return ""; return `<div class="mk-grp" data-mk="grp"><div class="mk-grp-h"><i style="background:${dot}"></i>${label}<span>${rows.length}${k === "none" && opts.first ? " · 눌러서 정해요" : ""}</span></div>${rows.map(row).join("")}</div>`; }).join("")}
+    <div class="mk-cycle"><span>점검 주기</span><span class="mk-muted" style="display:inline-flex;align-items:center;gap:2px">3개월 ${I.chev}</span></div>
+  </section>
+</div>`;
+  return { tPl, tPct, lo, hi };
+}
+if (document.body.classList.contains("mk-standalone")) renderMock(document.getElementById("mk-root"), Object.fromEntries(new URLSearchParams(location.search)));
+</script>
+</body>
+</html>
