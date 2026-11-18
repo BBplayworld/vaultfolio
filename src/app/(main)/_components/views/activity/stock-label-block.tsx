@@ -215,7 +215,7 @@ function Axes({ axis, onAxis, groups, totalRate, scale, filterKey, onGroup }: {
 // ─── ③ 종목별 표 ────────────────────────────────────────────────────
 
 // 열: 종목·보유 기간 | (1024~) 보유 기간 | 수익률 + 미니 막대 | 손익 | 이름표. 360 미만은 손익을 수익률 칸 둘째 줄로 접는다
-const ROW_COLS = "grid grid-cols-[minmax(0,1fr)_3.5rem_3.75rem_4.75rem] max-[359px]:grid-cols-[minmax(0,1fr)_4rem_4.75rem] lg:grid-cols-[minmax(0,1fr)_7rem_6rem_6.5rem_6.75rem]";
+const ROW_COLS = "grid grid-cols-[minmax(0,1fr)_3.5rem_3.75rem_4.75rem] max-[359px]:grid-cols-[minmax(0,1fr)_4rem_4.75rem] lg:grid-cols-[minmax(0,1fr)_5.5rem_4.5rem_4.5rem_5rem]";
 const CHIP_TEXT: Record<BoardRow["labelState"], string> = { keep: "오래 둘", check: "점검할", none: "이름표", unset: "이름표" };
 
 /** 보유 기간 · 점수 · 점검 차례 — withHold=false면 보유 기간 없이(1024 열 둘째 줄, testId는 모바일 줄에만) */
@@ -264,7 +264,8 @@ function BoardRowItem({ row, scale, open, onToggle, onOpenPage, onLabel, onCheck
           aria-label={`${row.name} 종목 페이지 보기, 보유 ${row.holdText}, 수익률 ${row.rate === null ? "없음" : pctText(row.rate)}`}
           className="min-h-10 min-w-0 rounded-md py-1.5 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <span className="block min-w-0 truncate text-sm font-semibold text-foreground max-[359px]:whitespace-normal max-[359px]:break-keep">{row.name}</span>
+          {/* lg 미만은 폭과 관계없이 어절 단위 2줄 감김(말줄임 없음), 1024부터는 이름 칸이 넓어 한 줄 */}
+          <span className="block min-w-0 text-sm font-semibold text-foreground text-pretty break-keep lg:truncate">{row.name}</span>
           <HoldLine row={row} withHold className="lg:hidden" />
         </button>
         <span className="hidden flex-col items-end justify-center text-sm tabular-nums lg:flex">
@@ -277,7 +278,7 @@ function BoardRowItem({ row, scale, open, onToggle, onOpenPage, onLabel, onCheck
           ) : (
             <>
               <span className={`text-sm font-bold ${pctTone(row.rate)}`}>{pctText(row.rate)}</span>
-              <ZeroBar value={row.rate} scale={scale} className="mt-1 h-1 w-12 max-[359px]:hidden lg:w-18" />
+              <ZeroBar value={row.rate} scale={scale} className="mt-1 h-1 w-12 max-[359px]:hidden lg:w-16" />
               <span className="hidden text-xs text-muted-foreground max-[359px]:block">{wonText(row.profit)}</span>
             </>
           )}
@@ -438,11 +439,14 @@ export function StockLabelBlock() {
               <span className="truncate">종목<span className="lg:hidden"> · 기간 · 점수</span></span>
               <span data-testid="grow-score-hint" data-screenshot-hide className="inline-flex">
                 <InfoHint summary="점수는 보유 기간 대비 성과를 5점 만점으로 매긴 거예요.">
-                  <p className="text-pretty break-keep">산 날부터 지금까지 수익률을 1년 기준으로 바꾼 값(연 환산)으로 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
-                  <ul className="flex flex-col gap-0.5 tabular-nums">
-                    {HOLD_SCORE_BANDS.map((b) => <li key={b.score}>{b.score}점 · {b.text}</li>)}
-                  </ul>
-                  <p className="text-pretty break-keep">보유가 {Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 연 환산 값이 크게 흔들려 측정 중으로 보여요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 &apos;장기 순자산 성장&apos;과 같아요.</p>
+                  {/* 괄호 뒤 조사 금지(C114), 팝오버 높이를 줄이려 기준표는 한 문단 */}
+                  <p className="text-pretty break-keep">산 날부터 지금까지 수익률을 1년 기준 연 환산 수익률로 바꿔 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
+                  <p className="tabular-nums text-pretty break-keep">
+                    {HOLD_SCORE_BANDS.map((b, i) => (
+                      <span key={b.score}>{i > 0 && " · "}<span className="whitespace-nowrap">{b.score}점 {b.min === null ? "0% 미만" : `${b.min}% 이상`}</span></span>
+                    ))}
+                  </p>
+                  <p className="text-pretty break-keep">{Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 측정 중이에요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
                 </InfoHint>
               </span>
             </span>

@@ -187,6 +187,10 @@ describe("재설계 3차 금지어·금지 형식", () => {
     expect(scoreHint).toContain("측정 중");
     expect(scoreHint).toContain("연 환산");
     expect(scoreHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(2);
+    // 괄호 뒤 조사로 줄이 끊기지 않게 문장에 괄호를 쓰지 않는다(C114) — JSX 표현식을 뺀 글자만 본다
+    let plain = scoreHint;
+    for (let prev = ""; prev !== plain;) { prev = plain; plain = plain.replace(/\{[^{}]*\}/g, ""); }
+    expect(plain.replace(/<[^>]+>/g, "")).not.toMatch(/[()]/);
   });
   it("점수·수익률로 정렬하지 않는다 — 표는 오래 가진 순 고정, 정렬 선택 UI 없음", () => {
     expect(block).not.toMatch(/sort\(\(a, b\) => [^)]*(score|rate)/);
