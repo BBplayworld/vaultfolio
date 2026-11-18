@@ -5,11 +5,11 @@
  * 순수 함수만 둔다(저장 접근은 demo-snapshot-rebase.tsx). 부동산·현금·대출·투입원가는 시세 무관이라 건드리지 않는다.
  */
 
-import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import type { AssetData, Crypto, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 import { buildLiveAttributionCurr, computeAttributionBetween } from "@/lib/report/asset-report";
 
 type AttributionPoint = ReturnType<typeof buildLiveAttributionCurr>;
-import { reviewKey, type StockLabels } from "@/lib/asset/stock-labels";
+import { cryptoLabelKey, reviewKey, type StockLabels } from "@/lib/asset/stock-labels";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 
 type Row = DailyAssetSnapshot | MonthlyAssetSnapshot;
@@ -98,6 +98,19 @@ export function priceByLabelKey(stocks: Pick<Stock, "ticker" | "category" | "cur
     if (!s.ticker || !(s.currentPrice > 0)) continue;
     const k = normalizeTicker(s);
     if (!m.has(k)) m.set(k, s.currentPrice);
+  }
+  return m;
+}
+
+/**
+ * 주식 + 코인 이름표 키별 시세(#242) — 코인 키(`c:`+심볼)의 정한 날 가격·기록 가격도 같은 배율(실시간 ÷ JSON 시세)로 옮기게 한다.
+ * 안 옮기면 실시간 시세로 덮인 데모에서 코인 `정한 날 대비`가 현실 밖 값이 된다(C132). 부동산·실물 키는 시세가 없어 들어가지 않는다
+ */
+export function priceByAnyLabelKey(stocks: Pick<Stock, "ticker" | "category" | "currentPrice">[], crypto: Pick<Crypto, "symbol" | "currentPrice">[] = []): Map<string, number> {
+  const m = priceByLabelKey(stocks);
+  for (const c of crypto) {
+    const k = cryptoLabelKey(c.symbol);
+    if (k && c.currentPrice > 0 && !m.has(k)) m.set(k, c.currentPrice);
   }
   return m;
 }

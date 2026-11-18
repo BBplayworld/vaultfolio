@@ -176,12 +176,16 @@ describe("점검 한 장", () => {
     );
   };
   const CHECK = (o: Partial<StockLabels["items"][string]> = {}) => mk({ BBB: { label: "check", labeledAt: day(150), at: day(150), ...o } }, 3);
-  it("섹션 5개: 차례 이유 → 선택 3버튼(그대로 둠 둘째 줄 `다음 점검 M월 D일`) → 조건 요약 → 이동 안내 → 최근 기록·바닥 줄", () => {
+  it("섹션 5개: 차례 이유 → 선택 3버튼 + 버튼 아래 `그대로 두면 다음 점검은 M월 D일`(#242) → 조건 요약 → 이동 안내 → 최근 기록·바닥 줄", () => {
     const html = sheet(CHECK({ plan: { down: 10, memo: "실적 발표 뒤 다시 보기" } }), "BBB");
     const t = text(html);
     expect(t).toMatch(/^점검 차례 · 점검 주기 3개월이 지났어요/); // 기본 주기(6차 ui-review ①)
     expect([...html.matchAll(/data-testid="grow-choice-(same|keep|check|none)"/g)].map((m) => m[1])).toEqual(["same", "keep", "none"]);
-    expect(text(html.match(/<button[^>]*data-testid="grow-choice-same"[\s\S]*?<\/button>/)![0])).toMatch(/^그대로 두기다음 점검 \d{1,2}월 \d{1,2}일$/);
+    // #242: 날짜는 버튼 밖 바로 아래 한 줄 — 버튼 안 글자는 낱말 1줄
+    expect(text(html.match(/<button[^>]*data-testid="grow-choice-same"[\s\S]*?<\/button>/)![0])).toBe("그대로 두기");
+    expect(text(html.match(/<p[^>]*data-testid="grow-choice-next"[\s\S]*?<\/p>/)![0])).toMatch(/^그대로 두면 다음 점검은\d{1,2}월 \d{1,2}일$/);
+    expect(html.indexOf('data-testid="grow-choice-next"')).toBeGreaterThan(html.indexOf('data-testid="grow-choice-none"'));
+    expect(html.indexOf('data-testid="grow-choice-next"')).toBeLessThan(html.indexOf('data-testid="grow-plan-summary"'));
     expect(text(html.match(/<button[^>]*data-testid="grow-plan-summary"[\s\S]*?<\/button>/)![0])).toBe("다시 볼 조건−10% 이하 · 3개월 · 메모");
     expect(t).toContain("점검 대상에서 빼면 다시 볼 조건과 메모도 지워져요");
     expect(t).toContain("아직 점검 기록이 없어요");
@@ -212,7 +216,7 @@ describe("점검 한 장", () => {
     expect(text(html)).toContain("기본 3개월");
     expect(text(html)).toContain("내가 정한 조건이에요. 앱이 권하는 값이 아니에요");
   });
-  it("최근 기록: `점검 N번 · 그대로 M번`, 최신 3건, `그때 수익률 ±x%`", () => {
+  it("최근 기록: `점검 N번 · 그대로 M번`, 최신 3건. 오른쪽 값은 afterOf를 넘기지 않으면 비어 있다(`그때 수익률` 없음, #242)", () => {
     const L: StockLabels = { ...CHECK(), reviews: [
       { t: "BBB", at: day(20), from: "check", choice: "same", price: 190, rate: 90 },
       { t: "BBB", at: day(60), from: "check", choice: "same", price: 150, rate: 50.04 },
@@ -224,8 +228,9 @@ describe("점검 한 장", () => {
     expect(text(html)).toContain("최근 기록 · 점검 4번 · 그대로 2번");
     const rows = [...html.matchAll(/<p data-testid="grow-history-row"[\s\S]*?<\/p>/g)].map((m) => text(m[0]));
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toMatch(/^\d{1,2}월 \d{1,2}일그대로 두기그때 수익률 \+90\.0%$/);
-    expect(rows[2]).toMatch(/점검 대상으로그때 수익률 \+20\.0%$/);
+    expect(rows[0]).toMatch(/^\d{1,2}월 \d{1,2}일그대로 두기$/);
+    expect(rows[2]).toMatch(/점검 대상으로$/);
+    expect(text(html)).not.toContain("그때 수익률");
     // 점검 뒤 % 행 2줄 기준은 마지막 그대로 둠 가격(190)
     expect(text(html)).toMatch(/^다음 점검|^점검 차례|^오늘 점검함/);
   });

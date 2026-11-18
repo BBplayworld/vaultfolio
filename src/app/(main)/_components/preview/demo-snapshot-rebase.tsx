@@ -17,10 +17,10 @@ import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-s
 import { STORAGE_KEYS } from "@/lib/local-storage";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { isTrialMode } from "@/lib/trial/trial-mode";
-import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices, type DemoSeedStock, type RebaseRef } from "@/lib/preview/demo-live-rebase";
+import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByAnyLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices, type DemoSeedStock, type RebaseRef } from "@/lib/preview/demo-live-rebase";
 import { loadDemoPayload } from "@/lib/preview/demo-inject";
 import { parseStockLabels, readStockLabelsState, writeStockLabels, type StockLabels } from "@/lib/asset/stock-labels";
-import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
+import type { AssetData, AssetSummary, Crypto, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
@@ -42,8 +42,10 @@ export function DemoSnapshotRebase() {
     if (!eligible || seed) return;
     let alive = true;
     loadDemoPayload().then((payload) => {
-      const stocks = (payload.assetData as { stocks?: Stock[] } | undefined)?.stocks ?? [];
-      if (alive) setSeed({ labels: parseStockLabels(payload.stockLabels), prices: priceByLabelKey(stocks), stocks: demoSeedStockMap(stocks) });
+      const seedData = payload.assetData as { stocks?: Stock[]; crypto?: Crypto[] } | undefined;
+      const stocks = seedData?.stocks ?? [];
+      // 코인 키(c:)의 정한 날 가격도 같은 배율로 옮긴다(#242)
+      if (alive) setSeed({ labels: parseStockLabels(payload.stockLabels), prices: priceByAnyLabelKey(stocks, seedData?.crypto ?? []), stocks: demoSeedStockMap(stocks) });
     }).catch(() => { /* 시드 없음 — 표시만 영향 */ });
     return () => { alive = false; };
   }, [eligible, seed]);
@@ -95,13 +97,13 @@ export function DemoSnapshotRebase() {
     if (!eligible || !seed?.labels) return;
     const cur = readStockLabelsState();
     if (cur.state !== "ok") return;
-    const next = rebaseDemoLabelPrices(cur.value, seed.labels, seed.prices, priceByLabelKey(assetData.stocks));
+    const next = rebaseDemoLabelPrices(cur.value, seed.labels, seed.prices, priceByAnyLabelKey(assetData.stocks, assetData.crypto));
     if (next === cur.value) return;
     try {
       writeStockLabels(next);
       bumpSnapshotVersion();
     } catch { /* 저장 실패 시 시드 값 유지 — 데모 표시만 영향 */ }
-  }, [eligible, seed, assetData.stocks, bumpSnapshotVersion]);
+  }, [eligible, seed, assetData.stocks, assetData.crypto, bumpSnapshotVersion]);
 
   return null;
 }

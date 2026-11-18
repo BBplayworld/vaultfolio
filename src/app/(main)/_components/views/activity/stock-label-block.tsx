@@ -1,6 +1,8 @@
 "use client";
 
-// 자산 성적표·불리기(#239, 5.125 재설계 6차)의 종목 점검 칸 — ① 종합 카드(평단 대비 수익 · 라벨 3행 · 기준 4칸 + 막대 패널) ② 내 종목(장기 보유·점검 대상·정하지 않음 묶음 + 점검 한 장).
+// 자산 성적표·불리기(#239, 5.125 재설계 6차)의 내 자산 점검 칸 — ① 종합 카드(평단 대비 수익 · 라벨 행 · 기준 4칸 + 막대 패널) ② 내 종목(장기 보유·점검 대상·정하지 않음 묶음 + 점검 한 장).
+// #242(5.127): 보기 3종(주식 / 코인 / 부동산·실물)을 종류 줄로 바꾼다. 코인은 주식과 같은 카드·행·조건, 부동산·실물은 카드·막대·점수·±% 조건 없이 목록 + 값 구획.
+//  카드 넷째 라벨 행 `내 선택`(grow-pick.ts)과 펼침 패널은 주식·코인 보기에만 있다. 새 요소는 grow-pick-panel.tsx
 // 앱은 내 기록에서 나온 사실(손익·보유 기간·분류)과 내가 정한 조건만 보여 주고, 종목을 고르거나 권하지 않는다.
 //  - 묶음은 오래 둘 → 점검할 → 아직 안 정함 고정. 묶음 안은 점검 차례 → 오래 가진 순(화면에 들어올 때 한 번 정함). 수익률·점수 순 없음
 //  - 손익색은 % 숫자·막대와 큰 합계 금액에만. 주황 없음, brand 계열은 '점검 차례' 글자에만
@@ -15,9 +17,11 @@ import { SKELETON_FILL } from "@/components/ui/skeleton";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useStockLabels } from "@/hooks/use-stock-labels";
 import { buildLabelBase } from "@/lib/asset/grow-rows";
+import { buildCryptoLabelBase, buildGrowBoards, cryptoTotal, firstGrowView, heldViews, ownSnap, viewHasDue, type GrowView } from "@/lib/asset/grow-kinds";
+import { computePick, cryptoPickInput, pickAfterOf, stockPickInput } from "@/lib/asset/grow-pick";
 import {
   BOARD_AXES, BOARD_BUCKETS, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, addMonthsKst, boardRowRank, boardScale, boardSummary, boardTotal, bucketOf,
-  buildAxisGroups, buildBoardRows, checkMonthsOf, dueReasonText, monthDayText, nextCheckDateText, scalePos,
+  buildAxisGroups, checkMonthsOf, dueReasonText, hitOf, monthDayText, nextCheckDateText, scalePos,
   type BoardAxis, type BoardBucket, type BoardGroup, type BoardRow, type BoardSummary,
 } from "@/lib/asset/grow-board";
 import {
@@ -29,6 +33,9 @@ import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { formatShortCurrency } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
 import { useStockPageStore } from "@/stores/stock-page-store";
+import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
+import { GrowKindTabs, OwnValueBox, PICK_FILTER_LABEL, PickLine, PickPanel, type PickFilter } from "./grow-pick-panel";
+import { getGrowView, setGrowView } from "./report-tab";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { InlineSelector } from "../../layout/ui/inline-selector";
@@ -201,7 +208,9 @@ export function planDraftDirty(d: PlanDraft, saved: StockLabelPlan | undefined):
 }
 
 /** 다시 볼 조건 — 요약 1줄(누르면 폼). 값은 사용자가 비운 칸에 직접 넣는다(예시 숫자·프리셋 없음) */
-function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
+function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave, pct = true }: {
+  /** false = 부동산·실물(기간·메모만 — ±% 칸 없음) */
+  pct?: boolean;
   row: BoardRow;
   plan: StockLabelPlan | undefined;
   cycleMonths: number | null;
@@ -231,9 +240,9 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
   useEffect(() => { if (wasOpen.current && !open) flush(); wasOpen.current = open; }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const months = plan?.months ?? cycleMonths;
   const summary = [
-    plan?.down !== undefined ? `−${plan.down}% 이하` : null,
-    plan?.up !== undefined ? `+${plan.up}% 이상` : null,
-    plan && (plan.down !== undefined || plan.up !== undefined || plan.months !== undefined) && months !== null ? `${months}개월` : null,
+    pct && plan?.down !== undefined ? `−${plan.down}% 이하` : null,
+    pct && plan?.up !== undefined ? `+${plan.up}% 이상` : null,
+    plan && ((pct && (plan.down !== undefined || plan.up !== undefined)) || plan.months !== undefined) && months !== null ? `${months}개월` : null,
     plan?.memo ? "메모" : null,
   ].filter(Boolean).join(" · ");
   const field = "flex min-h-10 items-center gap-1 rounded-lg bg-background px-2.5 text-sm shadow-[inset_0_0_0_1px] shadow-foreground/20 focus-within:ring-2 focus-within:ring-ring/50";
@@ -261,6 +270,7 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
         <span className="inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground">내가 정해요<ChevronDown aria-hidden className="size-3.5 rotate-180" /></span>
       </button>
       <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1.5">
+        {pct && (<>
         <span className="text-xs text-muted-foreground">평단 대비</span>
         <label className={field}>
           <span aria-hidden>−</span>
@@ -272,6 +282,7 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
           <Input data-testid="grow-plan-up" inputMode="numeric" autoComplete="off" aria-label={`${row.name} 평단 대비 몇 퍼센트 이상에 다시 볼지`} value={draft.up} onChange={(e) => setDraft({ ...draft, up: digits(e.target.value) })} onBlur={() => commit(draft)} onKeyDown={blurOnEnter} className={bare} />
           <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">% 이상</span>
         </label>
+        </>)}
         <span className="text-xs text-muted-foreground">기간</span>
         <label className={`${field} col-span-2`}>
           <select
@@ -298,7 +309,11 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
   );
 }
 
-export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose, onSavePlan, onOpenPage }: {
+export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose, onSavePlan, onOpenPage, afterOf, onEditValue }: {
+  /** 이력 줄 오른쪽 값(#242) — 그 기록부터 다음 기록·지금까지 %. `내 선택`과 같은 계산(grow-pick)의 결과를 넘긴다 */
+  afterOf?: (r: StockLabelReview) => { kind: "now" | "next"; pct: number } | null;
+  /** 부동산·실물 값 구획의 `시세 고치기` — 기존 수정 창을 연다 */
+  onEditValue?: (row: BoardRow) => void;
   row: BoardRow;
   labels: StockLabels;
   nowMs: number;
@@ -314,6 +329,10 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
   const months = checkMonthsOf(item, labels.cycle.months);
   const nextIfSame = months === null ? null : nextCheckDateText(addMonthsKst(nowMs, months), nowMs);
   const plan = label === "check" ? item?.plan : undefined;
+  // 부동산·실물 — 값이 내가 넣은 숫자라 ±% 조건·이력 값·바닥 줄이 없다
+  const own = row.kind === "real" || row.kind === "physical";
+  const nextId = `grow-next-${row.key}`;
+  const showNext = !row.checkedToday && nextIfSame !== null && label !== null;
   const choices: { choice: StockReviewChoice; text: string }[] = label === "keep"
     ? [{ choice: "same", text: "그대로 두기" }, { choice: "check", text: "점검 대상으로" }, { choice: "none", text: "정하지 않음" }]
     : label === "check"
@@ -331,6 +350,8 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
       {row.labelKey && (
         <>
           {reason && <p data-testid="grow-sheet-reason" className={`text-xs ${reason.cls}`}>{reason.text}</p>}
+          {own && onEditValue && <OwnValueBox row={row} onEdit={onEditValue} />}
+          <div>
           <div className={`grid gap-1.5 ${choices.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {choices.map(({ choice, text }) => {
               const done = choice === "same" && row.checkedToday;
@@ -341,17 +362,24 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
                   data-testid={`grow-choice-${choice}`}
                   aria-disabled={done || undefined}
                   aria-label={done ? `${row.name} 오늘 점검함` : `${row.name} ${text}`}
+                  aria-describedby={choice === "same" && showNext ? nextId : undefined}
                   onClick={() => { if (!done) onChoose(row, choice); }}
-                  className={`flex min-h-11 flex-col items-center justify-center rounded-lg px-1 text-sm font-semibold leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[transform,background-color] motion-safe:duration-150 ${done ? "cursor-default bg-transparent text-muted-foreground shadow-[inset_0_0_0_1px] shadow-border" : "bg-muted hover:bg-muted/80 active:scale-[0.96]"}`}
+                  className={`flex min-h-11 items-center justify-center rounded-lg px-1 text-sm font-semibold leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[transform,background-color] motion-safe:duration-150 ${done ? "cursor-default bg-transparent text-muted-foreground shadow-[inset_0_0_0_1px] shadow-border" : "bg-muted hover:bg-muted/80 active:scale-[0.96]"}`}
                 >
                   <span className="inline-flex items-center gap-1 whitespace-nowrap">{done && <Check aria-hidden className="size-3.5" />}{done ? "오늘 점검함" : text}</span>
-                  {choice === "same" && !done && nextIfSame && <small data-testid="grow-choice-next" className="text-2xs font-medium text-muted-foreground tabular-nums">다음 점검 {nextIfSame}</small>}
                 </button>
               );
             })}
           </div>
+          {/* 다음 점검 날짜는 버튼 밖 바로 아래 한 줄(#242) — 버튼 안 글자는 낱말 1줄, 세 버튼 높이 같음. 연도가 붙어도 320에서 1줄 */}
+          {showNext && (
+            <p id={nextId} data-testid="grow-choice-next" className="mt-1.5 flex flex-wrap gap-x-1 text-2xs font-medium text-muted-foreground tabular-nums">
+              <span className="whitespace-nowrap">그대로 두면 다음 점검은</span><span className="whitespace-nowrap">{nextIfSame}</span>
+            </p>
+          )}
+          </div>
           {label === "check" && (
-            <PlanEditor row={row} plan={plan} cycleMonths={labels.cycle.months} open={planOpen} onOpen={onPlanOpen} onSave={(p) => onSavePlan(row, p)} />
+            <PlanEditor pct={!own} row={row} plan={plan} cycleMonths={labels.cycle.months} open={planOpen} onOpen={onPlanOpen} onSave={(p) => onSavePlan(row, p)} />
           )}
           {plan && <p data-testid="grow-plan-warn" className="text-xs text-muted-foreground text-pretty break-keep">점검 대상에서 빼면 다시 볼 조건과 메모도 지워져요</p>}
           {(label !== null || history.length > 0) && (
@@ -364,19 +392,28 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
                   <span aria-hidden className="size-[7px] justify-self-center rounded-full bg-foreground/45" />
                   <span className="whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
                   <span className="truncate">{historyText(r)}</span>
-                  <span className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">그때 수익률 <b className={`text-sm font-bold ${pctTone(r.rate)}`}>{pctText(r.rate)}</b></span>
+                  {/* 그날 가격부터 다음 기록(다음 점검까지)·지금(지금까지)까지. 값이 없으면 비운다. 부동산·실물은 가격이 시세가 아니라 값이 없다 */}
+                  {(() => {
+                    const a = own ? null : afterOf?.(r) ?? null;
+                    return a
+                      ? <span data-testid="grow-history-after" data-kind={a.kind} className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">{a.kind === "now" ? "지금까지" : "다음 점검까지"} <b className={`text-sm font-bold ${pctTone(a.pct)}`}>{pctText(a.pct)}</b></span>
+                      : <span />;
+                  })()}
                 </p>
               ))}
             </div>
           )}
         </>
       )}
+      {!own && (
       <div className="flex min-h-8 items-center justify-between gap-2 border-t border-border pt-2 text-xs text-muted-foreground dark:border-border/40">
         <span className="tabular-nums text-pretty break-keep">최근 3개월 거래 {row.tradeCount}건 · 이 앱 기록</span>
         <button type="button" data-testid="grow-row-open" onClick={() => onOpenPage(row)} className="inline-flex min-h-10 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-          종목 페이지 <ChevronRight aria-hidden className="size-4" />
+          {/* 낱말 = 도착 화면 제목. 코인은 보유 건이 하나면 그 코인의 매수/매도 내역, 여럿이면 상세 › 암호화폐 */}
+          {row.kind === "crypto" ? (row.groupStockIds.length === 1 ? "매수/매도 내역" : "암호화폐") : "종목 페이지"} <ChevronRight aria-hidden className="size-4" />
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -391,7 +428,10 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
   children: React.ReactNode;
 }) {
   const sheetId = `grow-sheet-${row.key}`;
+  const own = row.kind === "real" || row.kind === "physical";
   const meta: { key: string; node: React.ReactNode }[] = [{ key: "hold", node: row.holdText }];
+  // 부동산·실물 — %가 내가 넣은 값 기준임을 2줄에서 말한다. 매입가 0원이면 % 대신 안내(`—`·`0%` 없음)
+  if (own) meta.push({ key: "basis", node: <span data-testid="grow-row-basis">{row.rate === null ? "매입가를 넣으면 보여요" : row.kind === "real" ? "내가 넣은 시세 기준" : "내가 넣은 평가액 기준"}</span> });
   if (row.score.state !== "none") {
     meta.push({
       key: "score",
@@ -409,20 +449,20 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
   }
   if (row.dropNote) meta.push({ key: "drop", node: <span data-testid="grow-row-drop">{row.dropNote}</span> });
   return (
-    <li data-testid="grow-row" data-key={row.key} data-ticker={row.labelKey ?? ""} data-label={row.labelState} data-due={row.due ? "true" : "false"}>
+    <li data-testid="grow-row" data-key={row.key} data-kind={row.kind} data-ticker={row.labelKey ?? ""} data-label={row.labelState} data-due={row.due ? "true" : "false"}>
       <button
         type="button"
         data-testid="grow-row-toggle"
         aria-expanded={open}
         aria-controls={sheetId}
-        aria-label={`${row.name}, 보유 ${row.holdText}, 평단 대비 수익률 ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
+        aria-label={`${row.name}, 보유 ${row.holdText}, ${own ? "매입가 대비" : "평단 대비 수익률"} ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
         onClick={onToggle}
         className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_3.625rem_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[359px]:grid-cols-[minmax(0,1fr)_3rem_3.625rem_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
       >
-        <span className="min-w-0 text-sm font-semibold text-foreground text-pretty break-keep">{row.name}</span>
-        {row.rate === null ? <span /> : <ZeroBar value={row.rate} scale={scale} className="h-2" />}
+        <span className={`min-w-0 text-sm font-semibold text-foreground text-pretty break-keep ${own ? "col-span-2" : ""}`}>{row.name}</span>
+        {own ? null : row.rate === null ? <span /> : <ZeroBar value={row.rate} scale={scale} className="h-2" />}
         <span data-testid="grow-row-rate" data-rate={row.rate === null ? "" : pctText(row.rate)} className={`text-right text-base font-bold tabular-nums ${row.rate === null ? "text-muted-foreground" : pctTone(row.rate)}`}>
-          {row.rate === null ? "—" : pctText(row.rate)}
+          {row.rate === null ? (own ? "" : "—") : pctText(row.rate)}
         </span>
         <ChevronRight aria-hidden className={`row-span-2 size-3.5 self-center text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-90" : ""}`} />
         <span className={`flex min-w-0 flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums ${row.due ? "col-span-2" : "col-span-3"}`}>
@@ -440,50 +480,34 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
   );
 }
 
+const VIEW_TEXT: Record<GrowView, { noun: string; list: string; right: string; guide: string }> = {
+  stock: { noun: "주식", list: "내 종목", right: "평단 대비 수익률", guide: "종목을 누르면 장기 보유·점검 대상을 정할 수 있어요" },
+  crypto: { noun: "코인", list: "내 코인", right: "평단 대비 수익률", guide: "눌러서 장기 보유·점검 대상을 정할 수 있어요" },
+  own: { noun: "", list: "내 부동산·실물", right: "매입가 대비", guide: "눌러서 장기 보유·점검 대상을 정할 수 있어요" },
+};
+
 /**
- * 불리기 블록. 표시할 주식 종목이 없으면 아무것도 그리지 않는다.
+ * 불리기 블록. 표시할 자산(주식·코인·부동산·실물)이 없으면 아무것도 그리지 않는다.
  * store = 화면(asset-report-view)이 같은 저장소 값으로 세그먼트를 그릴 때 넘기는 훅 결과 — 블록에서 고른 값이 세그먼트에 바로 반영된다
  */
 export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockLabels> } = {}) {
   const { assetData, exchangeRates } = useAssetData();
-  const { navigate } = useAssetNavigation();
-  const setStockPageTarget = useStockPageStore((s) => s.setTarget);
   const own = useStockLabels();
-  const { labels, ready, record, setPlan, setCycle } = store ?? own;
+  const s = store ?? own;
+  const { labels, ready } = s;
   const [now] = useState(() => Date.now());
-  const [openAxis, setOpenAxis] = useState<BoardAxis | null>(null);
-  const [filter, setFilter] = useState<{ axis: BoardAxis; key: string } | null>(null);
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [planOpenKey, setPlanOpenKey] = useState<string | null>(null);
-  const [cycleOpen, setCycleOpen] = useState(false);
+  // 화면 안에서 고른 종류 — 종목 페이지·수정 창에 다녀와도 그대로(세션 메모리). 허브로 새로 들어오면 규칙대로(resetReportTab)
+  const [picked, setPicked] = useState<GrowView | null>(getGrowView);
 
-  const rows = useMemo(
-    () => buildBoardRows(assetData.stocks, exchangeRates, labels, now, assetData.transactions ?? []),
-    [assetData.stocks, assetData.transactions, exchangeRates, labels, now],
+  const boards = useMemo(
+    () => buildGrowBoards(assetData, exchangeRates, labels, now),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 행에 쓰는 자산 배열만 본다(현금·대출 변경으로 다시 만들지 않는다)
+    [assetData.stocks, assetData.crypto, assetData.realEstate, assetData.physicalAssets, assetData.transactions, assetData.cryptoTransactions, exchangeRates, labels, now],
   );
-  const total = useMemo(() => boardTotal(assetData.stocks, exchangeRates, rows), [assetData.stocks, exchangeRates, rows]);
-  const summary = useMemo(() => boardSummary(rows), [rows]);
-  // 네 축의 묶음을 한 번에 만들어 막대 눈금을 하나로 정한다(축을 바꿔도 길이 비교 유지)
-  const axisGroups = useMemo(
-    () => Object.fromEntries(BOARD_AXES.map((a) => [a.value, buildAxisGroups(a.value, rows)])) as Record<BoardAxis, BoardGroup[]>,
-    [rows],
-  );
-  const scale = useMemo(
-    () => boardScale([...Object.values(axisGroups).flatMap((gs) => gs.map((g) => g.rate)), ...rows.flatMap((r) => (r.rate === null ? [] : [r.rate]))]),
-    [axisGroups, rows],
-  );
-  // 시세 없는 종목이 있으면 기준 4칸을 숨긴다(합계가 틀린다). 묶음이 1개뿐인 축은 비교할 것이 없어 숨긴다
-  const axes = useMemo(() => (total.priced ? BOARD_AXES.filter((a) => axisGroups[a.value].length > 1) : []), [total.priced, axisGroups]);
-
-  // 묶음 안 순서와 첫 사용자 기본 패널은 화면에 들어올 때 한 번 정한다(누른 뒤 행이 자리를 옮기지 않게)
-  const entry = useRef<{ rank: Map<string, number> } | null>(null);
-  if (ready && rows.length > 0 && !entry.current) entry.current = { rank: boardRowRank(rows) };
-  const firstPanelSet = useRef(false);
-  useEffect(() => {
-    if (!ready || firstPanelSet.current || rows.length === 0) return;
-    firstPanelSet.current = true;
-    if (summary.first && axes.length > 0) setOpenAxis(axes.some((a) => a.value === "hold") ? "hold" : axes[0].value);
-  }, [ready, rows.length, summary.first, axes]);
+  const views = heldViews(boards);
+  // 처음 열리는 보기 — 차례가 있는 종류 중 순서상 첫째, 없으면 가진 종류 중 첫째. 화면에 들어올 때 한 번 정한다
+  const entryView = useRef<GrowView | null>(null);
+  if (ready && views.length > 0 && (!entryView.current || !views.includes(entryView.current))) entryView.current = firstGrowView(boards);
 
   // 보조 지표 '다시 봄' — 화면을 연 시점의 저장소 값으로 마운트당 1회. preview 데모는 여기서, 체험은 track 안에서 막는다
   const revisitJudged = useRef(false);
@@ -494,18 +518,105 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
     if (isStockLabelRevisit(labels, Date.now())) track("feature_use", { category: "grow_revisit" });
   }, [ready, labels]);
 
-  if (!ready || rows.length === 0) return null;
+  // 주 지표 `·내 선택` — 값이 있는 패널을 처음 열 때 화면 로드당 1회(주식·코인 보기 공통). 종류·건수는 보내지 않는다
+  const pickSent = useRef(false);
+  const onPickOpen = () => {
+    if (pickSent.current) return;
+    pickSent.current = true;
+    if (!isPreviewEnv()) track("feature_use", { category: "grow_pick" });
+  };
+
+  if (!ready || views.length === 0 || !entryView.current) return null;
+  const view = picked && views.includes(picked) ? picked : entryView.current;
+  const due = { stock: viewHasDue(boards, "stock"), crypto: viewHasDue(boards, "crypto"), own: viewHasDue(boards, "own") };
+
+  return (
+    <div data-testid="grow-block" data-view={view}>
+      {views.length >= 2 && <GrowKindTabs views={views} value={view} due={due} onChange={(v) => { setPicked(v); setGrowView(v); }} />}
+      {/* 보기를 바꾸면 내용만 바뀐다(슬라이드 없음). key로 다시 마운트해 열린 한 장·패널·거름을 닫는다 */}
+      <GrowViewPanel key={view} view={view} rows={boards[view]} store={s} now={now} onPickOpen={onPickOpen} />
+    </div>
+  );
+}
+
+function GrowViewPanel({ view, rows, store, now, onPickOpen }: {
+  view: GrowView;
+  rows: BoardRow[];
+  store: ReturnType<typeof useStockLabels>;
+  now: number;
+  onPickOpen: () => void;
+}) {
+  const { assetData, exchangeRates } = useAssetData();
+  const { navigate } = useAssetNavigation();
+  const setStockPageTarget = useStockPageStore((st) => st.setTarget);
+  const setCryptoTxTarget = useCryptoTxViewStore((st) => st.setTarget);
+  const { labels, record, setPlan, setCycle } = store;
+  const [openAxis, setOpenAxis] = useState<BoardAxis | null>(null);
+  const [filter, setFilter] = useState<{ axis: BoardAxis; key: string } | null>(null);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [pickFilter, setPickFilter] = useState<PickFilter | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [planOpenKey, setPlanOpenKey] = useState<string | null>(null);
+  const [cycleOpen, setCycleOpen] = useState(false);
+  const text = VIEW_TEXT[view];
+
+  const total = useMemo(
+    () => (view === "crypto" ? cryptoTotal(assetData.crypto ?? [], rows) : boardTotal(assetData.stocks, exchangeRates, rows)),
+    [view, assetData.stocks, assetData.crypto, exchangeRates, rows],
+  );
+  const summary = useMemo(() => boardSummary(rows), [rows]);
+  // 네 축의 묶음을 한 번에 만들어 막대 눈금을 하나로 정한다(축을 바꿔도 길이 비교 유지). 기준 4칸은 주식 보기에만 있다
+  const axisGroups = useMemo(
+    () => Object.fromEntries(BOARD_AXES.map((a) => [a.value, view === "stock" ? buildAxisGroups(a.value, rows) : []])) as Record<BoardAxis, BoardGroup[]>,
+    [view, rows],
+  );
+  const scale = useMemo(
+    () => boardScale([...Object.values(axisGroups).flatMap((gs) => gs.map((g) => g.rate)), ...rows.flatMap((r) => (r.rate === null ? [] : [r.rate]))]),
+    [axisGroups, rows],
+  );
+  // 시세 없는 종목이 있으면 기준 4칸을 숨긴다(합계가 틀린다). 묶음이 1개뿐인 축은 비교할 것이 없어 숨긴다
+  const axes = useMemo(() => (total.priced ? BOARD_AXES.filter((a) => axisGroups[a.value].length > 1) : []), [total.priced, axisGroups]);
+
+  // `내 선택`(#242) — 주식·코인 보기 각각 따로 센다. 결론 줄·패널·이력 줄 값이 이 결과 하나에서 나온다
+  const pick = useMemo(() => {
+    if (view === "own") return null;
+    const input = view === "stock" ? stockPickInput(assetData.stocks, assetData.transactions ?? []) : cryptoPickInput(assetData.crypto ?? [], assetData.cryptoTransactions ?? []);
+    return computePick(labels, view, input, now);
+  }, [view, assetData.stocks, assetData.transactions, assetData.crypto, assetData.cryptoTransactions, labels, now]);
+  // 처음 쓰는 사람(정한 것 0)이고 값도 없으면 행을 그리지 않는다(안내 1줄만)
+  const showPick = !!pick && !(summary.first && pick.state === "wait");
+  const pickHasPanel = showPick && pick.state !== "wait";
+
+  // 묶음 안 순서와 첫 사용자 기본 패널은 화면에 들어올 때 한 번 정한다(누른 뒤 행이 자리를 옮기지 않게)
+  const entry = useRef<{ rank: Map<string, number> } | null>(null);
+  if (rows.length > 0 && !entry.current) entry.current = { rank: boardRowRank(rows) };
+  const firstPanelSet = useRef(false);
+  useEffect(() => {
+    if (firstPanelSet.current || rows.length === 0) return;
+    firstPanelSet.current = true;
+    if (summary.first && axes.length > 0) setOpenAxis(axes.some((a) => a.value === "hold") ? "hold" : axes[0].value);
+  }, [rows.length, summary.first, axes]);
+
+  if (rows.length === 0) return null;
 
   const activeFilter = filter && axes.some((a) => a.value === filter.axis) ? axisGroups[filter.axis].find((g) => g.key === filter.key) ?? null : null;
+  // 패널 행 거름 — 그 기록이 있는 지금 가진 종목만(판 종목은 건수에만 있고 목록에 없다). 패널이 열려 있는 동안만 걸린다
+  const pickKeys = pickHasPanel && pickOpen && pickFilter ? (pickFilter === "hit" ? pick.hit.keys : pickFilter === "buy" ? pick.buys.keys : pick.rows[pickFilter].keys) : null;
   const rank = entry.current?.rank ?? new Map<string, number>();
   const rankOf = (r: BoardRow, i: number) => rank.get(r.key) ?? rows.length + i;
-  const visibleRows = (activeFilter ? rows.filter((r) => activeFilter.rowKeys.includes(r.key)) : rows)
+  const visibleRows = (pickKeys ? rows.filter((r) => r.labelKey !== null && pickKeys.includes(r.labelKey)) : activeFilter ? rows.filter((r) => activeFilter.rowKeys.includes(r.key)) : rows)
     .map((r, i) => ({ r, k: rankOf(r, i) }))
     .sort((a, b) => a.k - b.k)
     .map(({ r }) => r);
   const buckets = BOARD_BUCKETS.map((b) => ({ ...b, rows: visibleRows.filter((r) => bucketOf(r) === b.value) })).filter((b) => b.rows.length > 0);
 
-  const openStockPage = (row: BoardRow) => {
+  const openPage = (row: BoardRow) => {
+    if (row.kind === "crypto") {
+      if (row.groupStockIds.length !== 1) { navigate({ type: "detail", tab: "crypto" }); return; }
+      setCryptoTxTarget({ cryptoId: row.groupStockIds[0], name: row.name });
+      navigate({ type: "detail", tab: "crypto-transactions" });
+      return;
+    }
     setStockPageTarget({
       groupStockIds: row.groupStockIds,
       name: row.name,
@@ -516,16 +627,27 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
     });
     navigate({ type: "detail", tab: "stocks-item" });
   };
-  // 점검 한 장의 선택 — 그때 시세·산 날부터 %를 기록과 함께 한 번에 쓴다. 정하는 순간의 기준값(수량·시세·비중)도 함께(저장 구조 유지)
+  // 부동산·실물 값 고치기 — 기존 수정 창(성과 화면에서도 떠 있는 입력 컴포넌트가 받는다). 값을 고쳐도 점검 기록은 생기지 않는다
+  const editValue = (row: BoardRow) => {
+    if (!row.own) return;
+    window.dispatchEvent(new CustomEvent(row.kind === "real" ? "trigger-edit-real-estate" : "trigger-edit-physical", { detail: { id: row.own.assetId } }));
+  };
+  // 점검 한 장의 선택 — 그때 시세·평단 대비 %를 기록과 함께 한 번에 쓴다. 정하는 순간의 기준값도 함께(저장 구조 유지).
+  // 차례인 상태에서 누르면 그 이유(hit)가 기록에 남는다(입력 추가 0). 부동산·실물은 기준값(base)을 쓰지 않는다
   const onChoose = (row: BoardRow, choice: StockReviewChoice) => {
     if (!row.labelKey) return;
-    const snap = row.nowPrice !== null && row.rate !== null ? { price: row.nowPrice, rate: row.rate } : null;
-    const base = choice === "keep" || choice === "check" ? buildLabelBase(assetData.stocks, exchangeRates, row.labelKey) : undefined;
-    record(row.labelKey, choice, snap, base);
+    const snap = row.own ? ownSnap(row) : row.nowPrice !== null && row.rate !== null ? { price: row.nowPrice, rate: row.rate } : null;
+    const base = choice !== "keep" && choice !== "check" ? undefined
+      : row.kind === "stock" ? buildLabelBase(assetData.stocks, exchangeRates, row.labelKey)
+        : row.kind === "crypto" ? buildCryptoLabelBase(assetData.crypto ?? [], row.labelKey) : undefined;
+    record(row.labelKey, choice, snap, base, hitOf(row.dueReason));
     setPlanOpenKey(null);
   };
   const onSavePlan = (row: BoardRow, plan: Pick<StockLabelPlan, "down" | "up" | "months" | "memo">) => { if (row.labelKey) setPlan(row.labelKey, plan); };
+  // 한 번에 하나 — 기준 칸을 누르면 `내 선택` 패널이 닫히고(거름도 풀린다), `내 선택`을 열면 기준 패널이 닫힌다
+  const closePick = () => { setPickOpen(false); setPickFilter(null); };
   const onAxis = (a: BoardAxis) => {
+    closePick();
     if (activeFilter && filter?.axis === a) { setFilter(null); return; }
     setOpenAxis(openAxis === a ? null : a);
   };
@@ -535,18 +657,37 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
     setFilter({ axis: openAxis, key: g.key });
     setOpenAxis(null);
   };
+  const onPickToggle = () => {
+    if (pickOpen) { closePick(); return; }
+    setPickOpen(true);
+    setOpenAxis(null);
+    onPickOpen();
+  };
+  const onPickFilter = (f: PickFilter) => {
+    setFilter(null);
+    setPickFilter(pickFilter === f ? null : f);
+  };
+  const afterOf = pick ? (r: StockLabelReview) => pickAfterOf(pick, r.t, r.at) : undefined;
+  const pickPanelId = `grow-pick-panel-${view}`;
 
   return (
-    <div data-testid="grow-block" className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-      {/* ① 종합 카드 */}
+    <div data-testid="grow-view" data-view={view} className={`grid gap-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 ${view === "own" ? "" : "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start"}`}>
+      {/* ① 종합 카드 — 부동산·실물 보기에는 없다(값이 내가 넣은 숫자라 합계를 주식과 같은 잣대에 놓지 않는다) */}
+      {view !== "own" && (
       <section data-testid="grow-total-card" className={`min-w-0 ${SECTION}`}>
         <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-          <span>평단 대비 수익 · 내 주식 {rows.length}종목</span>
+          <span>평단 대비 수익 · 내 {text.noun} {rows.length}종목</span>
           <span data-screenshot-hide className="inline-flex">
-            <InfoHint summary="판 종목의 손익은 넣지 않아요.">
-              <p className="text-pretty break-keep">수익률은 평단 대비예요. 지금 가격이 내가 산 평균 가격보다 얼마나 오르내렸는지예요. 상세 › 주식 &apos;전체&apos;의 손익과 같은 값이에요.</p>
-              <p className="text-pretty break-keep">배당은 올해 지급·예정 배당을 지금 가진 수량으로 계산한 가정이에요. 실제로 받는 금액과 다를 수 있어요.</p>
-            </InfoHint>
+            {view === "stock" ? (
+              <InfoHint summary="판 종목의 손익은 넣지 않아요.">
+                <p className="text-pretty break-keep">수익률은 평단 대비예요. 지금 가격이 내가 산 평균 가격보다 얼마나 오르내렸는지예요. 상세 › 주식 &apos;전체&apos;의 손익과 같은 값이에요.</p>
+                <p className="text-pretty break-keep">배당은 올해 지급·예정 배당을 지금 가진 수량으로 계산한 가정이에요. 실제로 받는 금액과 다를 수 있어요.</p>
+              </InfoHint>
+            ) : (
+              <InfoHint summary="판 코인의 손익은 넣지 않아요.">
+                <p className="text-pretty break-keep">수익률은 평단 대비예요. 지금 가격이 내가 산 평균 가격보다 얼마나 오르내렸는지예요. 상세 › 암호화폐의 평가손익과 같은 값이에요.</p>
+              </InfoHint>
+            )}
           </span>
         </div>
         {total.priced ? (
@@ -557,58 +698,91 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
         ) : (
           <p data-testid="grow-total" data-state="unpriced" className="text-sm text-muted-foreground text-pretty break-keep">시세를 불러오면 합계가 보여요.</p>
         )}
-        {summary.first && <p data-testid="grow-guide" className="text-sm text-pretty break-keep">종목을 누르면 장기 보유·점검 대상을 정할 수 있어요</p>}
-        <dl data-testid="grow-summary" className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1.5 text-sm">
-          {!summary.first && (
-            <>
-              <dt className="text-xs text-muted-foreground">장기 보유</dt>
-              <dd data-testid="grow-summary-keep" className="min-w-0 tabular-nums break-keep"><KeepLine s={summary.keep} /></dd>
-              <dt className="text-xs text-muted-foreground">점검 대상</dt>
-              <dd data-testid="grow-summary-check" className="min-w-0 tabular-nums break-keep"><CheckLine s={summary.check} /></dd>
-            </>
-          )}
-          <dt className="text-xs text-muted-foreground">배당</dt>
-          <dd data-testid="grow-next-dividend" className="min-w-0 tabular-nums text-pretty break-keep"><DividendLine /></dd>
-        </dl>
-        {axes.length > 0 && (
-          <>
-            <div data-testid="grow-axes" role="group" aria-label="기준별로 보기" className="grid rounded-lg bg-muted/50 p-0.5" style={{ gridTemplateColumns: `repeat(${axes.length}, minmax(0, 1fr))` }}>
-              {axes.map((a) => {
-                const filtered = activeFilter && filter?.axis === a.value;
-                return (
-                  <button
-                    key={a.value}
-                    type="button"
-                    data-testid={`grow-axis-${a.value}`}
-                    aria-expanded={openAxis === a.value}
-                    aria-label={filtered ? `${activeFilter.label} 거르기 해제` : `${a.label}별로 보기`}
-                    onClick={() => onAxis(a.value)}
-                    className={`relative inline-flex min-h-9 min-w-0 items-center justify-center gap-0.5 rounded-md px-1 text-sm outline-none after:absolute after:inset-x-0 after:-inset-y-0.5 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150 max-[359px]:text-xs ${
-                      filtered ? "bg-foreground font-bold text-card" : openAxis === a.value ? "bg-foreground/15 font-semibold text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    <span className="truncate">{filtered ? activeFilter.label : a.label}</span>
-                    {filtered && <X aria-hidden className="size-3.5 shrink-0" />}
-                  </button>
-                );
-              })}
+        {summary.first && <p data-testid="grow-guide" className="text-sm text-pretty break-keep">{text.guide}</p>}
+        {/* 라벨 행과 `내 선택` 패널은 한 덩어리 — 닫힌 패널이 카드 간격을 하나 더 만들지 않게 */}
+        <div>
+          <dl data-testid="grow-summary" className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1.5 text-sm">
+            {!summary.first && (
+              <>
+                <dt className="text-xs text-muted-foreground">장기 보유</dt>
+                <dd data-testid="grow-summary-keep" className="min-w-0 tabular-nums break-keep"><KeepLine s={summary.keep} /></dd>
+                <dt className="text-xs text-muted-foreground">점검 대상</dt>
+                <dd data-testid="grow-summary-check" className="min-w-0 tabular-nums break-keep"><CheckLine s={summary.check} /></dd>
+              </>
+            )}
+            {view === "stock" && (
+              <>
+                <dt className="text-xs text-muted-foreground">배당</dt>
+                <dd data-testid="grow-next-dividend" className="min-w-0 tabular-nums text-pretty break-keep"><DividendLine /></dd>
+              </>
+            )}
+            {showPick && (
+              <>
+                <dt className="text-xs text-muted-foreground">내 선택</dt>
+                <PickLine pick={pick} open={pickOpen} panelId={pickPanelId} onToggle={onPickToggle} />
+              </>
+            )}
+          </dl>
+          {pickHasPanel && (
+            // 항상 마운트 + grid-rows 0fr↔1fr(재마운트 없음 — 중간에 다시 눌러도 그 자리에서 되돌아간다)
+            <div id={pickPanelId} {...(pickOpen ? {} : { inert: true, "aria-hidden": true })} className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-200 ${pickOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <div className="min-h-0 overflow-hidden">
+                <div className="pt-3"><PickPanel pick={pick} filter={pickOpen ? pickFilter : null} onFilter={onPickFilter} /></div>
+              </div>
             </div>
-            {activeFilter && (
-              <p data-testid="grow-filter-fact" className="text-sm tabular-nums text-pretty break-keep">
-                {activeFilter.label} {activeFilter.count}종목 {wonText(activeFilter.profit)} <b className={`font-bold ${pctTone(activeFilter.rate)}`}>{pctText(activeFilter.rate)}</b>
-              </p>
-            )}
-            {openAxis && axes.some((a) => a.value === openAxis) && (
-              <AxisPanel key={openAxis} axis={openAxis} groups={axisGroups[openAxis]} total={{ count: rows.length, profit: total.profit, rate: total.rate }} scale={scale} filterKey={activeFilter && filter?.axis === openAxis ? activeFilter.key : null} onGroup={onGroup} />
-            )}
-          </>
+          )}
+        </div>
+        {axes.length > 0 && (
+          <div data-testid="grow-axes" role="group" aria-label="기준별로 보기" className="grid rounded-lg bg-muted/50 p-0.5" style={{ gridTemplateColumns: `repeat(${axes.length}, minmax(0, 1fr))` }}>
+            {axes.map((a) => {
+              const filtered = activeFilter && filter?.axis === a.value;
+              return (
+                <button
+                  key={a.value}
+                  type="button"
+                  data-testid={`grow-axis-${a.value}`}
+                  aria-expanded={openAxis === a.value}
+                  aria-label={filtered ? `${activeFilter.label} 거르기 해제` : `${a.label}별로 보기`}
+                  onClick={() => onAxis(a.value)}
+                  className={`relative inline-flex min-h-9 min-w-0 items-center justify-center gap-0.5 rounded-md px-1 text-sm outline-none after:absolute after:inset-x-0 after:-inset-y-0.5 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150 max-[359px]:text-xs ${
+                    filtered ? "bg-foreground font-bold text-card" : openAxis === a.value ? "bg-foreground/15 font-semibold text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <span className="truncate">{filtered ? activeFilter.label : a.label}</span>
+                  {filtered && <X aria-hidden className="size-3.5 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {pickKeys && pickFilter ? (
+          <p data-testid="grow-filter-fact" data-pick={pickFilter} className="text-sm tabular-nums text-pretty break-keep">
+            {visibleRows.length > 0
+              ? `${PICK_FILTER_LABEL[pickFilter]} 기록이 있는 ${visibleRows.length}종목 · 지금 가진 종목만 보여요`
+              : `${PICK_FILTER_LABEL[pickFilter]} 기록은 판 종목에만 있어요 · 지금 가진 종목만 보여요`}
+          </p>
+        ) : axes.length > 0 && activeFilter && (
+          <p data-testid="grow-filter-fact" className="text-sm tabular-nums text-pretty break-keep">
+            {activeFilter.label} {activeFilter.count}종목 {wonText(activeFilter.profit)} <b className={`font-bold ${pctTone(activeFilter.rate)}`}>{pctText(activeFilter.rate)}</b>
+          </p>
+        )}
+        {axes.length > 0 && openAxis && axes.some((a) => a.value === openAxis) && (
+          <AxisPanel key={openAxis} axis={openAxis} groups={axisGroups[openAxis]} total={{ count: rows.length, profit: total.profit, rate: total.rate }} scale={scale} filterKey={activeFilter && filter?.axis === openAxis ? activeFilter.key : null} onGroup={onGroup} />
         )}
       </section>
+      )}
 
       {/* ② 내 종목 */}
       <section data-testid="grow-list" className={`min-w-0 ${SECTION}`}>
         <div className="flex min-h-7 items-center justify-between gap-2">
-          <SectionHeader icon={List} title="내 종목">
+          <SectionHeader icon={List} title={text.list}>
+            {view === "own" ? (
+              <span data-testid="grow-own-hint" data-screenshot-hide className="inline-flex">
+                <InfoHint summary="내가 넣은 값으로 계산해요.">
+                  <p className="text-pretty break-keep">시세에 따라 자동으로 바뀌지 않아요. 대출과 보증금은 빼지 않은 값이에요.</p>
+                </InfoHint>
+              </span>
+            ) : (
             <span data-testid="grow-score-hint" data-screenshot-hide className="inline-flex">
               <InfoHint summary="점수는 보유 기간 대비 수익을 5점 만점으로 매긴 거예요.">
                 {/* 괄호 뒤 조사 금지(C114), 팝오버 높이를 줄이려 기준표는 한 문단 */}
@@ -624,11 +798,13 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
                 <p className="text-pretty break-keep">장기 보유·점검 대상은 내가 정한 묶음이에요. 보유 기간과는 따로예요.</p>
               </InfoHint>
             </span>
+            )}
           </SectionHeader>
-          <span className="whitespace-nowrap text-sm text-muted-foreground">평단 대비 수익률</span>
+          <span className="whitespace-nowrap text-sm text-muted-foreground">{text.right}</span>
         </div>
-        {/* 행 2줄 `N점`·`측정 중`의 기준을 목록 머리에서 바로(qa 권고, 상세는 ⓘ). 좁은 폭에서는 어절 단위로 감긴다 */}
-        <p data-testid="grow-score-caption" className="-mt-1 text-xs text-muted-foreground tabular-nums text-pretty break-keep">점수 5점 만점 · 측정 중은 보유 {Math.round(SCORE_MIN_DAYS / 30.5)}개월 미만</p>
+        {/* 행 2줄 `N점`·`측정 중`의 기준을 목록 머리에서 바로(qa 권고, 상세는 ⓘ). 좁은 폭에서는 어절 단위로 감긴다. 부동산·실물은 점수가 없다 */}
+        {view !== "own" && <p data-testid="grow-score-caption" className="-mt-1 text-xs text-muted-foreground tabular-nums text-pretty break-keep">점수 5점 만점 · 측정 중은 보유 {Math.round(SCORE_MIN_DAYS / 30.5)}개월 미만</p>}
+        {view === "own" && summary.first && <p data-testid="grow-guide" className="text-sm text-pretty break-keep">{text.guide}</p>}
         <div data-testid="grow-buckets" className="flex flex-col gap-3">
           {buckets.map((b) => (
             <div key={b.value} data-testid="grow-bucket" data-bucket={b.value}>
@@ -648,7 +824,9 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
                       onPlanOpen={(o) => setPlanOpenKey(o ? row.key : null)}
                       onChoose={onChoose}
                       onSavePlan={onSavePlan}
-                      onOpenPage={openStockPage}
+                      onOpenPage={openPage}
+                      afterOf={afterOf}
+                      onEditValue={editValue}
                     />
                   </BoardRowItem>
                 ))}

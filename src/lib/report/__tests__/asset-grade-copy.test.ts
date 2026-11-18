@@ -117,10 +117,10 @@ describe("금지 단어 0(AC-13)", () => {
     for (const w of FORBIDDEN) expect(visibleText(card), w).not.toContain(w);
     // 6차(11/18): 메뉴 통합 — 제목·설명, 큰 값 = 성적표가 기록한 최신 등급(재계산 없음), 둘째 줄 = 점검 차례 수(불리기 화면과 같은 boardStatus)
     expect(card).toContain('title="자산 성적표·불리기"');
-    expect(card).toContain('description="종합 등급과 종목 점검을 한곳에서"');
+    expect(card).toContain('description="성적표와 내 자산 점검을 한곳에서"'); // #242(5.127) 칸 이름 `내 자산 점검`
     expect(hub).toContain("const latestGrade = useLatestAssetGrade();");
     expect(card).toContain("{tierLabel(latestGrade.tier)}");
-    expect(hub).toContain("boardStatus(buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []))");
+    expect(hub).toContain("growStatus(buildGrowBoards(assetData, exchangeRates, labels, growNow))"); // #242: 전 종류 합(세그먼트와 같은 함수)
     expect(visibleText(card)).toContain("점검 차례 <span");
     expect(visibleText(card)).toContain("장기 보유·점검 대상 정하기");
     expect(card).not.toMatch(/formatPriceByMode|모든 자산|투입 대비|산 날부터|pctText|weights|computeStockTotals/);
@@ -134,7 +134,7 @@ describe("금지 단어 0(AC-13)", () => {
     expect(entry.featureId).toBe("report");
     const feature = APP_FEATURES.find((f) => f.id === "report")!;
     expect(feature.title).toBe("자산 성적표·불리기");
-    expect(feature.description).toBe("성과 탭에서 종합 등급을 보고, 보유 주식을 장기 보유·점검 대상으로 나눠 기록해요.");
+    expect(feature.description).toBe("성과 탭에서 종합 등급을 보고, 주식·코인·부동산·실물을 장기 보유·점검 대상으로 나눠 기록해요.");
     expect(feature.target).toEqual({ type: "activity", tab: "report" });
     for (const w of FORBIDDEN) expect(`${entry.title}${entry.body}${feature.title}${feature.description}`, w).not.toContain(w);
   });
@@ -220,6 +220,8 @@ describe("재설계 3차 금지어·금지 형식", () => {
       "hooks/use-stock-labels.ts",
       "lib/asset/asset-storage.ts",
       "lib/asset/grow-board.ts",
+      "lib/asset/grow-kinds.ts", // #242 주식 외 행·전 종류 합
+      "lib/asset/grow-pick.ts", // #242 내 선택 계산
       "lib/asset/grow-rows.ts",
       "lib/asset/stock-labels.ts",
       "lib/local-storage.ts",
@@ -234,7 +236,10 @@ describe("재설계 3차 금지어·금지 형식", () => {
     expect(guard).toBeGreaterThan(0);
     expect(send).toBeGreaterThan(guard);
     expect(src.slice(send - 200, send)).toContain("isStockLabelRevisit(labels, Date.now())");
-    expect(src.match(/track\(/g)).toHaveLength(1);
+    // #242: `·내 선택`(값 있는 패널을 처음 열 때) 1곳이 더해져 2곳 — 둘 다 preview 가드 뒤
+    expect(src.match(/track\(/g)).toHaveLength(2);
+    expect(src).toContain('if (!isPreviewEnv()) track("feature_use", { category: "grow_pick" });');
+    expect(filesMatching(/\.(ts|tsx)$/, /category: "grow_pick"/)).toEqual(["app/(main)/_components/views/activity/stock-label-block.tsx"]);
     expect(src).not.toMatch(/localStorage|sessionStorage/); // 새 저장 키·플래그 없음
   });
   it("이 화면은 분류를 새로 요청하지 않는다(X-Ray 캐시 읽기만)", () => {
@@ -322,7 +327,7 @@ describe("재설계 6차 — 옛 낱말 0건, 새 용어·정의 문장", () => 
     ["허브 카드", visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')))],
     ["화면 제목·도움말", view.slice(view.indexOf('data-testid="grow-title"'), view.indexOf("</CardTitle>"))],
     ["세그먼트", visibleText(view.slice(view.indexOf('data-testid="report-tabs"'), view.indexOf('data-testid="report-panel-grade"')))],
-    ["세그먼트 둘째 줄", visibleText(view.slice(view.indexOf("const growSub"), view.indexOf("const growSub") + 400))],
+    ["세그먼트 둘째 줄", visibleText(view.slice(view.indexOf("const growSub"), view.indexOf("const growSub") + 800))],
     ["새 소식", `${entry.title}${entry.body}`],
     ["기능 목록", `${feature.title}${feature.description}`],
   ];
@@ -335,12 +340,12 @@ describe("재설계 6차 — 옛 낱말 0건, 새 용어·정의 문장", () => 
   });
   it("새 용어가 정해진 자리에 있다 — 묶음·버튼·수익률 정의", () => {
     const block = texts[0][1];
-    for (const w of ["평단 대비 수익 · 내 주식", "평단 대비 수익률", "정한 날 대비", "점검일 대비", "오늘 정함", "평단보다 낮은 종목 없음", "점검 대상에서 빼면", "최근 3개월 거래", "그때 수익률", "수익률은 평단 대비예요.", "내 주식 전체"]) expect(block, w).toContain(w);
+    for (const w of ["평단 대비 수익 · 내 {text.noun}", "평단 대비 수익률", "정한 날 대비", "점검일 대비", "오늘 정함", "평단보다 낮은 종목 없음", "점검 대상에서 빼면", "최근 3개월 거래", "지금까지", "다음 점검까지", "수익률은 평단 대비예요.", "내 주식 전체"]) expect(block, w).toContain(w);
     expect(block.match(/"그대로 두기"/g)!.length).toBeGreaterThanOrEqual(3); // 두 묶음 버튼 + 기록 줄 — 같은 낱말(COO 수정 1)
     expect(block).not.toMatch(/계속 장기 보유|장기 보유하세요/);
     const board = texts[1][1];
     for (const w of ['"장기 보유"', '"점검 대상"', '"정하지 않음"', "점검 대상에서 뺌"]) expect(board, w).toContain(w);
-    expect(texts[5][1]).toContain("종목 · 정하기 전"); // 첫 사용자 세그먼트(사업 수정 1)
+    expect(texts[5][1]).toContain("{growStatus.unit} · 정하기 전"); // 첫 사용자 세그먼트(사업 수정 1). #242: 단위는 종목|개
   });
   it("기준 패널 — `0`·`전체 ±x%` 라벨·점선 기준선이 없고, 0점 눈금은 라벨 없는 1px", () => {
     const block = read("stock-label-block.tsx");

@@ -129,7 +129,7 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: "report",
     title: "자산 성적표·불리기",
-    description: "성과 탭에서 종합 등급을 보고, 보유 주식을 장기 보유·점검 대상으로 나눠 기록해요.",
+    description: "성과 탭에서 종합 등급을 보고, 주식·코인·부동산·실물을 장기 보유·점검 대상으로 나눠 기록해요.",
     icon: FileBarChart,
     target: { type: "activity", tab: "report" },
   },

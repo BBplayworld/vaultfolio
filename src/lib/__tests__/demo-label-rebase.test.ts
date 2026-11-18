@@ -87,10 +87,17 @@ describe("데모 이름표 정한 날 가격 — 실시간 시세 배율만큼 �
 });
 
 describe("데모 점검 기록(reviews) 그때 가격 — base.price와 같은 배율(5.125 4·5차)", () => {
-  /** '그날 가격부터' %(지금 시세 ÷ 기록 가격 − 1) — 행 2줄 점검 뒤 %·NVIDIA 바꾼 기록이 현실 범위인지 */
+  /**
+   * 화면에 보이는 '그날 가격부터' % — 그 종목의 다음 기록 가격(이력 줄 `다음 점검까지`), 없으면 지금 시세(`지금까지`·행 2줄 점검일 대비)까지(#242).
+   * AAPL @D-160(166, 조건 −10%에 닿아 한 점검)은 다음 기록 205까지 +23.5%로 보인다 — 지금 시세까지의 값(+35.5%)은 화면에 없다
+   */
   const reviewPcts = (stocks: Stock[], labels: StockLabels) => {
     const price = priceByLabelKey(stocks);
-    return (labels.reviews ?? []).map((r) => ({ k: `${r.t}@${r.at}`, pct: Math.round((price.get(r.t)! / r.price - 1) * 1000) / 10 }));
+    const list = labels.reviews ?? [];
+    return list.map((r) => {
+      const later = list.filter((x) => x.t === r.t && x.at > r.at).sort((a, b) => (a.at < b.at ? -1 : 1))[0];
+      return { k: `${r.t}@${r.at}`, pct: Math.round(((later?.price ?? price.get(r.t)!) / r.price - 1) * 1000) / 10 };
+    });
   };
   for (const today of ["2026-11-17", "2026-03-10", "2027-01-31"]) {
     const { stocks, labels } = load(today);
