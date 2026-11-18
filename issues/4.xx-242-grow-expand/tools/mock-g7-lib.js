@@ -25,9 +25,13 @@
   .g7-tally i.on{background:color-mix(in oklab,var(--foreground) 60%,transparent)}
   .g7-rail{position:relative}
   .g7-rail::before{content:"";position:absolute;left:-7px;top:10px;bottom:9px;width:2px;border-radius:2px;background:color-mix(in oklab,var(--foreground) 22%,transparent)}
-  .g7-sub{all:unset;box-sizing:border-box;display:block;padding:6px 0;width:100%;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;word-break:keep-all;color:var(--muted-foreground);cursor:pointer;position:relative}
+  .g7-sub{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;column-gap:4px;padding:6px 0;width:100%;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;word-break:keep-all;color:var(--muted-foreground);cursor:pointer;position:relative}
   .g7-sub::after{content:"";position:absolute;inset:-6px 0}
   .g7-sub b{color:var(--foreground);font-weight:600}
+  .g7-sub span{white-space:nowrap}
+  .g7-late{padding:2px 0 6px}
+  .g7-next{margin-top:6px;display:flex;flex-wrap:wrap;column-gap:4px}
+  .g7-next span{white-space:nowrap}
   .g7-div{height:1px;margin:6px 0 2px;background:var(--border)}
   .g7-pr.buy{min-height:48px}
   .g7-pr.buy .l{display:block;white-space:nowrap}
@@ -57,7 +61,7 @@
   // ── 종류 줄. kinds = [{name, due}], sel = 이름. two = 2줄 칸 비교안
   function kinds(list, sel, two) {
     $(".g7-kinds")?.remove(); if (!list) return;
-    const el = H(`<div data-testid="grow-kinds" role="tablist" aria-label="자산 종류" class="g7-kinds${two ? " two" : ""}">${list.map((k) => `<button type="button" role="tab" data-testid="grow-kind" aria-selected="${k.name === sel}" class="g7-kind"><span class="text-sm">${k.name}</span>${k.due ? `<span class="text-2xs font-semibold ${DUE}">${typeof k.due === "string" ? k.due : "점검 차례"}</span>` : ""}</button>`).join("")}</div>`);
+    const el = H(`<div data-testid="grow-kinds" role="tablist" aria-label="자산 종류" class="g7-kinds${two ? " two" : ""}">${list.map((k) => `<button type="button" role="tab" data-testid="grow-kind" aria-selected="${k.name === sel}" class="g7-kind"><span class="text-sm">${k.name}</span>${k.due && k.name !== sel ? `<span class="text-2xs font-semibold ${DUE}">${typeof k.due === "string" ? k.due : "점검 차례"}</span>` : ""}</button>`).join("")}</div>`);
     $('[data-testid="report-tabs"]').after(el);
   }
 
@@ -65,7 +69,7 @@
   function pick(html, { open = false, noPanel = false } = {}) {
     const dl = $('[data-testid="grow-summary"]'); $$(".g7-pk", dl).forEach((e) => e.remove()); if (!html) return;
     dl.append(H(`<dt class="g7-pk text-xs text-muted-foreground">내 선택</dt>`));
-    dl.append(H(noPanel ? `<dd data-testid="grow-pick" class="g7-pk min-w-0 tabular-nums break-keep text-muted-foreground">${html}</dd>` : `<dd data-testid="grow-pick" class="g7-pk min-w-0 tabular-nums break-keep"><button type="button" data-testid="grow-pick-toggle" aria-expanded="${open}" class="g7-pick"><span>${html}</span>${CHEV_D}</button></dd>`));
+    dl.append(H(noPanel ? `<dd data-testid="grow-pick" data-state="wait" class="g7-pk min-w-0 tabular-nums break-keep text-muted-foreground" style="text-wrap:balance">${html}</dd>` : `<dd data-testid="grow-pick" class="g7-pk min-w-0 tabular-nums break-keep"><button type="button" data-testid="grow-pick-toggle" aria-expanded="${open}" class="g7-pick"><span>${html}</span>${CHEV_D}</button></dd>`));
   }
 
   // ── 칸 막대: 칸 1개 = 기록 1번, 채운 칸 = 오름. scale = 한 줄에 들어가는 칸 수(패널 안 최대 N, 최소 8)
@@ -74,19 +78,20 @@
   const tally = (n, up, scale) => ((trackW() - (scale - 1) * 2) / scale < 4
     ? `<span class="g7-tally" aria-hidden="true"><i style="width:${(n / scale) * 100}%;position:relative;overflow:hidden"><i class="on" style="position:absolute;inset:0 auto 0 0;width:${(up / n) * 100}%;border-radius:2px"></i></i></span>`
     : `<span class="g7-tally" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i class="${i < up ? "on" : ""}" style="width:calc((100% - ${(scale - 1) * 2}px) / ${scale})"></i>`).join("")}</span>`);
-  const upText = (n, up, unit = "번") => (up === 0 ? "오름 없음" : up === n ? `<b class="font-bold">모두</b> 오름` : `오름 <b class="font-bold">${up}${unit}</b>`);
+  const upText = (n, up, unit = "번") => (up === 0 ? "오름 없음" : up === n && n > 1 ? "모두 오름" : `오름 <b class="font-bold">${up}${unit}</b>`);
   const prow = (r, scale, pressed) => `<button type="button" data-testid="grow-pick-row" aria-pressed="${pressed === r.label}" class="g7-pr"><span class="l"><span class="text-sm font-semibold">${r.label}</span><span class="text-xs text-muted-foreground tabular-nums">${r.n}번</span></span>${tally(r.n, r.up, scale)}<span class="v text-sm tabular-nums">${upText(r.n, r.up)}</span></button>`;
 
-  // ── 내 선택 패널. p = {head, rows:[{label,n,up}], sub:{text}, buy:{n,up}, pressed, fact}
+  // ── 내 선택 패널. p = {head, rows:[{label,n,up}], hit:{n,up}(주석 줄), late:K(30일 안 된 기록 수), buy:{n,up}, pressed, fact}
   function panel(p) {
     $(".g7-panel")?.remove(); $(".g7-fact")?.remove(); if (!p) return;
     const rows = (p.rows ?? []).filter((r) => r.n > 0); const scale = Math.max(8, ...rows.map((r) => r.n));
+    const h = p.hit; const sub = h && h.n > 0 ? `<span>위 두 가지 중 내 조건에 닿아 점검 <b>${h.n}번</b></span><span aria-hidden="true">·</span><span>${h.up === 0 ? "오름 없음" : `오름 <b>${h.up}번</b>`}</span>` : "";
     const first = rows.filter((r) => r.label === "정함"), rest = rows.filter((r) => r.label !== "정함");
-    const top = rows.length === 0 ? `<p data-testid="grow-pick-empty" class="g7-empty text-sm text-muted-foreground break-keep">기록이 쌓이면 여기에 보여요</p>`
-      : `${first.map((r) => prow(r, scale, p.pressed)).join("")}${rest.length ? `<div class="${p.sub ? "g7-rail" : ""}">${rest.map((r) => prow(r, scale, p.pressed)).join("")}${p.sub ? `<button type="button" data-testid="grow-pick-hit" class="g7-sub text-xs tabular-nums break-keep">${p.sub}</button>` : ""}</div>` : ""}`;
+    const top = rows.length === 0 ? `<p data-testid="grow-pick-empty" class="g7-empty text-sm text-muted-foreground break-keep">30일이 지난 기록이 3번 되면 보여요</p>`
+      : `${first.map((r) => prow(r, scale, p.pressed)).join("")}${rest.length ? `<div class="${sub ? "g7-rail" : ""}">${rest.map((r) => prow(r, scale, p.pressed)).join("")}${sub ? `<button type="button" data-testid="grow-pick-hit" class="g7-sub text-xs tabular-nums">${sub}</button>` : ""}</div>` : ""}${p.late && rows.length ? `<p data-testid="grow-pick-late" class="g7-late text-xs text-muted-foreground tabular-nums break-keep">30일이 안 된 기록 ${p.late}번은 아직 넣지 않았어요</p>` : ""}`;
     const b = p.buy; const bs = b ? Math.max(8, b.n) : 0;
     const buy = b ? `<div class="g7-div"></div><button type="button" data-testid="grow-pick-buy" aria-pressed="false" class="g7-pr buy"><span class="l"><span class="block text-xs text-muted-foreground">이 앱에 기록한</span><span class="block"><span class="text-sm font-semibold">매수</span> <span class="text-xs text-muted-foreground tabular-nums">${b.n}건</span></span></span>${tally(b.n, b.up, bs)}<span class="v text-sm tabular-nums">${upText(b.n, b.up, "건")}</span></button>` : "";
-    const el = H(`<div data-testid="grow-pick-panel" class="g7-panel"><div class="g7-ph"><span class="text-xs font-semibold text-muted-foreground">${p.head ?? "내 선택 뒤 가격"}</span>${infoBtn()}</div>${top}${buy}</div>`);
+    const el = H(`<div data-testid="grow-pick-panel" class="g7-panel"><div class="g7-ph"><span class="text-xs font-semibold text-muted-foreground">${p.head ?? "선택한 날 가격보다 오른 횟수"}</span>${infoBtn()}</div>${top}${buy}</div>`);
     $('[data-testid="grow-summary"]').after(el);
     if (p.fact) (($('[data-testid="grow-axes"]') ?? el)).after(H(`<p data-testid="grow-filter-fact" class="g7-fact text-sm tabular-nums text-pretty break-keep">${p.fact}</p>`));
   }
@@ -147,6 +152,8 @@
     $('[data-testid="grow-sheet-reason"]', sh).textContent = v.reason;
     const val = H(`<div data-testid="grow-value" class="g7-val"><div class="r1"><span class="min-w-0"><span class="block text-xs text-muted-foreground">${v.label}</span><span data-testid="grow-value-mine" class="block text-base font-bold tabular-nums">${v.value}</span></span><button type="button" data-testid="grow-value-edit" class="g7-edit text-sm font-semibold">${v.edit}${CHEV_R}</button></div>${v.est ? `<p data-testid="grow-value-estimate" class="est text-xs text-muted-foreground tabular-nums"><span>실거래 추정 ${v.est[0]}</span><span aria-hidden="true">·</span><span>${v.est[1]} 기준</span></p>` : ""}</div>`);
     $('[data-testid="grow-sheet-reason"]', sh).after(val);
+    const nx = $('[data-testid="grow-choice-next"]', sh); if (nx) { const grid = nx.closest("button").parentElement; nx.remove(); grid.after(H(`<p data-testid="grow-choice-next" class="g7-next text-2xs font-medium text-muted-foreground tabular-nums"><span>그대로 두면 다음 점검은</span><span>${v.next}</span></p>`)); }
+    if (v.note) $('[data-testid="grow-value"]', sh).after(H(`<p class="g7-note">${v.note}</p>`));
     const ps = $('[data-testid="grow-plan-summary"]', sh); if (ps) ps.children[1].textContent = v.plan;
     if (!v.keepWarn) $('[data-testid="grow-plan-warn"]', sh)?.remove();
     const hist = $('[data-testid="grow-history"]', sh); if (hist) hist.innerHTML = v.history.length ? `<p class="mb-1 text-xs text-muted-foreground tabular-nums">최근 기록 · 점검 ${v.history.length}번 · 그대로 ${v.history.length}번</p>${v.history.map((h) => `<p data-testid="grow-history-row" class="grid min-h-7 grid-cols-[0.875rem_4rem_minmax(0,1fr)_auto] items-center gap-x-1.5 text-sm"><span aria-hidden="true" class="size-[7px] justify-self-center rounded-full bg-foreground/45"></span><span class="whitespace-nowrap text-muted-foreground tabular-nums">${h[0]}</span><span class="truncate">${h[1]}</span><span></span></p>`).join("")}` : `<p class="text-xs text-muted-foreground">아직 점검 기록이 없어요</p>`;
@@ -161,8 +168,11 @@
     const kr = $(".g7-kinds"); const kinds = kr ? { h: Math.round(kr.getBoundingClientRect().height), w: Math.round(kr.getBoundingClientRect().width), need: $$(".g7-kind", kr).reduce((a, e) => a + Math.ceil(e.getBoundingClientRect().width), 0) + 4 * ($$(".g7-kind", kr).length - 1), right: Math.round(Math.max(...$$(".g7-kind", kr).map((e) => e.getBoundingClientRect().right))) } : null;
     const pk = $('[data-testid="grow-pick"]'); const pickW = pk && $('.g7-pick span', pk) ? [Math.round($('.g7-pick span', pk).getBoundingClientRect().width), Math.round(pk.getBoundingClientRect().width)] : null; const pickLines = pk ? Math.round(pk.getBoundingClientRect().height / 20) : 0;
     const numLines = $$('[data-testid="grow-total-card"] dd, [data-testid="grow-total"], [data-testid="grow-total-card"] > div:first-child').filter((e) => /\d/.test(e.textContent)).length;
-    return { vh: innerHeight, docW: document.documentElement.scrollWidth, tabs: b('[data-testid="report-tabs"]'), kinds, card: b('[data-testid="grow-total-card"]'), rowsBottom: $$('[data-testid="grow-row-toggle"]').slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().bottom)), pickLines, pickW, numLines, over }; };
+    return { vh: innerHeight, docW: document.documentElement.scrollWidth, tabs: b('[data-testid="report-tabs"]'), kinds, card: b('[data-testid="grow-total-card"]'), rowsBottom: $$('[data-testid="grow-row-toggle"]').slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().bottom)), pickLines, pickW, numLines, over, pickL: linesOf(pk), pickArea: pk ? pk.clientWidth : null, head: linesOf($('.g7-ph span')), headW: [textW($('.g7-ph span')), $('.g7-ph') ? $('.g7-ph').clientWidth : null], sub: linesOf($('.g7-sub')), late: linesOf($('.g7-late')), empty: linesOf($('.g7-empty')), next: linesOf($('.g7-next')), panelH: b('.g7-panel') && Math.round($('.g7-panel').getBoundingClientRect().height), sameBtn: (() => { const e = $('[data-g7="sheet-host"] [data-testid="grow-choice-same"]'); return e ? [linesOf(e), Math.round(e.getBoundingClientRect().height)] : null; })() }; };
 
-  window.g7 = { CSS, seg, kinds, pick, panel, rows, rescale, card, first, list, reSheet, history, measure, H, $, $$ };
+  // 요소 안 글자를 줄 단위 낱말 배열로(줄바꿈 자리 판정용)
+  const linesOf = (el) => { if (!el) return null; const out = new Map(); const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const re = /\S+/g; let m; while ((m = re.exec(n.data))) { const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const b = r.getBoundingClientRect(); if (!b.width) continue; const k = Math.round(b.top / 6); out.set(k, [...(out.get(k) ?? []), m[0]]); } } return [...out.entries()].sort((a, b) => a[0] - b[0]).map((e) => e[1].join(" ")); };
+  const textW = (el) => { if (!el) return null; const r = document.createRange(); r.selectNodeContents(el); return Math.round(r.getBoundingClientRect().width * 10) / 10; };
+  window.g7 = { linesOf, textW, CSS, seg, kinds, pick, panel, rows, rescale, card, first, list, reSheet, history, measure, H, $, $$ };
   const st = document.createElement("style"); st.id = "g7-style"; st.textContent = CSS; document.head.appendChild(st);
 })();
