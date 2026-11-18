@@ -105,12 +105,13 @@ export async function pullAsset(assetId: string, keys: AssetKeys, { merge = true
     // keepLocalSnapshots: 스냅샷 없는 기기가 push했다고 해서 이 기기의 순자산 이력을 지우지 않는다.
     // syncedIds: 다른 기기가 거의 동시에 push해 이 기기가 막 추가한 자산이 pull로 사라지는 것을
     // 막되, 기준점에 있던 항목이 원격에서 사라졌으면 "원격에서 삭제됨"으로 존중한다.
-    const { mergedAdditions, remoteIds } = applyImportedPayload(payload, { keepLocalSnapshots: true, syncedIds });
+    // mergeStockLabels: 주식 이름표(#239)는 티커별 병합 — 이 기기 쪽이 더 새 값이면(stockLabelsRepush) 아래에서 재-push 표시에 합친다.
+    const { mergedAdditions, remoteIds, stockLabelsRepush } = applyImportedPayload(payload, { keepLocalSnapshots: true, syncedIds, mergeStockLabels: true });
     markSynced(data.asset.version);
     // 기준점은 **병합 전 원격 id**로 갱신 — 병합으로 살려둔 로컬 신규분은 아직 서버에 없으므로
     // 여기 포함시키면 다음 pull이 그걸 "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다.
     setSyncedIds(remoteIds);
-    return { status: "ok", version: data.asset.version, mergedAdditions };
+    return { status: "ok", version: data.asset.version, mergedAdditions: mergedAdditions || stockLabelsRepush };
   } catch {
     return { status: "error", message: "복원에 실패했습니다." };
   }

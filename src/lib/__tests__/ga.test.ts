@@ -166,6 +166,12 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "push_click_kr" }, "알림·누름·국내"],
     ["feature_use", { category: "push_click_settle" }, "알림·누름·결산"],
     ["feature_use", { category: "push_click_tax" }, "알림·누름·세금"],
+    // 5.125 #239 — 주 지표·보조 지표 title 고정. 매핑이 빠지면 화면 title `성과·자산 성적표`에 섞인다
+    ["feature_use", { category: "grow_label" }, "내 자산 불리기·정함"],
+    ["feature_use", { category: "grow_check" }, "내 자산 불리기·점검"],
+    ["feature_use", { category: "grow_revisit" }, "내 자산 불리기·다시 봄"], // 인사이트 보조 지표 — 붙인 날과 다른 날 다시 열 때
+    ["feature_use", { category: "grow_plan" }, "내 자산 불리기·조건"], // 5차 — 다시 볼 조건·메모 첫 저장
+    ["feature_use", { category: "grow_grade_tab" }, "내 자산 불리기·성적표 탭"], // 6차 — 통합 화면 성적표 칸 진입
     ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
     ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
@@ -297,6 +303,52 @@ describe("체험 모드", () => {
     trackScreen("home");
     expect(gtag).not.toHaveBeenCalled();
     __resetTrialModeForTest();
+  });
+});
+
+describe("내 자산 불리기 GA (5.125 #239)", () => {
+  it.each([
+    ["grow_label", "내 자산 불리기·정함"],
+    ["grow_check", "내 자산 불리기·점검"],
+    ["grow_revisit", "내 자산 불리기·다시 봄"],
+    ["grow_plan", "내 자산 불리기·조건"],
+    ["grow_grade_tab", "내 자산 불리기·성적표 탭"],
+  ] as const)("%s는 성적표 화면에서도 자기 title로 가고 page_title·page_location 외 값을 싣지 않는다", (category, title) => {
+    trackScreen("activity:report");
+    gtag.mockClear();
+    track("feature_use", { category });
+    expect(gtag).toHaveBeenCalledTimes(1);
+    const payload = gtag.mock.calls[0][2] as Record<string, unknown>;
+    expect(payload.page_title).toBe(title);
+    expect(Object.keys(payload).filter((k) => k !== "debug_mode").sort()).toEqual(["page_location", "page_title"]);
+  });
+
+  it("5차 이름 변경 — 옛 title(·이름표·체크)은 매핑에 없다", () => {
+    for (const c of ["grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab"] as const) {
+      expect(featureTitleOf("feature_use", { category: c }, "activity:report")).not.toMatch(/이름표|체크/);
+    }
+  });
+
+  it("6차 — 화면 title `성과·자산 성적표`와 기존 4개 title은 그대로", () => {
+    expect([featureTitleOf("feature_use", { category: "grow_label" }, "home"), featureTitleOf("feature_use", { category: "grow_check" }, "home"), featureTitleOf("feature_use", { category: "grow_revisit" }, "home"), featureTitleOf("feature_use", { category: "grow_plan" }, "home")])
+      .toEqual(["내 자산 불리기·정함", "내 자산 불리기·점검", "내 자산 불리기·다시 봄", "내 자산 불리기·조건"]);
+  });
+
+  it("화면 title은 그대로 `성과·자산 성적표`", () => {
+    expect(featureTitleOf("feature_use", {}, "activity:report")).toBe("성과·자산 성적표");
+  });
+
+  it("체험 중에는 네 category 모두 전송 0", () => {
+    markTrialActive();
+    try {
+      track("feature_use", { category: "grow_plan" });
+      track("feature_use", { category: "grow_label" });
+      track("feature_use", { category: "grow_check" });
+      track("feature_use", { category: "grow_revisit" });
+      expect(gtag).not.toHaveBeenCalled();
+    } finally {
+      __resetTrialModeForTest();
+    }
   });
 });
 

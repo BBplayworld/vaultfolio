@@ -64,12 +64,18 @@ export function sheetEntries(entries: WhatsNewEntry[], today: string = todayKst(
   return entries.filter((e) => ageDays(e, today) <= WHATS_NEW_LIST_DAYS).slice(0, WHATS_NEW_LIST_MAX);
 }
 
+/** 시트에 보이는 안 본 항목 — 시트 20개 상한 밖의 안 본 항목까지 세면 팁 숫자와 시트 '새' 개수가 어긋난다(5.125 qa D-1) */
+function visibleUnseenEntries(entries: WhatsNewEntry[], record: NoticeSeenRecord | null, today: string): WhatsNewEntry[] {
+  const visible = new Set(sheetEntries(entries, today).map((e) => e.id));
+  return unseenEntries(entries, record, today).filter((e) => visible.has(e.id));
+}
+
 /** 홈 팁 판정: 안 본 항목이 있고, 기록 없음 또는 seenAt에서 7일 이상 지났을 때 */
 export function whatsNewTip(
   record: NoticeSeenRecord | null,
   { now = Date.now(), today = todayKst(), entries = WHATS_NEW }: { now?: number; today?: string; entries?: WhatsNewEntry[] } = {},
 ): { count: number; title: string } | null {
-  const unseen = unseenEntries(entries, record, today);
+  const unseen = visibleUnseenEntries(entries, record, today);
   if (unseen.length === 0) return null;
   if (record && now - record.seenAt < WHATS_NEW_GAP_MS) return null;
   return { count: unseen.length, title: unseen[0].title };
@@ -110,9 +116,9 @@ export function runSilentFirstRun(p: { isDataLoaded: boolean; hasAssets: boolean
   return true;
 }
 
-/** 열기 직전 안 본 항목 id 집합(홈 팁 N과 같은 개수 — 상한 없음, 안 본 항목은 30일 이내로 이미 한정) — 읽음 기록 전에 호출 */
+/** 열기 직전 시트에 보이는 안 본 항목 id 집합(홈 팁 N과 같은 개수) — 읽음 기록 전에 호출 */
 export function newBadgeIds(entries: WhatsNewEntry[] = WHATS_NEW, record: NoticeSeenRecord | null = readSeen(), today: string = todayKst()): Set<string> {
-  return new Set(unseenEntries(entries, record, today).map((e) => e.id));
+  return new Set(visibleUnseenEntries(entries, record, today).map((e) => e.id));
 }
 
 /** 시트 닫힘 후 포커스(4.84 D2) — 바로 가기로 이동(gone)한 경우만 건드리지 않고, 홈 팁·더보기·Esc 모두 main(tabindex -1)으로 보낸다.

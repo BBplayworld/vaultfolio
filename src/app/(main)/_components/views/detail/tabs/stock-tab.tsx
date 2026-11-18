@@ -26,7 +26,7 @@ import { AnnualizedReturn } from "../annualized-return";
 import { StockToolTiles } from "../stock-tools";
 import { StockPageEntry } from "../stock-row-flow";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay, getPurchaseRatePerUnit, computeStockMetrics, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay, computeStockMetrics, computeStockTotals, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/finance/profit-utils";
 import { computeTodayChip, sortByChipRate, todayChipLabel } from "@/lib/finance/today-chip";
 import { cancelThenRefetchProfit } from "@/lib/finance/profit-fetch-gate";
@@ -207,19 +207,8 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
   }, [assetData.stocks, activeCategory, exchangeRates]);
 
   // 상장폐지(delisted) 종목은 평가·매입원가 합계에서 제외(asset-data-context.tsx getAssetSummary와 동일 정책) — 리스트 표시는 filteredStocks 그대로 유지
-  const activeStocks = filteredStocks.filter((st) => st.inactiveStatus !== "delisted");
-  const totalValue = activeStocks.reduce(
-    (s, st) => s + st.quantity * st.currentPrice * mul(st.currency),
-    0,
-  );
-  const totalCost = activeStocks.reduce((s, st) => {
-    const isForeign = st.category === "foreign" && st.currency !== "KRW";
-    // USD 모드: 매입환율 대신 항상 현재환율로 원가 계산 → 환차익 소거
-    const rate = displayCurrency === "USD" ? mul(st.currency) : (isForeign ? getPurchaseRatePerUnit(st, mul(st.currency)) : mul(st.currency));
-    return s + st.quantity * st.averagePrice * rate;
-  }, 0);
-  const totalProfit = totalValue - totalCost;
-  const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+  // USD 모드: 매입환율 대신 항상 현재환율로 원가 계산 → 환차익 소거. 내 자산 불리기 결론 카드와 같은 공용 함수(#239)
+  const { totalValue, totalCost, totalProfit, totalProfitRate } = computeStockTotals(filteredStocks, exchangeRates, displayCurrency);
 
   const groupByTickerOnly = activeCategory === "all";
   const groupKeyOf = (s: Stock) =>

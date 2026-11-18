@@ -49,7 +49,7 @@ export function InfoHint({
         sideOffset={4}
         collisionPadding={12}
         style={{ zIndex: z }}
-        className="w-72 p-3 text-sm leading-relaxed text-left space-y-1.5"
+        className="w-72 max-h-[min(var(--radix-popover-content-available-height),32rem)] overflow-y-auto overscroll-contain p-3 text-sm leading-relaxed text-left space-y-1.5"
       >
         <p className="font-semibold text-foreground text-pretty break-keep">{summary}</p>
         {children && <div className="space-y-1 text-muted-foreground">{children}</div>}

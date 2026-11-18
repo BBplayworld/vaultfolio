@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Trophy, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Trophy, Sprout, Star, TrendingUp, Sparkles, Banknote, PieChart, Globe2, Repeat, ChevronRight, ChevronDown, Wallet, Link2, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -9,7 +9,7 @@ import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { buildAssetReport, computeFxExposure, formatAttributionDate } from "@/lib/report/asset-report";
 import { buildFxExposureLines } from "@/lib/report/composition";
-import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
+import { computeAssetGrade, tierLabel, diffGrade, toSnapshotGrade, GRADE_THRESHOLDS, type AxisKey, type GradeTier } from "@/lib/report/asset-grade";
 import { computeRecordStats } from "@/lib/report/record-streak";
 import { listArchivedDates } from "@/lib/asset/snapshot-archive";
 import { fetchProfitRef, computePeriodStockProfitTotal } from "@/lib/finance/profit-utils";
@@ -29,6 +29,11 @@ import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-s
 import { SECTION, GROUP_BADGE, SectionHeader, SpecRow } from "../../layout/ui/report-section";
 import { NetworthBenchmarkBlock } from "./networth-benchmark-block";
 import { SettlementAiButton } from "./settlement-view";
+import { StockLabelBlock } from "./stock-label-block";
+import { getReportTab, setReportTab, type ReportTab } from "./report-tab";
+import { useStockLabels } from "@/hooks/use-stock-labels";
+import { boardStatus, buildBoardRows } from "@/lib/asset/grow-board";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
 function Signed({ value, className = "" }: { value: number; className?: string }) {
@@ -83,11 +88,20 @@ export const TIER_STYLE: Record<GradeTier, { color: string; shadow: string }> = 
   platinum: { color: "text-indigo-500", shadow: "drop-shadow-[0_0_18px_rgba(99,102,241,0.8)]" },
 };
 
-const TIER_SUMMARY: Record<GradeTier, string> = {
-  bronze: "기초 체력을 다질 단계입니다. 아래 축별 액션부터 하나씩 실행해보세요.",
-  silver: "기본기는 갖췄습니다. 가장 낮은 축을 끌어올리면 등급이 오릅니다.",
-  gold: "탄탄한 자산 관리입니다. 약한 축 한두 개만 보완하면 최상위권입니다.",
-  platinum: "최상위 수준의 자산 관리입니다. 지금의 원칙을 꾸준히 유지하세요.",
+// 등급 한 줄 — 채점 기준을 알리는 사실형(#239). 숫자는 GRADE_THRESHOLDS.tier를 그대로 써서 기준이 바뀌면 문장도 따라간다
+const TIER_CUT = GRADE_THRESHOLDS.tier;
+export const TIER_SUMMARY: Record<GradeTier, string> = {
+  bronze: `종합 점수가 ${TIER_CUT.silver}점 미만이에요. 축을 펼치면 점수 기준이 보여요.`,
+  silver: `종합 점수가 ${TIER_CUT.silver}점 이상이에요. ${TIER_CUT.gold}점부터 골드예요.`,
+  gold: `종합 점수가 ${TIER_CUT.gold}점 이상이에요. ${TIER_CUT.platinum}점부터 플래티넘이에요.`,
+  platinum: `종합 점수가 ${TIER_CUT.platinum}점 이상이에요.`,
+};
+
+// 축 링크 글자 — 축 문장은 채점 기준이라 링크로 쓰지 않고, 링크가 있는 3축만 도착지 이름을 따로 둔다(#239)
+const AXIS_LINK_LABELS: Partial<Record<AxisKey, string>> = {
+  diversification: "주식 X-Ray 보기",
+  growth: "연도별 자산 변화 보기",
+  habit: "현금 보기",
 };
 
 const AXIS_ICONS: Record<AxisKey, typeof TrendingUp> = {
@@ -305,6 +319,34 @@ export function AssetReportView() {
   const hasAssets = summary.totalValue > 0;
   const tierStyle = TIER_STYLE[grade.tier];
 
+  // ── 세그먼트 2칸(6차 ①): 종목 점검 | 자산 성적표. 블록과 같은 저장소 값(store)으로 둘째 줄을 그린다 ──
+  const growStore = useStockLabels();
+  const [growNow] = useState(() => Date.now());
+  const growRows = useMemo(
+    () => buildBoardRows(assetData.stocks, exchangeRates, growStore.labels, growNow, assetData.transactions ?? []),
+    [assetData.stocks, assetData.transactions, exchangeRates, growStore.labels, growNow],
+  );
+  const growStatus = boardStatus(growRows);
+  const showSegment = hasAssets && growStore.ready && growStatus.kind !== "empty";
+  const [tab, setTab] = useState<ReportTab>(getReportTab);
+  // 주식 행이 없으면 성적표만(행은 보유 종목에서 나오므로 저장소를 읽기 전에도 판정된다)
+  const shownTab: ReportTab = growStatus.kind === "empty" ? "grade" : tab;
+  // GA `내 자산 불리기·성적표 탭` — 성적표 칸을 연 화면 로드당 1회(통합이 성적표를 묻었는지 판독). preview 데모는 0회
+  const gradeTabSent = useRef(false);
+  const chooseTab = (t: ReportTab) => {
+    setTab(t);
+    setReportTab(t);
+    if (t === "grade" && !gradeTabSent.current) {
+      gradeTabSent.current = true;
+      if (!isPreviewEnv()) track("feature_use", { category: "grow_grade_tab" });
+    }
+  };
+  const growSub = growStatus.kind === "due"
+    ? <>점검 차례 <span className="tabular-nums">{growStatus.due}종목</span></>
+    : growStatus.kind === "labeled"
+      ? `장기 보유 ${growStatus.keep} · 점검 대상 ${growStatus.check}`
+      : `${growStatus.count}종목 · 정하기 전`;
+
   // ── 투입 대비 성과 3기준 행 — 모바일 세로 스택과 sm+ 표가 같은 소스를 쓰도록 한 번만 정의 ──
   // interest: null이면 "—"(이자 미부과), 그 외엔 연간 이자(음수 표기)
   const perfRows: { key: string; title: string; desc: string; cost: string; interest: number | null; value: ReactNode }[] = [
@@ -388,14 +430,13 @@ export function AssetReportView() {
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
         <CardTitle className={`flex items-center gap-2 ${PAGE_TITLE}`}>
-          <Trophy className="size-5 text-primary" />
-          자산 성적표
-          <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-primary">Plus</span>
-          <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
-            <p>5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
-            <p>데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
-            <p>투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
-          </InfoHint>
+          <Sprout className="size-5 text-primary" />
+          <span data-testid="grow-title">자산 성적표·불리기</span>
+          <span data-testid="grow-hint" data-screenshot-hide className="inline-flex">
+            <InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">
+              <p className="text-pretty break-keep">종목 점검에서는 장기 보유·점검 대상과 다시 볼 조건을 내가 정하고, 자산 성적표에서는 종합 등급을 봐요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+            </InfoHint>
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad} motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500`}>
@@ -403,6 +444,49 @@ export function AssetReportView() {
           <p className={`${CAPTION} py-10 text-center`}>자산을 등록하면 성적표가 계산됩니다.</p>
         ) : (
           <>
+            {/* ── 세그먼트 2칸(6차) — 두 칸의 결론 값이 첫 화면 맨 위에 보인다. 주식(티커 있는 종목)이 없으면 성적표만 ── */}
+            {showSegment && (
+              <div data-testid="report-tabs" role="tablist" aria-label="화면 칸" className="grid grid-cols-2 gap-1 rounded-xl bg-card p-1 dark:shadow-xs">
+                {([
+                  { value: "grow" as const, title: "종목 점검", sub: growSub },
+                  { value: "grade" as const, title: "자산 성적표", sub: <><span className={tierStyle.color}>{tierLabel(grade.tier)}</span> <span className="tabular-nums">{grade.overall.toFixed(1)}점</span></> },
+                ]).map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    role="tab"
+                    data-testid={`report-tab-${t.value}`}
+                    data-kind={t.value === "grow" ? growStatus.kind : undefined}
+                    aria-selected={shownTab === t.value}
+                    onClick={() => chooseTab(t.value)}
+                    className={`flex min-h-12 flex-col items-center justify-center rounded-lg px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98] motion-safe:transition-[transform,background-color] motion-safe:duration-150 ${shownTab === t.value ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                  >
+                    <span className="text-sm font-bold">{t.title}</span>
+                    <span className="text-xs text-muted-foreground">{t.sub}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── 종목 점검 칸(#239) — 숨겨도 마운트는 유지(묶음 순서·펼침 상태 보존) ── */}
+            <div hidden={shownTab !== "grow"} data-testid="report-panel-grow">
+              <StockLabelBlock store={growStore} />
+            </div>
+
+            {/* ── 자산 성적표 칸 — 기존 구획 그대로 옮김(6차, 렌더 diff 0). 숨겨도 마운트 유지(등급 기록·세그먼트 값) ── */}
+            <div hidden={shownTab !== "grade"} data-testid="report-panel-grade" className="space-y-4">
+
+            {/* ── 자산 성적표 구획 제목 — 화면 제목에 있던 InfoHint가 여기로 내려왔다(문구 그대로) ── */}
+            <div className="pt-1">
+              <SectionHeader icon={Trophy} title="자산 성적표" titleTestId="report-section-title">
+                <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
+                  <p className="text-pretty break-keep">5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
+                  <p className="text-pretty break-keep">데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
+                  <p className="text-pretty break-keep">투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
+                </InfoHint>
+              </SectionHeader>
+            </div>
+
             {/* ── 등급 Hero: 트로피 티어 + 종합 별점 ── */}
             <div className="rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
@@ -438,9 +522,9 @@ export function AssetReportView() {
                 badge={<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground shrink-0">3가지 기준</span>}
               >
                 <InfoHint summary="투입 자본을 '내 돈'과 '빌린 돈'으로 나눠, 각각 얼마를 남겼는지 비교해요.">
-                  <p><span className="font-semibold text-foreground">모든 자산</span>: 부동산·주식·코인·현금 전부. 넣은 돈에는 대출·보증금으로 마련한 돈도 포함됩니다.</p>
-                  <p><span className="font-semibold text-foreground">실투자금</span>(내 돈)과 <span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
-                  <p>수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 부동산·코인의 1년 수익을 잴 수 없어 주식·코인만 담은 별점용 보조 지표입니다.</p>
+                  <p className="text-pretty break-keep"><span className="font-semibold text-foreground">모든 자산</span>: 부동산·주식·코인·현금 전부. 넣은 돈에는 대출·보증금으로 마련한 돈도 포함됩니다.</p>
+                  <p className="text-pretty break-keep"><span className="font-semibold text-foreground">실투자금</span>(내 돈)과 <span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
+                  <p className="text-pretty break-keep">수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 부동산·코인의 1년 수익을 잴 수 없어 주식·코인만 담은 별점용 보조 지표입니다.</p>
                 </InfoHint>
               </SectionHeader>
 
@@ -724,17 +808,22 @@ export function AssetReportView() {
                                 <p className="text-xs text-muted-foreground text-pretty break-keep">{fxLines.caption}</p>
                               </div>
                             )}
-                            {axis.key === "earningQuality" && divFailed > 0 ? null : linked ? (
-                              <button
-                                type="button"
-                                onClick={() => axisNavigate(axis.key)}
-                                className="flex w-full min-h-10 items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
-                              >
-                                <span className="text-pretty break-keep">{axis.action}</span>
-                                <ChevronRight className="size-4 shrink-0" />
-                              </button>
-                            ) : (
-                              <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
+                            {/* 축 문장(채점 기준)은 일반 문단, 링크가 있는 3축만 그 아래 도착지 이름 링크(#239) — 도착지·노출 조건은 그대로 */}
+                            {axis.key === "earningQuality" && divFailed > 0 ? null : (
+                              <>
+                                <p className="text-sm font-medium text-foreground text-pretty break-keep">{axis.action}</p>
+                                {linked && (
+                                  <button
+                                    type="button"
+                                    data-testid={`axis-link-${axis.key}`}
+                                    onClick={() => axisNavigate(axis.key)}
+                                    className="flex w-full min-h-10 items-center justify-between gap-2 text-left text-sm font-medium text-primary hover:underline"
+                                  >
+                                    <span className="text-pretty break-keep">{AXIS_LINK_LABELS[axis.key]}</span>
+                                    <ChevronRight className="size-4 shrink-0" />
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -748,6 +837,7 @@ export function AssetReportView() {
 
             {/* ── AI 평가 프롬프트(5.108 C7) — 결산 AI 버튼과 같은 1행 버튼, 설명은 대화상자 안 ── */}
             <SettlementAiButton name="" title="AI에게 전체 자산 진단 물어보기" testId={null} onOpen={() => setPromptOpen(true)} />
+            </div>
           </>
         )}
       </CardContent>

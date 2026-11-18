@@ -452,6 +452,11 @@ const SHARE_AXES: Record<XrayAxis, SingleExtractor> = {
   stockType: extractStockType,
 };
 
+/** 종목 1개의 축 분류(키·라벨) — X-Ray 집계와 같은 판정. 내 자산 불리기 기준별 점검이 쓴다(#239, 캐시 읽기만·요청 0) */
+export function classifyStock(axis: XrayAxis, stock: Stock): { key: string; label: string } {
+  return SHARE_AXES[axis](stock);
+}
+
 // ─────────────────────────────────────────────
 // 공통 집계
 // ─────────────────────────────────────────────

@@ -1,5 +1,5 @@
 // #170 [4.87] 홈 기능 팁 보유 필터 — 실제 recordVisit·dismissTip로 방문·dismiss를 만들어 판정(C76·C83)
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssetData } from "@/types/asset";
 import { dismissTip, isTipDismissed, pickRecommendedFeature, recordVisit } from "../feature-usage";
 import { pickHomeTip } from "../home-tip";
@@ -7,7 +7,12 @@ import { APP_FEATURES } from "@/config/app-features";
 import { markTaxNoticeDismissed } from "../tax-utils";
 
 const store = new Map<string, string>();
+// 시계 고정 — 픽스처 lastUpdated(2026-11-10)와 판정일(today 2026-11-12)에 맞춘다. 실제 시계를 쓰면 11/17부터
+// '백업한 적 없음 7일 경과' 팁이 먼저 이겨 기능 팁 단언이 날짜에 따라 깨진다(5.125에서 발견, 판정 로직 변경 없음)
+afterEach(() => { vi.useRealTimers(); });
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-12T03:00:00.000Z"));
   store.clear();
   (globalThis as Record<string, unknown>).window = globalThis;
   (globalThis as Record<string, unknown>).localStorage = {

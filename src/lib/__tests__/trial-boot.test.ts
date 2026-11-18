@@ -172,6 +172,50 @@ describe("정상 경로 — 메모리에만 주입, 원본 불변", () => {
   });
 });
 
+// #239 [5.125] AC-19 ⑦ — 체험에서 이름표·점검·주기를 조작해도 원본 저장소의 키 목록·값이 그대로다
+describe("체험 중 주식 이름표 조작 — 메모리에만 기록(#239)", () => {
+  it("시드 이름표가 조작 없이 보이고, 이름표·점검·주기 조작 뒤 원본 불변·쓰기 0", async () => {
+    const { s: original, writes } = makeOriginal({ "ga-optout": "1", secretasset_notice_seen: "{}" });
+    const before = dump(original);
+    stubBrowser(original);
+    const { injectDemoPayload, skipDemoTutorial } = await import("../preview/demo-inject");
+    const result = await bootTrial({
+      win: globalThis as unknown as Window & typeof globalThis,
+      original,
+      hash: "",
+      inject: async () => { await injectDemoPayload({ nickname: "" }); skipDemoTutorial(); },
+    });
+    expect(result).toBe("trial");
+    const L = await import("../asset/stock-labels");
+    const { STORAGE_KEYS } = await import("../local-storage");
+    const mem = (globalThis as unknown as { localStorage: Storage }).localStorage;
+    // 데모와 같은 시드(오래 둘 2·점검할 2, 주기 3개월)
+    const seeded = L.readStockLabels();
+    expect(L.countValidLabels(seeded)).toBe(4);
+    expect(seeded.cycle.months).toBe(3);
+    // 조작: 훅의 저장 경로와 같은 함수들
+    const now = new Date().toISOString();
+    let next = L.setStockLabel(seeded, "005930", "check", now);
+    next = L.markStockChecked(next, "005930", now);
+    next = L.setStockLabel(next, "AAPL", null, now);
+    next = L.setStockLabelCycle(next, 12, now);
+    L.writeStockLabels(next);
+    expect(L.readStockLabels()).toEqual(next);
+    expect(mem.getItem(STORAGE_KEYS.stockLabels)).not.toBeNull();
+    // 원본: 키 목록·값 그대로, 쓰기 호출 0, 이름표 키 없음
+    expect(dump(original)).toBe(before);
+    expect(writes).toEqual([]);
+    expect(original.getItem(STORAGE_KEYS.stockLabels)).toBeNull();
+    expect(Object.keys(original)).not.toContain(STORAGE_KEYS.stockLabels);
+  });
+  it("이름표 모듈은 전역 localStorage만 쓴다 — IndexedDB·모듈 캐시 없음", () => {
+    const text = readFileSync(path.resolve(__dirname, "../asset/stock-labels.ts"), "utf8");
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).not.toMatch(/indexedDB|sessionStorage|window\.localStorage|^(let|var) /m);
+    expect(code).toMatch(/localStorage\.(getItem|setItem|removeItem)/);
+  });
+});
+
 describe("체험 주입 닉네임(ui-review R2)", () => {
   const nick = (m: Storage) => JSON.parse(m.getItem("secretasset_asset_data")!).nickname;
   it("체험 경로는 닉네임을 비운다, preview ?demo=1 경로(기본)는 '데모' 그대로, 데모 JSON 원본 불변", async () => {
@@ -190,7 +234,23 @@ describe("체험 주입 닉네임(ui-review R2)", () => {
     expect(readFileSync(path.resolve(__dirname, "../preview/demo-data.json"), "utf8")).toBe(raw);
   });
   it("runTrialBoot은 닉네임 빈 값으로 주입", () => {
-    expect(readFileSync(path.resolve(__dirname, "../trial/trial-boot.ts"), "utf8")).toContain('await injectDemoPayload({ nickname: "" });');
+    expect(readFileSync(path.resolve(__dirname, "../trial/trial-boot.ts"), "utf8")).toContain('await injectDemoPayload({ nickname: "", mode: "trial" });');
+  });
+  it("등급 기록 시드(#239 6차) — 데모 주입은 1건, 체험 주입은 0건(없는 변화 표시 방지), 다른 기록 값은 같다", async () => {
+    const graded = (m: Storage) => (JSON.parse(m.getItem("secretasset_daily_snapshots") ?? "[]") as { grade?: unknown }[]).filter((d) => d.grade);
+    const rows = (m: Storage) => (JSON.parse(m.getItem("secretasset_daily_snapshots") ?? "[]") as { grade?: unknown }[]).map(({ grade: _g, ...r }) => r);
+    const { injectDemoPayload } = await import("../preview/demo-inject");
+    const demo = createMemoryStorage();
+    stubBrowser(demo);
+    await injectDemoPayload();
+    vi.unstubAllGlobals();
+    const trial = createMemoryStorage();
+    stubBrowser(trial);
+    await injectDemoPayload({ nickname: "", mode: "trial" });
+    expect(graded(demo)).toHaveLength(1);
+    expect(graded(trial)).toHaveLength(0);
+    expect(JSON.parse(trial.getItem("secretasset_monthly_snapshots") ?? "[]").some((m: { grade?: unknown }) => m.grade)).toBe(false);
+    expect(rows(trial)).toEqual(rows(demo));
   });
 });
 

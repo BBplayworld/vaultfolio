@@ -17,6 +17,7 @@ const assetData = () => ({
 });
 
 vi.mock("@/contexts/asset-data-context", () => ({
+  notifyAssetUserEdit: () => {}, // 5.125: 이름표 훅이 저장 뒤 부르는 push 신호(이 테스트는 주식 0이라 블록이 그려지지 않는다)
   useAssetData: () => ({ assetData: assetData(), getAssetSummary: baseSummary, exchangeRates: { USD: 1400, JPY: 900 }, snapshotVersion: 0, recordGradeSnapshot: () => {} }),
 }));
 vi.mock("../../../layout/navigation/navigation-context", () => ({ useAssetNavigation: () => ({ navigate: () => {} }) }));
@@ -73,8 +74,15 @@ describe("성적표 요약/펼침(5.108)", () => {
     expect(html).not.toContain("전체 자산 프롬프트 확인 · 복사");
     expect(html).not.toContain("settlement-ai-button");
   });
-  it("신규 testId는 fx-exposure-lines 등 기존 것뿐(성적표에서 추가 0)", () => {
+  it("testId는 기존 것 + 5.125 ui.md 7절이 정한 것(grow-*·report-section-title·axis-link-*)뿐", () => {
     const ids = new Set([...render(20_000_000).matchAll(/data-testid="([^"]+)"/g)].map((m) => m[1]));
-    for (const id of ids) expect(/^(fx-exposure|benchmark|networth)/.test(id)).toBe(true);
+    for (const id of ids) expect(/^(fx-exposure|benchmark|networth|grow-|report-section-title$|report-panel-|report-tab|axis-link-)/.test(id)).toBe(true);
+  });
+  it("6차 — 화면 제목 `자산 성적표·불리기`, 주식이 없으면 세그먼트 없이 성적표 칸이 보인다(hidden 아님)", () => {
+    const html = render(0);
+    expect(html).toContain('data-testid="grow-title">자산 성적표·불리기<');
+    expect(html).not.toContain('data-testid="report-tabs"');
+    expect(html.match(/<div[^>]*data-testid="report-panel-grade"[^>]*>/)![0]).not.toContain("hidden");
+    expect(html.match(/<div[^>]*data-testid="report-panel-grow"[^>]*>/)![0]).toContain("hidden");
   });
 });

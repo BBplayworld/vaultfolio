@@ -128,8 +128,8 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: "report",
-    title: "자산 성적표",
-    description: "성과 탭의 자산 성적표에서 내 자산을 가계 통계와 나란히 확인하세요.",
+    title: "자산 성적표·불리기",
+    description: "성과 탭에서 종합 등급을 보고, 보유 주식을 장기 보유·점검 대상으로 나눠 기록해요.",
     icon: FileBarChart,
     target: { type: "activity", tab: "report" },
   },
