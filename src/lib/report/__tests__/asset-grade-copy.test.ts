@@ -118,7 +118,7 @@ describe("금지 단어 0(AC-13)", () => {
     expect(card).toContain("내 기준으로 지키고, 내가 점검해요");
     // 재설계 3차(11/18 오케스트레이터 판단): 둘째 줄은 무게 대신 결론 카드와 같은 공용 합계 한 줄. 묶음별·이름표별 값 없음(대표: 합계만)
     expect(card).not.toMatch(/formatPriceByMode|모든 자산|투입 대비|오래 둘 자산이 내 주식의|pctText|weights/);
-    expect(card).toContain("산 날부터 지금까지");
+    expect(card).toContain('산 날부터<span className="max-[359px]:hidden"> 지금까지</span>');
     expect(card).toContain('data-kind="total"');
     expect(hub).toContain("computeStockTotals(active, exchangeRates)");
     expect(card.match(/getProfitLossColor\(/g)).toHaveLength(1); // 손익색은 금액·% 한 곳

@@ -215,7 +215,8 @@ export function PerformanceHub() {
           ) : !labelsReady || !grow.hasRows || !grow.total ? null : (
             // 산 날부터 지금까지 손익 한 줄 — 손익색은 금액·%에만(앱 규약). 시세 없는 종목이 있으면 줄 없음(불리기 결론 카드와 같은 조건)
             <span data-testid="hub-report-secondary" data-kind="total" data-profit={Math.round(grow.total.totalProfit)} className="whitespace-nowrap text-muted-foreground tabular-nums">
-              산 날부터 지금까지{" "}
+              {/* 360 미만은 `지금까지`를 빼 한 줄에 둔다(카드 높이 유지, 320 실측 잘림) */}
+              산 날부터<span className="max-[359px]:hidden"> 지금까지</span>{" "}
               <span className={`font-semibold ${Math.round(grow.total.totalProfitRate * 10) === 0 ? "text-foreground" : getProfitLossColor(grow.total.totalProfit)}`}>
                 {Math.round(grow.total.totalProfit) > 0 ? "+" : ""}{formatShortCurrency(Math.round(grow.total.totalProfit))} ({Math.round(grow.total.totalProfitRate * 10) > 0 ? "+" : ""}{(Math.round(grow.total.totalProfitRate * 10) / 10 || 0).toFixed(1)}%)
               </span>
