@@ -12,6 +12,7 @@ import {
 import { boardSummary, buildBoardRows, countDueRows } from "../asset/grow-board";
 import { materializeDemo } from "../preview/demo-payload";
 import { migrateStorageKeys, STORAGE_KEYS } from "../local-storage";
+import { readDailySnapshots } from "../asset/snapshot-storage";
 import { assetDataSchema } from "@/types/asset";
 import { cashItem, emptyData, g, legacy, memoryStorage } from "./physical-fixtures";
 
@@ -270,8 +271,8 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     const by = (t: string) => rows.find((r) => r.labelKey === t)!;
     expect(rows.filter((r) => r.due).map((r) => [r.labelKey, r.dueReason]).sort()).toEqual([
       ["000660", { kind: "up", pct: 25 }],
-      ["360750", { kind: "date", months: 12 }],
-      ["AAPL", { kind: "date", months: 3 }],
+      ["360750", { kind: "date", months: 12, source: "keep" }],
+      ["AAPL", { kind: "date", months: 3, source: "cycle" }],
     ]);
     expect(countDueRows(rows)).toBe(3); // 허브 셋째 카드 `점검 차례 3종목`
     // 정한 뒤·점검 뒤(JSON 시세): TIGER 21,000 ÷ 19,000, Apple 225 ÷ 마지막 그대로 둠 205, SK하이닉스 190,000 ÷ 175,000
@@ -302,6 +303,12 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
       // TIGER는 매일 12개월 재확인 차례(정한 날 13개월 전), base.qty 100 + 그 뒤 매수 5 = 105
       expect(p.stockLabels.items["360750"].labeledAt.slice(0, 7) < today.slice(0, 7)).toBe(true);
     }
+  });
+  it("등급 기록 시드(6차 ui-review ④) — 어제 일별 기록 1건에 등급, 데모·체험 첫 진입 허브·홈 트로피가 같은 기록을 읽는다", () => {
+    applyImportedPayload(materializeDemo(demoRaw, "2026-11-17"));
+    const graded = readDailySnapshots().filter((d) => d.grade);
+    expect(graded.map((d) => d.date)).toEqual(["2026-11-16"]);
+    expect(graded[0].grade).toEqual({ overall: 3.5, tier: "gold", axes: { growth: 4, earningQuality: 3.5, leverage: 5, diversification: 2, habit: 4 } });
   });
   it("시드에 고정 날짜가 없다(전부 날짜 토큰)", () => {
     const seedText = JSON.stringify(demoRaw.stockLabels);

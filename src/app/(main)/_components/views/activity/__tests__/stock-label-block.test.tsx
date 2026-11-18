@@ -179,7 +179,7 @@ describe("점검 한 장", () => {
   it("섹션 5개: 차례 이유 → 선택 3버튼(그대로 둠 둘째 줄 `다음 점검 M월 D일`) → 조건 요약 → 이동 안내 → 최근 기록·바닥 줄", () => {
     const html = sheet(CHECK({ plan: { down: 10, memo: "실적 발표 뒤 다시 보기" } }), "BBB");
     const t = text(html);
-    expect(t).toMatch(/^점검 차례 · 정한 기간 3개월이 지났어요/);
+    expect(t).toMatch(/^점검 차례 · 점검 주기 3개월이 지났어요/); // 기본 주기(6차 ui-review ①)
     expect([...html.matchAll(/data-testid="grow-choice-(same|keep|check|none)"/g)].map((m) => m[1])).toEqual(["same", "keep", "none"]);
     expect(text(html.match(/<button[^>]*data-testid="grow-choice-same"[\s\S]*?<\/button>/)![0])).toMatch(/^그대로 두기다음 점검 \d{1,2}월 \d{1,2}일$/);
     expect(text(html.match(/<button[^>]*data-testid="grow-plan-summary"[\s\S]*?<\/button>/)![0])).toBe("다시 볼 조건−10% 이하 · 3개월 · 메모");

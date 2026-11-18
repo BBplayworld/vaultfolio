@@ -112,7 +112,7 @@ export interface BoardRow {
 export type DueReason =
   | { kind: "down"; pct: number }
   | { kind: "up"; pct: number }
-  | { kind: "date"; months: number };
+  | { kind: "date"; months: number; source: "plan" | "cycle" | "keep" };
 
 /** 오래 둘 재확인 간격(개월) */
 export const KEEP_RECHECK_MONTHS = 12;
@@ -145,6 +145,12 @@ export function monthDayText(ms: number): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
 }
 
+/** 다음 점검 날짜 — 오늘과 11개월 넘게 떨어지면 연도를 붙인다(`2027년 11월 18일`, 같은 달 이름이 두 번 오는 혼동 방지) */
+export function nextCheckDateText(ms: number, nowMs: number): string {
+  const far = ms > addMonthsKst(nowMs, 11) || ms < addMonthsKst(nowMs, -11);
+  return far ? `${new Date(ms + 9 * 60 * 60 * 1000).getUTCFullYear()}년 ${monthDayText(ms)}` : monthDayText(ms);
+}
+
 /** 이 이름표의 점검 간격(개월) — 오래 둘 12, 점검할 = 조건 기간 ‖ 기본 주기(없으면 null) */
 export function checkMonthsOf(item: StockLabelItem | undefined, cycleMonths: number | null): number | null {
   if (item?.label === "keep") return KEEP_RECHECK_MONTHS;
@@ -163,13 +169,16 @@ function dueOf(item: StockLabelItem, rate: number | null, months: number | null,
   }
   if (months === null) return null;
   const e = elapsedSince(baseIso, nowMs);
-  return e && e.months >= months ? { kind: "date", months } : null;
+  const source = item.label === "keep" ? "keep" : item.plan?.months !== undefined ? "plan" : "cycle";
+  return e && e.months >= months ? { kind: "date", months, source } : null;
 }
 
 /** 차례 이유 문장(사실형) — `+25% 이상에 닿았어요` / `정한 기간 3개월이 지났어요` */
 export function dueReasonText(r: DueReason): string {
   if (r.kind === "down") return `평단 대비 −${r.pct}% 이하에 닿았어요`;
   if (r.kind === "up") return `평단 대비 +${r.pct}% 이상에 닿았어요`;
+  if (r.source === "keep") return `장기 보유로 정한 지 ${r.months}개월이 지났어요`;
+  if (r.source === "cycle") return `점검 주기 ${r.months}개월이 지났어요`;
   return `정한 기간 ${r.months}개월이 지났어요`;
 }
 

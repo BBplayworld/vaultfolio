@@ -11,7 +11,7 @@ import { demoClassificationPatches } from "../preview/demo-inject";
 import { parseStockLabels, type StockLabels } from "../asset/stock-labels";
 import {
   BOARD_AXES, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, annualizedPct, boardScale, boardTotal, buildAxisGroups, buildBoardRows, holdScore, scalePos,
-  boardRowRank, boardSummary, countDueRows, dueReasonText, monthDayText,
+  addMonthsKst, boardRowRank, boardSummary, countDueRows, dueReasonText, monthDayText, nextCheckDateText,
 } from "../asset/grow-board";
 
 const RATES = { USD: 1400, JPY: 925 };
@@ -144,6 +144,12 @@ describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월,
   const rows = (l: StockLabels, now = NOW) => buildBoardRows(STOCKS, RATES, l, now);
   const by = (rs: ReturnType<typeof rows>, t: string) => rs.find((r) => r.labelKey === t)!;
   const chk = (o: Partial<StockLabels["items"][string]> = {}) => ({ label: "check" as const, labeledAt: "2026-10-01T00:00:00Z", at: "2026-10-01T00:00:00Z", ...o });
+  it("다음 점검 날짜 — 오늘과 11개월 넘게 떨어지면 연도(`2027년 11월 18일`), 그 안이면 `M월 D일`(6차 ui-review ②)", () => {
+    const now = Date.parse("2026-11-18T03:00:00Z");
+    expect(nextCheckDateText(addMonthsKst(now, 12), now)).toBe("2027년 11월 18일");
+    expect(nextCheckDateText(addMonthsKst(now, 11), now)).toBe("10월 18일");
+    expect(nextCheckDateText(addMonthsKst(now, 3), now)).toBe("2월 18일");
+  });
   it("다음 점검일 = 기준일(정한 날·점검한 날 중 늦은 쪽) + 기본 주기, 말일 당김(11/30 + 3개월 = 2월 28일)", () => {
     const l = mk({ A: chk({ labeledAt: "2026-11-30T03:00:00Z", at: "2026-11-30T03:00:00Z" }), B: chk({ checkedAt: "2026-10-29T03:00:00Z" }) }, 3);
     const r = rows(l, Date.parse("2026-12-01T03:00:00Z"));
@@ -159,12 +165,17 @@ describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월,
     expect(by(r, "B").dueReason).toEqual({ kind: "down", pct: 20 });
     expect(by(r, "C").dueReason).toEqual({ kind: "up", pct: 30 });
     expect(dueReasonText({ kind: "up", pct: 25 })).toBe("평단 대비 +25% 이상에 닿았어요");
-    expect(dueReasonText({ kind: "date", months: 3 })).toBe("정한 기간 3개월이 지났어요");
+    // 6차 ui-review ①: 기간 출처별 문장 — 조건 기간 / 기본 주기 / 장기 보유 12개월
+    expect(dueReasonText({ kind: "date", months: 6, source: "plan" })).toBe("정한 기간 6개월이 지났어요");
+    expect(dueReasonText({ kind: "date", months: 3, source: "cycle" })).toBe("점검 주기 3개월이 지났어요");
+    expect(dueReasonText({ kind: "date", months: 12, source: "keep" })).toBe("장기 보유로 정한 지 12개월이 지났어요");
+    expect(by(rows(mk({ A: chk({ labeledAt: "2026-01-01T00:00:00Z", plan: { months: 6 } }) }, 3)), "A").dueReason).toEqual({ kind: "date", months: 6, source: "plan" });
+    expect(by(rows(mk({ A: chk({ labeledAt: "2026-01-01T00:00:00Z" }) }, 3)), "A").dueReason).toEqual({ kind: "date", months: 3, source: "cycle" });
     expect(by(rows(mk({ B: chk({ plan: { down: 21 } }) })), "B").due).toBe(false); // −20.0% > −21%
   });
   it("오래 둘은 기준일 + 12개월에 차례, 사용자 주기(3개월)는 쓰지 않는다", () => {
     const keep = (labeledAt: string, checkedAt?: string) => mk({ A: { label: "keep", labeledAt, ...(checkedAt ? { checkedAt } : {}), at: labeledAt } }, 3);
-    expect(by(rows(keep("2025-11-18T00:00:00Z")), "A").dueReason).toEqual({ kind: "date", months: 12 });
+    expect(by(rows(keep("2025-11-18T00:00:00Z")), "A").dueReason).toEqual({ kind: "date", months: 12, source: "keep" });
     expect(by(rows(keep("2025-11-19T03:00:00Z")), "A").due).toBe(false);
     expect(by(rows(keep("2025-01-01T00:00:00Z", "2026-06-01T00:00:00Z")), "A").due).toBe(false); // 그대로 오래 둠 뒤 12개월 전
   });

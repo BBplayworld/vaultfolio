@@ -17,7 +17,7 @@ import { useStockLabels } from "@/hooks/use-stock-labels";
 import { buildLabelBase } from "@/lib/asset/grow-rows";
 import {
   BOARD_AXES, BOARD_BUCKETS, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, addMonthsKst, boardRowRank, boardScale, boardSummary, boardTotal, bucketOf,
-  buildAxisGroups, buildBoardRows, checkMonthsOf, dueReasonText, monthDayText, scalePos,
+  buildAxisGroups, buildBoardRows, checkMonthsOf, dueReasonText, monthDayText, nextCheckDateText, scalePos,
   type BoardAxis, type BoardBucket, type BoardGroup, type BoardRow, type BoardSummary,
 } from "@/lib/asset/grow-board";
 import {
@@ -312,7 +312,7 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
   const label = item?.label ?? null;
   const history = row.labelKey ? reviewsOf(labels, row.labelKey) : [];
   const months = checkMonthsOf(item, labels.cycle.months);
-  const nextIfSame = months === null ? null : monthDayText(addMonthsKst(nowMs, months));
+  const nextIfSame = months === null ? null : nextCheckDateText(addMonthsKst(nowMs, months), nowMs);
   const plan = label === "check" ? item?.plan : undefined;
   const choices: { choice: StockReviewChoice; text: string }[] = label === "keep"
     ? [{ choice: "same", text: "그대로 두기" }, { choice: "check", text: "점검 대상으로" }, { choice: "none", text: "정하지 않음" }]
@@ -322,9 +322,9 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
   const reason = row.due && row.dueReason
     ? { text: `점검 차례 · ${dueReasonText(row.dueReason)}`, cls: DUE_TEXT }
     : row.checkedToday && row.nextCheckMs !== null
-      ? { text: `오늘 점검함 · 다음 점검 ${monthDayText(row.nextCheckMs)}`, cls: "text-muted-foreground" }
+      ? { text: `오늘 점검함 · 다음 점검 ${nextCheckDateText(row.nextCheckMs, nowMs)}`, cls: "text-muted-foreground" }
       : label !== null && row.nextCheckMs !== null
-        ? { text: `다음 점검 ${monthDayText(row.nextCheckMs)}`, cls: "text-muted-foreground" }
+        ? { text: `다음 점검 ${nextCheckDateText(row.nextCheckMs, nowMs)}`, cls: "text-muted-foreground" }
         : null;
   return (
     <div data-testid="grow-sheet" className="flex flex-col gap-3 pt-1">

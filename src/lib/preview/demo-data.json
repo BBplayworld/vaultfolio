@@ -103,7 +103,7 @@
         "breakdown": {"realEstate": 535840000, "stocks": 14374008, "crypto": 6975000, "cash": 14399000, "loans": 20500000, "tenantDeposit": 0},
         "fx": {"USD": 1399, "JPY": 925}, "fxBase": {"USD": 6615563, "JPY": 0},
         "cost": {"total": 532700900, "stock": 12301900, "crypto": 6000000, "realEstate": 500000000} },
-      { "date": "@D-1", "netAsset": 551122158, "financialAsset": 35782158,
+      { "date": "@D-1", "grade": { "overall": 3.5, "tier": "gold", "axes": { "growth": 4, "earningQuality": 3.5, "leverage": 5, "diversification": 2, "habit": 4 } }, "netAsset": 551122158, "financialAsset": 35782158,
         "breakdown": {"realEstate": 535840000, "stocks": 14392158, "crypto": 6990000, "cash": 14400000, "loans": 20500000, "tenantDeposit": 0},
         "fx": {"USD": 1400, "JPY": 925}, "fxBase": {"USD": 6625528, "JPY": 0},
         "cost": {"total": 532705000, "stock": 12305000, "crypto": 6000000, "realEstate": 500000000} }
