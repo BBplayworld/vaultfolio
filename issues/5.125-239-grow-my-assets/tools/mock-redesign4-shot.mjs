@@ -8,7 +8,7 @@ const css = html.match(/<style id="mk-style">([\s\S]*?)<\/style>/)[1]; const js 
 const b = await chromium.launch({ proxy });
 const jobs = [ // [이름, 폭, 높이, 옵션, fullPage, 요소 선택자]
   ["390-first", 390, 844, {}, false, null], ["390-review", 390, 844, {}, false, '[data-mk="review"]'], ["390-card", 390, 844, { open: "Apple" }, false, '[data-mk="list"]'],
-  ["390-full", 390, 844, { open: "Apple" }, true, null], ["320-first", 320, 844, {}, false, null], ["1280", 1280, 900, {}, false, null], ["1280-full", 1280, 900, { open: "Apple" }, true, null],
+  ["390-full", 390, 844, { open: "Apple" }, true, null], ["320-first", 320, 844, {}, false, null], ["1280", 1280, 900, {}, false, null], ["1280-full", 1280, 900, { open: "Apple" }, true, null], ["390-loss-inject", 390, 844, { loss: true }, true, null],
 ];
 for (const [name, W, H, opts, full, sel] of jobs) {
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, colorScheme: "dark", isMobile: W < 700, hasTouch: W < 1100 });
