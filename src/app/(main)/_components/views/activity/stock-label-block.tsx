@@ -397,9 +397,10 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
         </span>
         {row.due && <span data-testid="grow-row-due" className={`whitespace-nowrap text-right text-xs ${DUE_TEXT}`}>점검 차례</span>}
       </button>
-      <div id={sheetId} {...(open ? {} : { inert: true, "aria-hidden": true })} className={`${FOLD} motion-safe:duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+      {/* 행 버튼과 같은 폭(-mx-2)은 접힘 래퍼에 준다 — overflow-hidden 안쪽에 두면 좌우가 잘린다 */}
+      <div id={sheetId} {...(open ? {} : { inert: true, "aria-hidden": true })} className={`-mx-2 ${FOLD} motion-safe:duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
-          <div className="-mx-2 mb-2 rounded-b-[10px] bg-foreground/6 px-3 pb-3">{open && children}</div>
+          <div className="mb-2 rounded-b-[10px] bg-foreground/6 px-3 pb-3">{open && children}</div>
         </div>
       </div>
     </li>

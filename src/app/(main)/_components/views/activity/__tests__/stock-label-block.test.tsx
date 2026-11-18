@@ -145,7 +145,7 @@ describe("② 내 종목", () => {
     expect(text(html)).not.toMatch(/\d\/5|재확인 차례/);
   });
   it("점검 한 장은 닫혀 있다(inert), 열린 행이 없으면 내용도 그리지 않는다", () => {
-    expect(html.match(/inert=""[^>]*class="grid[^"]*grid-rows-\[0fr\]/g)!.length).toBeGreaterThanOrEqual(6);
+    expect(html.match(/inert=""[^>]*class="[^"]*grid-rows-\[0fr\]/g)!.length).toBeGreaterThanOrEqual(6);
     expect(html).not.toContain('data-testid="grow-sheet"');
   });
   it("첫 사용자: `아직 안 정함 N · 눌러서 정해요`, 빈 묶음은 머리째 숨김", () => {
