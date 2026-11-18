@@ -1,0 +1,198 @@
+<!doctype html>
+<!-- #239 v5.125 재설계 3차 시각안 목업(ui-designer, 2026-11-18). 코드 수정 0, 데모 값만 사용.
+     단독으로 열어도 보이고(아래 .mk-standalone 토큰), preview 화면에 주입하면 앱의 실제 토큰·폰트(var(--card) 등)를 쓴다.
+     주입: tools/mock-redesign3-shot.mjs 가 mk-style 스타일과 mk-script 스크립트를 꺼내 renderMock(root, opts)를 부른다. -->
+<html lang="ko" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>내 자산 불리기 — 재설계 3차 시각안</title>
+<style id="mk-style">
+/* 단독 열람용 토큰(앱 다크 토큰 값 그대로). 주입 시에는 앱의 :root/.dark 변수가 이긴다 */
+.mk-standalone { --background: oklch(0.16 0.010 265); --foreground: oklch(0.965 0.004 265); --card: oklch(0.225 0.012 265); --muted: oklch(0.31 0.014 265); --muted-foreground: oklch(0.74 0.016 265); --border: oklch(1 0 0 / 10%); --brand: #5b6fbf;
+  background: var(--background); color: var(--foreground); font-family: Pretendard, "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; margin: 0; padding: 16px; }
+.mk { --up: oklch(71.2% 0.194 13.428); /* rose-400 = 이익 */ --down: oklch(70.7% 0.165 254.624); /* blue-400 = 손실 */
+  display: flex; flex-direction: column; gap: 20px; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.mk * { box-sizing: border-box; }
+.mk-sec { background: var(--card); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+.mk-muted { color: var(--muted-foreground); }
+.mk-up { color: var(--up); } .mk-down { color: var(--down); }
+.mk-h { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; line-height: 24px; }
+.mk-h svg { width: 20px; height: 20px; color: var(--muted-foreground); flex-shrink: 0; }
+.mk-i { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid oklch(74.6% 0.16 232.661 / 0.7); color: oklch(74.6% 0.16 232.661 / 0.7); font-size: 10px; font-weight: 700; line-height: 1; }
+
+/* ① 결론 카드 — 큰 숫자 1개 + 보조 최소 */
+.mk-hero-label { font-size: 14px; line-height: 20px; display: flex; align-items: center; gap: 6px; }
+.mk-hero-num { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+.mk-hero-num b { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.02em; }
+.mk-hero-num span { font-size: 17px; font-weight: 700; }
+.mk-next { border-top: 1px solid var(--border); padding-top: 12px; display: grid; grid-template-columns: 40px 1fr; row-gap: 6px; column-gap: 8px; font-size: 14px; line-height: 20px; align-items: baseline; }
+.mk-next dt { color: var(--muted-foreground); font-size: 13px; }
+.mk-next dd { margin: 0; min-width: 0; word-break: keep-all; text-wrap: pretty; }
+.mk-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: color-mix(in oklab, var(--muted) 70%, transparent); color: var(--muted-foreground); font-size: 11px; line-height: 18px; vertical-align: 1px; }
+
+/* ② 기준별 점검 */
+.mk-tabs { display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 50%, transparent); }
+.mk-tabs button { all: unset; min-height: 40px; border-radius: 6px; text-align: center; font-size: 14px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-tabs button[aria-selected="true"] { background: color-mix(in oklab, var(--foreground) 15%, transparent); color: var(--foreground); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); }
+.mk-groups { position: relative; display: flex; flex-direction: column; }
+.mk-scale { display: grid; grid-template-columns: 100px 1fr 68px; column-gap: 8px; font-size: 11px; line-height: 16px; height: 16px; }
+.mk-scale > div { position: relative; }
+.mk-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.mk-g { all: unset; display: grid; grid-template-columns: 100px 1fr 68px; column-gap: 8px; align-items: center; min-height: 52px; border-radius: 8px; margin: 0 -8px; padding: 0 8px; cursor: pointer; }
+.mk-g + .mk-g { border-top: 1px solid var(--border); border-radius: 0; }
+.mk-g[aria-pressed="true"] { background: color-mix(in oklab, var(--foreground) 8%, transparent); border-radius: 8px; border-top-color: transparent; }
+.mk-g[aria-pressed="true"] + .mk-g { border-top-color: transparent; }
+.mk-g-name { display: block; font-size: 14px; font-weight: 600; line-height: 20px; word-break: keep-all; }
+.mk-g-sub { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mk-track { position: relative; height: 10px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.mk-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.mk-ref { position: absolute; top: -10px; bottom: -10px; width: 0; border-left: 1.5px dashed color-mix(in oklab, var(--foreground) 55%, transparent); }
+.mk-g-val { text-align: right; }
+.mk-g-val b { display: block; font-size: 15px; line-height: 20px; font-weight: 700; }
+.mk-g-val span { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+/* ③ 종목별 표 */
+.mk-list-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mk-sort { font-size: 13px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-filter { all: unset; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 10px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 12%, transparent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mk-table { display: grid; grid-template-columns: minmax(0, 1fr) 58px 62px 76px; column-gap: 0; }
+.mk-rate-pl { display: none; }
+.mk-th { font-size: 12px; line-height: 16px; color: var(--muted-foreground); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.mk-th.r { text-align: right; }
+.mk-table .mk-th.c-hold, .mk-table .mk-c.mk-hold-col { display: none; }
+.mk-row { display: contents; }
+.mk-row > .mk-c { min-height: 56px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border); }
+.mk-row:last-of-type > .mk-c { border-bottom: 0; }
+.mk-c.r { align-items: flex-end; text-align: right; padding-left: 4px; }
+.mk-th.r { padding-left: 4px; }
+.mk-due { color: oklch(0.87 0.065 274); font-weight: 600; }
+.mk-name { font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-hold { font-size: 12px; line-height: 16px; color: var(--muted-foreground); white-space: nowrap; }
+.mk-rate b { font-size: 14px; line-height: 20px; font-weight: 700; }
+.mk-mini { margin-top: 4px; width: 50px; height: 4px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 7%, transparent); position: relative; overflow: hidden; }
+.mk-mini i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+.mk-pl { font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.mk-chip { all: unset; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 2px; height: 28px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: color-mix(in oklab, var(--muted) 75%, transparent); }
+.mk-chip::after { content: ""; position: absolute; inset: -6px -2px; }
+.mk-chip.none { background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--muted-foreground); font-weight: 500; }
+.mk-chip.due { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--brand) 90%, white 10%); }
+.mk-chip svg { width: 12px; height: 12px; opacity: 0.8; }
+.mk-open { grid-column: 1 / -1; margin: 0 0 12px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 8px; }
+.mk-seg { display: grid; grid-template-columns: repeat(3, 1fr); padding: 2px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 70%, transparent); }
+.mk-seg span { min-height: 40px; display: grid; place-items: center; font-size: 13px; color: var(--muted-foreground); border-radius: 6px; }
+.mk-seg span.on { background: color-mix(in oklab, var(--foreground) 15%, transparent); color: var(--foreground); font-weight: 600; }
+.mk-btn { min-height: 40px; display: grid; place-items: center; border-radius: 8px; background: var(--muted); font-size: 14px; font-weight: 500; }
+.mk-cap { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mk-cycle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-size: 14px; border-top: 1px solid var(--border); margin-top: 4px; }
+
+/* 1024부터 2열: 왼쪽 결론+기준별, 오른쪽 종목 표(보유 기간을 열로 분리) */
+@media (min-width: 1024px) {
+  .mk { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: 20px; }
+  .mk-left { display: flex; flex-direction: column; gap: 20px; }
+  .mk-table { grid-template-columns: minmax(0, 1fr) 120px 96px 104px 108px; column-gap: 0; }
+  .mk-table .mk-th.c-hold { display: block; }
+  .mk-hold { display: none; }
+  .mk-table .mk-c.mk-hold-col { display: flex; font-size: 14px; color: var(--foreground); }
+  .mk-mini { width: 72px; }
+  .mk-name, .mk-rate b { font-size: 15px; }
+}
+@media (max-width: 1023px) { .mk-left { display: contents; } }
+/* 360 미만: 손익 열을 수익률 칸 둘째 줄로 접는다(이름 칸 확보) */
+@media (max-width: 359px) {
+  .mk-table { grid-template-columns: minmax(0, 1fr) 64px 76px; }
+  .mk-table .pl-col { display: none; }
+  .mk-rate-pl { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); font-weight: 400; }
+  .mk-mini { display: none; }
+  .mk-name { white-space: normal; word-break: keep-all; }
+  .mk-g, .mk-scale { grid-template-columns: 88px 1fr 64px; }
+  .mk-tabs button { font-size: 13px; letter-spacing: -0.02em; }
+}
+</style>
+</head>
+<body class="mk-standalone">
+<div id="mk-root"></div>
+<script id="mk-script">
+// 데모 값(redesign.md 3차 목업: 데모 JSON 시세, USD 1,400원, 해외 원가는 매입환율, 삼성전자·TIGER 매수일 제안 반영)
+function renderMock(root, opts = {}) {
+  const STOCKS = [ // 오래 가진 순(매수일 오름차순) — 표 순서의 정본
+    { name: "TIGER 미국S&P500", hold: "2년 2개월", pl: 315000, cost: 1890000, label: "keep" },
+    { name: "삼성전자", hold: "1년 8개월", pl: 585000, cost: 3965000, label: "keep" },
+    { name: "KODEX 200", hold: "9개월", pl: 120000, cost: 1360000, label: null },
+    { name: "SK하이닉스", hold: "6개월", pl: 200000, cost: 750000, label: "check" },
+    { name: "Apple", hold: "6개월", pl: 816300, cost: 2963700, label: "check", due: true },
+    { name: "NVIDIA", hold: "5개월", pl: 276800, cost: 1179200, label: null },
+  ];
+  const by = (names) => STOCKS.filter((s) => names.includes(s.name));
+  const AXES = { // 축 안 순서는 고정(값 순 아님) — ui.md '재설계 3차 시각안' B절
+    hold: { label: "보유 기간", groups: [["1년 이상", ["TIGER 미국S&P500", "삼성전자"]], ["1년 미만", ["KODEX 200", "SK하이닉스", "Apple", "NVIDIA"]]] },
+    etf: { label: "ETF·개별", groups: [["ETF", ["TIGER 미국S&P500", "KODEX 200"]], ["개별 종목", ["삼성전자", "SK하이닉스", "Apple", "NVIDIA"]]] },
+    sector: { label: "핵심 분야", groups: [["AI 및 반도체", ["삼성전자", "SK하이닉스", "NVIDIA"]], ["AI 및 소프트웨어", ["Apple"]], ["ETF/펀드", ["TIGER 미국S&P500", "KODEX 200"]]] },
+    cap: { label: "시가총액", groups: [["대형주", ["삼성전자", "SK하이닉스", "Apple", "NVIDIA"]], ["ETF/펀드", ["TIGER 미국S&P500", "KODEX 200"]]] },
+  };
+  const sum = (arr, k) => arr.reduce((a, s) => a + s[k], 0);
+  const pct = (pl, cost) => (pl / cost) * 100;
+  const fmtPct = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}%`;
+  const man = (w) => `${w > 0 ? "+" : w < 0 ? "−" : ""}${Math.trunc(Math.abs(w) / 10000).toLocaleString("ko-KR")}만원`;
+  const tone = (v) => (v > 0 ? "mk-up" : v < 0 ? "mk-down" : "mk-muted");
+  const totalPl = sum(STOCKS, "pl"), totalCost = sum(STOCKS, "cost"), totalPct = pct(totalPl, totalCost);
+  // 막대 눈금: 네 축 전체·종목 전체에서 공통 하나(탭을 바꿔도 길이 비교가 유지된다). 0은 음수가 없으면 왼쪽 끝
+  const allPcts = [...Object.values(AXES).flatMap((a) => a.groups.map(([, n]) => pct(sum(by(n), "pl"), sum(by(n), "cost")))), ...STOCKS.map((s) => pct(s.pl, s.cost))];
+  const step = 10, hi = Math.max(step, Math.ceil(Math.max(0, ...allPcts) / step) * step), lo = Math.min(0, Math.floor(Math.min(0, ...allPcts) / step) * step);
+  const X = (v) => ((v - lo) / (hi - lo)) * 100;
+  const bar = (v) => { const a = X(Math.min(0, v)), b = X(Math.max(0, v)); return `left:${a}%;width:${Math.max(b - a, 0.8)}%;background:var(${v >= 0 ? "--up" : "--down"})`; };
+  const axis = opts.axis ?? "hold"; const sel = opts.filter ?? null; const open = opts.open ?? null;
+  const ICON = { trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11h8"/><path d="M7 16h12"/><path d="M7 6h3"/></svg>', list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>', down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>', chev: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>' };
+  const groups = AXES[axis].groups.map(([g, n]) => { const ss = by(n); return { g, n: ss.length, pl: sum(ss, "pl"), p: pct(sum(ss, "pl"), sum(ss, "cost")), names: n }; });
+  const ticks = []; for (let t = lo; t <= hi; t += step) ticks.push(t);
+  const rows = sel ? STOCKS.filter((s) => groups.find((x) => x.g === sel)?.names.includes(s.name)) : STOCKS;
+  const chip = (s) => s.due ? `<span class="mk-chip due">점검할${ICON.down}</span>` : s.label === "keep" ? `<span class="mk-chip">오래 둘${ICON.down}</span>` : s.label === "check" ? `<span class="mk-chip">점검할${ICON.down}</span>` : `<span class="mk-chip none">이름표${ICON.down}</span>`;
+  root.innerHTML = `<div class="mk" data-mock="redesign3">
+  <div class="mk-left">
+  <section class="mk-sec" data-mk="hero">
+    <div class="mk-hero-label mk-muted">산 날부터 지금까지 · 내 주식 ${STOCKS.length}종목 <span class="mk-i">i</span></div>
+    <div class="mk-hero-num ${tone(totalPl)}"><b>${man(totalPl)}</b><span>${fmtPct(totalPct)}</span></div>
+    <dl class="mk-next" style="margin:0">
+      <dt>배당</dt><dd>1년 약 17만원<span class="mk-tag">지금 수량 기준 가정</span></dd>
+      <dt>점검</dt><dd>Apple 지금 · SK하이닉스 1월 29일</dd>
+    </dl>
+  </section>
+  <section class="mk-sec" data-mk="axes">
+    <div class="mk-h">${ICON.trend}기준별 점검</div>
+    <div class="mk-tabs" role="tablist">${Object.entries(AXES).map(([k, a]) => `<button role="tab" aria-selected="${k === axis}">${a.label}</button>`).join("")}</div>
+    <div class="mk-groups">
+      <div class="mk-scale mk-muted" aria-hidden="true"><div></div><div><span style="left:0;transform:none">0</span><span style="left:${X(totalPct)}%;top:0;color:var(--foreground);font-weight:600;background:var(--card);padding:0 3px">전체 ${fmtPct(totalPct)}</span></div><div></div></div>
+      ${groups.map((x) => `<button class="mk-g" aria-pressed="${sel === x.g}" data-mk="group">
+        <span><span class="mk-g-name">${x.g}</span><span class="mk-g-sub">${x.n}종목</span></span>
+        <span class="mk-track"><span class="mk-fill" style="${bar(x.p)}"></span><span class="mk-ref" style="left:${X(totalPct)}%"></span></span>
+        <span class="mk-g-val"><b class="${tone(x.p)}">${fmtPct(x.p)}</b><span>${man(x.pl)}</span></span>
+      </button>`).join("")}
+    </div>
+  </section>
+  </div>
+  <section class="mk-sec" data-mk="list">
+    <div class="mk-list-h"><div class="mk-h">${ICON.list}종목별</div>${sel ? `<span class="mk-filter">${sel} · ${rows.length}종목 <span aria-hidden="true">✕</span></span>` : `<span class="mk-sort">오래 가진 순</span>`}</div>
+    <div class="mk-table" role="table">
+      <div class="mk-th">종목<span class="mk-hold" style="font-size:12px"> · 보유 기간</span></div><div class="mk-th r c-hold">보유 기간</div><div class="mk-th r">수익률</div><div class="mk-th r pl-col">손익</div><div class="mk-th r">이름표</div>
+      ${rows.map((s) => { const p = pct(s.pl, s.cost); return `<div class="mk-row" role="row" data-mk="row">
+        <div class="mk-c"><span class="mk-name">${s.name}</span><span class="mk-hold">${s.hold}${s.due ? ' · <span class="mk-due">점검 차례</span>' : ""}</span></div>
+        <div class="mk-c r mk-hold-col" style="justify-content:center">${s.hold}${s.due ? '<span class="mk-due" style="font-size:12px;line-height:16px">점검 차례</span>' : ""}</div>
+        <div class="mk-c r mk-rate"><b class="${tone(p)}">${fmtPct(p)}</b><span class="mk-mini"><i style="${bar(p)}"></i></span><span class="mk-rate-pl">${man(s.pl)}</span></div>
+        <div class="mk-c r pl-col"><span class="mk-pl">${man(s.pl)}</span></div>
+        <div class="mk-c r">${chip(s)}</div>
+      </div>${open === s.name ? `<div class="mk-open" data-mk="open">
+        <div class="mk-seg"><span>오래 둘 자산</span><span class="on">점검할 자산</span><span>정하지 않음</span></div>
+        <div class="mk-btn">오늘 점검했어요</div>
+        <div class="mk-cap">최근 3개월 매매 1건 · 이 앱 기록 · 마지막 점검 4개월 전</div>
+      </div>` : ""}`; }).join("")}
+    </div>
+    <div class="mk-cycle"><span>점검 주기</span><span class="mk-muted" style="display:inline-flex;align-items:center;gap:2px">3개월 ${ICON.chev}</span></div>
+  </section>
+</div>`;
+  // 막대 정합 확인용(측정 스크립트가 읽는다)
+  return { lo, hi, totalPct, groups: groups.map((x) => ({ g: x.g, p: +x.p.toFixed(1), pl: x.pl })), sumPl: totalPl };
+}
+if (document.body.classList.contains("mk-standalone")) renderMock(document.getElementById("mk-root"), Object.fromEntries(new URLSearchParams(location.search)));
+</script>
+</body>
+</html>
