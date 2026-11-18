@@ -1,6 +1,6 @@
 "use client";
 
-// 내 자산 불리기(#239, 5.125 재설계 5차 개선판 5b) — ① 종합 카드(큰 숫자 · 라벨 3행 · 기준 4칸 + 막대 패널) ② 내 종목(묶음 목록 + 점검 한 장).
+// 자산 성적표·불리기(#239, 5.125 재설계 6차)의 종목 점검 칸 — ① 종합 카드(평단 대비 수익 · 라벨 3행 · 기준 4칸 + 막대 패널) ② 내 종목(장기 보유·점검 대상·정하지 않음 묶음 + 점검 한 장).
 // 앱은 내 기록에서 나온 사실(손익·보유 기간·분류)과 내가 정한 조건만 보여 주고, 종목을 고르거나 권하지 않는다.
 //  - 묶음은 오래 둘 → 점검할 → 아직 안 정함 고정. 묶음 안은 점검 차례 → 오래 가진 순(화면에 들어올 때 한 번 정함). 수익률·점수 순 없음
 //  - 손익색은 % 숫자·막대와 큰 합계 금액에만. 주황 없음, brand 계열은 '점검 차례' 글자에만
@@ -58,12 +58,14 @@ const pctTone = (v: number) => (Math.round(v * 10) === 0 ? "text-muted-foregroun
 const wonText = (v: number) => `${Math.round(v) > 0 ? "+" : ""}${formatShortCurrency(Math.round(v))}`;
 
 /** 0 기준 가로 막대 — 이익은 0에서 오른쪽, 손실은 0에서 왼쪽. 눈금은 화면 전체 공통 */
-function ZeroBar({ value, scale, className }: { value: number; scale: { lo: number; hi: number }; className: string }) {
+function ZeroBar({ value, scale, className, fill, zeroTick = false }: { value: number; scale: { lo: number; hi: number }; className: string; fill?: string; zeroTick?: boolean }) {
   const a = scalePos(Math.min(0, value), scale);
   const b = scalePos(Math.max(0, value), scale);
   return (
     <span aria-hidden className={`relative block overflow-hidden rounded-full bg-foreground/7 ${className}`}>
-      <span className={`absolute inset-y-0 rounded-full ${fillTone(value)} motion-safe:transition-[left,width] motion-safe:duration-300`} style={{ left: `${a}%`, width: `${Math.max(b - a, 0.8)}%` }} />
+      <span className={`absolute inset-y-0 rounded-full ${fill ?? fillTone(value)} motion-safe:transition-[left,width] motion-safe:duration-300`} style={{ left: `${a}%`, width: `${Math.max(b - a, 0.8)}%` }} />
+      {/* 음수가 있는 눈금이면 0점에 라벨 없는 1px 세로 눈금 — 막대가 그 점에서 좌우로 자란다(6차 ③) */}
+      {zeroTick && scale.lo < 0 && <span data-testid="grow-zero-tick" className="absolute inset-y-0 w-px -translate-x-1/2 bg-foreground/60" style={{ left: `${scalePos(0, scale)}%` }} />}
     </span>
   );
 }
@@ -74,9 +76,9 @@ function KeepLine({ s }: { s: BoardSummary["keep"] }) {
   if (s.count === 0) return <span className="text-muted-foreground">아직 없어요</span>;
   return (
     <>
-      {s.count}종목 산 날부터 {s.rate === null ? <span className="text-muted-foreground">—</span> : <b className={`font-bold ${pctTone(s.rate)}`}>{pctText(s.rate)}</b>}
+      {s.count}종목 수익률 {s.rate === null ? <span className="text-muted-foreground">—</span> : <b className={`font-bold ${pctTone(s.rate)}`}>{pctText(s.rate)}</b>}
       <span aria-hidden className="text-muted-foreground"> · </span>
-      {s.low === 0 ? "산 날보다 낮은 종목 없음" : s.low === s.count ? <><b className="font-bold">모두</b> 산 날보다 낮음</> : <><b className="font-bold">{s.low}종목</b> 산 날보다 낮음</>}
+      {s.low === 0 ? "평단보다 낮은 종목 없음" : s.low === s.count ? <><b className="font-bold">모두</b> 평단보다 낮음</> : <><b className="font-bold">{s.low}종목</b> 평단보다 낮음</>}
     </>
   );
 }
@@ -96,36 +98,40 @@ function DividendLine() {
   return <span className="text-muted-foreground">올해 예정된 배당이 없어요</span>;
 }
 
-/** 기준 패널 — 공통 눈금 막대, `전체 ±x%` 점선, 묶음을 누르면 아래 목록을 그 묶음으로 거른다 */
-function AxisPanel({ axis, groups, totalRate, scale, filterKey, onGroup }: {
+/**
+ * 기준 패널 — 첫 행 `내 주식 전체`(무채색 막대)와 묶음 행을 같은 눈금으로 나란히. 0·`전체 ±x%` 라벨·점선 없음(6차 ③).
+ * 묶음을 누르면 아래 목록을 그 묶음으로 거른다
+ */
+export function AxisPanel({ axis, groups, total, scale, filterKey, onGroup }: {
   axis: BoardAxis;
   groups: BoardGroup[];
-  totalRate: number;
+  total: { count: number; profit: number; rate: number };
   scale: { lo: number; hi: number };
   filterKey: string | null;
   onGroup: (g: BoardGroup) => void;
 }) {
   const [moreGroups, setMoreGroups] = useState(false);
-  const refPos = scalePos(totalRate, scale);
-  const zeroPos = scalePos(0, scale);
   const visible = moreGroups || groups.length <= VISIBLE_GROUPS + 1 ? groups : groups.slice(0, VISIBLE_GROUPS);
   const hidden = groups.length - visible.length;
   const cols = "grid grid-cols-[6.25rem_minmax(0,1fr)_4.25rem] gap-x-2 max-[359px]:grid-cols-[5.5rem_minmax(0,1fr)_4rem]";
   return (
-    <div data-testid="grow-groups" data-axis={axis} className="border-t border-border pt-2.5 dark:border-border/40">
-      <div aria-hidden className={`${cols} h-4 text-xs text-muted-foreground`}>
-        <span />
-        <span className="relative">
-          <span className={`absolute tabular-nums ${zeroPos > 0 ? "-translate-x-1/2" : ""}`} style={{ left: `${zeroPos}%` }}>0</span>
-          <span data-testid="grow-ref-label" className="absolute -translate-x-1/2 whitespace-nowrap bg-card px-1 font-semibold tabular-nums text-foreground" style={{ left: `${refPos}%` }}>전체 {pctText(totalRate)}</span>
+    <div data-testid="grow-groups" data-axis={axis} className="border-t border-border pt-1 dark:border-border/40">
+      <div data-testid="grow-group-total" data-rate={pctText(total.rate)} data-profit={Math.round(total.profit)} className={`${cols} min-h-13 items-center py-1.5`}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-muted-foreground text-pretty break-keep">내 주식 전체</span>
+          <span className="block text-xs text-muted-foreground tabular-nums">{total.count}종목</span>
         </span>
-        <span />
+        <ZeroBar value={total.rate} scale={scale} className="h-2.5" fill="bg-foreground/40" zeroTick />
+        <span className="text-right tabular-nums">
+          <span className={`block text-base font-bold ${pctTone(total.rate)}`}>{pctText(total.rate)}</span>
+          <span className="block text-xs text-muted-foreground">{wonText(total.profit)}</span>
+        </span>
       </div>
-      <ul className="mt-1">
+      <ul>
         {visible.map((g) => {
           const on = filterKey === g.key;
           return (
-            <li key={g.key} className="border-t border-border first:border-t-0 dark:border-border/40">
+            <li key={g.key} className="border-t border-border dark:border-border/40">
               <button
                 type="button"
                 data-testid="grow-group"
@@ -141,10 +147,7 @@ function AxisPanel({ axis, groups, totalRate, scale, filterKey, onGroup }: {
                   <span className="block text-sm font-semibold text-foreground text-pretty break-keep">{g.label}</span>
                   <span className="block text-xs text-muted-foreground tabular-nums">{g.count}종목</span>
                 </span>
-                <span className="relative block">
-                  <ZeroBar value={g.rate} scale={scale} className="h-2.5" />
-                  <span aria-hidden data-testid="grow-ref-line" className="absolute -inset-y-2.5 w-0 border-l-[1.5px] border-dashed border-foreground/55" style={{ left: `${refPos}%` }} />
-                </span>
+                <ZeroBar value={g.rate} scale={scale} className="h-2.5" zeroTick />
                 <span className="text-right tabular-nums">
                   <span className={`block text-base font-bold ${pctTone(g.rate)}`}>{pctText(g.rate)}</span>
                   <span className="block text-xs text-muted-foreground">{wonText(g.profit)}</span>
@@ -168,8 +171,9 @@ function AxisPanel({ axis, groups, totalRate, scale, filterKey, onGroup }: {
 
 // ─── ② 점검 한 장 ───────────────────────────────────────────────────
 
-const CHOICE_TEXT: Record<StockReviewChoice, string> = { same: "그대로 둠", keep: "오래 둘로", check: "점검할로", none: "정하지 않음으로" };
-const historyText = (r: StockLabelReview) => (r.choice === "same" && r.from === "keep" ? "그대로 오래 둠" : CHOICE_TEXT[r.choice]);
+// 두 묶음 모두 같은 동작(점검 기록)은 같은 낱말 `그대로 두기`(6차 COO 수정 1, C133)
+const CHOICE_TEXT: Record<StockReviewChoice, string> = { same: "그대로 두기", keep: "장기 보유로", check: "점검 대상으로", none: "정하지 않음으로" };
+const historyText = (r: StockLabelReview) => CHOICE_TEXT[r.choice];
 
 export type PlanDraft = { down: string; up: string; months: "" | CycleChoice; memo: string };
 const draftOf = (p: StockLabelPlan | undefined): PlanDraft => ({
@@ -257,15 +261,15 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
         <span className="inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground">내가 정해요<ChevronDown aria-hidden className="size-3.5 rotate-180" /></span>
       </button>
       <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1.5">
-        <span className="text-xs text-muted-foreground">산 날부터</span>
+        <span className="text-xs text-muted-foreground">평단 대비</span>
         <label className={field}>
           <span aria-hidden>−</span>
-          <Input data-testid="grow-plan-down" inputMode="numeric" autoComplete="off" aria-label={`${row.name} 산 날부터 몇 퍼센트 이하에 다시 볼지`} value={draft.down} onChange={(e) => setDraft({ ...draft, down: digits(e.target.value) })} onBlur={() => commit(draft)} onKeyDown={blurOnEnter} className={bare} />
+          <Input data-testid="grow-plan-down" inputMode="numeric" autoComplete="off" aria-label={`${row.name} 평단 대비 몇 퍼센트 이하에 다시 볼지`} value={draft.down} onChange={(e) => setDraft({ ...draft, down: digits(e.target.value) })} onBlur={() => commit(draft)} onKeyDown={blurOnEnter} className={bare} />
           <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">% 이하</span>
         </label>
         <label className={field}>
           <span aria-hidden>+</span>
-          <Input data-testid="grow-plan-up" inputMode="numeric" autoComplete="off" aria-label={`${row.name} 산 날부터 몇 퍼센트 이상에 다시 볼지`} value={draft.up} onChange={(e) => setDraft({ ...draft, up: digits(e.target.value) })} onBlur={() => commit(draft)} onKeyDown={blurOnEnter} className={bare} />
+          <Input data-testid="grow-plan-up" inputMode="numeric" autoComplete="off" aria-label={`${row.name} 평단 대비 몇 퍼센트 이상에 다시 볼지`} value={draft.up} onChange={(e) => setDraft({ ...draft, up: digits(e.target.value) })} onBlur={() => commit(draft)} onKeyDown={blurOnEnter} className={bare} />
           <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">% 이상</span>
         </label>
         <span className="text-xs text-muted-foreground">기간</span>
@@ -311,10 +315,10 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
   const nextIfSame = months === null ? null : monthDayText(addMonthsKst(nowMs, months));
   const plan = label === "check" ? item?.plan : undefined;
   const choices: { choice: StockReviewChoice; text: string }[] = label === "keep"
-    ? [{ choice: "same", text: "그대로 오래 둠" }, { choice: "check", text: "점검할로" }, { choice: "none", text: "정하지 않음" }]
+    ? [{ choice: "same", text: "그대로 두기" }, { choice: "check", text: "점검 대상으로" }, { choice: "none", text: "정하지 않음" }]
     : label === "check"
-      ? [{ choice: "same", text: "그대로 둠" }, { choice: "keep", text: "오래 둘로" }, { choice: "none", text: "정하지 않음" }]
-      : [{ choice: "keep", text: "오래 둘" }, { choice: "check", text: "점검할" }];
+      ? [{ choice: "same", text: "그대로 두기" }, { choice: "keep", text: "장기 보유로" }, { choice: "none", text: "정하지 않음" }]
+      : [{ choice: "keep", text: "장기 보유" }, { choice: "check", text: "점검 대상" }];
   const reason = row.due && row.dueReason
     ? { text: `점검 차례 · ${dueReasonText(row.dueReason)}`, cls: DUE_TEXT }
     : row.checkedToday && row.nextCheckMs !== null
@@ -349,7 +353,7 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
           {label === "check" && (
             <PlanEditor row={row} plan={plan} cycleMonths={labels.cycle.months} open={planOpen} onOpen={onPlanOpen} onSave={(p) => onSavePlan(row, p)} />
           )}
-          {plan && <p data-testid="grow-plan-warn" className="text-xs text-muted-foreground text-pretty break-keep">점검할에서 옮기면 다시 볼 조건과 메모도 지워져요</p>}
+          {plan && <p data-testid="grow-plan-warn" className="text-xs text-muted-foreground text-pretty break-keep">점검 대상에서 빼면 다시 볼 조건과 메모도 지워져요</p>}
           {(label !== null || history.length > 0) && (
             <div data-testid="grow-history">
               <p className="mb-1 text-xs text-muted-foreground tabular-nums">
@@ -360,7 +364,7 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
                   <span aria-hidden className="size-[7px] justify-self-center rounded-full bg-foreground/45" />
                   <span className="whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
                   <span className="truncate">{historyText(r)}</span>
-                  <span className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">그때 산 날부터 <b className={`text-sm font-bold ${pctTone(r.rate)}`}>{pctText(r.rate)}</b></span>
+                  <span className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">그때 수익률 <b className={`text-sm font-bold ${pctTone(r.rate)}`}>{pctText(r.rate)}</b></span>
                 </p>
               ))}
             </div>
@@ -368,7 +372,7 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
         </>
       )}
       <div className="flex min-h-8 items-center justify-between gap-2 border-t border-border pt-2 text-xs text-muted-foreground dark:border-border/40">
-        <span className="tabular-nums text-pretty break-keep">매매 {row.tradeCount}건 · 최근 3개월 이 앱 기록</span>
+        <span className="tabular-nums text-pretty break-keep">최근 3개월 거래 {row.tradeCount}건 · 이 앱 기록</span>
         <button type="button" data-testid="grow-row-open" onClick={() => onOpenPage(row)} className="inline-flex min-h-10 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
           종목 페이지 <ChevronRight aria-hidden className="size-4" />
         </button>
@@ -391,10 +395,18 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
   if (row.score.state !== "none") {
     meta.push({
       key: "score",
-      node: <span data-testid="grow-row-score" data-state={row.score.state} data-score={row.score.state === "score" ? row.score.score : ""}>{row.score.state === "score" ? `점수 ${row.score.score}` : "측정 중"}</span>,
+      node: <span data-testid="grow-row-score" data-state={row.score.state} data-score={row.score.state === "score" ? row.score.score : ""}>{row.score.state === "score" ? `${row.score.score}점` : "측정 중"}</span>,
     });
   }
-  if (row.since) meta.push({ key: "since", node: <span data-testid="grow-row-since" data-kind={row.since.kind}>{row.since.kind === "checked" ? "점검 뒤" : "정한 뒤"} <b className="font-semibold text-foreground">{pctText(row.since.pct)}</b></span> });
+  // 정한 날이 없으면 칸 자체가 없다(`—`·0% 없음). 기준일이 오늘이면 % 대신 `오늘 정함`·`오늘 점검함`
+  if (row.since) {
+    meta.push({
+      key: "since",
+      node: row.since.today
+        ? <span data-testid="grow-row-since" data-kind={row.since.kind} data-today="true">{row.since.kind === "checked" ? "오늘 점검함" : "오늘 정함"}</span>
+        : <span data-testid="grow-row-since" data-kind={row.since.kind}>{row.since.kind === "checked" ? "점검일 대비" : "정한 날 대비"} <b className="font-semibold text-foreground">{pctText(row.since.pct)}</b></span>,
+    });
+  }
   if (row.dropNote) meta.push({ key: "drop", node: <span data-testid="grow-row-drop">{row.dropNote}</span> });
   return (
     <li data-testid="grow-row" data-key={row.key} data-ticker={row.labelKey ?? ""} data-label={row.labelState} data-due={row.due ? "true" : "false"}>
@@ -403,7 +415,7 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
         data-testid="grow-row-toggle"
         aria-expanded={open}
         aria-controls={sheetId}
-        aria-label={`${row.name}, 보유 ${row.holdText}, 산 날부터 ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
+        aria-label={`${row.name}, 보유 ${row.holdText}, 평단 대비 수익률 ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
         onClick={onToggle}
         className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_3.625rem_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[359px]:grid-cols-[minmax(0,1fr)_3rem_3.625rem_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
       >
@@ -428,12 +440,16 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
   );
 }
 
-/** 불리기 블록. 표시할 주식 종목이 없으면 아무것도 그리지 않는다 */
-export function StockLabelBlock() {
+/**
+ * 불리기 블록. 표시할 주식 종목이 없으면 아무것도 그리지 않는다.
+ * store = 화면(asset-report-view)이 같은 저장소 값으로 세그먼트를 그릴 때 넘기는 훅 결과 — 블록에서 고른 값이 세그먼트에 바로 반영된다
+ */
+export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockLabels> } = {}) {
   const { assetData, exchangeRates } = useAssetData();
   const { navigate } = useAssetNavigation();
   const setStockPageTarget = useStockPageStore((s) => s.setTarget);
-  const { labels, ready, record, setPlan, setCycle } = useStockLabels();
+  const own = useStockLabels();
+  const { labels, ready, record, setPlan, setCycle } = store ?? own;
   const [now] = useState(() => Date.now());
   const [openAxis, setOpenAxis] = useState<BoardAxis | null>(null);
   const [filter, setFilter] = useState<{ axis: BoardAxis; key: string } | null>(null);
@@ -525,11 +541,10 @@ export function StockLabelBlock() {
       {/* ① 종합 카드 */}
       <section data-testid="grow-total-card" className={`min-w-0 ${SECTION}`}>
         <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-          <span>산 날부터 지금까지 · 내 주식 {rows.length}종목</span>
+          <span>평단 대비 수익 · 내 주식 {rows.length}종목</span>
           <span data-screenshot-hide className="inline-flex">
             <InfoHint summary="판 종목의 손익은 넣지 않아요.">
-              <p className="text-pretty break-keep">지금 가진 종목을 산 날부터 지금까지 손익이에요. %는 손익을 산 금액으로 나눈 값이고, 상세 › 주식 &apos;전체&apos;의 손익과 같은 값이에요.</p>
-              <p className="text-pretty break-keep">정한 뒤 %는 오래 둘·점검할로 정한 날 가격부터, 점검 뒤 %는 마지막으로 그대로 둔 날 가격부터 지금까지예요.</p>
+              <p className="text-pretty break-keep">수익률은 평단 대비예요. 지금 가격이 내가 산 평균 가격보다 얼마나 오르내렸는지예요. 상세 › 주식 &apos;전체&apos;의 손익과 같은 값이에요.</p>
               <p className="text-pretty break-keep">배당은 올해 지급·예정 배당을 지금 가진 수량으로 계산한 가정이에요. 실제로 받는 금액과 다를 수 있어요.</p>
             </InfoHint>
           </span>
@@ -542,13 +557,13 @@ export function StockLabelBlock() {
         ) : (
           <p data-testid="grow-total" data-state="unpriced" className="text-sm text-muted-foreground text-pretty break-keep">시세를 불러오면 합계가 보여요.</p>
         )}
-        {summary.first && <p data-testid="grow-guide" className="text-sm text-pretty break-keep">종목을 누르면 오래 둘·점검할을 정할 수 있어요</p>}
-        <dl data-testid="grow-summary" className="grid grid-cols-[3.25rem_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1.5 text-sm">
+        {summary.first && <p data-testid="grow-guide" className="text-sm text-pretty break-keep">종목을 누르면 장기 보유·점검 대상을 정할 수 있어요</p>}
+        <dl data-testid="grow-summary" className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1.5 text-sm">
           {!summary.first && (
             <>
-              <dt className="text-xs text-muted-foreground">오래 둘</dt>
+              <dt className="text-xs text-muted-foreground">장기 보유</dt>
               <dd data-testid="grow-summary-keep" className="min-w-0 tabular-nums break-keep"><KeepLine s={summary.keep} /></dd>
-              <dt className="text-xs text-muted-foreground">점검할</dt>
+              <dt className="text-xs text-muted-foreground">점검 대상</dt>
               <dd data-testid="grow-summary-check" className="min-w-0 tabular-nums break-keep"><CheckLine s={summary.check} /></dd>
             </>
           )}
@@ -584,7 +599,7 @@ export function StockLabelBlock() {
               </p>
             )}
             {openAxis && axes.some((a) => a.value === openAxis) && (
-              <AxisPanel key={openAxis} axis={openAxis} groups={axisGroups[openAxis]} totalRate={total.rate} scale={scale} filterKey={activeFilter && filter?.axis === openAxis ? activeFilter.key : null} onGroup={onGroup} />
+              <AxisPanel key={openAxis} axis={openAxis} groups={axisGroups[openAxis]} total={{ count: rows.length, profit: total.profit, rate: total.rate }} scale={scale} filterKey={activeFilter && filter?.axis === openAxis ? activeFilter.key : null} onGroup={onGroup} />
             )}
           </>
         )}
@@ -595,20 +610,22 @@ export function StockLabelBlock() {
         <div className="flex min-h-7 items-center justify-between gap-2">
           <SectionHeader icon={List} title="내 종목">
             <span data-testid="grow-score-hint" data-screenshot-hide className="inline-flex">
-              <InfoHint summary="점수는 보유 기간 대비 성과를 5점 만점으로 매긴 거예요.">
+              <InfoHint summary="점수는 보유 기간 대비 수익을 5점 만점으로 매긴 거예요.">
                 {/* 괄호 뒤 조사 금지(C114), 팝오버 높이를 줄이려 기준표는 한 문단 */}
-                <p className="text-pretty break-keep">산 날부터 지금까지 수익률을 1년 기준 연 환산 수익률로 바꿔 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
+                <p className="text-pretty break-keep">평단 대비 수익률을 1년 기준 연 환산 수익률로 바꿔 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
                 {/* 구간표 — 2열 격자(5점|4점 / 3점|2점 / 1점), 칸 높이 같음, 가운뎃점 없음(ui-review 재검수) */}
                 <ul data-testid="grow-score-bands" className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
                   {HOLD_SCORE_BANDS.map((b) => (
                     <li key={b.score} className="whitespace-nowrap">{b.score}점 {b.min === null ? "0% 미만" : `${b.min}% 이상`}</li>
                   ))}
                 </ul>
-                <p className="text-pretty break-keep">{Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 측정 중이에요. 짧게 가진 종목일수록 몇 달의 변동이 점수에 크게 반영돼요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
+                <p className="text-pretty break-keep">측정 중은 보유 기간이 {Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목이에요. 짧게 가진 종목일수록 몇 달의 변동이 점수에 크게 반영돼요. 보유 기간은 처음 매수한 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
+                <p className="text-pretty break-keep">정한 날 대비는 장기 보유·점검 대상으로 정한 날의 가격부터, 점검일 대비는 마지막으로 그대로 두기를 누른 날의 가격부터 지금까지예요.</p>
+                <p className="text-pretty break-keep">장기 보유·점검 대상은 내가 정한 묶음이에요. 보유 기간과는 따로예요.</p>
               </InfoHint>
             </span>
           </SectionHeader>
-          <span className="whitespace-nowrap text-sm text-muted-foreground">산 날부터</span>
+          <span className="whitespace-nowrap text-sm text-muted-foreground">평단 대비 수익률</span>
         </div>
         <div data-testid="grow-buckets" className="flex flex-col gap-3">
           {buckets.map((b) => (
@@ -647,7 +664,7 @@ export function StockLabelBlock() {
             onClick={() => setCycleOpen(!cycleOpen)}
             className="flex min-h-11 w-full items-center justify-between text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            <span>점검할 기본 주기</span>
+            <span>점검 주기</span>
             <span className="inline-flex items-center gap-0.5 text-muted-foreground">
               {labels.cycle.months === null ? "정하지 않음" : `${labels.cycle.months}개월`}
               <ChevronRight aria-hidden className={`size-4 motion-safe:transition-transform motion-safe:duration-200 ${cycleOpen ? "rotate-90" : ""}`} />
@@ -659,12 +676,12 @@ export function StockLabelBlock() {
                 <InlineSelector<CycleChoice>
                   fullWidth
                   tight
-                  ariaLabel="점검할 기본 주기"
+                  ariaLabel="점검 주기"
                   value={labels.cycle.months === null ? null : (`${labels.cycle.months}` as CycleChoice)}
                   onChange={(v) => setCycle(Number(v) as StockLabelCycleMonths)}
                   options={CYCLE_OPTIONS}
                 />
-                <p data-testid="grow-cycle-caption" className="mt-1.5 text-xs text-muted-foreground text-pretty break-keep">다시 볼 조건에 기간을 정하지 않은 점검할 종목은 이 기간이 지나면 점검 차례로 보여요.</p>
+                <p data-testid="grow-cycle-caption" className="mt-1.5 text-xs text-muted-foreground text-pretty break-keep">다시 볼 조건에 기간을 정하지 않은 점검 대상은 이 기간이 지나면 점검 차례로 보여요.</p>
               </div>
             </div>
           </div>

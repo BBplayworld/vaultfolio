@@ -115,22 +115,26 @@ describe("금지 단어 0(AC-13)", () => {
     const hub = read("performance-hub.tsx");
     const card = hub.slice(hub.indexOf('data-testid="hub-card-report"'));
     for (const w of FORBIDDEN) expect(visibleText(card), w).not.toContain(w);
-    expect(card).toContain("내 기준으로 지키고, 내가 점검해요");
-    // 재설계 3차(11/18 오케스트레이터 판단): 둘째 줄은 무게 대신 결론 카드와 같은 공용 합계 한 줄. 묶음별·이름표별 값 없음(대표: 합계만)
-    expect(card).not.toMatch(/formatPriceByMode|모든 자산|투입 대비|오래 둘 자산이 내 주식의|pctText|weights/);
-    expect(card).toContain('산 날부터<span className="max-[359px]:hidden"> 지금까지</span>');
-    expect(card).toContain('data-kind="total"');
-    expect(hub).toContain("computeStockTotals(active, exchangeRates)");
-    expect(card.match(/getProfitLossColor\(/g)).toHaveLength(1); // 손익색은 금액·% 한 곳
-    expect(card).toContain("primaryClassName={ASSET_THEME.text.default}"); // 큰 값(이름표 개수·행동 문구)은 본문색 그대로
+    // 6차(11/18): 메뉴 통합 — 제목·설명, 큰 값 = 성적표가 기록한 최신 등급(재계산 없음), 둘째 줄 = 점검 차례 수(불리기 화면과 같은 boardStatus)
+    expect(card).toContain('title="자산 성적표·불리기"');
+    expect(card).toContain('description="종합 등급과 종목 점검을 한곳에서"');
+    expect(hub).toContain("const latestGrade = useLatestAssetGrade();");
+    expect(card).toContain("{tierLabel(latestGrade.tier)}");
+    expect(hub).toContain("boardStatus(buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []))");
+    expect(visibleText(card)).toContain("점검 차례 <span");
+    expect(visibleText(card)).toContain("장기 보유·점검 대상 정하기");
+    expect(card).not.toMatch(/formatPriceByMode|모든 자산|투입 대비|산 날부터|pctText|weights|computeStockTotals/);
+    expect(card.match(/getProfitLossColor\(/g)).toBeNull(); // 손익 금액 줄은 화면 안 결론 카드로 옮겼다
+    expect(card).toContain("primaryClassName={ASSET_THEME.text.default}"); // 큰 값 숫자는 본문색, 등급 낱말만 등급 색
+    expect(card).toContain('onClick={() => { resetReportTab(); go("report"); }}'); // 허브는 기본 칸(종목 점검)으로
   });
   it("새 소식 1줄·기능 목록 이름", () => {
     const entry = WHATS_NEW.find((e) => e.id === "20261117-01")!;
-    expect(entry.title).toBe("성과에 '내 자산 불리기'가 생겼어요");
+    expect(entry.title).toBe("성과에 '자산 성적표·불리기'가 생겼어요");
     expect(entry.featureId).toBe("report");
     const feature = APP_FEATURES.find((f) => f.id === "report")!;
-    expect(feature.title).toBe("내 자산 불리기");
-    expect(feature.description).toBe("성과 탭에서 보유 주식을 오래 둘·점검할로 정하고 자산 성적표를 확인하세요.");
+    expect(feature.title).toBe("자산 성적표·불리기");
+    expect(feature.description).toBe("성과 탭에서 종합 등급을 보고, 보유 주식을 장기 보유·점검 대상으로 나눠 기록해요.");
     expect(feature.target).toEqual({ type: "activity", tab: "report" });
     for (const w of FORBIDDEN) expect(`${entry.title}${entry.body}${feature.title}${feature.description}`, w).not.toContain(w);
   });
@@ -173,7 +177,7 @@ describe("재설계 3차 금지어·금지 형식", () => {
   it("새 소식 본문에 금지어가 없고, 지금 화면이 보여 주는 것을 말한다(48자 이하)", () => {
     const body = WHATS_NEW.find((e) => e.id === "20261117-01")!.body!;
     for (const w of [...FORBIDDEN, ...REDESIGN_FORBIDDEN]) expect(body, w).not.toContain(w);
-    expect(body).toBe("산 날부터 손익과 점수를 보고, 오래 둘·점검할을 내 조건으로 다시 봐요");
+    expect(body).toBe("종합 등급과 종목 점검을 한곳에서 보고, 장기 보유·점검 대상은 내가 정해요");
     expect([...body].length).toBeLessThanOrEqual(48);
   });
   it("화면 제목 도움말은 1문단(a2fb703)", () => {
@@ -186,7 +190,10 @@ describe("재설계 3차 금지어·금지 형식", () => {
     expect(scoreHint).toContain("HOLD_SCORE_BANDS.map");
     expect(scoreHint).toContain("측정 중");
     expect(scoreHint).toContain("연 환산");
-    expect(scoreHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(2);
+    expect(scoreHint.match(/<p className="text-pretty break-keep">/g)).toHaveLength(4); // 6차: 점수·측정 중 + 정한 날·점검일 대비 정의 + 묶음 ≠ 보유 기간
+    expect(scoreHint).toContain("5점 만점");
+    expect(scoreHint).toContain("장기 보유·점검 대상은 내가 정한 묶음이에요. 보유 기간과는 따로예요.");
+    expect(scoreHint).toContain("정한 날 대비는 장기 보유·점검 대상으로 정한 날의 가격부터, 점검일 대비는 마지막으로 그대로 두기를 누른 날의 가격부터 지금까지예요.");
     // 괄호 뒤 조사로 줄이 끊기지 않게 문장에 괄호를 쓰지 않는다(C114) — JSX 표현식을 뺀 글자만 본다
     let plain = scoreHint;
     for (let prev = ""; prev !== plain;) { prev = plain; plain = plain.replace(/\{[^{}]*\}/g, ""); }
@@ -207,6 +214,7 @@ describe("재설계 3차 금지어·금지 형식", () => {
       "app/(main)/_components/header-menu/settings-page.tsx",
       "app/(main)/_components/preview/demo-snapshot-rebase.tsx", // 데모·체험 이름표 정한 날 가격 재기준(5.125)
       "app/(main)/_components/preview/preview-gate.tsx",
+      "app/(main)/_components/views/activity/asset-report-view.tsx", // 6차 세그먼트 둘째 줄(블록과 같은 저장소 값)
       "app/(main)/_components/views/activity/performance-hub.tsx",
       "app/(main)/_components/views/activity/stock-label-block.tsx",
       "hooks/use-stock-labels.ts",
@@ -279,11 +287,11 @@ describe("재설계 4·5차 금지어 — 불리기 블록·표시 값·허브 �
   it.each(R45_FORBIDDEN)("%s 0건", (w) => {
     for (const [name, text] of texts) expect(text, `${name}: ${w}`).not.toContain(w);
   });
-  it("손실은 '산 날보다 낮음' 사실형으로만, 차례 이유는 `…에 닿았어요`·`…지났어요` 사실형", () => {
+  it("손실은 '평단보다 낮음' 사실형으로만, 차례 이유는 `…에 닿았어요`·`…지났어요` 사실형", () => {
     const board = texts[1][1];
     expect(board).toContain("이하에 닿았어요");
     expect(board).toContain("이상에 닿았어요");
-    expect(visibleText(read("stock-label-block.tsx"))).toContain("산 날보다 낮은 종목 없음");
+    expect(visibleText(read("stock-label-block.tsx"))).toContain("평단보다 낮은 종목 없음");
   });
   it("메모는 점검 한 장 입력 칸에만 — 캡처 숨김 칸 안, 링크 변환 없음, 카드·허브·새 소식에 메모 값 없음", () => {
     const block = read("stock-label-block.tsx");
@@ -297,5 +305,42 @@ describe("재설계 4·5차 금지어 — 불리기 블록·표시 값·허브 �
     expect(block.slice(formStart, formEnd)).toContain('plan?.memo ? "메모" : null');
     expect(block).not.toMatch(/href=|<a |linkify|dangerouslySetInnerHTML/);
     expect(hub).not.toMatch(/\.plan\b|memo/);
+  });
+});
+
+// 6차(11/18 대표 지시 ②·④) — 어색한 낱말을 일상어로(ui.md 용어표). 옛 낱말은 화면 문자열에 0건
+const R6_OLD = ["오래 둘", "오래 둠", "점검할", "아직 안 정함", "산 날부터", "산 날보다", "정한 뒤", "점검 뒤", "그대로 둠", "매매 ", "내 자산 불리기", "점수 "];
+
+describe("재설계 6차 — 옛 낱말 0건, 새 용어·정의 문장", () => {
+  const view = read("asset-report-view.tsx");
+  const hub = read("performance-hub.tsx");
+  const entry = WHATS_NEW.find((e) => e.id === "20261117-01")!;
+  const feature = APP_FEATURES.find((f) => f.id === "report")!;
+  const texts: [string, string][] = [
+    ["블록", visibleText(read("stock-label-block.tsx"))],
+    ["판 값", visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-board.ts"), "utf8"))],
+    ["허브 카드", visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')))],
+    ["화면 제목·도움말", view.slice(view.indexOf('data-testid="grow-title"'), view.indexOf("</CardTitle>"))],
+    ["세그먼트", visibleText(view.slice(view.indexOf('data-testid="report-tabs"'), view.indexOf('data-testid="report-panel-grade"')))],
+    ["세그먼트 둘째 줄", visibleText(view.slice(view.indexOf("const growSub"), view.indexOf("const growSub") + 400))],
+    ["새 소식", `${entry.title}${entry.body}`],
+    ["기능 목록", `${feature.title}${feature.description}`],
+  ];
+  it.each(R6_OLD)("'%s' 0건", (w) => {
+    for (const [name, text] of texts) expect(text, `${name}: ${w}`).not.toContain(w);
+  });
+  it("새 용어가 정해진 자리에 있다 — 묶음·버튼·수익률 정의", () => {
+    const block = texts[0][1];
+    for (const w of ["평단 대비 수익 · 내 주식", "평단 대비 수익률", "정한 날 대비", "점검일 대비", "오늘 정함", "평단보다 낮은 종목 없음", "점검 대상에서 빼면", "최근 3개월 거래", "그때 수익률", "수익률은 평단 대비예요.", "내 주식 전체"]) expect(block, w).toContain(w);
+    expect(block.match(/"그대로 두기"/g)!.length).toBeGreaterThanOrEqual(3); // 두 묶음 버튼 + 기록 줄 — 같은 낱말(COO 수정 1)
+    expect(block).not.toMatch(/계속 장기 보유|장기 보유하세요/);
+    const board = texts[1][1];
+    for (const w of ['"장기 보유"', '"점검 대상"', '"정하지 않음"', "점검 대상에서 뺌"]) expect(board, w).toContain(w);
+    expect(texts[5][1]).toContain("종목 · 정하기 전"); // 첫 사용자 세그먼트(사업 수정 1)
+  });
+  it("기준 패널 — `0`·`전체 ±x%` 라벨·점선 기준선이 없고, 0점 눈금은 라벨 없는 1px", () => {
+    const block = read("stock-label-block.tsx");
+    expect(block).not.toMatch(/grow-ref-label|grow-ref-line|border-dashed|>전체 \{/);
+    expect(block).toContain('data-testid="grow-zero-tick"');
   });
 });

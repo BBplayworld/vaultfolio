@@ -21,10 +21,10 @@ vi.mock("@/hooks/use-stock-labels", () => ({
 vi.mock("../performance-hub", () => ({ useDividendAnnualTotals: () => h.div }));
 vi.mock("../../../layout/navigation/navigation-context", () => ({ useAssetNavigation: () => ({ navigate: () => {} }) }));
 
-import { planDraftDirty, planFromDraft, ReviewSheet, StockLabelBlock, type PlanDraft } from "../stock-label-block";
+import { AxisPanel, planDraftDirty, planFromDraft, ReviewSheet, StockLabelBlock, type PlanDraft } from "../stock-label-block";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { buildBoardRows } from "@/lib/asset/grow-board";
+import { boardScale, buildAxisGroups, buildBoardRows } from "@/lib/asset/grow-board";
 
 const ago = (n: number) => new Date(Date.now() - n * 86_400_000 + 9 * 3_600_000).toISOString().slice(0, 10);
 const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
@@ -69,7 +69,7 @@ describe("① 종합 카드", () => {
     expect(Number(attr(card, "data-profit"))).toBe(Math.round(t.totalProfit));
     expect(attr(card, "data-rate")).toBe(`${t.totalProfitRate > 0 ? "+" : ""}${t.totalProfitRate.toFixed(1)}%`);
     expect(card).toMatch(/text-rose-|text-blue-/);
-    expect(text(html)).toContain("산 날부터 지금까지 · 내 주식 6종목");
+    expect(text(html)).toContain("평단 대비 수익 · 내 주식 6종목");
   });
   it("시세 없는 종목이 있으면 합계 대신 안내, 기준 4칸 숨김, 그 행은 —", () => {
     const html = render([...SIX.slice(0, 2), st("z", "ZZZ", 1, 100, 0)], mk({}));
@@ -87,16 +87,16 @@ describe("① 종합 카드", () => {
   });
   it("첫 사용자(정한 것 0): 라벨 2행 대신 안내 1줄, 배당 행은 남는다", () => {
     const html = render(SIX, mk({ CCC: { label: null, labeledAt: day(4), at: day(4) } }));
-    expect(text(html.match(/<p data-testid="grow-guide"[^>]*>.*?<\/p>/)![0])).toBe("종목을 누르면 오래 둘·점검할을 정할 수 있어요");
+    expect(text(html.match(/<p data-testid="grow-guide"[^>]*>.*?<\/p>/)![0])).toBe("종목을 누르면 장기 보유·점검 대상을 정할 수 있어요");
     expect(html).not.toMatch(/grow-summary-keep|grow-summary-check/);
     expect(html).toContain('data-testid="grow-next-dividend"');
   });
   const dd = (html: string, id: string) => text(html.match(new RegExp(`<dd data-testid="${id}"[^>]*>(.*?)</dd>`))![1]);
-  it("오래 둘 행 — 늘 수익률 꼴 + 산 날보다 낮은 수(없음 / K종목 / 모두), 문장 본문은 본문색이고 손익색은 %에만", () => {
+  it("장기 보유 행 — 늘 수익률 꼴 + 평단보다 낮은 수(없음 / K종목 / 모두), 문장 본문은 본문색이고 손익색은 %에만", () => {
     const keep = (t: string) => ({ [t]: { label: "keep" as const, labeledAt: day(40), at: day(40) } });
-    expect(dd(render(SIX, mk({ ...keep("BBB"), ...keep("CCC") })), "grow-summary-keep")).toMatch(/^2종목 산 날부터 \+\d+\.\d% · 산 날보다 낮은 종목 없음$/);
-    expect(dd(render(SIX, mk({ ...keep("AAA"), ...keep("BBB") })), "grow-summary-keep")).toMatch(/^2종목 산 날부터 [+-]?\d+\.\d% · 1종목 산 날보다 낮음$/);
-    expect(dd(render(SIX, mk({ ...keep("AAA"), ...keep("FFF") })), "grow-summary-keep")).toMatch(/^2종목 산 날부터 -\d+\.\d% · 모두 산 날보다 낮음$/);
+    expect(dd(render(SIX, mk({ ...keep("BBB"), ...keep("CCC") })), "grow-summary-keep")).toMatch(/^2종목 수익률 \+\d+\.\d% · 평단보다 낮은 종목 없음$/);
+    expect(dd(render(SIX, mk({ ...keep("AAA"), ...keep("BBB") })), "grow-summary-keep")).toMatch(/^2종목 수익률 [+-]?\d+\.\d% · 1종목 평단보다 낮음$/);
+    expect(dd(render(SIX, mk({ ...keep("AAA"), ...keep("FFF") })), "grow-summary-keep")).toMatch(/^2종목 수익률 -\d+\.\d% · 모두 평단보다 낮음$/);
     const html = render(SIX, mk({ ...keep("AAA"), ...keep("BBB") }));
     const keepDd = html.match(/<dd data-testid="grow-summary-keep"[^>]*>(.*?)<\/dd>/)![1];
     expect(keepDd.match(/class="[^"]*text-(rose|blue)-/g)).toHaveLength(1);
@@ -126,10 +126,10 @@ describe("② 내 종목", () => {
     DDD: { label: "check", labeledAt: day(10), at: day(10) },
   }, 3);
   const html = render(SIX, L);
-  it("묶음 고정 순서 오래 둘 → 점검할 → 아직 안 정함, 머리에 개수(묶음 합계 %·금액 없음)", () => {
+  it("묶음 고정 순서 장기 보유 → 점검 대상 → 정하지 않음, 머리에 개수(묶음 합계 %·금액 없음)", () => {
     expect([...html.matchAll(/data-testid="grow-bucket" data-bucket="(\w+)"/g)].map((m) => m[1])).toEqual(["keep", "check", "none"]);
     const heads = [...html.matchAll(/<h3[^>]*>(.*?)<\/h3>/g)].map((m) => text(m[1]));
-    expect(heads).toEqual(["오래 둘2", "점검할2", "아직 안 정함2"]);
+    expect(heads).toEqual(["장기 보유2", "점검 대상2", "정하지 않음2"]);
   });
   it("묶음 안: 점검 차례 → 오래 가진 순. 오래 둘 차례 안에서 산 날보다 낮은 행 먼저(낮은 행에 색·배지 추가 없음)", () => {
     expect(rowsOf(html).map((r) => attr(r, "data-key"))).toEqual(["t:AAA", "t:BBB", "t:CCC", "t:DDD", "t:EEE", "t:FFF"]);
@@ -138,32 +138,32 @@ describe("② 내 종목", () => {
     const aaa = html.match(/<li data-testid="grow-row" data-key="t:AAA"[\s\S]*?<\/li>/)![0];
     expect(aaa).not.toMatch(/destructive|amber|orange|주의|badge/);
   });
-  it("행 2줄: `기간 · 점수 N · 정한 뒤 %`, 오른쪽 `점검 차례`, 모든 행 끝 `›`", () => {
+  it("행 2줄: `기간 · N점 · 정한 날 대비 %`, 오른쪽 `점검 차례`, 모든 행 끝 `›`", () => {
     const aaa = text(html.match(/<li data-testid="grow-row" data-key="t:AAA"[\s\S]*?<\/li>/)![0]);
-    expect(aaa).toMatch(/^종목 AAA-50\.0%2년 2개월·점수 1·정한 뒤 \+25\.0%점검 차례/);
+    expect(aaa).toMatch(/^종목 AAA-50\.0%2년 2개월·1점·정한 날 대비 \+25\.0%점검 차례/);
     expect(text(html.match(/<li data-testid="grow-row" data-key="t:EEE"[\s\S]*?<\/li>/)![0])).toContain("1개월·측정 중");
     expect(html.match(/data-testid="grow-row-toggle"/g)).toHaveLength(6);
     expect(html.match(/<svg[^>]*lucide-chevron-right[^>]*row-span-2/g)).toHaveLength(6);
-    expect(text(html)).not.toMatch(/\d\/5|재확인 차례/);
+    expect(text(html)).not.toMatch(/\d\/5|재확인 차례|점수 \d/);
   });
   it("점검 한 장은 닫혀 있다(inert), 열린 행이 없으면 내용도 그리지 않는다", () => {
     expect(html.match(/inert=""[^>]*class="[^"]*grid-rows-\[0fr\]/g)!.length).toBeGreaterThanOrEqual(6);
     expect(html).not.toContain('data-testid="grow-sheet"');
   });
-  it("첫 사용자: `아직 안 정함 N · 눌러서 정해요`, 빈 묶음은 머리째 숨김", () => {
+  it("첫 사용자: `정하지 않음 N · 눌러서 정해요`, 빈 묶음은 머리째 숨김", () => {
     const first = render(SIX, mk({}));
-    expect([...first.matchAll(/<h3[^>]*>(.*?)<\/h3>/g)].map((m) => text(m[1]))).toEqual(["아직 안 정함6 · 눌러서 정해요"]);
+    expect([...first.matchAll(/<h3[^>]*>(.*?)<\/h3>/g)].map((m) => text(m[1]))).toEqual(["정하지 않음6 · 눌러서 정해요"]);
   });
-  it("손익색은 %·막대·큰 합계에만, 주황·경고색 없음. 목록 머리 오른쪽은 `산 날부터`만(범례 숫자 없음)", () => {
+  it("손익색은 %·막대·큰 합계에만, 주황·경고색 없음. 목록 머리 오른쪽은 `평단 대비 수익률`(범례 숫자 없음)", () => {
     expect(html).not.toMatch(/orange-|amber-|destructive|important/);
-    expect(text(html.match(/<section data-testid="grow-list"[\s\S]*?<\/h2>|<section data-testid="grow-list"[\s\S]*?산 날부터/)![0])).toContain("내 종목");
+    expect(text(html.match(/<section data-testid="grow-list"[\s\S]*?<\/h2>|<section data-testid="grow-list"[\s\S]*?평단 대비 수익률/)![0])).toContain("내 종목");
     expect(html).not.toMatch(/0~\+30%|오래 가진 순/);
   });
-  it("점검할 기본 주기는 맨 아래 설정 줄 1개", () => {
+  it("점검 주기는 맨 아래 설정 줄 1개", () => {
     const h3 = render(SIX, mk({}, 3));
-    expect(text(h3.match(/<button[^>]*data-testid="grow-cycle-row"[^>]*>.*?<\/button>/)![0])).toBe("점검할 기본 주기3개월");
+    expect(text(h3.match(/<button[^>]*data-testid="grow-cycle-row"[^>]*>.*?<\/button>/)![0])).toBe("점검 주기3개월");
     expect(h3.indexOf('data-testid="grow-cycle-row"')).toBeGreaterThan(h3.lastIndexOf('data-testid="grow-row"'));
-    expect(text(render(SIX, mk({})).match(/<button[^>]*data-testid="grow-cycle-row"[^>]*>.*?<\/button>/)![0])).toBe("점검할 기본 주기정하지 않음");
+    expect(text(render(SIX, mk({})).match(/<button[^>]*data-testid="grow-cycle-row"[^>]*>.*?<\/button>/)![0])).toBe("점검 주기정하지 않음");
   });
 });
 
@@ -181,20 +181,20 @@ describe("점검 한 장", () => {
     const t = text(html);
     expect(t).toMatch(/^점검 차례 · 정한 기간 3개월이 지났어요/);
     expect([...html.matchAll(/data-testid="grow-choice-(same|keep|check|none)"/g)].map((m) => m[1])).toEqual(["same", "keep", "none"]);
-    expect(text(html.match(/<button[^>]*data-testid="grow-choice-same"[\s\S]*?<\/button>/)![0])).toMatch(/^그대로 둠다음 점검 \d{1,2}월 \d{1,2}일$/);
+    expect(text(html.match(/<button[^>]*data-testid="grow-choice-same"[\s\S]*?<\/button>/)![0])).toMatch(/^그대로 두기다음 점검 \d{1,2}월 \d{1,2}일$/);
     expect(text(html.match(/<button[^>]*data-testid="grow-plan-summary"[\s\S]*?<\/button>/)![0])).toBe("다시 볼 조건−10% 이하 · 3개월 · 메모");
-    expect(t).toContain("점검할에서 옮기면 다시 볼 조건과 메모도 지워져요");
+    expect(t).toContain("점검 대상에서 빼면 다시 볼 조건과 메모도 지워져요");
     expect(t).toContain("아직 점검 기록이 없어요");
-    expect(t).toContain("매매 0건 · 최근 3개월 이 앱 기록종목 페이지");
+    expect(t).toContain("최근 3개월 거래 0건 · 이 앱 기록종목 페이지");
     // 메모 값은 요약에 없다(표시만)
     expect(t).not.toContain("실적 발표");
   });
-  it("조건이 없으면 `다시 볼 조건 정하기`, 이동 안내 없음. 오래 둘은 조건 없이 `그대로 오래 둠·점검할로·정하지 않음`", () => {
+  it("조건이 없으면 `다시 볼 조건 정하기`, 이동 안내 없음. 장기 보유는 조건 없이 `그대로 두기·점검 대상으로·정하지 않음`(두 묶음 같은 낱말)", () => {
     const html = sheet(CHECK(), "BBB");
     expect(text(html.match(/<button[^>]*data-testid="grow-plan-summary"[\s\S]*?<\/button>/)![0])).toBe("다시 볼 조건 정하기");
     expect(html).not.toContain("grow-plan-warn");
     const keep = sheet(mk({ BBB: { label: "keep", labeledAt: day(40), at: day(40) } }, 3), "BBB");
-    expect([...keep.matchAll(/aria-label="종목 BBB ([^"]+)"/g)].map((m) => m[1])).toEqual(["그대로 오래 둠", "점검할로", "정하지 않음"]);
+    expect([...keep.matchAll(/aria-label="종목 BBB ([^"]+)"/g)].map((m) => m[1])).toEqual(["그대로 두기", "점검 대상으로", "정하지 않음"]);
     expect(keep).not.toContain("grow-plan-summary");
     const unset = sheet(mk({}), "BBB");
     expect([...unset.matchAll(/data-testid="grow-choice-(same|keep|check|none)"/g)].map((m) => m[1])).toEqual(["keep", "check"]);
@@ -212,7 +212,7 @@ describe("점검 한 장", () => {
     expect(text(html)).toContain("기본 3개월");
     expect(text(html)).toContain("내가 정한 조건이에요. 앱이 권하는 값이 아니에요");
   });
-  it("최근 기록: `점검 N번 · 그대로 M번`, 최신 3건, `그때 산 날부터 ±x%`", () => {
+  it("최근 기록: `점검 N번 · 그대로 M번`, 최신 3건, `그때 수익률 ±x%`", () => {
     const L: StockLabels = { ...CHECK(), reviews: [
       { t: "BBB", at: day(20), from: "check", choice: "same", price: 190, rate: 90 },
       { t: "BBB", at: day(60), from: "check", choice: "same", price: 150, rate: 50.04 },
@@ -224,8 +224,8 @@ describe("점검 한 장", () => {
     expect(text(html)).toContain("최근 기록 · 점검 4번 · 그대로 2번");
     const rows = [...html.matchAll(/<p data-testid="grow-history-row"[\s\S]*?<\/p>/g)].map((m) => text(m[0]));
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toMatch(/^\d{1,2}월 \d{1,2}일그대로 둠그때 산 날부터 \+90\.0%$/);
-    expect(rows[2]).toMatch(/점검할로그때 산 날부터 \+20\.0%$/);
+    expect(rows[0]).toMatch(/^\d{1,2}월 \d{1,2}일그대로 두기그때 수익률 \+90\.0%$/);
+    expect(rows[2]).toMatch(/점검 대상으로그때 수익률 \+20\.0%$/);
     // 점검 뒤 % 행 2줄 기준은 마지막 그대로 둠 가격(190)
     expect(text(html)).toMatch(/^다음 점검|^점검 차례|^오늘 점검함/);
   });
@@ -252,5 +252,39 @@ describe("조건 폼 — 입력 중 화면을 벗어나도 저장(ui-review 5b)"
     expect(editor).toContain("useEffect(() => () => flush(), [])");
     expect(editor).toMatch(/if \(wasOpen\.current && !open\) flush\(\)/);
     expect(editor).toContain("if (planDraftDirty(d, saved)) save(planFromDraft(d));");
+  });
+});
+
+describe("6차 — 기준 패널·정한 날 표시", () => {
+  const rates = { USD: 1400, JPY: 9 };
+  const panel = (stocks: Stock[]) => {
+    const rows = buildBoardRows(stocks, rates, mk({}), Date.now());
+    const groups = buildAxisGroups("hold", rows);
+    const t = computeStockTotals(stocks, rates);
+    const scale = boardScale([...groups.map((g) => g.rate), ...rows.flatMap((r) => (r.rate === null ? [] : [r.rate]))]);
+    return renderToStaticMarkup(<AxisPanel axis="hold" groups={groups} total={{ count: rows.length, profit: t.totalProfit, rate: t.totalProfitRate }} scale={scale} filterKey={null} onGroup={() => {}} />);
+  };
+  it("첫 행 `내 주식 전체 · N종목`(무채색 막대), `0`·`전체 ±x%` 라벨과 점선 없음, 손실이 없으면 0점 눈금도 없음", () => {
+    const html = panel([SIX[1], SIX[2], SIX[3]]);
+    const total = html.match(/<div data-testid="grow-group-total"[\s\S]*?<\/div><\/div>|<div data-testid="grow-group-total"[\s\S]*?종목<\/span>/)![0];
+    expect(text(total)).toContain("내 주식 전체3종목");
+    expect(html).toContain("bg-foreground/40");
+    expect(text(html)).not.toMatch(/전체 [+-]|^0/);
+    expect(html).not.toMatch(/border-dashed|grow-ref-/);
+    expect(html).not.toContain("grow-zero-tick");
+  });
+  it("손실이 있으면 막대마다 라벨 없는 1px 0점 눈금", () => {
+    const html = panel(SIX);
+    expect(html.match(/data-testid="grow-zero-tick"/g)!.length).toBe(1 + buildAxisGroups("hold", buildBoardRows(SIX, rates, mk({}), Date.now())).length);
+    expect(html.match(/<span data-testid="grow-zero-tick"[^>]*>/)![0]).toContain("w-px");
+  });
+  it("정한 날이 오늘이면 행 2줄 `오늘 정함`(% 없음), 정한 날이 없으면 칸 자체가 없다", () => {
+    const today = render(SIX, mk({ BBB: { label: "keep", labeledAt: new Date().toISOString(), at: new Date().toISOString(), base: { qty: 50, price: 150 } } }));
+    const bbb = text(today.match(/<li data-testid="grow-row" data-key="t:BBB"[\s\S]*?<\/li>/)![0]);
+    expect(bbb).toContain("오늘 정함");
+    expect(bbb).not.toMatch(/정한 날 대비/);
+    const none = text(render(SIX, mk({ BBB: { label: "keep", labeledAt: day(40), at: day(40) } })).match(/<li data-testid="grow-row" data-key="t:BBB"[\s\S]*?<\/li>/)![0]);
+    expect(none).toMatch(/1년 4개월·5점$/);
+    expect(none).not.toMatch(/—|정한 날|오늘 정함/);
   });
 });

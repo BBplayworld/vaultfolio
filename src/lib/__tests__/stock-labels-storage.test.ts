@@ -283,7 +283,7 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     expect(by("000660").since!.pct).toBeCloseTo(8.571, 2);
     // NVIDIA — 정하지 않음 표식은 개수에 들지 않고, 60일 전 기록이라 행 2줄에 `M월 D일 점검할에서 뺌`
     expect(by("NVDA").labelState).toBe("none");
-    expect(by("NVDA").dropNote).toMatch(/^\d{1,2}월 \d{1,2}일 점검할에서 뺌$/);
+    expect(by("NVDA").dropNote).toMatch(/^\d{1,2}월 \d{1,2}일 점검 대상에서 뺌$/);
     expect(by("069500").dropNote).toBeNull();
     expect(labels.items.AAPL.plan).toEqual({ down: 10, memo: "실적 발표 뒤 다시 보기", at: labels.items.AAPL.at });
   });

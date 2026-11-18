@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Wallet, BadgeDollarSign, Sprout } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
+import { formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
@@ -14,9 +14,13 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
-import { computeStockTotals, groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useStockLabels } from "@/hooks/use-stock-labels";
-import { buildBoardRows, countDueRows } from "@/lib/asset/grow-board";
+import { boardStatus, buildBoardRows } from "@/lib/asset/grow-board";
+import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
+import { tierLabel } from "@/lib/report/asset-grade";
+import { TIER_STYLE } from "./asset-report-view";
+import { resetReportTab } from "./report-tab";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
 import type { SettlementWindow } from "@/lib/report/settlement";
@@ -95,23 +99,15 @@ export function PerformanceHub() {
 
   const go = (tab: ActivityTab) => navigate({ type: "activity", tab });
 
-  // 내 자산 불리기 카드(#239) — 큰 값은 점검 차례 종목 수(없으면 정한 개수). 불리기 화면 행의 '점검 차례'와 같은 판정(같은 함수)
-  // 화면 밖에서 차례를 알리는 유일한 신호다(푸시·홈 팁·알림 0)
+  // 자산 성적표·불리기 카드(#239 6차) — 큰 값 = 성적표가 기록해 둔 최신 등급(재계산 없음, 홈 미니 트로피와 같은 값),
+  // 둘째 줄 = 점검 차례 수(불리기 행 '점검 차례'와 같은 판정). 화면 밖에서 차례를 알리는 유일한 신호다(푸시·홈 팁·알림 0)
   const { labels, ready: labelsReady } = useStockLabels();
+  const latestGrade = useLatestAssetGrade();
   const [growNow] = useState(() => Date.now());
-  const grow = useMemo(() => {
-    const rows = buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []);
-    // 둘째 줄 = 불리기 결론 카드와 같은 공용 합계(산 날부터 지금까지, 상세 › 주식 '전체'와 같은 값). 묶음별 값은 쓰지 않는다(대표: 합계만)
-    const active = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
-    const total = active.length > 0 && active.every((s) => s.currentPrice > 0) ? computeStockTotals(active, exchangeRates) : null;
-    return {
-      hasRows: rows.length > 0,
-      total,
-      keep: rows.filter((r) => r.labelState === "keep").length,
-      check: rows.filter((r) => r.labelState === "check").length,
-      due: countDueRows(rows),
-    };
-  }, [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow]);
+  const grow = useMemo(
+    () => boardStatus(buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? [])),
+    [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow],
+  );
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
   // 창 밖이면 이번 달 진행 중 증감, 첫 달·자산 0건이면 금액 없이 안내. 증감은 결산 Hero와 같은 settlementDelta.
@@ -208,30 +204,27 @@ export function PerformanceHub() {
         <div data-testid="hub-card-report">
         <KpiCard
           icon={Sprout}
-          title="내 자산 불리기"
-          description="내 기준으로 지키고, 내가 점검해요"
-          // 큰 값은 본문색 고정(주황·손익색 금지), 점검 차례 수의 숫자만 indigo(불리기 화면 '점검 차례'와 같은 색). 정한 것이 0개면 행동 문구만
-          primary={!hasAssets || !labelsReady ? undefined : (
-            <span data-testid="hub-report-primary" data-due={grow.due} className="whitespace-nowrap">
-              {!grow.hasRows ? "성적표 보기" : grow.keep + grow.check === 0 ? "오래 둘·점검할 정하기" : grow.due > 0 ? (
-                <>점검 차례 <span className="tabular-nums text-indigo-600 dark:text-indigo-200">{grow.due}종목</span></>
-              ) : `오래 둘 ${grow.keep} · 점검할 ${grow.check}`}
+          title="자산 성적표·불리기"
+          description="종합 등급과 종목 점검을 한곳에서"
+          // 큰 값 = 등급(등급 낱말만 등급 색, 숫자는 본문색). 성적표를 아직 연 적 없으면 행동 문구
+          primary={!hasAssets ? undefined : (
+            <span data-testid="hub-report-primary" data-tier={latestGrade?.tier ?? ""} className="whitespace-nowrap">
+              {latestGrade ? (
+                <><span className={TIER_STYLE[latestGrade.tier].color}>{tierLabel(latestGrade.tier)}</span> <span className="tabular-nums">{latestGrade.overall.toFixed(1)}점</span></>
+              ) : "등급 보기"}
             </span>
           )}
           primaryClassName={ASSET_THEME.text.default}
           secondary={!hasAssets ? (
             <span data-testid="hub-report-secondary" data-kind="empty" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
-          ) : !labelsReady || !grow.hasRows || !grow.total ? null : (
-            // 산 날부터 지금까지 손익 한 줄 — 손익색은 금액·%에만(앱 규약). 시세 없는 종목이 있으면 줄 없음(불리기 결론 카드와 같은 조건)
-            <span data-testid="hub-report-secondary" data-kind="total" data-profit={Math.round(grow.total.totalProfit)} className="whitespace-nowrap text-muted-foreground tabular-nums">
-              {/* 360 미만은 `지금까지`를 빼 한 줄에 둔다(카드 높이 유지, 320 실측 잘림) */}
-              산 날부터<span className="max-[359px]:hidden"> 지금까지</span>{" "}
-              <span className={`font-semibold ${Math.round(grow.total.totalProfitRate * 10) === 0 ? "text-foreground" : getProfitLossColor(grow.total.totalProfit)}`}>
-                {Math.round(grow.total.totalProfit) > 0 ? "+" : ""}{formatShortCurrency(Math.round(grow.total.totalProfit))} ({Math.round(grow.total.totalProfitRate * 10) > 0 ? "+" : ""}{(Math.round(grow.total.totalProfitRate * 10) / 10 || 0).toFixed(1)}%)
-              </span>
+          ) : !labelsReady || grow.kind === "empty" ? null : (
+            <span data-testid="hub-report-secondary" data-kind={grow.kind} data-due={grow.due} className="whitespace-nowrap text-muted-foreground tabular-nums">
+              {grow.kind === "due" ? <>점검 차례 <span className="font-semibold text-indigo-600 dark:text-indigo-200">{grow.due}종목</span></>
+                : grow.kind === "labeled" ? `장기 보유 ${grow.keep} · 점검 대상 ${grow.check}`
+                  : "장기 보유·점검 대상 정하기"}
             </span>
           )}
-          onClick={() => go("report")}
+          onClick={() => { resetReportTab(); go("report"); }} // 허브는 한 입구 — 기본 칸(종목 점검)으로 연다
         />
         </div>
       </div>

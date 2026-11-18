@@ -128,8 +128,8 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: "report",
-    title: "내 자산 불리기",
-    description: "성과 탭에서 보유 주식을 오래 둘·점검할로 정하고 자산 성적표를 확인하세요.",
+    title: "자산 성적표·불리기",
+    description: "성과 탭에서 종합 등급을 보고, 보유 주식을 장기 보유·점검 대상으로 나눠 기록해요.",
     icon: FileBarChart,
     target: { type: "activity", tab: "report" },
   },

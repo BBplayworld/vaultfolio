@@ -94,8 +94,8 @@ export interface BoardRow {
   labelState: GrowLabelState;
   /** 지금 주당 시세(종목 통화) — 시세가 있는 첫 보유 건. 없으면 null */
   nowPrice: number | null;
-  /** 행 2줄 `정한 뒤`/`점검 뒤` % — 오래 둘·점검할만. 기준 가격이 없으면 null */
-  since: { kind: "labeled" | "checked"; pct: number } | null;
+  /** 행 2줄 `정한 날 대비`/`점검일 대비` % — 장기 보유·점검 대상만. 기준 가격이 없으면 null(칸 없음). today = 기준일이 오늘(KST) → `오늘 정함`·`오늘 점검함` */
+  since: { kind: "labeled" | "checked"; pct: number; today: boolean } | null;
   /** 점검 차례 — 점검할 조건·기간, 오래 둘 12개월 재확인 */
   due: boolean;
   dueReason: DueReason | null;
@@ -168,12 +168,12 @@ function dueOf(item: StockLabelItem, rate: number | null, months: number | null,
 
 /** 차례 이유 문장(사실형) — `+25% 이상에 닿았어요` / `정한 기간 3개월이 지났어요` */
 export function dueReasonText(r: DueReason): string {
-  if (r.kind === "down") return `산 날부터 −${r.pct}% 이하에 닿았어요`;
-  if (r.kind === "up") return `산 날부터 +${r.pct}% 이상에 닿았어요`;
+  if (r.kind === "down") return `평단 대비 −${r.pct}% 이하에 닿았어요`;
+  if (r.kind === "up") return `평단 대비 +${r.pct}% 이상에 닿았어요`;
   return `정한 기간 ${r.months}개월이 지났어요`;
 }
 
-const DROP_FROM: Record<string, string> = { keep: "오래 둘에서 뺌", check: "점검할에서 뺌" };
+const DROP_FROM: Record<string, string> = { keep: "장기 보유에서 뺌", check: "점검 대상에서 뺌" };
 
 /** 매수일(YYYY-MM-DD) → 보유 기간. 비었거나 형식이 틀리거나 미래면 null */
 function holdingOf(purchaseDate: string | undefined, nowMs: number): { date: string; days: number; months: number } | null {
@@ -229,8 +229,8 @@ export function buildBoardRows(stocks: Stock[], rates: Rates, labels: StockLabel
       const c = elapsedSince(cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at), nowMs);
       checkedToday = !!c && c.days === 0;
       // '점검 뒤' = 정한 뒤 마지막 '그대로 둠' 기록의 가격, 없으면 '정한 뒤' = 정한 날 가격(base.price)
-      const ref = same ? { kind: "checked" as const, price: same.price } : item.base?.price ? { kind: "labeled" as const, price: item.base.price } : null;
-      if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100 };
+      const ref = same ? { kind: "checked" as const, price: same.price, at: same.at } : item.base?.price ? { kind: "labeled" as const, price: item.base.price, at: item.labeledAt } : null;
+      if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100, today: elapsedSince(ref.at, nowMs)?.days === 0 };
     } else if (labelKey) {
       const last = reviewsOf(labels, labelKey)[0];
       const ms = stockLabelTime(last?.at);
@@ -315,11 +315,23 @@ export function boardSummary(rows: BoardRow[]): BoardSummary {
 /** 점검 차례 종목 수 — 허브 셋째 카드(불리기 화면 행 표시와 같은 판정) */
 export const countDueRows = (rows: BoardRow[]): number => rows.filter((r) => r.due).length;
 
+/**
+ * 허브 셋째 카드 둘째 줄·화면 세그먼트 `종목 점검` 둘째 줄의 상태(6차) — 같은 판정을 두 곳이 쓴다.
+ * due = 점검 차례 있음 / labeled = 정한 것은 있고 차례 0 / first = 정한 것 0 / empty = 주식 행 없음
+ */
+export function boardStatus(rows: BoardRow[]): { kind: "due" | "labeled" | "first" | "empty"; due: number; keep: number; check: number; count: number } {
+  const keep = rows.filter((r) => r.labelState === "keep").length;
+  const check = rows.filter((r) => r.labelState === "check").length;
+  const due = countDueRows(rows);
+  const kind = rows.length === 0 ? "empty" : due > 0 ? "due" : keep + check > 0 ? "labeled" : "first";
+  return { kind, due, keep, check, count: rows.length };
+}
+
 export type BoardBucket = "keep" | "check" | "none";
 export const BOARD_BUCKETS: readonly { value: BoardBucket; label: string }[] = [
-  { value: "keep", label: "오래 둘" },
-  { value: "check", label: "점검할" },
-  { value: "none", label: "아직 안 정함" },
+  { value: "keep", label: "장기 보유" },
+  { value: "check", label: "점검 대상" },
+  { value: "none", label: "정하지 않음" },
 ];
 export const bucketOf = (r: BoardRow): BoardBucket => (r.labelState === "keep" || r.labelState === "check" ? r.labelState : "none");
 

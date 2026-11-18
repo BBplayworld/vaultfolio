@@ -28,6 +28,7 @@ import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
 import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
+import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -547,18 +548,6 @@ function useLast7DailySnapshots() {
     setSnapshots([...all].sort((a, b) => a.date.localeCompare(b.date)).slice(-7));
   }, [snapshotVersion]);
   return snapshots;
-}
-
-// 홈 순자산 헤더의 미니 트로피 배지용 — 성적표 화면(asset-report-view.tsx)이 확정 시 기록해둔
-// 최신 등급을 그대로 읽는다(재계산 안 함, 성적표 미방문이면 null).
-function useLatestAssetGrade(): SnapshotGrade | null {
-  const { snapshotVersion } = useAssetData();
-  const [grade, setGrade] = useState<SnapshotGrade | null>(null);
-  useEffect(() => {
-    const sorted = [...readDailySnapshots()].sort((a, b) => b.date.localeCompare(a.date));
-    setGrade(sorted.find((s) => s.grade)?.grade ?? null);
-  }, [snapshotVersion]);
-  return grade;
 }
 
 // Hero 통합 등락 뷰모델 — "지난 접속일 종가 → 실시간 현재"를 원인분해까지 한 줄에 표기.

@@ -158,7 +158,7 @@ describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월,
     expect(by(r, "A").due).toBe(false); // 조건 기간 12개월
     expect(by(r, "B").dueReason).toEqual({ kind: "down", pct: 20 });
     expect(by(r, "C").dueReason).toEqual({ kind: "up", pct: 30 });
-    expect(dueReasonText({ kind: "up", pct: 25 })).toBe("산 날부터 +25% 이상에 닿았어요");
+    expect(dueReasonText({ kind: "up", pct: 25 })).toBe("평단 대비 +25% 이상에 닿았어요");
     expect(dueReasonText({ kind: "date", months: 3 })).toBe("정한 기간 3개월이 지났어요");
     expect(by(rows(mk({ B: chk({ plan: { down: 21 } }) })), "B").due).toBe(false); // −20.0% > −21%
   });
@@ -176,17 +176,22 @@ describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월,
     expect(r.since).toMatchObject({ kind: "checked" });
     expect(r.since!.pct).toBeCloseTo((110 / 105 - 1) * 100, 6);
   });
+  it("행 2줄 % — 정한 날이 오늘이면 today(`오늘 정함`), 다음 날부터 정한 날 대비 %", () => {
+    const today = mk({ A: chk({ labeledAt: "2026-11-18T01:00:00Z", at: "2026-11-18T01:00:00Z", base: { qty: 10, price: 100 } }) });
+    expect(by(rows(today), "A").since).toMatchObject({ kind: "labeled", today: true });
+    expect(by(rows(today, Date.parse("2026-11-19T03:00:00Z")), "A").since).toMatchObject({ kind: "labeled", today: false });
+  });
   it("행 2줄 % — 기록 없으면 정한 날 가격(base.price)부터, 기준 가격이 없거나 정하지 않은 행은 없음", () => {
     const l = mk({ A: chk({ base: { qty: 10, price: 100 } }), B: chk(), C: { label: null, labeledAt: "2026-10-01T00:00:00Z", at: "2026-10-01T00:00:00Z" } });
     const r = rows(l);
-    expect(by(r, "A").since).toEqual({ kind: "labeled", pct: expect.closeTo(10, 6) });
+    expect(by(r, "A").since).toEqual({ kind: "labeled", pct: expect.closeTo(10, 6), today: false });
     expect(by(r, "B").since).toBeNull();
     expect(by(r, "C").since).toBeNull();
   });
-  it("아직 안 정함 행의 `M월 D일 점검할에서 뺌`은 최근 90일 기록만(COO P2-9)", () => {
+  it("정하지 않음 행의 `M월 D일 점검 대상에서 뺌`은 최근 90일 기록만(COO P2-9)", () => {
     const none = (at: string): StockLabels => ({ ...mk({ A: { label: null, labeledAt: at, at } }), reviews: [{ t: "A", at, from: "check", choice: "none", price: 100, rate: 1 }] });
-    expect(by(rows(none("2026-09-19T03:00:00Z")), "A").dropNote).toBe("9월 19일 점검할에서 뺌");
-    expect(by(rows(none("2026-08-20T03:00:00Z")), "A").dropNote).toBe("8월 20일 점검할에서 뺌"); // 90일
+    expect(by(rows(none("2026-09-19T03:00:00Z")), "A").dropNote).toBe("9월 19일 점검 대상에서 뺌");
+    expect(by(rows(none("2026-08-20T03:00:00Z")), "A").dropNote).toBe("8월 20일 점검 대상에서 뺌"); // 90일
     expect(by(rows(none("2026-08-19T03:00:00Z")), "A").dropNote).toBeNull(); // 91일
   });
 });
