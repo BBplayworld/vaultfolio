@@ -402,7 +402,7 @@ export function AssetReportView() {
           <span data-testid="grow-title">내 자산 불리기</span>
           <span data-testid="grow-hint" data-screenshot-hide className="inline-flex">
             <InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">
-              <p className="text-pretty break-keep">이름표와 점검 주기는 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+              <p className="text-pretty break-keep">오래 둘·점검할과 다시 볼 조건은 내가 정해요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
             </InfoHint>
           </span>
         </CardTitle>

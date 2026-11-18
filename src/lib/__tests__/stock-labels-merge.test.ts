@@ -96,10 +96,12 @@ describe("편집 함수", () => {
     const s = setStockLabel(emptyStockLabels(), "NVDA", null, T("2026-01-01"));
     expect(s.items.NVDA.label).toBeNull();
   });
-  it("점검은 '점검할 자산'만, 이름표를 바꿔도 점검 기록은 남는다", () => {
+  it("점검 시각은 오래 둘·점검할 항목에(4차 — 오래 둘 12개월 재확인), 정하지 않은 종목은 그대로. setStockLabel로 바꿔도 점검 기록은 남는다", () => {
     let s = setStockLabel(emptyStockLabels(), "AAPL", "keep", T("2026-01-01"));
-    expect(markStockChecked(s, "AAPL", T("2026-01-02"))).toBe(s);
+    expect(markStockChecked(s, "AAPL", T("2026-01-02")).items.AAPL.checkedAt).toBe(T("2026-01-02"));
     expect(markStockChecked(s, "NONE", T("2026-01-02"))).toBe(s);
+    const unset = setStockLabel(s, "TSLA", null, T("2026-01-02"));
+    expect(markStockChecked(unset, "TSLA", T("2026-01-03"))).toBe(unset);
     s = setStockLabel(s, "AAPL", "check", T("2026-01-03"));
     s = markStockChecked(s, "AAPL", T("2026-02-03"));
     expect(s.items.AAPL).toMatchObject({ label: "check", labeledAt: T("2026-01-03"), checkedAt: T("2026-02-03"), at: T("2026-02-03") });

@@ -16,7 +16,7 @@ import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { computeStockTotals, groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useStockLabels } from "@/hooks/use-stock-labels";
-import { buildGrowRows, growTotals, summarizeGrowRows } from "@/lib/asset/grow-rows";
+import { buildBoardRows, countDueRows } from "@/lib/asset/grow-board";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { monthlyLogEntryCount } from "@/lib/report/monthly-log";
 import type { SettlementWindow } from "@/lib/report/settlement";
@@ -95,16 +95,23 @@ export function PerformanceHub() {
 
   const go = (tab: ActivityTab) => navigate({ type: "activity", tab });
 
-  // 내 자산 불리기 카드(#239) — 금액·% 없이 사용자가 붙인 이름표 개수와 마지막 점검만. 불리기 화면 요약 줄과 같은 값(같은 함수)
+  // 내 자산 불리기 카드(#239) — 큰 값은 점검 차례 종목 수(없으면 정한 개수). 불리기 화면 행의 '점검 차례'와 같은 판정(같은 함수)
+  // 화면 밖에서 차례를 알리는 유일한 신호다(푸시·홈 팁·알림 0)
   const { labels, ready: labelsReady } = useStockLabels();
   const [growNow] = useState(() => Date.now());
   const grow = useMemo(() => {
-    const rows = buildGrowRows(assetData.stocks, exchangeRates, labels, growNow);
+    const rows = buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []);
     // 둘째 줄 = 불리기 결론 카드와 같은 공용 합계(산 날부터 지금까지, 상세 › 주식 '전체'와 같은 값). 묶음별 값은 쓰지 않는다(대표: 합계만)
     const active = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
     const total = active.length > 0 && active.every((s) => s.currentPrice > 0) ? computeStockTotals(active, exchangeRates) : null;
-    return { hasRows: rows.length > 0, total, ...summarizeGrowRows(rows, labels, growNow, growTotals(assetData.stocks, exchangeRates)) };
-  }, [assetData.stocks, exchangeRates, labels, growNow]);
+    return {
+      hasRows: rows.length > 0,
+      total,
+      keep: rows.filter((r) => r.labelState === "keep").length,
+      check: rows.filter((r) => r.labelState === "check").length,
+      due: countDueRows(rows),
+    };
+  }, [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow]);
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
   // 창 밖이면 이번 달 진행 중 증감, 첫 달·자산 0건이면 금액 없이 안내. 증감은 결산 Hero와 같은 settlementDelta.
@@ -203,10 +210,12 @@ export function PerformanceHub() {
           icon={Sprout}
           title="내 자산 불리기"
           description="내 기준으로 지키고, 내가 점검해요"
-          // 큰 값은 본문색 고정(주황·손익색 금지). 이름표 0개면 앱이 센 숫자·분류 없이 행동 문구만
+          // 큰 값은 본문색 고정(주황·손익색 금지), 점검 차례 수의 숫자만 indigo(불리기 화면 '점검 차례'와 같은 색). 정한 것이 0개면 행동 문구만
           primary={!hasAssets || !labelsReady ? undefined : (
-            <span data-testid="hub-report-primary" className="whitespace-nowrap">
-              {!grow.hasRows ? "성적표 보기" : grow.keep + grow.check === 0 ? "이름표 붙이기" : `오래 둘 ${grow.keep} · 점검할 ${grow.check}`}
+            <span data-testid="hub-report-primary" data-due={grow.due} className="whitespace-nowrap">
+              {!grow.hasRows ? "성적표 보기" : grow.keep + grow.check === 0 ? "오래 둘·점검할 정하기" : grow.due > 0 ? (
+                <>점검 차례 <span className="tabular-nums text-indigo-600 dark:text-indigo-200">{grow.due}종목</span></>
+              ) : `오래 둘 ${grow.keep} · 점검할 ${grow.check}`}
             </span>
           )}
           primaryClassName={ASSET_THEME.text.default}

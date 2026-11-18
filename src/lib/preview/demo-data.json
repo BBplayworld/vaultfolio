@@ -9,15 +9,21 @@
     "NVDA": {"marketCapTier": "large"}
   },
   "stockLabels": {
-    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660), 주기 3개월. AAPL 점검일은 오늘 기준 125일 전(@D-125 = 언제나 '4개월 전', 주기 경과 1건). 고정 날짜 금지. 시드 정합(COO R-C2): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감(거래·주식 데이터는 그대로) → 삼성전자 50→65주(정한 뒤 +10·+10·−5), TIGER 100→105주(+5), AAPL 10→12주(+2), SK하이닉스 5주 그대로. 재설계 3차(11/18): 삼성전자·TIGER 매수일을 1년 이상 전(@M-20·@M-26)으로 옮겨 보유 기간 축에 '1년 이상' 묶음이 보인다(이름표 붙인 날은 그 뒤라 정합 유지). 칩 펼침 캡션의 매매 건수: 삼성전자 2건·AAPL 1건·SK하이닉스 0건. base.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐",
+    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660)·아직 안 정함(NVDA 바꾼 기록, 069500), 주기 3개월. 고정 날짜 금지(토큰만). 시드 정합(COO R-C2·C132): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감 → 삼성전자 50→65주(+10·+10·−5), TIGER 100→105주(+5 @M0D02), AAPL 10→12주(+2), SK하이닉스 5주. reviews.at ≥ 그 종목 매수일·정한 날(AAPL @D-160·@D-125 ≥ 정한 날 @M-6D10, NVDA @D-60 ≥ 매수 @M-5D18 — 그 앞은 점검할 기간). 5차(11/18): TIGER 정한 날 @M-13D1(12개월 재확인 = 점검 차례), base.price 19,000(평단 18,000 이상 — 정한 뒤 +10.5% < 산 날부터 +16.7%, COO P1-6). AAPL 기록 2건(그대로 둠)·조건 −10%·메모, SK하이닉스 조건 +25%(+26.7%라 점검 차례), NVDA 9주 전 점검할→정하지 않음. base.price·reviews.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐",
     "v": 1,
     "cycle": {"months": 3, "at": "@M-8D1"},
     "items": {
-      "360750": {"label": "keep", "labeledAt": "@M-9D1", "base": {"qty": 100, "price": 17500, "priceAt": "@M-9D1", "weight": 14.2}, "at": "@M-9D1"},
+      "360750": {"label": "keep", "labeledAt": "@M-13D1", "base": {"qty": 100, "price": 19000, "priceAt": "@M-13D1", "weight": 14.2}, "at": "@M-13D1"},
       "005930": {"label": "keep", "labeledAt": "@M-5D1", "base": {"qty": 50, "price": 64000, "priceAt": "@M-5D1", "weight": 30.5}, "at": "@M-5D1"},
-      "AAPL": {"label": "check", "labeledAt": "@M-6D10", "checkedAt": "@D-125", "base": {"qty": 10, "price": 190, "priceAt": "@M-6D10", "weight": 21.8}, "at": "@D-125"},
-      "000660": {"label": "check", "labeledAt": "@D-20", "base": {"qty": 5, "price": 175000, "priceAt": "@D-20", "weight": 16.4}, "at": "@D-20"}
-    }
+      "AAPL": {"label": "check", "labeledAt": "@M-6D10", "checkedAt": "@D-125", "base": {"qty": 10, "price": 190, "priceAt": "@M-6D10", "weight": 21.8}, "plan": {"down": 10, "memo": "실적 발표 뒤 다시 보기", "at": "@D-125"}, "at": "@D-125"},
+      "000660": {"label": "check", "labeledAt": "@D-20", "base": {"qty": 5, "price": 175000, "priceAt": "@D-20", "weight": 16.4}, "plan": {"up": 25, "at": "@D-20"}, "at": "@D-20"},
+      "NVDA": {"label": null, "labeledAt": "@D-60", "at": "@D-60"}
+    },
+    "reviews": [
+      {"t": "AAPL", "at": "@D-125", "from": "check", "choice": "same", "price": 205, "rate": 10.8},
+      {"t": "AAPL", "at": "@D-160", "from": "check", "choice": "same", "price": 195, "rate": 5.4},
+      {"t": "NVDA", "at": "@D-60", "from": "check", "choice": "none", "price": 120, "rate": 9.1}
+    ]
   },
   "assetData": {
     "nickname": "데모",

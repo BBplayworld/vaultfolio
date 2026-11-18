@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push"],
-  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -218,10 +218,11 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   push_click_kr: "알림·누름·국내",
   push_click_settle: "알림·누름·결산",
   push_click_tax: "알림·누름·세금",
-  // 내 자산 불리기(#239) — 첫 이름표(저장소 0→1, 주 지표)·점검 누름(보조). 매핑이 빠지면 화면 title `성과·자산 성적표`에 섞인다
-  grow_label: "내 자산 불리기·이름표",
-  grow_check: "내 자산 불리기·체크",
-  grow_revisit: "내 자산 불리기·다시 봄", // 이름표를 붙인 날과 다른 날 불리기 화면을 다시 열 때(화면 로드당 1회, 저장 키 없음)
+  // 내 자산 불리기(#239) — 매핑이 빠지면 화면 title `성과·자산 성적표`에 섞인다(5.125 5차: 이름 변경, 미머지라 단절 비용 0)
+  grow_label: "내 자산 불리기·정함", // 정한 종목 0인 기기가 오래 둘·점검할을 처음 정할 때 1회(주 지표)
+  grow_check: "내 자산 불리기·점검", // 점검 한 장에서 선택(그대로 둠·옮김·정하지 않음)으로 점검 기록 1건이 생길 때
+  grow_revisit: "내 자산 불리기·다시 봄", // 정한 종목이 있고 가장 이른 정한 날이 오늘보다 앞인 기기가 화면을 열 때(로드당 1회, 저장 키 없음)
+  grow_plan: "내 자산 불리기·조건", // 다시 볼 조건·메모를 처음 저장할 때(값·메모 미전송)
 };
 
 // /ratio 홍보 도착 퍼널 단계별 page_title(4.88) — 화면 도착('비중 미리보기')은 화면 title 그대로. 맞춤 정의 0

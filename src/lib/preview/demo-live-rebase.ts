@@ -9,7 +9,7 @@ import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, Stock } from 
 import { buildLiveAttributionCurr, computeAttributionBetween } from "@/lib/report/asset-report";
 
 type AttributionPoint = ReturnType<typeof buildLiveAttributionCurr>;
-import type { StockLabels } from "@/lib/asset/stock-labels";
+import { reviewKey, type StockLabels } from "@/lib/asset/stock-labels";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 
 type Row = DailyAssetSnapshot | MonthlyAssetSnapshot;
@@ -52,6 +52,8 @@ export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: num
  * 종목마다 같은 배율(실시간 시세 ÷ JSON 시세)을 곱해 '정한 날 가격 대비 %'가 시드 그대로(JSON 시세 ÷ 시드 기준가 − 1)가 되게 한다.
  *  - 시드 그대로인 항목만(이름표 종류·labeledAt이 시드와 같음). 사용자가 다시 붙인 항목은 그때의 실제 시세라 건드리지 않는다
  *  - base의 다른 필드(qty·priceAt·weight·모르는 필드)는 그대로. 언제나 시드에서 다시 계산한다(누적 곱셈 없음)
+ *  - 점검 기록(reviews, 5.125 4차)의 그때 가격도 같은 배율로 옮긴다 — 시드에 같은 `t@at`이 있는 기록만(사용자가 데모에서 새로 남긴 기록은 그때의 실제 시세).
+ *    rate(그때 산 날부터 %)는 평단 재기준 뒤 매입가 %와 같은 눈금이라 옮기지 않는다
  *  - 바뀐 게 없으면 같은 객체를 돌려준다. 순수 함수 — 저장은 호출하는 쪽(demo-snapshot-rebase.tsx)
  */
 export function rebaseDemoLabelPrices(
@@ -73,7 +75,20 @@ export function rebaseDemoLabelPrices(
     items ??= { ...labels.items };
     items[key] = { ...cur, base: { ...cur.base, price } };
   }
-  return items ? { ...labels, items } : labels;
+  let reviews: StockLabels["reviews"] | null = null;
+  const seedReviews = new Map((seed.reviews ?? []).map((r) => [reviewKey(r), r]));
+  (labels.reviews ?? []).forEach((r, i) => {
+    const s = seedReviews.get(reviewKey(r));
+    const sp = seedPrices.get(r.t);
+    const lp = livePrices.get(r.t);
+    if (!s || !(sp !== undefined && sp > 0 && lp !== undefined && lp > 0)) return;
+    const price = (s.price * lp) / sp;
+    if (Math.abs(r.price - price) <= price * 1e-9) return;
+    reviews ??= [...labels.reviews!];
+    reviews[i] = { ...r, price };
+  });
+  if (!items && !reviews) return labels;
+  return { ...labels, ...(items ? { items } : {}), ...(reviews ? { reviews } : {}) };
 }
 
 /** 이름표 키(normalizeTicker)별 시세 — 현재가가 있는 첫 보유 건(grow-rows의 지금 시세와 같은 규칙) */

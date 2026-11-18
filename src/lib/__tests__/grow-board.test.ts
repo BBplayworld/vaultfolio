@@ -1,4 +1,4 @@
-// #239 [5.125 재설계 3차] 내 자산 불리기 표시 값 — 결론 합계·기준별 묶음·종목 행·보유 기간 대비 점수·다음 점검일·데모 시드
+// #239 [5.125 재설계 3차·5차 5b] 내 자산 불리기 표시 값 — 결론 합계·기준별 묶음·종목 행·보유 기간 대비 점수·점검 차례·카드 라벨 행·묶음 안 순서·데모 시드
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -10,7 +10,8 @@ import { materializeDemo } from "../preview/demo-payload";
 import { demoClassificationPatches } from "../preview/demo-inject";
 import { parseStockLabels, type StockLabels } from "../asset/stock-labels";
 import {
-  BOARD_AXES, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, annualizedPct, boardScale, boardTotal, buildAxisGroups, buildBoardRows, holdScore, nextChecks, scalePos,
+  BOARD_AXES, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, annualizedPct, boardScale, boardTotal, buildAxisGroups, buildBoardRows, holdScore, scalePos,
+  boardRowRank, boardSummary, countDueRows, dueReasonText, monthDayText,
 } from "../asset/grow-board";
 
 const RATES = { USD: 1400, JPY: 925 };
@@ -138,25 +139,84 @@ describe("막대 눈금 — 화면 전체 1개", () => {
   });
 });
 
-describe("다음 점검일 nextChecks", () => {
-  const STOCKS = [st({ id: "a" }), st({ id: "b" })];
-  const rows = (l: StockLabels) => buildBoardRows(STOCKS, RATES, l, NOW);
-  it("주기 + 기준일(점검일·붙인 날 중 늦은 쪽). 지났으면 `지금`, 지난 것 먼저", () => {
-    const l = mk({
-      A: { label: "check", labeledAt: "2026-01-01T00:00:00Z", at: "2026-01-01T00:00:00Z" },
-      B: { label: "check", labeledAt: "2026-01-01T00:00:00Z", checkedAt: "2026-10-29T03:00:00Z", at: "2026-10-29T03:00:00Z" },
-    }, 3);
-    expect(nextChecks(rows(l), l, NOW)).toEqual({ state: "list", items: [{ name: "a", when: "지금", due: true }, { name: "b", when: "1월 29일", due: false }] });
+describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월, 기준일에 '그대로 둠' 기록", () => {
+  const STOCKS = [st({ id: "a" }), st({ id: "b", currentPrice: 80 }), st({ id: "c", currentPrice: 130 })];
+  const rows = (l: StockLabels, now = NOW) => buildBoardRows(STOCKS, RATES, l, now);
+  const by = (rs: ReturnType<typeof rows>, t: string) => rs.find((r) => r.labelKey === t)!;
+  const chk = (o: Partial<StockLabels["items"][string]> = {}) => ({ label: "check" as const, labeledAt: "2026-10-01T00:00:00Z", at: "2026-10-01T00:00:00Z", ...o });
+  it("다음 점검일 = 기준일(정한 날·점검한 날 중 늦은 쪽) + 기본 주기, 말일 당김(11/30 + 3개월 = 2월 28일)", () => {
+    const l = mk({ A: chk({ labeledAt: "2026-11-30T03:00:00Z", at: "2026-11-30T03:00:00Z" }), B: chk({ checkedAt: "2026-10-29T03:00:00Z" }) }, 3);
+    const r = rows(l, Date.parse("2026-12-01T03:00:00Z"));
+    expect(monthDayText(by(r, "A").nextCheckMs!)).toBe("2월 28일");
+    expect(monthDayText(by(r, "B").nextCheckMs!)).toBe("1월 29일");
+    expect(by(rows(mk({ A: chk() })), "A").nextCheckMs).toBeNull(); // 기본 주기도 조건 기간도 없음
   });
-  it("말일 당김: 11/30 + 3개월 = 2월 28일", () => {
-    const l = mk({ A: { label: "check", labeledAt: "2026-11-30T03:00:00Z", at: "2026-11-30T03:00:00Z" } }, 3);
-    const r = nextChecks(rows(l), l, Date.parse("2026-12-01T03:00:00Z"));
-    expect(r).toEqual({ state: "list", items: [{ name: "a", when: "2월 28일", due: false }] });
+  it("조건 하한·상한에 닿으면 차례(사실형 이유), 조건 기간은 기본 주기보다 먼저", () => {
+    // B −20%, C +30%
+    const l = mk({ A: chk({ plan: { months: 12 } }), B: chk({ plan: { down: 20 } }), C: chk({ plan: { up: 30, down: 5 } }) }, 3);
+    const r = rows(l, Date.parse("2027-02-01T03:00:00Z")); // 4개월 경과
+    expect(by(r, "A").due).toBe(false); // 조건 기간 12개월
+    expect(by(r, "B").dueReason).toEqual({ kind: "down", pct: 20 });
+    expect(by(r, "C").dueReason).toEqual({ kind: "up", pct: 30 });
+    expect(dueReasonText({ kind: "up", pct: 25 })).toBe("산 날부터 +25% 이상에 닿았어요");
+    expect(dueReasonText({ kind: "date", months: 3 })).toBe("정한 기간 3개월이 지났어요");
+    expect(by(rows(mk({ B: chk({ plan: { down: 21 } }) })), "B").due).toBe(false); // −20.0% > −21%
   });
-  it("점검할 자산 없음 / 주기 없음", () => {
-    expect(nextChecks(rows(mk()), mk(), NOW)).toEqual({ state: "no-check" });
-    const l = mk({ A: { label: "check", labeledAt: "2026-01-01T00:00:00Z", at: "2026-01-01T00:00:00Z" } });
-    expect(nextChecks(rows(l), l, NOW)).toEqual({ state: "no-cycle" });
+  it("오래 둘은 기준일 + 12개월에 차례, 사용자 주기(3개월)는 쓰지 않는다", () => {
+    const keep = (labeledAt: string, checkedAt?: string) => mk({ A: { label: "keep", labeledAt, ...(checkedAt ? { checkedAt } : {}), at: labeledAt } }, 3);
+    expect(by(rows(keep("2025-11-18T00:00:00Z")), "A").dueReason).toEqual({ kind: "date", months: 12 });
+    expect(by(rows(keep("2025-11-19T03:00:00Z")), "A").due).toBe(false);
+    expect(by(rows(keep("2025-01-01T00:00:00Z", "2026-06-01T00:00:00Z")), "A").due).toBe(false); // 그대로 오래 둠 뒤 12개월 전
+  });
+  it("P5 — 기준일에 마지막 '그대로 둠' 기록을 넣는다: 경합으로 checkedAt이 진 쪽에 있어도 차례가 되살아나지 않는다", () => {
+    const l: StockLabels = { ...mk({ A: chk({ labeledAt: "2026-01-01T00:00:00Z", at: "2026-11-01T00:00:00Z", plan: { up: 50 } }) }, 3),
+      reviews: [{ t: "A", at: "2026-10-20T00:00:00Z", from: "check", choice: "same", price: 105, rate: 5 }] };
+    const r = by(rows(l), "A");
+    expect(r.due).toBe(false);
+    expect(r.since).toMatchObject({ kind: "checked" });
+    expect(r.since!.pct).toBeCloseTo((110 / 105 - 1) * 100, 6);
+  });
+  it("행 2줄 % — 기록 없으면 정한 날 가격(base.price)부터, 기준 가격이 없거나 정하지 않은 행은 없음", () => {
+    const l = mk({ A: chk({ base: { qty: 10, price: 100 } }), B: chk(), C: { label: null, labeledAt: "2026-10-01T00:00:00Z", at: "2026-10-01T00:00:00Z" } });
+    const r = rows(l);
+    expect(by(r, "A").since).toEqual({ kind: "labeled", pct: expect.closeTo(10, 6) });
+    expect(by(r, "B").since).toBeNull();
+    expect(by(r, "C").since).toBeNull();
+  });
+  it("아직 안 정함 행의 `M월 D일 점검할에서 뺌`은 최근 90일 기록만(COO P2-9)", () => {
+    const none = (at: string): StockLabels => ({ ...mk({ A: { label: null, labeledAt: at, at } }), reviews: [{ t: "A", at, from: "check", choice: "none", price: 100, rate: 1 }] });
+    expect(by(rows(none("2026-09-19T03:00:00Z")), "A").dropNote).toBe("9월 19일 점검할에서 뺌");
+    expect(by(rows(none("2026-08-20T03:00:00Z")), "A").dropNote).toBe("8월 20일 점검할에서 뺌"); // 90일
+    expect(by(rows(none("2026-08-19T03:00:00Z")), "A").dropNote).toBeNull(); // 91일
+  });
+});
+
+describe("카드 라벨 행·묶음 안 순서(5차)", () => {
+  const STOCKS = [
+    st({ id: "k1", purchaseDate: "2023-01-01", currentPrice: 90 }),
+    st({ id: "k2", purchaseDate: "2024-01-01", currentPrice: 150 }),
+    st({ id: "k3", purchaseDate: "2022-01-01", currentPrice: 120 }),
+    st({ id: "c1", purchaseDate: "2025-06-01" }),
+    st({ id: "n1", purchaseDate: "2025-01-01" }),
+  ];
+  const keep = (at: string) => ({ label: "keep" as const, labeledAt: at, at });
+  const OLD = "2025-01-01T00:00:00Z";
+  const NEW = "2026-06-01T00:00:00Z";
+  it("오래 둘은 늘 수익률 꼴(Σ손익 ÷ Σ원가)과 산 날보다 낮은 수, 점검할은 점검 차례 수. 정한 것이 0이면 first", () => {
+    const rows = buildBoardRows(STOCKS, RATES, mk({ K1: keep(OLD), K2: keep(NEW), K3: keep(OLD), C1: { label: "check", labeledAt: OLD, at: OLD } }, 3), NOW);
+    const s = boardSummary(rows);
+    expect(s.keep).toEqual({ count: 3, rate: expect.closeTo(((-10 + 50 + 20) / 300) * 100, 6), low: 1 });
+    expect(s.check).toEqual({ count: 1, due: 1 });
+    expect(s.first).toBe(false);
+    expect(boardSummary(buildBoardRows(STOCKS, RATES, mk(), NOW)).first).toBe(true);
+    expect(countDueRows(rows)).toBe(3); // K1·K3 12개월 + C1 주기
+  });
+  it("점검 차례 → 오래 가진 순. 오래 둘 점검 차례 안에서만 산 날보다 낮은 행 먼저(이분, 크기 순 아님)", () => {
+    const rows = buildBoardRows(STOCKS, RATES, mk({ K1: keep(OLD), K2: keep(OLD), K3: keep(NEW) }), NOW);
+    const rank = boardRowRank(rows);
+    const order = [...rows].sort((a, b) => rank.get(a.key)! - rank.get(b.key)!).map((r) => r.key);
+    // 차례: K1(−10%, 낮음) → K2(+50%) / 차례 아님: K3·C1·N1 오래 가진 순
+    expect(order).toEqual(["t:K1", "t:K2", "t:K3", "t:N1", "t:C1"]);
   });
 });
 

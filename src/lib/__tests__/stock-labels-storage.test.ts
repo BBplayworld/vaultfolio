@@ -9,7 +9,7 @@ import {
   applyIncomingStockLabels, clearStockLabels, markStockChecked, readStockLabels, readStockLabelsForExport, readStockLabelsState,
   setStockLabel, setStockLabelCycle, writeStockLabels, emptyStockLabels, type StockLabels,
 } from "../asset/stock-labels";
-import { buildGrowRows, growTotals, sortGrowRowKeys, summarizeGrowRows } from "../asset/grow-rows";
+import { boardSummary, buildBoardRows, countDueRows } from "../asset/grow-board";
 import { materializeDemo } from "../preview/demo-payload";
 import { migrateStorageKeys, STORAGE_KEYS } from "../local-storage";
 import { assetDataSchema } from "@/types/asset";
@@ -257,25 +257,51 @@ describe("⑩ base 왕복(AC-31) — 백업 → 모든 데이터 삭제 → 복�
 });
 
 describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다", () => {
-  it.each(["2026-11-17", "2026-03-01", "2027-01-31", "2028-02-29"])("기준일 %s: 오래 둘 2·점검할 2, 주기 3개월, 경과 1건이 1행째·4개월 전", (today) => {
+  it.each(["2026-11-17", "2026-03-01", "2027-01-31", "2028-02-29"])("기준일 %s: 오래 둘 2·점검할 2·아직 안 정함 2, 주기 3개월, 점검 차례 3(TIGER 12개월·Apple 기간·SK하이닉스 +25%)", (today) => {
     const payload = materializeDemo(demoRaw, today);
     const now = Date.parse(`${today}T03:00:00Z`);
     applyImportedPayload(payload);
     const labels = readStockLabels();
     expect(labels.cycle.months).toBe(3);
     const data = getAssetData();
-    const rows = buildGrowRows(data.stocks, { USD: 1400, JPY: 9 }, labels, now);
-    const s = summarizeGrowRows(rows, labels, now, growTotals(data.stocks, { USD: 1400, JPY: 9 }));
-    expect([s.keep, s.check, s.none]).toEqual([2, 2, rows.length - 4]);
-    expect(s.lastCheckText).toBe("마지막 점검 4개월 전");
-    const overdue = rows.filter((r) => r.overdueFact);
-    expect(overdue.map((r) => [r.ticker, r.labelFact, r.overdueFact])).toEqual([["AAPL", "마지막 점검 4개월 전", "내가 정한 주기 3개월이 지났어요"]]);
-    expect(sortGrowRowKeys(rows)[0]).toBe(overdue[0].key);
-    expect(rows.find((r) => r.ticker === "360750")!.labelFact).toBe("오래 두기로 한 지 9개월"); // 시드 정합(R-C2): 정한 날 @M-9D1 ≥ 매수일 @M-26D03
-    // 무게(허브 카드 둘째 줄) — 합 100.0
-    const w = s.weights;
-    expect(w.keep.pct! + w.check.pct! + w.none.pct!).toBeCloseTo(100, 6);
-    expect(w.keep.pctText).toMatch(/^\d+\.\d%$/);
+    const rows = buildBoardRows(data.stocks, { USD: 1400, JPY: 9 }, labels, now, data.transactions ?? []);
+    const s = boardSummary(rows);
+    expect([s.first, s.keep.count, s.check.count, s.keep.low, s.check.due]).toEqual([false, 2, 2, 0, 2]);
+    const by = (t: string) => rows.find((r) => r.labelKey === t)!;
+    expect(rows.filter((r) => r.due).map((r) => [r.labelKey, r.dueReason]).sort()).toEqual([
+      ["000660", { kind: "up", pct: 25 }],
+      ["360750", { kind: "date", months: 12 }],
+      ["AAPL", { kind: "date", months: 3 }],
+    ]);
+    expect(countDueRows(rows)).toBe(3); // 허브 셋째 카드 `점검 차례 3종목`
+    // 정한 뒤·점검 뒤(JSON 시세): TIGER 21,000 ÷ 19,000, Apple 225 ÷ 마지막 그대로 둠 205, SK하이닉스 190,000 ÷ 175,000
+    expect(by("360750").since!.kind).toBe("labeled");
+    expect(by("360750").since!.pct).toBeCloseTo(10.526, 2);
+    expect(by("360750").since!.pct).toBeLessThan(by("360750").rate!); // COO P1-6 — 정한 뒤 < 산 날부터
+    expect(by("AAPL").since).toMatchObject({ kind: "checked" });
+    expect(by("AAPL").since!.pct).toBeCloseTo(9.756, 2);
+    expect(by("000660").since!.pct).toBeCloseTo(8.571, 2);
+    // NVIDIA — 정하지 않음 표식은 개수에 들지 않고, 60일 전 기록이라 행 2줄에 `M월 D일 점검할에서 뺌`
+    expect(by("NVDA").labelState).toBe("none");
+    expect(by("NVDA").dropNote).toMatch(/^\d{1,2}월 \d{1,2}일 점검할에서 뺌$/);
+    expect(by("069500").dropNote).toBeNull();
+    expect(labels.items.AAPL.plan).toEqual({ down: 10, memo: "실적 발표 뒤 다시 보기", at: labels.items.AAPL.at });
+  });
+  it("시드 정합(C132) — 1년 동안 매일: 정한 날 ≥ 매수일, 기록 날 ≥ 매수일·그 앞의 정한 날, 기록 날 ≤ 오늘", () => {
+    for (let d = Date.parse("2026-01-01T00:00:00Z"); d < Date.parse("2027-01-01T00:00:00Z"); d += 86400000) {
+      const today = new Date(d).toISOString().slice(0, 10);
+      const p = materializeDemo(demoRaw, today) as { stockLabels: StockLabels; assetData: { stocks: { ticker: string; purchaseDate: string }[] } };
+      const buy = new Map(p.assetData.stocks.map((x) => [x.ticker, x.purchaseDate]));
+      for (const [t, it] of Object.entries(p.stockLabels.items)) expect(it.labeledAt >= buy.get(t)!, `${today} ${t}`).toBe(true);
+      for (const r of p.stockLabels.reviews!) {
+        expect(r.at >= buy.get(r.t)! && r.at <= today, `${today} ${r.t}@${r.at}`).toBe(true);
+        // AAPL 기록은 지금 이름표(점검할, @M-6D10) 뒤, NVIDIA 기록은 정하지 않음 표식과 같은 날
+        if (r.t === "AAPL") expect(r.at >= p.stockLabels.items.AAPL.labeledAt, today).toBe(true);
+        if (r.t === "NVDA") expect(r.at).toBe(p.stockLabels.items.NVDA.labeledAt);
+      }
+      // TIGER는 매일 12개월 재확인 차례(정한 날 13개월 전), base.qty 100 + 그 뒤 매수 5 = 105
+      expect(p.stockLabels.items["360750"].labeledAt.slice(0, 7) < today.slice(0, 7)).toBe(true);
+    }
   });
   it("시드에 고정 날짜가 없다(전부 날짜 토큰)", () => {
     const seedText = JSON.stringify(demoRaw.stockLabels);

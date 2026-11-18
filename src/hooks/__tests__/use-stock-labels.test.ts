@@ -12,6 +12,7 @@ import { g, memoryStorage } from "@/lib/__tests__/physical-fixtures";
 const notify = vi.fn();
 const send = vi.fn();
 let clock = Date.parse("2026-11-17T03:00:00Z");
+const SNAP = { price: 205, rate: 10.84 };
 const actions = () => stockLabelActions({ notify, track: send, now: () => new Date((clock += 1000)).toISOString() });
 
 beforeEach(() => {
@@ -25,13 +26,13 @@ describe("stockLabelActions", () => {
   it("이름표·점검·주기 저장마다 push 신호 1회, 바뀐 게 없으면 신호도 쓰기도 없다", () => {
     const a = actions();
     expect(a.setLabel("AAPL", "check")?.items.AAPL.label).toBe("check");
-    expect(a.markChecked("AAPL")?.items.AAPL.checkedAt).toBeTruthy();
+    expect(a.record("AAPL", "same", SNAP)?.items.AAPL.checkedAt).toBeTruthy();
     expect(a.setCycle(3)?.cycle.months).toBe(3);
     expect(notify).toHaveBeenCalledTimes(3);
     const raw = localStorage.getItem(STORAGE_KEYS.stockLabels);
     expect(a.setLabel("AAPL", "check")).toBeNull();
     expect(a.setCycle(3)).toBeNull();
-    expect(a.markChecked("NVDA")).toBeNull(); // '점검할 자산'이 아닌 종목
+    expect(a.record("NVDA", "same", SNAP)).toBeNull(); // 정하지 않은 종목은 '그대로 둠'이 없다
     expect(notify).toHaveBeenCalledTimes(3);
     expect(localStorage.getItem(STORAGE_KEYS.stockLabels)).toBe(raw);
   });
@@ -39,7 +40,7 @@ describe("stockLabelActions", () => {
     const a = actions();
     const base = { qty: 12, price: 185.5, priceAt: "2026-11-14", weight: 20.5 };
     expect(a.setLabel("AAPL", "check", base)?.items.AAPL.base).toEqual(base);
-    a.markChecked("AAPL"); a.setCycle(6);
+    a.record("AAPL", "same", SNAP); a.setCycle(6);
     expect(readStockLabels().items.AAPL.base).toEqual(base);
     const first = readStockLabels().items.AAPL.labeledAt;
     // 다른 이름표로 바꾸면 labeledAt·base가 함께 새 값
@@ -64,19 +65,53 @@ describe("stockLabelActions", () => {
     a.setLabel("AAPL", "keep");
     expect(send.mock.calls).toEqual([["grow_label"], ["grow_label"]]);
   });
-  it("grow_check: 점검을 저장할 때마다 1회", () => {
+  it("grow_check(·점검): 점검 기록이 1건 생길 때마다 1회 — 그대로 둠·옮김·정하지 않음 모두. 첫 결정은 기록이 없어 보내지 않는다", () => {
     const a = actions();
-    a.setLabel("AAPL", "check");
+    a.record("AAPL", "check", SNAP); // 첫 결정 — 기록 없음
+    expect(send.mock.calls).toEqual([["grow_label"]]);
     send.mockClear();
-    a.markChecked("AAPL");
-    a.markChecked("AAPL");
-    expect(send.mock.calls).toEqual([["grow_check"], ["grow_check"]]);
+    a.record("AAPL", "same", SNAP);
+    a.record("AAPL", "keep", SNAP);
+    a.record("AAPL", "none", SNAP);
+    expect(send.mock.calls).toEqual([["grow_check"], ["grow_check"], ["grow_check"]]);
+    expect(readStockLabels().reviews!.map((r) => r.choice)).toEqual(["none", "keep", "same"]);
   });
-  it("GA로 나가는 값은 category 이름뿐이다(종목·개수·종류·주기 없음)", () => {
+  it("GA로 나가는 값은 category 이름뿐이다(종목·개수·종류·주기·조건 값·메모 없음)", () => {
     const a = actions();
-    a.setLabel("AAPL", "check"); a.markChecked("AAPL");
+    a.setLabel("AAPL", "check"); a.record("AAPL", "same", SNAP);
+    a.setPlan("AAPL", { down: 10, memo: "실적 발표 뒤 다시 보기" });
     for (const call of send.mock.calls) expect(call).toHaveLength(1);
-    expect(send.mock.calls.flat()).toEqual(["grow_label", "grow_check"]);
+    expect(send.mock.calls.flat()).toEqual(["grow_label", "grow_check", "grow_plan"]);
+  });
+  it("recordReview: 기록·이름표·점검 시각이 쓰기 1회·push 신호 1회로 저장된다", () => {
+    const a = actions();
+    a.setLabel("AAPL", "check", { qty: 10, price: 190 });
+    const spy = vi.spyOn(localStorage, "setItem");
+    notify.mockClear();
+    const after = a.record("AAPL", "same", SNAP)!;
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(after.items.AAPL.checkedAt).toBe(after.reviews![0].at);
+    expect(after.reviews![0]).toEqual({ t: "AAPL", at: after.items.AAPL.at, from: "check", choice: "same", price: 205, rate: 10.8 });
+    expect(Object.keys(after.reviews![0]).sort()).toEqual(["at", "choice", "from", "price", "rate", "t"]); // pnl·qty·score·id 없음
+  });
+  it("오래 둘도 '그대로 오래 둠'이 checkedAt을 쓴다(12개월 재확인 기준일)", () => {
+    const a = actions();
+    a.setLabel("005930", "keep");
+    expect(a.record("005930", "same", SNAP)!.items["005930"].checkedAt).toBeTruthy();
+  });
+  it("grow_plan(·조건): 조건이 0개 → 1개가 된 저장 직후 1회. 고치기·두 번째 종목·지우고 다시는 0→1일 때만", () => {
+    const a = actions();
+    a.setLabel("AAPL", "check"); a.setLabel("000660", "check");
+    send.mockClear();
+    a.setPlan("AAPL", { down: 10 });
+    a.setPlan("AAPL", { down: 12 });
+    a.setPlan("000660", { up: 25 });
+    expect(send.mock.calls).toEqual([["grow_plan"]]);
+    expect(a.setPlan("AAPL", { down: 12 })).toBeNull(); // 같은 값 — 쓰기 없음
+    a.setPlan("AAPL", {}); a.setPlan("000660", {});
+    a.setPlan("AAPL", { memo: "다시" });
+    expect(send.mock.calls).toEqual([["grow_plan"], ["grow_plan"]]);
   });
   it("다른 탭·pull이 바꾼 저장소 값 위에 편집을 얹는다", () => {
     const a = actions();

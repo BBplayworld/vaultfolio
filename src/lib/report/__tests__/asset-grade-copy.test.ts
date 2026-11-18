@@ -130,7 +130,7 @@ describe("금지 단어 0(AC-13)", () => {
     expect(entry.featureId).toBe("report");
     const feature = APP_FEATURES.find((f) => f.id === "report")!;
     expect(feature.title).toBe("내 자산 불리기");
-    expect(feature.description).toBe("성과 탭에서 보유 주식에 이름표를 붙이고 자산 성적표를 확인하세요.");
+    expect(feature.description).toBe("성과 탭에서 보유 주식을 오래 둘·점검할로 정하고 자산 성적표를 확인하세요.");
     expect(feature.target).toEqual({ type: "activity", tab: "report" });
     for (const w of FORBIDDEN) expect(`${entry.title}${entry.body}${feature.title}${feature.description}`, w).not.toContain(w);
   });
@@ -173,7 +173,7 @@ describe("재설계 3차 금지어·금지 형식", () => {
   it("새 소식 본문에 금지어가 없고, 지금 화면이 보여 주는 것을 말한다(48자 이하)", () => {
     const body = WHATS_NEW.find((e) => e.id === "20261117-01")!.body!;
     for (const w of [...FORBIDDEN, ...REDESIGN_FORBIDDEN]) expect(body, w).not.toContain(w);
-    expect(body).toBe("산 날부터 손익과 보유 기간 대비 점수를 기준별로 보고, 이름표로 점검해요");
+    expect(body).toBe("산 날부터 손익과 점수를 보고, 오래 둘·점검할을 내 조건으로 다시 봐요");
     expect([...body].length).toBeLessThanOrEqual(48);
   });
   it("화면 제목 도움말은 1문단(a2fb703)", () => {
@@ -192,13 +192,16 @@ describe("재설계 3차 금지어·금지 형식", () => {
     for (let prev = ""; prev !== plain;) { prev = plain; plain = plain.replace(/\{[^{}]*\}/g, ""); }
     expect(plain.replace(/<[^>]+>/g, "")).not.toMatch(/[()]/);
   });
-  it("점수·수익률로 정렬하지 않는다 — 표는 오래 가진 순 고정, 정렬 선택 UI 없음", () => {
-    expect(block).not.toMatch(/sort\(\(a, b\) => [^)]*(score|rate)/);
+  it("점수·수익률로 정렬하지 않는다 — 묶음 안은 화면에 들어올 때 정한 순번(boardRowRank)뿐, 정렬 선택 UI 없음", () => {
+    expect(block + boardLib).not.toMatch(/sort\(\(a, b\) => [^)]*(score|\.rate|profit)/);
     expect(block).not.toMatch(/정렬|수익률 순|점수 순/);
-    expect(block).toContain("오래 가진 순");
+    expect(block).toContain("boardRowRank(rows)");
+    expect(block.match(/\.sort\(/g)).toHaveLength(1); // 순번 정렬 1곳
   });
-  it("정한 날 지표(base.price·weight·qty)는 어느 화면에도 그리지 않는다. 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
-    expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "") + boardLib).not.toMatch(/base\.(price|weight|qty)|priceAt/);
+  it("정한 날 지표 중 비중·수량(base.weight·qty)은 어느 화면에도 그리지 않는다(5차: base.price는 행 2줄 `정한 뒤 %` 한 곳). 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
+    expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "") + boardLib).not.toMatch(/base\.(weight|qty)|priceAt/);
+    expect(block).not.toMatch(/base\.price/);
+    expect(boardLib.match(/base\?\.price/g)).toHaveLength(1); // 정한 뒤 % 기준 가격 1곳
     const using = filesMatching(/\.(ts|tsx)$/, /stock-labels|grow-rows/).sort();
     expect(using).toEqual([
       "app/(main)/_components/header-menu/settings-page.tsx",
@@ -251,5 +254,48 @@ describe("추천 아님 조건 — 이름표 블록(AC-9·AC-10·AC-12)", () => 
   it("Plus 배지는 0곳 — 결제 없는 단계에서 유료로 오해되는 표시 폐지(대표 결정 11/17, AC-2 개정)", () => {
     const hits = filesMatching(/\.tsx$/, />\s*Plus\s*</).map((p) => path.basename(p));
     expect(hits).toEqual([]);
+  });
+});
+
+// 4·5차(11/18) — 선택의 결과·오래 둘 손실·다시 볼 조건은 사실만 말한다. 평가·후회·권유·행동 재촉 낱말과 '이름표' 단어 0(redesign 4-2·5-2, cto 4차 3-③·5차 1·3)
+const R45_FORBIDDEN = [
+  "덕분", "손해", "놓친", "아깝", "나았", "본전", "만회", "물타기", "추가 매수", "버티", "떨어진", "익절", "손절", "목표가", "회복", "반등", "물린",
+  "손실 종목", "정리하", "기다리", "잘 고르셨", "바꾼 게 나았", "그대로 뒀으면", "팔지 않았다면", "계속 두세요", "점검하세요", "이름표", "주의",
+];
+
+describe("재설계 4·5차 금지어 — 불리기 블록·표시 값·허브 셋째 카드·화면 도움말·새 소식·기능 목록", () => {
+  const hub = read("performance-hub.tsx");
+  const view = read("asset-report-view.tsx");
+  const entry = WHATS_NEW.find((e) => e.id === "20261117-01")!;
+  const feature = APP_FEATURES.find((f) => f.id === "report")!;
+  const texts: [string, string][] = [
+    ["블록", visibleText(read("stock-label-block.tsx"))],
+    ["판 값", visibleText(readFileSync(path.resolve(__dirname, "../../asset/grow-board.ts"), "utf8"))],
+    ["허브 카드", visibleText(hub.slice(hub.indexOf('data-testid="hub-card-report"')))],
+    ["도움말", view.slice(view.indexOf('data-testid="grow-hint"'), view.indexOf("</CardTitle>"))],
+    ["새 소식", `${entry.title}${entry.body}`],
+    ["기능 목록", `${feature.title}${feature.description}`],
+  ];
+  it.each(R45_FORBIDDEN)("%s 0건", (w) => {
+    for (const [name, text] of texts) expect(text, `${name}: ${w}`).not.toContain(w);
+  });
+  it("손실은 '산 날보다 낮음' 사실형으로만, 차례 이유는 `…에 닿았어요`·`…지났어요` 사실형", () => {
+    const board = texts[1][1];
+    expect(board).toContain("이하에 닿았어요");
+    expect(board).toContain("이상에 닿았어요");
+    expect(visibleText(read("stock-label-block.tsx"))).toContain("산 날보다 낮은 종목 없음");
+  });
+  it("메모는 점검 한 장 입력 칸에만 — 캡처 숨김 칸 안, 링크 변환 없음, 카드·허브·새 소식에 메모 값 없음", () => {
+    const block = read("stock-label-block.tsx");
+    const memoAt = block.indexOf('data-testid="grow-plan-memo"');
+    expect(block.lastIndexOf("data-screenshot-hide", memoAt)).toBeGreaterThan(block.lastIndexOf("<label", memoAt) - 1);
+    // 메모 값은 조건 폼(draftOf ~ PlanEditor)에서만 읽는다 — 요약 줄은 '메모' 표시만, 행·카드·기록에 복사 없음
+    const formStart = block.indexOf("const draftOf");
+    const formEnd = block.indexOf("function ReviewSheet(");
+    expect(formStart).toBeGreaterThan(0);
+    expect((block.slice(0, formStart) + block.slice(formEnd)).match(/\.memo\b/g)).toBeNull();
+    expect(block.slice(formStart, formEnd)).toContain('plan?.memo ? "메모" : null');
+    expect(block).not.toMatch(/href=|<a |linkify|dangerouslySetInnerHTML/);
+    expect(hub).not.toMatch(/\.plan\b|memo/);
   });
 });

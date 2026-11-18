@@ -86,6 +86,46 @@ describe("데모 이름표 정한 날 가격 — 실시간 시세 배율만큼 �
   });
 });
 
+describe("데모 점검 기록(reviews) 그때 가격 — base.price와 같은 배율(5.125 4·5차)", () => {
+  /** '그날 가격부터' %(지금 시세 ÷ 기록 가격 − 1) — 행 2줄 점검 뒤 %·NVIDIA 바꾼 기록이 현실 범위인지 */
+  const reviewPcts = (stocks: Stock[], labels: StockLabels) => {
+    const price = priceByLabelKey(stocks);
+    return (labels.reviews ?? []).map((r) => ({ k: `${r.t}@${r.at}`, pct: Math.round((price.get(r.t)! / r.price - 1) * 1000) / 10 }));
+  };
+  for (const today of ["2026-11-17", "2026-03-10", "2027-01-31"]) {
+    const { stocks, labels } = load(today);
+    it.each(Object.keys(SCENES))(`${today} %s: 기록 3건 모두 −15%~+30%, 장면과 무관하게 같은 %`, (scene) => {
+      const nowStocks = live(stocks, SCENES[scene]);
+      const next = rebaseDemoLabelPrices(labels, labels, priceByLabelKey(stocks), priceByLabelKey(nowStocks));
+      const got = reviewPcts(nowStocks, next);
+      expect(got).toHaveLength(3);
+      for (const g of got) {
+        expect(g.pct, g.k).toBeGreaterThanOrEqual(-15);
+        expect(g.pct, g.k).toBeLessThanOrEqual(30);
+      }
+      expect(got).toEqual(reviewPcts(stocks, labels));
+      // rate(그때 산 날부터 %)는 옮기지 않는다
+      expect(next.reviews!.map((r) => r.rate)).toEqual(labels.reviews!.map((r) => r.rate));
+    });
+  }
+  it("TIGER 정한 뒤 +10.5% < 산 날부터 +16.7%(COO P1-6, base.price 19,000)", () => {
+    const { stocks, labels } = load("2026-11-17");
+    expect(labels.items["360750"].base!.price).toBe(19000);
+    expect(pcts(stocks, labels, 0).find((g) => g.t === "360750")!.pct).toBe(10.5);
+    const tiger = stocks.find((s) => s.ticker === "360750")!;
+    expect(Math.round((tiger.currentPrice / tiger.averagePrice - 1) * 1000) / 10).toBe(16.7);
+  });
+  it("시드에 같은 `t@at`이 있는 기록만 — 데모에서 새로 남긴 기록은 그때 시세라 그대로", () => {
+    const { stocks, labels } = load("2026-11-17");
+    const mine = { t: "AAPL", at: "2026-11-17T01:00:00.000Z", from: "check" as const, choice: "same" as const, price: 300, rate: 50 };
+    const withMine: StockLabels = { ...labels, reviews: [mine, ...labels.reviews!] };
+    const next = rebaseDemoLabelPrices(withMine, labels, priceByLabelKey(stocks), priceByLabelKey(live(stocks, SCENES.실측)));
+    expect(next.reviews![0]).toBe(mine);
+    expect(next.reviews!.find((r) => r.t === "NVDA")!.price).toBeCloseTo(120 * 1.4, 6);
+    expect(rebaseDemoLabelPrices(next, labels, priceByLabelKey(stocks), priceByLabelKey(live(stocks, SCENES.실측)))).toBe(next); // 멱등
+  });
+});
+
 describe("데모·체험 전용 — 사용자 저장 경로 영향 0", () => {
   const comp = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/demo-snapshot-rebase.tsx"), "utf8");
   it("쓰기는 eligible(체험·preview + 모든 보유 id가 demo_) 안에서만. 이름표는 직접 쓰기(동기화 신호 없음), 평단은 saveData 1곳 — 동기화는 preview·체험에서 꺼져 있다", () => {
