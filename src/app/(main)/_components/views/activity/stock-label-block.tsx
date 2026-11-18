@@ -627,6 +627,8 @@ export function StockLabelBlock({ store }: { store?: ReturnType<typeof useStockL
           </SectionHeader>
           <span className="whitespace-nowrap text-sm text-muted-foreground">평단 대비 수익률</span>
         </div>
+        {/* 행 2줄 `N점`·`측정 중`의 기준을 목록 머리에서 바로(qa 권고, 상세는 ⓘ). 좁은 폭에서는 어절 단위로 감긴다 */}
+        <p data-testid="grow-score-caption" className="-mt-1 text-xs text-muted-foreground tabular-nums text-pretty break-keep">점수 5점 만점 · 측정 중은 보유 {Math.round(SCORE_MIN_DAYS / 30.5)}개월 미만</p>
         <div data-testid="grow-buckets" className="flex flex-col gap-3">
           {buckets.map((b) => (
             <div key={b.value} data-testid="grow-bucket" data-bucket={b.value}>

@@ -144,7 +144,7 @@ describe("② 내 종목", () => {
     expect(text(html.match(/<li data-testid="grow-row" data-key="t:EEE"[\s\S]*?<\/li>/)![0])).toContain("1개월·측정 중");
     expect(html.match(/data-testid="grow-row-toggle"/g)).toHaveLength(6);
     expect(html.match(/<svg[^>]*lucide-chevron-right[^>]*row-span-2/g)).toHaveLength(6);
-    expect(text(html)).not.toMatch(/\d\/5|재확인 차례|점수 \d/);
+    expect(text(html)).not.toMatch(/\d\/5|재확인 차례|점수 \d(?!점)/);
   });
   it("점검 한 장은 닫혀 있다(inert), 열린 행이 없으면 내용도 그리지 않는다", () => {
     expect(html.match(/inert=""[^>]*class="[^"]*grid-rows-\[0fr\]/g)!.length).toBeGreaterThanOrEqual(6);
@@ -256,6 +256,11 @@ describe("조건 폼 — 입력 중 화면을 벗어나도 저장(ui-review 5b)"
 });
 
 describe("6차 — 기준 패널·정한 날 표시", () => {
+  it("목록 머리 아래 점수 기준 1줄 `점수 5점 만점 · 측정 중은 보유 6개월 미만`(qa 권고)", () => {
+    const html = render(SIX, mk({}));
+    expect(text(html.match(/<p data-testid="grow-score-caption"[^>]*>.*?<\/p>/)![0])).toBe("점수 5점 만점 · 측정 중은 보유 6개월 미만");
+    expect(html.indexOf('data-testid="grow-score-caption"')).toBeLessThan(html.indexOf('data-testid="grow-buckets"'));
+  });
   const rates = { USD: 1400, JPY: 9 };
   const panel = (stocks: Stock[]) => {
     const rows = buildBoardRows(stocks, rates, mk({}), Date.now());

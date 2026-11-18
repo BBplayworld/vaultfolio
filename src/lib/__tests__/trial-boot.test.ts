@@ -234,7 +234,23 @@ describe("체험 주입 닉네임(ui-review R2)", () => {
     expect(readFileSync(path.resolve(__dirname, "../preview/demo-data.json"), "utf8")).toBe(raw);
   });
   it("runTrialBoot은 닉네임 빈 값으로 주입", () => {
-    expect(readFileSync(path.resolve(__dirname, "../trial/trial-boot.ts"), "utf8")).toContain('await injectDemoPayload({ nickname: "" });');
+    expect(readFileSync(path.resolve(__dirname, "../trial/trial-boot.ts"), "utf8")).toContain('await injectDemoPayload({ nickname: "", mode: "trial" });');
+  });
+  it("등급 기록 시드(#239 6차) — 데모 주입은 1건, 체험 주입은 0건(없는 변화 표시 방지), 다른 기록 값은 같다", async () => {
+    const graded = (m: Storage) => (JSON.parse(m.getItem("secretasset_daily_snapshots") ?? "[]") as { grade?: unknown }[]).filter((d) => d.grade);
+    const rows = (m: Storage) => (JSON.parse(m.getItem("secretasset_daily_snapshots") ?? "[]") as { grade?: unknown }[]).map(({ grade: _g, ...r }) => r);
+    const { injectDemoPayload } = await import("../preview/demo-inject");
+    const demo = createMemoryStorage();
+    stubBrowser(demo);
+    await injectDemoPayload();
+    vi.unstubAllGlobals();
+    const trial = createMemoryStorage();
+    stubBrowser(trial);
+    await injectDemoPayload({ nickname: "", mode: "trial" });
+    expect(graded(demo)).toHaveLength(1);
+    expect(graded(trial)).toHaveLength(0);
+    expect(JSON.parse(trial.getItem("secretasset_monthly_snapshots") ?? "[]").some((m: { grade?: unknown }) => m.grade)).toBe(false);
+    expect(rows(trial)).toEqual(rows(demo));
   });
 });
 
