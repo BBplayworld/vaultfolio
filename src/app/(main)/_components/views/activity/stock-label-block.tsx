@@ -441,11 +441,12 @@ export function StockLabelBlock() {
                 <InfoHint summary="점수는 보유 기간 대비 성과를 5점 만점으로 매긴 거예요.">
                   {/* 괄호 뒤 조사 금지(C114), 팝오버 높이를 줄이려 기준표는 한 문단 */}
                   <p className="text-pretty break-keep">산 날부터 지금까지 수익률을 1년 기준 연 환산 수익률로 바꿔 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
-                  <p className="tabular-nums text-pretty break-keep">
-                    {HOLD_SCORE_BANDS.map((b, i) => (
-                      <span key={b.score}>{i > 0 && " · "}<span className="whitespace-nowrap">{b.score}점 {b.min === null ? "0% 미만" : `${b.min}% 이상`}</span></span>
+                  {/* 구간표 — 2열 격자(5점|4점 / 3점|2점 / 1점), 칸 높이 같음, 가운뎃점 없음(ui-review 재검수) */}
+                  <ul data-testid="grow-score-bands" className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+                    {HOLD_SCORE_BANDS.map((b) => (
+                      <li key={b.score} className="whitespace-nowrap">{b.score}점 {b.min === null ? "0% 미만" : `${b.min}% 이상`}</li>
                     ))}
-                  </p>
+                  </ul>
                   <p className="text-pretty break-keep">{Math.round(SCORE_MIN_DAYS / 30.5)}개월이 안 된 종목은 측정 중이에요. 나눠 산 종목은 처음 산 날부터 세요. 구간은 자산 성적표 장기 순자산 성장과 같아요.</p>
                 </InfoHint>
               </span>
