@@ -156,7 +156,7 @@ function Axes({ axis, onAxis, groups, totalRate, scale, filterKey, onGroup }: {
           </InfoHint>
         </span>
       </SectionHeader>
-      <InlineSelector<BoardAxis> fullWidth ariaLabel="점검 기준" value={axis} onChange={onAxis} options={AXIS_OPTIONS} className="max-[359px]:[&>button]:text-xs" />
+      <InlineSelector<BoardAxis> fullWidth tight ariaLabel="점검 기준" value={axis} onChange={onAxis} options={AXIS_OPTIONS} className="max-[359px]:[&>button]:text-xs" />
       <div data-testid="grow-groups" data-axis={axis}>
         <div aria-hidden className={`${AXIS_COLS} h-4 text-xs text-muted-foreground`}>
           <span />
@@ -215,7 +215,7 @@ function Axes({ axis, onAxis, groups, totalRate, scale, filterKey, onGroup }: {
 // ─── ③ 종목별 표 ────────────────────────────────────────────────────
 
 // 열: 종목·보유 기간 | (1024~) 보유 기간 | 수익률 + 미니 막대 | 손익 | 이름표. 360 미만은 손익을 수익률 칸 둘째 줄로 접는다
-const ROW_COLS = "grid grid-cols-[minmax(0,1fr)_3.75rem_4rem_5rem] max-[359px]:grid-cols-[minmax(0,1fr)_4rem_4.75rem] lg:grid-cols-[minmax(0,1fr)_7rem_6rem_6.5rem_6.75rem]";
+const ROW_COLS = "grid grid-cols-[minmax(0,1fr)_3.5rem_3.75rem_4.75rem] max-[359px]:grid-cols-[minmax(0,1fr)_4rem_4.75rem] lg:grid-cols-[minmax(0,1fr)_7rem_6rem_6.5rem_6.75rem]";
 const CHIP_TEXT: Record<BoardRow["labelState"], string> = { keep: "오래 둘", check: "점검할", none: "이름표", unset: "이름표" };
 
 /** 보유 기간 · 점수 · 점검 차례 — withHold=false면 보유 기간 없이(1024 열 둘째 줄, testId는 모바일 줄에만) */
@@ -264,10 +264,7 @@ function BoardRowItem({ row, scale, open, onToggle, onOpenPage, onLabel, onCheck
           aria-label={`${row.name} 종목 페이지 보기, 보유 ${row.holdText}, 수익률 ${row.rate === null ? "없음" : pctText(row.rate)}`}
           className="min-h-10 min-w-0 rounded-md py-1.5 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <span className="flex min-w-0 items-center gap-0.5">
-            <span className="min-w-0 truncate text-sm font-semibold text-foreground max-[359px]:whitespace-normal max-[359px]:break-keep">{row.name}</span>
-            <ChevronRight aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-          </span>
+          <span className="block min-w-0 truncate text-sm font-semibold text-foreground max-[359px]:whitespace-normal max-[359px]:break-keep">{row.name}</span>
           <HoldLine row={row} withHold className="lg:hidden" />
         </button>
         <span className="hidden flex-col items-end justify-center text-sm tabular-nums lg:flex">
@@ -285,7 +282,7 @@ function BoardRowItem({ row, scale, open, onToggle, onOpenPage, onLabel, onCheck
             </>
           )}
         </span>
-        <span data-testid="grow-row-profit" data-profit={row.priced ? Math.round(row.profit) : ""} className="text-right text-sm text-muted-foreground tabular-nums max-[359px]:hidden">
+        <span data-testid="grow-row-profit" data-profit={row.priced ? Math.round(row.profit) : ""} className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums max-[359px]:hidden">
           {row.priced ? wonText(row.profit) : "—"}
         </span>
         <span className="flex justify-end">
@@ -438,7 +435,7 @@ export function StockLabelBlock() {
         <div>
           <div className={`${ROW_COLS} items-center border-b border-border pb-1.5 text-xs text-muted-foreground dark:border-border/40`}>
             <span className="flex min-w-0 items-center gap-1">
-              <span className="truncate">종목<span className="lg:hidden"> · 보유 기간 · 점수</span></span>
+              <span className="truncate">종목<span className="lg:hidden"> · 기간 · 점수</span></span>
               <span data-testid="grow-score-hint" data-screenshot-hide className="inline-flex">
                 <InfoHint summary="점수는 보유 기간 대비 성과를 5점 만점으로 매긴 거예요.">
                   <p className="text-pretty break-keep">산 날부터 지금까지 수익률을 1년 기준으로 바꾼 값(연 환산)으로 매겨요. 오래 가진 종목과 최근에 산 종목을 같은 잣대로 보기 위해서예요.</p>
