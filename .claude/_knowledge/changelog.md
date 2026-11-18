@@ -33,6 +33,7 @@
   - ③ 종목별 표(오래 가진 순 고정, 상위 5 + 전체 보기, 점검 차례 행은 접지 않음): 종목·보유 기간·점수 / 수익률 + 미니 막대 / 손익 / 이름표 칩(누르면 3택·`오늘 점검했어요`·`최근 3개월 매매 N건 · 이 앱 기록 · …`). 1024부터 2열(5fr:7fr)·보유 기간 열 분리, 360 미만은 손익을 수익률 아래로.
   - **보유 기간 대비 점수**(대표 선택): 연 환산 수익률 (1+r)^(365/일수)−1 을 자산 성적표 '장기 순자산 성장' 구간(15·10·5·0%)으로 5점 만점. 183일 미만은 `측정 중`(지수가 2를 넘으면 한두 달 시세가 점수를 좌우). 기준표 ⓘ, 점수 순 정렬 없음, 결론 카드 평균 점수는 넣지 않음.
   - ④ `점검 주기 3개월 ›` 설정 줄 1개(누르면 그 자리에서 선택).
+  - 허브 셋째 카드 둘째 줄: 무게(`오래 둘 자산이 내 주식의 N.N%`) → `산 날부터 지금까지 +N만원 (+x.x%)`(같은 공용 합계, 손익색은 금액·%만). 큰 값은 그대로.
   - 신규 `lib/asset/grow-board.ts`, `grow-links.ts` 삭제, `grow-rows.ts`에서 수량 비교·정한 날 가격·매매 건수 필드 제거(허브 카드용은 유지), `asset-report-view.tsx` ytd 조회 제거, `useDividendAnnualTotals` `byLabelKey` → `annualAtHeldQty`. 새 소식 본문 `산 날부터 손익과 보유 기간 대비 점수를 기준별로 보고, 이름표로 점검해요`.
   - 데모 시드: 삼성전자 매수일 `@M-20D12`·TIGER `@M-26D03`(1년 이상 묶음), 최상위 `xrayClassifications`(시가총액 구간 4종목) — `injectDemoPayload`가 캐시에 없는 필드만 채운다(`demoClassificationPatches`).
 - 테스트: `stock-labels-merge`·`stock-labels-storage`·`stock-labels-sync`·`trial-boot`(추가)·`use-stock-labels`·`stock-label-block`(재작성)·`asset-grade-copy`·`ga`(추가)·`grow-board`(신규)·`demo-label-rebase`. `home-tip-holdings.test.ts`는 실제 시계 의존(11/17부터 실패)이라 시계만 고정.

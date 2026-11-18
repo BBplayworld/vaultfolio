@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Wallet, BadgeDollarSign, Sprout } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { formatPriceByMode } from "@/lib/number-utils";
+import { formatPriceByMode, formatShortCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
@@ -14,7 +14,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
-import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { computeStockTotals, groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useStockLabels } from "@/hooks/use-stock-labels";
 import { buildGrowRows, growTotals, summarizeGrowRows } from "@/lib/asset/grow-rows";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
@@ -100,7 +100,10 @@ export function PerformanceHub() {
   const [growNow] = useState(() => Date.now());
   const grow = useMemo(() => {
     const rows = buildGrowRows(assetData.stocks, exchangeRates, labels, growNow);
-    return { hasRows: rows.length > 0, ...summarizeGrowRows(rows, labels, growNow, growTotals(assetData.stocks, exchangeRates)) };
+    // 둘째 줄 = 불리기 결론 카드와 같은 공용 합계(산 날부터 지금까지, 상세 › 주식 '전체'와 같은 값). 묶음별 값은 쓰지 않는다(대표: 합계만)
+    const active = assetData.stocks.filter((s) => s.inactiveStatus !== "delisted");
+    const total = active.length > 0 && active.every((s) => s.currentPrice > 0) ? computeStockTotals(active, exchangeRates) : null;
+    return { hasRows: rows.length > 0, total, ...summarizeGrowRows(rows, labels, growNow, growTotals(assetData.stocks, exchangeRates)) };
   }, [assetData.stocks, exchangeRates, labels, growNow]);
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
@@ -209,14 +212,15 @@ export function PerformanceHub() {
           primaryClassName={ASSET_THEME.text.default}
           secondary={!hasAssets ? (
             <span data-testid="hub-report-secondary" data-kind="empty" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
-          ) : !labelsReady || !grow.hasRows || grow.keep + grow.check === 0 ? null : grow.keep > 0 ? (
-            // '오래 둘'이 있으면 그 무게 — 불리기 화면 무게 줄 첫 묶음과 같은 함수의 같은 문자열 값. 색·경과 표시 없음
-            <span data-testid="hub-report-secondary" data-kind="weight" data-pct={grow.weights.keep.pctText} className="whitespace-nowrap text-muted-foreground tabular-nums">
-              오래 둘 자산이 내 주식의 <span className="font-semibold text-foreground">{grow.weights.keep.pctText}</span>
+          ) : !labelsReady || !grow.hasRows || !grow.total ? null : (
+            // 산 날부터 지금까지 손익 한 줄 — 손익색은 금액·%에만(앱 규약). 시세 없는 종목이 있으면 줄 없음(불리기 결론 카드와 같은 조건)
+            <span data-testid="hub-report-secondary" data-kind="total" data-profit={Math.round(grow.total.totalProfit)} className="whitespace-nowrap text-muted-foreground tabular-nums">
+              산 날부터 지금까지{" "}
+              <span className={`font-semibold ${Math.round(grow.total.totalProfitRate * 10) === 0 ? "text-foreground" : getProfitLossColor(grow.total.totalProfit)}`}>
+                {Math.round(grow.total.totalProfit) > 0 ? "+" : ""}{formatShortCurrency(Math.round(grow.total.totalProfit))} ({Math.round(grow.total.totalProfitRate * 10) > 0 ? "+" : ""}{(Math.round(grow.total.totalProfitRate * 10) / 10 || 0).toFixed(1)}%)
+              </span>
             </span>
-          ) : grow.lastCheckText ? (
-            <span data-testid="hub-report-secondary" data-kind="check" className="text-muted-foreground tabular-nums">{grow.lastCheckText}</span>
-          ) : null}
+          )}
           onClick={() => go("report")}
         />
         </div>

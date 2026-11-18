@@ -116,10 +116,13 @@ describe("금지 단어 0(AC-13)", () => {
     const card = hub.slice(hub.indexOf('data-testid="hub-card-report"'));
     for (const w of FORBIDDEN) expect(visibleText(card), w).not.toContain(w);
     expect(card).toContain("내 기준으로 지키고, 내가 점검해요");
-    expect(card).not.toMatch(/formatPriceByMode|getProfitLossColor|toFixed|모든 자산|투입 대비|원\b/); // 금액·손익색 없음(AC-1). %는 '오래 둘' 무게 1개뿐(AC-23)
-    expect(card).toContain("오래 둘 자산이 내 주식의 ");
-    expect(card.match(/pctText/g)).toHaveLength(2); // data-pct와 표시값 — 무게 줄 첫 묶음과 같은 문자열 값
-    expect(card).toContain("primaryClassName={ASSET_THEME.text.default}");
+    // 재설계 3차(11/18 오케스트레이터 판단): 둘째 줄은 무게 대신 결론 카드와 같은 공용 합계 한 줄. 묶음별·이름표별 값 없음(대표: 합계만)
+    expect(card).not.toMatch(/formatPriceByMode|모든 자산|투입 대비|오래 둘 자산이 내 주식의|pctText|weights/);
+    expect(card).toContain("산 날부터 지금까지");
+    expect(card).toContain('data-kind="total"');
+    expect(hub).toContain("computeStockTotals(active, exchangeRates)");
+    expect(card.match(/getProfitLossColor\(/g)).toHaveLength(1); // 손익색은 금액·% 한 곳
+    expect(card).toContain("primaryClassName={ASSET_THEME.text.default}"); // 큰 값(이름표 개수·행동 문구)은 본문색 그대로
   });
   it("새 소식 1줄·기능 목록 이름", () => {
     const entry = WHATS_NEW.find((e) => e.id === "20261117-01")!;
