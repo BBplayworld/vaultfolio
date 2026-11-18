@@ -21,7 +21,9 @@ vi.mock("@/hooks/use-stock-labels", () => ({
 vi.mock("../performance-hub", () => ({ useDividendAnnualTotals: () => h.div }));
 vi.mock("../../../layout/navigation/navigation-context", () => ({ useAssetNavigation: () => ({ navigate: () => {} }) }));
 
-import { ReviewSheet, StockLabelBlock } from "../stock-label-block";
+import { planDraftDirty, planFromDraft, ReviewSheet, StockLabelBlock, type PlanDraft } from "../stock-label-block";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { buildBoardRows } from "@/lib/asset/grow-board";
 
 const ago = (n: number) => new Date(Date.now() - n * 86_400_000 + 9 * 3_600_000).toISOString().slice(0, 10);
@@ -231,5 +233,24 @@ describe("점검 한 장", () => {
     const html = sheet({ ...CHECK({ checkedAt: day(0), at: day(0) }), reviews: [{ t: "BBB", at: day(0), from: "check", choice: "same", price: 200, rate: 100 }] }, "BBB");
     expect(html.match(/<button[^>]*data-testid="grow-choice-same"[^>]*>/)![0]).toContain('aria-disabled="true"');
     expect(text(html)).toMatch(/^오늘 점검함 · 다음 점검 \d{1,2}월 \d{1,2}일/);
+  });
+});
+
+describe("조건 폼 — 입력 중 화면을 벗어나도 저장(ui-review 5b)", () => {
+  const draft = (o: Partial<PlanDraft> = {}): PlanDraft => ({ down: "", up: "", months: "", memo: "", ...o });
+  it("저장값과 다른 입력만 dirty — 같은 정리 규칙(범위 끝값·메모 공백·제어문자)을 거쳐 비교", () => {
+    expect(planDraftDirty(draft({ memo: "실적 발표 뒤" }), undefined)).toBe(true);
+    expect(planDraftDirty(draft({ down: "10", memo: "메모" }), { down: 10, memo: "메모", at: "2026-11-01" })).toBe(false);
+    expect(planDraftDirty(draft({ down: "95" }), { down: 90 })).toBe(false); // 범위 밖 → 끝값 90
+    expect(planDraftDirty(draft({ memo: "  메모  " }), { memo: "메모" })).toBe(false);
+    expect(planDraftDirty(draft(), undefined)).toBe(false);
+    expect(planFromDraft(draft({ down: "0", up: "600", months: "6", memo: "x" }))).toEqual({ down: undefined, up: 500, months: 6, memo: "x" });
+  });
+  it("언마운트·접힘 때 남은 입력을 저장한다(blur 없이 이동)", () => {
+    const src = readFileSync(path.resolve(__dirname, "../stock-label-block.tsx"), "utf8");
+    const editor = src.slice(src.indexOf("function PlanEditor("), src.indexOf("export function ReviewSheet("));
+    expect(editor).toContain("useEffect(() => () => flush(), [])");
+    expect(editor).toMatch(/if \(wasOpen\.current && !open\) flush\(\)/);
+    expect(editor).toContain("if (planDraftDirty(d, saved)) save(planFromDraft(d));");
   });
 });

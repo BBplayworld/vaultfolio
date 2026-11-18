@@ -21,7 +21,7 @@ import {
   type BoardAxis, type BoardBucket, type BoardGroup, type BoardRow, type BoardSummary,
 } from "@/lib/asset/grow-board";
 import {
-  isStockLabelRevisit, reviewsOf, STOCK_LABEL_CYCLES, STOCK_PLAN_MEMO_MAX, STOCK_PLAN_RANGE,
+  cleanStockPlan, isStockLabelRevisit, reviewsOf, STOCK_LABEL_CYCLES, STOCK_PLAN_MEMO_MAX, STOCK_PLAN_RANGE,
   type StockLabelCycleMonths, type StockLabelPlan, type StockLabelReview, type StockLabels, type StockReviewChoice,
 } from "@/lib/asset/stock-labels";
 import { track } from "@/lib/analytics/ga";
@@ -171,7 +171,7 @@ function AxisPanel({ axis, groups, totalRate, scale, filterKey, onGroup }: {
 const CHOICE_TEXT: Record<StockReviewChoice, string> = { same: "그대로 둠", keep: "오래 둘로", check: "점검할로", none: "정하지 않음으로" };
 const historyText = (r: StockLabelReview) => (r.choice === "same" && r.from === "keep" ? "그대로 오래 둠" : CHOICE_TEXT[r.choice]);
 
-type PlanDraft = { down: string; up: string; months: "" | CycleChoice; memo: string };
+export type PlanDraft = { down: string; up: string; months: "" | CycleChoice; memo: string };
 const draftOf = (p: StockLabelPlan | undefined): PlanDraft => ({
   down: p?.down !== undefined ? String(p.down) : "",
   up: p?.up !== undefined ? String(p.up) : "",
@@ -185,6 +185,16 @@ const clampInt = (v: string, [lo, hi]: readonly [number, number]): number | unde
   if (v === "" || !Number.isFinite(n) || n <= 0) return undefined;
   return Math.min(hi, Math.max(lo, Math.round(n)));
 };
+
+/** 폼 입력 → 저장할 조건(범위 밖 숫자는 끝값, 메모 정리는 setStockPlan이 같은 규칙으로) */
+export function planFromDraft(d: PlanDraft): Pick<StockLabelPlan, "down" | "up" | "months" | "memo"> {
+  return { down: clampInt(d.down, STOCK_PLAN_RANGE.down), up: clampInt(d.up, STOCK_PLAN_RANGE.up), months: d.months === "" ? undefined : (Number(d.months) as StockLabelCycleMonths), memo: d.memo };
+}
+/** 저장값과 다른 입력이 남았는지 — 정리 규칙을 거친 값끼리 비교(공백·범위 밖 숫자만 다른 입력은 같은 값) */
+export function planDraftDirty(d: PlanDraft, saved: StockLabelPlan | undefined): boolean {
+  const norm = (p: Pick<StockLabelPlan, "down" | "up" | "months" | "memo"> | undefined) => JSON.stringify(p ? cleanStockPlan(p) : null);
+  return norm(planFromDraft(d)) !== norm(saved);
+}
 
 /** 다시 볼 조건 — 요약 1줄(누르면 폼). 값은 사용자가 비운 칸에 직접 넣는다(예시 숫자·프리셋 없음) */
 function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
@@ -200,10 +210,21 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave }: {
   // 저장소 값이 바뀌면(다른 탭·pull·범위 정리) 폼을 저장된 값으로 맞춘다
   useEffect(() => { setDraft(draftOf(plan)); }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
   const commit = (d: PlanDraft) => {
-    const next = { down: clampInt(d.down, STOCK_PLAN_RANGE.down), up: clampInt(d.up, STOCK_PLAN_RANGE.up), months: d.months === "" ? undefined : (Number(d.months) as StockLabelCycleMonths), memo: d.memo };
+    const next = planFromDraft(d);
     setDraft({ ...d, down: next.down === undefined ? "" : String(next.down), up: next.up === undefined ? "" : String(next.up) });
     onSave(next);
   };
+  // 입력 중 화면을 벗어나면(접기·한 장 닫기·페이지 이동 = 언마운트) blur가 오지 않는다 — 저장값과 다른 입력이 남아 있으면 그때 저장한다(iOS 숫자 키패드엔 Enter가 없다)
+  const latest = useRef({ draft, plan, onSave });
+  latest.current = { draft, plan, onSave };
+  const flush = () => {
+    const { draft: d, plan: saved, onSave: save } = latest.current;
+    if (planDraftDirty(d, saved)) save(planFromDraft(d));
+  };
+  useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // 폼이 접힐 때(헤더·다른 선택·다른 행) — 열림 → 닫힘 전환마다 한 번
+  const wasOpen = useRef(open);
+  useEffect(() => { if (wasOpen.current && !open) flush(); wasOpen.current = open; }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const months = plan?.months ?? cycleMonths;
   const summary = [
     plan?.down !== undefined ? `−${plan.down}% 이하` : null,
