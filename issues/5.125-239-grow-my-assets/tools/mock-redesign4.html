@@ -174,9 +174,10 @@ function renderMock(root, opts = {}) {
   const tone = (v) => (v > 0 ? "mk-up" : v < 0 ? "mk-down" : "mk-muted");
   const tPl = sum(S, "pl"), tCost = sum(S, "cost"), tPct = pct(tPl, tCost);
   const keep = S.filter((s) => s.label === "keep"); const keepShare = Math.round((sum(keep, "pl") / tPl) * 100);
-  const lo = 0, hi = 30; const X = (v) => ((v - lo) / (hi - lo)) * 100; const bar = (v) => `left:${X(Math.min(0, v))}%;width:${Math.max(X(Math.max(0, v)) - X(Math.min(0, v)), 0.8)}%;background:var(${v >= 0 ? "--up" : "--down"})`;
+  const lo = opts.loss ? -10 : 0, hi = 30; const X = (v) => ((v - lo) / (hi - lo)) * 100; const bar = (v) => `left:${X(Math.min(0, v))}%;width:${Math.max(X(Math.max(0, v)) - X(Math.min(0, v)), 0.8)}%;background:var(${v >= 0 ? "--up" : "--down"})`;
   const HOLD = [["1년 이상", ["TIGER 미국S&P500", "삼성전자"]], ["1년 미만", ["KODEX 200", "SK하이닉스", "Apple", "NVIDIA"]]].map(([g, n]) => { const ss = S.filter((s) => n.includes(s.name)); return { g, n: ss.length, pl: sum(ss, "pl"), p: pct(sum(ss, "pl"), sum(ss, "cost")) }; });
   // 돌아보기 — 고정 순서 오래 둘 → 점검할 → 바꾼 선택. %는 모두 '그날 가격부터'(정한 날 / 마지막 점검 / 바꾼 날)
+  const LP = opts.loss ? { "TIGER 미국S&P500": -8.1, "삼성전자": -4.2, "Apple": -3.5, "SK하이닉스": 2.1, "NVIDIA": -2.4 } : null;
   const RV = [
     { k: "오래 둘", base: "정한 날 가격부터", dot: "color-mix(in oklab, var(--foreground) 80%, transparent)", rows: [
       { name: "TIGER 미국S&P500", sub: "13개월째", st: "재확인 차례", p: 27.3 },
@@ -215,10 +216,10 @@ function renderMock(root, opts = {}) {
   </section>
   <section class="mk-sec" data-mk="review">
     <div class="mk-h">${ICON.back}내 선택 돌아보기 <span class="mk-i">i</span></div>
-    <div class="mk-rv-scale mk-muted" aria-hidden="true"><div></div><div><span style="position:absolute;left:0">0</span><span style="position:absolute;right:0">+${hi}%</span></div><div></div></div>
+    <div class="mk-rv-scale mk-muted" aria-hidden="true"><div></div><div><span style="position:absolute;left:${X(0)}%;transform:translateX(-50%)">0</span><span style="position:absolute;right:0">+${hi}%</span></div><div></div></div>
     ${RV.map((g) => `<div class="mk-rv-group" data-mk="rv-group">
       <div class="mk-rv-head"><b><i style="background:${g.dot}"></i>${g.k}</b><span>${g.base}</span></div>
-      ${g.rows.map((r) => `<button class="mk-rv-row" data-mk="rv-row"><span><span class="mk-rv-name">${r.name}</span><span class="mk-sub">${r.sub}</span></span>${r.p === null ? `<span class="mk-sub" style="text-align:right;grid-column:2 / 4">지금 보유 없음</span>` : `<span class="mk-track"><span class="mk-fill" style="${bar(r.p)}"></span></span><span class="mk-rv-pct"><b class="${tone(r.p)}">${fp(r.p)}</b>${r.st ? `<span class="mk-due">${r.st}</span>` : ""}</span>`}</button>`).join("")}
+      ${g.rows.map((r) => (LP && r.p !== null ? { ...r, p: LP[r.name] } : r)).map((r) => `<button class="mk-rv-row" data-mk="rv-row"><span><span class="mk-rv-name">${r.name}</span><span class="mk-sub">${r.sub}</span></span>${r.p === null ? `<span class="mk-sub" style="text-align:right;grid-column:2 / 4">지금 보유 없음</span>` : `<span class="mk-track"><span class="mk-fill" style="${bar(r.p)}"></span></span><span class="mk-rv-pct"><b class="${tone(r.p)}">${fp(r.p)}</b>${r.st ? `<span class="mk-due">${r.st}</span>` : ""}</span>`}</button>`).join("")}
     </div>`).join("")}
   </section>
   </div>
