@@ -636,6 +636,7 @@ function estimatePeriodInflows(
   fromDate: string,
   toDate: string,
   rates: { USD: number; JPY: number },
+  isFirstSegment: boolean = true,
 ): { stock: number; crypto: number; realEstate: number; physical: number; cash: number; debt: number } {
   const inPeriod = (d?: string) => !!d && d > fromDate && d <= toDate;
   // 기간 내 반영 거래를 가진 종목 id — 이 종목의 투입은 buy/sell로 계산되므로 매수일 추정에서 제외
@@ -690,7 +691,8 @@ function estimatePeriodInflows(
   for (const c of data.cash) {
     if (!inPeriod(assetIdRegisteredDate(c.id, toDate) ?? undefined)) continue;
     const later = (data.cashTransactions || [])
-      .filter((t) => t.reflected && t.cashId === c.id && t.date > fromDate)
+      // 첫 구간은 reflectedCashInflow가 시작일 당일 입출금도 income에 넣으므로 같은 경계로 뺀다(qa D-1, 이중 계상 0)
+      .filter((t) => t.reflected && t.cashId === c.id && (isFirstSegment ? t.date >= fromDate : t.date > fromDate))
       .reduce((s, t) => s + (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates), 0);
     cash += c.balance * krwMul(c.currency, rates) - later;
   }
@@ -915,7 +917,7 @@ function resolveAttribution(
       return sum + curr.fxBase![c] * (curr.fx![c] / prevFx[c] - 1);
     }, 0)
     : 0;
-  const inflows = estimatePeriodInflows(assetData, prev._date, curr._date, rates);
+  const inflows = estimatePeriodInflows(assetData, prev._date, curr._date, rates, isFirstSegment);
   // 구간 안 등록 현금(#251)도 새로 넣은 돈 — saving에 더해 항등식(price+…+saving=Δ순자산)을 유지한다
   const savingEffect = inflows.stock + inflows.crypto + inflows.realEstate + inflows.physical + inflows.cash;
   // breakdown(자산군별 평가액)은 fx/fxBase/cost 없이도 양쪽에 있을 수 있다 — breakdown.loans는

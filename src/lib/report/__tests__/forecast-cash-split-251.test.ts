@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeAttributionSince, getAttributionItems } from "../asset-report";
-import { mapSettlementCauses } from "../settlement";
+import { mapSettlementCauses, splitLoanCause } from "../settlement";
 import type { AssetData, Cash, DailyAssetSnapshot, Loan } from "@/types/asset";
 import type { CashTransaction, LoanTransaction } from "@/types/transaction";
 
@@ -119,6 +119,31 @@ describe("#251 예측 분해 — 구간 안 등록 현금·대출 분리", () =>
     const a = run(data, [legacy(10_000_000), enriched(TO, 15_000_000)]);
     const m = mapSettlementCauses(a.effects, { deltaNet: a.deltaNet, cashTracked: true, estimatedPriceAsUnrecorded: true });
     expect(m.causes).toEqual([{ key: "unrecorded", amount: 5_000_000, estimated: true }]);
+  });
+
+  it("7-2. (qa D-2) 신규 대출 예측 구간의 주·월·연 결산 원인 — 수정 전 기록 안 된 변화 → 수정 후 대출 · 예측(합계 불변)", () => {
+    const data = emptyData();
+    data.loans = [loan()]; // 금리 0 → 이자 몫 0, 대출 순증만으로 판정
+    const a = run(data, [legacy(10_000_000), enriched(TO, 10_000_000, 3_000_000)]);
+    // change-hero withLoanCause와 같은 입력: 엔진 debt 합의 순증·estimated
+    const settle = (effects: { key: Parameters<typeof mapSettlementCauses>[0][number]["key"]; amount: number; estimated?: boolean }[]) => {
+      const debts = effects.filter((e) => e.key === "debt");
+      const mapped = mapSettlementCauses(effects, { deltaNet: a.deltaNet, cashTracked: true, estimatedPriceAsUnrecorded: true });
+      return splitLoanCause(mapped, {
+        interest: 0,
+        debtIncrease: Math.max(0, -debts.reduce((s, e) => s + e.amount, 0)),
+        debtEstimated: debts.some((e) => e.estimated),
+      }).causes;
+    };
+    // 수정 전 엔진 결과(통합 시세 잔차 −300만·예측, debt 0) → 결산은 기록 안 된 변화
+    const before = [
+      { key: "price" as const, amount: -3_000_000, estimated: true },
+      { key: "debt" as const, amount: 0, estimated: true },
+    ];
+    expect(settle(before)).toEqual([{ key: "unrecorded", amount: -3_000_000, estimated: true }]);
+    // 수정 후 → 대출 · 예측 −300만(정밀 분기·startDate 구간 안 대출과 같은 결과)
+    expect(settle(a.effects)).toEqual([{ key: "loan", amount: -3_000_000, estimated: true }]);
+    expect(settle(a.effects).reduce((s, c) => s + c.amount, 0)).toBe(a.deltaNet);
   });
 
   it("8. 등록일을 못 읽는 id(비표준) → 현행 폴백(시세)", () => {
