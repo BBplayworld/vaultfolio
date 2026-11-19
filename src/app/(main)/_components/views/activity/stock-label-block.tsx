@@ -392,7 +392,8 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
                 // 선택 낱말은 어느 폭에서도 온전히 보인다(말줄임 없음). 낱말 + 값이 한 줄에 안 들어가면 값이 같은 행 둘째 줄 오른쪽으로 내려간다(ui-review R-1·qa D1)
                 <p key={`${r.t}@${r.at}`} data-testid="grow-history-row" className="flex min-h-7 flex-wrap items-center gap-x-1.5 text-sm">
                   <span aria-hidden className="mx-[3.5px] size-[7px] shrink-0 rounded-full bg-foreground/45" />
-                  <span className="w-16 shrink-0 whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
+                  {/* 날짜 칸은 최소 64px(줄 맞춤)이고 `11월 19일`처럼 긴 날짜에서는 내용만큼 늘어난다 — 고정 폭이면 선택 낱말과 겹친다(COO 되돌림) */}
+                  <span data-testid="grow-history-date" className="min-w-16 shrink-0 whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
                   <span data-testid="grow-history-choice" className="whitespace-nowrap">{historyText(r)}</span>
                   {/* 그날 가격부터 다음 기록(다음 점검까지)·지금(지금까지)까지. 값이 없으면 비운다. 부동산·실물은 가격이 시세가 아니라 값이 없다 */}
                   {(() => {

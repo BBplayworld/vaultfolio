@@ -433,6 +433,12 @@ describe("수정 라운드 — 이력 줄 말줄임·다음 점검 날짜 겹침
     // 값이 없는 줄은 빈 칸을 만들지 않는다
     expect(stockSheet(labels, false).match(/<p data-testid="grow-history-row"[\s\S]*?<\/p>/)![0]).not.toContain("grow-history-after");
   });
+  it("COO 되돌림: 이력 줄 날짜 칸은 고정 폭이 아니라 최소 폭 — 긴 날짜(`11월 19일`)가 선택 낱말과 겹치지 않는다", () => {
+    const labels = mk({ AAA: it0("keep", 20, 100) }, [{ t: "AAA", at: day(20), from: "keep", choice: "check", price: 90, rate: -10 }]);
+    const cls = stockSheet(labels).match(/<span data-testid="grow-history-date" class="([^"]*)"/)![1].split(" ");
+    expect(cls).toEqual(expect.arrayContaining(["min-w-16", "shrink-0", "whitespace-nowrap"]));
+    expect(cls.some((c) => /^(w-|max-w-|overflow|truncate)/.test(c))).toBe(false);
+  });
   it("R-6: 차례가 아닌 행은 이유 줄 `다음 점검 {날짜}` 한 줄만 — 버튼 아래 `그대로 두면 다음 점검은`은 차례인 행에서만(두 날짜 동시 노출 없음)", () => {
     const notDue = stockSheet(mk({ AAA: it0("check", 20, 100) }));
     expect(inner(notDue, "grow-sheet-reason")).toMatch(/^다음 점검 \d{1,2}월 \d{1,2}일$/);
