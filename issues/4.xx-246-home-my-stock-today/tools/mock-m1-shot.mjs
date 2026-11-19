@@ -38,7 +38,7 @@ async function compose(name, title, items, cols = 1, scheme = "dark") {
 const REAL = { name: "SK하이닉스", label: "11/19 종가", rate: "+2.9%", n: 5 };
 const S1 = { name: "엔비디아", label: "11/18 종가", rate: "+3.2%", n: 5 };
 const S2 = { name: "삼성전자", label: "오늘", rate: "-4.1%", n: 5 };
-const S3 = { name: "SK하이닉스", label: "오늘", rate: "-5.0%", n: 5 };
+const S3 = { name: "삼성전자", label: "오늘", rate: "-1.5%", n: 5 }; // 새 기준(원화 등락 기여): 삼성전자 -1.5% ≈ -19.5만 vs SK하이닉스 +2.9% ≈ +16.7만
 const S5 = { name: "삼성전자", label: "오늘", rate: "+0.8%", n: 0 };
 const S7 = { name: "애플", label: "11/18 종가", rate: "-1.5%", n: 1 };
 // S11(CEO 디자인 판정 ②, 2026-11-19): 고르는 기준 = 원화 등락 기여(현지 등락 × 수량 × 환율) 절대값 최대. 기여 ≈ 평가금 × r / (1 + r), 평가금은 preview 데모 상세·주식 실제 값
@@ -50,7 +50,7 @@ const S14 = { name: "삼성전자", label: "11/20 종가", rate: "-1.2%", n: 5 }
 const S15 = { name: "TIGER 미국나스닥100커버드콜(합성)", label: "11/18 종가", rate: "+1.4%", n: 5 };
 const S15b = { name: "TIGER 미국S&amp;P500", label: "11/18 종가", rate: "+1.4%", n: 12 };
 const WIDE = { name: "SK하이닉스", label: "11/19 종가", rate: "-12.3%", n: 12 };
-const DUE = { badge: "내 자산", title: "점검 차례 <span class='tabular-nums'>1종목</span>", desc: "평단 대비 −15% 이하에 닿았어요" };
+const DUE = { badge: "내 조건", title: "점검 차례 <span class='tabular-nums'>1종목</span>", desc: "평단 대비 −15% 이하에 닿았어요" };
 
 // ⓪ 데모 상세·주식 행 칩의 지금 값(목업 값과 대조용 로그)
 if (want("00-chips")) { const p = await open(390, 844, { hash: "#detail/stocks" }); await p.waitForSelector('[data-testid="stock-row-left"]');
@@ -68,7 +68,7 @@ if (want("01-place")) { const p = await open(390, 844); const items = [];
 
 // ② 상태 — 390 카드 조각
 if (want("02-states")) { const p = await open(390, 844); const items = [];
-  for (const [cap, s] of [["데모 실제 값(11/19 장 종료 뒤) — 원화 등락 기여 최대 행의 칩", REAL], ["S1 오른 날", S1], ["S2 내린 날(장중)", S2], ["S3 부호 혼합 — 절대값이 큰 내린 종목", S3], ["S5 1종목 — 꼬리 없음", S5], ["S7 나머지가 0.0% — 칩이 있으므로 센다", S7], ["S11 새 기준 — 소액 +20.0%가 있어도 주력 종목(원화 등락 기여 최대)", S11], ["S12 국내 장중·미국 마감 — 고른 종목의 라벨", S12], ["S13 미국 장중·국내 마감", S13], ["S14 주말·휴장", S14], ["S15 긴 종목명", S15], ["두 자리 % · 두 자리 N", WIDE], ["S16 조회 중 — 자리만", "pending"], ["S6·S8·S9·S10·S17 줄 없음 = 지금 화면 그대로", null]]) {
+  for (const [cap, s] of [["데모 실제 값(11/19 장 종료 뒤) — 원화 등락 기여 최대 행의 칩", REAL], ["S1 오른 날", S1], ["S2 내린 날(장중)", S2], ["S3 부호 혼합 — 원화 등락 기여가 큰 쪽(삼성전자 -1.5% ≈ -19.5만 / SK하이닉스 +2.9% ≈ +16.7만)", S3], ["S5 1종목 — 꼬리 없음", S5], ["S7 나머지가 0.0% — 칩이 있으므로 센다", S7], ["S11 새 기준 — 소액 +20.0%가 있어도 주력 종목(원화 등락 기여 최대)", S11], ["S12 국내 장중·미국 마감 — 고른 종목의 라벨", S12], ["S13 미국 장중·국내 마감", S13], ["S14 주말·휴장", S14], ["S15 긴 종목명", S15], ["두 자리 % · 두 자리 N", WIDE], ["S16 조회 중 — 자리만", "pending"], ["S6·S8·S9·S10·S17 줄 없음 = 지금 화면 그대로", null]]) {
     const m = await set(p, s); log(`02 ${cap}`, { card: m.card, text: m.text, overlap: m.overlap }); items.push({ cap, ...(await cardShot(p, 24)) }); }
   await compose("02-states-390", "② 상태별 문장 (390, 다크) — 꼴·자리·굵기 같고 등락률 색만 다르다", items, 2); await p.context().close(); }
 
