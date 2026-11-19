@@ -18,7 +18,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import { computeStockMetrics, computeStockTotals, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { classifyStock } from "@/lib/xray/stock-xray";
 import { GRADE_THRESHOLDS } from "@/lib/report/asset-grade";
-import { isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels, type StockReviewHit } from "@/lib/asset/stock-labels";
+import { STOCK_LABEL_CYCLES, isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels, type StockReviewHit } from "@/lib/asset/stock-labels";
 import { elapsedSince, formatSince, kstDayText, tradeCountsByLabelKey, type GrowLabelState } from "@/lib/asset/grow-rows";
 
 type Rates = { USD: number; JPY: number };
@@ -168,33 +168,38 @@ export function checkMonthsOf(item: StockLabelItem | undefined, cycleMonths: num
 
 const ROUND1 = (v: number) => Math.round(v * 10) / 10;
 
+/** 주기·기간이 없는 종목의 ±% 확인이 유지되는 기간(개월) — 점검 주기 선택지의 가장 짧은 값(3개월) */
+export const PCT_ACK_MONTHS = STOCK_LABEL_CYCLES[0];
+
 /**
  * ±% 조건 차례를 이미 확인했는지(#247) — 지금 이름표·지금 조건을 정한 뒤의 `그대로 둠` 기록 가운데
- * ±% 차례에서 누른 것(hit = down·up) 중 가장 최근 것의 방향. 없으면 null.
- *  - 조건을 고치면(plan.at이 기록보다 뒤) 새 조건이라 확인하지 않은 것으로 본다
+ * ±% 차례에서 누른 것(hit = down·up) 중 가장 최근 것의 방향과 시각. 없으면 null.
+ *  - ±% 값·기간을 고치면(plan.at이 기록보다 뒤) 새 조건이라 확인하지 않은 것으로 본다. 메모만 고치면 plan.at이 그대로다(setStockPlan)
  *  - 차례가 아닐 때 누른 기록·기간 차례 기록(hit 없음·plan·cycle·keep)은 건너뛴다 — 확인 뒤 다시 눌러도 확인이 지워지지 않는다
  *  - 5.125에서 누른 기록은 hit이 없어 어느 조건을 보고 눌렀는지 알 수 없다 → 확인으로 치지 않는다(다음 누름부터 hit이 남는다)
  * 저장된 값(기록·plan.at)만 읽는다. 기기 경합으로 checkedAt이 져도 기록이 남아 있으면 같다
  */
-export function pctAckOf(labels: StockLabels, labelKey: string, item: StockLabelItem): "down" | "up" | null {
+export function pctAckOf(labels: StockLabels, labelKey: string, item: StockLabelItem): { hit: "down" | "up"; at: string } | null {
   const floor = Math.max(stockLabelTime(item.labeledAt) ?? -Infinity, stockLabelTime(item.plan?.at) ?? -Infinity);
   // 정규화된 목록은 티커 안에서 최신 먼저
   const last = reviewsOf(labels, labelKey).find((r) => r.choice === "same" && (r.hit === "down" || r.hit === "up") && stockLabelTime(r.at)! >= floor);
-  return last ? (last.hit as "down" | "up") : null;
+  return last ? { hit: last.hit as "down" | "up", at: last.at } : null;
 }
 
 /**
  * 점검 차례 판정 — 조건 하한 → 상한 → 기간 순으로 첫 사유 1개.
  * ±% 조건은 같은 방향을 이미 확인했으면(ack) 차례가 아니다. 다시 차례가 되는 때: 약속한 다음 점검일(기준일 + 기간)이 되었을 때,
- * 확인 뒤 조건을 고쳤을 때, 반대 방향 조건에 닿았을 때(#247). 기간이 없는 종목은 뒤의 둘뿐이다
+ * 확인 뒤 조건을 고쳤을 때, 반대 방향 조건에 닿았을 때(#247). 기간이 없는 종목은 약속한 날이 없으므로
+ * 확인 기록 + PCT_ACK_MONTHS(3개월)가 지나고 여전히 닿아 있으면 다시 차례다(영구 확인 아님)
  */
-function dueOf(item: StockLabelItem, rate: number | null, months: number | null, baseIso: string, nowMs: number, ack: "down" | "up" | null = null): DueReason | null {
+function dueOf(item: StockLabelItem, rate: number | null, months: number | null, baseIso: string, nowMs: number, ack: { hit: "down" | "up"; at: string } | null = null): DueReason | null {
   const e = months === null ? null : elapsedSince(baseIso, nowMs);
   const dateDue = months !== null && !!e && e.months >= months;
   if (item.label === "check" && item.plan && rate !== null) {
     const r = ROUND1(rate);
     const hit = item.plan.down !== undefined && r <= -item.plan.down ? "down" : item.plan.up !== undefined && r >= item.plan.up ? "up" : null;
-    if (hit && (dateDue || ack !== hit)) return { kind: hit, pct: item.plan[hit]! };
+    const acked = ack?.hit === hit && !dateDue && (months !== null || (elapsedSince(ack.at, nowMs)?.months ?? 0) < PCT_ACK_MONTHS);
+    if (hit && !acked) return { kind: hit, pct: item.plan[hit]! };
   }
   if (!dateDue) return null;
   const source = item.label === "keep" ? "keep" : item.plan?.months !== undefined ? "plan" : "cycle";

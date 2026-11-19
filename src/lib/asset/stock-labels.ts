@@ -483,6 +483,7 @@ export function cleanStockPlan(plan: Pick<StockLabelPlan, "down" | "up" | "month
 
 /**
  * 다시 볼 조건 쓰기 — '점검할' 항목에만. 조건·메모가 모두 비면 plan 키를 지운다. item.at = now(병합에서 항목과 함께 움직인다).
+ * plan.at = ±% 값·기간을 마지막으로 고친 시각(메모만 고치면 그대로, #247 D-5).
  * 값이 같으면 그대로 돌려준다.
  */
 export function setStockPlan(state: StockLabels, ticker: string, plan: Pick<StockLabelPlan, "down" | "up" | "months" | "memo">, nowIso: string): StockLabels {
@@ -492,7 +493,10 @@ export function setStockPlan(state: StockLabels, ticker: string, plan: Pick<Stoc
   const cur = prev.plan ? cleanStockPlan(prev.plan) : null;
   if (canon(next) === canon(cur)) return state;
   const { plan: _old, ...rest } = prev;
-  const item: StockLabelItem = { ...rest, ...(next ? { plan: { ...next, at: nowIso } } : {}), at: nowIso };
+  // 메모만 고쳤으면(±% 값·기간 그대로) plan.at을 지킨다 — plan.at은 '조건을 고친 시각'이라 ±% 확인(grow-board.pctAckOf)이 풀리지 않게(#247 D-5)
+  const sameCond = !!cur && !!next && cur.down === next.down && cur.up === next.up && cur.months === next.months;
+  const planAt = sameCond ? (stockLabelTime(prev.plan?.at) !== null ? { at: prev.plan!.at } : {}) : { at: nowIso };
+  const item: StockLabelItem = { ...rest, ...(next ? { plan: { ...next, ...planAt } } : {}), at: nowIso };
   return { ...state, items: { ...state.items, [ticker]: item } };
 }
 

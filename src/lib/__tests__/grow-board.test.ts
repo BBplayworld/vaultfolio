@@ -13,7 +13,7 @@ import type { Crypto } from "@/types/asset";
 import { buildCryptoRows, buildGrowBoards, growStatus } from "../asset/grow-kinds";
 import {
   BOARD_AXES, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, annualizedPct, boardScale, boardTotal, buildAxisGroups, buildBoardRows, holdScore, scalePos,
-  addMonthsKst, boardRowRank, boardSummary, countDueRows, dueReasonText, hitOf, monthDayText, nextCheckDateText, pctAckOf,
+  addMonthsKst, boardRowRank, boardSummary, countDueRows, dueReasonText, hitOf, monthDayText, nextCheckDateText, pctAckOf, PCT_ACK_MONTHS,
 } from "../asset/grow-board";
 
 const RATES = { USD: 1400, JPY: 925 };
@@ -256,25 +256,59 @@ describe("#247 ±% 조건 차례 — `그대로 두기`로 확인하면 풀리�
       expect(by(rows(l, NOW + d * DAY), "C").due).toBe(false);
     }
     expect([reviewsOf(l, "C").length, hits(l, "C")]).toEqual([4, 1]);
-    expect(pctAckOf(l, "C", l.items.C)).toBe("up"); // hit 없는 뒤 기록은 건너뛴다
+    expect(pctAckOf(l, "C", l.items.C)).toMatchObject({ hit: "up", at: new Date(NOW).toISOString() }); // hit 없는 뒤 기록은 건너뛴다
     expect(by(rows(l, NOW + 40 * DAY), "C").due).toBe(false);
   });
   it("같은 날 다시 누름은 기존처럼 화면이 막는다(checkedToday) — 차례가 풀려도 값은 유지", () => {
     const l = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
     expect(by(rows(l, NOW + 3600000), "C")).toMatchObject({ due: false, checkedToday: true });
   });
-  it("하한 + 주기·기간 없음 — 누르면 풀리고 조건을 고칠 때까지 풀린 채(다음 점검일 없음)", () => {
+  it("하한 + 주기·기간 없음 — 누르면 풀리고, 확인 기록 + 3개월이 지나 여전히 닿아 있으면 다시 차례(영구 확인 아님, 다음 점검일 표시는 없음)", () => {
     const l0 = mk({ B: chk({ down: 20 }) });
     expect(by(rows(l0), "B").dueReason).toEqual({ kind: "down", pct: 20 });
-    const l1 = press(l0, "B", NOW);
+    const l1 = press(l0, "B", NOW); // 2026-11-18 확인
     expect(by(rows(l1), "B")).toMatchObject({ due: false, nextCheckMs: null });
-    expect(by(rows(l1, NOW + 400 * DAY), "B").due).toBe(false);
-    // 같은 값으로 저장하면 조건이 바뀌지 않아 그대로
-    expect(by(rows(setStockPlan(l1, "B", { down: 20 }, new Date(NOW + DAY).toISOString()), NOW + DAY), "B").due).toBe(false);
-    // 조건을 고치면(plan.at이 기록보다 뒤) 새 조건으로 다시 차례, 누르면 다시 풀린다
-    const l2 = setStockPlan(l1, "B", { down: 15 }, new Date(NOW + DAY).toISOString());
+    expect(PCT_ACK_MONTHS).toBe(3);
+    // 3개월 경계 — 2027-02-17까지 풀린 채, 2027-02-18부터 다시 차례
+    expect(by(rows(l1, Date.parse("2027-02-17T03:00:00Z")), "B").due).toBe(false);
+    expect(by(rows(l1, Date.parse("2027-02-18T03:00:00Z")), "B").dueReason).toEqual({ kind: "down", pct: 20 });
+    // 그 사이 차례가 아닌 날 누른 기록(hit 없음)은 3개월을 미루지 않는다
+    const mid = press(l1, "B", NOW + 30 * DAY);
+    expect(reviewsOf(mid, "B").map((x) => x.hit)).toEqual([undefined, "down"]);
+    expect(by(rows(mid, Date.parse("2027-02-18T03:00:00Z")), "B").due).toBe(true);
+    // 3개월 뒤 조건에서 벗어나 있으면 차례 아님
+    expect(by(rows(l1, Date.parse("2027-02-18T03:00:00Z"), [st({ id: "b", currentPrice: 95 })]), "B").due).toBe(false);
+    // 다시 누르면 그날부터 3개월 풀린다
+    const l3 = press(l1, "B", Date.parse("2027-02-18T03:00:00Z"));
+    expect(by(rows(l3, Date.parse("2027-05-17T03:00:00Z")), "B").due).toBe(false);
+    expect(by(rows(l3, Date.parse("2027-05-18T03:00:00Z")), "B").due).toBe(true);
+  });
+  it("확인 뒤 조건 — 메모만 고치면 plan.at이 그대로라 풀린 채(D-5, 같은 날 `오늘 점검함` + `점검 차례` 모순 없음), ±% 값·기간을 고치면 다시 차례", () => {
+    const l1 = press(mk({ B: chk({ down: 20 }) }), "B", NOW);
+    const later = new Date(NOW + 3600000).toISOString(); // 같은 날 1시간 뒤
+    // 같은 값으로 저장하면 그대로
+    expect(setStockPlan(l1, "B", { down: 20 }, later)).toBe(l1);
+    // 메모만 입력 — 저장은 되지만 plan.at 유지
+    const memo = setStockPlan(l1, "B", { down: 20, memo: "실적 발표 뒤 다시 보기" }, later);
+    expect(memo.items.B.plan).toEqual({ down: 20, memo: "실적 발표 뒤 다시 보기", at: P0 });
+    expect(memo.items.B.at).toBe(later); // 병합 기준 시각은 움직인다
+    expect(by(rows(memo, NOW + 3600000), "B")).toMatchObject({ due: false, checkedToday: true });
+    // 메모 고치기·지우기도 같다
+    const memo2 = setStockPlan(memo, "B", { down: 20 }, later);
+    expect(memo2.items.B.plan).toEqual({ down: 20, at: P0 });
+    expect(by(rows(memo2, NOW + 3600000), "B").due).toBe(false);
+    // ±% 값을 고치면 새 조건 — 다시 차례, 누르면 다시 풀린다
+    const l2 = setStockPlan(memo, "B", { down: 15, memo: "실적 발표 뒤 다시 보기" }, new Date(NOW + DAY).toISOString());
+    expect(l2.items.B.plan!.at).toBe(new Date(NOW + DAY).toISOString());
     expect(by(rows(l2, NOW + DAY), "B").dueReason).toEqual({ kind: "down", pct: 15 });
     expect(by(rows(press(l2, "B", NOW + DAY), NOW + 2 * DAY), "B").due).toBe(false);
+    // 반대쪽 조건 추가·기간 변경도 조건 수정이다
+    expect(setStockPlan(l1, "B", { down: 20, up: 50 }, later).items.B.plan!.at).toBe(later);
+    expect(by(rows(setStockPlan(l1, "B", { down: 20, months: 6 }, later), NOW + 3600000), "B").due).toBe(true);
+  });
+  it("plan.at이 없는 옛 조건 — 메모만 고쳐도 at을 새로 만들지 않는다", () => {
+    const l = mk({ B: { label: "check", labeledAt: P0, at: P0, plan: { down: 20 } } });
+    expect(setStockPlan(l, "B", { down: 20, memo: "메모" }, new Date(NOW).toISOString()).items.B.plan).toEqual({ down: 20, memo: "메모" });
   });
   it("조건 기간(plan.months)이 있으면 그 기간 뒤에 다시 차례 — 기본 주기보다 먼저", () => {
     const l = press(mk({ B: chk({ down: 20, months: 6 }) }, 3), "B", NOW);
