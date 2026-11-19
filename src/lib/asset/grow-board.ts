@@ -17,7 +17,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import { computeStockMetrics, computeStockTotals, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { classifyStock } from "@/lib/xray/stock-xray";
 import { GRADE_THRESHOLDS } from "@/lib/report/asset-grade";
-import { isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels } from "@/lib/asset/stock-labels";
+import { isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels, type StockReviewHit } from "@/lib/asset/stock-labels";
 import { elapsedSince, formatSince, kstDayText, tradeCountsByLabelKey, type GrowLabelState } from "@/lib/asset/grow-rows";
 
 type Rates = { USD: number; JPY: number };
@@ -65,8 +65,13 @@ export function holdScore(profit: number, cost: number, days: number | null, pri
 
 // ─── 종목 행 ────────────────────────────────────────────────────────
 
+/** 점검 칸의 보기 종류(#242) — 부동산·실물은 한 보기(own) */
+export type BoardRowKind = "stock" | "crypto" | "real" | "physical";
+
 export interface BoardRow {
-  /** 행 key — 티커 묶음(`t:원문 티커`) 또는 티커 없는 보유 건 id */
+  /** 자산 종류(#242). 주식 외 행은 grow-kinds.ts가 만든다 */
+  kind: BoardRowKind;
+  /** 행 key — 티커 묶음(`t:원문 티커`) 또는 티커 없는 보유 건 id. 주식 외는 이름표 키와 같은 접두(`c:`·`r:`·`p:`) */
   key: string;
   /** 이름표 저장 키(normalizeTicker). 티커 없는 종목은 null(이름표 칩 없음) */
   labelKey: string | null;
@@ -74,8 +79,10 @@ export interface BoardRow {
   groupStockIds: string[];
   rawTicker: string;
   category: string;
-  /** 분류 판정용 대표 보유 건(묶음의 합산 대표) */
-  rep: Stock;
+  /** 분류 판정용 대표 보유 건(묶음의 합산 대표). 주식 외 행은 null(기준 4칸 없음) */
+  rep: Stock | null;
+  /** 부동산·실물 행 전용 — 한 장 값 구획에 쓰는 내 입력값·참고값(저장하지 않는다) */
+  own?: { assetId: string; value: number; estimate?: number; estimateDate?: string };
   /** 가장 이른 매수일(YYYY-MM-DD). 읽을 수 없거나 미래면 null */
   purchaseDate: string | null;
   /** 보유 일수·지난 달력 월 수. 매수일을 읽을 수 없으면 null */
@@ -185,18 +192,61 @@ export function dueReasonText(r: DueReason): string {
 const DROP_FROM: Record<string, string> = { keep: "장기 보유에서 뺌", check: "점검 대상에서 뺌" };
 
 /** 매수일(YYYY-MM-DD) → 보유 기간. 비었거나 형식이 틀리거나 미래면 null */
-function holdingOf(purchaseDate: string | undefined, nowMs: number): { date: string; days: number; months: number } | null {
+export function holdingOf(purchaseDate: string | undefined, nowMs: number): { date: string; days: number; months: number } | null {
   if (!purchaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)) return null;
   if (purchaseDate > kstDayText(nowMs)) return null;
   const e = elapsedSince(purchaseDate, nowMs);
   return e ? { date: purchaseDate, days: e.days, months: e.months } : null;
 }
 
-const holdTextOf = (h: { days: number; months: number } | null): string => {
+export const holdTextOf = (h: { days: number; months: number } | null): string => {
   if (!h) return "기간 미상";
   if (h.days === 0) return "오늘";
   return formatSince(h);
 };
+
+export type LabelFacts = Pick<BoardRow, "labelState" | "since" | "due" | "dueReason" | "nextCheckMs" | "checkedToday" | "dropNote">;
+
+/**
+ * 한 이름표 키의 묶음·차례·`정한 날 대비` 값 — 주식·코인·부동산·실물 행이 같은 판정을 쓴다(#242, 계산 1벌).
+ * rate = 평단(매입가) 대비 %, nowPrice = 지금 주당 시세. 부동산·실물은 nowPrice를 null로 넘겨 `정한 날 대비`를 만들지 않고,
+ * pctPlan=false로 ±% 조건을 차례 판정에 쓰지 않는다(값이 내가 넣은 숫자라 조건에 닿는 날 = 내가 값을 고친 날)
+ */
+export function labelFactsOf(labels: StockLabels, labelKey: string | null, rate: number | null, nowPrice: number | null, nowMs: number, pctPlan = true): LabelFacts {
+  const item = labelKey ? labels.items[labelKey] : undefined;
+  let dueReason: DueReason | null = null;
+  let nextCheckMs: number | null = null;
+  let checkedToday = false;
+  let since: BoardRow["since"] = null;
+  let dropNote: string | null = null;
+  if (item && item.label !== null && labelKey) {
+    const same = lastSameReview(labels, labelKey, item.labeledAt);
+    const baseIso = cycleBaseOf(item, same?.at);
+    const months = checkMonthsOf(item, labels.cycle.months);
+    dueReason = dueOf(item, pctPlan ? rate : null, months, baseIso, nowMs);
+    nextCheckMs = months === null ? null : addMonthsKst(stockLabelTime(baseIso)!, months);
+    const c = elapsedSince(cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at), nowMs);
+    checkedToday = !!c && c.days === 0;
+    // '점검 뒤' = 정한 뒤 마지막 '그대로 둠' 기록의 가격, 없으면 '정한 뒤' = 정한 날 가격(base.price)
+    const ref = same ? { kind: "checked" as const, price: same.price, at: same.at } : item.base?.price ? { kind: "labeled" as const, price: item.base.price, at: item.labeledAt } : null;
+    if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100, today: elapsedSince(ref.at, nowMs)?.days === 0 };
+  } else if (labelKey) {
+    const last = reviewsOf(labels, labelKey)[0];
+    const ms = stockLabelTime(last?.at);
+    const days = ms === null ? null : elapsedSince(last.at, nowMs)?.days ?? null;
+    if (last && last.choice === "none" && days !== null && days <= DROP_NOTE_DAYS && ms! <= nowMs) dropNote = `${monthDayText(ms!)} ${DROP_FROM[last.from]}`;
+  }
+  return {
+    labelState: !labelKey ? "unset" : !item ? "unset" : item.label === null ? "none" : item.label,
+    since, due: dueReason !== null, dueReason, nextCheckMs, checkedToday, dropNote,
+  };
+}
+
+/** 차례 이유 → 기록에 남길 값(#242 `hit`) — 차례가 아니면 undefined */
+export function hitOf(r: DueReason | null): StockReviewHit | undefined {
+  if (!r) return undefined;
+  return r.kind === "date" ? r.source : r.kind;
+}
 
 /**
  * 종목별 표 행 — 오래 가진 순(가장 이른 매수일 오름차순, 기간 미상은 끝). 상장폐지 보유 건은 뺀다.
@@ -204,7 +254,8 @@ const holdTextOf = (h: { days: number; months: number } | null): string => {
  * 행 금액은 보유 건마다 computeStockMetrics를 더해 상세 › 주식 '전체' 헤더 합과 원 단위로 같다.
  */
 export function buildBoardRows(stocks: Stock[], rates: Rates, labels: StockLabels, nowMs: number, transactions: Transaction[] = []): BoardRow[] {
-  const active = stocks.filter((s) => s.inactiveStatus !== "delisted");
+  // 전량 매도로 수량 0만 남은 보유 건은 뺀다 — 판 뒤에도 행·차례·카드 수에 남던 문제(#243, v5.125 qa 확정)
+  const active = stocks.filter((s) => s.inactiveStatus !== "delisted" && s.quantity > 0);
   const trades = tradeCountsByLabelKey(active, transactions, nowMs);
   const rows: BoardRow[] = [];
   for (const [key, items] of groupStocksByTicker(active)) {
@@ -221,32 +272,11 @@ export function buildBoardRows(stocks: Stock[], rates: Rates, labels: StockLabel
     const priced = items.every((it) => it.currentPrice > 0);
     const profit = value - cost;
     const held = holdingOf(merged.purchaseDate, nowMs);
-    const item = labelKey ? labels.items[labelKey] : undefined;
     const rate = priced && cost > 0 ? (profit / cost) * 100 : null;
     const nowPrice = items.find((it) => it.currentPrice > 0)?.currentPrice ?? null;
-    let dueReason: DueReason | null = null;
-    let nextCheckMs: number | null = null;
-    let checkedToday = false;
-    let since: BoardRow["since"] = null;
-    let dropNote: string | null = null;
-    if (item && item.label !== null && labelKey) {
-      const same = lastSameReview(labels, labelKey, item.labeledAt);
-      const baseIso = cycleBaseOf(item, same?.at);
-      const months = checkMonthsOf(item, labels.cycle.months);
-      dueReason = dueOf(item, rate, months, baseIso, nowMs);
-      nextCheckMs = months === null ? null : addMonthsKst(stockLabelTime(baseIso)!, months);
-      const c = elapsedSince(cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at), nowMs);
-      checkedToday = !!c && c.days === 0;
-      // '점검 뒤' = 정한 뒤 마지막 '그대로 둠' 기록의 가격, 없으면 '정한 뒤' = 정한 날 가격(base.price)
-      const ref = same ? { kind: "checked" as const, price: same.price, at: same.at } : item.base?.price ? { kind: "labeled" as const, price: item.base.price, at: item.labeledAt } : null;
-      if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100, today: elapsedSince(ref.at, nowMs)?.days === 0 };
-    } else if (labelKey) {
-      const last = reviewsOf(labels, labelKey)[0];
-      const ms = stockLabelTime(last?.at);
-      const days = ms === null ? null : elapsedSince(last.at, nowMs)?.days ?? null;
-      if (last && last.choice === "none" && days !== null && days <= DROP_NOTE_DAYS && ms! <= nowMs) dropNote = `${monthDayText(ms!)} ${DROP_FROM[last.from]}`;
-    }
+    const facts = labelFactsOf(labels, labelKey, rate, nowPrice, nowMs);
     rows.push({
+      kind: "stock",
       key,
       labelKey,
       name: merged.name,
@@ -264,14 +294,8 @@ export function buildBoardRows(stocks: Stock[], rates: Rates, labels: StockLabel
       rate,
       priced,
       score: holdScore(profit, cost, held?.days ?? null, priced),
-      labelState: !labelKey ? "unset" : !item ? "unset" : item.label === null ? "none" : item.label,
+      ...facts,
       nowPrice,
-      since,
-      due: dueReason !== null,
-      dueReason,
-      nextCheckMs,
-      checkedToday,
-      dropNote,
       tradeCount: labelKey ? (trades.get(labelKey) ?? 0) : 0,
     });
   }
@@ -325,7 +349,7 @@ export function boardSummary(rows: BoardRow[]): BoardSummary {
 export const countDueRows = (rows: BoardRow[]): number => rows.filter((r) => r.due).length;
 
 /**
- * 허브 셋째 카드 둘째 줄·화면 세그먼트 `종목 점검` 둘째 줄의 상태(6차) — 같은 판정을 두 곳이 쓴다.
+ * 주식 행만의 상태(6차). #242부터 허브 셋째 카드·세그먼트 `내 자산 점검` 둘째 줄은 전 종류 합(grow-kinds.growStatus)을 쓴다.
  * due = 점검 차례 있음 / labeled = 정한 것은 있고 차례 0 / first = 정한 것 0 / empty = 주식 행 없음
  */
 export function boardStatus(rows: BoardRow[]): { kind: "due" | "labeled" | "first" | "empty"; due: number; keep: number; check: number; count: number } {
@@ -388,10 +412,10 @@ export function rowAxisKey(axis: BoardAxis, row: BoardRow): { key: string; label
     return { key: k, label: HOLD_LABEL[k] };
   }
   if (axis === "etf") {
-    const k = classifyStock("marketCap", row.rep).key === "etf" ? "etf" : "single";
+    const k = classifyStock("marketCap", row.rep!).key === "etf" ? "etf" : "single";
     return { key: k, label: ETF_LABEL[k] };
   }
-  return classifyStock(axis === "sector" ? "theme" : "marketCap", row.rep);
+  return classifyStock(axis === "sector" ? "theme" : "marketCap", row.rep!);
 }
 
 /**

@@ -9,19 +9,21 @@
     "NVDA": {"marketCapTier": "large"}
   },
   "stockLabels": {
-    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660)·아직 안 정함(NVDA 바꾼 기록, 069500), 주기 3개월. 고정 날짜 금지(토큰만). 시드 정합(COO R-C2·C132): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감 → 삼성전자 50→65주(+10·+10·−5), TIGER 100→105주(+5 @M0D02), AAPL 10→12주(+2), SK하이닉스 5주. reviews.at ≥ 그 종목 매수일·정한 날(AAPL @D-160·@D-125 ≥ 정한 날 @M-6D10, NVDA @D-60 ≥ 매수 @M-5D18 — 그 앞은 점검할 기간). 5차(11/18): TIGER 정한 날 @M-13D1(12개월 재확인 = 점검 차례), base.price 19,000(평단 18,000 이상 — 정한 뒤 +10.5% < 산 날부터 +16.7%, COO P1-6). AAPL 기록 2건(그대로 둠)·조건 −10%·메모, SK하이닉스 조건 +25%(+26.7%라 점검 차례), NVDA 9주 전 점검할→정하지 않음. base.price·reviews.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐",
+    "_comment": "내 자산 불리기(#239) 시드 — 오래 둘 2(360750·005930)·점검할 2(AAPL·000660)·아직 안 정함(NVDA 바꾼 기록, 069500), 주기 3개월. 고정 날짜 금지(토큰만). 시드 정합(COO R-C2·C132): labeledAt ≥ 그 종목 purchaseDate, base.qty = 지금 수량 − labeledAt 이후 거래 순증감 → 삼성전자 50→65주(+10·+10·−5), TIGER 100→105주(+5 @M0D02), AAPL 10→12주(+2), SK하이닉스 5주. reviews.at ≥ 그 종목 매수일·정한 날(AAPL @D-160·@D-125 ≥ 정한 날 @M-6D10, NVDA @D-60 ≥ 매수 @M-5D18 — 그 앞은 점검할 기간). 5차(11/18): TIGER 정한 날 @M-13D1(12개월 재확인 = 점검 차례), base.price 19,000(평단 18,000 이상 — 정한 뒤 +10.5% < 산 날부터 +16.7%, COO P1-6). AAPL 기록 2건(그대로 둠 — 첫 기록 @D-160은 조건 −10%에 닿아 한 점검 hit down)·조건 −10%·메모, SK하이닉스 조건 +25%(+26.7%라 점검 차례), NVDA 9주 전 점검할→정하지 않음. base.price·reviews.price는 JSON 시세 눈금 — 데모·체험은 demo-snapshot-rebase가 실시간 시세 배율만큼 옮긴다. 소비 화면은 성과 허브 셋째 카드·불리기 화면 2곳뿐. #242(5.127): 주식 외 항목 2개 — r:demo_re_1 장기 보유 @M-13D1(매입 @M-36D15 뒤, 12개월 재확인 = 점검 차례, base 없음), c:BTC 점검 대상 @M-2D5(매수 @M-12D10 뒤, base.qty 0.04 = 지금 0.05 − @M-1D18 매수 0.01, base.price 1억 3,200만 → 정한 날 대비 140/132 = +6.1%, 조건 −20%). 내 선택 정합표(주식): ① AAPL @D-160 rate −10.3 = 166 ÷ 평단 185 − 1(조건 −10%에 닿음) ② plan.at @M-6D10 ≤ hit 기록일 @D-160(조건이 그 기록보다 먼저 있다) ③ base·reviews 가격과 평단은 같은 실시간 배율로 옮겨져 rebase 뒤에도 −10.3%·다음 점검까지 +23.5%(205 ÷ 166)가 그대로. 건수: 정함 3(TIGER 19,000→21,000 오름 · 삼성전자 64,000→70,000 오름 · AAPL 190→166 오르지 않음) + 그대로 두기 2(166→205, 205→225 오름) + 바꾸기 1(NVDA 120→130 오름) = 6번 중 5번, 조건에 닿아 점검 1번·오름 1번, 30일이 안 된 기록 1번(SK하이닉스 @D-20), 매수 5건(거래 demo_tx_1·2·3·5·6 — 지금 시세가 모두 매수가 위). 코인: 기록 1번(c:BTC 정함)·매수 1건이라 아직 못 셈",
     "v": 1,
     "cycle": {"months": 3, "at": "@M-8D1"},
     "items": {
       "360750": {"label": "keep", "labeledAt": "@M-13D1", "base": {"qty": 100, "price": 19000, "priceAt": "@M-13D1", "weight": 14.2}, "at": "@M-13D1"},
       "005930": {"label": "keep", "labeledAt": "@M-5D1", "base": {"qty": 50, "price": 64000, "priceAt": "@M-5D1", "weight": 30.5}, "at": "@M-5D1"},
-      "AAPL": {"label": "check", "labeledAt": "@M-6D10", "checkedAt": "@D-125", "base": {"qty": 10, "price": 190, "priceAt": "@M-6D10", "weight": 21.8}, "plan": {"down": 10, "memo": "실적 발표 뒤 다시 보기", "at": "@D-125"}, "at": "@D-125"},
+      "AAPL": {"label": "check", "labeledAt": "@M-6D10", "checkedAt": "@D-125", "base": {"qty": 10, "price": 190, "priceAt": "@M-6D10", "weight": 21.8}, "plan": {"down": 10, "memo": "실적 발표 뒤 다시 보기", "at": "@M-6D10"}, "at": "@D-125"},
       "000660": {"label": "check", "labeledAt": "@D-20", "base": {"qty": 5, "price": 175000, "priceAt": "@D-20", "weight": 16.4}, "plan": {"up": 25, "at": "@D-20"}, "at": "@D-20"},
-      "NVDA": {"label": null, "labeledAt": "@D-60", "at": "@D-60"}
+      "NVDA": {"label": null, "labeledAt": "@D-60", "at": "@D-60"},
+      "r:demo_re_1": {"label": "keep", "labeledAt": "@M-13D1", "at": "@M-13D1"},
+      "c:BTC": {"label": "check", "labeledAt": "@M-2D5", "base": {"qty": 0.04, "price": 132000000, "priceAt": "@M-2D5"}, "plan": {"down": 20, "at": "@M-2D5"}, "at": "@M-2D5"}
     },
     "reviews": [
       {"t": "AAPL", "at": "@D-125", "from": "check", "choice": "same", "price": 205, "rate": 10.8},
-      {"t": "AAPL", "at": "@D-160", "from": "check", "choice": "same", "price": 195, "rate": 5.4},
+      {"t": "AAPL", "at": "@D-160", "from": "check", "choice": "same", "price": 166, "rate": -10.3, "hit": "down"},
       {"t": "NVDA", "at": "@D-60", "from": "check", "choice": "none", "price": 120, "rate": 9.1}
     ]
   },

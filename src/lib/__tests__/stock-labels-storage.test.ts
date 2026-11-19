@@ -286,13 +286,15 @@ describe("데모 시드(@D-125) — 체험·데모가 같은 payload를 쓴다",
     expect(by("NVDA").labelState).toBe("none");
     expect(by("NVDA").dropNote).toMatch(/^\d{1,2}월 \d{1,2}일 점검 대상에서 뺌$/);
     expect(by("069500").dropNote).toBeNull();
-    expect(labels.items.AAPL.plan).toEqual({ down: 10, memo: "실적 발표 뒤 다시 보기", at: labels.items.AAPL.at });
+    // #242: 조건을 정한 날 = 정한 날(@M-6D10) — 조건 −10%에 닿아 한 점검(@D-160 hit down)보다 먼저 있다
+    expect(labels.items.AAPL.plan).toEqual({ down: 10, memo: "실적 발표 뒤 다시 보기", at: labels.items.AAPL.labeledAt });
   });
   it("시드 정합(C132) — 1년 동안 매일: 정한 날 ≥ 매수일, 기록 날 ≥ 매수일·그 앞의 정한 날, 기록 날 ≤ 오늘", () => {
     for (let d = Date.parse("2026-01-01T00:00:00Z"); d < Date.parse("2027-01-01T00:00:00Z"); d += 86400000) {
       const today = new Date(d).toISOString().slice(0, 10);
-      const p = materializeDemo(demoRaw, today) as { stockLabels: StockLabels; assetData: { stocks: { ticker: string; purchaseDate: string }[] } };
-      const buy = new Map(p.assetData.stocks.map((x) => [x.ticker, x.purchaseDate]));
+      const p = materializeDemo(demoRaw, today) as { stockLabels: StockLabels; assetData: { stocks: { ticker: string; purchaseDate: string }[]; crypto: { symbol: string; purchaseDate: string }[]; realEstate: { id: string; purchaseDate: string }[] } };
+      // #242: 주식 외 항목(c:·r:)도 같은 정합 — 정한 날 ≥ 매수·매입일
+      const buy = new Map([...p.assetData.stocks.map((x) => [x.ticker, x.purchaseDate] as const), ...p.assetData.crypto.map((x) => [`c:${x.symbol}`, x.purchaseDate] as const), ...p.assetData.realEstate.map((x) => [`r:${x.id}`, x.purchaseDate] as const)]);
       for (const [t, it] of Object.entries(p.stockLabels.items)) expect(it.labeledAt >= buy.get(t)!, `${today} ${t}`).toBe(true);
       for (const r of p.stockLabels.reviews!) {
         expect(r.at >= buy.get(r.t)! && r.at <= today, `${today} ${r.t}@${r.at}`).toBe(true);

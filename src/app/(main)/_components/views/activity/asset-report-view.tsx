@@ -32,7 +32,7 @@ import { SettlementAiButton } from "./settlement-view";
 import { StockLabelBlock } from "./stock-label-block";
 import { getReportTab, setReportTab, type ReportTab } from "./report-tab";
 import { useStockLabels } from "@/hooks/use-stock-labels";
-import { boardStatus, buildBoardRows } from "@/lib/asset/grow-board";
+import { buildGrowBoards, growStatus as growStatusOf } from "@/lib/asset/grow-kinds";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
@@ -319,17 +319,17 @@ export function AssetReportView() {
   const hasAssets = summary.totalValue > 0;
   const tierStyle = TIER_STYLE[grade.tier];
 
-  // ── 세그먼트 2칸(6차 ①): 종목 점검 | 자산 성적표. 블록과 같은 저장소 값(store)으로 둘째 줄을 그린다 ──
+  // ── 세그먼트 2칸(6차 ①): 내 자산 점검 | 자산 성적표. 블록과 같은 저장소 값(store)으로 둘째 줄을 그린다 ──
+  // #242: 주식·코인·부동산·실물 중 하나라도 있으면 열린다. 둘째 줄 수는 전 종류 합(허브 셋째 카드와 같은 함수)
   const growStore = useStockLabels();
   const [growNow] = useState(() => Date.now());
-  const growRows = useMemo(
-    () => buildBoardRows(assetData.stocks, exchangeRates, growStore.labels, growNow, assetData.transactions ?? []),
-    [assetData.stocks, assetData.transactions, exchangeRates, growStore.labels, growNow],
+  const growStatus = useMemo(
+    () => growStatusOf(buildGrowBoards(assetData, exchangeRates, growStore.labels, growNow)),
+    [assetData, exchangeRates, growStore.labels, growNow],
   );
-  const growStatus = boardStatus(growRows);
   const showSegment = hasAssets && growStore.ready && growStatus.kind !== "empty";
   const [tab, setTab] = useState<ReportTab>(getReportTab);
-  // 주식 행이 없으면 성적표만(행은 보유 종목에서 나오므로 저장소를 읽기 전에도 판정된다)
+  // 점검할 자산 행이 없으면 성적표만(행은 보유 자산에서 나오므로 저장소를 읽기 전에도 판정된다)
   const shownTab: ReportTab = growStatus.kind === "empty" ? "grade" : tab;
   // GA `내 자산 불리기·성적표 탭` — 성적표 칸을 연 화면 로드당 1회(통합이 성적표를 묻었는지 판독). preview 데모는 0회
   const gradeTabSent = useRef(false);
@@ -342,10 +342,11 @@ export function AssetReportView() {
     }
   };
   const growSub = growStatus.kind === "due"
-    ? <>점검 차례 <span className="tabular-nums">{growStatus.due}종목</span></>
+    ? <>점검 차례 <span className="tabular-nums">{growStatus.due}{growStatus.unit}</span></>
     : growStatus.kind === "labeled"
-      ? `장기 보유 ${growStatus.keep} · 점검 대상 ${growStatus.check}`
-      : `${growStatus.count}종목 · 정하기 전`;
+      // 조각 2개를 nowrap으로 — 320에서 가운뎃점 뒤에서만 줄이 바뀐다(낱말 중간 끊김 방지)
+      ? <span className="flex flex-wrap justify-center gap-x-1 tabular-nums"><span className="whitespace-nowrap">장기 보유 {growStatus.keep} ·</span><span className="whitespace-nowrap">점검 대상 {growStatus.check}</span></span>
+      : `${growStatus.count}${growStatus.unit} · 정하기 전`;
 
   // ── 투입 대비 성과 3기준 행 — 모바일 세로 스택과 sm+ 표가 같은 소스를 쓰도록 한 번만 정의 ──
   // interest: null이면 "—"(이자 미부과), 그 외엔 연간 이자(음수 표기)
@@ -434,7 +435,7 @@ export function AssetReportView() {
           <span data-testid="grow-title">자산 성적표·불리기</span>
           <span data-testid="grow-hint" data-screenshot-hide className="inline-flex">
             <InfoHint summary="내 기준을 기록하고 내가 점검하는 화면이에요.">
-              <p className="text-pretty break-keep">종목 점검에서는 장기 보유·점검 대상과 다시 볼 조건을 내가 정하고, 자산 성적표에서는 종합 등급을 봐요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
+              <p className="text-pretty break-keep">내 자산 점검에서는 장기 보유·점검 대상과 다시 볼 조건을 내가 정하고, 자산 성적표에서는 종합 등급을 봐요. 앱은 내 기록에서 나온 숫자만 보여 주고, 종목을 골라 주지 않아요.</p>
             </InfoHint>
           </span>
         </CardTitle>
@@ -444,11 +445,11 @@ export function AssetReportView() {
           <p className={`${CAPTION} py-10 text-center`}>자산을 등록하면 성적표가 계산됩니다.</p>
         ) : (
           <>
-            {/* ── 세그먼트 2칸(6차) — 두 칸의 결론 값이 첫 화면 맨 위에 보인다. 주식(티커 있는 종목)이 없으면 성적표만 ── */}
+            {/* ── 세그먼트 2칸(6차) — 두 칸의 결론 값이 첫 화면 맨 위에 보인다. 주식·코인·부동산·실물이 하나도 없으면 성적표만 ── */}
             {showSegment && (
               <div data-testid="report-tabs" role="tablist" aria-label="화면 칸" className="grid grid-cols-2 gap-1 rounded-xl bg-card p-1 dark:shadow-xs">
                 {([
-                  { value: "grow" as const, title: "종목 점검", sub: growSub },
+                  { value: "grow" as const, title: "내 자산 점검", sub: growSub },
                   { value: "grade" as const, title: "자산 성적표", sub: <><span className={tierStyle.color}>{tierLabel(grade.tier)}</span> <span className="tabular-nums">{grade.overall.toFixed(1)}점</span></> },
                 ]).map((t) => (
                   <button
@@ -468,7 +469,7 @@ export function AssetReportView() {
               </div>
             )}
 
-            {/* ── 종목 점검 칸(#239) — 숨겨도 마운트는 유지(묶음 순서·펼침 상태 보존) ── */}
+            {/* ── 내 자산 점검 칸(#239·#242) — 숨겨도 마운트는 유지(묶음 순서·펼침 상태 보존) ── */}
             <div hidden={shownTab !== "grow"} data-testid="report-panel-grow">
               <StockLabelBlock store={growStore} />
             </div>

@@ -246,9 +246,12 @@ describe("데모 시드(재설계 3차) — 장기 묶음·분류 캐시", () =>
     const long = buildAxisGroups("hold", rows).find((g) => g.key === "long")!;
     expect(long.rowKeys.sort()).toEqual(["t:005930", "t:360750"]);
     expect(rows.slice(0, 2).map((r) => r.labelKey)).toEqual(["360750", "005930"]); // 오래 가진 순
+    // #242: 주식 외 항목(r:·c:)도 정한 날 ≥ 매입·매수일
+    const boughtAt = (key: string) => key.startsWith("r:") ? data.realEstate.find((x) => `r:${x.id}` === key)!.purchaseDate
+      : key.startsWith("c:") ? data.crypto.find((x) => `c:${x.symbol}` === key)!.purchaseDate
+        : data.stocks.find((x) => x.ticker === key)!.purchaseDate!;
     for (const [key, item] of Object.entries(labels.items)) {
-      const s = data.stocks.find((x) => x.ticker === key)!;
-      expect(item.labeledAt.slice(0, 10) >= s.purchaseDate!, key).toBe(true);
+      expect(item.labeledAt.slice(0, 10) >= boughtAt(key), key).toBe(true);
     }
   });
   it("분류 캐시 패치: 비어 있는 필드만, 밑줄 키 제외", () => {

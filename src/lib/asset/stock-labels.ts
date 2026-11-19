@@ -10,6 +10,10 @@
  *  - 모르는 필드 보존: 다음 버전이 더한 필드를 이 버전이 지우지 않는다(최상위·cycle·항목·base 4곳, 크기 상한 있음).
  *    계약 — 항목 안의 미래 필드는 '그 이름표 결정에 딸린 값'이다. 이름표를 바꿔도 남아야 하는 값은 최상위에 둔다
  *  - 삭제 표식: '정하지 않음'으로 되돌려도 항목을 지우지 않고 `label: null` + `at` 갱신(병합에서 예전 이름표가 되살아나지 않게)
+ *  - 주식 외 자산(#242, 5.127): 같은 키·같은 v:1·같은 items·reviews에 소문자 접두 키로 함께 둔다(마이그레이션 없음).
+ *    코인 `c:`+대문자 심볼, 부동산 `r:`+자산 id, 실물 `p:`+자산 id. 주식 키(normalizeTicker)는 소문자로 시작하지 않아 겹치지 않는다.
+ *    5.125 기기는 이 항목을 화면에 그리지 않을 뿐 읽기·저장·병합에서 그대로 보존한다(키 정규식 통과, 실행 확인)
+ *  - 기록의 `hit`(#242): 선택 순간의 차례 이유(down·up·plan·cycle·keep). 차례가 아니면 키를 쓰지 않는다. 5.125는 모르는 필드로 256B 안에서 보존한다
  *  - 손상 값: 읽기는 빈 상태. 읽기·병합·내보내기 같은 자동 경로는 원문을 덮어쓰지 않는다. 사용자가 직접 저장할 때만 새 값으로 교체한다
  */
 
@@ -48,6 +52,9 @@ export interface StockLabelPlan {
 }
 
 export type StockReviewChoice = "same" | "keep" | "check" | "none";
+/** 선택 순간의 차례 이유 — down·up = 내가 정한 ±% 조건에 닿음, plan·cycle·keep = 기간이 지남 */
+export type StockReviewHit = "down" | "up" | "plan" | "cycle" | "keep";
+export const STOCK_REVIEW_HITS: readonly StockReviewHit[] = ["down", "up", "plan", "cycle", "keep"];
 
 /** 점검 기록 1건 — id는 저장하지 않고 `t@at`로 만든다. 손익·수량·점수는 저장하지 않는다(화면에 쓰지 않는 값 0) */
 export interface StockLabelReview {
@@ -62,6 +69,8 @@ export interface StockLabelReview {
   price: number;
   /** 그때 산 날부터 %(소수 1자리) */
   rate: number;
+  /** 선택 순간의 차례 이유(#242). 차례가 아니었거나 5.125에서 누른 기록에는 없다 */
+  hit?: StockReviewHit;
   [future: string]: unknown;
 }
 
@@ -101,6 +110,25 @@ export function stockLabelTime(value: unknown): number | null {
 const TICKER_KEY = /^[A-Za-z0-9][A-Za-z0-9./\-:_^=&]{0,23}$/;
 /** 이름표 키로 쓸 수 있는 티커인지 — 아니면 화면에 행을 그리지 않는다(저장해도 다시 읽히지 않으므로) */
 export const isStockLabelKey = (ticker: string): boolean => TICKER_KEY.test(ticker);
+
+/** 이름표 키의 자산 종류(#242) — 소문자 접두로 나눈다. reserved = 아직 쓰지 않는 소문자 접두(어디에도 세지 않는다) */
+export type LabelKeyKind = "stock" | "crypto" | "real" | "physical" | "reserved";
+export function labelKeyKind(key: string): LabelKeyKind {
+  if (key.startsWith("c:")) return "crypto";
+  if (key.startsWith("r:")) return "real";
+  if (key.startsWith("p:")) return "physical";
+  return /^[a-z]/.test(key) ? "reserved" : "stock";
+}
+const keyOrNull = (key: string): string | null => (TICKER_KEY.test(key) ? key : null);
+/** 코인 이름표 키 — 심볼 묶음 단위(시세 조회와 같은 정규화). 정규식을 통과하지 못하면 null(행은 보이고 정할 수 없다) */
+export const cryptoLabelKey = (symbol: string | undefined): string | null => {
+  const s = (symbol ?? "").trim().toUpperCase();
+  return s ? keyOrNull(`c:${s}`) : null;
+};
+/** 부동산·실물 이름표 키 — 자산 id 단위(같은 이름으로 다시 등록해도 옛 결정이 붙지 않는다) */
+export const realLabelKey = (id: string): string | null => (id ? keyOrNull(`r:${id}`) : null);
+export const physicalLabelKey = (id: string): string | null => (id ? keyOrNull(`p:${id}`) : null);
+
 const isCycleMonths = (v: unknown): v is StockLabelCycleMonths => v === 3 || v === 6 || v === 12;
 
 export function emptyStockLabels(): StockLabels {
@@ -131,7 +159,7 @@ const within = (extras: Record<string, unknown>, limit: number) => (sizeOf(extra
 const ITEM_KNOWN = ["label", "labeledAt", "checkedAt", "base", "plan", "at"] as const;
 const BASE_KNOWN = ["qty", "price", "priceAt", "weight"] as const;
 const PLAN_KNOWN = ["down", "up", "months", "memo", "at"] as const;
-const REVIEW_KNOWN = ["t", "at", "from", "choice", "price", "rate"] as const;
+const REVIEW_KNOWN = ["t", "at", "from", "choice", "price", "rate", "hit"] as const;
 const TOP_KNOWN = ["v", "cycle", "items", "reviews"] as const;
 const positive = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
 
@@ -186,10 +214,11 @@ export function parsePlan(value: unknown): { plan: StockLabelPlan; extras: Recor
 
 const REVIEW_FROM = new Set(["keep", "check"]);
 const REVIEW_CHOICE = new Set(["same", "keep", "check", "none"]);
+const isReviewHit = (v: unknown): v is StockReviewHit => typeof v === "string" && (STOCK_REVIEW_HITS as readonly string[]).includes(v);
 /** 기록 키 — 저장하지 않고 만든다 */
 export const reviewKey = (r: { t: string; at: string }): string => `${r.t}@${r.at}`;
 
-/** 기록 1건 읽기 — 하나라도 틀리면 그 건만 뺀다. 모르는 필드는 256B 안에서 보존 */
+/** 기록 1건 읽기 — 하나라도 틀리면 그 건만 뺀다. 모르는 필드는 256B 안에서 보존. hit은 5종 밖이면 그 필드만 버린다(기록은 유지) */
 function parseReview(value: unknown): StockLabelReview | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const r = value as Record<string, unknown>;
@@ -202,6 +231,7 @@ function parseReview(value: unknown): StockLabelReview | null {
   return {
     ...within(extrasOf(r, REVIEW_KNOWN), STOCK_LABEL_EXTRA_LIMIT.review),
     t: r.t, at: r.at as string, from: r.from as StockLabelKind, choice: r.choice as StockReviewChoice, price: r.price, rate: r.rate,
+    ...(isReviewHit(r.hit) ? { hit: r.hit } : {}),
   };
 }
 
@@ -395,9 +425,19 @@ export function hasStockLabelRecords(v: StockLabels): boolean {
 
 // ─── 편집(순수 함수) ─────────────────────────────────────────────────────
 
-/** 유효 이름표 수 — `label`이 null이 아닌 항목(보유 여부 무관). GA 0→1 판정용 */
+/** 유효 이름표 수 — `label`이 null이 아닌 **주식 키** 항목(보유 여부 무관). GA `·정함` 0→1 판정용. 주식 외 키는 섞지 않는다(#242) */
 export function countValidLabels(v: StockLabels): number {
-  return Object.values(v.items).filter((i) => i.label !== null).length;
+  return Object.entries(v.items).filter(([k, i]) => i.label !== null && labelKeyKind(k) === "stock").length;
+}
+
+/** 주식 외(코인·부동산·실물) 유효 이름표 수 — GA `·주식 외 정함` 0→1 판정용. 예약 접두는 세지 않는다 */
+export function countValidOtherLabels(v: StockLabels): number {
+  return Object.entries(v.items).filter(([k, i]) => { const kind = labelKeyKind(k); return i.label !== null && kind !== "stock" && kind !== "reserved"; }).length;
+}
+
+/** 다시 볼 조건 수 — 주식 키만(GA `·조건` 0→1 판정용) */
+export function countStockPlans(v: StockLabels): number {
+  return Object.entries(v.items).filter(([k, i]) => i.label === "check" && i.plan && labelKeyKind(k) === "stock").length;
 }
 
 /**
@@ -474,6 +514,7 @@ export const reviewsOf = (v: StockLabels, ticker: string): StockLabelReview[] =>
  *  - 지금 이름표가 없거나 label:null에서 처음 정할 때: setStockLabel만(첫 결정은 기록하지 않는다)
  *  - snap(그때 시세·산 날부터 %)이 없으면 기록 없이 이름표·점검 시각만 바꾼다
  * 기록을 더한 뒤 그 티커를 다시 12건으로 자른다.
+ * hit = 선택 순간의 차례 이유(#242) — 차례가 아니면 넘기지 않는다(키 없음)
  */
 export function recordReview(
   state: StockLabels,
@@ -482,6 +523,7 @@ export function recordReview(
   nowIso: string,
   snap: { price: number; rate: number } | null,
   base?: StockLabelBase,
+  hit?: StockReviewHit,
 ): StockLabels {
   const prev = state.items[ticker];
   const from = prev?.label ?? null;
@@ -498,20 +540,20 @@ export function recordReview(
     next = { ...next, items: { ...next.items, [ticker]: item } };
   }
   if (from === null || !snap || !positive(snap.price) || !Number.isFinite(snap.rate)) return next;
-  const review: StockLabelReview = { t: ticker, at: nowIso, from, choice, price: snap.price, rate: Math.round(snap.rate * 10) / 10 };
+  const review: StockLabelReview = { t: ticker, at: nowIso, from, choice, price: snap.price, rate: Math.round(snap.rate * 10) / 10, ...(isReviewHit(hit) ? { hit } : {}) };
   return { ...next, reviews: normalizeReviews([...(next.reviews ?? []), review]) };
 }
 
 const KST_DAY = (ms: number) => Math.floor((ms + 9 * 60 * 60 * 1000) / (24 * 60 * 60 * 1000));
 
 /**
- * '다시 봄' 판정(GA 보조 지표) — 유효 이름표가 1개 이상이고 가장 이른 labeledAt의 날짜(KST)가 오늘보다 앞이면 true.
+ * '다시 봄' 판정(GA 보조 지표) — **주식 키**의 유효 이름표가 1개 이상이고 가장 이른 labeledAt의 날짜(KST)가 오늘보다 앞이면 true.
  * 화면을 연 시점의 저장소 값으로만 본다(새 저장 키·플래그 없음).
  */
 export function isStockLabelRevisit(v: StockLabels, nowMs: number): boolean {
-  const days = Object.values(v.items)
-    .filter((i) => i.label !== null)
-    .map((i) => stockLabelTime(i.labeledAt))
+  const days = Object.entries(v.items)
+    .filter(([k, i]) => i.label !== null && labelKeyKind(k) === "stock")
+    .map(([, i]) => stockLabelTime(i.labeledAt))
     .filter((ms): ms is number => ms !== null)
     .map(KST_DAY);
   return days.length > 0 && Math.min(...days) < KST_DAY(nowMs);
