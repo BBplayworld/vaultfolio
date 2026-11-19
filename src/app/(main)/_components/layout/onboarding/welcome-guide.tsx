@@ -460,6 +460,7 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false, pick = null 
   const wizardRef = useRef<HTMLButtonElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const pickedRowRef = useRef<HTMLButtonElement>(null);
+  const pointerOpenRef = useRef(false); // 포인터·터치로 연 팝오버는 짚는 행 첫 포커스에 링 없음(키보드로 열면 focus-visible 링 유지)
   const manualFirst = pick === "real-estate"; // 부동산은 직접 입력이 강조·포커스
   const copy = pick ? WELCOME_PICK_COPY[pick] : null;
 
@@ -498,7 +499,14 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false, pick = null 
         </Button>
         <Popover open={isStockMenuOpen} onOpenChange={setIsStockMenuOpen}>
           <PopoverTrigger asChild>
-            <Button ref={moreRef} size="lg" variant={manualFirst ? "brand" : "secondary"} data-testid="welcome-cta-more" className="gap-2">
+            <Button
+              ref={moreRef}
+              size="lg"
+              variant={manualFirst ? "brand" : "secondary"}
+              data-testid="welcome-cta-more"
+              className="gap-2"
+              {...(pick ? { onPointerDown: () => { pointerOpenRef.current = true; }, onKeyDown: () => { pointerOpenRef.current = false; } } : {})}
+            >
               <Pencil className="size-4" />
               직접 입력 · 가져오기
             </Button>
@@ -507,7 +515,7 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false, pick = null 
             align="center"
             collisionPadding={8}
             className="w-60 p-1.5 max-h-[min(var(--radix-popover-content-available-height),26rem)] overflow-y-auto overscroll-contain"
-            {...(pick ? { onOpenAutoFocus: (e: Event) => { e.preventDefault(); pickedRowRef.current?.focus(); } } : {})}
+            {...(pick ? { onOpenAutoFocus: (e: Event) => { e.preventDefault(); pickedRowRef.current?.focus(pointerOpenRef.current ? ({ focusVisible: false } as FocusOptions) : undefined); } } : {})}
           >
             <div role="group" aria-labelledby="welcome-manual-label">
               <p id="welcome-manual-label" data-testid="welcome-manual-label" className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">직접 입력</p>

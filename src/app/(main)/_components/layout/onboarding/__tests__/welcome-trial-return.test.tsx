@@ -98,7 +98,9 @@ describe("짚는 표시·포커스(spec 4절, AC-21) — 소스 고정", () => {
     expect(src).toContain('<span className={picked ? "font-semibold" : "font-medium"}>{label}</span>');
   });
   it("팝오버 첫 포커스는 자산군 있을 때만 해당 행으로(없으면 현행 Radix 기본)", () => {
-    expect(src).toContain("{...(pick ? { onOpenAutoFocus: (e: Event) => { e.preventDefault(); pickedRowRef.current?.focus(); } } : {})}");
+    expect(src).toContain("{...(pick ? { onOpenAutoFocus: (e: Event) => { e.preventDefault(); pickedRowRef.current?.focus(pointerOpenRef.current ? ({ focusVisible: false } as FocusOptions) : undefined); } } : {})}");
+    // 포인터·터치로 열면 링 없음(복귀 포커스가 직접 입력 버튼에 있던 부동산 상태 포함, AC-21), 키보드로 열면 focus-visible 유지
+    expect(src).toContain("{...(pick ? { onPointerDown: () => { pointerOpenRef.current = true; }, onKeyDown: () => { pointerOpenRef.current = false; } } : {})}");
   });
   it("복귀 포커스: 부동산은 직접 입력, 그 밖은 스크린샷", () => {
     expect(src).toContain("if (focusOnMount) (manualFirst ? moreRef : wizardRef).current?.focus();");
